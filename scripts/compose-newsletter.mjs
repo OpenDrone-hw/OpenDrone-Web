@@ -20,7 +20,7 @@ const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..');
 
 const DEFAULT_BLOG_HANDLE = 'news';
-const SITE_ORIGIN = 'https://opendrone.store';
+const SITE_ORIGIN = 'https://opendrone.be';
 const STOREFRONT_API_VERSION = '2026-01';
 
 async function loadEnv() {
@@ -179,7 +179,7 @@ function buildExcerptHtml(article) {
       plain.length > 320 ? plain.slice(0, 317).trimEnd() + '…' : plain;
     return `<p style="margin:0 0 14px 0;">${escapeHtml(truncated)}</p>`;
   }
-  return '<p style="margin:0;">Read the full article on opendrone.store.</p>';
+  return '<p style="margin:0;">Read the full article on opendrone.be.</p>';
 }
 
 function escapeHtml(s) {

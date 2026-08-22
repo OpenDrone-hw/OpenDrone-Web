@@ -30,7 +30,7 @@
 import {foldSource} from '~/lib/growth/attribution';
 
 /** The Plausible site domain, matching data-domain in root.tsx. */
-export const PLAUSIBLE_DOMAIN = 'opendrone.store';
+export const PLAUSIBLE_DOMAIN = 'opendrone.be';
 
 const EVENT_ENDPOINT = 'https://plausible.io/api/event';
 

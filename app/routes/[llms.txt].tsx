@@ -173,7 +173,7 @@ Multiple lines are comma-separated; an optional discount code goes in the query:
 Example, a 20×20 flight stack (OpenFC Lite + OpenESC${stackDiscountNote(globalSoon, statusFlags)}):
 fetch the two 20×20 variant IDs from the catalog below
 and request ${origin}/cart/<fcId>:1,<escId>:1 — the response is a 302 to the
-Shopify checkout; hand that URL to the human to pay. Only the opendrone.store
+Shopify checkout; hand that URL to the human to pay. Only the opendrone.be
 domain works. A machine-readable feed lives at ${origin}/products.json.
 
 ## Catalog

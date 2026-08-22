@@ -246,12 +246,12 @@ export async function sendBackInStockBroadcast(
     );
     if (!segmentId) return false;
     const from = env.RESEND_MARKETING_FROM || 'hello@opendrone.be';
-    const productUrl = `https://opendrone.store/products/${opts.productHandle}`;
+    const productUrl = `https://opendrone.be/products/${opts.productHandle}`;
     const subject = `Back in stock: ${opts.productTitle}`;
     const text = [
       'Hi,',
       '',
-      `${opts.productTitle} is back in stock at opendrone.store.`,
+      `${opts.productTitle} is back in stock at opendrone.be.`,
       '',
       `Get it here: ${productUrl}`,
       '',
@@ -359,7 +359,7 @@ function productDisplayTitle(handle: string): string {
 
 // Fallback when no signed one-click link is available (SESSION_SECRET
 // unset): the page's manual form, same route.
-const UNSUBSCRIBE_PAGE = 'https://opendrone.store/newsletter/unsubscribe';
+const UNSUBSCRIBE_PAGE = 'https://opendrone.be/newsletter/unsubscribe';
 
 function renderWelcome(opts: {
   product?: string;
@@ -380,8 +380,8 @@ function renderWelcome(opts: {
     : 'Subscribed: Engineering Essentials';
 
   const contextLine = product
-    ? `You signed up for launch updates for ${product} at opendrone.store.`
-    : `You signed up for the Engineering Essentials newsletter at opendrone.store.`;
+    ? `You signed up for launch updates for ${product} at opendrone.be.`
+    : `You signed up for the Engineering Essentials newsletter at opendrone.be.`;
 
   const text = [
     'Hi,',

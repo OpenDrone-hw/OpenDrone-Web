@@ -37,7 +37,7 @@ import {fileURLToPath} from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
-const SITE_ORIGIN = 'https://opendrone.store';
+const SITE_ORIGIN = 'https://opendrone.be';
 const RESEND_API = 'https://api.resend.com';
 
 // --- env (no dotenv dep in this repo — mirror shopify-infra/_client.mjs) ----
@@ -217,7 +217,7 @@ function renderBlast(handle) {
     'Thanks for waiting.',
     'OpenDrone',
     '',
-    'You get this because you signed up for launch updates at opendrone.store.',
+    'You get this because you signed up for launch updates at opendrone.be.',
     'Unsubscribe: {{{RESEND_UNSUBSCRIBE_URL}}}',
   ].join('\n');
   const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -235,7 +235,7 @@ function renderBlast(handle) {
           <p style="margin:24px 0 32px">
             <a href="${url}" style="display:inline-block;background:#ffb700;color:#0a0a0a;text-decoration:none;font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;font-weight:700;padding:12px 18px;border-radius:2px">View product &rarr;</a>
           </p>
-          <p style="color:#737373;font-size:13px;line-height:1.6">You get this because you signed up for launch updates at opendrone.store. <a href="{{{RESEND_UNSUBSCRIBE_URL}}}" style="color:#ffb700">Unsubscribe</a>.</p>
+          <p style="color:#737373;font-size:13px;line-height:1.6">You get this because you signed up for launch updates at opendrone.be. <a href="{{{RESEND_UNSUBSCRIBE_URL}}}" style="color:#ffb700">Unsubscribe</a>.</p>
         </td></tr>
       </table>
     </td></tr>
