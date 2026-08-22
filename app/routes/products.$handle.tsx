@@ -60,6 +60,7 @@ import {
 } from '~/components/ProductReviews';
 import {OshwaMark} from '~/components/OshwaMark';
 import {useNoHover, useIsMobile} from '~/lib/use-media-query';
+import {GpsrBlock} from '~/components/GpsrBlock';
 import {
   PRODUCT_CONTENT,
   PRODUCT_CONTENT_FALLBACK,
@@ -2768,6 +2769,18 @@ function ProductPage() {
       ))}
 
       <RelatedProducts recommendations={recommendations} />
+
+      {/* GPSR Art. 19 listing information (docs/store-compliance.md, section 1):
+          manufacturer identity, contact, product identifier and safety warnings
+          must be visible before purchase. Kept out of the product story,
+          rendered as a quiet compliance strip at the very end of the page. */}
+      {rootData?.company ? (
+        <GpsrBlock
+          company={rootData.company}
+          productTitle={product.title}
+          sku={selectedVariant?.sku ?? null}
+        />
+      ) : null}
 
       <Analytics.ProductView
         data={{

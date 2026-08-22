@@ -125,5 +125,29 @@
   "card_badge_sale": "Sale",
   "card_badge_new": "New",
   "card_model_soon_title": "Coming soon",
-  "card_add_to_cart": "Add to cart"
+  "card_add_to_cart": "Add to cart",
+  "gpsr_heading": "Manufacturer & safety information",
+  "gpsr_product_label": "Product type",
+  "gpsr_doc_link": "EU Declaration of Conformity",
+  "gpsr_warnings_en": [
+    "Not a toy. Not for persons under 14; minors only under adult supervision.",
+    "Component for self-built unmanned aircraft: the builder is responsible for the assembled aircraft and its lawful operation.",
+    "LiPo batteries can ignite when damaged, shorted or overcharged; never charge unattended.",
+    "Remove propellers before bench testing, configuration or firmware updates.",
+    "Observe the voltage and current limits in the specifications; reverse polarity destroys the board."
+  ],
+  "gpsr_warnings_nl": [
+    "Geen speelgoed. Niet voor personen onder 14 jaar; minderjarigen alleen onder toezicht van een volwassene.",
+    "Component voor zelfgebouwde onbemande luchtvaartuigen: de bouwer is verantwoordelijk voor het samengestelde toestel en het wettige gebruik ervan.",
+    "LiPo-batterijen kunnen ontbranden bij beschadiging, kortsluiting of overladen; laad nooit zonder toezicht.",
+    "Verwijder propellers vóór benchtests, configuratie of firmware-updates.",
+    "Respecteer de spannings- en stroomlimieten in de specificaties; omgekeerde polariteit vernietigt het board."
+  ],
+  "gpsr_warnings_fr": [
+    "Ceci n'est pas un jouet. Interdit aux moins de 14 ans ; mineurs uniquement sous surveillance d'un adulte.",
+    "Composant pour aéronefs sans équipage auto-construits : le constructeur est responsable de l'appareil assemblé et de son utilisation licite.",
+    "Les batteries LiPo peuvent s’enflammer en cas de dommage, de court-circuit ou de surcharge ; ne chargez jamais sans surveillance.",
+    "Retirez les hélices avant les essais au banc, la configuration ou les mises à jour du firmware.",
+    "Respectez les limites de tension et de courant des spécifications ; une inversion de polarité détruit la carte."
+  ]
 }
