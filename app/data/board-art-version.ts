@@ -3,4 +3,4 @@
 // under public/boards (sources and derived rasters/thumbnails). BoardArt
 // appends it as ?v= to bust Oxygen's 1-year immutable asset cache when board
 // art is regenerated in place.
-export const BOARD_ART_VERSION = '51783aa53686';
+export const BOARD_ART_VERSION = '5b89f46628ce';
