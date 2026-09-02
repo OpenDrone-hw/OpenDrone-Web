@@ -33,3 +33,10 @@ Use the narrowest relevant package commands first, then `npm run typecheck`,
 the affected responsive states and record any checks that could not be run.
 Never claim a deployment or external integration succeeded without observing
 the result.
+
+## Visual index
+
+`OVERVIEW.md` is the diagram-only map of this repository: structure, pipelines,
+and cross-repository handoffs. Change it in the same commit that adds, removes,
+or renames a top-level directory, a pipeline step, or a handoff. Check with
+`python3 ../../scripts/overview_check.py .`.
