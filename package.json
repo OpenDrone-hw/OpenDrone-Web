@@ -50,7 +50,7 @@
     "@formkit/auto-animate": "^0.10.0",
     "@react-three/fiber": "^9.7.0",
     "@react-three/postprocessing": "^3.0.4",
-    "@shopify/hydrogen": "^2026.4.1",
+    "@shopify/hydrogen": "^2026.4.5",
     "@tailwindcss/vite": "^4.3.3",
     "graphql": "^16.14.2",
     "isbot": "^5.2.1",
