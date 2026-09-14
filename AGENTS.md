@@ -18,13 +18,35 @@ local backlog.
 
 - Application behavior: source and tests in this repository.
 - Product facts: the implemented hardware repository and approved evidence.
-- Prices, availability, and catalog state: the active commerce data source.
-- Legal text: the maintained legal content, reviewed before publication.
+- Prices, availability, and catalog state: Shopify, the commerce backend
+  behind `opendrone.be`. Customer-facing SKUs come from
+  `../../stock/product_skus.json`; `scripts/shopify-infra/sync-product-skus.mjs`
+  previews and, with `--apply`, writes them onto Shopify variants.
+- Stock quantities: InvenTree (`../../stock`) is the stock authority and
+  Shopify inventory mirrors it. Never set inventory in Shopify by hand or from
+  this repository.
+- Legal text: the Markdown under `app/content/legal/`, reviewed before
+  publication. `npm run sync:legal` overwrites four Dutch pages only when
+  `COMPLIANCE_SRC` names a source directory; unset, it keeps the snapshots.
+- Board art, schematics and specs: exported from the board checkouts beside
+  this repository (`../hardware`, or `OPENDRONE_HARDWARE`).
 - Branch and work status: Git itself, not prose coordination files.
 
 Do not publish planned specifications as measured facts. Do not copy product
 claims into several files when one content source can serve them. Keep draft
 copy clearly marked and out of production paths.
+
+## Live systems and credentials
+
+Production is the Hydrogen app on Shopify Oxygen; every push to `main`
+deploys `opendrone.be`. The gitignored `.env` holds the local values named in
+`.env.example`: the storefront and customer-account tokens the app boots with,
+`SHOPIFY_ADMIN_API_TOKEN` for the custom app "OpenDrone Infra" (used by
+`publish:post`, `scripts/shopify-infra/` and the launch, goals and votes
+scripts), and the support-bridge secrets. Production values live in Oxygen
+environment settings, not in this repository. InvenTree credentials live in
+`../../stock/.env`; company Notion, DNS and carrier credentials live in
+`../../operations/.env`. Name variables, never print values.
 
 ## Verification
 
