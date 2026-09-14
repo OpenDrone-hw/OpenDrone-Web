@@ -11,6 +11,12 @@
  * The directives are the ones the site was already serving: same hosts,
  * same nonce mechanics, `'strict-dynamic'` deliberately absent (the site
  * loads no third-party loader scripts that would need it).
+ *
+ * cdn.shopify.com stays in the baseline because Oxygen serves this app's
+ * own bundle from it: the JS chunks, the stylesheet, and the fonts that
+ * stylesheet's url() resolves against. Dropping it would leave the
+ * production site unstyled and in SSR-only mode. It is the host, not an
+ * API.
  */
 
 import {createContext, createElement, useContext, type ReactNode} from 'react';
@@ -56,27 +62,27 @@ export function createContentSecurityPolicy(directives: CspDirectives = {}): {
   const nonce = randomNonce();
   const nonceSrc = `'nonce-${nonce}'`;
 
+  const ASSET_CDN = 'https://cdn.shopify.com';
   const parts = [
     directive('base-uri', ["'self'"]),
-    directive('default-src', ["'self'", nonceSrc]),
+    directive('default-src', ["'self'", ASSET_CDN, nonceSrc]),
     directive('frame-ancestors', ["'none'"]),
     directive('script-src', [
-      ...(directives.scriptSrc ?? ["'self'", 'https://cdn.shopify.com']),
+      ...(directives.scriptSrc ?? ["'self'", ASSET_CDN]),
       nonceSrc,
     ]),
     directive(
       'style-src',
-      directives.styleSrc ?? ["'self'", "'unsafe-inline'", 'https://cdn.shopify.com'],
+      directives.styleSrc ?? ["'self'", "'unsafe-inline'", ASSET_CDN],
     ),
     directive(
       'img-src',
-      directives.imgSrc ?? ["'self'", 'data:', 'https://cdn.shopify.com'],
+      directives.imgSrc ?? ["'self'", 'data:', ASSET_CDN],
     ),
-    directive(
-      'connect-src',
-      directives.connectSrc ?? ["'self'", 'https://cdn.shopify.com'],
-    ),
-    directive('font-src', directives.fontSrc ?? ["'self'", 'data:']),
+    directive('connect-src', directives.connectSrc ?? ["'self'", ASSET_CDN]),
+    // The self-hosted typefaces are Vite assets, so in production they
+    // come from the same CDN as the stylesheet that requests them.
+    directive('font-src', directives.fontSrc ?? ["'self'", 'data:', ASSET_CDN]),
     directive('frame-src', directives.frameSrc ?? ["'self'"]),
     directive('media-src', directives.mediaSrc ?? ["'self'"]),
   ];
