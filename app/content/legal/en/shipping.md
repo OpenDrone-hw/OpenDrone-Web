@@ -10,11 +10,15 @@ Orders are normally shipped within 2 business days of payment receipt. The final
 
 ### Pre-orders
 
-Some products are sold as pre-orders. They are marked as such, with their expected ship date, on the product page, in the cart and on the order confirmation. The full price is charged when the order is placed. The stated ship date is the delivery time agreed between the consumer and Incutec BV within the meaning of Art. VI.43 of the Belgian Code of Economic Law, so the 30-day default deadline above does not apply to pre-order items.
+Some products are sold as pre-orders. They are marked as such, with their expected ship date, on the product page, in the cart and on the order confirmation. The full price is charged when the order is placed. At launch, the flight controller and ESC ship from mid-October 2026; every other pre-order product ships in about 10 weeks after the order. The stated ship date is the delivery time agreed between the consumer and Incutec BV within the meaning of Art. VI.43 of the Belgian Code of Economic Law, so the 30-day default deadline above does not apply to pre-order items.
 
-An order that combines in-stock and pre-order items ships as one parcel once every item is in stock. If Incutec BV cannot meet the stated ship date, it informs the consumer, who may then cancel the order free of charge for a full refund.
+An order that combines in-stock and pre-order items ships as one parcel once every item is in stock: one delivery per order. If Incutec BV cannot meet the stated ship date, it informs the consumer and offers, at the consumer's choice, a new ship date or a full refund within 14 days.
 
-The 14-day right of withdrawal applies from delivery. The consumer may also cancel a pre-order at any time before delivery; Incutec BV refunds the full amount paid within 14 days of the cancellation.
+The consumer may cancel a pre-order before shipment for a full refund. The 14-day right of withdrawal runs from delivery and can also be exercised at any time before delivery; Incutec BV refunds the full amount paid within 14 days of the cancellation or withdrawal notice.
+
+Pre-order payments fund the production run and stock purchase for the order. They carry no interest and confer no equity, revenue share or other ownership interest in Incutec BV.
+
+Parcels shipped outside the European Union may be subject to import duties and taxes payable by the consumer on delivery, unless the chosen delivery method states that duties are paid by Incutec BV.
 
 ### Shipping rates and countries
 

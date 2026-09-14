@@ -10,11 +10,15 @@ Les commandes sont normalement expédiées dans les 2 jours ouvrables suivant la
 
 ### Précommandes
 
-Certains produits sont vendus en précommande. Ils sont indiqués comme tels, avec leur date d’expédition prévue, sur la page produit, dans le panier et sur la confirmation de commande. Le prix intégral est facturé lors de la commande. La date d’expédition indiquée constitue le délai de livraison convenu entre le consommateur et Incutec BV au sens de l’Art. VI.43 du Code de droit économique belge, de sorte que le délai par défaut de 30 jours mentionné ci-dessus ne s’applique pas aux articles en précommande.
+Certains produits sont vendus en précommande. Ils sont indiqués comme tels, avec leur date d’expédition prévue, sur la page produit, dans le panier et sur la confirmation de commande. Le prix intégral est facturé lors de la commande. Au lancement, le contrôleur de vol et l’ESC sont expédiés à partir de mi-octobre 2026 ; tout autre produit en précommande est expédié environ 10 semaines après la commande. La date d’expédition indiquée constitue le délai de livraison convenu entre le consommateur et Incutec BV au sens de l’Art. VI.43 du Code de droit économique belge, de sorte que le délai par défaut de 30 jours mentionné ci-dessus ne s’applique pas aux articles en précommande.
 
-Une commande combinant des articles en stock et des articles en précommande est expédiée en un seul colis dès que chaque article est en stock. Si Incutec BV ne peut respecter la date d’expédition indiquée, elle en informe le consommateur, qui peut alors annuler la commande sans frais et obtenir un remboursement intégral.
+Une commande combinant des articles en stock et des articles en précommande est expédiée en un seul colis dès que chaque article est en stock : une seule livraison par commande. Si Incutec BV ne peut respecter la date d’expédition indiquée, elle en informe le consommateur et propose, au choix du consommateur, une nouvelle date d’expédition ou un remboursement intégral dans les 14 jours.
 
-Le droit de rétractation de 14 jours s’applique à compter de la livraison. Le consommateur peut en outre annuler une précommande à tout moment avant la livraison ; Incutec BV rembourse l’intégralité du montant payé dans les 14 jours suivant l’annulation.
+Le consommateur peut annuler une précommande avant l’expédition pour un remboursement intégral. Le droit de rétractation de 14 jours s’applique à compter de la livraison et peut également être exercé à tout moment avant la livraison ; Incutec BV rembourse l’intégralité du montant payé dans les 14 jours suivant l’annulation ou la rétractation.
+
+Les paiements de précommande financent la production et l’achat du stock pour la commande. Ils ne portent aucun intérêt et ne confèrent aucune participation, partage de revenus ni autre intérêt de propriété dans Incutec BV.
+
+Les colis expédiés en dehors de l’Union européenne peuvent être soumis à des droits d’importation et taxes payables par le consommateur à la livraison, sauf si le mode de livraison choisi précise que les droits sont pris en charge par Incutec BV.
 
 ### Tarifs et pays d’expédition
 
