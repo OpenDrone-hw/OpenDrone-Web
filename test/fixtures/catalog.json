@@ -31,7 +31,14 @@
           "ship_promise": "ships from early October 2026",
           "image": null,
           "url": "https://shop.incutec.com/shop/openrx-40?attribute_values=14",
-          "cart_add_url": "https://shop.incutec.com/incutec/add?sku=OPENRX-GEMINI&qty=1&next=cart"
+          "cart_add_url": "https://shop.incutec.com/incutec/add?sku=OPENRX-GEMINI&qty=1&next=cart",
+          "compliance": {
+            "declaration_id": "INC-DoC-OPENRX-GEMINI",
+            "version": "1",
+            "issued_on": "2026-09-14",
+            "doc_url": "https://shop.incutec.com/incutec/doc/OPENRX-GEMINI/1.pdf",
+            "bundle_url": "https://shop.incutec.com/incutec/doc/OPENRX-GEMINI/1.pdf"
+          }
         },
         {
           "sku": "OPENRX-LITE",
