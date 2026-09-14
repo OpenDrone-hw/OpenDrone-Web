@@ -19,6 +19,17 @@ export default {
     executionContext: ExecutionContext,
   ): Promise<Response> {
     try {
+      // www.opendrone.be is a Cloudflare custom domain too (both point at
+      // this Worker, wrangler.toml), but Shopify today 301s www to the
+      // apex rather than serving it (D13/D16: keep current behaviour, no
+      // visual or structural change). Do the same redirect here so the
+      // custom domain doesn't start silently serving www as a mirror.
+      const url = new URL(request.url);
+      if (url.hostname === 'www.opendrone.be') {
+        url.hostname = 'opendrone.be';
+        return Response.redirect(url.toString(), 301);
+      }
+
       const context = await createAppLoadContext(
         request,
         env,
