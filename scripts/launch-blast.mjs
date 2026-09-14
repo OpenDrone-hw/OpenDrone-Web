@@ -6,30 +6,23 @@
 //   node scripts/launch-blast.mjs <product-handle> --create   sync audience + create DRAFT broadcast
 //   node scripts/launch-blast.mjs <product-handle> --send     sync + create + SEND immediately
 //
-// Audience sources (both read, then reconciled):
-//   1. Resend segment `notify-<handle>` — populated live by the newsletter
-//      action since Lane B (app/lib/growth/resend.ts).
-//   2. Shopify customers tagged `notify-<handle>` with marketing consent —
-//      the pre-Lane-B source of truth. Anyone here but missing from the
-//      Resend segment is synced in before the broadcast is created, so
-//      early signups aren't dropped.
+// Audience: the Resend segment `notify-<handle>`, populated live by the
+// newsletter action (app/lib/growth/resend.ts). It is the only subscriber
+// list; the Shopify customer tag that used to back it died with the store.
 //
 // The broadcast itself targets the Resend segment (Broadcasts can only
 // target a segment_id). Resend adds List-Unsubscribe/RFC-8058 headers and
 // suppresses unsubscribed contacts automatically; the template also embeds
 // the {{{RESEND_UNSUBSCRIBE_URL}}} footer link.
 //
-// Dry run prints recipient counts + the sync delta and writes the rendered
+// Dry run prints recipient counts and writes the rendered
 // email to scripts/out/launch-blast-<handle>.html — no API writes at all.
 // --create leaves the broadcast as a DRAFT to review (and send) in the
 // Resend dashboard; --send is the only path that actually emails people.
 //
-// Env (repo .env, same parser as scripts/shopify-infra/_client.mjs):
+// Env (repo .env):
 //   RESEND_API_KEY          required (needs Contacts/Segments/Broadcasts)
 //   RESEND_MARKETING_FROM   optional, default hello@opendrone.be
-//   PUBLIC_STORE_DOMAIN + SHOPIFY_ADMIN_API_TOKEN
-//                           optional — without them the Shopify
-//                           cross-check/backfill is skipped with a warning.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -40,7 +33,7 @@ const ROOT = path.resolve(__dirname, '..');
 const SITE_ORIGIN = 'https://opendrone.be';
 const RESEND_API = 'https://api.resend.com';
 
-// --- env (no dotenv dep in this repo — mirror shopify-infra/_client.mjs) ----
+// --- env (no dotenv dep in this repo) --------------------------------------
 
 function loadEnv() {
   const env = {};
@@ -110,8 +103,6 @@ async function resend(method, apiPath, body) {
   return {ok: true, status: res.status, json};
 }
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
 async function findSegment(name) {
   let after = null;
   for (let i = 0; i < 20; i++) {
@@ -144,62 +135,6 @@ async function listSegmentContacts(segmentId) {
   return contacts;
 }
 
-// --- Shopify notify-tag audience (optional cross-check + backfill source) -----
-
-async function shopifyNotifyEmails(handle) {
-  const shop = env.PUBLIC_STORE_DOMAIN;
-  const token = env.SHOPIFY_ADMIN_API_TOKEN;
-  if (!shop || !token) {
-    console.warn(
-      '  ! PUBLIC_STORE_DOMAIN / SHOPIFY_ADMIN_API_TOKEN not set — Shopify cross-check skipped',
-    );
-    return null;
-  }
-  const version = env.SHOPIFY_ADMIN_API_VERSION || '2026-01';
-  const endpoint = `https://${shop}/admin/api/${version}/graphql.json`;
-  const query = `
-    query NotifyAudience($query: String!, $cursor: String) {
-      customers(first: 100, query: $query, after: $cursor) {
-        pageInfo { hasNextPage endCursor }
-        nodes {
-          email
-          emailMarketingConsent { marketingState }
-        }
-      }
-    }
-  `;
-  const emails = new Set();
-  let cursor = null;
-  for (let i = 0; i < 100; i++) {
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Shopify-Access-Token': token,
-      },
-      body: JSON.stringify({
-        query,
-        variables: {query: `tag:notify-${handle}`, cursor},
-      }),
-    });
-    const json = await res.json();
-    if (json.errors) {
-      throw new Error(`Shopify GraphQL: ${JSON.stringify(json.errors)}`);
-    }
-    const page = json.data.customers;
-    for (const c of page.nodes) {
-      if (!c.email) continue;
-      // Only consented addresses — an unsubscribed / never-consented
-      // customer must not be pushed into a marketing segment.
-      if (c.emailMarketingConsent?.marketingState === 'SUBSCRIBED') {
-        emails.add(c.email.toLowerCase());
-      }
-    }
-    if (!page.pageInfo.hasNextPage) break;
-    cursor = page.pageInfo.endCursor;
-  }
-  return emails;
-}
 
 // --- email template ------------------------------------------------------------
 
@@ -282,15 +217,6 @@ async function main() {
     `  Resend segment:  ${segment ? `${memberEmails.size} contacts (${unsubscribed} unsubscribed — auto-suppressed)` : 'does not exist yet'}`,
   );
 
-  // 2. Shopify notify tag (pre-Lane-B signups) → backfill delta.
-  const shopifyEmails = await shopifyNotifyEmails(handle);
-  let delta = [];
-  if (shopifyEmails) {
-    console.log(`  Shopify tag:     ${shopifyEmails.size} subscribed customers`);
-    delta = [...shopifyEmails].filter((e) => !memberEmails.has(e));
-    console.log(`  Missing in Resend segment: ${delta.length}`);
-  }
-
   const {subject, text, html} = renderBlast(handle);
 
   if (!create) {
@@ -298,15 +224,15 @@ async function main() {
     fs.mkdirSync(outDir, {recursive: true});
     const outPath = path.join(outDir, `launch-blast-${handle}.html`);
     fs.writeFileSync(outPath, html);
-    const total = memberEmails.size - unsubscribed + delta.length;
+    const total = memberEmails.size - unsubscribed;
     console.log(`\n  Subject:    ${subject}`);
-    console.log(`  Recipients: ~${total} after sync (segment minus unsubscribed, plus Shopify backfill)`);
+    console.log(`  Recipients: ~${total} (segment minus unsubscribed)`);
     console.log(`  Preview:    ${path.relative(ROOT, outPath)}`);
     console.log('\n✓ Dry run — nothing written to Resend. Re-run with --create (draft) or --send.\n');
     return;
   }
 
-  // 3. Ensure segment + backfill missing contacts.
+  // 2. Ensure the segment exists.
   let segmentId = segment?.id;
   if (!segmentId) {
     const created = await resend('POST', '/segments', {name: segmentName});
@@ -314,29 +240,8 @@ async function main() {
     segmentId = created.json.id;
     console.log(`  created segment ${segmentId}`);
   }
-  for (const email of delta) {
-    // Create with membership; on "already exists" fall back to a plain
-    // segment add. Never touches `unsubscribed` — Resend suppresses
-    // opted-out contacts at send time anyway.
-    // segments must be objects ([{id}], not [id]) — strings 422.
-    const created = await resend('POST', '/contacts', {
-      email,
-      segments: [{id: segmentId}],
-    });
-    if (!created.ok) {
-      const added = await resend(
-        'POST',
-        `/contacts/${encodeURIComponent(email)}/segments/${segmentId}`,
-      );
-      if (!added.ok) {
-        console.warn(`  ! could not sync ${email}: ${added.error}`);
-      }
-    }
-    await sleep(600); // stay under Resend's default 2 req/s
-  }
-  if (delta.length) console.log(`  synced ${delta.length} contacts into segment`);
 
-  // 4. Create the broadcast (draft unless --send).
+  // 3. Create the broadcast (draft unless --send).
   const broadcast = await resend('POST', '/broadcasts', {
     name: `launch-${handle}`,
     segment_id: segmentId,

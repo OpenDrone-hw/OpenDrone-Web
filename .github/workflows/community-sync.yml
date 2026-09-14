@@ -35,18 +35,19 @@ jobs:
         with:
           node-version: 22
 
-      # Both scripts are dependency-free: checkout + node is the whole setup.
-      - name: Tally votes and update goal meters
+      # The scripts are dependency-free: checkout + node is the whole setup.
+      # The goal meters read the shop's aggregate endpoint; until it exists
+      # (ERP PLAN.md step 12.6) GOALS_URL is unset and the step is skipped
+      # rather than failing the weekly run.
+      - name: Update the goal meters
         env:
-          PUBLIC_STORE_DOMAIN: ktjqug-jw.myshopify.com
-          SHOPIFY_ADMIN_API_TOKEN: ${{ secrets.SHOPIFY_ADMIN_API_TOKEN }}
+          GOALS_URL: ${{ secrets.GOALS_URL }}
         run: |
-          if [ -z "$SHOPIFY_ADMIN_API_TOKEN" ]; then
-            echo "SHOPIFY_ADMIN_API_TOKEN is not set in repo secrets" >&2
-            exit 1
+          if [ -z "$GOALS_URL" ]; then
+            echo "GOALS_URL is not set; skipping the goal meters" >&2
+          else
+            node scripts/update-goals.mjs --write
           fi
-          node scripts/tally-votes.mjs --write
-          node scripts/update-goals.mjs --write
 
       # The PDP fetches contributors live, but Oxygen's shared egress IP burns
       # the unauthenticated GitHub budget, so the wall needs a committed floor.
@@ -61,18 +62,16 @@ jobs:
         uses: peter-evans/create-pull-request@v8
         with:
           branch: bot/community-sync
-          title: 'Community sync: vote tally + goal meters + contributors'
+          title: 'Community sync: goal meters + contributors'
           commit-message: |
-            Community sync: vote tally + goal meters + contributors
+            Community sync: goal meters + contributors
 
-            Automated weekly run of votes:tally, goals:update and
-            sync:contributors.
+            Automated weekly run of goals:update and sync:contributors.
 
             Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
           body: |
-            Weekly automated update of `content/votes.json` (ballot tally
-            from order attributes, 3/2/1 weighting) and the auto-mode goal
-            meters in `content/goals.json` (order totals since each goal's
+            Weekly automated update of the auto-mode goal meters in
+            `content/goals.json` (the shop's gross since each goal's
             `since`, allocation applied, floored to 5% steps).
 
             Also refreshes `content/contributors.json`, the roster the PDP
