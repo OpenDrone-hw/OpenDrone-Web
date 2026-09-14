@@ -116,11 +116,22 @@ const SAFE_LINK_RE =
   /^(?:https?:\/\/|mailto:|tel:|\/|#)[^\s"<>]*$/i;
 
 function inline(s: string) {
-  // bold, italic, inline code, links
+  // bold, italic, inline code, images, links
   let out = escapeHtml(s);
   out = out.replace(/`([^`]+)`/g, '<code>$1</code>');
   out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   out = out.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  // Images before links: `![alt](src)` is a link pattern with a `!` in
+  // front, so the link rule would eat it and leave a stray bang. Same
+  // href allowlist, so a malformed src degrades to its alt text.
+  out = out.replace(
+    /!\[([^\]]*)\]\(([^)]+)\)/g,
+    (_m, alt: string, src: string) => {
+      const t = src.trim();
+      if (!SAFE_LINK_RE.test(t)) return alt;
+      return `<img src="${t}" alt="${alt}" loading="lazy" decoding="async" />`;
+    },
+  );
   out = out.replace(
     /\[([^\]]+)\]\(([^)]+)\)/g,
     (_m, text: string, href: string) => {
@@ -135,8 +146,9 @@ function inline(s: string) {
 /**
  * Minimal, purposely-limited Markdown → HTML converter. Supports:
  * headings, paragraphs, ordered/unordered lists, blockquotes, simple
- * pipe tables, horizontal rules, and inline bold/italic/code/links.
- * Not a general-purpose MD parser — tuned to the compliance documents.
+ * pipe tables, horizontal rules, and inline bold/italic/code/images/links.
+ * Not a general-purpose MD parser — tuned to the compliance documents and
+ * the newsletter posts (app/lib/posts.ts).
  */
 export function mdToHtml(src: string): string {
   const lines = src.split(/\r?\n/);
