@@ -1,0 +1,44 @@
+name: Deploy to Cloudflare (preview)
+
+# D15 (erp/PLAN.md): preview host for opendrone.be on Cloudflare Workers,
+# evaluated as the Shopify Oxygen replacement so Shopify can be retired.
+# This does not touch opendrone.be DNS or Shopify; it only pushes a build of
+# this branch to the Workers preview project "opendrone-web". Cutover
+# (pointing opendrone.be at it, removing the Oxygen deployment) is a separate,
+# deliberate step documented in README.md under "Hosting".
+on:
+  push:
+    branches: [feat/cloudflare-hosting]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      # SESSION_SECRET only needs to be well-formed for the build step (it is
+      # not baked into the bundle); the real value is the Worker's
+      # SESSION_SECRET secret, set separately with `wrangler secret put`.
+      - name: Build
+        env:
+          SESSION_SECRET: "ci-build-only-not-the-runtime-secret"
+        run: npm run build
+
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy

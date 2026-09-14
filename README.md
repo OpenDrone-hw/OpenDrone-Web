@@ -35,6 +35,7 @@ store compliance).
 - [Environment variables](#environment-variables)
 - [Operations](#operations)
 - [Security](#security)
+- [Hosting](#hosting)
 - [Going live](#going-live)
 - [Contributing](#contributing)
 - [License](#license)
@@ -411,6 +412,75 @@ into the existing TXT, never replace it.
   Resend key and the Turnstile secret annually or on suspicion.
 - **Disclosure**: GitHub private vulnerability reporting is on; contact at
   `/.well-known/security.txt`, policy at `/security`. Default embargo 90 days.
+
+---
+
+## Hosting
+
+Production (`opendrone.be`) runs on Shopify Oxygen today (decision D3);
+`.github/workflows/oxygen-deployment-1000116751.yml` deploys every push to
+`main`. D15 (`erp/PLAN.md`) evaluates moving hosting to Cloudflare so Shopify
+can be retired entirely, Oxygen included. This branch adds a Cloudflare
+Workers **preview** only — no DNS change, no effect on `opendrone.be`.
+
+**Why it fits unchanged:** `npm run build` (the Hydrogen/Oxygen Vite
+toolchain, decision D3, unchanged by this branch) already emits a plain
+workerd ES module at `dist/server/index.js` with a standard
+`fetch(request, env, ctx)` export, because Oxygen is itself Shopify's
+Cloudflare Workers host. `wrangler.toml` points real Cloudflare Workers at
+that same build output and its static assets (`dist/client`); no application
+code changed for this.
+
+**Preview project:** `opendrone-web`, deployed by
+`.github/workflows/cloudflare-deploy.yml` on every push to
+`feat/cloudflare-hosting`, using repo secrets `CLOUDFLARE_API_TOKEN` and
+`CLOUDFLARE_ACCOUNT_ID` (same account as `../site`, see
+`../../operations/INTEGRATIONS.md`). **A founder must add both repo secrets**
+(Settings → Secrets and variables → Actions) before the workflow can deploy;
+this was not done as part of this change.
+
+**One-time setup**, from this repository:
+
+```sh
+npm run build
+npx wrangler deploy                              # creates the opendrone-web Worker
+npx wrangler secret put SESSION_SECRET            # openssl rand -hex 32
+```
+
+`CATALOG_URL` and `PUBLIC_SHOP_URL` are set as plain `[vars]` in
+`wrangler.toml` (public values, already the app's defaults); `SESSION_SECRET`
+is the only value the Worker needs that isn't already in the repo, and it only
+signs session cookies, so any random string works for a preview.
+
+The Cloudflare API token that already exists at
+`../../operations/.env` (`CLOUDFLARE_API_TOKEN`, used today for the
+`incutec-site` Pages project and for `../../operations/tools/cloudflare_dns.py`)
+**cannot create a new Workers script or a new Pages project**: both
+`wrangler deploy` and `wrangler pages project create` fail with an
+authentication/permission error against a fresh name. It can read zones/DNS
+and deploy to the already-existing `incutec-site` Pages project. Creating the
+`opendrone-web` project needs either a one-time run of the commands above from
+a session with a broader token (or the Cloudflare dashboard: Workers & Pages →
+Create), or the token's permissions widened to include Workers Scripts: Edit
+(or Cloudflare Pages: Edit, account-scoped) before CI can do it unattended.
+
+**Cutover (do not run without a separate, explicit request):**
+
+1. Confirm the preview serves `/`, a product page and the `/incutec/add`
+   cart hand-off correctly (see `npm run build` + `npx wrangler dev` locally,
+   or the deployed `*.workers.dev` URL).
+2. `opendrone.be`'s DNS lives on Gandi today (`A @ → 23.227.38.65`,
+   `CNAME www → shops.myshopify.com.`; see `../../operations/tools/gandi_dns.py`).
+   A Cloudflare Workers Custom Domain needs the zone's nameservers on
+   Cloudflare first (the way `incutec.com` was migrated; see
+   `../../operations/INTEGRATIONS.md`), not just a Gandi CNAME to
+   `*.workers.dev`. So cutover is: move the `opendrone.be` zone to Cloudflare,
+   add `opendrone.be` and `www` as Custom Domains on the `opendrone-web`
+   Worker, then `python3 ../../operations/tools/cloudflare_dns.py` to manage
+   any remaining records (mail, TXT) in the new zone.
+3. Remove `.github/workflows/oxygen-deployment-1000116751.yml` and the Oxygen
+   deployment in Shopify admin only after DNS has cut over and the Worker has
+   served production traffic without incident.
 
 ---
 

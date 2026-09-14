@@ -7,6 +7,8 @@ drafts/
 .env
 .env.local
 .env.*.local
+.dev.vars
+.wrangler/
 .cache/
 dist/
 build/
