@@ -547,8 +547,6 @@
         "label": "OpenESC"
       }
     ],
-    "matchOption": "Model",
-    "discountPct": 10,
-    "discountedHandle": "openesc"
+    "matchOption": "Model"
   }
 }

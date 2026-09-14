@@ -1,11 +1,11 @@
-import {Money} from '@shopify/hydrogen';
-import type {MoneyV2} from '@shopify/hydrogen/storefront-api-types';
+import type {MoneyV2} from '~/lib/product-shapes';
+import {formatPrice} from '~/lib/catalog';
 
 export function ProductPrice({
   price,
   compareAtPrice,
 }: {
-  price?: MoneyV2;
+  price?: MoneyV2 | null;
   compareAtPrice?: MoneyV2 | null;
 }) {
   return (
@@ -14,15 +14,15 @@ export function ProductPrice({
         <span className="product-price-row">
           {price ? (
             <span className="product-price-sale">
-              <Money data={price} />
+              {formatPrice(price.amount, price.currencyCode)}
             </span>
           ) : null}
           <s className="product-price-compare">
-            <Money data={compareAtPrice} />
+            {formatPrice(compareAtPrice.amount, compareAtPrice.currencyCode)}
           </s>
         </span>
       ) : price ? (
-        <Money data={price} />
+        formatPrice(price.amount, price.currencyCode)
       ) : (
         <span>&nbsp;</span>
       )}

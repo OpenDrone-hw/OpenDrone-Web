@@ -614,8 +614,6 @@
         "label": "OpenFC Lite"
       }
     ],
-    "matchOption": "Model",
-    "discountPct": 10,
-    "discountedHandle": "openesc"
+    "matchOption": "Model"
   }
 }
