@@ -417,70 +417,74 @@ into the existing TXT, never replace it.
 
 ## Hosting
 
-Production (`opendrone.be`) runs on Shopify Oxygen today (decision D3);
-`.github/workflows/oxygen-deployment-1000116751.yml` deploys every push to
-`main`. D15 (`erp/PLAN.md`) evaluates moving hosting to Cloudflare so Shopify
-can be retired entirely, Oxygen included. This branch adds a Cloudflare
-Workers **preview** only — no DNS change, no effect on `opendrone.be`.
+Production (`opendrone.be`, `www.opendrone.be`) runs on the Cloudflare
+Worker `opendrone-web` (D15/D16, `erp/PLAN.md`). The `opendrone.be` zone
+moved from Gandi DNS to Cloudflare as part of the cutover; Gandi remains the
+registrar. Shopify Oxygen still deploys in parallel on every push to `main`
+(`.github/workflows/oxygen-deployment-1000116751.yml`) but no longer serves
+any production traffic — retiring it (and the Shopify subscription) is a
+follow-up step, not yet done.
 
 **Why it fits unchanged:** `npm run build` (the Hydrogen/Oxygen Vite
-toolchain, decision D3, unchanged by this branch) already emits a plain
-workerd ES module at `dist/server/index.js` with a standard
-`fetch(request, env, ctx)` export, because Oxygen is itself Shopify's
-Cloudflare Workers host. `wrangler.toml` points real Cloudflare Workers at
-that same build output and its static assets (`dist/client`); no application
-code changed for this.
+toolchain, decision D3) emits a plain workerd ES module at
+`dist/server/index.js` with a standard `fetch(request, env, ctx)` export,
+because Oxygen is itself Shopify's Cloudflare Workers host. `wrangler.toml`
+points real Cloudflare Workers at that same build output and its static
+assets (`dist/client`); no application code changed for the move itself.
+`server.ts` adds one exception: `www.opendrone.be` 301s to the apex, matching
+Shopify's prior redirect, since a Cloudflare custom domain would otherwise
+serve `www` as a silent mirror.
 
-**Preview project:** `opendrone-web`, deployed by
-`.github/workflows/cloudflare-deploy.yml` on every push to
-`feat/cloudflare-hosting`, using repo secrets `CLOUDFLARE_API_TOKEN` and
-`CLOUDFLARE_ACCOUNT_ID` (same account as `../site`, see
-`../../operations/INTEGRATIONS.md`). **A founder must add both repo secrets**
-(Settings → Secrets and variables → Actions) before the workflow can deploy;
-this was not done as part of this change.
-
-**One-time setup**, from this repository:
-
-```sh
-npm run build
-npx wrangler deploy                              # creates the opendrone-web Worker
-npx wrangler secret put SESSION_SECRET            # openssl rand -hex 32
-```
+**Deploy:** `.github/workflows/cloudflare-deploy.yml` runs `wrangler deploy`
+on every push to `main` (production) and to `feat/cloudflare-hosting` (the
+branch used while a hosting change is in flight), using repo secrets
+`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` (same account as
+`../site`, see `../../operations/INTEGRATIONS.md`). The workflow pins
+`wranglerVersion: "4"`: wrangler 3.x doesn't understand `custom_domain = true`
+in `wrangler.toml`'s `routes` and falls back to the deprecated zone-level
+Workers Routes API, which needs a separate token permission from the
+account-level Custom Domains API wrangler 4 uses.
 
 `CATALOG_URL` and `PUBLIC_SHOP_URL` are set as plain `[vars]` in
-`wrangler.toml` (public values, already the app's defaults); `SESSION_SECRET`
-is the only value the Worker needs that isn't already in the repo, and it only
-signs session cookies, so any random string works for a preview.
+`wrangler.toml` (public values, already the app's defaults). Everything else
+Oxygen had is a Worker secret, set once with `npx wrangler secret put <NAME>`
+and not in the repo. Names only (values live in the Oxygen production
+environment or, for anything Oxygen keeps masked, only in the Shopify admin):
 
-The Cloudflare API token that already exists at
-`../../operations/.env` (`CLOUDFLARE_API_TOKEN`, used today for the
-`incutec-site` Pages project and for `../../operations/tools/cloudflare_dns.py`)
-**cannot create a new Workers script or a new Pages project**: both
-`wrangler deploy` and `wrangler pages project create` fail with an
-authentication/permission error against a fresh name. It can read zones/DNS
-and deploy to the already-existing `incutec-site` Pages project. Creating the
-`opendrone-web` project needs either a one-time run of the commands above from
-a session with a broader token (or the Cloudflare dashboard: Workers & Pages →
-Create), or the token's permissions widened to include Workers Scripts: Edit
-(or Cloudflare Pages: Edit, account-scoped) before CI can do it unattended.
+- `SESSION_SECRET` — its own random value per environment; no need to match Oxygen's.
+- `RESEND_API_KEY` — the opendrone.be Resend team's key (not
+  `../../operations/.env`'s, which is a different team; see below).
+- `SUPPORT_FROM_EMAIL`, `DISCORD_SUPPORT_CHANNEL_ID`, `DISCORD_GUILD_ID`,
+  `DISCORD_STAFF_METADATA_CHANNEL_ID`, `SUPPORT_MOD_ROLE_ID`,
+  `SUPPORT_MODERATION_MODE`, `DISCORD_SUPPORT_INVITE`,
+  `PUBLIC_DISCORD_GUILD_ID`, `PUBLIC_DISCORD_INVITE`, `TURNSTILE_SITE_KEY`,
+  `UPSTASH_REDIS_REST_URL` — ported from the Oxygen production environment.
+- **Not yet ported** — Shopify Hydrogen's `env pull` masks these as secret and
+  has no reveal command; only the Shopify admin (Hydrogen storefront →
+  Environments → Production) shows the real values: `DISCORD_BOT_TOKEN`
+  (without it the support Discord bridge stays off even with the IDs above
+  set), `TURNSTILE_SECRET_KEY` (support form CAPTCHA fails closed without
+  it), `SUPPORT_SESSION_SECRET`, `NEWSLETTER_DISPATCH_SECRET`,
+  `SUPPORT_CLEANUP_SECRET`, `UPSTASH_REDIS_REST_TOKEN`.
 
-**Cutover (do not run without a separate, explicit request):**
+**DNS:** the `opendrone.be` zone's Cloudflare-assigned nameservers
+(`dahlia.ns.cloudflare.com`, `henry.ns.cloudflare.com`) are set at Gandi.
+Every non-Shopify record from the old Gandi zone (MX, SPF, DKIM, DMARC, the
+Resend/SES records under `send.opendrone.be`) was recreated DNS-only on the
+Cloudflare zone before the nameserver switch; the apex and `www` are the
+Worker's Custom Domains instead of the old Shopify `A`/`CNAME`. Manage any
+further record on the new zone with `python3 ../../operations/tools/cloudflare_dns.py`.
+The Resend domain `opendrone.be` verifies under the Oxygen production
+`RESEND_API_KEY` (a dedicated, older Resend team, D15) — a *different* Resend
+account than `../../operations/.env`'s key, under which the same domain name
+shows `failed` (a stale, unrelated entry in the newer team, pending the D15
+Resend team merge). Use the Oxygen-sourced key for anything that must send as
+opendrone.be.
 
-1. Confirm the preview serves `/`, a product page and the `/incutec/add`
-   cart hand-off correctly (see `npm run build` + `npx wrangler dev` locally,
-   or the deployed `*.workers.dev` URL).
-2. `opendrone.be`'s DNS lives on Gandi today (`A @ → 23.227.38.65`,
-   `CNAME www → shops.myshopify.com.`; see `../../operations/tools/gandi_dns.py`).
-   A Cloudflare Workers Custom Domain needs the zone's nameservers on
-   Cloudflare first (the way `incutec.com` was migrated; see
-   `../../operations/INTEGRATIONS.md`), not just a Gandi CNAME to
-   `*.workers.dev`. So cutover is: move the `opendrone.be` zone to Cloudflare,
-   add `opendrone.be` and `www` as Custom Domains on the `opendrone-web`
-   Worker, then `python3 ../../operations/tools/cloudflare_dns.py` to manage
-   any remaining records (mail, TXT) in the new zone.
-3. Remove `.github/workflows/oxygen-deployment-1000116751.yml` and the Oxygen
-   deployment in Shopify admin only after DNS has cut over and the Worker has
-   served production traffic without incident.
+**Retiring Oxygen** (not yet done): once production has served from
+Cloudflare without incident, remove
+`.github/workflows/oxygen-deployment-1000116751.yml` and the Oxygen
+deployment in the Shopify admin. Do not touch anything else in Shopify.
 
 ---
 
