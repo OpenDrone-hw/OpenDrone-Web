@@ -24,12 +24,11 @@ const DEVICES = [
 const ROUTES = [
   ['home', '/'],
   ['collections', '/collections'],
-  ['catalog', '/collections/all'],
+  ['catalog', '/products'],
   ['product-openframe', '/products/openframe'], // FrameViewer (touch drag)
   ['product-openstack', '/products/openstack'], // BoardArt + FirmwareSplit + Schematic
   ['product-openesc', '/products/openesc'], // BoardArt (ESC)
   ['product-battery-strap', '/products/battery-strap'], // simple product
-  ['cart', '/cart'],
   ['search', '/search?q=esc'],
   ['support', '/support'],
   ['contact', '/contact'],

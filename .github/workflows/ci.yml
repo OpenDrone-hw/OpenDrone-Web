@@ -92,12 +92,4 @@ jobs:
       - name: Build (with stub env)
         env:
           SESSION_SECRET: "ci-stub-secret-for-build-only"
-          PUBLIC_STORE_DOMAIN: "example.myshopify.com"
-          PUBLIC_STOREFRONT_API_TOKEN: "ci-stub"
-          PUBLIC_STOREFRONT_ID: "0"
-          PUBLIC_CHECKOUT_DOMAIN: "example.com"
-          PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID: "ci-stub"
-          PUBLIC_CUSTOMER_ACCOUNT_API_URL: "https://example.com"
-          PRIVATE_STOREFRONT_API_TOKEN: "ci-stub"
-          SHOP_ID: "0"
         run: npm run build

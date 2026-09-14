@@ -127,18 +127,58 @@ describe('resolveStatus', () => {
     }
   });
 
-  it('preorder waits for the shop to open, or for PUBLIC_PREORDERS', () => {
+  it('preorder waits for the shop to open', () => {
     // The boards' content files carry status: "preorder" (verified, not
     // assumed, so a content edit that drops it fails here first).
     for (const handle of ['openesc', 'openfc-lite', 'openrx', 'openframe']) {
       assert.equal(PRODUCT_CONTENT[handle]?.status, 'preorder', handle);
-      // Global flag on: rendered as development, no orders taken...
+      // Global flag on: rendered as development, no orders taken.
       assert.equal(resolveStatus(handle, true), 'development', handle);
-      // ...unless preorders are opened early (the Oxygen preview).
-      assert.equal(resolveStatus(handle, true, {}, true), 'preorder', handle);
       // Flag off: the shop is open, so is the pre-order.
       assert.equal(resolveStatus(handle, false), 'preorder', handle);
     }
+  });
+
+  describe("Odoo's availability", () => {
+    it('decides who is orderable once the shop is open', () => {
+      assert.equal(resolveStatus('openesc', false, {}, 'in_stock'), 'live');
+      assert.equal(resolveStatus('openesc', false, {}, 'preorder'), 'preorder');
+      // sold_out is a live product with nothing on the shelf: the page
+      // shows the price and the sold-out state, not a launch teaser.
+      assert.equal(resolveStatus('openesc', false, {}, 'sold_out'), 'live');
+    });
+
+    it('still answers to the global kill switch for pre-orders', () => {
+      assert.equal(
+        resolveStatus('openesc', true, {}, 'preorder'),
+        'development',
+      );
+    });
+
+    it('never overrides a local idea or development status', () => {
+      PRODUCT_CONTENT['__test-idea-odoo'] = {
+        ...PRODUCT_CONTENT.openesc,
+        status: 'idea',
+      };
+      try {
+        assert.equal(
+          resolveStatus('__test-idea-odoo', false, {}, 'in_stock'),
+          'idea',
+        );
+      } finally {
+        delete PRODUCT_CONTENT['__test-idea-odoo'];
+      }
+    });
+
+    it('beats the roadmap topic for a product the shop sells', () => {
+      const alpha = {
+        'https://github.com/OpenDrone-hw/OpenESC-20x20': 'alpha',
+      } as const;
+      assert.equal(
+        resolveStatus('battery-strap', false, alpha, 'in_stock'),
+        'live',
+      );
+    });
   });
 
   it('preorder wins over the roadmap topic like any explicit status', () => {
@@ -218,7 +258,10 @@ describe('isComingSoon', () => {
 
   it('is false for a pre-order product once it takes orders', () => {
     assert.equal(isComingSoon('openrx', true), true);
-    assert.equal(isComingSoon('openrx', true, {}, true), false);
     assert.equal(isComingSoon('openrx', false), false);
+    // Odoo saying in_stock is just as purchasable.
+    assert.equal(isComingSoon('openrx', false, {}, 'in_stock'), false);
+    // ...but the kill switch still outranks it for a pre-order.
+    assert.equal(isComingSoon('openrx', true, {}, 'preorder'), true);
   });
 });

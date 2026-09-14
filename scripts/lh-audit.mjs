@@ -28,7 +28,7 @@ const argVal = (name, dflt) => {
 const BASE = argVal('url', 'https://opendrone.be').replace(/\/$/, '');
 const FORM = argVal('form', 'mobile');
 const OUT = argVal('out', '.lh');
-const ROUTES = argVal('routes', '/,/products/openesc,/products/openrx,/collections/all,/roadmap')
+const ROUTES = argVal('routes', '/,/products/openesc,/products/openrx,/products,/roadmap')
   .split(',')
   .map((r) => r.trim())
   .filter(Boolean);

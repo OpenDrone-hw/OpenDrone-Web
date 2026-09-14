@@ -199,7 +199,7 @@ const scenarios = {
 
   /** Collections + catalog interactions. */
   async collections(page, report) {
-    await page.goto(BASE + '/collections/all', {waitUntil: 'domcontentloaded'});
+    await page.goto(BASE + '/products', {waitUntil: 'domcontentloaded'});
     await page.evaluate(HARNESS);
     await idle(page, 800);
     report.nav = await page.evaluate(() => window.__pa.nav());
@@ -251,9 +251,10 @@ const scenarios = {
     }
   },
 
-  /** Cart drawer + cart page. */
+  /** The product listing: the closest thing to a cart page now that the
+   *  cart itself lives on the shop. */
   async cart(page, report) {
-    await page.goto(BASE + '/cart', {waitUntil: 'domcontentloaded'});
+    await page.goto(BASE + '/products', {waitUntil: 'domcontentloaded'});
     await page.evaluate(HARNESS);
     await idle(page, 800);
     report.nav = await page.evaluate(() => window.__pa.nav());
@@ -263,9 +264,9 @@ const scenarios = {
     );
   },
 
-  /** Search: predictive typing latency is the key metric. */
+  /** Search: the listing's client-side filter over the catalog. */
   async search(page, report) {
-    await page.goto(BASE + '/search', {waitUntil: 'domcontentloaded'});
+    await page.goto(BASE + '/products?q=open', {waitUntil: 'domcontentloaded'});
     await page.evaluate(HARNESS);
     await idle(page, 600);
     report.nav = await page.evaluate(() => window.__pa.nav());
@@ -313,10 +314,6 @@ const scenarios = {
     await idle(page, 1000);
     report.nav = await page.evaluate(() => window.__pa.nav());
     report.steps = [];
-    const cartBtn = page.locator('a[href="/cart"]:visible, button[aria-label*="cart" i]:visible').first();
-    if (await cartBtn.count()) {
-      report.steps.push(await measure(page, 'cart-hover-preview', () => cartBtn.hover(), 1200));
-    }
     const themeBtn = page.locator('button.theme-toggle:visible').first();
     if (await themeBtn.count()) {
       report.steps.push(await measure(page, 'theme-toggle', () => themeBtn.click(), 1500));
@@ -412,7 +409,7 @@ const scenarios = {
     const seen = new Set();
     let refetches = 0;
     const onReq = (req) => {
-      if (req.resourceType() !== 'image' || !/cdn\.shopify\.com\/s\/files/.test(req.url())) return;
+      if (req.resourceType() !== 'image' || !/\/web\/image\//.test(req.url())) return;
       if (seen.has(req.url())) refetches += 1;
       else seen.add(req.url());
     };
@@ -432,7 +429,7 @@ const scenarios = {
 
   /** Client-side navigation between routes (SPA transitions). */
   async spanav(page, report) {
-    await page.goto(BASE + '/collections/all', {waitUntil: 'domcontentloaded'});
+    await page.goto(BASE + '/products', {waitUntil: 'domcontentloaded'});
     await page.evaluate(HARNESS);
     await idle(page, 900);
     report.nav = await page.evaluate(() => window.__pa.nav());
