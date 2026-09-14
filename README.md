@@ -376,15 +376,42 @@ replace it.
 ## Going live
 
 The storefront is headless: checkout, payments, orders, inventory, and
-transactional email all live in Shopify's backend. No order completes until, in
-Shopify admin: a payment provider is active (Bancontact is essential in Belgium),
-shipping zones and rates exist, and VAT settings are confirmed
-(`taxesIncluded=true` is already on). Then point the Customer Account API
-callback URLs at the production domain, set real prices on the remaining SKUs,
-paste in the generated notification-email templates, and place one real
-low-value order end to end.
+transactional email all live in Shopify's backend. Shopify admin needs a
+payment provider (Bancontact is essential in Belgium), shipping zones and
+rates, confirmed VAT settings (`taxesIncluded=true` is on), the Customer
+Account API callback URLs pointed at the production domain, real prices on
+every SKU, and the generated notification-email templates.
 
-Compliance details (GPSR, withdrawal, battery shipping): `docs/store-compliance.md`.
+The launch model on the storefront side:
+
+- `PUBLIC_COMING_SOON=0` opens the shop. Until then every product renders as
+  coming soon (no price, notify-me signup) unless its roadmap topic says
+  otherwise.
+- `status: "preorder"` in `content/products/<handle>.json` makes a product
+  buyable at full price ahead of stock, with its own ship promise in
+  `statusNote` ("ships from early October 2026"); without one the shop-wide
+  default applies (`product-chrome.preorder_lead_default`). While
+  `PUBLIC_COMING_SOON` is still on, a pre-order product renders as coming soon.
+- `PUBLIC_PREORDERS=1` opens the pre-order products while the coming-soon flag
+  is still on: set it on the Oxygen preview environment to run end-to-end order
+  tests before launch. Never needed on production, where dropping the
+  coming-soon flag opens them.
+- Every cart line for a pre-order product carries a `Pre-order` line attribute
+  holding the ship promise, stamped server-side by the cart action (a client
+  cannot set or forge it). Shopify copies line attributes onto the order, so
+  the operator sees it on the order page and the packing slip.
+- One-parcel rule: an order that mixes in-stock and pre-order lines ships as
+  one parcel once every line is on hand. The cart, the order confirmation and
+  the shipping policy say so; the operator holds the order until then.
+- The cart's BE market lock (`app/routes/cart.tsx`) only pins the pricing
+  market (EUR, Belgian VAT). It does not block foreign addresses: checkout
+  collects the address and the shipping zones decide which countries are
+  served.
+
+Before launch, place one real low-value order end to end on the preview.
+
+Compliance details (GPSR, withdrawal, pre-orders, battery shipping):
+`docs/store-compliance.md`.
 
 ---
 

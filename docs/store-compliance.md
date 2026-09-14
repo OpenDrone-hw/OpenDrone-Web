@@ -23,6 +23,7 @@ Build these as required fields in the product template so a listing cannot publi
 - **Mandatory pre-contract information** on the offer and at checkout: trader identity plus geographic and electronic address, total price including taxes and all shipping/handling, payment and delivery arrangements, the withdrawal right plus model form, the legal guarantee, and complaint handling.
 - Do not link the EU ODR platform (discontinued 20 July 2025). Point consumers to the Belgian Consumentenombudsdienst instead.
 - Provide at least two substantially different delivery methods (Art. VI.45/2 WER).
+- **Pre-orders.** A pre-order product must state its expected ship date on the product page, in the cart and on the order confirmation; that date is the agreed delivery time (Art. VI.43 WER), so it must be stated, not implied. The full price is charged at order, and withdrawal (before delivery or within 14 days after it) is refunded in full within 14 days. The shipping policy carries the wording.
 
 ### Required legal pages
 Terms and conditions, privacy policy, cookie policy, return/refund policy, and the withdrawal form. Replace any auto-generated storefront defaults with the reviewed Incutec versions.

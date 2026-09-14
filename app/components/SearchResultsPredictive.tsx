@@ -8,7 +8,7 @@ import {
 } from '~/lib/search';
 import {useAside} from './Aside';
 import {useProductStatusResolver} from '~/lib/coming-soon';
-import {isComingSoon} from '~/lib/product-content';
+import {isComingSoon, isPurchasableStatus} from '~/lib/product-content';
 
 type PredictiveSearchItems = PredictiveSearchReturn['result']['items'];
 
@@ -217,7 +217,7 @@ function SearchResultsPredictiveProducts({
             term: term.current,
           });
 
-          const soon = productStatus(product.handle) !== 'live';
+          const soon = !isPurchasableStatus(productStatus(product.handle));
           const price = soon
             ? undefined
             : product?.selectedOrFirstAvailableVariant?.price;

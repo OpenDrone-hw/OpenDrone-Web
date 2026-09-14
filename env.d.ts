@@ -66,6 +66,10 @@ declare global {
     // overrides live in app/lib/product-content.ts (`comingSoon`).
     PUBLIC_COMING_SOON?: string;
 
+    // "1" opens pre-order products while PUBLIC_COMING_SOON is still on;
+    // used on the Oxygen preview for end-to-end order tests.
+    PUBLIC_PREORDERS?: string;
+
     PUBLIC_COMPANY_NAME?: string;
     PUBLIC_COMPANY_ADDRESS?: string;
     PUBLIC_COMPANY_KBO?: string;

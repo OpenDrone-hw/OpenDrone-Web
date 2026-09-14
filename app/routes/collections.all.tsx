@@ -14,9 +14,12 @@ import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {EmptyState} from '~/components/EmptyState';
 import {SearchForm} from '~/components/SearchForm';
 import {SearchResults} from '~/components/SearchResults';
-import {PRODUCT_CONTENT} from '~/lib/product-content';
+import {
+  PRODUCT_CONTENT,
+  isConceptFor,
+  isPurchasableStatus,
+} from '~/lib/product-content';
 import {useProductStatusResolver, useRoadmapStatusResolver} from '~/lib/coming-soon';
-import {isConceptStatus} from '~/lib/roadmap-data';
 import {stackDiscountedPrice} from '~/lib/stack-discount';
 import {Txt} from '~/components/Txt';
 import {copyText, editAttrs} from '~/lib/copy';
@@ -230,7 +233,7 @@ export default function Collection() {
     for (const p of products) {
       // Planned / in-progress products have no settled tiers or renders to
       // list; they live on /roadmap and their concept plate only.
-      if (isConceptStatus(roadmapStatus(p.handle))) continue;
+      if (isConceptFor(p.handle, roadmapStatus(p.handle))) continue;
       const content = PRODUCT_CONTENT[p.handle];
       const axis = content?.optionAxis;
       const allTiers =
@@ -247,7 +250,7 @@ export default function Collection() {
           ).flatMap((pc) => {
             // Unlaunched partners can't join a stack offer (their price
             // stays hidden everywhere).
-            if (productStatus(pc.handle) !== 'live') return [];
+            if (!isPurchasableStatus(productStatus(pc.handle))) return [];
             const partner = products.find((pp) => pp.handle === pc.handle);
             if (!partner || !sv) return [];
             const pv = variantFor(

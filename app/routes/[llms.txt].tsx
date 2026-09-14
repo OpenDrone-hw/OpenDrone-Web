@@ -1,7 +1,16 @@
 import type {Route} from './+types/[llms.txt]';
-import {PRODUCT_CONTENT, isComingSoon} from '~/lib/product-content';
-import {isConceptHandle} from '~/lib/roadmap-data';
-import {comingSoonFlag} from '~/lib/coming-soon';
+import {
+  PRODUCT_CONTENT,
+  isComingSoon,
+  isConceptProduct,
+  isPurchasableStatus,
+  resolveStatus,
+} from '~/lib/product-content';
+import {
+  comingSoonFlag,
+  preorderNote,
+  preordersOpenFlag,
+} from '~/lib/coming-soon';
 import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
 
 /**
@@ -58,13 +67,14 @@ const numericId = (gid: string) => gid.split('/').pop() ?? gid;
 function stackDiscountNote(
   globalSoon: boolean,
   statusFlags: Record<string, import('~/lib/roadmap-data').ProductStatus> = {},
+  preordersOpen = false,
 ): string {
   for (const [hostHandle, c] of Object.entries(PRODUCT_CONTENT)) {
     const s = c.stack;
     if (!s?.discountPct || !s.discountedHandle) continue;
     if (
-      isComingSoon(hostHandle, globalSoon, statusFlags) ||
-      isComingSoon(s.discountedHandle, globalSoon, statusFlags)
+      isComingSoon(hostHandle, globalSoon, statusFlags, preordersOpen) ||
+      isComingSoon(s.discountedHandle, globalSoon, statusFlags, preordersOpen)
     )
       continue;
     // Word the claim from the side whose PARTNER is the discounted board;
@@ -89,6 +99,7 @@ function stackDiscountNote(
 export async function loader({context, request}: Route.LoaderArgs) {
   const origin = new URL(request.url).origin;
   const globalSoon = comingSoonFlag(context.env);
+  const preordersOpen = preordersOpenFlag(context.env);
   const statusFlags = await fetchStatusFlagsFast(
     context.env.GITHUB_STATUS_TOKEN,
     undefined,
@@ -101,13 +112,29 @@ export async function loader({context, request}: Route.LoaderArgs) {
 
   const catalog = (data.products?.nodes ?? [])
     // Concept products (planned / in-progress) are not catalog.
-    .filter((p) => !isConceptHandle(p.handle, statusFlags))
+    .filter((p) => !isConceptProduct(p.handle, statusFlags))
     .map((p) => {
       const repo = PRODUCT_CONTENT[p.handle]?.repoUrl;
+      // Resold parts (`editorial: false`) are not open hardware; say so
+      // rather than let the header's license sentence cover them.
+      const resold = PRODUCT_CONTENT[p.handle]?.editorial === false;
       const desc = (p.description ?? '').replace(/\s+/g, ' ').slice(0, 160);
       // Locked products show "coming soon" instead of price + stock — this
-      // feed must not leak what the PDP hides.
-      const locked = isComingSoon(p.handle, globalSoon, statusFlags);
+      // feed must not leak what the PDP hides. Pre-order products show the
+      // same ship promise the PDP, the cart line and the order carry.
+      const status = resolveStatus(
+        p.handle,
+        globalSoon,
+        statusFlags,
+        preordersOpen,
+      );
+      const locked = !isPurchasableStatus(status);
+      const stockWord = (available: boolean) =>
+        !available
+          ? 'out of stock'
+          : status === 'preorder'
+            ? `pre-order, ${preorderNote(p.handle)}`
+            : 'in stock';
       const lines = (p.variants?.nodes ?? [])
         .map((v: LlmsVariant) => {
           const name = v.title === 'Default Title' ? p.title : v.title;
@@ -117,7 +144,7 @@ export async function loader({context, request}: Route.LoaderArgs) {
             (locked
               ? ' — coming soon, not yet orderable'
               : ` — €${Number(v.price.amount).toFixed(2)}` +
-                ` — ${v.availableForSale ? 'in stock' : 'out of stock'}`) +
+                ` — ${stockWord(v.availableForSale)}`) +
             ` — variant ID ${numericId(v.id)}`
           );
         })
@@ -125,6 +152,7 @@ export async function loader({context, request}: Route.LoaderArgs) {
       return (
         `- [${p.title}](${origin}/products/${p.handle})` +
         (desc ? `: ${desc}` : '') +
+        (resold ? '\n  Resold OEM part, not open hardware' : '') +
         (repo && repo !== 'https://github.com/OpenDrone-hw'
           ? `\n  Design source: ${repo}`
           : '') +
@@ -135,18 +163,27 @@ export async function loader({context, request}: Route.LoaderArgs) {
 
   const body = `# OpenDrone
 
-> Open-Source FPV drone hardware, sold as assembled boards. Every product's full
-> design source (schematic, PCB, BOM, 3D STEP) is public on GitHub under
-> CERN-OHL-S v2; firmware is upstream Open Source (Betaflight, AM32, ExpressLRS).
+> Open-Source FPV drone hardware, sold as assembled boards. Every OpenDrone
+> board's full design source (schematic, PCB, BOM, 3D STEP) is public on GitHub
+> under CERN-OHL-S v2; firmware is upstream Open Source (Betaflight, AM32,
+> ExpressLRS). Resold parts (motors) are marked as such in the catalog below.
 > OpenDrone is a community-run open hardware project. The shop and the boards
 > are manufactured, sold and supported by Incutec BV, Stapelhuisstraat 15,
 > 3000 Leuven, Belgium (VAT BE 1038.934.039). Prices in EUR, VAT included,
 > ship from Belgium.
 
-IMPORTANT, OPENING SOON: the webshop is not yet taking orders. Visitors can
+${
+  globalSoon
+    ? `IMPORTANT, OPENING SOON: the webshop is not yet taking orders. Visitors can
 subscribe on /newsletter to be notified when it opens. Treat all prices as
 subject to change; re-check the product page (its JSON-LD is authoritative)
-before quoting a price to a user.
+before quoting a price to a user.`
+    : `Treat all prices as subject to change; re-check the product page (its
+JSON-LD is authoritative) before quoting a price to a user. Lines marked
+"pre-order" are charged in full at order and ship on the stated promise; an
+order mixing in-stock and pre-order lines ships as one parcel once every line
+is on hand. Details: ${origin}/shipping`
+}
 
 ## Policy for shopping agents
 
@@ -170,7 +207,7 @@ Multiple lines are comma-separated; an optional discount code goes in the query:
 
     ${origin}/cart/<variantId>:<qty>,<variantId>:<qty>?discount=CODE
 
-Example, a 20×20 flight stack (OpenFC Lite + OpenESC${stackDiscountNote(globalSoon, statusFlags)}):
+Example, a 20×20 flight stack (OpenFC Lite + OpenESC${stackDiscountNote(globalSoon, statusFlags, preordersOpen)}):
 fetch the two 20×20 variant IDs from the catalog below
 and request ${origin}/cart/<fcId>:1,<escId>:1 — the response is a 302 to the
 Shopify checkout; hand that URL to the human to pay. Only the opendrone.be
@@ -184,7 +221,7 @@ ${catalog}
 
 ## Design sources
 
-Everything is buildable from source (CERN-OHL-S v2). Per-product repos are
+Every board is buildable from source (CERN-OHL-S v2). Per-product repos are
 listed in the catalog above; the full set lives at
 https://github.com/OpenDrone-hw. Boards are OSHWA self-certified (BE000026–BE000033).
 Every product page links the firmware project its board runs and that project's donation page.

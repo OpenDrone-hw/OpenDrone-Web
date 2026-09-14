@@ -7,12 +7,34 @@ import {ProductPrice} from './ProductPrice';
 import {useAside} from './Aside';
 import {Txt} from '~/components/Txt';
 import {copyText, editAttrs} from '~/lib/copy';
+import {PREORDER_ATTR_KEY} from '~/lib/preorder';
 import type {
   CartApiQueryFragment,
   CartLineFragment,
 } from 'storefrontapi.generated';
 
 export type CartLine = OptimisticCartLine<CartApiQueryFragment>;
+
+/** The ship promise the cart action stamped on a pre-order line (see
+ *  stampPreorderLines), or undefined. Only this attribute is ever shown;
+ *  optimistic lines carry no attributes until the server responds. */
+export function preorderNoteOf(line: {
+  attributes?: Array<{key: string; value?: string | null}> | null;
+}): string | undefined {
+  return (
+    (line.attributes ?? []).find((a) => a.key === PREORDER_ATTR_KEY)?.value ??
+    undefined
+  );
+}
+
+function PreorderLine({note}: {note: string | undefined}) {
+  if (!note) return null;
+  return (
+    <small className="cart-line-preorder">
+      {copyText('cart.preorder_line_prefix') ?? 'Pre-order'} · {note}
+    </small>
+  );
+}
 
 /** Sum a line's discount allocations into one label + amount (the stack BXGY
  *  or a code). Shopify splits over-quantity lines itself, so a line either
@@ -63,6 +85,7 @@ export function CartLineItem({
   const lineItemUrl = useVariantUrl(product.handle, selectedOptions);
   const {close} = useAside();
   const lineDiscount = lineDiscountOf(line);
+  const preorderNote = preorderNoteOf(line);
   // What the line would cost undiscounted, for the strikethrough.
   const preDiscountTotal =
     lineDiscount && line.cost?.totalAmount
@@ -143,6 +166,7 @@ export function CartLineItem({
                   </li>
                 ))}
             </ul>
+            <PreorderLine note={preorderNote} />
             {lineDiscount ? (
               <span className="cart-line-discount-badge">
                 {lineDiscount.label} −
@@ -235,6 +259,7 @@ export function CartLineItem({
                 </li>
               ))}
           </ul>
+          <PreorderLine note={preorderNote} />
           <CartLineQuantity line={line} />
         </div>
       </div>

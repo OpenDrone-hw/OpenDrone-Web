@@ -4398,6 +4398,13 @@ button.reset {
   border: 1px solid var(--color-border);
 }
 
+/* Pre-order: the default gold fill, stated so a later default change does
+   not silently restyle it. */
+.product-card-badge.is-preorder {
+  color: var(--color-on-accent);
+  background: var(--color-gold-fill);
+}
+
 /* Unreleased product — greyed, non-interactive (no link, no hover lift). */
 .product-card.is-comingsoon {
   opacity: 0.55;
@@ -4912,6 +4919,16 @@ button.reset {
 .product-buy-stock.is-out::before {
   background: var(--color-text-dim);
   box-shadow: none;
+}
+
+/* Pre-order: gold dot (same treatment as the coming-soon module below),
+   the label reads "Pre-order · <ship promise>". */
+.product-buy-stock.is-preorder {
+  color: var(--color-gold);
+}
+.product-buy-stock.is-preorder::before {
+  background: var(--color-gold-fill);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-gold) 18%, transparent);
 }
 
 /* Coming-soon buy module — the price slot carries a hairline COMING SOON
@@ -9394,6 +9411,16 @@ a.what-chain-chip:hover {
   border-radius: var(--r-pill);
   padding: 0.05rem 0.5rem;
   white-space: nowrap;
+}
+
+/* Pre-order line: the ship promise the cart action stamped on the line,
+   gold mono under the options list, in the drawer and on the sheet. */
+.cart-line-preorder {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--color-gold);
+  margin-top: 0.15rem;
 }
 
 /* Phone: a long stack-offer title inside the pill would overflow the item

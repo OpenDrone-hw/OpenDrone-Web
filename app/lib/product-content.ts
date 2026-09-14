@@ -21,6 +21,8 @@
 // Relative import on purpose: the node:test suites run this module without
 // Vite, so the `~` alias is not available here.
 import {
+  isConceptHandle,
+  isConceptStatus,
   statusForHandle,
   type ProductStatus as RoadmapStatus,
 } from './roadmap-data.ts';
@@ -361,13 +363,24 @@ export type ProductContent = {
    *  Superseded by `status`; kept while existing callers migrate. */
   comingSoon?: boolean;
   /** Lifecycle status. 'idea': a published concept with no hardware yet —
-   *  not purchasable, the PDP invites people to help design it. 
+   *  not purchasable, the PDP invites people to help design it.
    *  'development': designed, launch pending — notify-at-launch signup
-   *  (the classic coming-soon UX). 'live': purchasable; Shopify
+   *  (the classic coming-soon UX). 'preorder': purchasable at full price
+   *  ahead of stock; the order ships when the batch lands (the buy module
+   *  shows the pre-order lead time, the cart line carries a "Pre-order"
+   *  attribute and the whole order is held until every line is on hand).
+   *  Rendered as 'development' while the global PUBLIC_COMING_SOON flag is
+   *  on, unless PUBLIC_PREORDERS=1 opens pre-orders early (the Oxygen
+   *  preview does this for end-to-end tests). 'live': purchasable; Shopify
    *  availableForSale decides in stock vs sold out. Unset = follow the
    *  global PUBLIC_COMING_SOON flag ('development' while set, 'live'
    *  once cleared), or the legacy `comingSoon` boolean when present. */
   status?: ProductStatus;
+  /** `false` marks a resold product (motors, other OEM parts) that has a
+   *  content file for its status and copy but is NOT open hardware: no
+   *  CERN-OHL-S claim, no "Open for learning" or contributors chapter.
+   *  Unset = editorial (every OpenDrone board). */
+  editorial?: boolean;
   /** One line shown next to the status on the PDP buy module: "Restock
    *  expected late August", "First prototypes at the mill". Free text,
    *  keep it current fact only. */
@@ -536,7 +549,63 @@ export const PRODUCT_CONTENT: Record<string, ProductContent> =
   Object.fromEntries(LOADED);
 
 /** Product lifecycle. See {@link ProductContent.status}. */
-export type ProductStatus = 'idea' | 'development' | 'live';
+export type ProductStatus = 'idea' | 'development' | 'preorder' | 'live';
+
+/**
+ * Whether a status puts a price and an add-to-cart on the page. 'live'
+ * ships from stock; 'preorder' takes the order now and ships later. Every
+ * "can this be bought" decision goes through here, never `=== 'live'`.
+ */
+export function isPurchasableStatus(status: ProductStatus): boolean {
+  return status === 'live' || status === 'preorder';
+}
+
+/**
+ * Whether the content file declares a status that sells ('preorder' or
+ * 'live'). Such a product is a product page, not a concept, whatever its
+ * roadmap word says: the frame is 'in-progress' on the roadmap while it
+ * takes pre-orders. The roadmap word stays on the chip as display
+ * vocabulary; only the concept gate (plate, listings, feeds) is lifted.
+ */
+export function hasExplicitPurchasableStatus(
+  handle: string | null | undefined,
+): boolean {
+  const s = handle ? PRODUCT_CONTENT[handle]?.status : undefined;
+  return s !== undefined && isPurchasableStatus(s);
+}
+
+/**
+ * The concept gate for a handle with a resolved roadmap word (client
+ * surfaces, which hold the root loader's live map): planned / in-progress
+ * hides the product from listings and shows the plate, unless the content
+ * file declares a purchasable status. See {@link hasExplicitPurchasableStatus}.
+ */
+export function isConceptFor(
+  handle: string | null | undefined,
+  roadmapWord: RoadmapStatus | null | undefined,
+): boolean {
+  return isConceptStatus(roadmapWord) && !hasExplicitPurchasableStatus(handle);
+}
+
+/**
+ * The same gate for server loaders that carry the fetched topic flags
+ * (feeds), resolving the roadmap word itself.
+ */
+export function isConceptProduct(
+  handle: string,
+  flags: Record<string, RoadmapStatus> = {},
+): boolean {
+  return isConceptHandle(handle, flags) && !hasExplicitPurchasableStatus(handle);
+}
+
+/**
+ * Whether ANY content file declares a pre-order product. Guards the
+ * pre-order stamping in the cart action so a shop without pre-orders pays
+ * nothing for the feature.
+ */
+export function anyPreorderProducts(): boolean {
+  return Object.values(PRODUCT_CONTENT).some((c) => c.status === 'preorder');
+}
 
 /**
  * The roadmap's five-stage vocabulary collapsed to the page tri-state:
@@ -570,13 +639,23 @@ export function roadmapTriState(
  * so "flip to beta" is a deliberate release act by a maintainer, and the
  * global flag remains only the default for products with no roadmap entry
  * (accessories) plus the per-product JSON kill-switch above it.
+ *
+ * The one exception to "explicit status wins": 'preorder' only opens once
+ * the shop itself is open (global flag off) or `preordersOpen` is set
+ * (PUBLIC_PREORDERS=1). Until then it renders as 'development', so a
+ * pre-order status can sit in the content files before launch day without
+ * taking orders on the production site.
  */
 export function resolveStatus(
   handle: string | null | undefined,
   globalFlag: boolean,
   flags: Record<string, RoadmapStatus> = {},
+  preordersOpen = false,
 ): ProductStatus {
   const content = handle ? PRODUCT_CONTENT[handle] : undefined;
+  if (content?.status === 'preorder') {
+    return !globalFlag || preordersOpen ? 'preorder' : 'development';
+  }
   if (content?.status) return content.status;
   if (content?.comingSoon !== undefined) {
     return content.comingSoon ? 'development' : 'live';
@@ -589,14 +668,18 @@ export function resolveStatus(
 /**
  * Whether a product renders as not-yet-purchasable (no prices, no
  * add-to-cart). True for both 'idea' and 'development'; the buy module
- * differentiates the two via {@link resolveStatus}.
+ * differentiates the two via {@link resolveStatus}. 'preorder' is
+ * purchasable, so it is NOT coming soon.
  */
 export function isComingSoon(
   handle: string | null | undefined,
   globalFlag: boolean,
   flags: Record<string, RoadmapStatus> = {},
+  preordersOpen = false,
 ): boolean {
-  return resolveStatus(handle, globalFlag, flags) !== 'live';
+  return !isPurchasableStatus(
+    resolveStatus(handle, globalFlag, flags, preordersOpen),
+  );
 }
 
 /**

@@ -10,6 +10,7 @@ import type {
 } from 'storefrontapi.generated';
 import {useVariantUrl} from '~/lib/variants';
 import {useProductStatus, useRoadmapStatus} from '~/lib/coming-soon';
+import {isPurchasableStatus} from '~/lib/product-content';
 import {AddToCartButton} from './AddToCartButton';
 import {StackQuickAdd, type StackOffer} from './StackQuickAdd';
 import {useAside} from './Aside';
@@ -111,7 +112,7 @@ export function ProductItem({
   // shows no price and no quick-add.
   const status = useProductStatus(product.handle);
   const roadmapStatus = useRoadmapStatus(product.handle);
-  const launchPending = status !== 'live';
+  const launchPending = !isPurchasableStatus(status);
   const showPrice = !launchPending;
 
   // Quick-add overlay: revealed on card hover (always visible on touch).
@@ -142,7 +143,15 @@ export function ProductItem({
   // and dot as the kanban and the PDP chip. A span, not a link: the whole
   // card is already an anchor, and nested anchors are invalid — the
   // "what the labels mean" link lives once per listing, in the grid header.
-  const badge = roadmapStatus ? (
+  // A pre-order product wears the pre-order badge instead of its roadmap
+  // chip: the buyable state is the news on a card. Unreleased tiers
+  // (`comingSoon` prop) keep their own badge.
+  const badge =
+    status === 'preorder' && !comingSoon ? (
+      <span className="product-card-badge is-preorder">
+        {copyText('product-chrome.card_badge_preorder')}
+      </span>
+    ) : roadmapStatus ? (
     <span
       className="product-card-status"
       data-status={roadmapStatus}

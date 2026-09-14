@@ -21,7 +21,6 @@ import {
 import {useAside} from '~/components/Aside';
 import {Txt} from '~/components/Txt';
 import {ConceptPlate} from '~/components/ConceptPlate';
-import {isConceptStatus} from '~/lib/roadmap-data';
 import {WHAT_IS_THIS_ID} from '~/lib/product-content';
 import {CONTRIBUTING_URL} from '~/lib/company';
 import {ProductPrice} from '~/components/ProductPrice';
@@ -65,6 +64,8 @@ import {
   PRODUCT_CONTENT,
   PRODUCT_CONTENT_FALLBACK,
   isComingSoon,
+  isConceptFor,
+  isPurchasableStatus,
 } from '~/lib/product-content';
 import {useProductStatus} from '~/lib/coming-soon';
 import {fetchStatusFlagsFast, statusForHandle} from '~/lib/roadmap-data';
@@ -89,7 +90,9 @@ export const meta: Route.MetaFunction = ({data, location}) =>
     url: `${SITE_ORIGIN}${location.pathname}`,
     // Planned / in-progress products render the concept plate, which is a
     // placeholder, not content worth indexing.
-    robots: isConceptStatus(data?.roadmapStatus) ? 'noindex, follow' : undefined,
+    robots: isConceptFor(data?.product?.handle, data?.roadmapStatus)
+      ? 'noindex, follow'
+      : undefined,
   });
 
 /**
@@ -584,8 +587,9 @@ function useChapterReveal(key: string) {
 export default function Product() {
   const {product, roadmapStatus} = useLoaderData<typeof loader>();
   // Nothing about a planned or in-progress product is settled, so it gets
-  // the concept plate instead of a product page (docs/product-status.md).
-  if (isConceptStatus(roadmapStatus)) {
+  // the concept plate instead of a product page (docs/product-status.md),
+  // unless its content file says it sells (pre-order frame).
+  if (roadmapStatus && isConceptFor(product.handle, roadmapStatus)) {
     return <ConceptPlate title={product.title} status={roadmapStatus} />;
   }
   return <ProductPage />;
@@ -736,9 +740,11 @@ function ProductPage() {
   const rootData = useRouteLoaderData<RootLoader>('root');
   const globalComingSoon = rootData?.comingSoon ?? true;
   // Lifecycle status drives the buy module: 'idea' and 'development' are
-  // both not-purchasable (`soon`), but render different plates.
+  // both not-purchasable (`soon`), but render different plates; 'preorder'
+  // buys like 'live' with the ship promise on the stock line.
   const status = useProductStatus(product.handle);
-  const soon = status !== 'live';
+  const soon = !isPurchasableStatus(status);
+  const preorder = status === 'preorder';
 
   // Get the product options array
   const productOptions = getProductOptions({
@@ -751,11 +757,14 @@ function ProductPage() {
 
 
   const primaryCollection = product.collections?.nodes?.[0];
-  // isEditorial: this handle has a real PRODUCT_CONTENT entry. Fallback
-  // products (accessories like straps and hardware kits) are not open-source
-  // hardware — they must not claim a CERN-OHL-S license or render the
+  // isEditorial: this handle has a real PRODUCT_CONTENT entry that is open
+  // hardware. Fallback products (accessories like straps and hardware kits)
+  // and resold parts with `editorial: false` (motors) are not open-source
+  // hardware: they must not claim a CERN-OHL-S license or render the
   // "Open for learning" chapter pointing at the GitHub org.
-  const isEditorial = Boolean(PRODUCT_CONTENT[product.handle]);
+  const isEditorial =
+    Boolean(PRODUCT_CONTENT[product.handle]) &&
+    PRODUCT_CONTENT[product.handle]?.editorial !== false;
   const content = PRODUCT_CONTENT[product.handle] ?? PRODUCT_CONTENT_FALLBACK;
   const hasHeroCopy = Boolean(content.hero.line1);
   // Star aggregate from the review-synced metafields. Gated on the loader's
@@ -1494,6 +1503,7 @@ function ProductPage() {
     availableForSale: content.bundle
       ? bundleAvailable
       : (selectedVariant?.availableForSale ?? false),
+    preorder,
     productHandle: product.handle,
     // AggregateRating rides only when reviews are enabled and count > 0 —
     // same gate as the visible stars, so the structured data never claims
@@ -1657,25 +1667,49 @@ function ProductPage() {
           </span>
         ) : null}
       </div>
-      <span className={`product-buy-stock${buyAvailable ? '' : ' is-out'}`}>
+      {/* Pre-order: the stock line carries the ship promise (the product's
+          own statusNote, else the shop-wide default), the same words the
+          cart line and the order attribute carry. Shopify's inventory policy
+          still decides whether the add-to-cart is enabled. */}
+      <span
+        className={`product-buy-stock${
+          preorder && !isBundle ? ' is-preorder' : buyAvailable ? '' : ' is-out'
+        }`}
+      >
         {isBundle
           ? copyText(
               buyAvailable
                 ? 'product-chrome.buy_stock_bundle_in'
                 : 'product-chrome.buy_stock_bundle_out',
             )
-          : selectedVariant?.availableForSale
-            ? copyText('product-chrome.buy_stock_in')
-            : content.statusNote
-              ? (
-                  <>
-                    {copyText('product-chrome.buy_stock_out') ?? ''} ·{' '}
+          : preorder
+            ? (
+                <>
+                  {copyText('product-chrome.buy_stock_preorder_prefix') ?? ''} ·{' '}
+                  {content.statusNote ? (
                     <span {...prodEdit('statusNote')}>{content.statusNote}</span>
-                  </>
-                )
-              : copyText('product-chrome.buy_stock_out')}
+                  ) : (
+                    <Txt id="product-chrome.preorder_lead_default" as="span" />
+                  )}
+                </>
+              )
+            : selectedVariant?.availableForSale
+              ? copyText('product-chrome.buy_stock_in')
+              : content.statusNote
+                ? (
+                    <>
+                      {copyText('product-chrome.buy_stock_out') ?? ''} ·{' '}
+                      <span {...prodEdit('statusNote')}>{content.statusNote}</span>
+                    </>
+                  )
+                : copyText('product-chrome.buy_stock_out')}
       </span>
-      {!isBundle && selectedVariant && !selectedVariant.availableForSale ? (
+      {/* Sold-out signup: not for pre-order products, whose "unavailable"
+          is a Shopify inventory-policy state, not a launch to be notified of. */}
+      {!isBundle &&
+      !preorder &&
+      selectedVariant &&
+      !selectedVariant.availableForSale ? (
         <NewsletterSignup
           notify={{productHandle: product.handle, productTitle: product.title}}
           turnstileSiteKey={rootData?.turnstileSiteKey ?? null}

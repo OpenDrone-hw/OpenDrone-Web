@@ -17,7 +17,11 @@ import favicon from '~/assets/favicon.svg';
 import interVarWoff2 from '~/assets/fonts/inter-var.woff2';
 import jetbrainsMonoWoff2 from '~/assets/fonts/jetbrains-mono-Regular.woff2';
 import {HEADER_QUERY, HEADER_PRODUCTS_QUERY} from '~/lib/fragments';
-import {resolveAllStatuses, roadmapStatusMap} from '~/lib/coming-soon';
+import {
+  preordersOpenFlag,
+  resolveAllStatuses,
+  roadmapStatusMap,
+} from '~/lib/coming-soon';
 import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
 import {CUSTOMER_NEWSLETTER_STATE_QUERY} from '~/graphql/customer-account/NewsletterStateQuery';
 import resetStyles from '~/styles/reset.css?url';
@@ -152,6 +156,7 @@ export async function loader(args: Route.LoaderArgs) {
   // to the static statuses while the fetch fills the cache for the next
   // request.
   const globalComingSoon = env.PUBLIC_COMING_SOON !== '0';
+  const preordersOpen = preordersOpenFlag(env);
   const statusFlags = await fetchStatusFlagsFast(
     env.GITHUB_STATUS_TOKEN,
     400,
@@ -170,9 +175,16 @@ export async function loader(args: Route.LoaderArgs) {
     // Coming-soon kill switch: defaults ON; set PUBLIC_COMING_SOON=0 the day
     // orders open. Per-product overrides in product-content.ts win over this.
     comingSoon: globalComingSoon,
-    // Per-handle tri-state resolved with the live topic flags; the
+    // Pre-orders open while the shop is still coming soon (PUBLIC_PREORDERS=1,
+    // set on the Oxygen preview for end-to-end order tests).
+    preordersOpen,
+    // Per-handle status resolved with the live topic flags; the
     // useProductStatus/useComingSoon hooks read this map first.
-    productStatuses: resolveAllStatuses(globalComingSoon, statusFlags),
+    productStatuses: resolveAllStatuses(
+      globalComingSoon,
+      statusFlags,
+      preordersOpen,
+    ),
     // The five-stage roadmap word per handle, for status chips on cards
     // and listings (display vocabulary; buyability is the map above).
     roadmapStatuses: roadmapStatusMap(statusFlags),

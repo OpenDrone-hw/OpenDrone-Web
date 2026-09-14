@@ -2,7 +2,7 @@ import {useRouteLoaderData} from 'react-router';
 import type {Storefront} from '@shopify/hydrogen';
 import type {RootLoader} from '~/root';
 import {
-  isComingSoon,
+  isPurchasableStatus,
   resolveStatus,
   PRODUCT_CONTENT,
   type ProductStatus,
@@ -11,6 +11,15 @@ import {
   statusForHandle,
   type ProductStatus as RoadmapStatus,
 } from '~/lib/roadmap-data';
+import {preorderNote} from '~/lib/preorder';
+
+// The pure pre-order helpers live in app/lib/preorder.ts (bundler-free, so
+// the node:test suites can load them); re-exported here for the app.
+export {
+  PREORDER_ATTR_KEY,
+  preorderNote,
+  stampPreorderLines,
+} from '~/lib/preorder';
 
 /**
  * Every product handle's resolved tri-state, for the root loader: the
@@ -20,10 +29,11 @@ import {
 export function resolveAllStatuses(
   globalFlag: boolean,
   flags: Record<string, RoadmapStatus> = {},
+  preordersOpen = false,
 ): Record<string, ProductStatus> {
   const out: Record<string, ProductStatus> = {};
   for (const handle of Object.keys(PRODUCT_CONTENT)) {
-    out[handle] = resolveStatus(handle, globalFlag, flags);
+    out[handle] = resolveStatus(handle, globalFlag, flags, preordersOpen);
   }
   return out;
 }
@@ -78,7 +88,7 @@ export function useRoadmapStatusResolver(): (
  * the flag's fail-closed default.
  */
 export function useComingSoon(handle?: string | null): boolean {
-  return useProductStatus(handle) !== 'live';
+  return !isPurchasableStatus(useProductStatus(handle));
 }
 
 /**
@@ -109,8 +119,10 @@ export function useProductStatusResolver(): (
   const data = useRouteLoaderData<RootLoader>('root');
   const map = data?.productStatuses;
   const globalFlag = data?.comingSoon ?? true;
+  const preordersOpen = data?.preordersOpen ?? false;
   return (handle) =>
-    (handle ? map?.[handle] : undefined) ?? resolveStatus(handle, globalFlag);
+    (handle ? map?.[handle] : undefined) ??
+    resolveStatus(handle, globalFlag, {}, preordersOpen);
 }
 
 /**
@@ -121,6 +133,16 @@ export function useProductStatusResolver(): (
  */
 export function comingSoonFlag(env: {PUBLIC_COMING_SOON?: string}): boolean {
   return env.PUBLIC_COMING_SOON !== '0';
+}
+
+/**
+ * Whether pre-order products take orders while the shop is still coming
+ * soon: defaults OFF, `PUBLIC_PREORDERS=1` opens them. Set on the Oxygen
+ * preview environment for end-to-end order tests before launch; on
+ * production the coming-soon flag dropping opens pre-orders by itself.
+ */
+export function preordersOpenFlag(env: {PUBLIC_PREORDERS?: string}): boolean {
+  return env.PUBLIC_PREORDERS === '1';
 }
 
 /**
@@ -143,10 +165,11 @@ export function anyComingSoonLocks(
   ) {
     return true;
   }
-  // Roadmap-driven locks: any known handle that does not resolve to 'live'
-  // (an alpha board with a product page) keeps the cart gate armed.
+  // Roadmap-driven locks: any known handle that does not resolve to a
+  // purchasable status (an alpha board with a product page) keeps the cart
+  // gate armed.
   return Object.keys(PRODUCT_CONTENT).some(
-    (h) => resolveStatus(h, globalFlag, flags) !== 'live',
+    (h) => !isPurchasableStatus(resolveStatus(h, globalFlag, flags)),
   );
 }
 
@@ -169,10 +192,12 @@ const COMING_SOON_VARIANT_PRODUCTS_QUERY = `#graphql
 
 /**
  * Given cart-line merchandise gids, return the set that belongs to
- * coming-soon products (plus their handles, for messaging/redirects).
- * Callers must check {@link anyComingSoonLocks} first — this always
- * queries. Fail-closed: if the lookup errors while the gate is active,
- * every requested id is treated as locked (matching the `?? true`
+ * coming-soon products (plus their handles, for messaging/redirects) and
+ * the set that belongs to pre-order products (so the cart action can stamp
+ * the pre-order attribute on those lines). Callers must check
+ * {@link anyComingSoonLocks} or {@link anyPreorderProducts} first: this
+ * always queries. Fail-closed: if the lookup errors while the gate is
+ * active, every requested id is treated as locked (matching the `?? true`
  * default everywhere else in the feature).
  */
 export async function findLockedMerchandise(
@@ -180,9 +205,17 @@ export async function findLockedMerchandise(
   globalFlag: boolean,
   merchandiseIds: string[],
   flags: Record<string, RoadmapStatus> = {},
-): Promise<{lockedIds: Set<string>; lockedHandles: string[]}> {
+  preordersOpen = false,
+): Promise<{
+  lockedIds: Set<string>;
+  lockedHandles: string[];
+  /** merchandise gid -> the product's ship promise, for pre-order lines. */
+  preorderNotes: Map<string, string>;
+}> {
   const ids = [...new Set(merchandiseIds)].filter(Boolean);
-  if (ids.length === 0) return {lockedIds: new Set(), lockedHandles: []};
+  if (ids.length === 0) {
+    return {lockedIds: new Set(), lockedHandles: [], preorderNotes: new Map()};
+  }
   try {
     const data = await storefront.query(COMING_SOON_VARIANT_PRODUCTS_QUERY, {
       variables: {ids},
@@ -190,16 +223,26 @@ export async function findLockedMerchandise(
     });
     const lockedIds = new Set<string>();
     const lockedHandles = new Set<string>();
+    const preorderNotes = new Map<string, string>();
     for (const node of data.nodes ?? []) {
       const handle = node?.product?.handle;
-      if (node?.id && handle && isComingSoon(handle, globalFlag, flags)) {
+      if (!node?.id || !handle) continue;
+      const status = resolveStatus(handle, globalFlag, flags, preordersOpen);
+      if (!isPurchasableStatus(status)) {
         lockedIds.add(node.id);
         lockedHandles.add(handle);
+      } else if (status === 'preorder') {
+        preorderNotes.set(node.id, preorderNote(handle));
       }
     }
-    return {lockedIds, lockedHandles: [...lockedHandles]};
+    return {lockedIds, lockedHandles: [...lockedHandles], preorderNotes};
   } catch (err) {
     console.error('[coming-soon] variant lookup failed — blocking lines', err);
-    return {lockedIds: new Set(ids), lockedHandles: []};
+    return {
+      lockedIds: new Set(ids),
+      lockedHandles: [],
+      preorderNotes: new Map(),
+    };
   }
 }
+

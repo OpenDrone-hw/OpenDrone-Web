@@ -6,9 +6,8 @@ import {HeroWordmark} from '~/components/HeroWordmark';
 import {ProductItem} from '~/components/ProductItem';
 import {AnimatedNumber} from '~/components/AnimatedNumber';
 import {Txt} from '~/components/Txt';
-import {PRODUCT_CONTENT} from '~/lib/product-content';
+import {PRODUCT_CONTENT, isConceptFor} from '~/lib/product-content';
 import {useRoadmapStatusResolver} from '~/lib/coming-soon';
-import {isConceptStatus} from '~/lib/roadmap-data';
 import {BOARD_ART_VERSION} from '~/data/board-art-version';
 import {assetUrl} from '~/lib/asset-url';
 
@@ -29,7 +28,8 @@ const BOARD_THUMB_SIZES = '(min-width: 489px) 264px, 54vw';
  * the site (open-source page, PDP downloads); the design count is derived
  * from the product-content registry so it can't drift. */
 const OPEN_DESIGN_COUNT = Object.values(PRODUCT_CONTENT).filter(
-  (c) => c.fileNumber !== '—',
+  // Resold parts (`editorial: false`) are catalog, not open designs.
+  (c) => c.fileNumber !== '—' && c.editorial !== false,
 ).length;
 
 /* Row order and which row is derived. Labels are copy
@@ -237,7 +237,9 @@ export function MobileHome({
 function FeaturedGrid({items: all}: {items: CollectionItemFragment[]}) {
   // Concept products (planned / in-progress) never list.
   const roadmapStatus = useRoadmapStatusResolver();
-  const items = all.filter((p) => !isConceptStatus(roadmapStatus(p.handle)));
+  const items = all.filter(
+    (p) => !isConceptFor(p.handle, roadmapStatus(p.handle)),
+  );
   if (items.length === 0) return null;
   return (
     <section className="home-mobile-featured">

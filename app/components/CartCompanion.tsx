@@ -12,7 +12,11 @@ import {AddToCartButton} from '~/components/AddToCartButton';
 import {useAside} from '~/components/Aside';
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
-import {PRODUCT_CONTENT} from '~/lib/product-content';
+import {
+  PRODUCT_CONTENT,
+  isPurchasableStatus,
+  type ProductStatus,
+} from '~/lib/product-content';
 import {useProductStatusResolver} from '~/lib/coming-soon';
 import {trackEvent} from '~/lib/growth/plausible';
 import {attributionSource} from '~/lib/growth/attribution';
@@ -157,7 +161,7 @@ function CartCompanionRow({
 function findSuggestion(
   lines: CartLine[],
   products: HeaderFamilyProduct[],
-  productStatus: (handle?: string | null) => string,
+  productStatus: (handle?: string | null) => ProductStatus,
 ): Suggestion | null {
   // Root lines only — bundle children re-expand from their parent.
   const rootLines = lines.filter(
@@ -187,7 +191,7 @@ function findSuggestion(
       // Already in the cart — don't sell them a second one.
       if (inCart.has(partner.handle)) continue;
       // Coming-soon-locked — can't be bought, don't tease it here.
-      if (productStatus(partner.handle) !== 'live') continue;
+      if (!isPurchasableStatus(productStatus(partner.handle))) continue;
 
       const product = products.find((p) => p.handle === partner.handle);
       if (!product) continue;

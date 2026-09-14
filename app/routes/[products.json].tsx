@@ -1,7 +1,15 @@
 import type {Route} from './+types/[products.json]';
-import {PRODUCT_CONTENT, isComingSoon} from '~/lib/product-content';
-import {isConceptHandle} from '~/lib/roadmap-data';
-import {comingSoonFlag} from '~/lib/coming-soon';
+import {
+  PRODUCT_CONTENT,
+  isConceptProduct,
+  isPurchasableStatus,
+  resolveStatus,
+} from '~/lib/product-content';
+import {
+  comingSoonFlag,
+  preorderNote,
+  preordersOpenFlag,
+} from '~/lib/coming-soon';
 import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
 
 /**
@@ -50,6 +58,7 @@ const numericId = (gid: string) => gid.split('/').pop() ?? gid;
 export async function loader({context, request}: Route.LoaderArgs) {
   const origin = new URL(request.url).origin;
   const globalSoon = comingSoonFlag(context.env);
+  const preordersOpen = preordersOpenFlag(context.env);
   const statusFlags = await fetchStatusFlagsFast(
     context.env.GITHUB_STATUS_TOKEN,
     undefined,
@@ -62,12 +71,18 @@ export async function loader({context, request}: Route.LoaderArgs) {
 
   const products = (data.products?.nodes ?? [])
     // Concept products (planned / in-progress) are not catalog.
-    .filter((p) => !isConceptHandle(p.handle, statusFlags))
+    .filter((p) => !isConceptProduct(p.handle, statusFlags))
     .map((p) => {
       const content = PRODUCT_CONTENT[p.handle];
       // Locked products expose no price and no cart permalink — this feed is
       // the most scrapeable surface, so it must match what the PDP shows.
-      const locked = isComingSoon(p.handle, globalSoon, statusFlags);
+      const status = resolveStatus(
+        p.handle,
+        globalSoon,
+        statusFlags,
+        preordersOpen,
+      );
+      const locked = !isPurchasableStatus(status);
       return {
         handle: p.handle,
         title: p.title,
@@ -75,13 +90,19 @@ export async function loader({context, request}: Route.LoaderArgs) {
         product_type: p.productType || null,
         url: `${origin}/products/${p.handle}`,
         image: p.featuredImage?.url ?? null,
-        license: content ? 'CERN-OHL-S-2.0' : null,
+        // Resold parts (`editorial: false`) have a content file for their
+        // status and copy but are not open hardware: no license claim.
+        license:
+          content && content.editorial !== false ? 'CERN-OHL-S-2.0' : null,
         design_source:
           content?.repoUrl &&
           content.repoUrl !== 'https://github.com/OpenDrone-hw'
             ? content.repoUrl
             : null,
         ...(locked ? {coming_soon: true} : null),
+        // Pre-order: charged in full now, ships on this promise (the same
+        // string the PDP, the cart line and the order attribute carry).
+        ...(status === 'preorder' ? {preorder: preorderNote(p.handle)} : null),
         variants: (p.variants?.nodes ?? []).map((v) => {
           const id = numericId(v.id);
           return {
