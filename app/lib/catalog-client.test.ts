@@ -142,6 +142,6 @@ describe('catalog outage behavior', () => {
     assert.equal(production.generated_at, publicEnv.CATALOG_URL);
     assert.match(seen[0].authorization ?? '', /^Basic /);
     assert.equal(seen[1].authorization, null);
-    assert.ok(seen.every((entry) => entry.redirect === 'error'));
+    assert.ok(seen.every((entry) => entry.redirect === 'manual'));
   });
 });

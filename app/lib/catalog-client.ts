@@ -136,7 +136,7 @@ async function fetchAndStore(
   // Reject redirects so credentials can only reach the configured catalog
   // origin. The uncredentialed cache key remains safe for Cache API storage.
   const response = await fetch(new Request(cacheRequest, {headers}), {
-    redirect: 'error',
+    redirect: 'manual',
   });
   if (!response.ok) {
     throw new Error(`catalog: ${cacheRequest.url} returned ${response.status}`);
