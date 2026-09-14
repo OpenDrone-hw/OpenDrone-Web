@@ -446,9 +446,26 @@ Workers Routes API, which needs a separate token permission from the
 account-level Custom Domains API wrangler 4 uses.
 
 `CATALOG_URL` and `PUBLIC_SHOP_URL` are set as plain `[vars]` in
-`wrangler.toml` (public values, already the app's defaults); `SESSION_SECRET`
-is set once with `npx wrangler secret put SESSION_SECRET` and is not in the
-repo.
+`wrangler.toml` (public values, already the app's defaults). Everything else
+Oxygen had is a Worker secret, set once with `npx wrangler secret put <NAME>`
+and not in the repo. Names only (values live in the Oxygen production
+environment or, for anything Oxygen keeps masked, only in the Shopify admin):
+
+- `SESSION_SECRET` — its own random value per environment; no need to match Oxygen's.
+- `RESEND_API_KEY` — the opendrone.be Resend team's key (not
+  `../../operations/.env`'s, which is a different team; see below).
+- `SUPPORT_FROM_EMAIL`, `DISCORD_SUPPORT_CHANNEL_ID`, `DISCORD_GUILD_ID`,
+  `DISCORD_STAFF_METADATA_CHANNEL_ID`, `SUPPORT_MOD_ROLE_ID`,
+  `SUPPORT_MODERATION_MODE`, `DISCORD_SUPPORT_INVITE`,
+  `PUBLIC_DISCORD_GUILD_ID`, `PUBLIC_DISCORD_INVITE`, `TURNSTILE_SITE_KEY`,
+  `UPSTASH_REDIS_REST_URL` — ported from the Oxygen production environment.
+- **Not yet ported** — Shopify Hydrogen's `env pull` masks these as secret and
+  has no reveal command; only the Shopify admin (Hydrogen storefront →
+  Environments → Production) shows the real values: `DISCORD_BOT_TOKEN`
+  (without it the support Discord bridge stays off even with the IDs above
+  set), `TURNSTILE_SECRET_KEY` (support form CAPTCHA fails closed without
+  it), `SUPPORT_SESSION_SECRET`, `NEWSLETTER_DISPATCH_SECRET`,
+  `SUPPORT_CLEANUP_SECRET`, `UPSTASH_REDIS_REST_TOKEN`.
 
 **DNS:** the `opendrone.be` zone's Cloudflare-assigned nameservers
 (`dahlia.ns.cloudflare.com`, `henry.ns.cloudflare.com`) are set at Gandi.
@@ -457,9 +474,12 @@ Resend/SES records under `send.opendrone.be`) was recreated DNS-only on the
 Cloudflare zone before the nameserver switch; the apex and `www` are the
 Worker's Custom Domains instead of the old Shopify `A`/`CNAME`. Manage any
 further record on the new zone with `python3 ../../operations/tools/cloudflare_dns.py`.
-The Resend domain `opendrone.be` (a different, older Resend team than
-`../../operations/.env`'s key) has been in `failed` verification since before
-this cutover — D15's pending Resend team merge, unrelated to the DNS move.
+The Resend domain `opendrone.be` verifies under the Oxygen production
+`RESEND_API_KEY` (a dedicated, older Resend team, D15) — a *different* Resend
+account than `../../operations/.env`'s key, under which the same domain name
+shows `failed` (a stale, unrelated entry in the newer team, pending the D15
+Resend team merge). Use the Oxygen-sourced key for anything that must send as
+opendrone.be.
 
 **Retiring Oxygen** (not yet done): once production has served from
 Cloudflare without incident, remove
