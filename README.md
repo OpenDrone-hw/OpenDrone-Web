@@ -420,10 +420,10 @@ into the existing TXT, never replace it.
 Production (`opendrone.be`, `www.opendrone.be`) runs on the Cloudflare
 Worker `opendrone-web` (D15/D16, `erp/PLAN.md`). The `opendrone.be` zone
 moved from Gandi DNS to Cloudflare as part of the cutover; Gandi remains the
-registrar. Shopify Oxygen still deploys in parallel on every push to `main`
-(`.github/workflows/oxygen-deployment-1000116751.yml`) but no longer serves
-any production traffic — retiring it (and the Shopify subscription) is a
-follow-up step, not yet done.
+registrar. The parallel Shopify Oxygen deploy workflow
+(`.github/workflows/oxygen-deployment-1000116751.yml`) is removed; retiring
+the Oxygen deployment itself (and the Shopify subscription) in the Shopify
+admin remains a manual follow-up outside this repository.
 
 **Why it fits unchanged:** `npm run build` (the Hydrogen/Oxygen Vite
 toolchain, decision D3) emits a plain workerd ES module at
@@ -481,10 +481,9 @@ shows `failed` (a stale, unrelated entry in the newer team, pending the D15
 Resend team merge). Use the Oxygen-sourced key for anything that must send as
 opendrone.be.
 
-**Retiring Oxygen** (not yet done): once production has served from
-Cloudflare without incident, remove
-`.github/workflows/oxygen-deployment-1000116751.yml` and the Oxygen
-deployment in the Shopify admin. Do not touch anything else in Shopify.
+**Retiring Oxygen**: the deploy workflow is removed from this repository.
+The Oxygen deployment in the Shopify admin still needs deleting by hand; do
+not touch anything else in Shopify.
 
 ---
 
