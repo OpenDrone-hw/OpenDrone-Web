@@ -25,6 +25,22 @@ export type ProductImage = {
 /** Odoo's per-variant availability word, straight from the catalog feed. */
 export type CatalogAvailability = 'in_stock' | 'preorder' | 'sold_out';
 
+/**
+ * An issued Declaration of Conformity for one SKU's current design
+ * revision, straight from the catalog feed's optional `compliance` object
+ * (`erp/docs/storefront-contract.md` section 2, PLAN.md 11.4). Present on
+ * a variant only once `incutec_compliance` has an issued record for it;
+ * absent otherwise, never a stand-in with empty fields.
+ */
+export type CatalogCompliance = {
+  declaration_id: string | null;
+  version: string | null;
+  /** ISO date, e.g. "2026-09-14". */
+  issued_on: string | null;
+  doc_url: string;
+  bundle_url: string;
+};
+
 export type ProductVariantFragment = {
   id: string;
   sku: string | null;
@@ -42,6 +58,8 @@ export type ProductVariantFragment = {
   availability: CatalogAvailability;
   /** The variant's page on the shop, for the review list link. */
   shopUrl: string | null;
+  /** The issued DoC for this SKU, or null when none is issued yet. */
+  compliance: CatalogCompliance | null;
 };
 
 /** Card-sized product: listings, related strip, header pods, hero. */
