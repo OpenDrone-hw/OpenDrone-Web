@@ -1,0 +1,690 @@
+{
+  "apiVersion": "2026-01",
+  "deliveryProfiles": {
+    "unavailable": "scope read_shipping missing"
+  },
+  "locations": [
+    {
+      "city": "Leuven",
+      "countryCode": "BE",
+      "fulfillsOnlineOrders": true,
+      "id": "gid://shopify/Location/117571912025",
+      "isActive": true,
+      "name": "OpenDrone Leuven"
+    }
+  ],
+  "markets": {
+    "unavailable": "scope read_markets missing"
+  },
+  "products": [
+    {
+      "handle": "battery-strap",
+      "id": "gid://shopify/Product/16316794732889",
+      "options": [
+        {
+          "name": "Title",
+          "values": [
+            "Default Title"
+          ]
+        }
+      ],
+      "productType": "Accessory",
+      "status": "ACTIVE",
+      "title": "OpenDrone Battery Strap",
+      "variants": [
+        {
+          "compareAtPrice": null,
+          "countryCodeOfOrigin": "CN",
+          "harmonizedSystemCode": null,
+          "id": "gid://shopify/ProductVariant/58119860486489",
+          "inventoryPolicy": "DENY",
+          "price": "4.50",
+          "requiresShipping": true,
+          "sku": "ACC-STRAP-001",
+          "title": "Default Title",
+          "tracked": true,
+          "weight": {
+            "unit": "KILOGRAMS",
+            "value": 0.2
+          }
+        }
+      ],
+      "vendor": "OpenDrone"
+    },
+    {
+      "handle": "elrs-antenna-24",
+      "id": "gid://shopify/Product/16316794798425",
+      "options": [
+        {
+          "name": "Type",
+          "values": [
+            "U.FL Dipole",
+            "T-style"
+          ]
+        }
+      ],
+      "productType": "Accessory",
+      "status": "ACTIVE",
+      "title": "ELRS 2.4 GHz Antenna",
+      "variants": [
+        {
+          "compareAtPrice": null,
+          "countryCodeOfOrigin": "CN",
+          "harmonizedSystemCode": null,
+          "id": "gid://shopify/ProductVariant/58119860715865",
+          "inventoryPolicy": "DENY",
+          "price": "7.00",
+          "requiresShipping": true,
+          "sku": "ACC-ANT-T",
+          "title": "T-style",
+          "tracked": true,
+          "weight": {
+            "unit": "KILOGRAMS",
+            "value": 0.2
+          }
+        },
+        {
+          "compareAtPrice": null,
+          "countryCodeOfOrigin": "CN",
+          "harmonizedSystemCode": null,
+          "id": "gid://shopify/ProductVariant/58119860683097",
+          "inventoryPolicy": "DENY",
+          "price": "6.00",
+          "requiresShipping": true,
+          "sku": "ACC-ANT-UFL",
+          "title": "U.FL Dipole",
+          "tracked": true,
+          "weight": {
+            "unit": "KILOGRAMS",
+            "value": 0.2
+          }
+        }
+      ],
+      "vendor": "OpenDrone"
+    },
+    {
+      "handle": "firmware-donation",
+      "id": "gid://shopify/Product/16392600191321",
+      "options": [
+        {
+          "name": "Amount",
+          "values": [
+            "€1",
+            "€3",
+            "€5",
+            "€10"
+          ]
+        }
+      ],
+      "productType": "Donation",
+      "status": "ARCHIVED",
+      "title": "Firmware donation",
+      "variants": [
+        {
+          "compareAtPrice": null,
+          "countryCodeOfOrigin": null,
+          "harmonizedSystemCode": null,
+          "id": "gid://shopify/ProductVariant/58467432137049",
+          "inventoryPolicy": "DENY",
+          "price": "1.00",
+          "requiresShipping": false,
+          "sku": null,
+          "title": "€1",
+          "tracked": false,
+          "weight": {
+            "unit": "KILOGRAMS",
+            "value": 0
+          }
+        },
+        {
+          "compareAtPrice": null,
+          "countryCodeOfOrigin": null,
+          "harmonizedSystemCode": null,
+          "id": "gid://shopify/ProductVariant/58467432235353",
+          "inventoryPolicy": "DENY",
+          "price": "10.00",
+          "requiresShipping": false,
+          "sku": null,
+          "title": "€10",
+          "tracked": false,
+          "weight": {
+            "unit": "KILOGRAMS",
+            "value": 0
+          }
+        },
+        {
+          "compareAtPrice": null,
+          "countryCodeOfOrigin": null,
+          "harmonizedSystemCode": null,
+          "id": "gid://shopify/ProductVariant/58467432169817",
+          "inventoryPolicy": "DENY",
+          "price": "3.00",
+          "requiresShipping": false,
+          "sku": null,
+          "title": "€3",
+          "tracked": false,
+          "weight": {
+            "unit": "KILOGRAMS",
+            "value": 0
+          }
+        },
+        {
+          "compareAtPrice": null,
+          "countryCodeOfOrigin": null,
+          "harmonizedSystemCode": null,
+          "id": "gid://shopify/ProductVariant/58467432202585",
+          "inventoryPolicy": "DENY",
+          "price": "5.00",
+          "requiresShipping": false,
+          "sku": null,
+          "title": "€5",
+          "tracked": false,
+          "weight": {
+            "unit": "KILOGRAMS",
+            "value": 0
+          }
+        }
+      ],
+      "vendor": "OpenDrone"
+    },
+    {
+      "handle": "hardware-kit",
+      "id": "gid://shopify/Product/16316794995033",
+      "options": [
+        {
+          "name": "Kit",
+          "values": [
+            "M3 soft-mount grommets (×4)",
+            "Standoff + bolt kit"
+          ]
+        }
+      ],
+      "productType": "Accessory",
+      "status": "ACTIVE",
+      "title": "OpenDrone Hardware Kit",
+      "variants": [
+        {
+          "compareAtPrice": null,
+          "countryCodeOfOrigin": "CN",
+          "harmonizedSystemCode": null,
+          "id": "gid://shopify/ProductVariant/58119861469529",
+          "inventoryPolicy": "DENY",
+          "price": "3.00",
+          "requiresShipping": true,
+          "sku": "ACC-HW-GROMMET",
+          "title": "M3 soft-mount grommets (×4)",
+          "tracked": true,
+          "weight": {
+            "unit": "KILOGRAMS",
+            "value": 0.2
+          }
+        },
+        {
+          "compareAtPrice": null,
+          "countryCodeOfOrigin": "CN",
+          "harmonizedSystemCode": null,
+          "id": "gid://shopify/ProductVariant/58119861666137",
+          "inventoryPolicy": "DENY",
+          "price": "5.00",
+          "requiresShipping": true,
+          "sku": "ACC-HW-STANDOFF",
+          "title": "Standoff + bolt kit",
+          "tracked": true,
+          "weight": {
+            "unit": "KILOGRAMS",
+            "value": 0.2
+          }
+        }
+      ],
+      "vendor": "OpenDrone"
+    },
+    {
+      "handle": "openesc",
+      "id": "gid://shopify/Product/16254063870297",
+      "options": [
+        {
+          "name": "Model",
+          "values": [
+            "20×20",
+            "30×30"
+          ]
+        }
+      ],
+      "productType": "ESC",
+      "status": "ACTIVE",
+      "title": "OpenESC",
+      "variants": [
+        {
+          "compareAtPrice": null,
+          "countryCodeOfOrigin": "CN",
+          "harmonizedSystemCode": "85044082",
+          "id": "gid://shopify/ProductVariant/57852985868633",
+          "inventoryPolicy": "CONTINUE",
+          "price": "35.00",
+          "requiresShipping": true,
+          "sku": "OPENESC-2020",
+          "title": "20×20",
+          "tracked": true,
+          "weight": {
+            "unit": "KILOGRAMS",
+            "value": 0.2
+          }
+        },
+        {
+          "compareAtPrice": null,
+          "countryCodeOfOrigin": "CN",
+          "harmonizedSystemCode": "85044082",
+          "id": "gid://shopify/ProductVariant/58118923747673",
+          "inventoryPolicy": "CONTINUE",
+          "price": "45.00",
+          "requiresShipping": true,
+          "sku": "OPENESC-3030",
+          "title": "30×30",
+          "tracked": true,
+          "weight": {
+            "unit": "KILOGRAMS",
+            "value": 0.2
+          }
+        }
+      ],
+      "vendor": "OpenDrone"
+    },
+    {
+      "handle": "openfc-lite",
+      "id": "gid://shopify/Product/16341314503001",
+      "options": [
+        {
+          "name": "Model",
+          "values": [
+            "20×20",
+            "30×30"
+          ]
+        }
+      ],
+      "productType": "Flight Controller",
+      "status": "ACTIVE",
+      "title": "OpenFC Lite",
+      "variants": [
+        {
+          "compareAtPrice": null,
+          "countryCodeOfOrigin": "CN",
+          "harmonizedSystemCode": "85371098",
+          "id": "gid://shopify/ProductVariant/58231176921433",
+          "inventoryPolicy": "CONTINUE",
+          "price": "35.00",
+          "requiresShipping": true,
+          "sku": "OPENFC-LITE-2020",
+          "title": "20×20",
+          "tracked": true,
+          "weight": {
+            "unit": "KILOGRAMS",
+            "value": 0.2
+          }
+        },
+        {
+          "compareAtPrice": null,
+          "countryCodeOfOrigin": "CN",
+          "harmonizedSystemCode": "85371098",
+          "id": "gid://shopify/ProductVariant/58231176954201",
+          "inventoryPolicy": "CONTINUE",
+          "price": "35.00",
+          "requiresShipping": true,
+          "sku": "OPENFC-LITE-3030",
+          "title": "30×30",
+          "tracked": true,
+          "weight": {
+            "unit": "KILOGRAMS",
+            "value": 0.2
+          }
+        }
+      ],
+      "vendor": "OpenDrone"
+    },
+    {
+      "handle": "openframe",
+      "id": "gid://shopify/Product/16254098178393",
+      "options": [
+        {
+          "name": "Model",
+          "values": [
+            "5\" Freestyle",
+            "3\" Freestyle"
+          ]
+        }
+      ],
+      "productType": "Frame",
+      "status": "ACTIVE",
+      "title": "OpenFrame",
+      "variants": [
+        {
+          "compareAtPrice": null,
+          "countryCodeOfOrigin": "CN",
+          "harmonizedSystemCode": null,
+          "id": "gid://shopify/ProductVariant/58118929678681",
+          "inventoryPolicy": "CONTINUE",
+          "price": "35.00",
+          "requiresShipping": true,
+          "sku": "OPENFRAME-3",
+          "title": "3\" Freestyle",
+          "tracked": true,
+          "weight": {
+            "unit": "KILOGRAMS",
+            "value": 0.2
+          }
+        },
+        {
+          "compareAtPrice": null,
+          "countryCodeOfOrigin": "CN",
+          "harmonizedSystemCode": null,
+          "id": "gid://shopify/ProductVariant/57853085548889",
+          "inventoryPolicy": "CONTINUE",
+          "price": "41.00",
+          "requiresShipping": true,
+          "sku": "OPENFRAME-5",
+          "title": "5\" Freestyle",
+          "tracked": true,
+          "weight": {
+            "unit": "KILOGRAMS",
+            "value": 0.2
+          }
+        }
+      ],
+      "vendor": "OpenDrone"
+    },
+    {
+      "handle": "openframe-spares",
+      "id": "gid://shopify/Product/16316794863961",
+      "options": [
+        {
+          "name": "Part",
+          "values": [
+            "Arms (set of 4)",
+            "Top plate",
+            "Bottom plate",
+            "Hardware kit"
+          ]
+        }
+      ],
+      "productType": "Accessory",
+      "status": "ACTIVE",
+      "title": "OpenFrame Spare Parts",
+      "variants": [
+        {
+          "compareAtPrice": null,
+          "countryCodeOfOrigin": "CN",
+          "harmonizedSystemCode": null,
+          "id": "gid://shopify/ProductVariant/58119860912473",
+          "inventoryPolicy": "DENY",
+          "price": "24.00",
+          "requiresShipping": true,
+          "sku": "ACC-FRM-ARMS",
+          "title": "Arms (set of 4)",
+          "tracked": true,
+          "weight": {
+            "unit": "KILOGRAMS",
+            "value": 0.2
+          }
+        },
+        {
+          "compareAtPrice": null,
+          "countryCodeOfOrigin": "CN",
+          "harmonizedSystemCode": null,
+          "id": "gid://shopify/ProductVariant/58119861141849",
+          "inventoryPolicy": "DENY",
+          "price": "12.00",
+          "requiresShipping": true,
+          "sku": "ACC-FRM-BOT",
+          "title": "Bottom plate",
+          "tracked": true,
+          "weight": {
+            "unit": "KILOGRAMS",
+            "value": 0.2
+          }
+        },
+        {
+          "compareAtPrice": null,
+          "countryCodeOfOrigin": "CN",
+          "harmonizedSystemCode": null,
+          "id": "gid://shopify/ProductVariant/58119861174617",
+          "inventoryPolicy": "DENY",
+          "price": "8.00",
+          "requiresShipping": true,
+          "sku": "ACC-FRM-HW",
+          "title": "Hardware kit",
+          "tracked": true,
+          "weight": {
+            "unit": "KILOGRAMS",
+            "value": 0.2
+          }
+        },
+        {
+          "compareAtPrice": null,
+          "countryCodeOfOrigin": "CN",
+          "harmonizedSystemCode": null,
+          "id": "gid://shopify/ProductVariant/58119861109081",
+          "inventoryPolicy": "DENY",
+          "price": "12.00",
+          "requiresShipping": true,
+          "sku": "ACC-FRM-TOP",
+          "title": "Top plate",
+          "tracked": true,
+          "weight": {
+            "unit": "KILOGRAMS",
+            "value": 0.2
+          }
+        }
+      ],
+      "vendor": "OpenDrone"
+    },
+    {
+      "handle": "openmotor",
+      "id": "gid://shopify/Product/16609299104089",
+      "options": [
+        {
+          "name": "Model",
+          "values": [
+            "1604",
+            "2207"
+          ]
+        }
+      ],
+      "productType": "Motor",
+      "status": "ACTIVE",
+      "title": "OpenMotor",
+      "variants": [
+        {
+          "compareAtPrice": null,
+          "countryCodeOfOrigin": null,
+          "harmonizedSystemCode": null,
+          "id": "gid://shopify/ProductVariant/59420090007897",
+          "inventoryPolicy": "CONTINUE",
+          "price": "15.00",
+          "requiresShipping": true,
+          "sku": "OPENMOTOR-1604",
+          "title": "1604",
+          "tracked": true,
+          "weight": {
+            "unit": "KILOGRAMS",
+            "value": 0.05
+          }
+        },
+        {
+          "compareAtPrice": null,
+          "countryCodeOfOrigin": null,
+          "harmonizedSystemCode": null,
+          "id": "gid://shopify/ProductVariant/59420090040665",
+          "inventoryPolicy": "CONTINUE",
+          "price": "20.00",
+          "requiresShipping": true,
+          "sku": "OPENMOTOR-2207",
+          "title": "2207",
+          "tracked": true,
+          "weight": {
+            "unit": "KILOGRAMS",
+            "value": 0.05
+          }
+        }
+      ],
+      "vendor": "OpenDrone"
+    },
+    {
+      "handle": "openrx",
+      "id": "gid://shopify/Product/16254095720793",
+      "options": [
+        {
+          "name": "Model",
+          "values": [
+            "Lite",
+            "Lite-UFL",
+            "Mono",
+            "Gemini"
+          ]
+        }
+      ],
+      "productType": "Receiver",
+      "status": "ACTIVE",
+      "title": "OpenRX",
+      "variants": [
+        {
+          "compareAtPrice": null,
+          "countryCodeOfOrigin": "CN",
+          "harmonizedSystemCode": "85176200",
+          "id": "gid://shopify/ProductVariant/58118927974745",
+          "inventoryPolicy": "CONTINUE",
+          "price": "35.00",
+          "requiresShipping": true,
+          "sku": "OPENRX-GEMINI",
+          "title": "Gemini",
+          "tracked": true,
+          "weight": {
+            "unit": "KILOGRAMS",
+            "value": 0.2
+          }
+        },
+        {
+          "compareAtPrice": null,
+          "countryCodeOfOrigin": "CN",
+          "harmonizedSystemCode": "85176200",
+          "id": "gid://shopify/ProductVariant/57853081715033",
+          "inventoryPolicy": "CONTINUE",
+          "price": "18.00",
+          "requiresShipping": true,
+          "sku": "OPENRX-LITE",
+          "title": "Lite",
+          "tracked": true,
+          "weight": {
+            "unit": "KILOGRAMS",
+            "value": 0.2
+          }
+        },
+        {
+          "compareAtPrice": null,
+          "countryCodeOfOrigin": "CN",
+          "harmonizedSystemCode": "85176200",
+          "id": "gid://shopify/ProductVariant/58118927909209",
+          "inventoryPolicy": "CONTINUE",
+          "price": "20.00",
+          "requiresShipping": true,
+          "sku": "OPENRX-LITE-UFL",
+          "title": "Lite-UFL",
+          "tracked": true,
+          "weight": {
+            "unit": "KILOGRAMS",
+            "value": 0.2
+          }
+        },
+        {
+          "compareAtPrice": null,
+          "countryCodeOfOrigin": "CN",
+          "harmonizedSystemCode": "85176200",
+          "id": "gid://shopify/ProductVariant/58118927941977",
+          "inventoryPolicy": "CONTINUE",
+          "price": "25.00",
+          "requiresShipping": true,
+          "sku": "OPENRX-MONO",
+          "title": "Mono",
+          "tracked": true,
+          "weight": {
+            "unit": "KILOGRAMS",
+            "value": 0.2
+          }
+        }
+      ],
+      "vendor": "OpenDrone"
+    },
+    {
+      "handle": "openstack",
+      "id": "gid://shopify/Product/16254201659737",
+      "options": [
+        {
+          "name": "Title",
+          "values": [
+            "Default Title"
+          ]
+        }
+      ],
+      "productType": "Bundle",
+      "status": "ARCHIVED",
+      "title": "OpenStack",
+      "variants": [
+        {
+          "compareAtPrice": null,
+          "countryCodeOfOrigin": "CN",
+          "harmonizedSystemCode": null,
+          "id": "gid://shopify/ProductVariant/57853387178329",
+          "inventoryPolicy": "DENY",
+          "price": "114.00",
+          "requiresShipping": true,
+          "sku": "OPENSTACK",
+          "title": "Default Title",
+          "tracked": true,
+          "weight": {
+            "unit": "KILOGRAMS",
+            "value": 0.2
+          }
+        }
+      ],
+      "vendor": "OpenDrone"
+    }
+  ],
+  "shop": {
+    "currencyCode": "EUR",
+    "myshopifyDomain": "ktjqug-jw.myshopify.com",
+    "name": "OpenDrone",
+    "shipsToCountries": [
+      "AT",
+      "AU",
+      "BE",
+      "CA",
+      "CH",
+      "CY",
+      "CZ",
+      "DE",
+      "DK",
+      "EE",
+      "ES",
+      "FI",
+      "FR",
+      "GR",
+      "HR",
+      "HU",
+      "IE",
+      "IT",
+      "JP",
+      "LT",
+      "LU",
+      "LV",
+      "MT",
+      "NL",
+      "NO",
+      "PL",
+      "PT",
+      "RO",
+      "SE",
+      "SI",
+      "SK",
+      "TR"
+    ],
+    "taxesIncluded": true
+  }
+}
