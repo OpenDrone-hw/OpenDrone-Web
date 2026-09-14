@@ -8,6 +8,14 @@ La version néerlandaise (/shipping) constitue le texte juridiquement faisant fo
 
 Les commandes sont normalement expédiées dans les 2 jours ouvrables suivant la réception du paiement. Le délai final de livraison est de 30 jours calendrier après la commande, sauf accord exprès contraire (Art. VI.43 du Code de droit économique belge, Art. 7 de nos Conditions Générales de Vente). Si Incutec BV ne respecte pas le délai de livraison de 30 jours, le consommateur peut proposer un délai supplémentaire raisonnable. À défaut de livraison dans ce délai supplémentaire, le consommateur peut résilier le contrat sans frais (Art. VI.43 §2 CDE), à moins que le délai de livraison initial ait été essentiel ou qu’Incutec BV ait déjà refusé de livrer.
 
+### Précommandes
+
+Certains produits sont vendus en précommande. Ils sont indiqués comme tels, avec leur date d’expédition prévue, sur la page produit, dans le panier et sur la confirmation de commande. Le prix intégral est facturé lors de la commande. La date d’expédition indiquée constitue le délai de livraison convenu entre le consommateur et Incutec BV au sens de l’Art. VI.43 du Code de droit économique belge, de sorte que le délai par défaut de 30 jours mentionné ci-dessus ne s’applique pas aux articles en précommande.
+
+Une commande combinant des articles en stock et des articles en précommande est expédiée en un seul colis dès que chaque article est en stock. Si Incutec BV ne peut respecter la date d’expédition indiquée, elle en informe le consommateur, qui peut alors annuler la commande sans frais et obtenir un remboursement intégral.
+
+Le droit de rétractation de 14 jours s’applique à compter de la livraison. Le consommateur peut en outre annuler une précommande à tout moment avant la livraison ; Incutec BV rembourse l’intégralité du montant payé dans les 14 jours suivant l’annulation.
+
 ### Tarifs et pays d’expédition
 
 Les frais d’expédition dépendent de la destination et du poids du colis. Certains pays sont exclus en raison de sanctions à l’exportation : voir notre [politique d’usage final](/end-use).
