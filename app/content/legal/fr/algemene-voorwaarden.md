@@ -79,6 +79,22 @@
 
 7.4. Incutec BV propose au moins **deux modes de livraison sensiblement différents** (art. VI.45/2 CDE).
 
+### Article 7bis : Précommandes
+
+7bis.1. Certains produits sont vendus en précommande. Ils sont indiqués comme tels, avec leur fenêtre d’expédition, sur la page produit, dans le panier et sur la confirmation de commande. Le consommateur paie le prix intégral lors de la commande.
+
+7bis.2. Fenêtres d’expédition au lancement : le contrôleur de vol et l’ESC sont expédiés à partir de mi-octobre 2026 ; tout autre produit en précommande est expédié environ 10 semaines après la commande. La fenêtre d’expédition indiquée constitue le délai de livraison convenu entre le consommateur et Incutec BV au sens de l’art. VI.43 CDE, de sorte que le délai par défaut de 30 jours de l’article 7.1 ne s’applique pas aux articles en précommande.
+
+7bis.3. Si Incutec BV ne peut pas expédier dans la fenêtre indiquée, elle en informe le consommateur et propose, au choix du consommateur, une nouvelle date d’expédition ou un remboursement intégral dans les 14 jours.
+
+7bis.4. Le consommateur peut annuler une précommande avant l’expédition pour un remboursement intégral. Ceci est sans préjudice du droit de rétractation prévu à l’article 5, qui court à compter de la livraison et que le consommateur peut également exercer à tout moment avant la livraison.
+
+7bis.5. Une commande combinant des articles en stock et des articles en précommande est expédiée en un seul colis, dès que chaque article est disponible (une seule livraison par commande).
+
+7bis.6. Les paiements de précommande financent la production et l’achat du stock pour la commande. Ils ne portent aucun intérêt et ne confèrent aucune participation, partage de revenus ni autre intérêt de propriété dans Incutec BV.
+
+7bis.7. Les colis expédiés en dehors de l’Union européenne peuvent être soumis à des droits d’importation et taxes payables par le consommateur à la livraison, sauf si le mode de livraison choisi précise que les droits sont pris en charge par Incutec BV.
+
 ### Article 8 : Paiement
 
 8.1. Le paiement s’effectue via les moyens de paiement proposés sur le site web (carte de crédit, Bancontact, iDEAL, virement bancaire, etc.).

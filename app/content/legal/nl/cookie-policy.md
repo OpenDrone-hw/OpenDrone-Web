@@ -15,17 +15,19 @@ Cookies zijn kleine tekstbestanden die door een website op uw apparaat worden ge
 
 #### Strikt noodzakelijke cookies (geen toestemming vereist)
 
+Deze site (opendrone.be) plaatst zelf geen winkelwagen- of checkoutcookie: bij aankoop wordt uw winkelmandje aangemaakt op shop.incutec.com.
+
 | Cookie | Doel | Bewaartermijn |
 |--------|------|--------------|
-| `cart`, `cart_sig`, `cart_ts`, `_secure_session_id`, `_shopify_tm` | Winkelwagen- en sessiebeheer (Shopify) | Sessie |
-| `_tracking_consent`, `_cmp_a` | Uw cookievoorkeuren onthouden (Shopify Customer Privacy API) | 6 maanden |
-| `__stripe_mid`, `__stripe_sid` | Fraudepreventie bij betaling — wordt **uitsluitend op de gehoste Shopify-checkoutpagina's** geplaatst tijdens de betaling, niet op deze storefront (Stripe, Art. 10/2 Wet van 30 juli 2018 (zoals ingevoegd door de Wet van 21 december 2021), strikt noodzakelijk voor de uitdrukkelijk gevraagde dienst; Art. 5(3) ePrivacy-richtlijn 2002/58/EG) | 1 jaar / sessie |
+| Sessiecookie (shop.incutec.com) | Houdt uw winkelmandje en accountaanmelding tijdens het afrekenen werkend | Sessie |
+| Consentcookie (shop.incutec.com) | Onthoudt uw cookiekeuze, indien een toestemmingsbanner wordt getoond | 6 maanden |
+| Betalingscookies (gehoste betaalpagina van Mollie of de kaartuitgever) | Fraudepreventie bij betaling — wordt **uitsluitend op de gehoste betaalpagina** geplaatst tijdens de betaling, niet op opendrone.be of shop.incutec.com (Art. 10/2 Wet van 30 juli 2018 (zoals ingevoegd door de Wet van 21 december 2021), strikt noodzakelijk voor de uitdrukkelijk gevraagde dienst; Art. 5(3) ePrivacy-richtlijn 2002/58/EG) | Sessie |
+
+shop.incutec.com plaatst uitsluitend de sessie- en consentcookie hierboven: geen analytische of marketingcookies.
 
 #### Analytische cookies
 
-Wij gebruiken **Plausible Analytics** (EU-gehost, cookieloos). Plausible plaatst geen cookies en slaat geen persistente identifier op; het IP-adres wordt gehasht en niet bewaard. Deze verwerking valt niet onder de toestemmingsvereiste van de ePrivacy-regels en steunt op ons gerechtvaardigd belang (Art. 6.1.f AVG). Daarom tonen wij geen toestemmingsbanner voor analyse.
-
-Shopify's ingebouwde analytische cookies (`_shopify_s`, `_shopify_y`) zijn niet geactiveerd en worden op deze storefront niet geplaatst.
+Wij gebruiken **Plausible Analytics** op opendrone.be (EU-gehost, cookieloos). Plausible plaatst geen cookies en slaat geen persistente identifier op; het IP-adres wordt gehasht en niet bewaard. Deze verwerking valt niet onder de toestemmingsvereiste van de ePrivacy-regels en steunt op ons gerechtvaardigd belang (Art. 6.1.f AVG). Daarom tonen wij geen toestemmingsbanner voor analyse. shop.incutec.com plaatst geen enkele analytische cookie.
 
 #### Marketing cookies
 
