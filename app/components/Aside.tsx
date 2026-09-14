@@ -8,10 +8,14 @@ import {
   useState,
 } from 'react';
 import {useId} from 'react';
-import {trackEvent} from '~/lib/growth/plausible';
-import {attributionSource} from '~/lib/growth/attribution';
 
-type AsideType = 'search' | 'cart' | 'mobile' | 'closed';
+/**
+ * The only aside left is the mobile menu drawer. The cart drawer went
+ * with the local cart (the cart icon links to the shop) and the search
+ * drawer with predictive search (the listing filters client-side), so
+ * their types are gone rather than kept as dead states.
+ */
+type AsideType = 'mobile' | 'closed';
 type AsideContextValue = {
   type: AsideType;
   /** True while the aside is open as a non-modal hover preview. */
@@ -228,23 +232,6 @@ Aside.Provider = function AsideProvider({children}: {children: ReactNode}) {
     type: 'closed',
     preview: false,
   });
-
-  // Funnel diagnostic: one `Cart Drawer Open` per DELIBERATE drawer open,
-  // meaning a full open (add-to-cart, click) or a hover preview the
-  // visitor pinned by interacting inside it. Graze previews (pointer
-  // passing the cart icon) never count, or hover noise would swamp the
-  // signal. Detected on the modal-cart state transition, with a ref
-  // guard, so StrictMode's double effect run cannot double-fire.
-  const prevStateRef = useRef(state);
-  useEffect(() => {
-    const was = prevStateRef.current;
-    prevStateRef.current = state;
-    const isModalCart = state.type === 'cart' && !state.preview;
-    const wasModalCart = was.type === 'cart' && !was.preview;
-    if (isModalCart && !wasModalCart) {
-      trackEvent('Cart Drawer Open', {props: {source: attributionSource()}});
-    }
-  }, [state]);
 
   const open = useCallback(
     (type: AsideType) => setState({type, preview: false}),
