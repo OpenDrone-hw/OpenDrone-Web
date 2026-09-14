@@ -1,32 +1,32 @@
 import {Link} from 'react-router';
-import {Money, type OptimisticCartLineInput} from '@shopify/hydrogen';
 import {ShoppingCart} from 'lucide-react';
 import {AddToCartButton} from './AddToCartButton';
 import {trackEvent} from '~/lib/growth/plausible';
 import {attributionSource} from '~/lib/growth/attribution';
 
-/** A stack companion for a pod row: one candidate partner board, size-matched,
- *  with BOTH cart lines prebuilt so a single click orders the pair. */
+/** A stack companion for a pod row: one candidate partner board,
+ *  size-matched, on one multi-line hand-off link so a single click puts
+ *  the pair in the Odoo cart. */
 export type PodCompanionOption = {
   key: string;
   /** Full name for tooltips/aria, e.g. "OpenESC · 20×20". */
   title: string;
   /** Chip label, e.g. "ESC" (renders as "+ESC"). */
   short: string;
-  /** Displayed price. When the companion is the board the BXGY discounts,
-   *  the host passes the derived discounted price (what checkout actually
-   *  charges for it once the pair is in the cart). */
+  /** Displayed price. When the companion is the board a configured Odoo
+   *  promotion discounts, the host passes the derived discounted price. */
   price?: {amount: string; currencyCode: string} | null;
   /** The companion's undiscounted price, set ONLY when `price` is the
    *  derived discounted one: the tooltip then shows "full -> discounted"
    *  so the pct never reads as a further cut on the shown price. */
   fullPrice?: {amount: string; currencyCode: string} | null;
   pct?: number;
-  /** Short label of the board the pct is off (the BXGY discounts ONE board,
-   *  today the OpenESC, never the pair), e.g. "ESC". Without it the pct is
-   *  not shown: an unattributed percent would read as pair-wide. */
+  /** Short label of the board the pct is off (a promotion discounts ONE
+   *  board, never the pair), e.g. "ESC". Without it the pct is not shown:
+   *  an unattributed percent would read as pair-wide. */
   discountedShort?: string;
-  lines: OptimisticCartLineInput[];
+  /** The multi-line hand-off link for the pair. */
+  href: string;
   available: boolean;
   imageUrl?: string | null;
 };
@@ -49,17 +49,17 @@ export type ProductPodItem = {
    *  button per companion (both lines, one click). Hosts without it (the
    *  hero showcase) render exactly as before. */
   buy?: {
-    lines: OptimisticCartLineInput[];
+    /** The single-line hand-off link for this row's own SKU. */
+    href: string;
+    /** Product handle for the funnel events. */
+    product?: string | null;
     available: boolean;
-    flyImage?: string | null;
     /** Short family name of the row's own product ("FC", "ESC") — names the
      *  buttons so it's unambiguous what each one adds. */
     selfShort?: string;
     companions?: PodCompanionOption[];
   };
 };
-
-type MoneyData = React.ComponentProps<typeof Money>['data'];
 
 const fmt = (p?: {amount: string; currencyCode: string} | null) =>
   p
@@ -132,9 +132,7 @@ export function ProductPods({
             {it.soon ? (
               <span className="product-pod-soon">Soon</span>
             ) : it.price ? (
-              <span className="product-pod-price">
-                <Money data={it.price as MoneyData} />
-              </span>
+              <span className="product-pod-price">{fmt(it.price)}</span>
             ) : null}
           </Link>
         );
@@ -163,9 +161,9 @@ export function ProductPods({
             >
               <AddToCartButton
                 className="pod-buy-add"
-                lines={it.buy.lines}
+                href={it.buy.href}
+                product={it.buy.product}
                 disabled={!it.buy.available}
-                flyImage={it.buy.flyImage}
                 onClick={onAdd}
                 ariaLabel={`Add ${it.title} to cart`}
               >
@@ -179,20 +177,16 @@ export function ProductPods({
                 <AddToCartButton
                   key={o.key}
                   className="pod-buy-stack"
-                  lines={o.lines}
+                  href={o.href}
+                  product={it.buy?.product}
                   disabled={!o.available}
-                  flyImage={o.imageUrl ?? it.buy?.flyImage}
                   onClick={() => {
-                    // Stack-builder engagement from the header/collection
-                    // pods. NOT it.key (a variant GID on tier rows): the
-                    // first line's product handle is the low-cardinality id.
-                    const v = it.buy?.lines[0]?.selectedVariant as
-                      | {product?: {handle?: string | null} | null}
-                      | null
-                      | undefined;
+                    // Stack-builder engagement from the header/listing
+                    // pods. The row's product handle is the
+                    // low-cardinality id, never it.key (a SKU on tier rows).
                     trackEvent('Stack Toggle', {
                       props: {
-                        product: v?.product?.handle ?? 'unknown',
+                        product: it.buy?.product ?? 'unknown',
                         partner: o.key,
                         surface: 'pod',
                         source: attributionSource(),
@@ -202,7 +196,7 @@ export function ProductPods({
                   }}
                   ariaLabel={`Add ${it.title} and ${o.title} as a stack${
                     o.pct && o.discountedShort
-                      ? `, ${o.discountedShort} ${o.pct}% off at checkout`
+                      ? `, ${o.discountedShort} ${o.pct}% off in the cart`
                       : ''
                   }`}
                   dataTip={
@@ -211,10 +205,10 @@ export function ProductPods({
                         // discounted one, spell out full -> discounted so
                         // the pct can't read as a further cut on it.
                         o.fullPrice && o.pct && o.discountedShort
-                        ? `${o.title} · +${fmt(o.fullPrice)} → ${fmt(o.price)} (${o.discountedShort} −${o.pct}% at checkout)`
+                        ? `${o.title} · +${fmt(o.fullPrice)} → ${fmt(o.price)} (${o.discountedShort} −${o.pct}% in the cart)`
                         : `${o.title} · +${fmt(o.price)}${
                             o.pct && o.discountedShort
-                              ? ` · ${o.discountedShort} −${o.pct}% at checkout`
+                              ? ` · ${o.discountedShort} −${o.pct}% in the cart`
                               : ''
                           }`
                       : 'Out of stock'

@@ -5,12 +5,17 @@ hardware, designed and sold from Belgium. Flight controllers (OpenFC), 4-in-1 ES
 (OpenESC), ExpressLRS receivers (OpenRX), carbon frames (OpenFrame), and the OpenStack
 bundle.
 
-Under the hood it is a Shopify store, but not a themed one: a headless
-**[Hydrogen](https://hydrogen.shopify.dev/)** app on **Oxygen** (Shopify's Cloudflare
-Workers host). Shopify owns the cart, checkout, catalog, and customer accounts. This
-repo owns everything the visitor actually looks at, plus a support desk that lives
-inside the Worker and a local editing studio that makes the whole site editable
-without touching code.
+Under the hood it is a headless **[Hydrogen](https://hydrogen.shopify.dev/)** app
+on **Oxygen** (Shopify's Cloudflare Workers host). The commerce backend is
+**Odoo**, at [shop.incutec.com](https://shop.incutec.com): it owns the catalog,
+prices, availability, cart, checkout, payment, orders, invoices, addresses and
+customer accounts. This repo reads one public catalog JSON from it, hands every
+buy click to it, and owns everything else the visitor looks at, plus a support
+desk that lives inside the Worker and a local editing studio that makes the
+whole site editable without touching code.
+
+Oxygen is hosting and build toolchain only; nothing in `app/` calls a Shopify
+API at runtime.
 
 Selling entity is **Incutec BV**; OpenDrone is the community project and product
 brand. This storefront is MIT; the hardware repos are CERN-OHL-S.
@@ -30,6 +35,7 @@ store compliance).
 - [Environment variables](#environment-variables)
 - [Operations](#operations)
 - [Security](#security)
+- [Hosting](#hosting)
 - [Going live](#going-live)
 - [Contributing](#contributing)
 - [License](#license)
@@ -75,9 +81,10 @@ and toggled by data (`content/products/*.json`):
 - **Prose**: the escape hatch chapter type whose whole content comes from the copy
   store, for when a page just needs a few extra paragraphs.
 
-Product lines (OpenESC 20×20 / 30×30, the four OpenRX variants) are one Shopify
-product with a variant axis. The page renders the line as a tier-card ladder that
-doubles as the buy selector, wired to real Shopify variants by option name.
+Product lines (OpenESC 20×20 / 30×30, the four OpenRX variants) are one Odoo
+product with a `Model` attribute. The page renders the line as a tier-card ladder
+that doubles as the buy selector, matched to the catalog's variants by option
+name and value.
 
 ### Roadmap: status straight from GitHub
 
@@ -130,6 +137,18 @@ WebSocket, no application database:
   reacts ✅). PII goes to a private staff channel, never the public thread.
 - A 15-minute cron emails customers the replies they did not see arrive; a
   nightly cron deletes stale threads and index entries.
+- Every ticket, and every message a visitor sends into it, is best-effort
+  mirrored into Odoo `project.task` (`erp/addons/incutec_support`, erp
+  PLAN.md step 12.2) so staff also see it in the ERP: `app/lib/support/odoo.ts`
+  calls `POST /incutec/support/ticket` when the Discord thread is created
+  (`app/routes/api.support.start.tsx`) and `POST
+  /incutec/support/ticket/<ref>/message` for each message the visitor sends
+  (`app/routes/api.support.send.tsx`), authenticated with
+  `X-Incutec-Support-Token`. The returned `ticket_ref` (e.g. `SUP-00001`) is
+  stored on the Upstash ticket record and appended to the resume-link
+  confirmation email the visitor already gets. Every Odoo call retries once
+  and then just logs a warning: an Odoo outage never blocks or changes the
+  Discord flow.
 
 `/account/support` shows the signed-in ticket history. `/contact` is the front
 door with the Discord invite card. UI in `app/components/Support*.tsx`, server in
@@ -137,11 +156,14 @@ door with the Discord invite card. UI in `app/components/Support*.tsx`, server i
 
 ### Newsletter: written locally, sent by hand
 
-`/newsletter` is the post archive (the Shopify `news` blog) plus a signup form in
-the footer of every page. Posts are Markdown files in `content/posts/`, published
-with `npm run publish:post` (idempotent by slug, uploads images to Shopify Files).
-Sending email is a deliberate manual step in Shopify admin; publishing never
-emails anyone.
+`/newsletter` is the post archive plus a signup form in the footer of every
+page. Posts are Markdown files in `content/posts/`, rendered by the app the way
+the legal pages are (`app/lib/posts.ts`): set `published: true` in the front
+matter, commit, and the post is live at `/newsletter/<slug>` and in
+`/newsletter.rss`. Images are authored in `content/posts/images/` and served
+from `public/posts/`; add each one to both. Subscribers are Resend contacts and
+sending is a deliberate manual step (`scripts/launch-blast.mjs`); publishing
+never emails anyone.
 
 ### Wholesale and firmware partners
 
@@ -160,23 +182,31 @@ vulnerability handling, end-use, e-invoicing) each serve at `/{en,nl,fr}/<slug>`
 keeps the snapshots. The site UI itself is English-only; `LangToggle` appears
 only on legal paths.
 
-### Account, cart, collections, search
+### Account, cart, products
 
-Customer accounts are Shopify's OAuth (login, orders, addresses, profile) via the
-Customer Account API. The cart is Hydrogen `CartForm`; the buyer's country is
-hard-locked to BE so nobody can switch the cart's market mid-session. Collections
-and search are conventional Shopify storefront pages; search lives in a slide-over
-drawer with predictive results.
+None of these live here. The buy button is a link to
+`https://shop.incutec.com/incutec/add?sku=…&qty=1&next=cart`, which adds the
+lines to the visitor's own Odoo cart and redirects them to it; the stack builder
+puts both SKUs on one `?lines=A:1,B:1` link. Accounts, orders, invoices and
+addresses are the Odoo portal (`/my`, `/my/orders`, `/my/invoices`,
+`/my/addresses`), and `/account/*` 301s there.
+
+`/products` is the one browse page: every product and every model as its own
+card, filtered and sorted client-side from the URL, with a text filter in place
+of the old predictive search. `/collections/*`, `/search`, `/cart/*` and
+`/discount/*` all 301 to it.
 
 ### The invisible pages
 
 `/api/status/<Repo>.json` is a shields.io endpoint badge: the board repo READMEs
 render their status badge from it, so the badge, the roadmap and the shop all
-resolve the same `status-*` topic. `robots.txt`, a paginated `sitemap.xml` plus a static child sitemap for the
-codebase-only routes, RSS feeds, RFC 9116 `security.txt`, `healthz`, and
-`llms.txt`: a machine-readable catalog for AI agents, generated live from the
-Storefront API so prices and variant IDs can never drift from the shop. Old URLs
-(`/blog*`, `/releases*`, `/contribute`, `/incutec`) are 301 stubs.
+resolve the same `status-*` topic. `robots.txt`, one `sitemap.xml` listing the
+static routes plus a line per catalog product, RSS feeds, RFC 9116
+`security.txt`, `healthz`, and `llms.txt`: a machine-readable catalog for AI
+agents, generated live from the Odoo catalog so prices, SKUs and order links
+can never drift from the shop. `products.json` is the same data as JSON, with a
+ready-made `cart_add_url` per variant. Old URLs (`/blog*`, `/releases*`,
+`/contribute`, `/incutec`) are 301 stubs.
 
 ---
 
@@ -206,15 +236,19 @@ deletes the studio HTML from the output.
 deliberately tiny: `[label](/path)`, `*emphasis*`, `**strong**`, and that is all.
 `npm run studio:coverage` reports which files still have words baked into code.
 
-**Not editable, by design**: Shopify data (titles, prices) is edited in Shopify
-admin; the synced Dutch legal pages show read-only; board art comes from KiCad and
-the hero model from Onshape, so the studio can point at assets but not author them.
+**Not editable, by design**: catalog data (titles, prices, availability) is
+edited in Odoo; the synced Dutch legal pages show read-only; board art comes from
+KiCad and the hero model from Onshape, so the studio can point at assets but not
+author them.
 
 ---
 
 ## How it is built
 
-- **Hydrogen** (Shopify's React Router 7 framework) on **Oxygen** workers
+- **Hydrogen** (Shopify's React Router 7 framework) on **Oxygen** workers, as
+  build toolchain and host only
+- **Odoo** at shop.incutec.com for catalog, cart, checkout, orders and accounts,
+  read through one public JSON feed (`app/lib/catalog.ts`)
 - **React 19** + **TypeScript**, **Tailwind CSS v4** in one file
   (`app/styles/app.css`) plus self-hosted, Latin-subset Inter and JetBrains
   Mono (`app/assets/fonts`, regenerated by `scripts/subset-fonts.sh`)
@@ -234,9 +268,10 @@ app/
   styles/app.css           the single CSS file
 content/                   editable copy, product chapters, posts, theme tokens
 public/                    models (GLB), board art SVGs + rasters, schematics, logos
-scripts/                   publish-post, board art export, hero build, shopify-infra, smoke
+scripts/                   board art export, hero build, goals, launch blast, smoke
+test/fixtures/             catalog.json, the contract document the mapper tests read
 studio/                    the dev-only Vite plugin (write endpoint)
-docs/                      hero-studio, growth-architecture, store-compliance, store-snapshot.json
+docs/                      hero-studio, growth-architecture, store-compliance
 ```
 
 **Board art pipeline**: `npm run gen:board-art` shells out to `kicad-cli` and
@@ -281,14 +316,15 @@ URL prefix; each legal route emits hreflang for en/nl/fr.
 git clone https://github.com/OpenDrone-hw/OpenDrone-Web.git
 cd OpenDrone-Web
 npm install
-cp .env.example .env       # fill in Shopify tokens; see the comments in the file
+cp .env.example .env       # SESSION_SECRET is the only required value
 npm run dev                # http://localhost:3000
 ```
 
-Sign-in runs through a Hydrogen-managed `*.tryhydrogen.dev` tunnel; plain
-localhost cannot complete the OAuth callback, use the tunnel URL the dev server
-prints. Without real credentials the loaders fall back to empty states and the
-support bridge shows an "unavailable" notice, so a contributor copy still runs.
+`CATALOG_URL` and `PUBLIC_SHOP_URL` default to production, so a fresh clone
+shows the real catalog with real prices and working buy links. Set
+`PUBLIC_COMING_SOON=0` to see prices before the shop opens. Without the support
+and email credentials the bridge shows an "unavailable" notice, so a
+contributor copy still runs.
 
 ---
 
@@ -296,15 +332,20 @@ support bridge shows an "unavailable" notice, so a contributor copy still runs.
 
 The complete annotated list is [`.env.example`](.env.example). Groups:
 
-- **Required**: `SESSION_SECRET` plus the six Shopify storefront and customer
-  account values. The app does not boot without them.
+- **Required**: `SESSION_SECRET`. It is the only value the app will not boot
+  without; it signs the locale and support-desk cookies.
+- **Commerce backend**: `PUBLIC_SHOP_URL` (default
+  `https://shop.incutec.com`) and `CATALOG_URL` (default
+  `https://erp.incutec.eu/incutec/catalog.json`). Both optional, both
+  defaulted to production.
 - **Legal entity**: `PUBLIC_COMPANY_*` (name, address, KBO, VAT, email, phone).
   Belgian law (WER Art. VI.45) requires these on every page.
 - **Support bridge**: Discord bot + channels, Turnstile, Resend, Upstash,
-  moderation gate. All optional; the bridge degrades gracefully.
-- **Publishing**: `SHOPIFY_ADMIN_API_TOKEN` (custom app "OpenDrone Infra") for
-  `publish:post`, the `scripts/shopify-infra/` inspectors and SKU sync, and
-  the launch, goals and votes scripts.
+  moderation gate, the Odoo ticket mirror (`SUPPORT_ODOO_URL`,
+  `SUPPORT_ODOO_TOKEN`). All optional; the bridge degrades gracefully.
+- **Goal meter**: `GOALS_URL`, the shop's aggregate order totals for
+  `goals:update`. The Odoo endpoint is not built yet (ERP `PLAN.md` step 12.6);
+  unset, the script reports that and writes nothing.
 - **Ops**: `SUPPORT_CLEANUP_SECRET` (cron auth), `COMPLIANCE_SRC` (legal sync
   override), `GITHUB_STATUS_TOKEN` (roadmap API headroom).
 
@@ -316,27 +357,26 @@ The complete annotated list is [`.env.example`](.env.example). Groups:
 
 | Command | Purpose |
 |---|---|
-| `npm run dev` | dev server + codegen + OAuth tunnel |
+| `npm run dev` | dev server |
 | `npm run build` | `sync:legal`, then production build |
 | `npm run typecheck` / `lint` / `test` | the PR gate; all three must pass |
-| `npm run codegen` | regenerate Storefront + Customer Account API types |
-| `npm run publish:post -- content/posts/<slug>.md` | publish a blog post (`--dry`, `--draft`) |
-| `npm run compose:newsletter <handle>` | branded HTML email from a published post |
+| `npm run goals:update` | move the auto-mode goal meters from the shop's aggregate totals (`--write`) |
 | `npm run gen:board-art` | export PCB SVGs + copper-layer rasters (needs KiCad, cwebp) |
 | `npm run sync:specs` / `sync:downloads` | mirror README specs / release assets into the product JSON |
 | `npm run sync:timeline` | append releases, new repos and status flips to the timeline ledger (CI does this daily on the `data` branch) |
-| `node scripts/shopify-infra/ensure-products.mjs` | create the Shopify products and Model variants that `stock/product_skus.json` lists and Shopify lacks; never edits existing variants (`--apply` to write) |
-| `node scripts/shopify-infra/sync-product-skus.mjs` | align Shopify variant SKUs with `stock/product_skus.json` (`--apply` to write) |
-| `npm run snapshot:store` | write `docs/store-snapshot.json`, the committed record of the Shopify configuration (shop, locations, products, variants, markets, delivery profiles; no stock levels or discount codes); re-run after any admin change and commit the diff |
-| `node scripts/shopify-infra/dev-sample-discount.mjs` | create the two sample discounts (100% off one OpenRX Gemini, free shipping) for the end-to-end order test; the random codes print once and live only in Shopify |
+| `node scripts/launch-blast.mjs <handle>` | dry run of the launch email to the `notify-<handle>` Resend segment (`--create` drafts it, `--send` sends) |
 | `npm run studio:coverage` | how much copy is studio-editable |
-| `npm run gen:shopify-templates` | branded Shopify notification-email HTML |
 | `npm run audit:perf -- --device "Pixel 7" --throttle 6 --network slow4g` | mobile perf lab: frames, long tasks, bytes per interaction (drop `--device` for the desktop lab) |
 | `npm run audit:lh -- --form mobile` | Lighthouse vitals per route, mobile or desktop preset |
 
+Products, prices, SKUs and stock are Odoo's, edited in the Odoo backend and
+published through `GET /incutec/catalog.json`. Nothing in this repository writes
+them, and no command here can.
+
 Tests are plain `node:test` suites next to the code (`app/**/*.test.ts`), no
-framework dependency. `scripts/smoke.mjs` hits 25+ routes against any base URL
-and asserts status plus content invariants.
+framework dependency. `scripts/smoke.mjs` hits 26 routes against any base URL
+and asserts status plus content invariants, including that the PDP carries the
+`/incutec/add` hand-off.
 
 **CI and protection**: every PR runs Lint, Typecheck, Test, Build, a registry
 invariants check, and a status fallback check (`npm run check:status`: no static
@@ -345,9 +385,9 @@ merge is a squash. **Every push to `main` auto-deploys to opendrone.be** in abou
 two minutes, so local-only commits do not exist as far as the site is concerned:
 push after every commit. Dependabot runs weekly, grouped, no major bumps.
 
-**DNS**: `A @ → 23.227.38.65`, `CNAME www → shops.myshopify.com.` Mail records
-live with the email provider; merge SPF changes into the existing TXT, never
-replace it.
+**DNS**: `A @ → 23.227.38.65`, `CNAME www → shops.myshopify.com.` (Oxygen is
+still the host.) Mail records live with the email provider; merge SPF changes
+into the existing TXT, never replace it.
 
 ---
 
@@ -364,51 +404,149 @@ replace it.
   private staff channel), outbound scrubber, moderation gate. The poll endpoint
   is the trust boundary: nothing from Discord reaches the browser except a
   scrubbed projection.
-- **Cart**: buyer country hard-locked to BE.
-- **Secrets**: `.env` is gitignored and history is clean of token-shaped strings.
-  Rotate session secrets, Storefront tokens, the Discord bot token, and the
-  Turnstile secret annually or on suspicion.
+- **Cart**: not here. The hand-off is a GET that only touches the caller's own
+  Odoo session and can only redirect within the shop.
+- **Secrets**: `.env` is gitignored and history is clean of token-shaped
+  strings. This app holds no commerce credentials at all; the catalog feed is
+  public and read-only. Rotate the session secret, the Discord bot token, the
+  Resend key and the Turnstile secret annually or on suspicion.
 - **Disclosure**: GitHub private vulnerability reporting is on; contact at
   `/.well-known/security.txt`, policy at `/security`. Default embargo 90 days.
 
 ---
 
+## Hosting
+
+Production (`opendrone.be`) runs on Shopify Oxygen today (decision D3);
+`.github/workflows/oxygen-deployment-1000116751.yml` deploys every push to
+`main`. D15 (`erp/PLAN.md`) evaluates moving hosting to Cloudflare so Shopify
+can be retired entirely, Oxygen included. This branch adds a Cloudflare
+Workers **preview** only — no DNS change, no effect on `opendrone.be`.
+
+**Why it fits unchanged:** `npm run build` (the Hydrogen/Oxygen Vite
+toolchain, decision D3, unchanged by this branch) already emits a plain
+workerd ES module at `dist/server/index.js` with a standard
+`fetch(request, env, ctx)` export, because Oxygen is itself Shopify's
+Cloudflare Workers host. `wrangler.toml` points real Cloudflare Workers at
+that same build output and its static assets (`dist/client`); no application
+code changed for this.
+
+**Preview project:** `opendrone-web`, deployed by
+`.github/workflows/cloudflare-deploy.yml` on every push to
+`feat/cloudflare-hosting`, using repo secrets `CLOUDFLARE_API_TOKEN` and
+`CLOUDFLARE_ACCOUNT_ID` (same account as `../site`, see
+`../../operations/INTEGRATIONS.md`). **A founder must add both repo secrets**
+(Settings → Secrets and variables → Actions) before the workflow can deploy;
+this was not done as part of this change.
+
+**One-time setup**, from this repository:
+
+```sh
+npm run build
+npx wrangler deploy                              # creates the opendrone-web Worker
+npx wrangler secret put SESSION_SECRET            # openssl rand -hex 32
+```
+
+`CATALOG_URL` and `PUBLIC_SHOP_URL` are set as plain `[vars]` in
+`wrangler.toml` (public values, already the app's defaults); `SESSION_SECRET`
+is the only value the Worker needs that isn't already in the repo, and it only
+signs session cookies, so any random string works for a preview.
+
+The Cloudflare API token that already exists at
+`../../operations/.env` (`CLOUDFLARE_API_TOKEN`, used today for the
+`incutec-site` Pages project and for `../../operations/tools/cloudflare_dns.py`)
+**cannot create a new Workers script or a new Pages project**: both
+`wrangler deploy` and `wrangler pages project create` fail with an
+authentication/permission error against a fresh name. It can read zones/DNS
+and deploy to the already-existing `incutec-site` Pages project. Creating the
+`opendrone-web` project needs either a one-time run of the commands above from
+a session with a broader token (or the Cloudflare dashboard: Workers & Pages →
+Create), or the token's permissions widened to include Workers Scripts: Edit
+(or Cloudflare Pages: Edit, account-scoped) before CI can do it unattended.
+
+**Cutover (do not run without a separate, explicit request):**
+
+1. Confirm the preview serves `/`, a product page and the `/incutec/add`
+   cart hand-off correctly (see `npm run build` + `npx wrangler dev` locally,
+   or the deployed `*.workers.dev` URL).
+2. `opendrone.be`'s DNS lives on Gandi today (`A @ → 23.227.38.65`,
+   `CNAME www → shops.myshopify.com.`; see `../../operations/tools/gandi_dns.py`).
+   A Cloudflare Workers Custom Domain needs the zone's nameservers on
+   Cloudflare first (the way `incutec.com` was migrated; see
+   `../../operations/INTEGRATIONS.md`), not just a Gandi CNAME to
+   `*.workers.dev`. So cutover is: move the `opendrone.be` zone to Cloudflare,
+   add `opendrone.be` and `www` as Custom Domains on the `opendrone-web`
+   Worker, then `python3 ../../operations/tools/cloudflare_dns.py` to manage
+   any remaining records (mail, TXT) in the new zone.
+3. Remove `.github/workflows/oxygen-deployment-1000116751.yml` and the Oxygen
+   deployment in Shopify admin only after DNS has cut over and the Worker has
+   served production traffic without incident.
+
+---
+
 ## Going live
 
-The storefront is headless: checkout, payments, orders, inventory, and
-transactional email all live in Shopify's backend. Shopify admin needs a
-payment provider (Bancontact is essential in Belgium), shipping zones and
-rates, confirmed VAT settings (`taxesIncluded=true` is on), the Customer
-Account API callback URLs pointed at the production domain, real prices on
-every SKU, and the generated notification-email templates.
+Checkout, payments, orders, inventory, invoicing and the order mails live in
+Odoo at shop.incutec.com. What that side needs is tracked in the ERP
+repository's `PLAN.md`, not here; from the storefront's point of view the shop
+is ready when `GET https://erp.incutec.eu/incutec/catalog.json` lists every
+product with its prices, availability and ship promises.
+
+**Oxygen environment variables.** Set these per environment (production and
+preview) in the Shopify admin, Hydrogen storefront, Storefront settings,
+Environments and variables. The four below are the whole list:
+
+| Variable | Value | Notes |
+|---|---|---|
+| `SESSION_SECRET` | 32 random bytes hex (`openssl rand -hex 32`) | required; the app does not boot without it. Different value per environment |
+| `PUBLIC_SHOP_URL` | `https://shop.incutec.com` | base of every buy hand-off and portal link. Optional, this is the default |
+| `CATALOG_URL` | `https://erp.incutec.eu/incutec/catalog.json` | the catalog feed. Optional, this is the default. Point a preview at a staging Odoo here |
+| `GOALS_URL` | unset | the goal meter's aggregate endpoint, ERP `PLAN.md` step 12.6. Build-time only, so it belongs in repo secrets rather than Oxygen |
+
+New for the Odoo ticket mirror (`app/lib/support/odoo.ts`, erp PLAN.md step
+12.2): add `SUPPORT_ODOO_URL` (`https://erp.incutec.eu` in production; point a
+preview at `https://staging.incutec.eu`) and `SUPPORT_ODOO_TOKEN` (the same
+shared secret as `SUPPORT_BRIDGE_TOKEN` in `erp/.env`, set on the Odoo side by
+`erp/config/support.py`) to both Oxygen environments. Without them the ticket
+mirror silently no-ops; the Discord bridge is unaffected either way.
+
+Everything else already in Oxygen stays: `PUBLIC_COMPANY_*`, the support bridge
+(Discord, Turnstile, Upstash, Resend), `GITHUB_TOKEN` / `GITHUB_STATUS_TOKEN`,
+`PUBLIC_COMING_SOON`, `PUBLIC_PRELAUNCH`, `PUBLIC_LEARN_DRAFT`,
+`NEWSLETTER_*`, `SUPPORT_CLEANUP_SECRET`. Delete the Shopify commerce values if
+they are still set: `PUBLIC_STORE_DOMAIN`, `PUBLIC_STOREFRONT_API_TOKEN`,
+`PRIVATE_STOREFRONT_API_TOKEN`, `PUBLIC_STOREFRONT_ID`, `SHOP_ID`,
+`PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID`, `PUBLIC_CUSTOMER_ACCOUNT_API_URL`,
+`PUBLIC_CHECKOUT_DOMAIN`, `SHOPIFY_ADMIN_API_TOKEN`,
+`SHOPIFY_ADMIN_API_VERSION`, `SHOPIFY_WEBHOOK_SECRET`,
+`NEWSLETTER_BLOG_HANDLE`, `JUDGEME_PRIVATE_TOKEN`,
+`PUBLIC_JUDGEME_SHOP_DOMAIN`, `PUBLIC_PREORDERS`. Nothing reads them.
+
+**What still depends on Shopify:** nothing at runtime. `@shopify/cli` builds and
+deploys the app and Oxygen hosts it (`cdn.shopify.com` serves this app's own JS
+bundles, which is why it stays in the CSP), but no page, loader or action calls
+a Shopify API.
 
 The launch model on the storefront side:
 
 - `PUBLIC_COMING_SOON=0` opens the shop. Until then every product renders as
   coming soon (no price, notify-me signup) unless its roadmap topic says
   otherwise.
-- `status: "preorder"` in `content/products/<handle>.json` makes a product
-  buyable at full price ahead of stock, with its own ship promise in
-  `statusNote` ("ships from early October 2026"); without one the shop-wide
-  default applies (`product-chrome.preorder_lead_default`). While
-  `PUBLIC_COMING_SOON` is still on, a pre-order product renders as coming soon.
-- `PUBLIC_PREORDERS=1` opens the pre-order products while the coming-soon flag
-  is still on: set it on the Oxygen preview environment to run end-to-end order
-  tests before launch. Never needed on production, where dropping the
-  coming-soon flag opens them.
-- Every cart line for a pre-order product carries a `Pre-order` line attribute
-  holding the ship promise, stamped server-side by the cart action (a client
-  cannot set or forge it). Shopify copies line attributes onto the order, so
-  the operator sees it on the order page and the packing slip.
+- Odoo's per-variant `availability` decides who is orderable once the shop is
+  open: `in_stock` and `preorder` are buyable, `sold_out` shows the sold-out
+  state. A `status` of `idea` or `development` in
+  `content/products/<handle>.json` still wins over it, because that is the
+  storefront saying a product is not for sale at all.
+- The ship promise on a pre-order comes from Odoo (`ship_promise`, set per
+  product and frozen onto the order line there), falling back to `statusNote`
+  in the content file and then to `product-chrome.preorder_lead_default`. The
+  same words appear on the PDP, in the Odoo cart and on the order.
 - One-parcel rule: an order that mixes in-stock and pre-order lines ships as
-  one parcel once every line is on hand. The cart, the order confirmation and
-  the shipping policy say so; the operator holds the order until then.
-- The cart's BE market lock (`app/routes/cart.tsx`) only pins the pricing
-  market (EUR, Belgian VAT). It does not block foreign addresses: checkout
-  collects the address and the shipping zones decide which countries are
-  served.
+  one parcel once every line is on hand. The PDP, the Odoo order confirmation
+  and the shipping policy say so; the operator holds the order until then.
 
-Before launch, place one real low-value order end to end on the preview.
+Before launch, walk one order end to end on an Oxygen preview: PDP, buy click,
+Odoo cart, checkout, test payment, order mail, portal link.
 
 Compliance details (GPSR, withdrawal, pre-orders, battery shipping):
 `docs/store-compliance.md`.

@@ -2,18 +2,19 @@
  * Stack-deal display math, shared by every surface that advertises the
  * FC + ESC stack (PDP CTA flyout, catalog cards, header pod rows).
  *
- * REALITY (maintainer, 2026-07-17): the Shopify automatic discount is 10% off the
- * OpenESC when it's bought together with an OpenFC Lite. It is NOT 10% off
- * the whole pair. Copy must name the discounted board (e.g. "OpenESC −10%"),
- * and any discounted price shown must be derived from the live price with
- * {@link stackDiscountedPrice} so it matches what checkout actually charges.
+ * The percent and which board it is off are per-product configuration
+ * (`stack.discountPct` / `stack.discountedHandle` in
+ * content/products/*.json). Set them ONLY while Odoo actually carries the
+ * matching promotion (`website_sale_loyalty`), because the storefront
+ * only advertises the deal: the Odoo cart is what applies it. They are
+ * unset today, so no surface claims a discount.
+ *
+ * Copy must name the discounted board (e.g. "OpenESC -10%"), and any
+ * discounted price shown must be derived from the live catalog price with
+ * {@link stackDiscountedPrice} so it matches what the Odoo cart charges.
  * Never hardcode computed prices in code or copy, comments included: they
- * rot the moment a price changes in Shopify.
+ * rot the moment a price changes.
  */
-
-/** The advertised percent of the Shopify automatic BXGY. Display only:
- *  the discount itself is configured in Shopify and applied by checkout. */
-export const STACK_DISCOUNT_PCT = 10;
 
 /** A money-ish price ({amount, currencyCode}) with `pct` percent off,
  *  rounded to cents. */

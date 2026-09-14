@@ -9,7 +9,7 @@ import {copyText} from '~/lib/copy';
 
 // Engineering Essentials — dual-purpose: product-release announcements and
 // engineering content digest. Posts to app/routes/newsletter.tsx which
-// writes the subscriber into Shopify's customer list with marketing consent.
+// writes the subscriber into the Resend marketing list with consent.
 //
 // Bot protection: honeypot field + Cloudflare Turnstile. The Turnstile
 // widget + script are lazy-loaded only after the visitor focuses the email
@@ -31,17 +31,10 @@ interface NewsletterSignupProps {
   /** Cloudflare Turnstile public site key — widget is skipped when null. */
   turnstileSiteKey?: string | null;
   /**
-   * Signed-in customer's marketing state (null = guest). When `subscribed`,
-   * the form is replaced by a confirmation panel; otherwise the email field is
-   * prefilled with the account address so a signed-in visitor needn't retype it.
-   */
-  account?: {email: string; subscribed: boolean} | null;
-  /**
    * Coming-soon mode: "Notify me at launch" for one product. Posts the same
    * newsletter action with a hidden `product` field so the subscriber gets a
-   * `notify-<handle>` tag in Shopify. An already-subscribed account still
-   * sees the form (prefilled) — registering interest in the SKU is the point,
-   * not the subscription itself.
+   * `notify-<handle>` tag on the Resend contact. Registering interest in
+   * the SKU is the point, not the subscription itself.
    */
   notify?: {productHandle: string; productTitle: string} | null;
 }
@@ -62,7 +55,6 @@ export function NewsletterSignup({
   variant = 'compact',
   className = '',
   turnstileSiteKey = null,
-  account = null,
   notify = null,
 }: NewsletterSignupProps) {
   const fetcher = useFetcher<NewsletterActionData>();
@@ -197,7 +189,6 @@ export function NewsletterSignup({
   const isNotify = Boolean(notify);
   // Notify mode never short-circuits to the subscribed panel: an existing
   // subscriber still needs to submit to get the per-product notify tag.
-  const alreadySubscribed = !isNotify && account?.subscribed === true;
   const message = clientError ?? serverMessage;
   const messageTone = clientError
     ? 'error'
@@ -271,31 +262,8 @@ export function NewsletterSignup({
         </p>
       </div>
 
-      {alreadySubscribed ? (
-        <div
-          className={
-            isWide
-              ? 'flex flex-col gap-1'
-              : 'flex flex-col gap-1 md:items-end md:text-right'
-          }
-          role="status"
-        >
-          <p className="gold-tag inline-flex items-center gap-1.5 font-mono text-[12px] uppercase tracking-[0.14em] text-[var(--color-gold)]">
-            <Check size={13} strokeWidth={2.5} aria-hidden="true" />
-            <Txt id="newsletter.signup_subscribed_badge" />
-          </p>
-          <p className="text-[12px] text-[var(--color-text-muted)] leading-snug md:whitespace-nowrap">
-            <Txt id="newsletter.signup_subscribed_body" />{' '}
-            <a
-              href="/account"
-              className="underline underline-offset-2 hover:text-[var(--color-text)]"
-            >
-              <Txt id="newsletter.signup_subscribed_link" />
-            </a>
-            .
-          </p>
-        </div>
-      ) : isNotify && isSuccess ? (
+      {isNotify && isSuccess ? (
+
         <div className="flex flex-col gap-1">
           <p
             role="status"
@@ -362,7 +330,6 @@ export function NewsletterSignup({
             autoComplete="email"
             inputMode="email"
             placeholder={copyText('newsletter.signup_email_placeholder')}
-            defaultValue={account?.email ?? undefined}
             disabled={isSubmitting}
             onFocus={markInteracted}
             onChange={markInteracted}

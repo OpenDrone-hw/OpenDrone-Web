@@ -1,7 +1,6 @@
 import {Await, PrefetchPageLinks, useLoaderData} from 'react-router';
 import {AnimatePresence, motion, useReducedMotion} from 'motion/react';
 import {Link} from '~/components/nav';
-import {Money} from '@shopify/hydrogen';
 import type {Route} from './+types/_index';
 import {
   useEffect,
@@ -11,8 +10,8 @@ import {
   useMemo,
   Suspense,
 } from 'react';
-import type {CollectionItemFragment} from 'storefrontapi.generated';
-import type {MoneyV2} from '@shopify/hydrogen/storefront-api-types';
+import type {MoneyV2, ProductCardFragment} from '~/lib/product-shapes';
+import {byHandle, formatPrice, toCard} from '~/lib/catalog';
 import {INCUTEC_HINT_SEEN_KEY} from '~/lib/incutec-hint';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {useProductStatusResolver, useRoadmapStatusResolver} from '~/lib/coming-soon';
@@ -56,18 +55,10 @@ export const meta: Route.MetaFunction = ({location}) =>
   });
 
 type HomeMoney = Pick<MoneyV2, 'amount' | 'currencyCode'>;
-type HomeVariant = {
-  id: string;
-  availableForSale: boolean;
-  price: HomeMoney;
-  image?: {url: string; altText: string | null} | null;
-  selectedOptions: Array<{name: string; value: string}>;
-};
-// FC/ESC come back with their variant list so a size can pick its Model variant.
-type HomeProduct = CollectionItemFragment & {variants?: {nodes: HomeVariant[]}};
+type HomeProduct = ProductCardFragment;
 type HomeFeaturedResult = {
-  frame: CollectionItemFragment | null;
-  rx: CollectionItemFragment | null;
+  frame: HomeProduct | null;
+  rx: HomeProduct | null;
   fc: HomeProduct | null;
   esc: HomeProduct | null;
 };
@@ -112,7 +103,7 @@ function buildHeroStacks(d: HomeFeaturedResult): HeroStacks {
       const p = byBoard[board.boardKey];
       if (!p) continue;
       let url = `/products/${board.handle}`;
-      let price: HomeMoney | null = p.priceRange?.minVariantPrice ?? null;
+      let price: HomeMoney | null = p.priceRange.minVariantPrice ?? null;
       // Default to the product's featured image; a matched size variant
       // overrides it below (the featured image is the mini/first variant).
       let image = p.featuredImage
@@ -122,8 +113,8 @@ function buildHeroStacks(d: HomeFeaturedResult): HeroStacks {
       if (model) {
         const axis = HERO_VARIANT_AXIS.toLowerCase();
         const want = model.trim().toLowerCase();
-        const variant = p.variants?.nodes?.find((v) =>
-          v.selectedOptions?.some(
+        const variant = p.variants.nodes.find((v) =>
+          v.selectedOptions.some(
             (o) =>
               o.name.trim().toLowerCase() === axis &&
               o.value.trim().toLowerCase() === want,
@@ -133,7 +124,7 @@ function buildHeroStacks(d: HomeFeaturedResult): HeroStacks {
           // Link with the value the LIVE variant carries (preserves exact
           // casing/encoding) so the PDP resolves it cleanly.
           const liveValue =
-            variant.selectedOptions?.find(
+            variant.selectedOptions.find(
               (o) => o.name.trim().toLowerCase() === axis,
             )?.value ?? model;
           url += `?${HERO_VARIANT_AXIS}=${encodeURIComponent(liveValue)}`;
@@ -176,19 +167,26 @@ export async function loader({request, context}: Route.LoaderArgs) {
 
   // Flagship line for the mobile showcase. Deferred, not awaited: desktop
   // never renders these cards, and on mobile they sit below the hero — so
-  // streaming them keeps TTFB off the Shopify round-trip entirely. Cache
-  // long since the catalogue changes rarely. Catch resolves to [] so a
-  // storefront hiccup just drops the cards instead of blanking the page.
+  // streaming them keeps TTFB off the catalog fetch entirely (it is worker
+  // -cached anyway). Catch resolves to [] so a catalog hiccup just drops
+  // the cards instead of blanking the page.
   const home: Promise<{
-    featured: CollectionItemFragment[];
+    featured: HomeProduct[];
     heroStacks: HeroStacks;
-  }> = context.storefront
-    .query(HOME_FEATURED_QUERY, {cache: context.storefront.CacheLong()})
-    .then((data) => {
-      const d = data as HomeFeaturedResult;
-      const keep = (
-        p: CollectionItemFragment | null,
-      ): p is CollectionItemFragment => Boolean(p);
+  }> = context.catalog
+    .get()
+    .then((catalog) => {
+      const card = (handle: string): HomeProduct | null => {
+        const entry = byHandle(catalog, handle);
+        return entry ? toCard(catalog, entry) : null;
+      };
+      const d: HomeFeaturedResult = {
+        frame: card('openframe'),
+        rx: card('openrx'),
+        fc: card('openfc-lite'),
+        esc: card('openesc'),
+      };
+      const keep = (p: HomeProduct | null): p is HomeProduct => Boolean(p);
       return {
         // Mobile flagship line: the four core parts (FC, ESC, RX, frame). The
         // OpenStack is intentionally NOT here — it's just the FC + ESC bundled,
@@ -1044,7 +1042,10 @@ function DesktopHome({heroStacks}: {heroStacks: Promise<HeroStacks>}) {
                                   />
                                 ) : card.price ? (
                                   <span className="hero-reveal-price">
-                                    <Money data={card.price} />
+                                    {formatPrice(
+                                      card.price.amount,
+                                      card.price.currencyCode,
+                                    )}
                                   </span>
                                 ) : null}
                               </Link>
@@ -1151,72 +1152,3 @@ function DesktopHome({heroStacks}: {heroStacks: Promise<HeroStacks>}) {
     </div>
   );
 }
-
-// Three flagship products for the mobile showcase, fetched by handle:
-// OpenFrame / OpenStack / OpenRX.
-const HOME_FEATURED_QUERY = `#graphql
-  fragment HomeMoney on MoneyV2 {
-    amount
-    currencyCode
-  }
-  fragment HomeProductCard on Product {
-    id
-    handle
-    title
-    productType
-    featuredImage {
-      id
-      altText
-      url
-      width
-      height
-    }
-    priceRange {
-      minVariantPrice {
-        ...HomeMoney
-      }
-      maxVariantPrice {
-        ...HomeMoney
-      }
-    }
-  }
-  fragment HomeProductVariants on Product {
-    variants(first: 30) {
-      nodes {
-        id
-        availableForSale
-        price {
-          ...HomeMoney
-        }
-        image {
-          id
-          altText
-          url
-          width
-          height
-        }
-        selectedOptions {
-          name
-          value
-        }
-      }
-    }
-  }
-  query HomeFeatured($country: CountryCode, $language: LanguageCode)
-  @inContext(country: $country, language: $language) {
-    frame: product(handle: "openframe") {
-      ...HomeProductCard
-    }
-    rx: product(handle: "openrx") {
-      ...HomeProductCard
-    }
-    fc: product(handle: "openfc-lite") {
-      ...HomeProductCard
-      ...HomeProductVariants
-    }
-    esc: product(handle: "openesc") {
-      ...HomeProductCard
-      ...HomeProductVariants
-    }
-  }
-` as const;

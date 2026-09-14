@@ -1,0 +1,116 @@
+{
+  "schema": 1,
+  "generated_at": "2026-09-14T14:21:54Z",
+  "max_age": 300,
+  "currency": "EUR",
+  "prices_include_vat": true,
+  "shop_url": "https://shop.incutec.com",
+  "cart_url": "https://shop.incutec.com/shop/cart",
+  "add_url": "https://shop.incutec.com/incutec/add",
+  "products": [
+    {
+      "handle": "openrx",
+      "title": "OpenRX",
+      "family": "ELRS Receiver",
+      "description": "An ExpressLRS receiver, open from antenna to firmware.",
+      "url": "https://shop.incutec.com/shop/openrx-40",
+      "images": [
+        "https://shop.incutec.com/web/image/product.template/40/image_1024?unique=5f1c2a9"
+      ],
+      "rating": {"average": 4.5, "count": 2},
+      "variants": [
+        {
+          "sku": "OPENRX-GEMINI",
+          "title": "OpenRX (Gemini)",
+          "model": "Gemini",
+          "options": {"Model": "Gemini"},
+          "price": 39.99,
+          "compare_price": 49.99,
+          "currency": "EUR",
+          "availability": "preorder",
+          "ship_promise": "ships from early October 2026",
+          "image": null,
+          "url": "https://shop.incutec.com/shop/openrx-40?attribute_values=14",
+          "cart_add_url": "https://shop.incutec.com/incutec/add?sku=OPENRX-GEMINI&qty=1&next=cart",
+          "compliance": {
+            "declaration_id": "INC-DoC-OPENRX-GEMINI",
+            "version": "1",
+            "issued_on": "2026-09-14",
+            "doc_url": "https://shop.incutec.com/incutec/doc/OPENRX-GEMINI/1.pdf",
+            "bundle_url": "https://shop.incutec.com/incutec/doc/OPENRX-GEMINI/1.pdf"
+          }
+        },
+        {
+          "sku": "OPENRX-LITE",
+          "title": "OpenRX (Lite)",
+          "model": "Lite",
+          "options": {"Model": "Lite"},
+          "price": 24.99,
+          "compare_price": null,
+          "currency": "EUR",
+          "availability": "in_stock",
+          "ship_promise": null,
+          "image": "https://shop.incutec.com/web/image/product.product/7/image_1024?unique=62f378b",
+          "url": "https://shop.incutec.com/shop/openrx-40?attribute_values=3",
+          "cart_add_url": "https://shop.incutec.com/incutec/add?sku=OPENRX-LITE&qty=1&next=cart"
+        },
+        {
+          "sku": "OPENRX-MONO",
+          "title": "OpenRX (Mono)",
+          "model": "Mono",
+          "options": {"Model": "Mono"},
+          "price": 29.99,
+          "compare_price": null,
+          "currency": "EUR",
+          "availability": "sold_out",
+          "ship_promise": null,
+          "image": null,
+          "url": "https://shop.incutec.com/shop/openrx-40?attribute_values=5",
+          "cart_add_url": "https://shop.incutec.com/incutec/add?sku=OPENRX-MONO&qty=1&next=cart"
+        }
+      ]
+    },
+    {
+      "handle": "openfc-lite",
+      "title": "OpenFC Lite",
+      "family": null,
+      "description": null,
+      "url": "https://shop.incutec.com/shop/openfc-lite-4",
+      "images": [
+        "https://shop.incutec.com/web/image/product.template/4/image_1024?unique=2cf0ef3",
+        "https://shop.incutec.com/web/image/product.image/4/image_1024?unique=34f2e82"
+      ],
+      "rating": {"average": 0.0, "count": 0},
+      "variants": [
+        {
+          "sku": "OPENFC-LITE-2020",
+          "title": "OpenFC Lite (20×20)",
+          "model": "20×20",
+          "options": {"Model": "20×20"},
+          "price": 44.99,
+          "compare_price": null,
+          "currency": "EUR",
+          "availability": "preorder",
+          "ship_promise": "ships from mid-October 2026",
+          "image": null,
+          "url": "https://shop.incutec.com/shop/openfc-lite-4?attribute_values=1",
+          "cart_add_url": "https://shop.incutec.com/incutec/add?sku=OPENFC-LITE-2020&qty=1&next=cart"
+        },
+        {
+          "sku": "OPENFC-LITE-3030",
+          "title": "OpenFC Lite (30×30)",
+          "model": "30×30",
+          "options": {"Model": "30×30"},
+          "price": 59.99,
+          "compare_price": null,
+          "currency": "EUR",
+          "availability": "preorder",
+          "ship_promise": "ships from mid-October 2026",
+          "image": null,
+          "url": "https://shop.incutec.com/shop/openfc-lite-4?attribute_values=2",
+          "cart_add_url": "https://shop.incutec.com/incutec/add?sku=OPENFC-LITE-3030&qty=1&next=cart"
+        }
+      ]
+    }
+  ]
+}

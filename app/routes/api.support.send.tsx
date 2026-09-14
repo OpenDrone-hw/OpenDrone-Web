@@ -5,7 +5,8 @@ import {readSupportCookie, verifyTicket} from '~/lib/support/session';
 import {extractAttachments} from '~/lib/support/uploads';
 import {checkRateLimit} from '~/lib/rate-limit';
 import {scrubForDiscord} from '~/lib/support/scrubber';
-import {bumpActivity} from '~/lib/support/ticket-index';
+import {bumpActivity, getMeta, patchMeta} from '~/lib/support/ticket-index';
+import {createOrFetchOdooTicket, postOdooMessage} from '~/lib/support/odoo';
 
 type SendResult =
   | {
@@ -112,6 +113,45 @@ export async function action({request, context}: Route.ActionArgs) {
   );
   if (context.waitUntil) context.waitUntil(bumpJob);
   else void bumpJob;
+
+  // Relay this message onto the mirrored Odoo ticket
+  // (erp/addons/incutec_support, PLAN.md 12.2). Fire-and-forget: the
+  // message already reached Discord above, so an Odoo outage here can
+  // only ever be logged, never surfaced to the visitor (D13). Resolve
+  // the ticket_ref from the index first; if this ticket was created (or
+  // last relayed) while Odoo was down, `odooRef` is still missing here,
+  // so fall back to the same idempotent create-or-fetch call the start
+  // route makes, keyed on the Discord thread id, and persist whatever it
+  // returns for next time.
+  const odooJob = (async () => {
+    try {
+      const meta = await getMeta(env, ticket.tid);
+      let ref = meta?.odooRef;
+      if (!ref) {
+        const odooTicket = await createOrFetchOdooTicket(env, {
+          threadId: ticket.tid,
+          email: ticket.email,
+          name: ticket.name,
+          subject: meta?.subject || `Support ticket #${ticket.pid ?? ticket.uid}`,
+        });
+        if (odooTicket) {
+          ref = odooTicket.ticketRef;
+          await patchMeta(env, ticket.tid, {odooRef: ref});
+        }
+      }
+      if (ref) {
+        await postOdooMessage(env, {
+          ticketRef: ref,
+          author: firstNameOnly(ticket.name),
+          body: cleanContent.content || '[attachment]',
+        });
+      }
+    } catch (err) {
+      console.warn('[support/send] odoo relay failed', err);
+    }
+  })();
+  if (context.waitUntil) context.waitUntil(odooJob);
+  else void odooJob;
   return data<SendResult>({
     ok: true,
     id: posted.id,

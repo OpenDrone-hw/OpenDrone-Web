@@ -1,36 +1,20 @@
-import {Image} from '@shopify/hydrogen';
 import {useEffect, useRef, useState} from 'react';
-import type {ComponentProps} from 'react';
+import type {ProductImage} from '~/lib/product-shapes';
 
-/** Width (px) of the low-quality placeholder fetched from the Shopify CDN.
- *  32px keeps the thumb around 1 KB while still carrying the dominant
- *  colors and rough shape once blurred up. */
-const LQIP_WIDTH = 32;
-
-/** Build the tiny-preview URL for a Shopify CDN image by pinning `width`.
- *  Returns null for non-Shopify hosts or unparseable URLs — the cover then
- *  falls back to the flat token background (no wrong-origin fetches). */
-function lqipUrl(url: unknown): string | null {
-  if (typeof url !== 'string' || url === '') return null;
-  try {
-    const u = new URL(url);
-    const host = u.hostname;
-    const isShopifyCdn =
-      host === 'cdn.shopify.com' ||
-      host.endsWith('.shopify.com') ||
-      host.endsWith('.shopifycdn.com') ||
-      host.endsWith('.shopifycdn.net');
-    if (!isShopifyCdn) return null;
-    u.searchParams.set('width', String(LQIP_WIDTH));
-    u.searchParams.delete('height'); // keep intrinsic ratio at thumb size
-    return u.toString();
-  } catch {
-    return null;
-  }
-}
+export type SmoothImageProps = {
+  /** The image to render; null renders nothing. */
+  data?: ProductImage | {url: string; altText?: string | null} | null;
+  src?: string;
+  alt?: string;
+  className?: string;
+  loading?: 'eager' | 'lazy';
+  sizes?: string;
+  aspectRatio?: string;
+  fetchPriority?: 'high' | 'low' | 'auto';
+};
 
 /**
- * Hydrogen <Image> with a blur-up cover while the file streams in. SSR-safe:
+ * A plain <img> with a blur-up cover while the file streams in. SSR-safe:
  * the image renders visible by default; only after hydration, if the file
  * hasn't arrived yet, a cover fades over it — a heavily blurred ~1 KB CDN
  * thumb of the same image (flat `--color-bg-elevated` when no thumb URL can
@@ -40,7 +24,7 @@ function lqipUrl(url: unknown): string | null {
  * motion swaps without the fade. No hydration mismatch, no invisible
  * images without JS.
  */
-export function SmoothImage(props: ComponentProps<typeof Image>) {
+export function SmoothImage(props: SmoothImageProps) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const [phase, setPhase] = useState<'idle' | 'loading' | 'loaded'>('idle');
 
@@ -49,7 +33,9 @@ export function SmoothImage(props: ComponentProps<typeof Image>) {
   const srcUrl =
     (props.data && typeof props.data.url === 'string' ? props.data.url : null) ??
     (typeof props.src === 'string' ? props.src : null);
-  const tiny = lqipUrl(srcUrl);
+  // Odoo's image URLs carry no width parameter, so there is no cheap
+  // thumbnail to blur up from: the cover is the flat token background.
+  const tiny: string | null = null;
 
   // Synchronous re-arm on source change (sanctioned derived-state pattern:
   // setting state during render restarts the render before commit). Without
@@ -87,7 +73,18 @@ export function SmoothImage(props: ComponentProps<typeof Image>) {
 
   return (
     <div ref={wrapRef} className="smooth-media">
-      <Image {...props} />
+      {srcUrl ? (
+        <img
+          src={srcUrl}
+          alt={props.alt ?? props.data?.altText ?? ''}
+          className={props.className}
+          loading={props.loading ?? 'lazy'}
+          decoding="async"
+          sizes={props.sizes}
+          fetchPriority={props.fetchPriority}
+          style={props.aspectRatio ? {aspectRatio: props.aspectRatio} : undefined}
+        />
+      ) : null}
       {phase !== 'idle' ? (
         // Keyed by source so a re-arm swaps in a FRESH node at full opacity
         // instead of transitioning the old (lifted, mid-fade) one back up.

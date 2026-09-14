@@ -5,7 +5,7 @@
  * not shared across them, so a determined attacker can still burst. Pair
  * this with a real edge rate limit (Cloudflare dashboard → Rules → Rate
  * Limiting Rules) for full coverage. The limiter here discourages casual
- * floods and keeps bots from chewing a single isolate's Discord / Shopify
+ * floods and keeps bots from chewing a single isolate's Discord / upstream
  * quota in a loop.
  */
 

@@ -1,6 +1,6 @@
 import type {Route} from './+types/[newsletter.rss]';
+import {archivePosts, postHtml} from '~/lib/posts';
 
-const BLOG_HANDLE_FALLBACK = 'news';
 const FEED_LIMIT = 50;
 
 /**
@@ -10,36 +10,20 @@ const FEED_LIMIT = 50;
  * <link rel="alternate"> auto-discovery tag in the route's meta.
  *
  * Cache-Control: 10 min on the edge — we publish at most a few times
- * per month, so a stale-by-10-min feed is fine and saves a round-trip
- * to the Storefront API on every poller hit.
+ * per month, so a stale-by-10-min feed is fine.
  */
-export async function loader({context, request}: Route.LoaderArgs) {
-  const blogHandle = context.env.NEWSLETTER_BLOG_HANDLE || BLOG_HANDLE_FALLBACK;
+export function loader({request}: Route.LoaderArgs) {
   const origin = new URL(request.url).origin;
 
-  let articles: Array<{
-    handle: string;
-    title: string;
-    publishedAt: string;
-    excerpt: string | null;
-    contentHtml: string | null;
-  }> = [];
-  try {
-    const {blog} = await context.storefront.query(FEED_QUERY, {
-      variables: {blogHandle, first: FEED_LIMIT},
-      cache: context.storefront.CacheLong(),
-    });
-    articles = (blog?.articles?.nodes ?? []).map((n: any) => ({
-      handle: n.handle,
-      title: n.title,
-      publishedAt: n.publishedAt,
-      excerpt: n.excerpt ?? null,
-      contentHtml: n.contentHtml ?? null,
+  const articles = archivePosts()
+    .slice(0, FEED_LIMIT)
+    .map((p) => ({
+      handle: p.handle,
+      title: p.title,
+      publishedAt: p.publishedAt,
+      excerpt: p.excerpt,
+      contentHtml: postHtml(p),
     }));
-  } catch {
-    // Empty blog or transient API failure — render an empty but valid feed.
-    articles = [];
-  }
 
   const xml = renderFeed({origin, articles});
 
@@ -114,18 +98,4 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-const FEED_QUERY = `#graphql
-  query NewsletterFeed($blogHandle: String!, $first: Int!) {
-    blog(handle: $blogHandle) {
-      articles(first: $first, sortKey: PUBLISHED_AT, reverse: true) {
-        nodes {
-          handle
-          title
-          publishedAt
-          excerpt
-          contentHtml
-        }
-      }
-    }
-  }
-` as const;
+

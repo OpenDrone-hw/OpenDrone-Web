@@ -119,7 +119,6 @@ export async function createSupportThread(
     userAgent?: string;
     ipHint?: string;
     files?: OutboundFile[];
-    customerId?: string;
     pid?: string;
   },
 ): Promise<DiscordThread> {
@@ -156,9 +155,6 @@ export async function createSupportThread(
         '**New web-support ticket**',
         ticketRef,
         `From: **${opts.userName}** <${opts.userEmail}>`,
-        opts.customerId
-          ? `Shopify customer: \`${opts.customerId}\``
-          : null,
         opts.ipHint ? `Hint: ${opts.ipHint}` : null,
         opts.userAgent ? `UA: \`${opts.userAgent.slice(0, 180)}\`` : null,
         '',
@@ -238,7 +234,6 @@ export async function postStaffMetadata(
   metadata: {
     userName: string;
     userEmail: string;
-    customerId?: string;
     userAgent?: string;
     ipHint?: string;
     pid?: string;
@@ -257,9 +252,6 @@ export async function postStaffMetadata(
     `Thread: ${jumpUrl}`,
     '',
     `From: **${metadata.userName}** <${metadata.userEmail}>`,
-    metadata.customerId
-      ? `Shopify customer: \`${metadata.customerId}\``
-      : null,
     metadata.ipHint ? `IP hint: ${metadata.ipHint}` : null,
     metadata.userAgent
       ? `UA: \`${metadata.userAgent.slice(0, 180)}\``
@@ -299,7 +291,6 @@ export async function postFeedback(
     threadId: string;
     customerName: string;
     customerEmail: string;
-    customerId?: string;
     speed: number;
     helpfulness: number;
     overall: number;
@@ -316,9 +307,6 @@ export async function postFeedback(
     `📝 **Ticket feedback** · #${payload.pid}`,
     `Thread: ${jumpUrl}`,
     `From: **${payload.customerName}** <${payload.customerEmail}>`,
-    payload.customerId
-      ? `Shopify customer: \`${payload.customerId}\``
-      : null,
     '',
     `Response speed:  ${star(payload.speed)} (${payload.speed}/5)`,
     `Helpfulness:     ${star(payload.helpfulness)} (${payload.helpfulness}/5)`,

@@ -1,14 +1,28 @@
 #!/usr/bin/env node
 /**
- * Move the auto-mode financial goals in content/goals.json from Shopify
- * order totals.
+ * Move the auto-mode financial goals in content/goals.json from the shop's
+ * aggregate order totals.
  *
- * For each goal with `mode: "auto"`, sums the current total of every
- * non-cancelled order created since the goal's `since` date, applies the
- * goal's `allocation_pct`, divides by `target_eur`, and floors to 5% steps.
- * The coarse rounding is the point: the public meter stays "somewhere in
- * this 5% band of an approximate target" and never resolves to a revenue
- * figure. Manual-mode goals are never touched.
+ * For each goal with `mode: "auto"`, takes the gross since the goal's
+ * `since` date, applies the goal's `allocation_pct`, divides by
+ * `target_eur`, and floors to 5% steps. The coarse rounding is the point:
+ * the public meter stays "somewhere in this 5% band of an approximate
+ * target" and never resolves to a revenue figure. Manual-mode goals are
+ * never touched.
+ *
+ * Source: `GOALS_URL`, one GET per goal with a `since=YYYY-MM-DD` query,
+ * answering
+ *
+ *   {"orders": 12, "revenue_eur": 842.5, "updated_at": "2026-09-14T10:00:00Z"}
+ *
+ * `revenue_eur` is the gross of non-cancelled orders since that date, in
+ * EUR. Nothing else in the document is read, and no per-order detail is
+ * requested: the script must never hold order-level data.
+ *
+ * This replaced a Shopify Admin API walk over `orders`. The Odoo endpoint
+ * that serves the shape above does not exist yet (ERP PLAN.md step 12.6);
+ * until it does, leave GOALS_URL unset and the script reports that and
+ * writes nothing.
  *
  * Mirrors computeAutoPct in app/lib/goals.ts (this script cannot import TS);
  * the unit test in app/lib/goals.test.ts greps this file to keep the formula
@@ -17,9 +31,7 @@
  * Run:  npm run goals:update           (dry run, prints the result)
  *       npm run goals:update -- --write    (also writes content/goals.json)
  *
- * Env (repo .env or process env): PUBLIC_STORE_DOMAIN,
- * SHOPIFY_ADMIN_API_TOKEN (needs `read_orders`). Optional:
- * SHOPIFY_ADMIN_API_VERSION.
+ * Env (repo .env or process env): GOALS_URL.
  *
  * The result is committed content: the community-sync workflow runs this
  * weekly and opens a PR, so the diff is always reviewed before it deploys.
@@ -29,7 +41,6 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const API_VERSION_FALLBACK = '2026-01';
 const GOALS_FILE = path.join(ROOT, 'content', 'goals.json');
 const AUTO_PCT_STEP = 5;
 
@@ -55,63 +66,29 @@ function loadEnv() {
 const env = {...loadEnv(), ...process.env};
 const WRITE = process.argv.includes('--write');
 
-if (!env.PUBLIC_STORE_DOMAIN || !env.SHOPIFY_ADMIN_API_TOKEN) {
+if (!env.GOALS_URL) {
   console.error(
-    'PUBLIC_STORE_DOMAIN and SHOPIFY_ADMIN_API_TOKEN must be set in .env',
+    'GOALS_URL is not set. The Odoo aggregate endpoint it reads is ERP\n' +
+      'PLAN.md step 12.6 and does not exist yet; nothing was written.',
   );
   process.exit(1);
 }
 
-async function adminGraphql(query, variables) {
-  const version = env.SHOPIFY_ADMIN_API_VERSION || API_VERSION_FALLBACK;
-  const res = await fetch(
-    `https://${env.PUBLIC_STORE_DOMAIN}/admin/api/${version}/graphql.json`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Shopify-Access-Token': env.SHOPIFY_ADMIN_API_TOKEN,
-      },
-      body: JSON.stringify({query, variables}),
-    },
-  );
-  if (!res.ok) throw new Error(`Admin API HTTP ${res.status}`);
-  const json = await res.json();
-  if (json.errors?.length) {
-    throw new Error(`Admin API: ${json.errors.map((e) => e.message).join('; ')}`);
-  }
-  return json.data;
-}
-
-const ORDERS_QUERY = `
-  query GoalOrders($cursor: String, $query: String!) {
-    orders(first: 250, after: $cursor, query: $query) {
-      pageInfo { hasNextPage endCursor }
-      nodes {
-        cancelledAt
-        currentTotalPriceSet { shopMoney { amount } }
-      }
-    }
-  }
-`;
-
-/** Sum of non-cancelled order totals (EUR) created on/after `since`. */
+/**
+ * Gross revenue in EUR since `since` (YYYY-MM-DD), from the aggregate
+ * endpoint. Throws on anything but a well-formed document: a goal meter
+ * silently reading 0% because the endpoint answered an error page would be
+ * worse than a failed run.
+ */
 async function grossSince(since) {
-  let cursor = null;
-  let gross = 0;
-  const query = `status:any created_at:>=${since}`;
-  for (;;) {
-    const data = await adminGraphql(ORDERS_QUERY, {cursor, query});
-    const page = data?.orders;
-    if (!page) break;
-    for (const order of page.nodes) {
-      if (order.cancelledAt) continue;
-      gross += parseFloat(
-        order.currentTotalPriceSet?.shopMoney?.amount ?? '0',
-      );
-    }
-    if (!page.pageInfo.hasNextPage) break;
-    cursor = page.pageInfo.endCursor;
+  const url = new URL(env.GOALS_URL);
+  url.searchParams.set('since', since);
+  const res = await fetch(url, {headers: {Accept: 'application/json'}});
+  if (!res.ok) throw new Error(`GOALS_URL HTTP ${res.status}`);
+  const doc = await res.json();
+  const gross = Number(doc?.revenue_eur);
+  if (!Number.isFinite(gross)) {
+    throw new Error('GOALS_URL: response has no numeric revenue_eur');
   }
   return gross;
 }

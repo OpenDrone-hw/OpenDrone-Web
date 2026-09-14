@@ -39,10 +39,29 @@ const cases = [
   {path: '/privacy', expectStatus: 200, expectInBody: ['Privacy']},
   {path: '/terms', expectStatus: 200, expectInBody: ['Terms']},
   {path: '/cookies', expectStatus: 200, expectInBody: ['Cookie']},
-  // Cart and search load fine without items.
-  {path: '/cart', expectStatus: 200, expectInBody: ['Cart']},
-  {path: '/search', expectStatus: 200, expectInBody: ['Search']},
-  {path: '/collections/all', expectStatus: 200, expectInBody: ['Products']},
+  // The catalog listing and a product page, both rendered from the Odoo
+  // catalog feed. The PDP must carry a buy control and the hand-off link
+  // to the shop: without the link the page looks fine and sells nothing.
+  {path: '/products', expectStatus: 200, expectInBody: ['Products']},
+  {
+    path: '/products/openrx',
+    expectStatus: 200,
+    expectInBodyAny: ['Pre-order', 'Add to cart'],
+    expectInBody: ['/incutec/add'],
+  },
+  // Machine-readable surfaces carry the hand-off too.
+  {
+    path: '/products.json',
+    expectStatus: 200,
+    expectInBody: ['cart_add_url'],
+  },
+  {path: '/llms.txt', expectStatus: 200, expectInBody: ['/incutec/add']},
+  // The cart, the old collections URLs and search all land on /products.
+  {path: '/cart', expectStatus: 200, expectRedirect: '/products'},
+  {path: '/collections/all', expectStatus: 200, expectRedirect: '/products'},
+  {path: '/search', expectStatus: 200, expectRedirect: '/products'},
+  // Accounts live in the Odoo portal; /account leaves this site.
+  {path: '/account', expectStatus: 200, expectRedirect: 'shop.incutec.com'},
   // 404 path returns 404, not 500.
   {path: '/this-route-does-not-exist-xyz', expectStatus: 404},
 ];
@@ -75,6 +94,16 @@ async function run() {
       bad++;
       fail(tc.path, `expected redirect to ${tc.expectRedirect}, got ${res.url}`);
       continue;
+    }
+    if (tc.expectInBodyAny) {
+      const hit = tc.expectInBodyAny.some((needle) =>
+        body.toLowerCase().includes(needle.toLowerCase()),
+      );
+      if (!hit) {
+        bad++;
+        fail(tc.path, `none of ${tc.expectInBodyAny.join(' / ')} in body`);
+        continue;
+      }
     }
     let missed = false;
     for (const needle of tc.expectInBody || []) {

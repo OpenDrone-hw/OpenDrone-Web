@@ -1,15 +1,25 @@
-import type {ProductReview, ReviewAggregate} from '~/lib/reviews';
-
 /**
- * Provider-neutral review UI for the PDP. Data comes from
- * app/lib/reviews.ts (the Judge.me seam) — nothing in here knows or
- * cares where a review originated. Engineering-document styling:
- * hairline rows, JetBrains Mono numerals, tokens only (see the
- * "PDP reviews" section in app/styles/app.css).
+ * Review UI for the PDP. The aggregate (average and count) comes from
+ * the Odoo catalog feed, which reads Odoo's own published product
+ * ratings; the review bodies live on the shop product page, where a
+ * signed-in customer writes them. No third party (contract section 6).
+ *
+ * Engineering-document styling: hairline rows, JetBrains Mono numerals,
+ * tokens only (see the "PDP reviews" section in app/styles/app.css).
  */
+
+export type ReviewAggregate = {value: number; count: number};
 
 const STARS_FILLED = '★★★★★';
 const STARS_EMPTY = '☆☆☆☆☆';
+
+/** The catalog's rating as the aggregate, or null when nobody rated. */
+export function toReviewAggregate(
+  rating: {average: number; count: number} | null | undefined,
+): ReviewAggregate | null {
+  if (!rating || !rating.count) return null;
+  return {value: rating.average, count: rating.count};
+}
 
 /** Five mono star glyphs, filled to the rounded rating. */
 export function ReviewStars({rating}: {rating: number}) {
@@ -30,8 +40,8 @@ export function ReviewStars({rating}: {rating: number}) {
 
 /**
  * Buy-area aggregate line: stars, average, count. Links to the reviews
- * chapter further down the page. Renders nothing without an aggregate —
- * a product with zero reviews shows no trace of the feature.
+ * chapter further down the page. Renders nothing without an aggregate,
+ * so a product with zero reviews shows no trace of the feature.
  */
 export function ReviewAggregateLine({
   aggregate,
@@ -50,64 +60,31 @@ export function ReviewAggregateLine({
   );
 }
 
-/** ISO date (YYYY-MM-DD) — engineering-log style, no locale guessing. */
-function isoDate(timestamp: string): string {
-  return timestamp.slice(0, 10);
-}
-
 /**
- * The chapter body: hairline-separated review rows plus a count line
- * when more reviews exist than are shown.
+ * The chapter body: the aggregate in full, and a link to the shop
+ * product page where the reviews are read and written.
  */
 export function ReviewList({
-  reviews,
-  totalCount,
+  aggregate,
+  shopUrl,
 }: {
-  reviews: ProductReview[];
-  totalCount: number;
+  aggregate: ReviewAggregate;
+  shopUrl: string | null;
 }) {
-  if (reviews.length === 0) return null;
   return (
     <>
-      <ul className="review-list">
-        {reviews.map((r) => (
-          <li className="review-item" key={r.id}>
-            <div className="review-head">
-              <ReviewStars rating={r.rating} />
-              <span className="review-name">{r.reviewer}</span>
-              {r.verified ? (
-                <span className="review-verified">Verified buyer</span>
-              ) : null}
-              {r.createdAt ? (
-                <time className="review-date" dateTime={r.createdAt}>
-                  {isoDate(r.createdAt)}
-                </time>
-              ) : null}
-            </div>
-            {r.title ? <p className="review-title">{r.title}</p> : null}
-            {r.body ? <p className="review-body">{r.body}</p> : null}
-          </li>
-        ))}
-      </ul>
-      {totalCount > reviews.length ? (
+      <p className="review-count-line">
+        <ReviewStars rating={aggregate.value} /> {aggregate.value.toFixed(1)} out
+        of 5, from {aggregate.count}{' '}
+        {aggregate.count === 1 ? 'review' : 'reviews'}.
+      </p>
+      {shopUrl ? (
         <p className="review-count-line">
-          Showing the {reviews.length} most recent of {totalCount} reviews.
+          <a href={shopUrl} target="_blank" rel="noopener noreferrer">
+            Read the reviews
+          </a>
         </p>
       ) : null}
     </>
-  );
-}
-
-/**
- * Fallback body when the review fetch resolves empty/null but the
- * metafield aggregate says reviews exist (API hiccup, sync lag). The
- * chapter keeps its number and heading; the bodies degrade gracefully.
- */
-export function ReviewListFallback({totalCount}: {totalCount: number}) {
-  return (
-    <p className="review-count-line">
-      {totalCount} {totalCount === 1 ? 'rating' : 'ratings'} on file. Full
-      reviews are temporarily unavailable.
-    </p>
   );
 }

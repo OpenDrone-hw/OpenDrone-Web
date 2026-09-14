@@ -21,9 +21,10 @@ Deze site (opendrone.be) plaatst zelf geen winkelwagen- of checkoutcookie: bij a
 |--------|------|--------------|
 | Sessiecookie (shop.incutec.com) | Houdt uw winkelmandje en accountaanmelding tijdens het afrekenen werkend | Sessie |
 | Consentcookie (shop.incutec.com) | Onthoudt uw cookiekeuze, indien een toestemmingsbanner wordt getoond | 6 maanden |
-| Betalingscookies (gehoste betaalpagina van Mollie of de kaartuitgever) | Fraudepreventie bij betaling — wordt **uitsluitend op de gehoste betaalpagina** geplaatst tijdens de betaling, niet op opendrone.be of shop.incutec.com (Art. 10/2 Wet van 30 juli 2018 (zoals ingevoegd door de Wet van 21 december 2021), strikt noodzakelijk voor de uitdrukkelijk gevraagde dienst; Art. 5(3) ePrivacy-richtlijn 2002/58/EG) | Sessie |
+| Stripe-cookies (`m`, `__stripe_mid`, `__stripe_sid`) | Fraudepreventie bij betaling — geplaatst door Stripe op shop.incutec.com tijdens het afrekenen, niet op opendrone.be (strikt noodzakelijk voor de uitdrukkelijk gevraagde dienst; Art. 10/2 Wet van 30 juli 2018 (zoals ingevoegd door de Wet van 21 december 2021); Art. 5(3) ePrivacy-richtlijn 2002/58/EG) | Sessie tot 1 jaar, afhankelijk van de cookie |
+| Betalingscookies (gehoste betaalpagina van Mollie, enkel als terugvaloptie indien Stripe niet beschikbaar is) | Fraudepreventie bij betaling — wordt **uitsluitend op de gehoste betaalpagina** geplaatst tijdens de betaling, niet op opendrone.be of shop.incutec.com (Art. 10/2 Wet van 30 juli 2018 (zoals ingevoegd door de Wet van 21 december 2021), strikt noodzakelijk voor de uitdrukkelijk gevraagde dienst; Art. 5(3) ePrivacy-richtlijn 2002/58/EG) | Sessie |
 
-shop.incutec.com plaatst uitsluitend de sessie- en consentcookie hierboven: geen analytische of marketingcookies.
+shop.incutec.com plaatst uitsluitend de sessie-, consent- en Stripe-betalingscookies hierboven: geen analytische of marketingcookies.
 
 #### Analytische cookies
 

@@ -58,7 +58,8 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 | Destinataire | Finalité | Lieu |
 |-----------|---------|----------|
 | Odoo, auto-hébergé par Incutec BV | Plateforme de boutique, de commandes, de comptes et de facturation (shop.incutec.com) | Hetzner Online GmbH, Falkenstein, Allemagne (UE) |
-| Mollie B.V. | Traitement des paiements (Bancontact, SEPA, cartes) | Pays-Bas (UE) |
+| Stripe Payments Europe, Ltd. | Traitement des paiements (cartes, Bancontact, iDEAL, Klarna, PayPal) : données de paiement, e-mail, adresse de facturation ; données de l'appareil pour la prévention de la fraude | 1 Grand Canal Street Lower, Dublin 2, Irlande (UE) ; politique de confidentialité de Stripe : https://stripe.com/privacy |
+| Mollie B.V. | Traitement des paiements, utilisé uniquement en secours si Stripe est indisponible (Bancontact, SEPA, cartes) | Pays-Bas (UE) |
 | bpost NV/SA | Livraison des colis et étiquettes d’expédition | Belgique (UE) |
 | Google Workspace (Google Ireland Ltd.) | Boîtes mail de l’entreprise (support@ et sales@incutec.com), messagerie et connexion du personnel | Irlande (UE) ; les clauses contractuelles types de Google couvrent tout transfert hors EEE |
 | Plausible Analytics | Analyse de site sans cookies | Plausible Insights OÜ — Estonie (UE) ; hébergement en Allemagne |

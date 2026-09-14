@@ -9,56 +9,22 @@ import {
 import {
   comingSoonFlag,
   preorderNote,
-  preordersOpenFlag,
 } from '~/lib/coming-soon';
 import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
+import {toCards} from '~/lib/catalog';
 
 /**
  * /llms.txt — the machine-readable front door for AI agents (llmstxt.org).
- * Served dynamically so prices, availability and variant IDs come straight
- * from the Storefront API and can never drift from the shop. The catalog
- * section regenerates per request (cached 1h); everything else is static
- * policy/ordering/source-links text.
+ * Served dynamically so prices, availability, SKUs and order links come
+ * straight from the Odoo catalog and can never drift from the shop. The
+ * catalog section regenerates per request (cached 1h); everything else is
+ * static policy/ordering/source-links text.
  */
-
-const LLMS_CATALOG_QUERY = `#graphql
-  query LlmsCatalog($count: Int!) {
-    products(first: $count, query: "-product_type:Donation") {
-      nodes {
-        handle
-        title
-        description
-        variants(first: 12) {
-          nodes {
-            id
-            sku
-            title
-            availableForSale
-            price {
-              amount
-              currencyCode
-            }
-          }
-        }
-      }
-    }
-  }
-` as const;
-
-type LlmsVariant = {
-  id: string;
-  sku?: string | null;
-  title: string;
-  availableForSale: boolean;
-  price: {amount: string; currencyCode: string};
-};
-
-const numericId = (gid: string) => gid.split('/').pop() ?? gid;
 
 /**
  * The stack example's discount claim, derived from the same StackConfig the
- * storefront surfaces use (product-content.ts): the automatic BXGY is a
- * percent off ONE board (`discountedHandle`), never the pair. Returns the
+ * storefront surfaces use (product-content.ts): a promotion is a percent
+ * off ONE board (`discountedHandle`), never the pair. Returns the
  * parenthetical tail for the example sentence, or '' when no pct + side is
  * configured or either board of the pair is still coming-soon (a locked
  * feed hides prices, so it advertises no checkout discount either), so the
@@ -67,14 +33,13 @@ const numericId = (gid: string) => gid.split('/').pop() ?? gid;
 function stackDiscountNote(
   globalSoon: boolean,
   statusFlags: Record<string, import('~/lib/roadmap-data').ProductStatus> = {},
-  preordersOpen = false,
 ): string {
   for (const [hostHandle, c] of Object.entries(PRODUCT_CONTENT)) {
     const s = c.stack;
     if (!s?.discountPct || !s.discountedHandle) continue;
     if (
-      isComingSoon(hostHandle, globalSoon, statusFlags, preordersOpen) ||
-      isComingSoon(s.discountedHandle, globalSoon, statusFlags, preordersOpen)
+      isComingSoon(hostHandle, globalSoon, statusFlags) ||
+      isComingSoon(s.discountedHandle, globalSoon, statusFlags)
     )
       continue;
     // Word the claim from the side whose PARTNER is the discounted board;
@@ -88,8 +53,8 @@ function stackDiscountNote(
         (p) => p.handle === hostHandle,
       )?.label ?? hostHandle;
     return (
-      `; the ${discountedName} is automatically ${s.discountPct}% off at ` +
-      `checkout when bought together with the ${hostName}, a discount on ` +
+      `; the ${discountedName} is automatically ${s.discountPct}% off in ` +
+      `the cart when bought together with the ${hostName}, a discount on ` +
       `the ${discountedName} only, not on the pair`
     );
   }
@@ -99,18 +64,17 @@ function stackDiscountNote(
 export async function loader({context, request}: Route.LoaderArgs) {
   const origin = new URL(request.url).origin;
   const globalSoon = comingSoonFlag(context.env);
-  const preordersOpen = preordersOpenFlag(context.env);
-  const statusFlags = await fetchStatusFlagsFast(
-    context.env.GITHUB_STATUS_TOKEN,
-    undefined,
-    context.waitUntil,
-  );
-  const data = await context.storefront.query(LLMS_CATALOG_QUERY, {
-    variables: {count: 50},
-    cache: context.storefront.CacheLong(),
-  });
+  const [statusFlags, feed] = await Promise.all([
+    fetchStatusFlagsFast(
+      context.env.GITHUB_STATUS_TOKEN,
+      undefined,
+      context.waitUntil,
+    ),
+    context.catalog.get(),
+  ]);
+  const shopUrl = context.catalog.shopUrl;
 
-  const catalog = (data.products?.nodes ?? [])
+  const catalog = toCards(feed)
     // Concept products (planned / in-progress) are not catalog.
     .filter((p) => !isConceptProduct(p.handle, statusFlags))
     .map((p) => {
@@ -118,7 +82,9 @@ export async function loader({context, request}: Route.LoaderArgs) {
       // Resold parts (`editorial: false`) are not open hardware; say so
       // rather than let the header's license sentence cover them.
       const resold = PRODUCT_CONTENT[p.handle]?.editorial === false;
-      const desc = (p.description ?? '').replace(/\s+/g, ' ').slice(0, 160);
+      const desc = (PRODUCT_CONTENT[p.handle]?.hero?.lead ?? '')
+        .replace(/\s+/g, ' ')
+        .slice(0, 160);
       // Locked products show "coming soon" instead of price + stock — this
       // feed must not leak what the PDP hides. Pre-order products show the
       // same ship promise the PDP, the cart line and the order carry.
@@ -126,17 +92,20 @@ export async function loader({context, request}: Route.LoaderArgs) {
         p.handle,
         globalSoon,
         statusFlags,
-        preordersOpen,
+        p.variants.nodes[0]?.availability,
       );
       const locked = !isPurchasableStatus(status);
       const stockWord = (available: boolean) =>
         !available
           ? 'out of stock'
           : status === 'preorder'
-            ? `pre-order, ${preorderNote(p.handle)}`
+            ? `pre-order, ${preorderNote(
+                p.handle,
+                p.variants.nodes.find((v) => v.shipPromise)?.shipPromise,
+              )}`
             : 'in stock';
-      const lines = (p.variants?.nodes ?? [])
-        .map((v: LlmsVariant) => {
+      const lines = p.variants.nodes
+        .map((v) => {
           const name = v.title === 'Default Title' ? p.title : v.title;
           return (
             `  - ${name}` +
@@ -144,8 +113,8 @@ export async function loader({context, request}: Route.LoaderArgs) {
             (locked
               ? ' — coming soon, not yet orderable'
               : ` — €${Number(v.price.amount).toFixed(2)}` +
-                ` — ${stockWord(v.availableForSale)}`) +
-            ` — variant ID ${numericId(v.id)}`
+                ` — ${stockWord(v.availableForSale)}` +
+                ` — order: ${v.cartAddUrl}`)
           );
         })
         .join('\n');
@@ -197,21 +166,29 @@ is on hand. Details: ${origin}/shipping`
 - Prices include Belgian VAT. Shipping: ${origin}/shipping
 - Warranty and returns: ${origin}/warranty and ${origin}/herroepingsrecht
 
-## How to order (cart permalinks)
+## How to order
 
-Create a cart and jump straight to checkout with a GET request, no JS needed:
+Orders are placed on the Incutec shop, ${shopUrl}. Add lines to the visitor's
+own cart with a GET request, no JS needed:
 
-    ${origin}/cart/<variantId>:<qty>
+    ${shopUrl}/incutec/add?sku=<SKU>&qty=<n>&next=cart
 
-Multiple lines are comma-separated; an optional discount code goes in the query:
+Multiple lines go in one request, comma-separated:
 
-    ${origin}/cart/<variantId>:<qty>,<variantId>:<qty>?discount=CODE
+    ${shopUrl}/incutec/add?lines=<SKU>:<qty>,<SKU>:<qty>&next=cart
 
-Example, a 20×20 flight stack (OpenFC Lite + OpenESC${stackDiscountNote(globalSoon, statusFlags, preordersOpen)}):
-fetch the two 20×20 variant IDs from the catalog below
-and request ${origin}/cart/<fcId>:1,<escId>:1 — the response is a 302 to the
-Shopify checkout; hand that URL to the human to pay. Only the opendrone.be
-domain works. A machine-readable feed lives at ${origin}/products.json.
+Parameters: \`sku\`/\`qty\` repeatable pairs (qty 1 to 50, at most 20 lines);
+\`lines\` as above; \`mode=set\` makes the line quantity equal to qty instead of
+adding to it; \`next\` is \`cart\` (default) or \`checkout\`. The response is a
+303 to that page on the shop; hand that URL to the human to pay. An unknown or
+unpublished SKU gives 404 and adds nothing.
+
+Example, a 20×20 flight stack (OpenFC Lite + OpenESC${stackDiscountNote(globalSoon, statusFlags)}):
+
+    ${shopUrl}/incutec/add?lines=OPENFC-LITE-2020:1,OPENESC-2020:1&next=cart
+
+Every catalog line below carries its own ready-made order URL. A
+machine-readable feed lives at ${origin}/products.json.
 
 ## Catalog
 

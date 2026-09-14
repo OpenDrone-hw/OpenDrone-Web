@@ -1,11 +1,10 @@
 import {ServerRouter} from 'react-router';
 import {isbot} from 'isbot';
 import {renderToReadableStream} from 'react-dom/server';
-import {
-  createContentSecurityPolicy,
-  type HydrogenRouterContextProvider,
-} from '@shopify/hydrogen';
+import {createContentSecurityPolicy} from '~/lib/csp';
 import type {EntryContext} from 'react-router';
+import type {AppLoadContext} from '~/lib/context';
+import {shopUrl} from '~/lib/catalog-client';
 
 // Minimal ambient declaration for Cloudflare Workers' HTMLRewriter, which
 // Oxygen's edge runtime provides but isn't in the default TS lib and
@@ -27,13 +26,14 @@ export default async function handleRequest(
   responseStatusCode: number,
   responseHeaders: Headers,
   reactRouterContext: EntryContext,
-  context: HydrogenRouterContextProvider,
+  context: AppLoadContext,
 ) {
+  // The Odoo shop: product images are served from it, and every buy
+  // button navigates to it. cdn.shopify.com stays in scriptSrc because
+  // Oxygen serves this app's own JS bundles from it (decision D3 keeps
+  // the hosting); no Shopify API is called at runtime.
+  const shop = shopUrl(context.env);
   const {nonce, header, NonceProvider} = createContentSecurityPolicy({
-    shop: {
-      checkoutDomain: context.env.PUBLIC_CHECKOUT_DOMAIN,
-      storeDomain: context.env.PUBLIC_STORE_DOMAIN,
-    },
     // Turnstile injects a script from challenges.cloudflare.com and renders
     // the challenge UI inside an iframe served from the same host. Without
     // these directives Hydrogen's default CSP drops both and the support
@@ -66,13 +66,7 @@ export default async function handleRequest(
       // YouTube build-video lightbox (WatchCard) — privacy-enhanced host.
       'https://www.youtube-nocookie.com',
     ],
-    connectSrc: [
-      "'self'",
-      'https://cdn.shopify.com',
-      'https://monorail-edge.shopifysvc.com',
-      `https://${context.env.PUBLIC_STORE_DOMAIN}`,
-      'https://challenges.cloudflare.com',
-    ],
+    connectSrc: ["'self'", 'https://cdn.shopify.com', shop, 'https://challenges.cloudflare.com'],
     // Support-thread attachments (images, video, audio) are hosted on
     // Discord's CDN. Without these the inline <img>/<video>/<audio> tags
     // in SupportThread fail to load because Hydrogen's default img-src /
@@ -83,6 +77,7 @@ export default async function handleRequest(
       "'self'",
       'data:',
       'https://cdn.shopify.com',
+      shop,
       'https://cdn.discordapp.com',
       'https://media.discordapp.net',
       // YouTube thumbnail shown in the WatchCard build-video bubble.

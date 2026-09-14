@@ -1,6 +1,5 @@
 import {data} from 'react-router';
 import type {Route} from './+types/api.support.start';
-import {SUPPORT_CUSTOMER_PREFILL_QUERY} from '~/graphql/customer-account/SupportPrefillQuery';
 import {
   createSupportThread,
   firstNameOnly,
@@ -23,6 +22,7 @@ import {extractAttachments} from '~/lib/support/uploads';
 import {checkRateLimit, clientIp} from '~/lib/rate-limit';
 import {scrubForDiscord} from '~/lib/support/scrubber';
 import {addTicket} from '~/lib/support/ticket-index';
+import {createOrFetchOdooTicket} from '~/lib/support/odoo';
 
 type StartResult =
   | {ok: true; ticketId: string; pid?: string}
@@ -57,43 +57,20 @@ export async function action({request, context}: Route.ActionArgs) {
     );
   }
 
-  // Opening a ticket requires a Shopify customer account session. Name +
-  // email come from the authenticated customer record, not the form —
-  // that way we always post to Discord with a verified identity and a
-  // customerId staff can click back to the order history. The old anon
-  // flow let random visitors trickle in; gating here keeps the forum
-  // channel signal-heavy.
+  // Opening a ticket used to require a Shopify customer-account session,
+  // which supplied the name and email. Odoo owns accounts now and they
+  // live on another domain, so the intake form carries them again;
+  // Turnstile, the honeypot and the IP/email rate limits are the gate.
   const env = context.env;
-  let customer: {id: string; name: string; email: string} | null = null;
-  try {
-    const {data: prefill} = await context.customerAccount.query(
-      SUPPORT_CUSTOMER_PREFILL_QUERY,
-    );
-    const c = prefill?.customer;
-    const emailAddr = c?.emailAddress?.emailAddress;
-    if (c?.id && emailAddr) {
-      const name = [c.firstName, c.lastName].filter(Boolean).join(' ').trim();
-      customer = {
-        id: c.id,
-        name: name || emailAddr.split('@')[0],
-        email: emailAddr.toLowerCase(),
-      };
-    }
-  } catch {
-    // not signed in / scope missing — fall through to 401 below
-  }
-  if (!customer) {
-    return data<StartResult>(
-      {
-        ok: false,
-        message: 'Sign in to open a support ticket.',
-        code: 'signin-required',
-      },
-      {status: 401},
-    );
-  }
 
   const form = await request.formData();
+  const name = String(form.get('name') ?? '')
+    .trim()
+    .slice(0, 80);
+  const email = String(form.get('email') ?? '')
+    .trim()
+    .toLowerCase()
+    .slice(0, 254);
   const message = String(form.get('message') ?? '').trim();
   const turnstileToken = String(form.get('cf-turnstile-response') ?? '');
   const subject = String(form.get('subject') ?? '').trim().slice(0, 256);
@@ -103,6 +80,18 @@ export async function action({request, context}: Route.ActionArgs) {
 
   if (honeypot) {
     return data<StartResult>({ok: true, ticketId: 'drop'});
+  }
+  if (name.length < 2) {
+    return data<StartResult>(
+      {ok: false, message: 'Tell us your name so we know who we are helping.'},
+      {status: 400},
+    );
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return data<StartResult>(
+      {ok: false, message: 'Enter a valid email address.'},
+      {status: 400},
+    );
   }
   if (!subject || subject.length < 4) {
     return data<StartResult>(
@@ -184,8 +173,6 @@ export async function action({request, context}: Route.ActionArgs) {
     );
   }
 
-  const {id: verifiedCustomerId, name, email} = customer;
-
   try {
     // When a private staff-metadata channel is configured, the public
     // forum thread (which any helper can read) gets a first-name-only
@@ -213,7 +200,6 @@ export async function action({request, context}: Route.ActionArgs) {
       userAgent: ua,
       ipHint: ip && ip !== 'unknown' ? anonymizeIp(ip) : undefined,
       files: attachments.files,
-      customerId: verifiedCustomerId,
       pid,
     });
 
@@ -228,7 +214,6 @@ export async function action({request, context}: Route.ActionArgs) {
           await postStaffMetadata(env, thread.id, thread.name, {
             userName: name,
             userEmail: email,
-            customerId: verifiedCustomerId,
             userAgent: ua,
             ipHint: ip && ip !== 'unknown' ? anonymizeIp(ip) : undefined,
             pid,
@@ -252,55 +237,67 @@ export async function action({request, context}: Route.ActionArgs) {
     };
     const cookie = await signTicket(env, ticket);
 
-    // Write ticket meta + per-customer/email index. Fire-and-forget so
-    // a slow store write doesn't tail the API response. No-op when the
-    // Upstash store is unbound.
-    const indexJob = addTicket(env, {
-      tid: thread.id,
-      pid,
-      subject: cleanSubject || cleanMessage.content.slice(0, 80),
-      openedAt: ticket.createdAt,
-      closedAt: null,
-      lastActivityAt: ticket.createdAt,
-      status: 'open',
-      customerId: verifiedCustomerId,
-      email,
-      name: ticket.name,
-      product: cleanProduct || undefined,
-      firmware: cleanFirmware || undefined,
-    }).catch((err) =>
-      console.warn('[support/start] ticket-index write failed', err),
-    );
-    if (context.waitUntil) context.waitUntil(indexJob);
-    else void indexJob;
-
-    // Magic-link resume — fire-and-forget so the API response isn't blocked
-    // by Resend latency. The email contains a link that survives cookie
-    // wipes / device changes.
+    // Write ticket meta + the email index, mirror the ticket into Odoo
+    // (erp/addons/incutec_support, PLAN.md 12.2), and send the resume-link
+    // email — all fire-and-forget so a slow store write, an Odoo outage, or
+    // Resend latency never tails the API response. The Odoo call goes first
+    // because both the index write and the confirmation email want its
+    // ticket_ref; createOrFetchOdooTicket never throws and resolves to
+    // `null` on any failure (logged there), so this never blocks or fails
+    // the Discord path.
+    const ticketIndexSubject = cleanSubject || cleanMessage.content.slice(0, 80);
     const ticketSubject = cleanSubject || cleanMessage.content.slice(0, 60);
-    const emailJob = (async () => {
-      try {
-        const token = await signResumeToken(env, {
+    const backgroundJob = (async () => {
+      const odooTicket = await createOrFetchOdooTicket(env, {
+        threadId: thread.id,
+        email,
+        name,
+        subject: ticketIndexSubject,
+      });
+
+      await Promise.all([
+        addTicket(env, {
           tid: thread.id,
-          uid: ticket.uid,
+          pid,
+          subject: ticketIndexSubject,
+          openedAt: ticket.createdAt,
+          closedAt: null,
+          lastActivityAt: ticket.createdAt,
+          status: 'open',
           email,
           name: ticket.name,
-          pid,
-        });
-        const baseUrl = new URL(request.url).origin;
-        const resumeUrl = buildResumeUrl(baseUrl, token);
-        await sendResumeLink(env, {
-          to: email,
-          name,
-          subject: ticketSubject,
-          resumeUrl,
-        });
-      } catch (err) {
-        console.warn('[support/start] resume-email failed', err);
-      }
+          product: cleanProduct || undefined,
+          firmware: cleanFirmware || undefined,
+          odooRef: odooTicket?.ticketRef,
+        }).catch((err) =>
+          console.warn('[support/start] ticket-index write failed', err),
+        ),
+        (async () => {
+          try {
+            const token = await signResumeToken(env, {
+              tid: thread.id,
+              uid: ticket.uid,
+              email,
+              name: ticket.name,
+              pid,
+            });
+            const baseUrl = new URL(request.url).origin;
+            const resumeUrl = buildResumeUrl(baseUrl, token);
+            await sendResumeLink(env, {
+              to: email,
+              name,
+              subject: ticketSubject,
+              resumeUrl,
+              odooRef: odooTicket?.ticketRef,
+            });
+          } catch (err) {
+            console.warn('[support/start] resume-email failed', err);
+          }
+        })(),
+      ]);
     })();
-    if (context.waitUntil) context.waitUntil(emailJob);
-    else void emailJob;
+    if (context.waitUntil) context.waitUntil(backgroundJob);
+    else void backgroundJob;
 
     return data<StartResult>(
       {ok: true, ticketId: ticket.uid, pid},

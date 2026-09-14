@@ -1,9 +1,9 @@
 /**
- * Editorial content per Shopify product handle. Sourced from the real
+ * Editorial content per catalog product handle. Sourced from the real
  * product repos in iCloud (4in1ESC, 4in1ESC-30x30, OpenFC, OpenRX) —
- * NOT from the Shopify description field (which is currently a
- * placeholder). When a SKU gets real variants/metafields in Shopify
- * those take priority; this file fills the gaps the CMS doesn't cover.
+ * NOT from the Odoo description field. Odoo owns price, availability,
+ * ship promise and rating; this file owns the story, and the two merge
+ * by handle.
  *
  * The data itself lives in `content/products/<handle>.json` and is loaded
  * below by `import.meta.glob({eager: true})`, the same way `app/lib/copy.ts`
@@ -14,7 +14,7 @@
  * and the lifecycle helpers; it no longer keeps the words.
  *
  * When you add a new product: drop a `content/products/<handle>.json` named
- * after the Shopify handle. Missing file = product renders with
+ * after the catalog handle. Missing file = product renders with
  * `_fallback.json`.
  */
 
@@ -26,6 +26,7 @@ import {
   statusForHandle,
   type ProductStatus as RoadmapStatus,
 } from './roadmap-data.ts';
+import type {CatalogAvailability} from './product-shapes.ts';
 
 export type ChapterPin = {
   ref: string;
@@ -143,12 +144,12 @@ export type DownloadAsset = {
 };
 
 /**
- * "Complete the stack" cross-sell rendered inside the buy module. The buyer
- * toggles it on and the partner board is added to the cart in the same
- * add-to-cart submit; the stack discount itself is a Shopify automatic
- * Buy-X-Get-Y and applies at checkout. It discounts the "get Y" board
- * ONLY (today: 10% off the OpenESC when bought with an OpenFC Lite),
- * never the whole pair, so copy must name the discounted board.
+ * "Complete the stack" cross-sell rendered inside the buy module. The
+ * buyer clicks the offer and both SKUs go to the shop on one hand-off
+ * link. Any discount is an Odoo promotion applied by its cart, and it
+ * discounts ONE board of the pair, never the whole pair, so copy must name
+ * the discounted board. `discountPct` and `discountedHandle` are unset
+ * today: nothing may advertise a percent Odoo will not apply.
  * `partners` is a list on purpose: one entry today renders as a fixed
  * line, several (e.g. a future OpenFC Pro next to OpenFC Lite) render
  * as a picker.
@@ -156,13 +157,13 @@ export type DownloadAsset = {
 export type StackConfig = {
   /** What the partner adds, for copy: 'flight controller', 'ESC'. */
   adds: string;
-  /** Candidate partner products, by Shopify handle. */
+  /** Candidate partner products, by catalog handle. */
   partners: Array<{handle: string; label?: string}>;
   /** Option name matched between the two products' variants so the sizes
    *  pair up (20×20 FC with 20×20 ESC). Defaults to 'Model'. */
   matchOption?: string;
   /** Advertised discount percent. Display only: the real discount is the
-   *  automatic BXGY configured in Shopify. */
+   *  promotion configured in Odoo. Unset today. */
   discountPct?: number;
   /** Handle of the board the BXGY actually discounts (its "get Y" side).
    *  The pct is off THIS board only, not the pair. Surfaces use it to word
@@ -201,15 +202,15 @@ export type BundleComponent = {
  * one tier on a comparison ladder that doubles as the variant selector.
  *
  * Editorial here is the source of truth for *which tiers exist and how
- * they differ*. The PDP cross-references the Shopify product's option
+ * they differ*. The PDP cross-references the catalog product's option
  * values (matched by `optionAxis` name + the key of this map) to wire
  * each card to a real, purchasable variant — price, stock, add-to-cart.
- * Until those Shopify variants exist the ladder still renders for preview
+ * Until those catalog variants exist the ladder still renders for preview
  * and the cart falls back to the single default variant.
  */
 export type VariantContent = {
   /** Display name on the ladder card. Defaults to the variant key (which is
-   *  what Shopify matches against); set this when the shown name should differ
+   *  what the catalog matches against); set this when the shown name should differ
    *  from the matched key (e.g. key "20×20" shown as "20×20 (mini)"). */
   label?: string;
   /** Per-tier GitHub repo, when a line splits its boards across separate repos
@@ -259,7 +260,7 @@ export type VariantContent = {
    *  without their own model fall back to `teardown.frameViewer`. */
   frameViewer?: {src: string; inspectUrl?: string};
   /** When true the tier renders as a greyed, non-selectable "Coming soon"
-   *  card — a designed model that is not yet a purchasable Shopify variant.
+   *  card: a designed model that is not yet a purchasable catalog variant.
    *  It shows on the ladder for line completeness but can't be added to cart. */
   comingSoon?: boolean;
   /** OSHWA open-source-hardware certification UID for this specific tier (each
@@ -344,7 +345,7 @@ export type ProductContent = {
   specs: Array<[string, string]>;
   footnote?: string;            // appears under the family card
   /** When set, the PDP renders a comparison-ladder selector. `optionAxis`
-   *  is the Shopify option NAME that carries the line's variants
+   *  is the catalog option NAME that carries the line's variants
    *  (standardised to "Model"); `variants` is keyed by the option VALUE. See
    *  {@link VariantContent}. */
   optionAxis?: string;
@@ -367,14 +368,14 @@ export type ProductContent = {
    *  'development': designed, launch pending — notify-at-launch signup
    *  (the classic coming-soon UX). 'preorder': purchasable at full price
    *  ahead of stock; the order ships when the batch lands (the buy module
-   *  shows the pre-order lead time, the cart line carries a "Pre-order"
-   *  attribute and the whole order is held until every line is on hand).
-   *  Rendered as 'development' while the global PUBLIC_COMING_SOON flag is
-   *  on, unless PUBLIC_PREORDERS=1 opens pre-orders early (the Oxygen
-   *  preview does this for end-to-end tests). 'live': purchasable; Shopify
-   *  availableForSale decides in stock vs sold out. Unset = follow the
-   *  global PUBLIC_COMING_SOON flag ('development' while set, 'live'
-   *  once cleared), or the legacy `comingSoon` boolean when present. */
+   *  shows the ship promise, Odoo freezes it onto the order line, and the
+   *  whole order is held until every line is on hand).
+   *  Rendered as 'development' while the global PUBLIC_COMING_SOON flag
+   *  is on. 'live': purchasable; the catalog's availability decides in
+   *  stock vs sold out. Unset = the catalog's availability when the shop
+   *  carries the product, else the global PUBLIC_COMING_SOON flag
+   *  ('development' while set, 'live' once cleared), or the legacy
+   *  `comingSoon` boolean when present. */
   status?: ProductStatus;
   /** `false` marks a resold product (motors, other OEM parts) that has a
    *  content file for its status and copy but is NOT open hardware: no
@@ -428,8 +429,9 @@ export type ProductContent = {
  *
  * openfc-lite
  * - The shipping cost-down flight controller: one design, two mount sizes
- *   sharing nearly the whole BOM. The Shopify product (handle `openfc-lite`,
- *   Model "20x20"/"30x30") is ACTIVE; the old `openfc` product is archived.
+ *   sharing nearly the whole BOM. The catalog product (handle
+ *   `openfc-lite`, Model "20x20"/"30x30") is the one that sells; the old
+ *   `openfc` is a concept page only.
  * - `boardArt` is supplied per variant, so the layer reveal follows the ladder.
  * - Buck pins use one enlarged box per region, IC plus inductor plus in/out
  *   caps, so it reads as the whole buck rather than just the chip.
@@ -633,28 +635,43 @@ export function roadmapTriState(
  * fetchStatusFlags* where the caller can) > the global flag.
  *
  * The roadmap status is the truth in BOTH directions: status-beta means
- * the price is on the page and the board can be ordered (Shopify stock
- * permitting), whatever PUBLIC_COMING_SOON says; status-alpha means the
+ * the price is on the page and the board can be ordered (the catalog's
+ * availability permitting), whatever PUBLIC_COMING_SOON says; status-alpha means the
  * waitlist, even on an open shop. The topics are admin-only on the repos,
  * so "flip to beta" is a deliberate release act by a maintainer, and the
  * global flag remains only the default for products with no roadmap entry
  * (accessories) plus the per-product JSON kill-switch above it.
  *
  * The one exception to "explicit status wins": 'preorder' only opens once
- * the shop itself is open (global flag off) or `preordersOpen` is set
- * (PUBLIC_PREORDERS=1). Until then it renders as 'development', so a
- * pre-order status can sit in the content files before launch day without
- * taking orders on the production site.
+ * the shop itself is open (global flag off). Until then it renders as
+ * 'development', so a pre-order status can sit in the content files
+ * before launch day without taking orders on the production site.
+ *
+ * `availability` is Odoo's word for the product, carried by the catalog
+ * feed. Odoo decides which of its products are orderable, so it sits
+ * above the roadmap topic and the global default. It does NOT outrank the
+ * two switches above it: a local 'idea' or 'development' status is the
+ * storefront saying the product is not for sale at all, and
+ * PUBLIC_COMING_SOON is the kill switch, so a product sitting in stock in
+ * Odoo before launch day still renders as coming soon.
  */
 export function resolveStatus(
   handle: string | null | undefined,
   globalFlag: boolean,
   flags: Record<string, RoadmapStatus> = {},
-  preordersOpen = false,
+  availability?: CatalogAvailability,
 ): ProductStatus {
   const content = handle ? PRODUCT_CONTENT[handle] : undefined;
+  if (content?.status === 'idea' || content?.status === 'development') {
+    return content.status;
+  }
+  if (content?.status === 'live') return 'live';
+  if (availability) {
+    if (globalFlag) return 'development';
+    return availability === 'preorder' ? 'preorder' : 'live';
+  }
   if (content?.status === 'preorder') {
-    return !globalFlag || preordersOpen ? 'preorder' : 'development';
+    return globalFlag ? 'development' : 'preorder';
   }
   if (content?.status) return content.status;
   if (content?.comingSoon !== undefined) {
@@ -675,10 +692,10 @@ export function isComingSoon(
   handle: string | null | undefined,
   globalFlag: boolean,
   flags: Record<string, RoadmapStatus> = {},
-  preordersOpen = false,
+  availability?: CatalogAvailability,
 ): boolean {
   return !isPurchasableStatus(
-    resolveStatus(handle, globalFlag, flags, preordersOpen),
+    resolveStatus(handle, globalFlag, flags, availability),
   );
 }
 

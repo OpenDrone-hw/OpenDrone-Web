@@ -1,64 +1,18 @@
 /**
- * The community vote: ballot codec and tally store.
+ * The community vote: the read side of the tally store.
  *
- * How a vote travels: the cart ballot serialises a ranking into ONE cart
- * attribute (`_vote_rank`), Shopify copies cart attributes onto the order at
- * checkout, and `scripts/tally-votes.mjs` later walks orders via the Admin
- * API and writes the weighted totals into `content/votes.json`. This module
- * owns both ends: the codec the ballot and the cart action share, and the
- * read side of the tally file. Nothing at request time talks to the Admin
- * API.
+ * The ballot used to ride on a Shopify cart attribute (`_vote_rank`),
+ * which checkout copied onto the order for a nightly tally script. The
+ * cart lives in Odoo now and has no equivalent hook at the hand-off, so
+ * the ballot and its codec are gone; what stays is the display, reading
+ * `content/votes.json` exactly as before. Until a new ballot exists
+ * (phase 6, the Upstash ledger) the file no longer changes and /roadmap
+ * shows its empty state.
  *
- * The tally file is committed like all other content, so the counts shown on
- * /roadmap are exactly as fresh as the last tally run, and the maintainer can
- * review or correct them in the studio's Goals tab before they ship.
+ * The tally file is committed like all other content, so the counts shown
+ * on /roadmap are exactly as fresh as the last tally, and the maintainer
+ * can review or correct them in the studio's Goals tab.
  */
-
-/** Cart attribute key. `_` prefix hides it from the customer at checkout. */
-export const VOTE_ATTR_KEY = '_vote_rank';
-
-/** At most three ranked choices, scored 3/2/1. */
-export const VOTE_MAX_CHOICES = 3;
-export const VOTE_WEIGHTS = [3, 2, 1] as const;
-
-/**
- * `openvtx>motors>charger`. `>` reads as "over" in a ranking, cannot appear
- * in a roadmap id, and keeps the longest possible value (three ids) well
- * under the cart action's 64-char attribute cap.
- */
-const SEPARATOR = '>';
-
-export function serializeVoteRank(ids: string[]): string {
-  return ids.slice(0, VOTE_MAX_CHOICES).join(SEPARATOR);
-}
-
-/**
- * Decode and validate in one step: order-preserving, deduplicated, unknown
- * ids dropped, capped at three. Returns [] for garbage rather than throwing,
- * because the value crosses a trust boundary twice (client -> cart action,
- * order -> tally script) and both callers want "ignore what is not a vote".
- */
-export function parseVoteRank(
-  value: unknown,
-  validIds: readonly string[],
-): string[] {
-  if (typeof value !== 'string' || value.length > 64) return [];
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const raw of value.split(SEPARATOR)) {
-    const id = raw.trim();
-    if (!id || seen.has(id) || !validIds.includes(id)) continue;
-    seen.add(id);
-    out.push(id);
-    if (out.length === VOTE_MAX_CHOICES) break;
-  }
-  return out;
-}
-
-/** Points one ballot contributes, by rank position. */
-export function ballotPoints(rank: number): number {
-  return VOTE_WEIGHTS[rank] ?? 0;
-}
 
 /** Shape of `content/votes.json`. */
 export type VoteTally = {

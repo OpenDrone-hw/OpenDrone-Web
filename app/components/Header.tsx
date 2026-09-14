@@ -1,20 +1,13 @@
-import {Suspense, useEffect, useRef, useState} from 'react';
-import {Await, useAsyncValue, useLocation} from 'react-router';
+import {useEffect, useRef, useState} from 'react';
+import {Form, useLocation} from 'react-router';
 import {NavLink} from '~/components/nav';
 import {AnimatePresence} from 'motion/react';
-import {
-  type CartViewPayload,
-  useAnalytics,
-  useOptimisticCart,
-} from '@shopify/hydrogen';
-import type {HeaderQuery, CartApiQueryFragment} from 'storefrontapi.generated';
 import {useAside} from '~/components/Aside';
 import {LangToggle} from '~/components/LangToggle';
 import {ThemeToggle} from '~/components/ThemeToggle';
 import {SiteWordmark} from '~/components/SiteWordmark';
 import {IncutecWordmark} from '~/components/IncutecWordmark';
 import {Pod} from '~/components/Pod';
-import {SearchForm} from '~/components/SearchForm';
 import {
   ProductPods,
   type ProductPodItem,
@@ -33,7 +26,13 @@ import {
   isPurchasableStatus,
   PRODUCT_CONTENT,
 } from '~/lib/product-content';
+import {FAMILIES} from '~/lib/families';
 import {stackDiscountedPrice} from '~/lib/stack-discount';
+import {buyUrl, portalUrl} from '~/lib/shop-links';
+import type {
+  ProductCardFragment,
+  ProductVariantFragment,
+} from '~/lib/product-shapes';
 
 /** Retire the hero "Who's incutec?" hint: persist the dismissal and pull the
  *  class so it can't flash on a same-session SPA return to the homepage. */
@@ -46,66 +45,39 @@ function dismissIncutecHint() {
   document.documentElement.classList.remove('hero-incutec-hint');
 }
 
-/** Thin shape of a product as read by HEADER_PRODUCTS_QUERY. */
-export type HeaderFamilyVariant = {
-  id: string;
-  title: string;
-  availableForSale?: boolean;
-  image?: {url: string; altText?: string | null} | null;
-  price?: {amount: string; currencyCode: string} | null;
-  selectedOptions?: Array<{name: string; value: string}>;
-};
-
-export type HeaderFamilyProduct = {
-  id: string;
-  handle: string;
-  title: string;
-  productType?: string | null;
-  featuredImage?: {url: string; altText?: string | null} | null;
-  priceRange?: {
-    minVariantPrice?: {amount: string; currencyCode: string} | null;
-  } | null;
-  variants?: {nodes: HeaderFamilyVariant[]} | null;
-};
+/** A product as the header reads it: a catalog card. */
+export type HeaderFamilyVariant = ProductVariantFragment;
+export type HeaderFamilyProduct = ProductCardFragment;
 
 interface HeaderProps {
-  header: HeaderQuery;
-  cart: Promise<CartApiQueryFragment | null>;
-  isLoggedIn: Promise<boolean>;
-  publicStoreDomain: string;
-  familyProducts?: Promise<HeaderFamilyProduct[]>;
+  shopUrl: string;
+  familyProducts?: HeaderFamilyProduct[];
 }
 
 type Viewport = 'desktop' | 'mobile';
 
 // The header's own words live in `content/copy/chrome.json` and are rendered
-// through <Txt>. Three sets of strings deliberately do NOT: the Shopify menu
-// titles (edited in Shopify admin, including FALLBACK_HEADER_MENU which mirrors
-// it), anything derived from product data, and the family labels below — those
-// double as dropdown state keys and as the short names on the buy buttons, so
-// they are structure, not copy.
+// through <Txt>. Three sets of strings deliberately do NOT: the site menu
+// titles in HEADER_MENU below, anything derived from product data, and the
+// family labels below — those double as dropdown state keys and as the short
+// names on the buy buttons, so they are structure, not copy.
 //
-// Category links jump straight to the current PDP for each family.
-// Accessories no longer get a dedicated link here — they live (with
-// everything else) on the aggregated All Products page, reachable via the
-// "All Products" CTA on the right, filterable by category there.
-// Each family chip links to its representative PDP and, on hover, drops a Pod
-// listing every SKU of that Shopify `productType`.
-const CATEGORY_LINKS: Array<{label: string; to: string; type: string}> = [
-  {label: 'FC', to: '/products/openfc-lite', type: 'Flight Controller'},
-  {label: 'ESC', to: '/products/openesc', type: 'ESC'},
-  {label: 'RX', to: '/products/openrx', type: 'Receiver'},
-  {label: 'Frame', to: '/products/openframe', type: 'Frame'},
-];
+// The family chips. Accessories get no dedicated link: they live (with
+// everything else) on the All Products page, reachable via the CTA on the
+// right and filterable by family there. Each chip links to its family's
+// representative PDP and, on hover, drops a Pod listing every SKU in it.
+// The vocabulary itself is app/lib/families.ts, shared with the listing.
+const CATEGORY_LINKS = FAMILIES.map((f) => ({
+  label: f.short,
+  to: f.to,
+  type: f.type,
+}));
 
-/** Fuller family names for the mobile drawer (the desktop FamilyNav chips use
- *  the terse FC/ESC/… labels; the drawer has room to spell them out). */
-const MOBILE_FAMILY_LABEL: Record<string, string> = {
-  'Flight Controller': 'Flight Controllers',
-  ESC: 'ESCs',
-  Receiver: 'Receivers',
-  Frame: 'Frames',
-};
+/** Fuller family names for the mobile drawer (the desktop FamilyNav chips
+ *  use the terse FC/ESC/… labels; the drawer has room to spell them out). */
+const MOBILE_FAMILY_LABEL: Record<string, string> = Object.fromEntries(
+  FAMILIES.map((f) => [f.type, f.long]),
+);
 
 /** Stack companions per family: each pod row offers "+X" buttons for these
  *  partner products, size-matched by the Model option. N-to-N ready: every
@@ -116,47 +88,20 @@ const MOBILE_FAMILY_LABEL: Record<string, string> = {
  *  the visible label. Only the pairing lives here; the discount claim (the
  *  automatic BXGY's percent and which ONE board of the pair it is off,
  *  today the OpenESC, never both) derives per row from that product's
- *  `stack` config in product-content.ts, so removing `discountPct` or
- *  `discountedHandle` there silences the header's claim too. */
+ *  `stack` config in product-content.ts, which is only set while Odoo
+ *  carries the matching promotion, so an unconfigured shop claims nothing. */
 const STACK_COMPANIONS: Record<string, Array<{handle: string; short: string}>> = {
   'Flight Controller': [{handle: 'openesc', short: 'ESC'}],
-  ESC: [{handle: 'openfc-lite', short: 'FC'}],
+  '4-in-1 ESC': [{handle: 'openfc-lite', short: 'FC'}],
 };
 
-/** Short family label ("FC", "ESC") for a productType — names the buy
- *  buttons so "FC only" vs "FC + ESC stack" is unambiguous. */
+/** Short family label ("FC", "ESC") for a family type. */
+
 function selfShortFor(type: string): string {
   return CATEGORY_LINKS.find((c) => c.type === type)?.label ?? 'board';
 }
 
-/** Minimal ProductVariant-ish shape so useOptimisticCart can render the
- *  pending line immediately instead of console-erroring and waiting for the
- *  server cart. Cast at the use site — the header only has the thin query. */
-function optimisticVariant(
-  v: HeaderFamilyVariant,
-  product: {title: string; handle: string},
-) {
-  return {
-    id: v.id,
-    title: v.title,
-    availableForSale: v.availableForSale ?? true,
-    price: v.price,
-    image: v.image ?? null,
-    product,
-    selectedOptions: v.selectedOptions ?? [],
-  } as unknown as NonNullable<
-    import('@shopify/hydrogen').OptimisticCartLineInput['selectedVariant']
-  >;
-}
-
-export function Header({
-  header,
-  isLoggedIn,
-  cart,
-  publicStoreDomain,
-  familyProducts,
-}: HeaderProps) {
-  const {menu} = header;
+export function Header({shopUrl, familyProducts}: HeaderProps) {
   // Dynamic-Island logo slot. On the hero ("/") the OpenDrone wordmark already
   // lives bottom-left in the 3D scene, so the bar instead credits the parent
   // company — the Incutec mark linking to incutec.eu (OpenDrone is an Incutec
@@ -212,21 +157,16 @@ export function Header({
         )}
 
         {/* Center: primary nav + gold category links on the same row */}
-        <HeaderMenu
-          menu={menu}
-          viewport="desktop"
-          primaryDomainUrl={header.shop.primaryDomain.url}
-          publicStoreDomain={publicStoreDomain}
-        />
+        <HeaderMenu viewport="desktop" shopUrl={shopUrl} />
         {/* Category families in segmented bubbles: FC and ESC share one
             (their rows sell the stack), while RX and Frame are standalone
             families so each gets its own bubble; All Products follows in its
             own accented bubble as the route into the full catalogue. No
             dividers — the bubbles do the grouping. */}
-        <FamilyNav familyProducts={familyProducts} />
+        <FamilyNav familyProducts={familyProducts} shopUrl={shopUrl} />
 
         {/* Right: actions */}
-        <HeaderCtas isLoggedIn={isLoggedIn} cart={cart} />
+        <HeaderCtas shopUrl={shopUrl} />
       </div>
     </header>
   );
@@ -242,18 +182,17 @@ export function Header({
  */
 function FamilyNav({
   familyProducts,
+  shopUrl,
 }: {
-  familyProducts?: Promise<HeaderFamilyProduct[]>;
+  familyProducts?: HeaderFamilyProduct[];
+  shopUrl: string;
 }) {
-  const [products, setProducts] = useState<HeaderFamilyProduct[] | null>(null);
+  const products = familyProducts ?? null;
   const [open, setOpen] = useState<string | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   // True for the tick after Escape restores focus to a chip (see onFocus).
   const escFocus = useRef(false);
   const location = useLocation();
-  // Cart drawer opener for the Stack chip's add buttons (named to avoid the
-  // `open` dropdown-state collision above).
-  const {open: openCartAside} = useAside();
   // Global coming-soon flag; per-product overrides resolve in isComingSoon()
   // below so unlaunched SKUs list without price or buy cell.
   const productStatus = useProductStatusResolver();
@@ -267,12 +206,7 @@ function FamilyNav({
     setOpen(null);
   }, [location.pathname, location.search]);
 
-  function ensureProducts() {
-    if (products || !familyProducts) return;
-    familyProducts.then((p) => setProducts(p)).catch(() => setProducts([]));
-  }
   function openFamily(label: string) {
-    ensureProducts();
     clearTimeout(closeTimer.current);
     setOpen(label);
   }
@@ -330,8 +264,8 @@ function FamilyNav({
       // Unlaunched partners can't cascade into a stack add.
       if (!isPurchasableStatus(productStatus(h))) return [];
       const partner = (products ?? []).find((p) => p.handle === h);
-      const pv = partner?.variants?.nodes?.find((pvv) =>
-        pvv.selectedOptions?.some(
+      const pv = partner?.variants.nodes.find((pvv) =>
+        pvv.selectedOptions.some(
           (o) =>
             o.name.trim().toLowerCase() === 'model' &&
             o.value.trim().toLowerCase() === size.trim().toLowerCase(),
@@ -363,21 +297,11 @@ function FamilyNav({
               : undefined,
           available: Boolean(pv.availableForSale && v.availableForSale),
           imageUrl: pv.image?.url ?? partner.featuredImage?.url ?? null,
-          lines: [
-            {
-              merchandiseId: v.id,
-              quantity: 1,
-              selectedVariant: optimisticVariant(v, rowProduct),
-            },
-            {
-              merchandiseId: pv.id,
-              quantity: 1,
-              selectedVariant: optimisticVariant(pv, {
-                title: partner.title,
-                handle: partner.handle,
-              }),
-            },
-          ],
+          // Both SKUs on one hand-off link.
+          href: buyUrl(shopUrl, [
+            {sku: v.sku ?? '', quantity: 1},
+            {sku: pv.sku ?? '', quantity: 1},
+          ]),
         },
       ];
     });
@@ -396,12 +320,12 @@ function FamilyNav({
         // no price and no buy cell — the PDP hosts the notify signup.
         const soon = !isPurchasableStatus(productStatus(p.handle));
         // Real, distinguishable variants (drop the single "Default Title").
-        const variants = (p.variants?.nodes ?? []).filter(
+        const variants = (p.variants.nodes ?? []).filter(
           (v) => v.title && v.title !== 'Default Title',
         );
         // Single-variant product → one row for the product itself.
         if (variants.length <= 1) {
-          const only = p.variants?.nodes?.[0];
+          const only = p.variants.nodes[0];
           return [
             {
               key: p.handle,
@@ -410,25 +334,15 @@ function FamilyNav({
               subtitle: p.productType ?? undefined,
               imageUrl: p.featuredImage?.url ?? null,
               imageAlt: p.featuredImage?.altText ?? null,
-              price: soon ? null : (p.priceRange?.minVariantPrice ?? null),
+              price: soon ? null : (p.priceRange.minVariantPrice ?? null),
               soon,
               buy: soon
                 ? undefined
                 : only
                 ? {
-                    lines: [
-                      {
-                        merchandiseId: only.id,
-                        quantity: 1,
-                        selectedVariant: optimisticVariant(only, {
-                          title: p.title,
-                          handle: p.handle,
-                        }),
-                      },
-                    ],
+                    href: only.cartAddUrl,
+                    product: p.handle,
                     available: Boolean(only.availableForSale),
-                    flyImage:
-                      only.image?.url ?? p.featuredImage?.url ?? null,
                     selfShort: selfShortFor(type),
                   }
                 : undefined,
@@ -438,10 +352,10 @@ function FamilyNav({
         // Multi-variant → a row per SKU, deep-linking the variant on the PDP.
         return variants.map((v) => {
           const params = new URLSearchParams();
-          (v.selectedOptions ?? []).forEach((o) => params.set(o.name, o.value));
+          v.selectedOptions.forEach((o) => params.set(o.name, o.value));
           const qs = params.toString();
           return {
-            key: v.id,
+            key: v.sku ?? v.id,
             to: `/products/${p.handle}${qs ? `?${qs}` : ''}`,
             // SKU/variant name is the headline (gold); the family line is the
             // dim context beneath it.
@@ -449,23 +363,14 @@ function FamilyNav({
             subtitle: p.title,
             imageUrl: v.image?.url ?? p.featuredImage?.url ?? null,
             imageAlt: v.image?.altText ?? p.featuredImage?.altText ?? null,
-            price: soon ? null : (v.price ?? p.priceRange?.minVariantPrice ?? null),
+            price: soon ? null : (v.price ?? p.priceRange.minVariantPrice ?? null),
             soon,
             buy: soon
               ? undefined
               : {
-                  lines: [
-                    {
-                      merchandiseId: v.id,
-                      quantity: 1,
-                      selectedVariant: optimisticVariant(v, {
-                        title: p.title,
-                        handle: p.handle,
-                      }),
-                    },
-                  ],
+                  href: v.cartAddUrl,
+                  product: p.handle,
                   available: Boolean(v.availableForSale),
-                  flyImage: v.image?.url ?? p.featuredImage?.url ?? null,
                   selfShort: selfShortFor(type),
                   companions: companionsFor(type, v, {
                     title: p.title,
@@ -533,10 +438,7 @@ function FamilyNav({
                 <ProductPods
                   items={items}
                   layout="row"
-                  onAdd={() => {
-                    setOpen(null);
-                    openCartAside('cart');
-                  }}
+                  onAdd={() => setOpen(null)}
                 />
               </Pod>
             ) : null}
@@ -560,7 +462,7 @@ function FamilyNav({
       ))}
       <NavLink
         prefetch="viewport"
-        to="/collections/all"
+        to="/products"
         className="site-header-cat-all"
       >
         <Txt id="chrome.nav_all_products" />
@@ -570,15 +472,11 @@ function FamilyNav({
 }
 
 export function HeaderMenu({
-  menu,
-  primaryDomainUrl,
   viewport,
-  publicStoreDomain,
+  shopUrl,
 }: {
-  menu: HeaderProps['header']['menu'];
-  primaryDomainUrl: HeaderProps['header']['shop']['primaryDomain']['url'];
   viewport: Viewport;
-  publicStoreDomain: HeaderProps['publicStoreDomain'];
+  shopUrl: string;
 }) {
   const {close} = useAside();
   const isMobile = viewport === 'mobile';
@@ -598,32 +496,30 @@ export function HeaderMenu({
           a sea of empty panel and the whole product taxonomy vanished. */}
       {isMobile && (
         <>
-          <SearchForm
-            action="/collections/all"
+          {/* The listing filters the catalog client-side, so this is a
+              plain GET form onto it rather than a search API call. */}
+          <Form
+            action="/products"
+            method="get"
             className="site-mobile-nav-search"
             onSubmit={() => close()}
           >
-            {({inputRef}) => (
-              <>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                  <circle cx="11" cy="11" r="7" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-                <input
-                  ref={inputRef}
-                  type="search"
-                  name="q"
-                  placeholder={
-                    copyText('chrome.search_placeholder') ?? 'Search products'
-                  }
-                  aria-label={
-                    copyText('chrome.search_placeholder') ?? 'Search products'
-                  }
-                  enterKeyHint="search"
-                />
-              </>
-            )}
-          </SearchForm>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              type="search"
+              name="q"
+              placeholder={
+                copyText('chrome.search_placeholder') ?? 'Search products'
+              }
+              aria-label={
+                copyText('chrome.search_placeholder') ?? 'Search products'
+              }
+              enterKeyHint="search"
+            />
+          </Form>
           <Txt
             id="chrome.heading_shop"
             as="p"
@@ -643,7 +539,7 @@ export function HeaderMenu({
           <NavLink
             onClick={close}
             prefetch="viewport"
-            to="/collections/all"
+            to="/products"
             className="text-sm font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
           >
             <Txt id="chrome.nav_all_products_mobile" />
@@ -664,35 +560,25 @@ export function HeaderMenu({
           </NavLink>
         </>
       )}
-      {(menu || FALLBACK_HEADER_MENU).items.map((item) => {
+      {HEADER_MENU.items.map((item) => {
         if (!item.url) return null;
-        let url =
-          item.url.includes('myshopify.com') ||
-          item.url.includes(publicStoreDomain) ||
-          item.url.includes(primaryDomainUrl)
-            ? new URL(item.url).pathname
-            : item.url;
-        // The Storefront API returns menu URLs locale-prefixed
-        // ("/nl/collections/all") when the query runs @inContext with a
-        // non-default language. Only legal pages exist under locale
-        // prefixes in this app, so strip the prefix: it makes the skip
-        // rules below match in every locale and un-breaks the links
-        // themselves (a prefixed "/nl/collections/all" is a 404 here).
-        url = url.replace(/^\/(en|nl|fr)(?=\/|$)/, '') || '/';
-        // Rewrite Shopify Pages handles to our local routes when one
-        // exists. Shopify's main menu defaults Contact to /pages/contact
-        // even though we own a local /contact route with the support
-        // widget; without this rewrite the menu link lands on an empty
-        // Shopify Page.
-        url = LOCAL_PAGE_REWRITES[url] ?? url;
-        // Drop any menu item that resolves to "/" — the wordmark logo
-        // on the left already links there, so a separate "Home" entry
-        // is duplicated chrome. This skips it in code so we don't have
-        // to keep the Shopify admin menu in sync.
-        if (url === '/' || url === '') return null;
-        // Catalog + Contact render in the right-side CTA group; skip
-        // them here to avoid duplicate links in the center menu.
-        if (!isMobile && (url === '/collections/all' || url === '/support')) return null;
+        const url = item.url;
+        // Catalog and Contact render in the right-side CTA group, and
+        // Newsletter and Open Source render there / in the footer too
+        // (HeaderCtas below, and the footer's "Open Source & Incutec"
+        // link): skip all four here on desktop so the center menu isn't
+        // a duplicate row. Production's live center nav is empty for the
+        // same reason (mirrors that empty `<nav>` byte-for-byte). Mobile
+        // keeps every item since the drawer has no CTA group to fall
+        // back on.
+        if (
+          !isMobile &&
+          (url === '/products' ||
+            url === '/support' ||
+            url === '/newsletter' ||
+            url === 'https://github.com/OpenDrone-hw')
+        )
+          return null;
         const className = isMobile
           ? 'text-sm font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors'
           : 'font-mono text-[12px] uppercase tracking-[0.15em] transition-colors text-[var(--color-text-muted)] hover:text-[var(--color-text)]';
@@ -734,11 +620,9 @@ export function HeaderMenu({
       {/* Mobile aside only: a Newsletter link in the slide-out menu. On
           desktop Newsletter lives in the right-side CTA group (left of
           Catalog), so it's omitted here to avoid duplicating it. Skipped if
-          the Shopify menu already links to /newsletter. */}
+          HEADER_MENU already links to /newsletter. */}
       {isMobile &&
-      !(menu || FALLBACK_HEADER_MENU).items.some((it) =>
-        it.url?.includes('/newsletter'),
-      ) ? (
+      !HEADER_MENU.items.some((it) => it.url?.includes('/newsletter')) ? (
         <NavLink
           end
           onClick={close}
@@ -762,25 +646,22 @@ export function HeaderMenu({
             as="p"
             className="site-mobile-nav-label"
           />
-          {/* No prefetch — auth-gated route, see the desktop account link. */}
-          <NavLink
+          {/* Accounts live in the Odoo portal on the shop, so this leaves
+              the site rather than routing inside it. */}
+          <a
             onClick={close}
-            prefetch="none"
-            to="/account"
+            href={portalUrl(shopUrl, 'account')}
             className="text-sm font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
           >
             <Txt id="chrome.nav_account_signin" />
-          </NavLink>
+          </a>
         </>
       ) : null}
     </nav>
   );
 }
 
-function HeaderCtas({
-  isLoggedIn,
-  cart,
-}: Pick<HeaderProps, 'isLoggedIn' | 'cart'>) {
+function HeaderCtas({shopUrl}: {shopUrl: string}) {
   return (
     <nav className="flex items-center gap-2 md:gap-5 ml-auto" role="navigation">
       {/* Hidden in the top bar on phones (it would overflow a 320px row on
@@ -812,27 +693,17 @@ function HeaderCtas({
       >
         <Txt id="chrome.nav_contact" />
       </NavLink>
-      {/* No prefetch: /account is auth-gated, so a viewport prefetch fired a
-          wasted 400 /account.data request (+ console error) on every single
-          pageview for logged-out visitors. */}
-      <NavLink
-        prefetch="none"
-        to="/account"
+      {/* Account, orders, invoices and addresses live in the Odoo portal
+          on the shop: an external link, not an in-app route. The signed-in
+          state is the shop's to know, so the label is always "Account". */}
+      <a
+        href={portalUrl(shopUrl, 'account')}
         className="font-mono text-[12px] uppercase tracking-[0.15em] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors hidden md:block"
       >
-        <Suspense fallback={<Txt id="chrome.nav_sign_in" />}>
-          <Await
-            resolve={isLoggedIn}
-            errorElement={<Txt id="chrome.nav_sign_in" />}
-          >
-            {(isLoggedIn) => (
-              <Txt id={isLoggedIn ? 'chrome.nav_account' : 'chrome.nav_sign_in'} />
-            )}
-          </Await>
-        </Suspense>
-      </NavLink>
+        <Txt id="chrome.nav_account" />
+      </a>
       <ThemeToggle className="site-header-icon" />
-      <CartToggle cart={cart} />
+      <CartToggle shopUrl={shopUrl} />
       <HeaderMenuMobileToggle />
     </nav>
   );
@@ -855,181 +726,50 @@ function HeaderMenuMobileToggle() {
   );
 }
 
-function CartBadge({count}: {count: number}) {
-  const {openPreview, close, type, preview} = useAside();
-  const {publish, shop, cart, prevCart} = useAnalytics();
-  // Hover (mouse only) opens the drawer as a quick preview — same feel as the
-  // family pods; click always commits to the /cart page, which is also the
-  // keyboard/touch path. The open goes through a short hover-intent delay so
-  // a pointer merely grazing the icon en route to something else never
-  // triggers it. The preview is NON-modal (see Aside `openPreview`): no focus
-  // steal, no scroll-lock — it closes once the pointer settles outside both
-  // the icon and the drawer, and pins to a full modal the moment the visitor
-  // interacts inside the drawer (it's a real cart session then, not a peek).
-  const previewActive = type === 'cart' && preview;
-  const openTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  // One cart_viewed per drawer open — hover-open publishes, and the
-  // commit-click only publishes when no preview already did.
-  const viewedRef = useRef(false);
-
-  useEffect(() => {
-    if (type !== 'cart') viewedRef.current = false;
-  }, [type]);
-
-  useEffect(() => () => clearTimeout(openTimer.current), []);
-
-  // While the preview is open, lift the header above the drawer overlay
-  // (html[data-cart-preview] .site-header — same pattern as the family-pod
-  // z-index bump) so the cart icon stays hoverable AND clickable: the
-  // commit-click must land on the icon, not on the overlay.
-  useEffect(() => {
-    if (!previewActive) return;
-    document.documentElement.setAttribute('data-cart-preview', '');
-    return () => document.documentElement.removeAttribute('data-cart-preview');
-  }, [previewActive]);
-
-  useEffect(() => {
-    if (!previewActive) return;
-    // Same global-pointer backstop as FamilyNav: onMouseLeave alone can't
-    // bridge the gap between the icon and the drawer panel, so watch the
-    // pointer document-wide while the preview is open.
-    const onPointer = (e: PointerEvent) => {
-      const t = e.target as Element | null;
-      clearTimeout(closeTimer.current);
-      if (t?.closest?.('.overlay aside') || t?.closest?.('[data-cart-hover]'))
-        return;
-      closeTimer.current = setTimeout(() => close(), 140);
-    };
-    // A preview doesn't scroll-lock the body — a wheel spin outside the panel
-    // means "get out of my way", so close immediately (pods close on scroll).
-    const onWheel = (e: WheelEvent) => {
-      const t = e.target as Element | null;
-      if (t?.closest?.('.overlay aside')) return;
-      clearTimeout(closeTimer.current);
-      close();
-    };
-    document.addEventListener('pointermove', onPointer);
-    document.addEventListener('wheel', onWheel, {passive: true});
-    return () => {
-      clearTimeout(closeTimer.current);
-      document.removeEventListener('pointermove', onPointer);
-      document.removeEventListener('wheel', onWheel);
-    };
-  }, [previewActive, close]);
-
+/**
+ * The cart icon. The cart itself lives on the shop (contract section
+ * 1.3), so this is a plain external link to it: there is no local cart
+ * to count, preview in a drawer or publish analytics for.
+ */
+function CartToggle({shopUrl}: {shopUrl: string}) {
   return (
-    <NavLink
-      prefetch="viewport"
-      to="/cart"
-      data-cart-target=""
-      data-cart-hover=""
-      className="site-header-icon text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
-      onPointerEnter={(e) => {
-        if (e.pointerType !== 'mouse') return;
-        clearTimeout(closeTimer.current);
-        clearTimeout(openTimer.current);
-        if (type !== 'closed') return;
-        // Hover intent: only open once the pointer has dwelled on the icon.
-        openTimer.current = setTimeout(() => {
-          openPreview('cart');
-          viewedRef.current = true;
-          publish('cart_viewed', {
-            cart,
-            prevCart,
-            shop,
-            url: window.location.href || '',
-          } as CartViewPayload);
-        }, 150);
-      }}
-      onPointerLeave={() => {
-        // Grazed, not committed — cancel a pending hover-open. The global
-        // pointermove watcher handles closing an already-open preview.
-        clearTimeout(openTimer.current);
-      }}
-      onClick={() => {
-        // Committing to the page: drop the preview so the drawer doesn't sit
-        // open over /cart after the SPA navigation.
-        clearTimeout(openTimer.current);
-        clearTimeout(closeTimer.current);
-        close();
-        if (!viewedRef.current) {
-          publish('cart_viewed', {
-            cart,
-            prevCart,
-            shop,
-            url: window.location.href || '',
-          } as CartViewPayload);
-        }
-      }}
+    <a
+      className="site-header-icon site-header-cart"
+      href={portalUrl(shopUrl, 'cart')}
+      aria-label={copyText('chrome.cart_aria') ?? 'Cart'}
     >
-      {/* Inner relative wrapper keeps the count badge pinned to the icon, not
-          to the enlarged 44px tap area the anchor gets on mobile. */}
-      <span className="relative inline-flex">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
-          <line x1="3" y1="6" x2="21" y2="6" />
-          <path d="M16 10a4 4 0 01-8 0" />
-        </svg>
-        {count > 0 && (
-          <span className="absolute -top-1 -right-1.5 bg-[var(--color-gold-fill)] text-[var(--color-on-accent)] text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">
-            {count}
-          </span>
-        )}
-      </span>
-    </NavLink>
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        aria-hidden="true"
+      >
+        <circle cx="9" cy="20" r="1.5" />
+        <circle cx="18" cy="20" r="1.5" />
+        <path d="M2 3h3l2.4 12.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.6L21 7H6" />
+      </svg>
+    </a>
   );
 }
 
-function CartToggle({cart}: Pick<HeaderProps, 'cart'>) {
-  return (
-    <Suspense fallback={<CartBadge count={0} />}>
-      <Await resolve={cart}>
-        <CartBanner />
-      </Await>
-    </Suspense>
-  );
-}
-
-function CartBanner() {
-  const originalCart = useAsyncValue() as CartApiQueryFragment | null;
-  const cart = useOptimisticCart(originalCart);
-  return <CartBadge count={cart?.totalQuantity ?? 0} />;
-}
-
-const LOCAL_PAGE_REWRITES: Record<string, string> = {
-  '/pages/contact': '/support',
-};
-
-const FALLBACK_HEADER_MENU = {
-  id: 'gid://shopify/Menu/199655587896',
+/**
+ * The site menu. It used to be edited in the Shopify admin and read
+ * through the Storefront API; it is three links, and they are these
+ * three. Titles stay here rather than in the copy store for the same
+ * reason they always did: they are structure shared with the CTA group,
+ * not editable prose.
+ */
+const HEADER_MENU = {
   items: [
+    {id: 'menu-products', title: 'Catalog', url: '/products'},
+    {id: 'menu-newsletter', title: 'Newsletter', url: '/newsletter'},
     {
-      id: 'gid://shopify/MenuItem/461609500728',
-      resourceId: null,
-      tags: [],
-      title: 'Catalog',
-      type: 'HTTP',
-      url: '/collections/all',
-      items: [],
-    },
-    {
-      id: 'gid://shopify/MenuItem/461609566265',
-      resourceId: null,
-      tags: [],
-      title: 'Newsletter',
-      type: 'HTTP',
-      url: '/newsletter',
-      items: [],
-    },
-    {
-      id: 'gid://shopify/MenuItem/461609566264',
-      resourceId: null,
-      tags: [],
+      id: 'menu-open-source',
       title: 'Open Source',
-      type: 'HTTP',
       url: 'https://github.com/OpenDrone-hw',
-      items: [],
     },
   ],
 };

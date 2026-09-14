@@ -7,7 +7,6 @@
  *
  * Storage layout (when the Upstash store is configured):
  *   tk:{tid}                 -> per-ticket meta (single source of truth)
- *   idx:cust:{customerId}    -> JSON list of {tid, pid, openedAt, closedAt}
  *   idx:email:{emailHashHex} -> same, for anon/email-resume path
  *   fb:{tid}                 -> feedback record (rating + notes), if submitted
  *
@@ -41,7 +40,6 @@ export type TicketIndexEntry = {
 };
 
 export type TicketMeta = TicketIndexEntry & {
-  customerId?: string;
   email: string;
   name: string;
   // Newest Discord message id the customer's widget delivered while the
@@ -50,6 +48,12 @@ export type TicketMeta = TicketIndexEntry & {
   // Discord message id up to which the reply-notification sweep has
   // settled its email decisions. Written by /api/support/notify.
   notifyCursor?: string;
+  // Odoo `project.task.ticket_ref` (e.g. "SUP-00001") for the mirrored
+  // ticket in erp/addons/incutec_support (PLAN.md 12.2). Absent until the
+  // Odoo bridge call has succeeded at least once; a missing value means
+  // "not yet linked", not "no Odoo ticket exists" — callers retry the
+  // create-or-fetch call, which is idempotent on the Discord thread id.
+  odooRef?: string;
 };
 
 const MAX_INDEX_ENTRIES = 200;
@@ -97,9 +101,6 @@ export async function addTicket(
       expirationTtl: META_TTL_SECONDS,
     }),
   ];
-  if (meta.customerId) {
-    writes.push(prependIndex(kv, `idx:cust:${meta.customerId}`, entry));
-  }
   if (meta.email) {
     const ek = await emailKey(meta.email);
     writes.push(prependIndex(kv, `idx:email:${ek}`, entry));
@@ -157,7 +158,6 @@ export async function removeTicket(env: Env, tid: string): Promise<void> {
   // stop returning the ticket even if the meta delete races.
   if (meta) {
     const indexKeys: string[] = [];
-    if (meta.customerId) indexKeys.push(`idx:cust:${meta.customerId}`);
     if (meta.email) indexKeys.push(`idx:email:${await emailKey(meta.email)}`);
     await Promise.all(
       indexKeys.map(async (key) => {
@@ -199,7 +199,7 @@ export async function markFeedback(env: Env, tid: string): Promise<void> {
 export async function patchMeta(
   env: Env,
   tid: string,
-  patch: Partial<Pick<TicketMeta, 'seenCursor' | 'notifyCursor'>>,
+  patch: Partial<Pick<TicketMeta, 'seenCursor' | 'notifyCursor' | 'odooRef'>>,
 ): Promise<void> {
   const kv = getTicketStore(env);
   if (!kv) return;
@@ -231,17 +231,6 @@ export type ListOpts = {
   limit?: number;
 };
 
-export async function listByCustomer(
-  env: Env,
-  customerId: string,
-  opts: ListOpts = {},
-): Promise<TicketIndexEntry[]> {
-  const kv = getTicketStore(env);
-  if (!kv) return [];
-  const raw = await kv.get(`idx:cust:${customerId}`);
-  return filterAndLimit(parseIndex(raw), opts);
-}
-
 export async function listByEmail(
   env: Env,
   email: string,
@@ -269,11 +258,11 @@ export async function listByEmail(
   return filterAndLimit(entries, opts);
 }
 
-export async function countOpenForCustomer(
+export async function countOpenForEmail(
   env: Env,
-  customerId: string,
+  email: string,
 ): Promise<number> {
-  const list = await listByCustomer(env, customerId, {status: 'open'});
+  const list = await listByEmail(env, email, {status: 'open'});
   return list.length;
 }
 
@@ -339,7 +328,6 @@ async function updateInIndex(
   mutate: (entry: TicketIndexEntry) => void,
 ): Promise<void> {
   const keys: string[] = [];
-  if (meta.customerId) keys.push(`idx:cust:${meta.customerId}`);
   if (meta.email) keys.push(`idx:email:${await emailKey(meta.email)}`);
   await Promise.all(
     keys.map(async (key) => {
@@ -375,7 +363,6 @@ async function updateInIndex(
 export type Feedback = {
   tid: string;
   pid: string;
-  customerId?: string;
   email: string;
   speed: number; // 1-5
   helpfulness: number; // 1-5
@@ -437,7 +424,6 @@ export type TicketArchive = {
   subject: string;
   product?: string;
   firmware?: string;
-  customerId?: string;
   openedAt: number;
   closedAt: number;
   lastActivityAt: number;

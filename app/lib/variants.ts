@@ -1,5 +1,5 @@
 import {useLocation} from 'react-router';
-import type {SelectedOption} from '@shopify/hydrogen/storefront-api-types';
+import type {SelectedOption} from '~/lib/product-shapes';
 import {useMemo} from 'react';
 
 export function useVariantUrl(

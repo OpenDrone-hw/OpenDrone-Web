@@ -47,7 +47,7 @@ export function ProductGhostTile({
   title,
 }: {
   /** Product type ("Accessory", "Flight controller", …) — the document
-   *  header. Falls back to the brand when Shopify has no type. */
+   *  header. Falls back to the brand when the product has no family. */
   type?: string | null;
   /** Product title — rendered as the catalog line under the figure. */
   title: string;

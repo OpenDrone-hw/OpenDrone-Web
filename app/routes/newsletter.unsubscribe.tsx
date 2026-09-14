@@ -5,7 +5,6 @@ import {checkRateLimit, clientIp} from '~/lib/rate-limit';
 import {verifyUnsubscribeToken} from '~/lib/growth/unsubscribe-token';
 import {recordUnsubscribe} from '~/lib/growth/ledger';
 import {unsubscribeContact} from '~/lib/growth/resend';
-import {unsubscribeCustomerMarketing} from '~/lib/shopify-admin';
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
 
@@ -15,9 +14,8 @@ import {copyText} from '~/lib/copy';
 //        confirm button bound to that email. Without/with an invalid token:
 //        a plain email form. GET never unsubscribes anything — inbox link
 //        scanners prefetch GETs.
-// POST → does the actual opt-out across all three stores: Resend contact
-//        suppression, `sig:` ledger record, Shopify email marketing consent
-//        (skipped without SHOPIFY_ADMIN_API_TOKEN — best-effort like all
+// POST → does the actual opt-out across both stores: Resend contact
+//        suppression and the `sig:` ledger record (best-effort like all
 //        growth writers). Token-authenticated POSTs skip the rate limit;
 //        form POSTs get honeypot + per-IP limit. The response is the same
 //        generic confirmation either way, so the endpoint never confirms
@@ -109,7 +107,6 @@ export async function action({request, context}: Route.ActionArgs) {
   await Promise.all([
     unsubscribeContact(context.env, email),
     recordUnsubscribe(context.env, email),
-    unsubscribeCustomerMarketing(context.env, email),
   ]);
 
   return data<UnsubscribeResult>({ok: true, message: doneMessage()});

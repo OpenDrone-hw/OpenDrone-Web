@@ -1,5 +1,5 @@
 import {useEffect} from 'react';
-import {Analytics, getShopAnalytics, useNonce} from '@shopify/hydrogen';
+import {useNonce} from '~/lib/csp';
 import {
   Outlet,
   useRouteError,
@@ -16,14 +16,9 @@ import type {Route} from './+types/root';
 import favicon from '~/assets/favicon.svg';
 import interVarWoff2 from '~/assets/fonts/inter-var.woff2';
 import jetbrainsMonoWoff2 from '~/assets/fonts/jetbrains-mono-Regular.woff2';
-import {HEADER_QUERY, HEADER_PRODUCTS_QUERY} from '~/lib/fragments';
-import {
-  preordersOpenFlag,
-  resolveAllStatuses,
-  roadmapStatusMap,
-} from '~/lib/coming-soon';
+import {resolveAllStatuses, roadmapStatusMap} from '~/lib/coming-soon';
 import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
-import {CUSTOMER_NEWSLETTER_STATE_QUERY} from '~/graphql/customer-account/NewsletterStateQuery';
+import {toCards} from '~/lib/catalog';
 import resetStyles from '~/styles/reset.css?url';
 import appStyles from '~/styles/app.css?url';
 import {PageLayout} from './components/PageLayout';
@@ -100,7 +95,6 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 export function links() {
   return [
     {rel: 'preconnect', href: 'https://cdn.shopify.com'},
-    {rel: 'preconnect', href: 'https://shop.app'},
     // Preload the above-the-fold typefaces so first paint doesn't flash
     // system fallbacks then reflow on swap. Fonts fetch in CORS mode even
     // same-origin, so crossorigin is required for the preload to match the
@@ -134,13 +128,10 @@ export function links() {
 }
 
 export async function loader(args: Route.LoaderArgs) {
-  // Start fetching non-critical data without blocking time to first byte
-  const deferredData = loadDeferredData(args);
-
   // Await the critical data required to render initial state of the page
   const criticalData = await loadCriticalData(args);
 
-  const {storefront, env} = args.context;
+  const {env} = args.context;
 
   const company = getCompanyIdentity(env as unknown as Record<string, string | undefined>);
 
@@ -156,7 +147,6 @@ export async function loader(args: Route.LoaderArgs) {
   // to the static statuses while the fetch fills the cache for the next
   // request.
   const globalComingSoon = env.PUBLIC_COMING_SOON !== '0';
-  const preordersOpen = preordersOpenFlag(env);
   const statusFlags = await fetchStatusFlagsFast(
     env.GITHUB_STATUS_TOKEN,
     400,
@@ -164,9 +154,7 @@ export async function loader(args: Route.LoaderArgs) {
   );
 
   return {
-    ...deferredData,
     ...criticalData,
-    publicStoreDomain: env.PUBLIC_STORE_DOMAIN,
     company,
     locale,
     // Pre-launch banner kill switch: defaults ON; set PUBLIC_PRELAUNCH=0 in
@@ -175,37 +163,18 @@ export async function loader(args: Route.LoaderArgs) {
     // Coming-soon kill switch: defaults ON; set PUBLIC_COMING_SOON=0 the day
     // orders open. Per-product overrides in product-content.ts win over this.
     comingSoon: globalComingSoon,
-    // Pre-orders open while the shop is still coming soon (PUBLIC_PREORDERS=1,
-    // set on the Oxygen preview for end-to-end order tests).
-    preordersOpen,
-    // Per-handle status resolved with the live topic flags; the
-    // useProductStatus/useComingSoon hooks read this map first.
+    // Per-handle status resolved with the live topic flags and the
+    // catalog's availability; the useProductStatus/useComingSoon hooks
+    // read this map first.
     productStatuses: resolveAllStatuses(
       globalComingSoon,
       statusFlags,
-      preordersOpen,
+      criticalData.availability,
     ),
     // The five-stage roadmap word per handle, for status chips on cards
     // and listings (display vocabulary; buyability is the map above).
     roadmapStatuses: roadmapStatusMap(statusFlags),
     turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? null,
-    shop: getShopAnalytics({
-      storefront,
-      publicStorefrontId: env.PUBLIC_STOREFRONT_ID,
-    }),
-    consent: {
-      // checkoutDomain is required by Hydrogen Analytics. Fall back to the
-      // store domain when the dedicated checkout subdomain isn't configured.
-      checkoutDomain:
-        env.PUBLIC_CHECKOUT_DOMAIN || env.PUBLIC_STORE_DOMAIN,
-      storefrontAccessToken: env.PUBLIC_STOREFRONT_API_TOKEN,
-      // No cookie banner at launch: Plausible-only analytics, Shopify analytics
-      // not shipped. Consent is default-denied. Banner will return when marketing
-      // cookies are introduced.
-      withPrivacyBanner: false,
-      country: args.context.storefront.i18n.country,
-      language: args.context.storefront.i18n.language,
-    },
   };
 }
 
@@ -214,62 +183,25 @@ export async function loader(args: Route.LoaderArgs) {
  * needed to render the page. If it's unavailable, the whole page should 400 or 500 error.
  */
 async function loadCriticalData({context}: Route.LoaderArgs) {
-  const {storefront} = context;
+  // The catalog is the header's product source and the per-handle
+  // availability the status model resolves against. One fetch, cached in
+  // the worker for five minutes; a failure degrades to an empty catalog
+  // rather than a 500.
+  const catalog = await context.catalog.get();
 
-  const [header] = await Promise.all([
-    storefront.query(HEADER_QUERY, {
-      cache: storefront.CacheLong(),
-      variables: {
-        headerMenuHandle: 'main-menu', // Adjust to your header menu handle
-      },
-    }),
-    // Add other queries here, so that they are loaded in parallel
-  ]);
-
-  return {header};
-}
-
-/**
- * Load data for rendering content below the fold. This data is deferred and will be
- * fetched after the initial page load. If it's unavailable, the page should still 200.
- * Make sure to not throw any errors here, as it will cause the page to 500.
- */
-function loadDeferredData({context}: Route.LoaderArgs) {
-  const {customerAccount, cart, storefront} = context;
-
-  const isLoggedIn = customerAccount.isLoggedIn();
-
-  // Marketing-consent state for the signed-in customer so the footer newsletter
-  // can be subscription-aware (no re-asking a subscribed user for their email).
-  // Deferred + best-effort: resolves to null for guests or on any error.
-  const newsletterAccount = isLoggedIn
-    .then(async (loggedIn) => {
-      if (!loggedIn) return null;
-      const {data} = await customerAccount.query(
-        CUSTOMER_NEWSLETTER_STATE_QUERY,
-      );
-      const email = data?.customer?.emailAddress;
-      if (!email?.emailAddress) return null;
-      return {
-        email: email.emailAddress,
-        subscribed: email.marketingState === 'SUBSCRIBED',
-      };
-    })
-    .catch(() => null);
-
-  // NOTE: the Shopify "footer" menu is deliberately not fetched — Footer.tsx
-  // renders hardcoded link arrays. The old deferred FOOTER_QUERY was a dead
-  // Storefront API round-trip on every session.
   return {
-    cart: cart.get(),
-    isLoggedIn,
-    newsletterAccount,
-    // Deferred so it never blocks TTFB; feeds the header family dropdowns.
-    // Best-effort: a failure resolves to [] so the header still renders.
-    familyProducts: storefront
-      .query(HEADER_PRODUCTS_QUERY, {cache: storefront.CacheLong()})
-      .then((d) => d?.products?.nodes ?? [])
-      .catch(() => []),
+    shopUrl: context.catalog.shopUrl,
+    familyProducts: toCards(catalog),
+    availability: Object.fromEntries(
+      catalog.products.map((p) => [
+        p.handle,
+        p.variants.some((v) => v.availability === 'in_stock')
+          ? ('in_stock' as const)
+          : p.variants.some((v) => v.availability === 'preorder')
+            ? ('preorder' as const)
+            : ('sold_out' as const),
+      ]),
+    ),
   };
 }
 
@@ -429,15 +361,9 @@ export default function App() {
   }
 
   return (
-    <Analytics.Provider
-      cart={data.cart}
-      shop={data.shop}
-      consent={data.consent}
-    >
-      <PageLayout {...data}>
-        <Outlet />
-      </PageLayout>
-    </Analytics.Provider>
+    <PageLayout {...data}>
+      <Outlet />
+    </PageLayout>
   );
 }
 
@@ -478,7 +404,7 @@ export function ErrorBoundary() {
         <a href="/" className="hero-cta-primary">
           <Txt id="not-found.error_cta_home" />
         </a>
-        <a href="/collections/all" className="hero-cta-secondary">
+        <a href="/products" className="hero-cta-secondary">
           <Txt id="not-found.error_cta_shop" />
         </a>
       </div>

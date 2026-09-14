@@ -24,11 +24,8 @@ ${generalDisallowRules({sitemapUrl})}
 
 # Google adsbot ignores robots.txt unless specifically named!
 User-agent: adsbot-google
-Disallow: /cart
 Disallow: /account
-Disallow: /search
-Allow: /search/
-Disallow: /search/?*
+Disallow: /api/
 
 User-agent: Nutch
 Disallow: /
@@ -50,34 +47,15 @@ Crawl-delay: 1
 }
 
 /**
- * This function generates disallow rules that generally follow what Shopify's
- * Online Store has as defaults for their robots.txt
+ * Disallow rules for the routes that carry no indexable content: the
+ * account redirects into the shop portal, the JSON APIs, and the support
+ * desk (per-visitor ticket state). The cart, collections, Shopify blog
+ * and policy rules are gone with those routes.
  */
 function generalDisallowRules({sitemapUrl}: {sitemapUrl?: string}) {
-  return `Disallow: /cart
-Allow: /cart/
-Disallow: /account
+  return `Disallow: /account
 Disallow: /api/
 Disallow: /support
 Disallow: /support/
-Disallow: /collections/*sort_by*
-Disallow: /*/collections/*sort_by*
-Disallow: /collections/*+*
-Disallow: /collections/*%2B*
-Disallow: /collections/*%2b*
-Disallow: /*/collections/*+*
-Disallow: /*/collections/*%2B*
-Disallow: /*/collections/*%2b*
-Disallow: /*/collections/*filter*&*filter*
-Disallow: /blogs/*+*
-Disallow: /blogs/*%2B*
-Disallow: /blogs/*%2b*
-Disallow: /*/blogs/*+*
-Disallow: /*/blogs/*%2B*
-Disallow: /*/blogs/*%2b*
-Disallow: /policies/
-Disallow: /search
-Allow: /search/
-Disallow: /search/?*
 ${sitemapUrl ? `Sitemap: ${sitemapUrl}` : ''}`;
 }

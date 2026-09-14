@@ -1,4 +1,3 @@
-import {Image} from '@shopify/hydrogen';
 import {useSearchParams} from 'react-router';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {SmoothImage} from './SmoothImage';
@@ -255,15 +254,16 @@ export function ProductGallery({
                   i === index ? ' is-active' : ''
                 }`}
               >
-                <Image
-                  data={img}
+                <img
+                  src={img.url}
                   alt={
                     img.altText ||
                     `${copyText('product-chrome.gallery_thumb_alt_prefix') ?? ''} ${i + 1}`
                   }
-                  aspectRatio="1/1"
+                  style={{aspectRatio: '1/1'}}
                   sizes="80px"
                   loading="lazy"
+                  decoding="async"
                 />
               </button>
             </li>

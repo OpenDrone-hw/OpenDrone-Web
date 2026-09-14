@@ -128,7 +128,6 @@ export async function action({request, context}: Route.ActionArgs) {
       subject: meta.subject,
       product: meta.product,
       firmware: meta.firmware,
-      customerId: meta.customerId,
       openedAt: meta.openedAt,
       closedAt: meta.closedAt ?? 0,
       lastActivityAt: meta.lastActivityAt,

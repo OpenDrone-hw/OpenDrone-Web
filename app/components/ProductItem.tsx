@@ -1,32 +1,30 @@
 import {useCallback} from 'react';
 import {Link} from 'react-router';
-import {Money} from '@shopify/hydrogen';
 import {SmoothImage} from './SmoothImage';
 import {ProductGhostTile} from './ProductGhostTile';
-import type {MoneyV2} from '@shopify/hydrogen/storefront-api-types';
+import {formatPrice} from '~/lib/catalog';
 import type {
-  ProductItemFragment,
-  CollectionItemFragment,
-} from 'storefrontapi.generated';
+  MoneyV2,
+  ProductCardFragment,
+  ProductImage,
+} from '~/lib/product-shapes';
 import {useVariantUrl} from '~/lib/variants';
 import {useProductStatus, useRoadmapStatus} from '~/lib/coming-soon';
 import {isPurchasableStatus} from '~/lib/product-content';
 import {AddToCartButton} from './AddToCartButton';
 import {StackQuickAdd, type StackOffer} from './StackQuickAdd';
-import {useAside} from './Aside';
 import {copyText} from '~/lib/copy';
 
-/** Hover quick-add for catalog cards: the card's own variant prewired as a
- *  cart line, so ordering never requires opening the PDP. */
+/** Hover quick-add for catalog cards: the card's own hand-off link, so
+ *  ordering never requires opening the PDP. */
 export type ProductQuickAdd = {
-  lines: import('@shopify/hydrogen').OptimisticCartLineInput[];
+  href: string;
   available: boolean;
-  flyImage?: string | null;
 };
 
 /**
  * One model/tier of a product line, surfaced as a chip under the card on
- * the browse page. `axis` is the Shopify option name (standardised to
+ * the browse page. `axis` is the catalog option name (standardised to
  * "Model"); a real model deep-links to the PDP with that model
  * preselected (`?<axis>=<value>`), a coming-soon model renders greyed and
  * non-interactive (no purchasable variant yet).
@@ -53,7 +51,7 @@ export function ProductItem({
   quickAdd,
   stackOffers,
 }: {
-  product: CollectionItemFragment | ProductItemFragment;
+  product: ProductCardFragment;
   loading?: 'eager' | 'lazy';
   models?: ProductModelChip[];
   /** Wide horizontal layout for a single-product category row, so the
@@ -77,7 +75,7 @@ export function ProductItem({
   /** Image override — the specific variant's image for per-variant cards.
    *  Without it every tier card falls back to the product's featuredImage
    *  (the first uploaded render), so 20×20 and 30×30 show the same board. */
-  imageOverride?: CollectionItemFragment['featuredImage'];
+  imageOverride?: ProductImage | null;
   /** Unreleased product — renders greyed and non-clickable with a "Coming
    *  soon" badge instead of a link (nothing to buy or open yet). */
   comingSoon?: boolean;
@@ -88,7 +86,6 @@ export function ProductItem({
   stackOffers?: StackOffer[];
 }) {
   const variantUrl = useVariantUrl(product.handle);
-  const {open: openAside} = useAside();
 
   // Cursor-tracked gold spotlight (same recipe as .related-card): write the
   // pointer position into CSS vars the card's ::after radial reads. Mouse
@@ -121,17 +118,12 @@ export function ProductItem({
   const quickAddNode =
     quickAdd && !comingSoon && !launchPending && !feature ? (
       <div className="product-card-quickadd">
-        <StackQuickAdd
-          offers={stackOffers ?? []}
-          flyImage={quickAdd.flyImage}
-          onAdd={() => openAside('cart')}
-        >
+        <StackQuickAdd offers={stackOffers ?? []}>
           <AddToCartButton
             className="product-card-quickadd-btn"
-            lines={quickAdd.lines}
+            href={quickAdd.href}
+            product={product.handle}
             disabled={!quickAdd.available}
-            flyImage={quickAdd.flyImage}
-            onClick={() => openAside('cart')}
           >
             {copyText('product-chrome.card_add_to_cart')}
           </AddToCartButton>
@@ -243,7 +235,10 @@ export function ProductItem({
               <h2 className="product-card-title">{product.title}</h2>
               {showPrice ? (
                 <span className="product-card-price">
-                  <Money data={product.priceRange.minVariantPrice} />
+                  {formatPrice(
+                    product.priceRange.minVariantPrice.amount,
+                    product.priceRange.minVariantPrice.currencyCode,
+                  )}
                 </span>
               ) : null}
             </div>
@@ -282,7 +277,7 @@ export function ProductItem({
           <h2 className="product-card-title">{displayTitle}</h2>
           {showPrice ? (
             <span className="product-card-price">
-              <Money data={price} />
+              {formatPrice(price.amount, price.currencyCode)}
             </span>
           ) : null}
         </div>

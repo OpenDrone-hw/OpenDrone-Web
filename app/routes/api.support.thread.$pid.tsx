@@ -1,8 +1,8 @@
 import {data} from 'react-router';
 import type {Route} from './+types/api.support.thread.$pid';
 import {fetchThreadMessages} from '~/lib/support/discord';
-import {SUPPORT_CUSTOMER_PREFILL_QUERY} from '~/graphql/customer-account/SupportPrefillQuery';
-import {hasTicketStore, listByCustomer, getMeta} from '~/lib/support/ticket-index';
+import {hasTicketStore, listByEmail, getMeta} from '~/lib/support/ticket-index';
+import {readSupportCookie, verifyTicket} from '~/lib/support/session';
 import {checkRateLimit} from '~/lib/rate-limit';
 import {
   extractFirstName,
@@ -47,21 +47,20 @@ export async function loader({request, context, params}: Route.LoaderArgs) {
     );
   }
 
-  let customerId: string | null = null;
-  try {
-    const {data: prefill} = await context.customerAccount.query(
-      SUPPORT_CUSTOMER_PREFILL_QUERY,
-    );
-    customerId = prefill?.customer?.id ?? null;
-  } catch {
-    /* anon */
-  }
-  if (!customerId) {
+  // Identity is the signed ticket cookie, the same proof the
+  // resume-by-email link mints. No customer account exists any more.
+  const session = await verifyTicket(env, readSupportCookie(request));
+  if (!session?.email) {
     return data<ThreadResult>(
-      {ok: false, message: 'Sign in to view this ticket.', code: 'signin-required'},
+      {
+        ok: false,
+        message: 'Open a ticket, or use the resume link we emailed you.',
+        code: 'signin-required',
+      },
       {status: 401},
     );
   }
+  const email = session.email;
 
   if (!hasTicketStore(env)) {
     return data<ThreadResult>(
@@ -70,7 +69,7 @@ export async function loader({request, context, params}: Route.LoaderArgs) {
     );
   }
 
-  const limit = checkRateLimit(`support-thread:${customerId}:${pid}`, 30, 60 * 1000);
+  const limit = checkRateLimit(`support-thread:${email}:${pid}`, 30, 60 * 1000);
   if (!limit.allowed) {
     return data<ThreadResult>(
       {ok: false, message: 'Too many requests.'},
@@ -78,9 +77,9 @@ export async function loader({request, context, params}: Route.LoaderArgs) {
     );
   }
 
-  // Resolve pid -> tid via the customer's index list. Bounded: index
-  // is capped at 200 entries so this is a single KV read + linear scan.
-  const list = await listByCustomer(env, customerId, {status: 'all', limit: 200});
+  // Resolve pid -> tid via the email index. Bounded: the index is capped
+  // at 200 entries so this is a single KV read plus a linear scan.
+  const list = await listByEmail(env, email, {status: 'all', limit: 200});
   const indexEntry = list.find((e) => e.pid === pid);
   if (!indexEntry) {
     return data<ThreadResult>(
