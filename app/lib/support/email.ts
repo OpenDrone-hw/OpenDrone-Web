@@ -72,14 +72,26 @@ async function send(env: Env, opts: SendOpts): Promise<boolean> {
 
 export async function sendResumeLink(
   env: Env,
-  opts: {to: string; name: string; subject: string; resumeUrl: string},
+  opts: {
+    to: string;
+    name: string;
+    subject: string;
+    resumeUrl: string;
+    // Odoo `ticket_ref` (e.g. "SUP-00001"), when the erp/addons/incutec_support
+    // bridge call succeeded (PLAN.md 12.2, D13: appended only, nothing else
+    // about this email changes). Absent when Odoo was unreachable.
+    odooRef?: string;
+  },
 ): Promise<boolean> {
+  const subjectLine = opts.odooRef
+    ? `${opts.subject} (ref ${opts.odooRef})`
+    : opts.subject;
   const text = [
     `Hi ${opts.name || 'there'},`,
     '',
     `Thanks for opening a support ticket with us. Save this email: the link below restores your chat from any device, even if you clear cookies or switch browsers.`,
     '',
-    `Your ticket: ${opts.subject}`,
+    `Your ticket: ${subjectLine}`,
     `Resume: ${opts.resumeUrl}`,
     '',
     `If you didn't open this ticket, just ignore this message. The link only works if you actually started the chat.`,
@@ -93,7 +105,7 @@ export async function sendResumeLink(
       <p>Hi ${escapeHtml(opts.name || 'there')},</p>
       <p>Thanks for opening a support ticket with us. Save this email: the link below restores your chat from any device, even if you clear cookies or switch browsers.</p>
       <p style="margin-top:24px">
-        <strong>${escapeHtml(opts.subject)}</strong>
+        <strong>${escapeHtml(subjectLine)}</strong>
       </p>
       <p style="margin:16px 0 32px">
         <a href="${escapeAttr(opts.resumeUrl)}" style="display:inline-block;background:#ffb700;color:#0a0a0a;text-decoration:none;font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;font-weight:700;padding:12px 18px;border-radius:2px">Resume chat →</a>
