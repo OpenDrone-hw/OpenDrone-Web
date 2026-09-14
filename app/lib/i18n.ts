@@ -257,7 +257,8 @@ const LEGAL_LABELS_FALLBACK: Record<
  *
  * Guarded on `import.meta.env` like the other content loaders, so node:test can
  * import this module: there the glob never runs and the fallback below is used.
- * Regenerate the JSON from a literal with `scripts/dump-legal-labels.mjs`.
+ * The JSON is now the editable source. Keep the fallback in this module aligned
+ * through review and tests; do not regenerate over studio edits.
  */
 const LEGAL_LABEL_FILES = import.meta.env
   ? import.meta.glob<{default: Record<string, unknown>}>(

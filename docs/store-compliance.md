@@ -2,7 +2,8 @@
 
 Reference for anyone building or reviewing the store. It lists the EU and Belgian requirements the storefront itself must satisfy: product-listing content, consumer-law machinery, privacy/cookies, tax display, shipping policy, and sales restrictions. Incutec BV is an EU-established manufacturer selling B2C and B2B and shipping from Belgium, so the store carries the manufacturer and seller obligations directly.
 
-This is the storefront-facing subset. OpenDrone CE/RED and EU DoC scope lives only in `product/CE.md` in the private compliance repository and is out of scope here.
+This is the storefront-facing subset. Product CE/RED evidence and EU
+declarations of conformity are maintained separately and are out of scope here.
 
 ## 1. Product-listing content (GPSR, Reg (EU) 2023/988)
 

@@ -1,13 +1,16 @@
 #!/usr/bin/env node
-/** Preview or apply Shopify variant SKUs from stock/product_skus.json. */
+/** Preview or apply Shopify variant SKUs from a canonical product catalogue. */
 
 import fs from 'node:fs';
 import path from 'node:path';
-import {fileURLToPath} from 'node:url';
 import {admin, assertNoUserErrors} from './_client.mjs';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-const catalogPath = path.resolve(here, '../../../../stock/product_skus.json');
+const catalogPath = process.env.PRODUCT_SKUS_PATH
+  ? path.resolve(process.env.PRODUCT_SKUS_PATH)
+  : null;
+if (!catalogPath) {
+  throw new Error('PRODUCT_SKUS_PATH must point to the canonical product catalogue JSON.');
+}
 const products = JSON.parse(fs.readFileSync(catalogPath, 'utf8')).products;
 const apply = process.argv.includes('--apply');
 

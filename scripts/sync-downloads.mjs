@@ -26,7 +26,7 @@
  *   *.zip             -> gerber   (the JLCPCB fab set: gerbers, BOM, CPL)
  *
  * Anything else is skipped and reported, never guessed. Release step 8 in
- * OpenDrone-Scripts/README.md names the assets so they match:
+ * The OpenDrone release profile names the assets so they match:
  * <Repo>-<rev>-fab.zip, <Repo>-<rev>.step, <Repo>-<rev>-schematic.pdf.
  *
  * Only entries this script wrote (marked `"synced": true`) are replaced; a

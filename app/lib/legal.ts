@@ -14,7 +14,7 @@
  * rendered.
  */
 
-// NL = authoritative text synced from the compliance repo via scripts/sync-legal.mjs.
+// NL = authoritative snapshot synced from a maintained source via scripts/sync-legal.mjs.
 // EN = hand-authored translations, stored in the webshop repo.
 // When a new legal language is added later (FR/DE), mirror this pattern:
 // add a new directory under app/content/legal/<lang>/ and a new SOURCES_<lang> map.

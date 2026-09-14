@@ -152,10 +152,8 @@ const MIRROR_SLUGS = new Set();
 const RENDER_PX = 1568; // render_board.py squares+centres to 1568².
 // Side per face; back is mirrored after rendering.
 const RENDER_SIDE = {front: 'top', back: 'bottom'};
-// OpenDrone's canonical renderer (vias+paste stripped, orthographic, square).
-const RENDER_BOARD_PY =
-  process.env.RENDER_BOARD_PY ||
-  resolve(here, '../../../scripts/kicad/render_board.py');
+// Compatible renderer supplied explicitly by the caller.
+const RENDER_BOARD_PY = process.env.RENDER_BOARD_PY;
 
 const TAU = Math.PI * 2;
 /** Max arc/bezier chord ≈ this many radians per sample — fine enough that a
@@ -552,6 +550,11 @@ function buildBoard(pcbPath, handle) {
     // to 1568². These are the SAME images used for the README/Shopify shots.
     // It backs up the .kicad_pcb, edits a throwaway copy in-place for the
     // render, then restores the original BYTE-IDENTICAL (verified with cmp).
+    if (!RENDER_BOARD_PY) {
+      throw new Error(
+        'RENDER_BOARD_PY must point to a compatible render_board.py for full board-art generation.',
+      );
+    }
     const topRaw = join(tmp, 'top-raw.png');
     const botRaw = join(tmp, 'bottom-raw.png');
     execSync(
@@ -968,7 +971,9 @@ function usage() {
       '\n' +
       '  --components-only  regenerate ONLY components.json (no svg/render).\n' +
       '  --derivatives-only regenerate ONLY the front-w*.webp thumbnails.\n' +
-      '  --rasters-only     regenerate ONLY board-lite.svg + layer rasters.',
+      '  --rasters-only     regenerate ONLY board-lite.svg + layer rasters.\n' +
+      '\n' +
+      '  Full generation requires RENDER_BOARD_PY to point to a compatible renderer.',
   );
   process.exit(2);
 }

@@ -1,8 +1,7 @@
 #!/usr/bin/env node
-// Sync legal Markdown snapshots from the compliance repo into
-// app/content/legal/. The storefront is the source of truth for the
-// snapshot committed to git; the compliance repo is the single source of
-// truth for authoring.
+// Sync legal Markdown snapshots from a maintained source directory into
+// app/content/legal/. The committed storefront snapshot remains buildable
+// when that authoring source is unavailable.
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -11,15 +10,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..');
 
-const ICLOUD_DEFAULT = path.join(
-  process.env.HOME || '',
-  // Optional default — override with COMPLIANCE_SRC env var. Looks for
-  // a sibling `compliance` checkout next to this repo on the maintainer's
-  // machine; falls through to a no-op when not present.
-  '../compliance',
-);
-
-const SRC_ROOT = process.env.COMPLIANCE_SRC || ICLOUD_DEFAULT;
+const SRC_ROOT = process.env.COMPLIANCE_SRC;
 
 // { destBasename: relative path inside COMPLIANCE_SRC }
 const FILES = {
@@ -41,6 +32,13 @@ const destDir = path.join(repoRoot, 'app/content/legal/nl');
 
 async function main() {
   await fs.mkdir(destDir, {recursive: true});
+
+  if (!SRC_ROOT) {
+    console.warn(
+      '[sync-legal] COMPLIANCE_SRC is not set. Existing snapshots in app/content/legal/ are preserved.',
+    );
+    return;
+  }
 
   const srcAvailable = await fs
     .stat(SRC_ROOT)
