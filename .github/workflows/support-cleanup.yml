@@ -3,7 +3,7 @@
 # for tickets that are closed or have had no activity for 7+ days.
 #
 # Required repo secret: SUPPORT_CLEANUP_SECRET (must match the env var
-# of the same name in Oxygen Production).
+# of the same name in the production Worker).
 
 name: Support cleanup
 
@@ -28,7 +28,7 @@ jobs:
             exit 1
           fi
           response=$(curl -sS -w "\n%{http_code}" \
-            -X POST https://opendrone.store/api/support/cleanup \
+            -X POST https://opendrone.be/api/support/cleanup \
             -H "Authorization: Bearer $SUPPORT_CLEANUP_SECRET" \
             -H "Content-Type: application/json")
           body=$(echo "$response" | head -n -1)

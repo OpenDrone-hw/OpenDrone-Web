@@ -1,0 +1,63 @@
+name: Deploy Cloudflare production
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run check:runtime-env -- production
+        env: &runtime-secrets
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_SUPPORT_CHANNEL_ID: ${{ secrets.DISCORD_SUPPORT_CHANNEL_ID }}
+          DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
+          DISCORD_STAFF_METADATA_CHANNEL_ID: ${{ secrets.DISCORD_STAFF_METADATA_CHANNEL_ID }}
+          TURNSTILE_SITE_KEY: ${{ secrets.TURNSTILE_SITE_KEY }}
+          TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          SUPPORT_ODOO_TOKEN: ${{ secrets.SUPPORT_ODOO_TOKEN }}
+          SUPPORT_CLEANUP_SECRET: ${{ secrets.SUPPORT_CLEANUP_SECRET }}
+          GITHUB_STATUS_TOKEN: ${{ secrets.GITHUB_STATUS_TOKEN }}
+      - name: Build
+        env:
+          SESSION_SECRET: ci-build-only-not-the-runtime-secret
+        run: npm run build
+      - name: Deploy production Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --config wrangler.production.toml
+          wranglerVersion: "4"
+          secrets: |
+            SESSION_SECRET
+            DISCORD_BOT_TOKEN
+            DISCORD_SUPPORT_CHANNEL_ID
+            DISCORD_GUILD_ID
+            DISCORD_STAFF_METADATA_CHANNEL_ID
+            TURNSTILE_SITE_KEY
+            TURNSTILE_SECRET_KEY
+            RESEND_API_KEY
+            UPSTASH_REDIS_REST_URL
+            UPSTASH_REDIS_REST_TOKEN
+            SUPPORT_ODOO_TOKEN
+            SUPPORT_CLEANUP_SECRET
+            GITHUB_STATUS_TOKEN
+        env: *runtime-secrets
+

@@ -28,6 +28,7 @@ declare global {
   }
 
   interface Env {
+    RUNTIME_PROFILE?: 'preview' | 'production';
     // Signs the locale and support-desk cookies.
     SESSION_SECRET: string;
 

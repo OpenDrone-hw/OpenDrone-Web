@@ -4,8 +4,8 @@
 # confirmation into the Discord thread.
 #
 # Required repo secret: SUPPORT_CLEANUP_SECRET (same secret as the
-# cleanup sweep; must match the env var of the same name in Oxygen
-# Production).
+# cleanup sweep; must match the env var of the same name in the production
+# Worker).
 
 name: Support notify
 
@@ -31,7 +31,7 @@ jobs:
             exit 1
           fi
           response=$(curl -sS -w "\n%{http_code}" \
-            -X POST https://opendrone.store/api/support/notify \
+            -X POST https://opendrone.be/api/support/notify \
             -H "Authorization: Bearer $SUPPORT_CLEANUP_SECRET" \
             -H "Content-Type: application/json")
           body=$(echo "$response" | head -n -1)

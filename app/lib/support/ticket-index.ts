@@ -20,8 +20,8 @@
  * itself still gets the close marker and feedback post.
  */
 
-import {findThreadsByEmail} from './discord';
-import {getTicketStore, type TicketStore, type UpstashEnv} from './upstash';
+import {findThreadsByEmail} from './discord.ts';
+import {getTicketStore, type TicketStore, type UpstashEnv} from './upstash.ts';
 
 export type TicketStatus = 'open' | 'closed';
 
@@ -54,6 +54,15 @@ export type TicketMeta = TicketIndexEntry & {
   // "not yet linked", not "no Odoo ticket exists" — callers retry the
   // create-or-fetch call, which is idempotent on the Discord thread id.
   odooRef?: string;
+  // Durable Odoo relay outbox. Entries stay here until the bridge acknowledges
+  // them; the notification sweep retries every open ticket.
+  odooPending?: OdooPendingMessage[];
+};
+
+export type OdooPendingMessage = {
+  id: string;
+  author: string;
+  body: string;
 };
 
 const MAX_INDEX_ENTRIES = 200;
@@ -199,7 +208,9 @@ export async function markFeedback(env: Env, tid: string): Promise<void> {
 export async function patchMeta(
   env: Env,
   tid: string,
-  patch: Partial<Pick<TicketMeta, 'seenCursor' | 'notifyCursor' | 'odooRef'>>,
+  patch: Partial<
+    Pick<TicketMeta, 'seenCursor' | 'notifyCursor' | 'odooRef' | 'odooPending'>
+  >,
 ): Promise<void> {
   const kv = getTicketStore(env);
   if (!kv) return;
@@ -209,6 +220,21 @@ export async function patchMeta(
   await kv.put(`tk:${tid}`, JSON.stringify(meta), {
     expirationTtl: META_TTL_SECONDS,
   });
+}
+
+export async function queueOdooMessage(
+  env: Env,
+  tid: string,
+  message: OdooPendingMessage,
+): Promise<TicketMeta | null> {
+  const meta = await getMeta(env, tid);
+  if (!meta) return null;
+  const pending = meta.odooPending ?? [];
+  if (!pending.some((entry) => entry.id === message.id)) {
+    meta.odooPending = [...pending, message].slice(-100);
+    await patchMeta(env, tid, {odooPending: meta.odooPending});
+  }
+  return meta;
 }
 
 export async function getMeta(

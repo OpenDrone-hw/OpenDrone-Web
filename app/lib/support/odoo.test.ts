@@ -50,7 +50,12 @@ describe('createOrFetchOdooTicket', () => {
       name: 'Bridge Customer',
       subject: 'ELRS not binding',
     });
-    assert.deepEqual(ticket, {id: 42, ticketRef: 'SUP-00001', created: true});
+    assert.deepEqual(ticket, {
+      id: 42,
+      ticketRef: 'SUP-00001',
+      created: true,
+      posted: false,
+    });
     assert.equal(seenUrl, 'https://staging.incutec.eu/incutec/support/ticket');
     assert.equal(
       (seenInit?.headers as Record<string, string>)['X-Incutec-Support-Token'],
@@ -80,7 +85,12 @@ describe('createOrFetchOdooTicket', () => {
       name: 'Bridge Customer',
       subject: 'ignored on an existing thread_id',
     });
-    assert.deepEqual(ticket, {id: 42, ticketRef: 'SUP-00001', created: false});
+    assert.deepEqual(ticket, {
+      id: 42,
+      ticketRef: 'SUP-00001',
+      created: false,
+      posted: false,
+    });
   });
 
   it('retries once on a network error, then succeeds', async () => {
@@ -100,7 +110,12 @@ describe('createOrFetchOdooTicket', () => {
       subject: 's',
     });
     assert.equal(calls, 2);
-    assert.deepEqual(ticket, {id: 1, ticketRef: 'SUP-00002', created: true});
+    assert.deepEqual(ticket, {
+      id: 1,
+      ticketRef: 'SUP-00002',
+      created: true,
+      posted: false,
+    });
   });
 
   it('Odoo down: retries once then returns null without throwing', async () => {

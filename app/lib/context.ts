@@ -1,5 +1,6 @@
 import {AppSession} from '~/lib/session';
 import {createCatalogClient, type CatalogClient} from '~/lib/catalog-client';
+import {assertRuntimeEnvironment} from '~/lib/runtime-env';
 
 /**
  * The request context: env, the session cookie, the worker cache, the
@@ -33,9 +34,7 @@ export async function createAppLoadContext(
   env: Env,
   executionContext: ExecutionContext,
 ): Promise<AppLoadContext> {
-  if (!env?.SESSION_SECRET) {
-    throw new Error('SESSION_SECRET environment variable is not set');
-  }
+  assertRuntimeEnvironment(env);
 
   const waitUntil = executionContext.waitUntil.bind(executionContext);
   const [cache, session] = await Promise.all([

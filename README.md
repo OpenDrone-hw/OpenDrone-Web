@@ -5,8 +5,8 @@ hardware, designed and sold from Belgium. Flight controllers (OpenFC), 4-in-1 ES
 (OpenESC), ExpressLRS receivers (OpenRX), carbon frames (OpenFrame), and the OpenStack
 bundle.
 
-Under the hood it is a headless **[Hydrogen](https://hydrogen.shopify.dev/)** app
-on **Oxygen** (Shopify's Cloudflare Workers host). The commerce backend is
+Under the hood it is a React Router storefront built with Hydrogen's Vite
+toolchain and hosted on **Cloudflare Workers**. The commerce backend is
 **Odoo**, at [shop.incutec.com](https://shop.incutec.com): it owns the catalog,
 prices, availability, cart, checkout, payment, orders, invoices, addresses and
 customer accounts. This repo reads one public catalog JSON from it, hands every
@@ -14,8 +14,7 @@ buy click to it, and owns everything else the visitor looks at, plus a support
 desk that lives inside the Worker and a local editing studio that makes the
 whole site editable without touching code.
 
-Oxygen is hosting and build toolchain only; nothing in `app/` calls a Shopify
-API at runtime.
+Nothing in `app/` calls a Shopify API at runtime.
 
 Selling entity is **Incutec BV**; OpenDrone is the community project and product
 brand. This storefront is MIT; the hardware repos are CERN-OHL-S.
@@ -245,8 +244,8 @@ author them.
 
 ## How it is built
 
-- **Hydrogen** (Shopify's React Router 7 framework) on **Oxygen** workers, as
-  build toolchain and host only
+- **React Router 7** with Hydrogen's Vite build integration, deployed as a
+  Cloudflare Worker
 - **Odoo** at shop.incutec.com for catalog, cart, checkout, orders and accounts,
   read through one public JSON feed (`app/lib/catalog.ts`)
 - **React 19** + **TypeScript**, **Tailwind CSS v4** in one file
@@ -385,9 +384,9 @@ merge is a squash. **Every push to `main` auto-deploys to opendrone.be** in abou
 two minutes, so local-only commits do not exist as far as the site is concerned:
 push after every commit. Dependabot runs weekly, grouped, no major bumps.
 
-**DNS**: `A @ → 23.227.38.65`, `CNAME www → shops.myshopify.com.` (Oxygen is
-still the host.) Mail records live with the email provider; merge SPF changes
-into the existing TXT, never replace it.
+**DNS**: the public host is `opendrone.be`; `www.opendrone.be` redirects to the
+apex in `server.ts`. Mail records live with the email provider; merge SPF
+changes into the existing TXT, never replace it.
 
 ---
 
@@ -404,7 +403,7 @@ into the existing TXT, never replace it.
   private staff channel), outbound scrubber, moderation gate. The poll endpoint
   is the trust boundary: nothing from Discord reaches the browser except a
   scrubbed projection.
-- **Cart**: not here. The hand-off is a GET that only touches the caller's own
+- **Cart**: not here. The hand-off is a POST that only touches the caller's own
   Odoo session and can only redirect within the shop.
 - **Secrets**: `.env` is gitignored and history is clean of token-shaped
   strings. This app holds no commerce credentials at all; the catalog feed is
@@ -417,70 +416,24 @@ into the existing TXT, never replace it.
 
 ## Hosting
 
-Production (`opendrone.be`) runs on Shopify Oxygen today (decision D3);
-`.github/workflows/oxygen-deployment-1000116751.yml` deploys every push to
-`main`. D15 (`erp/PLAN.md`) evaluates moving hosting to Cloudflare so Shopify
-can be retired entirely, Oxygen included. This branch adds a Cloudflare
-Workers **preview** only — no DNS change, no effect on `opendrone.be`.
+The repository has separate Cloudflare targets:
 
-**Why it fits unchanged:** `npm run build` (the Hydrogen/Oxygen Vite
-toolchain, decision D3, unchanged by this branch) already emits a plain
-workerd ES module at `dist/server/index.js` with a standard
-`fetch(request, env, ctx)` export, because Oxygen is itself Shopify's
-Cloudflare Workers host. `wrangler.toml` points real Cloudflare Workers at
-that same build output and its static assets (`dist/client`); no application
-code changed for this.
+- `wrangler.toml` is the route-free `opendrone-web-preview` Worker. It uses the
+  staging catalog and shop, and keeps buying disabled.
+- `wrangler.production.toml` is the `opendrone-web` Worker for
+  `opendrone.be` and `www.opendrone.be`. It uses the production Odoo endpoints.
 
-**Preview project:** `opendrone-web`, deployed by
-`.github/workflows/cloudflare-deploy.yml` on every push to
-`feat/cloudflare-hosting`, using repo secrets `CLOUDFLARE_API_TOKEN` and
-`CLOUDFLARE_ACCOUNT_ID` (same account as `../site`, see
-`../../operations/INTEGRATIONS.md`). **A founder must add both repo secrets**
-(Settings → Secrets and variables → Actions) before the workflow can deploy;
-this was not done as part of this change.
+`.github/workflows/cloudflare-preview.yml` deploys only the feature branch to
+the GitHub `preview` environment. `.github/workflows/cloudflare-production.yml`
+deploys only `main` through the protected GitHub `production` environment.
+Both workflows validate the names of required runtime values before invoking
+Wrangler. The preview receives its own session secret and no production
+support credentials.
 
-**One-time setup**, from this repository:
-
-```sh
-npm run build
-npx wrangler deploy                              # creates the opendrone-web Worker
-npx wrangler secret put SESSION_SECRET            # openssl rand -hex 32
-```
-
-`CATALOG_URL` and `PUBLIC_SHOP_URL` are set as plain `[vars]` in
-`wrangler.toml` (public values, already the app's defaults); `SESSION_SECRET`
-is the only value the Worker needs that isn't already in the repo, and it only
-signs session cookies, so any random string works for a preview.
-
-The Cloudflare API token that already exists at
-`../../operations/.env` (`CLOUDFLARE_API_TOKEN`, used today for the
-`incutec-site` Pages project and for `../../operations/tools/cloudflare_dns.py`)
-**cannot create a new Workers script or a new Pages project**: both
-`wrangler deploy` and `wrangler pages project create` fail with an
-authentication/permission error against a fresh name. It can read zones/DNS
-and deploy to the already-existing `incutec-site` Pages project. Creating the
-`opendrone-web` project needs either a one-time run of the commands above from
-a session with a broader token (or the Cloudflare dashboard: Workers & Pages →
-Create), or the token's permissions widened to include Workers Scripts: Edit
-(or Cloudflare Pages: Edit, account-scoped) before CI can do it unattended.
-
-**Cutover (do not run without a separate, explicit request):**
-
-1. Confirm the preview serves `/`, a product page and the `/incutec/add`
-   cart hand-off correctly (see `npm run build` + `npx wrangler dev` locally,
-   or the deployed `*.workers.dev` URL).
-2. `opendrone.be`'s DNS lives on Gandi today (`A @ → 23.227.38.65`,
-   `CNAME www → shops.myshopify.com.`; see `../../operations/tools/gandi_dns.py`).
-   A Cloudflare Workers Custom Domain needs the zone's nameservers on
-   Cloudflare first (the way `incutec.com` was migrated; see
-   `../../operations/INTEGRATIONS.md`), not just a Gandi CNAME to
-   `*.workers.dev`. So cutover is: move the `opendrone.be` zone to Cloudflare,
-   add `opendrone.be` and `www` as Custom Domains on the `opendrone-web`
-   Worker, then `python3 ../../operations/tools/cloudflare_dns.py` to manage
-   any remaining records (mail, TXT) in the new zone.
-3. Remove `.github/workflows/oxygen-deployment-1000116751.yml` and the Oxygen
-   deployment in Shopify admin only after DNS has cut over and the Worker has
-   served production traffic without incident.
+Run `npm run check:runtime-env -- preview` or
+`npm run check:runtime-env -- production` to validate an environment without
+printing secret values. `npm run build` emits the Worker at
+`dist/server/index.js` and static assets at `dist/client`.
 
 ---
 
@@ -492,40 +445,20 @@ repository's `PLAN.md`, not here; from the storefront's point of view the shop
 is ready when `GET https://erp.incutec.eu/incutec/catalog.json` lists every
 product with its prices, availability and ship promises.
 
-**Oxygen environment variables.** Set these per environment (production and
-preview) in the Shopify admin, Hydrogen storefront, Storefront settings,
-Environments and variables. The four below are the whole list:
+**Cloudflare environment variables.** Public endpoints and company identity
+live in the matching Wrangler config. Runtime secrets live in the GitHub
+`preview` and `production` environments and are uploaded by their deployment
+workflow. Production startup checks the complete Discord, Turnstile, Resend,
+Upstash, Odoo support, cleanup and GitHub status set; a missing value returns
+503 instead of booting a partially working storefront.
 
-| Variable | Value | Notes |
-|---|---|---|
-| `SESSION_SECRET` | 32 random bytes hex (`openssl rand -hex 32`) | required; the app does not boot without it. Different value per environment |
-| `PUBLIC_SHOP_URL` | `https://shop.incutec.com` | base of every buy hand-off and portal link. Optional, this is the default |
-| `CATALOG_URL` | `https://erp.incutec.eu/incutec/catalog.json` | the catalog feed. Optional, this is the default. Point a preview at a staging Odoo here |
-| `GOALS_URL` | unset | the goal meter's aggregate endpoint, ERP `PLAN.md` step 12.6. Build-time only, so it belongs in repo secrets rather than Oxygen |
+The Odoo ticket mirror uses `SUPPORT_ODOO_URL` and `SUPPORT_ODOO_TOKEN`.
+Opening messages and later customer messages are queued in the Upstash ticket
+record until Odoo acknowledges them, and the notification sweep retries the
+queue. `SUPPORT_ODOO_TOKEN` must match `SUPPORT_BRIDGE_TOKEN` on Odoo.
 
-New for the Odoo ticket mirror (`app/lib/support/odoo.ts`, erp PLAN.md step
-12.2): add `SUPPORT_ODOO_URL` (`https://erp.incutec.eu` in production; point a
-preview at `https://staging.incutec.eu`) and `SUPPORT_ODOO_TOKEN` (the same
-shared secret as `SUPPORT_BRIDGE_TOKEN` in `erp/.env`, set on the Odoo side by
-`erp/config/support.py`) to both Oxygen environments. Without them the ticket
-mirror silently no-ops; the Discord bridge is unaffected either way.
-
-Everything else already in Oxygen stays: `PUBLIC_COMPANY_*`, the support bridge
-(Discord, Turnstile, Upstash, Resend), `GITHUB_TOKEN` / `GITHUB_STATUS_TOKEN`,
-`PUBLIC_COMING_SOON`, `PUBLIC_PRELAUNCH`, `PUBLIC_LEARN_DRAFT`,
-`NEWSLETTER_*`, `SUPPORT_CLEANUP_SECRET`. Delete the Shopify commerce values if
-they are still set: `PUBLIC_STORE_DOMAIN`, `PUBLIC_STOREFRONT_API_TOKEN`,
-`PRIVATE_STOREFRONT_API_TOKEN`, `PUBLIC_STOREFRONT_ID`, `SHOP_ID`,
-`PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID`, `PUBLIC_CUSTOMER_ACCOUNT_API_URL`,
-`PUBLIC_CHECKOUT_DOMAIN`, `SHOPIFY_ADMIN_API_TOKEN`,
-`SHOPIFY_ADMIN_API_VERSION`, `SHOPIFY_WEBHOOK_SECRET`,
-`NEWSLETTER_BLOG_HANDLE`, `JUDGEME_PRIVATE_TOKEN`,
-`PUBLIC_JUDGEME_SHOP_DOMAIN`, `PUBLIC_PREORDERS`. Nothing reads them.
-
-**What still depends on Shopify:** nothing at runtime. `@shopify/cli` builds and
-deploys the app and Oxygen hosts it (`cdn.shopify.com` serves this app's own JS
-bundles, which is why it stays in the CSP), but no page, loader or action calls
-a Shopify API.
+The app has no Shopify runtime dependency. `@shopify/cli` remains a build-time
+wrapper around Vite; no page, loader or action calls a Shopify API.
 
 The launch model on the storefront side:
 
@@ -545,7 +478,7 @@ The launch model on the storefront side:
   one parcel once every line is on hand. The PDP, the Odoo order confirmation
   and the shipping policy say so; the operator holds the order until then.
 
-Before launch, walk one order end to end on an Oxygen preview: PDP, buy click,
+Before launch, walk one order end to end on the route-free Cloudflare preview: PDP, buy click,
 Odoo cart, checkout, test payment, order mail, portal link.
 
 Compliance details (GPSR, withdrawal, pre-orders, battery shipping):
@@ -560,8 +493,9 @@ Compliance details (GPSR, withdrawal, pre-orders, battery shipping):
 2. Commit with DCO sign-off (`git commit -s`), Conventional Commits, subject
    ≤60 chars.
 3. `npm run typecheck && npm run lint && npm test` locally; CI enforces them.
-4. `gh pr create`: CI plus an Oxygen preview URL run automatically. Maintainers
-   squash-merge; a merge is a production deploy.
+4. `gh pr create`: CI runs automatically. Pushes to the hosting feature branch
+   update the isolated Cloudflare preview. Maintainers squash-merge; a merge is
+   a production deploy.
 
 Rules: no new npm dependencies without an issue first; mobile-first (375px,
 enhance at 768/1440); WCAG 2.1 AA; bundle additions over 50 KB gzipped need

@@ -23,6 +23,7 @@
     "test": "node --experimental-strip-types --test \"app/**/*.test.ts\"",
     "check:registry": "node --experimental-strip-types scripts/check-registry.mjs",
     "check:status": "node --experimental-strip-types scripts/check-status-fallback.mjs",
+    "check:runtime-env": "node scripts/check-runtime-env.mjs",
     "sync:legal": "node scripts/sync-legal.mjs",
     "audit:mobile": "node scripts/mobile-shots.mjs",
     "audit:perf": "node scripts/perf-audit.mjs",

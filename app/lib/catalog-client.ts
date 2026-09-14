@@ -3,18 +3,13 @@
  *
  * One `GET CATALOG_URL` per worker isolate per five minutes, stored in the
  * worker cache so every isolate on the same colo shares it. When the fetch
- * fails the last good copy is served for up to an hour, and only after that
- * does the site fall back to an empty catalog (no prices, no buy buttons)
- * rather than a 500 on every page.
+ * fails the last good copy is served for up to an hour. A true cold miss is
+ * a 503, never an empty catalog that turns valid product URLs into false 404s.
  *
  * The pure half, including every type and mapper, is `app/lib/catalog.ts`.
  */
 
-import {
-  emptyCatalog,
-  parseCatalog,
-  type Catalog,
-} from '~/lib/catalog';
+import {parseCatalog, type Catalog} from './catalog.ts';
 
 export const DEFAULT_CATALOG_URL =
   'https://erp.incutec.eu/incutec/catalog.json';
@@ -71,7 +66,10 @@ export function createCatalogClient({
       .catch((error) => {
         console.error('[catalog] fetch failed', error);
         if (memo && Date.now() - memo.fetchedAt < STALE_MS) return memo.catalog;
-        return emptyCatalog(shop);
+        throw new Response('Catalog temporarily unavailable.', {
+          status: 503,
+          headers: {'Retry-After': '60', 'Cache-Control': 'no-store'},
+        });
       })
       .finally(() => {
         inflight = null;
@@ -117,7 +115,10 @@ async function fetchAndStore(request: Request, cache?: Cache): Promise<Catalog> 
     const stored = new Response(body, {
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
-        'Cache-Control': `max-age=${FRESH_MS / 1000}`,
+        // Keep the last good response available for the full fallback window.
+        // x-catalog-age still makes it stale after five minutes and triggers a
+        // background refresh; the longer TTL only protects cold isolates.
+        'Cache-Control': `max-age=${STALE_MS / 1000}`,
         'x-catalog-age': String(Date.now()),
       },
     });

@@ -5,8 +5,8 @@ import {readSupportCookie, verifyTicket} from '~/lib/support/session';
 import {extractAttachments} from '~/lib/support/uploads';
 import {checkRateLimit} from '~/lib/rate-limit';
 import {scrubForDiscord} from '~/lib/support/scrubber';
-import {bumpActivity, getMeta, patchMeta} from '~/lib/support/ticket-index';
-import {createOrFetchOdooTicket, postOdooMessage} from '~/lib/support/odoo';
+import {bumpActivity, queueOdooMessage} from '~/lib/support/ticket-index';
+import {createOrFetchOdooTicket, flushOdooMirror} from '~/lib/support/odoo';
 
 type SendResult =
   | {
@@ -114,36 +114,30 @@ export async function action({request, context}: Route.ActionArgs) {
   if (context.waitUntil) context.waitUntil(bumpJob);
   else void bumpJob;
 
-  // Relay this message onto the mirrored Odoo ticket
-  // (erp/addons/incutec_support, PLAN.md 12.2). Fire-and-forget: the
-  // message already reached Discord above, so an Odoo outage here can
-  // only ever be logged, never surfaced to the visitor (D13). Resolve
-  // the ticket_ref from the index first; if this ticket was created (or
-  // last relayed) while Odoo was down, `odooRef` is still missing here,
-  // so fall back to the same idempotent create-or-fetch call the start
-  // route makes, keyed on the Discord thread id, and persist whatever it
-  // returns for next time.
+  // Queue before relaying so an Odoo outage cannot lose the message. The
+  // notification sweep retries every open ticket; message ids make replay
+  // idempotent on the Odoo side.
   const odooJob = (async () => {
     try {
-      const meta = await getMeta(env, ticket.tid);
-      let ref = meta?.odooRef;
-      if (!ref) {
-        const odooTicket = await createOrFetchOdooTicket(env, {
+      const pending = {
+        id: `discord:${posted.id}`,
+        author: firstNameOnly(ticket.name),
+        body: cleanContent.content || '[attachment]',
+      };
+      const meta = await queueOdooMessage(env, ticket.tid, pending);
+      if (meta) {
+        await flushOdooMirror(env, meta);
+      } else {
+        // Development fallback without Upstash: still mirror immediately,
+        // while production preflight requires the durable ticket store.
+        await createOrFetchOdooTicket(env, {
           threadId: ticket.tid,
           email: ticket.email,
           name: ticket.name,
-          subject: meta?.subject || `Support ticket #${ticket.pid ?? ticket.uid}`,
-        });
-        if (odooTicket) {
-          ref = odooTicket.ticketRef;
-          await patchMeta(env, ticket.tid, {odooRef: ref});
-        }
-      }
-      if (ref) {
-        await postOdooMessage(env, {
-          ticketRef: ref,
-          author: firstNameOnly(ticket.name),
-          body: cleanContent.content || '[attachment]',
+          subject: `Support ticket #${ticket.pid ?? ticket.uid}`,
+          author: pending.author,
+          body: pending.body,
+          messageId: pending.id,
         });
       }
     } catch (err) {

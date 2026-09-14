@@ -44,34 +44,10 @@ type CookieEntry = {name: string; en: string; nl: string; fr: string};
 
 const KNOWN: CookieEntry[] = [
   {
-    name: 'cart',
-    en: 'Links your cart to your browser session. Strictly necessary.',
-    nl: 'Koppelt uw winkelwagen aan uw browsersessie. Strikt noodzakelijk.',
-    fr: 'Associe votre panier \u00e0 votre session de navigateur. Strictement n\u00e9cessaire.',
-  },
-  {
-    name: 'cart_sig',
-    en: 'Security signature for the cart cookie.',
-    nl: 'Beveiligingshandtekening voor de winkelwagen-cookie.',
-    fr: 'Signature de s\u00e9curit\u00e9 pour le cookie du panier.',
-  },
-  {
-    name: '_secure_session_id',
-    en: 'Session security for Shopify checkout. Strictly necessary.',
-    nl: 'Sessiebeveiliging bij Shopify checkout. Strikt noodzakelijk.',
-    fr: 'S\u00e9curit\u00e9 de session pour le checkout Shopify. Strictement n\u00e9cessaire.',
-  },
-  {
-    name: 'localization',
-    en: 'Remembers selected language/region for the storefront.',
-    nl: 'Onthoudt de gekozen taal/regio voor de storefront.',
-    fr: 'M\u00e9morise la langue/r\u00e9gion s\u00e9lectionn\u00e9e pour la boutique.',
-  },
-  {
-    name: 'opendrone_lang',
-    en: 'Remembers your NL/FR/EN preference for regulatory pages.',
-    nl: 'Onthoudt uw NL/FR/EN-voorkeur voor juridische pagina\u2019s.',
-    fr: 'M\u00e9morise votre pr\u00e9f\u00e9rence linguistique pour les pages l\u00e9gales.',
+    name: 'session',
+    en: 'Stores your language and signed support-ticket session. Strictly necessary.',
+    nl: 'Bewaart uw taal en ondertekende supportticketsessie. Strikt noodzakelijk.',
+    fr: 'M\u00e9morise votre langue et votre session d’assistance sign\u00e9e. Strictement n\u00e9cessaire.',
   },
 ];
 
@@ -81,7 +57,7 @@ const STRINGS = {
     intro: [
       'The OpenDrone webshop uses ',
       {strong: 'no marketing cookies'},
-      ' and does not ask for consent; only strictly-necessary cookies are set for cart and checkout. Analytics runs via Plausible, which is cookieless. See also the ',
+      ' and does not ask for consent; only a strictly necessary storefront session is set. The cart and checkout run on shop.incutec.com and manage their own session. Analytics runs via Plausible, which is cookieless. See also the ',
       {link: ['cookie policy', '/cookies']},
       '.',
     ],
@@ -100,7 +76,7 @@ const STRINGS = {
     intro: [
       'De OpenDrone-webshop gebruikt ',
       {strong: 'geen marketingcookies'},
-      ' en vraagt geen toestemming; alleen strikt noodzakelijke cookies worden geplaatst voor winkelwagen en checkout. Analytics loopt via Plausible, dat cookieless is. Zie ook het ',
+      ' en vraagt geen toestemming; alleen een strikt noodzakelijke webshopsessie wordt geplaatst. De winkelwagen en checkout draaien op shop.incutec.com en beheren daar hun eigen sessie. Analytics loopt via Plausible, dat cookieless is. Zie ook het ',
       {link: ['cookiebeleid', '/cookies']},
       '.',
     ],
@@ -119,7 +95,7 @@ const STRINGS = {
     intro: [
       'La boutique OpenDrone n’utilise ',
       {strong: 'aucun cookie marketing'},
-      ' et ne demande pas de consentement ; seuls des cookies strictement nécessaires sont utilisés pour le panier et le checkout. Les statistiques passent par Plausible, sans cookies. Voir aussi la ',
+      ' et ne demande pas de consentement ; seule une session strictement nécessaire est utilisée sur ce site. Le panier et le paiement fonctionnent sur shop.incutec.com et y gèrent leur propre session. Les statistiques passent par Plausible, sans cookies. Voir aussi la ',
       {link: ['politique en matière de cookies', '/cookies']},
       '.',
     ],

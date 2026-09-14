@@ -1,0 +1,26 @@
+# Production Cloudflare Worker. Deployment is restricted to protected main and
+# the GitHub production environment in cloudflare-production.yml.
+name = "opendrone-web"
+main = "dist/server/index.js"
+compatibility_date = "2025-04-01"
+routes = [
+  { pattern = "opendrone.be", custom_domain = true },
+  { pattern = "www.opendrone.be", custom_domain = true },
+]
+
+[assets]
+directory = "dist/client"
+
+[vars]
+RUNTIME_PROFILE = "production"
+CATALOG_URL = "https://erp.incutec.eu/incutec/catalog.json"
+PUBLIC_SHOP_URL = "https://shop.incutec.com"
+PUBLIC_COMING_SOON = "0"
+PUBLIC_PRELAUNCH = "0"
+SUPPORT_ODOO_URL = "https://erp.incutec.eu"
+PUBLIC_COMPANY_NAME = "Incutec BV"
+PUBLIC_COMPANY_ADDRESS = "Stapelhuisstraat 15, 3000 Leuven, Belgium"
+PUBLIC_COMPANY_KBO = "1038.934.039"
+PUBLIC_COMPANY_VAT = "BE 1038.934.039"
+PUBLIC_COMPANY_EMAIL = "contact@opendrone.be"
+PUBLIC_DISCORD_INVITE = "https://discord.gg/ABajnacUsS"

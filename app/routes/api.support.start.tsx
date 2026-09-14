@@ -21,8 +21,8 @@ import {verifyTurnstile} from '~/lib/support/turnstile';
 import {extractAttachments} from '~/lib/support/uploads';
 import {checkRateLimit, clientIp} from '~/lib/rate-limit';
 import {scrubForDiscord} from '~/lib/support/scrubber';
-import {addTicket} from '~/lib/support/ticket-index';
-import {createOrFetchOdooTicket} from '~/lib/support/odoo';
+import {addTicket, type TicketMeta} from '~/lib/support/ticket-index';
+import {flushOdooMirror} from '~/lib/support/odoo';
 
 type StartResult =
   | {ok: true; ticketId: string; pid?: string}
@@ -240,61 +240,55 @@ export async function action({request, context}: Route.ActionArgs) {
     // Write ticket meta + the email index, mirror the ticket into Odoo
     // (erp/addons/incutec_support, PLAN.md 12.2), and send the resume-link
     // email — all fire-and-forget so a slow store write, an Odoo outage, or
-    // Resend latency never tails the API response. The Odoo call goes first
-    // because both the index write and the confirmation email want its
-    // ticket_ref; createOrFetchOdooTicket never throws and resolves to
-    // `null` on any failure (logged there), so this never blocks or fails
-    // the Discord path.
+    // Resend latency never tails the API response. The opening message is
+    // written to the durable ticket outbox before Odoo is called; the notify
+    // sweep retries it if this first attempt fails.
     const ticketIndexSubject = cleanSubject || cleanMessage.content.slice(0, 80);
     const ticketSubject = cleanSubject || cleanMessage.content.slice(0, 60);
     const backgroundJob = (async () => {
-      const odooTicket = await createOrFetchOdooTicket(env, {
-        threadId: thread.id,
-        email,
-        name,
+      const meta: TicketMeta = {
+        tid: thread.id,
+        pid,
         subject: ticketIndexSubject,
-      });
+        openedAt: ticket.createdAt,
+        closedAt: null,
+        lastActivityAt: ticket.createdAt,
+        status: 'open',
+        email,
+        name: ticket.name,
+        product: cleanProduct || undefined,
+        firmware: cleanFirmware || undefined,
+        odooPending: [{
+          id: `opening:${thread.id}`,
+          author: firstNameOnly(name),
+          body: cleanMessage.content || '[attachment]',
+        }],
+      };
+      await addTicket(env, meta).catch((err) =>
+        console.warn('[support/start] ticket-index write failed', err),
+      );
+      const odooRef = await flushOdooMirror(env, meta);
 
-      await Promise.all([
-        addTicket(env, {
+      try {
+        const token = await signResumeToken(env, {
           tid: thread.id,
-          pid,
-          subject: ticketIndexSubject,
-          openedAt: ticket.createdAt,
-          closedAt: null,
-          lastActivityAt: ticket.createdAt,
-          status: 'open',
+          uid: ticket.uid,
           email,
           name: ticket.name,
-          product: cleanProduct || undefined,
-          firmware: cleanFirmware || undefined,
-          odooRef: odooTicket?.ticketRef,
-        }).catch((err) =>
-          console.warn('[support/start] ticket-index write failed', err),
-        ),
-        (async () => {
-          try {
-            const token = await signResumeToken(env, {
-              tid: thread.id,
-              uid: ticket.uid,
-              email,
-              name: ticket.name,
-              pid,
-            });
-            const baseUrl = new URL(request.url).origin;
-            const resumeUrl = buildResumeUrl(baseUrl, token);
-            await sendResumeLink(env, {
-              to: email,
-              name,
-              subject: ticketSubject,
-              resumeUrl,
-              odooRef: odooTicket?.ticketRef,
-            });
-          } catch (err) {
-            console.warn('[support/start] resume-email failed', err);
-          }
-        })(),
-      ]);
+          pid,
+        });
+        const baseUrl = new URL(request.url).origin;
+        const resumeUrl = buildResumeUrl(baseUrl, token);
+        await sendResumeLink(env, {
+          to: email,
+          name,
+          subject: ticketSubject,
+          resumeUrl,
+          odooRef: odooRef ?? undefined,
+        });
+      } catch (err) {
+        console.warn('[support/start] resume-email failed', err);
+      }
     })();
     if (context.waitUntil) context.waitUntil(backgroundJob);
     else void backgroundJob;
@@ -334,4 +328,3 @@ function anonymizeIp(ip: string): string {
   if (parts.length === 4) return `${parts[0]}.${parts[1]}.${parts[2]}.x`;
   return 'unknown';
 }
-

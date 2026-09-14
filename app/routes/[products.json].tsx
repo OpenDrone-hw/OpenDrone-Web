@@ -79,9 +79,10 @@ export async function loader({context, request}: Route.LoaderArgs) {
           available: locked ? false : v.availableForSale,
           price: locked ? null : v.price.amount,
           currency: locked ? null : v.price.currencyCode,
-          // The hand-off link: a plain GET that puts this SKU in the
+          // The hand-off action: submitted as POST to put this SKU in the
           // visitor's own cart on the shop and redirects them to it.
           ...(locked ? null : {cart_add_url: v.cartAddUrl}),
+          ...(locked ? null : {cart_add_method: 'POST'}),
           // The issued Declaration of Conformity (D13, PLAN.md 11.4), only
           // once incutec_compliance has one for this SKU's current design
           // revision; never a stand-in for an unissued record.

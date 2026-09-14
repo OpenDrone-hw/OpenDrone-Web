@@ -1,28 +1,14 @@
-# Cloudflare Workers config for the D15 hosting preview (erp/PLAN.md).
-#
-# The build is unchanged: `npm run build` (Hydrogen's Vite/Oxygen toolchain,
-# decision D3) already emits a plain workerd ESM module at dist/server/index.js
-# with a standard `fetch(request, env, ctx)` export, because Oxygen is itself
-# Shopify's Cloudflare Workers host. This file only points real Cloudflare
-# Workers at that same build output; no server code changed.
-name = "opendrone-web"
+# Isolated Cloudflare preview. This Worker has no custom-domain routes and its
+# commerce links point at staging with buying disabled.
+name = "opendrone-web-preview"
 main = "dist/server/index.js"
 compatibility_date = "2025-04-01"
-
-# D16 cutover: the Worker serves opendrone.be and www.opendrone.be directly
-# once the zone's nameservers point at Cloudflare (erp/PLAN.md D15/D16).
-# server.ts 301s www to the apex to match Shopify's current behaviour.
-routes = [
-  { pattern = "opendrone.be", custom_domain = true },
-  { pattern = "www.opendrone.be", custom_domain = true },
-]
 
 [assets]
 directory = "dist/client"
 
-# Public, non-secret defaults (see .env.example). SESSION_SECRET is a
-# per-environment secret set with `wrangler secret put SESSION_SECRET` and is
-# never written here.
 [vars]
-CATALOG_URL = "https://erp.incutec.eu/incutec/catalog.json"
-PUBLIC_SHOP_URL = "https://shop.incutec.com"
+RUNTIME_PROFILE = "preview"
+CATALOG_URL = "https://staging.incutec.eu/incutec/catalog.json"
+PUBLIC_SHOP_URL = "https://staging.incutec.eu"
+PUBLIC_COMING_SOON = "1"

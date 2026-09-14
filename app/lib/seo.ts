@@ -3,9 +3,8 @@ import type {CompanyIdentity} from '~/lib/company';
 const STORE_NAME = 'OpenDrone';
 const DEFAULT_LOCALE = 'en_US';
 // Canonical SEO origin: what rel=canonical, og:url and JSON-LD point at.
-// Google must index opendrone.be even while pages serve on other hosts
-// (www.opendrone.store stays the checkout host), so canonicals must never
-// be derived from the request origin.
+// Canonicals are fixed to the public storefront origin and must never be
+// derived from preview or alternate request hosts.
 export const SITE_ORIGIN = 'https://opendrone.be';
 
 export const DEFAULT_SEO_DESCRIPTION =

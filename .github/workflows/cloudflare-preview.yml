@@ -1,0 +1,39 @@
+name: Deploy Cloudflare preview
+
+on:
+  push:
+    branches: [feat/cloudflare-hosting]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: preview
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run check:runtime-env -- preview
+        env:
+          SESSION_SECRET: ${{ secrets.CLOUDFLARE_PREVIEW_SESSION_SECRET }}
+      - name: Build
+        env:
+          SESSION_SECRET: ci-build-only-not-the-runtime-secret
+        run: npm run build
+      - name: Deploy route-free preview Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --config wrangler.toml
+          wranglerVersion: "4"
+          secrets: SESSION_SECRET
+        env:
+          SESSION_SECRET: ${{ secrets.CLOUDFLARE_PREVIEW_SESSION_SECRET }}
+

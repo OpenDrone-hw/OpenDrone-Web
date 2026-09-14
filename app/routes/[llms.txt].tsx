@@ -168,14 +168,14 @@ is on hand. Details: ${origin}/shipping`
 
 ## How to order
 
-Orders are placed on the Incutec shop, ${shopUrl}. Add lines to the visitor's
-own cart with a GET request, no JS needed:
+Orders are placed on the Incutec shop, ${shopUrl}. Submit an
+\`application/x-www-form-urlencoded\` POST to:
 
-    ${shopUrl}/incutec/add?sku=<SKU>&qty=<n>&next=cart
+    ${shopUrl}/incutec/add
 
-Multiple lines go in one request, comma-separated:
+Fields for one line are \`sku=<SKU>&qty=<n>&next=cart\`. Multiple lines use:
 
-    ${shopUrl}/incutec/add?lines=<SKU>:<qty>,<SKU>:<qty>&next=cart
+    lines=<SKU>:<qty>,<SKU>:<qty>&next=cart
 
 Parameters: \`sku\`/\`qty\` repeatable pairs (qty 1 to 50, at most 20 lines);
 \`lines\` as above; \`mode=set\` makes the line quantity equal to qty instead of
@@ -183,9 +183,9 @@ adding to it; \`next\` is \`cart\` (default) or \`checkout\`. The response is a
 303 to that page on the shop; hand that URL to the human to pay. An unknown or
 unpublished SKU gives 404 and adds nothing.
 
-Example, a 20×20 flight stack (OpenFC Lite + OpenESC${stackDiscountNote(globalSoon, statusFlags)}):
+Example POST body for a 20×20 flight stack (OpenFC Lite + OpenESC${stackDiscountNote(globalSoon, statusFlags)}):
 
-    ${shopUrl}/incutec/add?lines=OPENFC-LITE-2020:1,OPENESC-2020:1&next=cart
+    lines=OPENFC-LITE-2020:1,OPENESC-2020:1&next=cart
 
 Every catalog line below carries its own ready-made order URL. A
 machine-readable feed lives at ${origin}/products.json.

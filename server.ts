@@ -1,14 +1,15 @@
 import * as serverBuild from 'virtual:react-router/server-build';
 import {createRequestHandler} from 'react-router';
 import {createAppLoadContext} from '~/lib/context';
+import {RuntimeConfigurationError} from '~/lib/runtime-env';
 
 /**
  * Export a fetch handler in module format.
  *
  * The handler is React Router's own: Hydrogen's wrapper existed for the
  * Storefront client and `storefrontRedirect` (Shopify's URL redirect
- * table), neither of which exists any more. Oxygen still hosts and
- * builds the app (decision D3); it just has no Shopify API to call.
+ * table), neither of which exists any more. Cloudflare runs the generated
+ * Worker directly; no Shopify API is called.
  */
 const handleRequest = createRequestHandler(serverBuild, process.env.NODE_ENV);
 
@@ -20,10 +21,8 @@ export default {
   ): Promise<Response> {
     try {
       // www.opendrone.be is a Cloudflare custom domain too (both point at
-      // this Worker, wrangler.toml), but Shopify today 301s www to the
-      // apex rather than serving it (D13/D16: keep current behaviour, no
-      // visual or structural change). Do the same redirect here so the
-      // custom domain doesn't start silently serving www as a mirror.
+      // this Worker in production). Keep one public origin for SEO and
+      // session behavior by redirecting www to the apex.
       const url = new URL(request.url);
       if (url.hostname === 'www.opendrone.be') {
         url.hostname = 'opendrone.be';
@@ -52,7 +51,10 @@ export default {
       return response;
     } catch (error) {
       console.error(error);
-      return new Response('An unexpected error occurred', {status: 500});
+      return new Response('An unexpected error occurred', {
+        status: error instanceof RuntimeConfigurationError ? 503 : 500,
+        headers: {'Cache-Control': 'no-store'},
+      });
     }
   },
 };

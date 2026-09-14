@@ -22,18 +22,23 @@
  * to `null` / `false` so the caller can carry on with the Discord-only path.
  */
 
+import {patchMeta, type TicketMeta} from './ticket-index.ts';
+
 const DEFAULT_ODOO_URL = 'https://erp.incutec.eu';
 const ODOO_TIMEOUT_MS = 5000;
 
 type OdooEnv = {
   SUPPORT_ODOO_URL?: string;
   SUPPORT_ODOO_TOKEN?: string;
+  UPSTASH_REDIS_REST_URL?: string;
+  UPSTASH_REDIS_REST_TOKEN?: string;
 };
 
 export type OdooTicket = {
   id: number;
   ticketRef: string;
   created: boolean;
+  posted: boolean;
 };
 
 function baseUrl(env: OdooEnv): string {
@@ -92,7 +97,15 @@ async function callOdoo(
 // call ultimately fails — callers must not block the Discord path on it.
 export async function createOrFetchOdooTicket(
   env: OdooEnv,
-  opts: {threadId: string; email: string; name: string; subject: string},
+  opts: {
+    threadId: string;
+    email: string;
+    name: string;
+    subject: string;
+    author?: string;
+    body?: string;
+    messageId?: string;
+  },
 ): Promise<OdooTicket | null> {
   if (!env.SUPPORT_ODOO_TOKEN) return null;
   const res = await callOdoo(env, '/incutec/support/ticket', {
@@ -100,6 +113,9 @@ export async function createOrFetchOdooTicket(
     email: opts.email,
     name: opts.name,
     subject: opts.subject,
+    author: opts.author,
+    body: opts.body,
+    message_id: opts.messageId,
   });
   if (!res) return null;
   if (!res.ok) {
@@ -107,8 +123,18 @@ export async function createOrFetchOdooTicket(
     return null;
   }
   try {
-    const json = (await res.json()) as {id: number; ticket_ref: string; created: boolean};
-    return {id: json.id, ticketRef: json.ticket_ref, created: json.created};
+    const json = (await res.json()) as {
+      id: number;
+      ticket_ref: string;
+      created: boolean;
+      posted?: boolean;
+    };
+    return {
+      id: json.id,
+      ticketRef: json.ticket_ref,
+      created: json.created,
+      posted: json.posted === true,
+    };
   } catch (err) {
     console.warn('[support/odoo] ticket create/fetch: bad JSON', err);
     return null;
@@ -120,18 +146,55 @@ export async function createOrFetchOdooTicket(
 // throws.
 export async function postOdooMessage(
   env: OdooEnv,
-  opts: {ticketRef: string; author: string; body: string},
+  opts: {ticketRef: string; author: string; body: string; messageId?: string},
 ): Promise<boolean> {
   if (!env.SUPPORT_ODOO_TOKEN) return false;
   const res = await callOdoo(
     env,
     `/incutec/support/ticket/${encodeURIComponent(opts.ticketRef)}/message`,
-    {author: opts.author, body: opts.body},
+    {author: opts.author, body: opts.body, message_id: opts.messageId},
   );
   if (!res) return false;
   if (!res.ok) {
     console.warn('[support/odoo] message relay', res.status);
     return false;
   }
-  return true;
+  const json = (await res.json().catch(() => null)) as {posted?: boolean} | null;
+  return typeof json?.posted === 'boolean';
+}
+
+export async function flushOdooMirror(
+  env: OdooEnv,
+  ticket: TicketMeta,
+): Promise<string | null> {
+  let ref = ticket.odooRef;
+  let pending = [...(ticket.odooPending ?? [])];
+  if (!ref) {
+    const opening = pending[0];
+    const created = await createOrFetchOdooTicket(env, {
+      threadId: ticket.tid,
+      email: ticket.email,
+      name: ticket.name,
+      subject: ticket.subject,
+      author: opening?.author,
+      body: opening?.body,
+      messageId: opening?.id,
+    });
+    if (!created) return null;
+    ref = created.ticketRef;
+    if (opening) pending = pending.slice(1);
+    await patchMeta(env, ticket.tid, {odooRef: ref, odooPending: pending});
+  }
+  for (const message of pending) {
+    const settled = await postOdooMessage(env, {
+      ticketRef: ref,
+      author: message.author,
+      body: message.body,
+      messageId: message.id,
+    });
+    if (!settled) break;
+    pending = pending.filter((entry) => entry.id !== message.id);
+    await patchMeta(env, ticket.tid, {odooRef: ref, odooPending: pending});
+  }
+  return ref;
 }

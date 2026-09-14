@@ -17557,3 +17557,6 @@ body:has(.buy-rail.is-pinned.is-mobile) .placeholder-banner {
 .learn-table code {
   font-size: 0.9em;
 }
+.add-to-cart-form {
+  display: contents;
+}
