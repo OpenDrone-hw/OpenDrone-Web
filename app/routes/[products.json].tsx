@@ -83,10 +83,6 @@ export async function loader({context, request}: Route.LoaderArgs) {
           // visitor's own cart on the shop and redirects them to it.
           ...(locked ? null : {cart_add_url: v.cartAddUrl}),
           ...(locked ? null : {cart_add_method: 'POST'}),
-          // The issued Declaration of Conformity (D13, PLAN.md 11.4), only
-          // once incutec_compliance has one for this SKU's current design
-          // revision; never a stand-in for an unissued record.
-          ...(v.compliance ? {compliance: v.compliance} : null),
         })),
       };
     });

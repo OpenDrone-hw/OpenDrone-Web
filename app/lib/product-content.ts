@@ -128,10 +128,6 @@ export type DownloadKind =
   | 'flash'
   | 'changelog'
   | 'sbom'
-  /** EU Declaration of Conformity (GPSR/CE). Each SKU gets one `doc`
-   *  download entry once CE conformity assessment closes — no files exist
-   *  yet, the kind is reserved so the slot is first-class in the type. */
-  | 'doc'
   | 'firmware_manifest'
   | 'other';
 
@@ -338,9 +334,7 @@ export type ProductContent = {
   /** Beginner orientation chapter. See {@link WhatIsThis}. */
   whatIsThis?: WhatIsThis;
   inTheBox: BoxItem[];          // physical items shipped
-  /** Schematic PDFs, STEP files, manuals, etc. Each SKU also carries its
-   *  EU Declaration of Conformity here (kind: 'doc') once CE closes —
-   *  don't add DoC entries before the signed PDF exists. */
+  /** Schematic PDFs, STEP files, manuals, and other public design assets. */
   downloads: DownloadAsset[];
   specs: Array<[string, string]>;
   footnote?: string;            // appears under the family card

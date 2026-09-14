@@ -5,7 +5,6 @@ import {
   byHandle,
   bySku,
   cartAddUrl,
-  complianceDownload,
   emptyCatalog,
   familyGroups,
   formatPrice,
@@ -15,7 +14,6 @@ import {
   toCard,
   toCards,
   toProduct,
-  withComplianceDownload,
   type Catalog,
 } from './catalog.ts';
 
@@ -149,20 +147,6 @@ describe('toProduct', () => {
     );
   });
 
-  it('maps an issued compliance object, and carries null when none is issued', () => {
-    const bySkuMap = Object.fromEntries(
-      product.variants.nodes.map((v) => [v.sku, v]),
-    );
-    assert.deepEqual(bySkuMap['OPENRX-GEMINI'].compliance, {
-      declaration_id: 'INC-DoC-OPENRX-GEMINI',
-      version: '1',
-      issued_on: '2026-09-14',
-      doc_url: 'https://shop.incutec.com/incutec/doc/OPENRX-GEMINI/1.pdf',
-      bundle_url: 'https://shop.incutec.com/incutec/doc/OPENRX-GEMINI/1.pdf',
-    });
-    assert.equal(bySkuMap['OPENRX-LITE'].compliance, null);
-  });
-
   it('falls back to the template image when a variant has none', () => {
     const gemini = product.variants.nodes.find(
       (v) => v.sku === 'OPENRX-GEMINI',
@@ -229,45 +213,6 @@ describe('cards', () => {
     assert.equal(card.handle, 'openfc-lite');
     assert.equal(card.priceRange.minVariantPrice.amount, '44.99');
     assert.equal(card.variants.nodes.length, 2);
-  });
-});
-
-describe('PDP downloads chapter: declaration of conformity entry (D13, PLAN.md 11.4)', () => {
-  it('adds no entry when the variant has no issued compliance record', () => {
-    const lite = toProduct(FIXTURE, byHandle(FIXTURE, 'openrx')!, [
-      {name: 'Model', value: 'Lite'},
-    ]).selectedOrFirstAvailableVariant;
-    assert.equal(complianceDownload(lite?.compliance), null);
-    assert.deepEqual(withComplianceDownload([], lite?.compliance), []);
-    const existing = [{kind: 'schematic', label: 'Schematic', href: 'x'}] as const;
-    assert.deepEqual(withComplianceDownload([...existing], lite?.compliance), [
-      ...existing,
-    ]);
-  });
-
-  it('appends the DoC entry, with version and issue date, when one is issued', () => {
-    const gemini = toProduct(FIXTURE, byHandle(FIXTURE, 'openrx')!, [
-      {name: 'Model', value: 'Gemini'},
-    ]).selectedOrFirstAvailableVariant;
-    const doc = complianceDownload(gemini?.compliance);
-    assert.deepEqual(doc, {
-      kind: 'doc',
-      label: 'Declaration of conformity (PDF)',
-      href: 'https://shop.incutec.com/incutec/doc/OPENRX-GEMINI/1.pdf',
-      note: 'v1 · issued 2026-09-14',
-    });
-    // Rendered as the last entry of a product's Downloads chapter, exactly
-    // as the PDP route (app/routes/products.$handle.tsx) assembles it.
-    const editorialDownloads = [
-      {kind: 'schematic', label: 'Schematic (PDF)', href: 'https://x/schematic.pdf'},
-    ] as const;
-    const merged = withComplianceDownload(
-      [...editorialDownloads],
-      gemini?.compliance,
-    );
-    assert.equal(merged.length, 2);
-    assert.deepEqual(merged[0], editorialDownloads[0]);
-    assert.deepEqual(merged[1], doc);
   });
 });
 

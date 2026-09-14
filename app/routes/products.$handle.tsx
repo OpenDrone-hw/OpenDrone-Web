@@ -19,7 +19,6 @@ import {
   selectedOptionsFromRequest,
   toCard,
   toProduct,
-  withComplianceDownload,
 } from '~/lib/catalog';
 import {buyUrl} from '~/lib/shop-links';
 import {useAside} from '~/components/Aside';
@@ -267,7 +266,6 @@ const DOWNLOAD_ICONS: Record<DownloadKind, string> = {
   flash: '⚡',
   changelog: '↻',
   sbom: '◫',
-  doc: '✓',
   firmware_manifest: '⌘',
   other: '↓',
 };
@@ -275,20 +273,14 @@ const DOWNLOAD_ICONS: Record<DownloadKind, string> = {
 function DownloadsGrid({
   downloads,
   editBase,
-  editableCount = downloads.length,
 }: {
   downloads: DownloadAsset[];
   /** Studio tag prefix, `<handle>.downloads`; the grid is per-product. */
   editBase?: string;
-  /** Entries at this index or later are computed (e.g. the issued DoC,
-   *  D13/PLAN.md 11.4), not editorial: they get no Studio edit tag, since
-   *  `content/products/<handle>.json` has no matching downloads entry to
-   *  point at. Defaults to every entry being editable. */
-  editableCount?: number;
 }) {
   if (downloads.length === 0) return null;
   const edit = (i: number, field: string) =>
-    editBase && i < editableCount ? editAttrs(`${editBase}.${i}.${field}`) : {};
+    editBase ? editAttrs(`${editBase}.${i}.${field}`) : {};
   return (
     <div className="downloads-grid">
       {downloads.map((d, i) => (
@@ -742,14 +734,7 @@ function ProductPage() {
     PRODUCT_CONTENT[product.handle]?.editorial !== false;
   const content = PRODUCT_CONTENT[product.handle] ?? PRODUCT_CONTENT_FALLBACK;
   const hasHeroCopy = Boolean(content.hero.line1);
-  // The Downloads chapter's asset list, plus the selected variant's issued
-  // Declaration of Conformity (D13, PLAN.md 11.4) when one exists. Never
-  // hand-written into content/products/*.json: see that file's downloads
-  // field comment.
-  const downloads = withComplianceDownload(
-    content.downloads,
-    selectedVariant?.compliance,
-  );
+  const downloads = content.downloads;
   // Star aggregate from Odoo's published product ratings, carried by the
   // catalog feed. Gated on count > 0, so a product nobody has rated yet
   // renders no trace of the feature anywhere.
@@ -2429,7 +2414,6 @@ function ProductPage() {
           <DownloadsGrid
             downloads={downloads}
             editBase={`${product.handle}.downloads`}
-            editableCount={content.downloads.length}
           />
         </Chapter>
     ),

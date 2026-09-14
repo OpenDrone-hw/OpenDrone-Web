@@ -2,7 +2,7 @@
 
 Reference for anyone building or reviewing the store. It lists the EU and Belgian requirements the storefront itself must satisfy: product-listing content, consumer-law machinery, privacy/cookies, tax display, shipping policy, and sales restrictions. Incutec BV is an EU-established manufacturer selling B2C and B2B and shipping from Belgium, so the store carries the manufacturer and seller obligations directly.
 
-This is the storefront-facing subset. OpenDrone CE/RED and EU DoC scope lives only in `product/CE.md` in the private compliance repository and is out of scope here.
+This is the storefront-facing subset. OpenDrone product-conformity records remain internal to the private compliance repository and are out of scope here.
 
 ## 1. Product-listing content (GPSR, Reg (EU) 2023/988)
 
@@ -54,10 +54,6 @@ Terms and conditions, privacy policy, cookie policy, return/refund policy, and t
 - **No loose lithium batteries.** Kits ship battery-free; the listing points the customer to a compatible battery. Loose LiPo packs are dangerous goods that the ordinary parcel stream will not carry, so they are out of scope for the store.
 - Non-battery items (boards, chargers without cells, accessories) ship normally.
 - Offer the two required delivery methods and show carrier, cost, and delivery time before checkout.
-
-## 7. Product conformity display
-
-Use only the status and outputs controlled by `compliance/product/CE.md`. Do not show CE or publish a DoC until the exact declaration unit is ready, all declaration gates pass and the signed output exists. Link a published declaration from its stable `/doc/<sku>` page; do not describe a self-declared product as "certified".
 
 ## Sources
 

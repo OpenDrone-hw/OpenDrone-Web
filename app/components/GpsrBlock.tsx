@@ -1,11 +1,10 @@
-import {Link} from 'react-router';
 import type {CompanyIdentity} from '~/lib/company';
 import {copy, copyText, editAttrs} from '~/lib/copy';
 
 /**
  * GPSR (EU) 2023/988 Art. 19 information for product listings: manufacturer
  * identity with postal and electronic address, the product identifier, safety
- * warnings in EN/NL/FR, and the EU DoC pointer. Required before purchase by
+ * warnings in EN/NL/FR. Required before purchase by
  * docs/store-compliance.md section 1. Rendered as a quiet compliance strip at
  * the very bottom of the product page, deliberately outside the product story.
  * The email is plain text here on purpose: Art. 19 requires an electronic
@@ -41,11 +40,7 @@ export function GpsrBlock({
         </p>
         <p className="mb-2">
           {company.name}, {company.address} &middot; {company.email} &middot;{' '}
-          KBO/BCE {company.kbo} &middot;{' '}
-          <Link to="/doc" className="underline underline-offset-2">
-            {copyText('product-chrome.gpsr_doc_link') ??
-              'EU Declaration of Conformity'}
-          </Link>
+          KBO/BCE {company.kbo}
         </p>
         <p className="mb-4">
           {copyText('product-chrome.gpsr_product_label') ?? 'Product type'}:{' '}
