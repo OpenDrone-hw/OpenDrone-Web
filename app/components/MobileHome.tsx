@@ -29,7 +29,8 @@ const BOARD_THUMB_SIZES = '(min-width: 489px) 264px, 54vw';
  * the site (open-source page, PDP downloads); the design count is derived
  * from the product-content registry so it can't drift. */
 const OPEN_DESIGN_COUNT = Object.values(PRODUCT_CONTENT).filter(
-  (c) => c.fileNumber !== '—',
+  // Resold parts (`editorial: false`) are catalog, not open designs.
+  (c) => c.fileNumber !== '—' && c.editorial !== false,
 ).length;
 
 /* Row order and which row is derived. Labels are copy

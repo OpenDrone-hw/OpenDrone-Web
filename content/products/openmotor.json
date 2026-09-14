@@ -1,0 +1,47 @@
+{
+  "fileNumber": "05",
+  "family": "Motors",
+  "editorial": false,
+  "status": "preorder",
+  "statusNote": "ships in about 10 weeks",
+  "hero": {
+    "line1": "OpenMotor",
+    "line2Italic": "1604 and 2207",
+    "line3": "matched to the frames",
+    "lead": "Brushless motors sourced for the OpenFrame 3\" (1604) and 5\" (2207) builds. Resold OEM parts, chosen and bench-checked by us, not open hardware."
+  },
+  "firmware": {
+    "project": "—"
+  },
+  "repoUrl": "https://github.com/OpenDrone-hw",
+  "inTheBox": [],
+  "downloads": [],
+  "specs": [],
+  "optionAxis": "Model",
+  "variants": {
+    "1604": {
+      "highlights": [
+        [
+          "Prop size",
+          "3\""
+        ],
+        [
+          "Frame",
+          "OpenFrame 3\""
+        ]
+      ]
+    },
+    "2207": {
+      "highlights": [
+        [
+          "Prop size",
+          "5\""
+        ],
+        [
+          "Frame",
+          "OpenFrame 5\""
+        ]
+      ]
+    }
+  }
+}

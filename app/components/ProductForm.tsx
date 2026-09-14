@@ -14,7 +14,8 @@ import type {
 import {AddToCartButton} from './AddToCartButton';
 import {StackQuickAdd, type StackOffer} from './StackQuickAdd';
 import {useAside} from './Aside';
-import {useComingSoon} from '~/lib/coming-soon';
+import {useComingSoon, useProductStatus} from '~/lib/coming-soon';
+import {copyText} from '~/lib/copy';
 import type {RootLoader} from '~/root';
 import {trackEvent} from '~/lib/growth/plausible';
 import {attributionSource} from '~/lib/growth/attribution';
@@ -62,7 +63,13 @@ export function ProductForm({
     if (navigation.state === 'idle') setPendingOption(null);
   }, [navigation.state, location.search]);
   const isBundle = bundleLines !== undefined;
-  const ctaLabelAvailable = 'Add to cart';
+  // Pre-order products take the order now and ship later, so the CTA says
+  // so; the bundle CTA is the caller's label and is unchanged.
+  const productStatus = useProductStatus(selectedVariant?.product?.handle);
+  const ctaLabelAvailable =
+    productStatus === 'preorder'
+      ? (copyText('product-chrome.buy_cta_preorder') ?? 'Pre-order')
+      : 'Add to cart';
   const ctaLabelSoldOut = 'Sold out';
   const hidden = new Set((hideOptionNames ?? []).map((n) => n.trim().toLowerCase()));
   // Shop Pay accelerated checkout under the main CTA. Hard-gated on the
@@ -219,7 +226,7 @@ export function ProductForm({
           }
         >
           {isBundle
-            ? (bundleCtaLabel ?? ctaLabelAvailable)
+            ? (bundleCtaLabel ?? 'Add to cart')
             : selectedVariant?.availableForSale
               ? ctaLabelAvailable
               : ctaLabelSoldOut}

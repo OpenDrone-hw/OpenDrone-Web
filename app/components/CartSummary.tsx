@@ -5,6 +5,7 @@ import {useEffect, useId, useRef, useState} from 'react';
 import {Link} from 'react-router';
 import {useAside} from '~/components/Aside';
 import {CartGoalMeter} from '~/components/CartGoalMeter';
+import {preorderNoteOf} from '~/components/CartLineItem';
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
 import {trackEvent} from '~/lib/growth/plausible';
@@ -45,6 +46,12 @@ export function CartSummary({cart, layout}: CartSummaryProps) {
           currencyCode: cost.totalAmount.currencyCode,
         }
       : null);
+
+  // Any pre-order line holds the whole order (one parcel once every line
+  // is on hand), so the summary says so above the VAT note.
+  const hasPreorder = (cart?.lines?.nodes ?? []).some((line) =>
+    Boolean(preorderNoteOf(line)),
+  );
 
   return (
     <div aria-labelledby={summaryId} className={className}>
@@ -108,6 +115,9 @@ export function CartSummary({cart, layout}: CartSummaryProps) {
         </Link>
         {layout === 'page' ? <ShareCartButton cart={cart} /> : null}
       </div>
+      {hasPreorder ? (
+        <Txt id="cart.note_preorder" as="p" className="cart-summary-note" />
+      ) : null}
       <Txt id="cart.note_vat" as="p" className="cart-summary-note" />
       <Txt id="cart.note_terms" as="p" className="cart-summary-note" />
       <CartGoalMeter />

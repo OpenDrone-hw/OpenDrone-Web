@@ -28,7 +28,11 @@ import {
   useRoadmapStatusResolver,
 } from '~/lib/coming-soon';
 import {isConceptStatus} from '~/lib/roadmap-data';
-import {isComingSoon, PRODUCT_CONTENT} from '~/lib/product-content';
+import {
+  isComingSoon,
+  isPurchasableStatus,
+  PRODUCT_CONTENT,
+} from '~/lib/product-content';
 import {stackDiscountedPrice} from '~/lib/stack-discount';
 
 /** Retire the hero "Who's incutec?" hint: persist the dismissal and pull the
@@ -324,7 +328,7 @@ function FamilyNav({
         : undefined;
     const options = cfg.flatMap(({handle: h, short}) => {
       // Unlaunched partners can't cascade into a stack add.
-      if (productStatus(h) !== 'live') return [];
+      if (!isPurchasableStatus(productStatus(h))) return [];
       const partner = (products ?? []).find((p) => p.handle === h);
       const pv = partner?.variants?.nodes?.find((pvv) =>
         pvv.selectedOptions?.some(
@@ -390,7 +394,7 @@ function FamilyNav({
       .flatMap((p) => {
         // Coming-soon products list (the dropdown is navigation) but carry
         // no price and no buy cell — the PDP hosts the notify signup.
-        const soon = productStatus(p.handle) !== 'live';
+        const soon = !isPurchasableStatus(productStatus(p.handle));
         // Real, distinguishable variants (drop the single "Default Title").
         const variants = (p.variants?.nodes ?? []).filter(
           (v) => v.title && v.title !== 'Default Title',

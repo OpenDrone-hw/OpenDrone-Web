@@ -14,7 +14,7 @@ import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {EmptyState} from '~/components/EmptyState';
 import {SearchForm} from '~/components/SearchForm';
 import {SearchResults} from '~/components/SearchResults';
-import {PRODUCT_CONTENT} from '~/lib/product-content';
+import {PRODUCT_CONTENT, isPurchasableStatus} from '~/lib/product-content';
 import {useProductStatusResolver, useRoadmapStatusResolver} from '~/lib/coming-soon';
 import {isConceptStatus} from '~/lib/roadmap-data';
 import {stackDiscountedPrice} from '~/lib/stack-discount';
@@ -247,7 +247,7 @@ export default function Collection() {
           ).flatMap((pc) => {
             // Unlaunched partners can't join a stack offer (their price
             // stays hidden everywhere).
-            if (productStatus(pc.handle) !== 'live') return [];
+            if (!isPurchasableStatus(productStatus(pc.handle))) return [];
             const partner = products.find((pp) => pp.handle === pc.handle);
             if (!partner || !sv) return [];
             const pv = variantFor(

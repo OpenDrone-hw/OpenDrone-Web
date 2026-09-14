@@ -17,7 +17,7 @@ import {INCUTEC_HINT_SEEN_KEY} from '~/lib/incutec-hint';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {useProductStatusResolver, useRoadmapStatusResolver} from '~/lib/coming-soon';
 import {isConceptStatus} from '~/lib/roadmap-data';
-import {isComingSoon} from '~/lib/product-content';
+import {isComingSoon, isPurchasableStatus} from '~/lib/product-content';
 import {HeroDroneStage} from '~/components/HeroDroneStage';
 import type {HeroLoadState} from '~/components/HeroDroneScene';
 import {HeroWordmark} from '~/components/HeroWordmark';
@@ -1026,7 +1026,9 @@ function DesktopHome({heroStacks}: {heroStacks: Promise<HeroStacks>}) {
                                     </span>
                                   ) : null}
                                 </span>
-                                {productStatus(card.handle) !== 'live' ? (
+                                {!isPurchasableStatus(
+                                  productStatus(card.handle),
+                                ) ? (
                                   <Txt
                                     id="home.reveal_soon"
                                     as="span"
