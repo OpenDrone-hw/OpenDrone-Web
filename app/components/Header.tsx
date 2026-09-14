@@ -563,9 +563,22 @@ export function HeaderMenu({
       {HEADER_MENU.items.map((item) => {
         if (!item.url) return null;
         const url = item.url;
-        // Products + Contact render in the right-side CTA group; skip
-        // them here to avoid duplicate links in the center menu.
-        if (!isMobile && (url === '/products' || url === '/support')) return null;
+        // Catalog and Contact render in the right-side CTA group, and
+        // Newsletter and Open Source render there / in the footer too
+        // (HeaderCtas below, and the footer's "Open Source & Incutec"
+        // link): skip all four here on desktop so the center menu isn't
+        // a duplicate row. Production's live center nav is empty for the
+        // same reason (mirrors that empty `<nav>` byte-for-byte). Mobile
+        // keeps every item since the drawer has no CTA group to fall
+        // back on.
+        if (
+          !isMobile &&
+          (url === '/products' ||
+            url === '/support' ||
+            url === '/newsletter' ||
+            url === 'https://github.com/OpenDrone-hw')
+        )
+          return null;
         const className = isMobile
           ? 'text-sm font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors'
           : 'font-mono text-[12px] uppercase tracking-[0.15em] transition-colors text-[var(--color-text-muted)] hover:text-[var(--color-text)]';

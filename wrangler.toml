@@ -9,6 +9,14 @@ name = "opendrone-web"
 main = "dist/server/index.js"
 compatibility_date = "2025-04-01"
 
+# D16 cutover: the Worker serves opendrone.be and www.opendrone.be directly
+# once the zone's nameservers point at Cloudflare (erp/PLAN.md D15/D16).
+# server.ts 301s www to the apex to match Shopify's current behaviour.
+routes = [
+  { pattern = "opendrone.be", custom_domain = true },
+  { pattern = "www.opendrone.be", custom_domain = true },
+]
+
 [assets]
 directory = "dist/client"
 
