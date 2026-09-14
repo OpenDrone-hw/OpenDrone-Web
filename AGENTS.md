@@ -28,8 +28,8 @@ copy clearly marked and out of production paths.
 
 ## Verification
 
-Use the narrowest relevant package commands first, then run the repository's
-type check, lint, tests, and build as appropriate. For visual changes, inspect
+Use the narrowest relevant package commands first, then `npm run typecheck`,
+`npm run lint`, `npm run test`, and `npm run build` as appropriate. For visual changes, inspect
 the affected responsive states and record any checks that could not be run.
 Never claim a deployment or external integration succeeded without observing
 the result.
