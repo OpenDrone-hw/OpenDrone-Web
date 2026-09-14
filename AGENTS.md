@@ -18,13 +18,14 @@ local backlog.
 
 - Application behavior: source and tests in this repository.
 - Product facts: the implemented hardware repository and approved evidence.
-- Prices, availability, and catalog state: Shopify, the commerce backend
-  behind `opendrone.be`. Customer-facing SKUs come from
-  `../../stock/product_skus.json`; `scripts/shopify-infra/sync-product-skus.mjs`
-  previews and, with `--apply`, writes them onto Shopify variants.
-- Stock quantities: InvenTree (`../../stock`) is the stock authority and
-  Shopify inventory mirrors it. Never set inventory in Shopify by hand or from
-  this repository.
+- Prices, availability, and catalog state: Odoo at `shop.incutec.com`, read
+  through `GET /incutec/catalog.json` (`CATALOG_URL`). Nothing here writes
+  them. Customer-facing SKUs come from `../../stock/product_skus.json` and are
+  set on the Odoo products by the ERP repository's import.
+- Stock quantities: InvenTree (`../../stock`) is the stock authority and Odoo
+  mirrors it. Never set inventory from this repository.
+- The contract between this app and Odoo, including the catalog JSON shape and
+  the `/incutec/add` hand-off: `erp/docs/storefront-contract.md`.
 - Legal text: the Markdown under `app/content/legal/`, reviewed before
   publication. `npm run sync:legal` overwrites four Dutch pages only when
   `COMPLIANCE_SRC` names a source directory; unset, it keeps the snapshots.
@@ -39,12 +40,17 @@ copy clearly marked and out of production paths.
 ## Live systems and credentials
 
 Production is the Hydrogen app on Shopify Oxygen; every push to `main`
-deploys `opendrone.be`. The gitignored `.env` holds the local values named in
-`.env.example`: the storefront and customer-account tokens the app boots with,
-`SHOPIFY_ADMIN_API_TOKEN` for the custom app "OpenDrone Infra" (used by
-`publish:post`, `scripts/shopify-infra/` and the launch, goals and votes
-scripts), and the support-bridge secrets. Production values live in Oxygen
-environment settings, not in this repository. InvenTree credentials live in
+deploys `opendrone.be`. Oxygen is host and build toolchain only: no page,
+loader or action calls a Shopify API.
+
+The app boots on `SESSION_SECRET` alone. `PUBLIC_SHOP_URL`
+(`https://shop.incutec.com`) and `CATALOG_URL`
+(`https://erp.incutec.eu/incutec/catalog.json`) default to production and are
+the only commerce values; both are public, and this repository holds no
+commerce credentials. `GOALS_URL` is build-time only, for `goals:update`.
+Set the four per environment in the Oxygen environment settings; the gitignored
+`.env` holds the local copies plus the support-bridge secrets, named in
+`.env.example`. Production values live in Oxygen, not in this repository. InvenTree credentials live in
 `../../stock/.env`; company Notion, DNS and carrier credentials live in
 `../../operations/.env`. Name variables, never print values.
 
