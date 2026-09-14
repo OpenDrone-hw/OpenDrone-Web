@@ -1,14 +1,13 @@
-name: Deploy to Cloudflare (preview)
+name: Deploy to Cloudflare
 
-# D15 (erp/PLAN.md): preview host for opendrone.be on Cloudflare Workers,
-# evaluated as the Shopify Oxygen replacement so Shopify can be retired.
-# This does not touch opendrone.be DNS or Shopify; it only pushes a build of
-# this branch to the Workers preview project "opendrone-web". Cutover
-# (pointing opendrone.be at it, removing the Oxygen deployment) is a separate,
-# deliberate step documented in README.md under "Hosting".
+# D15/D16 (erp/PLAN.md): opendrone.be is cut over to the Cloudflare Worker
+# "opendrone-web" with custom domains opendrone.be / www.opendrone.be. Every
+# push to main redeploys production; feat/cloudflare-hosting stays wired too
+# so that branch keeps deploying to the same Worker while a PR against it is
+# open (the state before cutover, kept for the next such change).
 on:
   push:
-    branches: [feat/cloudflare-hosting]
+    branches: [main, feat/cloudflare-hosting]
 
 permissions:
   contents: read
