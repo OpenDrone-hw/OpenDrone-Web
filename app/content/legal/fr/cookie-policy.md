@@ -22,9 +22,10 @@ Ce site (opendrone.be) ne place lui-même aucun cookie de panier ou de paiement 
 |--------|---------|-----------|
 | Cookie de session (shop.incutec.com) | Maintient votre panier et votre connexion au compte pendant le paiement | Session |
 | Cookie de consentement (shop.incutec.com) | Mémorise votre choix en matière de cookies, si un bandeau de consentement est affiché | 6 mois |
-| Cookies de paiement (page de paiement hébergée par Mollie ou l’émetteur de la carte) | Prévention de la fraude au paiement — placés **uniquement sur la page de paiement hébergée**, pas sur opendrone.be ni sur shop.incutec.com (art. 10/2 de la loi du 30 juillet 2018 (inséré par la loi du 21 décembre 2021), strictement nécessaire au service expressément demandé ; Directive ePrivacy 2002/58/CE) | Session |
+| Cookies Stripe (`m`, `__stripe_mid`, `__stripe_sid`) | Prévention de la fraude au paiement — placés par Stripe sur shop.incutec.com pendant le paiement, pas sur opendrone.be (strictement nécessaire au service expressément demandé ; art. 10/2 de la loi du 30 juillet 2018 (inséré par la loi du 21 décembre 2021) ; Directive ePrivacy 2002/58/CE) | Session à 1 an, selon le cookie |
+| Cookies de paiement (page de paiement hébergée par Mollie, utilisée uniquement en secours si Stripe est indisponible) | Prévention de la fraude au paiement — placés **uniquement sur la page de paiement hébergée**, pas sur opendrone.be ni sur shop.incutec.com (art. 10/2 de la loi du 30 juillet 2018 (inséré par la loi du 21 décembre 2021), strictement nécessaire au service expressément demandé ; Directive ePrivacy 2002/58/CE) | Session |
 
-shop.incutec.com ne place que le cookie de session et le cookie de consentement ci-dessus : aucun cookie d’analyse ni de marketing.
+shop.incutec.com ne place que les cookies de session, de consentement et de paiement Stripe ci-dessus : aucun cookie d’analyse ni de marketing.
 
 #### Analyse
 

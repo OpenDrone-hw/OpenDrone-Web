@@ -22,9 +22,10 @@ This site (opendrone.be) sets no cart or checkout cookie itself: when you buy, y
 |--------|---------|-----------|
 | Session cookie (shop.incutec.com) | Keeps your cart and account sign-in working during checkout | Session |
 | Consent cookie (shop.incutec.com) | Records your cookie-consent choice, if a consent banner is shown | 6 months |
-| Payment cookies (Mollie's or the card issuer's hosted payment page) | Payment fraud prevention — set **only on the hosted payment page** during payment, not on opendrone.be or shop.incutec.com (Art. 10/2 of the Act of 30 July 2018 (as inserted by the Act of 21 December 2021), strictly necessary for the service explicitly requested; ePrivacy Directive 2002/58/EC) | Session |
+| Stripe cookies (`m`, `__stripe_mid`, `__stripe_sid`) | Payment fraud prevention — set by Stripe on shop.incutec.com during checkout, not on opendrone.be (strictly necessary for the payment explicitly requested; Art. 10/2 of the Act of 30 July 2018 (as inserted by the Act of 21 December 2021); ePrivacy Directive 2002/58/EC) | Session to 1 year, depending on the cookie |
+| Payment cookies (Mollie's hosted payment page, fallback only if Stripe is unavailable) | Payment fraud prevention — set **only on the hosted payment page** during payment, not on opendrone.be or shop.incutec.com (Art. 10/2 of the Act of 30 July 2018 (as inserted by the Act of 21 December 2021), strictly necessary for the service explicitly requested; ePrivacy Directive 2002/58/EC) | Session |
 
-shop.incutec.com sets only the session and consent cookies above: no analytics or marketing cookies.
+shop.incutec.com sets only the session, consent and Stripe payment cookies above: no analytics or marketing cookies.
 
 #### Analytics
 

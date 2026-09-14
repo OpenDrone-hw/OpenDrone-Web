@@ -58,7 +58,8 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Recipient | Purpose | Location |
 |-----------|---------|----------|
 | Odoo, self-hosted by Incutec BV | Webshop, order, account and invoicing platform (shop.incutec.com) | Hetzner Online GmbH, Falkenstein, Germany (EU) |
-| Mollie B.V. | Payment processing (Bancontact, SEPA, cards) | Netherlands (EU) |
+| Stripe Payments Europe, Ltd. | Payment processing (cards, Bancontact, iDEAL, Klarna, PayPal): payment data, email, billing address; device data for fraud prevention | 1 Grand Canal Street Lower, Dublin 2, Ireland (EU); Stripe's privacy policy: https://stripe.com/privacy |
+| Mollie B.V. | Payment processing, fallback only if Stripe is unavailable (Bancontact, SEPA, cards) | Netherlands (EU) |
 | bpost NV/SA | Parcel delivery and shipping labels | Belgium (EU) |
 | Google Workspace (Google Ireland Ltd.) | Company mailboxes (support@ and sales@incutec.com), staff email and sign-in | Ireland (EU); Google's standard contractual clauses cover any transfer outside the EEA |
 | Plausible Analytics | Cookieless website analytics | Plausible Insights OÜ — Estonia (EU); hosting in Germany |
