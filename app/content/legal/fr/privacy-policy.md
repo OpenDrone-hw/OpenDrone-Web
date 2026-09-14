@@ -47,9 +47,9 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 
 | Données | Durée de conservation |
 |------|-----------------|
-| Données de commande et factures | 10 ans (obligation légale de conservation comptable) |
-| Compte client | Jusqu’à la suppression par le client ou 3 ans après la dernière activité |
-| Communication de service client | 3 ans après clôture |
+| Données de commande et factures | 7 ans (Code de droit économique, art. III.86, et le Code de la TVA) |
+| Compte client | Jusqu’à la demande de suppression par le client |
+| Communication de service client | 2 ans après clôture |
 | Fichiers journaux du site | 6 mois |
 | Inscription à la newsletter | Jusqu’au désabonnement |
 
@@ -57,21 +57,21 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 
 | Destinataire | Finalité | Lieu |
 |-----------|---------|----------|
-| Shopify International Ltd. | Plateforme de boutique et de commandes | Irlande (UE) |
-| Shopify Oxygen | Hébergement du site | Réseau edge UE |
+| Odoo, auto-hébergé par Incutec BV | Plateforme de boutique, de commandes, de comptes et de facturation (shop.incutec.com) | Hetzner Online GmbH, Falkenstein, Allemagne (UE) |
 | Mollie B.V. | Traitement des paiements (Bancontact, SEPA, cartes) | Pays-Bas (UE) |
-| Stripe Payments Europe Ltd. | Traitement des cartes et prévention de la fraude | Irlande (UE) |
-| Sendcloud B.V. | Étiquettes d’expédition et suivi | Pays-Bas (UE) |
-| Bpost / DHL / DPD (transporteur selon commande) | Livraison des colis | UE |
+| bpost NV/SA | Livraison des colis et étiquettes d’expédition | Belgique (UE) |
+| Google Workspace (Google Ireland Ltd.) | Boîtes mail de l’entreprise (support@ et sales@incutec.com), messagerie et connexion du personnel | Irlande (UE) ; les clauses contractuelles types de Google couvrent tout transfert hors EEE |
 | Plausible Analytics | Analyse de site sans cookies | Plausible Insights OÜ — Estonie (UE) ; hébergement en Allemagne |
 | Polar Advisory BV (comptable) | Facturation et comptes annuels | Belgique |
-| Discord Inc. | Tickets de support via la passerelle Discord (nom, e-mail, contenu des messages, pièces jointes) | É-U — EU-US Data Privacy Framework |
+| Discord Inc. | Support communautaire, opt-in via la passerelle Discord (nom, e-mail, contenu des messages, pièces jointes) | É-U — EU-US Data Privacy Framework |
 | Anthropic PBC | Projets de réponses assistés par IA pour les tickets de support | É-U — accord de sous-traitance avec CCT |
-| Resend (Plus Five Five, Inc.) | E-mails transactionnels de support (liens de reprise) | É-U — CCT |
+| Resend (Plus Five Five, Inc.) | E-mails transactionnels : confirmation de commande, expédition et facture, liens de reprise du support | Infrastructure en région UE ; entité légale É-U — CCT |
 | Upstash, Inc. | Index temporaire des tickets pour le module de support | É-U — CCT |
-| Cloudflare, Inc. | Vérification anti-spam Turnstile sur les formulaires | É-U — EU-US Data Privacy Framework |
+| Cloudflare, Inc. | Vérification anti-spam Turnstile sur le formulaire de support | É-U — EU-US Data Privacy Framework |
 
-**Transferts hors EEE.** Pour les sous-traitants américains mentionnés ci-dessus, Incutec BV transfère des données personnelles sur la base de garanties appropriées (Art. 46 RGPD) : certification au titre de l’EU-US Data Privacy Framework ou clauses contractuelles types (CCT, Décision 2021/914). Shopify peut en outre traiter des données au Canada (décision d’adéquation) et via des sous-traitants aux États-Unis et à Singapour sous CCT. Tous les autres traitements conservent les données personnelles au sein de l’EEE.
+Les données de commande et de client (nom, adresse, e-mail, référence de paiement, historique des commandes) sont traitées dans Odoo sur shop.incutec.com, auto-hébergé par Incutec BV. Shopify ne traite plus aucune donnée de commande ou de client d’Incutec.
+
+**Transferts hors EEE.** Pour les sous-traitants américains mentionnés ci-dessus, Incutec BV transfère des données personnelles sur la base de garanties appropriées (Art. 46 RGPD) : certification au titre de l’EU-US Data Privacy Framework ou clauses contractuelles types (CCT, Décision 2021/914). Tous les autres traitements conservent les données personnelles au sein de l’EEE.
 
 **Assistance IA au support.** Lorsque vous soumettez un ticket de support, le contenu de votre message peut être transmis à Anthropic afin de préparer un projet de réponse. Un collaborateur examine chaque réponse avant son envoi ; aucune prise de décision automatisée n’a lieu.
 
@@ -112,7 +112,7 @@ Incutec BV prend des mesures techniques et organisationnelles appropriées pour 
 
 ### 9. Décision automatisée
 
-Lors de la passation d'une commande, la détection de fraude de la plateforme (Shopify Fraud Analysis) évalue automatiquement des signaux tels que les données de paiement, l'adresse de livraison, l'adresse IP et le schéma de commande, et attribue un score de risque. Une commande à score élevé peut être refusée automatiquement. Il s'agit d'une décision automatisée au sens de l'art. 22 RGPD, nécessaire à la conclusion et à l'exécution du contrat (art. 22.2.a). Vous avez le droit d'obtenir une intervention humaine, d'exprimer votre point de vue et de contester la décision : contactez contact@opendrone.be et un collaborateur réexaminera la commande. Aucune autre décision automatisée ni aucun profilage n'a lieu.
+Incutec BV n'effectue aucune décision automatisée ni aucun profilage au sens de l'art. 22 RGPD. Chaque commande est traitée et, si nécessaire, examinée par un collaborateur.
 
 **Caractère obligatoire des données.** Le nom, l'adresse, l'e-mail et les données de paiement sont nécessaires pour exécuter une commande ; sans eux, aucun contrat ne peut être conclu. Les données de facturation doivent être conservées légalement. Toutes les autres données (numéro de téléphone, newsletter, données de compte) sont facultatives.
 

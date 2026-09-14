@@ -79,6 +79,22 @@
 
 7.4. Incutec BV biedt ten minste **twee wezenlijk verschillende leveringswijzen** aan (Art. VI.45/2 WER).
 
+### Artikel 7bis: Voorverkoop
+
+7bis.1. Sommige producten worden verkocht als voorverkoop (pre-order). Zij worden als dusdanig vermeld, met hun verzendvenster, op de productpagina, in het winkelmandje en op de orderbevestiging. De consument betaalt de volledige prijs bij het plaatsen van de bestelling.
+
+7bis.2. Verzendvensters bij lancering: de flight controller en de ESC worden verzonden vanaf medio oktober 2026; elk ander voorverkoopproduct wordt verzonden ongeveer 10 weken na de bestelling. Het vermelde verzendvenster is de tussen de consument en Incutec BV overeengekomen leveringstermijn in de zin van Art. VI.43 WER, zodat de standaardtermijn van 30 dagen uit Artikel 7.1 niet geldt voor voorverkoopartikelen.
+
+7bis.3. Indien Incutec BV niet binnen het vermelde venster kan verzenden, brengt zij de consument daarvan op de hoogte en biedt, naar keuze van de consument, een nieuwe verzenddatum of een volledige terugbetaling binnen 14 dagen aan.
+
+7bis.4. De consument kan een voorverkoop annuleren vóór verzending voor een volledige terugbetaling. Dit doet geen afbreuk aan het herroepingsrecht van Artikel 5, dat geldt vanaf levering en dat de consument ook op elk moment vóór levering kan uitoefenen.
+
+7bis.5. Een bestelling die artikelen op voorraad en voorverkoopartikelen combineert, wordt verzonden als één pakket zodra elk artikel beschikbaar is (één levering per bestelling).
+
+7bis.6. Betalingen voor voorverkoop financieren de productie en de voorraadaankoop voor de bestelling. Zij dragen geen interest en verlenen geen aandeel, omzetdeling of ander eigendomsbelang in Incutec BV.
+
+7bis.7. Pakketten die buiten de Europese Unie worden verzonden, kunnen onderworpen zijn aan invoerrechten en -belastingen die door de consument bij levering moeten worden betaald, tenzij de gekozen verzendwijze vermeldt dat de rechten door Incutec BV worden betaald.
+
 ### Artikel 8: Betaling
 
 8.1. Betaling geschiedt via de op de website aangeboden betaalmethoden (creditcard, Bancontact, iDEAL, overschrijving, etc.).

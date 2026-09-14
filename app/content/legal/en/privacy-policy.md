@@ -47,9 +47,9 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 
 | Data | Retention period |
 |------|-----------------|
-| Order and invoice data | 10 years (statutory bookkeeping retention obligation) |
-| Customer account | Until deletion by the customer or 3 years after last activity |
-| Customer service communication | 3 years after closure |
+| Order and invoice data | 7 years (Belgian Code of Economic Law Art. III.86, and the VAT Code) |
+| Customer account | Until the customer requests deletion |
+| Customer service communication | 2 years after closure |
 | Website log files | 6 months |
 | Newsletter subscription | Until unsubscribed |
 
@@ -57,21 +57,21 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 
 | Recipient | Purpose | Location |
 |-----------|---------|----------|
-| Shopify International Ltd. | Webshop and order platform | Ireland (EU) |
-| Shopify Oxygen | Website hosting | EU edge network |
+| Odoo, self-hosted by Incutec BV | Webshop, order, account and invoicing platform (shop.incutec.com) | Hetzner Online GmbH, Falkenstein, Germany (EU) |
 | Mollie B.V. | Payment processing (Bancontact, SEPA, cards) | Netherlands (EU) |
-| Stripe Payments Europe Ltd. | Card processing and fraud prevention | Ireland (EU) |
-| Sendcloud B.V. | Shipping labels and tracking | Netherlands (EU) |
-| Bpost / DHL / DPD (carrier depending on order) | Parcel delivery | EU |
+| bpost NV/SA | Parcel delivery and shipping labels | Belgium (EU) |
+| Google Workspace (Google Ireland Ltd.) | Company mailboxes (support@ and sales@incutec.com), staff email and sign-in | Ireland (EU); Google's standard contractual clauses cover any transfer outside the EEA |
 | Plausible Analytics | Cookieless website analytics | Plausible Insights OÜ — Estonia (EU); hosting in Germany |
 | Polar Advisory BV (accountant) | Invoicing and annual accounts | Belgium |
-| Discord Inc. | Support tickets via the Discord bridge (name, email, message content, attachments) | US — EU-US Data Privacy Framework |
+| Discord Inc. | Community support tickets, opt-in via the Discord bridge (name, email, message content, attachments) | US — EU-US Data Privacy Framework |
 | Anthropic PBC | AI-assisted draft replies for support tickets | US — data processing agreement with SCCs |
-| Resend (Plus Five Five, Inc.) | Transactional support emails (resume links) | US — SCCs |
+| Resend (Plus Five Five, Inc.) | Transactional mail: order confirmation, shipping and invoice mail, support resume links | EU region infrastructure; US legal entity — SCCs |
 | Upstash, Inc. | Temporary ticket index for the support module | US — SCCs |
-| Cloudflare, Inc. | Turnstile anti-spam verification on forms | US — EU-US Data Privacy Framework |
+| Cloudflare, Inc. | Turnstile anti-spam verification on the support form | US — EU-US Data Privacy Framework |
 
-**Transfers outside the EEA.** For the US processors listed above, Incutec BV transfers personal data on the basis of appropriate safeguards (Art. 46 GDPR): certification under the EU-US Data Privacy Framework or standard contractual clauses (SCCs, Decision 2021/914). Shopify may additionally process data in Canada (adequacy decision) and through sub-processors in the US and Singapore under SCCs. All other processing keeps personal data inside the EEA.
+Order and customer data (name, address, email, payment reference, order history) is processed in Odoo at shop.incutec.com, self-hosted by Incutec BV. Shopify no longer processes any Incutec order or customer data.
+
+**Transfers outside the EEA.** For the US processors listed above, Incutec BV transfers personal data on the basis of appropriate safeguards (Art. 46 GDPR): certification under the EU-US Data Privacy Framework or standard contractual clauses (SCCs, Decision 2021/914). All other processing keeps personal data inside the EEA.
 
 **AI assistance in support.** When you submit a support ticket, the content of your message may be passed to Anthropic to prepare a draft reply. A staff member reviews every reply before it is sent; no automated decision-making takes place.
 
@@ -112,7 +112,7 @@ Incutec BV takes appropriate technical and organisational measures to protect pe
 
 ### 9. Automated decision-making
 
-When you place an order, the webshop platform's fraud detection (Shopify Fraud Analysis) automatically evaluates signals such as payment details, delivery address, IP address and ordering pattern and assigns a risk score. An order with a high score may be refused automatically. This is automated decision-making within the meaning of Art. 22 GDPR, necessary for entering into and performing the contract (Art. 22.2.a). You have the right to human intervention, to express your point of view and to contest the decision: contact contact@opendrone.be and a staff member will review the order. No other automated decision-making or profiling takes place.
+Incutec BV does not carry out automated decision-making or profiling within the meaning of Art. 22 GDPR. Every order is processed and, where needed, reviewed by a staff member.
 
 **Whether providing data is required.** Name, address, email and payment details are needed to fulfil an order; without them no contract can be concluded. Invoicing data must be retained by law. All other data (phone number, newsletter, account details) is optional.
 

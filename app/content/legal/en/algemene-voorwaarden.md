@@ -79,6 +79,22 @@
 
 7.4. Incutec BV offers at least **two substantially different delivery methods** (Art. VI.45/2 WER).
 
+### Article 7bis: Pre-orders
+
+7bis.1. Some products are sold as pre-orders. They are disclosed as such, with their ship window, on the product page, in the cart and on the order confirmation. The consumer pays the full price at checkout.
+
+7bis.2. Launch ship windows: the flight controller and ESC ship from mid-October 2026; every other pre-order product ships in about 10 weeks after the order. The disclosed ship window is the delivery time agreed between the consumer and Incutec BV within the meaning of Art. VI.43 WER, so the 30-day default deadline in Article 7.1 does not apply to pre-order items.
+
+7bis.3. If Incutec BV cannot ship within the disclosed window, it informs the consumer and offers, at the consumer's choice, a new ship date or a full refund within 14 days.
+
+7bis.4. The consumer may cancel a pre-order before shipment for a full refund. This is without prejudice to the right of withdrawal under Article 5, which runs from delivery and which the consumer may also exercise at any time before delivery.
+
+7bis.5. An order that combines in-stock and pre-order items ships as one parcel, once every item is available (one delivery per order).
+
+7bis.6. Pre-order payments fund the production run and stock purchase for the order. They carry no interest and confer no equity, revenue share or other ownership interest in Incutec BV.
+
+7bis.7. Parcels shipped outside the European Union may be subject to import duties and taxes payable by the consumer on delivery, unless the chosen delivery method states that duties are paid by Incutec BV.
+
 ### Article 8: Payment
 
 8.1. Payment is made via the payment methods offered on the website (credit card, Bancontact, iDEAL, bank transfer, etc.).

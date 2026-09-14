@@ -46,9 +46,9 @@ Incutec BV heeft geen Functionaris voor Gegevensbescherming (DPO) aangesteld aan
 
 | Gegevens | Bewaartermijn |
 |---------|--------------|
-| Bestel- en factuurgegevens | 10 jaar (wettelijke bewaarplicht boekhouding) |
-| Klantaccount | Tot verwijdering door klant of 3 jaar na laatste activiteit |
-| Communicatie (klantenservice) | 3 jaar na afsluiting |
+| Bestel- en factuurgegevens | 7 jaar (Wetboek van economisch recht Art. III.86, en het BTW-Wetboek) |
+| Klantaccount | Tot de klant om verwijdering verzoekt |
+| Communicatie (klantenservice) | 2 jaar na afsluiting |
 | Website-logbestanden | 6 maanden |
 | Nieuwsbrief-abonnement | Tot uitschrijving |
 
@@ -56,21 +56,21 @@ Incutec BV heeft geen Functionaris voor Gegevensbescherming (DPO) aangesteld aan
 
 | Ontvanger | Doel | Locatie |
 |-----------|------|---------|
-| Shopify International Ltd. | Webshop- en orderplatform | Ierland (EU) |
-| Shopify Oxygen | Websitehosting | EU edge netwerk |
+| Odoo, zelf gehost door Incutec BV | Webshop-, bestel-, account- en facturatieplatform (shop.incutec.com) | Hetzner Online GmbH, Falkenstein, Duitsland (EU) |
 | Mollie B.V. | Betalingsverwerking (Bancontact, SEPA, kaartbetalingen) | Nederland (EU) |
-| Stripe Payments Europe Ltd. | Kaartbetalingen en fraudepreventie | Ierland (EU) |
-| Sendcloud B.V. | Verzendlabels en trackinginformatie | Nederland (EU) |
-| Bpost / DHL / DPD (drager afhankelijk van orde) | Pakketbezorging | EU |
+| bpost NV/SA | Pakketbezorging en verzendlabels | België (EU) |
+| Google Workspace (Google Ireland Ltd.) | Bedrijfsmailboxen (support@ en sales@incutec.com), medewerker-e-mail en aanmelding | Ierland (EU); de standaardcontractuele clausules van Google dekken elke doorgifte buiten de EER |
 | Plausible Analytics | Cookieloze websitestatistieken | Plausible Insights OÜ — Estland (EU); hosting in Duitsland |
 | Polar Advisory BV (boekhouder) | Facturatie en jaarrekening | België |
-| Discord Inc. | Supporttickets via de Discord-brug (naam, e-mail, berichtinhoud, bijlagen) | VS — EU-VS Data Privacy Framework |
+| Discord Inc. | Community-support, opt-in via de Discord-brug (naam, e-mail, berichtinhoud, bijlagen) | VS — EU-VS Data Privacy Framework |
 | Anthropic PBC | AI-ondersteunde conceptantwoorden bij supporttickets | VS — verwerkersovereenkomst met SCC's |
-| Resend (Plus Five Five, Inc.) | Transactionele support-e-mails (hervattingslinks) | VS — SCC's |
+| Resend (Plus Five Five, Inc.) | Transactionele e-mail: orderbevestiging, verzending en factuur, hervattingslinks voor support | EU-regio infrastructuur; VS-rechtspersoon — SCC's |
 | Upstash, Inc. | Tijdelijke ticketindex voor de supportmodule | VS — SCC's |
-| Cloudflare, Inc. | Turnstile anti-spamverificatie op formulieren | VS — EU-VS Data Privacy Framework |
+| Cloudflare, Inc. | Turnstile anti-spamverificatie op het supportformulier | VS — EU-VS Data Privacy Framework |
 
-**Doorgifte buiten de EER.** Voor de hierboven vermelde verwerkers in de Verenigde Staten draagt Incutec BV persoonsgegevens over op basis van passende waarborgen (Art. 46 AVG): certificering onder het EU-VS Data Privacy Framework of standaardcontractuele clausules (SCC's, Besluit 2021/914). Shopify kan daarnaast gegevens verwerken in Canada (adequaatheidsbesluit) en via subverwerkers in de VS en Singapore onder SCC's. Voor alle overige verwerkingen blijven persoonsgegevens binnen de EER.
+Bestel- en klantgegevens (naam, adres, e-mail, betalingsreferentie, bestelgeschiedenis) worden verwerkt in Odoo op shop.incutec.com, zelf gehost door Incutec BV. Shopify verwerkt geen bestel- of klantgegevens van Incutec meer.
+
+**Doorgifte buiten de EER.** Voor de hierboven vermelde verwerkers in de Verenigde Staten draagt Incutec BV persoonsgegevens over op basis van passende waarborgen (Art. 46 AVG): certificering onder het EU-VS Data Privacy Framework of standaardcontractuele clausules (SCC's, Besluit 2021/914). Voor alle overige verwerkingen blijven persoonsgegevens binnen de EER.
 
 **AI-ondersteuning bij support.** Wanneer u een supportticket indient, kan de inhoud van uw bericht aan Anthropic worden doorgegeven om een conceptantwoord voor te bereiden. Een medewerker beoordeelt elk antwoord vóór verzending; er vindt geen geautomatiseerde besluitvorming plaats.
 
@@ -111,7 +111,7 @@ Incutec BV neemt passende technische en organisatorische maatregelen om persoons
 
 ### 9. Geautomatiseerde besluitvorming
 
-Bij het plaatsen van een bestelling beoordeelt de fraudedetectie van het webshopplatform (Shopify Fraud Analysis) automatisch signalen zoals betaalgegevens, afleveradres, IP-adres en bestelpatroon en kent zij een risicoscore toe. Een bestelling met een hoge score kan automatisch worden geweigerd. Dit is geautomatiseerde besluitvorming in de zin van Art. 22 AVG, noodzakelijk voor het sluiten en uitvoeren van de overeenkomst (Art. 22.2.a). U heeft het recht op menselijke tussenkomst, om uw standpunt kenbaar te maken en om het besluit te betwisten: neem contact op via contact@opendrone.be, dan beoordeelt een medewerker de bestelling. Voor het overige vindt geen geautomatiseerde besluitvorming of profilering plaats.
+Incutec BV verricht geen geautomatiseerde besluitvorming of profilering in de zin van Art. 22 AVG. Elke bestelling wordt verwerkt en, waar nodig, beoordeeld door een medewerker.
 
 **Verplicht karakter van de gegevens.** Naam, adres, e-mail en betaalgegevens zijn nodig om een bestelling te kunnen uitvoeren; zonder deze gegevens kan geen overeenkomst worden gesloten. Facturatiegegevens moeten wettelijk worden bewaard. Alle andere gegevens (telefoonnummer, nieuwsbrief, accountgegevens) zijn vrijwillig.
 

@@ -16,17 +16,19 @@ Cookies are small text files placed on your device by a website when you visit i
 
 #### Strictly necessary cookies (no consent required)
 
+This site (opendrone.be) sets no cart or checkout cookie itself: when you buy, your cart is created at shop.incutec.com.
+
 | Cookie | Purpose | Retention |
 |--------|---------|-----------|
-| `cart`, `cart_sig`, `cart_ts`, `_secure_session_id`, `_shopify_tm` | Cart and session handling (Shopify) | Session |
-| `_tracking_consent`, `_cmp_a` | Remember your cookie preferences (Shopify Customer Privacy API) | 6 months |
-| `__stripe_mid`, `__stripe_sid` | Payment fraud prevention — set **only on Shopify's hosted checkout pages** during payment, not on this storefront (Stripe, Art. 10/2 of the Act of 30 July 2018 (as inserted by the Act of 21 December 2021), strictly necessary for the service explicitly requested; ePrivacy Directive 2002/58/EC) | 1 year / session |
+| Session cookie (shop.incutec.com) | Keeps your cart and account sign-in working during checkout | Session |
+| Consent cookie (shop.incutec.com) | Records your cookie-consent choice, if a consent banner is shown | 6 months |
+| Payment cookies (Mollie's or the card issuer's hosted payment page) | Payment fraud prevention — set **only on the hosted payment page** during payment, not on opendrone.be or shop.incutec.com (Art. 10/2 of the Act of 30 July 2018 (as inserted by the Act of 21 December 2021), strictly necessary for the service explicitly requested; ePrivacy Directive 2002/58/EC) | Session |
+
+shop.incutec.com sets only the session and consent cookies above: no analytics or marketing cookies.
 
 #### Analytics
 
-We use **Plausible Analytics** (EU-hosted, cookieless). Plausible sets no cookies and stores no persistent identifier; the IP address is hashed and not retained. This processing falls outside the ePrivacy consent requirement and relies on our legitimate interest (Art. 6.1.f GDPR). That is why we do not show a consent banner for analytics.
-
-Shopify's built-in analytics cookies (`_shopify_s`, `_shopify_y`) are not activated and are not set on this storefront.
+We use **Plausible Analytics** on opendrone.be (EU-hosted, cookieless). Plausible sets no cookies and stores no persistent identifier; the IP address is hashed and not retained. This processing falls outside the ePrivacy consent requirement and relies on our legitimate interest (Art. 6.1.f GDPR). That is why we do not show a consent banner for analytics. shop.incutec.com sets no analytics cookies at all.
 
 #### Marketing cookies
 
