@@ -52,7 +52,7 @@ function directive(name: string, values: string[]): string {
  * Build the policy and the provider for one request. Each directive the
  * caller passes REPLACES the default for that directive (it does not
  * merge), so a caller adding one host must list the defaults it still
- * needs — same contract the previous implementation had.
+ * needs, the same contract the previous implementation had.
  */
 export function createContentSecurityPolicy(directives: CspDirectives = {}): {
   nonce: string;

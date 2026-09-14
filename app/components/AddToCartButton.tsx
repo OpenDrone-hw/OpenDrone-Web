@@ -32,7 +32,7 @@ export function AddToCartButton({
   /** Line value, so Plausible can attach revenue to the click. */
   revenue?: {currency: string; amount: number} | null;
   onClick?: () => void;
-  /** Button class — defaults to the primary CTA; stack/quick-add
+  /** Button class: defaults to the primary CTA; stack/quick-add
    *  surfaces pass their own compact pill styles. */
   className?: string;
   ariaLabel?: string;
