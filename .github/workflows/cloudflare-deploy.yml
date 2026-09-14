@@ -42,3 +42,11 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
+          # wrangler-action@v3 defaults to wrangler 3.90, which doesn't
+          # understand `custom_domain = true` in wrangler.toml's `routes`
+          # and falls back to the deprecated zone-level Workers Routes
+          # API (`/zones/.../workers/routes`) instead of the account-level
+          # Custom Domains API this token is scoped for. Pin wrangler 4 so
+          # `deploy` provisions opendrone.be / www.opendrone.be as custom
+          # domains the same way the verified local deploy did.
+          wranglerVersion: "4"
