@@ -647,10 +647,12 @@ export function roadmapTriState(
  * before launch day without taking orders on the production site.
  *
  * `availability` is Odoo's word for the product, carried by the catalog
- * feed. Odoo decides who is orderable, so it wins over the roadmap and
- * over the global default for any product the shop actually sells. A
- * local 'idea' or 'development' status still wins over it: that is the
- * storefront saying the product is not for sale at all.
+ * feed. Odoo decides which of its products are orderable, so it sits
+ * above the roadmap topic and the global default. It does NOT outrank the
+ * two switches above it: a local 'idea' or 'development' status is the
+ * storefront saying the product is not for sale at all, and
+ * PUBLIC_COMING_SOON is the kill switch, so a product sitting in stock in
+ * Odoo before launch day still renders as coming soon.
  */
 export function resolveStatus(
   handle: string | null | undefined,
@@ -662,11 +664,10 @@ export function resolveStatus(
   if (content?.status === 'idea' || content?.status === 'development') {
     return content.status;
   }
-  if (availability === 'preorder') {
-    return globalFlag ? 'development' : 'preorder';
-  }
-  if (availability === 'in_stock' || availability === 'sold_out') {
-    return 'live';
+  if (content?.status === 'live') return 'live';
+  if (availability) {
+    if (globalFlag) return 'development';
+    return availability === 'preorder' ? 'preorder' : 'live';
   }
   if (content?.status === 'preorder') {
     return globalFlag ? 'development' : 'preorder';

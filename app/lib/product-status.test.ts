@@ -148,11 +148,12 @@ describe('resolveStatus', () => {
       assert.equal(resolveStatus('openesc', false, {}, 'sold_out'), 'live');
     });
 
-    it('still answers to the global kill switch for pre-orders', () => {
-      assert.equal(
-        resolveStatus('openesc', true, {}, 'preorder'),
-        'development',
-      );
+    it('never outranks the global kill switch', () => {
+      // A product already sitting in stock in Odoo must still read as
+      // coming soon before launch day, or the kill switch is decorative.
+      assert.equal(resolveStatus('openesc', true, {}, 'in_stock'), 'development');
+      assert.equal(resolveStatus('openesc', true, {}, 'preorder'), 'development');
+      assert.equal(resolveStatus('openesc', true, {}, 'sold_out'), 'development');
     });
 
     it('never overrides a local idea or development status', () => {
@@ -178,6 +179,21 @@ describe('resolveStatus', () => {
         resolveStatus('battery-strap', false, alpha, 'in_stock'),
         'live',
       );
+    });
+
+    it('yields to an explicit live status in the content file', () => {
+      PRODUCT_CONTENT['__test-live-odoo'] = {
+        ...PRODUCT_CONTENT.openesc,
+        status: 'live',
+      };
+      try {
+        assert.equal(
+          resolveStatus('__test-live-odoo', true, {}, 'sold_out'),
+          'live',
+        );
+      } finally {
+        delete PRODUCT_CONTENT['__test-live-odoo'];
+      }
     });
   });
 
