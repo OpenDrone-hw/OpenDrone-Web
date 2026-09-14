@@ -22,6 +22,8 @@ jobs:
       - run: npm run check:runtime-env -- preview
         env:
           SESSION_SECRET: ${{ secrets.CLOUDFLARE_PREVIEW_SESSION_SECRET }}
+          CATALOG_HTTP_USER: ${{ secrets.CATALOG_HTTP_USER }}
+          CATALOG_HTTP_PASSWORD: ${{ secrets.CATALOG_HTTP_PASSWORD }}
       - name: Build
         env:
           SESSION_SECRET: ci-build-only-not-the-runtime-secret
@@ -33,7 +35,11 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy --config wrangler.toml
           wranglerVersion: "4"
-          secrets: SESSION_SECRET
+          secrets: |
+            SESSION_SECRET
+            CATALOG_HTTP_USER
+            CATALOG_HTTP_PASSWORD
         env:
           SESSION_SECRET: ${{ secrets.CLOUDFLARE_PREVIEW_SESSION_SECRET }}
-
+          CATALOG_HTTP_USER: ${{ secrets.CATALOG_HTTP_USER }}
+          CATALOG_HTTP_PASSWORD: ${{ secrets.CATALOG_HTTP_PASSWORD }}

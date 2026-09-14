@@ -95,9 +95,9 @@ export async function action({request, context}: Route.ActionArgs) {
   // the Discord/Resend call pattern trivially rate-limit safe.
   for (const ticket of open) {
     try {
-      if (ticket.odooPending?.length || !ticket.odooRef) {
-        await flushOdooMirror(env, ticket);
-      }
+      // The durable outbox uses independent Redis records, so metadata no
+      // longer advertises whether work is waiting. An empty flush is cheap.
+      await flushOdooMirror(env, ticket);
       const after = laterSnowflake(ticket.notifyCursor, ticket.seenCursor);
       const {messages, thread} = await fetchThreadMessages(env, ticket.tid, {
         afterId: after,

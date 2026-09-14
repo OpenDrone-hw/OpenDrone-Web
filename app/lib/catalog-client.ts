@@ -22,9 +22,9 @@ const STALE_MS = 60 * 60 * 1000;
 
 type Cached = {catalog: Catalog; fetchedAt: number};
 
-/** Per-isolate memory, so repeated loaders in one request pay nothing. */
-let memo: Cached | null = null;
-let inflight: Promise<Catalog> | null = null;
+/** Per-isolate memory, isolated by endpoint so preview/prod clients never mix. */
+const memoByUrl = new Map<string, Cached>();
+const inflightByUrl = new Map<string, Promise<Catalog>>();
 
 export type CatalogClient = {
   /** The catalog, from memory, the worker cache, or the network. */
@@ -52,30 +52,40 @@ export function createCatalogClient({
 }): CatalogClient {
   const url = catalogUrl(env);
   const shop = shopUrl(env);
+  const credentials =
+    env.CATALOG_HTTP_USER && env.CATALOG_HTTP_PASSWORD
+      ? {user: env.CATALOG_HTTP_USER, password: env.CATALOG_HTTP_PASSWORD}
+      : undefined;
 
   const get = async (): Promise<Catalog> => {
     const now = Date.now();
+    const memo = memoByUrl.get(url);
     if (memo && now - memo.fetchedAt < FRESH_MS) return memo.catalog;
-    if (inflight) return inflight;
+    const existing = inflightByUrl.get(url);
+    if (existing) return existing;
 
-    inflight = load(url, cache, waitUntil)
-      .then((catalog) => {
-        memo = {catalog, fetchedAt: Date.now()};
-        return catalog;
+    const request = load(url, cache, waitUntil, credentials)
+      .then((loaded) => {
+        memoByUrl.set(url, loaded);
+        return loaded.catalog;
       })
       .catch((error) => {
         console.error('[catalog] fetch failed', error);
-        if (memo && Date.now() - memo.fetchedAt < STALE_MS) return memo.catalog;
+        const fallback = memoByUrl.get(url);
+        if (fallback && Date.now() - fallback.fetchedAt < STALE_MS) {
+          return fallback.catalog;
+        }
         throw new Response('Catalog temporarily unavailable.', {
           status: 503,
           headers: {'Retry-After': '60', 'Cache-Control': 'no-store'},
         });
       })
       .finally(() => {
-        inflight = null;
+        inflightByUrl.delete(url);
       });
+    inflightByUrl.set(url, request);
 
-    return inflight;
+    return request;
   };
 
   return {get, shopUrl: shop};
@@ -85,32 +95,55 @@ async function load(
   url: string,
   cache?: Cache,
   waitUntil?: (p: Promise<unknown>) => void,
-): Promise<Catalog> {
+  credentials?: {user: string; password: string},
+): Promise<Cached> {
   const request = new Request(url, {headers: {Accept: 'application/json'}});
 
   if (cache) {
     const hit = await cache.match(request).catch(() => undefined);
     if (hit) {
-      const age = Number(hit.headers.get('x-catalog-age') ?? '0');
+      const fetchedAt = Number(hit.headers.get('x-catalog-age') ?? '0');
       const catalog = parseCatalog(await hit.json());
-      if (Date.now() - age < FRESH_MS) return catalog;
-      // Stale-while-revalidate: serve the cached copy, refresh behind it.
-      const refresh = fetchAndStore(request, cache).catch(() => {});
-      if (waitUntil) waitUntil(refresh);
-      return catalog;
+      const age = Date.now() - fetchedAt;
+      if (Number.isFinite(fetchedAt) && fetchedAt > 0 && age < STALE_MS) {
+        if (age >= FRESH_MS) {
+          // Stale-while-revalidate: serve the cached copy, refresh behind it.
+          const refresh = fetchAndStore(request, cache, credentials).catch(() => {});
+          if (waitUntil) waitUntil(refresh);
+        }
+        return {catalog, fetchedAt};
+      }
+      // A cache implementation may retain an entry beyond max-age. Never
+      // extend the one-hour fallback window by treating that hit as new.
     }
   }
 
-  return fetchAndStore(request, cache);
+  return fetchAndStore(request, cache, credentials);
 }
 
-async function fetchAndStore(request: Request, cache?: Cache): Promise<Catalog> {
-  const response = await fetch(request);
+async function fetchAndStore(
+  cacheRequest: Request,
+  cache?: Cache,
+  credentials?: {user: string; password: string},
+): Promise<Cached> {
+  const headers = new Headers(cacheRequest.headers);
+  if (credentials) {
+    headers.set(
+      'Authorization',
+      `Basic ${btoa(`${credentials.user}:${credentials.password}`)}`,
+    );
+  }
+  // Reject redirects so credentials can only reach the configured catalog
+  // origin. The uncredentialed cache key remains safe for Cache API storage.
+  const response = await fetch(new Request(cacheRequest, {headers}), {
+    redirect: 'error',
+  });
   if (!response.ok) {
-    throw new Error(`catalog: ${request.url} returned ${response.status}`);
+    throw new Error(`catalog: ${cacheRequest.url} returned ${response.status}`);
   }
   const body = await response.text();
   const catalog = parseCatalog(JSON.parse(body));
+  const fetchedAt = Date.now();
   if (cache) {
     const stored = new Response(body, {
       headers: {
@@ -119,16 +152,16 @@ async function fetchAndStore(request: Request, cache?: Cache): Promise<Catalog> 
         // x-catalog-age still makes it stale after five minutes and triggers a
         // background refresh; the longer TTL only protects cold isolates.
         'Cache-Control': `max-age=${STALE_MS / 1000}`,
-        'x-catalog-age': String(Date.now()),
+        'x-catalog-age': String(fetchedAt),
       },
     });
-    await cache.put(request, stored).catch(() => {});
+    await cache.put(cacheRequest, stored).catch(() => {});
   }
-  return catalog;
+  return {catalog, fetchedAt};
 }
 
 /** Test seam: drop the per-isolate memory. */
 export function resetCatalogMemo(): void {
-  memo = null;
-  inflight = null;
+  memoByUrl.clear();
+  inflightByUrl.clear();
 }

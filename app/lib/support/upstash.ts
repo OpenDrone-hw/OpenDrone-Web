@@ -23,6 +23,15 @@ export type UpstashEnv = {
 export type TicketStore = {
   get(key: string): Promise<string | null>;
   put(key: string, value: string, opts?: {expirationTtl?: number}): Promise<void>;
+  putIfAbsent(
+    key: string,
+    value: string,
+    opts?: {expirationTtl?: number},
+  ): Promise<boolean>;
+  delete(key: string): Promise<void>;
+  putHashIfAbsent(key: string, field: string, value: string): Promise<boolean>;
+  getHash(key: string): Promise<Record<string, string>>;
+  deleteHashField(key: string, field: string): Promise<void>;
   // Iterate keys matching `pattern` (Redis glob — e.g. "tk:*"). Returns
   // every match in one batch; suitable for bounded indexes (we cap each
   // per-customer list at 200 and don't expect more than a few thousand
@@ -48,6 +57,32 @@ export function getTicketStore(env: UpstashEnv): TicketStore | null {
           ? ['SET', key, value, 'EX', String(ttl)]
           : ['SET', key, value];
       await call(url, token, cmd);
+    },
+    async putIfAbsent(key, value, opts) {
+      const ttl = opts?.expirationTtl;
+      const cmd =
+        ttl && ttl > 0
+          ? ['SET', key, value, 'NX', 'EX', String(ttl)]
+          : ['SET', key, value, 'NX'];
+      return (await call(url, token, cmd)) === 'OK';
+    },
+    async delete(key) {
+      await call(url, token, ['DEL', key]);
+    },
+    async putHashIfAbsent(key, field, value) {
+      return Number(await call(url, token, ['HSETNX', key, field, value])) === 1;
+    },
+    async getHash(key) {
+      const result = await call(url, token, ['HGETALL', key]);
+      if (!Array.isArray(result)) return {};
+      const entries: Array<[string, string]> = [];
+      for (let i = 0; i + 1 < result.length; i += 2) {
+        entries.push([String(result[i]), String(result[i + 1])]);
+      }
+      return Object.fromEntries(entries);
+    },
+    async deleteHashField(key, field) {
+      await call(url, token, ['HDEL', key, field]);
     },
     async scan(pattern) {
       const out = new Set<string>();

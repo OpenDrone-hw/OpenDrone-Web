@@ -22,7 +22,13 @@
  * to `null` / `false` so the caller can carry on with the Discord-only path.
  */
 
-import {patchMeta, type TicketMeta} from './ticket-index.ts';
+import {
+  acknowledgeOdooMessage,
+  listOdooMessages,
+  patchMeta,
+  queueOdooMessage,
+  type TicketMeta,
+} from './ticket-index.ts';
 
 const DEFAULT_ODOO_URL = 'https://erp.incutec.eu';
 const ODOO_TIMEOUT_MS = 5000;
@@ -168,7 +174,16 @@ export async function flushOdooMirror(
   ticket: TicketMeta,
 ): Promise<string | null> {
   let ref = ticket.odooRef;
-  let pending = [...(ticket.odooPending ?? [])];
+  // Move records from the first outbox format into independent, atomic keys.
+  // SET NX makes retries harmless; clearing the legacy field prevents those
+  // records from being recreated after their independent keys are acked.
+  if (ticket.odooPending?.length) {
+    for (const message of ticket.odooPending) {
+      await queueOdooMessage(env, ticket.tid, message);
+    }
+    await patchMeta(env, ticket.tid, {odooPending: undefined});
+  }
+  let pending = await listOdooMessages(env, ticket.tid);
   if (!ref) {
     const opening = pending[0];
     const created = await createOrFetchOdooTicket(env, {
@@ -182,8 +197,11 @@ export async function flushOdooMirror(
     });
     if (!created) return null;
     ref = created.ticketRef;
-    if (opening) pending = pending.slice(1);
-    await patchMeta(env, ticket.tid, {odooRef: ref, odooPending: pending});
+    await patchMeta(env, ticket.tid, {odooRef: ref});
+    if (opening) {
+      await acknowledgeOdooMessage(env, ticket.tid, opening.id);
+      pending = pending.slice(1);
+    }
   }
   for (const message of pending) {
     const settled = await postOdooMessage(env, {
@@ -193,8 +211,7 @@ export async function flushOdooMirror(
       messageId: message.id,
     });
     if (!settled) break;
-    pending = pending.filter((entry) => entry.id !== message.id);
-    await patchMeta(env, ticket.tid, {odooRef: ref, odooPending: pending});
+    await acknowledgeOdooMessage(env, ticket.tid, message.id);
   }
   return ref;
 }

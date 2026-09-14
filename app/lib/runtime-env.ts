@@ -14,6 +14,12 @@ export const PRODUCTION_RUNTIME_VARIABLES = [
   'GITHUB_STATUS_TOKEN',
 ] as const;
 
+export const PREVIEW_RUNTIME_VARIABLES = [
+  'SESSION_SECRET',
+  'CATALOG_HTTP_USER',
+  'CATALOG_HTTP_PASSWORD',
+] as const;
+
 export class RuntimeConfigurationError extends Error {
   readonly missing: string[];
 
@@ -27,7 +33,9 @@ export class RuntimeConfigurationError extends Error {
 export function assertRuntimeEnvironment(env: Env): void {
   const required = env.RUNTIME_PROFILE === 'production'
     ? PRODUCTION_RUNTIME_VARIABLES
-    : (['SESSION_SECRET'] as const);
+    : env.RUNTIME_PROFILE === 'preview'
+      ? PREVIEW_RUNTIME_VARIABLES
+      : (['SESSION_SECRET'] as const);
   const missing = required.filter((name) => !String(env[name] ?? '').trim());
   if (missing.length) throw new RuntimeConfigurationError([...missing]);
 }

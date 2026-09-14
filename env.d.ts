@@ -42,6 +42,9 @@ declare global {
     // with a 5 minute worker cache; the last good copy is served for up
     // to an hour if the fetch fails.
     CATALOG_URL?: string;
+    // Optional server-side Basic auth for a protected catalog origin.
+    CATALOG_HTTP_USER?: string;
+    CATALOG_HTTP_PASSWORD?: string;
 
     // Aggregate order totals behind the financial goal meter, as
     // {"orders": n, "revenue_eur": x, "updated_at": iso}. Read by

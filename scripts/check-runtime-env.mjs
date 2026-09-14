@@ -16,7 +16,7 @@ const required = profile === 'production'
       'GITHUB_STATUS_TOKEN',
     ]
   : profile === 'preview'
-    ? ['SESSION_SECRET']
+    ? ['SESSION_SECRET', 'CATALOG_HTTP_USER', 'CATALOG_HTTP_PASSWORD']
     : [];
 
 if (!required.length) {

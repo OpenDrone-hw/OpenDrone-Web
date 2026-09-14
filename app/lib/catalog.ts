@@ -75,7 +75,7 @@ export type Catalog = {
   products: CatalogProduct[];
 };
 
-/** The shape a failed fetch degrades to: a valid, empty catalog. */
+/** A valid empty catalog for explicit local/fallback callers. */
 export function emptyCatalog(shopUrl: string): Catalog {
   const base = shopUrl.replace(/\/+$/, '');
   return {

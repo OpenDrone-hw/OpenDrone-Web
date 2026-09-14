@@ -406,8 +406,9 @@ changes into the existing TXT, never replace it.
 - **Cart**: not here. The hand-off is a POST that only touches the caller's own
   Odoo session and can only redirect within the shop.
 - **Secrets**: `.env` is gitignored and history is clean of token-shaped
-  strings. This app holds no commerce credentials at all; the catalog feed is
-  public and read-only. Rotate the session secret, the Discord bot token, the
+  strings. The production catalog is public and read-only; the protected
+  staging feed uses dedicated server-side Basic credentials. Rotate those,
+  the session secret, the Discord bot token, the
   Resend key and the Turnstile secret annually or on suspicion.
 - **Disclosure**: GitHub private vulnerability reporting is on; contact at
   `/.well-known/security.txt`, policy at `/security`. Default embargo 90 days.
@@ -427,8 +428,8 @@ The repository has separate Cloudflare targets:
 the GitHub `preview` environment. `.github/workflows/cloudflare-production.yml`
 deploys only `main` through the protected GitHub `production` environment.
 Both workflows validate the names of required runtime values before invoking
-Wrangler. The preview receives its own session secret and no production
-support credentials.
+Wrangler. The preview receives its own session secret and staging-only catalog
+credentials, with no production support credentials.
 
 Run `npm run check:runtime-env -- preview` or
 `npm run check:runtime-env -- production` to validate an environment without
@@ -439,11 +440,12 @@ printing secret values. `npm run build` emits the Worker at
 
 ## Going live
 
-Checkout, payments, orders, inventory, invoicing and the order mails live in
-Odoo at shop.incutec.com. What that side needs is tracked in the ERP
-repository's `PLAN.md`, not here; from the storefront's point of view the shop
-is ready when `GET https://erp.incutec.eu/incutec/catalog.json` lists every
-product with its prices, availability and ship promises.
+Odoo is the target for checkout, payments, orders, inventory, invoicing and
+order mail. Treat it as authoritative only after the migration cutover gate is
+approved. What that side needs is tracked in the ERP repository's `PLAN.md`,
+not here; from the storefront's point of view the shop is ready when its
+configured production catalog lists every product with its prices,
+availability and ship promises.
 
 **Cloudflare environment variables.** Public endpoints and company identity
 live in the matching Wrangler config. Runtime secrets live in the GitHub
@@ -453,9 +455,9 @@ Upstash, Odoo support, cleanup and GitHub status set; a missing value returns
 503 instead of booting a partially working storefront.
 
 The Odoo ticket mirror uses `SUPPORT_ODOO_URL` and `SUPPORT_ODOO_TOKEN`.
-Opening messages and later customer messages are queued in the Upstash ticket
-record until Odoo acknowledges them, and the notification sweep retries the
-queue. `SUPPORT_ODOO_TOKEN` must match `SUPPORT_BRIDGE_TOKEN` on Odoo.
+Opening messages and later customer messages each use an independent Upstash
+outbox record until Odoo acknowledges them, and the notification sweep retries
+the queue. `SUPPORT_ODOO_TOKEN` must match `SUPPORT_BRIDGE_TOKEN` on Odoo.
 
 The app has no Shopify runtime dependency. `@shopify/cli` remains a build-time
 wrapper around Vite; no page, loader or action calls a Shopify API.

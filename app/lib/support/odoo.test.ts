@@ -1,6 +1,15 @@
 import {describe, it, mock, after} from 'node:test';
 import assert from 'node:assert/strict';
-import {createOrFetchOdooTicket, postOdooMessage} from './odoo.ts';
+import {
+  createOrFetchOdooTicket,
+  flushOdooMirror,
+  postOdooMessage,
+} from './odoo.ts';
+import {
+  listOdooMessages,
+  queueOdooMessage,
+  type TicketMeta,
+} from './ticket-index.ts';
 
 // Run with:
 //   node --experimental-strip-types --test app/lib/support/odoo.test.ts
@@ -238,5 +247,88 @@ describe('postOdooMessage', () => {
     });
     assert.equal(ok, false);
     assert.equal(calls, 2);
+  });
+});
+
+describe('durable Odoo outbox', () => {
+  after(() => mock.restoreAll());
+
+  it('keeps a concurrent enqueue while flush acknowledges its snapshot', async () => {
+    const env = {
+      ...CONFIGURED,
+      UPSTASH_REDIS_REST_URL: 'https://redis.test',
+      UPSTASH_REDIS_REST_TOKEN: 'redis-token',
+    };
+    const ticket: TicketMeta = {
+      tid: 'thread-1',
+      pid: '0000000001',
+      subject: 'Concurrent relay',
+      openedAt: 1,
+      closedAt: null,
+      lastActivityAt: 1,
+      status: 'open',
+      email: 'a@example.com',
+      name: 'A',
+      odooRef: 'SUP-00001',
+    };
+    const store = new Map<string, string>([
+      [`tk:${ticket.tid}`, JSON.stringify(ticket)],
+    ]);
+    let enqueuedDuringFlush = false;
+    stubFetch(async (input, init) => {
+      const url = String(input);
+      if (url === 'https://redis.test') {
+        const command = JSON.parse(String(init?.body)) as string[];
+        let result: unknown = null;
+        if (command[0] === 'GET') result = store.get(command[1]) ?? null;
+        if (command[0] === 'SET') {
+          if (!command.includes('NX') || !store.has(command[1])) {
+            store.set(command[1], command[2]);
+            result = 'OK';
+          }
+        }
+        if (command[0] === 'HSETNX') {
+          const hash = JSON.parse(store.get(command[1]) ?? '{}') as Record<string, string>;
+          if (!(command[2] in hash)) {
+            hash[command[2]] = command[3];
+            store.set(command[1], JSON.stringify(hash));
+            result = 1;
+          } else result = 0;
+        }
+        if (command[0] === 'HGETALL') {
+          const hash = JSON.parse(store.get(command[1]) ?? '{}') as Record<string, string>;
+          result = Object.entries(hash).flat();
+        }
+        if (command[0] === 'HDEL') {
+          const hash = JSON.parse(store.get(command[1]) ?? '{}') as Record<string, string>;
+          result = delete hash[command[2]] ? 1 : 0;
+          store.set(command[1], JSON.stringify(hash));
+        }
+        return new Response(JSON.stringify({result}), {status: 200});
+      }
+      if (!enqueuedDuringFlush) {
+        enqueuedDuringFlush = true;
+        await queueOdooMessage(env, ticket.tid, {
+          id: 'discord:200',
+          author: 'A',
+          body: 'arrived during flush',
+        });
+      }
+      return new Response(
+        JSON.stringify({id: 7, ticket_ref: ticket.odooRef, posted: true}),
+        {status: 200},
+      );
+    });
+    await queueOdooMessage(env, ticket.tid, {
+      id: 'discord:100',
+      author: 'A',
+      body: 'first',
+    });
+
+    await flushOdooMirror(env, ticket);
+
+    assert.deepEqual(await listOdooMessages(env, ticket.tid), [
+      {id: 'discord:200', author: 'A', body: 'arrived during flush'},
+    ]);
   });
 });

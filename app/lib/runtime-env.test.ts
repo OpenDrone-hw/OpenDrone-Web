@@ -8,10 +8,19 @@ import {
 } from './runtime-env.ts';
 
 describe('runtime environment preflight', () => {
-  it('keeps preview isolated with only a session secret', () => {
+  it('requires isolated preview session and catalog credentials', () => {
+    assert.throws(() => assertRuntimeEnvironment({
+      RUNTIME_PROFILE: 'preview', SESSION_SECRET: 'preview-only',
+    } as Env), (error: unknown) => {
+      assert.ok(error instanceof RuntimeConfigurationError);
+      assert.deepEqual(error.missing, ['CATALOG_HTTP_USER', 'CATALOG_HTTP_PASSWORD']);
+      return true;
+    });
     assert.doesNotThrow(() => assertRuntimeEnvironment({
       RUNTIME_PROFILE: 'preview',
       SESSION_SECRET: 'preview-only',
+      CATALOG_HTTP_USER: 'preview-user',
+      CATALOG_HTTP_PASSWORD: 'preview-password',
     } as Env));
   });
 
@@ -38,4 +47,3 @@ describe('runtime environment preflight', () => {
     assert.doesNotThrow(() => assertRuntimeEnvironment(env));
   });
 });
-

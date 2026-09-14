@@ -21,7 +21,11 @@ import {verifyTurnstile} from '~/lib/support/turnstile';
 import {extractAttachments} from '~/lib/support/uploads';
 import {checkRateLimit, clientIp} from '~/lib/rate-limit';
 import {scrubForDiscord} from '~/lib/support/scrubber';
-import {addTicket, type TicketMeta} from '~/lib/support/ticket-index';
+import {
+  addTicket,
+  queueOdooMessage,
+  type TicketMeta,
+} from '~/lib/support/ticket-index';
 import {flushOdooMirror} from '~/lib/support/odoo';
 
 type StartResult =
@@ -258,15 +262,20 @@ export async function action({request, context}: Route.ActionArgs) {
         name: ticket.name,
         product: cleanProduct || undefined,
         firmware: cleanFirmware || undefined,
-        odooPending: [{
-          id: `opening:${thread.id}`,
-          author: firstNameOnly(name),
-          body: cleanMessage.content || '[attachment]',
-        }],
       };
       await addTicket(env, meta).catch((err) =>
         console.warn('[support/start] ticket-index write failed', err),
       );
+      const opening = {
+        id: `opening:${thread.id}`,
+        author: firstNameOnly(name),
+        body: cleanMessage.content || '[attachment]',
+      };
+      const queued = await queueOdooMessage(env, meta.tid, opening).catch((err) => {
+        console.warn('[support/start] Odoo queue write failed', err);
+        return null;
+      });
+      if (!queued) meta.odooPending = [opening];
       const odooRef = await flushOdooMirror(env, meta);
 
       try {

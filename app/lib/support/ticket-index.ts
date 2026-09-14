@@ -9,6 +9,7 @@
  *   tk:{tid}                 -> per-ticket meta (single source of truth)
  *   idx:email:{emailHashHex} -> same, for anon/email-resume path
  *   fb:{tid}                 -> feedback record (rating + notes), if submitted
+ *   oq:{tid}                 -> hash of message id => pending Odoo message
  *
  * Lists are capped at MAX_INDEX_ENTRIES (200) most-recent. Older tickets
  * still resolvable by tid via tk:{tid}; we just don't paginate further
@@ -54,8 +55,9 @@ export type TicketMeta = TicketIndexEntry & {
   // "not yet linked", not "no Odoo ticket exists" — callers retry the
   // create-or-fetch call, which is idempotent on the Discord thread id.
   odooRef?: string;
-  // Durable Odoo relay outbox. Entries stay here until the bridge acknowledges
-  // them; the notification sweep retries every open ticket.
+  // Legacy relay outbox written by the first Odoo bridge release. New messages
+  // use independent oq:* records so concurrent metadata writes cannot lose
+  // them. flushOdooMirror migrates this field before sending.
   odooPending?: OdooPendingMessage[];
 };
 
@@ -229,12 +231,61 @@ export async function queueOdooMessage(
 ): Promise<TicketMeta | null> {
   const meta = await getMeta(env, tid);
   if (!meta) return null;
-  const pending = meta.odooPending ?? [];
-  if (!pending.some((entry) => entry.id === message.id)) {
-    meta.odooPending = [...pending, message].slice(-100);
-    await patchMeta(env, tid, {odooPending: meta.odooPending});
-  }
+  const kv = getTicketStore(env);
+  if (!kv) return null;
+  await kv.putHashIfAbsent(odooOutboxKey(tid), message.id, JSON.stringify(message));
   return meta;
+}
+
+export async function listOdooMessages(
+  env: Env,
+  tid: string,
+): Promise<OdooPendingMessage[]> {
+  const kv = getTicketStore(env);
+  if (!kv) return [];
+  const records = Object.values(await kv.getHash(odooOutboxKey(tid)));
+  return records
+    .map(parseOdooMessage)
+    .filter((message): message is OdooPendingMessage => message !== null)
+    .sort(compareOdooMessages);
+}
+
+export async function acknowledgeOdooMessage(
+  env: Env,
+  tid: string,
+  messageId: string,
+): Promise<void> {
+  const kv = getTicketStore(env);
+  if (!kv) return;
+  await kv.deleteHashField(odooOutboxKey(tid), messageId);
+}
+
+function odooOutboxKey(tid: string): string {
+  return `oq:${tid}`;
+}
+
+function parseOdooMessage(raw: string | null): OdooPendingMessage | null {
+  if (!raw) return null;
+  try {
+    const value = JSON.parse(raw) as Partial<OdooPendingMessage>;
+    if (
+      typeof value.id !== 'string' ||
+      typeof value.author !== 'string' ||
+      typeof value.body !== 'string'
+    ) {
+      return null;
+    }
+    return {id: value.id, author: value.author, body: value.body};
+  } catch {
+    return null;
+  }
+}
+
+function compareOdooMessages(a: OdooPendingMessage, b: OdooPendingMessage): number {
+  const openingA = a.id.startsWith('opening:');
+  const openingB = b.id.startsWith('opening:');
+  if (openingA !== openingB) return openingA ? -1 : 1;
+  return a.id.localeCompare(b.id, undefined, {numeric: true});
 }
 
 export async function getMeta(
