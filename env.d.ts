@@ -29,15 +29,26 @@ declare global {
   }
 
   interface Env {
+    // Signs the locale and support-desk cookies.
     SESSION_SECRET: string;
-    PUBLIC_STORE_DOMAIN: string;
-    PUBLIC_STOREFRONT_API_TOKEN: string;
-    PRIVATE_STOREFRONT_API_TOKEN: string;
-    PUBLIC_STOREFRONT_ID: string;
-    SHOP_ID: string;
-    PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID: string;
-    PUBLIC_CUSTOMER_ACCOUNT_API_URL: string;
-    PUBLIC_CHECKOUT_DOMAIN: string;
+
+    // The Incutec shop on Odoo: base of every buy hand-off and portal
+    // link, and the fallback base when the catalog is unreachable.
+    // Defaults to https://shop.incutec.com.
+    PUBLIC_SHOP_URL?: string;
+
+    // The Odoo catalog feed (module incutec_catalog_api). Defaults to
+    // https://erp.incutec.eu/incutec/catalog.json. Fetched server-side
+    // with a 5 minute worker cache; the last good copy is served for up
+    // to an hour if the fetch fails.
+    CATALOG_URL?: string;
+
+    // Aggregate order totals behind the financial goal meter, as
+    // {"orders": n, "revenue_eur": x, "updated_at": iso}. Read by
+    // scripts/update-goals.mjs only; the Odoo endpoint that serves it is
+    // ERP PLAN.md step 12.6. Unset, the script reports and changes
+    // nothing.
+    GOALS_URL?: string;
 
     // Pre-launch banner kill switch: unset/anything ≠ '0' keeps the banner.
     PUBLIC_PRELAUNCH?: string;
@@ -65,10 +76,6 @@ declare global {
     // Set PUBLIC_COMING_SOON=0 in Oxygen the day orders open. Per-product
     // overrides live in app/lib/product-content.ts (`comingSoon`).
     PUBLIC_COMING_SOON?: string;
-
-    // "1" opens pre-order products while PUBLIC_COMING_SOON is still on;
-    // used on the Oxygen preview for end-to-end order tests.
-    PUBLIC_PREORDERS?: string;
 
     PUBLIC_COMPANY_NAME?: string;
     PUBLIC_COMPANY_ADDRESS?: string;
@@ -102,20 +109,6 @@ declare global {
     // defaults to hello@opendrone.be. Domain must be verified in Resend.
     RESEND_MARKETING_FROM?: string;
 
-    // Product reviews — Judge.me seam (app/lib/reviews.ts is the only
-    // module that knows the provider). BOTH must be set for the PDP
-    // reviews chapter, the buy-area stars and the AggregateRating
-    // JSON-LD to render; leave either unset and the storefront behaves
-    // exactly as if the feature did not exist (no logs, no placeholders).
-    // - JUDGEME_PRIVATE_TOKEN: server-only secret. Shopify admin →
-    //   Apps → Judge.me → Settings → Integrations → Judge.me API →
-    //   "Private API Token". Never exposed to the client despite living
-    //   next to PUBLIC_ vars.
-    // - PUBLIC_JUDGEME_SHOP_DOMAIN: the *.myshopify.com domain Judge.me
-    //   is installed on — same value as PUBLIC_STORE_DOMAIN.
-    JUDGEME_PRIVATE_TOKEN?: string;
-    PUBLIC_JUDGEME_SHOP_DOMAIN?: string;
-
     // Stage 2 moderation gate
     SUPPORT_MOD_ROLE_ID?: string;
     SUPPORT_APPROVE_EMOJI?: string;
@@ -137,39 +130,15 @@ declare global {
     DISCORD_FEEDBACK_CHANNEL_ID?: string;
 
     // Newsletter / release-notes auto-dispatch
-    // - SHOPIFY_ADMIN_API_TOKEN: custom-app Admin API token. Required
-    //   scopes: read_customers, write_customers, read_content,
-    //   write_content (metafields). Server-only — never exposed.
-    // - SHOPIFY_ADMIN_API_VERSION: defaults to 2026-01 when unset.
-    // - SHOPIFY_WEBHOOK_SECRET: shared secret configured on Shopify
-    //   webhooks (Dev Dashboard custom app). Verifies inbound
-    //   X-Shopify-Hmac-Sha256 headers. Used by /api/webhooks/shopify
-    //   (orders/paid primary, orders/create also accepted → growth
-    //   ledger, app/routes/api.webhooks.shopify.tsx) and the planned
-    //   articles/update newsletter dispatch. One secret for all topics.
-    // - NEWSLETTER_DISPATCH_SECRET: bearer token for manual dispatch
+    // - NEWSLETTER_DISPATCH_SECRET: bearer token for the manual dispatch
     //   trigger (CLI/curl) AND HMAC key for per-recipient unsubscribe
-    //   tokens. Rotate together — old unsubscribe links die on rotate.
+    //   tokens. Rotate together, old unsubscribe links die on rotate.
     // - NEWSLETTER_FROM_EMAIL: sender address, e.g. news@opendrone.be.
     //   Domain must be verified in Resend (SPF/DKIM/DMARC).
-    // - NEWSLETTER_BLOG_HANDLE: defaults to `releases`. Articles in
-    //   any other blog never trigger an email.
-    // - NEWSLETTER_DISPATCH_KV: dedup ledger so a redelivered webhook
-    //   doesn't double-send during the window before the metafield
-    //   write lands. Optional but recommended.
-    //
-    // Webhook URL to register in Shopify admin:
-    //   POST https://opendrone.be/api/newsletter/dispatch
-    //   topic: articles/update  (also create a one-shot
-    //   articles/create subscription if desired)
-    //   format: JSON
-    //   secret: same value as SHOPIFY_WEBHOOK_SECRET
-    SHOPIFY_ADMIN_API_TOKEN?: string;
-    SHOPIFY_ADMIN_API_VERSION?: string;
-    SHOPIFY_WEBHOOK_SECRET?: string;
+    // - NEWSLETTER_DISPATCH_KV: dedup ledger so a repeated dispatch does
+    //   not double-send. Optional but recommended.
     NEWSLETTER_DISPATCH_SECRET?: string;
     NEWSLETTER_FROM_EMAIL?: string;
-    NEWSLETTER_BLOG_HANDLE?: string;
     NEWSLETTER_DISPATCH_KV?: KVNamespace;
   }
 }

@@ -1,10 +1,17 @@
 import * as serverBuild from 'virtual:react-router/server-build';
-import {createRequestHandler, storefrontRedirect} from '@shopify/hydrogen';
-import {createHydrogenRouterContext} from '~/lib/context';
+import {createRequestHandler} from 'react-router';
+import {createAppLoadContext} from '~/lib/context';
 
 /**
  * Export a fetch handler in module format.
+ *
+ * The handler is React Router's own: Hydrogen's wrapper existed for the
+ * Storefront client and `storefrontRedirect` (Shopify's URL redirect
+ * table), neither of which exists any more. Oxygen still hosts and
+ * builds the app (decision D3); it just has no Shopify API to call.
  */
+const handleRequest = createRequestHandler(serverBuild, process.env.NODE_ENV);
+
 export default {
   async fetch(
     request: Request,
@@ -12,42 +19,16 @@ export default {
     executionContext: ExecutionContext,
   ): Promise<Response> {
     try {
-      const hydrogenContext = await createHydrogenRouterContext(
+      const context = await createAppLoadContext(
         request,
         env,
         executionContext,
       );
 
-      /**
-       * Create a Hydrogen request handler that internally
-       * delegates to React Router for routing and rendering.
-       */
-      const handleRequest = createRequestHandler({
-        build: serverBuild,
-        mode: process.env.NODE_ENV,
-        getLoadContext: () => hydrogenContext,
-      });
+      const response = await handleRequest(request, context);
 
-      const response = await handleRequest(request);
-
-      if (hydrogenContext.session.isPending) {
-        response.headers.set(
-          'Set-Cookie',
-          await hydrogenContext.session.commit(),
-        );
-      }
-
-      if (response.status === 404) {
-        /**
-         * Check for redirects only when there's a 404 from the app.
-         * If the redirect doesn't exist, then `storefrontRedirect`
-         * will pass through the 404 response.
-         */
-        return storefrontRedirect({
-          request,
-          response,
-          storefront: hydrogenContext.storefront,
-        });
+      if (context.session.isPending) {
+        response.headers.set('Set-Cookie', await context.session.commit());
       }
 
       return response;
