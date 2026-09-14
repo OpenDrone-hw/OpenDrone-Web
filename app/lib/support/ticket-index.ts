@@ -48,6 +48,12 @@ export type TicketMeta = TicketIndexEntry & {
   // Discord message id up to which the reply-notification sweep has
   // settled its email decisions. Written by /api/support/notify.
   notifyCursor?: string;
+  // Odoo `project.task.ticket_ref` (e.g. "SUP-00001") for the mirrored
+  // ticket in erp/addons/incutec_support (PLAN.md 12.2). Absent until the
+  // Odoo bridge call has succeeded at least once; a missing value means
+  // "not yet linked", not "no Odoo ticket exists" — callers retry the
+  // create-or-fetch call, which is idempotent on the Discord thread id.
+  odooRef?: string;
 };
 
 const MAX_INDEX_ENTRIES = 200;
@@ -193,7 +199,7 @@ export async function markFeedback(env: Env, tid: string): Promise<void> {
 export async function patchMeta(
   env: Env,
   tid: string,
-  patch: Partial<Pick<TicketMeta, 'seenCursor' | 'notifyCursor'>>,
+  patch: Partial<Pick<TicketMeta, 'seenCursor' | 'notifyCursor' | 'odooRef'>>,
 ): Promise<void> {
   const kv = getTicketStore(env);
   if (!kv) return;

@@ -136,6 +136,18 @@ WebSocket, no application database:
   reacts ✅). PII goes to a private staff channel, never the public thread.
 - A 15-minute cron emails customers the replies they did not see arrive; a
   nightly cron deletes stale threads and index entries.
+- Every ticket, and every message a visitor sends into it, is best-effort
+  mirrored into Odoo `project.task` (`erp/addons/incutec_support`, erp
+  PLAN.md step 12.2) so staff also see it in the ERP: `app/lib/support/odoo.ts`
+  calls `POST /incutec/support/ticket` when the Discord thread is created
+  (`app/routes/api.support.start.tsx`) and `POST
+  /incutec/support/ticket/<ref>/message` for each message the visitor sends
+  (`app/routes/api.support.send.tsx`), authenticated with
+  `X-Incutec-Support-Token`. The returned `ticket_ref` (e.g. `SUP-00001`) is
+  stored on the Upstash ticket record and appended to the resume-link
+  confirmation email the visitor already gets. Every Odoo call retries once
+  and then just logs a warning: an Odoo outage never blocks or changes the
+  Discord flow.
 
 `/account/support` shows the signed-in ticket history. `/contact` is the front
 door with the Discord invite card. UI in `app/components/Support*.tsx`, server in
@@ -328,7 +340,8 @@ The complete annotated list is [`.env.example`](.env.example). Groups:
 - **Legal entity**: `PUBLIC_COMPANY_*` (name, address, KBO, VAT, email, phone).
   Belgian law (WER Art. VI.45) requires these on every page.
 - **Support bridge**: Discord bot + channels, Turnstile, Resend, Upstash,
-  moderation gate. All optional; the bridge degrades gracefully.
+  moderation gate, the Odoo ticket mirror (`SUPPORT_ODOO_URL`,
+  `SUPPORT_ODOO_TOKEN`). All optional; the bridge degrades gracefully.
 - **Goal meter**: `GOALS_URL`, the shop's aggregate order totals for
   `goals:update`. The Odoo endpoint is not built yet (ERP `PLAN.md` step 12.6);
   unset, the script reports that and writes nothing.
@@ -419,6 +432,13 @@ Environments and variables. The four below are the whole list:
 | `PUBLIC_SHOP_URL` | `https://shop.incutec.com` | base of every buy hand-off and portal link. Optional, this is the default |
 | `CATALOG_URL` | `https://erp.incutec.eu/incutec/catalog.json` | the catalog feed. Optional, this is the default. Point a preview at a staging Odoo here |
 | `GOALS_URL` | unset | the goal meter's aggregate endpoint, ERP `PLAN.md` step 12.6. Build-time only, so it belongs in repo secrets rather than Oxygen |
+
+New for the Odoo ticket mirror (`app/lib/support/odoo.ts`, erp PLAN.md step
+12.2): add `SUPPORT_ODOO_URL` (`https://erp.incutec.eu` in production; point a
+preview at `https://staging.incutec.eu`) and `SUPPORT_ODOO_TOKEN` (the same
+shared secret as `SUPPORT_BRIDGE_TOKEN` in `erp/.env`, set on the Odoo side by
+`erp/config/support.py`) to both Oxygen environments. Without them the ticket
+mirror silently no-ops; the Discord bridge is unaffected either way.
 
 Everything else already in Oxygen stays: `PUBLIC_COMPANY_*`, the support bridge
 (Discord, Turnstile, Upstash, Resend), `GITHUB_TOKEN` / `GITHUB_STATUS_TOKEN`,

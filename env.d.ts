@@ -121,6 +121,14 @@ declare global {
     UPSTASH_REDIS_REST_URL?: string;
     UPSTASH_REDIS_REST_TOKEN?: string;
 
+    // Odoo support-ticket mirror (erp/addons/incutec_support, PLAN.md
+    // 12.2, app/lib/support/odoo.ts). Every Discord ticket and message
+    // is best-effort mirrored into Odoo `project.task`; unset or
+    // unreachable, the Discord-only bridge is unaffected (D13).
+    // SUPPORT_ODOO_URL defaults to https://erp.incutec.eu.
+    SUPPORT_ODOO_URL?: string;
+    SUPPORT_ODOO_TOKEN?: string;
+
     // Bearer token for /api/support/cleanup. The daily GitHub Actions
     // cron (.github/workflows/support-cleanup.yml) sends this in the
     // Authorization header. Without it the endpoint returns 503 — set

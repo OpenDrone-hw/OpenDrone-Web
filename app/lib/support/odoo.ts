@@ -1,0 +1,137 @@
+/**
+ * Odoo support-ticket mirror (erp PLAN.md step 12.2, `addons/incutec_support`).
+ *
+ * Every Discord support ticket this bridge creates, and every message a
+ * visitor sends into it, is mirrored into an Odoo `project.task` so staff
+ * see the same ticket in the ERP. Contract:
+ * erp/addons/incutec_support/README.md ("Bridge contract"):
+ *
+ *   POST {SUPPORT_ODOO_URL}/incutec/support/ticket
+ *     {thread_id, email, name, subject} -> {id, ticket_ref, created}
+ *   POST {SUPPORT_ODOO_URL}/incutec/support/ticket/<ref>/message
+ *     {author, body} -> {id, ticket_ref, posted}
+ *
+ * Both are idempotent / additive on the Odoo side and authenticated with
+ * X-Incutec-Support-Token.
+ *
+ * D13 (docs/storefront-contract.md, erp/PLAN.md): the storefront's Discord
+ * flow does not change shape for the visitor. This module is therefore
+ * best-effort by design — a network error or an Odoo outage never throws,
+ * never delays the Discord response, and never surfaces to the visitor.
+ * Every call here does at most one retry, then logs a warning and resolves
+ * to `null` / `false` so the caller can carry on with the Discord-only path.
+ */
+
+const DEFAULT_ODOO_URL = 'https://erp.incutec.eu';
+const ODOO_TIMEOUT_MS = 5000;
+
+type OdooEnv = {
+  SUPPORT_ODOO_URL?: string;
+  SUPPORT_ODOO_TOKEN?: string;
+};
+
+export type OdooTicket = {
+  id: number;
+  ticketRef: string;
+  created: boolean;
+};
+
+function baseUrl(env: OdooEnv): string {
+  return (env.SUPPORT_ODOO_URL || DEFAULT_ODOO_URL).replace(/\/+$/, '');
+}
+
+function odooFetch(env: OdooEnv, path: string, body: unknown): Promise<Response> {
+  return fetch(`${baseUrl(env)}${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Incutec-Support-Token': env.SUPPORT_ODOO_TOKEN ?? '',
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(ODOO_TIMEOUT_MS),
+  });
+}
+
+// At most one retry: a network error or a 5xx is retried once, a 4xx
+// (bad request, unauthorized, not found) is not — retrying would just
+// repeat the same error. Never throws; a permanent failure resolves to
+// `null` after logging a warning, which every caller treats as "Odoo is
+// unavailable right now, continue on the Discord-only path".
+async function callOdoo(
+  env: OdooEnv,
+  path: string,
+  body: unknown,
+): Promise<Response | null> {
+  let lastErr: unknown = null;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const res = await odooFetch(env, path, body);
+      if (res.ok || res.status < 500) return res;
+      lastErr = new Error(`odoo ${path} ${res.status}`);
+      if (attempt === 2) {
+        console.warn('[support/odoo] request failed after retry', path, res.status);
+        return res;
+      }
+    } catch (err) {
+      lastErr = err;
+      if (attempt === 2) {
+        console.warn('[support/odoo] request failed after retry', path, err);
+        return null;
+      }
+      console.warn('[support/odoo] request failed, retrying once', path, err);
+    }
+  }
+  console.warn('[support/odoo] request failed', path, lastErr);
+  return null;
+}
+
+// Create or fetch the Odoo ticket for a Discord thread. Idempotent on
+// thread_id: a second call for the same thread returns the existing
+// ticket (`created: false`) and ignores email/name/subject, matching the
+// Odoo contract. Returns `null` when SUPPORT_ODOO_TOKEN is unset or the
+// call ultimately fails — callers must not block the Discord path on it.
+export async function createOrFetchOdooTicket(
+  env: OdooEnv,
+  opts: {threadId: string; email: string; name: string; subject: string},
+): Promise<OdooTicket | null> {
+  if (!env.SUPPORT_ODOO_TOKEN) return null;
+  const res = await callOdoo(env, '/incutec/support/ticket', {
+    thread_id: opts.threadId,
+    email: opts.email,
+    name: opts.name,
+    subject: opts.subject,
+  });
+  if (!res) return null;
+  if (!res.ok) {
+    console.warn('[support/odoo] ticket create/fetch', res.status);
+    return null;
+  }
+  try {
+    const json = (await res.json()) as {id: number; ticket_ref: string; created: boolean};
+    return {id: json.id, ticketRef: json.ticket_ref, created: json.created};
+  } catch (err) {
+    console.warn('[support/odoo] ticket create/fetch: bad JSON', err);
+    return null;
+  }
+}
+
+// Relay one message onto the ticket named by `ticketRef` (Odoo's
+// `ticket_ref`, e.g. "SUP-00001"). Returns whether it posted; never
+// throws.
+export async function postOdooMessage(
+  env: OdooEnv,
+  opts: {ticketRef: string; author: string; body: string},
+): Promise<boolean> {
+  if (!env.SUPPORT_ODOO_TOKEN) return false;
+  const res = await callOdoo(
+    env,
+    `/incutec/support/ticket/${encodeURIComponent(opts.ticketRef)}/message`,
+    {author: opts.author, body: opts.body},
+  );
+  if (!res) return false;
+  if (!res.ok) {
+    console.warn('[support/odoo] message relay', res.status);
+    return false;
+  }
+  return true;
+}
