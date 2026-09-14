@@ -236,7 +236,7 @@ content/                   editable copy, product chapters, posts, theme tokens
 public/                    models (GLB), board art SVGs + rasters, schematics, logos
 scripts/                   publish-post, board art export, hero build, shopify-infra, smoke
 studio/                    the dev-only Vite plugin (write endpoint)
-docs/                      hero-studio, growth-architecture, store-compliance
+docs/                      hero-studio, growth-architecture, store-compliance, store-snapshot.json
 ```
 
 **Board art pipeline**: `npm run gen:board-art` shells out to `kicad-cli` and
@@ -325,6 +325,10 @@ The complete annotated list is [`.env.example`](.env.example). Groups:
 | `npm run gen:board-art` | export PCB SVGs + copper-layer rasters (needs KiCad, cwebp) |
 | `npm run sync:specs` / `sync:downloads` | mirror README specs / release assets into the product JSON |
 | `npm run sync:timeline` | append releases, new repos and status flips to the timeline ledger (CI does this daily on the `data` branch) |
+| `node scripts/shopify-infra/ensure-products.mjs` | create the Shopify products and Model variants that `stock/product_skus.json` lists and Shopify lacks; never edits existing variants (`--apply` to write) |
+| `node scripts/shopify-infra/sync-product-skus.mjs` | align Shopify variant SKUs with `stock/product_skus.json` (`--apply` to write) |
+| `npm run snapshot:store` | write `docs/store-snapshot.json`, the committed record of the Shopify configuration (shop, locations, products, variants, markets, delivery profiles; no stock levels or discount codes); re-run after any admin change and commit the diff |
+| `node scripts/shopify-infra/dev-sample-discount.mjs` | create the two sample discounts (100% off one OpenRX Gemini, free shipping) for the end-to-end order test; the random codes print once and live only in Shopify |
 | `npm run studio:coverage` | how much copy is studio-editable |
 | `npm run gen:shopify-templates` | branded Shopify notification-email HTML |
 | `npm run audit:perf -- --device "Pixel 7" --throttle 6 --network slow4g` | mobile perf lab: frames, long tasks, bytes per interaction (drop `--device` for the desktop lab) |
