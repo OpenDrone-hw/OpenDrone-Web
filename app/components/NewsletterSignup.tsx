@@ -9,7 +9,7 @@ import {copyText} from '~/lib/copy';
 
 // Engineering Essentials — dual-purpose: product-release announcements and
 // engineering content digest. Posts to app/routes/newsletter.tsx which
-// writes the subscriber into Shopify's customer list with marketing consent.
+// writes the subscriber into the Resend marketing list with consent.
 //
 // Bot protection: honeypot field + Cloudflare Turnstile. The Turnstile
 // widget + script are lazy-loaded only after the visitor focuses the email

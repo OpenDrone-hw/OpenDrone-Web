@@ -82,7 +82,7 @@ export function VariantLadder({
         {tiers.map(({value, content, optionValue}) => {
           const selected = norm(value) === norm(activeValue);
           // Coming-soon: a designed model with no purchasable variant yet.
-          // Editorial-only — greyed and non-selectable regardless of Shopify.
+          // Editorial only: greyed and non-selectable whatever the catalog says.
           const comingSoon = Boolean(content.comingSoon);
           // Sold-out only when the catalog actually has the variant and
           // marks it unavailable. Pre-setup (no matching option) stays

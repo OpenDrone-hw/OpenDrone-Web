@@ -17,7 +17,7 @@ const clause = (s: string) => s.split(/[,(]/)[0].trim();
 /**
  * One-line spec for a related card, composed from the product's editorial
  * spec table (product-content.ts): firmware project + MCU/radio when the
- * board has them, else the first spec rows, else the Shopify productType.
+ * board has them, else the first spec rows, else the product family.
  * Derived, never invented — every cell already ships on the PDP.
  */
 function specLineOf(p: RelatedProduct): string | null {

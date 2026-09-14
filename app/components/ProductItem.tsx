@@ -24,7 +24,7 @@ export type ProductQuickAdd = {
 
 /**
  * One model/tier of a product line, surfaced as a chip under the card on
- * the browse page. `axis` is the Shopify option name (standardised to
+ * the browse page. `axis` is the catalog option name (standardised to
  * "Model"); a real model deep-links to the PDP with that model
  * preselected (`?<axis>=<value>`), a coming-soon model renders greyed and
  * non-interactive (no purchasable variant yet).

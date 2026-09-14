@@ -204,7 +204,7 @@ describe('product content shape', () => {
         assert.equal(
           typeof content.optionAxis,
           'string',
-          `${handle}: variants without an optionAxis never match a Shopify option`,
+          `${handle}: variants without an optionAxis never match a catalog option`,
         );
         for (const [key, variant] of Object.entries(content.variants)) {
           assert.notEqual(key, '', `${handle}: empty variant key`);

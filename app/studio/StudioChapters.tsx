@@ -49,7 +49,7 @@ const SINGLETON: ChapterType[] = CHAPTER_TYPES.filter((t) => t !== 'prose');
 const CAVEATS: Partial<Record<ChapterType, string>> = {
   whatIsThis: 'Needs a whatIsThis block in the product file.',
   contributors: 'Fills itself from GitHub. Nothing to write here.',
-  reviews: 'Appears only once a product has ratings in Shopify.',
+  reviews: 'Appears only once a product has published ratings in Odoo.',
   teardown: 'Needs board art or a frame viewer for this product.',
   firmware: 'Hidden on bundles and on products not yet for sale.',
 };

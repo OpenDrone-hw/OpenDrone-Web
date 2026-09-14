@@ -1,7 +1,7 @@
 import {Link} from 'react-router';
 
 // `label` is a ReactNode so a crumb can be a <Txt> from the copy store and
-// stay editable in the studio; Shopify-sourced crumbs stay plain strings.
+// stay editable in the studio; catalog-sourced crumbs stay plain strings.
 export type Crumb = {label: React.ReactNode; to?: string};
 
 export function Breadcrumb({items}: {items: Crumb[]}) {

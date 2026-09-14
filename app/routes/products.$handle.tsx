@@ -95,7 +95,7 @@ export const meta: Route.MetaFunction = ({data, location}) =>
 /**
  * Selecting a SKU only mutates this PDP's option query params (e.g. ?Model=…).
  * Skip the loader on those same-path navigations: re-running it means a
- * Shopify round-trip plus a full PDP re-render (3D viewer, chapters, deferred
+ * catalog round-trip plus a full PDP re-render (3D viewer, chapters, deferred
  * recommendations) on every click — the source of the variant-switch lag. The
  * variant is resolved client-side from the already-loaded data instead.
  */
@@ -137,7 +137,8 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
 
   // Bundle products render from their own product but add the *component*
   // variants to cart; the stack builder needs its partner products' variants
-  // the same way. Fetch both sets in parallel with the product itself.
+  // the same way. Both come out of the same catalog document as the
+  // product itself, so resolving them costs nothing extra.
   const bundleHandles =
     PRODUCT_CONTENT[handle]?.bundle?.components.map((c) => c.handle) ?? [];
   const stackHandles =
@@ -680,7 +681,7 @@ function ProductPage() {
   }, [product.handle]);
 
   // Resolve the selected variant client-side from the URL options. Paired with
-  // `shouldRevalidate` (above), switching SKUs is instant — no Shopify
+  // `shouldRevalidate` (above), switching SKUs is instant: no loader
   // round-trip, no full-page revalidation. The candidate list already carries
   // every tier's price/stock for a line product, so we match the URL against it
   // and fall back to the server's default variant when no options are set.
@@ -741,7 +742,7 @@ function ProductPage() {
 
   // Comparison-ladder state for product lines (OpenRX/OpenESC). The
   // editorial `variants` map is the tier source of truth; the active tier
-  // drives the spec/in-the-box preview and, once Shopify carries the
+  // drives the spec/in-the-box preview and, once Odoo carries the
   // matching option, the buy module follows via the selected variant.
   const variantKeys = content.variants ? Object.keys(content.variants) : [];
   const hasLadder = Boolean(content.optionAxis && variantKeys.length > 0);
@@ -751,7 +752,7 @@ function ProductPage() {
           (k) => k.trim().toLowerCase() === val.trim().toLowerCase(),
         )
       : undefined;
-  const shopifyAxisValue = content.optionAxis
+  const catalogAxisValue = content.optionAxis
     ? selectedVariant?.selectedOptions?.find(
         (o) =>
           o.name.trim().toLowerCase() ===
@@ -759,15 +760,15 @@ function ProductPage() {
       )?.value
     : undefined;
   const [activeTier, setActiveTier] = useState(
-    matchKey(shopifyAxisValue) ?? variantKeys[0] ?? '',
+    matchKey(catalogAxisValue) ?? variantKeys[0] ?? '',
   );
-  // Re-sync if Shopify resolves a different variant (deep-link with
+  // Re-sync if the catalog resolves a different variant (deep-link with
   // ?Model=Mono, or the optimistic variant settling on another tier).
   useEffect(() => {
-    const k = matchKey(shopifyAxisValue);
+    const k = matchKey(catalogAxisValue);
     if (k && k !== activeTier) setActiveTier(k);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shopifyAxisValue]);
+  }, [catalogAxisValue]);
   const activeVariant = content.variants?.[activeTier];
 
   // Gallery: dedupe by URL and, on tiered products, hide images whose
@@ -775,9 +776,9 @@ function ProductPage() {
   // alt "OpenRX Mono, top", has no business in another tier's deck).
   // Normalizes '20×20' → '20x20' for the match; images naming no tier
   // (lifestyle shots) always stay, and the selected variant's own featured
-  // image always stays. Shopify's storefront API only links ONE image per
-  // variant, so tagging the rest is a data job: name the file or set the alt
-  // text with the tier key in Shopify admin.
+  // image always stays. Odoo links at most ONE image per variant, so
+  // tagging the rest is a data job: name the file or set the alt text with
+  // the tier key on the product in Odoo.
   const galleryImages = useMemo(() => {
     const nodes = product.images?.nodes?.length
       ? product.images.nodes
@@ -887,14 +888,12 @@ function ProductPage() {
     : undefined;
 
   // "Buy it as a stack": for each configured partner (FC↔ESC), resolve the
-  // variant matching the selected mount size and prebuild BOTH cart lines.
-  // The offers surface as a hover flyout on the add-to-cart CTA, so ordering
-  // the pair is one extra click; more partners later (an OpenFC Pro) just
-  // become more rows. The 10% itself is the Shopify automatic BXGY at
-  // checkout, and it is off the discountedHandle board ONLY (the OpenESC),
-  // never the pair: when that board is the partner being added, its shown
-  // price is pre-discounted (with the full price struck) so it matches what
-  // checkout charges; when it is this product, the badge names it instead.
+  // variant matching the selected mount size and put BOTH SKUs on one
+  // hand-off link. The offers surface as a hover flyout on the buy CTA, so
+  // ordering the pair is one extra click; more partners later (an OpenFC
+  // Pro) just become more rows. Any pair discount is an Odoo promotion, off
+  // the discountedHandle board ONLY, never the pair; it is unconfigured
+  // today, so no offer carries a percent.
   const stackCfg = content.stack;
   const stackAxis = (stackCfg?.matchOption ?? 'Model').trim().toLowerCase();
   const stackMatchValue =
@@ -1413,7 +1412,7 @@ function ProductPage() {
   // don't render a breadcrumb on the PDP — the editorial hero with
   // the "File 0N · Family" eyebrow is the navigation clue instead.
   // Bundles advertise the composed component price (what add-to-cart actually
-  // charges), not the Shopify master-variant placeholder. Coming soon → no
+  // charges), not a single component's price. Coming soon: no
   // offer at all: structured data must not leak a price the page hides.
   const jsonLdPrice = soon
     ? undefined
@@ -1450,7 +1449,7 @@ function ProductPage() {
   // pinned to the top so a variant switcher + add-to-cart is always reachable.
   // Both copies share `activeTier`, so switching in either keeps them in sync.
   // Ladder clicks are the PDP's main variant switch: track them as
-  // `Variant Select` (user-initiated only; deep links and Shopify
+  // `Variant Select` (user-initiated only; deep links and catalog
   // re-syncs go through setActiveTier directly and stay silent). Only an
   // actual change counts: the ladder fires onSelect for clicks on the
   // already-active tier too, and re-clicks are not selections.
@@ -1708,7 +1707,7 @@ function ProductPage() {
    * They stay in the route rather than moving into the config because their
    * answers come from three places `content/chapters.json` cannot see: whether
    * the handle has an editorial entry at all, the product's lifecycle status,
-   * and the Shopify review metafields.
+   * and the catalog's rating.
    */
   const present = (type: ChapterType, entry: ChapterEntry): boolean => {
     switch (type) {
