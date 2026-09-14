@@ -26,6 +26,7 @@ import {
   isPurchasableStatus,
   PRODUCT_CONTENT,
 } from '~/lib/product-content';
+import {FAMILIES} from '~/lib/families';
 import {stackDiscountedPrice} from '~/lib/stack-discount';
 import {buyUrl, portalUrl} from '~/lib/shop-links';
 import type {
@@ -61,27 +62,22 @@ type Viewport = 'desktop' | 'mobile';
 // family labels below — those double as dropdown state keys and as the short
 // names on the buy buttons, so they are structure, not copy.
 //
-// Category links jump straight to the current PDP for each family.
-// Accessories no longer get a dedicated link here — they live (with
-// everything else) on the aggregated All Products page, reachable via the
-// "All Products" CTA on the right, filterable by category there.
-// Each family chip links to its representative PDP and, on hover, drops a Pod
-// listing every SKU of that Shopify `productType`.
-const CATEGORY_LINKS: Array<{label: string; to: string; type: string}> = [
-  {label: 'FC', to: '/products/openfc-lite', type: 'Flight Controller'},
-  {label: 'ESC', to: '/products/openesc', type: 'ESC'},
-  {label: 'RX', to: '/products/openrx', type: 'Receiver'},
-  {label: 'Frame', to: '/products/openframe', type: 'Frame'},
-];
+// The family chips. Accessories get no dedicated link: they live (with
+// everything else) on the All Products page, reachable via the CTA on the
+// right and filterable by family there. Each chip links to its family's
+// representative PDP and, on hover, drops a Pod listing every SKU in it.
+// The vocabulary itself is app/lib/families.ts, shared with the listing.
+const CATEGORY_LINKS = FAMILIES.map((f) => ({
+  label: f.short,
+  to: f.to,
+  type: f.type,
+}));
 
-/** Fuller family names for the mobile drawer (the desktop FamilyNav chips use
- *  the terse FC/ESC/… labels; the drawer has room to spell them out). */
-const MOBILE_FAMILY_LABEL: Record<string, string> = {
-  'Flight Controller': 'Flight Controllers',
-  ESC: 'ESCs',
-  Receiver: 'Receivers',
-  Frame: 'Frames',
-};
+/** Fuller family names for the mobile drawer (the desktop FamilyNav chips
+ *  use the terse FC/ESC/… labels; the drawer has room to spell them out). */
+const MOBILE_FAMILY_LABEL: Record<string, string> = Object.fromEntries(
+  FAMILIES.map((f) => [f.type, f.long]),
+);
 
 /** Stack companions per family: each pod row offers "+X" buttons for these
  *  partner products, size-matched by the Model option. N-to-N ready: every
@@ -96,11 +92,11 @@ const MOBILE_FAMILY_LABEL: Record<string, string> = {
  *  carries the matching promotion, so an unconfigured shop claims nothing. */
 const STACK_COMPANIONS: Record<string, Array<{handle: string; short: string}>> = {
   'Flight Controller': [{handle: 'openesc', short: 'ESC'}],
-  ESC: [{handle: 'openfc-lite', short: 'FC'}],
+  '4-in-1 ESC': [{handle: 'openfc-lite', short: 'FC'}],
 };
 
-/** Short family label ("FC", "ESC") for a productType — names the buy
- *  buttons so "FC only" vs "FC + ESC stack" is unambiguous. */
+/** Short family label ("FC", "ESC") for a family type. */
+
 function selfShortFor(type: string): string {
   return CATEGORY_LINKS.find((c) => c.type === type)?.label ?? 'board';
 }

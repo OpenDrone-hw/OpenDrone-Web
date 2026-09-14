@@ -7,6 +7,7 @@ import type {StackOffer} from '~/components/StackQuickAdd';
 import type {MoneyV2, ProductCardFragment} from '~/lib/product-shapes';
 import {toCards} from '~/lib/catalog';
 import {buyUrl} from '~/lib/shop-links';
+import {FAMILIES} from '~/lib/families';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {EmptyState} from '~/components/EmptyState';
 import {
@@ -47,17 +48,14 @@ export const meta: Route.MetaFunction = ({data, location}) =>
   });
 
 /**
- * Sidebar order for each product family (the local content file's
- * `family`, else the Odoo public category), and the copy id of the
- * heading each one shows. Families not listed fall into a trailing
- * "Other" bucket so nothing is silently dropped from the filter rail.
- * The family is catalog data; only the heading is copy.
+ * Sidebar order for the known families (app/lib/families.ts, shared with
+ * the header chips), then the two catch-all buckets. A family present in
+ * the catalog but not listed here labels itself at the end of the rail, so
+ * nothing is silently dropped. The family is catalog data; only the
+ * heading is copy.
  */
 const CATEGORY_ORDER: Array<{type: string; copyId: string}> = [
-  {type: 'Flight Controller', copyId: 'collections-all.category_flight_controller'},
-  {type: 'ESC', copyId: 'collections-all.category_esc'},
-  {type: 'Receiver', copyId: 'collections-all.category_receiver'},
-  {type: 'Frame', copyId: 'collections-all.category_frame'},
+  ...FAMILIES.map((f) => ({type: f.type, copyId: f.copyId})),
   {type: 'Bundle', copyId: 'collections-all.category_bundle'},
   {type: 'Accessory', copyId: 'collections-all.category_accessory'},
 ];
