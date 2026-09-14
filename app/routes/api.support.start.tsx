@@ -1,6 +1,5 @@
 import {data} from 'react-router';
 import type {Route} from './+types/api.support.start';
-import {SUPPORT_CUSTOMER_PREFILL_QUERY} from '~/graphql/customer-account/SupportPrefillQuery';
 import {
   createSupportThread,
   firstNameOnly,
@@ -57,43 +56,20 @@ export async function action({request, context}: Route.ActionArgs) {
     );
   }
 
-  // Opening a ticket requires a Shopify customer account session. Name +
-  // email come from the authenticated customer record, not the form —
-  // that way we always post to Discord with a verified identity and a
-  // customerId staff can click back to the order history. The old anon
-  // flow let random visitors trickle in; gating here keeps the forum
-  // channel signal-heavy.
+  // Opening a ticket used to require a Shopify customer-account session,
+  // which supplied the name and email. Odoo owns accounts now and they
+  // live on another domain, so the intake form carries them again;
+  // Turnstile, the honeypot and the IP/email rate limits are the gate.
   const env = context.env;
-  let customer: {id: string; name: string; email: string} | null = null;
-  try {
-    const {data: prefill} = await context.customerAccount.query(
-      SUPPORT_CUSTOMER_PREFILL_QUERY,
-    );
-    const c = prefill?.customer;
-    const emailAddr = c?.emailAddress?.emailAddress;
-    if (c?.id && emailAddr) {
-      const name = [c.firstName, c.lastName].filter(Boolean).join(' ').trim();
-      customer = {
-        id: c.id,
-        name: name || emailAddr.split('@')[0],
-        email: emailAddr.toLowerCase(),
-      };
-    }
-  } catch {
-    // not signed in / scope missing — fall through to 401 below
-  }
-  if (!customer) {
-    return data<StartResult>(
-      {
-        ok: false,
-        message: 'Sign in to open a support ticket.',
-        code: 'signin-required',
-      },
-      {status: 401},
-    );
-  }
 
   const form = await request.formData();
+  const name = String(form.get('name') ?? '')
+    .trim()
+    .slice(0, 80);
+  const email = String(form.get('email') ?? '')
+    .trim()
+    .toLowerCase()
+    .slice(0, 254);
   const message = String(form.get('message') ?? '').trim();
   const turnstileToken = String(form.get('cf-turnstile-response') ?? '');
   const subject = String(form.get('subject') ?? '').trim().slice(0, 256);
@@ -103,6 +79,18 @@ export async function action({request, context}: Route.ActionArgs) {
 
   if (honeypot) {
     return data<StartResult>({ok: true, ticketId: 'drop'});
+  }
+  if (name.length < 2) {
+    return data<StartResult>(
+      {ok: false, message: 'Tell us your name so we know who we are helping.'},
+      {status: 400},
+    );
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return data<StartResult>(
+      {ok: false, message: 'Enter a valid email address.'},
+      {status: 400},
+    );
   }
   if (!subject || subject.length < 4) {
     return data<StartResult>(
@@ -184,8 +172,6 @@ export async function action({request, context}: Route.ActionArgs) {
     );
   }
 
-  const {id: verifiedCustomerId, name, email} = customer;
-
   try {
     // When a private staff-metadata channel is configured, the public
     // forum thread (which any helper can read) gets a first-name-only
@@ -213,7 +199,6 @@ export async function action({request, context}: Route.ActionArgs) {
       userAgent: ua,
       ipHint: ip && ip !== 'unknown' ? anonymizeIp(ip) : undefined,
       files: attachments.files,
-      customerId: verifiedCustomerId,
       pid,
     });
 
@@ -228,7 +213,6 @@ export async function action({request, context}: Route.ActionArgs) {
           await postStaffMetadata(env, thread.id, thread.name, {
             userName: name,
             userEmail: email,
-            customerId: verifiedCustomerId,
             userAgent: ua,
             ipHint: ip && ip !== 'unknown' ? anonymizeIp(ip) : undefined,
             pid,
@@ -252,7 +236,7 @@ export async function action({request, context}: Route.ActionArgs) {
     };
     const cookie = await signTicket(env, ticket);
 
-    // Write ticket meta + per-customer/email index. Fire-and-forget so
+    // Write ticket meta + the email index. Fire-and-forget so
     // a slow store write doesn't tail the API response. No-op when the
     // Upstash store is unbound.
     const indexJob = addTicket(env, {
@@ -263,7 +247,6 @@ export async function action({request, context}: Route.ActionArgs) {
       closedAt: null,
       lastActivityAt: ticket.createdAt,
       status: 'open',
-      customerId: verifiedCustomerId,
       email,
       name: ticket.name,
       product: cleanProduct || undefined,

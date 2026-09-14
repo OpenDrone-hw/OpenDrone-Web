@@ -5,71 +5,31 @@ import {
   isPurchasableStatus,
   resolveStatus,
 } from '~/lib/product-content';
-import {
-  comingSoonFlag,
-  preorderNote,
-  preordersOpenFlag,
-} from '~/lib/coming-soon';
+import {comingSoonFlag, preorderNote} from '~/lib/coming-soon';
 import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
+import {toCards} from '~/lib/catalog';
 
 /**
  * /products.json — machine-readable catalog feed for agents and tooling.
- * Replaces the Liquid endpoint agents probe for on Shopify stores (Hydrogen
- * doesn't ship one). Adds what no stock feed has: a ready-made cart
- * permalink per variant, the CERN-OHL-S license, and the design-source repo.
+ * Adds what no stock feed has: a ready-made buy link per variant (the same
+ * `<shop>/incutec/add?sku=…` hand-off the buy buttons use, so an agent can
+ * order without scraping the page), the CERN-OHL-S license, and the
+ * design-source repo.
  */
-
-const FEED_QUERY = `#graphql
-  query ProductsFeed($count: Int!) {
-    products(first: $count, query: "-product_type:Donation") {
-      nodes {
-        id
-        handle
-        title
-        description
-        productType
-        featuredImage {
-          url
-          altText
-        }
-        variants(first: 12) {
-          nodes {
-            id
-            sku
-            title
-            availableForSale
-            price {
-              amount
-              currencyCode
-            }
-            selectedOptions {
-              name
-              value
-            }
-          }
-        }
-      }
-    }
-  }
-` as const;
-
-const numericId = (gid: string) => gid.split('/').pop() ?? gid;
 
 export async function loader({context, request}: Route.LoaderArgs) {
   const origin = new URL(request.url).origin;
   const globalSoon = comingSoonFlag(context.env);
-  const preordersOpen = preordersOpenFlag(context.env);
-  const statusFlags = await fetchStatusFlagsFast(
-    context.env.GITHUB_STATUS_TOKEN,
-    undefined,
-    context.waitUntil,
-  );
-  const data = await context.storefront.query(FEED_QUERY, {
-    variables: {count: 50},
-    cache: context.storefront.CacheLong(),
-  });
+  const [statusFlags, catalog] = await Promise.all([
+    fetchStatusFlagsFast(
+      context.env.GITHUB_STATUS_TOKEN,
+      undefined,
+      context.waitUntil,
+    ),
+    context.catalog.get(),
+  ]);
 
-  const products = (data.products?.nodes ?? [])
+  const products = toCards(catalog)
     // Concept products (planned / in-progress) are not catalog.
     .filter((p) => !isConceptProduct(p.handle, statusFlags))
     .map((p) => {
@@ -80,13 +40,13 @@ export async function loader({context, request}: Route.LoaderArgs) {
         p.handle,
         globalSoon,
         statusFlags,
-        preordersOpen,
+        p.variants.nodes[0]?.availability,
       );
       const locked = !isPurchasableStatus(status);
       return {
         handle: p.handle,
         title: p.title,
-        description: p.description,
+        description: PRODUCT_CONTENT[p.handle]?.hero?.lead || null,
         product_type: p.productType || null,
         url: `${origin}/products/${p.handle}`,
         image: p.featuredImage?.url ?? null,
@@ -102,29 +62,34 @@ export async function loader({context, request}: Route.LoaderArgs) {
         ...(locked ? {coming_soon: true} : null),
         // Pre-order: charged in full now, ships on this promise (the same
         // string the PDP, the cart line and the order attribute carry).
-        ...(status === 'preorder' ? {preorder: preorderNote(p.handle)} : null),
-        variants: (p.variants?.nodes ?? []).map((v) => {
-          const id = numericId(v.id);
-          return {
-            id,
-            sku: v.sku || null,
-            title: v.title,
-            options: Object.fromEntries(
-              (v.selectedOptions ?? []).map((o) => [o.name, o.value]),
-            ),
-            available: locked ? false : v.availableForSale,
-            price: locked ? null : v.price.amount,
-            currency: locked ? null : v.price.currencyCode,
-            ...(locked ? null : {cart_permalink: `${origin}/cart/${id}:1`}),
-          };
-        }),
+        ...(status === 'preorder'
+          ? {
+              preorder: preorderNote(
+                p.handle,
+                p.variants.nodes.find((v) => v.shipPromise)?.shipPromise,
+              ),
+            }
+          : null),
+        variants: p.variants.nodes.map((v) => ({
+          sku: v.sku,
+          title: v.title,
+          options: Object.fromEntries(
+            v.selectedOptions.map((o) => [o.name, o.value]),
+          ),
+          available: locked ? false : v.availableForSale,
+          price: locked ? null : v.price.amount,
+          currency: locked ? null : v.price.currencyCode,
+          // The hand-off link: a plain GET that puts this SKU in the
+          // visitor's own cart on the shop and redirects them to it.
+          ...(locked ? null : {cart_add_url: v.cartAddUrl}),
+        })),
       };
     });
 
   return new Response(
     JSON.stringify(
       {
-        note: 'Availability and pricing reflect the current store response. Civilian use only — see /end-use. Agent guide: /llms.txt',
+        note: 'Availability and pricing reflect the current shop response. Civilian use only — see /end-use. Agent guide: /llms.txt',
         products,
       },
       null,

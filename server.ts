@@ -25,7 +25,14 @@ export default {
         executionContext,
       );
 
-      const response = await handleRequest(request, context);
+      // The Hydrogen package still augments React Router's AppLoadContext
+      // with a Storefront client, a cart handler and a customer-account
+      // client, none of which exist here; the cast is that type-level
+      // ghost, not a runtime one.
+      const response = await handleRequest(
+        request,
+        context as unknown as Parameters<typeof handleRequest>[1],
+      );
 
       if (context.session.isPending) {
         response.headers.set('Set-Cookie', await context.session.commit());

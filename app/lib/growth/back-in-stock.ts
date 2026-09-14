@@ -1,74 +1,60 @@
 /**
- * Back-in-stock notify — turns an authenticated inventory_levels/update
- * webhook delivery into ONE Resend broadcast to the `notify-<handle>`
- * segment (the same segment every PDP notify signup lands in).
+ * Back-in-stock notify — turns a restock event into ONE Resend broadcast
+ * to the `notify-<handle>` segment (the same segment every PDP notify
+ * signup lands in).
+ *
+ * The trigger used to be a Shopify `inventory_levels/update` webhook. That
+ * receiver is gone with the store; Odoo will post restock events to the
+ * growth ledger in phase 6 (an `incutec_growth` module). This module is
+ * the side-effecting half, kept whole so that step only has to call it
+ * with a handle and a title.
  *
  * Pipeline (all best-effort, everything degrades to warn + no-op):
  *
- *   inventory_levels/update (available > 0)
- *     → Admin API: inventory_item_id → owning product (handle/title/status)
- *     → guards: product ACTIVE, not coming-soon (the launch-blast flow
- *       owns comms while a product is still notify-at-launch)
+ *   restock(handle)
+ *     → guard: not coming-soon (the launch-blast flow owns comms while a
+ *       product is still notify-at-launch)
  *     → cooldown latch `bis:<handle>` (SET NX EX, 7 days) so a restock
  *       that flaps in and out of stock cannot re-blast the segment
  *     → Resend broadcast to notify-<handle> (send: true)
  *
- * The latch is released when the broadcast fails, so a Shopify webhook
- * redelivery retries cleanly. When Upstash is unconfigured the latch
- * cannot arbitrate — we SKIP rather than risk double-blasting a
- * marketing email (opposite default from the ledger writers, where a
- * dropped record is the cheaper failure).
- *
- * Registration (manual, Dev Dashboard custom app, same receiver):
- *   POST https://opendrone.store/api/webhooks/shopify
- *   topic: inventory_levels/update — token needs read_products.
+ * The latch is released when the broadcast fails, so a redelivered event
+ * retries cleanly. When Upstash is unconfigured the latch cannot
+ * arbitrate — we SKIP rather than risk double-blasting a marketing email
+ * (opposite default from the ledger writers, where a dropped record is
+ * the cheaper failure).
  */
 
 import {isComingSoon} from '~/lib/product-content';
 import {comingSoonFlag} from '~/lib/coming-soon';
 import {fetchStatusFlags} from '~/lib/roadmap-data';
-import {adminApiAvailable, resolveInventoryItemProduct} from '~/lib/shopify-admin';
 import {sendBackInStockBroadcast} from '~/lib/growth/resend';
 import {deleteKey, setIfAbsentTtl, type UpstashEnv} from '~/lib/support/upstash';
 
 const COOLDOWN_SECONDS = 7 * 24 * 60 * 60;
-// extractRestock (payload parsing) lives in shopify-webhook.ts next to
-// the other webhook parsing + its unit tests; this module is the part
-// with side effects.
 
-// Derive the admin/marketing env shapes from the helpers themselves so
-// this module can never drift from what they actually need.
+// Derive the marketing env shape from the helper itself so this module
+// can never drift from what it actually needs.
 type BackInStockEnv = UpstashEnv &
-  Parameters<typeof resolveInventoryItemProduct>[0] &
   Parameters<typeof sendBackInStockBroadcast>[0] & {
     PUBLIC_COMING_SOON?: string;
     GITHUB_STATUS_TOKEN?: string;
   };
 
 /**
- * Full handler, run in waitUntil after the webhook is ACKed. Never
- * throws.
+ * Full handler, meant to run in waitUntil after the caller has ACKed its
+ * event. Never throws.
  */
 export async function handleRestock(
   env: BackInStockEnv,
-  restock: {inventoryItemId: string; available: number},
+  product: {handle: string; title: string},
 ): Promise<void> {
   try {
-    if (!adminApiAvailable(env)) {
-      console.warn('[growth/bis] admin token unset — restock notify skipped');
-      return;
-    }
-    const product = await resolveInventoryItemProduct(
-      env,
-      restock.inventoryItemId,
-    );
-    if (!product) return;
-    if (product.status !== 'ACTIVE') return;
     // Resolve with the LIVE topic flags, like every other server surface:
     // with static-only resolution the mandated static-lags-topic discipline
     // would misread a freshly released (topic-beta, static-alpha) board as
-    // pre-launch and silently kill its restock mail. The webhook runs in
-    // waitUntil, so the full fetch's latency is free here. Note for the
+    // pre-launch and silently kill its restock mail. The caller runs this
+    // in waitUntil, so the full fetch's latency is free here. Note for the
     // release runbook: a stock top-up right after a topic flip will fire
     // this blast — coordinate it with the manual launch mail.
     const statusFlags = await fetchStatusFlags(env.GITHUB_STATUS_TOKEN).catch(
@@ -98,7 +84,7 @@ export async function handleRestock(
       productTitle: product.title,
     });
     if (!sent) {
-      // Free the latch so a webhook redelivery can retry the send.
+      // Free the latch so a redelivered event can retry the send.
       await deleteKey(env, latchKey);
     }
   } catch (err) {

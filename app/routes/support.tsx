@@ -1,7 +1,6 @@
 import {useEffect, useId, useRef, useState} from 'react';
 import {useLoaderData, useNavigate} from 'react-router';
 import type {Route} from './+types/support';
-import {SUPPORT_CUSTOMER_PREFILL_QUERY} from '~/graphql/customer-account/SupportPrefillQuery';
 import {readSupportCookie, verifyTicket} from '~/lib/support/session';
 import {getMeta} from '~/lib/support/ticket-index';
 import {SupportThread} from '~/components/SupportThread';
@@ -30,12 +29,11 @@ export const meta: Route.MetaFunction = () =>
   });
 
 type LoaderData =
-  | {phase: 'signed-out'; discordInvite: string}
   | {
       phase: 'intake';
       discordInvite: string;
       turnstileSiteKey: string | null;
-      prefill: {name: string; email: string; customerId: string};
+      identity: {name: string; email: string} | null;
     }
   | {
       phase: 'active';
@@ -58,7 +56,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
   // cookie-active redirect so the intake form is reachable; the new
   // ticket will replace the cookie focus on submission. The previous
   // ticket continues to live in the Discord thread + Upstash index and
-  // remains visible in /account/support.
+  // remains visible in /support/tickets.
   const url = new URL(request.url);
   const forceNew = url.searchParams.get('new') === '1';
 
@@ -86,50 +84,32 @@ export async function loader({request, context}: Route.LoaderArgs) {
     } satisfies LoaderData;
   }
 
-  let prefill: {name: string; email: string; customerId: string} | null = null;
-  try {
-    const {data} = await context.customerAccount.query(
-      SUPPORT_CUSTOMER_PREFILL_QUERY,
-    );
-    const c = data?.customer;
-    const emailAddr = c?.emailAddress?.emailAddress;
-    if (c?.id && emailAddr) {
-      const name = [c.firstName, c.lastName].filter(Boolean).join(' ').trim();
-      prefill = {
-        name: name || emailAddr.split('@')[0],
-        email: emailAddr,
-        customerId: c.id,
-      };
-    }
-  } catch {
-    /* anon */
-  }
-
   const discordInvite =
     env.DISCORD_SUPPORT_INVITE ?? 'https://discord.gg/ABajnacUsS';
 
-  if (!prefill) {
-    return {phase: 'signed-out' as const, discordInvite} satisfies LoaderData;
-  }
+  // The desk used to open only for a signed-in Shopify customer, whose
+  // name and email it read from the account. Odoo owns accounts now and
+  // the shop lives on another domain, so the intake asks for the two
+  // fields itself; Turnstile, the honeypot and the rate limits are the
+  // gate. A returning visitor's cookie fills them in.
   return {
     phase: 'intake' as const,
     discordInvite,
     turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? null,
-    prefill,
+    identity: await verifyTicket(env, cookie).then((t) =>
+      t ? {name: t.name, email: t.email} : null,
+    ),
   } satisfies LoaderData;
 }
 
 export default function SupportRoute() {
   const data = useLoaderData<typeof loader>();
-  if (data.phase === 'signed-out') {
-    return <SignedOutView discordInvite={data.discordInvite} />;
-  }
   if (data.phase === 'intake') {
     return (
       <IntakeView
         discordInvite={data.discordInvite}
         turnstileSiteKey={data.turnstileSiteKey}
-        prefill={data.prefill}
+        identity={data.identity}
       />
     );
   }
@@ -160,88 +140,14 @@ const PRODUCT_OPTIONS: Array<{value: string; key: string}> = [
   {value: 'Other', key: 'other'},
 ];
 
-function SignedOutView({discordInvite}: {discordInvite: string}) {
-  const returnTo =
-    typeof window !== 'undefined' ? encodeURIComponent('/support') : '%2Fsupport';
-  // Read as one array so the id and the value cannot drift; the `.i` suffix on
-  // the annotation is the same path the studio's leaf walker produces.
-  const relaySteps = copy('support.relay_steps');
-  const steps = Array.isArray(relaySteps) ? relaySteps : [];
-  return (
-    <article className="od-page-frame support-page-frame">
-      <header className="od-page-head">
-        <Txt id="support.signed_out_eyebrow" as="p" className="od-eyebrow" />
-        <h1>
-          <Txt id="support.signed_out_title_line1" />
-          <br />
-          <Txt id="support.signed_out_title_line2" />
-        </h1>
-        <Txt id="support.signed_out_intro" as="p" />
-      </header>
-
-      <div className="support-signed-out">
-        <div className="od-tile od-tile-gold support-signin">
-          <Txt id="support.signin_eyebrow" as="p" className="od-tile-eyebrow" />
-          <Txt id="support.signin_title" as="h2" />
-          <Txt id="support.signin_body" as="p" />
-          <ul className="support-signin-reasons">
-            <Txt id="support.signin_reasons" as="li" />
-          </ul>
-          <div className="support-signin-actions-row">
-            <a
-              href={`/account/login?return_to=${returnTo}`}
-              className="od-btn od-btn-primary"
-            >
-              <Txt id="support.signin_cta" />
-            </a>
-            <a
-              href={`/account/login?return_to=${returnTo}`}
-              className="od-btn od-btn-secondary"
-            >
-              <Txt id="support.signin_cta_create" />
-            </a>
-          </div>
-        </div>
-        <div className="od-tile">
-          <Txt id="support.discord_eyebrow" as="p" className="od-tile-eyebrow" />
-          <Txt id="support.discord_title" as="h3" />
-          <Txt id="support.discord_body" as="p" />
-          <ul
-            className="support-relay-trace"
-            aria-label={copyText('support.relay_aria')}
-          >
-            {RELAY.map(({id, dir}, i) => (
-              <li
-                key={id}
-                data-dir={dir}
-                {...editAttrs(`support.relay_steps.${i}`)}
-              >
-                <Txt id={`support.relay_tag_${dir}`} /> {steps[i]}
-              </li>
-            ))}
-          </ul>
-          <a
-            href={discordInvite}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="od-btn od-btn-secondary"
-          >
-            <Txt id="support.discord_cta" />
-          </a>
-        </div>
-      </div>
-    </article>
-  );
-}
-
 function IntakeView({
   discordInvite,
   turnstileSiteKey,
-  prefill,
+  identity,
 }: {
   discordInvite: string;
   turnstileSiteKey: string | null;
-  prefill: {name: string; email: string; customerId: string};
+  identity: {name: string; email: string} | null;
 }) {
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
@@ -327,10 +233,6 @@ function IntakeView({
         // Loader on /support will see the new cookie and render the active state.
         void navigate('/support', {replace: true});
       } else {
-        if ('code' in json && json.code === 'signin-required') {
-          window.location.href = `/account/login?return_to=${encodeURIComponent('/support')}`;
-          return;
-        }
         // Server copy, rendered verbatim: `/api/support/start` owns these.
         setError(json.message);
         const cf = (window as unknown as {turnstile?: Turnstile}).turnstile;
@@ -405,6 +307,57 @@ function IntakeView({
                   placeholder={copyText('support.field_firmware_placeholder')}
                   disabled={busy}
                   {...editAttrs('support.field_firmware_placeholder')}
+                />
+              </div>
+            </div>
+
+            {/* Name and email: the desk's only identity. They used to come
+                from the signed-in customer record; a returning visitor's
+                ticket cookie prefills them. */}
+            <div className="od-row">
+              <div className="od-field">
+                <label htmlFor="sup-name">
+                  {copyText('support.field_name_label') ?? 'Your name'}{' '}
+                  <span
+                    className="od-req"
+                    aria-label={copyText('support.field_required_aria')}
+                  >
+                    *
+                  </span>
+                </label>
+                <input
+                  id="sup-name"
+                  name="name"
+                  type="text"
+                  autoComplete="name"
+                  className="od-input"
+                  required
+                  minLength={2}
+                  maxLength={80}
+                  defaultValue={identity?.name ?? ''}
+                  disabled={busy}
+                />
+              </div>
+              <div className="od-field">
+                <label htmlFor="sup-email">
+                  {copyText('support.field_email_label') ?? 'Email'}{' '}
+                  <span
+                    className="od-req"
+                    aria-label={copyText('support.field_required_aria')}
+                  >
+                    *
+                  </span>
+                </label>
+                <input
+                  id="sup-email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  className="od-input"
+                  required
+                  maxLength={254}
+                  defaultValue={identity?.email ?? ''}
+                  disabled={busy}
                 />
               </div>
             </div>
@@ -550,11 +503,6 @@ function IntakeView({
           <a href={discordInvite} target="_blank" rel="noreferrer noopener">
             <Txt id="support.help_prefer_discord_link" />
           </a>
-        </p>
-        <p className="od-help" style={{marginTop: 8, textAlign: 'center'}}>
-          {/* The address is account data and the full stop is punctuation
-              around it; only the lead-in is copy. */}
-          <Txt id="support.help_signed_in_as" /> <strong>{prefill.email}</strong>.
         </p>
       </div>
     </article>

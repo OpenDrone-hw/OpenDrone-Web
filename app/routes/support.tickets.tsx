@@ -1,9 +1,8 @@
 import {useEffect, useMemo, useState} from 'react';
-import {Link, useLoaderData, type HeadersFunction} from 'react-router';
-import type {Route} from './+types/account.support';
-import {SUPPORT_CUSTOMER_PREFILL_QUERY} from '~/graphql/customer-account/SupportPrefillQuery';
+import {Link, redirect, useLoaderData, type HeadersFunction} from 'react-router';
+import type {Route} from './+types/support.tickets';
 import {readSupportCookie, verifyTicket} from '~/lib/support/session';
-import {listByCustomer, type TicketIndexEntry} from '~/lib/support/ticket-index';
+import {listByEmail, type TicketIndexEntry} from '~/lib/support/ticket-index';
 import {SupportThread, type ThreadMessage} from '~/components/SupportThread';
 import {buildSeoMeta} from '~/lib/seo';
 import {Txt} from '~/components/Txt';
@@ -30,33 +29,29 @@ export const meta: Route.MetaFunction = () =>
   });
 
 export async function loader({request, context}: Route.LoaderArgs) {
-  await context.customerAccount.handleAuthStatus();
   const env = context.env;
 
-  let customerId: string | null = null;
-  let customerName = copyText('account.support.customer_fallback') ?? 'You';
-  try {
-    const {data} = await context.customerAccount.query(
-      SUPPORT_CUSTOMER_PREFILL_QUERY,
-    );
-    const c = data?.customer;
-    customerId = c?.id ?? null;
-    if (c) {
-      const name = [c.firstName, c.lastName].filter(Boolean).join(' ').trim();
-      if (name) customerName = name;
-    }
-  } catch {
-    /* not signed in — handleAuthStatus will have redirected */
-  }
-
+  // Identity is the signed ticket cookie: the email the visitor opened a
+  // ticket with, or the one a resume link re-minted. There is no customer
+  // account to authenticate against any more (contract section 4), so a
+  // visitor without a cookie is sent to the desk to open one or to ask
+  // for a resume link by email.
   const cookie = readSupportCookie(request);
   const cookieTicket = await verifyTicket(env, cookie);
-  const activeCookieTid = cookieTicket?.tid ?? null;
-  const activeCookiePid = cookieTicket?.pid ?? null;
+  if (!cookieTicket?.email) throw redirect('/support');
 
-  const indexed: TicketIndexEntry[] = customerId
-    ? await listByCustomer(env, customerId, {status: 'all', limit: 100})
-    : [];
+  const customerName =
+    cookieTicket.name ||
+    copyText('account.support.customer_fallback') ||
+    'You';
+  const activeCookieTid = cookieTicket.tid;
+  const activeCookiePid = cookieTicket.pid ?? null;
+
+  const indexed: TicketIndexEntry[] = await listByEmail(
+    env,
+    cookieTicket.email,
+    {status: 'all', limit: 100},
+  );
 
   // Without the ticket store bound the customer index is empty even
   // when a live ticket exists in the cookie. Synthesise a single entry

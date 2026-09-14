@@ -1,43 +1,15 @@
 import {Suspense, useCallback} from 'react';
 import {Await, Link} from 'react-router';
-import {Money} from '@shopify/hydrogen';
-import type {MoneyV2} from '@shopify/hydrogen/storefront-api-types';
-import type {OptimisticCartLineInput} from '@shopify/hydrogen';
+import type {ProductCardFragment} from '~/lib/product-shapes';
+import {formatPrice} from '~/lib/catalog';
 import {SmoothImage} from '~/components/SmoothImage';
 import {AddToCartButton} from '~/components/AddToCartButton';
-import {useAside} from '~/components/Aside';
 import {useComingSoon, useRoadmapStatusResolver} from '~/lib/coming-soon';
 import {isConceptFor} from '~/lib/product-content';
 import {PRODUCT_CONTENT} from '~/lib/product-content';
 
-/** The slice of a product the related strip needs — matches what the
- *  recommendations + fallback queries in products.$handle.tsx select. */
-export type RelatedProduct = {
-  id: string;
-  handle: string;
-  title: string;
-  productType?: string | null;
-  featuredImage?: {
-    id?: string | null;
-    url: string;
-    altText?: string | null;
-    width?: number | null;
-    height?: number | null;
-  } | null;
-  priceRange: {
-    minVariantPrice: MoneyV2;
-    maxVariantPrice: MoneyV2;
-  };
-  variants?: {
-    nodes: Array<{
-      id: string;
-      availableForSale: boolean;
-      price: MoneyV2;
-      image?: {url: string; altText?: string | null} | null;
-      selectedOptions: Array<{name: string; value: string}>;
-    }>;
-  };
-};
+/** The related strip renders catalog cards, same as every listing. */
+export type RelatedProduct = ProductCardFragment;
 
 /** First clause of a spec cell — "AT32F421G8U7, 120 MHz" → "AT32F421G8U7". */
 const clause = (s: string) => s.split(/[,(]/)[0].trim();
@@ -106,7 +78,6 @@ export function RelatedProducts({
 }
 
 function RelatedCard({product}: {product: RelatedProduct}) {
-  const {open: openAside} = useAside();
   const comingSoon = useComingSoon(product.handle);
   const image = product.featuredImage;
   const min = product.priceRange.minVariantPrice;
@@ -120,28 +91,9 @@ function RelatedCard({product}: {product: RelatedProduct}) {
   // line (FC/ESC/RX) must send the buyer to the PDP to pick a mount/model —
   // and never while the product is still gated coming-soon.
   const only =
-    !comingSoon && product.variants?.nodes?.length === 1
+    !comingSoon && product.variants.nodes.length === 1
       ? product.variants.nodes[0]
       : null;
-  const lines: OptimisticCartLineInput[] = only
-    ? [
-        {
-          merchandiseId: only.id,
-          quantity: 1,
-          selectedVariant: {
-            id: only.id,
-            title: product.title,
-            availableForSale: only.availableForSale,
-            price: only.price,
-            image: only.image ?? product.featuredImage ?? null,
-            product: {title: product.title, handle: product.handle},
-            selectedOptions: only.selectedOptions ?? [],
-          } as unknown as NonNullable<
-            OptimisticCartLineInput['selectedVariant']
-          >,
-        },
-      ]
-    : [];
 
   // Spotlight hover — a gold radial that follows the pointer (CSS vars read
   // by .related-card::after). Mouse-only, mirroring .product-card: touch
@@ -185,9 +137,6 @@ function RelatedCard({product}: {product: RelatedProduct}) {
           {fileLine ? <p className="related-card-file">{fileLine}</p> : null}
           <h3 className="related-card-title">{product.title}</h3>
           {specLine ? <p className="related-card-spec">{specLine}</p> : null}
-          {/* Money defaults to a <div>; inside a <p> the HTML parser
-              auto-closes the paragraph and hydration structurally
-              mismatches — render it as a span. */}
           {/* Price is gated on coming-soon exactly like ProductItem's
               showPrice — useComingSoon() is fail-closed (defaults locked
               when root data is missing), so a locked shop never leaks a
@@ -198,7 +147,7 @@ function RelatedCard({product}: {product: RelatedProduct}) {
                 {fromPrice ? (
                   <span className="related-card-from">from</span>
                 ) : null}
-                <Money as="span" data={min} />
+                <span>{formatPrice(min.amount, min.currencyCode)}</span>
               </>
             ) : (
               <span>&nbsp;</span>
@@ -210,10 +159,9 @@ function RelatedCard({product}: {product: RelatedProduct}) {
         <div className="related-card-quickadd">
           <AddToCartButton
             className="product-card-quickadd-btn"
-            lines={lines}
+            href={only.cartAddUrl}
+            product={product.handle}
             disabled={!only.availableForSale}
-            flyImage={only.image?.url ?? product.featuredImage?.url ?? null}
-            onClick={() => openAside('cart')}
           >
             Add to cart
           </AddToCartButton>

@@ -1,20 +1,14 @@
-import {Suspense} from 'react';
-import {Await} from 'react-router';
 import {NavLink} from '~/components/nav';
-import type {HeaderQuery} from 'storefrontapi.generated';
 import {DISCORD_INVITE_URL, CONTRIBUTING_URL, type CompanyIdentity} from '~/lib/company';
-import type {NewsletterAccount} from '~/components/PageLayout';
 import {CompanyFooterBlock} from '~/components/CompanyFooterBlock';
 import {NewsletterSignup} from '~/components/NewsletterSignup';
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
 
 interface FooterProps {
-  header: HeaderQuery;
-  publicStoreDomain: string;
+  shopUrl: string;
   company: CompanyIdentity;
   turnstileSiteKey?: string | null;
-  newsletterAccount?: Promise<NewsletterAccount>;
 }
 
 /**
@@ -24,7 +18,7 @@ interface FooterProps {
  * (Newsletter, Contact, All Products, GitHub) and the maintainer edits it once.
  */
 const SHOP_LINKS: Array<{to: string; copy: string}> = [
-  {to: '/collections/all', copy: 'nav_all_products'},
+  {to: '/products', copy: 'nav_all_products'},
   {to: '/newsletter', copy: 'nav_newsletter'},
 ];
 
@@ -93,45 +87,19 @@ function FooterNavLink({to, children}: {to: string; children: React.ReactNode}) 
   );
 }
 
-export function Footer({
-  company,
-  turnstileSiteKey,
-  newsletterAccount,
-}: FooterProps) {
+export function Footer({company, turnstileSiteKey}: FooterProps) {
   return (
     <footer className="mt-auto border-t border-[var(--color-border)]">
       <div className="site-footer-inner">
-        {/* Newsletter — separated by a hairline + whitespace, not a card box.
-            The form carries its own hierarchy. Subscription-aware: the deferred
-            account state swaps the form for a "you're subscribed" panel (or
-            prefills the email for a signed-in non-subscriber). Falls back to the
-            plain form for guests / while the deferred state resolves. */}
+        {/* Newsletter — separated by a hairline + whitespace, not a card
+            box. The form carries its own hierarchy. The list is Resend
+            contacts, so there is no signed-in subscription state to read
+            and every visitor sees the same form. */}
         <div className="mb-8 pb-8 border-b border-[var(--color-border)]">
-          {newsletterAccount ? (
-            <Suspense
-              fallback={
-                <NewsletterSignup
-                  variant="footer"
-                  turnstileSiteKey={turnstileSiteKey ?? null}
-                />
-              }
-            >
-              <Await resolve={newsletterAccount} errorElement={null}>
-                {(account) => (
-                  <NewsletterSignup
-                    variant="footer"
-                    turnstileSiteKey={turnstileSiteKey ?? null}
-                    account={account ?? null}
-                  />
-                )}
-              </Await>
-            </Suspense>
-          ) : (
-            <NewsletterSignup
-              variant="footer"
-              turnstileSiteKey={turnstileSiteKey ?? null}
-            />
-          )}
+          <NewsletterSignup
+            variant="footer"
+            turnstileSiteKey={turnstileSiteKey ?? null}
+          />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Company identity */}

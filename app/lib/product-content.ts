@@ -26,6 +26,7 @@ import {
   statusForHandle,
   type ProductStatus as RoadmapStatus,
 } from './roadmap-data.ts';
+import type {CatalogAvailability} from './product-shapes.ts';
 
 export type ChapterPin = {
   ref: string;
@@ -641,20 +642,34 @@ export function roadmapTriState(
  * (accessories) plus the per-product JSON kill-switch above it.
  *
  * The one exception to "explicit status wins": 'preorder' only opens once
- * the shop itself is open (global flag off) or `preordersOpen` is set
- * (PUBLIC_PREORDERS=1). Until then it renders as 'development', so a
- * pre-order status can sit in the content files before launch day without
- * taking orders on the production site.
+ * the shop itself is open (global flag off). Until then it renders as
+ * 'development', so a pre-order status can sit in the content files
+ * before launch day without taking orders on the production site.
+ *
+ * `availability` is Odoo's word for the product, carried by the catalog
+ * feed. Odoo decides who is orderable, so it wins over the roadmap and
+ * over the global default for any product the shop actually sells. A
+ * local 'idea' or 'development' status still wins over it: that is the
+ * storefront saying the product is not for sale at all.
  */
 export function resolveStatus(
   handle: string | null | undefined,
   globalFlag: boolean,
   flags: Record<string, RoadmapStatus> = {},
-  preordersOpen = false,
+  availability?: CatalogAvailability,
 ): ProductStatus {
   const content = handle ? PRODUCT_CONTENT[handle] : undefined;
+  if (content?.status === 'idea' || content?.status === 'development') {
+    return content.status;
+  }
+  if (availability === 'preorder') {
+    return globalFlag ? 'development' : 'preorder';
+  }
+  if (availability === 'in_stock' || availability === 'sold_out') {
+    return 'live';
+  }
   if (content?.status === 'preorder') {
-    return !globalFlag || preordersOpen ? 'preorder' : 'development';
+    return globalFlag ? 'development' : 'preorder';
   }
   if (content?.status) return content.status;
   if (content?.comingSoon !== undefined) {
@@ -675,10 +690,10 @@ export function isComingSoon(
   handle: string | null | undefined,
   globalFlag: boolean,
   flags: Record<string, RoadmapStatus> = {},
-  preordersOpen = false,
+  availability?: CatalogAvailability,
 ): boolean {
   return !isPurchasableStatus(
-    resolveStatus(handle, globalFlag, flags, preordersOpen),
+    resolveStatus(handle, globalFlag, flags, availability),
   );
 }
 

@@ -1,7 +1,7 @@
 import {ServerRouter} from 'react-router';
 import {isbot} from 'isbot';
 import {renderToReadableStream} from 'react-dom/server';
-import {createContentSecurityPolicy} from '@shopify/hydrogen';
+import {createContentSecurityPolicy} from '~/lib/csp';
 import type {EntryContext} from 'react-router';
 import type {AppLoadContext} from '~/lib/context';
 import {shopUrl} from '~/lib/catalog-client';

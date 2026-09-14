@@ -3,12 +3,12 @@ import type {Route} from './+types/newsletter._index';
 import {buildSeoMeta} from '~/lib/seo';
 import {checkRateLimit, clientIp} from '~/lib/rate-limit';
 import {verifyTurnstile} from '~/lib/support/turnstile';
-import {tagCustomerNotify} from '~/lib/shopify-admin';
 import {signSurveyToken} from '~/lib/growth/survey-token';
 import {signUnsubscribeToken} from '~/lib/growth/unsubscribe-token';
 import {recordSignup} from '~/lib/growth/ledger';
 import {upsertContact, sendWelcome} from '~/lib/growth/resend';
 import {getLocaleFromRequest} from '~/lib/i18n';
+import {archivePosts} from '~/lib/posts';
 import {
   ReleaseRow,
   type ReleaseRowArticle,
@@ -16,15 +16,14 @@ import {
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
 
-// Newsletter — the single hub. It's all newsletter: posts written locally and
-// published to the Shopify `news` blog show up here as the newsletter archive,
-// at /newsletter (posts at /newsletter/<handle>). Old /blog, /releases, and
-// /blogs URLs redirect in.
+// Newsletter — the single hub. It's all newsletter: posts authored as
+// Markdown in content/posts/ show up here as the archive, at /newsletter
+// (posts at /newsletter/<handle>). Old /blog, /releases, and /blogs URLs
+// redirect in.
 //
 // GET  → renders the post archive (this is the newsletter).
-// POST → enrols an email into Shopify's customer list with marketing consent
-//        so posts can be emailed from Shopify admin (Marketing → Shopify Email)
-//        to the "Subscribed" segment.
+// POST → enrols an email as a Resend marketing contact, which is the one
+//        subscriber list; sending uses Resend Broadcasts.
 //
 // The signup FORM lives in the site footer (present on every page), so this
 // page intentionally has no in-body form — it would just duplicate the footer.
@@ -32,8 +31,6 @@ import {copyText} from '~/lib/copy';
 // Abuse controls on the action: honeypot + Cloudflare Turnstile + per-IP and
 // per-email rate limits. Turnstile is soft — if TURNSTILE_SITE_KEY is unset
 // (dev) the verifier no-ops; in production it fails closed.
-
-const BLOG_HANDLE_FALLBACK = 'news';
 
 export const meta: Route.MetaFunction = () => {
   const base = buildSeoMeta({
@@ -54,30 +51,18 @@ export const meta: Route.MetaFunction = () => {
   ];
 };
 
-export async function loader({context}: Route.LoaderArgs) {
-  const blogHandle = context.env.NEWSLETTER_BLOG_HANDLE || BLOG_HANDLE_FALLBACK;
+export function loader() {
+  const visible: ReleaseRowArticle[] = archivePosts().map((p) => ({
+    id: p.handle,
+    handle: p.handle,
+    title: p.title,
+    publishedAt: p.publishedAt,
+    excerpt: p.excerpt,
+    tags: p.tags,
+    image: p.image,
+  }));
 
-  const {blog} = await context.storefront.query(ARCHIVE_QUERY, {
-    variables: {blogHandle, first: 100},
-    cache: context.storefront.CacheLong(),
-  });
-
-  const all: ReleaseRowArticle[] = (blog?.articles?.nodes ?? []).map(
-    (n: any) => ({
-      id: n.id,
-      handle: n.handle,
-      title: n.title,
-      publishedAt: n.publishedAt,
-      excerpt: n.excerpt ?? null,
-      tags: (n.tags ?? []).filter(Boolean),
-      image: n.image ?? null,
-    }),
-  );
-
-  // `no-archive` tag keeps a post out of the public list (rare).
-  const visible = all.filter((a) => !a.tags.includes('no-archive'));
-
-  // Group by year, descending — articles already reverse-chronological.
+  // Group by year, descending — posts already reverse-chronological.
   const grouped = new Map<string, ReleaseRowArticle[]>();
   for (const a of visible) {
     const year = a.publishedAt.slice(0, 4);
@@ -144,53 +129,7 @@ export default function NewsletterPage() {
   );
 }
 
-const ARCHIVE_QUERY = `#graphql
-  query NewsletterArchive(
-    $language: LanguageCode
-    $blogHandle: String!
-    $first: Int!
-  ) @inContext(language: $language) {
-    blog(handle: $blogHandle) {
-      title
-      handle
-      articles(first: $first, sortKey: PUBLISHED_AT, reverse: true) {
-        nodes {
-          id
-          handle
-          title
-          publishedAt
-          excerpt
-          tags
-          image {
-            id
-            altText
-            url
-            width
-            height
-          }
-        }
-      }
-    }
-  }
-` as const;
-
 // --- Signup action ---------------------------------------------------------
-
-const CUSTOMER_CREATE_MUTATION = `#graphql
-  mutation NewsletterCustomerCreate($input: CustomerCreateInput!) {
-    customerCreate(input: $input) {
-      customer {
-        id
-        email
-      }
-      customerUserErrors {
-        field
-        message
-        code
-      }
-    }
-  }
-` as const;
 
 type NewsletterResult = {
   ok: boolean;
@@ -206,9 +145,9 @@ type NewsletterResult = {
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Optional `product` form field: a Shopify product handle from the
-// coming-soon "Notify me at launch" signup. Strict slug shape — it becomes
-// a customer tag (`notify-<handle>`), so nothing free-form gets through.
+// Optional `product` form field: a catalog handle from the coming-soon
+// "Notify me at launch" signup. Strict slug shape — it becomes a Resend
+// contact property, so nothing free-form gets through.
 const PRODUCT_HANDLE_REGEX = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
 // Optional `channel` form field: client-side first-touch attribution
@@ -216,15 +155,6 @@ const PRODUCT_HANDLE_REGEX = /^[a-z0-9][a-z0-9-]{0,63}$/;
 // it becomes a ledger dimension and a Resend contact property, so
 // anything free-form collapses to 'direct'.
 const CHANNEL_REGEX = /^[a-z0-9][a-z0-9_-]{0,63}$/;
-
-function generateOpaquePassword(): string {
-  // Shopify requires >=5 chars and caps at 40. The subscriber never uses
-  // this — there is no /account login exposed for newsletter-only signups.
-  const bytes = new Uint8Array(16);
-  crypto.getRandomValues(bytes);
-  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-  return `Nl!${hex}`; // 3 + 32 = 35 chars, under the 40 limit
-}
 
 export async function action({request, context}: Route.ActionArgs) {
   if (request.method !== 'POST') {
@@ -271,10 +201,9 @@ export async function action({request, context}: Route.ActionArgs) {
   // only. Everything degrades to warn+no-op without its env keys and
   // must never block or fail the response.
   //
-  // `freshCustomer` is the fallback first-signup signal when the ledger
-  // is unconfigured: true only on a brand-new Shopify customerCreate,
-  // so an "already subscribed" resubmit can't re-trigger the welcome.
-  const scheduleGrowth = (freshCustomer: boolean) => {
+  // The Resend list is the only subscriber list now, so the ledger is the
+  // only first-signup signal; without it, `fallbackFirst` decides.
+  const scheduleGrowth = (fallbackFirst: boolean) => {
     const env = context.env;
     const locale = getLocaleFromRequest(request);
     const consentAt = new Date().toISOString();
@@ -292,7 +221,7 @@ export async function action({request, context}: Route.ActionArgs) {
         channel,
         product: notifyProduct ?? undefined,
       });
-      const firstSignup = ledger ? ledger.created : freshCustomer;
+      const firstSignup = ledger ? ledger.created : fallbackFirst;
       if (firstSignup) {
         // One-click opt-out link for the welcome footer; falls back to
         // the plain /newsletter/unsubscribe form when no secret is set.
@@ -329,11 +258,9 @@ export async function action({request, context}: Route.ActionArgs) {
     );
   }
 
-  // Verify Turnstile BEFORE the per-email rate-limit branch: that branch can
-  // still tag a customer (tagCustomerNotify below), and a mutation must never
-  // run on an unverified request — otherwise a bot hammering a known email
-  // past the limit could tag arbitrary customers without ever solving a
-  // challenge.
+  // Verify Turnstile BEFORE the per-email rate-limit branch: that branch
+  // still writes a Resend contact, and a write must never run on an
+  // unverified request.
   const turnstile = await verifyTurnstile(context.env, turnstileToken, ip);
   if (!turnstile.ok) {
     return data<NewsletterResult>(
@@ -358,14 +285,10 @@ export async function action({request, context}: Route.ActionArgs) {
   );
   if (!emailLimit.allowed) {
     // Rate-limited, but a notify-at-launch click still carries signal: the
-    // tag is idempotent, so apply it before returning the generic success —
-    // otherwise the 4th product someone asks about in a day is silently
-    // dropped. (Token-gated: Turnstile already verified above.)
+    // contact upsert is idempotent, so run it before returning the generic
+    // success — otherwise the 4th product someone asks about in a day is
+    // silently dropped. (Turnstile already verified above.)
     if (notifyProduct) {
-      await tagCustomerNotify(context.env, {
-        email,
-        productHandle: notifyProduct,
-      });
       scheduleGrowth(false);
       return data<NewsletterResult>({
         ok: true,
@@ -382,98 +305,26 @@ export async function action({request, context}: Route.ActionArgs) {
     });
   }
 
-  try {
-    const result = await context.storefront.mutate(CUSTOMER_CREATE_MUTATION, {
-      variables: {
-        input: {
-          email,
-          password: generateOpaquePassword(),
-          acceptsMarketing: true,
-        },
-      },
-    });
+  // The subscriber list is Resend contacts, written by scheduleGrowth.
+  // There is no second system to fail against and no "already a customer"
+  // state to read back, so the only outcome here is success: the ledger
+  // decides whether this address gets the welcome mail.
+  scheduleGrowth(true);
 
-    const payload = result?.customerCreate;
-    const userErrors = payload?.customerUserErrors ?? [];
-
-    const taken = userErrors.find(
-      (e: {code?: string | null; message: string}) =>
-        e.code === 'TAKEN' ||
-        e.code === 'CUSTOMER_DISABLED' ||
-        /taken|already/i.test(e.message),
-    );
-    if (taken) {
-      // Existing Shopify customer, but possibly no ledger record yet
-      // (signed up before the growth pipeline existed) — recording here
-      // backfills the profile. freshCustomer=false: no ledger → no welcome.
-      scheduleGrowth(false);
-      // Existing subscriber asking to be notified about a SKU: still tag
-      // them (lookup by email — customerCreate returned no id). Best-effort.
-      if (notifyProduct) {
-        await tagCustomerNotify(context.env, {
-          email,
-          productHandle: notifyProduct,
-        });
-        return data<NewsletterResult>({
-          ok: true,
-          message: (copyText('newsletter.action_notify_listed') ?? "You're on the list. We'll email you at launch."),
-          alreadySubscribed: true,
-        });
-      }
-      return data<NewsletterResult>({
-        ok: true,
-        message: (copyText('newsletter.action_already_listed') ?? "You're already on the list."),
-        alreadySubscribed: true,
-      });
-    }
-
-    if (userErrors.length) {
-      // Log only error codes — messages can reference internal fields
-      // (password, etc.) or the subscriber email; keep those out of logs.
-      const codes = userErrors
-        .map((e: {code?: string | null}) => e.code ?? 'unknown')
-        .join(',');
-      console.error('[newsletter] customerUserErrors', codes);
-      const firstError = userErrors[0];
-      const field = firstError.field?.join('.') ?? '';
-      const userFacing = /email/i.test(field)
-        ? (copyText('newsletter.action_email_rejected') ?? 'That email address was rejected. Double-check it and try again.')
-        : (copyText('newsletter.action_generic_failure') ?? "Couldn't subscribe right now. Try again in a moment.");
-      return data<NewsletterResult>(
-        {ok: false, message: userFacing},
-        {status: 400},
-      );
-    }
-
-    // Fresh signup — full growth pipeline including the welcome email
-    // (unless the ledger says this address already signed up before).
-    scheduleGrowth(true);
-
-    // Per-product launch interest: tag the fresh customer so the SKU is
-    // segmentable in Shopify admin. The Storefront customer gid is the same
-    // gid the Admin API uses, so no lookup round-trip is needed here.
-    if (notifyProduct) {
-      await tagCustomerNotify(context.env, {
-        customerId: payload?.customer?.id ?? null,
-        email,
-        productHandle: notifyProduct,
-      });
-      return data<NewsletterResult>({
-        ok: true,
-        message: (copyText('newsletter.action_notify_listed') ?? "You're on the list. We'll email you at launch."),
-        ...(surveyToken ? {surveyToken} : {}),
-      });
-    }
-
+  if (notifyProduct) {
     return data<NewsletterResult>({
       ok: true,
-      message: (copyText('newsletter.action_subscribed') ?? 'Subscribed. The next post goes to your inbox.'),
+      message:
+        copyText('newsletter.action_notify_listed') ??
+        "You're on the list. We'll email you at launch.",
+      ...(surveyToken ? {surveyToken} : {}),
     });
-  } catch (err) {
-    console.error('[newsletter] customerCreate failed', err);
-    return data<NewsletterResult>(
-      {ok: false, message: (copyText('newsletter.action_unavailable') ?? 'Signup temporarily unavailable. Try again later.')},
-      {status: 502},
-    );
   }
+
+  return data<NewsletterResult>({
+    ok: true,
+    message:
+      copyText('newsletter.action_subscribed') ??
+      'Subscribed. The next post goes to your inbox.',
+  });
 }

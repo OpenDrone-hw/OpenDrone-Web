@@ -81,7 +81,6 @@ export async function action({request, context}: Route.ActionArgs) {
           subject: meta.subject,
           product: meta.product,
           firmware: meta.firmware,
-          customerId: meta.customerId,
           openedAt: meta.openedAt,
           closedAt: meta.closedAt ?? Math.floor(Date.now() / 1000),
           lastActivityAt: meta.lastActivityAt,

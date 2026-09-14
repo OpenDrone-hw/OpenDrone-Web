@@ -12,12 +12,15 @@ import {
 import type {RootLoader} from '~/root';
 import type {Route} from './+types/products.$handle';
 import {
-  getSelectedProductOptions,
-  Analytics,
-  getProductOptions,
-  getAdjacentAndFirstAvailableVariants,
-  useSelectedOptionInUrlParam,
-} from '@shopify/hydrogen';
+  byHandle,
+  bySku,
+  mapProductOptions,
+  selectVariant,
+  selectedOptionsFromRequest,
+  toCard,
+  toProduct,
+} from '~/lib/catalog';
+import {buyUrl} from '~/lib/shop-links';
 import {useAside} from '~/components/Aside';
 import {Txt} from '~/components/Txt';
 import {ConceptPlate} from '~/components/ConceptPlate';
@@ -48,14 +51,9 @@ import {fetchContributors} from '~/lib/github';
 import {orderByCredits, snapshotContributors} from '~/lib/contributors-snapshot';
 import {ContributorGrid, ContributorGridSkeleton} from '~/components/Contributors';
 import {
-  fetchProductReviews,
-  parseReviewAggregate,
-  reviewsEnabled,
-} from '~/lib/reviews';
-import {
   ReviewAggregateLine,
   ReviewList,
-  ReviewListFallback,
+  toReviewAggregate,
 } from '~/components/ProductReviews';
 import {OshwaMark} from '~/components/OshwaMark';
 import {useNoHover, useIsMobile} from '~/lib/use-media-query';
@@ -69,7 +67,6 @@ import {
 } from '~/lib/product-content';
 import {useProductStatus} from '~/lib/coming-soon';
 import {fetchStatusFlagsFast, statusForHandle} from '~/lib/roadmap-data';
-import {stackDiscountedPrice} from '~/lib/stack-discount';
 import {trackEvent} from '~/lib/growth/plausible';
 import {attributionSource} from '~/lib/growth/attribution';
 import {NewsletterSignup} from '~/components/NewsletterSignup';
@@ -127,7 +124,6 @@ export async function loader(args: Route.LoaderArgs) {
  */
 async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
   const {handle} = params;
-  const {storefront} = context;
 
   if (!handle) {
     throw new Error('Expected product handle to be defined');
@@ -156,27 +152,25 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
     context.waitUntil,
   );
 
-  const [{product}, ...partnerResults] = await Promise.all([
-    storefront.query(PRODUCT_QUERY, {
-      variables: {handle, selectedOptions: getSelectedProductOptions(request)},
-    }),
-    ...[...bundleHandles, ...stackHandles].map((h) =>
-      storefront
-        .query(BUNDLE_COMPONENT_QUERY, {variables: {handle: h}})
-        .catch(() => null),
-    ),
-  ]);
+  const catalog = await context.catalog.get();
+  const entry = byHandle(catalog, handle);
 
-  if (!product?.id) {
+  if (!entry) {
     throw new Response(null, {status: 404});
   }
 
-  // The API handle might be localized, so redirect to the localized handle
-  redirectIfHandleIsLocalized(request, {handle, data: product});
+  const product = toProduct(
+    catalog,
+    entry,
+    selectedOptionsFromRequest(request),
+  );
 
-  const partnerProducts = partnerResults
-    .map((r) => r?.product)
-    .filter((p): p is NonNullable<typeof p> => Boolean(p));
+  // Partner products for the bundle lines and the stack builder, from the
+  // same catalog: no second round-trip, no second source of prices.
+  const partnerProducts = [...bundleHandles, ...stackHandles]
+    .map((h) => byHandle(catalog, h))
+    .filter((p): p is NonNullable<typeof p> => Boolean(p))
+    .map((p) => toProduct(catalog, p));
   const bundleProducts = partnerProducts.filter((p) =>
     bundleHandles.includes(p.handle),
   );
@@ -188,14 +182,11 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
     product,
     bundleProducts,
     stackProducts,
+    shopUrl: context.catalog.shopUrl,
     // The roadmap status this page's boards carry (beta, alpha, ...), for
     // the chip near the title. Undefined for products off the roadmap
     // (accessories); the chip simply doesn't render.
     roadmapStatus: statusForHandle(handle, await statusFlagsPromise),
-    // Whether the review env vars are configured — the client can't see
-    // env, so the loader answers. False hides every review surface even
-    // when the synced metafields carry a count (feature fully dormant).
-    reviewsEnabled: reviewsEnabled(context.env),
   };
 }
 
@@ -206,13 +197,11 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
  */
 function loadDeferredData({context, params}: Route.LoaderArgs) {
   const {handle} = params;
-  const {storefront} = context;
 
   if (!handle) {
     return {
       recommendations: Promise.resolve(null),
       contributors: Promise.resolve([]),
-      reviews: Promise.resolve(null),
     };
   }
 
@@ -250,36 +239,20 @@ function loadDeferredData({context, params}: Route.LoaderArgs) {
     .then((list) => (list.length ? list : recorded))
     .catch(() => recorded);
 
-  // Shopify's productRecommendations returns [] for new stores with no
-  // purchase history. Fall back to "other products from the catalog" so
-  // the You-might-also-like strip is never empty.
-  const recommendations = storefront
-    .query(PRODUCT_RECOMMENDATIONS_QUERY, {
-      variables: {handle},
-    })
-    .then(async (res) => {
-      // The legacy firmware-donation tip product (cart upsell removed
-      // 2026-07) must stay out of recommendations while it still exists in
-      // Shopify; the fallback query already excludes it server-side.
-      const keep = (p: {handle: string; productType?: string | null}) =>
-        p.handle !== handle && p.productType !== 'Donation';
-      const rec = res?.productRecommendations?.filter(keep);
-      if (rec && rec.length > 0) return rec;
-      const fallback = await storefront
-        .query(FALLBACK_PRODUCTS_QUERY, {variables: {first: 8}})
-        .catch(() => null);
-      const items = fallback?.products?.nodes ?? [];
-      return items.filter(keep).slice(0, 4);
-    })
+  // "You might also like": the other products in the catalog. Odoo has no
+  // recommendation engine and the catalog is small enough that the whole
+  // rest of it IS the honest answer.
+  const recommendations = context.catalog
+    .get()
+    .then((catalog) =>
+      catalog.products
+        .filter((p) => p.handle !== handle)
+        .slice(0, 4)
+        .map((p) => toCard(catalog, p)),
+    )
     .catch(() => null);
 
-  // Full review bodies from the Judge.me REST API — deferred so their
-  // latency never blocks the PDP. Resolves null when the env vars are
-  // unset or the API misbehaves; the chapter then falls back to the
-  // metafield aggregate (or, with no aggregate, renders nothing at all).
-  const reviews = fetchProductReviews(context.env, handle);
-
-  return {recommendations, contributors, reviews};
+  return {recommendations, contributors};
 }
 
 const DOWNLOAD_ICONS: Record<DownloadKind, string> = {
@@ -614,8 +587,7 @@ function ProductPage() {
     stackProducts,
     recommendations,
     contributors,
-    reviews,
-    reviewsEnabled: reviewsOn,
+    shopUrl,
     roadmapStatus,
   } = useLoaderData<typeof loader>();
   useChapterReveal(product.handle);
@@ -716,20 +688,12 @@ function ProductPage() {
   const searchKey = searchParams.toString();
   const selectedVariant = useMemo(() => {
     const params = new URLSearchParams(searchKey);
-    const match = getAdjacentAndFirstAvailableVariants(product).find(
-      (v) =>
-        (v.selectedOptions?.length ?? 0) > 0 &&
-        v.selectedOptions!.every((o) => params.get(o.name) === o.value),
-    );
+    const wanted = [...params].map(([name, value]) => ({name, value}));
     return (
-      (match as unknown as typeof product.selectedOrFirstAvailableVariant) ??
+      selectVariant(product.variants.nodes, wanted) ??
       product.selectedOrFirstAvailableVariant
     );
   }, [searchKey, product]);
-
-  // Sets the search param to the selected variant without navigation
-  // only when no search params are set in the url
-  useSelectedOptionInUrlParam(selectedVariant?.selectedOptions ?? []);
 
   // Hide the pinned buy rail while an aside (cart/search/mobile nav) is open —
   // otherwise the fixed overlay sits on top of the cart drawer.
@@ -747,16 +711,19 @@ function ProductPage() {
   const preorder = status === 'preorder';
 
   // Get the product options array
-  const productOptions = getProductOptions({
-    ...product,
-    selectedOrFirstAvailableVariant: selectedVariant,
-  });
+  const productOptions = useMemo(
+    () =>
+      mapProductOptions({
+        ...product,
+        selectedOrFirstAvailableVariant: selectedVariant,
+      }),
+    [product, selectedVariant],
+  );
 
   const {title} = product;
 
 
 
-  const primaryCollection = product.collections?.nodes?.[0];
   // isEditorial: this handle has a real PRODUCT_CONTENT entry that is open
   // hardware. Fallback products (accessories like straps and hardware kits)
   // and resold parts with `editorial: false` (motors) are not open-source
@@ -767,16 +734,10 @@ function ProductPage() {
     PRODUCT_CONTENT[product.handle]?.editorial !== false;
   const content = PRODUCT_CONTENT[product.handle] ?? PRODUCT_CONTENT_FALLBACK;
   const hasHeroCopy = Boolean(content.hero.line1);
-  // Star aggregate from the review-synced metafields. Gated on the loader's
-  // env check so the whole feature stays invisible until the review
-  // provider is configured — and on count > 0, so a zero-review store
-  // (coming-soon today) renders no trace of it anywhere.
-  const reviewAggregate = reviewsOn
-    ? parseReviewAggregate(
-        product.reviewsRating?.value,
-        product.reviewsRatingCount?.value,
-      )
-    : null;
+  // Star aggregate from Odoo's published product ratings, carried by the
+  // catalog feed. Gated on count > 0, so a product nobody has rated yet
+  // renders no trace of the feature anywhere.
+  const reviewAggregate = toReviewAggregate(product.rating);
 
   // Comparison-ladder state for product lines (OpenRX/OpenESC). The
   // editorial `variants` map is the tier source of truth; the active tier
@@ -894,7 +855,7 @@ function ProductPage() {
   const bundleComponents = content.bundle?.components ?? [];
   const bundleVariants = bundleComponents.map((c) => {
     const bp = bundleProducts?.find((p) => p?.handle === c.handle);
-    const nodes = bp?.variants?.nodes ?? [];
+    const nodes = bp?.variants.nodes ?? [];
     const match = nodes.find((n) =>
       n.selectedOptions?.some(
         (o) =>
@@ -906,9 +867,14 @@ function ProductPage() {
   });
   const bundleReady =
     Boolean(content.bundle) && bundleVariants.every((v) => v != null);
-  const bundleLines = bundleReady
-    ? bundleVariants.map((v) => ({merchandiseId: v!.id, quantity: 1}))
-    : [];
+  // One multi-line hand-off link for the whole bundle: the shop puts both
+  // component SKUs in the cart in a single GET.
+  const bundleBuyUrl = bundleReady
+    ? buyUrl(
+        shopUrl,
+        bundleVariants.map((v) => ({sku: v!.sku ?? '', quantity: 1})),
+      )
+    : undefined;
   const bundleAvailable =
     bundleReady && bundleVariants.every((v) => v!.availableForSale);
   const bundlePrice = bundleReady
@@ -943,7 +909,7 @@ function ProductPage() {
       // and add-to-cart must stay hidden even when this product is live.
       if (isComingSoon(pc.handle, globalComingSoon)) return [];
       const pp = stackProducts?.find((p) => p.handle === pc.handle);
-      const nodes = pp?.variants?.nodes ?? [];
+      const nodes = pp?.variants.nodes ?? [];
       // Exact size match ONLY: the pill names the selected size, so a
       // fallback variant of another size would silently add the wrong board.
       // No match -> no offer.
@@ -956,57 +922,26 @@ function ProductPage() {
         ),
       );
       if (!match) return [];
-      const pct = stackCfg.discountPct;
-      const partnerDiscounted =
-        Boolean(pct) && stackCfg.discountedHandle === pc.handle;
-      const selfDiscounted =
-        Boolean(pct) && stackCfg.discountedHandle === product.handle;
       return [
         {
           key: pc.handle,
           label: pc.label ?? pp?.title ?? pc.handle,
           size: stackMatchValue,
-          price:
-            partnerDiscounted && pct
-              ? stackDiscountedPrice(match.price, pct)
-              : match.price,
-          compareAtPrice: partnerDiscounted ? match.price : null,
-          pct,
-          discountedLabel: selfDiscounted ? product.title : undefined,
+          price: match.price,
+          compareAtPrice: match.compareAtPrice,
+          product: product.handle,
           available:
             match.availableForSale &&
             Boolean(selectedVariant.availableForSale),
-          lines: [
-            {
-              merchandiseId: selectedVariant.id,
-              quantity: 1,
-              selectedVariant,
-            },
-            {
-              merchandiseId: match.id,
-              quantity: 1,
-              // Minimal optimistic shape: enough for useOptimisticCart to
-              // render the pending line instead of console-erroring.
-              selectedVariant: {
-                id: match.id,
-                title: stackMatchValue,
-                availableForSale: match.availableForSale,
-                price: match.price,
-                image: null,
-                product: {
-                  title: pc.label ?? pp?.title ?? pc.handle,
-                  handle: pc.handle,
-                },
-                selectedOptions: match.selectedOptions ?? [],
-              } as unknown as NonNullable<
-                typeof selectedVariant
-              >,
-            },
-          ],
+          // Both SKUs on one link: ?lines=SELF:1,PARTNER:1.
+          href: buyUrl(shopUrl, [
+            {sku: selectedVariant.sku ?? '', quantity: 1},
+            {sku: match.sku ?? '', quantity: 1},
+          ]),
         },
       ];
     });
-  }, [stackCfg, stackProducts, selectedVariant, stackAxis, stackMatchValue, globalComingSoon, product.handle, product.title]);
+  }, [stackCfg, stackProducts, selectedVariant, stackAxis, stackMatchValue, globalComingSoon, product.handle, shopUrl]);
 
   // The teardown board art follows the selected tier: a variant's own
   // `boardArt` wins, otherwise the shared `teardown.boardArt` (the default
@@ -1477,8 +1412,6 @@ function ProductPage() {
   // primaryCollection is retained in the loader but we deliberately
   // don't render a breadcrumb on the PDP — the editorial hero with
   // the "File 0N · Family" eyebrow is the navigation clue instead.
-  void primaryCollection;
-
   // Bundles advertise the composed component price (what add-to-cart actually
   // charges), not the Shopify master-variant placeholder. Coming soon → no
   // offer at all: structured data must not leak a price the page hides.
@@ -1567,6 +1500,12 @@ function ProductPage() {
     copyText('product-chrome.trust_chip_firmware_bundle') ?? ''
   ).split('{firmwares}');
   const isBundle = Boolean(content.bundle);
+  // The ship promise shown on the buy module: Odoo's per-product word
+  // (frozen onto the order line and printed in the order mail by the same
+  // module) when the catalog carries one, else the local content file's
+  // note. One string, so the promise the customer reads is the promise on
+  // the contract.
+  const shipPromise = selectedVariant?.shipPromise ?? content.statusNote ?? null;
   const buyPrice = isBundle ? bundlePrice : selectedVariant?.price;
   const buyAvailable = isBundle
     ? bundleAvailable
@@ -1594,9 +1533,9 @@ function ProductPage() {
               : 'product-chrome.buy_status_soon',
           )}
         />
-        {content.statusNote ? (
+        {shipPromise ? (
           <span className="product-buy-sku" {...prodEdit('statusNote')}>
-            {content.statusNote}
+            {shipPromise}
           </span>
         ) : selectedVariant?.sku ? (
           <span className="product-buy-sku">
@@ -1667,10 +1606,10 @@ function ProductPage() {
           </span>
         ) : null}
       </div>
-      {/* Pre-order: the stock line carries the ship promise (the product's
-          own statusNote, else the shop-wide default), the same words the
-          cart line and the order attribute carry. Shopify's inventory policy
-          still decides whether the add-to-cart is enabled. */}
+      {/* Pre-order: the stock line carries the ship promise from Odoo (the
+          product's own, else the shop-wide default), the same words the
+          Odoo cart line and the order carry. Odoo's availability still
+          decides whether the buy button is enabled. */}
       <span
         className={`product-buy-stock${
           preorder && !isBundle ? ' is-preorder' : buyAvailable ? '' : ' is-out'
@@ -1686,8 +1625,8 @@ function ProductPage() {
             ? (
                 <>
                   {copyText('product-chrome.buy_stock_preorder_prefix') ?? ''} ·{' '}
-                  {content.statusNote ? (
-                    <span {...prodEdit('statusNote')}>{content.statusNote}</span>
+                  {shipPromise ? (
+                    <span {...prodEdit('statusNote')}>{shipPromise}</span>
                   ) : (
                     <Txt id="product-chrome.preorder_lead_default" as="span" />
                   )}
@@ -1695,17 +1634,17 @@ function ProductPage() {
               )
             : selectedVariant?.availableForSale
               ? copyText('product-chrome.buy_stock_in')
-              : content.statusNote
+              : shipPromise
                 ? (
                     <>
                       {copyText('product-chrome.buy_stock_out') ?? ''} ·{' '}
-                      <span {...prodEdit('statusNote')}>{content.statusNote}</span>
+                      <span {...prodEdit('statusNote')}>{shipPromise}</span>
                     </>
                   )
                 : copyText('product-chrome.buy_stock_out')}
       </span>
       {/* Sold-out signup: not for pre-order products, whose "unavailable"
-          is a Shopify inventory-policy state, not a launch to be notified of. */}
+          is an Odoo availability state, not a launch to be notified of. */}
       {!isBundle &&
       !preorder &&
       selectedVariant &&
@@ -1723,9 +1662,9 @@ function ProductPage() {
         productOptions={productOptions}
         selectedVariant={selectedVariant}
         hideOptionNames={content.optionAxis ? [content.optionAxis] : undefined}
-        bundleLines={isBundle ? bundleLines : undefined}
-        bundleDisabled={isBundle ? !bundleAvailable : undefined}
-        bundleCtaLabel={
+        buyUrl={isBundle ? (bundleBuyUrl ?? '') : undefined}
+        buyDisabled={isBundle ? !bundleAvailable : undefined}
+        buyCtaLabel={
           isBundle ? copyText('product-chrome.buy_bundle_cta') : undefined
         }
         stackOffers={stackOffers}
@@ -2553,8 +2492,8 @@ function ProductPage() {
         </Chapter>
     ),
     /**
-     * Judge.me data, own markup (no widget). Bodies stream in deferred; a fetch
-     * failure degrades to the aggregate count line.
+     * Odoo's published product ratings, own markup (no widget). The
+     * bodies live on the shop product page, which this links to.
      */
     reviews: (n, title) => {
       // `present` already ruled this out, but the aggregate is read half a
@@ -2569,7 +2508,7 @@ function ProductPage() {
           titleId="product-chrome.ch_reviews_title"
           noMedia
         >
-          {/* The aggregate is Shopify data, so the framing sentence marks its
+          {/* The aggregate is catalog data, so the framing sentence marks its
               slots with `{average}`, `{count}` and `{ratings}` and stays one
               editable string. */}
           <p className="chapter-body" {...editAttrs('product-chrome.reviews_intro')}>
@@ -2585,27 +2524,7 @@ function ProductPage() {
                 ) ?? '',
               )}
           </p>
-          <Suspense
-            fallback={<ReviewListFallback totalCount={reviewAggregate.count} />}
-          >
-            <Await
-              resolve={reviews}
-              errorElement={
-                <ReviewListFallback totalCount={reviewAggregate.count} />
-              }
-            >
-              {(list) =>
-                list && list.length > 0 ? (
-                  <ReviewList
-                    reviews={list}
-                    totalCount={reviewAggregate.count}
-                  />
-                ) : (
-                  <ReviewListFallback totalCount={reviewAggregate.count} />
-                )
-              }
-            </Await>
-          </Suspense>
+          <ReviewList aggregate={reviewAggregate} shopUrl={product.shopUrl} />
         </Chapter>
       );
     },
@@ -2816,249 +2735,6 @@ function ProductPage() {
         />
       ) : null}
 
-      <Analytics.ProductView
-        data={{
-          products: [
-            {
-              id: product.id,
-              title: product.title,
-              // Coming soon → no price anywhere, analytics payload included.
-              price: soon ? '0' : selectedVariant?.price.amount || '0',
-              vendor: product.vendor,
-              variantId: selectedVariant?.id || '',
-              variantTitle: selectedVariant?.title || '',
-              quantity: 1,
-            },
-          ],
-        }}
-      />
     </div>
   );
 }
-
-const PRODUCT_VARIANT_FRAGMENT = `#graphql
-  fragment ProductVariant on ProductVariant {
-    availableForSale
-    compareAtPrice {
-      amount
-      currencyCode
-    }
-    id
-    image {
-      __typename
-      id
-      url
-      altText
-      width
-      height
-    }
-    price {
-      amount
-      currencyCode
-    }
-    product {
-      title
-      handle
-    }
-    selectedOptions {
-      name
-      value
-    }
-    sku
-    title
-    unitPrice {
-      amount
-      currencyCode
-    }
-  }
-` as const;
-
-const PRODUCT_FRAGMENT = `#graphql
-  fragment Product on Product {
-    id
-    title
-    vendor
-    handle
-    descriptionHtml
-    description
-    encodedVariantExistence
-    encodedVariantAvailability
-    options {
-      name
-      optionValues {
-        name
-        firstSelectableVariant {
-          ...ProductVariant
-        }
-        swatch {
-          color
-          image {
-            previewImage {
-              url
-            }
-          }
-        }
-      }
-    }
-    selectedOrFirstAvailableVariant(selectedOptions: $selectedOptions, ignoreUnknownOptions: true, caseInsensitiveMatch: true) {
-      ...ProductVariant
-    }
-    adjacentVariants (selectedOptions: $selectedOptions) {
-      ...ProductVariant
-    }
-    images(first: 10) {
-      nodes {
-        id
-        url
-        altText
-        width
-        height
-      }
-    }
-    collections(first: 1) {
-      nodes {
-        handle
-        title
-      }
-    }
-    seo {
-      description
-      title
-    }
-    # Review aggregates synced into the standard product metafields by the
-    # review provider (see app/lib/reviews.ts). Null when no reviews exist.
-    reviewsRating: metafield(namespace: "reviews", key: "rating") {
-      value
-    }
-    reviewsRatingCount: metafield(namespace: "reviews", key: "rating_count") {
-      value
-    }
-  }
-  ${PRODUCT_VARIANT_FRAGMENT}
-` as const;
-
-const PRODUCT_QUERY = `#graphql
-  query Product(
-    $country: CountryCode
-    $handle: String!
-    $language: LanguageCode
-    $selectedOptions: [SelectedOptionInput!]!
-  ) @inContext(country: $country, language: $language) {
-    product(handle: $handle) {
-      ...Product
-    }
-  }
-  ${PRODUCT_FRAGMENT}
-` as const;
-
-// Bundle component lookup: just enough of each FC/ESC product to resolve the
-// variant for the selected mount size and price/stock it. The bundle page
-// renders from its own product; this only powers the two-line add-to-cart.
-const BUNDLE_COMPONENT_QUERY = `#graphql
-  query BundleComponent(
-    $country: CountryCode
-    $language: LanguageCode
-    $handle: String!
-  ) @inContext(country: $country, language: $language) {
-    product(handle: $handle) {
-      handle
-      title
-      variants(first: 20) {
-        nodes {
-          id
-          sku
-          availableForSale
-          price {
-            amount
-            currencyCode
-          }
-          selectedOptions {
-            name
-            value
-          }
-        }
-      }
-    }
-  }
-` as const;
-
-// Shared card shape for the related strip — enough for a spec-forward card
-// (render, price band) plus the single variant a quick-add needs. Multi-
-// variant lines get no quick-add, so two variant nodes is enough to tell
-// "one" from "many" without dragging the whole ladder over the wire.
-const RELATED_PRODUCT_CARD_FRAGMENT = `#graphql
-  fragment RelatedProductCard on Product {
-    id
-    handle
-    title
-    productType
-    featuredImage {
-      id
-      url
-      altText
-      width
-      height
-    }
-    priceRange {
-      minVariantPrice {
-        amount
-        currencyCode
-      }
-      maxVariantPrice {
-        amount
-        currencyCode
-      }
-    }
-    variants(first: 2) {
-      nodes {
-        id
-        availableForSale
-        price {
-          amount
-          currencyCode
-        }
-        image {
-          url
-          altText
-        }
-        selectedOptions {
-          name
-          value
-        }
-      }
-    }
-  }
-` as const;
-
-const PRODUCT_RECOMMENDATIONS_QUERY = `#graphql
-  query ProductRecommendations(
-    $country: CountryCode
-    $handle: String!
-    $language: LanguageCode
-  ) @inContext(country: $country, language: $language) {
-    productRecommendations(productHandle: $handle) {
-      ...RelatedProductCard
-    }
-  }
-  ${RELATED_PRODUCT_CARD_FRAGMENT}
-` as const;
-
-const FALLBACK_PRODUCTS_QUERY = `#graphql
-  query FallbackProducts(
-    $country: CountryCode
-    $first: Int!
-    $language: LanguageCode
-  ) @inContext(country: $country, language: $language) {
-    # The legacy firmware-donation tip product is not catalog; keep it out of related cards.
-    products(
-      first: $first
-      sortKey: BEST_SELLING
-      query: "-product_type:Donation"
-    ) {
-      nodes {
-        ...RelatedProductCard
-      }
-    }
-  }
-  ${RELATED_PRODUCT_CARD_FRAGMENT}
-` as const;

@@ -1,5 +1,4 @@
 import {Link} from 'react-router';
-import {Image} from '@shopify/hydrogen';
 import {VersionChip, pickVersionTag} from './VersionChip';
 import {FILTER_TAGS, type FilterTag} from './TagFilter';
 
@@ -70,12 +69,13 @@ export function ReleaseRow({article}: {article: ReleaseRowArticle}) {
         </div>
         {article.image ? (
           <div className="rn-thumb">
-            <Image
+            <img
               alt={article.image.altText || article.title}
-              data={article.image as any}
-              aspectRatio="4/3"
+              src={article.image.url}
+              style={{aspectRatio: '4/3'}}
               sizes="(min-width: 768px) 96px, 0px"
               loading="lazy"
+              decoding="async"
             />
           </div>
         ) : (

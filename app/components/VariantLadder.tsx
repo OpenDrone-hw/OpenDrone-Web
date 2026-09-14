@@ -2,7 +2,7 @@ import {useLocation, useNavigate, useNavigation} from 'react-router';
 import {useEffect, useState} from 'react';
 import {motion} from 'motion/react';
 import {Check} from 'lucide-react';
-import {type MappedProductOptions} from '@shopify/hydrogen';
+import type {MappedProductOptions} from '~/lib/product-shapes';
 import type {VariantContent} from '~/lib/product-content';
 import {copyText} from '~/lib/copy';
 
@@ -11,15 +11,15 @@ import {copyText} from '~/lib/copy';
  * (OpenRX: Lite/Lite-UFL/Mono/Gemini; OpenESC: 20×20/30×30). Each tier
  * is a card showing the cells that differ between variants; clicking a
  * card both updates the on-page preview (`onSelect`) and, when a matching
- * Shopify variant exists, navigates to select it so price/stock/cart
+ * catalog variant exists, navigates to select it so price and stock
  * follow.
  *
  * Editorial (`variants`, keyed by option value) is the source of truth
- * for which tiers exist. Shopify wiring is matched in by name: we find
- * the option whose name equals `axis`, then the option value whose name
- * equals the editorial key (both case-insensitive, trimmed). Until those
- * Shopify variants exist the ladder still renders for preview and the
- * cart uses the product's single default variant.
+ * for which tiers exist. The catalog is matched in by name: we find the
+ * option whose name equals `axis`, then the option value whose name
+ * equals the editorial key (both case-insensitive, trimmed). Until Odoo
+ * carries those variants the ladder still renders for preview and the
+ * buy button uses the product's default variant.
  */
 export function VariantLadder({
   axis,
@@ -55,10 +55,10 @@ export function VariantLadder({
   }, [navigation.state, location.search]);
 
   const norm = (s: string) => s.trim().toLowerCase();
-  const shopifyOption = productOptions.find((o) => norm(o.name) === norm(axis));
+  const axisOption = productOptions.find((o) => norm(o.name) === norm(axis));
 
   const tiers = Object.entries(variants).map(([value, content]) => {
-    const optionValue = shopifyOption?.optionValues.find(
+    const optionValue = axisOption?.optionValues.find(
       (v) => norm(v.name) === norm(value),
     );
     return {value, content, optionValue};
@@ -84,9 +84,9 @@ export function VariantLadder({
           // Coming-soon: a designed model with no purchasable variant yet.
           // Editorial-only — greyed and non-selectable regardless of Shopify.
           const comingSoon = Boolean(content.comingSoon);
-          // Sold-out only when Shopify actually has the variant and marks
-          // it unavailable. Pre-setup (no matching option) stays selectable
-          // for preview.
+          // Sold-out only when the catalog actually has the variant and
+          // marks it unavailable. Pre-setup (no matching option) stays
+          // selectable for preview.
           const soldOut = Boolean(
             optionValue && optionValue.exists && !optionValue.available,
           );

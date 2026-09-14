@@ -66,7 +66,7 @@ describe('postStaffMetadata', () => {
     assert.equal(calls, 0);
   });
 
-  it('posts a message containing email + customer id + UA + IP + jump URL', async () => {
+  it('posts a message containing email + UA + IP + jump URL', async () => {
     let seenUrl = '';
     let seenBody = '';
     stubFetch(async (input, init) => {
@@ -85,7 +85,6 @@ describe('postStaffMetadata', () => {
       {
         userName: 'Test Customer',
         userEmail: 'customer@example.com',
-        customerId: 'gid://shopify/Customer/24852411842905',
         userAgent: 'Mozilla/5.0 (Macintosh)',
         ipHint: '203.0.113.x',
       },
@@ -95,7 +94,6 @@ describe('postStaffMetadata', () => {
     const payload = JSON.parse(seenBody) as {content: string};
     assert.match(payload.content, /Test Customer/);
     assert.match(payload.content, /customer@example\.com/);
-    assert.match(payload.content, /gid:\/\/shopify\/Customer\/24852411842905/);
     assert.match(payload.content, /Mozilla\/5\.0 \(Macintosh\)/);
     assert.match(payload.content, /203\.0\.113\.x/);
     assert.match(

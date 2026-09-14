@@ -4,7 +4,6 @@ import {postFeedback} from '~/lib/support/discord';
 import {readSupportCookie, verifyTicket} from '~/lib/support/session';
 import {checkRateLimit} from '~/lib/rate-limit';
 import {saveFeedback} from '~/lib/support/ticket-index';
-import {SUPPORT_CUSTOMER_PREFILL_QUERY} from '~/graphql/customer-account/SupportPrefillQuery';
 import {scrubForDiscord} from '~/lib/support/scrubber';
 
 type FeedbackResult =
@@ -62,25 +61,11 @@ export async function action({request, context}: Route.ActionArgs) {
     .slice(0, 1500);
   const notes = scrubForDiscord(rawNotes).content;
 
-  // Try to associate with the customer ID for the index. Optional —
-  // tickets opened by anon visitors (legacy flow) won't have one and
-  // the feedback still saves keyed by tid.
-  let customerId: string | undefined;
-  try {
-    const {data: prefill} = await context.customerAccount.query(
-      SUPPORT_CUSTOMER_PREFILL_QUERY,
-    );
-    customerId = prefill?.customer?.id ?? undefined;
-  } catch {
-    /* anon */
-  }
-
   const submittedAt = Math.floor(Date.now() / 1000);
 
   const kvJob = saveFeedback(env, {
     tid: ticket.tid,
     pid: ticket.pid ?? '',
-    customerId,
     email: ticket.email,
     speed,
     helpfulness,
@@ -96,7 +81,6 @@ export async function action({request, context}: Route.ActionArgs) {
     threadId: ticket.tid,
     customerName: ticket.name,
     customerEmail: ticket.email,
-    customerId,
     speed,
     helpfulness,
     overall,

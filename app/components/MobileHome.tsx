@@ -1,7 +1,7 @@
 import {Suspense} from 'react';
 import {Await, Link} from 'react-router';
 import {motion, useReducedMotion, type MotionProps} from 'motion/react';
-import type {CollectionItemFragment} from 'storefrontapi.generated';
+import type {ProductCardFragment as CollectionItemFragment} from '~/lib/product-shapes';
 import {HeroWordmark} from '~/components/HeroWordmark';
 import {ProductItem} from '~/components/ProductItem';
 import {AnimatedNumber} from '~/components/AnimatedNumber';

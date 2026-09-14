@@ -1,5 +1,5 @@
 {
-  "$comment": "Community vote tally. Written by scripts/tally-votes.mjs from order attributes; reviewable and correctable in the studio's Goals tab. Read by app/lib/votes.ts.",
+  "$comment": "Community vote tally. Read by app/lib/votes.ts and shown on /roadmap. The writer (a cart-attribute ballot tallied from Shopify orders) was removed with the Shopify cart; a new ballot is phase 6. Correctable in the studio's Goals tab.",
   "updated": "",
   "ballots": 0,
   "points": {},

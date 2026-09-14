@@ -1,6 +1,5 @@
 import {flatRoutes} from '@react-router/fs-routes';
 import {type RouteConfig, route} from '@react-router/dev/routes';
-import {hydrogenRoutes} from '@shopify/hydrogen';
 import {LEGAL_SLUGS} from './lib/legal-slugs';
 
 /**
@@ -69,4 +68,4 @@ if (isProd) {
   }
 }
 
-export default hydrogenRoutes([...routes, ...localeRoutes]) satisfies RouteConfig;
+export default [...routes, ...localeRoutes] satisfies RouteConfig;
