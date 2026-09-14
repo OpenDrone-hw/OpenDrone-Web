@@ -4,7 +4,10 @@ import {
   anyComingSoonLocks,
   comingSoonFlag,
   findLockedMerchandise,
+  preordersOpenFlag,
+  stampPreorderLines,
 } from '~/lib/coming-soon';
+import {anyPreorderProducts} from '~/lib/product-content';
 import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
 
 /**
@@ -58,18 +61,22 @@ export async function loader({request, context, params}: Route.LoaderArgs) {
   // agent/deep-link order path, so locked SKUs must be dropped here too.
   // Zero-cost when the shop is unlocked and nothing is override-locked.
   const soonFlag = comingSoonFlag(context.env);
+  const preordersOpen = preordersOpenFlag(context.env);
   const statusFlags = await fetchStatusFlagsFast(
     context.env.GITHUB_STATUS_TOKEN,
     undefined,
     context.waitUntil,
   );
-  if (anyComingSoonLocks(soonFlag, statusFlags)) {
-    const {lockedIds, lockedHandles} = await findLockedMerchandise(
-      context.storefront,
-      soonFlag,
-      linesMap.map((l) => l.merchandiseId),
-      statusFlags,
-    );
+  if (anyComingSoonLocks(soonFlag, statusFlags) || anyPreorderProducts()) {
+    const {lockedIds, lockedHandles, preorderNotes} =
+      await findLockedMerchandise(
+        context.storefront,
+        soonFlag,
+        linesMap.map((l) => l.merchandiseId),
+        statusFlags,
+        preordersOpen,
+      );
+    linesMap = stampPreorderLines(linesMap, preorderNotes);
     if (lockedIds.size > 0) {
       const open = linesMap.filter((l) => !lockedIds.has(l.merchandiseId));
       if (open.length === 0) {

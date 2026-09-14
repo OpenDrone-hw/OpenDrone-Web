@@ -10,7 +10,10 @@ import {
   anyComingSoonLocks,
   comingSoonFlag,
   findLockedMerchandise,
+  preordersOpenFlag,
+  stampPreorderLines,
 } from '~/lib/coming-soon';
+import {anyPreorderProducts} from '~/lib/product-content';
 import {VOTE_ATTR_KEY, parseVoteRank, serializeVoteRank} from '~/lib/votes';
 import {fetchStatusFlagsFast, votableIds} from '~/lib/roadmap-data';
 
@@ -66,20 +69,28 @@ export async function action({request, context}: Route.ActionArgs) {
       // override-locked — no extra query.
       let lines = inputs.lines ?? [];
       const soonFlag = comingSoonFlag(context.env);
+      const preordersOpen = preordersOpenFlag(context.env);
       const statusFlags = await fetchStatusFlagsFast(
         context.env.GITHUB_STATUS_TOKEN,
         undefined,
         context.waitUntil,
       );
-      if (lines.length > 0 && anyComingSoonLocks(soonFlag, statusFlags)) {
-        const {lockedIds} = await findLockedMerchandise(
+      // The same lookup also finds pre-order lines, which get the
+      // "Pre-order" attribute stamped server-side (see stampPreorderLines).
+      if (
+        lines.length > 0 &&
+        (anyComingSoonLocks(soonFlag, statusFlags) || anyPreorderProducts())
+      ) {
+        const {lockedIds, preorderNotes} = await findLockedMerchandise(
           context.storefront,
           soonFlag,
           lines
             .map((l) => l.merchandiseId)
             .filter((id): id is string => Boolean(id)),
           statusFlags,
+          preordersOpen,
         );
+        lines = stampPreorderLines(lines, preorderNotes);
         if (lockedIds.size > 0) {
           const open = lines.filter(
             (l) => !l.merchandiseId || !lockedIds.has(l.merchandiseId),

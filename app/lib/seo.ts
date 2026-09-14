@@ -203,6 +203,9 @@ type ProductJsonLdInput = {
   gtin?: string | null;
   price?: {amount: string; currencyCode: string} | null;
   availableForSale: boolean;
+  /** Pre-order product: an orderable offer becomes schema.org/PreOrder
+   *  instead of InStock (sold-out stays OutOfStock either way). */
+  preorder?: boolean;
   productHandle: string;
   /**
    * Star aggregate from the synced review metafields (app/lib/reviews.ts).
@@ -244,9 +247,11 @@ export function buildProductJsonLd(input: ProductJsonLdInput) {
       url: input.url,
       price: input.price.amount,
       priceCurrency: input.price.currencyCode,
-      availability: input.availableForSale
-        ? 'https://schema.org/InStock'
-        : 'https://schema.org/OutOfStock',
+      availability: !input.availableForSale
+        ? 'https://schema.org/OutOfStock'
+        : input.preorder
+          ? 'https://schema.org/PreOrder'
+          : 'https://schema.org/InStock',
       priceValidUntil: nextYearIso(),
     };
   }

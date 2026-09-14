@@ -2,12 +2,29 @@ import {describe, it} from 'node:test';
 import assert from 'node:assert/strict';
 import {
   isComingSoon,
+  isPurchasableStatus,
   resolveStatus,
   PRODUCT_CONTENT,
 } from './product-content.ts';
 
 // Run with:
 //   node --experimental-strip-types --test app/lib/product-status.test.ts
+
+/**
+ * Run `fn` with the handle's explicit `status` (and legacy `comingSoon`)
+ * lifted, so the roadmap and the global flag decide as they do for a
+ * product whose content file carries no status. The boards ship as
+ * pre-orders today, so their files DO carry one.
+ */
+function withoutExplicitStatus(handle: string, fn: () => void) {
+  const saved = PRODUCT_CONTENT[handle];
+  PRODUCT_CONTENT[handle] = {...saved, status: undefined, comingSoon: undefined};
+  try {
+    fn();
+  } finally {
+    PRODUCT_CONTENT[handle] = saved;
+  }
+}
 
 describe('resolveStatus', () => {
   it('follows the global flag only for handles off the roadmap', () => {
@@ -18,35 +35,40 @@ describe('resolveStatus', () => {
   it('the roadmap decides for roadmap products, whatever the global flag', () => {
     // Static roadmap: every board is alpha today -> waitlist, no price,
     // on a locked AND an open shop alike.
-    for (const flag of [true, false]) {
-      assert.equal(resolveStatus('openesc', flag), 'development');
-      assert.equal(resolveStatus('openrx', flag), 'development');
-      assert.equal(isComingSoon('openesc', flag), true);
-    }
+    withoutExplicitStatus('openesc', () => {
+      for (const flag of [true, false]) {
+        assert.equal(resolveStatus('openesc', flag), 'development');
+        assert.equal(isComingSoon('openesc', flag), true);
+      }
+    });
   });
 
   it('a status-beta topic is the release act: price + orderable', () => {
     // The flag map is keyed by repo URL, as fetchStatusFlags returns it.
     // Beta unlocks even while the global pre-launch flag is still set.
-    const flags = {
-      'https://github.com/OpenDrone-hw/OpenESC-20x20': 'beta',
-    } as const;
-    assert.equal(resolveStatus('openesc', true, flags), 'live');
-    assert.equal(isComingSoon('openesc', true, flags), false);
-    // ...and moving it back down locks it again.
-    const down = {
-      'https://github.com/OpenDrone-hw/OpenESC-20x20': 'in-progress',
-      'https://github.com/OpenDrone-hw/OpenESC-30x30': 'in-progress',
-    } as const;
-    assert.equal(resolveStatus('openesc', false, down), 'development');
+    withoutExplicitStatus('openesc', () => {
+      const flags = {
+        'https://github.com/OpenDrone-hw/OpenESC-20x20': 'beta',
+      } as const;
+      assert.equal(resolveStatus('openesc', true, flags), 'live');
+      assert.equal(isComingSoon('openesc', true, flags), false);
+      // ...and moving it back down locks it again.
+      const down = {
+        'https://github.com/OpenDrone-hw/OpenESC-20x20': 'in-progress',
+        'https://github.com/OpenDrone-hw/OpenESC-30x30': 'in-progress',
+      } as const;
+      assert.equal(resolveStatus('openesc', false, down), 'development');
+    });
   });
 
   it('a page with two boards sells on its furthest-along board', () => {
     // OpenESC page carries 20x20 and 30x30; one beta board is enough.
-    const flags = {
-      'https://github.com/OpenDrone-hw/OpenESC-30x30': 'beta',
-    } as const;
-    assert.equal(resolveStatus('openesc', true, flags), 'live');
+    withoutExplicitStatus('openesc', () => {
+      const flags = {
+        'https://github.com/OpenDrone-hw/OpenESC-30x30': 'beta',
+      } as const;
+      assert.equal(resolveStatus('openesc', true, flags), 'live');
+    });
   });
 
   it('treats unknown handles like unset products', () => {
@@ -76,6 +98,7 @@ describe('resolveStatus', () => {
   it('maps the legacy comingSoon boolean when no status is set', () => {
     PRODUCT_CONTENT['__test-legacy'] = {
       ...PRODUCT_CONTENT.openesc,
+      status: undefined,
       comingSoon: false,
     };
     try {
@@ -99,23 +122,65 @@ describe('resolveStatus', () => {
       delete PRODUCT_CONTENT['__test-both'];
     }
   });
+
+  it('preorder waits for the shop to open, or for PUBLIC_PREORDERS', () => {
+    // The boards' content files carry status: "preorder" (verified, not
+    // assumed, so a content edit that drops it fails here first).
+    for (const handle of ['openesc', 'openfc-lite', 'openrx', 'openframe']) {
+      assert.equal(PRODUCT_CONTENT[handle]?.status, 'preorder', handle);
+      // Global flag on: rendered as development, no orders taken...
+      assert.equal(resolveStatus(handle, true), 'development', handle);
+      // ...unless preorders are opened early (the Oxygen preview).
+      assert.equal(resolveStatus(handle, true, {}, true), 'preorder', handle);
+      // Flag off: the shop is open, so is the pre-order.
+      assert.equal(resolveStatus(handle, false), 'preorder', handle);
+    }
+  });
+
+  it('preorder wins over the roadmap topic like any explicit status', () => {
+    // A beta topic does not turn a pre-order into "in stock", and an alpha
+    // topic does not lock it once the shop is open.
+    const beta = {
+      'https://github.com/OpenDrone-hw/OpenESC-20x20': 'beta',
+    } as const;
+    assert.equal(resolveStatus('openesc', false, beta), 'preorder');
+    assert.equal(resolveStatus('openesc', true, beta), 'development');
+  });
+});
+
+describe('isPurchasableStatus', () => {
+  it('is true for live and preorder only', () => {
+    assert.equal(isPurchasableStatus('live'), true);
+    assert.equal(isPurchasableStatus('preorder'), true);
+    assert.equal(isPurchasableStatus('development'), false);
+    assert.equal(isPurchasableStatus('idea'), false);
+  });
 });
 
 describe('isComingSoon', () => {
-  it('is true for every non-live status', () => {
+  it('is true for every non-purchasable status', () => {
     PRODUCT_CONTENT['__test-idea'] = {
       ...PRODUCT_CONTENT.openesc,
       status: 'idea',
     };
     try {
       assert.equal(isComingSoon('__test-idea', false), true);
-      assert.equal(isComingSoon('openesc', true), true);
-      // openesc is on the roadmap (alpha today) so the open-shop flag does
-      // not unlock it; an off-roadmap accessory follows the flag.
-      assert.equal(isComingSoon('openesc', false), true);
+      // openesc is on the roadmap (alpha today) so, without its explicit
+      // status, the open-shop flag does not unlock it; an off-roadmap
+      // accessory follows the flag.
+      withoutExplicitStatus('openesc', () => {
+        assert.equal(isComingSoon('openesc', true), true);
+        assert.equal(isComingSoon('openesc', false), true);
+      });
       assert.equal(isComingSoon('battery-strap', false), false);
     } finally {
       delete PRODUCT_CONTENT['__test-idea'];
     }
+  });
+
+  it('is false for a pre-order product once it takes orders', () => {
+    assert.equal(isComingSoon('openrx', true), true);
+    assert.equal(isComingSoon('openrx', true, {}, true), false);
+    assert.equal(isComingSoon('openrx', false), false);
   });
 });
