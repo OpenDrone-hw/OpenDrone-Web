@@ -5,7 +5,7 @@ import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 import {ProductItem} from '~/components/ProductItem';
 import {useRoadmapStatusResolver} from '~/lib/coming-soon';
-import {isConceptStatus} from '~/lib/roadmap-data';
+import {isConceptFor} from '~/lib/product-content';
 import type {ProductItemFragment} from 'storefrontapi.generated';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {Breadcrumb} from '~/components/Breadcrumb';
@@ -124,7 +124,7 @@ export default function Collection() {
         >
           {({node: product, index}) =>
             // Concept products (planned / in-progress) never list.
-            isConceptStatus(roadmapStatus(product.handle)) ? null : (
+            isConceptFor(product.handle, roadmapStatus(product.handle)) ? null : (
               <ProductItem
                 key={product.id}
                 product={product}

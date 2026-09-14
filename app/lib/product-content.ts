@@ -21,6 +21,8 @@
 // Relative import on purpose: the node:test suites run this module without
 // Vite, so the `~` alias is not available here.
 import {
+  isConceptHandle,
+  isConceptStatus,
   statusForHandle,
   type ProductStatus as RoadmapStatus,
 } from './roadmap-data.ts';
@@ -556,6 +558,44 @@ export type ProductStatus = 'idea' | 'development' | 'preorder' | 'live';
  */
 export function isPurchasableStatus(status: ProductStatus): boolean {
   return status === 'live' || status === 'preorder';
+}
+
+/**
+ * Whether the content file declares a status that sells ('preorder' or
+ * 'live'). Such a product is a product page, not a concept, whatever its
+ * roadmap word says: the frame is 'in-progress' on the roadmap while it
+ * takes pre-orders. The roadmap word stays on the chip as display
+ * vocabulary; only the concept gate (plate, listings, feeds) is lifted.
+ */
+export function hasExplicitPurchasableStatus(
+  handle: string | null | undefined,
+): boolean {
+  const s = handle ? PRODUCT_CONTENT[handle]?.status : undefined;
+  return s !== undefined && isPurchasableStatus(s);
+}
+
+/**
+ * The concept gate for a handle with a resolved roadmap word (client
+ * surfaces, which hold the root loader's live map): planned / in-progress
+ * hides the product from listings and shows the plate, unless the content
+ * file declares a purchasable status. See {@link hasExplicitPurchasableStatus}.
+ */
+export function isConceptFor(
+  handle: string | null | undefined,
+  roadmapWord: RoadmapStatus | null | undefined,
+): boolean {
+  return isConceptStatus(roadmapWord) && !hasExplicitPurchasableStatus(handle);
+}
+
+/**
+ * The same gate for server loaders that carry the fetched topic flags
+ * (feeds), resolving the roadmap word itself.
+ */
+export function isConceptProduct(
+  handle: string,
+  flags: Record<string, RoadmapStatus> = {},
+): boolean {
+  return isConceptHandle(handle, flags) && !hasExplicitPurchasableStatus(handle);
 }
 
 /**

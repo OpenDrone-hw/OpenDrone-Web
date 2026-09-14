@@ -7,7 +7,7 @@ import {SmoothImage} from '~/components/SmoothImage';
 import {AddToCartButton} from '~/components/AddToCartButton';
 import {useAside} from '~/components/Aside';
 import {useComingSoon, useRoadmapStatusResolver} from '~/lib/coming-soon';
-import {isConceptStatus} from '~/lib/roadmap-data';
+import {isConceptFor} from '~/lib/product-content';
 import {PRODUCT_CONTENT} from '~/lib/product-content';
 
 /** The slice of a product the related strip needs — matches what the
@@ -88,7 +88,7 @@ export function RelatedProducts({
           {(items) => {
             // Concept products (planned / in-progress) never list.
             const listed = (items ?? []).filter(
-              (p) => !isConceptStatus(roadmapStatus(p.handle)),
+              (p) => !isConceptFor(p.handle, roadmapStatus(p.handle)),
             );
             if (listed.length === 0) return null;
             return (

@@ -27,9 +27,9 @@ import {
   useProductStatusResolver,
   useRoadmapStatusResolver,
 } from '~/lib/coming-soon';
-import {isConceptStatus} from '~/lib/roadmap-data';
 import {
   isComingSoon,
+  isConceptFor,
   isPurchasableStatus,
   PRODUCT_CONTENT,
 } from '~/lib/product-content';
@@ -390,7 +390,7 @@ function FamilyNav({
       // Planned / in-progress products have no settled tiers, images or
       // names to preview: the chip itself links to their concept plate and
       // the pod stays closed (docs/product-status.md).
-      .filter((p) => !isConceptStatus(roadmapStatus(p.handle)))
+      .filter((p) => !isConceptFor(p.handle, roadmapStatus(p.handle)))
       .flatMap((p) => {
         // Coming-soon products list (the dropdown is navigation) but carry
         // no price and no buy cell — the PDP hosts the notify signup.

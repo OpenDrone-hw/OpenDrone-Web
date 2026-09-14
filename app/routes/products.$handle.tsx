@@ -21,7 +21,6 @@ import {
 import {useAside} from '~/components/Aside';
 import {Txt} from '~/components/Txt';
 import {ConceptPlate} from '~/components/ConceptPlate';
-import {isConceptStatus} from '~/lib/roadmap-data';
 import {WHAT_IS_THIS_ID} from '~/lib/product-content';
 import {CONTRIBUTING_URL} from '~/lib/company';
 import {ProductPrice} from '~/components/ProductPrice';
@@ -65,6 +64,7 @@ import {
   PRODUCT_CONTENT,
   PRODUCT_CONTENT_FALLBACK,
   isComingSoon,
+  isConceptFor,
   isPurchasableStatus,
 } from '~/lib/product-content';
 import {useProductStatus} from '~/lib/coming-soon';
@@ -90,7 +90,9 @@ export const meta: Route.MetaFunction = ({data, location}) =>
     url: `${SITE_ORIGIN}${location.pathname}`,
     // Planned / in-progress products render the concept plate, which is a
     // placeholder, not content worth indexing.
-    robots: isConceptStatus(data?.roadmapStatus) ? 'noindex, follow' : undefined,
+    robots: isConceptFor(data?.product?.handle, data?.roadmapStatus)
+      ? 'noindex, follow'
+      : undefined,
   });
 
 /**
@@ -585,8 +587,9 @@ function useChapterReveal(key: string) {
 export default function Product() {
   const {product, roadmapStatus} = useLoaderData<typeof loader>();
   // Nothing about a planned or in-progress product is settled, so it gets
-  // the concept plate instead of a product page (docs/product-status.md).
-  if (isConceptStatus(roadmapStatus)) {
+  // the concept plate instead of a product page (docs/product-status.md),
+  // unless its content file says it sells (pre-order frame).
+  if (roadmapStatus && isConceptFor(product.handle, roadmapStatus)) {
     return <ConceptPlate title={product.title} status={roadmapStatus} />;
   }
   return <ProductPage />;

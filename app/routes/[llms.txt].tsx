@@ -2,10 +2,10 @@ import type {Route} from './+types/[llms.txt]';
 import {
   PRODUCT_CONTENT,
   isComingSoon,
+  isConceptProduct,
   isPurchasableStatus,
   resolveStatus,
 } from '~/lib/product-content';
-import {isConceptHandle} from '~/lib/roadmap-data';
 import {
   comingSoonFlag,
   preorderNote,
@@ -112,7 +112,7 @@ export async function loader({context, request}: Route.LoaderArgs) {
 
   const catalog = (data.products?.nodes ?? [])
     // Concept products (planned / in-progress) are not catalog.
-    .filter((p) => !isConceptHandle(p.handle, statusFlags))
+    .filter((p) => !isConceptProduct(p.handle, statusFlags))
     .map((p) => {
       const repo = PRODUCT_CONTENT[p.handle]?.repoUrl;
       // Resold parts (`editorial: false`) are not open hardware; say so

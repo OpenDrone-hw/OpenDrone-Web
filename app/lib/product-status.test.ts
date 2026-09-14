@@ -1,11 +1,15 @@
 import {describe, it} from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  hasExplicitPurchasableStatus,
   isComingSoon,
+  isConceptFor,
+  isConceptProduct,
   isPurchasableStatus,
   resolveStatus,
   PRODUCT_CONTENT,
 } from './product-content.ts';
+import {statusForHandle} from './roadmap-data.ts';
 
 // Run with:
 //   node --experimental-strip-types --test app/lib/product-status.test.ts
@@ -154,6 +158,40 @@ describe('isPurchasableStatus', () => {
     assert.equal(isPurchasableStatus('preorder'), true);
     assert.equal(isPurchasableStatus('development'), false);
     assert.equal(isPurchasableStatus('idea'), false);
+  });
+});
+
+describe('concept gate', () => {
+  it('an explicit purchasable status lifts the gate, the chip keeps its word', () => {
+    // The frame is in-progress on the static roadmap but takes pre-orders.
+    assert.equal(statusForHandle('openframe'), 'in-progress');
+    assert.equal(hasExplicitPurchasableStatus('openframe'), true);
+    assert.equal(isConceptProduct('openframe'), false);
+    assert.equal(isConceptFor('openframe', 'in-progress'), false);
+    // The roadmap word is untouched: it is display vocabulary for the chip.
+    assert.equal(statusForHandle('openframe'), 'in-progress');
+    // Without the explicit status the roadmap word gates it again.
+    withoutExplicitStatus('openframe', () => {
+      assert.equal(hasExplicitPurchasableStatus('openframe'), false);
+      assert.equal(isConceptProduct('openframe'), true);
+      assert.equal(isConceptFor('openframe', 'in-progress'), true);
+    });
+  });
+
+  it('idea and development statuses do not lift the gate', () => {
+    PRODUCT_CONTENT['__test-idea'] = {
+      ...PRODUCT_CONTENT.openframe,
+      status: 'idea',
+    };
+    try {
+      assert.equal(hasExplicitPurchasableStatus('__test-idea'), false);
+      assert.equal(isConceptFor('__test-idea', 'planned'), true);
+      assert.equal(isConceptFor('__test-idea', 'alpha'), false);
+      assert.equal(isConceptFor(null, 'planned'), true);
+      assert.equal(isConceptFor('battery-strap', undefined), false);
+    } finally {
+      delete PRODUCT_CONTENT['__test-idea'];
+    }
   });
 });
 

@@ -1,10 +1,10 @@
 import type {Route} from './+types/[products.json]';
 import {
   PRODUCT_CONTENT,
+  isConceptProduct,
   isPurchasableStatus,
   resolveStatus,
 } from '~/lib/product-content';
-import {isConceptHandle} from '~/lib/roadmap-data';
 import {
   comingSoonFlag,
   preorderNote,
@@ -71,7 +71,7 @@ export async function loader({context, request}: Route.LoaderArgs) {
 
   const products = (data.products?.nodes ?? [])
     // Concept products (planned / in-progress) are not catalog.
-    .filter((p) => !isConceptHandle(p.handle, statusFlags))
+    .filter((p) => !isConceptProduct(p.handle, statusFlags))
     .map((p) => {
       const content = PRODUCT_CONTENT[p.handle];
       // Locked products expose no price and no cart permalink — this feed is
