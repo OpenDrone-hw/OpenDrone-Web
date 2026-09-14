@@ -304,7 +304,8 @@ The complete annotated list is [`.env.example`](.env.example). Groups:
 - **Publishing**: `SHOPIFY_ADMIN_API_TOKEN` for `publish:post` and the
   `scripts/shopify-infra/` inspectors.
 - **Ops**: `SUPPORT_CLEANUP_SECRET` (cron auth), `COMPLIANCE_SRC` (legal sync
-  override), `GITHUB_STATUS_TOKEN` (roadmap API headroom).
+  source), `RENDER_BOARD_PY` (board-art renderer), `PRODUCT_SKUS_PATH`
+  (canonical catalogue), and `GITHUB_STATUS_TOKEN` (roadmap API headroom).
 
 `PUBLIC_*` values reach the client bundle; nothing secret does.
 
