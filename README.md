@@ -154,10 +154,11 @@ the upstream maintainers; the page lists them.
 Nine legal documents (terms, privacy, cookies, withdrawal, shipping, warranty,
 vulnerability handling, end-use, e-invoicing) each serve at `/{en,nl,fr}/<slug>`, with the bare
 `/<slug>` redirecting to the visitor's cached locale. Content is Markdown in
-`app/content/legal/{en,nl,fr}/`. Five Dutch pages are overwritten on every build
-from an external compliance workstream (`npm run sync:legal`); the rest are
-authored in-repo. The site UI itself is English-only; `LangToggle` appears only on
-legal paths.
+`app/content/legal/{en,nl,fr}/` and is authored in-repo. `npm run sync:legal`
+(run by `prebuild`) overwrites four Dutch pages from a directory named by
+`COMPLIANCE_SRC`; with the variable unset, which is the committed state, it
+keeps the snapshots. The site UI itself is English-only; `LangToggle` appears
+only on legal paths.
 
 ### Account, cart, collections, search
 
@@ -301,8 +302,9 @@ The complete annotated list is [`.env.example`](.env.example). Groups:
   Belgian law (WER Art. VI.45) requires these on every page.
 - **Support bridge**: Discord bot + channels, Turnstile, Resend, Upstash,
   moderation gate. All optional; the bridge degrades gracefully.
-- **Publishing**: `SHOPIFY_ADMIN_API_TOKEN` for `publish:post` and the
-  `scripts/shopify-infra/` inspectors.
+- **Publishing**: `SHOPIFY_ADMIN_API_TOKEN` (custom app "OpenDrone Infra") for
+  `publish:post`, the `scripts/shopify-infra/` inspectors and SKU sync, and
+  the launch, goals and votes scripts.
 - **Ops**: `SUPPORT_CLEANUP_SECRET` (cron auth), `COMPLIANCE_SRC` (legal sync
   override), `GITHUB_STATUS_TOKEN` (roadmap API headroom).
 
