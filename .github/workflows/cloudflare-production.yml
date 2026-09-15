@@ -1,13 +1,12 @@
-name: Deploy to Cloudflare
+name: Deploy Cloudflare production
 
 # D15/D16 (erp/PLAN.md): opendrone.be is cut over to the Cloudflare Worker
-# "opendrone-web" with custom domains opendrone.be / www.opendrone.be. Every
-# push to main redeploys production; feat/cloudflare-hosting stays wired too
-# so that branch keeps deploying to the same Worker while a PR against it is
-# open (the state before cutover, kept for the next such change).
+# "opendrone-web" (wrangler.production.toml) with custom domains opendrone.be
+# / www.opendrone.be. Every push to main redeploys production. The isolated
+# preview Worker (wrangler.toml) has its own workflow: cloudflare-preview.yml.
 on:
   push:
-    branches: [main, feat/cloudflare-hosting]
+    branches: [main]
 
 permissions:
   contents: read
@@ -40,7 +39,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy
+          command: deploy --config wrangler.production.toml
           # wrangler-action@v3 defaults to wrangler 3.90, which doesn't
           # understand `custom_domain = true` in wrangler.toml's `routes`
           # and falls back to the deprecated zone-level Workers Routes

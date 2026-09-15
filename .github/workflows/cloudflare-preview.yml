@@ -1,0 +1,43 @@
+name: Deploy Cloudflare preview
+
+# Isolated preview Worker (wrangler.toml): no custom-domain routes, staging
+# catalog, coming-soon on. Deploys on every push to feat/cloudflare-hosting
+# so a branch under review gets a live, non-production URL without touching
+# opendrone.be. Production deploys from cloudflare-production.yml instead.
+on:
+  push:
+    branches: [feat/cloudflare-hosting]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      # SESSION_SECRET only needs to be well-formed for the build step (it is
+      # not baked into the bundle); the real value is the Worker's
+      # SESSION_SECRET secret, set separately with `wrangler secret put`.
+      - name: Build
+        env:
+          SESSION_SECRET: "ci-build-only-not-the-runtime-secret"
+        run: npm run build
+
+      - name: Deploy preview Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --config wrangler.toml
+          wranglerVersion: "4"

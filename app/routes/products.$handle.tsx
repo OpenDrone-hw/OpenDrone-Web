@@ -19,7 +19,6 @@ import {
   selectedOptionsFromRequest,
   toCard,
   toProduct,
-  withComplianceDownload,
 } from '~/lib/catalog';
 import {buyUrl} from '~/lib/shop-links';
 import {useAside} from '~/components/Aside';
@@ -742,14 +741,10 @@ function ProductPage() {
     PRODUCT_CONTENT[product.handle]?.editorial !== false;
   const content = PRODUCT_CONTENT[product.handle] ?? PRODUCT_CONTENT_FALLBACK;
   const hasHeroCopy = Boolean(content.hero.line1);
-  // The Downloads chapter's asset list, plus the selected variant's issued
-  // Declaration of Conformity (D13, PLAN.md 11.4) when one exists. Never
-  // hand-written into content/products/*.json: see that file's downloads
-  // field comment.
-  const downloads = withComplianceDownload(
-    content.downloads,
-    selectedVariant?.compliance,
-  );
+  // The Downloads chapter's editorial assets. Declarations of Conformity are
+  // internal records (erp docs/storefront-contract.md section 4): no DoC
+  // entry is rendered, also when a cached catalog still carries one.
+  const downloads = content.downloads;
   // Star aggregate from Odoo's published product ratings, carried by the
   // catalog feed. Gated on count > 0, so a product nobody has rated yet
   // renders no trace of the feature anywhere.

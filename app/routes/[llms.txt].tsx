@@ -114,7 +114,7 @@ export async function loader({context, request}: Route.LoaderArgs) {
               ? ' — coming soon, not yet orderable'
               : ` — €${Number(v.price.amount).toFixed(2)}` +
                 ` — ${stockWord(v.availableForSale)}` +
-                ` — order: ${v.cartAddUrl}`)
+                ` — order: POST ${v.cartAddUrl.split('?')[0]} with ${v.cartAddUrl.split('?')[1] ?? ''}`)
           );
         })
         .join('\n');
@@ -168,26 +168,32 @@ is on hand. Details: ${origin}/shipping`
 
 ## How to order
 
-Orders are placed on the Incutec shop, ${shopUrl}. Add lines to the visitor's
-own cart with a GET request, no JS needed:
+Orders are placed on the Incutec shop, ${shopUrl}. Lines are added to the
+visitor's own cart by an HTML form POST from the visitor's browser
+(application/x-www-form-urlencoded, Origin ${origin}); a GET is refused, so a
+link alone cannot fill a cart:
 
-    ${shopUrl}/incutec/add?sku=<SKU>&qty=<n>&next=cart
+    POST ${shopUrl}/incutec/add
+    sku=<SKU>&qty=<n>&next=cart
 
 Multiple lines go in one request, comma-separated:
 
-    ${shopUrl}/incutec/add?lines=<SKU>:<qty>,<SKU>:<qty>&next=cart
+    POST ${shopUrl}/incutec/add
+    lines=<SKU>:<qty>,<SKU>:<qty>&next=cart
 
 Parameters: \`sku\`/\`qty\` repeatable pairs (qty 1 to 50, at most 20 lines);
 \`lines\` as above; \`mode=set\` makes the line quantity equal to qty instead of
 adding to it; \`next\` is \`cart\` (default) or \`checkout\`. The response is a
-303 to that page on the shop; hand that URL to the human to pay. An unknown or
-unpublished SKU gives 404 and adds nothing.
+303 to that page on the shop, in the session of whoever submitted the form, so
+send the human to the product page on this site to press the buy button there. An
+unknown or unpublished SKU gives 404 and adds nothing.
 
 Example, a 20×20 flight stack (OpenFC Lite + OpenESC${stackDiscountNote(globalSoon, statusFlags)}):
 
-    ${shopUrl}/incutec/add?lines=OPENFC-LITE-2020:1,OPENESC-2020:1&next=cart
+    POST ${shopUrl}/incutec/add
+    lines=OPENFC-LITE-2020:1,OPENESC-2020:1&next=cart
 
-Every catalog line below carries its own ready-made order URL. A
+Every catalog line below carries its own form action and body. A
 machine-readable feed lives at ${origin}/products.json.
 
 ## Catalog

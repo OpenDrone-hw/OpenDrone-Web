@@ -1,21 +1,14 @@
-# Cloudflare Workers config for the D15 hosting preview (erp/PLAN.md).
+# Isolated Cloudflare preview Worker config. Deployed by
+# .github/workflows/cloudflare-preview.yml on every push to
+# feat/cloudflare-hosting. No custom-domain routes (a plain workers.dev URL
+# only) and no rate limit bindings, so a preview deploy never touches
+# production DNS or shares state with the production Worker. Points at the
+# staging catalog so preview traffic never lists live stock or prices.
 #
-# The build is unchanged: `npm run build` (Hydrogen's Vite/Oxygen toolchain,
-# decision D3) already emits a plain workerd ESM module at dist/server/index.js
-# with a standard `fetch(request, env, ctx)` export, because Oxygen is itself
-# Shopify's Cloudflare Workers host. This file only points real Cloudflare
-# Workers at that same build output; no server code changed.
-name = "opendrone-web"
+# wrangler.production.toml is the real opendrone.be/www.opendrone.be Worker.
+name = "opendrone-web-preview"
 main = "dist/server/index.js"
 compatibility_date = "2025-04-01"
-
-# D16 cutover: the Worker serves opendrone.be and www.opendrone.be directly
-# once the zone's nameservers point at Cloudflare (erp/PLAN.md D15/D16).
-# server.ts 301s www to the apex to match Shopify's current behaviour.
-routes = [
-  { pattern = "opendrone.be", custom_domain = true },
-  { pattern = "www.opendrone.be", custom_domain = true },
-]
 
 [assets]
 directory = "dist/client"
@@ -24,21 +17,6 @@ directory = "dist/client"
 # per-environment secret set with `wrangler secret put SESSION_SECRET` and is
 # never written here.
 [vars]
-CATALOG_URL = "https://erp.incutec.eu/incutec/catalog.json"
-PUBLIC_SHOP_URL = "https://shop.incutec.com"
-
-# Workers Rate Limiting bindings for /api/support/lookup (founder decision,
-# 2026-09-15: replaced Upstash-backed global rate limiting). Each binding is
-# a fixed limit/period pair — Cloudflare only supports a 10s or 60s window —
-# configured here, not passed at call time; see env.d.ts and
-# app/routes/api.support.lookup.tsx. namespace_id only needs to be a unique
-# positive integer within this account; no external provisioning needed.
-[[ratelimits]]
-name = "SUPPORT_LOOKUP_IP_LIMITER"
-namespace_id = "1001"
-simple = { limit = 3, period = 60 }
-
-[[ratelimits]]
-name = "SUPPORT_LOOKUP_EMAIL_LIMITER"
-namespace_id = "1002"
-simple = { limit = 2, period = 60 }
+CATALOG_URL = "https://staging.incutec.eu/incutec/catalog.json"
+PUBLIC_SHOP_URL = "https://staging.incutec.eu"
+PUBLIC_COMING_SOON = "1"

@@ -200,10 +200,11 @@ only on legal paths.
 
 ### Account, cart, products
 
-None of these live here. The buy button is a link to
-`https://shop.incutec.com/incutec/add?sku=…&qty=1&next=cart`, which adds the
-lines to the visitor's own Odoo cart and redirects them to it; the stack builder
-puts both SKUs on one `?lines=A:1,B:1` link. Accounts, orders, invoices and
+None of these live here. The buy button is a form that POSTs `sku`, `qty` and
+`next` to `https://shop.incutec.com/incutec/add`, which adds the lines to the
+visitor's own Odoo cart and redirects them to it; the stack builder sends both
+SKUs as one `lines=A:1,B:1` field. The shop refuses a GET, so a plain link or a
+crawler cannot fill a cart. Accounts, orders, invoices and
 addresses are the Odoo portal (`/my`, `/my/orders`, `/my/invoices`,
 `/my/addresses`), and `/account/*` 301s there.
 
@@ -360,8 +361,8 @@ The complete annotated list is [`.env.example`](.env.example). Groups:
   moderation gate, the Odoo ticket mirror/state/lookup
   (`SUPPORT_ODOO_URL`, `SUPPORT_ODOO_TOKEN`), and the
   `SUPPORT_LOOKUP_IP_LIMITER`/`SUPPORT_LOOKUP_EMAIL_LIMITER` Workers Rate
-  Limiting bindings (`wrangler.toml`, not env vars). All optional; the
-  bridge degrades gracefully.
+  Limiting bindings (`wrangler.production.toml`, not env vars). All
+  optional; the bridge degrades gracefully.
 - **Goal meter**: `GOALS_URL`, the shop's aggregate order totals for
   `goals:update`. The Odoo endpoint is not built yet (ERP `PLAN.md` step 12.6);
   unset, the script reports that and writes nothing.
@@ -463,18 +464,29 @@ assets (`dist/client`); no application code changed for the move itself.
 Shopify's prior redirect, since a Cloudflare custom domain would otherwise
 serve `www` as a silent mirror.
 
-**Deploy:** `.github/workflows/cloudflare-deploy.yml` runs `wrangler deploy`
-on every push to `main` (production) and to `feat/cloudflare-hosting` (the
-branch used while a hosting change is in flight), using repo secrets
-`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` (same account as
-`../site`, see `../../operations/INTEGRATIONS.md`). The workflow pins
-`wranglerVersion: "4"`: wrangler 3.x doesn't understand `custom_domain = true`
-in `wrangler.toml`'s `routes` and falls back to the deprecated zone-level
-Workers Routes API, which needs a separate token permission from the
-account-level Custom Domains API wrangler 4 uses.
+**Deploy:** two workflows, one Worker each, so a preview deploy can never
+touch production DNS or state:
 
-`CATALOG_URL` and `PUBLIC_SHOP_URL` are set as plain `[vars]` in
-`wrangler.toml` (public values, already the app's defaults). Everything else
+- `.github/workflows/cloudflare-production.yml` runs `wrangler deploy
+  --config wrangler.production.toml` on every push to `main`: the real
+  `opendrone-web` Worker with the `opendrone.be`/`www.opendrone.be` custom
+  domains and the `[[ratelimits]]` bindings below.
+- `.github/workflows/cloudflare-preview.yml` runs `wrangler deploy --config
+  wrangler.toml` on every push to `feat/cloudflare-hosting`: an isolated
+  `opendrone-web-preview` Worker with no custom-domain routes, pointed at the
+  staging catalog with `PUBLIC_COMING_SOON=1`, so a hosting change in flight
+  gets a live URL without touching opendrone.be.
+
+Both use repo secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`
+(same account as `../site`, see `../../operations/INTEGRATIONS.md`) and pin
+`wranglerVersion: "4"`: wrangler 3.x doesn't understand `custom_domain = true`
+in `wrangler.production.toml`'s `routes` and falls back to the deprecated
+zone-level Workers Routes API, which needs a separate token permission from
+the account-level Custom Domains API wrangler 4 uses.
+
+`CATALOG_URL` and `PUBLIC_SHOP_URL` are set as plain `[vars]` per environment
+in `wrangler.production.toml` / `wrangler.toml` (public values, already the
+app's defaults). Everything else
 Oxygen had is a Worker secret, set once with `npx wrangler secret put <NAME>`
 and not in the repo. Names only (values live in the Oxygen production
 environment or, for anything Oxygen keeps masked, only in the Shopify admin):
@@ -510,8 +522,8 @@ checkout-click counter's own numerator had already gone dead when the
 Shopify orders webhook was retired, and nothing read the counter on its
 own, so it and its client-side beacon were dropped rather than migrated.
 `/api/support/lookup`'s rate limiting moved to a Cloudflare Workers Rate
-Limiting binding (`[[ratelimits]]` in `wrangler.toml`, not a secret —
-nothing to port).
+Limiting binding (`[[ratelimits]]` in `wrangler.production.toml`, not a
+secret — nothing to port).
 
 **DNS:** the `opendrone.be` zone's Cloudflare-assigned nameservers
 (`dahlia.ns.cloudflare.com`, `henry.ns.cloudflare.com`) are set at Gandi.
