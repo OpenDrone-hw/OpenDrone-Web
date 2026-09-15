@@ -45,6 +45,7 @@ export type CatalogVariant = {
   image: string | null;
   url: string;
   cart_add_url: string;
+  cart_add_method?: 'POST';
   /** Present only once an incutec.compliance.record is issued for this
    *  SKU's current design revision (storefront-contract.md section 2). */
   compliance?: CatalogCompliance | null;
@@ -70,6 +71,7 @@ export type Catalog = {
   shop_url: string;
   cart_url: string;
   add_url: string;
+  add_method?: 'POST';
   products: CatalogProduct[];
 };
 
@@ -85,6 +87,7 @@ export function emptyCatalog(shopUrl: string): Catalog {
     shop_url: base,
     cart_url: `${base}/shop/cart`,
     add_url: `${base}/incutec/add`,
+    add_method: 'POST',
     products: [],
   };
 }
@@ -198,9 +201,11 @@ export function withComplianceDownload(
 }
 
 /**
- * The buy hand-off link (contract section 3): a plain GET on the shop
- * that adds the lines to the caller's own Odoo cart and redirects to
- * `next`. One line uses the `sku`/`qty` pair, several use `lines`.
+ * Build the action and fields for the shop's POST hand-off form (contract
+ * section 3): `/incutec/add` rejects state-changing GETs so crawlers and
+ * link previewers cannot create carts. One line uses the `sku`/`qty` pair,
+ * several use `lines`. `AddToCartButton` turns the query string this
+ * returns into hidden form fields submitted with `method="post"`.
  *
  * `addUrl` is the catalog's `add_url`; callers that only hold the shop
  * base pass `${shopUrl}/incutec/add`.
