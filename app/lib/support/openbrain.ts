@@ -1,11 +1,11 @@
 /**
  * OpenBrain ticket-API client — phase-1 scaffold. NOT WIRED LIVE.
  *
- * The support backend is moving from "Discord-as-source-of-truth + Upstash
- * index + cookie/magic-link" to OpenBrain's account-bound CRM store
- * (crm.* schema). This is the typed client the support routes will proxy to
- * once `SUPPORT_BACKEND=openbrain`. Today the routes still use the Discord
- * bridge; nothing here is on the request path yet.
+ * The support backend is moving from "Discord-as-source-of-truth + Odoo-
+ * backed ticket state + cookie/magic-link" to OpenBrain's account-bound
+ * CRM store (crm.* schema). This is the typed client the support routes
+ * will proxy to once `SUPPORT_BACKEND=openbrain`. Today the routes still
+ * use the Discord bridge; nothing here is on the request path yet.
  *
  * Trust boundary: this Worker is a confidential first-party client. It verifies
  * the Shopify customer session, then calls OpenBrain with the VERIFIED

@@ -1,7 +1,7 @@
 import {data} from 'react-router';
 import type {Route} from './+types/api.support.thread.$pid';
 import {fetchThreadMessages} from '~/lib/support/discord';
-import {hasTicketStore, listByEmail, getMeta} from '~/lib/support/ticket-index';
+import {hasOdooBridge, searchOdooTickets} from '~/lib/support/odoo';
 import {readSupportCookie, verifyTicket} from '~/lib/support/session';
 import {checkRateLimit} from '~/lib/rate-limit';
 import {
@@ -62,7 +62,7 @@ export async function loader({request, context, params}: Route.LoaderArgs) {
   }
   const email = session.email;
 
-  if (!hasTicketStore(env)) {
+  if (!hasOdooBridge(env)) {
     return data<ThreadResult>(
       {ok: false, message: 'Ticket history unavailable.', code: 'no-kv'},
       {status: 503},
@@ -77,9 +77,10 @@ export async function loader({request, context, params}: Route.LoaderArgs) {
     );
   }
 
-  // Resolve pid -> tid via the email index. Bounded: the index is capped
-  // at 200 entries so this is a single KV read plus a linear scan.
-  const list = await listByEmail(env, email, {status: 'all', limit: 200});
+  // Resolve pid -> tid via Odoo (erp/addons/incutec_support), scoped to
+  // this email so a guessed pid can never resolve to another customer's
+  // ticket.
+  const list = await searchOdooTickets(env, {email, status: 'all', limit: 200});
   const indexEntry = list.find((e) => e.pid === pid);
   if (!indexEntry) {
     return data<ThreadResult>(
@@ -87,8 +88,6 @@ export async function loader({request, context, params}: Route.LoaderArgs) {
       {status: 404},
     );
   }
-
-  const meta = await getMeta(env, indexEntry.tid);
 
   const {messages, thread} = await fetchThreadMessages(env, indexEntry.tid, {
     limit: 100,
@@ -121,7 +120,7 @@ export async function loader({request, context, params}: Route.LoaderArgs) {
     if (isSelf) {
       const match = SELF_PREFIX_RE.exec(m.content);
       raw = (match?.[2] ?? '').trim();
-      firstName = match?.[1]?.trim() || meta?.name || 'You';
+      firstName = match?.[1]?.trim() || indexEntry.name || 'You';
     }
     const scrubbed = scrubForPublic(raw);
     if (scrubbed.blocked) continue;

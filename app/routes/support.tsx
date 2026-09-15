@@ -2,7 +2,7 @@ import {useEffect, useId, useRef, useState} from 'react';
 import {useLoaderData, useNavigate} from 'react-router';
 import type {Route} from './+types/support';
 import {readSupportCookie, verifyTicket} from '~/lib/support/session';
-import {getMeta} from '~/lib/support/ticket-index';
+import {searchOdooTickets} from '~/lib/support/odoo';
 import {SupportThread} from '~/components/SupportThread';
 import {FeedbackModal} from '~/components/FeedbackModal';
 import {buildSeoMeta} from '~/lib/seo';
@@ -55,8 +55,8 @@ export async function loader({request, context}: Route.LoaderArgs) {
   // /contact page when the user already has an active ticket. Skip the
   // cookie-active redirect so the intake form is reachable; the new
   // ticket will replace the cookie focus on submission. The previous
-  // ticket continues to live in the Discord thread + Upstash index and
-  // remains visible in /support/tickets.
+  // ticket continues to live in the Discord thread + Odoo (erp/addons/
+  // incutec_support) and remains visible in /support/tickets.
   const url = new URL(request.url);
   const forceNew = url.searchParams.get('new') === '1';
 
@@ -64,7 +64,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
   const cookie = readSupportCookie(request);
   const cookieTicket = forceNew ? null : await verifyTicket(env, cookie);
   if (cookieTicket) {
-    const meta = await getMeta(env, cookieTicket.tid);
+    const [meta] = await searchOdooTickets(env, {threadId: cookieTicket.tid, limit: 1});
     return {
       phase: 'active' as const,
       ticket: {

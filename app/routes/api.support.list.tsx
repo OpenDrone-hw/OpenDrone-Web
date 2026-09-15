@@ -1,26 +1,29 @@
 import {data} from 'react-router';
 import type {Route} from './+types/api.support.list';
 import {readSupportCookie, verifyTicket} from '~/lib/support/session';
-import {
-  countOpenForEmail,
-  listByEmail,
-  type TicketIndexEntry,
-  type TicketStatus,
-} from '~/lib/support/ticket-index';
+import {searchOdooTickets, type OdooTicketStatus} from '~/lib/support/odoo';
+
+type TicketRow = {
+  tid: string;
+  pid: string;
+  subject: string;
+  openedAt: number;
+  closedAt: number | null;
+  lastActivityAt: number;
+  status: OdooTicketStatus;
+};
 
 type ListResult =
   | {
       ok: true;
-      tickets: TicketIndexEntry[];
+      tickets: TicketRow[];
       openCount: number;
     }
   | {ok: false; message: string; code?: 'signin-required'};
 
-// Lists the tickets opened with the email in the signed ticket cookie.
-// KV-fast: one indexed read per call. Falls back to an empty list when
-// the Upstash store is unbound (tickets still exist in Discord; staff can
-// find them via the forum, the customer-facing /support/tickets view just
-// won't list them until storage is provisioned).
+// Lists the tickets opened with the email in the signed ticket cookie,
+// sourced from Odoo (erp/addons/incutec_support), which replaced this
+// storefront's own Upstash-backed ticket index.
 export async function loader({request, context}: Route.LoaderArgs) {
   const env = context.env;
 
@@ -42,21 +45,33 @@ export async function loader({request, context}: Route.LoaderArgs) {
 
   const url = new URL(request.url);
   const statusParam = url.searchParams.get('status') as
-    | TicketStatus
+    | OdooTicketStatus
     | 'all'
     | null;
-  const status: TicketStatus | 'all' =
+  const status: OdooTicketStatus | 'all' =
     statusParam === 'open' || statusParam === 'closed' || statusParam === 'all'
       ? statusParam
       : 'all';
 
-  const [tickets, openCount] = await Promise.all([
-    listByEmail(env, email, {status, limit: 50}),
-    countOpenForEmail(env, email),
+  const [tickets, openTickets] = await Promise.all([
+    searchOdooTickets(env, {email, status, limit: 50}),
+    searchOdooTickets(env, {email, status: 'open', limit: 200}),
   ]);
 
   return data<ListResult>(
-    {ok: true, tickets, openCount},
+    {
+      ok: true,
+      tickets: tickets.map((t) => ({
+        tid: t.tid,
+        pid: t.pid,
+        subject: t.subject,
+        openedAt: t.openedAt,
+        closedAt: t.closedAt,
+        lastActivityAt: t.lastActivityAt,
+        status: t.status,
+      })),
+      openCount: openTickets.length,
+    },
     {headers: {'Cache-Control': 'private, no-store'}},
   );
 }

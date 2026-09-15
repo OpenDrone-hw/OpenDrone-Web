@@ -1,6 +1,12 @@
 import {describe, it, mock, after} from 'node:test';
 import assert from 'node:assert/strict';
-import {createOrFetchOdooTicket, postOdooMessage} from './odoo.ts';
+import {
+  createOrFetchOdooTicket,
+  hasOdooBridge,
+  patchOdooTicketState,
+  postOdooMessage,
+  searchOdooTickets,
+} from './odoo.ts';
 
 // Run with:
 //   node --experimental-strip-types --test app/lib/support/odoo.test.ts
@@ -223,5 +229,187 @@ describe('postOdooMessage', () => {
     });
     assert.equal(ok, false);
     assert.equal(calls, 2);
+  });
+});
+
+describe('hasOdooBridge', () => {
+  it('true only when SUPPORT_ODOO_TOKEN is set', () => {
+    assert.equal(hasOdooBridge(CONFIGURED), true);
+    assert.equal(hasOdooBridge({SUPPORT_ODOO_URL: 'https://staging.incutec.eu'}), false);
+    assert.equal(hasOdooBridge({}), false);
+  });
+});
+
+describe('patchOdooTicketState', () => {
+  after(() => mock.restoreAll());
+
+  it('returns false when SUPPORT_ODOO_TOKEN is unset', async () => {
+    let calls = 0;
+    stubFetch(async () => {
+      calls++;
+      return new Response('{}', {status: 200});
+    });
+    const ok = await patchOdooTicketState(
+      {SUPPORT_ODOO_URL: 'https://staging.incutec.eu'},
+      'SUP-00001',
+      {closed: true},
+    );
+    assert.equal(ok, false);
+    assert.equal(calls, 0);
+  });
+
+  it('posts only the provided fields to the state endpoint', async () => {
+    let seenUrl = '';
+    let seenBody: Record<string, unknown> = {};
+    stubFetch(async (input, init) => {
+      seenUrl = String(input);
+      seenBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      return new Response(
+        JSON.stringify({id: 1, ticket_ref: 'SUP-00001', ok: true}),
+        {status: 200, headers: {'content-type': 'application/json'}},
+      );
+    });
+    const ok = await patchOdooTicketState(CONFIGURED, 'SUP-00001', {
+      seenCursor: '123',
+    });
+    assert.equal(ok, true);
+    assert.equal(
+      seenUrl,
+      'https://staging.incutec.eu/incutec/support/ticket/SUP-00001/state',
+    );
+    assert.deepEqual(seenBody, {seen_cursor: '123'});
+  });
+
+  it('sends feedback as a nested object', async () => {
+    let seenBody: Record<string, unknown> = {};
+    stubFetch(async (_input, init) => {
+      seenBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      return new Response(
+        JSON.stringify({id: 1, ticket_ref: 'SUP-00001', ok: true}),
+        {status: 200, headers: {'content-type': 'application/json'}},
+      );
+    });
+    await patchOdooTicketState(CONFIGURED, 'SUP-00001', {
+      feedback: {speed: 5, helpfulness: 4, overall: 5, notes: 'great'},
+    });
+    assert.deepEqual(seenBody, {
+      feedback: {speed: 5, helpfulness: 4, overall: 5, notes: 'great'},
+    });
+  });
+
+  it('an error response resolves false, not thrown', async () => {
+    stubFetch(async () =>
+      new Response(JSON.stringify({error: 'unknown ticket ref'}), {status: 404}),
+    );
+    const ok = await patchOdooTicketState(CONFIGURED, 'SUP-99999', {closed: true});
+    assert.equal(ok, false);
+  });
+});
+
+describe('searchOdooTickets', () => {
+  after(() => mock.restoreAll());
+
+  it('returns [] when SUPPORT_ODOO_TOKEN is unset', async () => {
+    let calls = 0;
+    stubFetch(async () => {
+      calls++;
+      return new Response('{"tickets": []}', {status: 200});
+    });
+    const tickets = await searchOdooTickets(
+      {SUPPORT_ODOO_URL: 'https://staging.incutec.eu'},
+      {email: 'a@example.com'},
+    );
+    assert.deepEqual(tickets, []);
+    assert.equal(calls, 0);
+  });
+
+  it('maps the wire shape (snake_case) to the camelCase summary', async () => {
+    let seenBody: Record<string, unknown> = {};
+    stubFetch(async (_input, init) => {
+      seenBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      return new Response(
+        JSON.stringify({
+          tickets: [
+            {
+              thread_id: 't1',
+              ticket_ref: 'SUP-00001',
+              pid: '1234567890',
+              subject: 'ELRS not binding',
+              email: 'a@example.com',
+              name: 'Jane Doe',
+              opened_at: 1000,
+              closed_at: null,
+              last_activity_at: 2000,
+              status: 'open',
+              product: 'ranger-rx',
+              firmware: '1.2.3',
+              seen_cursor: null,
+              notify_cursor: '999',
+            },
+          ],
+        }),
+        {status: 200, headers: {'content-type': 'application/json'}},
+      );
+    });
+    const tickets = await searchOdooTickets(CONFIGURED, {
+      email: 'a@example.com',
+      status: 'open',
+      limit: 10,
+    });
+    assert.deepEqual(seenBody, {
+      email: 'a@example.com',
+      status: 'open',
+      limit: 10,
+    });
+    assert.deepEqual(tickets, [
+      {
+        tid: 't1',
+        ref: 'SUP-00001',
+        pid: '1234567890',
+        subject: 'ELRS not binding',
+        email: 'a@example.com',
+        name: 'Jane Doe',
+        openedAt: 1000,
+        closedAt: null,
+        lastActivityAt: 2000,
+        status: 'open',
+        product: 'ranger-rx',
+        firmware: '1.2.3',
+        seenCursor: undefined,
+        notifyCursor: '999',
+      },
+    ]);
+  });
+
+  it('falls back to ticket_ref for pid when the bridge omits it', async () => {
+    stubFetch(async () =>
+      new Response(
+        JSON.stringify({
+          tickets: [
+            {
+              thread_id: 't1',
+              ticket_ref: 'SUP-00001',
+              subject: 's',
+              email: 'a@example.com',
+              name: 'A',
+              opened_at: 1000,
+              closed_at: null,
+              last_activity_at: null,
+              status: 'open',
+            },
+          ],
+        }),
+        {status: 200, headers: {'content-type': 'application/json'}},
+      ),
+    );
+    const [ticket] = await searchOdooTickets(CONFIGURED, {email: 'a@example.com'});
+    assert.equal(ticket.pid, 'SUP-00001');
+    assert.equal(ticket.lastActivityAt, 1000); // falls back to openedAt
+  });
+
+  it('an error response resolves to an empty list, not thrown', async () => {
+    stubFetch(async () => new Response('unauthorized', {status: 401}));
+    const tickets = await searchOdooTickets(CONFIGURED, {email: 'a@example.com'});
+    assert.deepEqual(tickets, []);
   });
 });

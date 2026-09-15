@@ -2,11 +2,21 @@ import {useEffect, useMemo, useState} from 'react';
 import {Link, redirect, useLoaderData, type HeadersFunction} from 'react-router';
 import type {Route} from './+types/support.tickets';
 import {readSupportCookie, verifyTicket} from '~/lib/support/session';
-import {listByEmail, type TicketIndexEntry} from '~/lib/support/ticket-index';
+import {searchOdooTickets, type OdooTicketStatus} from '~/lib/support/odoo';
 import {SupportThread, type ThreadMessage} from '~/components/SupportThread';
 import {buildSeoMeta} from '~/lib/seo';
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
+
+type AccountTicket = {
+  tid: string;
+  pid: string;
+  subject: string;
+  openedAt: number;
+  closedAt: number | null;
+  lastActivityAt: number;
+  status: OdooTicketStatus;
+};
 
 /** One copy string with `{placeholders}` filled in. */
 function fill(id: string, fallback: string, vars: Record<string, string>) {
@@ -47,17 +57,26 @@ export async function loader({request, context}: Route.LoaderArgs) {
   const activeCookieTid = cookieTicket.tid;
   const activeCookiePid = cookieTicket.pid ?? null;
 
-  const indexed: TicketIndexEntry[] = await listByEmail(
-    env,
-    cookieTicket.email,
-    {status: 'all', limit: 100},
-  );
+  const found = await searchOdooTickets(env, {
+    email: cookieTicket.email,
+    status: 'all',
+    limit: 100,
+  });
+  const indexed: AccountTicket[] = found.map((t) => ({
+    tid: t.tid,
+    pid: t.pid,
+    subject: t.subject,
+    openedAt: t.openedAt,
+    closedAt: t.closedAt,
+    lastActivityAt: t.lastActivityAt,
+    status: t.status,
+  }));
 
-  // Without the ticket store bound the customer index is empty even
-  // when a live ticket exists in the cookie. Synthesise a single entry
-  // from the cookie so the page reflects reality and the live thread
-  // is reachable from the list.
-  const tickets: TicketIndexEntry[] =
+  // When Odoo has nothing yet for this email (bridge unreachable, or the
+  // mirror write for this ticket hasn't landed), synthesise a single
+  // entry from the cookie so the page reflects reality and the live
+  // thread is reachable from the list.
+  const tickets: AccountTicket[] =
     indexed.length === 0 && cookieTicket
       ? [
           {
@@ -196,7 +215,7 @@ function TicketRow({
   isActive,
   onSelect,
 }: {
-  ticket: TicketIndexEntry;
+  ticket: AccountTicket;
   isActive: boolean;
   onSelect: () => void;
 }) {
@@ -263,7 +282,7 @@ function DetailPane({
   customerName,
 }: {
   pid: string | null;
-  ticket: TicketIndexEntry | null;
+  ticket: AccountTicket | null;
   isCookieActive: boolean;
   customerName: string;
 }) {
@@ -304,7 +323,7 @@ function ReadOnlyThread({
 }: {
   pid: string;
   customerName: string;
-  ticket: TicketIndexEntry;
+  ticket: AccountTicket;
 }) {
   const [state, setState] = useState<
     | {phase: 'loading'}
@@ -380,7 +399,7 @@ function ReadOnlyThread({
 }
 
 function mapStatus(
-  t: TicketIndexEntry,
+  t: AccountTicket,
 ): 'open' | 'awaiting' | 'progress' | 'resolved' {
   if (t.status === 'closed') return 'resolved';
   // No fine-grained "awaiting/progress" tracking yet — index has open|closed.

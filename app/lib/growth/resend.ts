@@ -29,8 +29,9 @@
  * throws — marketing plumbing must not break a signup.
  *
  * GDPR: contacts are created only from the consent-checked newsletter
- * form. RtbF for a subscriber = DEL the `sig:<email>` ledger record
- * (app/lib/growth/ledger.ts) + DELETE /contacts/{email} here.
+ * form. Resend is the only place a subscriber's data lives now (founder
+ * decision, 2026-09-15 removed the Upstash `sig:<email>` ledger that used
+ * to duplicate it); RtbF for a subscriber is DELETE /contacts/{email}.
  */
 
 const RESEND_API = 'https://api.resend.com';
@@ -127,6 +128,31 @@ async function ensureSegmentId(
 }
 
 /**
+ * Whether a contact already exists — the newsletter action's only
+ * first-signup signal (welcome email sends once). Replaced a
+ * `sig:<email>` Upstash ledger record that served the same purpose
+ * (founder decision, 2026-09-15: Upstash removed). Returns `null` when
+ * RESEND_API_KEY is unset or the call fails (degrade-soft; the caller
+ * falls back to its own heuristic).
+ */
+export async function contactExists(
+  env: MarketingEnv,
+  email: string,
+): Promise<boolean | null> {
+  if (!env.RESEND_API_KEY) return null;
+  try {
+    const res = await api(env, 'GET', `/contacts/${encodeURIComponent(email)}`);
+    if (res.status === 404) return false;
+    if (res.ok) return true;
+    console.warn('[growth/resend] contact lookup failed', res.status);
+    return null;
+  } catch (err) {
+    console.warn('[growth/resend] contact lookup failed', err);
+    return null;
+  }
+}
+
+/**
  * Create-or-merge a marketing contact. `product` additionally files the
  * contact into the `notify-<product>` segment. `unsubscribed` is never
  * touched, so an opt-out always survives a re-signup.
@@ -135,9 +161,10 @@ async function ensureSegmentId(
  * POST /contacts requires `segments` as an array of OBJECTS
  * (`[{id}]`, not `[id]` — strings 422), and custom `properties` 422
  * unless declared account-side first, which this plan cannot do via
- * API. locale/channel therefore stay ledger-only (sig:<email> is the
- * source of truth anyway) and are accepted here only for call-site
- * compatibility.
+ * API. `locale`/`channel` are therefore accepted only for call-site
+ * compatibility and not persisted anywhere — Resend is the only
+ * subscriber store now (founder decision, 2026-09-15 removed the
+ * Upstash ledger that used to hold them).
  */
 export async function upsertContact(
   env: MarketingEnv,

@@ -3,7 +3,7 @@ import type {Route} from './+types/api.support.feedback';
 import {postFeedback} from '~/lib/support/discord';
 import {readSupportCookie, verifyTicket} from '~/lib/support/session';
 import {checkRateLimit} from '~/lib/rate-limit';
-import {saveFeedback} from '~/lib/support/ticket-index';
+import {createOrFetchOdooTicket, patchOdooTicketState} from '~/lib/support/odoo';
 import {scrubForDiscord} from '~/lib/support/scrubber';
 
 type FeedbackResult =
@@ -12,10 +12,11 @@ type FeedbackResult =
 
 // Stage 6 end-of-ticket survey. Three 1-5 ratings + free-text notes.
 // Posts a structured message to DISCORD_FEEDBACK_CHANNEL_ID (falls back
-// to staff metadata channel) AND writes to KV under fb:{tid} so we
-// can roll up trends later. Idempotent at the KV layer — submitting
-// twice overwrites, which keeps the UX simple ("oops, wanted to fix
-// my rating") at the cost of losing the prior submission.
+// to staff metadata channel) AND stores the ratings on the mirrored Odoo
+// ticket (erp/addons/incutec_support) so they can be rolled up into a
+// report there. Idempotent — submitting twice overwrites, which keeps the
+// UX simple ("oops, wanted to fix my rating") at the cost of losing the
+// prior submission.
 export async function action({request, context}: Route.ActionArgs) {
   if (request.method !== 'POST') {
     return data<FeedbackResult>(
@@ -61,20 +62,19 @@ export async function action({request, context}: Route.ActionArgs) {
     .slice(0, 1500);
   const notes = scrubForDiscord(rawNotes).content;
 
-  const submittedAt = Math.floor(Date.now() / 1000);
-
-  const kvJob = saveFeedback(env, {
-    tid: ticket.tid,
-    pid: ticket.pid ?? '',
-    email: ticket.email,
-    speed,
-    helpfulness,
-    overall,
-    notes,
-    submittedAt,
-  }).catch((err) =>
-    console.warn('[support/feedback] kv save failed', err),
-  );
+  const odooJob = (async () => {
+    const odooTicket = await createOrFetchOdooTicket(env, {
+      threadId: ticket.tid,
+      email: ticket.email,
+      name: ticket.name,
+      subject: `Support ticket #${ticket.pid ?? ticket.uid}`,
+    });
+    if (odooTicket) {
+      await patchOdooTicketState(env, odooTicket.ticketRef, {
+        feedback: {speed, helpfulness, overall, notes},
+      });
+    }
+  })().catch((err) => console.warn('[support/feedback] odoo save failed', err));
 
   const discordJob = postFeedback(env, {
     pid: ticket.pid ?? ticket.uid,
@@ -90,10 +90,10 @@ export async function action({request, context}: Route.ActionArgs) {
   );
 
   if (context.waitUntil) {
-    context.waitUntil(kvJob);
+    context.waitUntil(odooJob);
     context.waitUntil(discordJob);
   } else {
-    void kvJob;
+    void odooJob;
     void discordJob;
   }
 

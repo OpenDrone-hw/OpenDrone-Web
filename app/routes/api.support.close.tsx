@@ -1,19 +1,12 @@
 import {data} from 'react-router';
 import type {Route} from './+types/api.support.close';
-import {fetchAllThreadMessages, postToThread} from '~/lib/support/discord';
-import {scrubForPublic} from '~/lib/support/scrubber';
+import {postToThread} from '~/lib/support/discord';
 import {
   buildSupportSetCookie,
   readSupportCookie,
   verifyTicket,
 } from '~/lib/support/session';
-import {
-  archiveTicket,
-  closeTicket,
-  getFeedback,
-  getMeta,
-  type ArchivedMessage,
-} from '~/lib/support/ticket-index';
+import {createOrFetchOdooTicket, patchOdooTicketState} from '~/lib/support/odoo';
 
 type CloseResult = {ok: true} | {ok: false; message: string};
 
@@ -28,76 +21,38 @@ export async function action({request, context}: Route.ActionArgs) {
   const cookie = readSupportCookie(request);
   const ticket = await verifyTicket(env, cookie);
   if (ticket) {
-    // Mark closed + post a staff-visible close marker. The Discord
-    // thread itself is left in place for a 1-day grace period so the
-    // customer can re-open from /account/support if they had buyer's
-    // remorse on hitting END TICKET. The daily cleanup cron
+    // Mark closed on the mirrored Odoo ticket + post a staff-visible close
+    // marker. The Discord thread itself is left in place for a 1-day grace
+    // period so the customer can re-open from /account/support if they had
+    // buyer's remorse on hitting END TICKET. The daily cleanup cron
     // (/api/support/cleanup) deletes closed threads after 24 h.
-    await Promise.all([
-      closeTicket(env, ticket.tid).catch((err) =>
-        console.warn('[support/close] index update failed', err),
-      ),
-      postToThread(
-        env,
-        ticket.tid,
-        `_${ticket.name} ended the web-support session._`,
-      ).catch(() => null),
-    ]);
-
-    // Snapshot the transcript + feedback to archive:{tid} immediately,
-    // not at cleanup time. Two reasons:
-    //  1. If staff manually delete the Discord thread before the cron
-    //     runs (or Discord errors during cleanup's fetch), we still
-    //     have the conversation.
-    //  2. If the cleanup cron is broken or misconfigured, ended
-    //     tickets still land in the corpus.
-    // The cleanup pass later overwrites this archive with whatever the
-    // thread looks like at deletion time (including any post-close
-    // staff notes within the 24h grace). Idempotent.
     //
-    // Run in waitUntil so the End-Ticket request returns immediately —
-    // a Discord thread fetch + Upstash put adds ~500 ms otherwise.
-    const archiveJob = (async () => {
-      try {
-        const meta = await getMeta(env, ticket.tid);
-        if (!meta) return;
-        const messages = await fetchAllThreadMessages(env, ticket.tid).catch(
-          () => [],
-        );
-        const feedback = await getFeedback(env, ticket.tid).catch(() => null);
-        const archived: ArchivedMessage[] = messages.map((m) => ({
-          role: m.author.bot ? 'bot' : 'staff',
-          authorFirstName:
-            (m.author.globalName || m.author.username || '')
-              .trim()
-              .split(/\s+/)[0]
-              ?.slice(0, 40) || 'Unknown',
-          content: scrubForPublic(m.content || '').content,
-          createdAt: m.createdAt,
-        }));
-        await archiveTicket(env, {
-          tid: meta.tid,
-          pid: meta.pid,
-          subject: meta.subject,
-          product: meta.product,
-          firmware: meta.firmware,
-          openedAt: meta.openedAt,
-          closedAt: meta.closedAt ?? Math.floor(Date.now() / 1000),
-          lastActivityAt: meta.lastActivityAt,
-          archivedAt: Math.floor(Date.now() / 1000),
-          removalReason: 'closed',
-          messages: archived,
-          feedback,
-        });
-      } catch (err) {
-        console.warn('[support/close] archive snapshot failed', err);
+    // No separate archive snapshot any more: every message either side
+    // sends is already mirrored into the Odoo task's chatter as it
+    // happens (app/routes/api.support.start.tsx, api.support.send.tsx),
+    // so that task IS the permanent record once the Discord thread is
+    // gone — there is nothing left for this route to additionally save.
+    const closeJob = (async () => {
+      const odooTicket = await createOrFetchOdooTicket(env, {
+        threadId: ticket.tid,
+        email: ticket.email,
+        name: ticket.name,
+        subject: `Support ticket #${ticket.pid ?? ticket.uid}`,
+      });
+      if (odooTicket) {
+        await patchOdooTicketState(env, odooTicket.ticketRef, {closed: true});
       }
-    })();
-    if (context.waitUntil) {
-      context.waitUntil(archiveJob);
-    } else {
-      void archiveJob;
-    }
+    })().catch((err) => console.warn('[support/close] odoo close failed', err));
+    // Odoo's own round trip (up to ~10s with its one retry) must never
+    // tail this response — fire-and-forget like every other Odoo call
+    // (D13). The Discord close marker is fast enough to await directly.
+    if (context.waitUntil) context.waitUntil(closeJob);
+    else void closeJob;
+    await postToThread(
+      env,
+      ticket.tid,
+      `_${ticket.name} ended the web-support session._`,
+    ).catch(() => null);
   }
   return data<CloseResult>(
     {ok: true},

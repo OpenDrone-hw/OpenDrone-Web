@@ -10,11 +10,7 @@ import {buildResumeUrl, signResumeToken} from '~/lib/support/resume-token';
 import {constantTimeEqual, randomId} from '~/lib/support/session';
 import {filterByApproval} from '~/lib/support/moderation';
 import {extractFirstName, scrubForPublic} from '~/lib/support/scrubber';
-import {
-  hasTicketStore,
-  listAllTickets,
-  patchMeta,
-} from '~/lib/support/ticket-index';
+import {hasOdooBridge, patchOdooTicketState, searchOdooTickets} from '~/lib/support/odoo';
 import {
   decideNotify,
   laterSnowflake,
@@ -45,7 +41,7 @@ type NotifyResult =
   | {
       ok: true;
       scanned: number;
-      emailed: Array<{tid: string; pid: string; replies: number}>;
+      emailed: Array<{tid: string; ref: string; replies: number}>;
       deferred: number;
     }
   | {ok: false; message: string};
@@ -73,7 +69,7 @@ export async function action({request, context}: Route.ActionArgs) {
       {status: 401},
     );
   }
-  if (!hasTicketStore(env)) {
+  if (!hasOdooBridge(env)) {
     return data<NotifyResult>(
       {ok: false, message: 'Ticket store not configured.'},
       {status: 503},
@@ -82,12 +78,9 @@ export async function action({request, context}: Route.ActionArgs) {
 
   const origin = new URL(request.url).origin;
   const nowMs = Date.now();
-  const all = await listAllTickets(env);
-  const open = all
-    .filter((t) => t.status === 'open')
-    .slice(0, MAX_TICKETS_PER_RUN);
+  const open = await searchOdooTickets(env, {status: 'open', limit: MAX_TICKETS_PER_RUN});
 
-  const emailed: Array<{tid: string; pid: string; replies: number}> = [];
+  const emailed: Array<{tid: string; ref: string; replies: number}> = [];
   let deferred = 0;
 
   // Sequential on purpose: open-ticket volume is tiny and this keeps
@@ -138,14 +131,14 @@ export async function action({request, context}: Route.ActionArgs) {
       }
       if (decision.action === 'skip') {
         if (decision.nextCursor) {
-          await patchMeta(env, ticket.tid, {notifyCursor: decision.nextCursor});
+          await patchOdooTicketState(env, ticket.ref, {notifyCursor: decision.nextCursor});
         }
         continue;
       }
 
       if (!ticket.email) {
         // Nothing to email; settle the cursor so we stop re-reading.
-        await patchMeta(env, ticket.tid, {notifyCursor: decision.nextCursor});
+        await patchOdooTicketState(env, ticket.ref, {notifyCursor: decision.nextCursor});
         continue;
       }
       const resumeToken = await signResumeToken(env, {
@@ -153,7 +146,6 @@ export async function action({request, context}: Route.ActionArgs) {
         uid: randomId(),
         email: ticket.email,
         name: ticket.name,
-        pid: ticket.pid,
       });
       const sent = await sendReplyNotification(env, {
         to: ticket.email,
@@ -169,10 +161,10 @@ export async function action({request, context}: Route.ActionArgs) {
       // batch is retried on the next sweep.
       if (!sent) continue;
 
-      await patchMeta(env, ticket.tid, {notifyCursor: decision.nextCursor});
+      await patchOdooTicketState(env, ticket.ref, {notifyCursor: decision.nextCursor});
       emailed.push({
         tid: ticket.tid,
-        pid: ticket.pid,
+        ref: ticket.ref,
         replies: decision.include.length,
       });
       const n = decision.include.length;

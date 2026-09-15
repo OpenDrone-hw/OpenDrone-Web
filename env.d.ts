@@ -27,6 +27,13 @@ declare global {
     }>;
   }
 
+  // Cloudflare Workers Rate Limiting binding (wrangler.toml
+  // `[[ratelimits]]`). Not re-exported by @shopify/oxygen-workers-types,
+  // so declared minimally here like KVNamespace above.
+  interface RateLimit {
+    limit(options: {key: string}): Promise<{success: boolean}>;
+  }
+
   interface Env {
     // Signs the locale and support-desk cookies.
     SESSION_SECRET: string;
@@ -113,21 +120,28 @@ declare global {
     SUPPORT_APPROVE_EMOJI?: string;
     SUPPORT_MODERATION_MODE?: string;
 
-    // Stage 6 ticket index — Upstash Redis REST credentials. Oxygen
-    // does not expose Cloudflare KV bindings, so we hit Upstash over
-    // HTTPS instead. When unset, list operations degrade to a Discord
-    // forum scan (slow, fine at <100 tickets total). Required before
-    // scaling beyond a few hundred tickets.
-    UPSTASH_REDIS_REST_URL?: string;
-    UPSTASH_REDIS_REST_TOKEN?: string;
-
-    // Odoo support-ticket mirror (erp/addons/incutec_support, PLAN.md
-    // 12.2, app/lib/support/odoo.ts). Every Discord ticket and message
-    // is best-effort mirrored into Odoo `project.task`; unset or
-    // unreachable, the Discord-only bridge is unaffected (D13).
-    // SUPPORT_ODOO_URL defaults to https://erp.incutec.eu.
+    // Ticket state and lookup — Odoo (erp/addons/incutec_support,
+    // PLAN.md 12.2, app/lib/support/odoo.ts). Every Discord ticket and
+    // message is best-effort mirrored into Odoo `project.task`, which is
+    // also the storefront's ticket index (close/cursors/feedback/lookup):
+    // there is no separate KV store any more (Upstash Redis removed
+    // entirely, founder decision, 2026-09-15). Unset or unreachable, the
+    // Discord-only bridge is unaffected (D13). SUPPORT_ODOO_URL defaults
+    // to https://erp.incutec.eu.
     SUPPORT_ODOO_URL?: string;
     SUPPORT_ODOO_TOKEN?: string;
+
+    // Workers Rate Limiting bindings (wrangler.toml `[[ratelimits]]`) for
+    // /api/support/lookup's "resume by email" abuse defence — distributed
+    // across isolates, unlike app/lib/rate-limit.ts's in-memory limiter.
+    // Replaced Upstash-backed global counters (founder decision,
+    // 2026-09-15). Cloudflare's platform ceiling is a 10s/60s window, so
+    // these approximate the former 10-minute IP cap and 24-hour email cap
+    // as 60s windows at the same request counts (app/routes/
+    // api.support.lookup.tsx). Optional because local dev has no binding
+    // — the route falls back to the in-memory limiter.
+    SUPPORT_LOOKUP_IP_LIMITER?: RateLimit;
+    SUPPORT_LOOKUP_EMAIL_LIMITER?: RateLimit;
 
     // Bearer token for /api/support/cleanup. The daily GitHub Actions
     // cron (.github/workflows/support-cleanup.yml) sends this in the
