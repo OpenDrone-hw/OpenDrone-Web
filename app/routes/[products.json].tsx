@@ -82,10 +82,6 @@ export async function loader({context, request}: Route.LoaderArgs) {
           // The hand-off: POST the query string of cart_add_url as form
           // fields to its path; the shop refuses GET (contract section 3).
           ...(locked ? null : {cart_add_url: v.cartAddUrl, cart_add_method: 'POST'}),
-          // The issued Declaration of Conformity (D13, PLAN.md 11.4), only
-          // once incutec_compliance has one for this SKU's current design
-          // revision; never a stand-in for an unissued record.
-          ...(v.compliance ? {compliance: v.compliance} : null),
         })),
       };
     });

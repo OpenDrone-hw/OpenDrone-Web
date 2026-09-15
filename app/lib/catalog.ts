@@ -19,7 +19,6 @@
 import type {
   CartLine,
   CatalogAvailability,
-  CatalogCompliance,
   MappedProductOptions,
   MoneyV2,
   ProductCardFragment,
@@ -27,10 +26,9 @@ import type {
   ProductImage,
   ProductVariantFragment,
 } from './product-shapes.ts';
-import type {DownloadAsset} from './product-content.ts';
 import {PRODUCT_CONTENT} from './product-content.ts';
 
-export type {CartLine, CatalogAvailability, CatalogCompliance};
+export type {CartLine, CatalogAvailability};
 
 export type CatalogVariant = {
   sku: string;
@@ -46,9 +44,9 @@ export type CatalogVariant = {
   url: string;
   cart_add_url: string;
   cart_add_method?: 'POST';
-  /** Present only once an incutec.compliance.record is issued for this
-   *  SKU's current design revision (storefront-contract.md section 2). */
-  compliance?: CatalogCompliance | null;
+  /** Older catalogs carried an issued DoC object here. It is ignored:
+   *  Declarations of Conformity stay internal (contract section 4). */
+  compliance?: unknown;
 };
 
 export type CatalogProduct = {
@@ -163,44 +161,6 @@ export function availabilityToAvailableForSale(
 }
 
 /**
- * A variant's issued Declaration of Conformity as one Downloads-chapter
- * entry (D13, PLAN.md 11.4), or null when none is issued yet. `doc` is the
- * download kind reserved for this in `product-content.ts`; the label and
- * note are fixed here so no per-product content file ever hand-writes a
- * DoC entry ahead of the record actually being issued.
- */
-export function complianceDownload(
-  compliance: CatalogCompliance | null | undefined,
-): DownloadAsset | null {
-  if (!compliance) return null;
-  const note = [
-    compliance.version ? `v${compliance.version}` : null,
-    compliance.issued_on ? `issued ${compliance.issued_on}` : null,
-  ]
-    .filter((part): part is string => Boolean(part))
-    .join(' · ');
-  return {
-    kind: 'doc',
-    label: 'Declaration of conformity (PDF)',
-    href: compliance.doc_url,
-    note: note || undefined,
-  };
-}
-
-/**
- * The Downloads chapter's asset list: the product's editorial downloads
- * (schematics, STEP, manuals, ...) plus the selected variant's DoC entry,
- * appended last, only once one is issued.
- */
-export function withComplianceDownload(
-  downloads: DownloadAsset[],
-  compliance: CatalogCompliance | null | undefined,
-): DownloadAsset[] {
-  const doc = complianceDownload(compliance);
-  return doc ? [...downloads, doc] : downloads;
-}
-
-/**
  * Build the action and fields for the shop's POST hand-off form (contract
  * section 3): `/incutec/add` rejects state-changing GETs so crawlers and
  * link previewers cannot create carts. One line uses the `sku`/`qty` pair,
@@ -275,7 +235,6 @@ function mapVariant(
     shipPromise: variant.ship_promise,
     availability: variant.availability,
     shopUrl: variant.url || product.url || null,
-    compliance: variant.compliance ?? null,
   };
 }
 
