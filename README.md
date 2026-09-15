@@ -172,9 +172,14 @@ page. Posts are Markdown files in `content/posts/`, rendered by the app the way
 the legal pages are (`app/lib/posts.ts`): set `published: true` in the front
 matter, commit, and the post is live at `/newsletter/<slug>` and in
 `/newsletter.rss`. Images are authored in `content/posts/images/` and served
-from `public/posts/`; add each one to both. Subscribers are Resend contacts and
-sending is a deliberate manual step (`scripts/launch-blast.mjs`); publishing
-never emails anyone.
+from `public/posts/`; add each one to both. The signup form starts a double
+opt-in subscription on Odoo's "Newsletter" `mailing.list`
+(`app/lib/growth/odoo-newsletter.ts`; erp PLAN.md 13.11): Odoo mails the
+confirmation link and owns unsubscribing (its own mailing link). Sending an
+actual issue is a manual step done from Odoo, outside this repository;
+publishing a post here never emails anyone. `scripts/launch-blast.mjs`
+is a separate, older per-product "notify me at launch" blast against a
+Resend segment, unrelated to the Newsletter list above.
 
 ### Wholesale and firmware partners
 

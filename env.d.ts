@@ -108,12 +108,19 @@ declare global {
     RESEND_API_KEY?: string;
     SUPPORT_FROM_EMAIL?: string;
 
-    // Marketing email (growth, app/lib/growth/resend.ts). Reuses
-    // RESEND_API_KEY — the key must have access to Resend
-    // Contacts/Segments/Broadcasts, not just transactional sends.
-    // From-address for the launch-list welcome email + broadcasts;
-    // defaults to hello@opendrone.be. Domain must be verified in Resend.
-    RESEND_MARKETING_FROM?: string;
+    // Newsletter double opt-in bridge (erp PLAN.md 13.11, Odoo module
+    // incutec_catalog_api, app/lib/growth/odoo-newsletter.ts). Every
+    // signup is a server-to-server POST to Odoo, which mails the
+    // confirmation link itself and only joins the "Newsletter"
+    // mailing.list once it is followed; unsubscribing uses Odoo's own
+    // mailing link, so this repository holds no Resend audience, contact
+    // or unsubscribe-token code any more. NEWSLETTER_ODOO_URL defaults to
+    // https://erp.incutec.eu. NEWSLETTER_DISPATCH_SECRET must match the
+    // system parameter incutec_catalog_api.newsletter_dispatch_secret,
+    // set from env $NEWSLETTER_DISPATCH_SECRET by erp/config/configure.py
+    // (--section catalog_api). Unset, signup fails closed (no mail sent).
+    NEWSLETTER_ODOO_URL?: string;
+    NEWSLETTER_DISPATCH_SECRET?: string;
 
     // Stage 2 moderation gate
     SUPPORT_MOD_ROLE_ID?: string;

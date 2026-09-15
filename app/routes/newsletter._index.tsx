@@ -3,9 +3,7 @@ import type {Route} from './+types/newsletter._index';
 import {buildSeoMeta} from '~/lib/seo';
 import {checkRateLimit, clientIp} from '~/lib/rate-limit';
 import {verifyTurnstile} from '~/lib/support/turnstile';
-import {signUnsubscribeToken} from '~/lib/growth/unsubscribe-token';
-import {contactExists, upsertContact, sendWelcome} from '~/lib/growth/resend';
-import {getLocaleFromRequest} from '~/lib/i18n';
+import {subscribeToNewsletter} from '~/lib/growth/odoo-newsletter';
 import {archivePosts} from '~/lib/posts';
 import {
   ReleaseRow,
@@ -20,8 +18,11 @@ import {copyText} from '~/lib/copy';
 // redirect in.
 //
 // GET  → renders the post archive (this is the newsletter).
-// POST → enrols an email as a Resend marketing contact, which is the one
-//        subscriber list; sending uses Resend Broadcasts.
+// POST → starts a double opt-in signup on Odoo's "Newsletter" mailing.list
+//        (erp PLAN.md 13.11, app/lib/growth/odoo-newsletter.ts): Odoo mails
+//        the confirmation link and the address joins the list only once it
+//        is followed. Odoo also owns unsubscribing, via its own mailing
+//        link — this route holds no unsubscribe code.
 //
 // The signup FORM lives in the site footer (present on every page), so this
 // page intentionally has no in-body form — it would just duplicate the footer.
@@ -132,21 +133,15 @@ export default function NewsletterPage() {
 type NewsletterResult = {
   ok: boolean;
   message: string;
-  alreadySubscribed?: boolean;
 };
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Optional `product` form field: a catalog handle from the coming-soon
-// "Notify me at launch" signup. Strict slug shape — it becomes a Resend
-// contact property, so nothing free-form gets through.
+// "Notify me at launch" signup, forwarded to Odoo as-is (it validates the
+// same shape again server-side). Strict slug shape — nothing free-form
+// gets through.
 const PRODUCT_HANDLE_REGEX = /^[a-z0-9][a-z0-9-]{0,63}$/;
-
-// Optional `channel` form field: client-side first-touch attribution
-// (NewsletterSignup.tsx fills it from sessionStorage). Same strictness —
-// accepted for call-site compatibility but not persisted anywhere (see
-// upsertContact).
-const CHANNEL_REGEX = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 
 export async function action({request, context}: Route.ActionArgs) {
   if (request.method !== 'POST') {
@@ -181,50 +176,6 @@ export async function action({request, context}: Route.ActionArgs) {
   const notifyProduct = PRODUCT_HANDLE_REGEX.test(productRaw)
     ? productRaw
     : null;
-  const channelRaw = String(formData.get('channel') ?? '')
-    .trim()
-    .toLowerCase();
-  const channel = CHANNEL_REGEX.test(channelRaw) ? channelRaw : 'direct';
-
-  // Growth pipeline (Lane B), fired via waitUntil on every verified
-  // successful signup path: (a) Resend marketing contact upsert (+
-  // notify-<handle> segment), (b) welcome email on the FIRST signup for
-  // the address only. Everything degrades to warn+no-op without its env
-  // keys and must never block or fail the response.
-  //
-  // Resend is the only subscriber list (founder decision, 2026-09-15
-  // removed the Upstash `sig:<email>` ledger this used to check first);
-  // whether the contact already existed is the first-signup signal, with
-  // `fallbackFirst` deciding when that lookup itself is unavailable.
-  const scheduleGrowth = (fallbackFirst: boolean) => {
-    const env = context.env;
-    const locale = getLocaleFromRequest(request);
-    const job = (async () => {
-      const existed = await contactExists(env, email);
-      await upsertContact(env, {
-        email,
-        locale,
-        channel,
-        product: notifyProduct ?? undefined,
-      });
-      const firstSignup = existed === null ? fallbackFirst : existed === false;
-      if (firstSignup) {
-        // One-click opt-out link for the welcome footer; falls back to
-        // the plain /newsletter/unsubscribe form when no secret is set.
-        const unsubToken = await signUnsubscribeToken(env, email);
-        await sendWelcome(env, {
-          email,
-          product: notifyProduct ?? undefined,
-          unsubscribeUrl: unsubToken
-            ? `https://opendrone.be/newsletter/unsubscribe?t=${encodeURIComponent(unsubToken)}`
-            : null,
-        });
-      }
-    })().catch((err) => console.warn('[newsletter] growth job failed', err));
-    if (context.waitUntil) {
-      context.waitUntil(job);
-    }
-  };
 
   if (honeypot) {
     return data<NewsletterResult>({ok: true, message: (copyText('newsletter.action_honeypot') ?? 'Thanks.')});
@@ -245,8 +196,8 @@ export async function action({request, context}: Route.ActionArgs) {
   }
 
   // Verify Turnstile BEFORE the per-email rate-limit branch: that branch
-  // still writes a Resend contact, and a write must never run on an
-  // unverified request.
+  // still triggers a real confirmation mail from Odoo, and a send must
+  // never run on an unverified request.
   const turnstile = await verifyTurnstile(context.env, turnstileToken, ip);
   if (!turnstile.ok) {
     return data<NewsletterResult>(
@@ -261,39 +212,44 @@ export async function action({request, context}: Route.ActionArgs) {
     24 * 60 * 60 * 1000,
   );
   if (!emailLimit.allowed) {
-    // Rate-limited, but a notify-at-launch click still carries signal: the
-    // contact upsert is idempotent, so run it before returning the generic
-    // success — otherwise the 4th product someone asks about in a day is
-    // silently dropped. (Turnstile already verified above.)
-    if (notifyProduct) {
-      scheduleGrowth(false);
-      return data<NewsletterResult>({
-        ok: true,
-        message: (copyText('newsletter.action_notify_listed') ?? "You're on the list. We'll email you at launch."),
-        alreadySubscribed: true,
-      });
-    }
-    // Be generic to avoid confirming which addresses have already signed up.
+    // Odoo resends the confirmation mail on every subscribe call (it is
+    // how a visitor who lost the first email gets a fresh one), so past
+    // this limit the Worker stops calling Odoo rather than mailing the
+    // address again — the earlier call already queued a confirmation.
     return data<NewsletterResult>({
       ok: true,
-      message: (copyText('newsletter.action_already_listed') ?? "You're already on the list."),
-      alreadySubscribed: true,
+      message:
+        copyText('newsletter.action_already_listed') ??
+        'Already sent — check your inbox (including spam) for the confirmation link.',
     });
   }
 
-  // The subscriber list is Resend contacts, written by scheduleGrowth.
-  // There is no second system to fail against and no "already a customer"
-  // state to read back, so the only outcome here is success: whether the
-  // Resend contact already existed decides whether this address gets the
-  // welcome mail.
-  scheduleGrowth(true);
+  const subscribed = await subscribeToNewsletter(context.env, {
+    email,
+    product: notifyProduct ?? undefined,
+  });
+  if (!subscribed) {
+    return data<NewsletterResult>(
+      {
+        ok: false,
+        message:
+          copyText('newsletter.action_generic_failure') ??
+          "Couldn't subscribe right now. Try again in a moment.",
+      },
+      {status: 502},
+    );
+  }
 
+  // Odoo's own response never reveals whether the address was already on
+  // the list (same anti-enumeration property the old Resend path had), so
+  // the message here is generic regardless of notifyProduct or repeat
+  // signup: confirmation is always required next.
   if (notifyProduct) {
     return data<NewsletterResult>({
       ok: true,
       message:
         copyText('newsletter.action_notify_listed') ??
-        "You're on the list. We'll email you at launch.",
+        "Check your inbox to confirm, and we'll email you at launch.",
     });
   }
 
@@ -301,6 +257,6 @@ export async function action({request, context}: Route.ActionArgs) {
     ok: true,
     message:
       copyText('newsletter.action_subscribed') ??
-      'Subscribed. The next post goes to your inbox.',
+      'Check your inbox to confirm your subscription.',
   });
 }
