@@ -415,6 +415,15 @@ into the existing TXT, never replace it.
 - **Headers** (`app/entry.server.tsx`): nonce-based CSP, HSTS with preload,
   `X-Frame-Options: DENY`, nosniff, strict referrer policy, a Permissions-Policy
   that denies nearly everything, COOP/CORP.
+- **Product images** (`app/lib/odoo-image.ts`): catalog images are served
+  same-origin from `/img/odoo/<model>/<id>/<field>?unique=<hash>`, not
+  hot-linked from Odoo. Only `product.template`, `product.product` and
+  `product.image` with `image_1920`/`1024`/`512`/`256`/`128` are proxied.
+  Responses sit in the Workers Cache API keyed by the hash; when Odoo is
+  unreachable a cached or last known image is served, and a neutral
+  `no-store` placeholder only if none was ever cached. Each isolate warms the
+  cache for every catalog image at most every 30 minutes. The upstream Basic
+  auth (`CATALOG_HTTP_USER`/`CATALOG_HTTP_PASSWORD`) never reaches the browser.
 - **Rate limits**: a per-isolate sliding window on every public POST (support
   endpoints, newsletter, resume). Pair with Cloudflare edge rules for real floods.
 - **Input caps**: bounded lengths on every support field; uploads capped at
