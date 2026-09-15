@@ -8,7 +8,7 @@ import {
   verifyTicket,
 } from '~/lib/support/session';
 import {checkRateLimit} from '~/lib/rate-limit';
-import {patchMeta} from '~/lib/support/ticket-index';
+import {createOrFetchOdooTicket, patchOdooTicketState} from '~/lib/support/odoo';
 import {
   extractFirstName,
   scrubForPublic,
@@ -225,9 +225,16 @@ export async function loader({request, context}: Route.LoaderArgs) {
   // but its deliveries stay email-eligible. Best-effort, never blocks
   // the response.
   if (visible && cursorChanged && cursorTarget) {
-    const job = patchMeta(env, ticket.tid, {seenCursor: cursorTarget}).catch(
-      (err) => console.warn('[support/poll] seenCursor write failed', err),
-    );
+    const job = (async () => {
+      const odooTicket = await createOrFetchOdooTicket(env, {
+        threadId: ticket.tid,
+        email: ticket.email,
+        name: ticket.name,
+        subject: `Support ticket #${ticket.pid ?? ticket.uid}`,
+      });
+      if (!odooTicket) return;
+      await patchOdooTicketState(env, odooTicket.ticketRef, {seenCursor: cursorTarget});
+    })().catch((err) => console.warn('[support/poll] seenCursor write failed', err));
     if (context.waitUntil) context.waitUntil(job);
     else void job;
   }

@@ -3,7 +3,6 @@ import type {Route} from './+types/newsletter.unsubscribe';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {checkRateLimit, clientIp} from '~/lib/rate-limit';
 import {verifyUnsubscribeToken} from '~/lib/growth/unsubscribe-token';
-import {recordUnsubscribe} from '~/lib/growth/ledger';
 import {unsubscribeContact} from '~/lib/growth/resend';
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
@@ -14,9 +13,9 @@ import {copyText} from '~/lib/copy';
 //        confirm button bound to that email. Without/with an invalid token:
 //        a plain email form. GET never unsubscribes anything — inbox link
 //        scanners prefetch GETs.
-// POST → does the actual opt-out across both stores: Resend contact
-//        suppression and the `sig:` ledger record (best-effort like all
-//        growth writers). Token-authenticated POSTs skip the rate limit;
+// POST → does the actual opt-out: Resend contact suppression, the only
+//        subscriber store (best-effort like every growth writer here).
+//        Token-authenticated POSTs skip the rate limit;
 //        form POSTs get honeypot + per-IP limit. The response is the same
 //        generic confirmation either way, so the endpoint never confirms
 //        whether an address was subscribed.
@@ -102,12 +101,11 @@ export async function action({request, context}: Route.ActionArgs) {
     }
   }
 
-  // All three best-effort and awaited inline (three fast API calls): the
-  // user is told "done" only after the suppression writes actually ran.
-  await Promise.all([
-    unsubscribeContact(context.env, email),
-    recordUnsubscribe(context.env, email),
-  ]);
+  // Best-effort, awaited inline: the user is told "done" only after the
+  // suppression write actually ran. Resend is the only subscriber store
+  // now (founder decision, 2026-09-15 removed the Upstash ledger this
+  // used to also write).
+  await unsubscribeContact(context.env, email);
 
   return data<UnsubscribeResult>({ok: true, message: doneMessage()});
 }

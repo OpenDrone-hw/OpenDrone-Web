@@ -5,7 +5,6 @@ import {readSupportCookie, verifyTicket} from '~/lib/support/session';
 import {extractAttachments} from '~/lib/support/uploads';
 import {checkRateLimit} from '~/lib/rate-limit';
 import {scrubForDiscord} from '~/lib/support/scrubber';
-import {bumpActivity, getMeta, patchMeta} from '~/lib/support/ticket-index';
 import {createOrFetchOdooTicket, postOdooMessage} from '~/lib/support/odoo';
 
 type SendResult =
@@ -106,42 +105,25 @@ export async function action({request, context}: Route.ActionArgs) {
       {status: 502},
     );
   }
-  // Bump lastActivityAt so the ticket sorts to the top of the index list.
-  // Fire-and-forget — KV write isn't on the response path.
-  const bumpJob = bumpActivity(env, ticket.tid).catch((err) =>
-    console.warn('[support/send] index bump failed', err),
-  );
-  if (context.waitUntil) context.waitUntil(bumpJob);
-  else void bumpJob;
-
   // Relay this message onto the mirrored Odoo ticket
-  // (erp/addons/incutec_support, PLAN.md 12.2). Fire-and-forget: the
-  // message already reached Discord above, so an Odoo outage here can
-  // only ever be logged, never surfaced to the visitor (D13). Resolve
-  // the ticket_ref from the index first; if this ticket was created (or
-  // last relayed) while Odoo was down, `odooRef` is still missing here,
-  // so fall back to the same idempotent create-or-fetch call the start
-  // route makes, keyed on the Discord thread id, and persist whatever it
-  // returns for next time.
+  // (erp/addons/incutec_support, PLAN.md 12.2), which also bumps the
+  // ticket's last-activity server-side. Fire-and-forget: the message
+  // already reached Discord above, so an Odoo outage here can only ever
+  // be logged, never surfaced to the visitor (D13). createOrFetchOdooTicket
+  // is idempotent and indexed on the Discord thread id, so resolving the
+  // ref fresh on every send (no local cache) is a cheap fetch, not a
+  // duplicate ticket, and needs no separate KV store to remember it.
   const odooJob = (async () => {
     try {
-      const meta = await getMeta(env, ticket.tid);
-      let ref = meta?.odooRef;
-      if (!ref) {
-        const odooTicket = await createOrFetchOdooTicket(env, {
-          threadId: ticket.tid,
-          email: ticket.email,
-          name: ticket.name,
-          subject: meta?.subject || `Support ticket #${ticket.pid ?? ticket.uid}`,
-        });
-        if (odooTicket) {
-          ref = odooTicket.ticketRef;
-          await patchMeta(env, ticket.tid, {odooRef: ref});
-        }
-      }
-      if (ref) {
+      const odooTicket = await createOrFetchOdooTicket(env, {
+        threadId: ticket.tid,
+        email: ticket.email,
+        name: ticket.name,
+        subject: `Support ticket #${ticket.pid ?? ticket.uid}`,
+      });
+      if (odooTicket) {
         await postOdooMessage(env, {
-          ticketRef: ref,
+          ticketRef: odooTicket.ticketRef,
           author: firstNameOnly(ticket.name),
           body: cleanContent.content || '[attachment]',
         });

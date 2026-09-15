@@ -3,10 +3,8 @@ import type {Route} from './+types/newsletter._index';
 import {buildSeoMeta} from '~/lib/seo';
 import {checkRateLimit, clientIp} from '~/lib/rate-limit';
 import {verifyTurnstile} from '~/lib/support/turnstile';
-import {signSurveyToken} from '~/lib/growth/survey-token';
 import {signUnsubscribeToken} from '~/lib/growth/unsubscribe-token';
-import {recordSignup} from '~/lib/growth/ledger';
-import {upsertContact, sendWelcome} from '~/lib/growth/resend';
+import {contactExists, upsertContact, sendWelcome} from '~/lib/growth/resend';
 import {getLocaleFromRequest} from '~/lib/i18n';
 import {archivePosts} from '~/lib/posts';
 import {
@@ -135,12 +133,6 @@ type NewsletterResult = {
   ok: boolean;
   message: string;
   alreadySubscribed?: boolean;
-  /**
-   * Notify mode only: short-lived HMAC token (app/lib/growth/survey-token.ts)
-   * that lets the success panel POST micro-survey answers to /api/survey
-   * without a second Turnstile round. Absent in plain-newsletter mode.
-   */
-  surveyToken?: string;
 };
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -152,8 +144,8 @@ const PRODUCT_HANDLE_REGEX = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
 // Optional `channel` form field: client-side first-touch attribution
 // (NewsletterSignup.tsx fills it from sessionStorage). Same strictness —
-// it becomes a ledger dimension and a Resend contact property, so
-// anything free-form collapses to 'direct'.
+// accepted for call-site compatibility but not persisted anywhere (see
+// upsertContact).
 const CHANNEL_REGEX = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 
 export async function action({request, context}: Route.ActionArgs) {
@@ -195,33 +187,27 @@ export async function action({request, context}: Route.ActionArgs) {
   const channel = CHANNEL_REGEX.test(channelRaw) ? channelRaw : 'direct';
 
   // Growth pipeline (Lane B), fired via waitUntil on every verified
-  // successful signup path: (a) sig:<email> ledger record (merge-don't-
-  // clobber), (b) Resend marketing contact upsert (+ notify-<handle>
-  // segment), (c) welcome email on the FIRST signup for the address
-  // only. Everything degrades to warn+no-op without its env keys and
-  // must never block or fail the response.
+  // successful signup path: (a) Resend marketing contact upsert (+
+  // notify-<handle> segment), (b) welcome email on the FIRST signup for
+  // the address only. Everything degrades to warn+no-op without its env
+  // keys and must never block or fail the response.
   //
-  // The Resend list is the only subscriber list now, so the ledger is the
-  // only first-signup signal; without it, `fallbackFirst` decides.
+  // Resend is the only subscriber list (founder decision, 2026-09-15
+  // removed the Upstash `sig:<email>` ledger this used to check first);
+  // whether the contact already existed is the first-signup signal, with
+  // `fallbackFirst` deciding when that lookup itself is unavailable.
   const scheduleGrowth = (fallbackFirst: boolean) => {
     const env = context.env;
     const locale = getLocaleFromRequest(request);
-    const consentAt = new Date().toISOString();
     const job = (async () => {
-      const ledger = await recordSignup(env, {
-        email,
-        consentAt,
-        product: notifyProduct,
-        locale,
-        channel,
-      });
+      const existed = await contactExists(env, email);
       await upsertContact(env, {
         email,
         locale,
         channel,
         product: notifyProduct ?? undefined,
       });
-      const firstSignup = ledger ? ledger.created : fallbackFirst;
+      const firstSignup = existed === null ? fallbackFirst : existed === false;
       if (firstSignup) {
         // One-click opt-out link for the welcome footer; falls back to
         // the plain /newsletter/unsubscribe form when no secret is set.
@@ -269,15 +255,6 @@ export async function action({request, context}: Route.ActionArgs) {
     );
   }
 
-  // Micro-survey gate (Lane C): notify signups get a short-lived token so
-  // the success panel can submit the 2-question survey to /api/survey.
-  // Minted only AFTER Turnstile verification — the token is the survey
-  // endpoint's entire bot defence. Null when SESSION_SECRET is unset
-  // (degrade-soft: the survey simply doesn't render).
-  const surveyToken = notifyProduct
-    ? await signSurveyToken(context.env, email)
-    : null;
-
   const emailLimit = checkRateLimit(
     `newsletter:email:${email}`,
     3,
@@ -294,7 +271,6 @@ export async function action({request, context}: Route.ActionArgs) {
         ok: true,
         message: (copyText('newsletter.action_notify_listed') ?? "You're on the list. We'll email you at launch."),
         alreadySubscribed: true,
-        ...(surveyToken ? {surveyToken} : {}),
       });
     }
     // Be generic to avoid confirming which addresses have already signed up.
@@ -307,8 +283,9 @@ export async function action({request, context}: Route.ActionArgs) {
 
   // The subscriber list is Resend contacts, written by scheduleGrowth.
   // There is no second system to fail against and no "already a customer"
-  // state to read back, so the only outcome here is success: the ledger
-  // decides whether this address gets the welcome mail.
+  // state to read back, so the only outcome here is success: whether the
+  // Resend contact already existed decides whether this address gets the
+  // welcome mail.
   scheduleGrowth(true);
 
   if (notifyProduct) {
@@ -317,7 +294,6 @@ export async function action({request, context}: Route.ActionArgs) {
       message:
         copyText('newsletter.action_notify_listed') ??
         "You're on the list. We'll email you at launch.",
-      ...(surveyToken ? {surveyToken} : {}),
     });
   }
 

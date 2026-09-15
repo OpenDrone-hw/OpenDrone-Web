@@ -5,8 +5,10 @@
  * which checkout copied onto the order for a nightly tally script. The
  * cart lives in Odoo now and has no equivalent hook at the hand-off, so
  * the ballot and its codec are gone; what stays is the display, reading
- * `content/votes.json` exactly as before. Until a new ballot exists
- * (phase 6, the Upstash ledger) the file no longer changes and /roadmap
+ * `content/votes.json` exactly as before. There is no live ballot and no
+ * write path here (a future one would read from Odoo, not a Cloudflare KV
+ * ledger — Upstash Redis was removed entirely, founder decision,
+ * 2026-09-15); until one exists the file no longer changes and /roadmap
  * shows its empty state.
  *
  * The tally file is committed like all other content, so the counts shown

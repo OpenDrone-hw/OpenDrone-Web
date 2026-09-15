@@ -4,7 +4,7 @@
  * The welcome email embeds `/newsletter/unsubscribe?t=<token>`; a valid
  * token lets the route unsubscribe that exact address with a single
  * confirm click, no form, no rate-limit friction. Same HMAC recipe as
- * app/lib/growth/survey-token.ts with a separate audience string, so
+ * app/lib/support/resume-token.ts with a separate audience string, so
  * tokens can never be replayed across schemes despite the shared
  * SESSION_SECRET.
  *

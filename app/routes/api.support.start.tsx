@@ -21,8 +21,7 @@ import {verifyTurnstile} from '~/lib/support/turnstile';
 import {extractAttachments} from '~/lib/support/uploads';
 import {checkRateLimit, clientIp} from '~/lib/rate-limit';
 import {scrubForDiscord} from '~/lib/support/scrubber';
-import {addTicket} from '~/lib/support/ticket-index';
-import {createOrFetchOdooTicket} from '~/lib/support/odoo';
+import {createOrFetchOdooTicket, postOdooMessage} from '~/lib/support/odoo';
 
 type StartResult =
   | {ok: true; ticketId: string; pid?: string}
@@ -237,14 +236,14 @@ export async function action({request, context}: Route.ActionArgs) {
     };
     const cookie = await signTicket(env, ticket);
 
-    // Write ticket meta + the email index, mirror the ticket into Odoo
-    // (erp/addons/incutec_support, PLAN.md 12.2), and send the resume-link
-    // email — all fire-and-forget so a slow store write, an Odoo outage, or
-    // Resend latency never tails the API response. The Odoo call goes first
-    // because both the index write and the confirmation email want its
-    // ticket_ref; createOrFetchOdooTicket never throws and resolves to
-    // `null` on any failure (logged there), so this never blocks or fails
-    // the Discord path.
+    // Mirror the ticket into Odoo (erp/addons/incutec_support, PLAN.md
+    // 12.2) — Odoo IS the ticket store now (no separate KV index) — and
+    // send the resume-link email, both fire-and-forget so an Odoo outage
+    // or Resend latency never tails the API response. The Odoo call goes
+    // first because the confirmation email and the initial-message relay
+    // both want its ticket_ref; createOrFetchOdooTicket never throws and
+    // resolves to `null` on any failure (logged there), so this never
+    // blocks or fails the Discord path.
     const ticketIndexSubject = cleanSubject || cleanMessage.content.slice(0, 80);
     const ticketSubject = cleanSubject || cleanMessage.content.slice(0, 60);
     const backgroundJob = (async () => {
@@ -253,25 +252,21 @@ export async function action({request, context}: Route.ActionArgs) {
         email,
         name,
         subject: ticketIndexSubject,
+        product: cleanProduct || undefined,
+        firmware: cleanFirmware || undefined,
+        pid,
       });
 
       await Promise.all([
-        addTicket(env, {
-          tid: thread.id,
-          pid,
-          subject: ticketIndexSubject,
-          openedAt: ticket.createdAt,
-          closedAt: null,
-          lastActivityAt: ticket.createdAt,
-          status: 'open',
-          email,
-          name: ticket.name,
-          product: cleanProduct || undefined,
-          firmware: cleanFirmware || undefined,
-          odooRef: odooTicket?.ticketRef,
-        }).catch((err) =>
-          console.warn('[support/start] ticket-index write failed', err),
-        ),
+        odooTicket
+          ? postOdooMessage(env, {
+              ticketRef: odooTicket.ticketRef,
+              author: firstNameOnly(name),
+              body: messageWithMeta,
+            }).catch((err) =>
+              console.warn('[support/start] initial message relay failed', err),
+            )
+          : Promise.resolve(),
         (async () => {
           try {
             const token = await signResumeToken(env, {

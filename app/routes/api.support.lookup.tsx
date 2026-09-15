@@ -3,9 +3,8 @@ import type {Route} from './+types/api.support.lookup';
 import {sendTicketIndex} from '~/lib/support/email';
 import {buildResumeUrl, signResumeToken} from '~/lib/support/resume-token';
 import {randomId} from '~/lib/support/session';
-import {listByEmail} from '~/lib/support/ticket-index';
-import {globalRateLimit} from '~/lib/support/upstash';
-import {checkRateLimit, clientIp} from '~/lib/rate-limit';
+import {searchOdooTickets} from '~/lib/support/odoo';
+import {bindingRateLimit, checkRateLimit, clientIp} from '~/lib/rate-limit';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -13,20 +12,24 @@ type LookupResult = {ok: true} | {ok: false; message: string};
 
 /**
  * "Resume by email" — the customer enters the email they used when they
- * opened a ticket. We look up the tickets indexed under that email and
- * send a resume link per match in one consolidated email.
+ * opened a ticket. We look up the tickets on file for that email (Odoo,
+ * erp/addons/incutec_support) and send a resume link per match in one
+ * consolidated email.
  *
  * Privacy: the response is *always* a generic success message regardless
  * of whether matches were found. We never confirm or deny that a given
  * email has tickets — that would let an attacker fingerprint customers.
  * The only signal is the inbox: tickets exist iff an email arrives.
  *
- * Abuse / amplification: in production the lookup resolves from the
- * Upstash email index — a single KV read, no fan-out. (It only falls
- * back to a Discord forum scan when Upstash is unconfigured, e.g. local
- * dev.) Rate limits are Upstash-backed so they hold *across* Worker
- * isolates instead of per-isolate; the per-email cap is what stops this
- * being used to spam a victim's inbox with resume mails. Honeypot too.
+ * Abuse / amplification: the Odoo search is one indexed query, no fan-out.
+ * Rate limits use the Workers Rate Limiting binding (wrangler.toml) so
+ * they hold *across* Worker isolates instead of per-isolate — the
+ * per-email cap is what stops this being used to spam a victim's inbox
+ * with resume mails. The binding's platform ceiling is a 60s window
+ * (Cloudflare only supports 10s/60s), so the former 10-minute IP cap and
+ * 24-hour email cap are approximated as 60s windows at the same counts;
+ * falls back to the in-memory limiter (per-isolate, original windows)
+ * when the binding isn't configured (e.g. local dev). Honeypot too.
  * (Turnstile isn't used here because the resume form shares the widget
  * with the ticket-intake form which already carries a Turnstile widget —
  * double-rendering the challenge would reset the first on interaction.)
@@ -41,7 +44,12 @@ export async function action({request, context}: Route.ActionArgs) {
   const env = context.env;
   const ip = clientIp(request);
 
-  const ipLimit = await rateLimit(env, `support-lookup:ip:${ip}`, 3, 10 * 60);
+  const ipLimit = await rateLimit(
+    env.SUPPORT_LOOKUP_IP_LIMITER,
+    `support-lookup:ip:${ip}`,
+    3,
+    10 * 60 * 1000,
+  );
   if (!ipLimit.allowed) {
     return data<LookupResult>(
       {ok: false, message: 'Too many requests. Try again later.'},
@@ -65,25 +73,21 @@ export async function action({request, context}: Route.ActionArgs) {
   }
 
   const emailLimit = await rateLimit(
-    env,
+    env.SUPPORT_LOOKUP_EMAIL_LIMITER,
     `support-lookup:email:${email}`,
     2,
-    24 * 60 * 60,
+    24 * 60 * 60 * 1000,
   );
   // When the email-level limit kicks in we still answer with the same
   // privacy-preserving generic success — never confirm or deny tickets.
   if (!emailLimit.allowed) return data<LookupResult>({ok: true});
 
   // Resolve + email asynchronously — we always tell the user "check your
-  // inbox" within ~50ms regardless of how long the index read + Resend
+  // inbox" within ~50ms regardless of how long the Odoo lookup + Resend
   // round-trip takes.
   const job = (async () => {
     try {
-      // listByEmail reads the Upstash idx:email index (one KV GET) in
-      // production; it only fans out to a Discord scan when Upstash is
-      // unconfigured. Either way no client-controlled value reaches a
-      // URL — the email is matched against indexed/first-message content.
-      const matches = await listByEmail(env, email);
+      const matches = await searchOdooTickets(env, {email});
       if (!matches.length) return;
 
       const baseUrl = new URL(request.url).origin;
@@ -97,7 +101,7 @@ export async function action({request, context}: Route.ActionArgs) {
             // route uses what's in the token, so a placeholder is fine.
             // Staff already see the original name in the Discord post.
             name: 'You',
-            ...(t.pid ? {pid: t.pid} : {}),
+            pid: t.pid,
           });
           return {
             subject: t.subject,
@@ -120,18 +124,18 @@ export async function action({request, context}: Route.ActionArgs) {
   return data<LookupResult>({ok: true});
 }
 
-// Prefer the Upstash-backed global limiter (shared across isolates);
-// fall back to the per-isolate in-memory limiter when Upstash is
-// unconfigured or erroring. Window is in seconds.
+// Prefer the Workers Rate Limiting binding (shared across isolates); fall
+// back to the per-isolate in-memory limiter, at the original limit/window,
+// when the binding is missing.
 async function rateLimit(
-  env: Parameters<typeof globalRateLimit>[0],
+  binding: Parameters<typeof bindingRateLimit>[0],
   key: string,
   limit: number,
-  windowSeconds: number,
+  windowMs: number,
 ): Promise<{allowed: boolean; resetInSeconds: number}> {
-  const global = await globalRateLimit(env, key, limit, windowSeconds);
-  if (global) return {allowed: global.allowed, resetInSeconds: windowSeconds};
-  const local = checkRateLimit(key, limit, windowSeconds * 1000);
+  const bound = await bindingRateLimit(binding, key);
+  if (bound) return {allowed: bound.allowed, resetInSeconds: 60};
+  const local = checkRateLimit(key, limit, windowMs);
   return {allowed: local.allowed, resetInSeconds: local.resetInSeconds};
 }
 
