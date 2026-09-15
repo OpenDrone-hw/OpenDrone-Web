@@ -27,6 +27,7 @@ import type {
   ProductVariantFragment,
 } from './product-shapes.ts';
 import {PRODUCT_CONTENT} from './product-content.ts';
+import {toStorefrontImageUrl} from './odoo-image.ts';
 
 export type {CartLine, CatalogAvailability};
 
@@ -201,7 +202,10 @@ function money(amount: number, currency: string): MoneyV2 {
 
 function image(url: string | null, alt: string, index = 0): ProductImage | null {
   if (!url) return null;
-  return {id: `${url}#${index}`, url, altText: alt, width: null, height: null};
+  // Odoo image URLs become the same-origin cached route (odoo-image.ts), so a
+  // slow or restarting Odoo never breaks a gallery.
+  const src = toStorefrontImageUrl(url);
+  return {id: `${src}#${index}`, url: src, altText: alt, width: null, height: null};
 }
 
 function variantId(sku: string): string {

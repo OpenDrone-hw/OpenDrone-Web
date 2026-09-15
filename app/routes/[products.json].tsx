@@ -49,7 +49,9 @@ export async function loader({context, request}: Route.LoaderArgs) {
         description: PRODUCT_CONTENT[p.handle]?.hero?.lead || null,
         product_type: p.productType || null,
         url: `${origin}/products/${p.handle}`,
-        image: p.featuredImage?.url ?? null,
+        image: p.featuredImage?.url
+          ? new URL(p.featuredImage.url, origin).toString()
+          : null,
         // Resold parts (`editorial: false`) have a content file for their
         // status and copy but are not open hardware: no license claim.
         license:
