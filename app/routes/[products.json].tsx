@@ -11,10 +11,10 @@ import {toCards} from '~/lib/catalog';
 
 /**
  * /products.json — machine-readable catalog feed for agents and tooling.
- * Adds what no stock feed has: a ready-made buy link per variant (the same
- * `<shop>/incutec/add?sku=…` hand-off the buy buttons use, so an agent can
- * order without scraping the page), the CERN-OHL-S license, and the
- * design-source repo.
+ * Adds what no stock feed has: the buy hand-off per variant (the same
+ * `<shop>/incutec/add` form the buy buttons POST, action URL plus its
+ * form fields as the query string, with `cart_add_method: "POST"`), the
+ * CERN-OHL-S license, and the design-source repo.
  */
 
 export async function loader({context, request}: Route.LoaderArgs) {
@@ -79,9 +79,9 @@ export async function loader({context, request}: Route.LoaderArgs) {
           available: locked ? false : v.availableForSale,
           price: locked ? null : v.price.amount,
           currency: locked ? null : v.price.currencyCode,
-          // The hand-off link: a plain GET that puts this SKU in the
-          // visitor's own cart on the shop and redirects them to it.
-          ...(locked ? null : {cart_add_url: v.cartAddUrl}),
+          // The hand-off: POST the query string of cart_add_url as form
+          // fields to its path; the shop refuses GET (contract section 3).
+          ...(locked ? null : {cart_add_url: v.cartAddUrl, cart_add_method: 'POST'}),
           // The issued Declaration of Conformity (D13, PLAN.md 11.4), only
           // once incutec_compliance has one for this SKU's current design
           // revision; never a stand-in for an unissued record.

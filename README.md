@@ -195,10 +195,11 @@ only on legal paths.
 
 ### Account, cart, products
 
-None of these live here. The buy button is a link to
-`https://shop.incutec.com/incutec/add?sku=…&qty=1&next=cart`, which adds the
-lines to the visitor's own Odoo cart and redirects them to it; the stack builder
-puts both SKUs on one `?lines=A:1,B:1` link. Accounts, orders, invoices and
+None of these live here. The buy button is a form that POSTs `sku`, `qty` and
+`next` to `https://shop.incutec.com/incutec/add`, which adds the lines to the
+visitor's own Odoo cart and redirects them to it; the stack builder sends both
+SKUs as one `lines=A:1,B:1` field. The shop refuses a GET, so a plain link or a
+crawler cannot fill a cart. Accounts, orders, invoices and
 addresses are the Odoo portal (`/my`, `/my/orders`, `/my/invoices`,
 `/my/addresses`), and `/account/*` 301s there.
 

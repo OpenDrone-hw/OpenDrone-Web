@@ -4,7 +4,7 @@ import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
 
 /**
  * The buy button: a regular POST form to the shop's hand-off endpoint
- * (`<shop>/incutec/add?sku=…&qty=…&next=cart`), which adds the lines to
+ * (`<shop>/incutec/add`, fields `sku`, `qty`, `next`), which adds the lines to
  * the visitor's own Odoo cart and redirects them to it.
  *
  * POST prevents crawlers and link previewers from creating quotations by

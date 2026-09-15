@@ -42,7 +42,8 @@ export function portalUrl(
 }
 
 /**
- * The buy hand-off for one or more SKUs. A plain link: the shop adds the
+ * The buy hand-off for one or more SKUs: the form action plus its fields as
+ * a query string. `AddToCartButton` submits it as a POST; the shop adds the
  * lines to the visitor's own Odoo cart and redirects them to it.
  */
 export function buyUrl(
