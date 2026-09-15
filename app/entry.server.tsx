@@ -28,8 +28,9 @@ export default async function handleRequest(
   reactRouterContext: EntryContext,
   context: AppLoadContext,
 ) {
-  // The Odoo shop: product images are served from it, and every buy
-  // button navigates to it. cdn.shopify.com stays in scriptSrc because
+  // The Odoo shop: every buy button navigates to it. Product images are
+  // not loaded from it: they are proxied and cached same-origin under
+  // /img/odoo/ (app/lib/odoo-image.ts), so img-src does not list it. cdn.shopify.com stays in scriptSrc because
   // Oxygen serves this app's own JS bundles from it (decision D3 keeps
   // the hosting); no Shopify API is called at runtime.
   const shop = shopUrl(context.env);
@@ -77,7 +78,6 @@ export default async function handleRequest(
       "'self'",
       'data:',
       'https://cdn.shopify.com',
-      shop,
       'https://cdn.discordapp.com',
       'https://media.discordapp.net',
       // YouTube thumbnail shown in the WatchCard build-video bubble.
