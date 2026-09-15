@@ -1,5 +1,5 @@
 {
-  "$comment": "Incutec's public financial goals. Edited in the studio's Goals tab. mode 'auto' goals are updated by scripts/update-goals.mjs (weekly community-sync workflow) from Shopify order totals: gross since `since` x allocation_pct / target_eur, floored to 5% steps so the public meter stays approximate. target_eur and allocation_pct are inputs, never displayed. Read by app/lib/goals.ts.",
+  "$comment": "Incutec's public financial goals. Edited in the studio's Goals tab. mode 'auto' goals are updated by scripts/update-goals.mjs (weekly community-sync workflow) from Odoo's GET /incutec/goals.json aggregate endpoint (ERP PLAN.md step 12.6): gross since `since` x allocation_pct / target_eur, floored to 5% steps so the public meter stays approximate. target_eur and allocation_pct are inputs, never displayed. Read by app/lib/goals.ts.",
   "goals": [
     {
       "id": "pick-and-place",
