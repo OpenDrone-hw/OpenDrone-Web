@@ -18,11 +18,11 @@ import {copyText} from '~/lib/copy';
 // redirect in.
 //
 // GET  → renders the post archive (this is the newsletter).
-// POST → starts a double opt-in signup on Odoo's "Newsletter" mailing.list
-//        (erp PLAN.md 13.11, app/lib/growth/odoo-newsletter.ts): Odoo mails
-//        the confirmation link and the address joins the list only once it
-//        is followed. Odoo also owns unsubscribing, via its own mailing
-//        link — this route holds no unsubscribe code.
+// POST → subscribes the address on Odoo, single opt-in (erp PLAN.md 13.11,
+//        app/lib/growth/odoo-newsletter.ts): it joins the brand's newsletter
+//        list immediately and Odoo sends one welcome mail carrying a
+//        one-click unsubscribe that needs no login. Odoo owns unsubscribing
+//        — this route holds no unsubscribe code.
 //
 // The signup FORM lives in the site footer (present on every page), so this
 // page intentionally has no in-body form — it would just duplicate the footer.
@@ -196,8 +196,8 @@ export async function action({request, context}: Route.ActionArgs) {
   }
 
   // Verify Turnstile BEFORE the per-email rate-limit branch: that branch
-  // still triggers a real confirmation mail from Odoo, and a send must
-  // never run on an unverified request.
+  // still triggers a real welcome mail from Odoo, and a send must never run
+  // on an unverified request.
   const turnstile = await verifyTurnstile(context.env, turnstileToken, ip);
   if (!turnstile.ok) {
     return data<NewsletterResult>(
@@ -212,21 +212,23 @@ export async function action({request, context}: Route.ActionArgs) {
     24 * 60 * 60 * 1000,
   );
   if (!emailLimit.allowed) {
-    // Odoo resends the confirmation mail on every subscribe call (it is
-    // how a visitor who lost the first email gets a fresh one), so past
-    // this limit the Worker stops calling Odoo rather than mailing the
-    // address again — the earlier call already queued a confirmation.
+    // Odoo sends a welcome mail on every subscribe call, so past this
+    // limit the Worker stops calling Odoo rather than mailing the address
+    // again — the earlier call already subscribed it.
     return data<NewsletterResult>({
       ok: true,
       message:
         copyText('newsletter.action_already_listed') ??
-        'Already sent — check your inbox (including spam) for the confirmation link.',
+        'You are already on the list. Nothing more to do.',
     });
   }
 
   const subscribed = await subscribeToNewsletter(context.env, {
     email,
     product: notifyProduct ?? undefined,
+    // The visitor's IP, which only this Worker sees: Odoo stores a hash of
+    // it as consent evidence, never the address itself.
+    ip,
   });
   if (!subscribed) {
     return data<NewsletterResult>(
@@ -242,8 +244,7 @@ export async function action({request, context}: Route.ActionArgs) {
 
   // Odoo's own response never reveals whether the address was already on
   // the list (same anti-enumeration property the old Resend path had), so
-  // the message here is generic regardless of notifyProduct or repeat
-  // signup: confirmation is always required next.
+  // the message here is the same for a fresh and a repeat signup.
   if (notifyProduct) {
     return data<NewsletterResult>({
       ok: true,

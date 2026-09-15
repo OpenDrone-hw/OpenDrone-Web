@@ -1,26 +1,27 @@
 /**
- * Odoo newsletter double opt-in bridge (erp PLAN.md 13.11, Odoo module
+ * Odoo newsletter signup bridge (erp PLAN.md 13.11, Odoo module
  * `incutec_catalog_api`).
  *
  * Replaces the former Resend-audience growth pipeline (`upsertContact`,
  * `contactExists`, `sendWelcome`, per-SKU `notify-<handle>` segments) with a
- * single server-to-server call. Odoo owns the whole double opt-in flow from
- * here: it mails the confirmation link itself, and a contact joins the
- * "Newsletter" `mailing.list` — the same list holding the 1169 imported
- * Shopify contacts — only once that link is followed. Unsubscribing uses
- * Odoo's own mailing link (`/mailing/<id>/unsubscribe`, generated on every
- * mailing Odoo sends to the list), so nothing in this repository signs or
- * verifies an unsubscribe token any more.
+ * single server-to-server call. Single opt-in: Odoo records the consent
+ * (timestamp, source, hashed IP, brand), puts the address on that brand's
+ * newsletter list in the same request, and sends one welcome mail. Every
+ * mail carries a one-click unsubscribe that needs no login, so nothing in
+ * this repository signs or verifies an unsubscribe token.
+ *
+ * Odoo picks the brand from the request host, so a second brand's front end
+ * needs no change here.
  *
  *   POST {NEWSLETTER_ODOO_URL}/incutec/newsletter/subscribe
- *     {email, product?} -> {ok: true} | {ok: false, error}
+ *     {email, product?, ip?} -> {ok: true} | {ok: false, error}
  *
  * Authenticated with X-Newsletter-Dispatch-Secret, which must match the
  * system parameter incutec_catalog_api.newsletter_dispatch_secret (set from
  * env $NEWSLETTER_DISPATCH_SECRET by erp/config/configure.py --section
  * catalog_api). The response never reveals whether the address was already
  * subscribed — Odoo always answers {ok: true} for a well-formed request,
- * whether it created a fresh pending signup or reused one still pending.
+ * whether the address was new or already on the list.
  *
  * Best-effort in shape only, not in effect: unlike the old growth pipeline
  * (fire-and-forget via `waitUntil`, always reporting success to the
@@ -47,11 +48,13 @@ export function hasNewsletterBridge(env: NewsletterEnv): boolean {
 }
 
 /**
- * Start (or resume, if still pending) a double opt-in newsletter signup.
+ * Subscribe an address to the calling brand's newsletter.
  * `product` is the optional coming-soon "notify me at launch" handle
- * (NewsletterSignup.tsx's `notify` prop) — Odoo records it on the pending
- * signup but does not (yet) segment mailings by it; see the module's own
+ * (NewsletterSignup.tsx's `notify` prop) — Odoo records it on the consent
+ * row but does not (yet) segment mailings by it; see the module's own
  * README for what changed from the old per-SKU Resend segments.
+ * `ip` is the visitor's address, which only this Worker sees: Odoo stores a
+ * hash of it as consent evidence and never the address.
  *
  * Returns true only when Odoo accepted the request (200 {ok: true});
  * false on any failure, including NEWSLETTER_DISPATCH_SECRET being unset.
@@ -60,7 +63,7 @@ export function hasNewsletterBridge(env: NewsletterEnv): boolean {
  */
 export async function subscribeToNewsletter(
   env: NewsletterEnv,
-  opts: {email: string; product?: string},
+  opts: {email: string; product?: string; ip?: string},
 ): Promise<boolean> {
   if (!env.NEWSLETTER_DISPATCH_SECRET) {
     console.warn(
@@ -71,6 +74,7 @@ export async function subscribeToNewsletter(
   const body = JSON.stringify({
     email: opts.email,
     ...(opts.product ? {product: opts.product} : {}),
+    ...(opts.ip ? {ip: opts.ip} : {}),
   });
   let lastErr: unknown = null;
   for (let attempt = 1; attempt <= 2; attempt++) {
