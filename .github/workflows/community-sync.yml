@@ -36,9 +36,11 @@ jobs:
           node-version: 22
 
       # The scripts are dependency-free: checkout + node is the whole setup.
-      # The goal meters read the shop's aggregate endpoint; until it exists
-      # (ERP PLAN.md step 12.6) GOALS_URL is unset and the step is skipped
-      # rather than failing the weekly run.
+      # The goal meters read the shop's aggregate endpoint, GET
+      # /incutec/goals.json (ERP PLAN.md step 12.6), live since 2026-09-14.
+      # GOALS_URL is still a repository secret that has to be set to that
+      # URL to activate this step; unset, it is skipped rather than failing
+      # the weekly run.
       - name: Update the goal meters
         env:
           GOALS_URL: ${{ secrets.GOALS_URL }}

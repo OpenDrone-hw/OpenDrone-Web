@@ -20,9 +20,12 @@
  * requested: the script must never hold order-level data.
  *
  * This replaced a Shopify Admin API walk over `orders`. The Odoo endpoint
- * that serves the shape above does not exist yet (ERP PLAN.md step 12.6);
- * until it does, leave GOALS_URL unset and the script reports that and
- * writes nothing.
+ * that serves the shape above is `GET /incutec/goals.json` (ERP PLAN.md
+ * step 12.6, `erp PR #19`), live in production since 2026-09-14. GOALS_URL
+ * itself is a repository secret consumed by the community-sync workflow
+ * (`.github/workflows/community-sync.yml`) and this script reads it the
+ * same way from a local `.env`; until that secret is set, leave GOALS_URL
+ * unset and the script reports that and writes nothing.
  *
  * Mirrors computeAutoPct in app/lib/goals.ts (this script cannot import TS);
  * the unit test in app/lib/goals.test.ts greps this file to keep the formula
@@ -68,8 +71,10 @@ const WRITE = process.argv.includes('--write');
 
 if (!env.GOALS_URL) {
   console.error(
-    'GOALS_URL is not set. The Odoo aggregate endpoint it reads is ERP\n' +
-      'PLAN.md step 12.6 and does not exist yet; nothing was written.',
+    'GOALS_URL is not set. The Odoo aggregate endpoint it reads (ERP PLAN.md\n' +
+      'step 12.6) is live at https://erp.incutec.eu/incutec/goals.json; set the\n' +
+      'GOALS_URL repository secret (or a local .env) to activate this script.\n' +
+      'Nothing was written.',
   );
   process.exit(1);
 }
