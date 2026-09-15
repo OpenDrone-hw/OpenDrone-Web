@@ -480,8 +480,10 @@ and not in the repo. Names only (values live in the Oxygen production
 environment or, for anything Oxygen keeps masked, only in the Shopify admin):
 
 - `SESSION_SECRET` — its own random value per environment; no need to match Oxygen's.
-- `RESEND_API_KEY` — the opendrone.be Resend team's key (not
-  `../../operations/.env`'s, which is a different team; see below).
+- `RESEND_API_KEY`: the incutec Resend team's `opendrone-web` key, copy in
+  `../../operations/.env` as `OPENDRONE_RESEND_API_KEY`. Full access, not
+  sending-only: `app/lib/growth/resend.ts` also manages contacts, segments
+  and broadcasts.
 - `SUPPORT_FROM_EMAIL`, `DISCORD_SUPPORT_CHANNEL_ID`, `DISCORD_GUILD_ID`,
   `DISCORD_STAFF_METADATA_CHANNEL_ID`, `SUPPORT_MOD_ROLE_ID`,
   `SUPPORT_MODERATION_MODE`, `DISCORD_SUPPORT_INVITE`,
@@ -518,12 +520,13 @@ Resend/SES records under `send.opendrone.be`) was recreated DNS-only on the
 Cloudflare zone before the nameserver switch; the apex and `www` are the
 Worker's Custom Domains instead of the old Shopify `A`/`CNAME`. Manage any
 further record on the new zone with `python3 ../../operations/tools/cloudflare_dns.py`.
-The Resend domain `opendrone.be` verifies under the Oxygen production
-`RESEND_API_KEY` (a dedicated, older Resend team, D15) — a *different* Resend
-account than `../../operations/.env`'s key, under which the same domain name
-shows `failed` (a stale, unrelated entry in the newer team, pending the D15
-Resend team merge). Use the Oxygen-sourced key for anything that must send as
-opendrone.be.
+The Resend domain `opendrone.be` (region `eu-west-1`) is verified in the
+incutec Resend team, the same team Odoo sends through, since 2026-09-15; its
+`resend._domainkey` TXT record on the Cloudflare zone carries that team's DKIM
+key. Anything that sends as opendrone.be uses `OPENDRONE_RESEND_API_KEY` from
+`../../operations/.env`. Newsletter and notify contacts created before
+2026-09-15 are in the older, separate Resend team and are not in the incutec
+team.
 
 **Retiring Oxygen**: the deploy workflow is removed from this repository.
 The Oxygen deployment in the Shopify admin still needs deleting by hand; do
