@@ -44,7 +44,7 @@ declare global {
     PUBLIC_SHOP_URL?: string;
 
     // The Odoo catalog feed (module incutec_catalog_api). Defaults to
-    // https://erp.incutec.eu/incutec/catalog.json. Fetched server-side
+    // https://erp.incutec.com/incutec/catalog.json. Fetched server-side
     // with a 5 minute worker cache; the last good copy is served for up
     // to an hour if the fetch fails.
     CATALOG_URL?: string;

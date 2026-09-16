@@ -28,7 +28,7 @@ directory = "dist/client"
 # per-environment secret set with `wrangler secret put SESSION_SECRET` and is
 # never written here.
 [vars]
-CATALOG_URL = "https://erp.incutec.eu/incutec/catalog.json"
+CATALOG_URL = "https://erp.incutec.com/incutec/catalog.json"
 PUBLIC_SHOP_URL = "https://shop.incutec.com"
 
 # Workers Rate Limiting bindings for /api/support/lookup (founder decision,

@@ -353,7 +353,7 @@ The complete annotated list is [`.env.example`](.env.example). Groups:
   without; it signs the locale and support-desk cookies.
 - **Commerce backend**: `PUBLIC_SHOP_URL` (default
   `https://shop.incutec.com`) and `CATALOG_URL` (default
-  `https://erp.incutec.eu/incutec/catalog.json`). Both optional, both
+  `https://erp.incutec.com/incutec/catalog.json`). Both optional, both
   defaulted to production.
 - **Legal entity**: `PUBLIC_COMPANY_*` (name, address, KBO, VAT, email, phone).
   Belgian law (WER Art. VI.45) requires these on every page.
@@ -551,7 +551,7 @@ not touch anything else in Shopify.
 Checkout, payments, orders, inventory, invoicing and the order mails live in
 Odoo at shop.incutec.com. What that side needs is tracked in the ERP
 repository's `PLAN.md`, not here; from the storefront's point of view the shop
-is ready when `GET https://erp.incutec.eu/incutec/catalog.json` lists every
+is ready when `GET https://erp.incutec.com/incutec/catalog.json` lists every
 product with its prices, availability and ship promises.
 
 **Oxygen environment variables.** Set these per environment (production and
@@ -562,7 +562,7 @@ Environments and variables. The four below are the whole list:
 |---|---|---|
 | `SESSION_SECRET` | 32 random bytes hex (`openssl rand -hex 32`) | required; the app does not boot without it. Different value per environment |
 | `PUBLIC_SHOP_URL` | `https://shop.incutec.com` | base of every buy hand-off and portal link. Optional, this is the default |
-| `CATALOG_URL` | `https://erp.incutec.eu/incutec/catalog.json` | the catalog feed. Optional, this is the default. Point a preview at a staging Odoo here |
+| `CATALOG_URL` | `https://erp.incutec.com/incutec/catalog.json` | the catalog feed. Optional, this is the default. Point a preview at a staging Odoo here |
 | `GOALS_URL` | unset | the goal meter's aggregate endpoint, ERP `PLAN.md` step 12.6. Build-time only, so it belongs in repo secrets rather than Oxygen |
 
 New for the Odoo ticket mirror (`app/lib/support/odoo.ts`, erp PLAN.md step

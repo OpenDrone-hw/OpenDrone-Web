@@ -95,7 +95,7 @@ within one request.
 
 **Release a product (alpha → beta):** confirm the Odoo product is published
 with the right variants, prices and availability, and that it appears in
-`GET https://erp.incutec.eu/incutec/catalog.json`; flip the repo topic to `status-beta`
+`GET https://erp.incutec.com/incutec/catalog.json`; flip the repo topic to `status-beta`
 (repo admin only — topics cannot be changed by pull request); within ~10
 minutes the price is public and orders open; then update the static status
 in `roadmap-data.ts` in a follow-up PR.
