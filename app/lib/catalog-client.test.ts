@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import {afterEach, describe, it} from 'node:test';
 
-import {createCatalogClient, resetCatalogMemo} from './catalog-client.ts';
+import {
+  catalogUrl,
+  createCatalogClient,
+  resetCatalogMemo,
+} from './catalog-client.ts';
 
 const ENV = {
   CATALOG_URL: 'https://catalog.test/catalog.json',
@@ -18,6 +22,13 @@ afterEach(() => {
 });
 
 describe('catalog outage behavior', () => {
+  it('uses the canonical production origin by default', () => {
+    assert.equal(
+      catalogUrl({} as Env),
+      'https://erp.incutec.com/incutec/catalog.json',
+    );
+  });
+
   it('returns 503 on a cold miss instead of an empty catalog', async () => {
     globalThis.fetch = async () => new Response('down', {status: 503});
     const client = createCatalogClient({env: ENV});

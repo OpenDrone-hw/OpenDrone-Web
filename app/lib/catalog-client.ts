@@ -12,7 +12,7 @@
 import {parseCatalog, type Catalog} from './catalog.ts';
 
 export const DEFAULT_CATALOG_URL =
-  'https://erp.incutec.eu/incutec/catalog.json';
+  'https://erp.incutec.com/incutec/catalog.json';
 export const DEFAULT_SHOP_URL = 'https://shop.incutec.com';
 
 /** Fresh window: the contract's 5 minutes. */

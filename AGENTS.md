@@ -45,7 +45,7 @@ loader or action calls a Shopify API.
 
 The app boots on `SESSION_SECRET` alone. `PUBLIC_SHOP_URL`
 (`https://shop.incutec.com`) and `CATALOG_URL`
-(`https://erp.incutec.eu/incutec/catalog.json`) default to production and are
+(`https://erp.incutec.com/incutec/catalog.json`) default to production and are
 the only commerce values; both are public, and this repository holds no
 commerce credentials. `GOALS_URL` is build-time only, for `goals:update`.
 Set the four per environment in the Oxygen environment settings; the gitignored
