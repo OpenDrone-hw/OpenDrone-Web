@@ -2,8 +2,8 @@
 # the bearer token; the route deletes Discord threads + index entries
 # for tickets that are closed or have had no activity for 7+ days.
 #
-# Required repo secret: SUPPORT_CLEANUP_SECRET (must match the env var
-# of the same name in Oxygen Production).
+# Required repo secret: SUPPORT_CLEANUP_SECRET (must match the Worker
+# secret of the same name, set with `wrangler secret put`).
 
 name: Support cleanup
 

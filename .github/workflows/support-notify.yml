@@ -4,8 +4,8 @@
 # confirmation into the Discord thread.
 #
 # Required repo secret: SUPPORT_CLEANUP_SECRET (same secret as the
-# cleanup sweep; must match the env var of the same name in Oxygen
-# Production).
+# cleanup sweep; must match the Worker secret of the same name, set
+# with `wrangler secret put`).
 
 name: Support notify
 
