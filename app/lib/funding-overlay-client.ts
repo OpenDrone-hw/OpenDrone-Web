@@ -38,6 +38,14 @@ type Cached = {overlay: FundingOverlay; fetchedAt: number};
 /** Per-isolate memory, isolated by endpoint so preview/prod clients never mix. */
 const memoByUrl = new Map<string, Cached>();
 const inflightByUrl = new Map<string, Promise<FundingOverlay>>();
+/**
+ * When the last fetch failed, per endpoint. A failure is remembered for one
+ * freshness window: without this an endpoint that answers 404 (production
+ * until `incutec_funding` is installed there) or times out was fetched again
+ * on every single page render, up to `TIMEOUT_MS` each, for a feed that is
+ * cosmetic.
+ */
+const failedAtByUrl = new Map<string, number>();
 
 export type FundingOverlayClient = {
   /** The live overlay, from memory, the worker cache, or the network. Never
@@ -70,16 +78,24 @@ export function createFundingOverlayClient({
     const now = Date.now();
     const memo = memoByUrl.get(url);
     if (memo && now - memo.fetchedAt < FRESH_MS) return memo.overlay;
+    const failedAt = failedAtByUrl.get(url);
+    if (failedAt !== undefined && now - failedAt < FRESH_MS) {
+      return memo && now - memo.fetchedAt < STALE_MS
+        ? memo.overlay
+        : EMPTY_FUNDING_OVERLAY;
+    }
     const existing = inflightByUrl.get(url);
     if (existing) return existing;
 
     const request = load(url, cache, waitUntil, credentials)
       .then((loaded) => {
         memoByUrl.set(url, loaded);
+        failedAtByUrl.delete(url);
         return loaded.overlay;
       })
       .catch((error) => {
         console.error('[funding-overlay] fetch failed', error);
+        failedAtByUrl.set(url, Date.now());
         const fallback = memoByUrl.get(url);
         if (fallback && Date.now() - fallback.fetchedAt < STALE_MS) {
           return fallback.overlay;
@@ -174,4 +190,5 @@ async function fetchAndStore(
 export function resetFundingOverlayMemo(): void {
   memoByUrl.clear();
   inflightByUrl.clear();
+  failedAtByUrl.clear();
 }

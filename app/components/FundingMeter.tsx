@@ -4,10 +4,10 @@ import {
   FUNDING_EXPLAINER_LABEL,
   FUNDING_EXPLAINER_PATH,
   FUNDING_PRECISION_DEFAULT,
-  FUNDING_REFUND_GUARANTEE,
   fundingDeadlineText,
   fundingDisplayPct,
   fundingLabel,
+  fundingRefundText,
   fundingStatusText,
   isFundingPublic,
   type FundingPrecision,
@@ -77,7 +77,7 @@ export function FundingMeter({
           {deadline ? (
             <span className="funding-meter-deadline">{deadline}</span>
           ) : null}
-          <p className="funding-meter-refund">{FUNDING_REFUND_GUARANTEE}</p>
+          <p className="funding-meter-refund">{fundingRefundText(funding)}</p>
           <Link className="funding-meter-link" to={FUNDING_EXPLAINER_PATH}>
             {FUNDING_EXPLAINER_LABEL}
           </Link>

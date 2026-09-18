@@ -1,10 +1,13 @@
 import {describe, it} from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  FUNDING_MISSED_NOTICE,
+  FUNDING_REFUND_GUARANTEE,
   fundingDeadlineText,
   fundingDisplayPct,
   fundingLabel,
   fundingPct,
+  fundingRefundText,
   fundingStatusText,
   isFundedPreorder,
   isFundingPublic,
@@ -214,5 +217,24 @@ describe('isFundedPreorder', () => {
     assert.equal(isFundedPreorder(base), false);
     assert.equal(isFundedPreorder(null), false);
     assert.equal(isFundedPreorder(undefined), false);
+  });
+});
+
+describe('fundingRefundText', () => {
+  it('promises the refund while the outcome is open', () => {
+    assert.equal(fundingRefundText(funding({state: 'open'})), FUNDING_REFUND_GUARANTEE);
+    assert.equal(fundingRefundText(funding({state: 'funded'})), FUNDING_REFUND_GUARANTEE);
+  });
+
+  it('states the miss, not a condition, once the campaign has missed', () => {
+    const text = fundingRefundText(funding({state: 'missed'}));
+    assert.equal(text, FUNDING_MISSED_NOTICE);
+    assert.ok(!/^If /.test(text), 'a missed campaign is not an "if"');
+    assert.match(text, /refunded in full/);
+    assert.ok(!/has been refunded|was refunded/.test(text), 'refunds are manual: never claim they landed');
+  });
+
+  it('is empty without a campaign', () => {
+    assert.equal(fundingRefundText(null), '');
   });
 });
