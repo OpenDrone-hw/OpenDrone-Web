@@ -33,6 +33,8 @@
 
 3.3. Incutec BV reserves the right to change prices. Orders in progress are not affected by price changes.
 
+3.4. Shipping costs are not included in the product price and are not charged at checkout. The shipping rate per destination zone is published on the shipping page (opendrone.be/shipping) before the order is placed. The rate applicable to an order is the rate published there at the time the order is placed.
+
 ### Article 4: Contract
 
 4.1. The contract is concluded at the moment the consumer accepts the offer and complies with the conditions set out therein.
@@ -81,7 +83,7 @@
 
 ### Article 7bis: Pre-orders
 
-7bis.1. Some products are sold as pre-orders. They are disclosed as such, with their ship window, on the product page, in the cart and on the order confirmation. The consumer pays the full price at checkout.
+7bis.1. Some products are sold as pre-orders. They are disclosed as such, with their ship window, on the product page, in the cart and on the order confirmation. The consumer pays the full price of the products at checkout; shipping costs are charged separately under Article 7ter.
 
 7bis.2. Launch ship windows: the flight controller and ESC ship from mid-October 2026; every other pre-order product ships in about 10 weeks after the order. The disclosed ship window is the delivery time agreed between the consumer and Incutec BV within the meaning of Art. VI.43 WER, so the 30-day default deadline in Article 7.1 does not apply to pre-order items.
 
@@ -94,6 +96,20 @@
 7bis.6. Pre-order payments fund the production run and stock purchase for the order. They carry no interest and confer no equity, revenue share or other ownership interest in Incutec BV.
 
 7bis.7. Parcels shipped outside the European Union may be subject to import duties and taxes payable by the consumer on delivery, unless the chosen delivery method states that duties are paid by Incutec BV.
+
+7bis.8. Each hardware product has a funding target, stated publicly on its product page. If a product does not reach its funding target, the pre-orders for that product are refunded in full. In an order that combines several products, a product that has not reached its funding target is refunded and the remaining items ship together in the single delivery referred to in Article 7bis.5. The funding model is explained at opendrone.be/preorder.
+
+### Article 7ter: Shipping costs and dispatch
+
+7ter.1. Shipping is not charged at checkout. The consumer pays for the products when placing the order; the shipping cost is invoiced separately.
+
+7ter.2. The shipping cost is billed per destination zone once the complete order is ready to ship. The consumer receives a payment request by mail containing a secure payment link. The order is dispatched once that shipping invoice is paid.
+
+7ter.3. The rate per destination zone is published on the shipping page (opendrone.be/shipping). The rate applicable to an order is the rate published there at the time the order is placed.
+
+7ter.4. If the payment request for shipping is not paid, Incutec BV sends reminders. The order is held and is not cancelled automatically.
+
+7ter.5. The consumer may cancel the order at any time before dispatch and receives a full refund of the products. This is without prejudice to the right of withdrawal under Article 5.
 
 ### Article 8: Payment
 

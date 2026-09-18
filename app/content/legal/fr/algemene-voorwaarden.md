@@ -33,6 +33,8 @@
 
 3.3. Incutec BV se réserve le droit de modifier les prix. Les commandes en cours ne sont pas affectées par des changements de prix.
 
+3.4. Les frais d’expédition ne sont pas compris dans le prix du produit et ne sont pas facturés lors du passage en caisse. Le tarif d’expédition par zone de destination est publié sur la page d’expédition (opendrone.be/shipping) avant que la commande ne soit passée. Le tarif applicable à une commande est celui qui y est publié au moment où la commande est passée.
+
 ### Article 4 : Contrat
 
 4.1. Le contrat est conclu au moment où le consommateur accepte l’offre et se conforme aux conditions qui y sont énoncées.
@@ -81,7 +83,7 @@
 
 ### Article 7bis : Précommandes
 
-7bis.1. Certains produits sont vendus en précommande. Ils sont indiqués comme tels, avec leur fenêtre d’expédition, sur la page produit, dans le panier et sur la confirmation de commande. Le consommateur paie le prix intégral lors de la commande.
+7bis.1. Certains produits sont vendus en précommande. Ils sont indiqués comme tels, avec leur fenêtre d’expédition, sur la page produit, dans le panier et sur la confirmation de commande. Le consommateur paie le prix intégral des produits lors de la commande ; les frais d’expédition sont facturés séparément conformément à l’article 7ter.
 
 7bis.2. Fenêtres d’expédition au lancement : le contrôleur de vol et l’ESC sont expédiés à partir de mi-octobre 2026 ; tout autre produit en précommande est expédié environ 10 semaines après la commande. La fenêtre d’expédition indiquée constitue le délai de livraison convenu entre le consommateur et Incutec BV au sens de l’art. VI.43 CDE, de sorte que le délai par défaut de 30 jours de l’article 7.1 ne s’applique pas aux articles en précommande.
 
@@ -94,6 +96,20 @@
 7bis.6. Les paiements de précommande financent la production et l’achat du stock pour la commande. Ils ne portent aucun intérêt et ne confèrent aucune participation, partage de revenus ni autre intérêt de propriété dans Incutec BV.
 
 7bis.7. Les colis expédiés en dehors de l’Union européenne peuvent être soumis à des droits d’importation et taxes payables par le consommateur à la livraison, sauf si le mode de livraison choisi précise que les droits sont pris en charge par Incutec BV.
+
+7bis.8. Chaque produit matériel a un objectif de financement (funding target) indiqué publiquement sur sa page produit. Si un produit n’atteint pas son objectif de financement, les précommandes de ce produit sont intégralement remboursées. Dans une commande combinant plusieurs produits, le produit qui n’a pas atteint son objectif de financement est remboursé et les autres articles sont expédiés ensemble dans l’unique livraison visée à l’article 7bis.5. Le modèle de financement est expliqué sur opendrone.be/preorder.
+
+### Article 7ter : Frais d’expédition et expédition
+
+7ter.1. Les frais d’expédition ne sont pas facturés lors du passage en caisse. Le consommateur paie les produits lors de la commande ; les frais d’expédition sont facturés séparément.
+
+7ter.2. Les frais d’expédition sont facturés par zone de destination dès que la commande complète est prête à être expédiée. Le consommateur reçoit une demande de paiement par courriel comportant un lien de paiement sécurisé. La commande est expédiée dès que cette facture d’expédition est payée.
+
+7ter.3. Le tarif par zone de destination est publié sur la page d’expédition (opendrone.be/shipping). Le tarif applicable à une commande est celui qui y est publié au moment où la commande est passée.
+
+7ter.4. Si la demande de paiement des frais d’expédition n’est pas payée, Incutec BV envoie des rappels. La commande est suspendue et n’est pas annulée automatiquement.
+
+7ter.5. Le consommateur peut annuler la commande à tout moment avant l’expédition et obtient le remboursement intégral des produits. Ceci est sans préjudice du droit de rétractation prévu à l’article 5.
 
 ### Article 8 : Paiement
 

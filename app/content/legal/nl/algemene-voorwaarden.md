@@ -33,6 +33,8 @@
 
 3.3. Incutec BV behoudt zich het recht voor prijzen te wijzigen. Lopende bestellingen worden niet beïnvloed door prijswijzigingen.
 
+3.4. De verzendkosten zijn niet in de productprijs begrepen en worden niet aangerekend aan de checkout. Het verzendtarief per bestemmingszone wordt vóór het plaatsen van de bestelling gepubliceerd op de verzendpagina (opendrone.be/shipping). Het tarief dat op een bestelling van toepassing is, is het tarief dat daar op het ogenblik van de bestelling gepubliceerd is.
+
 ### Artikel 4: Overeenkomst
 
 4.1. De overeenkomst komt tot stand op het moment van aanvaarding door de consument van het aanbod en het voldoen aan de daarbij gestelde voorwaarden.
@@ -81,7 +83,7 @@
 
 ### Artikel 7bis: Voorverkoop
 
-7bis.1. Sommige producten worden verkocht als voorverkoop (pre-order). Zij worden als dusdanig vermeld, met hun verzendvenster, op de productpagina, in het winkelmandje en op de orderbevestiging. De consument betaalt de volledige prijs bij het plaatsen van de bestelling.
+7bis.1. Sommige producten worden verkocht als voorverkoop (pre-order). Zij worden als dusdanig vermeld, met hun verzendvenster, op de productpagina, in het winkelmandje en op de orderbevestiging. De consument betaalt de volledige prijs van de producten bij het plaatsen van de bestelling; de verzendkosten worden afzonderlijk aangerekend overeenkomstig Artikel 7ter.
 
 7bis.2. Verzendvensters bij lancering: de flight controller en de ESC worden verzonden vanaf medio oktober 2026; elk ander voorverkoopproduct wordt verzonden ongeveer 10 weken na de bestelling. Het vermelde verzendvenster is de tussen de consument en Incutec BV overeengekomen leveringstermijn in de zin van Art. VI.43 WER, zodat de standaardtermijn van 30 dagen uit Artikel 7.1 niet geldt voor voorverkoopartikelen.
 
@@ -94,6 +96,20 @@
 7bis.6. Betalingen voor voorverkoop financieren de productie en de voorraadaankoop voor de bestelling. Zij dragen geen interest en verlenen geen aandeel, omzetdeling of ander eigendomsbelang in Incutec BV.
 
 7bis.7. Pakketten die buiten de Europese Unie worden verzonden, kunnen onderworpen zijn aan invoerrechten en -belastingen die door de consument bij levering moeten worden betaald, tenzij de gekozen verzendwijze vermeldt dat de rechten door Incutec BV worden betaald.
+
+7bis.8. Elk hardwareproduct heeft een financieringsdoel (funding target) dat publiek op de productpagina wordt vermeld. Indien een product zijn financieringsdoel niet bereikt, worden de voorverkopen van dat product volledig terugbetaald. In een bestelling die meerdere producten combineert, wordt het product dat zijn financieringsdoel niet heeft bereikt terugbetaald en worden de overige artikelen samen verzonden in de ene levering bedoeld in Artikel 7bis.5. Het financieringsmodel wordt toegelicht op opendrone.be/preorder.
+
+### Artikel 7ter: Verzendkosten en verzending
+
+7ter.1. De verzendkosten worden niet aangerekend aan de checkout. De consument betaalt de producten bij het plaatsen van de bestelling; de verzendkosten worden afzonderlijk gefactureerd.
+
+7ter.2. De verzendkosten worden per bestemmingszone gefactureerd zodra de volledige bestelling klaar is voor verzending. De consument ontvangt een betalingsverzoek per e-mail met een beveiligde betaallink. De bestelling wordt verzonden zodra die verzendfactuur betaald is.
+
+7ter.3. Het tarief per bestemmingszone wordt gepubliceerd op de verzendpagina (opendrone.be/shipping). Het tarief dat op een bestelling van toepassing is, is het tarief dat daar op het ogenblik van de bestelling gepubliceerd is.
+
+7ter.4. Indien het betalingsverzoek voor de verzending niet betaald wordt, stuurt Incutec BV herinneringen. De bestelling wordt aangehouden en wordt niet automatisch geannuleerd.
+
+7ter.5. De consument kan de bestelling op elk ogenblik vóór verzending annuleren en krijgt dan de producten volledig terugbetaald. Dit doet geen afbreuk aan het herroepingsrecht van Artikel 5.
 
 ### Artikel 8: Betaling
 
