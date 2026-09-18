@@ -42,6 +42,8 @@ export type CatalogVariant = {
   currency: string;
   availability: CatalogAvailability;
   ship_promise: string | null;
+  /** Design revision stage of this variant (schema 2), or null. */
+  stage?: string | null;
   image: string | null;
   url: string;
   cart_add_url: string;
@@ -156,8 +158,18 @@ function normalizeProduct(raw: unknown): CatalogProduct {
     return {stage: null, funding: null} as CatalogProduct;
   }
   const p = raw as CatalogProduct & Record<string, unknown>;
+  // A schema-1 product always has a variants array; anything else is left
+  // untouched so this normalizer never changes what an old catalog parses to.
+  const variants = Array.isArray(p.variants)
+    ? p.variants.map((v) =>
+        v && typeof v === 'object'
+          ? {...v, stage: typeof v.stage === 'string' ? v.stage : null}
+          : v,
+      )
+    : p.variants;
   return {
     ...p,
+    variants,
     stage: typeof p.stage === 'string' ? p.stage : null,
     funding: normalizeFunding(p.funding),
   };
