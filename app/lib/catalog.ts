@@ -44,6 +44,14 @@ export type CatalogVariant = {
   ship_promise: string | null;
   /** Design revision stage of this variant (schema 2), or null. */
   stage?: string | null;
+  /** Promotional discount on this variant (schema addition), or null.
+   *  Wire shape from `incutec_catalog_api`; `mapVariant` carries it onto
+   *  the mapped variant as camelCase. */
+  discount?: {
+    label: string | null;
+    ends_at: string | null;
+    units_left: number | null;
+  } | null;
   image: string | null;
   url: string;
   cart_add_url: string;
@@ -146,6 +154,25 @@ function normalizeFunding(raw: unknown): CatalogFunding | null {
 }
 
 /**
+ * Normalize a variant's raw `discount` field. Anything that is not a
+ * plain object (missing, null, a string, a number) maps to null, same as
+ * `stage`; a present object gets each sub-field type-checked independently
+ * so one bad field never drops a label/date/count that parsed fine.
+ */
+function normalizeDiscount(raw: unknown): NonNullable<CatalogVariant['discount']> | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const d = raw as Record<string, unknown>;
+  return {
+    label: typeof d.label === 'string' ? d.label : null,
+    ends_at: typeof d.ends_at === 'string' ? d.ends_at : null,
+    units_left:
+      typeof d.units_left === 'number' && Number.isFinite(d.units_left)
+        ? d.units_left
+        : null,
+  };
+}
+
+/**
  * Normalize the additive `stage`/`funding` fields on one raw product.
  * Everything else on the product passes through untouched, so an old
  * schema-1 catalog (neither field present) parses exactly as before.
@@ -163,7 +190,11 @@ function normalizeProduct(raw: unknown): CatalogProduct {
   const variants = Array.isArray(p.variants)
     ? p.variants.map((v) =>
         v && typeof v === 'object'
-          ? {...v, stage: typeof v.stage === 'string' ? v.stage : null}
+          ? {
+              ...v,
+              stage: typeof v.stage === 'string' ? v.stage : null,
+              discount: normalizeDiscount(v.discount),
+            }
           : v,
       )
     : p.variants;
@@ -323,6 +354,13 @@ function mapVariant(
     shipPromise: variant.ship_promise,
     availability: variant.availability,
     shopUrl: variant.url || product.url || null,
+    discount: variant.discount
+      ? {
+          label: variant.discount.label,
+          endsAt: variant.discount.ends_at,
+          unitsLeft: variant.discount.units_left,
+        }
+      : null,
   };
 }
 

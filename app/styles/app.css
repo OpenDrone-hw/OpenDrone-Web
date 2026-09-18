@@ -319,6 +319,21 @@ html.light .schematic-sheet {
   text-decoration: line-through;
 }
 
+/* Discount label chip next to a struck-through compare price — the
+   promotion's own wording (e.g. "Launch week"), same pill recipe as
+   .cart-line-discount-badge. */
+.product-price-discount {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--color-gold);
+  border: 1px solid color-mix(in srgb, var(--color-gold) 45%, transparent);
+  border-radius: var(--r-pill);
+  padding: 0.05rem 0.5rem;
+  white-space: nowrap;
+}
+
 /* Tabular numerals everywhere a number appears. Cheap and unambiguously
    says "engineering" everywhere a price/spec/SKU is rendered. */
 .product-buy-sku,

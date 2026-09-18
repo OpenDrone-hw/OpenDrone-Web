@@ -44,6 +44,7 @@ export function ProductItem({
   lead,
   isNew,
   onSale,
+  discountLabel,
   to,
   title,
   priceOverride,
@@ -65,6 +66,9 @@ export function ProductItem({
   isNew?: boolean;
   /** Corner badge — listed below its compare-at price. */
   onSale?: boolean;
+  /** The promotion's own wording, shown in the sale badge instead of the
+   *  generic "Sale" copy when one exists. Ignored unless `onSale`. */
+  discountLabel?: string | null;
   /** Link override — used by per-variant cards to deep-link the PDP with a
    *  model preselected (`?Model=…`) instead of the bare product URL. */
   to?: string;
@@ -163,7 +167,7 @@ export function ProductItem({
     </span>
   ) : onSale ? (
     <span className="product-card-badge is-sale">
-      {copyText('product-chrome.card_badge_sale')}
+      {discountLabel || copyText('product-chrome.card_badge_sale')}
     </span>
   ) : isNew ? (
     <span className="product-card-badge is-new">

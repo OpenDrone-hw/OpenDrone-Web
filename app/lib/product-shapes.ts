@@ -39,6 +39,18 @@ export type CatalogFunding = {
   dateDeadline: string | null;
 };
 
+/**
+ * A variant's promotional discount, straight from the catalog feed
+ * (camelCase, mapped from the wire's snake_case by `mapVariant`). `endsAt`
+ * and `unitsLeft` are carried for a future surface; only `label` is shown
+ * today, next to the compare price.
+ */
+export type CatalogVariantDiscount = {
+  label: string | null;
+  endsAt: string | null;
+  unitsLeft: number | null;
+};
+
 export type ProductVariantFragment = {
   id: string;
   sku: string | null;
@@ -56,6 +68,8 @@ export type ProductVariantFragment = {
   availability: CatalogAvailability;
   /** The variant's page on the shop, for the review list link. */
   shopUrl: string | null;
+  /** Promotional discount on this variant, or null for an ordinary price. */
+  discount: CatalogVariantDiscount | null;
 };
 
 /** Card-sized product: listings, related strip, header pods, hero. */

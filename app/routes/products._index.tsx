@@ -108,6 +108,9 @@ type Card = {
    *  instead of falling back to the product's featuredImage. */
   image?: CatalogProduct['featuredImage'];
   onSale: boolean;
+  /** The promotion's own wording for the sale badge, or null to fall back
+   *  to the generic "Sale" copy. Ignored unless `onSale`. */
+  discountLabel?: string | null;
   /** A product line whose every tier is still coming soon — shown as a
    *  greyed, non-clickable teaser rather than a buyable card. */
   comingSoon?: boolean;
@@ -122,6 +125,13 @@ const num = (m?: MoneyV2 | null) => (m ? parseFloat(m.amount) || 0 : 0);
 /** A product is "on sale" when any of its variants has a compare price. */
 const productOnSale = (p: CatalogProduct) =>
   p.variants.nodes.some((v) => v.compareAtPrice != null);
+
+/** The discount label off the first discounted variant, or null. Mirrors
+ *  `productOnSale`'s notion of "on sale" so the two never disagree about
+ *  which variant is the discounted one. */
+const productDiscountLabel = (p: CatalogProduct) =>
+  p.variants.nodes.find((v) => v.compareAtPrice != null)?.discount?.label ??
+  null;
 
 /** The Shopify variant carrying a given option value (e.g. Model = "Gemini"),
  *  so a tier card shows its real price/sale even though the tiers themselves
@@ -259,6 +269,7 @@ export default function ProductsIndex() {
             onSale: sv?.compareAtPrice
               ? num(sv.compareAtPrice) > num(price)
               : productOnSale(p),
+            discountLabel: sv?.discount?.label ?? null,
             quickAdd: sv
               ? {
                   href: sv.cartAddUrl,
@@ -284,6 +295,7 @@ export default function ProductsIndex() {
           to: `/products/${p.handle}`,
           price: p.priceRange.minVariantPrice,
           onSale: comingSoon ? false : productOnSale(p),
+          discountLabel: comingSoon ? null : productDiscountLabel(p),
           comingSoon,
           quickAdd:
             !comingSoon && firstVariant
@@ -541,6 +553,7 @@ export default function ProductsIndex() {
                     imageOverride={card.image}
                     loading={index < 8 ? 'eager' : undefined}
                     onSale={card.onSale}
+                    discountLabel={card.discountLabel}
                     comingSoon={card.comingSoon}
                     quickAdd={card.quickAdd}
                     stackOffers={card.stackOffers}

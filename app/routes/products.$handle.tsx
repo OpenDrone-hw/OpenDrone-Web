@@ -1594,6 +1594,7 @@ function ProductPage() {
           <ProductPrice
             price={buyPrice}
             compareAtPrice={isBundle ? undefined : selectedVariant?.compareAtPrice}
+            discountLabel={isBundle ? undefined : selectedVariant?.discount?.label}
           />
           <Txt
             id="product-chrome.buy_vat_note"
