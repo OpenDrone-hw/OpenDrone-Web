@@ -3,7 +3,11 @@ import assert from 'node:assert/strict';
 import {
   FUNDING_MISSED_NOTICE,
   FUNDING_REFUND_GUARANTEE,
+  fundingDaysLeft,
+  fundingDaysLeftText,
+  fundingDeadlineDay,
   fundingDeadlineText,
+  fundingUnitsLabel,
   fundingDisplayPct,
   fundingLabel,
   fundingPct,
@@ -236,5 +240,101 @@ describe('fundingRefundText', () => {
 
   it('is empty without a campaign', () => {
     assert.equal(fundingRefundText(null), '');
+  });
+});
+
+describe('fundingDeadlineDay', () => {
+  it('reads the day off the string, never through a local Date', () => {
+    // "2026-12-01 23:59:59" parsed as a local instant names a different
+    // day on a UTC server than in a browser west of Greenwich, which is
+    // both an off-by-one deadline and a hydration mismatch.
+    assert.equal(fundingDeadlineDay(funding({dateDeadline: '2026-12-01'})), '2026-12-01');
+    assert.equal(
+      fundingDeadlineDay(funding({dateDeadline: '2026-12-01 23:59:59'})),
+      '2026-12-01',
+    );
+    assert.equal(
+      fundingDeadlineDay(funding({dateDeadline: '2026-12-01T10:00:00Z'})),
+      '2026-12-01',
+    );
+  });
+
+  it('is null for a missing, malformed or impossible day', () => {
+    assert.equal(fundingDeadlineDay(null), null);
+    assert.equal(fundingDeadlineDay(funding({dateDeadline: null})), null);
+    assert.equal(fundingDeadlineDay(funding({dateDeadline: 'soon'})), null);
+    assert.equal(fundingDeadlineDay(funding({dateDeadline: '2026-13-45'})), null);
+    assert.equal(fundingDeadlineDay(funding({dateDeadline: '2026-02-30'})), null);
+  });
+});
+
+describe('fundingDaysLeft', () => {
+  const at = (iso: string) => Date.parse(iso);
+
+  it('counts whole calendar days to the deadline', () => {
+    const f = funding({dateDeadline: '2026-12-01'});
+    assert.equal(fundingDaysLeft(f, at('2026-11-20T00:00:00Z')), 11);
+    assert.equal(fundingDaysLeft(f, at('2026-11-30T23:59:00Z')), 1);
+  });
+
+  it('ignores the time of day at both ends', () => {
+    // Late on the same UTC day must read the same as early on it: the
+    // count is in days, so it may never come back as a fraction.
+    const f = funding({dateDeadline: '2026-12-01'});
+    assert.equal(fundingDaysLeft(f, at('2026-11-20T00:00:01Z')), 11);
+    assert.equal(fundingDaysLeft(f, at('2026-11-20T23:59:59Z')), 11);
+  });
+
+  it('is 0 on the deadline day and after it, never negative', () => {
+    const f = funding({dateDeadline: '2026-12-01'});
+    assert.equal(fundingDaysLeft(f, at('2026-12-01T09:00:00Z')), 0);
+    assert.equal(fundingDaysLeft(f, at('2027-03-01T00:00:00Z')), 0);
+  });
+
+  it('is null without a usable deadline', () => {
+    assert.equal(fundingDaysLeft(null, at('2026-11-20T00:00:00Z')), null);
+    assert.equal(
+      fundingDaysLeft(funding({dateDeadline: null}), at('2026-11-20T00:00:00Z')),
+      null,
+    );
+    assert.equal(
+      fundingDaysLeft(funding({dateDeadline: 'q4'}), at('2026-11-20T00:00:00Z')),
+      null,
+    );
+  });
+});
+
+describe('fundingDaysLeftText', () => {
+  it('agrees with the noun', () => {
+    assert.equal(fundingDaysLeftText(11), '11 days left');
+    assert.equal(fundingDaysLeftText(1), '1 day left');
+    assert.equal(fundingDaysLeftText(0), '0 days left');
+  });
+
+  it('says nothing when there is no count', () => {
+    assert.equal(fundingDaysLeftText(null), '');
+  });
+});
+
+describe('fundingUnitsLabel', () => {
+  it('is the exact "X of Y units" the tracker prints', () => {
+    assert.equal(
+      fundingUnitsLabel(funding({unitsFunded: 312, targetUnits: 500})),
+      '312 of 500 units',
+    );
+  });
+
+  it('reports the real count past the target, not the capped bar', () => {
+    // The BAR caps at 100%; the label must still say what was ordered.
+    assert.equal(
+      fundingUnitsLabel(funding({unitsFunded: 700, targetUnits: 500})),
+      '700 of 500 units',
+    );
+    assert.equal(fundingDisplayPct(funding({unitsFunded: 700, targetUnits: 500})), 100);
+  });
+
+  it('is empty for no funding', () => {
+    assert.equal(fundingUnitsLabel(null), '');
+    assert.equal(fundingUnitsLabel(undefined), '');
   });
 });
