@@ -6,6 +6,7 @@ import {ProductItem, type ProductQuickAdd} from '~/components/ProductItem';
 import type {StackOffer} from '~/components/StackQuickAdd';
 import type {MoneyV2, ProductCardFragment} from '~/lib/product-shapes';
 import {toCards} from '~/lib/catalog';
+import {mergeFundingOverlay} from '~/lib/funding-overlay';
 import {buyUrl} from '~/lib/shop-links';
 import {FAMILIES} from '~/lib/families';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
@@ -77,7 +78,14 @@ export async function loader({request, context}: Route.LoaderArgs) {
   // and the URL filters/sorts it client-side, so the page is one
   // shareable browse hub that lists every model on its own card. The
   // search term filters the same cards.
-  const catalog = await context.catalog.get();
+  // The catalog is cached 5 minutes; the funding overlay refreshes just
+  // unitsFunded/state every 60 seconds and never rejects (a missing, slow
+  // or 404 feed resolves to an empty overlay), so this page always renders.
+  const [rawCatalog, fundingOverlay] = await Promise.all([
+    context.catalog.get(),
+    context.fundingOverlay.get(),
+  ]);
+  const catalog = mergeFundingOverlay(rawCatalog, fundingOverlay);
   return {
     products: toCards(catalog),
     shopUrl: context.catalog.shopUrl,

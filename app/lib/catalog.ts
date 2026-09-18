@@ -120,12 +120,15 @@ function normalizeFunding(raw: unknown): CatalogFunding | null {
     !Number.isFinite(f.target_units) ||
     typeof f.units_funded !== 'number' ||
     !Number.isFinite(f.units_funded) ||
+    // Kept for contract compatibility with the wire shape and still
+    // range-checked here, but `fundingPct` (funding.ts) derives the
+    // displayed percentage from unitsFunded/targetUnits instead: nothing
+    // reads this field for display any more.
     typeof f.pct !== 'number' ||
     !Number.isFinite(f.pct) ||
     // A target of zero or less is not a campaign: it reads "0 of 0 funded"
     // and it is what a division by zero on the Odoo side looks like here.
     f.target_units <= 0 ||
-    typeof f.explainer_url !== 'string' ||
     typeof f.state !== 'string' ||
     !FUNDING_STATES.has(f.state)
   ) {
@@ -137,7 +140,6 @@ function normalizeFunding(raw: unknown): CatalogFunding | null {
     pct: f.pct,
     state: f.state as CatalogFunding['state'],
     dateDeadline: typeof f.date_deadline === 'string' ? f.date_deadline : null,
-    explainerUrl: f.explainer_url,
   };
 }
 

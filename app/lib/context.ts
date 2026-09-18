@@ -1,14 +1,20 @@
 import {AppSession} from '~/lib/session';
 import {createCatalogClient, type CatalogClient} from '~/lib/catalog-client';
+import {
+  createFundingOverlayClient,
+  type FundingOverlayClient,
+} from '~/lib/funding-overlay-client';
 
 /**
  * The request context: env, the session cookie, the worker cache, the
- * waitUntil hook and the Odoo catalog client.
+ * waitUntil hook, the Odoo catalog client and the live funding overlay
+ * client.
  *
  * This used to be Hydrogen's `createHydrogenContext`, which built a
  * Storefront API client, a cart handler and a customer-account client.
  * Odoo owns catalog, cart, checkout and accounts now (decision D3), so
- * the only backend client left is the read-only catalog feed.
+ * the only backend clients left are the read-only catalog feed and the
+ * lighter live funding feed layered on top of it.
  */
 export type AppLoadContext = {
   env: Env;
@@ -16,6 +22,7 @@ export type AppLoadContext = {
   cache: Cache;
   waitUntil: (p: Promise<unknown>) => void;
   catalog: CatalogClient;
+  fundingOverlay: FundingOverlayClient;
 };
 
 declare module 'react-router' {
@@ -25,6 +32,7 @@ declare module 'react-router' {
     cache: Cache;
     waitUntil: (p: Promise<unknown>) => void;
     catalog: CatalogClient;
+    fundingOverlay: FundingOverlayClient;
   }
 }
 
@@ -49,5 +57,6 @@ export async function createAppLoadContext(
     cache,
     waitUntil,
     catalog: createCatalogClient({env, cache, waitUntil}),
+    fundingOverlay: createFundingOverlayClient({env, cache, waitUntil}),
   };
 }

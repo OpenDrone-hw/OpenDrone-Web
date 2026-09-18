@@ -15,13 +15,31 @@ import type {CatalogFunding, CatalogProduct} from './catalog.ts';
 /**
  * 0-100, integer, clamped: the meter width a progress bar can use directly.
  *
- * A percentage that is not a finite number reads 0, not `NaN`: `NaN` would
- * reach the DOM as `width: NaN%` and `aria-valuenow="NaN"`, which is outside
- * the range the `progressbar` role allows.
+ * Derived from `unitsFunded / targetUnits`, never from the catalog's own
+ * `pct` field: the label below the bar reads `unitsFunded` of
+ * `targetUnits` too (`fundingLabel`), and computing both from the same two
+ * numbers is the only way the bar's `aria-valuenow` can never contradict
+ * the label it sits next to. `pct` still rides on `CatalogFunding` for
+ * contract compatibility (`catalog.ts` parses it) but nothing reads it for
+ * display any more.
+ *
+ * A result that is not a finite number, or a non-positive target, reads 0,
+ * not `NaN`: `NaN` would reach the DOM as `width: NaN%` and
+ * `aria-valuenow="NaN"`, which is outside the range the `progressbar` role
+ * allows.
  */
 export function fundingPct(funding: CatalogFunding | null | undefined): number {
-  if (!funding || !Number.isFinite(funding.pct)) return 0;
-  return Math.min(100, Math.max(0, Math.round(funding.pct)));
+  if (
+    !funding ||
+    !Number.isFinite(funding.unitsFunded) ||
+    !Number.isFinite(funding.targetUnits) ||
+    funding.targetUnits <= 0
+  ) {
+    return 0;
+  }
+  const pct = (funding.unitsFunded / funding.targetUnits) * 100;
+  if (!Number.isFinite(pct)) return 0;
+  return Math.min(100, Math.max(0, Math.round(pct)));
 }
 
 /** "312 of 500 funded", the count a funded pre-order card shows under its meter. */
@@ -126,7 +144,11 @@ export function fundingDeadlineText(
 export const FUNDING_REFUND_GUARANTEE =
   'If this product misses its funding target, your preorder is refunded in full.';
 
-/** In-app explainer for how funded pre-orders work. */
+/**
+ * In-app explainer for how funded pre-orders work. The catalog used to
+ * also carry `funding.explainer_url`; nothing read it, so it was removed
+ * rather than kept in sync with a page this route already replaces.
+ */
 export const FUNDING_EXPLAINER_PATH = '/preorder';
 
 /** Link text for `FUNDING_EXPLAINER_PATH`. */

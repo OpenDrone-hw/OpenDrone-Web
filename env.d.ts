@@ -54,6 +54,15 @@ declare global {
     CATALOG_HTTP_USER?: string;
     CATALOG_HTTP_PASSWORD?: string;
 
+    // The live funding overlay (same Odoo module, incutec_catalog_api).
+    // Defaults to https://erp.incutec.com/incutec/funding.json. Refreshes
+    // only unitsFunded/state on a campaign the catalog already published;
+    // fetched server-side with a 60 second worker cache, the last good
+    // copy served for up to an hour on a failed fetch, and the catalog's
+    // own numbers on a missing, slow, or 404 feed (CATALOG_HTTP_USER/
+    // PASSWORD above apply here too: same origin, same staging auth).
+    FUNDING_URL?: string;
+
     // Aggregate order totals behind the financial goal meter, as
     // {"orders": n, "revenue_eur": x, "updated_at": iso}. Read by
     // scripts/update-goals.mjs only; the Odoo endpoint that serves it is
