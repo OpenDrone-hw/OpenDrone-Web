@@ -5,7 +5,9 @@
  *
  * Wholesale is deliberately absent. It is an editorial page by layout but
  * it addresses shops, not the reader this series is written for, and
- * dropping it into the middle of the story breaks the through-line.
+ * dropping it into the middle of the story breaks the through-line. The
+ * preorder explainer is absent for the same reason: it is the page a buyer
+ * is sent to from a product page, not a chapter of the project's story.
  *
  * `minutes` is a reading estimate at ~200 wpm, measured against the
  * rendered `.editorial-page` text. It is stored rather than derived
