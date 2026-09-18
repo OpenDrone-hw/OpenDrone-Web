@@ -20,6 +20,7 @@ import {
   toCard,
   toProduct,
 } from '~/lib/catalog';
+import {mergeFundingOverlay} from '~/lib/funding-overlay';
 import {buyUrl} from '~/lib/shop-links';
 import {useAside} from '~/components/Aside';
 import {Txt} from '~/components/Txt';
@@ -154,7 +155,14 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
     context.waitUntil,
   );
 
-  const catalog = await context.catalog.get();
+  // The catalog is cached 5 minutes; the funding overlay refreshes just
+  // unitsFunded/state every 60 seconds and never rejects (a missing, slow
+  // or 404 feed resolves to an empty overlay), so the PDP always renders.
+  const [rawCatalog, fundingOverlay] = await Promise.all([
+    context.catalog.get(),
+    context.fundingOverlay.get(),
+  ]);
+  const catalog = mergeFundingOverlay(rawCatalog, fundingOverlay);
   const entry = byHandle(catalog, handle);
 
   if (!entry) {

@@ -37,7 +37,6 @@ export type CatalogFunding = {
   pct: number;
   state: 'draft' | 'open' | 'funded' | 'missed' | 'cancelled';
   dateDeadline: string | null;
-  explainerUrl: string;
 };
 
 export type ProductVariantFragment = {

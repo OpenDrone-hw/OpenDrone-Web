@@ -18,23 +18,37 @@ function funding(overrides: Partial<CatalogFunding> = {}): CatalogFunding {
   return {
     targetUnits: 500,
     unitsFunded: 312,
+    // Carried for contract compatibility; fundingPct ignores it (see below).
     pct: 62.4,
     state: 'open',
     dateDeadline: '2026-12-01',
-    explainerUrl: 'https://shop.incutec.com/pages/funding',
     ...overrides,
   };
 }
 
 describe('fundingPct', () => {
-  it('rounds to an integer', () => {
-    assert.equal(fundingPct(funding({pct: 62.4})), 62);
-    assert.equal(fundingPct(funding({pct: 62.6})), 63);
+  it('derives from unitsFunded/targetUnits, rounded to an integer', () => {
+    assert.equal(fundingPct(funding({unitsFunded: 312, targetUnits: 500})), 62);
+    assert.equal(fundingPct(funding({unitsFunded: 313, targetUnits: 500})), 63);
+  });
+
+  it('ignores the catalog-supplied pct field entirely', () => {
+    // A `pct` that disagrees with unitsFunded/targetUnits must never win:
+    // the bar and the "N of 500 funded" label are computed from the same
+    // two numbers, so they can never contradict each other.
+    assert.equal(
+      fundingPct(funding({unitsFunded: 312, targetUnits: 500, pct: 999})),
+      62,
+    );
+    assert.equal(
+      fundingPct(funding({unitsFunded: 312, targetUnits: 500, pct: Number.NaN})),
+      62,
+    );
   });
 
   it('clamps to 0-100', () => {
-    assert.equal(fundingPct(funding({pct: -10})), 0);
-    assert.equal(fundingPct(funding({pct: 140})), 100);
+    assert.equal(fundingPct(funding({unitsFunded: -10, targetUnits: 500})), 0);
+    assert.equal(fundingPct(funding({unitsFunded: 700, targetUnits: 500})), 100);
   });
 
   it('is 0 for no funding', () => {
@@ -42,12 +56,18 @@ describe('fundingPct', () => {
     assert.equal(fundingPct(undefined), 0);
   });
 
-  it('is 0 for a percentage that is not a finite number', () => {
+  it('is 0 for a non-finite unitsFunded/targetUnits or a non-positive target', () => {
     // A bar width of `NaN%` and `aria-valuenow="NaN"` is worse than a bar at
     // zero: the progressbar role requires a number inside 0-100.
-    assert.equal(fundingPct(funding({pct: Number.NaN})), 0);
-    assert.equal(fundingDisplayPct(funding({pct: Number.NaN})), 0);
-    assert.equal(fundingDisplayPct(funding({pct: Number.NaN}), 'nearest-5'), 0);
+    assert.equal(fundingPct(funding({unitsFunded: Number.NaN})), 0);
+    assert.equal(fundingPct(funding({targetUnits: Number.NaN})), 0);
+    assert.equal(fundingPct(funding({targetUnits: 0})), 0);
+    assert.equal(fundingPct(funding({targetUnits: -500})), 0);
+    assert.equal(fundingDisplayPct(funding({unitsFunded: Number.NaN})), 0);
+    assert.equal(
+      fundingDisplayPct(funding({unitsFunded: Number.NaN}), 'nearest-5'),
+      0,
+    );
   });
 });
 
@@ -70,19 +90,40 @@ describe('isFundingPublic', () => {
 
 describe('fundingDisplayPct', () => {
   it('is the exact rounded percentage by default', () => {
-    assert.equal(fundingDisplayPct(funding({pct: 62.4})), 62);
-    assert.equal(fundingDisplayPct(funding({pct: 62.4}), 'exact'), 62);
+    assert.equal(
+      fundingDisplayPct(funding({unitsFunded: 312, targetUnits: 500})),
+      62,
+    );
+    assert.equal(
+      fundingDisplayPct(funding({unitsFunded: 312, targetUnits: 500}), 'exact'),
+      62,
+    );
   });
 
   it('snaps to 5% steps when asked', () => {
-    assert.equal(fundingDisplayPct(funding({pct: 62.4}), 'nearest-5'), 60);
-    assert.equal(fundingDisplayPct(funding({pct: 63}), 'nearest-5'), 65);
-    assert.equal(fundingDisplayPct(funding({pct: 2}), 'nearest-5'), 0);
+    assert.equal(
+      fundingDisplayPct(funding({unitsFunded: 312, targetUnits: 500}), 'nearest-5'),
+      60,
+    );
+    assert.equal(
+      fundingDisplayPct(funding({unitsFunded: 315, targetUnits: 500}), 'nearest-5'),
+      65,
+    );
+    assert.equal(
+      fundingDisplayPct(funding({unitsFunded: 10, targetUnits: 500}), 'nearest-5'),
+      0,
+    );
   });
 
   it('stays inside 0-100 at both precisions', () => {
-    assert.equal(fundingDisplayPct(funding({pct: 140}), 'nearest-5'), 100);
-    assert.equal(fundingDisplayPct(funding({pct: -10}), 'nearest-5'), 0);
+    assert.equal(
+      fundingDisplayPct(funding({unitsFunded: 700, targetUnits: 500}), 'nearest-5'),
+      100,
+    );
+    assert.equal(
+      fundingDisplayPct(funding({unitsFunded: -10, targetUnits: 500}), 'nearest-5'),
+      0,
+    );
     assert.equal(fundingDisplayPct(null, 'nearest-5'), 0);
   });
 });

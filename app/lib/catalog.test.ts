@@ -82,7 +82,6 @@ describe('stage and funding', () => {
             pct: 62.4,
             state: 'open',
             date_deadline: '2026-12-01',
-            explainer_url: 'https://shop.incutec.com/pages/funding',
           },
         },
       ],
@@ -95,7 +94,6 @@ describe('stage and funding', () => {
       pct: 62.4,
       state: 'open',
       dateDeadline: '2026-12-01',
-      explainerUrl: 'https://shop.incutec.com/pages/funding',
     });
     // The funding object rides onto both product shapes, so the PDP buy
     // module and the card meter read it without a second catalog lookup.
@@ -121,7 +119,7 @@ describe('stage and funding', () => {
             target_units: 500,
             units_funded: 312,
             pct: 62.4,
-            // unknown state and a missing explainer_url
+            // unknown state
             state: 'launched',
           },
         },
@@ -172,7 +170,6 @@ describe('stage and funding', () => {
       units_funded: 312,
       pct: 62.4,
       state: 'open',
-      explainer_url: 'https://shop.incutec.com/pages/funding',
     };
     assert.equal(bad({...ok, pct: Number.NaN}), null);
     assert.equal(bad({...ok, units_funded: Number.NaN}), null);
