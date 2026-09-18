@@ -1,42 +1,81 @@
 {
   "$route": "/preorder",
   "$title": "Preorders",
-  "meta_title": "Preorders · How the funding targets work",
-  "meta_description": "Every OpenDrone hardware product opens for preorder with a public funding target of 500 units. You pay for the product at order, shipping is charged when your order is ready to ship, and a product that misses its target is refunded in full.",
+  "meta_title": "Preorders · A funding round per product",
+  "meta_description": "Every OpenDrone hardware product opens for preorder with a public funding target. Watch each campaign fill, pick a tier, and get refunded in full if a product misses its target.",
   "title": "A funding round per product.",
   "lead": "This is not a normal shop opening. The designs are finished, but there is no capital to buy large batches up front, so each hardware product opens for preorder with a public funding target and you can watch it fill.",
-  "s1_title": "*01* · Why it works this way",
+  "cta_primary": "Pick a tier ↓",
+  "cta_secondary": "Where the boards are made →",
+  "strip_amount_label": "Funded so far",
+  "strip_backers_label": "Backers",
+  "strip_products_label": "Products funded / open",
+  "strip_deadline_label": "Nearest deadline",
+  "strip_empty": "No campaign is running right now. The tracker fills as soon as one opens.",
+  "tracker_title": "Campaign tracker",
+  "tracker_lead": "One card per product with a public campaign. The numbers come from the shop, refresh while a campaign runs, and are the same ones the product pages show.",
+  "tracker_empty": "Nothing is open for preorder at the moment.",
+  "s1_title": "*01* · What this is",
   "s1_body": [
+    "OpenDrone is an open source FPV platform: flight controller, ESC, receiver, motors and frames, with the design files public.",
+    "This page is the funding round for that hardware. Each product carries a public funding target in units, and the tracker above shows how far each one has come."
+  ],
+  "s2_title": "*02* · Why it works this way",
+  "s2_body": [
     "Development is done. What is missing is money for production, not engineering time.",
     "Suppliers do not produce single units. Each of them sets a minimum order quantity, and that minimum is what sets the threshold a product has to clear before we can order it. The funding target is that constraint, stated in public instead of hidden behind a sold-out label."
   ],
-  "s2_title": "*02* · How a funding target works",
-  "s2_body": [
-    "Every hardware product carries a public funding target of 500 units, with live progress on its own product page.",
-    "You pay for the product in full when you order. Shipping is not charged at checkout. It is charged later, when your complete order is ready to ship, so you pay one shipping cost for one delivery."
-  ],
-  "s3_title": "*03* · What ships, and when",
+  "s3_title": "*03* · Who is behind it",
   "s3_body": [
-    "The stack ships regardless of any funding target. Batch 1 is paid for and in production, shipping from mid-October 2026.",
-    "Everything else ships about 10 weeks after its funding target is reached and the supplier order is placed. Until a target is reached there is no date, and we will not invent one."
+    "Incutec BV, a small company in Leuven, Belgium. The same people design the boards, answer the support mail and pack the parcels.",
+    "The hardware is open source, so the designs outlive the company that made them. Nothing on this page is a crowdfunding platform: you order in our own shop, under our own terms."
   ],
-  "s4_title": "*04* · If a target is missed",
+  "s4_title": "*04* · What ships, and when",
   "s4_body": [
-    "If a product does not reach its funding target, every preorder of that product is refunded in full. That is a guarantee, not a policy we reserve the right to interpret.",
-    "In an order that mixes products, the item that missed its target is refunded and the rest of the order still ships."
+    "The stack ships regardless of any funding target. Batch 1 is paid for and in production, shipping from mid-October 2026.",
+    "Everything else ships about 10 weeks from the funding target being reached and the supplier order placed. Until a target is reached there is no date, and we will not invent one.",
+    "You pay for the product in full when you order. Shipping is not charged at checkout: it is billed at dispatch, at the published rate for your zone, once your complete order is ready. An order ships once, complete, as one delivery."
   ],
-  "s5_title": "*05* · One delivery per order",
+  "s5_title": "*05* · Risks and challenges",
   "s5_body": [
-    "An order ships once, complete. If you mix products with different funding targets, the whole order waits until every item in it is ready, and then goes out as a single delivery. Order separately if you want the fast items sooner."
+    "Hardware schedules slip. Supplier lead times move, a component goes out of stock and has to be swapped for an equivalent, and a production run can come back needing rework. When the ship window moves, you get mail saying so, with the new window.",
+    "A product can also miss its funding target. That is the risk this page exists to state: if it happens, every preorder of that product is refunded in full, within 14 days of the campaign closing. In an order that mixes products, the item that missed its target is refunded and the rest of the order still ships."
   ],
-  "s6_title": "*06* · What we will mail you",
+  "s6_title": "*06* · What you get",
   "s6_body": [
+    "The product you ordered, at the price on its tier, with the documentation and the design files that come with every OpenDrone board.",
+    "You also get the rights the law gives you, which we are not allowed to shrink and would not want to: 14 days to withdraw from the purchase after delivery, and free cancellation at any time before dispatch. The full text is in [the terms](/algemene-voorwaarden), article 7bis.",
     "You get mail when your product reaches its funding target, when the supplier order is placed, whenever the ship window slips, and once more to reconfirm your address before dispatch."
   ],
   "s7_title": "*07* · What opens for preorder",
   "s7_body": [
     "The stack, the frames, the motors and the receivers, plus a commodity FPV assortment: propellers, straps, power connectors, wire, capacitors, buzzers, antennas, TPU parts and consumables. There are no batteries in the assortment."
   ],
-  "cta_primary": "See what is open for preorder →",
-  "cta_secondary": "Where the boards are made →"
+  "tiers_title": "Tiers",
+  "tiers_lead": "One card per variant of every product with a campaign. Ordering hands you off to our shop, where you pay for the product and nothing else.",
+  "tiers_empty": "No tier is open for ordering right now.",
+  "others_title": "Other products",
+  "others_lead": "Products with no campaign of their own. They are ordered the normal way, on their own page.",
+  "faq_title": "Questions",
+  "faq_q1": "What happens when a product reaches its funding target?",
+  "faq_a1": "We place the supplier order and mail everyone who backed it. From there the ship window is about 10 weeks, and you hear from us again when the order is placed and once more before dispatch.",
+  "faq_q2": "What happens if a product misses its target?",
+  "faq_a2": "Every preorder of that product is refunded in full, within 14 days of the campaign closing. That is a guarantee, not a policy we reserve the right to interpret.",
+  "faq_q3": "When do I pay, and for what?",
+  "faq_a3": "You pay the full product price when you order. Shipping is not charged at checkout.",
+  "faq_q4": "When is shipping charged?",
+  "faq_a4": "At dispatch, once your complete order is ready to ship, at the published rate for your destination zone. You get a payment request with a secure link, and the parcel goes out once it is paid.",
+  "faq_q5": "Can I cancel?",
+  "faq_a5": "Yes. You can cancel free of charge at any time before dispatch and get the product price back. After delivery you have 14 days to withdraw from the purchase. Both are in [the terms](/algemene-voorwaarden).",
+  "faq_q6": "Do I get one parcel or several?",
+  "faq_a6": "One. An order ships once, complete. If you mix products with different funding targets, the whole order waits until every item in it is ready. Order separately if you want the fast items sooner.",
+  "faq_q7": "What if the ship window slips?",
+  "faq_a7": "You get mail with the new window. If we cannot ship within the window we disclosed, you choose between a new date and a full refund.",
+  "faq_q8": "Is this an investment?",
+  "faq_a8": "No. A preorder funds the production run for your own order. It carries no interest and gives you no equity, revenue share or other stake in the company.",
+  "faq_q9": "Where do the numbers on this page come from?",
+  "faq_a9": "From our shop, live. The units, the amount and the backer count on a card are the same figures its product page shows, and they refresh while a campaign runs.",
+  "updates_title": "Updates",
+  "updates_lead": "What changed, newest first. Every entry is dated and stays on the page.",
+  "updates_empty": "No updates yet."
 }
