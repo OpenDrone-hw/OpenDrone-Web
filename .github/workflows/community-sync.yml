@@ -8,9 +8,9 @@
 # these numbers are committed content like any other edit, so the diff
 # gets a human look before it ships. Merging the PR is the review.
 #
-# Required repo secrets:
-#   SHOPIFY_ADMIN_API_TOKEN  custom-app Admin token WITH read_orders scope
-#   (PUBLIC_STORE_DOMAIN is not secret; set in the env block below)
+# Required repo secret: GOALS_URL (optional; unset, the goal-meter step is
+# skipped rather than failing the run). GITHUB_TOKEN is the job's own
+# token, nothing to provision.
 
 name: Community sync
 
@@ -51,8 +51,9 @@ jobs:
             node scripts/update-goals.mjs --write
           fi
 
-      # The PDP fetches contributors live, but Oxygen's shared egress IP burns
-      # the unauthenticated GitHub budget, so the wall needs a committed floor.
+      # The PDP fetches contributors live, but the Worker's shared egress IP
+      # burns the unauthenticated GitHub budget, so the wall needs a committed
+      # floor.
       # GITHUB_TOKEN is the job's own token: public repos, read-only, no secret
       # to provision. Private repos are skipped by the script.
       - name: Sync the contributor roster

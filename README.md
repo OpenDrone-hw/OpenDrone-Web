@@ -5,8 +5,8 @@ hardware, designed and sold from Belgium. Flight controllers (OpenFC), 4-in-1 ES
 (OpenESC), ExpressLRS receivers (OpenRX), carbon frames (OpenFrame), and the OpenStack
 bundle.
 
-Under the hood it is a headless **[Hydrogen](https://hydrogen.shopify.dev/)** app
-on **Oxygen** (Shopify's Cloudflare Workers host). The commerce backend is
+Under the hood it is a headless **[Hydrogen](https://hydrogen.shopify.dev/)**
+app deployed as a **Cloudflare Worker**. The commerce backend is
 **Odoo**, at [shop.incutec.com](https://shop.incutec.com): it owns the catalog,
 prices, availability, cart, checkout, payment, orders, invoices, addresses and
 customer accounts. This repo reads one public catalog JSON from it, hands every
@@ -14,8 +14,8 @@ buy click to it, and owns everything else the visitor looks at, plus a support
 desk that lives inside the Worker and a local editing studio that makes the
 whole site editable without touching code.
 
-Oxygen is hosting and build toolchain only; nothing in `app/` calls a Shopify
-API at runtime.
+Hydrogen's Vite toolchain is build tooling only; nothing in `app/` calls a
+Shopify API at runtime.
 
 Selling entity is **Incutec BV**; OpenDrone is the community project and product
 brand. This storefront is MIT; the hardware repos are CERN-OHL-S.
@@ -262,8 +262,8 @@ author them.
 
 ## How it is built
 
-- **Hydrogen** (Shopify's React Router 7 framework) on **Oxygen** workers, as
-  build toolchain and host only
+- **Hydrogen** (Shopify's React Router 7 framework), built with its Vite
+  toolchain and deployed as a **Cloudflare Worker**
 - **Odoo** at shop.incutec.com for catalog, cart, checkout, orders and accounts,
   read through one public JSON feed (`app/lib/catalog.ts`)
 - **React 19** + **TypeScript**, **Tailwind CSS v4** in one file
@@ -405,9 +405,9 @@ merge is a squash. **Every push to `main` auto-deploys to opendrone.be** in abou
 two minutes, so local-only commits do not exist as far as the site is concerned:
 push after every commit. Dependabot runs weekly, grouped, no major bumps.
 
-**DNS**: `A @ → 23.227.38.65`, `CNAME www → shops.myshopify.com.` (Oxygen is
-still the host.) Mail records live with the email provider; merge SPF changes
-into the existing TXT, never replace it.
+**DNS**: `opendrone.be` is proxied through Cloudflare, apex and `www` served
+by the Worker's Custom Domains (see `## Hosting`). Mail records live with the
+email provider; merge SPF changes into the existing TXT, never replace it.
 
 ---
 
@@ -447,22 +447,14 @@ into the existing TXT, never replace it.
 ## Hosting
 
 Production (`opendrone.be`, `www.opendrone.be`) runs on the Cloudflare
-Worker `opendrone-web` (D15/D16, `erp/PLAN.md`). The `opendrone.be` zone
-moved from Gandi DNS to Cloudflare as part of the cutover; Gandi remains the
-registrar. The parallel Shopify Oxygen deploy workflow
-(`.github/workflows/oxygen-deployment-1000116751.yml`) is removed; retiring
-the Oxygen deployment itself (and the Shopify subscription) in the Shopify
-admin remains a manual follow-up outside this repository.
-
-**Why it fits unchanged:** `npm run build` (the Hydrogen/Oxygen Vite
-toolchain, decision D3) emits a plain workerd ES module at
-`dist/server/index.js` with a standard `fetch(request, env, ctx)` export,
-because Oxygen is itself Shopify's Cloudflare Workers host. `wrangler.toml`
-points real Cloudflare Workers at that same build output and its static
-assets (`dist/client`); no application code changed for the move itself.
-`server.ts` adds one exception: `www.opendrone.be` 301s to the apex, matching
-Shopify's prior redirect, since a Cloudflare custom domain would otherwise
-serve `www` as a silent mirror.
+Worker `opendrone-web`, deployed to those two hostnames as Custom Domains.
+`npm run build` (Hydrogen's Vite toolchain) emits a plain workerd ES module
+at `dist/server/index.js` with a standard `fetch(request, env, ctx)` export;
+`wrangler.production.toml` points the Worker at that build output and its
+static assets (`dist/client`). `server.ts` 301s `www.opendrone.be` to the
+apex, since a Cloudflare custom domain would otherwise serve `www` as a
+silent mirror. Gandi is the domain registrar; it no longer serves the zone's
+DNS (see DNS below).
 
 **Deploy:** two workflows, one Worker each, so a preview deploy can never
 touch production DNS or state:
@@ -486,63 +478,38 @@ the account-level Custom Domains API wrangler 4 uses.
 
 `CATALOG_URL` and `PUBLIC_SHOP_URL` are set as plain `[vars]` per environment
 in `wrangler.production.toml` / `wrangler.toml` (public values, already the
-app's defaults). Everything else
-Oxygen had is a Worker secret, set once with `npx wrangler secret put <NAME>`
-and not in the repo. Names only (values live in the Oxygen production
-environment or, for anything Oxygen keeps masked, only in the Shopify admin):
+app's defaults). Everything else is a Worker secret, set with `npx wrangler
+secret put <NAME>` and not in the repo. Names only:
 
-- `SESSION_SECRET` — its own random value per environment; no need to match Oxygen's.
+- `SESSION_SECRET`: its own random value per environment.
 - `RESEND_API_KEY`: the incutec Resend team's `opendrone-web` key, copy in
   `../../operations/.env` as `OPENDRONE_RESEND_API_KEY`. Full access, not
   sending-only: `app/lib/growth/resend.ts` also manages contacts, segments
   and broadcasts.
-- `SUPPORT_FROM_EMAIL`, `DISCORD_SUPPORT_CHANNEL_ID`, `DISCORD_GUILD_ID`,
-  `DISCORD_STAFF_METADATA_CHANNEL_ID`, `SUPPORT_MOD_ROLE_ID`,
+- `SUPPORT_FROM_EMAIL`, `DISCORD_BOT_TOKEN`, `DISCORD_SUPPORT_CHANNEL_ID`,
+  `DISCORD_GUILD_ID`, `DISCORD_STAFF_METADATA_CHANNEL_ID`,
+  `DISCORD_FEEDBACK_CHANNEL_ID`, `SUPPORT_MOD_ROLE_ID`,
   `SUPPORT_MODERATION_MODE`, `DISCORD_SUPPORT_INVITE`,
-  `PUBLIC_DISCORD_GUILD_ID`, `PUBLIC_DISCORD_INVITE`, `TURNSTILE_SITE_KEY` —
-  ported from the Oxygen production environment.
-- `SUPPORT_ODOO_TOKEN` — shared secret for the `incutec_support` bridge
+  `PUBLIC_DISCORD_GUILD_ID`, `PUBLIC_DISCORD_INVITE`, `TURNSTILE_SITE_KEY`,
+  `TURNSTILE_SECRET_KEY`, `SUPPORT_SESSION_SECRET`.
+- `SUPPORT_ODOO_TOKEN`: shared secret for the `incutec_support` bridge
   (`X-Incutec-Support-Token`); must match system parameter
-  `incutec_support.bridge_token` on `erp.incutec.eu`. `SUPPORT_ODOO_URL`
-  is optional, defaults to `https://erp.incutec.eu`.
-- **Not yet ported** — Shopify Hydrogen's `env pull` masks these as secret and
-  has no reveal command; only the Shopify admin (Hydrogen storefront →
-  Environments → Production) shows the real values: `DISCORD_BOT_TOKEN`
-  (without it the support Discord bridge stays off even with the IDs above
-  set), `TURNSTILE_SECRET_KEY` (support form CAPTCHA fails closed without
-  it), `SUPPORT_SESSION_SECRET`, `NEWSLETTER_DISPATCH_SECRET`,
-  `SUPPORT_CLEANUP_SECRET`.
+  `incutec_support.bridge_token` on the Odoo instance it targets.
+  `SUPPORT_ODOO_URL` is optional, defaults to `https://erp.incutec.eu`.
+- `NEWSLETTER_DISPATCH_SECRET`, `SUPPORT_CLEANUP_SECRET`.
 
-Upstash Redis (a KV index the storefront kept for support tickets, votes,
-back-in-stock notify and a checkout-click counter) was removed entirely
-(founder decision, 2026-09-15): ticket state and lookup moved to Odoo
-(`erp/addons/incutec_support`, above); votes has no live ballot and
-back-in-stock notify has no live trigger, so both are unaffected; the
-checkout-click counter's own numerator had already gone dead when the
-Shopify orders webhook was retired, and nothing read the counter on its
-own, so it and its client-side beacon were dropped rather than migrated.
-`/api/support/lookup`'s rate limiting moved to a Cloudflare Workers Rate
-Limiting binding (`[[ratelimits]]` in `wrangler.production.toml`, not a
-secret — nothing to port).
+`/api/support/lookup`'s rate limiting is a Cloudflare Workers Rate Limiting
+binding (`[[ratelimits]]` in `wrangler.production.toml`), not a secret.
 
-**DNS:** the `opendrone.be` zone's Cloudflare-assigned nameservers
-(`dahlia.ns.cloudflare.com`, `henry.ns.cloudflare.com`) are set at Gandi.
-Every non-Shopify record from the old Gandi zone (MX, SPF, DKIM, DMARC, the
-Resend/SES records under `send.opendrone.be`) was recreated DNS-only on the
-Cloudflare zone before the nameserver switch; the apex and `www` are the
-Worker's Custom Domains instead of the old Shopify `A`/`CNAME`. Manage any
-further record on the new zone with `python3 ../../operations/tools/cloudflare_dns.py`.
+**DNS:** the `opendrone.be` zone's nameservers
+(`dahlia.ns.cloudflare.com`, `henry.ns.cloudflare.com`) are set at Gandi; the
+apex and `www` resolve through the Worker's Custom Domains. Manage any other
+record on the zone with `python3 ../../operations/tools/cloudflare_dns.py`.
 The Resend domain `opendrone.be` (region `eu-west-1`) is verified in the
-incutec Resend team, the same team Odoo sends through, since 2026-09-15; its
-`resend._domainkey` TXT record on the Cloudflare zone carries that team's DKIM
-key. Anything that sends as opendrone.be uses `OPENDRONE_RESEND_API_KEY` from
-`../../operations/.env`. Newsletter and notify contacts created before
-2026-09-15 are in the older, separate Resend team and are not in the incutec
-team.
-
-**Retiring Oxygen**: the deploy workflow is removed from this repository.
-The Oxygen deployment in the Shopify admin still needs deleting by hand; do
-not touch anything else in Shopify.
+incutec Resend team, the same team Odoo sends through; its
+`resend._domainkey` TXT record lives on the Cloudflare zone. Anything that
+sends as opendrone.be uses `OPENDRONE_RESEND_API_KEY` from
+`../../operations/.env`.
 
 ---
 
@@ -554,40 +521,17 @@ repository's `PLAN.md`, not here; from the storefront's point of view the shop
 is ready when `GET https://erp.incutec.com/incutec/catalog.json` lists every
 product with its prices, availability and ship promises.
 
-**Oxygen environment variables.** Set these per environment (production and
-preview) in the Shopify admin, Hydrogen storefront, Storefront settings,
-Environments and variables. The four below are the whole list:
-
-| Variable | Value | Notes |
-|---|---|---|
-| `SESSION_SECRET` | 32 random bytes hex (`openssl rand -hex 32`) | required; the app does not boot without it. Different value per environment |
-| `PUBLIC_SHOP_URL` | `https://shop.incutec.com` | base of every buy hand-off and portal link. Optional, this is the default |
-| `CATALOG_URL` | `https://erp.incutec.com/incutec/catalog.json` | the catalog feed. Optional, this is the default. Point a preview at a staging Odoo here |
-| `GOALS_URL` | unset | the goal meter's aggregate endpoint, ERP `PLAN.md` step 12.6. Build-time only, so it belongs in repo secrets rather than Oxygen |
-
-New for the Odoo ticket mirror (`app/lib/support/odoo.ts`, erp PLAN.md step
-12.2): add `SUPPORT_ODOO_URL` (`https://erp.incutec.eu` in production; point a
-preview at `https://staging.incutec.eu`) and `SUPPORT_ODOO_TOKEN` (the same
-shared secret as `SUPPORT_BRIDGE_TOKEN` in `erp/.env`, set on the Odoo side by
-`erp/config/support.py`) to both Oxygen environments. Without them the ticket
+Environment variables for each Worker environment are the `[vars]` and
+secrets described in `## Hosting` above; see `## Environment variables` for
+the full annotated list. `SUPPORT_ODOO_URL` defaults to
+`https://erp.incutec.eu` in production; point a preview at
+`https://staging.incutec.eu`. Without `SUPPORT_ODOO_TOKEN` the Odoo ticket
 mirror silently no-ops; the Discord bridge is unaffected either way.
 
-Everything else already in Oxygen stays: `PUBLIC_COMPANY_*`, the support bridge
-(Discord, Turnstile, Resend), `GITHUB_TOKEN` / `GITHUB_STATUS_TOKEN`,
-`PUBLIC_COMING_SOON`, `PUBLIC_PRELAUNCH`, `PUBLIC_LEARN_DRAFT`,
-`NEWSLETTER_*`, `SUPPORT_CLEANUP_SECRET`. Delete the Shopify commerce values if
-they are still set: `PUBLIC_STORE_DOMAIN`, `PUBLIC_STOREFRONT_API_TOKEN`,
-`PRIVATE_STOREFRONT_API_TOKEN`, `PUBLIC_STOREFRONT_ID`, `SHOP_ID`,
-`PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID`, `PUBLIC_CUSTOMER_ACCOUNT_API_URL`,
-`PUBLIC_CHECKOUT_DOMAIN`, `SHOPIFY_ADMIN_API_TOKEN`,
-`SHOPIFY_ADMIN_API_VERSION`, `SHOPIFY_WEBHOOK_SECRET`,
-`NEWSLETTER_BLOG_HANDLE`, `JUDGEME_PRIVATE_TOKEN`,
-`PUBLIC_JUDGEME_SHOP_DOMAIN`, `PUBLIC_PREORDERS`. Nothing reads them.
-
-**What still depends on Shopify:** nothing at runtime. `@shopify/cli` builds and
-deploys the app and Oxygen hosts it (`cdn.shopify.com` serves this app's own JS
-bundles, which is why it stays in the CSP), but no page, loader or action calls
-a Shopify API.
+**What still depends on Shopify:** nothing at runtime. `@shopify/hydrogen` and
+`@shopify/mini-oxygen` are build/dev dependencies only (`cdn.shopify.com`
+still serves this app's own JS bundles, which is why it stays in the CSP);
+no page, loader or action calls a Shopify API.
 
 The launch model on the storefront side:
 
@@ -607,8 +551,8 @@ The launch model on the storefront side:
   one parcel once every line is on hand. The PDP, the Odoo order confirmation
   and the shipping policy say so; the operator holds the order until then.
 
-Before launch, walk one order end to end on an Oxygen preview: PDP, buy click,
-Odoo cart, checkout, test payment, order mail, portal link.
+Before launch, walk one order end to end on the preview Worker: PDP, buy
+click, Odoo cart, checkout, test payment, order mail, portal link.
 
 Compliance details (GPSR, withdrawal, pre-orders, battery shipping):
 `docs/store-compliance.md`.
@@ -622,8 +566,9 @@ Compliance details (GPSR, withdrawal, pre-orders, battery shipping):
 2. Commit with DCO sign-off (`git commit -s`), Conventional Commits, subject
    ≤60 chars.
 3. `npm run typecheck && npm run lint && npm test` locally; CI enforces them.
-4. `gh pr create`: CI plus an Oxygen preview URL run automatically. Maintainers
-   squash-merge; a merge is a production deploy.
+4. `gh pr create`: CI (lint, typecheck, test, build, registry and status
+   checks) runs automatically. Maintainers squash-merge; a merge to `main`
+   is a production deploy.
 
 Rules: no new npm dependencies without an issue first; mobile-first (375px,
 enhance at 768/1440); WCAG 2.1 AA; bundle additions over 50 KB gzipped need

@@ -39,20 +39,22 @@ copy clearly marked and out of production paths.
 
 ## Live systems and credentials
 
-Production is the Hydrogen app on Shopify Oxygen; every push to `main`
-deploys `opendrone.be`. Oxygen is host and build toolchain only: no page,
-loader or action calls a Shopify API.
+Production (`opendrone.be`, `www.opendrone.be`) is the Cloudflare Worker
+`opendrone-web`, deployed by `.github/workflows/cloudflare-production.yml` on
+every push to `main` (`wrangler deploy --config wrangler.production.toml`).
+Hydrogen's Vite toolchain builds it; no page, loader or action calls a
+Shopify API. See README `## Hosting` for the deploy, DNS and secrets detail.
 
 The app boots on `SESSION_SECRET` alone. `PUBLIC_SHOP_URL`
 (`https://shop.incutec.com`) and `CATALOG_URL`
 (`https://erp.incutec.com/incutec/catalog.json`) default to production and are
 the only commerce values; both are public, and this repository holds no
 commerce credentials. `GOALS_URL` is build-time only, for `goals:update`.
-Set the four per environment in the Oxygen environment settings; the gitignored
-`.env` holds the local copies plus the support-bridge secrets, named in
-`.env.example`. Production values live in Oxygen, not in this repository. InvenTree credentials live in
-`../../stock/.env`; company Notion, DNS and carrier credentials live in
-`../../operations/.env`. Name variables, never print values.
+Runtime secrets are Worker secrets, set per environment with `wrangler secret
+put <NAME>`, never committed; the gitignored `.env` holds local copies, named
+in `.env.example`. InvenTree credentials live in `../../stock/.env`; company
+Notion, DNS and carrier credentials live in `../../operations/.env`. Name
+variables, never print values.
 
 ## Verification
 
