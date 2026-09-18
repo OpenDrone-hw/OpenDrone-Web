@@ -351,6 +351,51 @@ export async function deleteThread(
   return {ok: res.ok, status: res.status};
 }
 
+export type ThreadChannel = {
+  id: string;
+  parentId: string | null;
+  archived: boolean;
+  locked: boolean;
+};
+
+/**
+ * Read a thread's channel object (`GET /channels/{id}`) for its parent.
+ * The relay route uses this to prove a caller-supplied thread id really
+ * is a post in the support forum before the bot writes into it: a thread
+ * id is guessable, and a bot writing into an arbitrary guild channel on
+ * request is exactly what the relay must not become.
+ *
+ * Returns null when Discord refuses or the thread is gone, so the caller
+ * fails closed instead of posting.
+ */
+export async function fetchThreadChannel(
+  env: DiscordEnv,
+  threadId: string,
+): Promise<ThreadChannel | null> {
+  const res = await discordFetch(`${DISCORD_API}/channels/${threadId}`, {
+    headers: authHeaders(env),
+  });
+  if (!res.ok) {
+    console.warn(
+      '[support] fetchThreadChannel',
+      res.status,
+      (await res.text().catch(() => '')).slice(0, 160),
+    );
+    return null;
+  }
+  const json = (await res.json()) as {
+    id: string;
+    parent_id?: string | null;
+    thread_metadata?: {archived?: boolean; locked?: boolean};
+  };
+  return {
+    id: json.id,
+    parentId: json.parent_id ?? null,
+    archived: !!json.thread_metadata?.archived,
+    locked: !!json.thread_metadata?.locked,
+  };
+}
+
 export async function postToThread(
   env: DiscordEnv,
   threadId: string,
