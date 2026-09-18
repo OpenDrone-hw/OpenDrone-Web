@@ -1,0 +1,42 @@
+{
+  "$route": "/preorder",
+  "$title": "Preorders",
+  "meta_title": "Preorders · How the funding targets work",
+  "meta_description": "Every OpenDrone hardware product opens for preorder with a public funding target of 500 units. You pay for the product at order, shipping is charged when your order is ready to ship, and a product that misses its target is refunded in full.",
+  "title": "A funding round per product.",
+  "lead": "This is not a normal shop opening. The designs are finished, but there is no capital to buy large batches up front, so each hardware product opens for preorder with a public funding target and you can watch it fill.",
+  "s1_title": "*01* · Why it works this way",
+  "s1_body": [
+    "Development is done. What is missing is money for production, not engineering time.",
+    "Suppliers do not produce single units. Each of them sets a minimum order quantity, and that minimum is what sets the threshold a product has to clear before we can order it. The funding target is that constraint, stated in public instead of hidden behind a sold-out label."
+  ],
+  "s2_title": "*02* · How a funding target works",
+  "s2_body": [
+    "Every hardware product carries a public funding target of 500 units, with live progress on its own product page.",
+    "You pay for the product in full when you order. Shipping is not charged at checkout. It is charged later, when your complete order is ready to ship, so you pay one shipping cost for one delivery."
+  ],
+  "s3_title": "*03* · What ships, and when",
+  "s3_body": [
+    "The stack ships regardless of any funding target. Batch 1 is paid for and in production, shipping from mid-October 2026.",
+    "Everything else ships about 10 weeks after its funding target is reached and the supplier order is placed. Until a target is reached there is no date, and we will not invent one."
+  ],
+  "s4_title": "*04* · If a target is missed",
+  "s4_body": [
+    "If a product does not reach its funding target, every preorder of that product is refunded in full. That is a guarantee, not a policy we reserve the right to interpret.",
+    "In an order that mixes products, the item that missed its target is refunded and the rest of the order still ships."
+  ],
+  "s5_title": "*05* · One delivery per order",
+  "s5_body": [
+    "An order ships once, complete. If you mix products with different funding targets, the whole order waits until every item in it is ready, and then goes out as a single delivery. Order separately if you want the fast items sooner."
+  ],
+  "s6_title": "*06* · What we will mail you",
+  "s6_body": [
+    "You get mail when your product reaches its funding target, when the supplier order is placed, whenever the ship window slips, and once more to reconfirm your address before dispatch."
+  ],
+  "s7_title": "*07* · What opens for preorder",
+  "s7_body": [
+    "The stack, the frames, the motors and the receivers, plus a commodity FPV assortment: propellers, straps, power connectors, wire, capacitors, buzzers, antennas, TPU parts and consumables. There are no batteries in the assortment."
+  ],
+  "cta_primary": "See what is open for preorder →",
+  "cta_secondary": "Where the boards are made →"
+}

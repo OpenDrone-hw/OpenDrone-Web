@@ -40,6 +40,7 @@ const COMPANY_LINKS: Array<{to: string; copy: string}> = [
   {to: '/roadmap', copy: 'nav_roadmap'},
   {to: '/timeline', copy: 'nav_timeline'},
   {to: '/production', copy: 'nav_production'},
+  {to: '/preorder', copy: 'nav_preorder'},
 ];
 
 // Imprint, contact and security head the Legal column (maintainer, 2026-08-12):
