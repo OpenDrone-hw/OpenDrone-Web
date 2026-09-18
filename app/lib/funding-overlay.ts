@@ -1,8 +1,18 @@
 /**
  * Live funding overlay: parsing and merging for the lighter Odoo feed
- * `GET /incutec/funding.json` (module `incutec_catalog_api`), contract
- * shape `{schema, updated_at, max_age, funding: {<handle>: {units_funded,
- * pct, state}}}`.
+ * `GET /incutec/funding.json` (module `incutec_catalog_api`).
+ *
+ * Two wire schemas are accepted, because the feed moves to schema 2 on the
+ * Odoo side independently of this deploy:
+ *  - schema 1: `funding[<handle>] = {units_funded, pct, state}`;
+ *  - schema 2: the same three fields plus `target_units`, `date_open`,
+ *    `date_deadline`, `backers`, `amount_funded` and `currency`.
+ * The document wrapper (`{schema, updated_at, max_age, funding}`) is the
+ * same in both, and the schema number itself is not read: an entry is
+ * accepted on the three fields every schema carries, and each schema-2
+ * field is validated on its own and dropped when it is missing or
+ * malformed. A schema-1 feed therefore parses exactly as it did before,
+ * and a schema-2 feed reaching an older build is still readable.
  *
  * The catalog (`app/lib/catalog.ts`) is cached 5 minutes and stays the
  * source of every campaign's existence, target and deadline. This feed is
@@ -20,10 +30,29 @@
 // the `~` alias is not available here.
 import type {Catalog, CatalogFunding} from './catalog.ts';
 
-/** The live fields this feed is allowed to refresh. */
+/**
+ * The live fields this feed is allowed to refresh.
+ *
+ * `unitsFunded` and `state` are the schema-1 core and are always present.
+ * Everything below is schema 2 and reads null when the feed omits it, so
+ * the merge can tell "the feed does not carry this" apart from "the feed
+ * says zero".
+ */
 export type FundingOverlayEntry = {
   unitsFunded: number;
   state: 'open' | 'funded' | 'missed';
+  /** Unit target, when the live feed restates it. Null on schema 1. */
+  targetUnits?: number | null;
+  /** ISO day the campaign opened, or null. */
+  dateOpen?: string | null;
+  /** ISO day the campaign closes, or null. */
+  dateDeadline?: string | null;
+  /** Distinct backers, or null. */
+  backers?: number | null;
+  /** Money pledged so far, in `currency`, or null. */
+  amountFunded?: number | null;
+  /** ISO code for `amountFunded`, or null. */
+  currency?: string | null;
 };
 
 export type FundingOverlay = {
@@ -69,7 +98,34 @@ function normalizeEntry(raw: unknown): FundingOverlayEntry | undefined {
   return {
     unitsFunded: f.units_funded,
     state: f.state as FundingOverlayEntry['state'],
+    // Schema 2. Each field stands or falls on its own: a feed that mixes a
+    // good backer count with a broken amount keeps the count. A target of
+    // zero or less is not a campaign and is dropped rather than allowed to
+    // divide the meter by zero.
+    targetUnits: positive(f.target_units),
+    dateOpen: isoDay(f.date_open),
+    dateDeadline: isoDay(f.date_deadline),
+    backers: counted(f.backers),
+    amountFunded: counted(f.amount_funded),
+    currency: typeof f.currency === 'string' && f.currency ? f.currency : null,
   };
+}
+
+/** A finite number at or above zero, else null. */
+function counted(raw: unknown): number | null {
+  return typeof raw === 'number' && Number.isFinite(raw) && raw >= 0 ? raw : null;
+}
+
+/** A finite number above zero, else null. */
+function positive(raw: unknown): number | null {
+  return typeof raw === 'number' && Number.isFinite(raw) && raw > 0 ? raw : null;
+}
+
+/** A non-empty date string, else null. Shape checking is the reader's job
+ *  (`fundingDeadlineText`, `fundingDaysLeft`), which already rejects a day
+ *  that does not parse. */
+function isoDay(raw: unknown): string | null {
+  return typeof raw === 'string' && raw.trim() ? raw : null;
 }
 
 /**
@@ -128,8 +184,35 @@ export function mergeFundingOverlay(
       if (!live) return product;
       return {
         ...product,
-        funding: {...current, unitsFunded: live.unitsFunded, state: live.state},
+        funding: mergeEntry(current, live),
       };
     }),
   };
+}
+
+/**
+ * One catalog campaign plus one live entry.
+ *
+ * `unitsFunded` and `state` always come from the feed: refreshing those is
+ * what this overlay exists for. Every schema-2 field is applied only when
+ * the feed actually carries it, so a schema-1 feed (or a schema-2 feed
+ * that omits a field) leaves the catalog's own value standing instead of
+ * blanking it to null.
+ */
+function mergeEntry(
+  current: CatalogFunding,
+  live: FundingOverlayEntry,
+): CatalogFunding {
+  const merged: CatalogFunding = {
+    ...current,
+    unitsFunded: live.unitsFunded,
+    state: live.state,
+  };
+  if (live.targetUnits != null) merged.targetUnits = live.targetUnits;
+  if (live.dateOpen != null) merged.dateOpen = live.dateOpen;
+  if (live.dateDeadline != null) merged.dateDeadline = live.dateDeadline;
+  if (live.backers != null) merged.backers = live.backers;
+  if (live.amountFunded != null) merged.amountFunded = live.amountFunded;
+  if (live.currency != null) merged.currency = live.currency;
+  return merged;
 }

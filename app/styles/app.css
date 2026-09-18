@@ -17667,3 +17667,367 @@ body:has(.buy-rail.is-pinned.is-mobile) .placeholder-banner {
 .add-to-cart-form {
   display: contents;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Crowdfunding page (/preorder)
+
+   The round itself: summary strip, live tracker, orderable tiers, the
+   questions and the dated updates. Everything here sits inside the
+   editorial reading column, so it borrows that page's measure, its
+   section rhythm and its gold; only the pieces the explainer never had
+   (cards, a stat strip, disclosure rows) are new.
+
+   Mobile first: one column everywhere, widened at 34em and again inside
+   the editorial column's own breakpoints. The meter itself is NOT
+   restyled here, it reuses .funding-meter so a campaign reads the same
+   on this page as it does on a product card.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* In-page jumps (the hero CTA lands on #tiers) must not put the heading
+   under the sticky header. */
+.preorder-page :is(#tracker, #tiers, #questions, #updates) {
+  scroll-margin-top: 5rem;
+}
+
+.preorder-empty {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+
+/* Summary strip — the whole round in two to four figures. Two columns on
+   a phone, one row once there is width; cells are dropped by the route
+   when the feed carries no figure for them, so the count varies. */
+.preorder-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-3);
+  margin: var(--sp-5) 0 0;
+  padding: var(--sp-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+  background: var(--color-bg-card);
+}
+
+@media (min-width: 34em) {
+  .preorder-strip {
+    grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  }
+}
+
+.preorder-strip-cell {
+  display: grid;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+.preorder-strip-label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.preorder-strip-value {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+/* Tracker — one card per public campaign. */
+.preorder-tracker {
+  list-style: none;
+  margin: var(--sp-5) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-4);
+}
+
+.preorder-track {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: var(--sp-4);
+  align-items: start;
+  padding: var(--sp-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+  background: var(--color-bg-card);
+}
+
+.preorder-track-media {
+  display: block;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background: var(--color-bg-elevated);
+}
+
+.preorder-track-media:empty {
+  aspect-ratio: 1 / 1;
+}
+
+.preorder-track-media img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.preorder-track-body {
+  display: grid;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+.preorder-track-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.preorder-track-title a {
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.preorder-track-title a:hover {
+  color: var(--color-gold);
+}
+
+.preorder-track-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-5);
+  margin: 0;
+}
+
+.preorder-track-stat {
+  display: grid;
+  gap: var(--sp-1);
+}
+
+.preorder-track-stat dt {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.preorder-track-stat dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--color-text);
+}
+
+/* State chip. Same three-state vocabulary and the same colours as the
+   meter fill, so a chip and the bar above it can never disagree. */
+.preorder-chip {
+  display: inline-block;
+  padding: 0.15rem var(--sp-2);
+  border-radius: var(--r-xs);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  color: var(--color-gold);
+  background: color-mix(in srgb, var(--color-gold) 14%, transparent);
+}
+
+.preorder-chip[data-funding-state='funded'] {
+  color: var(--color-stock);
+  background: color-mix(in srgb, var(--color-stock) 14%, transparent);
+}
+
+.preorder-chip[data-funding-state='missed'] {
+  color: var(--color-text-dim);
+  background: color-mix(in srgb, var(--color-text-dim) 14%, transparent);
+}
+
+/* Tiers — one group per campaign, one card per variant. */
+.preorder-tier-group {
+  margin-top: var(--sp-5);
+}
+
+.preorder-tier-group-title {
+  margin: 0 0 var(--sp-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+}
+
+.preorder-tiers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-3);
+}
+
+@media (min-width: 34em) {
+  .preorder-tiers {
+    /* Two cards per row in the prose column; a wider min keeps a product
+       with four variants from squeezing three clipped cards into one row. */
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  }
+}
+
+.preorder-tier {
+  display: grid;
+  gap: var(--sp-2);
+  align-content: start;
+  /* Grid items default to min-width:auto, so an unwrappable price row would
+     widen the track past the column. Let the card shrink and the row wrap. */
+  min-width: 0;
+  padding: var(--sp-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+  background: var(--color-bg-card);
+}
+
+.preorder-tier .product-price,
+.preorder-tier .product-price-row {
+  flex-wrap: wrap;
+  row-gap: 0.3rem;
+}
+
+.preorder-tier-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.preorder-tier-left,
+.preorder-tier-ship {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+
+/* The tier CTA is the editorial primary button, stretched to the card. A
+   dead one keeps the shape and says why in its own label rather than
+   disappearing, so a missed campaign still shows what it cost. */
+.preorder-tier-cta {
+  justify-content: center;
+  width: 100%;
+  margin-top: var(--sp-2);
+  border: 0;
+  cursor: pointer;
+}
+
+.preorder-tier-cta:disabled {
+  background: var(--color-bg-elevated);
+  color: var(--color-text-dim);
+  cursor: not-allowed;
+}
+
+.preorder-others a {
+  color: var(--color-gold);
+  text-decoration: none;
+}
+
+.preorder-others a:hover {
+  text-decoration: underline;
+}
+
+/* Questions — native <details>, so it works before hydration and with the
+   browser's own find-in-page. */
+.preorder-faq {
+  display: grid;
+  gap: var(--sp-2);
+  margin-top: var(--sp-4);
+}
+
+.preorder-faq-item {
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-sm);
+  background: var(--color-bg-card);
+}
+
+.preorder-faq-q {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  color: var(--color-text);
+  list-style: none;
+}
+
+.preorder-faq-q::-webkit-details-marker {
+  display: none;
+}
+
+/* Own marker, so open/closed is visible without relying on the platform
+   triangle (which several browsers hide when list-style is dropped). */
+.preorder-faq-q::after {
+  content: '+';
+  font-family: var(--font-mono);
+  color: var(--color-gold);
+  transition: transform 0.2s ease;
+}
+
+.preorder-faq-item[open] .preorder-faq-q::after {
+  transform: rotate(45deg);
+}
+
+.preorder-faq-a {
+  margin: 0;
+  padding: 0 var(--sp-4) var(--sp-4);
+  color: var(--color-text-muted);
+}
+
+/* Updates — newest first, each one dated. */
+.preorder-updates {
+  list-style: none;
+  margin: var(--sp-4) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-4);
+}
+
+.preorder-update {
+  display: grid;
+  gap: var(--sp-1);
+  padding-left: var(--sp-4);
+  border-left: 2px solid color-mix(in srgb, var(--color-gold) 45%, transparent);
+}
+
+.preorder-update-date {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.12em;
+  color: var(--color-text-muted);
+}
+
+.preorder-update-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.preorder-update-body {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .preorder-faq-q::after {
+    transition: none;
+  }
+}

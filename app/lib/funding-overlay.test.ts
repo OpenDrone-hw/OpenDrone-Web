@@ -51,6 +51,12 @@ function catalogWith(
             pct: p.funding.pct,
             state: p.funding.state,
             date_deadline: p.funding.dateDeadline,
+            // Schema 2 additions ride through the same normalizer; a
+            // fixture that sets none of them still parses as schema 1.
+            date_open: p.funding.dateOpen ?? null,
+            backers: p.funding.backers ?? null,
+            amount_funded: p.funding.amountFunded ?? null,
+            currency: p.funding.currency ?? null,
           }
         : null,
     })),
@@ -69,10 +75,13 @@ describe('parseFundingOverlay', () => {
       },
     });
     assert.equal(overlay.updatedAt, '2026-09-18T12:00:00Z');
-    assert.deepEqual(overlay.funding, {
-      openrx: {unitsFunded: 340, state: 'open'},
-      openfc: {unitsFunded: 500, state: 'funded'},
-    });
+    // Schema 1 in, schema-2 shape out: the added fields read null rather
+    // than being absent, so one reader handles both wire schemas.
+    assert.deepEqual(overlay.funding.openrx.unitsFunded, 340);
+    assert.deepEqual(overlay.funding.openrx.state, 'open');
+    assert.deepEqual(overlay.funding.openfc.unitsFunded, 500);
+    assert.deepEqual(overlay.funding.openfc.state, 'funded');
+    assert.deepEqual(overlay.funding.openrx.backers, null);
   });
 
   it('is empty for non-object input', () => {
@@ -104,9 +113,9 @@ describe('parseFundingOverlay', () => {
         openrx4: 'nope',
       },
     });
-    assert.deepEqual(overlay.funding, {
-      openrx: {unitsFunded: 340, state: 'open'},
-    });
+    assert.deepEqual(Object.keys(overlay.funding), ['openrx']);
+    assert.equal(overlay.funding.openrx.unitsFunded, 340);
+    assert.equal(overlay.funding.openrx.state, 'open');
   });
 
   it('never throws', () => {
@@ -180,5 +189,135 @@ describe('mergeFundingOverlay', () => {
       funding: {openrx: {unitsFunded: 999, state: 'funded'}},
     });
     assert.equal(JSON.stringify(catalog), before);
+  });
+});
+
+describe('parseFundingOverlay, schema 2', () => {
+  it('carries the added fields when the feed has them', () => {
+    const overlay = parseFundingOverlay({
+      schema: 2,
+      updated_at: '2026-09-18T12:00:00Z',
+      max_age: 60,
+      funding: {
+        openrx: {
+          units_funded: 340,
+          pct: 68,
+          state: 'open',
+          target_units: 500,
+          date_open: '2026-09-01',
+          date_deadline: '2026-12-01',
+          backers: 288,
+          amount_funded: 10880.5,
+          currency: 'EUR',
+        },
+      },
+    });
+    assert.deepEqual(overlay.funding.openrx, {
+      unitsFunded: 340,
+      state: 'open',
+      targetUnits: 500,
+      dateOpen: '2026-09-01',
+      dateDeadline: '2026-12-01',
+      backers: 288,
+      amountFunded: 10880.5,
+      currency: 'EUR',
+    });
+  });
+
+  it('reads a schema-1 entry as the same shape with nulls', () => {
+    // The schema number itself is never read: an entry is accepted on the
+    // three fields every schema carries, so an old feed keeps working and
+    // a new one reaching an old build is still readable.
+    const overlay = parseFundingOverlay({
+      schema: 1,
+      funding: {openrx: {units_funded: 340, pct: 68, state: 'open'}},
+    });
+    assert.deepEqual(overlay.funding.openrx, {
+      unitsFunded: 340,
+      state: 'open',
+      targetUnits: null,
+      dateOpen: null,
+      dateDeadline: null,
+      backers: null,
+      amountFunded: null,
+      currency: null,
+    });
+  });
+
+  it('drops one malformed added field without losing the entry', () => {
+    const overlay = parseFundingOverlay({
+      schema: 2,
+      funding: {
+        openrx: {
+          units_funded: 340,
+          pct: 68,
+          state: 'open',
+          // Zero is not a target, NaN is not a count, an empty string is
+          // not a currency: each is dropped on its own.
+          target_units: 0,
+          backers: Number.NaN,
+          amount_funded: -5,
+          currency: '',
+          date_deadline: 42,
+        },
+      },
+    });
+    assert.equal(overlay.funding.openrx.unitsFunded, 340);
+    assert.equal(overlay.funding.openrx.targetUnits, null);
+    assert.equal(overlay.funding.openrx.backers, null);
+    assert.equal(overlay.funding.openrx.amountFunded, null);
+    assert.equal(overlay.funding.openrx.currency, null);
+    assert.equal(overlay.funding.openrx.dateDeadline, null);
+  });
+});
+
+describe('mergeFundingOverlay, schema 2 fields', () => {
+  it('carries the added fields onto the catalog campaign', () => {
+    const catalog = catalogWith([{handle: 'openrx', funding: funding()}]);
+    const merged = mergeFundingOverlay(catalog, {
+      updatedAt: null,
+      funding: {
+        openrx: {
+          unitsFunded: 400,
+          state: 'open',
+          targetUnits: 600,
+          dateOpen: '2026-09-01',
+          dateDeadline: '2027-01-15',
+          backers: 355,
+          amountFunded: 12800,
+          currency: 'EUR',
+        },
+      },
+    });
+    const live = merged.products[0].funding!;
+    assert.equal(live.unitsFunded, 400);
+    assert.equal(live.targetUnits, 600);
+    assert.equal(live.dateOpen, '2026-09-01');
+    assert.equal(live.dateDeadline, '2027-01-15');
+    assert.equal(live.backers, 355);
+    assert.equal(live.amountFunded, 12800);
+    assert.equal(live.currency, 'EUR');
+  });
+
+  it('never blanks a catalog value the overlay does not carry', () => {
+    // A schema-1 feed must leave a schema-2 catalog alone apart from the
+    // two live fields it exists to refresh.
+    const catalog = catalogWith([
+      {
+        handle: 'openrx',
+        funding: {...funding(), backers: 288, amountFunded: 9000, currency: 'EUR'},
+      },
+    ]);
+    const merged = mergeFundingOverlay(catalog, {
+      updatedAt: null,
+      funding: {openrx: {unitsFunded: 400, state: 'open'}},
+    });
+    const live = merged.products[0].funding!;
+    assert.equal(live.unitsFunded, 400);
+    assert.equal(live.backers, 288);
+    assert.equal(live.amountFunded, 9000);
+    assert.equal(live.currency, 'EUR');
+    assert.equal(live.targetUnits, 500);
+    assert.equal(live.dateDeadline, '2026-12-01');
   });
 });

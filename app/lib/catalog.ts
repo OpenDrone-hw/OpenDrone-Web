@@ -150,6 +150,22 @@ function normalizeFunding(raw: unknown): CatalogFunding | null {
     pct: f.pct,
     state: f.state as CatalogFunding['state'],
     dateDeadline: typeof f.date_deadline === 'string' ? f.date_deadline : null,
+    // Schema 2 additions, each checked on its own so one missing or
+    // malformed field never costs the campaign the ones that parsed. A
+    // schema-1 product carries none of them and reads null across the
+    // board, which is what every display helper already handles.
+    dateOpen: typeof f.date_open === 'string' ? f.date_open : null,
+    backers:
+      typeof f.backers === 'number' && Number.isFinite(f.backers) && f.backers >= 0
+        ? f.backers
+        : null,
+    amountFunded:
+      typeof f.amount_funded === 'number' &&
+      Number.isFinite(f.amount_funded) &&
+      f.amount_funded >= 0
+        ? f.amount_funded
+        : null,
+    currency: typeof f.currency === 'string' && f.currency ? f.currency : null,
   };
 }
 

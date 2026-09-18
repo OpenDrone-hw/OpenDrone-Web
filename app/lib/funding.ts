@@ -124,20 +124,88 @@ export function fundingDisplayPct(
  */
 const ISO_DAY = /^(\d{4})-(\d{2})-(\d{2})(?:[T ]|$)/;
 
+/**
+ * The campaign's deadline as a validated `YYYY-MM-DD`, or null.
+ *
+ * One reader of `dateDeadline`, so the printed deadline and the day count
+ * can never disagree about which day the campaign ends on, or about
+ * whether the field is usable at all.
+ */
+export function fundingDeadlineDay(
+  funding: CatalogFunding | null | undefined,
+): string | null {
+  const raw = funding?.dateDeadline;
+  if (!raw) return null;
+  const match = ISO_DAY.exec(raw.trim());
+  if (!match) return null;
+  const [, year, month, day] = match;
+  const iso = `${year}-${month}-${day}`;
+  // Reject a well-formed but impossible day, e.g. 2026-13-45 or 2026-02-30.
+  const utc = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(utc.getTime()) || utc.toISOString().slice(0, 10) !== iso) {
+    return null;
+  }
+  return iso;
+}
+
 export function fundingDeadlineText(
   funding: CatalogFunding | null | undefined,
 ): string {
-  const raw = funding?.dateDeadline;
-  if (!raw) return '';
-  const match = ISO_DAY.exec(raw.trim());
-  if (!match) return '';
-  const [, year, month, day] = match;
-  // Reject a well-formed but impossible day, e.g. 2026-13-45 or 2026-02-30.
-  const utc = new Date(`${year}-${month}-${day}T00:00:00Z`);
-  if (Number.isNaN(utc.getTime()) || utc.toISOString().slice(0, 10) !== `${year}-${month}-${day}`) {
-    return '';
-  }
-  return `Funding deadline ${year}-${month}-${day}`;
+  const day = fundingDeadlineDay(funding);
+  return day ? `Funding deadline ${day}` : '';
+}
+
+const MS_PER_DAY = 86_400_000;
+
+/**
+ * Whole days from today to the deadline, or null when the campaign
+ * carries no usable deadline.
+ *
+ * Both ends are taken at UTC midnight, so the answer is a count of
+ * calendar days and never a fraction of one. A deadline that has passed
+ * reads 0, never a negative number: "-3 days left" is not a thing a page
+ * may say, and 0 is the honest floor.
+ *
+ * `now` is a parameter so the caller decides the clock. Every page
+ * computes this in its loader and ships the number, because a count
+ * computed during render would be the server's day on the first paint and
+ * the visitor's day on hydration, which is a React mismatch on exactly
+ * the line a buyer is reading.
+ */
+export function fundingDaysLeft(
+  funding: CatalogFunding | null | undefined,
+  now: number = Date.now(),
+): number | null {
+  const day = fundingDeadlineDay(funding);
+  if (!day) return null;
+  const deadline = Date.parse(`${day}T00:00:00Z`);
+  const today = new Date(now);
+  const midnight = Date.UTC(
+    today.getUTCFullYear(),
+    today.getUTCMonth(),
+    today.getUTCDate(),
+  );
+  const days = Math.round((deadline - midnight) / MS_PER_DAY);
+  return days > 0 ? days : 0;
+}
+
+/** "12 days left", "1 day left", "0 days left". '' for no deadline. */
+export function fundingDaysLeftText(days: number | null): string {
+  if (days == null) return '';
+  return `${days} ${days === 1 ? 'day' : 'days'} left`;
+}
+
+/**
+ * "312 of 500 units", the count the crowdfunding tracker prints beside
+ * its bar. Units, spelled out: `fundingLabel` says "funded" instead and
+ * is what the product surfaces use, and the two must not be confused
+ * with each other when one of them is edited.
+ */
+export function fundingUnitsLabel(
+  funding: CatalogFunding | null | undefined,
+): string {
+  if (!funding) return '';
+  return `${funding.unitsFunded} of ${funding.targetUnits} units`;
 }
 
 /** The refund promise carried next to every funded pre-order meter. */

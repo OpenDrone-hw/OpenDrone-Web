@@ -87,7 +87,18 @@ describe('funding overlay outage behavior: falls back to the catalog exactly as 
     const client = createFundingOverlayClient({env: ENV});
     const overlay = await client.get();
     assert.equal(overlay.updatedAt, '2026-09-18T12:00:00Z');
-    assert.deepEqual(overlay.funding, {openrx: {unitsFunded: 340, state: 'open'}});
+    assert.deepEqual(overlay.funding, {
+      openrx: {
+        unitsFunded: 340,
+        state: 'open',
+        targetUnits: null,
+        dateOpen: null,
+        dateDeadline: null,
+        backers: null,
+        amountFunded: null,
+        currency: null,
+      },
+    });
   });
 
   it('serves the bounded Cache API snapshot across a cold isolate on a failed fetch', async () => {
@@ -120,7 +131,18 @@ describe('funding overlay outage behavior: falls back to the catalog exactly as 
     });
     const overlay = await client.get();
 
-    assert.deepEqual(overlay.funding, {openrx: {unitsFunded: 340, state: 'open'}});
+    assert.deepEqual(overlay.funding, {
+      openrx: {
+        unitsFunded: 340,
+        state: 'open',
+        targetUnits: null,
+        dateOpen: null,
+        dateDeadline: null,
+        backers: null,
+        amountFunded: null,
+        currency: null,
+      },
+    });
     assert.ok(refresh, 'stale cache schedules a background refresh');
     await refresh;
   });
