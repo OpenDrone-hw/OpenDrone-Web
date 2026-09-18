@@ -145,6 +145,28 @@ export const FUNDING_REFUND_GUARANTEE =
   'If this product misses its funding target, your preorder is refunded in full.';
 
 /**
+ * What the meter says instead once the campaign HAS missed. The conditional
+ * promise above reads as if the outcome were still open, on a page that
+ * states "Funding missed" one line higher. Present tense, not "has been
+ * refunded": refunds are issued by hand after the miss (erp
+ * `docs/runbooks/funding-missed.md`), so the page must not claim the money
+ * is already back. Same wording as terms art. 7bis.8 and `/preorder`, and no
+ * deadline the terms do not carry.
+ */
+export const FUNDING_MISSED_NOTICE =
+  'This product missed its funding target. Every preorder of it is refunded in full.';
+
+/** The refund line for a campaign in its current state. */
+export function fundingRefundText(
+  funding: CatalogFunding | null | undefined,
+): string {
+  if (!funding) return '';
+  return funding.state === 'missed'
+    ? FUNDING_MISSED_NOTICE
+    : FUNDING_REFUND_GUARANTEE;
+}
+
+/**
  * In-app explainer for how funded pre-orders work. The catalog used to
  * also carry `funding.explainer_url`; nothing read it, so it was removed
  * rather than kept in sync with a page this route already replaces.

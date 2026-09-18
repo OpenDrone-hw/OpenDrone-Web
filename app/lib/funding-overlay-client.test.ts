@@ -35,6 +35,26 @@ describe('funding overlay outage behavior: falls back to the catalog exactly as 
     assert.deepEqual(overlay, {updatedAt: null, funding: {}});
   });
 
+  it('remembers a failed fetch for one freshness window instead of refetching on every render', async () => {
+    let now = 2_000_000_000_000;
+    Date.now = () => now;
+    let calls = 0;
+    globalThis.fetch = async () => {
+      calls += 1;
+      return new Response('not found', {status: 404});
+    };
+    const client = createFundingOverlayClient({env: ENV});
+
+    await client.get();
+    await client.get();
+    await client.get();
+    assert.equal(calls, 1, 'a 404 endpoint is asked once per window, not once per page');
+
+    now += 61 * 1000;
+    assert.deepEqual(await client.get(), {updatedAt: null, funding: {}});
+    assert.equal(calls, 2, 'and asked again once the window has passed');
+  });
+
   it('resolves to an empty overlay when the fetch is aborted (slow endpoint), never rejects', async () => {
     globalThis.fetch = async () => {
       throw new DOMException('The operation was aborted.', 'TimeoutError');
