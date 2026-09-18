@@ -37,6 +37,21 @@ export type CatalogFunding = {
   pct: number;
   state: 'draft' | 'open' | 'funded' | 'missed' | 'cancelled';
   dateDeadline: string | null;
+  /**
+   * Schema 2 additions. Every one of them is optional and reads null when
+   * the feed does not carry it, so a schema-1 catalog (and every object
+   * built before these existed) stays a valid `CatalogFunding`. Nothing
+   * here may become required: the storefront has to render a campaign
+   * from `targetUnits`/`unitsFunded`/`state` alone.
+   */
+  /** ISO day the campaign opened, or null. */
+  dateOpen?: string | null;
+  /** Distinct backers on this campaign, or null when the feed omits it. */
+  backers?: number | null;
+  /** Money pledged so far, in `currency`, or null. */
+  amountFunded?: number | null;
+  /** ISO code for `amountFunded`, e.g. "EUR", or null. */
+  currency?: string | null;
 };
 
 /**

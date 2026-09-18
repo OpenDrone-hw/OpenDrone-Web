@@ -102,6 +102,12 @@ describe('stage and funding', () => {
       pct: 62.4,
       state: 'open',
       dateDeadline: '2026-12-01',
+      // Schema 2 fields the feed did not send: null, never absent, so a
+      // reader never has to tell `undefined` and "not funded" apart.
+      dateOpen: null,
+      backers: null,
+      amountFunded: null,
+      currency: null,
     });
     // The funding object rides onto both product shapes, so the PDP buy
     // module and the card meter read it without a second catalog lookup.
@@ -487,5 +493,78 @@ describe('formatPrice', () => {
   it('is empty for a missing amount', () => {
     assert.equal(formatPrice(null, 'EUR'), '');
     assert.equal(formatPrice('', 'EUR'), '');
+  });
+});
+
+describe('parseCatalog, schema 2 funding', () => {
+  const base = {
+    shop_url: 'https://shop.incutec.com',
+    add_url: 'https://shop.incutec.com/incutec/add',
+  };
+
+  it('carries backers, amount and currency when the feed has them', () => {
+    const catalog = parseCatalog({
+      ...base,
+      products: [
+        {
+          handle: 'openrx',
+          title: 'OpenRX',
+          family: null,
+          description: null,
+          url: 'https://shop.incutec.com/shop/openrx',
+          images: [],
+          rating: null,
+          variants: [],
+          funding: {
+            target_units: 500,
+            units_funded: 312,
+            pct: 62.4,
+            state: 'open',
+            date_open: '2026-09-01',
+            date_deadline: '2026-12-01',
+            backers: 288,
+            amount_funded: 12448.8,
+            currency: 'EUR',
+          },
+        },
+      ],
+    });
+    const funding = byHandle(catalog, 'openrx')!.funding!;
+    assert.equal(funding.dateOpen, '2026-09-01');
+    assert.equal(funding.backers, 288);
+    assert.equal(funding.amountFunded, 12448.8);
+    assert.equal(funding.currency, 'EUR');
+  });
+
+  it('drops one malformed added field without dropping the campaign', () => {
+    const catalog = parseCatalog({
+      ...base,
+      products: [
+        {
+          handle: 'openrx',
+          title: 'OpenRX',
+          family: null,
+          description: null,
+          url: 'https://shop.incutec.com/shop/openrx',
+          images: [],
+          rating: null,
+          variants: [],
+          funding: {
+            target_units: 500,
+            units_funded: 312,
+            pct: 62.4,
+            state: 'open',
+            backers: 'lots',
+            amount_funded: Number.NaN,
+            currency: 42,
+          },
+        },
+      ],
+    });
+    const funding = byHandle(catalog, 'openrx')!.funding!;
+    assert.equal(funding.unitsFunded, 312);
+    assert.equal(funding.backers, null);
+    assert.equal(funding.amountFunded, null);
+    assert.equal(funding.currency, null);
   });
 });
