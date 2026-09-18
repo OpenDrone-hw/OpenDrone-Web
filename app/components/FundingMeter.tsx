@@ -9,6 +9,7 @@ import {
   fundingDisplayPct,
   fundingLabel,
   fundingStatusText,
+  isFundingPublic,
   type FundingPrecision,
 } from '~/lib/funding';
 
@@ -21,7 +22,9 @@ import {
  * far the campaign has come, so it never gates or disables anything.
  *
  * Renders nothing when the product carries no `funding` object, which is
- * every ordinary product — the caller can mount it unconditionally.
+ * every ordinary product, and nothing for a `draft` or `cancelled`
+ * campaign, which is unpublished or withdrawn. The caller can mount it
+ * unconditionally.
  *
  * `compact` is the card variant: bar plus label only. It carries no link,
  * because a product card is already one anchor and nesting anchors is
@@ -40,7 +43,7 @@ export function FundingMeter({
   precision?: FundingPrecision;
   className?: string;
 }) {
-  if (!funding) return null;
+  if (!funding || !isFundingPublic(funding)) return null;
 
   const pct = fundingDisplayPct(funding, precision);
   const label = fundingLabel(funding);
@@ -57,6 +60,7 @@ export function FundingMeter({
       <span
         className="funding-meter-track"
         role="progressbar"
+        aria-label="Funding progress"
         aria-valuenow={pct}
         aria-valuemin={0}
         aria-valuemax={100}

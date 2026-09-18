@@ -113,9 +113,18 @@ function normalizeFunding(raw: unknown): CatalogFunding | null {
   if (!raw || typeof raw !== 'object') return null;
   const f = raw as Record<string, unknown>;
   if (
+    // `typeof NaN === 'number'`, so the numbers are range-checked as well
+    // as type-checked: NaN or Infinity would reach the meter as a bar of
+    // `width: NaN%` and `aria-valuenow="NaN"`.
     typeof f.target_units !== 'number' ||
+    !Number.isFinite(f.target_units) ||
     typeof f.units_funded !== 'number' ||
+    !Number.isFinite(f.units_funded) ||
     typeof f.pct !== 'number' ||
+    !Number.isFinite(f.pct) ||
+    // A target of zero or less is not a campaign: it reads "0 of 0 funded"
+    // and it is what a division by zero on the Odoo side looks like here.
+    f.target_units <= 0 ||
     typeof f.explainer_url !== 'string' ||
     typeof f.state !== 'string' ||
     !FUNDING_STATES.has(f.state)
@@ -138,6 +147,12 @@ function normalizeFunding(raw: unknown): CatalogFunding | null {
  * schema-1 catalog (neither field present) parses exactly as before.
  */
 function normalizeProduct(raw: unknown): CatalogProduct {
+  // A product entry that is not an object (null, a string, a number) must
+  // not throw: one malformed product costs the site every price, not one
+  // meter, because the whole catalog fetch fails with it.
+  if (!raw || typeof raw !== 'object') {
+    return {stage: null, funding: null} as CatalogProduct;
+  }
   const p = raw as CatalogProduct & Record<string, unknown>;
   return {
     ...p,
