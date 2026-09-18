@@ -74,7 +74,11 @@ describe('stage and funding', () => {
           url: 'https://shop.incutec.com/shop/openrx-40',
           images: [],
           rating: null,
-          variants: [],
+          variants: [
+            {sku: 'OPENRX-A', title: 'A', price: 10, stage: 'production'},
+            {sku: 'OPENRX-B', title: 'B', price: 10, stage: 7},
+            {sku: 'OPENRX-C', title: 'C', price: 10},
+          ],
           stage: 'concept',
           funding: {
             target_units: 500,
@@ -88,6 +92,10 @@ describe('stage and funding', () => {
     });
     const product = byHandle(catalog, 'openrx')!;
     assert.equal(product.stage, 'concept');
+    assert.deepEqual(
+      product.variants.map((v) => v.stage),
+      ['production', null, null],
+    );
     assert.deepEqual(product.funding, {
       targetUnits: 500,
       unitsFunded: 312,
