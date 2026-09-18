@@ -12,9 +12,15 @@
 // the `~` alias is not available here.
 import type {CatalogFunding, CatalogProduct} from './catalog.ts';
 
-/** 0-100, integer, clamped: the meter width a progress bar can use directly. */
+/**
+ * 0-100, integer, clamped: the meter width a progress bar can use directly.
+ *
+ * A percentage that is not a finite number reads 0, not `NaN`: `NaN` would
+ * reach the DOM as `width: NaN%` and `aria-valuenow="NaN"`, which is outside
+ * the range the `progressbar` role allows.
+ */
 export function fundingPct(funding: CatalogFunding | null | undefined): number {
-  if (!funding) return 0;
+  if (!funding || !Number.isFinite(funding.pct)) return 0;
   return Math.min(100, Math.max(0, Math.round(funding.pct)));
 }
 
@@ -39,6 +45,24 @@ export function fundingStatusText(
     default:
       return '';
   }
+}
+
+/**
+ * Whether a campaign may be shown to a buyer at all.
+ *
+ * `draft` is an unpublished campaign and `cancelled` is a withdrawn one.
+ * Neither has a unit count, a deadline or a refund guarantee a buyer is
+ * allowed to read, so every public surface renders nothing for them.
+ */
+export function isFundingPublic(
+  funding: CatalogFunding | null | undefined,
+): boolean {
+  if (!funding) return false;
+  return (
+    funding.state === 'open' ||
+    funding.state === 'funded' ||
+    funding.state === 'missed'
+  );
 }
 
 /** Whether a catalog product is a funded pre-order at all. */
@@ -73,15 +97,29 @@ export function fundingDisplayPct(
  * deadline or an unparseable one. ISO day, the same readout format the
  * release rows use; no state wording, so it reads correctly after the
  * deadline as well as before it.
+ *
+ * The day is read off the string, never through `new Date`. A bare
+ * datetime such as "2026-12-01 23:59:59" is parsed as a local instant, so
+ * `new Date(...).toISOString()` names a different day on a UTC server than
+ * in a visitor's browser: an off-by-one deadline and a React hydration
+ * mismatch on the same line.
  */
+const ISO_DAY = /^(\d{4})-(\d{2})-(\d{2})(?:[T ]|$)/;
+
 export function fundingDeadlineText(
   funding: CatalogFunding | null | undefined,
 ): string {
   const raw = funding?.dateDeadline;
   if (!raw) return '';
-  const parsed = new Date(raw);
-  if (Number.isNaN(parsed.getTime())) return '';
-  return `Funding deadline ${parsed.toISOString().slice(0, 10)}`;
+  const match = ISO_DAY.exec(raw.trim());
+  if (!match) return '';
+  const [, year, month, day] = match;
+  // Reject a well-formed but impossible day, e.g. 2026-13-45 or 2026-02-30.
+  const utc = new Date(`${year}-${month}-${day}T00:00:00Z`);
+  if (Number.isNaN(utc.getTime()) || utc.toISOString().slice(0, 10) !== `${year}-${month}-${day}`) {
+    return '';
+  }
+  return `Funding deadline ${year}-${month}-${day}`;
 }
 
 /** The refund promise carried next to every funded pre-order meter. */

@@ -144,6 +144,54 @@ describe('stage and funding', () => {
     assert.equal(byHandle(catalog, 'openfc-lite')!.stage, null);
     assert.equal(byHandle(catalog, 'openfc-lite')!.funding, null);
   });
+
+  it('drops funding whose numbers cannot drive a meter', () => {
+    // `typeof NaN === 'number'`, so a type check alone lets NaN through and
+    // the bar renders `width: NaN%` with `aria-valuenow="NaN"`. A target of
+    // zero or less is not a campaign either: it reads "0 of 0 funded" and
+    // carries the refund guarantee with it.
+    const bad = (funding: Record<string, unknown>) =>
+      parseCatalog({
+        ...base,
+        products: [
+          {
+            handle: 'openrx',
+            title: 'OpenRX',
+            family: null,
+            description: null,
+            url: 'https://shop.incutec.com/shop/openrx-40',
+            images: [],
+            rating: null,
+            variants: [],
+            funding,
+          },
+        ],
+      }).products[0].funding;
+    const ok = {
+      target_units: 500,
+      units_funded: 312,
+      pct: 62.4,
+      state: 'open',
+      explainer_url: 'https://shop.incutec.com/pages/funding',
+    };
+    assert.equal(bad({...ok, pct: Number.NaN}), null);
+    assert.equal(bad({...ok, units_funded: Number.NaN}), null);
+    assert.equal(bad({...ok, target_units: Number.NaN}), null);
+    assert.equal(bad({...ok, target_units: 0}), null);
+    assert.equal(bad({...ok, target_units: -500}), null);
+    assert.notEqual(bad(ok), null);
+  });
+
+  it('survives a product entry that is not an object', () => {
+    // One malformed product must not fail the whole catalog fetch: a throw
+    // here costs the site every price, not one meter.
+    const catalog = parseCatalog({...base, products: [null, 'nope', 7]});
+    assert.equal(catalog.products.length, 3);
+    for (const product of catalog.products) {
+      assert.equal(product.stage, null);
+      assert.equal(product.funding, null);
+    }
+  });
 });
 
 describe('lookups', () => {

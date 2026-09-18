@@ -7,6 +7,7 @@ import {
   fundingPct,
   fundingStatusText,
   isFundedPreorder,
+  isFundingPublic,
 } from './funding.ts';
 import type {CatalogFunding, CatalogProduct} from './catalog.ts';
 
@@ -40,6 +41,31 @@ describe('fundingPct', () => {
     assert.equal(fundingPct(null), 0);
     assert.equal(fundingPct(undefined), 0);
   });
+
+  it('is 0 for a percentage that is not a finite number', () => {
+    // A bar width of `NaN%` and `aria-valuenow="NaN"` is worse than a bar at
+    // zero: the progressbar role requires a number inside 0-100.
+    assert.equal(fundingPct(funding({pct: Number.NaN})), 0);
+    assert.equal(fundingDisplayPct(funding({pct: Number.NaN})), 0);
+    assert.equal(fundingDisplayPct(funding({pct: Number.NaN}), 'nearest-5'), 0);
+  });
+});
+
+describe('isFundingPublic', () => {
+  it('is true only for a campaign a buyer may see', () => {
+    assert.equal(isFundingPublic(funding({state: 'open'})), true);
+    assert.equal(isFundingPublic(funding({state: 'funded'})), true);
+    assert.equal(isFundingPublic(funding({state: 'missed'})), true);
+  });
+
+  it('is false for draft, cancelled and no funding', () => {
+    // A draft campaign is unpublished and a cancelled one is withdrawn.
+    // Neither may leak a unit count or the refund guarantee to a buyer.
+    assert.equal(isFundingPublic(funding({state: 'draft'})), false);
+    assert.equal(isFundingPublic(funding({state: 'cancelled'})), false);
+    assert.equal(isFundingPublic(null), false);
+    assert.equal(isFundingPublic(undefined), false);
+  });
 });
 
 describe('fundingDisplayPct', () => {
@@ -72,7 +98,30 @@ describe('fundingDeadlineText', () => {
   it('is empty without a usable deadline', () => {
     assert.equal(fundingDeadlineText(funding({dateDeadline: null})), '');
     assert.equal(fundingDeadlineText(funding({dateDeadline: 'soon'})), '');
+    assert.equal(fundingDeadlineText(funding({dateDeadline: '2026-13-45'})), '');
     assert.equal(fundingDeadlineText(null), '');
+  });
+
+  it('reads the same day in every timezone', () => {
+    // Server-rendered in UTC, hydrated in the visitor's zone. Parsing the
+    // string as a local instant shifts the day and React then reports a
+    // hydration mismatch, so the day is read off the string itself.
+    const zones = ['UTC', 'America/New_York', 'Pacific/Kiritimati'];
+    for (const raw of ['2026-12-01', '2026-12-01T00:00:00', '2026-12-01 23:59:59']) {
+      for (const zone of zones) {
+        const before = process.env.TZ;
+        process.env.TZ = zone;
+        try {
+          assert.equal(
+            fundingDeadlineText(funding({dateDeadline: raw})),
+            'Funding deadline 2026-12-01',
+            `${raw} in ${zone}`,
+          );
+        } finally {
+          process.env.TZ = before;
+        }
+      }
+    }
   });
 });
 
