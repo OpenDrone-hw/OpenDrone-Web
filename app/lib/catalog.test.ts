@@ -48,6 +48,100 @@ describe('parseCatalog', () => {
   });
 });
 
+describe('stage and funding', () => {
+  const base = {
+    shop_url: 'https://shop.incutec.com',
+    add_url: 'https://shop.incutec.com/incutec/add',
+  };
+
+  it('parses an old schema-1 catalog (no stage or funding) exactly as before', () => {
+    const openrx = byHandle(FIXTURE, 'openrx')!;
+    assert.equal(openrx.stage, null);
+    assert.equal(openrx.funding, null);
+    assert.equal(openrx.title, 'OpenRX');
+    assert.equal(FIXTURE.products.length, 2);
+  });
+
+  it('maps stage and snake_case funding onto camelCase fields', () => {
+    const catalog = parseCatalog({
+      ...base,
+      products: [
+        {
+          handle: 'openrx',
+          title: 'OpenRX',
+          family: null,
+          description: null,
+          url: 'https://shop.incutec.com/shop/openrx-40',
+          images: [],
+          rating: null,
+          variants: [],
+          stage: 'concept',
+          funding: {
+            target_units: 500,
+            units_funded: 312,
+            pct: 62.4,
+            state: 'open',
+            date_deadline: '2026-12-01',
+            explainer_url: 'https://shop.incutec.com/pages/funding',
+          },
+        },
+      ],
+    });
+    const product = byHandle(catalog, 'openrx')!;
+    assert.equal(product.stage, 'concept');
+    assert.deepEqual(product.funding, {
+      targetUnits: 500,
+      unitsFunded: 312,
+      pct: 62.4,
+      state: 'open',
+      dateDeadline: '2026-12-01',
+      explainerUrl: 'https://shop.incutec.com/pages/funding',
+    });
+  });
+
+  it('maps missing or malformed stage/funding to null', () => {
+    const catalog = parseCatalog({
+      ...base,
+      products: [
+        {
+          handle: 'openrx',
+          title: 'OpenRX',
+          family: null,
+          description: null,
+          url: 'https://shop.incutec.com/shop/openrx-40',
+          images: [],
+          rating: null,
+          variants: [],
+          // stage absent entirely
+          funding: {
+            target_units: 500,
+            units_funded: 312,
+            pct: 62.4,
+            // unknown state and a missing explainer_url
+            state: 'launched',
+          },
+        },
+        {
+          handle: 'openfc-lite',
+          title: 'OpenFC Lite',
+          family: null,
+          description: null,
+          url: 'https://shop.incutec.com/shop/openfc-lite-4',
+          images: [],
+          rating: null,
+          variants: [],
+          stage: 42,
+          funding: 'not an object',
+        },
+      ],
+    });
+    assert.equal(byHandle(catalog, 'openrx')!.stage, null);
+    assert.equal(byHandle(catalog, 'openrx')!.funding, null);
+    assert.equal(byHandle(catalog, 'openfc-lite')!.stage, null);
+    assert.equal(byHandle(catalog, 'openfc-lite')!.funding, null);
+  });
+});
+
 describe('lookups', () => {
   it('finds a product by handle', () => {
     assert.equal(byHandle(FIXTURE, 'openrx')?.title, 'OpenRX');

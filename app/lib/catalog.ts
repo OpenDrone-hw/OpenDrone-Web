@@ -50,6 +50,16 @@ export type CatalogVariant = {
   compliance?: unknown;
 };
 
+/** A funded pre-order's progress toward its unit target. */
+export type CatalogFunding = {
+  targetUnits: number;
+  unitsFunded: number;
+  pct: number;
+  state: 'draft' | 'open' | 'funded' | 'missed' | 'cancelled';
+  dateDeadline: string | null;
+  explainerUrl: string;
+};
+
 export type CatalogProduct = {
   handle: string;
   title: string;
@@ -59,6 +69,10 @@ export type CatalogProduct = {
   images: string[];
   rating: {average: number; count: number} | null;
   variants: CatalogVariant[];
+  /** Odoo's product stage, e.g. "concept" or "production". */
+  stage?: string | null;
+  /** Funded pre-order progress, or null/absent for an ordinary product. */
+  funding?: CatalogFunding | null;
 };
 
 export type Catalog = {
@@ -91,6 +105,56 @@ export function emptyCatalog(shopUrl: string): Catalog {
   };
 }
 
+const FUNDING_STATES: ReadonlySet<string> = new Set([
+  'draft',
+  'open',
+  'funded',
+  'missed',
+  'cancelled',
+]);
+
+/**
+ * Normalize a product's raw `funding` field. Missing or malformed input
+ * (wrong types, an unknown `state`) maps to null rather than throwing, so
+ * one bad product never fails the whole catalog fetch.
+ */
+function normalizeFunding(raw: unknown): CatalogFunding | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const f = raw as Record<string, unknown>;
+  if (
+    typeof f.target_units !== 'number' ||
+    typeof f.units_funded !== 'number' ||
+    typeof f.pct !== 'number' ||
+    typeof f.explainer_url !== 'string' ||
+    typeof f.state !== 'string' ||
+    !FUNDING_STATES.has(f.state)
+  ) {
+    return null;
+  }
+  return {
+    targetUnits: f.target_units,
+    unitsFunded: f.units_funded,
+    pct: f.pct,
+    state: f.state as CatalogFunding['state'],
+    dateDeadline: typeof f.date_deadline === 'string' ? f.date_deadline : null,
+    explainerUrl: f.explainer_url,
+  };
+}
+
+/**
+ * Normalize the additive `stage`/`funding` fields on one raw product.
+ * Everything else on the product passes through untouched, so an old
+ * schema-1 catalog (neither field present) parses exactly as before.
+ */
+function normalizeProduct(raw: unknown): CatalogProduct {
+  const p = raw as CatalogProduct & Record<string, unknown>;
+  return {
+    ...p,
+    stage: typeof p.stage === 'string' ? p.stage : null,
+    funding: normalizeFunding(p.funding),
+  };
+}
+
 /**
  * Accept a parsed JSON body as a catalog, or throw. Deliberately narrow:
  * a 200 with a login page or an error document must not become an empty
@@ -104,7 +168,7 @@ export function parseCatalog(body: unknown): Catalog {
   if (!c.shop_url || !c.add_url) {
     throw new Error('catalog: response is missing shop_url or add_url');
   }
-  return c as Catalog;
+  return {...c, products: c.products.map(normalizeProduct)} as Catalog;
 }
 
 export function byHandle(
