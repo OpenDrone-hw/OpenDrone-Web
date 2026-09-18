@@ -17872,7 +17872,9 @@ body:has(.buy-rail.is-pinned.is-mobile) .placeholder-banner {
 
 @media (min-width: 34em) {
   .preorder-tiers {
-    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    /* Two cards per row in the prose column; a wider min keeps a product
+       with four variants from squeezing three clipped cards into one row. */
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
   }
 }
 
@@ -17880,10 +17882,19 @@ body:has(.buy-rail.is-pinned.is-mobile) .placeholder-banner {
   display: grid;
   gap: var(--sp-2);
   align-content: start;
+  /* Grid items default to min-width:auto, so an unwrappable price row would
+     widen the track past the column. Let the card shrink and the row wrap. */
+  min-width: 0;
   padding: var(--sp-4);
   border: 1px solid var(--color-border);
   border-radius: var(--r-md);
   background: var(--color-bg-card);
+}
+
+.preorder-tier .product-price,
+.preorder-tier .product-price-row {
+  flex-wrap: wrap;
+  row-gap: 0.3rem;
 }
 
 .preorder-tier-title {
