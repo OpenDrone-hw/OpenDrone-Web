@@ -12,6 +12,7 @@ import {useVariantUrl} from '~/lib/variants';
 import {useProductStatus, useRoadmapStatus} from '~/lib/coming-soon';
 import {isPurchasableStatus} from '~/lib/product-content';
 import {AddToCartButton} from './AddToCartButton';
+import {FundingMeter} from './FundingMeter';
 import {StackQuickAdd, type StackOffer} from './StackQuickAdd';
 import {copyText} from '~/lib/copy';
 
@@ -284,6 +285,10 @@ export function ProductItem({
         {'productType' in product && product.productType ? (
           <p className="product-card-meta">{product.productType}</p>
         ) : null}
+        {/* Funded pre-order progress: bar plus unit count, no link — the
+            whole card is already an anchor. Nothing renders for a product
+            with no campaign, which is every ordinary product. */}
+        <FundingMeter funding={product.funding} compact />
       </div>
     </>
   );

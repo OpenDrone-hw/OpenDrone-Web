@@ -25,6 +25,21 @@ export type ProductImage = {
 /** Odoo's per-variant availability word, straight from the catalog feed. */
 export type CatalogAvailability = 'in_stock' | 'preorder' | 'sold_out';
 
+/**
+ * A funded pre-order's progress toward its unit target, straight from the
+ * catalog feed. Lives here, beside the other catalog-derived shapes, so a
+ * card can carry it; `app/lib/catalog.ts` re-exports it as the name the
+ * rest of the app imports.
+ */
+export type CatalogFunding = {
+  targetUnits: number;
+  unitsFunded: number;
+  pct: number;
+  state: 'draft' | 'open' | 'funded' | 'missed' | 'cancelled';
+  dateDeadline: string | null;
+  explainerUrl: string;
+};
+
 export type ProductVariantFragment = {
   id: string;
   sku: string | null;
@@ -53,6 +68,9 @@ export type ProductCardFragment = {
   featuredImage: ProductImage | null;
   priceRange: {minVariantPrice: MoneyV2; maxVariantPrice: MoneyV2};
   variants: {nodes: ProductVariantFragment[]};
+  /** Funded pre-order progress, null for an ordinary product. Reporting
+   *  only: availability still decides what can be bought. */
+  funding?: CatalogFunding | null;
 };
 
 /** One option axis with its values, as the pill grid and ladder read it. */

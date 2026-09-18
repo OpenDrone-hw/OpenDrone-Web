@@ -4931,6 +4931,96 @@ button.reset {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-gold) 18%, transparent);
 }
 
+/* Funded pre-order meter (.funding-meter, FundingMeter.tsx) — how far a
+   campaign has come toward its unit target. Sits under the stock line on
+   the buy module and, in its compact form, under the title on a card.
+   Progress only: availability is the stock line's job, and nothing here
+   ever greys out a button. Track and fill mirror the roadmap goal meter's
+   geometry without sharing its classes: that meter is shop-wide, this one
+   is per product, and they must be able to move apart. */
+.funding-meter {
+  display: grid;
+  gap: var(--sp-2);
+  width: 100%;
+}
+
+.funding-meter-track {
+  display: block;
+  width: 100%;
+  height: 6px;
+  border-radius: var(--r-2xs);
+  background: color-mix(in srgb, var(--color-border) 70%, transparent);
+  overflow: hidden;
+}
+
+.funding-meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-gold);
+  transition: width 0.6s ease;
+}
+
+/* Reached target reads in the stock green, a closed campaign goes dim. */
+.funding-meter[data-funding-state='funded'] .funding-meter-fill {
+  background: var(--color-stock);
+}
+.funding-meter[data-funding-state='missed'] .funding-meter-fill,
+.funding-meter[data-funding-state='cancelled'] .funding-meter-fill {
+  background: var(--color-text-dim);
+}
+
+.funding-meter-label,
+.funding-meter-status,
+.funding-meter-deadline {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+
+.funding-meter-status {
+  color: var(--color-gold);
+}
+.funding-meter[data-funding-state='funded'] .funding-meter-status {
+  color: var(--color-stock);
+}
+.funding-meter[data-funding-state='missed'] .funding-meter-status {
+  color: var(--color-text-dim);
+}
+
+.funding-meter-refund {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.funding-meter-link {
+  justify-self: start;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  color: var(--color-gold);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-gold) 40%, transparent);
+}
+
+.funding-meter-link:hover {
+  color: var(--color-gold-hover);
+  border-bottom-color: var(--color-gold-hover);
+}
+
+/* Card variant — bar and count only, tucked under the product meta. */
+.funding-meter.is-compact {
+  gap: var(--sp-1);
+  margin-top: var(--sp-2);
+}
+
+.funding-meter.is-compact .funding-meter-track {
+  height: 4px;
+}
+
 /* Coming-soon buy module — the price slot carries a hairline COMING SOON
    plate instead of a figure; the stock dot goes gold ("in development"),
    and the notify signup drops its section chrome to sit inside the card. */
@@ -5098,6 +5188,7 @@ button.reset {
     width: 100%;
   }
   .buy-rail.is-pinned.is-mobile .product-buy-stock,
+  .buy-rail.is-pinned.is-mobile .funding-meter,
   .buy-rail.is-pinned.is-mobile .product-buy-sku {
     display: none;
   }
@@ -5293,6 +5384,7 @@ button.reset {
     border-radius: 0;
   }
   .buy-rail.is-pinned .product-buy-sku,
+  .buy-rail.is-pinned .funding-meter,
   .buy-rail.is-pinned .product-buy-stock {
     display: none;
   }
