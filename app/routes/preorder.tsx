@@ -351,7 +351,10 @@ function TrackerCard({campaign}: {campaign: PreorderCampaign}) {
         <dl className="preorder-track-stats">
           {campaign.amountFunded != null ? (
             <div className="preorder-track-stat">
-              <dt>Funded</dt>
+              {/* "Raised", not "Funded": the state chip beside it already
+                  uses "Funded"/"Funding missed" for the campaign state, and
+                  two different meanings of one word read as a defect. */}
+              <dt>Raised</dt>
               <dd>{formatPrice(campaign.amountFunded, campaign.currency)}</dd>
             </div>
           ) : null}
