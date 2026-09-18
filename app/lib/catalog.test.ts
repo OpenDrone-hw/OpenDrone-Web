@@ -199,6 +199,107 @@ describe('stage and funding', () => {
   });
 });
 
+describe('discount', () => {
+  const base = {
+    shop_url: 'https://shop.incutec.com',
+    add_url: 'https://shop.incutec.com/incutec/add',
+  };
+  const withVariants = (variants: unknown[]) =>
+    parseCatalog({
+      ...base,
+      products: [
+        {
+          handle: 'openrx',
+          title: 'OpenRX',
+          family: null,
+          description: null,
+          url: 'https://shop.incutec.com/shop/openrx-40',
+          images: [],
+          rating: null,
+          variants,
+        },
+      ],
+    });
+
+  it('normalizes a valid discount object', () => {
+    const catalog = withVariants([
+      {
+        sku: 'OPENRX-A',
+        title: 'A',
+        price: 10,
+        discount: {label: 'Launch week', ends_at: '2026-12-01', units_left: 5},
+      },
+    ]);
+    assert.deepEqual(byHandle(catalog, 'openrx')!.variants[0].discount, {
+      label: 'Launch week',
+      ends_at: '2026-12-01',
+      units_left: 5,
+    });
+  });
+
+  it('maps an explicit null discount to null', () => {
+    const catalog = withVariants([
+      {sku: 'OPENRX-A', title: 'A', price: 10, discount: null},
+    ]);
+    assert.equal(byHandle(catalog, 'openrx')!.variants[0].discount, null);
+  });
+
+  it('maps a malformed discount to null', () => {
+    const catalog = withVariants([
+      {sku: 'OPENRX-A', title: 'A', price: 10, discount: 'not an object'},
+      {sku: 'OPENRX-B', title: 'B', price: 10, discount: 7},
+      {sku: 'OPENRX-C', title: 'C', price: 10, discount: []},
+    ]);
+    const product = byHandle(catalog, 'openrx')!;
+    assert.equal(product.variants[0].discount, null);
+    assert.equal(product.variants[1].discount, null);
+    assert.equal(product.variants[2].discount, null);
+  });
+
+  it('maps a missing discount key to null', () => {
+    const catalog = withVariants([{sku: 'OPENRX-A', title: 'A', price: 10}]);
+    assert.equal(byHandle(catalog, 'openrx')!.variants[0].discount, null);
+  });
+
+  it('type-checks each sub-field independently rather than dropping the whole object', () => {
+    const catalog = withVariants([
+      {
+        sku: 'OPENRX-A',
+        title: 'A',
+        price: 10,
+        discount: {label: 42, ends_at: 20261201, units_left: 'lots'},
+      },
+    ]);
+    assert.deepEqual(byHandle(catalog, 'openrx')!.variants[0].discount, {
+      label: null,
+      ends_at: null,
+      units_left: null,
+    });
+  });
+
+  it('carries discount onto the mapped variant as camelCase', () => {
+    const catalog = withVariants([
+      {
+        sku: 'OPENRX-A',
+        title: 'A',
+        price: 10,
+        discount: {label: 'Launch week', ends_at: '2026-12-01', units_left: 5},
+      },
+      {sku: 'OPENRX-B', title: 'B', price: 10},
+    ]);
+    const product = toProduct(catalog, byHandle(catalog, 'openrx')!);
+    const bySkuMap = Object.fromEntries(
+      product.variants.nodes.map((v) => [v.sku, v]),
+    );
+    assert.deepEqual(bySkuMap['OPENRX-A'].discount, {
+      label: 'Launch week',
+      endsAt: '2026-12-01',
+      unitsLeft: 5,
+    });
+    assert.equal(bySkuMap['OPENRX-B'].discount, null);
+  });
+});
+
 describe('lookups', () => {
   it('finds a product by handle', () => {
     assert.equal(byHandle(FIXTURE, 'openrx')?.title, 'OpenRX');
