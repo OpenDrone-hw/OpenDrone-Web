@@ -28,7 +28,7 @@ jobs:
             exit 1
           fi
           response=$(curl -sS -w "\n%{http_code}" \
-            -X POST https://opendrone.store/api/support/cleanup \
+            -X POST https://opendrone.be/api/support/cleanup -d "{}" \
             -H "Authorization: Bearer $SUPPORT_CLEANUP_SECRET" \
             -H "Content-Type: application/json")
           body=$(echo "$response" | head -n -1)
