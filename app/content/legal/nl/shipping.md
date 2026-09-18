@@ -1,6 +1,6 @@
 ## Verzending en levering
 
-Incutec BV verzendt bestellingen vanuit België naar de meeste landen van de Europese Unie. Leveringstermijnen en verzendkosten worden berekend en getoond aan de checkout voorafgaand aan betaling.
+Incutec BV verzendt bestellingen vanuit België naar de meeste landen van de Europese Unie. De producten worden volledig betaald bij het plaatsen van de bestelling. De verzendkosten worden niet aangerekend aan de checkout: zij worden afzonderlijk gefactureerd, per bestemmingszone, zodra de volledige bestelling klaar is voor verzending. Het tarief per zone wordt op deze pagina gepubliceerd, zodat het gekend is vóór de bestelling wordt geplaatst.
 
 ### Leveringstermijn
 
@@ -8,7 +8,7 @@ Bestellingen worden in principe verzonden binnen 2 werkdagen na ontvangst van de
 
 ### Pre-orders
 
-Sommige producten worden verkocht als pre-order. Zij zijn als dusdanig gemarkeerd, met hun verwachte verzenddatum, op de productpagina, in het winkelmandje en op de orderbevestiging. De volledige prijs wordt aangerekend bij het plaatsen van de bestelling. Bij lancering worden de flight controller en de ESC verzonden vanaf medio oktober 2026; elk ander pre-orderproduct wordt verzonden ongeveer 10 weken na de bestelling. De vermelde verzenddatum is de tussen de consument en Incutec BV overeengekomen leveringstermijn in de zin van Art. VI.43 WER, zodat de bovenstaande standaardtermijn van 30 dagen niet geldt voor pre-orderartikelen.
+Sommige producten worden verkocht als pre-order. Zij zijn als dusdanig gemarkeerd, met hun verwachte verzenddatum, op de productpagina, in het winkelmandje en op de orderbevestiging. De volledige prijs van de producten wordt aangerekend bij het plaatsen van de bestelling; de verzendkosten worden afzonderlijk aangerekend zodra de bestelling klaar is voor verzending, zoals beschreven onder "Verzendkosten en landen" hieronder. Bij lancering worden de flight controller en de ESC verzonden vanaf medio oktober 2026; elk ander pre-orderproduct wordt verzonden ongeveer 10 weken na de bestelling. De vermelde verzenddatum is de tussen de consument en Incutec BV overeengekomen leveringstermijn in de zin van Art. VI.43 WER, zodat de bovenstaande standaardtermijn van 30 dagen niet geldt voor pre-orderartikelen.
 
 Een bestelling die artikelen op voorraad en pre-orderartikelen combineert, wordt in één pakket verzonden zodra elk artikel op voorraad is: één levering per bestelling. Indien Incutec BV de vermelde verzenddatum niet kan halen, brengt zij de consument daarvan op de hoogte en biedt, naar keuze van de consument, een nieuwe verzenddatum of een volledige terugbetaling binnen 14 dagen aan.
 
@@ -18,9 +18,31 @@ Betalingen voor pre-orders financieren de productie en de voorraadaankoop voor d
 
 Pakketten die buiten de Europese Unie worden verzonden, kunnen onderworpen zijn aan invoerrechten en -belastingen die door de consument bij levering moeten worden betaald, tenzij de gekozen verzendwijze vermeldt dat de rechten door Incutec BV worden betaald.
 
+### Gefinancierde pre-orders
+
+Elk hardwareproduct heeft een financieringsdoel (funding target) dat publiek op de productpagina wordt vermeld. Indien een product zijn financieringsdoel niet bereikt, worden de pre-orders voor dat product volledig terugbetaald. In een bestelling die meerdere producten combineert, wordt het product dat zijn financieringsdoel niet heeft bereikt terugbetaald en worden de overige artikelen samen verzonden in de ene levering. Onze [pre-orderpagina](/preorder) legt het financieringsmodel uit.
+
 ### Verzendkosten en landen
 
-Het verzendtarief is afhankelijk van bestemming en pakketgewicht. Bepaalde landen zijn uitgesloten wegens export-sancties: zie ons [end-use beleid](/end-use).
+De verzendkosten worden niet aangerekend aan de checkout. Zodra elk artikel van de bestelling klaar is voor verzending, factureert Incutec BV de verzendkosten voor de bestemmingszone en stuurt zij de consument een betalingsverzoek per e-mail met een beveiligde betaallink. De bestelling wordt verzonden zodra die verzendfactuur betaald is.
+
+De onderstaande tarieven gelden per bestelling, zijn inclusief BTW en zijn afhankelijk van de bestemmingszone en het bestelbedrag. Het tarief dat op een bestelling van toepassing is, is het tarief dat op het ogenblik van de bestelling op deze pagina gepubliceerd is.
+
+| Bestemming | Bestelbedrag onder € 50 | Bestelbedrag vanaf € 50 |
+|---|---|---|
+| België | € 7,70 | € 8,10 |
+| Duitsland, Frankrijk, Nederland, Luxemburg | € 10,10 | € 11,85 |
+| Oostenrijk, Tsjechië, Denemarken, Finland, Griekenland, Hongarije, Ierland, Italië, Polen, Portugal, Spanje, Zweden | € 10,55 | € 22,05 |
+| Kroatië, Letland, Litouwen, Roemenië, Slovakije, Slovenië | € 8,65 | € 33,20 |
+| Bulgarije | € 48,00 | € 48,00 |
+| Cyprus, Estland, Malta | € 12,85 | € 33,20 |
+| Australië, Canada, Japan, Noorwegen, Zwitserland, Turkije | € 37,45 | € 37,45 |
+
+Bepaalde landen zijn uitgesloten wegens export-sancties: zie ons [end-use beleid](/end-use).
+
+### Indien het betalingsverzoek voor de verzending niet betaald wordt
+
+Indien het betalingsverzoek voor de verzending niet betaald wordt, stuurt Incutec BV herinneringen. De bestelling wordt aangehouden; zij wordt niet automatisch geannuleerd. De consument kan de bestelling op elk ogenblik vóór verzending annuleren en krijgt dan de producten volledig terugbetaald. Dit doet geen afbreuk aan het hierboven beschreven herroepingsrecht.
 
 ### Risico bij verzending
 
