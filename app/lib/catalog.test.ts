@@ -97,6 +97,10 @@ describe('stage and funding', () => {
       dateDeadline: '2026-12-01',
       explainerUrl: 'https://shop.incutec.com/pages/funding',
     });
+    // The funding object rides onto both product shapes, so the PDP buy
+    // module and the card meter read it without a second catalog lookup.
+    assert.deepEqual(toProduct(catalog, product).funding, product.funding);
+    assert.deepEqual(toCard(catalog, product).funding, product.funding);
   });
 
   it('maps missing or malformed stage/funding to null', () => {
@@ -313,6 +317,8 @@ describe('cards', () => {
     assert.equal(toCards(FIXTURE).length, 2);
     const card = toCard(FIXTURE, byHandle(FIXTURE, 'openfc-lite')!);
     assert.equal(card.handle, 'openfc-lite');
+    // Ordinary products carry no campaign, so the card meter stays unmounted.
+    assert.equal(card.funding, null);
     assert.equal(card.priceRange.minVariantPrice.amount, '44.99');
     assert.equal(card.variants.nodes.length, 2);
   });

@@ -29,6 +29,7 @@ import {CONTRIBUTING_URL} from '~/lib/company';
 import {ProductPrice} from '~/components/ProductPrice';
 import {ProductGallery} from '~/components/ProductGallery';
 import {ProductForm} from '~/components/ProductForm';
+import {FundingMeter} from '~/components/FundingMeter';
 import {RelatedProducts} from '~/components/RelatedProducts';
 import {FirmwareSupport} from '~/components/FirmwareSupport';
 import {VariantLadder} from '~/components/VariantLadder';
@@ -1652,6 +1653,11 @@ function ProductPage() {
                   )
                 : copyText('product-chrome.buy_stock_out')}
       </span>
+      {/* Funded pre-order progress, under the stock/ship-promise line and
+          above everything that buys. Reporting only: the meter never
+          decides whether the button works — Odoo's availability does, one
+          line up. Renders nothing for a product with no campaign. */}
+      <FundingMeter funding={product.funding} />
       {/* Sold-out signup: not for pre-order products, whose "unavailable"
           is an Odoo availability state, not a launch to be notified of. */}
       {!isBundle &&

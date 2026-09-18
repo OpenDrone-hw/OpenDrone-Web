@@ -1,6 +1,8 @@
 import {describe, it} from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  fundingDeadlineText,
+  fundingDisplayPct,
   fundingLabel,
   fundingPct,
   fundingStatusText,
@@ -37,6 +39,40 @@ describe('fundingPct', () => {
   it('is 0 for no funding', () => {
     assert.equal(fundingPct(null), 0);
     assert.equal(fundingPct(undefined), 0);
+  });
+});
+
+describe('fundingDisplayPct', () => {
+  it('is the exact rounded percentage by default', () => {
+    assert.equal(fundingDisplayPct(funding({pct: 62.4})), 62);
+    assert.equal(fundingDisplayPct(funding({pct: 62.4}), 'exact'), 62);
+  });
+
+  it('snaps to 5% steps when asked', () => {
+    assert.equal(fundingDisplayPct(funding({pct: 62.4}), 'nearest-5'), 60);
+    assert.equal(fundingDisplayPct(funding({pct: 63}), 'nearest-5'), 65);
+    assert.equal(fundingDisplayPct(funding({pct: 2}), 'nearest-5'), 0);
+  });
+
+  it('stays inside 0-100 at both precisions', () => {
+    assert.equal(fundingDisplayPct(funding({pct: 140}), 'nearest-5'), 100);
+    assert.equal(fundingDisplayPct(funding({pct: -10}), 'nearest-5'), 0);
+    assert.equal(fundingDisplayPct(null, 'nearest-5'), 0);
+  });
+});
+
+describe('fundingDeadlineText', () => {
+  it('reads the deadline as an ISO day', () => {
+    assert.equal(
+      fundingDeadlineText(funding({dateDeadline: '2026-12-01'})),
+      'Funding deadline 2026-12-01',
+    );
+  });
+
+  it('is empty without a usable deadline', () => {
+    assert.equal(fundingDeadlineText(funding({dateDeadline: null})), '');
+    assert.equal(fundingDeadlineText(funding({dateDeadline: 'soon'})), '');
+    assert.equal(fundingDeadlineText(null), '');
   });
 });
 

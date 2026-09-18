@@ -47,3 +47,49 @@ export function isFundedPreorder(
 ): boolean {
   return Boolean(product?.funding);
 }
+
+/**
+ * How precisely the meter reports progress. `exact` shows the rounded
+ * percentage the catalog carries; `nearest-5` snaps it to 5% steps, which
+ * reports the campaign without publishing an exact live order count.
+ * One switch, so the reporting precision is a decision, not a rewrite.
+ */
+export type FundingPrecision = 'exact' | 'nearest-5';
+
+/** The precision every caller gets unless it asks for another one. */
+export const FUNDING_PRECISION_DEFAULT: FundingPrecision = 'exact';
+
+/** The percentage actually displayed (bar width and `aria-valuenow`). */
+export function fundingDisplayPct(
+  funding: CatalogFunding | null | undefined,
+  precision: FundingPrecision = FUNDING_PRECISION_DEFAULT,
+): number {
+  const pct = fundingPct(funding);
+  return precision === 'nearest-5' ? Math.round(pct / 5) * 5 : pct;
+}
+
+/**
+ * "Funding deadline 2026-12-01", or '' when the campaign carries no
+ * deadline or an unparseable one. ISO day, the same readout format the
+ * release rows use; no state wording, so it reads correctly after the
+ * deadline as well as before it.
+ */
+export function fundingDeadlineText(
+  funding: CatalogFunding | null | undefined,
+): string {
+  const raw = funding?.dateDeadline;
+  if (!raw) return '';
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return '';
+  return `Funding deadline ${parsed.toISOString().slice(0, 10)}`;
+}
+
+/** The refund promise carried next to every funded pre-order meter. */
+export const FUNDING_REFUND_GUARANTEE =
+  'If this product misses its funding target, your preorder is refunded in full.';
+
+/** In-app explainer for how funded pre-orders work. */
+export const FUNDING_EXPLAINER_PATH = '/preorder';
+
+/** Link text for `FUNDING_EXPLAINER_PATH`. */
+export const FUNDING_EXPLAINER_LABEL = 'How funded pre-orders work';

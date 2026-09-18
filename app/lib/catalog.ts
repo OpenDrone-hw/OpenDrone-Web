@@ -19,6 +19,7 @@
 import type {
   CartLine,
   CatalogAvailability,
+  CatalogFunding,
   MappedProductOptions,
   MoneyV2,
   ProductCardFragment,
@@ -29,7 +30,7 @@ import type {
 import {PRODUCT_CONTENT} from './product-content.ts';
 import {toStorefrontImageUrl} from './odoo-image.ts';
 
-export type {CartLine, CatalogAvailability};
+export type {CartLine, CatalogAvailability, CatalogFunding};
 
 export type CatalogVariant = {
   sku: string;
@@ -48,16 +49,6 @@ export type CatalogVariant = {
   /** Older catalogs carried an issued DoC object here. It is ignored:
    *  Declarations of Conformity stay internal (contract section 4). */
   compliance?: unknown;
-};
-
-/** A funded pre-order's progress toward its unit target. */
-export type CatalogFunding = {
-  targetUnits: number;
-  unitsFunded: number;
-  pct: number;
-  state: 'draft' | 'open' | 'funded' | 'missed' | 'cancelled';
-  dateDeadline: string | null;
-  explainerUrl: string;
 };
 
 export type CatalogProduct = {
@@ -400,6 +391,7 @@ export function toProduct(
     rating:
       product.rating && product.rating.count > 0 ? product.rating : null,
     shopUrl: product.url,
+    funding: product.funding ?? null,
   };
 }
 
@@ -417,6 +409,7 @@ export function toCard(
     featuredImage: full.images.nodes[0] ?? full.featuredImage,
     priceRange: full.priceRange,
     variants: full.variants,
+    funding: full.funding ?? null,
   };
 }
 
