@@ -1,10 +1,8 @@
 import {defineConfig} from 'vite';
-import {hydrogen} from '@shopify/hydrogen/vite';
-import {oxygen} from '@shopify/mini-oxygen/vite';
+import {cloudflare} from '@cloudflare/vite-plugin';
 import {reactRouter} from '@react-router/dev/vite';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import tailwindcss from '@tailwindcss/vite';
-import path from 'path';
 import {
   heroStudioExcludePlugin,
   studioPlugin,
@@ -12,40 +10,46 @@ import {
 
 export default defineConfig({
   plugins: [
-    // MUST stay ahead of oxygen(). Both register `configureServer` with
-    // `order: 'pre'`, and Vite keeps registration order inside a bucket, so
-    // this is what lets the studio's write endpoint be answered by real Node
-    // instead of being proxied into the filesystem-less Workerd sandbox.
+    // MUST stay ahead of cloudflare(). The studio registers `configureServer`
+    // with `order: 'pre'` so its write endpoint is answered by real Node
+    // before any request is handed to the filesystem-less workerd sandbox.
     // It is `apply: 'serve'`, so it does not exist in a production build.
     studioPlugin(),
     // Strips the hero tuning tool out of the production client build; it sits
     // in publicDir, so Vite would otherwise serve it at a public URL.
     heroStudioExcludePlugin(),
     tailwindcss(),
-    hydrogen(),
-    oxygen(),
+    // Runs server.ts in workerd in dev and builds it as the Worker entry
+    // (dist/server/index.js). wrangler.toml supplies the compatibility date
+    // for dev; `main` points the plugin at the source entry. Its staging
+    // [vars] are dropped so dev reads env from .env alone and falls back to
+    // the production defaults in code. Deploys pass --config explicitly
+    // (.github/workflows), so they read the build output, not this.
+    cloudflare({
+      viteEnvironment: {name: 'ssr'},
+      configPath: './wrangler.toml',
+      config: (worker) => {
+        worker.vars = {};
+        return {main: './server.ts'};
+      },
+    }),
     reactRouter(),
     tsconfigPaths(),
   ],
-  resolve: {
-    alias: {
-      // Fix broken pnpm paths in @shopify/hydrogen-react@2026.1.1
-      '@xstate/react/lib/fsm': path.resolve(
-        'node_modules/@shopify/hydrogen-react/node_modules/@xstate/react/lib/fsm.js',
-      ),
-      '@xstate/fsm': path.resolve('node_modules/@xstate/fsm/lib/index.js'),
-    },
-  },
   build: {
     // Allow a strict Content-Security-Policy
     // without inlining assets as base64:
     assetsInlineLimit: 0,
   },
+  environments: {
+    // The Worker bundle was minified under the Hydrogen CLI too; Vite leaves
+    // SSR output unminified by default.
+    ssr: {build: {minify: true}},
+  },
   ssr: {
     optimizeDeps: {
       include: [
         'use-sync-external-store/shim/with-selector',
-        '@xstate/fsm',
         'set-cookie-parser',
         'cookie',
         'react-router',
@@ -53,7 +57,7 @@ export default defineConfig({
     },
   },
   server: {
-    allowedHosts: ['.tryhydrogen.dev'],
+    port: 3000,
     watch: {
       // iCloud Drive constantly touches mtime on the synced legal
       // markdown snapshots which makes Vite's file watcher reload the

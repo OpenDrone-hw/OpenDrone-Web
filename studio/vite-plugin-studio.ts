@@ -3,12 +3,12 @@
  *
  * Three facts about this repo shape everything below.
  *
- * 1. In dev, `@shopify/mini-oxygen` registers a `configureServer` hook with
- *    `order: 'pre'` that forwards EVERY request into a Workerd sandbox. Workerd
- *    has no filesystem and Oxygen sets no `nodejs_compat` flag, so a write
- *    handled anywhere downstream of that proxy cannot touch disk. This plugin
- *    therefore also registers `order: 'pre'` and is listed BEFORE `oxygen()` in
- *    vite.config.ts, and it never calls `next()` for a path it owns. It runs in
+ * 1. In dev, `@cloudflare/vite-plugin` forwards requests into a workerd
+ *    sandbox. Workerd has no filesystem and wrangler.toml sets no
+ *    `nodejs_compat` flag, so a write handled anywhere downstream of that proxy
+ *    cannot touch disk. This plugin therefore registers `order: 'pre'` and is
+ *    listed BEFORE `cloudflare()` in vite.config.ts, and it never calls
+ *    `next()` for a path it owns. It runs in
  *    the real Node process, which is the only place `node:fs` exists.
  *
  * 2. `apply: 'serve'` means the plugin is not part of `vite build` at all. There
@@ -275,9 +275,9 @@ export function studioPlugin(): Plugin {
       repoRoot = config.root;
     },
     configureServer: {
-      // `pre` puts this ahead of Oxygen's own `pre` proxy, but only because the
-      // plugin is also listed before `oxygen()` in the plugins array: Vite keeps
-      // registration order within the same `order` bucket. Both halves matter.
+      // `pre` puts this ahead of the Cloudflare plugin's workerd proxy, and the
+      // plugin is also listed before `cloudflare()` in the plugins array: Vite
+      // keeps registration order within the same `order` bucket.
       order: 'pre',
       handler(server: ViteDevServer) {
         server.middlewares.use((req, res, next) => {

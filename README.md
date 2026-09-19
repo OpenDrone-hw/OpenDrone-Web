@@ -5,7 +5,7 @@ hardware designed and sold from Belgium. Flight controllers (OpenFC), 4-in-1
 ESCs (OpenESC), ExpressLRS receivers (OpenRX), carbon frames (OpenFrame) and
 the OpenStack bundle.
 
-It is a [Hydrogen](https://hydrogen.shopify.dev/) (React Router 7) app that
+It is a React Router 7 app, built with the Cloudflare Vite plugin, that
 runs as a Cloudflare Worker. Commerce lives in Odoo at
 [shop.incutec.com](https://shop.incutec.com): catalog, prices, availability,
 cart, checkout, payment, orders, invoices and customer accounts. This app reads
@@ -13,9 +13,8 @@ one public catalog feed from Odoo (`GET /incutec/catalog.json`), hands every
 buy click to the shop, and owns everything else the visitor sees, plus a
 support desk inside the Worker and a local editing studio.
 
-Hydrogen's Vite toolchain is build tooling only. No page, loader or action
-calls a Shopify API; `@shopify/hydrogen` and `@shopify/mini-oxygen` are
-build and dev dependencies.
+No page, loader or action calls a Shopify API, and no Shopify package is a
+runtime or build dependency.
 
 Selling entity: Incutec BV. OpenDrone is the community project and product
 brand. This repository is MIT; the hardware repositories are CERN-OHL-S.
@@ -46,12 +45,12 @@ Node 22 (what CI uses).
 
 | Command | Does |
 |---|---|
-| `npm run dev` | dev server with the studio at `/studio` |
+| `npm run dev` | dev server (server.ts in workerd) with the studio at `/studio` |
 | `npm run typecheck` | `react-router typegen` then `tsc --noEmit` |
 | `npm run lint` | ESLint over the repository |
 | `npm test` | `node --test` over `app/**/*.test.ts`, no test framework |
 | `npm run build` | `sync:legal`, then the production build into `dist/` |
-| `npm run preview` | build, then serve the build locally |
+| `npm run preview` | build, then serve `dist/` locally with `wrangler dev` and the production Worker config |
 | `npm run check:registry` | the product registry's data invariants (CI runs it; lint and tsc never evaluate them) |
 | `npm run check:status` | fails when a static roadmap status is ahead of its repo's `status-*` topic |
 | `npm run sync:legal` | copies four Dutch legal pages from `COMPLIANCE_SRC`; with it unset, keeps the committed snapshots |

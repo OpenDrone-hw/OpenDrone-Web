@@ -30,9 +30,9 @@ export default async function handleRequest(
 ) {
   // The Odoo shop: every buy button navigates to it. Product images are
   // not loaded from it: they are proxied and cached same-origin under
-  // /img/odoo/ (app/lib/odoo-image.ts), so img-src does not list it. cdn.shopify.com stays in scriptSrc because
-  // Oxygen serves this app's own JS bundles from it (decision D3 keeps
-  // the hosting); no Shopify API is called at runtime.
+  // /img/odoo/ (app/lib/odoo-image.ts), so img-src does not list it. cdn.shopify.com is a leftover
+  // from Shopify Oxygen hosting (see app/lib/csp.ts); no Shopify API is
+  // called at runtime.
   const shop = shopUrl(context.env);
   const {nonce, header, NonceProvider} = createContentSecurityPolicy({
     // Turnstile injects a script from challenges.cloudflare.com and renders

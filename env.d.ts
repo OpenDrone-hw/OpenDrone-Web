@@ -1,17 +1,23 @@
 /// <reference types="vite/client" />
 /// <reference types="react-router" />
-/// <reference types="@shopify/oxygen-workers-types" />
 
 // Enhance TypeScript's built-in typings.
 import '@total-typescript/ts-reset';
 
-// Extend the Oxygen-provided Env interface with project env vars so
-// context.env.* is strongly typed in routes.
+// Extend the Worker Env interface with project env vars so context.env.* is
+// strongly typed in routes.
 declare global {
-  // Minimal KVNamespace shape - Oxygen provides the binding at runtime
-  // but doesn't re-export Cloudflare's type definition. Only the
-  // methods we actually call are declared. Replace with the full
-  // @cloudflare/workers-types KVNamespace if that package gets added.
+  // The Workers runtime types are declared minimally here, only for what
+  // the app uses. The full @cloudflare/workers-types package redeclares DOM
+  // globals such as Element with Workers-only signatures, which breaks
+  // browser code type-checked in the same program.
+  interface ExecutionContext {
+    waitUntil(promise: Promise<unknown>): void;
+    passThroughOnException(): void;
+  }
+
+  // Minimal KVNamespace shape. Only the methods we actually call are
+  // declared.
   interface KVNamespace {
     get(key: string): Promise<string | null>;
     put(
@@ -28,8 +34,7 @@ declare global {
   }
 
   // Cloudflare Workers Rate Limiting binding (wrangler.toml
-  // `[[ratelimits]]`). Not re-exported by @shopify/oxygen-workers-types,
-  // so declared minimally here like KVNamespace above.
+  // `[[ratelimits]]`), declared minimally like KVNamespace above.
   interface RateLimit {
     limit(options: {key: string}): Promise<{success: boolean}>;
   }
