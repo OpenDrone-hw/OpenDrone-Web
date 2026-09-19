@@ -12,7 +12,7 @@ import {
 import {DISCORD_INVITE_URL} from '~/lib/company';
 
 /**
- * Active-ticket chat UI. Rebuilt for the Apr-2026 design — chat-bubble
+ * Active-ticket chat UI. Rebuilt for the Apr-2026 design - chat-bubble
  * variant, sticky composer, inline image previews, drag-and-drop. Used
  * by /support (live mode) and /account/support (live or read-only).
  *
@@ -111,7 +111,7 @@ export interface SupportThreadProps {
   mode: 'live' | 'readonly';
   /** When provided, skips the live status/poll fetch and renders these messages. */
   initialMessages?: ThreadMessage[];
-  /** Header info — provided when the parent loader knows the ticket up front. */
+  /** Header info - provided when the parent loader knows the ticket up front. */
   ticket: SupportThreadInitial;
   /** Called when user clicks "End ticket". Parent opens the feedback modal. */
   onEnd?: () => void;
@@ -140,7 +140,7 @@ export function SupportThread({
   const [error, setError] = useState<string | null>(null);
   // Pending replies = staff messages currently held by the moderation
   // gate. They never appear in `messages` (that's post-projection), so we
-  // track them via the poll's `pending` snapshot — assigned each poll, not
+  // track them via the poll's `pending` snapshot - assigned each poll, not
   // accumulated, so it falls to zero when a moderator approves the reply.
   // Visible reply count is derived from messages directly via useMemo.
   const [pendingReplies, setPendingReplies] = useState<number>(0);
@@ -156,7 +156,7 @@ export function SupportThread({
     el.scrollTop = el.scrollHeight;
   }, []);
 
-  // Track whether the user has scrolled up — if so, don't auto-scroll
+  // Track whether the user has scrolled up - if so, don't auto-scroll
   // when staff replies, so we don't yank their reading position.
   useEffect(() => {
     const el = logRef.current;
@@ -214,7 +214,7 @@ export function SupportThread({
         }
         if (json.ok && json.stats) {
           // `pending` is a snapshot of replies currently held by the
-          // moderation gate — assign it, don't accumulate. It rises when
+          // moderation gate - assign it, don't accumulate. It rises when
           // a staff reply is awaiting ✅ and drops back to zero once the
           // moderator approves.
           setPendingReplies(json.stats.pending);
@@ -223,7 +223,7 @@ export function SupportThread({
           setClosed(true);
         }
       } catch {
-        /* swallow — try again next tick */
+        /* swallow - try again next tick */
       }
       const interval =
         typeof document !== 'undefined' && document.hidden
@@ -928,7 +928,7 @@ function mergeMessages(
 }
 
 // Convenience initial-fetch wrapper for the live mode. Returns parent
-// loader-friendly shape — kept here so /support and /account/support
+// loader-friendly shape - kept here so /support and /account/support
 // share one fetch.
 export async function fetchActiveTicketStatus(): Promise<StatusResponse | null> {
   try {

@@ -32,7 +32,7 @@ export type PodCompanionOption = {
 };
 
 export type ProductPodItem = {
-  /** Stable key — a PDP handle, or a hero family id ('fc'/'esc'/'frame') the
+  /** Stable key - a PDP handle, or a hero family id ('fc'/'esc'/'frame') the
    *  3D viewer uses to spotlight the matching mesh on hover. */
   key: string;
   to: string;
@@ -42,7 +42,7 @@ export type ProductPodItem = {
   imageAlt?: string | null;
   price?: {amount: string; currencyCode: string} | null;
   /** Coming-soon product: a small SOON tag takes the price slot. Hosts also
-   *  omit `buy` for these rows — there is nothing to add yet. */
+   *  omit `buy` for these rows - there is nothing to add yet. */
   soon?: boolean;
   /** When set, the row grows a hover/focus-revealed action bar spanning the
    *  row width: one "<self> only" button and one "<self> + <partner> stack"
@@ -54,7 +54,7 @@ export type ProductPodItem = {
     /** Product handle for the funnel events. */
     product?: string | null;
     available: boolean;
-    /** Short family name of the row's own product ("FC", "ESC") — names the
+    /** Short family name of the row's own product ("FC", "ESC") - names the
      *  buttons so it's unambiguous what each one adds. */
     selfShort?: string;
     companions?: PodCompanionOption[];
@@ -70,15 +70,15 @@ const fmt = (p?: {amount: string; currencyCode: string} | null) =>
     : '';
 
 /**
- * A row/grid of product thumbnails — the SHARED content behind both the hero
+ * A row/grid of product thumbnails - the SHARED content behind both the hero
  * product showcase and the header family dropdowns (one component, two mounts).
  * Each pod links to its PDP and emits its key on hover/focus so a host (the
- * hero) can spotlight the matching 3D model. Hover cue is brightness/opacity —
+ * hero) can spotlight the matching 3D model. Hover cue is brightness/opacity -
  * no underlines.
  *
  * Buyable rows (header dropdowns) render a fixed-width buy cell that exists
  * BEFORE any pointer event: an ADD chip and a stack chip with an overlapped
- * two-board glyph. Nothing appears, moves, or resizes on hover — the only
+ * two-board glyph. Nothing appears, moves, or resizes on hover - the only
  * hover effect is color. Deal detail lives in an attr-driven tooltip.
  */
 export function ProductPods({

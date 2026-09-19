@@ -20,7 +20,7 @@ const ORDER: readonly Locale[] = ['nl', 'fr', 'en'];
 
 /**
  * NL/FR/EN language toggle for legal/regulatory pages. Renders nothing
- * on non-legal routes — the rest of the site is English-only.
+ * on non-legal routes - the rest of the site is English-only.
  *
  * On a legal page it swaps the locale segment of the URL and refreshes
  * the preference cookie so SSR picks the right language next time.

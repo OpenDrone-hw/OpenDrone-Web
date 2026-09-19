@@ -1,12 +1,12 @@
 /**
  * Official OSHWA certification mark (stacked v2.6) with the project UID baked in
- * — the open-hardware credential as a real mark, not just the raw number.
+ * - the open-hardware credential as a real mark, not just the raw number.
  *
  * Geometry is OSHWA's unmodified stacked source
  * (github.com/oshwa/certification-mark, `oshw-certification-mark-stacked-v2.6`).
  * Two deviations, both deliberate:
  *   • the box + wordmark + UID are recoloured to `currentColor` (the source is
- *     solid rgb(51,51,51), which would vanish on the dark theme) — set the colour
+ *     solid rgb(51,51,51), which would vanish on the dark theme) - set the colour
  *     on the parent; the signature "W" sweep keeps OSHWA red either way;
  *   • the UID renders in a monospace stack rather than bundling DejaVu Sans Mono.
  *     `text-anchor: middle` centres any 8-char `XX000000` UID in the box.
@@ -56,7 +56,7 @@ export function OshwaMark({
           d="M276.29,140.038l14.672,-0l-0,44.235l39.97,-0l0,-44.235l14.673,-0l-0,107.911l-14.673,-0l0,-51.39l-39.97,-0l-0,51.39l-14.672,-0l-0,-107.911"
           style={{fill: 'currentColor', fillRule: 'nonzero'}}
         />
-        {/* W — keeps OSHWA red in both themes */}
+        {/* W - keeps OSHWA red in both themes */}
         <path
           d="M355.453,140.038l14.238,-0l10.336,87.6l12.288,-57.967l15.25,-0l12.432,58.112l35.008,-167.926l14.239,-0l-40.79,188.092l-13.805,-0l-14.673,-64.111l-14.6,64.111l-13.806,-0l-16.118,-107.911"
           style={{fill: '#ff4444', fillRule: 'nonzero'}}

@@ -296,7 +296,7 @@ function DetailPane({
     );
   }
   // /account/support is the read-only history view. Live interaction
-  // (composer, attachments, end-ticket) lives on /support — having two
+  // (composer, attachments, end-ticket) lives on /support - having two
   // places to type into the same Discord thread is split-brain UX. When
   // the selected ticket is the cookie-bound one, surface a "Continue"
   // CTA that jumps to /support; everything else just renders the
@@ -402,7 +402,7 @@ function mapStatus(
   t: AccountTicket,
 ): 'open' | 'awaiting' | 'progress' | 'resolved' {
   if (t.status === 'closed') return 'resolved';
-  // No fine-grained "awaiting/progress" tracking yet — index has open|closed.
+  // No fine-grained "awaiting/progress" tracking yet - index has open|closed.
   // Treat all open tickets as plain "open" for now.
   return 'open';
 }

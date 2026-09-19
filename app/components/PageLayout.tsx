@@ -43,7 +43,7 @@ export function PageLayout({
           <RouteProgress />
           {/* On PDPs the bottom-right corner belongs to the buy rail's
               notify-at-launch form (consent checkbox + Privacy link at
-              common scroll positions) — park the pill bottom-left there. */}
+              common scroll positions) - park the pill bottom-left there. */}
           {prelaunch && (
             <PlaceholderBanner
               side={pathname.startsWith('/products/') ? 'left' : 'right'}
@@ -55,7 +55,7 @@ export function PageLayout({
           </main>
           {/* The desktop homepage is the scroll-pinned WebGL hero and owns its
               own ending, so it ships no footer. The mobile homepage (MobileHome)
-              is an ordinary scrolling page — without a footer it ends in a void
+              is an ordinary scrolling page - without a footer it ends in a void
               with no nav/legal/newsletter. Render the footer there too, hidden
               above the mobile breakpoint so the desktop hero is untouched. */}
           {!isHomepage ? (
@@ -83,7 +83,7 @@ function MobileMenuAside({shopUrl}: {shopUrl: string}) {
   return (
     <Aside type="mobile" heading={<Txt id="chrome.aside_menu_heading" />}>
       <HeaderMenu viewport="mobile" shopUrl={shopUrl} />
-      {/* Language switch lives in the drawer on phones — it's hidden from the
+      {/* Language switch lives in the drawer on phones - it's hidden from the
           top bar there to keep the header row inside a 320px viewport.
           LangToggle self-hides on non-legal routes. */}
       <LangToggle className="mobile-menu-lang" />

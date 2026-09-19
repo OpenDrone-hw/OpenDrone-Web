@@ -20,13 +20,13 @@
  * system parameter incutec_catalog_api.newsletter_dispatch_secret (set from
  * env $NEWSLETTER_DISPATCH_SECRET by erp/config/configure.py --section
  * catalog_api). The response never reveals whether the address was already
- * subscribed — Odoo always answers {ok: true} for a well-formed request,
+ * subscribed - Odoo always answers {ok: true} for a well-formed request,
  * whether the address was new or already on the list.
  *
  * Best-effort in shape only, not in effect: unlike the old growth pipeline
  * (fire-and-forget via `waitUntil`, always reporting success to the
  * visitor), this call IS the product feature, so the caller awaits it and
- * shows a real failure message when Odoo is unreachable or misconfigured —
+ * shows a real failure message when Odoo is unreachable or misconfigured -
  * matching app/lib/support/odoo.ts's one-retry policy but without the
  * "never block the visitor" guarantee that only applies to a side channel.
  */
@@ -50,7 +50,7 @@ export function hasNewsletterBridge(env: NewsletterEnv): boolean {
 /**
  * Subscribe an address to the calling brand's newsletter.
  * `product` is the optional coming-soon "notify me at launch" handle
- * (NewsletterSignup.tsx's `notify` prop) — Odoo records it on the consent
+ * (NewsletterSignup.tsx's `notify` prop) - Odoo records it on the consent
  * row but does not (yet) segment mailings by it; see the module's own
  * README for what changed from the old per-SKU Resend segments.
  * `ip` is the visitor's address, which only this Worker sees: Odoo stores a
@@ -67,7 +67,7 @@ export async function subscribeToNewsletter(
 ): Promise<boolean> {
   if (!env.NEWSLETTER_DISPATCH_SECRET) {
     console.warn(
-      '[growth/odoo-newsletter] NEWSLETTER_DISPATCH_SECRET not set — subscribe skipped',
+      '[growth/odoo-newsletter] NEWSLETTER_DISPATCH_SECRET not set - subscribe skipped',
     );
     return false;
   }

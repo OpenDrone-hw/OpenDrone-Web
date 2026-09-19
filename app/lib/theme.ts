@@ -16,7 +16,7 @@ export type Theme = 'light' | 'dark';
 
 export const THEME_STORAGE_KEY = 'od-theme';
 
-/** <meta name="theme-color"> per mode — browser chrome / mobile status bar. */
+/** <meta name="theme-color"> per mode - browser chrome / mobile status bar. */
 export const THEME_COLORS: Record<Theme, string> = {
   dark: '#0d0d10',
   light: '#f7f6f3',
@@ -25,7 +25,7 @@ export const THEME_COLORS: Record<Theme, string> = {
 /**
  * Inline, render-blocking script injected into <head> before the stylesheet.
  * Resolves the theme and writes the class onto <html> synchronously so the
- * first paint is already correct — no dark→light flash for a visitor who
+ * first paint is already correct - no dark→light flash for a visitor who
  * chose light. Kept dependency-free and tiny; runs once, before hydration.
  */
 export const THEME_INIT_SCRIPT = `
@@ -62,6 +62,6 @@ export function applyTheme(theme: Theme): void {
   try {
     localStorage.setItem(THEME_STORAGE_KEY, theme);
   } catch {
-    // Private mode / storage disabled — theme still applies for this session.
+    // Private mode / storage disabled - theme still applies for this session.
   }
 }

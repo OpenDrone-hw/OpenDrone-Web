@@ -75,7 +75,7 @@ describe('parseRich href safety', () => {
       // Degrades to the label rather than vanishing, so a typo is visible in
       // the page instead of silently deleting a sentence. Some of these leave a
       // stray character behind (an href containing `(` ends the match early, so
-      // the trailing `)` falls through as text) — ugly authoring output, but
+      // the trailing `)` falls through as text) - ugly authoring output, but
       // inert, which is the point.
       const text = out.map((n) => n.v).join('');
       assert.ok(text.startsWith('click'), `lost the label: ${text}`);

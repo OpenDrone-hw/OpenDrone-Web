@@ -3,7 +3,7 @@
  * Reads PUBLIC_COMPANY_* env vars from the Hydrogen/Oxygen runtime env.
  *
  * All user-visible copy referring to the selling entity must use this
- * identity — product branding (OpenDrone, OpenFC, OpenESC) is separate.
+ * identity - product branding (OpenDrone, OpenFC, OpenESC) is separate.
  */
 
 /** Public invite to the OpenDrone Discord, where the project is coordinated. */

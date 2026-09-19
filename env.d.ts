@@ -8,7 +8,7 @@ import '@total-typescript/ts-reset';
 // Extend the Oxygen-provided Env interface with project env vars so
 // context.env.* is strongly typed in routes.
 declare global {
-  // Minimal KVNamespace shape — Oxygen provides the binding at runtime
+  // Minimal KVNamespace shape - Oxygen provides the binding at runtime
   // but doesn't re-export Cloudflare's type definition. Only the
   // methods we actually call are declared. Replace with the full
   // @cloudflare/workers-types KVNamespace if that package gets added.
@@ -132,7 +132,7 @@ declare global {
     SUPPORT_APPROVE_EMOJI?: string;
     SUPPORT_MODERATION_MODE?: string;
 
-    // Ticket state and lookup — Odoo (erp/addons/incutec_support,
+    // Ticket state and lookup - Odoo (erp/addons/incutec_support,
     // PLAN.md 12.2, app/lib/support/odoo.ts). Every Discord ticket and
     // message is best-effort mirrored into Odoo `project.task`, which is
     // also the storefront's ticket index (close/cursors/feedback/lookup):
@@ -144,20 +144,20 @@ declare global {
     SUPPORT_ODOO_TOKEN?: string;
 
     // Workers Rate Limiting bindings (wrangler.toml `[[ratelimits]]`) for
-    // /api/support/lookup's "resume by email" abuse defence — distributed
+    // /api/support/lookup's "resume by email" abuse defence - distributed
     // across isolates, unlike app/lib/rate-limit.ts's in-memory limiter.
     // Replaced Upstash-backed global counters (founder decision,
     // 2026-09-15). Cloudflare's platform ceiling is a 10s/60s window, so
     // these approximate the former 10-minute IP cap and 24-hour email cap
     // as 60s windows at the same request counts (app/routes/
     // api.support.lookup.tsx). Optional because local dev has no binding
-    // — the route falls back to the in-memory limiter.
+    // - the route falls back to the in-memory limiter.
     SUPPORT_LOOKUP_IP_LIMITER?: RateLimit;
     SUPPORT_LOOKUP_EMAIL_LIMITER?: RateLimit;
 
     // Bearer token for /api/support/cleanup. The daily GitHub Actions
     // cron (.github/workflows/support-cleanup.yml) sends this in the
-    // Authorization header. Without it the endpoint returns 503 — set
+    // Authorization header. Without it the endpoint returns 503 - set
     // it to enable automatic stale-ticket sweeping.
     SUPPORT_CLEANUP_SECRET?: string;
     DISCORD_FEEDBACK_CHANNEL_ID?: string;

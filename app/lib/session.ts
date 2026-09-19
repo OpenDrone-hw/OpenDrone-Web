@@ -28,7 +28,7 @@ export class AppSession {
         path: '/',
         sameSite: 'lax',
         secrets,
-        // Set Secure explicitly in prod — on miniOxygen / local dev the
+        // Set Secure explicitly in prod - on miniOxygen / local dev the
         // cookie must work over plain HTTP, so we gate on NODE_ENV.
         secure: process.env.NODE_ENV === 'production',
       },

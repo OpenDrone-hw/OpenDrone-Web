@@ -32,7 +32,7 @@ import {computeCursorTarget} from '~/lib/support/poll-cursor';
 
 export type PollStats = {
   // Helper-authored messages delivered in this poll (post-moderation,
-  // post-scrubber). Informational — the widget derives its live visible
+  // post-scrubber). Informational - the widget derives its live visible
   // count from the message list.
   deltaVisible: number;
   // SNAPSHOT of helper-authored messages currently held by the
@@ -117,11 +117,11 @@ export async function loader({request, context}: Route.LoaderArgs) {
   // Bot authorship rules:
   //   - Bot messages that start with `**<Name>:**` are customer-relayed
   //     messages from /api/support/send. Project as role:'self' so the
-  //     customer sees their own history on refresh — without these the
+  //     customer sees their own history on refresh - without these the
   //     log appears empty until staff replies.
   //   - Every other bot message is the thread-starter or a system
   //     message and must not surface.
-  // Self-relayed messages bypass the moderation gate — the customer
+  // Self-relayed messages bypass the moderation gate - the customer
   // wrote them, so requiring a staff ✅ to surface them on refresh
   // would erase the customer's own history.
   const selfRelayed = messages.filter(
@@ -146,13 +146,13 @@ export async function loader({request, context}: Route.LoaderArgs) {
 
   // Project each raw Discord message into the public shape. A projection
   // that returns null (blocked by the scrubber, or empty after redaction)
-  // is dropped from the response but still advances the cursor — otherwise
+  // is dropped from the response but still advances the cursor - otherwise
   // a single always-blocked message would loop forever.
   const projected: PublicMessage[] = [];
   for (const m of filtered.approved) {
     const isSelfRelayed = m.author.bot && isSelfRelayedMessage(m.content);
     if (m.author.bot && !isSelfRelayed) continue;
-    // Strip the bot marker from content before scrubbing/projecting —
+    // Strip the bot marker from content before scrubbing/projecting -
     // the `role` field replaces the inline prefix in the widget.
     let rawContent = m.content;
     let projectedFirstName = extractFirstName([
@@ -194,7 +194,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
   // is still delivered, so those messages are terminal and the cursor
   // may pass them. Scrubber-blocked and bot system messages (dropped in
   // the projection loop above, not in filtered.dropped) are terminal too
-  // — they never change — so they don't pin the cursor either.
+  // - they never change - so they don't pin the cursor either.
   const heldIds =
     filtered.mode === 'enforce'
       ? new Set(filtered.dropped.map((d) => d.message.id))
@@ -210,7 +210,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
   };
 
   // Roll the cursor forward into the signed cookie so the next poll asks
-  // only for what's newer than what we just delivered — but never past a
+  // only for what's newer than what we just delivered - but never past a
   // message still awaiting moderation (see cursorTarget above).
   const cursorChanged = cursorTarget && cursorTarget !== ticket.lastCursor;
   if (cursorChanged) {
@@ -240,16 +240,16 @@ export async function loader({request, context}: Route.LoaderArgs) {
   }
 
   // Stats for the sidebar.
-  //   deltaVisible — scrubber-passed helper messages delivered this poll
+  //   deltaVisible - scrubber-passed helper messages delivered this poll
   //     (a delta; the widget derives the live "visible" count from the
   //     message list itself, so this is informational).
-  //   pending — a SNAPSHOT of how many helper messages are currently held
+  //   pending - a SNAPSHOT of how many helper messages are currently held
   //     by the moderation gate. Because the cursor now parks behind held
   //     messages, the same pending message recurs in every poll window
   //     until it's approved; an accumulating delta would inflate without
   //     bound and never decrement. A snapshot the widget assigns directly
   //     rises when a reply is held and falls to zero the moment a
-  //     moderator ✅'s it. Only enforce mode genuinely holds messages — in
+  //     moderator ✅'s it. Only enforce mode genuinely holds messages - in
   //     log/off mode the "dropped" set is still delivered, so nothing is
   //     pending.
   const deltaVisible = projected.filter((m) => m.role === 'helper').length;
@@ -271,7 +271,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
 
 // Recognises a customer-relayed message posted by the bot on behalf of
 // the customer. Format from /api/support/send: `**<First>:**` optionally
-// followed by a space + body. Conservative — caps the captured name at
+// followed by a space + body. Conservative - caps the captured name at
 // 80 chars and disallows asterisks in the name to avoid matching bold
 // runs in arbitrary helper replies.
 const SELF_PREFIX_RE = /^\*\*([^*]{1,80}?):\*\*(?:\s+([\s\S]*))?$/;

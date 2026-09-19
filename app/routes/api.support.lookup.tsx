@@ -11,19 +11,19 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 type LookupResult = {ok: true} | {ok: false; message: string};
 
 /**
- * "Resume by email" — the customer enters the email they used when they
+ * "Resume by email" - the customer enters the email they used when they
  * opened a ticket. We look up the tickets on file for that email (Odoo,
  * erp/addons/incutec_support) and send a resume link per match in one
  * consolidated email.
  *
  * Privacy: the response is *always* a generic success message regardless
  * of whether matches were found. We never confirm or deny that a given
- * email has tickets — that would let an attacker fingerprint customers.
+ * email has tickets - that would let an attacker fingerprint customers.
  * The only signal is the inbox: tickets exist iff an email arrives.
  *
  * Abuse / amplification: the Odoo search is one indexed query, no fan-out.
  * Rate limits use the Workers Rate Limiting binding (wrangler.toml) so
- * they hold *across* Worker isolates instead of per-isolate — the
+ * they hold *across* Worker isolates instead of per-isolate - the
  * per-email cap is what stops this being used to spam a victim's inbox
  * with resume mails. The binding's platform ceiling is a 60s window
  * (Cloudflare only supports 10s/60s), so the former 10-minute IP cap and
@@ -31,7 +31,7 @@ type LookupResult = {ok: true} | {ok: false; message: string};
  * falls back to the in-memory limiter (per-isolate, original windows)
  * when the binding isn't configured (e.g. local dev). Honeypot too.
  * (Turnstile isn't used here because the resume form shares the widget
- * with the ticket-intake form which already carries a Turnstile widget —
+ * with the ticket-intake form which already carries a Turnstile widget -
  * double-rendering the challenge would reset the first on interaction.)
  */
 export async function action({request, context}: Route.ActionArgs) {
@@ -79,10 +79,10 @@ export async function action({request, context}: Route.ActionArgs) {
     24 * 60 * 60 * 1000,
   );
   // When the email-level limit kicks in we still answer with the same
-  // privacy-preserving generic success — never confirm or deny tickets.
+  // privacy-preserving generic success - never confirm or deny tickets.
   if (!emailLimit.allowed) return data<LookupResult>({ok: true});
 
-  // Resolve + email asynchronously — we always tell the user "check your
+  // Resolve + email asynchronously - we always tell the user "check your
   // inbox" within ~50ms regardless of how long the Odoo lookup + Resend
   // round-trip takes.
   const job = (async () => {
@@ -97,7 +97,7 @@ export async function action({request, context}: Route.ActionArgs) {
             tid: t.tid,
             uid: randomId(),
             email,
-            // We don't carry the original name in this flow — the resume
+            // We don't carry the original name in this flow - the resume
             // route uses what's in the token, so a placeholder is fine.
             // Staff already see the original name in the Discord post.
             name: 'You',

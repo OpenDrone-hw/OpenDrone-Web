@@ -115,7 +115,7 @@ export function buildSeoMeta({
     meta.push({property: 'og:locale:alternate', content: alt});
   }
 
-  // Canonical — either passed in or derived from the request URL. Strips
+  // Canonical - either passed in or derived from the request URL. Strips
   // query + hash so `?foo=bar` variants don't splinter into many canonicals.
   let resolvedCanonical = canonical;
   if (!resolvedCanonical && url) {
@@ -150,7 +150,7 @@ export function buildSeoMeta({
 }
 
 /**
- * schema.org Organization JSON-LD — emit in root Layout <head>. Identifies
+ * schema.org Organization JSON-LD - emit in root Layout <head>. Identifies
  * the selling entity (Incutec BV) for search engines, not the OpenDrone
  * product brand. We deliberately omit `email`: scrapers harvest it from
  * JSON-LD as readily as from a mailto. Customers reach us via /support.
@@ -167,7 +167,7 @@ export function buildOrgJsonLd(company: CompanyIdentity, siteUrl?: string) {
       contactType: 'customer support',
       url: `${url}/support`,
     },
-    // Omit telephone until a real number is set — never leak the placeholder.
+    // Omit telephone until a real number is set - never leak the placeholder.
     ...(company.tel && company.tel !== '[pending]'
       ? {telephone: company.tel}
       : {}),
@@ -188,7 +188,7 @@ export function buildOrgJsonLd(company: CompanyIdentity, siteUrl?: string) {
 }
 
 /**
- * schema.org Product JSON-LD — emit on PDP. Drives Google rich-result
+ * schema.org Product JSON-LD - emit on PDP. Drives Google rich-result
  * cards for product listings (price, availability, brand). Skipped when
  * the variant has no price (combined-listing parents) so we don't post
  * a malformed offer.
@@ -209,7 +209,7 @@ type ProductJsonLdInput = {
   productHandle: string;
   /**
    * Star aggregate from the synced review metafields (app/lib/reviews.ts).
-   * Only pass a value when count > 0 — a zero-review AggregateRating is
+   * Only pass a value when count > 0 - a zero-review AggregateRating is
    * malformed structured data. Null/undefined skips the block entirely.
    */
   rating?: {value: number; count: number} | null;

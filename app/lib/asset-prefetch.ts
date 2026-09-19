@@ -34,7 +34,7 @@ export function fetchTextCached(url: string): Promise<string> {
   return inflight;
 }
 
-/** Synchronous peek — the text if already warmed, else undefined. */
+/** Synchronous peek - the text if already warmed, else undefined. */
 export function peekText(url: string): string | undefined {
   return textCache.get(url);
 }
@@ -64,7 +64,7 @@ export function fetchJsonCached<T>(url: string): Promise<T> {
   return inflight as Promise<T>;
 }
 
-/** Synchronous peek — the parsed JSON if already warmed, else undefined. */
+/** Synchronous peek - the parsed JSON if already warmed, else undefined. */
 export function peekJson<T>(url: string): T | undefined {
   return jsonCache.get(url) as T | undefined;
 }

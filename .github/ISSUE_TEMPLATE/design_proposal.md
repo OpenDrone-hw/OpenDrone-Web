@@ -17,4 +17,4 @@ labels: "design:open"
 **Scope check**
 - [ ] I've read the [Design scope section](../../README.md#design-scope)
 - [ ] This is not a locked or forbidden area
-- [ ] Mobile-first — I've thought about 375px
+- [ ] Mobile-first - I've thought about 375px

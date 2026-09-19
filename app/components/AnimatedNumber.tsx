@@ -4,15 +4,15 @@ import {useInView, useReducedMotion} from 'motion/react';
 /**
  * Count-up for spec strings: every numeric run in the value sweeps 0 → final
  * the first time it scrolls into view, non-numeric text stays put. Handles
- * mixed values ("20×20 mm", "3–6S", "3,3 V") — each number animates, decimal
+ * mixed values ("20×20 mm", "3–6S", "3,3 V") - each number animates, decimal
  * places and comma-vs-dot separators are preserved. Values with no digits
  * render as-is.
  *
- * This is the site's React Bits "Count Up" equivalent — reuse it, don't copy
+ * This is the site's React Bits "Count Up" equivalent - reuse it, don't copy
  * another one in.
  *
  * Runs once per mount; later value changes (variant spec deltas) swap the
- * text without re-counting — a settled table shouldn't spin on every click.
+ * text without re-counting - a settled table shouldn't spin on every click.
  * The server renders the final value, so SEO/no-JS never see zeros. Pair
  * with `tabular-nums` on the container (spec-table already has it) so digits
  * don't wobble mid-count. Hand-rolled RAF, so reduced-motion is checked here
@@ -25,14 +25,14 @@ const IDENT = /[A-Za-z_-]/;
 
 /**
  * True when a digit run is part of an identifier rather than a free-standing
- * quantity — sweeping it would display fake-but-plausible part numbers
+ * quantity - sweeping it would display fake-but-plausible part numbers
  * ("AT32F398…") mid-count. Static cases:
  * - letter/underscore/ASCII-hyphen immediately before (AT32…, RP2354, M33,
  *   CERN-OHL-S-2.0, OPENFC_LITE_…). En-dash ranges ("3–6S") are not hyphens
  *   and still sweep.
- * - a letter after that continues into a longer token ("8U7") — a single
+ * - a letter after that continues into a longer token ("8U7") - a single
  *   trailing unit letter that ends the token ("6S", "5V") still sweeps.
- * - an extra dot/comma joining a further digit run — multi-part version
+ * - an extra dot/comma joining a further digit run - multi-part version
  *   strings ("3.5.0") beyond the one decimal separator the regex consumes.
  */
 function isIdentifierRun(value: string, at: number, raw: string): boolean {
@@ -100,7 +100,7 @@ export function AnimatedNumber({
   const [display, setDisplay] = useState(value);
   const played = useRef(false);
 
-  // Variant switches merge new spec deltas over the table — swap the text
+  // Variant switches merge new spec deltas over the table - swap the text
   // silently instead of re-counting. Unconditional: under reduced motion the
   // count effect never runs (and never sets `played`), so gating this on
   // `played` would freeze the visible value at its mount text across variant

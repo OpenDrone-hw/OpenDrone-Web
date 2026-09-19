@@ -5,7 +5,7 @@
  * visitor sends into it, is mirrored into an Odoo `project.task` so staff
  * see the same ticket in the ERP. Odoo is also this storefront's ticket
  * state and lookup store (founder decision, 2026-09-15): it replaced a
- * Upstash Redis KV index this module used to keep alongside it — there is
+ * Upstash Redis KV index this module used to keep alongside it - there is
  * no separate KV store any more, `project.task` is the only one. Contract:
  * erp/addons/incutec_support/README.md ("Bridge contract"):
  *
@@ -25,7 +25,7 @@
  *
  * D13 (docs/storefront-contract.md, erp/PLAN.md): the storefront's Discord
  * flow does not change shape for the visitor. This module is therefore
- * best-effort by design — a network error or an Odoo outage never throws,
+ * best-effort by design - a network error or an Odoo outage never throws,
  * never delays the Discord response, and never surfaces to the visitor.
  * Every call here does at most one retry, then logs a warning and resolves
  * to `null` / `false` (or an empty list) so the caller can carry on with
@@ -98,7 +98,7 @@ function odooFetch(env: OdooEnv, path: string, body: unknown): Promise<Response>
 }
 
 // At most one retry: a network error or a 5xx is retried once, a 4xx
-// (bad request, unauthorized, not found) is not — retrying would just
+// (bad request, unauthorized, not found) is not - retrying would just
 // repeat the same error. Never throws; a permanent failure resolves to
 // `null` after logging a warning, which every caller treats as "Odoo is
 // unavailable right now, continue on the Discord-only path".
@@ -134,7 +134,7 @@ async function callOdoo(
 // thread_id: a second call for the same thread returns the existing
 // ticket (`created: false`) and ignores email/name/subject, matching the
 // Odoo contract. Returns `null` when SUPPORT_ODOO_TOKEN is unset or the
-// call ultimately fails — callers must not block the Discord path on it.
+// call ultimately fails - callers must not block the Discord path on it.
 export async function createOrFetchOdooTicket(
   env: OdooEnv,
   opts: {
@@ -235,7 +235,7 @@ export async function patchOdooTicketState(
   return true;
 }
 
-// Look up tickets by Discord thread id or customer email — replaces the
+// Look up tickets by Discord thread id or customer email - replaces the
 // storefront's former Upstash-backed ticket index (listByEmail,
 // countOpenForEmail, listAllTickets). Returns an empty list when the
 // bridge is unconfigured or the call fails (degrade-soft): callers that

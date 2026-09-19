@@ -7,7 +7,7 @@ import type {VariantContent} from '~/lib/product-content';
 import {copyText} from '~/lib/copy';
 
 /**
- * Comparison ladder — the variant selector for a product *line*
+ * Comparison ladder - the variant selector for a product *line*
  * (OpenRX: Lite/Lite-UFL/Mono/Gemini; OpenESC: 20×20/30×30). Each tier
  * is a card showing the cells that differ between variants; clicking a
  * card both updates the on-page preview (`onSelect`) and, when a matching
@@ -35,7 +35,7 @@ export function VariantLadder({
   activeValue: string;
   onSelect: (value: string) => void;
   /** Compact mode: a single horizontal row of name-only pills (no axis label,
-   *  spec line) — for the pinned mobile buy bar where space is tight
+   *  spec line) - for the pinned mobile buy bar where space is tight
    *  but variant switching still needs to be reachable. */
   compact?: boolean;
 }) {

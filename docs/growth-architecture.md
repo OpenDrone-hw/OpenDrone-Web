@@ -27,7 +27,7 @@ notify signup -> Resend contact upsert (notify-<handle> segment) + welcome
 ## Modules and routes
 
 - `app/lib/growth/resend.ts`: marketing client (global Contacts +
-  `notify-<handle>` Segments) — the only subscriber store. `contactExists`
+  `notify-<handle>` Segments) - the only subscriber store. `contactExists`
   is the newsletter action's first-signup signal (welcome email sends
   once); `app/lib/support/email.ts` is transactional support mail and
   stays separate.
@@ -44,14 +44,14 @@ reader left, not because a replacement was built:
 
 - The notify-signup micro-survey (`app/lib/growth/survey-token.ts`,
   `app/routes/api.survey.tsx`, the `NotifySurvey` panel in
-  `NewsletterSignup.tsx`) — its answers had nowhere to persist without the
+  `NewsletterSignup.tsx`) - its answers had nowhere to persist without the
   ledger, and it had no consumer beyond the ledger record itself.
-- `app/lib/growth/back-in-stock.ts` (the restock broadcast) — its cooldown
+- `app/lib/growth/back-in-stock.ts` (the restock broadcast) - its cooldown
   latch was ledger-backed and it never had a caller (the Shopify
   `inventory_levels/update` receiver that would have called it is deleted;
   the Odoo restock event that would replace it is unbuilt).
 - `app/routes/api.track.checkout.tsx` and its client-side beacon in
-  `app/lib/growth/checkout-beacon.ts` — its numerator (`ord:` records) had
+  `app/lib/growth/checkout-beacon.ts` - its numerator (`ord:` records) had
   already gone dead when the Shopify orders webhook was retired, and
   nothing ever read the `chk:<day>` counter on its own.
 
@@ -66,7 +66,7 @@ variant), `Stack Toggle` (product, partner, surface), `Add to Cart`
 it is one click, and it leaves the site for the shop.
 
 Server (`app/lib/growth/plausible-server.ts`): `Purchase` (source, campaign,
-+ order total as revenue) has no sender — it was fired by the Shopify
++ order total as revenue) has no sender - it was fired by the Shopify
 orders/paid webhook, which is gone (410). The helper is unused; nothing
 calls it.
 

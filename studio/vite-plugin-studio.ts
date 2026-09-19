@@ -136,7 +136,7 @@ function resolveWritePath(repoRoot: string, rel: string): string | null {
  *
  * `resolveWritePath` is purely lexical: it collapses `..` but has no idea what
  * a path component actually IS. A directory symlink under `content/` therefore
- * escapes it completely — reads leak arbitrary files, writes land outside the
+ * escapes it completely - reads leak arbitrary files, writes land outside the
  * repo, and the success response reports a path inside `content/` that is not
  * where the bytes went. There is no such symlink today, but the repo root
  * already carries one (`drafts`), so the pattern is one `ln -s` away.
@@ -205,7 +205,7 @@ function send(res: ServerResponse, status: number, body: unknown) {
  *
  * So: one promise chain per path, and a temp name nothing else can collide
  * with. Note macOS is case-insensitive, so the chain is keyed on the lowercased
- * path — otherwise `copy/A.json` and `copy/a.json` would be two chains writing
+ * path - otherwise `copy/A.json` and `copy/a.json` would be two chains writing
  * one file.
  */
 const writeChains = new Map<string, Promise<unknown>>();

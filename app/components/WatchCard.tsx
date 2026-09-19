@@ -2,7 +2,7 @@ import {useState} from 'react';
 
 /**
  * The "Watch" bubble in the Open-for-learning chapter. A 16:9 card showing just
- * the real YouTube thumbnail with a centred gold play glyph over it — no caption
+ * the real YouTube thumbnail with a centred gold play glyph over it - no caption
  * text (the thumbnail carries the title). Clicking opens the video on YouTube in
  * a new tab (no in-page player), so the PDP never loads any YouTube weight.
  */

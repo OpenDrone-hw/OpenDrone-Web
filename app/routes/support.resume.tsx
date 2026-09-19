@@ -27,7 +27,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
 
   // Best-effort per-IP cap. If a resume link ever leaks (email archive
   // scraping, shared screen recording), this keeps it from being turned
-  // into a bulk hijack vector — the legitimate user only needs a handful
+  // into a bulk hijack vector - the legitimate user only needs a handful
   // of redemptions. `clientIp()` falls back to "unknown" which buckets
   // all un-identified traffic together, so "unknown" sees the same cap.
   const ip = clientIp(request);

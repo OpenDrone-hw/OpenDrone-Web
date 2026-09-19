@@ -216,8 +216,8 @@ test('the corpus carries no local filesystem paths', () => {
       new URL(`../content/learn/${m.slug}.md`, import.meta.url),
       'utf8',
     );
-    // Anchored on a path boundary so `api.github.com/users/<login>` — a real
-    // citation in the ESC dossier — does not read as a home directory.
+    // Anchored on a path boundary so `api.github.com/users/<login>` - a real
+    // citation in the ESC dossier - does not read as a home directory.
     assert.ok(
       !/(?:^|[\s`("'])\/Users\//m.test(src) && !/\/private\/tmp/.test(src),
       `${m.slug} still cites a path from someone's machine`,

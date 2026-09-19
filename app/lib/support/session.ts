@@ -1,7 +1,7 @@
 /**
  * Signed-cookie ticket session. All ticket state (Discord thread ID, user
  * identity, last seen message cursor) lives in one HttpOnly cookie so the
- * Worker stays stateless — no KV or DO required for the MVP.
+ * Worker stays stateless - no KV or DO required for the MVP.
  *
  * Signature uses HMAC-SHA256 over the JSON payload, keyed with
  * SUPPORT_SESSION_SECRET. The cookie can be decoded client-side (it's
@@ -20,7 +20,7 @@ export type SupportTicket = {
   createdAt: number; // unix seconds
   lastCursor?: string; // Discord message id of last seen staff reply
   // 10-digit public-facing ticket reference. Optional because cookies
-  // minted before this field existed don't carry one — widget falls
+  // minted before this field existed don't carry one - widget falls
   // back to no display in that case.
   pid?: string;
 };
@@ -137,7 +137,7 @@ export function randomId(bytes = 12): string {
 // are CSPRNG random. Two tickets opened in the same second collide
 // 1-in-10000; with low support volume that's effectively never.
 //
-// We deliberately don't dedupe against an external set — that would
+// We deliberately don't dedupe against an external set - that would
 // need KV/D1 and the value-add is theoretical at this volume. If you
 // see a collision in the wild, swap this for a KV-backed counter.
 export function randomTicketId(): string {

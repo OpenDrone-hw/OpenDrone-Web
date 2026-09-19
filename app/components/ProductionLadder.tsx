@@ -71,7 +71,7 @@ export function ProductionLadder() {
             )}
             {/* The rung explains itself: what this capability unlocks, how
                 far the saving is, what it roughly costs. Same goals.json the
-                studio edits, so the ladder updates as the plan does — new
+                studio edits, so the ladder updates as the plan does - new
                 goals become new rungs, finished ones stack above as record. */}
             {r.goal && (r.kind === 'current' || r.kind === 'next') ? (
               <>

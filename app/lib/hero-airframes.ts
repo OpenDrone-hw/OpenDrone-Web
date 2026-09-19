@@ -2,12 +2,12 @@
  * DERIVED views for the homepage hero's airframe sizes + board stack.
  *
  * The truth now lives in the builder parts registry
- * (`app/lib/builder/registry.ts` — AIRFRAMES / SLOTS / PART_CATALOG /
+ * (`app/lib/builder/registry.ts` - AIRFRAMES / SLOTS / PART_CATALOG /
  * HERO_DEFAULT_BUILDS); this module only reshapes it into the exact exports
  * the hero has always consumed, so every existing consumer (routes/_index,
  * HeroScene, HeroSizeSlider) keeps compiling and behaving unchanged.
  *
- * Adding a drone size is STILL config-only — add an AirframeDef + the per-size
+ * Adding a drone size is STILL config-only - add an AirframeDef + the per-size
  * PartDefs/GLBs + HERO_DEFAULT_BUILDS entry in the registry, and the matching
  * `Model` variants on the FC/ESC products. Nothing else hardcodes the size
  * list. (See the registry header for the full checklist.)
@@ -30,7 +30,7 @@ export type HeroAirframe = {
   key: string;
   /** Slider label. */
   label: string;
-  /** The Shopify "Model" option value this size maps to — mount-named
+  /** The Shopify "Model" option value this size maps to - mount-named
    *  (`20×20`/`30×30`, × = U+00D7), the SAME axis for both the FC and the ESC.
    *  Matched case-insensitively against the live variant option values, so the
    *  size-variant cards (and the PDP they link to) resolve to this variant.
@@ -38,7 +38,7 @@ export type HeroAirframe = {
    *  NOTE: the FC product's live Shopify variants must be named `20×20`/`30×30`
    *  to match (the OpenESC already is). Any FC variant still tier-named
    *  (`Lite`/`Lite Mini`) won't match and that card falls back to the base
-   *  product link — rename them in Shopify to fix. */
+   *  product link - rename them in Shopify to fix. */
   model: string;
 };
 
@@ -65,7 +65,7 @@ export type HeroBoard = {
 
 /**
  * The boards each size's hero stack shows, in render/spotlight order
- * (FC → ESC → Frame — HERO_SLOTS order, which drives the scroll reveal
+ * (FC → ESC → Frame - HERO_SLOTS order, which drives the scroll reveal
  * order in the 3D scene).
  *
  * `sizeVariant` boards link to the active size's `Model` variant and show that
@@ -76,7 +76,7 @@ export type HeroBoard = {
  * The strict invariants behind this reshaping (every slot × size resolves to
  * a shopify part, ONE handle per slot, option values agree with the
  * airframe's Model mapping) live in the registry's assertBuilderRegistry()
- * — thrown at import in dev and executed in CI (`npm run check:registry`),
+ * - thrown at import in dev and executed in CI (`npm run check:registry`),
  * never at production module scope. Here the derivation only degrades: a
  * broken slot keeps its last-known-good shape with an empty handle, and the
  * hero card falls back to the base product link.
@@ -88,7 +88,7 @@ export const HERO_BOARDS: readonly HeroBoard[] = HERO_SLOTS.map((slot) => {
       const commerce = heroPartFor(slot.id, airframe.size).commerce;
       if (commerce.kind === 'shopify') commerces.push(commerce);
     } catch {
-      // Missing part/build entry — assertBuilderRegistry reports it loudly
+      // Missing part/build entry - assertBuilderRegistry reports it loudly
       // in dev/CI; in production the slot degrades instead of 500ing boot.
     }
   }

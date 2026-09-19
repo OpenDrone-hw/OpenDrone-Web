@@ -15,7 +15,7 @@ export const MAX_FILES = 5;
 export const MAX_PER_FILE_BYTES = 8 * 1024 * 1024; // 8 MB
 export const MAX_TOTAL_BYTES = 24 * 1024 * 1024; // 24 MB
 
-// Explicit allowlist — no broad `text/` prefix. Discord serves attachments
+// Explicit allowlist - no broad `text/` prefix. Discord serves attachments
 // from its own CDN with the Content-Type we declare, so admitting
 // `text/html` or `text/javascript` would give an attacker a free XSS
 // hosted on a domain with user trust ("attachments from support"). Keep
@@ -46,7 +46,7 @@ const ALLOWED_MIME_PREFIXES = ['image/', 'audio/'];
 // an extension allowlist. Doubles as a sanity check when the browser
 // sends `application/octet-stream` for files it doesn't recognise.
 const ALLOWED_EXTENSIONS = new Set([
-  // images — note: no 'svg'. SVG can carry inline <script>; drone support
+  // images - note: no 'svg'. SVG can carry inline <script>; drone support
   // never needs it, so we don't lean on the CSP being the only thing that
   // stops a stored-XSS-by-attachment. image/svg+xml passes the `image/`
   // MIME prefix but is rejected here at the extension gate.

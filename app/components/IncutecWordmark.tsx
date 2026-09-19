@@ -2,7 +2,7 @@
  * Incutec wordmark, inlined and theme-aware: the letterforms inherit
  * `currentColor` (so they're white on dark, near-black on light, matching the
  * supplied dark/light-mode assets) while the brand accent stays Incutec teal.
- * OpenDrone is a product brand of Incutec — this links the hero back to the
+ * OpenDrone is a product brand of Incutec - this links the hero back to the
  * parent company.
  */
 export function IncutecWordmark({className}: {className?: string}) {

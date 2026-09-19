@@ -3,12 +3,12 @@ import {useReducedMotion} from 'motion/react';
 
 /**
  * Decode-in text: the string resolves left-to-right with a short churn of
- * technical glyphs running just ahead of the resolved prefix — a calm take
+ * technical glyphs running just ahead of the resolved prefix - a calm take
  * on the "decrypted text" effect, tuned to the site's engineering voice.
  *
  * Width only ever grows (resolved prefix + a 3-char window; nothing beyond
  * renders), so proportional headings don't jitter while decoding. The server
- * renders the full text — SEO and no-JS visitors never see the scramble —
+ * renders the full text - SEO and no-JS visitors never see the scramble -
  * and the animation starts after hydration.
  *
  * Design-brief budget: easter eggs only (the 404 SIGNAL LOST banner), not
