@@ -123,14 +123,14 @@ with the EU-assembly path as the stated next step.
 
 `/support` is a live chat with the people who actually design the boards, built as
 a **stateless web-to-Discord bridge** inside the Worker. No gateway bot process, no
-WebSocket, no application database of its own — ticket state and lookup are Odoo's:
+WebSocket, no application database of its own - ticket state and lookup are Odoo's:
 
 - A customer opens a ticket (form gated by Turnstile). The Worker creates a thread
   in a Discord forum channel. Staff just type in the thread; the browser picks
   replies up by polling every 4 seconds.
 - Ticket identity lives in a signed HttpOnly cookie. "List my tickets by
   email" across devices, and every other lookup, resolves live against
-  Odoo (`erp/addons/incutec_support` — see below), which replaced an
+  Odoo (`erp/addons/incutec_support` - see below), which replaced an
   Upstash Redis KV index this app used to keep for the same purpose
   (founder decision, 2026-09-15). Resume links are HMAC-signed magic
   links emailed via Resend.
@@ -143,7 +143,7 @@ WebSocket, no application database of its own — ticket state and lookup are Od
   ticket `thread_deleted` so it drops out of future lookups.
 - Every ticket, and every message either side sends, is best-effort
   mirrored into Odoo `project.task` (`erp/addons/incutec_support`, erp
-  PLAN.md step 12.2/12.7) — that task, with its full mirrored chatter, is
+  PLAN.md step 12.2/12.7) - that task, with its full mirrored chatter, is
   also this app's permanent record once a Discord thread is gone, and the
   only place lifecycle state (closed, feedback, seen/notify cursors) is
   written: `app/lib/support/odoo.ts` calls `POST /incutec/support/ticket`
@@ -152,13 +152,13 @@ WebSocket, no application database of its own — ticket state and lookup are Od
   side sends, `POST /incutec/support/ticket/<ref>/state` to close a
   ticket, advance a cursor, or record feedback, and `POST
   /incutec/support/tickets/search` to look tickets up by thread id or
-  email — all authenticated with `X-Incutec-Support-Token`. The returned
+  email - all authenticated with `X-Incutec-Support-Token`. The returned
   `ticket_ref` (e.g. `SUP-00001`) is appended to the resume-link
   confirmation email the visitor already gets. Every Odoo call retries
   once and then just logs a warning: an Odoo outage never blocks or
   changes the Discord flow, degrading to "the customer's own device
   cookie still works; cross-device lookup and staff-side ERP visibility
-  don't" — see `erp/addons/incutec_support/README.md` for the bridge
+  don't" - see `erp/addons/incutec_support/README.md` for the bridge
   contract.
 
 `/account/support` shows the signed-in ticket history. `/contact` is the front

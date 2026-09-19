@@ -13,7 +13,7 @@ import {copy, copyText, editAttrs} from '~/lib/copy';
  * Words come from `content/copy/support.json`; everything that makes the widget
  * work does not. Sessions, polling, the Discord relay, Turnstile, the file
  * limits and every endpoint stay in this file, and the error strings the
- * `/api/support/*` routes send back are their copy, not this page's — they are
+ * `/api/support/*` routes send back are their copy, not this page's - they are
  * rendered verbatim.
  *
  * Where a string sits next to a glyph or a dynamic value the text is read with
@@ -60,7 +60,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
   const url = new URL(request.url);
   const forceNew = url.searchParams.get('new') === '1';
 
-  // Cookie-bound active ticket takes precedence — that's the live thread.
+  // Cookie-bound active ticket takes precedence - that's the live thread.
   const cookie = readSupportCookie(request);
   const cookieTicket = forceNew ? null : await verifyTicket(env, cookie);
   if (cookieTicket) {
@@ -568,9 +568,9 @@ function ActiveView({
         credentials: 'same-origin',
       });
     } catch {
-      /* still navigate away — the cookie cleared if the call landed */
+      /* still navigate away - the cookie cleared if the call landed */
     }
-    // Send the user to their account history — the closed thread now
+    // Send the user to their account history - the closed thread now
     // appears under "Resolved" so the conversation isn't lost.
     void navigate('/account/support', {replace: true});
   }

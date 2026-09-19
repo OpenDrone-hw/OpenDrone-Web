@@ -1,5 +1,5 @@
 /**
- * Transactional email for the support bridge — sent via Resend.
+ * Transactional email for the support bridge - sent via Resend.
  *
  * Two senders:
  *  - sendResumeLink:    one ticket → one resume URL. Fired on ticket creation.
@@ -30,7 +30,7 @@ type SendOpts = {
 
 async function send(env: Env, opts: SendOpts): Promise<boolean> {
   if (!env.RESEND_API_KEY) {
-    console.warn('[support/email] RESEND_API_KEY not set — would have sent', {
+    console.warn('[support/email] RESEND_API_KEY not set - would have sent', {
       to: redactEmail(opts.to),
       subject: opts.subject,
     });

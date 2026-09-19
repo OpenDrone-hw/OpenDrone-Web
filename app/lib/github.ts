@@ -50,7 +50,7 @@ export async function fetchLatestCommit(
     const res = await fetch(url, {
       headers: ghHeaders(token),
       signal: AbortSignal.timeout(4000),
-      // Cloudflare / Oxygen edge-cache hint — keep GitHub origin hits
+      // Cloudflare / Oxygen edge-cache hint - keep GitHub origin hits
       // to roughly once every 5 minutes per PoP. Safe cast because
       // the RequestInit type doesn't know about `cf`.
       ...({cf: {cacheTtl: 300, cacheEverything: true}} as RequestInit),
@@ -110,7 +110,7 @@ export type Contributor = {
 /**
  * Contributors across a product's repos, merged by login, bots dropped,
  * sorted by total commits. Same unauthenticated-API budget as the
- * latest-commit fetch, so the edge cache TTL is a full hour — the list
+ * latest-commit fetch, so the edge cache TTL is a full hour - the list
  * changes slowly and a stale hour costs nothing.
  */
 export async function fetchContributors(

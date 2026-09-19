@@ -49,7 +49,7 @@ export function LatestCommitCard({commit}: {commit: LatestCommit}) {
  * Static stand-in for {@link LatestCommitCard} when the live GitHub fetch comes
  * back empty (the unauthenticated API is capped at 60 req/hour per IP, so the
  * edge gets rate-limited under load). Keeps the row's 4th card present on every
- * page — it just links to the repo's commit history instead of a single commit.
+ * page - it just links to the repo's commit history instead of a single commit.
  */
 export function CommitHistoryCard({repoUrl}: {repoUrl: string}) {
   return (

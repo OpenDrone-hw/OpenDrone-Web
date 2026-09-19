@@ -101,7 +101,7 @@ export function ProductGallery({
   const prev = () => setIndex(index === 0 ? images.length - 1 : index - 1);
   const next = () => setIndex(index === images.length - 1 ? 0 : index + 1);
   // Touch swipe: flick the main image ←/→ to step photos. Same threshold +
-  // direction-ratio gate as the board explorer (BoardArt). Horizontal-only —
+  // direction-ratio gate as the board explorer (BoardArt). Horizontal-only -
   // we never preventDefault, so a vertical drag still scrolls the page; only a
   // deliberate sideways flick (>44px and >1.3× the vertical travel) navigates.
   const onTouchStart = (e: React.TouchEvent) => {
@@ -202,7 +202,7 @@ export function ProductGallery({
           />
         )}
       </div>
-      {/* Mobile swipe bar — the touch-first replacement for the arrow pill +
+      {/* Mobile swipe bar - the touch-first replacement for the arrow pill +
           thumbnail strip (both hidden on mobile via CSS). A tick per image (tap
           to jump) + counter + swipe hint, matching the board/schematic decks. */}
       {images.length > 1 && (

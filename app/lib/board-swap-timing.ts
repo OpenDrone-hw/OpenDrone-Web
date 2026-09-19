@@ -5,19 +5,19 @@
 // app.css (the @media swap block that consumes --swap-dur/--swap-stagger/--swap-exit).
 //
 // The swap is TWO sequential phases: the old board flies OUT (exitS + stagger),
-// then the new board flies IN (durS + stagger) — the incoming is delayed by the
+// then the new board flies IN (durS + stagger) - the incoming is delayed by the
 // outgoing's full flight (--swap-in-delay) so the two never overlap.
 export const SWAP_TIMING = {
   /** Incoming layer fly-in duration (seconds). */
   durS: 0.45,
-  /** Per-layer --depth stagger (seconds) — shared by the in + out animations. */
+  /** Per-layer --depth stagger (seconds) - shared by the in + out animations. */
   staggerS: 0.06,
   /** Outgoing layer fly-out (shove) duration (seconds). */
   exitS: 0.45,
 } as const;
 
 /**
- * When the LAST (deepest) outgoing layer's fly-out ends (seconds) — i.e. how long
+ * When the LAST (deepest) outgoing layer's fly-out ends (seconds) - i.e. how long
  * the whole OUT phase takes, which is exactly the delay the IN phase waits so the
  * old board is gone before the new one arrives. `layers` = outgoing layer count
  * (1 for the mobile whole-board slide).

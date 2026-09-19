@@ -147,7 +147,7 @@ function inline(s: string) {
  * Minimal, purposely-limited Markdown → HTML converter. Supports:
  * headings, paragraphs, ordered/unordered lists, blockquotes, simple
  * pipe tables, horizontal rules, and inline bold/italic/code/images/links.
- * Not a general-purpose MD parser — tuned to the compliance documents and
+ * Not a general-purpose MD parser - tuned to the compliance documents and
  * the newsletter posts (app/lib/posts.ts).
  */
 export function mdToHtml(src: string): string {

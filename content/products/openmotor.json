@@ -11,7 +11,7 @@
     "lead": "Brushless motors sourced for the OpenFrame 3\" (1604) and 5\" (2207) builds. Resold OEM parts, chosen and bench-checked by us, not open hardware."
   },
   "firmware": {
-    "project": "—"
+    "project": "-"
   },
   "repoUrl": "https://github.com/OpenDrone-hw",
   "inTheBox": [],

@@ -10,7 +10,7 @@ const LABELS: Record<Size, string> = Object.fromEntries(
   HERO_AIRFRAMES.map((a) => [a.key, a.label]),
 );
 
-const PAD = 5; // px — must match .hero-size-slider padding in app.css
+const PAD = 5; // px - must match .hero-size-slider padding in app.css
 // The "other" side for the 2-position drag. NOTE: the drag-scrub gesture is
 // built for exactly two positions (the registry's first two). A 3rd+ size still
 // renders as a click-to-select button and swaps correctly; only the drag would
@@ -23,7 +23,7 @@ const other = (s: Size): Size => SIZES.find((k) => k !== s) ?? s;
  * The drag is a true 1:1 scrub: on drag-start we commit the *target* size,
  * which sets up HeroScene's cross-slide swap; then each drag frame writes the
  * thumb's fraction into `scrubRef`, which HeroScene reads to position the
- * airframe — so the model tracks the thumb continuously. Release past the
+ * airframe - so the model tracks the thumb continuously. Release past the
  * midpoint keeps the target; short of it, it reverts (the model slides back).
  *
  * The two labels are real buttons, so the control also works by click +

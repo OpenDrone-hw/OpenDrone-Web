@@ -10,7 +10,7 @@ import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
 import {toCards} from '~/lib/catalog';
 
 /**
- * /products.json — machine-readable catalog feed for agents and tooling.
+ * /products.json - machine-readable catalog feed for agents and tooling.
  * Adds what no stock feed has: the buy hand-off per variant (the same
  * `<shop>/incutec/add` form the buy buttons POST, action URL plus its
  * form fields as the query string, with `cart_add_method: "POST"`), the
@@ -34,7 +34,7 @@ export async function loader({context, request}: Route.LoaderArgs) {
     .filter((p) => !isConceptProduct(p.handle, statusFlags))
     .map((p) => {
       const content = PRODUCT_CONTENT[p.handle];
-      // Locked products expose no price and no cart permalink — this feed is
+      // Locked products expose no price and no cart permalink - this feed is
       // the most scrapeable surface, so it must match what the PDP shows.
       const status = resolveStatus(
         p.handle,
@@ -91,7 +91,7 @@ export async function loader({context, request}: Route.LoaderArgs) {
   return new Response(
     JSON.stringify(
       {
-        note: 'Availability and pricing reflect the current shop response. Civilian use only — see /end-use. Agent guide: /llms.txt',
+        note: 'Availability and pricing reflect the current shop response. Civilian use only - see /end-use. Agent guide: /llms.txt',
         products,
       },
       null,

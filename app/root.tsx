@@ -36,7 +36,7 @@ import {captureAttribution} from '~/lib/growth/attribution';
 export type RootLoader = typeof loader;
 
 /**
- * Root meta — the fallback when no deeper route supplies meta, and the ONLY
+ * Root meta - the fallback when no deeper route supplies meta, and the ONLY
  * meta that runs when an error renders root's ErrorBoundary (meta from
  * routes below the rendering boundary is discarded, which is why the 404
  * page used to ship an empty <title>). Healthy routes with their own meta
@@ -103,7 +103,7 @@ export function links() {
     // resolves its url() against that origin, so only an identical hashed
     // URL on both sides makes the preload actually satisfy the font request.
     // - Inter: body text.
-    // - JetBrains Mono: NOT just spec tables — it renders the header nav,
+    // - JetBrains Mono: NOT just spec tables - it renders the header nav,
     //   prices and SKUs sitewide, all above the fold.
     {
       rel: 'preload',
@@ -224,7 +224,7 @@ export function Layout({children}: {children?: React.ReactNode}) {
   }, []);
 
   // First-touch channel attribution: stash utm_*/ref params from the
-  // landing URL in sessionStorage (session-scoped by design — see
+  // landing URL in sessionStorage (session-scoped by design - see
   // app/lib/growth/attribution.ts for the ePrivacy rationale). Runs once
   // on hydration; later client-side navigations can't be a first touch.
   useEffect(() => {
@@ -249,7 +249,7 @@ export function Layout({children}: {children?: React.ReactNode}) {
           dangerouslySetInnerHTML={{__html: THEME_INIT_SCRIPT}}
         />
         {/* Pre-paint blanket for the reading cascade: injected BY script,
-            so its very existence is the js-gate — a no-JS reader never gets
+            so its very existence is the js-gate - a no-JS reader never gets
             it and sees the whole page. Hides everything below the first
             chapter from the first frame (no flash of content that then
             vanishes and re-reveals); EditorialShell lifts it by adding
@@ -264,7 +264,7 @@ export function Layout({children}: {children?: React.ReactNode}) {
           }}
         />
         {/* Pause all CSS animations while the window is unfocused or the tab is
-            hidden — the ambient infinite animations (wordmark sheen, banner
+            hidden - the ambient infinite animations (wordmark sheen, banner
             ping, etc.) otherwise keep the GPU compositing every frame even when
             no one is looking. Full fidelity returns the instant the window is
             focused. Inline + pre-paint so it's active before first frame. */}
@@ -279,7 +279,7 @@ export function Layout({children}: {children?: React.ReactNode}) {
         {/* Jank governor: sample frame times in ~90-frame windows; after two
             consecutive janky windows add `perf-lite` (pauses the ambient
             infinite animations + strips live rail blurs via the same CSS as
-            anim-paused), and — unlike the removed perf-tier system — RELEASE
+            anim-paused), and - unlike the removed perf-tier system - RELEASE
             it again after two clean windows. Sampling is suspended while
             `anim-paused` is freezing the workload (idle/unfocused), so the
             governor never releases perf-lite off artificially clean idle
@@ -308,7 +308,7 @@ export function Layout({children}: {children?: React.ReactNode}) {
         ) : null}
         <Meta />
         <Links />
-        {/* Plausible — cookieless analytics, no consent required.
+        {/* Plausible - cookieless analytics, no consent required.
             Combined legacy-script variant: `tagged-events` enables custom
             events with props, `revenue` attaches monetary values to them
             (verified served 2026-07-06; extensions compose as

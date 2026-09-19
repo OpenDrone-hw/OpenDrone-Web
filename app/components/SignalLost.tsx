@@ -6,7 +6,7 @@ import {Txt} from '~/components/Txt';
 import {copyText, editAttrs} from '~/lib/copy';
 
 /**
- * The 404 easter egg. An FPV "lost signal / failsafe" screen — the quad has
+ * The 404 easter egg. An FPV "lost signal / failsafe" screen - the quad has
  * flown out of range, the OSD telemetry has flatlined, and the only way back
  * is RTH (Return To Home). Drone pilots will get the joke instantly.
  */
@@ -23,7 +23,7 @@ export function SignalLost() {
     let t = 0;
     const tick = () => {
       t += 1;
-      // jittery decay — a few false-hope flickers before it gives up
+      // jittery decay - a few false-hope flickers before it gives up
       const noise = Math.sin(t * 0.7) * Math.sin(t * 0.21);
       const v = Math.max(0, 2 + noise * 1.4 - t * 0.06);
       setLink(v);
@@ -76,7 +76,7 @@ export function SignalLost() {
             {status}
           </p>
           <p className="signal-lost-title" {...editAttrs('not-found.title')}>
-            {/* Decode-in on the failsafe banner — corrupted-link flavor for
+            {/* Decode-in on the failsafe banner - corrupted-link flavor for
                 the OSD scene, and the one deliberate scramble easter egg the
                 design brief allows. */}
             <ScrambleText

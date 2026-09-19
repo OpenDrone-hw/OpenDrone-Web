@@ -1,27 +1,27 @@
 /**
- * Drone-builder parts registry — single source of truth for the slot/part
+ * Drone-builder parts registry - single source of truth for the slot/part
  * system the homepage hero (and later the /builder route) renders and sells.
  *
  * Follows the `product-content.ts` precedent: the REPO holds identity,
  * compatibility facts, and editorial data, keyed by Shopify handle; Shopify
  * stays authoritative ONLY for price/stock/variant ids, resolved at load time
  * (see buildHeroStacks in routes/_index.tsx). The registry therefore NEVER
- * stores variant GIDs — only `handle` + option values — so a future storefront
+ * stores variant GIDs - only `handle` + option values - so a future storefront
  * swap replaces the resolver, not this data.
  *
  * The legacy hero registry (`app/lib/hero-airframes.ts`) is now a DERIVED view
- * over this file — its exports (HERO_AIRFRAMES / HERO_BOARDS / …) are computed
+ * over this file - its exports (HERO_AIRFRAMES / HERO_BOARDS / …) are computed
  * from AIRFRAMES / SLOTS / PART_CATALOG below, so every existing hero consumer
  * keeps working unchanged while the builder grows.
  *
  * ── Adding a SKU to the hero (checklist) ─────────────────────────────────────
- *  1. SlotDef in SLOTS (if it's a new slot) — `order` slots it into the scroll
+ *  1. SlotDef in SLOTS (if it's a new slot) - `order` slots it into the scroll
  *     choreography; the reveal windows + scroll stops are GENERATED from the
  *     slot count (see heroRevealWindows / heroScrollStops below).
- *  2. PartDef in PART_CATALOG — handle + option values (never variant GIDs),
+ *  2. PartDef in PART_CATALOG - handle + option values (never variant GIDs),
  *     one GLB path per supported size in `models`.
  *  3. Reference it from HERO_DEFAULT_BUILDS for each size that shows it.
- *  4. Ship the GLBs (meshopt-compressed — NOT Draco; Hydrogen's CSP
+ *  4. Ship the GLBs (meshopt-compressed - NOT Draco; Hydrogen's CSP
  *     `worker-src` blocks DRACOLoader's blob worker, see HeroScene.tsx).
  *  5. Matching Shopify variants named on the `Model` axis convention
  *     (mount-named for FC/ESC: `20×20` / `30×30`).
@@ -32,7 +32,7 @@
  * so a violated registry invariant throws loudly at first import. In the
  * production worker bundle `import.meta.env.DEV` is statically `false`, so a
  * bad data edit degrades (fallbacks below) instead of 500ing every route at
- * boot — server.ts statically imports the route graph, which imports this
+ * boot - server.ts statically imports the route graph, which imports this
  * module. CI executes the same asserts via `npm run check:registry`
  * (scripts/check-registry.mjs → assertBuilderRegistry()).
  */
@@ -43,7 +43,7 @@ const DEV: boolean =
 export type SizeClass = '3' | '5';
 
 /** Stack mounting patterns (mm). Matches the Shopify "Model" axis values
- *  already in use (HERO_VARIANT_AXIS) — 20×20 ↔ '20x20', 30×30 ↔ '30x30'. */
+ *  already in use (HERO_VARIANT_AXIS) - 20×20 ↔ '20x20', 30×30 ↔ '30x30'. */
 export type MountPattern =
   | '20x20'
   | '25x25'
@@ -78,7 +78,7 @@ export type SlotDef = {
   label: string;
   /** frame/fc/esc/motors yes; mount no. */
   required: boolean;
-  /** Reveal + spotlight order — generalizes HERO_BOARDS' array order. The
+  /** Reveal + spotlight order - generalizes HERO_BOARDS' array order. The
    *  hero's reveal windows and scroll stops are generated from this ordering
    *  (see heroRevealWindows / heroScrollStops). */
   order: number;
@@ -89,16 +89,16 @@ export type SlotDef = {
    *  own board materials (upgraded to PBR, merged by material). */
   finish?: 'carbon' | 'pcb';
   /** Hero choreography: X tilt while this slot holds the scroll spotlight
-   *  (radians). Only meaningful for non-final slots — the final slot's beat is
+   *  (radians). Only meaningful for non-final slots - the final slot's beat is
    *  the camera pull-back, not a tilt. */
   focusTiltX?: number;
-  /** The slot whose model defines the airframe's bounds — the whole assembly
+  /** The slot whose model defines the airframe's bounds - the whole assembly
    *  is fit-scaled and centered on THIS slot's GLB (the frame). Exactly one
    *  hero slot must set it. */
   fitAnchor?: boolean;
 };
 
-/** Commerce nature of a part — drives card UI + cart eligibility. */
+/** Commerce nature of a part - drives card UI + cart eligibility. */
 export type PartCommerce =
   | {
       kind: 'shopify';
@@ -121,12 +121,12 @@ export type PartDef = {
   /** GLB per size class it supports; absent size ⇒ not offered there.
    *  Doubles as the size-compatibility rule and the loader manifest. */
   models: Partial<Record<SizeClass, string>>;
-  /** Compatibility facts — consumed by the (future) rule set. */
+  /** Compatibility facts - consumed by the (future) rule set. */
   mounts?: MountPattern[]; // what it bolts to (boards: its own pattern)
   provides?: Connector[]; // e.g. ESC provides 'jst-sh-8'
   requires?: Connector[]; // e.g. FC requires 'jst-sh-8' from ESC
   weightGrams?: Partial<Record<SizeClass, number>>;
-  /** Battery only — feeds the flight-time estimate (Phase 4). */
+  /** Battery only - feeds the flight-time estimate (Phase 4). */
   cell?: {s: number; mAh: number};
   /** Per-part placement tweak if the GLB origin isn't the mounted pose. */
   transform?: {position?: [number, number, number]; rotationY?: number};
@@ -145,7 +145,7 @@ export type AirframeDef = {
   size: SizeClass;
   /** Size-slider label. */
   label: string;
-  /** The Shopify "Model" option value this size maps to — mount-named
+  /** The Shopify "Model" option value this size maps to - mount-named
    *  (`20×20`/`30×30`, × = U+00D7), the SAME axis for both the FC and the ESC.
    *  Matched case-insensitively against live variant option values. */
   shopifyModel: string;
@@ -179,7 +179,7 @@ export const SLOTS: SlotDef[] = [
     required: true,
     order: 1,
     finish: 'pcb',
-    // ESC sits beneath the FC — steeper look-down so the FC doesn't cover it.
+    // ESC sits beneath the FC - steeper look-down so the FC doesn't cover it.
     focusTiltX: 0.62,
   },
   {
@@ -219,7 +219,7 @@ export const HERO_ANCHOR_SLOT: HeroSlotDef = (() => {
 
 /**
  * Every part the hero can render/sell. Commerce is handle + option values
- * ONLY (no variant GIDs — see the header). `models` carries one GLB per
+ * ONLY (no variant GIDs - see the header). `models` carries one GLB per
  * supported size; a part offered at both sizes as one SKU (the frame) lists
  * both, a per-size variant part (FC/ESC) is one PartDef per variant.
  */
@@ -273,7 +273,7 @@ export const PART_CATALOG: PartDef[] = [
     mounts: ['20x20'],
   },
   {
-    // One SKU across sizes — the 3D model differs per size, the product
+    // One SKU across sizes - the 3D model differs per size, the product
     // doesn't (no `options`, card links to the base PDP).
     id: 'openframe',
     slot: 'frame',
@@ -290,7 +290,7 @@ export function findPart(id: string): PartDef | undefined {
 // ─── Hero default builds ─────────────────────────────────────────────────────
 
 /**
- * The one blessed stack the hero shows per size (no configuration UI yet —
+ * The one blessed stack the hero shows per size (no configuration UI yet -
  * that's the /builder route). partId per hero slot.
  */
 export const HERO_DEFAULT_BUILDS: Record<
@@ -302,7 +302,7 @@ export const HERO_DEFAULT_BUILDS: Record<
 };
 
 /** The PartDef filling a hero slot for a given size. Throws on registry
- *  inconsistency (unknown size/part) — these are compile-time-adjacent data
+ *  inconsistency (unknown size/part) - these are compile-time-adjacent data
  *  bugs, not runtime conditions. */
 export function heroPartFor(slotId: HeroSlotId, sizeKey: string): PartDef {
   const build = HERO_DEFAULT_BUILDS[sizeKey as SizeClass];
@@ -328,7 +328,7 @@ export function heroModelUrl(slotId: HeroSlotId, sizeKey: string): string {
   return url;
 }
 
-/** Shopify product handle behind a hero slot (same across sizes — asserted
+/** Shopify product handle behind a hero slot (same across sizes - asserted
  *  by the HERO_BOARDS derivation in hero-airframes.ts). */
 export function heroSlotHandle(slotId: HeroSlotId): string {
   const part = heroPartFor(slotId, AIRFRAMES[0].size);
@@ -346,13 +346,13 @@ export function heroSlotHandle(slotId: HeroSlotId): string {
 // lockstep. They are now generated here from the hero slot list, so adding a
 // slot updates both sides structurally. (scope doc §7 "Choreography coupling")
 
-/** First window opens at this progress — a beat after the scroll starts. */
+/** First window opens at this progress - a beat after the scroll starts. */
 const REVEAL_FIRST_START = 0.08;
-/** Widest a window may span (reveal duration per card) — the 3-slot value. */
+/** Widest a window may span (reveal duration per card) - the 3-slot value. */
 const REVEAL_MAX_WIDTH = 0.22;
-/** Last window closes here — leaves a settle beat before progress hits 1. */
+/** Last window closes here - leaves a settle beat before progress hits 1. */
 const REVEAL_LAST_END = 0.94;
-/** Minimum dead beat between one window's close and the next one's open —
+/** Minimum dead beat between one window's close and the next one's open -
  *  keeps reveals reading as discrete pops even when windows shrink to fit. */
 const REVEAL_MIN_GAP = 0.06;
 
@@ -362,7 +362,7 @@ const round2 = (x: number) => Math.round(x * 100) / 100;
  * Evenly space `count` reveal windows between REVEAL_FIRST_START and
  * REVEAL_LAST_END. Width is DERIVED from the count: as wide as possible up to
  * REVEAL_MAX_WIDTH while keeping at least REVEAL_MIN_GAP between consecutive
- * windows — so any slot count yields non-overlapping windows instead of the
+ * windows - so any slot count yields non-overlapping windows instead of the
  * fixed width colliding at n≥4. For the current 3 slots this reproduces the
  * historical literals EXACTLY (asserted in assertBuilderRegistry):
  * [0.08, 0.3], [0.4, 0.62], [0.72, 0.94].
@@ -389,7 +389,7 @@ export function heroRevealWindows(
 }
 
 /**
- * Scroll stops: rest position 0 plus one stop per slot — evenly spaced,
+ * Scroll stops: rest position 0 plus one stop per slot - evenly spaced,
  * rounded UP to 2 decimals, and floored at the matching window's close so
  * each stop rests on a fully-revealed card at ANY slot count (the invariant
  * assertBuilderRegistry verifies). For 3 slots this reproduces the historical
@@ -432,7 +432,7 @@ function assertChoreography(count: number): void {
         `registry: reveal window ${i} [${open}, ${close}] out of range (count=${count})`,
       );
     }
-    // Stop i+1 rests at-or-after window i's close — the card is fully
+    // Stop i+1 rests at-or-after window i's close - the card is fully
     // revealed at its stop.
     if (stops[i + 1] < close) {
       throw new Error(
@@ -454,7 +454,7 @@ function assertChoreography(count: number): void {
 
 /**
  * Every deterministic registry invariant, in one callable place. Runs on
- * import in dev only (see the DEV gate at the top — a violated invariant must
+ * import in dev only (see the DEV gate at the top - a violated invariant must
  * never 500 the production worker at boot), and in CI via
  * `npm run check:registry` (scripts/check-registry.mjs), so the asserts
  * actually EXECUTE somewhere on every PR even though lint/tsc/build never
@@ -475,7 +475,7 @@ export function assertBuilderRegistry(): void {
   // ── Hero build data: every slot × size resolves to a purchasable part with
   //    a GLB, one product handle per slot, and variant options that agree
   //    with the airframe's Model value (buildHeroStacks matches the
-  //    AIRFRAME's value against live variants — a disagreeing part would
+  //    AIRFRAME's value against live variants - a disagreeing part would
   //    silently link the wrong variant). ──
   for (const slot of HERO_SLOTS) {
     const handles = new Set<string>();
@@ -521,7 +521,7 @@ export function assertBuilderRegistry(): void {
       `registry: generated scroll stops ${JSON.stringify(heroScrollStops(3))} != legacy ${legacyStops}`,
     );
   }
-  // 2. Structural invariants — for the live slot count AND the next counts
+  // 2. Structural invariants - for the live slot count AND the next counts
   //    Phase 1 grows into (rx, battery), so "add a slot" can't reintroduce
   //    overlapping windows or stops that undercut them.
   for (const count of new Set([HERO_SLOTS.length, 1, 2, 3, 4, 5, 6])) {

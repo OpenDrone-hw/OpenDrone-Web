@@ -44,7 +44,7 @@ async function send(
   opts: {to: string; subject: string; text: string; replyTo?: string},
 ): Promise<boolean> {
   if (!env.RESEND_API_KEY) {
-    console.warn('[withdrawal/email] RESEND_API_KEY not set — would have sent', {
+    console.warn('[withdrawal/email] RESEND_API_KEY not set - would have sent', {
       subject: opts.subject,
     });
     return false;

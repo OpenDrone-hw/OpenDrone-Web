@@ -60,23 +60,23 @@ export function ProductItem({
   /** Editorial one-liner shown in the feature layout (the product's hero
    *  lead). Ignored outside `feature`. */
   lead?: string;
-  /** Corner badge — recently added product. */
+  /** Corner badge - recently added product. */
   isNew?: boolean;
-  /** Corner badge — listed below its compare-at price. */
+  /** Corner badge - listed below its compare-at price. */
   onSale?: boolean;
-  /** Link override — used by per-variant cards to deep-link the PDP with a
+  /** Link override - used by per-variant cards to deep-link the PDP with a
    *  model preselected (`?Model=…`) instead of the bare product URL. */
   to?: string;
-  /** Display-title override — used by per-variant cards (e.g. "OpenRX Gemini"
+  /** Display-title override - used by per-variant cards (e.g. "OpenRX Gemini"
    *  instead of just "OpenRX"). */
   title?: string;
-  /** Price override — the specific variant's price for per-variant cards. */
+  /** Price override - the specific variant's price for per-variant cards. */
   priceOverride?: MoneyV2;
-  /** Image override — the specific variant's image for per-variant cards.
+  /** Image override - the specific variant's image for per-variant cards.
    *  Without it every tier card falls back to the product's featuredImage
    *  (the first uploaded render), so 20×20 and 30×30 show the same board. */
   imageOverride?: ProductImage | null;
-  /** Unreleased product — renders greyed and non-clickable with a "Coming
+  /** Unreleased product - renders greyed and non-clickable with a "Coming
    *  soon" badge instead of a link (nothing to buy or open yet). */
   comingSoon?: boolean;
   /** Hover quick-add: adds this card's variant without opening the PDP. */
@@ -89,7 +89,7 @@ export function ProductItem({
 
   // Cursor-tracked gold spotlight (same recipe as .related-card): write the
   // pointer position into CSS vars the card's ::after radial reads. Mouse
-  // only — touch/pen never hover — and the ::after itself is gated behind
+  // only - touch/pen never hover - and the ::after itself is gated behind
   // @media (hover: hover) in app.css, so this is a no-op on touch devices.
   const onSpotMove = useCallback((e: React.PointerEvent<HTMLElement>) => {
     if (e.pointerType !== 'mouse') return;
@@ -105,7 +105,7 @@ export function ProductItem({
 
   // Product-level coming-soon (PUBLIC_COMING_SOON / per-SKU override):
   // unlike the `comingSoon` prop (unreleased tier, non-clickable tile) the
-  // card stays clickable — the PDP hosts the notify-at-launch signup — but
+  // card stays clickable - the PDP hosts the notify-at-launch signup - but
   // shows no price and no quick-add.
   const status = useProductStatus(product.handle);
   const roadmapStatus = useRoadmapStatus(product.handle);
@@ -113,7 +113,7 @@ export function ProductItem({
   const showPrice = !launchPending;
 
   // Quick-add overlay: revealed on card hover (always visible on touch).
-  // Rendered as a SIBLING of the card link, never inside it — a form inside
+  // Rendered as a SIBLING of the card link, never inside it - a form inside
   // an anchor is invalid HTML and hijacks the navigation click.
   const quickAddNode =
     quickAdd && !comingSoon && !launchPending && !feature ? (
@@ -133,7 +133,7 @@ export function ProductItem({
 
   // Roadmap products carry their status word on the card, same vocabulary
   // and dot as the kanban and the PDP chip. A span, not a link: the whole
-  // card is already an anchor, and nested anchors are invalid — the
+  // card is already an anchor, and nested anchors are invalid - the
   // "what the labels mean" link lives once per listing, in the grid header.
   // A pre-order product wears the pre-order badge instead of its roadmap
   // chip: the buyable state is the news on a card. Unreleased tiers
@@ -197,7 +197,7 @@ export function ProductItem({
     </div>
   ) : null;
 
-  // Feature layout — image left, editorial copy + model chips right. Used
+  // Feature layout - image left, editorial copy + model chips right. Used
   // for category sections with a single product so the flagship spans the
   // full rail. The media and the headline are separate links (no nested
   // anchors); the chips are their own links too.
@@ -288,7 +288,7 @@ export function ProductItem({
     </>
   );
 
-  // Unreleased — a non-interactive tile (nothing to open or buy yet).
+  // Unreleased - a non-interactive tile (nothing to open or buy yet).
   if (comingSoon) {
     return (
       <div className="product-card is-comingsoon" aria-disabled="true">
@@ -297,7 +297,7 @@ export function ProductItem({
     );
   }
 
-  // Plain card — a single link wrapping the whole tile. With a quick-add the
+  // Plain card - a single link wrapping the whole tile. With a quick-add the
   // wrapper becomes a div (the add button can't nest inside the anchor).
   if (!hasModels) {
     if (quickAddNode) {
@@ -329,7 +329,7 @@ export function ProductItem({
   }
 
   // Card with a model strip. The card chrome (border, hover lift) stays on
-  // the outer element, but it can't be a <Link prefetch="viewport"> — the chips are their own
+  // the outer element, but it can't be a <Link prefetch="viewport"> - the chips are their own
   // links and nesting anchors is invalid HTML. So the tile body is one link
   // and each model is a sibling link below it.
   return (

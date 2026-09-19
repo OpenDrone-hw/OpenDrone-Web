@@ -3,7 +3,7 @@
  * yet. Instead of a grey word in a box, the empty media slot reads as a
  * catalog figure: hairline-ruled header with the product type, a technical
  * line glyph (same stroke language as the PDP chapter placeholders), and
- * the product title as the catalog line. Tokens only — works in both
+ * the product title as the catalog line. Tokens only - works in both
  * themes. Purely decorative: the card's text body carries the real info,
  * so the whole tile is aria-hidden.
  */
@@ -14,20 +14,20 @@ import type {ReactNode} from 'react';
  *  (120-viewBox, 1.2 hairline, round caps). Picked deterministically from
  *  the title so a given product always shows the same figure. */
 const GLYPHS: ReactNode[] = [
-  // 00 — isometric crate (boxed part)
+  // 00 - isometric crate (boxed part)
   <g key="crate">
     <path d="M24 38l36-14 36 14v44L60 96 24 82z" />
     <path d="M24 38l36 14 36-14" />
     <path d="M60 52v44" />
   </g>,
-  // 01 — fastener head, slotted
+  // 01 - fastener head, slotted
   <g key="fastener">
     <circle cx="60" cy="60" r="32" />
     <circle cx="60" cy="60" r="22" />
     <path d="M44 60h32" />
     <path d="M60 24v8M60 88v8M24 60h8M88 60h8" />
   </g>,
-  // 02 — cable with connectors
+  // 02 - cable with connectors
   <g key="cable">
     <rect x="22" y="50" width="16" height="20" rx="2" />
     <rect x="82" y="50" width="16" height="20" rx="2" />
@@ -46,10 +46,10 @@ export function ProductGhostTile({
   type,
   title,
 }: {
-  /** Product type ("Accessory", "Flight controller", …) — the document
+  /** Product type ("Accessory", "Flight controller", …) - the document
    *  header. Falls back to the brand when the product has no family. */
   type?: string | null;
-  /** Product title — rendered as the catalog line under the figure. */
+  /** Product title - rendered as the catalog line under the figure. */
   title: string;
 }) {
   const idx = glyphIndex(title);
@@ -57,7 +57,7 @@ export function ProductGhostTile({
     <div className="ghost-tile" aria-hidden="true">
       <div className="ghost-tile-rule">
         <span className="ghost-tile-type">{type || 'OpenDrone'}</span>
-        <span className="ghost-tile-fig">Fig. —</span>
+        <span className="ghost-tile-fig">Fig. -</span>
       </div>
       <div className="ghost-tile-figure">
         <svg

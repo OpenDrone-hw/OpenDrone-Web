@@ -13,7 +13,7 @@ function formatDate(iso: string): string {
 /**
  * Prev / Next two-card row at the foot of an individual release post.
  * `previous` is the release published before this one (older); `next`
- * is the more recent one. Either can be null at the ends — we render an
+ * is the more recent one. Either can be null at the ends - we render an
  * empty grid cell so the two-up layout doesn't collapse.
  */
 export function PrevNextNav({

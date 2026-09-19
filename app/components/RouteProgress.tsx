@@ -4,7 +4,7 @@ import {useNavigation} from 'react-router';
 /**
  * A thin top-of-viewport progress bar that runs whenever React Router is
  * between routes (navigating or submitting). The page itself renders
- * immediately — this is the "something is happening" affordance so tab
+ * immediately - this is the "something is happening" affordance so tab
  * switches (FC/ESC/RX), product links, and any nav never feel blocked while
  * a loader resolves. Purely cosmetic: aria-hidden, no layout impact.
  */

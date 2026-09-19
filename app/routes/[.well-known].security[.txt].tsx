@@ -2,7 +2,7 @@ import type {Route} from './+types/[.well-known].security[.txt]';
 
 /**
  * RFC 9116 security.txt resource route. Machine-readable contact record
- * for vulnerability disclosure — paired with /security human-readable page.
+ * for vulnerability disclosure - paired with /security human-readable page.
  */
 export async function loader(_args: Route.LoaderArgs) {
   const expires = new Date();

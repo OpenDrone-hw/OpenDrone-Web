@@ -7,7 +7,7 @@
  * the ballot and its codec are gone; what stays is the display, reading
  * `content/votes.json` exactly as before. There is no live ballot and no
  * write path here (a future one would read from Odoo, not a Cloudflare KV
- * ledger — Upstash Redis was removed entirely, founder decision,
+ * ledger - Upstash Redis was removed entirely, founder decision,
  * 2026-09-15); until one exists the file no longer changes and /roadmap
  * shows its empty state.
  *

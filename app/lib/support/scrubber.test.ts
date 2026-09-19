@@ -11,7 +11,7 @@ import {
 //
 // Zero runtime deps beyond Node 23's built-in type-stripping + node:test.
 
-describe('scrubForPublic — redactions', () => {
+describe('scrubForPublic - redactions', () => {
   it('redacts plain email', () => {
     const r = scrubForPublic('mail me at foo@bar.com please');
     assert.equal(r.content, 'mail me at [email redacted] please');
@@ -30,7 +30,7 @@ describe('scrubForPublic — redactions', () => {
   });
 
   it('redacts a lowercase IBAN', () => {
-    // People type IBANs lowercase as often as upper — must still redact.
+    // People type IBANs lowercase as often as upper - must still redact.
     const r = scrubForPublic('wire to be68 5390 0754 7034 today');
     assert.match(r.content, /\[iban redacted\]/);
     assert.doesNotMatch(r.content, /5390/);
@@ -102,7 +102,7 @@ describe('scrubForPublic — redactions', () => {
   });
 });
 
-describe('scrubForPublic — block triggers', () => {
+describe('scrubForPublic - block triggers', () => {
   it('blocks when redaction count exceeds the cap', () => {
     const emails = Array.from({length: 15}, (_, i) => `a${i}@b.com`).join(' ');
     const r = scrubForPublic(emails);
@@ -156,7 +156,7 @@ describe('extractFirstName', () => {
   });
 });
 
-describe('scrubForDiscord — inbound (user -> Discord)', () => {
+describe('scrubForDiscord - inbound (user -> Discord)', () => {
   it('preserves email (user may be asking about their own mailbox)', () => {
     const r = scrubForDiscord('order confirmation never arrived at foo@bar.com');
     assert.match(r.content, /foo@bar\.com/);
@@ -197,7 +197,7 @@ describe('scrubForDiscord — inbound (user -> Discord)', () => {
   });
 });
 
-describe('integration — poll response projection', () => {
+describe('integration - poll response projection', () => {
   // Smoke test: when we run a full Discord message payload through the
   // scrubber, none of the fields from the raw Discord shape that we
   // intentionally drop should appear in the output string.
@@ -207,7 +207,7 @@ describe('integration — poll response projection', () => {
     // The cdn URL is not pattern-matched directly, but the avatar hash
     // `abcdef` is short enough to pass generic-key; what we're asserting
     // is that *if* somebody tries to leak a user ID via message text,
-    // the snowflake is preserved (not leaked — it's already the URL the
+    // the snowflake is preserved (not leaked - it's already the URL the
     // user typed) but the URL itself isn't something we scrub. This
     // test documents that behaviour so a future reader knows the bar:
     // the scrubber protects against accidental PII pasting, not against

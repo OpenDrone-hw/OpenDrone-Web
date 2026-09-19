@@ -12,7 +12,7 @@ import type {AnimationEvent as ReactAnimationEvent, CSSProperties} from 'react';
 
 // useLayoutEffect on the server logs a warning; fall back to useEffect there.
 // The board swap it drives is a client-only interaction, so this never matters
-// functionally — it just silences the SSR noise.
+// functionally - it just silences the SSR noise.
 const useIsoLayoutEffect =
   typeof document !== 'undefined' ? useLayoutEffect : useEffect;
 import {
@@ -33,7 +33,7 @@ import {
 } from '~/lib/board-swap-timing';
 
 // `?v=` busts Oxygen's 1-year immutable cache when board art is regenerated in
-// place — the token is the content hash of every board.svg, board-lite.svg,
+// place - the token is the content hash of every board.svg, board-lite.svg,
 // front/back PNG and derived WebP under public/boards, baked into the bundle
 // by scripts/export-board-art.mjs. We version BOTH the svg fetch URL AND every
 // <image> href it references, so a re-render (e.g. an IC-less → IC-full face,
@@ -109,11 +109,11 @@ export type BoardArtProps = {
    *  board. Fetched lazily; when a `highlightRefs` ref matches a component its
    *  footprint is drawn as a gold highlight over the active sheet. */
   componentsSrc?: string;
-  /** Refdes (case-sensitive) to highlight on the board — typically the refs of
+  /** Refdes (case-sensitive) to highlight on the board - typically the refs of
    *  the teardown pin the visitor is hovering/focusing. */
   highlightRefs?: string[];
   /** When true, draw ONE box around the union of all `highlightRefs` instead of a
-   *  box per refdes — for dense arrays (e.g. the bulk ceramic-cap grid). */
+   *  box per refdes - for dense arrays (e.g. the bulk ceramic-cap grid). */
   highlightUnion?: boolean;
   /** Draw one union box per subarray (e.g. ESC motor pads grouped by motor → 4
    *  boxes). Each entry is a list of refdes; takes precedence over union/each. */
@@ -127,7 +127,7 @@ export type BoardArtProps = {
   onHighlightVisible?: (visible: boolean) => void;
   /** Fired once when a variant swap's fly-out/fly-in begins (gen = swap id), so
    *  the parent can dip the parts list + retract the connector wires in lockstep
-   *  with the board — no independent timers. Also fired for the reduced-motion /
+   *  with the board - no independent timers. Also fired for the reduced-motion /
    *  non-desktop hard-cut, immediately followed by {@link onSwapSettle}. */
   onSwapStart?: (gen: number) => void;
   /** Fired once when the swap has fully settled (all fly-out animations ended, or
@@ -136,7 +136,7 @@ export type BoardArtProps = {
   onSwapSettle?: (gen: number) => void;
 };
 
-/** One component from `components.json` — coords already in the board viewBox. */
+/** One component from `components.json` - coords already in the board viewBox. */
 type BoardComponent = {
   ref: string;
   layer?: string;
@@ -165,7 +165,7 @@ function parseManifest(raw: unknown): {
 
 /**
  * Short function blurb for a copper layer. A content-supplied `override` wins;
- * otherwise guess from the layer's position in the stack — the outermost pair
+ * otherwise guess from the layer's position in the stack - the outermost pair
  * carries signals + components, the pair just inside them is almost always a
  * solid reference (ground) plane, and everything between is signal + power.
  */
@@ -245,7 +245,7 @@ function parseSheets(raw: string): Sheet[] {
       return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
     });
     // Version every <image> href (the faces and, in board-lite.svg, the copper
-    // rasters) so a re-render busts their immutable cache too — the same
+    // rasters) so a re-render busts their immutable cache too - the same
     // content hash as the svg fetch, so markup and bitmaps refetch together.
     // Done on the parsed DOM before serialization. sizedHref also picks the
     // WebP face and the raster width for the screen, and assetUrl points the
@@ -304,14 +304,14 @@ async function warmParsed(src: string): Promise<Sheet[]> {
  *
  * The asset is one SVG (scripts/export-board-art.mjs) with a `<g id="layer-…">`
  * per copper layer plus `layer-edge-cuts` as the board outline. We split it into
- * one self-contained `<svg>` "sheet" per copper layer — each carries the shared
+ * one self-contained `<svg>` "sheet" per copper layer - each carries the shared
  * clip + a faint board silhouette + that one layer's copper. CSS fans the sheets
  * back like files in a folder; selecting a layer floats its sheet up and forward.
  *
  * Fetched lazily (only as the section nears the viewport).
  */
-/** A frozen capture of the board being flown OUT — its own sheets + the layer
- *  index that was showing — so the outgoing stack renders from pure props and can
+/** A frozen capture of the board being flown OUT - its own sheets + the layer
+ *  index that was showing - so the outgoing stack renders from pure props and can
  *  never be perturbed by live state (the active-index clamp, a hover, etc.). */
 type SwapSnapshot = {sheets: Sheet[]; shownIndex: number};
 /** The variant-swap finite state machine. Generation-counted: every run gets a
@@ -329,7 +329,7 @@ type SwapState = {
    *  incoming has fully landed (it's the LAST phase), not when the outgoing left.
    *  Captured at START so a near-breakpoint resize can't desync count from CSS. */
   expected: number;
-  /** Outgoing layer count — drives the incoming's --swap-in-delay (so the new
+  /** Outgoing layer count - drives the incoming's --swap-in-delay (so the new
    *  board waits for the old to leave) and the settle backstop. */
   outCount: number;
   remaining: number;
@@ -351,7 +351,7 @@ function swapReducer(state: SwapState, action: SwapAction): SwapState {
   switch (action.type) {
     case 'START':
       // Idempotent: a duplicate dispatch for an already-committed src (React
-      // StrictMode double-invoke) is a no-op — the prior action in the queue has
+      // StrictMode double-invoke) is a no-op - the prior action in the queue has
       // already moved committedSrc forward.
       if (action.src === state.committedSrc) return state;
       return {
@@ -417,13 +417,13 @@ export function BoardArt({
   // can never collide on `od-dim`/`od-bright`/`od-spot` (SVG id resolution would
   // otherwise pick the first in document order → wrong board masked).
   const uid = useId().replace(/:/g, '');
-  // Whether the previous render already had a highlight group on the board — so a
+  // Whether the previous render already had a highlight group on the board - so a
   // row-to-row move (highlight→highlight) skips the fade-in and just repositions
   // the spotlight, while a fresh entry (none→highlight) still fades in.
   const hadHilite = useRef(false);
   // One spotlight group per board FACE (keyed by that face's <svg> node), built
   // ONCE and then only repositioned/hidden. Re-cloning the board <image> on
-  // every hover — to dim + re-light the board — is what flashed the spotlight;
+  // every hover - to dim + re-light the board - is what flashed the spotlight;
   // caching per face means the dim veil and the decoded image clone are never
   // rebuilt, so neither a row-to-row move nor a front/back flip can flash. The
   // group is hidden (not destroyed) when nothing is highlighted, so re-entering
@@ -448,11 +448,11 @@ export function BoardArt({
   // active sheet's box to position the layer textbox; measuring it WHILE the new
   // board is flying in (translated off to the side) placed the rail wrong and
   // made it jump. So we hold the rail where it is during the swap and re-place it
-  // once — via `placeNonce` — when the swap has settled.
+  // once - via `placeNonce` - when the swap has settled.
   const swapActiveRef = useRef(false);
   const [placeNonce, setPlaceNonce] = useState(0);
   // Which src the current `raw` text belongs to, and the last non-empty parsed
-  // board — so a tier switch keeps the prior board on screen until the new one
+  // board - so a tier switch keeps the prior board on screen until the new one
   // is parsed, and never re-parses a board the cache already holds.
   const rawSrcRef = useRef<string | null>(
     peekBoardText(src) != null ? src : null,
@@ -580,7 +580,7 @@ export function BoardArt({
     };
   }, [inView, src]);
 
-  // Fade the board in once its SVG is in hand — driven off `raw`, not the fetch
+  // Fade the board in once its SVG is in hand - driven off `raw`, not the fetch
   // effect's `alive` flag. A large SVG's parse can block the main thread long
   // enough that an effect re-run (e.g. a fresh `srcs` array) flips `alive` false
   // before a reveal scheduled inside the fetch effect ever fires, leaving the
@@ -613,7 +613,7 @@ export function BoardArt({
     // Wait for `revealed`: before the sheets exist the chapter is collapsed to
     // its skeleton height and this element sits near the top of the document,
     // so a one-shot observer attached then fires immediately and promotes at
-    // load — the exact thing this gate exists to avoid. Once the board is built
+    // load - the exact thing this gate exists to avoid. Once the board is built
     // the element has its real box and the margin means what it says.
     if (warm || !revealed) return;
     const el = ref.current;
@@ -661,7 +661,7 @@ export function BoardArt({
 
   // Live "is the board roughly on screen" flag (NOT one-shot). A SKU swap that
   // happens while this is false is not worth animating (the user is looking
-  // elsewhere on the page) — the driver hard-cuts it and re-arms the entrance so
+  // elsewhere on the page) - the driver hard-cuts it and re-arms the entrance so
   // the reveal plays fresh when they scroll back. Cheap: a ref, no re-render.
   const visibleRef = useRef(false);
   useEffect(() => {
@@ -685,12 +685,12 @@ export function BoardArt({
   // instantly at full scale instead of re-flying. While the fly runs we tell the
   // parent (to lock part selection) and the CSS drops the heavy filters.
   const [flyDone, setFlyDone] = useState(false);
-  // The layer rail fades in DURING the entrance — 0.5s before the fly fully
-  // settles — instead of waiting for flyDone, so it reads a beat sooner.
+  // The layer rail fades in DURING the entrance - 0.5s before the fly fully
+  // settles - instead of waiting for flyDone, so it reads a beat sooner.
   const [railIn, setRailIn] = useState(false);
   useEffect(() => {
     if (!flyIn || flyDone) return;
-    // Honour reduced-motion: no animation, no lock — settle immediately.
+    // Honour reduced-motion: no animation, no lock - settle immediately.
     if (
       typeof window !== 'undefined' &&
       window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
@@ -713,7 +713,7 @@ export function BoardArt({
     };
   }, [flyIn, flyDone, onFlying]);
 
-  // Pre-parse sibling tiers ONLY after the entrance finishes — parsing every
+  // Pre-parse sibling tiers ONLY after the entrance finishes - parsing every
   // other board's multi-thousand-path SVG is heavy main-thread work that, if it
   // landed mid-fly, janked the compositor animation. Deferring it to flyDone
   // gives the entrance the main thread to itself; the warm still lands long
@@ -768,14 +768,14 @@ export function BoardArt({
   // Fit the layer rail into the gutter between the teardown copy and the board,
   // measuring where the *text* and the *board* actually are (not their grid
   // columns). The board is blown up past its column and bleeds left for drama,
-  // so its visible left edge sits at/past the text column's right edge — but the
+  // so its visible left edge sits at/past the text column's right edge - but the
   // copy at the rail's vertical level rarely fills that column, leaving a real
   // gutter to its right. Priority, matching how a reader expects it to degrade:
   //   1. Full rail centred in the gutter, clear of both copy and board (the
-  //      roomy default — wide screens).
+  //      roomy default - wide screens).
   //   2. When the gutter is too tight for the full pill, drop the rail to
   //   3. When even the names-only pill can't fit, floor it at the copy (so it
-  //      never crosses the text) and let it overlay the board's edge — the
+  //      never crosses the text) and let it overlay the board's edge - the
   //      last-resort overlay.
   // Re-runs (rAF-coalesced) on resize; the active sheet's settled left edge is
   // the same for every layer, so we don't key it on `active` (which would
@@ -794,7 +794,7 @@ export function BoardArt({
     const setBoardW = (w: number) =>
       root.style.setProperty('--board-w', `${w * 100}%`);
     // Rightmost edge of the teardown copy that sits at the RAIL'S vertical level
-    // — a Range gives the tight text bounds (longest wrapped line), not the full
+    // - a Range gives the tight text bounds (longest wrapped line), not the full
     // column box. The rail floats centred on the board, BELOW the chapter title:
     // on a narrow viewport that title wraps wide (its right edge runs ~180px past
     // the component list) but it ends well above the rail, so it shares no
@@ -821,7 +821,7 @@ export function BoardArt({
       return max;
     };
     const place = () => {
-      // Below the breakpoint the rail is a full-width top bar — reset both.
+      // Below the breakpoint the rail is a full-width top bar - reset both.
       if (!window.matchMedia('(min-width: 1025px)').matches) {
         rail.style.transform = '';
         root.style.removeProperty('--board-w');
@@ -834,19 +834,19 @@ export function BoardArt({
       if (swapActiveRef.current) return;
       rail.style.transform = '';
       setBoardW(DEFAULT_W); // the board stays at full size; the rail takes what is left
-      // Scope to the LIVE stack — never the outgoing (.board-swap-out) one, whose
+      // Scope to the LIVE stack - never the outgoing (.board-swap-out) one, whose
       // box is mid-flight and would mis-place the rail during a swap.
       const stack = body.querySelector('[data-role="live"]');
       if (!stack) return;
       const sr = stack.getBoundingClientRect();
       // Board's VISIBLE left edge. The active sheet is scaled up (~1.05) and is
       // rendered WIDER than its stack column, centred over it, so the visible
-      // board bleeds left of the stack box — by an amount that is NOT a fixed
+      // board bleeds left of the stack box - by an amount that is NOT a fixed
       // fraction of the stack (the sheet keeps roughly its own size as the column
       // narrows, so the bleed grows as the column shrinks). Once the entrance has
       // settled (flyDone) the active sheet's rect is stable and gives the exact
       // edge, so read it directly. DURING the fly the sheets are flown off-screen
-      // and the sheet rect would mis-place the rail and snap it at the end — so
+      // and the sheet rect would mis-place the rail and snap it at the end - so
       // fall back to the never-translating stack box (rough but only momentary).
       const activeSheet = stack.querySelector(
         '.board-sheet.is-active svg, .board-sheet.is-active img',
@@ -892,7 +892,7 @@ export function BoardArt({
       const railFull = widthOf(rail);
       // The rail floats centred on the board; the stack box is its stable vertical
       // anchor. Inset the band a little from the stack's top so the chapter title
-      // — which can dip a hair into the stack's top edge — never gets counted as
+      // - which can dip a hair into the stack's top edge - never gets counted as
       // copy in the rail's lane (it lives above the rail).
       const bandTop = sr.top + sr.height * 0.1;
       const textRight = contentRight(bandTop, sr.bottom);
@@ -901,10 +901,10 @@ export function BoardArt({
       const gutterStart = textRight + MARGIN; // nearest the rail may sit to the copy
       const gutterEnd = boardLeft - GAP; // nearest the rail may sit to the board
       // Centre a pill of the given width in the gutter, but ALWAYS keep its right
-      // edge at/left of gutterEnd (the board-side wall) — so even if boardLeft is
+      // edge at/left of gutterEnd (the board-side wall) - so even if boardLeft is
       // measured a hair generous, the rail can't creep onto the silk. When the
       // pill can't fit, this still floors at gutterStart so it never crosses the
-      // copy (it may then overlap the board's edge — the last-resort overlay).
+      // copy (it may then overlap the board's edge - the last-resort overlay).
       const placeWidth = (w: number) => {
         const slack = gutterEnd - gutterStart - w;
         const centred = gutterStart + slack / 2;
@@ -914,13 +914,13 @@ export function BoardArt({
         );
       };
       // Always the full rail (names + function blurbs): the names-only
-      // is-compact fallback was dropped 2026-08-12 (maintainer) — under the
+      // is-compact fallback was dropped 2026-08-12 (maintainer) - under the
       // repo-scope layout its tight-gutter trigger misfired on tall boards
       // and a wrapping names-only pill reads worse than a slight overlap.
       const target = placeWidth(railFull);
       rail.style.transform = `translateX(${target - leftOf(rail)}px)`;
     };
-    // Coalesce resize bursts into one placement per frame — `place` forces a
+    // Coalesce resize bursts into one placement per frame - `place` forces a
     // handful of layout reads against the large board SVG.
     let scheduled = 0;
     const schedule = () => {
@@ -939,7 +939,7 @@ export function BoardArt({
     };
   }, [sheets, revealed, flyDone, placeNonce]);
 
-  // The index/refs actually rendered — the manual layer + tap/swipe-driven
+  // The index/refs actually rendered - the manual layer + tap/swipe-driven
   // highlight.
   const shownIndex = active;
   const effectiveRefs = highlightRefs;
@@ -947,7 +947,7 @@ export function BoardArt({
   const effectiveGroups = highlightGroups;
 
   // The realistic FACE currently shown: 'F' (Front face) / 'B' (Back face), or
-  // null for any copper layer. Highlights only appear on the faces — a copper
+  // null for any copper layer. Highlights only appear on the faces - a copper
   // layer isn't "a PCB-mounted component", so no box there.
   const visibleFace =
     sheets[shownIndex]?.slug === 'front'
@@ -1070,7 +1070,7 @@ export function BoardArt({
   }, [manifest, highlightRefs, sheets]);
 
   // Footprint boxes for parts mounted on the visible FACE only. A padded bbox
-  // rect (mm, in the board viewBox frame) — drawn anchored INSIDE the sheet svg
+  // rect (mm, in the board viewBox frame) - drawn anchored INSIDE the sheet svg
   // so it scrolls with the board and sits exactly on the part.
   const highlights = useMemo(() => {
     if (!manifest || !effectiveRefs?.length || !visibleFace) return [];
@@ -1102,9 +1102,9 @@ export function BoardArt({
   // face (clipped to the board outline, with a feathered hole at each part) and a
   // gold box outline per part on top. Only runs on a FACE (highlights is empty
   // on copper layers), so there's never a box on an inner layer. No screen-space
-  // overlay, no scroll tracking — fully anchored + deterministic.
+  // overlay, no scroll tracking - fully anchored + deterministic.
   useEffect(() => {
-    // Inject highlights into the LIVE stack only — never the outgoing one.
+    // Inject highlights into the LIVE stack only - never the outgoing one.
     const stack = bodyRef.current?.querySelector('[data-role="live"]');
     if (!stack) return;
     const NS = 'http://www.w3.org/2000/svg';
@@ -1156,8 +1156,8 @@ export function BoardArt({
       boxes = highlights;
     }
 
-    // Fill the per-box geometry into a live group: the lit window(s) — one union
-    // clipPath (a <rect> per box) shared by a SINGLE bright face image — plus the
+    // Fill the per-box geometry into a live group: the lit window(s) - one union
+    // clipPath (a <rect> per box) shared by a SINGLE bright face image - plus the
     // gold boxes. Leaves the dim veil + cloned face image alone, so a move only
     // slides the lit window; the dim never re-rasterises, the image never
     // re-decodes (that was the flash).
@@ -1220,7 +1220,7 @@ export function BoardArt({
     g.setAttribute('class', cls);
 
     // SPOTLIGHT: DIM the board everywhere EXCEPT the lit window(s). The dim
-    // region is the board bbox + a margin (NOT a giant rect — a huge masked
+    // region is the board bbox + a margin (NOT a giant rect - a huge masked
     // element overflows the browser's mask buffer and only renders a corner).
     if (vb && vb.length === 4 && vb.every((n) => Number.isFinite(n))) {
       const M = Math.max(vb[2], vb[3]); // generous region (covers any overhang)
@@ -1231,11 +1231,11 @@ export function BoardArt({
       const defs = document.createElementNS(NS, 'defs');
       const faceImg = svg.querySelector('image');
       if (faceImg) {
-        // Dim the WHOLE board picture — including ports that overhang the
-        // Edge.Cuts outline — by masking a dark layer with the FACE IMAGE's
+        // Dim the WHOLE board picture - including ports that overhang the
+        // Edge.Cuts outline - by masking a dark layer with the FACE IMAGE's
         // ALPHA (covers exactly the rendered board + ports, soft edges, no page
         // bleed). Then re-show ONE bright face clipped to a single union clipPath
-        // (one <rect> per box) on top — so a row move only edits those rects, not
+        // (one <rect> per box) on top - so a row move only edits those rects, not
         // the image clones. No outline clip → no bright port sliver.
         const dimMask = document.createElementNS(NS, 'mask');
         dimMask.setAttribute('id', `od-dim-${uid}`);
@@ -1265,7 +1265,7 @@ export function BoardArt({
         bface.setAttribute('clip-path', `url(#od-bright-${uid})`);
         bface.setAttribute('class', 'board-hilite-face');
         g.appendChild(bface);
-        // Lit window(s) + gold boxes — the only parts that move between rows.
+        // Lit window(s) + gold boxes - the only parts that move between rows.
         paintWindows(brightClip, g);
         svg.appendChild(g);
         cache.set(svg, {g, brightClip});
@@ -1312,7 +1312,7 @@ export function BoardArt({
       }
     }
 
-    // Gold box per part, on top (fallback / no-viewBox path — no reusable clip).
+    // Gold box per part, on top (fallback / no-viewBox path - no reusable clip).
     for (const h of boxes) {
       const rect = document.createElementNS(NS, 'rect');
       rect.setAttribute('x', String(h.rect[0]));
@@ -1341,7 +1341,7 @@ export function BoardArt({
   // Memoise the sheet stack so a hover never re-renders these <button>s. A hover
   // changes highlight props on the PARENT, re-rendering BoardArt; React was then
   // re-applying each dangerouslySetInnerHTML and rebuilding the board <svg> on
-  // every hover — re-decoding the board image and flashing the spotlight. Keyed
+  // every hover - re-decoding the board image and flashing the spotlight. Keyed
   // on [sheets, active] only, the element array is referentially stable across
   // hovers, so React skips this subtree entirely: the svg nodes stay put and the
   // imperatively-injected highlight overlay is reused (above) instead of rebuilt.
@@ -1349,7 +1349,7 @@ export function BoardArt({
     () =>
       sheets.map((s, i) => (
         // One layer on screen at a time. Mobile: the incoming layer slides up +
-        // fades in over the outgoing (CSS) — a clean peel, no per-layer boxes.
+        // fades in over the outgoing (CSS) - a clean peel, no per-layer boxes.
         <button
           type="button"
           key={s.slug}
@@ -1377,7 +1377,7 @@ export function BoardArt({
   // On a tier toggle the component stays mounted and `src` changes; the live stack
   // re-renders to the NEW board (the sheets memo) while a FROZEN snapshot of the
   // OLD board is mounted as a real React subtree (.board-swap-out) that flies out.
-  // No innerHTML clone, no captured ref, no wall-clock timer — the swap ENDS by
+  // No innerHTML clone, no captured ref, no wall-clock timer - the swap ENDS by
   // counting board-swap-out animationend events. This replaces the whole ghost
   // machine that was the source of the "behind / restarts / hangs / laggy" bugs.
   const [swap, dispatchSwap] = useReducer(swapReducer, undefined, () => ({
@@ -1390,7 +1390,7 @@ export function BoardArt({
     remaining: 0,
   }));
   // Keep parent callbacks in refs so the lifecycle effect can depend ONLY on
-  // (phase, gen) — an inline callback's changing identity must not re-fire
+  // (phase, gen) - an inline callback's changing identity must not re-fire
   // onSwapStart or re-arm the backstop mid-run.
   const onSwapStartRef = useRef(onSwapStart);
   onSwapStartRef.current = onSwapStart;
@@ -1407,7 +1407,7 @@ export function BoardArt({
     const reduce =
       typeof window !== 'undefined' &&
       window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    // The board to fly OUT is the one committedSrc was showing — read it from the
+    // The board to fly OUT is the one committedSrc was showing - read it from the
     // parse cache (always warmed for an on-screen tier), frozen at the index the
     // visitor was on. NEVER read live `sheets`/`active` (already the NEW board).
     const outSheets =
@@ -1448,7 +1448,7 @@ export function BoardArt({
         sheets: outSheets,
         shownIndex: Math.min(activeRef.current, outSheets.length - 1),
       },
-      // Settle counts the INCOMING (new board) layers — it lands last. Delay is
+      // Settle counts the INCOMING (new board) layers - it lands last. Delay is
       // driven by the OUTGOING count. Mobile is a single whole-board slide → 1.
       expected: wide ? sheets.length : 1,
       outCount: wide ? outSheets.length : 1,
@@ -1494,7 +1494,7 @@ export function BoardArt({
   // by a label signature: variants that share the same layers (e.g. both 8-layer
   // boards) never animate, so identical content never pulses. `railSheets` lags the
   // live sheets so the OLD tabs fade out, the set switches while hidden, the NEW
-  // fade in — the same crossfade the component table uses.
+  // fade in - the same crossfade the component table uses.
   const railSig = useMemo(() => sheets.map((s) => s.label).join('|'), [sheets]);
   const [railSheets, setRailSheets] = useState<Sheet[]>(sheets);
   const [railSwapping, setRailSwapping] = useState(false);
@@ -1531,7 +1531,7 @@ export function BoardArt({
   // out under the finger while the next/prev sheet chases in behind it (the
   // peel is driven by --drag in CSS); a flick or a far-enough drag commits,
   // else it snaps back. Vertical is left to the page (touch-action: pan-y), so
-  // a swipe that reads as vertical just scrolls — only horizontal is captured.
+  // a swipe that reads as vertical just scrolls - only horizontal is captured.
   const {drag, dragging} = useLayerSwipe({
     ref: stackElRef,
     count: sheets.length,
@@ -1550,14 +1550,14 @@ export function BoardArt({
       }${flyDone ? ' is-swap-ready' : ''}${railIn ? ' is-rail-in' : ''}`}
       // The swap durations live in ONE place (SWAP_TIMING) and are pushed to CSS
       // here so the @keyframes block and the JS settle backstop read identical
-      // numbers — change a duration in board-swap-timing.ts and both follow.
+      // numbers - change a duration in board-swap-timing.ts and both follow.
       style={
         {
           ['--swap-dur' as string]: `${SWAP_TIMING.durS}s`,
           ['--swap-stagger' as string]: `${SWAP_TIMING.staggerS}s`,
           ['--swap-exit' as string]: `${SWAP_TIMING.exitS}s`,
           // The IN phase waits for the OUT phase to finish (old fully leaves before
-          // the new arrives — no overlap). Computed live from the outgoing count.
+          // the new arrives - no overlap). Computed live from the outgoing count.
           ['--swap-in-delay' as string]:
             swap.phase === 'run'
               ? `${swapInDelayS(swap.outCount || 1)}s`
@@ -1571,7 +1571,7 @@ export function BoardArt({
           {/* Roving keyboard-nav group: arrow keys step the layer stack. The
               interactive controls (buttons) live inside; the group itself is
               focusable to capture arrow nav. Wheel is intentionally NOT captured
-              — scrolling over the panel scrolls the page like anywhere else. */}
+              - scrolling over the panel scrolls the page like anywhere else. */}
           {/* eslint-disable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */}
           <div
             className={`board-folder-rail${railSwapping ? ' is-swapping' : ''}`}
@@ -1632,7 +1632,7 @@ export function BoardArt({
                   <svg> by the effect above (so they inherit its viewBox + every
                   transform); there is no separate overlay element here. */}
             </div>
-            {/* The OUTGOING (old) stack — a real React subtree built from a FROZEN
+            {/* The OUTGOING (old) stack - a real React subtree built from a FROZEN
                 snapshot (its own sheets + the index that was showing), flying out
                 beneath the live one. Counting its board-swap-out animationend
                 events is what settles the swap. */}
@@ -1665,7 +1665,7 @@ export function BoardArt({
           {isMobile && sheets.length ? (
             <div className="board-deck-progress">
               {/* Lightweight progress: a tick per layer (how far through the
-                  stack you are) — and each is tappable to jump straight there. */}
+                  stack you are) - and each is tappable to jump straight there. */}
               <div className="board-deck-dots" aria-label="Board layer">
                 {sheets.map((s, i) => (
                   <button
@@ -1695,8 +1695,8 @@ export function BoardArt({
       ) : null}
       {!revealed && !failed ? (
         <div className="board-art-skeleton" aria-hidden="true">
-          {/* Dimmed static face render as backdrop — the asset the canvas is
-              about to draw anyway — so a slow init reads as "developing"
+          {/* Dimmed static face render as backdrop - the asset the canvas is
+              about to draw anyway - so a slow init reads as "developing"
               instead of a viewport of black. */}
           <img
             className="board-art-skeleton-preview"

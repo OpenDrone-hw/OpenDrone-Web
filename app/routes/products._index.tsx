@@ -87,7 +87,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
 
 type CatalogProduct = ProductCardFragment;
 
-/** One browse card — a single product, or one model/tier of a product line. */
+/** One browse card - a single product, or one model/tier of a product line. */
 type Card = {
   key: string;
   product: CatalogProduct;
@@ -100,7 +100,7 @@ type Card = {
    *  instead of falling back to the product's featuredImage. */
   image?: CatalogProduct['featuredImage'];
   onSale: boolean;
-  /** A product line whose every tier is still coming soon — shown as a
+  /** A product line whose every tier is still coming soon - shown as a
    *  greyed, non-clickable teaser rather than a buyable card. */
   comingSoon?: boolean;
   /** Hover quick-add: this card's own hand-off link. */
@@ -131,7 +131,7 @@ function variantFor(p: CatalogProduct, axis: string, value: string) {
 }
 
 /**
- * Join a product title with a tier value without stuttering — "OpenFC Lite" +
+ * Join a product title with a tier value without stuttering - "OpenFC Lite" +
  * "20×20" → "OpenFC Lite 20×20", while "OpenRX" + "Gemini" → "OpenRX Gemini"
  * and "OpenFC Lite" + "Lite" → "OpenFC Lite" (drops the repeated word).
  */
@@ -262,9 +262,9 @@ export default function ProductsIndex() {
         }
       } else {
         // A line whose every tier is still coming soon (e.g. OpenFC) is an
-        // unreleased teaser — show it greyed and non-clickable, not buyable.
+        // unreleased teaser - show it greyed and non-clickable, not buyable.
         const comingSoon = allTiers.length > 0;
-        // Quick-add only when there is genuinely ONE variant — a future
+        // Quick-add only when there is genuinely ONE variant - a future
         // multi-option accessory must send the buyer to the PDP to choose.
         const firstVariant =
           p.variants.nodes.length === 1 ? p.variants.nodes[0] : undefined;
@@ -338,7 +338,7 @@ export default function ProductsIndex() {
         sorted.sort((a, b) => b.title.localeCompare(a.title));
         break;
       default:
-        break; // newest — already CREATED_AT desc from the loader
+        break; // newest - already CREATED_AT desc from the loader
     }
     return sorted;
   }, [cards, term, activeType, onlySale, sort]);
@@ -427,7 +427,7 @@ export default function ProductsIndex() {
 
       {hasProducts ? (
         <div className="catalog-layout">
-          {/* Left filter rail — category single-select + an on-sale toggle. */}
+          {/* Left filter rail - category single-select + an on-sale toggle. */}
           <aside
             className="catalog-sidebar"
             aria-label={copyText('collections-all.filter_aria') ?? 'Filter products'}
@@ -466,7 +466,7 @@ export default function ProductsIndex() {
             </div>
           </aside>
 
-          {/* Main column — toolbar (count + sort) above the product grid. */}
+          {/* Main column - toolbar (count + sort) above the product grid. */}
           <div className="catalog-main">
             <div className="catalog-toolbar">
               <p className="catalog-count">

@@ -96,7 +96,7 @@ export const meta: Route.MetaFunction = ({data, location}) =>
  * Selecting a SKU only mutates this PDP's option query params (e.g. ?Model=…).
  * Skip the loader on those same-path navigations: re-running it means a
  * catalog round-trip plus a full PDP re-render (3D viewer, chapters, deferred
- * recommendations) on every click — the source of the variant-switch lag. The
+ * recommendations) on every click - the source of the variant-switch lag. The
  * variant is resolved client-side from the already-loaded data instead.
  */
 export function shouldRevalidate({
@@ -354,7 +354,7 @@ function mergeSpecs(
 
 /**
  * Client-only loader for the exploded 3D frame viewer. The viewer pulls in
- * three.js + @react-three/fiber, so — like the homepage's HeroScene — we
+ * three.js + @react-three/fiber, so - like the homepage's HeroScene - we
  * code-split it and import it in the browser only, keeping the r3f runtime
  * out of the server render and the PDP's initial chunk.
  */
@@ -455,7 +455,7 @@ function Chapter({
    *  schematic viewer). Plain flow on mobile, spans both tracks on desktop. */
   wide?: React.ReactNode;
   /** When set, the chapter draws the repo-scope outline around everything it
-   *  contains — the visual claim (together with the lead line from the
+   *  contains - the visual claim (together with the lead line from the
    *  GitHub-repo card above) that the whole chapter is the contents of the
    *  product's repo. */
   repoScope?: boolean;
@@ -472,14 +472,14 @@ function Chapter({
    *  to the left, hidden). Used by the teardown so the copy slides in only after
    *  the board layers have flown in. Undefined = no gating (normal reveal). */
   textReveal?: boolean;
-  /** Optional live media node — when omitted, the chapter renders the
+  /** Optional live media node - when omitted, the chapter renders the
    *  geometric placeholder glyph for this chapter number. */
   media?: React.ReactNode;
   /** Optional full-bleed, non-interactive layer rendered behind the chapter
    *  content (the exploded frame viewer). When set, the right-hand media
    *  slot is dropped and the text sits on top of this layer. */
   backdrop?: React.ReactNode;
-  /** Let the media span the full chapter width below the copy — used for the
+  /** Let the media span the full chapter width below the copy - used for the
    *  wide schematic viewer. */
   wideMedia?: boolean;
   /** Leave the media slot empty for chapters whose content (e.g. the spec
@@ -702,11 +702,11 @@ function ProductPage() {
     );
   }, [searchKey, product]);
 
-  // Hide the pinned buy rail while an aside (cart/search/mobile nav) is open —
+  // Hide the pinned buy rail while an aside (cart/search/mobile nav) is open -
   // otherwise the fixed overlay sits on top of the cart drawer.
   const {type: asideType} = useAside();
 
-  // Coming-soon state: no prices, no add-to-cart — the buy module becomes a
+  // Coming-soon state: no prices, no add-to-cart - the buy module becomes a
   // notify-at-launch signup. Root data feeds the global flag + Turnstile key.
   const rootData = useRouteLoaderData<RootLoader>('root');
   const globalComingSoon = rootData?.comingSoon ?? true;
@@ -835,7 +835,7 @@ function ProductPage() {
   // split-repo lines (OpenFC-Lite ↔ OpenFC-Lite-Mini, OpenESC-20x20 ↔
   // OpenESC-30x30) point at the tier's repo, others at the product default.
   const activeRepoUrl = activeVariant?.repoUrl ?? content.repoUrl;
-  // OSHWA certification follows the selected tier — each certified board has its
+  // OSHWA certification follows the selected tier - each certified board has its
   // own UID, so the chip links to the directory page for the active variant.
   const activeOshwaUid = activeVariant?.oshwaUid ?? content.oshwaUid;
   const mergedSpecs = mergeSpecs(content.specs, activeVariant?.specs);
@@ -914,7 +914,7 @@ function ProductPage() {
   const stackOffers = useMemo(() => {
     if (!stackCfg || !selectedVariant) return [];
     return stackCfg.partners.flatMap((pc) => {
-      // A partner that hasn't launched can't join a stack offer — its price
+      // A partner that hasn't launched can't join a stack offer - its price
       // and add-to-cart must stay hidden even when this product is live.
       if (isComingSoon(pc.handle, globalComingSoon)) return [];
       const pp = stackProducts?.find((p) => p.handle === pc.handle);
@@ -960,15 +960,15 @@ function ProductPage() {
   // each board in a line has its own refdes layout, so a tier's own `pins`
   // win over the shared `teardown.pins` default. Keeps the hover-highlight
   // refdes matched to the board currently shown.
-  // Memoised so its reference is stable per tier — the deferred-swap effect below
+  // Memoised so its reference is stable per tier - the deferred-swap effect below
   // keys on it and calls setState, so a fresh `?? []` array every render would
   // loop it.
   const activePins = useMemo(
     () => activeVariant?.pins ?? content.teardown?.pins ?? [],
     [activeVariant, content.teardown],
   );
-  // Group the teardown pins by board side — Top (front) first, then Bottom
-  // (back) — reading each refdes's side from the board's components.json. Done
+  // Group the teardown pins by board side - Top (front) first, then Bottom
+  // (back) - reading each refdes's side from the board's components.json. Done
   // at runtime so it stays accurate per tier with no manual side tagging.
   const componentsSrc = activeBoardArt?.src.replace(
     /board\.svg$/,
@@ -998,13 +998,13 @@ function ProductPage() {
   }, [componentsSrc]);
   // The teardown list lags a tier swap on purpose. When the board animates a
   // variant change its layers fly across the copy column (the intro cadence),
-  // briefly covering the part list — so we hold the OLD pins and switch to the
+  // briefly covering the part list - so we hold the OLD pins and switch to the
   // new ones mid-flight, behind the flying boards, instead of snapping the list
   // the instant the tier changes. Reduced-motion (or mobile, where the swap is a
   // quick block slide with no cover) swaps immediately.
   const [displayedPins, setDisplayedPins] = useState(activePins);
   const [pinsSwapping, setPinsSwapping] = useState(false);
-  // The component table crossfades on its OWN clock when the pins change — NOT
+  // The component table crossfades on its OWN clock when the pins change - NOT
   // slaved to the board swap. (Tying it to onSwapSettle made the content switch
   // land ~1.1s in, after the dip had already faded back to opacity 1, so the new
   // rows snapped in visibly.) Now: fade out → switch the rows while fully hidden
@@ -1023,7 +1023,7 @@ function ProductPage() {
     }
     setPinsSwapping(true);
     // Switch the rows at the dip's hidden trough (44–56% of 0.52s = 229–291ms),
-    // then let the dip fade the new rows back in — no visible row snap.
+    // then let the dip fade the new rows back in - no visible row snap.
     const tSwap = setTimeout(() => setDisplayedPins(activePins), 235);
     const tDone = setTimeout(() => setPinsSwapping(false), 520);
     return () => {
@@ -1067,7 +1067,7 @@ function ProductPage() {
     return {top, bottom, other};
   }, [displayedPins, pinSides]);
   // Flat tour order for the mobile "swipe the board sideways to step through the
-  // parts" gesture — front parts top→bottom, then back, then any unsided. Each
+  // parts" gesture - front parts top→bottom, then back, then any unsided. Each
   // carries its full highlight spec (the same one its table row uses). Chip rows
   // (I/O pads) expand to one stop per chip.
   type TourPart = {
@@ -1139,7 +1139,7 @@ function ProductPage() {
     }
     return [...set];
   }, [content]);
-  // The schematic viewer follows the same board as the layer viewer — its
+  // The schematic viewer follows the same board as the layer viewer - its
   // sheets live at /schematics/<board-handle>/ (same handle as the board art).
   const schematicHandle =
     activeBoardArt?.src.match(/\/boards\/([^/]+)\//)?.[1] ?? null;
@@ -1166,13 +1166,13 @@ function ProductPage() {
   const railSentinelRef = useRef<HTMLDivElement>(null);
   const [railPinned, setRailPinned] = useState(false);
   const [railBox, setRailBox] = useState<{right: number} | null>(null);
-  // Refdes of the teardown pin the visitor is hovering/focusing — highlighted
+  // Refdes of the teardown pin the visitor is hovering/focusing - highlighted
   // on the board by BoardArt. Lives here (the common ancestor of the pin list
   // and the board) so a hover lights the matching footprint.
   const [hoveredRefs, setHoveredRefs] = useState<string[]>([]);
   // Whether the current highlight is actually drawn on the visible layer (fed by
   // BoardArt). A part can be "selected" but hidden if you've flicked to another
-  // layer — used so a re-tap re-asserts instead of toggling an invisible part off.
+  // layer - used so a re-tap re-asserts instead of toggling an invisible part off.
   const [highlightVisible, setHighlightVisible] = useState(false);
   // On touch there's no hover: a tap emits synthetic mouseenter→...→mouseleave/
   // blur, so the hover handlers would light the part then instantly clear it.
@@ -1184,7 +1184,7 @@ function ProductPage() {
   const [hoveredGroups, setHoveredGroups] = useState<string[][] | undefined>(
     undefined,
   );
-  // True while the board's first-reveal fly-in is animating — locks the parts
+  // True while the board's first-reveal fly-in is animating - locks the parts
   // list so a hover can't fight the animation.
   const [boardFlying, setBoardFlying] = useState(false);
   // The teardown text slides in from the left AFTER the board layers finish
@@ -1193,7 +1193,7 @@ function ProductPage() {
   // / never centred).
   const [textIn, setTextIn] = useState(false);
   // Slide the teardown copy in from the left once the section is actually on
-  // screen — a beat after it centres (the board's layers are flying in), so it
+  // screen - a beat after it centres (the board's layers are flying in), so it
   // reads like a final layer. Driven by the section's OWN visibility (not a blind
   // timer, which fired before the user scrolled down → the slide played offscreen
   // and was never seen).
@@ -1228,7 +1228,7 @@ function ProductPage() {
   }, [product.handle]);
   // Co-trigger: the board's own fly starting is a sure sign the teardown is on
   // screen, so slide the copy in a beat later too (belt-and-suspenders with the
-  // observer above — textIn latches, so whichever fires first wins).
+  // observer above - textIn latches, so whichever fires first wins).
   useEffect(() => {
     if (!boardFlying) return;
     const t = setTimeout(() => setTextIn(true), 600);
@@ -1241,7 +1241,7 @@ function ProductPage() {
   }, [product.handle]);
   // Clear all hover highlight state. Called only when the pointer leaves the
   // whole list (not between rows) so the spotlight stays lit and just moves from
-  // row to row — no off/on flicker crossing the dividers/gaps.
+  // row to row - no off/on flicker crossing the dividers/gaps.
   const clearHover = () => {
     setHoveredRefs([]);
     setHoveredUnion(false);
@@ -1276,14 +1276,14 @@ function ProductPage() {
                 hoveredRefs.length === chip.refs.length &&
                 chip.refs.every((r) => hoveredRefs.includes(r));
               const on = () => {
-                // Fresh array each tap so BoardArt's auto-flip effect re-fires —
+                // Fresh array each tap so BoardArt's auto-flip effect re-fires -
                 // re-tapping a part hidden under another layer flips back to it.
                 setHoveredRefs([...chip.refs]);
                 setHoveredUnion(false);
                 setHoveredGroups(undefined);
               };
               // Touch: tap toggles this chip's spotlight. Only toggle OFF when
-              // it's actually lit on the visible layer — otherwise (you've
+              // it's actually lit on the visible layer - otherwise (you've
               // flicked to another layer) re-tap re-asserts + flips to its face.
               const chipHandlers = noHover
                 ? {
@@ -1310,7 +1310,7 @@ function ProductPage() {
     const hoverable = !!refs?.length;
     const enter = () => {
       // Fresh array each tap so BoardArt's auto-flip effect re-fires even on the
-      // same part — re-tapping one hidden under another layer flips back to it.
+      // same part - re-tapping one hidden under another layer flips back to it.
       setHoveredRefs(refs ? [...refs] : []);
       setHoveredUnion(pin.box === 'union');
       setHoveredGroups(pin.boxGroups);
@@ -1321,13 +1321,13 @@ function ProductPage() {
       hoveredRefs.length === refs!.length &&
       refs!.every((r) => hoveredRefs.includes(r));
     // Touch has no hover: a tap toggles this row's spotlight on/off. On desktop
-    // the click toggle is harmless — hover already drives the highlight.
+    // the click toggle is harmless - hover already drives the highlight.
     // Toggle OFF only when actually lit on the visible layer; otherwise re-tap
-    // re-asserts (and BoardArt flips to the part's face) — no invisible dead tap.
+    // re-asserts (and BoardArt flips to the part's face) - no invisible dead tap.
     const tap = () => (isActive && highlightVisible ? clearHover() : enter());
-    // No per-row onMouseLeave — clearing happens on the container leave so the
+    // No per-row onMouseLeave - clearing happens on the container leave so the
     // spotlight stays lit while moving between rows (onBlur covers keyboard).
-    // On touch, drop every hover/focus handler — a tap's synthetic mouse +
+    // On touch, drop every hover/focus handler - a tap's synthetic mouse +
     // blur events would clear the spotlight the click just set. Click alone
     // toggles, and it persists (no container mouseleave on touch either).
     const handlers = !hoverable
@@ -1364,7 +1364,7 @@ function ProductPage() {
     );
   };
   // While a component is highlighted, dim the rest of the page a touch (light
-  // mode) so the eye is drawn to the board — a focus accent. Toggled via a class
+  // mode) so the eye is drawn to the board - a focus accent. Toggled via a class
   // on <html> so the dim (an ::after overlay) + the board's lift are pure CSS.
   useEffect(() => {
     const on = hoveredRefs.length > 0;
@@ -1376,7 +1376,7 @@ function ProductPage() {
   // module scrolled away.
   const [railMobile, setRailMobile] = useState(false);
 
-  // The mobile PCB explorer is now FULLY MANUAL — no auto-play, no scroll-driven
+  // The mobile PCB explorer is now FULLY MANUAL - no auto-play, no scroll-driven
   // body-class toggles (those fed an IntersectionObserver→layout→observer loop
   // that flickered even when idle). The board stays sticky, the layer rail is
   // tappable, and tapping a part highlights it. Nothing here moves the elements
@@ -1419,7 +1419,7 @@ function ProductPage() {
   }, [product.handle, hasLadder]);
 
   // primaryCollection is retained in the loader but we deliberately
-  // don't render a breadcrumb on the PDP — the editorial hero with
+  // don't render a breadcrumb on the PDP - the editorial hero with
   // the "File 0N · Family" eyebrow is the navigation clue instead.
   // Bundles advertise the composed component price (what add-to-cart actually
   // charges), not a single component's price. Coming soon: no
@@ -1447,14 +1447,14 @@ function ProductPage() {
       : (selectedVariant?.availableForSale ?? false),
     preorder,
     productHandle: product.handle,
-    // AggregateRating rides only when reviews are enabled and count > 0 —
+    // AggregateRating rides only when reviews are enabled and count > 0 -
     // same gate as the visible stars, so the structured data never claims
     // ratings the page doesn't show.
     rating: reviewAggregate,
   });
 
   // The ladder + buy module. These two nodes are rendered twice: once in the
-  // hero (in normal flow — it scrolls past like any content) and, once the
+  // hero (in normal flow - it scrolls past like any content) and, once the
   // in-hero selector has scrolled under the header, again in a compact bar
   // pinned to the top so a variant switcher + add-to-cart is always reachable.
   // Both copies share `activeTier`, so switching in either keeps them in sync.
@@ -1485,7 +1485,7 @@ function ProductPage() {
         onSelect={selectTier}
       />
     ) : null;
-  // Compact (name-pill) variant switcher for the pinned MOBILE buy bar — keeps
+  // Compact (name-pill) variant switcher for the pinned MOBILE buy bar - keeps
   // variant selection reachable there without the full spec ladder's height.
   const railLadderCompact =
     hasLadder && content.optionAxis && content.variants ? (
@@ -1580,7 +1580,7 @@ function ProductPage() {
     <div className="product-buy" data-buy-module>
       <div className="product-buy-price">
         {/* Price + the "incl. VAT" qualifier (Art. VI.45 WER pre-contractual
-            info) grouped together — also fills the dead space beside the price. */}
+            info) grouped together - also fills the dead space beside the price. */}
         <span className="product-buy-amount">
           <ProductPrice
             price={buyPrice}
@@ -1682,11 +1682,11 @@ function ProductPage() {
   );
 
   // The compact pinned copy. Desktop: top-right bar with ladder + buy module.
-  // Mobile (<960px): bottom bar with the buy module only — the ladder chips
+  // Mobile (<960px): bottom bar with the buy module only - the ladder chips
   // don't fit and the in-hero selector is a short scroll away. Portaled to
-  // <body> so the fixed overlay escapes the hero's sticky/stacking context —
+  // <body> so the fixed overlay escapes the hero's sticky/stacking context -
   // otherwise the chapter media (sticky to the same top-right spot) paints
-  // over it and swallows clicks. Suppressed (CSS-hidden, not unmounted — an
+  // over it and swallows clicks. Suppressed (CSS-hidden, not unmounted - an
   // in-flight add-to-cart submit must survive opening the drawer) while an
   // aside is open so it doesn't sit on top of the cart. It stays live through the
   // teardown chapter (the board no longer pins full-screen there) so variant/SKU
@@ -1725,7 +1725,7 @@ function ProductPage() {
       // and bundles have no `whatIsThis` block and skip the chapter cleanly.
       case 'whatIsThis':
         return Boolean(content.whatIsThis);
-      // Accessories (fallback content) aren't open-hardware products — no
+      // Accessories (fallback content) aren't open-hardware products - no
       // "Open for learning" chapter, and no chapter number burnt on it.
       case 'openSource':
         return isEditorial;
@@ -1743,10 +1743,10 @@ function ProductPage() {
         return (
           !content.bundle &&
           Boolean(content.firmware.project) &&
-          content.firmware.project !== '—'
+          content.firmware.project !== '-'
         );
       // Every editorial product has a public repo, so the chapter always exists
-      // for them — the grid degrades to the "+ you" invitation when the GitHub
+      // for them - the grid degrades to the "+ you" invitation when the GitHub
       // API is rate-limited.
       case 'contributors':
         return isEditorial;
@@ -1769,7 +1769,7 @@ function ProductPage() {
    * The data model picks which of these run and in what order; it does not pick
    * how they look. `n` is the number `resolveChapters` assigned from position,
    * so it cannot drift from the render order. `title` is the studio's optional
-   * override — absent, the designed title (inline `<em>` and all) stands.
+   * override - absent, the designed title (inline `<em>` and all) stands.
    */
   const chapterNodes: Partial<
     Record<
@@ -1992,7 +1992,7 @@ function ProductPage() {
           {activeOshwaUid ? (
             // OSHWA-certified: lead with the open-hardware certification (links
             // the public cert page for this UID) and keep the CERN-OHL-S license
-            // name on the sub-line — the certification attests the license, it
+            // name on the sub-line - the certification attests the license, it
             // doesn't replace it.
             <a
               href={`https://certification.oshwa.org/${activeOshwaUid.toLowerCase()}.html`}
@@ -2164,7 +2164,7 @@ function ProductPage() {
                       />
                     </p>
                     {/* Real, labelled, thumb-sized chips split into a top-side and
-                        a bottom-side row — not one long scroller. Tap one to
+                        a bottom-side row - not one long scroller. Tap one to
                         spotlight that part on the board; each row scrolls for the
                         rest. */}
                     {[
@@ -2217,7 +2217,7 @@ function ProductPage() {
                               >
                                 {/* Just the model/short name on the chip (e.g.
                                     "RP2354A"), not the whole descriptive sentence
-                                    — split off anything after a dash/middot. */}
+                                    - split off anything after a dash/middot. */}
                                 {p.name.split(/\s+[—–·-]\s+/)[0]}
                                 {p.cost && p.cost !== '×1' ? (
                                   <span className="board-part-chip-qty">{p.cost}</span>
@@ -2474,7 +2474,7 @@ function ProductPage() {
           noMedia
         >
           {/* No prose above the grid; the how-and-why lives once, on the
-              org contributing guide. The button sits to the grid's right — the
+              org contributing guide. The button sits to the grid's right - the
               row of people ends in the door you walk through to join them. */}
           <div className="contributors-row">
             <Suspense fallback={<ContributorGridSkeleton />}>
@@ -2595,7 +2595,7 @@ function ProductPage() {
           </p>
           {hasHeroCopy ? (
             <h1 className="product-hero-headline">
-              {/* Skip empty lines — single-line heroes (OpenESC) otherwise
+              {/* Skip empty lines - single-line heroes (OpenESC) otherwise
                   render stray empty <em>/<span> nodes and join spaces. */}
               <span {...prodEdit('hero.line1')}>{content.hero.line1}</span>
               {content.hero.line2Italic ? (
@@ -2670,7 +2670,7 @@ function ProductPage() {
                   {bundleChipParts[1]}
                 </Link>
               </li>
-            ) : content.firmware.project && content.firmware.project !== '—' ? (
+            ) : content.firmware.project && content.firmware.project !== '-' ? (
               <li>
                 <Link
                   to="/firmware-partners"
@@ -2685,7 +2685,7 @@ function ProductPage() {
             ) : null}
           </ul>
 
-          {/* In-flow buy box — scrolls past with the page like any content,
+          {/* In-flow buy box - scrolls past with the page like any content,
               so nothing vanishes or leaves a gap. The sentinel sits BELOW the
               buy module: the compact top bar takes over only once the whole
               module (CTA included) is under the header, otherwise the two

@@ -1,5 +1,5 @@
 /**
- * /learn — the FPV knowledge layer.
+ * /learn - the FPV knowledge layer.
  *
  * The corpus in `app/content/learn/` is RESEARCH, not published prose: one
  * claim per bullet, each carrying its source URL(s) and a confidence tag
@@ -159,7 +159,7 @@ export function dossierMeta(slug: string): DossierMeta | undefined {
 /**
  * Lazy glob: each dossier compiles to its own chunk and is fetched only when
  * its route is hit. Absent under `node --test`, where `import.meta.env` is
- * undefined — same guarded-glob pattern as `app/lib/votes.ts`.
+ * undefined - same guarded-glob pattern as `app/lib/votes.ts`.
  */
 const BODIES = import.meta.env
   ? import.meta.glob<string>('/app/content/learn/*.md', {
@@ -187,7 +187,7 @@ const RULE = /^-{3,}\s*$/;
 const TAG = /\[(verified|single|lore)\b([^\]]*)\]/gi;
 /**
  * A URL, without the sentence punctuation that follows it. The last character
- * may not be `.,;:)]` — those belong to the prose, and swallowing a closing
+ * may not be `.,;:)]` - those belong to the prose, and swallowing a closing
  * paren both breaks the link and strands its opening half in the claim text.
  */
 const URL_RE = /https?:\/\/[^\s<>"']*[^\s<>"'.,;:)\]]/g;

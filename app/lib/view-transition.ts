@@ -10,7 +10,7 @@
  * `.finished` / `.updateCallbackDone` promises then reject with
  * `InvalidStateError: Transition was aborted because of invalid state` (or an
  * `AbortError`). If those rejections aren't caught they flood the console, and
- * — worse — when the aborted one is a React Router *navigation* transition, its
+ * - worse - when the aborted one is a React Router *navigation* transition, its
  * state-commit render is interrupted, which can leave the next route (the PDP
  * board art) mounted but stuck pre-reveal until a refresh.
  *
@@ -63,7 +63,7 @@ function swallow(p: Promise<unknown> | undefined): void {
 export function markTransition(vt: ViewTransitionLike | null | undefined): void {
   if (!vt) return;
   // Already tracking this exact transition (e.g. the document patch registered
-  // it before safeStartViewTransition could) — don't double-attach handlers.
+  // it before safeStartViewTransition could) - don't double-attach handlers.
   if (activeTransition === vt) return;
   activeTransition = vt;
   swallow(vt.ready);
@@ -78,9 +78,9 @@ export function markTransition(vt: ViewTransitionLike | null | undefined): void 
 }
 
 /**
- * Patch `document.startViewTransition` ONCE so that *every* caller — including
+ * Patch `document.startViewTransition` ONCE so that *every* caller - including
  * React Router's internal navigation transitions, which don't go through
- * `safeStartViewTransition` — is recorded in our in-flight flag and has its
+ * `safeStartViewTransition` - is recorded in our in-flight flag and has its
  * abort/interrupt rejections swallowed.
  *
  * This is what lets a manual theme transition know a navigation transition is
@@ -144,7 +144,7 @@ export function safeStartViewTransition(
   // Skip the transition (run the update directly) when unsupported, under
   // reduced motion, while the tab is hidden (the API can't snapshot a hidden
   // document and throws InvalidStateError), or while another transition is
-  // already running (we'd abort it — e.g. an in-flight RR navigation).
+  // already running (we'd abort it - e.g. an in-flight RR navigation).
   if (
     !supported ||
     reduce ||

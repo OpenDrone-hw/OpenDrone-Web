@@ -14,7 +14,7 @@ type FeedbackResult =
 // Posts a structured message to DISCORD_FEEDBACK_CHANNEL_ID (falls back
 // to staff metadata channel) AND stores the ratings on the mirrored Odoo
 // ticket (erp/addons/incutec_support) so they can be rolled up into a
-// report there. Idempotent — submitting twice overwrites, which keeps the
+// report there. Idempotent - submitting twice overwrites, which keeps the
 // UX simple ("oops, wanted to fix my rating") at the cost of losing the
 // prior submission.
 export async function action({request, context}: Route.ActionArgs) {

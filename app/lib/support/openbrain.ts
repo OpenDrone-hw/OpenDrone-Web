@@ -1,5 +1,5 @@
 /**
- * OpenBrain ticket-API client — phase-1 scaffold. NOT WIRED LIVE.
+ * OpenBrain ticket-API client - phase-1 scaffold. NOT WIRED LIVE.
  *
  * The support backend is moving from "Discord-as-source-of-truth + Odoo-
  * backed ticket state + cookie/magic-link" to OpenBrain's account-bound

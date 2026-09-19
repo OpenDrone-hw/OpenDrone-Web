@@ -102,7 +102,7 @@ export async function loader({request, context, params}: Route.LoaderArgs) {
   // Same projection rules as /api/support/poll. Customer-relayed
   // bot messages surface as role:'self'; staff surface as helper.
   // Self-relayed bot messages (the customer's own posts) bypass the
-  // moderation gate — same reasoning as in /api/support/poll.
+  // moderation gate - same reasoning as in /api/support/poll.
   const selfRelayed = messages.filter(
     (m) => m.author.bot && SELF_PREFIX_RE.test(m.content),
   );

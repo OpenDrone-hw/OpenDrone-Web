@@ -22,7 +22,7 @@
     "chain": "frame"
   },
   "firmware": {
-    "project": "—"
+    "project": "-"
   },
   "repoUrl": "https://github.com/OpenDrone-hw/OpenFrame",
   "teardown": {

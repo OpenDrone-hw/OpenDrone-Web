@@ -4,7 +4,7 @@ import {Txt} from './Txt';
 import {copyText} from '~/lib/copy';
 
 /**
- * Provenance card — the honest where-is-this-made line. Designed in
+ * Provenance card - the honest where-is-this-made line. Designed in
  * Belgium, first runs assembled in Shenzhen, EU assembly on the roadmap.
  * Kept static for now; the batch ID on the build card is the live link
  * between a given unit and its factory.
