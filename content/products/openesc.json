@@ -15,7 +15,7 @@
       "A flight controller to command it (OpenFC Lite, one 8-pin cable, in the box)",
       "Four brushless motors soldered to the pads",
       "A LiPo on the XT pigtail, with the included low-ESR capacitor across the battery pads",
-      "A frame, props, receiver, radio; the usual rest of the drone"
+      "A frame, props, receiver, radio; the usual rest of the aircraft"
     ],
     "fit": "The layer between the flight controller's digital requests and the raw battery current that actually spins the props.",
     "chain": "esc"
