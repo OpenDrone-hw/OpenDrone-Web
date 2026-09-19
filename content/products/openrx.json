@@ -109,22 +109,24 @@
   "inTheBox": [
     {
       "qty": "1×",
-      "item": "OpenRX board",
-      "note": ""
+      "item": "OpenRX board"
     },
     {
       "qty": "1×",
-      "item": "Sillicone cables",
-      "note": ""
+      "item": "Silicone hook-up wire set, 30 AWG, four wires"
     },
     {
       "qty": "1×",
-      "item": "Heat-shrink sleeve + double-sided tape"
+      "item": "Heat-shrink sleeve, clear, two-piece"
     },
     {
       "qty": "1×",
-      "item": "Quickstart guide",
-      "note": ""
+      "item": "Bind and quick-start card"
+    },
+    {
+      "qty": "1×",
+      "item": "ESD bag (OpenDrone logo)",
+      "note": "everything above ships inside it"
     }
   ],
   "downloads": [],
@@ -286,7 +288,7 @@
       "inTheBox": [
         {
           "qty": "1×",
-          "item": "U.FL dipole antenna"
+          "item": "2.4 GHz U.FL T-dipole antenna"
         }
       ],
       "pins": [
@@ -402,7 +404,7 @@
       "inTheBox": [
         {
           "qty": "1×",
-          "item": "U.FL dipole antenna"
+          "item": "Dual-band U.FL T-dipole antenna"
         }
       ],
       "pins": [
@@ -526,7 +528,7 @@
       "inTheBox": [
         {
           "qty": "2×",
-          "item": "U.FL dipole antenna",
+          "item": "Dual-band U.FL T-dipole antenna",
           "note": "diversity pair"
         }
       ],
