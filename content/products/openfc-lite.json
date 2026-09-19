@@ -226,15 +226,25 @@
     },
     {
       "qty": "1×",
-      "item": "8-pin JST SH ESC harness"
+      "item": "JST-SH 1.0 mm 8-pin FC-to-ESC cable"
     },
     {
       "qty": "4×",
-      "item": "M3 rubber soft-mount grommets"
+      "item": "Silicone soft-mount grommets",
+      "note": "M3 on 30×30, M2 on 20×20"
     },
     {
       "qty": "1×",
-      "item": "Quickstart guide"
+      "item": "Silicone hook-up wire set, 28 AWG, four colours"
+    },
+    {
+      "qty": "1×",
+      "item": "Quick-start card"
+    },
+    {
+      "qty": "1×",
+      "item": "ESD bag (OpenDrone logo)",
+      "note": "everything above ships inside it"
     }
   ],
   "downloads": [],
