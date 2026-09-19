@@ -162,6 +162,17 @@ declare global {
     SUPPORT_CLEANUP_SECRET?: string;
     DISCORD_FEEDBACK_CHANNEL_ID?: string;
 
+    // Bearer token for /api/support/relay, the outbound half of the
+    // support bridge (erp/docs/integrations/discord.md, D1). Odoo sends
+    // this when a staff member's public chatter comment has to reach the
+    // Discord thread; it must match the system parameter
+    // incutec_support.relay_token on the Odoo side (set from env
+    // SUPPORT_RELAY_SECRET by erp/config/support.py). Separate from
+    // SUPPORT_ODOO_TOKEN on purpose: a leak of one direction's secret
+    // must not grant the other. Unset, the route returns 503 and the
+    // Odoo side stays inert.
+    SUPPORT_RELAY_SECRET?: string;
+
     // Newsletter / release-notes auto-dispatch
     // - NEWSLETTER_DISPATCH_SECRET: bearer token for the manual dispatch
     //   trigger (CLI/curl) AND HMAC key for per-recipient unsubscribe
