@@ -11,10 +11,9 @@ import {
 /**
  * Export a fetch handler in module format.
  *
- * The handler is React Router's own: Hydrogen's wrapper existed for the
- * Storefront client and `storefrontRedirect` (Shopify's URL redirect
- * table), neither of which exists any more. Oxygen still hosts and
- * builds the app (decision D3); it just has no Shopify API to call.
+ * The handler is React Router's own. This module is the Cloudflare Worker
+ * entry: the Cloudflare Vite plugin runs it in dev and builds it to
+ * dist/server/index.js, which wrangler.production.toml deploys.
  */
 const handleRequest = createRequestHandler(serverBuild, process.env.NODE_ENV);
 
@@ -80,14 +79,7 @@ export default {
       );
       scheduleImageWarm(url.origin, env, context);
 
-      // The Hydrogen package still augments React Router's AppLoadContext
-      // with a Storefront client, a cart handler and a customer-account
-      // client, none of which exist here; the cast is that type-level
-      // ghost, not a runtime one.
-      const response = await handleRequest(
-        request,
-        context as unknown as Parameters<typeof handleRequest>[1],
-      );
+      const response = await handleRequest(request, context);
 
       if (context.session.isPending) {
         response.headers.set('Set-Cookie', await context.session.commit());

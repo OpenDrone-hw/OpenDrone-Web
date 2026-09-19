@@ -15,9 +15,9 @@
   },
   "scripts": {
     "prebuild": "npm run sync:legal",
-    "build": "shopify hydrogen build",
-    "dev": "shopify hydrogen dev",
-    "preview": "shopify hydrogen preview --build",
+    "build": "react-router build",
+    "dev": "react-router dev",
+    "preview": "npm run build && wrangler dev --config wrangler.production.toml",
     "lint": "eslint --no-error-on-unmatched-pattern .",
     "typecheck": "react-router typegen && tsc --noEmit",
     "test": "node --experimental-strip-types --test \"app/**/*.test.ts\"",
@@ -45,7 +45,6 @@
     "@formkit/auto-animate": "^0.10.0",
     "@react-three/fiber": "^9.7.0",
     "@react-three/postprocessing": "^3.1.1",
-    "@shopify/hydrogen": "^2026.4.5",
     "@tailwindcss/vite": "^4.3.3",
     "isbot": "^5.2.2",
     "lucide-react": "^1.44.0",
@@ -53,19 +52,17 @@
     "postprocessing": "^6.39.2",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-router": "7.16.0",
+    "react-router": "7.18.4",
     "tailwindcss": "^4.3.3",
     "three": "^0.185.1"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.56.0",
     "@eslint/compat": "^1.2.5",
     "@eslint/eslintrc": "^3.3.6",
     "@eslint/js": "^9.39.5",
-    "@react-router/dev": "~7.16.0",
-    "@react-router/fs-routes": "~7.16.0",
-    "@shopify/cli": "^3.94.3",
-    "@shopify/mini-oxygen": "^4.2.1",
-    "@shopify/oxygen-workers-types": "^4.1.6",
+    "@react-router/dev": "~7.18.4",
+    "@react-router/fs-routes": "~7.18.4",
     "@shopify/prettier-config": "^1.1.4",
     "@total-typescript/ts-reset": "^0.6.1",
     "@types/eslint": "^9.6.1",
@@ -91,7 +88,8 @@
     "prettier": "^3.9.6",
     "typescript": "^5.9.2",
     "vite": "^6.4.3",
-    "vite-tsconfig-paths": "^4.3.1"
+    "vite-tsconfig-paths": "^4.3.1",
+    "wrangler": "^4.135.0"
   },
   "engines": {
     "node": "^22 || ^24"
@@ -102,19 +100,6 @@
   },
   "overrides": {
     "lodash": "^4.18.1",
-    "qs": "^6.15.3",
-    "@shopify/cli": {
-      "esbuild": "0.28.1"
-    },
-    "@shopify/mini-oxygen": {
-      "undici": "^7.28.0"
-    },
-    "miniflare": {
-      "undici": "^6.27.0",
-      "ws": "^8.21.0",
-      "youch": {
-        "cookie": "^0.7.0"
-      }
-    }
+    "qs": "^6.15.3"
   }
 }
