@@ -55,7 +55,7 @@ Two site-specific consequences of one gold, both deliberate:
 - **Gold is 1.62:1 on the light surface.** Fine for the mark and the wordmark,
   which are exempt from contrast rules. Gold chips and eyebrows on light sit at
   roughly that too, which is a deliberate brand accent, not an oversight
-  (maintainer, 2026-08-14). Anything a user has to *read* rather than recognise uses
+  Anything a user has to *read* rather than recognise uses
   `--color-text` or `--color-text-muted`.
 - **Focus rings never use gold.** WCAG 1.4.11 wants 3:1 and gives focus
   indicators no logo exemption, so `--color-focus` is ink on light.
@@ -63,8 +63,8 @@ Two site-specific consequences of one gold, both deliberate:
 ### Email
 
 Email cannot use CSS variables, so the gold is inlined as a literal in
-`app/lib/growth/resend.ts`, `app/lib/support/email.ts`, `scripts/launch-blast.mjs`,
-`scripts/newsletter-template.html` and `scripts/shopify-templates/`. Those are
-the only places a gold hex may appear outside the stylesheet. Buttons are fine,
+`app/lib/support/email.ts`, `scripts/launch-blast.mjs` and
+`scripts/newsletter-template.html`. Those are the only places a gold hex may
+appear outside the stylesheet. Buttons are fine,
 dark ink on a gold fill. Gold link text in email is 1.75:1 on a white client,
 which is a known cost of one gold rather than an oversight.
