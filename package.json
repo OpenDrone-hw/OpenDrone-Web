@@ -48,7 +48,7 @@
     "@shopify/hydrogen": "^2026.4.5",
     "@tailwindcss/vite": "^4.3.3",
     "isbot": "^5.2.1",
-    "lucide-react": "^1.31.0",
+    "lucide-react": "^1.44.0",
     "motion": "^12.43.0",
     "postprocessing": "^6.39.2",
     "react": "^19.2.8",
