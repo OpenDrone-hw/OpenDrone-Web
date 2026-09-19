@@ -7,7 +7,7 @@ import {attributionSource} from '~/lib/growth/attribution';
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
 
-// Engineering Essentials — dual-purpose: product-release announcements and
+// Engineering Essentials - dual-purpose: product-release announcements and
 // engineering content digest. Posts to app/routes/newsletter._index.tsx,
 // which starts a double opt-in signup on Odoo's "Newsletter" mailing.list
 // (erp PLAN.md 13.11): the address joins only once the visitor confirms the
@@ -15,7 +15,7 @@ import {copyText} from '~/lib/copy';
 //
 // Bot protection: honeypot field + Cloudflare Turnstile. The Turnstile
 // widget + script are lazy-loaded only after the visitor focuses the email
-// input — the form lives in every page footer, so loading the script
+// input - the form lives in every page footer, so loading the script
 // unconditionally would tax the main site bundle for visitors who never
 // intend to subscribe.
 
@@ -27,7 +27,7 @@ type NewsletterActionData = {
 interface NewsletterSignupProps {
   variant?: 'compact' | 'wide' | 'footer';
   className?: string;
-  /** Cloudflare Turnstile public site key — widget is skipped when null. */
+  /** Cloudflare Turnstile public site key - widget is skipped when null. */
   turnstileSiteKey?: string | null;
   /**
    * Coming-soon mode: "Notify me at launch" for one product. Posts the same
@@ -293,7 +293,7 @@ export function NewsletterSignup({
         ) : null}
         <input type="hidden" name="channel" value={channel} />
 
-        {/* Honeypot — hidden from humans, visible to bots */}
+        {/* Honeypot - hidden from humans, visible to bots */}
         <label className="sr-only" aria-hidden="true">
           Website
           <input

@@ -13,7 +13,7 @@ const DISCORD_API = 'https://discord.com/api/v10';
 
 // Every outbound Discord call goes through this so a hanging Discord
 // incident can't tie up a Worker's CPU/wall budget indefinitely. 5 s is
-// generous — healthy Discord calls return in ~50–200 ms.
+// generous - healthy Discord calls return in ~50–200 ms.
 const DISCORD_TIMEOUT_MS = 5000;
 
 function discordFetch(
@@ -44,7 +44,7 @@ export function firstNameOnly(full: string): string {
   // chars from the first name before it is written into the public
   // Discord thread (`**<name>:**`). Without this a Trojan-Source
   // RLO/LRO in a Shopify account name could reverse line order in
-  // staff's Discord view — the class the message/filename sanitisers
+  // staff's Discord view - the class the message/filename sanitisers
   // already defend against.
   const token = full.trim().split(/\s+/)[0] ?? '';
   let cleaned = '';
@@ -95,7 +95,7 @@ function authHeaders(env: DiscordEnv) {
 
 function authHeadersMultipart(env: DiscordEnv) {
   if (!env.DISCORD_BOT_TOKEN) throw new Error('DISCORD_BOT_TOKEN not set');
-  // No Content-Type — fetch sets the multipart boundary automatically.
+  // No Content-Type - fetch sets the multipart boundary automatically.
   return {
     Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
     'User-Agent': 'opendrone-support (https://opendrone.store, 0.1)',
@@ -131,12 +131,12 @@ export async function createSupportThread(
   // to the metadata channel in a separate bot message (see
   // postStaffMetadata below). This matches how Ticket Tool /
   // TicketsBot / HelpDesk split public triage from sensitive context
-  // — Discord itself enforces who can read the metadata channel via
+  // - Discord itself enforces who can read the metadata channel via
   // role-based View Channel permissions, which you configure in
   // Discord UI, not in code.
   //
   // If DISCORD_STAFF_METADATA_CHANNEL_ID is unset, the public post
-  // includes everything (legacy behaviour) — this is the failure mode
+  // includes everything (legacy behaviour) - this is the failure mode
   // when the env isn't fully configured, better to still have the
   // info *somewhere* than to lose it.
   const redact = !!env.DISCORD_STAFF_METADATA_CHANNEL_ID;
@@ -224,7 +224,7 @@ export async function createSupportThread(
 // back to the public thread. Discord-side role permissions on that
 // channel decide who can see it.
 //
-// Silently no-ops when DISCORD_STAFF_METADATA_CHANNEL_ID is unset —
+// Silently no-ops when DISCORD_STAFF_METADATA_CHANNEL_ID is unset -
 // caller falls back to including the metadata in the public thread,
 // which is the legacy behaviour and keeps a single-deploy toggle.
 export async function postStaffMetadata(
@@ -281,7 +281,7 @@ export async function postStaffMetadata(
 }
 
 // Posts a structured feedback message to the dedicated feedback
-// channel (or falls back to the staff-metadata channel). Best-effort —
+// channel (or falls back to the staff-metadata channel). Best-effort -
 // failures are logged but never bubble up, so a Discord hiccup can't
 // block the customer's ack response.
 export async function postFeedback(
@@ -336,7 +336,7 @@ export async function postFeedback(
 }
 
 // Permanently delete a Discord thread (forum post). Used when a ticket
-// is closed or has gone stale — the bridge keeps a copy in our index;
+// is closed or has gone stale - the bridge keeps a copy in our index;
 // Discord doesn't need to retain the original.
 export async function deleteThread(
   env: DiscordEnv,
@@ -346,7 +346,7 @@ export async function deleteThread(
     method: 'DELETE',
     headers: authHeaders(env),
   });
-  // Treat 404 as success — already gone is the goal state.
+  // Treat 404 as success - already gone is the goal state.
   if (res.status === 404) return {ok: true, status: 404};
   return {ok: res.ok, status: res.status};
 }
@@ -398,7 +398,7 @@ function sanitizeMessageContent(content: string): string {
   // Strip Unicode bidi overrides (U+202A-U+202E, U+2066-U+2069) from
   // user-supplied message content before it reaches Discord. A staff
   // member viewing a ticket should not have their rendered line order
-  // silently reversed by RLO/LRO/PDI/LRI chars — the same class of
+  // silently reversed by RLO/LRO/PDI/LRI chars - the same class of
   // trick that landed CVE-2021-42574 ("Trojan Source"). Also strip C0/C1
   // control chars except tab/newline so log-injection via CR doesn't
   // spoof Discord command output.
@@ -468,7 +468,7 @@ export async function fetchThreadMessages(
 
 /**
  * Walk the entire message history of a thread, oldest-first. Used by
- * the cleanup archiver — fetchThreadMessages only does forward-paging
+ * the cleanup archiver - fetchThreadMessages only does forward-paging
  * from a known cursor, this paginates backward from the latest message
  * so we capture everything regardless of how long the thread is.
  *
@@ -531,7 +531,7 @@ export type SupportThreadMatch = {
  *     has the same id as the thread itself).
  *  4. Match the email substring case-insensitively.
  *
- * The cap (`maxCandidates`) keeps the call bounded — at low volume we
+ * The cap (`maxCandidates`) keeps the call bounded - at low volume we
  * cover everything; at higher volume we walk the most recent N threads
  * and miss older ones, which is acceptable for a "resume by email" UX.
  */
@@ -548,7 +548,7 @@ export async function findThreadsByEmail(
   const candidates = await listForumThreads(env, cap);
   if (!candidates.length) return [];
 
-  // Fetch first messages in parallel — Discord's global limit (50/s) is
+  // Fetch first messages in parallel - Discord's global limit (50/s) is
   // well above what 60 parallel GETs incur in a single burst.
   const firstMessages = await Promise.all(
     candidates.map((t) => fetchFirstMessage(env, t.id).catch(() => null)),
@@ -635,7 +635,7 @@ async function listArchivedChannelThreads(
   channelId: string,
 ): Promise<ForumThread[]> {
   // One page (≤100 threads). Older history is intentionally out of scope
-  // for the resume flow — at OpenDrone's volume one page covers months.
+  // for the resume flow - at OpenDrone's volume one page covers months.
   const res = await discordFetch(
     `${DISCORD_API}/channels/${channelId}/threads/archived/public?limit=100`,
     {headers: authHeaders(env)},
@@ -743,7 +743,7 @@ export async function fetchReactors(
     {headers: authHeaders(env)},
   );
   if (!res.ok) {
-    // 404 means no reactions (or wrong emoji) — treat as empty.
+    // 404 means no reactions (or wrong emoji) - treat as empty.
     if (res.status === 404) return [];
     console.warn(
       '[support] fetchReactors failed',
@@ -784,7 +784,7 @@ function snowflakeToDate(id: string): string {
 // banner: name, icon, member/online counts, description, creation date.
 // Uses the bot token because the unauthenticated /widget.json endpoint
 // requires the server widget to be enabled and omits description and
-// member count. Cached on the Cloudflare edge for 5 minutes — counts are
+// member count. Cached on the Cloudflare edge for 5 minutes - counts are
 // approximate anyway, no point hammering Discord on every page view.
 export async function fetchGuildPreview(
   env: DiscordEnv,
@@ -863,7 +863,7 @@ export async function fetchGuildPreview(
 
 // Fetches guild members that carry a specific role. Used to build the
 // moderator allowlist cache. One call per cache refresh (not per poll).
-// We page through members up to a reasonable cap — if the server ever
+// We page through members up to a reasonable cap - if the server ever
 // has >1000 members, the cache becomes slightly lossy for role holders
 // past position 1000, which is a problem for a later stage.
 export async function fetchGuildRoleMembers(
@@ -871,7 +871,7 @@ export async function fetchGuildRoleMembers(
   roleId: string,
 ): Promise<string[]> {
   if (!env.DISCORD_GUILD_ID) {
-    console.warn('[support] DISCORD_GUILD_ID unset — cannot resolve mod role');
+    console.warn('[support] DISCORD_GUILD_ID unset - cannot resolve mod role');
     return [];
   }
   const ids: string[] = [];

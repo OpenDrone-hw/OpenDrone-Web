@@ -9,16 +9,16 @@
  *
  * Keep motion calm and engineering-grade: short travel, no bounce/overshoot.
  * Reduced-motion is enforced globally by <MotionConfig reducedMotion="user">
- * in PageLayout — individual components don't need to re-check it.
+ * in PageLayout - individual components don't need to re-check it.
  */
 
 /** Cubic-bezier control points, as Motion expects them ([x1,y1,x2,y2]). */
 export const EASE = {
-  /** slow-start, snappy middle, soft land — the PDP `.chapter` reveal curve. */
+  /** slow-start, snappy middle, soft land - the PDP `.chapter` reveal curve. */
   reveal: [0.2, 0.7, 0.2, 1],
-  /** symmetric in/out — the hero wordmark settle curve. */
+  /** symmetric in/out - the hero wordmark settle curve. */
   settle: [0.72, 0, 0.28, 1],
-  /** expo-out — quick to acknowledge, used for entrances and hovers. */
+  /** expo-out - quick to acknowledge, used for entrances and hovers. */
   out: [0.22, 1, 0.36, 1],
 } as const;
 
@@ -57,7 +57,7 @@ export const staggerContainer = {
 
 /**
  * The site's signature surface motion: a Pod *expands from its origin* rather
- * than just appearing — dropdowns from their chip, the hero showcase from the
+ * than just appearing - dropdowns from their chip, the hero showcase from the
  * shop button, the PDP scroll-bubble into place. Set `transform-origin` on the
  * element to the trigger edge so it grows from the right spot.
  */

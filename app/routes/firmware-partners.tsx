@@ -24,13 +24,13 @@ export async function loader(_args: Route.LoaderArgs) {
 type MergedPr = {
   project: string; // upstream project name
   title: string; // the PR title as it reads on GitHub
-  url: string; // the real PR URL — must resolve
+  url: string; // the real PR URL - must resolve
   what: string; // one line: what the change does for users
 };
 
 /**
  * Upstream contributions with receipts. HARD RULE: only list PRs that are
- * real, authored by us, and MERGED on the upstream repo — verify the URL
+ * real, authored by us, and MERGED on the upstream repo - verify the URL
  * before adding an entry. Never list aspirational or in-progress work here.
  *
  * Verified 2026-07-06 (gh pr list --author Just4Stan on betaflight/betaflight,

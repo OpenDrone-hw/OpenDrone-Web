@@ -4,7 +4,7 @@ import type {CompanyIdentity} from '~/lib/company';
 /**
  * Legal identity block for the selling entity. Used in Footer and on the
  * /legal imprint page. Product branding (OpenDrone/OpenFC/OpenESC) is
- * intentionally absent — this block is the seller, not the product.
+ * intentionally absent - this block is the seller, not the product.
  *
  * `company.email` is intentionally not rendered as a mailto here: scrapers
  * pull plaintext mailto links from every page they visit. The legal pages

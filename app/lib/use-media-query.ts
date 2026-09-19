@@ -9,7 +9,7 @@ import {useSyncExternalStore} from 'react';
  *   phone   0      – 639   (single column, touch-first)
  *   sm      640    – 767   (large phone / small tablet portrait)
  *   md      768    – 1023  (tablet)
- *   lg      1024   – 1279  (small laptop — desktop hero turns on here)
+ *   lg      1024   – 1279  (small laptop - desktop hero turns on here)
  *   xl      1280+         (wide)
  *
  * `MOBILE_MAX` is the shared "below this is the touch experience" cutoff used
@@ -52,7 +52,7 @@ export function useMediaQuery(query: string, serverFallback = false): boolean {
 
 /**
  * True on the mobile/touch experience (viewport ≤ MOBILE_MAX). `serverFallback`
- * seeds SSR — pass the UA-based hint so a phone gets the mobile tree on first
+ * seeds SSR - pass the UA-based hint so a phone gets the mobile tree on first
  * paint instead of flashing the desktop layout for a frame.
  */
 export function useIsMobile(serverFallback = false): boolean {
@@ -71,7 +71,7 @@ export function usePrefersReducedMotion(): boolean {
 
 /**
  * True on a touch device with no hover (phones, most tablets). Used to switch
- * hover-driven affordances to a tap-only model — on touch, the synthetic
+ * hover-driven affordances to a tap-only model - on touch, the synthetic
  * `mouseenter`/`mouseleave`/`blur` a tap emits otherwise fight a click-toggle
  * (the tap lights then instantly clears). Defaults false on SSR so the desktop
  * hover path renders first, then corrects on the client.

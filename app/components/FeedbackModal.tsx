@@ -6,7 +6,7 @@ import {copyText, editAttrs} from '~/lib/copy';
  * End-of-ticket survey modal. Three 1-5 ratings + optional notes.
  * Submit posts to /api/support/feedback then closes the ticket
  * (parent decides whether to call /api/support/close after the
- * feedback succeeds — `onSubmitted` is fired with the chosen scores
+ * feedback succeeds - `onSubmitted` is fired with the chosen scores
  * so analytics can hook in).
  *
  * Only /support mounts this, so its words live in `content/copy/support.json`

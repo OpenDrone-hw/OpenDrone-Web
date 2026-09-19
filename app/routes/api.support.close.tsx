@@ -31,7 +31,7 @@ export async function action({request, context}: Route.ActionArgs) {
     // sends is already mirrored into the Odoo task's chatter as it
     // happens (app/routes/api.support.start.tsx, api.support.send.tsx),
     // so that task IS the permanent record once the Discord thread is
-    // gone — there is nothing left for this route to additionally save.
+    // gone - there is nothing left for this route to additionally save.
     const closeJob = (async () => {
       const odooTicket = await createOrFetchOdooTicket(env, {
         threadId: ticket.tid,
@@ -44,7 +44,7 @@ export async function action({request, context}: Route.ActionArgs) {
       }
     })().catch((err) => console.warn('[support/close] odoo close failed', err));
     // Odoo's own round trip (up to ~10s with its one retry) must never
-    // tail this response — fire-and-forget like every other Odoo call
+    // tail this response - fire-and-forget like every other Odoo call
     // (D13). The Discord close marker is fast enough to await directly.
     if (context.waitUntil) context.waitUntil(closeJob);
     else void closeJob;

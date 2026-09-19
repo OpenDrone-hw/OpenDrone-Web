@@ -2,7 +2,7 @@
  * Reads from article tags. First tag matching /^v[\w.-]+$/ becomes the
  * chip. `rush-r1` and similar non-v-prefixed release codes are also
  * accepted via an optional fallback set so we don't have to retag old
- * articles. When no version is found the component returns null — the
+ * articles. When no version is found the component returns null - the
  * row layout reserves space, the post page meta hides cleanly.
  */
 

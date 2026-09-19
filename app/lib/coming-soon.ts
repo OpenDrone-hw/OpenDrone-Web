@@ -39,7 +39,7 @@ export function resolveAllStatuses(
 
 /**
  * The five-stage roadmap word per handle (beta, alpha, ...), for the
- * status chips on cards and PDPs — display vocabulary, not the buyability
+ * status chips on cards and PDPs - display vocabulary, not the buyability
  * tri-state. Only roadmap handles appear in the map.
  */
 export function roadmapStatusMap(
@@ -82,7 +82,7 @@ export function useRoadmapStatusResolver(): (
 /**
  * Coming-soon state for a product, resolved from the root loader's
  * PUBLIC_COMING_SOON flag + the per-product override in product-content.ts.
- * Works in any component under root — no prop drilling. Defaults to
+ * Works in any component under root - no prop drilling. Defaults to
  * coming-soon when root data is unavailable (error boundaries), matching
  * the flag's fail-closed default.
  */
@@ -124,7 +124,7 @@ export function useProductStatusResolver(): (
 }
 
 /**
- * Resolve the global coming-soon flag from env — the single rule (shared
+ * Resolve the global coming-soon flag from env - the single rule (shared
  * with root.tsx): defaults ON, `PUBLIC_COMING_SOON=0` unlocks the shop.
  * Server-side twin of {@link useComingSoon} for loaders/actions that have
  * no root loader data (feeds, cart gate).
@@ -136,7 +136,7 @@ export function comingSoonFlag(env: {PUBLIC_COMING_SOON?: string}): boolean {
 /**
  * Whether ANY product can currently be locked: the global flag is on, or
  * it's off but a per-product `comingSoon: true` override keeps a SKU
- * teasing. Guards the zero-cost unlock path — when this is false the cart
+ * teasing. Guards the zero-cost unlock path - when this is false the cart
  * gate and feeds skip their coming-soon work entirely, so the unlocked
  * shop pays nothing for the feature.
  */

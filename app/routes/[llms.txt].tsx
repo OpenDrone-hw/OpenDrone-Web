@@ -14,7 +14,7 @@ import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
 import {toCards} from '~/lib/catalog';
 
 /**
- * /llms.txt — the machine-readable front door for AI agents (llmstxt.org).
+ * /llms.txt - the machine-readable front door for AI agents (llmstxt.org).
  * Served dynamically so prices, availability, SKUs and order links come
  * straight from the Odoo catalog and can never drift from the shop. The
  * catalog section regenerates per request (cached 1h); everything else is
@@ -85,7 +85,7 @@ export async function loader({context, request}: Route.LoaderArgs) {
       const desc = (PRODUCT_CONTENT[p.handle]?.hero?.lead ?? '')
         .replace(/\s+/g, ' ')
         .slice(0, 160);
-      // Locked products show "coming soon" instead of price + stock — this
+      // Locked products show "coming soon" instead of price + stock - this
       // feed must not leak what the PDP hides. Pre-order products show the
       // same ship promise the PDP, the cart line and the order carry.
       const status = resolveStatus(
@@ -111,10 +111,10 @@ export async function loader({context, request}: Route.LoaderArgs) {
             `  - ${name}` +
             (v.sku ? ` (SKU ${v.sku})` : '') +
             (locked
-              ? ' — coming soon, not yet orderable'
-              : ` — €${Number(v.price.amount).toFixed(2)}` +
-                ` — ${stockWord(v.availableForSale)}` +
-                ` — order: POST ${v.cartAddUrl.split('?')[0]} with ${v.cartAddUrl.split('?')[1] ?? ''}`)
+              ? ' - coming soon, not yet orderable'
+              : ` - €${Number(v.price.amount).toFixed(2)}` +
+                ` - ${stockWord(v.availableForSale)}` +
+                ` - order: POST ${v.cartAddUrl.split('?')[0]} with ${v.cartAddUrl.split('?')[1] ?? ''}`)
           );
         })
         .join('\n');
@@ -198,7 +198,7 @@ machine-readable feed lives at ${origin}/products.json.
 
 ## Catalog
 
-Prices EUR incl. VAT, subject to change — verify on the product page.
+Prices EUR incl. VAT, subject to change - verify on the product page.
 
 ${catalog}
 
@@ -232,7 +232,7 @@ infer status from prose anywhere else.
 
 ## Support
 
-- [Support chat](${origin}/support) — live support on the site
+- [Support chat](${origin}/support) - live support on the site
 - Email: contact@opendrone.be
 - [Discord](https://discord.gg/ABajnacUsS)
 `;

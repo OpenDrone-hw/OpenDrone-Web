@@ -8,7 +8,7 @@ import {
  * Static, theme-aware OpenDrone wordmark for site chrome (header).
  *
  * Same traced paths as the animated HeroWordmark, but rendered as a flat
- * filled logo: "Open" in the body text color, "Drone" in gold — both via
+ * filled logo: "Open" in the body text color, "Drone" in gold - both via
  * tokens, so it inverts correctly in light mode. Replaces the white-baked
  * PNG that vanished on a light background.
  */
@@ -37,7 +37,7 @@ export function SiteWordmark({className}: {className?: string}) {
             }
             // Each gold letter is a static base path plus a brighter overlay
             // copy whose opacity is animated (the ambient sheen). Animating the
-            // overlay's opacity — a compositor-only property — keeps the wave on
+            // overlay's opacity - a compositor-only property - keeps the wave on
             // the GPU instead of repainting the glyph every frame the way the
             // old `fill` animation did. The per-letter --gold-index staggers the
             // sweep into a left→right wave.

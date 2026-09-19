@@ -4,8 +4,8 @@ import {revealVariants, staggerContainer} from '~/lib/motion';
 /**
  * Fade-and-rise an element into view the first time it enters the viewport.
  *
- * This is the JS twin of the CSS `.chapter` scroll-reveal — same curve, same
- * 16px travel — for cases where the markup isn't a `.chapter` (grids, cards,
+ * This is the JS twin of the CSS `.chapter` scroll-reveal - same curve, same
+ * 16px travel - for cases where the markup isn't a `.chapter` (grids, cards,
  * arbitrary blocks). Use it sparingly and intentionally: a reveal should mark
  * a genuine new section, not fire on every paragraph.
  *
@@ -42,7 +42,7 @@ export function Reveal({
 /**
  * Wraps a set of `Reveal` children so they cascade in on scroll instead of
  * appearing together. Children must use `variants={revealVariants}` (the
- * default `Reveal` does) and omit their own `whileInView` — the container
+ * default `Reveal` does) and omit their own `whileInView` - the container
  * drives them.
  */
 export function RevealGroup({

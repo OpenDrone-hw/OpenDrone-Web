@@ -20,7 +20,7 @@ import {
 
 // The hero GLBs use EXT_meshopt_compression (the Onshape assemblies are
 // decimated to a few MB/size this way). MeshoptDecoder decodes on the main
-// thread — unlike DRACOLoader, which spins up a blob: Web Worker that
+// thread - unlike DRACOLoader, which spins up a blob: Web Worker that
 // Hydrogen's CSP (worker-src) blocks, causing the loader to hang silently.
 function getGLTFLoader(): GLTFLoader {
   const loader = new GLTFLoader();
@@ -37,7 +37,7 @@ function useScrollProgress() {
   const targetRef = useRef(0);
   const smoothRef = useRef(0);
   useEffect(() => {
-    // NOTE: no scrollTo(0,0) here — the route owns the first-visit scroll
+    // NOTE: no scrollTo(0,0) here - the route owns the first-visit scroll
     // reset (_index.tsx). The scene chunk can resolve seconds after the
     // splash lock releases on slow networks; resetting here teleported a
     // user who had already scrolled back to the top.
@@ -63,7 +63,7 @@ function useScrollProgress() {
 // RATE (~1/RATE s time constant) governs the gentle ease for ordinary scrolling.
 // MAX_RATE caps how fast the animation can advance in progress-units/second:
 // when you fling the page hard, the raw scroll target leaps to the end, but the
-// scene is not allowed to traverse the whole sequence in two frames — it glides
+// scene is not allowed to traverse the whole sequence in two frames - it glides
 // at a watchable speed instead of teleporting. Normal slow scrolling never hits
 // the cap (its per-frame step is well under it), so it stays directly coupled.
 const SCROLL_RATE = 14;
@@ -88,7 +88,7 @@ function ScrollDamper({
     // Clamp dt so a long stall (tab refocus, GC pause) can't snap the value.
     const cdt = Math.min(dt, 0.1);
     let step = diff * (1 - Math.exp(-cdt * SCROLL_RATE));
-    // Velocity cap — bounds the per-frame jump so a momentum fling plays the
+    // Velocity cap - bounds the per-frame jump so a momentum fling plays the
     // animation at a controlled rate rather than skipping through it.
     const maxStep = SCROLL_MAX_VEL * cdt;
     if (step > maxStep) step = maxStep;
@@ -109,7 +109,7 @@ function loadModel(
       (gltf) => resolve(gltf.scene),
       (event) => {
         // Content-Length may be missing for cached responses or when the
-        // server doesn't set it — `lengthComputable` is the canonical
+        // server doesn't set it - `lengthComputable` is the canonical
         // signal. Caller treats unknown totals as a synthetic 0..1 ramp.
         if (event.lengthComputable) onProgress?.(event.loaded, event.total);
         else onProgress?.(event.loaded, 0);
@@ -154,7 +154,7 @@ const GLOW_TINT = new THREE.Color(0xc79a32);
  * per mesh, even when many meshes share identical colour/map/PBR settings.
  * `mergeByMaterialRef` buckets by uuid so each of those duplicates becomes
  * its own draw call. Walk the scene first and collapse materials with
- * matching visual fingerprints into a single shared instance — buckets
+ * matching visual fingerprints into a single shared instance - buckets
  * then collapse with them, dropping the draw-call count substantially.
  */
 async function dedupeMaterialsByFingerprint(
@@ -205,7 +205,7 @@ async function dedupeMaterialsByFingerprint(
 
 /**
  * GLB exports from PCB tooling often ship as MeshBasicMaterial (unlit) so
- * the boards look the same under any lighting — bright, flat, no shading.
+ * the boards look the same under any lighting - bright, flat, no shading.
  * Replace any non-PBR material with a MeshStandardMaterial that preserves
  * the colour/map but actually responds to scene lights.
  */
@@ -361,7 +361,7 @@ async function mergeGroupByBucket(
     meshes[key] = mesh;
   }
 
-  // Dispose the source scene's original geometries and materials — we've
+  // Dispose the source scene's original geometries and materials - we've
   // replaced them with the merged version.
   await forEachSliced(
     sourceMeshes,
@@ -385,18 +385,18 @@ export type LabelRefs = Partial<
 // A fully-processed part ready to drop into the scene: the merged group and
 // its material list (for hover/opacity animation).
 type BuiltPart = {group: THREE.Group; mats: THREE.Material[]};
-// A fully-processed airframe: one BuiltPart per hero slot (registry order —
+// A fully-processed airframe: one BuiltPart per hero slot (registry order -
 // see HERO_SLOTS), keyed by slot id.
 type BuiltModel = Map<HeroSlotId, BuiltPart>;
 
-// Raycast no-op — see addProxyHitbox.
+// Raycast no-op - see addProxyHitbox.
 const NO_RAYCAST = () => {};
 
 /**
  * Pointer hit-testing used to run against the merged megameshes: three.js
  * Mesh.raycast is a LINEAR per-triangle scan and the 5" trio carries ~1.27M
  * render vertices, so r3f's pointermove raycast walked ~700k triangles per
- * mouse movement over the full-viewport canvas — the main "sometimes laggy"
+ * mouse movement over the full-viewport canvas - the main "sometimes laggy"
  * cause, paid even before the scene becomes interactive.
  *
  * Fix: null out raycast on every merged mesh and add ONE invisible box per
@@ -479,7 +479,7 @@ function DroneAssembly({
    *  thread for its first frames. Cached visits already see ms-scale loads
    *  so the delay there is invisible. */
   loadDelayMs?: number;
-  /** Which airframe to show — a HERO_AIRFRAMES key (e.g. '5' / '3'). Each maps
+  /** Which airframe to show - a HERO_AIRFRAMES key (e.g. '5' / '3'). Each maps
    *  to a size-specific GLB trio (frame{key}/fc{key}/esc{key}). Changing it
    *  reloads. */
   size: string;
@@ -531,17 +531,17 @@ function DroneAssembly({
     >;
   const hoverState = useRef<Record<HeroSlotId, number>>(zeroPerSlot());
   const hoverTarget = useRef<Record<HeroSlotId, number>>(zeroPerSlot());
-  // Preallocated per-frame scratch (reveal + focus per slot) — the render loop
+  // Preallocated per-frame scratch (reveal + focus per slot) - the render loop
   // must not allocate.
   const revealsRef = useRef<number[]>(new Array(HERO_SLOTS.length).fill(0));
   const focusScratchRef = useRef<number[]>(
     new Array(HERO_SLOTS.length).fill(0),
   );
-  // Seconds parked on the frame stop — used to hold the frame's spotlight for a
+  // Seconds parked on the frame stop - used to hold the frame's spotlight for a
   // beat after it reveals, then fade it out so the very end settles unlit.
   const frameHoldRef = useRef(0);
   // Latched scroll direction. While scrolling BACK (up) the per-part highlight
-  // choreography is skipped — only the camera zoom eases smoothly back in.
+  // choreography is skipped - only the camera zoom eases smoothly back in.
   const reverseRef = useRef(false);
   // Smoothed pitch/roll so the board-view tilt eases back to rest on scroll-back
   // instead of snapping when the focus is suppressed.
@@ -601,7 +601,7 @@ function DroneAssembly({
   }, []);
 
   // Detach the outgoing model's groups from the slide-out wrapper (they return
-  // to the cache for reuse — never disposed here).
+  // to the cache for reuse - never disposed here).
   const finishOutgoing = useCallback(() => {
     const og = outgoingRef.current;
     if (og && outWrapperRef.current) {
@@ -733,7 +733,7 @@ function DroneAssembly({
         );
 
         // Raw Onshape geometry (metres). Fit to a ~0.124-unit frame with ONE
-        // uniform scale across all parts — display only; proportions/positions
+        // uniform scale across all parts - display only; proportions/positions
         // stay exactly as exported. The anchor slot (the frame) defines the
         // airframe's bounds for both the fit and the centering.
         const anchorScene = sceneOf.get(HERO_ANCHOR_SLOT.id)!;
@@ -807,12 +807,12 @@ function DroneAssembly({
           let pack: {group: THREE.Group};
           let mats: THREE.Material[];
           if (slot.finish === 'carbon') {
-            // Plain dark frame material — flat carbon colour, no woven texture.
+            // Plain dark frame material - flat carbon colour, no woven texture.
             // Stays partly transparent so the boards read through it; the
             // colour is animated per-frame (see the carbon block in useFrame).
             const frameMat = new THREE.MeshStandardMaterial({
               // Matte, near-non-metallic so the warm key light doesn't bloom
-              // the frame into a tan/grey plastic look — it should read as
+              // the frame into a tan/grey plastic look - it should read as
               // dark carbon.
               color: 0xf2f2f2,
               metalness: 0.0,
@@ -852,7 +852,7 @@ function DroneAssembly({
                 (m as any).emissiveIntensity = 0;
               }
               // Onshape exports every board material DOUBLE-SIDED. PCBs are
-              // solid, so the inside/back faces never should show — and
+              // solid, so the inside/back faces never should show - and
               // double-siding makes near-coplanar pad/board faces flicker
               // through one another as the model rotates. Render front-only:
               // correct for a solid and it removes the back-face z-fighting
@@ -862,7 +862,7 @@ function DroneAssembly({
             }
             // Boards: OUT of shadows entirely. They used to self-shadow
             // (cast+receive), which on the down-scaled 5" board produced
-            // crawling shadow-acne across the fine pad geometry — a fixed
+            // crawling shadow-acne across the fine pad geometry - a fixed
             // world-space bias + fixed shadow-map texel size can't resolve
             // features that small, so the depth comparison flips per-texel as
             // the view rotates. Dropping board self-shadow kills it (and is a
@@ -870,7 +870,7 @@ function DroneAssembly({
             setShadowFlags(pack.group, false, false);
           }
           packs.push(pack);
-          // Swap per-triangle raycasting for invisible bounding-box proxies —
+          // Swap per-triangle raycasting for invisible bounding-box proxies -
           // pointer moves stop scanning ~700k triangles (see addProxyHitbox).
           addProxyHitbox(pack.group);
           built.set(slot.id, {group: pack.group, mats});
@@ -917,7 +917,7 @@ function DroneAssembly({
         outgoingRef.current = prev;
       }
 
-      // Main wrapper now holds only the incoming parts — one per slot group.
+      // Main wrapper now holds only the incoming parts - one per slot group.
       for (const slot of HERO_SLOTS) {
         const holder = slotGroupsRef.current.get(slot.id);
         while (holder && holder.children.length) {
@@ -985,7 +985,7 @@ function DroneAssembly({
         await display(model);
         onReady?.();
 
-        // Build the OTHER size(s) lazily, only once the thread is idle —
+        // Build the OTHER size(s) lazily, only once the thread is idle -
         // scheduled AFTER the active model is shown so it never delays the
         // initial load. With >2 registry sizes each remaining one is built in
         // turn; the chained idle callbacks keep them off the first scroll.
@@ -994,7 +994,7 @@ function DroneAssembly({
           if (!aliveRef.current || modelCacheRef.current.has(sz)) return;
           void buildModel(sz, {
             shouldCancel: () => !aliveRef.current,
-            // Every build stage waits for an idle slot — the background build
+            // Every build stage waits for an idle slot - the background build
             // used to chain setTimeout(0) and its 50–200ms merge stages landed
             // exactly during the user's first scroll-through.
             idleYields: true,
@@ -1008,7 +1008,7 @@ function DroneAssembly({
             // the scroll right after it) is smooth instead of stalling on a
             // first-render compile. Parent it into the (idle) slide-out wrapper
             // while the programs link. compileAsync yields to the frame loop, so
-            // park the wrapper far outside the frustum for the duration — an
+            // park the wrapper far outside the frustum for the duration - an
             // on-screen parent would let interleaved frames draw a ghost second
             // drone mid-warm.
             const holder = outWrapperRef.current;
@@ -1050,14 +1050,14 @@ function DroneAssembly({
     })().catch((err: unknown) => {
       // buildModel catches its own load errors, but a registry/data bug
       // (heroModelUrl throwing) or a display() failure would otherwise be an
-      // unhandled rejection that strands the splash dim-layer — release it.
+      // unhandled rejection that strands the splash dim-layer - release it.
       console.error('HeroScene: hero model build/display failed:', err);
       onReady?.();
     });
 
     return () => {
       // Cancel only the in-flight build for THIS size change. Displayed models
-      // stay in the cache (and on screen) — they're disposed on unmount below.
+      // stay in the cache (and on screen) - they're disposed on unmount below.
       // The next effect run owns the busy cue from here; drop this run's.
       cancelled = true;
       onBuildingChange?.(false);
@@ -1107,11 +1107,11 @@ function DroneAssembly({
   // Pause the perpetual auto-rotate when the window loses focus. The Canvas-level
   // visibilitychange handler only catches a fully hidden tab (switched away /
   // minimised); it does NOT fire when the tab stays "visible" but the window is
-  // unfocused — another app on top, a second monitor, another window in front.
+  // unfocused - another app on top, a second monitor, another window in front.
   // In that gap RAF keeps running at full rate and the showcase rotation pegs the
   // GPU for nothing. Gate the auto-rotate's invalidate() on focus so the
   // frameloop="demand" loop halts to zero cost while blurred, and kick one frame
-  // on refocus to resume. We don't unmount on blur — that would replay the load.
+  // on refocus to resume. We don't unmount on blur - that would replay the load.
   useEffect(() => {
     focusedRef.current = document.hasFocus();
     const onFocus = () => {
@@ -1139,17 +1139,17 @@ function DroneAssembly({
     const p = scrollRef.current;
     dampedP.current = p;
 
-    // The drone no longer explodes on scroll — it stays assembled and turning
+    // The drone no longer explodes on scroll - it stays assembled and turning
     // the whole time. Scroll instead pops the product cards out of the Shop
     // bubble on the right (see _index.tsx) and, in here, (a) spotlights the
     // matching board as each card reveals and (b) pulls the camera back a touch
-    // once the frame — the LAST card — appears, so the whole airframe reads.
-    // The reveal windows are the registry-generated HERO_REVEAL_WINDOWS —
+    // once the frame - the LAST card - appears, so the whole airframe reads.
+    // The reveal windows are the registry-generated HERO_REVEAL_WINDOWS -
     // the SAME array the route uses to pop the cards, so the glow and the
     // card can no longer fall out of sync. They're spread out with dwell gaps
     // between them so each card is a deliberate, separate scroll beat rather
     // than a continuous sweep, and each reveal plays out within one snap-step
-    // gap (HERO_SCROLL_STOPS — see the step controller in _index.tsx), so
+    // gap (HERO_SCROLL_STOPS - see the step controller in _index.tsx), so
     // each board's card is fully shown by the time the scroll settles on its
     // stop. (For 3 slots: [0.08,0.3] / [0.4,0.62] / [0.72,0.94].)
     const reveals = revealsRef.current;
@@ -1164,14 +1164,14 @@ function DroneAssembly({
     const lastReveal = reveals[lastIdx];
 
     // Latch scroll direction. Scrolling back (p decreasing) suppresses the
-    // per-part highlight choreography so it doesn't replay in reverse — the
+    // per-part highlight choreography so it doesn't replay in reverse - the
     // camera zoom still eases smoothly because CameraRig reads p directly, not
     // this gate.
     if (p < prevP - 0.0008) reverseRef.current = true;
     else if (p > prevP + 0.0008) reverseRef.current = false;
     const playing = reverseRef.current ? 0 : 1;
 
-    // Per-board focus weights — which centre board the spotlight is on. Each
+    // Per-board focus weights - which centre board the spotlight is on. Each
     // non-final slot's focus peaks at its own stop and hands off as the next
     // slot reveals; boardFocus is 1 while any of them is held, 0 at the top
     // and once the final slot (the frame) reveals. Gated by `playing` so the
@@ -1205,7 +1205,7 @@ function DroneAssembly({
       rotRef.current += dt * 0.12 * rotateAmt;
     }
 
-    // Always decay drag after release — absorb into rotRef to avoid unwinding
+    // Always decay drag after release - absorb into rotRef to avoid unwinding
     if (!dragging.current) {
       const decayRate = Math.min(1, 3 * dt);
       const absorbY = dragRef.current.y * decayRate;
@@ -1218,14 +1218,14 @@ function DroneAssembly({
       if (Math.abs(dragRef.current.x) < 0.0005) dragRef.current.x = 0;
     }
 
-    // Rotation — assembled pose, perpetual spin + drag. No explode-driven
+    // Rotation - assembled pose, perpetual spin + drag. No explode-driven
     // settling anymore, so the model tracks autoRot/drag directly.
     // Y azimuth: free spin (+ drag) normally; while a centre board is held, ease
     // to a slight 3/4 angle off front (not dead-on) so the board reads with some
     // depth instead of flat-on.
     const FOCUS_AZIMUTH = 0.4; // ~23° off front
     // Ease the spin accumulator ITSELF toward the nearest front-facing 3/4 angle
-    // as a board takes focus — rather than overriding the display on top of a
+    // as a board takes focus - rather than overriding the display on top of a
     // frozen spin value. That way, releasing focus on the way back leaves the
     // drone AT this front view and the spin simply resumes from here; it no
     // longer snaps back to whatever angle it was at before you scrolled in.
@@ -1239,7 +1239,7 @@ function DroneAssembly({
     );
     wrapperRef.current.rotation.y = rotRef.current + dragRef.current.y;
     // X tilt: resting 3/4 view normally. Each focusable board carries its own
-    // viewing angle in the registry (SlotDef.focusTiltX — FC reads from a
+    // viewing angle in the registry (SlotDef.focusTiltX - FC reads from a
     // slight downward front angle; the ESC sits beneath it so it gets a
     // steeper look-down that clears the FC), weighted by its own focus.
     let targetTiltX = (1 - boardFocus) * 0.45;
@@ -1255,13 +1255,13 @@ function DroneAssembly({
     wrapperRef.current.rotation.x = tiltXRef.current + dragRef.current.x;
     wrapperRef.current.rotation.z = tiltZRef.current;
 
-    // Scale + lift are constant — the assembled drone keeps a fixed size; the
+    // Scale + lift are constant - the assembled drone keeps a fixed size; the
     // end-of-scroll zoom-out is done by pulling the CAMERA back (CameraRig),
     // not by shrinking the model.
     wrapperRef.current.scale.setScalar(7);
     wrapperRef.current.position.y = 0.07;
 
-    // Cross-slide — on a size toggle the incoming assembly slides in from the
+    // Cross-slide - on a size toggle the incoming assembly slides in from the
     // right while the outgoing one (frozen in outWrapperRef) slides out to the
     // left. To keep it from feeling dizzying both assemblies also pull back
     // (zoom out) toward the middle of the swap, and the horizontal motion uses
@@ -1271,12 +1271,12 @@ function DroneAssembly({
     // frame reveal the camera zooms all the way out, so the frustum is ~2× wider
     // at the model plane; a fixed 1.3-unit slide no longer carried the outgoing
     // trio past the edge, so it was still on screen when finishOutgoing detached
-    // it — reading as the old model "just disappearing". Scaling by the camera
+    // it - reading as the old model "just disappearing". Scaling by the camera
     // distance (0.72 = the zoomed-in baseline) keeps the outgoing fully off
     // screen before removal at any zoom level.
     const SLIDE = 1.3 * Math.max(1, camera.position.length() / 0.72);
     const TRANS_DUR = 0.85;
-    // easeInOutCubic — gentle acceleration then deceleration.
+    // easeInOutCubic - gentle acceleration then deceleration.
     const easeSwap = (t: number) =>
       t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     // Apply the cross-slide transform for a given progress t (0→1): the
@@ -1298,7 +1298,7 @@ function DroneAssembly({
 
     const scrubVal = scrubRef?.current ?? null;
     if (scrubVal != null && outgoingRef.current) {
-      // Slider scrub — the airframe tracks the thumb 1:1 instead of the timer.
+      // Slider scrub - the airframe tracks the thumb 1:1 instead of the timer.
       // Gated on an outgoing trio existing so a scrub that arrives before the
       // swap is set up (or with the other size still building) just holds.
       transitionRef.current = THREE.MathUtils.clamp(scrubVal, 0, 1);
@@ -1322,12 +1322,12 @@ function DroneAssembly({
       if (outgoingRef.current) finishOutgoing();
     }
 
-    // Highlight focus — smoothed per-part target (scroll reveal + hover
+    // Highlight focus - smoothed per-part target (scroll reveal + hover
     // override). The frame's hold (frameHi) gives it a beat before settling.
     const hovered = spotlightRef?.current ?? null;
     if (hovered) {
       // Hovering a product card selects ONLY that part and overrides the scroll
-      // focus entirely — otherwise the hovered part AND the scroll-focused part
+      // focus entirely - otherwise the hovered part AND the scroll-focused part
       // were both "selected" at once (both lifted toward the camera and glowed),
       // which collided into a broken-looking double state.
       for (const slot of HERO_SLOTS) {
@@ -1355,7 +1355,7 @@ function DroneAssembly({
     }
 
     // Spotlight ONE component at a time. Two cheap, robust moves (NO transparency
-    // — that sorted badly and jumbled the overlapping boards):
+    // - that sorted badly and jumbled the overlapping boards):
     //  1. Lift the focused board toward the camera so it pops clear of the stack
     //     instead of hiding behind the board above it.
     //  2. Darken everything that isn't focused (multiply its base colour down) so
@@ -1368,7 +1368,7 @@ function DroneAssembly({
     for (const slot of HERO_SLOTS) {
       const g = slotGroupsRef.current.get(slot.id)!;
       if (slot.fitAnchor) {
-        // The anchor (frame) never lifts — it IS the airframe.
+        // The anchor (frame) never lifts - it IS the airframe.
         g.position.set(0, 0, 0);
         g.scale.setScalar(1);
       } else {
@@ -1403,7 +1403,7 @@ function DroneAssembly({
       applyPart(displayed?.get(slot.id)?.mats, hoverState.current[slot.id]);
     }
 
-    // Carbon frame — fixed (less-transparent) opacity that firms up while it's
+    // Carbon frame - fixed (less-transparent) opacity that firms up while it's
     // the focused product; its grey darkens when a board holds the focus, and
     // it glows gold while the frame itself is selected.
     for (const slot of HERO_SLOTS) {
@@ -1425,14 +1425,14 @@ function DroneAssembly({
     }
 
     // Project model world positions to screen coords and update the
-    // label overlay divs imperatively — keeps labels glued under each
+    // label overlay divs imperatively - keeps labels glued under each
     // board as the assembly rotates/moves, without triggering React
     // re-renders every frame.
     //
     // Only while the labels are actually on screen. They fade in at p≈0.72
-    // (linearstep(0.72, 0.84) in the route), so below ~0.66 this whole block —
+    // (linearstep(0.72, 0.84) in the route), so below ~0.66 this whole block -
     // a forced full-subtree updateMatrixWorld plus 3× Box3.setFromObject, all
-    // on the main thread — was running every frame through the explode for
+    // on the main thread - was running every frame through the explode for
     // labels nobody can see. That was a big chunk of the fast-scroll jank.
     if (labelRefs && p >= 0.66) {
       wrapperRef.current.updateMatrixWorld(true);
@@ -1468,7 +1468,7 @@ function DroneAssembly({
     // are in the single digits the scene is cheap enough to let the
     // browser's RAF drive it at display rate.
     const scrollChanged = Math.abs(p - prevP) > 0.0001;
-    // Auto-rotate keeps the loop alive only while focused — a blurred window
+    // Auto-rotate keeps the loop alive only while focused - a blurred window
     // (still "visible", so visibilitychange never fired) otherwise burns the GPU
     // at full rate on a rotation no one is watching.
     const isAutoRotating = focusedRef.current; // perpetual spin while focused
@@ -1487,7 +1487,7 @@ function DroneAssembly({
   });
 
   // The drone is always assembled now, so the three boards overlap spatially and
-  // there's no unambiguous part to click/hover. Disable per-part interaction —
+  // there's no unambiguous part to click/hover. Disable per-part interaction -
   // the spotlight is driven by scroll reveal, and clicking the stack should do
   // nothing rather than navigate to a guessed PDP. Drag-to-rotate still works.
   const isInteractive = useCallback(() => false, []);
@@ -1495,7 +1495,7 @@ function DroneAssembly({
   const handleClick = useCallback(
     (url: string) => {
       if (!dragMoved.current && isInteractive()) {
-        // Client-side nav into the prefetched PDP — instant. Falls back to a
+        // Client-side nav into the prefetched PDP - instant. Falls back to a
         // hard load only if no navigate was threaded in.
         if (onNavigate) onNavigate(url);
         else window.location.href = url;
@@ -1568,7 +1568,7 @@ function PerfProbe({onSample}: {onSample: (s: PerfSample) => void}) {
   const prevFrameT = useRef(0);
   // Ring of recent frame timings {t, dt} for the sticky worst/jank window.
   const ring = useRef<Array<{t: number; dt: number}>>([]);
-  // Real per-frame draw totals — three resets info per gl.render() call, and
+  // Real per-frame draw totals - three resets info per gl.render() call, and
   // EffectComposer renders several passes per frame, so the default counter
   // only ever shows the last (SMAA) pass = 1. Turn autoReset off and reset once
   // per frame ourselves so calls/triangles accumulate across all passes.
@@ -1640,7 +1640,7 @@ function PerfProbe({onSample}: {onSample: (s: PerfSample) => void}) {
  * the screen. This drifts the dpr between 1.0 and min(devicePixelRatio, 1.5)
  * from measured frame times:
  *  - a window of consistently fast frames (<9 ms worst) steps UP one notch;
- *  - sustained jank (≥8 frames >24 ms in a window) steps DOWN and LATCHES —
+ *  - sustained jank (≥8 frames >24 ms in a window) steps DOWN and LATCHES -
  *    a GPU that janked once never gets re-raised, avoiding oscillation and
  *    repeated render-target reallocations (each setDpr realloc has a cost).
  * Demand-loop aware: only deltas from continuous rendering bursts count;
@@ -1649,7 +1649,7 @@ function PerfProbe({onSample}: {onSample: (s: PerfSample) => void}) {
 const DPR_STEPS = [1, 1.25, 1.5];
 function AdaptiveDpr() {
   const setDpr = useThree((s) => s.setDpr);
-  const idxRef = useRef(1); // start at 1.25 — the previous fixed cap
+  const idxRef = useRef(1); // start at 1.25 - the previous fixed cap
   const maxIdxRef = useRef(1);
   const samplesRef = useRef<number[]>([]);
   const latchedDownRef = useRef(false);
@@ -1707,17 +1707,17 @@ function AdaptiveDpr() {
  * in the rotating hero state (0.72 top sky color vs 0.18 ground in hemi
  * creates a strong vertical lift across the stacked boards) while
  * dropping it at the end so the directional key dominates and its cast
- * shadows read clearly. Key and rim stay constant — that earlier
+ * shadows read clearly. Key and rim stay constant - that earlier
  * dimming was what caused the dark→light→dark feel.
  */
 function SceneLights() {
-  // Constant lighting — highlighting is done per-object (fading the
+  // Constant lighting - highlighting is done per-object (fading the
   // non-focused parts' opacity in DroneAssembly), not by touching the lights,
   // so a single board can be isolated instead of the whole scene reacting.
   return (
     <>
       <hemisphereLight args={['#cfdaeb', '#1a1d22', 0.72]} />
-      {/* Warm key light. No casts — nothing receives a real shadow. */}
+      {/* Warm key light. No casts - nothing receives a real shadow. */}
       <spotLight
         position={[0, 2.4, 0.9]}
         angle={0.58}
@@ -1746,7 +1746,7 @@ function CameraRig({scrollRef}: {scrollRef: React.RefObject<number>}) {
     // Hold the tight assembled view through the board reveals, then pull the
     // camera back ONLY once it reaches the frame (the last card) so the whole
     // airframe clears the edges. Opens with the LAST registry reveal window
-    // (0.72 for the current 3 slots) — the same one DroneAssembly reads.
+    // (0.72 for the current 3 slots) - the same one DroneAssembly reads.
     const pull = smoothstep(
       HERO_REVEAL_WINDOWS[HERO_REVEAL_WINDOWS.length - 1][0],
       1.0,
@@ -1797,7 +1797,7 @@ export function HeroScene({
   // the whole per-size model cache, so crossing back above the threshold
   // mid-scroll replayed fetch → meshopt decode → merge → shader compile on a
   // fresh WebGL context: a multi-hundred-ms hitch and a visibly missing
-  // drone — and the threshold didn't even match the real 220vh spacer.
+  // drone - and the threshold didn't even match the real 220vh spacer.
   // With frameloop="demand" a static scene idles at zero cost (the
   // auto-rotate is already gated on scroll phase + window focus, and a
   // hidden tab gets no RAF at all), so keeping it mounted is effectively
@@ -1821,25 +1821,25 @@ export function HeroScene({
       <Canvas
         // near/far kept tight around the drone (~0.7–1.5 units away, ~1 unit
         // across). The three.js default far of 2000 wastes almost all depth
-        // precision on empty space, which makes near-coplanar surfaces — the
-        // gold FC pads on the board — z-fight when you rotate the model. A
+        // precision on empty space, which makes near-coplanar surfaces - the
+        // gold FC pads on the board - z-fight when you rotate the model. A
         // 200:1 range fixes it. (Worst on 5": its tighter fit-scale puts the
         // pad/board gap right at the precision limit.)
         camera={{position: [0, 0.15, 0.7], fov: 40, near: 0.1, far: 20}}
         style={{background: 'transparent'}}
-        // No `shadows` — nothing in the scene sets castShadow (frame + boards
+        // No `shadows` - nothing in the scene sets castShadow (frame + boards
         // are all cast=false), so the shadow map was rendering empty every
         // frame: a render-target bind/clear + extra depth-material programs for
         // zero visible shadow. Dropping it is a free per-frame win.
         frameloop="demand"
-        // Initial pixel ratio 1.25 — fragment (fill) cost scales with dpr²,
+        // Initial pixel ratio 1.25 - fragment (fill) cost scales with dpr²,
         // and this scene is fill-bound once the boards explode full-screen.
         // From here <AdaptiveDpr> drifts the live value between 1.0 and 1.5
         // off measured frame times: fast GPUs earn back full Retina
         // sharpness, weak ones shed load before they jank.
         dpr={[1, 1.25]}
         gl={{
-          // MSAA off — replaced by an SMAA postprocess pass below. MSAA
+          // MSAA off - replaced by an SMAA postprocess pass below. MSAA
           // at DPR 1.5 on Retina was rasterising 4 samples × 2.25× the
           // pixel count; SMAA is a fixed per-pixel cost decoupled from
           // scene complexity and looks ≈ 4×MSAA for this material set.
@@ -1853,7 +1853,7 @@ export function HeroScene({
         }}
         onCreated={({camera, gl}) => {
           camera.lookAt(0, 0, 0);
-          // Tighten the depth range HERE — r3f bakes the `camera` prop's
+          // Tighten the depth range HERE - r3f bakes the `camera` prop's
           // near/far at creation and doesn't reliably re-apply them, so set
           // them on the live camera. The drone sits ~0.7–1.5 units away and is
           // ~1 unit across; a 200:1 range (vs the default 20000:1) restores the
@@ -1868,7 +1868,7 @@ export function HeroScene({
           invalidate();
         }}
       >
-        {/* First useFrame in the tree — eases smoothRef toward the raw scroll
+        {/* First useFrame in the tree - eases smoothRef toward the raw scroll
             target so every consumer below reads the damped value this frame. */}
         <ScrollDamper targetRef={targetRef} smoothRef={smoothRef} />
         <AdaptiveDpr />

@@ -47,7 +47,7 @@ export function ContributorGrid({
             {/* NOT loading="lazy". The chapter sets content-visibility: auto,
                 so this subtree is size-contained until it nears the viewport,
                 and a lazy image inside it reads as far offscreen and never
-                gets fetched — the avatars stayed blank even once the grid was
+                gets fetched - the avatars stayed blank even once the grid was
                 on screen. content-visibility already does the deferring; a
                 60px avatar needs no second mechanism. */}
             <img

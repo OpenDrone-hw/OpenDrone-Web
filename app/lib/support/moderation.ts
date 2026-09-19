@@ -7,7 +7,7 @@
 //
 // The moderator allowlist is the set of users in the configured Discord
 // guild who carry the `SUPPORT_MOD_ROLE_ID` role. It's cached per
-// Worker isolate for 1 hour — a fresh fetch would cost one API call
+// Worker isolate for 1 hour - a fresh fetch would cost one API call
 // per poll, which is wasteful when the role membership changes weekly.
 //
 // Rollback / staged rollout:
@@ -20,7 +20,7 @@
 //     only during an incident.
 //
 // If SUPPORT_MOD_ROLE_ID is unset, the gate falls back to `log` mode
-// regardless of SUPPORT_MODERATION_MODE — better than silently
+// regardless of SUPPORT_MODERATION_MODE - better than silently
 // enforcing an empty allowlist (which would drop every message).
 
 import type {DiscordMessage} from './discord.ts';
@@ -50,7 +50,7 @@ type ModCache = {
 };
 
 // One cache per guild id, scoped to this isolate. Cloudflare Workers
-// run many isolates per PoP — that's fine, each warms its own cache
+// run many isolates per PoP - that's fine, each warms its own cache
 // lazily. Worst case is N roundtrips across N cold isolates per hour.
 const MOD_CACHE = new Map<string, ModCache>();
 
@@ -58,7 +58,7 @@ export function resolveMode(env: ModerationEnv): ModerationMode {
   const raw = env.SUPPORT_MODERATION_MODE?.toLowerCase();
   if (raw === 'off') return 'off';
   if (raw === 'log') return 'log';
-  // Fall back to log when the role isn't configured — we'd rather leak
+  // Fall back to log when the role isn't configured - we'd rather leak
   // by default than silently drop every message because an env var is
   // missing. Enforce only kicks in once the role id is wired up.
   if (!env.SUPPORT_MOD_ROLE_ID) return 'log';
@@ -107,7 +107,7 @@ export async function decideApproval(
   if (mode === 'off') {
     return {approved: true, reason: 'bypass-off'};
   }
-  // No role configured — `resolveMode` already forces 'log'. We still
+  // No role configured - `resolveMode` already forces 'log'. We still
   // compute the real decision so the log output can tell staff what
   // would happen under enforce.
   const emoji = approveEmoji(env);
@@ -117,7 +117,7 @@ export async function decideApproval(
   }
   const modIds = await getModeratorIds(env);
   if (modIds.size === 0) {
-    // No resolvable mods — treat as bypass so the system keeps working
+    // No resolvable mods - treat as bypass so the system keeps working
     // while staff figure out the role config.
     return {approved: true, reason: 'bypass-unconfigured'};
   }

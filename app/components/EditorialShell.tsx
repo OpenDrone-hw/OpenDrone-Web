@@ -63,7 +63,7 @@ export function EditorialShell({
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     // One performance per page per session. Re-arming on every client-side
     // navigation made already-read paragraphs vanish and fade back in when
-    // the reader returned to a page — the cascade is a greeting, not a tic.
+    // the reader returned to a page - the cascade is a greeting, not a tic.
     // On a seen page, force-reveal instead of merely skipping: the DOM may
     // still carry armed (hidden) items from a previous effect run of this
     // same mount (StrictMode re-runs effects without rebuilding the DOM,
@@ -90,7 +90,7 @@ export function EditorialShell({
               a.getBoundingClientRect().top - b.getBoundingClientRect().top,
           );
         // The page counts as SEEN once the first reveal actually plays for
-        // the user — not at arm time, or a re-run of this effect (dev
+        // the user - not at arm time, or a re-run of this effect (dev
         // StrictMode) would skip before anything ever showed.
         if (entering.length > 0) seenSlugs.add(slug);
         entering.forEach((el, i) => {

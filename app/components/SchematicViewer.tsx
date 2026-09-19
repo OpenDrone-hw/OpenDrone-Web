@@ -35,7 +35,7 @@ type Sheet = {
 type Manifest = {sheets?: Sheet[]};
 
 // `?v=` busts Oxygen's 1-year immutable cache when schematics are regenerated in
-// place — the token is the content hash of all exported sheets, baked into the
+// place - the token is the content hash of all exported sheets, baked into the
 // bundle by scripts/export-schematics.mjs.
 const manifestUrl = (h: string) =>
   `/schematics/${h}/manifest.json?v=${SCHEMATICS_VERSION}`;
@@ -56,7 +56,7 @@ const componentsUrl = (h: string) =>
 /**
  * Per-sheet index of every text label in the exported SVG. kicad-cli draws
  * visible text as strokes but ALSO emits an invisible real `<text>` per label
- * (opacity 0) carrying exact x/y/textLength/font-size in viewBox units — so a
+ * (opacity 0) carrying exact x/y/textLength/font-size in viewBox units - so a
  * refdes can be located precisely with a regex, no DOM mounting or getBBox.
  * Keyed by sheet URL; the SVG text ride the same fetchTextCached cache the
  * rest of the asset pipeline uses.
@@ -102,14 +102,14 @@ function sheetIndex(url: string): Promise<SheetIndex> {
 }
 
 /**
- * Paged viewer for a multi-sheet KiCad schematic — the schematic analogue of
+ * Paged viewer for a multi-sheet KiCad schematic - the schematic analogue of
  * {@link BoardArt}. Reads /schematics/<handle>/manifest.json (written by
  * scripts/export-schematics.mjs), shows a tab per sheet, and renders one sheet
  * SVG at a time. The B&W export is inverted to white "blueprint" lines on the
  * dark page; CSS gives it a stacked-paper edge so it reads as a sheaf.
  *
  * Warms the active board's sheets and every sibling tier's manifest + sheets in
- * the background, so switching sheets — or switching tiers — is instant and
+ * the background, so switching sheets - or switching tiers - is instant and
  * never flashes blank. Self-hiding: renders nothing until a manifest loads, and
  * stays empty if the board has no exported schematic.
  */
@@ -176,7 +176,7 @@ export function SchematicViewer({
         const sheets = m.sheets ?? [];
         setDisplay({handle, sheets});
         // Keep the current sheet across a tier swap (clamped below if the new
-        // board has fewer sheets) — mirrors BoardArt holding its active layer,
+        // board has fewer sheets) - mirrors BoardArt holding its active layer,
         // rather than snapping back to the first sheet on every variant switch.
         // Warm every sheet's bytes, but eagerly DECODE only the one that will
         // actually paint: decoding the whole sheaf (~1 MB per multi-megapixel
@@ -248,7 +248,7 @@ export function SchematicViewer({
 
   // Lock the page to ONE height across all sheets (mobile) instead of letting it
   // jump per sheet. For a fixed full width, height = width / aspect-ratio, so the
-  // tallest sheet is the one with the SMALLEST aspect ratio — use that as a
+  // tallest sheet is the one with the SMALLEST aspect ratio - use that as a
   // constant `--sheet-ar`. Every sheet then sits in the same box and the shorter
   // ones letterbox (object-fit: contain), no more height jump on paging.
   const pageAr = useMemo(() => {
@@ -266,8 +266,8 @@ export function SchematicViewer({
   const [outgoing, setOutgoing] = useState<string | null>(null);
   // Live "is the schematic roughly on screen" flag + a "reveal owed" flag: a SKU
   // swap while the schematic is off-screen (the user is up in the teardown, or
-  // anywhere else) skips the wipe — animating it is wasted work that competes with
-  // whatever IS on screen — and instead owes a quick fade-in reveal, played when
+  // anywhere else) skips the wipe - animating it is wasted work that competes with
+  // whatever IS on screen - and instead owes a quick fade-in reveal, played when
   // the schematic next scrolls into view.
   const visibleRef = useRef(false);
   const revealPendingRef = useRef(false);
@@ -317,7 +317,7 @@ export function SchematicViewer({
   });
 
   // Step through the sheets, clamped to the ends (used by arrow keys / wheel
-  // over the rail) — mirrors the board folder's layer stepping.
+  // over the rail) - mirrors the board folder's layer stepping.
   const step = (delta: number) =>
     setActive((i) =>
       Math.min((sheets?.length ?? 1) - 1, Math.max(0, i + delta)),
@@ -391,7 +391,7 @@ export function SchematicViewer({
     };
   }, [highlightRefs, sheets, active, dh]);
 
-  // Touch: drag the sheet ←/→ to page through the schematic — the same peel as
+  // Touch: drag the sheet ←/→ to page through the schematic - the same peel as
   // the board explorer (active sheet slides out under the finger, the next/prev
   // chases in behind it). Vertical is left to the page; only horizontal is
   // captured. Wheel + hover stay mouse-only.
@@ -420,7 +420,7 @@ export function SchematicViewer({
       {sheets && sheets.length ? (
         <>
           <div className="schematic-body">
-            {/* Vertical sheet rail beside the schematic — the same selector as
+            {/* Vertical sheet rail beside the schematic - the same selector as
                 the board's copper-layer rail. Arrows/wheel step the sheets. */}
             {/* eslint-disable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */}
             <div
@@ -514,7 +514,7 @@ export function SchematicViewer({
               })}
               {/* Component spotlight: gold boxes over the hovered refs, drawn
                   in the sheet's own viewBox space so they track any scaling.
-                  Keyed to the active sheet — never painted over the wrong one. */}
+                  Keyed to the active sheet - never painted over the wrong one. */}
               {hl && current && hl.key === `${dh}:${current.slug}` ? (
                 <svg
                   className="schematic-hl"
@@ -542,7 +542,7 @@ export function SchematicViewer({
           </div>
           {/* Mobile: the sheet-tab rail is dropped (a mouse-era button strip);
               you page sheets by flicking the page ←/→. This slim deck mirrors the
-              board explorer — a tick per sheet (tap to jump) + which sheet is up
+              board explorer - a tick per sheet (tap to jump) + which sheet is up
               + a swipe hint. Hidden on desktop, where the rail is shown. */}
           <div className="schematic-deck">
             <div

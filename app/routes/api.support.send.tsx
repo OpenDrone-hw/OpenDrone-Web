@@ -71,7 +71,7 @@ export async function action({request, context}: Route.ActionArgs) {
   }
 
   // Inbound scrub before the message touches Discord. See api.support.start
-  // for the full rationale — narrower than the outbound Discord->web scrub
+  // for the full rationale - narrower than the outbound Discord->web scrub
   // because users legitimately share their own contact details in support
   // threads.
   const cleanContent = scrubForDiscord(content);

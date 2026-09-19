@@ -15,7 +15,7 @@ import {
 } from '~/lib/learn';
 
 /**
- * /learn/<slug> — one research dossier, rendered claim by claim.
+ * /learn/<slug> - one research dossier, rendered claim by claim.
  *
  * The point of this rendering is reviewability: the claim, its confidence tag
  * and every source it cites are all on screen together. A claim with no source
@@ -24,7 +24,7 @@ import {
 
 export const meta: Route.MetaFunction = ({data}) =>
   buildSeoMeta({
-    title: data?.dossier ? `${data.dossier.title} — draft` : 'Learn — draft',
+    title: data?.dossier ? `${data.dossier.title} - draft` : 'Learn - draft',
     description: 'FPV research notes, unpublished.',
     robots: 'noindex, nofollow',
   });

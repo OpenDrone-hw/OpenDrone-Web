@@ -6,7 +6,7 @@
  * props, revenue → monetary values on events). Manual events go through
  * `window.plausible()`; this wrapper is SSR-safe (no-op on the server)
  * and installs the official queue stub so events fired before the
- * deferred script finishes loading are replayed on init — the script
+ * deferred script finishes loading are replayed on init - the script
  * drains `window.plausible.q` when it boots.
  *
  * Keep event names and prop values LOW-CARDINALITY: Plausible breaks
@@ -33,7 +33,7 @@ type PlausibleWindow = Window & {plausible?: PlausibleFn};
 
 /**
  * Fire a Plausible custom event. Safe to call anywhere: no-ops during SSR
- * and never throws — analytics must not take down a storefront flow.
+ * and never throws - analytics must not take down a storefront flow.
  */
 export function trackEvent(name: string, opts?: PlausibleEventOptions): void {
   if (typeof window === 'undefined') return;

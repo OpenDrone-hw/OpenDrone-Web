@@ -11,14 +11,14 @@ import {PRODUCT_CONTENT} from '~/lib/product-content';
 /** The related strip renders catalog cards, same as every listing. */
 export type RelatedProduct = ProductCardFragment;
 
-/** First clause of a spec cell — "AT32F421G8U7, 120 MHz" → "AT32F421G8U7". */
+/** First clause of a spec cell - "AT32F421G8U7, 120 MHz" → "AT32F421G8U7". */
 const clause = (s: string) => s.split(/[,(]/)[0].trim();
 
 /**
  * One-line spec for a related card, composed from the product's editorial
  * spec table (product-content.ts): firmware project + MCU/radio when the
  * board has them, else the first spec rows, else the product family.
- * Derived, never invented — every cell already ships on the PDP.
+ * Derived, never invented - every cell already ships on the PDP.
  */
 function specLineOf(p: RelatedProduct): string | null {
   const c = PRODUCT_CONTENT[p.handle];
@@ -30,7 +30,7 @@ function specLineOf(p: RelatedProduct): string | null {
     rows.find(([k]) => k.toLowerCase() === key)?.[1];
   const parts: string[] = [];
   const fw = c.firmware?.project;
-  if (fw && fw !== '—') parts.push(fw);
+  if (fw && fw !== '-') parts.push(fw);
   const chip = cell('mcu') ?? cell('radio');
   if (chip) parts.push(clause(chip));
   if (parts.length === 0) {
@@ -42,7 +42,7 @@ function specLineOf(p: RelatedProduct): string | null {
 /** Mono eyebrow in catalog-number language: "FILE 02 · FLIGHT CONTROLLER". */
 function fileLineOf(p: RelatedProduct): string | null {
   const c = PRODUCT_CONTENT[p.handle];
-  if (c && c.fileNumber !== '—') return `File ${c.fileNumber} · ${c.family}`;
+  if (c && c.fileNumber !== '-') return `File ${c.fileNumber} · ${c.family}`;
   return p.productType ?? null;
 }
 
@@ -87,15 +87,15 @@ function RelatedCard({product}: {product: RelatedProduct}) {
   const specLine = specLineOf(product);
   const fileLine = fileLineOf(product);
 
-  // Quick-add only when the product has exactly ONE variant — a multi-model
-  // line (FC/ESC/RX) must send the buyer to the PDP to pick a mount/model —
+  // Quick-add only when the product has exactly ONE variant - a multi-model
+  // line (FC/ESC/RX) must send the buyer to the PDP to pick a mount/model -
   // and never while the product is still gated coming-soon.
   const only =
     !comingSoon && product.variants.nodes.length === 1
       ? product.variants.nodes[0]
       : null;
 
-  // Spotlight hover — a gold radial that follows the pointer (CSS vars read
+  // Spotlight hover - a gold radial that follows the pointer (CSS vars read
   // by .related-card::after). Mouse-only, mirroring .product-card: touch
   // taps fire pointermove too and would pin a phantom glow (the ::after is
   // also gated behind (hover: hover) in app.css). Keyboard focus keeps the
@@ -138,7 +138,7 @@ function RelatedCard({product}: {product: RelatedProduct}) {
           <h3 className="related-card-title">{product.title}</h3>
           {specLine ? <p className="related-card-spec">{specLine}</p> : null}
           {/* Price is gated on coming-soon exactly like ProductItem's
-              showPrice — useComingSoon() is fail-closed (defaults locked
+              showPrice - useComingSoon() is fail-closed (defaults locked
               when root data is missing), so a locked shop never leaks a
               number here. */}
           <p className="related-card-price">

@@ -7,7 +7,7 @@
  * versa). The token is opaque base64url and short enough to fit in a
  * regular URL.
  *
- * Lifetime defaults to 14 days — long enough to cover a short holiday,
+ * Lifetime defaults to 14 days - long enough to cover a short holiday,
  * short enough that an email-archive compromise months later doesn't
  * hand out live support-thread access. The token is multi-use within
  * the TTL (the user may click it from a different device, then again

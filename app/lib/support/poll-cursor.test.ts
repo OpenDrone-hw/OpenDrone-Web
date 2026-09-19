@@ -28,7 +28,7 @@ describe('computeCursorTarget', () => {
 
   it('does not advance when the oldest message in the window is held', () => {
     // If we advanced at all we would skip the held message the instant
-    // it is approved — the exact "had to refresh" bug.
+    // it is approved - the exact "had to refresh" bug.
     const messages = [m('1'), m('2'), m('3')];
     assert.equal(computeCursorTarget(messages, new Set(['1']), '0'), '0');
   });

@@ -315,7 +315,7 @@ export function readLocaleCookie(cookieHeader: string | null): Locale | null {
 
 /**
  * Best-effort detection from the Accept-Language header. Honours nl
- * and fr — everything else falls back to the default locale (en).
+ * and fr - everything else falls back to the default locale (en).
  */
 export function detectLocaleFromAccept(accept: string | null): Locale {
   if (!accept) return DEFAULT_LOCALE;
@@ -424,7 +424,7 @@ export async function resolveLegalLoader(
     return {html, locale: first, canonicalUrl, hreflang};
   }
 
-  // Unprefixed legacy URL — redirect to the canonical locale URL and
+  // Unprefixed legacy URL - redirect to the canonical locale URL and
   // refresh the cookie so subsequent visits stick.
   const locale = getLocaleFromRequest(request);
   const qs = url.search;

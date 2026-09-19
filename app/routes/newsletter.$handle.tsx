@@ -52,7 +52,7 @@ export function loader({params}: Route.LoaderArgs) {
     publishedAt: p.publishedAt,
   }));
   const idx = siblings.findIndex((sib) => sib.handle === article.handle);
-  // siblings ordered DESC by publishedAt — newer first, so "next" (more
+  // siblings ordered DESC by publishedAt - newer first, so "next" (more
   // recent) sits at idx-1, "previous" (older) at idx+1.
   const next = idx > 0 ? siblings[idx - 1] : null;
   const previous =

@@ -12,7 +12,7 @@ import {
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
 
-// Newsletter — the single hub. It's all newsletter: posts authored as
+// Newsletter - the single hub. It's all newsletter: posts authored as
 // Markdown in content/posts/ show up here as the archive, at /newsletter
 // (posts at /newsletter/<handle>). Old /blog, /releases, and /blogs URLs
 // redirect in.
@@ -22,13 +22,13 @@ import {copyText} from '~/lib/copy';
 //        app/lib/growth/odoo-newsletter.ts): it joins the brand's newsletter
 //        list immediately and Odoo sends one welcome mail carrying a
 //        one-click unsubscribe that needs no login. Odoo owns unsubscribing
-//        — this route holds no unsubscribe code.
+//        - this route holds no unsubscribe code.
 //
 // The signup FORM lives in the site footer (present on every page), so this
-// page intentionally has no in-body form — it would just duplicate the footer.
+// page intentionally has no in-body form - it would just duplicate the footer.
 //
 // Abuse controls on the action: honeypot + Cloudflare Turnstile + per-IP and
-// per-email rate limits. Turnstile is soft — if TURNSTILE_SITE_KEY is unset
+// per-email rate limits. Turnstile is soft - if TURNSTILE_SITE_KEY is unset
 // (dev) the verifier no-ops; in production it fails closed.
 
 export const meta: Route.MetaFunction = () => {
@@ -61,7 +61,7 @@ export function loader() {
     image: p.image,
   }));
 
-  // Group by year, descending — posts already reverse-chronological.
+  // Group by year, descending - posts already reverse-chronological.
   const grouped = new Map<string, ReleaseRowArticle[]>();
   for (const a of visible) {
     const year = a.publishedAt.slice(0, 4);
@@ -139,7 +139,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Optional `product` form field: a catalog handle from the coming-soon
 // "Notify me at launch" signup, forwarded to Odoo as-is (it validates the
-// same shape again server-side). Strict slug shape — nothing free-form
+// same shape again server-side). Strict slug shape - nothing free-form
 // gets through.
 const PRODUCT_HANDLE_REGEX = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
@@ -214,7 +214,7 @@ export async function action({request, context}: Route.ActionArgs) {
   if (!emailLimit.allowed) {
     // Odoo sends a welcome mail on every subscribe call, so past this
     // limit the Worker stops calling Odoo rather than mailing the address
-    // again — the earlier call already subscribed it.
+    // again - the earlier call already subscribed it.
     return data<NewsletterResult>({
       ok: true,
       message:

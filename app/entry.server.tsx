@@ -41,7 +41,7 @@ export default async function handleRequest(
     // widget shows "Could not verify you are human".
     //
     // IMPORTANT: Hydrogen's createContentSecurityPolicy REPLACES each
-    // directive with the list you pass — it does not merge. So we have
+    // directive with the list you pass - it does not merge. So we have
     // to include the Hydrogen defaults (`self`, the nonce placeholder,
     // cdn.shopify.com) explicitly, or the JS bundles served from that
     // CDN stop loading and the whole site stays in SSR-only mode.
@@ -51,8 +51,8 @@ export default async function handleRequest(
       'https://challenges.cloudflare.com',
       // The hero 3D scene loads EXT_meshopt_compression GLBs; the meshopt
       // decoder instantiates a small WebAssembly module on the main thread.
-      // 'wasm-unsafe-eval' allows WASM compilation ONLY — it does not permit
-      // string eval()/new Function() — so it's the minimal grant needed.
+      // 'wasm-unsafe-eval' allows WASM compilation ONLY - it does not permit
+      // string eval()/new Function() - so it's the minimal grant needed.
       // Without it the decoder throws a CSP CompileError and the hero stays
       // blank. (Draco was rejected as an alternative: its decoder runs in a
       // blob: Worker, which worker-src also blocks.)
@@ -64,7 +64,7 @@ export default async function handleRequest(
       // Official Discord server widget iframe used on /contact.
       // Server admin must enable widget in Server Settings → Widget.
       'https://discord.com',
-      // YouTube build-video lightbox (WatchCard) — privacy-enhanced host.
+      // YouTube build-video lightbox (WatchCard) - privacy-enhanced host.
       'https://www.youtube-nocookie.com',
     ],
     connectSrc: ["'self'", 'https://cdn.shopify.com', shop, 'https://challenges.cloudflare.com'],
@@ -163,7 +163,7 @@ export default async function handleRequest(
 
   // Oxygen's asset CDN serves cross-origin module bundles (cdn.shopify.com),
   // and Chrome treats a <link rel="modulepreload"> without a crossorigin
-  // attribute as credentialed — which the CDN rejects with 503 during the
+  // attribute as credentialed - which the CDN rejects with 503 during the
   // window where a previous deployment's assets are being evicted. Force
   // crossorigin="anonymous" on every module script/preload so the preload
   // fetch matches the module fetch and the cached response is reused.

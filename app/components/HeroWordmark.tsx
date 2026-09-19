@@ -8,11 +8,11 @@ import {
 /**
  * Hero wordmark with two phases:
  *
- * 1. **Draw** (0..~700ms per letter, staggered) — each letter "flies in"
+ * 1. **Draw** (0..~700ms per letter, staggered) - each letter "flies in"
  *    from a small random offset while its stroke is drawn via
  *    `stroke-dashoffset` on `pathLength="100"`. Pure CSS.
  *
- * 2. **Fill** (driven by `progress`) — each letter fades from outline to
+ * 2. **Fill** (driven by `progress`) - each letter fades from outline to
  *    solid color individually as the load progresses. The first letter
  *    fills when progress crosses ~0/N, the last when it crosses ~(N-1)/N,
  *    with a small ramp width per letter so the transition is smooth, not
@@ -32,7 +32,7 @@ export function HeroWordmark({
   // Per-letter "fly-in" offset for the wireframe phase. Memoised so the
   // offset stays stable across re-renders during the draw animation.
   // Deterministic (sine-hash on index) so SSR and client agree. Magnitudes
-  // floored so no letter happens to seed near 0.5 and spawn in-place —
+  // floored so no letter happens to seed near 0.5 and spawn in-place -
   // every letter must visibly assemble.
   const letterStyles = useMemo(() => {
     return WORDMARK_LETTERS.map(({index}) => {
@@ -40,7 +40,7 @@ export function HeroWordmark({
       const a = seed - Math.floor(seed);
       const b = Math.sin(index * 78.233) * 43758.5453;
       const c = b - Math.floor(b);
-      // Signed jitter with a magnitude floor — even an `a` near 0.5
+      // Signed jitter with a magnitude floor - even an `a` near 0.5
       // yields a meaningful displacement. dx ±(120..280)px,
       // dy ±(60..160)px, rot ±(8..28)deg.
       const signA = a < 0.5 ? -1 : 1;
@@ -87,12 +87,12 @@ export function HeroWordmark({
       {/*
         Outer wrapper carries the potrace group transform (y-flip + 0.1
         scale). Inside, paths live in the original potrace coord system
-        which is ~10x the displayed size — vector-effect on strokes
+        which is ~10x the displayed size - vector-effect on strokes
         keeps stroke-width in viewport pixels regardless of that scale.
       */}
       <g transform={WORDMARK_GROUP_TRANSFORM}>
         {/*
-          Stroke layer — drawn first so the fill layer paints on top.
+          Stroke layer - drawn first so the fill layer paints on top.
           Each path uses pathLength="100" so a single
           stroke-dashoffset:100→0 keyframe works regardless of the
           actual geometric length. CSS reads --fill-opacity to fade
@@ -119,7 +119,7 @@ export function HeroWordmark({
         </g>
 
         {/*
-          Fill layer — same paths, fill only. Per-letter opacity driven
+          Fill layer - same paths, fill only. Per-letter opacity driven
           by `progress`. evenodd so counters (the hole in O/p/o/D) cut
           through the outer shape correctly.
         */}

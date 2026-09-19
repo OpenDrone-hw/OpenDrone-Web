@@ -17,7 +17,7 @@ const FRAME_LINE = {
 } as const;
 
 // Memoise fetched GLB bytes by URL so a model that's been loaded once (e.g. the
-// other tier, preloaded in the background) never hits the network again — the
+// other tier, preloaded in the background) never hits the network again - the
 // switch only pays the cheap parse, not the multi-MB download.
 THREE.Cache.enabled = true;
 
@@ -34,7 +34,7 @@ export type FrameViewerProps = {
 };
 
 /**
- * Exploded-assembly backdrop for the carbon frame — the CAD analogue of
+ * Exploded-assembly backdrop for the carbon frame - the CAD analogue of
  * {@link BoardArt}. The frame is a 3D OnShape assembly, so instead of
  * revealing flat PCB layers it pulls its parts apart as the user scrolls:
  * top plate lifts, bottom plates drop, arms fan out.
@@ -43,7 +43,7 @@ export type FrameViewerProps = {
  * vector outlines that flows over the neighbouring sections, behind the
  * teardown text. The explode amount is recomputed from the section's
  * viewport position every rendered frame, and a scroll listener invalidates
- * (frameloop="demand") — so it animates smoothly while scrolling and the GPU
+ * (frameloop="demand") - so it animates smoothly while scrolling and the GPU
  * idles otherwise; off-screen the canvas unmounts entirely.
  *
  * Parts are classified by node name ("top", "base"/"base.001",
@@ -112,8 +112,8 @@ async function prepareModel(scene: THREE.Object3D): Promise<Part[]> {
     //    applies the explode cleanly instead of negating it.
     //  - cascadio: the mesh is ON the named part node ("Arm"), already a direct
     //    child of the root, so the part node itself is what moves.
-    // Moving the SHARED root would collapse every part onto one vector — the
-    // "flies up as one piece" bug — so we stop one level below it.
+    // Moving the SHARED root would collapse every part onto one vector - the
+    // "flies up as one piece" bug - so we stop one level below it.
     let moveNode = o;
     while (
       moveNode.parent &&
@@ -151,7 +151,7 @@ async function prepareModel(scene: THREE.Object3D): Promise<Part[]> {
   const sz = sceneBox.getSize(new THREE.Vector3());
   const unit = Math.max(sz.x, sz.y, sz.z) || 1;
   // Fan the arms out from the stack centreline (the plate centres), not
-  // the bounding-box centre — the arms are asymmetric, so the bbox centre
+  // the bounding-box centre - the arms are asymmetric, so the bbox centre
   // is skewed and would bias every arm the same way.
   const axisPoint = baseC ?? topC ?? sceneBox.getCenter(new THREE.Vector3());
 
@@ -286,10 +286,10 @@ function FrameModel({
   // x so the model sits off to the right and the left arms fan into the text.
   // On mobile the viewer is a centred square above the copy, so the offset is
   // dropped and the model scaled up to fill it (otherwise it floats in a corner
-  // of a black void — the desktop right-bias has nothing to fan into).
+  // of a black void - the desktop right-bias has nothing to fan into).
   const isMobile = useIsMobile();
   // Respect reduced-motion: the explode is a scroll-coupled animation, so for
-  // visitors who opt out we hold the frame assembled (e = 0) — they get the
+  // visitors who opt out we hold the frame assembled (e = 0) - they get the
   // wireframe backdrop without parts flying as they scroll.
   const reducedMotion = usePrefersReducedMotion();
   const rot = {x: 0.42, y: -0.5};
@@ -404,7 +404,7 @@ function FrameModel({
     invalidate();
   }, [src]);
 
-  // Recolour the wireframes live when the visitor toggles light/dark — the
+  // Recolour the wireframes live when the visitor toggles light/dark - the
   // baked-at-build gold is invisible on the light cream page. Watches the
   // <html> class (the single source of theme truth) and repaints every loaded
   // model's edge materials.
@@ -526,7 +526,7 @@ function FrameModel({
       const c1 = cached.c1 - window.scrollY;
       if (cached.c2 != null) {
         const c2 = cached.c2 - window.scrollY;
-        // Hold the frame assembled (e = 0) through chapter 1 — it only starts
+        // Hold the frame assembled (e = 0) through chapter 1 - it only starts
         // coming apart once chapter 2 reaches the viewport centre. (vh/2 − c2)
         // is how far ch.2's centre has risen past the centre; normalise by the
         // ch.1→ch.2 centre distance so e ≈ 1 about one chapter later, then it
@@ -537,7 +537,7 @@ function FrameModel({
           EXPLODE_MAX,
         );
       } else {
-        // No following chapter — fall back to a single-pass scrub.
+        // No following chapter - fall back to a single-pass scrub.
         e = THREE.MathUtils.clamp(1 - c1 / vh, 0, 1);
       }
     }
@@ -593,7 +593,7 @@ export function FrameViewer({src, srcs}: FrameViewerProps) {
       aria-hidden="true"
     >
       {mounted && onScreen ? (
-        // DPR capped at 1.5 to match the hero — 1.75 rasterized ~40% more
+        // DPR capped at 1.5 to match the hero - 1.75 rasterized ~40% more
         // fragments for a decorative wireframe backdrop.
         <Canvas
           camera={{position: [0, 0.3, 4.4], fov: 38}}
@@ -602,7 +602,7 @@ export function FrameViewer({src, srcs}: FrameViewerProps) {
           dpr={[1, 1.5]}
           gl={{antialias: true, alpha: true, powerPreference: 'default'}}
         >
-          {/* Edge-outline parts are unlit — no lights or shadows needed. */}
+          {/* Edge-outline parts are unlit - no lights or shadows needed. */}
           <FrameModel src={src} srcs={allSrcs} containerRef={wrapRef} />
         </Canvas>
       ) : null}

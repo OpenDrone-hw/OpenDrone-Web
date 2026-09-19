@@ -2,7 +2,7 @@
  * The hero's 3D layer: the scroll-driven walkthrough, its progress rail, and the
  * copy panel that follows it.
  *
- * This is an absolutely-positioned layer, not a section of its own — it fills
+ * This is an absolutely-positioned layer, not a section of its own - it fills
  * the hero's sticky pane so the wordmark, size selector and buy bubble sit over
  * the same drone. The route owns the splash; this owns the drone.
  *

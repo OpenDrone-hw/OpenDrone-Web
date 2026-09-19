@@ -8,7 +8,7 @@ published: true
 ---
 
 You've caught OpenDrone mid-build. The store, the product pages, and this
-journal are all under active development — so expect rough edges, placeholder
+journal are all under active development - so expect rough edges, placeholder
 pricing, and the occasional broken link while we wire things up.
 
 ## What's here already
@@ -26,7 +26,7 @@ pricing, and the occasional broken link while we wire things up.
 ## Why in the open
 
 Every board is open hardware (CERN-OHL-S) and every firmware repo is public.
-The website is no different — it's developed in the open on GitHub, and this
+The website is no different - it's developed in the open on GitHub, and this
 journal is where the work gets documented as it happens.
 
 Subscribe below and you'll get an email when there's a new post. One email per
