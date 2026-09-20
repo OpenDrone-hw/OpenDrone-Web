@@ -65,11 +65,40 @@ describe('Shopify newsletter ownership', () => {
       return Response.json({data: {tagsAdd: {userErrors: []}}});
     });
     assert.equal(
-      await subscribeWithShopify(ENV, 'pilot@example.com', 'openrx'),
+      await subscribeWithShopify(ENV, 'pilot@example.com', ['openrx']),
       'subscribed',
     );
     assert.deepEqual(bodies[2].variables.tags, ['newsletter', 'notify-openrx']);
     assert.match(bodies[2].query, /tagsAdd/);
+  });
+
+  it('tags every product a single submit asked to be notified about', async () => {
+    const bodies: Array<{query: string; variables: Record<string, unknown>}> = [];
+    mock.method(globalThis, 'fetch', async (
+      _input: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      const body = JSON.parse(String(init?.body)) as (typeof bodies)[number];
+      bodies.push(body);
+      if (body.query.includes('NewsletterCustomerByEmail')) {
+        return Response.json({data: {customers: {nodes: [customer('NOT_SUBSCRIBED')]}}});
+      }
+      if (body.query.includes('NewsletterConsentUpdate')) {
+        return Response.json({data: {customerEmailMarketingConsentUpdate: {customer: customer('SUBSCRIBED'), userErrors: []}}});
+      }
+      return Response.json({data: {tagsAdd: {userErrors: []}}});
+    });
+    assert.equal(
+      // The repeat is what a double-posted handle looks like; it must not
+      // become a duplicate tag.
+      await subscribeWithShopify(ENV, 'pilot@example.com', ['openrx', 'openesc', 'openrx']),
+      'subscribed',
+    );
+    assert.deepEqual(bodies[2].variables.tags, [
+      'newsletter',
+      'notify-openrx',
+      'notify-openesc',
+    ]);
   });
 
   it('puts native tags on a newly created customer', async () => {
