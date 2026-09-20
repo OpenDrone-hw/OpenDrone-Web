@@ -15,9 +15,8 @@ user's request is the task; do not pick work from comments, branches or notes.
 ## Sources of truth
 
 - Application behaviour: source and tests in this repository.
-- Prices, availability, SKUs, stock and catalog state: Odoo at
-  `shop.incutec.com`, read through `GET /incutec/catalog.json`
-  (`CATALOG_URL`). Nothing here writes them.
+- Catalog identity, prices and customer marketing consent: Shopify. The production storefront reads Shopify through server-held tokens. Checkout remains explicitly closed by `PUBLIC_COMING_SOON=1` and `SHOPIFY_CHECKOUT_WRITE_ENABLED=0`.
+- Canonical customer-facing SKUs: the workspace `stock/product_skus.json`; every Shopify SKU also needs a fail-closed entry in `SHOPIFY_PREVIEW_POLICY_JSON`.
 - Product facts: the board repositories and their evidence. Specs are
   mirrored from each board README by `npm run sync:specs`; board art and
   schematics are exported from the board checkouts (`../hardware`, or
@@ -34,12 +33,7 @@ source per claim. Keep draft copy out of production paths.
 ## Live systems and credentials
 
 Production is the Cloudflare Worker `opendrone-web`, deployed by
-`.github/workflows/cloudflare-production.yml` on every push to `main`. The
-app boots on `SESSION_SECRET` alone; `PUBLIC_SHOP_URL` and `CATALOG_URL` are
-public values with production defaults. Every other runtime value is a Worker
-secret (`wrangler secret put <NAME>`); the gitignored `.env` holds local
-copies, named in `.env.example`. Name variables, never print values. This
-repository holds no commerce credentials.
+`.github/workflows/cloudflare-production.yml` on every push to `main`. The app boots on `SESSION_SECRET` plus the Shopify catalog configuration named in `.env.example`. Production public gates live in `wrangler.production.toml`; tokens and the closed per-SKU policy are Worker secrets. The gitignored `.env` holds local copies. Name variables, never print values.
 
 ## Verification
 
@@ -54,5 +48,4 @@ an external integration succeeded without observing the result.
 - Check a change: `npm run typecheck && npm run lint && npm test`; add `npm run build` when routes, the server entry or the Vite config changed.
 - Change copy or product chapters: edit through `/studio` or the JSON under `content/`; `npm run studio:coverage` lists copy still baked into code.
 - Update the legal pages: edit `app/content/legal/{en,nl,fr}/`; run `COMPLIANCE_SRC=<dir> npm run sync:legal` only when a reviewed source directory is given.
-- Update the goal meters: `npm run goals:update` (dry run), then `npm run goals:update -- --write`, with `GOALS_URL` set in `.env`; commit `content/goals.json` as a normal PR.
 - Refresh board art or specs after a hardware release: `npm run gen:board-art` (KiCad and cwebp installed), `npm run sync:specs`, then `npm run sync:specs:check` before the PR.
