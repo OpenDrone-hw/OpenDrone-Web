@@ -9,9 +9,12 @@ function form(values: Record<string, string>): FormData {
 }
 
 describe('Shopify cart input', () => {
-  it('aggregates duplicate SKUs before enforcing the quantity limit', () => {
+  it('aggregates duplicate SKUs without imposing a campaign quantity cap', () => {
     assert.deepEqual(requestedLines(form({lines: 'OPENRX-LITE:2,OPENRX-LITE:3'})), [
       {sku: 'OPENRX-LITE', quantity: 5},
+    ]);
+    assert.deepEqual(requestedLines(form({sku: 'OPENRX-LITE', qty: '10000'})), [
+      {sku: 'OPENRX-LITE', quantity: 10000},
     ]);
   });
 
@@ -20,7 +23,6 @@ describe('Shopify cart input', () => {
     ['decimal', {sku: 'OPENRX-LITE', qty: '1.5'}],
     ['infinite', {sku: 'OPENRX-LITE', qty: 'Infinity'}],
     ['malformed', {sku: 'not valid', qty: '1'}],
-    ['over limit', {lines: 'OPENRX-LITE:30,OPENRX-LITE:21'}],
     ['extra separators', {lines: 'OPENRX-LITE:1:2'}],
     ['mixed formats', {lines: 'OPENRX-LITE:1', sku: 'OPENRX-LITE'}],
   ] as const) {

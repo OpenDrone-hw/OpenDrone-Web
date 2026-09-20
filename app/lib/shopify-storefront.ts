@@ -2,6 +2,10 @@ import type {Catalog, CatalogProduct, CatalogVariant} from './catalog.ts';
 
 const DEFAULT_API_VERSION = '2026-07';
 const CART_PATH = '/api/shopify/cart';
+const PREORDER_ATTRIBUTES = [
+  {key: 'OpenDrone order type', value: 'Pre-order'},
+  {key: 'OpenDrone shipping', value: 'Billed separately when the complete order is ready'},
+];
 
 const CATALOG_QUERY = `#graphql
   query OpenDroneCatalog($first: Int!, $variantsFirst: Int!) {
@@ -361,7 +365,9 @@ export async function createCart(
       userErrors: Array<{field?: string[]; message: string}>;
       warnings: Array<{message: string}>;
     };
-  }>(env, CART_CREATE_MUTATION, {input: {lines}}, fetcher);
+  }>(env, CART_CREATE_MUTATION, {
+    input: {lines, attributes: PREORDER_ATTRIBUTES},
+  }, fetcher);
   if (
     data.cartCreate.userErrors.length ||
     data.cartCreate.warnings.length ||

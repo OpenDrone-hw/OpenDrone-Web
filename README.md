@@ -77,7 +77,9 @@ docs/                      the deep dives listed above
 
 ## How the site works
 
-**Catalog and buying.** `app/lib/shopify-storefront.ts` reads the Shopify Storefront API into the repository's existing catalog shape. Every SKU requires an explicit policy entry; production entries are `sold_out` with no ship promise. `PUBLIC_COMING_SOON=1`, `SHOPIFY_CHECKOUT_WRITE_ENABLED=0`, and the cart loader's `410` response keep checkout closed. Customer-account links stay hidden unless an exact verified Shopify account URL is configured.
+**Catalog and buying.** `app/lib/shopify-storefront.ts` reads the Shopify Storefront API into the repository's existing catalog shape. Every SKU requires an explicit policy entry; production entries are `sold_out` with no ship promise. `PUBLIC_COMING_SOON=1`, `SHOPIFY_CHECKOUT_WRITE_ENABLED=0`, `SHOPIFY_SHIPPING_LATER_CONFIRMED=0`, and the cart loader's `410` response keep checkout closed. Opening pre-orders requires a zero-cost Shopify delivery rate named `Shipping billed when ready`, matching checkout and legal disclosures, and explicit activation of all three gates. Customer-account links stay hidden unless an exact verified Shopify account URL is configured.
+
+**Pre-order shipping balance.** Product prices are paid at initial checkout and Shopify keeps the order unfulfilled. Shipping is excluded and calculated once the complete order is packed. `npm run shopify:shipping-invoice -- --order gid://shopify/Order/... --amount 12.34 --service "Standard tracked" --reference PACK-...` performs a read-only preview. Adding `--send` edits the order, adds that shipping line, and asks Shopify to email its balance-due checkout link, but only when `SHOPIFY_SHIPPING_INVOICE_WRITE_ENABLED=1`. The command refuses cancelled, fulfilled, non-EUR, already-labelled, or already-referenced orders. Each send is a customer communication and requires the founder's go.
 
 **Product lines.** OpenESC 20x20 / 30x30 and the four OpenRX variants are one
 Shopify product with a `Model` attribute; the page renders a tier ladder matched
@@ -174,7 +176,7 @@ Markdown by URL prefix and each legal route emits hreflang for en, nl, fr.
 
 ## Environment variables
 
-The annotated list is [`.env.example`](.env.example). Production uses `SESSION_SECRET`; Shopify Storefront domain/token/version; the closed SKU policy; explicit VAT confirmation; and Shopify Admin customer scopes for newsletter consent. `PUBLIC_COMING_SOON=1` and `SHOPIFY_CHECKOUT_WRITE_ENABLED=0` keep commerce closed. `SHOPIFY_NEWSLETTER_WRITE_ENABLED` gates consent writes independently. Native support uses `DISCORD_SUPPORT_INVITE` and `PUBLIC_COMPANY_EMAIL`. `PUBLIC_*` values reach the client bundle; tokens do not.
+The annotated list is [`.env.example`](.env.example). Production uses `SESSION_SECRET`; Shopify Storefront domain/token/version; the closed SKU policy; explicit VAT confirmation; and Shopify Admin customer scopes for newsletter consent. `PUBLIC_COMING_SOON=1`, `SHOPIFY_CHECKOUT_WRITE_ENABLED=0`, and `SHOPIFY_SHIPPING_LATER_CONFIRMED=0` keep commerce closed. `SHOPIFY_SHIPPING_INVOICE_WRITE_ENABLED` gates later shipping invoices independently. `SHOPIFY_NEWSLETTER_WRITE_ENABLED` gates consent writes independently. Native support uses `DISCORD_SUPPORT_INVITE` and `PUBLIC_COMPANY_EMAIL`. `PUBLIC_*` values reach the client bundle; tokens do not.
 
 ## Hosting and deploy
 

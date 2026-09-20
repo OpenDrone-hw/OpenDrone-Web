@@ -81,7 +81,7 @@
 
 ### Artikel 7bis: Voorverkoop
 
-7bis.1. Sommige producten worden verkocht als voorverkoop (pre-order). Zij worden als dusdanig vermeld, met hun verzendvenster, op de productpagina, in het winkelmandje en op de orderbevestiging. De consument betaalt de volledige prijs bij het plaatsen van de bestelling.
+7bis.1. Sommige producten worden verkocht als voorverkoop (pre-order). Zij worden als dusdanig vermeld, met hun verzendvenster, op de productpagina, in het winkelmandje en op de orderbevestiging. De consument betaalt de volledige productprijs bij het plaatsen van de bestelling. Verzendkosten zijn niet inbegrepen en worden afzonderlijk gefactureerd zodra de volledige bestelling verpakt en klaar is. Zij worden berekend op basis van bestemming, verpakt gewicht, afmetingen en gekozen dienst. Verzending volgt na betaling van die verzendfactuur.
 
 7bis.2. Verzendvensters bij lancering: de flight controller en de ESC worden verzonden vanaf medio oktober 2026; elk ander voorverkoopproduct wordt verzonden ongeveer 10 weken na de bestelling. Het vermelde verzendvenster is de tussen de consument en Incutec BV overeengekomen leveringstermijn in de zin van Art. VI.43 WER, zodat de standaardtermijn van 30 dagen uit Artikel 7.1 niet geldt voor voorverkoopartikelen.
 

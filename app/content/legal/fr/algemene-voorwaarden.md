@@ -81,7 +81,7 @@
 
 ### Article 7bis : Précommandes
 
-7bis.1. Certains produits sont vendus en précommande. Ils sont indiqués comme tels, avec leur fenêtre d’expédition, sur la page produit, dans le panier et sur la confirmation de commande. Le consommateur paie le prix intégral lors de la commande.
+7bis.1. Certains produits sont vendus en précommande. Ils sont indiqués comme tels, avec leur fenêtre d’expédition, sur la page produit, dans le panier et sur la confirmation de commande. Le consommateur paie le prix intégral des produits lors de la commande. Les frais d’expédition sont exclus et facturés séparément lorsque la commande complète est emballée et prête. Ils sont calculés selon la destination, le poids emballé, les dimensions et le service choisi. L’expédition suit le paiement de cette facture.
 
 7bis.2. Fenêtres d’expédition au lancement : le contrôleur de vol et l’ESC sont expédiés à partir de mi-octobre 2026 ; tout autre produit en précommande est expédié environ 10 semaines après la commande. La fenêtre d’expédition indiquée constitue le délai de livraison convenu entre le consommateur et Incutec BV au sens de l’art. VI.43 CDE, de sorte que le délai par défaut de 30 jours de l’article 7.1 ne s’applique pas aux articles en précommande.
 

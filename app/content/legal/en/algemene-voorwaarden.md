@@ -81,7 +81,7 @@
 
 ### Article 7bis: Pre-orders
 
-7bis.1. Some products are sold as pre-orders. They are disclosed as such, with their ship window, on the product page, in the cart and on the order confirmation. The consumer pays the full price at checkout.
+7bis.1. Some products are sold as pre-orders. They are disclosed as such, with their ship window, on the product page, in the cart and on the order confirmation. The consumer pays the full product price at checkout. Shipping is excluded and is invoiced separately when the complete order is packed and ready. It is calculated from the destination, packed weight, dimensions and selected service. Dispatch follows payment of that shipping invoice.
 
 7bis.2. Launch ship windows: the flight controller and ESC ship from mid-October 2026; every other pre-order product ships in about 10 weeks after the order. The disclosed ship window is the delivery time agreed between the consumer and Incutec BV within the meaning of Art. VI.43 WER, so the 30-day default deadline in Article 7.1 does not apply to pre-order items.
 

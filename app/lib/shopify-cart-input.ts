@@ -35,7 +35,9 @@ export function requestedLines(form: FormData): Array<{sku: string; quantity: nu
       throw new Response('Invalid cart lines.', {status: 400});
     }
     const total = (aggregated.get(sku) ?? 0) + quantity;
-    if (total > 50) throw new Response('Cart quantity exceeds the limit.', {status: 400});
+    if (!Number.isSafeInteger(total)) {
+      throw new Response('Invalid cart lines.', {status: 400});
+    }
     aggregated.set(sku, total);
   }
   return [...aggregated].map(([sku, quantity]) => ({sku, quantity}));

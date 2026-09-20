@@ -5,7 +5,10 @@ import type {ShopifyCart} from './shopify-storefront.ts';
 
 type CartEnv = Pick<
   Env,
-  'SHOPIFY_ADAPTER_PREVIEW' | 'SHOPIFY_CHECKOUT_WRITE_ENABLED' | 'PUBLIC_COMING_SOON'
+  | 'SHOPIFY_ADAPTER_PREVIEW'
+  | 'SHOPIFY_CHECKOUT_WRITE_ENABLED'
+  | 'SHOPIFY_SHIPPING_LATER_CONFIRMED'
+  | 'PUBLIC_COMING_SOON'
 >;
 export type ShopifyCartDependencies = {
   fetchCatalog: () => Promise<Catalog>;
@@ -23,6 +26,12 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
   if (env.SHOPIFY_ADAPTER_PREVIEW !== '1') throw new Response('Shopify checkout is not enabled.', {status: 404});
   if (env.SHOPIFY_CHECKOUT_WRITE_ENABLED !== '1') {
     throw new Response('Shopify checkout writes are not enabled.', {
+      status: 404,
+      headers: {'Cache-Control': 'no-store'},
+    });
+  }
+  if (env.SHOPIFY_SHIPPING_LATER_CONFIRMED !== '1') {
+    throw new Response('Shipping-later checkout is not confirmed.', {
       status: 404,
       headers: {'Cache-Control': 'no-store'},
     });
@@ -86,18 +95,6 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
       if (!existing) {
         dependencies.unsetCartId?.();
         throw new Response('Cart expired. Start a new cart.', {status: 409, headers: {'Cache-Control': 'no-store'}});
-      }
-      const quantities = new Map<string, number>();
-      for (const line of existing.lines) {
-        quantities.set(
-          line.merchandiseId,
-          (quantities.get(line.merchandiseId) ?? 0) + line.quantity,
-        );
-      }
-      for (const line of lines) {
-        if ((quantities.get(line.merchandiseId) ?? 0) + line.quantity > 50) {
-          throw new Response('Cart quantity exceeds the limit.', {status: 400});
-        }
       }
       cart = await dependencies.addCartLines(existingId, lines);
     } else {

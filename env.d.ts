@@ -49,6 +49,13 @@ declare global {
     // Independent mutation gate. Catalog/account preview stays read-only
     // unless this is explicitly enabled as well.
     SHOPIFY_CHECKOUT_WRITE_ENABLED?: string;
+    // Third checkout gate. Set to "1" only after Shopify has a zero-cost
+    // delivery rate named "Shipping billed when ready" and checkout/legal
+    // surfaces disclose the later shipping invoice.
+    SHOPIFY_SHIPPING_LATER_CONFIRMED?: string;
+    // Separate operational gate for the order-edit tool that adds shipping
+    // and emails Shopify's balance-due checkout link.
+    SHOPIFY_SHIPPING_INVOICE_WRITE_ENABLED?: string;
     SHOPIFY_STORE_DOMAIN?: string;
     SHOPIFY_STOREFRONT_TOKEN?: string;
     SHOPIFY_STOREFRONT_API_VERSION?: string;

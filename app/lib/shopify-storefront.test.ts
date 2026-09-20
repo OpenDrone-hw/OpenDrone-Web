@@ -163,9 +163,13 @@ describe('Shopify hosted checkout handoff', () => {
       fetcher,
     );
     assert.equal(url, 'https://checkout.opendrone.be/checkouts/cn/abc');
-    assert.deepEqual(variables, {input: {lines: [{
-      merchandiseId: 'gid://shopify/ProductVariant/1', quantity: 2,
-    }]}});
+    assert.deepEqual(variables, {input: {
+      lines: [{merchandiseId: 'gid://shopify/ProductVariant/1', quantity: 2}],
+      attributes: [
+        {key: 'OpenDrone order type', value: 'Pre-order'},
+        {key: 'OpenDrone shipping', value: 'Billed separately when the complete order is ready'},
+      ],
+    }});
   });
 
   it('rejects checkout redirects to an unexpected host', async () => {

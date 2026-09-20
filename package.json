@@ -36,6 +36,7 @@
     "sync:contributors": "node scripts/sync-contributors.mjs",
     "sync:timeline": "node scripts/sync-timeline.mjs",
     "goals:update": "node scripts/update-goals.mjs",
+    "shopify:shipping-invoice": "node --experimental-strip-types scripts/shopify-shipping-invoice.mjs",
     "sync:specs": "node scripts/import-specs.mjs --write",
     "sync:downloads": "node scripts/sync-downloads.mjs --check",
     "sync:specs:check": "node scripts/import-specs.mjs --check"

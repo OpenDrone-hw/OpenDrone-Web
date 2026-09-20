@@ -32,6 +32,7 @@ directory = "dist/client"
 # configured separately by the reviewed runtime secret update.
 SHOPIFY_ADAPTER_PREVIEW = "1"
 SHOPIFY_CHECKOUT_WRITE_ENABLED = "0"
+SHOPIFY_SHIPPING_LATER_CONFIRMED = "0"
 PUBLIC_COMING_SOON = "1"
 
 # Workers Rate Limiting bindings for /api/support/lookup (founder decision,

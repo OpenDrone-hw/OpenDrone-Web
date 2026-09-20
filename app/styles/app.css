@@ -3547,6 +3547,7 @@ button.reset {
   border-bottom: 1px solid var(--color-border);
 }
 
+
 .product-facts {
   display: grid;
   gap: 0.75rem;

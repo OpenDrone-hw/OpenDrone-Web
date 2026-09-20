@@ -1,6 +1,6 @@
 ## Expédition et livraison
 
-Incutec BV expédie les commandes depuis la Belgique vers la plupart des pays de l’Union européenne. Les délais de livraison et les frais d’expédition sont calculés et affichés lors du passage en caisse avant le paiement.
+Incutec BV expédie les commandes depuis la Belgique vers la plupart des pays de l’Union européenne. Pour les articles en stock, les délais et frais de livraison sont affichés lors du passage en caisse. Pour les précommandes, les frais d’expédition font l’objet du paiement séparé décrit ci-dessous.
 
 La version néerlandaise (/shipping) constitue le texte juridiquement faisant foi pour les consommateurs résidant en Belgique. Cette traduction française est fournie à titre informatif uniquement.
 
@@ -10,7 +10,7 @@ Les commandes sont normalement expédiées dans les 2 jours ouvrables suivant la
 
 ### Précommandes
 
-Certains produits sont vendus en précommande. Ils sont indiqués comme tels, avec leur date d’expédition prévue, sur la page produit, dans le panier et sur la confirmation de commande. Le prix intégral est facturé lors de la commande. Au lancement, le contrôleur de vol et l’ESC sont expédiés à partir de mi-octobre 2026 ; tout autre produit en précommande est expédié environ 10 semaines après la commande. La date d’expédition indiquée constitue le délai de livraison convenu entre le consommateur et Incutec BV au sens de l’Art. VI.43 du Code de droit économique belge, de sorte que le délai par défaut de 30 jours mentionné ci-dessus ne s’applique pas aux articles en précommande.
+Certains produits sont vendus en précommande. Ils sont indiqués comme tels, avec leur date d’expédition prévue, sur la page produit, dans le panier et sur la confirmation de commande. Le prix intégral des produits est facturé lors de la commande. Les frais d’expédition ne sont pas inclus dans ce paiement. Lorsque la commande complète est emballée et prête, Incutec BV calcule ces frais selon la destination, le poids emballé, les dimensions et le service choisi, puis envoie une facture Shopify avec un lien de paiement sécurisé. L’expédition suit le paiement de cette facture. Au lancement, le contrôleur de vol et l’ESC sont expédiés à partir de mi-octobre 2026 ; tout autre produit en précommande est expédié environ 10 semaines après la commande. La date d’expédition indiquée constitue le délai de livraison convenu entre le consommateur et Incutec BV au sens de l’Art. VI.43 du Code de droit économique belge, de sorte que le délai par défaut de 30 jours mentionné ci-dessus ne s’applique pas aux articles en précommande.
 
 Une commande combinant des articles en stock et des articles en précommande est expédiée en un seul colis dès que chaque article est en stock : une seule livraison par commande. Si Incutec BV ne peut respecter la date d’expédition indiquée, elle en informe le consommateur et propose, au choix du consommateur, une nouvelle date d’expédition ou un remboursement intégral dans les 14 jours.
 
@@ -22,7 +22,7 @@ Les colis expédiés en dehors de l’Union européenne peuvent être soumis à 
 
 ### Tarifs et pays d’expédition
 
-Les frais d’expédition dépendent de la destination et du poids du colis. Certains pays sont exclus en raison de sanctions à l’exportation : voir notre [politique d’usage final](/end-use).
+Les frais d’expédition dépendent de la destination, du poids emballé, des dimensions et du service choisi. Les services standard et express sont proposés lorsqu’ils sont disponibles pour la destination. Le montant figure dans la facture Shopify ultérieure avant son paiement par le client. Certains pays sont exclus en raison de sanctions à l’exportation : voir notre [politique d’usage final](/end-use).
 
 ### Risque pendant l’expédition
 

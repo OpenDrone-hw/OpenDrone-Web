@@ -1,6 +1,6 @@
 ## Verzending en levering
 
-Incutec BV verzendt bestellingen vanuit België naar de meeste landen van de Europese Unie. Leveringstermijnen en verzendkosten worden berekend en getoond aan de checkout voorafgaand aan betaling.
+Incutec BV verzendt bestellingen vanuit België naar de meeste landen van de Europese Unie. Voor artikelen op voorraad worden leveringstermijnen en verzendkosten getoond aan de checkout. Voor pre-orders geldt de afzonderlijke betaling van verzendkosten hieronder.
 
 ### Leveringstermijn
 
@@ -8,7 +8,7 @@ Bestellingen worden in principe verzonden binnen 2 werkdagen na ontvangst van de
 
 ### Pre-orders
 
-Sommige producten worden verkocht als pre-order. Zij zijn als dusdanig gemarkeerd, met hun verwachte verzenddatum, op de productpagina, in het winkelmandje en op de orderbevestiging. De volledige prijs wordt aangerekend bij het plaatsen van de bestelling. Bij lancering worden de flight controller en de ESC verzonden vanaf medio oktober 2026; elk ander pre-orderproduct wordt verzonden ongeveer 10 weken na de bestelling. De vermelde verzenddatum is de tussen de consument en Incutec BV overeengekomen leveringstermijn in de zin van Art. VI.43 WER, zodat de bovenstaande standaardtermijn van 30 dagen niet geldt voor pre-orderartikelen.
+Sommige producten worden verkocht als pre-order. Zij zijn als dusdanig gemarkeerd, met hun verwachte verzenddatum, op de productpagina, in het winkelmandje en op de orderbevestiging. De volledige productprijs wordt aangerekend bij het plaatsen van de bestelling. Verzendkosten zijn niet inbegrepen in die betaling. Zodra de volledige bestelling verpakt en klaar is, berekent Incutec BV de verzendkosten op basis van bestemming, verpakt gewicht, afmetingen en gekozen dienst. Daarna ontvangt de klant een Shopify-factuur met een beveiligde betaallink. De bestelling wordt verzonden na betaling van die factuur. Bij lancering worden de flight controller en de ESC verzonden vanaf medio oktober 2026; elk ander pre-orderproduct wordt verzonden ongeveer 10 weken na de bestelling. De vermelde verzenddatum is de tussen de consument en Incutec BV overeengekomen leveringstermijn in de zin van Art. VI.43 WER, zodat de bovenstaande standaardtermijn van 30 dagen niet geldt voor pre-orderartikelen.
 
 Een bestelling die artikelen op voorraad en pre-orderartikelen combineert, wordt in één pakket verzonden zodra elk artikel op voorraad is: één levering per bestelling. Indien Incutec BV de vermelde verzenddatum niet kan halen, brengt zij de consument daarvan op de hoogte en biedt, naar keuze van de consument, een nieuwe verzenddatum of een volledige terugbetaling binnen 14 dagen aan.
 
@@ -20,7 +20,7 @@ Pakketten die buiten de Europese Unie worden verzonden, kunnen onderworpen zijn 
 
 ### Verzendkosten en landen
 
-Het verzendtarief is afhankelijk van bestemming en pakketgewicht. Bepaalde landen zijn uitgesloten wegens export-sancties: zie ons [end-use beleid](/end-use).
+Het verzendtarief is afhankelijk van bestemming, verpakt gewicht, afmetingen en gekozen dienst. Standaard- en expresdiensten worden aangeboden wanneer deze beschikbaar zijn voor de bestemming. Het bedrag staat in de latere Shopify-factuur voordat de klant het betaalt. Bepaalde landen zijn uitgesloten wegens export-sancties: zie ons [end-use beleid](/end-use).
 
 ### Risico bij verzending
 
