@@ -34,3 +34,24 @@ export function preorderNote(
     'ships in about 10 weeks'
   );
 }
+
+/**
+ * The ship promise the buy module prints, as opposed to the pre-order note
+ * above: the catalog variant decides whenever it carries the key, INCLUDING
+ * when it decides `null`, and only an absent key falls back to the content
+ * file's `statusNote`.
+ *
+ * The distinction is the whole point. The closed-storefront policy
+ * (`SHOPIFY_PREVIEW_POLICY_JSON`) sets `shipPromise: null` on every sold_out
+ * SKU deliberately, and `app/lib/shopify-storefront.ts` refuses to build a
+ * closed SKU that carries one. Coalescing that null with `??` republished a
+ * dispatch date the policy had just withdrawn, on a storefront whose checkout
+ * is closed.
+ */
+export function shipPromiseFor(
+  variantPromise: string | null | undefined,
+  statusNote?: string | null,
+): string | null {
+  if (variantPromise !== undefined) return variantPromise;
+  return statusNote ?? null;
+}

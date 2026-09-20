@@ -65,7 +65,8 @@ import {
   isConceptFor,
   isPurchasableStatus,
 } from '~/lib/product-content';
-import {useProductStatus} from '~/lib/coming-soon';
+import {notifiableProducts, useProductStatus} from '~/lib/coming-soon';
+import {shipPromiseFor} from '~/lib/preorder';
 import {fetchStatusFlagsFast, statusForHandle} from '~/lib/roadmap-data';
 import {trackEvent} from '~/lib/growth/plausible';
 import {attributionSource} from '~/lib/growth/attribution';
@@ -1509,12 +1510,31 @@ function ProductPage() {
     copyText('product-chrome.trust_chip_firmware_bundle') ?? ''
   ).split('{firmwares}');
   const isBundle = Boolean(content.bundle);
-  // The ship promise shown on the buy module: Odoo's per-product word
+  // The other launches a visitor can join from this page, so registering
+  // interest in a second product costs a tick box rather than another visit.
+  // The page's own product is posted as a hidden field and filtered out by
+  // NewsletterSignup.
+  const otherNotifyProducts = notifiableProducts(
+    rootData?.familyProducts,
+    rootData?.productStatuses,
+  );
+  // The ship promise shown on the buy module: the catalog's per-product word
   // (frozen onto the order line and printed in the order mail by the same
   // module) when the catalog carries one, else the local content file's
   // note. One string, so the promise the customer reads is the promise on
   // the contract.
-  const shipPromise = selectedVariant?.shipPromise ?? content.statusNote ?? null;
+  //
+  // A variant that carries the key decides, INCLUDING when it decides `null`.
+  // The closed-storefront policy (SHOPIFY_PREVIEW_POLICY_JSON) sets
+  // `shipPromise: null` on every sold_out SKU on purpose, and
+  // app/lib/shopify-storefront.ts refuses to build a closed SKU that carries
+  // one. `??` treated that deliberate null as "no opinion" and fell through to
+  // the content file, republishing a dispatch date the policy had just
+  // withdrawn. Only an absent key falls back.
+  const shipPromise = shipPromiseFor(
+    selectedVariant?.shipPromise,
+    content.statusNote,
+  );
   const buyPrice = isBundle ? bundlePrice : selectedVariant?.price;
   const buyAvailable = isBundle
     ? bundleAvailable
@@ -1562,6 +1582,7 @@ function ProductPage() {
       ) : null}
       <NewsletterSignup
         notify={{productHandle: product.handle, productTitle: product.title}}
+        notifyProducts={otherNotifyProducts}
         turnstileSiteKey={rootData?.turnstileSiteKey ?? null}
         className="product-buy-notify"
       />
@@ -1660,6 +1681,7 @@ function ProductPage() {
       !selectedVariant.availableForSale ? (
         <NewsletterSignup
           notify={{productHandle: product.handle, productTitle: product.title}}
+          notifyProducts={otherNotifyProducts}
           turnstileSiteKey={rootData?.turnstileSiteKey ?? null}
           className="product-buy-notify"
         />

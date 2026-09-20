@@ -9,6 +9,8 @@ import {PlaceholderBanner} from '~/components/PlaceholderBanner';
 import {RouteProgress} from '~/components/RouteProgress';
 import {Txt} from '~/components/Txt';
 import type {CommerceHandoff} from '~/lib/shop-links';
+import {notifiableProducts} from '~/lib/coming-soon';
+import type {ProductStatus} from '~/lib/product-content';
 
 interface PageLayoutProps {
   shopUrl: string;
@@ -18,6 +20,7 @@ interface PageLayoutProps {
   turnstileSiteKey?: string | null;
   prelaunch?: boolean;
   familyProducts?: HeaderFamilyProduct[];
+  productStatuses?: Record<string, ProductStatus>;
   children?: React.ReactNode;
 }
 
@@ -30,9 +33,13 @@ export function PageLayout({
   turnstileSiteKey,
   prelaunch = true,
   familyProducts,
+  productStatuses,
 }: PageLayoutProps) {
   const {pathname} = useLocation();
   const isHomepage = pathname === '/';
+  // The footer form offers every not-yet-buyable product, so a visitor can
+  // join several launch lists from wherever they happen to be standing.
+  const notifyProducts = notifiableProducts(familyProducts, productStatuses);
 
   return (
     <MotionConfig reducedMotion="user">
@@ -73,6 +80,7 @@ export function PageLayout({
               shopUrl={shopUrl}
               company={company}
               turnstileSiteKey={turnstileSiteKey ?? null}
+              notifyProducts={notifyProducts}
             />
           ) : (
             <div className="home-mobile-footer">
@@ -80,6 +88,7 @@ export function PageLayout({
                 shopUrl={shopUrl}
                 company={company}
                 turnstileSiteKey={turnstileSiteKey ?? null}
+                notifyProducts={notifyProducts}
               />
             </div>
           )}

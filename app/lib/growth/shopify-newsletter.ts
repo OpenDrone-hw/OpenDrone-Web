@@ -69,11 +69,18 @@ function successfulConsent(customer: Customer | null | undefined, expected: Mark
   return Boolean(customer?.id && customer.emailMarketingConsent?.marketingState === expected);
 }
 
-/** Shopify is the consent owner. An existing unsubscribe is never cleared by signup. */
+/**
+ * Shopify is the consent owner. An existing unsubscribe is never cleared by
+ * signup.
+ *
+ * `productHandles` carries every launch the visitor asked to hear about, so
+ * one submit can register interest in several SKUs. Each becomes its own
+ * `notify-<handle>` customer tag alongside the plain `newsletter` tag.
+ */
 export async function subscribeWithShopify(
   env: NewsletterEnv,
   email: string,
-  productHandle?: string,
+  productHandles: readonly string[] = [],
 ): Promise<'subscribed' | 'suppressed' | 'disabled' | 'failed'> {
   if (env.SHOPIFY_ADAPTER_PREVIEW !== '1' || env.SHOPIFY_NEWSLETTER_WRITE_ENABLED !== '1') return 'disabled';
   try {
@@ -88,7 +95,10 @@ export async function subscribeWithShopify(
       marketingOptInLevel: 'SINGLE_OPT_IN',
       consentUpdatedAt: new Date().toISOString(),
     };
-    const tags = ['newsletter', ...(productHandle ? [`notify-${productHandle}`] : [])];
+    const tags = [
+      'newsletter',
+      ...new Set(productHandles.map((handle) => `notify-${handle}`)),
+    ];
     if (existing) {
       const written = await admin<{
         customerEmailMarketingConsentUpdate: {customer: Customer | null; userErrors: unknown[]};

@@ -6,6 +6,7 @@ import {searchOdooTickets} from '~/lib/support/odoo';
 import {SupportThread} from '~/components/SupportThread';
 import {FeedbackModal} from '~/components/FeedbackModal';
 import {buildSeoMeta} from '~/lib/seo';
+import {getActiveTheme} from '~/lib/theme';
 import {Txt} from '~/components/Txt';
 import {copy, copyText, editAttrs} from '~/lib/copy';
 
@@ -216,7 +217,9 @@ function IntakeView({
       if (turnstileWidgetId.current) return;
       const id = cf.render(turnstileContainerRef.current, {
         sitekey: turnstileSiteKey!,
-        theme: 'dark',
+        // Match the active site theme, or the widget renders a dark box on a
+        // light page (and vice-versa).
+        theme: getActiveTheme(),
         size: 'flexible',
       });
       turnstileWidgetId.current = id ?? null;
@@ -225,7 +228,19 @@ function IntakeView({
       render();
       return;
     }
-    if (document.getElementById(SCRIPT_ID)) return;
+    // The footer newsletter form injects a script under this same id. If it
+    // got there first the tag exists while `window.turnstile` is still
+    // loading, so bailing out here left this form with no widget at all and
+    // nothing to submit. Wait for whoever injected it to finish instead.
+    if (document.getElementById(SCRIPT_ID)) {
+      const check = window.setInterval(() => {
+        if ((window as unknown as {turnstile?: Turnstile}).turnstile) {
+          window.clearInterval(check);
+          render();
+        }
+      }, 120);
+      return () => window.clearInterval(check);
+    }
     const s = document.createElement('script');
     s.id = SCRIPT_ID;
     s.src =
