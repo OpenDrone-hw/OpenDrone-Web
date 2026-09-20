@@ -289,18 +289,20 @@ describe('Shopify cart action', () => {
     assert.equal(unset, true);
   });
 
-  it('rejects set mode and keeps the cart loader read-only', async () => {
+  it('rejects set mode and permanently closes the legacy cart loader', async () => {
     const invalid = await thrownResponse(handleShopifyCartAction(
       request({sku: 'OPENRX-LITE', qty: '1', mode: 'set'}),
       ENABLED_ENV,
       {fetchCatalog: async () => CATALOG, createCart: async () => { throw new Error('must not create'); }},
     ));
     assert.equal(invalid.status, 400);
-    const response = await handleShopifyCartLoader(
+    let fetched = false;
+    const response = await thrownResponse(handleShopifyCartLoader(
       {SHOPIFY_ADAPTER_PREVIEW: '1'},
-      {getCartId: () => 'cart-a', getCart: async (id) => ({id, checkoutUrl: 'https://checkout.opendrone.be/a', lines: []})},
-    );
-    assert.equal(response.status, 303);
+      {getCartId: () => 'cart-a', getCart: async (id) => { fetched = true; return {id, checkoutUrl: 'https://checkout.opendrone.be/a', lines: []}; }},
+    ));
+    assert.equal(response.status, 410);
+    assert.equal(fetched, false);
   });
 
 });

@@ -113,19 +113,13 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
 }
 
 export async function handleShopifyCartLoader(env: CartEnv, dependencies: Pick<ShopifyCartDependencies, 'getCartId' | 'unsetCartId' | 'getCart' | 'logError'>): Promise<Response> {
-  if (env.SHOPIFY_ADAPTER_PREVIEW !== '1') throw new Response('Shopify checkout is not enabled.', {status: 404});
-  const id = dependencies.getCartId?.();
-  if (!id || !dependencies.getCart) throw new Response('Cart not found.', {status: 404});
-  try {
-    const cart = await dependencies.getCart(id);
-    if (!cart) {
-      dependencies.unsetCartId?.();
-      throw new Response('Cart expired.', {status: 410});
-    }
-    return new Response(null, {status: 303, headers: {Location: cart.checkoutUrl, 'Cache-Control': 'no-store'}});
-  } catch (error) {
-    if (error instanceof Response) throw error;
-    dependencies.logError?.('cart lookup failed');
-    throw new Response('Cart temporarily unavailable.', {status: 503, headers: {'Retry-After': '60', 'Cache-Control': 'no-store'}});
-  }
+  // This deployment is a closed catalog. Never turn an old session cookie
+  // into a checkout redirect, even if the cart was created during testing.
+  // Reopening commerce requires a separately reviewed cart surface.
+  void env;
+  void dependencies;
+  throw new Response('Checkout is closed.', {
+    status: 410,
+    headers: {'Cache-Control': 'no-store'},
+  });
 }

@@ -27,8 +27,12 @@ directory = "dist/client"
 # per-environment secret set with `wrangler secret put SESSION_SECRET` and is
 # never written here.
 [vars]
-CATALOG_URL = "https://erp.incutec.com/incutec/catalog.json"
-PUBLIC_SHOP_URL = "https://shop.incutec.com"
+# Shopify catalog reads are active, while every commerce write remains closed.
+# The domain, tokens, closed per-SKU policy and newsletter write switch are
+# configured separately by the reviewed runtime secret update.
+SHOPIFY_ADAPTER_PREVIEW = "1"
+SHOPIFY_CHECKOUT_WRITE_ENABLED = "0"
+PUBLIC_COMING_SOON = "1"
 
 # Workers Rate Limiting bindings for /api/support/lookup (founder decision,
 # 2026-09-15: replaced Upstash-backed global rate limiting). Each binding is

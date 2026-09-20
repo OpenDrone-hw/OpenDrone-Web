@@ -62,9 +62,26 @@ export default {
         return Response.redirect(url.toString(), 301);
       }
 
-      // Product images: served from the edge cache, fetched from Odoo only
-      // on a miss, before any session or catalog work (app/lib/odoo-image.ts).
+      // The Shopify cutover retires the custom ticket API as one unit. New
+      // support uses the public Discord/email page; old API URLs must never
+      // instantiate a route loader or contact the retired Odoo backend.
+      if (
+        env.SHOPIFY_ADAPTER_PREVIEW === '1' &&
+        url.pathname.startsWith('/api/support/')
+      ) {
+        return new Response('Support API retired. Use /support.', {
+          status: 410,
+          headers: {'Cache-Control': 'no-store'},
+        });
+      }
+
+      // The retired image proxy remains reachable only during rollback mode.
+      // Shopify preview uses Shopify CDN URLs directly and must not contact
+      // Odoo even when an old image URL is requested.
       if (url.pathname.startsWith(ODOO_IMAGE_PREFIX)) {
+        if (env.SHOPIFY_ADAPTER_PREVIEW === '1') {
+          return new Response('Not Found', {status: 404});
+        }
         return await handleOdooImage(request, {
           env,
           cache: await caches.open(IMAGE_CACHE).catch(() => undefined),
@@ -77,7 +94,9 @@ export default {
         env,
         executionContext,
       );
-      scheduleImageWarm(url.origin, env, context);
+      if (!context.catalog.shopifyPreview) {
+        scheduleImageWarm(url.origin, env, context);
+      }
 
       const response = await handleRequest(request, context);
 

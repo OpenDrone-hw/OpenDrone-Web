@@ -207,6 +207,9 @@ export function mapShopifyCatalog(
       ) {
         throw new Error(`shopify: missing catalog policy for ${sku}`);
       }
+      if (configured.saleMode === 'sold_out' && configured.shipPromise !== null) {
+        throw new Error(`shopify: closed SKU ${sku} must not carry a ship promise`);
+      }
       const options = Object.fromEntries(
         variant.selectedOptions.map(({name, value}) => [name, value]),
       );

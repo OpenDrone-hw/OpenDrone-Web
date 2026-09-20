@@ -80,7 +80,7 @@ describe('Shopify Storefront catalog', () => {
     assert.equal(variant.merchandise_id, 'gid://shopify/ProductVariant/1');
     assert.equal(variant.cart_add_url, '/api/shopify/cart?sku=OPENRX-GEMINI&qty=1');
     assert.equal(request?.headers.get('x-shopify-storefront-access-token'), 'test-token');
-    assert.equal(request?.redirect, 'error');
+    assert.equal(request?.redirect, 'manual');
   });
 
   it('fails closed when a SKU is missing or duplicated', async () => {
