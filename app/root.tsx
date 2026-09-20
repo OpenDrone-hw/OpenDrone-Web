@@ -19,6 +19,7 @@ import jetbrainsMonoWoff2 from '~/assets/fonts/jetbrains-mono-Regular.woff2';
 import {resolveAllStatuses, roadmapStatusMap} from '~/lib/coming-soon';
 import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
 import {toCards} from '~/lib/catalog';
+import {commerceHandoff, customerAccountUrl} from '~/lib/shop-links';
 import resetStyles from '~/styles/reset.css?url';
 import appStyles from '~/styles/app.css?url';
 import {PageLayout} from './components/PageLayout';
@@ -191,6 +192,16 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
 
   return {
     shopUrl: context.catalog.shopUrl,
+    commerceHandoff: commerceHandoff(
+      catalog,
+      context.catalog.shopifyPreview,
+      context.session.has('shopifyCartId'),
+    ),
+    accountUrl: customerAccountUrl(
+      context.env,
+      context.catalog.shopUrl,
+      context.catalog.shopifyPreview,
+    ),
     familyProducts: toCards(catalog),
     availability: Object.fromEntries(
       catalog.products.map((p) => [

@@ -1,7 +1,11 @@
 import {useEffect, useMemo, useState} from 'react';
 import {Link, redirect, useLoaderData, type HeadersFunction} from 'react-router';
 import type {Route} from './+types/support.tickets';
-import {readSupportCookie, verifyTicket} from '~/lib/support/session';
+import {
+  readSupportCookie,
+  supportHistoryDestination,
+  verifyTicket,
+} from '~/lib/support/session';
 import {searchOdooTickets, type OdooTicketStatus} from '~/lib/support/odoo';
 import {SupportThread, type ThreadMessage} from '~/components/SupportThread';
 import {buildSeoMeta} from '~/lib/seo';
@@ -40,12 +44,15 @@ export const meta: Route.MetaFunction = () =>
 
 export async function loader({request, context}: Route.LoaderArgs) {
   const env = context.env;
+  if (context.catalog.shopifyPreview) {
+    throw redirect(supportHistoryDestination(true), 302);
+  }
 
   // Identity is the signed ticket cookie: the email the visitor opened a
   // ticket with, or the one a resume link re-minted. There is no customer
-  // account to authenticate against any more (contract section 4), so a
-  // visitor without a cookie is sent to the desk to open one or to ask
-  // for a resume link by email.
+  // account assertion available here, so a visitor without a cookie returns
+  // to the public support contacts. This route is retained read-only while
+  // historical tickets are exported from the legacy support system.
   const cookie = readSupportCookie(request);
   const cookieTicket = await verifyTicket(env, cookie);
   if (!cookieTicket?.email) throw redirect('/support');

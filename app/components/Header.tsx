@@ -28,7 +28,7 @@ import {
 } from '~/lib/product-content';
 import {FAMILIES} from '~/lib/families';
 import {stackDiscountedPrice} from '~/lib/stack-discount';
-import {buyUrl, portalUrl} from '~/lib/shop-links';
+import {buyUrl, type CommerceHandoff} from '~/lib/shop-links';
 import type {
   ProductCardFragment,
   ProductVariantFragment,
@@ -51,6 +51,8 @@ export type HeaderFamilyProduct = ProductCardFragment;
 
 interface HeaderProps {
   shopUrl: string;
+  commerceHandoff: CommerceHandoff;
+  accountUrl: string | null;
   familyProducts?: HeaderFamilyProduct[];
 }
 
@@ -101,7 +103,7 @@ function selfShortFor(type: string): string {
   return CATEGORY_LINKS.find((c) => c.type === type)?.label ?? 'board';
 }
 
-export function Header({shopUrl, familyProducts}: HeaderProps) {
+export function Header({shopUrl, commerceHandoff, accountUrl, familyProducts}: HeaderProps) {
   // Dynamic-Island logo slot. On the hero ("/") the OpenDrone wordmark already
   // lives bottom-left in the 3D scene, so the bar instead credits the parent
   // company - the Incutec mark linking to incutec.eu (OpenDrone is an Incutec
@@ -157,16 +159,16 @@ export function Header({shopUrl, familyProducts}: HeaderProps) {
         )}
 
         {/* Center: primary nav + gold category links on the same row */}
-        <HeaderMenu viewport="desktop" shopUrl={shopUrl} />
+        <HeaderMenu viewport="desktop" accountUrl={accountUrl} />
         {/* Category families in segmented bubbles: FC and ESC share one
             (their rows sell the stack), while RX and Frame are standalone
             families so each gets its own bubble; All Products follows in its
             own accented bubble as the route into the full catalogue. No
             dividers - the bubbles do the grouping. */}
-        <FamilyNav familyProducts={familyProducts} shopUrl={shopUrl} />
+        <FamilyNav familyProducts={familyProducts} commerceHandoff={commerceHandoff} />
 
         {/* Right: actions */}
-        <HeaderCtas shopUrl={shopUrl} />
+        <HeaderCtas accountUrl={accountUrl} cartUrl={commerceHandoff.cartUrl} />
       </div>
     </header>
   );
@@ -182,10 +184,10 @@ export function Header({shopUrl, familyProducts}: HeaderProps) {
  */
 function FamilyNav({
   familyProducts,
-  shopUrl,
+  commerceHandoff,
 }: {
   familyProducts?: HeaderFamilyProduct[];
-  shopUrl: string;
+  commerceHandoff: CommerceHandoff;
 }) {
   const products = familyProducts ?? null;
   const [open, setOpen] = useState<string | null>(null);
@@ -298,7 +300,7 @@ function FamilyNav({
           available: Boolean(pv.availableForSale && v.availableForSale),
           imageUrl: pv.image?.url ?? partner.featuredImage?.url ?? null,
           // Both SKUs on one hand-off link.
-          href: buyUrl(shopUrl, [
+          href: buyUrl(commerceHandoff, [
             {sku: v.sku ?? '', quantity: 1},
             {sku: pv.sku ?? '', quantity: 1},
           ]),
@@ -473,10 +475,10 @@ function FamilyNav({
 
 export function HeaderMenu({
   viewport,
-  shopUrl,
+  accountUrl,
 }: {
   viewport: Viewport;
-  shopUrl: string;
+  accountUrl: string | null;
 }) {
   const {close} = useAside();
   const isMobile = viewport === 'mobile';
@@ -639,7 +641,7 @@ export function HeaderMenu({
           <Txt id="chrome.nav_newsletter" />
         </NavLink>
       ) : null}
-      {isMobile ? (
+      {isMobile && accountUrl ? (
         <>
           <Txt
             id="chrome.heading_account"
@@ -650,7 +652,7 @@ export function HeaderMenu({
               the site rather than routing inside it. */}
           <a
             onClick={close}
-            href={portalUrl(shopUrl, 'account')}
+            href={accountUrl}
             className="text-sm font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
           >
             <Txt id="chrome.nav_account_signin" />
@@ -661,7 +663,7 @@ export function HeaderMenu({
   );
 }
 
-function HeaderCtas({shopUrl}: {shopUrl: string}) {
+function HeaderCtas({accountUrl, cartUrl}: {accountUrl: string | null; cartUrl: string | null}) {
   return (
     <nav className="flex items-center gap-2 md:gap-5 ml-auto" role="navigation">
       {/* Hidden in the top bar on phones (it would overflow a 320px row on
@@ -696,14 +698,16 @@ function HeaderCtas({shopUrl}: {shopUrl: string}) {
       {/* Account, orders, invoices and addresses live in the Odoo portal
           on the shop: an external link, not an in-app route. The signed-in
           state is the shop's to know, so the label is always "Account". */}
-      <a
-        href={portalUrl(shopUrl, 'account')}
-        className="font-mono text-[12px] uppercase tracking-[0.15em] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors hidden md:block"
-      >
-        <Txt id="chrome.nav_account" />
-      </a>
+      {accountUrl ? (
+        <a
+          href={accountUrl}
+          className="font-mono text-[12px] uppercase tracking-[0.15em] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors hidden md:block"
+        >
+          <Txt id="chrome.nav_account" />
+        </a>
+      ) : null}
       <ThemeToggle className="site-header-icon" />
-      <CartToggle shopUrl={shopUrl} />
+      <CartToggle cartUrl={cartUrl} />
       <HeaderMenuMobileToggle />
     </nav>
   );
@@ -727,18 +731,35 @@ function HeaderMenuMobileToggle() {
 }
 
 /**
- * The cart icon. The cart itself lives on the shop (contract section
- * 1.3), so this is a plain external link to it: there is no local cart
- * to count, preview in a drawer or publish analytics for.
+ * The cart icon links to Odoo or, after the first preview add, the local
+ * server route that resolves the session's hosted Shopify checkout.
  */
-function CartToggle({shopUrl}: {shopUrl: string}) {
+function CartToggle({cartUrl}: {cartUrl: string | null}) {
+  if (!cartUrl) {
+    return (
+      <span
+        className="site-header-icon site-header-cart"
+        aria-label="Cart unavailable in checkout preview"
+        aria-disabled="true"
+      >
+        <CartIcon />
+      </span>
+    );
+  }
   return (
     <a
       className="site-header-icon site-header-cart"
-      href={portalUrl(shopUrl, 'cart')}
+      href={cartUrl}
       aria-label={copyText('chrome.cart_aria') ?? 'Cart'}
     >
-      <svg
+      <CartIcon />
+    </a>
+  );
+}
+
+function CartIcon() {
+  return (
+    <svg
         width="20"
         height="20"
         viewBox="0 0 24 24"
@@ -750,8 +771,7 @@ function CartToggle({shopUrl}: {shopUrl: string}) {
         <circle cx="9" cy="20" r="1.5" />
         <circle cx="18" cy="20" r="1.5" />
         <path d="M2 3h3l2.4 12.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.6L21 7H6" />
-      </svg>
-    </a>
+    </svg>
   );
 }
 

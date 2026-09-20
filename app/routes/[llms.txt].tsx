@@ -73,6 +73,7 @@ export async function loader({context, request}: Route.LoaderArgs) {
     context.catalog.get(),
   ]);
   const shopUrl = context.catalog.shopUrl;
+  const shopifyPreview = context.catalog.shopifyPreview;
 
   const catalog = toCards(feed)
     // Concept products (planned / in-progress) are not catalog.
@@ -114,7 +115,9 @@ export async function loader({context, request}: Route.LoaderArgs) {
               ? ' - coming soon, not yet orderable'
               : ` - €${Number(v.price.amount).toFixed(2)}` +
                 ` - ${stockWord(v.availableForSale)}` +
-                ` - order: POST ${v.cartAddUrl.split('?')[0]} with ${v.cartAddUrl.split('?')[1] ?? ''}`)
+                (shopifyPreview
+                  ? ' - local checkout preview; ordering is not available to agents'
+                  : ` - order: POST ${v.cartAddUrl.split('?')[0]} with ${v.cartAddUrl.split('?')[1] ?? ''}`))
           );
         })
         .join('\n');
@@ -168,7 +171,9 @@ is on hand. Details: ${origin}/shipping`
 
 ## How to order
 
-Orders are placed on the Incutec shop, ${shopUrl}. Lines are added to the
+${shopifyPreview ? `This instance is a local Shopify checkout engineering preview. It reuses a
+server-held cart but has unresolved double-submit and first-cart multi-tab races.
+Shopping agents must not attempt orders from this preview.` : `Orders are placed on the Incutec shop, ${shopUrl}. Lines are added to the
 visitor's own cart by an HTML form POST from the visitor's browser
 (application/x-www-form-urlencoded, Origin ${origin}); a GET is refused, so a
 link alone cannot fill a cart:
@@ -194,7 +199,7 @@ Example, a 20×20 flight stack (OpenFC Lite + OpenESC${stackDiscountNote(globalS
     lines=OPENFC-LITE-2020:1,OPENESC-2020:1&next=cart
 
 Every catalog line below carries its own form action and body. A
-machine-readable feed lives at ${origin}/products.json.
+machine-readable feed lives at ${origin}/products.json.`}
 
 ## Catalog
 
