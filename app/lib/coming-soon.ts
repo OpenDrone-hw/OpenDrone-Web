@@ -17,31 +17,6 @@ import {
 export {preorderNote} from '~/lib/preorder';
 
 /**
- * The products a visitor can ask to be told about: the product lines the
- * status map says are not buyable yet. Feeds the newsletter form's notify tick
- * boxes, so one submit covers several launches instead of one visit per
- * product page. Catalog order is kept, and a product missing from the status
- * map is treated as buyable rather than guessed at.
- *
- * Only handles with a content file qualify. While the storefront is closed
- * every SKU reads as not-buyable, and without this the footer offered a launch
- * list for battery straps, spares and hardware kits alongside the boards.
- * A line has a `content/products/<handle>.json`; an accessory does not.
- */
-export function notifiableProducts(
-  products: ReadonlyArray<{handle: string; title: string}> = [],
-  statuses: Record<string, ProductStatus> = {},
-): Array<{handle: string; title: string}> {
-  return products
-    .filter((p) => {
-      if (!PRODUCT_CONTENT[p.handle]) return false;
-      const status = statuses[p.handle];
-      return Boolean(status) && !isPurchasableStatus(status);
-    })
-    .map((p) => ({handle: p.handle, title: p.title}));
-}
-
-/**
  * Every product handle's resolved tri-state, for the root loader: the
  * client-side hooks read this map so live topic flags (server-fetched)
  * reach every component without each one refetching.

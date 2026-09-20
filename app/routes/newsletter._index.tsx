@@ -19,9 +19,8 @@ import {copyText} from '~/lib/copy';
 // redirect in.
 //
 // GET  → renders the post archive (this is the newsletter).
-// POST → records single-opt-in consent in Shopify. Every signup carries the
-// `newsletter` customer tag; each `product` field posted adds a
-// `notify-<handle>` tag beside it, so one submit can cover several launches.
+// POST → records single-opt-in consent in Shopify. Product launch signups also
+// carry a `notify-<handle>` customer tag; plain signups carry `newsletter`.
 //
 // The signup FORM lives in the site footer (present on every page), so this
 // page intentionally has no in-body form - it would just duplicate the footer.
@@ -136,16 +135,10 @@ type NewsletterResult = {
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Optional `product` form fields: catalog handles from a coming-soon "Notify
-// me at launch" signup. Repeatable, so one submit can cover several launches
-// (the footer form offers every coming-soon product; a PDP posts its own).
-// Strict slug shape: each becomes a Shopify customer tag, so nothing
-// free-form gets through.
+// Optional `product` form field: a catalog handle from the coming-soon
+// "Notify me at launch" signup. Strict slug shape: it becomes a Shopify
+// customer tag, so nothing free-form gets through.
 const PRODUCT_HANDLE_REGEX = /^[a-z0-9][a-z0-9-]{0,63}$/;
-
-// Upper bound on handles honoured per submit. The catalog is far smaller than
-// this; the cap just stops a hand-rolled POST writing unbounded tags.
-const MAX_NOTIFY_PRODUCTS = 20;
 
 export async function action({request, context}: Route.ActionArgs) {
   if (request.method !== 'POST') {
@@ -174,14 +167,12 @@ export async function action({request, context}: Route.ActionArgs) {
   const consent = formData.get('consent') === 'on';
   const honeypot = String(formData.get('website') ?? '');
   const turnstileToken = String(formData.get('cf-turnstile-response') ?? '');
-  const notifyProducts = [
-    ...new Set(
-      formData
-        .getAll('product')
-        .map((value) => String(value).trim().toLowerCase())
-        .filter((handle) => PRODUCT_HANDLE_REGEX.test(handle)),
-    ),
-  ].slice(0, MAX_NOTIFY_PRODUCTS);
+  const productRaw = String(formData.get('product') ?? '')
+    .trim()
+    .toLowerCase();
+  const notifyProduct = PRODUCT_HANDLE_REGEX.test(productRaw)
+    ? productRaw
+    : null;
 
   if (honeypot) {
     return data<NewsletterResult>({ok: true, message: (copyText('newsletter.action_honeypot') ?? 'Thanks.')});
@@ -226,16 +217,17 @@ export async function action({request, context}: Route.ActionArgs) {
   }
 
   const shopifyResult = context.catalog.shopifyPreview
-    ? await subscribeWithShopify(context.env, email, notifyProducts)
+    ? await subscribeWithShopify(
+        context.env,
+        email,
+        notifyProduct ?? undefined,
+      )
     : null;
   const subscribed = context.catalog.shopifyPreview
     ? shopifyResult === 'subscribed' || shopifyResult === 'suppressed'
     : await subscribeToNewsletter(context.env, {
         email,
-        // The Odoo bridge takes one handle per call; it is unreachable while
-        // the Shopify adapter is on, so the first pick stands in rather than
-        // growing a second multi-product protocol for a dead path.
-        product: notifyProducts[0],
+        product: notifyProduct ?? undefined,
         ip,
       });
   if (!subscribed) {
@@ -251,13 +243,11 @@ export async function action({request, context}: Route.ActionArgs) {
   }
 
   // The response never reveals whether the address already existed.
-  if (notifyProducts.length) {
+  if (notifyProduct) {
     return data<NewsletterResult>({
       ok: true,
       message:
-        (notifyProducts.length > 1
-          ? copyText('newsletter.action_notify_listed_many')
-          : copyText('newsletter.action_notify_listed')) ??
+        copyText('newsletter.action_notify_listed') ??
         "You're on the list. We'll email you when this product launches.",
     });
   }
