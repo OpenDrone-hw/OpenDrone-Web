@@ -1,6 +1,6 @@
 <!--
 Thanks for contributing to OpenDrone Web! Before opening:
-- Read the "Design scope" section of README.md — confirm the change is in the "open" bucket
+- Read the "Design scope" section of README.md - confirm the change is in the "open" bucket
 - Sign off commits with `git commit -s` (DCO)
 - Run `npm run lint` and `npm run typecheck` locally
 -->

@@ -22,7 +22,7 @@ type AsideContextValue = {
   preview: boolean;
   open: (mode: AsideType) => void;
   /** Open as a non-modal hover preview: no focus steal, no focus trap, no
-   *  aria-modal, no body scroll-lock — until the visitor interacts inside
+   *  aria-modal, no body scroll-lock - until the visitor interacts inside
    *  the panel, at which point it upgrades ("pins") to a full modal. */
   openPreview: (mode: AsideType) => void;
   /** Upgrade the current preview to full modal behavior. */
@@ -63,7 +63,7 @@ export function Aside({
   // Hover-preview opens are deliberately non-modal (WCAG 3.2.1: an incidental
   // pointer graze must not yank focus, trap Tab, or lock the page). The full
   // dialog contract below only engages for real opens (click/keyboard/touch)
-  // — or once the visitor interacts inside a preview, which pins it.
+  // - or once the visitor interacts inside a preview, which pins it.
   const modal = expanded && !preview;
   const id = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -107,7 +107,7 @@ export function Aside({
           return;
         }
         if (event.key !== 'Tab') return;
-        // Focus trap — keep Tab cycling inside the dialog.
+        // Focus trap - keep Tab cycling inside the dialog.
         const root = dialogRef.current;
         if (!root) return;
         const focusables = Array.from(
@@ -136,7 +136,7 @@ export function Aside({
 
     return () => {
       abortController.abort();
-      // Restore focus to whatever the user had focused before opening —
+      // Restore focus to whatever the user had focused before opening -
       // but never steal it back from an element the user focused outside
       // the dialog themselves (preview mode never took their focus).
       const prev = lastFocusedRef.current;
@@ -148,7 +148,7 @@ export function Aside({
         (dialogEl ? dialogEl.contains(active) : false);
       // A pinned preview can capture lastFocused INSIDE the dialog (the
       // focusin that pinned it). Restoring there would aim focus into the
-      // now-hidden drawer subtree — skip and let focus fall to the body.
+      // now-hidden drawer subtree - skip and let focus fall to the body.
       const prevInsideDialog =
         !!prev && !!dialogEl && dialogEl.contains(prev);
       if (
@@ -162,7 +162,7 @@ export function Aside({
   }, [close, modal]);
 
   // Preview mode: the first real interaction inside the panel means it's a
-  // cart session now, not a peek — pin it, which engages the full modal
+  // cart session now, not a peek - pin it, which engages the full modal
   // contract above (without re-stealing the focus the interaction set).
   // Escape still dismisses a preview even though focus never moved into it.
   useEffect(() => {
@@ -183,7 +183,7 @@ export function Aside({
         // The preview is non-modal, so focus may legitimately sit in a page
         // input while the drawer peeks open. Let text-editing contexts and
         // anything that already claimed the event keep their Escape (clear
-        // field, dismiss combobox, …) — only a "free" Escape dismisses the
+        // field, dismiss combobox, …) - only a "free" Escape dismisses the
         // preview.
         if (event.defaultPrevented) return;
         const target = event.target as HTMLElement | null;

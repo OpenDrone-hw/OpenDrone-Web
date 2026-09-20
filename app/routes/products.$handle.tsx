@@ -21,7 +21,7 @@ import {
   toProduct,
 } from '~/lib/catalog';
 import {mergeFundingOverlay} from '~/lib/funding-overlay';
-import {buyUrl} from '~/lib/shop-links';
+import {buyUrl, commerceHandoff} from '~/lib/shop-links';
 import {useAside} from '~/components/Aside';
 import {Txt} from '~/components/Txt';
 import {ConceptPlate} from '~/components/ConceptPlate';
@@ -192,7 +192,7 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
     product,
     bundleProducts,
     stackProducts,
-    shopUrl: context.catalog.shopUrl,
+    commerceHandoff: commerceHandoff(catalog, context.catalog.shopifyPreview),
     // The roadmap status this page's boards carry (beta, alpha, ...), for
     // the chip near the title. Undefined for products off the roadmap
     // (accessories); the chip simply doesn't render.
@@ -603,7 +603,7 @@ function ProductPage() {
     stackProducts,
     recommendations,
     contributors,
-    shopUrl,
+    commerceHandoff,
     roadmapStatus,
   } = useLoaderData<typeof loader>();
   useChapterReveal(product.handle);
@@ -891,7 +891,7 @@ function ProductPage() {
   // component SKUs in the cart in a single GET.
   const bundleBuyUrl = bundleReady
     ? buyUrl(
-        shopUrl,
+        commerceHandoff,
         bundleVariants.map((v) => ({sku: v!.sku ?? '', quantity: 1})),
       )
     : undefined;
@@ -952,14 +952,14 @@ function ProductPage() {
             match.availableForSale &&
             Boolean(selectedVariant.availableForSale),
           // Both SKUs on one link: ?lines=SELF:1,PARTNER:1.
-          href: buyUrl(shopUrl, [
+          href: buyUrl(commerceHandoff, [
             {sku: selectedVariant.sku ?? '', quantity: 1},
             {sku: match.sku ?? '', quantity: 1},
           ]),
         },
       ];
     });
-  }, [stackCfg, stackProducts, selectedVariant, stackAxis, stackMatchValue, globalComingSoon, product.handle, shopUrl]);
+  }, [stackCfg, stackProducts, selectedVariant, stackAxis, stackMatchValue, globalComingSoon, product.handle, commerceHandoff]);
 
   // The teardown board art follows the selected tier: a variant's own
   // `boardArt` wins, otherwise the shared `teardown.boardArt` (the default

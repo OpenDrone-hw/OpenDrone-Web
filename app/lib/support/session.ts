@@ -1,7 +1,7 @@
 /**
  * Signed-cookie ticket session. All ticket state (Discord thread ID, user
  * identity, last seen message cursor) lives in one HttpOnly cookie so the
- * Worker stays stateless — no KV or DO required for the MVP.
+ * Worker stays stateless - no KV or DO required for the MVP.
  *
  * Signature uses HMAC-SHA256 over the JSON payload, keyed with
  * SUPPORT_SESSION_SECRET. The cookie can be decoded client-side (it's
@@ -20,7 +20,7 @@ export type SupportTicket = {
   createdAt: number; // unix seconds
   lastCursor?: string; // Discord message id of last seen staff reply
   // 10-digit public-facing ticket reference. Optional because cookies
-  // minted before this field existed don't carry one — widget falls
+  // minted before this field existed don't carry one - widget falls
   // back to no display in that case.
   pid?: string;
 };
@@ -109,6 +109,11 @@ export function readSupportCookie(request: Request): string | null {
   return null;
 }
 
+/** Destination for retired ticket-workspace links during the Shopify preview. */
+export function supportHistoryDestination(shopifyPreview: boolean): string {
+  return shopifyPreview ? '/support?existing=1' : '/support/tickets';
+}
+
 export function buildSupportSetCookie(value: string, opts: {clear?: boolean} = {}): string {
   // SameSite=Strict: the support cookie is never needed on cross-site
   // navigation. The resume flow carries its token in the URL path, not the
@@ -137,14 +142,25 @@ export function randomId(bytes = 12): string {
 // are CSPRNG random. Two tickets opened in the same second collide
 // 1-in-10000; with low support volume that's effectively never.
 //
-// We deliberately don't dedupe against an external set — that would
+// We deliberately don't dedupe against an external set - that would
 // need KV/D1 and the value-add is theoretical at this volume. If you
 // see a collision in the wild, swap this for a KV-backed counter.
+let ticketSecond = -1;
+const issuedTicketTails = new Set<number>();
+
 export function randomTicketId(): string {
   const seconds = Math.floor(Date.now() / 1000) % 1_000_000;
-  const arr = new Uint8Array(2);
-  crypto.getRandomValues(arr);
-  const rand = ((arr[0] << 8) | arr[1]) % 10_000;
+  if (seconds !== ticketSecond) {
+    ticketSecond = seconds;
+    issuedTicketTails.clear();
+  }
+  let rand = 0;
+  do {
+    const arr = new Uint8Array(2);
+    crypto.getRandomValues(arr);
+    rand = ((arr[0] << 8) | arr[1]) % 10_000;
+  } while (issuedTicketTails.has(rand) && issuedTicketTails.size < 10_000);
+  issuedTicketTails.add(rand);
   return (
     String(seconds).padStart(6, '0') + String(rand).padStart(4, '0')
   );

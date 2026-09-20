@@ -8,9 +8,12 @@ import {LangToggle} from '~/components/LangToggle';
 import {PlaceholderBanner} from '~/components/PlaceholderBanner';
 import {RouteProgress} from '~/components/RouteProgress';
 import {Txt} from '~/components/Txt';
+import type {CommerceHandoff} from '~/lib/shop-links';
 
 interface PageLayoutProps {
   shopUrl: string;
+  commerceHandoff: CommerceHandoff;
+  accountUrl: string | null;
   company: CompanyIdentity;
   turnstileSiteKey?: string | null;
   prelaunch?: boolean;
@@ -21,6 +24,8 @@ interface PageLayoutProps {
 export function PageLayout({
   children = null,
   shopUrl,
+  commerceHandoff,
+  accountUrl,
   company,
   turnstileSiteKey,
   prelaunch = true,
@@ -35,7 +40,7 @@ export function PageLayout({
         {/* The cart aside is gone with the local cart: the cart icon links
             to the shop (contract section 1.3). The mobile menu drawer is
             the only aside left. */}
-        <MobileMenuAside shopUrl={shopUrl} />
+        <MobileMenuAside accountUrl={accountUrl} />
         <div className={isHomepage ? 'homepage-layout' : ''}>
           <a className="skip-link" href="#main-content">
             <Txt id="chrome.skip_link" />
@@ -43,19 +48,24 @@ export function PageLayout({
           <RouteProgress />
           {/* On PDPs the bottom-right corner belongs to the buy rail's
               notify-at-launch form (consent checkbox + Privacy link at
-              common scroll positions) — park the pill bottom-left there. */}
+              common scroll positions) - park the pill bottom-left there. */}
           {prelaunch && (
             <PlaceholderBanner
               side={pathname.startsWith('/products/') ? 'left' : 'right'}
             />
           )}
-          <Header shopUrl={shopUrl} familyProducts={familyProducts} />
+          <Header
+            shopUrl={shopUrl}
+            commerceHandoff={commerceHandoff}
+            accountUrl={accountUrl}
+            familyProducts={familyProducts}
+          />
           <main id="main-content" className="site-main">
             {children}
           </main>
           {/* The desktop homepage is the scroll-pinned WebGL hero and owns its
               own ending, so it ships no footer. The mobile homepage (MobileHome)
-              is an ordinary scrolling page — without a footer it ends in a void
+              is an ordinary scrolling page - without a footer it ends in a void
               with no nav/legal/newsletter. Render the footer there too, hidden
               above the mobile breakpoint so the desktop hero is untouched. */}
           {!isHomepage ? (
@@ -79,11 +89,11 @@ export function PageLayout({
   );
 }
 
-function MobileMenuAside({shopUrl}: {shopUrl: string}) {
+function MobileMenuAside({accountUrl}: {accountUrl: string | null}) {
   return (
     <Aside type="mobile" heading={<Txt id="chrome.aside_menu_heading" />}>
-      <HeaderMenu viewport="mobile" shopUrl={shopUrl} />
-      {/* Language switch lives in the drawer on phones — it's hidden from the
+      <HeaderMenu viewport="mobile" accountUrl={accountUrl} />
+      {/* Language switch lives in the drawer on phones - it's hidden from the
           top bar there to keep the header row inside a 320px viewport.
           LangToggle self-hides on non-legal routes. */}
       <LangToggle className="mobile-menu-lang" />

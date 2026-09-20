@@ -23,7 +23,7 @@ const SUN = (
  * The button starts in a deterministic state ('dark') so SSR and the first
  * client render agree; a mount effect then syncs it to whatever the inline
  * head script already applied (the stored choice, else dark). Until mount we
- * render aria-hidden, neutral chrome — the page is already themed correctly
+ * render aria-hidden, neutral chrome - the page is already themed correctly
  * by the head script, this only catches the toggle's own state up.
  *
  * The OS `prefers-color-scheme` is not consulted, here or in the head script:
@@ -39,7 +39,7 @@ export function ThemeToggle({className}: {className?: string}) {
   }, []);
 
   function toggle(e?: React.MouseEvent) {
-    // Read the live theme from the DOM rather than React state — state can
+    // Read the live theme from the DOM rather than React state - state can
     // lag the DOM by a render, which would mis-toggle on rapid clicks.
     const next: Theme = getActiveTheme() === 'dark' ? 'light' : 'dark';
     const apply = () => {
@@ -48,7 +48,7 @@ export function ThemeToggle({className}: {className?: string}) {
     };
     // Circular reveal from the click point via the View Transitions API. The
     // new theme wipes in as an expanding circle. Falls back to an instant swap
-    // where unsupported, under reduced-motion, or — critically — while another
+    // where unsupported, under reduced-motion, or - critically - while another
     // transition (e.g. a React Router navigation) is already in flight: starting
     // one then would abort the other and throw
     // `InvalidStateError: Transition was aborted because of invalid state`.
@@ -60,7 +60,7 @@ export function ThemeToggle({className}: {className?: string}) {
     root.classList.add('theme-vt');
     const vt = safeStartViewTransition(apply);
     if (!vt) {
-      // Ran the swap directly (no transition) — drop the marker class again so
+      // Ran the swap directly (no transition) - drop the marker class again so
       // it can't leak into a later transition.
       root.classList.remove('theme-vt');
       return;

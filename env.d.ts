@@ -1,17 +1,23 @@
 /// <reference types="vite/client" />
 /// <reference types="react-router" />
-/// <reference types="@shopify/oxygen-workers-types" />
 
 // Enhance TypeScript's built-in typings.
 import '@total-typescript/ts-reset';
 
-// Extend the Oxygen-provided Env interface with project env vars so
-// context.env.* is strongly typed in routes.
+// Extend the Worker Env interface with project env vars so context.env.* is
+// strongly typed in routes.
 declare global {
-  // Minimal KVNamespace shape — Oxygen provides the binding at runtime
-  // but doesn't re-export Cloudflare's type definition. Only the
-  // methods we actually call are declared. Replace with the full
-  // @cloudflare/workers-types KVNamespace if that package gets added.
+  // The Workers runtime types are declared minimally here, only for what
+  // the app uses. The full @cloudflare/workers-types package redeclares DOM
+  // globals such as Element with Workers-only signatures, which breaks
+  // browser code type-checked in the same program.
+  interface ExecutionContext {
+    waitUntil(promise: Promise<unknown>): void;
+    passThroughOnException(): void;
+  }
+
+  // Minimal KVNamespace shape. Only the methods we actually call are
+  // declared.
   interface KVNamespace {
     get(key: string): Promise<string | null>;
     put(
@@ -28,8 +34,7 @@ declare global {
   }
 
   // Cloudflare Workers Rate Limiting binding (wrangler.toml
-  // `[[ratelimits]]`). Not re-exported by @shopify/oxygen-workers-types,
-  // so declared minimally here like KVNamespace above.
+  // `[[ratelimits]]`), declared minimally like KVNamespace above.
   interface RateLimit {
     limit(options: {key: string}): Promise<{success: boolean}>;
   }
@@ -37,6 +42,32 @@ declare global {
   interface Env {
     // Signs the locale and support-desk cookies.
     SESSION_SECRET: string;
+
+    // Commerce recovery switch. Unset keeps the production Odoo catalog and
+    // hand-off. Set to "1" only in a local preview environment.
+    SHOPIFY_ADAPTER_PREVIEW?: string;
+    // Independent mutation gate. Catalog/account preview stays read-only
+    // unless this is explicitly enabled as well.
+    SHOPIFY_CHECKOUT_WRITE_ENABLED?: string;
+    // Third checkout gate. Set to "1" only after Shopify has a zero-cost
+    // delivery rate named "Shipping billed when ready" and checkout/legal
+    // surfaces disclose the later shipping invoice.
+    SHOPIFY_SHIPPING_LATER_CONFIRMED?: string;
+    // Separate operational gate for the order-edit tool that adds shipping
+    // and emails Shopify's balance-due checkout link.
+    SHOPIFY_SHIPPING_INVOICE_WRITE_ENABLED?: string;
+    SHOPIFY_STORE_DOMAIN?: string;
+    SHOPIFY_STOREFRONT_TOKEN?: string;
+    SHOPIFY_STOREFRONT_API_VERSION?: string;
+    SHOPIFY_CHECKOUT_DOMAIN?: string;
+    // Exact account destination copied from Shopify's customer-account
+    // configuration. No account subpaths are derived locally.
+    SHOPIFY_CUSTOMER_ACCOUNT_URL?: string;
+    SHOPIFY_NEWSLETTER_WRITE_ENABLED?: string;
+    SHOPIFY_ADMIN_API_TOKEN?: string;
+    SHOPIFY_ADMIN_API_VERSION?: string;
+    SHOPIFY_PRICES_INCLUDE_VAT?: string;
+    SHOPIFY_PREVIEW_POLICY_JSON?: string;
 
     // The Incutec shop on Odoo: base of every buy hand-off and portal
     // link, and the fallback base when the catalog is unreachable.
@@ -141,7 +172,7 @@ declare global {
     SUPPORT_APPROVE_EMOJI?: string;
     SUPPORT_MODERATION_MODE?: string;
 
-    // Ticket state and lookup — Odoo (erp/addons/incutec_support,
+    // Ticket state and lookup - Odoo (erp/addons/incutec_support,
     // PLAN.md 12.2, app/lib/support/odoo.ts). Every Discord ticket and
     // message is best-effort mirrored into Odoo `project.task`, which is
     // also the storefront's ticket index (close/cursors/feedback/lookup):
@@ -153,23 +184,34 @@ declare global {
     SUPPORT_ODOO_TOKEN?: string;
 
     // Workers Rate Limiting bindings (wrangler.toml `[[ratelimits]]`) for
-    // /api/support/lookup's "resume by email" abuse defence — distributed
+    // /api/support/lookup's "resume by email" abuse defence - distributed
     // across isolates, unlike app/lib/rate-limit.ts's in-memory limiter.
     // Replaced Upstash-backed global counters (founder decision,
     // 2026-09-15). Cloudflare's platform ceiling is a 10s/60s window, so
     // these approximate the former 10-minute IP cap and 24-hour email cap
     // as 60s windows at the same request counts (app/routes/
     // api.support.lookup.tsx). Optional because local dev has no binding
-    // — the route falls back to the in-memory limiter.
+    // - the route falls back to the in-memory limiter.
     SUPPORT_LOOKUP_IP_LIMITER?: RateLimit;
     SUPPORT_LOOKUP_EMAIL_LIMITER?: RateLimit;
 
     // Bearer token for /api/support/cleanup. The daily GitHub Actions
     // cron (.github/workflows/support-cleanup.yml) sends this in the
-    // Authorization header. Without it the endpoint returns 503 — set
+    // Authorization header. Without it the endpoint returns 503 - set
     // it to enable automatic stale-ticket sweeping.
     SUPPORT_CLEANUP_SECRET?: string;
     DISCORD_FEEDBACK_CHANNEL_ID?: string;
+
+    // Bearer token for /api/support/relay, the outbound half of the
+    // support bridge (erp/docs/integrations/discord.md, D1). Odoo sends
+    // this when a staff member's public chatter comment has to reach the
+    // Discord thread; it must match the system parameter
+    // incutec_support.relay_token on the Odoo side (set from env
+    // SUPPORT_RELAY_SECRET by erp/config/support.py). Separate from
+    // SUPPORT_ODOO_TOKEN on purpose: a leak of one direction's secret
+    // must not grant the other. Unset, the route returns 503 and the
+    // Odoo side stays inert.
+    SUPPORT_RELAY_SECRET?: string;
 
     // Newsletter / release-notes auto-dispatch
     // - NEWSLETTER_DISPATCH_SECRET: bearer token for the manual dispatch

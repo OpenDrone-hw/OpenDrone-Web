@@ -1,8 +1,8 @@
 /**
- * First-touch channel attribution — session-scoped BY DESIGN.
+ * First-touch channel attribution - session-scoped BY DESIGN.
  *
  * ePrivacy stance (growth-infra brief, pending legal review 18-jul): no
- * cookies, no localStorage — a `sessionStorage` record only, so the data
+ * cookies, no localStorage - a `sessionStorage` record only, so the data
  * dies with the tab session. It is promoted server-side into cart
  * attributes (→ Shopify order custom attributes) only when the visitor
  * acts (add-to-cart), via the allowlisted AttributesUpdate case in
@@ -16,7 +16,7 @@
  */
 
 export type Attribution = {
-  /** utm_source, or `ref` fallback — e.g. 'youtube', 'discord'. */
+  /** utm_source, or `ref` fallback - e.g. 'youtube', 'discord'. */
   source: string;
   medium?: string;
   campaign?: string;
@@ -38,7 +38,7 @@ function clean(value: string | null): string | undefined {
 /**
  * Capture first-touch UTM/ref params from the current URL into
  * sessionStorage. Call once on hydration (root.tsx). Idempotent; never
- * throws (sessionStorage can be unavailable in hardened privacy modes —
+ * throws (sessionStorage can be unavailable in hardened privacy modes -
  * attribution is best-effort, the sale still works).
  */
 export function captureAttribution(): void {
@@ -59,7 +59,7 @@ export function captureAttribution(): void {
     };
     window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(record));
   } catch {
-    // Storage blocked — skip silently.
+    // Storage blocked - skip silently.
   }
 }
 

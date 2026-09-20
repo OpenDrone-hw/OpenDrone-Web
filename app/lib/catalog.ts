@@ -56,6 +56,8 @@ export type CatalogVariant = {
   url: string;
   cart_add_url: string;
   cart_add_method?: 'POST';
+  /** Server-only Shopify variant identity. Never accepted from a browser. */
+  merchandise_id?: string;
   /** Older catalogs carried an issued DoC object here. It is ignored:
    *  Declarations of Conformity stay internal (contract section 4). */
   compliance?: unknown;

@@ -4,6 +4,7 @@ import {buildSeoMeta} from '~/lib/seo';
 import {checkRateLimit, clientIp} from '~/lib/rate-limit';
 import {verifyTurnstile} from '~/lib/support/turnstile';
 import {subscribeToNewsletter} from '~/lib/growth/odoo-newsletter';
+import {subscribeWithShopify} from '~/lib/growth/shopify-newsletter';
 import {archivePosts} from '~/lib/posts';
 import {
   ReleaseRow,
@@ -12,23 +13,20 @@ import {
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
 
-// Newsletter — the single hub. It's all newsletter: posts authored as
+// Newsletter - the single hub. It's all newsletter: posts authored as
 // Markdown in content/posts/ show up here as the archive, at /newsletter
 // (posts at /newsletter/<handle>). Old /blog, /releases, and /blogs URLs
 // redirect in.
 //
 // GET  → renders the post archive (this is the newsletter).
-// POST → subscribes the address on Odoo, single opt-in (erp PLAN.md 13.11,
-//        app/lib/growth/odoo-newsletter.ts): it joins the brand's newsletter
-//        list immediately and Odoo sends one welcome mail carrying a
-//        one-click unsubscribe that needs no login. Odoo owns unsubscribing
-//        — this route holds no unsubscribe code.
+// POST → records single-opt-in consent in Shopify. Product launch signups also
+// carry a `notify-<handle>` customer tag; plain signups carry `newsletter`.
 //
 // The signup FORM lives in the site footer (present on every page), so this
-// page intentionally has no in-body form — it would just duplicate the footer.
+// page intentionally has no in-body form - it would just duplicate the footer.
 //
 // Abuse controls on the action: honeypot + Cloudflare Turnstile + per-IP and
-// per-email rate limits. Turnstile is soft — if TURNSTILE_SITE_KEY is unset
+// per-email rate limits. Turnstile is soft - if TURNSTILE_SITE_KEY is unset
 // (dev) the verifier no-ops; in production it fails closed.
 
 export const meta: Route.MetaFunction = () => {
@@ -61,7 +59,7 @@ export function loader() {
     image: p.image,
   }));
 
-  // Group by year, descending — posts already reverse-chronological.
+  // Group by year, descending - posts already reverse-chronological.
   const grouped = new Map<string, ReleaseRowArticle[]>();
   for (const a of visible) {
     const year = a.publishedAt.slice(0, 4);
@@ -138,9 +136,8 @@ type NewsletterResult = {
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Optional `product` form field: a catalog handle from the coming-soon
-// "Notify me at launch" signup, forwarded to Odoo as-is (it validates the
-// same shape again server-side). Strict slug shape — nothing free-form
-// gets through.
+// "Notify me at launch" signup. Strict slug shape: it becomes a Shopify
+// customer tag, so nothing free-form gets through.
 const PRODUCT_HANDLE_REGEX = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
 export async function action({request, context}: Route.ActionArgs) {
@@ -195,9 +192,7 @@ export async function action({request, context}: Route.ActionArgs) {
     );
   }
 
-  // Verify Turnstile BEFORE the per-email rate-limit branch: that branch
-  // still triggers a real welcome mail from Odoo, and a send must never run
-  // on an unverified request.
+  // Verify Turnstile before any consent write.
   const turnstile = await verifyTurnstile(context.env, turnstileToken, ip);
   if (!turnstile.ok) {
     return data<NewsletterResult>(
@@ -212,9 +207,7 @@ export async function action({request, context}: Route.ActionArgs) {
     24 * 60 * 60 * 1000,
   );
   if (!emailLimit.allowed) {
-    // Odoo sends a welcome mail on every subscribe call, so past this
-    // limit the Worker stops calling Odoo rather than mailing the address
-    // again — the earlier call already subscribed it.
+    // The earlier successful request already recorded consent and tags.
     return data<NewsletterResult>({
       ok: true,
       message:
@@ -223,13 +216,20 @@ export async function action({request, context}: Route.ActionArgs) {
     });
   }
 
-  const subscribed = await subscribeToNewsletter(context.env, {
-    email,
-    product: notifyProduct ?? undefined,
-    // The visitor's IP, which only this Worker sees: Odoo stores a hash of
-    // it as consent evidence, never the address itself.
-    ip,
-  });
+  const shopifyResult = context.catalog.shopifyPreview
+    ? await subscribeWithShopify(
+        context.env,
+        email,
+        notifyProduct ?? undefined,
+      )
+    : null;
+  const subscribed = context.catalog.shopifyPreview
+    ? shopifyResult === 'subscribed' || shopifyResult === 'suppressed'
+    : await subscribeToNewsletter(context.env, {
+        email,
+        product: notifyProduct ?? undefined,
+        ip,
+      });
   if (!subscribed) {
     return data<NewsletterResult>(
       {
@@ -242,15 +242,13 @@ export async function action({request, context}: Route.ActionArgs) {
     );
   }
 
-  // Odoo's own response never reveals whether the address was already on
-  // the list (same anti-enumeration property the old Resend path had), so
-  // the message here is the same for a fresh and a repeat signup.
+  // The response never reveals whether the address already existed.
   if (notifyProduct) {
     return data<NewsletterResult>({
       ok: true,
       message:
         copyText('newsletter.action_notify_listed') ??
-        "Check your inbox to confirm, and we'll email you at launch.",
+        "You're on the list. We'll email you when this product launches.",
     });
   }
 
@@ -258,6 +256,6 @@ export async function action({request, context}: Route.ActionArgs) {
     ok: true,
     message:
       copyText('newsletter.action_subscribed') ??
-      'Check your inbox to confirm your subscription.',
+      'Subscribed. You will receive updates when they are published.',
   });
 }

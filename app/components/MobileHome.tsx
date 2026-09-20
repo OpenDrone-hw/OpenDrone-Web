@@ -23,18 +23,18 @@ const boardThumb = (handle: string, w: 528 | 800) =>
 const BOARD_THUMB_SIZES = '(min-width: 489px) 264px, 54vw';
 
 
-/* Below-fold "index" band — the open-hardware ledger in the PDP's
+/* Below-fold "index" band - the open-hardware ledger in the PDP's
  * spec-table language. Every row is a fact already published elsewhere on
  * the site (open-source page, PDP downloads); the design count is derived
  * from the product-content registry so it can't drift. */
 const OPEN_DESIGN_COUNT = Object.values(PRODUCT_CONTENT).filter(
   // Resold parts (`editorial: false`) are catalog, not open designs.
-  (c) => c.fileNumber !== '—' && c.editorial !== false,
+  (c) => c.fileNumber !== '-' && c.editorial !== false,
 ).length;
 
 /* Row order and which row is derived. Labels are copy
  * (`home.m_ledger_<key>_label`), and so is every value EXCEPT the design
- * count, which is computed from the registry so it can't drift — a value here
+ * count, which is computed from the registry so it can't drift - a value here
  * wins over the copy file. Only that derived count is a quantity worth
  * sweeping; licence versions, tool versions and prices are identifiers/fixed
  * figures and render static. */
@@ -51,12 +51,12 @@ const HOME_LEDGER: Array<{key: string; value?: string; countUp?: boolean}> = [
 
 /**
  * Phone homepage (≤768px). The desktop homepage IS the WebGL hero scene +
- * scroll-pinned choreography (DesktopHome in routes/_index.tsx) — ~6.3 MB of
+ * scroll-pinned choreography (DesktopHome in routes/_index.tsx) - ~6.3 MB of
  * GLBs and a scroll story tuned for a mouse, deliberately never loaded on a
  * phone. This is the mobile counterpart: not a plain fallback but a hero in its
- * own right — the animated wordmark, a floating "stack" of the real board
+ * own right - the animated wordmark, a floating "stack" of the real board
  * renders under a gold glow (the desktop hero's product showcase, distilled),
- * and a Dynamic-Island Shop pill — then a clear path to the flagship line and
+ * and a Dynamic-Island Shop pill - then a clear path to the flagship line and
  * the full catalogue. No 3D, no scroll tricks: fast, legible, touch-first.
  */
 export function MobileHome({
@@ -84,7 +84,7 @@ export function MobileHome({
   return (
     <div className="home-mobile">
       <section className="home-mobile-hero">
-        {/* Floating board "stack" — the two flagship boards (FC over ESC),
+        {/* Floating board "stack" - the two flagship boards (FC over ESC),
             offset like a mounted stack, on a gold-glow island. The desktop
             hero's rotatable 3D trio, distilled to a still that loads instantly. */}
         <motion.div className="home-mobile-stage" {...rise(0)} aria-hidden="true">
@@ -137,7 +137,7 @@ export function MobileHome({
           {...rise(2)}
         />
 
-        {/* Two full-width actions side by side — Shop (gold) + GitHub (ghost).
+        {/* Two full-width actions side by side - Shop (gold) + GitHub (ghost).
             Each is its own pill spanning half the row, not nested in one pod. */}
         <motion.div className="home-mobile-cta" {...rise(3)}>
           <Link
@@ -189,7 +189,7 @@ export function MobileHome({
         </Suspense>
       )}
 
-      {/* Open-hardware index — spec-table rows (hairline rules, mono keys,
+      {/* Open-hardware index - spec-table rows (hairline rules, mono keys,
           right-aligned values) with count-ups on the numerals. Reuses the
           PDP's .spec-table so the band IS the house datasheet language. */}
       <section className="home-mobile-ledger" aria-label="Open hardware index">

@@ -10,14 +10,14 @@
     "lead": ""
   },
   "whatIsThis": {
-    "intro": "A receiver has one job: get your commands off the air and hand them to the flight controller. OpenRX runs ExpressLRS, which uses LoRa modulation: the signal is a frequency chirp. That is why a receiver this small, but still holds a link kilometres out while Wi-Fi on the same 2.4 GHz band dies across the house. It speaks CRSF to the flight controller over one UART wire, is powered from a 5V pad, and flashes over Wi-Fi or Betaflight passthrough. Four variants, from ceramic antenna Lite to dual-radio Gemini.",
+    "intro": "A receiver has one job: get your commands off the air and hand them to the flight controller. OpenRX runs ExpressLRS, which uses LoRa modulation: the signal is a frequency chirp. That is why a receiver this small keeps a robust link on the same 2.4 GHz band where Wi-Fi drops out. It speaks CRSF to the flight controller over one UART wire, is powered from a 5V pad, and flashes over Wi-Fi or Betaflight passthrough. Four variants, from ceramic antenna Lite to dual-radio Gemini.",
     "needs": [
       "A radio with an ExpressLRS transmitter, internal or module, on 2.4 GHz",
       "The same binding phrase flashed on both ends",
       "A flight controller with a free UART and a 5 V pad",
-      "The rest of the drone: it only carries commands, it moves nothing"
+      "The rest of the aircraft: it only carries commands, it moves nothing"
     ],
-    "fit": "The drone's ear, the first stop for everything you do on the sticks.",
+    "fit": "The aircraft's ear, the first stop for everything you do on the sticks.",
     "chain": "rx"
   },
   "firmware": {
@@ -109,22 +109,24 @@
   "inTheBox": [
     {
       "qty": "1×",
-      "item": "OpenRX board",
-      "note": ""
+      "item": "OpenRX board"
     },
     {
       "qty": "1×",
-      "item": "Sillicone cables",
-      "note": ""
+      "item": "Silicone hook-up wire set, 30 AWG, four wires"
     },
     {
       "qty": "1×",
-      "item": "Heat-shrink sleeve + double-sided tape"
+      "item": "Heat-shrink sleeve, clear, two-piece"
     },
     {
       "qty": "1×",
-      "item": "Quickstart guide",
-      "note": ""
+      "item": "Bind and quick-start card"
+    },
+    {
+      "qty": "1×",
+      "item": "ESD bag (OpenDrone logo)",
+      "note": "everything above ships inside it"
     }
   ],
   "downloads": [],
@@ -286,7 +288,7 @@
       "inTheBox": [
         {
           "qty": "1×",
-          "item": "U.FL dipole antenna"
+          "item": "2.4 GHz U.FL T-dipole antenna"
         }
       ],
       "pins": [
@@ -402,7 +404,7 @@
       "inTheBox": [
         {
           "qty": "1×",
-          "item": "U.FL dipole antenna"
+          "item": "Dual-band U.FL T-dipole antenna"
         }
       ],
       "pins": [
@@ -526,7 +528,7 @@
       "inTheBox": [
         {
           "qty": "2×",
-          "item": "U.FL dipole antenna",
+          "item": "Dual-band U.FL T-dipole antenna",
           "note": "diversity pair"
         }
       ],

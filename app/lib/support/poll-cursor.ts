@@ -20,11 +20,11 @@
  * @param heldIds   Ids of messages held by the moderation gate in this
  *                  window (enforce mode only; empty in log/off mode,
  *                  where dropped messages are still delivered and are
- *                  therefore terminal — the cursor may pass them).
+ *                  therefore terminal - the cursor may pass them).
  * @param lastCursor  The cursor the ticket carried into this poll.
  * @returns The cursor to store. With no held messages it is the newest
  *   message id (normal forward progress). With held messages it is the
- *   id immediately before the earliest held one — or `lastCursor`
+ *   id immediately before the earliest held one - or `lastCursor`
  *   unchanged when the oldest message in the window is itself held
  *   (advancing at all would skip it the instant it's approved).
  */

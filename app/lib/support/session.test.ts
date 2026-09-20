@@ -1,6 +1,6 @@
 import {describe, it} from 'node:test';
 import assert from 'node:assert/strict';
-import {randomTicketId} from './session.ts';
+import {randomTicketId, supportHistoryDestination} from './session.ts';
 
 // Run with:
 //   node --experimental-strip-types --test app/lib/support/session.test.ts
@@ -33,5 +33,12 @@ describe('randomTicketId', () => {
       Math.abs(head - now) <= 2,
       `head=${head} now=${now} drift too large`,
     );
+  });
+});
+
+describe('retired support history route', () => {
+  it('hands preview visitors to native contacts without exposing an archive', () => {
+    assert.equal(supportHistoryDestination(true), '/support?existing=1');
+    assert.equal(supportHistoryDestination(false), '/support/tickets');
   });
 });

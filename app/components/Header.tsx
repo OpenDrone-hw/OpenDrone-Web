@@ -28,7 +28,7 @@ import {
 } from '~/lib/product-content';
 import {FAMILIES} from '~/lib/families';
 import {stackDiscountedPrice} from '~/lib/stack-discount';
-import {buyUrl, portalUrl} from '~/lib/shop-links';
+import {buyUrl, type CommerceHandoff} from '~/lib/shop-links';
 import type {
   ProductCardFragment,
   ProductVariantFragment,
@@ -40,7 +40,7 @@ function dismissIncutecHint() {
   try {
     localStorage.setItem(INCUTEC_HINT_SEEN_KEY, '1');
   } catch {
-    /* storage blocked (private mode) — the nudge just isn't persisted */
+    /* storage blocked (private mode) - the nudge just isn't persisted */
   }
   document.documentElement.classList.remove('hero-incutec-hint');
 }
@@ -51,6 +51,8 @@ export type HeaderFamilyProduct = ProductCardFragment;
 
 interface HeaderProps {
   shopUrl: string;
+  commerceHandoff: CommerceHandoff;
+  accountUrl: string | null;
   familyProducts?: HeaderFamilyProduct[];
 }
 
@@ -59,7 +61,7 @@ type Viewport = 'desktop' | 'mobile';
 // The header's own words live in `content/copy/chrome.json` and are rendered
 // through <Txt>. Three sets of strings deliberately do NOT: the site menu
 // titles in HEADER_MENU below, anything derived from product data, and the
-// family labels below — those double as dropdown state keys and as the short
+// family labels below - those double as dropdown state keys and as the short
 // names on the buy buttons, so they are structure, not copy.
 //
 // The family chips. Accessories get no dedicated link: they live (with
@@ -82,8 +84,8 @@ const MOBILE_FAMILY_LABEL: Record<string, string> = Object.fromEntries(
 /** Stack companions per family: each pod row offers "+X" buttons for these
  *  partner products, size-matched by the Model option. N-to-N ready: every
  *  entry in a family's list becomes its own button in the buy cell (they
- *  stack vertically), so a second compatible ESC — or an OpenFC Pro on the
- *  ESC side — is one more `{handle, short}` here. Keep `short` unique per
+ *  stack vertically), so a second compatible ESC - or an OpenFC Pro on the
+ *  ESC side - is one more `{handle, short}` here. Keep `short` unique per
  *  list ("ESC 30×30", "FC PRO") once a family has two partners, since it's
  *  the visible label. Only the pairing lives here; the discount claim (the
  *  automatic BXGY's percent and which ONE board of the pair it is off,
@@ -101,10 +103,10 @@ function selfShortFor(type: string): string {
   return CATEGORY_LINKS.find((c) => c.type === type)?.label ?? 'board';
 }
 
-export function Header({shopUrl, familyProducts}: HeaderProps) {
+export function Header({shopUrl, commerceHandoff, accountUrl, familyProducts}: HeaderProps) {
   // Dynamic-Island logo slot. On the hero ("/") the OpenDrone wordmark already
   // lives bottom-left in the 3D scene, so the bar instead credits the parent
-  // company — the Incutec mark linking to incutec.eu (OpenDrone is an Incutec
+  // company - the Incutec mark linking to incutec.eu (OpenDrone is an Incutec
   // product brand). On every other route the slot is the OpenDrone wordmark
   // home link. The slot is a fixed width so the nav chips never shift between
   // routes; view-transition-name animates the swap across navigations.
@@ -113,7 +115,7 @@ export function Header({shopUrl, familyProducts}: HeaderProps) {
   return (
     <header className="site-header">
       <div className="site-header-main">
-        {/* Left: brand slot — OpenDrone home link, or Incutec credit on the hero.
+        {/* Left: brand slot - OpenDrone home link, or Incutec credit on the hero.
             On the hero the mark links to the in-site Incutec company page, and a
             "Who's incutec?" hint drops out from under it a beat after the header
             lands (gated on `html.hero-incutec-hint`, set by the homepage). */}
@@ -157,23 +159,23 @@ export function Header({shopUrl, familyProducts}: HeaderProps) {
         )}
 
         {/* Center: primary nav + gold category links on the same row */}
-        <HeaderMenu viewport="desktop" shopUrl={shopUrl} />
+        <HeaderMenu viewport="desktop" accountUrl={accountUrl} />
         {/* Category families in segmented bubbles: FC and ESC share one
             (their rows sell the stack), while RX and Frame are standalone
             families so each gets its own bubble; All Products follows in its
             own accented bubble as the route into the full catalogue. No
-            dividers — the bubbles do the grouping. */}
-        <FamilyNav familyProducts={familyProducts} shopUrl={shopUrl} />
+            dividers - the bubbles do the grouping. */}
+        <FamilyNav familyProducts={familyProducts} commerceHandoff={commerceHandoff} />
 
         {/* Right: actions */}
-        <HeaderCtas shopUrl={shopUrl} />
+        <HeaderCtas accountUrl={accountUrl} cartUrl={commerceHandoff.cartUrl} />
       </div>
     </header>
   );
 }
 
 /**
- * The gold family chips (FC/ESC/Stack/RX/Frame) — segmented bubbles that, on
+ * The gold family chips (FC/ESC/Stack/RX/Frame) - segmented bubbles that, on
  * hover/focus, drop a Pod listing every SKU of that productType (thumbnail +
  * title + price). The chip itself still links to the family's PDP. Deferred
  * product data is resolved once on first hover so the chips render instantly.
@@ -182,10 +184,10 @@ export function Header({shopUrl, familyProducts}: HeaderProps) {
  */
 function FamilyNav({
   familyProducts,
-  shopUrl,
+  commerceHandoff,
 }: {
   familyProducts?: HeaderFamilyProduct[];
-  shopUrl: string;
+  commerceHandoff: CommerceHandoff;
 }) {
   const products = familyProducts ?? null;
   const [open, setOpen] = useState<string | null>(null);
@@ -198,7 +200,7 @@ function FamilyNav({
   const productStatus = useProductStatusResolver();
   const roadmapStatus = useRoadmapStatusResolver();
 
-  // Close the hover dropdown on any navigation — otherwise clicking a SKU drops
+  // Close the hover dropdown on any navigation - otherwise clicking a SKU drops
   // you on the page with the menu still stuck open (mouseleave never fires when
   // the pointer is over the navigating link).
   useEffect(() => {
@@ -215,7 +217,7 @@ function FamilyNav({
     closeTimer.current = setTimeout(() => setOpen(null), 140);
   }
 
-  // Backstop for the hover dropdown: onMouseLeave/onBlur are not reliable — a
+  // Backstop for the hover dropdown: onMouseLeave/onBlur are not reliable - a
   // fast pointer move, a scroll, or the pod re-rendering under the cursor can
   // swallow the leave event, leaving the menu stuck open (no longer hovered).
   // While something is open, watch the pointer and scroll globally: any pointer
@@ -298,7 +300,7 @@ function FamilyNav({
           available: Boolean(pv.availableForSale && v.availableForSale),
           imageUrl: pv.image?.url ?? partner.featuredImage?.url ?? null,
           // Both SKUs on one hand-off link.
-          href: buyUrl(shopUrl, [
+          href: buyUrl(commerceHandoff, [
             {sku: v.sku ?? '', quantity: 1},
             {sku: pv.sku ?? '', quantity: 1},
           ]),
@@ -317,7 +319,7 @@ function FamilyNav({
       .filter((p) => !isConceptFor(p.handle, roadmapStatus(p.handle)))
       .flatMap((p) => {
         // Coming-soon products list (the dropdown is navigation) but carry
-        // no price and no buy cell — the PDP hosts the notify signup.
+        // no price and no buy cell - the PDP hosts the notify signup.
         const soon = !isPurchasableStatus(productStatus(p.handle));
         // Real, distinguishable variants (drop the single "Default Title").
         const variants = (p.variants.nodes ?? []).filter(
@@ -385,7 +387,7 @@ function FamilyNav({
   function chip(cat: (typeof CATEGORY_LINKS)[number]) {
     const items = itemsFor(cat.type);
     return (
-      // The wrapper itself isn't interactive — the chip link and pod rows
+      // The wrapper itself isn't interactive - the chip link and pod rows
       // inside are. onKeyDown here is a container-level Escape listener so
       // Escape works from anywhere within the open pod.
       // eslint-disable-next-line jsx-a11y/no-static-element-interactions
@@ -395,7 +397,7 @@ function FamilyNav({
         onMouseEnter={() => openFamily(cat.label)}
         onMouseLeave={scheduleClose}
         onFocus={() => {
-          // Swallow the focus event caused by Escape's own focus restore —
+          // Swallow the focus event caused by Escape's own focus restore -
           // otherwise the menu instantly reopens.
           if (escFocus.current) return;
           openFamily(cat.label);
@@ -473,10 +475,10 @@ function FamilyNav({
 
 export function HeaderMenu({
   viewport,
-  shopUrl,
+  accountUrl,
 }: {
   viewport: Viewport;
-  shopUrl: string;
+  accountUrl: string | null;
 }) {
   const {close} = useAside();
   const isMobile = viewport === 'mobile';
@@ -492,7 +494,7 @@ export function HeaderMenu({
     >
       {/* Mobile drawer only: surface Search + the product families + Home up
           top. The desktop header carries these in its own bar / FamilyNav,
-          which is hidden on phones — without this the drawer was four links in
+          which is hidden on phones - without this the drawer was four links in
           a sea of empty panel and the whole product taxonomy vanished. */}
       {isMobile && (
         <>
@@ -639,7 +641,7 @@ export function HeaderMenu({
           <Txt id="chrome.nav_newsletter" />
         </NavLink>
       ) : null}
-      {isMobile ? (
+      {isMobile && accountUrl ? (
         <>
           <Txt
             id="chrome.heading_account"
@@ -650,7 +652,7 @@ export function HeaderMenu({
               the site rather than routing inside it. */}
           <a
             onClick={close}
-            href={portalUrl(shopUrl, 'account')}
+            href={accountUrl}
             className="text-sm font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
           >
             <Txt id="chrome.nav_account_signin" />
@@ -661,7 +663,7 @@ export function HeaderMenu({
   );
 }
 
-function HeaderCtas({shopUrl}: {shopUrl: string}) {
+function HeaderCtas({accountUrl, cartUrl}: {accountUrl: string | null; cartUrl: string | null}) {
   return (
     <nav className="flex items-center gap-2 md:gap-5 ml-auto" role="navigation">
       {/* Hidden in the top bar on phones (it would overflow a 320px row on
@@ -696,14 +698,16 @@ function HeaderCtas({shopUrl}: {shopUrl: string}) {
       {/* Account, orders, invoices and addresses live in the Odoo portal
           on the shop: an external link, not an in-app route. The signed-in
           state is the shop's to know, so the label is always "Account". */}
-      <a
-        href={portalUrl(shopUrl, 'account')}
-        className="font-mono text-[12px] uppercase tracking-[0.15em] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors hidden md:block"
-      >
-        <Txt id="chrome.nav_account" />
-      </a>
+      {accountUrl ? (
+        <a
+          href={accountUrl}
+          className="font-mono text-[12px] uppercase tracking-[0.15em] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors hidden md:block"
+        >
+          <Txt id="chrome.nav_account" />
+        </a>
+      ) : null}
       <ThemeToggle className="site-header-icon" />
-      <CartToggle shopUrl={shopUrl} />
+      <CartToggle cartUrl={cartUrl} />
       <HeaderMenuMobileToggle />
     </nav>
   );
@@ -727,18 +731,35 @@ function HeaderMenuMobileToggle() {
 }
 
 /**
- * The cart icon. The cart itself lives on the shop (contract section
- * 1.3), so this is a plain external link to it: there is no local cart
- * to count, preview in a drawer or publish analytics for.
+ * The cart icon links to Odoo or, after the first preview add, the local
+ * server route that resolves the session's hosted Shopify checkout.
  */
-function CartToggle({shopUrl}: {shopUrl: string}) {
+function CartToggle({cartUrl}: {cartUrl: string | null}) {
+  if (!cartUrl) {
+    return (
+      <span
+        className="site-header-icon site-header-cart"
+        aria-label="Cart unavailable in checkout preview"
+        aria-disabled="true"
+      >
+        <CartIcon />
+      </span>
+    );
+  }
   return (
     <a
       className="site-header-icon site-header-cart"
-      href={portalUrl(shopUrl, 'cart')}
+      href={cartUrl}
       aria-label={copyText('chrome.cart_aria') ?? 'Cart'}
     >
-      <svg
+      <CartIcon />
+    </a>
+  );
+}
+
+function CartIcon() {
+  return (
+    <svg
         width="20"
         height="20"
         viewBox="0 0 24 24"
@@ -750,8 +771,7 @@ function CartToggle({shopUrl}: {shopUrl: string}) {
         <circle cx="9" cy="20" r="1.5" />
         <circle cx="18" cy="20" r="1.5" />
         <path d="M2 3h3l2.4 12.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.6L21 7H6" />
-      </svg>
-    </a>
+    </svg>
   );
 }
 

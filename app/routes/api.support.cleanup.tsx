@@ -15,7 +15,7 @@ import {patchOdooTicketState, searchOdooTickets} from '~/lib/support/odoo';
 // No separate archive step: every message either side sends is already
 // mirrored into the Odoo task's chatter as it happens
 // (api.support.start.tsx, api.support.send.tsx), so that task is the
-// permanent record already — this route's only remaining job is to tear
+// permanent record already - this route's only remaining job is to tear
 // down the Discord thread and mark the ticket `thread_deleted` so it
 // drops out of future searches/sweeps.
 //
@@ -52,7 +52,7 @@ export async function action({request, context}: Route.ActionArgs) {
     );
   }
   const auth = request.headers.get('authorization') ?? '';
-  // Constant-time compare — this bearer gate is the only thing standing
+  // Constant-time compare - this bearer gate is the only thing standing
   // between the public internet and destructive thread deletion, so
   // don't leak the secret a byte at a time via `!==` short-circuit.
   if (!constantTimeEqual(auth, `Bearer ${secret}`)) {

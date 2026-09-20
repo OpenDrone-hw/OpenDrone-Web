@@ -16,9 +16,9 @@ export type SmoothImageProps = {
 /**
  * A plain <img> with a blur-up cover while the file streams in. SSR-safe:
  * the image renders visible by default; only after hydration, if the file
- * hasn't arrived yet, a cover fades over it — a heavily blurred ~1 KB CDN
+ * hasn't arrived yet, a cover fades over it - a heavily blurred ~1 KB CDN
  * thumb of the same image (flat `--color-bg-elevated` when no thumb URL can
- * be derived) — and crossfades away on load. The cover is absolutely
+ * be derived) - and crossfades away on load. The cover is absolutely
  * positioned inside the existing wrapper, so aspect-ratio handling and
  * layout are untouched (no shift). Cached images never see it; reduced
  * motion swaps without the fade. No hydration mismatch, no invisible
@@ -49,14 +49,14 @@ export function SmoothImage(props: SmoothImageProps) {
   }
 
   useEffect(() => {
-    // `:scope > img` — the main image is the wrapper's direct child; never
+    // `:scope > img` - the main image is the wrapper's direct child; never
     // match the cover's own thumb img.
     const img = wrapRef.current?.querySelector<HTMLImageElement>(
       ':scope > img',
     );
     if (!img) return;
     if (img.complete) {
-      // Already cached — drop any cover from a previous source, never
+      // Already cached - drop any cover from a previous source, never
       // flash one for this one.
       setPhase('idle');
       return;
@@ -90,7 +90,7 @@ export function SmoothImage(props: SmoothImageProps) {
         // instead of transitioning the old (lifted, mid-fade) one back up.
         // Once the lift fade finishes the cover leaves the DOM entirely;
         // under reduced motion the transition is disabled so no
-        // transitionend fires and the invisible cover simply stays — the
+        // transitionend fires and the invisible cover simply stays - the
         // pre-existing (harmless) behavior.
         <div
           key={srcUrl ?? 'cover'}

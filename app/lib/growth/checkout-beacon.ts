@@ -1,5 +1,5 @@
 /**
- * Checkout Click — the Plausible funnel event (cart or express-item value
+ * Checkout Click - the Plausible funnel event (cart or express-item value
  * as revenue). One helper so every checkout entry point (the cart CTA in
  * CartSummary, and the PDP ShopPay express button in ProductForm, added
  * in #304, which bypasses the cart entirely) fires the same event shape.
@@ -10,7 +10,7 @@
  * numerator (`ord:<order_id>`, written by the Shopify orders webhook) had
  * already gone dead when the cart moved to Odoo and that webhook route
  * started returning 410 Gone, and nothing ever read the denominator
- * counter on its own (no report or dashboard queried it) — a live write
+ * counter on its own (no report or dashboard queried it) - a live write
  * into a metric whose other half was already broken. Checkout-intent
  * visibility lives in Plausible via the event below.
  */

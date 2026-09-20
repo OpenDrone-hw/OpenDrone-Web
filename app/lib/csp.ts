@@ -12,11 +12,11 @@
  * same nonce mechanics, `'strict-dynamic'` deliberately absent (the site
  * loads no third-party loader scripts that would need it).
  *
- * cdn.shopify.com stays in the baseline because Oxygen serves this app's
- * own bundle from it: the JS chunks, the stylesheet, and the fonts that
- * stylesheet's url() resolves against. Dropping it would leave the
- * production site unstyled and in SSR-only mode. It is the host, not an
- * API.
+ * cdn.shopify.com is still in the baseline. It dates from Shopify Oxygen
+ * hosting, which served the JS chunks, stylesheet and fonts from it. The
+ * Cloudflare Worker serves them same-origin, so the host is no longer
+ * needed; it is kept only so the served policy stays byte-identical until a
+ * separate change removes it.
  */
 
 import {createContext, createElement, useContext, type ReactNode} from 'react';

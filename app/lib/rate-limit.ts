@@ -1,7 +1,7 @@
 /**
  * Per-isolate, in-memory sliding-window rate limiter.
  *
- * Best-effort — Cloudflare Workers run many isolates per PoP and state is
+ * Best-effort - Cloudflare Workers run many isolates per PoP and state is
  * not shared across them, so a determined attacker can still burst. Pair
  * this with a real edge rate limit (Cloudflare dashboard → Rules → Rate
  * Limiting Rules) for full coverage. The limiter here discourages casual
@@ -66,15 +66,15 @@ export function clientIp(request: Request): string {
  * Shape of a Cloudflare Workers Rate Limiting binding
  * (wrangler.toml `[[ratelimits]]`), declared minimally in env.d.ts. Each
  * binding is pre-configured with one fixed `limit`/`period` pair at deploy
- * time — the period can only be 10 or 60 seconds (a Cloudflare platform
- * limit) — so a distinct cap needs its own binding, not a parameter here.
+ * time - the period can only be 10 or 60 seconds (a Cloudflare platform
+ * limit) - so a distinct cap needs its own binding, not a parameter here.
  */
 export type WorkersRateLimiter = {
   limit(options: {key: string}): Promise<{success: boolean}>;
 };
 
 /**
- * Distributed rate limit backed by a Workers Rate Limiting binding —
+ * Distributed rate limit backed by a Workers Rate Limiting binding -
  * shared across isolates, unlike checkRateLimit above. Returns `null` when
  * the binding is missing (e.g. local dev, where wrangler.toml's
  * `[[ratelimits]]` entries aren't simulated), so the caller can fall back

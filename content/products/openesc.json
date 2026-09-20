@@ -12,10 +12,10 @@
   "whatIsThis": {
     "intro": "An ESC turns battery power into AC signals needed for BLDC motors to spin. This one specifically is sensorless. Do that four times over: per motor a microcontroller running AM32, a gate driver, and six MOSFETs doing the power switching. It listens for throttle commands from the flight controller over DShot and reports motor RPM back on the same wire, which Betaflight uses to filter gyro noise at exactly the motors' frequencies. Current sensing is on board, exposed through the connector to the Flight Controller.",
     "needs": [
-      "A flight controller to command it (OpenFC Lite, one 8-pin cable, in the box)",
+      "A flight controller to command it (OpenFC Lite; the 8-pin cable comes in its box)",
       "Four brushless motors soldered to the pads",
-      "A LiPo on the XT pigtail, with the included low-ESR capacitor across the battery pads",
-      "A frame, props, receiver, radio; the usual rest of the drone"
+      "A LiPo on the included XT connector and wires, with the included low-ESR capacitor across the battery pads",
+      "A frame, props, receiver, radio; the usual rest of the aircraft"
     ],
     "fit": "The layer between the flight controller's digital requests and the raw battery current that actually spins the props.",
     "chain": "esc"
@@ -256,23 +256,36 @@
   "inTheBox": [
     {
       "qty": "1×",
-      "item": "OpenESC"
+      "item": "OpenESC board"
+    },
+    {
+      "qty": "1×",
+      "item": "Battery connector, ESC-side half",
+      "note": "XT60 on 30×30, XT30 on 20×20"
     },
     {
       "qty": "2×",
-      "item": "8-pin JST cable"
+      "item": "Silicone power wire, 100 mm, red and black",
+      "note": "12 AWG on 30×30, 16 AWG on 20×20; you solder the pigtail"
     },
     {
       "qty": "1×",
-      "item": "XT battery pigtail"
+      "item": "Low-ESR electrolytic capacitor, 470 µF",
+      "note": "50 V on 30×30, 35 V on 20×20"
     },
     {
       "qty": "4×",
-      "item": "M3 grommets"
+      "item": "Silicone soft-mount grommets",
+      "note": "M3 on 30×30, M2 on 20×20"
     },
     {
       "qty": "1×",
-      "item": "Low-ESR Electrolytic Capacitor"
+      "item": "Quick-start card"
+    },
+    {
+      "qty": "1×",
+      "item": "ESD bag (OpenDrone logo)",
+      "note": "everything above ships inside it"
     }
   ],
   "downloads": [],

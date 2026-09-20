@@ -4,7 +4,7 @@ export type LayerSwipe = {
   /** Live drag offset as a fraction of one card width: 0 at rest, -1 = dragged a
    *  full card left (peeling toward the next layer), +1 = right (previous). */
   drag: number;
-  /** True while a horizontal drag is in progress — kills the snap transition so
+  /** True while a horizontal drag is in progress - kills the snap transition so
    *  the layers track the finger 1:1; clears on release to animate the settle. */
   dragging: boolean;
 };
@@ -20,8 +20,8 @@ export type LayerSwipe = {
  *
  * Vertical is left to the page: the stack uses `touch-action: pan-y`, and this
  * only claims (preventDefault) a gesture once it reads as horizontal. The axis
- * lock is biased toward horizontal — vertical wins only when it clearly
- * dominates (1.6×) — so a near-horizontal swipe is never stolen by page scroll.
+ * lock is biased toward horizontal - vertical wins only when it clearly
+ * dominates (1.6×) - so a near-horizontal swipe is never stolen by page scroll.
  *
  * Listeners are attached natively (touchmove non-passive) because React's
  * synthetic touch handlers are passive and can't preventDefault.

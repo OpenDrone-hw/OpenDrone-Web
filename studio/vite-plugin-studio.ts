@@ -3,12 +3,12 @@
  *
  * Three facts about this repo shape everything below.
  *
- * 1. In dev, `@shopify/mini-oxygen` registers a `configureServer` hook with
- *    `order: 'pre'` that forwards EVERY request into a Workerd sandbox. Workerd
- *    has no filesystem and Oxygen sets no `nodejs_compat` flag, so a write
- *    handled anywhere downstream of that proxy cannot touch disk. This plugin
- *    therefore also registers `order: 'pre'` and is listed BEFORE `oxygen()` in
- *    vite.config.ts, and it never calls `next()` for a path it owns. It runs in
+ * 1. In dev, `@cloudflare/vite-plugin` forwards requests into a workerd
+ *    sandbox. Workerd has no filesystem and wrangler.toml sets no
+ *    `nodejs_compat` flag, so a write handled anywhere downstream of that proxy
+ *    cannot touch disk. This plugin therefore registers `order: 'pre'` and is
+ *    listed BEFORE `cloudflare()` in vite.config.ts, and it never calls
+ *    `next()` for a path it owns. It runs in
  *    the real Node process, which is the only place `node:fs` exists.
  *
  * 2. `apply: 'serve'` means the plugin is not part of `vite build` at all. There
@@ -136,7 +136,7 @@ function resolveWritePath(repoRoot: string, rel: string): string | null {
  *
  * `resolveWritePath` is purely lexical: it collapses `..` but has no idea what
  * a path component actually IS. A directory symlink under `content/` therefore
- * escapes it completely — reads leak arbitrary files, writes land outside the
+ * escapes it completely - reads leak arbitrary files, writes land outside the
  * repo, and the success response reports a path inside `content/` that is not
  * where the bytes went. There is no such symlink today, but the repo root
  * already carries one (`drafts`), so the pattern is one `ln -s` away.
@@ -205,7 +205,7 @@ function send(res: ServerResponse, status: number, body: unknown) {
  *
  * So: one promise chain per path, and a temp name nothing else can collide
  * with. Note macOS is case-insensitive, so the chain is keyed on the lowercased
- * path — otherwise `copy/A.json` and `copy/a.json` would be two chains writing
+ * path - otherwise `copy/A.json` and `copy/a.json` would be two chains writing
  * one file.
  */
 const writeChains = new Map<string, Promise<unknown>>();
@@ -275,9 +275,9 @@ export function studioPlugin(): Plugin {
       repoRoot = config.root;
     },
     configureServer: {
-      // `pre` puts this ahead of Oxygen's own `pre` proxy, but only because the
-      // plugin is also listed before `oxygen()` in the plugins array: Vite keeps
-      // registration order within the same `order` bucket. Both halves matter.
+      // `pre` puts this ahead of the Cloudflare plugin's workerd proxy, and the
+      // plugin is also listed before `cloudflare()` in the plugins array: Vite
+      // keeps registration order within the same `order` bucket.
       order: 'pre',
       handler(server: ViteDevServer) {
         server.middlewares.use((req, res, next) => {

@@ -1,11 +1,10 @@
 # Production Cloudflare Worker config (D15/D16 cutover, erp/PLAN.md). Deployed
 # by .github/workflows/cloudflare-production.yml on every push to main.
 #
-# The build is unchanged: `npm run build` (Hydrogen's Vite/Oxygen toolchain,
-# decision D3) already emits a plain workerd ESM module at dist/server/index.js
-# with a standard `fetch(request, env, ctx)` export, because Oxygen is itself
-# Shopify's Cloudflare Workers host. This file only points real Cloudflare
-# Workers at that same build output; no server code changed.
+# `npm run build` (React Router with the Cloudflare Vite plugin, vite.config.ts)
+# emits a workerd ESM module at dist/server/index.js with a standard
+# `fetch(request, env, ctx)` export (server.ts) and the static assets in
+# dist/client. This file points the Worker at that build output.
 #
 # wrangler.toml (no suffix) is the isolated preview config: no custom-domain
 # routes, no rate limit bindings, staging catalog.
@@ -28,8 +27,13 @@ directory = "dist/client"
 # per-environment secret set with `wrangler secret put SESSION_SECRET` and is
 # never written here.
 [vars]
-CATALOG_URL = "https://erp.incutec.com/incutec/catalog.json"
-PUBLIC_SHOP_URL = "https://shop.incutec.com"
+# Shopify catalog reads are active, while every commerce write remains closed.
+# The domain, tokens, closed per-SKU policy and newsletter write switch are
+# configured separately by the reviewed runtime secret update.
+SHOPIFY_ADAPTER_PREVIEW = "1"
+SHOPIFY_CHECKOUT_WRITE_ENABLED = "0"
+SHOPIFY_SHIPPING_LATER_CONFIRMED = "0"
+PUBLIC_COMING_SOON = "1"
 
 # Workers Rate Limiting bindings for /api/support/lookup (founder decision,
 # 2026-09-15: replaced Upstash-backed global rate limiting). Each binding is

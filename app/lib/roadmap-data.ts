@@ -187,7 +187,7 @@ export const STATUS_ORDER: ProductStatus[] = [
 let topicCache: {at: number; map: Record<string, ProductStatus>} | null = null;
 // One fan-out at a time per isolate: concurrent cold callers (a link burst,
 // or root + PDP loader inside one document request) share the same in-flight
-// fetch instead of each firing the full per-repo fan-out — without this, four
+// fetch instead of each firing the full per-repo fan-out - without this, four
 // concurrent cold requests could burn the whole unauthenticated hourly budget
 // in a second.
 let topicInflight: Promise<Record<string, ProductStatus>> | null = null;
@@ -253,7 +253,7 @@ async function fetchStatusFlagsUncached(
  *
  * PASS `waitUntil` FROM LOADERS (context.waitUntil). On Oxygen, work still
  * pending when the response finishes is cancelled unless it is registered
- * with waitUntil — without it, the losing fetch here dies with the
+ * with waitUntil - without it, the losing fetch here dies with the
  * response, the cache never fills, and every sequential request re-pays
  * the deadline plus the whole GitHub fan-out.
  */

@@ -38,7 +38,7 @@ export async function action({request, context}: Route.ActionArgs) {
   }
 
   const ip = clientIp(request);
-  // Generous IP cap — abuse defence only. Per-customer throttling and
+  // Generous IP cap - abuse defence only. Per-customer throttling and
   // the auth gate below are the real protections; signed-in users
   // testing the flow shouldn't trip this.
   const ipLimit = checkRateLimit(`support-start:ip:${ip}`, 12, 60 * 60 * 1000);
@@ -115,7 +115,7 @@ export async function action({request, context}: Route.ActionArgs) {
 
   // Inbound scrub: strip credentials / cards / bidi overrides from the
   // user's message BEFORE it ever hits Discord. Narrower than the
-  // outbound scrubber — users legitimately share their own email,
+  // outbound scrubber - users legitimately share their own email,
   // phone, order number, etc. when asking for help, so those pass
   // through. Only secrets / cards / control chars get replaced.
   const cleanMessage = scrubForDiscord(message);
@@ -178,7 +178,7 @@ export async function action({request, context}: Route.ActionArgs) {
     // title and a redacted body. Email / Shopify GID / UA / IP go to
     // the staff channel below. Same toggle on both sides so they stay
     // consistent. The `redact` flag mirrors what createSupportThread
-    // looks at internally — keeps the title and body in sync.
+    // looks at internally - keeps the title and body in sync.
     const redact = !!env.DISCORD_STAFF_METADATA_CHANNEL_ID;
     const titleName = redact ? firstNameOnly(name) : name;
     // Public 10-digit reference. Goes into the thread title, the staff
@@ -237,7 +237,7 @@ export async function action({request, context}: Route.ActionArgs) {
     const cookie = await signTicket(env, ticket);
 
     // Mirror the ticket into Odoo (erp/addons/incutec_support, PLAN.md
-    // 12.2) — Odoo IS the ticket store now (no separate KV index) — and
+    // 12.2) - Odoo IS the ticket store now (no separate KV index) - and
     // send the resume-link email, both fire-and-forget so an Odoo outage
     // or Resend latency never tails the API response. The Odoo call goes
     // first because the confirmation email and the initial-message relay

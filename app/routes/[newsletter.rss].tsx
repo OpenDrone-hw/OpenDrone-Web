@@ -9,7 +9,7 @@ const FEED_LIMIT = 50;
  * Pulled by feed readers and surfaced from /newsletter via the
  * <link rel="alternate"> auto-discovery tag in the route's meta.
  *
- * Cache-Control: 10 min on the edge — we publish at most a few times
+ * Cache-Control: 10 min on the edge - we publish at most a few times
  * per month, so a stale-by-10-min feed is fine.
  */
 export function loader({request}: Route.LoaderArgs) {

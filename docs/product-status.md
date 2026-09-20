@@ -29,17 +29,17 @@ One `status-*` topic per repo, matched against `STATUS_ORDER` in
 
 ## Resolution order (app/lib/product-content.ts, `resolveStatus`)
 
-1. **Per-product JSON kill-switch** — `"status": "idea" | "development" |
+1. **Per-product JSON kill-switch**: `"status": "idea" | "development" |
    "live"` in `content/products/<handle>.json`. Beats everything. This is
    the emergency lever: if a price ever leaks, set `"status": "development"`
    on that handle and deploy; no GitHub dependency in the loop.
 2. **Legacy `comingSoon` boolean** in the same JSON (kept for compatibility).
-3. **Roadmap status** — the live topic, falling back to the static list in
+3. **Roadmap status**: the live topic, falling back to the static list in
    `app/lib/roadmap-data.ts`. `launched`/`beta` → sellable ('live'),
    `alpha`/`in-progress` → waitlist ('development'), `planned` → concept
    ('idea'). A page carrying several boards (OpenESC 20×20 + 30×30,
    OpenFC-Lite + Mini) sells on its furthest-along board.
-4. **`PUBLIC_COMING_SOON` env flag** — only reaches products with no roadmap
+4. **`PUBLIC_COMING_SOON` env flag**: only reaches products with no roadmap
    entry and no JSON override (accessories: straps, antennas, hardware kits).
 
 The roadmap wins in BOTH directions: `status-beta` puts the price on the
@@ -55,9 +55,8 @@ All of these read the same resolution (do not add a surface that doesn't):
 - Product cards, header product pods, collections grid, related/search
 - Feeds: `/products.json`, `/llms.txt` (no price, no cart permalink)
 - Server-side cart gate (`app/lib/coming-soon.ts`): direct cart POSTs and
-  cart permalinks drop locked lines — the client hiding a button is never
+  cart permalinks drop locked lines; the client hiding a button is never
   the only defence
-- Back-in-stock growth flow
 - The README status badge: `/api/status/<Repo>.json` (shields endpoint
   schema), same fetch, same fallback
 
@@ -70,14 +69,14 @@ within one request.
 - Topic fetches are cached 10 minutes per worker isolate, with a single
   shared in-flight fetch (concurrent cold requests never fan out twice).
   Loaders cap the wait (400-600ms) and fall back to the static list while
-  the fetch finishes under `context.waitUntil` — always pass waitUntil
-  from loaders, or Oxygen cancels the losing fetch with the response and
+  the fetch finishes under `context.waitUntil`; always pass waitUntil
+  from loaders, or the Worker cancels the losing fetch with the response and
   the cache never fills. A flip lands within ~10 minutes.
 - The feeds' HTTP Cache-Control is capped at 600s for the same reason: a
   response cached longer than the gating latency would keep serving a
   price after a topic downgrade.
-- `GITHUB_STATUS_TOKEN` (fine-grained, public read only) must be set in
-  Oxygen: without it the unauthenticated 60/h budget can rate-limit the
+- `GITHUB_STATUS_TOKEN` (fine-grained, public read only) must be set as a
+  Worker secret: without it the unauthenticated 60/h budget can rate-limit the
   fetch and pin the site to the static statuses.
 - **Fallback discipline: the static status in ROADMAP must LAG the repo
   topic, never lead it.** If the API is down, the static value stands in; a
@@ -96,7 +95,7 @@ within one request.
 **Release a product (alpha → beta):** confirm the Odoo product is published
 with the right variants, prices and availability, and that it appears in
 `GET https://erp.incutec.com/incutec/catalog.json`; flip the repo topic to `status-beta`
-(repo admin only — topics cannot be changed by pull request); within ~10
+(repo admin only; topics cannot be changed by pull request); within ~10
 minutes the price is public and orders open; then update the static status
 in `roadmap-data.ts` in a follow-up PR.
 
@@ -104,18 +103,9 @@ in `roadmap-data.ts` in a follow-up PR.
 `content/products/<handle>.json`, deploy (auto on merge). Then fix the
 topic at leisure.
 
-**Restock mails:** the back-in-stock webhook resolves with the live
-topics too, so a stock top-up right after a topic flip WILL fire the
-restock broadcast — coordinate it with the manual launch mail.
-
-**Vote tally:** `scripts/tally-votes.mjs` merges each run onto the
-per-order ballots recorded in `content/votes.json` (`ballots_by_order`);
-without the merge, the Admin API's 60-day order window would silently
-decay old ballots on every weekly recount. Do not delete that key.
-
 **Test buy flows in a dev worktree:** roadmap products ignore
 `PUBLIC_COMING_SOON=0` now. Temporarily set `"status": "live"` in the
-product's JSON — and do not commit that change.
+product's JSON, and do not commit that change.
 
 ## Gatekeeping
 

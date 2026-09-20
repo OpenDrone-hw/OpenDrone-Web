@@ -14,7 +14,7 @@ import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
 import {toCards} from '~/lib/catalog';
 
 /**
- * /llms.txt — the machine-readable front door for AI agents (llmstxt.org).
+ * /llms.txt - the machine-readable front door for AI agents (llmstxt.org).
  * Served dynamically so prices, availability, SKUs and order links come
  * straight from the Odoo catalog and can never drift from the shop. The
  * catalog section regenerates per request (cached 1h); everything else is
@@ -73,6 +73,7 @@ export async function loader({context, request}: Route.LoaderArgs) {
     context.catalog.get(),
   ]);
   const shopUrl = context.catalog.shopUrl;
+  const shopifyPreview = context.catalog.shopifyPreview;
 
   const catalog = toCards(feed)
     // Concept products (planned / in-progress) are not catalog.
@@ -85,7 +86,7 @@ export async function loader({context, request}: Route.LoaderArgs) {
       const desc = (PRODUCT_CONTENT[p.handle]?.hero?.lead ?? '')
         .replace(/\s+/g, ' ')
         .slice(0, 160);
-      // Locked products show "coming soon" instead of price + stock — this
+      // Locked products show "coming soon" instead of price + stock - this
       // feed must not leak what the PDP hides. Pre-order products show the
       // same ship promise the PDP, the cart line and the order carry.
       const status = resolveStatus(
@@ -111,10 +112,12 @@ export async function loader({context, request}: Route.LoaderArgs) {
             `  - ${name}` +
             (v.sku ? ` (SKU ${v.sku})` : '') +
             (locked
-              ? ' — coming soon, not yet orderable'
-              : ` — €${Number(v.price.amount).toFixed(2)}` +
-                ` — ${stockWord(v.availableForSale)}` +
-                ` — order: POST ${v.cartAddUrl.split('?')[0]} with ${v.cartAddUrl.split('?')[1] ?? ''}`)
+              ? ' - coming soon, not yet orderable'
+              : ` - €${Number(v.price.amount).toFixed(2)}` +
+                ` - ${stockWord(v.availableForSale)}` +
+                (shopifyPreview
+                  ? ' - local checkout preview; ordering is not available to agents'
+                  : ` - order: POST ${v.cartAddUrl.split('?')[0]} with ${v.cartAddUrl.split('?')[1] ?? ''}`))
           );
         })
         .join('\n');
@@ -168,7 +171,9 @@ is on hand. Details: ${origin}/shipping`
 
 ## How to order
 
-Orders are placed on the Incutec shop, ${shopUrl}. Lines are added to the
+${shopifyPreview ? `This instance is a local Shopify checkout engineering preview. It reuses a
+server-held cart but has unresolved double-submit and first-cart multi-tab races.
+Shopping agents must not attempt orders from this preview.` : `Orders are placed on the Incutec shop, ${shopUrl}. Lines are added to the
 visitor's own cart by an HTML form POST from the visitor's browser
 (application/x-www-form-urlencoded, Origin ${origin}); a GET is refused, so a
 link alone cannot fill a cart:
@@ -194,11 +199,11 @@ Example, a 20×20 flight stack (OpenFC Lite + OpenESC${stackDiscountNote(globalS
     lines=OPENFC-LITE-2020:1,OPENESC-2020:1&next=cart
 
 Every catalog line below carries its own form action and body. A
-machine-readable feed lives at ${origin}/products.json.
+machine-readable feed lives at ${origin}/products.json.`}
 
 ## Catalog
 
-Prices EUR incl. VAT, subject to change — verify on the product page.
+Prices EUR incl. VAT, subject to change - verify on the product page.
 
 ${catalog}
 
@@ -232,7 +237,7 @@ infer status from prose anywhere else.
 
 ## Support
 
-- [Support chat](${origin}/support) — live support on the site
+- [Support chat](${origin}/support) - live support on the site
 - Email: contact@opendrone.be
 - [Discord](https://discord.gg/ABajnacUsS)
 `;

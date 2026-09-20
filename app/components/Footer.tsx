@@ -13,7 +13,7 @@ interface FooterProps {
 
 /**
  * The link lists are structure: which link exists, in what order, and where it
- * points. Only the visible label is data — `copy` names its key in
+ * points. Only the visible label is data - `copy` names its key in
  * `content/copy/chrome.json`, so the same label can be shared with the header
  * (Newsletter, Contact, All Products, GitHub) and the maintainer edits it once.
  */
@@ -92,7 +92,7 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
   return (
     <footer className="mt-auto border-t border-[var(--color-border)]">
       <div className="site-footer-inner">
-        {/* Newsletter — separated by a hairline + whitespace, not a card
+        {/* Newsletter - separated by a hairline + whitespace, not a card
             box. The form carries its own hierarchy. The list is Resend
             contacts, so there is no signed-in subscription state to read
             and every visitor sees the same form. */}

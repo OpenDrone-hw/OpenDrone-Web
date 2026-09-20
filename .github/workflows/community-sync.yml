@@ -1,16 +1,10 @@
-# Weekly sync of the community-facing data that lives as committed content:
-# the vote tally (content/votes.json, from order ballot attributes), the
-# auto-mode financial goal meters (content/goals.json, from order totals,
-# floored to 5% steps so the public figure stays approximate), and the PDP
-# contributor roster (content/contributors.json, from the GitHub API).
+# Weekly sync of the PDP contributor roster from the GitHub API.
 #
 # Deliberately a PR, not a push: main is protected and auto-deploys, and
 # these numbers are committed content like any other edit, so the diff
 # gets a human look before it ships. Merging the PR is the review.
 #
-# Required repo secrets:
-#   SHOPIFY_ADMIN_API_TOKEN  custom-app Admin token WITH read_orders scope
-#   (PUBLIC_STORE_DOMAIN is not secret; set in the env block below)
+# GITHUB_TOKEN is the job's own token, nothing to provision.
 
 name: Community sync
 
@@ -35,24 +29,9 @@ jobs:
         with:
           node-version: 22
 
-      # The scripts are dependency-free: checkout + node is the whole setup.
-      # The goal meters read the shop's aggregate endpoint, GET
-      # /incutec/goals.json (ERP PLAN.md step 12.6), live since 2026-09-14.
-      # GOALS_URL is still a repository secret that has to be set to that
-      # URL to activate this step; unset, it is skipped rather than failing
-      # the weekly run.
-      - name: Update the goal meters
-        env:
-          GOALS_URL: ${{ secrets.GOALS_URL }}
-        run: |
-          if [ -z "$GOALS_URL" ]; then
-            echo "GOALS_URL is not set; skipping the goal meters" >&2
-          else
-            node scripts/update-goals.mjs --write
-          fi
-
-      # The PDP fetches contributors live, but Oxygen's shared egress IP burns
-      # the unauthenticated GitHub budget, so the wall needs a committed floor.
+      # The PDP fetches contributors live, but the Worker's shared egress IP
+      # burns the unauthenticated GitHub budget, so the wall needs a committed
+      # floor.
       # GITHUB_TOKEN is the job's own token: public repos, read-only, no secret
       # to provision. Private repos are skipped by the script.
       - name: Sync the contributor roster
@@ -64,26 +43,19 @@ jobs:
         uses: peter-evans/create-pull-request@v8
         with:
           branch: bot/community-sync
-          title: 'Community sync: goal meters + contributors'
+          title: 'Community sync: contributors'
           commit-message: |
-            Community sync: goal meters + contributors
+            Community sync: contributors
 
-            Automated weekly run of goals:update and sync:contributors.
+            Automated weekly run of sync:contributors.
 
             Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
           body: |
-            Weekly automated update of the auto-mode goal meters in
-            `content/goals.json` (the shop's gross since each goal's
-            `since`, allocation applied, floored to 5% steps).
-
-            Also refreshes `content/contributors.json`, the roster the PDP
+            Refreshes `content/contributors.json`, the roster the PDP
             contributor wall falls back to when the live GitHub fetch is
             rate-limited.
 
-            Review the numbers, then merge to publish them. Correct anything
-            odd in the studio's Goals tab instead of editing JSON by hand.
+            Review the roster, then merge to publish it.
           add-paths: |
-            content/votes.json
-            content/goals.json
             content/contributors.json
           delete-branch: true

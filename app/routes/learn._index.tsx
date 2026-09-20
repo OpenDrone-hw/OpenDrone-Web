@@ -4,7 +4,7 @@ import {buildSeoMeta} from '~/lib/seo';
 import {LEARN_DOSSIERS, learnDraftEnabled} from '~/lib/learn';
 
 /**
- * /learn — index of the FPV knowledge layer.
+ * /learn - index of the FPV knowledge layer.
  *
  * Draft-gated and noindex: the material below is research, not published copy.
  * See `app/lib/learn.ts` for why, and `drafts/learn/PLAN.md` for the chapter
@@ -13,7 +13,7 @@ import {LEARN_DOSSIERS, learnDraftEnabled} from '~/lib/learn';
 
 export const meta: Route.MetaFunction = () =>
   buildSeoMeta({
-    title: 'Learn — draft',
+    title: 'Learn - draft',
     description: 'FPV research notes, unpublished.',
     robots: 'noindex, nofollow',
   });

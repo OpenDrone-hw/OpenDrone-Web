@@ -4,8 +4,8 @@ import type {Route} from './+types/policies.$handle';
 /**
  * Shopify-hosted policy pages are not compliant with our legal stack
  * (WER Book VI, 2023 CPC action). The storefront owns all legal copy under
- * dedicated routes. Keep this path alive — Shopify and older sitemaps may
- * still link to `/policies/*` — but redirect to the Incutec-owned pages.
+ * dedicated routes. Keep this path alive - Shopify and older sitemaps may
+ * still link to `/policies/*` - but redirect to the Incutec-owned pages.
  */
 const REDIRECT_MAP: Record<string, string> = {
   'privacy-policy': '/privacy',
