@@ -5,16 +5,7 @@ hardware designed and sold from Belgium. Flight controllers (OpenFC), 4-in-1
 ESCs (OpenESC), ExpressLRS receivers (OpenRX), carbon frames (OpenFrame) and
 the OpenStack bundle.
 
-It is a React Router 7 app, built with the Cloudflare Vite plugin, that
-runs as a Cloudflare Worker. Commerce lives in Odoo at
-[shop.incutec.com](https://shop.incutec.com): catalog, prices, availability,
-cart, checkout, payment, orders, invoices and customer accounts. This app reads
-one public catalog feed from Odoo (`GET /incutec/catalog.json`), hands every
-buy click to the shop, and owns everything else the visitor sees, plus a
-support desk inside the Worker and a local editing studio.
-
-No page, loader or action calls a Shopify API, and no Shopify package is a
-runtime or build dependency.
+It is a React Router 7 app, built with the Cloudflare Vite plugin, that runs as a Cloudflare Worker. The public catalog comes from Shopify. The storefront is intentionally closed: product pages show coming-soon states, checkout writes are disabled, and old cart sessions cannot redirect to checkout. Shopify also owns newsletter consent and unsubscribe state. Support is the public Discord invite and company email; the retired ticket APIs return `410` without contacting Odoo.
 
 Selling entity: Incutec BV. OpenDrone is the community project and product
 brand. This repository is MIT; the hardware repositories are CERN-OHL-S.
@@ -34,10 +25,7 @@ cp .env.example .env       # SESSION_SECRET is the only required value
 npm run dev                # http://localhost:3000
 ```
 
-`CATALOG_URL` and `PUBLIC_SHOP_URL` default to production, so a fresh clone
-shows the live catalog with working buy links. Set `PUBLIC_COMING_SOON=0` to
-see prices while the shop is closed. Without the support and mail credentials
-the support desk shows an "unavailable" notice and everything else runs.
+For a Shopify-backed local run, set the `SHOPIFY_*` values described in `.env.example`. Keep `PUBLIC_COMING_SOON=1` and leave `SHOPIFY_CHECKOUT_WRITE_ENABLED` unset or `0`. The app fails closed when catalog policy or tax configuration is missing.
 
 Node 22 (what CI uses).
 
@@ -54,7 +42,6 @@ Node 22 (what CI uses).
 | `npm run check:registry` | the product registry's data invariants (CI runs it; lint and tsc never evaluate them) |
 | `npm run check:status` | fails when a static roadmap status is ahead of its repo's `status-*` topic |
 | `npm run sync:legal` | copies four Dutch legal pages from `COMPLIANCE_SRC`; with it unset, keeps the committed snapshots |
-| `npm run goals:update` | dry run of the goal meters from `GOALS_URL`; `-- --write` writes `content/goals.json` |
 | `npm run gen:board-art` | export every PCB as layered SVG and copper rasters (needs KiCad and cwebp) |
 | `npm run gen:schematics` | render the schematic sheets from the board checkouts |
 | `npm run sync:specs` / `sync:specs:check` | mirror each board README's `## Specifications` table into `content/products/<handle>.json`, or diff |
@@ -90,24 +77,13 @@ docs/                      the deep dives listed above
 
 ## How the site works
 
-**Catalog and buying.** `app/lib/catalog.ts` fetches `CATALOG_URL`
-server-side with a five minute cache and serves the last good copy for up to
-an hour when the fetch fails. The buy button is a form that POSTs `sku`, `qty`
-and `next` to `<PUBLIC_SHOP_URL>/incutec/add`; the shop adds the lines to the
-visitor's own Odoo cart and redirects there. The stack builder sends both SKUs
-as one `lines=A:1,B:1` field. The shop refuses a GET, so a link or crawler
-cannot fill a cart. Accounts, orders, invoices and addresses are the Odoo
-portal (`/my`, `/my/orders`, `/my/invoices`, `/my/addresses`); `/account/*`
-redirects there. Nothing in this repository writes prices, SKUs or stock.
+**Catalog and buying.** `app/lib/shopify-storefront.ts` reads the Shopify Storefront API into the repository's existing catalog shape. Every SKU requires an explicit policy entry; production entries are `sold_out` with no ship promise. `PUBLIC_COMING_SOON=1`, `SHOPIFY_CHECKOUT_WRITE_ENABLED=0`, and the cart loader's `410` response keep checkout closed. Customer-account links stay hidden unless an exact verified Shopify account URL is configured.
 
 **Product lines.** OpenESC 20x20 / 30x30 and the four OpenRX variants are one
-Odoo product with a `Model` attribute; the page renders a tier ladder matched
+Shopify product with a `Model` attribute; the page renders a tier ladder matched
 to the catalog's variants by option name and value.
 
-**Product images** are proxied same-origin at
-`/img/odoo/<model>/<id>/<field>?unique=<hash>` (`app/lib/odoo-image.ts`),
-cached in the Workers Cache API, with a placeholder only when nothing was
-ever cached.
+**Product images** use Shopify CDN URLs directly. The old `/img/odoo/*` proxy returns `404` during the Shopify cutover and performs no backend request.
 
 **Status.** What is public and buyable is decided by the `status-*` GitHub
 topic on each board repository, resolved per request and cached; the static
@@ -142,32 +118,9 @@ with `timeline-ledger.json` on this repository's unprotected `data` branch,
 appended daily by `.github/workflows/timeline-ledger.yml` from releases, new
 repos and `status-*` flips across the public OpenDrone-hw repositories.
 
-**Support.** `/support` is a stateless web-to-Discord bridge inside the
-Worker: a ticket (form gated by Turnstile) becomes a thread in a Discord forum
-channel, staff type in the thread, the browser polls. Ticket identity is a
-signed HttpOnly cookie; resume links are HMAC-signed magic links sent through
-Resend. Everything from Discord passes an outbound scrubber and an optional
-moderation gate; PII goes to a private staff channel. Every ticket and message
-is mirrored into Odoo (module `incutec_support`, endpoints
-`POST /incutec/support/ticket`, `/ticket/<ref>/message`, `/ticket/<ref>/state`,
-`/tickets/search`, header `X-Incutec-Support-Token`), which is the permanent
-record, the cross-device lookup index and the only place lifecycle state is
-written. Each Odoo call retries once and then logs a warning; an Odoo outage
-never blocks the Discord flow. UI in `app/components/Support*.tsx`, server in
-`app/lib/support/`, endpoints in `app/routes/api.support.*.tsx`. Two
-scheduled workflows call the Worker with `SUPPORT_CLEANUP_SECRET`:
-`support-notify.yml` every 15 minutes mails customers the replies they did
-not see, `support-cleanup.yml` nightly deletes stale Discord threads and marks
-the Odoo ticket `thread_deleted`.
+**Support.** `/support` links to the configured OpenDrone Discord invite and `mailto:` company address. Existing-conversation links lead to the same native contacts. The retired `/api/support/*` surface returns `410` at the Worker boundary before route or backend code runs. Historical ticket exports remain private outside this repository.
 
-**Newsletter.** Posts are Markdown in `content/posts/` (`published: true` in
-the front matter publishes at `/newsletter/<slug>` and in `/newsletter.rss`);
-images go in both `content/posts/images/` and `public/posts/`. The footer
-signup posts to Odoo (`app/lib/growth/odoo-newsletter.ts`, header
-`X-Newsletter-Dispatch-Secret`), single opt-in: Odoo records consent, sends
-the welcome mail and owns unsubscribing. Sending an issue happens in Odoo;
-publishing a post here mails nobody. `scripts/launch-blast.mjs` is an older,
-separate per-product launch mail against a Resend segment.
+**Newsletter.** Posts are Markdown in `content/posts/` (`published: true` publishes at `/newsletter/<slug>` and in `/newsletter.rss`). The footer signup records single-opt-in consent in Shopify and adds the `newsletter` tag plus `notify-<handle>` for product launch interest. `/newsletter/unsubscribe` changes Shopify consent to `UNSUBSCRIBED`; it sends no welcome or confirmation email. `SHOPIFY_NEWSLETTER_WRITE_ENABLED` is a separate runtime gate.
 
 **Legal.** The legal documents in `app/content/legal/{en,nl,fr}/` serve at
 `/{en,nl,fr}/<slug>`; the bare `/<slug>` redirects to the visitor's cached
@@ -178,7 +131,7 @@ names a source directory. The site UI is English-only.
 **Other routes.** `/products` is the one browse page; `/collections/*`,
 `/search`, `/cart/*` and `/discount/*` redirect to it. `/open-source`,
 `/production`, `/wholesale`, `/firmware-partners` and `/contact` are content
-pages; `/account/support` is the signed-in ticket history. `robots.txt`, `sitemap.xml`,
+pages; `/account/support` sends visitors to the native support contacts. `robots.txt`, `sitemap.xml`,
 `security.txt`, `healthz`, `llms.txt` and `products.json` are generated live
 from the catalog. `/blog*`, `/releases*`, `/contribute`, `/incutec` are 301
 stubs.
@@ -206,7 +159,7 @@ build-stage plugin deletes the studio HTML from the output.
 Editable copy: create `content/copy/<page>.json` with `$route` and `$title`,
 render strings with `<Txt id="<page>.<key>" />` (`app/components/Txt.tsx`) or
 `copyText(id)` for attributes. Inline markup is `[label](/path)`, `*emphasis*`
-and `**strong**` only. Catalog data is edited in Odoo, synced Dutch legal pages
+and `**strong**` only. Catalog data is edited in Shopify, synced Dutch legal pages
 are read-only, board art comes from KiCad and the hero model from Onshape.
 
 ## Theming and i18n
@@ -221,26 +174,7 @@ Markdown by URL prefix and each legal route emits hreflang for en, nl, fr.
 
 ## Environment variables
 
-The annotated list is [`.env.example`](.env.example). Groups:
-
-- Required: `SESSION_SECRET`, signs the locale and support cookies.
-- Commerce: `PUBLIC_SHOP_URL` and `CATALOG_URL`, both public, both defaulted
-  to production; `CATALOG_HTTP_USER` and `CATALOG_HTTP_PASSWORD` for a
-  protected catalog origin (the preview Worker's staging catalog).
-- Legal entity: `PUBLIC_COMPANY_*`, shown on every page (WER Art. VI.45).
-- Launch switch: `PUBLIC_COMING_SOON`.
-- Support: Discord bot and channels, Turnstile, Resend, moderation gate,
-  `SUPPORT_ODOO_URL` and `SUPPORT_ODOO_TOKEN` for the ticket mirror, and the
-  `SUPPORT_LOOKUP_IP_LIMITER` and `SUPPORT_LOOKUP_EMAIL_LIMITER` Workers Rate
-  Limiting bindings in `wrangler.production.toml`. All optional.
-- Newsletter: `NEWSLETTER_ODOO_URL`, `NEWSLETTER_DISPATCH_SECRET`.
-- Goal meter: `GOALS_URL`, the shop's aggregate totals (`GET
-  /incutec/goals.json`), read by `goals:update` and the community-sync
-  workflow.
-- Ops: `SUPPORT_CLEANUP_SECRET`, `COMPLIANCE_SRC`, `GITHUB_STATUS_TOKEN`
-  (roadmap API headroom).
-
-`PUBLIC_*` values reach the client bundle; nothing secret does.
+The annotated list is [`.env.example`](.env.example). Production uses `SESSION_SECRET`; Shopify Storefront domain/token/version; the closed SKU policy; explicit VAT confirmation; and Shopify Admin customer scopes for newsletter consent. `PUBLIC_COMING_SOON=1` and `SHOPIFY_CHECKOUT_WRITE_ENABLED=0` keep commerce closed. `SHOPIFY_NEWSLETTER_WRITE_ENABLED` gates consent writes independently. Native support uses `DISCORD_SUPPORT_INVITE` and `PUBLIC_COMPANY_EMAIL`. `PUBLIC_*` values reach the client bundle; tokens do not.
 
 ## Hosting and deploy
 
@@ -260,21 +194,7 @@ Two workflows, one Worker each:
   Worker (`wrangler.toml`): no custom domains, staging catalog,
   `PUBLIC_COMING_SOON=1`.
 
-Both use the repository secrets `CLOUDFLARE_API_TOKEN` and
-`CLOUDFLARE_ACCOUNT_ID` and pin wrangler 4, which understands
-`custom_domain = true`. `CATALOG_URL` and `PUBLIC_SHOP_URL` are plain `[vars]`
-in the wrangler files. Every other runtime value is a Worker secret set with
-`npx wrangler secret put <NAME>`, one value per Worker, never committed:
-`SESSION_SECRET`, `RESEND_API_KEY`, `SUPPORT_FROM_EMAIL`, the `DISCORD_*` and
-`SUPPORT_*` values, `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`,
-`SUPPORT_ODOO_TOKEN`, `NEWSLETTER_DISPATCH_SECRET`, `SUPPORT_CLEANUP_SECRET`,
-`GITHUB_STATUS_TOKEN`.
-
-Other scheduled workflows: `community-sync.yml` (weekly: goal meters when
-`GOALS_URL` is set, contributor roster; opens a PR because the numbers are
-committed content), `timeline-ledger.yml` (daily, pushes to the `data`
-branch), `support-notify.yml`, `support-cleanup.yml`. Dependabot runs weekly,
-grouped, no major bumps.
+Both use the repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` and pin wrangler 4. Storefront and Admin tokens are Worker secrets, never committed. `community-sync.yml` refreshes the contributor roster only; `timeline-ledger.yml` updates the public repository timeline. The scheduled Odoo goal and support jobs were removed.
 
 ## Security
 
@@ -287,8 +207,7 @@ grouped, no major bumps.
   24 MB total, MIME and extension allowlist.
 - Support privacy: scrubbed public thread, PII in a private staff channel,
   moderation gate; the poll endpoint is the trust boundary.
-- No commerce credentials in this app; the catalog feed is public and
-  read-only. `.env` is gitignored. Rotate the session secret, the Discord bot
+- Commerce credentials are server-only Worker secrets. `.env` is gitignored; never expose tokens or the SKU policy in client data. Rotate the session secret, the Discord bot
   token, the Resend key and the Turnstile secret annually or on suspicion.
 - Disclosure: GitHub private vulnerability reporting, `/.well-known/security.txt`,
   policy at `/security`, default embargo 90 days.
