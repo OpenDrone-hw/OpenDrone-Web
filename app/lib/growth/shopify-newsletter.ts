@@ -69,12 +69,22 @@ function successfulConsent(customer: Customer | null | undefined, expected: Mark
   return Boolean(customer?.id && customer.emailMarketingConsent?.marketingState === expected);
 }
 
-/** Shopify is the consent owner. An existing unsubscribe is never cleared by signup. */
+/**
+ * Shopify is the consent owner. An existing unsubscribe is never cleared by
+ * signup.
+ *
+ * `subscribed` means the address actually joined on this call; an address that
+ * was already SUBSCRIBED returns `already-subscribed`. Both are successes, and
+ * the caller tells them apart so a repeat submit does not send a second
+ * welcome mail.
+ */
 export async function subscribeWithShopify(
   env: NewsletterEnv,
   email: string,
   productHandle?: string,
-): Promise<'subscribed' | 'suppressed' | 'disabled' | 'failed'> {
+): Promise<
+  'subscribed' | 'already-subscribed' | 'suppressed' | 'disabled' | 'failed'
+> {
   if (env.SHOPIFY_ADAPTER_PREVIEW !== '1' || env.SHOPIFY_NEWSLETTER_WRITE_ENABLED !== '1') return 'disabled';
   try {
     const found = await admin<{customers: {nodes: Customer[]}}>(env, CUSTOMER_QUERY, {
@@ -83,6 +93,8 @@ export async function subscribeWithShopify(
     if (!found) return 'failed';
     const existing = exactCustomer(found.customers.nodes, email);
     if (existing?.emailMarketingConsent?.marketingState === 'UNSUBSCRIBED') return 'suppressed';
+    const alreadySubscribed =
+      existing?.emailMarketingConsent?.marketingState === 'SUBSCRIBED';
     const consent = {
       marketingState: 'SUBSCRIBED',
       marketingOptInLevel: 'SINGLE_OPT_IN',
@@ -102,7 +114,8 @@ export async function subscribeWithShopify(
         ADD_TAGS,
         {id: existing.id, tags},
       );
-      return tagged?.tagsAdd.userErrors.length === 0 ? 'subscribed' : 'failed';
+      if (tagged?.tagsAdd.userErrors.length !== 0) return 'failed';
+      return alreadySubscribed ? 'already-subscribed' : 'subscribed';
     }
     const written = await admin<{
       customerCreate: {customer: Customer | null; userErrors: unknown[]};

@@ -5,6 +5,7 @@ import {checkRateLimit, clientIp} from '~/lib/rate-limit';
 import {verifyTurnstile} from '~/lib/support/turnstile';
 import {subscribeToNewsletter} from '~/lib/growth/odoo-newsletter';
 import {subscribeWithShopify} from '~/lib/growth/shopify-newsletter';
+import {sendWelcomeEmail} from '~/lib/growth/welcome-email';
 import {archivePosts} from '~/lib/posts';
 import {
   ReleaseRow,
@@ -224,7 +225,9 @@ export async function action({request, context}: Route.ActionArgs) {
       )
     : null;
   const subscribed = context.catalog.shopifyPreview
-    ? shopifyResult === 'subscribed' || shopifyResult === 'suppressed'
+    ? shopifyResult === 'subscribed' ||
+      shopifyResult === 'already-subscribed' ||
+      shopifyResult === 'suppressed'
     : await subscribeToNewsletter(context.env, {
         email,
         product: notifyProduct ?? undefined,
@@ -240,6 +243,20 @@ export async function action({request, context}: Route.ActionArgs) {
       },
       {status: 502},
     );
+  }
+
+  // Welcome mail, only for an address that actually joined on this call.
+  // Shopify owns the consent but sends nothing for an Admin API write, so the
+  // storefront sends it. Fire-and-forget: the consent is already recorded, and
+  // a Resend hiccup must not turn a successful signup into an error. A repeat
+  // submit returns `already-subscribed` and is not welcomed twice.
+  if (shopifyResult === 'subscribed') {
+    const welcome = sendWelcomeEmail(context.env, {
+      email,
+      product: notifyProduct ?? undefined,
+    });
+    if (context.waitUntil) context.waitUntil(welcome);
+    else await welcome;
   }
 
   // The response never reveals whether the address already existed.
