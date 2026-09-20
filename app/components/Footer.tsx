@@ -9,7 +9,6 @@ interface FooterProps {
   shopUrl: string;
   company: CompanyIdentity;
   turnstileSiteKey?: string | null;
-  notifyProducts?: Array<{handle: string; title: string}>;
 }
 
 /**
@@ -88,11 +87,7 @@ function FooterNavLink({to, children}: {to: string; children: React.ReactNode}) 
   );
 }
 
-export function Footer({
-  company,
-  turnstileSiteKey,
-  notifyProducts = [],
-}: FooterProps) {
+export function Footer({company, turnstileSiteKey}: FooterProps) {
   return (
     <footer className="mt-auto border-t border-[var(--color-border)]">
       <div className="site-footer-inner">
@@ -105,7 +100,6 @@ export function Footer({
           <NewsletterSignup
             variant="footer"
             turnstileSiteKey={turnstileSiteKey ?? null}
-            notifyProducts={notifyProducts}
           />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">

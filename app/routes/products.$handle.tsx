@@ -65,7 +65,7 @@ import {
   isConceptFor,
   isPurchasableStatus,
 } from '~/lib/product-content';
-import {notifiableProducts, useProductStatus} from '~/lib/coming-soon';
+import {useProductStatus} from '~/lib/coming-soon';
 import {shipPromiseFor} from '~/lib/preorder';
 import {fetchStatusFlagsFast, statusForHandle} from '~/lib/roadmap-data';
 import {trackEvent} from '~/lib/growth/plausible';
@@ -1510,14 +1510,6 @@ function ProductPage() {
     copyText('product-chrome.trust_chip_firmware_bundle') ?? ''
   ).split('{firmwares}');
   const isBundle = Boolean(content.bundle);
-  // The other launches a visitor can join from this page, so registering
-  // interest in a second product costs a tick box rather than another visit.
-  // The page's own product is posted as a hidden field and filtered out by
-  // NewsletterSignup.
-  const otherNotifyProducts = notifiableProducts(
-    rootData?.familyProducts,
-    rootData?.productStatuses,
-  );
   // The ship promise shown on the buy module: the catalog's per-product word
   // (frozen onto the order line and printed in the order mail by the same
   // module) when the catalog carries one, else the local content file's
@@ -1582,7 +1574,6 @@ function ProductPage() {
       ) : null}
       <NewsletterSignup
         notify={{productHandle: product.handle, productTitle: product.title}}
-        notifyProducts={otherNotifyProducts}
         turnstileSiteKey={rootData?.turnstileSiteKey ?? null}
         className="product-buy-notify"
       />
@@ -1681,7 +1672,6 @@ function ProductPage() {
       !selectedVariant.availableForSale ? (
         <NewsletterSignup
           notify={{productHandle: product.handle, productTitle: product.title}}
-          notifyProducts={otherNotifyProducts}
           turnstileSiteKey={rootData?.turnstileSiteKey ?? null}
           className="product-buy-notify"
         />

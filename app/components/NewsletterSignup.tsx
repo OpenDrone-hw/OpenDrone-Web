@@ -38,14 +38,6 @@ interface NewsletterSignupProps {
    * the SKU is the point, not the subscription itself.
    */
   notify?: {productHandle: string; productTitle: string} | null;
-  /**
-   * Coming-soon products offered as tick boxes, so one submit registers
-   * interest in several launches instead of one visit per product page. Each
-   * ticked box posts its own `product` field and earns its own
-   * `notify-<handle>` tag. In `notify` mode the page's own product stays a
-   * hidden field and is left out of this list.
-   */
-  notifyProducts?: Array<{handle: string; title: string}>;
 }
 
 type TurnstileRenderOpts = {
@@ -65,7 +57,6 @@ export function NewsletterSignup({
   className = '',
   turnstileSiteKey = null,
   notify = null,
-  notifyProducts = [],
 }: NewsletterSignupProps) {
   const fetcher = useFetcher<NewsletterActionData>();
   const formRef = useRef<HTMLFormElement>(null);
@@ -203,11 +194,6 @@ export function NewsletterSignup({
   const isWide = variant === 'wide';
   const isFooter = variant === 'footer';
   const isNotify = Boolean(notify);
-  // The page's own product is already posted as a hidden field, so offering it
-  // again as a tick box would post the handle twice and read as a mistake.
-  const pickable = notifyProducts.filter(
-    (p) => p.handle !== notify?.productHandle,
-  );
   // Notify mode never short-circuits to the subscribed panel: an existing
   // subscriber still needs to submit to get the per-product notify tag.
   const message = clientError ?? serverMessage;
@@ -410,41 +396,6 @@ export function NewsletterSignup({
             .
           </span>
         </label>
-
-        {pickable.length ? (
-          <fieldset
-            className="newsletter-notify-picker flex flex-col gap-1.5 border-0 p-0 m-0"
-            data-testid="newsletter-notify-picker"
-          >
-            <Txt
-              id={
-                isNotify
-                  ? 'newsletter.signup_notify_picker_legend_more'
-                  : 'newsletter.signup_notify_picker_legend'
-              }
-              as="legend"
-              className="font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--color-text-muted)] p-0 mb-0.5"
-            />
-            <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-              {pickable.map((product) => (
-                <label
-                  key={product.handle}
-                  className="flex items-center gap-1.5 text-[12px] text-[var(--color-text-muted)] leading-snug cursor-pointer select-none"
-                >
-                  <input
-                    type="checkbox"
-                    name="product"
-                    value={product.handle}
-                    disabled={isSubmitting}
-                    onChange={markInteracted}
-                    className="accent-[var(--color-gold)] cursor-pointer"
-                  />
-                  <span>{product.title}</span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-        ) : null}
 
         {turnstileSiteKey && interacted ? (
           <div
