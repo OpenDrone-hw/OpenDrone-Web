@@ -48,6 +48,46 @@ describe('Shopify newsletter ownership', () => {
     assert.equal(await subscribeWithShopify(ENV, 'pilot@example.com'), 'failed');
   });
 
+  it('adds newsletter and product-interest tags without replacing existing tags', async () => {
+    const bodies: Array<{query: string; variables: Record<string, unknown>}> = [];
+    mock.method(globalThis, 'fetch', async (
+      _input: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      const body = JSON.parse(String(init?.body)) as (typeof bodies)[number];
+      bodies.push(body);
+      if (body.query.includes('NewsletterCustomerByEmail')) {
+        return Response.json({data: {customers: {nodes: [customer('NOT_SUBSCRIBED')]}}});
+      }
+      if (body.query.includes('NewsletterConsentUpdate')) {
+        return Response.json({data: {customerEmailMarketingConsentUpdate: {customer: customer('SUBSCRIBED'), userErrors: []}}});
+      }
+      return Response.json({data: {tagsAdd: {userErrors: []}}});
+    });
+    assert.equal(
+      await subscribeWithShopify(ENV, 'pilot@example.com', 'openrx'),
+      'subscribed',
+    );
+    assert.deepEqual(bodies[2].variables.tags, ['newsletter', 'notify-openrx']);
+    assert.match(bodies[2].query, /tagsAdd/);
+  });
+
+  it('puts native tags on a newly created customer', async () => {
+    const bodies: Array<{query: string; variables: {input?: {tags?: string[]}}}> = [];
+    mock.method(globalThis, 'fetch', async (
+      _input: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      const body = JSON.parse(String(init?.body)) as (typeof bodies)[number];
+      bodies.push(body);
+      return body.query.includes('NewsletterCustomerByEmail')
+        ? Response.json({data: {customers: {nodes: []}}})
+        : Response.json({data: {customerCreate: {customer: customer('SUBSCRIBED'), userErrors: []}}});
+    });
+    assert.equal(await subscribeWithShopify(ENV, 'pilot@example.com'), 'subscribed');
+    assert.deepEqual(bodies[1].variables.input?.tags, ['newsletter']);
+  });
+
   it('unsubscribes the exact customer and verifies the returned state', async () => {
     let call = 0;
     mock.method(globalThis, 'fetch', async () => ++call === 1

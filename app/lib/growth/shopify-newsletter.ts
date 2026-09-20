@@ -32,6 +32,9 @@ const UPDATE_CONSENT = `mutation NewsletterConsentUpdate($input: CustomerEmailMa
     userErrors { field message }
   }
 }`;
+const ADD_TAGS = `mutation NewsletterTagsAdd($id: ID!, $tags: [String!]!) {
+  tagsAdd(id: $id, tags: $tags) { userErrors { field message } }
+}`;
 
 function adminDomain(raw: string | undefined): string | null {
   const domain = raw?.trim().toLowerCase();
@@ -70,6 +73,7 @@ function successfulConsent(customer: Customer | null | undefined, expected: Mark
 export async function subscribeWithShopify(
   env: NewsletterEnv,
   email: string,
+  productHandle?: string,
 ): Promise<'subscribed' | 'suppressed' | 'disabled' | 'failed'> {
   if (env.SHOPIFY_ADAPTER_PREVIEW !== '1' || env.SHOPIFY_NEWSLETTER_WRITE_ENABLED !== '1') return 'disabled';
   try {
@@ -84,18 +88,25 @@ export async function subscribeWithShopify(
       marketingOptInLevel: 'SINGLE_OPT_IN',
       consentUpdatedAt: new Date().toISOString(),
     };
+    const tags = ['newsletter', ...(productHandle ? [`notify-${productHandle}`] : [])];
     if (existing) {
       const written = await admin<{
         customerEmailMarketingConsentUpdate: {customer: Customer | null; userErrors: unknown[]};
       }>(env, UPDATE_CONSENT, {input: {customerId: existing.id, emailMarketingConsent: consent}});
       const result = written?.customerEmailMarketingConsentUpdate;
-      return result && result.userErrors.length === 0 && successfulConsent(result.customer, 'SUBSCRIBED')
-        ? 'subscribed'
-        : 'failed';
+      if (!result || result.userErrors.length || !successfulConsent(result.customer, 'SUBSCRIBED')) {
+        return 'failed';
+      }
+      const tagged = await admin<{tagsAdd: {userErrors: unknown[]}}>(
+        env,
+        ADD_TAGS,
+        {id: existing.id, tags},
+      );
+      return tagged?.tagsAdd.userErrors.length === 0 ? 'subscribed' : 'failed';
     }
     const written = await admin<{
       customerCreate: {customer: Customer | null; userErrors: unknown[]};
-    }>(env, CREATE_CUSTOMER, {input: {email, emailMarketingConsent: consent}});
+    }>(env, CREATE_CUSTOMER, {input: {email, tags, emailMarketingConsent: consent}});
     const result = written?.customerCreate;
     return result && result.userErrors.length === 0 && successfulConsent(result.customer, 'SUBSCRIBED')
       ? 'subscribed'
