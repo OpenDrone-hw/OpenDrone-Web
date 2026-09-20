@@ -45,5 +45,18 @@
   "signup_consent": "I agree to receive updates from OpenDrone.",
   "signup_consent_link": "Privacy",
   "signup_error_email": "Enter your email address.",
-  "signup_error_consent": "Please confirm you want to receive updates."
+  "signup_error_consent": "Please confirm you want to receive updates.",
+  "unsub_meta_title": "Unsubscribe",
+  "unsub_meta_description": "Unsubscribe from OpenDrone emails.",
+  "unsub_eyebrow": "Newsletter preferences",
+  "unsub_title": "Unsubscribe",
+  "unsub_form_lede": "Enter your email address to stop OpenDrone newsletter emails.",
+  "unsub_email_placeholder": "you@domain.com",
+  "unsub_confirm_before": "Stop newsletter emails to",
+  "unsub_submit": "Unsubscribe",
+  "unsub_busy": "Updating…",
+  "unsub_done": "Done. If this address was on any OpenDrone list, it is now unsubscribed.",
+  "unsub_method_not_allowed": "Method not allowed.",
+  "unsub_rate_limited": "Too many requests. Try again in a few minutes.",
+  "unsub_invalid_email": "Enter a valid email address."
 }

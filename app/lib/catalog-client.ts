@@ -10,6 +10,7 @@
  */
 
 import {parseCatalog, type Catalog} from './catalog.ts';
+import {fetchShopifyCatalog} from './shopify-storefront.ts';
 
 export const DEFAULT_CATALOG_URL =
   'https://erp.incutec.com/incutec/catalog.json';
@@ -31,6 +32,7 @@ export type CatalogClient = {
   get: () => Promise<Catalog>;
   /** Where buy links and portal links point. */
   shopUrl: string;
+  shopifyPreview: boolean;
 };
 
 export function catalogUrl(env: Env): string {
@@ -52,12 +54,14 @@ export function createCatalogClient({
 }): CatalogClient {
   const url = catalogUrl(env);
   const shop = shopUrl(env);
+  const shopifyPreview = env.SHOPIFY_ADAPTER_PREVIEW === '1';
   const credentials =
     env.CATALOG_HTTP_USER && env.CATALOG_HTTP_PASSWORD
       ? {user: env.CATALOG_HTTP_USER, password: env.CATALOG_HTTP_PASSWORD}
       : undefined;
 
   const get = async (): Promise<Catalog> => {
+    if (shopifyPreview) return fetchShopifyCatalog(env);
     const now = Date.now();
     const memo = memoByUrl.get(url);
     if (memo && now - memo.fetchedAt < FRESH_MS) return memo.catalog;
@@ -88,7 +92,7 @@ export function createCatalogClient({
     return request;
   };
 
-  return {get, shopUrl: shop};
+  return {get, shopUrl: shop, shopifyPreview};
 }
 
 async function load(

@@ -30,6 +30,12 @@ export const meta: Route.MetaFunction = () =>
 
 type LoaderData =
   | {
+      phase: 'native';
+      discordInvite: string;
+      email: string;
+      existingConversation: boolean;
+    }
+  | {
       phase: 'intake';
       discordInvite: string;
       turnstileSiteKey: string | null;
@@ -50,6 +56,16 @@ type LoaderData =
 
 export async function loader({request, context}: Route.LoaderArgs) {
   const env = context.env;
+  if (context.catalog.shopifyPreview) {
+    const url = new URL(request.url);
+    return {
+      phase: 'native' as const,
+      discordInvite:
+        env.DISCORD_SUPPORT_INVITE ?? 'https://discord.gg/ABajnacUsS',
+      email: env.PUBLIC_COMPANY_EMAIL || 'contact@opendrone.be',
+      existingConversation: url.searchParams.get('existing') === '1',
+    } satisfies LoaderData;
+  }
 
   // `?new=1` is the explicit "open another ticket" entry point from the
   // /contact page when the user already has an active ticket. Skip the
@@ -104,6 +120,38 @@ export async function loader({request, context}: Route.LoaderArgs) {
 
 export default function SupportRoute() {
   const data = useLoaderData<typeof loader>();
+  if (data.phase === 'native') {
+    return (
+      <div className="page-shell">
+        <section className="support-intake-shell">
+          <Txt id="support.title" as="h1" />
+          <p>
+            Ask the OpenDrone community and support team directly on Discord,
+            or email Incutec for order and account questions.
+          </p>
+          <div className="support-intake-form-actions">
+            <a
+              className="od-btn od-btn-primary"
+              href={data.discordInvite}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Open Discord support
+            </a>
+            <a className="od-btn od-btn-secondary" href={`mailto:${data.email}`}>
+              Email {data.email}
+            </a>
+          </div>
+          {data.existingConversation ? (
+            <p className="support-intake-note">
+              Contact support through Discord or email to continue an existing
+              conversation. Include your ticket reference if you have it.
+            </p>
+          ) : null}
+        </section>
+      </div>
+    );
+  }
   if (data.phase === 'intake') {
     return (
       <IntakeView
@@ -615,4 +663,3 @@ type Turnstile = {
   ) => string | undefined;
   reset: (id?: string) => void;
 };
-

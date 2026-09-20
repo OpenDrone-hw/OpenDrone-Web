@@ -4,6 +4,7 @@ import {buildSeoMeta} from '~/lib/seo';
 import {checkRateLimit, clientIp} from '~/lib/rate-limit';
 import {verifyTurnstile} from '~/lib/support/turnstile';
 import {subscribeToNewsletter} from '~/lib/growth/odoo-newsletter';
+import {subscribeWithShopify} from '~/lib/growth/shopify-newsletter';
 import {archivePosts} from '~/lib/posts';
 import {
   ReleaseRow,
@@ -223,13 +224,16 @@ export async function action({request, context}: Route.ActionArgs) {
     });
   }
 
-  const subscribed = await subscribeToNewsletter(context.env, {
-    email,
-    product: notifyProduct ?? undefined,
-    // The visitor's IP, which only this Worker sees: Odoo stores a hash of
-    // it as consent evidence, never the address itself.
-    ip,
-  });
+  const shopifyResult = context.catalog.shopifyPreview
+    ? await subscribeWithShopify(context.env, email)
+    : null;
+  const subscribed = context.catalog.shopifyPreview
+    ? shopifyResult === 'subscribed' || shopifyResult === 'suppressed'
+    : await subscribeToNewsletter(context.env, {
+        email,
+        product: notifyProduct ?? undefined,
+        ip,
+      });
   if (!subscribed) {
     return data<NewsletterResult>(
       {

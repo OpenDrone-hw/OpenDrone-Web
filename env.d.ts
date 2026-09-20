@@ -43,6 +43,25 @@ declare global {
     // Signs the locale and support-desk cookies.
     SESSION_SECRET: string;
 
+    // Commerce recovery switch. Unset keeps the production Odoo catalog and
+    // hand-off. Set to "1" only in a local preview environment.
+    SHOPIFY_ADAPTER_PREVIEW?: string;
+    // Independent mutation gate. Catalog/account preview stays read-only
+    // unless this is explicitly enabled as well.
+    SHOPIFY_CHECKOUT_WRITE_ENABLED?: string;
+    SHOPIFY_STORE_DOMAIN?: string;
+    SHOPIFY_STOREFRONT_TOKEN?: string;
+    SHOPIFY_STOREFRONT_API_VERSION?: string;
+    SHOPIFY_CHECKOUT_DOMAIN?: string;
+    // Exact account destination copied from Shopify's customer-account
+    // configuration. No account subpaths are derived locally.
+    SHOPIFY_CUSTOMER_ACCOUNT_URL?: string;
+    SHOPIFY_NEWSLETTER_WRITE_ENABLED?: string;
+    SHOPIFY_ADMIN_API_TOKEN?: string;
+    SHOPIFY_ADMIN_API_VERSION?: string;
+    SHOPIFY_PRICES_INCLUDE_VAT?: string;
+    SHOPIFY_PREVIEW_POLICY_JSON?: string;
+
     // The Incutec shop on Odoo: base of every buy hand-off and portal
     // link, and the fallback base when the catalog is unreachable.
     // Defaults to https://shop.incutec.com.

@@ -6,7 +6,7 @@ import {ProductItem, type ProductQuickAdd} from '~/components/ProductItem';
 import type {StackOffer} from '~/components/StackQuickAdd';
 import type {MoneyV2, ProductCardFragment} from '~/lib/product-shapes';
 import {toCards} from '~/lib/catalog';
-import {buyUrl} from '~/lib/shop-links';
+import {buyUrl, commerceHandoff} from '~/lib/shop-links';
 import {FAMILIES} from '~/lib/families';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {EmptyState} from '~/components/EmptyState';
@@ -80,7 +80,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
   const catalog = await context.catalog.get();
   return {
     products: toCards(catalog),
-    shopUrl: context.catalog.shopUrl,
+    commerceHandoff: commerceHandoff(catalog, context.catalog.shopifyPreview),
     term,
   };
 }
@@ -167,7 +167,7 @@ function matchesTerm(haystack: string, term: string): boolean {
 }
 
 export default function ProductsIndex() {
-  const {products, shopUrl, term} = useLoaderData<typeof loader>();
+  const {products, commerceHandoff, term} = useLoaderData<typeof loader>();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeType = searchParams.get('type');
   const onlySale = searchParams.get('sale') === '1';
@@ -233,7 +233,7 @@ export default function ProductsIndex() {
                 available: Boolean(
                   pv.availableForSale && sv.availableForSale,
                 ),
-                href: buyUrl(shopUrl, [
+                href: buyUrl(commerceHandoff, [
                   {sku: sv.sku ?? '', quantity: 1},
                   {sku: pv.sku ?? '', quantity: 1},
                 ]),
@@ -288,7 +288,7 @@ export default function ProductsIndex() {
       }
     }
     return out;
-  }, [products, productStatus, roadmapStatus, shopUrl]);
+  }, [products, productStatus, roadmapStatus, commerceHandoff]);
 
   // Categories present in the catalog, in editorial order then any leftovers.
   const categories = useMemo(() => {

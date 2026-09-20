@@ -8,9 +8,12 @@ import {LangToggle} from '~/components/LangToggle';
 import {PlaceholderBanner} from '~/components/PlaceholderBanner';
 import {RouteProgress} from '~/components/RouteProgress';
 import {Txt} from '~/components/Txt';
+import type {CommerceHandoff} from '~/lib/shop-links';
 
 interface PageLayoutProps {
   shopUrl: string;
+  commerceHandoff: CommerceHandoff;
+  accountUrl: string | null;
   company: CompanyIdentity;
   turnstileSiteKey?: string | null;
   prelaunch?: boolean;
@@ -21,6 +24,8 @@ interface PageLayoutProps {
 export function PageLayout({
   children = null,
   shopUrl,
+  commerceHandoff,
+  accountUrl,
   company,
   turnstileSiteKey,
   prelaunch = true,
@@ -35,7 +40,7 @@ export function PageLayout({
         {/* The cart aside is gone with the local cart: the cart icon links
             to the shop (contract section 1.3). The mobile menu drawer is
             the only aside left. */}
-        <MobileMenuAside shopUrl={shopUrl} />
+        <MobileMenuAside accountUrl={accountUrl} />
         <div className={isHomepage ? 'homepage-layout' : ''}>
           <a className="skip-link" href="#main-content">
             <Txt id="chrome.skip_link" />
@@ -49,7 +54,12 @@ export function PageLayout({
               side={pathname.startsWith('/products/') ? 'left' : 'right'}
             />
           )}
-          <Header shopUrl={shopUrl} familyProducts={familyProducts} />
+          <Header
+            shopUrl={shopUrl}
+            commerceHandoff={commerceHandoff}
+            accountUrl={accountUrl}
+            familyProducts={familyProducts}
+          />
           <main id="main-content" className="site-main">
             {children}
           </main>
@@ -79,10 +89,10 @@ export function PageLayout({
   );
 }
 
-function MobileMenuAside({shopUrl}: {shopUrl: string}) {
+function MobileMenuAside({accountUrl}: {accountUrl: string | null}) {
   return (
     <Aside type="mobile" heading={<Txt id="chrome.aside_menu_heading" />}>
-      <HeaderMenu viewport="mobile" shopUrl={shopUrl} />
+      <HeaderMenu viewport="mobile" accountUrl={accountUrl} />
       {/* Language switch lives in the drawer on phones - it's hidden from the
           top bar there to keep the header row inside a 320px viewport.
           LangToggle self-hides on non-legal routes. */}

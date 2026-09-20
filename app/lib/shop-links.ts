@@ -8,7 +8,7 @@
  * Bundler-free (relative imports) so the node:test suites can load it.
  */
 
-import {cartAddUrl, type CartLine} from './catalog.ts';
+import {cartAddUrl, type CartLine, type Catalog} from './catalog.ts';
 
 export const DEFAULT_SHOP_URL = 'https://shop.incutec.com';
 
@@ -29,6 +29,32 @@ export const PORTAL_PATHS = {
 
 export type PortalTarget = keyof typeof PORTAL_PATHS;
 
+export type CommerceHandoff = {
+  mode: 'odoo' | 'shopify-preview';
+  addUrl: string;
+  /** Shopify cartCreate has no browser basket to revisit. */
+  cartUrl: string | null;
+};
+
+export function commerceHandoff(
+  catalog: Catalog,
+  shopifyPreview: boolean,
+  hasShopifyCart = false,
+): CommerceHandoff {
+  if (shopifyPreview && catalog.add_url !== '/api/shopify/cart') {
+    throw new Error('shopify preview catalog has an unexpected add endpoint');
+  }
+  return {
+    mode: shopifyPreview ? 'shopify-preview' : 'odoo',
+    addUrl: shopifyPreview
+      ? catalog.add_url
+      : new URL(catalog.add_url, catalog.shop_url).toString(),
+    cartUrl: shopifyPreview
+      ? (hasShopifyCart ? '/api/shopify/cart' : null)
+      : new URL(catalog.cart_url, catalog.shop_url).toString(),
+  };
+}
+
 export function shopBase(shopUrl?: string | null): string {
   return (shopUrl || DEFAULT_SHOP_URL).replace(/\/+$/, '');
 }
@@ -42,14 +68,38 @@ export function portalUrl(
 }
 
 /**
- * The buy hand-off for one or more SKUs: the form action plus its fields as
- * a query string. `AddToCartButton` submits it as a POST; the shop adds the
- * lines to the visitor's own Odoo cart and redirects them to it.
+ * Customer-account destination for the active commerce backend. Shopify's
+ * account URL is configuration supplied by the store; this app does not
+ * derive login, order, profile, address or invoice paths.
+ */
+export function customerAccountUrl(
+  env: Pick<Env, 'SHOPIFY_CUSTOMER_ACCOUNT_URL'>,
+  shopUrl: string | null | undefined,
+  shopifyPreview: boolean,
+): string | null {
+  if (!shopifyPreview) return portalUrl(shopUrl, 'account');
+  const configured = env.SHOPIFY_CUSTOMER_ACCOUNT_URL?.trim();
+  if (!configured) return null;
+  let url: URL;
+  try {
+    url = new URL(configured);
+  } catch {
+    throw new Error('shopify: SHOPIFY_CUSTOMER_ACCOUNT_URL is invalid');
+  }
+  if (url.protocol !== 'https:' || url.username || url.password) {
+    throw new Error('shopify: SHOPIFY_CUSTOMER_ACCOUNT_URL must be HTTPS');
+  }
+  return url.toString();
+}
+
+/**
+ * The buy hand-off for one or more SKUs: the selected backend's form action
+ * plus its fields as a query string. `AddToCartButton` submits it as a POST.
  */
 export function buyUrl(
-  shopUrl: string | null | undefined,
+  handoff: CommerceHandoff,
   lines: CartLine[],
   opts?: {next?: string; mode?: 'add' | 'set'},
 ): string {
-  return cartAddUrl(`${shopBase(shopUrl)}/incutec/add`, lines, opts);
+  return cartAddUrl(handoff.addUrl, lines, opts);
 }
