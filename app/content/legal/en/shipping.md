@@ -1,6 +1,6 @@
 ## Shipping and delivery
 
-Incutec BV ships orders from Belgium to most European Union countries. Delivery times and shipping costs are calculated and displayed at checkout before payment.
+Incutec BV ships orders from Belgium to most European Union countries and to the other destinations offered at checkout. Delivery times, shipping costs and, where they apply, import duties are calculated and displayed at checkout before payment.
 
 The Dutch version (/shipping) is the legally authoritative text for consumers residing in Belgium. This English translation is informative only.
 
@@ -10,19 +10,23 @@ Orders are normally shipped within 2 business days of payment receipt. The final
 
 ### Pre-orders
 
-Some products are sold as pre-orders. They are marked as such, with their expected ship date, on the product page, in the cart and on the order confirmation. The full price is charged when the order is placed. At launch, the flight controller and ESC ship from mid-October 2026; every other pre-order product ships in about 10 weeks after the order. The stated ship date is the delivery time agreed between the consumer and Incutec BV within the meaning of Art. VI.43 of the Belgian Code of Economic Law, so the 30-day default deadline above does not apply to pre-order items.
+Some products are sold as pre-orders. They are marked as such, with their ship date, on the product page, at checkout and on the order confirmation. The full price, the shipping costs and any import duties shown at checkout are paid when the order is placed.
 
-An order that combines in-stock and pre-order items ships as one parcel once every item is in stock: one delivery per order. If Incutec BV cannot meet the stated ship date, it informs the consumer and offers, at the consumer's choice, a new ship date or a full refund within 14 days.
+Pre-order products are produced in batches. The flight controller and ESC from the first batch ship late October 2026. Every other pre-order product has a funding target, stated on its product page: the quantity Incutec BV orders from its supplier. It ships about 10 weeks after that target is reached. The ship date stated for an item when the order is placed is the delivery time agreed between the consumer and Incutec BV within the meaning of Art. VI.43 of the Belgian Code of Economic Law, so the 30-day default deadline above does not apply to pre-order items.
 
-The consumer may cancel a pre-order before shipment for a full refund. The 14-day right of withdrawal runs from delivery and can also be exercised at any time before delivery; Incutec BV refunds the full amount paid within 14 days of the cancellation or withdrawal notice.
+If a ship date moves, Incutec BV informs the consumer by email and states the new date. This is without prejudice to the consumer's rights under Art. VI.43 §2 of the Belgian Code of Economic Law.
+
+An order that combines items with different ship dates ships as one parcel once every item is available: one delivery per order.
 
 Pre-order payments fund the production run and stock purchase for the order. They carry no interest and confer no equity, revenue share or other ownership interest in Incutec BV.
 
-Parcels shipped outside the European Union may be subject to import duties and taxes payable by the consumer on delivery, unless the chosen delivery method states that duties are paid by Incutec BV.
+### Import duties
+
+Parcels to the United States are shipped duty paid: import duties are calculated and charged at checkout, and Incutec BV pays them to the carrier, so nothing is due on delivery. Parcels to other destinations outside the European Union may be subject to import duties and taxes payable by the consumer on delivery, unless checkout states that duties are included.
 
 ### Shipping rates and countries
 
-Shipping costs depend on the destination and parcel weight. Some countries are excluded due to export sanctions: see our [end-use policy](/end-use).
+Shipping costs depend on the destination zone and are shown at checkout before payment. Some countries are excluded due to export sanctions: see our [end-use policy](/end-use).
 
 ### Risk during shipping
 

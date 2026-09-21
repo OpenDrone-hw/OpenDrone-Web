@@ -23,6 +23,7 @@ import type {
   ProductVariantFragment,
 } from './product-shapes.ts';
 import {PRODUCT_CONTENT} from './product-content.ts';
+import type {CampaignState} from './preorder-campaign.ts';
 
 export type {CartLine, CatalogAvailability};
 
@@ -42,6 +43,8 @@ export type CatalogVariant = {
   cart_add_method?: 'POST';
   /** Server-only Shopify variant identity. Never accepted from a browser. */
   merchandise_id?: string;
+  /** Preorder campaign state, set by `applyCampaign` for campaign SKUs. */
+  campaign?: CampaignState | null;
 };
 
 export type CatalogProduct = {
@@ -65,6 +68,8 @@ export type Catalog = {
   cart_url: string;
   add_url: string;
   add_method?: 'POST';
+  /** Set by `applyCampaign`: whether the paid preorder counts were read. */
+  campaign_counts?: 'verified' | 'unavailable';
   products: CatalogProduct[];
 };
 
@@ -210,6 +215,7 @@ function mapVariant(
     cartAddUrl:
       variant.cart_add_url || cartAddUrl(catalog.add_url, [{sku: variant.sku}]),
     shipPromise: variant.ship_promise,
+    campaign: variant.campaign ?? null,
     availability: variant.availability,
     shopUrl: variant.url || product.url || null,
   };

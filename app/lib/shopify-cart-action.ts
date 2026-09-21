@@ -1,7 +1,11 @@
 import {bySku, type Catalog} from './catalog.ts';
 import {isPurchasableStatus, resolveStatus} from './product-content.ts';
 import {requestedLines} from './shopify-cart-input.ts';
-import type {ShopifyCart} from './shopify-storefront.ts';
+import type {CartLineInput, ShopifyCart} from './shopify-storefront.ts';
+
+/** The line attribute that carries the ship promise onto the checkout line
+ *  and the order confirmation. */
+export const PREORDER_ATTRIBUTE = 'Preorder';
 
 type CartEnv = Pick<
   Env,
@@ -9,12 +13,12 @@ type CartEnv = Pick<
 >;
 export type ShopifyCartDependencies = {
   fetchCatalog: () => Promise<Catalog>;
-  createCart: (lines: Array<{merchandiseId: string; quantity: number}>) => Promise<ShopifyCart>;
+  createCart: (lines: CartLineInput[]) => Promise<ShopifyCart>;
   getCartId?: () => string | undefined;
   setCartId?: (id: string) => void;
   unsetCartId?: () => void;
   getCart?: (id: string) => Promise<ShopifyCart | null>;
-  addCartLines?: (id: string, lines: Array<{merchandiseId: string; quantity: number}>) => Promise<ShopifyCart>;
+  addCartLines?: (id: string, lines: CartLineInput[]) => Promise<ShopifyCart>;
   logError?: (message: string) => void;
 };
 
@@ -75,6 +79,20 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
           headers: {'Cache-Control': 'no-store'},
         });
       }
+      // A preorder line carries its ship promise, so checkout and the order
+      // confirmation state the delivery time the product page showed. A
+      // preorder without one is not sold.
+      if (match.variant.availability === 'preorder') {
+        const promise = match.variant.ship_promise?.trim();
+        if (!promise) {
+          throw new Response('Product is unavailable.', {status: 409, headers: {'Cache-Control': 'no-store'}});
+        }
+        return {
+          merchandiseId: match.variant.merchandise_id,
+          quantity,
+          attributes: [{key: PREORDER_ATTRIBUTE, value: promise}],
+        };
+      }
       return {merchandiseId: match.variant.merchandise_id, quantity};
     });
     const existingId = dependencies.getCartId?.();
@@ -111,14 +129,32 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
   }
 }
 
+/**
+ * The header cart icon: back to the session cart's Shopify checkout. Closed
+ * behind the same two gates as the action, so an old session cookie never
+ * turns into a checkout redirect while the store is closed.
+ */
 export async function handleShopifyCartLoader(env: CartEnv, dependencies: Pick<ShopifyCartDependencies, 'getCartId' | 'unsetCartId' | 'getCart' | 'logError'>): Promise<Response> {
-  // This deployment is a closed catalog. Never turn an old session cookie
-  // into a checkout redirect, even if the cart was created during testing.
-  // Reopening commerce requires a separately reviewed cart surface.
-  void env;
-  void dependencies;
-  throw new Response('Checkout is closed.', {
+  const closed = new Response('Checkout is closed.', {
     status: 410,
     headers: {'Cache-Control': 'no-store'},
   });
+  if (env.SHOPIFY_CHECKOUT_WRITE_ENABLED !== '1' || env.PUBLIC_COMING_SOON !== '0') {
+    throw closed;
+  }
+  const id = dependencies.getCartId?.();
+  if (!id || !dependencies.getCart) {
+    return new Response(null, {status: 303, headers: {Location: '/products', 'Cache-Control': 'no-store'}});
+  }
+  try {
+    const cart = await dependencies.getCart(id);
+    if (!cart || !cart.lines.length) {
+      dependencies.unsetCartId?.();
+      return new Response(null, {status: 303, headers: {Location: '/products', 'Cache-Control': 'no-store'}});
+    }
+    return new Response(null, {status: 303, headers: {Location: cart.checkoutUrl, 'Cache-Control': 'no-store'}});
+  } catch (error) {
+    dependencies.logError?.(error instanceof Error ? error.message : 'unknown error');
+    throw new Response('Checkout temporarily unavailable.', {status: 503, headers: {'Retry-After': '60', 'Cache-Control': 'no-store'}});
+  }
 }

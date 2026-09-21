@@ -17,6 +17,7 @@ import type {Route} from './+types/[sitemap.xml]';
 const STATIC_PATHS = [
   '/',
   '/products',
+  '/preorder',
   '/open-source',
   '/production',
   '/roadmap',

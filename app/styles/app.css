@@ -4924,7 +4924,12 @@ button.reset {
 /* Pre-order: gold dot (same treatment as the coming-soon module below),
    the label reads "Pre-order · <ship promise>". */
 .product-buy-stock.is-preorder {
+  align-items: flex-start;
   color: var(--color-gold);
+}
+.product-buy-stock.is-preorder::before {
+  flex: none;
+  margin-top: 0.35em;
 }
 .product-buy-stock.is-preorder::before {
   background: var(--color-gold-fill);
@@ -17559,4 +17564,147 @@ body:has(.buy-rail.is-pinned.is-mobile) .placeholder-banner {
 }
 .add-to-cart-form {
   display: contents;
+}
+
+/* Preorder campaign meter (PreorderMeter). Hairline bar, gold fill, mono
+   numerals: the same engineering-document register as the stock line it sits
+   under. The pinned buy rail drops it; the full module carries it. */
+.preorder-meter {
+  display: grid;
+  gap: 0.375rem;
+  margin: 0.5rem 0 0.75rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+}
+.preorder-meter p {
+  margin: 0;
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+}
+.preorder-meter .preorder-meter-headline {
+  font-size: var(--fs-sm);
+  color: var(--color-text);
+}
+.preorder-meter-bar {
+  position: relative;
+  height: 6px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--color-bg-elevated);
+}
+.preorder-meter-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--color-gold-fill);
+}
+.preorder-meter-bar.is-thin {
+  height: 4px;
+}
+.preorder-meter-bar.is-thin > span {
+  background: var(--color-gold-soft);
+}
+.preorder-meter-early {
+  color: var(--color-gold);
+}
+.preorder-meter-link {
+  justify-self: start;
+  color: var(--color-text-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.preorder-meter-link:hover {
+  color: var(--color-text);
+}
+.buy-rail.is-pinned .preorder-meter {
+  display: none;
+}
+
+/* /preorder: summary strip, tracker, FAQ, updates. */
+.preorder-strip {
+  margin: 1.5rem 0 2rem;
+  padding: 1rem 0;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+.preorder-strip dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2.5rem;
+  margin: 0;
+}
+.preorder-strip dt {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-text-muted);
+}
+.preorder-strip dd {
+  margin: 0.25rem 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);
+  color: var(--color-text);
+}
+.preorder-strip-note {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+.preorder-tracker {
+  display: grid;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+.preorder-tracker-product h3 {
+  margin: 0 0 0.5rem;
+  font-size: var(--fs-md);
+}
+.preorder-tracker-product h3 a {
+  color: var(--color-text);
+  text-decoration: none;
+}
+.preorder-tracker-product h3 a:hover {
+  color: var(--color-accent);
+}
+.preorder-tracker-row {
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--color-border);
+}
+.preorder-tracker-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: var(--fs-sm);
+  color: var(--color-text);
+}
+.preorder-tracker-price {
+  font-family: var(--font-mono);
+}
+.preorder-tracker-ships {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--color-gold);
+}
+.preorder-tracker-empty {
+  color: var(--color-text-muted);
+}
+.preorder-faq {
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+}
+.preorder-faq dt {
+  font-weight: 600;
+  color: var(--color-text);
+}
+.preorder-faq dd {
+  margin: 0.25rem 0 0;
+}
+.preorder-updates {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
 }

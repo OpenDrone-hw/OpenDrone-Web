@@ -1,0 +1,80 @@
+{
+  "$route": "/preorder",
+  "$title": "Preorders",
+  "meta_title": "Preorders · A funding target for every product",
+  "meta_description": "Every OpenDrone product option has its own public funding target, set at the quantity we order from the supplier. Watch each target fill.",
+  "title": "A funding target for every product.",
+  "lead": "The designs are finished. What we need now is the money to order production runs, so every product option has a public target: the quantity we order from the supplier. Your preorder pays for that run, and you can watch each target fill.",
+  "cta_primary": "View the targets ↓",
+  "cta_secondary": "Where the boards are made →",
+  "strip_ordered_label": "Units ordered",
+  "strip_reached_label": "Targets reached",
+  "strip_stack_label": "Stack batch 1 left",
+  "strip_unavailable": "Campaign numbers are temporarily unavailable. Campaign products cannot be ordered until the count is verified.",
+  "tracker_title": "Every target",
+  "tracker_lead": "Each product option has its own target, set at the quantity we order from the supplier. The numbers are paid orders in our shop, per option.",
+  "tracker_empty": "No product is open for preorder yet.",
+  "s1_title": "*01* · What this is",
+  "s1_body": [
+    "OpenDrone is an open source FPV platform: flight controller, ESC, receiver, motors and frames, with the design files public.",
+    "Development is done. What is missing is money for production, not engineering time. Preorders pay for the supplier orders."
+  ],
+  "s2_title": "*02* · How a target works",
+  "s2_body": [
+    "Suppliers do not produce single units. Each sets a minimum order quantity, and that quantity is the target for the product option.",
+    "When a target is reached we place the supplier order, and the product ships about 10 weeks later. Orders keep coming in after that: they fill the next batch, which gets its own target."
+  ],
+  "s3_title": "*03* · The stack ships first",
+  "s3_body": [
+    "Batch 1 of the flight controller and the ESC, 250 of each size, is paid for and in production. It ships late October 2026.",
+    "Once batch 1 is gone, the stack gets a funding target like every other product."
+  ],
+  "s4_title": "*04* · What you pay",
+  "s4_body": [
+    "You pay the full price when you order. Until a product reaches its target it sells at an early price. Once the target is reached, the price rises to the price shown struck through.",
+    "Shipping is charged at checkout at the rate for your destination zone. Orders to the United States ship duty paid: import duties are calculated and charged at checkout, and there is nothing to pay on delivery."
+  ],
+  "s5_title": "*05* · One order, one parcel",
+  "s5_body": [
+    "An order ships once, complete. If you order the stack together with a product that is still funding, the whole order waits until everything in it is ready. Order separately if you want the stack sooner."
+  ],
+  "s6_title": "*06* · Risks",
+  "s6_body": [
+    "Hardware schedules slip. Supplier lead times move, a component goes out of stock and has to be replaced by an equivalent, and a production run can need rework. When a ship date moves, you get mail with the new date.",
+    "A product can also fall short of its target. Targets are set at a quantity we can order, so a product that falls short can still go ahead as a smaller run. Either way, everyone who ordered it gets mail saying what happens next."
+  ],
+  "s7_title": "*07* · Who is behind it",
+  "s7_body": [
+    "Incutec BV, a small company in Leuven, Belgium. The same people design the boards, answer the support mail and pack the parcels.",
+    "This is not a crowdfunding platform: you order in our own shop, under [our terms](/algemene-voorwaarden), article 7bis."
+  ],
+  "faq_title": "Questions",
+  "faq_q1": "When do I pay?",
+  "faq_a1": "When you order: the product price, shipping and, for the United States, import duties. Nothing is charged later.",
+  "faq_q2": "When does my order ship?",
+  "faq_a2": "The stack ships late October 2026 while batch 1 lasts. Every other product ships about 10 weeks after its target is reached. Each item shows its ship date on the product page, at checkout and on the order confirmation.",
+  "faq_q3": "What happens when a target is reached?",
+  "faq_a3": "We place the supplier order and mail everyone who ordered that product. You hear from us again when the ship date is set and before dispatch.",
+  "faq_q4": "What if the ship date moves?",
+  "faq_a4": "You get mail with the new date as soon as we know it.",
+  "faq_q5": "Do I get one parcel or several?",
+  "faq_a5": "One. An order ships once, complete, when every item in it is ready.",
+  "faq_q6": "Do you ship to the United States?",
+  "faq_a6": "Yes, duty paid. Import duties are calculated from each product's customs classification and charged at checkout, so the carrier asks for nothing on delivery.",
+  "faq_q7": "Is this an investment?",
+  "faq_a7": "No. A preorder pays for the production run of your own order. It carries no interest and gives you no equity, revenue share or other stake in the company.",
+  "faq_q8": "Where do the numbers on this page come from?",
+  "faq_a8": "From paid orders in our shop. Each product option counts only its own units, and the numbers refresh every minute.",
+  "updates_title": "Updates",
+  "updates_lead": "What changed, newest first. Every entry is dated and stays on the page.",
+  "updates_empty": "No updates yet.",
+  "updates": [],
+  "meter_paid": "Batch {batch} is paid for and in production · {left} of {units} left",
+  "meter_paid_bar": "{ordered} of {units} ordered",
+  "meter_target": "{ordered} of {target} ordered toward the funding target",
+  "meter_target_bar": "{ordered} of {target} ordered",
+  "meter_reached": "Funding target reached · {ordered} ordered",
+  "meter_next": "Batch {batch}: {ordered} of {units}",
+  "meter_early": "Early price until the target is reached, then {price}",
+  "meter_link": "How preorders work"
+}

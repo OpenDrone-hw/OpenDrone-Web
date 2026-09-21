@@ -1,0 +1,19 @@
+{
+  "$comment": "Preorder campaigns per Shopify SKU, read by app/lib/preorder-campaign.ts. Batches are in production order: a paid batch is stock Incutec already ordered and carries its own ship promise; any other batch is a funding target whose supplier order is placed once that many units are ordered. Set `ships` on a batch once its supplier order is placed. Only SKUs the Shopify catalog policy sells as preorder are affected. countFrom is the first day whose paid Shopify orders count. Prices live in Shopify, never here.",
+  "countFrom": "2026-09-21",
+  "pendingShips": "ships about 10 weeks after its target is reached",
+  "skus": {
+    "OPENFC-LITE-2020": {"batches": [{"units": 250, "paid": true, "ships": "ships late October 2026"}, {"units": 250}]},
+    "OPENFC-LITE-3030": {"batches": [{"units": 250, "paid": true, "ships": "ships late October 2026"}, {"units": 250}]},
+    "OPENESC-2020": {"batches": [{"units": 250, "paid": true, "ships": "ships late October 2026"}, {"units": 250}]},
+    "OPENESC-3030": {"batches": [{"units": 250, "paid": true, "ships": "ships late October 2026"}, {"units": 250}]},
+    "OPENRX-LITE": {"batches": [{"units": 250}, {"units": 1000}]},
+    "OPENRX-LITE-UFL": {"batches": [{"units": 250}, {"units": 1000}]},
+    "OPENRX-MONO": {"batches": [{"units": 250}, {"units": 1000}]},
+    "OPENRX-GEMINI": {"batches": [{"units": 250}, {"units": 1000}]},
+    "OPENFRAME-3": {"batches": [{"units": 250}, {"units": 1000}]},
+    "OPENFRAME-5": {"batches": [{"units": 250}, {"units": 1000}]},
+    "OPENMOTOR-1604": {"batches": [{"units": 1000}, {"units": 4000}]},
+    "OPENMOTOR-2207": {"batches": [{"units": 1000}, {"units": 4000}]}
+  }
+}

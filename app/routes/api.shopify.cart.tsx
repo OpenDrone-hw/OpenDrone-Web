@@ -1,4 +1,4 @@
-import {addCartLines, createCart, fetchShopifyCatalog, getCart} from '~/lib/shopify-storefront';
+import {addCartLines, createCart, getCart} from '~/lib/shopify-storefront';
 import {handleShopifyCartAction, handleShopifyCartLoader} from '~/lib/shopify-cart-action';
 import type {Route} from './+types/api.shopify.cart';
 
@@ -6,7 +6,9 @@ const CART_KEY = 'shopifyCartId';
 
 export async function action({request, context}: Route.ActionArgs) {
   return handleShopifyCartAction(request, context.env, {
-    fetchCatalog: () => fetchShopifyCatalog(context.env),
+    // The campaign-aware catalog: the same ship promise the page showed,
+    // and campaign SKUs closed when paid counts cannot be verified.
+    fetchCatalog: () => context.catalog.get(),
     createCart: (lines) => createCart(context.env, lines),
     getCartId: () => context.session.get(CART_KEY) as string | undefined,
     setCartId: (id) => context.session.set(CART_KEY, id),

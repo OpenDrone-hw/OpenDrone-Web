@@ -68,6 +68,14 @@ export type ShopifyCart = {
   lines: Array<{merchandiseId: string; quantity: number}>;
 };
 
+/** A line to add: the variant, how many, and the attributes Shopify shows
+ *  on the checkout line and the order (the preorder ship promise). */
+export type CartLineInput = {
+  merchandiseId: string;
+  quantity: number;
+  attributes?: Array<{key: string; value: string}>;
+};
+
 type StorefrontEnv = Pick<
   Env,
   | 'SHOPIFY_STORE_DOMAIN'
@@ -351,7 +359,7 @@ function validatedCart(
 
 export async function createCart(
   env: StorefrontEnv,
-  lines: Array<{merchandiseId: string; quantity: number}>,
+  lines: CartLineInput[],
   fetcher: typeof fetch = fetch,
 ): Promise<ShopifyCart> {
   if (!lines.length) throw new Error('shopify: cart has no valid lines');
@@ -374,7 +382,7 @@ export async function createCart(
 
 export async function createCheckout(
   env: StorefrontEnv,
-  lines: Array<{merchandiseId: string; quantity: number}>,
+  lines: CartLineInput[],
   fetcher: typeof fetch = fetch,
 ): Promise<string> {
   return (await createCart(env, lines, fetcher)).checkoutUrl;
@@ -388,7 +396,7 @@ export async function getCart(env: StorefrontEnv, id: string, fetcher: typeof fe
 export async function addCartLines(
   env: StorefrontEnv,
   cartId: string,
-  lines: Array<{merchandiseId: string; quantity: number}>,
+  lines: CartLineInput[],
   fetcher: typeof fetch = fetch,
 ) {
   const data = await storefrontRequest<{

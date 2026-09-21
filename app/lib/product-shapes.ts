@@ -10,6 +10,8 @@
  * the mapper that produces them.
  */
 
+import type {CampaignState} from './preorder-campaign.ts';
+
 export type MoneyV2 = {amount: string; currencyCode: string};
 
 export type SelectedOption = {name: string; value: string};
@@ -39,6 +41,8 @@ export type ProductVariantFragment = {
   cartAddUrl: string;
   /** The catalog ship promise, shown where the local statusNote is shown. */
   shipPromise: string | null;
+  /** Preorder campaign state for a campaign SKU, else null. */
+  campaign: CampaignState | null;
   availability: CatalogAvailability;
   /** The variant's page on the shop, for the review list link. */
   shopUrl: string | null;

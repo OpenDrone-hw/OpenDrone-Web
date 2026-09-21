@@ -71,6 +71,8 @@ import {fetchStatusFlagsFast, statusForHandle} from '~/lib/roadmap-data';
 import {trackEvent} from '~/lib/growth/plausible';
 import {attributionSource} from '~/lib/growth/attribution';
 import {NewsletterSignup} from '~/components/NewsletterSignup';
+import {PreorderMeter} from '~/components/PreorderMeter';
+import {paysEuVat} from '~/lib/visitor-country';
 import type {
   ChapterPin,
   DownloadAsset,
@@ -1595,7 +1597,11 @@ function ProductPage() {
             compareAtPrice={isBundle ? undefined : selectedVariant?.compareAtPrice}
           />
           <Txt
-            id="product-chrome.buy_vat_note"
+            id={
+              paysEuVat(rootData?.visitorCountry ?? null)
+                ? 'product-chrome.buy_vat_note'
+                : 'product-chrome.buy_duties_note'
+            }
             as="span"
             className="product-buy-vat"
           />
@@ -1639,14 +1645,16 @@ function ProductPage() {
             )
           : preorder
             ? (
-                <>
+                // One text run, so the flex row wraps it as a sentence
+                // instead of stranding the separator on its own line.
+                <span>
                   {copyText('product-chrome.buy_stock_preorder_prefix') ?? ''} ·{' '}
                   {shipPromise ? (
                     <span {...prodEdit('statusNote')}>{shipPromise}</span>
                   ) : (
                     <Txt id="product-chrome.preorder_lead_default" as="span" />
                   )}
-                </>
+                </span>
               )
             : selectedVariant?.availableForSale
               ? copyText('product-chrome.buy_stock_in')
@@ -1659,6 +1667,15 @@ function ProductPage() {
                   )
                 : copyText('product-chrome.buy_stock_out')}
       </span>
+      {/* Campaign meter: paid stock left, or progress to the funding target.
+          The numbers and the ship promise above come from the same catalog
+          read. */}
+      {!isBundle && preorder && selectedVariant?.campaign ? (
+        <PreorderMeter
+          campaign={selectedVariant.campaign}
+          priceAfter={selectedVariant.compareAtPrice}
+        />
+      ) : null}
       {/* Sold-out signup: not for pre-order products, whose "unavailable"
           is a catalog availability state, not a launch to be notified of. */}
       {!isBundle &&

@@ -224,7 +224,39 @@ describe('Shopify cart action', () => {
     assert.deepEqual(received, [{
       merchandiseId: 'gid://shopify/ProductVariant/server-authoritative',
       quantity: 2,
+      attributes: [{key: 'Preorder', value: 'preview promise'}],
     }]);
+  });
+
+  it('refuses a preorder line without a ship promise', async () => {
+    const withoutPromise: Catalog = {
+      ...CATALOG,
+      products: [{...CATALOG.products[0], variants: [{...CATALOG.products[0].variants[0], ship_promise: null}]}],
+    };
+    const response = await thrownResponse(handleShopifyCartAction(
+      request({sku: 'OPENRX-LITE', qty: '1'}), ENABLED_ENV,
+      {fetchCatalog: async () => withoutPromise, createCart: async () => { throw new Error('must not create'); }},
+    ));
+    assert.equal(response.status, 409);
+  });
+
+  it('sends the header cart link back to the session checkout only while checkout is open', async () => {
+    const cart = {id: 'cart-a', checkoutUrl: 'https://checkout.opendrone.be/a', lines: [{merchandiseId: 'v', quantity: 1}]};
+    const open = await handleShopifyCartLoader(ENABLED_ENV, {getCartId: () => 'cart-a', getCart: async () => cart});
+    assert.equal(open.status, 303);
+    assert.equal(open.headers.get('Location'), 'https://checkout.opendrone.be/a');
+
+    let unset = false;
+    const empty = await handleShopifyCartLoader(ENABLED_ENV, {
+      getCartId: () => 'cart-a',
+      getCart: async () => ({...cart, lines: []}),
+      unsetCartId: () => { unset = true; },
+    });
+    assert.equal(empty.headers.get('Location'), '/products');
+    assert.equal(unset, true);
+
+    const none = await handleShopifyCartLoader(ENABLED_ENV, {getCartId: () => undefined, getCart: async () => cart});
+    assert.equal(none.headers.get('Location'), '/products');
   });
 
 
@@ -288,7 +320,7 @@ describe('Shopify cart action', () => {
     assert.equal(unset, true);
   });
 
-  it('rejects set mode and permanently closes the legacy cart loader', async () => {
+  it('rejects set mode and keeps the cart loader closed while checkout is closed', async () => {
     const invalid = await thrownResponse(handleShopifyCartAction(
       request({sku: 'OPENRX-LITE', qty: '1', mode: 'set'}),
       ENABLED_ENV,

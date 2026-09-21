@@ -51,7 +51,8 @@ no second switch to forget.
 
 All of these read the same resolution (do not add a surface that doesn't):
 
-- PDP buy module (price, add-to-cart, JSON-LD offer suppression)
+- PDP buy module (price, add-to-cart, JSON-LD offer suppression) and the
+  preorder tracker on `/preorder`
 - Product cards, header product pods, collections grid, related/search
 - Feeds: `/products.json`, `/llms.txt` (no price, no cart permalink)
 - Server-side cart gate (`app/lib/coming-soon.ts`): direct cart POSTs and
@@ -98,6 +99,12 @@ every SKU has its `SHOPIFY_PREVIEW_POLICY_JSON` entry; flip the repo topic to `s
 (repo admin only; topics cannot be changed by pull request); within ~10
 minutes the price is public and orders open; then update the static status
 in `roadmap-data.ts` in a follow-up PR.
+
+**A funding target is reached:** place the supplier order, set that batch's
+`ships` in `content/preorders.json` (for example `"ships mid-December 2026"`)
+and raise the Shopify price to the compare-at price. New orders then fall into
+the next batch, which shows as the stretch meter. Customer mail about the
+target and the date stays a human send.
 
 **Emergency lock:** set `"status": "development"` in
 `content/products/<handle>.json`, deploy (auto on merge). Then fix the

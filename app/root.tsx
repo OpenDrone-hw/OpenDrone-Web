@@ -19,6 +19,7 @@ import jetbrainsMonoWoff2 from '~/assets/fonts/jetbrains-mono-Regular.woff2';
 import {resolveAllStatuses, roadmapStatusMap} from '~/lib/coming-soon';
 import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
 import {toCards} from '~/lib/catalog';
+import {visitorCountry} from '~/lib/visitor-country';
 import {commerceHandoff, customerAccountUrl} from '~/lib/shop-links';
 import resetStyles from '~/styles/reset.css?url';
 import appStyles from '~/styles/app.css?url';
@@ -176,6 +177,8 @@ export async function loader(args: Route.LoaderArgs) {
     // and listings (display vocabulary; buyability is the map above).
     roadmapStatuses: roadmapStatusMap(statusFlags),
     turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? null,
+    // Display only: picks the buy module's price note (VAT vs duties).
+    visitorCountry: visitorCountry(args.request),
   };
 }
 

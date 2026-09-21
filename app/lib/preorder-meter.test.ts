@@ -1,0 +1,53 @@
+import assert from 'node:assert/strict';
+import {describe, it} from 'node:test';
+import {campaignState, type CampaignBatch} from './preorder-campaign.ts';
+import {barPercent, meterView} from './preorder-meter.ts';
+
+const PENDING = 'ships about 10 weeks after its target is reached';
+const STACK: CampaignBatch[] = [{units: 250, paid: true, ships: 'ships late October 2026'}, {units: 250}];
+const FRAME: CampaignBatch[] = [{units: 250}, {units: 1000}];
+const none = () => undefined;
+
+describe('meterView', () => {
+  it('shows paid stock as units left, without an early-price line', () => {
+    const view = meterView(campaignState(STACK, 107, PENDING), none, '€55.00');
+    assert.equal(view.headline, 'Batch 1 is paid for and in production · 143 of 250 left');
+    assert.deepEqual([view.bar.value, view.bar.max], [107, 250]);
+    assert.equal(view.stretch, null);
+    assert.equal(view.early, null);
+  });
+
+  it('shows progress toward the first target with the price after it', () => {
+    const view = meterView(campaignState(FRAME, 187, PENDING), none, '€99.00');
+    assert.equal(view.headline, '187 of 250 ordered toward the funding target');
+    assert.equal(view.early, 'Early price until the target is reached, then €99.00');
+    assert.equal(barPercent(view.bar), 75);
+  });
+
+  it('drops the early-price line when Shopify has no higher price', () => {
+    assert.equal(meterView(campaignState(FRAME, 1, PENDING), none, null).early, null);
+  });
+
+  it('keeps a full bar after the target and fills the next batch below it', () => {
+    const view = meterView(campaignState(FRAME, 312, PENDING), none, '€99.00');
+    assert.equal(view.headline, 'Funding target reached · 312 ordered');
+    assert.equal(barPercent(view.bar), 100);
+    assert.equal(view.stretch?.label, 'Batch 2: 62 of 1000');
+    assert.equal(view.early, null);
+  });
+
+  it('reads its words from copy', () => {
+    const view = meterView(campaignState(FRAME, 5, PENDING), (key) =>
+      key === 'meter_target' ? '{ordered}/{target}' : undefined,
+    );
+    assert.equal(view.headline, '5/250');
+  });
+});
+
+describe('barPercent', () => {
+  it('never returns NaN or leaves 0 to 100', () => {
+    assert.equal(barPercent({value: 5, max: 0, label: ''}), 0);
+    assert.equal(barPercent({value: Number.NaN, max: 10, label: ''}), 0);
+    assert.equal(barPercent({value: 20, max: 10, label: ''}), 100);
+  });
+});
