@@ -85,26 +85,6 @@ function lineAttributes(variant: CatalogVariant): CartLineInput['attributes'] {
   return [{key: PREORDER_ATTRIBUTE, value: promise}];
 }
 
-/** In stock, or from a batch that is already paid for: ships first. */
-export function shipsEarly(variant: CatalogVariant | null): boolean {
-  if (!variant) return false;
-  return variant.availability !== 'preorder' || Boolean(variant.campaign?.paidStock);
-}
-
-/**
- * Ids of the cart lines that ship first when the cart also holds later
- * lines; empty when a split would not change anything.
- */
-export function earlyLineIds(
-  catalog: Catalog,
-  cart: Pick<ShopifyCart, 'lines'>,
-  env: Pick<CartEnv, 'PUBLIC_COMING_SOON'>,
-): string[] {
-  const comingSoon = env.PUBLIC_COMING_SOON !== '0';
-  const early = cart.lines.filter((line) => shipsEarly(sellableVariant(catalog, line.merchandiseId, comingSoon)));
-  return early.length && early.length < cart.lines.length ? early.map((line) => line.id) : [];
-}
-
 /** The catalog variant behind a cart line, if the shop still sells it. */
 function sellableVariant(
   catalog: Catalog,
@@ -205,24 +185,6 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
         if (promise !== line.shipPromise) {
           refresh.push({id: line.id, quantity: line.quantity, attributes});
         }
-      }
-      if (form.get('split') === 'early') {
-        // Check out only the lines that ship first (in stock or paid batch
-        // stock) as their own order; the rest stays in the session cart for
-        // a second order. Refuses when there is nothing to split.
-        const early = cart.lines.filter((line) => shipsEarly(sellableVariant(catalog, line.merchandiseId, globalComingSoon)));
-        if (!early.length || early.length === cart.lines.length) throw fail('Nothing to split.', 409);
-        if (!dependencies.removeCartLines) throw new Error('shopify: remove dependency missing');
-        const first = await dependencies.createCart(
-          early.map((line) => {
-            const attributes = lineAttributes(sellableVariant(catalog, line.merchandiseId, globalComingSoon)!);
-            return attributes
-              ? {merchandiseId: line.merchandiseId, quantity: line.quantity, attributes}
-              : {merchandiseId: line.merchandiseId, quantity: line.quantity};
-          }),
-        );
-        await dependencies.removeCartLines(existingId, early.map((line) => line.id));
-        return redirect(first.checkoutUrl);
       }
       let target = cart;
       if (refresh.length) {

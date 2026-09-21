@@ -3,7 +3,7 @@ import {Form, Link, redirect, useLoaderData, useRevalidator, useRouteLoaderData}
 import {shopifyImageUrl} from '~/lib/shopify-image';
 import type {Route} from './+types/cart.$';
 import {getCart, type ShopifyCart, type ShopifyCartLine} from '~/lib/shopify-storefront';
-import {checkoutOpen, earlyLineIds, loadSessionCart} from '~/lib/shopify-cart-action';
+import {checkoutOpen, loadSessionCart} from '~/lib/shopify-cart-action';
 import {formatPrice} from '~/lib/catalog';
 import {Txt} from '~/components/Txt';
 import {buildSeoMeta} from '~/lib/seo';
@@ -35,14 +35,11 @@ export async function loader({context, params}: Route.LoaderArgs) {
     getCart: (id) => getCart(context.env, id),
     logError: (message) => console.error('[shopify-cart] cart read failed', message),
   });
-  // Lines that could go out first as their own order (see the split button).
-  const catalog = cart?.lines.length ? await context.catalog.get().catch(() => null) : null;
-  const splitIds = cart && catalog ? earlyLineIds(catalog, cart, context.env) : [];
-  return {cart, splitIds};
+  return {cart};
 }
 
 export default function CartPage() {
-  const {cart, splitIds} = useLoaderData<typeof loader>();
+  const {cart} = useLoaderData<typeof loader>();
   return (
     <main className="cart page-shell">
       <header className="page-header">
@@ -50,7 +47,7 @@ export default function CartPage() {
         <h1 className="page-title"><Txt id="cart.title" /></h1>
         <p className="page-description"><Txt id="cart.description" /></p>
       </header>
-      {cart?.lines.length ? <PopulatedCart cart={cart} splitIds={splitIds} /> : <EmptyCart />}
+      {cart?.lines.length ? <PopulatedCart cart={cart} /> : <EmptyCart />}
     </main>
   );
 }
@@ -75,7 +72,7 @@ function lineName(line: ShopifyCartLine): string {
     : line.title;
 }
 
-function PopulatedCart({cart, splitIds}: {cart: ShopifyCart; splitIds: string[]}) {
+function PopulatedCart({cart}: {cart: ShopifyCart}) {
   const rootData = useRouteLoaderData<RootLoader>('root');
   const note = priceNote(rootData?.visitorCountry ?? null);
   const hasPreorder = cart.lines.some((line) => line.shipPromise);
@@ -112,19 +109,6 @@ function PopulatedCart({cart, splitIds}: {cart: ShopifyCart; splitIds: string[]}
               ))}
             </ul>
             <Txt id="cart.mixed_body" as="p" />
-            {splitIds.length ? (
-              <Form method="post" action="/api/shopify/cart">
-                <input type="hidden" name="intent" value="checkout" />
-                <input type="hidden" name="split" value="early" />
-                <button className="cart-split-cta" type="submit">
-                  {(copyText('cart.split_cta') ?? 'Check out {items} now').replace(
-                    '{items}',
-                    cart.lines.filter((l) => splitIds.includes(l.id)).map(lineName).join(', '),
-                  )}
-                </button>
-                <Txt id="cart.split_note" as="p" className="cart-summary-note" />
-              </Form>
-            ) : null}
           </div>
         ) : null}
         {hasPreorder && !mixed ? <Txt id="cart.note_preorder" as="p" className="cart-summary-note" /> : null}

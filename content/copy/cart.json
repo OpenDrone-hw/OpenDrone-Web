@@ -69,8 +69,6 @@
   "build_replaces": "Your cart has the {other} version, which does not fit this build.",
   "line_each": "{price} each",
   "line_update_failed": "Could not update. Try again.",
-  "split_cta": "Check out {items} now",
-  "split_note": "They ship on their own date as a separate order. The rest stays in your cart for a second order.",
   "build_not_included": "Not included: propellers, VTX, camera and battery.",
   "extras_title": "Optional extras"
 }
