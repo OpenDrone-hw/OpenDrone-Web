@@ -49,7 +49,7 @@ type TrackerRow = {
 };
 
 const SECTIONS = [1, 2, 3, 4, 5, 6, 7];
-const FAQ = [1, 2, 3, 4, 5, 6, 7, 8];
+const FAQ = [1, 2, 3, 9, 4, 5, 6, 7, 8];
 
 export async function loader({context}: Route.LoaderArgs) {
   const globalSoon = comingSoonFlag(context.env);
@@ -103,7 +103,12 @@ export async function loader({context}: Route.LoaderArgs) {
 export default function PreorderRoute() {
   const {rows, unavailable, summary} = useLoaderData<typeof loader>();
   const updates = copy('preorder.updates');
-  const updateList = Array.isArray(updates) ? updates.filter((u) => u.trim()) : [];
+  // Entries are "YYYY-MM-DD · text", newest first, never edited: a
+  // correction is a new entry. The section stays hidden until the first one.
+  const updateList = (Array.isArray(updates) ? updates.filter((u) => u.trim()) : []).map((raw) => {
+    const m = /^(\d{4}-\d{2}-\d{2})\s*[·:]\s*(.+)$/.exec(raw.trim());
+    return {raw, date: m?.[1] ?? null, text: m?.[2] ?? raw};
+  });
 
   const cells = [
     summary.stackLeft !== null
@@ -179,19 +184,26 @@ export default function PreorderRoute() {
         </div>
       </section>
 
-      <section className="editorial-section" id="updates">
-        <Txt id="preorder.updates_title" as="h2" className="editorial-section-title" />
-        <Txt id="preorder.updates_lead" as="p" />
-        {updateList.length ? (
+      {updateList.length ? (
+        <section className="editorial-section" id="updates">
+          <Txt id="preorder.updates_title" as="h2" className="editorial-section-title" />
+          <Txt id="preorder.updates_lead" as="p" />
+          {updateList[0].date ? (
+            <p className="preorder-updated">
+              {copyText('preorder.updates_last') ?? 'Last updated'}{' '}
+              <time dateTime={updateList[0].date}>{updateList[0].date}</time>
+            </p>
+          ) : null}
           <ol className="preorder-updates">
             {updateList.map((entry) => (
-              <li className="preorder-update" key={entry}>{entry}</li>
+              <li className="preorder-update" key={entry.raw}>
+                {entry.date ? <time dateTime={entry.date}>{entry.date}</time> : null}
+                <span>{entry.text}</span>
+              </li>
             ))}
           </ol>
-        ) : (
-          <Txt id="preorder.updates_empty" as="p" className="preorder-empty" />
-        )}
-      </section>
+        </section>
+      ) : null}
     </EditorialShell>
   );
 }

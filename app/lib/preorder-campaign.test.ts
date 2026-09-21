@@ -18,6 +18,15 @@ const STACK: CampaignBatch[] = [
 const FRAME: CampaignBatch[] = [{units: 250}, {units: 1000}];
 
 describe('campaignState', () => {
+  it('lists sold-out batches, the current one and the next', () => {
+    const s = campaignState(STACK, 260, PENDING);
+    assert.deepEqual(
+      s.batches.map(({batch, status, shipPromise}) => [batch, status, shipPromise]),
+      [[1, 'sold_out', 'ships late October 2026'], [2, 'current', PENDING]],
+    );
+    assert.deepEqual(campaignState(FRAME, 0, PENDING).batches.map((b) => b.status), ['current', 'next']);
+  });
+
   it('sells paid stock with its own ship date and no early price', () => {
     const s = campaignState(STACK, 107, PENDING);
     assert.equal(s.batch, 1);
@@ -100,7 +109,7 @@ describe('parseCampaignConfig', () => {
     assert.throws(
       () =>
         parseCampaignConfig({
-          countFrom: '2026-09-21',
+          countFrom: '2026-09-21', endsOn: '2026-12-31',
           pendingShips: PENDING,
           skus: {A: {batches: [{units: 1, paid: true}]}},
         }),
@@ -112,7 +121,7 @@ describe('parseCampaignConfig', () => {
     assert.throws(
       () =>
         parseCampaignConfig({
-          countFrom: '2026-09-21',
+          countFrom: '2026-09-21', endsOn: '2026-12-31',
           pendingShips: PENDING,
           skus: {A: {batches: [{units: 0}]}},
         }),
@@ -175,7 +184,7 @@ function catalog(availability: 'preorder' | 'sold_out' | 'in_stock'): Catalog {
   };
 }
 
-const CONFIG = {countFrom: '2026-09-21', pendingShips: PENDING, skus: {'OPENFRAME-5': {batches: FRAME}}};
+const CONFIG = {countFrom: '2026-09-21', endsOn: '2026-12-31', pendingShips: PENDING, skus: {'OPENFRAME-5': {batches: FRAME}}};
 
 describe('applyCampaign', () => {
   it('sets the campaign state and ship promise on campaign preorder SKUs only', () => {

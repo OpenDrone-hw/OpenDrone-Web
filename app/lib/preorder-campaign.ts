@@ -34,6 +34,9 @@ export type CampaignConfig = {
   countFrom: string;
   /** Ship promise for a unit in a batch whose supplier order is not placed. */
   pendingShips: string;
+  /** Last day a funding target can be reached, YYYY-MM-DD. A buyer whose
+   *  target is missed by then chooses a refund or to keep waiting. */
+  endsOn: string;
   skus: Record<string, {batches: CampaignBatch[]}>;
 };
 
@@ -58,6 +61,14 @@ export type CampaignState = {
   /** Shopify's price is the preorder price: paid stock, or the first
    *  funding target, not reached yet. */
   earlyPrice: boolean;
+  /** Every configured batch up to the one after the current, in order:
+   *  sold-out batches stay listed. */
+  batches: Array<{
+    batch: number;
+    units: number;
+    status: 'sold_out' | 'current' | 'next';
+    shipPromise: string;
+  }>;
 };
 
 /** Accept `content/preorders.json`, or throw on anything malformed. */
@@ -66,6 +77,9 @@ export function parseCampaignConfig(body: unknown): CampaignConfig {
   if (!c || typeof c !== 'object') throw new Error('preorders: not an object');
   if (typeof c.countFrom !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(c.countFrom)) {
     throw new Error('preorders: countFrom must be YYYY-MM-DD');
+  }
+  if (typeof c.endsOn !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(c.endsOn)) {
+    throw new Error('preorders: endsOn must be YYYY-MM-DD');
   }
   if (typeof c.pendingShips !== 'string' || !c.pendingShips.trim()) {
     throw new Error('preorders: pendingShips is required');
@@ -138,6 +152,12 @@ export function campaignState(
     targetReached,
     shipPromise: current.ships?.trim() || pendingShips,
     earlyPrice: (targetIndex < 0 || index <= targetIndex) && !targetReached,
+    batches: batches.slice(0, index + 2).map((b, i) => ({
+      batch: i + 1,
+      units: b.units,
+      status: i < index ? 'sold_out' : i === index ? 'current' : 'next',
+      shipPromise: b.ships?.trim() || pendingShips,
+    })),
   };
 }
 

@@ -18339,3 +18339,45 @@ html.light .cart-added-continue {
   font-size: var(--fs-xs, 0.75rem);
   color: var(--color-text-muted);
 }
+
+/* Batch list under the buy-box meter: every batch up to the next one, with
+   its ship date; sold-out batches stay visible, struck through. */
+.funding-meter-batches {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs, 0.75rem);
+  color: var(--color-text-muted);
+}
+.funding-meter-batches li {
+  display: flex;
+  gap: 0.6rem;
+}
+.funding-meter-batches li > span:first-child {
+  flex: 0 0 5.5em;
+}
+.funding-meter-batches li[data-batch-status='current'] {
+  color: var(--color-text);
+}
+.funding-meter-batches li[data-batch-status='sold_out'] {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.preorder-updated {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs, 0.75rem);
+  color: var(--color-text-muted);
+}
+.preorder-update {
+  display: grid;
+  grid-template-columns: 7.5em 1fr;
+  gap: 0.75rem;
+}
+.preorder-update time {
+  font-family: var(--font-mono);
+  color: var(--color-text-muted);
+}

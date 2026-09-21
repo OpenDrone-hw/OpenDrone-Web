@@ -48,6 +48,22 @@ export function PreorderMeter({
         </>
       ) : null}
       {view.early ? <span className="funding-meter-label">{view.early}</span> : null}
+      {campaign.batches.length > 1 ? (
+        <ol className="funding-meter-batches">
+          {campaign.batches.map((b) => (
+            <li key={b.batch} data-batch-status={b.status}>
+              <span>{(copyText('preorder.batch_label') ?? 'Batch {batch}').replace('{batch}', String(b.batch))}</span>
+              <span>
+                {b.status === 'sold_out'
+                  ? copyText('preorder.batch_sold_out') ?? 'sold out'
+                  : b.status === 'current'
+                    ? b.shipPromise
+                    : (copyText('preorder.batch_next') ?? 'next, {units} units').replace('{units}', String(b.units))}
+              </span>
+            </li>
+          ))}
+        </ol>
+      ) : null}
       <Link className="funding-meter-link" prefetch="intent" to="/preorder">
         {copyText('preorder.meter_link') ?? 'How preorders work'}
       </Link>

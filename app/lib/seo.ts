@@ -1,4 +1,5 @@
 import {DISCORD_INVITE_URL, type CompanyIdentity} from '~/lib/company';
+import preorders from '../../content/preorders.json';
 
 const STORE_NAME = 'OpenDrone';
 const DEFAULT_LOCALE = 'en_US';
@@ -192,8 +193,8 @@ export function buildOrgJsonLd(company: CompanyIdentity, siteUrl?: string) {
 /** Public profiles for Organization.sameAs. */
 const ORG_PROFILES = ['https://github.com/OpenDrone-hw', DISCORD_INVITE_URL] as const;
 
-/** The date a preorder price stops applying: the campaign end. */
-export const CAMPAIGN_END_ISO = '2026-12-31';
+/** The date a preorder price stops applying: the target deadline. */
+export const CAMPAIGN_END_ISO: string = preorders.endsOn;
 
 /**
  * schema.org Product JSON-LD - emit on PDP. Drives Google rich-result

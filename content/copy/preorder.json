@@ -22,7 +22,7 @@
   "s2_title": "*02* · How a target works",
   "s2_body": [
     "Suppliers do not produce single units. Each sets a minimum order quantity, and that quantity is the target for the product option.",
-    "When a target is reached we place the supplier order, and the product ships about 10 weeks later. Orders keep coming in after that: they fill the next batch, which gets its own target."
+    "When a target is reached we place the supplier order, and the product ships about 10 weeks later. Every target has a deadline: 31 December 2026. Orders keep coming in after a target is reached: they fill the next batch, which gets its own target."
   ],
   "s3_title": "*03* · The stack ships first",
   "s3_body": [
@@ -41,7 +41,7 @@
   "s6_title": "*06* · Risks",
   "s6_body": [
     "Hardware schedules slip. Supplier lead times move, a component goes out of stock and has to be replaced by an equivalent, and a production run can need rework. When a ship date moves, you get mail with the new date.",
-    "A product can also fall short of its target. Targets are set at a quantity we can order, so a product that falls short can still go ahead as a smaller run. Either way, everyone who ordered it gets mail saying what happens next."
+    "A product can also fall short of its target. If a target is not reached by 31 December 2026, we mail everyone who ordered that product and each buyer chooses: a full refund, or keep the order for the next date we set."
   ],
   "s7_title": "*07* · Who is behind it",
   "s7_body": [
@@ -52,9 +52,11 @@
   "faq_q1": "When do I pay?",
   "faq_a1": "When you order: the product price, shipping and, for the United States, import duties. Nothing is charged later.",
   "faq_q2": "When does my order ship?",
-  "faq_a2": "The stack ships late October 2026 while batch 1 lasts. Every other product ships about 10 weeks after its target is reached. Each item shows its ship date on the product page, at checkout and on the order confirmation.",
+  "faq_a2": "The stack ships late October 2026 while batch 1 lasts. Every other product ships about 10 weeks after its target is reached, and every target has a deadline of 31 December 2026. Each item shows its ship date on the product page, at checkout and on the order confirmation.",
   "faq_q3": "What happens when a target is reached?",
   "faq_a3": "We place the supplier order and mail everyone who ordered that product. You hear from us again when the ship date is set and before dispatch.",
+  "faq_q9": "What if a target is not reached?",
+  "faq_a9": "Every target has a deadline: 31 December 2026. If a product misses it, we mail everyone who ordered it and you choose: a full refund, or keep your order for the next date we set.",
   "faq_q4": "What if the ship date moves?",
   "faq_a4": "You get mail with the new date as soon as we know it.",
   "faq_q5": "Do I get one parcel or several?",
@@ -66,7 +68,7 @@
   "faq_q8": "Where do the numbers on this page come from?",
   "faq_a8": "From paid orders in our shop. Each product option counts only its own units, and the numbers refresh every minute.",
   "updates_title": "Updates",
-  "updates_lead": "What changed, newest first. Every entry is dated and stays on the page.",
+  "updates_lead": "What changed, newest first. Every entry is dated and stays on the page as written; a correction is a new entry.",
   "updates_empty": "No updates yet.",
   "updates": [],
   "meter_paid": "Batch {batch} is paid for and in production · {left} of {units} left",
@@ -79,5 +81,10 @@
   "meter_paid_count": "{left} left in batch 1",
   "meter_reached_count": "{ordered} ordered",
   "meter_early_stock": "Preorder price while batch {batch} lasts, then {price}",
-  "track_price_after": "then {price}"
+  "track_price_after": "then {price}",
+  "batch_label": "Batch {batch}",
+  "batch_sold_out": "sold out",
+  "batch_next": "next, {units} units",
+  "updates_last": "Last updated",
+  "$comment_updates": "updates: \"YYYY-MM-DD · text\" strings, newest first. Never edit or delete an entry; add a new one."
 }

@@ -1,7 +1,8 @@
 {
-  "$comment": "Preorder campaigns per Shopify SKU, read by app/lib/preorder-campaign.ts. Batches are in production order: a paid batch is stock Incutec already ordered and carries its own ship promise; any other batch is a funding target whose supplier order is placed once that many units are ordered. Set `ships` on a batch once its supplier order is placed. Only SKUs the Shopify catalog policy sells as preorder are affected. countFrom is the first day whose paid Shopify orders count. Prices live in Shopify, never here.",
+  "$comment": "Preorder campaigns per Shopify SKU, read by app/lib/preorder-campaign.ts. Batches are in production order: a paid batch is stock Incutec already ordered and carries its own ship promise; any other batch is a funding target whose supplier order is placed once that many units are ordered. Set `ships` on a batch once its supplier order is placed. Only SKUs the Shopify catalog policy sells as preorder are affected. countFrom is the first day whose paid Shopify orders count. endsOn is the target deadline: a buyer whose target is missed by then chooses a refund or to keep waiting. Prices live in Shopify, never here.",
   "countFrom": "2026-09-21",
-  "pendingShips": "ships about 10 weeks after its target is reached",
+  "endsOn": "2026-12-31",
+  "pendingShips": "ships about 10 weeks after its target is reached (target deadline 31 December 2026)",
   "skus": {
     "OPENFC-LITE-2020": {"batches": [{"units": 250, "paid": true, "ships": "ships late October 2026"}, {"units": 250}]},
     "OPENFC-LITE-3030": {"batches": [{"units": 250, "paid": true, "ships": "ships late October 2026"}, {"units": 250}]},
