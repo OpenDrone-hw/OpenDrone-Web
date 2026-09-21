@@ -43,6 +43,8 @@ export type ProductVariantFragment = {
   shipPromise: string | null;
   /** Preorder campaign state for a campaign SKU, else null. */
   campaign: CampaignState | null;
+  /** A campaign SKU's price once its preorder price ends, else null. */
+  priceAfter: MoneyV2 | null;
   availability: CatalogAvailability;
   /** The variant's page on the shop, for the review list link. */
   shopUrl: string | null;

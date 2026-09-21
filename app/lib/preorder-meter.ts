@@ -44,7 +44,12 @@ export function meterView(
 
   const early =
     state.earlyPrice && priceAfter
-      ? t('meter_early', 'Early price until the target is reached, then {price}', {price: priceAfter})
+      ? state.paidStock
+        ? t('meter_early_stock', 'Preorder price while batch {batch} lasts, then {price}', {
+            batch: state.batch,
+            price: priceAfter,
+          })
+        : t('meter_early', 'Preorder price until the target is reached, then {price}', {price: priceAfter})
       : null;
 
   if (state.paidStock) {

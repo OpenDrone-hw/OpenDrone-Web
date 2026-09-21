@@ -205,8 +205,16 @@ function mapVariant(
     title: variant.title,
     availableForSale: availabilityToAvailableForSale(variant.availability),
     price: money(variant.price, variant.currency || catalog.currency),
+    // A campaign SKU never shows a struck-through price: it was never sold
+    // at the higher one, so a "was" price would be a misleading reduction
+    // (EU Price Indication Directive, art. 6a). Shopify's compare-at price
+    // is its price after the funding target instead: `priceAfter`.
     compareAtPrice:
-      variant.compare_price != null && variant.compare_price > variant.price
+      !variant.campaign && variant.compare_price != null && variant.compare_price > variant.price
+        ? money(variant.compare_price, variant.currency || catalog.currency)
+        : null,
+    priceAfter:
+      variant.campaign && variant.compare_price != null && variant.compare_price > variant.price
         ? money(variant.compare_price, variant.currency || catalog.currency)
         : null,
     image:

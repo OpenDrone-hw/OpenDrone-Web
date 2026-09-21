@@ -8,6 +8,7 @@ import {LangToggle} from '~/components/LangToggle';
 import {PlaceholderBanner} from '~/components/PlaceholderBanner';
 import {RouteProgress} from '~/components/RouteProgress';
 import {Txt} from '~/components/Txt';
+import {CartAddedDialog} from '~/components/CartAddedDialog';
 import type {CommerceHandoff} from '~/lib/shop-links';
 
 interface PageLayoutProps {
@@ -35,10 +36,10 @@ export function PageLayout({
   return (
     <MotionConfig reducedMotion="user">
       <Aside.Provider>
-        {/* The cart aside is gone with the local cart: the cart icon links
-            to the Shopify checkout. The mobile menu drawer is the only aside
-            left. */}
+        {/* The mobile menu drawer is the only aside; the add-to-cart dialog
+            is its own overlay, opened by every AddToCartButton. */}
         <MobileMenuAside accountUrl={accountUrl} />
+        <CartAddedDialog />
         <div className={isHomepage ? 'homepage-layout' : ''}>
           <a className="skip-link" href="#main-content">
             <Txt id="chrome.skip_link" />

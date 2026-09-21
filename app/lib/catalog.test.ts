@@ -220,3 +220,29 @@ describe('formatPrice', () => {
     assert.equal(formatPrice('', 'EUR'), '');
   });
 });
+
+describe('campaign pricing', () => {
+  it('never shows a struck-through price on a campaign SKU; the higher price is the price after', () => {
+    const campaign = {
+      ordered: 0, batch: 1, batchUnits: 250, batchOrdered: 0, paidStock: false,
+      target: 250, targetOrdered: 0, targetReached: false, shipPromise: 'x', earlyPrice: true,
+    };
+    const withCampaign: Catalog = {
+      ...FIXTURE,
+      products: FIXTURE.products.map((p) => ({
+        ...p,
+        variants: p.variants.map((v) => (v.sku === 'OPENRX-GEMINI' ? {...v, campaign} : v)),
+      })),
+    };
+    const gemini = toProduct(withCampaign, byHandle(withCampaign, 'openrx')!).variants.nodes.find(
+      (v) => v.sku === 'OPENRX-GEMINI',
+    )!;
+    assert.equal(gemini.compareAtPrice, null);
+    assert.equal(gemini.priceAfter?.amount, '49.99');
+    const plain = toProduct(FIXTURE, byHandle(FIXTURE, 'openrx')!).variants.nodes.find(
+      (v) => v.sku === 'OPENRX-GEMINI',
+    )!;
+    assert.equal(plain.compareAtPrice?.amount, '49.99');
+    assert.equal(plain.priceAfter, null);
+  });
+});

@@ -70,7 +70,7 @@ export async function loader({context}: Route.LoaderArgs) {
           variant: v.title === 'Default Title' ? '' : v.title,
           image: v.image,
           price: v.price,
-          priceAfter: v.compareAtPrice,
+          priceAfter: v.priceAfter,
           shipPromise: v.shipPromise,
           cartAddUrl: v.cartAddUrl,
           campaign: v.campaign,
@@ -222,6 +222,14 @@ function TrackerCard({row}: {row: TrackerRow}) {
           </h3>
           <span className="preorder-track-price">
             {formatPrice(row.price.amount, row.price.currencyCode)}
+            {row.priceAfter ? (
+              <em>
+                {(copyText('preorder.track_price_after') ?? 'then {price}').replace(
+                  '{price}',
+                  formatPrice(row.priceAfter.amount, row.priceAfter.currencyCode),
+                )}
+              </em>
+            ) : null}
           </span>
         </div>
         <PreorderMeter campaign={row.campaign} priceAfter={row.priceAfter} compact />

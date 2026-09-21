@@ -21,6 +21,11 @@ export async function action({request, context}: Route.ActionArgs) {
   });
 }
 
-export function loader({context}: Route.LoaderArgs) {
-  return handleShopifyCartLoader(context.env);
+export function loader({request, context}: Route.LoaderArgs) {
+  return handleShopifyCartLoader(request, context.env, {
+    getCartId: () => context.session.get(CART_KEY) as string | undefined,
+    unsetCartId: () => context.session.unset(CART_KEY),
+    getCart: (id) => getCart(context.env, id),
+    logError: (message) => console.error('[shopify-cart] cart read failed', message),
+  });
 }

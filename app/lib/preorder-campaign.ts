@@ -55,8 +55,8 @@ export type CampaignState = {
   targetReached: boolean;
   /** The ship promise for the next ordered unit. */
   shipPromise: string;
-  /** Shopify's price is the early price: the next unit counts toward the
-   *  first funding target and that target is not reached yet. */
+  /** Shopify's price is the preorder price: paid stock, or the first
+   *  funding target, not reached yet. */
   earlyPrice: boolean;
 };
 
@@ -137,7 +137,7 @@ export function campaignState(
     targetOrdered,
     targetReached,
     shipPromise: current.ships?.trim() || pendingShips,
-    earlyPrice: index === targetIndex && !targetReached,
+    earlyPrice: (targetIndex < 0 || index <= targetIndex) && !targetReached,
   };
 }
 

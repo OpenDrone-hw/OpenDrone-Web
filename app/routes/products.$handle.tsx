@@ -1675,7 +1675,7 @@ function ProductPage() {
       {!isBundle && preorder && selectedVariant?.campaign ? (
         <PreorderMeter
           campaign={selectedVariant.campaign}
-          priceAfter={selectedVariant.compareAtPrice}
+          priceAfter={selectedVariant.priceAfter}
         />
       ) : null}
       {/* Sold-out signup: not for pre-order products, whose "unavailable"

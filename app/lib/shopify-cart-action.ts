@@ -35,6 +35,35 @@ function fail(message: string, status: number, headers: Record<string, string> =
   return new Response(message, {status, headers: {...NO_STORE, ...headers}});
 }
 
+/** What the add-to-cart dialog and the header count need; no checkout URL. */
+export type CartSummary = {
+  totalQuantity: number;
+  lines: Array<{
+    sku: string | null;
+    handle: string;
+    title: string;
+    variantTitle: string;
+    quantity: number;
+    image: {url: string; altText: string | null} | null;
+    shipPromise: string | null;
+  }>;
+};
+
+export function cartSummary(cart: ShopifyCart): CartSummary {
+  return {
+    totalQuantity: cart.totalQuantity,
+    lines: cart.lines.map((line) => ({
+      sku: line.sku,
+      handle: line.handle,
+      title: line.title,
+      variantTitle: line.variantTitle,
+      quantity: line.quantity,
+      image: line.image,
+      shipPromise: line.shipPromise,
+    })),
+  };
+}
+
 function redirect(location: string): Response {
   return new Response(null, {status: 303, headers: {Location: location, ...NO_STORE}});
 }
@@ -107,6 +136,9 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
   }
   if (form.has('mode')) throw fail('Cart mode is not supported.', 400);
   const intent = String(form.get('intent') ?? 'add');
+  // The button's background submit asks for the cart back instead of the
+  // /cart page; a plain form post (no JavaScript) still lands on /cart.
+  const wantsSummary = form.get('response') === 'summary';
 
   try {
     const existingId = dependencies.getCartId?.();
@@ -187,15 +219,19 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
             throw fail('Cart quantity exceeds the limit.', 400);
           }
         }
-        await dependencies.addCartLines(existingId, lines);
-        return redirect('/cart');
+        const updated = await dependencies.addCartLines(existingId, lines);
+        return wantsSummary
+          ? Response.json(cartSummary(updated), {headers: NO_STORE})
+          : redirect('/cart');
       }
       // The session pointed at a cart Shopify no longer has: start a new one.
       dependencies.unsetCartId?.();
     }
     const cart = await dependencies.createCart(lines);
     dependencies.setCartId?.(cart.id);
-    return redirect('/cart');
+    return wantsSummary
+      ? Response.json(cartSummary(cart), {headers: NO_STORE})
+      : redirect('/cart');
   } catch (error) {
     if (error instanceof Response) throw error;
     dependencies.logError?.(error instanceof Error ? error.message : 'unknown error');
@@ -225,8 +261,17 @@ export async function loadSessionCart(
   }
 }
 
-/** GET /api/shopify/cart: the old checkout link lands on the cart page. */
-export function handleShopifyCartLoader(env: CartEnv): Response {
+/**
+ * GET /api/shopify/cart: the old checkout link lands on the cart page;
+ * `?summary=1` returns the session cart summary for the header count.
+ */
+export async function handleShopifyCartLoader(
+  request: Request,
+  env: CartEnv,
+  dependencies: Pick<ShopifyCartDependencies, 'getCartId' | 'unsetCartId' | 'getCart' | 'logError'> = {},
+): Promise<Response> {
   if (!checkoutOpen(env)) throw fail('Checkout is closed.', 410);
-  return redirect('/cart');
+  if (new URL(request.url).searchParams.get('summary') !== '1') return redirect('/cart');
+  const cart = await loadSessionCart(env, dependencies);
+  return Response.json(cart ? cartSummary(cart) : {totalQuantity: 0, lines: []}, {headers: NO_STORE});
 }

@@ -1,15 +1,17 @@
+import {useState} from 'react';
+import {useRevalidator} from 'react-router';
 import {trackEvent} from '~/lib/growth/plausible';
 import {attributionSource} from '~/lib/growth/attribution';
-import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
+import {announceCartAdded, postCartAdd, skusFromFields} from '~/lib/cart-client';
 
 /**
- * The buy button: a regular POST form to the cart action
- * (`/api/shopify/cart`, fields `sku`, `qty`, `next`), which creates the
- * visitor's Shopify cart and redirects them to its checkout.
+ * The buy button: a POST form to the cart action (`/api/shopify/cart`,
+ * fields `sku`, `qty` or `lines`). With JavaScript it adds in the
+ * background, the visitor stays on the page and the add-to-cart dialog
+ * opens (`CartAddedDialog`); without it the form posts and lands on /cart.
  *
  * POST prevents crawlers and link previewers from creating carts by
- * following the public product link. The click still fires funnel events
- * before the browser navigates to checkout.
+ * following the public product link.
  */
 export function AddToCartButton({
   children,
@@ -38,6 +40,8 @@ export function AddToCartButton({
   /** Attr-driven CSS tooltip content (see .pod-buy-stack[data-tip]). */
   dataTip?: string;
 }) {
+  const [state, setState] = useState<'idle' | 'adding' | 'error'>('idle');
+  const revalidator = useRevalidator();
   if (disabled) {
     return (
       <button
@@ -71,17 +75,27 @@ export function AddToCartButton({
       method="post"
       className="add-to-cart-form"
       onSubmit={(e) => {
-        // The hand-off leaves this site, so every click is a checkout
-        // click: the Plausible event plus the chk:<day> beacon that is
-        // the buy-rate denominator (app/lib/growth/ledger.ts).
+        e.preventDefault();
+        if (state === 'adding') return;
         trackEvent('Add to Cart', {
           props: {product: product ?? 'unknown', source: attributionSource()},
+          ...(revenue && Number.isFinite(revenue.amount) ? {revenue} : {}),
         });
-        trackCheckoutClick(revenue ?? null);
         // Drop focus after the click so :focus-within doesn't pin
         // hover-revealed quick-add UI open once the pointer leaves.
         e.currentTarget.querySelector('button')?.blur();
         onClick?.();
+        setState('adding');
+        const submitted = keyedFields.map(({name, value}) => [name, value] as [string, string]);
+        postCartAdd(action, submitted)
+          .then((summary) => {
+            setState('idle');
+            announceCartAdded({summary, skus: skusFromFields(submitted), handle: product ?? null});
+            // The first add creates the session cart: refresh the header's
+            // cart link.
+            void revalidator.revalidate();
+          })
+          .catch(() => setState('error'));
       }}
     >
       {keyedFields.map(({name, value, key}) => (
@@ -92,8 +106,11 @@ export function AddToCartButton({
         aria-label={ariaLabel}
         data-tip={dataTip}
         className={className}
+        aria-busy={state === 'adding'}
       >
-        <span className="btn-label">{children}</span>
+        <span className="btn-label">
+          {state === 'adding' ? 'Adding…' : state === 'error' ? 'Try again' : children}
+        </span>
       </button>
     </form>
   );

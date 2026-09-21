@@ -25,7 +25,7 @@ describe('campaignState', () => {
     assert.equal(s.batchOrdered, 107);
     assert.equal(s.batchUnits, 250);
     assert.equal(s.shipPromise, 'ships late October 2026');
-    assert.equal(s.earlyPrice, false);
+    assert.equal(s.earlyPrice, true);
     assert.equal(s.target, 250);
     assert.equal(s.targetOrdered, 0);
   });
@@ -82,7 +82,7 @@ describe('campaignState', () => {
     const s = campaignState([{units: 10, paid: true, ships: 'ships now'}], 3, PENDING);
     assert.equal(s.target, null);
     assert.equal(s.targetReached, false);
-    assert.equal(s.earlyPrice, false);
+    assert.equal(s.earlyPrice, true);
   });
 });
 

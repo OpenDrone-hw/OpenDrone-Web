@@ -7,6 +7,7 @@ import {Txt} from '~/components/Txt';
 import {buildSeoMeta} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
 import {priceNote} from '~/lib/visitor-country';
+import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
 import type {RootLoader} from '~/root';
 
 const CART_KEY = 'shopifyCartId';
@@ -109,7 +110,13 @@ function PopulatedCart({cart}: {cart: ShopifyCart}) {
         ) : null}
         {hasPreorder && !mixed ? <Txt id="cart.note_preorder" as="p" className="cart-summary-note" /> : null}
         <Txt id={`cart.note_${note}`} as="p" className="cart-summary-note" />
-        <Form method="post" action="/api/shopify/cart">
+        <Form
+          method="post"
+          action="/api/shopify/cart"
+          onSubmit={() =>
+            trackCheckoutClick({currency: cart.subtotal.currencyCode, amount: Number(cart.subtotal.amount)})
+          }
+        >
           <input type="hidden" name="intent" value="checkout" />
           <button className="cart-checkout-cta" type="submit"><Txt id="cart.checkout_cta" /></button>
         </Form>

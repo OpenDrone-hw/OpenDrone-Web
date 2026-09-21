@@ -1,3 +1,4 @@
+import {CART_UPDATED_EVENT} from '~/lib/cart-client';
 import {useEffect, useRef, useState} from 'react';
 import {Form, useLocation} from 'react-router';
 import {NavLink} from '~/components/nav';
@@ -733,6 +734,31 @@ function HeaderMenuMobileToggle() {
  * The cart icon links, after the first add, to the cart page.
  */
 function CartToggle({cartUrl}: {cartUrl: string | null}) {
+  const [quantity, setQuantity] = useState(0);
+  useEffect(() => {
+    if (!cartUrl) {
+      setQuantity(0);
+      return;
+    }
+    let live = true;
+    fetch('/api/shopify/cart?summary=1', {credentials: 'same-origin'})
+      .then((r) => (r.ok ? (r.json() as Promise<{totalQuantity?: number}>) : null))
+      .then((d) => {
+        if (live && typeof d?.totalQuantity === 'number') setQuantity(d.totalQuantity);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [cartUrl]);
+  useEffect(() => {
+    const update = (event: Event) => {
+      const total = (event as CustomEvent<{totalQuantity?: number}>).detail?.totalQuantity;
+      if (typeof total === 'number') setQuantity(total);
+    };
+    window.addEventListener(CART_UPDATED_EVENT, update);
+    return () => window.removeEventListener(CART_UPDATED_EVENT, update);
+  }, []);
   if (!cartUrl) {
     return (
       <span
@@ -748,9 +774,12 @@ function CartToggle({cartUrl}: {cartUrl: string | null}) {
     <a
       className="site-header-icon site-header-cart"
       href={cartUrl}
-      aria-label={copyText('chrome.cart_aria') ?? 'Cart'}
+      aria-label={`${copyText('chrome.cart_aria') ?? 'Cart'}${quantity ? ` (${quantity})` : ''}`}
     >
       <CartIcon />
+      {quantity > 0 ? (
+        <span className="site-header-cart-count">{quantity > 99 ? '99+' : quantity}</span>
+      ) : null}
     </a>
   );
 }

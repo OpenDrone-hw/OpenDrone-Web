@@ -282,6 +282,21 @@ describe('Shopify cart action: add', () => {
   });
 });
 
+describe('Shopify cart action: background add', () => {
+  it('returns the cart summary instead of the /cart redirect when asked', async () => {
+    const response = await handleShopifyCartAction(
+      request({sku: 'OPENRX-LITE', qty: '1', response: 'summary'}), ENABLED_ENV, {
+        fetchCatalog: async () => CATALOG,
+        createCart: async () => cart([line()]),
+      },
+    );
+    assert.equal(response.status, 200);
+    const body = (await response.json()) as {totalQuantity: number; lines: Array<{sku: string; shipPromise: string}>};
+    assert.equal(body.totalQuantity, 1);
+    assert.deepEqual([body.lines[0].sku, body.lines[0].shipPromise], ['OPENRX-LITE', 'preview promise']);
+  });
+});
+
 describe('Shopify cart action: update, remove, checkout', () => {
   it('sets one line quantity and removes lines, then shows the cart', async () => {
     let updated: unknown;
@@ -355,13 +370,20 @@ describe('cart page and legacy cart link', () => {
   it('stay closed while checkout is closed, even with a session cart', async () => {
     let fetched = false;
     const getCart = async () => { fetched = true; return cart([line()]); };
-    assert.equal((await thrownResponse(() => handleShopifyCartLoader({}))).status, 410);
+    assert.equal((await thrownResponse(handleShopifyCartLoader(new Request('https://opendrone.be/api/shopify/cart'), {}))).status, 410);
     assert.equal((await thrownResponse(loadSessionCart({SHOPIFY_CHECKOUT_WRITE_ENABLED: '1'}, {getCartId: () => 'cart-a', getCart}))).status, 410);
     assert.equal(fetched, false);
   });
 
   it('send the legacy link to /cart and load the session cart once open', async () => {
-    assert.equal(handleShopifyCartLoader(ENABLED_ENV).headers.get('Location'), '/cart');
+    assert.equal((await handleShopifyCartLoader(new Request('https://opendrone.be/api/shopify/cart'), ENABLED_ENV)).headers.get('Location'), '/cart');
+    const summary = await handleShopifyCartLoader(
+      new Request('https://opendrone.be/api/shopify/cart?summary=1'), ENABLED_ENV,
+      {getCartId: () => 'cart-a', getCart: async () => cart([line({quantity: 2})], 'cart-a')},
+    );
+    const body = (await summary.json()) as {totalQuantity: number; lines: unknown[]};
+    assert.equal(body.totalQuantity, 2);
+    assert.equal(JSON.stringify(body).includes('checkout'), false);
     const loaded = await loadSessionCart(ENABLED_ENV, {getCartId: () => 'cart-a', getCart: async () => cart([line()], 'cart-a')});
     assert.equal(loaded?.lines.length, 1);
     let unset = false;

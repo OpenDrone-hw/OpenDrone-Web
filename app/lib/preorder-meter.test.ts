@@ -9,19 +9,19 @@ const FRAME: CampaignBatch[] = [{units: 250}, {units: 1000}];
 const none = () => undefined;
 
 describe('meterView', () => {
-  it('shows paid stock as units left, without an early-price line', () => {
+  it('shows paid stock as units left, with the price after batch 1', () => {
     const view = meterView(campaignState(STACK, 107, PENDING), none, '€55.00');
     assert.equal(view.headline, 'Batch 1 is paid for and in production · 143 of 250 left');
+    assert.equal(view.early, 'Preorder price while batch 1 lasts, then €55.00');
     assert.equal(view.bar, null);
     assert.equal(view.count, '143 left');
     assert.equal(view.stretch, null);
-    assert.equal(view.early, null);
   });
 
   it('shows progress toward the first target with the price after it', () => {
     const view = meterView(campaignState(FRAME, 187, PENDING), none, '€99.00');
     assert.equal(view.headline, '187 of 250 ordered toward the funding target');
-    assert.equal(view.early, 'Early price until the target is reached, then €99.00');
+    assert.equal(view.early, 'Preorder price until the target is reached, then €99.00');
     assert.equal(barPercent(view.bar!), 75);
     assert.equal(view.count, '187 / 250');
   });

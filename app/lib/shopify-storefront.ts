@@ -543,3 +543,31 @@ export async function removeCartLines(
   );
   return payloadCart(env, data.cartLinesRemove, 'cartLinesRemove', cartId);
 }
+
+export const PRODUCT_RECOMMENDATIONS_QUERY = `#graphql
+  query OpenDroneComplementaryProducts($handle: String!) {
+    productRecommendations(productHandle: $handle, intent: COMPLEMENTARY) {
+      handle
+      availableForSale
+    }
+  }
+`;
+
+/**
+ * Shopify's complementary products for a handle (Search & Discovery), in
+ * Shopify's order. Only a ranking signal: the build graph decides what is
+ * compatible (`app/lib/build-recommendations.ts`).
+ */
+export async function fetchShopifyComplementaryHandles(
+  env: StorefrontEnv,
+  productHandle: string,
+  fetcher: typeof fetch = fetch,
+): Promise<string[]> {
+  if (!/^[a-z0-9][a-z0-9-]{0,254}$/.test(productHandle)) return [];
+  const data = await storefrontRequest<{
+    productRecommendations: Array<{handle: string; availableForSale: boolean}> | null;
+  }>(env, PRODUCT_RECOMMENDATIONS_QUERY, {handle: productHandle}, fetcher);
+  return (data.productRecommendations ?? [])
+    .filter((product) => product.availableForSale)
+    .map(({handle}) => handle);
+}
