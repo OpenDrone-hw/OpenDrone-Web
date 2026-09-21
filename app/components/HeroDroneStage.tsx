@@ -32,9 +32,14 @@ function shouldLoad3D() {
 // instead, so this must stay a dynamic import or every phone downloads a
 // renderer it never uses. Started at module eval rather than in an effect so it
 // races hydration; the type-only import above adds no runtime dependency.
-const scenePromise =
-  typeof window !== 'undefined' && shouldLoad3D()
-    ? import('~/components/HeroDroneScene')
+// Only on a page that shows the stage: other routes can evaluate this module
+// through a prefetched home route, and must not pull three.js with it.
+const loadScene = () => import('~/components/HeroDroneScene');
+let scenePromise: ReturnType<typeof loadScene> | null =
+  typeof window !== 'undefined' &&
+  /^\/(hero-preview)?$/.test(window.location.pathname) &&
+  shouldLoad3D()
+    ? loadScene()
     : null;
 
 /** Link label for a beat: the chapter's own title when the href points at
@@ -78,13 +83,14 @@ export function HeroDroneStage({
     null,
   );
   useEffect(() => {
-    if (!shouldLoad3D() || !scenePromise) {
+    if (!shouldLoad3D()) {
       // Tell the route now, or it sits behind the splash's dim layer waiting out
       // the safety timeout on a machine that will never show a drone.
       onReady?.();
       return;
     }
     setUse3D(true);
+    scenePromise ??= loadScene();
     scenePromise
       .then((m) => setScene(() => m.HeroDroneScene))
       .catch((err) => {

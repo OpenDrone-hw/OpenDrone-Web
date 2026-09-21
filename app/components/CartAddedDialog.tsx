@@ -1,4 +1,5 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
+import {shopifyImageUrl} from '~/lib/shopify-image';
 import {Link, useLocation, useRevalidator, useRouteLoaderData} from 'react-router';
 import type {RootLoader} from '~/root';
 import {copyText} from '~/lib/copy';
@@ -47,6 +48,7 @@ export function CartAddedDialog() {
   const [busy, setBusy] = useState<string | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
 
   const close = useCallback(() => {
@@ -78,6 +80,24 @@ export function CartAddedDialog() {
     closeRef.current?.focus();
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') close();
+      if (event.key !== 'Tab' || !dialogRef.current) return;
+      // Keep focus inside the modal: wrap from the last control to the first.
+      const focusable = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      );
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || !dialogRef.current.contains(active))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (active === last || !dialogRef.current.contains(active))) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
@@ -147,6 +167,7 @@ export function CartAddedDialog() {
         onClick={close}
       />
       <section
+        ref={dialogRef}
         className="cart-added"
         role="dialog"
         aria-modal="true"
@@ -174,7 +195,7 @@ export function CartAddedDialog() {
         {added.map((line) => (
           <div className="cart-added-line" key={line.sku}>
             {line.image ? (
-              <img src={line.image.url} alt="" width={72} height={72} />
+              <img src={shopifyImageUrl(line.image.url, 144)} alt="" width={72} height={72} />
             ) : (
               <span className="cart-line-noimage" aria-hidden="true">{line.title.slice(4, 5) || line.title[0]}</span>
             )}
@@ -207,7 +228,7 @@ export function CartAddedDialog() {
                 return (
                   <li className="cart-added-suggestion" key={s.sku}>
                     {image ? (
-                      <img src={image.url} alt="" width={64} height={64} loading="lazy" />
+                      <img src={shopifyImageUrl(image.url, 128)} alt="" width={64} height={64} loading="lazy" />
                     ) : (
                       <span className="cart-line-noimage" aria-hidden="true">{s.product.title.slice(4, 5)}</span>
                     )}

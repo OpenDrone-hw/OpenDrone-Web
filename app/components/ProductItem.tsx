@@ -217,6 +217,7 @@ export function ProductItem({
               data={image}
               loading={loading}
               sizes="(min-width: 64em) 340px, 100vw"
+              maxWidth={960}
             />
           ) : (
             <ProductGhostTile
@@ -264,6 +265,7 @@ export function ProductItem({
             data={image}
             loading={loading}
             sizes="(min-width: 45em) 400px, 100vw"
+            maxWidth={960}
           />
         ) : (
           <ProductGhostTile

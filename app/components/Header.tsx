@@ -396,14 +396,23 @@ function FamilyNav({
         key={cat.label}
         onMouseEnter={() => openFamily(cat.label)}
         onMouseLeave={scheduleClose}
+        // Tabbing onto a chip does not open its pod, so a keyboard user
+        // passes the header in one stop per category. Arrow Down opens it and
+        // moves into the products; focus inside an open pod keeps it open.
         onFocus={() => {
-          // Swallow the focus event caused by Escape's own focus restore -
-          // otherwise the menu instantly reopens.
-          if (escFocus.current) return;
-          openFamily(cat.label);
+          if (!escFocus.current && open === cat.label) clearTimeout(closeTimer.current);
         }}
         onBlur={scheduleClose}
         onKeyDown={(e) => {
+          if (e.key === 'ArrowDown' && items.length > 0) {
+            e.preventDefault();
+            openFamily(cat.label);
+            const wrap = e.currentTarget;
+            setTimeout(() => {
+              wrap.querySelector<HTMLElement>('.header-cat-pod a, .header-cat-pod button')?.focus();
+            }, 50);
+            return;
+          }
           // Escape closes the pod and hands focus back to the chip, so a
           // keyboard user isn't stranded in a closed popup.
           if (e.key === 'Escape' && open === cat.label) {
@@ -714,11 +723,13 @@ function HeaderCtas({accountUrl, cartUrl}: {accountUrl: string | null; cartUrl: 
 }
 
 function HeaderMenuMobileToggle() {
-  const {open} = useAside();
+  const {open, type} = useAside();
   return (
     <button
       className="site-header-icon site-header-menu-toggle text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
       onClick={() => open('mobile')}
+      aria-expanded={type === 'mobile'}
+      aria-haspopup="dialog"
       aria-label={copyText('chrome.menu_toggle_aria') ?? 'Menu'}
     >
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -761,11 +772,7 @@ function CartToggle({cartUrl}: {cartUrl: string | null}) {
   }, []);
   if (!cartUrl) {
     return (
-      <span
-        className="site-header-icon site-header-cart"
-        aria-label="Cart unavailable in checkout preview"
-        aria-disabled="true"
-      >
+      <span className="site-header-icon site-header-cart" role="img" aria-label="Cart unavailable">
         <CartIcon />
       </span>
     );

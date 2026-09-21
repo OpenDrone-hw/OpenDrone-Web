@@ -227,7 +227,7 @@ export function NewsletterSignup({
               : 'newsletter.signup_eyebrow'
           }
           as="p"
-          className="gold-tag font-mono text-[12px] uppercase tracking-[0.2em] text-[var(--color-gold)] mb-0.5"
+          className="gold-tag font-mono text-[12px] uppercase tracking-[0.2em] text-[var(--color-gold-text)] mb-0.5"
         />
         {/* The heading keeps its DOM id in code: `aria-labelledby` on the
             section points at it, and <Txt> spends its own `id` prop on the
@@ -272,7 +272,7 @@ export function NewsletterSignup({
         <div className="flex flex-col gap-1">
           <p
             role="status"
-            className="gold-tag inline-flex items-center gap-1.5 font-mono text-[12px] uppercase tracking-[0.14em] text-[var(--color-gold)]"
+            className="gold-tag inline-flex items-center gap-1.5 font-mono text-[12px] uppercase tracking-[0.14em] text-[var(--color-gold-text)]"
           >
             <Check size={13} strokeWidth={2.5} aria-hidden="true" />
             <Txt id="newsletter.signup_notify_badge" />

@@ -126,6 +126,7 @@ function RelatedCard({product}: {product: RelatedProduct}) {
               data={image}
               loading="lazy"
               sizes="(min-width: 45em) 260px, 50vw"
+              maxWidth={640}
             />
           ) : (
             <span className="product-card-media-ghost" aria-hidden="true">

@@ -49,7 +49,7 @@ export function LangToggle({className}: {className?: string} = {}) {
           to={ensurePrefix(loc) + location.search}
           preventScrollReset
           prefetch="viewport"
-          aria-pressed={active === loc}
+          aria-current={active === loc ? 'page' : undefined}
           onClick={() => writeLangCookie(loc)}
           data-active={active === loc ? 'true' : undefined}
         >

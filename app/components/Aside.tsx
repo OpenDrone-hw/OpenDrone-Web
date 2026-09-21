@@ -211,7 +211,7 @@ export function Aside({
       ref={dialogRef}
       tabIndex={-1}
     >
-      <button className="close-outside" onClick={close} aria-label="Close" />
+      <button className="close-outside" onClick={close} aria-label="Close" tabIndex={-1} />
       <aside>
         <header>
           <h3 id={id}>{heading}</h3>

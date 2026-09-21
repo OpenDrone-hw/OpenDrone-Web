@@ -46,7 +46,8 @@ import {
   type ChapterEntry,
   type ChapterType,
 } from '~/lib/chapters';
-import {buildSeoMeta, buildProductJsonLd, SITE_ORIGIN} from '~/lib/seo';
+import {buildSeoMeta, buildProductJsonLd,
+  buildBreadcrumbJsonLd, SITE_ORIGIN} from '~/lib/seo';
 import {fetchContributors} from '~/lib/github';
 import {orderByCredits, snapshotContributors} from '~/lib/contributors-snapshot';
 import {ContributorGrid, ContributorGridSkeleton} from '~/components/Contributors';
@@ -2589,6 +2590,18 @@ function ProductPage() {
         type="application/ld+json"
          
         dangerouslySetInnerHTML={{__html: JSON.stringify(productJsonLd)}}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            buildBreadcrumbJsonLd([
+              {name: 'OpenDrone', path: '/'},
+              {name: 'Products', path: '/products'},
+              {name: product.title, path: `/products/${product.handle}`},
+            ]),
+          ),
+        }}
       />
       {/* === HERO: gallery left, copy + sticky buy module right === */}
       <section className="product-hero" ref={heroSectionRef}>

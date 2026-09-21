@@ -1,4 +1,5 @@
 import type {Route} from './+types/preorder';
+import {shopifyImageUrl} from '~/lib/shopify-image';
 import {Link, useLoaderData} from 'react-router';
 import {buildSeoMeta} from '~/lib/seo';
 import {EditorialShell} from '~/components/EditorialShell';
@@ -208,7 +209,7 @@ function TrackerCard({row}: {row: TrackerRow}) {
         tabIndex={-1}
       >
         {row.image ? (
-          <img src={row.image.url} alt="" loading="lazy" width={72} height={72} />
+          <img src={shopifyImageUrl(row.image.url, 144)} alt="" loading="lazy" width={72} height={72} />
         ) : (
           <span className="preorder-track-initial">{row.product.slice(4, 5) || row.product[0]}</span>
         )}

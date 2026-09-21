@@ -1,4 +1,5 @@
 import {Form, Link, redirect, useLoaderData, useRouteLoaderData} from 'react-router';
+import {shopifyImageUrl} from '~/lib/shopify-image';
 import type {Route} from './+types/cart.$';
 import {getCart, type ShopifyCart, type ShopifyCartLine} from '~/lib/shopify-storefront';
 import {checkoutOpen, loadSessionCart} from '~/lib/shopify-cart-action';
@@ -137,7 +138,7 @@ function CartLine({line}: {line: ShopifyCartLine}) {
     <li className="cart-line cart-line--sheet">
       <div className="cart-sheet-row">
         {line.image ? (
-          <img src={line.image.url} alt={line.image.altText ?? line.title} width={56} height={56} />
+          <img src={shopifyImageUrl(line.image.url, 112)} alt={line.image.altText ?? line.title} width={56} height={56} />
         ) : (
           <span className="cart-line-noimage" aria-hidden="true">{line.title.slice(4, 5) || line.title[0]}</span>
         )}

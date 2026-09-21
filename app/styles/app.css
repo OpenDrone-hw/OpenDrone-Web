@@ -94,6 +94,10 @@
      there is nothing to keep in sync. Hover LIFTS toward white because the
      base is already at the chroma ceiling and cannot go brighter. */
   --color-gold-hover: color-mix(in oklab, var(--color-gold) 82%, white);
+  /* Gold used as TEXT. Same as --color-gold on dark; html.light swaps in a
+     deep gold (6.1:1 on the light background) so labels stay legible. */
+  --color-gold-text: var(--color-gold);
+  --color-gold-text-hover: var(--color-gold-hover);
   --color-gold-soft: color-mix(in srgb, var(--color-gold) 12%, transparent);
   /* Kept as an alias so the four existing call sites still resolve. There is
      no longer a separate bright gold; prefer --color-gold in new code. */
@@ -234,11 +238,13 @@ html.light {
      ~2.6:1 for gold text on white; this pass keeps that decision and fixes the
      colour it was made with. Every gold token now inherits from @theme
      unchanged, so nothing is overridden here — deleting these overrides IS the
-     change. Gold text on light is now 1.62:1, which is a brand accent only.
-     Anything that must stay legible on light uses --color-text or
-     --color-text-muted, and focus rings use --color-focus. */
+     change. Gold as text goes through --color-gold-text, which swaps to a
+     deep gold here (6.1:1); fills, borders and rules keep the brand gold.
+     Focus rings use --color-focus. */
   --color-gold-soft: color-mix(in srgb, var(--color-gold) 14%, transparent);
   --color-focus: var(--color-text);
+  --color-gold-text: #7a5700;
+  --color-gold-text-hover: #5c4200;
   /* Emerald PCB/brand green, AA 5.4:1 on white. --color-green-deep and
      --color-stock (= var(--color-green)) inherit from @theme and re-theme
      through this value automatically. */
@@ -310,7 +316,7 @@ html.light .schematic-sheet {
 }
 
 .product-price-sale {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .product-price-compare {
@@ -717,7 +723,7 @@ html {
 
 .hero-load-overflow__skip:hover {
   border-color: color-mix(in srgb, var(--color-gold) 55%, transparent);
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 @keyframes hero-overflow-in {
@@ -812,7 +818,7 @@ html {
   animation: island-splash-bottom 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 .hero-github:hover {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 /* Island entrances — the floating "islands" glide in from their nearest screen
@@ -918,11 +924,11 @@ html {
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   letter-spacing: 0.08em;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   transition: color 0.15s ease;
 }
 .hero-showcase-all:hover {
-  color: var(--color-gold-hover);
+  color: var(--color-gold-text-hover);
 }
 .hero-showcase-loading {
   display: flex;
@@ -1067,7 +1073,7 @@ html {
   flex: 0 0 auto;
   font-family: var(--font-mono);
   font-size: var(--fs-md);
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 /* Coming-soon reveal cards: a quiet mono tag in the price slot. */
 .hero-reveal-soon {
@@ -1079,10 +1085,10 @@ html {
   text-transform: uppercase;
   /* On the dark reveal card, use full-brightness brand gold so the badge
      pops; light mode swaps back to --color-gold (the card goes near-white). */
-  color: var(--color-gold-bright);
+  color: var(--color-gold-text);
 }
 html.light .hero-reveal-soon {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 /* Drag-to-view hint — centred over the drone, fades in after a few idle
@@ -1115,7 +1121,7 @@ html.light .hero-reveal-soon {
   animation: hero-drag-bob 2.4s ease-in-out 0.5s infinite;
 }
 .hero-drag-hint svg {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 @keyframes hero-drag-bob {
   0%, 100% { transform: translate(-50%, -6px); }
@@ -1154,7 +1160,7 @@ html.light .hero-reveal-soon {
   opacity: 1;
 }
 .hero-scroll-hint svg {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 .hero-scroll-hint.is-visible svg {
   animation: hero-scroll-bob 2.4s ease-in-out 0.5s infinite;
@@ -1264,7 +1270,7 @@ a {
   text-decoration: none;
 }
 a:hover {
-  color: var(--color-accent);
+  color: var(--color-gold-text);
 }
 
 /* Global keyboard-focus baseline. Most components ship their own ring;
@@ -1385,7 +1391,7 @@ a:hover {
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 .product-pods--grid .product-pod-soon {
   margin-left: 0;
@@ -1894,7 +1900,7 @@ html.anim-paused .board-sheet.is-active {
   text-align: center;
 }
 .pod-buy-stack-pct {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 /* The stack, physically: two board thumbs mounted with a diagonal offset. */
@@ -1974,7 +1980,7 @@ html.light .header-cat-pod {
   height: 4.5rem;
 }
 .site-header-categories .header-cat-pod .product-pod-title {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-size: 0.95rem;
@@ -2003,7 +2009,7 @@ html.light .header-cat-pod {
   font-size: var(--fs-sm);
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   opacity: 0.7;
   font-weight: 500;
   position: relative;
@@ -2012,15 +2018,21 @@ html.light .header-cat-pod {
   transition: opacity 0.15s ease, color 0.15s ease, font-weight 0.15s ease;
 }
 
+/* Light: the dimmed-chip idle state drops the deep gold under AA, so
+   chips stay fully opaque and the active chip is marked by its pill. */
+html.light .site-header-categories a {
+  opacity: 1;
+}
+
 .site-header-categories a:hover {
   opacity: 1;
-  color: var(--color-gold-hover);
+  color: var(--color-gold-text-hover);
 }
 
 .site-header-categories a.active,
 .site-header-categories a[aria-current="page"] {
   opacity: 1;
-  color: var(--color-gold-hover);
+  color: var(--color-gold-text-hover);
   font-weight: 600;
 }
 
@@ -2057,7 +2069,7 @@ html.light .header-cat-pod {
 }
 .site-header-categories .site-header-cat-group a:hover {
   opacity: 1;
-  color: var(--color-gold-hover);
+  color: var(--color-gold-text-hover);
 }
 /* Active = high-contrast label (white in dark, black in light) on a raised
    chip. A gold fill washed the text out — gold is a mid-tone, so neither dark
@@ -2083,19 +2095,19 @@ html.light .header-cat-pod {
   border-radius: var(--r-pill);
   background: var(--color-gold-soft);
   border: 1px solid color-mix(in srgb, var(--color-gold) 50%, transparent);
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   opacity: 1;
 }
 .site-header-categories .site-header-cat-all:hover {
   background: color-mix(in srgb, var(--color-gold) 20%, transparent);
   border-color: var(--color-gold);
-  color: var(--color-gold-hover);
+  color: var(--color-gold-text-hover);
 }
 .site-header-categories .site-header-cat-all.active,
 .site-header-categories .site-header-cat-all[aria-current='page'] {
   background: color-mix(in srgb, var(--color-gold) 24%, transparent);
   border-color: var(--color-gold);
-  color: var(--color-gold-hover);
+  color: var(--color-gold-text-hover);
   font-weight: 600;
 }
 .site-header-categories .site-header-cat-all::after {
@@ -2310,7 +2322,7 @@ html.hero-header-in .homepage-layout .site-header {
 }
 .home-mobile-cta-github:hover {
   border-color: var(--color-gold);
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 /* The footer is rendered on the homepage only for the mobile layout (the
@@ -2370,7 +2382,7 @@ html.hero-header-in .homepage-layout .site-header {
 }
 
 .home-mobile-browse:hover {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   border-color: var(--color-gold);
 }
 
@@ -2383,7 +2395,7 @@ html.hero-header-in .homepage-layout .site-header {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.25em;
-  color: var(--color-accent-light);
+  color: var(--color-gold-text);
   margin-bottom: 0.375rem;
 }
 
@@ -2735,7 +2747,7 @@ html.hero-header-in .homepage-layout .site-header {
 }
 
 .product-card:hover .product-card-title {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .product-card-price {
@@ -2795,7 +2807,7 @@ html.hero-header-in .homepage-layout .site-header {
 }
 
 a.product-card-model:hover {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   border-color: var(--color-border-strong);
 }
 
@@ -2880,7 +2892,7 @@ a.product-card-model:hover {
 }
 
 .product-feature:hover .product-card-title {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .product-feature-lead {
@@ -3134,7 +3146,7 @@ button.reset {
 }
 .product-options-item[aria-checked="true"] {
   border-color: var(--color-accent-light);
-  color: var(--color-accent);
+  color: var(--color-gold-text);
 }
 
 /* ============================================
@@ -3290,7 +3302,7 @@ button.reset {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.24em;
-  color: var(--color-accent-light);
+  color: var(--color-gold-text);
 }
 
 .page-title {
@@ -3326,7 +3338,7 @@ button.reset {
 }
 
 .rich-content a {
-  color: var(--color-gold-light);
+  color: var(--color-gold-text-hover);
 }
 
 .rich-content h2,
@@ -3457,7 +3469,7 @@ button.reset {
 
 .policy-card:hover .policy-card-title,
 .policy-card:hover h3 {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 /* De-boxed: an order is a hairline list row, its fields flowing inline and
@@ -3538,7 +3550,7 @@ button.reset {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.22em;
-  color: var(--color-accent-light);
+  color: var(--color-gold-text);
 }
 
 .product-price-wrap,
@@ -3977,7 +3989,7 @@ button.reset {
 }
 
 .related-card:hover .related-card-title {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .related-card-spec {
@@ -4200,7 +4212,7 @@ button.reset {
 }
 
 .catalog-filter.is-active {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   font-weight: 600;
 }
 
@@ -4295,7 +4307,7 @@ button.reset {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   text-decoration: none;
   transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
 }
@@ -4359,11 +4371,11 @@ button.reset {
   padding: 0 0.2rem;
   font: inherit;
   letter-spacing: inherit;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   cursor: pointer;
 }
 .catalog-term-clear:hover {
-  color: var(--color-accent);
+  color: var(--color-gold-text);
 }
 /* Pages + articles hits under the grid. */
 .catalog-site-results {
@@ -4562,7 +4574,7 @@ button.reset {
    weight as the rest. */
 .product-hero-headline em {
   font-style: normal;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   font-weight: 600;
 }
 
@@ -4641,7 +4653,7 @@ button.reset {
 }
 
 .trust-chip-gold {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   border-color: color-mix(in srgb, var(--color-gold) 35%, var(--color-border));
 }
 
@@ -4925,7 +4937,7 @@ button.reset {
    the label reads "Pre-order · <ship promise>". */
 .product-buy-stock.is-preorder {
   align-items: flex-start;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 .product-buy-stock.is-preorder::before {
   flex: none;
@@ -4947,7 +4959,7 @@ button.reset {
   font-size: var(--fs-sm);
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   padding: 0.35rem 0.7rem;
   border: 1px solid color-mix(in srgb, var(--color-gold) 45%, transparent);
   border-radius: var(--r-sm);
@@ -4988,7 +5000,7 @@ button.reset {
   font-size: var(--fs-xs);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   text-decoration: none;
   border-bottom: 1px solid color-mix(in srgb, var(--color-gold) 45%, transparent);
   width: fit-content;
@@ -5170,7 +5182,7 @@ button.reset {
   }
   .buy-rail.is-pinned.is-mobile .variant-ladder--compact .variant-tier-flag {
     font-size: 11px;
-    color: var(--color-gold);
+    color: var(--color-gold-text);
   }
   .buy-rail.is-pinned.is-mobile.is-suppressed {
     display: none;
@@ -5457,7 +5469,7 @@ button.reset {
 }
 
 .variant-tier-flag.is-selected {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 /* The differing specs as ONE dotted line under the tier name, on every card.
@@ -5563,7 +5575,7 @@ button.reset {
   font-size: 0.78rem;
 }
 .cta-stack-offer-plus {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   font-weight: 700;
 }
 .cta-stack-offer-label {
@@ -5588,7 +5600,7 @@ button.reset {
   text-decoration: line-through;
 }
 .cta-stack-offer-pct {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 /* Touch devices: no hover — show the offers as a slim row under the CTA. */
 @media (hover: none) {
@@ -5713,7 +5725,7 @@ button.reset {
   font-size: 12px;
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .pair-cta-title {
@@ -5731,7 +5743,7 @@ button.reset {
   bottom: 1.1rem;
   font-family: var(--font-mono);
   font-size: 1.4rem;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   transition: transform 0.2s ease;
 }
 
@@ -5938,7 +5950,7 @@ button.reset {
     font-size: 11px;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--color-gold);
+    color: var(--color-gold-text);
   }
   .chapter-wide {
     grid-column: 1 / -1;
@@ -6580,7 +6592,7 @@ html.light .firmware-logo--tile {
 }
 .board-folder-rail-count,
 .schematic-rail-count {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   letter-spacing: 0.06em;
 }
 .board-folder-tabs,
@@ -6969,7 +6981,7 @@ html.light .firmware-logo--tile {
   margin-top: 1.4rem;
 }
 .board-art-inspect:hover {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 .board-art-fallback {
   font-family: var(--font-mono);
@@ -7068,7 +7080,7 @@ html.light .firmware-logo--tile {
   font-weight: 500;
   font-size: var(--fs-xs);
   line-height: 1;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   letter-spacing: 0.08em;
 }
 
@@ -7232,7 +7244,7 @@ html.light .firmware-logo--tile {
   padding: 0.1rem 0.45rem;
   border-radius: var(--r-pill);
   background: color-mix(in srgb, var(--color-gold) 14%, transparent);
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 /* A pin that maps to footprints on the board: interactive. Hover fills the whole
@@ -7311,12 +7323,12 @@ html.light .firmware-logo--tile {
 .teardown-io-chip:focus-visible {
   background: color-mix(in srgb, var(--color-gold) 16%, transparent);
   border-color: color-mix(in srgb, var(--color-gold) 55%, transparent);
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   outline: none;
 }
 .teardown-pin-hoverable:hover .teardown-pin-part,
 .teardown-pin-hoverable:focus-visible .teardown-pin-part {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 .teardown-pin-hoverable:hover::before,
 .teardown-pin-hoverable:focus-visible::before {
@@ -7425,7 +7437,7 @@ html.light .firmware-logo--tile {
 }
 
 .open-source-story-link a:hover {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 
@@ -7624,7 +7636,7 @@ html.light .firmware-logo--tile {
   top: 0.5rem;
   margin: 0;
   text-align: center;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 /* "Watch" bubble — the video card that replaces the issues card on products
@@ -7683,7 +7695,7 @@ html.light .firmware-logo--tile {
 .watch-card-yt {
   width: 48px;
   height: auto;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   transition: transform 0.2s ease;
 }
 
@@ -7751,7 +7763,7 @@ html.light .firmware-logo--tile {
 }
 
 .latest-commit-label span {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .latest-commit-message {
@@ -7773,7 +7785,7 @@ html.light .firmware-logo--tile {
 }
 
 .latest-commit-sha {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .latest-commit-skeleton {
@@ -7863,7 +7875,7 @@ html.light .firmware-logo--tile {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
 }
 .contributors-cta-btn:hover {
@@ -7881,7 +7893,7 @@ html.light .firmware-logo--tile {
   border: 1px solid color-mix(in srgb, var(--color-gold) 55%, transparent);
   border-radius: 999px;
   font-weight: 600;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   text-decoration: none;
   transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
 }
@@ -7901,7 +7913,7 @@ html.light .firmware-logo--tile {
   font-size: 11px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .provenance-rows {
@@ -7992,7 +8004,7 @@ html.light .firmware-logo--tile {
   justify-content: center;
   font-family: var(--font-mono);
   font-size: 1.6rem;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   border-style: dashed;
 }
 .contributor-login {
@@ -8020,7 +8032,7 @@ html.light .firmware-logo--tile {
   font-size: var(--fs-xs);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 .contributor-tile.is-skeleton {
   pointer-events: none;
@@ -8058,7 +8070,7 @@ html.light .firmware-logo--tile {
   align-self: center;
   justify-self: center;
   font-size: 1.2rem;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   line-height: 1;
 }
 
@@ -8097,7 +8109,7 @@ html.light .firmware-logo--tile {
   font-family: var(--font-mono);
   font-size: 12px;
   letter-spacing: 0.12em;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 /* Bundle components — richer cards than the generic open-source cards
@@ -8151,7 +8163,7 @@ html.light .firmware-logo--tile {
 }
 
 .bundle-component-firmware span {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .bundle-component-more {
@@ -8159,7 +8171,7 @@ html.light .firmware-logo--tile {
   font-family: var(--font-mono);
   font-size: 12px;
   letter-spacing: 0.08em;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 /* In the box — actual parts list. Engineering-terse, mono font, no
@@ -8206,7 +8218,7 @@ html.light .firmware-logo--tile {
   font-family: var(--font-mono);
   font-size: 12px;
   letter-spacing: 0.08em;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   text-transform: uppercase;
 }
 
@@ -8269,7 +8281,7 @@ html.light .firmware-logo--tile {
 }
 
 a.what-chain-chip:hover {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   border-color: color-mix(in srgb, var(--color-gold) 55%, transparent);
 }
 
@@ -8286,11 +8298,11 @@ a.what-chain-chip:hover {
   font-family: var(--font-mono);
   font-size: 12px;
   letter-spacing: 0.08em;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .what-home-link:hover {
-  color: var(--color-accent);
+  color: var(--color-gold-text);
 }
 
 /* Spec table */
@@ -8382,11 +8394,11 @@ a.what-chain-chip:hover {
 }
 
 .firmware-support-links a:hover {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .firmware-support-links a.firmware-support-donate {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .firmware-support-nodonate {
@@ -8462,7 +8474,7 @@ a.what-chain-chip:hover {
   margin: 0 auto 1rem;
   border-radius: var(--r-pill);
   background: color-mix(in srgb, var(--color-gold) 12%, transparent);
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .empty-state-title {
@@ -8505,7 +8517,7 @@ a.what-chain-chip:hover {
   justify-content: center;
   border-radius: var(--r-pill);
   background: color-mix(in srgb, var(--color-gold) 12%, transparent);
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .cart-empty-title {
@@ -8538,7 +8550,7 @@ a.what-chain-chip:hover {
   font-size: 12px;
   letter-spacing: 0.25em;
   text-transform: uppercase;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .route-error-title {
@@ -8611,7 +8623,7 @@ a.what-chain-chip:hover {
     );
   overflow: hidden;
   font-family: var(--font-mono);
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   box-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.6);
   isolation: isolate;
 }
@@ -8765,7 +8777,7 @@ a.what-chain-chip:hover {
   animation: glitch-x 2.4s steps(2) infinite;
 }
 .signal-lost-status::after {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   animation: glitch-x 3.1s steps(2) infinite reverse;
 }
 @keyframes glitch-x {
@@ -8791,7 +8803,7 @@ a.what-chain-chip:hover {
   letter-spacing: 0.5em;
   text-indent: 0.5em;
   text-transform: uppercase;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 .signal-lost-sub {
   margin: 0.2rem 0 0;
@@ -8803,7 +8815,7 @@ a.what-chain-chip:hover {
   padding: 0.05em 0.4em;
   border-radius: var(--r-xs);
   background: var(--color-gold-soft);
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   word-break: break-all;
 }
 
@@ -9153,7 +9165,7 @@ a.what-chain-chip:hover {
 }
 
 .cart-goal:hover .cart-goal-title {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 /* The ranked ballot under the cart summary. Chips share the quiet mono
@@ -9254,7 +9266,7 @@ a.what-chain-chip:hover {
 }
 
 .cart-ballot-foot a:hover {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 /* Quiet secondary actions under the checkout CTA: keep-shopping escape +
@@ -9292,7 +9304,7 @@ a.what-chain-chip:hover {
 }
 
 .cart-secondary-actions .cart-share-btn[data-copied] {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 /* "Goes well with" companion row (drawer + page): one quiet suggestion of
@@ -9336,7 +9348,7 @@ a.what-chain-chip:hover {
 }
 
 .cart-companion-name:hover {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .cart-companion-price {
@@ -9411,7 +9423,7 @@ a.what-chain-chip:hover {
   gap: 0.2rem;
   font-family: var(--font-mono);
   font-size: 0.7rem;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   border: 1px solid color-mix(in srgb, var(--color-gold) 45%, transparent);
   border-radius: var(--r-pill);
   padding: 0.05rem 0.5rem;
@@ -9424,7 +9436,7 @@ a.what-chain-chip:hover {
   display: block;
   font-family: var(--font-mono);
   font-size: 0.7rem;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   margin-top: 0.15rem;
 }
 
@@ -9928,7 +9940,7 @@ a.what-chain-chip:hover {
 }
 
 .account-dashboard-title span {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .account-dashboard-lede {
@@ -9983,7 +9995,7 @@ a.what-chain-chip:hover {
   font-size: 11px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   margin: 0;
 }
 
@@ -10031,7 +10043,7 @@ a.what-chain-chip:hover {
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   background: var(--color-gold-soft);
   border: 1px solid color-mix(in srgb, var(--color-gold) 45%, transparent);
   border-radius: var(--r-md);
@@ -10046,7 +10058,7 @@ a.what-chain-chip:hover {
 .account-dash-support .od-tile-link:hover {
   background: color-mix(in srgb, var(--color-gold) 18%, transparent);
   border-color: var(--color-gold);
-  color: var(--color-gold-hover);
+  color: var(--color-gold-text-hover);
 }
 
 .account-dashboard-cta:disabled,
@@ -10186,7 +10198,7 @@ a.what-chain-chip:hover {
   font-size: 12px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   margin: 0;
 }
 
@@ -10201,7 +10213,7 @@ a.what-chain-chip:hover {
 }
 
 .account-welcome-title span {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .account-welcome-lede {
@@ -10249,7 +10261,7 @@ a.what-chain-chip:hover {
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .account-welcome-link {
@@ -10266,13 +10278,13 @@ a.what-chain-chip:hover {
 }
 
 .order-card a {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   font-family: var(--font-mono);
   font-size: 0.8125rem;
 }
 
 .order-card a:hover {
-  color: var(--color-gold-hover);
+  color: var(--color-gold-text-hover);
 }
 
 .order-card p {
@@ -10315,7 +10327,8 @@ a.what-chain-chip:hover {
 }
 
 .lang-toggle button[aria-pressed="true"],
-.lang-toggle a[data-active="true"] {
+.lang-toggle a[data-active="true"],
+.lang-toggle a[aria-current="page"] {
   background: var(--color-gold-fill);
   color: var(--color-on-accent);
 }
@@ -10442,7 +10455,7 @@ a.what-chain-chip:hover {
 .route-error h2 {
   font-family: var(--font-mono);
   font-size: 1.25rem;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   margin-bottom: 1.5rem;
 }
 
@@ -10539,7 +10552,7 @@ a.what-chain-chip:hover {
   font-size: 12px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   margin: 0 0 1rem;
 }
 
@@ -10603,7 +10616,7 @@ a.what-chain-chip:hover {
 }
 
 .editorial-section em {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   font-style: italic;
 }
 
@@ -10618,14 +10631,14 @@ a.what-chain-chip:hover {
    the editorial column so chrome and nav links keep their quiet default. */
 .editorial-section p a,
 .editorial-lead a {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   text-decoration: underline;
   text-decoration-color: color-mix(in srgb, var(--color-gold) 45%, transparent);
   text-underline-offset: 3px;
 }
 .editorial-section p a:hover,
 .editorial-lead a:hover {
-  color: var(--color-accent);
+  color: var(--color-gold-text);
   text-decoration-color: currentColor;
 }
 
@@ -10825,7 +10838,7 @@ html.light .editorial-watermark {
   border: 1px solid var(--color-border);
 }
 .contrib-wall-leads a:hover .contrib-wall-count {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   border-color: color-mix(in srgb, var(--color-gold) 45%, transparent);
 }
 .contrib-wall-leads img {
@@ -10868,7 +10881,7 @@ html.light .editorial-watermark {
   border: 1px solid color-mix(in srgb, var(--color-gold) 45%, transparent);
   border-radius: 999px;
   background: none;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.1em;
@@ -10995,7 +11008,7 @@ html.light .editorial-watermark {
   align-items: center;
   padding: 0.75rem 1.5rem;
   border: 1px solid color-mix(in srgb, var(--color-gold) 55%, transparent);
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 600;
@@ -11131,7 +11144,7 @@ html.light .editorial-watermark {
 }
 
 .series-rail-list li.is-current .series-rail-num {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 /* End-of-page hand-off */
@@ -11154,7 +11167,7 @@ html.light .editorial-watermark {
   font-size: 10px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .editorial-next-title {
@@ -11305,7 +11318,7 @@ html.light .editorial-watermark {
   font-size: 11px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .aside-sub {
@@ -11355,7 +11368,7 @@ html.light .editorial-watermark {
 }
 
 .pipeline li.is-now .pipeline-count {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .pipeline li.is-now .pipeline-label {
@@ -11383,7 +11396,7 @@ html.light .editorial-watermark {
   font-size: 11px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   margin: 0 0 0.4rem;
 }
 
@@ -11419,12 +11432,12 @@ html.light .editorial-watermark {
   font-size: 12px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   transition: color 0.2s ease;
 }
 
 .partner-links a:hover {
-  color: var(--color-gold-hover);
+  color: var(--color-gold-text-hover);
 }
 
 /* Roadmap (/roadmap) — hairline rows, mono status chips. Tokens only,
@@ -11719,7 +11732,7 @@ html.light .editorial-watermark {
 }
 
 .kanban-links a:hover {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .kanban-empty {
@@ -11834,7 +11847,7 @@ html.light .editorial-watermark {
 
 .vote-graduated p {
   margin: 0 0 0.4rem;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   text-transform: uppercase;
   font-size: 10px;
   letter-spacing: 0.14em;
@@ -11904,7 +11917,7 @@ html.light .editorial-watermark {
   font-size: 10px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   white-space: nowrap;
 }
 
@@ -11983,7 +11996,7 @@ html.light .editorial-watermark {
   font-size: 11px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   margin: 0 0 0.3rem;
 }
 
@@ -11996,7 +12009,7 @@ html.light .editorial-watermark {
 }
 
 .upstream-title:hover {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .upstream-what {
@@ -12042,7 +12055,7 @@ html.light .editorial-watermark {
   font-family: var(--font-mono);
   font-size: var(--fs-sm);
   letter-spacing: 0.12em;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   line-height: 1;
 }
 
@@ -12136,12 +12149,12 @@ html.light .editorial-watermark {
 }
 
 .trust-chip-link.trust-chip-green:hover {
-  color: var(--color-accent-light);
+  color: var(--color-gold-text);
   border-color: color-mix(in srgb, var(--color-accent-light) 60%, var(--color-border));
 }
 
 .trust-chip-link.trust-chip-gold:hover {
-  color: var(--color-gold-hover);
+  color: var(--color-gold-text-hover);
 }
 
 .trust-chip-link.trust-chip-oshwa:hover {
@@ -12175,7 +12188,7 @@ html.light .editorial-watermark {
   font-size: 11px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   margin: 0;
 }
 
@@ -12295,7 +12308,7 @@ html.light .editorial-watermark {
 }
 
 .contact-tier-discord .contact-tier-eyebrow {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 /* --- tier 2: web ticket --------------------------------------------- */
@@ -12395,7 +12408,7 @@ html.light .editorial-watermark {
 }
 
 .contact-direct-list a:hover {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .contact-security-cta {
@@ -12415,7 +12428,7 @@ html.light .editorial-watermark {
 }
 
 .contact-security-cta:hover {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   border-color: color-mix(in srgb, var(--color-gold) 60%, var(--color-border));
 }
 
@@ -12471,7 +12484,7 @@ html.light .editorial-watermark {
 }
 
 .contact-reference-body a:hover {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 @media (max-width: 720px) {
@@ -12502,7 +12515,7 @@ html.light .editorial-watermark {
   font-size: 11px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   margin: 0 0 0.35rem;
 }
 
@@ -12524,7 +12537,7 @@ html.light .editorial-watermark {
 
 .support-lede a,
 .support-privacy a {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -12752,7 +12765,7 @@ html.light .editorial-watermark {
 }
 
 .support-msg-staff .support-msg-author {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .support-msg-body {
@@ -12776,7 +12789,7 @@ html.light .editorial-watermark {
 .support-msg-attachments a {
   font-family: var(--font-mono);
   font-size: 12px;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   text-decoration: underline;
   text-underline-offset: 2px;
   word-break: break-all;
@@ -13024,7 +13037,7 @@ html.light .editorial-watermark {
 }
 
 .support-resume-toggle:hover {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .support-resume-form {
@@ -13067,7 +13080,7 @@ html.light .editorial-watermark {
 .support-resume-success {
   font-family: var(--font-mono);
   font-size: 12px;
-  color: var(--color-accent-light);
+  color: var(--color-gold-text);
   margin: 0;
   line-height: 1.5;
 }
@@ -13142,7 +13155,7 @@ html.light .editorial-watermark {
 
 .cart-notice-warning {
   margin: 0;
-  color: var(--color-gold-light);
+  color: var(--color-gold-text-hover);
   border-left: 2px solid var(--color-gold);
   padding-left: 0.6rem;
 }
@@ -15918,7 +15931,7 @@ html.light .editorial-watermark {
   text-decoration: none;
 }
 .newsletter-recent-head a:hover {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 .newsletter-recent-list {
   list-style: none;
@@ -15937,7 +15950,7 @@ html.light .editorial-watermark {
   color: var(--color-text);
 }
 .newsletter-recent-list a:hover .newsletter-recent-title {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 .newsletter-recent-date {
   flex: 0 0 auto;
@@ -16334,7 +16347,7 @@ html.light .editorial-watermark {
   .board-deck-count {
     font-size: 0.95rem;
     font-weight: 700;
-    color: var(--color-gold);
+    color: var(--color-gold-text);
     letter-spacing: 0.04em;
   }
   .board-deck-name {
@@ -16712,7 +16725,7 @@ html.light .editorial-watermark {
 }
 .cart-empty-chip:hover {
   border-color: var(--color-gold);
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 /* In dark the card bg sits a hair off the near-black page, so the chips read as
    faint decoration, not buttons. Lift the surface + border so they're obviously
@@ -16926,7 +16939,7 @@ body:has(.buy-rail.is-pinned.is-mobile) .placeholder-banner {
   color: var(--color-text-dim);
 }
 .tl-glyph {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   letter-spacing: 0;
 }
 .tl-tag {
@@ -17125,7 +17138,7 @@ body:has(.buy-rail.is-pinned.is-mobile) .placeholder-banner {
   gap: 0.4rem;
   margin-top: 0.75rem;
   font-size: 0.85rem;
-  color: var(--color-accent);
+  color: var(--color-gold-text);
   text-decoration: none;
 }
 .hp-copy-link:hover,
@@ -17255,14 +17268,14 @@ body:has(.buy-rail.is-pinned.is-mobile) .placeholder-banner {
   color: var(--color-text-muted);
 }
 .hero-load-piece.is-active .hero-load-piece__mark {
-  color: var(--color-accent);
+  color: var(--color-gold-text);
   animation: hero-load-piece-pulse 0.9s ease-in-out infinite;
 }
 .hero-load-piece.is-done {
   color: var(--color-text-dim);
 }
 .hero-load-piece.is-done .hero-load-piece__mark {
-  color: var(--color-accent);
+  color: var(--color-gold-text);
 }
 @keyframes hero-load-piece-pulse {
   0%, 100% { opacity: 1; }
@@ -17324,7 +17337,7 @@ body:has(.buy-rail.is-pinned.is-mobile) .placeholder-banner {
   margin: 0;
 }
 .learn-index-item a:hover h2 {
-  color: var(--color-accent);
+  color: var(--color-gold-text);
 }
 .learn-index-item p {
   color: var(--color-text-muted);
@@ -17389,7 +17402,7 @@ body:has(.buy-rail.is-pinned.is-mobile) .placeholder-banner {
   text-decoration: none;
 }
 .learn-toc a:hover {
-  color: var(--color-accent);
+  color: var(--color-gold-text);
 }
 
 .learn-section {
@@ -17498,7 +17511,7 @@ body:has(.buy-rail.is-pinned.is-mobile) .placeholder-banner {
   border-bottom: 1px dotted var(--color-border-strong);
 }
 .learn-source:hover {
-  color: var(--color-accent);
+  color: var(--color-gold-text);
 }
 .learn-source-none {
   color: var(--color-text-muted);
@@ -17621,12 +17634,12 @@ body:has(.buy-rail.is-pinned.is-mobile) .placeholder-banner {
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   letter-spacing: 0.04em;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   text-decoration: none;
   border-bottom: 1px solid color-mix(in srgb, var(--color-gold) 40%, transparent);
 }
 .funding-meter-link:hover {
-  color: var(--color-gold-hover);
+  color: var(--color-gold-text-hover);
   border-bottom-color: var(--color-gold-hover);
 }
 .funding-meter.is-compact {
@@ -17661,7 +17674,7 @@ html.light .funding-meter-link {
 /* Cart: preorder line in the stock line's gold, a tile for a line without a
    photo, the mixed ship date warning, and touch-sized controls on phones. */
 .cart-sheet-item .cart-line-preorder {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 .cart-line-noimage,
 .preorder-track-initial {
@@ -17813,7 +17826,7 @@ html.light .funding-meter-link {
   text-decoration: none;
 }
 .preorder-track-title a:hover {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 .preorder-track-title span {
   color: var(--color-text-muted);
@@ -17829,7 +17842,7 @@ html.light .funding-meter-link {
   margin: 0;
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 /* Outline, sentence case: twelve solid gold pills read as a wall. */
 .preorder-track-cta {
@@ -17842,7 +17855,7 @@ html.light .funding-meter-link {
   border: 1px solid var(--color-gold);
   border-radius: 999px;
   background: transparent;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   font-size: var(--fs-sm);
   font-weight: 600;
   cursor: pointer;
@@ -17907,7 +17920,7 @@ html.light .preorder-track-media img {
 .preorder-faq-q::after {
   content: '+';
   font-family: var(--font-mono);
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   transition: transform 0.2s ease;
 }
 .preorder-faq-item[open] .preorder-faq-q::after {
@@ -18086,7 +18099,7 @@ html.light .cart-added-suggestion img {
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   line-height: 1.45;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 .cart-added-ship.is-later {
   color: var(--color-text-muted);
@@ -18137,7 +18150,7 @@ html.light .cart-added-ship {
   border: 1px solid var(--color-gold);
   border-radius: 999px;
   background: transparent;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   font-size: var(--fs-sm);
   font-weight: 600;
   cursor: pointer;

@@ -1,5 +1,6 @@
 import {useEffect, useRef, useState} from 'react';
 import type {ProductImage} from '~/lib/product-shapes';
+import {shopifySrcSet} from '~/lib/shopify-image';
 
 export type SmoothImageProps = {
   /** The image to render; null renders nothing. */
@@ -9,6 +10,8 @@ export type SmoothImageProps = {
   className?: string;
   loading?: 'eager' | 'lazy';
   sizes?: string;
+  /** Widest rendered size in device pixels; caps the Shopify srcset. */
+  maxWidth?: number;
   aspectRatio?: string;
   fetchPriority?: 'high' | 'low' | 'auto';
 };
@@ -80,6 +83,7 @@ export function SmoothImage(props: SmoothImageProps) {
           className={props.className}
           loading={props.loading ?? 'lazy'}
           decoding="async"
+          srcSet={props.sizes ? shopifySrcSet(srcUrl, props.maxWidth) : undefined}
           sizes={props.sizes}
           fetchPriority={props.fetchPriority}
           style={props.aspectRatio ? {aspectRatio: props.aspectRatio} : undefined}

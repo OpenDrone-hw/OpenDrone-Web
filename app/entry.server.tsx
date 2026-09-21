@@ -32,8 +32,8 @@ export default async function handleRequest(
   const {nonce, header, NonceProvider} = createContentSecurityPolicy({
     // Turnstile injects a script from challenges.cloudflare.com and renders
     // the challenge UI inside an iframe served from the same host. Without
-    // these directives Hydrogen's default CSP drops both and the support
-    // widget shows "Could not verify you are human".
+    // these directives the newsletter form shows "Could not verify you are
+    // human".
     //
     // IMPORTANT: Hydrogen's createContentSecurityPolicy REPLACES each
     // directive with the list you pass - it does not merge. So we have
@@ -56,34 +56,25 @@ export default async function handleRequest(
     frameSrc: [
       "'self'",
       'https://challenges.cloudflare.com',
-      // Official Discord server widget iframe used on /contact.
-      // Server admin must enable widget in Server Settings → Widget.
-      'https://discord.com',
       // YouTube build-video lightbox (WatchCard) - privacy-enhanced host.
       'https://www.youtube-nocookie.com',
     ],
-    connectSrc: ["'self'", 'https://cdn.shopify.com', 'https://challenges.cloudflare.com'],
-    // Support-thread attachments (images, video, audio) are hosted on
-    // Discord's CDN. Without these the inline <img>/<video>/<audio> tags
-    // in SupportThread fail to load because Hydrogen's default img-src /
-    // media-src don't include the Discord hosts. cdn.discordapp.com is
-    // the raw upload host; media.discordapp.net is the transcoded /
-    // resized variant Discord rewrites large media to.
+    // plausible.io receives the analytics events the Plausible script
+    // (loaded with the nonce in root.tsx) posts to /api/event.
+    connectSrc: [
+      "'self'",
+      'https://cdn.shopify.com',
+      'https://challenges.cloudflare.com',
+      'https://plausible.io',
+    ],
     imgSrc: [
       "'self'",
       'data:',
       'https://cdn.shopify.com',
-      'https://cdn.discordapp.com',
-      'https://media.discordapp.net',
       // YouTube thumbnail shown in the WatchCard build-video bubble.
       'https://i.ytimg.com',
       // Contributor avatars in the PDP contributors chapter.
       'https://avatars.githubusercontent.com',
-    ],
-    mediaSrc: [
-      "'self'",
-      'https://cdn.discordapp.com',
-      'https://media.discordapp.net',
     ],
   });
 

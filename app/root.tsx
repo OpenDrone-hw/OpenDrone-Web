@@ -266,6 +266,8 @@ export function Layout({children}: {children?: React.ReactNode}) {
             wiped class/attribute markers off <html>, which is why this is
             a style node and not a selector gate. */}
         <script
+          nonce={nonce}
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html:
               "var s=document.createElement('style');s.textContent='@media (prefers-reduced-motion: no-preference){.editorial-shell:not(.cascade-armed) .editorial-section:not(:first-of-type)>*,.editorial-shell:not(.cascade-armed) .editorial-cta>*{visibility:hidden}}';document.head.appendChild(s)",

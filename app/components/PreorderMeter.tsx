@@ -61,6 +61,7 @@ function Bar({bar, thin = false}: {bar: MeterBar; thin?: boolean}) {
     <span
       className={`funding-meter-track${thin ? ' is-thin' : ''}`}
       role="progressbar"
+      aria-label={bar.label}
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={pct}

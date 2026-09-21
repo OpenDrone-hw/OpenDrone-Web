@@ -1,4 +1,5 @@
 import {Await, PrefetchPageLinks, useLoaderData} from 'react-router';
+import {shopifyImageUrl} from '~/lib/shopify-image';
 import {AnimatePresence, motion, useReducedMotion} from 'motion/react';
 import {Link} from '~/components/nav';
 import type {Route} from './+types/_index';
@@ -1010,7 +1011,7 @@ function DesktopHome({heroStacks}: {heroStacks: Promise<HeroStacks>}) {
                                 <span className="hero-reveal-media">
                                   {card.image?.url ? (
                                     <img
-                                      src={card.image.url}
+                                      src={shopifyImageUrl(card.image.url, 640)}
                                       alt={card.image.altText ?? ''}
                                       loading="lazy"
                                       decoding="async"

@@ -1,3 +1,4 @@
+import {shopifyImageUrl} from '~/lib/shopify-image';
 import {useSearchParams} from 'react-router';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {SmoothImage} from './SmoothImage';
@@ -255,13 +256,14 @@ export function ProductGallery({
                 }`}
               >
                 <img
-                  src={img.url}
+                  src={shopifyImageUrl(img.url, 160)}
                   alt={
                     img.altText ||
                     `${copyText('product-chrome.gallery_thumb_alt_prefix') ?? ''} ${i + 1}`
                   }
                   style={{aspectRatio: '1/1'}}
-                  sizes="80px"
+                  width={80}
+                  height={80}
                   loading="lazy"
                   decoding="async"
                 />
