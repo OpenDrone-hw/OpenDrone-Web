@@ -955,7 +955,10 @@ export function BoardArt({
       if (scheduled) cancelAnimationFrame(scheduled);
       window.removeEventListener('resize', schedule);
     };
-  }, [sheets, revealed, flyDone, placeNonce]);
+    // flyIn: measure again the moment the entrance starts. The first run can
+    // happen while the chapter above is still settling, and a stale offset
+    // made the board land and then jump a few pixels when flyDone re-measured.
+  }, [sheets, revealed, flyIn, flyDone, placeNonce]);
 
   // The index/refs actually rendered - the manual layer + tap/swipe-driven
   // highlight.
