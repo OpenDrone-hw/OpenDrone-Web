@@ -11,6 +11,8 @@ export const meta: Route.MetaFunction = () =>
     title: 'EU Declarations of Conformity',
     description:
       'EU declarations of conformity for OpenDrone hardware, published per hardware revision.',
+    // Reached from the packaging QR code only: unlinked and not indexed.
+    robots: 'noindex,nofollow',
   });
 
 export async function loader({context}: Route.LoaderArgs) {

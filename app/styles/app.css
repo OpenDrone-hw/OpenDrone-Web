@@ -4552,6 +4552,15 @@ button.reset {
    The 3-line span pattern from product-content stays in the markup
    (no text change) but renders inline so it reads as one engineered
    title rather than an editorial pull-quote. */
+.product-hero-name {
+  margin: 0.5rem 0 0.35rem;
+  font-family: var(--font-display);
+  font-size: var(--fs-xl, 1.5rem);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+}
+
 .product-hero-headline {
   font-family: var(--font-display);
   font-weight: 600;
@@ -18380,4 +18389,97 @@ html.light .cart-added-continue {
 .preorder-update time {
   font-family: var(--font-mono);
   color: var(--color-text-muted);
+}
+
+/* Side-by-side variant comparison under the spec table: only the rows that
+   differ. Scrolls sideways on phones instead of squeezing columns. */
+.variant-compare-wrap {
+  margin-top: var(--sp-6, 2rem);
+  overflow-x: auto;
+}
+.variant-compare {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm, 0.875rem);
+  font-variant-numeric: tabular-nums;
+}
+.variant-compare caption {
+  text-align: left;
+  margin-bottom: 0.6rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs, 0.75rem);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.variant-compare th,
+.variant-compare td {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+.variant-compare thead th {
+  font-family: var(--font-mono);
+  color: var(--color-text);
+  white-space: nowrap;
+}
+.variant-compare tbody th {
+  font-weight: 500;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.firmware-freedom {
+  margin: 0 0 var(--sp-4, 1.25rem);
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-gold-fill);
+  border-radius: var(--r-sm);
+  background: var(--color-bg-elevated);
+}
+.firmware-freedom p {
+  margin: 0;
+}
+.firmware-freedom-title {
+  font-weight: 600;
+  margin-bottom: 0.25rem !important;
+}
+.firmware-freedom a {
+  text-decoration: underline;
+}
+
+/* The team, as a row of small portraits under "Who is behind it". */
+.team-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--sp-4, 1.25rem);
+  margin: var(--sp-4, 1.25rem) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.team-strip li {
+  display: grid;
+  gap: 0.2rem;
+}
+.team-strip img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: var(--r-sm);
+  background: var(--color-bg-elevated);
+  margin-bottom: 0.35rem;
+}
+.team-strip strong {
+  font-size: var(--fs-sm, 0.875rem);
+}
+.team-strip span {
+  font-size: var(--fs-xs, 0.75rem);
+  color: var(--color-text-muted);
+}
+@media (max-width: 560px) {
+  .team-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }

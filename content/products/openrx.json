@@ -502,11 +502,11 @@
         ],
         [
           "Radio",
-          null
+          "2× LR1121"
         ],
         [
           "Antenna",
-          null
+          "2× U.FL"
         ],
         [
           "Telemetry power",
@@ -515,14 +515,6 @@
         [
           "Dimensions",
           "17.0 × 15.7 mm"
-        ],
-        [
-          "Radios",
-          "2× LR1121"
-        ],
-        [
-          "Antennas",
-          "2× U.FL"
         ]
       ],
       "inTheBox": [

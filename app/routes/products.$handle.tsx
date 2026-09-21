@@ -58,7 +58,7 @@ import {
 } from '~/components/ProductReviews';
 import {OshwaMark} from '~/components/OshwaMark';
 import {useNoHover, useIsMobile} from '~/lib/use-media-query';
-import {GpsrBlock} from '~/components/GpsrBlock';
+import {GpsrBlock, safetyKind} from '~/components/GpsrBlock';
 import {
   PRODUCT_CONTENT,
   PRODUCT_CONTENT_FALLBACK,
@@ -352,6 +352,27 @@ function mergeSpecs(
     }
   }
   return out;
+}
+
+/**
+ * The rows that differ between a product's variants, for the side-by-side
+ * comparison under the spec table: every variant's merged table, keeping
+ * only keys whose value is not the same everywhere. "-" marks a row a
+ * variant does not have.
+ */
+function variantComparison(
+  base: Array<[string, string]>,
+  variants: Record<string, {specs?: Array<[string, string | null]>}> | undefined,
+): {names: string[]; rows: Array<[string, string[]]>} | null {
+  const names = Object.keys(variants ?? {});
+  if (names.length < 2) return null;
+  const tables = names.map((name) => new Map(mergeSpecs(base, variants![name].specs)));
+  const keys: string[] = [];
+  for (const table of tables) for (const key of table.keys()) if (!keys.includes(key)) keys.push(key);
+  const rows = keys
+    .map((key): [string, string[]] => [key, tables.map((t) => t.get(key) ?? '-')])
+    .filter(([, values]) => new Set(values).size > 1);
+  return rows.length ? {names, rows} : null;
 }
 
 /**
@@ -839,6 +860,7 @@ function ProductPage() {
   // own UID, so the chip links to the directory page for the active variant.
   const activeOshwaUid = activeVariant?.oshwaUid ?? content.oshwaUid;
   const mergedSpecs = mergeSpecs(content.specs, activeVariant?.specs);
+  const comparison = variantComparison(content.specs, content.variants);
   const mergedBox = [...content.inTheBox, ...(activeVariant?.inTheBox ?? [])];
 
   // Studio click-to-edit for per-product strings. Copy files get their
@@ -2331,6 +2353,31 @@ function ProductPage() {
               </div>
             ))}
           </dl>
+          {comparison ? (
+            <div className="variant-compare-wrap">
+              <table className="variant-compare">
+                <caption>{copyText('product-chrome.compare_caption') ?? 'How the versions differ'}</caption>
+                <thead>
+                  <tr>
+                    <th scope="col"><span className="sr-only">{copyText('product-chrome.compare_spec') ?? 'Spec'}</span></th>
+                    {comparison.names.map((name) => (
+                      <th scope="col" key={name}>{name}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {comparison.rows.map(([key, values]) => (
+                    <tr key={key}>
+                      <th scope="row">{key}</th>
+                      {values.map((value, i) => (
+                        <td key={comparison.names[i]}>{value}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
           {content.footnote ? (
             <p className="chapter-footnote" {...prodEdit('footnote')}>
               {content.footnote}
@@ -2480,6 +2527,21 @@ function ProductPage() {
             ) : undefined
           }
         >
+          <div className="firmware-freedom">
+            <p className="firmware-freedom-title">
+              {copyText('product-chrome.firmware_freedom_title') ?? 'Flash what you want'}
+            </p>
+            <p>
+              {(copyText('product-chrome.firmware_freedom_body') ??
+                'Ships with {project}. No activation, no locked bootloader, no account. Flashing another build or another project is normal use and does not by itself affect the 2-year guarantee.').replace(
+                '{project}',
+                content.firmware.project,
+              )}{' '}
+              <Link prefetch="intent" to="/warranty">
+                {copyText('product-chrome.firmware_freedom_link') ?? 'Warranty'}
+              </Link>
+            </p>
+          </div>
           <FirmwareSupport
             firmwareProject={content.firmware.project}
             firmwareUrl={content.firmware.projectUrl}
@@ -2631,8 +2693,11 @@ function ProductPage() {
               </Link>
             ) : null}
           </p>
+          {/* The product name is the page heading; the editorial tagline
+              follows it at display size. */}
+          {hasHeroCopy ? <h1 className="product-hero-name">{title}</h1> : null}
           {hasHeroCopy ? (
-            <h1 className="product-hero-headline">
+            <p className="product-hero-headline">
               {/* Skip empty lines - single-line heroes (OpenESC) otherwise
                   render stray empty <em>/<span> nodes and join spaces. */}
               <span {...prodEdit('hero.line1')}>{content.hero.line1}</span>
@@ -2650,7 +2715,7 @@ function ProductPage() {
                   <span {...prodEdit('hero.line3')}>{content.hero.line3}</span>
                 </>
               ) : null}
-            </h1>
+            </p>
           ) : (
             <h1 className="product-hero-headline">
               <span>{title}</span>
@@ -2780,6 +2845,7 @@ function ProductPage() {
           company={rootData.company}
           productTitle={product.title}
           sku={selectedVariant?.sku ?? null}
+          kind={safetyKind(product.handle)}
         />
       ) : null}
 

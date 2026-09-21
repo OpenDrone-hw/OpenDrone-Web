@@ -2,6 +2,7 @@ import type {Route} from './+types/open-source';
 import {Link} from 'react-router';
 import {buildSeoMeta} from '~/lib/seo';
 import {EditorialShell} from '~/components/EditorialShell';
+import {TeamStrip} from '~/components/TeamStrip';
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
 import {
@@ -60,6 +61,7 @@ export default function OpenSourceRoute() {
           />
           <MarginArt>{art}</MarginArt>
           <Txt id={`open-source.s${n}_body`} as="p" />
+          {n === 2 ? <TeamStrip /> : null}
         </section>
       ))}
 

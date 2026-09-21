@@ -17,6 +17,8 @@ export const meta: Route.MetaFunction = ({data}) => {
       : 'EU Declaration of Conformity',
     description:
       'EU declarations of conformity for OpenDrone hardware, published per hardware revision.',
+    // Reached from the packaging QR code only: unlinked and not indexed.
+    robots: 'noindex,nofollow',
   });
 };
 

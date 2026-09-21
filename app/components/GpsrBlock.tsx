@@ -1,11 +1,10 @@
-import {Link} from 'react-router';
 import type {CompanyIdentity} from '~/lib/company';
 import {copy, copyText, editAttrs} from '~/lib/copy';
 
 /**
  * GPSR (EU) 2023/988 Art. 19 information for product listings: manufacturer
  * identity with postal and electronic address, the product identifier, safety
- * warnings in EN/NL/FR, and the EU DoC pointer. Required before purchase by
+ * warnings in EN/NL/FR. Required before purchase by
  * docs/store-compliance.md section 1. Rendered as a quiet compliance strip at
  * the very bottom of the product page, deliberately outside the product story.
  * The email is plain text here on purpose: Art. 19 requires an electronic
@@ -17,14 +16,32 @@ import {copy, copyText, editAttrs} from '~/lib/copy';
 
 const WARNING_LANGS = ['en', 'nl', 'fr'] as const;
 
+/** Which extra warnings a product carries, on top of the shared ones. */
+export type SafetyKind = 'electronics' | 'frame' | 'motor' | 'accessory';
+
+const SAFETY_KIND: Record<string, SafetyKind> = {
+  'openfc-lite': 'electronics',
+  openesc: 'electronics',
+  openrx: 'electronics',
+  openframe: 'frame',
+  'openframe-spares': 'frame',
+  openmotor: 'motor',
+};
+
+export function safetyKind(handle: string): SafetyKind {
+  return SAFETY_KIND[handle] ?? 'accessory';
+}
+
 export function GpsrBlock({
   company,
   productTitle,
   sku,
+  kind,
 }: {
   company: CompanyIdentity;
   productTitle: string;
   sku?: string | null;
+  kind: SafetyKind;
 }) {
   return (
     <section
@@ -41,11 +58,7 @@ export function GpsrBlock({
         </p>
         <p className="mb-2">
           {company.name}, {company.address} &middot; {company.email} &middot;{' '}
-          KBO/BCE {company.kbo} &middot;{' '}
-          <Link to="/doc" className="underline underline-offset-2">
-            {copyText('product-chrome.gpsr_doc_link') ??
-              'EU Declaration of Conformity'}
-          </Link>
+          KBO/BCE {company.kbo}
         </p>
         <p className="mb-4">
           {copyText('product-chrome.gpsr_product_label') ?? 'Product type'}:{' '}
@@ -60,8 +73,13 @@ export function GpsrBlock({
         </p>
         <div className="grid gap-6 md:grid-cols-3">
           {WARNING_LANGS.map((lang) => {
-            const lines = copy(`product-chrome.gpsr_warnings_${lang}`);
-            if (!Array.isArray(lines) || lines.length === 0) return null;
+            const shared = copy(`product-chrome.gpsr_warnings_${lang}`);
+            const specific = copy(`product-chrome.gpsr_warnings_${kind}_${lang}`);
+            const lines = [
+              ...(Array.isArray(shared) ? shared : []),
+              ...(Array.isArray(specific) ? specific : []),
+            ];
+            if (lines.length === 0) return null;
             return (
               <ul key={lang} lang={lang} className="list-disc space-y-1 pl-4">
                 {lines.map((line) => (

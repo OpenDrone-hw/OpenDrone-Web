@@ -5,6 +5,7 @@ import {buildSeoMeta} from '~/lib/seo';
 import {EditorialShell} from '~/components/EditorialShell';
 import {PreorderMeter} from '~/components/PreorderMeter';
 import {AddToCartButton} from '~/components/AddToCartButton';
+import {TeamStrip} from '~/components/TeamStrip';
 import {Txt} from '~/components/Txt';
 import {copy, copyText} from '~/lib/copy';
 import {formatPrice, toCards} from '~/lib/catalog';
@@ -167,6 +168,7 @@ export default function PreorderRoute() {
         <section key={n} className="editorial-section">
           <Txt id={`preorder.s${n}_title`} as="h2" className="editorial-section-title" />
           <Txt id={`preorder.s${n}_body`} as="p" />
+          {n === 7 ? <TeamStrip /> : null}
         </section>
       ))}
 
