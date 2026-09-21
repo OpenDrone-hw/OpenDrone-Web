@@ -32,8 +32,8 @@ export default function SupportRoute() {
       <section className="support-intake-shell">
         <Txt id="support.title" as="h1" />
         <p>
-          Ask the OpenDrone community and support team directly on Discord,
-          or email Incutec for order and account questions.
+          Ask build and tuning questions on Discord. For orders and your
+          account, email us.
         </p>
         <div className="support-intake-form-actions">
           <a
@@ -50,8 +50,7 @@ export default function SupportRoute() {
         </div>
         {data.existingConversation ? (
           <p className="support-intake-note">
-            Contact support through Discord or email to continue an existing
-            conversation. Include your ticket reference if you have it.
+            To continue an earlier conversation, reply on Discord or by email.
           </p>
         ) : null}
       </section>

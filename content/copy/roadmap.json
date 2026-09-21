@@ -5,14 +5,14 @@
   "meta_description": "Every OpenDrone project with its current status, what the community voted to build next, and the financial goals the shop is working toward.",
   "eyebrow": "Roadmap",
   "title": "What we're building.",
-  "lead": "The end goal is to cover every corner of the FPV hardware spectrum, foundational hardware first: fc, esc, receiver, frame, motors, video. This page is the live state of that plan.",
+  "lead": "The goal is to cover the whole FPV drone, starting with the basics: flight controller, ESC, receiver, frame, motors and video. This page shows where each product stands.",
   "s1_title": "*01* · How this works",
   "s1_body": [
     "Everything starts as a conversation on [the OpenDrone Discord](@discord): what the market needs, which specs make sense, what can realistically be produced. Agreeing before anyone draws is the point. It stops two people building the same thing, and it kills bad ideas before someone spends weeks on a layout. When you want to do more than talk, [the contributing page](/contributing) is the manual."
   ],
   "s2_title": "Where every product stands",
   "s2_body": [
-    "The same board we work from. Each product carries exactly one status flag, explained below. The flag is the status: the same value is set as a status-* topic on the product's GitHub repo, and nothing describes status in prose anywhere else."
+    "Each product has one status, explained below. It is the same status as the status-* topic on the product's GitHub repo."
   ],
   "kanban_empty": "none yet",
   "kanban_product_link": "Product →",
@@ -22,9 +22,9 @@
   "item_openfc_lite_mini_20_name": "OpenFC Lite Mini · 20×20",
   "item_openfc_lite_mini_20_note": "The same flight controller at 20×20.",
   "item_openesc_20_name": "OpenESC · 20×20",
-  "item_openesc_20_note": "4-in-1 AM32 ESC, 30 A per channel.",
+  "item_openesc_20_note": "4-in-1 AM32 ESC, 40 A per channel.",
   "item_openesc_30_name": "OpenESC · 30×30",
-  "item_openesc_30_note": "4-in-1 AM32 ESC, 50 A per channel.",
+  "item_openesc_30_note": "4-in-1 AM32 ESC, 60 A per channel.",
   "item_openrx_lite_name": "OpenRX Lite",
   "item_openrx_lite_note": "2.4 GHz ExpressLRS receiver with a ceramic antenna.",
   "item_openrx_lite_ufl_name": "OpenRX Lite UFL",
