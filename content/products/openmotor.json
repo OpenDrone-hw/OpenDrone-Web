@@ -5,9 +5,9 @@
   "editorial": false,
   "statusNote": "opens for preorder once specs, thrust data and photos are published",
   "hero": {
-    "line1": "OpenMotor",
-    "line2Italic": "1604 and 2207",
-    "line3": "matched to the frames",
+    "line1": "",
+    "line2Italic": "",
+    "line3": "",
     "lead": "Brushless motors sourced for the OpenFrame 3\" (1604) and 5\" (2207) builds. Resold OEM parts, chosen and bench-checked by us, not open hardware."
   },
   "firmware": {

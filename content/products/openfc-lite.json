@@ -4,9 +4,9 @@
   "status": "preorder",
   "statusNote": "ships late October 2026",
   "hero": {
-    "line1": "A flight controller,",
-    "line2Italic": "minus",
-    "line3": "what you don’t need.",
+    "line1": "",
+    "line2Italic": "",
+    "line3": "",
     "lead": ""
   },
   "whatIsThis": {
@@ -227,24 +227,6 @@
     {
       "qty": "1×",
       "item": "JST-SH 1.0 mm 8-pin FC-to-ESC cable"
-    },
-    {
-      "qty": "4×",
-      "item": "Silicone soft-mount grommets",
-      "note": "M3 on 30×30, M2 on 20×20"
-    },
-    {
-      "qty": "1×",
-      "item": "Silicone hook-up wire set, 28 AWG, four colours"
-    },
-    {
-      "qty": "1×",
-      "item": "Quick-start card"
-    },
-    {
-      "qty": "1×",
-      "item": "ESD bag (OpenDrone logo)",
-      "note": "everything above ships inside it"
     }
   ],
   "downloads": [],
@@ -528,7 +510,25 @@
         "src": "/boards/openfc-lite-mini/board.svg",
         "inspectUrl": "https://kicanvas.org/?github=https://github.com/OpenDrone-hw/OpenFC-Lite-Mini/blob/main/hardware/OpenFC.kicad_pcb",
         "schematicUrl": "https://kicanvas.org/?github=https://github.com/OpenDrone-hw/OpenFC-Lite-Mini/blob/main/hardware/OpenFC.kicad_sch"
-      }
+      },
+      "inTheBox": [
+        {
+          "qty": "4×",
+          "item": "Silicone soft-mount grommets, M2"
+        },
+        {
+          "qty": "1×",
+          "item": "Silicone hook-up wire set, 28 AWG, four colours"
+        },
+        {
+          "qty": "1×",
+          "item": "Quick-start card"
+        },
+        {
+          "qty": "1×",
+          "item": "ESD bag"
+        }
+      ]
     },
     "30×30": {
       "oshwaUid": "BE000026",
@@ -546,7 +546,25 @@
         "src": "/boards/openfc-lite/board.svg",
         "inspectUrl": "https://kicanvas.org/?github=https://github.com/OpenDrone-hw/OpenFC-Lite/blob/main/hardware/OpenFC.kicad_pcb",
         "schematicUrl": "https://kicanvas.org/?github=https://github.com/OpenDrone-hw/OpenFC-Lite/blob/main/hardware/OpenFC.kicad_sch"
-      }
+      },
+      "inTheBox": [
+        {
+          "qty": "4×",
+          "item": "Silicone soft-mount grommets, M3"
+        },
+        {
+          "qty": "1×",
+          "item": "Silicone hook-up wire set, 28 AWG, four colours"
+        },
+        {
+          "qty": "1×",
+          "item": "Quick-start card"
+        },
+        {
+          "qty": "1×",
+          "item": "ESD bag"
+        }
+      ]
     }
   }
 }

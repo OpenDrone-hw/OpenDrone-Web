@@ -244,7 +244,10 @@ export function selectVariant(
   selectedOptions: Array<{name: string; value: string}>,
 ): ProductVariantFragment | null {
   const norm = (s: string) => s.trim().toLowerCase();
-  const wanted = selectedOptions.filter((o) => o.value);
+  // Only real option names count: other query params on the page URL
+  // (?image=1 from the gallery, ?country=US) must not void the match.
+  const optionNames = new Set(variants.flatMap((v) => v.selectedOptions.map((o) => norm(o.name))));
+  const wanted = selectedOptions.filter((o) => o.value && optionNames.has(norm(o.name)));
   if (wanted.length) {
     const match = variants.find((v) =>
       wanted.every((w) =>

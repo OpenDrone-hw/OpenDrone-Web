@@ -172,6 +172,17 @@ describe('variant selection', () => {
     );
   });
 
+  it('ignores page params that are not options', () => {
+    assert.equal(
+      selectVariant(product.variants.nodes, [
+        {name: 'Model', value: 'Gemini'},
+        {name: 'image', value: '1'},
+        {name: 'country', value: 'US'},
+      ])?.sku,
+      'OPENRX-GEMINI',
+    );
+  });
+
   it('falls back to the first buyable variant', () => {
     assert.equal(
       selectVariant(product.variants.nodes, [{name: 'Model', value: 'Ghost'}])

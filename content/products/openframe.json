@@ -4,9 +4,9 @@
   "status": "preorder",
   "statusNote": "ships about 10 weeks after its target is reached (target deadline 31 December 2026)",
   "hero": {
-    "line1": "The body",
-    "line2Italic": "everything else",
-    "line3": "mounts to.",
+    "line1": "",
+    "line2Italic": "",
+    "line3": "",
     "lead": ""
   },
   "whatIsThis": {
@@ -53,26 +53,6 @@
     {
       "qty": "1×",
       "item": "Top plate + bottom plate"
-    },
-    {
-      "qty": "4×",
-      "item": "5\" arms"
-    },
-    {
-      "qty": "1×",
-      "item": "Hardware kit"
-    },
-    {
-      "qty": "1×",
-      "item": "Camera mount"
-    },
-    {
-      "qty": "1×",
-      "item": "VTX antenna tube clamp"
-    },
-    {
-      "qty": "1×",
-      "item": "Build card"
     }
   ],
   "downloads": [],
@@ -133,7 +113,29 @@
       ],
       "frameViewer": {
         "src": "/models/frame5.glb"
-      }
+      },
+      "inTheBox": [
+        {
+          "qty": "4×",
+          "item": "5\" arms"
+        },
+        {
+          "qty": "1×",
+          "item": "Hardware kit"
+        },
+        {
+          "qty": "1×",
+          "item": "Camera mount"
+        },
+        {
+          "qty": "1×",
+          "item": "VTX antenna tube clamp"
+        },
+        {
+          "qty": "1×",
+          "item": "Build card"
+        }
+      ]
     },
     "3\" Freestyle": {
       "highlights": [
@@ -174,7 +176,29 @@
       ],
       "frameViewer": {
         "src": "/models/frame3.glb"
-      }
+      },
+      "inTheBox": [
+        {
+          "qty": "4×",
+          "item": "3\" arms"
+        },
+        {
+          "qty": "1×",
+          "item": "Hardware kit"
+        },
+        {
+          "qty": "1×",
+          "item": "Camera mount"
+        },
+        {
+          "qty": "1×",
+          "item": "VTX antenna tube clamp"
+        },
+        {
+          "qty": "1×",
+          "item": "Build card"
+        }
+      ]
     }
   }
 }

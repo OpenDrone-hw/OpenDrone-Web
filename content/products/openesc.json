@@ -4,7 +4,7 @@
   "status": "preorder",
   "statusNote": "ships late October 2026",
   "hero": {
-    "line1": "An ESC (or 4)",
+    "line1": "",
     "line2Italic": "",
     "line3": "",
     "lead": ""
@@ -257,35 +257,6 @@
     {
       "qty": "1×",
       "item": "OpenESC board"
-    },
-    {
-      "qty": "1×",
-      "item": "Battery connector, ESC-side half",
-      "note": "XT60 on 30×30, XT30 on 20×20"
-    },
-    {
-      "qty": "2×",
-      "item": "Silicone power wire, 100 mm, red and black",
-      "note": "12 AWG on 30×30, 16 AWG on 20×20; you solder the pigtail"
-    },
-    {
-      "qty": "1×",
-      "item": "Low-ESR electrolytic capacitor, 470 µF",
-      "note": "50 V on 30×30, 35 V on 20×20"
-    },
-    {
-      "qty": "4×",
-      "item": "Silicone soft-mount grommets",
-      "note": "M3 on 30×30, M2 on 20×20"
-    },
-    {
-      "qty": "1×",
-      "item": "Quick-start card"
-    },
-    {
-      "qty": "1×",
-      "item": "ESD bag (OpenDrone logo)",
-      "note": "everything above ships inside it"
     }
   ],
   "downloads": [],
@@ -356,6 +327,32 @@
           "Input",
           "2–6S"
         ]
+      ],
+      "inTheBox": [
+        {
+          "qty": "1×",
+          "item": "XT30 battery connector, ESC-side half"
+        },
+        {
+          "qty": "2×",
+          "item": "Silicone power wire, 16 AWG, 100 mm, red and black"
+        },
+        {
+          "qty": "1×",
+          "item": "Low-ESR electrolytic capacitor, 470 µF 35 V"
+        },
+        {
+          "qty": "4×",
+          "item": "Silicone soft-mount grommets, M2"
+        },
+        {
+          "qty": "1×",
+          "item": "Quick-start card"
+        },
+        {
+          "qty": "1×",
+          "item": "ESD bag"
+        }
       ]
     },
     "30×30": {
@@ -616,7 +613,33 @@
           "in4": "Ground plane",
           "b": "Signal + components"
         }
-      }
+      },
+      "inTheBox": [
+        {
+          "qty": "1×",
+          "item": "XT60 battery connector, ESC-side half"
+        },
+        {
+          "qty": "2×",
+          "item": "Silicone power wire, 12 AWG, 100 mm, red and black"
+        },
+        {
+          "qty": "1×",
+          "item": "Low-ESR electrolytic capacitor, 470 µF 50 V"
+        },
+        {
+          "qty": "4×",
+          "item": "Silicone soft-mount grommets, M3"
+        },
+        {
+          "qty": "1×",
+          "item": "Quick-start card"
+        },
+        {
+          "qty": "1×",
+          "item": "ESD bag"
+        }
+      ]
     }
   }
 }
