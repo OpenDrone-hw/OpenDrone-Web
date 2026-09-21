@@ -1,3 +1,4 @@
+import {shopifyImageUrl} from '~/lib/shopify-image';
 import {Link} from 'react-router';
 import {VersionChip, pickVersionTag} from './VersionChip';
 import {FILTER_TAGS, type FilterTag} from './TagFilter';
@@ -71,10 +72,9 @@ export function ReleaseRow({article}: {article: ReleaseRowArticle}) {
           <div className="rn-thumb">
             <img
               alt={article.image.altText || article.title}
-              src={article.image.url}
-              style={{aspectRatio: '4/3'}}
-              sizes="(min-width: 768px) 96px, 0px"
               loading="lazy"
+              src={shopifyImageUrl(article.image.url, 192)}
+              style={{aspectRatio: '4/3'}}
               decoding="async"
             />
           </div>

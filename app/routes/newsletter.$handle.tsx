@@ -1,3 +1,4 @@
+import {shopifyImageUrl, shopifySrcSet} from '~/lib/shopify-image';
 import {Link, useLoaderData} from 'react-router';
 import type {Route} from './+types/newsletter.$handle';
 import {buildSeoMeta} from '~/lib/seo';
@@ -107,9 +108,10 @@ export default function NewsletterPost() {
         {image ? (
           <div className="rn-post-hero">
             <img
-              src={image.url}
-              sizes="(min-width: 768px) 920px, 100vw"
               loading="eager"
+              sizes="(min-width: 768px) 920px, 100vw"
+              srcSet={shopifySrcSet(image.url, 1840)}
+              src={shopifyImageUrl(image.url, 920)}
               decoding="async"
               alt={image.altText || title}
             />

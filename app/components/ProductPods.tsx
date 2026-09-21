@@ -1,3 +1,4 @@
+import {shopifyImageUrl} from '~/lib/shopify-image';
 import {Link} from 'react-router';
 import {ShoppingCart} from 'lucide-react';
 import {AddToCartButton} from './AddToCartButton';
@@ -114,9 +115,9 @@ export function ProductPods({
             <span className="product-pod-media">
               {it.imageUrl ? (
                 <img
-                  src={it.imageUrl}
-                  alt={it.imageAlt ?? ''}
                   loading="lazy"
+                  src={shopifyImageUrl(it.imageUrl, 160)}
+                  alt={it.imageAlt ?? ''}
                   decoding="async"
                 />
               ) : (
@@ -217,14 +218,14 @@ export function ProductPods({
                   {it.imageUrl && o.imageUrl ? (
                     <span className="pod-stack-glyph" aria-hidden="true">
                       <img
-                        src={it.imageUrl}
+                        src={shopifyImageUrl(it.imageUrl, 64)}
                         alt=""
                         width={18}
                         height={18}
                         loading="lazy"
                       />
                       <img
-                        src={o.imageUrl}
+                        src={shopifyImageUrl(o.imageUrl, 64)}
                         alt=""
                         width={18}
                         height={18}

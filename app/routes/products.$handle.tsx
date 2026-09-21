@@ -1,3 +1,4 @@
+import {BOARD_ART_VERSION} from '~/data/board-art-version';
 import {Fragment, Suspense, useEffect, useMemo, useRef, useState} from 'react';
 import {createPortal} from 'react-dom';
 import {
@@ -930,9 +931,10 @@ function ProductPage() {
   // Group the teardown pins by board side - Top (front) first, then Bottom
   // (back) - reading each refdes's side from the board's components.json. Done
   // at runtime so it stays accurate per tier with no manual side tagging.
+  // Versioned like the board art: /boards/* is cached as immutable.
   const componentsSrc = activeBoardArt?.src.replace(
     /board\.svg$/,
-    'components.json',
+    `components.json${BOARD_ART_VERSION ? `?v=${BOARD_ART_VERSION}` : ''}`,
   );
   const [pinSides, setPinSides] = useState<Map<string, 'F' | 'B'>>(new Map());
   useEffect(() => {

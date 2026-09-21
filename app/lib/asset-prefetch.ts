@@ -96,3 +96,16 @@ export function prefetchImage(url: string, opts?: {decode?: boolean}): void {
     img.decode?.().catch(() => {});
   }
 }
+
+const bytesPrefetched = new Set<string>();
+
+/**
+ * Warm a file into the HTTP cache without handing it to the renderer. For
+ * SVG this matters: an <img> or `new Image()` of an SVG parses the whole
+ * document on the main thread, while a fetch only stores the bytes.
+ */
+export function prefetchBytes(url: string): void {
+  if (typeof fetch === 'undefined' || bytesPrefetched.has(url)) return;
+  bytesPrefetched.add(url);
+  void fetch(url, {priority: 'low'} as RequestInit).catch(() => bytesPrefetched.delete(url));
+}

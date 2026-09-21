@@ -77,15 +77,18 @@ export function SmoothImage(props: SmoothImageProps) {
   return (
     <div ref={wrapRef} className="smooth-media">
       {srcUrl ? (
+        // Attribute order is the order React sets them on a client render:
+        // loading, sizes and srcset must land before src, or the browser
+        // starts fetching the full-size original the moment src is set.
         <img
+          loading={props.loading ?? 'lazy'}
+          decoding="async"
+          fetchPriority={props.fetchPriority}
+          sizes={props.sizes}
+          srcSet={props.sizes ? shopifySrcSet(srcUrl, props.maxWidth) : undefined}
           src={srcUrl}
           alt={props.alt ?? props.data?.altText ?? ''}
           className={props.className}
-          loading={props.loading ?? 'lazy'}
-          decoding="async"
-          srcSet={props.sizes ? shopifySrcSet(srcUrl, props.maxWidth) : undefined}
-          sizes={props.sizes}
-          fetchPriority={props.fetchPriority}
           style={props.aspectRatio ? {aspectRatio: props.aspectRatio} : undefined}
         />
       ) : null}

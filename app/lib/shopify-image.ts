@@ -36,3 +36,15 @@ export function shopifySrcSet(url: string, maxWidth = 1600): string | undefined 
   if (!widths.length || widths[widths.length - 1] < maxWidth) widths.push(maxWidth as never);
   return widths.map((w) => `${shopifyImageUrl(url, w)} ${w}w`).join(', ');
 }
+
+/**
+ * The srcset width a browser picks for a slot `slotCss` CSS pixels wide on a
+ * `dpr` screen: the smallest candidate that covers it. Lets a background
+ * warm-up fetch the exact URL the page will later ask for.
+ */
+export function srcsetPick(slotCss: number, dpr: number, maxWidth = 1600): number {
+  const widths: number[] = WIDTHS.filter((w) => w <= maxWidth);
+  if (!widths.length || widths[widths.length - 1] < maxWidth) widths.push(maxWidth);
+  const need = slotCss * dpr;
+  return widths.find((w) => w >= need) ?? widths[widths.length - 1];
+}

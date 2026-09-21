@@ -20,6 +20,7 @@ import {
   fetchTextCached,
   peekJson,
   peekText,
+  prefetchImage,
 } from '~/lib/asset-prefetch';
 import {BOARD_ART_VERSION} from '~/data/board-art-version';
 import {assetUrl} from '~/lib/asset-url';
@@ -86,6 +87,23 @@ function sizedHref(href: string, small: boolean, lite: boolean): string {
   }
   return small ? href.replace(/-w1280\.webp$/, '-w1024.webp') : href;
 }
+/**
+ * Warm a board's bytes for a later visit: the layered SVG text and every
+ * raster it references, at the size this screen will use, into the network
+ * cache. No DOMParser, no decode and no layout, so it costs the main thread
+ * nothing; the expensive build still happens when the board nears the view.
+ */
+export async function warmBoardBytes(src: string): Promise<void> {
+  const text = await fetchBoardText(src);
+  const small = smallStack();
+  const lite = text.includes('-w1280.webp');
+  for (const m of text.matchAll(/(?:xlink:)?href="([^"]+\.(?:webp|png))"/g)) {
+    const href = m[1];
+    if (href.includes('?v=')) continue;
+    prefetchImage(assetUrl(versioned(sizedHref(href, small, lite))));
+  }
+}
+
 /** Synchronous cache peek matching {@link fetchBoardText}: lite first, then
  *  the board.svg fallback, so a remount of a warmed board seeds from cache. */
 const peekBoardText = (src: string) =>

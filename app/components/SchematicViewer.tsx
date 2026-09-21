@@ -3,6 +3,7 @@ import {
   fetchJsonCached,
   fetchTextCached,
   peekJson,
+  prefetchBytes,
   prefetchImage,
 } from '~/lib/asset-prefetch';
 import {SCHEMATICS_VERSION} from '~/data/schematics-version';
@@ -186,8 +187,12 @@ export function SchematicViewer({
           activeRef.current,
           Math.max(0, sheets.length - 1),
         );
+        // The visible sheet is parsed now; the rest are only fetched (an SVG
+        // image parses on the main thread, ~200 ms a sheet on a slow CPU).
         sheets.forEach((s, i) =>
-          prefetchImage(sheetUrl(handle, s.file), {decode: i === visible}),
+          i === visible
+            ? prefetchImage(sheetUrl(handle, s.file), {decode: true})
+            : prefetchBytes(sheetUrl(handle, s.file)),
         );
       })
       .catch(() => {
@@ -216,7 +221,7 @@ export function SchematicViewer({
             .then((m) => {
               if (frugal) return;
               for (const s of m.sheets ?? [])
-                prefetchImage(sheetUrl(h, s.file));
+                prefetchBytes(sheetUrl(h, s.file));
             })
             .catch(() => {});
         }
@@ -503,7 +508,9 @@ export function SchematicViewer({
                     style={
                       {['--rel' as string]: i - active} as React.CSSProperties
                     }
-                    src={sheetUrl(dh, s.file)}
+                    // Only the active sheet and its neighbours carry a source:
+                    // every mounted SVG image is parsed on the main thread.
+                    src={Math.abs(i - active) <= 1 ? sheetUrl(dh, s.file) : undefined}
                     alt={`${s.label} ${copyText('product-chrome.schematic_sheet_alt_suffix') ?? ''}`}
                     loading="lazy"
                     decoding="async"
