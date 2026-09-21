@@ -3,6 +3,7 @@ import {shopifyImageUrl} from '~/lib/shopify-image';
 import {Link, useLocation, useRevalidator, useRouteLoaderData} from 'react-router';
 import type {RootLoader} from '~/root';
 import {copyText} from '~/lib/copy';
+import {Txt} from '~/components/Txt';
 import {formatPrice} from '~/lib/catalog';
 import {isPurchasableStatus} from '~/lib/product-content';
 import type {CartSummary} from '~/lib/shopify-cart-action';
@@ -14,6 +15,7 @@ import {
 } from '~/lib/cart-client';
 import {
   buildSuggestionSpecs,
+  extraSuggestionSpecs,
   parseBuilds,
   resolveBuild,
   resolveBuildSuggestions,
@@ -119,6 +121,11 @@ export function CartAddedDialog() {
     buildSuggestionSpecs(BUILDS, buildId, openedWith, ranking),
     (handle) => isPurchasableStatus(statuses[handle]),
   );
+  const extras = resolveBuildSuggestions(
+    rootData?.familyProducts ?? [],
+    extraSuggestionSpecs(BUILDS, openedWith),
+    (handle) => isPurchasableStatus(statuses[handle]),
+  );
   const added = summary.lines.filter((l) => l.sku && detail.skus.includes(l.sku));
   // What the order waits for today: every ship date in the cart.
   const cartDates = new Set(summary.lines.map((l) => l.shipPromise ?? ''));
@@ -151,11 +158,77 @@ export function CartAddedDialog() {
     }
   };
 
-  const buildTotal = suggestions.reduce(
-    (sum, s) => sum + Number(s.variant.price.amount) * s.quantity,
-    0,
-  );
+  // "Add the whole build" adds only what is not in the cart yet, and says
+  // exactly how many units and what they cost.
+  const missing = suggestions.filter((s) => !summary.lines.some((l) => l.sku === s.sku));
+  const buildTotal = missing.reduce((sum, s) => sum + Number(s.variant.price.amount) * s.quantity, 0);
+  const buildUnits = missing.reduce((sum, s) => sum + s.quantity, 0);
   const currency = suggestions[0]?.variant.price.currencyCode ?? 'EUR';
+
+  const renderSuggestion = (s: BuildSuggestion) => {
+    const image = s.variant.image ?? s.product.featuredImage;
+    const inCart = summary.lines.some((l) => l.sku === s.sku);
+    const promise = s.variant.shipPromise;
+    const delays = !cartDates.has(promise ?? '');
+    return (
+      <li className="cart-added-suggestion" key={s.sku}>
+        {image ? (
+          <img src={shopifyImageUrl(image.url, 128)} alt="" width={64} height={64} loading="lazy" />
+        ) : (
+          <span className="cart-line-noimage" aria-hidden="true">{s.product.title.slice(4, 5)}</span>
+        )}
+        <div>
+          <strong>
+            {s.quantity > 1 ? `${s.quantity}× ` : ''}
+            {s.product.title}
+          </strong>
+          {s.variant.title !== 'Default Title' ? <span>{s.variant.title}</span> : null}
+          <span className="cart-added-price">
+            {formatPrice(Number(s.variant.price.amount) * s.quantity, s.variant.price.currencyCode)}
+            {s.quantity > 1 ? (
+              <em>
+                {' '}
+                {t('build_each', '{price} each', {
+                  price: formatPrice(s.variant.price.amount, s.variant.price.currencyCode),
+                })}
+              </em>
+            ) : null}
+          </span>
+          {s.replaces ? (
+            <small className="cart-added-replaces">
+              {t('build_replaces', 'Your cart has the {other} version, which does not fit this build.', {
+                other: s.replaces,
+              })}
+            </small>
+          ) : null}
+          {promise ? (
+            <small className={`cart-added-ship${delays ? ' is-later' : ''}`}>
+              {delays
+                ? t('build_delays', '{promise}. Your order then ships when this is ready.', {
+                    promise: promise.charAt(0).toUpperCase() + promise.slice(1),
+                  })
+                : promise}
+            </small>
+          ) : null}
+        </div>
+        <button
+          type="button"
+          className="cart-added-add"
+          disabled={inCart || busy !== null}
+          onClick={() => void add([s], s.sku)}
+        >
+          {inCart
+            ? t('build_added', 'Added')
+            : busy === s.sku
+              ? 'Adding…'
+              : failed === s.sku
+                ? t('build_retry', 'Try again')
+                : t('build_add', 'Add')}
+        </button>
+      </li>
+    );
+
+  };
 
   return (
     <div className="cart-added-overlay" role="presentation">
@@ -219,85 +292,32 @@ export function CartAddedDialog() {
             <p className="cart-added-build-title">
               {t('build_title', 'Complete your {build} build', {build: build?.label ?? ''})}
             </p>
-            <ul className="cart-added-suggestions">
-              {suggestions.map((s) => {
-                const image = s.variant.image ?? s.product.featuredImage;
-                const inCart = summary.lines.some((l) => l.sku === s.sku);
-                const promise = s.variant.shipPromise;
-                const delays = !cartDates.has(promise ?? '');
-                return (
-                  <li className="cart-added-suggestion" key={s.sku}>
-                    {image ? (
-                      <img src={shopifyImageUrl(image.url, 128)} alt="" width={64} height={64} loading="lazy" />
-                    ) : (
-                      <span className="cart-line-noimage" aria-hidden="true">{s.product.title.slice(4, 5)}</span>
-                    )}
-                    <div>
-                      <strong>
-                        {s.quantity > 1 ? `${s.quantity}× ` : ''}
-                        {s.product.title}
-                      </strong>
-                      {s.variant.title !== 'Default Title' ? <span>{s.variant.title}</span> : null}
-                      <span className="cart-added-price">
-                        {formatPrice(Number(s.variant.price.amount) * s.quantity, s.variant.price.currencyCode)}
-                        {s.quantity > 1 ? (
-                          <em>
-                            {' '}
-                            {t('build_each', '{price} each', {
-                              price: formatPrice(s.variant.price.amount, s.variant.price.currencyCode),
-                            })}
-                          </em>
-                        ) : null}
-                      </span>
-                      {s.replaces ? (
-                        <small className="cart-added-replaces">
-                          {t('build_replaces', 'Your cart has the {other} version, which does not fit this build.', {
-                            other: s.replaces,
-                          })}
-                        </small>
-                      ) : null}
-                      {promise ? (
-                        <small className={`cart-added-ship${delays ? ' is-later' : ''}`}>
-                          {delays
-                            ? t('build_delays', '{promise}. Your order then ships when this is ready.', {
-                                promise: promise.charAt(0).toUpperCase() + promise.slice(1),
-                              })
-                            : promise}
-                        </small>
-                      ) : null}
-                    </div>
-                    <button
-                      type="button"
-                      className="cart-added-add"
-                      disabled={inCart || busy !== null}
-                      onClick={() => void add([s], s.sku)}
-                    >
-                      {inCart
-                        ? t('build_added', 'Added')
-                        : busy === s.sku
-                          ? 'Adding…'
-                          : failed === s.sku
-                            ? t('build_retry', 'Try again')
-                            : t('build_add', 'Add')}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-            {suggestions.length > 1 && suggestions.some((s) => !summary.lines.some((l) => l.sku === s.sku)) ? (
+            {missing.length > 1 ? (
               <button
                 type="button"
                 className="cart-added-all"
                 disabled={busy !== null}
-                onClick={() => void add(suggestions.filter((s) => !summary.lines.some((l) => l.sku === s.sku)), 'all')}
+                onClick={() => void add(missing, 'all')}
               >
                 {busy === 'all'
                   ? 'Adding…'
-                  : t('build_add_all', 'Add the whole build · {price}', {
+                  : t('build_add_all', 'Add the whole build: {count} items · {price}', {
+                      count: String(buildUnits),
                       price: formatPrice(buildTotal, currency),
                     })}
               </button>
             ) : null}
+            <ul className="cart-added-suggestions">
+              {suggestions.map(renderSuggestion)}
+            </ul>
+            <Txt id="cart.build_not_included" as="p" className="cart-added-note" />
+          </div>
+        ) : null}
+
+        {extras.length ? (
+          <div className="cart-added-build">
+            <p className="cart-added-build-title">{t('extras_title', 'Optional extras')}</p>
+            <ul className="cart-added-suggestions">{extras.map(renderSuggestion)}</ul>
           </div>
         ) : null}
 

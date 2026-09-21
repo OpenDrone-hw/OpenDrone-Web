@@ -33,6 +33,10 @@ function specLineOf(p: RelatedProduct): string | null {
   if (fw && fw !== '-') parts.push(fw);
   const chip = cell('mcu') ?? cell('radio');
   if (chip) parts.push(clause(chip));
+  // The base table describes one variant; with several (3" and 5" frames)
+  // its first rows would contradict the "from" price, so name the variants.
+  const variantNames = Object.keys(c.variants ?? {});
+  if (parts.length === 0 && variantNames.length > 1) return variantNames.join(' · ');
   if (parts.length === 0) {
     for (const [, v] of rows.slice(0, 2)) parts.push(clause(v));
   }

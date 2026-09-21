@@ -548,15 +548,5 @@
         "schematicUrl": "https://kicanvas.org/?github=https://github.com/OpenDrone-hw/OpenFC-Lite/blob/main/hardware/OpenFC.kicad_sch"
       }
     }
-  },
-  "stack": {
-    "adds": "ESC",
-    "partners": [
-      {
-        "handle": "openesc",
-        "label": "OpenESC"
-      }
-    ],
-    "matchOption": "Model"
   }
 }

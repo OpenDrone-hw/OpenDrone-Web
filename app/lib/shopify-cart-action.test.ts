@@ -4,6 +4,7 @@ import type {Catalog} from './catalog.ts';
 import {PRODUCT_CONTENT} from './product-content.ts';
 import {
   handleShopifyCartAction,
+  earlyLineIds,
   handleShopifyCartLoader,
   loadSessionCart,
   type ShopifyCartDependencies,
@@ -349,6 +350,58 @@ describe('Shopify cart action: update, remove, checkout', () => {
       quantity: 2,
       attributes: [{key: 'Preorder', value: 'preview promise'}],
     }]);
+  });
+
+  it('returns the cart summary for a background quantity change', async () => {
+    const response = await handleShopifyCartAction(
+      request({intent: 'update', lineId: 'gid://shopify/CartLine/1?cart=a', quantity: '2', response: 'summary'}),
+      ENABLED_ENV,
+      {
+        fetchCatalog: async () => CATALOG,
+        getCartId: () => 'cart-a',
+        updateCartLines: async () => cart([line({quantity: 2})], 'cart-a'),
+        ...MUST_NOT,
+      },
+    );
+    assert.equal(response.status, 200);
+    const body = (await response.json()) as {totalQuantity: number};
+    assert.equal(body.totalQuantity, 2);
+  });
+
+  it('splits the lines that ship first into their own checkout and keeps the rest', async () => {
+    const PAID_ID = 'gid://shopify/ProductVariant/paid-batch';
+    const split: Catalog = {
+      ...CATALOG,
+      products: [{
+        ...CATALOG.products[0],
+        variants: [
+          CATALOG.products[0].variants[0],
+          {
+            ...CATALOG.products[0].variants[0],
+            sku: 'OPENRX-MONO',
+            merchandise_id: PAID_ID,
+            ship_promise: 'ships late October 2026',
+            campaign: {paidStock: true} as never,
+          },
+        ],
+      }],
+    };
+    const later = line();
+    const early = line({id: 'gid://shopify/CartLine/2?cart=a', merchandiseId: PAID_ID, sku: 'OPENRX-MONO', shipPromise: 'ships late October 2026'});
+    let created: unknown;
+    let removed: unknown;
+    const response = await handleShopifyCartAction(request({intent: 'checkout', split: 'early'}), ENABLED_ENV, {
+      fetchCatalog: async () => split,
+      getCartId: () => 'cart-a',
+      getCart: async () => cart([later, early], 'cart-a'),
+      createCart: async (lines) => { created = lines; return {...cart([], 'cart-b'), checkoutUrl: `${CHECKOUT}?split=1`}; },
+      removeCartLines: async (_id, ids) => { removed = ids; return cart([later], 'cart-a'); },
+    });
+    assert.equal(response.headers.get('Location'), `${CHECKOUT}?split=1`);
+    assert.deepEqual(created, [{merchandiseId: PAID_ID, quantity: 1, attributes: [{key: 'Preorder', value: 'ships late October 2026'}]}]);
+    assert.deepEqual(removed, ['gid://shopify/CartLine/2?cart=a']);
+    assert.deepEqual(earlyLineIds(split, cart([later, early]), ENABLED_ENV), ['gid://shopify/CartLine/2?cart=a']);
+    assert.deepEqual(earlyLineIds(split, cart([early]), ENABLED_ENV), []);
   });
 
   it('blocks checkout when a line is no longer sold', async () => {

@@ -23,8 +23,9 @@ export class CartAddError extends Error {
   }
 }
 
-/** Add lines in the background; resolves to the new cart summary. */
-export async function postCartAdd(
+/** Post any cart form (add, update, remove) in the background; resolves to
+ *  the new cart summary and updates the header count. */
+export async function postCart(
   action: string,
   fields: Array<[string, string]>,
 ): Promise<CartSummary> {
@@ -45,6 +46,9 @@ export async function postCartAdd(
   );
   return summary;
 }
+
+/** Add lines in the background; resolves to the new cart summary. */
+export const postCartAdd = postCart;
 
 /** The SKUs a set of cart form fields adds (`sku` pairs or `lines`). */
 export function skusFromFields(fields: Array<[string, string]>): string[] {

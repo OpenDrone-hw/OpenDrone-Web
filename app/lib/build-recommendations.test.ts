@@ -4,6 +4,7 @@ import {describe, it} from 'node:test';
 import {
   buildOf,
   buildSuggestionSpecs,
+  extraSuggestionSpecs,
   parseBuilds,
   resolveBuild,
   resolveBuildSuggestions,
@@ -76,6 +77,13 @@ function card(handle: string, sku: string, availableForSale = true): ProductCard
   const variant = {sku, availableForSale} as ProductVariantFragment;
   return {handle, variants: {nodes: [variant]}} as ProductCardFragment;
 }
+
+describe('extraSuggestionSpecs', () => {
+  it('offers the extras the cart does not hold', () => {
+    const cart = [{sku: 'ACC-STRAP-20X220', handle: 'battery-strap'}];
+    assert.deepEqual(extraSuggestionSpecs(BUILDS, cart).map(({sku, role}) => [sku, role]), [['ACC-ANT-T', 'extra']]);
+  });
+});
 
 describe('resolveBuildSuggestions', () => {
   it('keeps only variants that exist, are for sale and pass the status gate', () => {

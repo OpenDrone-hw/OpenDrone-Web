@@ -1,8 +1,9 @@
-import {Form, Link, redirect, useLoaderData, useRouteLoaderData} from 'react-router';
+import {useEffect, useRef, useState} from 'react';
+import {Form, Link, redirect, useLoaderData, useRevalidator, useRouteLoaderData} from 'react-router';
 import {shopifyImageUrl} from '~/lib/shopify-image';
 import type {Route} from './+types/cart.$';
 import {getCart, type ShopifyCart, type ShopifyCartLine} from '~/lib/shopify-storefront';
-import {checkoutOpen, loadSessionCart} from '~/lib/shopify-cart-action';
+import {checkoutOpen, earlyLineIds, loadSessionCart} from '~/lib/shopify-cart-action';
 import {formatPrice} from '~/lib/catalog';
 import {Txt} from '~/components/Txt';
 import {buildSeoMeta} from '~/lib/seo';
@@ -10,6 +11,7 @@ import {copyText} from '~/lib/copy';
 import {priceNote} from '~/lib/visitor-country';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
 import type {RootLoader} from '~/root';
+import {postCart} from '~/lib/cart-client';
 
 const CART_KEY = 'shopifyCartId';
 
@@ -33,11 +35,14 @@ export async function loader({context, params}: Route.LoaderArgs) {
     getCart: (id) => getCart(context.env, id),
     logError: (message) => console.error('[shopify-cart] cart read failed', message),
   });
-  return {cart};
+  // Lines that could go out first as their own order (see the split button).
+  const catalog = cart?.lines.length ? await context.catalog.get().catch(() => null) : null;
+  const splitIds = cart && catalog ? earlyLineIds(catalog, cart, context.env) : [];
+  return {cart, splitIds};
 }
 
 export default function CartPage() {
-  const {cart} = useLoaderData<typeof loader>();
+  const {cart, splitIds} = useLoaderData<typeof loader>();
   return (
     <main className="cart page-shell">
       <header className="page-header">
@@ -45,7 +50,7 @@ export default function CartPage() {
         <h1 className="page-title"><Txt id="cart.title" /></h1>
         <p className="page-description"><Txt id="cart.description" /></p>
       </header>
-      {cart?.lines.length ? <PopulatedCart cart={cart} /> : <EmptyCart />}
+      {cart?.lines.length ? <PopulatedCart cart={cart} splitIds={splitIds} /> : <EmptyCart />}
     </main>
   );
 }
@@ -70,7 +75,7 @@ function lineName(line: ShopifyCartLine): string {
     : line.title;
 }
 
-function PopulatedCart({cart}: {cart: ShopifyCart}) {
+function PopulatedCart({cart, splitIds}: {cart: ShopifyCart; splitIds: string[]}) {
   const rootData = useRouteLoaderData<RootLoader>('root');
   const note = priceNote(rootData?.visitorCountry ?? null);
   const hasPreorder = cart.lines.some((line) => line.shipPromise);
@@ -107,6 +112,19 @@ function PopulatedCart({cart}: {cart: ShopifyCart}) {
               ))}
             </ul>
             <Txt id="cart.mixed_body" as="p" />
+            {splitIds.length ? (
+              <Form method="post" action="/api/shopify/cart">
+                <input type="hidden" name="intent" value="checkout" />
+                <input type="hidden" name="split" value="early" />
+                <button className="cart-split-cta" type="submit">
+                  {(copyText('cart.split_cta') ?? 'Check out {items} now').replace(
+                    '{items}',
+                    cart.lines.filter((l) => splitIds.includes(l.id)).map(lineName).join(', '),
+                  )}
+                </button>
+                <Txt id="cart.split_note" as="p" className="cart-summary-note" />
+              </Form>
+            ) : null}
           </div>
         ) : null}
         {hasPreorder && !mixed ? <Txt id="cart.note_preorder" as="p" className="cart-summary-note" /> : null}
@@ -125,6 +143,24 @@ function PopulatedCart({cart}: {cart: ShopifyCart}) {
           <Link className="cart-keep-shopping" to="/products"><Txt id="cart.keep_shopping" /></Link>
         </div>
         <Txt id="cart.note_terms" as="p" className="cart-summary-note" />
+      </div>
+      {/* Phones: the summary sits below every line, so the total and the
+          checkout button also ride along the bottom of the screen. */}
+      <div className="cart-sticky-bar">
+        <span>
+          <Txt id="cart.register_subtotal" />{' '}
+          <strong>{formatPrice(cart.subtotal.amount, cart.subtotal.currencyCode)}</strong>
+        </span>
+        <Form
+          method="post"
+          action="/api/shopify/cart"
+          onSubmit={() =>
+            trackCheckoutClick({currency: cart.subtotal.currencyCode, amount: Number(cart.subtotal.amount)})
+          }
+        >
+          <input type="hidden" name="intent" value="checkout" />
+          <button className="cart-sticky-checkout" type="submit"><Txt id="cart.checkout_cta" /></button>
+        </Form>
       </div>
     </section>
   );
@@ -152,28 +188,99 @@ function CartLine({line}: {line: ShopifyCartLine}) {
           ) : null}
         </div>
         <div className="cart-sheet-qty">
-          <div className="cart-line-quantity cart-line-quantity--sheet">
-            <div className="cart-sheet-stepper">
-              <LineForm line={line} quantity={line.quantity - 1} disabled={line.quantity <= 1} label={copyText('cart.line_decrease_aria') ?? 'Decrease quantity'}>−</LineForm>
-              <span className="cart-sheet-qty-value" aria-live="polite">{line.quantity}</span>
-              <LineForm line={line} quantity={line.quantity + 1} disabled={line.quantity >= 50} label={copyText('cart.line_increase_aria') ?? 'Increase quantity'}>+</LineForm>
-            </div>
-            <Form method="post" action="/api/shopify/cart">
-              <input type="hidden" name="intent" value="remove" />
-              <input type="hidden" name="lineId" value={line.id} />
-              <button type="submit"><Txt id="cart.line_remove" /></button>
-            </Form>
-          </div>
+          <LineQuantity line={line} />
         </div>
-        <div className="cart-sheet-total">{formatPrice(line.total.amount, line.total.currencyCode)}</div>
+        <div className="cart-sheet-total">
+          {formatPrice(line.total.amount, line.total.currencyCode)}
+          {line.quantity > 1 ? (
+            <small className="cart-sheet-unit">
+              {(copyText('cart.line_each') ?? '{price} each').replace(
+                '{price}',
+                formatPrice(Number(line.total.amount) / line.quantity, line.total.currencyCode),
+              )}
+            </small>
+          ) : null}
+        </div>
       </div>
     </li>
   );
 }
 
-function LineForm({line, quantity, disabled, label, children}: {line: ShopifyCartLine; quantity: number; disabled?: boolean; label: string; children: React.ReactNode}) {
+const MAX_LINE_QUANTITY = 50;
+
+/**
+ * Quantity stepper. Clicks change the number at once and are sent together
+ * a moment after the last one, so fast clicking never drops a step; the
+ * control reports busy while Shopify confirms. Without JavaScript each
+ * button is a plain form post that reloads /cart.
+ */
+function LineQuantity({line}: {line: ShopifyCartLine}) {
+  const revalidator = useRevalidator();
+  const [quantity, setQuantity] = useState(line.quantity);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const timer = useRef<number | undefined>(undefined);
+  const pending = useRef(false);
+
+  // Take the server value once nothing of ours is in flight.
+  useEffect(() => {
+    if (!pending.current) setQuantity(line.quantity);
+  }, [line.quantity]);
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+
+  const send = async (fields: Array<[string, string]>) => {
+    setBusy(true);
+    setFailed(false);
+    try {
+      await postCart('/api/shopify/cart', fields);
+    } catch {
+      setFailed(true);
+      setQuantity(line.quantity);
+    } finally {
+      pending.current = false;
+      setBusy(false);
+      void revalidator.revalidate();
+    }
+  };
+
+  const step = (event: React.FormEvent<HTMLFormElement>, next: number) => {
+    event.preventDefault();
+    if (next < 1 || next > MAX_LINE_QUANTITY) return;
+    setQuantity(next);
+    pending.current = true;
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => {
+      void send([['intent', 'update'], ['lineId', line.id], ['quantity', String(next)]]);
+    }, 400);
+  };
+
+  const remove = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    window.clearTimeout(timer.current);
+    pending.current = true;
+    void send([['intent', 'remove'], ['lineId', line.id]]);
+  };
+
   return (
-    <Form method="post" action="/api/shopify/cart">
+    <div className="cart-line-quantity cart-line-quantity--sheet" aria-busy={busy || undefined}>
+      <div className="cart-sheet-stepper">
+        <LineForm line={line} quantity={quantity - 1} disabled={quantity <= 1} onSubmit={(e) => step(e, quantity - 1)} label={copyText('cart.line_decrease_aria') ?? 'Decrease quantity'}>−</LineForm>
+        <span className="cart-sheet-qty-value" aria-live="polite">{quantity}</span>
+        <LineForm line={line} quantity={quantity + 1} disabled={quantity >= MAX_LINE_QUANTITY} onSubmit={(e) => step(e, quantity + 1)} label={copyText('cart.line_increase_aria') ?? 'Increase quantity'}>+</LineForm>
+      </div>
+      <Form method="post" action="/api/shopify/cart" onSubmit={remove}>
+        <input type="hidden" name="intent" value="remove" />
+        <input type="hidden" name="lineId" value={line.id} />
+        <button type="submit" disabled={busy}><Txt id="cart.line_remove" /></button>
+      </Form>
+      {failed ? <small className="cart-line-error" role="alert">{copyText('cart.line_update_failed') ?? 'Could not update. Try again.'}</small> : null}
+    </div>
+  );
+}
+
+function LineForm({line, quantity, disabled, label, onSubmit, children}: {line: ShopifyCartLine; quantity: number; disabled?: boolean; label: string; onSubmit: (event: React.FormEvent<HTMLFormElement>) => void; children: React.ReactNode}) {
+  return (
+    <Form method="post" action="/api/shopify/cart" onSubmit={onSubmit}>
       <input type="hidden" name="intent" value="update" />
       <input type="hidden" name="lineId" value={line.id} />
       <input type="hidden" name="quantity" value={quantity} />

@@ -52,7 +52,7 @@
   "note_us": "Shipping and US import duties are calculated on the next page and charged there, so nothing is due on delivery.",
   "note_intl": "Shipping is calculated on the next page. Import duties and taxes may be due on delivery.",
   "mixed_title": "Your items ship on different dates.",
-  "mixed_body": "The whole order ships in one parcel once the last item is ready. Check out the items you want sooner as a separate order.",
+  "mixed_body": "The whole order ships in one parcel once the last item is ready.",
   "mixed_in_stock": "in stock",
   "added_eyebrow": "Added to cart",
   "added_title": "{count} in your cart",
@@ -64,7 +64,13 @@
   "build_retry": "Try again",
   "build_each": "{price} each",
   "build_delays": "{promise}. Your order then ships when this is ready.",
-  "build_add_all": "Add the whole build · {price}",
+  "build_add_all": "Add the whole build: {count} items · {price}",
   "build_title": "Complete your {build} build",
-  "build_replaces": "Your cart has the {other} version, which does not fit this build."
+  "build_replaces": "Your cart has the {other} version, which does not fit this build.",
+  "line_each": "{price} each",
+  "line_update_failed": "Could not update. Try again.",
+  "split_cta": "Check out {items} now",
+  "split_note": "They ship on their own date as a separate order. The rest stays in your cart for a second order.",
+  "build_not_included": "Not included: propellers, VTX, camera and battery.",
+  "extras_title": "Optional extras"
 }

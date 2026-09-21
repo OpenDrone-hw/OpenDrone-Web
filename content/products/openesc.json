@@ -316,7 +316,7 @@
     ],
     [
       "MCU",
-      "One per motor"
+      "AT32F421, one per motor"
     ],
     [
       "MOSFETs",
@@ -618,15 +618,5 @@
         }
       }
     }
-  },
-  "stack": {
-    "adds": "flight controller",
-    "partners": [
-      {
-        "handle": "openfc-lite",
-        "label": "OpenFC Lite"
-      }
-    ],
-    "matchOption": "Model"
   }
 }

@@ -18071,8 +18071,10 @@ html.light .preorder-track-media img {
 .cart-added-line img,
 .cart-added-suggestion img {
   width: 100%;
+  height: auto;
+  align-self: start;
   aspect-ratio: 1 / 1;
-  object-fit: cover;
+  object-fit: contain;
   border: 1px solid var(--color-border);
   border-radius: var(--r-sm);
   background: var(--color-bg-elevated);
@@ -18223,6 +18225,9 @@ html.light .cart-added-continue {
 @media (max-width: 560px) {
   .cart-added-overlay {
     align-items: flex-end;
+    /* Darker on phones: the page behind the translucent header otherwise
+       reads through above the sheet. */
+    background: color-mix(in srgb, black 60%, transparent);
   }
   .cart-added {
     width: 100%;
@@ -18261,4 +18266,76 @@ html.light .cart-added-continue {
   font-size: var(--fs-xs);
   line-height: 1.45;
   color: var(--color-text);
+}
+
+/* Cart: unit price under a multi-quantity line total, update errors, and the
+   phone-only sticky total + checkout bar. */
+.cart-sheet-unit {
+  display: block;
+  font-size: var(--fs-xs, 0.75rem);
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+.cart-line-error {
+  display: block;
+  color: var(--color-error);
+  font-size: var(--fs-xs, 0.75rem);
+}
+.cart-line-quantity[aria-busy='true'] .cart-sheet-qty-value {
+  opacity: 0.55;
+}
+.cart-sticky-bar {
+  display: none;
+}
+@media (max-width: 767px) {
+  .cart-sticky-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 1.5rem -16px 0;
+    padding: 0.75rem 16px calc(0.75rem + env(safe-area-inset-bottom));
+    background: var(--pod-bg-strong);
+    border-top: 1px solid var(--color-border);
+    backdrop-filter: blur(12px);
+  }
+  .cart-sticky-bar strong {
+    font-family: var(--font-mono);
+  }
+  .cart-sticky-checkout {
+    min-height: 44px;
+    padding: 0 1.25rem;
+    background: var(--color-gold-fill);
+    color: var(--color-on-accent);
+    border-radius: var(--r-md);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.8rem;
+  }
+}
+
+.cart-split-cta {
+  width: 100%;
+  margin-top: 0.75rem;
+  min-height: 44px;
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--color-gold-fill);
+  border-radius: var(--r-md);
+  color: var(--color-text);
+  font-weight: 600;
+  text-align: center;
+}
+.cart-split-cta:hover {
+  background: var(--color-gold-soft);
+}
+
+.cart-added-note {
+  margin: 0;
+  font-size: var(--fs-xs, 0.75rem);
+  color: var(--color-text-muted);
 }

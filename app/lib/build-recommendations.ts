@@ -12,6 +12,9 @@ import type {ProductCardFragment, ProductVariantFragment} from './product-shapes
 
 export type BuildRole = 'flight-controller' | 'esc' | 'frame' | 'motors' | 'receiver';
 
+/** An optional add-on offered after the build parts. */
+export type ExtraRole = 'extra';
+
 export type BuildsConfig = {
   roles: Record<BuildRole, {handle: string; sizeNeutral?: boolean}>;
   builds: Array<{
@@ -19,9 +22,10 @@ export type BuildsConfig = {
     label: string;
     parts: Array<{role: BuildRole; sku: string; quantity: number}>;
   }>;
+  extras?: Array<{handle: string; sku: string; quantity: number}>;
 };
 
-export type BuildPart = {role: BuildRole; handle: string; sku: string; quantity: number};
+export type BuildPart = {role: BuildRole | ExtraRole; handle: string; sku: string; quantity: number};
 
 export type BuildSuggestion = BuildPart & {
   product: ProductCardFragment;
@@ -44,7 +48,23 @@ export function parseBuilds(body: unknown): BuildsConfig {
       }
     }
   }
+  for (const extra of c.extras ?? []) {
+    if (!extra.handle || !extra.sku || !Number.isSafeInteger(extra.quantity) || extra.quantity < 1) {
+      throw new Error('builds: every extra needs a handle, a sku and a positive quantity');
+    }
+  }
   return c as BuildsConfig;
+}
+
+/** The optional extras the cart does not hold yet, after any build. */
+export function extraSuggestionSpecs(
+  config: BuildsConfig,
+  cart: readonly CartLine[] = [],
+): Array<BuildPart & {replaces: string | null}> {
+  const held = new Set(cart.map((line) => line.sku));
+  return (config.extras ?? [])
+    .filter((extra) => !held.has(extra.sku))
+    .map((extra) => ({...extra, role: 'extra' as const, replaces: null}));
 }
 
 /** The build a SKU belongs to, or null for a part in no build (a receiver
