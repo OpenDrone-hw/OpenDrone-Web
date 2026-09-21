@@ -86,8 +86,6 @@
   "provenance_designed_value": "Leuven, Belgium",
   "provenance_assembled_label": "Assembled",
   "provenance_assembled_value": "Shenzhen, China",
-  "provenance_next_label": "Next",
-  "provenance_next_value": "EU assembly",
   "provenance_link_production": "The production story →",
   "provenance_link_contribute": "How to contribute →",
   "downloads_intro": "Straight from the repo. If a link 404s, the file moved; open an issue on the matching GitHub repo and we'll point it back.",

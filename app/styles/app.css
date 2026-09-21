@@ -18484,3 +18484,9 @@ html.light .cart-added-continue {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* A placeholder card with a quick-add pill: the pill sits where the
+   tile's catalog caption would be, and the name is under the tile anyway. */
+.product-card-media .ghost-tile-rule.is-foot {
+  visibility: hidden;
+}

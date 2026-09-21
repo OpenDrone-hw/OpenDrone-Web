@@ -46,9 +46,9 @@ export function GpsrBlock({
   return (
     <section
       aria-label="Manufacturer and safety information"
-      className="mt-16 border-t border-[var(--color-border)] px-6 py-8 text-[11px] leading-relaxed text-[var(--color-text-muted)]"
+      className="mt-16 border-t border-[var(--color-border)] py-8 text-[11px] leading-relaxed text-[var(--color-text-muted)]"
     >
-      <div className="mx-auto max-w-6xl">
+      <div>
         <p
           className="mb-4 font-mono text-[10px] uppercase tracking-[0.2em]"
           {...editAttrs('product-chrome.gpsr_heading')}

@@ -398,63 +398,6 @@ function ClientFrameViewer(props: FrameViewerProps) {
   return <Viewer {...props} />;
 }
 
-/** Placeholder media slot. Renders a soft card with a geometric icon
- *  picked from `kind` until real images are wired in. */
-function ChapterMediaPlaceholder({kind}: {kind: string}) {
-  return (
-    <div className="chapter-media-frame" aria-hidden="true">
-      <svg
-        viewBox="0 0 120 120"
-        className="chapter-media-glyph"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        {kind === '01' ? (
-          <>
-            <rect x="22" y="22" width="76" height="76" rx="6" />
-            <circle cx="36" cy="36" r="3" />
-            <circle cx="84" cy="36" r="3" />
-            <circle cx="36" cy="84" r="3" />
-            <circle cx="84" cy="84" r="3" />
-            <path d="M44 60h32M60 44v32" />
-          </>
-        ) : kind === '02' ? (
-          <>
-            <path d="M30 32h60v56H30z" />
-            <path d="M30 32l30 18 30-18" />
-            <path d="M60 50v38" />
-          </>
-        ) : kind === '03' ? (
-          <>
-            <path d="M24 38l36-14 36 14v44L60 96 24 82z" />
-            <path d="M24 38l36 14 36-14" />
-            <path d="M60 52v44" />
-          </>
-        ) : kind === '04' ? (
-          <>
-            <circle cx="60" cy="60" r="34" />
-            <path d="M50 50h20M50 70h20M55 50v20M65 50v20" />
-          </>
-        ) : kind === '05' ? (
-          <>
-            <rect x="26" y="26" width="68" height="68" rx="4" />
-            <path d="M26 46h68M26 66h68M26 86h68" />
-            <path d="M46 26v68M66 26v68" />
-          </>
-        ) : (
-          <>
-            <path d="M30 32h60v56H30z" />
-            <path d="M40 56l12 12 28-28" />
-          </>
-        )}
-      </svg>
-    </div>
-  );
-}
 
 function Chapter({
   number,
@@ -495,8 +438,7 @@ function Chapter({
    *  to the left, hidden). Used by the teardown so the copy slides in only after
    *  the board layers have flown in. Undefined = no gating (normal reveal). */
   textReveal?: boolean;
-  /** Optional live media node - when omitted, the chapter renders the
-   *  geometric placeholder glyph for this chapter number. */
+  /** Optional live media node; without one the chapter has no media slot. */
   media?: React.ReactNode;
   /** Optional full-bleed, non-interactive layer rendered behind the chapter
    *  content (the exploded frame viewer). When set, the right-hand media
@@ -517,7 +459,7 @@ function Chapter({
       data-chapter={number}
       data-backdrop={backdrop ? '' : undefined}
       data-wide-media={wideMedia ? '' : undefined}
-      data-no-media={noMedia ? '' : undefined}
+      data-no-media={noMedia || (!media && !backdrop) ? '' : undefined}
       data-repo-scope={repoScope ? '' : undefined}
       data-text-pending={textReveal === false ? '' : undefined}
     >
@@ -538,15 +480,11 @@ function Chapter({
         ) : null}
         {children}
       </div>
-      {backdrop || noMedia ? null : (
+      {backdrop || noMedia || !media ? null : (
         <aside className="chapter-media">
-          {media ? (
-            <div className="chapter-media-frame chapter-media-frame--live">
-              {media}
-            </div>
-          ) : (
-            <ChapterMediaPlaceholder kind={number} />
-          )}
+          <div className="chapter-media-frame chapter-media-frame--live">
+            {media}
+          </div>
         </aside>
       )}
       {wide ? <div className="chapter-wide">{wide}</div> : null}

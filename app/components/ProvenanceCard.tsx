@@ -5,7 +5,7 @@ import {copyText} from '~/lib/copy';
 
 /**
  * Provenance card - the honest where-is-this-made line. Designed in
- * Belgium, first runs assembled in Shenzhen, EU assembly on the roadmap.
+ * Belgium, assembled in Shenzhen.
  * Kept static for now; the batch ID on the build card is the live link
  * between a given unit and its factory.
  */
@@ -37,19 +37,9 @@ export function ProvenanceCard() {
             {copyText('product-chrome.provenance_assembled_value')}
           </span>
         </li>
-        <li>
-          <Txt
-            id="product-chrome.provenance_next_label"
-            as="span"
-            className="provenance-row-label"
-          />
-          <span className="provenance-row-value">
-            {copyText('product-chrome.provenance_next_value')}
-          </span>
-        </li>
       </ul>
       {/* The card states the facts; these carry the reader to the story
-          behind them: the production plan (EU line) and how to join in. */}
+          behind them: the production page and how to join in. */}
       <p className="provenance-links">
         <Link prefetch="viewport" to="/production">
           <Txt id="product-chrome.provenance_link_production" />
