@@ -242,4 +242,4 @@ export function fundingRefundText(
 export const FUNDING_EXPLAINER_PATH = '/preorder';
 
 /** Link text for `FUNDING_EXPLAINER_PATH`. */
-export const FUNDING_EXPLAINER_LABEL = 'How funded pre-orders work';
+export const FUNDING_EXPLAINER_LABEL = 'View all preorder targets';

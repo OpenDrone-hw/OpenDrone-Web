@@ -85,6 +85,8 @@ export type ProductVariantFragment = {
   shopUrl: string | null;
   /** Promotional discount on this variant, or null for an ordinary price. */
   discount: CatalogVariantDiscount | null;
+  campaignTarget?: number | null;
+  campaignUnitsFunded?: number | null;
 };
 
 /** Card-sized product: listings, related strip, header pods, hero. */

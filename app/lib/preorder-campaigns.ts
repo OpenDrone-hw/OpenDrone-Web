@@ -33,6 +33,7 @@ export type PublicFundingState = 'open' | 'funded' | 'missed';
 export type PreorderTier = {
   sku: string;
   title: string;
+  image: ProductImage | null;
   price: MoneyV2;
   /** Struck-through price, only when the feed carries a higher one. */
   compareAtPrice: MoneyV2 | null;
@@ -40,6 +41,9 @@ export type PreorderTier = {
   discountLabel: string | null;
   /** Units left at the discounted price, or null when uncapped/absent. */
   unitsLeft: number | null;
+  /** Paid Shopify units toward this SKU's production-run goal. */
+  unitsFunded: number | null;
+  targetUnits: number | null;
   shipPromise: string | null;
   /** The shop hand-off link (POST to `<shop>/incutec/add`, `next=cart`). */
   cartAddUrl: string;
@@ -84,17 +88,17 @@ export type PreorderSummary = {
   currency: string;
   /** Backers across those same campaigns, null when no feed carries any. */
   backers: number | null;
-  /** How many campaigns reached their target. */
+  /** How many SKU goals reached their target. */
   funded: number;
-  /** How many are still taking orders. */
+  /** How many SKU goals are still taking orders. */
   open: number;
-  /** Public campaigns in total, missed ones included. */
+  /** Public SKU goals in total, missed ones included. */
   total: number;
   /** Days to the nearest OPEN deadline, or null when none is running. */
   daysLeft: number | null;
 };
 
-const PREORDER_CTA = 'Pre-order';
+const PREORDER_CTA = 'Add to cart';
 const MISSED_CTA = 'Funding missed';
 const UNAVAILABLE_CTA = 'Not available';
 
@@ -120,10 +124,13 @@ function tiersOf(
     return {
       sku: variant.sku ?? '',
       title: variant.title,
+      image: variant.image,
       price: variant.price,
       compareAtPrice: variant.compareAtPrice,
       discountLabel: variant.discount?.label ?? null,
       unitsLeft: variant.discount?.unitsLeft ?? null,
+      unitsFunded: variant.campaignUnitsFunded ?? null,
+      targetUnits: variant.campaignTarget ?? null,
       shipPromise: variant.shipPromise ?? null,
       cartAddUrl: variant.cartAddUrl,
       orderable,
@@ -196,6 +203,11 @@ export function summarize(
   fallbackCurrency: string,
 ): PreorderSummary {
   const standing = campaigns.filter((c) => c.state !== 'missed');
+  const skuGoals = campaigns.flatMap((campaign) =>
+    campaign.tiers
+      .filter((tier) => tier.targetUnits != null && tier.unitsFunded != null)
+      .map((tier) => ({campaign, tier})),
+  );
   const amountFunded = standing.reduce((sum, c) => sum + (c.amountFunded ?? 0), 0);
   const withBackers = standing.filter((c) => c.backers != null);
   const deadlines = campaigns
@@ -207,9 +219,15 @@ export function summarize(
     backers: withBackers.length
       ? withBackers.reduce((sum, c) => sum + (c.backers ?? 0), 0)
       : null,
-    funded: campaigns.filter((c) => c.state === 'funded').length,
-    open: campaigns.filter((c) => c.state === 'open').length,
-    total: campaigns.length,
+    funded: skuGoals.filter(
+      ({tier}) => (tier.unitsFunded as number) >= (tier.targetUnits as number),
+    ).length,
+    open: skuGoals.filter(
+      ({campaign, tier}) =>
+        campaign.state === 'open' &&
+        (tier.unitsFunded as number) < (tier.targetUnits as number),
+    ).length,
+    total: skuGoals.length,
     daysLeft: deadlines.length ? Math.min(...deadlines) : null,
   };
 }

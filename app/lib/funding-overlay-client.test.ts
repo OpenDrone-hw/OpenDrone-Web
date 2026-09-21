@@ -21,11 +21,8 @@ afterEach(() => {
 });
 
 describe('funding overlay outage behavior: falls back to the catalog exactly as today', () => {
-  it('uses the canonical production origin by default', () => {
-    assert.equal(
-      fundingOverlayUrl({} as Env),
-      'https://erp.incutec.com/incutec/funding.json',
-    );
+  it('does not contact a retired funding service by default', () => {
+    assert.equal(fundingOverlayUrl({} as Env), null);
   });
 
   it('resolves to an empty overlay on a 404 (endpoint not deployed yet), never rejects', async () => {

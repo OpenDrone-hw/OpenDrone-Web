@@ -1,4 +1,4 @@
-import type {MoneyV2} from '~/lib/product-shapes';
+import type {MoneyV2, ProductImage} from '~/lib/product-shapes';
 import {formatPrice} from '~/lib/catalog';
 import {AddToCartButton} from './AddToCartButton';
 import {trackEvent} from '~/lib/growth/plausible';
@@ -21,6 +21,7 @@ export type StackOffer = {
   key: string;
   /** Partner board name, e.g. "OpenFC Lite". */
   label: string;
+  image?: ProductImage | null;
   /** Matched size value, e.g. "20x20". */
   size?: string;
   /** Partner's displayed price. */
@@ -79,6 +80,8 @@ export function StackQuickAdd({
               onAdd?.();
             }}
           >
+            {o.image ? <img className="cta-stack-offer-image" src={o.image.url} alt={o.image.altText ?? o.label} width={88} height={88} /> : null}
+            <span className="cta-stack-offer-copy">
             <span className="cta-stack-offer-plus" aria-hidden="true">
               +
             </span>
@@ -108,6 +111,7 @@ export function StackQuickAdd({
                 {o.discountedLabel ? `${o.discountedLabel} ` : ''}−{o.pct}%
               </span>
             ) : null}
+            </span>
           </AddToCartButton>
         ))}
       </div>

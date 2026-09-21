@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState} from 'react';
-import {Form, useLocation} from 'react-router';
+import {Form, useFetcher, useLocation} from 'react-router';
 import {NavLink} from '~/components/nav';
 import {AnimatePresence} from 'motion/react';
 import {useAside} from '~/components/Aside';
@@ -578,6 +578,7 @@ export function HeaderMenu({
           (url === '/products' ||
             url === '/support' ||
             url === '/newsletter' ||
+            url === '/preorder' ||
             url === 'https://github.com/OpenDrone-hw')
         )
           return null;
@@ -671,7 +672,7 @@ function HeaderCtas({accountUrl, cartUrl}: {accountUrl: string | null; cartUrl: 
       <LangToggle className="header-lang-toggle" />
       <NavLink
         prefetch="viewport"
-        to="/newsletter"
+        to="/preorder"
         className={({isActive}) =>
           `font-mono text-[12px] uppercase tracking-[0.15em] transition-colors hidden md:block ${
             isActive
@@ -680,7 +681,7 @@ function HeaderCtas({accountUrl, cartUrl}: {accountUrl: string | null; cartUrl: 
           }`
         }
       >
-        <Txt id="chrome.nav_newsletter" />
+        <Txt id="chrome.nav_campaign" />
       </NavLink>
       <NavLink
         prefetch="viewport"
@@ -731,15 +732,30 @@ function HeaderMenuMobileToggle() {
 }
 
 /**
- * The cart icon links to Odoo or, after the first preview add, the local
- * server route that resolves the session's hosted Shopify checkout.
+ * The cart icon opens the local Shopify-backed cart review page.
  */
 function CartToggle({cartUrl}: {cartUrl: string | null}) {
+  const fetcher = useFetcher<{totalQuantity?: number} | null>();
+  const [quantity, setQuantity] = useState(0);
+  useEffect(() => {
+    if (cartUrl) void fetcher.load('/api/shopify/cart');
+  }, [cartUrl]);
+  useEffect(() => {
+    if (fetcher.data?.totalQuantity != null) setQuantity(fetcher.data.totalQuantity);
+  }, [fetcher.data]);
+  useEffect(() => {
+    const update = (event: Event) => {
+      const total = (event as CustomEvent<{totalQuantity?: number}>).detail?.totalQuantity;
+      if (typeof total === 'number') setQuantity(total);
+    };
+    window.addEventListener('opendrone:cart-updated', update);
+    return () => window.removeEventListener('opendrone:cart-updated', update);
+  }, []);
   if (!cartUrl) {
     return (
       <span
         className="site-header-icon site-header-cart"
-        aria-label="Cart unavailable in checkout preview"
+        aria-label="Cart unavailable"
         aria-disabled="true"
       >
         <CartIcon />
@@ -753,6 +769,7 @@ function CartToggle({cartUrl}: {cartUrl: string | null}) {
       aria-label={copyText('chrome.cart_aria') ?? 'Cart'}
     >
       <CartIcon />
+      {quantity > 0 ? <span className="site-header-cart-count">{quantity > 99 ? '99+' : quantity}</span> : null}
     </a>
   );
 }
@@ -785,6 +802,7 @@ function CartIcon() {
 const HEADER_MENU = {
   items: [
     {id: 'menu-products', title: 'Catalog', url: '/products'},
+    {id: 'menu-campaign', title: 'Preorders', url: '/preorder'},
     {id: 'menu-newsletter', title: 'Newsletter', url: '/newsletter'},
     {
       id: 'menu-open-source',

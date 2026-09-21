@@ -52,7 +52,11 @@ function product(
     url: `https://shop.incutec.com/shop/${handle}`,
     images: ['https://erp.incutec.com/web/image/1'],
     rating: null,
-    variants,
+    variants: variants.map((entry) => ({
+      campaign_target: funding?.target_units ?? null,
+      campaign_units_funded: funding?.units_funded ?? null,
+      ...entry,
+    })),
     funding,
   };
 }
@@ -163,7 +167,7 @@ describe('buildCampaigns', () => {
     assert.match(tier.cartAddUrl, /\/incutec\/add\?/);
     assert.match(tier.cartAddUrl, /next=cart/);
     assert.equal(tier.orderable, true);
-    assert.equal(tier.ctaLabel, 'Pre-order');
+    assert.equal(tier.ctaLabel, 'Add to cart');
   });
 
   it('drops a compare price that is not above the price', () => {

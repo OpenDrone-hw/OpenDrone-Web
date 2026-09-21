@@ -114,7 +114,7 @@ describe('crowdfunding page copy', () => {
     }
   });
 
-  it('has the strip, tracker, tier, updates and questions copy', () => {
+  it('has the strip, SKU tracker, updates and questions copy', () => {
     for (const id of [
       'strip_amount_label',
       'strip_backers_label',
@@ -124,11 +124,6 @@ describe('crowdfunding page copy', () => {
       'tracker_title',
       'tracker_lead',
       'tracker_empty',
-      'tiers_title',
-      'tiers_lead',
-      'tiers_empty',
-      'others_title',
-      'others_lead',
       'faq_title',
       'updates_title',
       'updates_lead',
@@ -164,10 +159,11 @@ describe('crowdfunding page copy', () => {
 });
 
 describe('the crowdfunding route', () => {
-  it('reads the catalog through the funding overlay', () => {
+  it('reads the catalog and applies Shopify order progress', () => {
     assert.match(route, /context\.catalog\.get\(\)/);
-    assert.match(route, /context\.fundingOverlay\.get\(\)/);
-    assert.match(route, /mergeFundingOverlay\(/);
+    assert.match(route, /fetchShopifyCampaignProgress\(context\.env\)/);
+    assert.match(route, /applyCampaignProgress\(/);
+    assert.doesNotMatch(route, /context\.fundingOverlay\.get\(\)/);
   });
 
   it('keeps its meta on the copy file', () => {
@@ -184,10 +180,17 @@ describe('the crowdfunding route', () => {
 
   it('labels every progress bar it renders', () => {
     const bars = [...route.matchAll(/role="progressbar"/g)].length;
-    const labels = [...route.matchAll(/aria-label=\{`\$\{campaign\.title\}/g)]
-      .length;
-    assert.equal(bars, 1, 'the tracker should render one bar per campaign');
+    const labels = [
+      ...route.matchAll(/aria-label=\{`\$\{campaign\.title\}[^`]+`\}/g),
+    ].length;
+    assert.equal(bars, 1, 'the route should render only the SKU progress bar');
     assert.equal(labels, bars, 'a progressbar with no accessible name');
-    assert.match(route, /aria-valuetext=\{campaign\.unitsLabel\}/);
+    assert.match(route, /aria-valuetext=\{unitsLabel\}/);
+  });
+
+  it('has one SKU tracker and no duplicate price tier section', () => {
+    assert.match(route, /function SkuTrackerRow/);
+    assert.doesNotMatch(route, /id="tiers"/);
+    assert.doesNotMatch(route, /<ProductPrice/);
   });
 });

@@ -54,7 +54,7 @@
   "event_library_live_detail": "105 symbols, 195 footprints, one pinned submodule.",
   "event_frame_v01_tagged_title": "[OpenFrame](/products/openframe) v0.1 tagged, first CNC pack ordered",
   "event_batch1_planned_title": "Production batch 1 planned",
-  "event_batch1_planned_detail": "200 boards across 8 SKUs for the first stocked run.",
+  "event_batch1_planned_detail": "200 boards across 8 models for the first stocked run.",
   "event_hardware_validated_title": "Hardware validated",
   "event_hardware_validated_detail": "Both [ESCs](/products/openesc), both [FCs](/products/openfc-lite) and all four [OpenRX](/products/openrx) variants pass bench validation.",
   "event_oshwa_certified_title": "Eight boards OSHWA-certified",

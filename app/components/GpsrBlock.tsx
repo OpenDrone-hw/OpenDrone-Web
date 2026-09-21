@@ -20,11 +20,9 @@ const WARNING_LANGS = ['en', 'nl', 'fr'] as const;
 export function GpsrBlock({
   company,
   productTitle,
-  sku,
 }: {
   company: CompanyIdentity;
   productTitle: string;
-  sku?: string | null;
 }) {
   return (
     <section
@@ -50,13 +48,6 @@ export function GpsrBlock({
         <p className="mb-4">
           {copyText('product-chrome.gpsr_product_label') ?? 'Product type'}:{' '}
           {productTitle}
-          {sku ? (
-            <>
-              {' '}
-              &middot; {copyText('product-chrome.buy_sku_prefix') ?? 'SKU'}{' '}
-              {sku}
-            </>
-          ) : null}
         </p>
         <div className="grid gap-6 md:grid-cols-3">
           {WARNING_LANGS.map((lang) => {

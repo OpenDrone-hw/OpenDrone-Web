@@ -24,8 +24,6 @@ import {
   type FundingOverlay,
 } from './funding-overlay.ts';
 
-export const DEFAULT_FUNDING_URL = 'https://erp.incutec.com/incutec/funding.json';
-
 /** Fresh window: the contract's 60 seconds. */
 const FRESH_MS = 60 * 1000;
 /** How long a stale copy still beats falling back to the catalog's numbers. */
@@ -53,8 +51,8 @@ export type FundingOverlayClient = {
   get: () => Promise<FundingOverlay>;
 };
 
-export function fundingOverlayUrl(env: Env): string {
-  return env.FUNDING_URL || DEFAULT_FUNDING_URL;
+export function fundingOverlayUrl(env: Env): string | null {
+  return env.FUNDING_URL?.trim() || null;
 }
 
 export function createFundingOverlayClient({
@@ -67,6 +65,7 @@ export function createFundingOverlayClient({
   waitUntil?: (p: Promise<unknown>) => void;
 }): FundingOverlayClient {
   const url = fundingOverlayUrl(env);
+  if (!url) return {get: async () => EMPTY_FUNDING_OVERLAY};
   // Same origin and staging basic auth as the catalog (both served by
   // incutec_catalog_api): no separate credential pair to configure.
   const credentials =

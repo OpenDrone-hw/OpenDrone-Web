@@ -223,7 +223,7 @@ describe('Shopify cart action', () => {
     assert.equal(response.headers.get('Retry-After'), '60');
   });
 
-  it('redirects to checkout using request-time catalog identity and ignores a client price', async () => {
+  it('redirects to the cart using request-time catalog identity and ignores a client price', async () => {
     let received: unknown;
     const response = await handleShopifyCartAction(
       request({sku: 'OPENRX-LITE', qty: '2', price: '0.01', merchandiseId: 'attacker'}),
@@ -236,8 +236,7 @@ describe('Shopify cart action', () => {
         },
       },
     );
-    assert.equal(response.status, 303);
-    assert.equal(response.headers.get('Location'), 'https://checkout.opendrone.be/checkouts/cn/ok');
+    assert.equal(response.status, 200);
     assert.deepEqual(received, [{
       merchandiseId: 'gid://shopify/ProductVariant/server-authoritative',
       quantity: 2,
@@ -257,21 +256,25 @@ describe('Shopify cart action', () => {
     assert.equal(fetched, false);
   });
 
-  it('reuses only the cart id from this session without imposing a quantity cap', async () => {
-    let addedTo = '';
+  it('merges repeat adds into the existing variant without imposing a quantity cap', async () => {
+    let updated: unknown;
     const response = await handleShopifyCartAction(
       request({sku: 'OPENRX-LITE', qty: '2'}), ENABLED_ENV, {
         fetchCatalog: async () => CATALOG,
         getCartId: () => 'gid://shopify/Cart/session-a?key=secret-a',
-        getCart: async (id) => ({id, checkoutUrl: 'https://checkout.opendrone.be/a', lines: [{merchandiseId: 'gid://shopify/ProductVariant/server-authoritative', quantity: 3}]}),
-        addCartLines: async (id) => { addedTo = id; return {id, checkoutUrl: 'https://checkout.opendrone.be/a', lines: []}; },
+        getCart: async (id) => ({id, checkoutUrl: 'https://checkout.opendrone.be/a', lines: [{id: 'gid://shopify/CartLine/one', lineIds: ['gid://shopify/CartLine/one'], merchandiseId: 'gid://shopify/ProductVariant/server-authoritative', quantity: 3}]}),
+        updateCartLines: async (id, lines) => { updated = {id, lines}; return {id, checkoutUrl: 'https://checkout.opendrone.be/a', lines: []}; },
+        addCartLines: async () => { throw new Error('must not create a duplicate line'); },
         createCart: async () => { throw new Error('must not create'); },
       },
     );
-    assert.equal(response.status, 303);
-    assert.equal(addedTo, 'gid://shopify/Cart/session-a?key=secret-a');
+    assert.equal(response.status, 200);
+    assert.deepEqual(updated, {
+      id: 'gid://shopify/Cart/session-a?key=secret-a',
+      lines: [{id: 'gid://shopify/CartLine/one', quantity: 5}],
+    });
 
-    let largeAdd: unknown;
+    const mutations: unknown[] = [];
     const unlimited = await handleShopifyCartAction(
       request({sku: 'OPENRX-LITE', qty: '10000'}), ENABLED_ENV, {
         fetchCatalog: async () => CATALOG,
@@ -280,40 +283,106 @@ describe('Shopify cart action', () => {
           id: 'cart-b',
           checkoutUrl: 'https://checkout.opendrone.be/b',
           lines: [
-            {merchandiseId: 'gid://shopify/ProductVariant/server-authoritative', quantity: 30},
-            {merchandiseId: 'gid://shopify/ProductVariant/server-authoritative', quantity: 19},
+            {id: 'gid://shopify/CartLine/a', lineIds: ['gid://shopify/CartLine/a', 'gid://shopify/CartLine/b'], merchandiseId: 'gid://shopify/ProductVariant/server-authoritative', quantity: 49},
           ],
         }),
-        addCartLines: async (id, lines) => {
-          largeAdd = {id, lines};
+        updateCartLines: async (id, lines) => {
+          mutations.push({kind: 'update', id, lines});
           return {id, checkoutUrl: 'https://checkout.opendrone.be/b', lines: []};
         },
+        removeCartLines: async (id, lineIds) => {
+          mutations.push({kind: 'remove', id, lineIds});
+          return {id, checkoutUrl: 'https://checkout.opendrone.be/b', lines: []};
+        },
+        addCartLines: async () => { throw new Error('must not create a duplicate line'); },
         createCart: async () => { throw new Error('must not create'); },
       },
     );
-    assert.equal(unlimited.status, 303);
-    assert.deepEqual(largeAdd, {
-      id: 'cart-b',
-      lines: [{merchandiseId: 'gid://shopify/ProductVariant/server-authoritative', quantity: 10000}],
-    });
+    assert.equal(unlimited.status, 200);
+    assert.deepEqual(mutations, [
+      {kind: 'update', id: 'cart-b', lines: [{id: 'gid://shopify/CartLine/a', quantity: 10049}]},
+      {kind: 'remove', id: 'cart-b', lineIds: ['gid://shopify/CartLine/b']},
+    ]);
   });
 
-  it('fails closed and clears an expired session cart without creating another', async () => {
+  it('clears an expired session cart and recreates it in the same add request', async () => {
     let unset = false;
-    const response = await thrownResponse(handleShopifyCartAction(
+    let replacement = '';
+    const response = await handleShopifyCartAction(
       request({sku: 'OPENRX-LITE', qty: '1'}), ENABLED_ENV, {
         fetchCatalog: async () => CATALOG,
         getCartId: () => 'expired', getCart: async () => null,
         unsetCartId: () => { unset = true; },
+        setCartId: (id) => { replacement = id; },
         addCartLines: async () => { throw new Error('must not add'); },
-        createCart: async () => { throw new Error('must not create'); },
+        createCart: async () => ({id: 'replacement', checkoutUrl: 'https://checkout.opendrone.be/a', lines: []}),
       },
-    ));
-    assert.equal(response.status, 409);
+    );
+    assert.equal(response.status, 200);
     assert.equal(unset, true);
+    assert.equal(replacement, 'replacement');
   });
 
-  it('rejects set mode and permanently closes the legacy cart loader', async () => {
+  it('updates and removes existing cart lines without fetching the catalog', async () => {
+    let fetched = false;
+    let updated: unknown;
+    let removed: unknown;
+    const base = {
+      fetchCatalog: async () => { fetched = true; return CATALOG; },
+      createCart: async () => { throw new Error('must not create'); },
+      getCartId: () => 'gid://shopify/Cart/cart-a?key=secret',
+    };
+    const update = await handleShopifyCartAction(
+      request({intent: 'update', lineId: 'gid://shopify/CartLine/line-a', quantity: '42'}),
+      ENABLED_ENV,
+      {
+        ...base,
+        updateCartLines: async (id, lines) => {
+          updated = {id, lines};
+          return {id, checkoutUrl: 'https://checkout.opendrone.be/a', lines: []};
+        },
+      },
+    );
+    assert.equal(update.status, 303);
+    assert.equal(update.headers.get('Location'), '/cart');
+    assert.deepEqual(updated, {
+      id: 'gid://shopify/Cart/cart-a?key=secret',
+      lines: [{id: 'gid://shopify/CartLine/line-a', quantity: 42}],
+    });
+    const remove = await handleShopifyCartAction(
+      request({intent: 'remove', lineId: 'gid://shopify/CartLine/line-a'}),
+      ENABLED_ENV,
+      {
+        ...base,
+        removeCartLines: async (id, lineIds) => {
+          removed = {id, lineIds};
+          return {id, checkoutUrl: 'https://checkout.opendrone.be/a', lines: []};
+        },
+      },
+    );
+    assert.equal(remove.status, 303);
+    assert.deepEqual(removed, {
+      id: 'gid://shopify/Cart/cart-a?key=secret',
+      lineIds: ['gid://shopify/CartLine/line-a'],
+    });
+    assert.equal(fetched, false);
+  });
+
+  it('loads the session cart when every commerce gate is open', async () => {
+    const response = await handleShopifyCartLoader(ENABLED_ENV, {
+      getCartId: () => 'gid://shopify/Cart/cart-a?key=secret',
+      getCart: async (id) => ({
+        id,
+        checkoutUrl: 'https://checkout.opendrone.be/a',
+        lines: [],
+      }),
+    });
+    assert.equal(response.status, 200);
+    const cart = (await response.json()) as {id: string};
+    assert.equal(cart.id, 'gid://shopify/Cart/cart-a?key=secret');
+  });
+
+  it('rejects set mode and keeps the cart loader closed when commerce is gated', async () => {
     const invalid = await thrownResponse(handleShopifyCartAction(
       request({sku: 'OPENRX-LITE', qty: '1', mode: 'set'}),
       ENABLED_ENV,
@@ -325,7 +394,7 @@ describe('Shopify cart action', () => {
       {SHOPIFY_ADAPTER_PREVIEW: '1'},
       {getCartId: () => 'cart-a', getCart: async (id) => { fetched = true; return {id, checkoutUrl: 'https://checkout.opendrone.be/a', lines: []}; }},
     ));
-    assert.equal(response.status, 410);
+    assert.equal(response.status, 404);
     assert.equal(fetched, false);
   });
 

@@ -1,4 +1,4 @@
-import {addCartLines, createCart, fetchShopifyCatalog, getCart} from '~/lib/shopify-storefront';
+import {addCartLines, createCart, fetchShopifyCatalog, getCart, removeCartLines, updateCartLines} from '~/lib/shopify-storefront';
 import {handleShopifyCartAction, handleShopifyCartLoader} from '~/lib/shopify-cart-action';
 import type {Route} from './+types/api.shopify.cart';
 
@@ -13,6 +13,8 @@ export async function action({request, context}: Route.ActionArgs) {
     unsetCartId: () => context.session.unset(CART_KEY),
     getCart: (id) => getCart(context.env, id),
     addCartLines: (id, lines) => addCartLines(context.env, id, lines),
+    updateCartLines: (id, lines) => updateCartLines(context.env, id, lines),
+    removeCartLines: (id, lineIds) => removeCartLines(context.env, id, lineIds),
     logError: (message) => console.error('[shopify-cart] checkout operation failed', message),
   });
 }

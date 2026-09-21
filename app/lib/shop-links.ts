@@ -32,14 +32,14 @@ export type PortalTarget = keyof typeof PORTAL_PATHS;
 export type CommerceHandoff = {
   mode: 'odoo' | 'shopify-preview';
   addUrl: string;
-  /** Shopify cartCreate has no browser basket to revisit. */
+  /** Local cart review page, or the external commerce cart. */
   cartUrl: string | null;
 };
 
 export function commerceHandoff(
   catalog: Catalog,
   shopifyPreview: boolean,
-  hasShopifyCart = false,
+  _hasShopifyCart = false,
 ): CommerceHandoff {
   if (shopifyPreview && catalog.add_url !== '/api/shopify/cart') {
     throw new Error('shopify preview catalog has an unexpected add endpoint');
@@ -50,7 +50,7 @@ export function commerceHandoff(
       ? catalog.add_url
       : new URL(catalog.add_url, catalog.shop_url).toString(),
     cartUrl: shopifyPreview
-      ? (hasShopifyCart ? '/api/shopify/cart' : null)
+      ? '/cart'
       : new URL(catalog.cart_url, catalog.shop_url).toString(),
   };
 }

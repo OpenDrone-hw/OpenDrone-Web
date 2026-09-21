@@ -7,6 +7,51 @@ const PREORDER_ATTRIBUTES = [
   {key: 'OpenDrone shipping', value: 'Billed separately when the complete order is ready'},
 ];
 
+const STOREFRONT_PRODUCT_TYPES = [
+  'frame',
+  'pcb',
+  'flight controller',
+  'esc',
+  'receiver',
+  'elrs receiver',
+  'motor',
+] as const;
+
+function isStorefrontProductType(productType: string): boolean {
+  const normalized = productType.trim().toLowerCase();
+  return STOREFRONT_PRODUCT_TYPES.some((type) => normalized === type);
+}
+
+const CART_FIELDS = `#graphql
+  fragment OpenDroneCartFields on Cart {
+    id
+    checkoutUrl
+    totalQuantity
+    cost {
+      subtotalAmount { amount currencyCode }
+      totalAmount { amount currencyCode }
+    }
+    lines(first: 100) {
+      pageInfo { hasNextPage }
+      nodes {
+        id
+        quantity
+        cost { totalAmount { amount currencyCode } }
+        merchandise {
+          ... on ProductVariant {
+            id
+            title
+            sku
+            image { url altText }
+            selectedOptions { name value }
+            product { handle title productType }
+          }
+        }
+      }
+    }
+  }
+`;
+
 const CATALOG_QUERY = `#graphql
   query OpenDroneCatalog($first: Int!, $variantsFirst: Int!) {
     products(first: $first, sortKey: TITLE) {
@@ -36,10 +81,21 @@ const CATALOG_QUERY = `#graphql
   }
 `;
 
+export const PRODUCT_RECOMMENDATIONS_QUERY = `#graphql
+  query OpenDroneComplementaryProducts($handle: String!) {
+    productRecommendations(productHandle: $handle, intent: COMPLEMENTARY) {
+      handle
+      productType
+      availableForSale
+    }
+  }
+`;
+
 export const CART_CREATE_MUTATION = `#graphql
+  ${CART_FIELDS}
   mutation OpenDroneCartCreate($input: CartInput!) {
     cartCreate(input: $input) {
-      cart { id checkoutUrl lines(first: 100) { pageInfo { hasNextPage } nodes { merchandise { ... on ProductVariant { id } } quantity } } }
+      cart { ...OpenDroneCartFields }
       userErrors { field message }
       warnings { message }
     }
@@ -47,29 +103,68 @@ export const CART_CREATE_MUTATION = `#graphql
 `;
 
 export const CART_QUERY = `#graphql
+  ${CART_FIELDS}
   query OpenDroneCart($id: ID!) {
-    cart(id: $id) {
-      id
-      checkoutUrl
-      lines(first: 100) { pageInfo { hasNextPage } nodes { merchandise { ... on ProductVariant { id } } quantity } }
-    }
+    cart(id: $id) { ...OpenDroneCartFields }
   }
 `;
 
 export const CART_LINES_ADD_MUTATION = `#graphql
+  ${CART_FIELDS}
   mutation OpenDroneCartLinesAdd($cartId: ID!, $lines: [CartLineInput!]!) {
     cartLinesAdd(cartId: $cartId, lines: $lines) {
-      cart { id checkoutUrl lines(first: 100) { pageInfo { hasNextPage } nodes { merchandise { ... on ProductVariant { id } } quantity } } }
+      cart { ...OpenDroneCartFields }
       userErrors { field message }
       warnings { message }
     }
   }
 `;
 
+export const CART_LINES_UPDATE_MUTATION = `#graphql
+  ${CART_FIELDS}
+  mutation OpenDroneCartLinesUpdate($cartId: ID!, $lines: [CartLineUpdateInput!]!) {
+    cartLinesUpdate(cartId: $cartId, lines: $lines) {
+      cart { ...OpenDroneCartFields }
+      userErrors { field message }
+      warnings { message }
+    }
+  }
+`;
+
+export const CART_LINES_REMOVE_MUTATION = `#graphql
+  ${CART_FIELDS}
+  mutation OpenDroneCartLinesRemove($cartId: ID!, $lineIds: [ID!]!) {
+    cartLinesRemove(cartId: $cartId, lineIds: $lineIds) {
+      cart { ...OpenDroneCartFields }
+      userErrors { field message }
+      warnings { message }
+    }
+  }
+`;
+
+export type ShopifyMoney = {amount: string; currencyCode: string};
+export type ShopifyCartLine = {
+  id: string;
+  lineIds: string[];
+  merchandiseId: string;
+  quantity: number;
+  title: string;
+  variantTitle: string;
+  handle: string;
+  productType: string;
+  sku: string | null;
+  image: {url: string; altText: string | null} | null;
+  selectedOptions: Array<{name: string; value: string}>;
+  total: ShopifyMoney;
+};
+
 export type ShopifyCart = {
   id: string;
   checkoutUrl: string;
-  lines: Array<{merchandiseId: string; quantity: number}>;
+  totalQuantity: number;
+  subtotal: ShopifyMoney;
+  total: ShopifyMoney;
+  lines: ShopifyCartLine[];
 };
 
 type StorefrontEnv = Pick<
@@ -193,7 +288,9 @@ export function mapShopifyCatalog(
   }
   const seen = new Set<string>();
   let catalogCurrency: string | null = null;
-  const products: CatalogProduct[] = data.products.nodes.map((product) => {
+  const products: CatalogProduct[] = data.products.nodes
+  .filter((product) => isStorefrontProductType(product.productType))
+  .map((product) => {
     if (product.variants.pageInfo.hasNextPage) {
       throw new Error(`shopify: ${product.handle} has more than 100 variants`);
     }
@@ -299,12 +396,52 @@ export async function fetchShopifyCatalog(
   );
 }
 
+/**
+ * Shopify Search & Discovery owns product-level merchandising links. The
+ * build graph applies variant/quantity compatibility after this result, so
+ * a recommendation can change rank but cannot cross build sizes.
+ */
+export async function fetchShopifyComplementaryHandles(
+  env: StorefrontEnv,
+  productHandle: string,
+  fetcher: typeof fetch = fetch,
+): Promise<string[]> {
+  if (!/^[a-z0-9][a-z0-9-]{0,254}$/.test(productHandle)) return [];
+  const data = await storefrontRequest<{
+    productRecommendations: Array<{
+      handle: string;
+      productType: string;
+      availableForSale: boolean;
+    }> | null;
+  }>(env, PRODUCT_RECOMMENDATIONS_QUERY, {handle: productHandle}, fetcher);
+  return (data.productRecommendations ?? [])
+    .filter(
+      (product) =>
+        product.availableForSale && isStorefrontProductType(product.productType),
+    )
+    .map(({handle}) => handle);
+}
+
 type CartWire = {
   id: string;
   checkoutUrl: string;
+  totalQuantity: number;
+  cost: {subtotalAmount: ShopifyMoney; totalAmount: ShopifyMoney};
   lines: {
     pageInfo: {hasNextPage: boolean};
-    nodes: Array<{merchandise: {id: string}; quantity: number}>;
+    nodes: Array<{
+      id: string;
+      quantity: number;
+      cost: {totalAmount: ShopifyMoney};
+      merchandise: {
+        id: string;
+        title: string;
+        sku: string | null;
+        image: {url: string; altText: string | null} | null;
+        selectedOptions: Array<{name: string; value: string}>;
+        product: {handle: string; title: string; productType: string};
+      };
+    }>;
   };
 };
 
@@ -322,6 +459,7 @@ function validatedCart(
   if (
     cart.lines.nodes.some(
       (line) =>
+        !line.id ||
         !line.merchandise.id ||
         !Number.isSafeInteger(line.quantity) ||
         line.quantity < 1,
@@ -346,11 +484,45 @@ function validatedCart(
   return {
     id: cart.id,
     checkoutUrl: checkout.toString(),
-    lines: cart.lines.nodes.map((line) => ({
+    totalQuantity: cart.totalQuantity,
+    subtotal: cart.cost.subtotalAmount,
+    total: cart.cost.totalAmount,
+    lines: mergeCartLines(cart.lines.nodes.map((line) => ({
+      id: line.id,
+      lineIds: [line.id],
       merchandiseId: line.merchandise.id,
       quantity: line.quantity,
-    })),
+      title: line.merchandise.product.title,
+      variantTitle: line.merchandise.title,
+      handle: line.merchandise.product.handle,
+      productType: line.merchandise.product.productType,
+      sku: line.merchandise.sku,
+      image: line.merchandise.image,
+      selectedOptions: line.merchandise.selectedOptions,
+      total: line.cost.totalAmount,
+    }))),
   };
+}
+
+export function mergeCartLines(lines: ShopifyCartLine[]): ShopifyCartLine[] {
+  const merged = new Map<string, ShopifyCartLine>();
+  for (const line of lines) {
+    const existing = merged.get(line.merchandiseId);
+    if (!existing) {
+      merged.set(line.merchandiseId, {...line, lineIds: [...line.lineIds]});
+      continue;
+    }
+    if (existing.total.currencyCode !== line.total.currencyCode) {
+      throw new Error('shopify: duplicate cart lines use mixed currencies');
+    }
+    existing.lineIds.push(...line.lineIds);
+    existing.quantity += line.quantity;
+    existing.total = {
+      amount: (Number(existing.total.amount) + Number(line.total.amount)).toFixed(2),
+      currencyCode: existing.total.currencyCode,
+    };
+  }
+  return [...merged.values()];
 }
 
 export async function createCart(
@@ -404,4 +576,34 @@ export async function addCartLines(
     throw new Error('shopify: cartLinesAdd failed');
   }
   return validatedCart(env, data.cartLinesAdd.cart, cartId);
+}
+
+export async function updateCartLines(
+  env: StorefrontEnv,
+  cartId: string,
+  lines: Array<{id: string; quantity: number}>,
+  fetcher: typeof fetch = fetch,
+) {
+  const data = await storefrontRequest<{
+    cartLinesUpdate: {cart: CartWire | null; userErrors: unknown[]; warnings: unknown[]};
+  }>(env, CART_LINES_UPDATE_MUTATION, {cartId, lines}, fetcher);
+  if (data.cartLinesUpdate.userErrors.length || data.cartLinesUpdate.warnings.length || !data.cartLinesUpdate.cart) {
+    throw new Error('shopify: cartLinesUpdate failed');
+  }
+  return validatedCart(env, data.cartLinesUpdate.cart, cartId);
+}
+
+export async function removeCartLines(
+  env: StorefrontEnv,
+  cartId: string,
+  lineIds: string[],
+  fetcher: typeof fetch = fetch,
+) {
+  const data = await storefrontRequest<{
+    cartLinesRemove: {cart: CartWire | null; userErrors: unknown[]; warnings: unknown[]};
+  }>(env, CART_LINES_REMOVE_MUTATION, {cartId, lineIds}, fetcher);
+  if (data.cartLinesRemove.userErrors.length || data.cartLinesRemove.warnings.length || !data.cartLinesRemove.cart) {
+    throw new Error('shopify: cartLinesRemove failed');
+  }
+  return validatedCart(env, data.cartLinesRemove.cart, cartId);
 }

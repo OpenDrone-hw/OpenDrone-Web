@@ -13,7 +13,7 @@
   "signin_title": "Continue with your OpenDrone account",
   "signin_body": "One ticket, one thread. Resume from desktop or phone.",
   "signin_reasons": [
-    "We see exactly which SKU and firmware rev you have.",
+    "We see exactly which product and firmware revision you have.",
     "You can attach order files without typing the order number."
   ],
   "signin_cta": "Sign in →",

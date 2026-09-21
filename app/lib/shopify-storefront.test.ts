@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import {
   createCheckout,
+  fetchShopifyComplementaryHandles,
   fetchShopifyCatalog,
   getCart,
   storefrontEndpoint,
@@ -90,7 +91,7 @@ describe('Shopify Storefront catalog', () => {
           pageInfo: {hasNextPage: false},
           nodes: [
             {
-              handle: 'bad', title: 'Bad', description: '', productType: '',
+              handle: 'bad', title: 'Bad', description: '', productType: 'Receiver',
               featuredImage: null, images: {nodes: []},
               variants: {pageInfo: {hasNextPage: false}, nodes: [{
                 id: 'gid://shopify/ProductVariant/1', title: 'Default', sku: '',
@@ -105,6 +106,22 @@ describe('Shopify Storefront catalog', () => {
     await assert.rejects(fetchShopifyCatalog(ENV, fetcher), /missing or duplicate SKU/);
   });
 
+  it('excludes accessories, spare parts, kits, and donations from the storefront', async () => {
+    const fetcher: typeof fetch = async () => response({
+      products: {pageInfo: {hasNextPage: false}, nodes: [{
+        handle: 'hardware-kit', title: 'Hardware Kit', description: '', productType: 'Accessory',
+        featuredImage: null, images: {nodes: []},
+        variants: {pageInfo: {hasNextPage: false}, nodes: [{
+          id: 'gid://shopify/ProductVariant/1', title: 'Default', sku: '', availableForSale: true,
+          image: null, price: {amount: '3.00', currencyCode: 'EUR'}, compareAtPrice: null,
+          selectedOptions: [],
+        }]},
+      }]},
+    });
+    const catalog = await fetchShopifyCatalog(ENV, fetcher);
+    assert.deepEqual(catalog.products, []);
+  });
+
   it('does not infer VAT inclusion or sale mode from Shopify fields', async () => {
     const fetcher: typeof fetch = async () => response({
       products: {pageInfo: {hasNextPage: false}, nodes: []},
@@ -116,7 +133,57 @@ describe('Shopify Storefront catalog', () => {
   });
 });
 
+describe('Shopify complementary recommendations', () => {
+  it('returns only available core hardware handles', async () => {
+    const handles = await fetchShopifyComplementaryHandles(ENV, 'openfc-lite', async () =>
+      response({
+        productRecommendations: [
+          {handle: 'openesc', productType: 'ESC', availableForSale: true},
+          {handle: 'strap', productType: 'Accessory', availableForSale: true},
+          {handle: 'openmotor', productType: 'Motor', availableForSale: false},
+        ],
+      }),
+    );
+    assert.deepEqual(handles, ['openesc']);
+  });
+
+  it('does not send malformed handles to Shopify', async () => {
+    let called = false;
+    const handles = await fetchShopifyComplementaryHandles(
+      ENV,
+      '../admin',
+      async () => {
+        called = true;
+        return response({productRecommendations: []});
+      },
+    );
+    assert.deepEqual(handles, []);
+    assert.equal(called, false);
+  });
+});
+
 describe('Shopify hosted checkout handoff', () => {
+  it('presents duplicate Shopify lines for the same variant as one cart row', async () => {
+    const id = 'gid://shopify/Cart/test?key=secret';
+    const merchandise = {
+      id: 'gid://shopify/ProductVariant/1', title: '20×20', sku: 'OPENFC-LITE-2020',
+      image: null, selectedOptions: [{name: 'Model', value: '20×20'}],
+      product: {handle: 'openfc-lite', title: 'OpenFC Lite', productType: 'Flight Controller'},
+    };
+    const cart = await getCart(ENV, id, async () => response({cart: {
+      id, checkoutUrl: 'https://checkout.opendrone.be/checkouts/cn/abc', totalQuantity: 3,
+      cost: {subtotalAmount: {amount: '105.00', currencyCode: 'EUR'}, totalAmount: {amount: '105.00', currencyCode: 'EUR'}},
+      lines: {pageInfo: {hasNextPage: false}, nodes: [
+        {id: 'gid://shopify/CartLine/a', quantity: 1, cost: {totalAmount: {amount: '35.00', currencyCode: 'EUR'}}, merchandise},
+        {id: 'gid://shopify/CartLine/b', quantity: 2, cost: {totalAmount: {amount: '70.00', currencyCode: 'EUR'}}, merchandise},
+      ]},
+    }}));
+    assert.equal(cart?.lines.length, 1);
+    assert.equal(cart?.lines[0].quantity, 3);
+    assert.equal(cart?.lines[0].total.amount, '105.00');
+    assert.deepEqual(cart?.lines[0].lineIds, ['gid://shopify/CartLine/a', 'gid://shopify/CartLine/b']);
+  });
+
   it('fails closed when the cart line query is incomplete', async () => {
     const id = 'gid://shopify/Cart/test?key=secret';
     await assert.rejects(
@@ -151,7 +218,16 @@ describe('Shopify hosted checkout handoff', () => {
       }).variables;
       return response({
         cartCreate: {
-          cart: {id: 'gid://shopify/Cart/test?key=secret', checkoutUrl: 'https://checkout.opendrone.be/checkouts/cn/abc', lines: {pageInfo: {hasNextPage: false}, nodes: []}},
+          cart: {
+            id: 'gid://shopify/Cart/test?key=secret',
+            checkoutUrl: 'https://checkout.opendrone.be/checkouts/cn/abc',
+            totalQuantity: 0,
+            cost: {
+              subtotalAmount: {amount: '0.00', currencyCode: 'EUR'},
+              totalAmount: {amount: '0.00', currencyCode: 'EUR'},
+            },
+            lines: {pageInfo: {hasNextPage: false}, nodes: []},
+          },
           userErrors: [],
           warnings: [],
         },

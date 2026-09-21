@@ -47,7 +47,7 @@ describe('commerce handoff', () => {
     );
   });
 
-  it('routes a multi-line preview purchase to the local Shopify action and exposes no fake cart', () => {
+  it('routes a multi-line preview purchase to the local Shopify cart', () => {
     const handoff = commerceHandoff(
       catalog('/api/shopify/cart', 'https://store.myshopify.com/cart'),
       true,
@@ -56,7 +56,7 @@ describe('commerce handoff', () => {
     assert.deepEqual(handoff, {
       mode: 'shopify-preview',
       addUrl: '/api/shopify/cart',
-      cartUrl: null,
+      cartUrl: '/cart',
     });
     assert.equal(
       buyUrl(handoff, [

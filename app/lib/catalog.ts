@@ -58,6 +58,10 @@ export type CatalogVariant = {
   cart_add_method?: 'POST';
   /** Server-only Shopify variant identity. Never accepted from a browser. */
   merchandise_id?: string;
+  /** Shopify-backed preorder campaign progress. A target is a funding goal,
+   *  never an order cap. */
+  campaign_target?: number | null;
+  campaign_units_funded?: number;
   /** Older catalogs carried an issued DoC object here. It is ignored:
    *  Declarations of Conformity stay internal (contract section 4). */
   compliance?: unknown;
@@ -379,6 +383,8 @@ function mapVariant(
           unitsLeft: variant.discount.units_left,
         }
       : null,
+    campaignTarget: variant.campaign_target ?? null,
+    campaignUnitsFunded: variant.campaign_units_funded ?? null,
   };
 }
 

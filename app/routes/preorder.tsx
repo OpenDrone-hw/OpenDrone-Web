@@ -4,18 +4,17 @@ import {buildSeoMeta} from '~/lib/seo';
 import {EditorialShell} from '~/components/EditorialShell';
 import {Txt} from '~/components/Txt';
 import {AddToCartButton} from '~/components/AddToCartButton';
-import {ProductPrice} from '~/components/ProductPrice';
 import {SmoothImage} from '~/components/SmoothImage';
 import {copyText} from '~/lib/copy';
 import {formatPrice} from '~/lib/catalog';
 import {fundingDaysLeftText} from '~/lib/funding';
-import {mergeFundingOverlay} from '~/lib/funding-overlay';
+import {applyCampaignProgress, fetchShopifyCampaignProgress} from '~/lib/shopify-campaign';
 import {
   buildCampaigns,
-  otherProducts,
   summarize,
   type PreorderCampaign,
   type PreorderSummary,
+  type PreorderTier,
 } from '~/lib/preorder-campaigns';
 import {preorderUpdates} from '~/lib/preorder-updates';
 
@@ -43,15 +42,15 @@ export const meta: Route.MetaFunction = () =>
   });
 
 export async function loader({context}: Route.LoaderArgs) {
-  // The catalog is cached 5 minutes and owns every campaign's existence,
-  // target and deadline; the overlay refreshes the live fields every 60
-  // seconds and never rejects, so an absent or empty overlay simply leaves
-  // the catalog's own numbers standing and this page still renders.
-  const [rawCatalog, fundingOverlay] = await Promise.all([
-    context.catalog.get(),
-    context.fundingOverlay.get(),
-  ]);
-  const catalog = mergeFundingOverlay(rawCatalog, fundingOverlay);
+  // The catalog owns every campaign's products and variants. Paid preorder
+  // quantities are read from Shopify orders and cached for 60 seconds. If
+  // that read fails, the targets remain visible with zero confirmed units.
+  const rawCatalog = await context.catalog.get();
+  const snapshot = await fetchShopifyCampaignProgress(context.env).catch(() => ({
+    unitsBySku: {},
+    updatedAt: new Date().toISOString(),
+  }));
+  const catalog = applyCampaignProgress(rawCatalog, snapshot);
   // One clock for the whole page, read in the loader: a day count taken
   // during render would be the server's day at first paint and the
   // visitor's day at hydration.
@@ -59,7 +58,6 @@ export async function loader({context}: Route.LoaderArgs) {
   return {
     campaigns,
     summary: summarize(campaigns, catalog.currency),
-    others: otherProducts(catalog),
     updates: preorderUpdates(),
   };
 }
@@ -81,9 +79,13 @@ const FAQ: ReadonlyArray<readonly [string, string]> = [
 ];
 
 export default function PreorderRoute() {
-  const {campaigns, summary, others, updates} = useLoaderData<typeof loader>();
-  const hasCampaigns = campaigns.length > 0;
-  const tierCount = campaigns.reduce((n, c) => n + c.tiers.length, 0);
+  const {campaigns, summary, updates} = useLoaderData<typeof loader>();
+  const skuGoals = campaigns.flatMap((campaign) =>
+    campaign.tiers
+      .filter((tier) => tier.targetUnits != null && tier.unitsFunded != null)
+      .map((tier) => ({campaign, tier})),
+  );
+  const hasCampaigns = skuGoals.length > 0;
 
   return (
     <EditorialShell slug="preorder" rail={false} pageClassName="preorder-page">
@@ -92,7 +94,7 @@ export default function PreorderRoute() {
         <Txt id="preorder.lead" as="p" className="editorial-lead" />
         <SummaryStrip summary={summary} hasCampaigns={hasCampaigns} />
         <div className="editorial-cta">
-          <a className="editorial-cta-primary" href="#tiers">
+          <a className="editorial-cta-primary" href="#tracker">
             <Txt id="preorder.cta_primary" />
           </a>
           <Link
@@ -112,8 +114,12 @@ export default function PreorderRoute() {
         <Txt id="preorder.tracker_lead" as="p" />
         {hasCampaigns ? (
           <ul className="preorder-tracker">
-            {campaigns.map((campaign) => (
-              <TrackerCard key={campaign.handle} campaign={campaign} />
+            {skuGoals.map(({campaign, tier}) => (
+              <SkuTrackerRow
+                key={tier.sku}
+                campaign={campaign}
+                tier={tier}
+              />
             ))}
           </ul>
         ) : (
@@ -131,73 +137,6 @@ export default function PreorderRoute() {
           <Txt id={`preorder.${s}_body`} as="p" />
         </section>
       ))}
-
-      <section className="editorial-section" id="tiers">
-        <h2 className="editorial-section-title">
-          <Txt id="preorder.tiers_title" />
-        </h2>
-        <Txt id="preorder.tiers_lead" as="p" />
-        {tierCount > 0 ? (
-          campaigns.map((campaign) => (
-            <div className="preorder-tier-group" key={campaign.handle}>
-              <h3 className="preorder-tier-group-title">{campaign.title}</h3>
-              <ul className="preorder-tiers">
-                {campaign.tiers.map((tier) => (
-                  <li className="preorder-tier" key={tier.sku || tier.title}>
-                    <h4 className="preorder-tier-title">{tier.title}</h4>
-                    <ProductPrice
-                      price={tier.price}
-                      compareAtPrice={tier.compareAtPrice}
-                      discountLabel={tier.discountLabel}
-                    />
-                    {tier.unitsLeft != null ? (
-                      <p className="preorder-tier-left">
-                        {tier.unitsLeft} left at this price
-                      </p>
-                    ) : null}
-                    {tier.shipPromise ? (
-                      <p className="preorder-tier-ship">{tier.shipPromise}</p>
-                    ) : null}
-                    <AddToCartButton
-                      className="editorial-cta-primary preorder-tier-cta"
-                      href={tier.cartAddUrl}
-                      product={campaign.handle}
-                      disabled={!tier.orderable}
-                      revenue={{
-                        currency: tier.price.currencyCode,
-                        amount: Number(tier.price.amount) || 0,
-                      }}
-                      ariaLabel={`${tier.ctaLabel}: ${campaign.title} ${tier.title}`}
-                    >
-                      {tier.ctaLabel}
-                    </AddToCartButton>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))
-        ) : (
-          <Txt id="preorder.tiers_empty" as="p" className="preorder-empty" />
-        )}
-      </section>
-
-      {others.length > 0 ? (
-        <section className="editorial-section">
-          <h2 className="editorial-section-title">
-            <Txt id="preorder.others_title" />
-          </h2>
-          <Txt id="preorder.others_lead" as="p" />
-          <ul className="editorial-list preorder-others">
-            {others.map((product) => (
-              <li key={product.handle}>
-                <Link prefetch="viewport" to={product.to}>
-                  {product.title}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
 
       <section className="editorial-section" id="questions">
         <h2 className="editorial-section-title">
@@ -294,18 +233,25 @@ function SummaryStrip({
   );
 }
 
-/**
- * One campaign in the tracker. The bar shares the `.funding-meter`
- * geometry and state colours with the product surfaces, so a campaign
- * looks the same wherever it is read; `aria-valuetext` carries the exact
- * "X of Y units" the label under it prints, which is why neither can
- * contradict the other.
- */
-function TrackerCard({campaign}: {campaign: PreorderCampaign}) {
-  const countdown =
-    campaign.state === 'open'
-      ? fundingDaysLeftText(campaign.daysLeft)
-      : campaign.statusText;
+/** One horizontal production goal. The SKU remains its hidden data identity. */
+function SkuTrackerRow({
+  campaign,
+  tier,
+}: {
+  campaign: PreorderCampaign;
+  tier: PreorderTier;
+}) {
+  const target = tier.targetUnits as number;
+  const ordered = tier.unitsFunded as number;
+  const pct = Math.min(100, Math.round((ordered / target) * 100));
+  const state =
+    campaign.state === 'missed'
+      ? 'missed'
+      : ordered >= target
+        ? 'funded'
+        : 'open';
+  const unitsLabel = `${ordered.toLocaleString('en')} / ${target.toLocaleString('en')} ordered`;
+  const image = tier.image ?? campaign.image;
   return (
     <li className="preorder-track">
       <Link
@@ -315,70 +261,56 @@ function TrackerCard({campaign}: {campaign: PreorderCampaign}) {
         aria-hidden="true"
         tabIndex={-1}
       >
-        {campaign.image ? (
+        {image ? (
           <SmoothImage
-            alt={campaign.image.altText || campaign.title}
+            alt={image.altText || `${campaign.title} ${tier.title}`}
             aspectRatio="1/1"
-            data={campaign.image}
+            data={image}
             loading="lazy"
-            sizes="(min-width: 45em) 200px, 40vw"
+            sizes="96px"
           />
         ) : null}
       </Link>
       <div className="preorder-track-body">
         <h3 className="preorder-track-title">
           <Link prefetch="viewport" to={campaign.to}>
-            {campaign.title}
+            {campaign.title} <span>{tier.title}</span>
           </Link>
         </h3>
-        <div className="funding-meter" data-funding-state={campaign.state}>
+        <div className="funding-meter" data-funding-state={state}>
           <span
             className="funding-meter-track"
             role="progressbar"
-            aria-label={`${campaign.title} funding progress`}
-            aria-valuenow={campaign.pct}
+            aria-label={`${campaign.title} ${tier.title} preorder goal`}
+            aria-valuenow={ordered}
             aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuetext={campaign.unitsLabel}
+            aria-valuemax={target}
+            aria-valuetext={unitsLabel}
           >
             <span
               className="funding-meter-fill"
-              style={{width: `${campaign.pct}%`}}
+              style={{width: `${pct}%`}}
             />
           </span>
-          <span className="funding-meter-label">{campaign.unitsLabel}</span>
+          <span className="funding-meter-label">{unitsLabel}</span>
         </div>
-        <dl className="preorder-track-stats">
-          {campaign.amountFunded != null ? (
-            <div className="preorder-track-stat">
-              {/* "Raised", not "Funded": the state chip beside it already
-                  uses "Funded"/"Funding missed" for the campaign state, and
-                  two different meanings of one word read as a defect. */}
-              <dt>Raised</dt>
-              <dd>{formatPrice(campaign.amountFunded, campaign.currency)}</dd>
-            </div>
-          ) : null}
-          {campaign.backers != null ? (
-            <div className="preorder-track-stat">
-              <dt>Backers</dt>
-              <dd>{campaign.backers}</dd>
-            </div>
-          ) : null}
-          {countdown ? (
-            <div className="preorder-track-stat">
-              <dt>{campaign.state === 'open' ? 'Time' : 'State'}</dt>
-              <dd>
-                <span
-                  className="preorder-chip"
-                  data-funding-state={campaign.state}
-                >
-                  {countdown}
-                </span>
-              </dd>
-            </div>
-          ) : null}
-        </dl>
+        {tier.shipPromise ? (
+          <p className="preorder-track-ship">{tier.shipPromise}</p>
+        ) : null}
       </div>
+      <AddToCartButton
+        className="editorial-cta-primary preorder-track-cta"
+        href={tier.cartAddUrl}
+        product={campaign.handle}
+        disabled={!tier.orderable}
+        revenue={{
+          currency: tier.price.currencyCode,
+          amount: Number(tier.price.amount) || 0,
+        }}
+        ariaLabel={`${tier.ctaLabel}: ${campaign.title} ${tier.title}`}
+      >
+        {tier.ctaLabel}
+      </AddToCartButton>
     </li>
   );
 }

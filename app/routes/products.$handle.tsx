@@ -10,6 +10,7 @@ import {
   type ShouldRevalidateFunctionArgs,
 } from 'react-router';
 import type {RootLoader} from '~/root';
+import {useNonce} from '~/lib/csp';
 import type {Route} from './+types/products.$handle';
 import {
   byHandle,
@@ -17,7 +18,6 @@ import {
   mapProductOptions,
   selectVariant,
   selectedOptionsFromRequest,
-  toCard,
   toProduct,
 } from '~/lib/catalog';
 import {mergeFundingOverlay} from '~/lib/funding-overlay';
@@ -31,7 +31,6 @@ import {ProductPrice} from '~/components/ProductPrice';
 import {ProductGallery} from '~/components/ProductGallery';
 import {ProductForm} from '~/components/ProductForm';
 import {FundingMeter} from '~/components/FundingMeter';
-import {RelatedProducts} from '~/components/RelatedProducts';
 import {FirmwareSupport} from '~/components/FirmwareSupport';
 import {VariantLadder} from '~/components/VariantLadder';
 import {BoardArt} from '~/components/BoardArt';
@@ -210,7 +209,6 @@ function loadDeferredData({context, params}: Route.LoaderArgs) {
 
   if (!handle) {
     return {
-      recommendations: Promise.resolve(null),
       contributors: Promise.resolve([]),
     };
   }
@@ -249,20 +247,7 @@ function loadDeferredData({context, params}: Route.LoaderArgs) {
     .then((list) => (list.length ? list : recorded))
     .catch(() => recorded);
 
-  // "You might also like": the other products in the catalog. Odoo has no
-  // recommendation engine and the catalog is small enough that the whole
-  // rest of it IS the honest answer.
-  const recommendations = context.catalog
-    .get()
-    .then((catalog) =>
-      catalog.products
-        .filter((p) => p.handle !== handle)
-        .slice(0, 4)
-        .map((p) => toCard(catalog, p)),
-    )
-    .catch(() => null);
-
-  return {recommendations, contributors};
+  return {contributors};
 }
 
 const DOWNLOAD_ICONS: Record<DownloadKind, string> = {
@@ -597,11 +582,11 @@ function layoutBox(el: HTMLElement) {
 }
 
 function ProductPage() {
+  const nonce = useNonce();
   const {
     product,
     bundleProducts,
     stackProducts,
-    recommendations,
     contributors,
     commerceHandoff,
     roadmapStatus,
@@ -944,6 +929,8 @@ function ProductPage() {
         {
           key: pc.handle,
           label: pc.label ?? pp?.title ?? pc.handle,
+          handle: pc.handle,
+          image: match.image ?? pp?.featuredImage,
           size: stackMatchValue,
           price: match.price,
           compareAtPrice: match.compareAtPrice,
@@ -1555,11 +1542,6 @@ function ProductPage() {
           <span className="product-buy-sku" {...prodEdit('statusNote')}>
             {shipPromise}
           </span>
-        ) : selectedVariant?.sku ? (
-          <span className="product-buy-sku">
-            {copyText('product-chrome.buy_sku_prefix')}{' '}
-            {selectedVariant.sku}
-          </span>
         ) : null}
       </div>
       {status === 'idea' ? (
@@ -1618,11 +1600,6 @@ function ProductPage() {
               </span>
             );
           })()
-        ) : selectedVariant?.sku ? (
-          <span className="product-buy-sku">
-            {copyText('product-chrome.buy_sku_prefix')}{' '}
-            {selectedVariant.sku}
-          </span>
         ) : null}
       </div>
       {/* Pre-order: the stock line carries the ship promise from Odoo (the
@@ -2577,7 +2554,8 @@ function ProductPage() {
     <div className="product-page">
       <script
         type="application/ld+json"
-         
+        nonce={nonce}
+        suppressHydrationWarning
         dangerouslySetInnerHTML={{__html: JSON.stringify(productJsonLd)}}
       />
       {/* === HERO: gallery left, copy + sticky buy module right === */}
@@ -2746,8 +2724,6 @@ function ProductPage() {
         </Fragment>
       ))}
 
-      <RelatedProducts recommendations={recommendations} />
-
       {/* GPSR Art. 19 listing information (docs/store-compliance.md, section 1):
           manufacturer identity, contact, product identifier and safety warnings
           must be visible before purchase. Kept out of the product story,
@@ -2755,8 +2731,11 @@ function ProductPage() {
       {rootData?.company ? (
         <GpsrBlock
           company={rootData.company}
-          productTitle={product.title}
-          sku={selectedVariant?.sku ?? null}
+          productTitle={`${product.title}${
+            selectedVariant?.title && selectedVariant.title !== 'Default Title'
+              ? ` ${selectedVariant.title}`
+              : ''
+          }`}
         />
       ) : null}
 
