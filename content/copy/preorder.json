@@ -9,7 +9,7 @@
   "cta_secondary": "Where the boards are made →",
   "strip_ordered_label": "Ordered so far",
   "strip_reached_label": "Targets reached",
-  "strip_stack_label": "Stack batch 1 in stock",
+  "strip_stack_label": "Stack batch 1 left",
   "strip_unavailable": "Campaign numbers are temporarily unavailable. Campaign products cannot be ordered until the count is verified.",
   "tracker_title": "Every target",
   "tracker_lead": "Each product option has its own target, set at the quantity we order from the supplier. The numbers are paid orders in our shop, per option.",

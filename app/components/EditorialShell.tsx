@@ -110,7 +110,9 @@ export function EditorialShell({
     const later: Element[] = [];
     for (const el of items) {
       const parent = el.parentElement;
-      (parent?.classList.contains('editorial-hero') || parent === firstSection
+      // Anything inside the hero greets immediately, including a CTA row
+      // nested in it: those buttons otherwise waited for a scroll.
+      (parent?.closest('.editorial-hero') || parent === firstSection
         ? immediate
         : later
       ).push(el);

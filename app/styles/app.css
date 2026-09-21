@@ -17591,6 +17591,7 @@ body:has(.buy-rail.is-pinned.is-mobile) .placeholder-banner {
 }
 .funding-meter-fill {
   display: block;
+  min-width: 3px;
   height: 100%;
   border-radius: inherit;
   background: var(--color-gold);
@@ -17662,15 +17663,25 @@ html.light .funding-meter-link {
 .cart-sheet-item .cart-line-preorder {
   color: var(--color-gold);
 }
-.cart-line-noimage {
-  display: block;
+.cart-line-noimage,
+.preorder-track-initial {
+  display: grid;
+  place-items: center;
   width: 56px;
   height: 56px;
   border-radius: var(--r-sm);
   background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border);
+  border: 1px dashed var(--color-border-strong);
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);
+  color: var(--color-text-dim);
+}
+.preorder-track-initial {
+  width: 100%;
+  height: 100%;
 }
 .cart-mixed-warning {
+  max-width: 72ch;
   margin: var(--sp-3) 0 0;
   padding: var(--sp-3) var(--sp-4);
   border: 1px solid color-mix(in srgb, var(--color-gold) 45%, var(--color-border));
@@ -17688,6 +17699,12 @@ html.light .funding-meter-link {
 }
 .cart-summary-page .cart-checkout-cta {
   min-height: 48px;
+}
+@media (min-width: 768px) {
+  .cart-summary-page .cart-checkout-cta {
+    max-width: 360px;
+    margin-left: auto;
+  }
 }
 @media (max-width: 640px) {
   .cart-line-quantity--sheet button {
@@ -17814,26 +17831,53 @@ html.light .funding-meter-link {
   font-size: var(--fs-xs);
   color: var(--color-gold);
 }
+/* Outline, sentence case: twelve solid gold pills read as a wall. */
 .preorder-track-cta {
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  min-width: 8rem;
-  min-height: 44px;
-  border: 0;
+  min-width: 7.5rem;
+  min-height: 40px;
+  padding: 0 var(--sp-4);
+  border: 1px solid var(--color-gold);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-gold);
+  font-size: var(--fs-sm);
+  font-weight: 600;
   cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.preorder-track-cta:hover {
+  background: var(--color-gold-fill);
+  color: var(--color-on-accent);
+}
+html.light .preorder-track-cta {
+  color: var(--color-text);
+}
+html.light .preorder-track-cta:hover {
+  color: var(--color-on-accent);
 }
 .preorder-track-cta:disabled {
-  background: var(--color-bg-elevated);
+  border-color: var(--color-border);
   color: var(--color-text-dim);
   cursor: not-allowed;
+}
+.preorder-track form {
+  margin: 0;
 }
 @media (max-width: 42em) {
   .preorder-track {
     grid-template-columns: 4rem minmax(0, 1fr);
   }
-  .preorder-track-cta {
-    grid-column: 1 / -1;
-    width: 100%;
+  .preorder-track > form,
+  .preorder-track > button {
+    grid-column: 2;
+    justify-self: start;
   }
+}
+html.light .preorder-track-media img {
+  mix-blend-mode: multiply;
 }
 .preorder-faq {
   display: grid;
@@ -17895,7 +17939,6 @@ html.light .funding-meter-link {
 .cart-mixed-warning ul {
   margin: var(--sp-2) 0 0;
   padding-left: 1.1rem;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+  color: var(--color-text);
 }

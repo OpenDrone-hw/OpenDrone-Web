@@ -107,7 +107,7 @@ function PopulatedCart({cart}: {cart: ShopifyCart}) {
             <Txt id="cart.mixed_body" as="p" />
           </div>
         ) : null}
-        {hasPreorder ? <Txt id="cart.note_preorder" as="p" className="cart-summary-note" /> : null}
+        {hasPreorder && !mixed ? <Txt id="cart.note_preorder" as="p" className="cart-summary-note" /> : null}
         <Txt id={`cart.note_${note}`} as="p" className="cart-summary-note" />
         <Form method="post" action="/api/shopify/cart">
           <input type="hidden" name="intent" value="checkout" />
@@ -132,7 +132,7 @@ function CartLine({line}: {line: ShopifyCartLine}) {
         {line.image ? (
           <img src={line.image.url} alt={line.image.altText ?? line.title} width={56} height={56} />
         ) : (
-          <span className="cart-line-noimage" aria-hidden="true" />
+          <span className="cart-line-noimage" aria-hidden="true">{line.title.slice(4, 5) || line.title[0]}</span>
         )}
         <div className="cart-sheet-item">
           <Link to={`/products/${line.handle}`}><strong>{line.title}</strong></Link>

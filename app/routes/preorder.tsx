@@ -91,7 +91,8 @@ export async function loader({context}: Route.LoaderArgs) {
         ? stock.reduce((sum, r) => sum + r.campaign.batchUnits - r.campaign.batchOrdered, 0)
         : null,
       ordered: ordered > 0 ? ordered : null,
-      reached: funding.length
+      // Shown once a target is reached; "0 / 8" only discourages.
+      reached: funding.some((r) => r.campaign.targetReached)
         ? `${funding.filter((r) => r.campaign.targetReached).length} / ${funding.length}`
         : null,
     },
@@ -208,7 +209,9 @@ function TrackerCard({row}: {row: TrackerRow}) {
       >
         {row.image ? (
           <img src={row.image.url} alt="" loading="lazy" width={72} height={72} />
-        ) : null}
+        ) : (
+          <span className="preorder-track-initial">{row.product.slice(4, 5) || row.product[0]}</span>
+        )}
       </Link>
       <div className="preorder-track-body">
         <div className="preorder-track-head">
@@ -225,7 +228,7 @@ function TrackerCard({row}: {row: TrackerRow}) {
         <p className="preorder-track-ship">{row.shipPromise}</p>
       </div>
       <AddToCartButton
-        className="editorial-cta-primary preorder-track-cta"
+        className="preorder-track-cta"
         href={row.cartAddUrl}
         product={row.handle}
         revenue={{currency: row.price.currencyCode, amount: Number(row.price.amount) || 0}}
