@@ -50,7 +50,7 @@
     "isbot": "^5.2.2",
     "lucide-react": "^1.44.0",
     "motion": "^12.43.0",
-    "postprocessing": "^6.39.2",
+    "postprocessing": "^6.39.5",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router": "7.18.4",
