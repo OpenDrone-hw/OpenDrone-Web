@@ -5,8 +5,8 @@ import type {Route} from './+types/[sitemap.xml]';
  * `/products/<handle>` line per catalog product.
  *
  * It used to be a Hydrogen sitemap index over Shopify-hosted resources
- * with paginated child sitemaps. Odoo owns the catalog now, the site is a
- * few dozen URLs, and a single file is simpler for crawlers and for us.
+ * with paginated child sitemaps. The site is a few dozen URLs, and a
+ * single file is simpler for crawlers and for us.
  *
  * Redirect-only routes (/contribute, /incutec, /contact, /releases, /blog,
  * /terms and the un-prefixed legal slugs) and robots-disallowed ones

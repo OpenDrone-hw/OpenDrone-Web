@@ -28,7 +28,7 @@ describe('preorderNote', () => {
   });
 });
 
-describe("Odoo's ship promise", () => {
+describe("the catalog ship promise", () => {
   it("wins over the content file's note", () => {
     assert.equal(
       preorderNote('openesc', 'ships from mid-October 2026'),

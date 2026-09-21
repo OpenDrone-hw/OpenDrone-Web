@@ -6,15 +6,15 @@ import {attributionSource} from '~/lib/growth/attribution';
 
 /** A stack companion for a pod row: one candidate partner board,
  *  size-matched, on one multi-line hand-off link so a single click puts
- *  the pair in the Odoo cart. */
+ *  the pair in the cart. */
 export type PodCompanionOption = {
   key: string;
   /** Full name for tooltips/aria, e.g. "OpenESC · 20×20". */
   title: string;
   /** Chip label, e.g. "ESC" (renders as "+ESC"). */
   short: string;
-  /** Displayed price. When the companion is the board a configured Odoo
-   *  promotion discounts, the host passes the derived discounted price. */
+  /** Displayed price. When the companion is the board a configured Shopify
+   *  discount applies to, the host passes the derived discounted price. */
   price?: {amount: string; currencyCode: string} | null;
   /** The companion's undiscounted price, set ONLY when `price` is the
    *  derived discounted one: the tooltip then shows "full -> discounted"

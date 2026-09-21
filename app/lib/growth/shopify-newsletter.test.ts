@@ -3,7 +3,7 @@ import {afterEach, describe, it, mock} from 'node:test';
 import {subscribeWithShopify, unsubscribeWithShopify} from './shopify-newsletter.ts';
 
 const ENV = {
-  SHOPIFY_ADAPTER_PREVIEW: '1', SHOPIFY_NEWSLETTER_WRITE_ENABLED: '1',
+  SHOPIFY_NEWSLETTER_WRITE_ENABLED: '1',
   SHOPIFY_STORE_DOMAIN: 'store.myshopify.com', SHOPIFY_ADMIN_API_TOKEN: 'test-token',
   SHOPIFY_ADMIN_API_VERSION: '2026-07',
 };

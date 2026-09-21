@@ -1,7 +1,6 @@
 import type {Route} from './+types/[llms.txt]';
 import {
   PRODUCT_CONTENT,
-  isComingSoon,
   isConceptProduct,
   isPurchasableStatus,
   resolveStatus,
@@ -16,50 +15,10 @@ import {toCards} from '~/lib/catalog';
 /**
  * /llms.txt - the machine-readable front door for AI agents (llmstxt.org).
  * Served dynamically so prices, availability, SKUs and order links come
- * straight from the Odoo catalog and can never drift from the shop. The
+ * straight from the Shopify catalog and can never drift from the shop. The
  * catalog section regenerates per request (cached 1h); everything else is
  * static policy/ordering/source-links text.
  */
-
-/**
- * The stack example's discount claim, derived from the same StackConfig the
- * storefront surfaces use (product-content.ts): a promotion is a percent
- * off ONE board (`discountedHandle`), never the pair. Returns the
- * parenthetical tail for the example sentence, or '' when no pct + side is
- * configured or either board of the pair is still coming-soon (a locked
- * feed hides prices, so it advertises no checkout discount either), so the
- * feed makes no claim the checkout won't honour.
- */
-function stackDiscountNote(
-  globalSoon: boolean,
-  statusFlags: Record<string, import('~/lib/roadmap-data').ProductStatus> = {},
-): string {
-  for (const [hostHandle, c] of Object.entries(PRODUCT_CONTENT)) {
-    const s = c.stack;
-    if (!s?.discountPct || !s.discountedHandle) continue;
-    if (
-      isComingSoon(hostHandle, globalSoon, statusFlags) ||
-      isComingSoon(s.discountedHandle, globalSoon, statusFlags)
-    )
-      continue;
-    // Word the claim from the side whose PARTNER is the discounted board;
-    // the discounted product's own config points at itself and names the
-    // host instead.
-    const discounted = s.partners.find((p) => p.handle === s.discountedHandle);
-    if (!discounted) continue;
-    const discountedName = discounted.label ?? s.discountedHandle;
-    const hostName =
-      PRODUCT_CONTENT[s.discountedHandle]?.stack?.partners.find(
-        (p) => p.handle === hostHandle,
-      )?.label ?? hostHandle;
-    return (
-      `; the ${discountedName} is automatically ${s.discountPct}% off in ` +
-      `the cart when bought together with the ${hostName}, a discount on ` +
-      `the ${discountedName} only, not on the pair`
-    );
-  }
-  return '';
-}
 
 export async function loader({context, request}: Route.LoaderArgs) {
   const origin = new URL(request.url).origin;
@@ -72,8 +31,6 @@ export async function loader({context, request}: Route.LoaderArgs) {
     ),
     context.catalog.get(),
   ]);
-  const shopUrl = context.catalog.shopUrl;
-  const shopifyPreview = context.catalog.shopifyPreview;
 
   const catalog = toCards(feed)
     // Concept products (planned / in-progress) are not catalog.
@@ -115,9 +72,7 @@ export async function loader({context, request}: Route.LoaderArgs) {
               ? ' - coming soon, not yet orderable'
               : ` - €${Number(v.price.amount).toFixed(2)}` +
                 ` - ${stockWord(v.availableForSale)}` +
-                (shopifyPreview
-                  ? ' - local checkout preview; ordering is not available to agents'
-                  : ` - order: POST ${v.cartAddUrl.split('?')[0]} with ${v.cartAddUrl.split('?')[1] ?? ''}`))
+                ' - ordering is not available to agents')
           );
         })
         .join('\n');
@@ -171,35 +126,10 @@ is on hand. Details: ${origin}/shipping`
 
 ## How to order
 
-${shopifyPreview ? `This instance is a local Shopify checkout engineering preview. It reuses a
-server-held cart but has unresolved double-submit and first-cart multi-tab races.
-Shopping agents must not attempt orders from this preview.` : `Orders are placed on the Incutec shop, ${shopUrl}. Lines are added to the
-visitor's own cart by an HTML form POST from the visitor's browser
-(application/x-www-form-urlencoded, Origin ${origin}); a GET is refused, so a
-link alone cannot fill a cart:
-
-    POST ${shopUrl}/incutec/add
-    sku=<SKU>&qty=<n>&next=cart
-
-Multiple lines go in one request, comma-separated:
-
-    POST ${shopUrl}/incutec/add
-    lines=<SKU>:<qty>,<SKU>:<qty>&next=cart
-
-Parameters: \`sku\`/\`qty\` repeatable pairs (qty 1 to 50, at most 20 lines);
-\`lines\` as above; \`mode=set\` makes the line quantity equal to qty instead of
-adding to it; \`next\` is \`cart\` (default) or \`checkout\`. The response is a
-303 to that page on the shop, in the session of whoever submitted the form, so
-send the human to the product page on this site to press the buy button there. An
-unknown or unpublished SKU gives 404 and adds nothing.
-
-Example, a 20×20 flight stack (OpenFC Lite + OpenESC${stackDiscountNote(globalSoon, statusFlags)}):
-
-    POST ${shopUrl}/incutec/add
-    lines=OPENFC-LITE-2020:1,OPENESC-2020:1&next=cart
-
-Every catalog line below carries its own form action and body. A
-machine-readable feed lives at ${origin}/products.json.`}
+Orders go through the Shopify checkout from the product page, in the
+visitor's own browser session. Shopping agents must not attempt orders: send
+the human to the product page on this site to press the buy button there. A
+machine-readable feed lives at ${origin}/products.json.
 
 ## Catalog
 

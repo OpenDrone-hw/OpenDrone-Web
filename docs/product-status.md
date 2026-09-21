@@ -21,7 +21,7 @@ One `status-*` topic per repo, matched against `STATUS_ORDER` in
 
 | Topic | Meaning | Shop behaviour |
 |---|---|---|
-| `status-launched` | Buyable, design settled | Price shown, orderable (Odoo availability decides in stock / pre-order / sold out) |
+| `status-launched` | Buyable, design settled | Price shown, orderable (the catalog availability decides in stock / pre-order / sold out) |
 | `status-beta` | Buyable, first production batch | Price shown, orderable, early-batch pricing possible |
 | `status-alpha` | Community testing, not buyable | Product page with waitlist signup; NO price anywhere |
 | `status-in-progress` | First design exists, nothing under test | Concept plate only (name, status chip, Discord link); no product page, no price |
@@ -92,9 +92,9 @@ within one request.
 
 ## Runbooks
 
-**Release a product (alpha → beta):** confirm the Odoo product is published
-with the right variants, prices and availability, and that it appears in
-`GET https://erp.incutec.com/incutec/catalog.json`; flip the repo topic to `status-beta`
+**Release a product (alpha → beta):** confirm the Shopify product is published
+to the storefront sales channel with the right variants and prices, and that
+every SKU has its `SHOPIFY_PREVIEW_POLICY_JSON` entry; flip the repo topic to `status-beta`
 (repo admin only; topics cannot be changed by pull request); within ~10
 minutes the price is public and orders open; then update the static status
 in `roadmap-data.ts` in a follow-up PR.

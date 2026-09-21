@@ -11,9 +11,7 @@ import {copyText} from '~/lib/copy';
 // engineering content digest. Posts to app/routes/newsletter._index.tsx,
 // which records SINGLE opt-in consent in Shopify, the consent owner. There is
 // no confirmation step and the storefront sends no mail of its own: the
-// address is on the list the moment the action returns. (This used to be an
-// Odoo double opt-in that mailed a confirmation link; that path is dead while
-// the Shopify adapter is on.)
+// address is on the list the moment the action returns.
 //
 // Bot protection: honeypot field + Cloudflare Turnstile. The Turnstile
 // widget + script are lazy-loaded only after the visitor focuses the email

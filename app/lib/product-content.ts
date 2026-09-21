@@ -1,9 +1,9 @@
 /**
  * Editorial content per catalog product handle. Sourced from the real
  * product repos in iCloud (4in1ESC, 4in1ESC-30x30, OpenFC, OpenRX) -
- * NOT from the Odoo description field. Odoo owns price, availability,
- * ship promise and rating; this file owns the story, and the two merge
- * by handle.
+ * NOT from the Shopify description field. Shopify owns price and
+ * availability, the catalog policy owns the ship promise; this file owns
+ * the story, and the two merge by handle.
  *
  * The data itself lives in `content/products/<handle>.json` and is loaded
  * below by `import.meta.glob({eager: true})`, the same way `app/lib/copy.ts`
@@ -146,10 +146,10 @@ export type DownloadAsset = {
 /**
  * "Complete the stack" cross-sell rendered inside the buy module. The
  * buyer clicks the offer and both SKUs go to the shop on one hand-off
- * link. Any discount is an Odoo promotion applied by its cart, and it
+ * link. Any discount is a Shopify discount applied at checkout, and it
  * discounts ONE board of the pair, never the whole pair, so copy must name
  * the discounted board. `discountPct` and `discountedHandle` are unset
- * today: nothing may advertise a percent Odoo will not apply.
+ * today: nothing may advertise a percent Shopify will not apply.
  * `partners` is a list on purpose: one entry today renders as a fixed
  * line, several (e.g. a future OpenFC Pro next to OpenFC Lite) render
  * as a picker.
@@ -163,7 +163,7 @@ export type StackConfig = {
    *  pair up (20×20 FC with 20×20 ESC). Defaults to 'Model'. */
   matchOption?: string;
   /** Advertised discount percent. Display only: the real discount is the
-   *  promotion configured in Odoo. Unset today. */
+   *  one configured in Shopify. Unset today. */
   discountPct?: number;
   /** Handle of the board the BXGY actually discounts (its "get Y" side).
    *  The pct is off THIS board only, not the pair. Surfaces use it to word
@@ -368,8 +368,8 @@ export type ProductContent = {
    *  'development': designed, launch pending - notify-at-launch signup
    *  (the classic coming-soon UX). 'preorder': purchasable at full price
    *  ahead of stock; the order ships when the batch lands (the buy module
-   *  shows the ship promise, Odoo freezes it onto the order line, and the
-   *  whole order is held until every line is on hand).
+   *  shows the ship promise and the whole order is held until every line
+   *  is on hand).
    *  Rendered as 'development' while the global PUBLIC_COMING_SOON flag
    *  is on. 'live': purchasable; the catalog's availability decides in
    *  stock vs sold out. Unset = the catalog's availability when the shop
@@ -647,13 +647,14 @@ export function roadmapTriState(
  * 'development', so a pre-order status can sit in the content files
  * before launch day without taking orders on the production site.
  *
- * `availability` is Odoo's word for the product, carried by the catalog
- * feed. Odoo decides which of its products are orderable, so it sits
- * above the roadmap topic and the global default. It does NOT outrank the
- * two switches above it: a local 'idea' or 'development' status is the
- * storefront saying the product is not for sale at all, and
- * PUBLIC_COMING_SOON is the kill switch, so a product sitting in stock in
- * Odoo before launch day still renders as coming soon.
+ * `availability` is the catalog's word for the product: the SKU's sale
+ * policy, denied by Shopify's availableForSale. The catalog decides which
+ * products are orderable, so it sits above the roadmap topic and the
+ * global default. It does NOT outrank the two switches above it: a local
+ * 'idea' or 'development' status is the storefront saying the product is
+ * not for sale at all, and PUBLIC_COMING_SOON is the kill switch, so a
+ * product the catalog calls in stock before launch day still renders as
+ * coming soon.
  */
 export function resolveStatus(
   handle: string | null | undefined,

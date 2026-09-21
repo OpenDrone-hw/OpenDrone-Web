@@ -1,28 +1,21 @@
 import {redirect} from 'react-router';
 import type {Route} from './+types/account.$';
 import {customerAccountUrl} from '~/lib/shop-links';
-import {shopUrl} from '~/lib/catalog-client';
-import {supportHistoryDestination} from '~/lib/support/session';
 
 /**
- * Legacy account URLs go to the configured provider-owned account root.
- * During Shopify preview that root must be an explicitly configured HTTPS
- * customer account URL; no order, invoice or address endpoint is invented.
+ * Legacy account URLs go to the configured Shopify customer account root.
+ * That root must be an explicitly configured HTTPS customer account URL; no
+ * order, invoice or address endpoint is invented.
  *
  * /account/support is the exception: the support desk never belonged to
- * the shop, and its ticket list is now /support/tickets in this app.
+ * the shop, so it lands on the support page.
  */
 export function loader({params, context}: Route.LoaderArgs) {
   const rest = (params['*'] ?? '').replace(/^\/+/, '');
   if (/^support(\/|$)/.test(rest)) {
-    throw redirect(supportHistoryDestination(context.catalog.shopifyPreview), 301);
+    throw redirect('/support?existing=1', 301);
   }
-  const shop = shopUrl(context.env);
-  const destination = customerAccountUrl(
-    context.env,
-    shop,
-    context.catalog.shopifyPreview,
-  );
+  const destination = customerAccountUrl(context.env);
   if (!destination) {
     throw new Response('Customer accounts are not configured.', {
       status: 404,

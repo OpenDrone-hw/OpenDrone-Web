@@ -4,14 +4,14 @@
  *
  * The percent and which board it is off are per-product configuration
  * (`stack.discountPct` / `stack.discountedHandle` in
- * content/products/*.json). Set them ONLY while Odoo actually carries the
- * matching promotion (`website_sale_loyalty`), because the storefront
- * only advertises the deal: the Odoo cart is what applies it. They are
- * unset today, so no surface claims a discount.
+ * content/products/*.json). Set them ONLY while Shopify actually carries
+ * the matching automatic discount, because the storefront only advertises
+ * the deal: Shopify checkout is what applies it. They are unset today, so
+ * no surface claims a discount.
  *
  * Copy must name the discounted board (e.g. "OpenESC -10%"), and any
  * discounted price shown must be derived from the live catalog price with
- * {@link stackDiscountedPrice} so it matches what the Odoo cart charges.
+ * {@link stackDiscountedPrice} so it matches what Shopify checkout charges.
  * Never hardcode computed prices in code or copy, comments included: they
  * rot the moment a price changes.
  */

@@ -5,7 +5,7 @@ hardware designed and sold from Belgium. Flight controllers (OpenFC), 4-in-1
 ESCs (OpenESC), ExpressLRS receivers (OpenRX), carbon frames (OpenFrame) and
 the OpenStack bundle.
 
-It is a React Router 7 app, built with the Cloudflare Vite plugin, that runs as a Cloudflare Worker. The public catalog comes from Shopify. The storefront is intentionally closed: product pages show coming-soon states, checkout writes are disabled, and old cart sessions cannot redirect to checkout. Shopify also owns newsletter consent and unsubscribe state. Support is the public Discord invite and company email; the retired ticket APIs return `410` without contacting Odoo.
+It is a React Router 7 app, built with the Cloudflare Vite plugin, that runs as a Cloudflare Worker. The public catalog comes from Shopify. The storefront is intentionally closed: product pages show coming-soon states, checkout writes are disabled, and old cart sessions cannot redirect to checkout. Shopify also owns newsletter consent and unsubscribe state. Support is the public Discord invite and company email; the retired ticket APIs return `410`.
 
 Selling entity: Incutec BV. OpenDrone is the community project and product
 brand. This repository is MIT; the hardware repositories are CERN-OHL-S.
@@ -64,7 +64,7 @@ app/
   routes/                  file-based routes
   components/              shared React components
   content/legal/{en,nl,fr} legal Markdown
-  lib/                     catalog, i18n, SEO, product content, support bridge, growth
+  lib/                     catalog, i18n, SEO, product content, growth
   studio/                  the studio's editor panels
   styles/app.css           the single CSS file (Tailwind v4)
 content/                   editable copy, product chapters, posts, theme tokens, goals, votes
@@ -83,7 +83,7 @@ docs/                      the deep dives listed above
 Shopify product with a `Model` attribute; the page renders a tier ladder matched
 to the catalog's variants by option name and value.
 
-**Product images** use Shopify CDN URLs directly. The old `/img/odoo/*` proxy returns `404` during the Shopify cutover and performs no backend request.
+**Product images** use Shopify CDN URLs directly.
 
 **Status.** What is public and buyable is decided by the `status-*` GitHub
 topic on each board repository, resolved per request and cached; the static
@@ -118,7 +118,7 @@ with `timeline-ledger.json` on this repository's unprotected `data` branch,
 appended daily by `.github/workflows/timeline-ledger.yml` from releases, new
 repos and `status-*` flips across the public OpenDrone-hw repositories.
 
-**Support.** `/support` links to the configured OpenDrone Discord invite and `mailto:` company address. Existing-conversation links lead to the same native contacts. The retired `/api/support/*` surface returns `410` at the Worker boundary before route or backend code runs. Historical ticket exports remain private outside this repository.
+**Support.** `/support` links to the configured OpenDrone Discord invite and `mailto:` company address. Existing-conversation links lead to the same native contacts. The retired `/api/support/*` surface returns `410` at the Worker boundary. Historical ticket exports remain private outside this repository.
 
 **Newsletter.** Posts are Markdown in `content/posts/` (`published: true` publishes at `/newsletter/<slug>` and in `/newsletter.rss`). The footer signup records single-opt-in consent in Shopify and adds the `newsletter` tag plus `notify-<handle>` for product launch interest. `/newsletter/unsubscribe` changes Shopify consent to `UNSUBSCRIBED`; it sends no welcome or confirmation email. `SHOPIFY_NEWSLETTER_WRITE_ENABLED` is a separate runtime gate.
 
@@ -191,24 +191,19 @@ Two workflows, one Worker each:
   `main` is a production deploy.
 - `.github/workflows/cloudflare-preview.yml`: every push to
   `feat/cloudflare-hosting` deploys the isolated `opendrone-web-preview`
-  Worker (`wrangler.toml`): no custom domains, staging catalog,
-  `PUBLIC_COMING_SOON=1`.
+  Worker (`wrangler.toml`): no custom domains, Shopify catalog secrets,
+  `PUBLIC_COMING_SOON=1`, checkout writes off.
 
-Both use the repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` and pin wrangler 4. Storefront and Admin tokens are Worker secrets, never committed. `community-sync.yml` refreshes the contributor roster only; `timeline-ledger.yml` updates the public repository timeline. The scheduled Odoo goal and support jobs were removed.
+Both use the repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` and pin wrangler 4. Storefront and Admin tokens are Worker secrets, never committed. `community-sync.yml` refreshes the contributor roster only; `timeline-ledger.yml` updates the public repository timeline.
 
 ## Security
 
 - Headers (`app/entry.server.tsx`): nonce-based CSP, HSTS with preload,
   `X-Frame-Options: DENY`, nosniff, strict referrer policy, restrictive
   Permissions-Policy, COOP and CORP.
-- Rate limits: a per-isolate sliding window on every public POST, plus the
-  Workers Rate Limiting bindings on `/api/support/lookup`.
-- Input caps on every support field; uploads capped at 5 files, 8 MB each,
-  24 MB total, MIME and extension allowlist.
-- Support privacy: scrubbed public thread, PII in a private staff channel,
-  moderation gate; the poll endpoint is the trust boundary.
-- Commerce credentials are server-only Worker secrets. `.env` is gitignored; never expose tokens or the SKU policy in client data. Rotate the session secret, the Discord bot
-  token, the Resend key and the Turnstile secret annually or on suspicion.
+- Rate limits: a per-isolate sliding window on every public POST.
+- Commerce credentials are server-only Worker secrets. `.env` is gitignored; never expose tokens or the SKU policy in client data. Rotate the session secret,
+  the Resend key and the Turnstile secret annually or on suspicion.
 - Disclosure: GitHub private vulnerability reporting, `/.well-known/security.txt`,
   policy at `/security`, default embargo 90 days.
 

@@ -184,7 +184,7 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
     product,
     bundleProducts,
     stackProducts,
-    commerceHandoff: commerceHandoff(catalog, context.catalog.shopifyPreview),
+    commerceHandoff: commerceHandoff(catalog),
     // The roadmap status this page's boards carry (beta, alpha, ...), for
     // the chip near the title. Undefined for products off the roadmap
     // (accessories); the chip simply doesn't render.
@@ -241,9 +241,8 @@ function loadDeferredData({context, params}: Route.LoaderArgs) {
     .then((list) => (list.length ? list : recorded))
     .catch(() => recorded);
 
-  // "You might also like": the other products in the catalog. Odoo has no
-  // recommendation engine and the catalog is small enough that the whole
-  // rest of it IS the honest answer.
+  // "You might also like": the other products in the catalog. The catalog
+  // is small enough that the whole rest of it IS the honest answer.
   const recommendations = context.catalog
     .get()
     .then((catalog) =>
@@ -280,8 +279,7 @@ function DownloadsGrid({
   downloads: DownloadAsset[];
   /** Studio tag prefix, `<handle>.downloads`; the grid is per-product. */
   editBase?: string;
-  /** Entries at this index or later are computed (e.g. the issued DoC,
-   *  D13/PLAN.md 11.4), not editorial: they get no Studio edit tag, since
+  /** Entries at this index or later are computed, not editorial: they get no Studio edit tag, since
    *  `content/products/<handle>.json` has no matching downloads entry to
    *  point at. Defaults to every entry being editable. */
   editableCount?: number;
@@ -743,17 +741,15 @@ function ProductPage() {
   const content = PRODUCT_CONTENT[product.handle] ?? PRODUCT_CONTENT_FALLBACK;
   const hasHeroCopy = Boolean(content.hero.line1);
   // The Downloads chapter's editorial assets. Declarations of Conformity are
-  // internal records (erp docs/storefront-contract.md section 4): no DoC
-  // entry is rendered, also when a cached catalog still carries one.
+  // internal records: no DoC entry is rendered.
   const downloads = content.downloads;
-  // Star aggregate from Odoo's published product ratings, carried by the
-  // catalog feed. Gated on count > 0, so a product nobody has rated yet
-  // renders no trace of the feature anywhere.
+  // Star aggregate from the catalog's `rating` field. Gated on count > 0, so
+  // a product with no published rating renders no trace of the feature.
   const reviewAggregate = toReviewAggregate(product.rating);
 
   // Comparison-ladder state for product lines (OpenRX/OpenESC). The
   // editorial `variants` map is the tier source of truth; the active tier
-  // drives the spec/in-the-box preview and, once Odoo carries the
+  // drives the spec/in-the-box preview and, once Shopify carries the
   // matching option, the buy module follows via the selected variant.
   const variantKeys = content.variants ? Object.keys(content.variants) : [];
   const hasLadder = Boolean(content.optionAxis && variantKeys.length > 0);
@@ -787,9 +783,9 @@ function ProductPage() {
   // alt "OpenRX Mono, top", has no business in another tier's deck).
   // Normalizes '20×20' → '20x20' for the match; images naming no tier
   // (lifestyle shots) always stay, and the selected variant's own featured
-  // image always stays. Odoo links at most ONE image per variant, so
+  // image always stays. Shopify links at most ONE image per variant, so
   // tagging the rest is a data job: name the file or set the alt text with
-  // the tier key on the product in Odoo.
+  // the tier key on the product in Shopify.
   const galleryImages = useMemo(() => {
     const nodes = product.images?.nodes?.length
       ? product.images.nodes
@@ -902,7 +898,7 @@ function ProductPage() {
   // variant matching the selected mount size and put BOTH SKUs on one
   // hand-off link. The offers surface as a hover flyout on the buy CTA, so
   // ordering the pair is one extra click; more partners later (an OpenFC
-  // Pro) just become more rows. Any pair discount is an Odoo promotion, off
+  // Pro) just become more rows. Any pair discount is a Shopify discount, off
   // the discountedHandle board ONLY, never the pair; it is unconfigured
   // today, so no offer carries a percent.
   const stackCfg = content.stack;
@@ -1627,10 +1623,9 @@ function ProductPage() {
           </span>
         ) : null}
       </div>
-      {/* Pre-order: the stock line carries the ship promise from Odoo (the
-          product's own, else the shop-wide default), the same words the
-          Odoo cart line and the order carry. Odoo's availability still
-          decides whether the buy button is enabled. */}
+      {/* Pre-order: the stock line carries the catalog ship promise (the
+          product's own, else the shop-wide default). The catalog
+          availability still decides whether the buy button is enabled. */}
       <span
         className={`product-buy-stock${
           preorder && !isBundle ? ' is-preorder' : buyAvailable ? '' : ' is-out'
@@ -1665,7 +1660,7 @@ function ProductPage() {
                 : copyText('product-chrome.buy_stock_out')}
       </span>
       {/* Sold-out signup: not for pre-order products, whose "unavailable"
-          is an Odoo availability state, not a launch to be notified of. */}
+          is a catalog availability state, not a launch to be notified of. */}
       {!isBundle &&
       !preorder &&
       selectedVariant &&
@@ -2514,8 +2509,7 @@ function ProductPage() {
         </Chapter>
     ),
     /**
-     * Odoo's published product ratings, own markup (no widget). The
-     * bodies live on the shop product page, which this links to.
+     * Published product ratings from the catalog, own markup (no widget).
      */
     reviews: (n, title) => {
       // `present` already ruled this out, but the aggregate is read half a

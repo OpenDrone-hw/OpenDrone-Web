@@ -80,7 +80,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
   const catalog = await context.catalog.get();
   return {
     products: toCards(catalog),
-    commerceHandoff: commerceHandoff(catalog, context.catalog.shopifyPreview),
+    commerceHandoff: commerceHandoff(catalog),
     term,
   };
 }
@@ -209,8 +209,8 @@ export default function ProductsIndex() {
               value,
             );
             if (!pv) return [];
-            // A pair discount is claimed only while Odoo carries the
-            // matching promotion (stack.discountPct is unset otherwise).
+            // A pair discount is claimed only while Shopify carries the
+            // matching discount (stack.discountPct is unset otherwise).
             const pct = content?.stack?.discountPct;
             const partnerDiscounted =
               Boolean(pct) &&

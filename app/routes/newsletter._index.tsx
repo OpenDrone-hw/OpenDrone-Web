@@ -2,8 +2,7 @@ import {data, useLoaderData} from 'react-router';
 import type {Route} from './+types/newsletter._index';
 import {buildSeoMeta} from '~/lib/seo';
 import {checkRateLimit, clientIp} from '~/lib/rate-limit';
-import {verifyTurnstile} from '~/lib/support/turnstile';
-import {subscribeToNewsletter} from '~/lib/growth/odoo-newsletter';
+import {verifyTurnstile} from '~/lib/turnstile';
 import {subscribeWithShopify} from '~/lib/growth/shopify-newsletter';
 import {sendWelcomeEmail} from '~/lib/growth/welcome-email';
 import {archivePosts} from '~/lib/posts';
@@ -217,22 +216,15 @@ export async function action({request, context}: Route.ActionArgs) {
     });
   }
 
-  const shopifyResult = context.catalog.shopifyPreview
-    ? await subscribeWithShopify(
-        context.env,
-        email,
-        notifyProduct ?? undefined,
-      )
-    : null;
-  const subscribed = context.catalog.shopifyPreview
-    ? shopifyResult === 'subscribed' ||
-      shopifyResult === 'already-subscribed' ||
-      shopifyResult === 'suppressed'
-    : await subscribeToNewsletter(context.env, {
-        email,
-        product: notifyProduct ?? undefined,
-        ip,
-      });
+  const shopifyResult = await subscribeWithShopify(
+    context.env,
+    email,
+    notifyProduct ?? undefined,
+  );
+  const subscribed =
+    shopifyResult === 'subscribed' ||
+    shopifyResult === 'already-subscribed' ||
+    shopifyResult === 'suppressed';
   if (!subscribed) {
     return data<NewsletterResult>(
       {

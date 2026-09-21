@@ -8,8 +8,8 @@
  * `chk:<day>` click counter (a home-grown buy-rate denominator). Removed
  * with the Upstash migration (founder decision, 2026-09-15): its
  * numerator (`ord:<order_id>`, written by the Shopify orders webhook) had
- * already gone dead when the cart moved to Odoo and that webhook route
- * started returning 410 Gone, and nothing ever read the denominator
+ * already gone dead when that webhook route started returning 410 Gone,
+ * and nothing ever read the denominator
  * counter on its own (no report or dashboard queried it) - a live write
  * into a metric whose other half was already broken. Checkout-intent
  * visibility lives in Plausible via the event below.
