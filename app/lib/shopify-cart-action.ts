@@ -1,11 +1,14 @@
-import {bySku, type Catalog} from './catalog.ts';
+import {bySku, type Catalog, type CatalogVariant} from './catalog.ts';
 import {isPurchasableStatus, resolveStatus} from './product-content.ts';
 import {requestedLines} from './shopify-cart-input.ts';
-import type {CartLineInput, ShopifyCart} from './shopify-storefront.ts';
+import {
+  PREORDER_ATTRIBUTE,
+  type CartLineInput,
+  type CartLineUpdate,
+  type ShopifyCart,
+} from './shopify-storefront.ts';
 
-/** The line attribute that carries the ship promise onto the checkout line
- *  and the order confirmation. */
-export const PREORDER_ATTRIBUTE = 'Preorder';
+export {PREORDER_ATTRIBUTE};
 
 type CartEnv = Pick<
   Env,
@@ -19,142 +22,211 @@ export type ShopifyCartDependencies = {
   unsetCartId?: () => void;
   getCart?: (id: string) => Promise<ShopifyCart | null>;
   addCartLines?: (id: string, lines: CartLineInput[]) => Promise<ShopifyCart>;
+  updateCartLines?: (id: string, lines: CartLineUpdate[]) => Promise<ShopifyCart>;
+  removeCartLines?: (id: string, lineIds: string[]) => Promise<ShopifyCart>;
   logError?: (message: string) => void;
 };
 
+/** Most units of one SKU a cart may hold. */
+const MAX_QUANTITY = 50;
+const NO_STORE = {'Cache-Control': 'no-store'};
+
+function fail(message: string, status: number, headers: Record<string, string> = {}): Response {
+  return new Response(message, {status, headers: {...NO_STORE, ...headers}});
+}
+
+function redirect(location: string): Response {
+  return new Response(null, {status: 303, headers: {Location: location, ...NO_STORE}});
+}
+
+/** Whether both commerce gates are open. */
+export function checkoutOpen(env: CartEnv): boolean {
+  return env.SHOPIFY_CHECKOUT_WRITE_ENABLED === '1' && env.PUBLIC_COMING_SOON === '0';
+}
+
+/**
+ * The attributes a line of this variant carries: a preorder states its ship
+ * promise, so checkout and the order confirmation show the delivery time the
+ * product page showed. A preorder without a promise is not sold.
+ */
+function lineAttributes(variant: CatalogVariant): CartLineInput['attributes'] {
+  if (variant.availability !== 'preorder') return undefined;
+  const promise = variant.ship_promise?.trim();
+  if (!promise) throw fail('Product is unavailable.', 409);
+  return [{key: PREORDER_ATTRIBUTE, value: promise}];
+}
+
+/** The catalog variant behind a cart line, if the shop still sells it. */
+function sellableVariant(
+  catalog: Catalog,
+  merchandiseId: string,
+  globalComingSoon: boolean,
+): CatalogVariant | null {
+  for (const product of catalog.products) {
+    const variant = product.variants.find((v) => v.merchandise_id === merchandiseId);
+    if (!variant) continue;
+    if (variant.availability === 'sold_out') return null;
+    // The request-time catalog proves the SKU and stock state. The storefront
+    // lifecycle remains an independent server-side release gate: a roadmap
+    // concept never becomes orderable merely because a Shopify variant exists.
+    const status = resolveStatus(product.handle, globalComingSoon);
+    return isPurchasableStatus(status) ? variant : null;
+  }
+  return null;
+}
+
+/**
+ * POST /api/shopify/cart. Intents:
+ * - `add` (default): add SKUs to the session cart, then show /cart.
+ * - `update`: set one line's quantity. `remove`: drop lines.
+ * - `checkout`: re-check every line against the current catalog, refresh a
+ *   preorder line whose ship promise changed, then hand off to Shopify.
+ */
 export async function handleShopifyCartAction(request: Request, env: CartEnv, dependencies: ShopifyCartDependencies): Promise<Response> {
   if (request.method !== 'POST') throw new Response('Method Not Allowed', {status: 405, headers: {Allow: 'POST'}});
   if (env.SHOPIFY_CHECKOUT_WRITE_ENABLED !== '1') {
-    throw new Response('Shopify checkout writes are not enabled.', {
-      status: 404,
-      headers: {'Cache-Control': 'no-store'},
-    });
+    throw fail('Shopify checkout writes are not enabled.', 404);
   }
   // Same fail-closed rule as the UI helper: only an explicit 0 opens.
   const globalComingSoon = env.PUBLIC_COMING_SOON !== '0';
-  if (globalComingSoon) {
-    throw new Response('Checkout is closed.', {
-      status: 404,
-      headers: {'Cache-Control': 'no-store'},
-    });
-  }
+  if (globalComingSoon) throw fail('Checkout is closed.', 404);
   if (request.headers.get('Origin') !== new URL(request.url).origin) {
-    throw new Response('Forbidden', {status: 403, headers: {'Cache-Control': 'no-store'}});
+    throw fail('Forbidden', 403);
   }
   const contentType = request.headers.get('Content-Type') ?? '';
   if (!contentType.toLowerCase().startsWith('application/x-www-form-urlencoded')) {
-    throw new Response('Invalid form body.', {
-      status: 400,
-      headers: {'Cache-Control': 'no-store'},
-    });
+    throw fail('Invalid form body.', 400);
   }
   const contentLength = Number(request.headers.get('Content-Length') ?? '0');
   if (Number.isFinite(contentLength) && contentLength > 8192) {
-    throw new Response('Invalid form body.', {
-      status: 413,
-      headers: {'Cache-Control': 'no-store'},
-    });
+    throw fail('Invalid form body.', 413);
   }
   let form: FormData;
   try { form = await request.formData(); } catch {
-    throw new Response('Invalid form body.', {status: 400, headers: {'Cache-Control': 'no-store'}});
+    throw fail('Invalid form body.', 400);
   }
-  if (form.has('mode')) throw new Response('Cart mode is not supported.', {status: 400});
-  const requested = requestedLines(form);
+  if (form.has('mode')) throw fail('Cart mode is not supported.', 400);
+  const intent = String(form.get('intent') ?? 'add');
+
   try {
-    const catalog = await dependencies.fetchCatalog();
-    const lines = requested.map(({sku, quantity}) => {
-      const match = bySku(catalog, sku);
-      if (!match?.variant.merchandise_id || match.variant.availability === 'sold_out') {
-        throw new Response('Product is unavailable.', {status: 409, headers: {'Cache-Control': 'no-store'}});
-      }
-      // The request-time catalog proves the SKU and stock state. The
-      // storefront lifecycle remains an independent server-side release gate:
-      // a roadmap concept must never become orderable merely because a Shopify
-      // variant exists. Product content can explicitly open preorder/live.
-      const status = resolveStatus(match.product.handle, globalComingSoon);
-      if (!isPurchasableStatus(status)) {
-        throw new Response('Product is unavailable.', {
-          status: 409,
-          headers: {'Cache-Control': 'no-store'},
-        });
-      }
-      // A preorder line carries its ship promise, so checkout and the order
-      // confirmation state the delivery time the product page showed. A
-      // preorder without one is not sold.
-      if (match.variant.availability === 'preorder') {
-        const promise = match.variant.ship_promise?.trim();
-        if (!promise) {
-          throw new Response('Product is unavailable.', {status: 409, headers: {'Cache-Control': 'no-store'}});
-        }
-        return {
-          merchandiseId: match.variant.merchandise_id,
-          quantity,
-          attributes: [{key: PREORDER_ATTRIBUTE, value: promise}],
-        };
-      }
-      return {merchandiseId: match.variant.merchandise_id, quantity};
-    });
     const existingId = dependencies.getCartId?.();
-    let cart: ShopifyCart;
+
+    if (intent === 'update' || intent === 'remove') {
+      if (!existingId) throw fail('Cart is empty.', 409);
+      const lineIds = form.getAll('lineId').map(String);
+      if (!lineIds.length || lineIds.some((id) => !/^gid:\/\/shopify\/CartLine\/[A-Za-z0-9?=&_-]+$/.test(id))) {
+        throw fail('Invalid cart line.', 400);
+      }
+      if (intent === 'remove') {
+        if (!dependencies.removeCartLines) throw new Error('shopify: remove dependency missing');
+        await dependencies.removeCartLines(existingId, lineIds);
+      } else {
+        const quantity = Number(form.get('quantity'));
+        if (!Number.isSafeInteger(quantity) || quantity < 1 || quantity > MAX_QUANTITY || lineIds.length !== 1) {
+          throw fail('Invalid quantity.', 400);
+        }
+        if (!dependencies.updateCartLines) throw new Error('shopify: update dependency missing');
+        await dependencies.updateCartLines(existingId, [{id: lineIds[0], quantity}]);
+      }
+      return redirect('/cart');
+    }
+
+    if (intent === 'checkout') {
+      if (!existingId || !dependencies.getCart) throw fail('Cart is empty.', 409);
+      const [cart, catalog] = await Promise.all([
+        dependencies.getCart(existingId),
+        dependencies.fetchCatalog(),
+      ]);
+      if (!cart || !cart.lines.length) {
+        dependencies.unsetCartId?.();
+        return redirect('/cart');
+      }
+      const refresh: CartLineUpdate[] = [];
+      for (const line of cart.lines) {
+        const variant = sellableVariant(catalog, line.merchandiseId, globalComingSoon);
+        if (!variant) throw fail('One or more cart items are no longer available.', 409);
+        const attributes = lineAttributes(variant) ?? [];
+        const promise = attributes[0]?.value ?? null;
+        if (promise !== line.shipPromise) {
+          refresh.push({id: line.id, quantity: line.quantity, attributes});
+        }
+      }
+      let target = cart;
+      if (refresh.length) {
+        if (!dependencies.updateCartLines) throw new Error('shopify: update dependency missing');
+        target = await dependencies.updateCartLines(existingId, refresh);
+      }
+      return redirect(target.checkoutUrl);
+    }
+
+    if (intent !== 'add') throw fail('Invalid cart action.', 400);
+    const requested = requestedLines(form);
+    const catalog = await dependencies.fetchCatalog();
+    const lines: CartLineInput[] = requested.map(({sku, quantity}) => {
+      const match = bySku(catalog, sku);
+      const variant = match?.variant.merchandise_id
+        ? sellableVariant(catalog, match.variant.merchandise_id, globalComingSoon)
+        : null;
+      if (!variant?.merchandise_id) throw fail('Product is unavailable.', 409);
+      const attributes = lineAttributes(variant);
+      return attributes
+        ? {merchandiseId: variant.merchandise_id, quantity, attributes}
+        : {merchandiseId: variant.merchandise_id, quantity};
+    });
+
     if (existingId) {
       if (!dependencies.getCart || !dependencies.addCartLines) throw new Error('shopify: cart session dependencies missing');
       const existing = await dependencies.getCart(existingId);
-      if (!existing) {
-        dependencies.unsetCartId?.();
-        throw new Response('Cart expired. Start a new cart.', {status: 409, headers: {'Cache-Control': 'no-store'}});
-      }
-      const quantities = new Map<string, number>();
-      for (const line of existing.lines) {
-        quantities.set(
-          line.merchandiseId,
-          (quantities.get(line.merchandiseId) ?? 0) + line.quantity,
-        );
-      }
-      for (const line of lines) {
-        if ((quantities.get(line.merchandiseId) ?? 0) + line.quantity > 50) {
-          throw new Response('Cart quantity exceeds the limit.', {status: 400});
+      if (existing) {
+        const quantities = new Map<string, number>();
+        for (const line of existing.lines) {
+          quantities.set(line.merchandiseId, (quantities.get(line.merchandiseId) ?? 0) + line.quantity);
         }
+        for (const line of lines) {
+          if ((quantities.get(line.merchandiseId) ?? 0) + line.quantity > MAX_QUANTITY) {
+            throw fail('Cart quantity exceeds the limit.', 400);
+          }
+        }
+        await dependencies.addCartLines(existingId, lines);
+        return redirect('/cart');
       }
-      cart = await dependencies.addCartLines(existingId, lines);
-    } else {
-      cart = await dependencies.createCart(lines);
-      dependencies.setCartId?.(cart.id);
+      // The session pointed at a cart Shopify no longer has: start a new one.
+      dependencies.unsetCartId?.();
     }
-    return new Response(null, {status: 303, headers: {Location: cart.checkoutUrl, 'Cache-Control': 'no-store'}});
+    const cart = await dependencies.createCart(lines);
+    dependencies.setCartId?.(cart.id);
+    return redirect('/cart');
   } catch (error) {
     if (error instanceof Response) throw error;
     dependencies.logError?.(error instanceof Error ? error.message : 'unknown error');
-    throw new Response('Checkout temporarily unavailable.', {status: 503, headers: {'Retry-After': '60', 'Cache-Control': 'no-store'}});
+    throw fail('Checkout temporarily unavailable.', 503, {'Retry-After': '60'});
   }
 }
 
 /**
- * The header cart icon: back to the session cart's Shopify checkout. Closed
- * behind the same two gates as the action, so an old session cookie never
- * turns into a checkout redirect while the store is closed.
+ * The session cart for the /cart page, or null. Closed behind the same two
+ * gates as the action, so an old session cookie never shows or reopens a
+ * cart while the store is closed.
  */
-export async function handleShopifyCartLoader(env: CartEnv, dependencies: Pick<ShopifyCartDependencies, 'getCartId' | 'unsetCartId' | 'getCart' | 'logError'>): Promise<Response> {
-  const closed = new Response('Checkout is closed.', {
-    status: 410,
-    headers: {'Cache-Control': 'no-store'},
-  });
-  if (env.SHOPIFY_CHECKOUT_WRITE_ENABLED !== '1' || env.PUBLIC_COMING_SOON !== '0') {
-    throw closed;
-  }
+export async function loadSessionCart(
+  env: CartEnv,
+  dependencies: Pick<ShopifyCartDependencies, 'getCartId' | 'unsetCartId' | 'getCart' | 'logError'>,
+): Promise<ShopifyCart | null> {
+  if (!checkoutOpen(env)) throw fail('Checkout is closed.', 410);
   const id = dependencies.getCartId?.();
-  if (!id || !dependencies.getCart) {
-    return new Response(null, {status: 303, headers: {Location: '/products', 'Cache-Control': 'no-store'}});
-  }
+  if (!id || !dependencies.getCart) return null;
   try {
     const cart = await dependencies.getCart(id);
-    if (!cart || !cart.lines.length) {
-      dependencies.unsetCartId?.();
-      return new Response(null, {status: 303, headers: {Location: '/products', 'Cache-Control': 'no-store'}});
-    }
-    return new Response(null, {status: 303, headers: {Location: cart.checkoutUrl, 'Cache-Control': 'no-store'}});
+    if (!cart) dependencies.unsetCartId?.();
+    return cart;
   } catch (error) {
     dependencies.logError?.(error instanceof Error ? error.message : 'unknown error');
-    throw new Response('Checkout temporarily unavailable.', {status: 503, headers: {'Retry-After': '60', 'Cache-Control': 'no-store'}});
+    throw fail('Cart temporarily unavailable.', 503, {'Retry-After': '60'});
   }
+}
+
+/** GET /api/shopify/cart: the old checkout link lands on the cart page. */
+export function handleShopifyCartLoader(env: CartEnv): Response {
+  if (!checkoutOpen(env)) throw fail('Checkout is closed.', 410);
+  return redirect('/cart');
 }

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import {
-  createCheckout,
+  createCart,
   fetchShopifyCatalog,
   getCart,
   storefrontEndpoint,
@@ -151,17 +151,17 @@ describe('Shopify hosted checkout handoff', () => {
       }).variables;
       return response({
         cartCreate: {
-          cart: {id: 'gid://shopify/Cart/test?key=secret', checkoutUrl: 'https://checkout.opendrone.be/checkouts/cn/abc', lines: {pageInfo: {hasNextPage: false}, nodes: []}},
+          cart: {id: 'gid://shopify/Cart/test?key=secret', checkoutUrl: 'https://checkout.opendrone.be/checkouts/cn/abc', totalQuantity: 0, cost: {subtotalAmount: {amount: '0.0', currencyCode: 'EUR'}, totalAmount: {amount: '0.0', currencyCode: 'EUR'}}, lines: {pageInfo: {hasNextPage: false}, nodes: []}},
           userErrors: [],
           warnings: [],
         },
       });
     };
-    const url = await createCheckout(
+    const url = (await createCart(
       ENV,
       [{merchandiseId: 'gid://shopify/ProductVariant/1', quantity: 2}],
       fetcher,
-    );
+    )).checkoutUrl;
     assert.equal(url, 'https://checkout.opendrone.be/checkouts/cn/abc');
     assert.deepEqual(variables, {input: {lines: [{
       merchandiseId: 'gid://shopify/ProductVariant/1', quantity: 2,
@@ -171,12 +171,12 @@ describe('Shopify hosted checkout handoff', () => {
   it('rejects checkout redirects to an unexpected host', async () => {
     const fetcher: typeof fetch = async () => response({
       cartCreate: {
-        cart: {id: 'gid://shopify/Cart/test?key=secret', checkoutUrl: 'https://attacker.test/checkout', lines: {pageInfo: {hasNextPage: false}, nodes: []}},
+        cart: {id: 'gid://shopify/Cart/test?key=secret', checkoutUrl: 'https://attacker.test/checkout', totalQuantity: 0, cost: {subtotalAmount: {amount: '0.0', currencyCode: 'EUR'}, totalAmount: {amount: '0.0', currencyCode: 'EUR'}}, lines: {pageInfo: {hasNextPage: false}, nodes: []}},
         userErrors: [], warnings: [],
       },
     });
     await assert.rejects(
-      createCheckout(ENV, [{merchandiseId: 'gid://shopify/ProductVariant/1', quantity: 1}], fetcher),
+      createCart(ENV, [{merchandiseId: 'gid://shopify/ProductVariant/1', quantity: 1}], fetcher),
       /unexpected origin/,
     );
   });
@@ -187,10 +187,10 @@ describe('Shopify hosted checkout handoff', () => {
       'https://checkout.opendrone.be:8443/checkouts/x',
     ]) {
       const fetcher: typeof fetch = async () => response({
-        cartCreate: {cart: {id: 'gid://shopify/Cart/test?key=secret', checkoutUrl, lines: {pageInfo: {hasNextPage: false}, nodes: []}}, userErrors: [], warnings: []},
+        cartCreate: {cart: {id: 'gid://shopify/Cart/test?key=secret', checkoutUrl, totalQuantity: 0, cost: {subtotalAmount: {amount: '0.0', currencyCode: 'EUR'}, totalAmount: {amount: '0.0', currencyCode: 'EUR'}}, lines: {pageInfo: {hasNextPage: false}, nodes: []}}, userErrors: [], warnings: []},
       });
       await assert.rejects(
-        createCheckout(ENV, [{merchandiseId: 'gid://shopify/ProductVariant/1', quantity: 1}], fetcher),
+        createCart(ENV, [{merchandiseId: 'gid://shopify/ProductVariant/1', quantity: 1}], fetcher),
         /unexpected origin/,
       );
     }
@@ -199,12 +199,12 @@ describe('Shopify hosted checkout handoff', () => {
   it('rejects Shopify cart warnings instead of silently adjusting lines', async () => {
     const fetcher: typeof fetch = async () => response({
       cartCreate: {
-        cart: {id: 'gid://shopify/Cart/test?key=secret', checkoutUrl: 'https://checkout.opendrone.be/checkouts/cn/abc', lines: {pageInfo: {hasNextPage: false}, nodes: []}},
+        cart: {id: 'gid://shopify/Cart/test?key=secret', checkoutUrl: 'https://checkout.opendrone.be/checkouts/cn/abc', totalQuantity: 0, cost: {subtotalAmount: {amount: '0.0', currencyCode: 'EUR'}, totalAmount: {amount: '0.0', currencyCode: 'EUR'}}, lines: {pageInfo: {hasNextPage: false}, nodes: []}},
         userErrors: [], warnings: [{message: 'Quantity adjusted'}],
       },
     });
     await assert.rejects(
-      createCheckout(ENV, [{merchandiseId: 'gid://shopify/ProductVariant/1', quantity: 1}], fetcher),
+      createCart(ENV, [{merchandiseId: 'gid://shopify/ProductVariant/1', quantity: 1}], fetcher),
       /cartCreate failed/,
     );
   });

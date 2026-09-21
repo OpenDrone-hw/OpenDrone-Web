@@ -11,7 +11,7 @@ export const SHOPIFY_CART_PATH = '/api/shopify/cart';
 
 export type CommerceHandoff = {
   addUrl: string;
-  /** The cart route, once this session has a Shopify cart to revisit. */
+  /** The cart page, once this session has a Shopify cart to revisit. */
   cartUrl: string | null;
 };
 
@@ -24,7 +24,7 @@ export function commerceHandoff(
   }
   return {
     addUrl: catalog.add_url,
-    cartUrl: hasShopifyCart ? SHOPIFY_CART_PATH : null,
+    cartUrl: hasShopifyCart ? '/cart' : null,
   };
 }
 

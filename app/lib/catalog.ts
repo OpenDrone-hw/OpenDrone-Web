@@ -38,6 +38,8 @@ export type CatalogVariant = {
   availability: CatalogAvailability;
   ship_promise: string | null;
   image: string | null;
+  /** Shopify's alt text for `image`, which names the tier it shows. */
+  image_alt?: string | null;
   url: string;
   cart_add_url: string;
   cart_add_method?: 'POST';
@@ -54,6 +56,8 @@ export type CatalogProduct = {
   description: string | null;
   url: string;
   images: string[];
+  /** Shopify's alt text per entry of `images`, same order. */
+  image_alts?: Array<string | null>;
   rating: {average: number; count: number} | null;
   variants: CatalogVariant[];
 };
@@ -206,7 +210,7 @@ function mapVariant(
         ? money(variant.compare_price, variant.currency || catalog.currency)
         : null,
     image:
-      image(variant.image, variant.title) ??
+      image(variant.image, variant.image_alt || variant.title) ??
       image(product.images[0] ?? null, product.title),
     product: {title: product.title, handle: product.handle},
     selectedOptions: Object.entries(variant.options ?? {}).map(
@@ -271,7 +275,9 @@ export function toProduct(
   const selected = selectVariant(variants, selectedOptions);
   const prices = variants.map((v) => Number(v.price.amount));
   const currency = variants[0]?.price.currencyCode ?? catalog.currency;
-  const images = product.images.map((url, i) => image(url, product.title, i)!);
+  const images = product.images.map(
+    (url, i) => image(url, product.image_alts?.[i] || product.title, i)!,
+  );
   return {
     id: `product:${product.handle}`,
     handle: product.handle,

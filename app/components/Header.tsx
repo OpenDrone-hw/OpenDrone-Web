@@ -730,8 +730,7 @@ function HeaderMenuMobileToggle() {
 }
 
 /**
- * The cart icon links, after the first add, to the local server route that
- * resolves the session's hosted Shopify checkout.
+ * The cart icon links, after the first add, to the cart page.
  */
 function CartToggle({cartUrl}: {cartUrl: string | null}) {
   if (!cartUrl) {

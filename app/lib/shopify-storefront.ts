@@ -12,8 +12,8 @@ const CATALOG_QUERY = `#graphql
         title
         description
         productType
-        featuredImage { url }
-        images(first: 10) { nodes { url } }
+        featuredImage { url altText }
+        images(first: 10) { nodes { url altText } }
         variants(first: $variantsFirst) {
           pageInfo { hasNextPage }
           nodes {
@@ -21,7 +21,7 @@ const CATALOG_QUERY = `#graphql
             title
             sku
             availableForSale
-            image { url }
+            image { url altText }
             price { amount currencyCode }
             compareAtPrice { amount currencyCode }
             selectedOptions { name value }
@@ -32,10 +32,42 @@ const CATALOG_QUERY = `#graphql
   }
 `;
 
+const CART_FIELDS = `#graphql
+  fragment OpenDroneCartFields on Cart {
+    id
+    checkoutUrl
+    totalQuantity
+    cost {
+      subtotalAmount { amount currencyCode }
+      totalAmount { amount currencyCode }
+    }
+    lines(first: 100) {
+      pageInfo { hasNextPage }
+      nodes {
+        id
+        quantity
+        attributes { key value }
+        cost { totalAmount { amount currencyCode } }
+        merchandise {
+          ... on ProductVariant {
+            id
+            title
+            sku
+            image { url altText }
+            selectedOptions { name value }
+            product { handle title }
+          }
+        }
+      }
+    }
+  }
+`;
+
 export const CART_CREATE_MUTATION = `#graphql
+  ${CART_FIELDS}
   mutation OpenDroneCartCreate($input: CartInput!) {
     cartCreate(input: $input) {
-      cart { id checkoutUrl lines(first: 100) { pageInfo { hasNextPage } nodes { merchandise { ... on ProductVariant { id } } quantity } } }
+      cart { ...OpenDroneCartFields }
       userErrors { field message }
       warnings { message }
     }
@@ -43,35 +75,86 @@ export const CART_CREATE_MUTATION = `#graphql
 `;
 
 export const CART_QUERY = `#graphql
+  ${CART_FIELDS}
   query OpenDroneCart($id: ID!) {
-    cart(id: $id) {
-      id
-      checkoutUrl
-      lines(first: 100) { pageInfo { hasNextPage } nodes { merchandise { ... on ProductVariant { id } } quantity } }
-    }
+    cart(id: $id) { ...OpenDroneCartFields }
   }
 `;
 
 export const CART_LINES_ADD_MUTATION = `#graphql
+  ${CART_FIELDS}
   mutation OpenDroneCartLinesAdd($cartId: ID!, $lines: [CartLineInput!]!) {
     cartLinesAdd(cartId: $cartId, lines: $lines) {
-      cart { id checkoutUrl lines(first: 100) { pageInfo { hasNextPage } nodes { merchandise { ... on ProductVariant { id } } quantity } } }
+      cart { ...OpenDroneCartFields }
       userErrors { field message }
       warnings { message }
     }
   }
 `;
 
+export const CART_LINES_UPDATE_MUTATION = `#graphql
+  ${CART_FIELDS}
+  mutation OpenDroneCartLinesUpdate($cartId: ID!, $lines: [CartLineUpdateInput!]!) {
+    cartLinesUpdate(cartId: $cartId, lines: $lines) {
+      cart { ...OpenDroneCartFields }
+      userErrors { field message }
+      warnings { message }
+    }
+  }
+`;
+
+export const CART_LINES_REMOVE_MUTATION = `#graphql
+  ${CART_FIELDS}
+  mutation OpenDroneCartLinesRemove($cartId: ID!, $lineIds: [ID!]!) {
+    cartLinesRemove(cartId: $cartId, lineIds: $lineIds) {
+      cart { ...OpenDroneCartFields }
+      userErrors { field message }
+      warnings { message }
+    }
+  }
+`;
+
+/** The line attribute that carries the ship promise onto the checkout line
+ *  and the order confirmation. */
+export const PREORDER_ATTRIBUTE = 'Preorder';
+
+export type ShopifyMoney = {amount: string; currencyCode: string};
+
+export type ShopifyCartLine = {
+  id: string;
+  merchandiseId: string;
+  quantity: number;
+  title: string;
+  variantTitle: string;
+  handle: string;
+  sku: string | null;
+  image: {url: string; altText: string | null} | null;
+  selectedOptions: Array<{name: string; value: string}>;
+  /** The ship promise on the line, from its `Preorder` attribute. */
+  shipPromise: string | null;
+  total: ShopifyMoney;
+};
+
 export type ShopifyCart = {
   id: string;
   checkoutUrl: string;
-  lines: Array<{merchandiseId: string; quantity: number}>;
+  totalQuantity: number;
+  subtotal: ShopifyMoney;
+  total: ShopifyMoney;
+  lines: ShopifyCartLine[];
 };
 
 /** A line to add: the variant, how many, and the attributes Shopify shows
  *  on the checkout line and the order (the preorder ship promise). */
 export type CartLineInput = {
   merchandiseId: string;
+  quantity: number;
+  attributes?: Array<{key: string; value: string}>;
+};
+
+/** A line change: its quantity, and optionally replaced attributes. */
+export type CartLineUpdate = {
+  id: string;
   quantity: number;
   attributes?: Array<{key: string; value: string}>;
 };
@@ -147,8 +230,8 @@ type ShopifyCatalogData = {
       title: string;
       description: string;
       productType: string;
-      featuredImage: {url: string} | null;
-      images: {nodes: Array<{url: string}>};
+      featuredImage: {url: string; altText: string | null} | null;
+      images: {nodes: Array<{url: string; altText: string | null}>};
       variants: {
         pageInfo: {hasNextPage: boolean};
         nodes: Array<{
@@ -156,7 +239,7 @@ type ShopifyCatalogData = {
           title: string;
           sku: string | null;
           availableForSale: boolean;
-          image: {url: string} | null;
+          image: {url: string; altText: string | null} | null;
           price: {amount: string; currencyCode: string};
           compareAtPrice: {amount: string; currencyCode: string} | null;
           selectedOptions: Array<{name: string; value: string}>;
@@ -253,6 +336,9 @@ export function mapShopifyCatalog(
           : 'sold_out',
         ship_promise: configured.shipPromise,
         image: variant.image?.url ?? product.featuredImage?.url ?? null,
+        // Alt text names the tier ("OpenRX Gemini, front"); the gallery
+        // uses it to show the selected tier's photos.
+        image_alt: (variant.image ?? product.featuredImage)?.altText ?? null,
         url: `/products/${product.handle}`,
         cart_add_url: `${CART_PATH}?sku=${encodeURIComponent(sku)}&qty=1`,
         cart_add_method: 'POST',
@@ -266,6 +352,7 @@ export function mapShopifyCatalog(
       description: product.description || null,
       url: `/products/${product.handle}`,
       images: product.images.nodes.map(({url}) => url),
+      image_alts: product.images.nodes.map(({altText}) => altText ?? null),
       rating: null,
       variants,
     };
@@ -306,10 +393,31 @@ export async function fetchShopifyCatalog(
 type CartWire = {
   id: string;
   checkoutUrl: string;
+  totalQuantity: number;
+  cost: {subtotalAmount: ShopifyMoney; totalAmount: ShopifyMoney};
   lines: {
     pageInfo: {hasNextPage: boolean};
-    nodes: Array<{merchandise: {id: string}; quantity: number}>;
+    nodes: Array<{
+      id: string;
+      quantity: number;
+      attributes: Array<{key: string; value: string}>;
+      cost: {totalAmount: ShopifyMoney};
+      merchandise: {
+        id: string;
+        title: string;
+        sku: string | null;
+        image: {url: string; altText: string | null} | null;
+        selectedOptions: Array<{name: string; value: string}>;
+        product: {handle: string; title: string};
+      };
+    }>;
   };
+};
+
+type CartPayload = {
+  cart: CartWire | null;
+  userErrors: Array<{field?: string[]; message: string}>;
+  warnings: Array<{message: string}>;
 };
 
 function validatedCart(
@@ -326,6 +434,7 @@ function validatedCart(
   if (
     cart.lines.nodes.some(
       (line) =>
+        !line.id ||
         !line.merchandise.id ||
         !Number.isSafeInteger(line.quantity) ||
         line.quantity < 1,
@@ -350,11 +459,36 @@ function validatedCart(
   return {
     id: cart.id,
     checkoutUrl: checkout.toString(),
+    totalQuantity: cart.totalQuantity,
+    subtotal: cart.cost.subtotalAmount,
+    total: cart.cost.totalAmount,
     lines: cart.lines.nodes.map((line) => ({
+      id: line.id,
       merchandiseId: line.merchandise.id,
       quantity: line.quantity,
+      title: line.merchandise.product.title,
+      variantTitle: line.merchandise.title,
+      handle: line.merchandise.product.handle,
+      sku: line.merchandise.sku,
+      image: line.merchandise.image,
+      selectedOptions: line.merchandise.selectedOptions,
+      shipPromise:
+        line.attributes.find(({key}) => key === PREORDER_ATTRIBUTE)?.value ?? null,
+      total: line.cost.totalAmount,
     })),
   };
+}
+
+function payloadCart(
+  env: StorefrontEnv,
+  payload: CartPayload,
+  operation: string,
+  expectedId?: string,
+): ShopifyCart {
+  if (payload.userErrors.length || payload.warnings.length || !payload.cart) {
+    throw new Error(`shopify: ${operation} failed`);
+  }
+  return validatedCart(env, payload.cart, expectedId);
 }
 
 export async function createCart(
@@ -363,29 +497,10 @@ export async function createCart(
   fetcher: typeof fetch = fetch,
 ): Promise<ShopifyCart> {
   if (!lines.length) throw new Error('shopify: cart has no valid lines');
-  const data = await storefrontRequest<{
-    cartCreate: {
-      cart: CartWire | null;
-      userErrors: Array<{field?: string[]; message: string}>;
-      warnings: Array<{message: string}>;
-    };
-  }>(env, CART_CREATE_MUTATION, {input: {lines}}, fetcher);
-  if (
-    data.cartCreate.userErrors.length ||
-    data.cartCreate.warnings.length ||
-    !data.cartCreate.cart?.checkoutUrl
-  ) {
-    throw new Error('shopify: cartCreate failed');
-  }
-  return validatedCart(env, data.cartCreate.cart);
-}
-
-export async function createCheckout(
-  env: StorefrontEnv,
-  lines: CartLineInput[],
-  fetcher: typeof fetch = fetch,
-): Promise<string> {
-  return (await createCart(env, lines, fetcher)).checkoutUrl;
+  const data = await storefrontRequest<{cartCreate: CartPayload}>(
+    env, CART_CREATE_MUTATION, {input: {lines}}, fetcher,
+  );
+  return payloadCart(env, data.cartCreate, 'cartCreate');
 }
 
 export async function getCart(env: StorefrontEnv, id: string, fetcher: typeof fetch = fetch) {
@@ -399,11 +514,32 @@ export async function addCartLines(
   lines: CartLineInput[],
   fetcher: typeof fetch = fetch,
 ) {
-  const data = await storefrontRequest<{
-    cartLinesAdd: {cart: CartWire | null; userErrors: unknown[]; warnings: unknown[]};
-  }>(env, CART_LINES_ADD_MUTATION, {cartId, lines}, fetcher);
-  if (data.cartLinesAdd.userErrors.length || data.cartLinesAdd.warnings.length || !data.cartLinesAdd.cart) {
-    throw new Error('shopify: cartLinesAdd failed');
-  }
-  return validatedCart(env, data.cartLinesAdd.cart, cartId);
+  const data = await storefrontRequest<{cartLinesAdd: CartPayload}>(
+    env, CART_LINES_ADD_MUTATION, {cartId, lines}, fetcher,
+  );
+  return payloadCart(env, data.cartLinesAdd, 'cartLinesAdd', cartId);
+}
+
+export async function updateCartLines(
+  env: StorefrontEnv,
+  cartId: string,
+  lines: CartLineUpdate[],
+  fetcher: typeof fetch = fetch,
+) {
+  const data = await storefrontRequest<{cartLinesUpdate: CartPayload}>(
+    env, CART_LINES_UPDATE_MUTATION, {cartId, lines}, fetcher,
+  );
+  return payloadCart(env, data.cartLinesUpdate, 'cartLinesUpdate', cartId);
+}
+
+export async function removeCartLines(
+  env: StorefrontEnv,
+  cartId: string,
+  lineIds: string[],
+  fetcher: typeof fetch = fetch,
+) {
+  const data = await storefrontRequest<{cartLinesRemove: CartPayload}>(
+    env, CART_LINES_REMOVE_MUTATION, {cartId, lineIds}, fetcher,
+  );
+  return payloadCart(env, data.cartLinesRemove, 'cartLinesRemove', cartId);
 }
