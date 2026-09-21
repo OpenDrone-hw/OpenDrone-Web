@@ -38,6 +38,7 @@ export type ProductModelChip = {
 export function ProductItem({
   product,
   loading,
+  imageSizes,
   models,
   feature,
   lead,
@@ -53,6 +54,9 @@ export function ProductItem({
 }: {
   product: ProductCardFragment;
   loading?: 'eager' | 'lazy';
+  /** The card image's rendered width, for the srcset; defaults to a
+   *  full-width card on phones. */
+  imageSizes?: string;
   models?: ProductModelChip[];
   /** Wide horizontal layout for a single-product category row, so the
    *  flagship fills the rail instead of leaving it empty. */
@@ -264,8 +268,8 @@ export function ProductItem({
             aspectRatio="1/1"
             data={image}
             loading={loading}
-            sizes="(min-width: 45em) 400px, 100vw"
-            maxWidth={960}
+            sizes={imageSizes ?? '(min-width: 45em) 400px, 100vw'}
+            maxWidth={800}
           />
         ) : (
           <ProductGhostTile

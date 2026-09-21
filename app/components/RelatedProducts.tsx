@@ -129,8 +129,8 @@ function RelatedCard({product}: {product: RelatedProduct}) {
               aspectRatio="1/1"
               data={image}
               loading="lazy"
-              sizes="(min-width: 45em) 260px, 50vw"
-              maxWidth={640}
+              sizes="(min-width: 45em) 260px, 100vw"
+              maxWidth={800}
             />
           ) : (
             <span className="product-card-media-ghost" aria-hidden="true">

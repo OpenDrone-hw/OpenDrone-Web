@@ -1011,7 +1011,7 @@ function DesktopHome({heroStacks}: {heroStacks: Promise<HeroStacks>}) {
                                 <span className="hero-reveal-media">
                                   {card.image?.url ? (
                                     <img
-                                      src={shopifyImageUrl(card.image.url, 640)}
+                                      src={shopifyImageUrl(card.image.url, 160)}
                                       alt={card.image.altText ?? ''}
                                       loading="lazy"
                                       decoding="async"

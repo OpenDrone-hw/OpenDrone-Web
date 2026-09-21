@@ -154,7 +154,8 @@ export function ProductGallery({
                   ''
                 }
                 aspectRatio="1/1"
-                sizes="(min-width: 960px) 60vw, 100vw"
+                sizes="(min-width: 960px) 600px, 85vw"
+                maxWidth={1080}
                 // The active slide is the PDP's LCP element: without an
                 // explicit priority it competes with the route chunk + fonts
                 // at default priority. Neighbours (mounted after idle) are

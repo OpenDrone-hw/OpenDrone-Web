@@ -611,7 +611,8 @@ export default function ProductsIndex() {
                     title={card.title}
                     priceOverride={card.price}
                     imageOverride={card.image}
-                    loading={index < 8 ? 'eager' : undefined}
+                    loading={index < 4 ? 'eager' : undefined}
+                    imageSizes="(min-width: 64em) 300px, (min-width: 45em) 33vw, 50vw"
                     onSale={card.onSale}
                     comingSoon={card.comingSoon}
                     quickAdd={card.quickAdd}

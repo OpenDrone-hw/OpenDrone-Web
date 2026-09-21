@@ -4172,6 +4172,8 @@ button.reset {
 .catalog-sidebar {
   position: sticky;
   top: calc(var(--header-height) + var(--sp-4));
+  display: grid;
+  gap: var(--sp-8, 2.5rem);
 }
 
 .catalog-filter-head {
@@ -4248,6 +4250,7 @@ button.reset {
   .catalog-sidebar {
     position: static;
     top: auto;
+    gap: 0.5rem;
   }
   /* One scrolling row, not a wrapped block: the grid starts a screen
      higher on phones. */
