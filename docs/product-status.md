@@ -100,6 +100,23 @@ every SKU has its `SHOPIFY_PREVIEW_POLICY_JSON` entry; flip the repo topic to `s
 minutes the price is public and orders open; then update the static status
 in `roadmap-data.ts` in a follow-up PR.
 
+**Launch preorders:** with the founder's go, and after the storefront deploy
+that opens checkout, flip every board sold as a preorder to `status-beta`
+(first production batch), so the chip and /roadmap stop saying the product
+cannot be bought:
+
+```sh
+for repo in OpenFC-Lite OpenFC-Lite-Mini OpenESC-20x20 OpenESC-30x30 \
+            OpenRX-Lite OpenRX-Lite-UFL OpenRX-Mono OpenRX-Gemini; do
+  gh repo edit "OpenDrone-hw/$repo" --remove-topic status-alpha --add-topic status-beta
+done
+```
+
+OpenFrame has no public repo: set its static status in `roadmap-data.ts`.
+Then update the static statuses in the same file in a follow-up PR.
+OpenMotor stays locked (`"status": "development"`) until its specs, thrust
+data and photos exist.
+
 **A funding target is reached:** place the supplier order, set that batch's
 `ships` in `content/preorders.json` (for example `"ships mid-December 2026"`)
 and raise the Shopify price to the compare-at price. New orders then fall into

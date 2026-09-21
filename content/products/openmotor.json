@@ -1,9 +1,9 @@
 {
   "fileNumber": "05",
   "family": "Motors",
+  "status": "development",
   "editorial": false,
-  "status": "preorder",
-  "statusNote": "ships about 10 weeks after its target is reached (target deadline 31 December 2026)",
+  "statusNote": "opens for preorder once specs, thrust data and photos are published",
   "hero": {
     "line1": "OpenMotor",
     "line2Italic": "1604 and 2207",
