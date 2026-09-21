@@ -6586,9 +6586,8 @@ html.light .firmware-logo--tile {
   width: max-content;
   max-width: clamp(150px, 13vw, 200px);
   /* Fade in once the fly is done (the is-armed rule holds it at opacity 0 during
-     the entrance). NO transform transition here — place() measures this box to
-     position it, and a transitioned transform makes that read a mid-glide value
-     → the rail jumps/overlaps. Opacity is safe (doesn't affect the measurement). */
+     the entrance). No transform transition until .is-swap-ready (end of this
+     file); place() reads layout boxes, which ignore a mid-glide transform. */
   transition: opacity 0.6s ease;
 }
 /* Schematic sheets are full words (MCU / BLACKBOX / CONNECTORS), so size the
@@ -18489,4 +18488,23 @@ html.light .cart-added-continue {
    tile's catalog caption would be, and the name is under the tile anyway. */
 .product-card-media .ghost-tile-rule.is-foot {
   visibility: hidden;
+}
+
+/* After the entrance, a SKU swap can change the board's shape, so the
+   repo-outline offset (root translate) and the rail's gutter position change
+   with it. place() sets both from layout boxes the moment the new board
+   mounts, so they glide over the swap instead of jumping once it settles. */
+.board-art.is-swap-ready {
+  transition: translate 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.board-art.is-swap-ready .board-folder-rail {
+  transition:
+    opacity 0.6s ease,
+    transform 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .board-art.is-swap-ready,
+  .board-art.is-swap-ready .board-folder-rail {
+    transition: none;
+  }
 }
