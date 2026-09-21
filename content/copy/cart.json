@@ -41,12 +41,17 @@
   "share_prompt": "Copy this cart link",
   "checkout_cta": "Checkout",
   "note_preorder": "This order contains pre-order items. Each shows its ship date, which is also stated at checkout and on your order confirmation. You pay the full price now, and the whole order ships in one parcel once every item in it is ready. [How preorders work](/preorder)",
-  "note_vat": "Prices include VAT. Shipping, import duties for the United States and any discount code are calculated on the next page.",
+  "note_vat": "Prices include VAT. Shipping and any discount code are calculated on the next page.",
   "note_terms": "By completing this order you accept the Incutec [End-Use Policy](/end-use) and the [General Terms and Conditions](/algemene-voorwaarden).",
   "ballot_title": "Your order is a vote",
   "ballot_hint": "Rank up to three projects you want us to build next. Your ranking is saved with this order at checkout.",
   "ballot_saved": "Saved to this order.",
   "ballot_empty": "Optional. Tap to rank; change it any time before checkout.",
   "ballot_results_link": "See the standings",
-  "goal_prefix": "Orders are currently funding:"
+  "goal_prefix": "Orders are currently funding:",
+  "note_us": "Shipping and US import duties are calculated on the next page and charged there, so nothing is due on delivery.",
+  "note_intl": "Shipping is calculated on the next page. Import duties and taxes may be due on delivery.",
+  "mixed_title": "Your items ship on different dates.",
+  "mixed_body": "The whole order ships in one parcel once the last item is ready. Check out the items you want sooner as a separate order.",
+  "mixed_in_stock": "in stock"
 }

@@ -1,4 +1,4 @@
-import {Form, Link, redirect, useLoaderData} from 'react-router';
+import {Form, Link, redirect, useLoaderData, useRouteLoaderData} from 'react-router';
 import type {Route} from './+types/cart.$';
 import {getCart, type ShopifyCart, type ShopifyCartLine} from '~/lib/shopify-storefront';
 import {checkoutOpen, loadSessionCart} from '~/lib/shopify-cart-action';
@@ -6,6 +6,8 @@ import {formatPrice} from '~/lib/catalog';
 import {Txt} from '~/components/Txt';
 import {buildSeoMeta} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
+import {priceNote} from '~/lib/visitor-country';
+import type {RootLoader} from '~/root';
 
 const CART_KEY = 'shopifyCartId';
 
@@ -55,8 +57,24 @@ function EmptyCart() {
   );
 }
 
+/** In stock, or the preorder ship promise: what decides when a line ships. */
+function shipKey(line: ShopifyCartLine): string {
+  return line.shipPromise ?? '';
+}
+
+function lineName(line: ShopifyCartLine): string {
+  return line.variantTitle && line.variantTitle !== 'Default Title'
+    ? `${line.title} ${line.variantTitle}`
+    : line.title;
+}
+
 function PopulatedCart({cart}: {cart: ShopifyCart}) {
+  const rootData = useRouteLoaderData<RootLoader>('root');
+  const note = priceNote(rootData?.visitorCountry ?? null);
   const hasPreorder = cart.lines.some((line) => line.shipPromise);
+  // One parcel per order: when lines ship on different dates, the early
+  // ones wait for the last. Say so, by name, before checkout.
+  const mixed = new Set(cart.lines.map(shipKey)).size > 1;
   return (
     <section className="cart-main">
       <div className="cart-details">
@@ -75,13 +93,22 @@ function PopulatedCart({cart}: {cart: ShopifyCart}) {
             <Txt id="cart.register_subtotal" as="dt" />
             <dd>{formatPrice(cart.subtotal.amount, cart.subtotal.currencyCode)}</dd>
           </div>
-          <div className="cart-register-row is-total">
-            <Txt id="cart.register_total" as="dt" />
-            <dd>{formatPrice(cart.total.amount, cart.total.currencyCode)}</dd>
-          </div>
         </dl>
+        {mixed ? (
+          <div className="cart-mixed-warning" role="note">
+            <Txt id="cart.mixed_title" as="p" />
+            <ul>
+              {cart.lines.map((line) => (
+                <li key={line.id}>
+                  {lineName(line)}: {line.shipPromise ?? copyText('cart.mixed_in_stock') ?? 'in stock'}
+                </li>
+              ))}
+            </ul>
+            <Txt id="cart.mixed_body" as="p" />
+          </div>
+        ) : null}
         {hasPreorder ? <Txt id="cart.note_preorder" as="p" className="cart-summary-note" /> : null}
-        <Txt id="cart.note_vat" as="p" className="cart-summary-note" />
+        <Txt id={`cart.note_${note}`} as="p" className="cart-summary-note" />
         <Form method="post" action="/api/shopify/cart">
           <input type="hidden" name="intent" value="checkout" />
           <button className="cart-checkout-cta" type="submit"><Txt id="cart.checkout_cta" /></button>
@@ -105,7 +132,7 @@ function CartLine({line}: {line: ShopifyCartLine}) {
         {line.image ? (
           <img src={line.image.url} alt={line.image.altText ?? line.title} width={56} height={56} />
         ) : (
-          <span />
+          <span className="cart-line-noimage" aria-hidden="true" />
         )}
         <div className="cart-sheet-item">
           <Link to={`/products/${line.handle}`}><strong>{line.title}</strong></Link>

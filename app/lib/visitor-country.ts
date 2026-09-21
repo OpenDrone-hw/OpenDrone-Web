@@ -23,3 +23,12 @@ export function visitorCountry(request: Request): string | null {
 export function paysEuVat(country: string | null): boolean {
   return country === null || EU.has(country);
 }
+
+/** Which price note a visitor sees: EU VAT included, US duties charged at
+ *  checkout (orders ship duty paid), or duties possibly due on delivery. */
+export type PriceNote = 'vat' | 'us' | 'intl';
+
+export function priceNote(country: string | null): PriceNote {
+  if (paysEuVat(country)) return 'vat';
+  return country === 'US' ? 'us' : 'intl';
+}

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {paysEuVat, visitorCountry} from './visitor-country.ts';
+import {paysEuVat, priceNote, visitorCountry} from './visitor-country.ts';
 
 const req = (url: string, country?: string) =>
   new Request(url, {headers: country ? {'CF-IPCountry': country} : {}});
@@ -24,5 +24,14 @@ describe('paysEuVat', () => {
     assert.equal(paysEuVat(null), true);
     assert.equal(paysEuVat('US'), false);
     assert.equal(paysEuVat('CH'), false);
+  });
+});
+
+describe('priceNote', () => {
+  it('tells EU, US and other visitors apart', () => {
+    assert.equal(priceNote('NL'), 'vat');
+    assert.equal(priceNote(null), 'vat');
+    assert.equal(priceNote('US'), 'us');
+    assert.equal(priceNote('GB'), 'intl');
   });
 });

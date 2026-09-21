@@ -10,6 +10,8 @@ import {barPercent, meterView, type MeterBar} from '~/lib/preorder-meter';
  * its funding target, then the next batch filling. Words come from
  * `content/copy/preorder.json`; the numbers are computed server-side in the
  * catalog client, so the server render and hydration agree.
+ *
+ * `compact` is the tracker row: bar and short count only.
  */
 export function PreorderMeter({
   campaign,
@@ -26,22 +28,29 @@ export function PreorderMeter({
     (key) => copyText(`preorder.${key}`),
     priceAfter ? formatPrice(priceAfter.amount, priceAfter.currencyCode) : null,
   );
+  const state = view.reached ? 'funded' : view.bar ? 'open' : 'stock';
+  if (compact) {
+    return (
+      <div className="funding-meter is-compact" data-funding-state={state}>
+        {view.bar ? <Bar bar={view.bar} /> : null}
+        <span className="funding-meter-label">{view.bar ? view.bar.label : view.count}</span>
+      </div>
+    );
+  }
   return (
-    <div className={`preorder-meter${compact ? ' is-compact' : ''}`}>
-      <p className="preorder-meter-headline">{view.headline}</p>
-      <Bar bar={view.bar} />
+    <div className="funding-meter preorder-meter" data-funding-state={state}>
+      {view.bar ? <Bar bar={view.bar} /> : null}
+      <span className="funding-meter-status">{view.headline}</span>
       {view.stretch ? (
         <>
-          <p className="preorder-meter-stretch">{view.stretch.label}</p>
           <Bar bar={view.stretch} thin />
+          <span className="funding-meter-label">{view.stretch.label}</span>
         </>
       ) : null}
-      {view.early && !compact ? <p className="preorder-meter-early">{view.early}</p> : null}
-      {compact ? null : (
-        <Link className="preorder-meter-link" prefetch="intent" to="/preorder">
-          {copyText('preorder.meter_link') ?? 'How preorders work'}
-        </Link>
-      )}
+      {view.early ? <span className="funding-meter-label">{view.early}</span> : null}
+      <Link className="funding-meter-link" prefetch="intent" to="/preorder">
+        {copyText('preorder.meter_link') ?? 'How preorders work'}
+      </Link>
     </div>
   );
 }
@@ -49,15 +58,15 @@ export function PreorderMeter({
 function Bar({bar, thin = false}: {bar: MeterBar; thin?: boolean}) {
   const pct = barPercent(bar);
   return (
-    <div
-      className={`preorder-meter-bar${thin ? ' is-thin' : ''}`}
+    <span
+      className={`funding-meter-track${thin ? ' is-thin' : ''}`}
       role="progressbar"
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={pct}
       aria-valuetext={bar.label}
     >
-      <span style={{width: `${pct}%`}} />
-    </div>
+      <span className="funding-meter-fill" style={{width: `${pct}%`}} />
+    </span>
   );
 }

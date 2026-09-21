@@ -119,6 +119,9 @@ function inline(s: string) {
   // bold, italic, inline code, images, links
   let out = escapeHtml(s);
   out = out.replace(/`([^`]+)`/g, '<code>$1</code>');
+  // The model withdrawal form marks "delete as appropriate" with a literal
+  // "(*)"; keep it out of the emphasis rules below.
+  out = out.replace(/\(\*\)/g, '(&#42;)');
   out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   out = out.replace(/\*([^*]+)\*/g, '<em>$1</em>');
   // Images before links: `![alt](src)` is a link pattern with a `!` in

@@ -7,9 +7,9 @@
   "lead": "The designs are finished. What we need now is the money to order production runs, so every product option has a public target: the quantity we order from the supplier. Your preorder pays for that run, and you can watch each target fill.",
   "cta_primary": "View the targets ↓",
   "cta_secondary": "Where the boards are made →",
-  "strip_ordered_label": "Units ordered",
+  "strip_ordered_label": "Ordered so far",
   "strip_reached_label": "Targets reached",
-  "strip_stack_label": "Stack batch 1 left",
+  "strip_stack_label": "Stack batch 1 in stock",
   "strip_unavailable": "Campaign numbers are temporarily unavailable. Campaign products cannot be ordered until the count is verified.",
   "tracker_title": "Every target",
   "tracker_lead": "Each product option has its own target, set at the quantity we order from the supplier. The numbers are paid orders in our shop, per option.",
@@ -31,7 +31,7 @@
   ],
   "s4_title": "*04* · What you pay",
   "s4_body": [
-    "You pay the full price when you order. Until a product reaches its target it sells at an early price. Once the target is reached, the price rises to the price shown struck through.",
+    "You pay the full price when you order. A product that shows a second, struck-through price sells at an early price until its target is reached, then at the struck-through price.",
     "Shipping is charged at checkout at the rate for your destination zone. Orders to the United States ship duty paid: import duties are calculated and charged at checkout, and there is nothing to pay on delivery."
   ],
   "s5_title": "*05* · One order, one parcel",
@@ -70,11 +70,12 @@
   "updates_empty": "No updates yet.",
   "updates": [],
   "meter_paid": "Batch {batch} is paid for and in production · {left} of {units} left",
-  "meter_paid_bar": "{ordered} of {units} ordered",
   "meter_target": "{ordered} of {target} ordered toward the funding target",
   "meter_target_bar": "{ordered} of {target} ordered",
   "meter_reached": "Funding target reached · {ordered} ordered",
   "meter_next": "Batch {batch}: {ordered} of {units}",
   "meter_early": "Early price until the target is reached, then {price}",
-  "meter_link": "How preorders work"
+  "meter_link": "How preorders work",
+  "meter_paid_count": "{left} left in batch 1",
+  "meter_reached_count": "{ordered} ordered"
 }

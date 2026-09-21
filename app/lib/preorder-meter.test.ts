@@ -12,7 +12,8 @@ describe('meterView', () => {
   it('shows paid stock as units left, without an early-price line', () => {
     const view = meterView(campaignState(STACK, 107, PENDING), none, '€55.00');
     assert.equal(view.headline, 'Batch 1 is paid for and in production · 143 of 250 left');
-    assert.deepEqual([view.bar.value, view.bar.max], [107, 250]);
+    assert.equal(view.bar, null);
+    assert.equal(view.count, '143 left');
     assert.equal(view.stretch, null);
     assert.equal(view.early, null);
   });
@@ -21,7 +22,8 @@ describe('meterView', () => {
     const view = meterView(campaignState(FRAME, 187, PENDING), none, '€99.00');
     assert.equal(view.headline, '187 of 250 ordered toward the funding target');
     assert.equal(view.early, 'Early price until the target is reached, then €99.00');
-    assert.equal(barPercent(view.bar), 75);
+    assert.equal(barPercent(view.bar!), 75);
+    assert.equal(view.count, '187 / 250');
   });
 
   it('drops the early-price line when Shopify has no higher price', () => {
@@ -31,7 +33,8 @@ describe('meterView', () => {
   it('keeps a full bar after the target and fills the next batch below it', () => {
     const view = meterView(campaignState(FRAME, 312, PENDING), none, '€99.00');
     assert.equal(view.headline, 'Funding target reached · 312 ordered');
-    assert.equal(barPercent(view.bar), 100);
+    assert.equal(barPercent(view.bar!), 100);
+    assert.equal(view.reached, true);
     assert.equal(view.stretch?.label, 'Batch 2: 62 of 1000');
     assert.equal(view.early, null);
   });

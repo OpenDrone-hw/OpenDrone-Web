@@ -72,7 +72,7 @@ import {trackEvent} from '~/lib/growth/plausible';
 import {attributionSource} from '~/lib/growth/attribution';
 import {NewsletterSignup} from '~/components/NewsletterSignup';
 import {PreorderMeter} from '~/components/PreorderMeter';
-import {paysEuVat} from '~/lib/visitor-country';
+import {priceNote} from '~/lib/visitor-country';
 import type {
   ChapterPin,
   DownloadAsset,
@@ -1598,9 +1598,11 @@ function ProductPage() {
           />
           <Txt
             id={
-              paysEuVat(rootData?.visitorCountry ?? null)
-                ? 'product-chrome.buy_vat_note'
-                : 'product-chrome.buy_duties_note'
+              {
+                vat: 'product-chrome.buy_vat_note',
+                us: 'product-chrome.buy_duties_note',
+                intl: 'product-chrome.buy_duties_note_intl',
+              }[priceNote(rootData?.visitorCountry ?? null)]
             }
             as="span"
             className="product-buy-vat"
