@@ -19,6 +19,7 @@
   "count_one": "product",
   "count_other": "products",
   "sort_label": "Sort",
+  "sort_featured": "Featured",
   "sort_newest": "Newest",
   "sort_price_asc": "Price: low to high",
   "sort_price_desc": "Price: high to low",
@@ -39,5 +40,7 @@
   "section_articles": "Articles",
   "empty_search_title": "Nothing found",
   "empty_search_body": "Try a product name, part number or article keyword.",
-  "roadmap_link": "What the status labels mean →"
+  "roadmap_link": "What the status labels mean →",
+  "filter_build": "Build size",
+  "filter_firmware": "Firmware"
 }

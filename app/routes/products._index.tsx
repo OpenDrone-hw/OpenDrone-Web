@@ -8,6 +8,8 @@ import type {MoneyV2, ProductCardFragment} from '~/lib/product-shapes';
 import {toCards} from '~/lib/catalog';
 import {buyUrl, commerceHandoff} from '~/lib/shop-links';
 import {FAMILIES} from '~/lib/families';
+import {buildOf, parseBuilds} from '~/lib/build-recommendations';
+import buildsJson from '../../content/builds.json';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {EmptyState} from '~/components/EmptyState';
 import {
@@ -60,10 +62,12 @@ const CATEGORY_ORDER: Array<{type: string; copyId: string}> = [
   {type: 'Accessory', copyId: 'collections-all.category_accessory'},
 ];
 
-/** Sort options for the toolbar dropdown. `newest` is the default and matches
- *  the loader's CREATED_AT-desc fetch order, so it needs no client re-sort.
+/** Sort options for the toolbar dropdown. `featured` is the default: the
+ *  families in sidebar order (boards first, accessories last), newest first
+ *  inside each. `newest` is the loader's CREATED_AT-desc fetch order.
  *  `label` is the fallback for a missing copy key. */
 const SORT_OPTIONS: Array<{value: string; copyId: string; label: string}> = [
+  {value: 'featured', copyId: 'collections-all.sort_featured', label: 'Featured'},
   {value: 'newest', copyId: 'collections-all.sort_newest', label: 'Newest'},
   {value: 'price-asc', copyId: 'collections-all.sort_price_asc', label: 'Price: low to high'},
   {value: 'price-desc', copyId: 'collections-all.sort_price_desc', label: 'Price: high to low'},
@@ -107,6 +111,11 @@ type Card = {
   quickAdd?: ProductQuickAdd;
   /** Stack offers layered on the quick-add (FC/ESC cards only). */
   stackOffers?: StackOffer[];
+  /** Build size from content/builds.json ('3-inch', '5-inch'), or null
+   *  for a part that fits both. */
+  build: string | null;
+  /** The open firmware project the board runs, if any. */
+  firmware: string | null;
 };
 
 const num = (m?: MoneyV2 | null) => (m ? parseFloat(m.amount) || 0 : 0);
@@ -159,11 +168,38 @@ function normalise(s: string): string {
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
 }
+const BUILDS = parseBuilds(buildsJson);
+
+function firmwareOf(handle: string): string | null {
+  const project = PRODUCT_CONTENT[handle]?.firmware?.project;
+  return project && project !== '-' ? project : null;
+}
+
+/** `5"`, `5 inch`, `5-inch` and `5in` all read as `5inch`. */
+function sizes(s: string): string {
+  return s.replace(/(\d)\s*-?\s*(?:"|”|inch(?:es)?\b|in\b)/g, '$1inch');
+}
 function matchesTerm(haystack: string, term: string): boolean {
-  const words = normalise(term).split(/\s+/).filter(Boolean);
+  const words = sizes(normalise(term)).split(/\s+/).filter(Boolean);
   if (!words.length) return true;
-  const hay = normalise(haystack);
+  const hay = sizes(normalise(haystack));
   return words.every((w) => hay.includes(w));
+}
+
+/** What a card is searched on: names, family, firmware and spec values. */
+function searchTextFor(p: ProductCardFragment, value = ''): string {
+  const content = PRODUCT_CONTENT[p.handle];
+  return [
+    p.title,
+    value,
+    p.handle,
+    p.productType,
+    content?.family,
+    content?.firmware?.project,
+    ...(content?.specs ?? []).map(([, v]) => v),
+  ]
+    .filter(Boolean)
+    .join(' ');
 }
 
 export default function ProductsIndex() {
@@ -171,7 +207,9 @@ export default function ProductsIndex() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeType = searchParams.get('type');
   const onlySale = searchParams.get('sale') === '1';
-  const sort = searchParams.get('sort') || 'newest';
+  const activeBuild = searchParams.get('build');
+  const activeFirmware = searchParams.get('firmware');
+  const sort = searchParams.get('sort') || 'featured';
 
   // Expand each product into one card per purchasable model (skipping
   // coming-soon tiers); single products / bundles / accessories get one card.
@@ -244,7 +282,9 @@ export default function ProductsIndex() {
             key: `${p.handle}:${value}`,
             product: p,
             title: joinTitle(p.title, value),
-            searchText: [p.title, value, p.handle, p.productType].join(' '),
+            searchText: searchTextFor(p, value),
+            build: buildOf(BUILDS, sv?.sku),
+            firmware: firmwareOf(p.handle),
             to: `/products/${p.handle}?${encodeURIComponent(axis)}=${encodeURIComponent(value)}`,
             price,
             image: sv?.image ?? p.featuredImage,
@@ -272,7 +312,9 @@ export default function ProductsIndex() {
           key: p.handle,
           product: p,
           title: p.title,
-          searchText: [p.title, p.handle, p.productType].join(' '),
+          searchText: searchTextFor(p),
+          build: null,
+          firmware: firmwareOf(p.handle),
           to: `/products/${p.handle}`,
           price: p.priceRange.minVariantPrice,
           onSale: comingSoon ? false : productOnSale(p),
@@ -314,6 +356,10 @@ export default function ProductsIndex() {
   }, [products]);
 
   const anyOnSale = useMemo(() => cards.some((c) => c.onSale), [cards]);
+  const firmwares = useMemo(
+    () => [...new Set(cards.map((c) => c.firmware).filter((f): f is string => Boolean(f)))],
+    [cards],
+  );
 
   // Filter (search term, category, sale), then sort. `newest` keeps the
   // loader's fetch order.
@@ -323,6 +369,9 @@ export default function ProductsIndex() {
     if (activeType)
       list = list.filter((c) => (c.product.productType || 'Other') === activeType);
     if (onlySale) list = list.filter((c) => c.onSale);
+    // A size-neutral part (receiver, accessory) fits either build.
+    if (activeBuild) list = list.filter((c) => c.build === null || c.build === activeBuild);
+    if (activeFirmware) list = list.filter((c) => c.firmware === activeFirmware);
     const sorted = [...list];
     switch (sort) {
       case 'price-asc':
@@ -337,11 +386,18 @@ export default function ProductsIndex() {
       case 'name-desc':
         sorted.sort((a, b) => b.title.localeCompare(a.title));
         break;
-      default:
-        break; // newest - already CREATED_AT desc from the loader
+      case 'newest':
+        break; // already CREATED_AT desc from the loader
+      default: {
+        const rank = (c: (typeof sorted)[number]) => {
+          const i = CATEGORY_ORDER.findIndex((o) => o.type === (c.product.productType || 'Other'));
+          return i === -1 ? CATEGORY_ORDER.length : i;
+        };
+        sorted.sort((a, b) => rank(a) - rank(b));
+      }
     }
     return sorted;
-  }, [cards, term, activeType, onlySale, sort]);
+  }, [cards, term, activeType, onlySale, activeBuild, activeFirmware, sort]);
 
   const setParam = (key: string, value: string | null) => {
     const next = new URLSearchParams(searchParams);
@@ -442,11 +498,13 @@ export default function ProductsIndex() {
                 {filterLink(
                   'all',
                   <Txt id="collections-all.filter_all" />,
-                  !activeType && !onlySale,
+                  !activeType && !onlySale && !activeBuild && !activeFirmware,
                   () => {
                     const next = new URLSearchParams(searchParams);
                     next.delete('type');
                     next.delete('sale');
+                    next.delete('build');
+                    next.delete('firmware');
                     setSearchParams(next, {preventScrollReset: true});
                   },
                 )}
@@ -464,6 +522,28 @@ export default function ProductsIndex() {
                 )}
               </ul>
             </div>
+            <div className="catalog-filter-group">
+              <Txt id="collections-all.filter_build" as="h2" className="catalog-filter-head" />
+              <ul className="catalog-filter-list">
+                {BUILDS.builds.map((b) =>
+                  filterLink(`build-${b.id}`, b.label, activeBuild === b.id, () =>
+                    setParam('build', activeBuild === b.id ? null : b.id),
+                  ),
+                )}
+              </ul>
+            </div>
+            {firmwares.length > 1 ? (
+              <div className="catalog-filter-group">
+                <Txt id="collections-all.filter_firmware" as="h2" className="catalog-filter-head" />
+                <ul className="catalog-filter-list">
+                  {firmwares.map((f) =>
+                    filterLink(`fw-${f}`, f, activeFirmware === f, () =>
+                      setParam('firmware', activeFirmware === f ? null : f),
+                    ),
+                  )}
+                </ul>
+              </div>
+            ) : null}
           </aside>
 
           {/* Main column - toolbar (count + sort) above the product grid. */}
@@ -503,7 +583,7 @@ export default function ProductsIndex() {
                 <select
                   value={sort}
                   onChange={(e) =>
-                    setParam('sort', e.target.value === 'newest' ? null : e.target.value)
+                    setParam('sort', e.target.value === 'featured' ? null : e.target.value)
                   }
                 >
                   {SORT_OPTIONS.map((o) => (
