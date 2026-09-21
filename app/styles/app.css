@@ -18243,3 +18243,9 @@ html.light .cart-added-continue {
   color: var(--color-text-dim);
   text-align: right;
 }
+
+.cart-added-replaces {
+  font-size: var(--fs-xs);
+  line-height: 1.45;
+  color: var(--color-text);
+}

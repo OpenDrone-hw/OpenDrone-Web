@@ -13,12 +13,15 @@ import {
 } from '~/lib/cart-client';
 import {
   buildSuggestionSpecs,
+  parseBuilds,
+  resolveBuild,
   resolveBuildSuggestions,
-  resolveProfile,
   type BuildSuggestion,
 } from '~/lib/build-recommendations';
+import buildsJson from '../../content/builds.json';
 
 const CART_ACTION = '/api/shopify/cart';
+const BUILDS = parseBuilds(buildsJson);
 
 function t(key: string, fallback: string, vars: Record<string, string> = {}): string {
   return (copyText(`cart.${key}`) ?? fallback).replace(/\{(\w+)\}/g, (m, k: string) => vars[k] ?? m);
@@ -87,13 +90,13 @@ export function CartAddedDialog() {
 
   // The build is judged on the cart as it was when the dialog opened, so a
   // part added from here stays listed as "Added" instead of vanishing.
-  const cartSkus = detail.summary.lines.map((l) => l.sku ?? '');
-  const cartHandles = detail.summary.lines.map((l) => l.handle);
-  const profile = resolveProfile(detail.skus[0], cartSkus);
+  const openedWith = detail.summary.lines;
+  const buildId = resolveBuild(BUILDS, detail.skus[0], openedWith.map((l) => l.sku));
+  const build = BUILDS.builds.find((b) => b.id === buildId);
   const statuses = rootData?.productStatuses ?? {};
   const suggestions = resolveBuildSuggestions(
     rootData?.familyProducts ?? [],
-    buildSuggestionSpecs(profile, cartHandles, ranking),
+    buildSuggestionSpecs(BUILDS, buildId, openedWith, ranking),
     (handle) => isPurchasableStatus(statuses[handle]),
   );
   const added = summary.lines.filter((l) => l.sku && detail.skus.includes(l.sku));
@@ -193,9 +196,7 @@ export function CartAddedDialog() {
         {suggestions.length ? (
           <div className="cart-added-build">
             <p className="cart-added-build-title">
-              {profile === '5-inch'
-                ? t('build_title_5', 'Complete your 5-inch build')
-                : t('build_title_3', 'Complete your 3-inch build')}
+              {t('build_title', 'Complete your {build} build', {build: build?.label ?? ''})}
             </p>
             <ul className="cart-added-suggestions">
               {suggestions.map((s) => {
@@ -227,6 +228,13 @@ export function CartAddedDialog() {
                           </em>
                         ) : null}
                       </span>
+                      {s.replaces ? (
+                        <small className="cart-added-replaces">
+                          {t('build_replaces', 'Your cart has the {other} version, which does not fit this build.', {
+                            other: s.replaces,
+                          })}
+                        </small>
+                      ) : null}
                       {promise ? (
                         <small className={`cart-added-ship${delays ? ' is-later' : ''}`}>
                           {delays

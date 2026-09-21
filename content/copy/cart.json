@@ -59,12 +59,12 @@
   "added_close": "Close",
   "added_continue": "Continue shopping",
   "added_view": "View cart",
-  "build_title_3": "Complete your 3-inch build",
-  "build_title_5": "Complete your 5-inch build",
   "build_add": "Add",
   "build_added": "Added",
   "build_retry": "Try again",
   "build_each": "{price} each",
   "build_delays": "{promise}. Your order then ships when this is ready.",
-  "build_add_all": "Add the whole build · {price}"
+  "build_add_all": "Add the whole build · {price}",
+  "build_title": "Complete your {build} build",
+  "build_replaces": "Your cart has the {other} version, which does not fit this build."
 }

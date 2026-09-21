@@ -1,93 +1,124 @@
 /**
  * "Complete your build": the parts that finish a quad around what was just
- * added. Compatibility is a hard constraint: a 20×20 stack only ever meets a
- * 3" frame and 1604 motors. Shopify's complementary-product ranking may
- * reorder the parts, never add one from the wrong build.
+ * added. Compatibility comes from `content/builds.json` and is a hard
+ * constraint: a 20×20 stack only ever meets a 3" frame and 1604 motors.
+ * Shopify's recommendations may reorder the parts, never add one.
  *
- * Bundler-free (relative imports) so the node:test suites can load it.
+ * Bundler-free (relative imports) so the node:test suites can load it; the
+ * build data is passed in.
  */
 
 import type {ProductCardFragment, ProductVariantFragment} from './product-shapes.ts';
 
 export type BuildRole = 'flight-controller' | 'esc' | 'frame' | 'motors' | 'receiver';
-export type BuildProfileId = '3-inch' | '5-inch';
 
-type BuildComponent = {role: BuildRole; handle: string; sku: string; quantity: number};
-
-export type BuildSuggestion = BuildComponent & {
-  product: ProductCardFragment;
-  variant: ProductVariantFragment;
+export type BuildsConfig = {
+  roles: Record<BuildRole, {handle: string; sizeNeutral?: boolean}>;
+  builds: Array<{
+    id: string;
+    label: string;
+    parts: Array<{role: BuildRole; sku: string; quantity: number}>;
+  }>;
 };
 
-const BUILD_PROFILES: ReadonlyArray<{
-  id: BuildProfileId;
-  sourceSku: RegExp;
-  components: readonly BuildComponent[];
-}> = [
-  {
-    id: '3-inch',
-    sourceSku: /(?:2020|FRAME-3|MOTOR-1604)$/,
-    components: [
-      {role: 'flight-controller', handle: 'openfc-lite', sku: 'OPENFC-LITE-2020', quantity: 1},
-      {role: 'esc', handle: 'openesc', sku: 'OPENESC-2020', quantity: 1},
-      {role: 'frame', handle: 'openframe', sku: 'OPENFRAME-3', quantity: 1},
-      {role: 'motors', handle: 'openmotor', sku: 'OPENMOTOR-1604', quantity: 4},
-      {role: 'receiver', handle: 'openrx', sku: 'OPENRX-LITE', quantity: 1},
-    ],
-  },
-  {
-    id: '5-inch',
-    sourceSku: /(?:3030|FRAME-5|MOTOR-2207)$/,
-    components: [
-      {role: 'flight-controller', handle: 'openfc-lite', sku: 'OPENFC-LITE-3030', quantity: 1},
-      {role: 'esc', handle: 'openesc', sku: 'OPENESC-3030', quantity: 1},
-      {role: 'frame', handle: 'openframe', sku: 'OPENFRAME-5', quantity: 1},
-      {role: 'motors', handle: 'openmotor', sku: 'OPENMOTOR-2207', quantity: 4},
-      {role: 'receiver', handle: 'openrx', sku: 'OPENRX-GEMINI', quantity: 1},
-    ],
-  },
-];
+export type BuildPart = {role: BuildRole; handle: string; sku: string; quantity: number};
 
-/** The build size a SKU belongs to, or null for a size-neutral part (a receiver). */
-export function buildProfileId(sku: string | null | undefined): BuildProfileId | null {
-  return BUILD_PROFILES.find((p) => p.sourceSku.test(sku ?? ''))?.id ?? null;
+export type BuildSuggestion = BuildPart & {
+  product: ProductCardFragment;
+  variant: ProductVariantFragment;
+  /** A part of this role is in the cart, but for the other build size. */
+  replaces: string | null;
+};
+
+type CartLine = {sku: string | null; handle: string; variantTitle?: string};
+
+/** Accept `content/builds.json`, or throw on anything malformed. */
+export function parseBuilds(body: unknown): BuildsConfig {
+  const c = body as Partial<BuildsConfig> | null;
+  if (!c?.roles || !Array.isArray(c.builds)) throw new Error('builds: roles and builds are required');
+  for (const build of c.builds) {
+    for (const part of build.parts ?? []) {
+      if (!c.roles[part.role]) throw new Error(`builds: ${build.id} uses unknown role ${part.role}`);
+      if (!Number.isSafeInteger(part.quantity) || part.quantity < 1) {
+        throw new Error(`builds: ${build.id} ${part.sku} needs a positive quantity`);
+      }
+    }
+  }
+  return c as BuildsConfig;
+}
+
+/** The build a SKU belongs to, or null for a part in no build (a receiver
+ *  variant that no build names, say). */
+export function buildOf(config: BuildsConfig, sku: string | null | undefined): string | null {
+  if (!sku) return null;
+  return config.builds.find((b) => b.parts.some((p) => p.sku === sku && !config.roles[p.role].sizeNeutral))?.id ?? null;
 }
 
 /**
- * The build to complete: the added SKU's own size, else the first sized part
- * already in the cart (a receiver added after a 20×20 stack completes the
- * 3" build). Null when nothing in reach has a size.
+ * The build to complete: the added SKU's own size, else the first sized
+ * part already in the cart (a receiver added after a 20×20 stack completes
+ * the 3" build). Null when nothing in reach has a size.
  */
-export function resolveProfile(
+export function resolveBuild(
+  config: BuildsConfig,
   sourceSku: string | null | undefined,
-  cartSkus: readonly string[] = [],
-): BuildProfileId | null {
-  return buildProfileId(sourceSku) ?? cartSkus.map(buildProfileId).find(Boolean) ?? null;
+  cartSkus: readonly (string | null)[] = [],
+): string | null {
+  return buildOf(config, sourceSku) ?? cartSkus.map((s) => buildOf(config, s)).find(Boolean) ?? null;
+}
+
+/** The role a cart line plays, from its SKU (sized parts) or handle (size-neutral roles). */
+function roleOf(config: BuildsConfig, line: CartLine): {role: BuildRole; build: string | null} | null {
+  for (const build of config.builds) {
+    const part = build.parts.find((p) => p.sku === line.sku);
+    if (part) return {role: part.role, build: config.roles[part.role].sizeNeutral ? null : build.id};
+  }
+  for (const [role, def] of Object.entries(config.roles) as Array<[BuildRole, BuildsConfig['roles'][BuildRole]]>) {
+    if (def.sizeNeutral && def.handle === line.handle) return {role, build: null};
+  }
+  return null;
 }
 
 /**
- * The parts to suggest, in order: everything in the profile except what the
- * cart already holds (by product, so a 30×30 ESC in the cart also rules out
- * suggesting a 20×20 one), Shopify's ranking first, the build order after.
+ * The parts to suggest for `buildId`, in order: every part whose role the
+ * cart does not already fill for this size (a size-neutral role is filled by
+ * any matching product), Shopify's ranking first, the build order after. A
+ * part whose role the cart fills with the other size stays, carrying the
+ * cart's version in `replaces`, so the dialog can say the sizes differ.
  */
 export function buildSuggestionSpecs(
-  profileId: BuildProfileId | null,
-  cartHandles: readonly string[] = [],
+  config: BuildsConfig,
+  buildId: string | null,
+  cart: readonly CartLine[] = [],
   preferredHandles: readonly string[] = [],
-): BuildComponent[] {
-  const profile = BUILD_PROFILES.find((p) => p.id === profileId);
-  if (!profile) return [];
-  const inCart = new Set(cartHandles);
+): Array<BuildPart & {replaces: string | null}> {
+  const build = config.builds.find((b) => b.id === buildId);
+  if (!build) return [];
+  const filled = new Set<string>();
+  const otherSize = new Map<BuildRole, string>();
+  for (const line of cart) {
+    const r = roleOf(config, line);
+    if (!r) continue;
+    if (r.build === null || r.build === build.id) filled.add(r.role);
+    else otherSize.set(r.role, line.variantTitle || line.sku || '');
+  }
   const rank = new Map(preferredHandles.map((handle, index) => [handle, index]));
-  return profile.components
-    .filter((c) => !inCart.has(c.handle))
-    .map((component, index) => ({component, index}))
+  return build.parts
+    .filter((p) => !filled.has(p.role))
+    .map((p, index) => ({
+      part: {
+        ...p,
+        handle: config.roles[p.role].handle,
+        replaces: otherSize.get(p.role) ?? null,
+      },
+      index,
+    }))
     .sort(
       (a, b) =>
-        (rank.get(a.component.handle) ?? Number.MAX_SAFE_INTEGER) -
-          (rank.get(b.component.handle) ?? Number.MAX_SAFE_INTEGER) || a.index - b.index,
+        (rank.get(a.part.handle) ?? Number.MAX_SAFE_INTEGER) -
+          (rank.get(b.part.handle) ?? Number.MAX_SAFE_INTEGER) || a.index - b.index,
     )
-    .map(({component}) => component);
+    .map(({part}) => part);
 }
 
 /**
@@ -96,7 +127,7 @@ export function buildSuggestionSpecs(
  */
 export function resolveBuildSuggestions(
   products: readonly ProductCardFragment[],
-  specs: readonly BuildComponent[],
+  specs: ReadonlyArray<BuildPart & {replaces: string | null}>,
   sellable: (handle: string, variant: ProductVariantFragment) => boolean,
 ): BuildSuggestion[] {
   return specs.flatMap((spec) => {
