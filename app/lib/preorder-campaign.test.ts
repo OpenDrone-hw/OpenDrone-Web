@@ -16,19 +16,20 @@ const STACK: CampaignBatch[] = [
   {units: 250},
 ];
 const FRAME: CampaignBatch[] = [{units: 250}, {units: 1000}];
+const EARLY = 250;
 
 describe('campaignState', () => {
   it('lists sold-out batches, the current one and the next', () => {
-    const s = campaignState(STACK, 260, PENDING);
+    const s = campaignState(STACK, 260, PENDING, EARLY);
     assert.deepEqual(
       s.batches.map(({batch, status, shipPromise}) => [batch, status, shipPromise]),
       [[1, 'sold_out', 'ships late October 2026'], [2, 'current', PENDING]],
     );
-    assert.deepEqual(campaignState(FRAME, 0, PENDING).batches.map((b) => b.status), ['current', 'next']);
+    assert.deepEqual(campaignState(FRAME, 0, PENDING, EARLY).batches.map((b) => b.status), ['current', 'next']);
   });
 
   it('sells paid stock with its own ship date and no early price', () => {
-    const s = campaignState(STACK, 107, PENDING);
+    const s = campaignState(STACK, 107, PENDING, EARLY);
     assert.equal(s.batch, 1);
     assert.equal(s.paidStock, true);
     assert.equal(s.batchOrdered, 107);
@@ -40,17 +41,28 @@ describe('campaignState', () => {
   });
 
   it('moves the stack onto its funding target once paid stock is gone', () => {
-    const s = campaignState(STACK, 250, PENDING);
+    const s = campaignState(STACK, 250, PENDING, EARLY);
     assert.equal(s.batch, 2);
     assert.equal(s.paidStock, false);
     assert.equal(s.batchOrdered, 0);
     assert.equal(s.shipPromise, PENDING);
-    assert.equal(s.earlyPrice, true);
+    assert.equal(s.earlyPrice, false);
     assert.equal(s.targetReached, false);
   });
 
+  it('sells the first earlyUnits at the early price, whatever the batches', () => {
+    const s = campaignState(FRAME, 187, PENDING, EARLY);
+    assert.equal(s.earlyPrice, true);
+    assert.equal(s.earlyUnits, 250);
+    assert.equal(s.earlyLeft, 63);
+    const after = campaignState(STACK, 260, PENDING, EARLY);
+    assert.equal(after.earlyPrice, false);
+    assert.equal(after.earlyLeft, 0);
+    assert.equal(campaignState(FRAME, 0, PENDING, 0).earlyPrice, false);
+  });
+
   it('counts toward the first target with the early price', () => {
-    const s = campaignState(FRAME, 187, PENDING);
+    const s = campaignState(FRAME, 187, PENDING, EARLY);
     assert.equal(s.batch, 1);
     assert.equal(s.target, 250);
     assert.equal(s.targetOrdered, 187);
@@ -60,7 +72,7 @@ describe('campaignState', () => {
   });
 
   it('reaches the target exactly at its unit count and opens the stretch batch', () => {
-    const s = campaignState(FRAME, 250, PENDING);
+    const s = campaignState(FRAME, 250, PENDING, EARLY);
     assert.equal(s.targetReached, true);
     assert.equal(s.targetOrdered, 250);
     assert.equal(s.batch, 2);
@@ -71,24 +83,24 @@ describe('campaignState', () => {
 
   it('uses a batch ship promise once its supplier order is placed', () => {
     const placed: CampaignBatch[] = [{units: 250, ships: 'ships mid-December 2026'}, {units: 1000}];
-    assert.equal(campaignState(placed, 10, PENDING).shipPromise, 'ships mid-December 2026');
-    assert.equal(campaignState(placed, 300, PENDING).shipPromise, PENDING);
+    assert.equal(campaignState(placed, 10, PENDING, EARLY).shipPromise, 'ships mid-December 2026');
+    assert.equal(campaignState(placed, 300, PENDING, EARLY).shipPromise, PENDING);
   });
 
   it('repeats the last batch size past the configured batches', () => {
-    const s = campaignState(FRAME, 1250 + 1000 + 3, PENDING);
+    const s = campaignState(FRAME, 1250 + 1000 + 3, PENDING, EARLY);
     assert.equal(s.batch, 4);
     assert.equal(s.batchUnits, 1000);
     assert.equal(s.batchOrdered, 3);
   });
 
   it('treats a negative or non-finite count as zero', () => {
-    assert.equal(campaignState(FRAME, -5, PENDING).ordered, 0);
-    assert.equal(campaignState(FRAME, Number.NaN, PENDING).ordered, 0);
+    assert.equal(campaignState(FRAME, -5, PENDING, EARLY).ordered, 0);
+    assert.equal(campaignState(FRAME, Number.NaN, PENDING, EARLY).ordered, 0);
   });
 
   it('has no target when every batch is paid stock', () => {
-    const s = campaignState([{units: 10, paid: true, ships: 'ships now'}], 3, PENDING);
+    const s = campaignState([{units: 10, paid: true, ships: 'ships now'}], 3, PENDING, EARLY);
     assert.equal(s.target, null);
     assert.equal(s.targetReached, false);
     assert.equal(s.earlyPrice, true);
@@ -109,7 +121,7 @@ describe('parseCampaignConfig', () => {
     assert.throws(
       () =>
         parseCampaignConfig({
-          countFrom: '2026-09-21', endsOn: '2026-12-31',
+          countFrom: '2026-09-21', endsOn: '2026-12-31', earlyUnits: EARLY,
           pendingShips: PENDING,
           skus: {A: {batches: [{units: 1, paid: true}]}},
         }),
@@ -117,11 +129,25 @@ describe('parseCampaignConfig', () => {
     );
   });
 
+  it('rejects a missing or negative earlyUnits', () => {
+    for (const earlyUnits of [undefined, -1, 2.5]) {
+      assert.throws(
+        () =>
+          parseCampaignConfig({
+            countFrom: '2026-09-21', endsOn: '2026-12-31', earlyUnits,
+            pendingShips: PENDING,
+            skus: {A: {batches: [{units: 1}]}},
+          }),
+        /earlyUnits/,
+      );
+    }
+  });
+
   it('rejects a batch without positive units', () => {
     assert.throws(
       () =>
         parseCampaignConfig({
-          countFrom: '2026-09-21', endsOn: '2026-12-31',
+          countFrom: '2026-09-21', endsOn: '2026-12-31', earlyUnits: EARLY,
           pendingShips: PENDING,
           skus: {A: {batches: [{units: 0}]}},
         }),
@@ -184,7 +210,7 @@ function catalog(availability: 'preorder' | 'sold_out' | 'in_stock'): Catalog {
   };
 }
 
-const CONFIG = {countFrom: '2026-09-21', endsOn: '2026-12-31', pendingShips: PENDING, skus: {'OPENFRAME-5': {batches: FRAME}}};
+const CONFIG = {countFrom: '2026-09-21', endsOn: '2026-12-31', earlyUnits: EARLY, pendingShips: PENDING, skus: {'OPENFRAME-5': {batches: FRAME}}};
 
 describe('applyCampaign', () => {
   it('sets the campaign state and ship promise on campaign preorder SKUs only', () => {
@@ -202,6 +228,21 @@ describe('applyCampaign', () => {
     assert.equal(frame.ship_promise, null);
     assert.equal(strap.availability, 'preorder');
     assert.equal(applyCampaign(catalog('preorder'), CONFIG, null).campaign_counts, 'unavailable');
+  });
+
+  it('closes a SKU whose early units are gone while Shopify still charges the early price', () => {
+    const [frame] = applyCampaign(catalog('preorder'), CONFIG, {'OPENFRAME-5': 250}).products[0].variants;
+    assert.equal(frame.availability, 'sold_out');
+    assert.equal(frame.campaign, null);
+  });
+
+  it('reopens that SKU once the Shopify price is raised to the full price', () => {
+    const raised = catalog('preorder');
+    raised.products[0].variants[0] = {...raised.products[0].variants[0], price: 99, compare_price: null};
+    const [frame] = applyCampaign(raised, CONFIG, {'OPENFRAME-5': 250}).products[0].variants;
+    assert.equal(frame.availability, 'preorder');
+    assert.equal(frame.campaign?.earlyPrice, false);
+    assert.equal(frame.campaign?.batch, 2);
   });
 
   it('leaves a SKU the policy keeps closed untouched', () => {

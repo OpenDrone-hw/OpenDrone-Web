@@ -112,16 +112,19 @@ for repo in OpenFC-Lite OpenFC-Lite-Mini OpenESC-20x20 OpenESC-30x30 \
 done
 ```
 
-OpenFrame has no public repo: set its static status in `roadmap-data.ts`.
-Then update the static statuses in the same file in a follow-up PR.
-OpenMotor stays locked (`"status": "development"`) until its specs, thrust
-data and photos exist.
+OpenFrame and OpenMotor have no public repo: set their static status in
+`roadmap-data.ts`. Then update the static statuses in the same file in a
+follow-up PR.
+
+**The early units of a SKU are gone:** after `earlyUnits` (250) paid units,
+the SKU closes while Shopify still charges less than its compare-at price. Set
+the Shopify price to the full price and clear the compare-at price; the SKU
+reopens at the full price within a minute (the order count cache).
 
 **A funding target is reached:** place the supplier order, set that batch's
-`ships` in `content/preorders.json` (for example `"ships mid-December 2026"`)
-and raise the Shopify price to the compare-at price. New orders then fall into
-the next batch, which shows as the stretch meter. Customer mail about the
-target and the date stays a human send.
+`ships` in `content/preorders.json` (for example `"ships mid-December 2026"`).
+New orders then fall into the next batch, which shows as the stretch meter.
+Customer mail about the target and the date stays a human send.
 
 **Emergency lock:** set `"status": "development"` in
 `content/products/<handle>.json`, deploy (auto on merge). Then fix the

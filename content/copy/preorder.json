@@ -31,7 +31,7 @@
   ],
   "s4_title": "*04* · What you pay",
   "s4_body": [
-    "You pay the full price when you order. Every product sells at a preorder price, 20% under its later price, until its target is reached; the stack keeps it while batch 1 lasts. The product page shows the price that follows.",
+    "You pay in full when you order. The first 250 of every product option sell at a preorder price; after them, it sells at its full price. The product page shows how many are left at the preorder price and the price that follows.",
     "Shipping is charged at checkout at the rate for your destination zone. Orders to the United States ship duty paid: import duties are calculated and charged at checkout, and there is nothing to pay on delivery."
   ],
   "s5_title": "*05* · One order, one parcel",
@@ -76,11 +76,10 @@
   "meter_target_bar": "{ordered} of {target} ordered",
   "meter_reached": "Funding target reached · {ordered} ordered",
   "meter_next": "Batch {batch}: {ordered} of {units}",
-  "meter_early": "Preorder price until the target is reached, then {price}",
+  "meter_early": "Preorder price for the first {units} · {left} left, then {price}",
   "meter_link": "How preorders work",
   "meter_paid_count": "{left} left in batch 1",
   "meter_reached_count": "{ordered} ordered",
-  "meter_early_stock": "Preorder price while batch {batch} lasts, then {price}",
   "track_price_after": "then {price}",
   "batch_label": "Batch {batch}",
   "batch_sold_out": "sold out",

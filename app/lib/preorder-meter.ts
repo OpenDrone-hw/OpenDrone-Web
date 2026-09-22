@@ -22,7 +22,7 @@ export type MeterView = {
   count: string;
   /** After the target: the next batch filling, as a second, thinner bar. */
   stretch: MeterBar | null;
-  /** "Early price until the target is reached, then €X", when it applies. */
+  /** "Preorder price for the first 250, 143 left, then €X", when it applies. */
   early: string | null;
 };
 
@@ -44,12 +44,11 @@ export function meterView(
 
   const early =
     state.earlyPrice && priceAfter
-      ? state.paidStock
-        ? t('meter_early_stock', 'Preorder price while batch {batch} lasts, then {price}', {
-            batch: state.batch,
-            price: priceAfter,
-          })
-        : t('meter_early', 'Preorder price until the target is reached, then {price}', {price: priceAfter})
+      ? t('meter_early', 'Preorder price for the first {units} · {left} left, then {price}', {
+          units: state.earlyUnits,
+          left: state.earlyLeft,
+          price: priceAfter,
+        })
       : null;
 
   if (state.paidStock) {

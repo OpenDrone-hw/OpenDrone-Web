@@ -9,9 +9,10 @@
  * state every surface renders, so the PDP, the cards, the feeds and the cart
  * line agree on one ship promise.
  *
- * Prices stay in Shopify. The early price is Shopify's price with its
- * compare-at price as the price after the target; this module only says
- * whether the "early price" label applies.
+ * Prices stay in Shopify. The first `earlyUnits` paid units of a SKU sell at
+ * Shopify's price, with its compare-at price as the full price after them.
+ * Once they are gone and Shopify still charges the early price, the SKU
+ * closes until the Shopify price is raised to the full price.
  *
  * Kept pure and bundler-free (relative imports, no worker APIs) so the
  * node:test suites can load it.
@@ -37,6 +38,8 @@ export type CampaignConfig = {
   /** Last day a funding target can be reached, YYYY-MM-DD. A buyer whose
    *  target is missed by then chooses a refund or to keep waiting. */
   endsOn: string;
+  /** Paid units per SKU sold at the early price, counted from `countFrom`. */
+  earlyUnits: number;
   skus: Record<string, {batches: CampaignBatch[]}>;
 };
 
@@ -58,9 +61,12 @@ export type CampaignState = {
   targetReached: boolean;
   /** The ship promise for the next ordered unit. */
   shipPromise: string;
-  /** Shopify's price is the preorder price: paid stock, or the first
-   *  funding target, not reached yet. */
+  /** The next unit is one of the first `earlyUnits`: Shopify's price is the
+   *  early price. */
   earlyPrice: boolean;
+  earlyUnits: number;
+  /** Early-price units left, 0 once they are gone. */
+  earlyLeft: number;
   /** Every configured batch up to the one after the current, in order:
    *  sold-out batches stay listed. */
   batches: Array<{
@@ -80,6 +86,9 @@ export function parseCampaignConfig(body: unknown): CampaignConfig {
   }
   if (typeof c.endsOn !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(c.endsOn)) {
     throw new Error('preorders: endsOn must be YYYY-MM-DD');
+  }
+  if (!Number.isSafeInteger(c.earlyUnits) || (c.earlyUnits as number) < 0) {
+    throw new Error('preorders: earlyUnits must be a whole number');
   }
   if (typeof c.pendingShips !== 'string' || !c.pendingShips.trim()) {
     throw new Error('preorders: pendingShips is required');
@@ -112,6 +121,7 @@ export function campaignState(
   batches: CampaignBatch[],
   ordered: number,
   pendingShips: string,
+  earlyUnits: number,
 ): CampaignState {
   const units = Math.max(0, Math.floor(Number.isFinite(ordered) ? ordered : 0));
   let start = 0;
@@ -151,7 +161,9 @@ export function campaignState(
     targetOrdered,
     targetReached,
     shipPromise: current.ships?.trim() || pendingShips,
-    earlyPrice: (targetIndex < 0 || index <= targetIndex) && !targetReached,
+    earlyPrice: units < earlyUnits,
+    earlyUnits,
+    earlyLeft: Math.max(0, earlyUnits - units),
     batches: batches.slice(0, index + 2).map((b, i) => ({
       batch: i + 1,
       units: b.units,
@@ -166,7 +178,8 @@ export function campaignState(
  * sells as `preorder` and that has a campaign entry is touched: it gets the
  * campaign state and the batch's ship promise. With `units` null (the paid
  * counts could not be verified) those variants close as sold out, because
- * their ship promise depends on the count.
+ * their ship promise depends on the count. A variant whose early units are
+ * gone while Shopify still charges less than its compare-at price closes too.
  */
 export function applyCampaign(
   catalog: Catalog,
@@ -184,7 +197,21 @@ export function applyCampaign(
         if (!units) {
           return {...variant, availability: 'sold_out', ship_promise: null, campaign: null};
         }
-        const state = campaignState(entry.batches, units[variant.sku] ?? 0, config.pendingShips);
+        const state = campaignState(
+          entry.batches,
+          units[variant.sku] ?? 0,
+          config.pendingShips,
+          config.earlyUnits,
+        );
+        // The early units are gone but Shopify still charges the early
+        // price: close until the price is raised to the full price.
+        if (
+          !state.earlyPrice &&
+          variant.compare_price != null &&
+          variant.compare_price > variant.price
+        ) {
+          return {...variant, availability: 'sold_out', ship_promise: null, campaign: null};
+        }
         return {...variant, ship_promise: state.shipPromise, campaign: state};
       }),
     })),
