@@ -32,16 +32,18 @@
   "s4_title": "*04* · What you pay",
   "s4_body": [
     "You pay in full when you order. The price steps up per product option as paid orders come in: units 1 to 100 cost 20% less than the retail price, units 101 to 250 cost 10% less, and from unit 251 the retail price applies. The price shown when you order is the price you pay. The product page shows how many units are left at the current price and what the next unit costs.",
-    "Shipping is a flat rate per order, charged at checkout: €8.50 to Belgium, €9.95 to Germany, France, Luxembourg and the Netherlands, €12.95 to most other EU countries. Every rate is on [the shipping page](/shipping). We do not collect import duties at checkout: outside the EU, including the United States, the carrier collects any import duties and taxes from you on delivery."
+    "Shipping is a flat rate per order, charged at checkout: €8.50 to Belgium, €9.95 to Germany, France, Luxembourg and the Netherlands, €12.95 to most other EU countries (Bulgaria: €39.95). Every rate is on [the shipping page](/shipping). We do not collect import duties at checkout: outside the EU, including the United States, the carrier collects any import duties and taxes from you on delivery."
   ],
   "s5_title": "*05* · One order, one parcel",
   "s5_body": [
-    "An order ships once, complete. If you order the stack together with a product that is still funding, the whole order waits until everything in it is ready, which can be as late as March 2027. Order separately if you want the stack in October."
+    "An order ships once, complete. If you order the stack together with a product that is still funding, the whole order waits until everything in it is ready: by 11 March 2027 if every target in it is reached by 31 December 2026. Order separately if you want the stack in October.",
+    "If a target in your order is missed, the rest of the order ships as soon as it is ready, whether you take the refund for the missed item or keep waiting for it. If you keep waiting, that item follows in a second parcel at no extra shipping cost."
   ],
   "s6_title": "*06* · Risks",
   "s6_body": [
     "Hardware schedules slip. Supplier lead times move, a component goes out of stock and has to be replaced by an equivalent, and a production run can need rework. When a ship date moves, you get mail with the new date.",
-    "A product can also fall short of its target. If a target is not reached by 31 December 2026, we mail everyone who ordered that product and each buyer chooses: a refund of everything paid for that product within 14 days, or keep the order for the new ship date in that mail."
+    "A product can also fall short of its target. If a target is not reached by 31 December 2026, we mail everyone who ordered that product and each buyer chooses: a refund of everything paid for that product within 14 days, or keep the order for the new ship date in that mail. The rest of an order does not wait for a missed target.",
+    "Incutec BV is a young company. If it stopped trading before your order shipped, you would have a claim for what you paid as a creditor in the bankruptcy, and you might not get all of it back. If you paid by card, you can also ask your card issuer for a chargeback for goods not delivered, within the card scheme's time limits."
   ],
   "s7_title": "*07* · Who is behind it",
   "s7_body": [
@@ -56,15 +58,15 @@
   "faq_q3": "What happens when a target is reached?",
   "faq_a3": "We place the supplier order and mail everyone who ordered that product. You hear from us again when the ship date is set and before dispatch.",
   "faq_q9": "What if a target is not reached?",
-  "faq_a9": "Every target has a deadline: 31 December 2026. If a product misses it, we mail everyone who ordered it and you choose: a refund of everything you paid for that product within 14 days, or keep your order for the new ship date in that mail.",
+  "faq_a9": "Every target has a deadline: 31 December 2026. If a product misses it, we mail everyone who ordered it and you choose: a refund of everything you paid for that product within 14 days, or keep your order for the new ship date in that mail. If the refund leaves nothing in your order to ship, we refund the shipping cost too. The rest of your order ships as soon as it is ready, whichever you choose.",
   "faq_q4": "What if the ship date moves?",
   "faq_a4": "You get mail with the new date as soon as we know it. Until your order is delivered you can still cancel it for a refund.",
   "faq_q5": "Do I get one parcel or several?",
-  "faq_a5": "One. An order ships once, complete, when every item in it is ready.",
+  "faq_a5": "One, once every item in it is ready. The exception is a missed funding target: the rest of the order then ships as soon as it is ready, and the missed item, if you keep waiting for it, follows in a second parcel at no extra shipping cost.",
   "faq_q6": "Do you ship to the United States?",
   "faq_a6": "Yes, for €19.95 per order. We do not collect US import duties at checkout: the carrier collects them from you before delivery. US import duty on electronics and motors made in China is high, often around 35 to 40% of the value. US customs sets the amount, not us, and the carrier can add a clearance fee.",
   "faq_q7": "Is this an investment?",
-  "faq_a7": "No. A preorder pays for the production run of your own order. It carries no interest and gives you no equity, revenue share or other stake in the company.",
+  "faq_a7": "No. A preorder pays for the production run of your own order. It carries no interest and gives you no equity, revenue share or other stake in the company. If Incutec BV stopped trading before your order shipped, you would have a claim for what you paid as a creditor in the bankruptcy, and you might not get all of it back. If you paid by card, you can also ask your card issuer for a chargeback for goods not delivered, within the card scheme's time limits.",
   "faq_q8": "Where do the numbers on this page come from?",
   "faq_a8": "From paid orders in our shop. Each product option counts only its own units, and the numbers refresh every minute.",
   "updates_title": "Updates",
@@ -107,5 +109,5 @@
   "faq_q_cancel": "Can I cancel before it ships?",
   "faq_a_cancel": "Yes. Until your order is delivered you can withdraw from it without giving a reason: use the [withdrawal form](/herroepingsrecht#withdraw) or email contact@opendrone.be. We refund what you paid for it, including the standard shipping cost, within 14 days, to the payment method you used.",
   "faq_q_duties": "Do I pay import duties outside the EU?",
-  "faq_a_duties": "Inside the EU there is nothing more to pay: prices include Belgian VAT. Outside the EU we do not collect import duties or taxes at checkout. Your country's customs may charge them, and the carrier collects them from you on delivery. For the United States that amount is high: US import duty on electronics and motors made in China is often around 35 to 40% of the value, and US customs sets the amount. Check your country's rules before you order, and see [Shipping](/shipping)."
+  "faq_a_duties": "Inside the EU there is nothing more to pay: prices include Belgian VAT. Outside the EU we do not collect import duties or taxes at checkout. Your country's customs may charge them, and the carrier collects them from you on delivery. For the United Kingdom, the price you pay at checkout does not include UK VAT, and the carrier can hold the parcel until UK VAT and a handling fee are paid. For the United States the amount is high: US import duty on electronics and motors made in China is often around 35 to 40% of the value, and US customs sets the amount. Check your country's rules before you order, and see [Shipping](/shipping)."
 }

@@ -10,11 +10,11 @@ Eén vast tarief per bestelling, in euro, inclusief btw:
 |---|---|
 | België | € 8,50 |
 | Duitsland, Frankrijk, Luxemburg, Nederland | € 9,95 |
-| Andere landen van de Europese Unie | € 12,95 |
+| Andere landen van de Europese Unie, behalve Bulgarije | € 12,95 |
 | Cyprus, Estland, Malta | € 16,95 |
 | Verenigd Koninkrijk, Zwitserland, Noorwegen, IJsland, Liechtenstein | € 24,95 |
 | Verenigde Staten | € 19,95 |
-| Alle andere landen | € 39,95 |
+| Bulgarije en alle andere landen | € 39,95 |
 
 Incutec BV verzendt niet naar Rusland, Belarus, Iran, Noord-Korea, Syrië en Cuba, noch naar andere bestemmingen waarvoor beperkende maatregelen gelden: zie ons [end-use beleid](/end-use).
 
@@ -24,17 +24,19 @@ Incutec BV int geen invoerrechten of invoerbelastingen aan de checkout. Binnen d
 
 Verenigde Staten: de Amerikaanse invoerrechten op elektronica en motoren die in China zijn gemaakt zijn hoog, vaak ongeveer 35 tot 40% van de waarde. De Amerikaanse douane bepaalt het bedrag, niet Incutec BV, en de vervoerder kan kosten voor de inklaring aanrekenen.
 
+Verenigd Koninkrijk: de prijs die aan de checkout betaald wordt, bevat geen Britse btw. De vervoerder kan een pakket naar het Verenigd Koninkrijk vasthouden tot de Britse btw en behandelingskosten van de vervoerder betaald zijn.
+
 ### Pre-orders
 
 Sommige producten worden verkocht als pre-order. Zij zijn als dusdanig gemarkeerd, met hun verzenddatum, op de productpagina, aan de checkout en op de orderbevestiging. De volledige prijs en de verzendkosten die aan de checkout worden getoond, worden betaald bij het plaatsen van de bestelling.
 
-Pre-orderproducten worden in batches geproduceerd. De flight controller en de ESC uit de eerste batch worden eind oktober 2026 verzonden. Elk ander pre-orderproduct heeft een financieringsdoel, vermeld op de productpagina: de hoeveelheid die Incutec BV bij haar leverancier bestelt. Het wordt ongeveer 10 weken na het bereiken van dat doel verzonden, en elk doel heeft een deadline op 31 december 2026. Wordt het doel uiterlijk op 31 december 2026 bereikt, dan wordt het product uiterlijk op 11 maart 2027 verzonden. Wordt een doel niet bereikt, dan kiest iedereen die dat product bestelde per e-mail tussen de terugbetaling van alle voor dat product betaalde bedragen binnen 14 dagen en het behouden van de bestelling voor de nieuwe verzenddatum die in die e-mail vermeld wordt. De verzenddatum die bij het plaatsen van de bestelling voor een artikel wordt vermeld, is de tussen de consument en Incutec BV overeengekomen leveringstermijn in de zin van Art. VI.43 WER, zodat de standaardtermijn van 30 dagen hieronder niet geldt voor pre-orderartikelen.
+Pre-orderproducten worden in batches geproduceerd. De flight controller en de ESC uit de eerste batch worden eind oktober 2026 verzonden. Elk ander pre-orderproduct heeft een financieringsdoel, vermeld op de productpagina: de hoeveelheid die Incutec BV bij haar leverancier bestelt. Het wordt ongeveer 10 weken na het bereiken van dat doel verzonden, en elk doel heeft een deadline op 31 december 2026. Wordt het doel uiterlijk op 31 december 2026 bereikt, dan wordt het product uiterlijk op 11 maart 2027 verzonden. Wordt een doel niet bereikt, dan kiest iedereen die dat product bestelde per e-mail tussen de terugbetaling van alle voor dat product betaalde bedragen binnen 14 dagen, met inbegrip van de verzendkosten als geen ander artikel uit de bestelling nog verzonden moet worden, en het behouden van de bestelling voor de nieuwe verzenddatum die in die e-mail vermeld wordt. De verzenddatum die bij het plaatsen van de bestelling voor een artikel wordt vermeld, is de tussen de consument en Incutec BV overeengekomen leveringstermijn in de zin van Art. VI.43 WER, zodat de standaardtermijn van 30 dagen hieronder niet geldt voor pre-orderartikelen.
 
 Indien een verzenddatum verschuift, brengt Incutec BV de consument daarvan per e-mail op de hoogte en vermeldt zij de nieuwe datum. Dit doet geen afbreuk aan de rechten van de consument uit Art. VI.43 §2 WER.
 
 De consument kan een pre-order tot de levering herroepen, via het [herroepingsformulier](/herroepingsrecht) of zoals bepaald in Art. 5.4 van de Algemene Voorwaarden (Art. 7bis.4 Algemene Voorwaarden).
 
-Een bestelling die artikelen met verschillende verzenddata combineert, wordt in één pakket verzonden zodra elk artikel beschikbaar is: één levering per bestelling.
+Een bestelling die artikelen met verschillende verzenddata combineert, wordt in één pakket verzonden zodra elk artikel beschikbaar is: één levering per bestelling. Wordt een financieringsdoel voor een artikel uit de bestelling niet bereikt, dan wordt de rest van de bestelling verzonden zodra die beschikbaar is, ongeacht wat de consument voor dat artikel kiest. Behoudt de consument de bestelling voor dat artikel, dan wordt het afzonderlijk verzonden op de nieuwe verzenddatum, zonder extra verzendkosten.
 
 Betalingen voor pre-orders financieren de productie en de voorraadaankoop voor de bestelling. Zij dragen geen interest en verlenen geen aandeel, omzetdeling of ander eigendomsbelang in Incutec BV.
 

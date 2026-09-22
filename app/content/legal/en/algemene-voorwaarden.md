@@ -85,15 +85,15 @@
 
 7bis.3. If a ship date moves, Incutec BV informs the consumer by email and states the new date. This is without prejudice to the consumer's rights under Art. VI.43 §2 WER.
 
-7bis.3bis. If a funding target is not reached by its deadline, Incutec BV informs every consumer who ordered that product by email. The consumer then chooses either to terminate the contract for that item, with a refund of all amounts paid for it within 14 days, or to keep the order for the new ship date stated in that email.
+7bis.3bis. If a funding target is not reached by its deadline, Incutec BV informs every consumer who ordered that product by email. The consumer then chooses either to terminate the contract for that item, with a refund of all amounts paid for it within 14 days, or to keep the order for the new ship date stated in that email. If the refund leaves no item in the order still to ship, the shipping costs paid for the order are refunded as well.
 
 7bis.4. The right of withdrawal under Article 5 applies to pre-orders. The consumer may also exercise it before delivery, through the online form at opendrone.be/herroepingsrecht or as set out in Article 5.4. If the consumer withdraws before delivery, Incutec BV refunds all payments within 14 days of receiving the withdrawal.
 
-7bis.5. An order that combines items with different ship dates ships as one parcel, once every item is available (one delivery per order).
+7bis.5. An order that combines items with different ship dates ships as one parcel, once every item is available (one delivery per order). If a funding target for an item in the order is not reached by its deadline, the rest of the order ships as soon as it is available, whichever the consumer chooses under Article 7bis.3bis. If the consumer keeps the order for that item, it ships separately at its new ship date at no extra shipping cost.
 
 7bis.6. Pre-order payments fund the production run and stock purchase for the order. They carry no interest and confer no equity, revenue share or other ownership interest in Incutec BV.
 
-7bis.7. Incutec BV does not collect import duties or import taxes at checkout. Parcels to destinations outside the European Union, including the United States, may be subject to import duties, import taxes and carrier fees, which the consumer pays to the carrier on delivery.
+7bis.7. Incutec BV does not collect import duties or import taxes at checkout. Parcels to destinations outside the European Union, including the United States, may be subject to import duties, import taxes and carrier fees, which the consumer pays to the carrier on delivery. For parcels to the United Kingdom, the price paid at checkout does not include UK VAT, and the carrier can hold the parcel until UK VAT and a carrier handling fee are paid.
 
 ### Article 8: Payment
 

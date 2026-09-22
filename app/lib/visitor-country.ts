@@ -24,8 +24,10 @@ export function paysEuVat(country: string | null): boolean {
   return country === null || EU.has(country);
 }
 
-/** Which price note a visitor sees: EU VAT included, US duties charged at
- *  checkout (orders ship duty paid), or duties possibly due on delivery. */
+/** Which price note a visitor sees: EU VAT included, or, outside the EU,
+ *  import duties and taxes paid to the carrier on delivery ('us' adds the
+ *  high US duty on China-made electronics). No duties are charged at
+ *  checkout for any country. */
 export type PriceNote = 'vat' | 'us' | 'intl';
 
 export function priceNote(country: string | null): PriceNote {

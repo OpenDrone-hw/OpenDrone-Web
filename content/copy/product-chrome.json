@@ -19,7 +19,7 @@
   "concept_roadmap_cta": "See the roadmap",
   "buy_vat_note": "incl. VAT",
   "buy_duties_note": "shipping at checkout · US import duties due on delivery",
-  "buy_duties_note_intl": "shipping at checkout · import duties may be due on delivery",
+  "buy_duties_note_intl": "shipping at checkout · import duties and taxes may be due on delivery",
   "buy_stock_in": "In stock · ships from Belgium",
   "buy_stock_out": "Sold out",
   "buy_stock_preorder_prefix": "Pre-order",
@@ -190,5 +190,6 @@
     "Retirez les hélices avant les essais au banc, la configuration ou les mises à jour du firmware.",
     "Les moteurs et hélices en rotation provoquent des coupures graves ; tenez-vous à distance lorsque l’appareil est armé.",
     "Les moteurs chauffent en fonctionnement ; laissez-les refroidir avant de les manipuler."
-  ]
+  ],
+  "buy_duties_gb": "No UK VAT or import duties are charged at checkout. The carrier can hold the parcel until UK VAT and a carrier handling fee are paid."
 }

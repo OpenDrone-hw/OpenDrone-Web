@@ -85,15 +85,15 @@
 
 7bis.3. Si une date d’expédition change, Incutec BV en informe le consommateur par e-mail et indique la nouvelle date. Ceci est sans préjudice des droits du consommateur au titre de l’art. VI.43 §2 CDE.
 
-7bis.3bis. Si un objectif de financement n’est pas atteint à son échéance, Incutec BV en informe par e-mail chaque consommateur ayant commandé ce produit. Le consommateur choisit alors soit de résoudre le contrat pour cet article, avec le remboursement de tous les montants payés pour celui-ci dans les 14 jours, soit de maintenir la commande pour la nouvelle date d’expédition indiquée dans cet e-mail.
+7bis.3bis. Si un objectif de financement n’est pas atteint à son échéance, Incutec BV en informe par e-mail chaque consommateur ayant commandé ce produit. Le consommateur choisit alors soit de résoudre le contrat pour cet article, avec le remboursement de tous les montants payés pour celui-ci dans les 14 jours, soit de maintenir la commande pour la nouvelle date d’expédition indiquée dans cet e-mail. Si, après le remboursement, aucun article de la commande ne reste à expédier, les frais d’expédition payés pour la commande sont également remboursés.
 
 7bis.4. Le droit de rétractation prévu à l’article 5 s’applique aux précommandes. Le consommateur peut également l’exercer avant la livraison, via le formulaire en ligne sur opendrone.be/herroepingsrecht ou comme prévu à l’article 5.4. En cas de rétractation avant la livraison, Incutec BV rembourse tous les paiements dans les 14 jours suivant la réception de la rétractation.
 
-7bis.5. Une commande combinant des articles ayant des dates d’expédition différentes est expédiée en un seul colis, dès que chaque article est disponible (une seule livraison par commande).
+7bis.5. Une commande combinant des articles ayant des dates d’expédition différentes est expédiée en un seul colis, dès que chaque article est disponible (une seule livraison par commande). Si l’objectif de financement d’un article de la commande n’est pas atteint à son échéance, le reste de la commande est expédié dès qu’il est disponible, quel que soit le choix du consommateur au titre de l’article 7bis.3bis. Si le consommateur maintient la commande pour cet article, celui-ci est expédié séparément à sa nouvelle date d’expédition, sans frais d’expédition supplémentaires.
 
 7bis.6. Les paiements de précommande financent la production et l’achat du stock pour la commande. Ils ne portent aucun intérêt et ne confèrent aucune participation, partage de revenus ni autre intérêt de propriété dans Incutec BV.
 
-7bis.7. Incutec BV ne perçoit aucun droit ni aucune taxe d’importation lors du passage en caisse. Les colis à destination de pays hors de l’Union européenne, y compris les États-Unis, peuvent être soumis à des droits d’importation, des taxes d’importation et des frais du transporteur, que le consommateur paie au transporteur à la livraison.
+7bis.7. Incutec BV ne perçoit aucun droit ni aucune taxe d’importation lors du passage en caisse. Les colis à destination de pays hors de l’Union européenne, y compris les États-Unis, peuvent être soumis à des droits d’importation, des taxes d’importation et des frais du transporteur, que le consommateur paie au transporteur à la livraison. Pour les colis à destination du Royaume-Uni, le prix payé lors du passage en caisse n’inclut pas la TVA britannique, et le transporteur peut retenir le colis jusqu’au paiement de la TVA britannique et de frais de traitement du transporteur.
 
 ### Article 8 : Paiement
 

@@ -12,11 +12,11 @@ One flat rate per order, in euro, VAT included:
 |---|---|
 | Belgium | €8.50 |
 | Germany, France, Luxembourg, Netherlands | €9.95 |
-| Other European Union countries | €12.95 |
+| Other European Union countries, except Bulgaria | €12.95 |
 | Cyprus, Estonia, Malta | €16.95 |
 | United Kingdom, Switzerland, Norway, Iceland, Liechtenstein | €24.95 |
 | United States | €19.95 |
-| All other countries | €39.95 |
+| Bulgaria and all other countries | €39.95 |
 
 Incutec BV does not ship to Russia, Belarus, Iran, North Korea, Syria or Cuba, or to other destinations under restrictive measures: see our [end-use policy](/end-use).
 
@@ -26,17 +26,19 @@ Incutec BV does not collect import duties or import taxes at checkout. Within th
 
 United States: US import duty on electronics and motors made in China is high, often around 35 to 40% of the value. US customs sets the amount, not Incutec BV, and the carrier may charge a fee for clearing the parcel.
 
+United Kingdom: the price paid at checkout does not include UK VAT. The carrier can hold a parcel to the United Kingdom until UK VAT and a carrier handling fee are paid.
+
 ### Pre-orders
 
 Some products are sold as pre-orders. They are marked as such, with their ship date, on the product page, at checkout and on the order confirmation. The full price and the shipping costs shown at checkout are paid when the order is placed.
 
-Pre-order products are produced in batches. The flight controller and ESC from the first batch ship late October 2026. Every other pre-order product has a funding target, stated on its product page: the quantity Incutec BV orders from its supplier. It ships about 10 weeks after that target is reached, and every target has a deadline of 31 December 2026. If the target is reached by 31 December 2026, the product ships by 11 March 2027 at the latest. If a target is not reached, everyone who ordered that product chooses by email between a refund of all amounts paid for that product within 14 days and keeping the order for the new ship date stated in that email. The ship date stated for an item when the order is placed is the delivery time agreed between the consumer and Incutec BV within the meaning of Art. VI.43 of the Belgian Code of Economic Law, so the 30-day default deadline below does not apply to pre-order items.
+Pre-order products are produced in batches. The flight controller and ESC from the first batch ship late October 2026. Every other pre-order product has a funding target, stated on its product page: the quantity Incutec BV orders from its supplier. It ships about 10 weeks after that target is reached, and every target has a deadline of 31 December 2026. If the target is reached by 31 December 2026, the product ships by 11 March 2027 at the latest. If a target is not reached, everyone who ordered that product chooses by email between a refund of all amounts paid for that product within 14 days, including the shipping costs if no other item in the order is still to ship, and keeping the order for the new ship date stated in that email. The ship date stated for an item when the order is placed is the delivery time agreed between the consumer and Incutec BV within the meaning of Art. VI.43 of the Belgian Code of Economic Law, so the 30-day default deadline below does not apply to pre-order items.
 
 If a ship date moves, Incutec BV informs the consumer by email and states the new date. This is without prejudice to the consumer's rights under Art. VI.43 §2 of the Belgian Code of Economic Law.
 
 The consumer may withdraw from a pre-order at any time until delivery, through the [withdrawal form](/herroepingsrecht) or as set out in Article 5.4 of the General Terms and Conditions (Art. 7bis.4 of the General Terms and Conditions).
 
-An order that combines items with different ship dates ships as one parcel once every item is available: one delivery per order.
+An order that combines items with different ship dates ships as one parcel once every item is available: one delivery per order. If a funding target for an item in the order is not reached, the rest of the order ships as soon as it is available, whichever the consumer chooses for that item. If the consumer keeps the order for that item, it ships separately at its new ship date at no extra shipping cost.
 
 Pre-order payments fund the production run and stock purchase for the order. They carry no interest and confer no equity, revenue share or other ownership interest in Incutec BV.
 

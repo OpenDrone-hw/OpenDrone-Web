@@ -85,15 +85,15 @@
 
 7bis.3. Indien een verzenddatum verschuift, brengt Incutec BV de consument daarvan per e-mail op de hoogte en vermeldt zij de nieuwe datum. Dit doet geen afbreuk aan de rechten van de consument uit Art. VI.43 §2 WER.
 
-7bis.3bis. Indien een financieringsdoel niet bereikt is op de deadline, brengt Incutec BV elke consument die dat product bestelde per e-mail op de hoogte. De consument kiest dan om de overeenkomst voor dat artikel te ontbinden, met terugbetaling van alle daarvoor betaalde bedragen binnen 14 dagen, of om de bestelling te behouden voor de nieuwe verzenddatum die in die e-mail vermeld wordt.
+7bis.3bis. Indien een financieringsdoel niet bereikt is op de deadline, brengt Incutec BV elke consument die dat product bestelde per e-mail op de hoogte. De consument kiest dan om de overeenkomst voor dat artikel te ontbinden, met terugbetaling van alle daarvoor betaalde bedragen binnen 14 dagen, of om de bestelling te behouden voor de nieuwe verzenddatum die in die e-mail vermeld wordt. Blijft er na de terugbetaling geen artikel uit de bestelling meer te verzenden, dan worden ook de voor de bestelling betaalde verzendkosten terugbetaald.
 
 7bis.4. Het herroepingsrecht van Artikel 5 geldt voor voorverkoop. De consument kan het ook vóór de levering uitoefenen, via het onlineformulier op opendrone.be/herroepingsrecht of zoals bepaald in Artikel 5.4. Bij herroeping vóór de levering betaalt Incutec BV alle betalingen terug binnen 14 dagen nadat zij de herroeping heeft ontvangen.
 
-7bis.5. Een bestelling die artikelen met verschillende verzenddata combineert, wordt verzonden als één pakket zodra elk artikel beschikbaar is (één levering per bestelling).
+7bis.5. Een bestelling die artikelen met verschillende verzenddata combineert, wordt verzonden als één pakket zodra elk artikel beschikbaar is (één levering per bestelling). Wordt een financieringsdoel voor een artikel uit de bestelling niet bereikt op de deadline, dan wordt de rest van de bestelling verzonden zodra die beschikbaar is, ongeacht wat de consument kiest onder Artikel 7bis.3bis. Behoudt de consument de bestelling voor dat artikel, dan wordt het afzonderlijk verzonden op de nieuwe verzenddatum, zonder extra verzendkosten.
 
 7bis.6. Betalingen voor voorverkoop financieren de productie en de voorraadaankoop voor de bestelling. Zij dragen geen interest en verlenen geen aandeel, omzetdeling of ander eigendomsbelang in Incutec BV.
 
-7bis.7. Incutec BV int geen invoerrechten of invoerbelastingen aan de checkout. Pakketten naar bestemmingen buiten de Europese Unie, ook naar de Verenigde Staten, kunnen onderworpen zijn aan invoerrechten, invoerbelastingen en kosten van de vervoerder, die de consument bij levering aan de vervoerder betaalt.
+7bis.7. Incutec BV int geen invoerrechten of invoerbelastingen aan de checkout. Pakketten naar bestemmingen buiten de Europese Unie, ook naar de Verenigde Staten, kunnen onderworpen zijn aan invoerrechten, invoerbelastingen en kosten van de vervoerder, die de consument bij levering aan de vervoerder betaalt. Voor pakketten naar het Verenigd Koninkrijk bevat de prijs die aan de checkout betaald wordt geen Britse btw, en kan de vervoerder het pakket vasthouden tot de Britse btw en behandelingskosten van de vervoerder betaald zijn.
 
 ### Artikel 8: Betaling
 
