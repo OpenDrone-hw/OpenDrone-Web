@@ -386,6 +386,10 @@ export type ProductContent = {
    *  expected late August", "First prototypes at the mill". Free text,
    *  keep it current fact only. */
   statusNote?: string;
+  /** What one unit of the price buys, printed after the price on the PDP
+   *  and the cards: "per motor" for a product sold singly that buyers
+   *  expect in sets of four. Unset prints nothing. */
+  priceUnit?: string;
 };
 
 /*
@@ -457,6 +461,19 @@ export type ProductContent = {
  * openframe
  * - Frame content is a planned-product fallback. It does not claim a public
  *   CAD source, measured weight, or material grade.
+ * - `repoUrl` is empty while OpenFrame-5F and OpenFrame-3F are private
+ *   repositories: an empty repoUrl drops the Open Source chip, the licence
+ *   card and the contributor wall on the PDP. Set it the day a repo is
+ *   public.
+ *
+ * openmotor
+ * - Not open hardware (`editorial: false`). Specs come only from the
+ *   sourcing records (`sourcing/comparisons/openmotor.md` and the T-Motor
+ *   sales contract YB-2026070103): the 1604 is ordered at KV2850. The stator
+ *   rows restate the size in the model name. The 2207 has no chosen supplier
+ *   or KV on file (the ordered 5-inch sample is a 2306.5 at KV1950), so it
+ *   shows no KV. Weight, shaft, mount pattern and cell count are not on file
+ *   and stay off the page until they are.
  * - `teardown.frameViewer` is the fallback when a tier defines none. Both
  *   tiers override it and it seeds the viewer's preload set, so it points at
  *   a current model (the 5") rather than the stale generic frame.glb.

@@ -4,35 +4,80 @@
   "editorial": false,
   "status": "preorder",
   "statusNote": "ships about 10 weeks after its target is reached (target deadline 31 December 2026)",
+  "priceUnit": "per motor",
   "hero": {
     "line1": "",
     "line2Italic": "",
     "line3": "",
-    "lead": "Brushless motors for the OpenFrame 3\" (1604) and 5\" (2207). These are OEM motors we picked and test ourselves; they are not open hardware."
+    "lead": "Brushless motors for the OpenFrame 3\" (1604) and 5\" (2207), sold per motor: a quad needs four. They are OEM motors, not open hardware. The supplier order for each size is placed once its funding target is reached."
   },
   "firmware": {
     "project": "-"
   },
   "repoUrl": "https://github.com/OpenDrone-hw",
-  "inTheBox": [],
+  "inTheBox": [
+    {
+      "qty": "1×",
+      "item": "Motor"
+    }
+  ],
   "downloads": [],
-  "specs": [],
+  "specs": [
+    [
+      "Stator",
+      "16 × 4 mm"
+    ],
+    [
+      "KV",
+      "2850"
+    ],
+    [
+      "Prop size",
+      "3\""
+    ],
+    [
+      "Frame",
+      "OpenFrame 3\""
+    ],
+    [
+      "Sold as",
+      "1 motor"
+    ]
+  ],
   "optionAxis": "Model",
   "variants": {
     "1604": {
       "highlights": [
         [
-          "Prop size",
-          "3\""
+          "KV",
+          "2850 KV"
         ],
         [
-          "Frame",
-          "OpenFrame 3\""
+          "Prop size",
+          "3\""
         ]
       ]
     },
     "2207": {
       "highlights": [
+        [
+          "Stator",
+          "22 × 7 mm"
+        ],
+        [
+          "Prop size",
+          "5\""
+        ]
+      ],
+      "specs": [
+        [
+          "Stator",
+          "22 × 7 mm"
+        ],
+        [
+          "KV",
+          null
+        ],
         [
           "Prop size",
           "5\""
