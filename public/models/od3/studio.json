@@ -245,12 +245,12 @@
   "boards": [
     {
       "id": "OpenFC",
-      "title": "OpenFC-Lite-Mini",
-      "note": "RP2354B flight controller"
+      "title": "OpenFC Lite 20×20",
+      "note": "RP2354A flight controller"
     },
     {
       "id": "4in1-mini",
-      "title": "OpenESC-20x20",
+      "title": "OpenESC 20×20",
       "note": "4-in-1 AM32 ESC"
     },
     {
@@ -274,8 +274,8 @@
     },
     {
       "id": "fc",
-      "title": "OpenFC-Lite-Mini",
-      "note": "RP2354B flight controller",
+      "title": "OpenFC Lite 20×20",
+      "note": "RP2354A flight controller",
       "hint": "Receiver in, ESC out: everything passes through it.",
       "href": "/products/openfc-lite",
       "select": {
@@ -285,7 +285,7 @@
     },
     {
       "id": "esc",
-      "title": "OpenESC-20x20",
+      "title": "OpenESC 20×20",
       "note": "4-in-1 AM32 ESC",
       "hint": "Between the flight controller's requests and a hundred amps of battery current.",
       "href": "/products/openesc",
@@ -335,7 +335,9 @@
         {
           "at": 0.62,
           "title": "Video module",
-          "note": "air unit, antennas and camera lift out as one"
+          "note": "air unit, antennas and camera lift out as one",
+          "caption": "Not sold here. The camera, video transmitter and antennas come with the video system you choose, and your goggles pair with that system.",
+          "hint": "What else a build needs is on the products page, under New to FPV."
         }
       ],
       "handle": "openframe"

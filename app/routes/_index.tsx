@@ -16,7 +16,6 @@ import {
 } from 'react';
 import type {MoneyV2, ProductCardFragment} from '~/lib/product-shapes';
 import {byHandle, formatPrice, toCard} from '~/lib/catalog';
-import {INCUTEC_HINT_SEEN_KEY} from '~/lib/incutec-hint';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {useProductStatusResolver, useRoadmapStatusResolver} from '~/lib/coming-soon';
 import {
@@ -749,29 +748,6 @@ function DesktopHome({
     if (headerIn) document.documentElement.classList.add('hero-header-in');
   }, [headerIn]);
 
-  // A beat after the header bar lands (3s), drop a small "Who's incutec?" hint
-  // out from under the Incutec mark, nudging discovery of the company page.
-  // Once the visitor has clicked through (flag in localStorage) the hint is
-  // retired - don't arm it, and clear any stale class from this session.
-  useEffect(() => {
-    if (!headerIn) return;
-    let seen = false;
-    try {
-      seen = localStorage.getItem(INCUTEC_HINT_SEEN_KEY) === '1';
-    } catch {
-      /* storage blocked - treat as not-yet-seen */
-    }
-    if (seen) {
-      document.documentElement.classList.remove('hero-incutec-hint');
-      return;
-    }
-    const t = window.setTimeout(
-      () => document.documentElement.classList.add('hero-incutec-hint'),
-      3000,
-    );
-    return () => window.clearTimeout(t);
-  }, [headerIn]);
-
   // One screen, no spacer. The walkthrough consumes the wheel itself and hands
   // the page back at its last beat, so extra document height would only be dead
   // scroll the reader has to grind through after the drone is done.
@@ -846,7 +822,7 @@ function DesktopHome({
         <div className="sticky top-0 h-screen overflow-hidden pointer-events-none">
           {/* Full-screen 3D - pinned behind everything via sticky parent */}
           <div
-            className="absolute inset-0 z-0"
+            className={`absolute inset-0 z-0${preorderShips !== null ? ' hero-stage-below-strip' : ''}`}
             style={{
               // Let the browser own vertical panning (page scroll) while
               // horizontal drags still reach the r3f pointer handlers for
@@ -933,6 +909,20 @@ function DesktopHome({
               "loading models" line and the Skip button always sit below the
               checklist instead of on top of it. */}
           <div className="hero-load-panel">
+          {/* A thin progress bar under the wordmark while the model streams
+              in. The per-piece list below it stays for screen readers. */}
+          {!splashSettled ? (
+            <div
+              className="hero-load-bar"
+              role="progressbar"
+              aria-label={copyText('home.loading_models') ?? 'Loading models'}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(displayedProgress * 100)}
+            >
+              <span style={{transform: `scaleX(${Math.min(1, Math.max(0, displayedProgress))})`}} />
+            </div>
+          ) : null}
           {!splashSettled && loadPieces.length ? (
             <ul className="hero-load-manifest" role="status" aria-live="polite">
               {loadPieces.map((p) => {
