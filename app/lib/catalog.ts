@@ -213,9 +213,10 @@ function mapVariant(
       !variant.campaign && variant.compare_price != null && variant.compare_price > variant.price
         ? money(variant.compare_price, variant.currency || catalog.currency)
         : null,
+    // The price after the current step: the next step's price, or retail.
     priceAfter:
-      variant.campaign && variant.compare_price != null && variant.compare_price > variant.price
-        ? money(variant.compare_price, variant.currency || catalog.currency)
+      variant.campaign?.nextPrice != null && variant.campaign.nextPrice > variant.price
+        ? money(variant.campaign.nextPrice, variant.currency || catalog.currency)
         : null,
     image:
       image(variant.image, variant.image_alt || variant.title) ??

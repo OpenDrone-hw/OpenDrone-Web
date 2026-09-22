@@ -48,5 +48,5 @@ an external integration succeeded without observing the result.
 - Check a change: `npm run typecheck && npm run lint && npm test`; add `npm run build` when routes, the server entry or the Vite config changed.
 - Change copy or product chapters: edit through `/studio` or the JSON under `content/`; `npm run studio:coverage` lists copy still baked into code.
 - Update the legal pages: edit `app/content/legal/{en,nl,fr}/`; run `COMPLIANCE_SRC=<dir> npm run sync:legal` only when a reviewed source directory is given.
-- Run a preorder campaign: batches per SKU in `content/preorders.json`; set a batch's `ships` once its supplier order is placed. Prices are changed in Shopify, never here: the early price is the price, the full price is the compare-at price.
+- Run a preorder campaign: batches per SKU in `content/preorders.json`; set a batch's `ships` once its supplier order is placed. Prices are changed in Shopify, never here: the price is what the next unit costs and the compare-at price is retail. The price steps are written by the Worker, not by hand.
 - Refresh board art or specs after a hardware release: `npm run gen:board-art` (KiCad and cwebp installed), `npm run sync:specs`, then `npm run sync:specs:check` before the PR.

@@ -9,10 +9,12 @@
  * state every surface renders, so the PDP, the cards, the feeds and the cart
  * line agree on one ship promise.
  *
- * Prices stay in Shopify. The first `earlyUnits` paid units of a SKU sell at
- * Shopify's price, with its compare-at price as the full price after them.
- * Once they are gone and Shopify still charges the early price, the SKU
- * closes until the Shopify price is raised to the full price.
+ * Prices stay in Shopify: the compare-at price is the retail price and the
+ * price is what the next unit costs. `priceTiers` says how the price steps
+ * as paid units come in, for example the first 100 at 20% off and units 101
+ * to 250 at 10% off, then retail. `app/lib/shopify-price-tier.ts` writes each
+ * step to Shopify; until it has, a SKU whose Shopify price is below its tier
+ * closes rather than sell under it.
  *
  * Kept pure and bundler-free (relative imports, no worker APIs) so the
  * node:test suites can load it.
@@ -30,6 +32,13 @@ export type CampaignBatch = {
   ships?: string;
 };
 
+export type PriceTier = {
+  /** The last paid unit that gets this step. */
+  upTo: number;
+  /** Share off the retail price, 0.2 for 20% off. */
+  off: number;
+};
+
 export type CampaignConfig = {
   /** First day whose paid Shopify orders count, YYYY-MM-DD. */
   countFrom: string;
@@ -38,8 +47,9 @@ export type CampaignConfig = {
   /** Last day a funding target can be reached, YYYY-MM-DD. A buyer whose
    *  target is missed by then chooses a refund or to keep waiting. */
   endsOn: string;
-  /** Paid units per SKU sold at the early price, counted from `countFrom`. */
-  earlyUnits: number;
+  /** Price steps by paid units, in order: `upTo` is the last unit of the
+   *  step and `off` its share off retail. Past the last step: retail. */
+  priceTiers: PriceTier[];
   skus: Record<string, {batches: CampaignBatch[]}>;
 };
 
@@ -61,12 +71,21 @@ export type CampaignState = {
   targetReached: boolean;
   /** The ship promise for the next ordered unit. */
   shipPromise: string;
-  /** The next unit is one of the first `earlyUnits`: Shopify's price is the
-   *  early price. */
+  /** The next unit still gets a price step, so Shopify's price is under
+   *  retail. */
   earlyPrice: boolean;
-  earlyUnits: number;
-  /** Early-price units left, 0 once they are gone. */
-  earlyLeft: number;
+  /** The current step's last unit, null once every step is used up. */
+  tierUpTo: number | null;
+  /** Units left in the current step, 0 once every step is used up. */
+  tierLeft: number;
+  /** Share off retail for the next unit, 0 past the last step. */
+  tierOff: number;
+  /** What the next unit costs, from retail and the step. Null without a
+   *  retail price. */
+  price: number | null;
+  /** What a unit costs after this step: the next step's price, or retail.
+   *  Null without a retail price, or when this is already retail. */
+  nextPrice: number | null;
   /** Every configured batch up to the one after the current, in order:
    *  sold-out batches stay listed. */
   batches: Array<{
@@ -87,8 +106,18 @@ export function parseCampaignConfig(body: unknown): CampaignConfig {
   if (typeof c.endsOn !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(c.endsOn)) {
     throw new Error('preorders: endsOn must be YYYY-MM-DD');
   }
-  if (!Number.isSafeInteger(c.earlyUnits) || (c.earlyUnits as number) < 0) {
-    throw new Error('preorders: earlyUnits must be a whole number');
+  if (!Array.isArray(c.priceTiers)) {
+    throw new Error('preorders: priceTiers must be an array');
+  }
+  let last = 0;
+  for (const tier of c.priceTiers) {
+    if (!Number.isSafeInteger(tier?.upTo) || tier.upTo <= last) {
+      throw new Error('preorders: priceTiers need whole, increasing upTo values');
+    }
+    if (!(typeof tier.off === 'number') || !(tier.off > 0) || tier.off >= 1) {
+      throw new Error(`preorders: priceTiers ${tier.upTo} needs an off share between 0 and 1`);
+    }
+    last = tier.upTo;
   }
   if (typeof c.pendingShips !== 'string' || !c.pendingShips.trim()) {
     throw new Error('preorders: pendingShips is required');
@@ -112,6 +141,12 @@ export function parseCampaignConfig(body: unknown): CampaignConfig {
   return c as CampaignConfig;
 }
 
+/** The price at a step off retail, to the cent. Null without retail. */
+export function tierPrice(retail: number | null, off: number): number | null {
+  if (retail == null || !Number.isFinite(retail)) return null;
+  return Math.round(retail * (1 - off) * 100) / 100;
+}
+
 /**
  * The campaign state for one SKU after `ordered` paid units. Past the last
  * configured batch, further batches repeat the last batch's size with the
@@ -121,7 +156,8 @@ export function campaignState(
   batches: CampaignBatch[],
   ordered: number,
   pendingShips: string,
-  earlyUnits: number,
+  priceTiers: PriceTier[],
+  retail: number | null = null,
 ): CampaignState {
   const units = Math.max(0, Math.floor(Number.isFinite(ordered) ? ordered : 0));
   let start = 0;
@@ -136,6 +172,9 @@ export function campaignState(
     start += current.units;
     index += 1;
   }
+
+  const tierIndex = priceTiers.findIndex((t) => units < t.upTo);
+  const tier = tierIndex < 0 ? null : priceTiers[tierIndex];
 
   let targetStart = 0;
   let targetIndex = -1;
@@ -161,9 +200,12 @@ export function campaignState(
     targetOrdered,
     targetReached,
     shipPromise: current.ships?.trim() || pendingShips,
-    earlyPrice: units < earlyUnits,
-    earlyUnits,
-    earlyLeft: Math.max(0, earlyUnits - units),
+    earlyPrice: tier !== null,
+    tierUpTo: tier?.upTo ?? null,
+    tierLeft: tier ? tier.upTo - units : 0,
+    tierOff: tier?.off ?? 0,
+    price: tierPrice(retail, tier?.off ?? 0),
+    nextPrice: tier ? tierPrice(retail, priceTiers[tierIndex + 1]?.off ?? 0) : null,
     batches: batches.slice(0, index + 2).map((b, i) => ({
       batch: i + 1,
       units: b.units,
@@ -178,8 +220,8 @@ export function campaignState(
  * sells as `preorder` and that has a campaign entry is touched: it gets the
  * campaign state and the batch's ship promise. With `units` null (the paid
  * counts could not be verified) those variants close as sold out, because
- * their ship promise depends on the count. A variant whose early units are
- * gone while Shopify still charges less than its compare-at price closes too.
+ * their ship promise depends on the count. A variant Shopify still prices
+ * under its step closes too, until the step is written.
  */
 export function applyCampaign(
   catalog: Catalog,
@@ -201,15 +243,12 @@ export function applyCampaign(
           entry.batches,
           units[variant.sku] ?? 0,
           config.pendingShips,
-          config.earlyUnits,
+          config.priceTiers,
+          variant.compare_price,
         );
-        // The early units are gone but Shopify still charges the early
-        // price: close until the price is raised to the full price.
-        if (
-          !state.earlyPrice &&
-          variant.compare_price != null &&
-          variant.compare_price > variant.price
-        ) {
+        // Shopify still charges under this SKU's step, so the step has not
+        // been written yet: close rather than sell under it.
+        if (state.price != null && variant.price < state.price - 0.005) {
           return {...variant, availability: 'sold_out', ship_promise: null, campaign: null};
         }
         return {...variant, ship_promise: state.shipPromise, campaign: state};

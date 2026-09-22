@@ -6,12 +6,12 @@ import {barPercent, meterView} from './preorder-meter.ts';
 const PENDING = 'ships about 10 weeks after its target is reached';
 const STACK: CampaignBatch[] = [{units: 250, paid: true, ships: 'ships late October 2026'}, {units: 250}];
 const FRAME: CampaignBatch[] = [{units: 250}, {units: 1000}];
-const EARLY = 250;
+const TIERS = [{upTo: 100, off: 0.2}, {upTo: 250, off: 0.1}];
 const none = () => undefined;
 
 describe('meterView', () => {
   it('shows paid stock as units left, with the price after batch 1', () => {
-    const view = meterView(campaignState(STACK, 107, PENDING, EARLY), none, '€55.00');
+    const view = meterView(campaignState(STACK, 107, PENDING, TIERS), none, '€55.00');
     assert.equal(view.headline, 'Batch 1 is paid for and in production · 143 of 250 left');
     assert.equal(view.early, 'Preorder price for the first 250 · 143 left, then €55.00');
     assert.equal(view.bar, null);
@@ -20,7 +20,7 @@ describe('meterView', () => {
   });
 
   it('shows progress toward the first target with the price after it', () => {
-    const view = meterView(campaignState(FRAME, 187, PENDING, EARLY), none, '€99.00');
+    const view = meterView(campaignState(FRAME, 187, PENDING, TIERS), none, '€99.00');
     assert.equal(view.headline, '187 of 250 ordered toward the funding target');
     assert.equal(view.early, 'Preorder price for the first 250 · 63 left, then €99.00');
     assert.equal(barPercent(view.bar!), 75);
@@ -28,11 +28,11 @@ describe('meterView', () => {
   });
 
   it('drops the early-price line when Shopify has no higher price', () => {
-    assert.equal(meterView(campaignState(FRAME, 1, PENDING, EARLY), none, null).early, null);
+    assert.equal(meterView(campaignState(FRAME, 1, PENDING, TIERS), none, null).early, null);
   });
 
   it('keeps a full bar after the target and fills the next batch below it', () => {
-    const view = meterView(campaignState(FRAME, 312, PENDING, EARLY), none, '€99.00');
+    const view = meterView(campaignState(FRAME, 312, PENDING, TIERS), none, '€99.00');
     assert.equal(view.headline, 'Funding target reached · 312 ordered');
     assert.equal(barPercent(view.bar!), 100);
     assert.equal(view.reached, true);
@@ -41,7 +41,7 @@ describe('meterView', () => {
   });
 
   it('reads its words from copy', () => {
-    const view = meterView(campaignState(FRAME, 5, PENDING, EARLY), (key) =>
+    const view = meterView(campaignState(FRAME, 5, PENDING, TIERS), (key) =>
       key === 'meter_target' ? '{ordered}/{target}' : undefined,
     );
     assert.equal(view.headline, '5/250');

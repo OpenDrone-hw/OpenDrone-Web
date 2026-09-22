@@ -57,6 +57,18 @@ declare global {
     SHOPIFY_ADMIN_API_TOKEN?: string;
     SHOPIFY_ADMIN_API_VERSION?: string;
     SHOPIFY_PRICES_INCLUDE_VAT?: string;
+    // Writes each preorder price step to Shopify (app/lib/shopify-price-tier.ts),
+    // from the orders/paid webhook and the scheduled reconcile. Anything but
+    // '1' leaves Shopify's prices alone and campaign SKUs whose price is
+    // under their step close instead.
+    SHOPIFY_PRICE_TIER_WRITE_ENABLED?: string;
+    // Shopify webhook signing secret, for the orders/paid HMAC. Without it
+    // the webhook route refuses every request.
+    SHOPIFY_WEBHOOK_SECRET?: string;
+    // Staging gate: when set, the Worker asks for HTTP basic auth as
+    // "opendrone" with this password before serving anything. Production
+    // leaves it unset.
+    STAGING_PASSWORD?: string;
     SHOPIFY_PREVIEW_POLICY_JSON?: string;
 
     // Aggregate order totals behind the financial goal meter, as

@@ -236,8 +236,8 @@ describe('campaign pricing', () => {
   it('never shows a struck-through price on a campaign SKU; the higher price is the price after', () => {
     const campaign = {
       ordered: 0, batch: 1, batchUnits: 250, batchOrdered: 0, paidStock: false,
-      target: 250, targetOrdered: 0, targetReached: false, shipPromise: 'x', earlyPrice: true,
-      earlyUnits: 250, earlyLeft: 250, batches: [],
+      target: 250, targetOrdered: 0, targetReached: false, shipPromise: 'x', earlyPrice: true, tierUpTo: 100, tierLeft: 100,
+      tierOff: 0.2, price: 39.99, nextPrice: 49.99, batches: [],
     };
     const withCampaign: Catalog = {
       ...FIXTURE,

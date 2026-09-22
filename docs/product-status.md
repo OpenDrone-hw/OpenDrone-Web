@@ -116,10 +116,13 @@ OpenFrame and OpenMotor have no public repo: set their static status in
 `roadmap-data.ts`. Then update the static statuses in the same file in a
 follow-up PR.
 
-**The early units of a SKU are gone:** after `earlyUnits` (250) paid units,
-the SKU closes while Shopify still charges less than its compare-at price. Set
-the Shopify price to the full price and clear the compare-at price; the SKU
-reopens at the full price within a minute (the order count cache).
+**A SKU crosses a price step:** nothing to do. The `orders/paid` webhook and
+the Worker's five-minute reconcile write the new price to Shopify
+(`priceTiers` in `content/preorders.json`), and the last step clears the
+compare-at price so the product sells at retail. While Shopify is still under
+the step, that SKU is closed, so check the Worker logs if one stays closed:
+the usual causes are `SHOPIFY_PRICE_TIER_WRITE_ENABLED` not being `1` and a
+missing `write_products` scope.
 
 **A funding target is reached:** place the supplier order, set that batch's
 `ships` in `content/preorders.json` (for example `"ships mid-December 2026"`).
