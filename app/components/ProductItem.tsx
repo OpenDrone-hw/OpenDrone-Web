@@ -191,7 +191,8 @@ export function ProductItem({
     ? campaign.paidStock
       ? {
           cls: 'is-ships',
-          badge: shortShipDate(campaign.shipPromise) ?? (copyText('product-chrome.card_badge_paid') ?? 'Paid stock'),
+          // A status word on the photo; the date is the text line below.
+          badge: copyText('product-chrome.card_badge_in_production') ?? 'In production',
           line: capitalize(campaign.shipPromise),
         }
       : campaign.target !== null && !campaign.targetReached
@@ -431,21 +432,6 @@ export function ProductItem({
       {quickAddNode}
       {modelStrip}
     </div>
-  );
-}
-
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
-/** "ships late October 2026" -> "Ships Oct 2026"; null without a month. */
-function shortShipDate(promise: string): string | null {
-  const match = new RegExp(`(${MONTHS.join('|')}) (\\d{4})`).exec(promise);
-  if (!match) return null;
-  return (copyText('product-chrome.card_badge_ships') ?? 'Ships {date}').replace(
-    '{date}',
-    `${match[1].slice(0, 3)} ${match[2]}`,
   );
 }
 

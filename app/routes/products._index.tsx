@@ -27,6 +27,7 @@ import {stackDiscountedPrice} from '~/lib/stack-discount';
 import {Txt} from '~/components/Txt';
 import {copyText, editAttrs} from '~/lib/copy';
 import {shopifyImageUrl} from '~/lib/shopify-image';
+import {helpText, normalise, sizes, termWords} from '~/lib/catalog-search';
 
 /**
  * The term-bearing meta string carries a `{term}` token rather than being
@@ -132,7 +133,20 @@ type Card = {
   build: string | null;
   /** The open firmware project the board runs, if any. */
   firmware: string | null;
+  /** Stack mounting of a flight controller or ESC tier ('20x20', '30x30'),
+   *  null for every other part. */
+  mount: string | null;
+  /** The card's unit is paid stock (true), waits for a funding target
+   *  (false), or has no preorder campaign (null). */
+  paidStock: boolean | null;
 };
+
+/** A tier value that names a stack mounting ("20×20") as its filter key. */
+function mountOf(value: string): string | null {
+  const m = normalise(value).match(/^(20x20|30x30)$/);
+  return m ? m[1] : null;
+}
+const STACK_SIZES = ['20x20', '30x30'];
 
 const num = (m?: MoneyV2 | null) => (m ? parseFloat(m.amount) || 0 : 0);
 
@@ -176,19 +190,6 @@ function joinTitle(title: string, value: string): string {
   return rest ? `${title} ${rest}` : title;
 }
 
-/** Case- and accent-insensitive token match: every word of the term must
- *  occur somewhere in the card's searchable text. */
-function normalise(s: string): string {
-  return (
-    s
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      // Mount patterns: "20×20", "20 x 20" and "30.5 x 30.5" all read as
-      // "20x20" / "30x30", the way buyers type them.
-      .replace(/(\d+)(?:\.5)?\s*[x×]\s*(\d+)(?:\.5)?/g, '$1x$2')
-  );
-}
 const BUILDS = parseBuilds(buildsJson);
 
 function firmwareOf(handle: string): string | null {
@@ -196,21 +197,6 @@ function firmwareOf(handle: string): string | null {
   return project && project !== '-' ? project : null;
 }
 
-/** `5"`, `5 inch`, `5-inch` and `5in` all read as `5inch`. */
-function sizes(s: string): string {
-  return s.replace(/(\d)\s*-?\s*(?:"|”|inch(?:es)?\b|in\b)/g, '$1inch');
-}
-/**
- * A term as search words: normalised, sizes joined, and the radio bands
- * buyers type ("868", "915 MHz", "900mhz") read as the spec tables' own
- * word for them, "sub-GHz".
- */
-function termWords(term: string): string[] {
-  return sizes(normalise(term))
-    .replace(/\b(?:868|915|900)\s*(?:mhz)?\b/g, 'sub-ghz')
-    .split(/\s+/)
-    .filter(Boolean);
-}
 function matchesTerm(haystack: string, term: string): boolean {
   const words = termWords(term);
   if (!words.length) return true;
@@ -287,7 +273,7 @@ const SEARCH_HELP: Array<{match: RegExp; copyId: string; surface?: string[]}> = 
 
 function searchHelpFor(term: string) {
   if (!term) return null;
-  const t = sizes(normalise(term));
+  const t = helpText(term);
   return SEARCH_HELP.find((h) => h.match.test(t)) ?? null;
 }
 
@@ -365,6 +351,8 @@ export default function ProductsIndex() {
   const onlySale = searchParams.get('sale') === '1';
   const activeBuild = searchParams.get('build');
   const activeFirmware = searchParams.get('firmware');
+  const activeStack = searchParams.get('stack');
+  const activeShips = searchParams.get('ships');
   const sort = searchParams.get('sort') || 'featured';
 
   // Expand each product into one card per purchasable model (skipping
@@ -443,6 +431,8 @@ export default function ProductsIndex() {
             searchText: searchTextFor(p, value),
             build: buildOf(BUILDS, sv?.sku),
             firmware: firmwareOf(p.handle),
+            mount: mountOf(value),
+            paidStock: sv?.campaign ? sv.campaign.paidStock : null,
             to: `/products/${p.handle}?${encodeURIComponent(axis)}=${encodeURIComponent(value)}`,
             price,
             image: sv?.image ?? p.featuredImage,
@@ -473,6 +463,11 @@ export default function ProductsIndex() {
           searchText: searchTextFor(p),
           build: null,
           firmware: firmwareOf(p.handle),
+          mount: null,
+          paidStock: (() => {
+            const c = p.variants.nodes.find((v) => v.campaign)?.campaign;
+            return c ? c.paidStock : null;
+          })(),
           to: `/products/${p.handle}`,
           price: p.priceRange.minVariantPrice,
           priceFrom:
@@ -534,6 +529,9 @@ export default function ProductsIndex() {
     // A size-neutral part (receiver, accessory) fits either build.
     if (activeBuild) list = list.filter((c) => c.build === null || c.build === activeBuild);
     if (activeFirmware) list = list.filter((c) => c.firmware === activeFirmware);
+    if (activeStack) list = list.filter((c) => c.mount === activeStack);
+    if (activeShips === 'paid') list = list.filter((c) => c.paidStock === true);
+    if (activeShips === 'target') list = list.filter((c) => c.paidStock === false);
     const sorted = [...list];
     switch (sort) {
       case 'price-asc':
@@ -566,7 +564,7 @@ export default function ProductsIndex() {
       sorted.sort((a, b) => relevance.get(a.key)! - relevance.get(b.key)!);
     }
     return sorted;
-  }, [cards, term, activeType, onlySale, activeBuild, activeFirmware, sort]);
+  }, [cards, term, activeType, onlySale, activeBuild, activeFirmware, activeStack, activeShips, sort]);
 
   // A plain answer for searches the catalog cannot meet (whoop sizes,
   // goggles, 7 inch), and the cards worth showing when nothing matched.
@@ -625,10 +623,17 @@ export default function ProductsIndex() {
     <div className="collection page-shell">
       <header className="page-header collection-header">
         <Txt id="collections-all.eyebrow" as="p" className="page-eyebrow max-sm:hidden" />
-        <Txt id="collections-all.title" as="h1" className="page-title" />
+        {term ? (
+          <h1 className="page-title" {...editAttrs('collections-all.results_title')}>
+            {withTerm('collections-all.results_title', 'Results for "{term}"', term)}
+          </h1>
+        ) : (
+          <Txt id="collections-all.title" as="h1" className="page-title" />
+        )}
         {/* The two builds for a buyer who is new here, each jumping to its
-            full card in the guide below. */}
-        {hasProducts ? <BuildPicker builds={builds} /> : null}
+            full card in the guide below. A search result list goes
+            straight to its results. */}
+        {hasProducts && !term ? <BuildPicker builds={builds} /> : null}
         {/* The catalog is also the search page: the term filters the grid
             below, client-side over the catalog. Enter submits; the
             magnifier inside the field is the same submit for a pointer. */}
@@ -691,13 +696,15 @@ export default function ProductsIndex() {
                 {filterLink(
                   'all',
                   <Txt id="collections-all.filter_all" />,
-                  !activeType && !onlySale && !activeBuild && !activeFirmware,
+                  !activeType && !onlySale && !activeBuild && !activeFirmware && !activeStack && !activeShips,
                   () => {
                     const next = new URLSearchParams(searchParams);
                     next.delete('type');
                     next.delete('sale');
                     next.delete('build');
                     next.delete('firmware');
+                    next.delete('stack');
+                    next.delete('ships');
                     setSearchParams(next, {preventScrollReset: true});
                   },
                 )}
@@ -715,12 +722,22 @@ export default function ProductsIndex() {
                 )}
               </ul>
             </div>
-            <div className="catalog-filter-group">
+            <div className="catalog-filter-group is-chip-dup">
               <Txt id="collections-all.filter_build" as="h2" className="catalog-filter-head" />
               <ul className="catalog-filter-list">
                 {BUILDS.builds.map((b) =>
                   filterLink(`build-${b.id}`, b.label, activeBuild === b.id, () =>
                     setParam('build', activeBuild === b.id ? null : b.id),
+                  ),
+                )}
+              </ul>
+            </div>
+            <div className="catalog-filter-group is-chip-dup">
+              <Txt id="collections-all.filter_stack" as="h2" className="catalog-filter-head" />
+              <ul className="catalog-filter-list">
+                {STACK_SIZES.map((size) =>
+                  filterLink(`stack-${size}`, size, activeStack === size, () =>
+                    setParam('stack', activeStack === size ? null : size),
                   ),
                 )}
               </ul>
@@ -741,6 +758,55 @@ export default function ProductsIndex() {
 
           {/* Main column - toolbar (count + sort) above the product grid. */}
           <div className="catalog-main">
+            <div
+              className="catalog-chips"
+              role="group"
+              aria-label={copyText('collections-all.chips_aria') ?? 'Quick filters'}
+            >
+              {BUILDS.builds.map((b) => (
+                <button
+                  key={`chip-build-${b.id}`}
+                  type="button"
+                  className="catalog-chip"
+                  aria-pressed={activeBuild === b.id}
+                  onClick={() => setParam('build', activeBuild === b.id ? null : b.id)}
+                >
+                  {b.label}
+                </button>
+              ))}
+              {STACK_SIZES.map((size) => (
+                <button
+                  key={`chip-stack-${size}`}
+                  type="button"
+                  className="catalog-chip"
+                  aria-pressed={activeStack === size}
+                  onClick={() => setParam('stack', activeStack === size ? null : size)}
+                >
+                  {(copyText('collections-all.chip_stack') ?? '{size} stack').replace('{size}', size)}
+                </button>
+              ))}
+              {stackShips ? (
+                <button
+                  type="button"
+                  className="catalog-chip"
+                  aria-pressed={activeShips === 'paid'}
+                  onClick={() => setParam('ships', activeShips === 'paid' ? null : 'paid')}
+                >
+                  {(copyText('collections-all.chip_paid') ?? 'Ships {ships}').replace(
+                    '{ships}',
+                    stackShips.replace(/^ships\s+/i, ''),
+                  )}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="catalog-chip"
+                aria-pressed={activeShips === 'target'}
+                onClick={() => setParam('ships', activeShips === 'target' ? null : 'target')}
+              >
+                {copyText('collections-all.chip_target') ?? 'Funding target'}
+              </button>
+            </div>
             <div className="catalog-toolbar">
               <p className="catalog-count">
                 {visible.length}{' '}
@@ -953,6 +1019,15 @@ function resolveBuilds(
               : (copyText('collections-all.guide_tag_target') ?? 'Funding target')
             : null,
           waits,
+          // Progress toward the funding target, "0 of 250 ordered".
+          progress:
+            waits && variant.campaign?.target
+              ? (copyText('collections-all.guide_tag_progress') ?? '{ordered} of {target} ordered')
+                  .replace('{ordered}', String(variant.campaign.targetOrdered))
+                  .replace('{target}', String(variant.campaign.target))
+              : null,
+          latestShip: waits ? (variant.campaign?.latestShip ?? null) : null,
+          untested: waits && roadmapStatus(product.handle) === 'in-progress',
           // What is not final about this exact part (the 5" motor's stator
           // and KV), from the same product-content field as the cart line.
           note: variantCartNote(product.handle, variant.title),
@@ -985,6 +1060,12 @@ function resolveBuilds(
           )
         : null;
     const waiting = parts.filter((p) => p.waits).map((p) => ROLE_NOUN[p.role] ?? p.role);
+    // The whole build ships in one parcel once its last funding target is
+    // reached: the latest planned date of the parts that wait.
+    const latestShip = parts.find((p) => p.latestShip)?.latestShip ?? null;
+    const untested = parts
+      .filter((p) => p.untested)
+      .map((p) => ROLE_NOUN[p.role] ?? p.role);
     const frame = parts.find((p) => p.role === 'frame');
     return {
       id: build.id,
@@ -997,6 +1078,8 @@ function resolveBuilds(
       stackTotal: sum(stack),
       stackShips: stack[0]?.shipPromise ?? null,
       waiting,
+      latestShip,
+      untested,
       image: frame?.image ?? parts[0]?.image ?? null,
     };
   });
@@ -1065,6 +1148,11 @@ function BuildPicker({builds}: {builds: ResolvedBuild[]}) {
       >
         <Txt id="collections-all.roadmap_link" fallback="What the status labels mean" />
       </Link>
+      <Txt
+        id="collections-all.picker_sizes"
+        as="p"
+        className="basis-full text-[13px] text-[var(--color-text-muted)]"
+      />
     </div>
   );
 }
@@ -1171,6 +1259,7 @@ function BuildGuide({
                           data-waits={part.waits ? '' : undefined}
                         >
                           {part.tag}
+                          {part.progress ? ` · ${part.progress}` : ''}
                         </span>
                       ) : null}
                       <Txt
@@ -1206,6 +1295,22 @@ function BuildGuide({
               </ol>
               {build.addHref || build.stackHref ? (
                 <div className="build-guide-add flex flex-col gap-2">
+                  {build.waiting.length && build.latestShip ? (
+                    <p className="build-guide-summary">
+                      {(
+                        copyText('collections-all.guide_add_summary') ??
+                        'Whole build: ships in one parcel when the {parts} reach their funding targets, planned by {latest}.'
+                      )
+                        .replace('{parts}', listJoin(build.waiting))
+                        .replace('{latest}', build.latestShip)}
+                      {build.untested.length
+                        ? ` ${(
+                            copyText('collections-all.guide_add_untested') ??
+                            'The {parts} are not flight-tested yet.'
+                          ).replace('{parts}', listJoin(build.untested))}`
+                        : ''}
+                    </p>
+                  ) : null}
                   {build.addHref ? (
                     <AddToCartButton
                       href={build.addHref}
@@ -1245,7 +1350,12 @@ function BuildGuide({
                 <Txt
                   id="collections-all.guide_also_title"
                   as="h4"
-                  className="font-display text-[15px] font-bold text-[var(--color-text)] mb-2"
+                  className="font-display text-[15px] font-bold text-[var(--color-text)] mb-1"
+                />
+                <Txt
+                  id="collections-all.guide_also_note"
+                  as="p"
+                  className="mb-2 text-[13px]! leading-snug! text-[var(--color-text-muted)]"
                 />
                 <ul className="flex flex-col gap-1.5 text-[13px] leading-snug text-[var(--color-text-muted)]">
                   <Txt
@@ -1258,7 +1368,7 @@ function BuildGuide({
               <button
                 type="button"
                 onClick={() => onShowBuild(build.id)}
-                className="mt-4 font-mono text-[12px] uppercase tracking-[0.15em] text-[var(--color-gold-text)] hover:text-[var(--color-gold-text-hover)] min-h-[44px]"
+                className="btn-secondary btn-sm mt-4"
               >
                 {(copyText('collections-all.guide_filter') ?? 'Show only {label} parts').replace(
                   '{label}',
