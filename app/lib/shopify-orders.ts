@@ -6,8 +6,12 @@
  * Counted: non-test, non-cancelled orders created on or after the
  * campaign's `countFrom` day whose financial status is PAID or
  * PARTIALLY_REFUNDED, using each line's `currentQuantity` (which drops
- * removed and refunded units). Checkout must capture payment automatically,
- * or an order stays AUTHORIZED and never counts.
+ * removed and refunded units). The search has no status filter, so closed
+ * (fulfilled or archived) orders keep counting after they ship; cancelled
+ * ones are dropped in code. `status:any` is the REST form and GraphQL
+ * search rejects it.
+ * Checkout must capture payment automatically, or an order stays
+ * AUTHORIZED and never counts.
  *
  * The Admin token needs `read_orders`, and `read_all_orders` once a campaign
  * runs longer than 60 days: without it Shopify only returns the last 60
@@ -78,6 +82,11 @@ function adminEndpoint(env: OrdersEnv): {url: string; token: string} {
   return {url: `https://${domain}/admin/api/${version}/graphql.json`, token};
 }
 
+/** The orders search: every order since `countFrom`, whatever its status. */
+export function paidOrdersSearch(countFrom: string): string {
+  return `created_at:>=${countFrom}`;
+}
+
 /** Sum paid units for `skus` across every counted order since `countFrom`. */
 export async function fetchPaidUnits(
   env: OrdersEnv,
@@ -97,7 +106,7 @@ export async function fetchPaidUnits(
       headers: {'Content-Type': 'application/json', 'X-Shopify-Access-Token': token},
       body: JSON.stringify({
         query: PAID_ORDERS_QUERY,
-        variables: {first: PAGE_SIZE, after, query: `created_at:>=${countFrom} status:any`},
+        variables: {first: PAGE_SIZE, after, query: paidOrdersSearch(countFrom)},
       }),
       redirect: 'manual',
       signal: AbortSignal.timeout(5000),

@@ -11,7 +11,8 @@
 //
 //   1. Preflight: branch feat/preorders, a clean wrangler.production.toml,
 //      the pull request open against main, the credentials present by name,
-//      wrangler and gh signed in.
+//      wrangler and gh signed in, and the Admin token's scopes (orders,
+//      order tags, products, fulfillment holds).
 //   2. Shopify prices: every campaign SKU in content/preorders.json is on
 //      the storefront channel, has a compare-at (retail) price, and its
 //      price equals the first price step (retail less priceTiers[0].off).
@@ -186,6 +187,28 @@ export function launchComment(toml) {
   );
 }
 
+/**
+ * Admin API scopes the production Worker and the batch scripts use: the
+ * paid counts, the price steps, the preorder holds and their order tags.
+ */
+export const REQUIRED_ADMIN_SCOPES = [
+  'read_all_orders',
+  'read_orders',
+  'write_orders',
+  'write_products',
+  'write_merchant_managed_fulfillment_orders',
+];
+
+/** The required scopes missing from `granted` (handles, write implies read). */
+export function missingAdminScopes(granted) {
+  const have = new Set(granted);
+  return REQUIRED_ADMIN_SCOPES.filter(
+    (scope) => !have.has(scope) && !(scope.startsWith('read_') && have.has(scope.replace(/^read_/, 'write_'))),
+  );
+}
+
+export const SCOPES_QUERY = `query { currentAppInstallation { accessScopes { handle } } }`;
+
 export const WEBHOOK_LIST_QUERY = `query {
   webhookSubscriptions(first: 50, topics: [ORDERS_PAID]) { nodes { id topic uri } }
 }`;
@@ -219,7 +242,7 @@ export function unsoldInFeed(feed, skus) {
 /** The step list printed by a dry run and followed by --apply. */
 export function plan({pr, skus}) {
   return [
-    ['preflight', `Check branch ${BRANCH}, a clean ${PROD_CONFIG}, PR #${pr} open against main, credentials present by name, wrangler and gh signed in.`],
+    ['preflight', `Check branch ${BRANCH}, a clean ${PROD_CONFIG}, PR #${pr} open against main, credentials present by name, wrangler and gh signed in, Admin token scopes (${REQUIRED_ADMIN_SCOPES.join(', ')}).`],
     ['prices', `Read the storefront catalog and check ${skus.length} campaign SKUs: each has a compare-at price and sells at the first price step.`],
     ['secrets', `npx wrangler secret bulk --config ${PROD_CONFIG} (stdin): SHOPIFY_PREVIEW_POLICY_JSON (${skus.length} SKUs preorder, the rest sold_out), SHOPIFY_WEBHOOK_SECRET (from .env), SHOPIFY_PRICE_TIER_WRITE_ENABLED=1. Production stays closed by its [vars].`],
     ['launch-commit', `Set ${PROD_CONFIG} [vars] PUBLIC_COMING_SOON="0", SHOPIFY_CHECKOUT_WRITE_ENABLED="1"; git commit; git push origin ${BRANCH}.`],
@@ -319,6 +342,15 @@ async function preflight(opts) {
     }
   }
   if (sh('npx', ['wrangler', 'whoami'], {allowFail: true}).status !== 0) problems.push('wrangler is not signed in');
+  if (!missing.length) {
+    try {
+      const data = await admin(SCOPES_QUERY);
+      const gaps = missingAdminScopes(data.currentAppInstallation.accessScopes.map((s) => s.handle));
+      if (gaps.length) problems.push(`Admin API token lacks scopes: ${gaps.join(', ')}`);
+    } catch (error) {
+      problems.push(`Admin API scope check failed: ${error.message}`);
+    }
+  }
   return problems;
 }
 

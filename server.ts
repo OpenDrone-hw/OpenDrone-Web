@@ -2,8 +2,8 @@ import * as serverBuild from 'virtual:react-router/server-build';
 import {createRequestHandler} from 'react-router';
 import {createAppLoadContext} from '~/lib/context';
 import {parseCampaignConfig} from '~/lib/preorder-campaign';
-import {fetchPaidUnits} from '~/lib/shopify-orders';
-import {priceTierWritesEnabled, syncPriceTiers} from '~/lib/shopify-price-tier';
+import {reconcilePreorders} from '~/lib/preorder-ops';
+import {priceTierWritesEnabled} from '~/lib/shopify-price-tier';
 import preordersJson from './content/preorders.json';
 
 /**
@@ -116,9 +116,10 @@ export default {
   },
 
   /**
-   * Reconcile the preorder price steps (wrangler `[triggers] crons`). The
-   * orders/paid webhook does this the moment an order is paid; this catches
-   * a delivery Shopify never made. Off unless
+   * Reconcile the preorder price steps and holds (wrangler `[triggers]
+   * crons`, every five minutes). The orders/paid webhook does this the
+   * moment an order is paid; this catches a delivery Shopify never made and
+   * any paid preorder order not yet held and tagged. Off unless
    * SHOPIFY_PRICE_TIER_WRITE_ENABLED is '1'.
    */
   async scheduled(_event: unknown, env: Env, executionContext: ExecutionContext): Promise<void> {
@@ -127,10 +128,12 @@ export default {
       (async () => {
         try {
           const config = parseCampaignConfig(preordersJson);
-          const units = await fetchPaidUnits(env, config.countFrom, new Set(Object.keys(config.skus)));
-          const result = await syncPriceTiers(env, config, units, {apply: true});
+          const result = await reconcilePreorders(env, config);
           if (result.changed.length) {
             console.log('preorder price steps written', JSON.stringify(result.changed));
+          }
+          if (result.held.length) {
+            console.log('preorder orders held', JSON.stringify(result.held));
           }
         } catch (error) {
           console.error('preorder price step reconcile failed', error);

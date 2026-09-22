@@ -9,15 +9,22 @@
  * Admin API (`fetchPaidUnits`), so a replayed or forged-shaped payload cannot
  * move a price on its own.
  *
- * Shopify retries a webhook it does not get a 2xx for, so a write failure
- * answers 500 and the scheduled reconcile in `server.ts` covers a delivery
- * that never arrives.
+ * After the price steps, every paid preorder order that is not yet done is
+ * put on hold and tagged by batch (`app/lib/preorder-fulfilment.ts`), so the
+ * bpost plugin cannot import it for a label before its batch ships. The
+ * pass re-reads all campaign orders, so it also covers an order Shopify's
+ * search index has not caught up with on the next run.
+ *
+ * Shopify retries a webhook it does not get a 2xx for, so a price write
+ * failure answers 500 and the scheduled reconcile in `server.ts` covers a
+ * delivery that never arrives. A hold failure answers 200 and is retried by
+ * that reconcile: Shopify removes a webhook that keeps failing.
  */
 
 import type {ActionFunctionArgs} from 'react-router';
-import {fetchPaidUnits} from '~/lib/shopify-orders';
 import {parseCampaignConfig} from '~/lib/preorder-campaign';
-import {priceTierWritesEnabled, syncPriceTiers} from '~/lib/shopify-price-tier';
+import {reconcilePreorders} from '~/lib/preorder-ops';
+import {priceTierWritesEnabled} from '~/lib/shopify-price-tier';
 import {verifyShopifyHmac} from '~/lib/shopify-webhook';
 import preordersJson from '../../content/preorders.json';
 
@@ -40,10 +47,14 @@ export async function action({request, context}: ActionFunctionArgs) {
   }
 
   const config = parseCampaignConfig(preordersJson);
-  const units = await fetchPaidUnits(env, config.countFrom, new Set(Object.keys(config.skus)));
-  const result = await syncPriceTiers(env, config, units, {apply: true});
+  const result = await reconcilePreorders(env, config);
   return Response.json(
-    {changed: result.changed, skipped: result.skipped},
+    {
+      changed: result.changed,
+      skipped: result.skipped,
+      held: result.held.length,
+      holdErrors: Object.keys(result.holdErrors).length,
+    },
     {headers: {'Cache-Control': 'no-store'}},
   );
 }

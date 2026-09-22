@@ -198,3 +198,12 @@ test('the plan never carries a secret value', () => {
   assert.match(text, /ORDERS_PAID/);
   assert.match(text, /gh pr merge 489 --squash/);
 });
+
+test('missingAdminScopes names the scopes holds, tags and price steps need', async () => {
+  const {missingAdminScopes} = await import('../../scripts/launch-preorders.mjs');
+  const today = ['read_all_orders', 'read_orders', 'write_products', 'read_merchant_managed_fulfillment_orders', 'write_merchant_managed_fulfillment_orders'];
+  assert.deepEqual(missingAdminScopes(today), ['write_orders']);
+  assert.deepEqual(missingAdminScopes([...today, 'write_orders']), []);
+  // write implies read
+  assert.deepEqual(missingAdminScopes(['read_all_orders', 'write_orders', 'write_products', 'write_merchant_managed_fulfillment_orders']), []);
+});

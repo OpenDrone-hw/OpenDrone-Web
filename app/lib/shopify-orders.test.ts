@@ -64,7 +64,24 @@ describe('fetchPaidUnits', () => {
         : page([{displayFinancialStatus: 'PAID', lines: [['OPENFRAME-5', 5]]}]);
     });
     assert.deepEqual(units, {'OPENFRAME-5': 7});
-    assert.deepEqual(queries, ['created_at:>=2026-09-21 status:any', 'created_at:>=2026-09-21 status:any']);
+    assert.deepEqual(queries, ['created_at:>=2026-09-21', 'created_at:>=2026-09-21']);
+  });
+
+  it('sends no status filter, so fulfilled and archived orders keep counting', async () => {
+    let query = '';
+    const units = await fetchPaidUnits(ENV, '2026-09-21', SKUS, async (_url, init) => {
+      query = (JSON.parse(String(init?.body)) as {variables: {query: string}}).variables.query;
+      const response = page([
+        {displayFinancialStatus: 'PAID', lines: [['OPENESC-2020', 2]]},
+        {displayFinancialStatus: 'PAID', lines: [['OPENESC-2020', 3]]},
+      ]);
+      // Shopify returns closed (fulfilled, archived) orders like open ones.
+      const body = (await response.json()) as {data: {orders: {nodes: Array<Record<string, unknown>>}}};
+      body.data.orders.nodes[1] = {...body.data.orders.nodes[1], closed: true, displayFulfillmentStatus: 'FULFILLED'};
+      return Response.json(body);
+    });
+    assert.doesNotMatch(query, /status:/);
+    assert.deepEqual(units, {'OPENESC-2020': 5});
   });
 
   it('fails instead of undercounting', async () => {
