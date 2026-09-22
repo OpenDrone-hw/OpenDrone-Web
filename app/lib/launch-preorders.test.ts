@@ -207,3 +207,24 @@ test('missingAdminScopes names the scopes holds, tags and price steps need', asy
   // write implies read
   assert.deepEqual(missingAdminScopes(['read_all_orders', 'write_orders', 'write_products', 'write_merchant_managed_fulfillment_orders']), []);
 });
+
+test('marketPricingProblems accepts the live tax-inclusive setup and names an excluding market', async () => {
+  const {marketPricingProblems} = await import('../../scripts/launch-preorders.mjs');
+  const inclusive = {inclusiveTaxPricingStrategy: 'INCLUDES_TAXES_IN_PRICE'};
+  const live = {
+    shop: {taxesIncluded: true},
+    markets: {
+      nodes: [
+        {handle: 'be', enabled: true, priceInclusions: null},
+        {handle: 'international', enabled: true, priceInclusions: inclusive},
+        {handle: 'us', enabled: true, priceInclusions: inclusive},
+      ],
+    },
+  };
+  assert.deepEqual(marketPricingProblems(live), []);
+  const us = {handle: 'us', enabled: true, priceInclusions: {inclusiveTaxPricingStrategy: 'EXCLUDES_TAXES_FROM_PRICE'}};
+  const problems = marketPricingProblems({shop: {taxesIncluded: false}, markets: {nodes: [us, {...us, handle: 'off', enabled: false}]}});
+  assert.equal(problems.length, 2);
+  assert.match(problems[0], /Settings > Taxes/);
+  assert.match(problems[1], /^market us: /);
+});

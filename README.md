@@ -85,6 +85,8 @@ docs/                      the deep dives listed above
 
 **Preorders.** `content/preorders.json` lists production batches per SKU: paid stock with its own ship date, or a funding target whose supplier order is placed once that many units are ordered. The catalog client counts paid Shopify orders per SKU since `countFrom` (`app/lib/shopify-orders.ts`, Admin API, cached one minute per isolate) and `app/lib/preorder-campaign.ts` derives the batch, the meter and the ship promise. Only SKUs the catalog policy sells as `preorder` are affected; if the counts cannot be read, those SKUs close. Every preorder cart line carries its ship promise as a `Preorder` line attribute, so checkout and the order confirmation state it. Prices stay in Shopify: the compare-at price is retail and the price is what the next unit costs. `priceTiers` steps that price as paid units come in (the first 100 at 20% off, units 101 to 250 at 10% off, then retail). `app/lib/shopify-price-tier.ts` writes each step from the `orders/paid` webhook (`/api/shopify/orders-paid`, HMAC-verified) and from the Worker's five-minute `scheduled` reconcile, both gated on `SHOPIFY_PRICE_TIER_WRITE_ENABLED=1`. A SKU Shopify still prices under its step closes instead of selling under it. The same two runs hold every paid order with a `Preorder` line (`app/lib/preorder-fulfilment.ts`): each open fulfillment order gets a hold (reason Other, handle `opendrone-preorder`, a note naming the batch and its ship promise) and the order gets the tags `preorder` and `batch:<SKU>:<N>` for each batch its units fall into. The `preorder` tag marks an order as done, so a released order is never held again. `/api/status/campaign` (never cached) reports per campaign SKU whether it is open, whether the paid counts and price steps read cleanly now, and the last run of each job in that Worker isolate; it answers 503 when a campaign SKU is closed, so an uptime monitor can alert on it. `/preorder` explains the model and tracks every target.
 
+**Cart country.** A new cart gets the visitor's country (`CF-IPCountry`) as its Shopify buyer country, so checkout opens in that market with its shipping rate. `POST /api/shopify/cart-country` (form field `country`, same-origin, open only when checkout is) sets a different country on the session cart; a blocked country is never set. Line prices do not change with the country, because every market prices tax-inclusive.
+
 **Product lines.** OpenESC 20x20 / 30x30 and the four OpenRX variants are one
 Shopify product with a `Model` attribute; the page renders a tier ladder matched
 to the catalog's variants by option name and value.
@@ -220,6 +222,13 @@ steps in Shopify admin first:
    methods.
 2. Settings > Markets: import duties are not collected at checkout in any
    market. Outside the EU the buyer pays them to the carrier on delivery.
+   Every market prices tax-inclusive (`INCLUDES_TAXES_IN_PRICE`), so the
+   price is the same in every country: an EU price includes VAT, and
+   outside the EU Shopify charges no Belgian VAT and removes none. The
+   cart's US duty estimate is worked out on that price. The launch
+   preflight fails on a market that excludes tax. In the unlocked checkout,
+   check a US address: line prices as on the product page, shipping 19.95,
+   a tax line of 0.00 and no duty line.
 3. Settings > Notifications: paste `scripts/shopify-templates/out/order-confirmation.html`
    and `shipping-confirmation.html` (regenerate with `npm run gen:shopify-templates`)
    and send a test. The order confirmation prints each line's `Preorder`

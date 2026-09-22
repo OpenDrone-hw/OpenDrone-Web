@@ -11,8 +11,10 @@
 //
 //   1. Preflight: branch feat/preorders, a clean wrangler.production.toml,
 //      the pull request open against main, the credentials present by name,
-//      wrangler and gh signed in, and the Admin token's scopes (orders,
-//      order tags, products, fulfillment holds).
+//      wrangler and gh signed in, the Admin token's scopes (orders,
+//      order tags, products, fulfillment holds), and every Shopify market
+//      pricing tax-inclusive (one price in every country, no VAT outside
+//      the EU).
 //   2. Shopify prices: every campaign SKU in content/preorders.json is on
 //      the storefront channel, has a compare-at (retail) price, and its
 //      price equals the first price step (retail less priceTiers[0].off).
@@ -209,6 +211,33 @@ export function missingAdminScopes(granted) {
 
 export const SCOPES_QUERY = `query { currentAppInstallation { accessScopes { handle } } }`;
 
+export const MARKETS_QUERY = `query {
+  shop { taxesIncluded }
+  markets(first: 50) { nodes { handle enabled priceInclusions { inclusiveTaxPricingStrategy } } }
+}`;
+
+/**
+ * Every market must price tax-inclusive, so a buyer anywhere pays the price
+ * the site shows: an EU buyer's price includes VAT, and outside the EU
+ * Shopify charges no Belgian VAT and removes none from the price. A market
+ * set to exclude taxes would show a US buyer a lower checkout price than the
+ * site, and the site's duty estimate would be worked out on the wrong
+ * amount. `priceInclusions` is null on the primary market, which follows
+ * the shop setting. Returns one problem string per offending setting.
+ */
+export function marketPricingProblems(data) {
+  const problems = [];
+  if (data?.shop?.taxesIncluded !== true) problems.push('Settings > Taxes: prices do not include tax');
+  for (const m of data?.markets?.nodes ?? []) {
+    if (!m.enabled || m.priceInclusions == null) continue;
+    const strategy = m.priceInclusions.inclusiveTaxPricingStrategy;
+    if (strategy !== 'INCLUDES_TAXES_IN_PRICE') {
+      problems.push(`market ${m.handle}: tax pricing is ${strategy}, need INCLUDES_TAXES_IN_PRICE (same price in every country)`);
+    }
+  }
+  return problems;
+}
+
 export const WEBHOOK_LIST_QUERY = `query {
   webhookSubscriptions(first: 50, topics: [ORDERS_PAID]) { nodes { id topic uri } }
 }`;
@@ -242,7 +271,7 @@ export function unsoldInFeed(feed, skus) {
 /** The step list printed by a dry run and followed by --apply. */
 export function plan({pr, skus}) {
   return [
-    ['preflight', `Check branch ${BRANCH}, a clean ${PROD_CONFIG}, PR #${pr} open against main, credentials present by name, wrangler and gh signed in, Admin token scopes (${REQUIRED_ADMIN_SCOPES.join(', ')}).`],
+    ['preflight', `Check branch ${BRANCH}, a clean ${PROD_CONFIG}, PR #${pr} open against main, credentials present by name, wrangler and gh signed in, Admin token scopes (${REQUIRED_ADMIN_SCOPES.join(', ')}), every market prices tax-inclusive.`],
     ['prices', `Read the storefront catalog and check ${skus.length} campaign SKUs: each has a compare-at price and sells at the first price step.`],
     ['secrets', `npx wrangler secret bulk --config ${PROD_CONFIG} (stdin): SHOPIFY_PREVIEW_POLICY_JSON (${skus.length} SKUs preorder, the rest sold_out), SHOPIFY_WEBHOOK_SECRET (from .env), SHOPIFY_PRICE_TIER_WRITE_ENABLED=1. Production stays closed by its [vars].`],
     ['launch-commit', `Set ${PROD_CONFIG} [vars] PUBLIC_COMING_SOON="0", SHOPIFY_CHECKOUT_WRITE_ENABLED="1"; git commit; git push origin ${BRANCH}.`],
@@ -349,6 +378,11 @@ async function preflight(opts) {
       if (gaps.length) problems.push(`Admin API token lacks scopes: ${gaps.join(', ')}`);
     } catch (error) {
       problems.push(`Admin API scope check failed: ${error.message}`);
+    }
+    try {
+      problems.push(...marketPricingProblems(await admin(MARKETS_QUERY)));
+    } catch (error) {
+      problems.push(`Admin API market check failed: ${error.message}`);
     }
   }
   return problems;
