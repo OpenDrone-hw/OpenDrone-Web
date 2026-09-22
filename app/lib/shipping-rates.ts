@@ -75,11 +75,24 @@ const ISO_COUNTRIES = (
   'UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW'
 ).split(' ');
 
+/** Territories with no postal addresses to ship to: Antarctica, Bouvet
+ *  Island, Heard and McDonald Islands, South Georgia, the French Southern
+ *  Territories, the US Minor Outlying Islands and the British Indian Ocean
+ *  Territory. Left out of the picker; `shippingQuote` still prices them. */
+export const UNINHABITED_TERRITORIES: ReadonlySet<string> = new Set([
+  'AQ', 'BV', 'HM', 'GS', 'TF', 'UM', 'IO',
+]);
+
 /** Every country code Incutec ships to: all of ISO 3166-1 minus
- *  `BLOCKED_COUNTRIES`, for a destination picker. */
+ *  `BLOCKED_COUNTRIES` and `UNINHABITED_TERRITORIES`, for a destination
+ *  picker. */
 export const SHIP_COUNTRY_CODES: readonly string[] = ISO_COUNTRIES.filter(
-  (code) => !BLOCKED_COUNTRIES.has(code),
+  (code) => !BLOCKED_COUNTRIES.has(code) && !UNINHABITED_TERRITORIES.has(code),
 );
+
+/** The destinations most orders go to, listed first in the picker, in
+ *  this order, above a divider. */
+export const LIKELY_SHIP_COUNTRIES: readonly string[] = ['BE', 'NL', 'DE', 'FR', 'LU'];
 
 const optionsByLocale = new Map<string, Array<{code: string; name: string}>>();
 
@@ -95,6 +108,26 @@ export function shipCountryOptions(locale = 'en'): Array<{code: string; name: st
     optionsByLocale.set(locale, options);
   }
   return options;
+}
+
+export type ShipCountryOption = {code: string; name: string; rate: number};
+
+/**
+ * The destination picker in two groups: `likely` (Belgium, the
+ * Netherlands, Germany, France, Luxembourg, in that order) goes first,
+ * then a divider, then `rest`, every other shippable country by name.
+ * Each option carries its flat rate.
+ */
+export function shipCountryPicker(locale = 'en'): {likely: ShipCountryOption[]; rest: ShipCountryOption[]} {
+  const withRate = ({code, name}: {code: string; name: string}): ShipCountryOption => {
+    const q = shippingQuote(code);
+    return {code, name, rate: q && !q.blocked ? q.rate : 0};
+  };
+  const all = shipCountryOptions(locale);
+  return {
+    likely: LIKELY_SHIP_COUNTRIES.map((code) => withRate({code, name: countryName(code, locale)})),
+    rest: all.filter((o) => !LIKELY_SHIP_COUNTRIES.includes(o.code)).map(withRate),
+  };
 }
 
 /** The English country name for a code, falling back to the code. */

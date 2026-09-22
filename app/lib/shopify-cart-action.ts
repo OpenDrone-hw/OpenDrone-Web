@@ -1,5 +1,5 @@
 import {bySku, type Catalog, type CatalogVariant} from './catalog.ts';
-import {shipGroupKey} from './preorder-campaign.ts';
+import {shipGroupKey, shipLabelFromPromise} from './preorder-campaign.ts';
 import {isPurchasableStatus, resolveStatus} from './product-content.ts';
 import {requestedLines} from './shopify-cart-input.ts';
 import {shippingQuote} from './shipping-rates.ts';
@@ -54,6 +54,8 @@ export type CartSummary = {
     quantity: number;
     image: {url: string; altText: string | null} | null;
     shipPromise: string | null;
+    /** The short ship label for the line (`shipLabel` 'short'). */
+    shipLabel: string | null;
     /** Line total, VAT included. */
     total?: {amount: string; currencyCode: string};
   }>;
@@ -71,6 +73,7 @@ export function cartSummary(cart: ShopifyCart): CartSummary {
       quantity: line.quantity,
       image: line.image,
       shipPromise: line.shipPromise,
+      shipLabel: shipLabelFromPromise(line.shipPromise, 'short'),
       total: {amount: line.total.amount, currencyCode: line.total.currencyCode},
     })),
   };
@@ -529,6 +532,8 @@ export type CartLineInfo = {
   maxQuantity: number | null;
   /** The funding target this line waits for, when it waits for one. */
   target: {units: number; ordered: number} | null;
+  /** The short ship label for the line; null when it has no promise. */
+  shipLabel: string | null;
 };
 
 /**
@@ -562,6 +567,7 @@ export function cartLineInfo(
         group.startsWith('target:') && campaign?.target != null
           ? {units: campaign.target, ordered: campaign.targetOrdered}
           : null,
+      shipLabel: shipLabelFromPromise(line.shipPromise, 'short'),
     };
   }
   return out;

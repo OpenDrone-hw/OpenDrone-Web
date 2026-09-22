@@ -40,6 +40,11 @@ describe('buildSuggestionSpecs', () => {
     );
   });
 
+  it('suggests the 2.4 GHz plug-in antenna receiver for a 5-inch build, not the dual-band one', () => {
+    const specs = buildSuggestionSpecs(BUILDS, '5-inch', [{sku: 'OPENFC-LITE-3030', handle: 'openfc-lite'}]);
+    assert.equal(specs.find((s) => s.role === 'receiver')?.sku, 'OPENRX-LITE-UFL');
+  });
+
   it('still suggests the right-size ESC when the cart holds the other size, and says so', () => {
     const cart = [
       {sku: 'OPENESC-2020', handle: 'openesc', variantTitle: '20×20'},

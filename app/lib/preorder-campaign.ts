@@ -424,3 +424,99 @@ export function needsCampaignCounts(catalog: Catalog, config: CampaignConfig): b
     ),
   );
 }
+
+/** How much ship text a surface shows: `short` for a cart line, a dialog
+ *  card, a listing card or the pinned rail; `long` once, in the PDP buy box
+ *  and as the one mixed-date note of a cart. */
+export type ShipLabelForm = 'short' | 'long';
+
+const SHORT_MONTHS = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+const LONG_MONTHS = [
+  'january', 'february', 'march', 'april', 'may', 'june',
+  'july', 'august', 'september', 'october', 'november', 'december',
+];
+
+/** "11 March 2027" as "11 Mar 2027"; null for anything else. */
+export function shortCampaignDate(longDate: string | null | undefined): string | null {
+  const match = longDate?.trim().match(/^(\d{1,2}) ([A-Za-z]+) (\d{4})$/);
+  if (!match) return null;
+  const month = LONG_MONTHS.indexOf(match[2].toLowerCase());
+  return month < 0 ? null : `${Number(match[1])} ${SHORT_MONTHS[month]} ${match[3]}`;
+}
+
+function capitalizeFirst(text: string): string {
+  return text ? text[0].toUpperCase() + text.slice(1) : text;
+}
+
+/** The latest planned ship date a funding-target promise names, "by 11
+ *  March 2027 if the target is reached", or null when it names none. */
+function promiseLatestShip(promise: string): string | null {
+  const match = promise.match(/\bby (\d{1,2} [A-Za-z]+ \d{4}) if\b/);
+  return match ? match[1] : null;
+}
+
+function fundingShort(latestShip: string | null): string {
+  const date = shortCampaignDate(latestShip);
+  return date
+    ? `Funding target · ships by ${date} if reached`
+    : 'Funding target · ships once reached';
+}
+
+function longSentence(promise: string): string {
+  const text = capitalizeFirst(promise.trim());
+  return /[.!?]$/.test(text) ? text : `${text}.`;
+}
+
+/**
+ * The ship text for the next unit of a campaign SKU, in two lengths.
+ *
+ * short: "Funding target · ships by 11 Mar 2027 if reached" for a unit that
+ * waits for a funding target, and the batch date for everything else,
+ * "Ships late October 2026". long: the full promise as a sentence, "Ships
+ * about 10 weeks after its target is reached: by 11 March 2027 if the target
+ * is reached by 31 December 2026, otherwise you choose a refund or to wait."
+ */
+export function shipLabel(
+  campaign: Pick<CampaignState, 'shipPromise' | 'paidStock' | 'shipsOnTarget' | 'latestShip'>,
+  form: ShipLabelForm,
+): string {
+  if (form === 'long') return longSentence(campaign.shipPromise);
+  if (campaign.shipsOnTarget && !campaign.paidStock) {
+    return fundingShort(campaign.latestShip ?? promiseLatestShip(campaign.shipPromise));
+  }
+  return capitalizeFirst(campaign.shipPromise.trim());
+}
+
+/**
+ * `shipLabel` for a surface that only has the promise text, such as a cart
+ * line or the add-to-cart dialog: a promise that names a latest ship date
+ * "if the target is reached" is a funding target. Null without a promise.
+ */
+export function shipLabelFromPromise(
+  promise: string | null | undefined,
+  form: ShipLabelForm,
+): string | null {
+  const text = promise?.trim();
+  if (!text) return null;
+  if (form === 'long') return longSentence(text);
+  const latest = promiseLatestShip(text);
+  return latest || /\bafter its target\b/.test(text) ? fundingShort(latest) : capitalizeFirst(text);
+}
+
+/**
+ * The one long ship sentence a cart shows: the funding-target promise in
+ * full, once, when the cart holds a line waiting for a funding target. Every
+ * line then carries only its short label. Null when no line waits for a
+ * target.
+ */
+export function cartShipNote(promises: Array<string | null | undefined>): string | null {
+  for (const promise of promises) {
+    const text = promise?.trim();
+    if (text && (promiseLatestShip(text) || /\bafter its target\b/.test(text))) {
+      return shipLabelFromPromise(text, 'long');
+    }
+  }
+  return null;
+}

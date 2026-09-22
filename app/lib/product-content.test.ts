@@ -9,6 +9,9 @@ import {
   variantDisplayName,
   lineDisplayName,
   variantCartNote,
+  displaySpecValue,
+  fundingTargetTerms,
+  shortShipPromise,
   type BoxItem,
   type ChapterPin,
   type DownloadAsset,
@@ -258,5 +261,54 @@ describe('openmotor 5-inch variant', () => {
     assert.equal(lineDisplayName('openesc', 'OpenESC', 'Default Title'), 'OpenESC');
     assert.ok(!/2207/.test(variantCartNote('openmotor', '2207') ?? '2207'));
     assert.equal(variantCartNote('openmotor', '1604'), null);
+  });
+});
+
+describe('short ship promise', () => {
+  const target =
+    'ships about 10 weeks after its target is reached: by 11 March 2027 if the target is reached by 31 December 2026, otherwise you choose a refund or to wait';
+  it('turns a funding-target promise into one short line', () => {
+    assert.deepEqual(shortShipPromise(target), {
+      kind: 'target',
+      label: 'Funding target',
+      text: 'ships by 11 March 2027 if reached',
+    });
+  });
+  it('keeps a dated promise, capitalised', () => {
+    assert.deepEqual(shortShipPromise('ships late October 2026'), {
+      kind: 'date',
+      label: null,
+      text: 'Ships late October 2026',
+    });
+    assert.equal(shortShipPromise(null), null);
+  });
+  it('states the full condition once, with both dates', () => {
+    const terms = fundingTargetTerms(target) ?? '';
+    assert.match(terms, /about 10 weeks/);
+    assert.match(terms, /11 March 2027/);
+    assert.match(terms, /31 December 2026/);
+    assert.match(terms, /refund/);
+    assert.equal(fundingTargetTerms('ships late October 2026'), null);
+  });
+});
+
+describe('spec display values', () => {
+  it('says a current-sense range is not a current rating', () => {
+    assert.equal(
+      displaySpecValue('Current sense', 'On-board, 165 A'),
+      'On-board, reads up to 165 A (measuring range, not a current rating)',
+    );
+    assert.equal(displaySpecValue('Current sense', 'Yes'), 'Yes');
+  });
+  it('names the grommet screw size from the box on the mounting row', () => {
+    const box: BoxItem[] = [{qty: '4×', item: 'Silicone soft-mount grommets, M2'}];
+    assert.equal(
+      displaySpecValue('Mounting', '20 × 20 mm, 3.0 mm holes', box),
+      '20 × 20 mm, 3.0 mm holes, M2 with included grommets',
+    );
+    assert.equal(displaySpecValue('Mounting', '20 × 20 mm, 3.0 mm holes'), '20 × 20 mm, 3.0 mm holes');
+  });
+  it('never shows the internal 2207 name for the 5" motor', () => {
+    assert.doesNotMatch(variantDisplayName('openmotor', '2207'), /2207/);
   });
 });

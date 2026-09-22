@@ -13,7 +13,11 @@ import {
   needsCampaignCounts,
   parseCampaignConfig,
   priceLadder,
+  cartShipNote,
   shipGroupKey,
+  shipLabel,
+  shipLabelFromPromise,
+  shortCampaignDate,
   type CampaignBatch,
 } from './preorder-campaign.ts';
 
@@ -517,5 +521,55 @@ describe('price steps inside one cart line', () => {
     assert.equal(next.target, 250);
     assert.equal(next.targetOrdered, 0);
     assert.equal(next.shipPromise, PENDING);
+  });
+});
+
+describe('shipLabel', () => {
+  const LONG =
+    'Ships about 10 weeks after its target is reached: by 11 March 2027 if the target is reached by 31 December 2026, otherwise you choose a refund or to wait.';
+
+  it('gives a funding-target SKU a short label and the full sentence as the long form', () => {
+    const state = {...campaignState(FRAME, 12, PENDING, TIERS), latestShip: '11 March 2027'};
+    assert.equal(shipLabel(state, 'short'), 'Funding target · ships by 11 Mar 2027 if reached');
+    assert.equal(shipLabel(state, 'long'), LONG);
+    const bare = campaignState(FRAME, 12, PENDING, TIERS);
+    assert.equal(shipLabel(bare, 'short'), 'Funding target · ships by 11 Mar 2027 if reached');
+  });
+
+  it('gives paid stock its batch date in both forms', () => {
+    const state = campaignState(STACK, 10, PENDING, TIERS);
+    assert.equal(shipLabel(state, 'short'), 'Ships late October 2026');
+    assert.equal(shipLabel(state, 'long'), 'Ships late October 2026.');
+    const past = campaignState(STACK, 250, PENDING, TIERS);
+    assert.equal(shipLabel(past, 'short'), 'Funding target · ships by 11 Mar 2027 if reached');
+  });
+
+  it('reads the same labels from the promise text alone', () => {
+    assert.equal(shipLabelFromPromise(PENDING, 'short'), 'Funding target · ships by 11 Mar 2027 if reached');
+    assert.equal(shipLabelFromPromise(PENDING, 'long'), LONG);
+    assert.equal(shipLabelFromPromise('ships late October 2026', 'short'), 'Ships late October 2026');
+    assert.equal(shipLabelFromPromise('ships late October 2026', 'long'), 'Ships late October 2026.');
+    assert.equal(shipLabelFromPromise(null, 'short'), null);
+    assert.equal(shipLabelFromPromise('  ', 'long'), null);
+  });
+
+  it('matches the configured promise in content/preorders.json', () => {
+    const config = parseCampaignConfig(
+      JSON.parse(fs.readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8')),
+    );
+    const short = `Funding target · ships by ${shortCampaignDate(latestShipDate(config))} if reached`;
+    assert.equal(shipLabelFromPromise(config.pendingShips, 'short'), short);
+  });
+
+  it('writes a short date without the September abbreviation quirk', () => {
+    assert.equal(shortCampaignDate('11 March 2027'), '11 Mar 2027');
+    assert.equal(shortCampaignDate('1 September 2027'), '1 Sep 2027');
+    assert.equal(shortCampaignDate('late October 2026'), null);
+  });
+
+  it('puts the long funding sentence in a cart note once, only when a line waits for a target', () => {
+    assert.equal(cartShipNote(['ships late October 2026', PENDING, PENDING]), LONG);
+    assert.equal(cartShipNote(['ships late October 2026', null]), null);
+    assert.equal(cartShipNote([]), null);
   });
 });

@@ -658,6 +658,8 @@ describe('cart line info and split plan', () => {
     assert.equal(info['gid://shopify/CartLine/fc?cart=a'].maxQuantity, 8);
     assert.equal(info['gid://shopify/CartLine/fc2'].maxQuantity, 7);
     assert.equal(info[rxLine.id].maxQuantity, null);
+    assert.equal(info[rxLine.id].shipLabel, 'Funding target · ships by 11 Mar 2027 if reached');
+    assert.equal(info['gid://shopify/CartLine/fc2'].shipLabel?.startsWith('Ships '), true);
     assert.deepEqual(splitPlan(c, info), {
       keep: ['gid://shopify/CartLine/fc?cart=a', 'gid://shopify/CartLine/fc2'],
       later: [rxLine.id, motorLine.id],

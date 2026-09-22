@@ -3,9 +3,12 @@ import {describe, it} from 'node:test';
 import {
   BLOCKED_COUNTRIES,
   SHIPPING_ZONES,
+  LIKELY_SHIP_COUNTRIES,
   SHIP_COUNTRY_CODES,
+  UNINHABITED_TERRITORIES,
   countryName,
   shipCountryOptions,
+  shipCountryPicker,
   shippingQuote,
 } from './shipping-rates.ts';
 
@@ -83,5 +86,30 @@ describe('shipCountryOptions', () => {
     const names = shipCountryOptions().map((o) => o.name);
     assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b, 'en')));
     assert.equal(shipCountryOptions().find((o) => o.code === 'BE')?.name, 'Belgium');
+  });
+});
+
+describe('shipCountryPicker', () => {
+  it('lists Belgium, the Netherlands, Germany, France and Luxembourg first', () => {
+    const {likely, rest} = shipCountryPicker();
+    assert.deepEqual(likely.map((o) => o.code), ['BE', 'NL', 'DE', 'FR', 'LU']);
+    assert.deepEqual(likely.map((o) => o.rate), [8.5, 9.95, 9.95, 9.95, 9.95]);
+    assert.equal(likely[0].name, 'Belgium');
+    for (const code of LIKELY_SHIP_COUNTRIES) assert.ok(!rest.some((o) => o.code === code), code);
+    assert.equal(likely.length + rest.length, SHIP_COUNTRY_CODES.length);
+    const names = rest.map((o) => o.name);
+    assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b, 'en')));
+    assert.equal(rest.find((o) => o.code === 'US')?.rate, 19.95);
+  });
+
+  it('leaves out uninhabited territories and blocked countries', () => {
+    const {likely, rest} = shipCountryPicker();
+    const codes = [...likely, ...rest].map((o) => o.code);
+    for (const c of ['AQ', 'BV', 'HM', 'GS', 'TF', 'UM', 'IO']) {
+      assert.ok(UNINHABITED_TERRITORIES.has(c), c);
+      assert.ok(!codes.includes(c), c);
+    }
+    for (const c of BLOCKED_COUNTRIES) assert.ok(!codes.includes(c), c);
+    for (const o of [...likely, ...rest]) assert.ok(o.rate > 0, o.code);
   });
 });

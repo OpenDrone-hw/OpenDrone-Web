@@ -76,7 +76,7 @@
         },
         {
           "role": "receiver",
-          "sku": "OPENRX-GEMINI",
+          "sku": "OPENRX-LITE-UFL",
           "quantity": 1
         }
       ]

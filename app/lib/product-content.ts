@@ -55,7 +55,13 @@ export type ChapterPin = {
  * can read "1×" or "kit" or "set". Keep items factual - only list
  * things that genuinely ship. No speculative filler.
  */
-export type BoxItem = {qty?: string; item: string; note?: string};
+export type BoxItem = {
+  qty?: string;
+  item: string;
+  note?: string;
+  /** Site path the note links to, e.g. the spare-parts page. */
+  href?: string;
+};
 
 /**
  * The beginner chapter ("What does this do?"), rendered first on the PDP.
@@ -332,6 +338,12 @@ export type VariantContent = {
   /** One plain line on the model card saying who this version is for
    *  ("Also receives 900 MHz. Only useful if..."). Published facts only. */
   pickIf?: string;
+  /**
+   * A short tag on the version card for someone who does not know which to
+   * pick, e.g. "Start here if unsure" or "Used in the 5-inch build". Plain
+   * words that match content/builds.json, no specs.
+   */
+  tag?: string;
 };
 
 export type ProductContent = {
@@ -673,6 +685,65 @@ export function lineDisplayName(handle: string | null | undefined, title: string
 export function variantCartNote(handle: string | null | undefined, value: string | null | undefined): string | null {
   if (!handle || !value) return null;
   return PRODUCT_CONTENT[handle]?.variants?.[value]?.cartNote ?? null;
+}
+
+/**
+ * A spec value as the page shows it. The spec arrays mirror the board
+ * READMEs (npm run sync:specs), so plain-words clarifications are added
+ * here at render time instead of in the mirrored data:
+ * - a current-sense range ("On-board, 165 A") says it is a measuring range,
+ *   so it does not read as a burst rating;
+ * - a mounting row names the screw size of the soft-mount grommets in the
+ *   box ("20 × 20 mm, 3.0 mm holes, M2 with included grommets").
+ */
+export function displaySpecValue(
+  key: string,
+  value: string,
+  box: readonly BoxItem[] = [],
+): string {
+  if (key === 'Current sense' && /\d+\s*A\b/.test(value)) {
+    return `${value.replace(/(\d+\s*A)\b/, 'reads up to $1')} (measuring range, not a current rating)`;
+  }
+  if (key === 'Mounting') {
+    const grommet = box.find((b) => /grommet/i.test(b.item));
+    const screw = grommet ? /\b(M\d)\b/.exec(grommet.item)?.[1] : undefined;
+    if (screw && !value.includes(screw)) return `${value}, ${screw} with included grommets`;
+  }
+  return value;
+}
+
+/**
+ * A ship promise as one short line for a cart row or a dialog row. A
+ * funding-target promise ("ships about 10 weeks after its target is
+ * reached: by 11 March 2027 if the target is reached by 31 December 2026,
+ * otherwise ...") becomes a label plus "ships by 11 March 2027 if reached";
+ * a dated promise ("ships late October 2026") keeps its words. The full
+ * condition is stated once elsewhere, see {@link fundingTargetTerms}.
+ */
+export type ShortShipPromise = {kind: 'target' | 'date'; label: string | null; text: string};
+
+const TARGET_PROMISE = /by (\d{1,2} [A-Z][a-z]+ \d{4}) if the target is reached by (\d{1,2} [A-Z][a-z]+ \d{4})/;
+
+export function shortShipPromise(promise: string | null | undefined): ShortShipPromise | null {
+  const text = promise?.trim();
+  if (!text) return null;
+  const target = TARGET_PROMISE.exec(text);
+  if (target) return {kind: 'target', label: 'Funding target', text: `ships by ${target[1]} if reached`};
+  if (/after its target/i.test(text)) return {kind: 'target', label: 'Funding target', text: 'ships after its target is reached'};
+  return {kind: 'date', label: null, text: text.charAt(0).toUpperCase() + text.slice(1)};
+}
+
+/**
+ * The full funding-target condition, stated once per surface (cart summary,
+ * added-to-cart dialog) instead of on every line. Null when the promise is
+ * not a funding-target promise with both dates in it.
+ */
+export function fundingTargetTerms(promise: string | null | undefined): string | null {
+  const target = promise ? TARGET_PROMISE.exec(promise) : null;
+  if (!target) return null;
+  const weeks = /about (\d+) weeks/.exec(promise ?? '')?.[1];
+  const after = weeks ? `about ${weeks} weeks after their target is reached` : 'after their target is reached';
+  return `Funding-target items ship ${after}: by ${target[1]} if it is reached by ${target[2]}. If a target is missed, you choose a refund for that item or to keep waiting.`;
 }
 
 /** Whether a variant's SKU stays off customer-facing pages. See
