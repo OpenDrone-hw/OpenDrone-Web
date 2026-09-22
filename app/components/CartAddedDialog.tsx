@@ -67,6 +67,19 @@ function addedBuild(skus: readonly string[]): {label: string; units: number} | n
     : null;
 }
 
+/** Boards that fit both the 3-inch and the 5-inch frame (20x20 stack). */
+const FITS_BOTH_SKUS = new Set(['OPENFC-LITE-2020', 'OPENESC-2020']);
+
+/** How many of one SKU a build uses (4 motors), from content/builds.json. */
+function buildQuantity(sku: string | null | undefined): number | null {
+  if (!sku) return null;
+  for (const build of BUILDS.builds) {
+    const part = build.parts.find((p) => p.sku === sku);
+    if (part) return part.quantity;
+  }
+  return null;
+}
+
 /**
  * The dialog that opens after a background add to cart: what went in, and
  * the parts that complete the same build. One instance for the whole site,
@@ -180,23 +193,54 @@ export function CartAddedDialog() {
   const compactLines = added.length > 1;
   const addedUnits = added.reduce((sum, l) => sum + l.quantity, 0);
   const wholeBuild = compactLines ? addedBuild(detail.skus) : null;
+  // The stack button adds the flight controller and ESC of one size.
+  const stackSize =
+    added.length === 2 &&
+    added.some((l) => l.handle === 'openfc-lite') &&
+    added.some((l) => l.handle === 'openesc') &&
+    added[0].variantTitle === added[1].variantTitle
+      ? (added[0].variantTitle ?? '')
+      : null;
   const title = wholeBuild
-    ? t('added_title_build', 'Added the {build} build ({parts} parts, {count} items)', {
+    ? t('added_title_build_short', 'Added the {build} build ({count} items)', {
         build: wholeBuild.label,
-        parts: String(added.length),
         count: String(wholeBuild.units),
       })
-    : compactLines
-      ? t('added_title_parts', 'Added {parts} parts ({count} items)', {
-          parts: String(added.length),
-          count: String(addedUnits),
-        })
-      : t('added_title', '{count} in your cart', {count: String(summary.totalQuantity)});
+    : stackSize !== null
+      ? t('added_title_stack', 'Added the {size} stack (2 parts)', {size: stackSize}).replace('  ', ' ')
+      : compactLines
+        ? addedUnits === added.length
+          ? t('added_title_parts_only', 'Added {parts} parts', {parts: String(added.length)})
+          : t('added_title_parts', 'Added {parts} parts ({count} items)', {
+              parts: String(added.length),
+              count: String(addedUnits),
+            })
+        : t('added_title', '{count} in your cart', {count: String(summary.totalQuantity)});
+  // An added part that ships later than everything else in the cart now
+  // holds that back: say so here, not only on the cart page.
+  const others = summary.lines.filter((l) => !(l.sku && detail.skus.includes(l.sku)));
+  const addedRank = Math.max(0, ...added.map((l) => shipRank(l.shipPromise)));
+  const othersRank = others.length ? Math.max(0, ...others.map((l) => shipRank(l.shipPromise))) : 0;
+  const heldBack =
+    others.length && addedRank > othersRank
+      ? others.filter((l) => shipRank(l.shipPromise) < addedRank)
+      : [];
+  const heldBackDate = shortShipPromise(added.find((l) => shipRank(l.shipPromise) === addedRank)?.shipPromise)?.text ?? null;
+  // Motors are sold singly: a quad needs a whole set.
+  const motorLine = added.find((l) => l.handle === 'openmotor');
+  const motorSet = motorLine ? (buildQuantity(motorLine.sku) ?? 4) : 0;
+  const motorShort = motorLine && motorLine.sku && motorLine.quantity % motorSet !== 0
+    ? motorSet - (motorLine.quantity % motorSet)
+    : 0;
+  // A 20x20 board fits the 3-inch and the 5-inch frame, so it does not
+  // pick a build for the buyer.
+  const fitsBoth = added.length > 0 && added.every((l) => FITS_BOTH_SKUS.has(l.sku ?? ''));
   // The funding-target condition, once, when the cart holds such an item.
   const targetTerms =
     summary.lines.map((l) => fundingTargetTerms(l.shipPromise)).find(Boolean) ?? null;
 
-  const add = async (items: BuildSuggestion[], key: string) => {
+  type AddItem = Pick<BuildSuggestion, 'sku' | 'quantity' | 'handle' | 'role'>;
+  const add = async (items: AddItem[], key: string, track = true) => {
     if (!beginCartAdd()) return;
     setBusy(key);
     setFailed(null);
@@ -207,7 +251,7 @@ export function CartAddedDialog() {
           : [['lines', items.map((s) => `${s.sku}:${s.quantity}`).join(',')]];
       const next = await postCartAdd(CART_ACTION, fields);
       setSummary(next);
-      for (const item of items) {
+      for (const item of track ? items : []) {
         trackEvent('Recommendation Add', {
           props: {
             product: item.handle,
@@ -292,8 +336,8 @@ export function CartAddedDialog() {
           {!compact && isInternalSku(s.product.handle, s.variant.title) ? (
             <small className="cart-added-ship">
               {t(
-                'build_spec_not_final',
-                'Stator size and KV are not final. You are told them before the supplier order and can cancel then for a full refund.',
+                'build_spec_not_final_plain',
+                'The exact motor size and speed rating (KV) are not final. We tell you both before we order them, and you can cancel for a full refund.',
               )}
             </small>
           ) : null}
@@ -401,15 +445,59 @@ export function CartAddedDialog() {
           </div>
         ))}
 
+        {heldBack.length && heldBackDate ? (
+          <p className="cart-added-note cart-added-held">
+            {t(
+              'added_held_back_order',
+              'Your whole order now ships together, {date}, including your {names}. To get the {names} sooner, split the order in the cart.',
+              {
+                names: heldBack.map((l) => `${l.title}${l.variantTitle && l.variantTitle !== 'Default Title' ? ` ${variantDisplayName(l.handle, l.variantTitle)}` : ''}`).join(' and '),
+                date: heldBackDate.replace(/^ships /i, ''),
+              },
+            )}{' '}
+            <Link to="/cart" className="text-link">{t('added_held_back_link', 'Open the cart')}</Link>
+          </p>
+        ) : null}
+        {motorLine && motorShort > 0 ? (
+          <p className="cart-added-note cart-added-set">
+            {t('added_motor_set', 'A quad uses {set} motors.', {set: String(motorSet)})}{' '}
+            <button
+              type="button"
+              className="text-link"
+              disabled={busy !== null}
+              onClick={() => {
+                const sku = motorLine.sku;
+                if (!sku) return;
+                void add([{sku, quantity: motorShort, handle: motorLine.handle, role: 'motors'}], 'motor-set', false);
+              }}
+            >
+              {busy === 'motor-set'
+                ? 'Adding…'
+                : t('added_motor_set_add', 'Add {count} more', {count: String(motorShort)})}
+            </button>
+          </p>
+        ) : null}
         {targetTerms ? <p className="cart-added-note cart-added-terms">{targetTerms}</p> : null}
 
         {suggestions.length ? (
           <div className="cart-added-build">
             <p className="cart-added-build-title">
-              {t('build_whole_title', 'Building a whole {build} drone? These parts match.', {
-                build: build?.label ?? '',
-              })}
+              {fitsBoth
+                ? t('build_fits_both_title', 'Building a drone? This board fits the 3-inch and the 5-inch frame.')
+                : t('build_whole_title', 'Building a whole {build} drone? These parts match.', {
+                    build: build?.label ?? '',
+                  })}
             </p>
+            {fitsBoth ? (
+              <p className="cart-added-note cart-added-guide-links">
+                <Link to="/products#build-3-inch" className="text-link">
+                  {t('build_see_3', 'See the 3-inch build')}
+                </Link>{' '}
+                <Link to="/products#build-5-inch" className="text-link">
+                  {t('build_see_5', 'See the 5-inch build')}
+                </Link>
+              </p>
+            ) : null}
             <p className="cart-added-note">
               {t('build_whole_skip', 'Skip this if you are replacing parts.')}
             </p>

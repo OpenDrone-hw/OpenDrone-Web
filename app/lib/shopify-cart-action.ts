@@ -2,8 +2,7 @@ import {bySku, type Catalog, type CatalogVariant} from './catalog.ts';
 import {shipGroupKey, shipLabelFromPromise} from './preorder-campaign.ts';
 import {isPurchasableStatus, resolveStatus} from './product-content.ts';
 import {requestedLines} from './shopify-cart-input.ts';
-import {shippingQuote} from './shipping-rates.ts';
-import {visitorCountry} from './visitor-country.ts';
+import {shipCountryForRequest, shippingQuote} from './shipping-rates.ts';
 import {
   PREORDER_ATTRIBUTE,
   storefrontRequest,
@@ -88,14 +87,15 @@ export function lineLimitMessage(inCart: number): string {
 }
 
 /**
- * The buyer country a new cart starts with: the visitor's country
- * (Cloudflare's `CF-IPCountry`), so Shopify checkout opens in that market
- * with its shipping rate and tax treatment. Undefined when the country is
- * unknown or blocked: the cart then starts in the shop's primary market and
- * checkout still decides from the shipping address.
+ * The buyer country a new cart starts with: the destination the buyer
+ * picked (`od_ship_country` cookie), else the visitor's country
+ * (Cloudflare's `CF-IPCountry`, then `Accept-Language`), so Shopify checkout
+ * opens in that market with its shipping rate and tax treatment. Undefined
+ * when the country is unknown or blocked: the cart then starts in the shop's
+ * primary market and checkout still decides from the shipping address.
  */
 export function cartCountry(request: Request): string | undefined {
-  const quote = shippingQuote(visitorCountry(request));
+  const quote = shippingQuote(shipCountryForRequest(request));
   return quote && !quote.blocked ? quote.country : undefined;
 }
 

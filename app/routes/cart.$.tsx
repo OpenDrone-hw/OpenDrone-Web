@@ -20,6 +20,7 @@ import buildsJson from '../../content/builds.json';
 import {
   fundingTargetTerms,
   lineDisplayName,
+  setSize,
   shortShipPromise,
   variantCartNote,
   variantDisplayName,
@@ -28,7 +29,12 @@ import {Txt} from '~/components/Txt';
 import {ShipChip} from '~/components/ShipChip';
 import {buildSeoMeta} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
-import {BLOCKED_COUNTRIES, countryName, shippingQuote} from '~/lib/shipping-rates';
+import {
+  BLOCKED_COUNTRIES,
+  countryName,
+  shipCountryOptions,
+  shippingQuote,
+} from '~/lib/shipping-rates';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
 import type {RootLoader} from '~/root';
 import {
@@ -74,6 +80,49 @@ function t(key: string, fallback: string, vars: Record<string, string | number> 
   return (copyText(`cart.${key}`) ?? fallback).replace(/\{(\w+)\}/g, (match, name: string) =>
     name in vars ? String(vars[name]) : match,
   );
+}
+
+/** Build-guide order of the parts: flight controller, ESC, frame, motors,
+ *  receiver; anything else after them, in the order it was added. */
+const GUIDE_ORDER = Object.values(BUILDS.roles).map((role) => role.handle);
+
+function sortCartLines(lines: ShopifyCartLine[]): ShopifyCartLine[] {
+  const rank = (line: ShopifyCartLine) => {
+    const i = GUIDE_ORDER.indexOf(line.handle);
+    return i < 0 ? GUIDE_ORDER.length : i;
+  };
+  return lines
+    .map((line, i) => ({line, i}))
+    .sort((a, b) => rank(a.line) - rank(b.line) || a.i - b.i)
+    .map(({line}) => line);
+}
+
+/** Lines under one heading per ship date: dated batches first, funding
+ *  targets after, anything in stock first of all. */
+function groupCartLines(
+  lines: ShopifyCartLine[],
+): Array<{key: string; title: string; lines: ShopifyCartLine[]}> {
+  const groups = new Map<string, {key: string; title: string; rank: number; lines: ShopifyCartLine[]}>();
+  for (const line of lines) {
+    const short = shortShipPromise(line.shipPromise);
+    const key = short ? `${short.kind}:${short.text}` : 'stock';
+    let group = groups.get(key);
+    if (!group) {
+      group = {
+        key,
+        title: !short
+          ? (copyText('cart.mixed_in_stock') ?? 'In stock')
+          : short.kind === 'target'
+            ? t('group_target', 'Funding target, {when}', {when: short.text})
+            : short.text,
+        rank: !short ? 0 : short.kind === 'target' ? 2 : 1,
+        lines: [],
+      };
+      groups.set(key, group);
+    }
+    group.lines.push(line);
+  }
+  return [...groups.values()].sort((a, b) => a.rank - b.rank);
 }
 
 /** "A", "A and B", "A, B and C". */
@@ -130,17 +179,6 @@ function sendCartCountry(code: string) {
   fetch('/api/shopify/cart-country', {method: 'POST', body}).catch(() => {});
 }
 
-/** Every ISO 3166-1 country code, for the cart's destination picker. */
-const COUNTRY_CODES = (
-  'AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ ' +
-  'CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR ' +
-  'GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP ' +
-  'KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT ' +
-  'MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW ' +
-  'SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG ' +
-  'UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW'
-).split(' ');
-
 export default function CartPage() {
   const {cart, info, check} = useLoaderData<typeof loader>();
   const rootData = useRouteLoaderData<RootLoader>('root');
@@ -168,7 +206,7 @@ export default function CartPage() {
     storeSplitItems(items);
   };
   return (
-    <main className="cart page-shell">
+    <div className="cart page-shell">
       <header className="page-header">
         <h1 className="page-title"><Txt id="cart.title" /></h1>
         {cart?.lines.length ? (
@@ -200,7 +238,7 @@ export default function CartPage() {
       ) : (
         <EmptyCart />
       )}
-    </main>
+    </div>
   );
 }
 
@@ -312,44 +350,59 @@ function lineName(line: ShopifyCartLine): string {
  *  checkout waits until Shopify has confirmed them. */
 const PendingContext = createContext<(delta: number) => void>(() => {});
 
-/** Country names for the picker, sorted by name, built once. */
-let countryOptions: Array<{code: string; name: string}> | null = null;
-function allCountries(): Array<{code: string; name: string}> {
-  countryOptions ??= COUNTRY_CODES.map((code) => ({code, name: countryName(code)})).sort((a, b) =>
-    a.name.localeCompare(b.name, 'en'),
-  );
-  return countryOptions;
+/** Where most orders go, first in the picker. */
+const COMMON_COUNTRIES = ['BE', 'NL', 'DE', 'FR', 'LU', 'GB', 'US'];
+
+/** The picker in rate groups: the common destinations first, then the
+ *  others by the flat-rate groups on /shipping, each by name. Blocked
+ *  countries and territories with no postal address are left out. */
+let countryGroups: Array<{label: string; options: Array<{code: string; name: string}>}> | null = null;
+function pickerGroups(): Array<{label: string; options: Array<{code: string; name: string}>}> {
+  if (countryGroups) return countryGroups;
+  const all = shipCountryOptions('en').filter(({code}) => !COMMON_COUNTRIES.includes(code));
+  const zoneOf = (code: string) => {
+    const q = shippingQuote(code);
+    return q && !q.blocked ? q.zone : 'world';
+  };
+  const pick = (zones: string[]) => all.filter(({code}) => zones.includes(zoneOf(code)));
+  countryGroups = [
+    {
+      label: t('shipping_group_common', 'Common'),
+      options: COMMON_COUNTRIES.map((code) => ({code, name: countryName(code)})),
+    },
+    {label: t('shipping_group_eu', 'European Union'), options: pick(['eu', 'eu_far', 'near', 'be'])},
+    {label: t('shipping_group_europe', 'Rest of Europe'), options: pick(['europe'])},
+    {label: t('shipping_group_world', 'Rest of the world'), options: pick(['us', 'world'])},
+  ].filter((g) => g.options.length);
+  return countryGroups;
 }
 
 /** The flat rate to the picked destination, with a picker to change it. */
 function ShippingRow({country, onCountry}: {country: string | null; onCountry: (code: string) => void}) {
   const quote = shippingQuote(country);
   return (
-    <div className="cart-register-row">
+    <div className="cart-register-row cart-ship-row">
       <dt>
-        <label htmlFor="cart-ship-country">{t('shipping_label_to', 'Shipping to')}</label>{' '}
+        <label htmlFor="cart-ship-country">{t('shipping_label_ship_to', 'Ship to')}</label>
         <select
           id="cart-ship-country"
+          className="cart-ship-select"
           value={quote?.country ?? ''}
           onChange={(event) => onCountry(event.target.value)}
-          style={{
-            maxWidth: '11rem',
-            font: 'inherit',
-            color: 'inherit',
-            background: 'transparent',
-            border: '1px solid var(--color-border-strong)',
-            borderRadius: '4px',
-            padding: '0.1rem 0.25rem',
-          }}
         >
           {quote ? null : <option value="">{t('shipping_pick', 'Choose a country')}</option>}
           {/* No shipping there, so not offered; only a visitor located in
               one sees it, selected, next to the "not available" line. */}
-          {allCountries()
-            .filter(({code}) => !BLOCKED_COUNTRIES.has(code) || code === quote?.country)
-            .map(({code, name}) => (
-              <option key={code} value={code}>{name}</option>
-            ))}
+          {quote && (BLOCKED_COUNTRIES.has(quote.country) || !pickerGroups().some((g) => g.options.some((o) => o.code === quote.country))) ? (
+            <option value={quote.country}>{countryName(quote.country)}</option>
+          ) : null}
+          {pickerGroups().map((group) => (
+            <optgroup key={group.label} label={group.label}>
+              {group.options.map(({code, name}) => (
+                <option key={code} value={code}>{name}</option>
+              ))}
+            </optgroup>
+          ))}
         </select>
       </dt>
       <dd>
@@ -414,17 +467,13 @@ function DutyNote({country}: {country: string | null}) {
   const exportVat = (
     <p className="cart-summary-note">
       {t(
-        'note_export_vat',
-        'No EU VAT is charged on orders shipped outside the EU. The price is the same as the EU price.',
+        'note_export_same_price',
+        "Everyone pays the same euro price. Outside the EU no EU VAT is added; your country's import duty and taxes are paid to the carrier on delivery.",
       )}
     </p>
   );
-  const currencyNote =
-    quote && paysInOtherCurrency(quote.country) ? (
-      <p className="cart-summary-note">
-        {t('note_currency', 'Prices are in euro. Your card issuer converts at its own rate.')}
-      </p>
-    ) : null;
+  // The currency sentence sits next to the total, above Checkout.
+  const currencyNote = null;
   if (duty === 'us') {
     return (
       <>
@@ -492,6 +541,26 @@ function PopulatedCart({
     quote && !quote.blocked
       ? {amount: Number(cart.subtotal.amount) + quote.rate, currencyCode: cart.subtotal.currencyCode}
       : null;
+  // Inside the EU the flat rate and the VAT-inclusive price are the whole
+  // bill, so the total is a total. Outside it duties follow on delivery.
+  const inEu = quote && !quote.blocked && quote.duty === 'none';
+  const totalLabel = inEu
+    ? t('register_total_final', 'Total')
+    : t('register_estimated_total', 'Estimated total');
+  const subtotalNum = Number(cart.subtotal.amount);
+  const dutyHint =
+    quote && !quote.blocked && quote.duty === 'us' && subtotalNum > 0
+      ? t('sticky_duty_us', '+ about {low} to {high} import duty on delivery', {
+          low: formatPrice(subtotalNum * US_DUTY_LOW, 'EUR'),
+          high: formatPrice(subtotalNum * US_DUTY_HIGH, 'EUR'),
+        })
+      : quote && !quote.blocked && quote.duty === 'intl'
+        ? t('sticky_duty_intl', '+ import duties on delivery')
+        : null;
+  // Cart lines in the order the build guide lists the parts, grouped by
+  // when they ship: the paid batch first, then the funding targets.
+  const sortedLines = sortCartLines(cart.lines);
+  const lineGroups = groupCartLines(sortedLines);
   const overLimit = cart.lines.some((line) => {
     const max = info[line.id]?.maxQuantity;
     return max != null && line.quantity > max;
@@ -547,11 +616,16 @@ function PopulatedCart({
             <Txt id="cart.sheet_head_qty" className="cart-sheet-head-qty" />
             <Txt id="cart.sheet_head_total" className="cart-sheet-head-total" />
           </div>
-          <ul className="cart-lines-scroll" aria-label={copyText('cart.sr_line_items') ?? 'Line items'}>
-            {cart.lines.map((line) => (
-              <CartLine key={line.id} line={line} info={info[line.id]} pending={pending} />
-            ))}
-          </ul>
+          {lineGroups.map((group) => (
+            <section className="cart-line-group" key={group.key}>
+              {lineGroups.length > 1 ? <h2 className="cart-line-group-title">{group.title}</h2> : null}
+              <ul className="cart-lines-scroll" aria-label={copyText('cart.sr_line_items') ?? 'Line items'}>
+                {group.lines.map((line) => (
+                  <CartLine key={line.id} line={line} info={info[line.id]} pending={pending} />
+                ))}
+              </ul>
+            </section>
+          ))}
         </div>
         <div className="cart-summary-page" aria-busy={pending || undefined}>
           <dl className="cart-register">
@@ -561,14 +635,26 @@ function PopulatedCart({
             </div>
             <ShippingRow country={country} onCountry={onCountry} />
             {estimatedTotal ? (
-              <div className="cart-register-row">
-                <dt><strong>{t('register_estimated_total', 'Estimated total')}</strong></dt>
+              <div className="cart-register-row cart-register-total">
+                <dt>
+                  <strong>{totalLabel}</strong>
+                  <small>
+                    {inEu
+                      ? t('register_incl_vat', 'incl. VAT')
+                      : t('register_duties_after', 'import duties on delivery not included')}
+                  </small>
+                </dt>
                 <dd style={pendingStyle}>
                   <strong>{formatPrice(estimatedTotal.amount, estimatedTotal.currencyCode)}</strong>
                 </dd>
               </div>
             ) : null}
           </dl>
+          {quote && !quote.blocked && paysInOtherCurrency(quote.country) ? (
+            <p className="cart-summary-note cart-currency-note">
+              {t('note_currency', 'Prices are in euro. Your card issuer converts at its own rate.')}
+            </p>
+          ) : null}
           <UsDutyEstimate
             country={country}
             subtotal={Number(cart.subtotal.amount)}
@@ -591,11 +677,13 @@ function PopulatedCart({
               targetsOnly={targetsOnly}
               completeBuild={holdsCompleteBuild(cart)}
               targetTerms={targetTerms}
+              outsideEu={Boolean(quote && !quote.blocked && quote.duty !== 'none')}
               onSplit={onSplit}
             />
           ) : targetTerms ? (
             <p className="cart-summary-note cart-target-terms">{targetTerms}</p>
           ) : null}
+          {targetTerms ? <Txt id="collections-all.help_gift" as="p" className="cart-summary-note cart-gift-note" /> : null}
           <details className="cart-notes" open={mixed || undefined}>
             <summary>{t('notes_summary', 'How shipping and ship dates work')}</summary>
             {hasPreorder && !mixed ? <Txt id="cart.note_preorder" as="p" className="cart-summary-note" /> : null}
@@ -612,8 +700,9 @@ function PopulatedCart({
           <span>
             {estimatedTotal ? (
               <>
-                {t('register_estimated_total', 'Estimated total')}{' '}
+                {totalLabel}{' '}
                 <strong style={pendingStyle}>{formatPrice(estimatedTotal.amount, estimatedTotal.currencyCode)}</strong>
+                {dutyHint ? <small className="cart-sticky-duty">{dutyHint}</small> : null}
               </>
             ) : (
               <>
@@ -641,10 +730,13 @@ function MixedWarning({
   targetsOnly,
   completeBuild,
   targetTerms,
+  outsideEu,
   onSplit,
 }: {
   cart: ShopifyCart;
   info: Record<string, CartLineInfo>;
+  /** Outside the EU a second parcel can also mean a second carrier fee. */
+  outsideEu: boolean;
   plan: {keep: string[]; later: string[]} | null;
   targetsOnly: boolean;
   /** The cart is one whole build: nothing flies before its last part, so
@@ -717,7 +809,9 @@ function MixedWarning({
         {targetTerms ? <p>{targetTerms}</p> : null}
         {plan
           ? splitForm(
-              t('split_early_link', 'Get the {keep} sooner (pays shipping twice)', {keep: names(plan.keep)}),
+              outsideEu
+                ? t('split_early_link_export', 'Get the {keep} sooner (pays shipping, and any carrier customs fee, twice)', {keep: names(plan.keep)})
+                : t('split_early_link', 'Get the {keep} sooner (pays shipping twice)', {keep: names(plan.keep)}),
               'cart-split-link',
             )
           : null}
@@ -729,7 +823,7 @@ function MixedWarning({
     <div className="cart-mixed-warning" role="note">
       <Txt id={targetsOnly ? 'cart.mixed_targets_title' : 'cart.mixed_title'} as="p" />
       <ul>
-        {cart.lines.map((line) => {
+        {sortCartLines(cart.lines).map((line) => {
           const target = info[line.id]?.target;
           return (
             <li key={line.id}>
@@ -797,7 +891,11 @@ function CartLine({line, info, pending}: {line: ShopifyCartLine; info: CartLineI
           ) : null}
         </div>
         <div className="cart-sheet-qty">
-          <LineQuantity line={line} max={max === null ? MAX_LINE_QUANTITY : Math.min(MAX_LINE_QUANTITY, max)} />
+          <LineQuantity
+            line={line}
+            name={lineName(line)}
+            max={max === null ? MAX_LINE_QUANTITY : Math.min(MAX_LINE_QUANTITY, max)}
+          />
         </div>
         <div className="cart-sheet-total" style={pending ? {opacity: 0.5} : undefined}>
           {formatPrice(line.total.amount, line.total.currencyCode)}
@@ -822,7 +920,7 @@ function CartLine({line, info, pending}: {line: ShopifyCartLine; info: CartLineI
  * until then. Without JavaScript each button is a plain form post that
  * reloads /cart.
  */
-function LineQuantity({line, max}: {line: ShopifyCartLine; max: number}) {
+function LineQuantity({line, name, max}: {line: ShopifyCartLine; name: string; max: number}) {
   const revalidator = useRevalidator();
   const onPending = useContext(PendingContext);
   const [quantity, setQuantity] = useState(line.quantity);
@@ -883,6 +981,18 @@ function LineQuantity({line, max}: {line: ShopifyCartLine; max: number}) {
     }, 400);
   };
 
+  // Sold singly, used in sets (4 motors per quad): offer the rest of the set.
+  const set = setSize(line.handle);
+  const toSet = set && quantity % set !== 0 ? set - (quantity % set) : 0;
+  const completeSet = () => {
+    const next = quantity + toSet;
+    if (next > max) return;
+    setQuantity(next);
+    begin();
+    window.clearTimeout(timer.current);
+    void send([['intent', 'update'], ['lineId', line.id], ['quantity', String(next)]]);
+  };
+
   const remove = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     window.clearTimeout(timer.current);
@@ -900,8 +1010,26 @@ function LineQuantity({line, max}: {line: ShopifyCartLine; max: number}) {
       <Form method="post" action="/api/shopify/cart" onSubmit={remove}>
         <input type="hidden" name="intent" value="remove" />
         <input type="hidden" name="lineId" value={line.id} />
-        <button type="submit" disabled={busy}><Txt id="cart.line_remove" /></button>
+        <button
+          type="submit"
+          className="cart-line-remove"
+          disabled={busy}
+          aria-label={t('line_remove_named', 'Remove {name}', {name})}
+          title={t('line_remove_named', 'Remove {name}', {name})}
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" />
+          </svg>
+        </button>
       </Form>
+      {toSet && quantity + toSet <= max ? (
+        <p className="cart-line-set">
+          {t('line_set_hint', 'A quad needs {set} motors.', {set: set ?? 4})}{' '}
+          <button type="button" className="text-link" disabled={busy} onClick={completeSet}>
+            {t('line_set_add', '+ Add {count} more', {count: toSet})}
+          </button>
+        </p>
+      ) : null}
       {error ? (
         <small className="cart-line-error" role="alert">{error}</small>
       ) : quantity >= max && max >= MAX_LINE_QUANTITY ? (

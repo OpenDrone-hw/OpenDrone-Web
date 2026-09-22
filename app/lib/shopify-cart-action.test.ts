@@ -738,6 +738,15 @@ describe('Shopify cart action: buyer country', () => {
     }
   });
 
+  it('prefers the destination the buyer picked, then the browser region', () => {
+    const picked = fromCountry({}, 'BE');
+    picked.headers.set('Cookie', 'session=abc; od_ship_country=DE');
+    assert.equal(cartCountry(picked), 'DE');
+    const noIp = fromCountry({}, null);
+    noIp.headers.set('Accept-Language', 'de-DE,de;q=0.9');
+    assert.equal(cartCountry(noIp), 'DE');
+  });
+
   it('passes the visitor country when it creates a cart', async () => {
     let country: string | undefined = 'unset';
     await handleShopifyCartAction(

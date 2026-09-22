@@ -6,7 +6,11 @@ import {
   LIKELY_SHIP_COUNTRIES,
   SHIP_COUNTRY_CODES,
   UNINHABITED_TERRITORIES,
+  countryFromAcceptLanguage,
   countryName,
+  shipCountryCookie,
+  shipCountryForRequest,
+  shipCountryFromCookie,
   shipCountryOptions,
   shipCountryPicker,
   shippingQuote,
@@ -111,5 +115,44 @@ describe('shipCountryPicker', () => {
     }
     for (const c of BLOCKED_COUNTRIES) assert.ok(!codes.includes(c), c);
     for (const o of [...likely, ...rest]) assert.ok(o.rate > 0, o.code);
+  });
+});
+
+describe('default destination', () => {
+  const req = (headers: Record<string, string>, query = '') =>
+    new Request(`https://example.test/products/x${query}`, {headers});
+
+  it('reads the region from Accept-Language by weight, skipping bare languages', () => {
+    assert.equal(countryFromAcceptLanguage('de-DE,de;q=0.9,en;q=0.8'), 'DE');
+    assert.equal(countryFromAcceptLanguage('de,en-US;q=0.5'), 'US');
+    assert.equal(countryFromAcceptLanguage('en-GB;q=0.4,fr-BE;q=0.8'), 'BE');
+    assert.equal(countryFromAcceptLanguage('zh-Hant-TW'), 'TW');
+    assert.equal(countryFromAcceptLanguage('es-419,fr'), null);
+    assert.equal(countryFromAcceptLanguage('de'), null);
+    assert.equal(countryFromAcceptLanguage(null), null);
+  });
+
+  it('keeps only a shippable pick in the cookie', () => {
+    assert.equal(shipCountryCookie('de'), 'od_ship_country=DE; Path=/; Max-Age=31536000; SameSite=Lax; Secure');
+    assert.equal(shipCountryCookie('NL', false), 'od_ship_country=NL; Path=/; Max-Age=31536000; SameSite=Lax');
+    assert.equal(shipCountryCookie('RU'), null);
+    assert.equal(shipCountryCookie('AQ'), null);
+    assert.equal(shipCountryCookie('ZZ'), null);
+    assert.equal(shipCountryFromCookie('a=1; od_ship_country=FR; b=2'), 'FR');
+    assert.equal(shipCountryFromCookie('od_ship_country=RU'), null);
+    assert.equal(shipCountryFromCookie('xod_ship_country=FR'), null);
+    assert.equal(shipCountryFromCookie(undefined), null);
+  });
+
+  it('orders query, cookie, CF-IPCountry, Accept-Language', () => {
+    const all = {Cookie: 'od_ship_country=NL', 'CF-IPCountry': 'BE', 'Accept-Language': 'de-DE'};
+    assert.equal(shipCountryForRequest(req(all, '?country=us')), 'US');
+    assert.equal(shipCountryForRequest(req(all)), 'NL');
+    assert.equal(shipCountryForRequest(req({'CF-IPCountry': 'BE', 'Accept-Language': 'de-DE'})), 'BE');
+    assert.equal(shipCountryForRequest(req({'CF-IPCountry': 'XX', 'Accept-Language': 'de-DE'})), 'DE');
+    assert.equal(shipCountryForRequest(req({'CF-IPCountry': 'T1'})), null);
+    // A blocked IP country stays visible so the page can say so.
+    assert.equal(shipCountryForRequest(req({'CF-IPCountry': 'RU'})), 'RU');
+    assert.equal(shipCountryForRequest(req({})), null);
   });
 });

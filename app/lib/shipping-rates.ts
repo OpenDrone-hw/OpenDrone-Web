@@ -138,3 +138,81 @@ export function countryName(code: string, locale = 'en'): string {
     return code;
   }
 }
+
+/** Cookie that holds the destination a buyer picked, shared by the product
+ *  page, the added-to-cart dialog and the cart, and read by the server so the
+ *  first render already quotes that country. Display only, like the rates:
+ *  checkout charges the rate for the address the buyer enters there. */
+export const SHIP_COUNTRY_COOKIE = 'od_ship_country';
+
+const ISO_SET: ReadonlySet<string> = new Set(ISO_COUNTRIES);
+
+/** An ISO 3166-1 alpha-2 code, upper-cased, or null. */
+function isoCode(value: string | null | undefined): string | null {
+  const code = value?.trim().toUpperCase();
+  return code && ISO_SET.has(code) ? code : null;
+}
+
+/** The `document.cookie` / `Set-Cookie` string that keeps a picked
+ *  destination for a year on the whole site. Null for a code that is not a
+ *  country Incutec ships to, so a blocked or bogus pick is never kept. */
+export function shipCountryCookie(country: string, secure = true): string | null {
+  const code = isoCode(country);
+  if (!code || !SHIP_COUNTRY_CODES.includes(code)) return null;
+  return `${SHIP_COUNTRY_COOKIE}=${code}; Path=/; Max-Age=31536000; SameSite=Lax${secure ? '; Secure' : ''}`;
+}
+
+/** The picked destination from a `Cookie` header (or `document.cookie`). */
+export function shipCountryFromCookie(cookieHeader: string | null | undefined): string | null {
+  if (!cookieHeader) return null;
+  for (const part of cookieHeader.split(';')) {
+    const eq = part.indexOf('=');
+    if (eq < 0 || part.slice(0, eq).trim() !== SHIP_COUNTRY_COOKIE) continue;
+    const code = isoCode(part.slice(eq + 1));
+    return code && SHIP_COUNTRY_CODES.includes(code) ? code : null;
+  }
+  return null;
+}
+
+/** The first region subtag in an `Accept-Language` header, by preference
+ *  weight: `de-DE,de;q=0.9` gives DE, `en-US` gives US. A bare language
+ *  (`de`, `fr`, `en`) names no country and is skipped. */
+export function countryFromAcceptLanguage(header: string | null | undefined): string | null {
+  if (!header) return null;
+  const tags = header
+    .split(',')
+    .map((entry, index) => {
+      const [tag, ...params] = entry.trim().split(';');
+      const q = params.map((p) => p.trim()).find((p) => p.startsWith('q='));
+      const weight = q ? Number(q.slice(2)) : 1;
+      return {tag: tag.trim(), weight: Number.isFinite(weight) ? weight : 0, index};
+    })
+    .filter((t) => t.tag && t.weight > 0)
+    .sort((a, b) => b.weight - a.weight || a.index - b.index);
+  for (const {tag} of tags) {
+    // The region is the first two-letter subtag after the language
+    // (`zh-Hant-TW` gives TW; a numeric region like `es-419` is skipped).
+    const region = tag.split('-').slice(1).find((sub) => /^[A-Za-z]{2}$/.test(sub));
+    const code = isoCode(region);
+    if (code) return code;
+  }
+  return null;
+}
+
+/**
+ * The destination the shop quotes by default for this request, in order:
+ * a `?country=XX` query (to check a page as seen from another country), the
+ * buyer's own pick in the `od_ship_country` cookie, Cloudflare's
+ * `CF-IPCountry`, then the region in `Accept-Language`. Null when none of
+ * them names a country. A blocked country from the IP or the browser is
+ * returned as is, so the page can say it does not ship there.
+ */
+export function shipCountryForRequest(request: Request): string | null {
+  const override = isoCode(new URL(request.url).searchParams.get('country'));
+  if (override) return override;
+  const picked = shipCountryFromCookie(request.headers.get('Cookie'));
+  if (picked) return picked;
+  const ip = isoCode(request.headers.get('CF-IPCountry'));
+  if (ip) return ip;
+  return countryFromAcceptLanguage(request.headers.get('Accept-Language'));
+}
