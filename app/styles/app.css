@@ -2976,7 +2976,7 @@ a.product-card-model:hover {
   color: var(--color-text);
 }
 
-.overlay aside main {
+.overlay aside .aside-body {
   display: flex;
   flex-direction: column;
   height: calc(100vh - var(--header-height));
@@ -16924,7 +16924,7 @@ html.light .editorial-watermark {
     line-height: 1;
   }
   /* Drawer can scroll if the fuller menu runs long. */
-  .overlay aside main {
+  .overlay aside .aside-body {
     overflow-y: auto;
   }
   .site-mobile-nav {
@@ -17912,6 +17912,9 @@ body:has(.buy-rail.is-pinned.is-mobile) .placeholder-banner {
   background: var(--color-gold);
   transition: width 0.6s ease;
 }
+.funding-meter-fill[data-empty] {
+  min-width: 0;
+}
 .funding-meter[data-funding-state='funded'] .funding-meter-track:not(.is-thin) .funding-meter-fill {
   background: var(--color-stock);
 }
@@ -18601,7 +18604,9 @@ html.light .cart-added-continue {
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
-    margin: 1.5rem -16px 0;
+    /* Bleed to the screen edges whatever the page gutter is: a fixed
+       -16px ran 5 px past a 11 px gutter and scrolled the page sideways. */
+    margin: 1.5rem calc(50% - 50vw) 0;
     padding: 0.75rem 16px calc(0.75rem + env(safe-area-inset-bottom));
     background: var(--pod-bg-strong);
     border-top: 1px solid var(--color-border);
@@ -19044,4 +19049,230 @@ html.light .cart-added-continue {
 }
 .preorder-strip-home-text {
   align-items: baseline;
+}
+
+/* ============================================
+   PDP "At a glance", spec help and cart polish
+   ============================================ */
+
+/* In-page links (#specs, #in-the-box, #what-is-this) land below the
+   floating header, not under it. */
+.chapter[id] {
+  scroll-margin-top: calc(var(--header-height) + 1.5rem);
+}
+
+/* Spec rows: the "?" button beside a row name, and its one plain line
+   under the row. */
+.spec-table > div {
+  flex-wrap: wrap;
+}
+.spec-table dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.spec-help-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  padding: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 150ms ease, border-color 150ms ease;
+}
+/* A bigger hit area without a bigger circle. */
+.spec-help-toggle {
+  position: relative;
+}
+.spec-help-toggle::after {
+  content: '';
+  position: absolute;
+  inset: -0.6rem;
+}
+.spec-help-toggle:hover,
+.spec-help-toggle:focus-visible,
+.spec-help-toggle[aria-expanded='true'] {
+  color: var(--color-gold-text);
+  border-color: var(--color-gold);
+}
+.spec-table dd.spec-help-text {
+  flex: 1 0 100%;
+  margin: 0.2rem 0 0;
+  text-align: left;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+.spec-table dd.spec-help-text[hidden] {
+  display: none;
+}
+
+/* At a glance: the five rows a buyer checks first, right under the buy
+   module, with links down to the full table and the box contents. */
+.product-glance {
+  margin-top: var(--sp-5);
+  padding: var(--sp-4) var(--sp-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-lg);
+  background: var(--color-bg-card);
+}
+.product-glance-title {
+  margin: 0 0 var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.product-glance .product-glance-table {
+  grid-template-columns: 1fr;
+  border-top: 0;
+}
+.product-glance-table > div {
+  padding: 0.55rem 0;
+}
+.product-glance-table > div:last-child {
+  border-bottom: 0;
+}
+.product-glance-table dd {
+  font-size: var(--fs-sm);
+}
+.product-glance-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.25rem;
+  margin: var(--sp-3) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+}
+.product-glance-links a,
+.product-glance-new a {
+  color: var(--color-gold-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.product-glance-new {
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+}
+.product-glance-new summary {
+  cursor: pointer;
+  color: var(--color-text);
+  font-weight: 500;
+}
+.product-glance-new ul {
+  margin: var(--sp-2) 0;
+  padding-left: 1.1rem;
+  color: var(--color-text-muted);
+}
+.product-glance-new li + li {
+  margin-top: 0.25rem;
+}
+
+/* Price ladder: the step the next unit falls in reads as a highlighted
+   band, not only bold text. */
+.product-price-ladder li[data-current] {
+  margin: 0 -0.4rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: var(--r-sm);
+  background: var(--color-gold-soft);
+}
+
+/* Phones: the pinned buy bar (75 px) rides the bottom of the screen, so the
+   page ends above it instead of under it (safety block, footer). */
+@media (max-width: 959px) {
+  body:has(> .buy-rail.is-pinned.is-mobile:not(.is-suppressed)) {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  }
+}
+
+/* Cart: the funding-target count of a line in the mixed-dates box. */
+.cart-mixed-warning li + li {
+  margin-top: 0.35rem;
+}
+.cart-mixed-target {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: var(--fs-xs);
+}
+.cart-line-max {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--color-text-muted);
+  font-size: var(--fs-xs);
+}
+.cart-checkout-domain {
+  margin-top: var(--sp-2);
+  font-size: var(--fs-xs);
+}
+
+/* Cart page, wide screens: lines on the left, the summary as a card on the
+   right that stays in view while the list scrolls. */
+@media (min-width: 1024px) {
+  .cart.page-shell .cart-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 400px);
+    gap: var(--sp-7);
+    align-items: start;
+  }
+  .cart.page-shell .cart-details {
+    overflow: visible;
+  }
+  .cart.page-shell .cart-summary-page {
+    position: sticky;
+    top: calc(var(--header-height) + 2.5rem);
+    padding: var(--sp-4) var(--sp-5);
+    border: 1px solid var(--color-border);
+    border-radius: var(--r-lg);
+    background: var(--color-bg-card);
+  }
+  .cart.page-shell .cart-summary-page .cart-checkout-cta {
+    max-width: none;
+    margin-left: 0;
+  }
+  .cart.page-shell .cart-mixed-warning {
+    max-width: none;
+  }
+}
+
+/* Desktop PDP: the photo stays beside the buy column while it scrolls past
+   the price, the terms and the glance box, instead of leaving an empty
+   column under it. */
+@media (min-width: 960px) {
+  .product-hero-gallery-col {
+    position: sticky;
+    top: calc(var(--header-height) + 2.5rem);
+  }
+}
+.product-glance-footnote {
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  color: var(--color-text-dim);
+}
+.cart-mixed-warning p,
+.cart-mixed-warning li {
+  font-size: inherit;
+}
+.cart-register-row dd {
+  white-space: nowrap;
+}
+.cart-register-row dt:has(select) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
 }

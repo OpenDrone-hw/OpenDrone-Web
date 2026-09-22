@@ -1,5 +1,5 @@
 import {BOARD_ART_VERSION} from '~/data/board-art-version';
-import {Fragment, Suspense, useEffect, useMemo, useRef, useState} from 'react';
+import {Fragment, Suspense, useEffect, useId, useMemo, useRef, useState} from 'react';
 import {createPortal} from 'react-dom';
 import {
   Await,
@@ -26,7 +26,7 @@ import {buyUrl, commerceHandoff} from '~/lib/shop-links';
 import {useAside} from '~/components/Aside';
 import {Txt} from '~/components/Txt';
 import {ConceptPlate} from '~/components/ConceptPlate';
-import {WHAT_IS_THIS_ID} from '~/lib/product-content';
+import {WHAT_IS_THIS_ID, specHelp} from '~/lib/product-content';
 import {CONTRIBUTING_URL} from '~/lib/company';
 import {ProductPrice} from '~/components/ProductPrice';
 import {ProductGallery} from '~/components/ProductGallery';
@@ -108,6 +108,7 @@ const CAMPAIGN_DEADLINE = new Date(`${preorders.endsOn}T00:00:00Z`).toLocaleDate
 /** The cheapest flat shipping rate, for "shipping from" when the visitor's
  *  country is unknown. */
 const SHIPPING_FROM = Math.min(...SHIPPING_ZONES.map((z) => z.rate));
+const SHIPPING_TO = Math.max(...SHIPPING_ZONES.map((z) => z.rate));
 
 /** Fill `{name}` slots in a copy template. */
 function fill(template: string, vars: Record<string, string | number>): string {
@@ -488,6 +489,59 @@ function ClientFrameViewer(props: FrameViewerProps) {
   return <Viewer {...props} />;
 }
 
+/** DOM ids of the spec and box chapters, for the "At a glance" links. */
+const SPECS_ID = 'specs';
+const IN_THE_BOX_ID = 'in-the-box';
+
+/**
+ * One row of a spec table. A row name with a plain-language line in
+ * `SPEC_HELP` gets a "?" button that shows the line under the row, for
+ * buyers who do not know what a UART or a KV is. Tap, click or keyboard;
+ * no hover-only tooltip.
+ */
+function SpecRow({
+  name,
+  value,
+  nameProps,
+  valueProps,
+  animate = false,
+}: {
+  name: string;
+  value: string;
+  nameProps?: Record<string, string>;
+  valueProps?: Record<string, string>;
+  animate?: boolean;
+}) {
+  const help = specHelp(name);
+  const [open, setOpen] = useState(false);
+  const helpId = useId();
+  return (
+    <div data-help-open={open ? '' : undefined}>
+      <dt>
+        <span {...nameProps}>{name}</span>
+        {help ? (
+          <button
+            type="button"
+            className="spec-help-toggle"
+            aria-expanded={open}
+            aria-controls={helpId}
+            aria-label={say('product-chrome.spec_help_aria', 'What is {name}?', {name})}
+            onClick={() => setOpen((o) => !o)}
+          >
+            ?
+          </button>
+        ) : null}
+      </dt>
+      <dd {...valueProps}>{animate ? <AnimatedNumber value={value} /> : value}</dd>
+      {help ? (
+        <dd id={helpId} className="spec-help-text" hidden={!open}>
+          {help}
+        </dd>
+      ) : null}
+    </div>
+  );
+}
+
 /**
  * The preorder price ladder under the price: every step as plain text, the
  * step the next unit falls in marked "now". The steps come from
@@ -524,17 +578,23 @@ function PriceLadder({
                   to: step.to,
                 });
           const past = step.to !== null && nextUnit > step.to;
-          const note = past
-            ? say('product-chrome.ladder_price_past', 'sold out')
-            : current
-            ? step.to === null
-              ? say('product-chrome.ladder_price_now_retail', 'now')
-              : say('product-chrome.ladder_price_now', 'now · {left} left', {left})
-            : step.to === null
+          // Every discounted step names its discount, the current one too,
+          // and the current one says the count is of units at this price
+          // (the batch meter below counts the whole batch).
+          const offLabel =
+            step.to === null
               ? say('product-chrome.ladder_price_retail', 'retail')
               : say('product-chrome.ladder_price_off', '{off}% off retail', {
                   off: Math.round((off ?? 0) * 100),
                 });
+          const note = past
+            ? say('product-chrome.ladder_price_past', 'sold out')
+            : current && step.to !== null
+              ? say('product-chrome.ladder_price_now_left', '{off} · {left} left at this price', {
+                  off: offLabel,
+                  left,
+                })
+              : offLabel;
           return (
             <li
               key={step.from}
@@ -1034,6 +1094,11 @@ function ProductPage() {
   const mergedSpecs = mergeSpecs(content.specs, activeVariant?.specs);
   const comparison = variantComparison(content.specs, content.variants);
   const mergedBox = [...content.inTheBox, ...(activeVariant?.inTheBox ?? [])];
+  // The key rows beside the buy module, from the same merged table, so the
+  // glance box and the spec chapter can never disagree.
+  const glanceRows = (content.glance ?? [])
+    .map((key) => mergedSpecs.find(([k]) => k === key))
+    .filter((row): row is [string, string] => Boolean(row));
 
   // Studio click-to-edit for per-product strings. Copy files get their
   // `data-edit` tag from `<Txt>`/`editAttrs`, but everything rendered out of
@@ -1823,8 +1888,9 @@ function ProductPage() {
         ? say('product-chrome.buy_vat_export', 'no EU VAT charged')
         : null;
   const shipNote = !quote
-    ? say('product-chrome.buy_ship_from', 'Shipping from {price}', {
-        price: formatPrice(SHIPPING_FROM, 'EUR'),
+    ? say('product-chrome.buy_ship_flat', 'Flat shipping per order: {low} in Belgium, up to {high} worldwide.', {
+        low: formatPrice(SHIPPING_FROM, 'EUR'),
+        high: formatPrice(SHIPPING_TO, 'EUR'),
       })
     : quote.blocked
       ? say('product-chrome.buy_ship_blocked', 'We do not ship to {country}.', {
@@ -2753,6 +2819,7 @@ function ProductPage() {
     /** What it measures. */
     specs: (n, title) => (
         <Chapter
+          id={SPECS_ID}
           number={n}
           label="Datasheet"
           title={title}
@@ -2760,17 +2827,19 @@ function ProductPage() {
           noMedia
         >
           <dl className="spec-table">
+            {/* Count-up on the numeric runs the first time the table
+                scrolls into view. spec-table already sets tabular-nums, so
+                digits don't jitter mid-count; reduced-motion and
+                variant-switch re-renders are handled inside. */}
             {mergedSpecs.map(([k, v]) => (
-              <div key={k}>
-                <dt {...prodEdit(`${specEditBase(k)}.0`)}>{k}</dt>
-                {/* Count-up on the numeric runs the first time the table
-                    scrolls into view. spec-table already sets tabular-nums,
-                    so digits don't jitter mid-count; reduced-motion and
-                    variant-switch re-renders are handled inside. */}
-                <dd {...prodEdit(`${specEditBase(k)}.1`)}>
-                  <AnimatedNumber value={v} />
-                </dd>
-              </div>
+              <SpecRow
+                key={k}
+                name={k}
+                value={v}
+                nameProps={prodEdit(`${specEditBase(k)}.0`)}
+                valueProps={prodEdit(`${specEditBase(k)}.1`)}
+                animate
+              />
             ))}
           </dl>
           {comparison ? (
@@ -2808,6 +2877,7 @@ function ProductPage() {
     /** What ships. */
     inTheBox: (n, title) => (
         <Chapter
+          id={IN_THE_BOX_ID}
           number={n}
           label="In the box"
           title={title}
@@ -3219,12 +3289,41 @@ function ProductPage() {
           <div className="buy-rail">
             {railLadder}
             {railBuyModule}
-            <div
-              ref={railSentinelRef}
-              className="buy-rail-sentinel"
-              aria-hidden="true"
-            />
           </div>
+          {glanceRows.length ? (
+            <section className="product-glance" aria-labelledby="product-glance-title">
+              <h2 id="product-glance-title" className="product-glance-title">
+                {say('product-chrome.glance_title', 'At a glance')}
+              </h2>
+              <dl className="spec-table product-glance-table">
+                {glanceRows.map(([k, v]) => (
+                  <SpecRow key={k} name={k} value={v} />
+                ))}
+              </dl>
+              <p className="product-glance-links">
+                <a href={`#${SPECS_ID}`}>{say('product-chrome.glance_specs', 'All specs')}</a>
+                {mergedBox.length ? (
+                  <a href={`#${IN_THE_BOX_ID}`}>{say('product-chrome.glance_box', 'What is in the box')}</a>
+                ) : null}
+              </p>
+              {content.footnote ? (
+                <p className="product-glance-footnote">{content.footnote}</p>
+              ) : null}
+              {content.whatIsThis?.needs.length ? (
+                <details className="product-glance-new">
+                  <summary>{say('product-chrome.glance_new', 'New to FPV? What else you need to fly')}</summary>
+                  <ul>
+                    {content.whatIsThis.needs.map((need) => (
+                      <li key={need}>{need}</li>
+                    ))}
+                  </ul>
+                  <a href={`#${WHAT_IS_THIS_ID}`}>
+                    {say('product-chrome.glance_what', 'What this part does')}
+                  </a>
+                </details>
+              ) : null}
+            </section>
+          ) : null}
           {/* Separate compact bar pinned to the top while the in-hero selector
               is out of view, so variants stay switchable from anywhere. Coming
               soon: ladder only (see pinnedRail), and nothing at all when the
@@ -3247,6 +3346,14 @@ function ProductPage() {
               <span className="pair-cta-arrow" aria-hidden="true">→</span>
             </Link>
           ) : null}
+          {/* Below everything in this column (buy module, glance box): the
+              pinned bar takes over only once all of it is under the header,
+              so it never covers the glance rows. */}
+          <div
+            ref={railSentinelRef}
+            className="buy-rail-sentinel"
+            aria-hidden="true"
+          />
         </div>
       </section>
 

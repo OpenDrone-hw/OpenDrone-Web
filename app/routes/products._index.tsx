@@ -5,7 +5,8 @@ import {Form, Link, useLoaderData, useSearchParams} from 'react-router';
 import {ProductItem, type ProductQuickAdd} from '~/components/ProductItem';
 import type {StackOffer} from '~/components/StackQuickAdd';
 import type {MoneyV2, ProductCardFragment} from '~/lib/product-shapes';
-import {toCards} from '~/lib/catalog';
+import {formatPrice, toCards} from '~/lib/catalog';
+import {CAMPAIGN} from '~/lib/catalog-client';
 import {buyUrl, commerceHandoff} from '~/lib/shop-links';
 import {FAMILIES} from '~/lib/families';
 import {buildOf, parseBuilds} from '~/lib/build-recommendations';
@@ -17,6 +18,7 @@ import {
   hiddenWhileSoldOut,
   isConceptFor,
   isPurchasableStatus,
+  lineDisplayName,
 } from '~/lib/product-content';
 import {useProductStatusResolver, useRoadmapStatusResolver} from '~/lib/coming-soon';
 import {stackDiscountedPrice} from '~/lib/stack-discount';
@@ -83,10 +85,18 @@ export async function loader({request, context}: Route.LoaderArgs) {
   // shareable browse hub that lists every model on its own card. The
   // search term filters the same cards.
   const catalog = await context.catalog.get();
+  // The one fixed ship date of the campaign, the stack's paid batch, for
+  // the build guide's note on what ships when.
+  const stackShips =
+    Object.values(CAMPAIGN.skus)
+      .flatMap((entry) => entry.batches)
+      .find((batch) => batch.paid && batch.ships?.trim())
+      ?.ships?.trim() ?? null;
   return {
     products: toCards(catalog),
     commerceHandoff: commerceHandoff(catalog),
     term,
+    stackShips,
   };
 }
 
@@ -194,6 +204,35 @@ function matchesTerm(haystack: string, term: string): boolean {
   return words.every((w) => hay.includes(w));
 }
 
+/**
+ * How well a card answers the search term, lower is better: the card's own
+ * name equal to the term, then every word in its name, then every word in
+ * its handle or family, then a match on specs and keywords only. Searching
+ * "OpenRX" or "receiver" lists the receivers before the flight controller
+ * whose spec table mentions a receiver.
+ */
+function termRelevance(card: {title: string; product: ProductCardFragment}, term: string): number {
+  const words = sizes(normalise(term)).split(/\s+/).filter(Boolean);
+  if (!words.length) return 0;
+  const name = sizes(normalise(card.title));
+  if (name === words.join(' ')) return 0;
+  if (words.every((w) => name.includes(w))) return 1;
+  const family = sizes(
+    normalise(
+      [
+        card.product.title,
+        card.product.handle,
+        card.product.productType,
+        PRODUCT_CONTENT[card.product.handle]?.family,
+      ]
+        .filter(Boolean)
+        .join(' '),
+    ),
+  );
+  if (words.every((w) => name.includes(w) || family.includes(w))) return 2;
+  return 3;
+}
+
 /** A tier's spec values: the shared table with the tier's rows replacing
  *  (or, when null, removing) the shared row of the same key, so a 20x20 card
  *  does not match on the 30x30 board's mount pattern. */
@@ -229,7 +268,7 @@ function searchTextFor(p: ProductCardFragment, value = ''): string {
 }
 
 export default function ProductsIndex() {
-  const {products, commerceHandoff, term} = useLoaderData<typeof loader>();
+  const {products, commerceHandoff, term, stackShips} = useLoaderData<typeof loader>();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeType = searchParams.get('type');
   const onlySale = searchParams.get('sale') === '1';
@@ -428,6 +467,13 @@ export default function ProductsIndex() {
         sorted.sort((a, b) => rank(a) - rank(b));
       }
     }
+    // With a search term and the default order, the best match leads and
+    // the family order breaks ties (Array.sort is stable). A sort the buyer
+    // picks (price, name, newest) is kept as picked.
+    if (term && sort === 'featured') {
+      const relevance = new Map(sorted.map((c) => [c.key, termRelevance(c, term)]));
+      sorted.sort((a, b) => relevance.get(a.key)! - relevance.get(b.key)!);
+    }
     return sorted;
   }, [cards, term, activeType, onlySale, activeBuild, activeFirmware, sort]);
 
@@ -509,6 +555,9 @@ export default function ProductsIndex() {
                   fallback="What the status labels mean →"
                 />
               </Link>
+              <a href="#new-to-fpv" className="catalog-roadmap-btn">
+                <Txt id="collections-all.guide_link" fallback="New to FPV? What a build needs ↓" />
+              </a>
           </div>
         </Form>
       </header>
@@ -686,7 +735,189 @@ export default function ProductsIndex() {
           }
         />
       )}
+      {hasProducts ? (
+        <BuildGuide
+          products={products}
+          stackShips={stackShips}
+          onShowBuild={(id) => {
+            const next = new URLSearchParams();
+            next.set('build', id);
+            setSearchParams(next, {preventScrollReset: false});
+            if (typeof window !== 'undefined') window.scrollTo({top: 0, behavior: 'smooth'});
+          }}
+        />
+      ) : null}
     </div>
+  );
+}
+
+/** The build guide's order of parts, with the copy key that explains each. */
+const GUIDE_ROLES: Array<{role: string; copyId: string}> = [
+  {role: 'flight-controller', copyId: 'collections-all.guide_role_fc'},
+  {role: 'esc', copyId: 'collections-all.guide_role_esc'},
+  {role: 'frame', copyId: 'collections-all.guide_role_frame'},
+  {role: 'motors', copyId: 'collections-all.guide_role_motors'},
+  {role: 'receiver', copyId: 'collections-all.guide_role_receiver'},
+];
+
+/**
+ * "New to FPV? What you need for a build": for each build size in
+ * content/builds.json, the parts one quad needs, each linked to its own
+ * product option with the quantity and today's price, then what a build
+ * needs that this shop does not sell. The parts come from builds.json and
+ * the names and prices from the catalog, so the guide cannot list a part
+ * or a price the shop does not have. A part the catalog lacks is skipped.
+ */
+function BuildGuide({
+  products,
+  stackShips,
+  onShowBuild,
+}: {
+  products: CatalogProduct[];
+  stackShips: string | null;
+  onShowBuild: (buildId: string) => void;
+}) {
+  const builds = BUILDS.builds.map((build) => {
+    const parts = GUIDE_ROLES.flatMap(({role, copyId}) => {
+      const part = build.parts.find((p) => p.role === role);
+      if (!part) return [];
+      const handle = BUILDS.roles[part.role]?.handle;
+      const product = products.find((p) => p.handle === handle);
+      const variant = product?.variants.nodes.find((v) => v.sku === part.sku);
+      if (!product || !variant) return [];
+      const query = new URLSearchParams(
+        variant.selectedOptions
+          .filter((o) => o.value !== 'Default Title')
+          .map((o): [string, string] => [o.name, o.value]),
+      ).toString();
+      return [
+        {
+          role,
+          copyId,
+          name: lineDisplayName(product.handle, product.title, variant.title),
+          to: `/products/${product.handle}${query ? `?${query}` : ''}`,
+          quantity: part.quantity,
+          price: variant.price,
+        },
+      ];
+    });
+    const currency = parts[0]?.price.currencyCode ?? 'EUR';
+    const total = parts.reduce((sum, p) => sum + num(p.price) * p.quantity, 0);
+    return {id: build.id, label: build.label, parts, total, currency};
+  });
+  if (!builds.some((b) => b.parts.length)) return null;
+  const shipNote = stackShips
+    ? (copyText('collections-all.guide_ships') ?? '').replace('{stack_ships}', stackShips)
+    : '';
+
+  return (
+    <section
+      id="new-to-fpv"
+      className="mt-16 scroll-mt-28 border-t border-[var(--color-border)] pt-10"
+    >
+      <Txt id="collections-all.guide_eyebrow" as="p" className="page-eyebrow" />
+      <Txt
+        id="collections-all.guide_title"
+        as="h2"
+        className="font-display text-2xl md:text-3xl font-bold tracking-tight text-[var(--color-text)] mb-3"
+      />
+      <Txt
+        id="collections-all.guide_lead"
+        as="p"
+        className="max-w-[46rem] text-[15px] leading-relaxed text-[var(--color-text-muted)] mb-8"
+      />
+      <div className="grid gap-5 md:grid-cols-2">
+        {builds.map((build) =>
+          build.parts.length ? (
+            <div
+              key={build.id}
+              className="rounded-[var(--r-md,12px)] border border-[var(--color-border)] bg-[var(--color-bg-card)] p-5 md:p-6"
+            >
+              <div className="flex items-baseline justify-between gap-3 mb-4">
+                <h3 className="font-display text-lg font-bold text-[var(--color-text)]">
+                  {(copyText('collections-all.guide_build_title') ?? '{label} build').replace(
+                    '{label}',
+                    build.label,
+                  )}
+                </h3>
+                <span className="font-mono text-[12px] text-[var(--color-text-muted)] whitespace-nowrap">
+                  {(copyText('collections-all.guide_total') ?? 'Parts: {price}').replace(
+                    '{price}',
+                    formatPrice(build.total, build.currency),
+                  )}
+                </span>
+              </div>
+              <ol className="flex flex-col">
+                {build.parts.map((part, i) => (
+                  <li
+                    key={part.role}
+                    className={`grid grid-cols-[1.75rem_1fr_auto] gap-x-3 py-3 ${
+                      i > 0 ? 'border-t border-[var(--color-border)]' : ''
+                    }`}
+                  >
+                    <span
+                      className="font-mono text-[12px] text-[var(--color-gold-text)] pt-0.5"
+                      aria-hidden="true"
+                    >
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+                    <div className="min-w-0">
+                      <Link
+                        prefetch="intent"
+                        to={part.to}
+                        className="font-medium text-[var(--color-text)] underline decoration-[var(--color-border-strong)] underline-offset-4 hover:decoration-[var(--color-gold)]"
+                      >
+                        {part.quantity > 1 ? `${part.quantity} × ` : ''}
+                        {part.name}
+                      </Link>
+                      <Txt
+                        id={part.copyId}
+                        as="p"
+                        className="mt-1 text-[13px] leading-snug text-[var(--color-text-muted)]"
+                      />
+                    </div>
+                    <span className="font-mono text-[13px] text-[var(--color-text)] whitespace-nowrap pt-0.5">
+                      {part.quantity > 1
+                        ? `${part.quantity} × ${formatPrice(part.price.amount, part.price.currencyCode)}`
+                        : formatPrice(part.price.amount, part.price.currencyCode)}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+              <button
+                type="button"
+                onClick={() => onShowBuild(build.id)}
+                className="mt-4 font-mono text-[12px] uppercase tracking-[0.15em] text-[var(--color-gold-text)] hover:text-[var(--color-gold-text-hover)] min-h-[44px]"
+              >
+                {(copyText('collections-all.guide_filter') ?? 'Show only {label} parts').replace(
+                  '{label}',
+                  build.label,
+                )}
+              </button>
+            </div>
+          ) : null,
+        )}
+      </div>
+      <div className="mt-6 grid gap-5 md:grid-cols-2 text-[14px] leading-relaxed text-[var(--color-text-muted)]">
+        <div>
+          <Txt
+            id="collections-all.guide_also_title"
+            as="h3"
+            className="font-display text-base font-bold text-[var(--color-text)] mb-2"
+          />
+          <Txt id="collections-all.guide_also_body" as="p" />
+        </div>
+        <div>
+          <Txt
+            id="collections-all.guide_when_title"
+            as="h3"
+            className="font-display text-base font-bold text-[var(--color-text)] mb-2"
+          />
+          {shipNote ? <p className="mb-2">{shipNote}</p> : null}
+          <Txt id="collections-all.guide_when_body" as="p" />
+        </div>
+      </div>
+    </section>
   );
 }
 

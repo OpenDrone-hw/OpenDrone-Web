@@ -89,6 +89,19 @@ export type HeroStacks = Record<string, HeroCard[]>;
  * `public/models/od5/` exists; the size toggle appears when two are built.
  */
 const HERO_BUILT_SIZES: readonly string[] = ['3'];
+
+/**
+ * Shop names for the pieces the splash manifest ticks off. `chunks.json` is
+ * written by the hero build from the CAD part names ("OpenFC", "4in1-mini");
+ * a buyer reads the names the shop sells, so a known chunk id is shown under
+ * its product name and an unknown one keeps its build label.
+ */
+const HERO_PIECE_NAMES: Readonly<Record<string, string>> = {
+  frame: 'OpenFrame 3" Freestyle',
+  'board-4in1-mini': 'OpenESC 20×20',
+  'board-OpenFC': 'OpenFC Lite 20×20',
+  'board-OpenRX-Lite-UFL': 'OpenRX Lite-UFL',
+};
 const HERO_SIZES = HERO_AIRFRAME_KEYS.filter((k) => HERO_BUILT_SIZES.includes(k));
 const HERO_START_SIZE = HERO_SIZES[0] ?? HERO_AIRFRAME_KEYS[0];
 
@@ -470,7 +483,11 @@ function DesktopHome({
   const [loadActive, setLoadActive] = useState<string | null>(null);
   const handleModelLoad = useCallback(
     (s: HeroLoadState) => {
-      setLoadPieces((prev) => (prev.length ? prev : s.pieces));
+      setLoadPieces((prev) =>
+        prev.length
+          ? prev
+          : s.pieces.map((p) => ({id: p.id, label: HERO_PIECE_NAMES[p.id] ?? p.label})),
+      );
       setLoadActive(s.chunk);
       if (s.done)
         setLoadDone((prev) =>

@@ -98,6 +98,13 @@
       "T700 carbon, aluminium camera mounts"
     ]
   ],
+  "glance": [
+    "Prop size",
+    "Wheelbase",
+    "Stack mounting",
+    "Motor mounting",
+    "Video systems"
+  ],
   "optionAxis": "Model",
   "variants": {
     "5\" Freestyle": {

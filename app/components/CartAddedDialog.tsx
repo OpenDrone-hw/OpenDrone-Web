@@ -413,7 +413,9 @@ export function CartAddedDialog() {
           {subtotal ? (
             <p className="cart-added-subtotal" style={{gridColumn: '1 / -1', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '1rem', margin: 0}}>
               <span>
-                {t('added_subtotal', 'Subtotal ({count} items)', {count: String(summary.totalQuantity)})}
+                {summary.totalQuantity === 1
+                  ? t('added_subtotal_one', 'Subtotal (1 item)')
+                  : t('added_subtotal', 'Subtotal ({count} items)', {count: String(summary.totalQuantity)})}
                 {vatIncluded ? (
                   <small style={{display: 'block', color: 'var(--color-text-muted)'}}>
                     {t('added_subtotal_note', 'incl. VAT, shipping at checkout')}

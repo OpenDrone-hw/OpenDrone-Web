@@ -97,7 +97,12 @@ function Bar({bar, thin = false}: {bar: MeterBar; thin?: boolean}) {
       aria-valuenow={pct}
       aria-valuetext={bar.label}
     >
-      <span className="funding-meter-fill" style={{width: `${pct}%`}} />
+      {/* Nothing counted yet: no fill at all, not a sliver. */}
+      <span
+        className="funding-meter-fill"
+        data-empty={bar.value > 0 ? undefined : ''}
+        style={{width: `${pct}%`}}
+      />
     </span>
   );
 }

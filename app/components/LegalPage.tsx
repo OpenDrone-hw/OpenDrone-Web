@@ -7,6 +7,25 @@ import {LEGAL_UI_STRINGS, type Locale} from '~/lib/i18n';
  * eyebrow, back-link, "Last updated") localises via `locale`; the
  * legal body HTML is rendered as-is from the per-locale Markdown file.
  */
+/**
+ * The page has one h1, the title above. A body that still carries its own
+ * `# Heading` (a Markdown file with front matter keeps it) loses that
+ * heading when it only repeats the title, and has it rendered as an h2
+ * otherwise, so no text is dropped.
+ */
+function singleH1(html: string, title: string): string {
+  const plain = (s: string) =>
+    s
+      .replace(/<[^>]+>/g, '')
+      .replace(/&amp;/g, '&')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+  return html.replace(/<h1\b([^>]*)>([\s\S]*?)<\/h1>/gi, (_m, attrs: string, inner: string) =>
+    plain(inner) === plain(title) ? '' : `<h2${attrs}>${inner}</h2>`,
+  );
+}
+
 export function LegalPage({
   title,
   eyebrow = 'Legal',
@@ -38,7 +57,7 @@ export function LegalPage({
         {html ? (
           <div
             className="rich-content legal-body"
-            dangerouslySetInnerHTML={{__html: html}}
+            dangerouslySetInnerHTML={{__html: singleH1(html, title)}}
           />
         ) : null}
 

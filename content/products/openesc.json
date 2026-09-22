@@ -314,6 +314,13 @@
       "6-layer, 1.6 mm, 2 oz copper"
     ]
   ],
+  "glance": [
+    "Continuous",
+    "Input",
+    "Mounting",
+    "Frame fit",
+    "FC connector"
+  ],
   "optionAxis": "Model",
   "variants": {
     "20×20": {

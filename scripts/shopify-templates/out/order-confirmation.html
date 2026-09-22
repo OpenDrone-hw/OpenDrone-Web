@@ -138,12 +138,17 @@
                         An item from a funding target ships about 10 weeks
                         after its target is reached. The target deadline is
                         31 December 2026. If a target is missed, we email you
-                        and you choose: a full refund for that item, or keep
-                        your order for the next date we set.
+                        and you choose: a full refund for that item within
+                        14 days, or keep your order for the new date in that
+                        email. If you do not reply within 30 days, we refund
+                        that item.
                       </p>
                       <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #c5c5c5;">
                         Your order ships once, in one parcel, when every item
-                        in it is ready. How preorders work:
+                        in it is ready. If a target in it is missed, the rest
+                        of the order ships without waiting for that item, and
+                        if nothing else is left to ship we refund the shipping
+                        cost too. How preorders work:
                         <a href="https://opendrone.be/preorder" style="color: #ffb700;">opendrone.be/preorder</a>
                       </p>
                     </td>
@@ -254,10 +259,10 @@
                   order. Your parcel ships from Belgium to outside the EU, so
                   the carrier may ask you to pay import duties, taxes and a
                   handling fee on delivery.
-                  {% if shipping_address.country_code == 'US' %}US duties on
-                  electronics made in China are high: for boards, expect
-                  roughly 35 to 40% of the declared value. US Customs sets
-                  the final amount.{% endif %}
+                  {% if shipping_address.country_code == 'US' %}US import
+                  duty on electronics and motors made in China is high,
+                  often around 35 to 40% of the value. US customs sets the
+                  amount, not us.{% endif %}
                 </p>
               </td>
             </tr>

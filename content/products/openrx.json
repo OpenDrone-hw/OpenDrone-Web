@@ -167,6 +167,13 @@
       "6-layer, 1.0 mm"
     ]
   ],
+  "glance": [
+    "Band",
+    "Antenna",
+    "Protocol",
+    "Input",
+    "Dimensions"
+  ],
   "optionAxis": "Model",
   "variants": {
     "Lite": {

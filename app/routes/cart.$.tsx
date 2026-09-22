@@ -191,8 +191,8 @@ function SplitReminder({
     <div className="cart-mixed-warning" role="status">
       <p>
         {cartHasLines
-          ? t('split_removed', 'Removed for a second order. Check out this order first, then add these back:')
-          : t('split_removed_ready', 'Your second order: add these back to the cart.')}
+          ? t('split_removed_waiting', 'Saved for a second order. Check out the order below first, then come back here to add these:')
+          : t('split_removed_ready', 'Your second order is ready to add back to the cart:')}
       </p>
       <ul>
         {items.map((item) => (
@@ -204,9 +204,13 @@ function SplitReminder({
         ))}
       </ul>
       <div className="cart-secondary-actions">
-        {!cartHasLines && addable.length ? (
+        {addable.length ? (
           <button type="button" className="cart-keep-shopping" disabled={busy} onClick={() => void addBack()}>
-            {busy ? t('split_adding', 'Adding…') : t('split_add_back', 'Add these back')}
+            {busy
+              ? t('split_adding', 'Adding…')
+              : cartHasLines
+                ? t('split_put_back', 'Put them back in this order')
+                : t('split_add_back', 'Add these to the cart')}
           </button>
         ) : null}
         <button type="button" className="cart-keep-shopping" disabled={busy} onClick={() => onChange([])}>
@@ -419,6 +423,14 @@ function PopulatedCart({
           {hasPreorder && !mixed ? <Txt id="cart.note_preorder" as="p" className="cart-summary-note" /> : null}
           <DutyNote country={country} />
           {checkoutForm('cart-checkout-cta')}
+          {shipBlocked ? null : (
+            <p className="cart-summary-note cart-checkout-domain">
+              {t(
+                'checkout_domain',
+                "Checkout opens on opendrone.store, OpenDrone's secure Shopify checkout. You pay there.",
+              )}
+            </p>
+          )}
           <div className="cart-secondary-actions">
             <Link className="cart-keep-shopping" to="/products"><Txt id="cart.keep_shopping" /></Link>
           </div>
@@ -508,13 +520,15 @@ function MixedWarning({
           const target = info[line.id]?.target;
           return (
             <li key={line.id}>
-              {lineName(line)}: {line.shipPromise ?? copyText('cart.mixed_in_stock') ?? 'in stock'}
-              {target
-                ? ` ${t('mixed_target', '(its target: {ordered} of {units} ordered)', {
+              <strong>{lineName(line)}</strong>: {line.shipPromise ?? copyText('cart.mixed_in_stock') ?? 'in stock'}
+              {target ? (
+                <small className="cart-mixed-target">
+                  {t('mixed_target_count', '{ordered} of {units} ordered toward its funding target', {
                     ordered: target.ordered,
                     units: target.units,
-                  })}`
-                : null}
+                  })}
+                </small>
+              ) : null}
             </li>
           );
         })}
@@ -523,11 +537,17 @@ function MixedWarning({
       {plan ? (
         <>
           <p>
-            {t(
-              'mixed_split',
-              'Want {keep} sooner? Order {later} separately: remove it here, check out, then order it in a second order. Each order ships on its own and has its own shipping charge.',
-              {keep: names(plan.keep), later: names(plan.later)},
-            )}
+            {plan.later.length > 1
+              ? t(
+                  'mixed_split_many',
+                  'To get {keep} sooner, order {later} separately: remove them here, check out this order, then add them back for a second order. Each order ships on its own and pays its own shipping.',
+                  {keep: names(plan.keep), later: names(plan.later)},
+                )
+              : t(
+                  'mixed_split_one',
+                  'To get {keep} sooner, order {later} separately: remove it here, check out this order, then add it back for a second order. Each order ships on its own and pays its own shipping.',
+                  {keep: names(plan.keep), later: names(plan.later)},
+                )}
           </p>
           <Form method="post" action="/api/shopify/cart" onSubmit={(event) => void split(event)}>
             <input type="hidden" name="intent" value="remove" />
@@ -535,7 +555,7 @@ function MixedWarning({
             <button type="submit" className="cart-keep-shopping" disabled={busy}>
               {busy
                 ? t('split_busy', 'Removing…')
-                : t('split_cta_named', 'Remove {later} for a second order', {later: names(plan.later)})}
+                : t('split_cta_named', 'Move {later} to a second order', {later: names(plan.later)})}
             </button>
           </Form>
           {failed ? (
@@ -686,7 +706,13 @@ function LineQuantity({line, max}: {line: ShopifyCartLine; max: number}) {
         <input type="hidden" name="lineId" value={line.id} />
         <button type="submit" disabled={busy}><Txt id="cart.line_remove" /></button>
       </Form>
-      {error ? <small className="cart-line-error" role="alert">{error}</small> : null}
+      {error ? (
+        <small className="cart-line-error" role="alert">{error}</small>
+      ) : quantity >= max && max >= MAX_LINE_QUANTITY ? (
+        <small className="cart-line-max">
+          {t('line_max', 'Max {count} per order. For more, email contact@opendrone.be.', {count: MAX_LINE_QUANTITY})}
+        </small>
+      ) : null}
     </div>
   );
 }

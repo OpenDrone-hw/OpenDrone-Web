@@ -1,7 +1,7 @@
 import type {Route} from './+types/preorder';
 import {shopifyImageUrl} from '~/lib/shopify-image';
 import {Link, useLoaderData} from 'react-router';
-import {buildSeoMeta} from '~/lib/seo';
+import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {EditorialShell} from '~/components/EditorialShell';
 import {PreorderMeter} from '~/components/PreorderMeter';
 import {AddToCartButton} from '~/components/AddToCartButton';
@@ -40,6 +40,7 @@ export const meta: Route.MetaFunction = () =>
   buildSeoMeta({
     title: copyText('preorder.meta_title') ?? 'Preorders',
     description: copyText('preorder.meta_description') ?? '',
+    canonical: `${SITE_ORIGIN}/preorder`,
   });
 
 type TrackerRow = {
@@ -165,9 +166,17 @@ export async function loader({context}: Route.LoaderArgs) {
     endsOn: longDate(CAMPAIGN.endsOn),
     unavailable: catalog.campaign_counts === 'unavailable',
     summary: {
-      stackLeft: stock.length
-        ? stock.reduce((sum, r) => sum + r.campaign.batchUnits - r.campaign.batchOrdered, 0)
-        : null,
+      // One figure per board and size: a single total ("1000 left") reads
+      // like 1000 of one board, while each option has its own batch.
+      // Flight controller before ESC, then by size: the stack's order.
+      stackLeft: [...stock]
+        .sort((a, b) => b.product.localeCompare(a.product) || a.variant.localeCompare(b.variant))
+        .map((r) => ({
+        sku: r.sku,
+        name: r.variant ? `${r.product} ${r.variant}` : r.product,
+        left: r.campaign.batchUnits - r.campaign.batchOrdered,
+        units: r.campaign.batchUnits,
+      })),
       ordered: ordered > 0 ? ordered : null,
       // Shown once a target is reached; "0 / 8" only discourages.
       reached: funding.some((r) => r.campaign.targetReached)
@@ -195,17 +204,24 @@ export default function PreorderRoute() {
     return {raw, date: m?.[1] ?? null, text: m?.[2] ?? raw};
   });
 
-  const cells = [
-    summary.stackLeft !== null
-      ? {key: 'stack', label: 'preorder.strip_stack_label', value: String(summary.stackLeft)}
-      : null,
+  type Cell = {key: string; label: string; value: string};
+  const stackCells: Cell[] = summary.stackLeft.map((row) => ({
+    key: `stack-${row.sku}`,
+    label: fill(copyText('preorder.strip_stack_each') ?? '{name}', {name: row.name}),
+    value: fill(copyText('preorder.strip_stack_value') ?? '{left} of {units} left in batch 1', {
+      left: row.left,
+      units: row.units,
+    }),
+  }));
+  const cells: Cell[] = [
+    ...stackCells,
     summary.reached !== null
-      ? {key: 'reached', label: 'preorder.strip_reached_label', value: summary.reached}
+      ? {key: 'reached', label: copyText('preorder.strip_reached_label') ?? '', value: summary.reached}
       : null,
     summary.ordered !== null
-      ? {key: 'ordered', label: 'preorder.strip_ordered_label', value: String(summary.ordered)}
+      ? {key: 'ordered', label: copyText('preorder.strip_ordered_label') ?? '', value: String(summary.ordered)}
       : null,
-  ].filter((c): c is {key: string; label: string; value: string} => c !== null);
+  ].filter((c): c is Cell => c !== null);
 
   return (
     <EditorialShell slug="preorder" rail={false} pageClassName="preorder-page">
@@ -218,7 +234,7 @@ export default function PreorderRoute() {
           <dl className="preorder-strip">
             {cells.map((cell) => (
               <div className="preorder-strip-cell" key={cell.key}>
-                <Txt id={cell.label} as="dt" className="preorder-strip-label" />
+                <dt className="preorder-strip-label">{cell.label}</dt>
                 <dd className="preorder-strip-value">{cell.value}</dd>
               </div>
             ))}

@@ -15,7 +15,7 @@
       "A 4-in-1 ESC and four motors (OpenESC pairs directly, one plug)",
       "A receiver wired to a UART (OpenRX, CRSF)",
       "A camera and VTX if you want a live video feed",
-      "A frame, props, and a 3-6S LiPo",
+      "A frame, props, and a LiPo battery: 3-6S for the 20×20, 3-8S for the 30×30",
       "A radio and goggles on your side of the link"
     ],
     "fit": "It sits in the middle of the stack. The receiver, ESC, camera and VTX all connect to it.",
@@ -39,7 +39,7 @@
     "pins": [
       {
         "ref": "①",
-        "part": "RP2354B ",
+        "part": "RP2354B",
         "refs": [
           "U2"
         ]
@@ -295,6 +295,13 @@
       "PCB",
       "6-layer, 1.6 mm"
     ]
+  ],
+  "glance": [
+    "Mounting",
+    "Input",
+    "UARTs",
+    "Frame fit",
+    "Firmware"
   ],
   "optionAxis": "Model",
   "variants": {

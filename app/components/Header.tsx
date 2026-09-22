@@ -781,9 +781,9 @@ function HeaderCtas({
       <HeaderSearch />
       {/* Community: the source and the people, one click from every page.
           Between the tablet and 1280px breakpoints the shop links need the
-          room, so the two icons step out there (the drawer and footer keep
-          them). */}
-      <span className="inline-flex items-center gap-2 md:hidden xl:inline-flex xl:gap-5">
+          room, so the two icons step out there, and below 400px they make
+          room for the search icon (the footer keeps them). */}
+      <span className="inline-flex items-center gap-2 max-[400px]:hidden md:hidden xl:inline-flex xl:gap-5">
       <a
         className="site-header-icon hidden md:inline-flex"
         href="https://github.com/OpenDrone-hw"
@@ -815,10 +815,11 @@ function HeaderCtas({
 }
 
 /**
- * Desktop header search: a magnifier that opens a one-field GET form onto
- * the product listing, which filters the catalog by `q` (the same target as
- * the mobile drawer's search field and /search). Escape or a click outside
- * closes it.
+ * Header search: a magnifier that opens a one-field GET form onto the
+ * product listing, which filters the catalog by `q` (the same target as the
+ * mobile drawer's search field and /search). On phones the field spans the
+ * screen under the header bar; from md up it drops below the icon. Escape
+ * or a click outside closes it.
  */
 function HeaderSearch() {
   const [open, setOpen] = useState(false);
@@ -844,7 +845,7 @@ function HeaderSearch() {
     // eslint-disable-next-line jsx-a11y/no-static-element-interactions
     <div
       ref={wrap}
-      className="relative hidden md:inline-flex"
+      className="relative inline-flex"
       onKeyDown={(e) => {
         if (e.key === 'Escape' && open) {
           e.stopPropagation();
@@ -870,8 +871,8 @@ function HeaderSearch() {
           action="/products"
           method="get"
           role="search"
-          className="absolute right-0 top-full mt-3 z-50 flex items-center gap-2 rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-bg-elevated)] p-2 shadow-lg"
-          style={{width: 'min(22rem, 70vw)', maxWidth: 'none'}}
+          className="header-search-form fixed left-4 right-4 top-[72px] md:absolute md:left-auto md:right-0 md:top-full md:mt-3 md:w-[min(22rem,70vw)] z-50 flex items-center gap-2 rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-bg-elevated)] p-2 shadow-lg"
+          style={{maxWidth: 'none'}}
           onSubmit={() => setOpen(false)}
         >
           <input

@@ -219,7 +219,9 @@ export function Aside({
             &times;
           </button>
         </header>
-        <main>{children}</main>
+        {/* A div, not <main>: the page already has its one main landmark,
+            and the drawer is a dialog laid over it. */}
+        <div className="aside-body">{children}</div>
       </aside>
     </div>
   );

@@ -35,8 +35,19 @@ function specLineOf(p: RelatedProduct): string | null {
   const parts: string[] = [];
   const fw = c.firmware?.project;
   if (fw && fw !== '-') parts.push(fw);
-  const chip = cell('mcu') ?? cell('radio');
-  if (chip) parts.push(clause(chip));
+  const chipKey = cell('mcu') !== undefined ? 'mcu' : 'radio';
+  const baseChip = cell(chipKey);
+  if (baseChip) {
+    // The base table is one variant's; when variants name different chips
+    // (the 20x20 FC runs an RP2354A, the 30x30 an RP2354B) the card names
+    // what they share, so the "from" price and the chip always agree.
+    const chips = new Set([clause(baseChip)]);
+    for (const v of Object.values(c.variants ?? {})) {
+      const own = v.specs?.find(([k]) => k.toLowerCase() === chipKey)?.[1];
+      if (own) chips.add(clause(own));
+    }
+    parts.push(chips.size > 1 ? sharedStem([...chips]) || clause(baseChip) : clause(baseChip));
+  }
   // The base table describes one variant; with several (3" and 5" frames)
   // its first rows would contradict the "from" price, so name the variants.
   const variantNames = Object.entries(c.variants ?? {}).map(([k, v]) => v.label ?? k);
@@ -45,6 +56,19 @@ function specLineOf(p: RelatedProduct): string | null {
     for (const [, v] of rows.slice(0, 2)) parts.push(clause(v));
   }
   return parts.slice(0, 2).join(' · ') || null;
+}
+
+/** The common start of several chip names, "RP2354A" + "RP2354B" →
+ *  "RP2354". Empty when they share fewer than three characters. */
+function sharedStem(names: string[]): string {
+  let stem = names[0];
+  for (const n of names.slice(1)) {
+    let i = 0;
+    while (i < stem.length && i < n.length && stem[i] === n[i]) i++;
+    stem = stem.slice(0, i);
+  }
+  stem = stem.replace(/[\s,·-]+$/, '');
+  return stem.length >= 3 ? stem : '';
 }
 
 /** Mono eyebrow in catalog-number language: "FILE 02 · FLIGHT CONTROLLER". */

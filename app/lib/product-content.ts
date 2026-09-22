@@ -85,6 +85,56 @@ export type WhatIsThis = {
 };
 
 /**
+ * One plain line per spec row name, for buyers new to FPV: what the row
+ * means, never a claim about a product. The PDP shows it behind a "?"
+ * button next to the row name. Rows without an entry get no button.
+ */
+export const SPEC_HELP: Readonly<Record<string, string>> = {
+  Mounting: 'Spacing of the mounting holes. A flight controller, ESC and frame stack together when they share it: 20 × 20 with 20 × 20, 30.5 × 30.5 with 30.5 × 30.5.',
+  'Stack mounting': 'Hole patterns in the middle of the frame for the flight controller and ESC stack.',
+  'Motor mounting': 'Bolt pattern at each arm tip. The base of your motors must match it.',
+  'Frame fit': 'Which OpenDrone frames this board bolts into.',
+  Frame: 'The OpenDrone frame this motor is sized for.',
+  Input: 'Battery voltage it accepts. "S" is the number of LiPo cells in series; one full cell is 4.2 V.',
+  UARTs: 'Serial ports for add-ons such as the receiver, a GPS or a digital video system. More ports, more add-ons.',
+  Firmware: 'The software that runs on it. Open source, and you can update it yourself.',
+  MCU: 'The main processor chip.',
+  IMU: 'The motion sensor: a gyroscope and accelerometer that tell the flight controller how the drone moves.',
+  Barometer: 'Air-pressure sensor used for altitude hold.',
+  Blackbox: 'Flight data logger, used to tune the drone and find problems.',
+  OSD: 'On-screen display: flight data such as battery voltage drawn over your video feed.',
+  'Motor outputs': 'Signal outputs to the ESC, one per motor.',
+  RX: 'How a separate receiver connects.',
+  BEC: 'On-board power supply for the camera, video transmitter and receiver.',
+  'Current sense': 'Measures battery current, so you can see how much of the pack you have used.',
+  Continuous: 'Current each motor channel carries without a break. Bigger motors and props draw more.',
+  'ESC protocol': 'How the flight controller sends throttle to the ESC. Bidirectional DShot also reports motor speed back.',
+  Telemetry: 'Data the ESC sends back to the flight controller, such as motor speed.',
+  'FC connector': 'The plug that links the ESC to the flight controller.',
+  MOSFETs: 'The power switches that drive each motor.',
+  Band: 'Radio frequency of the control link. Your radio needs a transmitter on the same band.',
+  Radio: 'The radio chip.',
+  Antenna: 'Ceramic is built onto the board. U.FL is a socket for an external antenna, which usually gives more range.',
+  'Telemetry power': 'Power the receiver uses to send data back to your radio.',
+  Protocol: 'How the receiver talks to the flight controller.',
+  Flashing: 'How you update the firmware.',
+  Dimensions: 'Outside size of the board.',
+  'Prop size': 'Propeller diameter in inches. It sets the class of the drone: a 3-inch or a 5-inch.',
+  Wheelbase: 'Diagonal distance between two opposite motor centres.',
+  'Max stack height': 'Tallest flight controller and ESC stack that fits between the plates.',
+  'Camera width': 'Widest FPV camera the mounts take.',
+  'Video systems': 'FPV camera systems the frame has mounts for.',
+  Stator: 'Motor size as stator width × height in mm: a 1604 is 16 mm wide and 4 mm tall.',
+  KV: 'Motor speed per volt with no load. Lower KV turns bigger props or runs on more cells.',
+  'Sold as': 'What one price buys. A quadcopter needs four motors.',
+};
+
+/** The help line for a spec row name, if there is one. */
+export function specHelp(key: string): string | undefined {
+  return Object.prototype.hasOwnProperty.call(SPEC_HELP, key) ? SPEC_HELP[key] : undefined;
+}
+
+/**
  * The homepage hero caption for a product: `whatIsThis.hero` when set,
  * otherwise the intro's first two sentences (first one only when two run
  * past 200 characters, hero copy is a caption, not a chapter). One
@@ -359,6 +409,10 @@ export type ProductContent = {
    *  "Weight", "Mount", "Shaft", "Rated cells", "Max current". */
   specs: Array<[string, string]>;
   footnote?: string;            // appears under the spec table
+  /** Spec row names shown in the "At a glance" box beside the buy module,
+   *  in order. Each must be a row of the merged (variant) spec table; a
+   *  name the selected variant lacks is skipped, so nothing is invented. */
+  glance?: string[];
   /** Extra words the catalog search matches for this product, the terms FPV
    *  buyers type that the name does not carry ("stack", "4in1"). */
   keywords?: string[];

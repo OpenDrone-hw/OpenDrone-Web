@@ -42,7 +42,7 @@
   "nav_end_use": "End-use policy",
   "nav_cookie_settings": "Cookie settings",
   "footer_run_by": "This shop is run by",
-  "footer_licence_line": "Hardware: CERN-OHL-S. Firmware: GPL/MIT. Open Source Hardware.",
+  "footer_licence_line": "Flight controller, ESC and receiver designs: CERN-OHL-S. Firmware: GPL/MIT.",
   "footer_site_source_line": "This site is Open Source too: [OpenDrone-Web](https://github.com/OpenDrone-hw/OpenDrone-Web).",
   "heading_help": "Customer service",
   "nav_support": "Support",
