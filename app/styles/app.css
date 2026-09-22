@@ -5884,6 +5884,41 @@ button.reset {
   }
 }
 
+/* Product page buy box: the stack offer is an always-visible row under the
+   Pre-order button, not a hover flyout. Pinned rails keep it hidden. */
+.cta-stack-group--inline .cta-stack-flyout {
+  position: static;
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+  padding-bottom: 0;
+  padding-top: 0.5rem;
+}
+.cta-stack-group--inline .cta-stack-offer {
+  box-shadow: none;
+  border-radius: var(--r-md);
+}
+.cta-stack-group--inline .cta-stack-offer-label {
+  white-space: normal;
+}
+.buy-rail.is-pinned .cta-stack-group--inline .cta-stack-flyout {
+  display: none;
+}
+/* Next to the quantity stepper the group dissolves into the buy row: the
+   Pre-order button keeps its place beside the stepper and the offer wraps
+   onto its own full-width line below both. */
+.product-buy .product-form:has(> .product-qty) > .cta-stack-group--inline {
+  display: contents;
+}
+.product-buy .product-form:has(> .product-qty) > .cta-stack-group--inline > .add-to-cart-form > button {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.product-buy .product-form:has(> .product-qty) > .cta-stack-group--inline > .cta-stack-flyout {
+  flex: 1 1 100%;
+  padding-top: 0;
+}
+
 /* Catalog card quick-add: a pill pinned to the bottom-right of the media
    square (the wrapper mirrors the 1:1 media box so it anchors to the image,
    not the text body), revealed on card hover. Touch: always visible. */

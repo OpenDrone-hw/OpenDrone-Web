@@ -660,5 +660,16 @@
     "4in1",
     "4-in-1",
     "esc"
-  ]
+  ],
+  "stack": {
+    "adds": "flight controller",
+    "partners": [
+      {
+        "handle": "openfc-lite",
+        "label": "OpenFC Lite"
+      }
+    ],
+    "matchOption": "Model"
+  },
+  "footnote": "Weight is published once production boards are weighed."
 }

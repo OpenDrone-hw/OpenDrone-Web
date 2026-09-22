@@ -35,6 +35,11 @@ export type StackOffer = {
   /** Handle of the board the visitor is looking at, for event props. */
   product?: string | null;
   available: boolean;
+  /** What the partner adds, for the inline wording: 'ESC', 'flight
+   *  controller'. */
+  adds?: string;
+  /** Plain sum of both boards' prices, shown as the stack total. */
+  total?: MoneyV2 | null;
 };
 
 /**
@@ -47,15 +52,19 @@ export function StackQuickAdd({
   children,
   offers,
   onAdd,
+  inline = false,
 }: {
   /** The primary CTA (usually an AddToCartButton). */
   children: React.ReactNode;
   offers: StackOffer[];
   onAdd?: () => void;
+  /** Always-visible row under the CTA (the product page buy box) instead
+   *  of the hover flyout, worded "Add the matching ESC, stack total". */
+  inline?: boolean;
 }) {
   if (!offers.length) return <>{children}</>;
   return (
-    <div className="cta-stack-group">
+    <div className={`cta-stack-group${inline ? ' cta-stack-group--inline' : ''}`}>
       {children}
       <div className="cta-stack-flyout" aria-label="Buy as a stack">
         {offers.map((o) => (
@@ -83,10 +92,15 @@ export function StackQuickAdd({
               +
             </span>
             <span className="cta-stack-offer-label">
-              {o.label}
-              {o.size ? ` · ${o.size}` : ''}
+              {inline
+                ? `Add the matching ${o.adds ?? o.label}${o.size ? ` (${o.size})` : ''}`
+                : `${o.label}${o.size ? ` · ${o.size}` : ''}`}
             </span>
-            {o.price ? (
+            {inline && o.total ? (
+              <span className="cta-stack-offer-price">
+                Stack total {formatPrice(o.total.amount, o.total.currencyCode)}
+              </span>
+            ) : o.price ? (
               <span className="cta-stack-offer-price">
                 {o.compareAtPrice ? (
                   <s className="cta-stack-offer-was">

@@ -201,7 +201,7 @@
       ]
     }
   },
-  "footnote": "These are design values from the CAD model, not measurements of a finished frame.",
+  "footnote": "These are design values from the CAD model, not measurements of a finished frame. Weight is published once a finished frame is weighed.",
   "keywords": [
     "frame",
     "chassis"

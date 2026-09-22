@@ -1130,8 +1130,22 @@ function ProductPage() {
           key: pc.handle,
           label: pc.label ?? pp?.title ?? pc.handle,
           size: stackMatchValue,
+          adds: stackCfg.adds,
           price: match.price,
-          compareAtPrice: match.compareAtPrice,
+          // No struck "was" price on a pair offer (EU Omnibus art. 6a):
+          // the retail compare-at stays off it.
+          compareAtPrice: null,
+          // The plain sum of the two boards, no pair discount.
+          total:
+            match.price && selectedVariant.price &&
+            match.price.currencyCode === selectedVariant.price.currencyCode
+              ? {
+                  amount: (
+                    Number(match.price.amount) + Number(selectedVariant.price.amount)
+                  ).toFixed(2),
+                  currencyCode: match.price.currencyCode,
+                }
+              : null,
           product: product.handle,
           available:
             match.availableForSale &&
@@ -1892,6 +1906,30 @@ function ProductPage() {
     >
       <span className="kanban-dot" aria-hidden="true" />
       {copyText(`roadmap.status_${roadmapStatus}_label`)}
+    </Link>
+  ) : null;
+
+  // A funding-target product takes full payment, so the design stage sits
+  // next to the funding chip instead of only on the roadmap: a buyer sees
+  // that a frame or motor is not yet tested before paying for it.
+  const stageText =
+    chip === 'funding' || chip === 'funded'
+      ? roadmapStatus === 'in-progress'
+        ? say('product-chrome.stage_in_progress', 'Design stage: prototypes ordered, not yet tested')
+        : roadmapStatus === 'alpha'
+          ? say('product-chrome.stage_alpha', 'Design stage: prototypes built and flown by testers')
+          : null
+      : null;
+  const stageChip = stageText ? (
+    <Link
+      prefetch="viewport"
+      to="/roadmap"
+      className="product-status-chip product-stage-chip"
+      data-status={roadmapStatus}
+      title={copyText(`roadmap.status_${roadmapStatus}_legend`)}
+    >
+      <span className="kanban-dot" aria-hidden="true" />
+      {stageText}
     </Link>
   ) : null;
   // Coming-soon buy module: the price/stock/add-to-cart block becomes a
@@ -3076,6 +3114,7 @@ function ProductPage() {
               <span>{product.productType || content.family}</span>
             )}
             {statusChip}
+            {stageChip}
           </p>
           {/* The product name is the page heading; the editorial tagline
               follows it at display size. */}

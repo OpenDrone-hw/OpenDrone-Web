@@ -189,7 +189,7 @@ export function ProductForm({
           </button>
         </div>
       ) : null}
-      <StackQuickAdd offers={stackOffers ?? []}>
+      <StackQuickAdd offers={stackOffers ?? []} inline>
         <AddToCartButton
           href={href}
           disabled={disabled}

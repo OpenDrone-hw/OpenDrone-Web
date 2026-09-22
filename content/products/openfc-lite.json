@@ -584,5 +584,16 @@
     "stack",
     "fc",
     "flight controller"
-  ]
+  ],
+  "stack": {
+    "adds": "ESC",
+    "partners": [
+      {
+        "handle": "openesc",
+        "label": "OpenESC"
+      }
+    ],
+    "matchOption": "Model"
+  },
+  "footnote": "Weight is published once production boards are weighed."
 }
