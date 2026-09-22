@@ -7,10 +7,10 @@
 //   node scripts/launch-blast.mjs <product-handle> --send     sync + create + SEND immediately
 //
 // Audience: the Resend segment `notify-<handle>`. The general "Newsletter"
-// signup (app/routes/newsletter._index.tsx) moved to Odoo double opt-in
-// (erp PLAN.md 13.11) and no longer writes these per-product segments, so
-// this blasts whatever interest was collected before that change; it does
-// not grow for a product launched after it.
+// signup (app/routes/newsletter._index.tsx) records consent in Shopify and no
+// longer writes these per-product segments, so this blasts whatever interest
+// was collected before that change; it does not grow for a product launched
+// after it.
 //
 // The broadcast itself targets the Resend segment (Broadcasts can only
 // target a segment_id). Resend adds List-Unsubscribe/RFC-8058 headers and

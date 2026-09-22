@@ -1,8 +1,8 @@
 /**
  * Review UI for the PDP. The aggregate (average and count) comes from
- * the Odoo catalog feed, which reads Odoo's own published product
- * ratings; the review bodies live on the shop product page, where a
- * signed-in customer writes them. No third party (contract section 6).
+ * the catalog's `rating` field, which the Shopify adapter leaves null, so
+ * the chapter renders only once a rating source is wired in. No third
+ * party.
  *
  * Engineering-document styling: hairline rows, JetBrains Mono numerals,
  * tokens only (see the "PDP reviews" section in app/styles/app.css).

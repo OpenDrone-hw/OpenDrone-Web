@@ -191,17 +191,11 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
   const catalog = await context.catalog.get();
 
   return {
-    shopUrl: context.catalog.shopUrl,
     commerceHandoff: commerceHandoff(
       catalog,
-      context.catalog.shopifyPreview,
       context.session.has('shopifyCartId'),
     ),
-    accountUrl: customerAccountUrl(
-      context.env,
-      context.catalog.shopUrl,
-      context.catalog.shopifyPreview,
-    ),
+    accountUrl: customerAccountUrl(context.env),
     familyProducts: toCards(catalog),
     availability: Object.fromEntries(
       catalog.products.map((p) => [

@@ -57,7 +57,7 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 
 | Destinataire | Finalité | Lieu |
 |-----------|---------|----------|
-| Odoo, auto-hébergé par Incutec BV | Plateforme de boutique, de commandes, de comptes et de facturation (shop.incutec.com) ; données des tickets de support (erp.incutec.eu) | Hetzner Online GmbH, Falkenstein, Allemagne (UE) |
+| Shopify International Limited | Plateforme de boutique : catalogue, panier, paiement, commandes, comptes clients et consentement à la newsletter | Irlande (UE) ; les transferts vers Shopify Inc. au Canada reposent sur la décision d’adéquation de l’UE pour le Canada, les autres transferts sur des CCT ; politique de confidentialité de Shopify : https://www.shopify.com/legal/privacy |
 | Stripe Payments Europe, Ltd. | Traitement des paiements (cartes, Bancontact, iDEAL, Klarna, PayPal) : données de paiement, e-mail, adresse de facturation ; données de l'appareil pour la prévention de la fraude | 1 Grand Canal Street Lower, Dublin 2, Irlande (UE) ; politique de confidentialité de Stripe : https://stripe.com/privacy |
 | Mollie B.V. | Traitement des paiements, utilisé uniquement en secours si Stripe est indisponible (Bancontact, SEPA, cartes) | Pays-Bas (UE) |
 | bpost NV/SA | Livraison des colis et étiquettes d’expédition | Belgique (UE) |
@@ -69,7 +69,7 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 | Resend (Plus Five Five, Inc.) | E-mails transactionnels : confirmation de commande, expédition et facture, liens de reprise du support | Infrastructure en région UE ; entité légale É-U — CCT |
 | Cloudflare, Inc. | Vérification anti-spam Turnstile sur le formulaire de support | É-U — EU-US Data Privacy Framework |
 
-Les données de commande et de client (nom, adresse, e-mail, référence de paiement, historique des commandes) sont traitées dans Odoo sur shop.incutec.com, auto-hébergé par Incutec BV. Shopify ne traite plus aucune donnée de commande ou de client d’Incutec.
+Les données de commande et de client (nom, adresse, e-mail, référence de paiement, historique des commandes) et le consentement à la newsletter sont traités dans Shopify.
 
 **Transferts hors EEE.** Pour les sous-traitants américains mentionnés ci-dessus, Incutec BV transfère des données personnelles sur la base de garanties appropriées (Art. 46 RGPD) : certification au titre de l’EU-US Data Privacy Framework ou clauses contractuelles types (CCT, Décision 2021/914). Tous les autres traitements conservent les données personnelles au sein de l’EEE.
 

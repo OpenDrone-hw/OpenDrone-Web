@@ -50,7 +50,6 @@ export type HeaderFamilyVariant = ProductVariantFragment;
 export type HeaderFamilyProduct = ProductCardFragment;
 
 interface HeaderProps {
-  shopUrl: string;
   commerceHandoff: CommerceHandoff;
   accountUrl: string | null;
   familyProducts?: HeaderFamilyProduct[];
@@ -90,8 +89,8 @@ const MOBILE_FAMILY_LABEL: Record<string, string> = Object.fromEntries(
  *  the visible label. Only the pairing lives here; the discount claim (the
  *  automatic BXGY's percent and which ONE board of the pair it is off,
  *  today the OpenESC, never both) derives per row from that product's
- *  `stack` config in product-content.ts, which is only set while Odoo
- *  carries the matching promotion, so an unconfigured shop claims nothing. */
+ *  `stack` config in product-content.ts, which is only set while Shopify
+ *  carries the matching discount, so an unconfigured shop claims nothing. */
 const STACK_COMPANIONS: Record<string, Array<{handle: string; short: string}>> = {
   'Flight Controller': [{handle: 'openesc', short: 'ESC'}],
   '4-in-1 ESC': [{handle: 'openfc-lite', short: 'FC'}],
@@ -103,7 +102,7 @@ function selfShortFor(type: string): string {
   return CATEGORY_LINKS.find((c) => c.type === type)?.label ?? 'board';
 }
 
-export function Header({shopUrl, commerceHandoff, accountUrl, familyProducts}: HeaderProps) {
+export function Header({commerceHandoff, accountUrl, familyProducts}: HeaderProps) {
   // Dynamic-Island logo slot. On the hero ("/") the OpenDrone wordmark already
   // lives bottom-left in the 3D scene, so the bar instead credits the parent
   // company - the Incutec mark linking to incutec.eu (OpenDrone is an Incutec
@@ -648,7 +647,7 @@ export function HeaderMenu({
             as="p"
             className="site-mobile-nav-label"
           />
-          {/* Accounts live in the Odoo portal on the shop, so this leaves
+          {/* Accounts live in Shopify customer accounts, so this leaves
               the site rather than routing inside it. */}
           <a
             onClick={close}
@@ -695,9 +694,9 @@ function HeaderCtas({accountUrl, cartUrl}: {accountUrl: string | null; cartUrl: 
       >
         <Txt id="chrome.nav_contact" />
       </NavLink>
-      {/* Account, orders, invoices and addresses live in the Odoo portal
-          on the shop: an external link, not an in-app route. The signed-in
-          state is the shop's to know, so the label is always "Account". */}
+      {/* Account, orders and addresses live in Shopify customer accounts:
+          an external link, not an in-app route. The signed-in state is
+          Shopify's to know, so the label is always "Account". */}
       {accountUrl ? (
         <a
           href={accountUrl}
@@ -731,8 +730,8 @@ function HeaderMenuMobileToggle() {
 }
 
 /**
- * The cart icon links to Odoo or, after the first preview add, the local
- * server route that resolves the session's hosted Shopify checkout.
+ * The cart icon links, after the first add, to the local server route that
+ * resolves the session's hosted Shopify checkout.
  */
 function CartToggle({cartUrl}: {cartUrl: string | null}) {
   if (!cartUrl) {

@@ -4,7 +4,6 @@ import {renderToReadableStream} from 'react-dom/server';
 import {createContentSecurityPolicy} from '~/lib/csp';
 import type {EntryContext} from 'react-router';
 import type {AppLoadContext} from '~/lib/context';
-import {shopUrl} from '~/lib/catalog-client';
 
 // Minimal ambient declaration for Cloudflare Workers' HTMLRewriter, which
 // Oxygen's edge runtime provides but isn't in the default TS lib and
@@ -28,12 +27,8 @@ export default async function handleRequest(
   reactRouterContext: EntryContext,
   context: AppLoadContext,
 ) {
-  // The Odoo shop: every buy button navigates to it. Product images are
-  // not loaded from it: they are proxied and cached same-origin under
-  // /img/odoo/ (app/lib/odoo-image.ts), so img-src does not list it. cdn.shopify.com is a leftover
-  // from Shopify Oxygen hosting (see app/lib/csp.ts); no Shopify API is
-  // called at runtime.
-  const shop = shopUrl(context.env);
+  // cdn.shopify.com serves the product images (Shopify CDN URLs) and the
+  // Hydrogen-era script defaults kept in app/lib/csp.ts.
   const {nonce, header, NonceProvider} = createContentSecurityPolicy({
     // Turnstile injects a script from challenges.cloudflare.com and renders
     // the challenge UI inside an iframe served from the same host. Without
@@ -67,7 +62,7 @@ export default async function handleRequest(
       // YouTube build-video lightbox (WatchCard) - privacy-enhanced host.
       'https://www.youtube-nocookie.com',
     ],
-    connectSrc: ["'self'", 'https://cdn.shopify.com', shop, 'https://challenges.cloudflare.com'],
+    connectSrc: ["'self'", 'https://cdn.shopify.com', 'https://challenges.cloudflare.com'],
     // Support-thread attachments (images, video, audio) are hosted on
     // Discord's CDN. Without these the inline <img>/<video>/<audio> tags
     // in SupportThread fail to load because Hydrogen's default img-src /
@@ -139,7 +134,7 @@ export default async function handleRequest(
    * headers are untouched: `process.env.NODE_ENV` is replaced at build time,
    * so the deployed worker hard-codes the strict branch with no runtime flag
    * that could be flipped by an environment variable. Same reasoning as
-   * app/lib/support/turnstile.ts.
+   * app/lib/turnstile.ts.
    */
   const isDev = process.env.NODE_ENV !== 'production';
   responseHeaders.set(

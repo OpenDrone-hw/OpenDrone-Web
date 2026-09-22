@@ -5,7 +5,6 @@ import {
   byHandle,
   bySku,
   cartAddUrl,
-  emptyCatalog,
   familyGroups,
   formatPrice,
   mapProductOptions,
@@ -40,12 +39,6 @@ describe('parseCatalog', () => {
     assert.throws(() => parseCatalog({products: []}));
     assert.throws(() => parseCatalog('<html>login</html>'));
   });
-
-  it('degrades to a valid empty catalog', () => {
-    const empty = emptyCatalog('https://shop.incutec.com/');
-    assert.equal(empty.products.length, 0);
-    assert.equal(empty.add_url, 'https://shop.incutec.com/incutec/add');
-  });
 });
 
 describe('lookups', () => {
@@ -65,7 +58,7 @@ describe('lookups', () => {
   it('groups by family, preferring the local content family', () => {
     const groups = familyGroups(FIXTURE);
     const families = groups.map((g) => g.family);
-    // openfc-lite has no Odoo family; the content file supplies one.
+    // openfc-lite has no Shopify product type; the content file supplies one.
     assert.ok(families.includes('ELRS Receiver') || families.includes(''));
     const total = groups.reduce((n, g) => n + g.products.length, 0);
     assert.equal(total, FIXTURE.products.length);
@@ -73,7 +66,7 @@ describe('lookups', () => {
 });
 
 describe('cartAddUrl', () => {
-  const add = 'https://shop.incutec.com/incutec/add';
+  const add = '/api/shopify/cart';
 
   it('builds the single-line hand-off', () => {
     assert.equal(
@@ -103,7 +96,7 @@ describe('cartAddUrl', () => {
     assert.ok(cartAddUrl(add, [{sku: 'A', quantity: 0}]).includes('qty=1'));
     assert.equal(cartAddUrl(add, [{sku: '   '}]), `${add}?next=cart`);
     const many = Array.from({length: 25}, (_, i) => ({sku: `S${i}`}));
-    const lines = new URL(cartAddUrl(add, many)).searchParams.get('lines');
+    const lines = new URL(cartAddUrl(add, many), 'https://opendrone.be').searchParams.get('lines');
     assert.equal(lines?.split(',').length, 20);
   });
 });
@@ -143,23 +136,15 @@ describe('toProduct', () => {
   it('carries the ready-made hand-off link per variant', () => {
     assert.equal(
       product.variants.nodes[0].cartAddUrl,
-      'https://shop.incutec.com/incutec/add?sku=OPENRX-GEMINI&qty=1&next=cart',
+      '/api/shopify/cart?sku=OPENRX-GEMINI&qty=1',
     );
-  });
-
-  it('ignores a compliance object a cached catalog still carries', () => {
-    // Declarations of Conformity are internal (erp storefront contract
-    // section 4): the fixture's older issued-DoC object is not mapped.
-    for (const v of product.variants.nodes) {
-      assert.equal('compliance' in v, false);
-    }
   });
 
   it('falls back to the template image when a variant has none', () => {
     const gemini = product.variants.nodes.find(
       (v) => v.sku === 'OPENRX-GEMINI',
     )!;
-    assert.ok(gemini.image?.url.includes('product.template/40'));
+    assert.ok(gemini.image?.url.endsWith('openrx-1.png'));
   });
 
   it('computes the price range across variants', () => {

@@ -12,7 +12,7 @@ import {toCards} from '~/lib/catalog';
 /**
  * /products.json - machine-readable catalog feed for agents and tooling.
  * Adds what no stock feed has: the buy hand-off per variant (the same
- * `<shop>/incutec/add` form the buy buttons POST, action URL plus its
+ * `/api/shopify/cart` form the buy buttons POST, action URL plus its
  * form fields as the query string, with `cart_add_method: "POST"`), the
  * CERN-OHL-S license, and the design-source repo.
  */
@@ -82,7 +82,7 @@ export async function loader({context, request}: Route.LoaderArgs) {
           price: locked ? null : v.price.amount,
           currency: locked ? null : v.price.currencyCode,
           // The hand-off: POST the query string of cart_add_url as form
-          // fields to its path; the shop refuses GET (contract section 3).
+          // fields to its path; the cart action refuses GET.
           ...(locked ? null : {cart_add_url: v.cartAddUrl, cart_add_method: 'POST'}),
         })),
       };

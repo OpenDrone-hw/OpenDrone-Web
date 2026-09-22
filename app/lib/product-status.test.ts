@@ -139,7 +139,7 @@ describe('resolveStatus', () => {
     }
   });
 
-  describe("Odoo's availability", () => {
+  describe("the catalog availability", () => {
     it('decides who is orderable once the shop is open', () => {
       assert.equal(resolveStatus('openesc', false, {}, 'in_stock'), 'live');
       assert.equal(resolveStatus('openesc', false, {}, 'preorder'), 'preorder');
@@ -149,7 +149,7 @@ describe('resolveStatus', () => {
     });
 
     it('never outranks the global kill switch', () => {
-      // A product already sitting in stock in Odoo must still read as
+      // A product the catalog already calls in stock must still read as
       // coming soon before launch day, or the kill switch is decorative.
       assert.equal(resolveStatus('openesc', true, {}, 'in_stock'), 'development');
       assert.equal(resolveStatus('openesc', true, {}, 'preorder'), 'development');
@@ -157,17 +157,17 @@ describe('resolveStatus', () => {
     });
 
     it('never overrides a local idea or development status', () => {
-      PRODUCT_CONTENT['__test-idea-odoo'] = {
+      PRODUCT_CONTENT['__test-idea-catalog'] = {
         ...PRODUCT_CONTENT.openesc,
         status: 'idea',
       };
       try {
         assert.equal(
-          resolveStatus('__test-idea-odoo', false, {}, 'in_stock'),
+          resolveStatus('__test-idea-catalog', false, {}, 'in_stock'),
           'idea',
         );
       } finally {
-        delete PRODUCT_CONTENT['__test-idea-odoo'];
+        delete PRODUCT_CONTENT['__test-idea-catalog'];
       }
     });
 
@@ -182,17 +182,17 @@ describe('resolveStatus', () => {
     });
 
     it('yields to an explicit live status in the content file', () => {
-      PRODUCT_CONTENT['__test-live-odoo'] = {
+      PRODUCT_CONTENT['__test-live-catalog'] = {
         ...PRODUCT_CONTENT.openesc,
         status: 'live',
       };
       try {
         assert.equal(
-          resolveStatus('__test-live-odoo', true, {}, 'sold_out'),
+          resolveStatus('__test-live-catalog', true, {}, 'sold_out'),
           'live',
         );
       } finally {
-        delete PRODUCT_CONTENT['__test-live-odoo'];
+        delete PRODUCT_CONTENT['__test-live-catalog'];
       }
     });
   });
@@ -275,7 +275,7 @@ describe('isComingSoon', () => {
   it('is false for a pre-order product once it takes orders', () => {
     assert.equal(isComingSoon('openrx', true), true);
     assert.equal(isComingSoon('openrx', false), false);
-    // Odoo saying in_stock is just as purchasable.
+    // The catalog saying in_stock is just as purchasable.
     assert.equal(isComingSoon('openrx', false, {}, 'in_stock'), false);
     // ...but the kill switch still outranks it for a pre-order.
     assert.equal(isComingSoon('openrx', true, {}, 'preorder'), true);

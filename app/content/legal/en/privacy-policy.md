@@ -57,7 +57,7 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 
 | Recipient | Purpose | Location |
 |-----------|---------|----------|
-| Odoo, self-hosted by Incutec BV | Webshop, order, account and invoicing platform (shop.incutec.com); support ticket records (erp.incutec.eu) | Hetzner Online GmbH, Falkenstein, Germany (EU) |
+| Shopify International Limited | Webshop platform: catalog, cart, checkout, orders, customer accounts and newsletter consent | Ireland (EU); transfers to Shopify Inc. in Canada rely on the EU adequacy decision for Canada, other transfers on SCCs; Shopify's privacy policy: https://www.shopify.com/legal/privacy |
 | Stripe Payments Europe, Ltd. | Payment processing (cards, Bancontact, iDEAL, Klarna, PayPal): payment data, email, billing address; device data for fraud prevention | 1 Grand Canal Street Lower, Dublin 2, Ireland (EU); Stripe's privacy policy: https://stripe.com/privacy |
 | Mollie B.V. | Payment processing, fallback only if Stripe is unavailable (Bancontact, SEPA, cards) | Netherlands (EU) |
 | bpost NV/SA | Parcel delivery and shipping labels | Belgium (EU) |
@@ -69,7 +69,7 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Resend (Plus Five Five, Inc.) | Transactional mail: order confirmation, shipping and invoice mail, support resume links | EU region infrastructure; US legal entity — SCCs |
 | Cloudflare, Inc. | Turnstile anti-spam verification on the support form | US — EU-US Data Privacy Framework |
 
-Order and customer data (name, address, email, payment reference, order history) is processed in Odoo at shop.incutec.com, self-hosted by Incutec BV. Shopify no longer processes any Incutec order or customer data.
+Order and customer data (name, address, email, payment reference, order history) and newsletter consent are processed in Shopify.
 
 **Transfers outside the EEA.** For the US processors listed above, Incutec BV transfers personal data on the basis of appropriate safeguards (Art. 46 GDPR): certification under the EU-US Data Privacy Framework or standard contractual clauses (SCCs, Decision 2021/914). All other processing keeps personal data inside the EEA.
 

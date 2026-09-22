@@ -2,9 +2,9 @@
  * The product shapes the storefront components consume.
  *
  * These used to be generated from the Shopify Storefront API schema
- * (`storefrontapi.generated.d.ts`). The data now comes from the Odoo
- * catalog feed (`app/lib/catalog.ts`), which maps onto exactly these
- * shapes, so the views did not have to change when the backend did.
+ * (`storefrontapi.generated.d.ts`). The catalog mapper
+ * (`app/lib/catalog.ts`) produces exactly these shapes from the Shopify
+ * adapter's output.
  *
  * Hand-written and bundler-free on purpose: the node:test suites import
  * the mapper that produces them.
@@ -22,7 +22,7 @@ export type ProductImage = {
   height: number | null;
 };
 
-/** Odoo's per-variant availability word, straight from the catalog feed. */
+/** The per-variant availability word: the SKU's sale policy, denied by Shopify's availableForSale. */
 export type CatalogAvailability = 'in_stock' | 'preorder' | 'sold_out';
 
 export type ProductVariantFragment = {
@@ -37,7 +37,7 @@ export type ProductVariantFragment = {
   selectedOptions: SelectedOption[];
   /** The shop's ready-made single-line hand-off link for this SKU. */
   cartAddUrl: string;
-  /** Odoo's ship promise, shown where the local statusNote is shown. */
+  /** The catalog ship promise, shown where the local statusNote is shown. */
   shipPromise: string | null;
   availability: CatalogAvailability;
   /** The variant's page on the shop, for the review list link. */
@@ -73,7 +73,7 @@ export type ProductFragment = ProductCardFragment & {
   adjacentVariants: ProductVariantFragment[];
   images: {nodes: ProductImage[]};
   seo: {title: string | null; description: string | null};
-  /** Published aggregate rating from Odoo, null when nobody rated yet. */
+  /** Published aggregate rating, null when there is none. */
   rating: {average: number; count: number} | null;
   /** The product page on the shop, where reviews are read and written. */
   shopUrl: string;

@@ -5,8 +5,8 @@ import {
 } from 'react-router';
 
 /**
- * The site's cookie session: the locale choice and the support desk's
- * signed ticket cookie. `isPending` lets server.ts commit the cookie only
+ * The site's cookie session: the locale choice and the Shopify cart
+ * reference. `isPending` lets server.ts commit the cookie only
  * when something actually wrote to it.
  */
 export class AppSession {

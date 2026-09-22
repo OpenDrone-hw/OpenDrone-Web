@@ -1,6 +1,6 @@
 name: Deploy Cloudflare production
 
-# D15/D16 (erp/PLAN.md): opendrone.be is cut over to the Cloudflare Worker
+# opendrone.be is served by the Cloudflare Worker
 # "opendrone-web" (wrangler.production.toml) with custom domains opendrone.be
 # / www.opendrone.be. Every push to main redeploys production. The isolated
 # preview Worker (wrangler.toml) has its own workflow: cloudflare-preview.yml.

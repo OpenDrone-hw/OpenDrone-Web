@@ -56,7 +56,7 @@ Incutec BV heeft geen Functionaris voor Gegevensbescherming (DPO) aangesteld aan
 
 | Ontvanger | Doel | Locatie |
 |-----------|------|---------|
-| Odoo, zelf gehost door Incutec BV | Webshop-, bestel-, account- en facturatieplatform (shop.incutec.com); supportticketgegevens (erp.incutec.eu) | Hetzner Online GmbH, Falkenstein, Duitsland (EU) |
+| Shopify International Limited | Webshopplatform: catalogus, winkelmandje, afrekenen, bestellingen, klantenaccounts en nieuwsbrieftoestemming | Ierland (EU); doorgiften aan Shopify Inc. in Canada steunen op het adequaatheidsbesluit van de EU voor Canada, andere doorgiften op SCC's; privacybeleid van Shopify: https://www.shopify.com/legal/privacy |
 | Stripe Payments Europe, Ltd. | Betalingsverwerking (kaarten, Bancontact, iDEAL, Klarna, PayPal): betalingsgegevens, e-mail, factuuradres; apparaatgegevens voor fraudepreventie | 1 Grand Canal Street Lower, Dublin 2, Ierland (EU); privacybeleid van Stripe: https://stripe.com/privacy |
 | Mollie B.V. | Betalingsverwerking, enkel als terugvaloptie indien Stripe niet beschikbaar is (Bancontact, SEPA, kaartbetalingen) | Nederland (EU) |
 | bpost NV/SA | Pakketbezorging en verzendlabels | België (EU) |
@@ -68,7 +68,7 @@ Incutec BV heeft geen Functionaris voor Gegevensbescherming (DPO) aangesteld aan
 | Resend (Plus Five Five, Inc.) | Transactionele e-mail: orderbevestiging, verzending en factuur, hervattingslinks voor support | EU-regio infrastructuur; VS-rechtspersoon — SCC's |
 | Cloudflare, Inc. | Turnstile anti-spamverificatie op het supportformulier | VS — EU-VS Data Privacy Framework |
 
-Bestel- en klantgegevens (naam, adres, e-mail, betalingsreferentie, bestelgeschiedenis) worden verwerkt in Odoo op shop.incutec.com, zelf gehost door Incutec BV. Shopify verwerkt geen bestel- of klantgegevens van Incutec meer.
+Bestel- en klantgegevens (naam, adres, e-mail, betalingsreferentie, bestelgeschiedenis) en de nieuwsbrieftoestemming worden verwerkt in Shopify.
 
 **Doorgifte buiten de EER.** Voor de hierboven vermelde verwerkers in de Verenigde Staten draagt Incutec BV persoonsgegevens over op basis van passende waarborgen (Art. 46 AVG): certificering onder het EU-VS Data Privacy Framework of standaardcontractuele clausules (SCC's, Besluit 2021/914). Voor alle overige verwerkingen blijven persoonsgegevens binnen de EER.
 

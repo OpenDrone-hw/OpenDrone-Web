@@ -1,6 +1,5 @@
 type NewsletterEnv = Pick<
   Env,
-  | 'SHOPIFY_ADAPTER_PREVIEW'
   | 'SHOPIFY_NEWSLETTER_WRITE_ENABLED'
   | 'SHOPIFY_STORE_DOMAIN'
   | 'SHOPIFY_ADMIN_API_TOKEN'
@@ -85,7 +84,7 @@ export async function subscribeWithShopify(
 ): Promise<
   'subscribed' | 'already-subscribed' | 'suppressed' | 'disabled' | 'failed'
 > {
-  if (env.SHOPIFY_ADAPTER_PREVIEW !== '1' || env.SHOPIFY_NEWSLETTER_WRITE_ENABLED !== '1') return 'disabled';
+  if (env.SHOPIFY_NEWSLETTER_WRITE_ENABLED !== '1') return 'disabled';
   try {
     const found = await admin<{customers: {nodes: Customer[]}}>(env, CUSTOMER_QUERY, {
       query: `email:"${email.replace(/"/g, '')}"`,
@@ -134,7 +133,7 @@ export async function unsubscribeWithShopify(
   env: NewsletterEnv,
   email: string,
 ): Promise<'unsubscribed' | 'disabled' | 'failed'> {
-  if (env.SHOPIFY_ADAPTER_PREVIEW !== '1' || env.SHOPIFY_NEWSLETTER_WRITE_ENABLED !== '1') return 'disabled';
+  if (env.SHOPIFY_NEWSLETTER_WRITE_ENABLED !== '1') return 'disabled';
   try {
     const found = await admin<{customers: {nodes: Customer[]}}>(env, CUSTOMER_QUERY, {
       query: `email:"${email.replace(/"/g, '')}"`,

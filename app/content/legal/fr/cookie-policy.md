@@ -16,20 +16,18 @@ Les cookies sont de petits fichiers texte placés sur votre appareil par un site
 
 #### Cookies strictement nécessaires (pas de consentement requis)
 
-Ce site (opendrone.be) ne place lui-même aucun cookie de panier ou de paiement : lors d’un achat, votre panier est créé sur shop.incutec.com.
+Ce site (opendrone.be) place un seul cookie qui lui est propre. Le paiement se déroule sur Shopify, qui place ses propres cookies sur les pages de paiement.
 
 | Cookie | Finalité | Conservation |
 |--------|---------|-----------|
-| Cookie de session (shop.incutec.com) | Maintient votre panier et votre connexion au compte pendant le paiement | Session |
-| Cookie de consentement (shop.incutec.com) | Mémorise votre choix en matière de cookies, si un bandeau de consentement est affiché | 6 mois |
-| Cookies Stripe (`m`, `__stripe_mid`, `__stripe_sid`) | Prévention de la fraude au paiement — placés par Stripe sur shop.incutec.com pendant le paiement, pas sur opendrone.be (strictement nécessaire au service expressément demandé ; art. 10/2 de la loi du 30 juillet 2018 (inséré par la loi du 21 décembre 2021) ; Directive ePrivacy 2002/58/CE) | Session à 1 an, selon le cookie |
-| Cookies de paiement (page de paiement hébergée par Mollie, utilisée uniquement en secours si Stripe est indisponible) | Prévention de la fraude au paiement — placés **uniquement sur la page de paiement hébergée**, pas sur opendrone.be ni sur shop.incutec.com (art. 10/2 de la loi du 30 juillet 2018 (inséré par la loi du 21 décembre 2021), strictement nécessaire au service expressément demandé ; Directive ePrivacy 2002/58/CE) | Session |
-
-shop.incutec.com ne place que les cookies de session, de consentement et de paiement Stripe ci-dessus : aucun cookie d’analyse ni de marketing.
+| `session` (opendrone.be) | Mémorise votre choix de langue et, dès que vous ajoutez un produit à votre panier, la référence de votre panier Shopify | Session |
+| Cookies du checkout Shopify | Maintiennent votre panier, le paiement et votre connexion au compte client, et préviennent la fraude au paiement ; placés par Shopify sur les pages de paiement, pas sur opendrone.be. Liste des cookies de Shopify : https://www.shopify.com/legal/cookies | Session à 1 an, selon le cookie |
+| Cookies Stripe (`m`, `__stripe_mid`, `__stripe_sid`) | Prévention de la fraude au paiement — placés par Stripe sur les pages de paiement pendant le paiement, pas sur opendrone.be (strictement nécessaire au service expressément demandé ; art. 10/2 de la loi du 30 juillet 2018 (inséré par la loi du 21 décembre 2021) ; Directive ePrivacy 2002/58/CE) | Session à 1 an, selon le cookie |
+| Cookies de paiement (page de paiement hébergée par Mollie, utilisée uniquement en secours si Stripe est indisponible) | Prévention de la fraude au paiement — placés **uniquement sur la page de paiement hébergée**, pas sur opendrone.be (art. 10/2 de la loi du 30 juillet 2018 (inséré par la loi du 21 décembre 2021), strictement nécessaire au service expressément demandé ; Directive ePrivacy 2002/58/CE) | Session |
 
 #### Analyse
 
-Nous utilisons **Plausible Analytics** sur opendrone.be (hébergé dans l’UE, sans cookies). Plausible ne place aucun cookie et ne conserve aucun identifiant persistant ; l’adresse IP est hachée et non conservée. Ce traitement échappe à l’exigence de consentement ePrivacy et repose sur notre intérêt légitime (art. 6.1.f RGPD). C’est pourquoi nous n’affichons pas de bandeau de consentement pour l’analyse. shop.incutec.com ne place aucun cookie d’analyse.
+Nous utilisons **Plausible Analytics** sur opendrone.be (hébergé dans l’UE, sans cookies). Plausible ne place aucun cookie et ne conserve aucun identifiant persistant ; l’adresse IP est hachée et non conservée. Ce traitement échappe à l’exigence de consentement ePrivacy et repose sur notre intérêt légitime (art. 6.1.f RGPD). C’est pourquoi nous n’affichons pas de bandeau de consentement pour l’analyse.
 
 #### Cookies marketing
 

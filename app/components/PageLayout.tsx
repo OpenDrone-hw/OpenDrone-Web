@@ -11,7 +11,6 @@ import {Txt} from '~/components/Txt';
 import type {CommerceHandoff} from '~/lib/shop-links';
 
 interface PageLayoutProps {
-  shopUrl: string;
   commerceHandoff: CommerceHandoff;
   accountUrl: string | null;
   company: CompanyIdentity;
@@ -23,7 +22,6 @@ interface PageLayoutProps {
 
 export function PageLayout({
   children = null,
-  shopUrl,
   commerceHandoff,
   accountUrl,
   company,
@@ -38,8 +36,8 @@ export function PageLayout({
     <MotionConfig reducedMotion="user">
       <Aside.Provider>
         {/* The cart aside is gone with the local cart: the cart icon links
-            to the shop (contract section 1.3). The mobile menu drawer is
-            the only aside left. */}
+            to the Shopify checkout. The mobile menu drawer is the only aside
+            left. */}
         <MobileMenuAside accountUrl={accountUrl} />
         <div className={isHomepage ? 'homepage-layout' : ''}>
           <a className="skip-link" href="#main-content">
@@ -55,7 +53,6 @@ export function PageLayout({
             />
           )}
           <Header
-            shopUrl={shopUrl}
             commerceHandoff={commerceHandoff}
             accountUrl={accountUrl}
             familyProducts={familyProducts}
@@ -70,14 +67,12 @@ export function PageLayout({
               above the mobile breakpoint so the desktop hero is untouched. */}
           {!isHomepage ? (
             <Footer
-              shopUrl={shopUrl}
               company={company}
               turnstileSiteKey={turnstileSiteKey ?? null}
             />
           ) : (
             <div className="home-mobile-footer">
               <Footer
-                shopUrl={shopUrl}
                 company={company}
                 turnstileSiteKey={turnstileSiteKey ?? null}
               />

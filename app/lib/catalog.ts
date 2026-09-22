@@ -1,19 +1,15 @@
 /**
- * The Odoo catalog: types, lookups and the mapping onto the product
- * shapes this app's components consume.
+ * The catalog: types, lookups and the mapping onto the product shapes this
+ * app's components consume.
  *
- * One public JSON endpoint (`CATALOG_URL`, served by the Odoo module
- * `incutec_catalog_api`) owns handles, titles, images, prices, compare
- * prices, availability, ship promises, ratings and the ready-made
- * hand-off links. Editorial content stays in `content/products/*.json`
- * and is merged by handle: Odoo never carries the story, this repository
- * never carries a price.
+ * `app/lib/shopify-storefront.ts` fills these types from the Shopify
+ * Storefront API: handles, titles, images, prices, compare prices,
+ * availability, ship promises and the cart hand-off links. Editorial content
+ * stays in `content/products/*.json` and is merged by handle: Shopify never
+ * carries the story, this repository never carries a price.
  *
  * Kept pure and bundler-free (relative imports, no worker APIs) so the
- * node:test suites can load it. The fetching and caching half lives in
- * `app/lib/catalog-client.ts`.
- *
- * The contract this implements: `erp/docs/storefront-contract.md`.
+ * node:test suites can load it.
  */
 
 import type {
@@ -27,7 +23,6 @@ import type {
   ProductVariantFragment,
 } from './product-shapes.ts';
 import {PRODUCT_CONTENT} from './product-content.ts';
-import {toStorefrontImageUrl} from './odoo-image.ts';
 
 export type {CartLine, CatalogAvailability};
 
@@ -47,9 +42,6 @@ export type CatalogVariant = {
   cart_add_method?: 'POST';
   /** Server-only Shopify variant identity. Never accepted from a browser. */
   merchandise_id?: string;
-  /** Older catalogs carried an issued DoC object here. It is ignored:
-   *  Declarations of Conformity stay internal (contract section 4). */
-  compliance?: unknown;
 };
 
 export type CatalogProduct = {
@@ -75,23 +67,6 @@ export type Catalog = {
   add_method?: 'POST';
   products: CatalogProduct[];
 };
-
-/** The shape a failed fetch degrades to: a valid, empty catalog. */
-export function emptyCatalog(shopUrl: string): Catalog {
-  const base = shopUrl.replace(/\/+$/, '');
-  return {
-    schema: 1,
-    generated_at: new Date(0).toISOString(),
-    max_age: 300,
-    currency: 'EUR',
-    prices_include_vat: true,
-    shop_url: base,
-    cart_url: `${base}/shop/cart`,
-    add_url: `${base}/incutec/add`,
-    add_method: 'POST',
-    products: [],
-  };
-}
 
 /**
  * Accept a parsed JSON body as a catalog, or throw. Deliberately narrow:
@@ -131,8 +106,8 @@ export function bySku(
 
 /**
  * The display family for a product: the local content file's `family`
- * first (it is the word the site has always shown), then Odoo's public
- * category, then nothing.
+ * first (it is the word the site has always shown), then the Shopify
+ * product type, then nothing.
  */
 export function familyOf(product: CatalogProduct): string | null {
   return PRODUCT_CONTENT[product.handle]?.family ?? product.family ?? null;
@@ -156,7 +131,7 @@ export function familyGroups(
   return [...groups].map(([family, products]) => ({family, products}));
 }
 
-/** Odoo's availability word as a buyable flag. */
+/** The availability word as a buyable flag. */
 export function availabilityToAvailableForSale(
   availability: CatalogAvailability,
 ): boolean {
@@ -164,14 +139,13 @@ export function availabilityToAvailableForSale(
 }
 
 /**
- * Build the action and fields for the shop's POST hand-off form (contract
- * section 3): `/incutec/add` rejects state-changing GETs so crawlers and
- * link previewers cannot create carts. One line uses the `sku`/`qty` pair,
- * several use `lines`. `AddToCartButton` turns the query string this
- * returns into hidden form fields submitted with `method="post"`.
+ * Build the action and fields for the cart POST hand-off form: the cart
+ * action rejects state-changing GETs so crawlers and link previewers cannot
+ * create carts. One line uses the `sku`/`qty` pair, several use `lines`.
+ * `AddToCartButton` turns the query string this returns into hidden form
+ * fields submitted with `method="post"`.
  *
- * `addUrl` is the catalog's `add_url`; callers that only hold the shop
- * base pass `${shopUrl}/incutec/add`.
+ * `addUrl` is the catalog's `add_url`.
  */
 export function cartAddUrl(
   addUrl: string,
@@ -204,14 +178,11 @@ function money(amount: number, currency: string): MoneyV2 {
 
 function image(url: string | null, alt: string, index = 0): ProductImage | null {
   if (!url) return null;
-  // Odoo image URLs become the same-origin cached route (odoo-image.ts), so a
-  // slow or restarting Odoo never breaks a gallery.
-  const src = toStorefrontImageUrl(url);
-  return {id: `${src}#${index}`, url: src, altText: alt, width: null, height: null};
+  return {id: `${url}#${index}`, url, altText: alt, width: null, height: null};
 }
 
 function variantId(sku: string): string {
-  return `odoo:variant:${sku}`;
+  return `variant:${sku}`;
 }
 
 function mapVariant(
@@ -296,7 +267,7 @@ export function toProduct(
   const currency = variants[0]?.price.currencyCode ?? catalog.currency;
   const images = product.images.map((url, i) => image(url, product.title, i)!);
   return {
-    id: `odoo:product:${product.handle}`,
+    id: `product:${product.handle}`,
     handle: product.handle,
     title: product.title,
     vendor: 'OpenDrone',

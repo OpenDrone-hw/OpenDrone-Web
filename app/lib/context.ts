@@ -3,12 +3,7 @@ import {createCatalogClient, type CatalogClient} from '~/lib/catalog-client';
 
 /**
  * The request context: env, the session cookie, the worker cache, the
- * waitUntil hook and the Odoo catalog client.
- *
- * This used to be Hydrogen's `createHydrogenContext`, which built a
- * Storefront API client, a cart handler and a customer-account client.
- * Odoo owns catalog, cart, checkout and accounts now (decision D3), so
- * the only backend client left is the read-only catalog feed.
+ * waitUntil hook and the Shopify catalog client.
  */
 export type AppLoadContext = {
   env: Env;
@@ -48,6 +43,6 @@ export async function createAppLoadContext(
     session,
     cache,
     waitUntil,
-    catalog: createCatalogClient({env, cache, waitUntil}),
+    catalog: createCatalogClient({env}),
   };
 }

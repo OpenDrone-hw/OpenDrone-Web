@@ -8,9 +8,9 @@ import {attributionSource} from '~/lib/growth/attribution';
  * One "buy it as a stack" offer: the paired board resolved to the size
  * that matches what the visitor is looking at, with BOTH SKUs on one
  * multi-line hand-off link (`?lines=SKU:1,SKU:1`), so a single click
- * puts the pair in the Odoo cart.
+ * puts the pair in the cart.
  *
- * Any pair discount is configured in Odoo and applied by its cart;
+ * Any pair discount is configured in Shopify and applied at checkout;
  * callers only pass a percent when that rule actually exists. When the
  * discounted board is the partner being added, pass its discounted
  * `price` plus the full price as `compareAtPrice`; when it is the board

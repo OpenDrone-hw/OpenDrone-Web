@@ -6,7 +6,6 @@ import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
 
 interface FooterProps {
-  shopUrl: string;
   company: CompanyIdentity;
   turnstileSiteKey?: string | null;
 }

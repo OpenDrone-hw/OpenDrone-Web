@@ -1,5 +1,5 @@
 /**
- * The checkout GraphQL proxy is gone (contract section 1.5). 410 for the
+ * The checkout GraphQL proxy is gone. 410 for the
  * same reason as the webhook receiver: a retired public endpoint.
  */
 export function loader() {

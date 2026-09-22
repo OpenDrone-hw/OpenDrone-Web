@@ -36,7 +36,6 @@ const CATALOG: Catalog = {
 };
 
 const ENABLED_ENV = {
-  SHOPIFY_ADAPTER_PREVIEW: '1',
   SHOPIFY_CHECKOUT_WRITE_ENABLED: '1',
   PUBLIC_COMING_SOON: '0',
 } as const;
@@ -80,7 +79,7 @@ describe('Shopify cart action', () => {
     let fetched = false;
     const response = await thrownResponse(handleShopifyCartAction(
       request({sku: 'OPENRX-LITE', qty: '1'}),
-      {SHOPIFY_ADAPTER_PREVIEW: '1'},
+      {},
       {
         fetchCatalog: async () => {
           fetched = true;
@@ -100,7 +99,7 @@ describe('Shopify cart action', () => {
     let fetched = false;
     const response = await thrownResponse(handleShopifyCartAction(
       request({sku: 'OPENRX-LITE', qty: '1'}),
-      {SHOPIFY_ADAPTER_PREVIEW: '1', SHOPIFY_CHECKOUT_WRITE_ENABLED: '1'},
+      {SHOPIFY_CHECKOUT_WRITE_ENABLED: '1'},
       {
         fetchCatalog: async () => { fetched = true; return CATALOG; },
         createCart: async () => { throw new Error('must not create'); },
@@ -298,7 +297,7 @@ describe('Shopify cart action', () => {
     assert.equal(invalid.status, 400);
     let fetched = false;
     const response = await thrownResponse(handleShopifyCartLoader(
-      {SHOPIFY_ADAPTER_PREVIEW: '1'},
+      {},
       {getCartId: () => 'cart-a', getCart: async (id) => { fetched = true; return {id, checkoutUrl: 'https://checkout.opendrone.be/a', lines: []}; }},
     ));
     assert.equal(response.status, 410);

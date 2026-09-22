@@ -11,13 +11,13 @@ utm_* on inbound links we control
   -> first-touch UTM in sessionStorage (session-scoped, not persistent)
   -> Plausible props on every funnel event, including the Checkout Click
      fired as the visitor leaves for the shop
-newsletter signup -> Odoo (single opt-in, consent recorded there)
+newsletter signup -> Shopify (single opt-in, consent recorded there)
 ```
 
 Order attribution is not wired: the Shopify orders webhook that used to post
 orders into a ledger is gone (`app/routes/api.webhooks.shopify.tsx` answers
-410) and nothing replaces it. Odoo holds every order and customer record; this
-repository keeps no subscriber or order data.
+410) and nothing replaces it. Shopify holds every order and customer record;
+this repository keeps no subscriber or order data.
 
 ## Modules and routes
 
@@ -27,15 +27,17 @@ repository keeps no subscriber or order data.
   persisted server-side.
 - `app/lib/growth/checkout-beacon.ts`: `trackCheckoutClick`, one helper so
   every checkout entry point fires the same event shape.
-- `app/lib/growth/odoo-newsletter.ts`: the footer signup
+- `app/lib/growth/shopify-newsletter.ts`: the footer signup
   (`app/components/NewsletterSignup.tsx`, action in
-  `app/routes/newsletter._index.tsx`) posts to Odoo with
-  `X-Newsletter-Dispatch-Secret`; Odoo records consent, subscribes the
-  address to the brand's list, sends the welcome mail and owns unsubscribing.
+  `app/routes/newsletter._index.tsx`) records email marketing consent on the
+  Shopify customer through the Admin API; Shopify owns consent and
+  unsubscribing. An existing opt-out is preserved, never resubscribed.
+- `app/lib/growth/welcome-email.ts`: the welcome mail for an address that
+  joined on this call, sent through Resend.
 - `app/lib/growth/plausible-server.ts`: server-side `Purchase` event helper.
   Its only sender was the retired orders webhook, so nothing calls it.
 - `scripts/launch-blast.mjs`: launch mail to the `notify-<handle>` Resend
-  segment collected before the signup moved to Odoo. Dry run by default;
+  segment collected before the signup moved to Shopify. Dry run by default;
   `--send` is the only path that mails anyone.
 
 Removed with the Upstash Redis migration, because nothing read or wrote them
@@ -56,7 +58,7 @@ is one click, and it leaves the site for the shop.
 
 - Pre-orders are the launch model: charged in full, shipped on the product's
   own promise.
-- Order and customer data stays in Odoo; the newsletter list is Odoo's.
+- Order and customer data stays in Shopify; so does newsletter consent.
 - No consent banner: Plausible is cookieless and first-touch storage is
   sessionStorage-only, disclosed as functional in the cookie policy.
 

@@ -33,8 +33,8 @@ export function SmoothImage(props: SmoothImageProps) {
   const srcUrl =
     (props.data && typeof props.data.url === 'string' ? props.data.url : null) ??
     (typeof props.src === 'string' ? props.src : null);
-  // Odoo's image URLs carry no width parameter, so there is no cheap
-  // thumbnail to blur up from: the cover is the flat token background.
+  // No cheap thumbnail URL is derived for the blur-up: the cover is the
+  // flat token background.
   const tiny: string | null = null;
 
   // Synchronous re-arm on source change (sanctioned derived-state pattern:

@@ -7,8 +7,6 @@
  * the only source: bundled at build time the way the legal pages are
  * (Vite's eager glob, because the Oxygen worker has no filesystem), with
  * the same front matter the publish script used to read.
- *
- * Contract: erp/docs/storefront-contract.md section 5.
  */
 
 import {mdToHtml} from '~/lib/legal';

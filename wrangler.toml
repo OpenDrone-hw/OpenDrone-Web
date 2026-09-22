@@ -2,8 +2,8 @@
 # .github/workflows/cloudflare-preview.yml on every push to
 # feat/cloudflare-hosting. No custom-domain routes (a plain workers.dev URL
 # only) and no rate limit bindings, so a preview deploy never touches
-# production DNS or shares state with the production Worker. Points at the
-# staging catalog so preview traffic never lists live stock or prices.
+# production DNS or shares state with the production Worker. The Shopify
+# catalog configuration is set as Worker secrets, like production.
 #
 # wrangler.production.toml is the real opendrone.be/www.opendrone.be Worker.
 name = "opendrone-web-preview"
@@ -17,6 +17,5 @@ directory = "dist/client"
 # per-environment secret set with `wrangler secret put SESSION_SECRET` and is
 # never written here.
 [vars]
-CATALOG_URL = "https://staging.incutec.eu/incutec/catalog.json"
-PUBLIC_SHOP_URL = "https://staging.incutec.eu"
+SHOPIFY_CHECKOUT_WRITE_ENABLED = "0"
 PUBLIC_COMING_SOON = "1"

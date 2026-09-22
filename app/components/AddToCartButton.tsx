@@ -3,13 +3,13 @@ import {attributionSource} from '~/lib/growth/attribution';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
 
 /**
- * The buy button: a regular POST form to the shop's hand-off endpoint
- * (`<shop>/incutec/add`, fields `sku`, `qty`, `next`), which adds the lines to
- * the visitor's own Odoo cart and redirects them to it.
+ * The buy button: a regular POST form to the cart action
+ * (`/api/shopify/cart`, fields `sku`, `qty`, `next`), which creates the
+ * visitor's Shopify cart and redirects them to its checkout.
  *
- * POST prevents crawlers and link previewers from creating quotations by
+ * POST prevents crawlers and link previewers from creating carts by
  * following the public product link. The click still fires funnel events
- * before the browser navigates to Odoo.
+ * before the browser navigates to checkout.
  */
 export function AddToCartButton({
   children,

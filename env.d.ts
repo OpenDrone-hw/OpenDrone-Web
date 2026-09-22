@@ -40,14 +40,11 @@ declare global {
   }
 
   interface Env {
-    // Signs the locale and support-desk cookies.
+    // Signs the locale and cart session cookies.
     SESSION_SECRET: string;
 
-    // Commerce recovery switch. Unset keeps the production Odoo catalog and
-    // hand-off. Set to "1" only in a local preview environment.
-    SHOPIFY_ADAPTER_PREVIEW?: string;
-    // Independent mutation gate. Catalog/account preview stays read-only
-    // unless this is explicitly enabled as well.
+    // Checkout mutation gate. The catalog stays read-only unless this is
+    // explicitly enabled.
     SHOPIFY_CHECKOUT_WRITE_ENABLED?: string;
     SHOPIFY_STORE_DOMAIN?: string;
     SHOPIFY_STOREFRONT_TOKEN?: string;
@@ -62,26 +59,9 @@ declare global {
     SHOPIFY_PRICES_INCLUDE_VAT?: string;
     SHOPIFY_PREVIEW_POLICY_JSON?: string;
 
-    // The Incutec shop on Odoo: base of every buy hand-off and portal
-    // link, and the fallback base when the catalog is unreachable.
-    // Defaults to https://shop.incutec.com.
-    PUBLIC_SHOP_URL?: string;
-
-    // The Odoo catalog feed (module incutec_catalog_api). Defaults to
-    // https://erp.incutec.com/incutec/catalog.json. Fetched server-side
-    // with a 5 minute worker cache; the last good copy is served for up
-    // to an hour if the fetch fails.
-    CATALOG_URL?: string;
-    // Optional server-side Basic auth for a protected catalog origin (the
-    // Cloudflare preview Worker points CATALOG_URL at staging, which sits
-    // behind auth; production leaves these unset).
-    CATALOG_HTTP_USER?: string;
-    CATALOG_HTTP_PASSWORD?: string;
-
     // Aggregate order totals behind the financial goal meter, as
     // {"orders": n, "revenue_eur": x, "updated_at": iso}. Read by
-    // scripts/update-goals.mjs only; the Odoo endpoint that serves it is
-    // ERP PLAN.md step 12.6. Unset, the script reports and changes
+    // scripts/update-goals.mjs only. Unset, the script reports and changes
     // nothing.
     GOALS_URL?: string;
 
@@ -119,83 +99,15 @@ declare global {
     PUBLIC_COMPANY_EMAIL?: string;
     PUBLIC_COMPANY_TEL?: string;
 
-    // Web support bridge
-    DISCORD_BOT_TOKEN?: string;
-    DISCORD_SUPPORT_CHANNEL_ID?: string;
-    DISCORD_GUILD_ID?: string;
-    DISCORD_STAFF_METADATA_CHANNEL_ID?: string;
+    // Public Discord invite used by /support and the /contact card.
     DISCORD_SUPPORT_INVITE?: string;
-    // Public-facing guild identifiers used by the /contact invite card.
-    // Distinct from the bridge-side bindings so the public card can be
-    // wired without exposing support-bridge state.
-    PUBLIC_DISCORD_GUILD_ID?: string;
     PUBLIC_DISCORD_INVITE?: string;
-    SUPPORT_SESSION_SECRET?: string;
+    // Cloudflare Turnstile for the newsletter signup.
     TURNSTILE_SITE_KEY?: string;
     TURNSTILE_SECRET_KEY?: string;
     SUPPORT_TURNSTILE_DEV_SKIP?: string;
     RESEND_API_KEY?: string;
     SUPPORT_FROM_EMAIL?: string;
-
-    // Newsletter double opt-in bridge (erp PLAN.md 13.11, Odoo module
-    // incutec_catalog_api, app/lib/growth/odoo-newsletter.ts). Every
-    // signup is a server-to-server POST to Odoo, which mails the
-    // confirmation link itself and only joins the "Newsletter"
-    // mailing.list once it is followed; unsubscribing uses Odoo's own
-    // mailing link, so this repository holds no Resend audience, contact
-    // or unsubscribe-token code any more. NEWSLETTER_ODOO_URL defaults to
-    // https://erp.incutec.eu. NEWSLETTER_DISPATCH_SECRET must match the
-    // system parameter incutec_catalog_api.newsletter_dispatch_secret,
-    // set from env $NEWSLETTER_DISPATCH_SECRET by erp/config/configure.py
-    // (--section catalog_api). Unset, signup fails closed (no mail sent).
-    NEWSLETTER_ODOO_URL?: string;
-    NEWSLETTER_DISPATCH_SECRET?: string;
-
-    // Stage 2 moderation gate
-    SUPPORT_MOD_ROLE_ID?: string;
-    SUPPORT_APPROVE_EMOJI?: string;
-    SUPPORT_MODERATION_MODE?: string;
-
-    // Ticket state and lookup - Odoo (erp/addons/incutec_support,
-    // PLAN.md 12.2, app/lib/support/odoo.ts). Every Discord ticket and
-    // message is best-effort mirrored into Odoo `project.task`, which is
-    // also the storefront's ticket index (close/cursors/feedback/lookup):
-    // there is no separate KV store any more (Upstash Redis removed
-    // entirely, founder decision, 2026-09-15). Unset or unreachable, the
-    // Discord-only bridge is unaffected (D13). SUPPORT_ODOO_URL defaults
-    // to https://erp.incutec.eu.
-    SUPPORT_ODOO_URL?: string;
-    SUPPORT_ODOO_TOKEN?: string;
-
-    // Workers Rate Limiting bindings (wrangler.toml `[[ratelimits]]`) for
-    // /api/support/lookup's "resume by email" abuse defence - distributed
-    // across isolates, unlike app/lib/rate-limit.ts's in-memory limiter.
-    // Replaced Upstash-backed global counters (founder decision,
-    // 2026-09-15). Cloudflare's platform ceiling is a 10s/60s window, so
-    // these approximate the former 10-minute IP cap and 24-hour email cap
-    // as 60s windows at the same request counts (app/routes/
-    // api.support.lookup.tsx). Optional because local dev has no binding
-    // - the route falls back to the in-memory limiter.
-    SUPPORT_LOOKUP_IP_LIMITER?: RateLimit;
-    SUPPORT_LOOKUP_EMAIL_LIMITER?: RateLimit;
-
-    // Bearer token for /api/support/cleanup. The daily GitHub Actions
-    // cron (.github/workflows/support-cleanup.yml) sends this in the
-    // Authorization header. Without it the endpoint returns 503 - set
-    // it to enable automatic stale-ticket sweeping.
-    SUPPORT_CLEANUP_SECRET?: string;
-    DISCORD_FEEDBACK_CHANNEL_ID?: string;
-
-    // Bearer token for /api/support/relay, the outbound half of the
-    // support bridge (erp/docs/integrations/discord.md, D1). Odoo sends
-    // this when a staff member's public chatter comment has to reach the
-    // Discord thread; it must match the system parameter
-    // incutec_support.relay_token on the Odoo side (set from env
-    // SUPPORT_RELAY_SECRET by erp/config/support.py). Separate from
-    // SUPPORT_ODOO_TOKEN on purpose: a leak of one direction's secret
-    // must not grant the other. Unset, the route returns 503 and the
-    // Odoo side stays inert.
-    SUPPORT_RELAY_SECRET?: string;
 
     // Newsletter / release-notes auto-dispatch
     // - NEWSLETTER_DISPATCH_SECRET: bearer token for the manual dispatch

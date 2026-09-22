@@ -17,7 +17,7 @@ import {copyText} from '~/lib/copy';
  * Editorial (`variants`, keyed by option value) is the source of truth
  * for which tiers exist. The catalog is matched in by name: we find the
  * option whose name equals `axis`, then the option value whose name
- * equals the editorial key (both case-insensitive, trimmed). Until Odoo
+ * equals the editorial key (both case-insensitive, trimmed). Until Shopify
  * carries those variants the ladder still renders for preview and the
  * buy button uses the product's default variant.
  */

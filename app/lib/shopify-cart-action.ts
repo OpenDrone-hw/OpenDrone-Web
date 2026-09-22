@@ -5,7 +5,7 @@ import type {ShopifyCart} from './shopify-storefront.ts';
 
 type CartEnv = Pick<
   Env,
-  'SHOPIFY_ADAPTER_PREVIEW' | 'SHOPIFY_CHECKOUT_WRITE_ENABLED' | 'PUBLIC_COMING_SOON'
+  'SHOPIFY_CHECKOUT_WRITE_ENABLED' | 'PUBLIC_COMING_SOON'
 >;
 export type ShopifyCartDependencies = {
   fetchCatalog: () => Promise<Catalog>;
@@ -20,7 +20,6 @@ export type ShopifyCartDependencies = {
 
 export async function handleShopifyCartAction(request: Request, env: CartEnv, dependencies: ShopifyCartDependencies): Promise<Response> {
   if (request.method !== 'POST') throw new Response('Method Not Allowed', {status: 405, headers: {Allow: 'POST'}});
-  if (env.SHOPIFY_ADAPTER_PREVIEW !== '1') throw new Response('Shopify checkout is not enabled.', {status: 404});
   if (env.SHOPIFY_CHECKOUT_WRITE_ENABLED !== '1') {
     throw new Response('Shopify checkout writes are not enabled.', {
       status: 404,
