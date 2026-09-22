@@ -1,9 +1,13 @@
 /**
  * Transactional email for the online withdrawal function (CRD Art. 11 bis /
  * Art. VI.49/1 WER): one notice to the shop, one receipt confirmation to the
- * consumer on a durable medium. Sent via Resend, same degrade-gracefully
- * contract as app/lib/support/email.ts: without RESEND_API_KEY the send is
- * logged and skipped so local dev works end to end.
+ * consumer on a durable medium. Sent via Resend. Without RESEND_API_KEY
+ * nothing is sent and both results are false, so the form never tells a
+ * consumer their withdrawal reached the shop when it did not.
+ *
+ * The receipt is sent only after the shop notice was accepted: a receipt
+ * saying "we have received your withdrawal" must not go out for a notice
+ * that never arrived.
  */
 
 const RESEND_API = 'https://api.resend.com/emails';
@@ -39,9 +43,17 @@ const CONFIRM_BODY: Record<WithdrawalNotice['locale'], string> = {
   fr: 'Nous avons bien reçu votre rétractation et la traiterons sous 14 jours. Renvoyez les produits à l’adresse indiquée dans les conditions générales ; le remboursement intervient au plus tard 14 jours après réception des produits ou de la preuve de leur renvoi.',
 };
 
+export type WithdrawalSendResult = {
+  /** The notice to the shop inbox was accepted by the mail provider. */
+  shopNotified: boolean;
+  /** The receipt to the consumer was accepted by the mail provider. */
+  receiptSent: boolean;
+};
+
 async function send(
   env: Env,
   opts: {to: string; subject: string; text: string; replyTo?: string},
+  fetcher: typeof fetch,
 ): Promise<boolean> {
   if (!env.RESEND_API_KEY) {
     console.warn('[withdrawal/email] RESEND_API_KEY not set - would have sent', {
@@ -53,32 +65,39 @@ async function send(
   const fromDisplay = env.PUBLIC_COMPANY_NAME
     ? `${env.PUBLIC_COMPANY_NAME} <${from}>`
     : from;
-  const res = await fetch(RESEND_API, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${env.RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: fromDisplay,
-      to: [opts.to],
-      subject: opts.subject,
-      text: opts.text,
-      ...(opts.replyTo ? {reply_to: opts.replyTo} : {}),
-    }),
-  });
+  let res: Response;
+  try {
+    res = await fetcher(RESEND_API, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: fromDisplay,
+        to: [opts.to],
+        subject: opts.subject,
+        text: opts.text,
+        ...(opts.replyTo ? {reply_to: opts.replyTo} : {}),
+      }),
+    });
+  } catch (error) {
+    console.error('[withdrawal/email] send failed', error instanceof Error ? error.message : error);
+    return false;
+  }
   if (!res.ok) {
     console.error('[withdrawal/email] send failed', res.status, await res.text());
   }
   return res.ok;
 }
 
-/** Notify the shop and confirm receipt to the consumer. Returns true when the
- * consumer confirmation was accepted by the mail provider. */
+/** Notify the shop, then confirm receipt to the consumer once the shop
+ * notice was accepted. */
 export async function sendWithdrawalNotice(
   env: Env,
   notice: WithdrawalNotice,
-): Promise<boolean> {
+  fetcher: typeof fetch = fetch,
+): Promise<WithdrawalSendResult> {
   const shopTo = env.PUBLIC_COMPANY_EMAIL || 'contact@opendrone.be';
   const lines = [
     `Herroeping via het onlineformulier (${notice.locale})`,
@@ -93,29 +112,39 @@ export async function sendWithdrawalNotice(
     `Ingediend: ${notice.submittedAt}`,
   ].join('\n');
 
-  await send(env, {
-    to: shopTo,
-    subject: `Herroeping: bestelling ${notice.orderNumber}`,
-    text: lines,
-    replyTo: notice.email,
-  });
+  const shopNotified = await send(
+    env,
+    {
+      to: shopTo,
+      subject: `Herroeping: bestelling ${notice.orderNumber}`,
+      text: lines,
+      replyTo: notice.email,
+    },
+    fetcher,
+  );
+  if (!shopNotified) return {shopNotified: false, receiptSent: false};
 
-  return send(env, {
-    to: notice.email,
-    subject: CONFIRM_SUBJECT[notice.locale],
-    text: [
-      CONFIRM_BODY[notice.locale],
-      '',
-      `Submitted / Ingediend / Envoyé: ${notice.submittedAt}`,
-      `Name: ${notice.name}`,
-      `Email: ${notice.email}`,
-      `Order: ${notice.orderNumber}`,
-      `Products: ${notice.products}`,
-      `Received on: ${notice.receivedOn || '-'}`,
-      `Remarks: ${notice.remarks || '-'}`,
-      '',
-      'Incutec BV, Stapelhuisstraat 15, 3000 Leuven, Belgium',
-      'contact@opendrone.be',
-    ].join('\n'),
-  });
+  const receiptSent = await send(
+    env,
+    {
+      to: notice.email,
+      subject: CONFIRM_SUBJECT[notice.locale],
+      text: [
+        CONFIRM_BODY[notice.locale],
+        '',
+        `Submitted / Ingediend / Envoyé: ${notice.submittedAt}`,
+        `Name: ${notice.name}`,
+        `Email: ${notice.email}`,
+        `Order: ${notice.orderNumber}`,
+        `Products: ${notice.products}`,
+        `Received on: ${notice.receivedOn || '-'}`,
+        `Remarks: ${notice.remarks || '-'}`,
+        '',
+        'Incutec BV, Stapelhuisstraat 15, 3000 Leuven, Belgium',
+        'contact@opendrone.be',
+      ].join('\n'),
+    },
+    fetcher,
+  );
+  return {shopNotified, receiptSent};
 }

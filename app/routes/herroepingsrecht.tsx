@@ -27,7 +27,14 @@ export async function loader({request}: Route.LoaderArgs) {
   );
 }
 
-type WithdrawResult = {ok: boolean; message?: string; submittedAt?: string; receiptSent?: boolean};
+type WithdrawResult = {
+  ok: boolean;
+  message?: string;
+  submittedAt?: string;
+  receiptSent?: boolean;
+  /** The notice did not reach the shop: nothing is recorded. */
+  notSent?: boolean;
+};
 
 /**
  * Online withdrawal function (Directive (EU) 2023/2673, new CRD Art. 11a,
@@ -35,8 +42,10 @@ type WithdrawResult = {ok: boolean; message?: string; submittedAt?: string; rece
  * withdrawal right; Belgian transposition pending, so no WER article is cited
  * here). The action records the statement, emails the shop and sends the
  * consumer an acknowledgement of receipt with the full content and timestamp.
- * If the acknowledgement cannot be sent, the page says so and shows the
- * timestamp instead of pretending a receipt is on its way.
+ * The shop notice is the record: if it cannot be sent, the page says the
+ * withdrawal did not reach the shop and asks the consumer to email it,
+ * keeping what they typed. If only the acknowledgement fails, the page says
+ * so and shows the timestamp instead of pretending a receipt is on its way.
  */
 export async function action({request, context}: Route.ActionArgs) {
   if (request.method !== 'POST') {
@@ -85,7 +94,17 @@ export async function action({request, context}: Route.ActionArgs) {
     );
   }
 
-  const receiptSent = await sendWithdrawalNotice(env, notice);
+  const {shopNotified, receiptSent} = await sendWithdrawalNotice(env, notice);
+  if (!shopNotified) {
+    console.error('[withdrawal] shop notice not sent', {
+      order: notice.orderNumber,
+      submittedAt: notice.submittedAt,
+    });
+    return data<WithdrawResult>(
+      {ok: false, notSent: true, submittedAt: notice.submittedAt},
+      {status: 503},
+    );
+  }
   if (!receiptSent) {
     console.error('[withdrawal] receipt email not sent', {
       order: notice.orderNumber,
@@ -110,6 +129,7 @@ const FORM_COPY = {
     done: 'Uw herroeping is ingediend. U ontvangt binnen enkele minuten een ontvangstbevestiging per e-mail.',
     noReceipt: 'Uw herroeping is geregistreerd, maar de bevestigingsmail kon niet worden verzonden. Bewaar deze pagina (schermafbeelding) als bewijs of mail contact@opendrone.be met het tijdstip hieronder.',
     stamp: 'Geregistreerd op',
+    notSent: 'Uw herroeping kon niet worden verzonden en is dus niet bij ons aangekomen. Mail ze naar contact@opendrone.be met uw naam, bestelnummer en de producten. Een herroeping per e-mail geldt evenzeer.',
   },
   en: {
     heading: 'Submit your withdrawal online',
@@ -125,6 +145,7 @@ const FORM_COPY = {
     done: 'Your withdrawal has been submitted. A confirmation of receipt will arrive by email within a few minutes.',
     noReceipt: 'Your withdrawal was recorded, but the confirmation email could not be sent. Keep this page (screenshot) as proof or email contact@opendrone.be quoting the timestamp below.',
     stamp: 'Recorded at',
+    notSent: 'Your withdrawal could not be sent, so it has not reached us. Email it to contact@opendrone.be with your name, order number and the products. A withdrawal by email counts just the same.',
   },
   fr: {
     heading: 'Exercer votre rétractation en ligne',
@@ -140,6 +161,7 @@ const FORM_COPY = {
     done: 'Votre rétractation a été envoyée. Une confirmation de réception vous parviendra par courriel dans quelques minutes.',
     noReceipt: 'Votre rétractation a été enregistrée, mais le courriel de confirmation n’a pas pu être envoyé. Conservez cette page (capture d’écran) comme preuve ou écrivez à contact@opendrone.be en citant l’horodatage ci-dessous.',
     stamp: 'Enregistrée le',
+    notSent: 'Votre rétractation n’a pas pu être envoyée et ne nous est donc pas parvenue. Envoyez-la à contact@opendrone.be avec votre nom, votre numéro de commande et les produits. Une rétractation par courriel est tout aussi valable.',
   },
 } as const;
 
@@ -170,7 +192,9 @@ function WithdrawalForm({locale}: {locale: 'nl' | 'en' | 'fr'}) {
         {copy.heading}
       </h2>
       <p className="text-sm text-[var(--color-text-muted)]">{copy.intro}</p>
-      {result?.message ? (
+      {result?.notSent ? (
+        <p className="text-sm text-red-500" role="alert">{copy.notSent}</p>
+      ) : result?.message ? (
         <p className="text-sm text-red-500" role="alert">{result.message}</p>
       ) : null}
       <input type="hidden" name="locale" value={locale} />
