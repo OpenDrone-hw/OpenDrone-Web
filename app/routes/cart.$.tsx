@@ -154,7 +154,9 @@ function ShippingRow({country}: {country: string | null}) {
  *  checkout; outside the EU the carrier collects them on delivery. */
 function DutyNote({country}: {country: string | null}) {
   const quote = shippingQuote(country);
-  const duty = quote && !quote.blocked ? quote.duty : 'none';
+  // No shipping to this country: the checkout slot says so instead.
+  if (quote?.blocked) return null;
+  const duty = quote ? quote.duty : 'none';
   if (duty === 'us') return <Txt id="cart.note_us" as="p" className="cart-summary-note" />;
   if (duty === 'intl') return <Txt id="cart.note_intl" as="p" className="cart-summary-note" />;
   return (
@@ -188,8 +190,13 @@ function PopulatedCart({
   // ones wait for the last. Lines waiting for different funding targets do
   // not ship together even when their promise reads the same.
   const groupOf = (line: ShopifyCartLine) => info[line.id]?.group ?? `date:${line.shipPromise ?? ''}`;
-  const mixed = new Set(cart.lines.map(groupOf)).size > 1;
+  const groups = new Set(cart.lines.map(groupOf));
+  const mixed = groups.size > 1;
   const plan = mixed ? splitPlan(cart, info) : null;
+  // Only funding targets: nothing ships sooner by splitting the order.
+  const targetsOnly = mixed && [...groups].every((g) => g.startsWith('target:'));
+  const quote = shippingQuote(country);
+  const shipBlocked = quote?.blocked === true;
   const overLimit = cart.lines.some((line) => {
     const max = info[line.id]?.maxQuantity;
     return max != null && line.quantity > max;
@@ -197,7 +204,14 @@ function PopulatedCart({
   const blocked = pending || overLimit;
   const pendingStyle = pending ? {opacity: 0.5} : undefined;
 
-  const checkoutForm = (className: string) => (
+  const checkoutForm = (className: string) => shipBlocked ? (
+    <p className="cart-summary-note" role="note">
+      {t('checkout_blocked', 'We do not ship to {country}, so this order cannot be checked out.', {
+        country: countryName(quote?.country ?? ''),
+      })}{' '}
+      <Link to="/end-use">{t('checkout_blocked_link', 'End-Use Policy')}</Link>
+    </p>
+  ) : (
     <Form
       method="post"
       action="/api/shopify/cart"
@@ -240,7 +254,7 @@ function PopulatedCart({
             <ShippingRow country={country} />
           </dl>
           {mixed ? (
-            <MixedWarning cart={cart} info={info} plan={plan} onSplit={onSplit} />
+            <MixedWarning cart={cart} info={info} plan={plan} targetsOnly={targetsOnly} onSplit={onSplit} />
           ) : null}
           {hasPreorder && !mixed ? <Txt id="cart.note_preorder" as="p" className="cart-summary-note" /> : null}
           <DutyNote country={country} />
@@ -273,11 +287,13 @@ function MixedWarning({
   cart,
   info,
   plan,
+  targetsOnly,
   onSplit,
 }: {
   cart: ShopifyCart;
   info: Record<string, CartLineInfo>;
   plan: {keep: string[]; later: string[]} | null;
+  targetsOnly: boolean;
   onSplit: (items: Removed) => void;
 }) {
   const revalidator = useRevalidator();
@@ -311,7 +327,7 @@ function MixedWarning({
 
   return (
     <div className="cart-mixed-warning" role="note">
-      <Txt id="cart.mixed_title" as="p" />
+      <Txt id={targetsOnly ? 'cart.mixed_targets_title' : 'cart.mixed_title'} as="p" />
       <ul>
         {cart.lines.map((line) => {
           const target = info[line.id]?.target;
@@ -328,7 +344,7 @@ function MixedWarning({
           );
         })}
       </ul>
-      <Txt id="cart.mixed_body" as="p" />
+      <Txt id={targetsOnly ? 'cart.mixed_targets_body' : 'cart.mixed_body'} as="p" />
       {plan ? (
         <>
           <p>

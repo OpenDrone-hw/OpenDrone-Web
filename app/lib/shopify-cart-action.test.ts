@@ -582,14 +582,14 @@ describe('cart line info and split plan', () => {
   const rxLine = line({id: 'gid://shopify/CartLine/rx', merchandiseId: 'gid://shopify/ProductVariant/rx', sku: 'OPENRX-LITE', shipPromise: PENDING});
   const motorLine = line({id: 'gid://shopify/CartLine/motor', merchandiseId: 'gid://shopify/ProductVariant/motor', sku: 'OPENMOTOR-2207', shipPromise: PENDING, quantity: 4});
 
-  it('groups two funding targets apart even with the same promise text', () => {
+  it('groups two funding targets apart even with the same promise text, and offers no split', () => {
     const c = cart([rxLine, motorLine]);
     const info = cartLineInfo(c, mixedCatalog());
     assert.equal(info[rxLine.id].group, 'target:OPENRX-LITE:1');
     assert.equal(info[motorLine.id].group, 'target:OPENMOTOR-2207:1');
     assert.deepEqual(info[motorLine.id].target, {units: 1000, ordered: 12});
-    // The RX is 50 short of its target, the motor 988: keep the RX.
-    assert.deepEqual(splitPlan(c, info), {keep: [rxLine.id], later: [motorLine.id]});
+    // Neither has a date: a second order ships nothing sooner, so no split.
+    assert.equal(splitPlan(c, info), null);
   });
 
   it('keeps the paid stack and moves the funding targets to a second order', () => {

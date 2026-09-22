@@ -158,18 +158,44 @@ export function CartAddedDialog() {
     }
   };
 
-  // "Add the whole build" adds only what is not in the cart yet, and says
-  // exactly how many units and what they cost.
+  // "Add all" adds only what is not in the cart yet, names the parts and
+  // their total, and says when one of them holds the whole order back.
   const missing = suggestions.filter((s) => !summary.lines.some((l) => l.sku === s.sku));
-  const buildTotal = missing.reduce((sum, s) => sum + Number(s.variant.price.amount) * s.quantity, 0);
-  const buildUnits = missing.reduce((sum, s) => sum + s.quantity, 0);
+  const totalOf = (items: BuildSuggestion[]) =>
+    items.reduce((sum, s) => sum + Number(s.variant.price.amount) * s.quantity, 0);
   const currency = suggestions[0]?.variant.price.currencyCode ?? 'EUR';
+  const delaysOrder = (s: BuildSuggestion) =>
+    Boolean(s.variant.shipPromise) && !cartDates.has(s.variant.shipPromise ?? '');
+  const later = missing.filter(delaysOrder);
+  const withOrder = missing.filter((s) => !delaysOrder(s));
+  const partName = (s: BuildSuggestion) => {
+    const role = t(`build_role_${s.role}`, s.product.title);
+    return s.quantity > 1 ? `${s.quantity} ${t(`build_role_${s.role}_plural`, role)}` : role;
+  };
+  // One sentence per ship promise among the parts that would hold the order.
+  const laterPromises = [...new Set(later.map((s) => s.variant.shipPromise ?? ''))];
+  const delayNote = later.length
+    ? [
+        t('build_add_all_delays', 'Adding all of these holds your whole order until the last item is ready.'),
+        ...laterPromises.map((promise) => {
+          const items = later.filter((s) => (s.variant.shipPromise ?? '') === promise);
+          const names = items
+            .map((s) => (s.variant.title !== 'Default Title' ? `${s.product.title} ${s.variant.title}` : s.product.title))
+            .join(', ');
+          return promise
+            ? `${names}: ${items.length > 1 ? t('build_each_prefix', 'each') + ' ' : ''}${promise}.`
+            : '';
+        }),
+      ]
+        .filter(Boolean)
+        .join(' ')
+    : null;
 
   const renderSuggestion = (s: BuildSuggestion) => {
     const image = s.variant.image ?? s.product.featuredImage;
     const inCart = summary.lines.some((l) => l.sku === s.sku);
     const promise = s.variant.shipPromise;
-    const delays = !cartDates.has(promise ?? '');
+    const delays = delaysOrder(s);
     return (
       <li className="cart-added-suggestion" key={s.sku}>
         {image ? (
@@ -290,27 +316,50 @@ export function CartAddedDialog() {
         {suggestions.length ? (
           <div className="cart-added-build">
             <p className="cart-added-build-title">
-              {t('build_title', 'Complete your {build} build', {build: build?.label ?? ''})}
+              {t('build_title', 'Matching parts for a {build} build', {build: build?.label ?? ''})}
             </p>
             {missing.length > 1 ? (
-              <button
-                type="button"
-                className="cart-added-all"
-                disabled={busy !== null}
-                onClick={() => void add(missing, 'all')}
-              >
-                {busy === 'all'
-                  ? 'Adding…'
-                  : t('build_add_all', 'Add the whole build: {count} items · {price}', {
-                      count: String(buildUnits),
-                      price: formatPrice(buildTotal, currency),
-                    })}
-              </button>
+              <>
+                {delayNote ? (
+                  <p id="cart-added-all-delay" className="cart-added-ship is-later" style={{margin: 0}}>
+                    {delayNote}
+                  </p>
+                ) : null}
+                <button
+                  type="button"
+                  className="cart-added-all"
+                  disabled={busy !== null}
+                  aria-describedby={delayNote ? 'cart-added-all-delay' : undefined}
+                  onClick={() => void add(missing, 'all')}
+                >
+                  {busy === 'all'
+                    ? 'Adding…'
+                    : t('build_add_all', 'Add all matching OpenDrone parts: {parts} · {price}', {
+                        parts: missing.map(partName).join(', '),
+                        price: formatPrice(totalOf(missing), currency),
+                      })}
+                </button>
+                {later.length && withOrder.length ? (
+                  <button
+                    type="button"
+                    className="cart-added-all"
+                    disabled={busy !== null}
+                    onClick={() => void add(withOrder, 'with-order')}
+                  >
+                    {busy === 'with-order'
+                      ? 'Adding…'
+                      : t('build_add_with_order', 'Add only what ships with your order: {parts} · {price}', {
+                          parts: withOrder.map(partName).join(', '),
+                          price: formatPrice(totalOf(withOrder), currency),
+                        })}
+                  </button>
+                ) : null}
+              </>
             ) : null}
+            <Txt id="cart.build_not_included" as="p" className="cart-added-note" />
             <ul className="cart-added-suggestions">
               {suggestions.map(renderSuggestion)}
             </ul>
-            <Txt id="cart.build_not_included" as="p" className="cart-added-note" />
           </div>
         ) : null}
 

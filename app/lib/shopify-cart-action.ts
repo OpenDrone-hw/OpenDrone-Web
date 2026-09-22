@@ -460,8 +460,9 @@ export function cartLineInfo(
  * How to split a cart whose lines ship on different dates: the lines to keep
  * for this order and the lines to order separately. Fixed-date lines (in
  * stock, paid stock) stay; everything waiting for a funding target goes.
- * With only funding lines, the group closest to its target stays. Null when
- * every line ships together, or when no split would ship anything sooner.
+ * Null when every line ships together, or when every line waits for a
+ * funding target: none of them has a date to ship sooner on, so a second
+ * order would only add a second shipping charge.
  */
 export function splitPlan(
   cart: ShopifyCart,
@@ -473,18 +474,8 @@ export function splitPlan(
     groups.set(key, [...(groups.get(key) ?? []), line.id]);
   }
   if (groups.size < 2) return null;
-  const fixed = [...groups.keys()].filter((k) => k.startsWith('date:'));
-  let keepKeys: string[];
-  if (fixed.length) {
-    keepKeys = fixed;
-  } else {
-    const remaining = (key: string) => {
-      const id = groups.get(key)![0];
-      const target = info[id]?.target;
-      return target ? target.units - target.ordered : Number.POSITIVE_INFINITY;
-    };
-    keepKeys = [[...groups.keys()].sort((a, b) => remaining(a) - remaining(b))[0]];
-  }
+  const keepKeys = [...groups.keys()].filter((k) => k.startsWith('date:'));
+  if (!keepKeys.length) return null;
   const keep = cart.lines.filter((l) => keepKeys.includes(info[l.id]?.group ?? `date:${l.shipPromise ?? ''}`)).map((l) => l.id);
   const later = cart.lines.map((l) => l.id).filter((id) => !keep.includes(id));
   return later.length && keep.length ? {keep, later} : null;
