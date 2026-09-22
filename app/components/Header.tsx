@@ -719,10 +719,9 @@ function HeaderCtas({
     <nav className="flex items-center gap-2 md:gap-3 xl:gap-5 ml-auto" role="navigation">
       {/* Hidden in the top bar on phones (it would overflow a 320px row on
           legal pages); MobileMenuAside renders it inside the drawer instead. */}
-      {/* On shop pages the toggle only shows from 1360px up: between the tablet
-          and 1360px the header row has no room for it next to the
-          icons, and the footer and drawer carry the same links. */}
-      <LangToggle className="header-lang-toggle" shopWrapperClassName="hidden min-[1360px]:flex" />
+      {/* Only on legal pages: the shop is in English, and the footer line
+          "The shop is in English. Legal texts:" links the NL/FR legal texts. */}
+      <LangToggle className="header-lang-toggle" shopPages={false} />
       <NavLink
         prefetch="viewport"
         to="/preorder"

@@ -153,6 +153,7 @@ const CHROME = {
     eyebrow: 'Legal · Imprint',
     seller: 'Seller',
     pages: 'Pages',
+    shopNote: null,
     intro: (companyName: string) =>
       `OpenDrone is a product brand operated by ${companyName}. All orders are sold by the legal entity below.`,
   },
@@ -161,6 +162,10 @@ const CHROME = {
     eyebrow: 'Juridisch · Colofon',
     seller: 'Verkoper',
     pages: 'Pagina’s',
+    shopNote: {
+      text: 'De winkel is in het Engels. De juridische teksten hieronder zijn in het Nederlands.',
+      back: 'Naar de winkel',
+    },
     intro: (companyName: string) =>
       `OpenDrone is een merk uitgebaat door ${companyName}. Alle bestellingen worden verkocht door onderstaande juridische entiteit.`,
   },
@@ -169,6 +174,10 @@ const CHROME = {
     eyebrow: 'Juridique · Mentions',
     seller: 'Vendeur',
     pages: 'Pages',
+    shopNote: {
+      text: 'La boutique est en anglais. Les textes juridiques ci-dessous sont en français.',
+      back: 'Vers la boutique',
+    },
     intro: (companyName: string) =>
       `OpenDrone est une marque exploitée par ${companyName}. Toutes les commandes sont vendues par l’entité juridique ci-dessous.`,
   },
@@ -183,6 +192,14 @@ export default function LegalIndex() {
         <p className="page-eyebrow">{t.eyebrow}</p>
         <h1 className="page-title">{t.pageTitle}</h1>
         <p className="page-description">{t.intro(company.name)}</p>
+        {t.shopNote ? (
+          <p className="page-description">
+            {t.shopNote.text}{' '}
+            <Link to="/" hrefLang="en" prefetch="intent">
+              {t.shopNote.back}
+            </Link>
+          </p>
+        ) : null}
       </header>
 
       <section className="legal-identity" style={{marginBottom: '2.5rem'}}>
