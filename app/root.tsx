@@ -192,6 +192,9 @@ export async function loader(args: Route.LoaderArgs) {
     turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? null,
     // Display only: picks the buy module's price note (VAT vs duties).
     visitorCountry: visitorCountry(args.request),
+    // Plausible counts the production site only: staging, previews and
+    // local runs would otherwise add review crawls to the shop's numbers.
+    analytics: /^(www\.)?opendrone\.be$/i.test(new URL(args.request.url).hostname),
   };
 }
 
@@ -341,14 +344,17 @@ export function Layout({children}: {children?: React.ReactNode}) {
             this deferred script loads are replayed on init.
             suppressHydrationWarning: nonce is per-request and only meaningful
             server-side; the client-side value is empty, which React would
-            otherwise flag as a hydration mismatch. */}
-        <script
-          defer
-          data-domain="opendrone.be"
-          src="https://plausible.io/js/script.tagged-events.revenue.js"
-          nonce={nonce}
-          suppressHydrationWarning
-        />
+            otherwise flag as a hydration mismatch. Rendered only when the
+            request host is opendrone.be (root loader `analytics`). */}
+        {data?.analytics ? (
+          <script
+            defer
+            data-domain="opendrone.be"
+            src="https://plausible.io/js/script.tagged-events.revenue.js"
+            nonce={nonce}
+            suppressHydrationWarning
+          />
+        ) : null}
         {orgJsonLd ? (
           <script
             type="application/ld+json"
