@@ -5,11 +5,16 @@
 //
 //   node scripts/smoke.mjs               # local dev
 //   BASE=https://opendrone.store node scripts/smoke.mjs
+//   BASE=<staging url> SMOKE_AUTH=opendrone:<STAGING_PASSWORD> node scripts/smoke.mjs
 //
 // Exits non-zero on the first failure. Designed to run in CI or before
 // a deploy without spinning up a test framework.
 
 const BASE = (process.env.BASE || 'http://localhost:3000').replace(/\/$/, '');
+// Staging sits behind HTTP basic auth; SMOKE_AUTH is `user:password`.
+const AUTH = process.env.SMOKE_AUTH
+  ? {authorization: `Basic ${Buffer.from(process.env.SMOKE_AUTH).toString('base64')}`}
+  : {};
 
 const cases = [
   {
@@ -66,7 +71,7 @@ async function run() {
     const url = `${BASE}${tc.path}`;
     let res;
     try {
-      res = await fetch(url, {redirect: 'follow', headers: {'user-agent': 'opendrone-smoke/1'}});
+      res = await fetch(url, {redirect: 'follow', headers: {'user-agent': 'opendrone-smoke/1', ...AUTH}});
     } catch (err) {
       bad++;
       fail(tc.path, `network: ${err.message}`);
