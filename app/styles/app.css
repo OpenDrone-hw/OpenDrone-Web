@@ -4719,20 +4719,233 @@ button.reset {
   flex-wrap: wrap;
 }
 
-/* Price + "incl. VAT" sit together; the qualifier is a small muted note to the
-   right of the figure. */
+/* Price + unit + "incl. VAT" sit together; the qualifiers are small muted
+   notes to the right of the figure. They wrap under it rather than widen
+   the buy card: a long note on one line pushed a 390 px page sideways. */
 .product-buy-amount {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 0.45rem;
+  gap: 0.2rem 0.45rem;
+  min-width: 0;
+  max-width: 100%;
 }
-.product-buy-vat {
+.product-buy-vat,
+.product-buy-unit {
   font-family: var(--font-mono);
   font-size: 0.72rem;
   font-weight: 400;
   letter-spacing: 0.03em;
   color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+.product-buy-unit {
+  color: var(--color-text);
+}
+
+/* Buy module detail lines: shipping to the visitor's country, the duties
+   note outside the EU, and the preorder terms. Small, muted, wrapping. */
+.product-buy-ship,
+.product-buy-duties,
+.product-buy-terms {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+.product-buy-terms {
+  color: var(--color-text);
+}
+.product-buy-ship-link {
+  color: var(--color-gold-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
   white-space: nowrap;
+}
+
+/* Preorder price ladder: every step as plain text, the current one marked.
+   Deliberately no struck-through price (EU Price Indication Directive). */
+.product-price-ladder {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+.product-price-ladder-head {
+  margin: 0;
+  color: var(--color-text-dim);
+  letter-spacing: 0.04em;
+}
+.product-price-ladder ol {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.product-price-ladder li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 0.6rem;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.product-price-ladder li[data-current] {
+  color: var(--color-text);
+  font-weight: 600;
+}
+.product-price-ladder li[data-current] .product-price-ladder-note {
+  color: var(--color-gold-text);
+}
+.product-price-ladder li[data-past] {
+  color: var(--color-text-dim);
+}
+.product-price-ladder-price {
+  text-align: right;
+}
+.product-price-ladder-note {
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+/* Quantity stepper beside the buy button. */
+.product-buy .product-form:has(> .product-qty) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--sp-2);
+}
+.product-buy .product-form:has(> .product-qty) > * {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+.product-buy .product-form:has(> .product-qty) > .product-qty {
+  flex: 0 0 auto;
+}
+.product-buy .product-form:has(> .product-qty) > .product-qty ~ *,
+.product-buy .product-form:has(> .product-qty) > .product-qty ~ .add-to-cart-form > button {
+  /* The add-to-cart form is display: contents, so its button is the flex
+     item that shares the row with the stepper. */
+  flex: 1 1 0;
+  min-width: 0;
+}
+.product-price-ladder-head {
+  font-size: var(--fs-xs);
+}
+.product-price-ladder li {
+  grid-template-columns: max-content max-content minmax(0, 1fr);
+}
+/* Trust row under the CTA: a two-column grid, no separators, so a wrap
+   never starts a line with a stray dot. */
+.product-buy .product-buy-trust {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem 0.75rem;
+}
+.product-buy .product-buy-trust li + li::before {
+  content: none;
+}
+.product-buy .product-buy-trust a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--color-border-strong);
+  text-underline-offset: 3px;
+}
+.product-qty {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.product-qty-step {
+  width: 2.5rem;
+  min-height: 44px;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 1.1rem;
+  border: 0;
+  cursor: pointer;
+}
+.product-qty-step:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+.product-qty-step:disabled {
+  color: var(--color-text-dim);
+  cursor: default;
+}
+.product-qty-value {
+  width: 2.75rem;
+  border: 0;
+  border-inline: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  text-align: center;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.product-qty-value::-webkit-outer-spin-button,
+.product-qty-value::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Per-tier price on the variant ladder cards. */
+.variant-tier-price {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Card prices: "from" on multi-variant cards, the unit after the price. */
+.product-card-price-from,
+.product-card-price-unit,
+.related-card-unit {
+  font-family: var(--font-mono);
+  font-size: 0.72em;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+.related-card-unit {
+  margin-left: 0.35em;
+}
+.product-card-badge.is-soldout {
+  background: var(--color-bg-elevated);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+}
+
+/* Campaign chip beside the PDP eyebrow: paid first batch in stock green,
+   a funding target in gold. */
+.product-status-chip[data-campaign='first-batch'] .kanban-dot {
+  background: var(--color-stock);
+}
+.product-status-chip[data-campaign='funding'] .kanban-dot,
+.product-status-chip[data-campaign='funded'] .kanban-dot {
+  background: var(--color-gold-fill);
+}
+
+/* The pinned buy rails carry price and button only; the detail lines stay
+   in the in-hero buy module. */
+.buy-rail.is-pinned .product-price-ladder,
+.buy-rail.is-pinned .product-buy-ship,
+.buy-rail.is-pinned .product-buy-duties,
+.buy-rail.is-pinned .product-buy-terms,
+.buy-rail.is-pinned .product-buy-trust,
+.buy-rail.is-pinned .product-buy-vat,
+.buy-rail.is-pinned .product-qty {
+  display: none;
 }
 
 .product-buy-price .product-price {
@@ -10389,11 +10602,21 @@ a.what-chain-chip:hover {
   font-size: 1.05rem;
 }
 
+/* Wide tables (rate tables, processor lists) scroll inside their own box
+   on a phone instead of widening the page. */
 .legal-body table {
   width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border-collapse: collapse;
   margin: 1rem 0;
   font-size: 0.9rem;
+}
+@media (max-width: 47.99em) {
+  .legal-body table {
+    display: block;
+  }
 }
 
 .legal-body th,
@@ -15787,9 +16010,9 @@ html.light .editorial-watermark {
 
 /* --------------------------------------------------------------------- */
 /* Opening-soon pill: sitewide, fixed bottom-right.                       */
-/* Public coming-soon notice with a newsletter CTA. Shown while           */
-/* PUBLIC_PRELAUNCH is on (kill switch in root.tsx); rendered by          */
-/* <PlaceholderBanner /> in PageLayout.tsx.                               */
+/* Public coming-soon notice with a newsletter CTA. Shown only while the  */
+/* shop is closed (root.tsx `prelaunch`, derived from PUBLIC_COMING_SOON  */
+/* and SHOPIFY_CHECKOUT_WRITE_ENABLED); rendered in PageLayout.tsx.       */
 /*                                                                        */
 /* Fixed positioning (not sticky) so it never pushes document flow,      */
 /* never overlaps the header, and never breaks the homepage hero.        */
@@ -18234,8 +18457,11 @@ html.light .cart-added-continue {
   font-weight: 600;
   text-decoration: none;
 }
-.cart-added-view:hover {
+.cart-added-view:hover,
+.cart-added-view:focus-visible {
   background: var(--color-gold-fill-hover);
+  /* The global a:hover gold would put gold text on the gold fill. */
+  color: var(--color-on-accent);
 }
 @keyframes cart-added-in {
   from { transform: translateX(100%); }
@@ -18507,4 +18733,259 @@ html.light .cart-added-continue {
   .board-art.is-swap-ready .board-folder-rail {
     transition: none;
   }
+}
+
+/* --------------------------------------------------------------------- */
+/* Launched-state home and help chrome                                   */
+/* --------------------------------------------------------------------- */
+/* Splash loader: the manifest and the slow-load escape stack in one      */
+/* column, so the "loading models" line never draws over the checklist.  */
+.hero-load-panel {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 5.5rem);
+  transform: translateX(-50%);
+  z-index: 35;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+}
+.hero-load-panel:empty {
+  display: none;
+}
+.hero-load-panel .hero-load-manifest,
+.hero-load-panel .hero-load-overflow {
+  position: static;
+  top: auto;
+  left: auto;
+  transform: none;
+}
+
+/* Top centre of the desktop hero: preorder line, then the size toggle.  */
+.hero-top-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3, 12px);
+  max-width: min(92vw, 44rem);
+}
+
+/* "Preorders open" line on the homepage.                                */
+.preorder-strip-home {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 16px;
+  padding: 8px 12px 8px 16px;
+  border: 1px solid color-mix(in srgb, var(--color-gold) 45%, var(--color-border));
+  border-radius: var(--r-pill, 999px);
+  background: color-mix(in srgb, var(--color-bg-card) 88%, transparent);
+  font-size: var(--fs-sm, 0.875rem);
+  color: var(--color-text);
+  text-align: center;
+}
+.preorder-strip-home p {
+  margin: 0;
+}
+.preorder-strip-home-text {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 10px;
+}
+.preorder-strip-home-tag {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs, 0.75rem);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-gold-text);
+}
+.preorder-strip-home-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 14px;
+}
+.preorder-strip-home-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.preorder-strip-home-primary {
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--color-gold-fill, var(--color-gold));
+  color: var(--color-on-accent);
+}
+.preorder-strip-home-primary:hover {
+  color: var(--color-on-accent);
+  filter: brightness(1.08);
+}
+.preorder-strip-home-secondary {
+  color: var(--color-text-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.preorder-strip-home-secondary:hover {
+  color: var(--color-text);
+}
+.preorder-strip-home.is-mobile {
+  margin-top: var(--sp-4, 16px);
+  border-radius: var(--r-md, 12px);
+  padding: 12px 14px;
+}
+.preorder-strip-home.is-mobile .preorder-strip-home-links a {
+  min-height: 44px;
+}
+
+/* /preorder: the model in four steps.                                   */
+.preorder-steps {
+  list-style: none;
+  margin: var(--sp-5, 24px) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-3, 12px);
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 48em) {
+  .preorder-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.preorder-step {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--sp-3, 12px);
+  row-gap: var(--sp-2, 8px);
+  align-content: start;
+  padding: var(--sp-4, 16px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md, 12px);
+  background: var(--color-bg-card);
+}
+.preorder-step-n {
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-gold);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--color-gold-text);
+}
+.preorder-step-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-md, 1.05rem);
+  font-weight: 700;
+  line-height: 1.25;
+}
+.preorder-step-body {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+/* /preorder tracker: the price ladder of one product option, plain text. */
+.preorder-ladder {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs, 0.75rem);
+  color: var(--color-text-muted);
+}
+.preorder-ladder-label {
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.preorder-ladder-step {
+  white-space: nowrap;
+  color: var(--color-text);
+}
+.preorder-ladder-step span {
+  color: var(--color-text-muted);
+}
+.preorder-ladder-step em {
+  margin-left: 4px;
+  font-style: normal;
+  color: var(--color-gold-text);
+}
+.preorder-ladder-step.is-current {
+  font-weight: 700;
+}
+
+/* /support: the help page.                                              */
+.support-page {
+  max-width: 52rem;
+}
+.support-block {
+  margin-top: var(--sp-6, 32px);
+  padding-top: var(--sp-5, 24px);
+  border-top: 1px solid var(--color-border);
+  scroll-margin-top: 6rem;
+}
+.support-block > p {
+  color: var(--color-text-muted);
+  max-width: 44rem;
+}
+.support-block-title {
+  margin: 0 0 var(--sp-3, 12px);
+  font-family: var(--font-display);
+  font-size: var(--fs-lg, 1.25rem);
+  font-weight: 700;
+}
+.support-note {
+  margin-top: var(--sp-3, 12px);
+  font-size: var(--fs-sm, 0.875rem);
+}
+.support-topics {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-2, 8px);
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 40em) {
+  .support-topics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.support-topic {
+  display: grid;
+  gap: 4px;
+  min-height: 44px;
+  padding: var(--sp-3, 12px) var(--sp-4, 16px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-sm, 8px);
+  background: var(--color-bg-card);
+  text-decoration: none;
+  color: var(--color-text);
+  transition: border-color 150ms ease;
+}
+.support-topic:hover {
+  border-color: var(--color-gold);
+}
+.support-topic-title {
+  font-weight: 600;
+}
+.support-topic-desc {
+  font-size: var(--fs-sm, 0.875rem);
+  color: var(--color-text-muted);
+}
+/* A strip with one figure spans the row instead of squeezing into half. */
+.preorder-strip-cell:only-child {
+  grid-column: 1 / -1;
+}
+.preorder-strip-home-text {
+  align-items: baseline;
 }

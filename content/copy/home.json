@@ -21,5 +21,9 @@
   "m_ledger_source_format_value": "KiCad 10 · STEP · BOM",
   "m_ledger_designed_in_label": "Designed in",
   "m_ledger_designed_in_value": "Belgium",
-  "m_browse": "Browse the full catalog"
+  "m_browse": "Browse the full catalog",
+  "preorder_strip_tag": "Preorders open",
+  "preorder_strip_stack": "Flight controller and ESC batch 1 {ships}.",
+  "preorder_strip_how": "How preorders work",
+  "preorder_strip_shop": "Shop all products"
 }

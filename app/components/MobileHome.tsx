@@ -6,6 +6,7 @@ import {HeroWordmark} from '~/components/HeroWordmark';
 import {ProductItem} from '~/components/ProductItem';
 import {AnimatedNumber} from '~/components/AnimatedNumber';
 import {Txt} from '~/components/Txt';
+import {PreorderStrip} from '~/components/PreorderStrip';
 import {PRODUCT_CONTENT, isConceptFor} from '~/lib/product-content';
 import {useRoadmapStatusResolver} from '~/lib/coming-soon';
 import {BOARD_ART_VERSION} from '~/data/board-art-version';
@@ -61,8 +62,11 @@ const HOME_LEDGER: Array<{key: string; value?: string; countUp?: boolean}> = [
  */
 export function MobileHome({
   featured,
+  preorderShips = null,
 }: {
   featured: CollectionItemFragment[] | Promise<CollectionItemFragment[]>;
+  /** Set while the shop is open: the preorder line under the actions. */
+  preorderShips?: string | null;
 }) {
   const reduce = useReducedMotion();
 
@@ -171,6 +175,11 @@ export function MobileHome({
             <Txt id="home.m_github" />
           </a>
         </motion.div>
+        {preorderShips !== null ? (
+          <motion.div {...rise(4)}>
+            <PreorderStrip ships={preorderShips || null} className="is-mobile" />
+          </motion.div>
+        ) : null}
       </section>
 
       {/* The loader resolves `featured` for a mobile UA, so the cards render

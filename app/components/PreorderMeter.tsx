@@ -17,11 +17,19 @@ export function PreorderMeter({
   campaign,
   priceAfter,
   compact = false,
+  showEarly = true,
+  showBatchPromise = true,
 }: {
   campaign: CampaignState;
   /** Shopify's compare-at price: the price once the target is reached. */
   priceAfter?: MoneyV2 | null;
   compact?: boolean;
+  /** The "preorder price for the first N" line. The product page turns it
+   *  off where it shows the whole price ladder instead. */
+  showEarly?: boolean;
+  /** The current batch row repeats the ship promise. The product page
+   *  turns it off where the ship promise already sits on the stock line. */
+  showBatchPromise?: boolean;
 }) {
   const view = meterView(
     campaign,
@@ -47,7 +55,9 @@ export function PreorderMeter({
           <span className="funding-meter-label">{view.stretch.label}</span>
         </>
       ) : null}
-      {view.early ? <span className="funding-meter-label">{view.early}</span> : null}
+      {showEarly && view.early ? (
+        <span className="funding-meter-label">{view.early}</span>
+      ) : null}
       {campaign.batches.length > 1 ? (
         <ol className="funding-meter-batches">
           {campaign.batches.map((b) => (
@@ -57,7 +67,9 @@ export function PreorderMeter({
                 {b.status === 'sold_out'
                   ? copyText('preorder.batch_sold_out') ?? 'sold out'
                   : b.status === 'current'
-                    ? b.shipPromise
+                    ? showBatchPromise
+                      ? b.shipPromise
+                      : (copyText('preorder.batch_current') ?? '{units} units, ordering now').replace('{units}', String(b.units))
                     : (copyText('preorder.batch_next') ?? 'next, {units} units').replace('{units}', String(b.units))}
               </span>
             </li>

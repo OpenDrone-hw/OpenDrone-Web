@@ -5,6 +5,7 @@ import {Check} from 'lucide-react';
 import type {MappedProductOptions} from '~/lib/product-shapes';
 import type {VariantContent} from '~/lib/product-content';
 import {copyText} from '~/lib/copy';
+import {formatPrice} from '~/lib/catalog';
 
 /**
  * Comparison ladder - the variant selector for a product *line*
@@ -28,6 +29,7 @@ export function VariantLadder({
   activeValue,
   onSelect,
   compact = false,
+  showPrices = false,
 }: {
   axis: string;
   variants: Record<string, VariantContent>;
@@ -38,6 +40,9 @@ export function VariantLadder({
    *  spec line) - for the pinned mobile buy bar where space is tight
    *  but variant switching still needs to be reachable. */
   compact?: boolean;
+  /** Print each tier's price on its card. Off while the product is not
+   *  for sale, so a locked page never shows a price. */
+  showPrices?: boolean;
 }) {
   const navigate = useNavigate();
   // The tier card previews instantly via onSelect, but price/stock/cart wiring
@@ -91,6 +96,15 @@ export function VariantLadder({
             optionValue && optionValue.exists && !optionValue.available,
           );
           const disabled = comingSoon || soldOut;
+          // Each tier's own price on its card, as FPV shops show it on the
+          // option: the buyer compares sizes without clicking through.
+          const tierPrice =
+            showPrices && !compact && !comingSoon && optionValue?.firstSelectableVariant
+              ? formatPrice(
+                  optionValue.firstSelectableVariant.price.amount,
+                  optionValue.firstSelectableVariant.price.currencyCode,
+                )
+              : '';
           const pending = pendingValue === value;
           return (
             <button
@@ -146,6 +160,9 @@ export function VariantLadder({
                   tagline said nothing a spec doesn't). Keys ride along for
                   screen readers only; keep the values short enough to hold
                   one line. */}
+              {tierPrice ? (
+                <span className="variant-tier-price">{tierPrice}</span>
+              ) : null}
               {compact || !content.highlights.length ? null : (
                 <span className="variant-tier-specs">
                   {content.highlights.map(([k, v], i) => (

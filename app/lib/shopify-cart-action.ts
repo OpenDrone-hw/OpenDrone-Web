@@ -1,4 +1,5 @@
 import {bySku, type Catalog, type CatalogVariant} from './catalog.ts';
+import {shipGroupKey} from './preorder-campaign.ts';
 import {isPurchasableStatus, resolveStatus} from './product-content.ts';
 import {requestedLines} from './shopify-cart-input.ts';
 import {
@@ -104,12 +105,95 @@ function sellableVariant(
   return null;
 }
 
+/** The catalog variant behind a merchandise id, whatever it sells as. */
+function catalogVariant(catalog: Catalog, merchandiseId: string): CatalogVariant | null {
+  for (const product of catalog.products) {
+    const variant = product.variants.find((v) => v.merchandise_id === merchandiseId);
+    if (variant) return variant;
+  }
+  return null;
+}
+
+/**
+ * Units a cart may hold of a variant sold from a paid batch: the units left
+ * in that batch. Null when the variant is not sold from paid stock.
+ */
+export function paidBatchLeft(variant: Pick<CatalogVariant, 'campaign'> | null | undefined): number | null {
+  const campaign = variant?.campaign;
+  if (!campaign?.paidStock) return null;
+  return Math.max(0, campaign.paidLeft ?? campaign.batchUnits - campaign.batchOrdered);
+}
+
+/** What a buyer reads when a line asks for more than the paid batch holds. */
+export function paidBatchMessage(left: number, shipPromise: string | null): string {
+  const promise = shipPromise?.trim() ? ` (${shipPromise.trim()})` : '';
+  return left === 1
+    ? `Only 1 unit is left in the paid batch${promise}. Order 1 at most; later units belong to the next batch, which is a funding target.`
+    : `Only ${left} units are left in the paid batch${promise}. Order ${left} or fewer; later units belong to the next batch, which is a funding target.`;
+}
+
+/** Refuse an add that takes a paid-batch variant past the units left,
+ *  counting what the cart already holds and every line of this add. */
+function checkPaidBatches(
+  catalog: Catalog,
+  lines: CartLineInput[],
+  inCart: Map<string, number>,
+): void {
+  const wanted = new Map(inCart);
+  for (const line of lines) {
+    wanted.set(line.merchandiseId, (wanted.get(line.merchandiseId) ?? 0) + line.quantity);
+  }
+  for (const line of lines) {
+    const variant = catalogVariant(catalog, line.merchandiseId);
+    if (variant) checkPaidBatch(variant, wanted.get(line.merchandiseId) ?? 0);
+  }
+}
+
+/** Refuse a quantity of a paid-batch variant beyond the units left. */
+function checkPaidBatch(variant: CatalogVariant, wanted: number): void {
+  const left = paidBatchLeft(variant);
+  if (left !== null && wanted > left) {
+    throw fail(paidBatchMessage(left, variant.ship_promise), 409);
+  }
+}
+
+/**
+ * The product page link for a cart line with its options selected, so a
+ * click from the cart opens the size or model that is in the cart:
+ * `/products/openfc-lite?Model=30%C3%9730`.
+ */
+export function variantLink(
+  handle: string,
+  selectedOptions: Array<{name: string; value: string}> = [],
+): string {
+  const options = selectedOptions.filter(
+    ({name, value}) => !(name === 'Title' && value === 'Default Title'),
+  );
+  const query = new URLSearchParams(options.map(({name, value}) => [name, value])).toString();
+  return `/products/${encodeURIComponent(handle)}${query ? `?${query}` : ''}`;
+}
+
+/** Where the checkout intent sends the buyer back to the cart, and why. */
+export const CART_CHECK = {
+  /** A paid-batch line asks for more units than the batch has left. */
+  paidBatch: 'paid-batch',
+  /** A preorder line's ship date changed since it was added. */
+  shipDate: 'ship-date',
+} as const;
+
 /**
  * POST /api/shopify/cart. Intents:
  * - `add` (default): add SKUs to the session cart, then show /cart.
- * - `update`: set one line's quantity. `remove`: drop lines.
- * - `checkout`: re-check every line against the current catalog, refresh a
- *   preorder line whose ship promise changed, then hand off to Shopify.
+ * - `update`: set one line's quantity. `remove`: drop lines. A line that is
+ *   no longer in the cart (a double click, a second tab) is a no-op for
+ *   `remove` and a 409 for `update`, never an upstream failure.
+ * - `checkout`: re-check every line against the current catalog. A line
+ *   over its paid batch, or a preorder line whose ship promise changed (the
+ *   line is refreshed first), goes back to /cart with a notice so the buyer
+ *   sees the date before paying; otherwise hand off to Shopify.
+ *
+ * A variant sold from a paid batch (FC/ESC first run) can never be in the
+ * cart in a larger quantity than the units left in that batch.
  */
 export async function handleShopifyCartAction(request: Request, env: CartEnv, dependencies: ShopifyCartDependencies): Promise<Response> {
   if (request.method !== 'POST') throw new Response('Method Not Allowed', {status: 405, headers: {Allow: 'POST'}});
@@ -149,17 +233,51 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
       if (!lineIds.length || lineIds.some((id) => !/^gid:\/\/shopify\/CartLine\/[A-Za-z0-9?=&_-]+$/.test(id))) {
         throw fail('Invalid cart line.', 400);
       }
+      const quantity = Number(form.get('quantity'));
+      if (intent === 'update' && (!Number.isSafeInteger(quantity) || quantity < 1 || quantity > MAX_QUANTITY || lineIds.length !== 1)) {
+        throw fail('Invalid quantity.', 400);
+      }
+      if (!dependencies.getCart) throw new Error('shopify: cart session dependencies missing');
+      const current = await dependencies.getCart(existingId);
+      if (!current) {
+        dependencies.unsetCartId?.();
+        if (intent === 'remove') {
+          return wantsSummary
+            ? Response.json({totalQuantity: 0, lines: []} satisfies CartSummary, {headers: NO_STORE})
+            : redirect('/cart');
+        }
+        throw fail('Cart is empty.', 409);
+      }
+      const present = new Set(current.lines.map((l) => l.id));
       let updated: ShopifyCart;
       if (intent === 'remove') {
+        const ids = lineIds.filter((id) => present.has(id));
+        // Already gone: nothing to do, show the cart as it is.
+        if (!ids.length) {
+          return wantsSummary
+            ? Response.json(cartSummary(current), {headers: NO_STORE})
+            : redirect('/cart');
+        }
         if (!dependencies.removeCartLines) throw new Error('shopify: remove dependency missing');
-        updated = await dependencies.removeCartLines(existingId, lineIds);
+        updated = await dependencies.removeCartLines(existingId, ids);
       } else {
-        const quantity = Number(form.get('quantity'));
-        if (!Number.isSafeInteger(quantity) || quantity < 1 || quantity > MAX_QUANTITY || lineIds.length !== 1) {
-          throw fail('Invalid quantity.', 400);
+        const target = current.lines.find((l) => l.id === lineIds[0]);
+        if (!target) {
+          if (!wantsSummary) return redirect('/cart');
+          throw fail('This item is no longer in your cart.', 409);
+        }
+        if (quantity > target.quantity) {
+          const catalog = await dependencies.fetchCatalog();
+          const variant = catalogVariant(catalog, target.merchandiseId);
+          if (variant) {
+            const others = current.lines
+              .filter((l) => l.merchandiseId === target.merchandiseId && l.id !== target.id)
+              .reduce((n, l) => n + l.quantity, 0);
+            checkPaidBatch(variant, quantity + others);
+          }
         }
         if (!dependencies.updateCartLines) throw new Error('shopify: update dependency missing');
-        updated = await dependencies.updateCartLines(existingId, [{id: lineIds[0], quantity}]);
+        updated = await dependencies.updateCartLines(existingId, [{id: target.id, quantity}]);
       }
       return wantsSummary
         ? Response.json(cartSummary(updated), {headers: NO_STORE})
@@ -177,21 +295,31 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
         return redirect('/cart');
       }
       const refresh: CartLineUpdate[] = [];
+      const totals = new Map<string, {variant: CatalogVariant; quantity: number}>();
       for (const line of cart.lines) {
         const variant = sellableVariant(catalog, line.merchandiseId, globalComingSoon);
         if (!variant) throw fail('One or more cart items are no longer available.', 409);
+        const total = totals.get(line.merchandiseId);
+        totals.set(line.merchandiseId, {variant, quantity: (total?.quantity ?? 0) + line.quantity});
         const attributes = lineAttributes(variant) ?? [];
         const promise = attributes[0]?.value ?? null;
         if (promise !== line.shipPromise) {
           refresh.push({id: line.id, quantity: line.quantity, attributes});
         }
       }
-      let target = cart;
+      // More units than the paid batch has left: the extra units would carry
+      // a ship date they cannot meet. Back to the cart, which says how many.
+      for (const {variant, quantity} of totals.values()) {
+        const left = paidBatchLeft(variant);
+        if (left !== null && quantity > left) return redirect(`/cart?check=${CART_CHECK.paidBatch}`);
+      }
       if (refresh.length) {
         if (!dependencies.updateCartLines) throw new Error('shopify: update dependency missing');
-        target = await dependencies.updateCartLines(existingId, refresh);
+        await dependencies.updateCartLines(existingId, refresh);
+        // The ship date moved since the line was added: show it before payment.
+        return redirect(`/cart?check=${CART_CHECK.shipDate}`);
       }
-      return redirect(target.checkoutUrl);
+      return redirect(cart.checkoutUrl);
     }
 
     if (intent !== 'add') throw fail('Invalid cart action.', 400);
@@ -222,6 +350,7 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
             throw fail('Cart quantity exceeds the limit.', 400);
           }
         }
+        checkPaidBatches(catalog, lines, quantities);
         const updated = await dependencies.addCartLines(existingId, lines);
         return wantsSummary
           ? Response.json(cartSummary(updated), {headers: NO_STORE})
@@ -230,6 +359,7 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
       // The session pointed at a cart Shopify no longer has: start a new one.
       dependencies.unsetCartId?.();
     }
+    checkPaidBatches(catalog, lines, new Map());
     const cart = await dependencies.createCart(lines);
     dependencies.setCartId?.(cart.id);
     return wantsSummary
@@ -277,4 +407,85 @@ export async function handleShopifyCartLoader(
   if (new URL(request.url).searchParams.get('summary') !== '1') return redirect('/cart');
   const cart = await loadSessionCart(env, dependencies);
   return Response.json(cart ? cartSummary(cart) : {totalQuantity: 0, lines: []}, {headers: NO_STORE});
+}
+
+/** What the cart page knows about one line beyond Shopify's cart. */
+export type CartLineInfo = {
+  /** Lines with the same key ship together (see `shipGroupKey`). */
+  group: string;
+  /** Most units this line may hold: the paid-batch units left minus the
+   *  same variant's other lines. Null when not sold from a paid batch. */
+  maxQuantity: number | null;
+  /** The funding target this line waits for, when it waits for one. */
+  target: {units: number; ordered: number} | null;
+};
+
+/**
+ * Per cart line: its ship group, its paid-batch limit and the target it
+ * waits for, from the campaign-aware catalog. Without a catalog (it could
+ * not be read) every line groups by its ship promise text and has no limit.
+ */
+export function cartLineInfo(
+  cart: ShopifyCart,
+  catalog: Catalog | null,
+): Record<string, CartLineInfo> {
+  const out: Record<string, CartLineInfo> = {};
+  for (const line of cart.lines) {
+    const variant = catalog ? catalogVariant(catalog, line.merchandiseId) : null;
+    const campaign = variant?.campaign ?? null;
+    // The line's own promise decides its date; the campaign says whether it
+    // is a funding batch. A line added from paid stock keeps its date group
+    // until checkout refreshes it.
+    const group =
+      campaign && line.shipPromise === campaign.shipPromise
+        ? shipGroupKey(line.sku, line.shipPromise, campaign)
+        : shipGroupKey(line.sku, line.shipPromise, null);
+    const left = paidBatchLeft(variant);
+    const others = cart.lines
+      .filter((l) => l.merchandiseId === line.merchandiseId && l.id !== line.id)
+      .reduce((n, l) => n + l.quantity, 0);
+    out[line.id] = {
+      group,
+      maxQuantity: left === null ? null : Math.max(0, left - others),
+      target:
+        group.startsWith('target:') && campaign?.target != null
+          ? {units: campaign.target, ordered: campaign.targetOrdered}
+          : null,
+    };
+  }
+  return out;
+}
+
+/**
+ * How to split a cart whose lines ship on different dates: the lines to keep
+ * for this order and the lines to order separately. Fixed-date lines (in
+ * stock, paid stock) stay; everything waiting for a funding target goes.
+ * With only funding lines, the group closest to its target stays. Null when
+ * every line ships together, or when no split would ship anything sooner.
+ */
+export function splitPlan(
+  cart: ShopifyCart,
+  info: Record<string, CartLineInfo>,
+): {keep: string[]; later: string[]} | null {
+  const groups = new Map<string, string[]>();
+  for (const line of cart.lines) {
+    const key = info[line.id]?.group ?? `date:${line.shipPromise ?? ''}`;
+    groups.set(key, [...(groups.get(key) ?? []), line.id]);
+  }
+  if (groups.size < 2) return null;
+  const fixed = [...groups.keys()].filter((k) => k.startsWith('date:'));
+  let keepKeys: string[];
+  if (fixed.length) {
+    keepKeys = fixed;
+  } else {
+    const remaining = (key: string) => {
+      const id = groups.get(key)![0];
+      const target = info[id]?.target;
+      return target ? target.units - target.ordered : Number.POSITIVE_INFINITY;
+    };
+    keepKeys = [[...groups.keys()].sort((a, b) => remaining(a) - remaining(b))[0]];
+  }
+  const keep = cart.lines.filter((l) => keepKeys.includes(info[l.id]?.group ?? `date:${l.shipPromise ?? ''}`)).map((l) => l.id);
+  const later = cart.lines.map((l) => l.id).filter((id) => !keep.includes(id));
+  return later.length && keep.length ? {keep, later} : null;
 }

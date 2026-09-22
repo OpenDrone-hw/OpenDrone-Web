@@ -71,6 +71,12 @@ export type CampaignState = {
   targetReached: boolean;
   /** The ship promise for the next ordered unit. */
   shipPromise: string;
+  /** The next unit's batch has no ship date of its own: it ships a set time
+   *  after its funding target is reached, so its date depends on this SKU. */
+  shipsOnTarget?: boolean;
+  /** Units left in the paid batch the next unit comes out of; null when the
+   *  next unit is not paid stock. A cart line must not ask for more. */
+  paidLeft?: number | null;
   /** The next unit still gets a price step, so Shopify's price is under
    *  retail. */
   earlyPrice: boolean;
@@ -147,6 +153,48 @@ export function tierPrice(retail: number | null, off: number): number | null {
   return Math.round(retail * (1 - off) * 100) / 100;
 }
 
+/** One step of the price ladder: units `from` to `to` (null: no end) of a
+ *  SKU cost `price`. Unit numbers count paid units, starting at 1. */
+export type LadderStep = {from: number; to: number | null; price: number};
+
+/**
+ * The whole price ladder for one SKU, as plain steps: with the default tiers
+ * and a retail price of 39.00, units 1 to 100 cost 31.20, units 101 to 250
+ * cost 35.10 and from unit 251 on it is retail. Shown as text, never as a
+ * struck-through price.
+ */
+export function priceLadder(retail: number, priceTiers: PriceTier[]): LadderStep[] {
+  const steps: LadderStep[] = [];
+  let from = 1;
+  for (const tier of priceTiers) {
+    const price = tierPrice(retail, tier.off);
+    if (price == null || tier.upTo < from) continue;
+    steps.push({from, to: tier.upTo, price});
+    from = tier.upTo + 1;
+  }
+  steps.push({from, to: null, price: Math.round(retail * 100) / 100});
+  return steps;
+}
+
+/**
+ * The key that decides whether two cart lines ship together. A line with a
+ * fixed date (in stock, paid stock, or a batch whose supplier order is
+ * placed) groups by that date. A line whose batch ships only once its own
+ * funding target is reached groups by SKU and batch: two products with the
+ * same "ships about 10 weeks after its target" text still wait for two
+ * different targets.
+ */
+export function shipGroupKey(
+  sku: string | null,
+  shipPromise: string | null,
+  campaign: CampaignState | null | undefined,
+): string {
+  if (campaign && campaign.shipsOnTarget && !campaign.paidStock) {
+    return `target:${sku ?? ''}:${campaign.batch}`;
+  }
+  return `date:${shipPromise ?? ''}`;
+}
+
 /**
  * The campaign state for one SKU after `ordered` paid units. Past the last
  * configured batch, further batches repeat the last batch's size with the
@@ -200,6 +248,8 @@ export function campaignState(
     targetOrdered,
     targetReached,
     shipPromise: current.ships?.trim() || pendingShips,
+    shipsOnTarget: !current.ships?.trim(),
+    paidLeft: current.paid ? current.units - (units - start) : null,
     earlyPrice: tier !== null,
     tierUpTo: tier?.upTo ?? null,
     tierLeft: tier ? tier.upTo - units : 0,

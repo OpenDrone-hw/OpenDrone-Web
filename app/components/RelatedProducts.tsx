@@ -4,7 +4,12 @@ import type {ProductCardFragment} from '~/lib/product-shapes';
 import {formatPrice} from '~/lib/catalog';
 import {SmoothImage} from '~/components/SmoothImage';
 import {AddToCartButton} from '~/components/AddToCartButton';
-import {useComingSoon, useRoadmapStatusResolver} from '~/lib/coming-soon';
+import {
+  useComingSoon,
+  useProductStatus,
+  useRoadmapStatusResolver,
+} from '~/lib/coming-soon';
+import {copyText} from '~/lib/copy';
 import {isConceptFor} from '~/lib/product-content';
 import {PRODUCT_CONTENT} from '~/lib/product-content';
 
@@ -83,6 +88,8 @@ export function RelatedProducts({
 
 function RelatedCard({product}: {product: RelatedProduct}) {
   const comingSoon = useComingSoon(product.handle);
+  const status = useProductStatus(product.handle);
+  const priceUnit = PRODUCT_CONTENT[product.handle]?.priceUnit;
   const image = product.featuredImage;
   const min = product.priceRange.minVariantPrice;
   const max = product.priceRange.maxVariantPrice;
@@ -150,9 +157,14 @@ function RelatedCard({product}: {product: RelatedProduct}) {
             {priced && !comingSoon ? (
               <>
                 {fromPrice ? (
-                  <span className="related-card-from">from</span>
+                  <span className="related-card-from">
+                    {copyText('product-chrome.card_price_from') ?? 'from'}
+                  </span>
                 ) : null}
                 <span>{formatPrice(min.amount, min.currencyCode)}</span>
+                {priceUnit ? (
+                  <span className="related-card-unit">{priceUnit}</span>
+                ) : null}
               </>
             ) : (
               <span>&nbsp;</span>
@@ -168,7 +180,11 @@ function RelatedCard({product}: {product: RelatedProduct}) {
             product={product.handle}
             disabled={!only.availableForSale}
           >
-            Add to cart
+            {!only.availableForSale
+              ? (copyText('product-chrome.buy_stock_out') ?? 'Sold out')
+              : status === 'preorder'
+                ? (copyText('product-chrome.buy_cta_preorder') ?? 'Pre-order')
+                : (copyText('product-chrome.card_add_to_cart') ?? 'Add to cart')}
           </AddToCartButton>
         </div>
       ) : null}

@@ -2,10 +2,16 @@ import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import type {Catalog} from './catalog.ts';
 import {PRODUCT_CONTENT} from './product-content.ts';
+import {campaignState} from './preorder-campaign.ts';
 import {
   handleShopifyCartAction,
   handleShopifyCartLoader,
   loadSessionCart,
+  cartLineInfo,
+  paidBatchLeft,
+  paidBatchMessage,
+  splitPlan,
+  variantLink,
   type ShopifyCartDependencies,
 } from './shopify-cart-action.ts';
 import type {ShopifyCart, ShopifyCartLine} from './shopify-storefront.ts';
@@ -304,6 +310,7 @@ describe('Shopify cart action: update, remove, checkout', () => {
     const deps: ShopifyCartDependencies = {
       fetchCatalog: async () => CATALOG,
       getCartId: () => 'cart-a',
+      getCart: async () => cart([line()], 'cart-a'),
       updateCartLines: async (_id, lines) => { updated = lines; return cart(); },
       removeCartLines: async (_id, ids) => { removed = ids; return cart(); },
       ...MUST_NOT,
@@ -334,7 +341,7 @@ describe('Shopify cart action: update, remove, checkout', () => {
     assert.equal(response.headers.get('Location'), CHECKOUT);
   });
 
-  it('refreshes a preorder line whose ship promise moved before checkout', async () => {
+  it('refreshes a preorder line whose ship promise moved, then shows the cart before payment', async () => {
     let updated: unknown;
     const response = await handleShopifyCartAction(request({intent: 'checkout'}), ENABLED_ENV, {
       fetchCatalog: async () => CATALOG,
@@ -343,7 +350,7 @@ describe('Shopify cart action: update, remove, checkout', () => {
       updateCartLines: async (_id, lines) => { updated = lines; return {...cart([], 'cart-a'), checkoutUrl: `${CHECKOUT}?v=2`}; },
       ...MUST_NOT,
     });
-    assert.equal(response.headers.get('Location'), `${CHECKOUT}?v=2`);
+    assert.equal(response.headers.get('Location'), '/cart?check=ship-date');
     assert.deepEqual(updated, [{
       id: 'gid://shopify/CartLine/1?cart=a',
       quantity: 2,
@@ -358,6 +365,7 @@ describe('Shopify cart action: update, remove, checkout', () => {
       {
         fetchCatalog: async () => CATALOG,
         getCartId: () => 'cart-a',
+        getCart: async () => cart([line()], 'cart-a'),
         updateCartLines: async () => cart([line({quantity: 2})], 'cart-a'),
         ...MUST_NOT,
       },
@@ -379,6 +387,243 @@ describe('Shopify cart action: update, remove, checkout', () => {
       ...MUST_NOT,
     }));
     assert.equal(response.status, 409);
+  });
+});
+
+const PAID_ID = 'gid://shopify/ProductVariant/fc';
+const PAID_PROMISE = 'ships late October 2026';
+const BATCHES = [{units: 250, paid: true, ships: PAID_PROMISE}, {units: 250}];
+const PENDING = 'ships about 10 weeks after its target is reached';
+
+/** A catalog selling OPENFC-LITE-2020 from its paid batch after `ordered` paid units. */
+function paidCatalog(ordered: number): Catalog {
+  const campaign = campaignState(BATCHES, ordered, PENDING, [{upTo: 100, off: 0.2}, {upTo: 250, off: 0.1}], 29);
+  return {
+    ...CATALOG,
+    products: [
+      ...CATALOG.products,
+      {
+        handle: 'openfc-lite', title: 'OpenFC Lite', family: null, description: null,
+        url: '/products/openfc-lite', images: [], rating: null,
+        variants: [{
+          sku: 'OPENFC-LITE-2020', title: '20×20', model: '20×20', options: {Model: '20×20'},
+          price: campaign.price ?? 29, compare_price: 29, currency: 'EUR',
+          availability: 'preorder', ship_promise: campaign.shipPromise, image: null,
+          url: '/products/openfc-lite', cart_add_url: '/api/shopify/cart',
+          merchandise_id: PAID_ID, campaign,
+        }],
+      },
+    ],
+  };
+}
+
+function fcLine(overrides: Partial<ShopifyCartLine> = {}): ShopifyCartLine {
+  return line({
+    id: 'gid://shopify/CartLine/fc?cart=a', merchandiseId: PAID_ID, handle: 'openfc-lite',
+    sku: 'OPENFC-LITE-2020', title: 'OpenFC Lite', variantTitle: '20×20', shipPromise: PAID_PROMISE,
+    ...overrides,
+  });
+}
+
+describe('Shopify cart action: paid batch limit', () => {
+  it('knows the units left in the paid batch, and nothing for a funding target', () => {
+    assert.equal(paidBatchLeft(paidCatalog(240).products[1].variants[0]), 10);
+    assert.equal(paidBatchLeft(paidCatalog(250).products[1].variants[0]), null);
+    assert.equal(paidBatchLeft(CATALOG.products[0].variants[0]), null);
+    assert.match(paidBatchMessage(10, PAID_PROMISE), /Only 10 units are left in the paid batch \(ships late October 2026\)/);
+    assert.match(paidBatchMessage(1, null), /^Only 1 unit is left in the paid batch\. /);
+  });
+
+  it('refuses an add past the units left, counting the cart and the add together', async () => {
+    const response = await thrownResponse(handleShopifyCartAction(
+      request({lines: 'OPENFC-LITE-2020:4,OPENFC-LITE-2020:3'}), ENABLED_ENV, {
+        fetchCatalog: async () => paidCatalog(240),
+        getCartId: () => 'cart-a',
+        getCart: async () => cart([fcLine({quantity: 4})], 'cart-a'),
+        addCartLines: async () => { throw new Error('must not add'); },
+        ...MUST_NOT,
+      },
+    ));
+    assert.equal(response.status, 409);
+    assert.match(await response.text(), /Only 10 units are left in the paid batch/);
+  });
+
+  it('refuses a new cart past the units left and accepts one within them', async () => {
+    const over = await thrownResponse(handleShopifyCartAction(
+      request({sku: 'OPENFC-LITE-2020', qty: '11'}), ENABLED_ENV,
+      {fetchCatalog: async () => paidCatalog(240), createCart: async () => { throw new Error('must not create'); }},
+    ));
+    assert.equal(over.status, 409);
+    let created: unknown;
+    await handleShopifyCartAction(
+      request({sku: 'OPENFC-LITE-2020', qty: '10'}), ENABLED_ENV,
+      {fetchCatalog: async () => paidCatalog(240), createCart: async (lines) => { created = lines; return cart(); }},
+    );
+    assert.deepEqual(created, [{merchandiseId: PAID_ID, quantity: 10, attributes: [{key: 'Preorder', value: PAID_PROMISE}]}]);
+  });
+
+  it('refuses a quantity update past the units left, but never blocks lowering it', async () => {
+    const deps: ShopifyCartDependencies = {
+      fetchCatalog: async () => paidCatalog(245),
+      getCartId: () => 'cart-a',
+      getCart: async () => cart([fcLine({quantity: 8})], 'cart-a'),
+      updateCartLines: async () => cart([fcLine()], 'cart-a'),
+      ...MUST_NOT,
+    };
+    const up = await thrownResponse(handleShopifyCartAction(
+      request({intent: 'update', lineId: 'gid://shopify/CartLine/fc?cart=a', quantity: '9', response: 'summary'}), ENABLED_ENV, deps,
+    ));
+    assert.equal(up.status, 409);
+    assert.match(await up.text(), /Only 5 units/);
+    const down = await handleShopifyCartAction(
+      request({intent: 'update', lineId: 'gid://shopify/CartLine/fc?cart=a', quantity: '7', response: 'summary'}),
+      ENABLED_ENV,
+      {...deps, fetchCatalog: async () => { throw new Error('must not read the catalog to lower a quantity'); }},
+    );
+    assert.equal(down.status, 200);
+  });
+
+  it('sends checkout back to the cart when a line is over the units left', async () => {
+    const response = await handleShopifyCartAction(request({intent: 'checkout'}), ENABLED_ENV, {
+      fetchCatalog: async () => paidCatalog(245),
+      getCartId: () => 'cart-a',
+      getCart: async () => cart([fcLine({quantity: 4}), fcLine({id: 'gid://shopify/CartLine/fc2', quantity: 2})], 'cart-a'),
+      updateCartLines: async () => { throw new Error('must not update'); },
+      ...MUST_NOT,
+    });
+    assert.equal(response.headers.get('Location'), '/cart?check=paid-batch');
+  });
+
+  it('hands a cart within the paid batch to checkout', async () => {
+    const response = await handleShopifyCartAction(request({intent: 'checkout'}), ENABLED_ENV, {
+      fetchCatalog: async () => paidCatalog(245),
+      getCartId: () => 'cart-a',
+      getCart: async () => cart([fcLine({quantity: 5})], 'cart-a'),
+      ...MUST_NOT,
+    });
+    assert.equal(response.headers.get('Location'), CHECKOUT);
+  });
+});
+
+describe('Shopify cart action: stale lines', () => {
+  const deps: ShopifyCartDependencies = {
+    fetchCatalog: async () => CATALOG,
+    getCartId: () => 'cart-a',
+    getCart: async () => cart([line()], 'cart-a'),
+    updateCartLines: async () => { throw new Error('must not update'); },
+    removeCartLines: async () => { throw new Error('must not remove'); },
+    ...MUST_NOT,
+  };
+  const gone = 'gid://shopify/CartLine/gone';
+
+  it('treats removing a line that is already gone as a no-op', async () => {
+    const summary = await handleShopifyCartAction(request({intent: 'remove', lineId: gone, response: 'summary'}), ENABLED_ENV, deps);
+    assert.equal(summary.status, 200);
+    assert.equal(((await summary.json()) as {totalQuantity: number}).totalQuantity, 1);
+    const plain = await handleShopifyCartAction(request({intent: 'remove', lineId: gone}), ENABLED_ENV, deps);
+    assert.equal(plain.headers.get('Location'), '/cart');
+  });
+
+  it('answers 409, not 503, for an update to a line that is gone', async () => {
+    const response = await thrownResponse(handleShopifyCartAction(
+      request({intent: 'update', lineId: gone, quantity: '2', response: 'summary'}), ENABLED_ENV, deps,
+    ));
+    assert.equal(response.status, 409);
+    assert.equal(await response.text(), 'This item is no longer in your cart.');
+    const plain = await handleShopifyCartAction(request({intent: 'update', lineId: gone, quantity: '2'}), ENABLED_ENV, deps);
+    assert.equal(plain.headers.get('Location'), '/cart');
+  });
+
+  it('removes only the lines still in the cart', async () => {
+    let removed: unknown;
+    await handleShopifyCartAction(
+      request({intent: 'remove', lineId: [gone, 'gid://shopify/CartLine/1?cart=a']}), ENABLED_ENV,
+      {...deps, removeCartLines: async (_id, ids) => { removed = ids; return cart(); }},
+    );
+    assert.deepEqual(removed, ['gid://shopify/CartLine/1?cart=a']);
+  });
+
+  it('forgets an expired session cart instead of failing', async () => {
+    let unset = false;
+    const response = await handleShopifyCartAction(
+      request({intent: 'remove', lineId: gone, response: 'summary'}), ENABLED_ENV,
+      {...deps, getCart: async () => null, unsetCartId: () => { unset = true; }},
+    );
+    assert.equal(response.status, 200);
+    assert.equal(unset, true);
+    assert.equal((await thrownResponse(handleShopifyCartAction(
+      request({intent: 'update', lineId: gone, quantity: '2'}), ENABLED_ENV,
+      {...deps, getCart: async () => null},
+    ))).status, 409);
+  });
+});
+
+describe('cart line info and split plan', () => {
+  /** The paid FC catalog plus RX (target 250) and a motor (target 1000), both funding targets. */
+  function mixedCatalog(): Catalog {
+    const base = paidCatalog(240);
+    const funding = (sku: string, id: string, batches: Array<{units: number}>, ordered: number) => {
+      const campaign = campaignState(batches, ordered, PENDING, [], 20);
+      return {
+        ...CATALOG.products[0],
+        handle: sku.toLowerCase(),
+        variants: [{...CATALOG.products[0].variants[0], sku, merchandise_id: id, ship_promise: campaign.shipPromise, campaign}],
+      };
+    };
+    return {
+      ...base,
+      products: [
+        base.products[1],
+        funding('OPENRX-LITE', 'gid://shopify/ProductVariant/rx', [{units: 250}, {units: 1000}], 200),
+        funding('OPENMOTOR-2207', 'gid://shopify/ProductVariant/motor', [{units: 1000}, {units: 4000}], 12),
+      ],
+    };
+  }
+  const rxLine = line({id: 'gid://shopify/CartLine/rx', merchandiseId: 'gid://shopify/ProductVariant/rx', sku: 'OPENRX-LITE', shipPromise: PENDING});
+  const motorLine = line({id: 'gid://shopify/CartLine/motor', merchandiseId: 'gid://shopify/ProductVariant/motor', sku: 'OPENMOTOR-2207', shipPromise: PENDING, quantity: 4});
+
+  it('groups two funding targets apart even with the same promise text', () => {
+    const c = cart([rxLine, motorLine]);
+    const info = cartLineInfo(c, mixedCatalog());
+    assert.equal(info[rxLine.id].group, 'target:OPENRX-LITE:1');
+    assert.equal(info[motorLine.id].group, 'target:OPENMOTOR-2207:1');
+    assert.deepEqual(info[motorLine.id].target, {units: 1000, ordered: 12});
+    // The RX is 50 short of its target, the motor 988: keep the RX.
+    assert.deepEqual(splitPlan(c, info), {keep: [rxLine.id], later: [motorLine.id]});
+  });
+
+  it('keeps the paid stack and moves the funding targets to a second order', () => {
+    const c = cart([fcLine({quantity: 3}), fcLine({id: 'gid://shopify/CartLine/fc2', quantity: 2}), rxLine, motorLine]);
+    const info = cartLineInfo(c, mixedCatalog());
+    assert.equal(info['gid://shopify/CartLine/fc?cart=a'].group, `date:${PAID_PROMISE}`);
+    assert.equal(info['gid://shopify/CartLine/fc?cart=a'].maxQuantity, 8);
+    assert.equal(info['gid://shopify/CartLine/fc2'].maxQuantity, 7);
+    assert.equal(info[rxLine.id].maxQuantity, null);
+    assert.deepEqual(splitPlan(c, info), {
+      keep: ['gid://shopify/CartLine/fc?cart=a', 'gid://shopify/CartLine/fc2'],
+      later: [rxLine.id, motorLine.id],
+    });
+  });
+
+  it('offers no split when everything ships together, or without a catalog', () => {
+    const one = cart([fcLine(), rxLine]);
+    assert.equal(splitPlan(cart([rxLine]), cartLineInfo(cart([rxLine]), mixedCatalog())), null);
+    const info = cartLineInfo(cart([rxLine, motorLine]), null);
+    assert.equal(info[rxLine.id].group, info[motorLine.id].group);
+    assert.equal(splitPlan(cart([rxLine, motorLine]), info), null);
+    // Without the catalog a funding line cannot be told from a date: warn, but offer no split.
+    assert.equal(splitPlan(one, cartLineInfo(one, null)), null);
+  });
+});
+
+describe('variant link', () => {
+  it('keeps the selected options and drops the default title', () => {
+    assert.equal(
+      variantLink('openfc-lite', [{name: 'Model', value: '30×30'}]),
+      '/products/openfc-lite?Model=30%C3%9730',
+    );
+    assert.equal(variantLink('openrx', [{name: 'Title', value: 'Default Title'}]), '/products/openrx');
+    assert.equal(variantLink('openmotor'), '/products/openmotor');
   });
 });
 

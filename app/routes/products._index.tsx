@@ -100,6 +100,8 @@ type Card = {
   searchText: string;
   to: string;
   price: MoneyV2;
+  /** `price` is the cheapest of several variant prices: the card says "from". */
+  priceFrom?: boolean;
   /** The tier's own variant image, so each size card shows its real board
    *  instead of falling back to the product's featuredImage. */
   image?: CatalogProduct['featuredImage'];
@@ -317,6 +319,8 @@ export default function ProductsIndex() {
           firmware: firmwareOf(p.handle),
           to: `/products/${p.handle}`,
           price: p.priceRange.minVariantPrice,
+          priceFrom:
+            num(p.priceRange.maxVariantPrice) > num(p.priceRange.minVariantPrice),
           onSale: comingSoon ? false : productOnSale(p),
           comingSoon,
           quickAdd:
@@ -610,6 +614,7 @@ export default function ProductsIndex() {
                     to={card.to}
                     title={card.title}
                     priceOverride={card.price}
+                    priceFrom={card.priceFrom ?? false}
                     imageOverride={card.image}
                     loading={index < 4 ? 'eager' : undefined}
                     imageSizes="(min-width: 64em) 300px, (min-width: 45em) 33vw, 50vw"

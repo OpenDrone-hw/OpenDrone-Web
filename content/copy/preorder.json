@@ -4,44 +4,44 @@
   "meta_title": "Preorders · A funding target for every product",
   "meta_description": "Every OpenDrone product option has its own public funding target, set at the quantity we order from the supplier. Watch each target fill.",
   "title": "A funding target for every product.",
-  "lead": "The designs are finished. What we need now is the money to order production runs, so every product option has a public target: the quantity we order from the supplier. Your preorder pays for that run, and you can watch each target fill.",
+  "lead": "The flight controller and ESC are in their first production batch, paid for and shipping late October 2026. The receivers, frames and motors are funded here: every product option has a public target, the quantity we order from the supplier. Your preorder pays for that run, and you can watch each target fill.",
   "cta_primary": "View the targets ↓",
   "cta_secondary": "Where the boards are made →",
   "strip_ordered_label": "Ordered so far",
   "strip_reached_label": "Targets reached",
-  "strip_stack_label": "Stack batch 1 left",
+  "strip_stack_label": "Flight controllers and ESCs left in batch 1",
   "strip_unavailable": "Campaign numbers are temporarily unavailable. Campaign products cannot be ordered until the count is verified.",
   "tracker_title": "Every target",
   "tracker_lead": "Each product option has its own target, set at the quantity we order from the supplier. The numbers are paid orders in our shop, per option.",
   "tracker_empty": "No product is open for preorder yet.",
   "s1_title": "*01* · What this is",
   "s1_body": [
-    "OpenDrone is an open source FPV platform: flight controller, ESC, receiver, motors and frames, with the design files public.",
-    "Development is done. What is missing is money for production, not engineering time. Preorders pay for the supplier orders."
+    "OpenDrone is an open source FPV platform. The flight controller, ESC and receiver are open hardware with public design files. The frame design files are not public yet. The motors come from a motor manufacturer; we select and test them, and they are not open hardware.",
+    "Preorders pay for the supplier orders. Where each design stands, from first prototype to production, is on [the roadmap](/roadmap)."
   ],
   "s2_title": "*02* · How a target works",
   "s2_body": [
-    "Suppliers do not produce single units. Each sets a minimum order quantity, and that quantity is the target for the product option.",
-    "When a target is reached we place the supplier order, and the product ships about 10 weeks later. Every target has a deadline: 31 December 2026. Orders keep coming in after a target is reached: they fill the next batch, which gets its own target."
+    "Suppliers do not produce single units. Each sets a minimum order quantity, the smallest run it will make, and that quantity is the target for the product option.",
+    "When a target is reached we place the supplier order, and the product ships about 10 weeks later. Every target has a deadline: 31 December 2026. If the target is reached by 31 December 2026, the product ships by 11 March 2027 at the latest. Orders keep coming in after a target is reached: they fill the next batch, which gets its own target."
   ],
   "s3_title": "*03* · The stack ships first",
   "s3_body": [
-    "Batch 1 of the flight controller and the ESC, 250 of each size, is paid for and in production. It ships late October 2026.",
+    "The stack is the flight controller and the ESC, mounted on top of each other in the middle of the frame. Batch 1, 250 of each board in each size, is paid for and in production. It ships late October 2026.",
     "Once batch 1 is gone, the stack gets a funding target like every other product."
   ],
   "s4_title": "*04* · What you pay",
   "s4_body": [
-    "You pay in full when you order. The first 250 of every product option sell at a preorder price; after them, it sells at its full price. The product page shows how many are left at the preorder price and the price that follows.",
-    "Shipping is charged at checkout at the rate for your destination zone. Orders to the United States ship duty paid: import duties are calculated and charged at checkout, and there is nothing to pay on delivery."
+    "You pay in full when you order. The price steps up per product option as paid orders come in: units 1 to 100 cost 20% less than the retail price, units 101 to 250 cost 10% less, and from unit 251 the retail price applies. The price shown when you order is the price you pay. The product page shows how many units are left at the current price and what the next unit costs.",
+    "Shipping is a flat rate per order, charged at checkout: €8.50 to Belgium, €9.95 to Germany, France, Luxembourg and the Netherlands, €12.95 to most other EU countries. Every rate is on [the shipping page](/shipping). We do not collect import duties at checkout: outside the EU, including the United States, the carrier collects any import duties and taxes from you on delivery."
   ],
   "s5_title": "*05* · One order, one parcel",
   "s5_body": [
-    "An order ships once, complete. If you order the stack together with a product that is still funding, the whole order waits until everything in it is ready. Order separately if you want the stack sooner."
+    "An order ships once, complete. If you order the stack together with a product that is still funding, the whole order waits until everything in it is ready, which can be as late as March 2027. Order separately if you want the stack in October."
   ],
   "s6_title": "*06* · Risks",
   "s6_body": [
     "Hardware schedules slip. Supplier lead times move, a component goes out of stock and has to be replaced by an equivalent, and a production run can need rework. When a ship date moves, you get mail with the new date.",
-    "A product can also fall short of its target. If a target is not reached by 31 December 2026, we mail everyone who ordered that product and each buyer chooses: a full refund, or keep the order for the next date we set."
+    "A product can also fall short of its target. If a target is not reached by 31 December 2026, we mail everyone who ordered that product and each buyer chooses: a refund of everything paid for that product within 14 days, or keep the order for the new ship date in that mail."
   ],
   "s7_title": "*07* · Who is behind it",
   "s7_body": [
@@ -50,19 +50,19 @@
   ],
   "faq_title": "Questions",
   "faq_q1": "When do I pay?",
-  "faq_a1": "When you order: the product price, shipping and, for the United States, import duties. Nothing is charged later.",
+  "faq_a1": "In full when you order: the product price and shipping. We charge nothing after checkout. Outside the EU, including the United States, the carrier may collect import duties and taxes from you on delivery: see [Shipping](/shipping).",
   "faq_q2": "When does my order ship?",
-  "faq_a2": "The stack ships late October 2026 while batch 1 lasts. Every other product ships about 10 weeks after its target is reached, and every target has a deadline of 31 December 2026. Each item shows its ship date on the product page, at checkout and on the order confirmation.",
+  "faq_a2": "The stack ships late October 2026 while batch 1 lasts. Every other product ships about 10 weeks after its target is reached. Every target has a deadline of 31 December 2026: if the target is reached by then, the product ships by 11 March 2027 at the latest. Each item shows its ship date on the product page, at checkout and on the order confirmation.",
   "faq_q3": "What happens when a target is reached?",
   "faq_a3": "We place the supplier order and mail everyone who ordered that product. You hear from us again when the ship date is set and before dispatch.",
   "faq_q9": "What if a target is not reached?",
-  "faq_a9": "Every target has a deadline: 31 December 2026. If a product misses it, we mail everyone who ordered it and you choose: a full refund, or keep your order for the next date we set.",
+  "faq_a9": "Every target has a deadline: 31 December 2026. If a product misses it, we mail everyone who ordered it and you choose: a refund of everything you paid for that product within 14 days, or keep your order for the new ship date in that mail.",
   "faq_q4": "What if the ship date moves?",
-  "faq_a4": "You get mail with the new date as soon as we know it.",
+  "faq_a4": "You get mail with the new date as soon as we know it. Until your order is delivered you can still cancel it for a refund.",
   "faq_q5": "Do I get one parcel or several?",
   "faq_a5": "One. An order ships once, complete, when every item in it is ready.",
   "faq_q6": "Do you ship to the United States?",
-  "faq_a6": "Yes, duty paid. Import duties are calculated from each product's customs classification and charged at checkout, so the carrier asks for nothing on delivery.",
+  "faq_a6": "Yes, for €19.95 per order. We do not collect US import duties at checkout: the carrier collects them from you before delivery. Duty on China-made electronics is high: for the flight controller and ESC, expect roughly 35 to 40% of the value. US customs sets the amount, not us, and the carrier can add a clearance fee.",
   "faq_q7": "Is this an investment?",
   "faq_a7": "No. A preorder pays for the production run of your own order. It carries no interest and gives you no equity, revenue share or other stake in the company.",
   "faq_q8": "Where do the numbers on this page come from?",
@@ -76,7 +76,7 @@
   "meter_target_bar": "{ordered} of {target} ordered",
   "meter_reached": "Funding target reached · {ordered} ordered",
   "meter_next": "Batch {batch}: {ordered} of {units}",
-  "meter_early": "Preorder price for the first {units} · {left} left, then {price}",
+  "meter_early": "This price up to unit {units} · {left} left, then {price}",
   "meter_link": "How preorders work",
   "meter_paid_count": "{left} left in batch 1",
   "meter_reached_count": "{ordered} ordered",
@@ -85,5 +85,27 @@
   "batch_sold_out": "sold out",
   "batch_next": "next, {units} units",
   "updates_last": "Last updated",
-  "$comment_updates": "updates: \"YYYY-MM-DD · text\" strings, newest first. Never edit or delete an entry; add a new one."
+  "$comment_updates": "updates: \"YYYY-MM-DD · text\" strings, newest first. Never edit or delete an entry; add a new one.",
+  "steps_title": "How a preorder works",
+  "step1_title": "Order and pay in full",
+  "step1_body": "You pay the product price and shipping when you order. We never charge you again after checkout. Outside the EU, customs in your country may charge import duties or VAT, which the carrier collects on delivery: see [Shipping](/shipping).",
+  "step2_title": "The price steps up per product option",
+  "step2_body": "{ladder} Each product option counts only its own paid orders. The price at checkout is the price you pay.",
+  "step3_title": "Your order ships",
+  "step3_body": "Batch 1 of the flight controller and ESC is paid stock and {stack_ships}. Receivers, frames and motors have a funding target: once a product option reaches it we place the supplier order, and it ships about 10 weeks later.",
+  "step4_title": "If a target is missed",
+  "step4_body": "Every funding target has a deadline: {ends_on}. If a product option misses it, we mail everyone who ordered it and you choose: a refund for that item, or keep waiting. Until your order is delivered you can also cancel it.",
+  "ladder_first": "Units {from} to {to}: {off}% off retail.",
+  "ladder_step": "Units {from} to {to}: {off}% off.",
+  "ladder_retail": "From unit {from}: retail price.",
+  "track_ladder_label": "Price per unit",
+  "track_ladder_units": "units {from}-{to}",
+  "track_ladder_units_open": "from unit {from}",
+  "track_ladder_now": "now",
+  "faq_q_price": "How is the price set?",
+  "faq_a_price": "{ladder} Each product option counts only its own paid orders. The list above and each product page show how many units are left at the current price and what the next unit costs.",
+  "faq_q_cancel": "Can I cancel before it ships?",
+  "faq_a_cancel": "Yes. Until your order is delivered you can withdraw from it without giving a reason: use the [withdrawal form](/herroepingsrecht#withdraw) or email contact@opendrone.be. We refund what you paid for it, including the standard shipping cost, within 14 days, to the payment method you used.",
+  "faq_q_duties": "Do I pay import duties outside the EU?",
+  "faq_a_duties": "Inside the EU there is nothing more to pay: prices include Belgian VAT. Outside the EU we do not collect import duties or taxes at checkout. Your country's customs may charge them, and the carrier collects them from you on delivery. For the United States that amount is high: duty on electronics made in China is roughly 35 to 40% of the value for the boards. Check your country's rules before you order, and see [Shipping](/shipping)."
 }

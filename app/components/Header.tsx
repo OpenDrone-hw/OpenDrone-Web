@@ -55,6 +55,9 @@ interface HeaderProps {
   commerceHandoff: CommerceHandoff;
   accountUrl: string | null;
   familyProducts?: HeaderFamilyProduct[];
+  /** Checkout is open: the cart icon always links to the cart, even before
+   *  the first add, as on any shop. */
+  shopOpen?: boolean;
 }
 
 type Viewport = 'desktop' | 'mobile';
@@ -104,7 +107,12 @@ function selfShortFor(type: string): string {
   return CATEGORY_LINKS.find((c) => c.type === type)?.label ?? 'board';
 }
 
-export function Header({commerceHandoff, accountUrl, familyProducts}: HeaderProps) {
+export function Header({
+  commerceHandoff,
+  accountUrl,
+  familyProducts,
+  shopOpen = false,
+}: HeaderProps) {
   // Dynamic-Island logo slot. On the hero ("/") the OpenDrone wordmark already
   // lives bottom-left in the 3D scene, so the bar instead credits the parent
   // company - the Incutec mark linking to incutec.eu (OpenDrone is an Incutec
@@ -169,7 +177,12 @@ export function Header({commerceHandoff, accountUrl, familyProducts}: HeaderProp
         <FamilyNav familyProducts={familyProducts} commerceHandoff={commerceHandoff} />
 
         {/* Right: actions */}
-        <HeaderCtas accountUrl={accountUrl} cartUrl={commerceHandoff.cartUrl} />
+        <HeaderCtas
+          accountUrl={accountUrl}
+          cartUrl={commerceHandoff.cartUrl ?? (shopOpen ? '/cart' : null)}
+          hasCart={commerceHandoff.cartUrl !== null}
+          shopOpen={shopOpen}
+        />
       </div>
     </header>
   );
@@ -587,6 +600,7 @@ export function HeaderMenu({
           !isMobile &&
           (url === '/preorder' ||
             url === '/support' ||
+            url === '/shipping' ||
             url === '/newsletter' ||
             url === 'https://github.com/OpenDrone-hw')
         )
@@ -673,7 +687,17 @@ export function HeaderMenu({
   );
 }
 
-function HeaderCtas({accountUrl, cartUrl}: {accountUrl: string | null; cartUrl: string | null}) {
+function HeaderCtas({
+  accountUrl,
+  cartUrl,
+  hasCart,
+  shopOpen,
+}: {
+  accountUrl: string | null;
+  cartUrl: string | null;
+  hasCart: boolean;
+  shopOpen: boolean;
+}) {
   return (
     <nav className="flex items-center gap-2 md:gap-5 ml-auto" role="navigation">
       {/* Hidden in the top bar on phones (it would overflow a 320px row on
@@ -692,19 +716,24 @@ function HeaderCtas({accountUrl, cartUrl}: {accountUrl: string | null; cartUrl: 
       >
         <Txt id="chrome.nav_preorder" />
       </NavLink>
-      <NavLink
-        prefetch="viewport"
-        to="/newsletter"
-        className={({isActive}) =>
-          `font-mono text-[12px] uppercase tracking-[0.15em] transition-colors hidden md:block ${
-            isActive
-              ? 'text-[var(--color-text)]'
-              : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
-          }`
-        }
-      >
-        <Txt id="chrome.nav_newsletter" />
-      </NavLink>
+      {/* While the shop is closed the newsletter is the way to hear about the
+          launch; once it is open the header carries the shopping links and
+          the newsletter lives in the footer. */}
+      {shopOpen ? null : (
+        <NavLink
+          prefetch="viewport"
+          to="/newsletter"
+          className={({isActive}) =>
+            `font-mono text-[12px] uppercase tracking-[0.15em] transition-colors hidden md:block ${
+              isActive
+                ? 'text-[var(--color-text)]'
+                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+            }`
+          }
+        >
+          <Txt id="chrome.nav_newsletter" />
+        </NavLink>
+      )}
       <NavLink
         prefetch="viewport"
         to="/support"
@@ -716,7 +745,7 @@ function HeaderCtas({accountUrl, cartUrl}: {accountUrl: string | null; cartUrl: 
           }`
         }
       >
-        <Txt id="chrome.nav_contact" />
+        <Txt id="chrome.nav_support" />
       </NavLink>
       {/* Account, orders and addresses live in Shopify customer accounts:
           an external link, not an in-app route. The signed-in state is
@@ -753,7 +782,7 @@ function HeaderCtas({accountUrl, cartUrl}: {accountUrl: string | null; cartUrl: 
         </svg>
       </a>
       <ThemeToggle className="site-header-icon" />
-      <CartToggle cartUrl={cartUrl} />
+      <CartToggle cartUrl={cartUrl} hasCart={hasCart} />
       <HeaderMenuMobileToggle />
     </nav>
   );
@@ -779,12 +808,13 @@ function HeaderMenuMobileToggle() {
 }
 
 /**
- * The cart icon links, after the first add, to the cart page.
+ * The cart icon links to the cart page whenever checkout is open, and shows
+ * the item count once this session has a Shopify cart.
  */
-function CartToggle({cartUrl}: {cartUrl: string | null}) {
+function CartToggle({cartUrl, hasCart}: {cartUrl: string | null; hasCart: boolean}) {
   const [quantity, setQuantity] = useState(0);
   useEffect(() => {
-    if (!cartUrl) {
+    if (!cartUrl || !hasCart) {
       setQuantity(0);
       return;
     }
@@ -798,7 +828,7 @@ function CartToggle({cartUrl}: {cartUrl: string | null}) {
     return () => {
       live = false;
     };
-  }, [cartUrl]);
+  }, [cartUrl, hasCart]);
   useEffect(() => {
     const update = (event: Event) => {
       const total = (event as CustomEvent<{totalQuantity?: number}>).detail?.totalQuantity;
@@ -848,14 +878,15 @@ function CartIcon() {
 
 /**
  * The site menu. It used to be edited in the Shopify admin and read
- * through the Storefront API; it is three links, and they are these
- * three. Titles stay here rather than in the copy store for the same
+ * through the Storefront API; it is these few links. Titles stay here rather than in the copy store for the same
  * reason they always did: they are structure shared with the CTA group,
  * not editable prose.
  */
 const HEADER_MENU = {
   items: [
     {id: 'menu-preorder', title: 'Preorders', url: '/preorder'},
+    {id: 'menu-support', title: 'Support', url: '/support'},
+    {id: 'menu-shipping', title: 'Shipping', url: '/shipping'},
     {id: 'menu-newsletter', title: 'Newsletter', url: '/newsletter'},
     {
       id: 'menu-open-source',

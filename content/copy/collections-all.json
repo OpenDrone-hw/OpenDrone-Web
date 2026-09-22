@@ -2,7 +2,7 @@
   "$route": "/collections/all",
   "$title": "All products",
   "meta_title": "All Products",
-  "meta_description": "Browse every OpenDrone product in one place: Open Source flight controllers, ESCs, receivers, frames, bundles, and accessories. Filter by category and sort by price or newest.",
+  "meta_description": "Browse every OpenDrone product in one place: flight controllers, ESCs, receivers, frames, motors, bundles and accessories. Filter by category and sort by price or newest.",
   "eyebrow": "Shop",
   "title": "All Products",
   "filter_aria": "Filter products",

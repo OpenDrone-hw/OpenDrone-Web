@@ -10,7 +10,7 @@ import type {
 } from '~/lib/product-shapes';
 import {useVariantUrl} from '~/lib/variants';
 import {useProductStatus, useRoadmapStatus} from '~/lib/coming-soon';
-import {isPurchasableStatus} from '~/lib/product-content';
+import {PRODUCT_CONTENT, isPurchasableStatus} from '~/lib/product-content';
 import {AddToCartButton} from './AddToCartButton';
 import {StackQuickAdd, type StackOffer} from './StackQuickAdd';
 import {copyText} from '~/lib/copy';
@@ -47,6 +47,7 @@ export function ProductItem({
   to,
   title,
   priceOverride,
+  priceFrom,
   imageOverride,
   comingSoon,
   quickAdd,
@@ -76,6 +77,9 @@ export function ProductItem({
   title?: string;
   /** Price override - the specific variant's price for per-variant cards. */
   priceOverride?: MoneyV2;
+  /** The shown price is the cheapest of several: print "from". Unset, a
+   *  card without `priceOverride` decides from the product's price range. */
+  priceFrom?: boolean;
   /** Image override - the specific variant's image for per-variant cards.
    *  Without it every tier card falls back to the product's featuredImage
    *  (the first uploaded render), so 20×20 and 30×30 show the same board. */
@@ -106,6 +110,26 @@ export function ProductItem({
   const price = priceOverride ?? product.priceRange.minVariantPrice;
   const image = imageOverride ?? product.featuredImage;
   const hasModels = Boolean(models && models.length > 0);
+  // "from" when the card shows the cheapest of several prices: a product
+  // card without a per-variant price override whose variants differ.
+  const fromPrice =
+    priceFrom ??
+    (!priceOverride &&
+      Number(product.priceRange.maxVariantPrice.amount) >
+        Number(product.priceRange.minVariantPrice.amount));
+  // "per motor" and the like: what one unit of the price buys.
+  const priceUnit = PRODUCT_CONTENT[product.handle]?.priceUnit;
+  const priceLabel = (amount: string, currencyCode: string, from: boolean) => (
+    <span className="product-card-price">
+      {from ? (
+        <span className="product-card-price-from">
+          {copyText('product-chrome.card_price_from') ?? 'from'}{' '}
+        </span>
+      ) : null}
+      {formatPrice(amount, currencyCode)}
+      {priceUnit ? <span className="product-card-price-unit"> {priceUnit}</span> : null}
+    </span>
+  );
 
   // Product-level coming-soon (PUBLIC_COMING_SOON / per-SKU override):
   // unlike the `comingSoon` prop (unreleased tier, non-clickable tile) the
@@ -129,7 +153,11 @@ export function ProductItem({
             product={product.handle}
             disabled={!quickAdd.available}
           >
-            {copyText('product-chrome.card_add_to_cart')}
+            {!quickAdd.available
+              ? (copyText('product-chrome.buy_stock_out') ?? 'Sold out')
+              : status === 'preorder'
+                ? (copyText('product-chrome.buy_cta_preorder') ?? 'Pre-order')
+                : copyText('product-chrome.card_add_to_cart')}
           </AddToCartButton>
         </StackQuickAdd>
       </div>
@@ -142,8 +170,20 @@ export function ProductItem({
   // A pre-order product wears the pre-order badge instead of its roadmap
   // chip: the buyable state is the news on a card. Unreleased tiers
   // (`comingSoon` prop) keep their own badge.
-  const badge =
-    status === 'preorder' && !comingSoon ? (
+  // Nothing on this card can be ordered: say so on the card, the same word
+  // the product page uses, instead of a live-looking card.
+  const soldOut =
+    showPrice &&
+    !comingSoon &&
+    (quickAdd
+      ? !quickAdd.available
+      : product.variants.nodes.length > 0 &&
+        product.variants.nodes.every((v) => !v.availableForSale));
+  const badge = soldOut ? (
+    <span className="product-card-badge is-soldout">
+      {copyText('product-chrome.buy_stock_out') ?? 'Sold out'}
+    </span>
+  ) : status === 'preorder' && !comingSoon ? (
       <span className="product-card-badge is-preorder">
         {copyText('product-chrome.card_badge_preorder')}
       </span>
@@ -238,14 +278,14 @@ export function ProductItem({
           >
             <div className="product-card-row">
               <h2 className="product-card-title">{product.title}</h2>
-              {showPrice ? (
-                <span className="product-card-price">
-                  {formatPrice(
+              {showPrice
+                ? priceLabel(
                     product.priceRange.minVariantPrice.amount,
                     product.priceRange.minVariantPrice.currencyCode,
-                  )}
-                </span>
-              ) : null}
+                    Number(product.priceRange.maxVariantPrice.amount) >
+                      Number(product.priceRange.minVariantPrice.amount),
+                  )
+                : null}
             </div>
             {'productType' in product && product.productType ? (
               <p className="product-card-meta">{product.productType}</p>
@@ -281,11 +321,7 @@ export function ProductItem({
       <div className="product-card-body">
         <div className="product-card-row">
           <h2 className="product-card-title">{displayTitle}</h2>
-          {showPrice ? (
-            <span className="product-card-price">
-              {formatPrice(price.amount, price.currencyCode)}
-            </span>
-          ) : null}
+          {showPrice ? priceLabel(price.amount, price.currencyCode, fromPrice) : null}
         </div>
         {'productType' in product && product.productType ? (
           <p className="product-card-meta">{product.productType}</p>

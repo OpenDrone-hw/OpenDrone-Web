@@ -7,7 +7,7 @@
  * Relative imports on purpose: node:test runs this module without Vite.
  */
 
-import type {CampaignState} from './preorder-campaign.ts';
+import type {CampaignState, LadderStep} from './preorder-campaign.ts';
 
 export type MeterBar = {value: number; max: number; label: string};
 
@@ -120,4 +120,31 @@ export function meterView(
 export function barPercent(bar: MeterBar): number {
   if (!Number.isFinite(bar.value) || !Number.isFinite(bar.max) || bar.max <= 0) return 0;
   return Math.min(100, Math.max(0, Math.round((bar.value / bar.max) * 100)));
+}
+
+/**
+ * The price ladder as one line of plain text, for example "€31.20 for units
+ * 1-100 · €35.10 for units 101-250 · €39.00 from unit 251". No struck-through
+ * price: every step is a price the SKU really sells at.
+ */
+export function ladderText(
+  steps: LadderStep[],
+  format: (price: number) => string,
+  text: Lookup = () => undefined,
+): string {
+  if (steps.length === 1) return format(steps[0].price);
+  return steps
+    .map((step) =>
+      step.to === null
+        ? fill(text('ladder_last') ?? '{price} from unit {from}', {
+            price: format(step.price),
+            from: step.from,
+          })
+        : fill(text('ladder_step') ?? '{price} for units {from}-{to}', {
+            price: format(step.price),
+            from: step.from,
+            to: step.to,
+          }),
+    )
+    .join(' · ');
 }

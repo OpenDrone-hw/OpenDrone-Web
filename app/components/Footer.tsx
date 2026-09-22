@@ -34,6 +34,19 @@ const SOCIAL_LINKS: Array<{href: string; copy: string}> = [
   {href: CONTRIBUTING_URL, copy: 'nav_contributing'},
 ];
 
+/**
+ * Customer service: the pages a buyer looks for before and after an order,
+ * in the order shops usually list them. Contact lands on the email block of
+ * the support page.
+ */
+const HELP_LINKS: Array<{to: string; copy: string}> = [
+  {to: '/support', copy: 'nav_support'},
+  {to: '/shipping', copy: 'nav_shipping'},
+  {to: '/herroepingsrecht', copy: 'nav_returns'},
+  {to: '/warranty', copy: 'nav_warranty'},
+  {to: '/support#contact', copy: 'nav_contact'},
+];
+
 const COMPANY_LINKS: Array<{to: string; copy: string}> = [
   {to: '/open-source', copy: 'nav_open_source_incutec'},
   {to: '/firmware-partners', copy: 'nav_firmware_partners'},
@@ -42,19 +55,17 @@ const COMPANY_LINKS: Array<{to: string; copy: string}> = [
   {to: '/production', copy: 'nav_production'},
 ];
 
-// Imprint, contact and security head the Legal column (maintainer, 2026-08-12):
-// they are practical/legal reader destinations, not part of the company story.
+// The imprint heads the Legal column; shipping, returns and warranty sit in
+// Customer service above, and the withdrawal link stays here too because the
+// law expects it to be easy to find.
 const LEGAL_LINKS: Array<{to: string; copy: string}> = [
   {to: '/legal', copy: 'nav_legal_imprint'},
-  {to: '/support', copy: 'nav_contact'},
-  {to: '/security', copy: 'nav_security'},
   {to: '/algemene-voorwaarden', copy: 'nav_terms'},
   {to: '/privacy', copy: 'nav_privacy'},
   {to: '/cookies', copy: 'nav_cookies'},
   {to: '/herroepingsrecht#withdraw', copy: 'nav_withdrawal'},
-  {to: '/shipping', copy: 'nav_shipping'},
-  {to: '/warranty', copy: 'nav_warranty'},
   {to: '/end-use', copy: 'nav_end_use'},
+  {to: '/security', copy: 'nav_security'},
   {to: '/cookie-settings', copy: 'nav_cookie_settings'},
 ];
 
@@ -102,9 +113,9 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
             turnstileSiteKey={turnstileSiteKey ?? null}
           />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8">
           {/* Company identity */}
-          <div className="md:col-span-1">
+          <div className="col-span-2 md:col-span-3 lg:col-span-1">
             <h3 className="gold-tag font-display text-sm font-bold tracking-[0.08em] uppercase text-[var(--color-gold-text)] mb-3">
               OpenDrone
             </h3>
@@ -121,6 +132,18 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
             <ColumnHeading id="chrome.heading_shop" />
             <nav className="flex flex-col gap-1.5">
               {SHOP_LINKS.map((link) => (
+                <FooterNavLink key={link.to} to={link.to}>
+                  <Txt id={`chrome.${link.copy}`} />
+                </FooterNavLink>
+              ))}
+            </nav>
+          </div>
+
+          {/* Customer service */}
+          <div>
+            <ColumnHeading id="chrome.heading_help" />
+            <nav className="flex flex-col gap-1.5">
+              {HELP_LINKS.map((link) => (
                 <FooterNavLink key={link.to} to={link.to}>
                   <Txt id={`chrome.${link.copy}`} />
                 </FooterNavLink>

@@ -1,4 +1,7 @@
-import {Await, PrefetchPageLinks, useLoaderData} from 'react-router';
+import {Await, PrefetchPageLinks, useLoaderData, useRouteLoaderData} from 'react-router';
+import type {RootLoader} from '~/root';
+import {CAMPAIGN} from '~/lib/catalog-client';
+import {PreorderStrip} from '~/components/PreorderStrip';
 import {shopifyImageUrl} from '~/lib/shopify-image';
 import {AnimatePresence, motion, useReducedMotion} from 'motion/react';
 import {Link} from '~/components/nav';
@@ -30,7 +33,6 @@ import {
   HERO_AIRFRAME_KEYS,
   HERO_BOARDS,
   HERO_VARIANT_AXIS,
-  DEFAULT_HERO_SIZE,
   type HeroBoardKey,
 } from '~/lib/hero-airframes';
 import {MobileHome} from '~/components/MobileHome';
@@ -62,6 +64,7 @@ type HomeFeaturedResult = {
   rx: HomeProduct | null;
   fc: HomeProduct | null;
   esc: HomeProduct | null;
+  motor: HomeProduct | null;
 };
 
 // A ready-to-render hero reveal card - resolved server-side so the view stays
@@ -78,6 +81,25 @@ export type HeroCard = {
 };
 /** Keyed by airframe size key (see HERO_AIRFRAMES). */
 export type HeroStacks = Record<string, HeroCard[]>;
+
+/**
+ * Airframe sizes whose 3D assembly is built (`public/models/od<size>/`).
+ * The hero only offers these: a size without an assembly would show the
+ * 3 inch drone under a 5 inch label and price. Add '5' here once
+ * `public/models/od5/` exists; the size toggle appears when two are built.
+ */
+const HERO_BUILT_SIZES: readonly string[] = ['3'];
+const HERO_SIZES = HERO_AIRFRAME_KEYS.filter((k) => HERO_BUILT_SIZES.includes(k));
+const HERO_START_SIZE = HERO_SIZES[0] ?? HERO_AIRFRAME_KEYS[0];
+
+/** A variant whose option value names this airframe size, e.g. `3" Freestyle`
+ *  for size "3": how the frame, one product with a size option, matches. */
+function variantForSize(p: HomeProduct, size: string) {
+  const re = new RegExp(`^${size}\\s*(?:"|″|in\\b|inch)`, 'i');
+  return (
+    p.variants.nodes.find((v) => v.selectedOptions.some((o) => re.test(o.value.trim()))) ?? null
+  );
+}
 
 function emptyHeroStacks(): HeroStacks {
   const stacks: HeroStacks = {};
@@ -111,6 +133,16 @@ function buildHeroStacks(d: HomeFeaturedResult): HeroStacks {
         ? {url: p.featuredImage.url, altText: p.featuredImage.altText ?? null}
         : null;
       const model = board.sizeVariant ? af.model : undefined;
+      // The frame is one product with a size option: link and price the
+      // variant for this airframe, not the cheapest one.
+      const sized = board.sizeVariant ? null : variantForSize(p, af.key);
+      if (sized) {
+        const q = new URLSearchParams(sized.selectedOptions.map((o) => [o.name, o.value]));
+        url += `?${q.toString()}`;
+        if (sized.price) price = sized.price;
+        if (sized.image)
+          image = {url: sized.image.url, altText: sized.image.altText ?? null};
+      }
       if (model) {
         const axis = HERO_VARIANT_AXIS.toLowerCase();
         const want = model.trim().toLowerCase();
@@ -147,7 +179,9 @@ function buildHeroStacks(d: HomeFeaturedResult): HeroStacks {
         title:
           board.sizeVariant && !p.title.includes(af.model)
             ? `${p.title} ${af.model}`
-            : p.title,
+            : sized && !p.title.includes(sized.title)
+              ? `${p.title} ${sized.title}`
+              : p.title,
         productType: p.productType ?? null,
         image,
         price,
@@ -186,13 +220,14 @@ export async function loader({request, context}: Route.LoaderArgs) {
         rx: card('openrx'),
         fc: card('openfc-lite'),
         esc: card('openesc'),
+        motor: card('openmotor'),
       };
       const keep = (p: HomeProduct | null): p is HomeProduct => Boolean(p);
       return {
         // Mobile flagship line: the four core parts (FC, ESC, RX, frame). The
         // OpenStack is intentionally NOT here - it's just the FC + ESC bundled,
         // surfaced as a note on the showcase, not as a separate flagship slot.
-        featured: [d.fc, d.esc, d.rx, d.frame].filter(keep),
+        featured: [d.fc, d.esc, d.rx, d.frame, d.motor].filter(keep),
         // The three hero boards, resolved per airframe size. FC + ESC are
         // single products with a size variant axis ("Model"): each size links
         // them to its own variant (?Model=…) and shows that variant's price.
@@ -214,7 +249,14 @@ export async function loader({request, context}: Route.LoaderArgs) {
     ? await home.then((h) => h.featured)
     : home.then((h) => h.featured);
 
-  return {isMobileHint, featured, heroStacks};
+  // The one fixed ship date of the campaign: the stack's paid batch.
+  const stackShips =
+    Object.values(CAMPAIGN.skus)
+      .flatMap((entry) => entry.batches)
+      .find((batch) => batch.paid && batch.ships?.trim())
+      ?.ships?.trim() ?? null;
+
+  return {isMobileHint, featured, heroStacks, stackShips};
 }
 
 // Hero scroll budget - the 3D scene + phased UI stays pinned for this many
@@ -285,7 +327,9 @@ let splashHasPlayedThisSession = false;
  * hooks never mount on a phone.
  */
 export default function Homepage() {
-  const {isMobileHint, featured, heroStacks} = useLoaderData<typeof loader>();
+  const {isMobileHint, featured, heroStacks, stackShips} = useLoaderData<typeof loader>();
+  const shopOpen = useRouteLoaderData<RootLoader>('root')?.shopOpen ?? false;
+  const strip = shopOpen ? stackShips ?? '' : null;
   const [isMobile, setIsMobile] = useState(isMobileHint);
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 768px)');
@@ -295,11 +339,18 @@ export default function Homepage() {
     return () => mq.removeEventListener('change', update);
   }, []);
 
-  if (isMobile) return <MobileHome featured={featured} />;
-  return <DesktopHome heroStacks={heroStacks} />;
+  if (isMobile) return <MobileHome featured={featured} preorderShips={strip} />;
+  return <DesktopHome heroStacks={heroStacks} preorderShips={strip} />;
 }
 
-function DesktopHome({heroStacks}: {heroStacks: Promise<HeroStacks>}) {
+function DesktopHome({
+  heroStacks,
+  preorderShips,
+}: {
+  heroStacks: Promise<HeroStacks>;
+  /** Set while the shop is open: the strip names the stack's ship date. */
+  preorderShips: string | null;
+}) {
   // Coming-soon reveal cards keep their link + title but swap the price
   // for a Soon tag (per-card handle resolved server-side on the card).
   const productStatus = useProductStatusResolver();
@@ -324,7 +375,7 @@ function DesktopHome({heroStacks}: {heroStacks: Promise<HeroStacks>}) {
   const cardInteractiveGate = (i: number) => (heroGates & (1 << (i + 1))) !== 0;
   // Which airframe the hero shows - 5-inch or 3-inch. Toggling swaps the
   // GLB trio loaded by HeroScene.
-  const [heroSize, setHeroSize] = useState<string>(DEFAULT_HERO_SIZE);
+  const [heroSize, setHeroSize] = useState<string>(HERO_START_SIZE);
   const reduceMotion = useReducedMotion();
   // Slide direction for the buy-card swap, mirroring the 3D cross-slide: +1 =
   // moving to a later registry index (new cards fly in from the right, old fly
@@ -861,6 +912,10 @@ function DesktopHome({heroStacks}: {heroStacks: Promise<HeroStacks>}) {
               each piece gets its line: pending is dim, arriving pulses, landed
               ticks off. Part of the splash and leaves with it; on a slow
               network it stays up and names exactly what is still coming. */}
+          {/* The manifest and the slow-load escape share one column, so the
+              "loading models" line and the Skip button always sit below the
+              checklist instead of on top of it. */}
+          <div className="hero-load-panel">
           {!splashSettled && loadPieces.length ? (
             <ul className="hero-load-manifest" role="status" aria-live="polite">
               {loadPieces.map((p) => {
@@ -916,6 +971,7 @@ function DesktopHome({heroStacks}: {heroStacks: Promise<HeroStacks>}) {
               </Link>
             </div>
           ) : null}
+          </div>
 
           {/* GitHub logo - bare mark (no circle), sitting to the right of the
               settled wordmark in the bottom-left corner, centred on the
@@ -1079,10 +1135,11 @@ function DesktopHome({heroStacks}: {heroStacks: Promise<HeroStacks>}) {
             </Link>
           </div>
 
-          {/* Airframe size toggle - swaps the 5" / 3" GLB trio in the hero.
-            Stays visible through the scroll so the toggle is always reachable. */}
+          {/* Top centre: the preorder line while the shop is open, then the
+            airframe size toggle when more than one assembly is built. Stays
+            visible through the scroll so both are always reachable. */}
           <div
-            className="absolute left-1/2 -translate-x-1/2 z-20 pointer-events-auto"
+            className="hero-top-center absolute left-1/2 -translate-x-1/2 z-20 pointer-events-auto"
             style={{
               // Springs down from the top edge when the splash settles, resting
               // high (2.5rem). When the header bar lands ~2s later it shoves the
@@ -1093,12 +1150,15 @@ function DesktopHome({heroStacks}: {heroStacks: Promise<HeroStacks>}) {
                 'top 0.7s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease',
             }}
           >
-            <HeroSizeSlider
-              value={heroSize}
-              onChange={changeHeroSize}
-              scrubRef={heroScrubRef}
-              busy={heroBuilding}
-            />
+            {preorderShips !== null ? <PreorderStrip ships={preorderShips || null} /> : null}
+            {HERO_SIZES.length > 1 ? (
+              <HeroSizeSlider
+                value={heroSize}
+                onChange={changeHeroSize}
+                scrubRef={heroScrubRef}
+                busy={heroBuilding}
+              />
+            ) : null}
           </div>
 
           {/* Scroll hint - fade driven by --hero-p in CSS (see .hero-scroll-fade)

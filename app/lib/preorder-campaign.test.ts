@@ -7,6 +7,8 @@ import {
   campaignState,
   needsCampaignCounts,
   parseCampaignConfig,
+  priceLadder,
+  shipGroupKey,
   type CampaignBatch,
 } from './preorder-campaign.ts';
 
@@ -300,5 +302,66 @@ describe('applyCampaign', () => {
   it('asks for counts only when a campaign SKU is on preorder', () => {
     assert.equal(needsCampaignCounts(catalog('preorder'), CONFIG), true);
     assert.equal(needsCampaignCounts(catalog('sold_out'), CONFIG), false);
+  });
+});
+
+describe('priceLadder', () => {
+  it('lists every step by unit number, ending at retail', () => {
+    assert.deepEqual(priceLadder(39, TIERS), [
+      {from: 1, to: 100, price: 31.2},
+      {from: 101, to: 250, price: 35.1},
+      {from: 251, to: null, price: 39},
+    ]);
+  });
+
+  it('is retail alone without tiers, and rounds to the cent', () => {
+    assert.deepEqual(priceLadder(19.999, []), [{from: 1, to: null, price: 20}]);
+    assert.deepEqual(priceLadder(29, [{upTo: 50, off: 0.15}]), [
+      {from: 1, to: 50, price: 24.65},
+      {from: 51, to: null, price: 29},
+    ]);
+  });
+
+  it('matches the tiers in content/preorders.json', () => {
+    const config = parseCampaignConfig(JSON.parse(fs.readFileSync('content/preorders.json', 'utf8')));
+    const ladder = priceLadder(59, config.priceTiers);
+    assert.deepEqual(ladder.map((s) => [s.from, s.to]), [[1, 100], [101, 250], [251, null]]);
+    assert.deepEqual(ladder.map((s) => s.price), [47.2, 53.1, 59]);
+  });
+});
+
+describe('paid batch and ship groups', () => {
+  it('counts the units left in the paid batch, and none once it is sold', () => {
+    assert.equal(campaignState(STACK, 240, PENDING, TIERS).paidLeft, 10);
+    assert.equal(campaignState(STACK, 0, PENDING, TIERS).paidLeft, 250);
+    assert.equal(campaignState(STACK, 250, PENDING, TIERS).paidLeft, null);
+    assert.equal(campaignState(FRAME, 10, PENDING, TIERS).paidLeft, null);
+  });
+
+  it('ships paid stock on its date and a funding batch on its target', () => {
+    assert.equal(campaignState(STACK, 10, PENDING, TIERS).shipsOnTarget, false);
+    assert.equal(campaignState(STACK, 250, PENDING, TIERS).shipsOnTarget, true);
+    assert.equal(campaignState([{units: 250, ships: 'ships March 2027'}], 3, PENDING, TIERS).shipsOnTarget, false);
+  });
+
+  it('groups fixed dates by date and funding batches by SKU and batch', () => {
+    const fc = campaignState(STACK, 10, PENDING, TIERS);
+    const rx = campaignState(FRAME, 10, PENDING, TIERS);
+    const motor = campaignState([{units: 1000}, {units: 4000}], 10, PENDING, TIERS);
+    // FC and ESC from their paid batches ship together.
+    assert.equal(
+      shipGroupKey('OPENFC-LITE-2020', fc.shipPromise, fc),
+      shipGroupKey('OPENESC-2020', fc.shipPromise, fc),
+    );
+    // Same promise text, different targets: not the same shipment.
+    assert.equal(rx.shipPromise, motor.shipPromise);
+    assert.notEqual(
+      shipGroupKey('OPENRX-LITE', rx.shipPromise, rx),
+      shipGroupKey('OPENMOTOR-2207', motor.shipPromise, motor),
+    );
+    assert.equal(shipGroupKey('OPENRX-LITE', rx.shipPromise, rx), 'target:OPENRX-LITE:1');
+    // Without campaign data (in stock, or counts unavailable): the promise text.
+    assert.equal(shipGroupKey('ACC-1', null, null), 'date:');
+    assert.equal(shipGroupKey('X', 'ships late October 2026', undefined), 'date:ships late October 2026');
   });
 });

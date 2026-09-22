@@ -16,7 +16,8 @@ import type {Route} from './+types/root';
 import favicon from '~/assets/favicon.svg';
 import interVarWoff2 from '~/assets/fonts/inter-var.woff2';
 import jetbrainsMonoWoff2 from '~/assets/fonts/jetbrains-mono-Regular.woff2';
-import {resolveAllStatuses, roadmapStatusMap} from '~/lib/coming-soon';
+import {comingSoonFlag, resolveAllStatuses, roadmapStatusMap} from '~/lib/coming-soon';
+import {checkoutOpen} from '~/lib/shopify-cart-action';
 import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
 import {toCards} from '~/lib/catalog';
 import {visitorCountry} from '~/lib/visitor-country';
@@ -148,7 +149,8 @@ export async function loader(args: Route.LoaderArgs) {
   // answer. 400ms cap: cache warm resolves instantly, cache cold falls back
   // to the static statuses while the fetch fills the cache for the next
   // request.
-  const globalComingSoon = env.PUBLIC_COMING_SOON !== '0';
+  const globalComingSoon = comingSoonFlag(env);
+  const shopOpen = !globalComingSoon && checkoutOpen(env);
   const statusFlags = await fetchStatusFlagsFast(
     env.GITHUB_STATUS_TOKEN,
     400,
@@ -159,9 +161,12 @@ export async function loader(args: Route.LoaderArgs) {
     ...criticalData,
     company,
     locale,
-    // Pre-launch banner kill switch: defaults ON; set PUBLIC_PRELAUNCH=0 in
-    // Oxygen the day orders open.
-    prelaunch: env.PUBLIC_PRELAUNCH !== '0',
+    // The shop is open only when both commerce gates are: the coming-soon
+    // flag is off and checkout writes are on. The "Opening soon" pill and
+    // the launched-state chrome (preorder strip, cart link) follow this one
+    // answer, so a launched shop never tells a buyer it is not open yet.
+    shopOpen,
+    prelaunch: !shopOpen,
     // Coming-soon kill switch: defaults ON; set PUBLIC_COMING_SOON=0 the day
     // orders open. Per-product overrides in product-content.ts win over this.
     comingSoon: globalComingSoon,

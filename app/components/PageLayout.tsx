@@ -17,6 +17,10 @@ interface PageLayoutProps {
   accountUrl: string | null;
   company: CompanyIdentity;
   turnstileSiteKey?: string | null;
+  /** Both commerce gates are open (root loader). */
+  shopOpen?: boolean;
+  /** The shop is not open yet: shows the "Opening soon" pill. Derived from
+   *  the same gates as `shopOpen` in the root loader. */
   prelaunch?: boolean;
   familyProducts?: HeaderFamilyProduct[];
   children?: React.ReactNode;
@@ -28,6 +32,7 @@ export function PageLayout({
   accountUrl,
   company,
   turnstileSiteKey,
+  shopOpen = false,
   prelaunch = true,
   familyProducts,
 }: PageLayoutProps) {
@@ -50,7 +55,7 @@ export function PageLayout({
           {/* On PDPs the bottom-right corner belongs to the buy rail's
               notify-at-launch form (consent checkbox + Privacy link at
               common scroll positions) - park the pill bottom-left there. */}
-          {prelaunch && (
+          {prelaunch && !shopOpen && (
             <PlaceholderBanner
               side={pathname.startsWith('/products/') ? 'left' : 'right'}
             />
@@ -59,6 +64,7 @@ export function PageLayout({
             commerceHandoff={commerceHandoff}
             accountUrl={accountUrl}
             familyProducts={familyProducts}
+            shopOpen={shopOpen}
           />
           <main id="main-content" className="site-main">
             {children}

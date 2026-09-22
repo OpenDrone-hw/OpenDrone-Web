@@ -18,6 +18,7 @@ import {
   mapProductOptions,
   selectVariant,
   selectedOptionsFromRequest,
+  formatPrice,
   toCard,
   toProduct,
 } from '~/lib/catalog';
@@ -69,23 +70,95 @@ import {
 } from '~/lib/product-content';
 import {useProductStatus} from '~/lib/coming-soon';
 import {shipPromiseFor} from '~/lib/preorder';
-import {fetchStatusFlagsFast, statusForHandle} from '~/lib/roadmap-data';
+import {
+  campaignChip,
+  fetchStatusFlagsFast,
+  statusForHandle,
+} from '~/lib/roadmap-data';
+import {
+  priceLadder,
+  type LadderStep,
+  type PriceTier,
+} from '~/lib/preorder-campaign';
+import {countryName, shippingQuote, SHIPPING_ZONES} from '~/lib/shipping-rates';
+import preorders from '../../content/preorders.json';
 import {trackEvent} from '~/lib/growth/plausible';
 import {attributionSource} from '~/lib/growth/attribution';
 import {NewsletterSignup} from '~/components/NewsletterSignup';
 import {PreorderMeter} from '~/components/PreorderMeter';
-import {priceNote} from '~/lib/visitor-country';
 import type {
   ChapterPin,
   DownloadAsset,
   DownloadKind,
 } from '~/lib/product-content';
 
+/** The price steps every campaign SKU follows (content/preorders.json). */
+const PRICE_TIERS: PriceTier[] = preorders.priceTiers;
+
+/** The funding-target deadline as the buyer reads it: "31 December 2026".
+ *  UTC on both sides, so the server render and hydration agree. */
+const CAMPAIGN_DEADLINE = new Date(`${preorders.endsOn}T00:00:00Z`).toLocaleDateString(
+  'en-GB',
+  {day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC'},
+);
+
+/** The cheapest flat shipping rate, for "shipping from" when the visitor's
+ *  country is unknown. */
+const SHIPPING_FROM = Math.min(...SHIPPING_ZONES.map((z) => z.rate));
+
+/** Fill `{name}` slots in a copy template. */
+function fill(template: string, vars: Record<string, string | number>): string {
+  return template.replace(/\{(\w+)\}/g, (match, name: string) =>
+    name in vars ? String(vars[name]) : match,
+  );
+}
+
+/** Copy with a readable fallback while a key is missing from the copy file. */
+function say(id: string, fallback: string, vars: Record<string, string | number> = {}): string {
+  return fill(copyText(id) ?? fallback, vars);
+}
+
+/** Largest quantity one add may ask for: the cart action's per-line cap. */
+const MAX_LINE_QUANTITY = 50;
+
+/**
+ * Whether a product's design files are public: an open-hardware content file
+ * with a repo link on the product or on one of its variants. The frames are
+ * open hardware whose repos are still private, so they are not.
+ */
+function hasPublicRepo(handle: string | null | undefined): boolean {
+  const content = handle ? PRODUCT_CONTENT[handle] : undefined;
+  if (!content || content.editorial === false) return false;
+  return (
+    Boolean(content.repoUrl) ||
+    Object.values(content.variants ?? {}).some((v) => Boolean(v.repoUrl))
+  );
+}
+
+/**
+ * The page description. Shopify's product description wins, except for
+ * open hardware whose repo is still private: its Shopify text names the
+ * open-source licence, which the page must not claim until the files are
+ * public, so the editorial intro stands in.
+ */
+function pageDescription(
+  handle: string | null | undefined,
+  shopify: string | null | undefined,
+): string | undefined {
+  const content = handle ? PRODUCT_CONTENT[handle] : undefined;
+  if (content && content.editorial !== false && !hasPublicRepo(handle)) {
+    return content.whatIsThis?.intro || content.hero.lead || undefined;
+  }
+  return shopify || undefined;
+}
+
 export const meta: Route.MetaFunction = ({data, location}) =>
   buildSeoMeta({
     title: data?.product?.seo?.title || data?.product?.title || 'Product',
-    description:
-      data?.product?.seo?.description || data?.product?.description || undefined,
+    description: pageDescription(
+      data?.product?.handle,
+      data?.product?.seo?.description || data?.product?.description,
+    ),
     image: data?.product?.selectedOrFirstAvailableVariant?.image?.url,
     type: 'product',
     // Canonical without the ?Model= query so variant links don't splinter.
@@ -184,10 +257,18 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
     stackHandles.includes(p.handle),
   );
 
+  // Shopify's compare-at price per SKU is the retail price a campaign SKU
+  // steps up to. The PDP variant shape drops it for campaign SKUs (no
+  // struck-through price, EU art. 6a), so the price ladder reads it here.
+  const retailBySku: Record<string, number | null> = Object.fromEntries(
+    entry.variants.map((v) => [v.sku, v.compare_price ?? null]),
+  );
+
   return {
     product,
     bundleProducts,
     stackProducts,
+    retailBySku,
     commerceHandoff: commerceHandoff(catalog),
     // The roadmap status this page's boards carry (beta, alpha, ...), for
     // the chip near the title. Undefined for products off the roadmap
@@ -397,6 +478,72 @@ function ClientFrameViewer(props: FrameViewerProps) {
   }, []);
   if (!Viewer) return null;
   return <Viewer {...props} />;
+}
+
+/**
+ * The preorder price ladder under the price: every step as plain text, the
+ * step the next unit falls in marked "now". The steps come from
+ * `priceLadder()` over the Shopify retail price, so they match what the
+ * price-step writer charges.
+ */
+function PriceLadder({
+  steps,
+  nextUnit,
+  left,
+  currency,
+}: {
+  steps: LadderStep[];
+  nextUnit: number;
+  /** Units left at the current step's price. */
+  left: number;
+  currency: string;
+}) {
+  return (
+    <div className="product-price-ladder">
+      <p className="product-price-ladder-head">
+        {say('product-chrome.ladder_price_head', 'Price by units ordered of this option')}
+      </p>
+      <ol>
+        {steps.map((step, i) => {
+          const current =
+            nextUnit >= step.from && (step.to === null || nextUnit <= step.to);
+          const off = PRICE_TIERS[i]?.off;
+          const range =
+            step.to === null
+              ? say('product-chrome.ladder_price_open', 'From unit {from}', {from: step.from})
+              : say('product-chrome.ladder_price_range', 'Units {from}-{to}', {
+                  from: step.from,
+                  to: step.to,
+                });
+          const past = step.to !== null && nextUnit > step.to;
+          const note = past
+            ? say('product-chrome.ladder_price_past', 'sold out')
+            : current
+            ? step.to === null
+              ? say('product-chrome.ladder_price_now_retail', 'now')
+              : say('product-chrome.ladder_price_now', 'now · {left} left', {left})
+            : step.to === null
+              ? say('product-chrome.ladder_price_retail', 'retail')
+              : say('product-chrome.ladder_price_off', '{off}% off retail', {
+                  off: Math.round((off ?? 0) * 100),
+                });
+          return (
+            <li
+              key={step.from}
+              data-current={current ? '' : undefined}
+              data-past={past ? '' : undefined}
+            >
+              <span className="product-price-ladder-range">{range}</span>
+              <span className="product-price-ladder-price">
+                {formatPrice(step.price, currency)}
+              </span>
+              <span className="product-price-ladder-note">{note}</span>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
 }
 
 /** Placeholder media slot. Renders a soft card with a geometric icon
@@ -620,6 +767,7 @@ function ProductPage() {
     contributors,
     commerceHandoff,
     roadmapStatus,
+    retailBySku,
   } = useLoaderData<typeof loader>();
   useChapterReveal(product.handle);
 
@@ -857,6 +1005,16 @@ function ProductPage() {
   // split-repo lines (OpenFC-Lite ↔ OpenFC-Lite-Mini, OpenESC-20x20 ↔
   // OpenESC-30x30) point at the tier's repo, others at the product default.
   const activeRepoUrl = activeVariant?.repoUrl ?? content.repoUrl;
+  // Open hardware whose design files are public. A product whose repo is
+  // still private (the frames) carries an empty repoUrl: no Open Source
+  // chip, no repo or licence cards and no contributor wall, because every
+  // one of those would point a buyer at a 404.
+  const hasPublicSource = hasPublicRepo(product.handle);
+  // Printed circuit boards: the provenance card (designed in Leuven,
+  // assembled in Shenzhen) describes these and nothing else.
+  const isBoard =
+    Boolean(content.teardown?.boardArt) ||
+    Object.values(content.variants ?? {}).some((v) => Boolean(v.boardArt));
   // OSHWA certification follows the selected tier - each certified board has its
   // own UID, so the chip links to the directory page for the active variant.
   const activeOshwaUid = activeVariant?.oshwaUid ?? content.oshwaUid;
@@ -1455,7 +1613,7 @@ function ProductPage() {
       : selectedVariant?.price;
   const productJsonLd = buildProductJsonLd({
     title: product.title,
-    description: product.description,
+    description: pageDescription(product.handle, product.description) ?? '',
     imageUrl: selectedVariant?.image?.url ?? galleryImages[0]?.url ?? null,
     url: `${SITE_ORIGIN}/products/${product.handle}`,
     vendor: product.vendor,
@@ -1476,6 +1634,45 @@ function ProductPage() {
     // ratings the page doesn't show.
     rating: reviewAggregate,
   });
+  // Structured data for the whole product, not only the selected variant:
+  // the canonical URL carries no ?Model=, so a multi-variant product
+  // publishes one AggregateOffer with an Offer per variant. A campaign
+  // price holds only until its step's units are sold, never to a date, so
+  // preorder offers carry no priceValidUntil.
+  const offerBase = productJsonLd.offers as Record<string, unknown> | undefined;
+  if (offerBase && preorder) delete offerBase.priceValidUntil;
+  const offerNodes = product.variants.nodes;
+  if (offerBase && !content.bundle && offerNodes.length > 1) {
+    const availabilityOf = (v: (typeof offerNodes)[number]) =>
+      !v.availableForSale
+        ? 'https://schema.org/OutOfStock'
+        : v.availability === 'preorder'
+          ? 'https://schema.org/PreOrder'
+          : 'https://schema.org/InStock';
+    const amounts = offerNodes.map((v) => Number(v.price.amount));
+    const currency = offerNodes[0].price.currencyCode;
+    productJsonLd.offers = {
+      '@type': 'AggregateOffer',
+      priceCurrency: currency,
+      lowPrice: Math.min(...amounts).toFixed(2),
+      highPrice: Math.max(...amounts).toFixed(2),
+      offerCount: offerNodes.length,
+      offers: offerNodes.map((v) => ({
+        ...offerBase,
+        name: v.title,
+        sku: v.sku ?? undefined,
+        price: v.price.amount,
+        priceCurrency: v.price.currencyCode,
+        availability: availabilityOf(v),
+        url: v.selectedOptions.length
+          ? `${SITE_ORIGIN}/products/${product.handle}?${new URLSearchParams(
+              v.selectedOptions.map((o) => [o.name, o.value]),
+            ).toString()}`
+          : `${SITE_ORIGIN}/products/${product.handle}`,
+      })),
+    };
+    delete productJsonLd.sku;
+  }
 
   // The ladder + buy module. These two nodes are rendered twice: once in the
   // hero (in normal flow - it scrolls past like any content) and, once the
@@ -1507,6 +1704,7 @@ function ProductPage() {
         productOptions={productOptions}
         activeValue={activeTier}
         onSelect={selectTier}
+        showPrices={!soon}
       />
     ) : null;
   // Compact (name-pill) variant switcher for the pinned MOBILE buy bar - keeps
@@ -1554,6 +1752,123 @@ function ProductPage() {
   const buyAvailable = isBundle
     ? bundleAvailable
     : Boolean(selectedVariant?.availableForSale);
+
+  // Preorder campaign of the selected variant: the price ladder, the ship
+  // terms and the quantity cap all read it.
+  const campaign = !isBundle && preorder ? (selectedVariant?.campaign ?? null) : null;
+  const retail = selectedVariant?.sku ? (retailBySku[selectedVariant.sku] ?? null) : null;
+  const ladder =
+    campaign && retail != null && retail > 0 ? priceLadder(retail, PRICE_TIERS) : null;
+  const currency = selectedVariant?.price.currencyCode ?? 'EUR';
+  // Units left in the paid batch: one add must not ask for more than the
+  // batch that carries the ship date still holds.
+  const paidLeft = campaign?.paidStock
+    ? (campaign.paidLeft ?? campaign.batchUnits - campaign.batchOrdered)
+    : null;
+  const maxQuantity =
+    paidLeft != null ? Math.max(1, Math.min(MAX_LINE_QUANTITY, paidLeft)) : MAX_LINE_QUANTITY;
+  // One quantity for both copies of the buy module (in the hero and in the
+  // pinned rail), reset to 1 whenever the variant changes.
+  const [quantity, setQuantity] = useState(1);
+  useEffect(() => {
+    setQuantity(1);
+  }, [selectedVariant?.id]);
+  const buyQuantity = Math.min(quantity, maxQuantity);
+
+  // Shipping and import duties for the visitor's country, from the flat
+  // rate table. Display only: checkout charges the rate for the address.
+  const visitorCountry = rootData?.visitorCountry ?? null;
+  const quote = shippingQuote(visitorCountry);
+  const vatNote =
+    !quote || (!quote.blocked && quote.duty === 'none')
+      ? say('product-chrome.buy_vat_note', 'incl. VAT')
+      : null;
+  const shipNote = !quote
+    ? say('product-chrome.buy_ship_from', 'Shipping from {price}', {
+        price: formatPrice(SHIPPING_FROM, 'EUR'),
+      })
+    : quote.blocked
+      ? say('product-chrome.buy_ship_blocked', 'We do not ship to {country}.', {
+          country: countryName(quote.country),
+        })
+      : say('product-chrome.buy_ship_to', 'Shipping to {country}: {price}', {
+          country: countryName(quote.country),
+          price: formatPrice(quote.rate, 'EUR'),
+        });
+  const dutiesNote =
+    quote && !quote.blocked && quote.duty === 'us'
+      ? say(
+          'product-chrome.buy_duties_us',
+          'No import duties are charged at checkout. The carrier collects US import duty and fees on delivery. For electronics made in China this duty is high, often around 35 to 40% of the value for boards.',
+        )
+      : quote && !quote.blocked && quote.duty === 'intl'
+        ? say(
+            'product-chrome.buy_duties_intl',
+            'No import duties are charged at checkout. Import duties and taxes may be due to the carrier on delivery.',
+          )
+        : null;
+  // What a preorder buyer agrees to, next to the button: paid in full now,
+  // and for a funding target what happens if it is missed.
+  const campaignTerms = !campaign
+    ? null
+    : !campaign.paidStock && campaign.target !== null && !campaign.targetReached
+      ? say(
+          'product-chrome.buy_terms_target',
+          'Paid in full when you order. The supplier order is placed once {target} are ordered. If that has not happened by {deadline}, you choose a refund or to keep waiting.',
+          {target: campaign.target, deadline: CAMPAIGN_DEADLINE},
+        )
+      : say('product-chrome.buy_terms_paid', 'Paid in full when you order.');
+
+  // The chip beside the eyebrow. While the selected variant sells in a
+  // campaign it says what the order is (paid first batch, or a funding
+  // target) and links to how preorders work; the roadmap word describes the
+  // design and on a product taking full payment would read as "cannot be
+  // bought yet". A preorder product outside a counted campaign shows none.
+  const chip = campaignChip(campaign);
+  const statusChip = chip ? (
+    <Link
+      prefetch="viewport"
+      to="/preorder"
+      className="product-status-chip"
+      data-campaign={chip}
+      title={
+        chip === 'first-batch'
+          ? say(
+              'product-chrome.chip_first_batch_legend',
+              'Batch {batch} is paid for and in production: {ships}.',
+              {batch: campaign!.batch, ships: campaign!.shipPromise},
+            )
+          : chip === 'funding'
+            ? say(
+                'product-chrome.chip_funding_legend',
+                'The supplier order is placed once {target} are ordered. If that has not happened by {deadline}, you choose a refund or to keep waiting.',
+                {target: campaign!.target ?? 0, deadline: CAMPAIGN_DEADLINE},
+              )
+            : say(
+                'product-chrome.chip_funded_legend',
+                'The funding target is reached. New orders count toward the next batch.',
+              )
+      }
+    >
+      <span className="kanban-dot" aria-hidden="true" />
+      {chip === 'first-batch'
+        ? say('product-chrome.chip_first_batch', 'First production batch')
+        : chip === 'funding'
+          ? say('product-chrome.chip_funding', 'Preorder funding target')
+          : say('product-chrome.chip_funded', 'Funding target reached')}
+    </Link>
+  ) : roadmapStatus && !preorder ? (
+    <Link
+      prefetch="viewport"
+      to="/roadmap"
+      className="product-status-chip"
+      data-status={roadmapStatus}
+      title={copyText(`roadmap.status_${roadmapStatus}_legend`)}
+    >
+      <span className="kanban-dot" aria-hidden="true" />
+      {copyText(`roadmap.status_${roadmapStatus}_label`)}
+    </Link>
+  ) : null;
   // Coming-soon buy module: the price/stock/add-to-cart block becomes a
   // COMING SOON plate + notify-at-launch signup (same newsletter action,
   // tagged with this product's handle). Everything else on the PDP stays.
@@ -1621,17 +1936,12 @@ function ProductPage() {
             price={buyPrice}
             compareAtPrice={isBundle ? undefined : selectedVariant?.compareAtPrice}
           />
-          <Txt
-            id={
-              {
-                vat: 'product-chrome.buy_vat_note',
-                us: 'product-chrome.buy_duties_note',
-                intl: 'product-chrome.buy_duties_note_intl',
-              }[priceNote(rootData?.visitorCountry ?? null)]
-            }
-            as="span"
-            className="product-buy-vat"
-          />
+          {content.priceUnit && !isBundle ? (
+            <span className="product-buy-unit" {...prodEdit('priceUnit')}>
+              {content.priceUnit}
+            </span>
+          ) : null}
+          {vatNote ? <span className="product-buy-vat">{vatNote}</span> : null}
         </span>
         {isBundle ? (
           (() => {
@@ -1656,6 +1966,23 @@ function ProductPage() {
           </span>
         ) : null}
       </div>
+      {/* The price ladder: every step as plain text, the current one marked.
+          No struck-through price (EU Price Indication Directive, art. 6a). */}
+      {ladder && campaign ? (
+        <PriceLadder
+          steps={ladder}
+          nextUnit={campaign.ordered + 1}
+          left={campaign.tierLeft}
+          currency={currency}
+        />
+      ) : null}
+      <p className="product-buy-ship">
+        {shipNote}{' '}
+        <Link prefetch="intent" to="/shipping" className="product-buy-ship-link">
+          {say('product-chrome.buy_ship_link', 'All rates')}
+        </Link>
+      </p>
+      {dutiesNote ? <p className="product-buy-duties">{dutiesNote}</p> : null}
       {/* Pre-order: the stock line carries the catalog ship promise (the
           product's own, else the shop-wide default). The catalog
           availability still decides whether the buy button is enabled. */}
@@ -1697,10 +2024,13 @@ function ProductPage() {
       {/* Campaign meter: paid stock left, or progress to the funding target.
           The numbers and the ship promise above come from the same catalog
           read. */}
-      {!isBundle && preorder && selectedVariant?.campaign ? (
+      {campaignTerms ? <p className="product-buy-terms">{campaignTerms}</p> : null}
+      {campaign ? (
         <PreorderMeter
-          campaign={selectedVariant.campaign}
-          priceAfter={selectedVariant.priceAfter}
+          campaign={campaign}
+          priceAfter={selectedVariant?.priceAfter}
+          showEarly={!ladder}
+          showBatchPromise={false}
         />
       ) : null}
       {/* Sold-out signup: not for pre-order products, whose "unavailable"
@@ -1728,7 +2058,31 @@ function ProductPage() {
           isBundle ? copyText('product-chrome.buy_bundle_cta') : undefined
         }
         stackOffers={stackOffers}
+        quantity={isBundle ? undefined : buyQuantity}
+        maxQuantity={maxQuantity}
+        onQuantityChange={isBundle ? undefined : setQuantity}
       />
+      <ul
+        className="product-buy-trust"
+        aria-label={say('product-chrome.buy_trust_aria', 'Buying from OpenDrone')}
+      >
+        <li>{say('product-chrome.buy_trust_checkout', 'Secure checkout by Shopify')}</li>
+        <li>
+          <Link prefetch="intent" to="/herroepingsrecht">
+            {say('product-chrome.buy_trust_withdrawal', '14-day right of withdrawal')}
+          </Link>
+        </li>
+        <li>
+          <Link prefetch="intent" to="/warranty">
+            {say('product-chrome.buy_trust_warranty', '2-year warranty')}
+          </Link>
+        </li>
+        <li>
+          <Link prefetch="intent" to="/shipping">
+            {say('product-chrome.buy_trust_origin', 'Ships from Belgium')}
+          </Link>
+        </li>
+      </ul>
     </div>
   );
 
@@ -1779,7 +2133,7 @@ function ProductPage() {
       // Accessories (fallback content) aren't open-hardware products - no
       // "Open for learning" chapter, and no chapter number burnt on it.
       case 'openSource':
-        return isEditorial;
+        return hasPublicSource;
       case 'teardown':
         return Boolean(content.teardown);
       case 'specs':
@@ -1800,7 +2154,7 @@ function ProductPage() {
       // for them - the grid degrades to the "+ you" invitation when the GitHub
       // API is rate-limited.
       case 'contributors':
-        return isEditorial;
+        return hasPublicSource;
       // Only when the feature is enabled AND the synced metafields carry at
       // least one rating, so a zero-review store shows no trace of it.
       case 'reviews':
@@ -2393,6 +2747,7 @@ function ProductPage() {
           number={n}
           label="In the box"
           title={title}
+          noMedia
           titleId={
             content.bundle
               ? 'product-chrome.ch_in_the_box_title_bundle'
@@ -2481,7 +2836,7 @@ function ProductPage() {
               ))}
             </div>
           ) : null}
-          <ProvenanceCard />
+          {isBoard ? <ProvenanceCard /> : null}
         </Chapter>
     ),
     /** The files themselves. */
@@ -2490,6 +2845,7 @@ function ProductPage() {
           number={n}
           label="Downloads"
           title={title}
+          noMedia
           titleId="product-chrome.ch_downloads_title"
         >
           <Txt
@@ -2682,18 +3038,7 @@ function ProductPage() {
           <p className="product-hero-eyebrow">
             {copyText('product-chrome.hero_eyebrow_file')} {content.fileNumber} ·{' '}
             <span {...prodEdit('family')}>{content.family}</span>
-            {roadmapStatus ? (
-              <Link
-                prefetch="viewport"
-                to="/roadmap"
-                className="product-status-chip"
-                data-status={roadmapStatus}
-                title={copyText(`roadmap.status_${roadmapStatus}_legend`)}
-              >
-                <span className="kanban-dot" aria-hidden="true" />
-                {copyText(`roadmap.status_${roadmapStatus}_label`)}
-              </Link>
-            ) : null}
+            {statusChip}
           </p>
           {/* The product name is the page heading; the editorial tagline
               follows it at display size. */}
@@ -2733,7 +3078,7 @@ function ProductPage() {
             className="trust-chips"
             aria-label={copyText('product-chrome.trust_chips_aria')}
           >
-            {isEditorial ? (
+            {hasPublicSource ? (
               <li>
                 <Link
                   to="/open-source"

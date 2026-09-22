@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {campaignState, type CampaignBatch} from './preorder-campaign.ts';
-import {barPercent, meterView} from './preorder-meter.ts';
+import {campaignState, priceLadder, type CampaignBatch} from './preorder-campaign.ts';
+import {barPercent, ladderText, meterView} from './preorder-meter.ts';
 
 const PENDING = 'ships about 10 weeks after its target is reached';
 const STACK: CampaignBatch[] = [{units: 250, paid: true, ships: 'ships late October 2026'}, {units: 250}];
@@ -53,5 +53,23 @@ describe('barPercent', () => {
     assert.equal(barPercent({value: 5, max: 0, label: ''}), 0);
     assert.equal(barPercent({value: Number.NaN, max: 10, label: ''}), 0);
     assert.equal(barPercent({value: 20, max: 10, label: ''}), 100);
+  });
+});
+
+describe('ladderText', () => {
+  const euro = (n: number) => `€${n.toFixed(2)}`;
+  it('writes the whole ladder as plain text', () => {
+    assert.equal(
+      ladderText(priceLadder(39, TIERS), euro),
+      '€31.20 for units 1-100 · €35.10 for units 101-250 · €39.00 from unit 251',
+    );
+  });
+  it('takes its words from the copy lookup', () => {
+    const text = (key: string) =>
+      ({ladder_step: '{from} tot {to}: {price}', ladder_last: 'vanaf {from}: {price}'})[key];
+    assert.equal(ladderText(priceLadder(10, [{upTo: 5, off: 0.5}]), euro, text), '1 tot 5: €5.00 · vanaf 6: €10.00');
+  });
+  it('is the price alone without steps', () => {
+    assert.equal(ladderText(priceLadder(10, []), euro), '€10.00');
   });
 });
