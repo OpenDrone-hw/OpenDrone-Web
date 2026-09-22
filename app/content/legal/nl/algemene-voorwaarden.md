@@ -83,9 +83,11 @@
 
 7bis.1. Sommige producten worden verkocht als voorverkoop (pre-order). Zij worden als dusdanig vermeld, met hun verzenddatum, op de productpagina, aan de checkout en op de orderbevestiging. De consument betaalt de volledige prijs, de verzendkosten en eventuele invoerrechten die aan de checkout worden getoond bij het plaatsen van de bestelling.
 
-7bis.2. Voorverkoopproducten worden in batches geproduceerd. De flight controller en de ESC uit de eerste batch worden eind oktober 2026 verzonden. Elk ander voorverkoopproduct heeft een financieringsdoel, vermeld op de productpagina, en wordt ongeveer 10 weken na het bereiken van dat doel verzonden. De verzenddatum die bij het plaatsen van de bestelling voor een artikel wordt vermeld, is de tussen de consument en Incutec BV overeengekomen leveringstermijn in de zin van Art. VI.43 WER, zodat de standaardtermijn van 30 dagen uit Artikel 7.1 niet geldt voor voorverkoopartikelen.
+7bis.2. Voorverkoopproducten worden in batches geproduceerd. De flight controller en de ESC uit de eerste batch worden eind oktober 2026 verzonden. Elk ander voorverkoopproduct heeft een financieringsdoel, vermeld op de productpagina, en wordt ongeveer 10 weken na het bereiken van dat doel verzonden. Elk financieringsdoel heeft een deadline op 31 december 2026. De verzenddatum die bij het plaatsen van de bestelling voor een artikel wordt vermeld, is de tussen de consument en Incutec BV overeengekomen leveringstermijn in de zin van Art. VI.43 WER, zodat de standaardtermijn van 30 dagen uit Artikel 7.1 niet geldt voor voorverkoopartikelen.
 
 7bis.3. Indien een verzenddatum verschuift, brengt Incutec BV de consument daarvan per e-mail op de hoogte en vermeldt zij de nieuwe datum. Dit doet geen afbreuk aan de rechten van de consument uit Art. VI.43 §2 WER.
+
+7bis.3bis. Indien een financieringsdoel niet bereikt is op de deadline, brengt Incutec BV elke consument die dat product bestelde per e-mail op de hoogte. De consument kiest dan om de overeenkomst voor dat artikel te ontbinden, met terugbetaling van alle daarvoor betaalde bedragen binnen 14 dagen, of om de bestelling te behouden voor de nieuwe verzenddatum die in die e-mail vermeld wordt.
 
 7bis.4. Het herroepingsrecht van Artikel 5 geldt voor voorverkoop. De consument kan het ook vóór de levering uitoefenen, via de herroepingsfunctie in het klantenaccount of zoals bepaald in Artikel 5.4.
 
@@ -117,7 +119,7 @@
 - Wijzigingen of herprogrammering door de consument, in de mate dat het gebrek daardoor is veroorzaakt. Het wijzigen van open-source firmware of hardware sluit de garantie niet uit voor gebreken die er geen verband mee houden (zie de garantiepagina)
 - Externe oorzaken (waterschade, bliksem, spanning of stroom buiten de specificaties), in de mate dat het gebrek daardoor is veroorzaakt
 
-9.4. **Onderzoek bij een garantieclaim.** Bij een claim onderzoekt Incutec BV het teruggestuurde product en deelt het de bevindingen met de consument (foto's en meetresultaten waar relevant). Sporen van oorzaken buiten de conformiteit, zoals soldeerschade aan pads of connectoren, omgepoolde of te hoge voedingsspanning, mechanische schade of waterschade, kunnen als tegenbewijs dienen dat het gebrek niet bij levering bestond, of aantonen dat het wettelijke vermoeden onverenigbaar is met de aard van het gebrek (Art. 1649quater §4 oud BW). Terugzending, herstelling en vervanging onder de wettelijke garantie zijn kosteloos voor de consument. Dit artikel beperkt de wettelijke garantie niet; het beschrijft hoe claims worden beoordeeld.
+9.4. **Onderzoek bij een garantieclaim.** Bij een claim onderzoekt Incutec BV het teruggestuurde product en deelt het de bevindingen met de consument (foto's en meetresultaten waar relevant). Sporen van oorzaken buiten de conformiteit, zoals soldeerschade aan pads of connectoren, omgepoolde of te hoge voedingsspanning, mechanische schade of waterschade, kunnen als tegenbewijs dienen dat het gebrek niet bij levering bestond, of aantonen dat het wettelijke vermoeden onverenigbaar is met de aard van het gebrek (Art. 1649quater §4 oud BW). Terugzending, herstelling en vervanging onder de wettelijke garantie zijn kosteloos voor de consument. Vóór het lossolderen van een product voor een claim wordt de consument gevraagd foto's van het gemonteerde product te sturen, zodat de oorzaak beoordeeld kan worden. Dit artikel beperkt de wettelijke garantie niet; het beschrijft hoe claims worden beoordeeld.
 
 9.5. **Geen commerciële garantie.** Incutec BV biedt geen commerciële garantie bovenop de wettelijke conformiteitsgarantie. Elke verwijzing naar "garantie" op de website of in productdocumentatie betreft de wettelijke garantie van Art. 9.2.
 
@@ -207,7 +209,7 @@
 
 ---
 
-*Versie: 2.1 — laatst bijgewerkt 2026-08-15*
+*Versie: 2.2 — laatst bijgewerkt 2026-09-21*
 
 ---
 

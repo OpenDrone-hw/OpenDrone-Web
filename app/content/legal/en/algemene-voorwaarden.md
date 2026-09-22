@@ -83,9 +83,11 @@
 
 7bis.1. Some products are sold as pre-orders. They are disclosed as such, with their ship date, on the product page, at checkout and on the order confirmation. The consumer pays the full price, the shipping costs and any import duties shown at checkout when the order is placed.
 
-7bis.2. Pre-order products are produced in batches. The flight controller and ESC from the first batch ship late October 2026. Every other pre-order product has a funding target, stated on its product page, and ships about 10 weeks after that target is reached. The ship date disclosed for an item when the order is placed is the delivery time agreed between the consumer and Incutec BV within the meaning of Art. VI.43 WER, so the 30-day default deadline in Article 7.1 does not apply to pre-order items.
+7bis.2. Pre-order products are produced in batches. The flight controller and ESC from the first batch ship late October 2026. Every other pre-order product has a funding target, stated on its product page, and ships about 10 weeks after that target is reached. Every funding target has a deadline of 31 December 2026. The ship date disclosed for an item when the order is placed is the delivery time agreed between the consumer and Incutec BV within the meaning of Art. VI.43 WER, so the 30-day default deadline in Article 7.1 does not apply to pre-order items.
 
 7bis.3. If a ship date moves, Incutec BV informs the consumer by email and states the new date. This is without prejudice to the consumer's rights under Art. VI.43 §2 WER.
+
+7bis.3bis. If a funding target is not reached by its deadline, Incutec BV informs every consumer who ordered that product by email. The consumer then chooses either to terminate the contract for that item, with a refund of all amounts paid for it within 14 days, or to keep the order for the new ship date stated in that email.
 
 7bis.4. The right of withdrawal under Article 5 applies to pre-orders. The consumer may also exercise it before delivery, through the withdrawal function in the customer account or as set out in Article 5.4.
 
@@ -117,7 +119,7 @@
 - Modifications or reprogramming by the consumer, to the extent the defect was caused by them. Modifying open-source firmware or hardware does not void the warranty for defects unrelated to the modification (see the warranty page)
 - External causes (water damage, lightning, voltage or current outside specifications), to the extent the defect was caused by them
 
-9.4. **Inspection on a warranty claim.** On a claim, Incutec BV examines the returned product and shares its findings with the consumer (photos and measurements where relevant). Traces of causes outside conformity, such as soldering damage to pads or connectors, reversed or excessive supply voltage, mechanical damage or water damage, can serve as proof to the contrary that the defect did not exist at delivery, or show that the legal presumption is incompatible with the nature of the defect (Art. 1649quater §4 old Civil Code). Return shipping, repair and replacement under the legal warranty are free of charge for the consumer. This article does not limit the legal warranty; it describes how claims are assessed.
+9.4. **Inspection on a warranty claim.** On a claim, Incutec BV examines the returned product and shares its findings with the consumer (photos and measurements where relevant). Traces of causes outside conformity, such as soldering damage to pads or connectors, reversed or excessive supply voltage, mechanical damage or water damage, can serve as proof to the contrary that the defect did not exist at delivery, or show that the legal presumption is incompatible with the nature of the defect (Art. 1649quater §4 old Civil Code). Return shipping, repair and replacement under the legal warranty are free of charge for the consumer. Before desoldering a product for a claim, the consumer is asked to send photos of it as mounted, so the cause can be assessed. This article does not limit the legal warranty; it describes how claims are assessed.
 
 9.5. **No commercial guarantee.** Incutec BV offers no commercial guarantee on top of the legal conformity warranty. Any reference to "warranty" on the website or in product documentation refers to the legal warranty of Art. 9.2.
 
@@ -207,4 +209,4 @@
 
 ---
 
-*Version: 2.1, last updated 2026-08-15*
+*Version: 2.2, last updated 2026-09-21*

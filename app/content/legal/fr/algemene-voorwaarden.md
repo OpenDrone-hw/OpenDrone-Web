@@ -83,9 +83,11 @@
 
 7bis.1. Certains produits sont vendus en précommande. Ils sont indiqués comme tels, avec leur date d’expédition, sur la page produit, lors du passage en caisse et sur la confirmation de commande. Le consommateur paie le prix intégral, les frais d’expédition et les éventuels droits d’importation affichés lors du passage en caisse au moment de la commande.
 
-7bis.2. Les produits en précommande sont fabriqués par lots. Le contrôleur de vol et l’ESC du premier lot sont expédiés fin octobre 2026. Tout autre produit en précommande a un objectif de financement, indiqué sur sa page produit, et est expédié environ 10 semaines après que cet objectif est atteint. La date d’expédition indiquée pour un article lors de la commande constitue le délai de livraison convenu entre le consommateur et Incutec BV au sens de l’art. VI.43 CDE, de sorte que le délai par défaut de 30 jours de l’article 7.1 ne s’applique pas aux articles en précommande.
+7bis.2. Les produits en précommande sont fabriqués par lots. Le contrôleur de vol et l’ESC du premier lot sont expédiés fin octobre 2026. Tout autre produit en précommande a un objectif de financement, indiqué sur sa page produit, et est expédié environ 10 semaines après que cet objectif est atteint. Chaque objectif de financement a une échéance au 31 décembre 2026. La date d’expédition indiquée pour un article lors de la commande constitue le délai de livraison convenu entre le consommateur et Incutec BV au sens de l’art. VI.43 CDE, de sorte que le délai par défaut de 30 jours de l’article 7.1 ne s’applique pas aux articles en précommande.
 
 7bis.3. Si une date d’expédition change, Incutec BV en informe le consommateur par e-mail et indique la nouvelle date. Ceci est sans préjudice des droits du consommateur au titre de l’art. VI.43 §2 CDE.
+
+7bis.3bis. Si un objectif de financement n’est pas atteint à son échéance, Incutec BV en informe par e-mail chaque consommateur ayant commandé ce produit. Le consommateur choisit alors soit de résoudre le contrat pour cet article, avec le remboursement de tous les montants payés pour celui-ci dans les 14 jours, soit de maintenir la commande pour la nouvelle date d’expédition indiquée dans cet e-mail.
 
 7bis.4. Le droit de rétractation prévu à l’article 5 s’applique aux précommandes. Le consommateur peut également l’exercer avant la livraison, via la fonction de rétractation de son compte client ou comme prévu à l’article 5.4.
 
@@ -117,7 +119,7 @@
 - Des modifications ou reprogrammations effectuées par le consommateur, dans la mesure où le défaut en résulte. La modification de firmware open source ou du matériel n’exclut pas la garantie pour les défauts sans lien avec cette modification (voir la page garantie)
 - Des causes externes (dégâts des eaux, foudre, tension ou courant hors spécifications), dans la mesure où le défaut en résulte
 
-9.4. **Examen lors d'une réclamation de garantie.** En cas de réclamation, Incutec BV examine le produit retourné et partage ses constatations avec le consommateur (photos et mesures le cas échéant). Des traces de causes étrangères à la conformité, telles que des dommages de soudure aux pastilles ou connecteurs, une tension d'alimentation inversée ou excessive, des dommages mécaniques ou des dégâts des eaux, peuvent servir de preuve contraire que le défaut n’existait pas à la livraison, ou établir que la présomption légale est incompatible avec la nature du défaut (art. 1649quater §4 ancien Code civil). Le renvoi, la réparation et le remplacement au titre de la garantie légale sont gratuits pour le consommateur. Cet article ne limite pas la garantie légale ; il décrit la manière dont les réclamations sont évaluées.
+9.4. **Examen lors d'une réclamation de garantie.** En cas de réclamation, Incutec BV examine le produit retourné et partage ses constatations avec le consommateur (photos et mesures le cas échéant). Des traces de causes étrangères à la conformité, telles que des dommages de soudure aux pastilles ou connecteurs, une tension d'alimentation inversée ou excessive, des dommages mécaniques ou des dégâts des eaux, peuvent servir de preuve contraire que le défaut n’existait pas à la livraison, ou établir que la présomption légale est incompatible avec la nature du défaut (art. 1649quater §4 ancien Code civil). Le renvoi, la réparation et le remplacement au titre de la garantie légale sont gratuits pour le consommateur. Avant de dessouder un produit pour une réclamation, le consommateur est invité à envoyer des photos du produit monté, afin que la cause puisse être évaluée. Cet article ne limite pas la garantie légale ; il décrit la manière dont les réclamations sont évaluées.
 
 9.5. **Pas de garantie commerciale.** Incutec BV n'offre aucune garantie commerciale en plus de la garantie légale de conformité. Toute référence à une « garantie » sur le site ou dans la documentation produit vise la garantie légale de l'art. 9.2.
 
@@ -207,4 +209,4 @@
 
 ---
 
-*Version : 2.1, dernière mise à jour 2026-08-15*
+*Version : 2.2, dernière mise à jour 2026-09-21*

@@ -15,7 +15,7 @@ La version néerlandaise (/warranty) constitue le texte juridiquement faisant fo
 
 - Les dommages de crash lorsque le crash n’a pas été causé par un défaut du produit (par ex. erreur de pilotage ou collision), ainsi que la mauvaise utilisation, la surcharge ou la modification.
 - L’usure normale de pièces à durée de vie limitée (par ex. connecteurs après usages répétés).
-- Les dommages résultant manifestement de modifications du firmware ou du matériel par le consommateur ; les défauts sans lien causal avec ces modifications restent couverts.
+- Les dommages résultant manifestement de modifications du firmware ou du matériel par le consommateur ; les défauts sans lien causal avec ces modifications restent couverts. Flasher Betaflight, AM32, ExpressLRS ou un autre firmware est un usage normal de ces produits et n’affecte pas en soi la garantie.
 
 ### Comment introduire une réclamation de garantie
 

@@ -15,7 +15,7 @@ The Dutch version (/warranty) is the legally authoritative text for consumers re
 
 - Crash damage where the crash was not caused by a defect of the product (e.g. pilot error or collision), as well as misuse or overload.
 - Wear and tear of parts with a natural lifetime (e.g. connectors after repeated use).
-- Damage demonstrably caused by user modifications to firmware or hardware; defects with no causal link to such modifications remain covered.
+- Damage demonstrably caused by user modifications to firmware or hardware; defects with no causal link to such modifications remain covered. Flashing Betaflight, AM32, ExpressLRS or other firmware is normal use of these products and does not by itself affect the guarantee.
 
 ### How to make a warranty claim
 

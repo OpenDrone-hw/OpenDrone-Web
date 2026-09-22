@@ -13,7 +13,7 @@ Alle producten die door Incutec BV aan consumenten worden verkocht genieten een 
 
 - Crashschade waarbij de crash niet door een gebrek van het product is veroorzaakt (bv. bestuurdersfout of botsing), alsook oneigenlijk gebruik of overbelasting.
 - Slijtage van onderdelen met natuurlijke levensduur (bv. connectoren na herhaaldelijk gebruik).
-- Schade die aantoonbaar het gevolg is van wijzigingen aan firmware of hardware door de consument; defecten zonder causaal verband met dergelijke wijzigingen blijven gedekt.
+- Schade die aantoonbaar het gevolg is van wijzigingen aan firmware of hardware door de consument; defecten zonder causaal verband met dergelijke wijzigingen blijven gedekt. Het flashen van Betaflight, AM32, ExpressLRS of andere firmware is normaal gebruik van deze producten en heeft op zich geen invloed op de garantie.
 
 ### Hoe een beroep doen op de garantie
 
