@@ -1,6 +1,6 @@
 ## Shipping and delivery
 
-Incutec BV ships orders by bpost from Belgium to every European Union country and to the other destinations in the table below. Shipping costs are shown at checkout before payment.
+Incutec BV ships orders by bpost from Belgium to every European Union country and to the other destinations in the table below. The rate is shown in your cart and again at checkout, before you pay.
 
 ### Shipping rates
 

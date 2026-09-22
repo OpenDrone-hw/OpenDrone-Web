@@ -50,6 +50,8 @@ export async function loader({request}: Route.LoaderArgs) {
 export default function ShippingRoute() {
   const {html, locale} = useLoaderData<typeof loader>();
   const labels = legalLabels('shipping', locale);
+  // The back label is an optional field of the shipping labels only.
+  const backLabel = (labels as {back?: string}).back;
   return (
     <LegalPage
       eyebrow={labels.eyebrow}
@@ -57,6 +59,9 @@ export default function ShippingRoute() {
       html={html}
       locale={locale}
       summary={<ShippingGlance locale={locale} />}
+      // Buyers reach this page from the cart: it is help, not only terms.
+      back={backLabel ? {to: '/support', label: backLabel} : undefined}
+      className="legal-shipping"
     />
   );
 }

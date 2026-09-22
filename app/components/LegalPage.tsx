@@ -39,6 +39,8 @@ export function LegalPage({
   locale = 'en',
   lastUpdated,
   summary,
+  back,
+  className,
   children,
 }: {
   title: string;
@@ -48,15 +50,22 @@ export function LegalPage({
   lastUpdated?: string;
   /** A short buyer summary shown above the legal text (shipping). */
   summary?: React.ReactNode;
+  /** Where the back link goes instead of the legal overview: a help page
+   *  a buyer reaches from the cart (shipping) points back to Support. */
+  back?: {to: string; label: string};
+  /** Extra class on the page, for page-specific table styling. */
+  className?: string;
   children?: React.ReactNode;
 }) {
   const overviewHref = `/${locale}/legal`;
   const ui = LEGAL_UI_STRINGS[locale];
   return (
-    <article className="legal-page page-shell">
+    <article className={`legal-page page-shell${className ? ` ${className}` : ''}`}>
       <div className="reading-column">
         <div className="policy-back-link">
-          <Link prefetch="viewport" to={overviewHref}>{ui.backToOverview}</Link>
+          <Link prefetch="viewport" to={back?.to ?? overviewHref}>
+            {back?.label ?? ui.backToOverview}
+          </Link>
         </div>
         <header className="page-header">
           <p className="page-eyebrow">{eyebrow}</p>

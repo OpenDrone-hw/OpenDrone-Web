@@ -1,6 +1,6 @@
 ## Verzending en levering
 
-Incutec BV verzendt bestellingen met bpost vanuit België naar elk land van de Europese Unie en naar de andere bestemmingen in de tabel hieronder. De verzendkosten worden aan de checkout getoond voorafgaand aan betaling.
+Incutec BV verzendt bestellingen met bpost vanuit België naar elk land van de Europese Unie en naar de andere bestemmingen in de tabel hieronder. Het tarief staat in je winkelmandje en opnieuw aan de checkout, voordat je betaalt.
 
 ### Verzendtarieven
 

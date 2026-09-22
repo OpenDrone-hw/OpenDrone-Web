@@ -63,7 +63,7 @@
   "gate_planned": "design requirements",
   "votes_title": "*02* · What you want next",
   "votes_body": "Tell us on [the OpenDrone Discord](@discord) which of the planned and in-progress projects on this board you want next. What the community asks for steers our priorities; engineering reality can still overrule it, and when it does we say so instead of silently dropping a project.",
-  "votes_empty": "No ballots counted yet.",
+  "votes_empty": "Tell us what OpenDrone should design next: [vote on Discord](@discord).",
   "votes_ballots_label": "ballots counted",
   "votes_count_label": "votes",
   "votes_added_prefix": "listed",

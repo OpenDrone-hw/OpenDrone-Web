@@ -633,3 +633,385 @@ html {
 .preorder-strip-home.is-mobile .preorder-strip-home-what {
   display: none;
 }
+
+/* ============================================
+   Buttons: small size and the plain link
+   ============================================ */
+
+/* A compact button for rows of choices (the home launch card, the build
+   guide): 36px high, Inter 14px, sized to its label. */
+.btn-primary.btn-sm,
+.btn-secondary.btn-sm {
+  width: auto;
+  min-height: 36px;
+  padding: 0 14px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  border-radius: var(--r-md);
+  text-decoration: none;
+}
+.btn-secondary.btn-sm {
+  font-weight: 500;
+  background: var(--color-bg-card);
+}
+/* A text action with the weight of a link, not a button. */
+.btn-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.btn-link:hover {
+  color: var(--color-text);
+}
+
+/* ============================================
+   Home launch card (desktop and phone)
+   ============================================ */
+
+.preorder-strip-home:not(.is-mobile) {
+  gap: 8px;
+  padding: 14px 18px;
+}
+/* Wide enough for the four buttons on one row. */
+.hero-top-center {
+  max-width: min(94vw, 52rem);
+}
+@media (min-width: 900px) {
+  .hero-top-center .preorder-strip-home {
+    width: max-content;
+    max-width: 100%;
+  }
+  .preorder-strip-home:not(.is-mobile) .preorder-strip-home-links {
+    flex-wrap: nowrap;
+  }
+  .preorder-strip-home:not(.is-mobile) .preorder-strip-home-links a {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+}
+.preorder-strip-home-text span {
+  font-size: 14px;
+  color: var(--color-text);
+}
+.preorder-strip-home-sizes {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+.preorder-strip-home-links {
+  gap: 8px;
+  margin-top: 4px;
+}
+.preorder-strip-home-links a.btn-sm {
+  min-height: 36px;
+  font-weight: 600;
+}
+.preorder-strip-home-links a.btn-secondary.btn-sm {
+  font-weight: 500;
+  color: var(--color-text);
+}
+.preorder-strip-home-links a.btn-primary.btn-sm,
+.preorder-strip-home-links a.btn-primary.btn-sm:hover {
+  color: var(--color-on-accent);
+}
+@media (min-width: 48em) {
+  .homepage .hero-stage-below-strip {
+    top: 13rem;
+  }
+}
+
+/* Phone: the card reads left-aligned, its buttons wrap from the left. */
+.preorder-strip-home.is-mobile {
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left;
+  margin-top: 0;
+  gap: 8px;
+}
+.preorder-strip-home.is-mobile .preorder-strip-home-text,
+.preorder-strip-home.is-mobile .preorder-strip-home-links {
+  justify-content: flex-start;
+}
+.preorder-strip-home.is-mobile .preorder-strip-home-links a {
+  min-height: 40px;
+}
+.home-mobile-strip {
+  align-self: stretch;
+}
+
+/* Desktop Shop button: the site's primary button at its own width, not a
+   full-width mono bar. */
+.hero-buy-btn.btn-primary {
+  width: auto;
+  align-self: flex-end;
+  min-height: 48px;
+  padding: 0 24px;
+  font-size: 16px;
+}
+/* The slow-load escape sits alone under the load bar. */
+.hero-load-overflow {
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Phone home: one full-width Shop button, the source as a link under it. */
+.home-mobile-cta {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.25rem;
+  margin-top: 0;
+}
+.home-mobile-cta .btn-primary {
+  min-height: 48px;
+}
+.home-mobile-cta .btn-link {
+  align-self: center;
+}
+/* The phone flagship line uses the /products two-column grid. */
+.home-mobile-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+/* A small phone: a shorter board render so the launch card and the Shop
+   button reach the first screen. */
+@media (max-width: 400px) {
+  .home-mobile-stage {
+    height: min(28vh, 160px);
+  }
+  .home-mobile-board {
+    width: clamp(120px, 36vw, 150px);
+  }
+  /* The launch card's one-line pitch stands in for the longer tagline. */
+  .home-mobile-tagline {
+    display: none;
+  }
+  .preorder-strip-home.is-mobile .preorder-strip-home-what {
+    display: block;
+    margin-bottom: 0;
+  }
+  .home-mobile-hero {
+    gap: 0.9rem;
+  }
+}
+
+/* ============================================
+   /products: sticky rail, quick-filter chips, build summary
+   ============================================ */
+
+/* The rail stays below the floating header pill while the grid scrolls. */
+@media (min-width: 900px) {
+  .catalog-sidebar {
+    position: sticky;
+    top: calc(var(--header-height) + 2rem);
+    align-self: start;
+    /* Compact enough to stay whole beside the grid on a laptop screen. */
+    gap: 1.5rem;
+  }
+  .catalog-sidebar .catalog-filter {
+    padding: 0.3rem 0;
+  }
+  .catalog-sidebar .catalog-filter-head {
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+}
+.catalog-filter-head,
+.collection .page-title,
+#new-to-fpv h2,
+#new-to-fpv h3 {
+  scroll-margin-top: calc(var(--header-height) + 2rem);
+}
+
+/* One wrapping row of quick filters over the grid. */
+.catalog-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 1rem;
+}
+.catalog-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--r-pill);
+  background: var(--color-bg-card);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.catalog-chip:hover {
+  border-color: var(--color-text-muted);
+}
+.catalog-chip[aria-pressed='true'] {
+  border-color: var(--color-gold-fill);
+  background: color-mix(in srgb, var(--color-gold-fill) 14%, var(--color-bg-card));
+  color: var(--color-text);
+  font-weight: 600;
+}
+/* Phones: the chips carry the size filters, so the sideways rail keeps
+   only the categories. */
+@media (max-width: 899px) {
+  .catalog-sidebar .catalog-filter-group.is-chip-dup {
+    display: none;
+  }
+  /* One sideways row, like the category rail, so the grid stays high. */
+  .catalog-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-bottom: 0.75rem;
+    padding-bottom: 2px;
+  }
+  .catalog-chips::-webkit-scrollbar {
+    display: none;
+  }
+  .catalog-chip {
+    flex: 0 0 auto;
+    min-height: 40px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+}
+
+/* The whole build's ship date and test status, in one line above its add. */
+.build-guide-summary {
+  margin: 0 0 4px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: var(--color-bg-elevated, var(--color-bg-card));
+  border: 1px solid var(--color-border);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text);
+}
+.build-guide-card li a[href^='http'],
+.build-guide-card li a[href^='/'] {
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ============================================
+   Reading cascade: short and early
+   ============================================ */
+/* The story pages keep a light cascade: a 6px rise over a quarter second,
+   armed before a block enters the viewport (EditorialShell). */
+.reveal-item {
+  transform: translateY(6px);
+  transition:
+    opacity 0.25s ease,
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--rv-d, 0ms);
+}
+
+/* ============================================
+   /preorder: the short version and anchors
+   ============================================ */
+.preorder-short {
+  margin-top: var(--sp-5, 24px);
+  padding: 16px 18px;
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-gold-fill);
+  border-radius: var(--r-md);
+  background: var(--color-bg-card);
+  max-width: 62ch;
+}
+.preorder-short-title {
+  margin: 0 0 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.preorder-short-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.preorder-short-list li {
+  position: relative;
+  padding-left: 18px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+.preorder-short-list li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 0.62em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-gold-fill);
+}
+.preorder-short-list strong {
+  font-weight: 600;
+  color: var(--color-text);
+}
+.preorder-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: var(--sp-5, 24px);
+}
+/* In-page targets (#gift, #nl, #fr, #tracker) land below the header pill. */
+.preorder-page [id] {
+  scroll-margin-top: calc(var(--header-height) + 2rem);
+}
+
+/* ============================================
+   Footer: one sans size for links, company block and language lines
+   ============================================ */
+.site-footer-inner nav a,
+.site-footer-inner .company-block,
+.site-footer-inner .company-block p,
+.site-footer-inner .company-block a {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.site-footer-inner .footer-small,
+.site-footer-inner .footer-small * {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* ============================================
+   /shipping: the rate table
+   ============================================ */
+.legal-shipping .legal-body table {
+  border-collapse: collapse;
+}
+.legal-shipping .legal-body tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+.legal-shipping .legal-body td:last-child,
+.legal-shipping .legal-body th:last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* The bottom bar line in the same small size as the rest of the footer. */
+.site-footer-inner > div:last-child > p {
+  font-size: 12px;
+  line-height: 1.6;
+}

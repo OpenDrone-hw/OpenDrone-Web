@@ -1,6 +1,6 @@
 ## Expédition et livraison
 
-Incutec BV expédie les commandes par bpost depuis la Belgique vers tous les pays de l’Union européenne et vers les autres destinations du tableau ci-dessous. Les frais d’expédition sont affichés lors du passage en caisse avant le paiement.
+Incutec BV expédie les commandes par bpost depuis la Belgique vers tous les pays de l’Union européenne et vers les autres destinations du tableau ci-dessous. Le tarif est affiché dans votre panier, puis à nouveau lors du passage en caisse, avant le paiement.
 
 ### Tarifs d’expédition
 

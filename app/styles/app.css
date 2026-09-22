@@ -150,6 +150,12 @@
   --font-mono: "JetBrains Mono", "JetBrains Mono Fallback", ui-monospace, Menlo, Monaco, "SF Mono",
     "Cascadia Mono", "Segoe UI Mono", Consolas, monospace;
 
+  /* Label type: mono caps only for labels of one to three words that are
+     not interactive (eyebrows, table heads), always at this tracking.
+     Sentences, buttons and links are Inter in sentence case. */
+  --ls-label: 0.06em;
+  --fs-label: 0.75rem;    /* 12px */
+
   /* Type scale. Capped so display doesn't balloon on ultrawide. */
   --fs-xs: 0.6875rem;     /* 11px */
   --fs-sm: 0.8125rem;     /* 13px */
@@ -699,7 +705,7 @@ html {
 }
 
 .hero-load-overflow__text {
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
 }
 
@@ -713,7 +719,7 @@ html {
   color: var(--color-text);
   border-radius: var(--r-xs);
   font-size: 0.7rem;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   transition:
     border-color 0.2s ease,
@@ -871,7 +877,7 @@ html {
   font-size: 0.95rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   border-radius: var(--r-xs);
   transition: background-color 0.2s ease;
 }
@@ -917,7 +923,7 @@ html {
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   text-transform: uppercase;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   color: var(--color-text-muted);
 }
 .hero-showcase-all {
@@ -1081,7 +1087,7 @@ html {
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   font-weight: 600;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   /* On the dark reveal card, use full-brightness brand gold so the badge
      pops; light mode swaps back to --color-gold (the card goes near-white). */
@@ -1108,7 +1114,7 @@ html.light .hero-reveal-soon {
   border: 1px solid var(--pod-border);
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
   pointer-events: none;
@@ -1149,7 +1155,7 @@ html.light .hero-reveal-soon {
   gap: 0.35rem;
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
   pointer-events: none;
@@ -1389,7 +1395,7 @@ a:hover {
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   font-weight: 600;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-gold-text);
 }
@@ -2007,7 +2013,7 @@ html.light .header-cat-pod {
 .site-header-categories a {
   font-family: var(--font-mono);
   font-size: var(--fs-sm);
-  letter-spacing: 0.16em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-gold-text);
   opacity: 0.7;
@@ -2373,7 +2379,7 @@ html.hero-header-in .homepage-layout .site-header {
   font-family: var(--font-mono);
   font-size: 0.85rem;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   color: var(--color-text);
   padding-bottom: 0.35rem;
   border-bottom: 1px solid
@@ -2394,7 +2400,7 @@ html.hero-header-in .homepage-layout .site-header {
   font-family: var(--font-mono);
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.25em;
+  letter-spacing: var(--ls-label);
   color: var(--color-gold-text);
   margin-bottom: 0.375rem;
 }
@@ -2649,7 +2655,7 @@ html.hero-header-in .homepage-layout .site-header {
 .product-card-media-ghost {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.22em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-dim);
   opacity: 0.6;
@@ -2685,7 +2691,7 @@ html.hero-header-in .homepage-layout .site-header {
   padding: 10px 14px;
   border-bottom: 1px solid var(--color-border);
   font-size: 10px;
-  letter-spacing: 0.16em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -3106,7 +3112,7 @@ button.reset {
   font-family: var(--font-mono);
   font-weight: 700;
   font-size: 0.9rem;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   text-decoration: none;
   transition: background-color 150ms ease, box-shadow 150ms ease,
@@ -3311,7 +3317,7 @@ button.reset {
   font-family: var(--font-mono);
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.24em;
+  letter-spacing: var(--ls-label);
   color: var(--color-gold-text);
 }
 
@@ -3333,7 +3339,7 @@ button.reset {
   font-family: var(--font-mono);
   font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   color: var(--color-text-muted);
   margin-bottom: 1rem;
 }
@@ -3559,7 +3565,7 @@ button.reset {
   font-family: var(--font-mono);
   font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.22em;
+  letter-spacing: var(--ls-label);
   color: var(--color-gold-text);
 }
 
@@ -3585,7 +3591,7 @@ button.reset {
   font-family: var(--font-mono);
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.16em;
+  letter-spacing: var(--ls-label);
   color: var(--color-text-muted);
 }
 
@@ -3670,7 +3676,7 @@ button.reset {
   font-family: var(--font-mono);
   font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--ls-label);
 }
 
 .product-gallery-main {
@@ -3737,7 +3743,7 @@ button.reset {
 .product-gallery-counter {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
   padding: 0 0.25rem;
@@ -3762,7 +3768,7 @@ button.reset {
     backdrop-filter: blur(6px);
     font-family: var(--font-mono);
     font-size: 10px;
-    letter-spacing: 0.14em;
+    letter-spacing: var(--ls-label);
     text-transform: uppercase;
     color: var(--color-text-dim);
     pointer-events: none;
@@ -3838,7 +3844,7 @@ button.reset {
   font-family: var(--font-mono);
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   color: var(--color-text-muted);
 }
 
@@ -3983,7 +3989,7 @@ button.reset {
 .related-card-file {
   font-family: var(--font-mono);
   font-size: 10px;
-  letter-spacing: 0.16em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-dim);
   margin: 0;
@@ -4139,7 +4145,7 @@ button.reset {
   font-family: var(--font-mono);
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   color: var(--color-text-muted);
 }
 
@@ -4192,7 +4198,7 @@ button.reset {
   font-family: var(--font-mono);
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   color: var(--color-text-muted);
   padding-bottom: 0.75rem;
   margin-bottom: 0.75rem;
@@ -4310,7 +4316,7 @@ button.reset {
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   padding: 0.25rem 0.6rem;
   border-radius: 999px;
@@ -4332,7 +4338,7 @@ button.reset {
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-gold-text);
   text-decoration: none;
@@ -4418,7 +4424,7 @@ button.reset {
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   padding: 0.25rem 0.5rem;
   border-radius: var(--r-xs);
@@ -4549,7 +4555,7 @@ button.reset {
   font-family: var(--font-mono);
   font-weight: 500;
   font-size: var(--fs-xs);
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-dim);
   margin: 0;
@@ -5231,7 +5237,7 @@ button.reset {
   font-family: var(--font-mono);
   font-weight: 600;
   font-size: var(--fs-sm);
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-gold-text);
   padding: 0.35rem 0.7rem;
@@ -5642,7 +5648,7 @@ button.reset {
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   color: var(--color-text-muted);
 }
 
@@ -6045,7 +6051,7 @@ button.reset {
 .pair-cta-eyebrow {
   font-family: var(--font-mono);
   font-size: 12px;
-  letter-spacing: 0.24em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-gold-text);
 }
@@ -6282,7 +6288,7 @@ button.reset {
     border-radius: var(--r-pill);
     font-family: var(--font-mono);
     font-size: 11px;
-    letter-spacing: 0.12em;
+    letter-spacing: var(--ls-label);
     text-transform: uppercase;
     color: var(--color-gold-text);
   }
@@ -6430,7 +6436,7 @@ button.reset {
   left: 0.85rem;
   font-family: var(--font-mono);
   font-size: 9px;
-  letter-spacing: 0.22em;
+  letter-spacing: var(--ls-label);
   color: color-mix(in srgb, var(--color-text-dim) 60%, transparent);
 }
 
@@ -6919,7 +6925,7 @@ html.light .firmware-logo--tile {
   padding: 0 3px 1px;
   font-family: var(--font-mono);
   font-size: 9px;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
@@ -6958,7 +6964,7 @@ html.light .firmware-logo--tile {
   cursor: pointer;
   font-family: var(--font-mono);
   font-size: clamp(10.5px, 0.74vw, 13px);
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   text-align: center;
   /* Full text colour: the muted grey read as low-contrast
@@ -6998,7 +7004,7 @@ html.light .firmware-logo--tile {
 }
 .board-folder-tab-name {
   font-size: clamp(10.5px, 0.74vw, 13px);
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   line-height: 1;
 }
 .board-folder-tab-fn {
@@ -7290,7 +7296,7 @@ html.light .firmware-logo--tile {
   margin-top: 0.7rem;
   font-family: var(--font-mono);
   font-size: 10px;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-dim);
 }
@@ -7304,7 +7310,7 @@ html.light .firmware-logo--tile {
   display: inline-block;
   font-family: var(--font-mono);
   font-size: 10px;
-  letter-spacing: 0.22em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-dim);
   text-decoration: none;
@@ -7403,7 +7409,7 @@ html.light .firmware-logo--tile {
   font-family: var(--font-mono);
   font-weight: 500;
   font-size: var(--fs-xs);
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-dim);
 }
@@ -7420,7 +7426,7 @@ html.light .firmware-logo--tile {
 .chapter-label {
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   color: var(--color-text-dim);
   text-transform: uppercase;
 }
@@ -7631,7 +7637,7 @@ html.light .firmware-logo--tile {
 .teardown-io-tag {
   flex: none;
   font-size: 0.7rem;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
@@ -7798,7 +7804,7 @@ html.light .firmware-logo--tile {
 .open-source-card-label {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
   margin: 0 0 0.25rem;
@@ -8051,7 +8057,7 @@ html.light .firmware-logo--tile {
   margin: 1.75rem 0 0.75rem;
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
@@ -8090,7 +8096,7 @@ html.light .firmware-logo--tile {
   margin: 0;
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
@@ -8206,7 +8212,7 @@ html.light .firmware-logo--tile {
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-gold-text);
   transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
@@ -8244,7 +8250,7 @@ html.light .firmware-logo--tile {
   border-bottom: 2px solid var(--color-gold);
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-gold-text);
 }
@@ -8273,7 +8279,7 @@ html.light .firmware-logo--tile {
 .provenance-row-label {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text);
 }
@@ -8430,7 +8436,7 @@ html.light .firmware-logo--tile {
   grid-row: 3;
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
@@ -8441,7 +8447,7 @@ html.light .firmware-logo--tile {
   margin-top: 0.35rem;
   font-family: var(--font-mono);
   font-size: 12px;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   color: var(--color-gold-text);
 }
 
@@ -8489,7 +8495,7 @@ html.light .firmware-logo--tile {
 .bundle-component-firmware {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
   margin: 0.25rem 0 0;
@@ -8666,7 +8672,7 @@ a.what-chain-chip:hover {
 .spec-table dt {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
   white-space: nowrap;
@@ -8758,7 +8764,7 @@ a.what-chain-chip:hover {
   color: var(--color-text-muted);
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   cursor: pointer;
   transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
@@ -8881,7 +8887,7 @@ a.what-chain-chip:hover {
 .route-error-status {
   font-family: var(--font-mono);
   font-size: 12px;
-  letter-spacing: 0.25em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-gold-text);
 }
@@ -8916,7 +8922,7 @@ a.what-chain-chip:hover {
 
 .route-error-details summary {
   cursor: pointer;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
 }
 
@@ -9006,7 +9012,7 @@ a.what-chain-chip:hover {
   align-items: center;
   padding: 0.6rem 0.9rem;
   font-size: clamp(9px, 2vw, 12px);
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   text-shadow: 0 0 6px rgba(0, 0, 0, 0.55);
 }
@@ -9251,7 +9257,7 @@ a.what-chain-chip:hover {
 .cart-sheet-head {
   font-family: var(--font-mono);
   font-size: 10px;
-  letter-spacing: 0.22em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-dim);
   padding-bottom: 0.55rem;
@@ -9442,7 +9448,7 @@ a.what-chain-chip:hover {
 .cart-register-row dt {
   font-family: var(--font-mono);
   font-size: 0.72rem;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
@@ -9514,7 +9520,7 @@ a.what-chain-chip:hover {
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 400;
-  letter-spacing: 0.16em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text);
 }
@@ -9624,7 +9630,7 @@ a.what-chain-chip:hover {
   font-size: 0.72rem;
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   color: var(--color-text-muted);
   cursor: pointer;
   transition: color 150ms ease;
@@ -9655,7 +9661,7 @@ a.what-chain-chip:hover {
 .cart-companion-eyebrow {
   font-family: var(--font-mono);
   font-size: 10px;
-  letter-spacing: 0.22em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-dim);
 }
@@ -9875,7 +9881,7 @@ a.what-chain-chip:hover {
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   cursor: pointer;
   transition: background-color 150ms ease, border-color 150ms ease,
@@ -9963,7 +9969,7 @@ a.what-chain-chip:hover {
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   text-transform: uppercase;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   color: var(--color-text-muted);
   margin-bottom: var(--sp-4);
 }
@@ -10012,7 +10018,7 @@ a.what-chain-chip:hover {
   font-family: var(--font-mono);
   font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   color: var(--color-text-muted);
 }
 
@@ -10079,7 +10085,7 @@ a.what-chain-chip:hover {
   font-family: var(--font-mono);
   font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   color: var(--color-text-muted);
 }
 
@@ -10256,7 +10262,7 @@ a.what-chain-chip:hover {
 .account-dashboard-eyebrow {
   font-family: var(--font-mono);
   font-size: 12px;
-  letter-spacing: 0.22em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
   margin: 0;
@@ -10326,7 +10332,7 @@ a.what-chain-chip:hover {
 .account-dashboard-eyebrow-mono {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.22em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-gold-text);
   margin: 0;
@@ -10335,7 +10341,7 @@ a.what-chain-chip:hover {
 .account-dashboard-card-link {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
   transition: color 150ms ease;
@@ -10374,7 +10380,7 @@ a.what-chain-chip:hover {
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-gold-text);
   background: var(--color-gold-soft);
@@ -10457,7 +10463,7 @@ a.what-chain-chip:hover {
   font-family: var(--font-mono);
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   color: var(--color-text-muted);
   margin-top: 0.25rem;
   display: flex;
@@ -10529,7 +10535,7 @@ a.what-chain-chip:hover {
 .account-welcome-eyebrow {
   font-family: var(--font-mono);
   font-size: 12px;
-  letter-spacing: 0.22em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-gold-text);
   margin: 0;
@@ -10592,7 +10598,7 @@ a.what-chain-chip:hover {
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-gold-text);
 }
@@ -10601,7 +10607,7 @@ a.what-chain-chip:hover {
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 400;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
@@ -10648,7 +10654,7 @@ a.what-chain-chip:hover {
   font-family: var(--font-mono);
   text-decoration: none;
   font-size: 12px;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   cursor: pointer;
   transition: background-color 150ms ease, color 150ms ease;
@@ -10671,7 +10677,7 @@ a.what-chain-chip:hover {
 .lang-toggle.header-lang-toggle a {
   padding: 0.25rem 0.55rem;
   font-size: 11px;
-  letter-spacing: 0.15em;
+  letter-spacing: var(--ls-label);
 }
 
 /* The top-bar lang toggle would overflow a 320px header row on legal pages,
@@ -10744,7 +10750,7 @@ a.what-chain-chip:hover {
   margin-top: 2.5rem;
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
@@ -10773,7 +10779,7 @@ a.what-chain-chip:hover {
   font-family: var(--font-mono);
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   color: var(--color-text-muted);
 }
 
@@ -10893,7 +10899,7 @@ a.what-chain-chip:hover {
 .editorial-eyebrow {
   font-family: var(--font-mono);
   font-size: 12px;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-gold-text);
   margin: 0 0 1rem;
@@ -11136,7 +11142,7 @@ html.light .editorial-watermark {
 }
 .contrib-wall-head {
   font-size: 11px;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
   margin-bottom: 1rem;
@@ -11298,7 +11304,7 @@ html.light .editorial-watermark {
 .editorial-section-title {
   font-family: var(--font-mono);
   font-size: 12px;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text);
   margin: 0 0 1.1rem;
@@ -11335,7 +11341,7 @@ html.light .editorial-watermark {
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   border-radius: 999px;
   transition: background-color 0.2s ease;
@@ -11355,7 +11361,7 @@ html.light .editorial-watermark {
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   border-radius: 999px;
   transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
@@ -11478,7 +11484,7 @@ html.light .editorial-watermark {
 
 .series-rail-title {
   font-size: 12px;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
 }
 
@@ -11508,7 +11514,7 @@ html.light .editorial-watermark {
 
 .editorial-next-label {
   font-size: 10px;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-gold-text);
 }
@@ -11529,7 +11535,7 @@ html.light .editorial-watermark {
 
 .editorial-next-min {
   font-size: 10px;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
   margin-top: 0.35rem;
@@ -11605,14 +11611,14 @@ html.light .editorial-watermark {
 
 .ladder-when {
   font-size: 10px;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: color-mix(in srgb, var(--color-text-muted) 80%, transparent);
 }
 
 .ladder-title {
   font-size: 13px;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
@@ -11659,7 +11665,7 @@ html.light .editorial-watermark {
 
 .aside-eyebrow {
   font-size: 11px;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-gold-text);
 }
@@ -11706,7 +11712,7 @@ html.light .editorial-watermark {
 
 .pipeline-label {
   font-size: 11px;
-  letter-spacing: 0.16em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
 }
 
@@ -11737,7 +11743,7 @@ html.light .editorial-watermark {
 .partner-label {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-gold-text);
   margin: 0 0 0.4rem;
@@ -11984,7 +11990,7 @@ html.light .editorial-watermark {
   margin: 0 0 0.3rem;
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.16em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text);
 }
@@ -12066,7 +12072,7 @@ html.light .editorial-watermark {
   gap: 0.9rem;
   font-family: var(--font-mono);
   font-size: 10px;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
 }
 
@@ -12085,7 +12091,7 @@ html.light .editorial-watermark {
   border-radius: var(--r-md);
   font-family: var(--font-mono);
   font-size: 10px;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: color-mix(in srgb, var(--color-text-muted) 60%, transparent);
 }
@@ -12103,7 +12109,7 @@ html.light .editorial-watermark {
   gap: 0.55rem;
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.16em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text);
   margin-bottom: 0.35rem;
@@ -12193,7 +12199,7 @@ html.light .editorial-watermark {
   color: var(--color-gold-text);
   text-transform: uppercase;
   font-size: 10px;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
 }
 
 .vote-graduated ul {
@@ -12258,7 +12264,7 @@ html.light .editorial-watermark {
 .goal-status {
   font-family: var(--font-mono);
   font-size: 10px;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-gold-text);
   white-space: nowrap;
@@ -12337,7 +12343,7 @@ html.light .editorial-watermark {
 .upstream-project {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-gold-text);
   margin: 0 0 0.3rem;
@@ -12397,7 +12403,7 @@ html.light .editorial-watermark {
 .review-stars {
   font-family: var(--font-mono);
   font-size: var(--fs-sm);
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   color: var(--color-gold-text);
   line-height: 1;
 }
@@ -12529,7 +12535,7 @@ html.light .editorial-watermark {
 .contact-hero-eyebrow {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.22em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-gold-text);
   margin: 0;
@@ -12577,7 +12583,7 @@ html.light .editorial-watermark {
 .contact-tier-eyebrow {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
   margin: 0 0 0.5rem;
@@ -12610,7 +12616,7 @@ html.light .editorial-watermark {
   display: inline-block;
   font-family: var(--font-mono);
   font-size: 12px;
-  letter-spacing: 0.16em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   font-weight: 700;
   padding: 0.85rem 1.4rem;
@@ -12736,7 +12742,7 @@ html.light .editorial-watermark {
 .contact-direct-label {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.16em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
@@ -12759,7 +12765,7 @@ html.light .editorial-watermark {
   margin-top: 0.85rem;
   font-family: var(--font-mono);
   font-size: 12px;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   font-weight: 700;
   color: var(--color-text);
@@ -12789,7 +12795,7 @@ html.light .editorial-watermark {
 .contact-reference-eyebrow {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
   margin: 0;
@@ -12805,7 +12811,7 @@ html.light .editorial-watermark {
 .contact-reference-body h2 {
   font-family: var(--font-mono);
   font-size: 12px;
-  letter-spacing: 0.16em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
   margin: 1rem 0 0.35rem;
@@ -12856,7 +12862,7 @@ html.light .editorial-watermark {
 .support-eyebrow {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-gold-text);
   margin: 0 0 0.35rem;
@@ -12907,7 +12913,7 @@ html.light .editorial-watermark {
 .support-label {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.16em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
@@ -12957,7 +12963,7 @@ html.light .editorial-watermark {
   align-self: flex-start;
   font-family: var(--font-mono);
   font-size: 12px;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   font-weight: 700;
   background: var(--color-gold-fill);
@@ -12996,7 +13002,7 @@ html.light .editorial-watermark {
 .support-signin-alt {
   font-family: var(--font-mono);
   font-size: 12px;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
   text-decoration: underline;
@@ -13043,7 +13049,7 @@ html.light .editorial-watermark {
 .support-close {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.16em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
   background: transparent;
@@ -13097,7 +13103,7 @@ html.light .editorial-watermark {
   gap: 0.75rem;
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
   margin-bottom: 0.35rem;
@@ -13178,7 +13184,7 @@ html.light .editorial-watermark {
   padding: 2rem 1.25rem;
   font-family: var(--font-mono);
   font-size: 12px;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
   text-align: center;
@@ -13218,7 +13224,7 @@ html.light .editorial-watermark {
 .support-files-btn {
   font-family: var(--font-mono);
   font-size: 12px;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   font-weight: 700;
   background: transparent;
@@ -13371,7 +13377,7 @@ html.light .editorial-watermark {
   border: none;
   font-family: var(--font-mono);
   font-size: 12px;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
   cursor: pointer;
@@ -13459,7 +13465,7 @@ html.light .editorial-watermark {
   color: var(--color-on-accent);
   font-family: var(--font-mono);
   font-size: 12px;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   font-weight: 700;
   text-decoration: none;
@@ -13544,7 +13550,7 @@ html.light .editorial-watermark {
 .od-page-head .od-eyebrow {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--od-ink-dim);
   margin: 0 0 12px;
@@ -13600,7 +13606,7 @@ html.light .editorial-watermark {
 .od-tile-eyebrow {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--od-ink-dim);
   margin: 0 0 14px;
@@ -13615,7 +13621,7 @@ html.light .editorial-watermark {
   border-radius: var(--r-xs);
   font-family: var(--font-mono);
   font-size: 12px;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   font-weight: 600;
   text-decoration: none;
@@ -13651,7 +13657,7 @@ html.light .editorial-watermark {
   border-color: var(--od-pcb-copper);
   color: var(--od-pcb-copper);
 }
-.od-btn-sm {padding: 8px 12px; font-size: 11px; letter-spacing: 0.14em;}
+.od-btn-sm {padding: 8px 12px; font-size: 11px; letter-spacing: var(--ls-label);}
 .od-btn[disabled] {opacity: 0.55; cursor: not-allowed;}
 .od-btn-icon {
   display: inline-flex;
@@ -13678,7 +13684,7 @@ html.light .editorial-watermark {
   border-radius: var(--r-xs);
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.16em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   line-height: 1.2;
 }
@@ -13721,7 +13727,7 @@ html.light .editorial-watermark {
 .od-field label {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--od-ink-dim);
 }
@@ -13819,7 +13825,7 @@ html.light .editorial-watermark {
 .contact-channels-title {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--od-ink-dim);
   margin: 0 0 12px;
@@ -13853,7 +13859,7 @@ html.light .editorial-watermark {
 .contact-direct-row .od-k {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.16em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--od-ink-dim);
 }
@@ -14000,7 +14006,7 @@ html.light .editorial-watermark {
 .support-intake-form-actions .od-turnstile {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--od-ink-faint);
   display: inline-flex;
@@ -14147,7 +14153,7 @@ html.light .editorial-watermark {
   margin: 6px 0 -2px;
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--od-ink-faint);
 }
@@ -14427,7 +14433,7 @@ html.light .editorial-watermark {
   justify-content: center;
   font-family: var(--font-mono);
   font-size: 12px;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--od-pcb-gold-2);
   opacity: 0;
@@ -14460,7 +14466,7 @@ html.light .editorial-watermark {
 .feedback-head .od-eyebrow {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--od-pcb-gold-2);
   margin: 0 0 8px;
@@ -14497,7 +14503,7 @@ html.light .editorial-watermark {
 .feedback-q-label .od-scale-hint {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--od-ink-faint);
 }
@@ -14572,7 +14578,7 @@ html.light .editorial-watermark {
 .account-support-list-section {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--od-ink-faint);
   padding: 14px 18px 6px;
@@ -14713,7 +14719,7 @@ html.light .editorial-watermark {
 .account-dash-support .od-count-label {
   font-family: var(--font-mono);
   font-size: 12px;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   color: var(--od-ink-dim);
 }
 /* (button styling for .account-dash-support .od-tile-link lives with the shared
@@ -15096,7 +15102,7 @@ html.light .editorial-watermark {
 .rn-archive-head .rn-eyebrow {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.22em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--od-ink-dim);
   margin: 0 0 10px;
@@ -15149,7 +15155,7 @@ html.light .editorial-watermark {
 .rn-sub-cta .rn-k {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--od-pcb-gold-2);
 }
@@ -15168,7 +15174,7 @@ html.light .editorial-watermark {
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   text-decoration: none;
   border-radius: var(--r-xs);
@@ -15190,7 +15196,7 @@ html.light .editorial-watermark {
 .rn-filters .rn-k {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--od-ink-faint);
   margin-right: 4px;
@@ -15207,7 +15213,7 @@ html.light .editorial-watermark {
   cursor: pointer;
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.16em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   text-decoration: none;
 }
@@ -15350,7 +15356,7 @@ html.light .editorial-watermark {
 .rn-tag {
   font-family: var(--font-mono);
   font-size: 10px;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--od-ink-faint);
   padding: 2px 7px;
@@ -15399,7 +15405,7 @@ html.light .editorial-watermark {
 .rn-year .rn-year-count {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--od-ink-faint);
 }
@@ -15441,7 +15447,7 @@ html.light .editorial-watermark {
 .rn-post-crumb {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--od-ink-dim);
   margin-bottom: 28px;
@@ -15645,7 +15651,7 @@ html.light .editorial-watermark {
 .rn-pn .rn-k {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--od-ink-faint);
 }
@@ -15751,7 +15757,7 @@ html.light .editorial-watermark {
   display: inline-block;
   font-family: var(--font-mono);
   font-size: 12px;
-  letter-spacing: 0.16em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--od-pcb-gold-2);
   border-bottom: 1px solid var(--od-pcb-gold);
@@ -15793,7 +15799,7 @@ html.light .editorial-watermark {
   gap: 4px;
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--od-pcb-gold-2);
   border-right: 1.5px solid var(--od-line);
@@ -15828,7 +15834,7 @@ html.light .editorial-watermark {
 .rn-strip-cta {
   font-family: var(--font-mono);
   font-size: 12px;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--od-ink-dim);
   display: inline-flex;
@@ -15861,7 +15867,7 @@ html.light .editorial-watermark {
 .rn-strip.is-rail .rn-strip-rail-head {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.22em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--od-ink-dim);
   margin-bottom: 10px;
@@ -16031,7 +16037,7 @@ html.light .editorial-watermark {
 .support-sidebar-row dt {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.16em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--od-ink-dim);
   margin: 0;
@@ -16071,7 +16077,7 @@ html.light .editorial-watermark {
 .support-sidebar-count-label {
   font-family: var(--font-mono);
   font-size: 10px;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--od-ink-dim);
 }
@@ -16192,7 +16198,7 @@ html.light .editorial-watermark {
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   flex-shrink: 0;
 }
@@ -16379,7 +16385,7 @@ html.light .editorial-watermark {
 .board-art-skeleton-label {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
   animation: latest-commit-pulse 1.4s ease-in-out infinite;
@@ -16758,7 +16764,7 @@ html.light .editorial-watermark {
     background: var(--color-bg);
     font-family: var(--font-mono);
     font-size: 10px;
-    letter-spacing: 0.14em;
+    letter-spacing: var(--ls-label);
     text-transform: uppercase;
     color: var(--color-text-dim);
   }
@@ -16976,7 +16982,7 @@ html.light .editorial-watermark {
     margin: 0.85rem 0 0.1rem;
     font-family: var(--font-mono);
     font-size: 12px;
-    letter-spacing: 0.2em;
+    letter-spacing: var(--ls-label);
     text-transform: uppercase;
     color: var(--color-text-dim);
   }
@@ -17172,7 +17178,7 @@ body:has(.buy-rail.is-pinned.is-mobile) .placeholder-banner {
 .tl-filter {
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-dim);
   background: none;
@@ -17277,7 +17283,7 @@ body:has(.buy-rail.is-pinned.is-mobile) .placeholder-banner {
   margin: 0 0 0.15rem;
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-dim);
 }
@@ -17358,7 +17364,7 @@ body:has(.buy-rail.is-pinned.is-mobile) .placeholder-banner {
   place-items: center;
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 0.7rem;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-dim);
   pointer-events: none;
@@ -17587,7 +17593,7 @@ body:has(.buy-rail.is-pinned.is-mobile) .placeholder-banner {
   gap: 0.28rem;
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 0.62rem;
-  letter-spacing: 0.22em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   pointer-events: none;
   animation: hero-load-manifest-in 0.5s ease both;
@@ -17691,7 +17697,7 @@ body:has(.buy-rail.is-pinned.is-mobile) .placeholder-banner {
   font-family: var(--font-mono);
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   color: var(--color-text-muted);
 }
 
@@ -17713,7 +17719,7 @@ body:has(.buy-rail.is-pinned.is-mobile) .placeholder-banner {
   font-family: var(--font-mono);
   font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.16em;
+  letter-spacing: var(--ls-label);
   color: var(--color-text-muted);
 }
 .learn-stats dd {
@@ -17767,7 +17773,7 @@ body:has(.buy-rail.is-pinned.is-mobile) .placeholder-banner {
   font-family: var(--font-mono);
   font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.16em;
+  letter-spacing: var(--ls-label);
   color: var(--color-text-muted);
   margin: 0 0 0.6rem;
 }
@@ -17823,7 +17829,7 @@ body:has(.buy-rail.is-pinned.is-mobile) .placeholder-banner {
   font-family: var(--font-mono);
   font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   padding: 0.15rem 0.4rem;
   border: 1px solid var(--color-border-strong);
   color: var(--color-text);
@@ -17904,7 +17910,7 @@ body:has(.buy-rail.is-pinned.is-mobile) .placeholder-banner {
   font-family: var(--font-mono);
   font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   color: var(--color-text-muted);
   white-space: nowrap;
   background: var(--color-bg-elevated);
@@ -18108,7 +18114,7 @@ html.light .funding-meter-link {
 .preorder-strip-label {
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
@@ -18399,7 +18405,7 @@ html.light .preorder-track-media img {
   margin: 0;
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
-  letter-spacing: 0.16em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-stock);
 }
@@ -18473,7 +18479,7 @@ html.light .cart-added-ship {
   margin: 0;
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
-  letter-spacing: 0.16em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
@@ -18736,7 +18742,7 @@ html.light .cart-added-continue {
   margin-bottom: 0.6rem;
   font-family: var(--font-mono);
   font-size: var(--fs-xs, 0.75rem);
-  letter-spacing: 0.16em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
@@ -18901,7 +18907,7 @@ html.light .cart-added-continue {
 .preorder-strip-home-tag {
   font-family: var(--font-mono);
   font-size: var(--fs-xs, 0.75rem);
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-gold-text);
 }
@@ -19170,7 +19176,7 @@ html.light .cart-added-continue {
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   font-weight: 500;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
@@ -19377,7 +19383,7 @@ html.light .cart-added-continue {
 .product-price-ladder-head {
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
@@ -19607,7 +19613,7 @@ button[data-waiting] {
   margin: 0;
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
@@ -20093,4 +20099,745 @@ html:not(.light) .trust-chip-oshwa-mark {
   .cart-added-head {
     padding-bottom: var(--sp-2);
   }
+}
+
+/* ==================================================================
+   Shop UI system: buttons, labels, chips, cards, tables, the docked
+   buy bar and the cart. One rule set for the product pages, the
+   cards, the added-to-cart dialog and the cart. Later rules win over
+   the older per-page ones above.
+   ================================================================== */
+
+/* --- Buttons: primary, secondary, and a text link ------------------ */
+.btn-primary {
+  min-height: 48px;
+  padding: 0 20px;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0;
+  box-shadow: none;
+}
+.btn-primary:hover {
+  box-shadow: none;
+}
+.btn-secondary {
+  min-height: 48px;
+  padding: 0 20px;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+  text-transform: none;
+  letter-spacing: 0;
+}
+/* A link inside a sentence: gold text, underlined, no button box. */
+.text-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 500;
+  color: var(--color-gold-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.text-link:hover {
+  color: var(--color-gold-text-hover);
+}
+.text-link:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+/* Checkout buttons: the primary button, no glow, sentence case. */
+.cart-checkout-cta,
+.cart-sticky-checkout,
+.cart-added-view {
+  min-height: 48px;
+  font-family: var(--font-sans) !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  box-shadow: none !important;
+}
+.cart-sticky-checkout {
+  min-height: 44px;
+}
+.cart-secondary-actions .cart-keep-shopping,
+.cart-empty .cart-keep-shopping,
+.cart-mixed-warning .cart-keep-shopping {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 20px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  text-decoration: none;
+}
+.cart-added-continue {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* --- Sentences and controls are Inter in sentence case -------------- */
+.cart-added-later-title,
+.cart-added-later--folded > summary,
+.product-status-chip,
+.board-art-skeleton-label,
+.cart-sheet-item small,
+.cart-line-note,
+.product-card-quickadd-btn {
+  font-family: var(--font-sans);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.cart-added-later-title,
+.cart-added-later--folded > summary {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text);
+}
+.cart-line-note {
+  display: block;
+  font-size: 13px !important;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+}
+.product-status-chip {
+  font-size: 12px;
+  font-weight: 500;
+}
+/* Short labels that stay mono keep the calm tracking on small screens. */
+@media (max-width: 380px) {
+  :root {
+    --ls-label: 0.04em;
+  }
+}
+
+/* --- Product cards --------------------------------------------------- */
+.product-card-body {
+  padding: 14px 16px 16px;
+  gap: 4px;
+}
+.product-card-price {
+  font-size: var(--fs-base);
+  font-weight: 600;
+  color: var(--color-text);
+}
+.product-card-badge {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  padding: 3px 8px;
+  border-radius: var(--r-pill);
+}
+.product-card-badge.is-ships {
+  background: var(--color-green-deep);
+  color: #fff;
+}
+.product-card-badge.is-target {
+  background: color-mix(in srgb, var(--color-gold) 18%, var(--color-bg-card));
+  color: var(--color-gold-text);
+  border: 1px solid var(--color-gold);
+}
+/* The image box holds its shape in the surface colour while the photo
+   loads, instead of a black square. */
+.product-card-media,
+.related-card-media {
+  background: #ece9e3;
+}
+.product-card-media .smooth-media-cover,
+.related-card-media .smooth-media-cover {
+  background: #ece9e3;
+}
+/* Quick add: an opaque pill that stays readable on a light photo. */
+.product-card-quickadd-btn {
+  min-height: 36px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--color-gold-fill);
+  box-shadow: 0 0 0 2px var(--color-bg-card), var(--pod-shadow);
+}
+@media (hover: none) {
+  .product-card-quickadd .product-card-quickadd-btn {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* --- Product hero: chips, notes, gallery ----------------------------- */
+.trust-chips {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.trust-chip {
+  padding: 4px 10px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--color-text-muted);
+  border-color: var(--color-border-strong);
+}
+.trust-chip-green,
+.trust-chip-gold {
+  color: var(--color-text-muted);
+  border-color: var(--color-border-strong);
+}
+.trust-chip-link:hover {
+  color: var(--color-text);
+  border-color: var(--color-text-muted);
+}
+.trust-chip-oshwa-uid {
+  font-variant-numeric: tabular-nums;
+}
+.trust-chip-oshwa-as {
+  color: var(--color-text-dim);
+}
+@media (max-width: 360px) {
+  .trust-chip-oshwa-as {
+    display: none;
+  }
+}
+/* Guidance tag on a version card: soft gold, no border. */
+.variant-tier-tag {
+  border: 0;
+  background: var(--color-gold-soft);
+  color: var(--color-gold-text);
+  font-weight: 600;
+  padding: 2px 8px;
+}
+/* The eyebrow and the status chip share one line; on phones the chip
+   drops under the category instead of indenting. */
+.product-hero-eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+.product-hero-eyebrow .product-status-chip {
+  margin-left: 0;
+}
+.product-hero-note {
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+  color: var(--color-text-muted);
+}
+.product-hero-note .text-link {
+  margin-left: 0.5rem;
+}
+.product-pick-note {
+  margin: calc(var(--sp-2) * -1) 0 0;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+/* The gallery fills its frame on the photo backdrop, no inner card. */
+.product-hero-media {
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-lg);
+  background: #ece9e3;
+  position: relative;
+}
+.product-hero-media .product-gallery-main {
+  border-radius: var(--r-lg);
+  background: #ece9e3;
+}
+.product-image-note {
+  position: absolute;
+  left: 0.6rem;
+  bottom: 0.6rem;
+  z-index: 3;
+  max-width: calc(100% - 1.2rem);
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  background: rgba(16, 16, 20, 0.86);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* --- Buy box --------------------------------------------------------- */
+/* One surface: the price block and its steps sit on the buy box itself. */
+.product-buy .product-price-ladder {
+  border: 0;
+  background: none;
+  padding: 0;
+}
+.product-price-ladder-rel {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0.2rem 0 0;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+/* Separator dots belong to the item after them, so no line starts with one. */
+.product-price-ladder-rel > span + span::before {
+  content: '·';
+  margin: 0 0.4rem;
+}
+.product-price-ladder-after {
+  display: block;
+  margin-top: 0.15rem;
+}
+.product-buy-set {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text);
+}
+.product-buy-gift {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+.product-buy-gift a,
+.cart-gift-note a {
+  color: var(--color-gold-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+/* Trust list: one column, links and plain rows look the same. */
+.product-buy .product-buy-trust,
+.product-buy-trust {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+}
+.product-buy .product-buy-trust li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  line-height: 1.4;
+  color: var(--color-text-muted);
+}
+.product-buy .product-buy-trust li::before,
+.product-buy .product-buy-trust li + li::before {
+  margin: 0;
+  content: '';
+  flex: none;
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3 3 7-7' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3 3 7-7' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  opacity: 0.8;
+}
+.product-buy-trust a {
+  color: var(--color-text-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.product-buy-trust a:hover {
+  color: var(--color-text);
+}
+
+/* --- Spec tables and At a glance: label column, value column -------- */
+.spec-table > div {
+  display: grid;
+  grid-template-columns: minmax(7rem, 9rem) 1fr;
+  column-gap: 16px;
+  align-items: baseline;
+  padding: 10px 0;
+}
+.spec-table dt {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-text-muted);
+  white-space: normal;
+}
+.spec-table dd {
+  font-size: 14px;
+  text-align: left;
+  color: var(--color-text);
+}
+.spec-table dd a {
+  color: var(--color-gold-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.spec-table dd.spec-help-text {
+  grid-column: 1 / -1;
+}
+.spec-connectors {
+  margin-top: var(--sp-6);
+}
+.spec-connectors-title {
+  margin: 0 0 var(--sp-3);
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--color-text);
+}
+.spec-connectors .spec-table {
+  grid-template-columns: 1fr;
+}
+.spec-connectors-note {
+  margin: var(--sp-3) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+}
+
+/* --- Chapter rhythm: one display size per page (the product name) --- */
+.chapter-title {
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+@media (min-width: 960px) {
+  .chapter {
+    padding-block: clamp(2.5rem, 5vw, 4rem);
+    gap: var(--sp-6);
+  }
+}
+
+/* --- Teardown loading: the board photo, with a small label ----------- */
+.board-art-skeleton-preview {
+  opacity: 0.85;
+  filter: none;
+  max-width: min(70%, 520px);
+}
+.board-art-skeleton-label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* --- Pinned buy bar -------------------------------------------------- */
+/* Steps aside while the in-page buy box or the footer is on screen. */
+.buy-rail.is-pinned.is-away {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.2s ease, visibility 0s linear 0.2s;
+}
+.buy-rail-id {
+  display: none;
+}
+@media (min-width: 960px) {
+  /* Docked to the bottom of the screen, across the content rail, so it
+     never floats over the specs, the box list or the cards. */
+  .buy-rail.is-pinned {
+    top: auto;
+    bottom: 16px;
+    left: max(var(--rail-gutter), calc((100vw - 1240px) / 2));
+    right: max(var(--rail-gutter), calc((100vw - 1240px) / 2));
+    max-width: none;
+    min-height: 64px;
+    justify-content: space-between;
+    padding: 0.5rem 0.5rem 0.5rem 1.25rem;
+    border-radius: var(--r-lg);
+    animation: buy-rail-rise-dock 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .buy-rail.is-pinned .buy-rail-id {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    margin-right: auto;
+    line-height: 1.3;
+  }
+  .buy-rail.is-pinned .buy-rail-id strong {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .buy-rail.is-pinned .buy-rail-id span {
+    font-size: 13px;
+    color: var(--color-text-muted);
+  }
+  .buy-rail.is-pinned .product-form .btn-primary {
+    min-height: 44px;
+    border-radius: var(--r-md);
+    font-size: 15px;
+  }
+  /* The selected version: soft gold fill and a thin gold border. */
+  .buy-rail.is-pinned .variant-tier .variant-tier-glow {
+    display: none;
+  }
+  .buy-rail.is-pinned .variant-tier {
+    border: 1px solid var(--color-border-strong);
+    background: transparent;
+  }
+  .buy-rail.is-pinned .variant-tier.is-selected {
+    background: var(--color-gold-soft);
+    border-color: var(--color-gold);
+    box-shadow: none;
+  }
+  body.has-buy-dock {
+    padding-bottom: 96px;
+  }
+  @keyframes buy-rail-rise-dock {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+/* Short phones: the bottom bar is one line, price and button. */
+@media (max-width: 959px) and (max-height: 700px) {
+  .buy-rail.is-pinned.is-mobile .variant-ladder {
+    display: none;
+  }
+}
+
+/* --- Added-to-cart dialog -------------------------------------------- */
+.cart-added-held,
+.cart-added-set,
+.cart-added-guide-links {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text);
+}
+.cart-added-guide-links .text-link + .text-link {
+  margin-left: 1rem;
+}
+/* Short screens: the suggestions would sit behind the pinned footer. */
+@media (max-height: 650px) {
+  .cart-added .cart-added-build {
+    display: none;
+  }
+}
+
+/* --- Cart ------------------------------------------------------------ */
+.cart-line-group + .cart-line-group {
+  margin-top: var(--sp-2);
+}
+.cart-line-group-title {
+  margin: 0 0 var(--sp-2);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-text);
+}
+/* Touch targets: 44 px steppers and remove button. */
+.cart-line-quantity--sheet .cart-sheet-stepper button,
+.cart-line-quantity--sheet .cart-sheet-stepper form:last-child button {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--r-md);
+  font-size: 18px;
+  color: var(--color-text);
+}
+.cart-sheet-qty-value {
+  min-width: 44px;
+  font-size: 15px;
+}
+.cart-line-quantity form:last-child button.cart-line-remove,
+.cart-line-remove {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--color-text-muted);
+}
+.cart-line-remove:hover {
+  color: var(--color-error);
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+}
+.cart-line-quantity--sheet {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+}
+.cart-line-set {
+  flex-basis: 100%;
+  margin: 0.2rem 0 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  text-align: right;
+}
+/* Ship-to picker: a full-size control. */
+.cart-ship-select {
+  min-height: 44px;
+  max-width: 100%;
+  padding: 0 0.6rem;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  color: var(--color-text);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--r-md);
+}
+.cart-ship-row dt {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  font-family: var(--font-sans);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.cart-ship-row dt label {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+@media (max-width: 640px) {
+  .cart-ship-row {
+    flex-wrap: wrap;
+  }
+  .cart-ship-row dt {
+    flex: 1 1 100%;
+  }
+  .cart-ship-select {
+    width: 100%;
+  }
+}
+.cart-register-total dt small {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-text-muted);
+}
+.cart-register dt,
+.cart-register dt strong {
+  font-family: var(--font-sans);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.cart-sticky-bar > span {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.4rem;
+}
+.cart-sticky-duty {
+  flex-basis: 100%;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+.cart-currency-note {
+  margin-top: 0.4rem;
+}
+
+/* Price steps: range, price, and a note column wide enough for
+   "20% off · now" on one line. */
+.product-price-ladder li {
+  grid-template-columns: minmax(0, 1fr) max-content minmax(7.5rem, max-content);
+}
+.product-price-ladder-note {
+  text-align: right;
+  white-space: nowrap;
+  font-family: var(--font-sans);
+}
+.product-price-ladder-after {
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+/* Links under the provenance card and the open-source cards: Inter,
+   sentence case, the secondary button and the text link. */
+.provenance-links {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.provenance-links a {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--r-md);
+  font-weight: 600;
+  color: var(--color-text);
+}
+.provenance-links a:hover {
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+  color: var(--color-text);
+  border-color: var(--color-text-muted);
+}
+.open-source-story-link,
+.open-source-story-link a {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.open-source-story-link a {
+  color: var(--color-gold-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+@media (max-width: 480px) {
+  .trust-chip-oshwa-as {
+    display: none;
+  }
+}
+/* Teardown loading: the board photo stays in view; a small label pill
+   sits under it instead of a spinner over the chips. */
+.board-art-skeleton {
+  justify-content: flex-end;
+  padding-bottom: 0.75rem;
+}
+.board-art-skeleton-spinner {
+  display: none;
+}
+.board-art-skeleton-label {
+  position: relative;
+  z-index: 1;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  background: var(--pod-bg-strong);
+  border: 1px solid var(--pod-border);
+}
+@media (max-width: 600px) {
+  .product-price-ladder-rel {
+    flex-direction: column;
+  }
+  .product-price-ladder-rel > span + span::before {
+    content: none;
+  }
+}
+.cart-ship-row dt {
+  text-align: left;
+  width: 100%;
+}
+.cart-ship-row dt label {
+  align-self: flex-start;
+}
+.cart-line-group .cart-lines-scroll {
+  min-height: 0;
 }

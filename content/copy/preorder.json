@@ -4,9 +4,17 @@
   "meta_title": "Preorders · Prices, targets and ship dates",
   "meta_description": "The OpenDrone flight controller and ESC are paid stock and ship late October 2026. Receivers, frames and motors each have a public funding target. See every price, target and ship date.",
   "title": "Order early, pay less, see when it ships.",
-  "lead": "The flight controller and ESC are in their first production batch, paid for and shipping late October 2026. The receivers, frames and motors are funding targets: each product option has a public target, the quantity we order from the supplier, and your preorder pays for that run. The receivers are built and flown by testers; the frame and motor prototypes are ordered and not yet tested.",
-  "cta_primary": "See prices and ship dates ↓",
-  "cta_secondary": "Where the boards are made →",
+  "lead": "The flight controller and ESC are paid for and ship late October 2026. Receivers, frames and motors ship about 10 weeks after their funding target is reached, by 11 March 2027 at the latest.",
+  "cta_primary": "See prices and ship dates",
+  "cta_secondary": "Where the boards are made",
+  "short_title": "In short",
+  "short_items": [
+    "**Pay in full now.** The product price and shipping, at checkout. We never charge you again.",
+    "**Flight controller and ESC ship {stack_ships_short}.** They are paid stock, in production.",
+    "**Receivers, frames and motors ship about 10 weeks after their target.** Every target has a deadline of {ends_on}.",
+    "**Missed target: refund or wait.** You choose. No reply within 30 days means a refund.",
+    "**Cancel any time before delivery.** You get a full refund, shipping included."
+  ],
   "strip_ordered_label": "Ordered so far",
   "strip_reached_label": "Targets reached",
   "strip_stack_each": "{name}",
@@ -15,18 +23,18 @@
   "tracker_title": "Every product, its price and its ship date",
   "tracker_lead": "The numbers are paid orders in our shop, per product option. New to FPV? [See what a build needs](/products#new-to-fpv).",
   "tracker_empty": "No product is open for preorder yet.",
-  "s1_title": "*01* · What this is",
+  "s1_title": "**01** · What this is",
   "s1_body": [
     "OpenDrone is an open source FPV platform. The flight controller, ESC and receiver are open hardware with public design files. The frame design files are not public yet. The motors come from a motor manufacturer; we select and test them, and they are not open hardware.",
     "Preorders pay for the supplier orders. Where each design stands, from first prototype to production, is on [the roadmap](/roadmap)."
   ],
-  "s6_title": "*02* · Risks",
+  "s6_title": "**02** · Risks",
   "s6_body": [
     "Hardware schedules slip. Supplier lead times move, a component goes out of stock and has to be replaced by an equivalent, and a production run can need rework. When a ship date moves, you get mail with the new date.",
     "A product can also fall short of its target. If a target is not reached by 31 December 2026, we mail everyone who ordered that product and each buyer chooses: a refund of everything paid for that product within 14 days, or keep the order for the new ship date in that mail. If a buyer does not reply within 30 days, we refund that item. The rest of an order does not wait for a missed target.",
     "Incutec BV is a young company. If it stopped trading before your order shipped, you would have a claim for what you paid as a creditor in the bankruptcy, and you might not get all of it back. If you paid by card, you can also ask your card issuer for a chargeback for goods not delivered, within the card scheme's time limits."
   ],
-  "s7_title": "*03* · Who is behind it",
+  "s7_title": "**03** · Who is behind it",
   "s7_body": [
     "Incutec BV, a small company in Leuven, Belgium. The same people design the boards, answer the support mail and pack the parcels.",
     "This is not a crowdfunding platform: you order in our own shop, under [our terms](/en/algemene-voorwaarden), article 7bis."
@@ -37,8 +45,8 @@
     "The order can ship straight to the recipient: enter their address as the delivery address at checkout. The order confirmation and the updates go to your email. Until the order is delivered you can withdraw from it for a full refund.",
     "Want something in time for a date? Order the flight controller and ESC on their own: an order ships in one parcel when its last item is ready."
   ],
-  "gift_nl": "Als cadeau? De flight controller en ESC worden eind oktober 2026 verzonden; ontvangers, frames en motoren ten laatste op 11 maart 2027 als hun doel gehaald wordt, anders kies je terugbetaling. Vul bij het afrekenen het adres van de ontvanger in als leveringsadres. Tot de levering kun je annuleren voor een volledige terugbetaling.",
-  "gift_fr": "Pour un cadeau ? Le contrôleur de vol et l'ESC sont expédiés fin octobre 2026 ; les récepteurs, châssis et moteurs au plus tard le 11 mars 2027 si leur objectif est atteint, sinon vous choisissez le remboursement. Au paiement, indiquez l'adresse du destinataire comme adresse de livraison. Jusqu'à la livraison, vous pouvez annuler pour un remboursement complet.",
+  "gift_nl": "Als cadeau? De flight controller en ESC worden eind oktober 2026 verzonden; ontvangers, frames en motoren ten laatste op 11 maart 2027 als hun doel gehaald wordt, anders kies je terugbetaling of verder wachten. Vul bij het afrekenen het adres van de ontvanger in als leveringsadres. Tot de levering kun je annuleren voor een volledige terugbetaling.",
+  "gift_fr": "Pour un cadeau ? Le contrôleur de vol et l'ESC sont expédiés fin octobre 2026 ; les récepteurs, châssis et moteurs au plus tard le 11 mars 2027 si leur objectif est atteint, sinon vous choisissez entre le remboursement et l'attente. Au paiement, indiquez l'adresse du destinataire comme adresse de livraison. Jusqu'à la livraison, vous pouvez annuler pour un remboursement complet.",
   "faq_title": "Questions",
   "faq_q1": "When do I pay?",
   "faq_a1": "In full when you order: the product price and shipping. We charge nothing after checkout. Outside the EU, including the United States, the carrier may collect import duties and taxes from you on delivery: see [Shipping](/en/shipping).",

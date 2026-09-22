@@ -1,7 +1,7 @@
 import {Await, PrefetchPageLinks, useLoaderData, useRouteLoaderData} from 'react-router';
 import type {RootLoader} from '~/root';
 import {CAMPAIGN} from '~/lib/catalog-client';
-import {PreorderStrip} from '~/components/PreorderStrip';
+import {PreorderStrip, type StripPrices} from '~/components/PreorderStrip';
 import {shopifyImageUrl} from '~/lib/shopify-image';
 import {AnimatePresence, motion, useReducedMotion} from 'motion/react';
 import {Link} from '~/components/nav';
@@ -220,6 +220,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
   const home: Promise<{
     featured: HomeProduct[];
     heroStacks: HeroStacks;
+    prices: StripPrices;
   }> = context.catalog
     .get()
     .then((catalog) => {
@@ -246,9 +247,16 @@ export async function loader({request, context}: Route.LoaderArgs) {
         // The frame is one shared SKU. Built off the HERO_AIRFRAMES registry,
         // so a new size is a config edit - see app/lib/hero-airframes.ts.
         heroStacks: buildHeroStacks(d),
+        // The launch card's price hook: the lowest current price of each
+        // stack board, straight from the catalog so it follows the steps.
+        prices: {fc: fromPrice(d.fc), esc: fromPrice(d.esc)},
       };
     })
-    .catch(() => ({featured: [], heroStacks: emptyHeroStacks()}));
+    .catch(() => ({
+      featured: [],
+      heroStacks: emptyHeroStacks(),
+      prices: {fc: null, esc: null},
+    }));
 
   const heroStacks = home.then((h) => h.heroStacks);
   // On a phone the featured cards are the first thing under the hero and the
@@ -268,7 +276,18 @@ export async function loader({request, context}: Route.LoaderArgs) {
       .find((batch) => batch.paid && batch.ships?.trim())
       ?.ships?.trim() ?? null;
 
-  return {isMobileHint, featured, heroStacks, stackShips};
+  // The launch card paints with the first HTML on every layout, so its
+  // prices are awaited. The catalog is worker-cached, the same fetch the
+  // phone layout already awaits.
+  const prices = await home.then((h) => h.prices);
+
+  return {isMobileHint, featured, heroStacks, stackShips, prices};
+}
+
+/** A product's lowest current price, formatted, or null. */
+function fromPrice(p: HomeProduct | null): string | null {
+  const min = p?.priceRange?.minVariantPrice;
+  return min ? formatPrice(min.amount, min.currencyCode) || null : null;
 }
 
 // Hero scroll budget - the 3D scene + phased UI stays pinned for this many
@@ -339,7 +358,8 @@ let splashHasPlayedThisSession = false;
  * hooks never mount on a phone.
  */
 export default function Homepage() {
-  const {isMobileHint, featured, heroStacks, stackShips} = useLoaderData<typeof loader>();
+  const {isMobileHint, featured, heroStacks, stackShips, prices} =
+    useLoaderData<typeof loader>();
   const shopOpen = useRouteLoaderData<RootLoader>('root')?.shopOpen ?? false;
   const strip = shopOpen ? stackShips ?? '' : null;
   const [isMobile, setIsMobile] = useState(isMobileHint);
@@ -351,17 +371,20 @@ export default function Homepage() {
     return () => mq.removeEventListener('change', update);
   }, []);
 
-  if (isMobile) return <MobileHome featured={featured} preorderShips={strip} />;
-  return <DesktopHome heroStacks={heroStacks} preorderShips={strip} />;
+  if (isMobile)
+    return <MobileHome featured={featured} preorderShips={strip} prices={prices} />;
+  return <DesktopHome heroStacks={heroStacks} preorderShips={strip} prices={prices} />;
 }
 
 function DesktopHome({
   heroStacks,
   preorderShips,
+  prices,
 }: {
   heroStacks: Promise<HeroStacks>;
   /** Set while the shop is open: the strip names the stack's ship date. */
   preorderShips: string | null;
+  prices: StripPrices;
 }) {
   // Coming-soon reveal cards keep their link + title but swap the price
   // for a Soon tag (per-card handle resolved server-side on the card).
@@ -445,9 +468,6 @@ function DesktopHome({
   const [displayedProgress, setDisplayedProgress] = useState(
     splashHasPlayedThisSession ? 1 : 0,
   );
-  // Overflow UI - only shown if scene isn't ready within
-  // EXPECTED_LOAD_BUDGET_MS. Hidden again as soon as it lands.
-  const [showOverflow, setShowOverflow] = useState(false);
   // Tracks whether at least one real (non-synthetic) progress event has
   // come back from GLTFLoader. If not, the time-based ramp drives the
   // wordmark fill so a cached/Content-Length-less load still animates.
@@ -674,20 +694,6 @@ function DesktopHome({
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [progress, drawPhaseDone, sceneReady]);
-
-  // Show "loading models…" + Skip button if the scene takes longer than
-  // the expected budget. Hides immediately when sceneReady fires.
-  useEffect(() => {
-    if (splashHasPlayedThisSession || sceneReady) {
-      setShowOverflow(false);
-      return;
-    }
-    const t = window.setTimeout(
-      () => setShowOverflow(true),
-      EXPECTED_LOAD_BUDGET_MS,
-    );
-    return () => window.clearTimeout(t);
-  }, [sceneReady]);
 
   // Drive the site-header drop-in animation from splash state. The
   // header lives outside this component (PageLayout in root.tsx), so
@@ -957,13 +963,6 @@ function DesktopHome({
               line joins it only when the load runs over budget. */}
           {!splashSettled ? (
             <div className="hero-load-overflow" role="status" aria-live="polite">
-              {showOverflow && !sceneReady ? (
-                <Txt
-                  id="home.loading_models"
-                  as="span"
-                  className="hero-load-overflow__text"
-                />
-              ) : null}
               <Link
                 prefetch="viewport"
                 to="/collections/all"
@@ -1155,7 +1154,7 @@ function DesktopHome({
             <Link
               prefetch="viewport"
               to="/collections/all"
-              className="hero-action-primary hero-buy-btn"
+              className="btn-primary hero-buy-btn"
             >
               <Txt id="home.shop" />
               <svg
@@ -1181,13 +1180,25 @@ function DesktopHome({
               // Springs down from the top edge when the splash settles, resting
               // high (2.5rem). When the header bar lands ~2s later it shoves the
               // selector down to 6rem - the spring `top` transition sells the push.
-              top: !splashSettled ? '-3rem' : headerIn ? '6rem' : '2.5rem',
-              opacity: splashSettled ? 1 : 0,
+              // While the shop is open the launch card is there from the
+              // first paint: prices and the ship date never wait for the
+              // models.
+              top:
+                preorderShips !== null
+                  ? '5.25rem'
+                  : !splashSettled
+                    ? '-3rem'
+                    : headerIn
+                      ? '6rem'
+                      : '2.5rem',
+              opacity: splashSettled || preorderShips !== null ? 1 : 0,
               transition:
                 'top 0.7s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease',
             }}
           >
-            {preorderShips !== null ? <PreorderStrip ships={preorderShips || null} /> : null}
+            {preorderShips !== null ? (
+              <PreorderStrip ships={preorderShips || null} prices={prices} />
+            ) : null}
             {HERO_SIZES.length > 1 ? (
               <HeroSizeSlider
                 value={heroSize}

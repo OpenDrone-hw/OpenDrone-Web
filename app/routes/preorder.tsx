@@ -8,6 +8,7 @@ import {PreorderMeter} from '~/components/PreorderMeter';
 import {AddToCartButton} from '~/components/AddToCartButton';
 import {TeamStrip} from '~/components/TeamStrip';
 import {Txt} from '~/components/Txt';
+import {parseRich} from '~/lib/rich-text';
 import {copy, copyText} from '~/lib/copy';
 import {formatPrice, toCards} from '~/lib/catalog';
 import {comingSoonFlag} from '~/lib/coming-soon';
@@ -237,7 +238,15 @@ export default function PreorderRoute() {
   // Step and FAQ texts that carry campaign numbers are filled from
   // content/preorders.json, so the page cannot drift from the price the
   // Worker writes to Shopify.
-  const values = {ladder, stack_ships: stackShips ?? '', ends_on: endsOn};
+  const values = {
+    ladder,
+    stack_ships: stackShips ?? '',
+    // "late October 2026", for a sentence that already says "ship".
+    stack_ships_short: (stackShips ?? '').replace(/^ships\s+/i, ''),
+    ends_on: endsOn,
+  };
+  const shortRaw = copy('preorder.short_items');
+  const shortItems = (Array.isArray(shortRaw) ? shortRaw : []).map((t) => fill(t, values));
   const filled = (id: string): string | null => {
     const text = copyText(id);
     return text ? fill(text, values) : null;
@@ -290,16 +299,36 @@ export default function PreorderRoute() {
   const targetRows = rows.filter((r) => !r.campaign.paidStock);
 
   return (
-    <EditorialShell slug="preorder" rail={false} pageClassName="preorder-page">
+    <EditorialShell slug="preorder" rail={false} reveal={false} pageClassName="preorder-page">
       <header className="editorial-hero preorder-hero">
         <div className="preorder-hero-text">
           <Txt id="preorder.title" as="h1" className="editorial-title" />
           <Txt id="preorder.lead" as="p" className="editorial-lead" />
-          <div className="editorial-cta">
-            <a className="editorial-cta-primary" href="#tracker">
+          {/* The short version: the five rules a skimming buyer needs. The
+              full text follows below. */}
+          {shortItems.length ? (
+            <div className="preorder-short">
+              <Txt id="preorder.short_title" as="h2" className="preorder-short-title" />
+              <ul className="preorder-short-list">
+                {shortItems.map((item) => (
+                  <li key={item}>
+                    {parseRich(item).map((n) =>
+                      n.t === 'strong' || n.t === 'em' ? (
+                        <strong key={`b:${n.v}`}>{n.v}</strong>
+                      ) : (
+                        <span key={`t:${n.v}`}>{n.v}</span>
+                      ),
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          <div className="preorder-hero-actions">
+            <a className="btn-primary btn-sm" href="#tracker">
               <Txt id="preorder.cta_primary" />
             </a>
-            <Link prefetch="viewport" to="/production" className="editorial-cta-secondary">
+            <Link prefetch="viewport" to="/production" className="btn-secondary btn-sm">
               <Txt id="preorder.cta_secondary" />
             </Link>
           </div>

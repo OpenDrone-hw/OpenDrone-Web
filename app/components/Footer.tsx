@@ -113,12 +113,19 @@ function FooterGroup({
     <details ref={ref} open className="group/fg">
       <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-between sm:min-h-0 sm:cursor-default sm:pointer-events-none [&::-webkit-details-marker]:hidden">
         <ColumnHeading id={id} />
-        <span
+        {/* One chevron, turned over when the group is open. */}
+        <svg
           aria-hidden="true"
-          className="mb-3 font-mono text-[var(--color-text-muted)] transition-transform group-open/fg:rotate-45 sm:hidden"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="mb-3 shrink-0 text-[var(--color-text-muted)] transition-transform group-open/fg:rotate-180 sm:hidden"
         >
-          +
-        </span>
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
       </summary>
       {children}
     </details>
@@ -169,13 +176,13 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
             <Txt
               id="chrome.footer_run_by"
               as="p"
-              className="text-[12px] text-[var(--color-text-muted)] mb-3 leading-relaxed"
+              className="text-[13px] text-[var(--color-text-muted)] mb-3 leading-[1.6]"
             />
             <CompanyFooterBlock company={company} />
             <NavLink
               to="/open-source"
               prefetch="intent"
-              className="mt-3 inline-flex items-center min-h-[44px] md:min-h-0 text-[12px] text-[var(--color-text-muted)] underline underline-offset-2 hover:text-[var(--color-text)]"
+              className="mt-3 inline-flex items-center min-h-[44px] md:min-h-0 text-[13px] text-[var(--color-text-muted)] underline underline-offset-2 hover:text-[var(--color-text)]"
             >
               <Txt id="chrome.incutec_hint" />
             </NavLink>
@@ -242,11 +249,11 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
               ))}
             </nav>
           </FooterGroup>
-            <LegalLanguages className="mt-4 text-[12px] leading-relaxed text-[var(--color-text-muted)]" />
+            <LegalLanguages className="footer-small mt-4 text-[var(--color-text-muted)]" />
             <Txt
               id="chrome.footer_order_help"
               as="p"
-              className="mt-2 text-[12px] leading-relaxed text-[var(--color-text-muted)] [&_a]:underline [&_a]:underline-offset-2"
+              className="footer-small mt-2 text-[var(--color-text-muted)] [&_a]:underline [&_a]:underline-offset-2"
             />
           </div>
         </div>

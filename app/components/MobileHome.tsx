@@ -4,9 +4,8 @@ import {motion, useReducedMotion, type MotionProps} from 'motion/react';
 import type {ProductCardFragment as CollectionItemFragment} from '~/lib/product-shapes';
 import {HeroWordmark} from '~/components/HeroWordmark';
 import {ProductItem} from '~/components/ProductItem';
-import {AnimatedNumber} from '~/components/AnimatedNumber';
 import {Txt} from '~/components/Txt';
-import {PreorderStrip} from '~/components/PreorderStrip';
+import {PreorderStrip, type StripPrices} from '~/components/PreorderStrip';
 import {PRODUCT_CONTENT, isConceptFor} from '~/lib/product-content';
 import {useRoadmapStatusResolver} from '~/lib/coming-soon';
 import {BOARD_ART_VERSION} from '~/data/board-art-version';
@@ -29,8 +28,10 @@ const BOARD_THUMB_SIZES = '(min-width: 489px) 264px, 54vw';
  * the site (open-source page, PDP downloads); the design count is derived
  * from the product-content registry so it can't drift. */
 const OPEN_DESIGN_COUNT = Object.values(PRODUCT_CONTENT).filter(
-  // Resold parts (`editorial: false`) are catalog, not open designs.
-  (c) => c.fileNumber !== '-' && c.editorial !== false,
+  // Resold parts (`editorial: false`) are catalog, not open designs, and a
+  // design counts as published only once its repository is public
+  // (`repoUrl` set): the frames are not, so they are not counted.
+  (c) => Boolean(c.fileNumber) && c.fileNumber !== '-' && c.editorial !== false && Boolean(c.repoUrl),
 ).length;
 
 /* Row order and which row is derived. Labels are copy
@@ -39,11 +40,12 @@ const OPEN_DESIGN_COUNT = Object.values(PRODUCT_CONTENT).filter(
  * wins over the copy file. Only that derived count is a quantity worth
  * sweeping; licence versions, tool versions and prices are identifiers/fixed
  * figures and render static. */
-const HOME_LEDGER: Array<{key: string; value?: string; countUp?: boolean}> = [
+const HOME_LEDGER: Array<{key: string; value?: string}> = [
   {
     key: 'designs',
+    // Static: a count-up renders the figure twice (a screen-reader copy
+    // plus the animated one), which page text and copy both pick up.
     value: String(OPEN_DESIGN_COUNT).padStart(2, '0'),
-    countUp: true,
   },
   {key: 'licence'},
   {key: 'source_format'},
@@ -63,10 +65,13 @@ const HOME_LEDGER: Array<{key: string; value?: string; countUp?: boolean}> = [
 export function MobileHome({
   featured,
   preorderShips = null,
+  prices = null,
 }: {
   featured: CollectionItemFragment[] | Promise<CollectionItemFragment[]>;
-  /** Set while the shop is open: the preorder line under the actions. */
+  /** Set while the shop is open: the launch card above the actions. */
   preorderShips?: string | null;
+  /** The launch card's "from" prices for the flight controller and ESC. */
+  prices?: StripPrices | null;
 }) {
   const reduce = useReducedMotion();
 
@@ -141,14 +146,21 @@ export function MobileHome({
           {...rise(2)}
         />
 
-        {/* Two full-width actions side by side - Shop (gold) + GitHub (ghost).
-            Each is its own pill spanning half the row, not nested in one pod. */}
-        <motion.div className="home-mobile-cta" {...rise(3)}>
-          <Link
-            prefetch="viewport"
-            to="/collections/all"
-            className="home-mobile-cta-btn home-mobile-cta-shop"
-          >
+        {/* The launch card (price hook and ship date) comes before the
+            actions, so a skimming buyer sees why to stay on a small phone. */}
+        {preorderShips !== null ? (
+          <motion.div className="home-mobile-strip" {...rise(3)}>
+            <PreorderStrip
+              ships={preorderShips || null}
+              prices={prices}
+              className="is-mobile"
+            />
+          </motion.div>
+        ) : null}
+
+        {/* One primary action at full width; the source is a plain link. */}
+        <motion.div className="home-mobile-cta" {...rise(4)}>
+          <Link prefetch="viewport" to="/collections/all" className="btn-primary">
             <Txt id="home.shop" />
             <svg
               width="18"
@@ -157,6 +169,7 @@ export function MobileHome({
               fill="none"
               stroke="currentColor"
               strokeWidth="2.5"
+              aria-hidden="true"
             >
               <line x1="5" y1="12" x2="19" y2="12" />
               <polyline points="12 5 19 12 12 19" />
@@ -166,20 +179,11 @@ export function MobileHome({
             href="https://github.com/OpenDrone-hw"
             target="_blank"
             rel="noopener noreferrer"
-            className="home-mobile-cta-btn home-mobile-cta-github"
-            aria-label="View source on GitHub"
+            className="btn-link"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
-            </svg>
             <Txt id="home.m_github" />
           </a>
         </motion.div>
-        {preorderShips !== null ? (
-          <motion.div {...rise(4)}>
-            <PreorderStrip ships={preorderShips || null} className="is-mobile" />
-          </motion.div>
-        ) : null}
       </section>
 
       {/* The loader resolves `featured` for a mobile UA, so the cards render
@@ -204,14 +208,12 @@ export function MobileHome({
       <section className="home-mobile-ledger" aria-label="Open hardware index">
         <Txt id="home.m_ledger_label" as="p" className="section-label" />
         <dl className="spec-table">
-          {HOME_LEDGER.map(({key, value, countUp}) => (
+          {HOME_LEDGER.map(({key, value}) => (
             <div key={key}>
               <Txt id={`home.m_ledger_${key}_label`} as="dt" />
               <dd>
                 {value === undefined ? (
                   <Txt id={`home.m_ledger_${key}_value`} />
-                ) : countUp ? (
-                  <AnimatedNumber value={value} />
                 ) : (
                   value
                 )}
