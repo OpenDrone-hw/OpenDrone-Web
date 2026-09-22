@@ -276,6 +276,9 @@ export type VariantContent = {
    *  final, as OPENMOTOR-2207 does: the PDP then keeps the SKU off the page
    *  and out of the structured data. The SKU stays the internal ID. */
   internalSku?: boolean;
+  /** One plain line shown under this variant's cart line: what is not final
+   *  about it and what the buyer can do (OpenMotor 5": stator and KV). */
+  cartNote?: string;
 };
 
 export type ProductContent = {
@@ -594,6 +597,21 @@ export const PRODUCT_CONTENT: Record<string, ProductContent> =
 export function variantDisplayName(handle: string | null | undefined, value: string): string {
   if (!handle) return value;
   return PRODUCT_CONTENT[handle]?.variants?.[value]?.label ?? value;
+}
+
+/** A cart line's name as the buyer reads it: the product title plus the
+ *  variant's display name, never a raw legacy option value ("2207"). */
+export function lineDisplayName(handle: string | null | undefined, title: string, variantTitle: string | null | undefined): string {
+  return variantTitle && variantTitle !== 'Default Title'
+    ? `${title} ${variantDisplayName(handle, variantTitle)}`
+    : title;
+}
+
+/** The cart-line note for one variant, if its content sets one. See
+ *  {@link VariantContent.cartNote}. */
+export function variantCartNote(handle: string | null | undefined, value: string | null | undefined): string | null {
+  if (!handle || !value) return null;
+  return PRODUCT_CONTENT[handle]?.variants?.[value]?.cartNote ?? null;
 }
 
 /** Whether a variant's SKU stays off customer-facing pages. See

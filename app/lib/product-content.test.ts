@@ -7,6 +7,8 @@ import {
   hiddenWhileSoldOut,
   isInternalSku,
   variantDisplayName,
+  lineDisplayName,
+  variantCartNote,
   type BoxItem,
   type ChapterPin,
   type DownloadAsset,
@@ -249,5 +251,12 @@ describe('openmotor 5-inch variant', () => {
     assert.equal(isInternalSku('openmotor', '1604'), false);
     assert.equal(variantDisplayName('openesc', '30×30'), '30×30');
     assert.equal(variantDisplayName(null, 'Lite'), 'Lite');
+  });
+
+  it('never names the 5" motor 2207 in a cart line name or note', () => {
+    assert.equal(lineDisplayName('openmotor', 'OpenMotor', '2207'), 'OpenMotor 5"');
+    assert.equal(lineDisplayName('openesc', 'OpenESC', 'Default Title'), 'OpenESC');
+    assert.ok(!/2207/.test(variantCartNote('openmotor', '2207') ?? '2207'));
+    assert.equal(variantCartNote('openmotor', '1604'), null);
   });
 });

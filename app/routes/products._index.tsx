@@ -210,9 +210,11 @@ function tierSpecValues(
 function searchTextFor(p: ProductCardFragment, value = ''): string {
   const content = PRODUCT_CONTENT[p.handle];
   const tier = value ? content?.variants?.[value] : undefined;
+  // A labelled tier is searched by its label only: OpenMotor's option value
+  // "2207" is a legacy key, not a size anyone should find it by.
   return [
     p.title,
-    value,
+    tier?.label ? '' : value,
     tier?.label,
     p.handle,
     p.productType,

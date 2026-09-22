@@ -10,7 +10,7 @@ import {Txt} from '~/components/Txt';
 import {copy, copyText} from '~/lib/copy';
 import {formatPrice, toCards} from '~/lib/catalog';
 import {comingSoonFlag} from '~/lib/coming-soon';
-import {isPurchasableStatus, resolveStatus} from '~/lib/product-content';
+import {isPurchasableStatus, resolveStatus, variantDisplayName} from '~/lib/product-content';
 import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
 import {CAMPAIGN} from '~/lib/catalog-client';
 import {
@@ -141,7 +141,7 @@ export async function loader({context}: Route.LoaderArgs) {
           handle: card.handle,
           url: variantUrl(card.handle, v.selectedOptions),
           product: card.title,
-          variant: v.title === 'Default Title' ? '' : v.title,
+          variant: v.title === 'Default Title' ? '' : variantDisplayName(card.handle, v.title),
           image: v.image,
           price: v.price,
           priceAfter: v.priceAfter,

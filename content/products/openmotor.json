@@ -89,10 +89,11 @@
           "OpenFrame 5\""
         ]
       ],
-      "internalSku": true
+      "internalSku": true,
+      "cartNote": "Stator size and KV are not final. You are told them before the supplier order and can cancel for a full refund."
     }
   },
-  "footnote": "The 3\" motor is a 1604 at 2850 KV. The stator size and KV of the 5\" motor are not final. They are set before its supplier order is placed, and every buyer of the 5\" motor is told them then and can cancel for a full refund.",
+  "footnote": "The 3\" motor is a 1604 at 2850 KV. The stator size and KV of the 5\" motor are not final. They are set before its supplier order is placed, and every buyer of the 5\" motor is told them then and can cancel for a full refund. Weight, mount pattern, shaft diameter, cell count and lead length are published once the supplier datasheet or measured samples are on file.",
   "keywords": [
     "motor",
     "brushless"

@@ -124,7 +124,9 @@ export const ROADMAP: RoadmapItem[] = [
   {
     id: 'motors',
     added: '2026-08-11',
+    // Samples ordered from the supplier, nothing under test yet.
     status: 'in-progress',
+    productPath: '/products/openmotor',
   },
   {
     id: 'openvtx',
