@@ -360,9 +360,11 @@ export default function ProductsIndex() {
     return out;
   }, [products, productStatus, roadmapStatus, commerceHandoff]);
 
-  // Categories present in the catalog, in editorial order then any leftovers.
+  // Categories that hold at least one shown card, in editorial order then
+  // any leftovers. Counting the cards, not the raw catalog, keeps a family
+  // whose every product is hidden (unsellable, sold out) out of the rail.
   const categories = useMemo(() => {
-    const present = new Set(products.map((p) => p.productType || 'Other'));
+    const present = new Set(cards.map((c) => c.product.productType || 'Other'));
     const out: Array<{value: string; label: ReactNode}> = CATEGORY_ORDER.filter(
       (c) => present.has(c.type),
     ).map((c) => ({
@@ -381,7 +383,7 @@ export default function ProductsIndex() {
       }
     }
     return out;
-  }, [products]);
+  }, [cards]);
 
   const anyOnSale = useMemo(() => cards.some((c) => c.onSale), [cards]);
   const firmwares = useMemo(

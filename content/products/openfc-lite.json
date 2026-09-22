@@ -335,6 +335,10 @@
         [
           "Dimensions",
           "26.9 × 26.9 mm"
+        ],
+        [
+          "Frame fit",
+          "OpenFrame 3\" and 5\""
         ]
       ],
       "pins": [
@@ -567,6 +571,12 @@
           "qty": "1×",
           "item": "ESD bag"
         }
+      ],
+      "specs": [
+        [
+          "Frame fit",
+          "OpenFrame 5\" only"
+        ]
       ]
     }
   },

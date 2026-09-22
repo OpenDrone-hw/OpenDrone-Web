@@ -5,6 +5,8 @@ import {
   PRODUCT_CONTENT,
   PRODUCT_CONTENT_FALLBACK,
   hiddenWhileSoldOut,
+  isInternalSku,
+  variantDisplayName,
   type BoxItem,
   type ChapterPin,
   type DownloadAsset,
@@ -240,5 +242,12 @@ describe('openmotor 5-inch variant', () => {
     assert.equal(specs.get('Stator'), 'To be confirmed');
     assert.equal(specs.get('KV'), 'To be confirmed');
     assert.ok(!JSON.stringify(PRODUCT_CONTENT.openmotor).includes('22 × 7'));
+  });
+  it('shows the option value "2207" as 5" and keeps its SKU internal', () => {
+    assert.equal(variantDisplayName('openmotor', '2207'), '5"');
+    assert.equal(isInternalSku('openmotor', '2207'), true);
+    assert.equal(isInternalSku('openmotor', '1604'), false);
+    assert.equal(variantDisplayName('openesc', '30×30'), '30×30');
+    assert.equal(variantDisplayName(null, 'Lite'), 'Lite');
   });
 });

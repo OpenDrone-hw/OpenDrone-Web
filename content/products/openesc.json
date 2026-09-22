@@ -356,6 +356,12 @@
       ],
       "keywords": [
         "mini"
+      ],
+      "specs": [
+        [
+          "Frame fit",
+          "OpenFrame 3\" and 5\""
+        ]
       ]
     },
     "30×30": {
@@ -391,6 +397,10 @@
         [
           "Dimensions",
           "41.6 × 42.5 mm"
+        ],
+        [
+          "Frame fit",
+          "OpenFrame 5\" only"
         ]
       ],
       "pins": [

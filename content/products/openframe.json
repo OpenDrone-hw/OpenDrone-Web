@@ -10,7 +10,7 @@
     "lead": ""
   },
   "whatIsThis": {
-    "intro": "A freestyle frame in T700 carbon, in two sizes: 3-inch (141 mm wheelbase) and 5-inch (226 mm). The stack mounts in the middle, the motors at the arm tips, and the camera in an aluminium mount at the front. A stiff frame vibrates less, which gives the flight controller a cleaner gyro signal. OpenFC Lite and OpenESC fit without extra spacers.",
+    "intro": "A freestyle frame in T700 carbon, in two sizes: 3-inch (141 mm wheelbase) and 5-inch (226 mm). The stack mounts in the middle, the motors at the arm tips, and the camera in an aluminium mount at the front. A stiff frame vibrates less, which gives the flight controller a cleaner gyro signal. The 20 × 20 OpenFC Lite and OpenESC fit both sizes. The 30 × 30 versions fit the 5-inch frame only.",
     "needs": [
       "A flight controller and ESC stack bolted in the middle",
       "Four motors and props at the arm tips",

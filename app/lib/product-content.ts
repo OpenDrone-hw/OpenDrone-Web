@@ -272,6 +272,10 @@ export type VariantContent = {
    *  certification chip linking to `certification.oshwa.org/<uid>.html` for the
    *  selected tier; falls back to the product-level `oshwaUid` when unset. */
   oshwaUid?: string;
+  /** True when the Shopify SKU (and option value) names a spec that is not
+   *  final, as OPENMOTOR-2207 does: the PDP then keeps the SKU off the page
+   *  and out of the structured data. The SKU stays the internal ID. */
+  internalSku?: boolean;
 };
 
 export type ProductContent = {
@@ -346,6 +350,10 @@ export type ProductContent = {
    *  EU Declaration of Conformity here (kind: 'doc') once CE closes -
    *  don't add DoC entries before the signed PDF exists. */
   downloads: DownloadAsset[];
+  /** Spec rows in display order. A row renders only when it is set, so a
+   *  value that is not on file stays off the page. Use these row names for
+   *  the common FPV rows once a measured or supplier value exists:
+   *  "Weight", "Mount", "Shaft", "Rated cells", "Max current". */
   specs: Array<[string, string]>;
   footnote?: string;            // appears under the spec table
   /** Extra words the catalog search matches for this product, the terms FPV
@@ -575,6 +583,25 @@ LOADED.sort(([handleA, a], [handleB, b]) => {
 
 export const PRODUCT_CONTENT: Record<string, ProductContent> =
   Object.fromEntries(LOADED);
+
+/**
+ * The name a buyer sees for one variant (option value) of a product: the
+ * variant's content `label` when set, else the value itself. The Shopify
+ * option value stays the key for links and the cart; only the shown text
+ * changes. OpenMotor's value "2207" is shown as 5" because no 2207 is
+ * chosen.
+ */
+export function variantDisplayName(handle: string | null | undefined, value: string): string {
+  if (!handle) return value;
+  return PRODUCT_CONTENT[handle]?.variants?.[value]?.label ?? value;
+}
+
+/** Whether a variant's SKU stays off customer-facing pages. See
+ *  {@link VariantContent.internalSku}. */
+export function isInternalSku(handle: string | null | undefined, value: string | null | undefined): boolean {
+  if (!handle || !value) return false;
+  return PRODUCT_CONTENT[handle]?.variants?.[value]?.internalSku === true;
+}
 
 /** Product lifecycle. See {@link ProductContent.status}. */
 export type ProductStatus = 'idea' | 'development' | 'preorder' | 'live';

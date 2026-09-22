@@ -66,7 +66,9 @@ import {
   PRODUCT_CONTENT_FALLBACK,
   isComingSoon,
   isConceptFor,
+  isInternalSku,
   isPurchasableStatus,
+  variantDisplayName,
 } from '~/lib/product-content';
 import {useProductStatus} from '~/lib/coming-soon';
 import {shipPromiseFor} from '~/lib/preorder';
@@ -956,6 +958,11 @@ function ProductPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [catalogAxisValue]);
   const activeVariant = content.variants?.[activeTier];
+  // The SKU a buyer may see: none when the variant's SKU names a spec that
+  // is not final (OPENMOTOR-2207). It stays the internal ID everywhere else.
+  const shownSku = isInternalSku(product.handle, catalogAxisValue)
+    ? null
+    : (selectedVariant?.sku ?? null);
 
   // Gallery: dedupe by URL and, on tiered products, hide images whose
   // filename OR alt text names a DIFFERENT tier (openesc-20x20-back.png, or
@@ -1623,7 +1630,7 @@ function ProductPage() {
     imageUrl: selectedVariant?.image?.url ?? galleryImages[0]?.url ?? null,
     url: `${SITE_ORIGIN}/products/${product.handle}`,
     vendor: product.vendor,
-    sku: selectedVariant?.sku ?? null,
+    sku: shownSku,
     price: jsonLdPrice
       ? {
           amount: jsonLdPrice.amount,
@@ -1665,8 +1672,8 @@ function ProductPage() {
       offerCount: offerNodes.length,
       offers: offerNodes.map((v) => ({
         ...offerBase,
-        name: v.title,
-        sku: v.sku ?? undefined,
+        name: variantDisplayName(product.handle, v.title),
+        sku: isInternalSku(product.handle, v.title) ? undefined : (v.sku ?? undefined),
         price: v.price.amount,
         priceCurrency: v.price.currencyCode,
         availability: availabilityOf(v),
@@ -1780,15 +1787,27 @@ function ProductPage() {
     setQuantity(1);
   }, [selectedVariant?.id]);
   const buyQuantity = Math.min(quantity, maxQuantity);
+  // Why the stepper stops: the per-order cap, or the units left in the
+  // paid batch when fewer remain.
+  const maxQuantityNote =
+    maxQuantity < MAX_LINE_QUANTITY
+      ? say('product-chrome.buy_qty_max_batch', '{count} left in this batch', {count: maxQuantity})
+      : say('product-chrome.buy_qty_max', 'Max {count} per order', {count: maxQuantity});
 
   // Shipping and import duties for the visitor's country, from the flat
   // rate table. Display only: checkout charges the rate for the address.
   const visitorCountry = rootData?.visitorCountry ?? null;
   const quote = shippingQuote(visitorCountry);
+  // Inside the EU the price includes 21% Belgian VAT. Outside it the
+  // International and US markets keep the same price with no EU VAT charged
+  // on the export (Shopify: taxes included in price); the destination's own
+  // VAT and duties go to the carrier, as the duties note says.
   const vatNote =
     !quote || (!quote.blocked && quote.duty === 'none')
       ? say('product-chrome.buy_vat_note', 'incl. VAT')
-      : null;
+      : !quote.blocked
+        ? say('product-chrome.buy_vat_export', 'no EU VAT charged')
+        : null;
   const shipNote = !quote
     ? say('product-chrome.buy_ship_from', 'Shipping from {price}', {
         price: formatPrice(SHIPPING_FROM, 'EUR'),
@@ -1902,10 +1921,10 @@ function ProductPage() {
           <span className="product-buy-sku" {...prodEdit('statusNote')}>
             {shipPromise}
           </span>
-        ) : selectedVariant?.sku ? (
+        ) : shownSku ? (
           <span className="product-buy-sku">
             {copyText('product-chrome.buy_sku_prefix')}{' '}
-            {selectedVariant.sku}
+            {shownSku}
           </span>
         ) : null}
       </div>
@@ -1965,10 +1984,10 @@ function ProductPage() {
               </span>
             );
           })()
-        ) : selectedVariant?.sku ? (
+        ) : shownSku ? (
           <span className="product-buy-sku">
             {copyText('product-chrome.buy_sku_prefix')}{' '}
-            {selectedVariant.sku}
+            {shownSku}
           </span>
         ) : null}
       </div>
@@ -2066,6 +2085,7 @@ function ProductPage() {
         stackOffers={stackOffers}
         quantity={isBundle ? undefined : buyQuantity}
         maxQuantity={maxQuantity}
+        maxQuantityNote={maxQuantityNote}
         onQuantityChange={isBundle ? undefined : setQuantity}
       />
       <ul
@@ -3207,8 +3227,12 @@ function ProductPage() {
       {rootData?.company ? (
         <GpsrBlock
           company={rootData.company}
-          productTitle={product.title}
-          sku={selectedVariant?.sku ?? null}
+          productTitle={
+            catalogAxisValue && isInternalSku(product.handle, catalogAxisValue)
+              ? `${product.title} ${variantDisplayName(product.handle, catalogAxisValue)}`
+              : product.title
+          }
+          sku={shownSku}
           kind={safetyKind(product.handle)}
         />
       ) : null}
