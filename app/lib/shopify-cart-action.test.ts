@@ -7,7 +7,10 @@ import {
   handleShopifyCartAction,
   handleShopifyCartLoader,
   loadSessionCart,
+  cartCountry,
   cartLineInfo,
+  createCartInCountry,
+  setCartCountry,
   paidBatchLeft,
   paidBatchMessage,
   lineLimitMessage,
@@ -705,5 +708,143 @@ describe('cart page and legacy cart link', () => {
     let unset = false;
     assert.equal(await loadSessionCart(ENABLED_ENV, {getCartId: () => 'gone', getCart: async () => null, unsetCartId: () => { unset = true; }}), null);
     assert.equal(unset, true);
+  });
+});
+
+function fromCountry(values: Record<string, string>, country: string | null): Request {
+  const r = request(values);
+  if (country) r.headers.set('CF-IPCountry', country);
+  return r;
+}
+
+describe('Shopify cart action: buyer country', () => {
+  it('takes the visitor country when the shop ships there', () => {
+    assert.equal(cartCountry(fromCountry({}, 'US')), 'US');
+    assert.equal(cartCountry(fromCountry({}, 'be')), 'BE');
+    // Rest of the world, Bulgaria included, is still a shipping country.
+    assert.equal(cartCountry(fromCountry({}, 'BG')), 'BG');
+    assert.equal(cartCountry(fromCountry({}, 'JP')), 'JP');
+  });
+
+  it('leaves the country out when it is unknown or blocked', () => {
+    assert.equal(cartCountry(fromCountry({}, null)), undefined);
+    assert.equal(cartCountry(fromCountry({}, 'XX')), undefined);
+    assert.equal(cartCountry(fromCountry({}, 'T1')), undefined);
+    for (const blocked of ['RU', 'BY', 'IR', 'KP', 'SY', 'CU']) {
+      assert.equal(cartCountry(fromCountry({}, blocked)), undefined, blocked);
+    }
+  });
+
+  it('passes the visitor country when it creates a cart', async () => {
+    let country: string | undefined = 'unset';
+    await handleShopifyCartAction(
+      fromCountry({sku: 'OPENRX-LITE', qty: '1'}, 'US'), ENABLED_ENV,
+      {fetchCatalog: async () => CATALOG, createCart: async (_lines, code) => { country = code; return cart(); }},
+    );
+    assert.equal(country, 'US');
+    await handleShopifyCartAction(
+      fromCountry({sku: 'OPENRX-LITE', qty: '1'}, 'RU'), ENABLED_ENV,
+      {fetchCatalog: async () => CATALOG, createCart: async (_lines, code) => { country = code; return cart(); }},
+    );
+    assert.equal(country, undefined);
+  });
+
+  it('sets the country on the new cart and reads it back in that market', async () => {
+    const calls: string[] = [];
+    const repriced = {...cart([line()]), subtotal: {amount: '8.00', currencyCode: 'EUR'}};
+    const result = await createCartInCountry([{merchandiseId: VARIANT_ID, quantity: 1}], 'US', {
+      create: async () => { calls.push('create'); return cart([line()]); },
+      setCountry: async (id, code) => { calls.push(`country:${id}:${code}`); },
+      getCart: async () => { calls.push('get'); return repriced; },
+    });
+    assert.deepEqual(calls, ['create', 'country:gid://shopify/Cart/a?key=secret:US', 'get']);
+    assert.equal(result.subtotal.amount, '8.00');
+  });
+
+  it('skips the country step without a country', async () => {
+    const calls: string[] = [];
+    await createCartInCountry([{merchandiseId: VARIANT_ID, quantity: 1}], undefined, {
+      create: async () => { calls.push('create'); return cart(); },
+      setCountry: async () => { calls.push('country'); },
+      getCart: async () => { calls.push('get'); return cart(); },
+    });
+    assert.deepEqual(calls, ['create']);
+  });
+
+  it('keeps the cart in the primary market when Shopify refuses the country', async () => {
+    const logged: string[] = [];
+    const created = cart([line()]);
+    const result = await createCartInCountry([{merchandiseId: VARIANT_ID, quantity: 1}], 'AQ', {
+      create: async () => created,
+      setCountry: async () => { throw new Error('shopify: cartBuyerIdentityUpdate failed'); },
+      getCart: async () => { throw new Error('must not read'); },
+      logError: (m) => logged.push(m),
+    });
+    assert.equal(result, created);
+    assert.match(logged[0], /cart country AQ not set/);
+  });
+
+  it('sends only the country code in cartBuyerIdentityUpdate and fails on a user error', async () => {
+    const env = {SHOPIFY_STORE_DOMAIN: 'store.myshopify.com', SHOPIFY_STOREFRONT_TOKEN: 'token'} as Parameters<typeof setCartCountry>[0];
+    let body: {query: string; variables: unknown} | null = null;
+    const ok = (async (_url: string, init: RequestInit) => {
+      body = JSON.parse(String(init.body)) as {query: string; variables: unknown};
+      return Response.json({data: {cartBuyerIdentityUpdate: {cart: {id: 'c'}, userErrors: []}}});
+    }) as unknown as typeof fetch;
+    await setCartCountry(env, 'c', 'US', ok);
+    assert.match(body!.query, /cartBuyerIdentityUpdate/);
+    assert.deepEqual(body!.variables, {cartId: 'c', buyerIdentity: {countryCode: 'US'}});
+    const refused = (async () => Response.json({
+      data: {cartBuyerIdentityUpdate: {cart: null, userErrors: [{message: 'invalid'}]}},
+    })) as unknown as typeof fetch;
+    await assert.rejects(setCartCountry(env, 'c', 'AQ', refused), /cartBuyerIdentityUpdate failed/);
+  });
+});
+
+describe('Shopify cart action: a line across a price step', () => {
+  it('accepts a line longer than the units left at this step: every unit gets the cheaper price', async () => {
+    // 95 paid units: 5 left at 20% off. A line of 10 is not capped at 5 and
+    // is not split; Shopify charges all 10 at the current step (kept on
+    // purpose: the buyer is never charged more than the page showed).
+    const catalog = paidCatalog(95);
+    const variant = catalog.products[1].variants[0];
+    assert.equal(variant.campaign?.tierLeft, 5);
+    assert.equal(variant.price, 23.2);
+    let created: unknown;
+    const response = await handleShopifyCartAction(
+      request({sku: 'OPENFC-LITE-2020', qty: '10'}), ENABLED_ENV,
+      {fetchCatalog: async () => catalog, createCart: async (lines) => { created = lines; return cart(); }},
+    );
+    assert.equal(response.status, 303);
+    assert.deepEqual(created, [{merchandiseId: PAID_ID, quantity: 10, attributes: [{key: 'Preorder', value: PAID_PROMISE}]}]);
+  });
+
+  it('lets checkout through when the step moved on but the paid batch still covers the line', async () => {
+    // Added at 95 paid; 20 more were paid before checkout. The line keeps
+    // its ship date, so checkout goes straight to Shopify at its price.
+    const response = await handleShopifyCartAction(
+      request({intent: 'checkout', datesSeen: '1'}), ENABLED_ENV,
+      {
+        fetchCatalog: async () => paidCatalog(115),
+        getCartId: () => 'cart-a',
+        getCart: async () => cart([fcLine({quantity: 10})], 'cart-a'),
+        ...MUST_NOT,
+      },
+    );
+    assert.equal(response.status, 303);
+    assert.equal(response.headers.get('Location'), CHECKOUT);
+  });
+
+  it('sends the buyer back to the cart when the paid batch shrank under the line', async () => {
+    const response = await handleShopifyCartAction(
+      request({intent: 'checkout', datesSeen: '1'}), ENABLED_ENV,
+      {
+        fetchCatalog: async () => paidCatalog(245),
+        getCartId: () => 'cart-a',
+        getCart: async () => cart([fcLine({quantity: 8})], 'cart-a'),
+        ...MUST_NOT,
+      },
+    );
+    assert.equal(response.headers.get('Location'), '/cart?check=paid-batch');
   });
 });

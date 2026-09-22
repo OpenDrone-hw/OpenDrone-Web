@@ -2,8 +2,11 @@ import {bySku, type Catalog, type CatalogVariant} from './catalog.ts';
 import {shipGroupKey} from './preorder-campaign.ts';
 import {isPurchasableStatus, resolveStatus} from './product-content.ts';
 import {requestedLines} from './shopify-cart-input.ts';
+import {shippingQuote} from './shipping-rates.ts';
+import {visitorCountry} from './visitor-country.ts';
 import {
   PREORDER_ATTRIBUTE,
+  storefrontRequest,
   type CartLineInput,
   type CartLineUpdate,
   type ShopifyCart,
@@ -17,7 +20,9 @@ type CartEnv = Pick<
 >;
 export type ShopifyCartDependencies = {
   fetchCatalog: () => Promise<Catalog>;
-  createCart: (lines: CartLineInput[]) => Promise<ShopifyCart>;
+  /** A new cart; `countryCode` is the visitor's country when the shop
+   *  ships there, so checkout opens in that country's market. */
+  createCart: (lines: CartLineInput[], countryCode?: string) => Promise<ShopifyCart>;
   getCartId?: () => string | undefined;
   setCartId?: (id: string) => void;
   unsetCartId?: () => void;
@@ -77,6 +82,76 @@ export function lineLimitMessage(inCart: number): string {
   return room === 0
     ? `One order holds at most ${MAX_QUANTITY} units of each item, and your cart already has ${inCart}. Check out this order first, then place a second one.`
     : `One order holds at most ${MAX_QUANTITY} units of each item. Your cart already has ${inCart}, so you can add ${room} more.`;
+}
+
+/**
+ * The buyer country a new cart starts with: the visitor's country
+ * (Cloudflare's `CF-IPCountry`), so Shopify checkout opens in that market
+ * with its shipping rate and tax treatment. Undefined when the country is
+ * unknown or blocked: the cart then starts in the shop's primary market and
+ * checkout still decides from the shipping address.
+ */
+export function cartCountry(request: Request): string | undefined {
+  const quote = shippingQuote(visitorCountry(request));
+  return quote && !quote.blocked ? quote.country : undefined;
+}
+
+export const CART_BUYER_IDENTITY_MUTATION = `#graphql
+  mutation OpenDroneCartBuyerIdentity($cartId: ID!, $buyerIdentity: CartBuyerIdentityInput!) {
+    cartBuyerIdentityUpdate(cartId: $cartId, buyerIdentity: $buyerIdentity) {
+      cart { id }
+      userErrors { field message }
+    }
+  }
+`;
+
+type CartCountrySteps = {
+  create: (lines: CartLineInput[]) => Promise<ShopifyCart>;
+  /** Set `buyerIdentity.countryCode` on the cart; throws on a user error. */
+  setCountry: (cartId: string, countryCode: string) => Promise<void>;
+  getCart: (cartId: string) => Promise<ShopifyCart | null>;
+  logError?: (message: string) => void;
+};
+
+/**
+ * Create a cart, then set its buyer country so checkout opens in that
+ * country's market, and read it back with that market's prices. A country
+ * Shopify refuses leaves the cart in the primary market (logged, not an
+ * error): the buyer can still check out, and checkout re-prices from the
+ * shipping address.
+ */
+export async function createCartInCountry(
+  lines: CartLineInput[],
+  countryCode: string | undefined,
+  steps: CartCountrySteps,
+): Promise<ShopifyCart> {
+  const cart = await steps.create(lines);
+  if (!countryCode) return cart;
+  try {
+    await steps.setCountry(cart.id, countryCode);
+  } catch (error) {
+    steps.logError?.(
+      `cart country ${countryCode} not set: ${error instanceof Error ? error.message : 'unknown error'}`,
+    );
+    return cart;
+  }
+  return (await steps.getCart(cart.id)) ?? cart;
+}
+
+/** `cartBuyerIdentityUpdate` with only the country code. */
+export async function setCartCountry(
+  env: Parameters<typeof storefrontRequest>[0],
+  cartId: string,
+  countryCode: string,
+  fetcher: typeof fetch = fetch,
+): Promise<void> {
+  const data = await storefrontRequest<{
+    cartBuyerIdentityUpdate: {cart: {id: string} | null; userErrors: Array<{message?: string}>};
+  }>(env, CART_BUYER_IDENTITY_MUTATION, {cartId, buyerIdentity: {countryCode}}, fetcher);
+  const payload = data.cartBuyerIdentityUpdate;
+  if (!payload?.cart || payload.userErrors.length) {
+    throw new Error('shopify: cartBuyerIdentityUpdate failed');
+  }
 }
 
 function redirect(location: string): Response {
@@ -396,7 +471,7 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
       dependencies.unsetCartId?.();
     }
     checkPaidBatches(catalog, lines, new Map());
-    const cart = await dependencies.createCart(lines);
+    const cart = await dependencies.createCart(lines, cartCountry(request));
     dependencies.setCartId?.(cart.id);
     return wantsSummary
       ? Response.json(cartSummary(cart), {headers: NO_STORE})
