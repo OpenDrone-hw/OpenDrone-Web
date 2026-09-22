@@ -35,7 +35,13 @@ interface NewsletterSignupProps {
    * `notify-<handle>` tag on the Resend contact. Registering interest in
    * the SKU is the point, not the subscription itself.
    */
-  notify?: {productHandle: string; productTitle: string} | null;
+  notify?: {
+    productHandle: string;
+    productTitle: string;
+    /** A sold-out product that already sold: "email me when it is back in
+     *  stock" instead of the launch-list wording. */
+    restock?: boolean;
+  } | null;
 }
 
 type TurnstileRenderOpts = {
@@ -192,6 +198,11 @@ export function NewsletterSignup({
   const isWide = variant === 'wide';
   const isFooter = variant === 'footer';
   const isNotify = Boolean(notify);
+  const isRestock = Boolean(notify?.restock);
+  // Restock wording: copy keys with plain fallbacks until the copy file
+  // carries them.
+  const say = (key: string, fallback: string) =>
+    copyText(`newsletter.${key}`) ?? fallback;
   // Notify mode never short-circuits to the subscribed panel: an existing
   // subscriber still needs to submit to get the per-product notify tag.
   const message = clientError ?? serverMessage;
@@ -220,15 +231,21 @@ export function NewsletterSignup({
         .join(' ')}
     >
       <div>
-        <Txt
-          id={
-            isNotify
-              ? 'newsletter.signup_eyebrow_notify'
-              : 'newsletter.signup_eyebrow'
-          }
-          as="p"
-          className="gold-tag font-mono text-[12px] uppercase tracking-[0.2em] text-[var(--color-gold-text)] mb-0.5"
-        />
+        {isRestock ? (
+          <p className="gold-tag font-mono text-[12px] uppercase tracking-[0.2em] text-[var(--color-gold-text)] mb-0.5">
+            {say('signup_eyebrow_restock', 'Back in stock')}
+          </p>
+        ) : (
+          <Txt
+            id={
+              isNotify
+                ? 'newsletter.signup_eyebrow_notify'
+                : 'newsletter.signup_eyebrow'
+            }
+            as="p"
+            className="gold-tag font-mono text-[12px] uppercase tracking-[0.2em] text-[var(--color-gold-text)] mb-0.5"
+          />
+        )}
         {/* The heading keeps its DOM id in code: `aria-labelledby` on the
             section points at it, and <Txt> spends its own `id` prop on the
             copy key. */}
@@ -240,13 +257,17 @@ export function NewsletterSignup({
               : 'font-display text-sm font-bold tracking-[0.04em] uppercase text-[var(--color-text)] mb-0.5'
           }
         >
-          <Txt
-            id={
-              isNotify
-                ? 'newsletter.signup_title_notify'
-                : 'newsletter.signup_title'
-            }
-          />
+          {isRestock ? (
+            say('signup_title_restock', 'Email me when it can be ordered.')
+          ) : (
+            <Txt
+              id={
+                isNotify
+                  ? 'newsletter.signup_title_notify'
+                  : 'newsletter.signup_title'
+              }
+            />
+          )}
         </h3>
         <p
           className={
@@ -255,7 +276,12 @@ export function NewsletterSignup({
               : 'text-[12px] text-[var(--color-text-muted)] leading-snug'
           }
         >
-          {isNotify ? (
+          {isRestock ? (
+            say(
+              'signup_lede_restock',
+              'One email when {product} can be ordered again, plus occasional engineering notes. One click to leave, any time.',
+            ).replace('{product}', notify!.productTitle)
+          ) : isNotify ? (
             <>
               <Txt id="newsletter.signup_lede_notify_before" />{' '}
               {notify!.productTitle}{' '}
@@ -275,10 +301,19 @@ export function NewsletterSignup({
             className="gold-tag inline-flex items-center gap-1.5 font-mono text-[12px] uppercase tracking-[0.14em] text-[var(--color-gold-text)]"
           >
             <Check size={13} strokeWidth={2.5} aria-hidden="true" />
-            <Txt id="newsletter.signup_notify_badge" />
+            {isRestock ? (
+              say('signup_restock_badge', 'We will email you')
+            ) : (
+              <Txt id="newsletter.signup_notify_badge" />
+            )}
           </p>
           <p className="text-[12px] text-[var(--color-text-muted)] leading-snug">
-            {serverMessage}
+            {isRestock
+              ? say(
+                  'signup_restock_done',
+                  'You are on the list. We will email you when this product is back in stock.',
+                )
+              : serverMessage}
           </p>
         </div>
       ) : (

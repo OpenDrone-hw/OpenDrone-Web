@@ -3,6 +3,7 @@ import {DISCORD_INVITE_URL, CONTRIBUTING_URL, type CompanyIdentity} from '~/lib/
 import {CompanyFooterBlock} from '~/components/CompanyFooterBlock';
 import {NewsletterSignup} from '~/components/NewsletterSignup';
 import {Txt} from '~/components/Txt';
+import {LegalLanguages, legalHref, useLegalLocale} from '~/components/LangToggle';
 import {copyText} from '~/lib/copy';
 
 interface FooterProps {
@@ -99,6 +100,7 @@ function FooterNavLink({to, children}: {to: string; children: React.ReactNode}) 
 }
 
 export function Footer({company, turnstileSiteKey}: FooterProps) {
+  const legalLocale = useLegalLocale();
   return (
     <footer className="mt-auto border-t border-[var(--color-border)]">
       <div className="site-footer-inner">
@@ -144,7 +146,7 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
             <ColumnHeading id="chrome.heading_help" />
             <nav className="flex flex-col gap-1.5">
               {HELP_LINKS.map((link) => (
-                <FooterNavLink key={link.to} to={link.to}>
+                <FooterNavLink key={link.to} to={legalHref(link.to, legalLocale)}>
                   <Txt id={`chrome.${link.copy}`} />
                 </FooterNavLink>
               ))}
@@ -182,11 +184,12 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
             <ColumnHeading id="chrome.heading_legal" />
             <nav className="flex flex-col gap-1.5">
               {LEGAL_LINKS.map((link) => (
-                <FooterNavLink key={link.to} to={link.to}>
+                <FooterNavLink key={link.to} to={legalHref(link.to, legalLocale)}>
                   <Txt id={`chrome.${link.copy}`} />
                 </FooterNavLink>
               ))}
             </nav>
+            <LegalLanguages className="mt-4 text-[12px] leading-relaxed text-[var(--color-text-muted)]" />
           </div>
         </div>
 

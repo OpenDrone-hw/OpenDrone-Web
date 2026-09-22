@@ -2702,11 +2702,6 @@ html.hero-header-in .homepage-layout .site-header {
   min-width: 0;
 }
 
-.ghost-tile-fig {
-  flex-shrink: 0;
-  opacity: 0.7;
-}
-
 .ghost-tile-figure {
   flex: 1;
   min-height: 0;
@@ -2730,9 +2725,24 @@ html.hero-header-in .homepage-layout .site-header {
 
 .product-card-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: var(--sp-3);
+  column-gap: var(--sp-3);
+  row-gap: 0.15rem;
+}
+
+.product-card-row > .product-card-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Narrow two-up cards: the price wraps under the title and its unit
+   ("per motor") may take its own line instead of being cut by the card. */
+@media (max-width: 30em) {
+  .product-card-row .product-card-price {
+    white-space: normal;
+  }
 }
 
 .product-card-title {
@@ -3650,6 +3660,8 @@ button.reset {
 
 .product-gallery-empty {
   aspect-ratio: 1 / 1;
+  border-radius: var(--r-md);
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;

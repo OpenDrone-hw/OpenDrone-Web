@@ -5,7 +5,7 @@ import {Form, useLocation} from 'react-router';
 import {NavLink} from '~/components/nav';
 import {AnimatePresence} from 'motion/react';
 import {useAside} from '~/components/Aside';
-import {LangToggle} from '~/components/LangToggle';
+import {LangToggle, legalHref, useLegalLocale} from '~/components/LangToggle';
 import {ThemeToggle} from '~/components/ThemeToggle';
 import {SiteWordmark} from '~/components/SiteWordmark';
 import {IncutecWordmark} from '~/components/IncutecWordmark';
@@ -73,17 +73,31 @@ type Viewport = 'desktop' | 'mobile';
 // right and filterable by family there. Each chip links to its family's
 // representative PDP and, on hover, drops a Pod listing every SKU in it.
 // The vocabulary itself is app/lib/families.ts, shared with the listing.
-const CATEGORY_LINKS = FAMILIES.map((f) => ({
-  label: f.short,
-  to: f.to,
-  type: f.type,
-}));
+//
+// Motors have a chip and a drawer entry but no FAMILIES entry: the listing
+// rail already labels the "Motors" family from the content file, and a
+// FAMILIES entry would need a rail heading in the copy store.
+const MOTORS_LINK = {
+  label: 'Motors',
+  long: 'Motors',
+  to: '/products/openmotor',
+  type: 'Motors',
+};
+const CATEGORY_LINKS = [
+  ...FAMILIES.map((f) => ({
+    label: f.short,
+    to: f.to,
+    type: f.type,
+  })),
+  {label: MOTORS_LINK.label, to: MOTORS_LINK.to, type: MOTORS_LINK.type},
+];
 
 /** Fuller family names for the mobile drawer (the desktop FamilyNav chips
  *  use the terse FC/ESC/… labels; the drawer has room to spell them out). */
-const MOBILE_FAMILY_LABEL: Record<string, string> = Object.fromEntries(
-  FAMILIES.map((f) => [f.type, f.long]),
-);
+const MOBILE_FAMILY_LABEL: Record<string, string> = Object.fromEntries([
+  ...FAMILIES.map((f) => [f.type, f.long]),
+  [MOTORS_LINK.type, MOTORS_LINK.long],
+]);
 
 /** Stack companions per family: each pod row offers "+X" buttons for these
  *  partner products, size-matched by the Model option. N-to-N ready: every
@@ -476,15 +490,17 @@ function FamilyNav({
   return (
     <nav className="site-header-categories" aria-label="Product categories">
       {/* FC and ESC share one bubble (a stack is bought from their rows);
-          RX and Frame are standalone families with their own bubbles. */}
+          RX stands alone; Frame and Motors share the last bubble, which
+          keeps the row inside the header pill at 1024px. */}
       <span className="site-header-cat-group">
         {CATEGORY_LINKS.slice(0, 2).map(chip)}
       </span>
-      {CATEGORY_LINKS.slice(2).map((cat) => (
-        <span className="site-header-cat-group" key={cat.label}>
-          {chip(cat)}
-        </span>
-      ))}
+      <span className="site-header-cat-group">
+        {CATEGORY_LINKS.slice(2, 3).map(chip)}
+      </span>
+      <span className="site-header-cat-group">
+        {CATEGORY_LINKS.slice(3).map(chip)}
+      </span>
       <NavLink
         prefetch="viewport"
         to="/products"
@@ -505,6 +521,7 @@ export function HeaderMenu({
 }) {
   const {close} = useAside();
   const isMobile = viewport === 'mobile';
+  const legalLocale = useLegalLocale();
 
   return (
     <nav
@@ -587,7 +604,7 @@ export function HeaderMenu({
       )}
       {HEADER_MENU.items.map((item) => {
         if (!item.url) return null;
-        const url = item.url;
+        const url = legalHref(item.url, legalLocale);
         // Preorders and Contact render in the right-side CTA group, and
         // Newsletter and Open Source render there / in the footer too
         // (HeaderCtas below, and the footer's "Open Source & Incutec"
@@ -600,7 +617,7 @@ export function HeaderMenu({
           !isMobile &&
           (url === '/preorder' ||
             url === '/support' ||
-            url === '/shipping' ||
+            item.url === '/shipping' ||
             url === '/newsletter' ||
             url === 'https://github.com/OpenDrone-hw')
         )
@@ -699,7 +716,7 @@ function HeaderCtas({
   shopOpen: boolean;
 }) {
   return (
-    <nav className="flex items-center gap-2 md:gap-5 ml-auto" role="navigation">
+    <nav className="flex items-center gap-2 md:gap-3 xl:gap-5 ml-auto" role="navigation">
       {/* Hidden in the top bar on phones (it would overflow a 320px row on
           legal pages); MobileMenuAside renders it inside the drawer instead. */}
       <LangToggle className="header-lang-toggle" />
@@ -734,11 +751,12 @@ function HeaderCtas({
           <Txt id="chrome.nav_newsletter" />
         </NavLink>
       )}
+      {/* Below 1024px the row has no room for it; the footer carries it. */}
       <NavLink
         prefetch="viewport"
         to="/support"
         className={({isActive}) =>
-          `font-mono text-[12px] uppercase tracking-[0.15em] transition-colors hidden md:block ${
+          `font-mono text-[12px] uppercase tracking-[0.15em] transition-colors hidden lg:block ${
             isActive
               ? 'text-[var(--color-text)]'
               : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
@@ -758,7 +776,12 @@ function HeaderCtas({
           <Txt id="chrome.nav_account" />
         </a>
       ) : null}
-      {/* Community: the source and the people, one click from every page. */}
+      <HeaderSearch />
+      {/* Community: the source and the people, one click from every page.
+          Between the tablet and 1280px breakpoints the shop links need the
+          room, so the two icons step out there (the drawer and footer keep
+          them). */}
+      <span className="inline-flex items-center gap-2 md:hidden xl:inline-flex xl:gap-5">
       <a
         className="site-header-icon hidden md:inline-flex"
         href="https://github.com/OpenDrone-hw"
@@ -781,10 +804,96 @@ function HeaderCtas({
           <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z" />
         </svg>
       </a>
+      </span>
       <ThemeToggle className="site-header-icon" />
       <CartToggle cartUrl={cartUrl} hasCart={hasCart} />
       <HeaderMenuMobileToggle />
     </nav>
+  );
+}
+
+/**
+ * Desktop header search: a magnifier that opens a one-field GET form onto
+ * the product listing, which filters the catalog by `q` (the same target as
+ * the mobile drawer's search field and /search). Escape or a click outside
+ * closes it.
+ */
+function HeaderSearch() {
+  const [open, setOpen] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+  const input = useRef<HTMLInputElement>(null);
+  const location = useLocation();
+  useEffect(() => {
+    setOpen(false);
+  }, [location.pathname, location.search]);
+  useEffect(() => {
+    if (!open) return;
+    input.current?.focus();
+    const onDown = (e: PointerEvent) => {
+      if (!wrap.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('pointerdown', onDown);
+    return () => document.removeEventListener('pointerdown', onDown);
+  }, [open]);
+  const label = copyText('chrome.search_placeholder') ?? 'Search products';
+  return (
+    // Container-level Escape listener; the button and the field inside are
+    // the interactive elements.
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
+    <div
+      ref={wrap}
+      className="relative hidden md:inline-flex"
+      onKeyDown={(e) => {
+        if (e.key === 'Escape' && open) {
+          e.stopPropagation();
+          setOpen(false);
+          wrap.current?.querySelector('button')?.focus();
+        }
+      }}
+    >
+      <button
+        type="button"
+        className="site-header-icon text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+        aria-label={label}
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+      </button>
+      {open ? (
+        <Form
+          action="/products"
+          method="get"
+          role="search"
+          className="absolute right-0 top-full mt-3 z-50 flex items-center gap-2 rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-bg-elevated)] p-2 shadow-lg"
+          style={{width: 'min(22rem, 70vw)', maxWidth: 'none'}}
+          onSubmit={() => setOpen(false)}
+        >
+          <input
+            ref={input}
+            type="search"
+            name="q"
+            placeholder={label}
+            aria-label={label}
+            enterKeyHint="search"
+            className="flex-1 min-w-0 text-sm"
+          />
+          <button
+            type="submit"
+            aria-label={label}
+            className="inline-flex p-2 text-[var(--color-gold-text)] hover:text-[var(--color-gold-text-hover)]"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
+          </button>
+        </Form>
+      ) : null}
+    </div>
   );
 }
 

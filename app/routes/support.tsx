@@ -2,6 +2,7 @@ import {Link, useLoaderData} from 'react-router';
 import type {Route} from './+types/support';
 import {buildSeoMeta} from '~/lib/seo';
 import {Txt} from '~/components/Txt';
+import {legalHref} from '~/components/LangToggle';
 import {CompanyFooterBlock} from '~/components/CompanyFooterBlock';
 import {copyText} from '~/lib/copy';
 import {getCompanyIdentity} from '~/lib/company';
@@ -83,7 +84,7 @@ export default function SupportRoute() {
         <ul className="support-topics">
           {TOPICS.map((t) => (
             <li key={t.key}>
-              <Link prefetch="viewport" to={t.to} className="support-topic">
+              <Link prefetch="viewport" to={legalHref(t.to, 'en')} className="support-topic">
                 <Txt id={`support.topic_${t.key}`} as="span" className="support-topic-title" />
                 <Txt id={`support.topic_${t.key}_desc`} as="span" className="support-topic-desc" />
               </Link>
