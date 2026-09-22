@@ -50,6 +50,8 @@ Node 22 (what CI uses).
 | `npm run sync:contributors` | refresh `content/contributors.json` from GitHub |
 | `npm run studio:coverage` | which files still have copy baked into code |
 | `npm run audit:perf`, `audit:lh`, `audit:mobile` | performance lab, Lighthouse, mobile screenshots |
+| `npm run gen:shopify-templates` | render the Shopify notification emails from `scripts/shopify-templates/` into `out/`, ready to paste into Shopify |
+| `node scripts/launch-preorders.mjs` | dry run of the preorder launch: read-only checks and the plan; `--apply` performs it (see "Launch preorders") |
 | `node scripts/launch-blast.mjs <handle>` | dry run of the launch mail to the `notify-<handle>` Resend segment; `--create` drafts, `--send` sends |
 
 The PR gate is typecheck, lint and test. `scripts/smoke.mjs` hits the main
@@ -194,11 +196,72 @@ Two workflows, one Worker each:
   and runs `wrangler deploy --config wrangler.production.toml`. A merge to
   `main` is a production deploy.
 - `.github/workflows/cloudflare-preview.yml`: every push to
-  `feat/cloudflare-hosting` deploys the isolated `opendrone-web-preview`
-  Worker (`wrangler.toml`): no custom domains, Shopify catalog secrets,
-  `PUBLIC_COMING_SOON=1`, checkout writes off.
+  `feat/preorders` deploys the isolated staging Worker `opendrone-web-preview`
+  (`wrangler.toml`): a workers.dev URL, no custom domains, HTTP basic auth
+  (user `opendrone`, the `STAGING_PASSWORD` secret) and `X-Robots-Tag:
+  noindex, nofollow` on every Worker response. Static files from
+  `dist/client` are served by Cloudflare before the Worker runs, so they
+  bypass both. Staging runs the shop open
+  (`PUBLIC_COMING_SOON=0`, checkout writes on) against the same Shopify
+  store, and never writes prices.
 
 Both use the repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` and pin wrangler 4. Storefront and Admin tokens are Worker secrets, never committed. `community-sync.yml` refreshes the contributor roster only; `timeline-ledger.yml` updates the public repository timeline.
+
+## Launch preorders
+
+Production stays closed until the founder says go. The founder does these
+steps in Shopify admin first:
+
+1. Settings > Payments: activate Shopify Payments, set capture to
+   "Automatically at checkout" (only paid orders count towards the preorder
+   meters and price steps), add Bancontact and PayPal. No manual payment
+   methods.
+2. Settings > Markets: import duties are not collected at checkout in any
+   market. Outside the EU the buyer pays them to the carrier on delivery.
+3. Settings > Notifications: paste `scripts/shopify-templates/out/order-confirmation.html`
+   and `shipping-confirmation.html` (regenerate with `npm run gen:shopify-templates`)
+   and send a test. The order confirmation prints each line's `Preorder`
+   ship date and a preorder summary.
+4. Online Store > Themes: publish "OpenDrone headless redirect (publish at
+   launch)", so opendrone.store pages redirect to opendrone.be while cart,
+   checkout, account and policy pages keep working.
+5. Online Store > Preferences: turn the password page off, then say go.
+
+On the go, an agent runs `node scripts/launch-preorders.mjs` (dry run) and
+then `node scripts/launch-preorders.mjs --apply` from this checkout on
+`feat/preorders`, with `.env` holding the Shopify tokens and
+`SHOPIFY_WEBHOOK_SECRET` (the OpenDrone Infra app's client secret). The
+script stops at the first failure and never prints a secret. In order it:
+
+1. Checks the branch, a clean `wrangler.production.toml`, PR #489 open
+   against `main`, the credentials by name, and that wrangler and gh are
+   signed in.
+2. Checks that each of the 12 SKUs in `content/preorders.json` is on the
+   storefront channel with a compare-at (retail) price and sells at the
+   first price step.
+3. Sets the production Worker secrets in one `wrangler secret bulk`:
+   `SHOPIFY_PREVIEW_POLICY_JSON` (the 12 SKUs `preorder`, every other
+   storefront SKU `sold_out`), `SHOPIFY_WEBHOOK_SECRET` and
+   `SHOPIFY_PRICE_TIER_WRITE_ENABLED=1`. The `[vars]` on `main` still keep
+   the store closed.
+4. Commits `PUBLIC_COMING_SOON="0"` and `SHOPIFY_CHECKOUT_WRITE_ENABLED="1"`
+   into the `[vars]` of `wrangler.production.toml` and pushes. They live in
+   the file because a deploy replaces variables set in the dashboard.
+5. Waits for the PR checks and squash-merges PR #489: the production deploy.
+6. Waits for the `cloudflare-production` workflow of the merge commit.
+7. Registers the `ORDERS_PAID` webhook for `https://opendrone.be/api/shopify/orders-paid`
+   through the Admin API token, so the OpenDrone Infra app signs it. A
+   webhook made in the admin UI is signed with another key and gets 401.
+8. Flips OpenFC-Lite, OpenFC-Lite-Mini, OpenESC-20x20 and OpenESC-30x30 to
+   `status-beta` (first production batch). OpenRX, OpenFrame and OpenMotor
+   keep theirs: they are funding targets (`docs/product-status.md`).
+9. Smokes production: `scripts/smoke.mjs`, `/products.json` sells every
+   campaign SKU, no noindex header, and the webhook answers 401 unsigned
+   and 200 when signed with the local secret.
+
+Then the founder places one test-mode order (BE address, one OpenRX Lite)
+and checks the `Preorder` line in the confirmation email and that the meter
+on `/preorder` moves.
 
 ## Security
 

@@ -100,21 +100,22 @@ every SKU has its `SHOPIFY_PREVIEW_POLICY_JSON` entry; flip the repo topic to `s
 minutes the price is public and orders open; then update the static status
 in `roadmap-data.ts` in a follow-up PR.
 
-**Launch preorders:** with the founder's go, and after the storefront deploy
-that opens checkout, flip every board sold as a preorder to `status-beta`
-(first production batch), so the chip and /roadmap stop saying the product
-cannot be bought:
+**Launch preorders:** on the founder's go, `node scripts/launch-preorders.mjs
+--apply` opens the store (README "Launch preorders"). The products sell
+through `"status": "preorder"` in their content JSON once
+`PUBLIC_COMING_SOON` is `0`, whatever their topic says. After the deploy the
+script flips only the boards with a first production batch to `status-beta`:
 
 ```sh
-for repo in OpenFC-Lite OpenFC-Lite-Mini OpenESC-20x20 OpenESC-30x30 \
-            OpenRX-Lite OpenRX-Lite-UFL OpenRX-Mono OpenRX-Gemini; do
+for repo in OpenFC-Lite OpenFC-Lite-Mini OpenESC-20x20 OpenESC-30x30; do
   gh repo edit "OpenDrone-hw/$repo" --remove-topic status-alpha --add-topic status-beta
 done
 ```
 
-OpenFrame and OpenMotor have no public repo: set their static status in
-`roadmap-data.ts`. Then update the static statuses in the same file in a
-follow-up PR.
+OpenRX, OpenFrame and OpenMotor are funding targets, not a production
+batch: they keep their status until their target is reached and the
+supplier order is placed. Update the static statuses in `roadmap-data.ts`
+in a follow-up PR, after the flip is live.
 
 **A SKU crosses a price step:** nothing to do. The `orders/paid` webhook and
 the Worker's five-minute reconcile write the new price to Shopify

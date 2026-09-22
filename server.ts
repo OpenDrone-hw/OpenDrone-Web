@@ -8,8 +8,10 @@ import preordersJson from './content/preorders.json';
 
 /**
  * Staging gate. The preview Worker is a public workers.dev URL, so it asks
- * for HTTP basic auth before anything is served, including assets. The
- * production Worker leaves STAGING_PASSWORD unset and never asks.
+ * for HTTP basic auth before any page or API response. Static files in
+ * dist/client are served by Cloudflare without running the Worker, so they
+ * are not gated. The production Worker leaves STAGING_PASSWORD unset and
+ * never asks.
  */
 function stagingGate(request: Request, env: Env): Response | null {
   const password = env.STAGING_PASSWORD?.trim();
@@ -34,6 +36,24 @@ function stagingGate(request: Request, env: Env): Response | null {
 }
 
 /**
+ * Staging must never be indexed, even if the basic-auth gate is later
+ * loosened: every Worker response with STAGING_PASSWORD set carries
+ * `X-Robots-Tag: noindex, nofollow`. Production leaves it unset.
+ */
+function markStaging(response: Response, env: Env): Response {
+  if (!env.STAGING_PASSWORD?.trim()) return response;
+  try {
+    response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+    return response;
+  } catch {
+    // Immutable headers (a fetched or redirect response): copy it.
+    const copy = new Response(response.body, response);
+    copy.headers.set('X-Robots-Tag', 'noindex, nofollow');
+    return copy;
+  }
+}
+
+/**
  * Export a fetch handler in module format.
  *
  * The handler is React Router's own. This module is the Cloudflare Worker
@@ -42,49 +62,57 @@ function stagingGate(request: Request, env: Env): Response | null {
  */
 const handleRequest = createRequestHandler(serverBuild, process.env.NODE_ENV);
 
+async function handleFetch(
+  request: Request,
+  env: Env,
+  executionContext: ExecutionContext,
+): Promise<Response> {
+  try {
+    // www.opendrone.be is a Cloudflare custom domain too (both point at
+    // this Worker); redirect it to the apex so it never serves a mirror.
+    const gate = stagingGate(request, env);
+    if (gate) return gate;
+
+    const url = new URL(request.url);
+    if (url.hostname === 'www.opendrone.be') {
+      url.hostname = 'opendrone.be';
+      return Response.redirect(url.toString(), 301);
+    }
+
+    // The custom ticket API is retired as one unit. Support is the public
+    // Discord/email page; old API URLs answer 410 so clients stop retrying.
+    if (url.pathname.startsWith('/api/support/')) {
+      return new Response('Support API retired. Use /support.', {
+        status: 410,
+        headers: {'Cache-Control': 'no-store'},
+      });
+    }
+
+    const context = await createAppLoadContext(
+      request,
+      env,
+      executionContext,
+    );
+    const response = await handleRequest(request, context);
+
+    if (context.session.isPending) {
+      response.headers.set('Set-Cookie', await context.session.commit());
+    }
+
+    return response;
+  } catch (error) {
+    console.error(error);
+    return new Response('An unexpected error occurred', {status: 500});
+  }
+}
+
 export default {
   async fetch(
     request: Request,
     env: Env,
     executionContext: ExecutionContext,
   ): Promise<Response> {
-    try {
-      // www.opendrone.be is a Cloudflare custom domain too (both point at
-      // this Worker); redirect it to the apex so it never serves a mirror.
-      const gate = stagingGate(request, env);
-      if (gate) return gate;
-
-      const url = new URL(request.url);
-      if (url.hostname === 'www.opendrone.be') {
-        url.hostname = 'opendrone.be';
-        return Response.redirect(url.toString(), 301);
-      }
-
-      // The custom ticket API is retired as one unit. Support is the public
-      // Discord/email page; old API URLs answer 410 so clients stop retrying.
-      if (url.pathname.startsWith('/api/support/')) {
-        return new Response('Support API retired. Use /support.', {
-          status: 410,
-          headers: {'Cache-Control': 'no-store'},
-        });
-      }
-
-      const context = await createAppLoadContext(
-        request,
-        env,
-        executionContext,
-      );
-      const response = await handleRequest(request, context);
-
-      if (context.session.isPending) {
-        response.headers.set('Set-Cookie', await context.session.commit());
-      }
-
-      return response;
-    } catch (error) {
-      console.error(error);
-      return new Response('An unexpected error occurred', {status: 500});
-    }
+    return markStaging(await handleFetch(request, env, executionContext), env);
   },
 
   /**

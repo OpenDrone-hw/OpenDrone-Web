@@ -44,7 +44,8 @@ declare global {
     SESSION_SECRET: string;
 
     // Checkout mutation gate. The catalog stays read-only unless this is
-    // explicitly enabled.
+    // exactly '1'. Production sets it in wrangler.production.toml [vars];
+    // scripts/launch-preorders.mjs flips it at launch.
     SHOPIFY_CHECKOUT_WRITE_ENABLED?: string;
     SHOPIFY_STORE_DOMAIN?: string;
     SHOPIFY_STOREFRONT_TOKEN?: string;
@@ -62,13 +63,18 @@ declare global {
     // '1' leaves Shopify's prices alone and campaign SKUs whose price is
     // under their step close instead.
     SHOPIFY_PRICE_TIER_WRITE_ENABLED?: string;
-    // Shopify webhook signing secret, for the orders/paid HMAC. Without it
-    // the webhook route refuses every request.
+    // Shopify webhook signing secret, for the orders/paid HMAC: the client
+    // secret of the app that registers the webhook (OpenDrone Infra).
+    // Without it the webhook route refuses every request. A Worker secret.
     SHOPIFY_WEBHOOK_SECRET?: string;
     // Staging gate: when set, the Worker asks for HTTP basic auth as
     // "opendrone" with this password before serving anything. Production
     // leaves it unset.
     STAGING_PASSWORD?: string;
+    // Per-SKU sale policy, {"SKU": {"saleMode": "in_stock" | "preorder" |
+    // "sold_out", "shipPromise": string | null}}, one entry for every
+    // storefront SKU or the catalog refuses to load. A Worker secret; the
+    // launch script sets the campaign SKUs to preorder.
     SHOPIFY_PREVIEW_POLICY_JSON?: string;
 
     // Aggregate order totals behind the financial goal meter, as
@@ -76,9 +82,6 @@ declare global {
     // scripts/update-goals.mjs only. Unset, the script reports and changes
     // nothing.
     GOALS_URL?: string;
-
-    // Pre-launch banner kill switch: unset/anything ≠ '0' keeps the banner.
-    PUBLIC_PRELAUNCH?: string;
 
     // Opens /learn in a deployed build. The corpus behind it is unreviewed
     // research, so the routes 404 unless this is exactly '1'. Dev always
@@ -100,8 +103,9 @@ declare global {
 
     // Coming-soon kill switch: unset/anything ≠ '0' renders every product
     // as coming soon (no prices, notify-me signup instead of add-to-cart).
-    // Set PUBLIC_COMING_SOON=0 in Oxygen the day orders open. Per-product
-    // overrides live in app/lib/product-content.ts (`comingSoon`).
+    // Production sets it in wrangler.production.toml [vars];
+    // scripts/launch-preorders.mjs sets it to '0' at launch. Per-product
+    // overrides live in content/products/<handle>.json (`status`).
     PUBLIC_COMING_SOON?: string;
 
     PUBLIC_COMPANY_NAME?: string;
