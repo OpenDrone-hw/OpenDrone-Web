@@ -10,11 +10,19 @@ describe('shippingQuote', () => {
     };
     assert.equal(rate('BE'), 8.5);
     for (const c of ['DE', 'FR', 'LU', 'NL']) assert.equal(rate(c), 9.95);
-    for (const c of ['AT', 'ES', 'IT', 'PL', 'SE', 'BG']) assert.equal(rate(c), 12.95);
+    for (const c of ['AT', 'ES', 'IT', 'PL', 'SE']) assert.equal(rate(c), 12.95);
     for (const c of ['CY', 'EE', 'MT']) assert.equal(rate(c), 16.95);
     for (const c of ['GB', 'CH', 'NO', 'IS', 'LI']) assert.equal(rate(c), 24.95);
     assert.equal(rate('US'), 19.95);
     for (const c of ['CA', 'AU', 'JP']) assert.equal(rate(c), 39.95);
+  });
+
+  it('bills Bulgaria at the rest-of-world rate with no import duty', () => {
+    const q = shippingQuote('BG');
+    assert.ok(q && !q.blocked);
+    assert.equal(q.rate, 39.95);
+    assert.equal(q.zone, 'world');
+    assert.equal(q.duty, 'none');
   });
 
   it('does not ship to the blocked countries', () => {
@@ -42,7 +50,7 @@ describe('shippingQuote', () => {
     assert.equal(shippingQuote('be')?.country, 'BE');
     const all = SHIPPING_ZONES.flatMap((z) => z.countries);
     assert.equal(new Set(all).size, all.length);
-    assert.equal(all.length, 27 + 5 + 1);
+    assert.equal(all.length, 26 + 5 + 1);
   });
 
   it('names a country in English', () => {

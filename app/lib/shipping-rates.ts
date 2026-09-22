@@ -17,7 +17,8 @@ const EU = new Set([
 
 export type ShippingZone = {
   id: 'be' | 'near' | 'eu' | 'eu_far' | 'europe' | 'us' | 'world';
-  /** Countries in the zone; empty for the rest of the world. */
+  /** Countries in the zone; empty for the rest of the world, which
+   *  includes Bulgaria (an EU country billed at the world rate). */
   countries: string[];
   /** Flat rate in EUR, VAT included. */
   rate: number;
@@ -29,7 +30,7 @@ export const SHIPPING_ZONES: ShippingZone[] = [
   {id: 'near', countries: ['DE', 'FR', 'LU', 'NL'], rate: 9.95},
   {
     id: 'eu',
-    countries: [...EU].filter((c) => !['BE', 'DE', 'FR', 'LU', 'NL', 'CY', 'EE', 'MT'].includes(c)).sort(),
+    countries: [...EU].filter((c) => !['BE', 'DE', 'FR', 'LU', 'NL', 'CY', 'EE', 'MT', 'BG'].includes(c)).sort(),
     rate: 12.95,
   },
   {id: 'eu_far', countries: ['CY', 'EE', 'MT'], rate: 16.95},
