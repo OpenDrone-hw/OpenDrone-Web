@@ -19,6 +19,7 @@ import {
   selectVariant,
   selectedOptionsFromRequest,
   formatPrice,
+  paysInOtherCurrency,
   toCard,
   toProduct,
 } from '~/lib/catalog';
@@ -39,7 +40,6 @@ import {SchematicViewer} from '~/components/SchematicViewer';
 import type {FrameViewerProps} from '~/components/FrameViewer';
 import {SceneErrorBoundary} from '~/components/SceneErrorBoundary';
 import {ProvenanceCard} from '~/components/ProvenanceCard';
-import {AnimatedNumber} from '~/components/AnimatedNumber';
 import {WatchCard} from '~/components/WatchCard';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 import {copy, copyText, editAttrs} from '~/lib/copy';
@@ -60,13 +60,14 @@ import {
 } from '~/components/ProductReviews';
 import {OshwaMark} from '~/components/OshwaMark';
 import {useNoHover, useIsMobile} from '~/lib/use-media-query';
-import {GpsrBlock, safetyKind} from '~/components/GpsrBlock';
+import {GpsrBlock, buyerFacts, safetyKind} from '~/components/GpsrBlock';
 import {
   PRODUCT_CONTENT,
   PRODUCT_CONTENT_FALLBACK,
   isComingSoon,
   isConceptFor,
   isInternalSku,
+  imagesAreRenders,
   isPurchasableStatus,
   variantDisplayName,
 } from '~/lib/product-content';
@@ -120,6 +121,12 @@ function fill(template: string, vars: Record<string, string | number>): string {
 /** Copy with a readable fallback while a key is missing from the copy file. */
 function say(id: string, fallback: string, vars: Record<string, string | number> = {}): string {
   return fill(copyText(id) ?? fallback, vars);
+}
+
+/** The first sentence of a paragraph ("... drone's onboard computer."). */
+function firstSentence(text: string): string {
+  const match = /^.+?[.!?](?=\s|$)/.exec(text.trim());
+  return match ? match[0] : text.trim();
 }
 
 /** Largest quantity one add may ask for: the cart action's per-line cap. */
@@ -492,6 +499,11 @@ function ClientFrameViewer(props: FrameViewerProps) {
 /** DOM ids of the spec and box chapters, for the "At a glance" links. */
 const SPECS_ID = 'specs';
 const IN_THE_BOX_ID = 'in-the-box';
+/** DOM id of the "How the versions differ" table, for the model picker. */
+const COMPARE_ID = 'compare-versions';
+/** Model values that belong to a 5-inch build. The homepage tour is a
+ *  3-inch drone, so these link to the build guide instead. */
+const FIVE_INCH_MODELS = new Set(['30×30', '5" Freestyle', '2207']);
 
 /**
  * One row of a spec table. A row name with a plain-language line in
@@ -504,13 +516,11 @@ function SpecRow({
   value,
   nameProps,
   valueProps,
-  animate = false,
 }: {
   name: string;
   value: string;
   nameProps?: Record<string, string>;
   valueProps?: Record<string, string>;
-  animate?: boolean;
 }) {
   const help = specHelp(name);
   const [open, setOpen] = useState(false);
@@ -532,7 +542,7 @@ function SpecRow({
           </button>
         ) : null}
       </dt>
-      <dd {...valueProps}>{animate ? <AnimatedNumber value={value} /> : value}</dd>
+      <dd {...valueProps}>{value}</dd>
       {help ? (
         <dd id={helpId} className="spec-help-text" hidden={!open}>
           {help}
@@ -543,58 +553,69 @@ function SpecRow({
 }
 
 /**
- * The preorder price ladder under the price: every step as plain text, the
- * step the next unit falls in marked "now". The steps come from
- * `priceLadder()` over the Shopify retail price, so they match what the
- * price-step writer charges.
+ * The preorder price steps under the price: every step as an absolute
+ * price with no reduction claim (no retail price was ever charged, so a
+ * "% off" would be a price-reduction claim under Directive 98/6/EC art.
+ * 6a). The rows count units sold in the shop, not units in one order, and
+ * say so. The step the next unit falls in is marked "now". Under the
+ * table ONE availability line: units left at this price and, for paid
+ * stock, what is left in the batch. The steps come from `priceLadder()`
+ * over the Shopify retail price, so they match what the price-step writer
+ * charges.
  */
 function PriceLadder({
   steps,
   nextUnit,
   left,
   currency,
+  batchLine,
 }: {
   steps: LadderStep[];
   nextUnit: number;
   /** Units left at the current step's price. */
   left: number;
   currency: string;
+  /** The paid batch in words ("Batch 1: 250 made, 250 left"), or null. */
+  batchLine: string | null;
 }) {
+  const currentStep = steps.find(
+    (step) => nextUnit >= step.from && (step.to === null || nextUnit <= step.to),
+  );
+  const leftLine =
+    currentStep && currentStep.to !== null && left > 0
+      ? say('product-chrome.ladder_left_at', '{left} left at {price}', {
+          left,
+          price: formatPrice(currentStep.price, currency),
+        })
+      : null;
   return (
     <div className="product-price-ladder">
       <p className="product-price-ladder-head">
-        {say('product-chrome.ladder_price_head', 'Price by units ordered of this option')}
+        {say('product-chrome.ladder_early_head', 'Early-order price')}
+      </p>
+      <p className="product-price-ladder-sub">
+        {say(
+          'product-chrome.ladder_early_sub',
+          'The same for every buyer. It goes up as more of this model are sold in the shop, not with how many you buy.',
+        )}
       </p>
       <ol>
         {steps.map((step, i) => {
-          const current =
-            nextUnit >= step.from && (step.to === null || nextUnit <= step.to);
-          const off = PRICE_TIERS[i]?.off;
+          const current = step === currentStep;
           const range =
             step.to === null
-              ? say('product-chrome.ladder_price_open', 'From unit {from}', {from: step.from})
-              : say('product-chrome.ladder_price_range', 'Units {from}-{to}', {
-                  from: step.from,
-                  to: step.to,
-                });
+              ? say('product-chrome.ladder_after', 'After that')
+              : i === 0
+                ? say('product-chrome.ladder_first', 'First {count} sold', {count: step.to})
+                : say('product-chrome.ladder_next', 'Next {count} sold', {
+                    count: step.to - step.from + 1,
+                  });
           const past = step.to !== null && nextUnit > step.to;
-          // Every discounted step names its discount, the current one too,
-          // and the current one says the count is of units at this price
-          // (the batch meter below counts the whole batch).
-          const offLabel =
-            step.to === null
-              ? say('product-chrome.ladder_price_retail', 'retail')
-              : say('product-chrome.ladder_price_off', '{off}% off retail', {
-                  off: Math.round((off ?? 0) * 100),
-                });
           const note = past
             ? say('product-chrome.ladder_price_past', 'sold out')
-            : current && step.to !== null
-              ? say('product-chrome.ladder_price_now_left', '{off} · {left} left at this price', {
-                  off: offLabel,
-                  left,
-                })
-              : offLabel;
+            : current
+              ? say('product-chrome.ladder_now', 'now')
+              : '';
           return (
             <li
               key={step.from}
@@ -610,6 +631,11 @@ function PriceLadder({
           );
         })}
       </ol>
+      {leftLine || batchLine ? (
+        <p className="product-price-ladder-left">
+          {[leftLine, batchLine].filter(Boolean).join(' · ')}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -1797,6 +1823,7 @@ function ProductPage() {
         activeValue={activeTier}
         onSelect={selectTier}
         showPrices={!soon}
+        compareHref={comparison ? `#${COMPARE_ID}` : undefined}
       />
     ) : null;
   // Compact (name-pill) variant switcher for the pinned MOBILE buy bar - keeps
@@ -1903,8 +1930,8 @@ function ProductPage() {
   const dutiesNote =
     quote && !quote.blocked && quote.duty === 'us'
       ? say(
-          'product-chrome.buy_duties_us',
-          'No import duties are charged at checkout. The carrier collects US import duty and fees on delivery. For electronics made in China this duty is high, often around 35 to 40% of the value for boards.',
+          'product-chrome.buy_duties_us_parts',
+          'No import duties are charged at checkout. The carrier collects US import duty and fees on delivery. US import duty on parts made in China is high, often around 35 to 40% of the value.',
         )
       : quote && !quote.blocked && quote.duty === 'intl'
         ? say(
@@ -2103,6 +2130,15 @@ function ProductPage() {
           nextUnit={campaign.ordered + 1}
           left={campaign.tierLeft}
           currency={currency}
+          batchLine={
+            campaign.paidStock
+              ? say('product-chrome.ladder_batch_left', 'Batch {batch}: {units} made, {left} left', {
+                  batch: campaign.batch,
+                  units: campaign.batchUnits,
+                  left: paidLeft ?? campaign.batchUnits - campaign.batchOrdered,
+                })
+              : null
+          }
         />
       ) : null}
       <p className="product-buy-ship">
@@ -2112,6 +2148,14 @@ function ProductPage() {
         </Link>
       </p>
       {dutiesNote ? <p className="product-buy-duties">{dutiesNote}</p> : null}
+      {quote && !quote.blocked && paysInOtherCurrency(quote.country) ? (
+        <p className="product-buy-duties">
+          {say(
+            'product-chrome.buy_currency_note',
+            'Prices are in euro. Your card issuer converts at its own rate.',
+          )}
+        </p>
+      ) : null}
       {/* Pre-order: the stock line carries the catalog ship promise (the
           product's own, else the shop-wide default). The catalog
           availability still decides whether the buy button is enabled. */}
@@ -2154,13 +2198,24 @@ function ProductPage() {
           The numbers and the ship promise above come from the same catalog
           read. */}
       {campaignTerms ? <p className="product-buy-terms">{campaignTerms}</p> : null}
+      {/* Paid stock with the price steps shown: the steps' availability
+          line already says what is left, so only the explainer link stays.
+          A funding target keeps its progress bar. The batch list lives on
+          /preorder, behind that link. */}
       {campaign ? (
-        <PreorderMeter
-          campaign={campaign}
-          priceAfter={selectedVariant?.priceAfter}
-          showEarly={!ladder}
-          showBatchPromise={false}
-        />
+        ladder && campaign.paidStock ? (
+          <Link className="funding-meter-link" prefetch="intent" to="/preorder">
+            {copyText('preorder.meter_link') ?? 'How preorders work'}
+          </Link>
+        ) : (
+          <PreorderMeter
+            campaign={campaign}
+            priceAfter={selectedVariant?.priceAfter}
+            showEarly={!ladder}
+            showBatchPromise={false}
+            showBatches={false}
+          />
+        )
       ) : null}
       {/* Sold-out signup: not for pre-order products, whose "unavailable"
           is a catalog availability state, not a launch to be notified of. */}
@@ -2198,9 +2253,15 @@ function ProductPage() {
       >
         <li>{say('product-chrome.buy_trust_checkout', 'Secure checkout by Shopify')}</li>
         <li>
-          <Link prefetch="intent" to="/herroepingsrecht">
-            {say('product-chrome.buy_trust_withdrawal', '14-day right of withdrawal')}
-          </Link>
+          {preorder && !isBundle ? (
+            <Link prefetch="intent" to="/preorder#how-it-works">
+              {say('product-chrome.buy_trust_cancel', 'Cancel any time before delivery, full refund')}
+            </Link>
+          ) : (
+            <Link prefetch="intent" to="/herroepingsrecht">
+              {say('product-chrome.buy_trust_withdrawal', '14-day right of withdrawal')}
+            </Link>
+          )}
         </li>
         <li>
           <Link prefetch="intent" to="/warranty">
@@ -2213,6 +2274,7 @@ function ProductPage() {
           </Link>
         </li>
       </ul>
+      <p className="product-buy-facts">{buyerFacts(safetyKind(product.handle))}</p>
     </div>
   );
 
@@ -2227,6 +2289,14 @@ function ProductPage() {
   // teardown chapter (the board no longer pins full-screen there) so variant/SKU
   // switching is reachable everywhere on the page, not just above the fold.
   const railSuppressed = railPinned && asideType !== 'closed';
+  // "What does this do?" in one or two plain lines under the name: the
+  // first sentence of the beginner intro plus where the part sits, for
+  // products whose hero has no lead of its own.
+  const heroLeadFromIntro = content.whatIsThis
+    ? [firstSentence(content.whatIsThis.intro), content.whatIsThis.fit]
+        .filter(Boolean)
+        .join(' ')
+    : '';
   // Coming soon (alpha): there is nothing to buy, and a notify form fixed to
   // the viewport would be noise, so the pinned copy carries the ladder ALONE.
   // The variants are the whole point of an alpha page, so switching them stays
@@ -2400,13 +2470,19 @@ function ProductPage() {
               the "zoom out" for the reader who wants the full picture. The
               hash opens the walkthrough ON this product's part (the hero
               maps `motors` to its singular beat id). */}
-          <Link
-            prefetch="viewport"
-            to={wit.chain ? `/#${wit.chain}` : '/'}
-            className="what-home-link"
-          >
-            <Txt id="product-chrome.what_is_this_link_home" />
-          </Link>
+          {FIVE_INCH_MODELS.has(activeTier) ? (
+            <Link prefetch="viewport" to="/products#new-to-fpv" className="what-home-link">
+              {say('product-chrome.what_is_this_link_build', 'The parts of a 5-inch drone, and what else you need →')}
+            </Link>
+          ) : (
+            <Link
+              prefetch="viewport"
+              to={wit.chain ? `/#${wit.chain}` : '/'}
+              className="what-home-link"
+            >
+              <Txt id="product-chrome.what_is_this_link_home" />
+            </Link>
+          )}
         </Chapter>
       );
     },
@@ -2804,6 +2880,14 @@ function ProductPage() {
               </section>
             </div>
           )}
+          {!frameViewer && activeBoardArt ? (
+            <p className="teardown-render-note">
+              {say(
+                'product-chrome.teardown_render_note',
+                'Rendered from the design files, so the silkscreen can differ. The board you receive is the one in the product photos.',
+              )}
+            </p>
+          ) : null}
           {!frameViewer && activeBoardArt?.inspectUrl ? (
             <a
               className="board-art-inspect teardown-inspect"
@@ -2827,10 +2911,8 @@ function ProductPage() {
           noMedia
         >
           <dl className="spec-table">
-            {/* Count-up on the numeric runs the first time the table
-                scrolls into view. spec-table already sets tabular-nums, so
-                digits don't jitter mid-count; reduced-motion and
-                variant-switch re-renders are handled inside. */}
+            {/* Final values only, never a count-up: a buyer who reads or
+                screenshots a spec must never see a wrong current or voltage. */}
             {mergedSpecs.map(([k, v]) => (
               <SpecRow
                 key={k}
@@ -2838,12 +2920,11 @@ function ProductPage() {
                 value={v}
                 nameProps={prodEdit(`${specEditBase(k)}.0`)}
                 valueProps={prodEdit(`${specEditBase(k)}.1`)}
-                animate
               />
             ))}
           </dl>
           {comparison ? (
-            <div className="variant-compare-wrap">
+            <div className="variant-compare-wrap" id={COMPARE_ID}>
               <table className="variant-compare">
                 <caption>{copyText('product-chrome.compare_caption') ?? 'How the versions differ'}</caption>
                 <thead>
@@ -2867,7 +2948,8 @@ function ProductPage() {
               </table>
             </div>
           ) : null}
-          {content.footnote ? (
+          {/* Printed once: the glance box above already carries it. */}
+          {content.footnote && !glanceRows.length ? (
             <p className="chapter-footnote" {...prodEdit('footnote')}>
               {content.footnote}
             </p>
@@ -3160,7 +3242,14 @@ function ProductPage() {
       {/* === HERO: gallery left, copy + sticky buy module right === */}
       <section className="product-hero" ref={heroSectionRef}>
         <div className="product-hero-gallery-col">
-          <div className="product-hero-media">
+          <div
+            className={`product-hero-media${
+              galleryImages.length && imagesAreRenders(product.handle) ? ' is-render' : ''
+            }`}
+          >
+            {galleryImages.length && imagesAreRenders(product.handle) ? (
+              <span className="render-chip">{say('product-chrome.render_chip', 'Render')}</span>
+            ) : null}
             <ProductGallery
               images={galleryImages}
               activeImageId={selectedVariant?.image?.id ?? null}
@@ -3173,13 +3262,11 @@ function ProductPage() {
 
         <div className="product-hero-copy">
           <p className="product-hero-eyebrow">
-            {/* A resold part without an editorial file has no file number:
-                its eyebrow is the catalog product type alone. */}
+            {/* The product type only: the internal file number meant nothing
+                to a buyer. A resold part without an editorial file shows the
+                catalog product type. */}
             {content.fileNumber !== '-' ? (
-              <>
-                {copyText('product-chrome.hero_eyebrow_file')} {content.fileNumber} ·{' '}
-                <span {...prodEdit('family')}>{content.family}</span>
-              </>
+              <span {...prodEdit('family')}>{content.family}</span>
             ) : (
               <span>{product.productType || content.family}</span>
             )}
@@ -3214,10 +3301,22 @@ function ProductPage() {
               <span>{title}</span>
             </h1>
           )}
+          {/* Phones: price and ship date right under the name, so the
+              buyer does not scroll past the gallery and chips to find them.
+              Hidden from 720px, where the buy box sits beside the gallery. */}
+          {!soon && buyPrice ? (
+            <p className="product-hero-price-mobile">
+              <strong>{formatPrice(buyPrice.amount, buyPrice.currencyCode)}</strong>
+              {vatNote ? <span> {vatNote}</span> : null}
+              {preorder && shipPromise ? <span> · {shipPromise}</span> : null}
+            </p>
+          ) : null}
           {content.hero.lead ? (
             <p className="product-hero-lead" {...prodEdit('hero.lead')}>
               {content.hero.lead}
             </p>
+          ) : heroLeadFromIntro ? (
+            <p className="product-hero-lead">{heroLeadFromIntro}</p>
           ) : null}
 
           <ul

@@ -93,7 +93,7 @@ export const SPEC_HELP: Readonly<Record<string, string>> = {
   Mounting: 'Spacing of the mounting holes. A flight controller, ESC and frame stack together when they share it: 20 × 20 with 20 × 20, 30.5 × 30.5 with 30.5 × 30.5.',
   'Stack mounting': 'Hole patterns in the middle of the frame for the flight controller and ESC stack.',
   'Motor mounting': 'Bolt pattern at each arm tip. The base of your motors must match it.',
-  'Frame fit': 'Which OpenDrone frames this board bolts into.',
+  'Frame fit': 'Frames this board bolts into: any frame with the same stack mounting holes. OpenDrone frames are named as examples.',
   Frame: 'The OpenDrone frame this motor is sized for.',
   Input: 'Battery voltage it accepts. "S" is the number of LiPo cells in series; one full cell is 4.2 V.',
   UARTs: 'Serial ports for add-ons such as the receiver, a GPS or a digital video system. More ports, more add-ons.',
@@ -329,6 +329,9 @@ export type VariantContent = {
   /** One plain line shown under this variant's cart line: what is not final
    *  about it and what the buyer can do (OpenMotor 5": stator and KV). */
   cartNote?: string;
+  /** One plain line on the model card saying who this version is for
+   *  ("Also receives 900 MHz. Only useful if..."). Published facts only. */
+  pickIf?: string;
 };
 
 export type ProductContent = {
@@ -462,6 +465,10 @@ export type ProductContent = {
    *  and the cards: "per motor" for a product sold singly that buyers
    *  expect in sets of four. Unset prints nothing. */
   priceUnit?: string;
+  /** The product images are CAD renders, not photos: cards and the
+   *  gallery set them on the paper tone of the board photos and label them
+   *  "Render". */
+  imagesAreRenders?: boolean;
 };
 
 /*
@@ -853,3 +860,8 @@ export const PRODUCT_CONTENT_FALLBACK: ProductContent = loadedFallback ?? {
   downloads: [],
   specs: [],
 };
+
+/** Whether a product's images are CAD renders rather than photos. */
+export function imagesAreRenders(handle: string | null | undefined): boolean {
+  return Boolean(handle && PRODUCT_CONTENT[handle]?.imagesAreRenders);
+}

@@ -8,7 +8,6 @@ import {useAside} from '~/components/Aside';
 import {LangToggle, legalHref, useLegalLocale} from '~/components/LangToggle';
 import {ThemeToggle} from '~/components/ThemeToggle';
 import {SiteWordmark} from '~/components/SiteWordmark';
-import {IncutecWordmark} from '~/components/IncutecWordmark';
 import {Pod} from '~/components/Pod';
 import {
   ProductPods,
@@ -17,7 +16,6 @@ import {
 } from '~/components/ProductPods';
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
-import {INCUTEC_HINT_SEEN_KEY} from '~/lib/incutec-hint';
 import {
   useProductStatusResolver,
   useRoadmapStatusResolver,
@@ -36,15 +34,43 @@ import type {
   ProductVariantFragment,
 } from '~/lib/product-shapes';
 
-/** Retire the hero "Who's incutec?" hint: persist the dismissal and pull the
- *  class so it can't flash on a same-session SPA return to the homepage. */
-function dismissIncutecHint() {
-  try {
-    localStorage.setItem(INCUTEC_HINT_SEEN_KEY, '1');
-  } catch {
-    /* storage blocked (private mode) - the nudge just isn't persisted */
-  }
-  document.documentElement.classList.remove('hero-incutec-hint');
+/**
+ * On short viewports (a phone held upright, under 600px tall) the floating
+ * header pill slides away while the reader scrolls down and comes back on
+ * the first scroll up, so it never sits over the price table or the buy
+ * button. Taller screens keep it pinned. Sets `html.header-hidden`.
+ */
+function useHeaderAutoHide() {
+  useEffect(() => {
+    const root = document.documentElement;
+    const short = window.matchMedia('(max-height: 600px)');
+    let lastY = window.scrollY;
+    let ticking = false;
+    const update = () => {
+      ticking = false;
+      const y = window.scrollY;
+      const delta = y - lastY;
+      if (!short.matches || y < 80) {
+        root.classList.remove('header-hidden');
+      } else if (delta > 6) {
+        root.classList.add('header-hidden');
+      } else if (delta < -6) {
+        root.classList.remove('header-hidden');
+      }
+      if (Math.abs(delta) > 6 || y < 80) lastY = y;
+    };
+    const onScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        window.requestAnimationFrame(update);
+      }
+    };
+    window.addEventListener('scroll', onScroll, {passive: true});
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      root.classList.remove('header-hidden');
+    };
+  }, []);
 }
 
 /** A product as the header reads it: a catalog card. */
@@ -83,13 +109,28 @@ const MOTORS_LINK = {
   to: '/products/openmotor',
   type: 'Motors',
 };
+/** What each short family label means, for a buyer new to FPV: shown as
+ *  the link's tooltip and spelled out on wide screens. */
+const FAMILY_HINT: Record<string, string> = {
+  'Flight Controller': 'Flight controller: the onboard computer',
+  '4-in-1 ESC': 'ESC: drives the four motors',
+  'ELRS Receiver': 'Receiver: picks up your radio',
+};
 const CATEGORY_LINKS = [
   ...FAMILIES.map((f) => ({
     label: f.short,
+    long: f.long,
+    hint: FAMILY_HINT[f.type] ?? f.long,
     to: f.to,
     type: f.type,
   })),
-  {label: MOTORS_LINK.label, to: MOTORS_LINK.to, type: MOTORS_LINK.type},
+  {
+    label: MOTORS_LINK.label,
+    long: MOTORS_LINK.long,
+    hint: MOTORS_LINK.long,
+    to: MOTORS_LINK.to,
+    type: MOTORS_LINK.type,
+  },
 ];
 
 /** Fuller family names for the mobile drawer (the desktop FamilyNav chips
@@ -127,59 +168,23 @@ export function Header({
   familyProducts,
   shopOpen = false,
 }: HeaderProps) {
-  // Dynamic-Island logo slot. On the hero ("/") the OpenDrone wordmark already
-  // lives bottom-left in the 3D scene, so the bar instead credits the parent
-  // company - the Incutec mark linking to incutec.eu (OpenDrone is an Incutec
-  // product brand). On every other route the slot is the OpenDrone wordmark
-  // home link. The slot is a fixed width so the nav chips never shift between
-  // routes; view-transition-name animates the swap across navigations.
-  const {pathname} = useLocation();
-  const isHero = pathname === '/';
+  // The logo slot is the OpenDrone wordmark home link on every route,
+  // the homepage included: a buyer always sees whose shop this is. Incutec,
+  // the company that runs the shop, is credited in the footer.
+  useHeaderAutoHide();
   return (
     <header className="site-header">
       <div className="site-header-main">
-        {/* Left: brand slot - OpenDrone home link, or Incutec credit on the hero.
-            On the hero the mark links to the in-site Incutec company page, and a
-            "Who's incutec?" hint drops out from under it a beat after the header
-            lands (gated on `html.hero-incutec-hint`, set by the homepage). */}
-        {isHero ? (
-          <span className="site-header-incutec-slot">
-            <NavLink
-              prefetch="intent"
-              to="/incutec"
-              className="site-header-logo site-header-logo--incutec"
-              aria-label={
-                copyText('chrome.incutec_logo_aria') ??
-                'Incutec, the company behind OpenDrone'
-              }
-              style={{viewTransitionName: 'site-logo'}}
-              onClick={dismissIncutecHint}
-            >
-              <IncutecWordmark className="site-header-incutec" />
-            </NavLink>
-            <NavLink
-              prefetch="intent"
-              to="/incutec"
-              className="incutec-hint"
-              tabIndex={-1}
-              aria-hidden="true"
-              onClick={dismissIncutecHint}
-            >
-              <Txt id="chrome.incutec_hint" />
-            </NavLink>
-          </span>
-        ) : (
-          <NavLink
-            prefetch="viewport"
-            to="/"
-            end
-            className="site-header-logo"
-            aria-label="OpenDrone"
-            style={{viewTransitionName: 'site-logo'}}
-          >
-            <SiteWordmark className="site-header-wordmark" />
-          </NavLink>
-        )}
+        <NavLink
+          prefetch="viewport"
+          to="/"
+          end
+          className="site-header-logo"
+          aria-label="OpenDrone"
+          style={{viewTransitionName: 'site-logo'}}
+        >
+          <SiteWordmark className="site-header-wordmark" />
+        </NavLink>
 
         {/* Center: primary nav + gold category links on the same row */}
         <HeaderMenu viewport="desktop" accountUrl={accountUrl} />
@@ -459,8 +464,10 @@ function FamilyNav({
           prefetch="viewport"
           to={cat.to}
           aria-expanded={open === cat.label}
+          title={cat.hint}
         >
-          {cat.label}
+          <span className="header-cat-short">{cat.label}</span>
+          <span className="header-cat-long">{cat.long}</span>
         </NavLink>
         <div className="header-cat-pod-wrap">
           <AnimatePresence>
@@ -489,18 +496,9 @@ function FamilyNav({
 
   return (
     <nav className="site-header-categories" aria-label="Product categories">
-      {/* FC and ESC share one bubble (a stack is bought from their rows);
-          RX stands alone; Frame and Motors share the last bubble, which
-          keeps the row inside the header pill at 1024px. */}
-      <span className="site-header-cat-group">
-        {CATEGORY_LINKS.slice(0, 2).map(chip)}
-      </span>
-      <span className="site-header-cat-group">
-        {CATEGORY_LINKS.slice(2, 3).map(chip)}
-      </span>
-      <span className="site-header-cat-group">
-        {CATEGORY_LINKS.slice(3).map(chip)}
-      </span>
+      {/* One plain text row: the family names, then All products. Gold is
+          kept for the purchase buttons, so the nav reads as navigation. */}
+      {CATEGORY_LINKS.map(chip)}
       <NavLink
         prefetch="viewport"
         to="/products"

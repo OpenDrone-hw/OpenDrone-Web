@@ -30,6 +30,7 @@ export function VariantLadder({
   onSelect,
   compact = false,
   showPrices = false,
+  compareHref,
 }: {
   axis: string;
   variants: Record<string, VariantContent>;
@@ -43,6 +44,9 @@ export function VariantLadder({
   /** Print each tier's price on its card. Off while the product is not
    *  for sale, so a locked page never shows a price. */
   showPrices?: boolean;
+  /** Anchor of the full "How the versions differ" table, linked next to the
+   *  axis label. */
+  compareHref?: string;
 }) {
   const navigate = useNavigate();
   // The tier card previews instantly via onSelect, but price/stock/cart wiring
@@ -81,6 +85,11 @@ export function VariantLadder({
           <span className="variant-ladder-axis-hint">
             {copyText('product-chrome.ladder_axis_hint')}
           </span>
+          {compareHref ? (
+            <a className="variant-ladder-compare" href={compareHref}>
+              {copyText('product-chrome.ladder_compare') ?? 'Compare versions'}
+            </a>
+          ) : null}
         </p>
       )}
       <div className="variant-ladder-track">
@@ -178,10 +187,29 @@ export function VariantLadder({
                   ))}
                 </span>
               )}
+              {/* Which frame the size fits, read from the tier's own "Frame
+                  fit" spec, and who the tier is for: never hand-written
+                  here, so the card cannot drift from the spec table. */}
+              {compact ? null : frameFit(content) ? (
+                <span className="variant-tier-fit">
+                  {(copyText('product-chrome.ladder_fits') ?? 'Fits {fit}').replace(
+                    '{fit}',
+                    frameFit(content) ?? '',
+                  )}
+                </span>
+              ) : null}
+              {compact || !content.pickIf ? null : (
+                <span className="variant-tier-fit">{content.pickIf}</span>
+              )}
             </button>
           );
         })}
       </div>
     </div>
   );
+}
+
+/** The tier's "Frame fit" spec value, when it has one. */
+function frameFit(content: VariantContent): string | null {
+  return content.specs?.find(([key]) => key === 'Frame fit')?.[1] ?? null;
 }

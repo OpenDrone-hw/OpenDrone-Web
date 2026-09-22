@@ -367,7 +367,7 @@
       "specs": [
         [
           "Frame fit",
-          "OpenFrame 3\" and 5\""
+          "20 × 20 mm stack frames, such as OpenFrame 3\" and 5\""
         ]
       ]
     },
@@ -407,7 +407,7 @@
         ],
         [
           "Frame fit",
-          "OpenFrame 5\" only"
+          "30.5 × 30.5 mm stack frames, such as OpenFrame 5\""
         ]
       ],
       "pins": [

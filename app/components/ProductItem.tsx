@@ -10,7 +10,7 @@ import type {
 } from '~/lib/product-shapes';
 import {useVariantUrl} from '~/lib/variants';
 import {useProductStatus, useRoadmapStatus} from '~/lib/coming-soon';
-import {PRODUCT_CONTENT, isPurchasableStatus} from '~/lib/product-content';
+import {PRODUCT_CONTENT, imagesAreRenders, isPurchasableStatus} from '~/lib/product-content';
 import {AddToCartButton} from './AddToCartButton';
 import {StackQuickAdd, type StackOffer} from './StackQuickAdd';
 import {copyText} from '~/lib/copy';
@@ -179,10 +179,41 @@ export function ProductItem({
       ? !quickAdd.available
       : product.variants.nodes.length > 0 &&
         product.variants.nodes.every((v) => !v.availableForSale));
+  // The card's own variant (the quick-add one, else the first campaign
+  // SKU) says when it ships: paid stock carries its date, a funding target
+  // its target and deadline. Same campaign data as the product page.
+  const cardVariant =
+    product.variants.nodes.find((v) => quickAdd && v.cartAddUrl === quickAdd.href) ??
+    product.variants.nodes.find((v) => v.campaign) ??
+    null;
+  const campaign = status === 'preorder' && !comingSoon ? (cardVariant?.campaign ?? null) : null;
+  const shipState = campaign
+    ? campaign.paidStock
+      ? {
+          cls: 'is-ships',
+          badge: shortShipDate(campaign.shipPromise) ?? (copyText('product-chrome.card_badge_paid') ?? 'Paid stock'),
+          line: capitalize(campaign.shipPromise),
+        }
+      : campaign.target !== null && !campaign.targetReached
+        ? {
+            cls: 'is-target',
+            badge: copyText('product-chrome.card_badge_target') ?? 'Funding target',
+            line: (copyText('product-chrome.card_line_target') ?? 'Target {target} by {deadline}')
+              .replace('{target}', String(campaign.target))
+              .replace('{deadline}', campaign.deadline ?? ''),
+          }
+        : {
+            cls: 'is-ships',
+            badge: copyText('product-chrome.card_badge_funded') ?? 'Target reached',
+            line: capitalize(campaign.shipPromise),
+          }
+    : null;
   const badge = soldOut ? (
     <span className="product-card-badge is-soldout">
       {copyText('product-chrome.buy_stock_out') ?? 'Sold out'}
     </span>
+  ) : shipState ? (
+    <span className={`product-card-badge ${shipState.cls}`}>{shipState.badge}</span>
   ) : status === 'preorder' && !comingSoon ? (
       <span className="product-card-badge is-preorder">
         {copyText('product-chrome.card_badge_preorder')}
@@ -300,8 +331,15 @@ export function ProductItem({
 
   const inner = (
     <>
-      <div className={`product-card-media${image ? '' : ' is-empty'}`}>
+      <div
+        className={`product-card-media${image ? '' : ' is-empty'}${
+          image && imagesAreRenders(product.handle) ? ' is-render' : ''
+        }`}
+      >
         {badge}
+        {image && imagesAreRenders(product.handle) ? (
+          <span className="render-chip">{copyText('product-chrome.render_chip') ?? 'Render'}</span>
+        ) : null}
         {image ? (
           <SmoothImage
             alt={image.altText || product.title}
@@ -323,6 +361,9 @@ export function ProductItem({
           <h2 className="product-card-title">{displayTitle}</h2>
           {showPrice ? priceLabel(price.amount, price.currencyCode, fromPrice) : null}
         </div>
+        {shipState && !soldOut && shipState.line ? (
+          <p className="product-card-ship">{shipState.line}</p>
+        ) : null}
         {'productType' in product && product.productType ? (
           <p className="product-card-meta">{product.productType}</p>
         ) : null}
@@ -391,4 +432,23 @@ export function ProductItem({
       {modelStrip}
     </div>
   );
+}
+
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+/** "ships late October 2026" -> "Ships Oct 2026"; null without a month. */
+function shortShipDate(promise: string): string | null {
+  const match = new RegExp(`(${MONTHS.join('|')}) (\\d{4})`).exec(promise);
+  if (!match) return null;
+  return (copyText('product-chrome.card_badge_ships') ?? 'Ships {date}').replace(
+    '{date}',
+    `${match[1].slice(0, 3)} ${match[2]}`,
+  );
+}
+
+function capitalize(text: string): string {
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) : text;
 }

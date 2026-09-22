@@ -19,6 +19,7 @@ export function PreorderMeter({
   compact = false,
   showEarly = true,
   showBatchPromise = true,
+  showBatches = true,
 }: {
   campaign: CampaignState;
   /** Shopify's compare-at price: the price once the target is reached. */
@@ -30,6 +31,9 @@ export function PreorderMeter({
   /** The current batch row repeats the ship promise. The product page
    *  turns it off where the ship promise already sits on the stock line. */
   showBatchPromise?: boolean;
+  /** The per-batch list. The product page turns it off: the batches are
+   *  explained on /preorder, behind the "How preorders work" link. */
+  showBatches?: boolean;
 }) {
   const view = meterView(
     campaign,
@@ -58,7 +62,7 @@ export function PreorderMeter({
       {showEarly && view.early ? (
         <span className="funding-meter-label">{view.early}</span>
       ) : null}
-      {campaign.batches.length > 1 ? (
+      {showBatches && campaign.batches.length > 1 ? (
         <ol className="funding-meter-batches">
           {campaign.batches.map((b) => (
             <li key={b.batch} data-batch-status={b.status}>

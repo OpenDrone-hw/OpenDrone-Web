@@ -7,7 +7,8 @@ import type {StackOffer} from '~/components/StackQuickAdd';
 import type {MoneyV2, ProductCardFragment} from '~/lib/product-shapes';
 import {formatPrice, toCards} from '~/lib/catalog';
 import {CAMPAIGN} from '~/lib/catalog-client';
-import {buyUrl, commerceHandoff} from '~/lib/shop-links';
+import {buyUrl, commerceHandoff, type CommerceHandoff} from '~/lib/shop-links';
+import {AddToCartButton} from '~/components/AddToCartButton';
 import {FAMILIES} from '~/lib/families';
 import {buildOf, parseBuilds} from '~/lib/build-recommendations';
 import buildsJson from '../../content/builds.json';
@@ -197,11 +198,86 @@ function firmwareOf(handle: string): string | null {
 function sizes(s: string): string {
   return s.replace(/(\d)\s*-?\s*(?:"|”|inch(?:es)?\b|in\b)/g, '$1inch');
 }
+/**
+ * A term as search words: normalised, sizes joined, and the radio bands
+ * buyers type ("868", "915 MHz", "900mhz") read as the spec tables' own
+ * word for them, "sub-GHz".
+ */
+function termWords(term: string): string[] {
+  return sizes(normalise(term))
+    .replace(/\b(?:868|915|900)\s*(?:mhz)?\b/g, 'sub-ghz')
+    .split(/\s+/)
+    .filter(Boolean);
+}
 function matchesTerm(haystack: string, term: string): boolean {
-  const words = sizes(normalise(term)).split(/\s+/).filter(Boolean);
+  const words = termWords(term);
   if (!words.length) return true;
   const hay = sizes(normalise(haystack));
   return words.every((w) => hay.includes(w));
+}
+
+/** The words that name what a card is: its product, handle and family. */
+function familyTextOf(product: ProductCardFragment): string {
+  return sizes(
+    normalise(
+      [
+        product.title,
+        product.handle,
+        product.productType,
+        PRODUCT_CONTENT[product.handle]?.family,
+      ]
+        .filter(Boolean)
+        .join(' '),
+    ),
+  );
+}
+
+/**
+ * A search word that names a product family ("motor", "esc", "receiver")
+ * keeps only the cards of that family: "5 inch motor" lists the 5" motor,
+ * not the ESC whose spec table mentions a motor and a 5" frame. Words that
+ * name no family (sizes, specs such as "BEC") narrow nothing.
+ */
+function narrowToFamily<T extends {title: string; product: ProductCardFragment}>(
+  list: T[],
+  term: string,
+): T[] {
+  const words = termWords(term);
+  const familyWords = words.filter((w) => list.some((c) => familyTextOf(c.product).includes(w)));
+  if (!familyWords.length) return list;
+  return list.filter((c) => {
+    const own = `${sizes(normalise(c.title))} ${familyTextOf(c.product)}`;
+    return familyWords.every((w) => own.includes(w));
+  });
+}
+
+/**
+ * Searches for things this shop does not sell, or sizes it does not make,
+ * get a plain answer above the results instead of a bare "Nothing found".
+ * `surface` lists cards (`handle:option value`) worth showing when nothing
+ * else matches. The texts live in content/copy/collections-all.json.
+ */
+const SEARCH_HELP: Array<{match: RegExp; copyId: string; surface?: string[]}> = [
+  {
+    match: /\b(?:whoops?|tinywhoops?|tiny|micro|1s|65\s*mm|75\s*mm|65mm|75mm)\b/,
+    copyId: 'collections-all.help_whoop',
+    surface: ['openrx:Lite'],
+  },
+  {
+    match: /\b(?:goggles?|dji|o3|o4|avata|radio|remote|transmitter|walksnail|hdzero|vtx|camera)\b/,
+    copyId: 'collections-all.help_video_radio',
+  },
+  {
+    match: /\b(?:[6-9]|1[0-9])\s*(?:inch|in)\b|\blong\s*range\b|\blr\b|cinelifter/,
+    copyId: 'collections-all.help_size',
+  },
+  {match: /\bgps\b/, copyId: 'collections-all.help_gps'},
+];
+
+function searchHelpFor(term: string) {
+  if (!term) return null;
+  const t = sizes(normalise(term));
+  return SEARCH_HELP.find((h) => h.match.test(t)) ?? null;
 }
 
 /**
@@ -212,7 +288,7 @@ function matchesTerm(haystack: string, term: string): boolean {
  * whose spec table mentions a receiver.
  */
 function termRelevance(card: {title: string; product: ProductCardFragment}, term: string): number {
-  const words = sizes(normalise(term)).split(/\s+/).filter(Boolean);
+  const words = termWords(term);
   if (!words.length) return 0;
   const name = sizes(normalise(card.title));
   if (name === words.join(' ')) return 0;
@@ -242,10 +318,14 @@ function tierSpecValues(
 ): string[] {
   const table = new Map<string, string | null>(base);
   for (const [k, v] of overrides ?? []) table.set(k, v);
-  return [...table.values()].filter((v): v is string => Boolean(v));
+  // Label and value both, so "BEC" or "telemetry" finds the boards that
+  // list one. A row whose value is "None" is not a match for its label.
+  return [...table.entries()].flatMap(([k, v]) =>
+    v && !/^none$/i.test(v.trim()) ? [k, v] : [],
+  );
 }
 
-/** What a card is searched on: names, family, firmware and spec values. */
+/** What a card is searched on: names, family, firmware and spec rows. */
 function searchTextFor(p: ProductCardFragment, value = ''): string {
   const content = PRODUCT_CONTENT[p.handle];
   const tier = value ? content?.variants?.[value] : undefined;
@@ -436,7 +516,7 @@ export default function ProductsIndex() {
   // loader's fetch order.
   const visible = useMemo(() => {
     let list = cards;
-    if (term) list = list.filter((c) => matchesTerm(c.searchText, term));
+    if (term) list = narrowToFamily(list.filter((c) => matchesTerm(c.searchText, term)), term);
     if (activeType)
       list = list.filter((c) => (c.product.productType || 'Other') === activeType);
     if (onlySale) list = list.filter((c) => c.onSale);
@@ -477,6 +557,18 @@ export default function ProductsIndex() {
     return sorted;
   }, [cards, term, activeType, onlySale, activeBuild, activeFirmware, sort]);
 
+  // A plain answer for searches the catalog cannot meet (whoop sizes,
+  // goggles, 7 inch), and the cards worth showing when nothing matched.
+  const help = searchHelpFor(term);
+  const surfaced = useMemo(
+    () =>
+      help?.surface && visible.length === 0
+        ? cards.filter((c) => help.surface!.includes(c.key))
+        : [],
+    [help, visible.length, cards],
+  );
+  const shown = visible.length > 0 ? visible : surfaced;
+
   const setParam = (key: string, value: string | null) => {
     const next = new URLSearchParams(searchParams);
     if (value === null) next.delete(key);
@@ -513,51 +605,51 @@ export default function ProductsIndex() {
       <header className="page-header collection-header">
         <Txt id="collections-all.eyebrow" as="p" className="page-eyebrow" />
         <Txt id="collections-all.title" as="h1" className="page-title" />
+        {/* Two plain text links for a buyer who is new here: the build
+            guide further down, and what the status chips on the cards mean. */}
+        <p className="catalog-help-links">
+          <a href="#new-to-fpv">
+            <Txt id="collections-all.guide_link" fallback="New to FPV? See what a 3-inch or 5-inch build needs ↓" />
+          </a>
+          <span aria-hidden="true"> · </span>
+          <Link prefetch="viewport" to="/roadmap">
+            <Txt id="collections-all.roadmap_link" fallback="What the status labels mean" />
+          </Link>
+        </p>
         {/* The catalog is also the search page: the term filters the grid
-            below, client-side over the catalog. */}
-        <Form method="get" action="/products" className="catalog-search">
-          <div className="search-form-row catalog-search-row">
-              {carried.map((k) => (
-                <input
-                  key={k}
-                  type="hidden"
-                  name={k}
-                  value={searchParams.get(k) ?? ''}
-                />
-              ))}
+            below, client-side over the catalog. Enter submits; the
+            magnifier inside the field is the same submit for a pointer. */}
+        <Form method="get" action="/products" className="catalog-search" role="search">
+          <div className="catalog-search-field">
+            {carried.map((k) => (
               <input
-                className="search-input"
-                key={term}
-                defaultValue={term}
-                name="q"
-                placeholder={copyText('collections-all.search_placeholder')}
-                aria-label={copyText('collections-all.search_placeholder')}
-                type="search"
-                enterKeyHint="search"
-                {...editAttrs('collections-all.search_placeholder')}
+                key={k}
+                type="hidden"
+                name={k}
+                value={searchParams.get(k) ?? ''}
               />
-              <Txt
-                id="collections-all.search_submit"
-                as="button"
-                className="search-submit"
-                type="submit"
-              />
-              {/* Every card carries its roadmap status chip; the roadmap is
-                  where the vocabulary is explained, one button, beside the
-                  search box. */}
-              <Link
-                prefetch="viewport"
-                to="/roadmap"
-                className="catalog-roadmap-btn"
-              >
-                <Txt
-                  id="collections-all.roadmap_link"
-                  fallback="What the status labels mean →"
-                />
-              </Link>
-              <a href="#new-to-fpv" className="catalog-roadmap-btn">
-                <Txt id="collections-all.guide_link" fallback="New to FPV? What a build needs ↓" />
-              </a>
+            ))}
+            <input
+              className="search-input"
+              key={term}
+              defaultValue={term}
+              name="q"
+              placeholder={copyText('collections-all.search_placeholder')}
+              aria-label={copyText('collections-all.search_placeholder')}
+              type="search"
+              enterKeyHint="search"
+              {...editAttrs('collections-all.search_placeholder')}
+            />
+            <button
+              type="submit"
+              className="catalog-search-submit"
+              aria-label={copyText('collections-all.search_submit') ?? 'Search'}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <circle cx="11" cy="11" r="7" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </button>
           </div>
         </Form>
       </header>
@@ -682,9 +774,14 @@ export default function ProductsIndex() {
               </label>
             </div>
 
-            {visible.length > 0 ? (
+            {help ? (
+              <div className="catalog-search-help" role="note">
+                <Txt id={help.copyId} as="p" />
+              </div>
+            ) : null}
+            {shown.length > 0 ? (
               <div className="products-grid">
-                {visible.map((card, index) => (
+                {shown.map((card, index) => (
                   <ProductItem
                     key={card.key}
                     product={card.product}
@@ -702,7 +799,7 @@ export default function ProductsIndex() {
                   />
                 ))}
               </div>
-            ) : term ? (
+            ) : help ? null : term ? (
               <EmptyState
                 title={<Txt id="collections-all.empty_search_title" />}
                 description={<Txt id="collections-all.empty_search_body" />}
@@ -739,6 +836,8 @@ export default function ProductsIndex() {
         <BuildGuide
           products={products}
           stackShips={stackShips}
+          commerceHandoff={commerceHandoff}
+          isBuyable={(handle) => isPurchasableStatus(productStatus(handle))}
           onShowBuild={(id) => {
             const next = new URLSearchParams();
             next.set('build', id);
@@ -749,6 +848,21 @@ export default function ProductsIndex() {
       ) : null}
     </div>
   );
+}
+
+/** Each role as a plain noun, for the sentence under "Add the build". */
+const ROLE_NOUN: Record<string, string> = {
+  'flight-controller': 'flight controller',
+  esc: 'ESC',
+  frame: 'frame',
+  motors: 'motors',
+  receiver: 'receiver',
+};
+
+/** "a, b and c". */
+function listJoin(items: string[]): string {
+  if (items.length < 2) return items.join('');
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
 }
 
 /** The build guide's order of parts, with the copy key that explains each. */
@@ -771,10 +885,14 @@ const GUIDE_ROLES: Array<{role: string; copyId: string}> = [
 function BuildGuide({
   products,
   stackShips,
+  commerceHandoff,
+  isBuyable,
   onShowBuild,
 }: {
   products: CatalogProduct[];
   stackShips: string | null;
+  commerceHandoff: CommerceHandoff;
+  isBuyable: (handle: string) => boolean;
   onShowBuild: (buildId: string) => void;
 }) {
   const builds = BUILDS.builds.map((build) => {
@@ -798,12 +916,33 @@ function BuildGuide({
           to: `/products/${product.handle}${query ? `?${query}` : ''}`,
           quantity: part.quantity,
           price: variant.price,
+          sku: variant.sku ?? '',
+          // Paid stock carries its own ship date; anything else waits for
+          // its funding target.
+          tag: variant.campaign
+            ? variant.campaign.paidStock && variant.shipPromise
+              ? variant.shipPromise.replace(/^ships/, 'Ships')
+              : (copyText('collections-all.guide_tag_target') ?? 'Funding target')
+            : null,
+          waits: Boolean(variant.campaign && !variant.campaign.paidStock),
+          buyable:
+            Boolean(variant.availableForSale && variant.sku) && isBuyable(product.handle),
         },
       ];
     });
     const currency = parts[0]?.price.currencyCode ?? 'EUR';
     const total = parts.reduce((sum, p) => sum + num(p.price) * p.quantity, 0);
-    return {id: build.id, label: build.label, parts, total, currency};
+    // One add for the whole build, every line in one cart call, only when
+    // every part of it can be ordered now.
+    const complete = parts.length === build.parts.length && parts.every((p) => p.buyable);
+    const addHref = complete
+      ? buyUrl(
+          commerceHandoff,
+          parts.map((p) => ({sku: p.sku, quantity: p.quantity})),
+        )
+      : null;
+    const waiting = parts.filter((p) => p.waits).map((p) => ROLE_NOUN[p.role] ?? p.role);
+    return {id: build.id, label: build.label, parts, total, currency, addHref, waiting};
   });
   if (!builds.some((b) => b.parts.length)) return null;
   const shipNote = stackShips
@@ -831,7 +970,8 @@ function BuildGuide({
           build.parts.length ? (
             <div
               key={build.id}
-              className="rounded-[var(--r-md,12px)] border border-[var(--color-border)] bg-[var(--color-bg-card)] p-5 md:p-6"
+              id={`build-${build.id}`}
+              className="build-guide-card rounded-[var(--r-md,12px)] border border-[var(--color-border)] bg-[var(--color-bg-card)] p-5 md:p-6"
             >
               <div className="flex items-baseline justify-between gap-3 mb-4">
                 <h3 className="font-display text-lg font-bold text-[var(--color-text)]">
@@ -870,6 +1010,14 @@ function BuildGuide({
                         {part.quantity > 1 ? `${part.quantity} × ` : ''}
                         {part.name}
                       </Link>
+                      {part.tag ? (
+                        <span
+                          className="build-guide-tag"
+                          data-waits={part.waits ? '' : undefined}
+                        >
+                          {part.tag}
+                        </span>
+                      ) : null}
                       <Txt
                         id={part.copyId}
                         as="p"
@@ -884,6 +1032,28 @@ function BuildGuide({
                   </li>
                 ))}
               </ol>
+              {build.addHref ? (
+                <div className="build-guide-add">
+                  <AddToCartButton
+                    href={build.addHref}
+                    product={build.parts[0]?.role === 'flight-controller' ? 'openfc-lite' : null}
+                    revenue={{currency: build.currency, amount: build.total}}
+                    className="btn-primary build-guide-add-btn"
+                  >
+                    {(copyText('collections-all.guide_add') ?? 'Add the {label} build · {price}')
+                      .replace('{label}', build.label)
+                      .replace('{price}', formatPrice(build.total, build.currency))}
+                  </AddToCartButton>
+                  {build.waiting.length ? (
+                    <p className="build-guide-add-note">
+                      {(
+                        copyText('collections-all.guide_add_waits') ??
+                        'The {parts} are funding targets: the whole build ships in one parcel when the last of them is ready.'
+                      ).replace('{parts}', listJoin(build.waiting))}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
               <button
                 type="button"
                 onClick={() => onShowBuild(build.id)}
@@ -915,6 +1085,14 @@ function BuildGuide({
           />
           {shipNote ? <p className="mb-2">{shipNote}</p> : null}
           <Txt id="collections-all.guide_when_body" as="p" />
+        </div>
+        <div id="coming-from-dji" className="md:col-span-2 build-guide-dji">
+          <Txt
+            id="collections-all.guide_dji_title"
+            as="h3"
+            className="font-display text-base font-bold text-[var(--color-text)] mb-2"
+          />
+          <Txt id="collections-all.guide_dji_body" as="p" />
         </div>
       </div>
     </section>

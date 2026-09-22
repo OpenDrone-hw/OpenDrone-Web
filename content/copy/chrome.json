@@ -5,7 +5,7 @@
   "aside_menu_heading": "MENU",
   "cart_loading": "Loading cart ...",
   "incutec_logo_aria": "Incutec, the company behind OpenDrone",
-  "incutec_hint": "Who's incutec?",
+  "incutec_hint": "Who is Incutec?",
   "menu_toggle_aria": "Menu",
   "search_placeholder": "Search products",
   "heading_shop": "Shop",
@@ -14,7 +14,7 @@
   "heading_open_source": "Community",
   "heading_company": "Company",
   "heading_legal": "Legal",
-  "nav_all_products": "All Products",
+  "nav_all_products": "All products",
   "nav_all_products_mobile": "All products",
   "nav_home": "Home",
   "nav_newsletter": "Newsletter",
@@ -48,5 +48,6 @@
   "nav_support": "Support",
   "nav_returns": "Returns",
   "cart_aria": "Cart",
-  "footer_email_label": "Email"
+  "footer_email_label": "Email",
+  "footer_order_help": "In het Nederlands: [hoe bestellen](/preorder#nl). En français : [comment commander](/preorder#fr)."
 }

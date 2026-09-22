@@ -26,6 +26,7 @@ import {visitorCountry} from '~/lib/visitor-country';
 import {commerceHandoff, customerAccountUrl} from '~/lib/shop-links';
 import resetStyles from '~/styles/reset.css?url';
 import appStyles from '~/styles/app.css?url';
+import siteUiStyles from '~/styles/site-ui.css?url';
 import {PageLayout} from './components/PageLayout';
 import {SignalLost} from './components/SignalLost';
 import {Txt} from './components/Txt';
@@ -321,6 +322,7 @@ export function Layout({children}: {children?: React.ReactNode}) {
         />
         <link rel="stylesheet" href={resetStyles}></link>
         <link rel="stylesheet" href={appStyles}></link>
+        <link rel="stylesheet" href={siteUiStyles}></link>
         {/* Design-token overrides authored in the studio (content/theme.json).
             After the stylesheet so it wins on order, before <Meta/> so route
             styles can still override it. Empty string when nothing is

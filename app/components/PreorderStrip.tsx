@@ -3,8 +3,9 @@ import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
 
 /**
- * The homepage's launch line: preorders are open, when the stack ships, and
- * the two ways on (how preorders work, the catalogue). Rendered only while
+ * The homepage's launch line: what OpenDrone sells, that preorders are
+ * open and when the stack ships, and the two ways on (how preorders work,
+ * and what a build needs for a buyer new to FPV). Rendered only while
  * the shop is open; `ships` is the paid batch's promise from
  * `content/preorders.json`, e.g. "ships late October 2026".
  */
@@ -20,6 +21,7 @@ export function PreorderStrip({
     : '';
   return (
     <div className={`preorder-strip-home ${className}`.trim()} role="note">
+      <Txt id="home.preorder_strip_what" as="p" className="preorder-strip-home-what" />
       <p className="preorder-strip-home-text">
         <Txt id="home.preorder_strip_tag" as="strong" className="preorder-strip-home-tag" />
         {stack ? <span>{stack}</span> : null}
@@ -28,8 +30,8 @@ export function PreorderStrip({
         <Link prefetch="viewport" to="/preorder" className="preorder-strip-home-primary">
           <Txt id="home.preorder_strip_how" />
         </Link>
-        <Link prefetch="viewport" to="/products" className="preorder-strip-home-secondary">
-          <Txt id="home.preorder_strip_shop" />
+        <Link prefetch="viewport" to="/products#new-to-fpv" className="preorder-strip-home-secondary">
+          <Txt id="home.preorder_strip_new" />
         </Link>
       </p>
     </div>

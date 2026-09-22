@@ -127,6 +127,13 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
               className="text-[12px] text-[var(--color-text-muted)] mb-3 leading-relaxed"
             />
             <CompanyFooterBlock company={company} />
+            <NavLink
+              to="/open-source"
+              prefetch="intent"
+              className="mt-3 inline-flex items-center min-h-[44px] md:min-h-0 text-[12px] text-[var(--color-text-muted)] underline underline-offset-2 hover:text-[var(--color-text)]"
+            >
+              <Txt id="chrome.incutec_hint" />
+            </NavLink>
           </div>
 
           {/* Shop */}
@@ -190,6 +197,11 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
               ))}
             </nav>
             <LegalLanguages className="mt-4 text-[12px] leading-relaxed text-[var(--color-text-muted)]" />
+            <Txt
+              id="chrome.footer_order_help"
+              as="p"
+              className="mt-2 text-[12px] leading-relaxed text-[var(--color-text-muted)] [&_a]:underline [&_a]:underline-offset-2"
+            />
           </div>
         </div>
 
