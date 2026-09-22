@@ -344,7 +344,19 @@ export type VariantContent = {
    * words that match content/builds.json, no specs.
    */
   tag?: string;
+  /** Other spellings of this option value a link may carry (the visible
+   *  label `5"`, `5in`). The PDP redirects them to the catalog value. */
+  aliases?: string[];
+  /** Per-tier connector and pin-order rows, appended to the product's
+   *  `connectors`. Taken from the board repo's design notes. */
+  connectors?: Array<[string, string]>;
+  /** One short line over the gallery when this tier shows another tier's
+   *  image, e.g. "Render of the 5-inch frame". */
+  imageNote?: string;
 };
+
+/** A plain link printed under the hero lead or the model picker. */
+export type ContentLink = {label: string; href: string};
 
 export type ProductContent = {
   fileNumber: string;           // "01" etc - shown in the eyebrow
@@ -481,6 +493,22 @@ export type ProductContent = {
    *  gallery set them on the paper tone of the board photos and label them
    *  "Render". */
   imagesAreRenders?: boolean;
+  /** Units one build uses, when the product is sold singly (4 motors per
+   *  quad). The PDP starts the quantity there and the cart says so when a
+   *  line is not a whole set. */
+  setOf?: number;
+  /** One line under the hero lead, with optional links (the RX's DJI note). */
+  heroNote?: {text: string; links?: ContentLink[]};
+  /** One plain line under the model picker for a buyer unsure which
+   *  version to take. Facts already on the page only. */
+  pickNote?: string;
+  /** Extra "At a glance" rows that are not spec rows (spare arms). */
+  glanceExtra?: Array<{label: string; value: string; href?: string}>;
+  /** Connector and pin-order rows shown under the spec table, from the
+   *  board repo's design notes. Not part of the README-mirrored `specs`. */
+  connectors?: Array<[string, string]>;
+  /** One line under `connectors`. */
+  connectorsNote?: string;
 };
 
 /*
@@ -682,6 +710,34 @@ export function lineDisplayName(handle: string | null | undefined, title: string
 
 /** The cart-line note for one variant, if its content sets one. See
  *  {@link VariantContent.cartNote}. */
+/** Units one build uses for a product sold singly (4 motors), or null. */
+export function setSize(handle: string | null | undefined): number | null {
+  if (!handle) return null;
+  const n = PRODUCT_CONTENT[handle]?.setOf;
+  return n && n > 1 ? n : null;
+}
+
+/**
+ * The catalog option value a link means, when it carries an alias
+ * (`?Model=5"` for the value `2207`). Case, spaces and inch marks are
+ * ignored. Null when the value is already canonical or unknown.
+ */
+export function canonicalOptionValue(
+  handle: string | null | undefined,
+  value: string | null | undefined,
+): string | null {
+  if (!handle || !value) return null;
+  const variants = PRODUCT_CONTENT[handle]?.variants;
+  if (!variants || value in variants) return null;
+  const norm = (v: string) => v.toLowerCase().replace(/["”″\s-]|inch|in$/g, '');
+  const wanted = norm(value);
+  for (const [key, v] of Object.entries(variants)) {
+    if (norm(key) === wanted) return key;
+    if (v.aliases?.some((a) => norm(a) === wanted)) return key;
+  }
+  return null;
+}
+
 export function variantCartNote(handle: string | null | undefined, value: string | null | undefined): string | null {
   if (!handle || !value) return null;
   return PRODUCT_CONTENT[handle]?.variants?.[value]?.cartNote ?? null;

@@ -92,7 +92,7 @@
     ],
     [
       "Video systems",
-      "Analog · DJI · Walksnail · HDZero"
+      "Designed for analog, DJI, Walksnail and HDZero mounts (not yet test-fitted)"
     ],
     [
       "Material",
@@ -101,7 +101,6 @@
   ],
   "glance": [
     "Prop size",
-    "Wheelbase",
     "Stack mounting",
     "Arm thickness",
     "Video systems"
@@ -145,6 +144,12 @@
           "qty": "1×",
           "item": "Build card"
         }
+      ],
+      "aliases": [
+        "5",
+        "5\"",
+        "5in",
+        "5-inch"
       ]
     },
     "3\" Freestyle": {
@@ -210,6 +215,13 @@
           "qty": "1×",
           "item": "Build card"
         }
+      ],
+      "imageNote": "Render of the 5-inch frame. The 3-inch frame has the same layout.",
+      "aliases": [
+        "3",
+        "3\"",
+        "3in",
+        "3-inch"
       ]
     }
   },
@@ -217,5 +229,12 @@
   "keywords": [
     "frame",
     "chassis"
+  ],
+  "glanceExtra": [
+    {
+      "label": "Spare arms",
+      "value": "Sold separately. Sold out for now: get an email when they can be ordered.",
+      "href": "/products/openframe-spares"
+    }
   ]
 }

@@ -315,16 +315,15 @@
     ]
   ],
   "glance": [
-    "Continuous",
-    "Input",
-    "Mounting",
     "Frame fit",
+    "Input",
+    "Continuous",
     "FC connector"
   ],
   "optionAxis": "Model",
   "variants": {
     "20×20": {
-      "tag": "Start here · 3-inch build",
+      "tag": "Fits 3-inch and 5-inch frames",
       "oshwaUid": "BE000028",
       "highlights": [
         [
@@ -370,6 +369,11 @@
           "Frame fit",
           "20 × 20 mm stack frames, such as OpenFrame 3\" and 5\""
         ]
+      ],
+      "aliases": [
+        "20x20",
+        "2020",
+        "mini"
       ]
     },
     "30×30": {
@@ -661,6 +665,10 @@
           "qty": "1×",
           "item": "ESD bag"
         }
+      ],
+      "aliases": [
+        "30x30",
+        "3030"
       ]
     }
   },
@@ -680,5 +688,16 @@
     ],
     "matchOption": "Model"
   },
-  "footnote": "Weight is published once production boards are weighed."
+  "footnote": "Weight is published once production boards are weighed.",
+  "pickNote": "For a 5-inch build take 30×30: it takes up to 8S and comes with the bigger XT60 battery plug. 20×20 also fits the 5-inch frame, for light builds.",
+  "connectors": [
+    [
+      "FC plug",
+      "8-pin JST-SH, Betaflight standard. Pin 1 battery +, 2 ground, 3 current sense, 4 not connected (telemetry goes over bidirectional DShot), 5 to 8 motor signals 1 to 4."
+    ],
+    [
+      "Other flight controllers",
+      "Works with any flight controller that uses the same 8-pin order. Otherwise re-pin the cable."
+    ]
+  ]
 }

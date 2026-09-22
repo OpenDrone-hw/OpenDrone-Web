@@ -10,7 +10,7 @@
     "line1": "",
     "line2Italic": "",
     "line3": "",
-    "lead": "Brushless motors for the OpenFrame 3\" and 5\", sold per motor: a quad needs four. They are OEM motors, not open hardware. The supplier order for each size is placed once its funding target is reached. The stator size and KV of the 5\" motor are not final. Before its supplier order, every buyer of the 5\" motor is told the final stator size and KV and can cancel for a full refund."
+    "lead": "Brushless motors for the OpenFrame 3\" and 5\", sold per motor: a quad needs four. They are OEM motors, not open hardware. The supplier order for each size is placed once its funding target is reached. The exact size and speed rating (KV) of the 5\" motor are not final. Before its supplier order, every buyer of the 5\" motor is told both and can cancel for a full refund."
   },
   "firmware": {
     "project": "-"
@@ -46,10 +46,9 @@
     ]
   ],
   "glance": [
-    "Stator",
-    "KV",
-    "Prop size",
     "Frame",
+    "Prop size",
+    "KV",
     "Sold as"
   ],
   "optionAxis": "Model",
@@ -65,6 +64,12 @@
           "Prop size",
           "3\""
         ]
+      ],
+      "aliases": [
+        "3\"",
+        "3",
+        "3in",
+        "3-inch"
       ]
     },
     "2207": {
@@ -98,12 +103,20 @@
         ]
       ],
       "internalSku": true,
-      "cartNote": "Stator size and KV are not final. You are told them before the supplier order and can cancel for a full refund."
+      "cartNote": "The exact motor size and speed rating (KV) are not final. We tell you both before we order them, and you can cancel for a full refund.",
+      "aliases": [
+        "5\"",
+        "5",
+        "5in",
+        "5-inch"
+      ]
     }
   },
   "footnote": "The 3\" motor is a 1604 at 2850 KV. The stator size and KV of the 5\" motor are not final. They are set before its supplier order is placed, and every buyer of the 5\" motor is told them then and can cancel for a full refund. Weight, mount pattern, shaft diameter, cell count and lead length are published once the supplier datasheet or measured samples are on file.",
   "keywords": [
     "motor",
     "brushless"
-  ]
+  ],
+  "setOf": 4,
+  "pickNote": "Not sure it fits? Ask the pilot for the frame size, or email contact@opendrone.be. Fit on frames other than OpenFrame is not confirmed yet."
 }

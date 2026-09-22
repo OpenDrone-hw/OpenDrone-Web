@@ -297,16 +297,15 @@
     ]
   ],
   "glance": [
-    "Mounting",
-    "Input",
-    "UARTs",
     "Frame fit",
-    "Firmware"
+    "Input",
+    "Firmware",
+    "UARTs"
   ],
   "optionAxis": "Model",
   "variants": {
     "20×20": {
-      "tag": "Start here · 3-inch build",
+      "tag": "Fits 3-inch and 5-inch frames",
       "oshwaUid": "BE000027",
       "repoUrl": "https://github.com/OpenDrone-hw/OpenFC-Lite-Mini",
       "highlights": [
@@ -543,6 +542,37 @@
       ],
       "keywords": [
         "mini"
+      ],
+      "aliases": [
+        "20x20",
+        "2020",
+        "mini"
+      ],
+      "connectors": [
+        [
+          "ESC plug",
+          "8-pin JST-SH, Betaflight standard. Pin 1 battery +, 2 ground, 3 current sense, 4 ESC telemetry, 5 to 8 motor signals 1 to 4."
+        ],
+        [
+          "Video plug",
+          "6-pin JST-SH. Pin 1 +10 V (switchable), 2 ground, 3 UART0 TX, 4 UART0 RX, 5 ground, 6 UART1 RX."
+        ],
+        [
+          "Digital air unit",
+          "Its cable goes on the 6-pin video plug: 10 V, ground and a UART for the on-screen display. Check that your cable has the same pin order before you plug it in."
+        ],
+        [
+          "Receiver",
+          "Solder pads on UART1 (TX and RX). SBUS is inverted in firmware, no extra pad needed."
+        ],
+        [
+          "I2C",
+          "Solder pads (SDA, SCL), for example for a compass."
+        ],
+        [
+          "BEC rails",
+          "Two separate regulators: 10 V (switchable) and 5 V (always on), each rated 3 A."
+        ]
       ]
     },
     "30×30": {
@@ -586,6 +616,10 @@
           "Frame fit",
           "30.5 × 30.5 mm stack frames, such as OpenFrame 5\""
         ]
+      ],
+      "aliases": [
+        "30x30",
+        "3030"
       ]
     }
   },
@@ -604,5 +638,37 @@
     ],
     "matchOption": "Model"
   },
-  "footnote": "Weight is published once production boards are weighed."
+  "footnote": "Weight is published once production boards are weighed.",
+  "pickNote": "For a 5-inch build take 30×30: it takes up to 8S and pairs with the bigger ESC that has the XT60 plug. 20×20 also fits the 5-inch frame, for light builds.",
+  "connectors": [
+    [
+      "ESC plug",
+      "8-pin JST-SH, Betaflight standard. Pin 1 battery +, 2 ground, 3 current sense, 4 ESC telemetry, 5 to 8 motor signals 1 to 4."
+    ],
+    [
+      "Video plug",
+      "6-pin JST-SH. Pin 1 +10 V (switchable), 2 ground, 3 UART0 TX, 4 UART0 RX, 5 ground, 6 UART1 RX."
+    ],
+    [
+      "Digital air unit",
+      "Its cable goes on the 6-pin video plug: 10 V, ground and a UART for the on-screen display. Check that your cable has the same pin order before you plug it in."
+    ],
+    [
+      "Receiver plug",
+      "4-pin JST-SH. +5 V, ground, PIO UART0 RX and TX."
+    ],
+    [
+      "Peripheral plug",
+      "6-pin JST-SH with a UART and I2C, the pair a GPS with compass uses. +4.5 V, ground, PIO UART1 RX and TX, I2C SDA and SCL."
+    ],
+    [
+      "Camera plug",
+      "3-pin JST-SH. +5 V, ground, video in."
+    ],
+    [
+      "BEC rails",
+      "Two separate regulators: 10 V (switchable) and 5 V (always on), each rated 3.5 A."
+    ]
+  ],
+  "connectorsNote": "Port names are the ones in the schematic. Other pads are solder pads."
 }

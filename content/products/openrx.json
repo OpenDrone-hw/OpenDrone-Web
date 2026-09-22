@@ -171,7 +171,6 @@
   "glance": [
     "Band",
     "Antenna",
-    "Protocol",
     "Input",
     "Dimensions"
   ],
@@ -657,5 +656,19 @@
     "rx",
     "expresslrs"
   ],
-  "footnote": "Weight is published once production boards are weighed."
+  "footnote": "Weight is published once production boards are weighed.",
+  "heroNote": {
+    "text": "A DJI remote or motion controller cannot control OpenRX.",
+    "links": [
+      {
+        "label": "Which radio you need, and how binding works",
+        "href": "/products#coming-from-dji"
+      },
+      {
+        "label": "Range test write-up",
+        "href": "/newsletter/openrx-range-test"
+      }
+    ]
+  },
+  "pickNote": "Not sure it fits? Ask the pilot which radio they fly, or email contact@opendrone.be."
 }

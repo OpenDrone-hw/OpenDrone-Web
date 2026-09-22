@@ -1705,7 +1705,7 @@ export function BoardArt({
             decoding="async"
           />
           <span className="board-art-skeleton-spinner" />
-          <span className="board-art-skeleton-label">Rendering board…</span>
+          <span className="board-art-skeleton-label">Loading the layer view…</span>
         </div>
       ) : null}
       {failed ? (
