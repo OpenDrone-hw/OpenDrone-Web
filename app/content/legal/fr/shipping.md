@@ -2,7 +2,7 @@
 
 Incutec BV expédie les commandes par bpost depuis la Belgique vers tous les pays de l’Union européenne et vers les autres destinations du tableau ci-dessous. Les frais d’expédition sont affichés lors du passage en caisse avant le paiement.
 
-La version néerlandaise ([/nl/shipping](/nl/shipping)) constitue le texte juridiquement faisant foi pour les consommateurs résidant en Belgique. Cette traduction française est fournie à titre informatif uniquement.
+La version néerlandaise ([/nl/shipping](/nl/shipping)) prévaut en cas de contradiction, sauf à l’égard des consommateurs, pour lesquels l’interprétation la plus favorable s’applique (art. 19.1 des Conditions Générales de Vente, art. VI.37 §2 du Code de droit économique). Cette traduction française est fournie pour votre commodité.
 
 ### Tarifs d’expédition
 
@@ -24,7 +24,7 @@ Incutec BV n’expédie pas vers la Russie, le Bélarus, l’Iran, la Corée du 
 
 Incutec BV ne perçoit aucun droit ni aucune taxe d’importation lors du passage en caisse. Dans l’Union européenne, rien d’autre n’est dû après le passage en caisse. Les colis à destination de pays hors de l’Union européenne, y compris les États-Unis, peuvent être soumis à des droits d’importation, des taxes d’importation et des frais du transporteur, que le consommateur paie au transporteur à la livraison.
 
-États-Unis : les droits d’importation américains sur l’électronique fabriquée en Chine sont élevés. Pour le contrôleur de vol et l’ESC, ils représentent environ 35 à 40 % de la valeur. Les douanes américaines fixent le montant, pas Incutec BV, et le transporteur peut facturer des frais de dédouanement.
+États-Unis : les droits d’importation américains sur l’électronique et les moteurs fabriqués en Chine sont élevés, souvent environ 35 à 40 % de la valeur. Les douanes américaines fixent le montant, pas Incutec BV, et le transporteur peut facturer des frais de dédouanement.
 
 ### Précommandes
 

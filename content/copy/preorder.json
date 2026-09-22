@@ -62,7 +62,7 @@
   "faq_q5": "Do I get one parcel or several?",
   "faq_a5": "One. An order ships once, complete, when every item in it is ready.",
   "faq_q6": "Do you ship to the United States?",
-  "faq_a6": "Yes, for €19.95 per order. We do not collect US import duties at checkout: the carrier collects them from you before delivery. Duty on China-made electronics is high: for the flight controller and ESC, expect roughly 35 to 40% of the value. US customs sets the amount, not us, and the carrier can add a clearance fee.",
+  "faq_a6": "Yes, for €19.95 per order. We do not collect US import duties at checkout: the carrier collects them from you before delivery. US import duty on electronics and motors made in China is high, often around 35 to 40% of the value. US customs sets the amount, not us, and the carrier can add a clearance fee.",
   "faq_q7": "Is this an investment?",
   "faq_a7": "No. A preorder pays for the production run of your own order. It carries no interest and gives you no equity, revenue share or other stake in the company.",
   "faq_q8": "Where do the numbers on this page come from?",
@@ -107,5 +107,5 @@
   "faq_q_cancel": "Can I cancel before it ships?",
   "faq_a_cancel": "Yes. Until your order is delivered you can withdraw from it without giving a reason: use the [withdrawal form](/herroepingsrecht#withdraw) or email contact@opendrone.be. We refund what you paid for it, including the standard shipping cost, within 14 days, to the payment method you used.",
   "faq_q_duties": "Do I pay import duties outside the EU?",
-  "faq_a_duties": "Inside the EU there is nothing more to pay: prices include Belgian VAT. Outside the EU we do not collect import duties or taxes at checkout. Your country's customs may charge them, and the carrier collects them from you on delivery. For the United States that amount is high: duty on electronics made in China is roughly 35 to 40% of the value for the boards. Check your country's rules before you order, and see [Shipping](/shipping)."
+  "faq_a_duties": "Inside the EU there is nothing more to pay: prices include Belgian VAT. Outside the EU we do not collect import duties or taxes at checkout. Your country's customs may charge them, and the carrier collects them from you on delivery. For the United States that amount is high: US import duty on electronics and motors made in China is often around 35 to 40% of the value, and US customs sets the amount. Check your country's rules before you order, and see [Shipping](/shipping)."
 }

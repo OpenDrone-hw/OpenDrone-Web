@@ -198,6 +198,7 @@ const TIMELINE: TimelineEvent[] = [
   {id: 'hardware_validated', date: '2026-08-05', tag: 'company', kind: 'validation'},
   {id: 'oshwa_certified', date: '2026-08-05', tag: 'company', kind: 'cert', url: 'https://certification.oshwa.org/list.html'},
   {id: 'release_tags_cut', date: '2026-08-06', tag: 'company', kind: 'launch', url: 'https://github.com/OpenDrone-hw'},
+  {id: 'batch1_paid', date: '2026-09-03', tag: 'company', kind: 'order'},
 ];
 
 function fmtDate(iso: string): string {

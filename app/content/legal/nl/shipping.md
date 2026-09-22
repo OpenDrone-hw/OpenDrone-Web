@@ -22,7 +22,7 @@ Incutec BV verzendt niet naar Rusland, Belarus, Iran, Noord-Korea, Syrië en Cub
 
 Incutec BV int geen invoerrechten of invoerbelastingen aan de checkout. Binnen de Europese Unie is na de checkout niets meer verschuldigd. Pakketten naar bestemmingen buiten de Europese Unie, ook naar de Verenigde Staten, kunnen onderworpen zijn aan invoerrechten, invoerbelastingen en kosten van de vervoerder, die de consument bij levering aan de vervoerder betaalt.
 
-Verenigde Staten: de Amerikaanse invoerrechten op elektronica die in China is gemaakt zijn hoog. Voor de flight controller en de ESC bedragen zij ongeveer 35 tot 40% van de waarde. De Amerikaanse douane bepaalt het bedrag, niet Incutec BV, en de vervoerder kan kosten voor de inklaring aanrekenen.
+Verenigde Staten: de Amerikaanse invoerrechten op elektronica en motoren die in China zijn gemaakt zijn hoog, vaak ongeveer 35 tot 40% van de waarde. De Amerikaanse douane bepaalt het bedrag, niet Incutec BV, en de vervoerder kan kosten voor de inklaring aanrekenen.
 
 ### Pre-orders
 

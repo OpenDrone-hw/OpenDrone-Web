@@ -69,7 +69,9 @@ export function PreorderMeter({
                   : b.status === 'current'
                     ? showBatchPromise
                       ? b.shipPromise
-                      : (copyText('preorder.batch_current') ?? '{units} units, ordering now').replace('{units}', String(b.units))
+                      : campaign.paidStock
+                        ? (copyText('preorder.batch_current_paid') ?? '{units} units, paid stock').replace('{units}', String(b.units))
+                        : (copyText('preorder.batch_current_target') ?? '{units} units, taking preorders').replace('{units}', String(b.units))
                     : (copyText('preorder.batch_next') ?? 'next, {units} units').replace('{units}', String(b.units))}
               </span>
             </li>

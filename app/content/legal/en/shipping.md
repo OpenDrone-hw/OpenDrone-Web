@@ -2,7 +2,7 @@
 
 Incutec BV ships orders by bpost from Belgium to every European Union country and to the other destinations in the table below. Shipping costs are shown at checkout before payment.
 
-The Dutch version ([/nl/shipping](/nl/shipping)) is the legally authoritative text for consumers residing in Belgium. This English translation is informative only.
+The Dutch version ([/nl/shipping](/nl/shipping)) prevails in case of conflict, except toward consumers, for whom the reading most favourable to them applies (Art. 19.1 of the General Terms and Conditions, Art. VI.37 §2 of the Belgian Code of Economic Law). This English translation is provided for convenience.
 
 ### Shipping rates
 
@@ -24,7 +24,7 @@ Incutec BV does not ship to Russia, Belarus, Iran, North Korea, Syria or Cuba, o
 
 Incutec BV does not collect import duties or import taxes at checkout. Within the European Union nothing more is due after checkout. Parcels to destinations outside the European Union, including the United States, may be subject to import duties, import taxes and carrier fees, which the consumer pays to the carrier on delivery.
 
-United States: US import duties on electronics made in China are high. For the flight controller and the ESC they come to roughly 35 to 40% of the value. US customs sets the amount, not Incutec BV, and the carrier may charge a fee for clearing the parcel.
+United States: US import duty on electronics and motors made in China is high, often around 35 to 40% of the value. US customs sets the amount, not Incutec BV, and the carrier may charge a fee for clearing the parcel.
 
 ### Pre-orders
 
