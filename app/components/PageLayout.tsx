@@ -5,7 +5,8 @@ import type {CompanyIdentity} from '~/lib/company';
 import {Aside} from '~/components/Aside';
 import {Footer} from '~/components/Footer';
 import {Header, HeaderMenu, type HeaderFamilyProduct} from '~/components/Header';
-import {LangToggle} from '~/components/LangToggle';
+import {LangToggle, LegalLanguages} from '~/components/LangToggle';
+import {isLegalPath} from '~/lib/i18n';
 import {PlaceholderBanner} from '~/components/PlaceholderBanner';
 import {RouteProgress} from '~/components/RouteProgress';
 import {Txt} from '~/components/Txt';
@@ -94,13 +95,18 @@ export function PageLayout({
 }
 
 function MobileMenuAside({accountUrl}: {accountUrl: string | null}) {
+  const {pathname} = useLocation();
   return (
     <Aside type="mobile" heading={<Txt id="chrome.aside_menu_heading" />}>
       <HeaderMenu viewport="mobile" accountUrl={accountUrl} />
       {/* Language switch lives in the drawer on phones - it's hidden from the
           top bar there to keep the header row inside a 320px viewport.
-          LangToggle self-hides on non-legal routes. */}
-      <LangToggle className="mobile-menu-lang" />
+          On shop pages the drawer says in words that the shop is English
+          and links the legal texts in each language instead. */}
+      <LangToggle className="mobile-menu-lang" shopPages={false} />
+      {isLegalPath(pathname) ? null : (
+        <LegalLanguages className="mt-3 shrink-0 text-[12px] leading-relaxed text-[var(--color-text-muted)]" />
+      )}
     </Aside>
   );
 }
