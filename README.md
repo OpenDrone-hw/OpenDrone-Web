@@ -122,6 +122,8 @@ repos and `status-*` flips across the public OpenDrone-hw repositories.
 
 **Support.** `/support` links to the configured OpenDrone Discord invite and `mailto:` company address. Existing-conversation links lead to the same native contacts. The retired `/api/support/*` surface returns `410` at the Worker boundary. Historical ticket exports remain private outside this repository.
 
+**Reviews.** The PDP's rating line and reviews chapter read Shopify's standard `reviews.rating` and `reviews.rating_count` product metafields, which the installed review app (Judge.me) maintains. No third-party script runs on the page. A product without those metafields renders no trace of the feature, so the chapter appears by itself once the first review is published.
+
 **Newsletter.** Posts are Markdown in `content/posts/` (`published: true` publishes at `/newsletter/<slug>` and in `/newsletter.rss`). The footer signup records single-opt-in consent in Shopify and adds the `newsletter` tag plus `notify-<handle>` for product launch interest. `/newsletter/unsubscribe` changes Shopify consent to `UNSUBSCRIBED`; it sends no welcome or confirmation email. `SHOPIFY_NEWSLETTER_WRITE_ENABLED` is a separate runtime gate.
 
 **Legal.** The legal documents in `app/content/legal/{en,nl,fr}/` serve at

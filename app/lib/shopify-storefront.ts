@@ -14,6 +14,11 @@ const CATALOG_QUERY = `#graphql
         productType
         featuredImage { url altText }
         images(first: 10) { nodes { url altText } }
+        # Shopify's standard review metafields. Judge.me writes them once a
+        # product has published reviews; absent means no reviews yet, and the
+        # PDP then renders no trace of the feature.
+        rating: metafield(namespace: "reviews", key: "rating") { value }
+        ratingCount: metafield(namespace: "reviews", key: "rating_count") { value }
         variants(first: $variantsFirst) {
           pageInfo { hasNextPage }
           nodes {
@@ -222,6 +227,32 @@ export async function storefrontRequest<T>(
   return result.data;
 }
 
+/**
+ * The review aggregate from Shopify's standard `reviews.rating` and
+ * `reviews.rating_count` metafields, which the review app maintains. The
+ * rating metafield is a `rating` type: JSON carrying `value`, `scale_min`
+ * and `scale_max`. Anything missing, unparseable or zero-count returns null,
+ * so the storefront shows no rating rather than a wrong one.
+ */
+export function productRating(
+  rating: string | undefined,
+  ratingCount: string | undefined,
+): {average: number; count: number} | null {
+  if (!rating || !ratingCount) return null;
+  const count = Number(ratingCount);
+  if (!Number.isFinite(count) || count <= 0) return null;
+  let average: number;
+  try {
+    const parsed = JSON.parse(rating) as {value?: string | number} | number;
+    // A `rating` metafield is an object; a plain number parses to a number.
+    average = typeof parsed === 'object' && parsed ? Number(parsed.value) : Number(parsed);
+  } catch {
+    average = Number(rating);
+  }
+  if (!Number.isFinite(average) || average <= 0) return null;
+  return {average, count: Math.round(count)};
+}
+
 type ShopifyCatalogData = {
   products: {
     pageInfo: {hasNextPage: boolean};
@@ -232,6 +263,8 @@ type ShopifyCatalogData = {
       productType: string;
       featuredImage: {url: string; altText: string | null} | null;
       images: {nodes: Array<{url: string; altText: string | null}>};
+      rating: {value: string} | null;
+      ratingCount: {value: string} | null;
       variants: {
         pageInfo: {hasNextPage: boolean};
         nodes: Array<{
@@ -353,7 +386,7 @@ export function mapShopifyCatalog(
       url: `/products/${product.handle}`,
       images: product.images.nodes.map(({url}) => url),
       image_alts: product.images.nodes.map(({altText}) => altText ?? null),
-      rating: null,
+      rating: productRating(product.rating?.value, product.ratingCount?.value),
       variants,
     };
   });

@@ -1,11 +1,6 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {
-  createCart,
-  fetchShopifyCatalog,
-  getCart,
-  storefrontEndpoint,
-} from './shopify-storefront.ts';
+import {createCart, fetchShopifyCatalog, getCart, productRating, storefrontEndpoint} from './shopify-storefront.ts';
 
 const ENV = {
   SHOPIFY_STORE_DOMAIN: 'open-drone-test.myshopify.com',
@@ -207,5 +202,26 @@ describe('Shopify hosted checkout handoff', () => {
       createCart(ENV, [{merchandiseId: 'gid://shopify/ProductVariant/1', quantity: 1}], fetcher),
       /cartCreate failed/,
     );
+  });
+});
+
+describe('productRating', () => {
+  it('reads the rating metafield JSON and the count', () => {
+    assert.deepEqual(
+      productRating('{"value":"4.7","scale_min":"1.0","scale_max":"5.0"}', '12'),
+      {average: 4.7, count: 12},
+    );
+  });
+
+  it('accepts a bare number, in case the app writes one', () => {
+    assert.deepEqual(productRating('4.5', '3'), {average: 4.5, count: 3});
+  });
+
+  it('is null without reviews, with a zero count, or on junk', () => {
+    assert.equal(productRating(undefined, undefined), null);
+    assert.equal(productRating('{"value":"4.7"}', undefined), null);
+    assert.equal(productRating('{"value":"4.7"}', '0'), null);
+    assert.equal(productRating('not json', '5'), null);
+    assert.equal(productRating('{"value":"0"}', '5'), null);
   });
 });
