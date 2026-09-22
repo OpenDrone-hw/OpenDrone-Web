@@ -5,6 +5,7 @@ import type {Route} from './+types/cart.$';
 import {getCart, type ShopifyCart, type ShopifyCartLine} from '~/lib/shopify-storefront';
 import {
   CART_CHECK,
+  DATES_SEEN_FIELD,
   cartLineInfo,
   checkoutOpen,
   loadSessionCart,
@@ -14,6 +15,7 @@ import {
   type CartLineInfo,
 } from '~/lib/shopify-cart-action';
 import {formatPrice} from '~/lib/catalog';
+import {lineDisplayName, variantCartNote, variantDisplayName} from '~/lib/product-content';
 import {Txt} from '~/components/Txt';
 import {buildSeoMeta} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
@@ -118,11 +120,13 @@ export default function CartPage() {
         <h1 className="page-title"><Txt id="cart.title" /></h1>
         <p className="page-description"><Txt id="cart.description" /></p>
       </header>
-      {check === CART_CHECK.paidBatch || check === CART_CHECK.shipDate ? (
+      {check === CART_CHECK.paidBatch || check === CART_CHECK.shipDate || check === CART_CHECK.mixedDates ? (
         <p className="cart-mixed-warning" role="alert">
           {check === CART_CHECK.paidBatch
             ? t('check_paid_batch', 'An item in your cart has more units than its paid batch has left. Lower the quantity where shown, then check out.')
-            : t('check_ship_date', 'A ship date in your cart changed since you added the item. Check the dates below, then check out.')}
+            : check === CART_CHECK.shipDate
+              ? t('check_ship_date', 'A ship date in your cart changed since you added the item. Check the dates below, then check out.')
+              : t('check_mixed_dates', 'Items in your cart ship on different dates, and the whole order ships in one parcel when the last item is ready. Check the dates below, or order the later items separately, then check out.')}
         </p>
       ) : null}
       {removed.length ? (
@@ -224,9 +228,7 @@ function EmptyCart() {
 }
 
 function lineName(line: ShopifyCartLine): string {
-  return line.variantTitle && line.variantTitle !== 'Default Title'
-    ? `${line.title} ${line.variantTitle}`
-    : line.title;
+  return lineDisplayName(line.handle, line.title, line.variantTitle);
 }
 
 /** Quantity changes in flight anywhere in the cart: totals are stale and
@@ -287,13 +289,14 @@ function DutyNote({country}: {country: string | null}) {
   // No shipping to this country: the checkout slot says so instead.
   if (quote?.blocked) return null;
   const duty = quote ? quote.duty : 'none';
-  // Outside the EU: say what the price holds without promising what Shopify
-  // checkout does with Belgian VAT for that address; checkout shows it.
+  // Outside the EU: the US and International markets keep the same price
+  // and charge no EU VAT (Shopify: taxes included in price), the same
+  // sentence the product page buy box gives.
   const exportVat = (
     <p className="cart-summary-note">
       {t(
         'note_export_vat',
-        'Prices on this site include Belgian VAT. Checkout shows the final price for your delivery address before you pay.',
+        'No EU VAT is charged on orders shipped outside the EU. The price is the same as the EU price.',
       )}
     </p>
   );
@@ -339,6 +342,11 @@ function PopulatedCart({
   const targetsOnly = mixed && [...groups].every((g) => g.startsWith('target:'));
   const quote = shippingQuote(country);
   const shipBlocked = quote?.blocked === true;
+  // Subtotal plus the flat rate for the picked country; checkout confirms it.
+  const estimatedTotal =
+    quote && !quote.blocked
+      ? {amount: Number(cart.subtotal.amount) + quote.rate, currencyCode: cart.subtotal.currencyCode}
+      : null;
   const overLimit = cart.lines.some((line) => {
     const max = info[line.id]?.maxQuantity;
     return max != null && line.quantity > max;
@@ -366,6 +374,8 @@ function PopulatedCart({
       }}
     >
       <input type="hidden" name="intent" value="checkout" />
+      {/* This page shows the mixed-dates notice, so checkout may go on. */}
+      {mixed ? <input type="hidden" name={DATES_SEEN_FIELD} value="1" /> : null}
       <button className={className} type="submit" disabled={blocked} aria-disabled={blocked || undefined}>
         {pending ? t('checkout_updating', 'Updating cart…') : <Txt id="cart.checkout_cta" />}
       </button>
@@ -394,6 +404,14 @@ function PopulatedCart({
               <dd style={pendingStyle}>{formatPrice(cart.subtotal.amount, cart.subtotal.currencyCode)}</dd>
             </div>
             <ShippingRow country={country} onCountry={onCountry} />
+            {estimatedTotal ? (
+              <div className="cart-register-row">
+                <dt><strong>{t('register_estimated_total', 'Estimated total')}</strong></dt>
+                <dd style={pendingStyle}>
+                  <strong>{formatPrice(estimatedTotal.amount, estimatedTotal.currencyCode)}</strong>
+                </dd>
+              </div>
+            ) : null}
           </dl>
           {mixed ? (
             <MixedWarning cart={cart} info={info} plan={plan} targetsOnly={targetsOnly} onSplit={onSplit} />
@@ -410,8 +428,17 @@ function PopulatedCart({
             checkout button also ride along the bottom of the screen. */}
         <div className="cart-sticky-bar">
           <span>
-            <Txt id="cart.register_subtotal" />{' '}
-            <strong style={pendingStyle}>{formatPrice(cart.subtotal.amount, cart.subtotal.currencyCode)}</strong>
+            {estimatedTotal ? (
+              <>
+                {t('register_estimated_total', 'Estimated total')}{' '}
+                <strong style={pendingStyle}>{formatPrice(estimatedTotal.amount, estimatedTotal.currencyCode)}</strong>
+              </>
+            ) : (
+              <>
+                <Txt id="cart.register_subtotal" />{' '}
+                <strong style={pendingStyle}>{formatPrice(cart.subtotal.amount, cart.subtotal.currencyCode)}</strong>
+              </>
+            )}
           </span>
           {checkoutForm('cart-sticky-checkout')}
         </div>
@@ -537,7 +564,11 @@ function CartLine({line, info, pending}: {line: ShopifyCartLine; info: CartLineI
         )}
         <div className="cart-sheet-item">
           <Link to={variantLink(line.handle, line.selectedOptions)}><strong>{line.title}</strong></Link>
-          {options.map(({name, value}) => <small key={name}>{name}: {value}</small>)}
+          {options.map(({name, value}) => <small key={name}>{name}: {variantDisplayName(line.handle, value)}</small>)}
+          {options.map(({name, value}) => {
+            const note = variantCartNote(line.handle, value);
+            return note ? <small key={`${name}-note`} className="cart-line-note">{note}</small> : null;
+          })}
           {line.shipPromise ? (
             <small className="cart-line-preorder">
               {copyText('cart.preorder_line_prefix') ?? 'Pre-order'} · {line.shipPromise}

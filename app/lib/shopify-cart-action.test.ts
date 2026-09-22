@@ -520,6 +520,46 @@ describe('Shopify cart action: paid batch limit', () => {
   });
 });
 
+describe('Shopify cart action: mixed ship dates', () => {
+  const FC_ID = 'gid://shopify/ProductVariant/fc-mixed';
+  const mixedCatalog: Catalog = {
+    ...CATALOG,
+    products: [
+      ...CATALOG.products,
+      {
+        ...CATALOG.products[0],
+        handle: 'openfc', title: 'OpenFC', url: '/products/openfc',
+        variants: [{
+          ...CATALOG.products[0].variants[0],
+          sku: 'OPENFC', title: 'Default Title', model: null, options: {},
+          ship_promise: 'ships late October 2026', url: '/products/openfc', merchandise_id: FC_ID,
+        }],
+      },
+    ],
+  };
+  const mixedCart = cart([
+    line(),
+    line({id: 'gid://shopify/CartLine/2?cart=a', merchandiseId: FC_ID, sku: 'OPENFC', title: 'OpenFC', handle: 'openfc', shipPromise: 'ships late October 2026'}),
+  ], 'cart-a');
+  const deps: ShopifyCartDependencies = {
+    fetchCatalog: async () => mixedCatalog,
+    getCartId: () => 'cart-a',
+    getCart: async () => mixedCart,
+    updateCartLines: async () => { throw new Error('must not update'); },
+    ...MUST_NOT,
+  };
+
+  it('sends a checkout with lines on different dates to the cart notice first', async () => {
+    const response = await handleShopifyCartAction(request({intent: 'checkout'}), ENABLED_ENV, deps);
+    assert.equal(response.headers.get('Location'), '/cart?check=mixed-dates');
+  });
+
+  it('hands the same cart to checkout once the cart page has shown the notice', async () => {
+    const response = await handleShopifyCartAction(request({intent: 'checkout', datesSeen: '1'}), ENABLED_ENV, deps);
+    assert.equal(response.headers.get('Location'), CHECKOUT);
+  });
+});
+
 describe('Shopify cart action: stale lines', () => {
   const deps: ShopifyCartDependencies = {
     fetchCatalog: async () => CATALOG,

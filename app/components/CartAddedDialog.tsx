@@ -350,25 +350,9 @@ export function CartAddedDialog() {
             </p>
             {missing.length > 1 ? (
               <>
-                {delayNote ? (
-                  <p id="cart-added-all-delay" className="cart-added-ship is-later" style={{margin: 0}}>
-                    {delayNote}
-                  </p>
-                ) : null}
-                <button
-                  type="button"
-                  className="cart-added-all"
-                  disabled={busy !== null}
-                  aria-describedby={delayNote ? 'cart-added-all-delay' : undefined}
-                  onClick={() => void add(missing, 'all')}
-                >
-                  {busy === 'all'
-                    ? 'Adding…'
-                    : t('build_add_all', 'Add all matching OpenDrone parts: {parts} · {price}', {
-                        parts: missing.map(partName).join(', '),
-                        price: formatPrice(totalOf(missing), currency),
-                      })}
-                </button>
+                {/* When some parts ship later than the cart, the parts that
+                    ship with the order come first; "add all" is secondary
+                    and says on the button that the whole order waits. */}
                 {later.length && withOrder.length ? (
                   <button
                     type="button"
@@ -384,6 +368,31 @@ export function CartAddedDialog() {
                         })}
                   </button>
                 ) : null}
+                {delayNote ? (
+                  <p id="cart-added-all-delay" className="cart-added-ship is-later" style={{margin: 0}}>
+                    {delayNote}
+                  </p>
+                ) : null}
+                <button
+                  type="button"
+                  className="cart-added-all"
+                  disabled={busy !== null}
+                  aria-describedby={delayNote ? 'cart-added-all-delay' : undefined}
+                  style={later.length && withOrder.length ? {background: 'transparent', fontWeight: 400} : undefined}
+                  onClick={() => void add(missing, 'all')}
+                >
+                  {busy === 'all'
+                    ? 'Adding…'
+                    : later.length
+                      ? t('build_add_all_waits', 'Add all, the whole order then waits for the last item: {parts} · {price}', {
+                          parts: missing.map(partName).join(', '),
+                          price: formatPrice(totalOf(missing), currency),
+                        })
+                      : t('build_add_all', 'Add all matching OpenDrone parts: {parts} · {price}', {
+                          parts: missing.map(partName).join(', '),
+                          price: formatPrice(totalOf(missing), currency),
+                        })}
+                </button>
               </>
             ) : null}
             <Txt id="cart.build_not_included" as="p" className="cart-added-note" />
@@ -411,7 +420,7 @@ export function CartAddedDialog() {
                   </small>
                 ) : (
                   <small style={{display: 'block', color: 'var(--color-text-muted)'}}>
-                    {t('added_subtotal_note_export', 'Shipping and final price for your address at checkout')}
+                    {t('added_subtotal_note_export', 'no EU VAT charged, shipping at checkout')}
                   </small>
                 )}
               </span>

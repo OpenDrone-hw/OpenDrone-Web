@@ -196,7 +196,19 @@ export const CART_CHECK = {
   paidBatch: 'paid-batch',
   /** A preorder line's ship date changed since it was added. */
   shipDate: 'ship-date',
+  /** Lines ship on different dates and the buyer has not seen the cart's
+   *  notice (one parcel, the whole order waits for the last item). */
+  mixedDates: 'mixed-dates',
 } as const;
+
+/** The form field the cart page sends with checkout once it has shown the
+ *  mixed-dates notice. Checkout from anywhere else goes to /cart first. */
+export const DATES_SEEN_FIELD = 'datesSeen';
+
+/** True when the cart's lines do not all ship together. */
+export function hasMixedShipDates(cart: ShopifyCart, info: Record<string, CartLineInfo>): boolean {
+  return new Set(cart.lines.map((l) => info[l.id]?.group ?? `date:${l.shipPromise ?? ''}`)).size > 1;
+}
 
 /**
  * POST /api/shopify/cart. Intents:
@@ -335,6 +347,12 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
         await dependencies.updateCartLines(existingId, refresh);
         // The ship date moved since the line was added: show it before payment.
         return redirect(`/cart?check=${CART_CHECK.shipDate}`);
+      }
+      // Lines ship on different dates: the whole order waits for the last
+      // one. Show the cart's notice and the option to order separately
+      // before payment, unless the checkout came from that cart page.
+      if (form.get(DATES_SEEN_FIELD) !== '1' && hasMixedShipDates(cart, cartLineInfo(cart, catalog))) {
+        return redirect(`/cart?check=${CART_CHECK.mixedDates}`);
       }
       return redirect(cart.checkoutUrl);
     }
