@@ -107,12 +107,51 @@
             <tr>
               <td style="padding: 0 32px 28px 32px;">
                 <p style="margin: 0 0 16px 0; font-family: Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.6; color: #c5c5c5;">
-                  We&rsquo;ve received your order and it&rsquo;s in the queue.
-                  You&rsquo;ll get a shipping confirmation with tracking as
-                  soon as it leaves the workshop.
+                  We&rsquo;ve received your order and your payment.
+                  You&rsquo;ll get a shipping confirmation with tracking
+                  when it ships.
                 </p>
               </td>
             </tr>
+            {% comment %}
+              Preorder lines carry the ship promise as the line item
+              property "Preorder" (PREORDER_ATTRIBUTE in
+              app/lib/shopify-storefront.ts). The summary below shows only
+              when at least one line has it.
+            {% endcomment %}
+            {% assign has_preorder = false %}
+            {% for line in line_items %}{% for p in line.properties %}{% if p.first == 'Preorder' and p.last != blank %}{% assign has_preorder = true %}{% endif %}{% endfor %}{% endfor %}
+            {% if has_preorder %}
+            <tr>
+              <td style="padding: 0 32px 28px 32px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #0a0a0a; border: 1px solid #ffb700;">
+                  <tr>
+                    <td style="padding: 20px 24px;">
+                      <p style="margin: 0 0 10px 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; color: #ffb700;">
+                        Preorder
+                      </p>
+                      <p style="margin: 0 0 8px 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #c5c5c5;">
+                        This order contains preorder items, paid in full today.
+                        Each one shows its ship date below.
+                      </p>
+                      <p style="margin: 0 0 8px 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #c5c5c5;">
+                        An item from a funding target ships about 10 weeks
+                        after its target is reached. The target deadline is
+                        31 December 2026. If a target is missed, we email you
+                        and you choose: a full refund for that item, or keep
+                        your order for the next date we set.
+                      </p>
+                      <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #c5c5c5;">
+                        Your order ships once, in one parcel, when every item
+                        in it is ready. How preorders work:
+                        <a href="https://opendrone.be/preorder" style="color: #ffb700;">opendrone.be/preorder</a>
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            {% endif %}
             <tr>
               <td style="padding: 0 32px 24px 32px;">
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0">
@@ -152,6 +191,11 @@
                         {{ line.variant.title }}
                       </p>
                       {% endif %}
+                      {% for p in line.properties %}{% if p.first == 'Preorder' and p.last != blank %}
+                      <p style="margin: 0 0 4px 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; color: #ffb700;">
+                        Preorder: {{ p.last }}
+                      </p>
+                      {% endif %}{% endfor %}
                       <p style="margin: 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; color: #a0a0a0;">
                         Qty {{ line.quantity }}
                       </p>
@@ -196,6 +240,28 @@
                 </table>
               </td>
             </tr>
+            {% comment %}
+              Import duties are never collected at checkout. Outside the EU
+              the carrier collects any import duties and taxes on delivery.
+            {% endcomment %}
+            {% assign eu_countries = 'AT,BE,BG,CY,CZ,DE,DK,EE,ES,FI,FR,GR,HR,HU,IE,IT,LT,LU,LV,MT,NL,PL,PT,RO,SE,SI,SK' | split: ',' %}
+            {% if shipping_address and shipping_address.country_code != blank %}{% unless eu_countries contains shipping_address.country_code %}
+            <tr>
+              <td style="padding: 0 32px 24px 32px;">
+                <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.6; color: #a0a0a0;">
+                  <strong style="color: #c5c5c5;">Import duties.</strong>
+                  No import duties or import taxes were charged with this
+                  order. Your parcel ships from Belgium to outside the EU, so
+                  the carrier may ask you to pay import duties, taxes and a
+                  handling fee on delivery.
+                  {% if shipping_address.country_code == 'US' %}US duties on
+                  electronics made in China are high: for boards, expect
+                  roughly 35 to 40% of the declared value. US Customs sets
+                  the final amount.{% endif %}
+                </p>
+              </td>
+            </tr>
+            {% endunless %}{% endif %}
             {% if shipping_address %}
             <tr>
               <td style="padding: 0 32px 32px 32px;">
@@ -218,6 +284,8 @@
             </tr>
             {% endif %}
 
+            <tr>
+              <td style="padding: 0 32px 32px 32px;">
 <!-- Legal: contract confirmation on a durable medium (Art. VI.46 WER).
      Withdrawal info + model form + terms PDF must reach the consumer with
      the order confirmation; omitting it extends withdrawal to 12 months. -->
@@ -226,7 +294,7 @@
     <td style="padding: 16px 0 0 0; border-top: 1px solid #1a241a; font-family: Helvetica, Arial, sans-serif; font-size: 12px; line-height: 1.6; color: #a0a0a0;">
       <p style="margin: 0 0 8px 0;">
         <strong style="color: #c5c5c5;">Right of withdrawal / Herroepingsrecht.</strong>
-        You may withdraw from this purchase within 14 days of receiving it, without giving a reason.
+        You may withdraw from this purchase at any time before delivery and within 14 days of receiving it, without giving a reason.
         Use the online form at <a href="https://opendrone.be/herroepingsrecht" style="color: #ffb700;">opendrone.be/herroepingsrecht</a>
         or the model form (<a href="https://opendrone.be/modelformulier-herroeping.pdf" style="color: #ffb700;">PDF</a>).
       </p>
@@ -239,6 +307,8 @@
     </td>
   </tr>
 </table>
+              </td>
+            </tr>
 
 
             <!-- FOOTER -->
@@ -269,7 +339,7 @@
                   "
                 >
                   <a
-                    href="{{ shop.url }}"
+                    href="https://opendrone.be"
                     style="color: #ffb700; text-decoration: none;"
                     >opendrone.be</a
                   >

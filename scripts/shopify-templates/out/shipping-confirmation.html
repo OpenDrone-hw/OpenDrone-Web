@@ -182,6 +182,11 @@
                         {{ line.line_item.variant.title }}
                       </p>
                       {% endif %}
+                      {% for p in line.line_item.properties %}{% if p.first == 'Preorder' and p.last != blank %}
+                      <p style="margin: 0 0 4px 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; color: #a0a0a0;">
+                        Preorder: {{ p.last }}
+                      </p>
+                      {% endif %}{% endfor %}
                       <p style="margin: 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; color: #a0a0a0;">
                         Qty {{ line.quantity }}
                       </p>
@@ -191,6 +196,19 @@
               </td>
             </tr>
             {% endfor %}
+            {% assign eu_countries = 'AT,BE,BG,CY,CZ,DE,DK,EE,ES,FI,FR,GR,HR,HU,IE,IT,LT,LU,LV,MT,NL,PL,PT,RO,SE,SI,SK' | split: ',' %}
+            {% if shipping_address and shipping_address.country_code != blank %}{% unless eu_countries contains shipping_address.country_code %}
+            <tr>
+              <td style="padding: 16px 32px 0 32px;">
+                <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.6; color: #a0a0a0;">
+                  <strong style="color: #c5c5c5;">Import duties.</strong>
+                  No import duties or import taxes were charged with your
+                  order. The carrier may ask you to pay import duties, taxes
+                  and a handling fee on delivery.
+                </p>
+              </td>
+            </tr>
+            {% endunless %}{% endif %}
             <tr>
               <td style="padding: 24px 32px 32px 32px;"></td>
             </tr>
@@ -224,7 +242,7 @@
                   "
                 >
                   <a
-                    href="{{ shop.url }}"
+                    href="https://opendrone.be"
                     style="color: #ffb700; text-decoration: none;"
                     >opendrone.be</a
                   >

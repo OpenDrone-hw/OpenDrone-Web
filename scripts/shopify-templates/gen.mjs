@@ -31,6 +31,7 @@ async function main() {
 
   let count = 0;
   const missing = [];
+  let deferred = 0;
 
   for (const tpl of mappings.templates) {
     const bodyPath = path.join(BODIES_DIR, `${tpl.key}.html`);
@@ -38,7 +39,9 @@ async function main() {
     try {
       body = await fs.readFile(bodyPath, 'utf8');
     } catch {
-      missing.push(tpl.key);
+      // Phase 2 templates have no body yet: Shopify's default stays live.
+      if (tpl.phase === 1) missing.push(tpl.key);
+      else deferred += 1;
       continue;
     }
 
@@ -46,8 +49,10 @@ async function main() {
     // (mappings.json `unsubscribeFooter: true`). Notification Liquid has
     // no unsubscribe variable, so the link goes to the site's manual
     // form with the address prefilled. Transactional templates get ''.
+    // The storefront is opendrone.be, not Shopify's shop.url, which the
+    // headless redirect theme sends to the home page.
     const unsubscribe = tpl.unsubscribeFooter
-      ? ' &middot;\n                  <a href="{{ shop.url }}/newsletter/unsubscribe?email={{ customer.email | url_encode }}" style="color: #a0a0a0; text-decoration: underline;">unsubscribe</a>'
+      ? ' &middot;\n                  <a href="https://opendrone.be/newsletter/unsubscribe?email={{ customer.email | url_encode }}" style="color: #a0a0a0; text-decoration: underline;">unsubscribe</a>'
       : '';
 
     let html = baseRaw.replaceAll('{{BODY_SLOT}}', body);
@@ -62,14 +67,16 @@ async function main() {
     count += 1;
   }
 
-  console.log(`✓ Generated ${count} template(s) → scripts/shopify-templates/out/`);
+  console.log(`Generated ${count} template(s) in scripts/shopify-templates/out/`);
+  if (deferred) {
+    console.log(`${deferred} phase 2 template(s) have no body; Shopify's default stays in use.`);
+  }
   if (missing.length) {
-    console.log(
-      `\n⚠ Missing bodies (${missing.length}) — create:`,
-    );
+    console.error(`Missing phase 1 bodies (${missing.length}), create:`);
     for (const key of missing) {
-      console.log(`  scripts/shopify-templates/bodies/${key}.html`);
+      console.error(`  scripts/shopify-templates/bodies/${key}.html`);
     }
+    process.exitCode = 1;
   }
 }
 
