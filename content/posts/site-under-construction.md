@@ -5,6 +5,7 @@ date: 2026-05-22
 tags: [milestone]
 author: OpenDrone
 published: true
+superseded_by: preorders-open
 ---
 
 You've caught OpenDrone mid-build. The store, the product pages, and this

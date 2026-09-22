@@ -1,5 +1,5 @@
 import type {Route} from './+types/[newsletter.rss]';
-import {archivePosts, postHtml} from '~/lib/posts';
+import {archivePosts, postHtml, shopIsOpen} from '~/lib/posts';
 
 const FEED_LIMIT = 50;
 
@@ -12,10 +12,10 @@ const FEED_LIMIT = 50;
  * Cache-Control: 10 min on the edge - we publish at most a few times
  * per month, so a stale-by-10-min feed is fine.
  */
-export function loader({request}: Route.LoaderArgs) {
+export function loader({request, context}: Route.LoaderArgs) {
   const origin = new URL(request.url).origin;
 
-  const articles = archivePosts()
+  const articles = archivePosts(shopIsOpen(context.env))
     .slice(0, FEED_LIMIT)
     .map((p) => ({
       handle: p.handle,
