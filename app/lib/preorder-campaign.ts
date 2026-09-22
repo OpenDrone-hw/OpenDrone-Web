@@ -147,6 +147,46 @@ export function parseCampaignConfig(body: unknown): CampaignConfig {
   return c as CampaignConfig;
 }
 
+/** The campaign's time zone: `endsOn` is a Brussels calendar day. */
+export const CAMPAIGN_TIME_ZONE = 'Europe/Brussels';
+
+/** Minutes a time zone is ahead of UTC at one instant, from Intl. */
+function zoneOffsetMinutes(at: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(at);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  const local = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour'), get('minute'), get('second'));
+  return Math.round((local - Math.floor(at.getTime() / 1000) * 1000) / 60000);
+}
+
+/**
+ * The instant the funding deadline passes: midnight at the end of `endsOn`
+ * in Brussels. For "2026-12-31" that is 2027-01-01 00:00 CET, which is
+ * 2026-12-31T23:00:00Z. Up to 23:59:59.999 on `endsOn` the targets are open.
+ */
+export function campaignEndsAt(endsOn: string, timeZone = CAMPAIGN_TIME_ZONE): Date {
+  const [y, m, d] = endsOn.split('-').map(Number);
+  const nextMidnightUtc = Date.UTC(y, m - 1, d + 1);
+  // The offset at that local midnight; one refinement covers a DST change
+  // between the UTC guess and the real instant.
+  let offset = zoneOffsetMinutes(new Date(nextMidnightUtc), timeZone);
+  offset = zoneOffsetMinutes(new Date(nextMidnightUtc - offset * 60000), timeZone);
+  return new Date(nextMidnightUtc - offset * 60000);
+}
+
+/** Whether the funding deadline has passed at `now`. */
+export function fundingClosed(config: Pick<CampaignConfig, 'endsOn'>, now: Date = new Date()): boolean {
+  return now.getTime() >= campaignEndsAt(config.endsOn).getTime();
+}
+
 /** The price at a step off retail, to the cent. Null without retail. */
 export function tierPrice(retail: number | null, off: number): number | null {
   if (retail == null || !Number.isFinite(retail)) return null;
@@ -272,12 +312,19 @@ export function campaignState(
  * counts could not be verified) those variants close as sold out, because
  * their ship promise depends on the count. A variant Shopify still prices
  * under its step closes too, until the step is written.
+ *
+ * After the funding deadline (`endsOn`, end of day in Brussels) a variant
+ * whose next unit would wait for a funding target closes as sold out: its
+ * ship promise names a deadline that has passed. Paid stock, and a batch
+ * with its own ship date (its supplier order is placed), keep selling.
  */
 export function applyCampaign(
   catalog: Catalog,
   config: CampaignConfig,
   units: Record<string, number> | null,
+  now: Date = new Date(),
 ): Catalog {
+  const closed = fundingClosed(config, now);
   return {
     ...catalog,
     campaign_counts: units ? 'verified' : 'unavailable',
@@ -296,6 +343,9 @@ export function applyCampaign(
           config.priceTiers,
           variant.compare_price,
         );
+        if (closed && state.shipsOnTarget && !state.paidStock) {
+          return {...variant, availability: 'sold_out', ship_promise: null, campaign: null};
+        }
         // Shopify still charges under this SKU's step, so the step has not
         // been written yet: close rather than sell under it.
         if (state.price != null && variant.price < state.price - 0.005) {

@@ -4,7 +4,9 @@ import {describe, it} from 'node:test';
 import type {Catalog} from './catalog.ts';
 import {
   applyCampaign,
+  campaignEndsAt,
   campaignState,
+  fundingClosed,
   needsCampaignCounts,
   parseCampaignConfig,
   priceLadder,
@@ -247,11 +249,14 @@ function catalog(availability: 'preorder' | 'sold_out' | 'in_stock'): Catalog {
   };
 }
 
+/** A moment the funding targets are open, so these tests do not change
+ *  meaning after the real deadline. */
+const OPEN = new Date('2026-10-01T12:00:00Z');
 const CONFIG = {countFrom: '2026-09-21', endsOn: '2026-12-31', priceTiers: TIERS, pendingShips: PENDING, skus: {'OPENFRAME-5': {batches: FRAME}}};
 
 describe('applyCampaign', () => {
   it('sets the campaign state and ship promise on campaign preorder SKUs only', () => {
-    const [frame, strap] = applyCampaign(catalog('preorder'), CONFIG, {'OPENFRAME-5': 12}).products[0].variants;
+    const [frame, strap] = applyCampaign(catalog('preorder'), CONFIG, {'OPENFRAME-5': 12}, OPEN).products[0].variants;
     assert.equal(frame.campaign?.targetOrdered, 12);
     assert.equal(frame.ship_promise, PENDING);
     assert.equal(frame.availability, 'preorder');
@@ -260,17 +265,17 @@ describe('applyCampaign', () => {
   });
 
   it('closes campaign SKUs when the paid counts could not be verified', () => {
-    const [frame, strap] = applyCampaign(catalog('preorder'), CONFIG, null).products[0].variants;
+    const [frame, strap] = applyCampaign(catalog('preorder'), CONFIG, null, OPEN).products[0].variants;
     assert.equal(frame.availability, 'sold_out');
     assert.equal(frame.ship_promise, null);
     assert.equal(strap.availability, 'preorder');
-    assert.equal(applyCampaign(catalog('preorder'), CONFIG, null).campaign_counts, 'unavailable');
+    assert.equal(applyCampaign(catalog('preorder'), CONFIG, null, OPEN).campaign_counts, 'unavailable');
   });
 
   it('closes a SKU Shopify still prices under its step', () => {
     // 99 retail, 120 paid units: the step is 10% off (89.10), but Shopify
     // still charges the 20% price of 79.
-    const [frame] = applyCampaign(catalog('preorder'), CONFIG, {'OPENFRAME-5': 120}).products[0].variants;
+    const [frame] = applyCampaign(catalog('preorder'), CONFIG, {'OPENFRAME-5': 120}, OPEN).products[0].variants;
     assert.equal(frame.availability, 'sold_out');
     assert.equal(frame.campaign, null);
   });
@@ -278,7 +283,7 @@ describe('applyCampaign', () => {
   it('keeps selling once the step is written', () => {
     const stepped = catalog('preorder');
     stepped.products[0].variants[0] = {...stepped.products[0].variants[0], price: 89.1};
-    const [frame] = applyCampaign(stepped, CONFIG, {'OPENFRAME-5': 120}).products[0].variants;
+    const [frame] = applyCampaign(stepped, CONFIG, {'OPENFRAME-5': 120}, OPEN).products[0].variants;
     assert.equal(frame.availability, 'preorder');
     assert.equal(frame.campaign?.price, 89.1);
     assert.equal(frame.campaign?.nextPrice, 99);
@@ -287,14 +292,14 @@ describe('applyCampaign', () => {
   it('sells at retail past the last step', () => {
     const full = catalog('preorder');
     full.products[0].variants[0] = {...full.products[0].variants[0], price: 99, compare_price: null};
-    const [frame] = applyCampaign(full, CONFIG, {'OPENFRAME-5': 250}).products[0].variants;
+    const [frame] = applyCampaign(full, CONFIG, {'OPENFRAME-5': 250}, OPEN).products[0].variants;
     assert.equal(frame.availability, 'preorder');
     assert.equal(frame.campaign?.earlyPrice, false);
     assert.equal(frame.campaign?.nextPrice, null);
   });
 
   it('leaves a SKU the policy keeps closed untouched', () => {
-    const [frame] = applyCampaign(catalog('sold_out'), CONFIG, {'OPENFRAME-5': 12}).products[0].variants;
+    const [frame] = applyCampaign(catalog('sold_out'), CONFIG, {'OPENFRAME-5': 12}, OPEN).products[0].variants;
     assert.equal(frame.availability, 'sold_out');
     assert.equal(frame.campaign, undefined);
   });
@@ -363,5 +368,105 @@ describe('paid batch and ship groups', () => {
     // Without campaign data (in stock, or counts unavailable): the promise text.
     assert.equal(shipGroupKey('ACC-1', null, null), 'date:');
     assert.equal(shipGroupKey('X', 'ships late October 2026', undefined), 'date:ships late October 2026');
+  });
+});
+
+describe('funding deadline (endsOn)', () => {
+  // 31 December 2026 is CET (UTC+1): 23:59 Brussels is 22:59 UTC.
+  const LAST_MINUTE = new Date('2026-12-31T22:59:00Z');
+  const LAST_MS = new Date('2026-12-31T22:59:59.999Z');
+  const AFTER = new Date('2026-12-31T23:00:00Z');
+  const STACK_CONFIG = {...CONFIG, skus: {'OPENFRAME-5': {batches: STACK}}};
+
+  it('ends at midnight after endsOn in Brussels, summer or winter', () => {
+    assert.equal(campaignEndsAt('2026-12-31').toISOString(), '2026-12-31T23:00:00.000Z');
+    // CEST (UTC+2) in July.
+    assert.equal(campaignEndsAt('2026-07-15').toISOString(), '2026-07-15T22:00:00.000Z');
+    // The night the clocks go back: midnight after 24 October is still CEST.
+    assert.equal(campaignEndsAt('2026-10-24').toISOString(), '2026-10-24T22:00:00.000Z');
+    // After 25 October the offset is CET again.
+    assert.equal(campaignEndsAt('2026-10-25').toISOString(), '2026-10-25T23:00:00.000Z');
+  });
+
+  it('is open through 23:59 on 31 December in Brussels and closed from midnight', () => {
+    assert.equal(fundingClosed(CONFIG, LAST_MINUTE), false);
+    assert.equal(fundingClosed(CONFIG, LAST_MS), false);
+    assert.equal(fundingClosed(CONFIG, AFTER), true);
+    assert.equal(fundingClosed(CONFIG, new Date('2027-03-01T00:00:00Z')), true);
+  });
+
+  it('keeps a funding-target SKU on sale at 23:59 and closes it at midnight', () => {
+    const [before] = applyCampaign(catalog('preorder'), CONFIG, {'OPENFRAME-5': 12}, LAST_MINUTE).products[0].variants;
+    assert.equal(before.availability, 'preorder');
+    assert.equal(before.ship_promise, PENDING);
+    const [after, strap] = applyCampaign(catalog('preorder'), CONFIG, {'OPENFRAME-5': 12}, AFTER).products[0].variants;
+    assert.equal(after.availability, 'sold_out');
+    assert.equal(after.ship_promise, null);
+    assert.equal(after.campaign, null);
+    // A SKU without a campaign entry is not touched by the deadline.
+    assert.equal(strap.availability, 'preorder');
+  });
+
+  it('keeps paid stock on sale after the deadline, and closes it once only a funding batch is left', () => {
+    const early = catalog('preorder');
+    // 12 paid units: 20% step, 79.20 on a 99 retail.
+    early.products[0].variants[0] = {...early.products[0].variants[0], price: 79.2};
+    const [paid] = applyCampaign(early, STACK_CONFIG, {'OPENFRAME-5': 12}, AFTER).products[0].variants;
+    assert.equal(paid.availability, 'preorder');
+    assert.equal(paid.campaign?.paidStock, true);
+    assert.equal(paid.ship_promise, 'ships late October 2026');
+    const retail = catalog('preorder');
+    retail.products[0].variants[0] = {...retail.products[0].variants[0], price: 99};
+    const [spent] = applyCampaign(retail, STACK_CONFIG, {'OPENFRAME-5': 250}, AFTER).products[0].variants;
+    assert.equal(spent.availability, 'sold_out');
+    const [open] = applyCampaign(retail, STACK_CONFIG, {'OPENFRAME-5': 250}, LAST_MINUTE).products[0].variants;
+    assert.equal(open.availability, 'preorder');
+  });
+
+  it('keeps a batch whose supplier order is placed (its own ship date) on sale', () => {
+    const placed = {...CONFIG, skus: {'OPENFRAME-5': {batches: [{units: 250, ships: 'ships March 2027'}, {units: 1000}]}}};
+    const [frame] = applyCampaign(catalog('preorder'), placed, {'OPENFRAME-5': 12}, AFTER).products[0].variants;
+    assert.equal(frame.availability, 'preorder');
+    assert.equal(frame.ship_promise, 'ships March 2027');
+  });
+
+  it('reads the deadline from content/preorders.json as 31 December 2026', () => {
+    const config = parseCampaignConfig(JSON.parse(fs.readFileSync('content/preorders.json', 'utf8')));
+    assert.equal(campaignEndsAt(config.endsOn).toISOString(), '2026-12-31T23:00:00.000Z');
+  });
+});
+
+describe('price steps inside one cart line', () => {
+  it('prices every unit of the next order at the current step, even past its end', () => {
+    // 95 paid: 5 units left at 20% off. A line of 10 is charged at the
+    // Shopify price, which is this step: the buyer gets the cheaper price
+    // on all 10 (founder decision, kept on purpose).
+    const s = campaignState(FRAME, 95, PENDING, TIERS, 39);
+    assert.equal(s.tierLeft, 5);
+    assert.equal(s.price, 31.2);
+    assert.equal(s.nextPrice, 35.1);
+    // The step moves only once those units are paid.
+    const after = campaignState(FRAME, 105, PENDING, TIERS, 39);
+    assert.equal(after.price, 35.1);
+    assert.equal(after.tierUpTo, 250);
+  });
+
+  it('steps at the exact unit boundaries: 100 is the last 20% unit, 250 the last 10% unit', () => {
+    assert.equal(campaignState(FRAME, 99, PENDING, TIERS, 39).price, 31.2);
+    assert.equal(campaignState(FRAME, 100, PENDING, TIERS, 39).price, 35.1);
+    assert.equal(campaignState(FRAME, 249, PENDING, TIERS, 39).price, 35.1);
+    assert.equal(campaignState(FRAME, 250, PENDING, TIERS, 39).price, 39);
+    assert.equal(campaignState(FRAME, 250, PENDING, TIERS, 39).earlyPrice, false);
+  });
+
+  it('sells paid stock at the last unit and moves to the funding batch after it', () => {
+    const last = campaignState(STACK, 249, PENDING, TIERS);
+    assert.equal(last.paidStock, true);
+    assert.equal(last.paidLeft, 1);
+    const next = campaignState(STACK, 250, PENDING, TIERS);
+    assert.equal(next.paidStock, false);
+    assert.equal(next.target, 250);
+    assert.equal(next.targetOrdered, 0);
+    assert.equal(next.shipPromise, PENDING);
   });
 });
