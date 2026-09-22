@@ -52,6 +52,8 @@ Node 22 (what CI uses).
 | `npm run audit:perf`, `audit:lh`, `audit:mobile` | performance lab, Lighthouse, mobile screenshots |
 | `npm run gen:shopify-templates` | render the Shopify notification emails from `scripts/shopify-templates/` into `out/`, ready to paste into Shopify |
 | `node scripts/launch-preorders.mjs` | dry run of the preorder launch: read-only checks and the plan; `--apply` performs it (see "Launch preorders") |
+| `node --experimental-strip-types scripts/release-batch.mjs --sku <SKU>` | dry run: the held orders of a batch; `--apply` releases their holds (see "Fulfil a batch") |
+| `node --experimental-strip-types scripts/preorder-notify.mjs --kind moved\|missed --sku <SKU> --new-date <text>` | dry run: renders the ship-date or missed-target email per order; `--send` sends through Resend (see "Tell buyers") |
 | `node scripts/launch-blast.mjs <handle>` | dry run of the launch mail to the `notify-<handle>` Resend segment; `--create` drafts, `--send` sends |
 
 The PR gate is typecheck, lint and test. `scripts/smoke.mjs` hits the main
@@ -81,7 +83,7 @@ docs/                      the deep dives listed above
 
 **Catalog and buying.** `app/lib/shopify-storefront.ts` reads the Shopify Storefront API into the repository's existing catalog shape. Every SKU requires an explicit policy entry; production entries are `sold_out` with no ship promise. `PUBLIC_COMING_SOON=1`, `SHOPIFY_CHECKOUT_WRITE_ENABLED=0`, and the cart loader's `410` response keep checkout closed. Customer-account links stay hidden unless an exact verified Shopify account URL is configured.
 
-**Preorders.** `content/preorders.json` lists production batches per SKU: paid stock with its own ship date, or a funding target whose supplier order is placed once that many units are ordered. The catalog client counts paid Shopify orders per SKU since `countFrom` (`app/lib/shopify-orders.ts`, Admin API, cached one minute per isolate) and `app/lib/preorder-campaign.ts` derives the batch, the meter and the ship promise. Only SKUs the catalog policy sells as `preorder` are affected; if the counts cannot be read, those SKUs close. Every preorder cart line carries its ship promise as a `Preorder` line attribute, so checkout and the order confirmation state it. Prices stay in Shopify: the compare-at price is retail and the price is what the next unit costs. `priceTiers` steps that price as paid units come in (the first 100 at 20% off, units 101 to 250 at 10% off, then retail). `app/lib/shopify-price-tier.ts` writes each step from the `orders/paid` webhook (`/api/shopify/orders-paid`, HMAC-verified) and from the Worker's five-minute `scheduled` reconcile, both gated on `SHOPIFY_PRICE_TIER_WRITE_ENABLED=1`. A SKU Shopify still prices under its step closes instead of selling under it. `/preorder` explains the model and tracks every target.
+**Preorders.** `content/preorders.json` lists production batches per SKU: paid stock with its own ship date, or a funding target whose supplier order is placed once that many units are ordered. The catalog client counts paid Shopify orders per SKU since `countFrom` (`app/lib/shopify-orders.ts`, Admin API, cached one minute per isolate) and `app/lib/preorder-campaign.ts` derives the batch, the meter and the ship promise. Only SKUs the catalog policy sells as `preorder` are affected; if the counts cannot be read, those SKUs close. Every preorder cart line carries its ship promise as a `Preorder` line attribute, so checkout and the order confirmation state it. Prices stay in Shopify: the compare-at price is retail and the price is what the next unit costs. `priceTiers` steps that price as paid units come in (the first 100 at 20% off, units 101 to 250 at 10% off, then retail). `app/lib/shopify-price-tier.ts` writes each step from the `orders/paid` webhook (`/api/shopify/orders-paid`, HMAC-verified) and from the Worker's five-minute `scheduled` reconcile, both gated on `SHOPIFY_PRICE_TIER_WRITE_ENABLED=1`. A SKU Shopify still prices under its step closes instead of selling under it. The same two runs hold every paid order with a `Preorder` line (`app/lib/preorder-fulfilment.ts`): each open fulfillment order gets a hold (reason Other, handle `opendrone-preorder`, a note naming the batch and its ship promise) and the order gets the tags `preorder` and `batch:<SKU>:<N>` for each batch its units fall into. The `preorder` tag marks an order as done, so a released order is never held again. `/api/status/campaign` (never cached) reports per campaign SKU whether it is open, whether the paid counts and price steps read cleanly now, and the last run of each job in that Worker isolate; it answers 503 when a campaign SKU is closed, so an uptime monitor can alert on it. `/preorder` explains the model and tracks every target.
 
 **Product lines.** OpenESC 20x20 / 30x30 and the four OpenRX variants are one
 Shopify product with a `Model` attribute; the page renders a tier ladder matched
@@ -227,6 +229,11 @@ steps in Shopify admin first:
    checkout, account and policy pages keep working.
 5. Online Store > Preferences: turn the password page off, then say go.
 
+The Admin API token (the OpenDrone Infra app) needs `read_all_orders`,
+`write_orders` (order tags), `write_products` (price steps) and
+`write_merchant_managed_fulfillment_orders` (preorder holds). The launch
+preflight names any that are missing.
+
 On the go, an agent runs `node scripts/launch-preorders.mjs` (dry run) and
 then `node scripts/launch-preorders.mjs --apply` from this checkout on
 `feat/preorders`, with `.env` holding the Shopify tokens and
@@ -262,6 +269,45 @@ script stops at the first failure and never prints a secret. In order it:
 Then the founder places one test-mode order (BE address, one OpenRX Lite)
 and checks the `Preorder` line in the confirmation email and that the meter
 on `/preorder` moves.
+
+## Fulfil a batch
+
+Paid preorder orders stay on hold until their batch ships, so the bpost
+plugin does not import them. When a batch arrives:
+
+1. `node --experimental-strip-types scripts/release-batch.mjs --sku OPENFC-LITE-2020 --batch 1`
+   lists the held orders tagged `batch:OPENFC-LITE-2020:1`: the ones that
+   ship now, and the ones that still wait for another batch in the same
+   order (an order ships as one parcel). Add `--with SKU:N` for any other
+   batch that is also in stock, or that is settled because its item was
+   refunded or the buyer chose to wait.
+2. Run it again with `--apply`. It releases the preorder hold on each
+   order that ships now. Nothing else changes.
+3. In the bpost plugin, import the released orders and print the labels.
+
+The script reads the Shopify Admin credentials from `.env` and never prints
+them. An order with an item whose target was missed is released once that
+item is refunded in Shopify admin: a line with nothing left to ship no
+longer holds the order back.
+
+## Tell buyers
+
+Terms 7bis.3 and 7bis.3bis promise an email when a ship date moves and
+when a funding target is missed. `scripts/preorder-notify.mjs` writes them
+per order, in the buyer's language (English, Dutch or French):
+
+- Ship date moved: `node --experimental-strip-types scripts/preorder-notify.mjs --kind moved --sku OPENFC-LITE-2020 --batch 1 --new-date "mid November 2026" --new-date-nl "half november 2026" --new-date-fr "mi-novembre 2026"`.
+- Target missed by `endsOn`: `--kind missed --sku OPENRX-LITE --batch 1 --new-date "by the end of June 2027"`.
+  The email offers a refund or to wait, and states the 30-day reply
+  deadline after which the item is refunded.
+
+Without `--send` it prints every email and sends nothing. With `--send` it
+sends through Resend from `SUPPORT_FROM_EMAIL` with replies to
+`contact@opendrone.be`, and tags each order `notified-<kind>:<SKU>:<N>` (a
+rerun skips those orders; `--again` resends). Record each answer with
+`--record "#1001" --sku OPENRX-LITE --choice refund|wait --apply`, which
+tags the order `preorder-refund:<SKU>` or `preorder-wait:<SKU>`. Refunds
+are made in Shopify admin.
 
 ## Security
 
