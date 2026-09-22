@@ -10,6 +10,7 @@ import {
   cartLineInfo,
   paidBatchLeft,
   paidBatchMessage,
+  lineLimitMessage,
   splitPlan,
   variantLink,
   type ShopifyCartDependencies,
@@ -231,6 +232,15 @@ describe('Shopify cart action: add', () => {
       },
     ));
     assert.equal(response.status, 400);
+    assert.equal(
+      await response.text(),
+      'One order holds at most 50 units of each item. Your cart already has 49, so you can add 1 more.',
+    );
+  });
+
+  it('states the per-order limit when the cart already holds 50', () => {
+    assert.match(lineLimitMessage(50), /already has 50\. Check out this order first/);
+    assert.match(lineLimitMessage(0), /you can add 50 more/);
   });
 
   it('starts a new cart when the session cart has expired', async () => {
@@ -300,6 +310,10 @@ describe('Shopify cart action: background add', () => {
     const body = (await response.json()) as {totalQuantity: number; lines: Array<{sku: string; shipPromise: string}>};
     assert.equal(body.totalQuantity, 1);
     assert.deepEqual([body.lines[0].sku, body.lines[0].shipPromise], ['OPENRX-LITE', 'preview promise']);
+    // The drawer shows the line total and the cart subtotal.
+    const priced = body as unknown as {subtotal: {amount: string}; lines: Array<{total: {amount: string}}>};
+    assert.equal(priced.subtotal.amount, '0.00');
+    assert.equal(priced.lines[0].total.amount, '999.99');
   });
 });
 
@@ -432,6 +446,7 @@ describe('Shopify cart action: paid batch limit', () => {
     assert.equal(paidBatchLeft(CATALOG.products[0].variants[0]), null);
     assert.match(paidBatchMessage(10, PAID_PROMISE), /Only 10 units are left in the paid batch \(ships late October 2026\)/);
     assert.match(paidBatchMessage(1, null), /^Only 1 unit is left in the paid batch\. /);
+    assert.match(paidBatchMessage(10, null, 4), /Your cart already has 4\.$/);
   });
 
   it('refuses an add past the units left, counting the cart and the add together', async () => {

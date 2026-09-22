@@ -39,6 +39,8 @@ function fail(message: string, status: number, headers: Record<string, string> =
 /** What the add-to-cart dialog and the header count need; no checkout URL. */
 export type CartSummary = {
   totalQuantity: number;
+  /** Subtotal of every line, VAT included; absent on an empty summary. */
+  subtotal?: {amount: string; currencyCode: string};
   lines: Array<{
     sku: string | null;
     handle: string;
@@ -47,12 +49,15 @@ export type CartSummary = {
     quantity: number;
     image: {url: string; altText: string | null} | null;
     shipPromise: string | null;
+    /** Line total, VAT included. */
+    total?: {amount: string; currencyCode: string};
   }>;
 };
 
 export function cartSummary(cart: ShopifyCart): CartSummary {
   return {
     totalQuantity: cart.totalQuantity,
+    subtotal: {amount: cart.subtotal.amount, currencyCode: cart.subtotal.currencyCode},
     lines: cart.lines.map((line) => ({
       sku: line.sku,
       handle: line.handle,
@@ -61,8 +66,17 @@ export function cartSummary(cart: ShopifyCart): CartSummary {
       quantity: line.quantity,
       image: line.image,
       shipPromise: line.shipPromise,
+      total: {amount: line.total.amount, currencyCode: line.total.currencyCode},
     })),
   };
+}
+
+/** What a buyer reads when an add would take one item past 50 units. */
+export function lineLimitMessage(inCart: number): string {
+  const room = Math.max(0, MAX_QUANTITY - inCart);
+  return room === 0
+    ? `One order holds at most ${MAX_QUANTITY} units of each item, and your cart already has ${inCart}. Check out this order first, then place a second one.`
+    : `One order holds at most ${MAX_QUANTITY} units of each item. Your cart already has ${inCart}, so you can add ${room} more.`;
 }
 
 function redirect(location: string): Response {
@@ -125,11 +139,12 @@ export function paidBatchLeft(variant: Pick<CatalogVariant, 'campaign'> | null |
 }
 
 /** What a buyer reads when a line asks for more than the paid batch holds. */
-export function paidBatchMessage(left: number, shipPromise: string | null): string {
+export function paidBatchMessage(left: number, shipPromise: string | null, inCart = 0): string {
   const promise = shipPromise?.trim() ? ` (${shipPromise.trim()})` : '';
-  return left === 1
+  const base = left === 1
     ? `Only 1 unit is left in the paid batch${promise}. Order 1 at most; later units belong to the next batch, which is a funding target.`
     : `Only ${left} units are left in the paid batch${promise}. Order ${left} or fewer; later units belong to the next batch, which is a funding target.`;
+  return inCart > 0 ? `${base} Your cart already has ${inCart}.` : base;
 }
 
 /** Refuse an add that takes a paid-batch variant past the units left,
@@ -145,15 +160,17 @@ function checkPaidBatches(
   }
   for (const line of lines) {
     const variant = catalogVariant(catalog, line.merchandiseId);
-    if (variant) checkPaidBatch(variant, wanted.get(line.merchandiseId) ?? 0);
+    if (variant) {
+      checkPaidBatch(variant, wanted.get(line.merchandiseId) ?? 0, inCart.get(line.merchandiseId) ?? 0);
+    }
   }
 }
 
 /** Refuse a quantity of a paid-batch variant beyond the units left. */
-function checkPaidBatch(variant: CatalogVariant, wanted: number): void {
+function checkPaidBatch(variant: CatalogVariant, wanted: number, inCart = 0): void {
   const left = paidBatchLeft(variant);
   if (left !== null && wanted > left) {
-    throw fail(paidBatchMessage(left, variant.ship_promise), 409);
+    throw fail(paidBatchMessage(left, variant.ship_promise, inCart), 409);
   }
 }
 
@@ -346,8 +363,9 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
           quantities.set(line.merchandiseId, (quantities.get(line.merchandiseId) ?? 0) + line.quantity);
         }
         for (const line of lines) {
-          if ((quantities.get(line.merchandiseId) ?? 0) + line.quantity > MAX_QUANTITY) {
-            throw fail('Cart quantity exceeds the limit.', 400);
+          const inCart = quantities.get(line.merchandiseId) ?? 0;
+          if (inCart + line.quantity > MAX_QUANTITY) {
+            throw fail(lineLimitMessage(inCart), 400);
           }
         }
         checkPaidBatches(catalog, lines, quantities);

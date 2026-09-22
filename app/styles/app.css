@@ -4848,6 +4848,15 @@ button.reset {
   flex: 1 1 0;
   min-width: 0;
 }
+/* The per-order cap under the buy row, once the stepper reaches it. */
+.product-buy .product-form:has(> .product-qty) > .product-qty-note {
+  flex: 1 1 100%;
+}
+.product-qty-note {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+}
 .product-price-ladder-head {
   font-size: var(--fs-xs);
 }

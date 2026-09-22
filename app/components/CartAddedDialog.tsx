@@ -5,12 +5,15 @@ import type {RootLoader} from '~/root';
 import {copyText} from '~/lib/copy';
 import {Txt} from '~/components/Txt';
 import {formatPrice} from '~/lib/catalog';
-import {isPurchasableStatus} from '~/lib/product-content';
+import {isInternalSku, isPurchasableStatus, variantDisplayName} from '~/lib/product-content';
+import {shippingQuote} from '~/lib/shipping-rates';
+import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
 import type {CartSummary} from '~/lib/shopify-cart-action';
 import {trackEvent} from '~/lib/growth/plausible';
 import {
   CART_ADDED_EVENT,
   postCartAdd,
+  storedShipCountry,
   type CartAddedDetail,
 } from '~/lib/cart-client';
 import {
@@ -49,6 +52,8 @@ export function CartAddedDialog() {
   const [ranking, setRanking] = useState<string[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
+  // The destination picked in the cart, when the buyer picked one.
+  const [shipCountry, setShipCountry] = useState<string | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
@@ -64,6 +69,7 @@ export function CartAddedDialog() {
       returnFocus.current = document.activeElement as HTMLElement | null;
       setDetail(next);
       setSummary(next.summary);
+      setShipCountry(storedShipCountry());
       setFailed(null);
       setRanking([]);
       if (next.handle) {
@@ -127,6 +133,11 @@ export function CartAddedDialog() {
     (handle) => isPurchasableStatus(statuses[handle]),
   );
   const added = summary.lines.filter((l) => l.sku && detail.skus.includes(l.sku));
+  const subtotal = summary.subtotal ?? null;
+  // Same rule as the buy module: "incl. VAT" only where EU VAT applies.
+  const quote = shippingQuote(shipCountry ?? rootData?.visitorCountry ?? null);
+  const vatIncluded = !quote || (!quote.blocked && quote.duty === 'none');
+  const shipBlocked = quote?.blocked === true;
   // What the order waits for today: every ship date in the cart.
   const cartDates = new Set(summary.lines.map((l) => l.shipPromise ?? ''));
 
@@ -180,7 +191,11 @@ export function CartAddedDialog() {
         ...laterPromises.map((promise) => {
           const items = later.filter((s) => (s.variant.shipPromise ?? '') === promise);
           const names = items
-            .map((s) => (s.variant.title !== 'Default Title' ? `${s.product.title} ${s.variant.title}` : s.product.title))
+            .map((s) =>
+              s.variant.title !== 'Default Title'
+                ? `${s.product.title} ${variantDisplayName(s.product.handle, s.variant.title)}`
+                : s.product.title,
+            )
             .join(', ');
           return promise
             ? `${names}: ${items.length > 1 ? t('build_each_prefix', 'each') + ' ' : ''}${promise}.`
@@ -208,7 +223,17 @@ export function CartAddedDialog() {
             {s.quantity > 1 ? `${s.quantity}× ` : ''}
             {s.product.title}
           </strong>
-          {s.variant.title !== 'Default Title' ? <span>{s.variant.title}</span> : null}
+          {s.variant.title !== 'Default Title' ? (
+            <span>{variantDisplayName(s.product.handle, s.variant.title)}</span>
+          ) : null}
+          {isInternalSku(s.product.handle, s.variant.title) ? (
+            <small className="cart-added-ship">
+              {t(
+                'build_spec_not_final',
+                'Stator size and KV are not final. You are told them before the supplier order and can cancel then for a full refund.',
+              )}
+            </small>
+          ) : null}
           <span className="cart-added-price">
             {formatPrice(Number(s.variant.price.amount) * s.quantity, s.variant.price.currencyCode)}
             {s.quantity > 1 ? (
@@ -301,7 +326,7 @@ export function CartAddedDialog() {
             <div>
               <strong>{line.title}</strong>
               {line.variantTitle && line.variantTitle !== 'Default Title' ? (
-                <span>{line.variantTitle}</span>
+                <span>{variantDisplayName(line.handle, line.variantTitle)}</span>
               ) : null}
               {line.shipPromise ? (
                 <small className="cart-added-ship">
@@ -309,7 +334,12 @@ export function CartAddedDialog() {
                 </small>
               ) : null}
             </div>
-            {line.quantity > 1 ? <span className="cart-added-qty">× {line.quantity}</span> : null}
+            <div style={{display: 'grid', justifyItems: 'end', gap: '0.15rem'}}>
+              {line.quantity > 1 ? <span className="cart-added-qty">× {line.quantity}</span> : null}
+              {line.total ? (
+                <span className="cart-added-price">{formatPrice(line.total.amount, line.total.currencyCode)}</span>
+              ) : null}
+            </div>
           </div>
         ))}
 
@@ -371,10 +401,55 @@ export function CartAddedDialog() {
         ) : null}
 
         <div className="cart-added-actions">
+          {subtotal ? (
+            <p className="cart-added-subtotal" style={{gridColumn: '1 / -1', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '1rem', margin: 0}}>
+              <span>
+                {t('added_subtotal', 'Subtotal ({count} items)', {count: String(summary.totalQuantity)})}
+                {vatIncluded ? (
+                  <small style={{display: 'block', color: 'var(--color-text-muted)'}}>
+                    {t('added_subtotal_note', 'incl. VAT, shipping at checkout')}
+                  </small>
+                ) : (
+                  <small style={{display: 'block', color: 'var(--color-text-muted)'}}>
+                    {t('added_subtotal_note_export', 'Shipping and final price for your address at checkout')}
+                  </small>
+                )}
+              </span>
+              <strong className="cart-added-price">{formatPrice(subtotal.amount, subtotal.currencyCode)}</strong>
+            </p>
+          ) : null}
+          {shipBlocked ? null : (
+            // A plain form post: the cart action checks every line again and
+            // redirects to Shopify checkout, or back to /cart with a notice.
+            <form
+              method="post"
+              action={CART_ACTION}
+              style={{gridColumn: '1 / -1', margin: 0}}
+              onSubmit={() =>
+                trackCheckoutClick(
+                  subtotal ? {currency: subtotal.currencyCode, amount: Number(subtotal.amount)} : null,
+                )
+              }
+            >
+              <input type="hidden" name="intent" value="checkout" />
+              <button
+                type="submit"
+                className="cart-added-view"
+                style={{width: '100%', border: 0, font: 'inherit', fontWeight: 600, cursor: 'pointer'}}
+              >
+                {copyText('cart.checkout_cta') ?? 'Checkout'}
+              </button>
+            </form>
+          )}
           <button type="button" className="cart-added-continue" onClick={close}>
             {t('added_continue', 'Continue shopping')}
           </button>
-          <Link className="cart-added-view" to="/cart" prefetch="intent">
+          <Link
+            className="cart-added-continue"
+            to="/cart"
+            prefetch="intent"
+            style={{display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', color: 'var(--color-text)'}}
+          >
             {t('added_view', 'View cart')}
           </Link>
         </div>

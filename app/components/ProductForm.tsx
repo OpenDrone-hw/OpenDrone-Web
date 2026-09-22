@@ -21,6 +21,7 @@ export function ProductForm({
   stackOffers,
   quantity,
   maxQuantity = 50,
+  maxQuantityNote,
   onQuantityChange,
 }: {
   productOptions: MappedProductOptions[];
@@ -46,6 +47,9 @@ export function ProductForm({
   /** The most one add may ask for: the cart line cap, or the units left in
    *  a paid preorder batch. */
   maxQuantity?: number;
+  /** Shown under the buy row once the stepper reaches `maxQuantity`, so a
+   *  clamped number is explained ("Max 50 per order"). */
+  maxQuantityNote?: string;
   onQuantityChange?: (next: number) => void;
 }) {
   const navigate = useNavigate();
@@ -203,6 +207,11 @@ export function ProductForm({
               : ctaLabelSoldOut}
         </AddToCartButton>
       </StackQuickAdd>
+      {onQuantityChange && !isBundle && maxQuantityNote && qty >= maxQuantity ? (
+        <p className="product-qty-note" role="status">
+          {maxQuantityNote}
+        </p>
+      ) : null}
     </div>
   );
 }

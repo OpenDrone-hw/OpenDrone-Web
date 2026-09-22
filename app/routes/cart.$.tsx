@@ -20,7 +20,15 @@ import {copyText} from '~/lib/copy';
 import {countryName, shippingQuote} from '~/lib/shipping-rates';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
 import type {RootLoader} from '~/root';
-import {CartAddError, postCart} from '~/lib/cart-client';
+import {
+  CartAddError,
+  postCart,
+  storedShipCountry,
+  storedSplitItems,
+  storeShipCountry,
+  storeSplitItems,
+  type SplitItem,
+} from '~/lib/cart-client';
 
 const CART_KEY = 'shopifyCartId';
 const MAX_LINE_QUANTITY = 50;
@@ -68,13 +76,41 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
   return {cart, info, check};
 }
 
-type Removed = Array<{id: string; name: string; href: string}>;
+type Removed = SplitItem[];
+
+/** Every ISO 3166-1 country code, for the cart's destination picker. */
+const COUNTRY_CODES = (
+  'AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ ' +
+  'CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR ' +
+  'GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP ' +
+  'KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT ' +
+  'MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW ' +
+  'SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG ' +
+  'UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW'
+).split(' ');
 
 export default function CartPage() {
   const {cart, info, check} = useLoaderData<typeof loader>();
-  // Lines moved out for a second order: kept here so the links survive the
-  // cart reloading without them.
+  const rootData = useRouteLoaderData<RootLoader>('root');
+  // Lines moved out for a second order: kept in this browser so the list
+  // survives a reload and the trip through checkout.
   const [removed, setRemoved] = useState<Removed>([]);
+  // The destination the shipping row quotes: the visitor's country until
+  // the buyer picks another one.
+  const [country, setCountry] = useState<string | null>(rootData?.visitorCountry ?? null);
+  useEffect(() => {
+    setRemoved(storedSplitItems());
+    const picked = storedShipCountry();
+    if (picked) setCountry(picked);
+  }, []);
+  const pickCountry = (code: string) => {
+    setCountry(code);
+    storeShipCountry(code);
+  };
+  const updateRemoved = (items: Removed) => {
+    setRemoved(items);
+    storeSplitItems(items);
+  };
   return (
     <main className="cart page-shell">
       <header className="page-header">
@@ -90,21 +126,91 @@ export default function CartPage() {
         </p>
       ) : null}
       {removed.length ? (
-        <div className="cart-mixed-warning" role="status">
-          <p>{t('split_removed', 'Removed for a second order. Add them again after this checkout:')}</p>
-          <ul>
-            {removed.map((item) => (
-              <li key={item.id}><Link to={item.href}>{item.name}</Link></li>
-            ))}
-          </ul>
-        </div>
+        <SplitReminder items={removed} cartHasLines={Boolean(cart?.lines.length)} onChange={updateRemoved} />
       ) : null}
       {cart?.lines.length ? (
-        <PopulatedCart cart={cart} info={info} onSplit={(items) => setRemoved(items)} />
+        <PopulatedCart
+          cart={cart}
+          info={info}
+          country={country}
+          onCountry={pickCountry}
+          onSplit={(items) => updateRemoved([...removed.filter((r) => !items.some((i) => i.id === r.id)), ...items])}
+        />
       ) : (
         <EmptyCart />
       )}
     </main>
+  );
+}
+
+/**
+ * The lines taken out for a second order, with their quantities. While this
+ * order is still in the cart, each links to its product page; once the cart
+ * is empty (the first order is checked out), one button adds the same
+ * quantities back.
+ */
+function SplitReminder({
+  items,
+  cartHasLines,
+  onChange,
+}: {
+  items: Removed;
+  cartHasLines: boolean;
+  onChange: (items: Removed) => void;
+}) {
+  const revalidator = useRevalidator();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const addable = items.filter((item) => item.sku);
+  const addBack = async () => {
+    if (busy || !addable.length) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await postCart('/api/shopify/cart', [
+        ['intent', 'add'],
+        ['lines', addable.map((item) => `${item.sku}:${item.quantity}`).join(',')],
+      ]);
+      onChange(items.filter((item) => !item.sku));
+      void revalidator.revalidate();
+    } catch (caught) {
+      setError(
+        caught instanceof CartAddError && (caught.status === 400 || caught.status === 409) && caught.message
+          ? caught.message
+          : (copyText('cart.line_update_failed') ?? 'Could not update. Try again.'),
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="cart-mixed-warning" role="status">
+      <p>
+        {cartHasLines
+          ? t('split_removed', 'Removed for a second order. Check out this order first, then add these back:')
+          : t('split_removed_ready', 'Your second order: add these back to the cart.')}
+      </p>
+      <ul>
+        {items.map((item) => (
+          <li key={item.id}>
+            <Link to={item.href}>
+              {t('split_item', '{quantity} x {name}', {quantity: item.quantity, name: item.name})}
+            </Link>
+          </li>
+        ))}
+      </ul>
+      <div className="cart-secondary-actions">
+        {!cartHasLines && addable.length ? (
+          <button type="button" className="cart-keep-shopping" disabled={busy} onClick={() => void addBack()}>
+            {busy ? t('split_adding', 'Adding…') : t('split_add_back', 'Add these back')}
+          </button>
+        ) : null}
+        <button type="button" className="cart-keep-shopping" disabled={busy} onClick={() => onChange([])}>
+          {t('split_dismiss', 'Clear this list')}
+        </button>
+      </div>
+      {error ? <small className="cart-line-error" role="alert">{error}</small> : null}
+    </div>
   );
 }
 
@@ -127,24 +233,48 @@ function lineName(line: ShopifyCartLine): string {
  *  checkout waits until Shopify has confirmed them. */
 const PendingContext = createContext<(delta: number) => void>(() => {});
 
-function ShippingRow({country}: {country: string | null}) {
+/** Country names for the picker, sorted by name, built once. */
+let countryOptions: Array<{code: string; name: string}> | null = null;
+function allCountries(): Array<{code: string; name: string}> {
+  countryOptions ??= COUNTRY_CODES.map((code) => ({code, name: countryName(code)})).sort((a, b) =>
+    a.name.localeCompare(b.name, 'en'),
+  );
+  return countryOptions;
+}
+
+/** The flat rate to the picked destination, with a picker to change it. */
+function ShippingRow({country, onCountry}: {country: string | null; onCountry: (code: string) => void}) {
   const quote = shippingQuote(country);
-  if (!quote) {
-    return (
-      <div className="cart-register-row">
-        <dt>{t('shipping_label', 'Shipping')}</dt>
-        <dd>{t('shipping_at_checkout', 'at checkout')}</dd>
-      </div>
-    );
-  }
-  const name = countryName(quote.country);
   return (
     <div className="cart-register-row">
-      <dt>{t('shipping_to', 'Shipping to {country}', {country: name})}</dt>
+      <dt>
+        <label htmlFor="cart-ship-country">{t('shipping_label_to', 'Shipping to')}</label>{' '}
+        <select
+          id="cart-ship-country"
+          value={quote?.country ?? ''}
+          onChange={(event) => onCountry(event.target.value)}
+          style={{
+            maxWidth: '11rem',
+            font: 'inherit',
+            color: 'inherit',
+            background: 'transparent',
+            border: '1px solid var(--color-border-strong)',
+            borderRadius: '4px',
+            padding: '0.1rem 0.25rem',
+          }}
+        >
+          {quote ? null : <option value="">{t('shipping_pick', 'Choose a country')}</option>}
+          {allCountries().map(({code, name}) => (
+            <option key={code} value={code}>{name}</option>
+          ))}
+        </select>
+      </dt>
       <dd>
-        {quote.blocked
-          ? t('shipping_blocked', 'not available')
-          : t('shipping_from', 'from {price}', {price: formatPrice(quote.rate, 'EUR')})}
+        {!quote
+          ? t('shipping_at_checkout', 'at checkout')
+          : quote.blocked
+            ? t('shipping_blocked', 'not available')
+            : formatPrice(quote.rate, 'EUR')}
       </dd>
     </div>
   );
@@ -157,8 +287,18 @@ function DutyNote({country}: {country: string | null}) {
   // No shipping to this country: the checkout slot says so instead.
   if (quote?.blocked) return null;
   const duty = quote ? quote.duty : 'none';
-  if (duty === 'us') return <Txt id="cart.note_us" as="p" className="cart-summary-note" />;
-  if (duty === 'intl') return <Txt id="cart.note_intl" as="p" className="cart-summary-note" />;
+  // Outside the EU: say what the price holds without promising what Shopify
+  // checkout does with Belgian VAT for that address; checkout shows it.
+  const exportVat = (
+    <p className="cart-summary-note">
+      {t(
+        'note_export_vat',
+        'Prices on this site include Belgian VAT. Checkout shows the final price for your delivery address before you pay.',
+      )}
+    </p>
+  );
+  if (duty === 'us') return <>{exportVat}<Txt id="cart.note_us" as="p" className="cart-summary-note" /></>;
+  if (duty === 'intl') return <>{exportVat}<Txt id="cart.note_intl" as="p" className="cart-summary-note" /></>;
   return (
     <>
       <Txt id="cart.note_vat" as="p" className="cart-summary-note" />
@@ -172,14 +312,16 @@ function DutyNote({country}: {country: string | null}) {
 function PopulatedCart({
   cart,
   info,
+  country,
+  onCountry,
   onSplit,
 }: {
   cart: ShopifyCart;
   info: Record<string, CartLineInfo>;
+  country: string | null;
+  onCountry: (code: string) => void;
   onSplit: (items: Removed) => void;
 }) {
-  const rootData = useRouteLoaderData<RootLoader>('root');
-  const country = rootData?.visitorCountry ?? null;
   const revalidator = useRevalidator();
   const [inFlight, setInFlight] = useState(0);
   const onPending = useCallback((delta: number) => setInFlight((n) => Math.max(0, n + delta)), []);
@@ -251,7 +393,7 @@ function PopulatedCart({
               <Txt id="cart.register_subtotal" as="dt" />
               <dd style={pendingStyle}>{formatPrice(cart.subtotal.amount, cart.subtotal.currencyCode)}</dd>
             </div>
-            <ShippingRow country={country} />
+            <ShippingRow country={country} onCountry={onCountry} />
           </dl>
           {mixed ? (
             <MixedWarning cart={cart} info={info} plan={plan} targetsOnly={targetsOnly} onSplit={onSplit} />
@@ -314,7 +456,13 @@ function MixedWarning({
       onSplit(
         cart.lines
           .filter((l) => plan.later.includes(l.id))
-          .map((l) => ({id: l.id, name: lineName(l), href: variantLink(l.handle, l.selectedOptions)})),
+          .map((l) => ({
+            id: l.id,
+            name: lineName(l),
+            href: variantLink(l.handle, l.selectedOptions),
+            sku: l.sku,
+            quantity: l.quantity,
+          })),
       );
     } catch {
       setFailed(true);
@@ -358,7 +506,9 @@ function MixedWarning({
             <input type="hidden" name="intent" value="remove" />
             {plan.later.map((id) => <input key={id} type="hidden" name="lineId" value={id} />)}
             <button type="submit" className="cart-keep-shopping" disabled={busy}>
-              {busy ? t('split_busy', 'Removing…') : t('split_cta', 'Order the rest separately')}
+              {busy
+                ? t('split_busy', 'Removing…')
+                : t('split_cta_named', 'Remove {later} for a second order', {later: names(plan.later)})}
             </button>
           </Form>
           {failed ? (

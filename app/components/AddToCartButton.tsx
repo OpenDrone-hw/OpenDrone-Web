@@ -2,7 +2,8 @@ import {useState} from 'react';
 import {useRevalidator} from 'react-router';
 import {trackEvent} from '~/lib/growth/plausible';
 import {attributionSource} from '~/lib/growth/attribution';
-import {announceCartAdded, postCartAdd, skusFromFields} from '~/lib/cart-client';
+import {announceCartAdded, CartAddError, postCartAdd, skusFromFields} from '~/lib/cart-client';
+import {copyText} from '~/lib/copy';
 
 /**
  * The buy button: a POST form to the cart action (`/api/shopify/cart`,
@@ -41,6 +42,9 @@ export function AddToCartButton({
   dataTip?: string;
 }) {
   const [state, setState] = useState<'idle' | 'adding' | 'error'>('idle');
+  // Why the last add failed, in the buyer's words: the per-order limit
+  // (400) or the paid-batch units left (409) come from the server.
+  const [message, setMessage] = useState<string | null>(null);
   const revalidator = useRevalidator();
   if (disabled) {
     return (
@@ -86,6 +90,7 @@ export function AddToCartButton({
         e.currentTarget.querySelector('button')?.blur();
         onClick?.();
         setState('adding');
+        setMessage(null);
         const submitted = keyedFields.map(({name, value}) => [name, value] as [string, string]);
         postCartAdd(action, submitted)
           .then((summary) => {
@@ -95,7 +100,21 @@ export function AddToCartButton({
             // cart link.
             void revalidator.revalidate();
           })
-          .catch(() => setState('error'));
+          .catch((caught: unknown) => {
+            const refused =
+              caught instanceof CartAddError &&
+              (caught.status === 400 || caught.status === 409) &&
+              Boolean(caught.message) &&
+              caught.message.length < 400;
+            // A refused quantity fails the same way on a retry: keep the
+            // label and say why. Anything else may pass on a second try.
+            setState(refused ? 'idle' : 'error');
+            setMessage(
+              refused
+                ? (caught as CartAddError).message
+                : (copyText('cart.add_failed') ?? 'Could not add to cart. Try again in a minute.'),
+            );
+          });
       }}
     >
       {keyedFields.map(({name, value, key}) => (
@@ -112,6 +131,13 @@ export function AddToCartButton({
           {state === 'adding' ? 'Adding…' : state === 'error' ? 'Try again' : children}
         </span>
       </button>
+      {message ? (
+        // The form is display: contents, so this sits in the buy row as its
+        // own full-width item.
+        <small className="cart-line-error" role="alert" style={{flex: '1 1 100%', width: '100%'}}>
+          {message}
+        </small>
+      ) : null}
     </form>
   );
 }
