@@ -1,9 +1,10 @@
-import {useState} from 'react';
+import {useState, useSyncExternalStore} from 'react';
 import {useRevalidator} from 'react-router';
 import {trackEvent} from '~/lib/growth/plausible';
 import {attributionSource} from '~/lib/growth/attribution';
 import {announceCartAdded, CartAddError, postCartAdd, skusFromFields} from '~/lib/cart-client';
 import {copyText} from '~/lib/copy';
+import {beginCartAdd, endCartAdd, isCartAddBusy, subscribeCartAdd} from './cart-add-lock';
 
 /**
  * The buy button: a POST form to the cart action (`/api/shopify/cart`,
@@ -46,6 +47,10 @@ export function AddToCartButton({
   // (400) or the paid-batch units left (409) come from the server.
   const [message, setMessage] = useState<string | null>(null);
   const revalidator = useRevalidator();
+  // Another buy button's add is still running: this one waits, so two
+  // quick taps never race on the cart and drop a line.
+  const anyBusy = useSyncExternalStore(subscribeCartAdd, isCartAddBusy, () => false);
+  const otherBusy = anyBusy && state !== 'adding';
   if (disabled) {
     return (
       <button
@@ -80,7 +85,7 @@ export function AddToCartButton({
       className="add-to-cart-form"
       onSubmit={(e) => {
         e.preventDefault();
-        if (state === 'adding') return;
+        if (state === 'adding' || !beginCartAdd()) return;
         trackEvent('Add to Cart', {
           props: {product: product ?? 'unknown', source: attributionSource()},
           ...(revenue && Number.isFinite(revenue.amount) ? {revenue} : {}),
@@ -94,6 +99,7 @@ export function AddToCartButton({
         const submitted = keyedFields.map(({name, value}) => [name, value] as [string, string]);
         postCartAdd(action, submitted)
           .then((summary) => {
+            endCartAdd();
             setState('idle');
             announceCartAdded({summary, skus: skusFromFields(submitted), handle: product ?? null});
             // The first add creates the session cart: refresh the header's
@@ -101,6 +107,7 @@ export function AddToCartButton({
             void revalidator.revalidate();
           })
           .catch((caught: unknown) => {
+            endCartAdd();
             const refused =
               caught instanceof CartAddError &&
               (caught.status === 400 || caught.status === 409) &&
@@ -126,6 +133,8 @@ export function AddToCartButton({
         data-tip={dataTip}
         className={className}
         aria-busy={state === 'adding'}
+        aria-disabled={otherBusy || undefined}
+        data-waiting={otherBusy ? '' : undefined}
       >
         <span className="btn-label">
           {state === 'adding' ? 'Adding…' : state === 'error' ? 'Try again' : children}

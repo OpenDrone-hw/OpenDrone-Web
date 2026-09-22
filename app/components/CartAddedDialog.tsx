@@ -6,7 +6,8 @@ import {copyText} from '~/lib/copy';
 import {Txt} from '~/components/Txt';
 import {formatPrice} from '~/lib/catalog';
 import {isInternalSku, isPurchasableStatus, variantDisplayName} from '~/lib/product-content';
-import {shippingQuote} from '~/lib/shipping-rates';
+import {countryName, shippingQuote} from '~/lib/shipping-rates';
+import {beginCartAdd, endCartAdd} from './cart-add-lock';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
 import type {CartSummary} from '~/lib/shopify-cart-action';
 import {trackEvent} from '~/lib/growth/plausible';
@@ -142,6 +143,7 @@ export function CartAddedDialog() {
   const cartDates = new Set(summary.lines.map((l) => l.shipPromise ?? ''));
 
   const add = async (items: BuildSuggestion[], key: string) => {
+    if (!beginCartAdd()) return;
     setBusy(key);
     setFailed(null);
     try {
@@ -165,6 +167,7 @@ export function CartAddedDialog() {
     } catch {
       setFailed(key);
     } finally {
+      endCartAdd();
       setBusy(null);
     }
   };
@@ -183,28 +186,23 @@ export function CartAddedDialog() {
     const role = t(`build_role_${s.role}`, s.product.title);
     return s.quantity > 1 ? `${s.quantity} ${t(`build_role_${s.role}_plural`, role)}` : role;
   };
-  // One sentence per ship promise among the parts that would hold the order.
-  const laterPromises = [...new Set(later.map((s) => s.variant.shipPromise ?? ''))];
-  const delayNote = later.length
-    ? [
-        t('build_add_all_delays', 'Adding all of these holds your whole order until the last item is ready.'),
-        ...laterPromises.map((promise) => {
-          const items = later.filter((s) => (s.variant.shipPromise ?? '') === promise);
-          const names = items
-            .map((s) =>
-              s.variant.title !== 'Default Title'
-                ? `${s.product.title} ${variantDisplayName(s.product.handle, s.variant.title)}`
-                : s.product.title,
-            )
-            .join(', ');
-          return promise
-            ? `${names}: ${items.length > 1 ? t('build_each_prefix', 'each') + ' ' : ''}${promise}.`
-            : '';
-        }),
-      ]
-        .filter(Boolean)
-        .join(' ')
-    : null;
+  // Parts that ship on a date already in the cart go first, as one button;
+  // parts that would hold the parcel back sit in their own group below.
+  const soonParts = suggestions.filter((s) => !delaysOrder(s));
+  const laterParts = suggestions.filter(delaysOrder);
+  const soonAdded = soonParts.length > 0 && soonParts.every((s) => summary.lines.some((l) => l.sku === s.sku));
+  const soonName = (s: BuildSuggestion) =>
+    s.variant.title !== 'Default Title'
+      ? `${s.quantity > 1 ? `${s.quantity}× ` : ''}${s.product.title} ${variantDisplayName(s.product.handle, s.variant.title)}`
+      : `${s.quantity > 1 ? `${s.quantity}× ` : ''}${s.product.title}`;
+  const soonPromise = soonParts.find((s) => s.variant.shipPromise)?.variant.shipPromise ?? null;
+  const shipping = quote && !quote.blocked ? quote : null;
+  // One matching part with nothing to explain rides on the button alone;
+  // several, or one with a caveat (a spec not final, a size swap), are
+  // also listed one by one.
+  const soonNeedsList =
+    soonParts.length > 1 ||
+    soonParts.some((s) => s.replaces || isInternalSku(s.product.handle, s.variant.title));
 
   const renderSuggestion = (s: BuildSuggestion) => {
     const image = s.variant.image ?? s.product.featuredImage;
@@ -346,59 +344,71 @@ export function CartAddedDialog() {
         {suggestions.length ? (
           <div className="cart-added-build">
             <p className="cart-added-build-title">
-              {t('build_title', 'Matching parts for a {build} build', {build: build?.label ?? ''})}
+              {t('build_whole_title', 'Building a whole {build} drone? These parts match.', {
+                build: build?.label ?? '',
+              })}
             </p>
-            {missing.length > 1 ? (
-              <>
-                {/* When some parts ship later than the cart, the parts that
-                    ship with the order come first; "add all" is secondary
-                    and says on the button that the whole order waits. */}
-                {later.length && withOrder.length ? (
+            <p className="cart-added-note">
+              {t('build_whole_skip', 'Skip this if you are replacing parts.')}
+            </p>
+            {soonParts.length ? (
+              <button
+                type="button"
+                className="cart-added-primary"
+                disabled={busy !== null || soonAdded}
+                onClick={() => void add(withOrder, 'with-order')}
+              >
+                <span>
+                  {soonAdded
+                    ? t('build_added', 'Added')
+                    : busy === 'with-order'
+                      ? 'Adding…'
+                      : failed === 'with-order'
+                        ? t('build_retry', 'Try again')
+                        : t('build_add_matching', '+ Add the matching {parts} · {price}', {
+                            parts: soonParts.map(soonName).join(', '),
+                            price: formatPrice(totalOf(soonParts), currency),
+                          })}
+                </span>
+                <small>
+                  {/* A short date reads well here; a funding-target promise
+                      is a paragraph and already sits on each part. */}
+                  {soonPromise && soonPromise.length <= 40
+                    ? t('build_ships_with_promise', 'Ships with your order: {promise}', {promise: soonPromise})
+                    : t('build_ships_with', 'Same ship terms as the rest of your cart')}
+                </small>
+              </button>
+            ) : null}
+            {soonNeedsList ? (
+              <ul className="cart-added-suggestions">{soonParts.map(renderSuggestion)}</ul>
+            ) : null}
+            {laterParts.length ? (
+              <div className="cart-added-later">
+                <p className="cart-added-later-title">
+                  {t('build_later_title', 'Ship later (funding target)')}
+                </p>
+                <p className="cart-added-note">
+                  {t('build_later_note', 'Adding these delays your whole parcel until the last one is ready.')}
+                </p>
+                <ul className="cart-added-suggestions">{laterParts.map(renderSuggestion)}</ul>
+                {later.length > 1 ? (
                   <button
                     type="button"
-                    className="cart-added-all"
+                    className="cart-added-textlink"
                     disabled={busy !== null}
-                    onClick={() => void add(withOrder, 'with-order')}
+                    onClick={() => void add(later, 'later')}
                   >
-                    {busy === 'with-order'
+                    {busy === 'later'
                       ? 'Adding…'
-                      : t('build_add_with_order', 'Add only what ships with your order: {parts} · {price}', {
-                          parts: withOrder.map(partName).join(', '),
-                          price: formatPrice(totalOf(withOrder), currency),
+                      : t('build_add_rest', 'Add the rest of the {build} build ({price})', {
+                          build: build?.label ?? '',
+                          price: formatPrice(totalOf(later), currency),
                         })}
                   </button>
                 ) : null}
-                {delayNote ? (
-                  <p id="cart-added-all-delay" className="cart-added-ship is-later" style={{margin: 0}}>
-                    {delayNote}
-                  </p>
-                ) : null}
-                <button
-                  type="button"
-                  className="cart-added-all"
-                  disabled={busy !== null}
-                  aria-describedby={delayNote ? 'cart-added-all-delay' : undefined}
-                  style={later.length && withOrder.length ? {background: 'transparent', fontWeight: 400} : undefined}
-                  onClick={() => void add(missing, 'all')}
-                >
-                  {busy === 'all'
-                    ? 'Adding…'
-                    : later.length
-                      ? t('build_add_all_waits', 'Add all, the whole order then waits for the last item: {parts} · {price}', {
-                          parts: missing.map(partName).join(', '),
-                          price: formatPrice(totalOf(missing), currency),
-                        })
-                      : t('build_add_all', 'Add all matching OpenDrone parts: {parts} · {price}', {
-                          parts: missing.map(partName).join(', '),
-                          price: formatPrice(totalOf(missing), currency),
-                        })}
-                </button>
-              </>
+              </div>
             ) : null}
             <Txt id="cart.build_not_included" as="p" className="cart-added-note" />
-            <ul className="cart-added-suggestions">
-              {suggestions.map(renderSuggestion)}
-            </ul>
           </div>
         ) : null}
 
@@ -414,19 +424,25 @@ export function CartAddedDialog() {
             <p className="cart-added-subtotal" style={{gridColumn: '1 / -1', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '1rem', margin: 0}}>
               <span>
                 {summary.totalQuantity === 1
-                  ? t('added_subtotal_one', 'Subtotal (1 item)')
-                  : t('added_subtotal', 'Subtotal ({count} items)', {count: String(summary.totalQuantity)})}
-                {vatIncluded ? (
-                  <small style={{display: 'block', color: 'var(--color-text-muted)'}}>
-                    {t('added_subtotal_note', 'incl. VAT, shipping at checkout')}
-                  </small>
-                ) : (
-                  <small style={{display: 'block', color: 'var(--color-text-muted)'}}>
-                    {t('added_subtotal_note_export', 'no EU VAT charged, shipping at checkout')}
-                  </small>
-                )}
+                  ? t('added_subtotal_single', 'Subtotal, 1 item')
+                  : t('added_subtotal_many', 'Subtotal, {count} items', {count: String(summary.totalQuantity)})}
+                <small style={{display: 'block', color: 'var(--color-text-muted)'}}>
+                  {vatIncluded ? t('added_vat_incl', 'incl. VAT') : t('added_vat_export', 'no EU VAT charged')}
+                  {shipping ? null : `, ${t('added_shipping_later', 'shipping at checkout')}`}
+                </small>
               </span>
               <strong className="cart-added-price">{formatPrice(subtotal.amount, subtotal.currencyCode)}</strong>
+            </p>
+          ) : null}
+          {subtotal && shipping ? (
+            // The same flat rate and country as the product page and the
+            // cart, so the all-in number shows up before the cart page.
+            <p className="cart-added-shipline">
+              {t('added_shipping_total', 'Shipping to {country} {rate} · Estimated total {total}', {
+                country: countryName(shipping.country),
+                rate: formatPrice(shipping.rate, 'EUR'),
+                total: formatPrice(Number(subtotal.amount) + shipping.rate, subtotal.currencyCode),
+              })}
             </p>
           ) : null}
           {shipBlocked ? null : (

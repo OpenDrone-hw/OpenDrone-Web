@@ -59,7 +59,8 @@ export function StackQuickAdd({
   offers: StackOffer[];
   onAdd?: () => void;
   /** Always-visible row under the CTA (the product page buy box) instead
-   *  of the hover flyout, worded "Add the matching ESC, stack total". */
+   *  of the hover flyout, worded "Pre-order the stack: this board +
+   *  OpenESC 20×20 · €62.40". */
   inline?: boolean;
 }) {
   if (!offers.length) return <>{children}</>;
@@ -92,13 +93,16 @@ export function StackQuickAdd({
               +
             </span>
             <span className="cta-stack-offer-label">
+              {/* Inline, the label names BOTH boards: the offer adds this
+                  board and its partner, so a buyer who also presses the
+                  main button knows they would get this board twice. */}
               {inline
-                ? `Add the matching ${o.adds ?? o.label}${o.size ? ` (${o.size})` : ''}`
+                ? `Pre-order the stack: this board + ${o.label}${o.size ? ` ${o.size}` : ''}`
                 : `${o.label}${o.size ? ` · ${o.size}` : ''}`}
             </span>
             {inline && o.total ? (
               <span className="cta-stack-offer-price">
-                Stack total {formatPrice(o.total.amount, o.total.currencyCode)}
+                {formatPrice(o.total.amount, o.total.currencyCode)}
               </span>
             ) : o.price ? (
               <span className="cta-stack-offer-price">

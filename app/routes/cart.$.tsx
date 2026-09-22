@@ -14,12 +14,14 @@ import {
   variantLink,
   type CartLineInfo,
 } from '~/lib/shopify-cart-action';
-import {formatPrice} from '~/lib/catalog';
+import {formatPrice, paysInOtherCurrency} from '~/lib/catalog';
+import {parseBuilds} from '~/lib/build-recommendations';
+import buildsJson from '../../content/builds.json';
 import {lineDisplayName, variantCartNote, variantDisplayName} from '~/lib/product-content';
 import {Txt} from '~/components/Txt';
 import {buildSeoMeta} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
-import {countryName, shippingQuote} from '~/lib/shipping-rates';
+import {BLOCKED_COUNTRIES, countryName, shippingQuote} from '~/lib/shipping-rates';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
 import type {RootLoader} from '~/root';
 import {
@@ -33,6 +35,31 @@ import {
 } from '~/lib/cart-client';
 
 const CART_KEY = 'shopifyCartId';
+const BUILDS = parseBuilds(buildsJson);
+
+/**
+ * The cart holds one whole build: every part of one size in at least the
+ * quantity a quad needs (a size-neutral receiver counts by handle). Then
+ * nothing flies before the last part arrives, so splitting the order only
+ * adds a second shipping charge.
+ */
+function holdsCompleteBuild(cart: ShopifyCart): boolean {
+  const units = (match: (line: ShopifyCartLine) => boolean) =>
+    cart.lines.filter(match).reduce((sum, line) => sum + line.quantity, 0);
+  return BUILDS.builds.some((build) =>
+    build.parts.every((part) => {
+      const role = BUILDS.roles[part.role];
+      const held = role.sizeNeutral
+        ? units((line) => line.handle === role.handle)
+        : units((line) => line.sku === part.sku);
+      return held >= part.quantity;
+    }),
+  );
+}
+
+/** US import duty shown as a range, never added to the total. */
+const US_DUTY_LOW = 0.35;
+const US_DUTY_HIGH = 0.4;
 const MAX_LINE_QUANTITY = 50;
 
 /** A copy string with `{name}` placeholders filled, or the fallback. */
@@ -270,9 +297,13 @@ function ShippingRow({country, onCountry}: {country: string | null; onCountry: (
           }}
         >
           {quote ? null : <option value="">{t('shipping_pick', 'Choose a country')}</option>}
-          {allCountries().map(({code, name}) => (
-            <option key={code} value={code}>{name}</option>
-          ))}
+          {/* No shipping there, so not offered; only a visitor located in
+              one sees it, selected, next to the "not available" line. */}
+          {allCountries()
+            .filter(({code}) => !BLOCKED_COUNTRIES.has(code) || code === quote?.country)
+            .map(({code, name}) => (
+              <option key={code} value={code}>{name}</option>
+            ))}
         </select>
       </dt>
       <dd>
@@ -283,6 +314,25 @@ function ShippingRow({country, onCountry}: {country: string | null; onCountry: (
             : formatPrice(quote.rate, 'EUR')}
       </dd>
     </div>
+  );
+}
+
+/** For a US address: the duty the carrier will ask for, as a range worked
+ *  out from the goods subtotal. Shown next to the total, never in it. */
+function UsDutyEstimate({country, subtotal}: {country: string | null; subtotal: number}) {
+  const quote = shippingQuote(country);
+  if (!quote || quote.blocked || quote.duty !== 'us' || !(subtotal > 0)) return null;
+  return (
+    <p className="cart-summary-note cart-duty-estimate">
+      {t(
+        'note_us_estimate',
+        'Estimated US import duty, paid to the carrier on delivery: about {low} to {high} (35 to 40% of the goods; US customs sets the amount). Not in the total above.',
+        {
+          low: formatPrice(subtotal * US_DUTY_LOW, 'EUR'),
+          high: formatPrice(subtotal * US_DUTY_HIGH, 'EUR'),
+        },
+      )}
+    </p>
   );
 }
 
@@ -304,8 +354,30 @@ function DutyNote({country}: {country: string | null}) {
       )}
     </p>
   );
-  if (duty === 'us') return <>{exportVat}<Txt id="cart.note_us" as="p" className="cart-summary-note" /></>;
-  if (duty === 'intl') return <>{exportVat}<Txt id="cart.note_intl" as="p" className="cart-summary-note" /></>;
+  const currencyNote =
+    quote && paysInOtherCurrency(quote.country) ? (
+      <p className="cart-summary-note">
+        {t('note_currency', 'Prices are in euro. Your card issuer converts at its own rate.')}
+      </p>
+    ) : null;
+  if (duty === 'us') {
+    return (
+      <>
+        {exportVat}
+        <Txt id="cart.note_us" as="p" className="cart-summary-note" />
+        {currencyNote}
+      </>
+    );
+  }
+  if (duty === 'intl') {
+    return (
+      <>
+        {exportVat}
+        <Txt id="cart.note_intl" as="p" className="cart-summary-note" />
+        {currencyNote}
+      </>
+    );
+  }
   return (
     <>
       <Txt id="cart.note_vat" as="p" className="cart-summary-note" />
@@ -356,6 +428,17 @@ function PopulatedCart({
     return max != null && line.quantity > max;
   });
   const blocked = pending || overLimit;
+  // The phone's sticky checkout bar steps aside while the checkout button
+  // in the summary is on screen, so there are never two at once.
+  const inflowCheckout = useRef<HTMLDivElement>(null);
+  const [inflowVisible, setInflowVisible] = useState(false);
+  useEffect(() => {
+    const el = inflowCheckout.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(([entry]) => setInflowVisible(entry.isIntersecting));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
   const pendingStyle = pending ? {opacity: 0.5} : undefined;
 
   const checkoutForm = (className: string) => shipBlocked ? (
@@ -417,12 +500,8 @@ function PopulatedCart({
               </div>
             ) : null}
           </dl>
-          {mixed ? (
-            <MixedWarning cart={cart} info={info} plan={plan} targetsOnly={targetsOnly} onSplit={onSplit} />
-          ) : null}
-          {hasPreorder && !mixed ? <Txt id="cart.note_preorder" as="p" className="cart-summary-note" /> : null}
-          <DutyNote country={country} />
-          {checkoutForm('cart-checkout-cta')}
+          <UsDutyEstimate country={country} subtotal={Number(cart.subtotal.amount)} />
+          <div ref={inflowCheckout}>{checkoutForm('cart-checkout-cta')}</div>
           {shipBlocked ? null : (
             <p className="cart-summary-note cart-checkout-domain">
               {t(
@@ -431,6 +510,21 @@ function PopulatedCart({
               )}
             </p>
           )}
+          {mixed ? (
+            <MixedWarning
+              cart={cart}
+              info={info}
+              plan={plan}
+              targetsOnly={targetsOnly}
+              completeBuild={holdsCompleteBuild(cart)}
+              onSplit={onSplit}
+            />
+          ) : null}
+          <details className="cart-notes" open={mixed || undefined}>
+            <summary>{t('notes_summary', 'How shipping and ship dates work')}</summary>
+            {hasPreorder && !mixed ? <Txt id="cart.note_preorder" as="p" className="cart-summary-note" /> : null}
+            <DutyNote country={country} />
+          </details>
           <div className="cart-secondary-actions">
             <Link className="cart-keep-shopping" to="/products"><Txt id="cart.keep_shopping" /></Link>
           </div>
@@ -438,7 +532,7 @@ function PopulatedCart({
         </div>
         {/* Phones: the summary sits below every line, so the total and the
             checkout button also ride along the bottom of the screen. */}
-        <div className="cart-sticky-bar">
+        <div className="cart-sticky-bar" data-hidden={inflowVisible ? '' : undefined}>
           <span>
             {estimatedTotal ? (
               <>
@@ -469,12 +563,16 @@ function MixedWarning({
   info,
   plan,
   targetsOnly,
+  completeBuild,
   onSplit,
 }: {
   cart: ShopifyCart;
   info: Record<string, CartLineInfo>;
   plan: {keep: string[]; later: string[]} | null;
   targetsOnly: boolean;
+  /** The cart is one whole build: nothing flies before its last part, so
+   *  the box says so in one line and the split becomes a quiet link. */
+  completeBuild: boolean;
   onSplit: (items: Removed) => void;
 }) {
   const revalidator = useRevalidator();
@@ -512,6 +610,38 @@ function MixedWarning({
     }
   };
 
+  const splitForm = (label: string, className: string) =>
+    plan ? (
+      <>
+        <Form method="post" action="/api/shopify/cart" onSubmit={(event) => void split(event)}>
+          <input type="hidden" name="intent" value="remove" />
+          {plan.later.map((id) => <input key={id} type="hidden" name="lineId" value={id} />)}
+          <button type="submit" className={className} disabled={busy}>
+            {busy ? t('split_busy', 'Removing…') : label}
+          </button>
+        </Form>
+        {failed ? (
+          <small className="cart-line-error" role="alert">
+            {copyText('cart.line_update_failed') ?? 'Could not update. Try again.'}
+          </small>
+        ) : null}
+      </>
+    ) : null;
+
+  if (completeBuild) {
+    return (
+      <div className="cart-mixed-warning is-build" role="note">
+        <p>{t('mixed_build_together', 'Your build ships together once the last part is ready.')}</p>
+        {plan
+          ? splitForm(
+              t('split_early_link', 'Get the {keep} sooner (pays shipping twice)', {keep: names(plan.keep)}),
+              'cart-split-link',
+            )
+          : null}
+      </div>
+    );
+  }
+
   return (
     <div className="cart-mixed-warning" role="note">
       <Txt id={targetsOnly ? 'cart.mixed_targets_title' : 'cart.mixed_title'} as="p" />
@@ -537,32 +667,13 @@ function MixedWarning({
       {plan ? (
         <>
           <p>
-            {plan.later.length > 1
-              ? t(
-                  'mixed_split_many',
-                  'To get {keep} sooner, order {later} separately: remove them here, check out this order, then add them back for a second order. Each order ships on its own and pays its own shipping.',
-                  {keep: names(plan.keep), later: names(plan.later)},
-                )
-              : t(
-                  'mixed_split_one',
-                  'To get {keep} sooner, order {later} separately: remove it here, check out this order, then add it back for a second order. Each order ships on its own and pays its own shipping.',
-                  {keep: names(plan.keep), later: names(plan.later)},
-                )}
+            {t(
+              'mixed_split_short',
+              'To get {keep} sooner, split this into two orders: {later} move to a list here, you check out the rest, then add them back as a second order. Each order pays its own shipping.',
+              {keep: names(plan.keep), later: names(plan.later)},
+            )}
           </p>
-          <Form method="post" action="/api/shopify/cart" onSubmit={(event) => void split(event)}>
-            <input type="hidden" name="intent" value="remove" />
-            {plan.later.map((id) => <input key={id} type="hidden" name="lineId" value={id} />)}
-            <button type="submit" className="cart-keep-shopping" disabled={busy}>
-              {busy
-                ? t('split_busy', 'Removing…')
-                : t('split_cta_named', 'Move {later} to a second order', {later: names(plan.later)})}
-            </button>
-          </Form>
-          {failed ? (
-            <small className="cart-line-error" role="alert">
-              {copyText('cart.line_update_failed') ?? 'Could not update. Try again.'}
-            </small>
-          ) : null}
+          {splitForm(t('split_cta_short', 'Split into two orders'), 'cart-split-button')}
         </>
       ) : null}
     </div>
