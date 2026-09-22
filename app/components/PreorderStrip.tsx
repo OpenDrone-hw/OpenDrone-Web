@@ -26,12 +26,21 @@ export function PreorderStrip({
         <Txt id="home.preorder_strip_tag" as="strong" className="preorder-strip-home-tag" />
         {stack ? <span>{stack}</span> : null}
       </p>
+      {/* Two equal actions: how preorders work, and what a build needs
+          for a buyer new to FPV. The DJI answer is a plain text link. */}
       <p className="preorder-strip-home-links">
-        <Link prefetch="viewport" to="/preorder" className="preorder-strip-home-primary">
+        <Link prefetch="viewport" to="/products#new-to-fpv" className="preorder-strip-home-primary">
+          <Txt id="home.preorder_strip_new" />
+        </Link>
+        <Link
+          prefetch="viewport"
+          to="/preorder"
+          className="preorder-strip-home-primary bg-transparent! text-[var(--color-text)]! border border-[var(--color-border-strong)] hover:border-[var(--color-gold)]"
+        >
           <Txt id="home.preorder_strip_how" />
         </Link>
-        <Link prefetch="viewport" to="/products#new-to-fpv" className="preorder-strip-home-secondary">
-          <Txt id="home.preorder_strip_new" />
+        <Link prefetch="viewport" to="/products#coming-from-dji" className="preorder-strip-home-secondary">
+          <Txt id="home.preorder_strip_dji" fallback="Coming from DJI?" />
         </Link>
       </p>
     </div>

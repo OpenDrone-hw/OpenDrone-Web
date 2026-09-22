@@ -5,6 +5,7 @@ import {NewsletterSignup} from '~/components/NewsletterSignup';
 import {Txt} from '~/components/Txt';
 import {LegalLanguages, legalHref, useLegalLocale} from '~/components/LangToggle';
 import {copyText} from '~/lib/copy';
+import {useEffect, useRef} from 'react';
 
 interface FooterProps {
   company: CompanyIdentity;
@@ -80,6 +81,50 @@ function ColumnHeading({id}: {id: string}) {
   );
 }
 
+/**
+ * One link group. Below 640px it is a collapsed <details> with the heading
+ * as its summary, so the phone footer is a short list of headings instead
+ * of five full columns; `open` groups (Shop, Customer service) stay open.
+ * The server renders every group open, so the links are there without
+ * JavaScript and on desktop, where the summary is a plain heading.
+ */
+function FooterGroup({
+  id,
+  open = false,
+  children,
+}: {
+  id: string;
+  open?: boolean;
+  children: React.ReactNode;
+}) {
+  const ref = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const mq = window.matchMedia('(max-width: 639px)');
+    const apply = () => {
+      el.open = mq.matches ? open : true;
+    };
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, [open]);
+  return (
+    <details ref={ref} open className="group/fg">
+      <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-between sm:min-h-0 sm:cursor-default sm:pointer-events-none [&::-webkit-details-marker]:hidden">
+        <ColumnHeading id={id} />
+        <span
+          aria-hidden="true"
+          className="mb-3 font-mono text-[var(--color-text-muted)] transition-transform group-open/fg:rotate-45 sm:hidden"
+        >
+          +
+        </span>
+      </summary>
+      {children}
+    </details>
+  );
+}
+
 function FooterNavLink({to, children}: {to: string; children: React.ReactNode}) {
   return (
     <NavLink
@@ -87,7 +132,7 @@ function FooterNavLink({to, children}: {to: string; children: React.ReactNode}) 
       prefetch="viewport"
       to={to}
       className={({isActive}) =>
-        `text-xs transition-colors flex items-center min-h-[44px] md:min-h-0 ${
+        `text-xs transition-colors flex items-center min-h-[36px] md:min-h-0 ${
           isActive
             ? 'text-[var(--color-text)]'
             : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
@@ -115,7 +160,7 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
             turnstileSiteKey={turnstileSiteKey ?? null}
           />
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-8 gap-y-3 sm:gap-8">
           {/* Company identity */}
           <div className="col-span-2 md:col-span-3 lg:col-span-1">
             <h3 className="gold-tag font-display text-sm font-bold tracking-[0.08em] uppercase text-[var(--color-gold-text)] mb-3">
@@ -137,8 +182,7 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
           </div>
 
           {/* Shop */}
-          <div>
-            <ColumnHeading id="chrome.heading_shop" />
+          <FooterGroup id="chrome.heading_shop" open>
             <nav className="flex flex-col gap-1.5">
               {SHOP_LINKS.map((link) => (
                 <FooterNavLink key={link.to} to={link.to}>
@@ -146,11 +190,10 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
                 </FooterNavLink>
               ))}
             </nav>
-          </div>
+          </FooterGroup>
 
           {/* Customer service */}
-          <div>
-            <ColumnHeading id="chrome.heading_help" />
+          <FooterGroup id="chrome.heading_help" open>
             <nav className="flex flex-col gap-1.5">
               {HELP_LINKS.map((link) => (
                 <FooterNavLink key={link.to} to={legalHref(link.to, legalLocale)}>
@@ -158,25 +201,26 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
                 </FooterNavLink>
               ))}
             </nav>
-          </div>
+          </FooterGroup>
 
           {/* Open Source + Company */}
-          <div>
-            <ColumnHeading id="chrome.heading_open_source" />
-            <nav className="flex flex-col gap-1.5 mb-6">
+          <div className="col-span-2 sm:col-span-1">
+          <FooterGroup id="chrome.heading_open_source">
+            <nav className="flex flex-col gap-1.5 sm:mb-6">
               {SOCIAL_LINKS.map((link) => (
                 <a
                   key={link.href}
                   href={link.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors flex items-center min-h-[44px] md:min-h-0"
+                  className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors flex items-center min-h-[36px] md:min-h-0"
                 >
                   <Txt id={`chrome.${link.copy}`} />
                 </a>
               ))}
             </nav>
-            <ColumnHeading id="chrome.heading_company" />
+          </FooterGroup>
+          <FooterGroup id="chrome.heading_company">
             <nav className="flex flex-col gap-1.5">
               {COMPANY_LINKS.map((link) => (
                 <FooterNavLink key={link.to} to={link.to}>
@@ -184,11 +228,12 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
                 </FooterNavLink>
               ))}
             </nav>
+          </FooterGroup>
           </div>
 
           {/* Legal */}
-          <div>
-            <ColumnHeading id="chrome.heading_legal" />
+          <div className="col-span-2 sm:col-span-1">
+          <FooterGroup id="chrome.heading_legal">
             <nav className="flex flex-col gap-1.5">
               {LEGAL_LINKS.map((link) => (
                 <FooterNavLink key={link.to} to={legalHref(link.to, legalLocale)}>
@@ -196,6 +241,7 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
                 </FooterNavLink>
               ))}
             </nav>
+          </FooterGroup>
             <LegalLanguages className="mt-4 text-[12px] leading-relaxed text-[var(--color-text-muted)]" />
             <Txt
               id="chrome.footer_order_help"

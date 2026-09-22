@@ -384,6 +384,7 @@ function DesktopHome({
   // revealed past its interactive point (r > 0.6 within its window).
   const [heroGates, setHeroGates] = useState(0);
   const stackVisibleGate = (heroGates & 1) !== 0;
+  const tourEndGate = (heroGates & (1 << 30)) !== 0;
   const cardInteractiveGate = (i: number) => (heroGates & (1 << (i + 1))) !== 0;
   // Which airframe the hero shows - 5-inch or 3-inch. Toggling swaps the
   // GLB trio loaded by HeroScene.
@@ -508,7 +509,10 @@ function DesktopHome({
   // repeat visits (splash already played) it's in from the first frame. When
   // it lands it shoves the airframe selector down to make room (see the
   // selector's `top` below, which keys off this).
-  const [headerIn, setHeaderIn] = useState(splashHasPlayedThisSession);
+  // The header is in from the first frame (root.tsx sets hero-header-in on
+  // <html>), so a buyer can reach the shop, search and cart while the tour
+  // loads.
+  const [headerIn, setHeaderIn] = useState(true);
   // Each product card's reveal window, as fractions of the walkthrough. Derived
   // from where that card's beat actually sits in the sequence (see
   // revealWindows below) rather than from the registry's even spacing: the
@@ -526,6 +530,8 @@ function DesktopHome({
     // setState is a no-op re-render-wise while the mask is unchanged.
     const windows = windowsRef.current;
     let gates = p >= 0.02 ? 1 : 0;
+    // Bit 30: the tour has reached its last step, so the build choice shows.
+    if (p >= 0.97) gates |= 1 << 30;
     for (let i = 0; i < windows.length; i++) {
       const [lo, hi] = windows[i];
       if (p > lo + 0.6 * (hi - lo)) gates |= 1 << (i + 1);
@@ -946,17 +952,18 @@ function DesktopHome({
           {/* Overflow UI - only renders when the scene takes longer than
               the expected animation budget. Gives the user a way out so
               they aren't trapped behind the dim layer on slow networks. */}
-          {showOverflow && !sceneReady ? (
-            <div
-              className={`hero-load-overflow${splashSettled ? ' is-hidden' : ''}`}
-              role="status"
-              aria-live="polite"
-            >
-              <Txt
-                id="home.loading_models"
-                as="span"
-                className="hero-load-overflow__text"
-              />
+          {/* The way out is there from the first frame: a buyer who came
+              to shop does not wait for the models. The "loading models"
+              line joins it only when the load runs over budget. */}
+          {!splashSettled ? (
+            <div className="hero-load-overflow" role="status" aria-live="polite">
+              {showOverflow && !sceneReady ? (
+                <Txt
+                  id="home.loading_models"
+                  as="span"
+                  className="hero-load-overflow__text"
+                />
+              ) : null}
               <Link
                 prefetch="viewport"
                 to="/collections/all"
@@ -1122,6 +1129,29 @@ function DesktopHome({
                 }}
               </Await>
             </Suspense>
+            {/* The tour's closing step: pick a build size, straight into the
+                build guide with every part of that size and its total. */}
+            {tourEndGate ? (
+              <nav
+                className="pointer-events-auto mb-2 flex items-center justify-end gap-2"
+                aria-label={copyText('home.tour_pick_label') ?? 'Pick a build'}
+              >
+                <Link
+                  prefetch="viewport"
+                  to="/products#build-3-inch"
+                  className="inline-flex min-h-[44px] items-center rounded-[var(--r-pill)] border border-[var(--color-border-strong)] bg-[var(--color-bg-card)] px-4 text-[15px] font-semibold text-[var(--color-text)] hover:border-[var(--color-gold)]"
+                >
+                  <Txt id="home.tour_pick_3" />
+                </Link>
+                <Link
+                  prefetch="viewport"
+                  to="/products#build-5-inch"
+                  className="inline-flex min-h-[44px] items-center rounded-[var(--r-pill)] border border-[var(--color-border-strong)] bg-[var(--color-bg-card)] px-4 text-[15px] font-semibold text-[var(--color-text)] hover:border-[var(--color-gold)]"
+                >
+                  <Txt id="home.tour_pick_5" />
+                </Link>
+              </nav>
+            ) : null}
             <Link
               prefetch="viewport"
               to="/collections/all"

@@ -1,5 +1,5 @@
 import {BackgroundWarmup} from '~/components/BackgroundWarmup';
-import {useLocation} from 'react-router';
+import {Link, useLocation} from 'react-router';
 import {MotionConfig} from 'motion/react';
 import type {CompanyIdentity} from '~/lib/company';
 import {Aside} from '~/components/Aside';
@@ -24,6 +24,8 @@ interface PageLayoutProps {
    *  the same gates as `shopOpen` in the root loader. */
   prelaunch?: boolean;
   familyProducts?: HeaderFamilyProduct[];
+  /** The browser's first language when it is Dutch or French (root loader). */
+  browserLang?: 'nl' | 'fr' | null;
   children?: React.ReactNode;
 }
 
@@ -36,6 +38,7 @@ export function PageLayout({
   shopOpen = false,
   prelaunch = true,
   familyProducts,
+  browserLang = null,
 }: PageLayoutProps) {
   const {pathname} = useLocation();
   const isHomepage = pathname === '/';
@@ -68,6 +71,12 @@ export function PageLayout({
             shopOpen={shopOpen}
           />
           <main id="main-content" className="site-main">
+            {/* A Dutch or French browser on an English shop page gets one
+                line pointing to the preorder rules in its own language. Legal
+                pages are translated already; the desktop home is the hero. */}
+            {shopOpen && browserLang && !isHomepage && !isLegalPath(pathname) ? (
+              <LanguageNotice lang={browserLang} />
+            ) : null}
             {children}
           </main>
           {/* The desktop homepage is the scroll-pinned WebGL hero and owns its
@@ -91,6 +100,20 @@ export function PageLayout({
         </div>
       </Aside.Provider>
     </MotionConfig>
+  );
+}
+
+function LanguageNotice({lang}: {lang: 'nl' | 'fr'}) {
+  return (
+    <p
+      lang={lang}
+      className="page-shell mx-auto mt-2 mb-0 text-[13px] leading-snug text-[var(--color-text-muted)]"
+    >
+      <Txt id={`chrome.lang_notice_${lang}`} />{' '}
+      <Link prefetch="viewport" to={`/preorder#${lang}`} className="underline underline-offset-2 text-[var(--color-text)]">
+        <Txt id={`chrome.lang_notice_${lang}_link`} />
+      </Link>
+    </p>
   );
 }
 

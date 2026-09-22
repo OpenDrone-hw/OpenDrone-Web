@@ -20,6 +20,7 @@ export function PreorderMeter({
   showEarly = true,
   showBatchPromise = true,
   showBatches = true,
+  zeroLabel,
 }: {
   campaign: CampaignState;
   /** Shopify's compare-at price: the price once the target is reached. */
@@ -34,6 +35,10 @@ export function PreorderMeter({
   /** The per-batch list. The product page turns it off: the batches are
    *  explained on /preorder, behind the "How preorders work" link. */
   showBatches?: boolean;
+  /** Shown instead of an empty bar and "0 of N" before the first order
+   *  counts toward a funding target ("Funding target: 250 by 31 December
+   *  2026"). Unset, the bar shows as it is. */
+  zeroLabel?: string;
 }) {
   const view = meterView(
     campaign,
@@ -41,6 +46,22 @@ export function PreorderMeter({
     priceAfter ? formatPrice(priceAfter.amount, priceAfter.currencyCode) : null,
   );
   const state = view.reached ? 'funded' : view.bar ? 'open' : 'stock';
+  if (
+    !compact &&
+    zeroLabel &&
+    !view.reached &&
+    !campaign.paidStock &&
+    (view.bar ? view.bar.value : campaign.targetOrdered) <= 0
+  ) {
+    return (
+      <div className="funding-meter preorder-meter" data-funding-state="zero">
+        <span className="funding-meter-status">{zeroLabel}</span>
+        <Link className="funding-meter-link" prefetch="intent" to="/preorder">
+          {copyText('preorder.meter_link') ?? 'How preorders work'}
+        </Link>
+      </div>
+    );
+  }
   if (compact) {
     return (
       <div className="funding-meter is-compact" data-funding-state={state}>

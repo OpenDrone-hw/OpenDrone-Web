@@ -172,6 +172,9 @@ export function VariantLadder({
               {tierPrice ? (
                 <span className="variant-tier-price">{tierPrice}</span>
               ) : null}
+              {compact || !content.tag ? null : (
+                <span className="variant-tier-tag">{content.tag}</span>
+              )}
               {compact || !content.highlights.length ? null : (
                 <span className="variant-tier-specs">
                   {content.highlights.map(([k, v], i) => (
@@ -199,7 +202,7 @@ export function VariantLadder({
                 </span>
               ) : null}
               {compact || !content.pickIf ? null : (
-                <span className="variant-tier-fit">{content.pickIf}</span>
+                <span className="variant-tier-fit variant-tier-pick">{content.pickIf}</span>
               )}
             </button>
           );

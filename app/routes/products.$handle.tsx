@@ -64,6 +64,8 @@ import {GpsrBlock, buyerFacts, safetyKind} from '~/components/GpsrBlock';
 import {
   PRODUCT_CONTENT,
   PRODUCT_CONTENT_FALLBACK,
+  displaySpecValue,
+  shortShipPromise,
   isComingSoon,
   isConceptFor,
   isInternalSku,
@@ -84,6 +86,7 @@ import {
   type PriceTier,
 } from '~/lib/preorder-campaign';
 import {countryName, shippingQuote, SHIPPING_ZONES} from '~/lib/shipping-rates';
+import {SHIP_COUNTRY_EVENT, storeShipCountry, storedShipCountry} from '~/lib/cart-client';
 import preorders from '../../content/preorders.json';
 import {trackEvent} from '~/lib/growth/plausible';
 import {attributionSource} from '~/lib/growth/attribution';
@@ -449,6 +452,46 @@ function mergeSpecs(
 }
 
 /**
+ * The chapters with the buying facts first: after the beginner chapter,
+ * Specs and In the box come before the teardown, schematic and the rest, so
+ * a buyer reads them right under the buy box. Numbers follow the new order.
+ */
+function buyingOrder<T extends {type: string; number: string}>(chapters: T[]): T[] {
+  const facts = (c: T) => c.type === 'specs' || c.type === 'inTheBox';
+  const intro = chapters.filter((c) => c.type === 'whatIsThis');
+  const ordered = [
+    ...intro,
+    ...chapters.filter(facts),
+    ...chapters.filter((c) => !facts(c) && c.type !== 'whatIsThis'),
+  ];
+  return ordered.map((c, i) => ({...c, number: String(i + 1).padStart(2, '0')}));
+}
+
+/** "OpenFC-Lite-Mini" from https://github.com/OpenDrone-hw/OpenFC-Lite-Mini. */
+function repoName(url: string | null | undefined): string | null {
+  const m = url ? /github\.com\/[^/]+\/([^/?#]+)/.exec(url) : null;
+  return m ? m[1] : null;
+}
+
+/**
+ * The LiPo cell range two boards share, from Input values such as
+ * "3–6S LiPo (9.0–25.2 V)" and "2–6S LiPo (6.0–25.2 V)": "3–6S". Null when
+ * either value has no cell range.
+ */
+function stackCellRange(a: string | undefined, b: string | undefined): string | null {
+  const parse = (v: string | undefined) => {
+    const m = v ? /(\d+)\s*[–-]\s*(\d+)\s*S\b/.exec(v) : null;
+    return m ? [Number(m[1]), Number(m[2])] : null;
+  };
+  const ra = parse(a);
+  const rb = parse(b);
+  if (!ra || !rb) return null;
+  const low = Math.max(ra[0], rb[0]);
+  const high = Math.min(ra[1], rb[1]);
+  return low <= high ? `${low}–${high}S` : null;
+}
+
+/**
  * The rows that differ between a product's variants, for the side-by-side
  * comparison under the spec table: every variant's merged table, keeping
  * only keys whose value is not the same everywhere. "-" marks a row a
@@ -568,6 +611,7 @@ function PriceLadder({
   nextUnit,
   left,
   currency,
+  vatNote,
   batchLine,
 }: {
   steps: LadderStep[];
@@ -575,67 +619,82 @@ function PriceLadder({
   /** Units left at the current step's price. */
   left: number;
   currency: string;
-  /** The paid batch in words ("Batch 1: 250 made, 250 left"), or null. */
+  /** "incl. VAT" or the export wording, next to the price. */
+  vatNote: string | null;
+  /** The paid batch in words ("Batch 1: 250 paid for, 250 left"), or null. */
   batchLine: string | null;
 }) {
   const currentStep = steps.find(
     (step) => nextUnit >= step.from && (step.to === null || nextUnit <= step.to),
   );
+  // The step table is folded on phones so the Pre-order button sits near
+  // the top of the page; desktop opens it after mount.
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (window.matchMedia?.('(min-width: 960px)').matches) setOpen(true);
+  }, []);
   const leftLine =
     currentStep && currentStep.to !== null && left > 0
-      ? say('product-chrome.ladder_left_at', '{left} left at {price}', {
-          left,
-          price: formatPrice(currentStep.price, currency),
-        })
+      ? say('product-chrome.ladder_left_for', 'for the next {left} sold', {left})
       : null;
   return (
     <div className="product-price-ladder">
-      <p className="product-price-ladder-head">
-        {say('product-chrome.ladder_early_head', 'Early-order price')}
+      <p className="product-price-ladder-now">
+        <span className="product-price-ladder-now-label">
+          {say('product-chrome.ladder_early_head', 'Early-order price')}
+        </span>{' '}
+        <strong className="product-price-ladder-now-price">
+          {currentStep ? formatPrice(currentStep.price, currency) : null}
+        </strong>
+        {vatNote ? <span className="product-price-ladder-now-vat"> {vatNote}</span> : null}
+        {leftLine ? <span className="product-price-ladder-now-left"> · {leftLine}</span> : null}
       </p>
-      <p className="product-price-ladder-sub">
-        {say(
-          'product-chrome.ladder_early_sub',
-          'The same for every buyer. It goes up as more of this model are sold in the shop, not with how many you buy.',
-        )}
-      </p>
-      <ol>
-        {steps.map((step, i) => {
-          const current = step === currentStep;
-          const range =
-            step.to === null
-              ? say('product-chrome.ladder_after', 'After that')
-              : i === 0
-                ? say('product-chrome.ladder_first', 'First {count} sold', {count: step.to})
-                : say('product-chrome.ladder_next', 'Next {count} sold', {
-                    count: step.to - step.from + 1,
-                  });
-          const past = step.to !== null && nextUnit > step.to;
-          const note = past
-            ? say('product-chrome.ladder_price_past', 'sold out')
-            : current
-              ? say('product-chrome.ladder_now', 'now')
-              : '';
-          return (
-            <li
-              key={step.from}
-              data-current={current ? '' : undefined}
-              data-past={past ? '' : undefined}
-            >
-              <span className="product-price-ladder-range">{range}</span>
-              <span className="product-price-ladder-price">
-                {formatPrice(step.price, currency)}
-              </span>
-              <span className="product-price-ladder-note">{note}</span>
-            </li>
-          );
-        })}
-      </ol>
-      {leftLine || batchLine ? (
-        <p className="product-price-ladder-left">
-          {[leftLine, batchLine].filter(Boolean).join(' · ')}
+      {batchLine ? <p className="product-price-ladder-left">{batchLine}</p> : null}
+      <details
+        className="product-price-ladder-steps"
+        open={open}
+        onToggle={(event) => setOpen((event.currentTarget as HTMLDetailsElement).open)}
+      >
+        <summary>{say('product-chrome.ladder_steps_summary', 'See the price steps')}</summary>
+        <p className="product-price-ladder-sub">
+          {say(
+            'product-chrome.ladder_early_sub',
+            'The same for every buyer. It goes up as more of this model are sold in the shop, not with how many you buy.',
+          )}
         </p>
-      ) : null}
+        <ol>
+          {steps.map((step, i) => {
+            const current = step === currentStep;
+            const range =
+              step.to === null
+                ? say('product-chrome.ladder_after', 'After that')
+                : i === 0
+                  ? say('product-chrome.ladder_first', 'First {count} sold', {count: step.to})
+                  : say('product-chrome.ladder_next', 'Next {count} sold', {
+                      count: step.to - step.from + 1,
+                    });
+            const past = step.to !== null && nextUnit > step.to;
+            const note = past
+              ? say('product-chrome.ladder_price_past', 'sold out')
+              : current
+                ? say('product-chrome.ladder_now', 'now')
+                : '';
+            return (
+              <li
+                key={step.from}
+                data-current={current ? '' : undefined}
+                data-past={past ? '' : undefined}
+              >
+                <span className="product-price-ladder-range">{range}</span>
+                <span className="product-price-ladder-price">
+                  {formatPrice(step.price, currency)}
+                </span>
+                <span className="product-price-ladder-note">{note}</span>
+              </li>
+            );
+          })}
+        </ol>
+      </details>
     </div>
   );
 }
@@ -1216,6 +1275,17 @@ function ProductPage() {
         ),
       );
       if (!match) return [];
+      // The cell range both boards accept, from their own Input rows: a
+      // 2S build from the ESC page must not get an FC that does not boot.
+      const partnerContent = PRODUCT_CONTENT[pc.handle];
+      const partnerSpecs = partnerContent
+        ? mergeSpecs(partnerContent.specs, partnerContent.variants?.[stackMatchValue]?.specs)
+        : [];
+      const ownSpecs = mergeSpecs(content.specs, content.variants?.[stackMatchValue]?.specs);
+      const cells = stackCellRange(
+        ownSpecs.find(([k]) => k === 'Input')?.[1],
+        partnerSpecs.find(([k]) => k === 'Input')?.[1],
+      );
       return [
         {
           key: pc.handle,
@@ -1238,6 +1308,9 @@ function ProductPage() {
                 }
               : null,
           product: product.handle,
+          note: cells
+            ? say('product-chrome.stack_cells', 'Stack runs on {cells}', {cells})
+            : undefined,
           available:
             match.availableForSale &&
             Boolean(selectedVariant.availableForSale),
@@ -1249,7 +1322,7 @@ function ProductPage() {
         },
       ];
     });
-  }, [stackCfg, stackProducts, selectedVariant, stackAxis, stackMatchValue, globalComingSoon, product.handle, commerceHandoff]);
+  }, [stackCfg, stackProducts, selectedVariant, stackAxis, stackMatchValue, globalComingSoon, product.handle, commerceHandoff, content]);
 
   // The teardown board art follows the selected tier: a variant's own
   // `boardArt` wins, otherwise the shared `teardown.boardArt` (the default
@@ -1902,7 +1975,24 @@ function ProductPage() {
 
   // Shipping and import duties for the visitor's country, from the flat
   // rate table. Display only: checkout charges the rate for the address.
-  const visitorCountry = rootData?.visitorCountry ?? null;
+  // The country the buyer picked in the cart wins over the IP country, so
+  // the product page, the dialog and the cart quote the same destination.
+  const [visitorCountry, setVisitorCountry] = useState<string | null>(
+    rootData?.visitorCountry ?? null,
+  );
+  useEffect(() => {
+    const sync = () => {
+      const picked = storedShipCountry();
+      if (picked) setVisitorCountry(picked);
+    };
+    sync();
+    window.addEventListener(SHIP_COUNTRY_EVENT, sync);
+    window.addEventListener('storage', sync);
+    return () => {
+      window.removeEventListener(SHIP_COUNTRY_EVENT, sync);
+      window.removeEventListener('storage', sync);
+    };
+  }, []);
   const quote = shippingQuote(visitorCountry);
   // Inside the EU the price includes 21% Belgian VAT. Outside it the
   // International and US markets keep the same price with no EU VAT charged
@@ -1930,8 +2020,8 @@ function ProductPage() {
   const dutiesNote =
     quote && !quote.blocked && quote.duty === 'us'
       ? say(
-          'product-chrome.buy_duties_us_parts',
-          'No import duties are charged at checkout. The carrier collects US import duty and fees on delivery. US import duty on parts made in China is high, often around 35 to 40% of the value.',
+          'product-chrome.buy_duties_us_short',
+          'US import duty is paid to the carrier on delivery, about 35 to 40% of the value. None is charged at checkout.',
         )
       : quote && !quote.blocked && quote.duty === 'intl'
         ? say(
@@ -1986,7 +2076,7 @@ function ProductPage() {
       {chip === 'first-batch'
         ? say('product-chrome.chip_first_batch', 'First production batch')
         : chip === 'funding'
-          ? say('product-chrome.chip_funding', 'Preorder funding target')
+          ? say('product-chrome.chip_funding_short', 'Funding target')
           : say('product-chrome.chip_funded', 'Funding target reached')}
     </Link>
   ) : roadmapStatus && !preorder ? (
@@ -2008,22 +2098,29 @@ function ProductPage() {
   const stageText =
     chip === 'funding' || chip === 'funded'
       ? roadmapStatus === 'in-progress'
-        ? say('product-chrome.stage_in_progress', 'Design stage: prototypes ordered, not yet tested')
+        ? say('product-chrome.stage_in_progress_line', 'Design stage: prototypes ordered, not yet tested')
         : roadmapStatus === 'alpha'
-          ? say('product-chrome.stage_alpha', 'Design stage: prototypes built and flown by testers')
+          ? say('product-chrome.stage_alpha_line', 'Design stage: prototypes built and flown by testers')
           : null
       : null;
-  const stageChip = stageText ? (
-    <Link
-      prefetch="viewport"
-      to="/roadmap"
-      className="product-status-chip product-stage-chip"
-      data-status={roadmapStatus}
-      title={copyText(`roadmap.status_${roadmapStatus}_legend`)}
-    >
-      <span className="kanban-dot" aria-hidden="true" />
-      {stageText}
-    </Link>
+  // The design stage in sentence case under the name (not a second
+  // uppercase chip), with what a missed target means for the buyer.
+  const stageLine = stageText ? (
+    <p className="product-stage-line" data-status={roadmapStatus}>
+      <Link prefetch="viewport" to="/roadmap">
+        {stageText}
+      </Link>
+      {chip === 'funding' ? (
+        <>
+          {'. '}
+          {say(
+            'product-chrome.stage_terms',
+            'Paid in full now. If the target is not reached by {deadline}, you choose a refund or to keep waiting.',
+            {deadline: CAMPAIGN_DEADLINE},
+          )}
+        </>
+      ) : null}
+    </p>
   ) : null;
   // Coming-soon buy module: the price/stock/add-to-cart block becomes a
   // COMING SOON plate + notify-at-launch signup (same newsletter action,
@@ -2083,7 +2180,7 @@ function ProductPage() {
       ) : null}
     </div>
   ) : (
-    <div className="product-buy" data-buy-module>
+    <div className="product-buy" data-buy-module data-has-ladder={ladder && campaign ? '' : undefined}>
       <div className="product-buy-price">
         {/* Price + the "incl. VAT" qualifier (Art. VI.45 WER pre-contractual
             info) grouped together - also fills the dead space beside the price. */}
@@ -2115,11 +2212,6 @@ function ProductPage() {
               </span>
             );
           })()
-        ) : shownSku ? (
-          <span className="product-buy-sku">
-            {copyText('product-chrome.buy_sku_prefix')}{' '}
-            {shownSku}
-          </span>
         ) : null}
       </div>
       {/* The price ladder: every step as plain text, the current one marked.
@@ -2130,9 +2222,10 @@ function ProductPage() {
           nextUnit={campaign.ordered + 1}
           left={campaign.tierLeft}
           currency={currency}
+          vatNote={vatNote}
           batchLine={
             campaign.paidStock
-              ? say('product-chrome.ladder_batch_left', 'Batch {batch}: {units} made, {left} left', {
+              ? say('product-chrome.ladder_batch_paid', 'Batch {batch}: {units} paid for, {left} left', {
                   batch: campaign.batch,
                   units: campaign.batchUnits,
                   left: paidLeft ?? campaign.batchUnits - campaign.batchOrdered,
@@ -2141,21 +2234,24 @@ function ProductPage() {
           }
         />
       ) : null}
-      <p className="product-buy-ship">
-        {shipNote}{' '}
-        <Link prefetch="intent" to="/shipping" className="product-buy-ship-link">
-          {say('product-chrome.buy_ship_link', 'All rates')}
-        </Link>
-      </p>
-      {dutiesNote ? <p className="product-buy-duties">{dutiesNote}</p> : null}
-      {quote && !quote.blocked && paysInOtherCurrency(quote.country) ? (
-        <p className="product-buy-duties">
-          {say(
-            'product-chrome.buy_currency_note',
-            'Prices are in euro. Your card issuer converts at its own rate.',
-          )}
-        </p>
-      ) : null}
+      {/* Star aggregate + link to the reviews chapter. Renders nothing
+          without reviews; CSS hides it in the compact pinned rail. */}
+      <ReviewAggregateLine aggregate={reviewAggregate} />
+      <ProductForm
+        productOptions={productOptions}
+        selectedVariant={selectedVariant}
+        hideOptionNames={content.optionAxis ? [content.optionAxis] : undefined}
+        buyUrl={isBundle ? (bundleBuyUrl ?? '') : undefined}
+        buyDisabled={isBundle ? !bundleAvailable : undefined}
+        buyCtaLabel={
+          isBundle ? copyText('product-chrome.buy_bundle_cta') : undefined
+        }
+        stackOffers={stackOffers}
+        quantity={isBundle ? undefined : buyQuantity}
+        maxQuantity={maxQuantity}
+        maxQuantityNote={maxQuantityNote}
+        onQuantityChange={isBundle ? undefined : setQuantity}
+      />
       {/* Pre-order: the stock line carries the catalog ship promise (the
           product's own, else the shop-wide default). The catalog
           availability still decides whether the buy button is enabled. */}
@@ -2177,7 +2273,9 @@ function ProductPage() {
                 <span>
                   {copyText('product-chrome.buy_stock_preorder_prefix') ?? ''} ·{' '}
                   {shipPromise ? (
-                    <span {...prodEdit('statusNote')}>{shipPromise}</span>
+                    // One short line; the full condition is in the terms
+                    // sentence and the stage line.
+                    <span>{shortShipPromise(shipPromise)?.text.replace(/^Ships/, 'ships') ?? shipPromise}</span>
                   ) : (
                     <Txt id="product-chrome.preorder_lead_default" as="span" />
                   )}
@@ -2197,7 +2295,7 @@ function ProductPage() {
       {/* Campaign meter: paid stock left, or progress to the funding target.
           The numbers and the ship promise above come from the same catalog
           read. */}
-      {campaignTerms ? <p className="product-buy-terms">{campaignTerms}</p> : null}
+      {campaignTerms && !campaign?.paidStock ? <p className="product-buy-terms">{campaignTerms}</p> : null}
       {/* Paid stock with the price steps shown: the steps' availability
           line already says what is left, so only the explainer link stays.
           A funding target keeps its progress bar. The batch list lives on
@@ -2214,8 +2312,31 @@ function ProductPage() {
             showEarly={!ladder}
             showBatchPromise={false}
             showBatches={false}
+            zeroLabel={
+              campaign.target
+                ? say('product-chrome.meter_zero', 'Funding target: {target} by {deadline}', {
+                    target: campaign.target,
+                    deadline: CAMPAIGN_DEADLINE,
+                  })
+                : undefined
+            }
           />
         )
+      ) : null}
+      <p className="product-buy-ship">
+        {shipNote}{' '}
+        <Link prefetch="intent" to="/shipping" className="product-buy-ship-link">
+          {say('product-chrome.buy_ship_link', 'All rates')}
+        </Link>
+      </p>
+      {dutiesNote ? <p className="product-buy-duties">{dutiesNote}</p> : null}
+      {quote && !quote.blocked && paysInOtherCurrency(quote.country) ? (
+        <p className="product-buy-duties">
+          {say(
+            'product-chrome.buy_currency_note',
+            'Prices are in euro. Your card issuer converts at its own rate.',
+          )}
+        </p>
       ) : null}
       {/* Sold-out signup: not for pre-order products, whose "unavailable"
           is a catalog availability state, not a launch to be notified of. */}
@@ -2229,28 +2350,13 @@ function ProductPage() {
           className="product-buy-notify"
         />
       ) : null}
-      {/* Star aggregate + link to the reviews chapter. Renders nothing
-          without reviews; CSS hides it in the compact pinned rail. */}
-      <ReviewAggregateLine aggregate={reviewAggregate} />
-      <ProductForm
-        productOptions={productOptions}
-        selectedVariant={selectedVariant}
-        hideOptionNames={content.optionAxis ? [content.optionAxis] : undefined}
-        buyUrl={isBundle ? (bundleBuyUrl ?? '') : undefined}
-        buyDisabled={isBundle ? !bundleAvailable : undefined}
-        buyCtaLabel={
-          isBundle ? copyText('product-chrome.buy_bundle_cta') : undefined
-        }
-        stackOffers={stackOffers}
-        quantity={isBundle ? undefined : buyQuantity}
-        maxQuantity={maxQuantity}
-        maxQuantityNote={maxQuantityNote}
-        onQuantityChange={isBundle ? undefined : setQuantity}
-      />
       <ul
         className="product-buy-trust"
         aria-label={say('product-chrome.buy_trust_aria', 'Buying from OpenDrone')}
       >
+        {campaign?.paidStock ? (
+          <li>{say('product-chrome.buy_terms_paid', 'Paid in full when you order.')}</li>
+        ) : null}
         <li>{say('product-chrome.buy_trust_checkout', 'Secure checkout by Shopify')}</li>
         <li>
           {preorder && !isBundle ? (
@@ -2566,6 +2672,20 @@ function ProductPage() {
                   as="p"
                   className="open-source-card-sub"
                 />
+                {/* The repository's own name, which can differ from the
+                    shop name (the 20×20 FC is OpenFC-Lite-Mini). */}
+                {repoName(activeRepoUrl) ? (
+                  <p className="open-source-card-repo">
+                    {say('product-chrome.os_card_repo_name', 'Design files: {repo}', {
+                      repo: repoName(activeRepoUrl) ?? '',
+                    })}
+                    {activeVariant && content.variants && Object.keys(content.variants).length > 1
+                      ? ` (${say('product-chrome.os_card_repo_for', 'the {model}', {
+                          model: variantDisplayName(product.handle, activeTier),
+                        })})`
+                      : ''}
+                  </p>
+                ) : null}
               </a>
               {content.video && !content.whatIsThis ? null : (
                 <a
@@ -2913,15 +3033,20 @@ function ProductPage() {
           <dl className="spec-table">
             {/* Final values only, never a count-up: a buyer who reads or
                 screenshots a spec must never see a wrong current or voltage. */}
-            {mergedSpecs.map(([k, v]) => (
-              <SpecRow
-                key={k}
-                name={k}
-                value={v}
-                nameProps={prodEdit(`${specEditBase(k)}.0`)}
-                valueProps={prodEdit(`${specEditBase(k)}.1`)}
-              />
-            ))}
+            {mergedSpecs.map(([k, v]) => {
+              const shown = displaySpecValue(k, v, mergedBox);
+              return (
+                <SpecRow
+                  key={k}
+                  name={k}
+                  value={shown}
+                  nameProps={prodEdit(`${specEditBase(k)}.0`)}
+                  // The studio edits the mirrored value, so a clarified
+                  // row is shown but not editable in place.
+                  valueProps={shown === v ? prodEdit(`${specEditBase(k)}.1`) : undefined}
+                />
+              );
+            })}
           </dl>
           {comparison ? (
             <div className="variant-compare-wrap" id={COMPARE_ID}>
@@ -2939,9 +3064,18 @@ function ProductPage() {
                   {comparison.rows.map(([key, values]) => (
                     <tr key={key}>
                       <th scope="row">{key}</th>
-                      {values.map((value, i) => (
-                        <td key={comparison.names[i]}>{value}</td>
-                      ))}
+                      {values.map((value, i) => {
+                        const variantKey = Object.keys(content.variants ?? {})[i];
+                        const box = [
+                          ...content.inTheBox,
+                          ...((variantKey ? content.variants?.[variantKey]?.inTheBox : undefined) ?? []),
+                        ];
+                        return (
+                          <td key={comparison.names[i]}>
+                            {value === '-' ? value : displaySpecValue(key, value, box)}
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                 </tbody>
@@ -3002,7 +3136,16 @@ function ProductPage() {
                     >
                       {it.item}
                     </span>
-                    {it.note ? (
+                    {it.note && it.href ? (
+                      <Link
+                        className="in-the-box-note"
+                        to={it.href}
+                        prefetch="intent"
+                        {...prodEdit(`${boxBase}.note`)}
+                      >
+                        {it.note}
+                      </Link>
+                    ) : it.note ? (
                       <span
                         className="in-the-box-note"
                         {...prodEdit(`${boxBase}.note`)}
@@ -3271,7 +3414,6 @@ function ProductPage() {
               <span>{product.productType || content.family}</span>
             )}
             {statusChip}
-            {stageChip}
           </p>
           {/* The product name is the page heading; the editorial tagline
               follows it at display size. */}
@@ -3301,6 +3443,7 @@ function ProductPage() {
               <span>{title}</span>
             </h1>
           )}
+          {stageLine}
           {/* Phones: price and ship date right under the name, so the
               buyer does not scroll past the gallery and chips to find them.
               Hidden from 720px, where the buy box sits beside the gallery. */}
@@ -3308,7 +3451,9 @@ function ProductPage() {
             <p className="product-hero-price-mobile">
               <strong>{formatPrice(buyPrice.amount, buyPrice.currencyCode)}</strong>
               {vatNote ? <span> {vatNote}</span> : null}
-              {preorder && shipPromise ? <span> · {shipPromise}</span> : null}
+              {preorder && shipPromise ? (
+                <span> · {shortShipPromise(shipPromise)?.text.replace(/^Ships/, 'ships') ?? shipPromise}</span>
+              ) : null}
             </p>
           ) : null}
           {content.hero.lead ? (
@@ -3350,6 +3495,7 @@ function ProductPage() {
                     className="trust-chip-oshwa-mark"
                   />
                   {copyText('product-chrome.trust_chip_oshwa')}
+                  <span className="trust-chip-oshwa-uid">{activeOshwaUid}</span>
                 </a>
               </li>
             ) : null}
@@ -3396,7 +3542,7 @@ function ProductPage() {
               </h2>
               <dl className="spec-table product-glance-table">
                 {glanceRows.map(([k, v]) => (
-                  <SpecRow key={k} name={k} value={v} />
+                  <SpecRow key={k} name={k} value={displaySpecValue(k, v, mergedBox)} />
                 ))}
               </dl>
               <p className="product-glance-links">
@@ -3457,7 +3603,7 @@ function ProductPage() {
       </section>
 
       {/* === Chapters, in the order `content/chapters.json` puts them === */}
-      {resolveChapters(product.handle, present).map((c) => (
+      {buyingOrder(resolveChapters(product.handle, present)).map((c) => (
         <Fragment key={c.id}>
           {chapterNodes[c.type]?.(c.number, c.title, c.id)}
         </Fragment>

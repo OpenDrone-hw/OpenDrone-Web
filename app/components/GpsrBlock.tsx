@@ -10,8 +10,9 @@ import {copy, copyText, editAttrs} from '~/lib/copy';
  * The email is plain text here on purpose: Art. 19 requires an electronic
  * address on the offer itself, so the site-wide no-mailto rule does not apply
  * to product pages. Strings live in content/copy/product-chrome.json under
- * the gpsr_* keys; the warning lists render in all three languages at once
- * because product pages are English-only chrome serving a NL/FR market.
+ * the gpsr_* keys; the English list shows and the NL/FR/DE lists sit in a
+ * folded disclosure on the same page, because product pages are English-only
+ * chrome serving NL/FR/DE markets.
  */
 
 const WARNING_LANGS = ['en', 'nl', 'fr', 'de'] as const;
@@ -112,22 +113,40 @@ export function GpsrBlock({
             </>
           ) : null}
         </p>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {WARNING_LANGS.map((lang) => {
-            const lines = [
-              ...warnings(`gpsr_warnings_${lang}`),
-              ...warnings(`gpsr_warnings_${kind}_${lang}`),
-            ];
-            if (lines.length === 0) return null;
-            return (
+        {/* The shop is English, so the English lines show; the Dutch,
+            French and German lines stay on the page, folded (GPSR Art. 9(7)
+            asks for the languages of the markets served). */}
+        {(() => {
+          const linesFor = (lang: (typeof WARNING_LANGS)[number]) => [
+            ...warnings(`gpsr_warnings_${lang}`),
+            ...warnings(`gpsr_warnings_${kind}_${lang}`),
+          ];
+          const list = (lang: (typeof WARNING_LANGS)[number]) => {
+            const lines = linesFor(lang);
+            return lines.length ? (
               <ul key={lang} lang={lang} className="list-disc space-y-1 pl-4">
                 {lines.map((line) => (
                   <li key={line}>{line}</li>
                 ))}
               </ul>
-            );
-          })}
-        </div>
+            ) : null;
+          };
+          const others = WARNING_LANGS.filter((lang) => lang !== 'en' && linesFor(lang).length);
+          return (
+            <>
+              {list('en')}
+              {others.length ? (
+                <details className="gpsr-languages mt-4">
+                  <summary className="cursor-pointer">
+                    {copyText('product-chrome.gpsr_other_languages') ??
+                      'Veiligheid · Sécurité · Sicherheit (NL / FR / DE)'}
+                  </summary>
+                  <div className="mt-3 grid gap-6 md:grid-cols-3">{others.map(list)}</div>
+                </details>
+              ) : null}
+            </>
+          );
+        })()}
       </div>
     </section>
   );

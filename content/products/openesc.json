@@ -324,6 +324,7 @@
   "optionAxis": "Model",
   "variants": {
     "20×20": {
+      "tag": "Start here · 3-inch build",
       "oshwaUid": "BE000028",
       "highlights": [
         [
@@ -372,6 +373,7 @@
       ]
     },
     "30×30": {
+      "tag": "Used in the 5-inch build",
       "oshwaUid": "BE000029",
       "repoUrl": "https://github.com/OpenDrone-hw/OpenESC-30x30",
       "highlights": [

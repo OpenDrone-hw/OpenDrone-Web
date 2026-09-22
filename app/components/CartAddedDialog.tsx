@@ -5,7 +5,14 @@ import type {RootLoader} from '~/root';
 import {copyText} from '~/lib/copy';
 import {Txt} from '~/components/Txt';
 import {formatPrice} from '~/lib/catalog';
-import {isInternalSku, isPurchasableStatus, variantDisplayName} from '~/lib/product-content';
+import {
+  fundingTargetTerms,
+  isInternalSku,
+  isPurchasableStatus,
+  shortShipPromise,
+  variantDisplayName,
+} from '~/lib/product-content';
+import {ShipChip} from './ShipChip';
 import {countryName, shippingQuote} from '~/lib/shipping-rates';
 import {beginCartAdd, endCartAdd} from './cart-add-lock';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
@@ -32,6 +39,32 @@ const BUILDS = parseBuilds(buildsJson);
 
 function t(key: string, fallback: string, vars: Record<string, string> = {}): string {
   return (copyText(`cart.${key}`) ?? fallback).replace(/\{(\w+)\}/g, (m, k: string) => vars[k] ?? m);
+}
+
+/** US import duty shown as a range next to the total, never in it. */
+const US_DUTY_LOW = 0.35;
+const US_DUTY_HIGH = 0.4;
+
+/**
+ * How late a ship promise is, for comparing a suggested part with the cart:
+ * nothing (in stock) < a dated batch < a funding target.
+ */
+function shipRank(promise: string | null | undefined): number {
+  const short = shortShipPromise(promise);
+  if (!short) return 0;
+  return short.kind === 'target' ? 2 : 1;
+}
+
+/** The build a multi-line add completes: every sized part of one build is
+ *  among the added SKUs. */
+function addedBuild(skus: readonly string[]): {label: string; units: number} | null {
+  const set = new Set(skus);
+  const build = BUILDS.builds.find((b) =>
+    b.parts.every((part) => BUILDS.roles[part.role].sizeNeutral || set.has(part.sku)),
+  );
+  return build
+    ? {label: build.label, units: build.parts.reduce((sum, part) => sum + part.quantity, 0)}
+    : null;
 }
 
 /**
@@ -142,6 +175,27 @@ export function CartAddedDialog() {
   // What the order waits for today: every ship date in the cart.
   const cartDates = new Set(summary.lines.map((l) => l.shipPromise ?? ''));
 
+  // Several lines in one add (a whole build from the guide): name the build
+  // and keep every row to one line, so all of them fit on a phone.
+  const compactLines = added.length > 1;
+  const addedUnits = added.reduce((sum, l) => sum + l.quantity, 0);
+  const wholeBuild = compactLines ? addedBuild(detail.skus) : null;
+  const title = wholeBuild
+    ? t('added_title_build', 'Added the {build} build ({parts} parts, {count} items)', {
+        build: wholeBuild.label,
+        parts: String(added.length),
+        count: String(wholeBuild.units),
+      })
+    : compactLines
+      ? t('added_title_parts', 'Added {parts} parts ({count} items)', {
+          parts: String(added.length),
+          count: String(addedUnits),
+        })
+      : t('added_title', '{count} in your cart', {count: String(summary.totalQuantity)});
+  // The funding-target condition, once, when the cart holds such an item.
+  const targetTerms =
+    summary.lines.map((l) => fundingTargetTerms(l.shipPromise)).find(Boolean) ?? null;
+
   const add = async (items: BuildSuggestion[], key: string) => {
     if (!beginCartAdd()) return;
     setBusy(key);
@@ -178,18 +232,29 @@ export function CartAddedDialog() {
   const totalOf = (items: BuildSuggestion[]) =>
     items.reduce((sum, s) => sum + Number(s.variant.price.amount) * s.quantity, 0);
   const currency = suggestions[0]?.variant.price.currencyCode ?? 'EUR';
+  // The latest ship date the cart already waits for. A part that ships
+  // later holds the parcel back; one that ships sooner waits for the cart.
+  const cartRank = Math.max(0, ...summary.lines.map((l) => shipRank(l.shipPromise)));
   const delaysOrder = (s: BuildSuggestion) =>
-    Boolean(s.variant.shipPromise) && !cartDates.has(s.variant.shipPromise ?? '');
+    Boolean(s.variant.shipPromise) &&
+    !cartDates.has(s.variant.shipPromise ?? '') &&
+    shipRank(s.variant.shipPromise) >= cartRank;
+  const shipsSooner = (s: BuildSuggestion) =>
+    Boolean(s.variant.shipPromise) && shipRank(s.variant.shipPromise) < cartRank;
   const later = missing.filter(delaysOrder);
-  const withOrder = missing.filter((s) => !delaysOrder(s));
+  const withOrder = missing.filter((s) => !delaysOrder(s) && !shipsSooner(s));
   const partName = (s: BuildSuggestion) => {
     const role = t(`build_role_${s.role}`, s.product.title);
     return s.quantity > 1 ? `${s.quantity} ${t(`build_role_${s.role}_plural`, role)}` : role;
   };
   // Parts that ship on a date already in the cart go first, as one button;
   // parts that would hold the parcel back sit in their own group below.
-  const soonParts = suggestions.filter((s) => !delaysOrder(s));
+  const soonParts = suggestions.filter((s) => !delaysOrder(s) && !shipsSooner(s));
+  const soonerParts = suggestions.filter(shipsSooner);
   const laterParts = suggestions.filter(delaysOrder);
+  // A cart of paid stock only: the funding-target parts stay folded away,
+  // so a buyer after the October stack is not pushed into a March parcel.
+  const paidStockCart = cartRank === 1;
   const soonAdded = soonParts.length > 0 && soonParts.every((s) => summary.lines.some((l) => l.sku === s.sku));
   const soonName = (s: BuildSuggestion) =>
     s.variant.title !== 'Default Title'
@@ -204,7 +269,7 @@ export function CartAddedDialog() {
     soonParts.length > 1 ||
     soonParts.some((s) => s.replaces || isInternalSku(s.product.handle, s.variant.title));
 
-  const renderSuggestion = (s: BuildSuggestion) => {
+  const renderSuggestion = (s: BuildSuggestion, compact = false) => {
     const image = s.variant.image ?? s.product.featuredImage;
     const inCart = summary.lines.some((l) => l.sku === s.sku);
     const promise = s.variant.shipPromise;
@@ -224,7 +289,7 @@ export function CartAddedDialog() {
           {s.variant.title !== 'Default Title' ? (
             <span>{variantDisplayName(s.product.handle, s.variant.title)}</span>
           ) : null}
-          {isInternalSku(s.product.handle, s.variant.title) ? (
+          {!compact && isInternalSku(s.product.handle, s.variant.title) ? (
             <small className="cart-added-ship">
               {t(
                 'build_spec_not_final',
@@ -243,21 +308,17 @@ export function CartAddedDialog() {
               </em>
             ) : null}
           </span>
-          {s.replaces ? (
+          {s.replaces && !compact ? (
             <small className="cart-added-replaces">
               {t('build_replaces', 'Your cart has the {other} version, which does not fit this build.', {
-                other: s.replaces,
+                // Through the display name: a legacy option value ("2207")
+                // never reaches the buyer.
+                other: variantDisplayName(s.product.handle, s.replaces),
               })}
             </small>
           ) : null}
           {promise ? (
-            <small className={`cart-added-ship${delays ? ' is-later' : ''}`}>
-              {delays
-                ? t('build_delays', '{promise}. Your order then ships when this is ready.', {
-                    promise: promise.charAt(0).toUpperCase() + promise.slice(1),
-                  })
-                : promise}
-            </small>
+            <ShipChip promise={promise} className={`cart-added-ship${delays ? ' is-later' : ''}`} />
           ) : null}
         </div>
         <button
@@ -308,29 +369,28 @@ export function CartAddedDialog() {
           <span className="cart-added-check" aria-hidden="true">✓</span>
           <div>
             <p className="cart-added-eyebrow">{t('added_eyebrow', 'Added to cart')}</p>
-            <h2 id="cart-added-title">
-              {t('added_title', '{count} in your cart', {count: String(summary.totalQuantity)})}
-            </h2>
+            <h2 id="cart-added-title">{title}</h2>
           </div>
         </header>
 
         {added.map((line) => (
-          <div className="cart-added-line" key={line.sku}>
+          <div className={`cart-added-line${compactLines ? ' is-compact' : ''}`} key={line.sku}>
             {line.image ? (
               <img src={shopifyImageUrl(line.image.url, 144)} alt="" width={72} height={72} />
             ) : (
               <span className="cart-line-noimage" aria-hidden="true">{line.title.slice(4, 5) || line.title[0]}</span>
             )}
             <div>
-              <strong>{line.title}</strong>
-              {line.variantTitle && line.variantTitle !== 'Default Title' ? (
+              <strong>
+                {line.title}
+                {compactLines && line.variantTitle && line.variantTitle !== 'Default Title'
+                  ? ` ${variantDisplayName(line.handle, line.variantTitle)}`
+                  : ''}
+              </strong>
+              {!compactLines && line.variantTitle && line.variantTitle !== 'Default Title' ? (
                 <span>{variantDisplayName(line.handle, line.variantTitle)}</span>
               ) : null}
-              {line.shipPromise ? (
-                <small className="cart-added-ship">
-                  {t('preorder_line_prefix', 'Pre-order')} · {line.shipPromise}
-                </small>
-              ) : null}
+              <ShipChip promise={line.shipPromise} className="cart-added-ship" labelOnly={compactLines} />
             </div>
             <div style={{display: 'grid', justifyItems: 'end', gap: '0.15rem'}}>
               {line.quantity > 1 ? <span className="cart-added-qty">× {line.quantity}</span> : null}
@@ -340,6 +400,8 @@ export function CartAddedDialog() {
             </div>
           </div>
         ))}
+
+        {targetTerms ? <p className="cart-added-note cart-added-terms">{targetTerms}</p> : null}
 
         {suggestions.length ? (
           <div className="cart-added-build">
@@ -374,39 +436,72 @@ export function CartAddedDialog() {
                   {/* A short date reads well here; a funding-target promise
                       is a paragraph and already sits on each part. */}
                   {soonPromise && soonPromise.length <= 40
-                    ? t('build_ships_with_promise', 'Ships with your order: {promise}', {promise: soonPromise})
+                    ? t('build_ships_with_promise', 'Ships with your order: {promise}', {
+                        promise: (shortShipPromise(soonPromise)?.text ?? soonPromise).replace(/^Ships /, ''),
+                      })
                     : t('build_ships_with', 'Same ship terms as the rest of your cart')}
                 </small>
               </button>
             ) : null}
             {soonNeedsList ? (
-              <ul className="cart-added-suggestions">{soonParts.map(renderSuggestion)}</ul>
+              <ul className="cart-added-suggestions">{soonParts.map((s) => renderSuggestion(s))}</ul>
             ) : null}
-            {laterParts.length ? (
+            {soonerParts.length ? (
               <div className="cart-added-later">
                 <p className="cart-added-later-title">
-                  {t('build_later_title', 'Ship later (funding target)')}
+                  {t('build_sooner_title', 'Ships sooner ({when})', {
+                    when: (shortShipPromise(soonerParts[0].variant.shipPromise)?.text ?? '').replace(/^Ships (late |early |mid )?/i, ''),
+                  })}
                 </p>
                 <p className="cart-added-note">
-                  {t('build_later_note', 'Adding these delays your whole parcel until the last one is ready.')}
+                  {t(
+                    'build_sooner_note',
+                    'In this order it waits for your funding-target items. Order it separately to get it sooner; each order pays its own shipping.',
+                  )}
                 </p>
-                <ul className="cart-added-suggestions">{laterParts.map(renderSuggestion)}</ul>
-                {later.length > 1 ? (
-                  <button
-                    type="button"
-                    className="cart-added-textlink"
-                    disabled={busy !== null}
-                    onClick={() => void add(later, 'later')}
-                  >
-                    {busy === 'later'
-                      ? 'Adding…'
-                      : t('build_add_rest', 'Add the rest of the {build} build ({price})', {
-                          build: build?.label ?? '',
-                          price: formatPrice(totalOf(later), currency),
-                        })}
-                  </button>
-                ) : null}
+                <ul className="cart-added-suggestions">{soonerParts.map((s) => renderSuggestion(s))}</ul>
               </div>
+            ) : null}
+            {laterParts.length ? (
+              paidStockCart ? (
+                <details className="cart-added-later cart-added-later--folded">
+                  <summary className="cart-added-later-title">
+                    {t('build_later_folded', 'Building a whole drone? The rest ships later')}
+                  </summary>
+                  <p className="cart-added-note">
+                    {t(
+                      'build_later_folded_note',
+                      'These are funding targets. Adding one makes your whole parcel wait for it.',
+                    )}
+                  </p>
+                  <ul className="cart-added-suggestions">{laterParts.map((s) => renderSuggestion(s, true))}</ul>
+                </details>
+              ) : (
+                <div className="cart-added-later">
+                  <p className="cart-added-later-title">
+                    {t('build_later_title', 'Ships later (funding target)')}
+                  </p>
+                  <p className="cart-added-note">
+                    {t('build_later_note', 'Adding these delays your whole parcel until the last one is ready.')}
+                  </p>
+                  <ul className="cart-added-suggestions">{laterParts.map((s) => renderSuggestion(s))}</ul>
+                  {later.length > 1 ? (
+                    <button
+                      type="button"
+                      className="cart-added-textlink"
+                      disabled={busy !== null}
+                      onClick={() => void add(later, 'later')}
+                    >
+                      {busy === 'later'
+                        ? 'Adding…'
+                        : t('build_add_rest', 'Add the rest of the {build} build ({price})', {
+                            build: build?.label ?? '',
+                            price: formatPrice(totalOf(later), currency),
+                          })}
+                    </button>
+                  ) : null}
+                </div>
+              )
             ) : null}
             <Txt id="cart.build_not_included" as="p" className="cart-added-note" />
           </div>
@@ -415,7 +510,7 @@ export function CartAddedDialog() {
         {extras.length ? (
           <div className="cart-added-build">
             <p className="cart-added-build-title">{t('extras_title', 'Optional extras')}</p>
-            <ul className="cart-added-suggestions">{extras.map(renderSuggestion)}</ul>
+            <ul className="cart-added-suggestions">{extras.map((s) => renderSuggestion(s))}</ul>
           </div>
         ) : null}
 
@@ -445,6 +540,22 @@ export function CartAddedDialog() {
               })}
             </p>
           ) : null}
+          {subtotal && shipping && shipping.duty === 'us' ? (
+            <p className="cart-added-shipline">
+              {t(
+                'added_us_duty',
+                'US import duty is paid to the carrier on delivery: about {low} to {high} (35 to 40% of the goods). Not in the total.',
+                {
+                  low: formatPrice(Number(subtotal.amount) * US_DUTY_LOW, subtotal.currencyCode),
+                  high: formatPrice(Number(subtotal.amount) * US_DUTY_HIGH, subtotal.currencyCode),
+                },
+              )}
+            </p>
+          ) : subtotal && shipping && shipping.duty === 'intl' ? (
+            <p className="cart-added-shipline">
+              {t('added_intl_duty', 'Import duties and taxes may be due to the carrier on delivery. Not in the total.')}
+            </p>
+          ) : null}
           {shipBlocked ? null : (
             // A plain form post: the cart action checks every line again and
             // redirects to Shopify checkout, or back to /cart with a notice.
@@ -466,6 +577,9 @@ export function CartAddedDialog() {
               >
                 {copyText('cart.checkout_cta') ?? 'Checkout'}
               </button>
+              <small className="cart-added-domain">
+                {t('added_checkout_domain', 'Checkout opens on opendrone.store (Shopify).')}
+              </small>
             </form>
           )}
           <button type="button" className="cart-added-continue" onClick={close}>

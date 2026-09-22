@@ -2,8 +2,6 @@
 
 Incutec BV expédie les commandes par bpost depuis la Belgique vers tous les pays de l’Union européenne et vers les autres destinations du tableau ci-dessous. Les frais d’expédition sont affichés lors du passage en caisse avant le paiement.
 
-La version néerlandaise ([/nl/shipping](/nl/shipping)) prévaut en cas de contradiction, sauf à l’égard des consommateurs, pour lesquels l’interprétation la plus favorable s’applique (art. 19.1 des Conditions Générales de Vente, art. VI.37 §2 du Code de droit économique). Cette traduction française est fournie pour votre commodité.
-
 ### Tarifs d’expédition
 
 Un tarif fixe par commande, en euros. Pour les destinations dans l’UE, la TVA est comprise ; hors de l’UE, aucune TVA de l’UE n’est facturée :
@@ -53,3 +51,7 @@ Le risque de dommage ou de perte en transit incombe à Incutec BV jusqu’au mom
 ### Suivi
 
 Une fois votre commande expédiée, vous recevrez un courriel de confirmation avec un numéro de suivi.
+
+### Langue
+
+La version néerlandaise ([/nl/shipping](/nl/shipping)) prévaut en cas de contradiction, sauf à l’égard des consommateurs, pour lesquels l’interprétation la plus favorable s’applique (art. 19.1 des Conditions Générales de Vente, art. VI.37 §2 du Code de droit économique). Cette traduction française est fournie pour votre commodité.

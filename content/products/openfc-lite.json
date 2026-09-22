@@ -306,6 +306,7 @@
   "optionAxis": "Model",
   "variants": {
     "20×20": {
+      "tag": "Start here · 3-inch build",
       "oshwaUid": "BE000027",
       "repoUrl": "https://github.com/OpenDrone-hw/OpenFC-Lite-Mini",
       "highlights": [
@@ -545,6 +546,7 @@
       ]
     },
     "30×30": {
+      "tag": "Used in the 5-inch build",
       "oshwaUid": "BE000026",
       "highlights": [
         [

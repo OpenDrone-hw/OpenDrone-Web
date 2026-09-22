@@ -1,5 +1,5 @@
 import type {Route} from './+types/products._index';
-import {useMemo} from 'react';
+import {useEffect, useMemo} from 'react';
 import type {ReactNode} from 'react';
 import {Form, Link, useLoaderData, useSearchParams} from 'react-router';
 import {ProductItem, type ProductQuickAdd} from '~/components/ProductItem';
@@ -20,11 +20,13 @@ import {
   isConceptFor,
   isPurchasableStatus,
   lineDisplayName,
+  variantCartNote,
 } from '~/lib/product-content';
 import {useProductStatusResolver, useRoadmapStatusResolver} from '~/lib/coming-soon';
 import {stackDiscountedPrice} from '~/lib/stack-discount';
 import {Txt} from '~/components/Txt';
 import {copyText, editAttrs} from '~/lib/copy';
+import {shopifyImageUrl} from '~/lib/shopify-image';
 
 /**
  * The term-bearing meta string carries a `{term}` token rather than being
@@ -264,8 +266,17 @@ const SEARCH_HELP: Array<{match: RegExp; copyId: string; surface?: string[]}> = 
     surface: ['openrx:Lite'],
   },
   {
-    match: /\b(?:goggles?|dji|o3|o4|avata|radio|remote|transmitter|walksnail|hdzero|vtx|camera)\b/,
+    match:
+      /\b(?:goggles?|dji|o3|o4|avata|radio|remote|transmitter|walksnail|hdzero|vtx|camera|bind|binding|elrs|expresslrs|(?<!flight\s)controllers?)\b/,
     copyId: 'collections-all.help_video_radio',
+  },
+  {
+    match: /\b(?:spares?|replacements?|repairs?|arms?|crash(?:ed|es)?|broken)\b/,
+    copyId: 'collections-all.help_spare',
+  },
+  {
+    match: /\b(?:gifts?|cadeaus?|cadeau|verjaardag|birthday|present|christmas|kerst|sinterklaas)\b/,
+    copyId: 'collections-all.help_gift',
   },
   {
     match: /\b(?:[6-9]|1[0-9])\s*(?:inch|in)\b|\blong\s*range\b|\blr\b|cinelifter/,
@@ -596,6 +607,16 @@ export default function ProductsIndex() {
   );
 
   const hasProducts = products.length > 0;
+  const builds = useMemo(
+    () =>
+      resolveBuilds(
+        products,
+        commerceHandoff,
+        (handle) => isPurchasableStatus(productStatus(handle)),
+        (handle) => roadmapStatus(handle),
+      ),
+    [products, commerceHandoff, productStatus, roadmapStatus],
+  );
   // Keep the active filters when a new term is submitted: the form only
   // carries `q`, so the rest ride along as hidden fields.
   const carried = ['type', 'sale', 'sort'].filter((k) => searchParams.get(k));
@@ -603,23 +624,22 @@ export default function ProductsIndex() {
   return (
     <div className="collection page-shell">
       <header className="page-header collection-header">
-        <Txt id="collections-all.eyebrow" as="p" className="page-eyebrow" />
+        <Txt id="collections-all.eyebrow" as="p" className="page-eyebrow max-sm:hidden" />
         <Txt id="collections-all.title" as="h1" className="page-title" />
-        {/* Two plain text links for a buyer who is new here: the build
-            guide further down, and what the status chips on the cards mean. */}
-        <p className="catalog-help-links">
-          <a href="#new-to-fpv">
-            <Txt id="collections-all.guide_link" fallback="New to FPV? See what a 3-inch or 5-inch build needs ↓" />
-          </a>
-          <span aria-hidden="true"> · </span>
-          <Link prefetch="viewport" to="/roadmap">
-            <Txt id="collections-all.roadmap_link" fallback="What the status labels mean" />
-          </Link>
-        </p>
+        {/* The two builds for a buyer who is new here, each jumping to its
+            full card in the guide below. */}
+        {hasProducts ? <BuildPicker builds={builds} /> : null}
         {/* The catalog is also the search page: the term filters the grid
             below, client-side over the catalog. Enter submits; the
             magnifier inside the field is the same submit for a pointer. */}
-        <Form method="get" action="/products" className="catalog-search" role="search">
+        {/* On a phone the header's search icon is the way in; the field
+            shows here once a term is set, so the products sit higher. */}
+        <Form
+          method="get"
+          action="/products"
+          className={`catalog-search${term ? '' : ' max-sm:hidden'}`}
+          role="search"
+        >
           <div className="catalog-search-field">
             {carried.map((k) => (
               <input
@@ -834,10 +854,8 @@ export default function ProductsIndex() {
       )}
       {hasProducts ? (
         <BuildGuide
-          products={products}
+          builds={builds}
           stackShips={stackShips}
-          commerceHandoff={commerceHandoff}
-          isBuyable={(handle) => isPurchasableStatus(productStatus(handle))}
           onShowBuild={(id) => {
             const next = new URLSearchParams();
             next.set('build', id);
@@ -874,28 +892,35 @@ const GUIDE_ROLES: Array<{role: string; copyId: string}> = [
   {role: 'receiver', copyId: 'collections-all.guide_role_receiver'},
 ];
 
+/** The two parts of a build that make the stack: paid stock with its own
+ *  ship date, orderable on their own ahead of the funding targets. */
+const STACK_ROLES = new Set(['flight-controller', 'esc']);
+
+/** The design stage of a funding-target part, in the words the product
+ *  page uses (content/copy/product-chrome.json), so the two cannot drift. */
+function stageLine(status: string | undefined): string | null {
+  if (status === 'in-progress')
+    return copyText('product-chrome.stage_in_progress') ?? 'Design stage: prototypes ordered, not yet tested';
+  if (status === 'alpha')
+    return copyText('product-chrome.stage_alpha') ?? 'Design stage: prototypes built and flown by testers';
+  return null;
+}
+
+type ResolvedBuild = ReturnType<typeof resolveBuilds>[number];
+
 /**
- * "New to FPV? What you need for a build": for each build size in
- * content/builds.json, the parts one quad needs, each linked to its own
- * product option with the quantity and today's price, then what a build
- * needs that this shop does not sell. The parts come from builds.json and
- * the names and prices from the catalog, so the guide cannot list a part
- * or a price the shop does not have. A part the catalog lacks is skipped.
+ * Every build of content/builds.json with its parts resolved against the
+ * catalog: names, prices, ship tags and the one-click add links. The parts
+ * come from builds.json and the names and prices from the catalog, so no
+ * total is written by hand. A part the catalog lacks is skipped.
  */
-function BuildGuide({
-  products,
-  stackShips,
-  commerceHandoff,
-  isBuyable,
-  onShowBuild,
-}: {
-  products: CatalogProduct[];
-  stackShips: string | null;
-  commerceHandoff: CommerceHandoff;
-  isBuyable: (handle: string) => boolean;
-  onShowBuild: (buildId: string) => void;
-}) {
-  const builds = BUILDS.builds.map((build) => {
+function resolveBuilds(
+  products: CatalogProduct[],
+  commerceHandoff: CommerceHandoff,
+  isBuyable: (handle: string) => boolean,
+  roadmapStatus: (handle: string) => string | undefined,
+) {
+  return BUILDS.builds.map((build) => {
     const parts = GUIDE_ROLES.flatMap(({role, copyId}) => {
       const part = build.parts.find((p) => p.role === role);
       if (!part) return [];
@@ -908,6 +933,7 @@ function BuildGuide({
           .filter((o) => o.value !== 'Default Title')
           .map((o): [string, string] => [o.name, o.value]),
       ).toString();
+      const waits = Boolean(variant.campaign && !variant.campaign.paidStock);
       return [
         {
           role,
@@ -917,6 +943,8 @@ function BuildGuide({
           quantity: part.quantity,
           price: variant.price,
           sku: variant.sku ?? '',
+          image: variant.image ?? product.featuredImage ?? null,
+          shipPromise: variant.shipPromise,
           // Paid stock carries its own ship date; anything else waits for
           // its funding target.
           tag: variant.campaign
@@ -924,14 +952,20 @@ function BuildGuide({
               ? variant.shipPromise.replace(/^ships/, 'Ships')
               : (copyText('collections-all.guide_tag_target') ?? 'Funding target')
             : null,
-          waits: Boolean(variant.campaign && !variant.campaign.paidStock),
+          waits,
+          // What is not final about this exact part (the 5" motor's stator
+          // and KV), from the same product-content field as the cart line.
+          note: variantCartNote(product.handle, variant.title),
+          stage: waits ? stageLine(roadmapStatus(product.handle)) : null,
           buyable:
             Boolean(variant.availableForSale && variant.sku) && isBuyable(product.handle),
         },
       ];
     });
     const currency = parts[0]?.price.currencyCode ?? 'EUR';
-    const total = parts.reduce((sum, p) => sum + num(p.price) * p.quantity, 0);
+    const sum = (list: typeof parts) =>
+      list.reduce((total, p) => total + num(p.price) * p.quantity, 0);
+    const total = sum(parts);
     // One add for the whole build, every line in one cart call, only when
     // every part of it can be ordered now.
     const complete = parts.length === build.parts.length && parts.every((p) => p.buyable);
@@ -941,9 +975,130 @@ function BuildGuide({
           parts.map((p) => ({sku: p.sku, quantity: p.quantity})),
         )
       : null;
+    // The stack on its own: the paid-stock parts that ship first.
+    const stack = parts.filter((p) => STACK_ROLES.has(p.role));
+    const stackHref =
+      stack.length === STACK_ROLES.size && stack.every((p) => p.buyable && !p.waits)
+        ? buyUrl(
+            commerceHandoff,
+            stack.map((p) => ({sku: p.sku, quantity: p.quantity})),
+          )
+        : null;
     const waiting = parts.filter((p) => p.waits).map((p) => ROLE_NOUN[p.role] ?? p.role);
-    return {id: build.id, label: build.label, parts, total, currency, addHref, waiting};
+    const frame = parts.find((p) => p.role === 'frame');
+    return {
+      id: build.id,
+      label: build.label,
+      parts,
+      total,
+      currency,
+      addHref,
+      stackHref,
+      stackTotal: sum(stack),
+      stackShips: stack[0]?.shipPromise ?? null,
+      waiting,
+      image: frame?.image ?? parts[0]?.image ?? null,
+    };
   });
+}
+
+/**
+ * "New to FPV? Pick a build": one compact line under the page title with
+ * the two builds, their totals and a thumbnail, each jumping to its full
+ * card in the guide further down. It stands in for the help links, so the
+ * first products stay above the fold on a small phone.
+ */
+function BuildPicker({builds}: {builds: ResolvedBuild[]}) {
+  const shown = builds.filter((b) => b.parts.length);
+  return (
+    <div className="catalog-help-links flex flex-wrap items-center gap-x-3 gap-y-2 max-sm:gap-x-2">
+      {/* One row on a 320px phone: a short label and the two sizes, so the
+          first products stay above the fold. */}
+      <Txt
+        id="collections-all.picker_label"
+        as="span"
+        className="text-[14px] font-semibold text-[var(--color-text)] max-sm:hidden"
+        fallback="New to FPV? Pick a build:"
+      />
+      <Txt
+        id="collections-all.picker_label_short"
+        as="span"
+        className="text-[13px] font-semibold text-[var(--color-text)] sm:hidden"
+        fallback="New to FPV?"
+      />
+      {shown.map((build) => (
+        <a
+          key={build.id}
+          href={`#build-${build.id}`}
+          className="inline-flex min-h-[44px] items-center gap-2 rounded-[var(--r-pill)] border border-[var(--color-border)] bg-[var(--color-bg-card)] py-1 pl-1 pr-3 no-underline! hover:border-[var(--color-gold)] max-sm:pl-3"
+        >
+          {build.image?.url ? (
+            <img
+              src={shopifyImageUrl(build.image.url, 80)}
+              alt=""
+              width={36}
+              height={36}
+              loading="lazy"
+              className="h-9 w-9 rounded-full bg-[var(--color-bg-elevated)] object-contain max-sm:hidden"
+            />
+          ) : null}
+          <span className="text-[14px] font-semibold text-[var(--color-text)]">
+            {/* "3-inch build" on a wide screen, "3-inch" on a phone so both
+                builds fit on one line above the products. */}
+            <span className="sm:hidden">{build.label}</span>
+            <span className="max-sm:hidden">
+              {(copyText('collections-all.guide_build_title') ?? '{label} build').replace(
+                '{label}',
+                build.label,
+              )}
+            </span>
+          </span>
+          <span className="font-mono text-[12px] text-[var(--color-text-muted)] max-sm:hidden">
+            {formatPrice(build.total, build.currency)}
+          </span>
+        </a>
+      ))}
+      <Link
+        prefetch="viewport"
+        to="/roadmap"
+        className="text-[13px] max-sm:hidden"
+      >
+        <Txt id="collections-all.roadmap_link" fallback="What the status labels mean" />
+      </Link>
+    </div>
+  );
+}
+
+/**
+ * "New to FPV? What you need for a build": for each build size in
+ * content/builds.json, the parts one quad needs, each linked to its own
+ * product option with the quantity and today's price, the stack on its own
+ * as the first step, then what a build needs that this shop does not sell.
+ */
+function BuildGuide({
+  builds,
+  stackShips,
+  onShowBuild,
+}: {
+  builds: ResolvedBuild[];
+  stackShips: string | null;
+  onShowBuild: (buildId: string) => void;
+}) {
+  // /products#coming-from-dji (home, support, search help) opens the
+  // collapsed answer on arrival.
+  useEffect(() => {
+    const open = () => {
+      if (window.location.hash !== '#coming-from-dji') return;
+      const target = document.getElementById('coming-from-dji');
+      if (target instanceof HTMLDetailsElement) {
+        target.open = true;
+        target.scrollIntoView();
+      }
+    };
+    open();
+    window.addEventListener('hashchange', open);
+    return () => window.removeEventListener('hashchange', open);
+  }, []);
   if (!builds.some((b) => b.parts.length)) return null;
   const shipNote = stackShips
     ? (copyText('collections-all.guide_ships') ?? '').replace('{stack_ships}', stackShips)
@@ -971,7 +1126,7 @@ function BuildGuide({
             <div
               key={build.id}
               id={`build-${build.id}`}
-              className="build-guide-card rounded-[var(--r-md,12px)] border border-[var(--color-border)] bg-[var(--color-bg-card)] p-5 md:p-6"
+              className="build-guide-card scroll-mt-28 rounded-[var(--r-md,12px)] border border-[var(--color-border)] bg-[var(--color-bg-card)] p-5 md:p-6"
             >
               <div className="flex items-baseline justify-between gap-3 mb-4">
                 <h3 className="font-display text-lg font-bold text-[var(--color-text)]">
@@ -1023,6 +1178,23 @@ function BuildGuide({
                         as="p"
                         className="mt-1 text-[13px] leading-snug text-[var(--color-text-muted)]"
                       />
+                      {part.stage ? (
+                        <p className="mt-1 text-[13px] leading-snug text-[var(--color-text-muted)]">
+                          {part.stage}
+                        </p>
+                      ) : null}
+                      {part.note ? (
+                        <p className="mt-1 text-[13px] leading-snug text-[var(--color-gold-text)]">
+                          {part.note}
+                        </p>
+                      ) : null}
+                      {part.role === 'receiver' ? (
+                        <Txt
+                          id="collections-all.guide_receiver_swap"
+                          as="p"
+                          className="mt-1 text-[13px] leading-snug text-[var(--color-text-muted)]"
+                        />
+                      ) : null}
                     </div>
                     <span className="font-mono text-[13px] text-[var(--color-text)] whitespace-nowrap pt-0.5">
                       {part.quantity > 1
@@ -1032,28 +1204,57 @@ function BuildGuide({
                   </li>
                 ))}
               </ol>
-              {build.addHref ? (
-                <div className="build-guide-add">
-                  <AddToCartButton
-                    href={build.addHref}
-                    product={build.parts[0]?.role === 'flight-controller' ? 'openfc-lite' : null}
-                    revenue={{currency: build.currency, amount: build.total}}
-                    className="btn-primary build-guide-add-btn"
-                  >
-                    {(copyText('collections-all.guide_add') ?? 'Add the {label} build · {price}')
-                      .replace('{label}', build.label)
-                      .replace('{price}', formatPrice(build.total, build.currency))}
-                  </AddToCartButton>
+              {build.addHref || build.stackHref ? (
+                <div className="build-guide-add flex flex-col gap-2">
+                  {build.addHref ? (
+                    <AddToCartButton
+                      href={build.addHref}
+                      product={build.parts[0]?.role === 'flight-controller' ? 'openfc-lite' : null}
+                      revenue={{currency: build.currency, amount: build.total}}
+                      className="btn-primary build-guide-add-btn"
+                    >
+                      {(copyText('collections-all.guide_add') ?? 'Add the {label} build · {price}')
+                        .replace('{label}', build.label)
+                        .replace('{price}', formatPrice(build.total, build.currency))}
+                    </AddToCartButton>
+                  ) : null}
+                  {build.stackHref ? (
+                    <AddToCartButton
+                      href={build.stackHref}
+                      product="openfc-lite"
+                      revenue={{currency: build.currency, amount: build.stackTotal}}
+                      className="btn-secondary build-guide-add-btn"
+                    >
+                      {(copyText('collections-all.guide_add_stack') ?? 'Start with the stack · {price} · {ships}')
+                        .replace('{price}', formatPrice(build.stackTotal, build.currency))
+                        .replace('{ships}', build.stackShips ?? '')
+                        .replace(/\s·\s*$/, '')}
+                    </AddToCartButton>
+                  ) : null}
                   {build.waiting.length ? (
                     <p className="build-guide-add-note">
                       {(
                         copyText('collections-all.guide_add_waits') ??
-                        'The {parts} are funding targets: the whole build ships in one parcel when the last of them is ready.'
+                        'The {parts} are funding targets. Add them now and the whole parcel waits for them, or order the stack now and the rest later (shipping is paid again).'
                       ).replace('{parts}', listJoin(build.waiting))}
                     </p>
                   ) : null}
                 </div>
               ) : null}
+              <div className="mt-5">
+                <Txt
+                  id="collections-all.guide_also_title"
+                  as="h4"
+                  className="font-display text-[15px] font-bold text-[var(--color-text)] mb-2"
+                />
+                <ul className="flex flex-col gap-1.5 text-[13px] leading-snug text-[var(--color-text-muted)]">
+                  <Txt
+                    id={`collections-all.guide_also_${build.id.replace(/[^a-z0-9]/gi, '')}`}
+                    as="li"
+                    className="relative pl-6 before:absolute before:left-0 before:top-0 before:font-mono before:text-[var(--color-gold-text)] before:content-['✓']"
+                  />
+                </ul>
+              </div>
               <button
                 type="button"
                 onClick={() => onShowBuild(build.id)}
@@ -1068,32 +1269,32 @@ function BuildGuide({
           ) : null,
         )}
       </div>
-      <div className="mt-6 grid gap-5 md:grid-cols-2 text-[14px] leading-relaxed text-[var(--color-text-muted)]">
-        <div>
-          <Txt
-            id="collections-all.guide_also_title"
-            as="h3"
-            className="font-display text-base font-bold text-[var(--color-text)] mb-2"
-          />
-          <Txt id="collections-all.guide_also_body" as="p" />
-        </div>
-        <div>
-          <Txt
-            id="collections-all.guide_when_title"
-            as="h3"
-            className="font-display text-base font-bold text-[var(--color-text)] mb-2"
-          />
-          {shipNote ? <p className="mb-2">{shipNote}</p> : null}
-          <Txt id="collections-all.guide_when_body" as="p" />
-        </div>
-        <div id="coming-from-dji" className="md:col-span-2 build-guide-dji">
+      <details
+        id="coming-from-dji"
+        className="build-guide-dji group mt-6 scroll-mt-28 text-[14px] leading-relaxed text-[var(--color-text-muted)]"
+      >
+        <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
           <Txt
             id="collections-all.guide_dji_title"
-            as="h3"
-            className="font-display text-base font-bold text-[var(--color-text)] mb-2"
+            as="span"
+            className="font-display text-base font-bold text-[var(--color-text)]"
           />
+          <span aria-hidden="true" className="font-mono text-[var(--color-gold-text)] transition-transform group-open:rotate-45">
+            +
+          </span>
+        </summary>
+        <div className="mt-2 flex max-w-[68ch] flex-col gap-2">
           <Txt id="collections-all.guide_dji_body" as="p" />
         </div>
+      </details>
+      <div className="mt-6 max-w-[46rem] text-[14px] leading-relaxed text-[var(--color-text-muted)]">
+        <Txt
+          id="collections-all.guide_when_title"
+          as="h3"
+          className="font-display text-base font-bold text-[var(--color-text)] mb-2"
+        />
+        {shipNote ? <p className="mb-2">{shipNote}</p> : null}
+        <Txt id="collections-all.guide_when_body" as="p" />
       </div>
     </section>
   );

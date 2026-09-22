@@ -15,8 +15,10 @@ import {
   isPurchasableStatus,
   PRODUCT_CONTENT,
   resolveStatus,
+  variantCartNote,
   variantDisplayName,
 } from '~/lib/product-content';
+import {useRoadmapStatusResolver} from '~/lib/coming-soon';
 import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
 import {CAMPAIGN} from '~/lib/catalog-client';
 import {
@@ -69,6 +71,9 @@ type TrackerRow = {
   ladder: LadderStep[];
   /** What one unit of the price buys ("per motor"), from the product content. */
   priceUnit: string | null;
+  /** What is not final about this option (the 5" motor's stator and KV),
+   *  the same product-content line the cart shows. */
+  note: string | null;
 };
 
 /** Background sections under the tracker. The model itself is the four
@@ -94,8 +99,9 @@ function fill(template: string, values: Record<string, string | number>): string
 }
 
 /** The price steps as one plain sentence, from `priceTiers`: "Units 1 to
- *  100: 20% off retail. Units 101 to 250: 10% off. From unit 251: retail
- *  price." No struck-through price anywhere (EU Omnibus, art. 6a). */
+ *  100: the early-order price. ..." Named steps, never a reduction against
+ *  a reference price nobody was charged, and no struck-through price
+ *  anywhere (EU Omnibus, art. 6a). */
 function ladderSentence(tiers: PriceTier[]): string {
   const parts: string[] = [];
   let from = 1;
@@ -110,22 +116,25 @@ function ladderSentence(tiers: PriceTier[]): string {
   return parts.join(' ');
 }
 
-/** The price steps as a row of cells: "Units 1-100" / "20% off retail". */
+/** The price steps as a row of cells: "Units 1-100" / "Early-order price".
+ *  No "off retail": the steps are named, each card lists its own prices. */
 function ladderCells(tiers: PriceTier[]): Array<{units: string; price: string}> {
   const cells: Array<{units: string; price: string}> = [];
   let from = 1;
-  for (const tier of tiers) {
+  for (const [i, tier] of tiers.entries()) {
     cells.push({
       units: fill(copyText('preorder.ladder_row_units') ?? 'Units {from}-{to}', {from, to: tier.upTo}),
-      price: fill(copyText('preorder.ladder_row_off') ?? '{off}% off retail', {
-        off: Math.round(tier.off * 100),
-      }),
+      price: fill(
+        copyText(i === 0 ? 'preorder.ladder_row_first' : 'preorder.ladder_row_off') ??
+          (i === 0 ? 'Early-order price' : 'Next price step'),
+        {off: Math.round(tier.off * 100)},
+      ),
     });
     from = tier.upTo + 1;
   }
   cells.push({
     units: fill(copyText('preorder.ladder_row_open') ?? 'From unit {from}', {from}),
-    price: copyText('preorder.ladder_row_retail') ?? 'Retail price',
+    price: copyText('preorder.ladder_row_retail') ?? 'Standard price',
   });
   return cells;
 }
@@ -184,6 +193,7 @@ export async function loader({context}: Route.LoaderArgs) {
           campaign: v.campaign,
           ladder: retail.has(v.sku) ? priceLadder(retail.get(v.sku)!, CAMPAIGN.priceTiers) : [],
           priceUnit: PRODUCT_CONTENT[card.handle]?.priceUnit ?? null,
+          note: variantCartNote(card.handle, v.title),
         },
       ];
     }),
@@ -386,6 +396,15 @@ export default function PreorderRoute() {
         </section>
       ))}
 
+      {copyText('preorder.gift_title') ? (
+        <section className="editorial-section" id="gift">
+          <Txt id="preorder.gift_title" as="h2" className="editorial-section-title" />
+          <Txt id="preorder.gift_body" as="p" />
+          <Txt id="preorder.gift_nl" as="p" lang="nl" />
+          <Txt id="preorder.gift_fr" as="p" lang="fr" />
+        </section>
+      ) : null}
+
       <section className="editorial-section" id="questions">
         <Txt id="preorder.faq_title" as="h2" className="editorial-section-title" />
         <div className="preorder-faq">
@@ -473,7 +492,20 @@ function TrackerGroup({
   );
 }
 
+/** A funding-target option's design stage, in the product page's words
+ *  (content/copy/product-chrome.json), so a buyer sees before paying that a
+ *  frame or motor is not yet tested. */
+function stageText(status: string | undefined): string | null {
+  if (status === 'in-progress')
+    return copyText('product-chrome.stage_in_progress') ?? 'Design stage: prototypes ordered, not yet tested';
+  if (status === 'alpha')
+    return copyText('product-chrome.stage_alpha') ?? 'Design stage: prototypes built and flown by testers';
+  return null;
+}
+
 function TrackerCard({row}: {row: TrackerRow}) {
+  const roadmapStatus = useRoadmapStatusResolver();
+  const stage = row.campaign.paidStock ? null : stageText(roadmapStatus(row.handle));
   const name = row.variant ? `${row.product} ${row.variant}` : row.product;
   const cta = copyText('product-chrome.buy_cta_preorder') ?? 'Add to cart';
   const currency = row.price.currencyCode;
@@ -533,6 +565,10 @@ function TrackerCard({row}: {row: TrackerRow}) {
             </span>
           ) : null}
         </p>
+        {stage ? <p className="preorder-track-stage text-[13px]! leading-snug! text-[var(--color-text-muted)]">{stage}</p> : null}
+        {row.note ? (
+          <p className="preorder-track-note text-[13px]! leading-snug! text-[var(--color-gold-text)]">{row.note}</p>
+        ) : null}
         <PreorderMeter campaign={row.campaign} priceAfter={row.priceAfter} compact />
         <div className="preorder-track-foot">
           {row.ladder.length > 1 ? (

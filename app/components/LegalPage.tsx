@@ -26,12 +26,19 @@ function singleH1(html: string, title: string): string {
   );
 }
 
+/** The legal text's classes: subheads that read as subheads (17px, 600,
+ *  air above) and a 68ch measure for the prose, so a long page does not
+ *  read as one block. */
+const LEGAL_BODY =
+  'rich-content legal-body [&_h3]:mt-8! [&_h3]:text-[17px]! [&_h3]:font-semibold! [&_p]:max-w-[68ch] [&_li]:max-w-[68ch]';
+
 export function LegalPage({
   title,
   eyebrow = 'Legal',
   html,
   locale = 'en',
   lastUpdated,
+  summary,
   children,
 }: {
   title: string;
@@ -39,6 +46,8 @@ export function LegalPage({
   html?: string;
   locale?: Locale;
   lastUpdated?: string;
+  /** A short buyer summary shown above the legal text (shipping). */
+  summary?: React.ReactNode;
   children?: React.ReactNode;
 }) {
   const overviewHref = `/${locale}/legal`;
@@ -54,14 +63,16 @@ export function LegalPage({
           <h1 className="page-title">{title}</h1>
         </header>
 
+        {summary}
+
         {html ? (
           <div
-            className="rich-content legal-body"
+            className={LEGAL_BODY}
             dangerouslySetInnerHTML={{__html: singleH1(html, title)}}
           />
         ) : null}
 
-        {children ? <div className="rich-content legal-body">{children}</div> : null}
+        {children ? <div className={LEGAL_BODY}>{children}</div> : null}
 
         {lastUpdated ? (
           <p className="legal-last-updated">

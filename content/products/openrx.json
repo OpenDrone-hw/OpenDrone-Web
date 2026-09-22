@@ -7,7 +7,7 @@
     "line1": "",
     "line2Italic": "",
     "line3": "",
-    "lead": "It picks up the commands from your radio and passes them to the flight controller. All four versions work with a 2.4 GHz ExpressLRS radio. Not sure which to pick? Ask what radio the pilot flies: it needs an ExpressLRS transmitter on the same band."
+    "lead": "It picks up the commands from your radio and passes them to the flight controller. All four versions work with a radio that has 2.4 GHz ExpressLRS. Not sure which to pick? Take Lite for a 3-inch build or Lite-UFL for a 5-inch. Take Mono or Gemini only if the radio also has a sub-GHz ExpressLRS module."
   },
   "whatIsThis": {
     "intro": "A receiver picks up the commands from your radio and passes them to the flight controller. OpenRX runs ExpressLRS, which uses LoRa, so it keeps a solid link even on the busy 2.4 GHz band. It connects to the flight controller with CRSF over one UART, runs on 5 V, and updates over Wi-Fi or Betaflight passthrough. There are four versions, from the Lite with a ceramic antenna to the Gemini with two radios.",
@@ -178,6 +178,7 @@
   "optionAxis": "Model",
   "variants": {
     "Lite": {
+      "tag": "Start here · 3-inch build",
       "pickIf": "Antenna built onto the board, nothing to mount. 2.4 GHz only.",
       "repoUrl": "https://github.com/OpenDrone-hw/OpenRX-Lite",
       "oshwaUid": "BE000030",
@@ -277,6 +278,7 @@
       ]
     },
     "Lite-UFL": {
+      "tag": "Used in the 5-inch build",
       "pickIf": "Plug-in 2.4 GHz antenna (included), which usually gives more range than the ceramic one.",
       "repoUrl": "https://github.com/OpenDrone-hw/OpenRX-Lite-UFL",
       "oshwaUid": "BE000031",
@@ -386,13 +388,13 @@
       }
     },
     "Mono": {
-      "pickIf": "Also receives 900 MHz. Only useful if your radio has a 900 MHz ExpressLRS module.",
+      "pickIf": "Also receives sub-GHz. Only useful if your radio has a sub-GHz ExpressLRS module.",
       "repoUrl": "https://github.com/OpenDrone-hw/OpenRX-Mono",
       "oshwaUid": "BE000032",
       "highlights": [
         [
           "Band",
-          "2.4 + 900 MHz"
+          "2.4 GHz + sub-GHz"
         ],
         [
           "Antenna",
@@ -511,13 +513,13 @@
       }
     },
     "Gemini": {
-      "pickIf": "Two radios and two antennas. 900 MHz is only useful if your radio has a 900 MHz ExpressLRS module.",
+      "pickIf": "Two radios and two antennas. Sub-GHz is only useful if your radio has a sub-GHz ExpressLRS module.",
       "repoUrl": "https://github.com/OpenDrone-hw/OpenRX-Gemini",
       "oshwaUid": "BE000033",
       "highlights": [
         [
           "Band",
-          "2.4 + 900 MHz"
+          "2.4 GHz + sub-GHz"
         ],
         [
           "Antenna",

@@ -22,6 +22,8 @@ export const meta: Route.MetaFunction = () =>
 
 const TOPICS: Array<{to: string; key: string}> = [
   {to: '/preorder#questions', key: 'preorder'},
+  {to: '/products#coming-from-dji', key: 'compat'},
+  {to: '/products#new-to-fpv', key: 'build'},
   {to: '/shipping', key: 'shipping'},
   {to: '/herroepingsrecht', key: 'returns'},
   {to: '/warranty', key: 'warranty'},

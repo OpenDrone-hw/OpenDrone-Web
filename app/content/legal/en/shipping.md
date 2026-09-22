@@ -2,8 +2,6 @@
 
 Incutec BV ships orders by bpost from Belgium to every European Union country and to the other destinations in the table below. Shipping costs are shown at checkout before payment.
 
-The Dutch version ([/nl/shipping](/nl/shipping)) prevails in case of conflict, except toward consumers, for whom the reading most favourable to them applies (Art. 19.1 of the General Terms and Conditions, Art. VI.37 §2 of the Belgian Code of Economic Law). This English translation is provided for convenience.
-
 ### Shipping rates
 
 One flat rate per order, in euro. For EU destinations the rate includes VAT; outside the EU no EU VAT is charged:
@@ -53,3 +51,7 @@ The risk of damage or loss in transit lies with Incutec BV until the moment of d
 ### Tracking
 
 Once your order has been shipped, you will receive an email confirmation with a tracking number.
+
+### Language
+
+The Dutch version ([/nl/shipping](/nl/shipping)) prevails in case of conflict, except toward consumers, for whom the reading most favourable to them applies (Art. 19.1 of the General Terms and Conditions, Art. VI.37 §2 of the Belgian Code of Economic Law). This English translation is provided for convenience.

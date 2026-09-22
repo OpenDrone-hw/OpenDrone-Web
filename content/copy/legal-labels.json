@@ -186,5 +186,28 @@
       "eyebrow": "Juridique",
       "description": "Conditions de vente entre Incutec BV et les clients OpenDrone."
     }
+  },
+  "shipping_glance": {
+    "en": {
+      "title": "In short",
+      "rate": "One flat rate per order, from €8.50 in Belgium: every rate is in the table below.",
+      "paid": "Flight controller and ESC (paid stock): ship late October 2026.",
+      "targets": "Receivers, frames and motors (funding targets): ship about 10 weeks after the target is reached, by 11 March 2027 at the latest if it is reached by 31 December 2026.",
+      "duties": "Outside the EU you pay any import duty to the carrier on delivery. For the United States that is often around 35 to 40% of the value."
+    },
+    "nl": {
+      "title": "Kort",
+      "rate": "Eén vast tarief per bestelling, vanaf € 8,50 in België: alle tarieven staan in de tabel hieronder.",
+      "paid": "Flight controller en ESC (betaalde voorraad): verzonden eind oktober 2026.",
+      "targets": "Ontvangers, frames en motoren (financieringsdoel): verzonden ongeveer 10 weken nadat het doel bereikt is, ten laatste op 11 maart 2027 als het doel tegen 31 december 2026 bereikt is.",
+      "duties": "Buiten de EU betaal je eventuele invoerrechten bij levering aan de vervoerder. Voor de Verenigde Staten is dat vaak ongeveer 35 tot 40% van de waarde."
+    },
+    "fr": {
+      "title": "En bref",
+      "rate": "Un tarif fixe par commande, à partir de 8,50 € en Belgique : tous les tarifs sont dans le tableau ci-dessous.",
+      "paid": "Contrôleur de vol et ESC (stock payé) : expédiés fin octobre 2026.",
+      "targets": "Récepteurs, châssis et moteurs (objectif de financement) : expédiés environ 10 semaines après que l'objectif est atteint, au plus tard le 11 mars 2027 s'il est atteint d'ici le 31 décembre 2026.",
+      "duties": "Hors de l'UE, vous payez les éventuels droits d'importation au transporteur à la livraison. Pour les États-Unis, c'est souvent environ 35 à 40 % de la valeur."
+    }
   }
 }

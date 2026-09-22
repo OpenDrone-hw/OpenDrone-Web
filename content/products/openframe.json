@@ -103,7 +103,7 @@
     "Prop size",
     "Wheelbase",
     "Stack mounting",
-    "Motor mounting",
+    "Arm thickness",
     "Video systems"
   ],
   "optionAxis": "Model",
@@ -125,7 +125,9 @@
       "inTheBox": [
         {
           "qty": "4×",
-          "item": "5\" arms"
+          "item": "5\" arms",
+          "note": "Spare arms: sold out for now, get an email when they can be ordered",
+          "href": "/products/openframe-spares"
         },
         {
           "qty": "1×",
@@ -188,7 +190,9 @@
       "inTheBox": [
         {
           "qty": "4×",
-          "item": "3\" arms"
+          "item": "3\" arms",
+          "note": "Spare arms: sold out for now, get an email when they can be ordered",
+          "href": "/products/openframe-spares"
         },
         {
           "qty": "1×",

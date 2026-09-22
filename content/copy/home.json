@@ -5,7 +5,7 @@
   "meta_description": "Open Source flight controllers and ESCs. Designed in Belgium.",
   "shop": "Shop",
   "loading_models": "loading models…",
-  "skip_to_catalog": "Skip to catalog",
+  "skip_to_catalog": "Go to the shop",
   "reveal_soon": "Soon",
   "walkthrough_link": "See the product",
   "drag_hint": "drag to rotate",
@@ -26,5 +26,9 @@
   "preorder_strip_stack": "Flight controller and ESC batch 1 {ships}.",
   "preorder_strip_how": "How preorders work",
   "preorder_strip_what": "Open-source parts to build your own FPV drone.",
-  "preorder_strip_new": "New to FPV? What a build needs"
+  "preorder_strip_new": "New to FPV? What a build needs",
+  "preorder_strip_dji": "Coming from DJI?",
+  "tour_pick_label": "Pick a build",
+  "tour_pick_3": "3-inch build",
+  "tour_pick_5": "5-inch build"
 }

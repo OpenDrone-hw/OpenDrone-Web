@@ -1,4 +1,5 @@
 import {shopifyImageUrl} from '~/lib/shopify-image';
+import {formatPrice} from '~/lib/catalog';
 import {Link} from 'react-router';
 import {ShoppingCart} from 'lucide-react';
 import {AddToCartButton} from './AddToCartButton';
@@ -62,13 +63,10 @@ export type ProductPodItem = {
   };
 };
 
+// The site's fixed-locale formatter, so a price reads the same for every
+// visitor and on the server and the client.
 const fmt = (p?: {amount: string; currencyCode: string} | null) =>
-  p
-    ? new Intl.NumberFormat(undefined, {
-        style: 'currency',
-        currency: p.currencyCode,
-      }).format(Number(p.amount))
-    : '';
+  p ? formatPrice(p.amount, p.currencyCode) : '';
 
 /**
  * A row/grid of product thumbnails - the SHARED content behind both the hero

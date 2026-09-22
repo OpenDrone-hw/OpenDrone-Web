@@ -17,8 +17,15 @@ import {
 import {formatPrice, paysInOtherCurrency} from '~/lib/catalog';
 import {parseBuilds} from '~/lib/build-recommendations';
 import buildsJson from '../../content/builds.json';
-import {lineDisplayName, variantCartNote, variantDisplayName} from '~/lib/product-content';
+import {
+  fundingTargetTerms,
+  lineDisplayName,
+  shortShipPromise,
+  variantCartNote,
+  variantDisplayName,
+} from '~/lib/product-content';
 import {Txt} from '~/components/Txt';
+import {ShipChip} from '~/components/ShipChip';
 import {buildSeoMeta} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
 import {BLOCKED_COUNTRIES, countryName, shippingQuote} from '~/lib/shipping-rates';
@@ -69,6 +76,12 @@ function t(key: string, fallback: string, vars: Record<string, string | number> 
   );
 }
 
+/** "A", "A and B", "A, B and C". */
+function joinNames(list: string[]): string {
+  if (list.length <= 1) return list[0] ?? '';
+  return `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}`;
+}
+
 /**
  * The cart: every line with its quantity, total and, for a preorder, the
  * ship date it carries into checkout. While the store is closed, /cart and
@@ -107,6 +120,16 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
 
 type Removed = SplitItem[];
 
+/** Put the picked destination on the Shopify cart so checkout opens in
+ *  that country's market (see `/api/shopify/cart-country`). A blocked
+ *  country is never sent; a failure leaves checkout to decide from the
+ *  shipping address. */
+function sendCartCountry(code: string) {
+  if (BLOCKED_COUNTRIES.has(code)) return;
+  const body = new URLSearchParams({country: code});
+  fetch('/api/shopify/cart-country', {method: 'POST', body}).catch(() => {});
+}
+
 /** Every ISO 3166-1 country code, for the cart's destination picker. */
 const COUNTRY_CODES = (
   'AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ ' +
@@ -130,11 +153,15 @@ export default function CartPage() {
   useEffect(() => {
     setRemoved(storedSplitItems());
     const picked = storedShipCountry();
-    if (picked) setCountry(picked);
+    if (picked) {
+      setCountry(picked);
+      if (picked !== rootData?.visitorCountry) sendCartCountry(picked);
+    }
   }, []);
   const pickCountry = (code: string) => {
     setCountry(code);
     storeShipCountry(code);
+    sendCartCountry(code);
   };
   const updateRemoved = (items: Removed) => {
     setRemoved(items);
@@ -143,9 +170,12 @@ export default function CartPage() {
   return (
     <main className="cart page-shell">
       <header className="page-header">
-        <p className="page-eyebrow"><Txt id="cart.eyebrow" /></p>
         <h1 className="page-title"><Txt id="cart.title" /></h1>
-        <p className="page-description"><Txt id="cart.description" /></p>
+        {cart?.lines.length ? (
+          <p className="page-description">
+            {t('description_review', 'Check your parts and ship dates, then pay on the secure checkout.')}
+          </p>
+        ) : null}
       </header>
       {check === CART_CHECK.paidBatch || check === CART_CHECK.shipDate || check === CART_CHECK.mixedDates ? (
         <p className="cart-mixed-warning" role="alert">
@@ -249,11 +279,27 @@ function SplitReminder({
   );
 }
 
+/** The empty cart points at the two ways people start: the stack that
+ *  ships in October, or the build guide for someone new to FPV. */
 function EmptyCart() {
   return (
     <section className="cart-empty">
       <h2 className="cart-empty-title"><Txt id="cart.empty_title" /></h2>
-      <Link className="hero-cta-primary" to="/products"><Txt id="cart.empty_cta" /></Link>
+      <ul className="cart-empty-cards">
+        <li>
+          <Link className="cart-empty-card" to="/products/openfc-lite" prefetch="intent">
+            <strong>{t('empty_stack_title', 'Pre-order a stack (flight controller + ESC)')}</strong>
+            <span>{t('empty_stack_body', 'Ships late October 2026')}</span>
+          </Link>
+        </li>
+        <li>
+          <Link className="cart-empty-card" to="/products#new-to-fpv" prefetch="intent">
+            <strong>{t('empty_guide_title', 'New to FPV?')}</strong>
+            <span>{t('empty_guide_body', 'See what a build needs')}</span>
+          </Link>
+        </li>
+      </ul>
+      <Link className="cart-keep-shopping" to="/products">{t('empty_all', 'All products')}</Link>
     </section>
   );
 }
@@ -319,10 +365,20 @@ function ShippingRow({country, onCountry}: {country: string | null; onCountry: (
 
 /** For a US address: the duty the carrier will ask for, as a range worked
  *  out from the goods subtotal. Shown next to the total, never in it. */
-function UsDutyEstimate({country, subtotal}: {country: string | null; subtotal: number}) {
+function UsDutyEstimate({
+  country,
+  subtotal,
+  total,
+}: {
+  country: string | null;
+  subtotal: number;
+  /** Subtotal plus shipping, for the cost-at-your-door line. */
+  total?: number | null;
+}) {
   const quote = shippingQuote(country);
   if (!quote || quote.blocked || quote.duty !== 'us' || !(subtotal > 0)) return null;
   return (
+    <>
     <p className="cart-summary-note cart-duty-estimate">
       {t(
         'note_us_estimate',
@@ -333,6 +389,15 @@ function UsDutyEstimate({country, subtotal}: {country: string | null; subtotal: 
         },
       )}
     </p>
+    {total ? (
+      <p className="cart-summary-note cart-landed-cost">
+        {t('note_us_landed', 'Expected cost at your door: about {low} to {high} (total plus estimated duty).', {
+          low: formatPrice(Math.round(total + subtotal * US_DUTY_LOW), 'EUR'),
+          high: formatPrice(Math.round(total + subtotal * US_DUTY_HIGH), 'EUR'),
+        })}
+      </p>
+    ) : null}
+    </>
   );
 }
 
@@ -407,6 +472,10 @@ function PopulatedCart({
   const pending = inFlight > 0 || revalidator.state !== 'idle';
 
   const hasPreorder = cart.lines.some((line) => line.shipPromise);
+  // The funding-target condition, once for the whole cart instead of on
+  // every line.
+  const targetTerms =
+    cart.lines.map((line) => fundingTargetTerms(line.shipPromise)).find(Boolean) ?? null;
   // One parcel per order: when lines ship at different times, the early
   // ones wait for the last. Lines waiting for different funding targets do
   // not ship together even when their promise reads the same.
@@ -500,7 +569,11 @@ function PopulatedCart({
               </div>
             ) : null}
           </dl>
-          <UsDutyEstimate country={country} subtotal={Number(cart.subtotal.amount)} />
+          <UsDutyEstimate
+            country={country}
+            subtotal={Number(cart.subtotal.amount)}
+            total={estimatedTotal ? estimatedTotal.amount : null}
+          />
           <div ref={inflowCheckout}>{checkoutForm('cart-checkout-cta')}</div>
           {shipBlocked ? null : (
             <p className="cart-summary-note cart-checkout-domain">
@@ -517,8 +590,11 @@ function PopulatedCart({
               plan={plan}
               targetsOnly={targetsOnly}
               completeBuild={holdsCompleteBuild(cart)}
+              targetTerms={targetTerms}
               onSplit={onSplit}
             />
+          ) : targetTerms ? (
+            <p className="cart-summary-note cart-target-terms">{targetTerms}</p>
           ) : null}
           <details className="cart-notes" open={mixed || undefined}>
             <summary>{t('notes_summary', 'How shipping and ship dates work')}</summary>
@@ -564,6 +640,7 @@ function MixedWarning({
   plan,
   targetsOnly,
   completeBuild,
+  targetTerms,
   onSplit,
 }: {
   cart: ShopifyCart;
@@ -573,6 +650,8 @@ function MixedWarning({
   /** The cart is one whole build: nothing flies before its last part, so
    *  the box says so in one line and the split becomes a quiet link. */
   completeBuild: boolean;
+  /** The full funding-target condition, stated once. */
+  targetTerms: string | null;
   onSplit: (items: Removed) => void;
 }) {
   const revalidator = useRevalidator();
@@ -580,7 +659,10 @@ function MixedWarning({
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const names = (ids: string[]) =>
-    cart.lines.filter((l) => ids.includes(l.id)).map(lineName).join(', ');
+    joinNames(cart.lines.filter((l) => ids.includes(l.id)).map(lineName));
+  const laterCount = plan
+    ? cart.lines.filter((l) => plan.later.includes(l.id)).length
+    : 0;
 
   const split = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -632,6 +714,7 @@ function MixedWarning({
     return (
       <div className="cart-mixed-warning is-build" role="note">
         <p>{t('mixed_build_together', 'Your build ships together once the last part is ready.')}</p>
+        {targetTerms ? <p>{targetTerms}</p> : null}
         {plan
           ? splitForm(
               t('split_early_link', 'Get the {keep} sooner (pays shipping twice)', {keep: names(plan.keep)}),
@@ -650,13 +733,16 @@ function MixedWarning({
           const target = info[line.id]?.target;
           return (
             <li key={line.id}>
-              <strong>{lineName(line)}</strong>: {line.shipPromise ?? copyText('cart.mixed_in_stock') ?? 'in stock'}
+              <strong>{lineName(line)}</strong>:{' '}
+              {shortShipPromise(line.shipPromise)?.text ?? copyText('cart.mixed_in_stock') ?? 'in stock'}
               {target ? (
                 <small className="cart-mixed-target">
-                  {t('mixed_target_count', '{ordered} of {units} ordered toward its funding target', {
-                    ordered: target.ordered,
-                    units: target.units,
-                  })}
+                  {target.ordered > 0
+                    ? t('mixed_target_count', '{ordered} of {units} ordered toward its funding target', {
+                        ordered: target.ordered,
+                        units: target.units,
+                      })
+                    : t('mixed_target_units', 'Funding target: {units} units', {units: target.units})}
                 </small>
               ) : null}
             </li>
@@ -664,12 +750,15 @@ function MixedWarning({
         })}
       </ul>
       <Txt id={targetsOnly ? 'cart.mixed_targets_body' : 'cart.mixed_body'} as="p" />
+      {targetTerms && !targetsOnly ? <p>{targetTerms}</p> : null}
       {plan ? (
         <>
           <p>
             {t(
-              'mixed_split_short',
-              'To get {keep} sooner, split this into two orders: {later} move to a list here, you check out the rest, then add them back as a second order. Each order pays its own shipping.',
+              laterCount > 1 ? 'mixed_split_plural' : 'mixed_split_single',
+              laterCount > 1
+                ? 'To get {keep} sooner, split this into two orders: we set {later} aside, you check out the rest, then add them back as a second order. Each order pays its own shipping.'
+                : 'To get {keep} sooner, split this into two orders: we set {later} aside, you check out the rest, then add it back as a second order. Each order pays its own shipping.',
               {keep: names(plan.keep), later: names(plan.later)},
             )}
           </p>
@@ -700,11 +789,7 @@ function CartLine({line, info, pending}: {line: ShopifyCartLine; info: CartLineI
             const note = variantCartNote(line.handle, value);
             return note ? <small key={`${name}-note`} className="cart-line-note">{note}</small> : null;
           })}
-          {line.shipPromise ? (
-            <small className="cart-line-preorder">
-              {copyText('cart.preorder_line_prefix') ?? 'Pre-order'} · {line.shipPromise}
-            </small>
-          ) : null}
+          <ShipChip promise={line.shipPromise} />
           {max !== null && line.quantity > max ? (
             <small className="cart-line-error" role="alert">{paidBatchMessage(max, line.shipPromise)}</small>
           ) : max !== null && max < MAX_LINE_QUANTITY ? (

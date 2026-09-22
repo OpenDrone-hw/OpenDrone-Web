@@ -25,6 +25,7 @@ import {
   isConceptFor,
   isPurchasableStatus,
   PRODUCT_CONTENT,
+  variantDisplayName,
 } from '~/lib/product-content';
 import {FAMILIES} from '~/lib/families';
 import {stackDiscountedPrice} from '~/lib/stack-discount';
@@ -317,7 +318,7 @@ function FamilyNav({
       return [
         {
           key: h,
-          title: `${partner.title} · ${size}`,
+          title: `${partner.title} · ${variantDisplayName(h, size)}`,
           short,
           price:
             pv.price && partnerDiscounted && pct
@@ -394,7 +395,11 @@ function FamilyNav({
             to: `/products/${p.handle}${qs ? `?${qs}` : ''}`,
             // SKU/variant name is the headline (gold); the family line is the
             // dim context beneath it.
-            title: v.title,
+            // The display name, never a raw legacy option value: the 5"
+            // motor's option value "2207" reads as 5".
+            title: v.selectedOptions
+              .map((o) => variantDisplayName(p.handle, o.value))
+              .join(' / '),
             subtitle: p.title,
             imageUrl: v.image?.url ?? p.featuredImage?.url ?? null,
             imageAlt: v.image?.altText ?? p.featuredImage?.altText ?? null,
