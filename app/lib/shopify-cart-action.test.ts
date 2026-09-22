@@ -410,7 +410,8 @@ describe('Shopify cart action: update, remove, checkout', () => {
 const PAID_ID = 'gid://shopify/ProductVariant/fc';
 const PAID_PROMISE = 'ships late October 2026';
 const BATCHES = [{units: 250, paid: true, ships: PAID_PROMISE}, {units: 250}];
-const PENDING = 'ships about 10 weeks after its target is reached';
+const PENDING =
+  'ships about 10 weeks after its target is reached: by 11 March 2027 if the target is reached by 31 December 2026, otherwise you choose a refund or to wait';
 
 /** A catalog selling OPENFC-LITE-2020 from its paid batch after `ordered` paid units. */
 function paidCatalog(ordered: number): Catalog {

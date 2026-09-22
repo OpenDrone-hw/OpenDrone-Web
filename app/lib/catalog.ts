@@ -439,3 +439,19 @@ export function formatPrice(
     return `${currency} ${value.toFixed(2)}`;
   }
 }
+
+/** Countries whose currency is the euro: the euro area (Bulgaria from
+ *  2026) plus the states that use the euro by agreement. */
+const EURO_COUNTRIES: ReadonlySet<string> = new Set([
+  'AT', 'BE', 'BG', 'CY', 'DE', 'EE', 'ES', 'FI', 'FR', 'GR', 'HR', 'IE', 'IT',
+  'LT', 'LU', 'LV', 'MT', 'NL', 'PT', 'SI', 'SK',
+  'AD', 'MC', 'ME', 'SM', 'VA', 'XK',
+]);
+
+/** Whether a visitor in this country pays in their own currency. False
+ *  for an unknown country, so no currency note is shown on a guess. */
+export function paysInOtherCurrency(country: string | null | undefined): boolean {
+  const code = country?.trim().toUpperCase();
+  if (!code || !/^[A-Z]{2}$/.test(code)) return false;
+  return !EURO_COUNTRIES.has(code);
+}

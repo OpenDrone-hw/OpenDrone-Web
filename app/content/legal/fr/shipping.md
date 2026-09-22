@@ -6,7 +6,7 @@ La version néerlandaise ([/nl/shipping](/nl/shipping)) prévaut en cas de contr
 
 ### Tarifs d’expédition
 
-Un tarif fixe par commande, en euros, TVA comprise :
+Un tarif fixe par commande, en euros. Pour les destinations dans l’UE, la TVA est comprise ; hors de l’UE, aucune TVA de l’UE n’est facturée :
 
 | Destination | Tarif |
 |---|---|

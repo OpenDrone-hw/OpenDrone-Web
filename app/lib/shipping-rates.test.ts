@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {BLOCKED_COUNTRIES, SHIPPING_ZONES, countryName, shippingQuote} from './shipping-rates.ts';
+import {
+  BLOCKED_COUNTRIES,
+  SHIPPING_ZONES,
+  SHIP_COUNTRY_CODES,
+  countryName,
+  shipCountryOptions,
+  shippingQuote,
+} from './shipping-rates.ts';
 
 describe('shippingQuote', () => {
   it('uses the flat bpost rate table', () => {
@@ -56,5 +63,25 @@ describe('shippingQuote', () => {
   it('names a country in English', () => {
     assert.equal(countryName('BE'), 'Belgium');
     assert.equal(countryName('GB'), 'United Kingdom');
+  });
+});
+
+describe('shipCountryOptions', () => {
+  it('leaves out every blocked country and quotes a rate for every one it lists', () => {
+    const codes = shipCountryOptions().map((o) => o.code);
+    for (const blocked of BLOCKED_COUNTRIES) assert.ok(!codes.includes(blocked), blocked);
+    assert.equal(codes.length, SHIP_COUNTRY_CODES.length);
+    assert.equal(new Set(codes).size, codes.length);
+    for (const code of codes) {
+      const q = shippingQuote(code);
+      assert.ok(q && !q.blocked, code);
+    }
+    for (const c of ['BE', 'US', 'GB', 'BG', 'JP']) assert.ok(codes.includes(c), c);
+  });
+
+  it('sorts by country name', () => {
+    const names = shipCountryOptions().map((o) => o.name);
+    assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b, 'en')));
+    assert.equal(shipCountryOptions().find((o) => o.code === 'BE')?.name, 'Belgium');
   });
 });

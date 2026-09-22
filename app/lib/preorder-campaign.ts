@@ -42,8 +42,13 @@ export type PriceTier = {
 export type CampaignConfig = {
   /** First day whose paid Shopify orders count, YYYY-MM-DD. */
   countFrom: string;
-  /** Ship promise for a unit in a batch whose supplier order is not placed. */
+  /** Ship promise for a unit in a batch whose supplier order is not placed.
+   *  It names the target deadline (`endsOn`) and the latest planned ship
+   *  date (`latestShipDate`), as terms 7bis.2 do; the tests hold the three
+   *  in step. */
   pendingShips: string;
+  /** Weeks from a reached funding target to shipping; 10 when absent. */
+  shipWeeksAfterTarget?: number;
   /** Last day a funding target can be reached, YYYY-MM-DD. A buyer whose
    *  target is missed by then chooses a refund or to keep waiting. */
   endsOn: string;
@@ -74,6 +79,12 @@ export type CampaignState = {
   /** The next unit's batch has no ship date of its own: it ships a set time
    *  after its funding target is reached, so its date depends on this SKU. */
   shipsOnTarget?: boolean;
+  /** The target deadline as a date, "31 December 2026". Set by
+   *  `applyCampaign`; absent in a bare `campaignState`. */
+  deadline?: string;
+  /** For a unit waiting on a funding target: the latest planned ship date
+   *  if the target is reached by the deadline, "11 March 2027". */
+  latestShip?: string | null;
   /** Units left in the paid batch the next unit comes out of; null when the
    *  next unit is not paid stock. A cart line must not ask for more. */
   paidLeft?: number | null;
@@ -127,6 +138,12 @@ export function parseCampaignConfig(body: unknown): CampaignConfig {
   }
   if (typeof c.pendingShips !== 'string' || !c.pendingShips.trim()) {
     throw new Error('preorders: pendingShips is required');
+  }
+  if (
+    c.shipWeeksAfterTarget !== undefined &&
+    (!Number.isSafeInteger(c.shipWeeksAfterTarget) || c.shipWeeksAfterTarget < 1)
+  ) {
+    throw new Error('preorders: shipWeeksAfterTarget must be a whole number of weeks');
   }
   if (!c.skus || typeof c.skus !== 'object' || Array.isArray(c.skus)) {
     throw new Error('preorders: skus must be an object');
@@ -185,6 +202,43 @@ export function campaignEndsAt(endsOn: string, timeZone = CAMPAIGN_TIME_ZONE): D
 /** Whether the funding deadline has passed at `now`. */
 export function fundingClosed(config: Pick<CampaignConfig, 'endsOn'>, now: Date = new Date()): boolean {
   return now.getTime() >= campaignEndsAt(config.endsOn).getTime();
+}
+
+/** Weeks from a reached funding target to shipping, when the config
+ *  does not say. */
+export const DEFAULT_SHIP_WEEKS = 10;
+
+/** A campaign day as the site writes it: "2026-12-31" is "31 December 2026". */
+export function campaignDate(isoDay: string): string {
+  const [y, m, d] = isoDay.split('-').map(Number);
+  return new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(Date.UTC(y, m - 1, d)));
+}
+
+/**
+ * The latest planned ship day for a funding target reached on the deadline:
+ * `endsOn` plus `shipWeeksAfterTarget` weeks, YYYY-MM-DD. For 2026-12-31 and
+ * 10 weeks that is 2027-03-11, the date in terms 7bis.2.
+ */
+export function latestShipDay(
+  config: Pick<CampaignConfig, 'endsOn' | 'shipWeeksAfterTarget'>,
+): string {
+  const [y, m, d] = config.endsOn.split('-').map(Number);
+  const weeks = config.shipWeeksAfterTarget ?? DEFAULT_SHIP_WEEKS;
+  return new Date(Date.UTC(y, m - 1, d + weeks * 7))
+    .toISOString()
+    .slice(0, 10);
+}
+
+/** The latest planned ship date in words: "11 March 2027". */
+export function latestShipDate(
+  config: Pick<CampaignConfig, 'endsOn' | 'shipWeeksAfterTarget'>,
+): string {
+  return campaignDate(latestShipDay(config));
 }
 
 /** The price at a step off retail, to the cent. Null without retail. */
@@ -351,7 +405,12 @@ export function applyCampaign(
         if (state.price != null && variant.price < state.price - 0.005) {
           return {...variant, availability: 'sold_out', ship_promise: null, campaign: null};
         }
-        return {...variant, ship_promise: state.shipPromise, campaign: state};
+        const dated: CampaignState = {
+          ...state,
+          deadline: campaignDate(config.endsOn),
+          latestShip: state.shipsOnTarget && !state.paidStock ? latestShipDate(config) : null,
+        };
+        return {...variant, ship_promise: state.shipPromise, campaign: dated};
       }),
     })),
   };

@@ -4,9 +4,12 @@ import {describe, it} from 'node:test';
 import type {Catalog} from './catalog.ts';
 import {
   applyCampaign,
+  campaignDate,
   campaignEndsAt,
   campaignState,
   fundingClosed,
+  latestShipDate,
+  latestShipDay,
   needsCampaignCounts,
   parseCampaignConfig,
   priceLadder,
@@ -14,7 +17,8 @@ import {
   type CampaignBatch,
 } from './preorder-campaign.ts';
 
-const PENDING = 'ships about 10 weeks after its target is reached';
+const PENDING =
+  'ships about 10 weeks after its target is reached: by 11 March 2027 if the target is reached by 31 December 2026, otherwise you choose a refund or to wait';
 const STACK: CampaignBatch[] = [
   {units: 250, paid: true, ships: 'ships late October 2026'},
   {units: 250},
@@ -142,6 +146,35 @@ describe('parseCampaignConfig', () => {
     assert.ok(Object.keys(config.skus).length > 0);
   });
 
+  it('keeps the committed pending ship promise in step with the deadline and the latest ship date', () => {
+    const config = parseCampaignConfig(
+      JSON.parse(
+        fs.readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8'),
+      ),
+    );
+    // Terms 7bis.2: a target reached by the deadline ships by that date.
+    assert.ok(config.pendingShips.includes(campaignDate(config.endsOn)), 'names the deadline');
+    assert.ok(config.pendingShips.includes(latestShipDate(config)), 'names the latest ship date');
+    assert.ok(
+      config.pendingShips.includes(`${config.shipWeeksAfterTarget ?? 10} weeks`),
+      'names the weeks after the target',
+    );
+    assert.equal(config.pendingShips, PENDING);
+    assert.ok(!config.pendingShips.includes('\u2014'), 'no em dash');
+  });
+
+  it('rejects a ship lead time that is not whole weeks', () => {
+    assert.throws(
+      () =>
+        parseCampaignConfig({
+          countFrom: '2026-09-21', endsOn: '2026-12-31', priceTiers: TIERS,
+          pendingShips: PENDING, shipWeeksAfterTarget: 2.5,
+          skus: {X: {batches: [{units: 10}]}},
+        }),
+      /shipWeeksAfterTarget/,
+    );
+  });
+
   it('rejects a paid batch without a ship promise', () => {
     assert.throws(
       () =>
@@ -254,7 +287,23 @@ function catalog(availability: 'preorder' | 'sold_out' | 'in_stock'): Catalog {
 const OPEN = new Date('2026-10-01T12:00:00Z');
 const CONFIG = {countFrom: '2026-09-21', endsOn: '2026-12-31', priceTiers: TIERS, pendingShips: PENDING, skus: {'OPENFRAME-5': {batches: FRAME}}};
 
+describe('latest ship date', () => {
+  it('is the deadline plus the weeks after the target', () => {
+    assert.equal(latestShipDay({endsOn: '2026-12-31', shipWeeksAfterTarget: 10}), '2027-03-11');
+    assert.equal(latestShipDate({endsOn: '2026-12-31', shipWeeksAfterTarget: 10}), '11 March 2027');
+    assert.equal(latestShipDate({endsOn: '2026-12-31'}), '11 March 2027', '10 weeks by default');
+    assert.equal(campaignDate('2026-12-31'), '31 December 2026');
+  });
+});
+
 describe('applyCampaign', () => {
+  it('dates a funding-target unit with the deadline and the latest ship date', () => {
+    const [frame] = applyCampaign(catalog('preorder'), CONFIG, {'OPENFRAME-5': 12}, OPEN).products[0].variants;
+    assert.equal(frame.campaign?.deadline, '31 December 2026');
+    assert.equal(frame.campaign?.latestShip, '11 March 2027');
+    assert.match(frame.ship_promise ?? '', /by 11 March 2027 if the target is reached by 31 December 2026/);
+  });
+
   it('sets the campaign state and ship promise on campaign preorder SKUs only', () => {
     const [frame, strap] = applyCampaign(catalog('preorder'), CONFIG, {'OPENFRAME-5': 12}, OPEN).products[0].variants;
     assert.equal(frame.campaign?.targetOrdered, 12);

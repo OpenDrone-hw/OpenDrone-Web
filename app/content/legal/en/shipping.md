@@ -6,7 +6,7 @@ The Dutch version ([/nl/shipping](/nl/shipping)) prevails in case of conflict, e
 
 ### Shipping rates
 
-One flat rate per order, in euro, VAT included:
+One flat rate per order, in euro. For EU destinations the rate includes VAT; outside the EU no EU VAT is charged:
 
 | Destination | Rate |
 |---|---|

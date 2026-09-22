@@ -64,6 +64,39 @@ export function shippingQuote(country: string | null): ShippingQuote | null {
   };
 }
 
+/** Every ISO 3166-1 country code. */
+const ISO_COUNTRIES = (
+  'AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ ' +
+  'CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR ' +
+  'GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP ' +
+  'KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT ' +
+  'MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW ' +
+  'SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG ' +
+  'UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW'
+).split(' ');
+
+/** Every country code Incutec ships to: all of ISO 3166-1 minus
+ *  `BLOCKED_COUNTRIES`, for a destination picker. */
+export const SHIP_COUNTRY_CODES: readonly string[] = ISO_COUNTRIES.filter(
+  (code) => !BLOCKED_COUNTRIES.has(code),
+);
+
+const optionsByLocale = new Map<string, Array<{code: string; name: string}>>();
+
+/** The destination picker's options: every country Incutec ships to, by
+ *  name. The blocked countries are left out, from the same set
+ *  `shippingQuote` refuses. Built once per locale. */
+export function shipCountryOptions(locale = 'en'): Array<{code: string; name: string}> {
+  let options = optionsByLocale.get(locale);
+  if (!options) {
+    options = SHIP_COUNTRY_CODES.map((code) => ({code, name: countryName(code, locale)})).sort((a, b) =>
+      a.name.localeCompare(b.name, locale),
+    );
+    optionsByLocale.set(locale, options);
+  }
+  return options;
+}
+
 /** The English country name for a code, falling back to the code. */
 export function countryName(code: string, locale = 'en'): string {
   try {

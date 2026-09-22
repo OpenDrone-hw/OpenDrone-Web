@@ -14,7 +14,12 @@ export type MeterBar = {value: number; max: number; label: string};
 export type MeterView = {
   /** The one-line status: paid stock left, progress to the target, or reached. */
   headline: string;
-  /** The main bar; none for paid stock, where "units left" says it all. */
+  /** Which meter this is: paid stock, a funding target still open, or a
+   *  reached target. Use this, not `bar`, to style the meter: an open
+   *  target with no orders yet has no bar. */
+  state: 'stock' | 'open' | 'funded';
+  /** The main bar; none for paid stock, where "units left" says it all,
+   *  and none for a funding target nobody has ordered toward yet. */
   bar: MeterBar | null;
   /** The funding target is reached: the bar reads as done. */
   reached: boolean;
@@ -54,6 +59,7 @@ export function meterView(
   if (state.paidStock) {
     const left = state.batchUnits - state.batchOrdered;
     return {
+      state: 'stock',
       headline: t('meter_paid', 'Batch {batch} is paid for and in production · {left} of {units} left', {
         batch: state.batch,
         left,
@@ -67,8 +73,32 @@ export function meterView(
     };
   }
 
+  if (state.target !== null && !state.targetReached && state.targetOrdered < 1) {
+    // Nothing ordered yet: lead with the target and its deadline, not an
+    // empty bar and "0 of 1000", which reads as a campaign going nowhere.
+    return {
+      state: 'open',
+      headline: state.deadline
+        ? t('meter_target_zero', 'Funding target: {target} units by {deadline}. Orders so far: {ordered}', {
+            target: state.target,
+            deadline: state.deadline,
+            ordered: 0,
+          })
+        : t('meter_target_zero_nodate', 'Funding target: {target} units. Orders so far: {ordered}', {
+            target: state.target,
+            ordered: 0,
+          }),
+      bar: null,
+      reached: false,
+      count: t('meter_target_zero_count', 'Target: {target} units', {target: state.target}),
+      stretch: null,
+      early,
+    };
+  }
+
   if (state.target !== null && !state.targetReached) {
     return {
+      state: 'open',
       headline: t('meter_target', '{ordered} of {target} ordered toward the funding target', {
         ordered: state.targetOrdered,
         target: state.target,
@@ -90,6 +120,7 @@ export function meterView(
 
   const target = state.target ?? state.batchUnits;
   return {
+    state: 'funded',
     headline: t('meter_reached', 'Funding target reached · {ordered} ordered', {
       ordered: state.ordered,
     }),

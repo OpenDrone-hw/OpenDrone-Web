@@ -4,7 +4,7 @@ Incutec BV verzendt bestellingen met bpost vanuit België naar elk land van de E
 
 ### Verzendtarieven
 
-Eén vast tarief per bestelling, in euro, inclusief btw:
+Eén vast tarief per bestelling, in euro. Voor bestemmingen in de EU is de btw inbegrepen; buiten de EU wordt geen EU-btw aangerekend:
 
 | Bestemming | Tarief |
 |---|---|

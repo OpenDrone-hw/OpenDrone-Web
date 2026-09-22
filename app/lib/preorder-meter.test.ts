@@ -3,7 +3,8 @@ import {describe, it} from 'node:test';
 import {campaignState, priceLadder, type CampaignBatch} from './preorder-campaign.ts';
 import {barPercent, ladderText, meterView} from './preorder-meter.ts';
 
-const PENDING = 'ships about 10 weeks after its target is reached';
+const PENDING =
+  'ships about 10 weeks after its target is reached: by 11 March 2027 if the target is reached by 31 December 2026, otherwise you choose a refund or to wait';
 const STACK: CampaignBatch[] = [{units: 250, paid: true, ships: 'ships late October 2026'}, {units: 250}];
 const FRAME: CampaignBatch[] = [{units: 250}, {units: 1000}];
 const TIERS = [{upTo: 100, off: 0.2}, {upTo: 250, off: 0.1}];
@@ -25,6 +26,32 @@ describe('meterView', () => {
     assert.equal(view.early, 'Preorder price for the first 250 · 63 left, then €99.00');
     assert.equal(barPercent(view.bar!), 75);
     assert.equal(view.count, '187 / 250');
+  });
+
+  it('leads with the target and deadline, and draws no bar, before the first order', () => {
+    const state = {...campaignState([{units: 1000}, {units: 4000}], 0, PENDING, TIERS), deadline: '31 December 2026'};
+    const view = meterView(state, none, '€29.00');
+    assert.equal(view.headline, 'Funding target: 1000 units by 31 December 2026. Orders so far: 0');
+    assert.equal(view.bar, null);
+    assert.equal(view.state, 'open');
+    assert.equal(view.reached, false);
+    assert.equal(view.count, 'Target: 1000 units');
+    assert.equal(
+      meterView(campaignState(FRAME, 0, PENDING, TIERS), none).headline,
+      'Funding target: 250 units. Orders so far: 0',
+      'without a deadline the line still reads',
+    );
+  });
+
+  it('draws the bar from the first order on', () => {
+    const view = meterView(campaignState(FRAME, 1, PENDING, TIERS), none);
+    assert.equal(view.state, 'open');
+    assert.equal(view.bar?.value, 1);
+  });
+
+  it('names the meter state for styling', () => {
+    assert.equal(meterView(campaignState(STACK, 10, PENDING, TIERS), none).state, 'stock');
+    assert.equal(meterView(campaignState(FRAME, 300, PENDING, TIERS), none).state, 'funded');
   });
 
   it('drops the early-price line when Shopify has no higher price', () => {
