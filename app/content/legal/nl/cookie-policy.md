@@ -21,8 +21,7 @@ Deze site (opendrone.be) plaatst zelf één cookie. Het afrekenen verloopt via S
 |--------|------|--------------|
 | `session` (opendrone.be) | Onthoudt uw taalkeuze en, zodra u een product in uw winkelmandje legt, de verwijzing naar uw Shopify-winkelmandje | Sessie |
 | Shopify-checkoutcookies | Houden uw winkelmandje, het afrekenen en uw aanmelding op uw klantenaccount werkend en voorkomen betalingsfraude; geplaatst door Shopify op de checkoutpagina's, niet op opendrone.be. Cookielijst van Shopify: https://www.shopify.com/legal/cookies | Sessie tot 1 jaar, afhankelijk van de cookie |
-| Stripe-cookies (`m`, `__stripe_mid`, `__stripe_sid`) | Fraudepreventie bij betaling — geplaatst door Stripe op de checkoutpagina's tijdens de betaling, niet op opendrone.be (strikt noodzakelijk voor de uitdrukkelijk gevraagde dienst; Art. 10/2 Wet van 30 juli 2018 (zoals ingevoegd door de Wet van 21 december 2021); Art. 5(3) ePrivacy-richtlijn 2002/58/EG) | Sessie tot 1 jaar, afhankelijk van de cookie |
-| Betalingscookies (gehoste betaalpagina van Mollie, enkel als terugvaloptie indien Stripe niet beschikbaar is) | Fraudepreventie bij betaling — wordt **uitsluitend op de gehoste betaalpagina** geplaatst tijdens de betaling, niet op opendrone.be (Art. 10/2 Wet van 30 juli 2018 (zoals ingevoegd door de Wet van 21 december 2021), strikt noodzakelijk voor de uitdrukkelijk gevraagde dienst; Art. 5(3) ePrivacy-richtlijn 2002/58/EG) | Sessie |
+| Stripe-cookies (`m`, `__stripe_mid`, `__stripe_sid`) | Fraudepreventie bij betaling: geplaatst door Stripe, dat Shopify Payments verwerkt, op de checkoutpagina's tijdens de betaling, niet op opendrone.be (strikt noodzakelijk voor de uitdrukkelijk gevraagde dienst; Art. 10/2 Wet van 30 juli 2018 (zoals ingevoegd door de Wet van 21 december 2021); Art. 5(3) ePrivacy-richtlijn 2002/58/EG) | Sessie tot 1 jaar, afhankelijk van de cookie |
 
 #### Analytische cookies
 

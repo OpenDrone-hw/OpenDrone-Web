@@ -3,7 +3,7 @@
 **Required by GDPR (Regulation (EU) 2016/679)**
 **Must be accessible on every page of the website**
 **Supervisory authority: Belgian Data Protection Authority (GBA)**
-**The Dutch version (/privacy) is the legally authoritative text for data subjects residing in Belgium. This English translation is informative only.**
+**The Dutch version ([/nl/privacy](/nl/privacy)) is the legally authoritative text for data subjects residing in Belgium. This English translation is informative only.**
 
 ---
 
@@ -57,17 +57,17 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 
 | Recipient | Purpose | Location |
 |-----------|---------|----------|
-| Shopify International Limited | Webshop platform: catalog, cart, checkout, orders, customer accounts and newsletter consent | Ireland (EU); transfers to Shopify Inc. in Canada rely on the EU adequacy decision for Canada, other transfers on SCCs; Shopify's privacy policy: https://www.shopify.com/legal/privacy |
-| Stripe Payments Europe, Ltd. | Payment processing (cards, Bancontact, iDEAL, Klarna, PayPal): payment data, email, billing address; device data for fraud prevention | 1 Grand Canal Street Lower, Dublin 2, Ireland (EU); Stripe's privacy policy: https://stripe.com/privacy |
-| Mollie B.V. | Payment processing, fallback only if Stripe is unavailable (Bancontact, SEPA, cards) | Netherlands (EU) |
+| Shopify International Limited | Webshop platform: catalog, cart, checkout, orders, customer accounts, order and shipping notifications, and newsletter consent | Ireland (EU); transfers to Shopify Inc. in Canada rely on the EU adequacy decision for Canada, other transfers on SCCs; Shopify's privacy policy: https://www.shopify.com/legal/privacy |
+| Shopify Payments, processed by Stripe Payments Europe, Ltd. | Payment processing for the payment methods shown at checkout: payment data, email, billing address; device data for fraud prevention | 1 Grand Canal Street Lower, Dublin 2, Ireland (EU); Stripe's privacy policy: https://stripe.com/privacy |
 | bpost NV/SA | Parcel delivery and shipping labels | Belgium (EU) |
-| Google Workspace (Google Ireland Ltd.) | Company mailboxes (support@ and sales@incutec.com), staff email and sign-in | Ireland (EU); Google's standard contractual clauses cover any transfer outside the EEA |
-| Plausible Analytics | Cookieless website analytics | Plausible Insights OÜ — Estonia (EU); hosting in Germany |
+| Judge.me | Review requests after delivery and publication of reviews: name, email, ordered products, review text | Judge.me's privacy policy: https://judge.me/privacy |
+| Google Workspace (Google Ireland Ltd.) | Company mailboxes, staff email and sign-in | Ireland (EU); Google's standard contractual clauses cover any transfer outside the EEA |
+| Plausible Analytics | Cookieless website analytics | Plausible Insights OÜ, Estonia (EU); hosting in Germany |
 | Polar Advisory BV (accountant) | Invoicing and annual accounts | Belgium |
-| Discord Inc. | Community support tickets, opt-in via the Discord bridge (name, email, message content, attachments) | US — EU-US Data Privacy Framework |
-| Anthropic PBC | AI-assisted draft replies for support tickets | US — data processing agreement with SCCs |
-| Resend (Plus Five Five, Inc.) | Transactional mail: order confirmation, shipping and invoice mail, support resume links | EU region infrastructure; US legal entity — SCCs |
-| Cloudflare, Inc. | Turnstile anti-spam verification on the support form | US — EU-US Data Privacy Framework |
+| Discord Inc. | Community support tickets, opt-in via the Discord bridge (name, email, message content, attachments) | US: EU-US Data Privacy Framework |
+| Anthropic PBC | AI-assisted draft replies for support tickets | US: data processing agreement with SCCs |
+| Resend (Plus Five Five, Inc.) | Mail sent by opendrone.be: withdrawal confirmations, newsletter mail and support resume links | EU region infrastructure; US legal entity: SCCs |
+| Cloudflare, Inc. | Turnstile anti-spam verification on the support and newsletter forms | US: EU-US Data Privacy Framework |
 
 Order and customer data (name, address, email, payment reference, order history) and newsletter consent are processed in Shopify.
 

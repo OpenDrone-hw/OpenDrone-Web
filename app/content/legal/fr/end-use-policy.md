@@ -2,7 +2,7 @@
 type: compliance
 status: final
 owner: incutec
-last_updated: 2026-08-15
+last_updated: 2026-09-22
 tags: [policy, end-use, export-control]
 ---
 
@@ -37,13 +37,13 @@ Incutec BV ne vend, ne fournit ni ne distribue sciemment des biens destinés à 
 ## 4. Mise en œuvre opérationnelle
 
 ### 4.1 Restrictions géographiques
-La boutique en ligne applique des restrictions par pays correspondant (a) aux destinations soumises à des mesures restrictives de l'UE et de l'ONU, et (b) aux destinations figurant sur la liste Active-Conflict Block tenue dans `compliance/export-sanctions/sanctions-screening.md`. La liste Active-Conflict Block est réexaminée chaque trimestre au regard de l'Armed Conflict Location & Event Data Project (ACLED) et de l'Uppsala Conflict Data Program (UCDP).
+La boutique en ligne n'expédie pas vers la Russie, le Bélarus, l'Iran, la Corée du Nord, la Syrie et Cuba. Elle applique en outre des restrictions par pays correspondant (a) aux autres destinations soumises à des mesures restrictives de l'UE et de l'ONU, et (b) aux destinations figurant sur la liste Active-Conflict Block d'Incutec BV. La liste Active-Conflict Block est réexaminée chaque trimestre au regard de l'Armed Conflict Location & Event Data Project (ACLED) et de l'Uppsala Conflict Data Program (UCDP).
 
 ### 4.2 Contrôle des clients
 Les commandes des consommateurs sont contrôlées au regard des listes de sanctions consolidées de l'UE. Les commandes interentreprises font en outre l'objet d'un examen de l'usage final et, le cas échéant, de la clause de non-réexportation vers la Russie exigée par l'article 12g du Règlement (UE) 833/2014.
 
 ### 4.3 Clause d'usage final acceptable
-La passation d'une commande sur la boutique Incutec vaut acceptation de la clause d'usage final acceptable figurant dans les Conditions Générales (`compliance/webshop/algemene-voorwaarden.md`).
+La passation d'une commande sur la boutique Incutec vaut acceptation de la clause d'usage final acceptable figurant dans les Conditions Générales ([/fr/algemene-voorwaarden](/fr/algemene-voorwaarden), article 18).
 
 ### 4.4 Revente en aval
 La présente politique s'applique aux ventes directes d'Incutec BV. La revente par des clients professionnels établis dans l'Union européenne est régie par la clause contractuelle de non-réexportation visée au §4.2 et n'est pas soumise à des obligations d'audit supplémentaires imposées par Incutec.
@@ -63,8 +63,6 @@ La présente politique :
 - Règlement (CE) 765/2006 (Bélarus) : https://eur-lex.europa.eu/eli/reg/2006/765/oj
 - ACLED : https://acleddata.com/
 - UCDP : https://ucdp.uu.se/
-- `compliance/export-sanctions/sanctions-screening.md`
-- `compliance/webshop/algemene-voorwaarden.md`
 
 ---
 

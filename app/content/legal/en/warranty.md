@@ -2,7 +2,7 @@
 
 All products sold to consumers by Incutec BV benefit from a statutory guarantee of **2 years** based on conformity with the contract (Art. 1649bis–1649octies of the old Civil Code, as inserted by the Act of 20 March 2022 transposing Directive (EU) 2019/771). During the entire 2-year period, any defect that becomes apparent is presumed to have existed at delivery (full Belgian reversal of the burden of proof). Incutec BV offers no commercial guarantee on top of this statutory guarantee.
 
-The Dutch version (/warranty) is the legally authoritative text for consumers residing in Belgium. This English translation is informative only.
+The Dutch version ([/nl/warranty](/nl/warranty)) is the legally authoritative text for consumers residing in Belgium. This English translation is informative only.
 
 ### What is covered
 

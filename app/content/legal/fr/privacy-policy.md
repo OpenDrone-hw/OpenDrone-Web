@@ -3,7 +3,7 @@
 **Requis par le RGPD (Règlement (UE) 2016/679)**
 **Doit être accessible sur chaque page du site web**
 **Autorité de contrôle : Autorité belge de Protection des Données (APD)**
-**La version néerlandaise (/privacy) constitue le texte juridiquement faisant foi pour les personnes concernées résidant en Belgique. Cette traduction française est fournie à titre informatif uniquement.**
+**La version néerlandaise ([/nl/privacy](/nl/privacy)) constitue le texte juridiquement faisant foi pour les personnes concernées résidant en Belgique. Cette traduction française est fournie à titre informatif uniquement.**
 
 ---
 
@@ -57,17 +57,17 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 
 | Destinataire | Finalité | Lieu |
 |-----------|---------|----------|
-| Shopify International Limited | Plateforme de boutique : catalogue, panier, paiement, commandes, comptes clients et consentement à la newsletter | Irlande (UE) ; les transferts vers Shopify Inc. au Canada reposent sur la décision d’adéquation de l’UE pour le Canada, les autres transferts sur des CCT ; politique de confidentialité de Shopify : https://www.shopify.com/legal/privacy |
-| Stripe Payments Europe, Ltd. | Traitement des paiements (cartes, Bancontact, iDEAL, Klarna, PayPal) : données de paiement, e-mail, adresse de facturation ; données de l'appareil pour la prévention de la fraude | 1 Grand Canal Street Lower, Dublin 2, Irlande (UE) ; politique de confidentialité de Stripe : https://stripe.com/privacy |
-| Mollie B.V. | Traitement des paiements, utilisé uniquement en secours si Stripe est indisponible (Bancontact, SEPA, cartes) | Pays-Bas (UE) |
+| Shopify International Limited | Plateforme de boutique : catalogue, panier, paiement, commandes, comptes clients, notifications de commande et d’expédition et consentement à la newsletter | Irlande (UE) ; les transferts vers Shopify Inc. au Canada reposent sur la décision d’adéquation de l’UE pour le Canada, les autres transferts sur des CCT ; politique de confidentialité de Shopify : https://www.shopify.com/legal/privacy |
+| Shopify Payments, traité par Stripe Payments Europe, Ltd. | Traitement des paiements pour les moyens de paiement affichés lors du passage en caisse : données de paiement, e-mail, adresse de facturation ; données de l'appareil pour la prévention de la fraude | 1 Grand Canal Street Lower, Dublin 2, Irlande (UE) ; politique de confidentialité de Stripe : https://stripe.com/privacy |
 | bpost NV/SA | Livraison des colis et étiquettes d’expédition | Belgique (UE) |
-| Google Workspace (Google Ireland Ltd.) | Boîtes mail de l’entreprise (support@ et sales@incutec.com), messagerie et connexion du personnel | Irlande (UE) ; les clauses contractuelles types de Google couvrent tout transfert hors EEE |
-| Plausible Analytics | Analyse de site sans cookies | Plausible Insights OÜ — Estonie (UE) ; hébergement en Allemagne |
+| Judge.me | Demandes d’avis après livraison et publication des avis : nom, e-mail, produits commandés, texte de l’avis | politique de confidentialité de Judge.me : https://judge.me/privacy |
+| Google Workspace (Google Ireland Ltd.) | Boîtes mail de l’entreprise, messagerie et connexion du personnel | Irlande (UE) ; les clauses contractuelles types de Google couvrent tout transfert hors EEE |
+| Plausible Analytics | Analyse de site sans cookies | Plausible Insights OÜ, Estonie (UE) ; hébergement en Allemagne |
 | Polar Advisory BV (comptable) | Facturation et comptes annuels | Belgique |
-| Discord Inc. | Support communautaire, opt-in via la passerelle Discord (nom, e-mail, contenu des messages, pièces jointes) | É-U — EU-US Data Privacy Framework |
-| Anthropic PBC | Projets de réponses assistés par IA pour les tickets de support | É-U — accord de sous-traitance avec CCT |
-| Resend (Plus Five Five, Inc.) | E-mails transactionnels : confirmation de commande, expédition et facture, liens de reprise du support | Infrastructure en région UE ; entité légale É-U — CCT |
-| Cloudflare, Inc. | Vérification anti-spam Turnstile sur le formulaire de support | É-U — EU-US Data Privacy Framework |
+| Discord Inc. | Support communautaire, opt-in via la passerelle Discord (nom, e-mail, contenu des messages, pièces jointes) | É-U : EU-US Data Privacy Framework |
+| Anthropic PBC | Projets de réponses assistés par IA pour les tickets de support | É-U : accord de sous-traitance avec CCT |
+| Resend (Plus Five Five, Inc.) | E-mails envoyés par opendrone.be : confirmations de rétractation, e-mails de newsletter et liens de reprise du support | Infrastructure en région UE ; entité légale É-U : CCT |
+| Cloudflare, Inc. | Vérification anti-spam Turnstile sur les formulaires de support et de newsletter | É-U : EU-US Data Privacy Framework |
 
 Les données de commande et de client (nom, adresse, e-mail, référence de paiement, historique des commandes) et le consentement à la newsletter sont traités dans Shopify.
 

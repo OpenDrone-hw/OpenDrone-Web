@@ -1,32 +1,48 @@
 ## Shipping and delivery
 
-Incutec BV ships orders from Belgium to most European Union countries and to the other destinations offered at checkout. Delivery times, shipping costs and, where they apply, import duties are calculated and displayed at checkout before payment.
+Incutec BV ships orders by bpost from Belgium to every European Union country and to the other destinations in the table below. Shipping costs are shown at checkout before payment.
 
-The Dutch version (/shipping) is the legally authoritative text for consumers residing in Belgium. This English translation is informative only.
+The Dutch version ([/nl/shipping](/nl/shipping)) is the legally authoritative text for consumers residing in Belgium. This English translation is informative only.
 
-### Delivery time
+### Shipping rates
 
-Orders are normally shipped within 2 business days of payment receipt. The final delivery deadline is 30 calendar days after the order, unless explicitly agreed otherwise (Art. VI.43 of the Belgian Code of Economic Law, Art. 7 of our General Terms and Conditions). If Incutec BV fails to deliver within the 30-day deadline, the consumer may set a reasonable additional period. If Incutec BV still fails to deliver within that additional period, the consumer is entitled to terminate the contract free of charge (Art. VI.43 §2 WER), unless the original delivery deadline was essential or Incutec BV has already refused to deliver.
+One flat rate per order, in euro, VAT included:
+
+| Destination | Rate |
+|---|---|
+| Belgium | €8.50 |
+| Germany, France, Luxembourg, Netherlands | €9.95 |
+| Other European Union countries | €12.95 |
+| Cyprus, Estonia, Malta | €16.95 |
+| United Kingdom, Switzerland, Norway, Iceland, Liechtenstein | €24.95 |
+| United States | €19.95 |
+| All other countries | €39.95 |
+
+Incutec BV does not ship to Russia, Belarus, Iran, North Korea, Syria or Cuba, or to other destinations under restrictive measures: see our [end-use policy](/end-use).
+
+### Import duties and taxes
+
+Incutec BV does not collect import duties or import taxes at checkout. Within the European Union nothing more is due after checkout. Parcels to destinations outside the European Union, including the United States, may be subject to import duties, import taxes and carrier fees, which the consumer pays to the carrier on delivery.
+
+United States: US import duties on electronics made in China are high. For the flight controller and the ESC they come to roughly 35 to 40% of the value. US customs sets the amount, not Incutec BV, and the carrier may charge a fee for clearing the parcel.
 
 ### Pre-orders
 
-Some products are sold as pre-orders. They are marked as such, with their ship date, on the product page, at checkout and on the order confirmation. The full price, the shipping costs and any import duties shown at checkout are paid when the order is placed.
+Some products are sold as pre-orders. They are marked as such, with their ship date, on the product page, at checkout and on the order confirmation. The full price and the shipping costs shown at checkout are paid when the order is placed.
 
-Pre-order products are produced in batches. The flight controller and ESC from the first batch ship late October 2026. Every other pre-order product has a funding target, stated on its product page: the quantity Incutec BV orders from its supplier. It ships about 10 weeks after that target is reached, and every target has a deadline of 31 December 2026. If a target is not reached by then, everyone who ordered that product chooses by email between a full refund and keeping the order for a new ship date. The ship date stated for an item when the order is placed is the delivery time agreed between the consumer and Incutec BV within the meaning of Art. VI.43 of the Belgian Code of Economic Law, so the 30-day default deadline above does not apply to pre-order items.
+Pre-order products are produced in batches. The flight controller and ESC from the first batch ship late October 2026. Every other pre-order product has a funding target, stated on its product page: the quantity Incutec BV orders from its supplier. It ships about 10 weeks after that target is reached, and every target has a deadline of 31 December 2026. If the target is reached by 31 December 2026, the product ships by 11 March 2027 at the latest. If a target is not reached, everyone who ordered that product chooses by email between a refund of all amounts paid for that product within 14 days and keeping the order for the new ship date stated in that email. The ship date stated for an item when the order is placed is the delivery time agreed between the consumer and Incutec BV within the meaning of Art. VI.43 of the Belgian Code of Economic Law, so the 30-day default deadline below does not apply to pre-order items.
 
 If a ship date moves, Incutec BV informs the consumer by email and states the new date. This is without prejudice to the consumer's rights under Art. VI.43 §2 of the Belgian Code of Economic Law.
+
+The consumer may withdraw from a pre-order at any time until delivery, through the [withdrawal form](/herroepingsrecht) or as set out in Article 5.4 of the General Terms and Conditions (Art. 7bis.4 of the General Terms and Conditions).
 
 An order that combines items with different ship dates ships as one parcel once every item is available: one delivery per order.
 
 Pre-order payments fund the production run and stock purchase for the order. They carry no interest and confer no equity, revenue share or other ownership interest in Incutec BV.
 
-### Import duties
+### Delivery time for items in stock
 
-Parcels to the United States are shipped duty paid: import duties are calculated and charged at checkout, and Incutec BV pays them to the carrier, so nothing is due on delivery. Parcels to other destinations outside the European Union may be subject to import duties and taxes payable by the consumer on delivery, unless checkout states that duties are included.
-
-### Shipping rates and countries
-
-Shipping costs depend on the destination zone and are shown at checkout before payment. Some countries are excluded due to export sanctions: see our [end-use policy](/end-use).
+Items in stock are normally shipped within 2 business days of payment receipt. The final delivery deadline is 30 calendar days after the order, unless explicitly agreed otherwise (Art. VI.43 of the Belgian Code of Economic Law, Art. 7 of our General Terms and Conditions). If Incutec BV fails to deliver within the 30-day deadline, the consumer may set a reasonable additional period. If Incutec BV still fails to deliver within that additional period, the consumer is entitled to terminate the contract free of charge (Art. VI.43 §2 WER), unless the original delivery deadline was essential or Incutec BV has already refused to deliver.
 
 ### Risk during shipping
 

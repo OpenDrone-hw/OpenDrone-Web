@@ -52,6 +52,7 @@ ____________________
 6. Incutec BV vergoedt alle betalingen (inclusief standaard leveringskosten) uiterlijk **14 dagen** nadat wij het product hebben terugontvangen of u bewijs van terugzending heeft geleverd.
 7. Terugbetaling geschiedt via hetzelfde betaalmiddel als bij uw oorspronkelijke aankoop.
 8. U mag het product uitpakken en testen zoals in een winkel; enkel de waardevermindering door gebruik dat verder gaat, wordt in mindering gebracht. Voor elektronicacomponenten gaan solderen, montage, het aansluiten van batterijvoeding of motoren, het flashen van andere firmware en vlieggebruik verder dan die beoordeling; controleren via USB niet (zie Algemene Voorwaarden Art. 5.8).
+9. **Pre-order nog niet geleverd?** U kunt de bestelling tot de levering op elk moment herroepen, zonder opgave van redenen. Laat "Ontvangen op" leeg. Wij betalen alles wat u betaalde, inclusief de standaard leveringskosten, terug binnen **14 dagen** nadat wij uw herroeping hebben ontvangen (Algemene Voorwaarden Art. 7bis.4).
 
 ---
 

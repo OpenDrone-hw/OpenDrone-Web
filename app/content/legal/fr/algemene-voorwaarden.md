@@ -1,7 +1,7 @@
 # Conditions Générales de Vente : Incutec BV
 
 **Obligatoires pour la boutique en ligne. Doivent être téléchargeables en PDF. Doivent être acceptées avant la commande.**
-**La version néerlandaise (/algemene-voorwaarden) prévaut en cas de contradiction, sauf à l’égard des consommateurs, pour lesquels l’interprétation la plus favorable s’applique (art. 19). Cette traduction française est fournie pour votre commodité.**
+**La version néerlandaise ([/nl/algemene-voorwaarden](/nl/algemene-voorwaarden)) prévaut en cas de contradiction, sauf à l’égard des consommateurs, pour lesquels l’interprétation la plus favorable s’applique (art. 19). Cette traduction française est fournie pour votre commodité.**
 
 ---
 
@@ -39,11 +39,11 @@
 
 4.2. Incutec BV confirme sans délai par voie électronique la réception de l’acceptation de l’offre. Tant que la réception n’a pas été confirmée, le consommateur peut résilier le contrat.
 
-4.3. Le bouton de commande porte la mention « commande avec obligation de paiement » conformément à l’Art. VI.46 §2 du Code de droit économique belge (CDE).
+4.3. Le dernier bouton lors du passage en caisse indique sans ambiguïté que passer la commande implique une obligation de paiement, conformément à l’Art. VI.46 §2 du Code de droit économique belge (CDE).
 
 ### Article 5 : Droit de rétractation
 
-> **Art. VI.47 CDE : délai de réflexion de 14 jours calendrier pour les consommateurs**
+**Art. VI.47 CDE : délai de réflexion de 14 jours calendrier pour les consommateurs**
 
 5.1. Le consommateur peut résilier un contrat d’achat d’un produit pendant un délai de réflexion de **14 jours calendrier** sans avoir à justifier sa décision (droit de rétractation).
 
@@ -67,8 +67,6 @@
 - Produits qui, après livraison, sont mélangés de manière indissociable avec d’autres articles en raison de leur nature
 - Produits fabriqués selon les spécifications du consommateur ou clairement personnalisés
 
-> **Note :** Les composants électroniques pour drones sont des produits standards : le droit de rétractation s’applique dans pratiquement tous les cas.
-
 ### Article 7 : Livraison
 
 7.1. Incutec BV livre les commandes dans le délai de livraison indiqué sur le site web. Délai final de livraison : **30 jours** après la commande, sauf convention contraire.
@@ -77,29 +75,29 @@
 
 7.3. Le risque de dommage et/ou de perte des produits incombe à Incutec BV jusqu’au moment de la livraison au consommateur.
 
-7.4. Incutec BV propose au moins **deux modes de livraison sensiblement différents** (art. VI.45/2 CDE).
+7.4. Les commandes sont expédiées par bpost au tarif fixe de la destination indiqué sur la page d’expédition (opendrone.be/shipping) et affiché lors du passage en caisse.
 
 ### Article 7bis : Précommandes
 
-7bis.1. Certains produits sont vendus en précommande. Ils sont indiqués comme tels, avec leur date d’expédition, sur la page produit, lors du passage en caisse et sur la confirmation de commande. Le consommateur paie le prix intégral, les frais d’expédition et les éventuels droits d’importation affichés lors du passage en caisse au moment de la commande.
+7bis.1. Certains produits sont vendus en précommande. Ils sont indiqués comme tels, avec leur date d’expédition, sur la page produit, lors du passage en caisse et sur la confirmation de commande. Le consommateur paie le prix intégral et les frais d’expédition affichés lors du passage en caisse au moment de la commande.
 
-7bis.2. Les produits en précommande sont fabriqués par lots. Le contrôleur de vol et l’ESC du premier lot sont expédiés fin octobre 2026. Tout autre produit en précommande a un objectif de financement, indiqué sur sa page produit, et est expédié environ 10 semaines après que cet objectif est atteint. Chaque objectif de financement a une échéance au 31 décembre 2026. La date d’expédition indiquée pour un article lors de la commande constitue le délai de livraison convenu entre le consommateur et Incutec BV au sens de l’art. VI.43 CDE, de sorte que le délai par défaut de 30 jours de l’article 7.1 ne s’applique pas aux articles en précommande.
+7bis.2. Les produits en précommande sont fabriqués par lots. Le contrôleur de vol et l’ESC du premier lot sont expédiés fin octobre 2026. Tout autre produit en précommande a un objectif de financement, indiqué sur sa page produit, et est expédié environ 10 semaines après que cet objectif est atteint. Chaque objectif de financement a une échéance au 31 décembre 2026. Si l’objectif de financement est atteint au plus tard le 31 décembre 2026, le produit est expédié au plus tard le 11 mars 2027. La date d’expédition indiquée pour un article lors de la commande constitue le délai de livraison convenu entre le consommateur et Incutec BV au sens de l’art. VI.43 CDE, de sorte que le délai par défaut de 30 jours de l’article 7.1 ne s’applique pas aux articles en précommande.
 
 7bis.3. Si une date d’expédition change, Incutec BV en informe le consommateur par e-mail et indique la nouvelle date. Ceci est sans préjudice des droits du consommateur au titre de l’art. VI.43 §2 CDE.
 
 7bis.3bis. Si un objectif de financement n’est pas atteint à son échéance, Incutec BV en informe par e-mail chaque consommateur ayant commandé ce produit. Le consommateur choisit alors soit de résoudre le contrat pour cet article, avec le remboursement de tous les montants payés pour celui-ci dans les 14 jours, soit de maintenir la commande pour la nouvelle date d’expédition indiquée dans cet e-mail.
 
-7bis.4. Le droit de rétractation prévu à l’article 5 s’applique aux précommandes. Le consommateur peut également l’exercer avant la livraison, via la fonction de rétractation de son compte client ou comme prévu à l’article 5.4.
+7bis.4. Le droit de rétractation prévu à l’article 5 s’applique aux précommandes. Le consommateur peut également l’exercer avant la livraison, via le formulaire en ligne sur opendrone.be/herroepingsrecht ou comme prévu à l’article 5.4. En cas de rétractation avant la livraison, Incutec BV rembourse tous les paiements dans les 14 jours suivant la réception de la rétractation.
 
 7bis.5. Une commande combinant des articles ayant des dates d’expédition différentes est expédiée en un seul colis, dès que chaque article est disponible (une seule livraison par commande).
 
 7bis.6. Les paiements de précommande financent la production et l’achat du stock pour la commande. Ils ne portent aucun intérêt et ne confèrent aucune participation, partage de revenus ni autre intérêt de propriété dans Incutec BV.
 
-7bis.7. Les colis à destination des États-Unis sont expédiés droits acquittés : les droits d’importation sont facturés lors du passage en caisse. Les colis à destination d’autres pays hors de l’Union européenne peuvent être soumis à des droits d’importation et taxes payables par le consommateur à la livraison, sauf si le passage en caisse indique que les droits sont inclus.
+7bis.7. Incutec BV ne perçoit aucun droit ni aucune taxe d’importation lors du passage en caisse. Les colis à destination de pays hors de l’Union européenne, y compris les États-Unis, peuvent être soumis à des droits d’importation, des taxes d’importation et des frais du transporteur, que le consommateur paie au transporteur à la livraison.
 
 ### Article 8 : Paiement
 
-8.1. Le paiement s’effectue via les moyens de paiement proposés sur le site web (carte de crédit, Bancontact, iDEAL, virement bancaire, etc.).
+8.1. Le paiement s’effectue par l’un des moyens de paiement affichés lors du passage en caisse avant que la commande soit passée. Le paiement est dû intégralement au moment de la commande.
 
 8.2. Le consommateur a l’obligation de signaler sans délai à Incutec BV toute inexactitude dans les données de paiement fournies.
 
@@ -147,7 +145,7 @@
 
 ### Article 11 : Propriété intellectuelle
 
-11.1. Les conceptions hardware d’Incutec BV sont sous licence CERN-OHL-S-2.0. Le firmware est sous licence MIT ou GPL (voir la page produit).
+11.1. Les conceptions hardware publiées d’Incutec BV sont sous licence CERN-OHL-S-2.0 (voir la page produit). Le firmware est sous licence MIT ou GPL (voir la page produit).
 
 11.2. La marque « Incutec », le logo et les noms de marque des produits sont la propriété d’Incutec BV. L’utilisation des licences open source ne confère aucun droit d’utiliser les noms de marque d’Incutec BV.
 
@@ -169,7 +167,7 @@
 
 14.2. Le consommateur peut introduire une plainte auprès du Service de Médiation pour le Consommateur / *Consumentenombudsdienst* (https://consumentenombudsdienst.be).
 
-14.3. Pour les litiges avec les consommateurs, le tribunal du lieu de résidence du consommateur est compétent (Art. 17–18 Règlement (UE) 1215/2012 — Bruxelles I bis ; Art. 624 Code judiciaire). Pour les litiges avec des entreprises, le Tribunal de l’entreprise de Louvain est compétent.
+14.3. Pour les litiges avec les consommateurs, le tribunal du lieu de résidence du consommateur est compétent (Art. 17–18 Règlement (UE) 1215/2012, Bruxelles I bis ; Art. 624 Code judiciaire). Pour les litiges avec des entreprises, le Tribunal de l’entreprise de Louvain est compétent.
 
 ### Article 15 : Modifications
 
@@ -209,4 +207,4 @@
 
 ---
 
-*Version : 2.2, dernière mise à jour 2026-09-21*
+*Version : 2.3, dernière mise à jour 2026-09-22*

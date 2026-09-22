@@ -2,7 +2,7 @@
 type: compliance
 status: final
 owner: incutec
-last_updated: 2026-08-15
+last_updated: 2026-09-22
 tags: [policy, end-use, export-control]
 ---
 
@@ -37,13 +37,13 @@ Incutec BV verkoopt, levert of distribueert niet bewust goederen voor gebruik in
 ## 4. Operationele uitvoering
 
 ### 4.1 Geografische beperkingen
-De webshop past beperkingen per land toe die overeenstemmen met (a) bestemmingen die onderworpen zijn aan beperkende maatregelen van de EU en de VN, en (b) bestemmingen op de Active-Conflict Block-lijst die wordt bijgehouden in `compliance/export-sanctions/sanctions-screening.md`. De Active-Conflict Block-lijst wordt driemaandelijks getoetst aan het Armed Conflict Location & Event Data Project (ACLED) en het Uppsala Conflict Data Program (UCDP).
+De webshop verzendt niet naar Rusland, Belarus, Iran, Noord-Korea, Syrië en Cuba. Hij past daarnaast beperkingen per land toe die overeenstemmen met (a) andere bestemmingen die onderworpen zijn aan beperkende maatregelen van de EU en de VN, en (b) bestemmingen op de Active-Conflict Block-lijst van Incutec BV. De Active-Conflict Block-lijst wordt driemaandelijks getoetst aan het Armed Conflict Location & Event Data Project (ACLED) en het Uppsala Conflict Data Program (UCDP).
 
 ### 4.2 Klantenscreening
 Bestellingen van consumenten worden gescreend tegen de geconsolideerde sanctielijsten van de EU. Zakelijke bestellingen worden bijkomend onderworpen aan een eindgebruikscontrole en, waar van toepassing, aan de clausule van niet-wederuitvoer naar Rusland vereist door artikel 12g van Verordening (EU) 833/2014.
 
 ### 4.3 Clausule aanvaardbaar eindgebruik
-Het plaatsen van een bestelling op de Incutec-webshop geldt als aanvaarding van de clausule Aanvaardbaar eindgebruik in de Algemene Voorwaarden (`compliance/webshop/algemene-voorwaarden.md`).
+Het plaatsen van een bestelling op de Incutec-webshop geldt als aanvaarding van de clausule Aanvaardbaar eindgebruik in de Algemene Voorwaarden ([/nl/algemene-voorwaarden](/nl/algemene-voorwaarden), Artikel 18).
 
 ### 4.4 Doorverkoop
 Dit beleid is van toepassing op rechtstreekse verkoop door Incutec BV. Doorverkoop door in de Europese Unie gevestigde zakelijke klanten wordt beheerst door de contractuele clausule van niet-wederuitvoer bedoeld in §4.2 en is niet onderworpen aan bijkomende auditverplichtingen opgelegd door Incutec.
@@ -63,8 +63,6 @@ Dit beleid:
 - Verordening (EG) 765/2006 (Belarus): https://eur-lex.europa.eu/eli/reg/2006/765/oj
 - ACLED: https://acleddata.com/
 - UCDP: https://ucdp.uu.se/
-- `compliance/export-sanctions/sanctions-screening.md`
-- `compliance/webshop/algemene-voorwaarden.md`
 
 ---
 

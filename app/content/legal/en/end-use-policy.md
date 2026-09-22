@@ -2,7 +2,7 @@
 type: compliance
 status: final
 owner: incutec
-last_updated: 2026-04-28
+last_updated: 2026-09-22
 tags: [policy, end-use, export-control]
 ---
 
@@ -37,13 +37,13 @@ Incutec BV does not knowingly sell, supply, or distribute goods for use in:
 ## 4. Operational Implementation
 
 ### 4.1 Geographic restrictions
-The webshop applies country-level restrictions corresponding to (a) destinations subject to EU and UN restrictive measures, and (b) destinations on the Active-Conflict Block list maintained in `compliance/export-sanctions/sanctions-screening.md`. The Active-Conflict Block list is reviewed quarterly against the Armed Conflict Location & Event Data Project (ACLED) and the Uppsala Conflict Data Program (UCDP).
+The webshop does not ship to Russia, Belarus, Iran, North Korea, Syria or Cuba. It also applies country-level restrictions corresponding to (a) other destinations subject to EU and UN restrictive measures, and (b) destinations on Incutec BV's Active-Conflict Block list. The Active-Conflict Block list is reviewed quarterly against the Armed Conflict Location & Event Data Project (ACLED) and the Uppsala Conflict Data Program (UCDP).
 
 ### 4.2 Customer screening
 Direct-to-consumer orders are screened against EU consolidated sanctions lists. Business-to-business orders are additionally subject to end-use review and, where applicable, the no-re-export-to-Russia clause required by Article 12g of EU Regulation 833/2014.
 
 ### 4.3 Acceptable end-use clause
-Order placement on the Incutec webshop constitutes acceptance of the Acceptable End-Use clause set out in the General Terms and Conditions (`compliance/webshop/algemene-voorwaarden.md`).
+Order placement on the Incutec webshop constitutes acceptance of the Acceptable End-Use clause set out in the General Terms and Conditions ([/algemene-voorwaarden](/algemene-voorwaarden), Article 18).
 
 ### 4.4 Downstream resale
 This policy applies to direct sales by Incutec BV. Resale by commercial customers established in the European Union is governed by the contractual no-re-export clause referenced in §4.2 and is not subject to additional audit obligations imposed by Incutec.
@@ -63,8 +63,6 @@ This policy:
 - EU Regulation 765/2006 (Belarus): https://eur-lex.europa.eu/eli/reg/2006/765/oj
 - ACLED: https://acleddata.com/
 - UCDP: https://ucdp.uu.se/
-- `compliance/export-sanctions/sanctions-screening.md`
-- `compliance/webshop/algemene-voorwaarden.md`
 
 ---
 

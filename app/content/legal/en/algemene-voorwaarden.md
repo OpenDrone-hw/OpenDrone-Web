@@ -1,7 +1,7 @@
 # Terms and Conditions: Incutec BV
 
 **Legally required for the webshop. Must be downloadable as PDF. Must be accepted before order.**
-**The Dutch version (/algemene-voorwaarden) prevails in case of conflict, except toward consumers, for whom the reading most favourable to them applies (Art. 19). This English translation is provided for convenience.**
+**The Dutch version ([/nl/algemene-voorwaarden](/nl/algemene-voorwaarden)) prevails in case of conflict, except toward consumers, for whom the reading most favourable to them applies (Art. 19). This English translation is provided for convenience.**
 
 ---
 
@@ -39,11 +39,11 @@
 
 4.2. Incutec BV confirms receipt of the acceptance of the offer electronically without delay. As long as receipt has not been confirmed, the consumer may rescind the contract.
 
-4.3. The order button displays the words "order with obligation to pay" in accordance with Art. VI.46 §2 of the Belgian Code of Economic Law (WER).
+4.3. The final button at checkout states unambiguously that placing the order involves an obligation to pay, in accordance with Art. VI.46 §2 of the Belgian Code of Economic Law (WER).
 
 ### Article 5: Right of withdrawal
 
-> **Art. VI.47 WER: 14 calendar days cooling-off period for consumers**
+**Art. VI.47 WER: 14 calendar days cooling-off period for consumers**
 
 5.1. The consumer may rescind a contract for the purchase of a product during a cooling-off period of **14 calendar days** without giving any reason (right of withdrawal).
 
@@ -67,8 +67,6 @@
 - Products which after delivery are inseparably mixed with other products by their nature
 - Products made to the consumer's specifications or clearly intended for a specific person
 
-> **Note:** Drone electronics are standard products: the right of withdrawal applies in practically all cases.
-
 ### Article 7: Delivery
 
 7.1. Incutec BV delivers orders within the delivery time stated on the website. Final delivery deadline: **30 days** after the order, unless otherwise agreed.
@@ -77,29 +75,29 @@
 
 7.3. The risk of damage and/or loss of products lies with Incutec BV until the moment of delivery to the consumer.
 
-7.4. Incutec BV offers at least **two substantially different delivery methods** (Art. VI.45/2 WER).
+7.4. Orders ship by bpost at the flat rate for the destination stated on the shipping page (opendrone.be/shipping) and shown at checkout.
 
 ### Article 7bis: Pre-orders
 
-7bis.1. Some products are sold as pre-orders. They are disclosed as such, with their ship date, on the product page, at checkout and on the order confirmation. The consumer pays the full price, the shipping costs and any import duties shown at checkout when the order is placed.
+7bis.1. Some products are sold as pre-orders. They are disclosed as such, with their ship date, on the product page, at checkout and on the order confirmation. The consumer pays the full price and the shipping costs shown at checkout when the order is placed.
 
-7bis.2. Pre-order products are produced in batches. The flight controller and ESC from the first batch ship late October 2026. Every other pre-order product has a funding target, stated on its product page, and ships about 10 weeks after that target is reached. Every funding target has a deadline of 31 December 2026. The ship date disclosed for an item when the order is placed is the delivery time agreed between the consumer and Incutec BV within the meaning of Art. VI.43 WER, so the 30-day default deadline in Article 7.1 does not apply to pre-order items.
+7bis.2. Pre-order products are produced in batches. The flight controller and ESC from the first batch ship late October 2026. Every other pre-order product has a funding target, stated on its product page, and ships about 10 weeks after that target is reached. Every funding target has a deadline of 31 December 2026. If the funding target is reached by 31 December 2026, the product ships by 11 March 2027 at the latest. The ship date disclosed for an item when the order is placed is the delivery time agreed between the consumer and Incutec BV within the meaning of Art. VI.43 WER, so the 30-day default deadline in Article 7.1 does not apply to pre-order items.
 
 7bis.3. If a ship date moves, Incutec BV informs the consumer by email and states the new date. This is without prejudice to the consumer's rights under Art. VI.43 §2 WER.
 
 7bis.3bis. If a funding target is not reached by its deadline, Incutec BV informs every consumer who ordered that product by email. The consumer then chooses either to terminate the contract for that item, with a refund of all amounts paid for it within 14 days, or to keep the order for the new ship date stated in that email.
 
-7bis.4. The right of withdrawal under Article 5 applies to pre-orders. The consumer may also exercise it before delivery, through the withdrawal function in the customer account or as set out in Article 5.4.
+7bis.4. The right of withdrawal under Article 5 applies to pre-orders. The consumer may also exercise it before delivery, through the online form at opendrone.be/herroepingsrecht or as set out in Article 5.4. If the consumer withdraws before delivery, Incutec BV refunds all payments within 14 days of receiving the withdrawal.
 
 7bis.5. An order that combines items with different ship dates ships as one parcel, once every item is available (one delivery per order).
 
 7bis.6. Pre-order payments fund the production run and stock purchase for the order. They carry no interest and confer no equity, revenue share or other ownership interest in Incutec BV.
 
-7bis.7. Parcels to the United States are shipped duty paid: import duties are charged at checkout. Parcels to other destinations outside the European Union may be subject to import duties and taxes payable by the consumer on delivery, unless checkout states that duties are included.
+7bis.7. Incutec BV does not collect import duties or import taxes at checkout. Parcels to destinations outside the European Union, including the United States, may be subject to import duties, import taxes and carrier fees, which the consumer pays to the carrier on delivery.
 
 ### Article 8: Payment
 
-8.1. Payment is made via the payment methods offered on the website (credit card, Bancontact, iDEAL, bank transfer, etc.).
+8.1. Payment is made by one of the payment methods shown at checkout before the order is placed. Payment is due in full when the order is placed.
 
 8.2. The consumer has the duty to notify Incutec BV without delay of any inaccuracies in the payment details provided.
 
@@ -147,7 +145,7 @@
 
 ### Article 11: Intellectual property
 
-11.1. Incutec BV's hardware designs are licensed under CERN-OHL-S-2.0. The firmware is licensed under MIT or GPL (see product page).
+11.1. Incutec BV's published hardware designs are licensed under CERN-OHL-S-2.0 (see product page). The firmware is licensed under MIT or GPL (see product page).
 
 11.2. The "Incutec" brand, the logo and product brand names are owned by Incutec BV. The use of open source licences does not grant any right to use Incutec BV's brand names.
 
@@ -169,7 +167,7 @@
 
 14.2. The consumer may file a complaint with the Consumer Mediation Service / *Consumentenombudsdienst* (https://consumentenombudsdienst.be).
 
-14.3. In disputes with consumers, the court of the consumer's place of residence has jurisdiction (Art. 17–18 of Regulation (EU) 1215/2012 — Brussels I bis; Art. 624 of the Belgian Judicial Code). In disputes with businesses, the Leuven Enterprise Court has jurisdiction.
+14.3. In disputes with consumers, the court of the consumer's place of residence has jurisdiction (Art. 17–18 of Regulation (EU) 1215/2012, Brussels I bis; Art. 624 of the Belgian Judicial Code). In disputes with businesses, the Leuven Enterprise Court has jurisdiction.
 
 ### Article 15: Amendments
 
@@ -209,4 +207,4 @@
 
 ---
 
-*Version: 2.2, last updated 2026-09-21*
+*Version: 2.3, last updated 2026-09-22*

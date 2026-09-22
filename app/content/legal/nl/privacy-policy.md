@@ -56,17 +56,17 @@ Incutec BV heeft geen Functionaris voor Gegevensbescherming (DPO) aangesteld aan
 
 | Ontvanger | Doel | Locatie |
 |-----------|------|---------|
-| Shopify International Limited | Webshopplatform: catalogus, winkelmandje, afrekenen, bestellingen, klantenaccounts en nieuwsbrieftoestemming | Ierland (EU); doorgiften aan Shopify Inc. in Canada steunen op het adequaatheidsbesluit van de EU voor Canada, andere doorgiften op SCC's; privacybeleid van Shopify: https://www.shopify.com/legal/privacy |
-| Stripe Payments Europe, Ltd. | Betalingsverwerking (kaarten, Bancontact, iDEAL, Klarna, PayPal): betalingsgegevens, e-mail, factuuradres; apparaatgegevens voor fraudepreventie | 1 Grand Canal Street Lower, Dublin 2, Ierland (EU); privacybeleid van Stripe: https://stripe.com/privacy |
-| Mollie B.V. | Betalingsverwerking, enkel als terugvaloptie indien Stripe niet beschikbaar is (Bancontact, SEPA, kaartbetalingen) | Nederland (EU) |
+| Shopify International Limited | Webshopplatform: catalogus, winkelmandje, afrekenen, bestellingen, klantenaccounts, order- en verzendberichten en nieuwsbrieftoestemming | Ierland (EU); doorgiften aan Shopify Inc. in Canada steunen op het adequaatheidsbesluit van de EU voor Canada, andere doorgiften op SCC's; privacybeleid van Shopify: https://www.shopify.com/legal/privacy |
+| Shopify Payments, verwerkt door Stripe Payments Europe, Ltd. | Betalingsverwerking voor de betaalmethoden die aan de checkout worden getoond: betalingsgegevens, e-mail, factuuradres; apparaatgegevens voor fraudepreventie | 1 Grand Canal Street Lower, Dublin 2, Ierland (EU); privacybeleid van Stripe: https://stripe.com/privacy |
 | bpost NV/SA | Pakketbezorging en verzendlabels | België (EU) |
-| Google Workspace (Google Ireland Ltd.) | Bedrijfsmailboxen (support@ en sales@incutec.com), medewerker-e-mail en aanmelding | Ierland (EU); de standaardcontractuele clausules van Google dekken elke doorgifte buiten de EER |
-| Plausible Analytics | Cookieloze websitestatistieken | Plausible Insights OÜ — Estland (EU); hosting in Duitsland |
+| Judge.me | Reviewverzoeken na levering en publicatie van reviews: naam, e-mail, bestelde producten, reviewtekst | privacybeleid van Judge.me: https://judge.me/privacy |
+| Google Workspace (Google Ireland Ltd.) | Bedrijfsmailboxen, medewerker-e-mail en aanmelding | Ierland (EU); de standaardcontractuele clausules van Google dekken elke doorgifte buiten de EER |
+| Plausible Analytics | Cookieloze websitestatistieken | Plausible Insights OÜ, Estland (EU); hosting in Duitsland |
 | Polar Advisory BV (boekhouder) | Facturatie en jaarrekening | België |
-| Discord Inc. | Community-support, opt-in via de Discord-brug (naam, e-mail, berichtinhoud, bijlagen) | VS — EU-VS Data Privacy Framework |
-| Anthropic PBC | AI-ondersteunde conceptantwoorden bij supporttickets | VS — verwerkersovereenkomst met SCC's |
-| Resend (Plus Five Five, Inc.) | Transactionele e-mail: orderbevestiging, verzending en factuur, hervattingslinks voor support | EU-regio infrastructuur; VS-rechtspersoon — SCC's |
-| Cloudflare, Inc. | Turnstile anti-spamverificatie op het supportformulier | VS — EU-VS Data Privacy Framework |
+| Discord Inc. | Community-support, opt-in via de Discord-brug (naam, e-mail, berichtinhoud, bijlagen) | VS: EU-VS Data Privacy Framework |
+| Anthropic PBC | AI-ondersteunde conceptantwoorden bij supporttickets | VS: verwerkersovereenkomst met SCC's |
+| Resend (Plus Five Five, Inc.) | E-mail verzonden door opendrone.be: herroepingsbevestigingen, nieuwsbrief-e-mail en hervattingslinks voor support | EU-regio infrastructuur; VS-rechtspersoon: SCC's |
+| Cloudflare, Inc. | Turnstile anti-spamverificatie op het support- en nieuwsbriefformulier | VS: EU-VS Data Privacy Framework |
 
 Bestel- en klantgegevens (naam, adres, e-mail, betalingsreferentie, bestelgeschiedenis) en de nieuwsbrieftoestemming worden verwerkt in Shopify.
 

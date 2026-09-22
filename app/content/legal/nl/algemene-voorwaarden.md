@@ -39,11 +39,11 @@
 
 4.2. Incutec BV bevestigt onverwijld langs elektronische weg de ontvangst van de aanvaarding van het aanbod. Zolang de ontvangst niet is bevestigd, kan de consument de overeenkomst ontbinden.
 
-4.3. De bestelknop bevat de vermelding "bestelling met betalingsverplichting" conform Art. VI.46 §2 WER.
+4.3. De laatste knop aan de checkout vermeldt ondubbelzinnig dat het plaatsen van de bestelling een betalingsverplichting inhoudt, conform Art. VI.46 §2 WER.
 
 ### Artikel 5: Herroepingsrecht
 
-> **Art. VI.47 WER: 14 kalenderdagen bedenktijd voor consumenten**
+**Art. VI.47 WER: 14 kalenderdagen bedenktijd voor consumenten**
 
 5.1. De consument kan een overeenkomst met betrekking tot de aankoop van een product gedurende een bedenktijd van **14 kalenderdagen** zonder opgave van redenen ontbinden (herroepingsrecht).
 
@@ -67,8 +67,6 @@
 - Producten die na levering door hun aard onherroepelijk vermengd zijn met andere producten
 - Producten die op maat zijn gemaakt of duidelijk voor een specifieke persoon bestemd zijn
 
-> **Noot:** Drone-elektronica zijn standaardproducten: het herroepingsrecht is in nagenoeg alle gevallen van toepassing.
-
 ### Artikel 7: Levering
 
 7.1. Incutec BV levert bestellingen binnen de op de website aangegeven levertijd. Uiterlijke leveringstermijn: **30 dagen** na bestelling, tenzij anders overeengekomen.
@@ -77,29 +75,29 @@
 
 7.3. Het risico van beschadiging en/of vermissing van producten berust tot het moment van bezorging aan de consument bij Incutec BV.
 
-7.4. Incutec BV biedt ten minste **twee wezenlijk verschillende leveringswijzen** aan (Art. VI.45/2 WER).
+7.4. Bestellingen worden met bpost verzonden, tegen het vaste tarief voor de bestemming dat op de verzendpagina (opendrone.be/shipping) vermeld staat en aan de checkout wordt getoond.
 
 ### Artikel 7bis: Voorverkoop
 
-7bis.1. Sommige producten worden verkocht als voorverkoop (pre-order). Zij worden als dusdanig vermeld, met hun verzenddatum, op de productpagina, aan de checkout en op de orderbevestiging. De consument betaalt de volledige prijs, de verzendkosten en eventuele invoerrechten die aan de checkout worden getoond bij het plaatsen van de bestelling.
+7bis.1. Sommige producten worden verkocht als voorverkoop (pre-order). Zij worden als dusdanig vermeld, met hun verzenddatum, op de productpagina, aan de checkout en op de orderbevestiging. De consument betaalt de volledige prijs en de verzendkosten die aan de checkout worden getoond bij het plaatsen van de bestelling.
 
-7bis.2. Voorverkoopproducten worden in batches geproduceerd. De flight controller en de ESC uit de eerste batch worden eind oktober 2026 verzonden. Elk ander voorverkoopproduct heeft een financieringsdoel, vermeld op de productpagina, en wordt ongeveer 10 weken na het bereiken van dat doel verzonden. Elk financieringsdoel heeft een deadline op 31 december 2026. De verzenddatum die bij het plaatsen van de bestelling voor een artikel wordt vermeld, is de tussen de consument en Incutec BV overeengekomen leveringstermijn in de zin van Art. VI.43 WER, zodat de standaardtermijn van 30 dagen uit Artikel 7.1 niet geldt voor voorverkoopartikelen.
+7bis.2. Voorverkoopproducten worden in batches geproduceerd. De flight controller en de ESC uit de eerste batch worden eind oktober 2026 verzonden. Elk ander voorverkoopproduct heeft een financieringsdoel, vermeld op de productpagina, en wordt ongeveer 10 weken na het bereiken van dat doel verzonden. Elk financieringsdoel heeft een deadline op 31 december 2026. Wordt het financieringsdoel uiterlijk op 31 december 2026 bereikt, dan wordt het product uiterlijk op 11 maart 2027 verzonden. De verzenddatum die bij het plaatsen van de bestelling voor een artikel wordt vermeld, is de tussen de consument en Incutec BV overeengekomen leveringstermijn in de zin van Art. VI.43 WER, zodat de standaardtermijn van 30 dagen uit Artikel 7.1 niet geldt voor voorverkoopartikelen.
 
 7bis.3. Indien een verzenddatum verschuift, brengt Incutec BV de consument daarvan per e-mail op de hoogte en vermeldt zij de nieuwe datum. Dit doet geen afbreuk aan de rechten van de consument uit Art. VI.43 §2 WER.
 
 7bis.3bis. Indien een financieringsdoel niet bereikt is op de deadline, brengt Incutec BV elke consument die dat product bestelde per e-mail op de hoogte. De consument kiest dan om de overeenkomst voor dat artikel te ontbinden, met terugbetaling van alle daarvoor betaalde bedragen binnen 14 dagen, of om de bestelling te behouden voor de nieuwe verzenddatum die in die e-mail vermeld wordt.
 
-7bis.4. Het herroepingsrecht van Artikel 5 geldt voor voorverkoop. De consument kan het ook vóór de levering uitoefenen, via de herroepingsfunctie in het klantenaccount of zoals bepaald in Artikel 5.4.
+7bis.4. Het herroepingsrecht van Artikel 5 geldt voor voorverkoop. De consument kan het ook vóór de levering uitoefenen, via het onlineformulier op opendrone.be/herroepingsrecht of zoals bepaald in Artikel 5.4. Bij herroeping vóór de levering betaalt Incutec BV alle betalingen terug binnen 14 dagen nadat zij de herroeping heeft ontvangen.
 
 7bis.5. Een bestelling die artikelen met verschillende verzenddata combineert, wordt verzonden als één pakket zodra elk artikel beschikbaar is (één levering per bestelling).
 
 7bis.6. Betalingen voor voorverkoop financieren de productie en de voorraadaankoop voor de bestelling. Zij dragen geen interest en verlenen geen aandeel, omzetdeling of ander eigendomsbelang in Incutec BV.
 
-7bis.7. Pakketten naar de Verenigde Staten worden verzonden met betaalde rechten: de invoerrechten worden aan de checkout aangerekend. Pakketten naar andere bestemmingen buiten de Europese Unie kunnen onderworpen zijn aan invoerrechten en -belastingen die door de consument bij levering moeten worden betaald, tenzij de checkout vermeldt dat de rechten inbegrepen zijn.
+7bis.7. Incutec BV int geen invoerrechten of invoerbelastingen aan de checkout. Pakketten naar bestemmingen buiten de Europese Unie, ook naar de Verenigde Staten, kunnen onderworpen zijn aan invoerrechten, invoerbelastingen en kosten van de vervoerder, die de consument bij levering aan de vervoerder betaalt.
 
 ### Artikel 8: Betaling
 
-8.1. Betaling geschiedt via de op de website aangeboden betaalmethoden (creditcard, Bancontact, iDEAL, overschrijving, etc.).
+8.1. Betaling geschiedt via een van de betaalmethoden die aan de checkout worden getoond voordat de bestelling geplaatst wordt. De volledige betaling is verschuldigd bij het plaatsen van de bestelling.
 
 8.2. De consument heeft de plicht om onjuistheden in verstrekte betaalgegevens onverwijld aan Incutec BV te melden.
 
@@ -147,7 +145,7 @@
 
 ### Artikel 11: Intellectuele eigendom
 
-11.1. De hardware-ontwerpen van Incutec BV zijn gelicentieerd onder CERN-OHL-S-2.0. De firmware is gelicentieerd onder MIT of GPL (zie productpagina).
+11.1. De gepubliceerde hardware-ontwerpen van Incutec BV zijn gelicentieerd onder CERN-OHL-S-2.0 (zie productpagina). De firmware is gelicentieerd onder MIT of GPL (zie productpagina).
 
 11.2. Het merk "Incutec", het logo en productmerknamen zijn eigendom van Incutec BV. Het gebruik van open source licenties geeft geen recht op het gebruik van de merknamen van Incutec BV.
 
@@ -169,7 +167,7 @@
 
 14.2. De consument kan een klacht indienen bij de Consumentenombudsdienst (https://consumentenombudsdienst.be).
 
-14.3. Bij geschillen met consumenten is de rechtbank van de woonplaats van de consument bevoegd (Art. 17–18 Verordening (EU) 1215/2012 — Brussel I-bis; Art. 624 Gerechtelijk Wetboek). Bij geschillen met ondernemingen is de ondernemingsrechtbank Leuven bevoegd.
+14.3. Bij geschillen met consumenten is de rechtbank van de woonplaats van de consument bevoegd (Art. 17–18 Verordening (EU) 1215/2012, Brussel I-bis; Art. 624 Gerechtelijk Wetboek). Bij geschillen met ondernemingen is de ondernemingsrechtbank Leuven bevoegd.
 
 ### Artikel 15: Wijzigingen
 
@@ -209,7 +207,7 @@
 
 ---
 
-*Versie: 2.2 — laatst bijgewerkt 2026-09-21*
+*Versie: 2.3, laatst bijgewerkt 2026-09-22*
 
 ---
 
@@ -247,7 +245,7 @@ Art. 9.2 states the full 2-year reversal correctly (fixed; Belgian implementatio
 ### GPSR (Reg 2023/988): applicable since 13 Dec 2024
 Incutec is "manufacturer" under GPSR. For every product listing the webshop must display:
 
-**GPSR pre-sale listing requirements (Art. 19 GPSR)** — every product listing must display:
+**GPSR pre-sale listing requirements (Art. 19 GPSR)**: every product listing must display:
 - Manufacturer name + registered trade name + postal address + electronic contact (per product page OR global "manufacturer info" link)
 - For Incutec products: "Manufacturer: Incutec BV, Stapelhuisstraat 15, 3000 Leuven, Belgium: contact@opendrone.be"
 - If selling 3rd-party products where Incutec is importer: also show "Importer: Incutec BV, [address]"
@@ -265,18 +263,18 @@ Don't link to ec.europa.eu/consumers/odr anymore. The ODR link requirement under
 **Replacement in Art. 14 AV:** Keep Consumentenombudsdienst reference (https://consumentenombudsdienst.be). Remove any ODR-platform link if present. Belgian consumers can also contact ECC Belgium (https://www.eccbelgium.be) for cross-border disputes. Source: https://eur-lex.europa.eu/eli/reg/2024/3228/oj
 
 ### NACEBEL 2025 codes for Incutec BV (declare at KBO via boekhouder/Acerta)
-Based on Incutec's activities (designing + manufacturing + selling FPV electronics, webshop, R&D and engineering consulting, education). Verified against the official NACE-BEL 2025 classification 2026-06-09 — the earlier draft used obsolete 2008-format codes (`XX.XX.XX`); 2025 uses 5-digit subclasses (`XX.XXX`) and retail is classified by product, not sales channel.
+Based on Incutec's activities (designing + manufacturing + selling FPV electronics, webshop, R&D and engineering consulting, education). Verified against the official NACE-BEL 2025 classification 2026-06-09, the earlier draft used obsolete 2008-format codes (`XX.XX.XX`); 2025 uses 5-digit subclasses (`XX.XXX`) and retail is classified by product, not sales channel.
 
 **Primary:**
-- **26.300**: Vervaardiging van communicatieapparatuur (radio TX/RX: VTX/VRX, ELRS receivers) — 7-digit detail: 26.30002
+- **26.300**: Vervaardiging van communicatieapparatuur (radio TX/RX: VTX/VRX, ELRS receivers), 7-digit detail: 26.30002
 
 **Secondary (declare all that apply):**
-- **26.510**: Vervaardiging van meet-, controle- en navigatie-instrumenten en -apparatuur (flight controllers, GPS, IMU) — detail: 26.51003
-- **26.110**: Vervaardiging van elektronische onderdelen (bare PCBs, modules) — detail: 26.11001 (PCBs) / 26.11003 (modules)
-- **46.500**: Groothandel in informatie- en communicatieapparatuur (B2B). *Replaces old 46.52 — merged in NACE Rev 2.1.*
-- **47.400**: Detailhandel in ICT-apparatuur (webshop B2C: electronics/computers/telecom). *Single product-based code replacing old 47.91.14 + 47.91.90 — channel-based retail codes were abolished.*
-- **72.10**: Speur- en ontwikkelingswerk op natuurwetenschappelijk gebied (R&D). *Replaces old 72.19 — merged with 72.11. Belgian detail: 72.101 / 72.109.*
-- **71.121**: Activiteiten van ingenieurs en aanverwante technische adviseurs (design-for-manufacture consulting) — detail: 71.12101
+- **26.510**: Vervaardiging van meet-, controle- en navigatie-instrumenten en -apparatuur (flight controllers, GPS, IMU), detail: 26.51003
+- **26.110**: Vervaardiging van elektronische onderdelen (bare PCBs, modules), detail: 26.11001 (PCBs) / 26.11003 (modules)
+- **46.500**: Groothandel in informatie- en communicatieapparatuur (B2B). *Replaces old 46.52, merged in NACE Rev 2.1.*
+- **47.400**: Detailhandel in ICT-apparatuur (webshop B2C: electronics/computers/telecom). *Single product-based code replacing old 47.91.14 + 47.91.90, channel-based retail codes were abolished.*
+- **72.10**: Speur- en ontwikkelingswerk op natuurwetenschappelijk gebied (R&D). *Replaces old 72.19, merged with 72.11. Belgian detail: 72.101 / 72.109.*
+- **71.121**: Activiteiten van ingenieurs en aanverwante technische adviseurs (design-for-manufacture consulting), detail: 71.12101
 - **85.599**: Overige vormen van onderwijs (workshops / maker education: optional)
 
 **Action: have boekhouder declare ALL applicable codes at BTW/KBO registration.** Missing a code can complicate subsidy applications (VLAIO ISS scoring depends on R&D NACE codes) and import duties. KBO accepts the 5-digit subclass; some ondernemingsloketten prefer the 7-digit detail (shown above). NACE-BEL 2025 (NACE Rev 2.1) in force since 1 Jan 2025. Source: https://nacebel.codes/, https://statbel.fgov.be/en/about-statbel/methodology/classifications/nace-bel-2025
