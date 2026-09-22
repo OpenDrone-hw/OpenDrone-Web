@@ -4,6 +4,7 @@ import {readdirSync} from 'node:fs';
 import {
   PRODUCT_CONTENT,
   PRODUCT_CONTENT_FALLBACK,
+  hiddenWhileSoldOut,
   type BoxItem,
   type ChapterPin,
   type DownloadAsset,
@@ -213,4 +214,31 @@ describe('product content shape', () => {
       });
     });
   }
+});
+
+describe('hiddenWhileSoldOut', () => {
+  const card = (handle: string, open: boolean[]) => ({
+    handle,
+    variants: {nodes: open.map((availableForSale) => ({availableForSale}))},
+  });
+  it('hides a sold-out part with no editorial file', () => {
+    assert.equal(hiddenWhileSoldOut(card('battery-strap', [false])), true);
+  });
+  it('lists that part once a variant can be bought', () => {
+    assert.equal(hiddenWhileSoldOut(card('openframe-spares', [false, true])), false);
+  });
+  it('keeps an editorial product listed when sold out', () => {
+    assert.equal(hiddenWhileSoldOut(card('openmotor', [false, false])), false);
+  });
+});
+
+describe('openmotor 5-inch variant', () => {
+  it('claims no stator size or KV that sourcing has not confirmed', () => {
+    const v = PRODUCT_CONTENT.openmotor?.variants?.['2207'];
+    assert.ok(v);
+    const specs = new Map(v.specs ?? []);
+    assert.equal(specs.get('Stator'), 'To be confirmed');
+    assert.equal(specs.get('KV'), 'To be confirmed');
+    assert.ok(!JSON.stringify(PRODUCT_CONTENT.openmotor).includes('22 × 7'));
+  });
 });

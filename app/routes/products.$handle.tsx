@@ -85,6 +85,7 @@ import preorders from '../../content/preorders.json';
 import {trackEvent} from '~/lib/growth/plausible';
 import {attributionSource} from '~/lib/growth/attribution';
 import {NewsletterSignup} from '~/components/NewsletterSignup';
+import {ProductGhostTile} from '~/components/ProductGhostTile';
 import {PreorderMeter} from '~/components/PreorderMeter';
 import type {
   ChapterPin,
@@ -332,8 +333,9 @@ function loadDeferredData({context, params}: Route.LoaderArgs) {
     .get()
     .then((catalog) =>
       catalog.products
+        // Every other product: the strip drops unlisted and concept ones
+        // and ranks what can be bought first before it takes four.
         .filter((p) => p.handle !== handle)
-        .slice(0, 4)
         .map((p) => toCard(catalog, p)),
     )
     .catch(() => null);
@@ -444,11 +446,15 @@ function mergeSpecs(
  */
 function variantComparison(
   base: Array<[string, string]>,
-  variants: Record<string, {specs?: Array<[string, string | null]>}> | undefined,
+  variants:
+    | Record<string, {label?: string; specs?: Array<[string, string | null]>}>
+    | undefined,
 ): {names: string[]; rows: Array<[string, string[]]>} | null {
-  const names = Object.keys(variants ?? {});
-  if (names.length < 2) return null;
-  const tables = names.map((name) => new Map(mergeSpecs(base, variants![name].specs)));
+  const keys0 = Object.keys(variants ?? {});
+  if (keys0.length < 2) return null;
+  // Column heads use the shown name, as the ladder cards do.
+  const names = keys0.map((k) => variants![k].label ?? k);
+  const tables = keys0.map((k) => new Map(mergeSpecs(base, variants![k].specs)));
   const keys: string[] = [];
   for (const table of tables) for (const key of table.keys()) if (!keys.includes(key)) keys.push(key);
   const rows = keys
@@ -2040,7 +2046,7 @@ function ProductPage() {
       selectedVariant &&
       !selectedVariant.availableForSale ? (
         <NewsletterSignup
-          notify={{productHandle: product.handle, productTitle: product.title}}
+          notify={{productHandle: product.handle, productTitle: product.title, restock: true}}
           turnstileSiteKey={rootData?.turnstileSiteKey ?? null}
           className="product-buy-notify"
         />
@@ -3030,14 +3036,25 @@ function ProductPage() {
             <ProductGallery
               images={galleryImages}
               activeImageId={selectedVariant?.image?.id ?? null}
+              emptyFallback={
+                <ProductGhostTile type={product.productType} title={product.title} />
+              }
             />
           </div>
         </div>
 
         <div className="product-hero-copy">
           <p className="product-hero-eyebrow">
-            {copyText('product-chrome.hero_eyebrow_file')} {content.fileNumber} ·{' '}
-            <span {...prodEdit('family')}>{content.family}</span>
+            {/* A resold part without an editorial file has no file number:
+                its eyebrow is the catalog product type alone. */}
+            {content.fileNumber !== '-' ? (
+              <>
+                {copyText('product-chrome.hero_eyebrow_file')} {content.fileNumber} ·{' '}
+                <span {...prodEdit('family')}>{content.family}</span>
+              </>
+            ) : (
+              <span>{product.productType || content.family}</span>
+            )}
             {statusChip}
           </p>
           {/* The product name is the page heading; the editorial tagline

@@ -528,6 +528,9 @@
           "qty": "1×",
           "item": "ESD bag"
         }
+      ],
+      "keywords": [
+        "mini"
       ]
     },
     "30×30": {
@@ -566,5 +569,10 @@
         }
       ]
     }
-  }
+  },
+  "keywords": [
+    "stack",
+    "fc",
+    "flight controller"
+  ]
 }

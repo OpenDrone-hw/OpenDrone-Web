@@ -106,7 +106,9 @@ export function heroCaption(handle: string): string | undefined {
   const wit = PRODUCT_CONTENT[handle]?.whatIsThis;
   if (!wit) return undefined;
   if (wit.hero) return wit.hero;
-  const sentences = wit.intro.match(/[^.!?]+[.!?]+(?:\s|$)/g);
+  // A sentence ends at . ! or ? followed by whitespace or the end of the
+  // text, so a decimal point ("2.4 GHz") stays inside its sentence.
+  const sentences = wit.intro.match(/(?:[^.!?]|[.!?](?!\s|$))+[.!?]+(?=\s|$)\s*/g);
   if (!sentences?.length) return wit.intro || undefined;
   const two = sentences.slice(0, 2).join('').trim();
   return two.length > 200 ? sentences[0].trim() : two;
@@ -225,6 +227,8 @@ export type VariantContent = {
    *  line has to hold a single row in the hero column's 2-up grid, and the
    *  full matrix lives in the Datasheet chapter. */
   highlights: Array<[string, string]>;
+  /** Extra catalog search words for this tier only ("mini" for 20x20). */
+  keywords?: string[];
   /** Per-tier spec deltas merged over the shared `specs` by row key: a
    *  value replaces the base row, `null` hides it (a cost-down tier dropping
    *  a sensor), and an unknown key appends. See `mergeSpecs` in the PDP. */
@@ -343,7 +347,10 @@ export type ProductContent = {
    *  don't add DoC entries before the signed PDF exists. */
   downloads: DownloadAsset[];
   specs: Array<[string, string]>;
-  footnote?: string;            // appears under the family card
+  footnote?: string;            // appears under the spec table
+  /** Extra words the catalog search matches for this product, the terms FPV
+   *  buyers type that the name does not carry ("stack", "4in1"). */
+  keywords?: string[];
   /** When set, the PDP renders a comparison-ladder selector. `optionAxis`
    *  is the catalog option NAME that carries the line's variants
    *  (standardised to "Model"); `variants` is keyed by the option VALUE. See
@@ -470,10 +477,12 @@ export type ProductContent = {
  * - Not open hardware (`editorial: false`). Specs come only from the
  *   sourcing records (`sourcing/comparisons/openmotor.md` and the T-Motor
  *   sales contract YB-2026070103): the 1604 is ordered at KV2850. The stator
- *   rows restate the size in the model name. The 2207 has no chosen supplier
- *   or KV on file (the ordered 5-inch sample is a 2306.5 at KV1950), so it
- *   shows no KV. Weight, shaft, mount pattern and cell count are not on file
- *   and stay off the page until they are.
+ *   rows restate the size in the model name. The 5-inch motor sells under
+ *   the legacy SKU OPENMOTOR-2207 (option value "2207", shown as 5"), but
+ *   no 2207 is chosen: the ordered 5-inch sample is a 2306.5 at KV1950. Its
+ *   stator and KV read "To be confirmed" until the founder confirms them.
+ *   Weight, shaft, mount pattern and cell count are not on file and stay
+ *   off the page until they are.
  * - `teardown.frameViewer` is the fallback when a tier defines none. Both
  *   tiers override it and it seeds the viewer's preload set, so it points at
  *   a current model (the 5") rather than the stale generic frame.glb.
@@ -591,6 +600,19 @@ export function hasExplicitPurchasableStatus(
 ): boolean {
   const s = handle ? PRODUCT_CONTENT[handle]?.status : undefined;
   return s !== undefined && isPurchasableStatus(s);
+}
+
+/**
+ * A resold part with no editorial file (antenna, strap, spare parts) stays
+ * out of the catalog grid and the Related strip while none of its variants
+ * can be bought: a launched store does not lead with sold-out placeholders.
+ * Editorial products stay listed when sold out, with their badge.
+ */
+export function hiddenWhileSoldOut(p: {
+  handle: string;
+  variants: {nodes: Array<{availableForSale: boolean}>};
+}): boolean {
+  return !PRODUCT_CONTENT[p.handle] && !p.variants.nodes.some((v) => v.availableForSale);
 }
 
 /**

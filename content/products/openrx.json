@@ -637,5 +637,10 @@
         "schematicUrl": "https://kicanvas.org/?github=https://github.com/OpenDrone-hw/OpenRX-Gemini/blob/main/hardware/OpenRX-Gemini.kicad_sch"
       }
     }
-  }
+  },
+  "keywords": [
+    "receiver",
+    "rx",
+    "expresslrs"
+  ]
 }

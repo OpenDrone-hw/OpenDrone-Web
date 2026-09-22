@@ -1,6 +1,6 @@
 import {shopifyImageUrl} from '~/lib/shopify-image';
 import {useSearchParams} from 'react-router';
-import {useEffect, useMemo, useRef, useState} from 'react';
+import {useEffect, useMemo, useRef, useState, type ReactNode} from 'react';
 import {SmoothImage} from './SmoothImage';
 import {Txt} from './Txt';
 import {copyText} from '~/lib/copy';
@@ -18,9 +18,12 @@ const IMAGE_PARAM = 'image';
 export function ProductGallery({
   images,
   activeImageId,
+  emptyFallback,
 }: {
   images: GalleryImage[];
   activeImageId?: string | null;
+  /** Shown in place of the gallery when the product has no images yet. */
+  emptyFallback?: ReactNode;
 }) {
   const [searchParams, setSearchParams] = useSearchParams();
   // Swipe tracker (declared before any early return so the hook order is stable).
@@ -82,11 +85,13 @@ export function ProductGallery({
   if (images.length === 0) {
     return (
       <div className="product-gallery-empty">
-        <Txt
-          id="product-chrome.gallery_empty"
-          as="span"
-          className="product-card-media-ghost"
-        />
+        {emptyFallback ?? (
+          <Txt
+            id="product-chrome.gallery_empty"
+            as="span"
+            className="product-card-media-ghost"
+          />
+        )}
       </div>
     );
   }

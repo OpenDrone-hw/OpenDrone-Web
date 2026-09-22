@@ -14,6 +14,7 @@ import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {EmptyState} from '~/components/EmptyState';
 import {
   PRODUCT_CONTENT,
+  hiddenWhileSoldOut,
   isConceptFor,
   isPurchasableStatus,
 } from '~/lib/product-content';
@@ -165,10 +166,15 @@ function joinTitle(title: string, value: string): string {
 /** Case- and accent-insensitive token match: every word of the term must
  *  occur somewhere in the card's searchable text. */
 function normalise(s: string): string {
-  return s
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase();
+  return (
+    s
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      // Mount patterns: "20×20", "20 x 20" and "30.5 x 30.5" all read as
+      // "20x20" / "30x30", the way buyers type them.
+      .replace(/(\d+)(?:\.5)?\s*[x×]\s*(\d+)(?:\.5)?/g, '$1x$2')
+  );
 }
 const BUILDS = parseBuilds(buildsJson);
 
@@ -188,17 +194,33 @@ function matchesTerm(haystack: string, term: string): boolean {
   return words.every((w) => hay.includes(w));
 }
 
+/** A tier's spec values: the shared table with the tier's rows replacing
+ *  (or, when null, removing) the shared row of the same key, so a 20x20 card
+ *  does not match on the 30x30 board's mount pattern. */
+function tierSpecValues(
+  base: Array<[string, string]>,
+  overrides: Array<[string, string | null]> | undefined,
+): string[] {
+  const table = new Map<string, string | null>(base);
+  for (const [k, v] of overrides ?? []) table.set(k, v);
+  return [...table.values()].filter((v): v is string => Boolean(v));
+}
+
 /** What a card is searched on: names, family, firmware and spec values. */
 function searchTextFor(p: ProductCardFragment, value = ''): string {
   const content = PRODUCT_CONTENT[p.handle];
+  const tier = value ? content?.variants?.[value] : undefined;
   return [
     p.title,
     value,
+    tier?.label,
     p.handle,
     p.productType,
     content?.family,
     content?.firmware?.project,
-    ...(content?.specs ?? []).map(([, v]) => v),
+    ...(content?.keywords ?? []),
+    ...(tier?.keywords ?? []),
+    ...tierSpecValues(content?.specs ?? [], tier?.specs),
   ]
     .filter(Boolean)
     .join(' ');
@@ -224,6 +246,8 @@ export default function ProductsIndex() {
       // Planned / in-progress products have no settled tiers or renders to
       // list; they live on /roadmap and their concept plate only.
       if (isConceptFor(p.handle, roadmapStatus(p.handle))) continue;
+      // Resold parts that cannot be bought yet stay off the grid.
+      if (hiddenWhileSoldOut(p)) continue;
       const content = PRODUCT_CONTENT[p.handle];
       const axis = content?.optionAxis;
       const allTiers =
@@ -283,7 +307,7 @@ export default function ProductsIndex() {
           out.push({
             key: `${p.handle}:${value}`,
             product: p,
-            title: joinTitle(p.title, value),
+            title: joinTitle(p.title, content?.variants?.[value]?.label ?? value),
             searchText: searchTextFor(p, value),
             build: buildOf(BUILDS, sv?.sku),
             firmware: firmwareOf(p.handle),

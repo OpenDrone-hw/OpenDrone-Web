@@ -10,8 +10,7 @@ import {
   useRoadmapStatusResolver,
 } from '~/lib/coming-soon';
 import {copyText} from '~/lib/copy';
-import {isConceptFor} from '~/lib/product-content';
-import {PRODUCT_CONTENT} from '~/lib/product-content';
+import {PRODUCT_CONTENT, hiddenWhileSoldOut, isConceptFor} from '~/lib/product-content';
 
 /** The related strip renders catalog cards, same as every listing. */
 export type RelatedProduct = ProductCardFragment;
@@ -40,7 +39,7 @@ function specLineOf(p: RelatedProduct): string | null {
   if (chip) parts.push(clause(chip));
   // The base table describes one variant; with several (3" and 5" frames)
   // its first rows would contradict the "from" price, so name the variants.
-  const variantNames = Object.keys(c.variants ?? {});
+  const variantNames = Object.entries(c.variants ?? {}).map(([k, v]) => v.label ?? k);
   if (parts.length === 0 && variantNames.length > 1) return variantNames.join(' · ');
   if (parts.length === 0) {
     for (const [, v] of rows.slice(0, 2)) parts.push(clause(v));
@@ -68,9 +67,17 @@ export function RelatedProducts({
         <Await resolve={recommendations} errorElement={null}>
           {(items) => {
             // Concept products (planned / in-progress) never list.
-            const listed = (items ?? []).filter(
-              (p) => !isConceptFor(p.handle, roadmapStatus(p.handle)),
-            );
+            // Resold parts that cannot be bought yet are left out, and
+            // what can be bought now comes before what is sold out.
+            const listed = (items ?? [])
+              .filter(
+                (p) =>
+                  !isConceptFor(p.handle, roadmapStatus(p.handle)) &&
+                  !hiddenWhileSoldOut(p),
+              )
+              .map((p, i) => ({p, i, open: p.variants.nodes.some((v) => v.availableForSale)}))
+              .sort((a, b) => Number(b.open) - Number(a.open) || a.i - b.i)
+              .map(({p}) => p);
             if (listed.length === 0) return null;
             return (
               <div className="related-grid">

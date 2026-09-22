@@ -9,7 +9,7 @@
     "line1": "",
     "line2Italic": "",
     "line3": "",
-    "lead": "Brushless motors for the OpenFrame 3\" (1604) and 5\" (2207), sold per motor: a quad needs four. They are OEM motors, not open hardware. The supplier order for each size is placed once its funding target is reached."
+    "lead": "Brushless motors for the OpenFrame 3\" and 5\", sold per motor: a quad needs four. They are OEM motors, not open hardware. The supplier order for each size is placed once its funding target is reached. The stator size and KV of the 5\" motor are confirmed before its supplier order."
   },
   "firmware": {
     "project": "-"
@@ -47,6 +47,7 @@
   "optionAxis": "Model",
   "variants": {
     "1604": {
+      "label": "3\" (1604)",
       "highlights": [
         [
           "KV",
@@ -59,10 +60,11 @@
       ]
     },
     "2207": {
+      "label": "5\"",
       "highlights": [
         [
-          "Stator",
-          "22 × 7 mm"
+          "KV",
+          "KV to be confirmed"
         ],
         [
           "Prop size",
@@ -72,11 +74,11 @@
       "specs": [
         [
           "Stator",
-          "22 × 7 mm"
+          "To be confirmed"
         ],
         [
           "KV",
-          null
+          "To be confirmed"
         ],
         [
           "Prop size",
@@ -88,5 +90,10 @@
         ]
       ]
     }
-  }
+  },
+  "footnote": "The 3\" motor is a 1604 at 2850 KV. The stator size and KV of the 5\" motor are not final: they are confirmed before its supplier order is placed.",
+  "keywords": [
+    "motor",
+    "brushless"
+  ]
 }

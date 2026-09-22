@@ -200,5 +200,10 @@
         }
       ]
     }
-  }
+  },
+  "footnote": "These are design values from the CAD model, not measurements of a finished frame.",
+  "keywords": [
+    "frame",
+    "chassis"
+  ]
 }
