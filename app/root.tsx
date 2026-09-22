@@ -19,6 +19,8 @@ import jetbrainsMonoWoff2 from '~/assets/fonts/jetbrains-mono-Regular.woff2';
 import {comingSoonFlag, resolveAllStatuses, roadmapStatusMap} from '~/lib/coming-soon';
 import {checkoutOpen} from '~/lib/shopify-cart-action';
 import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
+import {launchedStatusFlags} from '~/lib/launched-roadmap';
+import {CAMPAIGN} from '~/lib/catalog-client';
 import {toCards} from '~/lib/catalog';
 import {visitorCountry} from '~/lib/visitor-country';
 import {commerceHandoff, customerAccountUrl} from '~/lib/shop-links';
@@ -151,10 +153,16 @@ export async function loader(args: Route.LoaderArgs) {
   // request.
   const globalComingSoon = comingSoonFlag(env);
   const shopOpen = !globalComingSoon && checkoutOpen(env);
-  const statusFlags = await fetchStatusFlagsFast(
-    env.GITHUB_STATUS_TOKEN,
-    400,
-    args.context.waitUntil,
+  // An open shop files the boards with a paid first batch under beta, as the
+  // launch's topic flip will (app/lib/launched-roadmap.ts).
+  const statusFlags = launchedStatusFlags(
+    await fetchStatusFlagsFast(
+      env.GITHUB_STATUS_TOKEN,
+      400,
+      args.context.waitUntil,
+    ),
+    shopOpen,
+    CAMPAIGN,
   );
 
   return {
