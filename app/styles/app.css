@@ -659,82 +659,6 @@ html {
   transform: translate(0, 0) scale(1);
 }
 
-/* Hero load overflow: appears below the centered wordmark only when
-   the 3D scene is taking longer than the expected animation budget.
-   Sits at the centered-splash position; once the splash settles (or
-   the user clicks Skip) it fades away. */
-.hero-load-overflow {
-  position: absolute;
-  top: calc(50vh + clamp(2.5rem, 5vw, 4.5rem) * 1.4);
-  left: 50vw;
-  transform: translateX(-50%);
-  z-index: 35;
-  display: flex;
-  align-items: center;
-  gap: 1.25rem;
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
-  pointer-events: none;
-  opacity: 0;
-  animation: hero-overflow-in 420ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  white-space: nowrap;
-  transition: opacity 0.5s ease-out;
-}
-
-.hero-load-overflow.is-hidden {
-  opacity: 0 !important;
-}
-
-.hero-load-overflow__text {
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-}
-
-.hero-load-overflow__skip {
-  pointer-events: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.45rem 0.95rem;
-  border: 1px solid color-mix(in srgb, var(--color-text-muted) 35%, transparent);
-  color: var(--color-text);
-  border-radius: var(--r-xs);
-  font-size: 0.7rem;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  transition:
-    border-color 0.2s ease,
-    color 0.2s ease,
-    background-color 0.2s ease;
-}
-
-.hero-load-overflow__skip:hover {
-  border-color: color-mix(in srgb, var(--color-gold) 55%, transparent);
-  color: var(--color-gold-text);
-}
-
-@keyframes hero-overflow-in {
-  to {
-    opacity: 1;
-  }
-}
-
-@media (max-width: 640px) {
-  .hero-load-overflow {
-    flex-direction: column;
-    gap: 0.85rem;
-    font-size: 0.7rem;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hero-load-overflow {
-    animation: none;
-    opacity: 1;
-  }
-}
-
 /* Hero tagline: top-left, appears after the wordmark settles */
 .hero-tagline {
   position: absolute;
@@ -1059,7 +983,7 @@ html {
   flex: 0 0 auto;
   font-family: var(--font-mono);
   font-size: var(--fs-md);
-  color: var(--color-gold-text);
+  color: var(--color-text);
 }
 /* Coming-soon reveal cards: a quiet mono tag in the price slot. */
 .hero-reveal-soon {
@@ -2006,30 +1930,11 @@ html.light .header-cat-pod {
   display: none !important;
 }
 
-/* On the homepage the header floats over the hero scene. It starts
-   hidden above the viewport while the splash is loading and drops in
-   together with the wordmark settling to bottom-left. Matches the
-   wordmark's duration + easing so both land in sync.
-
-   Default state = hidden (covers SSR + initial hydration + the splash
-   loading window). Homepage toggles `html.splash-settled` once the 3D
-   scene is ready OR the safety timeout fires. */
+/* On the homepage the header floats over the hero scene, in place from
+   the first frame. */
 .homepage-layout .site-header {
   position: fixed;
   width: 100%;
-  transform: translateY(-100%);
-  opacity: 0;
-  /* Smooth weighted drop (easeOutExpo): glides down and settles without an
-     overshoot bounce. Gated on `hero-header-in`, which the homepage sets ~2s
-     after the splash settles (or on first scroll). */
-  transition:
-    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 0.3s ease-out 0.1s;
-}
-
-html.hero-header-in .homepage-layout .site-header {
-  transform: translateY(0);
-  opacity: 1;
 }
 
 @media (min-width: 900px) {
@@ -2038,31 +1943,11 @@ html.hero-header-in .homepage-layout .site-header {
   }
 }
 
-/* The header-hide above is gated on `html.splash-settled`, which only the
-   desktop 3D hero ever sets. The mobile homepage (MobileHome) is static and
-   never settles a splash, so on phones the homepage header must show
-   unconditionally: otherwise it stays translated off-screen forever. */
+/* The static phone homepage keeps the header in the page flow. */
 @media (max-width: 768px) {
   .homepage-layout .site-header {
     position: sticky;
     top: 0;
-    transform: none;
-    opacity: 1;
-    transition: none;
-  }
-}
-
-/* Reduced motion: the homepage header's translateY drop-in is decorative
-   transform motion. Under reduced-motion the 3D hero never loads and the
-   splash settles instantly, so just present the header in place: no slide,
-   no transition. (Hover color/opacity micro-transitions are left intact;
-   they're not motion in the vestibular sense.) */
-@media (prefers-reduced-motion: reduce) {
-  .homepage-layout .site-header,
-  html.hero-header-in .homepage-layout .site-header {
-    transform: none;
-    opacity: 1;
-    transition: none;
   }
 }
 
@@ -2206,15 +2091,6 @@ html.hero-header-in .homepage-layout .site-header {
 .home-mobile-cta-github:hover {
   border-color: var(--color-gold);
   color: var(--color-gold-text);
-}
-
-/* The footer is rendered on the homepage only for the mobile layout (the
-   desktop home is the WebGL hero and owns its own ending). Hide it at/above the
-   desktop breakpoint so the desktop hero is untouched. */
-@media (min-width: 1024px) {
-  .home-mobile-footer {
-    display: none;
-  }
 }
 
 .home-mobile-featured {
@@ -3622,16 +3498,12 @@ button.reset {
     height: 4px;
     min-height: 4px;
   }
+  .product-gallery-deck .board-deck-dot,
   .product-gallery-deck .board-deck-dot.is-done {
     background: var(--color-border-strong);
   }
   .product-gallery-deck .board-deck-dot.is-active {
-    background: var(--color-text-muted);
-  }
-  .product-gallery-deck .board-deck-count {
-    font-size: 0.78rem;
-    font-weight: 500;
-    color: var(--color-text-muted);
+    background: var(--color-text);
   }
   /* Drop the tap-to-navigate controls on touch: swipe + the deck replace them. */
   .product-gallery-controls,
@@ -4044,7 +3916,7 @@ button.reset {
 }
 
 .catalog-filter.is-active {
-  color: var(--color-gold-text);
+  color: var(--color-text);
   font-weight: 600;
 }
 
@@ -4107,9 +3979,8 @@ button.reset {
     font-size: 0.85rem;
   }
   .catalog-filter.is-active {
-    border-color: var(--color-gold-fill);
-    color: var(--color-on-accent);
-    background: var(--color-gold-fill);
+    border-color: var(--color-text);
+    color: var(--color-text);
   }
 }
 
@@ -5043,15 +4914,18 @@ button.reset {
 
 /* Selected look lives on a layoutId element so it *glides* between cards on
    selection instead of snapping. The base card keeps its neutral border to
-   avoid layout shift; this draws the gold ring + tint on top. */
+   avoid layout shift; this draws a neutral ring on top. Gold stays on the
+   Pre-order button. */
 .variant-tier-glow {
   position: absolute;
   inset: -1px;
   z-index: 0;
   border-radius: var(--r-md);
-  background: color-mix(in srgb, var(--color-gold) 6%, transparent);
-  box-shadow: 0 0 0 1.5px var(--color-gold);
+  box-shadow: 0 0 0 1.5px var(--color-text);
   pointer-events: none;
+}
+.variant-tier.is-selected .variant-tier-name {
+  font-weight: 700;
 }
 
 .variant-tier.is-soldout {
@@ -5107,7 +4981,7 @@ button.reset {
 
 /* Catalog card quick-add: a pill pinned to the bottom-right of the media
    square (the wrapper mirrors the 1:1 media box so it anchors to the image,
-   not the text body), revealed on card hover. Touch: always visible. */
+   not the text body), revealed on card hover. */
 .product-card.has-quickadd {
   position: relative;
 }
@@ -5155,12 +5029,7 @@ button.reset {
   opacity: 0.5;
   cursor: not-allowed;
 }
-@media (hover: none) {
-  .product-card-quickadd .product-card-quickadd-btn {
-    opacity: 1;
-    transform: none;
-  }
-}
+
 
 /* Chapters: two-column grid on wide viewports: content left,
    media placeholder right (real images later). Single column on
@@ -5211,8 +5080,7 @@ button.reset {
 
 /* content-visibility's paint containment clips descendants at the chapter's
    box: but the teardown board art bleeds past its media column into the page
-   margin, and the frame-viewer backdrop over-bleeds into the neighbouring
-   sections. Those chapters give up the skip-render optimisation so the bleed
+   margin. Those chapters give up the skip-render optimisation so the bleed
    stays visible. */
 .chapter:has(.board-art),
 .chapter[data-backdrop] {
@@ -5975,10 +5843,9 @@ html.light .firmware-logo--tile {
 }
 .board-folder-tabs button.is-active,
 .schematic-rail-tabs button.is-active {
-  color: var(--color-on-accent);
-  background: var(--color-gold-fill);
-  border-color: var(--color-gold-fill);
-  box-shadow: 0 0 16px color-mix(in srgb, var(--color-gold-fill) 35%, transparent);
+  color: var(--color-bg);
+  background: var(--color-text);
+  border-color: var(--color-text);
 }
 /* Layer buttons stack a name over a function blurb, left-aligned: so the
    centred via-spine would cut through the text; drop it on the board rail. */
@@ -6309,22 +6176,15 @@ html.light .firmware-logo--tile {
    layer of gold vector outlines that fan apart on scroll, sitting BEHIND the
    teardown text. The chapter goes position:relative; the backdrop is an
    over-bleeding absolute layer; the text/cards lift above it via z-index. === */
-/* No extra height: the chapter sizes to its text. The frame is an overlay
-   that flows OVER the neighbouring sections via a big over-bleeding layer. */
+/* The frame is a decorative layer clipped to its own chapter: nothing
+   draws over the safety block or the footer below it. */
 .chapter[data-backdrop] {
   position: relative;
+  overflow: clip;
 }
-/* Over-bleeds far above (into the section above) and below (into chapter 2)
-   and into the side margins, so the exploded outlines spill over the rest of
-   the page. Purely decorative. */
 .chapter-backdrop {
   position: absolute;
-  top: -6vh; /* barely above the section: keep clear of the hero / buy button */
-  bottom: -70vh; /* flow down into chapter 2. NB: the model paints at this
-                    layer's vertical centre, so don't grow this much further or
-                    the assembled frame drops out of the chapter-1 view. */
-  left: -10vw;
-  right: -4vw;
+  inset: 0 -4vw 0 -10vw;
   z-index: 0;
   pointer-events: none;
 }
@@ -7926,20 +7786,10 @@ html.light .firmware-logo--tile {
 .signal-lost-actions {
   display: inline-flex;
   flex-wrap: wrap;
+  align-items: center;
   justify-content: center;
-  gap: 0.75rem;
+  gap: 1.25rem;
 }
-.rth-tag {
-  display: inline-block;
-  margin-left: 0.5em;
-  padding: 0.05em 0.4em;
-  border-radius: var(--r-xs);
-  font-family: var(--font-mono);
-  font-size: 0.7em;
-  letter-spacing: 0.1em;
-  background: rgba(0, 0, 0, 0.18);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .signal-lost-osd::after,
   .osd-warn,
@@ -16261,8 +16111,8 @@ a.hp-label:focus-visible .hp-label-name {
 }
 .step-bar-label {
   font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  color: var(--color-text-muted);
+  font-size: 13px;
+  color: var(--color-text);
 }
 .step-bar[data-funded] .step-bar-label {
   color: var(--color-stock);
@@ -16492,6 +16342,11 @@ html.light .cart-added-line img {
 .cart-added-subtotal .cart-added-price {
   font-weight: 600;
 }
+.cart-added-parcel {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
 .cart-added-foot form {
   margin: 0;
 }
@@ -16668,13 +16523,6 @@ html.light .cart-added-line img {
   display: none;
 }
 .hero-load-panel .hero-load-manifest,
-.hero-load-panel .hero-load-overflow {
-  position: static;
-  top: auto;
-  left: auto;
-  transform: none;
-}
-
 /* Top centre of the desktop hero: the size toggle.                      */
 .hero-top-center {
   display: flex;
@@ -16714,34 +16562,6 @@ html.light .cart-added-line img {
   padding: 0;
   display: grid;
   gap: var(--sp-2, 8px);
-  grid-template-columns: minmax(0, 1fr);
-}
-@media (min-width: 40em) {
-  .support-topics {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-.support-topic {
-  display: grid;
-  gap: 4px;
-  min-height: 44px;
-  padding: var(--sp-3, 12px) var(--sp-4, 16px);
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-sm, 8px);
-  background: var(--color-bg-card);
-  text-decoration: none;
-  color: var(--color-text);
-  transition: border-color 150ms ease;
-}
-.support-topic:hover {
-  border-color: var(--color-gold);
-}
-.support-topic-title {
-  font-weight: 600;
-}
-.support-topic-desc {
-  font-size: var(--fs-sm, 0.875rem);
-  color: var(--color-text-muted);
 }
 
 /* ============================================
@@ -17262,10 +17082,10 @@ html:not(.light) .trust-chip-oshwa-mark {
   background: var(--color-gold-fill);
   box-shadow: 0 0 0 2px var(--color-bg-card), var(--pod-shadow);
 }
+/* Touch: no quick add, the card itself opens the product page. */
 @media (hover: none) {
-  .product-card-quickadd .product-card-quickadd-btn {
-    opacity: 1;
-    transform: none;
+  .product-card-quickadd {
+    display: none;
   }
 }
 

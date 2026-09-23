@@ -532,13 +532,6 @@ function DesktopHome({
     },
     [handleSceneProgress],
   );
-  // The top product header bar drops in a beat AFTER the rest of the islands
-  // have splashed in - 2s after the splash settles - so the hero reads first
-  // and the chrome arrives second. Starting to scroll brings it in early. On
-  // repeat visits (splash already played) it's in from the first frame. When
-  // it lands it shoves the airframe selector down to make room (see the
-  // selector's `top` below, which keys off this).
-  const [headerIn, setHeaderIn] = useState(splashHasPlayedThisSession);
   // Each product card's reveal window, as fractions of the walkthrough. Derived
   // from where that card's beat actually sits in the sequence (see
   // revealWindows below) rather than from the registry's even spacing: the
@@ -699,50 +692,19 @@ function DesktopHome({
     return () => cancelAnimationFrame(raf);
   }, [progress, drawPhaseDone, sceneReady]);
 
-  // Drive the site-header drop-in animation from splash state. The
-  // header lives outside this component (PageLayout in root.tsx), so
-  // we signal via a class on <html> that the header CSS can key off.
-  // Class is only meaningful inside `.homepage-layout`, so other pages
-  // are unaffected.
-  //
-  // No cleanup on unmount: once the splash has played in this browser
-  // session, the class stays on <html>. Removing it on navigation away
-  // caused the header to briefly re-hide when the user came back to "/"
-  // via client-side nav (e.g. clicking the wordmark). The class only
-  // matters inside `.homepage-layout`, so leaving it set has no effect
-  // on other routes.
+  // Once the splash has played in this browser session it stays settled,
+  // also after client-side navigation back to "/".
   useEffect(() => {
     if (!splashSettled) return;
     splashHasPlayedThisSession = true;
     document.documentElement.classList.add('splash-settled');
   }, [splashSettled]);
 
-  // Bring the top header bar in 1s after the splash settles, or immediately if
-  // the visitor starts scrolling. Once in, it stays in (and the class persists
-  // across SPA nav like splash-settled does, so it doesn't re-hide on return).
-  useEffect(() => {
-    if (!splashSettled || headerIn) return;
-    const t = window.setTimeout(() => setHeaderIn(true), 1000);
-    const onScroll = () => {
-      if (window.scrollY > 4) setHeaderIn(true);
-    };
-    window.addEventListener('scroll', onScroll, {passive: true});
-    return () => {
-      window.clearTimeout(t);
-      window.removeEventListener('scroll', onScroll);
-    };
-  }, [splashSettled, headerIn]);
-
-  useEffect(() => {
-    if (headerIn) document.documentElement.classList.add('hero-header-in');
-  }, [headerIn]);
-
-  // A beat after the header bar lands (3s), drop a small "Who's incutec?" hint
+  // 3s after load, drop a small "Who's incutec?" hint
   // out from under the Incutec mark, nudging discovery of the company page.
   // Once the visitor has clicked through (flag in localStorage) the hint is
   // retired - don't arm it, and clear any stale class from this session.
   useEffect(() => {
-    if (!headerIn) return;
     let seen = false;
     try {
       seen = localStorage.getItem(INCUTEC_HINT_SEEN_KEY) === '1';
@@ -758,7 +720,7 @@ function DesktopHome({
       3000,
     );
     return () => window.clearTimeout(t);
-  }, [headerIn]);
+  }, []);
 
   // One screen, no spacer. The walkthrough consumes the wheel itself and hands
   // the page back at its last beat, so extra document height would only be dead
@@ -956,35 +918,6 @@ function DesktopHome({
             </ul>
           ) : null}
 
-          {/* Overflow UI - only renders when the scene takes longer than
-              the expected animation budget. Gives the user a way out so
-              they aren't trapped behind the dim layer on slow networks. */}
-          {/* The way out is there from the first frame: a buyer who came
-              to shop does not wait for the models. The "loading models"
-              line joins it only when the load runs over budget. */}
-          {!splashSettled ? (
-            <div className="hero-load-overflow" role="status" aria-live="polite">
-              <Link
-                prefetch="viewport"
-                to="/collections/all"
-                className="hero-load-overflow__skip"
-                onClick={() => setSplashSettled(true)}
-              >
-                <Txt id="home.skip_to_catalog" />
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                >
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                  <polyline points="12 5 19 12 12 19" />
-                </svg>
-              </Link>
-            </div>
-          ) : null}
           </div>
 
           {/* GitHub logo - bare mark (no circle), sitting to the right of the
@@ -1008,10 +941,7 @@ function DesktopHome({
               of it one by one, the stack growing upward. Each card's reveal is
               driven off --hero-p and mirrors the spotlight in HeroScene.
               Scrolling back up retracts them in reverse. */}
-          <div
-            className={`hero-buy${splashSettled ? ' is-visible' : ''}`}
-            style={{opacity: splashSettled ? 1 : 0}}
-          >
+          <div className="hero-buy is-visible">
             <Suspense fallback={null}>
               <Await resolve={heroStacks}>
                 {(stacks) => {
@@ -1162,17 +1092,13 @@ function DesktopHome({
           <div
             className="hero-top-center absolute left-1/2 -translate-x-1/2 z-20 pointer-events-auto"
             style={{
-              // Springs down from the top edge when the splash settles, resting
-              // high (2.5rem). When the header bar lands ~2s later it shoves the
-              // selector down to 6rem - the spring `top` transition sells the push.
-              // Below the promo line while the shop is open.
+              // Springs down from the top edge when the splash settles, below
+              // the header, and below the promo line while the shop is open.
               top: !splashSettled
                 ? '-3rem'
                 : preorderShips !== null
                   ? '8rem'
-                  : headerIn
-                    ? '6rem'
-                    : '2.5rem',
+                  : '6rem',
               opacity: splashSettled ? 1 : 0,
               transition:
                 'top 0.7s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease',

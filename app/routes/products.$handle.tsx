@@ -62,7 +62,7 @@ import {shipPromiseFor} from '~/lib/preorder';
 import {fetchStatusFlagsFast, statusForHandle} from '~/lib/roadmap-data';
 import {priceLadder, type PriceTier} from '~/lib/preorder-campaign';
 import {stepBarView, stepLayout} from '~/lib/preorder-meter';
-import {countryName, shippingQuote, SHIPPING_ZONES} from '~/lib/shipping-rates';
+import {countryName, shippingQuote} from '~/lib/shipping-rates';
 import {SHIP_COUNTRY_EVENT, storeShipCountry, storedShipCountry} from '~/lib/cart-client';
 import preorders from '../../content/preorders.json';
 import {trackEvent} from '~/lib/growth/plausible';
@@ -82,10 +82,6 @@ const PRICE_TIERS: PriceTier[] = preorders.priceTiers;
 
 /** The unit counts where a price step ends: the ticks on the step bar. */
 const STEP_ENDS = PRICE_TIERS.map((tier) => tier.upTo);
-
-/** The cheapest flat shipping rate, for "shipping from" when the visitor's
- *  country is unknown. */
-const SHIPPING_FROM = Math.min(...SHIPPING_ZONES.map((z) => z.rate));
 
 /** Fill `{name}` slots in a copy template. */
 function fill(template: string, vars: Record<string, string | number>): string {
@@ -1381,8 +1377,9 @@ function ProductPage() {
   // rate table. Display only: checkout charges the rate for the address.
   // The country the buyer picked in the cart wins over the IP country, so
   // the product page, the dialog and the cart quote the same destination.
-  const [visitorCountry, setVisitorCountry] = useState<string | null>(
-    rootData?.visitorCountry ?? null,
+  // Belgium when the country is unknown, as in the cart.
+  const [visitorCountry, setVisitorCountry] = useState<string>(
+    rootData?.visitorCountry ?? 'BE',
   );
   useEffect(() => {
     const sync = () => {
@@ -1409,9 +1406,7 @@ function ProductPage() {
       ? say('product-chrome.buy_vat_note', 'incl. VAT')
       : null;
   const shipNote = !quote
-    ? say('product-chrome.buy_ship_from', 'Shipping from {price}', {
-        price: formatPrice(SHIPPING_FROM, 'EUR'),
-      })
+    ? null
     : quote.blocked
       ? say('product-chrome.buy_ship_blocked', 'No shipping to {country}', {
           country: countryName(quote.country),

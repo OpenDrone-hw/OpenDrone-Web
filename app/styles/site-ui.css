@@ -4,35 +4,16 @@
    Colours, type and spacing come from the tokens in app.css only. */
 
 /* ============================================
-   /products header: title, help links, search
+   /products header: title, search
    ============================================ */
 
 .collection-header {
   grid-template-areas:
     "eyebrow eyebrow eyebrow"
     "title   .       sort"
-    "help    help    help"
     "search  search  search";
   margin-bottom: var(--sp-6);
 }
-.catalog-help-links {
-  grid-area: help;
-  margin: 0.5rem 0 0;
-  font-family: var(--font-sans);
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--color-text-muted);
-}
-.catalog-help-links a {
-  color: var(--color-text);
-  text-decoration: underline;
-  text-decoration-color: var(--color-border-strong);
-  text-underline-offset: 3px;
-}
-.catalog-help-links a:hover {
-  text-decoration-color: var(--color-gold);
-}
-
 /* One field with the submit inside it as a magnifier button. */
 .catalog-search-field {
   position: relative;
@@ -153,46 +134,6 @@
   text-underline-offset: 3px;
 }
 
-/* Build guide: per-part ship tag and the one-click add for a whole build. */
-.build-guide-tag {
-  display: inline-block;
-  margin-top: 0.35rem;
-  padding: 0.1rem 0.5rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-pill);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.02em;
-  color: var(--color-gold-text);
-}
-.build-guide-tag[data-waits] {
-  color: var(--color-text-muted);
-}
-.build-guide-add {
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--color-border);
-}
-.build-guide-add .add-to-cart-form {
-  display: block;
-}
-.build-guide-add-btn {
-  width: 100%;
-  justify-content: center;
-}
-.build-guide-add-note {
-  margin-top: 0.6rem;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--color-text-muted);
-}
-.build-guide-dji {
-  padding: 1rem 1.1rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-md);
-  background: var(--color-bg-card);
-}
-
 /* ============================================
    /preorder: the campaign page
    ============================================ */
@@ -294,8 +235,8 @@
   width: 1rem;
   height: 1rem;
   border-radius: 50%;
-  border: 2px solid var(--color-gold);
-  background: var(--color-gold);
+  border: 2px solid var(--color-text-muted);
+  background: var(--color-text-muted);
 }
 .po-event[data-kind='deadline'] .po-event-dot {
   border-color: var(--color-text-muted);
@@ -381,7 +322,6 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--sp-2) var(--sp-3);
-  margin-top: var(--sp-7);
   font-size: var(--fs-sm);
 }
 .po-legend-label {
@@ -403,9 +343,6 @@
   border: 1px solid var(--color-border-strong);
   border-radius: 999px;
   color: var(--color-text-muted);
-}
-.po-legend li:first-child {
-  border-color: var(--color-gold);
 }
 .po-legend-units {
   font-family: var(--font-mono);
@@ -447,11 +384,6 @@
   font-weight: 500;
   color: var(--color-text-muted);
 }
-.po-group-line {
-  margin: var(--sp-2) 0 0;
-  font-size: var(--fs-sm);
-  color: var(--color-text-muted);
-}
 .po-cards {
   list-style: none;
   margin: var(--sp-5) 0 0;
@@ -467,28 +399,23 @@
   min-width: 0;
 }
 .po-card-media {
+  position: relative;
   display: block;
   aspect-ratio: 3 / 2;
   margin-bottom: var(--sp-2);
   border-radius: var(--r-md);
-  background: var(--color-bg-card);
   overflow: hidden;
+}
+/* Board photos and CAD renders on one light tile, as on the product grid. */
+.po-card-media,
+.po-card-media.is-render {
+  background: #ece9e3;
 }
 .po-card-media img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
-}
-html.light .po-card-media img {
-  mix-blend-mode: multiply;
-}
-/* CAD renders on the same paper tone as the board photos. */
-.po-card-media.is-render {
-  position: relative;
-  background: #ece4dc;
-}
-.po-card-media.is-render img {
   mix-blend-mode: multiply;
 }
 .po-card-title {
@@ -524,7 +451,8 @@ html.light .po-card-media img {
 .po-card form {
   margin: 0;
 }
-/* Outline: one gold fill per screen, and this page has none. */
+/* Neutral outline: gold only on hover, so no card button outshouts the
+   others. */
 .po-card-cta {
   display: inline-flex;
   align-items: center;
@@ -533,20 +461,18 @@ html.light .po-card-media img {
   min-height: 44px;
   margin-top: var(--sp-2);
   padding: 0 var(--sp-4);
-  border: 1px solid var(--color-gold);
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--r-pill);
   background: transparent;
-  color: var(--color-gold-text);
+  color: var(--color-text);
   font-size: var(--fs-sm);
   font-weight: 600;
   cursor: pointer;
   transition: background-color 150ms ease, color 150ms ease;
 }
 .po-card-cta:hover {
-  background: var(--color-gold-soft);
-}
-html.light .po-card-cta {
-  color: var(--color-text);
+  border-color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 .po-card-cta:disabled {
   border-color: var(--color-border);
@@ -580,7 +506,7 @@ html.light .po-card-cta {
 }
 .po-terms svg {
   grid-row: span 2;
-  color: var(--color-gold-text);
+  color: var(--color-text-muted);
 }
 .po-terms strong {
   font-weight: 600;
@@ -794,12 +720,6 @@ html.light .po-card-cta {
   padding: 0 24px;
   font-size: 16px;
 }
-/* The slow-load escape sits alone under the load bar. */
-.hero-load-overflow {
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
 /* Phone home: one full-width Shop button. */
 .home-mobile-cta {
   flex-direction: column;
@@ -850,9 +770,7 @@ html.light .po-card-cta {
   }
 }
 .catalog-filter-head,
-.collection .page-title,
-#new-to-fpv h2,
-#new-to-fpv h3 {
+.collection .page-title {
   scroll-margin-top: calc(var(--header-height) + 2rem);
 }
 
@@ -882,17 +800,12 @@ html.light .po-card-cta {
   border-color: var(--color-text-muted);
 }
 .catalog-chip[aria-pressed='true'] {
-  border-color: var(--color-gold-fill);
-  background: color-mix(in srgb, var(--color-gold-fill) 14%, var(--color-bg-card));
+  border-color: var(--color-text);
+  background: var(--color-bg-card);
   color: var(--color-text);
   font-weight: 600;
 }
-/* Phones: the chips carry the size filters, so the sideways rail keeps
-   only the categories. */
 @media (max-width: 899px) {
-  .catalog-sidebar .catalog-filter-group.is-chip-dup {
-    display: none;
-  }
   /* One sideways row, like the category rail, so the grid stays high. */
   .catalog-chips {
     flex-wrap: nowrap;
@@ -910,24 +823,6 @@ html.light .po-card-cta {
     font-size: 13px;
     white-space: nowrap;
   }
-}
-
-/* The whole build's ship date and test status, in one line above its add. */
-.build-guide-summary {
-  margin: 0 0 4px;
-  padding: 10px 12px;
-  border-radius: var(--r-md);
-  background: var(--color-bg-elevated, var(--color-bg-card));
-  border: 1px solid var(--color-border);
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--color-text);
-}
-.build-guide-card li a[href^='http'],
-.build-guide-card li a[href^='/'] {
-  color: var(--color-text);
-  text-decoration: underline;
-  text-underline-offset: 3px;
 }
 
 /* ============================================

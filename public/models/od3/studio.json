@@ -275,7 +275,7 @@
     {
       "id": "fc",
       "title": "OpenFC Lite",
-      "note": "20x20 / 30x30 · 3-6S",
+      "note": "20x20 / 30x30 · 3-6S / 3-8S",
       "select": {
         "board": "OpenFC"
       },

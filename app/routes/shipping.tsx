@@ -6,27 +6,24 @@ import {buildSeoMeta} from '~/lib/seo';
 import {copy} from '~/lib/copy';
 import type {Locale} from '~/lib/i18n';
 
-type Glance = {title: string; rate: string; paid: string; targets: string; duties: string};
+type Glance = {title: string; rows: Array<[string, string]>};
 
-/** The buyer's summary above the shipping terms: the rate, when each kind
- *  of product ships and who pays duties outside the EU. The terms below
- *  stay the text that applies. Words in content/copy/legal-labels.json. */
+/** Three rows above the shipping terms: when each kind of product ships
+ *  and who pays duties outside the EU. The rates are the table below; the
+ *  terms stay the text that applies. Words in content/copy/legal-labels.json. */
 function ShippingGlance({locale}: {locale: Locale}) {
   const all = copy('legal-labels.shipping_glance') as unknown as Record<string, Glance> | undefined;
   const g = all?.[locale] ?? all?.en;
-  if (!g) return null;
+  if (!g?.rows?.length) return null;
   return (
-    <section
-      aria-label={g.title}
-      className="mb-8 rounded-[var(--r-md)] border border-[var(--color-border)] border-l-[3px] border-l-[var(--color-gold-fill)] bg-[var(--color-bg-card)] px-5! py-4! text-[15px] leading-relaxed"
-    >
-      <h2 className="mt-0! mb-2! font-display text-[17px] font-semibold text-[var(--color-text)]">{g.title}</h2>
-      <ul className="m-0! flex list-none flex-col gap-1.5 p-0! text-[var(--color-text-muted)] [&>li]:m-0!">
-        {[g.rate, g.paid, g.targets, g.duties].map((line) => (
-          <li key={line}>{line}</li>
-        ))}
-      </ul>
-    </section>
+    <dl aria-label={g.title} className="mb-8! grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 text-[15px] [&>dd]:m-0! [&>dt]:m-0!">
+      {g.rows.map(([label, value]) => (
+        <div key={label} className="contents">
+          <dt className="text-[var(--color-text-muted)]">{label}</dt>
+          <dd className="font-mono text-[var(--color-text)]">{value}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 

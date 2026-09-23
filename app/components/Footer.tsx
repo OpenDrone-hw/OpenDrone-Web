@@ -171,7 +171,7 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-8 gap-y-3 sm:gap-8">
           {/* Company identity */}
           <div className="col-span-2 md:col-span-3 lg:col-span-1">
-            <h3 className="gold-tag font-display text-sm font-bold tracking-[0.08em] uppercase text-[var(--color-gold-text)] mb-3">
+            <h3 className="font-display text-sm font-bold tracking-[0.08em] uppercase text-[var(--color-text)] mb-3">
               OpenDrone
             </h3>
             <Txt

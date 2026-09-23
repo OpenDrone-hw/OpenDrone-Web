@@ -5,7 +5,7 @@
  * This is an absolutely-positioned layer, not a section of its own - it fills
  * the hero's sticky pane so the wordmark, size selector and buy bubble sit over
  * the same drone. The route owns the splash; this owns the drone and the one
- * label line per part ("OpenFC Lite · 20x20 / 30x30 · 3-6S · €23.20").
+ * label line per part ("OpenFC Lite · 20x20 / 30x30 · 3-6S / 3-8S · €23.20").
  *
  * Rendering rules live here rather than in the scene: the 3D is skipped under
  * 768px or `prefers-reduced-motion`, matching the policy the rest of the

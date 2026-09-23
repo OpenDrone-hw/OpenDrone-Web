@@ -1532,7 +1532,8 @@ export function BoardArt({
       }
       data-board={handle}
     >
-      {renderTag ? <span className="render-chip board-art-render-chip">{renderTag}</span> : null}
+      {/* The tag labels the render, so it waits for the render. */}
+      {renderTag && revealed ? <span className="render-chip board-art-render-chip">{renderTag}</span> : null}
       {sheets.length ? (
         <div className="board-folder-body" ref={bodyRef}>
           {/* Roving keyboard-nav group: arrow keys step the layer stack. The

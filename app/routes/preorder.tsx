@@ -17,6 +17,7 @@ import {
   PRODUCT_CONTENT,
   imagesAreRenders,
   resolveStatus,
+  setSize,
   shipMonth,
   variantDisplayName,
 } from '~/lib/product-content';
@@ -61,6 +62,8 @@ type Row = {
   price: MoneyV2;
   shipPromise: string;
   cartAddUrl: string;
+  /** Units one Pre-order adds: a set for a part used in sets. */
+  quantity: number;
   campaign: CampaignState;
   /** Units and price per step, retail last. Empty without a retail price. */
   ladder: LadderStep[];
@@ -101,6 +104,14 @@ function promiseDay(promise: string | null): string | null {
   return `${m[3]}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
+/** An add-to-cart link with its `qty` set. */
+function withQuantity(href: string, quantity: number): string {
+  const url = new URL(href, 'https://opendrone.be');
+  if (!url.searchParams.has('qty')) return href;
+  url.searchParams.set('qty', String(quantity));
+  return href.startsWith('http') ? url.toString() : `${url.pathname}${url.search}`;
+}
+
 export async function loader({context}: Route.LoaderArgs) {
   const globalSoon = comingSoonFlag(context.env);
   const [catalog, statusFlags] = await Promise.all([
@@ -129,6 +140,9 @@ export async function loader({context}: Route.LoaderArgs) {
       const status = resolveStatus(card.handle, globalSoon, statusFlags, v.availability);
       if (!isPurchasableStatus(status)) return [];
       const unit = PRODUCT_CONTENT[card.handle]?.priceUnit ?? null;
+      // A part used in sets (4 motors per quad) adds one set, as its
+      // product page does.
+      const set = setSize(card.handle);
       return [
         {
           sku: v.sku,
@@ -139,7 +153,8 @@ export async function loader({context}: Route.LoaderArgs) {
           image: v.image,
           price: v.price,
           shipPromise: v.shipPromise,
-          cartAddUrl: v.cartAddUrl,
+          cartAddUrl: set ? withQuantity(v.cartAddUrl, set) : v.cartAddUrl,
+          quantity: set ?? 1,
           campaign: v.campaign,
           ladder: retail.has(v.sku) ? priceLadder(retail.get(v.sku)!, CAMPAIGN.priceTiers) : [],
           priceUnit: unit ? unit.replace(/^per\s+/i, '/ ') : null,
@@ -214,11 +229,6 @@ export default function PreorderRoute() {
             <span className="po-group-meta">{dot + shipWord('deadline', ends)}</span>
             <span className="po-group-meta">{dot + shipWord('eta', eta)}</span>
           </h2>
-          {stackMonth ? (
-            <p className="po-group-line">
-              {(copyText('preorder.targets_line') ?? '').replace('{month}', stackMonth)}
-            </p>
-          ) : null}
           <Cards rows={targetRows} stepEnds={data.stepEnds} eta={eta} />
         </section>
       ) : null}
@@ -433,7 +443,7 @@ function Card({row, stepEnds, eta}: {row: Row; stepEnds: number[]; eta: string})
         className="po-card-cta"
         href={row.cartAddUrl}
         product={row.handle}
-        revenue={{currency, amount: Number(row.price.amount) || 0}}
+        revenue={{currency, amount: (Number(row.price.amount) || 0) * row.quantity}}
         ariaLabel={`${cta}: ${name}`}
       >
         {cta}

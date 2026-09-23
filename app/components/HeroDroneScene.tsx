@@ -22,7 +22,7 @@ export type HeroBeat = {
   id: string;
   /** Part name, the start of the label line. */
   title: string;
-  /** Spec suffix after the name ("20x20 / 30x30 · 3-6S"). */
+  /** Spec suffix after the name ("20x20 / 30x30 · 3-6S / 3-8S"). */
   note?: string;
   /** Product handle; the label adds that product's price. */
   handle?: string;

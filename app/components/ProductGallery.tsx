@@ -203,7 +203,7 @@ export function ProductGallery({
       </div>
       {/* Mobile swipe bar - the touch-first replacement for the arrow pill +
           thumbnail strip (both hidden on mobile via CSS). A tick per image (tap
-          to jump) + counter, matching the board/schematic decks. */}
+          to jump), the active one in the text colour. */}
       {images.length > 1 && (
         <div className="product-gallery-deck">
           <div
@@ -223,11 +223,6 @@ export function ProductGallery({
               />
             ))}
           </div>
-          <p className="board-deck-meta" aria-live="polite">
-            <span className="board-deck-count">
-              {index + 1}/{images.length}
-            </span>
-          </p>
         </div>
       )}
       {images.length > 1 && (

@@ -45,9 +45,13 @@ export function stepBarView(state: CampaignState, stepEnds: number[]): StepBarVi
  * price sits over its own stretch of the bar. A step that starts past the
  * bar's end (251+ over a 250-unit batch) gets a tail after the bar: the
  * bar then takes `TRACK_SHARE` of the width. Null once the bar counts a
- * later batch or a reached target, where the steps no longer line up.
+ * later batch or a reached target, where the steps no longer line up, and
+ * when two steps would start closer than `MIN_STEP_GAP` percent apart (the
+ * three steps inside the first quarter of a 1000-unit motor target): the
+ * prices then sit in equal columns.
  */
 export const TRACK_SHARE = 0.8;
+const MIN_STEP_GAP = 25;
 
 export function stepLayout(
   state: CampaignState,
@@ -58,10 +62,9 @@ export function stepLayout(
   if (bar.funded || state.ordered - counted > 0 || bar.max <= 0 || !froms.length) return null;
   const tail = froms.some((from) => from > bar.max);
   const share = tail ? TRACK_SHARE : 1;
-  return {
-    lefts: froms.map((from) => (Math.min(bar.max, from - 1) / bar.max) * share * 100),
-    tail,
-  };
+  const lefts = froms.map((from) => (Math.min(bar.max, from - 1) / bar.max) * share * 100);
+  if (lefts.some((left, i) => i > 0 && left - lefts[i - 1] < MIN_STEP_GAP)) return null;
+  return {lefts, tail};
 }
 
 /** 0 to 100, integer, clamped: a bar width that never reaches the DOM as NaN. */

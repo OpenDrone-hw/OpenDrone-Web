@@ -11,11 +11,11 @@ import {
   variantDisplayName,
 } from '~/lib/product-content';
 import type {ProductCardFragment, ProductVariantFragment} from '~/lib/product-shapes';
-import {ShipChip} from './ShipChip';
+import {ShipChip, parcelPromise, shipChipText} from './ShipChip';
 import {shippingQuote} from '~/lib/shipping-rates';
 import {beginCartAdd, endCartAdd} from './cart-add-lock';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
-import type {CartSummary} from '~/lib/shopify-cart-action';
+import {DATES_SEEN_FIELD, type CartSummary} from '~/lib/shopify-cart-action';
 import {trackEvent} from '~/lib/growth/plausible';
 import {attributionSource} from '~/lib/growth/attribution';
 import {
@@ -80,7 +80,7 @@ export function CartAddedDialog() {
   const [detail, setDetail] = useState<CartAddedDetail | null>(null);
   const [summary, setSummary] = useState<CartSummary | null>(null);
   const [busy, setBusy] = useState(false);
-  // The stack SKU added from this drawer, so its row reads "Added".
+  // The stack SKU added from this drawer: it joins the added lines.
   const [stacked, setStacked] = useState<string | null>(null);
   // The destination picked in the cart, when the buyer picked one.
   const [shipCountry, setShipCountry] = useState<string | null>(null);
@@ -139,7 +139,16 @@ export function CartAddedDialog() {
 
   if (!detail || !summary) return null;
 
-  const added = summary.lines.filter((l) => l.sku && detail.skus.includes(l.sku));
+  // The lines added this time, with the stack partner once it is added here.
+  const added = summary.lines
+    .filter((l) => l.sku && (detail.skus.includes(l.sku) || l.sku === stacked))
+    .sort((a, b) => Number(a.sku === stacked) - Number(b.sku === stacked));
+  // One parcel per order: when the cart's lines ship at different times,
+  // the drawer names the parcel's date above Checkout, as the cart does.
+  const mixed = new Set(summary.lines.map((l) => l.shipPromise ?? '')).size > 1;
+  const parcel = mixed
+    ? shipChipText(parcelPromise(summary.lines.map((l) => l.shipPromise)), true)
+    : null;
   const subtotal = summary.subtotal ?? null;
   // Same rule as the buy module and the cart: "incl. VAT" only where EU VAT
   // applies. The International and US markets keep the same price with no
@@ -148,8 +157,8 @@ export function CartAddedDialog() {
   const vatIncluded = !quote || (!quote.blocked && quote.duty === 'none');
   const shipBlocked = quote?.blocked === true;
 
-  // The stack row: judged on the cart as it was when the drawer opened, so
-  // the partner added from here stays listed as "Added".
+  // The stack row: judged on the cart as it was when the drawer opened; once
+  // the partner is added here it shows as a line instead.
   const statuses = rootData?.productStatuses ?? {};
   const partner =
     added.length === 1
@@ -244,7 +253,7 @@ export function CartAddedDialog() {
           ))}
         </ul>
 
-        {partner ? (
+        {partner && stacked !== partner.variant.sku ? (
           <p className="cart-added-stack">
             <span>
               {`${t('added_stack', 'Stack it:')} ${partner.label} · ${formatPrice(
@@ -252,14 +261,8 @@ export function CartAddedDialog() {
                 partner.variant.price.currencyCode,
               )}`}
             </span>
-            <button
-              type="button"
-              disabled={busy || stacked === partner.variant.sku}
-              onClick={() => void addStack()}
-            >
-              {stacked === partner.variant.sku
-                ? t('added_stack_added', 'Added')
-                : t('added_stack_add', 'Add')}
+            <button type="button" disabled={busy} onClick={() => void addStack()}>
+              {t('added_stack_add', 'Add')}
             </button>
           </p>
         ) : null}
@@ -277,6 +280,11 @@ export function CartAddedDialog() {
               </span>
             </p>
           ) : null}
+          {parcel ? (
+            <p className="cart-added-parcel">
+              {`${t('mixed_one_parcel', 'One parcel')} · ${parcel.text}`}
+            </p>
+          ) : null}
           {shipBlocked ? null : (
             // A plain form post: the cart action checks every line again and
             // redirects to Shopify checkout, or back to /cart with a notice.
@@ -290,6 +298,8 @@ export function CartAddedDialog() {
               }
             >
               <input type="hidden" name="intent" value="checkout" />
+              {/* The parcel line above names the date, so checkout may go on. */}
+              {parcel ? <input type="hidden" name={DATES_SEEN_FIELD} value="1" /> : null}
               <button type="submit" className="cart-added-checkout">
                 {copyText('cart.checkout_cta') ?? 'Checkout'}
               </button>

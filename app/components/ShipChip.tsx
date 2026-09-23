@@ -10,21 +10,17 @@ import {
 import preorders from '../../content/preorders.json';
 
 const CAMPAIGN = parseCampaignConfig(preorders);
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /**
- * The ship chip on a cart or drawer line: "Ships Oct 2026" for a dated
- * batch, "ETA 11 Mar 2027" for a funding target, "ETA 11 Mar 2027 if
- * funded" with `ifFunded` while the target is not met.
+ * The ship chip text for a line: "Ships Oct 2026" for a dated batch, "ETA
+ * 11 Mar 2027" for a funding target, "ETA 11 Mar 2027 if funded" with
+ * `ifFunded` while the target is not met.
  */
-export function ShipChip({
-  promise,
-  className = 'cart-line-preorder',
+export function shipChipText(
+  promise: string | null | undefined,
   ifFunded = false,
-}: {
-  promise: string | null | undefined;
-  className?: string;
-  ifFunded?: boolean;
-}) {
+): {kind: 'date' | 'target'; text: string} | null {
   const short = shortShipPromise(promise);
   if (!short) return null;
   let text = short.text;
@@ -39,10 +35,42 @@ export function ShipChip({
         : shipWord('eta', eta);
     }
   }
+  return {kind: short.kind, text};
+}
+
+/**
+ * The promise of the line a one-parcel order waits for: a funding target
+ * when the order holds one, else the latest dated batch.
+ */
+export function parcelPromise(promises: Array<string | null | undefined>): string | null {
+  let latest: {promise: string; at: number} | null = null;
+  for (const promise of promises) {
+    const short = shortShipPromise(promise);
+    if (!short || !promise) continue;
+    if (short.kind === 'target') return promise;
+    const [mon, year] = (shipMonth(promise) ?? '').split(' ');
+    const at = Number(year || 0) * 12 + MONTHS.indexOf(mon);
+    if (!latest || at > latest.at) latest = {promise, at};
+  }
+  return latest?.promise ?? null;
+}
+
+/** The ship chip on a cart or drawer line (see {@link shipChipText}). */
+export function ShipChip({
+  promise,
+  className = 'cart-line-preorder',
+  ifFunded = false,
+}: {
+  promise: string | null | undefined;
+  className?: string;
+  ifFunded?: boolean;
+}) {
+  const chip = shipChipText(promise, ifFunded);
+  if (!chip) return null;
   return (
-    <small className={`ship-chip ${className}`} data-kind={short.kind}>
-      {short.kind === 'date' ? <span className="ship-line-dot" aria-hidden="true" /> : null}
-      {text}
+    <small className={`ship-chip ${className}`} data-kind={chip.kind}>
+      {chip.kind === 'date' ? <span className="ship-line-dot" aria-hidden="true" /> : null}
+      {chip.text}
     </small>
   );
 }

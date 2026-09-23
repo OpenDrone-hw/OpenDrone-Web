@@ -243,7 +243,7 @@ export function NewsletterSignup({
                 : 'newsletter.signup_eyebrow'
             }
             as="p"
-            className="gold-tag font-mono text-[12px] uppercase tracking-[0.2em] text-[var(--color-gold-text)] mb-0.5"
+            className={`font-mono text-[12px] uppercase tracking-[0.2em] mb-0.5 ${isFooter ? 'text-[var(--color-text-muted)]' : 'gold-tag text-[var(--color-gold-text)]'}`}
           />
         )}
         {/* The heading keeps its DOM id in code: `aria-labelledby` on the
@@ -385,9 +385,9 @@ export function NewsletterSignup({
             className={[
               'font-mono text-xs uppercase tracking-[0.14em] font-bold',
               // The footer form sits under every page's own gold action, so
-              // it takes the outline style: one gold fill per screen.
+              // it takes a neutral outline: gold stays on the page's action.
               isFooter
-                ? 'border border-[var(--color-gold)] text-[var(--color-gold-text)] bg-transparent hover:bg-[color-mix(in_srgb,var(--color-gold)_12%,transparent)]'
+                ? 'border border-[var(--color-border-strong)] text-[var(--color-text)] bg-transparent hover:border-[var(--color-text)]'
                 : 'bg-[var(--color-gold-fill)] text-[var(--color-on-accent)] hover:bg-[var(--color-gold-fill-hover)]',
               'px-5 py-2.5 min-h-[44px] inline-flex items-center justify-center rounded-sm',
               'transition-colors',

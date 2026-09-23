@@ -15,7 +15,6 @@
   "legend_steps": ["Early bird", "Step 2", "Standard"],
   "stack_title": "Stack",
   "targets_title": "Funding targets",
-  "targets_line": "One order ships in one parcel. Want the stack in {month}? Order it separately.",
   "card_cta": "Pre-order",
   "funded": "Funded",
   "tracker_empty": "No pre-orders open.",

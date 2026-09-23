@@ -400,6 +400,7 @@ export default function App() {
 
 export function ErrorBoundary() {
   const error = useRouteError();
+  const rootData = useRouteLoaderData<RootLoader>('root');
   let errorMessage = '';
   let errorStatus = 500;
 
@@ -413,9 +414,16 @@ export function ErrorBoundary() {
 
   const isNotFound = errorStatus === 404;
 
-  // 404 gets the easter egg: an FPV "lost signal / failsafe" screen.
+  // 404 gets the easter egg: an FPV "lost signal / failsafe" screen, inside
+  // the site header and footer so nav, cart and search stay.
   if (isNotFound) {
-    return <SignalLost />;
+    return rootData ? (
+      <PageLayout {...rootData}>
+        <SignalLost />
+      </PageLayout>
+    ) : (
+      <SignalLost />
+    );
   }
 
   return (

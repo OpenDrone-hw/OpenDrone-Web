@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import {campaignState, priceLadder, type CampaignBatch} from './preorder-campaign.ts';
-import {barPercent, ladderText, stepBarView} from './preorder-meter.ts';
+import {barPercent, ladderText, stepBarView, stepLayout} from './preorder-meter.ts';
 
 const PENDING =
   'ships about 10 weeks after its target is reached: by 11 March 2027 if the target is reached by 31 December 2026, otherwise you choose a refund or to wait';
@@ -33,6 +33,23 @@ describe('stepBarView', () => {
     const bar = stepBarView(campaignState(STACK, 260, PENDING, TIERS), ENDS);
     assert.equal(bar.label, '10 / 250');
     assert.deepEqual(bar.ticks, []);
+  });
+});
+
+describe('stepLayout', () => {
+  const ENDS = TIERS.map((t) => t.upTo);
+  const FROMS = [1, 101, 251];
+
+  it('places each step price over its own stretch of a 250-unit batch', () => {
+    const state = campaignState(STACK, 37, PENDING, TIERS);
+    const layout = stepLayout(state, stepBarView(state, ENDS), FROMS);
+    assert.equal(layout?.tail, true);
+    assert.equal(layout?.lefts.length, 3);
+  });
+
+  it('falls back to equal columns when the steps crowd a 1000-unit target', () => {
+    const state = campaignState([{units: 1000}, {units: 4000}], 0, PENDING, TIERS);
+    assert.equal(stepLayout(state, stepBarView(state, ENDS), FROMS), null);
   });
 });
 

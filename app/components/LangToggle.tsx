@@ -38,8 +38,8 @@ export function legalHref(to: string, locale: Locale): string {
 }
 
 /**
- * The footer's language line: the shop is English, the legal texts exist in
- * English, Dutch and French. Each link opens the terms in that language and
+ * The footer's language line: the legal texts exist in English, Dutch and
+ * French. Each link opens the terms in that language and
  * stores the choice, so later unprefixed legal links follow it.
  */
 export function LegalLanguages({className}: {className?: string} = {}) {
@@ -48,7 +48,7 @@ export function LegalLanguages({className}: {className?: string} = {}) {
     <div className={className}>
       <Txt
         id="chrome.footer_legal_languages"
-        fallback="The shop is in English. Legal texts:"
+        fallback="Legal texts:"
       />{' '}
       {(['en', 'nl', 'fr'] as const).map((loc, i) => (
         <span key={loc}>

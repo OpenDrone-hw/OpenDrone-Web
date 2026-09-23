@@ -18,7 +18,7 @@ import {parseBuilds} from '~/lib/build-recommendations';
 import buildsJson from '../../content/builds.json';
 import {lineDisplayName, setSize} from '~/lib/product-content';
 import {Txt} from '~/components/Txt';
-import {ShipChip} from '~/components/ShipChip';
+import {ShipChip, parcelPromise, shipChipText} from '~/components/ShipChip';
 import {buildSeoMeta} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
 import {
@@ -126,7 +126,6 @@ function sendCartCountry(code: string) {
 function checkNotice(check: string | null): string | null {
   if (check === CART_CHECK.paidBatch) return t('check_paid_batch', 'Not enough left in batch 1. Lower the quantity where shown.');
   if (check === CART_CHECK.shipDate) return t('check_ship_date', 'A ship date changed. Check the dates below.');
-  if (check === CART_CHECK.mixedDates) return t('check_mixed_dates', 'Items ship on different dates. Check the dates below.');
   return null;
 }
 
@@ -471,8 +470,9 @@ function PaymentMarks({methods}: {methods: string[]}) {
 
 /**
  * Lines that ship at different times go in one parcel when the last is
- * ready. When some lines have a date of their own, a quiet link takes the
- * rest out of this order so they can be ordered separately.
+ * ready: "One parcel · ETA 11 Mar 2027 if funded". When some lines have a
+ * date of their own, a quiet link takes the rest out of this order so they
+ * can be ordered separately.
  */
 function MixedNote({
   cart,
@@ -488,6 +488,14 @@ function MixedNote({
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const plan = splitPlan(cart, info);
+  // The date the parcel ships: that of the line it waits for.
+  const parcel = shipChipText(
+    parcelPromise(cart.lines.map((l) => l.shipPromise)),
+    cart.lines.some((l) => {
+      const target = info[l.id]?.target;
+      return target ? target.ordered < target.units : false;
+    }),
+  );
 
   const split = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -520,7 +528,8 @@ function MixedNote({
   return (
     <div className="cart-mixed-note" role="note">
       <div className="cart-summary-note cart-mixed-line">
-        {t('mixed_one_parcel', 'One parcel, ships with the last item')}
+        {t('mixed_one_parcel', 'One parcel')}
+        {parcel ? ` · ${parcel.text}` : null}
         {plan ? (
           <>
             {' · '}

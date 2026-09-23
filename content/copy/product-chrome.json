@@ -16,7 +16,6 @@
   "buy_vat_note": "incl. VAT",
   "buy_early_bird": "Early bird",
   "buy_ship_to": "Shipping to {country} {price}",
-  "buy_ship_from": "Shipping from {price}",
   "buy_ship_blocked": "No shipping to {country}",
   "buy_duties_short": "duties on delivery",
   "buy_terms_link": "Pre-order terms",

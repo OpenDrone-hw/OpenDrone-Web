@@ -69,24 +69,10 @@ export function PageLayout({
           <main id="main-content" className="site-main">
             {children}
           </main>
-          {/* The desktop homepage is the scroll-pinned WebGL hero and owns its
-              own ending, so it ships no footer. The mobile homepage (MobileHome)
-              is an ordinary scrolling page - without a footer it ends in a void
-              with no nav/legal/newsletter. Render the footer there too, hidden
-              above the mobile breakpoint so the desktop hero is untouched. */}
-          {!isHomepage ? (
-            <Footer
-              company={company}
-              turnstileSiteKey={turnstileSiteKey ?? null}
-            />
-          ) : (
-            <div className="home-mobile-footer">
-              <Footer
-                company={company}
-                turnstileSiteKey={turnstileSiteKey ?? null}
-              />
-            </div>
-          )}
+          <Footer
+            company={company}
+            turnstileSiteKey={turnstileSiteKey ?? null}
+          />
         </div>
       </Aside.Provider>
     </MotionConfig>

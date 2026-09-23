@@ -459,9 +459,15 @@ function promiseLatestShip(promise: string): string | null {
 
 function fundingShort(latestShip: string | null): string {
   const date = shortCampaignDate(latestShip);
-  return date
-    ? `Funding target · ships by ${date} if reached`
-    : 'Funding target · ships once reached';
+  return date ? `ETA ${date} if funded` : 'Funding target';
+}
+
+/** A dated promise, short: "ships late October 2026" gives "Ships Oct
+ *  2026". A promise that names no month and year keeps its own words. */
+function datedShort(promise: string): string {
+  const match = promise.match(/\b([A-Za-z]+) (\d{4})\b/);
+  const month = match ? LONG_MONTHS.indexOf(match[1].toLowerCase()) : -1;
+  return month < 0 ? capitalizeFirst(promise.trim()) : `Ships ${SHORT_MONTHS[month]} ${match![2]}`;
 }
 
 function longSentence(promise: string): string {
@@ -472,9 +478,8 @@ function longSentence(promise: string): string {
 /**
  * The ship text for the next unit of a campaign SKU, in two lengths.
  *
- * short: "Funding target · ships by 11 Mar 2027 if reached" for a unit that
- * waits for a funding target, and the batch date for everything else,
- * "Ships late October 2026". long: the full promise as a sentence, "Ships
+ * short: "ETA 11 Mar 2027 if funded" for a unit that waits for a funding
+ * target, and the batch month for everything else, "Ships Oct 2026". long: the full promise as a sentence, "Ships
  * about 10 weeks after its target is reached: by 11 March 2027 if the target
  * is reached by 31 December 2026, otherwise you choose a refund or to wait."
  */
@@ -486,7 +491,7 @@ export function shipLabel(
   if (campaign.shipsOnTarget && !campaign.paidStock) {
     return fundingShort(campaign.latestShip ?? promiseLatestShip(campaign.shipPromise));
   }
-  return capitalizeFirst(campaign.shipPromise.trim());
+  return datedShort(campaign.shipPromise);
 }
 
 /**
@@ -502,7 +507,7 @@ export function shipLabelFromPromise(
   if (!text) return null;
   if (form === 'long') return longSentence(text);
   const latest = promiseLatestShip(text);
-  return latest || /\bafter its target\b/.test(text) ? fundingShort(latest) : capitalizeFirst(text);
+  return latest || /\bafter its target\b/.test(text) ? fundingShort(latest) : datedShort(text);
 }
 
 /**
