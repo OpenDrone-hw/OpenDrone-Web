@@ -832,11 +832,9 @@ html[data-cart-preview] .site-header {
    global `*`, which would also freeze one-time entrances (the board fly-in,
    chapter reveals) mid-flight and strand them off-screen. */
 html.anim-paused .site-wordmark-sheen,
-html.anim-paused .placeholder-banner__dot::after,
 html.anim-paused .latest-commit-dot,
 html.anim-paused .support-typing span,
 html.perf-lite .site-wordmark-sheen,
-html.perf-lite .placeholder-banner__dot::after,
 html.perf-lite .latest-commit-dot,
 html.perf-lite .support-typing span {
   animation-play-state: paused !important;
@@ -14224,148 +14222,6 @@ html.light .editorial-watermark {
   border-bottom-color: var(--od-pcb-gold);
 }
 
-/* --------------------------------------------------------------------- */
-/* Opening-soon pill: sitewide, fixed bottom-right.                       */
-/* Public coming-soon notice with a newsletter CTA. Shown only while the  */
-/* shop is closed (root.tsx `prelaunch`, derived from PUBLIC_COMING_SOON  */
-/* and SHOPIFY_CHECKOUT_WRITE_ENABLED); rendered in PageLayout.tsx.       */
-/*                                                                        */
-/* Fixed positioning (not sticky) so it never pushes document flow,      */
-/* never overlaps the header, and never breaks the homepage hero.        */
-/* --------------------------------------------------------------------- */
-.placeholder-banner {
-  position: fixed;
-  bottom: 16px;
-  right: 16px;
-  z-index: 80;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 0.7rem 0.4rem 0.55rem;
-  background: rgba(185, 28, 28, 0.95);
-  color: #fff;
-  font-family: var(--font-sans);
-  font-size: 12px;
-  line-height: 1.3;
-  border-radius: var(--r-pill);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45),
-    0 1px 2px rgba(185, 28, 28, 0.4);
-  /* No backdrop-filter: the banner is 95% opaque so the blur was imperceptible,
-     yet the pulsing dot inside it forced a perpetual per-frame re-blur. */
-  /* The pill shell stays click-through; only the __msg link re-enables
-     pointer events for itself. */
-  pointer-events: none;
-  user-select: none;
-  max-width: calc(100vw - 32px);
-}
-
-/* PDP variant: the right rail hosts the notify form (consent checkbox +
-   Privacy link land in the bottom-right corner at 1440×900), so the pill
-   moves to the free bottom-left corner there. Theme-independent. */
-.placeholder-banner--left {
-  right: auto;
-  left: 16px;
-}
-
-.placeholder-banner__dot {
-  position: relative;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #fff;
-  flex-shrink: 0;
-}
-
-/* Expanding halo. A pseudo-element disc the size of the dot scales up and fades
-  : a compositor-only transform/opacity ripple that reproduces the old
-   box-shadow pulse without animating on the paint path (box-shadow repaints an
-   expanding ring every frame). scale(3.3) ≈ the old 8px spread (7px dot →
-   ~23px). */
-.placeholder-banner__dot::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.55);
-  pointer-events: none;
-  animation: placeholder-banner-pulse 2.4s ease-out infinite;
-}
-
-@keyframes placeholder-banner-pulse {
-  0% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  70% {
-    transform: scale(3.3);
-    opacity: 0;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 0;
-  }
-}
-
-.placeholder-banner__tag {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  flex-shrink: 0;
-}
-
-/* The message is a real <Link> to /newsletter. The pill background is a
-   theme-independent literal, so the link inherits the pill's ink instead
-   of the global `a` color (which is near-black in light mode and would
-   vanish on the red). Underline via currentColor: no color literals. */
-.placeholder-banner__msg {
-  font-weight: 500;
-  font-size: 12px;
-  opacity: 0.95;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: inherit;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  pointer-events: auto;
-}
-
-/* Global `a:hover` swaps to the gold accent, which is illegible on the
-   red pill; keep the ink and just lift the opacity instead. Keyboard
-   focus comes from the global :focus-visible gold ring. */
-.placeholder-banner__msg:hover {
-  color: inherit;
-  opacity: 1;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  /* The pulse lives on the ::after halo, not the dot itself. */
-  .placeholder-banner__dot::after {
-    animation: none;
-  }
-}
-
-@media (max-width: 640px) {
-  .placeholder-banner {
-    bottom: 12px;
-    right: 12px;
-    padding: 0.35rem 0.6rem 0.35rem 0.5rem;
-    font-size: 12px;
-  }
-  /* The old explanatory sentence was hidden on phones for width; the CTA
-     link is short and is the pill's whole point, so it stays visible. */
-  .placeholder-banner--left {
-    left: 12px;
-    /* The generic mobile rule above re-sets `right: 12px` later in the
-       cascade than the desktop --left override; without re-clearing it here
-       a fixed element with both insets stretches full-width. */
-    right: auto;
-  }
-}
-
 /* Newsletter landing: recent-posts list under the signup form */
 .newsletter-recent {
   margin-top: 56px;
@@ -14530,8 +14386,7 @@ html.light .editorial-watermark {
     min-width: 44px;
     justify-content: center;
   }
-  .product-card-badge,
-  .placeholder-banner__tag {
+  .product-card-badge {
     font-size: 12px;
   }
   :root {
@@ -14782,14 +14637,6 @@ html.light .editorial-watermark {
     font-weight: 600;
     margin: 0 0 0.15rem;
   }
-}
-
-/* The fixed OPENING SOON pill (z-index 80) floats over the cart/menu
-   drawer's lower rows when one is open. Its CTA link is clickable, so hide
-   it while any aside/overlay is expanded: the drawer reads clean and the
-   link cannot steal a tap. (Pre-launch artifact; removed at launch.) */
-body:has(.overlay.expanded) .placeholder-banner {
-  display: none;
 }
 
 /* Cart controls on touch: the steppers and Remove were ~26px tall: below
@@ -17475,7 +17322,6 @@ html.hero-incutec-hint .incutec-hint {
   color: var(--color-on-accent);
 }
 html.anim-paused .site-wordmark-sheen,
-html.anim-paused .placeholder-banner__dot::after,
 html.anim-paused .hero-drag-hint.is-visible,
 html.anim-paused .hero-scroll-hint.is-visible svg,
 html.anim-paused .latest-commit-dot,
@@ -17483,7 +17329,6 @@ html.anim-paused .support-typing span,
 html.anim-paused .home-mobile-board-float--front,
 html.anim-paused .home-mobile-board-float--rear,
 html.perf-lite .site-wordmark-sheen,
-html.perf-lite .placeholder-banner__dot::after,
 html.perf-lite .hero-drag-hint.is-visible,
 html.perf-lite .hero-scroll-hint.is-visible svg,
 html.perf-lite .latest-commit-dot,

@@ -171,11 +171,9 @@ export async function loader(args: Route.LoaderArgs) {
     company,
     locale,
     // The shop is open only when both commerce gates are: the coming-soon
-    // flag is off and checkout writes are on. The "Opening soon" pill and
-    // the launched-state chrome (preorder strip, cart link) follow this one
-    // answer, so a launched shop never tells a buyer it is not open yet.
+    // flag is off and checkout writes are on. The preorder strip and cart
+    // link follow this answer; destination approval remains independent.
     shopOpen,
-    prelaunch: !shopOpen,
     // Coming-soon kill switch: defaults ON; set PUBLIC_COMING_SOON=0 the day
     // orders open. Per-product overrides in product-content.ts win over this.
     comingSoon: globalComingSoon,

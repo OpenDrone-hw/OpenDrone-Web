@@ -6,7 +6,6 @@ import {Aside} from '~/components/Aside';
 import {Footer} from '~/components/Footer';
 import {Header, HeaderMenu, type HeaderFamilyProduct} from '~/components/Header';
 import {LangToggle} from '~/components/LangToggle';
-import {PlaceholderBanner} from '~/components/PlaceholderBanner';
 import {RouteProgress} from '~/components/RouteProgress';
 import {Txt} from '~/components/Txt';
 import {CartAddedDialog} from '~/components/CartAddedDialog';
@@ -19,9 +18,6 @@ interface PageLayoutProps {
   turnstileSiteKey?: string | null;
   /** Both commerce gates are open (root loader). */
   shopOpen?: boolean;
-  /** The shop is not open yet: shows the "Opening soon" pill. Derived from
-   *  the same gates as `shopOpen` in the root loader. */
-  prelaunch?: boolean;
   familyProducts?: HeaderFamilyProduct[];
   children?: React.ReactNode;
 }
@@ -33,7 +29,6 @@ export function PageLayout({
   company,
   turnstileSiteKey,
   shopOpen = false,
-  prelaunch = true,
   familyProducts,
 }: PageLayoutProps) {
   const {pathname} = useLocation();
@@ -52,14 +47,6 @@ export function PageLayout({
             <Txt id="chrome.skip_link" />
           </a>
           <RouteProgress />
-          {/* On PDPs the bottom-right corner belongs to the buy rail's
-              notify-at-launch form (consent checkbox + Privacy link at
-              common scroll positions) - park the pill bottom-left there. */}
-          {prelaunch && !shopOpen && (
-            <PlaceholderBanner
-              side={pathname.startsWith('/products/') ? 'left' : 'right'}
-            />
-          )}
           <Header
             commerceHandoff={commerceHandoff}
             accountUrl={accountUrl}
