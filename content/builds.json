@@ -1,5 +1,5 @@
 {
-  "$comment": "Build compatibility for the add-to-cart dialog's 'complete your build' (app/lib/build-recommendations.ts). A SKU listed in a build belongs to that size; the parts of a build are what is suggested around it, with the quantity one quad needs. A role marked sizeNeutral (receivers) is filled by any product with that handle, whatever its variant. Shopify's recommendations may reorder parts, never add one that is not listed here. A part may name its own product handle (each prop set is its own product); `suggest: false` keeps it out of the drawer.",
+  "$comment": "Build compatibility for the add-to-cart dialog's 'complete your build' (app/lib/build-recommendations.ts). A SKU listed in a build belongs to that size; the parts of a build are what is suggested around it, with the quantity one quad needs. A role marked sizeNeutral (receivers) is filled by any product with that handle, whatever its variant. Shopify's recommendations may reorder parts, never add one that is not listed here. A part may name its own product handle (each prop set is its own product).",
   "roles": {
     "flight-controller": {
       "handle": "openfc-lite"
@@ -21,8 +21,7 @@
     "antenna": {
       "handle": "elrs-antenna-24",
       "sizeNeutral": true
-    },
-    "strap": {}
+    }
   },
   "builds": [
     {
@@ -59,13 +58,6 @@
           "sku": "ACC-PROP-3-HQ-T3X3X3",
           "handle": "hqprop-t3x3x3-propeller-set-3-inch-t-mount",
           "quantity": 1
-        },
-        {
-          "role": "strap",
-          "sku": "ACC-STRAP-15X200",
-          "handle": "battery-strap-15-x-200-mm-woven-logo",
-          "quantity": 1,
-          "suggest": false
         }
       ]
     },
@@ -108,13 +100,6 @@
           "role": "antenna",
           "sku": "ACC-ANT-T",
           "quantity": 1
-        },
-        {
-          "role": "strap",
-          "sku": "ACC-STRAP-20X220",
-          "handle": "battery-strap",
-          "quantity": 1,
-          "suggest": false
         }
       ]
     }

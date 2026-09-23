@@ -16,8 +16,7 @@ export type BuildRole =
   | 'motors'
   | 'receiver'
   | 'props'
-  | 'antenna'
-  | 'strap';
+  | 'antenna';
 
 export type BuildsConfig = {
   roles: Record<BuildRole, {handle?: string; sizeNeutral?: boolean}>;
@@ -25,9 +24,8 @@ export type BuildsConfig = {
     id: string;
     label: string;
     /** `handle` names the product when the role has none of its own (each
-     *  prop set is its own product). `suggest: false` keeps a part out of
-     *  the add-to-cart drawer. */
-    parts: Array<{role: BuildRole; sku: string; quantity: number; handle?: string; suggest?: boolean}>;
+     *  prop set is its own product). */
+    parts: Array<{role: BuildRole; sku: string; quantity: number; handle?: string}>;
   }>;
 };
 
@@ -125,7 +123,7 @@ export function buildSuggestionSpecs(
   }
   const rank = new Map(preferredHandles.map((handle, index) => [handle, index]));
   return build.parts
-    .filter((p) => !filled.has(p.role) && p.suggest !== false)
+    .filter((p) => !filled.has(p.role))
     .map((p, index) => ({
       part: {
         ...p,
