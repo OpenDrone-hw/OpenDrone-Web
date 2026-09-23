@@ -88,7 +88,7 @@ describe('Shopify newsletter ownership', () => {
     assert.deepEqual(bodies[1].variables.input?.tags, ['newsletter']);
   });
 
-  it('tags a subscriber from a country sold through shops with that country', async () => {
+  it('tags a subscriber from a country not sold direct with that country', async () => {
     const bodies: Array<{query: string; variables: {input?: {tags?: string[]}}}> = [];
     mock.method(globalThis, 'fetch', async (
       _input: string | URL | Request,
@@ -102,7 +102,11 @@ describe('Shopify newsletter ownership', () => {
     });
     assert.equal(await subscribeWithShopify(ENV, 'pilot@example.com', 'openrx', 'us'), 'subscribed');
     assert.deepEqual(bodies[1].variables.input?.tags, ['newsletter', 'notify-openrx', 'country-US']);
-    for (const country of ['DE', 'RU', null, 'ZZ']) {
+    // An EU country not open yet (Germany while its WEEE number is null).
+    bodies.length = 0;
+    await subscribeWithShopify(ENV, 'pilot@example.com', undefined, 'DE');
+    assert.deepEqual(bodies[1].variables.input?.tags, ['newsletter', 'country-DE']);
+    for (const country of ['NL', 'RU', null, 'ZZ']) {
       bodies.length = 0;
       await subscribeWithShopify(ENV, 'pilot@example.com', undefined, country);
       assert.deepEqual(bodies[1].variables.input?.tags, ['newsletter'], String(country));

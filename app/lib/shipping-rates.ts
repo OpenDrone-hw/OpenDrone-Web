@@ -3,10 +3,14 @@
  * Shopify shipping profile (bpost). Display only: Shopify checkout charges
  * the rate for the shipping address. Consumers buy direct only inside the
  * EU, where no import duty or customs clearance is due; every other country
- * that is not blocked buys through shops.
+ * that is not blocked buys through shops. An EU country whose law wants a
+ * registration number on the offer stays closed until that number is set
+ * (`euSaleOpen` in ./registrations.ts).
  *
- * Bundler-free (no imports) so the node:test suites can load it.
+ * Relative imports only, so the node:test suites can load it.
  */
+
+import {REGISTRATIONS, euSaleOpen, type RegistrationsFile} from './registrations.ts';
 
 /** Countries Incutec does not ship to. */
 export const BLOCKED_COUNTRIES: ReadonlySet<string> = new Set(['RU', 'BY', 'IR', 'KP', 'SY', 'CU']);
@@ -41,21 +45,29 @@ export const SHIPPING_ZONES: ShippingZone[] = [
 
 /**
  * What a destination gets: `direct`, a consumer order at the zone's flat
- * rate (EU only); `shops`, not sold direct, available through shops;
- * `blocked`, not sold at all (`BLOCKED_COUNTRIES`).
+ * rate (EU only); `closed`, an EU country not open yet because a
+ * registration number the offer must show is missing; `shops`, not sold
+ * direct, available through shops; `blocked`, not sold at all
+ * (`BLOCKED_COUNTRIES`).
  */
 export type ShippingQuote =
   | {country: string; kind: 'blocked'}
   | {country: string; kind: 'shops'}
+  | {country: string; kind: 'closed'}
   | {country: string; kind: 'direct'; zone: ShippingZone['id']; rate: number};
 
-/** The quote for one ISO country code, or null for an unknown country. */
-export function shippingQuote(country: string | null): ShippingQuote | null {
+/** The quote for one ISO country code, or null for an unknown country.
+ *  `registrations` is for tests; the committed file is the default. */
+export function shippingQuote(
+  country: string | null,
+  registrations: RegistrationsFile = REGISTRATIONS,
+): ShippingQuote | null {
   const code = isoCode(country);
   if (!code) return null;
   if (BLOCKED_COUNTRIES.has(code)) return {country: code, kind: 'blocked'};
   const zone = SHIPPING_ZONES.find((z) => z.countries.includes(code));
   if (!zone) return {country: code, kind: 'shops'};
+  if (!euSaleOpen(code, registrations)) return {country: code, kind: 'closed'};
   return {country: code, kind: 'direct', zone: zone.id, rate: zone.rate};
 }
 
@@ -64,6 +76,15 @@ export function shippingQuote(country: string | null): ShippingQuote | null {
  *  (which the shop treats as its default EU market). */
 export function soldThroughShops(country: string | null): boolean {
   return shippingQuote(country)?.kind === 'shops';
+}
+
+/** Why a visitor from this country cannot buy direct, when the page offers
+ *  something instead: `shops` (outside the EU) or `closed` (an EU country
+ *  not open yet). Null for a country sold direct, a blocked one (the cart
+ *  refuses it) and an unknown one. */
+export function notSoldDirect(country: string | null): 'shops' | 'closed' | null {
+  const kind = shippingQuote(country)?.kind;
+  return kind === 'shops' || kind === 'closed' ? kind : null;
 }
 
 /** Every ISO 3166-1 country code. */

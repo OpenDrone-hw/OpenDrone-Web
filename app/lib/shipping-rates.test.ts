@@ -16,12 +16,16 @@ import {
   shipCountryOptions,
   shipCountryPicker,
   shippingQuote,
+  notSoldDirect,
   soldThroughShops,
 } from './shipping-rates.ts';
 
+/** Every EU country open: the rate table alone, without the sale gate. */
+const ALL_OPEN = Object.fromEntries([...EU_COUNTRIES].map((c) => [c, {offerNeedsNumber: false}]));
+
 describe('shippingQuote', () => {
   const rate = (c: string) => {
-    const q = shippingQuote(c);
+    const q = shippingQuote(c, ALL_OPEN);
     return q?.kind === 'direct' ? q.rate : null;
   };
 
@@ -33,7 +37,7 @@ describe('shippingQuote', () => {
   });
 
   it('sells Bulgaria direct at its own rate', () => {
-    assert.deepEqual(shippingQuote('BG'), {country: 'BG', kind: 'direct', zone: 'eu_bg', rate: 39.95});
+    assert.deepEqual(shippingQuote('BG', ALL_OPEN), {country: 'BG', kind: 'direct', zone: 'eu_bg', rate: 39.95});
   });
 
   it('sells direct to exactly the EU27, each in one zone', () => {
@@ -41,7 +45,25 @@ describe('shippingQuote', () => {
     assert.equal(new Set(all).size, all.length);
     assert.deepEqual([...all].sort(), [...EU_COUNTRIES].sort());
     assert.equal(EU_COUNTRIES.size, 27);
-    for (const c of EU_COUNTRIES) assert.equal(shippingQuote(c)?.kind, 'direct', c);
+    for (const c of EU_COUNTRIES) assert.equal(shippingQuote(c, ALL_OPEN)?.kind, 'direct', c);
+  });
+
+  it('keeps an EU country closed until the number its offer needs is set', () => {
+    const file = (de: string | null) => ({
+      DE: {weee: de, packaging: null, offerNeedsNumber: true},
+      NL: {weee: null, packaging: null, offerNeedsNumber: false},
+    });
+    assert.deepEqual(shippingQuote('DE', file(null)), {country: 'DE', kind: 'closed'});
+    assert.equal(shippingQuote('DE', file('DE12345678'))?.kind, 'direct');
+    assert.equal(shippingQuote('NL', file(null))?.kind, 'direct');
+    assert.equal(notSoldDirect('US'), 'shops');
+    assert.equal(notSoldDirect('RU'), null);
+    assert.equal(notSoldDirect(null), null);
+  });
+
+  it('gates DE, FR, ES and IE on the committed file while their numbers are null', () => {
+    for (const c of ['DE', 'FR', 'ES', 'IE']) assert.equal(notSoldDirect(c), 'closed', c);
+    for (const c of ['BE', 'NL', 'LU', 'AT', 'BG']) assert.equal(notSoldDirect(c), null, c);
   });
 
   it('sends every other country that is not blocked to the shops', () => {
@@ -115,7 +137,8 @@ describe('shipCountryPicker', () => {
   it('lists Belgium, the Netherlands, Germany, France and Luxembourg first', () => {
     const {likely, rest} = shipCountryPicker();
     assert.deepEqual(likely.map((o) => o.code), ['BE', 'NL', 'DE', 'FR', 'LU']);
-    assert.deepEqual(likely.map((o) => o.rate), [8.5, 9.95, 9.95, 9.95, 9.95]);
+    // Germany and France stay closed until their offer numbers are set.
+    assert.deepEqual(likely.map((o) => o.rate), [8.5, 9.95, null, null, 9.95]);
     assert.equal(likely[0].name, 'Belgium');
     for (const code of LIKELY_SHIP_COUNTRIES) assert.ok(!rest.some((o) => o.code === code), code);
     assert.equal(likely.length + rest.length, SHIP_COUNTRY_CODES.length);
@@ -133,9 +156,9 @@ describe('shipCountryPicker', () => {
       assert.ok(!codes.includes(c), c);
     }
     for (const c of BLOCKED_COUNTRIES) assert.ok(!codes.includes(c), c);
-    // A rate for every EU country, "through shops" (null) for the others.
+    // A rate where sold direct, null for shops-only and closed countries.
     for (const o of [...likely, ...rest]) {
-      assert.equal(o.rate !== null && o.rate > 0, EU_COUNTRIES.has(o.code), o.code);
+      assert.equal(o.rate !== null && o.rate > 0, shippingQuote(o.code)?.kind === 'direct', o.code);
     }
   });
 });

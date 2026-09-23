@@ -1,4 +1,4 @@
-import {soldThroughShops} from '../shipping-rates.ts';
+import {notSoldDirect} from '../shipping-rates.ts';
 
 type NewsletterEnv = Pick<
   Env,
@@ -79,9 +79,10 @@ function successfulConsent(customer: Customer | null | undefined, expected: Mark
  * the caller tells them apart so a repeat submit does not send a second
  * welcome mail.
  *
- * `country` is the visitor's country. One sold only through shops adds a
- * `country-<CODE>` tag (`country-US`), so those subscribers can be told when
- * direct sales open there; EU, blocked and unknown countries add none.
+ * `country` is the visitor's country. One not sold direct (outside the EU,
+ * or an EU country not open yet) adds a `country-<CODE>` tag (`country-US`),
+ * so those subscribers can be told when direct sales open there; open EU,
+ * blocked and unknown countries add none.
  */
 export async function subscribeWithShopify(
   env: NewsletterEnv,
@@ -109,7 +110,7 @@ export async function subscribeWithShopify(
     const tags = [
       'newsletter',
       ...(productHandle ? [`notify-${productHandle}`] : []),
-      ...(country && soldThroughShops(country) ? [`country-${country.trim().toUpperCase()}`] : []),
+      ...(country && notSoldDirect(country) ? [`country-${country.trim().toUpperCase()}`] : []),
     ];
     if (existing) {
       const written = await admin<{

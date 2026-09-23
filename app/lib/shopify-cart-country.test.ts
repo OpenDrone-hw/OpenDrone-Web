@@ -31,10 +31,10 @@ function deps(cartId: string | null = 'gid://shopify/Cart/abc') {
 describe('handleCartCountry', () => {
   it('puts the picked country on the session cart', async () => {
     const d = deps();
-    const res = await handleCartCountry(post('de'), OPEN, d);
+    const res = await handleCartCountry(post('nl'), OPEN, d);
     assert.equal(res.status, 200);
-    assert.deepEqual(await res.json(), {country: 'DE', applied: true});
-    assert.deepEqual(d.calls, [['gid://shopify/Cart/abc', 'DE']]);
+    assert.deepEqual(await res.json(), {country: 'NL', applied: true});
+    assert.deepEqual(d.calls, [['gid://shopify/Cart/abc', 'NL']]);
     assert.equal(res.headers.get('Cache-Control'), 'no-store');
   });
 
@@ -46,9 +46,9 @@ describe('handleCartCountry', () => {
     assert.equal(d.calls.length, 0);
   });
 
-  it('never puts a country sold through shops on the cart', async () => {
+  it('never puts a country sold through shops, or a closed one, on the cart', async () => {
     const d = deps();
-    for (const c of ['US', 'GB', 'CH', 'NO']) {
+    for (const c of ['US', 'GB', 'CH', 'NO', 'DE']) {
       const res = await handleCartCountry(post(c), OPEN, d);
       assert.equal(res.status, 200);
       assert.deepEqual(await res.json(), {country: c, applied: false});
@@ -91,7 +91,7 @@ describe('handleCartCountry', () => {
 
   it('reports a Shopify refusal without throwing', async () => {
     const logged: string[] = [];
-    const res = await handleCartCountry(post('FR'), OPEN, {
+    const res = await handleCartCountry(post('AT'), OPEN, {
       getCartId: () => 'gid://shopify/Cart/abc',
       setCountry: async () => {
         throw new Error('shopify: cartBuyerIdentityUpdate failed');
@@ -99,7 +99,7 @@ describe('handleCartCountry', () => {
       logError: (m) => logged.push(m),
     });
     assert.equal(res.status, 502);
-    assert.deepEqual(await res.json(), {country: 'FR', applied: false});
+    assert.deepEqual(await res.json(), {country: 'AT', applied: false});
     assert.equal(logged.length, 1);
   });
 });

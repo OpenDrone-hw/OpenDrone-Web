@@ -244,7 +244,7 @@ function PopulatedCart({
   info: Record<string, CartLineInfo>;
   payments: string[];
   /** The visitor's country: the VAT wording and whether checkout is
-   *  offered (EU only). Shipping is priced at Shopify checkout from the
+   *  offered (open EU countries only). Shipping is priced at Shopify checkout from the
    *  address. */
   country: string | null;
   onSplit: (items: Removed) => void;
@@ -259,11 +259,13 @@ function PopulatedCart({
   // not ship together even when their promise reads the same.
   const groupOf = (line: ShopifyCartLine) => info[line.id]?.group ?? `date:${line.shipPromise ?? ''}`;
   const mixed = new Set(cart.lines.map(groupOf)).size > 1;
-  // Checkout is refused for a blocked country and for one sold only through
-  // shops (outside the EU); the cart says which and links onward.
+  // Checkout is refused for a blocked country, for one sold only through
+  // shops (outside the EU) and for an EU country not open yet; the cart
+  // says which and links onward.
   const quoteKind = shippingQuote(country)?.kind;
   const shipBlocked = quoteKind === 'blocked';
   const throughShops = quoteKind === 'shops';
+  const closed = quoteKind === 'closed';
   const vatIncluded = paysEuVat(country);
   const overLimit = cart.lines.some((line) => {
     const max = info[line.id]?.maxQuantity;
@@ -310,6 +312,11 @@ function PopulatedCart({
               {t('checkout_shops', 'Available through shops in {country}.', {country: countryName(country ?? '')})}{' '}
               <Link to="/wholesale">{t('checkout_shops_trade', 'Are you a shop?')}</Link>
               {' · '}
+              <Link to="/newsletter">{t('checkout_shops_notify', 'Get launch news')}</Link>
+            </p>
+          ) : closed ? (
+            <p className="cart-summary-note" role="note">
+              {t('checkout_closed', 'Opening in {country} soon.', {country: countryName(country ?? '')})}{' '}
               <Link to="/newsletter">{t('checkout_shops_notify', 'Get launch news')}</Link>
             </p>
           ) : (

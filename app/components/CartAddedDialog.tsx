@@ -11,7 +11,7 @@ import {
 } from '~/lib/product-content';
 import {ShipChip, parcelPromise, shipChipText} from './ShipChip';
 import {paysEuVat} from '~/lib/visitor-country';
-import {countryName, soldThroughShops} from '~/lib/shipping-rates';
+import {countryName, notSoldDirect} from '~/lib/shipping-rates';
 import {
   buildSuggestionSpecs,
   parseBuilds,
@@ -116,8 +116,9 @@ export function CartAddedDialog() {
   // applies.
   const visitor = rootData?.visitorCountry ?? null;
   const vatIncluded = paysEuVat(visitor);
-  // Outside the EU checkout is not offered, as in the cart.
-  const throughShops = soldThroughShops(visitor);
+  // Outside the EU, and in an EU country not open yet, checkout is not
+  // offered, as in the cart.
+  const notDirect = notSoldDirect(visitor);
 
   // The parts that complete the build, judged on the cart as it was when
   // the drawer opened, so a part added from here stays listed as "Added".
@@ -287,11 +288,16 @@ export function CartAddedDialog() {
           {/* Checkout is a plain form post: the cart action checks every line
               again and redirects to Shopify checkout, or back to /cart with
               a notice. */}
-          {throughShops ? (
+          {notDirect === 'shops' ? (
             <p className="cart-added-parcel" role="note">
               {t('checkout_shops', 'Available through shops in {country}.', {country: countryName(visitor ?? '')})}{' '}
               <Link to="/wholesale">{t('checkout_shops_trade', 'Are you a shop?')}</Link>
               {' · '}
+              <Link to="/newsletter">{t('checkout_shops_notify', 'Get launch news')}</Link>
+            </p>
+          ) : notDirect === 'closed' ? (
+            <p className="cart-added-parcel" role="note">
+              {t('checkout_closed', 'Opening in {country} soon.', {country: countryName(visitor ?? '')})}{' '}
               <Link to="/newsletter">{t('checkout_shops_notify', 'Get launch news')}</Link>
             </p>
           ) : (

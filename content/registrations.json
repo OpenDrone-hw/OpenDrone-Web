@@ -1,112 +1,139 @@
 {
-  "$comment": "Incutec BV's producer (EPR) registration numbers per EU country, rendered on /recycling. weee: the national WEEE register number; packaging: the packaging register number; idu (France only): the identifiant unique. null until registered; a null entry is not shown. Keys are exactly the 27 EU member states (app/lib/registrations.test.ts).",
+  "$comment": "Incutec BV's producer (EPR) registration numbers per EU country, rendered on /recycling and in the product page safety block for a visitor from that country. weee: the national WEEE register number; packaging: the packaging register number; idu (France only): the identifiant unique. null until registered; a null number is not shown. offerNeedsNumber: the country requires the number on the offer itself (DE, ES, IE: the WEEE number; FR: the IDU), so consumer sale there stays closed until that number is set (app/lib/registrations.ts). Keys are exactly the 27 EU member states (app/lib/registrations.test.ts).",
   "AT": {
     "weee": null,
-    "packaging": null
+    "packaging": null,
+    "offerNeedsNumber": false
   },
   "BE": {
     "weee": null,
-    "packaging": null
+    "packaging": null,
+    "offerNeedsNumber": false
   },
   "BG": {
     "weee": null,
-    "packaging": null
+    "packaging": null,
+    "offerNeedsNumber": false
   },
   "CY": {
     "weee": null,
-    "packaging": null
+    "packaging": null,
+    "offerNeedsNumber": false
   },
   "CZ": {
     "weee": null,
-    "packaging": null
+    "packaging": null,
+    "offerNeedsNumber": false
   },
   "DE": {
     "weee": null,
-    "packaging": null
+    "packaging": null,
+    "offerNeedsNumber": true
   },
   "DK": {
     "weee": null,
-    "packaging": null
+    "packaging": null,
+    "offerNeedsNumber": false
   },
   "EE": {
     "weee": null,
-    "packaging": null
+    "packaging": null,
+    "offerNeedsNumber": false
   },
   "ES": {
     "weee": null,
-    "packaging": null
+    "packaging": null,
+    "offerNeedsNumber": true
   },
   "FI": {
     "weee": null,
-    "packaging": null
+    "packaging": null,
+    "offerNeedsNumber": false
   },
   "FR": {
     "weee": null,
     "packaging": null,
-    "idu": null
+    "idu": null,
+    "offerNeedsNumber": true
   },
   "GR": {
     "weee": null,
-    "packaging": null
+    "packaging": null,
+    "offerNeedsNumber": false
   },
   "HR": {
     "weee": null,
-    "packaging": null
+    "packaging": null,
+    "offerNeedsNumber": false
   },
   "HU": {
     "weee": null,
-    "packaging": null
+    "packaging": null,
+    "offerNeedsNumber": false
   },
   "IE": {
     "weee": null,
-    "packaging": null
+    "packaging": null,
+    "offerNeedsNumber": true
   },
   "IT": {
     "weee": null,
-    "packaging": null
+    "packaging": null,
+    "offerNeedsNumber": false
   },
   "LT": {
     "weee": null,
-    "packaging": null
+    "packaging": null,
+    "offerNeedsNumber": false
   },
   "LU": {
     "weee": null,
-    "packaging": null
+    "packaging": null,
+    "offerNeedsNumber": false
   },
   "LV": {
     "weee": null,
-    "packaging": null
+    "packaging": null,
+    "offerNeedsNumber": false
   },
   "MT": {
     "weee": null,
-    "packaging": null
+    "packaging": null,
+    "offerNeedsNumber": false
   },
   "NL": {
     "weee": null,
-    "packaging": null
+    "packaging": null,
+    "offerNeedsNumber": false
   },
   "PL": {
     "weee": null,
-    "packaging": null
+    "packaging": null,
+    "offerNeedsNumber": false
   },
   "PT": {
     "weee": null,
-    "packaging": null
+    "packaging": null,
+    "offerNeedsNumber": false
   },
   "RO": {
     "weee": null,
-    "packaging": null
+    "packaging": null,
+    "offerNeedsNumber": false
   },
   "SE": {
     "weee": null,
-    "packaging": null
+    "packaging": null,
+    "offerNeedsNumber": false
   },
   "SI": {
     "weee": null,
-    "packaging": null
+    "packaging": null,
+    "offerNeedsNumber": false
   },
   "SK": {
     "weee": null,
-    "packaging": null
+    "packaging": null,
+    "offerNeedsNumber": false
   }
 }
