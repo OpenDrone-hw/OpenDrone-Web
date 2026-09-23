@@ -2,7 +2,7 @@ import {describe, it} from 'node:test';
 import assert from 'node:assert/strict';
 import {existsSync, readFileSync} from 'node:fs';
 import {PRODUCT_CONTENT} from './product-content.ts';
-import {stepCounter, tourSteps} from './home-tour.ts';
+import {stepCounter, tourStillId, tourSteps} from './home-tour.ts';
 
 // Run with:
 //   node --experimental-strip-types --test app/lib/home-tour.test.ts
@@ -106,8 +106,8 @@ describe('home tour copy', () => {
   it('has a phone still for every step', () => {
     for (const s of steps)
       assert.ok(
-        existsSync(new URL(`../../public/models/od3/tour/${s.id}.webp`, import.meta.url)),
-        `public/models/od3/tour/${s.id}.webp (npm run gen:tour-stills)`,
+        existsSync(new URL(`../../public/models/od3/tour/${tourStillId(s.id)}.webp`, import.meta.url)),
+        `public/models/od3/tour/${tourStillId(s.id)}.webp (npm run gen:tour-stills)`,
       );
   });
 

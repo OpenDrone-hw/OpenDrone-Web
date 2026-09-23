@@ -262,7 +262,7 @@
   "boardExclude": "(screw|hex nut|pressnut|press nut|washer|softmount|Standoff|20mmx4mm|Casing|^Arm$|^Cross$|^Base-|^Top$|DJI|VTX-Mount|Bumper|AirTag|Boot-|Admi|BM6B|^[0-9]+$)",
   "videoModule": "^(Top Casing|Bottom Casing|DJI|VTX-Mount|USB C|Body|Lens|BM6B)",
   "notFrame": "^(Admi|prop-pivot|[0-9]+$)",
-  "_beatNote": "select is one of: {board}, {names}, {cluster} one spatial cluster, {complement} everything not in another beat. choreo names a built-in behaviour. Each beat is one step of the homepage walkthrough, or one step per stop when it has stops. The caption panel shows the step number, title (the part's role), caption (what it does, 25 words at most) and, when handle names a product the shop sells, that product's name, from-price and link. A stop's title, caption and handle replace the beat's while it is active; id is its /#<id> deep link and park where the scroll rests inside the hold.",
+  "_beatNote": "select is one of: {board}, {names}, {cluster} one spatial cluster, {complement} everything not in another beat. choreo names a built-in behaviour. Each beat is one step of the homepage walkthrough, or one step per stop when it has stops. The text block shows the step number, title (the part's role), caption (what it does, 25 words at most) and, when handle names a product, the chosen build's pick for that part from content/builds.json: name, price, ship date, Add and the product link. A stop's title, caption and handle replace the beat's while it is active; id is its /#<id> deep link and park where the scroll rests inside the hold. The step with id build closes the tour with the whole build list from content/builds.json. view reframes a beat's shot: x moves the picture by that fraction of the width, zoom scales it.",
   "beats": [
     {
       "id": "whole",
@@ -317,7 +317,7 @@
         "plus": "videoModule"
       },
       "fade": 0.99,
-      "partSize": 0.92,
+      "partSize": 1.05,
       "choreo": "frame-teardown",
       "stops": [
         {
@@ -336,6 +336,18 @@
           "caption": "Sends live video to your goggles. Bring your own: DJI, Walksnail, HDZero or analog."
         }
       ]
+    },
+    {
+      "id": "build",
+      "title": "The build",
+      "caption": "Every part from the tour, sized for one quad.",
+      "select": {
+        "none": true
+      },
+      "view": {
+        "x": -0.12,
+        "zoom": 0.72
+      }
     }
   ],
   "camera": {

@@ -9,7 +9,7 @@
 //
 // STAGING_PASSWORD (environment or .env) is sent when the dev server asks
 // for it. PW_CHANNEL=chrome uses the installed Chrome instead of Playwright's
-// bundled Chromium.
+// bundled Chromium; PW_EXECUTABLE names any other Chromium binary.
 import {chromium} from 'playwright';
 import {execFileSync} from 'node:child_process';
 import {mkdirSync, readFileSync, rmSync, writeFileSync, existsSync} from 'node:fs';
@@ -38,6 +38,7 @@ function stagingPassword() {
 const pw = stagingPassword();
 const browser = await chromium.launch({
   channel: process.env.PW_CHANNEL || undefined,
+  executablePath: process.env.PW_EXECUTABLE || undefined,
   args: ['--ignore-gpu-blocklist', '--enable-gpu'],
 });
 try {
@@ -53,7 +54,7 @@ try {
     document.addEventListener('DOMContentLoaded', () => {
       const st = document.createElement('style');
       st.textContent =
-        '.hp-stage{--hero-shift-x:0.05!important;--hero-shift-x-part:0.2!important;--hero-shift-y:-0.02!important;--hero-zoom:1.1!important}';
+        '.hp-stage{--hero-shift-x:0.05!important;--hero-shift-x-part:0.2!important;--hero-shift-y:-0.02!important;--hero-zoom:0.9!important}';
       document.head.append(st);
     });
   });
@@ -64,6 +65,8 @@ try {
   const steps = await page.evaluate(() => window.__hero.steps);
   mkdirSync(OUT, {recursive: true});
   for (let i = 0; i < steps.length; i++) {
+    // The closing build step shows the whole drone's still (tourStillId).
+    if (steps[i] === 'build') continue;
     const png = await page.evaluate((i) => {
       const h = window.__hero;
       h.goTo(i);

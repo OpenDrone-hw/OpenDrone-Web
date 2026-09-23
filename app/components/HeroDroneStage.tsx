@@ -3,9 +3,12 @@
  * explains each step, and the rail of step buttons.
  *
  * This is an absolutely-positioned layer, not a section of its own: it fills
- * the hero's sticky pane. The route owns the splash; this owns the drone, the
- * caption panel (counter, part role, what it does, the product line) and the
- * one Shop button. The words come from studio.json (app/lib/home-tour.ts).
+ * the hero's sticky pane. The route owns the splash; this owns the drone and
+ * the text block on the right (counter, 3" / 5" build toggle, part role, what
+ * it does, the build's pick for that part with its Add, and the whole build on
+ * the last step). The words come from studio.json (app/lib/home-tour.ts), the
+ * picks from content/builds.json (app/lib/hero-build.ts). Clicking the part
+ * in the spotlight opens its product page.
  *
  * Rendering rules live here rather than in the scene: the 3D is skipped under
  * 768px or `prefers-reduced-motion`, matching the policy the rest of the
@@ -13,14 +16,19 @@
  * instead of being visually hidden.
  */
 import {useCallback, useEffect, useRef, useState} from 'react';
+import {useLocation, useNavigate} from 'react-router';
 import type {
   HeroBeat,
   HeroDroneSceneProps,
   HeroLoadState,
 } from '~/components/HeroDroneScene';
-import {TourCaption, TourShop} from '~/components/TourCaption';
+import {
+  DEFAULT_BUILD,
+  TourCaption,
+  stepProductUrl,
+  useHeroBuilds,
+} from '~/components/TourCaption';
 import {copyText} from '~/lib/copy';
-import type {TourProducts} from '~/lib/home-tour';
 import {HOME_TOUR_STEPS} from '~/lib/home-tour-steps';
 
 function shouldLoad3D() {
@@ -47,7 +55,6 @@ let scenePromise: ReturnType<typeof loadScene> | null =
 export function HeroDroneStage({
   model,
   size,
-  products = {},
   onLoad,
   onReady,
   onProgress,
@@ -56,9 +63,6 @@ export function HeroDroneStage({
 }: {
   model?: string;
   size?: string;
-  /** The shop's product per handle, for the product lines. A handle that is
-   *  missing gets no product line. */
-  products?: TourProducts;
   /** Model download progress, for the route's splash. */
   onLoad?: (s: HeroLoadState) => void;
   /** Fires once the drone is rigged and the walkthrough is live. */
@@ -158,8 +162,47 @@ export function HeroDroneStage({
 
   const total = steps.length;
   const current = steps[Math.min(active, total - 1)];
-  const last = active >= total - 1;
-  const productOf = (st: HeroBeat) => (st.handle ? products[st.handle] : undefined);
+  const builds = useHeroBuilds();
+  const [buildId, setBuildId] = useState(DEFAULT_BUILD);
+  const build = builds.find((b) => b.id === buildId);
+  // A click on the part in the spotlight opens its product page, on the
+  // variant the chosen build uses.
+  const navigate = useNavigate();
+  const latest = useRef({steps, build});
+  useEffect(() => {
+    latest.current = {steps, build};
+  }, [steps, build]);
+  const handlePick = useCallback(
+    (i: number) => {
+      const st = latest.current.steps[i];
+      const url = st ? stepProductUrl(st, latest.current.build) : null;
+      if (url) void navigate(url);
+    },
+    [navigate],
+  );
+  // A link to /#build (the footer's build guide) or a part while the page is
+  // open is a client navigation with no reload: fly to that step. On a fresh
+  // load the scene reads the hash itself.
+  const {hash} = useLocation();
+  useEffect(() => {
+    const id = hash.slice(1).toLowerCase();
+    const i = latest.current.steps.findIndex((st) => st.id === (id === 'motors' ? 'motor' : id));
+    if (i < 0 || !seek.current) return;
+    jumpTo.current = {step: i, until: performance.now() + 4000};
+    setActive(i);
+    seek.current(i);
+  }, [hash]);
+  const caption = (st: HeroBeat, i: number, extra: {as?: 'h3'; toggle?: boolean} = {}) => (
+    <TourCaption
+      step={st}
+      index={i}
+      total={total}
+      builds={builds}
+      buildId={buildId}
+      onBuild={setBuildId}
+      {...extra}
+    />
+  );
 
   return (
     <div ref={stageRef} className={`hp-stage${mode === 'static' ? ' is-static' : ''}`}>
@@ -172,6 +215,7 @@ export function HeroDroneStage({
           onLoad={onLoad}
           onReady={onReady}
           onSeeker={onSeeker}
+          onPick={handlePick}
         />
       ) : null}
 
@@ -179,14 +223,8 @@ export function HeroDroneStage({
         <aside ref={panelRef} className="tour-panel" aria-label={copyText('home.tour_label') ?? undefined}>
           {/* Keyed on the step so each new step's words fade in. */}
           <div className="tour-panel-body" key={current.id} aria-live="polite">
-            <TourCaption
-              step={current}
-              index={active}
-              total={total}
-              product={productOf(current)}
-            />
+            {caption(current, active)}
           </div>
-          <TourShop primary={last} />
         </aside>
       ) : null}
 
@@ -221,14 +259,9 @@ export function HeroDroneStage({
       <ol className="hp-fallback">
         {steps.map((b, i) => (
           <li key={b.id}>
-            <TourCaption step={b} index={i} total={total} product={productOf(b)} as="h3" />
+            {caption(b, i, {as: 'h3', toggle: i === 0})}
           </li>
         ))}
-        {mode === 'static' ? (
-          <li>
-            <TourShop primary />
-          </li>
-        ) : null}
       </ol>
     </div>
   );

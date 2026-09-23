@@ -1848,9 +1848,12 @@ html.light .header-cat-pod {
 .tour-m-sheet .tour-panel-body { align-self: stretch; }
 .tour-m-sheet .tour-role { font-size: 1.6rem; margin: 0.35rem 0 0.5rem; }
 .tour-m-sheet .tour-text { font-size: 1rem; }
-.tour-m-sheet .tour-product { margin-top: 1rem; padding-top: 0.75rem; }
-.tour-m-sheet .tour-shop { margin-top: 1.1rem; }
-.tour-m-sheet .tour-shop.is-primary { align-self: stretch; justify-content: center; }
+.tour-m-sheet .tour-picks { margin-top: 0.9rem; }
+.tour-m-still-link {
+  display: block;
+  width: 100%;
+  -webkit-user-drag: none;
+}
 @media (prefers-reduced-motion: reduce) {
   .tour-m-still { animation: none; }
 }
@@ -15539,37 +15542,45 @@ body:has(.overlay.expanded) .placeholder-banner {
   color: var(--color-text-dim);
   pointer-events: none;
 }
-/* The walkthrough's layout. Desktop: the caption panel is a column on the
-   left, vertically centred, and the drone is framed right of it (the scene
-   reads --hero-shift-x with the drone whole, --hero-shift-x-part with a part
-   out, --hero-shift-y and --hero-zoom from here). The rail is centred under
-   the drone. */
+/* The walkthrough's layout. Desktop: the drone centred as the scene frames
+   it, the text block on the right, top-anchored where the part label always
+   sat, and the rail centred along the bottom. The scene reads
+   --hero-shift-x (drone whole), --hero-shift-x-part (a part out),
+   --hero-shift-y and --hero-zoom from here; on desktop they stay neutral. */
 .hp-stage {
   --tour-gutter: 2.5rem;
-  --tour-col: clamp(19rem, 28vw, 25rem);
-  --hero-shift-x: 0.13;
-  --hero-shift-x-part: 0.2;
+  --hero-shift-x: 0;
+  --hero-shift-x-part: 0;
   --hero-shift-y: 0;
-  --hero-zoom: 0.9;
+  --hero-zoom: 1;
 }
 .tour-panel {
   position: absolute;
-  left: var(--tour-gutter);
-  /* Top-anchored a little above the middle, not centred: the counter and
-     heading stay put while the caption length changes between steps. */
-  top: max(1.5rem, calc(50% - 10rem));
-  width: var(--tour-col);
+  right: clamp(20px, 5vw, 96px);
+  /* Top-anchored, not centred: the counter and heading stay put while the
+     text length changes between steps. */
+  top: clamp(96px, 14vh, 160px);
+  width: min(25rem, 32vw);
   z-index: 22;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
 }
 .tour-panel-body {
+  /* A halo in the page colour keeps the words readable where the orbiting
+     drone's prop passes behind them. */
+  text-shadow: 0 0 14px var(--color-bg), 0 0 4px var(--color-bg);
   animation: hp-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 @keyframes hp-in {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: none; }
+}
+.tour-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
 }
 .tour-count {
   margin: 0;
@@ -15578,95 +15589,129 @@ body:has(.overlay.expanded) .placeholder-banner {
   letter-spacing: 0.14em;
   color: var(--color-gold-text);
 }
+/* 3" / 5": which build the picks are for. */
+.tour-build-toggle {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--color-bg) 70%, transparent);
+}
+.tour-build-toggle button {
+  min-width: 2.75rem;
+  min-height: 28px;
+  padding: 0 0.7rem;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: none;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.tour-build-toggle button:hover { color: var(--color-text); }
+.tour-build-toggle button[aria-pressed='true'] {
+  background: var(--color-text);
+  color: var(--color-bg);
+}
+.tour-build-toggle button:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
 .tour-role {
-  margin: 0.6rem 0 0.9rem;
-  font-size: clamp(2rem, 3vw, 2.75rem);
+  margin: 0.5rem 0 0.6rem;
+  font-size: clamp(1.75rem, 2.4vw, 2.25rem);
   font-weight: 600;
-  line-height: 1.05;
+  line-height: 1.1;
   letter-spacing: -0.01em;
   color: var(--color-text);
 }
 .tour-text {
   margin: 0;
-  max-width: 34ch;
-  font-size: 1.0625rem;
-  line-height: 1.55;
+  max-width: 40ch;
+  font-size: 1rem;
+  line-height: 1.5;
   color: var(--color-text-muted);
 }
-.tour-product {
-  margin-top: 1.5rem;
-  padding-top: 1rem;
+/* The build's pick for the part: name (to its product page) and price, then
+   the ship date and Add. */
+.tour-picks {
+  margin: 1.1rem 0 0;
+  padding: 0;
+  list-style: none;
   border-top: 1px solid var(--color-border);
+}
+.tour-pick {
   display: grid;
-  gap: 0.4rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.35rem 1rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--color-border);
 }
-.tour-product-line {
-  margin: 0;
+.tour-pick.is-compact {
+  padding: 0.4rem 0;
+  border-bottom: 0;
+}
+.tour-pick-name {
+  font-weight: 600;
+  color: var(--color-text);
+  text-decoration: underline;
+  text-decoration-color: var(--color-border-strong);
+  text-underline-offset: 4px;
+}
+.tour-pick-name:hover,
+.tour-pick-name:focus-visible {
+  text-decoration-color: var(--color-gold);
+}
+.tour-pick.is-compact .tour-pick-name { font-weight: 500; font-size: 0.95rem; }
+.tour-pick-price {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.9rem;
+  color: var(--color-text);
+  text-align: right;
+  white-space: nowrap;
+}
+.tour-pick .ship-chip { justify-self: start; }
+.tour-pick-add {
+  grid-column: 2;
+  min-height: 34px;
+  padding: 0 1.1rem;
+  border: 1px solid var(--color-gold);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tour-pick-add:hover { background: var(--color-gold-fill); color: var(--color-on-accent); }
+.tour-pick-add:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.tour-pick .cart-line-error { grid-column: 1 / -1; }
+/* The last step: the whole list, the total and one add. */
+.tour-summary .tour-picks { margin-top: 1rem; padding-top: 0.35rem; }
+.tour-total {
   display: flex;
-  flex-wrap: wrap;
+  justify-content: space-between;
   align-items: baseline;
-  gap: 0.2rem 0.75rem;
-}
-.tour-product-name {
+  margin: 0.35rem 0 0;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--color-border);
   font-weight: 600;
   color: var(--color-text);
 }
-.tour-product-price {
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 0.9rem;
+.tour-total .tour-pick-price { font-size: 1rem; }
+.tour-summary .tour-add-build { margin-top: 1rem; width: 100%; }
+.tour-not-sold {
+  margin: 0.8rem 0 0;
+  font-size: 0.85rem;
   color: var(--color-text-muted);
-}
-.tour-product-link,
-.tour-shop:not(.is-primary) {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: var(--color-gold-text);
-  text-decoration: none;
-}
-.tour-product-link:hover,
-.tour-product-link:focus-visible,
-.tour-shop:not(.is-primary):hover,
-.tour-shop:not(.is-primary):focus-visible {
-  text-decoration: underline;
-  text-underline-offset: 4px;
-}
-.tour-product-link svg,
-.tour-shop svg {
-  transition: transform 0.2s ease;
-}
-.tour-product-link:hover svg,
-.tour-shop:hover svg {
-  transform: translateX(3px);
-}
-/* The one Shop button: a quiet link under the caption until the last step,
-   where it becomes the gold button. */
-.tour-panel .tour-shop {
-  margin-top: 2rem;
-}
-.tour-shop:not(.is-primary) {
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 0.75rem;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-.tour-shop.is-primary {
-  width: auto;
-  min-height: 48px;
-  padding: 0 24px;
-  gap: 0.6rem;
-  font-size: 16px;
 }
 
-/* Step rail, centred under the drone. Each dot is a button that jumps to its
+/* Step rail, centred along the bottom. Each dot is a button that jumps to its
    step; the active step's name shows under it, any other on hover or focus. */
 .hp-rail {
   position: absolute;
-  --hp-rail-w: min(30rem, 36vw);
-  left: calc(var(--tour-gutter) + var(--tour-col) + (100% - var(--tour-gutter) - var(--tour-col)) / 2);
+  --hp-rail-w: min(34rem, 44vw);
+  left: 50%;
   bottom: 3.25rem;
   transform: translateX(-50%);
   width: var(--hp-rail-w);
@@ -15742,19 +15787,17 @@ body:has(.overlay.expanded) .placeholder-banner {
 
 @media (prefers-reduced-motion: reduce) {
   .tour-panel-body { animation: none; }
-  .tour-product-link svg, .tour-shop svg, .hp-dot::before, .hp-dot-label { transition: none; }
+  .hp-dot::before, .hp-dot-label { transition: none; }
 }
 
-/* Between the phone layout (768px) and ~1040px there is no room for a column:
-   the caption becomes a sheet at the bottom, the drone is framed above it and
-   the rail sits between the two. */
+/* Between the phone layout (768px) and ~1040px there is no room beside the
+   drone: the text block becomes a sheet at the bottom, the drone is framed
+   above it and the rail sits between the two. */
 @media (max-width: 65em) {
   .hp-stage {
     --tour-gutter: 1.5rem;
-    --hero-shift-x: 0;
-    --hero-shift-x-part: 0;
-    --hero-shift-y: 0.17;
-    --hero-zoom: 1;
+    --hero-shift-y: 0.2;
+    --hero-zoom: 0.85;
   }
   .tour-panel {
     left: var(--tour-gutter);
@@ -15762,25 +15805,17 @@ body:has(.overlay.expanded) .placeholder-banner {
     top: auto;
     bottom: 1.5rem;
     width: auto;
-    padding: 1.25rem 1.5rem;
+    padding: 1.1rem 1.4rem;
     background: var(--pod-bg-strong);
     border: 1px solid var(--pod-border);
     border-radius: var(--r-md);
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 1rem 2rem;
   }
-  .tour-panel .tour-panel-body { flex: 1 1 22rem; }
-  .tour-panel .tour-shop { margin-top: 0; }
-  .tour-panel .tour-role { font-size: 1.75rem; margin: 0.35rem 0 0.5rem; }
-  .tour-panel .tour-text { max-width: 52ch; font-size: 1rem; }
-  .tour-panel .tour-product { margin-top: 1rem; padding-top: 0.75rem; }
+  .tour-panel .tour-role { font-size: 1.6rem; margin: 0.35rem 0 0.4rem; }
+  .tour-panel .tour-text { max-width: 60ch; }
+  .tour-panel .tour-summary .tour-picks { columns: 2; column-gap: 2rem; }
   .hp-rail {
-    left: 50%;
     --hp-rail-w: min(28rem, 64vw);
-    bottom: calc(1.5rem + var(--tour-sheet-h, 15rem) + 1.5rem);
+    bottom: calc(1.5rem + var(--tour-sheet-h, 15rem) + 1.75rem);
   }
 }
 

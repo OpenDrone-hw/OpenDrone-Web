@@ -3,7 +3,6 @@
   "$title": "Home",
   "meta_title": "Open Source Drone Parts",
   "meta_description": "Open Source flight controllers and ESCs. Designed in Belgium.",
-  "shop": "Shop the parts",
   "loading_models": "loading models…",
   "reveal_soon": "Soon",
   "promo_tag": "Pre-order",
@@ -11,8 +10,11 @@
   "promo_fc": "FC from {price}",
   "promo_esc": "ESC from {price}",
   "tour_label": "Drone walkthrough",
-  "tour_from": "from {price}",
-  "tour_view": "View {name}",
   "tour_prev": "Previous part",
-  "tour_next": "Next part"
+  "tour_next": "Next part",
+  "tour_build_label": "Build size",
+  "tour_add": "Add",
+  "tour_add_build": "Add the build",
+  "tour_total": "Total",
+  "tour_not_sold": "Not sold here: camera and VTX, battery, radio, goggles."
 }

@@ -115,15 +115,20 @@ relative to the directory holding the board checkouts, `../hardware` by default,
 README's `## Specifications` table (`scripts/repo-sync.config.json`) into the
 product JSON. OpenRX stays hand-maintained.
 
-**Homepage hero.** A guided walkthrough of the drone, one part per step: a
-three.js scene (`app/components/HeroDroneScene.tsx`) plays the Onshape
-assembly, exported as one GLB and chunked by
+**Homepage hero.** A guided walkthrough of the drone that is also the build
+guide, one part per step: a three.js scene (`app/components/HeroDroneScene.tsx`)
+plays the Onshape assembly, exported as one GLB and chunked by
 `scripts/hero-assets/build-hero.mjs` into `public/models/<design>/`, and a
-caption panel names each part, says what it does and links the product. The
-steps and their words are the `beats` in `public/models/od3/studio.json`
-(`title`, `caption`, `handle`; a beat's `stops` are steps of their own). The
-3D loads only from 768px wide with `prefers-reduced-motion: no-preference`.
-Phones get the same steps with a still per step (`public/models/od3/tour/`,
+text block on the right names each part, says what it does and shows the
+chosen build's pick for it (3" or 5", from `content/builds.json`: name,
+price, ship date, Add, product link). Clicking the part in the spotlight
+opens its product page. The last step (`/#build`, linked from the footer) is
+the whole build with its total and one Add for everything. The steps and
+their words are the `beats` in `public/models/od3/studio.json` (`title`,
+`caption`, `handle`; a beat's `stops` are steps of their own; `view`
+reframes a whole-drone beat). The 3D loads only from 768px wide with
+`prefers-reduced-motion: no-preference`. Phones get the same steps, picks
+and Add buttons with a still per step (`public/models/od3/tour/`,
 `npm run gen:tour-stills`, rerun after a change to the model or a beat);
 reduced motion gets the steps as a list. Pipeline and tuning:
 `docs/hero-studio.md`.
