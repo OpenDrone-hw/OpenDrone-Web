@@ -9,8 +9,9 @@ import type {Locale} from '~/lib/i18n';
 type Glance = {title: string; rows: Array<[string, string]>};
 
 /** Three rows above the shipping terms: when each kind of product ships
- *  and who pays duties outside the EU. The rates are the table below; the
- *  terms stay the text that applies. Words in content/copy/legal-labels.json. */
+ *  and that outside the EU it goes through shops. The rates are the table
+ *  below; the terms stay the text that applies. Words in
+ *  content/copy/legal-labels.json. */
 function ShippingGlance({locale}: {locale: Locale}) {
   const all = copy('legal-labels.shipping_glance') as unknown as Record<string, Glance> | undefined;
   const g = all?.[locale] ?? all?.en;

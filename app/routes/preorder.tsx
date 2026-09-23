@@ -76,7 +76,7 @@ type Row = {
   render: boolean;
 };
 
-const FAQ = ['pay', 'cancel', 'missed', 'eta', 'duties', 'risks'];
+const FAQ = ['pay', 'cancel', 'missed', 'eta', 'shops', 'risks'];
 
 const TERMS: Array<{key: string; Icon: ComponentType<{size?: number; 'aria-hidden'?: boolean}>}> = [
   {key: 'pay', Icon: CreditCard},
