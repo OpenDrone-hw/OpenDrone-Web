@@ -44,6 +44,7 @@ Node 22 (what CI uses).
 | `npm run sync:legal` | copies four Dutch legal pages from `COMPLIANCE_SRC`; with it unset, keeps the committed snapshots |
 | `npm run gen:board-art` | export every PCB as layered SVG and copper rasters (needs KiCad and cwebp) |
 | `npm run gen:schematics` | render the schematic sheets from the board checkouts |
+| `npm run gen:tour-stills` | render the phone walkthrough's still per step from the running dev server (`BASE`, needs cwebp) |
 | `npm run sync:specs` / `sync:specs:check` | mirror each board README's `## Specifications` table into `content/products/<handle>.json`, or diff |
 | `npm run sync:downloads` | diff the latest GitHub release assets against the product JSON (`--check` only; the downloads chapter is not switched on) |
 | `npm run sync:timeline` | append releases, new repos and status flips to the timeline ledger |
@@ -114,12 +115,18 @@ relative to the directory holding the board checkouts, `../hardware` by default,
 README's `## Specifications` table (`scripts/repo-sync.config.json`) into the
 product JSON. OpenRX stays hand-maintained.
 
-**Homepage hero.** A three.js scene (`app/components/HeroDroneScene.tsx`) plays
-the Onshape assembly, exported as one GLB and chunked by
-`scripts/hero-assets/build-hero.mjs` into `public/models/<design>/`. It loads
-only on desktop with `prefers-reduced-motion: no-preference`; everyone else
-gets a static splash, and every beat's copy is plain DOM text. Pipeline and
-tuning: `docs/hero-studio.md`.
+**Homepage hero.** A guided walkthrough of the drone, one part per step: a
+three.js scene (`app/components/HeroDroneScene.tsx`) plays the Onshape
+assembly, exported as one GLB and chunked by
+`scripts/hero-assets/build-hero.mjs` into `public/models/<design>/`, and a
+caption panel names each part, says what it does and links the product. The
+steps and their words are the `beats` in `public/models/od3/studio.json`
+(`title`, `caption`, `handle`; a beat's `stops` are steps of their own). The
+3D loads only from 768px wide with `prefers-reduced-motion: no-preference`.
+Phones get the same steps with a still per step (`public/models/od3/tour/`,
+`npm run gen:tour-stills`, rerun after a change to the model or a beat);
+reduced motion gets the steps as a list. Pipeline and tuning:
+`docs/hero-studio.md`.
 
 **Timeline.** `/timeline` combines a curated list in `app/routes/timeline.tsx`
 with `timeline-ledger.json` on this repository's unprotected `data` branch,

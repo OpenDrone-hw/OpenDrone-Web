@@ -262,20 +262,20 @@
   "boardExclude": "(screw|hex nut|pressnut|press nut|washer|softmount|Standoff|20mmx4mm|Casing|^Arm$|^Cross$|^Base-|^Top$|DJI|VTX-Mount|Bumper|AirTag|Boot-|Admi|BM6B|^[0-9]+$)",
   "videoModule": "^(Top Casing|Bottom Casing|DJI|VTX-Mount|USB C|Body|Lens|BM6B)",
   "notFrame": "^(Admi|prop-pivot|[0-9]+$)",
-  "_beatNote": "select is one of: {board}, {names}, {cluster} one spatial cluster, {complement} everything not in another beat. choreo names a built-in behaviour. The homepage shows one label line per beat: title, then note after ' · ', then the product price when handle names a priced product. handle or href links the label to its product page; an active stop shows its own title, note and href, not the beat's.",
+  "_beatNote": "select is one of: {board}, {names}, {cluster} one spatial cluster, {complement} everything not in another beat. choreo names a built-in behaviour. Each beat is one step of the homepage walkthrough, or one step per stop when it has stops. The caption panel shows the step number, title (the part's role), caption (what it does, 25 words at most) and, when handle names a product the shop sells, that product's name, from-price and link. A stop's title, caption and handle replace the beat's while it is active; id is its /#<id> deep link and park where the scroll rests inside the hold.",
   "beats": [
     {
       "id": "whole",
-      "title": "OpenDrone 3\"",
-      "note": "complete airframe",
+      "title": "The quad",
+      "caption": "A 3\" freestyle quad built around OpenDrone parts, taken apart one part at a time.",
       "select": {
         "none": true
       }
     },
     {
       "id": "fc",
-      "title": "OpenFC Lite",
-      "note": "20x20 / 30x30 · 3-6S / 3-8S",
+      "title": "Flight controller",
+      "caption": "The brain. Runs Betaflight, reads the gyro and your sticks, and tells the ESC how fast to spin each motor.",
       "select": {
         "board": "OpenFC"
       },
@@ -283,8 +283,8 @@
     },
     {
       "id": "esc",
-      "title": "OpenESC",
-      "note": "4in1 · 20x20 / 30x30",
+      "title": "ESC",
+      "caption": "Turns battery power into motor speed. 4in1: all four motor drivers on one board, stacked under the FC.",
       "select": {
         "board": "4in1-mini"
       },
@@ -292,8 +292,8 @@
     },
     {
       "id": "rx",
-      "title": "OpenRX",
-      "note": "ELRS 2.4 GHz",
+      "title": "Receiver",
+      "caption": "Picks up your radio. ELRS 2.4 GHz, wired to a UART on the FC.",
       "select": {
         "board": "OpenRX-Lite-UFL"
       },
@@ -301,37 +301,41 @@
     },
     {
       "id": "motor",
-      "title": "Motor + prop",
-      "note": "1604 · 3\" tri-blade",
+      "title": "Motors + props",
+      "caption": "Four brushless motors. Speed up one side and the quad tilts toward the other. That is how it flies.",
       "select": {
         "cluster": "^Admi",
         "withProp": true
-      }
+      },
+      "handle": "openmotor"
     },
     {
       "id": "frame",
-      "title": "OpenFrame",
-      "note": "3\" / 5\"",
+      "title": "Frame",
       "select": {
         "complement": true,
         "plus": "videoModule"
       },
       "fade": 0.99,
-      "partSize": 1.05,
+      "partSize": 0.92,
       "choreo": "frame-teardown",
       "stops": [
         {
+          "id": "frame",
           "at": 0,
-          "title": "OpenFrame",
-          "note": "3\" / 5\"",
-          "href": "/products/openframe"
+          "park": 0.5,
+          "title": "Frame",
+          "caption": "T700 carbon fibre. Holds the stack, motors and camera, and takes the crashes.",
+          "handle": "openframe"
         },
         {
+          "id": "camera",
           "at": 0.62,
-          "title": "VTX / air unit: not included"
+          "park": 0.8,
+          "title": "Camera + VTX",
+          "caption": "Sends live video to your goggles. Bring your own: DJI, Walksnail, HDZero or analog."
         }
-      ],
-      "handle": "openframe"
+      ]
     }
   ],
   "camera": {

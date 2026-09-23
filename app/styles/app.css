@@ -491,24 +491,9 @@ html {
   outline-offset: 3px;
 }
 
-/* Hero wordmark: single element that animates from centered-large
-   (splash) to bottom-left-small (settled). Anchor is the settled
-   position; the splash state is a transform that moves+scales it up
-   to viewport center so the motion is a single tween, not a swap. */
-/* One shared centreline for the hero's bottom strip. Everything that lives
-   down there (wordmark + GitHub mark, progress rail, Shop button) centres on
-   the settled wordmark's midline: 2.5rem inset + half the wordmark height. */
-.homepage {
-  --hero-strip-mid: calc(2.5rem + clamp(2.5rem, 5vw, 4.5rem) / 2);
-  /* Right edge of the bottom-left brand block: wordmark inset + wordmark width
-     (height x 5.29 aspect, same term .hero-github's `left` is built from) +
-     the 1.75rem gap + the 64px GitHub mark. The rail clamps against this so
-     the strip's three tenants never overlap on narrow or short-wide windows. */
-  --hero-brand-right: calc(
-    2.5rem + clamp(2.5rem, 5vw, 4.5rem) * 5.29 + 1.75rem + 64px
-  );
-}
-
+/* Hero wordmark: the splash. Centred and large while the models load (a
+   transform from its bottom-left anchor, so the motion is one tween), then it
+   fades out in place (.is-settled). */
 .hero-wordmark {
   position: absolute;
   bottom: 2.5rem;
@@ -654,9 +639,13 @@ html {
   }
 }
 
-/* Settled: horizontal, bottom-left. */
+/* Settled: the splash is over, the wordmark fades out where it stands. The
+   header carries the brand; the hero's left side is the caption panel's. */
 .hero-wordmark.is-settled {
-  transform: translate(0, 0) scale(1);
+  transform: translate(calc(50vw - 2.5rem - 50%), calc(-50vh + 2.5rem + 50%))
+    scale(1.6);
+  /* Opacity only, not visibility: it stays the page's h1 for screen readers. */
+  transition: opacity 0.45s ease, transform 0.65s cubic-bezier(0.72, 0, 0.28, 1);
 }
 
 /* Hero tagline: top-left, appears after the wordmark settles */
@@ -697,77 +686,6 @@ html {
 .hero-actions.is-visible {
   transform: translateY(0);
   pointer-events: auto;
-}
-
-/* GitHub mark: bare logo (no circle/pod), sitting just right of the settled
-   wordmark in the bottom-left corner, centred on the strip line. The left
-   offset is the wordmark's own geometry: 2.5rem inset + its width (height x
-   the SVG viewBox ratio 2472/467.64, about 5.29) + a gap. Rises in with the
-   other bottom islands once the splash settles. */
-.hero-github {
-  position: absolute;
-  bottom: calc(var(--hero-strip-mid, 76px) - 32px);
-  left: calc(2.5rem + clamp(2.5rem, 5vw, 4.5rem) * 5.29 + 1.75rem);
-  z-index: 25;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  /* 64px muted, not 88px solid: a quiet side-door, not a second focal
-     point competing with the 3D scene. Full presence returns on hover. */
-  width: 64px;
-  height: 64px;
-  color: var(--color-text-muted);
-  /* Hidden resting state: parked below the bottom edge. The is-visible
-     class glides it up from there. */
-  transform: translateY(150%);
-  opacity: 0;
-  transition: color 0.2s ease;
-  pointer-events: none;
-}
-.hero-github.is-visible {
-  opacity: 1;
-  pointer-events: auto;
-  animation: island-splash-bottom 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-.hero-github:hover {
-  color: var(--color-gold-text);
-}
-
-/* Island entrances: the floating "islands" glide in from their nearest screen
-   edge and settle with a single smooth deceleration (easeOutExpo on the
-   .is-visible rule). No overshoot, no squash: a clean, weighted slide that
-   reads premium rather than springy/cheap. */
-@keyframes island-splash-left {
-  0% {
-    opacity: 0;
-    transform: translateX(-160%);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-@keyframes island-splash-bottom {
-  0% {
-    opacity: 0;
-    transform: translateY(150%);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Reduced motion: no splash, no spring: just present the islands in place. */
-@media (prefers-reduced-motion: reduce) {
-  .hero-github,
-  .hero-github.is-visible,
-  .hero-buy,
-  .hero-buy.is-visible {
-    animation: none;
-    transform: none;
-    opacity: 1;
-  }
 }
 
 .hero-action-primary {
@@ -852,155 +770,11 @@ html {
   color: var(--color-text-muted);
 }
 
-/* Buy bubble: bottom-right anchor. The Shop button sits at the bottom; the
-   product cards stack ABOVE it and grow upward as they reveal (column-reverse
-   so the first revealed card, FC, sits nearest the button and the frame ends
-   up on top). Container is pointer-events:none so the gaps between revealed
-   cards pass clicks/drags through to the drone behind; the button and each
-   revealed card re-enable their own pointer events. */
-.hero-buy {
-  position: absolute;
-  /* The Shop button (~52px tall: 2rem padding + ~20px line) centres on the
-     bottom strip's shared line, same as the wordmark and the rail. */
-  bottom: calc(var(--hero-strip-mid, 76px) - 26px);
-  right: 2.5rem;
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.5rem;
-  /* Hidden resting state: parked below the bottom edge. is-visible glides it
-     up from there. */
-  transform: translateY(150%);
-  opacity: 0;
-  pointer-events: none;
-}
-.hero-buy.is-visible {
-  opacity: 1;
-  animation: island-splash-bottom 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-.hero-buy-btn {
-  pointer-events: auto;
-}
-/* Wraps the swappable stack so the exiting (absolute) stack anchors to the same
-   bottom baseline as the incoming one during the size cross-slide. */
-.hero-buy-swap {
-  position: relative;
-}
-.hero-buy-stack {
-  display: flex;
-  flex-direction: column-reverse;
-  /* gap:0: a fixed gap would reserve space for the collapsed (0-height) cards
-     and leave a phantom band above the button. Inter-card spacing is instead
-     baked into each card's reveal (inline margin scaled by progress). */
-  gap: 0;
-  /* Cross-slide zoom dip scales from the bottom (the bubble/Shop anchor) so the
-     stack's base stays put while it pulls back mid-swap. */
-  transform-origin: bottom center;
-  will-change: transform, opacity;
-}
-
-/* A single revealing product card. max-height / opacity / transform are driven
-   by the --hero-p custom property (written once per scroll frame on .homepage)
-   through the per-card --lo/--win reveal window - the same linearstep the route
-   used to compute inline, now in calc() so the scrub costs zero React renders.
-   They carry NO CSS transition - only the hover affordances do - otherwise the
-   transition would fight the per-frame scrub and lag behind the scroll.
-   overflow:hidden lets max-height clip the card as it grows out of the bubble. */
-.hero-reveal-card {
-  --r: clamp(0, calc((var(--hero-p, 0) - var(--lo, 1)) / var(--win, 1)), 1);
-  max-height: calc(var(--r) * 7.5rem);
-  margin-top: calc(var(--r) * 0.55rem);
-  opacity: var(--r);
-  transform: translateY(calc((1 - var(--r)) * 28px));
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.85rem 1rem;
-  overflow: hidden;
-  /* No backdrop-filter: this card's max-height/opacity are scrubbed inline
-     every scroll frame, and a live blur would re-composite on each of those
-     frames. --pod-bg-strong already provides the legibility (same trade as
-     the header pill, see the GPU note above .site-header-main). */
-  background: var(--pod-bg-strong);
-  border: 1px solid var(--pod-border);
-  border-radius: var(--r-md);
-  box-shadow: var(--pod-shadow);
-  color: var(--color-text);
-  transition: border-color 0.15s ease;
-}
-.hero-reveal-card:hover {
-  border-color: color-mix(in srgb, var(--color-gold) 50%, transparent);
-}
-
 /* Thin-line scroll hint under the hero - fades out over the first ~13% of
    scroll. Driven by --hero-p so it needs no per-frame React render. */
 .hero-scroll-fade {
   opacity: clamp(0, calc(0.4 - var(--hero-p, 0) * 3), 0.4);
 }
-.hero-reveal-media {
-  flex: 0 0 auto;
-  width: 4.25rem;
-  height: 4.25rem;
-  border-radius: var(--r-sm);
-  overflow: hidden;
-  background: var(--color-bg-elevated);
-  display: grid;
-  place-items: center;
-}
-.hero-reveal-media img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-.hero-reveal-ph {
-  width: 100%;
-  height: 100%;
-  background: var(--color-bg-card);
-}
-.hero-reveal-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  flex: 1 1 auto;
-}
-.hero-reveal-title {
-  font-size: var(--fs-md);
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.hero-reveal-sub {
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-.hero-reveal-price {
-  flex: 0 0 auto;
-  font-family: var(--font-mono);
-  font-size: var(--fs-md);
-  color: var(--color-text);
-}
-/* Coming-soon reveal cards: a quiet mono tag in the price slot. */
-.hero-reveal-soon {
-  flex: 0 0 auto;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  /* On the dark reveal card, use full-brightness brand gold so the badge
-     pops; light mode swaps back to --color-gold (the card goes near-white). */
-  color: var(--color-gold-text);
-}
-html.light .hero-reveal-soon {
-  color: var(--color-gold-text);
-}
-
 /* Hero scene glow: a soft warm radial behind the drone so the stage isn't a
    flat slab of background. Dark mode lifts the centre with a gold-tinted glow;
    light mode (twin below) tints the centre warm and feathers a faint vignette
@@ -1038,7 +812,8 @@ html.light .hero-scene-glow {
     height: clamp(2rem, 9vw, 3.25rem);
   }
   .hero-wordmark.is-settled {
-    transform: translate(0, 0) scale(1);
+    transform: translate(calc(50vw - 1.5rem - 50%), calc(-50vh + 1.5rem + 50%))
+      scale(1.4);
   }
   .hero-tagline {
     top: calc(var(--header-height) + 1rem);
@@ -1416,14 +1191,10 @@ html.anim-paused .site-wordmark-sheen,
 html.anim-paused .placeholder-banner__dot::after,
 html.anim-paused .latest-commit-dot,
 html.anim-paused .support-typing span,
-html.anim-paused .home-mobile-board-float--front,
-html.anim-paused .home-mobile-board-float--rear,
 html.perf-lite .site-wordmark-sheen,
 html.perf-lite .placeholder-banner__dot::after,
 html.perf-lite .latest-commit-dot,
-html.perf-lite .support-typing span,
-html.perf-lite .home-mobile-board-float--front,
-html.perf-lite .home-mobile-board-float--rear {
+html.perf-lite .support-typing span {
   animation-play-state: paused !important;
 }
 /* …and strip the GPU-heavy live blurs + board drop-shadows while idle/unfocused,
@@ -1964,133 +1735,126 @@ html.light .header-cat-pod {
   gap: 2.5rem;
 }
 
-.home-mobile-hero {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 1.25rem;
-  padding-top: 0.5rem;
-}
-
-/* Floating board "stage": the flagship FC + ESC renders fanned like the
-   OpenStack bundle, on a gold-glow island. The desktop hero's rotatable 3D
-   trio, distilled to a still that paints instantly on a phone. */
-.home-mobile-stage {
-  position: relative;
-  align-self: stretch;
-  height: clamp(210px, 56vw, 300px);
-  margin-bottom: 0.25rem;
-  display: grid;
-  place-items: center;
-}
 .home-mobile-glow {
   position: absolute;
   inset: -8% -4%;
   background: radial-gradient(
     circle at 50% 50%,
-    color-mix(in srgb, var(--color-gold) 34%, transparent) 0%,
-    color-mix(in srgb, var(--color-gold) 11%, transparent) 38%,
+    color-mix(in srgb, var(--color-gold) 26%, transparent) 0%,
+    color-mix(in srgb, var(--color-gold) 8%, transparent) 38%,
     transparent 70%
   );
-  filter: blur(2px);
   pointer-events: none;
 }
-/* Boards fill the stage: bigger renders with tight, balanced offsets so the
-   pair reads as one centred cluster (not two corners), with the glow under it. */
-.home-mobile-board {
-  display: block;
-  width: clamp(178px, 54vw, 264px);
-  height: auto;
-  border-radius: var(--r-md);
-  filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.45));
-}
-/* The infinite float runs on this wrapper, NOT on the filtered img: the
-   drop-shadow raster gets cached once and the compositor just moves the
-   layer. Filter + transform-animation on the same element re-filters every
-   frame on weak GPUs. */
-.home-mobile-board-float {
-  position: absolute;
-  will-change: transform;
-}
-.home-mobile-board-float--rear {
-  transform: translate(15%, 9%) rotate(8deg) scale(0.85);
-  opacity: 0.8;
-  animation: home-board-float-rear 7s ease-in-out infinite;
-}
-.home-mobile-board-float--front {
-  transform: translate(-13%, -4%) rotate(-6deg);
-  animation: home-board-float-front 6s ease-in-out infinite;
-}
-@keyframes home-board-float-front {
-  0%, 100% { transform: translate(-13%, -4%) rotate(-6deg); }
-  50% { transform: translate(-13%, -7%) rotate(-6deg); }
-}
-@keyframes home-board-float-rear {
-  0%, 100% { transform: translate(15%, 9%) rotate(8deg) scale(0.85); }
-  50% { transform: translate(15%, 12%) rotate(8deg) scale(0.85); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .home-mobile-board-float--front,
-  .home-mobile-board-float--rear {
-    animation: none;
-  }
-}
 
-.home-mobile-wordmark {
-  margin: 0;
-  display: block;
-}
-
-.home-mobile-wordmark .hero-wordmark-svg {
-  height: clamp(2.75rem, 13vw, 4rem);
-}
-
-/* Two full-width hero actions side by side: Shop (gold) + GitHub (ghost).
-   Each is its own pill spanning half the row, using the phone's full width. */
-.home-mobile-cta {
+/* Phone walkthrough: the step's still, the step controls, then the caption
+   as a sheet. Stacked in flow, so the three never overlap. */
+.tour-m {
   display: flex;
-  align-items: stretch;
-  gap: 0.6rem;
-  margin-top: 0.5rem;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.tour-m-stage {
+  position: relative;
+  align-self: center;
+  width: min(100%, 26rem);
+  aspect-ratio: 1 / 0.82;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  touch-action: pan-y;
+  user-select: none;
+}
+.tour-m-still {
+  position: relative;
   width: 100%;
+  height: auto;
+  animation: tour-m-in 0.35s ease both;
+  -webkit-user-drag: none;
 }
-.home-mobile-cta-btn {
-  flex: 1 1 0;
-  display: inline-flex;
+@keyframes tour-m-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.tour-m-controls {
+  display: flex;
   align-items: center;
-  justify-content: center;
   gap: 0.5rem;
-  min-height: 52px;
-  padding: 0 1rem;
-  border-radius: var(--r-pill);
-  font-family: var(--font-mono);
-  font-size: 0.9rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease,
-    background 0.18s ease, color 0.18s ease;
 }
-.home-mobile-cta-btn:active {
-  transform: translateY(1px);
-}
-.home-mobile-cta-shop {
-  background: var(--color-gold-fill);
-  color: var(--color-on-accent);
-  border: 1px solid var(--color-gold-fill);
-  box-shadow: 0 8px 22px color-mix(in srgb, var(--color-gold-fill) 28%, transparent);
-}
-.home-mobile-cta-shop:hover {
-  background: var(--color-gold-fill-hover);
-}
-.home-mobile-cta-github {
+.tour-m-arrow {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border-strong);
   background: var(--color-bg-card);
   color: var(--color-text);
-  border: 1px solid var(--color-border-strong);
 }
-.home-mobile-cta-github:hover {
-  border-color: var(--color-gold);
-  color: var(--color-gold-text);
+.tour-m-arrow:disabled {
+  opacity: 0.35;
+}
+.tour-m-rail {
+  flex: 1 1 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  min-width: 0;
+}
+.tour-m-rail::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  background: color-mix(in srgb, var(--color-text-dim) 30%, transparent);
+}
+.tour-m-dot {
+  position: relative;
+  width: 24px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.tour-m-dot::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 17px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-bg);
+  border: 1px solid color-mix(in srgb, var(--color-text-dim) 60%, transparent);
+}
+.tour-m-dot.done::before { background: color-mix(in srgb, var(--color-accent) 45%, transparent); }
+.tour-m-dot.on::before {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  transform: scale(1.4);
+}
+.tour-m-sheet {
+  padding: 1.1rem 1.25rem 1.25rem;
+  background: var(--pod-bg-strong);
+  border: 1px solid var(--pod-border);
+  border-radius: var(--r-md);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.tour-m-sheet .tour-panel-body { align-self: stretch; }
+.tour-m-sheet .tour-role { font-size: 1.6rem; margin: 0.35rem 0 0.5rem; }
+.tour-m-sheet .tour-text { font-size: 1rem; }
+.tour-m-sheet .tour-product { margin-top: 1rem; padding-top: 0.75rem; }
+.tour-m-sheet .tour-shop { margin-top: 1.1rem; }
+.tour-m-sheet .tour-shop.is-primary { align-self: stretch; justify-content: center; }
+@media (prefers-reduced-motion: reduce) {
+  .tour-m-still { animation: none; }
 }
 
 .home-mobile-featured {
@@ -15508,12 +15272,11 @@ body:has(.overlay.expanded) .placeholder-banner {
 }
 
 /* ---------------------------------------------------------------------------
-   Hero prototype (/hero-preview). Scoped under .hp so it cannot leak into the
-   live homepage while the two are being compared.
+   Homepage walkthrough (HeroDroneStage): the 3D drone, its caption panel and
+   the step rail.
    --------------------------------------------------------------------------- */
 /* The walkthrough is a layer inside the hero's sticky pane, not a section of
-   its own: the wordmark, size selector and buy bubble sit over the same drone.
-   Pointer events are re-enabled here because the pane itself sets none. */
+   its own. Pointer events are re-enabled here because the pane sets none. */
 .hp-stage {
   position: absolute;
   inset: 0;
@@ -15532,33 +15295,135 @@ body:has(.overlay.expanded) .placeholder-banner {
   color: var(--color-text-dim);
   pointer-events: none;
 }
-/* Chapter rail, horizontal along the bottom centre. It was vertical on the left
-   originally, which put it straight on top of the hero's centred GitHub mark.
-   Horizontal also survives short viewports, where a 46vh vertical rail collides
-   with both the size selector above it and the wordmark below. */
+/* The walkthrough's layout. Desktop: the caption panel is a column on the
+   left, vertically centred, and the drone is framed right of it (the scene
+   reads --hero-shift-x with the drone whole, --hero-shift-x-part with a part
+   out, --hero-shift-y and --hero-zoom from here). The rail is centred under
+   the drone. */
+.hp-stage {
+  --tour-gutter: 2.5rem;
+  --tour-col: clamp(19rem, 28vw, 25rem);
+  --hero-shift-x: 0.13;
+  --hero-shift-x-part: 0.2;
+  --hero-shift-y: 0;
+  --hero-zoom: 0.9;
+}
+.tour-panel {
+  position: absolute;
+  left: var(--tour-gutter);
+  /* Top-anchored a little above the middle, not centred: the counter and
+     heading stay put while the caption length changes between steps. */
+  top: max(1.5rem, calc(50% - 10rem));
+  width: var(--tour-col);
+  z-index: 22;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.tour-panel-body {
+  animation: hp-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes hp-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+.tour-count {
+  margin: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.8rem;
+  letter-spacing: 0.14em;
+  color: var(--color-gold-text);
+}
+.tour-role {
+  margin: 0.6rem 0 0.9rem;
+  font-size: clamp(2rem, 3vw, 2.75rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+}
+.tour-text {
+  margin: 0;
+  max-width: 34ch;
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  color: var(--color-text-muted);
+}
+.tour-product {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+  display: grid;
+  gap: 0.4rem;
+}
+.tour-product-line {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0.75rem;
+}
+.tour-product-name {
+  font-weight: 600;
+  color: var(--color-text);
+}
+.tour-product-price {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+.tour-product-link,
+.tour-shop:not(.is-primary) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--color-gold-text);
+  text-decoration: none;
+}
+.tour-product-link:hover,
+.tour-product-link:focus-visible,
+.tour-shop:not(.is-primary):hover,
+.tour-shop:not(.is-primary):focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.tour-product-link svg,
+.tour-shop svg {
+  transition: transform 0.2s ease;
+}
+.tour-product-link:hover svg,
+.tour-shop:hover svg {
+  transform: translateX(3px);
+}
+/* The one Shop button: a quiet link under the caption until the last step,
+   where it becomes the gold button. */
+.tour-panel .tour-shop {
+  margin-top: 2rem;
+}
+.tour-shop:not(.is-primary) {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.75rem;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.tour-shop.is-primary {
+  width: auto;
+  min-height: 48px;
+  padding: 0 24px;
+  gap: 0.6rem;
+  font-size: 16px;
+}
+
+/* Step rail, centred under the drone. Each dot is a button that jumps to its
+   step; the active step's name shows under it, any other on hover or focus. */
 .hp-rail {
   position: absolute;
-  /* Width gives twice before position does: capped at 440px, then at 42vw,
-     then at the room actually left between the brand block (wordmark + GitHub
-     mark, --hero-brand-right) and the buy bubble's reserve on the right.
-     Centred while there is room; when the viewport narrows the centre is
-     pushed right just enough to clear the brand block instead of sliding
-     under it. */
-  /* 29.5rem right reserve = the buy bubble's ~24.5rem column + its 2.5rem
-     inset + breathing room, measured at rest. Rem, not px: the bubble's
-     width tracks the user's font size, so a px reserve under-reserves the
-     moment a visitor bumps their browser font scaling. */
-  --hp-rail-w: min(
-    27.5rem,
-    42vw,
-    calc(100vw - var(--hero-brand-right, 32rem) - 1.5rem - 29.5rem)
-  );
-  left: max(
-    50%,
-    calc(var(--hero-brand-right, 32rem) + 1.5rem + var(--hp-rail-w) / 2)
-  );
-  /* Centred on the bottom strip's shared line (the 2px track straddles it). */
-  bottom: calc(var(--hero-strip-mid, 93px) - 1px);
+  --hp-rail-w: min(30rem, 36vw);
+  left: calc(var(--tour-gutter) + var(--tour-col) + (100% - var(--tour-gutter) - var(--tour-col)) / 2);
+  bottom: 3.25rem;
   transform: translateX(-50%);
   width: var(--hp-rail-w);
   height: 2px;
@@ -15578,80 +15443,104 @@ body:has(.overlay.expanded) .placeholder-banner {
 }
 .hp-dot {
   position: absolute;
-  top: -4px;
-  margin-left: -5px;
+  top: -11px;
+  width: 24px;
+  height: 24px;
+  margin-left: -12px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.hp-dot::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 7px;
   width: 10px;
   height: 10px;
   border-radius: 50%;
   background: var(--color-bg);
-  border: 1px solid color-mix(in srgb, var(--color-text-dim) 50%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-text-dim) 60%, transparent);
   transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
 }
-/* No text on the rail: the dots and the fill say how far, the copy panel says
-   where. Beat names stay on the buttons as aria-labels. */
-.hp-dot.done { background: color-mix(in srgb, var(--color-accent) 45%, transparent); }
-.hp-dot.on {
+.hp-dot.done::before { background: color-mix(in srgb, var(--color-accent) 45%, transparent); }
+.hp-dot.on::before {
   background: var(--color-accent);
   border-color: var(--color-accent);
   transform: scale(1.4);
 }
-/* Per-beat copy, upper right. NOT vertically centred: the buy bubble occupies
-   the bottom right and grew tall enough to bury this entirely once all three
-   product cards revealed. Top-anchored also keeps the title in the same place
-   as the note length changes between beats. */
-.hp-copy {
+.hp-dot:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 0; border-radius: 50%; }
+.hp-dot-label {
   position: absolute;
-  right: clamp(20px, 5vw, 96px);
-  top: clamp(120px, 19vh, 210px);
-  /* Wider measure (2026-08-12, maintainer): the copy owns this side of the stage,
-     let it breathe instead of wrapping tight at 34ch. */
-  max-width: min(46ch, 38vw);
-  animation: hp-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-@keyframes hp-in {
-  from { opacity: 0; transform: translateY(14px); }
-  to   { opacity: 1; transform: none; }
-}
-.hp-label {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.25rem 0.75rem;
-  color: var(--color-text);
-  text-decoration: none;
-}
-.hp-label-name {
-  font-size: clamp(1.25rem, 2vw, 1.6rem);
-  font-weight: 600;
-  line-height: 1.2;
-  white-space: nowrap;
-}
-.hp-label-meta {
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 0.9rem;
-  color: var(--color-text-muted);
-  white-space: nowrap;
-}
-a.hp-label:hover .hp-label-name,
-a.hp-label:focus-visible .hp-label-name {
-  text-decoration: underline;
-  text-underline-offset: 4px;
-  text-decoration-color: var(--color-gold);
-}
-.hp-hint {
-  position: absolute;
+  top: 26px;
   left: 50%;
-  /* Below the rail, which now sits on the bottom strip's shared line. */
-  bottom: 10px;
   transform: translateX(-50%);
+  white-space: nowrap;
   font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 0.6rem;
-  letter-spacing: 0.26em;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--color-text-dim);
-  animation: hp-bob 2.4s ease-in-out infinite;
+  color: var(--color-text-muted);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
 }
-@keyframes hp-bob { 0%,100% {opacity:.4; transform:translate(-50%,0);} 50% {opacity:.9; transform:translate(-50%,4px);} }
+.hp-dot.on .hp-dot-label { opacity: 1; color: var(--color-text); }
+/* A hovered or focused dot's name replaces the active one's, so two names
+   never sit side by side. */
+.hp-rail:has(.hp-dot:hover, .hp-dot:focus-visible) .hp-dot.on .hp-dot-label { opacity: 0; }
+.hp-dot:hover .hp-dot-label,
+.hp-dot:focus-visible .hp-dot-label { opacity: 1 !important; color: var(--color-text); }
+/* The first and last names hang inward so they never leave the rail's side. */
+.hp-dot:first-of-type .hp-dot-label { left: 0; transform: translateX(-12px); }
+.hp-dot:last-of-type .hp-dot-label { left: auto; right: 0; transform: translateX(12px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tour-panel-body { animation: none; }
+  .tour-product-link svg, .tour-shop svg, .hp-dot::before, .hp-dot-label { transition: none; }
+}
+
+/* Between the phone layout (768px) and ~1040px there is no room for a column:
+   the caption becomes a sheet at the bottom, the drone is framed above it and
+   the rail sits between the two. */
+@media (max-width: 65em) {
+  .hp-stage {
+    --tour-gutter: 1.5rem;
+    --hero-shift-x: 0;
+    --hero-shift-x-part: 0;
+    --hero-shift-y: 0.17;
+    --hero-zoom: 1;
+  }
+  .tour-panel {
+    left: var(--tour-gutter);
+    right: var(--tour-gutter);
+    top: auto;
+    bottom: 1.5rem;
+    width: auto;
+    padding: 1.25rem 1.5rem;
+    background: var(--pod-bg-strong);
+    border: 1px solid var(--pod-border);
+    border-radius: var(--r-md);
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem 2rem;
+  }
+  .tour-panel .tour-panel-body { flex: 1 1 22rem; }
+  .tour-panel .tour-shop { margin-top: 0; }
+  .tour-panel .tour-role { font-size: 1.75rem; margin: 0.35rem 0 0.5rem; }
+  .tour-panel .tour-text { max-width: 52ch; font-size: 1rem; }
+  .tour-panel .tour-product { margin-top: 1rem; padding-top: 0.75rem; }
+  .hp-rail {
+    left: 50%;
+    --hp-rail-w: min(28rem, 64vw);
+    bottom: calc(1.5rem + var(--tour-sheet-h, 15rem) + 1.5rem);
+  }
+}
+
+/* /hero-preview: the page after the hero. */
 .hp-after {
   min-height: 60vh;
   display: grid;
@@ -15659,16 +15548,10 @@ a.hp-label:focus-visible .hp-label-name {
   color: var(--color-text-muted);
   padding: 4rem 1rem;
 }
-@media (prefers-reduced-motion: reduce) {
-  .hp-copy, .hp-hint { animation: none; }
-}
-@media (max-width: 720px) {
-  .hp-copy { right: 16px; left: 16px; max-width: none; top: auto; bottom: 130px; }
-}
 
-/* Every beat's copy lives in the DOM for crawlers and assistive tech. It is
-   visually hidden while the 3D drives the presentation, and becomes the actual
-   content when the scene is not loaded (small screens, reduced motion). */
+/* Every step's caption lives in the DOM for crawlers and assistive tech. It
+   is visually hidden while the 3D drives the presentation, and becomes the
+   page when the scene is not loaded (reduced motion, no WebGL). */
 .hp-fallback {
   position: absolute;
   width: 1px;
@@ -15680,7 +15563,11 @@ a.hp-label:focus-visible .hp-label-name {
   padding: 0;
   list-style: none;
 }
-.hp-stage:not(:has(canvas)) .hp-fallback {
+/* The stage is one pinned screen, so the list scrolls inside it. */
+.hp-stage.is-static {
+  overflow-y: auto;
+}
+.hp-stage.is-static .hp-fallback {
   position: static;
   width: auto;
   height: auto;
@@ -15688,28 +15575,12 @@ a.hp-label:focus-visible .hp-label-name {
   clip-path: none;
   white-space: normal;
   display: grid;
-  gap: 1.75rem;
+  gap: 2.5rem;
   max-width: 60ch;
   margin: 0 auto;
-  padding: 6rem 1.25rem;
+  padding: 3rem 1.5rem 5rem;
 }
-.hp-stage:not(:has(canvas)) { height: auto; min-height: 60vh; }
-.hp-stage:not(:has(canvas)) .hp-rail,
-.hp-stage:not(:has(canvas)) .hp-copy { display: none; }
-.hp-dot { padding: 0; cursor: pointer; }
-.hp-dot:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
-/* Between the 768px mobile switch and ~1040px the strip cannot hold all three
-   tenants (wordmark + GitHub, rail, buy bubble) at readable sizes: the width
-   formula above would starve the rail below ~140px. Drop the rail there; the
-   beat copy panel still names where you are, and scrolling still walks the
-   beats. */
-/* 65em, not 1040px: the strip's tenants are rem-sized, so the point where
-   they stop fitting scales with the font size. */
-@media (max-width: 65em) {
-  .hp-rail {
-    display: none;
-  }
-}
+.hp-stage.is-static .tour-role { font-size: 1.75rem; }
 
 /* Named load stage under the splash wordmark. The assembly arrives as several
    files and the drone visibly builds up behind this, so it reads as "the

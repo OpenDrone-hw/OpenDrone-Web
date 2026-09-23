@@ -17,25 +17,10 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
+import {tourSteps, type TourStep} from '~/lib/home-tour';
 
-export type HeroBeat = {
-  id: string;
-  /** Part name, the start of the label line. */
-  title: string;
-  /** Spec suffix after the name ("20x20 / 30x30 · 3-6S / 3-8S"). */
-  note?: string;
-  /** Product handle; the label adds that product's price. */
-  handle?: string;
-  /** Product page for this part, when it is sold here. */
-  href?: string;
-  /** Mid-hold label changes, in hold order. Only the fallback DOM renders
-   *  these as a list; live, the reported beat IS the active stop's label. */
-  stops?: Array<{
-    title: string;
-    note?: string;
-    href?: string;
-  }>;
-};
+/** One step of the walkthrough (see app/lib/home-tour.ts). */
+export type HeroBeat = TourStep;
 
 /** One streamed piece of the assembly, as written by build-hero.mjs --split. */
 type Chunk = {id: string; label: string; file: string; bytes: number};
@@ -63,15 +48,16 @@ export type HeroDroneSceneProps = {
   model?: string;
   /** Fires as the reader moves through the sequence, 0..1. */
   onProgress?: (frac: number) => void;
-  /** Fires when the presented beat changes; null while the drone rests whole. */
+  /** Fires when the presented step changes; null while the drone rests
+   *  whole between two parts. The index is the step's place in onBeats. */
   onBeat?: (beat: HeroBeat | null, index: number) => void;
-  /** The list of beats, once known. */
+  /** Every step in order, once known. */
   onBeats?: (beats: HeroBeat[]) => void;
   /** Fires as the model streams in, for the splash progress. */
   onLoad?: (state: HeroLoadState) => void;
   /** Fires once the model is on screen. */
   onReady?: () => void;
-  /** Handed a jump function once ready, so the rail dots can seek. */
+  /** Handed a jump function once ready, so the rail dots can seek a step. */
   onSeeker?: (goTo: (i: number) => void) => void;
 };
 
@@ -764,23 +750,25 @@ export function HeroDroneScene({
       type Beat = {
         id: string;
         title: string;
-        note?: string;
+        caption?: string;
         handle?: string;
-        href?: string;
         faceOn?: boolean;
         fade?: number;
         /** Per-beat override of sequence.partSize: how much of the viewport
          *  height the part fills under the spotlight. >0.9 deliberately
          *  crops (the airframe reads better close, top plate off screen). */
         partSize?: number;
-        /** Label changes partway through the hold, at that fraction of it.
-         *  An active stop's label REPLACES the beat's wholesale (href
-         *  included), so a stop with no href renders no link. */
+        /** Steps inside one hold. A stop's caption takes over at `at` (a
+         *  fraction of the hold) and REPLACES the beat's wholesale, handle
+         *  included. `park` is where the scroll rests for that step, default
+         *  halfway to the next stop. */
         stops?: Array<{
+          id?: string;
           at: number;
+          park?: number;
           title: string;
-          note?: string;
-          href?: string;
+          caption?: string;
+          handle?: string;
         }>;
         choreo?: string;
         nodes: Node[];
@@ -838,10 +826,8 @@ export function HeroDroneScene({
         const beat: Beat = {
           id: b.id,
           title: b.title,
-          note: b.note,
+          caption: b.caption,
           handle: b.handle,
-          // A beat naming a product handle links to that product page.
-          href: b.handle ? `/products/${b.handle}` : b.href,
           fade: b.fade,
           partSize: b.partSize,
           stops: b.stops,
@@ -888,32 +874,17 @@ export function HeroDroneScene({
         }
         return beat;
       });
-      // The reported copy payload. With a stop index, the stop's copy replaces
-      // the beat's wholesale (a stop with no href gets no link), and the id is
-      // suffixed so the copy panel re-animates on the mid-hold caption change.
-      const toHeroBeat = (b: Beat, stopIdx = -1): HeroBeat => {
-        const st = stopIdx >= 0 ? b.stops?.[stopIdx] : undefined;
-        if (st)
-          return {
-            id: `${b.id}:${stopIdx}`,
-            title: st.title,
-            note: st.note,
-            href: st.href,
-          };
-        return {
-          id: b.id,
-          title: b.title,
-          note: b.note,
-          handle: b.handle,
-          href: b.href,
-          stops: b.stops?.map((s) => ({
-            title: s.title,
-            note: s.note,
-            href: s.href,
-          })),
-        };
-      };
-      onBeats?.(BEATS.map((b) => toHeroBeat(b)));
+      // The walkthrough's steps: one per beat, or one per stop for a beat with
+      // stops. A stop's copy replaces the beat's wholesale (a stop with no
+      // handle gets no product line). stepBase[i] is beat i's first step.
+      const STEPS: HeroBeat[] = tourSteps(cfg.beats);
+      const stepBase: number[] = [];
+      for (let i = 0, n = 0; i < BEATS.length; i++) {
+        stepBase.push(n);
+        n += Math.max(1, BEATS[i].stops?.length ?? 0);
+      }
+      const stepOf = (beat: number, stopIdx: number) => stepBase[beat] + Math.max(0, stopIdx);
+      onBeats?.(STEPS.slice());
 
       /* --------------------------------------------- dim everything else */
       const twin = new Map<THREE.Material, THREE.MeshStandardMaterial>();
@@ -1005,7 +976,7 @@ export function HeroDroneScene({
         const SS = wantScale * pivot.scale.x;
 
         // The spotlight strikes only once the part has arrived, and cuts as it
-        // leaves. That cut is the cue for the copy on the right.
+        // leaves. That cut is the cue for the caption panel.
         const arrived = elapsed >= TRAVEL && elapsed <= TRAVEL + HOLD;
         const strike = arrived
           ? THREE.MathUtils.clamp((elapsed - TRAVEL) / Math.max(S.strike * HOLD, 1e-3), 0, 1)
@@ -1087,18 +1058,28 @@ export function HeroDroneScene({
        * flown home and the whole drone reads for a breath before the next
        * scroll pulls the next part out. Without these the sequence chains
        * spotlight into spotlight and the return-home never gets seen. */
-      const stopForBeat = (i: number) => i * dur() + TRAVEL + HOLD * 0.5;
-      type Stop = {pos: number; beat: number; part: boolean};
+      // A beat with stops parks once per stop, each inside the hold where
+      // that stop's caption is active; a plain beat parks mid-hold.
+      const parksFor = (b: Beat): number[] =>
+        b.stops?.length
+          ? b.stops.map((st, j) => {
+              const next = b.stops![j + 1]?.at ?? 1;
+              return THREE.MathUtils.clamp(st.park ?? (st.at + next) / 2, st.at + 0.01, next - 0.01);
+            })
+          : [0.5];
+      type Stop = {pos: number; beat: number; part: boolean; step: number};
       const STOPS: Stop[] = [];
       for (let i = 0; i < BEATS.length; i++) {
-        STOPS.push({pos: stopForBeat(i), beat: i, part: true});
+        parksFor(BEATS[i]).forEach((park, j) =>
+          STOPS.push({pos: i * dur() + TRAVEL + HOLD * park, beat: i, part: true, step: stepBase[i] + j}),
+        );
         // A rest only earns its place between two beats that both pull a part
         // out; next to a whole-drone beat it would be the same shot twice.
         if (i < BEATS.length - 1 && BEATS[i].nodes.length && BEATS[i + 1].nodes.length)
-          STOPS.push({pos: (i + 1) * dur(), beat: i + 1, part: false});
+          STOPS.push({pos: (i + 1) * dur(), beat: i + 1, part: false, step: -1});
       }
       const stopPos = (si: number) => STOPS[si].pos;
-      const partStopIdx = (beat: number) => STOPS.findIndex((s) => s.part && s.beat === beat);
+      const partStopIdx = (step: number) => STOPS.findIndex((s) => s.part && s.step === step);
       // The next PART stop in a direction. One confident scroll is one item
       // of the walkthrough: the rest between two parts never costs its own
       // gesture. It is not skipped either: a wheel step ROUTES through it
@@ -1358,7 +1339,7 @@ export function HeroDroneScene({
         target = stopPos(idx);
       };
       const goTo = (i: number) =>
-        goToStop(partStopIdx(Math.max(0, Math.min(BEATS.length - 1, i))));
+        goToStop(partStopIdx(Math.max(0, Math.min(STEPS.length - 1, i))));
       // Deep link: /#esc (also fc, rx, frame, motors) opens the walkthrough
       // ON that part, so the PDP's "see how the whole drone works" lands on
       // the component in the assembly instead of the top of the sequence.
@@ -1371,7 +1352,7 @@ export function HeroDroneScene({
             ? location.hash.slice(1).toLowerCase()
             : '';
         const wantId = hash === 'motors' ? 'motor' : hash;
-        const bi = wantId ? BEATS.findIndex((bb) => bb.id === wantId) : -1;
+        const bi = wantId ? STEPS.findIndex((st) => st.id === wantId) : -1;
         if (bi >= 0) {
           goTo(bi);
           pos = target;
@@ -1422,6 +1403,39 @@ export function HeroDroneScene({
       let lastBeat = -1;
       let lastDimBeat = -1;
       let sizedTo = '';
+      // Where the page wants the drone framed, from CSS custom properties on
+      // the host, so the layout (caption column, bottom sheet) owns it:
+      // --hero-shift-x / --hero-shift-x-part move the picture right by that
+      // fraction of the width with the drone whole / a part out, --hero-shift-y
+      // moves it up, --hero-zoom scales it. Read on resize only.
+      const frame0 = {sx: 0, sxPart: 0, sy: 0, zoom: 1};
+      const readFraming = () => {
+        const cs = getComputedStyle(el);
+        const num = (name: string, fallback: number) => {
+          const v = parseFloat(cs.getPropertyValue(name));
+          return Number.isFinite(v) ? v : fallback;
+        };
+        frame0.sx = num('--hero-shift-x', 0);
+        frame0.sxPart = num('--hero-shift-x-part', frame0.sx);
+        frame0.sy = num('--hero-shift-y', 0);
+        frame0.zoom = num('--hero-zoom', 1);
+      };
+      let lastShift = NaN;
+      const applyFraming = (k: number) => {
+        const w = renderer.domElement.clientWidth || el.clientWidth;
+        const h = renderer.domElement.clientHeight || el.clientHeight;
+        if (!w || !h) return;
+        const sx = THREE.MathUtils.lerp(frame0.sx, frame0.sxPart, k);
+        const key = sx * 1e4 + frame0.sy * 1e2 + frame0.zoom + w + h * 1e-3;
+        if (key === lastShift) return;
+        lastShift = key;
+        // The drone is about 1.3 times wider than tall, so a narrow frame
+        // (a portrait tablet, a square still) zooms out to keep it whole.
+        camera.zoom = frame0.zoom * Math.min(1, camera.aspect / 1.5);
+        if (sx || frame0.sy) camera.setViewOffset(w, h, -sx * w, frame0.sy * h, w, h);
+        else camera.clearViewOffset();
+        camera.updateProjectionMatrix();
+      };
       const resizeIfNeeded = () => {
         const w = Math.round(el.clientWidth);
         const h = Math.round(el.clientHeight);
@@ -1433,6 +1447,8 @@ export function HeroDroneScene({
         renderer.setPixelRatio(dpr);
         renderer.setSize(w, h, true);
         camera.aspect = w / h;
+        readFraming();
+        lastShift = NaN;
         camera.updateProjectionMatrix();
       };
 
@@ -1556,12 +1572,12 @@ export function HeroDroneScene({
         const kRaw = envelope(t);
         const k = b.nodes.length ? kRaw : 0;
 
-        // The label follows the SPOTLIGHT, not the timeline: it shows a
-        // part while that part is out (k high) and clears during travel and
-        // rests, so a rest reads as the whole drone with no label racing
-        // ahead to the next part. A whole-drone beat stays silent.
+        // The caption follows the SPOTLIGHT, not the timeline: a part's step
+        // is reported while that part is out (k high), and null during travel
+        // and rests, so the next part's caption never races ahead of it. A
+        // whole-drone beat (no nodes) is its own step and always reports.
         {
-          const display = b.nodes.length && kRaw > 0.3 ? beatIdx : -1;
+          const display = !b.nodes.length || kRaw > 0.3 ? beatIdx : -1;
           // Which mid-hold stop is active, matching the studio's activeStop():
           // the last stop whose `at` the hold progress has passed. This is the
           // wiring that used to be missing: `stops` was parsed and ignored, so
@@ -1575,7 +1591,10 @@ export function HeroDroneScene({
           const shown = display < 0 ? -1 : display * 100 + stopIdx + 1;
           if (shown !== lastBeat) {
             lastBeat = shown;
-            onBeat?.(display >= 0 ? toHeroBeat(b, stopIdx) : null, display);
+            onBeat?.(
+              display >= 0 ? STEPS[stepOf(display, stopIdx)] : null,
+              display >= 0 ? stepOf(display, stopIdx) : -1,
+            );
           }
         }
 
@@ -1621,7 +1640,7 @@ export function HeroDroneScene({
         const off = new THREE.Vector3(Math.cos(orbitAngle), camH + dragTilt, Math.sin(orbitAngle)).normalize().multiplyScalar(back);
         // The framing point sits a little below the drone's centre (camera and
         // lookAt shift together), which lifts the drone up the viewport: the
-        // bottom strip (wordmark, rail, Shop) eats into the lower frame, so
+        // rail along the bottom eats into the lower frame, so
         // dead centre reads as sitting too low.
         const focus = droneCentre.clone();
         focus.y -= droneRadius * (cfg.camera?.lift ?? 0.24);
@@ -1631,6 +1650,8 @@ export function HeroDroneScene({
         if (dragging) camera.position.copy(focus.clone().add(off));
         else camera.position.lerp(focus.clone().add(off), 1 - 0.004 ** dt);
         camera.lookAt(focus);
+
+        applyFraming(k);
 
         // The camera must be posed BEFORE the presentation: a spotlit part is
         // anchored to the camera, so presenting against last frame's pose makes
@@ -1688,10 +1709,25 @@ export function HeroDroneScene({
             renderer.domElement.dispatchEvent(
               new WheelEvent('wheel', {deltaY, deltaMode, bubbles: true, cancelable: true}),
             ),
+          // A still of the canvas as it stands: rendered and read in the same
+          // task, so it works without preserveDrawingBuffer. Without the light
+          // shaft by default: its dithered alpha triples a still's file size.
+          snap: (withBeam = false) => {
+            testDt = 0;
+            frame();
+            testDt = null;
+            if (!withBeam) {
+              beam.visible = false;
+              motes.visible = false;
+              renderer.render(scene, camera);
+            }
+            return renderer.domElement.toDataURL('image/png');
+          },
           scene,
           camera,
           THREE,
           beats: BEATS.map((b) => b.id),
+          steps: STEPS.map((st) => st.id),
           dur: dur(),
         };
       }

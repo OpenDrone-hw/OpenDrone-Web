@@ -711,40 +711,15 @@
   background: var(--color-bg-card);
 }
 
-/* Desktop Shop button: the site's primary button at its own width, not a
-   full-width mono bar. */
-.hero-buy-btn.btn-primary {
-  width: auto;
-  align-self: flex-end;
-  min-height: 48px;
-  padding: 0 24px;
-  font-size: 16px;
-}
-/* Phone home: one full-width Shop button. */
-.home-mobile-cta {
-  flex-direction: column;
-  align-items: stretch;
-  margin-top: 0;
-}
-.home-mobile-cta .btn-primary {
-  min-height: 48px;
-}
 /* The phone flagship line uses the /products two-column grid. */
 .home-mobile-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
-/* A small phone: a shorter board render so the Shop button reaches the
-   first screen. */
+/* A small phone: a shorter still so the caption reaches the first screen. */
 @media (max-width: 400px) {
-  .home-mobile-stage {
-    height: min(28vh, 160px);
-  }
-  .home-mobile-board {
-    width: clamp(120px, 36vw, 150px);
-  }
-  .home-mobile-hero {
-    gap: 0.9rem;
+  .tour-m-stage {
+    aspect-ratio: 1 / 0.7;
   }
 }
 
