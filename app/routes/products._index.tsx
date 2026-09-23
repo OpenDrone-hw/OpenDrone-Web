@@ -150,9 +150,9 @@ function datedOf(campaign: {paidStock: boolean; shipsOnTarget?: boolean; shipsWi
 
 const num = (m?: MoneyV2 | null) => (m ? parseFloat(m.amount) || 0 : 0);
 
-/** A product is "on sale" when any of its variants has a compare price. */
+/** Campaign compare prices are planned future steps, not previous sale prices. */
 const productOnSale = (p: CatalogProduct) =>
-  p.variants.nodes.some((v) => v.compareAtPrice != null);
+  p.variants.nodes.some((v) => !v.campaign && num(v.compareAtPrice) > num(v.price));
 
 /** The Shopify variant carrying a given option value (e.g. Model = "Gemini"),
  *  so a tier card shows its real price/sale even though the tiers themselves
@@ -377,7 +377,7 @@ export default function ProductsIndex() {
             to: `/products/${p.handle}?${encodeURIComponent(axis)}=${encodeURIComponent(value)}`,
             price,
             image: sv?.image ?? p.featuredImage,
-            onSale: sv?.compareAtPrice
+            onSale: sv?.campaign ? false : sv?.compareAtPrice
               ? num(sv.compareAtPrice) > num(price)
               : productOnSale(p),
             quickAdd: sv
