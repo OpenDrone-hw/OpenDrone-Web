@@ -81,17 +81,5 @@
         }
       ]
     }
-  ],
-  "extras": [
-    {
-      "handle": "battery-strap",
-      "sku": "ACC-STRAP-20X220",
-      "quantity": 1
-    },
-    {
-      "handle": "elrs-antenna-24",
-      "sku": "ACC-ANT-T",
-      "quantity": 1
-    }
   ]
 }

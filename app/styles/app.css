@@ -5012,7 +5012,6 @@ button.reset {
   margin-top: var(--sp-4);
 }
 
-
 /* Comparison ladder — the variant selector for a product line. Tier
    cards that double as the radio group; the selected card drives the
    spec/in-the-box preview and (when Shopify carries the option) the
@@ -5138,104 +5137,6 @@ button.reset {
   text-decoration-color: var(--color-text);
 }
 
-/* Pair CTA — playful cross-sell that sits under the buy strip. Vertical
-   stack so the product name gets display-size weight; the arrow pins to
-   the bottom-right corner of the card. */
-/* "Buy it as a stack" hover flyout on add-to-cart CTAs. Desktop: hovering or
-   focusing the CTA group reveals compact gold offer pills floating above the
-   button (Pod material) — one click adds this board + the size-matched
-   partner. Touch (no hover): the offers render as a slim always-visible row
-   under the CTA instead. */
-.cta-stack-group {
-  position: relative;
-}
-.cta-stack-flyout {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 100%;
-  /* Padding (not margin) bridges the hover gap between CTA and flyout. */
-  padding-bottom: 0.4rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  opacity: 0;
-  transform: translateY(5px);
-  pointer-events: none;
-  transition: opacity 0.16s ease, transform 0.16s ease;
-  z-index: 40;
-}
-.cta-stack-group:hover .cta-stack-flyout,
-.cta-stack-group:focus-within .cta-stack-flyout {
-  opacity: 1;
-  transform: none;
-  pointer-events: auto;
-}
-.cta-stack-group:hover .cta-stack-flyout,
-.cta-stack-group:focus-within .cta-stack-flyout {
-  transform: none;
-}
-.cta-stack-offer {
-  width: 100%;
-  padding: 0.45rem 0.85rem;
-  background: var(--pod-bg-strong);
-  border: 1px solid color-mix(in srgb, var(--color-gold) 40%, var(--color-border));
-  border-radius: var(--r-pill);
-  box-shadow: var(--pod-shadow);
-  color: var(--color-text);
-  cursor: pointer;
-  transition: border-color 0.15s ease;
-}
-.cta-stack-offer:hover {
-  border-color: var(--color-gold);
-}
-.cta-stack-offer .btn-label {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-}
-.cta-stack-offer-plus {
-  color: var(--color-gold-text);
-  font-weight: 700;
-}
-.cta-stack-offer-label {
-  flex: 1;
-  text-align: left;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.cta-stack-offer-price {
-  color: var(--color-text-muted);
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.35rem;
-}
-/* Struck full price next to a discounted partner price: the stack BXGY is
-   10% off the OpenESC only (never the pair), so when the added board is the
-   ESC its line shows full -> discounted, and the pct badge belongs to that
-   line, not to the stack total. */
-.cta-stack-offer-was {
-  color: var(--color-text-dim);
-  text-decoration: line-through;
-}
-.cta-stack-offer-pct {
-  color: var(--color-gold-text);
-}
-/* Touch devices: no hover — show the offers as a slim row under the CTA. */
-@media (hover: none) {
-  .cta-stack-flyout {
-    position: static;
-    opacity: 1;
-    transform: none;
-    pointer-events: auto;
-    padding-bottom: 0;
-    padding-top: 0.4rem;
-  }
-}
-
 /* Catalog card quick-add: a pill pinned to the bottom-right of the media
    square (the wrapper mirrors the 1:1 media box so it anchors to the image,
    not the text body), revealed on card hover. Touch: always visible. */
@@ -5255,20 +5156,16 @@ button.reset {
   pointer-events: none;
   z-index: 4;
 }
-.product-card-quickadd .cta-stack-group,
 .product-card-quickadd > * {
   pointer-events: auto;
 }
-.product-card-quickadd .product-card-quickadd-btn,
-.product-card-quickadd .cta-stack-offer {
+.product-card-quickadd .product-card-quickadd-btn {
   opacity: 0;
   transform: translateY(4px);
   transition: opacity 0.15s ease, transform 0.15s ease;
 }
 .product-card.has-quickadd:hover .product-card-quickadd-btn,
-.product-card.has-quickadd:focus-within .product-card-quickadd-btn,
-.product-card.has-quickadd:hover .cta-stack-group:hover .cta-stack-offer,
-.product-card.has-quickadd .cta-stack-group:focus-within .cta-stack-offer {
+.product-card.has-quickadd:focus-within .product-card-quickadd-btn {
   opacity: 1;
   transform: none;
 }
@@ -5290,22 +5187,10 @@ button.reset {
   opacity: 0.5;
   cursor: not-allowed;
 }
-/* The stack flyout inside a card opens upward over the image; keep it as
-   wide as the media box allows. */
-.product-card-quickadd .cta-stack-flyout {
-  min-width: 14rem;
-  left: auto;
-  right: 0;
-}
 @media (hover: none) {
   .product-card-quickadd .product-card-quickadd-btn {
     opacity: 1;
     transform: none;
-  }
-  /* Touch cards keep the single Add pill only — the stack offer lives on
-     the PDP's buy box there, where there's room to read it. */
-  .product-card-quickadd .cta-stack-flyout {
-    display: none;
   }
 }
 
@@ -17032,16 +16917,17 @@ html.light .cart-sheet-item .cart-line-preorder {
   line-height: 1;
 }
 
-/* Add-to-cart dialog (CartAddedDialog): a drawer from the right on desktop,
-   a bottom sheet on phones. What went in, then the parts that complete the
-   same build, each with its ship date. */
+/* Add-to-cart drawer (CartAddedDialog): from the right on desktop, a bottom
+   sheet on phones. The added line with its ship chip, an optional stack
+   row, the subtotal, Checkout. */
 .cart-added-overlay {
   position: fixed;
   inset: 0;
   z-index: 90;
   display: flex;
   justify-content: flex-end;
-  background: color-mix(in srgb, black 35%, transparent);
+  background: rgb(0 0 0 / 0.55);
+  animation: cart-added-fade 0.15s ease;
 }
 .cart-added-scrim {
   position: absolute;
@@ -17056,219 +16942,161 @@ html.light .cart-sheet-item .cart-line-preorder {
   display: flex;
   flex-direction: column;
   gap: var(--sp-4);
-  width: min(30rem, 100%);
+  width: min(26rem, 100%);
   height: 100%;
   overflow-y: auto;
-  padding: var(--sp-6, 2rem) 1.75rem;
+  padding: 1.25rem 1.5rem 1.5rem;
   border-left: 1px solid var(--color-border-strong);
   background: var(--color-bg-card);
-  box-shadow: -18px 0 60px color-mix(in srgb, black 38%, transparent);
   animation: cart-added-in 180ms ease-out;
 }
+.cart-added-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+.cart-added-head h2 {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-text);
+}
+.cart-added-check {
+  color: var(--color-stock);
+}
 .cart-added-close {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
   width: 2.5rem;
   height: 2.5rem;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
+  margin-right: -0.5rem;
+  border: 0;
   background: transparent;
   color: var(--color-text-muted);
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   line-height: 1;
   cursor: pointer;
 }
 .cart-added-close:hover {
   color: var(--color-text);
-  border-color: var(--color-border-strong);
 }
-.cart-added-head {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  padding-right: 3rem;
-  padding-bottom: var(--sp-4);
-  border-bottom: 1px solid var(--color-border);
-}
-.cart-added-check {
+.cart-added-lines {
   display: grid;
-  place-items: center;
-  flex: none;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--color-stock) 18%, transparent);
-  color: var(--color-stock);
-  font-weight: 700;
-}
-.cart-added-eyebrow {
+  gap: var(--sp-3);
   margin: 0;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-stock);
+  padding: 0;
+  list-style: none;
 }
-.cart-added h2 {
-  margin: 0.1rem 0 0;
-  font-size: 1.25rem;
-}
-.cart-added-line,
-.cart-added-suggestion {
+.cart-added-line {
   display: grid;
-  grid-template-columns: 4.5rem minmax(0, 1fr) auto;
-  align-items: center;
+  grid-template-columns: 3.5rem minmax(0, 1fr) auto;
+  align-items: start;
   gap: var(--sp-3);
+  font-size: var(--fs-sm);
 }
 .cart-added-line img,
-.cart-added-suggestion img {
+.cart-added-line .cart-line-noimage {
   width: 100%;
   height: auto;
-  align-self: start;
   aspect-ratio: 1 / 1;
   object-fit: contain;
-  border: 1px solid var(--color-border);
   border-radius: var(--r-sm);
   background: var(--color-bg-elevated);
 }
-html.light .cart-added-line img,
-html.light .cart-added-suggestion img {
+html.light .cart-added-line img {
   mix-blend-mode: multiply;
 }
-.cart-added-line > div,
-.cart-added-suggestion > div {
-  display: grid;
-  gap: 0.15rem;
-  min-width: 0;
+.cart-added-line-name {
+  display: block;
+  color: var(--color-text);
+  font-weight: 600;
 }
-.cart-added-line span,
-.cart-added-suggestion span {
+.cart-added-line-qty,
+.cart-added .ship-chip {
+  display: block;
+  margin-top: 0.15rem;
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-text-muted);
+}
+.cart-added-price {
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.cart-added-stack {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin: 0;
   font-size: var(--fs-sm);
   color: var(--color-text-muted);
 }
-.cart-added-qty {
-  font-family: var(--font-mono);
-}
-.cart-added-ship {
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  line-height: 1.45;
-  color: var(--color-gold-text);
-}
-.cart-added-ship.is-later {
-  color: var(--color-text-muted);
-}
-html.light .cart-added-ship {
+.cart-added-stack button {
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
   color: var(--color-text);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
 }
-.cart-added-price {
-  font-family: var(--font-mono);
-  color: var(--color-text) !important;
+.cart-added-stack button:disabled {
+  color: var(--color-text-muted);
+  text-decoration: none;
+  cursor: default;
 }
-.cart-added-price em {
-  font-style: normal;
-  color: var(--color-text-dim);
-}
-.cart-added-build {
+.cart-added-foot {
   display: grid;
   gap: var(--sp-3);
   padding-top: var(--sp-4);
   border-top: 1px solid var(--color-border);
 }
-.cart-added-build-title {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-.cart-added-suggestions {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: var(--sp-3);
-}
-.cart-added-suggestion {
-  grid-template-columns: 4rem minmax(0, 1fr) auto;
-  padding: var(--sp-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-md);
-}
-.cart-added-add,
-.cart-added-continue {
-  min-width: 4.5rem;
-  min-height: 40px;
-  padding: 0 var(--sp-3);
-  border: 1px solid var(--color-gold);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--color-gold-text);
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  cursor: pointer;
-}
-html.light .cart-added-add,
-html.light .cart-added-continue {
-  color: var(--color-text);
-}
-.cart-added-add:hover:not(:disabled) {
-  background: var(--color-gold-fill);
-  color: var(--color-on-accent);
-}
-.cart-added-add:disabled {
-  border-color: var(--color-border);
-  color: var(--color-text-dim);
-  cursor: default;
-}
-.cart-added-all {
-  min-height: 44px;
-  border: 1px dashed color-mix(in srgb, var(--color-gold) 60%, var(--color-border));
-  border-radius: var(--r-md);
-  background: var(--color-gold-soft);
-  color: var(--color-text);
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  cursor: pointer;
-}
-.cart-added-all:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-.cart-added-actions {
-  position: sticky;
-  bottom: calc(-1 * var(--sp-6, 2rem));
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--sp-3);
-  margin: auto -1.75rem calc(-1 * var(--sp-6, 2rem));
-  padding: var(--sp-3) 1.75rem var(--sp-6, 2rem);
-  border-top: 1px solid var(--color-border);
-  background: var(--color-bg-card);
-}
-.cart-added-continue {
-  min-height: 48px;
-  border-color: var(--color-border-strong);
-  color: var(--color-text);
-}
-.cart-added-view {
+.cart-added-subtotal {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--sp-3);
+  margin: 0;
+  color: var(--color-text);
+}
+.cart-added-subtotal .cart-added-price {
+  font-weight: 600;
+}
+.cart-added-foot form {
+  margin: 0;
+}
+.cart-added-checkout {
+  width: 100%;
   min-height: 48px;
-  border-radius: 999px;
+  border: 0;
+  border-radius: var(--r-md);
   background: var(--color-gold-fill);
   color: var(--color-on-accent);
+  font-family: var(--font-sans);
+  font-size: 1rem;
   font-weight: 600;
-  text-decoration: none;
+  cursor: pointer;
 }
-.cart-added-view:hover,
-.cart-added-view:focus-visible {
+.cart-added-checkout:hover,
+.cart-added-checkout:focus-visible {
   background: var(--color-gold-fill-hover);
-  /* The global a:hover gold would put gold text on the gold fill. */
-  color: var(--color-on-accent);
+}
+.cart-added-viewcart {
+  justify-self: center;
+  font-size: var(--fs-sm);
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
 }
 @keyframes cart-added-in {
   from { transform: translateX(100%); }
@@ -17278,42 +17106,30 @@ html.light .cart-added-continue {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
 }
+@keyframes cart-added-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 @media (max-width: 560px) {
   .cart-added-overlay {
     align-items: flex-end;
-    /* Darker on phones: the page behind the translucent header otherwise
-       reads through above the sheet. */
-    background: color-mix(in srgb, black 60%, transparent);
+    background: rgb(0 0 0 / 0.6);
   }
   .cart-added {
     width: 100%;
     height: auto;
     max-height: 92dvh;
-    padding: 1.25rem;
+    padding: 1rem 1.25rem 1.25rem;
     border: 1px solid var(--color-border-strong);
     border-radius: var(--r-md) var(--r-md) 0 0;
     animation-name: cart-added-up;
   }
-  .cart-added-actions {
-    position: sticky;
-    bottom: -1.25rem;
-    margin-inline: -1.25rem;
-    margin-bottom: -1.25rem;
-    padding: var(--sp-3) 1.25rem 1.25rem;
-    background: var(--color-bg-card);
-    border-top: 1px solid var(--color-border);
-  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .cart-added {
+  .cart-added,
+  .cart-added-overlay {
     animation: none;
   }
-}
-
-.cart-added-replaces {
-  font-size: var(--fs-xs);
-  line-height: 1.45;
-  color: var(--color-text);
 }
 
 /* Cart: unit price under a multi-quantity line total, update errors, and the
@@ -17368,13 +17184,6 @@ html.light .cart-added-continue {
     font-size: 0.8rem;
   }
 }
-
-.cart-added-note {
-  margin: 0;
-  font-size: var(--fs-xs, 0.75rem);
-  color: var(--color-text-muted);
-}
-
 
 .firmware-freedom {
   margin: 0 0 var(--sp-4, 1.25rem);
@@ -17668,8 +17477,7 @@ button[data-waiting] {
    cart: sans 16px/600, sentence case, gold fill. Yellow stays for the
    primary action only. */
 .cart-checkout-cta,
-.cart-sticky-checkout,
-.cart-added-view {
+.cart-sticky-checkout {
   min-height: 48px;
   font-family: var(--font-sans);
   font-size: 1rem;
@@ -17753,88 +17561,6 @@ button[data-waiting] {
    button is on screen. */
 .cart-sticky-bar[data-hidden] {
   display: none !important;
-}
-
-/* Added-to-cart dialog: a solid primary for the parts that ship with the
-   order, a group for the ones that would hold the parcel, no dashed boxes. */
-.cart-added-build-title {
-  font-family: var(--font-sans);
-  font-size: var(--fs-base);
-  font-weight: 600;
-  letter-spacing: 0;
-  text-transform: none;
-  color: var(--color-text);
-}
-.cart-added-primary {
-  display: grid;
-  gap: 0.15rem;
-  width: 100%;
-  min-height: 48px;
-  padding: 0.6rem var(--sp-4);
-  border: 1px solid var(--color-gold);
-  border-radius: var(--r-md);
-  background: var(--color-gold-soft);
-  color: var(--color-text);
-  font-family: var(--font-sans);
-  font-size: var(--fs-base);
-  font-weight: 600;
-  text-align: left;
-  cursor: pointer;
-}
-.cart-added-primary small {
-  font-size: var(--fs-sm);
-  font-weight: 400;
-  color: var(--color-text-muted);
-}
-.cart-added-primary:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--color-gold) 22%, transparent);
-}
-.cart-added-primary:disabled {
-  opacity: 0.7;
-  cursor: default;
-}
-.cart-added-later {
-  display: grid;
-  gap: var(--sp-2);
-  margin-top: var(--sp-2);
-}
-.cart-added-later-title {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-.cart-added-textlink {
-  justify-self: start;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--color-gold-text);
-  font-family: var(--font-sans);
-  font-size: var(--fs-sm);
-  text-align: left;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
-}
-.cart-added-textlink:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-.cart-added-note,
-.cart-added-ship,
-.cart-added-shipline {
-  font-family: var(--font-sans);
-  font-size: var(--fs-sm);
-  line-height: 1.45;
-  letter-spacing: 0;
-}
-.cart-added-shipline {
-  grid-column: 1 / -1;
-  margin: 0;
-  color: var(--color-text-muted);
 }
 
 /* Product cards: the badge says the ship state; the price sits under the
@@ -17962,8 +17688,7 @@ button[data-waiting] {
    is stated once in the summary (.cart-target-terms).
    ------------------------------------------------------------------ */
 .ship-chip,
-.cart-sheet-item .ship-chip,
-.cart-added .ship-chip {
+.cart-sheet-item .ship-chip {
   display: block;
   margin-top: 0.2rem;
   font-family: var(--font-sans);
@@ -18043,50 +17768,6 @@ body:has(main.cart) footer .site-footer-inner > div:has(> .newsletter-signup) {
   color: var(--color-text-muted);
 }
 
-/* Scrim: the page behind the dialog is clearly dimmed at every width
-   (phones keep their darker 60% from the sheet rule). */
-.cart-added-overlay {
-  animation: cart-added-fade 0.15s ease;
-}
-@media (min-width: 561px) {
-  .cart-added-overlay {
-    background: rgb(0 0 0 / 0.55);
-  }
-}
-@keyframes cart-added-fade {
-  from {
-    background: rgb(0 0 0 / 0);
-  }
-}
-
-/* A multi-line add (a whole build): one compact row per part. */
-.cart-added-line.is-compact {
-  grid-template-columns: 2.5rem minmax(0, 1fr) auto;
-  gap: var(--sp-2);
-  padding: 0.35rem 0;
-}
-.cart-added-line.is-compact + .cart-added-line.is-compact {
-  border-top: 1px solid var(--color-border);
-}
-.cart-added-line.is-compact strong {
-  font-size: var(--fs-sm);
-  line-height: 1.3;
-}
-.cart-added-line.is-compact .ship-chip {
-  margin-top: 0.05rem;
-  font-size: var(--fs-xs);
-}
-.cart-added-domain {
-  display: block;
-  margin-top: 0.35rem;
-  font-size: var(--fs-xs);
-  color: var(--color-text-muted);
-  text-align: center;
-}
-.cart-added-later--folded > summary {
-  cursor: pointer;
-  list-style: revert;
-}
 .product-price-ladder-now-left {
   font-size: var(--fs-sm);
 }
@@ -18146,28 +17827,6 @@ html:not(.light) .trust-chip-oshwa-mark {
   z-index: 1;
   background: var(--color-bg);
 }
-.cart-added-terms {
-  margin: 0;
-  color: var(--color-text-muted);
-}
-/* Short phones: a slimmer pinned footer, so a whole build's rows show. */
-@media (max-width: 560px) and (max-height: 760px) {
-  .cart-added-actions {
-    gap: var(--sp-2);
-    padding-top: var(--sp-2);
-  }
-  .cart-added-actions .cart-added-continue,
-  .cart-added-actions .cart-added-view {
-    min-height: 44px;
-  }
-  .cart-added-actions .cart-added-subtotal small {
-    display: inline !important;
-    margin-left: 0.35rem;
-  }
-  .cart-added-head {
-    padding-bottom: var(--sp-2);
-  }
-}
 
 /* ==================================================================
    Shop UI system: buttons, labels, chips, cards, tables, the docked
@@ -18220,8 +17879,7 @@ html:not(.light) .trust-chip-oshwa-mark {
 }
 /* Checkout buttons: the primary button, no glow, sentence case. */
 .cart-checkout-cta,
-.cart-sticky-checkout,
-.cart-added-view {
+.cart-sticky-checkout {
   min-height: 48px;
   font-family: var(--font-sans) !important;
   font-size: 15px !important;
@@ -18252,17 +17910,8 @@ html:not(.light) .trust-chip-oshwa-mark {
   text-transform: none;
   text-decoration: none;
 }
-.cart-added-continue {
-  font-family: var(--font-sans);
-  font-size: 15px;
-  font-weight: 500;
-  letter-spacing: 0;
-  text-transform: none;
-}
 
 /* --- Sentences and controls are Inter in sentence case -------------- */
-.cart-added-later-title,
-.cart-added-later--folded > summary,
 .product-status-chip,
 .board-art-skeleton-label,
 .cart-sheet-item small,
@@ -18271,12 +17920,7 @@ html:not(.light) .trust-chip-oshwa-mark {
   letter-spacing: 0;
   text-transform: none;
 }
-.cart-added-later-title,
-.cart-added-later--folded > summary {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--color-text);
-}
+
 .product-status-chip {
   font-size: 12px;
   font-weight: 500;
@@ -18428,25 +18072,6 @@ html:not(.light) .trust-chip-oshwa-mark {
 .board-art-skeleton-label {
   font-size: 12px;
   color: var(--color-text-muted);
-}
-
-/* --- Added-to-cart dialog -------------------------------------------- */
-.cart-added-held,
-.cart-added-set,
-.cart-added-guide-links {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--color-text);
-}
-.cart-added-guide-links .text-link + .text-link {
-  margin-left: 1rem;
-}
-/* Short screens: the suggestions would sit behind the pinned footer. */
-@media (max-height: 650px) {
-  .cart-added .cart-added-build {
-    display: none;
-  }
 }
 
 /* --- Cart ------------------------------------------------------------ */

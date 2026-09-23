@@ -12,7 +12,6 @@ import {useVariantUrl} from '~/lib/variants';
 import {useProductStatus, useRoadmapStatus} from '~/lib/coming-soon';
 import {PRODUCT_CONTENT, imagesAreRenders, isPurchasableStatus} from '~/lib/product-content';
 import {AddToCartButton} from './AddToCartButton';
-import {StackQuickAdd, type StackOffer} from './StackQuickAdd';
 import {copyText} from '~/lib/copy';
 
 /** Hover quick-add for catalog cards: the card's own hand-off link, so
@@ -51,7 +50,6 @@ export function ProductItem({
   imageOverride,
   comingSoon,
   quickAdd,
-  stackOffers,
 }: {
   product: ProductCardFragment;
   loading?: 'eager' | 'lazy';
@@ -89,9 +87,6 @@ export function ProductItem({
   comingSoon?: boolean;
   /** Hover quick-add: adds this card's variant without opening the PDP. */
   quickAdd?: ProductQuickAdd;
-  /** Stack offers layered on the quick-add (FC/ESC cards): hovering the add
-   *  button also offers the size-matched pair in one click. */
-  stackOffers?: StackOffer[];
 }) {
   const variantUrl = useVariantUrl(product.handle);
 
@@ -146,7 +141,6 @@ export function ProductItem({
   const quickAddNode =
     quickAdd && !comingSoon && !launchPending && !feature ? (
       <div className="product-card-quickadd">
-        <StackQuickAdd offers={stackOffers ?? []}>
           <AddToCartButton
             className="product-card-quickadd-btn"
             href={quickAdd.href}
@@ -159,7 +153,6 @@ export function ProductItem({
                 ? (copyText('product-chrome.buy_cta_preorder') ?? 'Pre-order')
                 : copyText('product-chrome.card_add_to_cart')}
           </AddToCartButton>
-        </StackQuickAdd>
       </div>
     ) : null;
 

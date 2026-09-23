@@ -3,7 +3,6 @@ import {useEffect, useMemo} from 'react';
 import type {ReactNode} from 'react';
 import {Form, Link, useLoaderData, useSearchParams} from 'react-router';
 import {ProductItem, type ProductQuickAdd} from '~/components/ProductItem';
-import type {StackOffer} from '~/components/StackQuickAdd';
 import type {MoneyV2, ProductCardFragment} from '~/lib/product-shapes';
 import {formatPrice, toCards} from '~/lib/catalog';
 import {CAMPAIGN} from '~/lib/catalog-client';
@@ -22,7 +21,6 @@ import {
   lineDisplayName,
 } from '~/lib/product-content';
 import {useProductStatusResolver, useRoadmapStatusResolver} from '~/lib/coming-soon';
-import {stackDiscountedPrice} from '~/lib/stack-discount';
 import {Txt} from '~/components/Txt';
 import {copyText, editAttrs} from '~/lib/copy';
 import {shopifyImageUrl} from '~/lib/shopify-image';
@@ -125,8 +123,6 @@ type Card = {
   comingSoon?: boolean;
   /** Hover quick-add: this card's own hand-off link. */
   quickAdd?: ProductQuickAdd;
-  /** Stack offers layered on the quick-add (FC/ESC cards only). */
-  stackOffers?: StackOffer[];
   /** Build size from content/builds.json ('3-inch', '5-inch'), or null
    *  for a part that fits both. */
   build: string | null;
@@ -376,53 +372,6 @@ export default function ProductsIndex() {
         for (const [value] of liveTiers) {
           const sv = variantFor(p, axis, value);
           const price = sv?.price ?? p.priceRange.minVariantPrice;
-          // "Buy it as a stack" offers for FC/ESC tier cards: the partner
-          // board at the same mount size, both lines prewired.
-          const stackOffers: StackOffer[] = (
-            content?.stack?.partners ?? []
-          ).flatMap((pc) => {
-            // Unlaunched partners can't join a stack offer (their price
-            // stays hidden everywhere).
-            if (!isPurchasableStatus(productStatus(pc.handle))) return [];
-            const partner = products.find((pp) => pp.handle === pc.handle);
-            if (!partner || !sv) return [];
-            const pv = variantFor(
-              partner,
-              content?.stack?.matchOption ?? 'Model',
-              value,
-            );
-            if (!pv) return [];
-            // A pair discount is claimed only while Shopify carries the
-            // matching discount (stack.discountPct is unset otherwise).
-            const pct = content?.stack?.discountPct;
-            const partnerDiscounted =
-              Boolean(pct) &&
-              content?.stack?.discountedHandle === pc.handle;
-            const selfDiscounted =
-              Boolean(pct) && content?.stack?.discountedHandle === p.handle;
-            return [
-              {
-                key: pc.handle,
-                label: pc.label ?? partner.title,
-                size: value,
-                price:
-                  partnerDiscounted && pct
-                    ? stackDiscountedPrice(pv.price, pct)
-                    : pv.price,
-                compareAtPrice: partnerDiscounted ? pv.price : null,
-                pct,
-                discountedLabel: selfDiscounted ? p.title : undefined,
-                product: p.handle,
-                available: Boolean(
-                  pv.availableForSale && sv.availableForSale,
-                ),
-                href: buyUrl(commerceHandoff, [
-                  {sku: sv.sku ?? '', quantity: 1},
-                  {sku: pv.sku ?? '', quantity: 1},
-                ]),
-              },
-            ];
-          });
           out.push({
             key: `${p.handle}:${value}`,
             product: p,
@@ -444,7 +393,6 @@ export default function ProductsIndex() {
                   available: Boolean(sv.availableForSale),
                 }
               : undefined,
-            stackOffers,
           });
         }
       } else {
@@ -484,7 +432,7 @@ export default function ProductsIndex() {
       }
     }
     return out;
-  }, [products, productStatus, roadmapStatus, commerceHandoff]);
+  }, [products, roadmapStatus]);
 
   // Categories that hold at least one shown card, in editorial order then
   // any leftovers. Counting the cards, not the raw catalog, keeps a family
@@ -880,7 +828,6 @@ export default function ProductsIndex() {
                     onSale={card.onSale}
                     comingSoon={card.comingSoon}
                     quickAdd={card.quickAdd}
-                    stackOffers={card.stackOffers}
                   />
                 ))}
               </div>

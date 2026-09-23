@@ -576,39 +576,3 @@ export async function removeCartLines(
   );
   return payloadCart(env, data.cartLinesRemove, 'cartLinesRemove', cartId);
 }
-
-export const PRODUCT_RECOMMENDATIONS_QUERY = `#graphql
-  query OpenDroneRecommendations($handle: String!) {
-    complementary: productRecommendations(productHandle: $handle, intent: COMPLEMENTARY) {
-      handle
-      availableForSale
-    }
-    related: productRecommendations(productHandle: $handle, intent: RELATED) {
-      handle
-      availableForSale
-    }
-  }
-`;
-
-/**
- * Shopify's recommendations for a handle, as one ranking: the complementary
- * products set by hand in Search & Discovery first, then the related ones
- * Shopify learns from orders and product data. Only a ranking signal: the
- * build data decides what is compatible (`app/lib/build-recommendations.ts`).
- */
-export async function fetchShopifyComplementaryHandles(
-  env: StorefrontEnv,
-  productHandle: string,
-  fetcher: typeof fetch = fetch,
-): Promise<string[]> {
-  if (!/^[a-z0-9][a-z0-9-]{0,254}$/.test(productHandle)) return [];
-  type Rec = Array<{handle: string; availableForSale: boolean}> | null;
-  const data = await storefrontRequest<{complementary: Rec; related: Rec}>(
-    env, PRODUCT_RECOMMENDATIONS_QUERY, {handle: productHandle}, fetcher,
-  );
-  const ranked: string[] = [];
-  for (const product of [...(data.complementary ?? []), ...(data.related ?? [])]) {
-    if (product.availableForSale && !ranked.includes(product.handle)) ranked.push(product.handle);
-  }
-  return ranked;
-}
