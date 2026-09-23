@@ -13,14 +13,17 @@ const CAMPAIGN = parseCampaignConfig(preorders);
 
 /**
  * The ship chip on a cart or drawer line: "Ships Oct 2026" for a dated
- * batch, "ETA 11 Mar 2027" for a funding target.
+ * batch, "ETA 11 Mar 2027" for a funding target, "ETA 11 Mar 2027 if
+ * funded" with `ifFunded` while the target is not met.
  */
 export function ShipChip({
   promise,
   className = 'cart-line-preorder',
+  ifFunded = false,
 }: {
   promise: string | null | undefined;
   className?: string;
+  ifFunded?: boolean;
 }) {
   const short = shortShipPromise(promise);
   if (!short) return null;
@@ -30,7 +33,11 @@ export function ShipChip({
     if (month) text = shipWord('ships', month);
   } else {
     const eta = shortCampaignDate(latestShipDate(CAMPAIGN));
-    if (eta) text = shipWord('eta', eta);
+    if (eta) {
+      text = ifFunded
+        ? (copyText('preorder.ship_eta_if_funded') ?? 'ETA {date} if funded').replace('{date}', eta)
+        : shipWord('eta', eta);
+    }
   }
   return (
     <small className={`ship-chip ${className}`} data-kind={short.kind}>

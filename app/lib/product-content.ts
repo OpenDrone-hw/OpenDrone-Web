@@ -770,8 +770,7 @@ export function specSheet(
  * funding-target promise ("ships about 10 weeks after its target is
  * reached: by 11 March 2027 if the target is reached by 31 December 2026,
  * otherwise ...") becomes a label plus "ships by 11 March 2027 if reached";
- * a dated promise ("ships late October 2026") keeps its words. The full
- * condition is stated once elsewhere, see {@link fundingTargetTerms}.
+ * a dated promise ("ships late October 2026") keeps its words.
  */
 export type ShortShipPromise = {kind: 'target' | 'date'; label: string | null; text: string};
 
@@ -796,19 +795,6 @@ export function shipMonth(promise: string | null | undefined): string | null {
   const m = /\b([A-Z][a-z]+) (\d{4})\b/.exec(promise ?? '');
   if (!m || !MONTHS.includes(m[1])) return null;
   return `${m[1].slice(0, 3)} ${m[2]}`;
-}
-
-/**
- * The full funding-target condition, stated once per surface (cart summary,
- * added-to-cart dialog) instead of on every line. Null when the promise is
- * not a funding-target promise with both dates in it.
- */
-export function fundingTargetTerms(promise: string | null | undefined): string | null {
-  const target = promise ? TARGET_PROMISE.exec(promise) : null;
-  if (!target) return null;
-  const weeks = /about (\d+) weeks/.exec(promise ?? '')?.[1];
-  const after = weeks ? `about ${weeks} weeks after their target is reached` : 'after their target is reached';
-  return `Funding-target items ship ${after}: by ${target[1]} if it is reached by ${target[2]}. If a target is missed, you choose a refund for that item or to keep waiting.`;
 }
 
 /** Whether a variant's SKU stays off customer-facing pages. See

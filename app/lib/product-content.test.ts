@@ -10,7 +10,6 @@ import {
   lineDisplayName,
   specSheet,
   terseSpecValue,
-  fundingTargetTerms,
   shortShipPromise,
   shipMonth,
   type BoxItem,
@@ -287,14 +286,6 @@ describe('short ship promise', () => {
     assert.equal(shipMonth('ships late October 2026'), 'Oct 2026');
     assert.equal(shipMonth('ships after its target is reached'), null);
     assert.equal(shipMonth(null), null);
-  });
-  it('states the full condition once, with both dates', () => {
-    const terms = fundingTargetTerms(target) ?? '';
-    assert.match(terms, /about 10 weeks/);
-    assert.match(terms, /11 March 2027/);
-    assert.match(terms, /31 December 2026/);
-    assert.match(terms, /refund/);
-    assert.equal(fundingTargetTerms('ships late October 2026'), null);
   });
 });
 
