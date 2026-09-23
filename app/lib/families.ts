@@ -53,6 +53,13 @@ export const FAMILIES: Family[] = [
     copyId: 'collections-all.category_receiver',
   },
   {
+    type: 'Motors',
+    short: 'Motors',
+    long: 'Motors',
+    to: '/products/openmotor',
+    copyId: 'collections-all.category_motors',
+  },
+  {
     type: 'Carbon Frame',
     short: 'Frame',
     long: 'Frames',

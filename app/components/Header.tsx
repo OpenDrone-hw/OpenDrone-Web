@@ -168,7 +168,7 @@ export function Header({
         {/* Center: primary nav + gold category links on the same row */}
         <HeaderMenu viewport="desktop" accountUrl={accountUrl} />
         {/* Category families in segmented bubbles: FC and ESC share one
-            (their rows sell the stack), while RX and Frame are standalone
+            (their rows sell the stack), while RX, Motors and Frame are standalone
             families so each gets its own bubble; All Products follows in its
             own accented bubble as the route into the full catalogue. No
             dividers - the bubbles do the grouping. */}
@@ -186,7 +186,7 @@ export function Header({
 }
 
 /**
- * The gold family chips (FC/ESC/Stack/RX/Frame) - segmented bubbles that, on
+ * The gold family chips (FC/ESC/Stack/RX/Motors/Frame) - segmented bubbles that, on
  * hover/focus, drop a Pod listing every SKU of that productType (thumbnail +
  * title + price). The chip itself still links to the family's PDP. Deferred
  * product data is resolved once on first hover so the chips render instantly.
@@ -464,7 +464,7 @@ function FamilyNav({
   return (
     <nav className="site-header-categories" aria-label="Product categories">
       {/* FC and ESC share one bubble (a stack is bought from their rows);
-          RX and Frame are standalone families with their own bubbles. */}
+          RX, Motors and Frame are standalone families with their own bubbles. */}
       <span className="site-header-cat-group">
         {CATEGORY_LINKS.slice(0, 2).map(chip)}
       </span>

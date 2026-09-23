@@ -30,11 +30,18 @@ import {
   HERO_BOARDS,
   HERO_VARIANT_AXIS,
   DEFAULT_HERO_SIZE,
-  type HeroBoardKey,
 } from '~/lib/hero-airframes';
 import {MobileHome} from '~/components/MobileHome';
 import {SceneErrorBoundary} from '~/components/SceneErrorBoundary';
-import {HERO_REVEAL_WINDOWS, HERO_SLOTS} from '~/lib/builder/registry';
+import {heroRevealWindows} from '~/lib/builder/registry';
+
+/** The hero's reveal cards in walkthrough order, each keyed by the studio
+ *  beat it appears with. Motors are not a builder slot, so their card is
+ *  resolved here: one Shopify product with a per-size `Model` variant. */
+const HERO_CARD_KEYS = ['fc', 'esc', 'motor', 'frame'] as const;
+type HeroCardKey = (typeof HERO_CARD_KEYS)[number];
+const HERO_CARD_WINDOWS = heroRevealWindows(HERO_CARD_KEYS.length);
+const MOTOR_MODEL_BY_SIZE: Record<string, string> = {'3': '1604', '5': '2207'};
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
 
@@ -58,6 +65,7 @@ type HomeMoney = Pick<MoneyV2, 'amount' | 'currencyCode'>;
 type HomeProduct = ProductCardFragment;
 type HomeFeaturedResult = {
   frame: HomeProduct | null;
+  motor: HomeProduct | null;
   rx: HomeProduct | null;
   fc: HomeProduct | null;
   esc: HomeProduct | null;
@@ -66,7 +74,7 @@ type HomeFeaturedResult = {
 // A ready-to-render hero reveal card - resolved server-side so the view stays
 // data-driven (the client just maps over the active size's stack).
 export type HeroCard = {
-  boardKey: HeroBoardKey;
+  boardKey: HeroCardKey;
   handle: string;
   /** PDP link, including `?Model=…` for size-variant boards. */
   url: string;
@@ -84,22 +92,26 @@ function emptyHeroStacks(): HeroStacks {
   return stacks;
 }
 
-// Resolve each airframe size's [FC, ESC, Frame] cards from the queried
+// Resolve each airframe size's [FC, ESC, Motor, Frame] cards from the queried
 // products. Size-variant boards (FC/ESC) match the size's `model` against the
 // product's "Model" option values, linking to that variant and using its
 // price; a size with no matching variant falls back to the base product link
 // + min price so the card still renders. Fully driven by the HERO_AIRFRAMES /
 // HERO_BOARDS registry - adding a size needs no change here.
 function buildHeroStacks(d: HomeFeaturedResult): HeroStacks {
-  const byBoard: Record<HeroBoardKey, HomeProduct | null> = {
+  const byBoard: Record<HeroCardKey, HomeProduct | null> = {
     fc: d.fc,
     esc: d.esc,
+    motor: d.motor,
     frame: (d.frame as HomeProduct | null) ?? null,
   };
+  type Board = {boardKey: HeroCardKey; handle: string; sizeVariant: boolean};
+  const motor: Board = {boardKey: 'motor', handle: 'openmotor', sizeVariant: true};
+  const boards: Board[] = [...HERO_BOARDS, motor].sort((a, b) => HERO_CARD_KEYS.indexOf(a.boardKey) - HERO_CARD_KEYS.indexOf(b.boardKey));
   const stacks: HeroStacks = {};
   for (const af of HERO_AIRFRAMES) {
     const cards: HeroCard[] = [];
-    for (const board of HERO_BOARDS) {
+    for (const board of boards) {
       const p = byBoard[board.boardKey];
       if (!p) continue;
       let url = `/products/${board.handle}`;
@@ -109,7 +121,11 @@ function buildHeroStacks(d: HomeFeaturedResult): HeroStacks {
       let image = p.featuredImage
         ? {url: p.featuredImage.url, altText: p.featuredImage.altText ?? null}
         : null;
-      const model = board.sizeVariant ? af.model : undefined;
+      const model = !board.sizeVariant
+        ? undefined
+        : board.boardKey === 'motor'
+          ? MOTOR_MODEL_BY_SIZE[af.key]
+          : af.model;
       if (model) {
         const axis = HERO_VARIANT_AXIS.toLowerCase();
         const want = model.trim().toLowerCase();
@@ -144,9 +160,7 @@ function buildHeroStacks(d: HomeFeaturedResult): HeroStacks {
         // 30×30") so the two airframes' cards aren't indistinguishable; the
         // shared frame keeps its plain title.
         title:
-          board.sizeVariant && !p.title.includes(af.model)
-            ? `${p.title} ${af.model}`
-            : p.title,
+          model && !p.title.includes(model) ? `${p.title} ${model}` : p.title,
         productType: p.productType ?? null,
         image,
         price,
@@ -182,17 +196,18 @@ export async function loader({request, context}: Route.LoaderArgs) {
       };
       const d: HomeFeaturedResult = {
         frame: card('openframe'),
+        motor: card('openmotor'),
         rx: card('openrx'),
         fc: card('openfc-lite'),
         esc: card('openesc'),
       };
       const keep = (p: HomeProduct | null): p is HomeProduct => Boolean(p);
       return {
-        // Mobile flagship line: the four core parts (FC, ESC, RX, frame). The
+        // Mobile flagship line: the core parts (FC, ESC, RX, motors, frame). The
         // OpenStack is intentionally NOT here - it's just the FC + ESC bundled,
         // surfaced as a note on the showcase, not as a separate flagship slot.
-        featured: [d.fc, d.esc, d.rx, d.frame].filter(keep),
-        // The three hero boards, resolved per airframe size. FC + ESC are
+        featured: [d.fc, d.esc, d.rx, d.motor, d.frame].filter(keep),
+        // The hero cards, resolved per airframe size. FC, ESC and motor are
         // single products with a size variant axis ("Model"): each size links
         // them to its own variant (?Model=…) and shows that variant's price.
         // The frame is one shared SKU. Built off the HERO_AIRFRAMES registry,
@@ -348,7 +363,7 @@ function DesktopHome({heroStacks}: {heroStacks: Promise<HeroStacks>}) {
   // Which board the visitor is hovering on the right-side product cards, or
   // null. A ref (not state) so hovering doesn't re-render the page; HeroScene
   // reads it each frame to pin that board's spotlight on.
-  const heroSpotlightRef = useRef<'fc' | 'esc' | 'frame' | null>(null);
+  const heroSpotlightRef = useRef<HeroCardKey | null>(null);
   // Splash starts centered and large. It settles when the 3D scene has
   // finished loading AND a minimum wait has elapsed (so the wordmark
   // always gets a readable beat), or when a max timeout fires as a
@@ -444,10 +459,10 @@ function DesktopHome({heroStacks}: {heroStacks: Promise<HeroStacks>}) {
   // Each product card's reveal window, as fractions of the walkthrough. Derived
   // from where that card's beat actually sits in the sequence (see
   // revealWindows below) rather than from the registry's even spacing: the
-  // walkthrough has six beats and only three of them have a card, so evenly
+  // walkthrough has six beats and only four of them have a card, so evenly
   // spaced windows put the ESC card on screen while the receiver is spotlit.
   const windowsRef = useRef<ReadonlyArray<readonly [number, number]>>(
-    HERO_REVEAL_WINDOWS,
+    HERO_CARD_WINDOWS,
   );
   const tick = useCallback(() => {
     const p = scrollRef.current;
@@ -482,9 +497,9 @@ function DesktopHome({heroStacks}: {heroStacks: Promise<HeroStacks>}) {
     const n = beatIds.length;
     // Before the scene reports in, fall back to the registry's even spacing so
     // the cards are never left permanently hidden.
-    if (n < 2) return HERO_REVEAL_WINDOWS;
-    return HERO_SLOTS.map((slot) => {
-      const j = beatIds.indexOf(slot.id);
+    if (n < 2) return HERO_CARD_WINDOWS;
+    return HERO_CARD_KEYS.map((key) => {
+      const j = beatIds.indexOf(key);
       // A slot with no beat (a future part with no walkthrough step) stays shut
       // rather than popping in at an arbitrary point.
       if (j <= 0) return [1, 1] as const;
@@ -757,13 +772,14 @@ function DesktopHome({heroStacks}: {heroStacks: Promise<HeroStacks>}) {
     <div className="homepage" ref={heroVarRef}>
 
       {/*
-        Warm the three flagship PDPs (the live handles the 3D part hotspots
+        Warm the hero cards' PDPs (the live handles the 3D part hotspots
         navigate to) so clicking a part is an instant SPA transition with its
         loader data already in cache. The FC hotspot targets openfc-lite -
         the live product; the old `openfc` handle is archived in Shopify.
       */}
       <PrefetchPageLinks page="/products/openfc-lite" />
       <PrefetchPageLinks page="/products/openesc" />
+      <PrefetchPageLinks page="/products/openmotor" />
       <PrefetchPageLinks page="/products/openframe" />
 
       {/*
@@ -944,7 +960,7 @@ function DesktopHome({heroStacks}: {heroStacks: Promise<HeroStacks>}) {
             <Suspense fallback={null}>
               <Await resolve={heroStacks}>
                 {(stacks) => {
-                  // The active size's resolved cards, already in [FC, ESC, Frame]
+                  // The active size's resolved cards, already in [FC, ESC, Motor, Frame]
                   // order with the right per-size variant URL + price baked in by
                   // the loader. Index maps directly to the 3D board it spotlights.
                   const items = stacks[heroSize] ?? [];
@@ -962,7 +978,7 @@ function DesktopHome({heroStacks}: {heroStacks: Promise<HeroStacks>}) {
                           animate="center"
                           exit={reduceMotion ? undefined : 'exit'}
                         >
-                          {items.slice(0, HERO_SLOTS.length).map((card, i) => {
+                          {items.slice(0, HERO_CARD_KEYS.length).map((card, i) => {
                             const [lo, hi] = REVEAL_WINDOWS[i] ?? [1, 1];
                             // Interactivity gate only - the reveal GEOMETRY
                             // (max-height/opacity/transform) is CSS driven by
@@ -971,7 +987,7 @@ function DesktopHome({heroStacks}: {heroStacks: Promise<HeroStacks>}) {
                             // gate bit is computed in tick(), the single place
                             // that owns the thresholds.
                             const interactive = cardInteractiveGate(i);
-                            const setSpot = (v: HeroBoardKey | null) => {
+                            const setSpot = (v: HeroCardKey | null) => {
                               heroSpotlightRef.current = v;
                             };
                             // A concept product (planned / in-progress) has

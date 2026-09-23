@@ -305,12 +305,16 @@
     },
     {
       "id": "motor",
-      "title": "Motors + props",
-      "note": "1604 · 3\" tri-blade",
+      "title": "OpenMotor",
+      "note": "1604 on 3\" · 2207 on 5\"",
       "select": {
         "cluster": "^Admi",
         "withProp": true
-      }
+      },
+      "caption": "Brushless, sold per motor, four per quad.",
+      "hint": "Three wires each to the ESC.",
+      "href": "/products/openmotor",
+      "handle": "openmotor"
     },
     {
       "id": "frame",
