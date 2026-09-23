@@ -133,12 +133,6 @@ export function links() {
   ];
 }
 
-/** "nl-BE,nl;q=0.9,en;q=0.8" -> "nl". Only the first language counts. */
-function browserShopLang(header: string | null): 'nl' | 'fr' | null {
-  const first = header?.split(',')[0]?.trim().toLowerCase().split(/[-;]/)[0];
-  return first === 'nl' || first === 'fr' ? first : null;
-}
-
 export async function loader(args: Route.LoaderArgs) {
   // Await the critical data required to render initial state of the page
   const criticalData = await loadCriticalData(args);
@@ -199,10 +193,6 @@ export async function loader(args: Route.LoaderArgs) {
     turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? null,
     // Display only: picks the buy module's price note (VAT vs duties).
     visitorCountry: visitorCountry(args.request),
-    // The browser's first language when it is Dutch or French: the English
-    // shop pages then point to the short summary in that language. Display
-    // only; the page language itself follows the URL.
-    browserLang: browserShopLang(args.request.headers.get('Accept-Language')),
     // Plausible counts the production site only: staging, previews and
     // local runs would otherwise add review crawls to the shop's numbers.
     analytics: /^(www\.)?opendrone\.be$/i.test(new URL(args.request.url).hostname),
@@ -266,11 +256,8 @@ export function Layout({children}: {children?: React.ReactNode}) {
     captureAttribution();
   }, []);
 
-  // hero-header-in: the home page shows its header from the first frame,
-  // so the shop, search and cart are there while the 3D tour loads. It only
-  // has an effect inside .homepage-layout.
   return (
-    <html lang={htmlLang} className="dark hero-header-in" suppressHydrationWarning>
+    <html lang={htmlLang} className="dark" suppressHydrationWarning>
       <head>
         <meta charSet="utf-8" />
         <meta

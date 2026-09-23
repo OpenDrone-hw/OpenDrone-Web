@@ -1,13 +1,12 @@
-import {DISCORD_INVITE_URL} from '~/lib/company';
-import {CART_UPDATED_EVENT} from '~/lib/cart-client';
 import {useEffect, useRef, useState} from 'react';
 import {Form, useLocation} from 'react-router';
 import {NavLink} from '~/components/nav';
 import {AnimatePresence} from 'motion/react';
 import {useAside} from '~/components/Aside';
-import {LangToggle, legalHref, useLegalLocale} from '~/components/LangToggle';
+import {LangToggle} from '~/components/LangToggle';
 import {ThemeToggle} from '~/components/ThemeToggle';
 import {SiteWordmark} from '~/components/SiteWordmark';
+import {IncutecWordmark} from '~/components/IncutecWordmark';
 import {Pod} from '~/components/Pod';
 import {
   ProductPods,
@@ -16,6 +15,8 @@ import {
 } from '~/components/ProductPods';
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
+import {CART_UPDATED_EVENT} from '~/lib/cart-client';
+import {INCUTEC_HINT_SEEN_KEY} from '~/lib/incutec-hint';
 import {
   useProductStatusResolver,
   useRoadmapStatusResolver,
@@ -25,7 +26,6 @@ import {
   isConceptFor,
   isPurchasableStatus,
   PRODUCT_CONTENT,
-  variantDisplayName,
 } from '~/lib/product-content';
 import {FAMILIES} from '~/lib/families';
 import {stackDiscountedPrice} from '~/lib/stack-discount';
@@ -35,43 +35,15 @@ import type {
   ProductVariantFragment,
 } from '~/lib/product-shapes';
 
-/**
- * On short viewports (a phone held upright, under 600px tall) the floating
- * header pill slides away while the reader scrolls down and comes back on
- * the first scroll up, so it never sits over the price table or the buy
- * button. Taller screens keep it pinned. Sets `html.header-hidden`.
- */
-function useHeaderAutoHide() {
-  useEffect(() => {
-    const root = document.documentElement;
-    const short = window.matchMedia('(max-height: 600px)');
-    let lastY = window.scrollY;
-    let ticking = false;
-    const update = () => {
-      ticking = false;
-      const y = window.scrollY;
-      const delta = y - lastY;
-      if (!short.matches || y < 80) {
-        root.classList.remove('header-hidden');
-      } else if (delta > 6) {
-        root.classList.add('header-hidden');
-      } else if (delta < -6) {
-        root.classList.remove('header-hidden');
-      }
-      if (Math.abs(delta) > 6 || y < 80) lastY = y;
-    };
-    const onScroll = () => {
-      if (!ticking) {
-        ticking = true;
-        window.requestAnimationFrame(update);
-      }
-    };
-    window.addEventListener('scroll', onScroll, {passive: true});
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      root.classList.remove('header-hidden');
-    };
-  }, []);
+/** Retire the hero "Who's incutec?" hint: persist the dismissal and pull the
+ *  class so it can't flash on a same-session SPA return to the homepage. */
+function dismissIncutecHint() {
+  try {
+    localStorage.setItem(INCUTEC_HINT_SEEN_KEY, '1');
+  } catch {
+    /* storage blocked (private mode) - the nudge just isn't persisted */
+  }
+  document.documentElement.classList.remove('hero-incutec-hint');
 }
 
 /** A product as the header reads it: a catalog card. */
@@ -82,8 +54,7 @@ interface HeaderProps {
   commerceHandoff: CommerceHandoff;
   accountUrl: string | null;
   familyProducts?: HeaderFamilyProduct[];
-  /** Checkout is open: the cart icon always links to the cart, even before
-   *  the first add, as on any shop. */
+  /** Checkout is open: the cart icon links to /cart and shows the count. */
   shopOpen?: boolean;
 }
 
@@ -100,46 +71,17 @@ type Viewport = 'desktop' | 'mobile';
 // right and filterable by family there. Each chip links to its family's
 // representative PDP and, on hover, drops a Pod listing every SKU in it.
 // The vocabulary itself is app/lib/families.ts, shared with the listing.
-//
-// Motors have a chip and a drawer entry but no FAMILIES entry: the listing
-// rail already labels the "Motors" family from the content file, and a
-// FAMILIES entry would need a rail heading in the copy store.
-const MOTORS_LINK = {
-  label: 'Motors',
-  long: 'Motors',
-  to: '/products/openmotor',
-  type: 'Motors',
-};
-/** What each short family label means, for a buyer new to FPV: shown as
- *  the link's tooltip and spelled out on wide screens. */
-const FAMILY_HINT: Record<string, string> = {
-  'Flight Controller': 'Flight controller: the onboard computer',
-  '4-in-1 ESC': 'ESC: drives the four motors',
-  'ELRS Receiver': 'Receiver: picks up your radio',
-};
-const CATEGORY_LINKS = [
-  ...FAMILIES.map((f) => ({
-    label: f.short,
-    long: f.long,
-    hint: FAMILY_HINT[f.type] ?? f.long,
-    to: f.to,
-    type: f.type,
-  })),
-  {
-    label: MOTORS_LINK.label,
-    long: MOTORS_LINK.long,
-    hint: MOTORS_LINK.long,
-    to: MOTORS_LINK.to,
-    type: MOTORS_LINK.type,
-  },
-];
+const CATEGORY_LINKS = FAMILIES.map((f) => ({
+  label: f.short,
+  to: f.to,
+  type: f.type,
+}));
 
 /** Fuller family names for the mobile drawer (the desktop FamilyNav chips
  *  use the terse FC/ESC/… labels; the drawer has room to spell them out). */
-const MOBILE_FAMILY_LABEL: Record<string, string> = Object.fromEntries([
-  ...FAMILIES.map((f) => [f.type, f.long]),
-  [MOTORS_LINK.type, MOTORS_LINK.long],
-]);
+const MOBILE_FAMILY_LABEL: Record<string, string> = Object.fromEntries(
+  FAMILIES.map((f) => [f.type, f.long]),
+);
 
 /** Stack companions per family: each pod row offers "+X" buttons for these
  *  partner products, size-matched by the Model option. N-to-N ready: every
@@ -169,23 +111,59 @@ export function Header({
   familyProducts,
   shopOpen = false,
 }: HeaderProps) {
-  // The logo slot is the OpenDrone wordmark home link on every route,
-  // the homepage included: a buyer always sees whose shop this is. Incutec,
-  // the company that runs the shop, is credited in the footer.
-  useHeaderAutoHide();
+  // Dynamic-Island logo slot. On the hero ("/") the OpenDrone wordmark already
+  // lives bottom-left in the 3D scene, so the bar instead credits the parent
+  // company - the Incutec mark linking to incutec.eu (OpenDrone is an Incutec
+  // product brand). On every other route the slot is the OpenDrone wordmark
+  // home link. The slot is a fixed width so the nav chips never shift between
+  // routes; view-transition-name animates the swap across navigations.
+  const {pathname} = useLocation();
+  const isHero = pathname === '/';
   return (
     <header className="site-header">
       <div className="site-header-main">
-        <NavLink
-          prefetch="viewport"
-          to="/"
-          end
-          className="site-header-logo"
-          aria-label="OpenDrone"
-          style={{viewTransitionName: 'site-logo'}}
-        >
-          <SiteWordmark className="site-header-wordmark" />
-        </NavLink>
+        {/* Left: brand slot - OpenDrone home link, or Incutec credit on the hero.
+            On the hero the mark links to the in-site Incutec company page, and a
+            "Who's incutec?" hint drops out from under it a beat after the header
+            lands (gated on `html.hero-incutec-hint`, set by the homepage). */}
+        {isHero ? (
+          <span className="site-header-incutec-slot">
+            <NavLink
+              prefetch="intent"
+              to="/incutec"
+              className="site-header-logo site-header-logo--incutec"
+              aria-label={
+                copyText('chrome.incutec_logo_aria') ??
+                'Incutec, the company behind OpenDrone'
+              }
+              style={{viewTransitionName: 'site-logo'}}
+              onClick={dismissIncutecHint}
+            >
+              <IncutecWordmark className="site-header-incutec" />
+            </NavLink>
+            <NavLink
+              prefetch="intent"
+              to="/incutec"
+              className="incutec-hint"
+              tabIndex={-1}
+              aria-hidden="true"
+              onClick={dismissIncutecHint}
+            >
+              <Txt id="chrome.incutec_hint" />
+            </NavLink>
+          </span>
+        ) : (
+          <NavLink
+            prefetch="viewport"
+            to="/"
+            end
+            className="site-header-logo"
+            aria-label="OpenDrone"
+            style={{viewTransitionName: 'site-logo'}}
+          >
+            <SiteWordmark className="site-header-wordmark" />
+          </NavLink>
+        )}
 
         {/* Center: primary nav + gold category links on the same row */}
         <HeaderMenu viewport="desktop" accountUrl={accountUrl} />
@@ -199,9 +177,8 @@ export function Header({
         {/* Right: actions */}
         <HeaderCtas
           accountUrl={accountUrl}
-          cartUrl={commerceHandoff.cartUrl ?? (shopOpen ? '/cart' : null)}
+          cartUrl={shopOpen ? '/cart' : commerceHandoff.cartUrl}
           hasCart={commerceHandoff.cartUrl !== null}
-          shopOpen={shopOpen}
         />
       </div>
     </header>
@@ -318,7 +295,7 @@ function FamilyNav({
       return [
         {
           key: h,
-          title: `${partner.title} · ${variantDisplayName(h, size)}`,
+          title: `${partner.title} · ${size}`,
           short,
           price:
             pv.price && partnerDiscounted && pct
@@ -395,11 +372,7 @@ function FamilyNav({
             to: `/products/${p.handle}${qs ? `?${qs}` : ''}`,
             // SKU/variant name is the headline (gold); the family line is the
             // dim context beneath it.
-            // The display name, never a raw legacy option value: the 5"
-            // motor's option value "2207" reads as 5".
-            title: v.selectedOptions
-              .map((o) => variantDisplayName(p.handle, o.value))
-              .join(' / '),
+            title: v.title,
             subtitle: p.title,
             imageUrl: v.image?.url ?? p.featuredImage?.url ?? null,
             imageAlt: v.image?.altText ?? p.featuredImage?.altText ?? null,
@@ -434,23 +407,14 @@ function FamilyNav({
         key={cat.label}
         onMouseEnter={() => openFamily(cat.label)}
         onMouseLeave={scheduleClose}
-        // Tabbing onto a chip does not open its pod, so a keyboard user
-        // passes the header in one stop per category. Arrow Down opens it and
-        // moves into the products; focus inside an open pod keeps it open.
         onFocus={() => {
-          if (!escFocus.current && open === cat.label) clearTimeout(closeTimer.current);
+          // Swallow the focus event caused by Escape's own focus restore -
+          // otherwise the menu instantly reopens.
+          if (escFocus.current) return;
+          openFamily(cat.label);
         }}
         onBlur={scheduleClose}
         onKeyDown={(e) => {
-          if (e.key === 'ArrowDown' && items.length > 0) {
-            e.preventDefault();
-            openFamily(cat.label);
-            const wrap = e.currentTarget;
-            setTimeout(() => {
-              wrap.querySelector<HTMLElement>('.header-cat-pod a, .header-cat-pod button')?.focus();
-            }, 50);
-            return;
-          }
           // Escape closes the pod and hands focus back to the chip, so a
           // keyboard user isn't stranded in a closed popup.
           if (e.key === 'Escape' && open === cat.label) {
@@ -469,10 +433,8 @@ function FamilyNav({
           prefetch="viewport"
           to={cat.to}
           aria-expanded={open === cat.label}
-          title={cat.hint}
         >
-          <span className="header-cat-short">{cat.label}</span>
-          <span className="header-cat-long">{cat.long}</span>
+          {cat.label}
         </NavLink>
         <div className="header-cat-pod-wrap">
           <AnimatePresence>
@@ -501,9 +463,16 @@ function FamilyNav({
 
   return (
     <nav className="site-header-categories" aria-label="Product categories">
-      {/* One plain text row: the family names, then All products. Gold is
-          kept for the purchase buttons, so the nav reads as navigation. */}
-      {CATEGORY_LINKS.map(chip)}
+      {/* FC and ESC share one bubble (a stack is bought from their rows);
+          RX and Frame are standalone families with their own bubbles. */}
+      <span className="site-header-cat-group">
+        {CATEGORY_LINKS.slice(0, 2).map(chip)}
+      </span>
+      {CATEGORY_LINKS.slice(2).map((cat) => (
+        <span className="site-header-cat-group" key={cat.label}>
+          {chip(cat)}
+        </span>
+      ))}
       <NavLink
         prefetch="viewport"
         to="/products"
@@ -524,7 +493,6 @@ export function HeaderMenu({
 }) {
   const {close} = useAside();
   const isMobile = viewport === 'mobile';
-  const legalLocale = useLegalLocale();
 
   return (
     <nav
@@ -607,8 +575,8 @@ export function HeaderMenu({
       )}
       {HEADER_MENU.items.map((item) => {
         if (!item.url) return null;
-        const url = legalHref(item.url, legalLocale);
-        // Preorders and Contact render in the right-side CTA group, and
+        const url = item.url;
+        // Catalog and Contact render in the right-side CTA group, and
         // Newsletter and Open Source render there / in the footer too
         // (HeaderCtas below, and the footer's "Open Source & Incutec"
         // link): skip all four here on desktop so the center menu isn't
@@ -618,9 +586,8 @@ export function HeaderMenu({
         // back on.
         if (
           !isMobile &&
-          (url === '/preorder' ||
+          (url === '/products' ||
             url === '/support' ||
-            item.url === '/shipping' ||
             url === '/newsletter' ||
             url === 'https://github.com/OpenDrone-hw')
         )
@@ -711,23 +678,19 @@ function HeaderCtas({
   accountUrl,
   cartUrl,
   hasCart,
-  shopOpen,
 }: {
   accountUrl: string | null;
   cartUrl: string | null;
   hasCart: boolean;
-  shopOpen: boolean;
 }) {
   return (
-    <nav className="flex items-center gap-2 md:gap-3 xl:gap-5 ml-auto" role="navigation">
+    <nav className="flex items-center gap-2 md:gap-5 ml-auto" role="navigation">
       {/* Hidden in the top bar on phones (it would overflow a 320px row on
           legal pages); MobileMenuAside renders it inside the drawer instead. */}
-      {/* Only on legal pages: the shop is in English, and the footer line
-          "The shop is in English. Legal texts:" links the NL/FR legal texts. */}
-      <LangToggle className="header-lang-toggle" shopPages={false} />
+      <LangToggle className="header-lang-toggle" />
       <NavLink
         prefetch="viewport"
-        to="/preorder"
+        to="/newsletter"
         className={({isActive}) =>
           `font-mono text-[12px] uppercase tracking-[0.15em] transition-colors hidden md:block ${
             isActive
@@ -736,39 +699,20 @@ function HeaderCtas({
           }`
         }
       >
-        <Txt id="chrome.nav_preorder" />
+        <Txt id="chrome.nav_newsletter" />
       </NavLink>
-      {/* While the shop is closed the newsletter is the way to hear about the
-          launch; once it is open the header carries the shopping links and
-          the newsletter lives in the footer. */}
-      {shopOpen ? null : (
-        <NavLink
-          prefetch="viewport"
-          to="/newsletter"
-          className={({isActive}) =>
-            `font-mono text-[12px] uppercase tracking-[0.15em] transition-colors hidden md:block ${
-              isActive
-                ? 'text-[var(--color-text)]'
-                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
-            }`
-          }
-        >
-          <Txt id="chrome.nav_newsletter" />
-        </NavLink>
-      )}
-      {/* Below 1024px the row has no room for it; the footer carries it. */}
       <NavLink
         prefetch="viewport"
         to="/support"
         className={({isActive}) =>
-          `font-mono text-[12px] uppercase tracking-[0.15em] transition-colors hidden lg:block ${
+          `font-mono text-[12px] uppercase tracking-[0.15em] transition-colors hidden md:block ${
             isActive
               ? 'text-[var(--color-text)]'
               : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
           }`
         }
       >
-        <Txt id="chrome.nav_support" />
+        <Txt id="chrome.nav_contact" />
       </NavLink>
       {/* Account, orders and addresses live in Shopify customer accounts:
           an external link, not an in-app route. The signed-in state is
@@ -781,35 +725,6 @@ function HeaderCtas({
           <Txt id="chrome.nav_account" />
         </a>
       ) : null}
-      <HeaderSearch />
-      {/* Community: the source and the people, one click from every page.
-          Between the tablet and 1280px breakpoints the shop links need the
-          room, so the two icons step out there, and below 400px they make
-          room for the search icon (the footer keeps them). */}
-      <span className="inline-flex items-center gap-2 max-[400px]:hidden md:hidden xl:inline-flex xl:gap-5">
-      <a
-        className="site-header-icon hidden md:inline-flex"
-        href="https://github.com/OpenDrone-hw"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="GitHub"
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-        </svg>
-      </a>
-      <a
-        className="site-header-icon hidden md:inline-flex"
-        href={DISCORD_INVITE_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="Discord"
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-          <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z" />
-        </svg>
-      </a>
-      </span>
       <ThemeToggle className="site-header-icon" />
       <CartToggle cartUrl={cartUrl} hasCart={hasCart} />
       <HeaderMenuMobileToggle />
@@ -817,100 +732,12 @@ function HeaderCtas({
   );
 }
 
-/**
- * Header search: a magnifier that opens a one-field GET form onto the
- * product listing, which filters the catalog by `q` (the same target as the
- * mobile drawer's search field and /search). On phones the field spans the
- * screen under the header bar; from md up it drops below the icon. Escape
- * or a click outside closes it.
- */
-function HeaderSearch() {
-  const [open, setOpen] = useState(false);
-  const wrap = useRef<HTMLDivElement>(null);
-  const input = useRef<HTMLInputElement>(null);
-  const location = useLocation();
-  useEffect(() => {
-    setOpen(false);
-  }, [location.pathname, location.search]);
-  useEffect(() => {
-    if (!open) return;
-    input.current?.focus();
-    const onDown = (e: PointerEvent) => {
-      if (!wrap.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('pointerdown', onDown);
-    return () => document.removeEventListener('pointerdown', onDown);
-  }, [open]);
-  const label = copyText('chrome.search_placeholder') ?? 'Search products';
-  return (
-    // Container-level Escape listener; the button and the field inside are
-    // the interactive elements.
-    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
-    <div
-      ref={wrap}
-      className="relative inline-flex"
-      onKeyDown={(e) => {
-        if (e.key === 'Escape' && open) {
-          e.stopPropagation();
-          setOpen(false);
-          wrap.current?.querySelector('button')?.focus();
-        }
-      }}
-    >
-      <button
-        type="button"
-        className="site-header-icon text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-        aria-label={label}
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-          <circle cx="11" cy="11" r="7" />
-          <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </svg>
-      </button>
-      {open ? (
-        <Form
-          action="/products"
-          method="get"
-          role="search"
-          className="header-search-form fixed left-4 right-4 top-[72px] md:absolute md:left-auto md:right-0 md:top-full md:mt-3 md:w-[min(22rem,70vw)] z-50 flex items-center gap-2 rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-bg-elevated)] p-2 shadow-lg"
-          style={{maxWidth: 'none'}}
-          onSubmit={() => setOpen(false)}
-        >
-          <input
-            ref={input}
-            type="search"
-            name="q"
-            placeholder={label}
-            aria-label={label}
-            enterKeyHint="search"
-            className="flex-1 min-w-0 text-sm"
-          />
-          <button
-            type="submit"
-            aria-label={label}
-            className="inline-flex p-2 text-[var(--color-gold-text)] hover:text-[var(--color-gold-text-hover)]"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <line x1="5" y1="12" x2="19" y2="12" />
-              <polyline points="12 5 19 12 12 19" />
-            </svg>
-          </button>
-        </Form>
-      ) : null}
-    </div>
-  );
-}
-
 function HeaderMenuMobileToggle() {
-  const {open, type} = useAside();
+  const {open} = useAside();
   return (
     <button
       className="site-header-icon site-header-menu-toggle text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
       onClick={() => open('mobile')}
-      aria-expanded={type === 'mobile'}
-      aria-haspopup="dialog"
       aria-label={copyText('chrome.menu_toggle_aria') ?? 'Menu'}
     >
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -923,8 +750,8 @@ function HeaderMenuMobileToggle() {
 }
 
 /**
- * The cart icon links to the cart page whenever checkout is open, and shows
- * the item count once this session has a Shopify cart.
+ * The cart icon links, after the first add or whenever the shop is open, to
+ * the local cart page, with a count badge once the session's cart has items.
  */
 function CartToggle({cartUrl, hasCart}: {cartUrl: string | null; hasCart: boolean}) {
   const [quantity, setQuantity] = useState(0);
@@ -954,7 +781,11 @@ function CartToggle({cartUrl, hasCart}: {cartUrl: string | null; hasCart: boolea
   }, []);
   if (!cartUrl) {
     return (
-      <span className="site-header-icon site-header-cart" role="img" aria-label="Cart unavailable">
+      <span
+        className="site-header-icon site-header-cart"
+        aria-label="Cart unavailable in checkout preview"
+        aria-disabled="true"
+      >
         <CartIcon />
       </span>
     );
@@ -993,15 +824,14 @@ function CartIcon() {
 
 /**
  * The site menu. It used to be edited in the Shopify admin and read
- * through the Storefront API; it is these few links. Titles stay here rather than in the copy store for the same
+ * through the Storefront API; it is three links, and they are these
+ * three. Titles stay here rather than in the copy store for the same
  * reason they always did: they are structure shared with the CTA group,
  * not editable prose.
  */
 const HEADER_MENU = {
   items: [
-    {id: 'menu-preorder', title: 'Preorders', url: '/preorder'},
-    {id: 'menu-support', title: 'Support', url: '/support'},
-    {id: 'menu-shipping', title: 'Shipping', url: '/shipping'},
+    {id: 'menu-products', title: 'Catalog', url: '/products'},
     {id: 'menu-newsletter', title: 'Newsletter', url: '/newsletter'},
     {
       id: 'menu-open-source',

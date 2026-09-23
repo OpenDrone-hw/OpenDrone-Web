@@ -5,7 +5,7 @@
   "aside_menu_heading": "MENU",
   "cart_loading": "Loading cart ...",
   "incutec_logo_aria": "Incutec, the company behind OpenDrone",
-  "incutec_hint": "Who is Incutec?",
+  "incutec_hint": "Who's incutec?",
   "menu_toggle_aria": "Menu",
   "search_placeholder": "Search products",
   "heading_shop": "Shop",
@@ -49,9 +49,5 @@
   "nav_returns": "Returns",
   "cart_aria": "Cart",
   "footer_email_label": "Email",
-  "footer_order_help": "In het Nederlands: [hoe bestellen](/preorder#nl). En français : [comment commander](/preorder#fr).",
-  "lang_notice_nl": "Deze winkel is in het Engels.",
-  "lang_notice_nl_link": "Hoe bestellen, in het Nederlands",
-  "lang_notice_fr": "Cette boutique est en anglais.",
-  "lang_notice_fr_link": "Comment commander, en français"
+  "footer_order_help": "In het Nederlands: [hoe bestellen](/preorder#nl). En français : [comment commander](/preorder#fr)."
 }

@@ -77,35 +77,15 @@ const LEGAL_LANGUAGE_NAMES: Record<Locale, string> = {
 };
 
 /**
- * NL/FR/EN language toggle. On a legal page it swaps the locale segment of
- * the URL and refreshes the preference cookie so SSR picks the right
- * language next time.
+ * NL/FR/EN language toggle for legal/regulatory pages. Renders nothing
+ * on non-legal routes - the rest of the site is English-only.
  *
- * The rest of the shop is in English only, so on any other page EN is the
- * active language and NL / FR open the legal overview in that language,
- * with a title that says so: a Dutch or French reader finds the texts that
- * exist in their language from the header, not only from the footer.
+ * On a legal page it swaps the locale segment of the URL and refreshes
+ * the preference cookie so SSR picks the right language next time.
  */
-export function LangToggle({
-  className,
-  shopPages = true,
-  shopWrapperClassName,
-}: {
-  className?: string;
-  /** Render the shop-page variant; false renders nothing off legal pages. */
-  shopPages?: boolean;
-  /** Wraps the shop-page variant, for a breakpoint the header row needs. */
-  shopWrapperClassName?: string;
-} = {}) {
+export function LangToggle({className}: {className?: string} = {}) {
   const location = useLocation();
-  if (!isLegalPath(location.pathname)) {
-    if (!shopPages) return null;
-    return (
-      <div className={shopWrapperClassName}>
-        <ShopLangToggle className={className} />
-      </div>
-    );
-  }
+  if (!isLegalPath(location.pathname)) return null;
 
   const currentLocale = localeFromPathname(location.pathname);
   const active: Locale = currentLocale ?? 'en';
@@ -138,52 +118,3 @@ export function LangToggle({
   );
 }
 
-/** Per language: what its link opens from a page that exists in English only. */
-const SHOP_LANG_TITLES: Record<Locale, string> = {
-  en: 'The shop is in English.',
-  nl: 'De winkel is in het Engels. Juridische teksten in het Nederlands.',
-  fr: 'La boutique est en anglais. Textes juridiques en français.',
-};
-
-/** The toggle on a shop page: EN is where the reader is, NL and FR open the
- *  legal overview in that language. */
-function ShopLangToggle({className}: {className?: string}) {
-  const {pathname, search} = useLocation();
-  const here = pathname + search;
-  return (
-    <div
-      className={`lang-toggle${className ? ` ${className}` : ''}`}
-      role="group"
-      aria-label="Language. The shop is in English; legal texts in English, Dutch and French."
-    >
-      {ORDER.map((loc) =>
-        loc === 'en' ? (
-          <Link
-            key={loc}
-            to={here}
-            preventScrollReset
-            lang="en"
-            title={SHOP_LANG_TITLES.en}
-            aria-current="page"
-            data-active="true"
-          >
-            {LABELS.en}
-          </Link>
-        ) : (
-          <Link
-            key={loc}
-            to={`/${loc}/legal`}
-            hrefLang={loc}
-            lang={loc}
-            title={SHOP_LANG_TITLES[loc]}
-            aria-label={SHOP_LANG_TITLES[loc]}
-            prefetch="intent"
-            onClick={() => writeLangCookie(loc)}
-          >
-            {LABELS[loc]}
-          </Link>
-        ),
-      )}
-    </div>
-  );
-}

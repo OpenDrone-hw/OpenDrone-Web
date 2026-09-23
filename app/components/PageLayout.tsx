@@ -1,12 +1,11 @@
 import {BackgroundWarmup} from '~/components/BackgroundWarmup';
-import {Link, useLocation} from 'react-router';
+import {useLocation} from 'react-router';
 import {MotionConfig} from 'motion/react';
 import type {CompanyIdentity} from '~/lib/company';
 import {Aside} from '~/components/Aside';
 import {Footer} from '~/components/Footer';
 import {Header, HeaderMenu, type HeaderFamilyProduct} from '~/components/Header';
-import {LangToggle, LegalLanguages} from '~/components/LangToggle';
-import {isLegalPath} from '~/lib/i18n';
+import {LangToggle} from '~/components/LangToggle';
 import {PlaceholderBanner} from '~/components/PlaceholderBanner';
 import {RouteProgress} from '~/components/RouteProgress';
 import {Txt} from '~/components/Txt';
@@ -24,8 +23,6 @@ interface PageLayoutProps {
    *  the same gates as `shopOpen` in the root loader. */
   prelaunch?: boolean;
   familyProducts?: HeaderFamilyProduct[];
-  /** The browser's first language when it is Dutch or French (root loader). */
-  browserLang?: 'nl' | 'fr' | null;
   children?: React.ReactNode;
 }
 
@@ -38,7 +35,6 @@ export function PageLayout({
   shopOpen = false,
   prelaunch = true,
   familyProducts,
-  browserLang = null,
 }: PageLayoutProps) {
   const {pathname} = useLocation();
   const isHomepage = pathname === '/';
@@ -71,12 +67,6 @@ export function PageLayout({
             shopOpen={shopOpen}
           />
           <main id="main-content" className="site-main">
-            {/* A Dutch or French browser on an English shop page gets one
-                line pointing to the preorder rules in its own language. Legal
-                pages are translated already; the desktop home is the hero. */}
-            {shopOpen && browserLang && !isHomepage && !isLegalPath(pathname) ? (
-              <LanguageNotice lang={browserLang} />
-            ) : null}
             {children}
           </main>
           {/* The desktop homepage is the scroll-pinned WebGL hero and owns its
@@ -103,33 +93,14 @@ export function PageLayout({
   );
 }
 
-function LanguageNotice({lang}: {lang: 'nl' | 'fr'}) {
-  return (
-    <p
-      lang={lang}
-      className="page-shell mx-auto mt-2 mb-0 text-[13px] leading-snug text-[var(--color-text-muted)]"
-    >
-      <Txt id={`chrome.lang_notice_${lang}`} />{' '}
-      <Link prefetch="viewport" to={`/preorder#${lang}`} className="underline underline-offset-2 text-[var(--color-text)]">
-        <Txt id={`chrome.lang_notice_${lang}_link`} />
-      </Link>
-    </p>
-  );
-}
-
 function MobileMenuAside({accountUrl}: {accountUrl: string | null}) {
-  const {pathname} = useLocation();
   return (
     <Aside type="mobile" heading={<Txt id="chrome.aside_menu_heading" />}>
       <HeaderMenu viewport="mobile" accountUrl={accountUrl} />
       {/* Language switch lives in the drawer on phones - it's hidden from the
           top bar there to keep the header row inside a 320px viewport.
-          On shop pages the drawer says in words that the shop is English
-          and links the legal texts in each language instead. */}
-      <LangToggle className="mobile-menu-lang" shopPages={false} />
-      {isLegalPath(pathname) ? null : (
-        <LegalLanguages className="mt-3 shrink-0 text-[12px] leading-relaxed text-[var(--color-text-muted)]" />
-      )}
+          LangToggle self-hides on non-legal routes. */}
+      <LangToggle className="mobile-menu-lang" />
     </Aside>
   );
 }

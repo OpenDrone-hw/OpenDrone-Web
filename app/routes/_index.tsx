@@ -16,6 +16,7 @@ import {
 } from 'react';
 import type {MoneyV2, ProductCardFragment} from '~/lib/product-shapes';
 import {byHandle, formatPrice, toCard} from '~/lib/catalog';
+import {INCUTEC_HINT_SEEN_KEY} from '~/lib/incutec-hint';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {useProductStatusResolver, useRoadmapStatusResolver} from '~/lib/coming-soon';
 import {
@@ -529,10 +530,7 @@ function DesktopHome({
   // repeat visits (splash already played) it's in from the first frame. When
   // it lands it shoves the airframe selector down to make room (see the
   // selector's `top` below, which keys off this).
-  // The header is in from the first frame (root.tsx sets hero-header-in on
-  // <html>), so a buyer can reach the shop, search and cart while the tour
-  // loads.
-  const [headerIn, setHeaderIn] = useState(true);
+  const [headerIn, setHeaderIn] = useState(splashHasPlayedThisSession);
   // Each product card's reveal window, as fractions of the walkthrough. Derived
   // from where that card's beat actually sits in the sequence (see
   // revealWindows below) rather than from the registry's even spacing: the
@@ -758,6 +756,29 @@ function DesktopHome({
 
   useEffect(() => {
     if (headerIn) document.documentElement.classList.add('hero-header-in');
+  }, [headerIn]);
+
+  // A beat after the header bar lands (3s), drop a small "Who's incutec?" hint
+  // out from under the Incutec mark, nudging discovery of the company page.
+  // Once the visitor has clicked through (flag in localStorage) the hint is
+  // retired - don't arm it, and clear any stale class from this session.
+  useEffect(() => {
+    if (!headerIn) return;
+    let seen = false;
+    try {
+      seen = localStorage.getItem(INCUTEC_HINT_SEEN_KEY) === '1';
+    } catch {
+      /* storage blocked - treat as not-yet-seen */
+    }
+    if (seen) {
+      document.documentElement.classList.remove('hero-incutec-hint');
+      return;
+    }
+    const t = window.setTimeout(
+      () => document.documentElement.classList.add('hero-incutec-hint'),
+      3000,
+    );
+    return () => window.clearTimeout(t);
   }, [headerIn]);
 
   // One screen, no spacer. The walkthrough consumes the wheel itself and hands
