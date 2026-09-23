@@ -4,6 +4,7 @@ import {buildSeoMeta} from '~/lib/seo';
 import {checkRateLimit, clientIp} from '~/lib/rate-limit';
 import {verifyTurnstile} from '~/lib/turnstile';
 import {subscribeWithShopify} from '~/lib/growth/shopify-newsletter';
+import {visitorCountry} from '~/lib/visitor-country';
 import {sendWelcomeEmail} from '~/lib/growth/welcome-email';
 import {archivePosts, shopIsOpen} from '~/lib/posts';
 import {
@@ -220,6 +221,7 @@ export async function action({request, context}: Route.ActionArgs) {
     context.env,
     email,
     notifyProduct ?? undefined,
+    visitorCountry(request),
   );
   const subscribed =
     shopifyResult === 'subscribed' ||

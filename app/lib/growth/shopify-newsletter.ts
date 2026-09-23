@@ -1,3 +1,5 @@
+import {soldThroughShops} from '../shipping-rates.ts';
+
 type NewsletterEnv = Pick<
   Env,
   | 'SHOPIFY_NEWSLETTER_WRITE_ENABLED'
@@ -76,11 +78,16 @@ function successfulConsent(customer: Customer | null | undefined, expected: Mark
  * was already SUBSCRIBED returns `already-subscribed`. Both are successes, and
  * the caller tells them apart so a repeat submit does not send a second
  * welcome mail.
+ *
+ * `country` is the visitor's country. One sold only through shops adds a
+ * `country-<CODE>` tag (`country-US`), so those subscribers can be told when
+ * direct sales open there; EU, blocked and unknown countries add none.
  */
 export async function subscribeWithShopify(
   env: NewsletterEnv,
   email: string,
   productHandle?: string,
+  country?: string | null,
 ): Promise<
   'subscribed' | 'already-subscribed' | 'suppressed' | 'disabled' | 'failed'
 > {
@@ -99,7 +106,11 @@ export async function subscribeWithShopify(
       marketingOptInLevel: 'SINGLE_OPT_IN',
       consentUpdatedAt: new Date().toISOString(),
     };
-    const tags = ['newsletter', ...(productHandle ? [`notify-${productHandle}`] : [])];
+    const tags = [
+      'newsletter',
+      ...(productHandle ? [`notify-${productHandle}`] : []),
+      ...(country && soldThroughShops(country) ? [`country-${country.trim().toUpperCase()}`] : []),
+    ];
     if (existing) {
       const written = await admin<{
         customerEmailMarketingConsentUpdate: {customer: Customer | null; userErrors: unknown[]};
