@@ -28,6 +28,7 @@ import {
   latestShipDay,
   priceLadder,
   shortCampaignDate,
+  tiersFor,
   type CampaignState,
   type LadderStep,
 } from '~/lib/preorder-campaign';
@@ -67,6 +68,8 @@ type Row = {
   campaign: CampaignState;
   /** Units and price per step, retail last. Empty without a retail price. */
   ladder: LadderStep[];
+  /** Last unit of each price step, for this SKU. */
+  stepEnds: number[];
   /** "/ motor" for a part sold per piece, from the product content. */
   priceUnit: string | null;
   /** The image is a CAD render, tagged like the home tiles. */
@@ -156,7 +159,8 @@ export async function loader({context}: Route.LoaderArgs) {
           cartAddUrl: set ? withQuantity(v.cartAddUrl, set) : v.cartAddUrl,
           quantity: set ?? 1,
           campaign: v.campaign,
-          ladder: retail.has(v.sku) ? priceLadder(retail.get(v.sku)!, CAMPAIGN.priceTiers) : [],
+          ladder: retail.has(v.sku) ? priceLadder(retail.get(v.sku)!, tiersFor(CAMPAIGN, v.sku)) : [],
+          stepEnds: tiersFor(CAMPAIGN, v.sku).map((tier) => tier.upTo),
           priceUnit: unit ? unit.replace(/^per\s+/i, '/ ') : null,
           render: imagesAreRenders(card.handle),
         },
@@ -175,7 +179,6 @@ export async function loader({context}: Route.LoaderArgs) {
     eta: shortCampaignDate(campaignDate(latestDay)) ?? latestDay,
     // The server's day, so the "Today" marker renders the same on hydration.
     today: new Date().toISOString().slice(0, 10),
-    stepEnds: CAMPAIGN.priceTiers.map((tier) => tier.upTo),
     unavailable: catalog.campaign_counts === 'unavailable',
   };
 }
@@ -210,7 +213,7 @@ export default function PreorderRoute() {
         <Txt id="preorder.tracker_empty" as="p" className="po-empty" />
       ) : null}
 
-      {!unavailable && rows.length ? <StepLegend /> : null}
+      {!unavailable && rows.length ? <StepLegend rows={rows} /> : null}
 
       {!unavailable && stackRows.length ? (
         <section className="po-group" id="stack">
@@ -218,7 +221,7 @@ export default function PreorderRoute() {
             <Txt id="preorder.stack_title" />
             {stackMonth ? <span className="po-group-meta">{dot + shipWord('ships', stackMonth)}</span> : null}
           </h2>
-          <Cards rows={stackRows} stepEnds={data.stepEnds} eta={eta} />
+          <Cards rows={stackRows} eta={eta} />
         </section>
       ) : null}
 
@@ -229,7 +232,7 @@ export default function PreorderRoute() {
             <span className="po-group-meta">{dot + shipWord('deadline', ends)}</span>
             <span className="po-group-meta">{dot + shipWord('eta', eta)}</span>
           </h2>
-          <Cards rows={targetRows} stepEnds={data.stepEnds} eta={eta} />
+          <Cards rows={targetRows} eta={eta} />
         </section>
       ) : null}
 
@@ -362,46 +365,62 @@ function Timeline({data}: {data: ReturnType<typeof useLoaderData<typeof loader>>
   );
 }
 
-/** The price steps once, for every card, as three chips over the cards:
- *  "1-100 Early bird", "101-250 Step 2", "251+ Standard". */
-function StepLegend() {
+/** The price steps once, as chips over the cards: "1-100 Early bird",
+ *  "101-250 Step 2", "251+ Standard". A product with its own steps (the
+ *  motors) gets its own line, named after it. */
+function StepLegend({rows}: {rows: Row[]}) {
   const names = copy('preorder.legend_steps');
   const labels = Array.isArray(names) ? names : [];
-  const cells: string[] = [];
-  let from = 1;
-  for (const tier of CAMPAIGN.priceTiers) {
-    cells.push(`${from}-${tier.upTo}`);
-    from = tier.upTo + 1;
+  const base = CAMPAIGN.priceTiers.map((tier) => tier.upTo).join(',');
+  const sets = new Map<string, {ends: number[]; products: string[]}>();
+  sets.set(base, {ends: CAMPAIGN.priceTiers.map((tier) => tier.upTo), products: []});
+  for (const row of rows) {
+    const key = row.stepEnds.join(',');
+    const set = sets.get(key) ?? {ends: row.stepEnds, products: []};
+    if (key !== base && !set.products.includes(row.product)) set.products.push(row.product);
+    sets.set(key, set);
   }
-  cells.push(`${from}+`);
   return (
     <div className="po-legend">
-      <span className="po-legend-label">
-        <Txt id="preorder.legend_label" />
-      </span>
-      <ol>
-        {cells.map((units, i) => (
-          <li key={units}>
-            <span className="po-legend-units">{units}</span>
-            <span>{labels[i] ?? ''}</span>
-          </li>
-        ))}
-      </ol>
+      {[...sets.entries()].map(([key, set], line) => {
+        const cells: string[] = [];
+        let from = 1;
+        for (const end of set.ends) {
+          cells.push(`${from}-${end}`);
+          from = end + 1;
+        }
+        cells.push(`${from}+`);
+        return (
+          <div className="po-legend-line" key={key}>
+            <span className="po-legend-label">
+              {line === 0 ? <Txt id="preorder.legend_label" /> : set.products.join(', ')}
+            </span>
+            <ol>
+              {cells.map((units, i) => (
+                <li key={units}>
+                  <span className="po-legend-units">{units}</span>
+                  <span>{labels[i] ?? ''}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-function Cards({rows, stepEnds, eta}: {rows: Row[]; stepEnds: number[]; eta: string}) {
+function Cards({rows, eta}: {rows: Row[]; eta: string}) {
   return (
     <ul className="po-cards">
       {rows.map((row) => (
-        <Card key={row.sku} row={row} stepEnds={stepEnds} eta={eta} />
+        <Card key={row.sku} row={row} eta={eta} />
       ))}
     </ul>
   );
 }
 
-function Card({row, stepEnds, eta}: {row: Row; stepEnds: number[]; eta: string}) {
+function Card({row, eta}: {row: Row; eta: string}) {
   const name = row.variant ? `${row.product} ${row.variant}` : row.product;
   const cta = copyText('preorder.card_cta') ?? 'Pre-order';
   const currency = row.price.currencyCode;
@@ -411,7 +430,7 @@ function Card({row, stepEnds, eta}: {row: Row; stepEnds: number[]; eta: string})
     text: formatPrice(step.price, currency),
     current: next >= step.from && (step.to === null || next <= step.to),
   }));
-  const bar = stepBarView(row.campaign, stepEnds);
+  const bar = stepBarView(row.campaign, row.stepEnds);
   const funded = `${copyText('preorder.funded') ?? 'Funded'} · ${shipWord('eta', shortCampaignDate(row.campaign.latestShip) ?? shipMonth(row.shipPromise) ?? eta)}`;
   return (
     <li className="po-card">

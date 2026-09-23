@@ -319,12 +319,18 @@
    clear of the timeline so they do not read as time spans. */
 .po-legend {
   display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  font-size: var(--fs-sm);
+}
+.po-legend-line {
+  display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--sp-2) var(--sp-3);
-  font-size: var(--fs-sm);
 }
 .po-legend-label {
+  min-width: 7.5rem;
   font-weight: 600;
   color: var(--color-text);
 }
@@ -354,6 +360,8 @@
 @media (max-width: 42em) {
   .po-legend {
     margin-top: calc(var(--sp-3) - var(--sp-7));
+  }
+  .po-legend-line {
     gap: var(--sp-2);
   }
   .po-legend-label {

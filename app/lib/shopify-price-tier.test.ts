@@ -126,3 +126,53 @@ describe('syncPriceTiers', () => {
     );
   });
 });
+
+describe('per-SKU price steps', () => {
+  const MOTORS = parseCampaignConfig({
+    countFrom: '2026-09-21',
+    endsOn: '2026-12-31',
+    priceTiers: [{upTo: 100, off: 0.2}, {upTo: 250, off: 0.1}],
+    pendingShips: 'ships later',
+    skus: {
+      'OPENESC-2020': {batches: [{units: 250}]},
+      'OPENMOTOR-1604': {
+        batches: [{units: 1000}],
+        priceTiers: [{upTo: 250, off: 0.2}, {upTo: 1000, off: 0.1}],
+      },
+    },
+  });
+
+  it('steps a SKU with its own tiers at its own unit counts', () => {
+    assert.deepEqual(targetPrice(MOTORS, 200, 20, 'OPENMOTOR-1604'), {price: 16, compareAt: 20});
+    assert.deepEqual(targetPrice(MOTORS, 250, 20, 'OPENMOTOR-1604'), {price: 18, compareAt: 20});
+    assert.deepEqual(targetPrice(MOTORS, 999, 20, 'OPENMOTOR-1604'), {price: 18, compareAt: 20});
+    assert.deepEqual(targetPrice(MOTORS, 1000, 20, 'OPENMOTOR-1604'), {price: 20, compareAt: null});
+  });
+
+  it('keeps the campaign tiers for a SKU without its own', () => {
+    assert.deepEqual(targetPrice(MOTORS, 200, 50, 'OPENESC-2020'), {price: 45, compareAt: 50});
+  });
+
+  it('writes a motor at the 20% step until unit 250', async () => {
+    const {fetcher} = shopify([
+      {sku: 'OPENESC-2020', price: '40.00', compareAtPrice: '50.00'},
+      {sku: 'OPENMOTOR-1604', price: '15.20', compareAtPrice: '19.00'},
+    ]);
+    const result = await syncPriceTiers(ENV, MOTORS, {'OPENMOTOR-1604': 120}, {apply: true, fetcher});
+    assert.deepEqual(result.changed, []);
+  });
+
+  it('refuses per-SKU tiers that do not increase', () => {
+    assert.throws(
+      () =>
+        parseCampaignConfig({
+          countFrom: '2026-09-21',
+          endsOn: '2026-12-31',
+          priceTiers: [{upTo: 100, off: 0.2}],
+          pendingShips: 'ships later',
+          skus: {X: {batches: [{units: 10}], priceTiers: [{upTo: 250, off: 0.2}, {upTo: 100, off: 0.1}]}},
+        }),
+      /X priceTiers need whole, increasing upTo values/,
+    );
+  });
+});

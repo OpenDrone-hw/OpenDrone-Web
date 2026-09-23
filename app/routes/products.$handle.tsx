@@ -60,7 +60,7 @@ import {
 import {useProductStatus} from '~/lib/coming-soon';
 import {shipPromiseFor} from '~/lib/preorder';
 import {fetchStatusFlagsFast, statusForHandle} from '~/lib/roadmap-data';
-import {priceLadder, type PriceTier} from '~/lib/preorder-campaign';
+import {parseCampaignConfig, priceLadder, tiersFor} from '~/lib/preorder-campaign';
 import {stepBarView, stepLayout} from '~/lib/preorder-meter';
 import {countryName, shippingQuote} from '~/lib/shipping-rates';
 import {SHIP_COUNTRY_EVENT, storeShipCountry, storedShipCountry} from '~/lib/cart-client';
@@ -77,11 +77,8 @@ import type {
   DownloadKind,
 } from '~/lib/product-content';
 
-/** The price steps every campaign SKU follows (content/preorders.json). */
-const PRICE_TIERS: PriceTier[] = preorders.priceTiers;
-
-/** The unit counts where a price step ends: the ticks on the step bar. */
-const STEP_ENDS = PRICE_TIERS.map((tier) => tier.upTo);
+/** The campaign (content/preorders.json): each SKU's price steps. */
+const CAMPAIGN_CONFIG = parseCampaignConfig(preorders);
 
 /** Fill `{name}` slots in a copy template. */
 function fill(template: string, vars: Record<string, string | number>): string {
@@ -1324,8 +1321,9 @@ function ProductPage() {
   // terms and the quantity cap all read it.
   const campaign = !isBundle && preorder ? (selectedVariant?.campaign ?? null) : null;
   const retail = selectedVariant?.sku ? (retailBySku[selectedVariant.sku] ?? null) : null;
+  const tiers = tiersFor(CAMPAIGN_CONFIG, selectedVariant?.sku ?? '');
   const ladder =
-    campaign && retail != null && retail > 0 ? priceLadder(retail, PRICE_TIERS) : null;
+    campaign && retail != null && retail > 0 ? priceLadder(retail, tiers) : null;
   const currency = selectedVariant?.price.currencyCode ?? 'EUR';
   // The step bar: units sold, a tick at each step end, "37 / 250", with
   // every step as an absolute price over it. No "% off", no struck price.
@@ -1336,7 +1334,9 @@ function ProductPage() {
     range: step.to === null ? `${step.from}+` : `${step.from}-${step.to}`,
     current: nextUnit >= step.from && (step.to === null || nextUnit <= step.to),
   }));
-  const stepBarState = campaign ? stepBarView(campaign, STEP_ENDS) : null;
+  const stepBarState = campaign
+    ? stepBarView(campaign, tiers.map((tier) => tier.upTo))
+    : null;
   const stepBar =
     campaign && stepBarState ? (
       <StepBar
