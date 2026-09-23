@@ -175,7 +175,7 @@
   ],
   "gpsr_warnings_motor_nl": [
     "Verwijder propellers vóór benchtests, configuratie of firmware-updates.",
-    "Draaiende motoren en propellers veroorzaken ernstige snijwonden; blijf uit de buurt wanneer het toestel gewapend is.",
+    "Draaiende motoren en propellers veroorzaken ernstige snijwonden; blijf uit de buurt wanneer het toestel ingeschakeld is.",
     "Motoren worden heet tijdens gebruik; laat ze afkoelen voor je ze aanraakt."
   ],
   "gpsr_warnings_motor_fr": [
@@ -183,13 +183,356 @@
     "Les moteurs et hélices en rotation provoquent des coupures graves ; tenez-vous à distance lorsque l’appareil est armé.",
     "Les moteurs chauffent en fonctionnement ; laissez-les refroidir avant de les manipuler."
   ],
+  "gpsr_warnings_de": [
+    "Kein Spielzeug. Nicht für Personen unter 14 Jahren; Minderjährige nur unter Aufsicht eines Erwachsenen.",
+    "Bauteil für selbstgebaute unbemannte Luftfahrzeuge: Der Erbauer ist für das zusammengebaute Luftfahrzeug und dessen rechtmäßigen Betrieb verantwortlich."
+  ],
+  "gpsr_warnings_electronics_de": [
+    "LiPo-Akkus können sich bei Beschädigung, Kurzschluss oder Überladung entzünden; niemals unbeaufsichtigt laden.",
+    "Propeller vor Prüfstandtests, Konfiguration oder Firmware-Updates entfernen.",
+    "Die Spannungs- und Stromgrenzen in den Spezifikationen einhalten; Verpolung zerstört die Platine."
+  ],
+  "gpsr_warnings_frame_de": [
+    "Kohlefaser leitet Strom: Verkabelung und Platinen gegen Platten und Arme isolieren.",
+    "Carbonkanten können scharf sein; Carbonstaub vom Sägen oder Schleifen ist beim Einatmen gesundheitsschädlich, daher nass arbeiten und eine Maske tragen."
+  ],
+  "gpsr_warnings_motor_de": [
+    "Propeller vor Prüfstandtests, Konfiguration oder Firmware-Updates entfernen.",
+    "Drehende Motoren und Propeller verursachen schwere Schnittverletzungen; Abstand halten, wenn das Luftfahrzeug scharfgeschaltet ist.",
+    "Motoren werden im Betrieb heiß; vor dem Anfassen abkühlen lassen."
+  ],
+  "gpsr_warnings_it": [
+    "Non è un giocattolo. Non adatto a persone di età inferiore a 14 anni; i minori solo sotto la supervisione di un adulto.",
+    "Componente per aeromobili senza equipaggio autocostruiti: il costruttore è responsabile dell'aeromobile assemblato e del suo utilizzo conforme alla legge."
+  ],
+  "gpsr_warnings_electronics_it": [
+    "Le batterie LiPo possono incendiarsi se danneggiate, in cortocircuito o sovraccaricate; non caricarle mai senza sorveglianza.",
+    "Rimuovere le eliche prima di test al banco, configurazione o aggiornamenti del firmware.",
+    "Rispettare i limiti di tensione e corrente indicati nelle specifiche; l'inversione di polarità distrugge la scheda."
+  ],
+  "gpsr_warnings_frame_it": [
+    "La fibra di carbonio conduce l'elettricità: isolare cavi e schede dalle piastre e dai bracci.",
+    "I bordi in carbonio possono essere taglienti; la polvere di carbonio prodotta da taglio o levigatura è nociva se inalata: lavorare a umido e indossare una mascherina."
+  ],
+  "gpsr_warnings_motor_it": [
+    "Rimuovere le eliche prima di test al banco, configurazione o aggiornamenti del firmware.",
+    "Motori ed eliche in rotazione causano tagli gravi; restare a distanza quando l'aeromobile è armato.",
+    "I motori si scaldano durante l'uso; lasciarli raffreddare prima di maneggiarli."
+  ],
+  "gpsr_warnings_es": [
+    "No es un juguete. No apto para menores de 14 años; los menores solo bajo la supervisión de un adulto.",
+    "Componente para aeronaves no tripuladas de construcción propia: el constructor es responsable de la aeronave montada y de su uso conforme a la ley."
+  ],
+  "gpsr_warnings_electronics_es": [
+    "Las baterías LiPo pueden incendiarse si se dañan, se cortocircuitan o se sobrecargan; nunca las cargue sin vigilancia.",
+    "Retire las hélices antes de pruebas en banco, configuración o actualizaciones de firmware.",
+    "Respete los límites de tensión y corriente de las especificaciones; la inversión de polaridad destruye la placa."
+  ],
+  "gpsr_warnings_frame_es": [
+    "La fibra de carbono conduce la electricidad: aísle el cableado y las placas electrónicas de las placas y los brazos del chasis.",
+    "Los bordes de carbono pueden estar afilados; el polvo de carbono de cortar o lijar es nocivo si se inhala: trabaje en húmedo y use mascarilla."
+  ],
+  "gpsr_warnings_motor_es": [
+    "Retire las hélices antes de pruebas en banco, configuración o actualizaciones de firmware.",
+    "Los motores y hélices en rotación causan cortes graves; manténgase alejado cuando la aeronave esté armada.",
+    "Los motores se calientan durante el uso; déjelos enfriar antes de manipularlos."
+  ],
+  "gpsr_warnings_pt": [
+    "Não é um brinquedo. Não se destina a pessoas com menos de 14 anos; menores apenas sob supervisão de um adulto.",
+    "Componente para aeronaves não tripuladas de construção própria: o construtor é responsável pela aeronave montada e pela sua utilização legal."
+  ],
+  "gpsr_warnings_electronics_pt": [
+    "As baterias LiPo podem incendiar-se se danificadas, em curto-circuito ou sobrecarregadas; nunca as carregue sem vigilância.",
+    "Retire as hélices antes de testes em bancada, configuração ou atualizações de firmware.",
+    "Respeite os limites de tensão e corrente indicados nas especificações; a inversão de polaridade destrói a placa."
+  ],
+  "gpsr_warnings_frame_pt": [
+    "A fibra de carbono conduz eletricidade: isole a cablagem e as placas eletrónicas das placas e dos braços do chassis.",
+    "As arestas de carbono podem ser cortantes; o pó de carbono resultante de cortar ou lixar é nocivo se inalado: trabalhe a húmido e use máscara."
+  ],
+  "gpsr_warnings_motor_pt": [
+    "Retire as hélices antes de testes em bancada, configuração ou atualizações de firmware.",
+    "Motores e hélices em rotação causam cortes graves; mantenha-se afastado quando a aeronave estiver armada.",
+    "Os motores aquecem durante a utilização; deixe-os arrefecer antes de os manusear."
+  ],
+  "gpsr_warnings_pl": [
+    "To nie jest zabawka. Nie dla osób poniżej 14 lat; osoby niepełnoletnie wyłącznie pod nadzorem dorosłego.",
+    "Podzespół do samodzielnie budowanych bezzałogowych statków powietrznych: za zmontowany statek powietrzny i jego zgodne z prawem użytkowanie odpowiada konstruktor."
+  ],
+  "gpsr_warnings_electronics_pl": [
+    "Akumulatory LiPo mogą się zapalić w razie uszkodzenia, zwarcia lub przeładowania; nigdy nie ładuj ich bez nadzoru.",
+    "Zdejmij śmigła przed testami na stanowisku, konfiguracją lub aktualizacją oprogramowania układowego.",
+    "Przestrzegaj limitów napięcia i prądu podanych w specyfikacji; odwrotna polaryzacja niszczy płytkę."
+  ],
+  "gpsr_warnings_frame_pl": [
+    "Włókno węglowe przewodzi prąd: odizoluj okablowanie i płytki od płyt i ramion ramy.",
+    "Krawędzie z włókna węglowego mogą być ostre; pył węglowy powstający przy cięciu lub szlifowaniu jest szkodliwy przy wdychaniu, dlatego pracuj na mokro i noś maskę."
+  ],
+  "gpsr_warnings_motor_pl": [
+    "Zdejmij śmigła przed testami na stanowisku, konfiguracją lub aktualizacją oprogramowania układowego.",
+    "Obracające się silniki i śmigła powodują poważne rany cięte; trzymaj się z daleka, gdy statek powietrzny jest uzbrojony.",
+    "Silniki nagrzewają się podczas pracy; przed dotknięciem odczekaj, aż ostygną."
+  ],
+  "gpsr_warnings_cs": [
+    "Není to hračka. Není určeno osobám mladším 14 let; nezletilí pouze pod dohledem dospělé osoby.",
+    "Součást pro svépomocně stavěná bezpilotní letadla: za sestavené letadlo a jeho provoz v souladu s právem odpovídá stavitel."
+  ],
+  "gpsr_warnings_electronics_cs": [
+    "Akumulátory LiPo se mohou vznítit při poškození, zkratu nebo přebití; nikdy je nenabíjejte bez dozoru.",
+    "Před zkouškami na stole, konfigurací nebo aktualizací firmwaru sejměte vrtule.",
+    "Dodržujte limity napětí a proudu uvedené ve specifikacích; přepólování desku zničí."
+  ],
+  "gpsr_warnings_frame_cs": [
+    "Uhlíková vlákna vedou elektrický proud: izolujte kabeláž a desky od plátů a ramen rámu.",
+    "Uhlíkové hrany mohou být ostré; uhlíkový prach z řezání nebo broušení je při vdechnutí zdraví škodlivý, proto pracujte za mokra a používejte respirátor."
+  ],
+  "gpsr_warnings_motor_cs": [
+    "Před zkouškami na stole, konfigurací nebo aktualizací firmwaru sejměte vrtule.",
+    "Rotující motory a vrtule způsobují vážná řezná poranění; když je letadlo aktivováno, držte se v bezpečné vzdálenosti.",
+    "Motory se během provozu zahřívají; před manipulací je nechte vychladnout."
+  ],
+  "gpsr_warnings_sk": [
+    "Nie je to hračka. Nie je určené pre osoby mladšie ako 14 rokov; maloletí iba pod dohľadom dospelej osoby.",
+    "Súčiastka pre svojpomocne stavané bezpilotné lietadlá: za zostavené lietadlo a jeho prevádzku v súlade so zákonom zodpovedá staviteľ."
+  ],
+  "gpsr_warnings_electronics_sk": [
+    "Akumulátory LiPo sa môžu vznietiť pri poškodení, skrate alebo prebití; nikdy ich nenabíjajte bez dozoru.",
+    "Pred skúškami na stole, konfiguráciou alebo aktualizáciou firmvéru odstráňte vrtule.",
+    "Dodržiavajte limity napätia a prúdu uvedené v špecifikáciách; prepólovanie dosku zničí."
+  ],
+  "gpsr_warnings_frame_sk": [
+    "Uhlíkové vlákno vedie elektrický prúd: izolujte kabeláž a dosky od platní a ramien rámu.",
+    "Uhlíkové hrany môžu byť ostré; uhlíkový prach z rezania alebo brúsenia je pri vdýchnutí škodlivý, preto pracujte namokro a používajte respirátor."
+  ],
+  "gpsr_warnings_motor_sk": [
+    "Pred skúškami na stole, konfiguráciou alebo aktualizáciou firmvéru odstráňte vrtule.",
+    "Rotujúce motory a vrtule spôsobujú vážne rezné poranenia; keď je lietadlo aktivované, držte sa v bezpečnej vzdialenosti.",
+    "Motory sa počas prevádzky zahrievajú; pred manipuláciou ich nechajte vychladnúť."
+  ],
+  "gpsr_warnings_sl": [
+    "To ni igrača. Ni za osebe, mlajše od 14 let; mladoletni samo pod nadzorom odrasle osebe.",
+    "Sestavni del za doma izdelane brezpilotne zrakoplove: za sestavljeni zrakoplov in njegovo zakonito uporabo je odgovoren graditelj."
+  ],
+  "gpsr_warnings_electronics_sl": [
+    "Baterije LiPo se lahko vžgejo, če so poškodovane, v kratkem stiku ali prenapolnjene; nikoli jih ne polnite brez nadzora.",
+    "Pred preizkusi na mizi, konfiguracijo ali posodobitvijo vdelane programske opreme odstranite propelerje.",
+    "Upoštevajte omejitve napetosti in toka iz specifikacij; obrnjena polariteta uniči ploščo."
+  ],
+  "gpsr_warnings_frame_sl": [
+    "Ogljikova vlakna prevajajo električni tok: ožičenje in tiskana vezja izolirajte od plošč in rok okvirja.",
+    "Robovi iz ogljikovih vlaken so lahko ostri; ogljikov prah pri rezanju ali brušenju je škodljiv pri vdihavanju, zato delajte mokro in nosite masko."
+  ],
+  "gpsr_warnings_motor_sl": [
+    "Pred preizkusi na mizi, konfiguracijo ali posodobitvijo vdelane programske opreme odstranite propelerje.",
+    "Vrteči se motorji in propelerji povzročijo hude urezne rane; ko je zrakoplov aktiviran, se držite stran.",
+    "Motorji se med uporabo segrejejo; pred rokovanjem jih pustite, da se ohladijo."
+  ],
+  "gpsr_warnings_hr": [
+    "Nije igračka. Nije za osobe mlađe od 14 godina; maloljetnici samo pod nadzorom odrasle osobe.",
+    "Komponenta za samostalno izrađene bespilotne zrakoplove: graditelj je odgovoran za sastavljeni zrakoplov i njegovu zakonitu uporabu."
+  ],
+  "gpsr_warnings_electronics_hr": [
+    "LiPo baterije mogu se zapaliti ako su oštećene, u kratkom spoju ili prepunjene; nikad ih ne punite bez nadzora.",
+    "Uklonite propelere prije ispitivanja na stolu, konfiguracije ili ažuriranja firmvera.",
+    "Pridržavajte se ograničenja napona i struje iz specifikacija; obrnuti polaritet uništava pločicu."
+  ],
+  "gpsr_warnings_frame_hr": [
+    "Ugljična vlakna provode električnu struju: izolirajte ožičenje i pločice od ploča i krakova okvira.",
+    "Rubovi od ugljičnih vlakana mogu biti oštri; ugljična prašina od rezanja ili brušenja štetna je pri udisanju, stoga radite mokro i nosite masku."
+  ],
+  "gpsr_warnings_motor_hr": [
+    "Uklonite propelere prije ispitivanja na stolu, konfiguracije ili ažuriranja firmvera.",
+    "Rotirajući motori i propeleri uzrokuju teške posjekotine; držite se podalje kada je zrakoplov aktiviran.",
+    "Motori se tijekom rada zagrijavaju; prije rukovanja pustite ih da se ohlade."
+  ],
+  "gpsr_warnings_hu": [
+    "Nem játék. 14 év alattiak számára nem alkalmas; kiskorúak csak felnőtt felügyelete mellett használhatják.",
+    "Alkatrész saját építésű pilóta nélküli légi járművekhez: az összeszerelt légi járműért és annak jogszerű üzemeltetéséért az építő felel."
+  ],
+  "gpsr_warnings_electronics_hu": [
+    "A LiPo akkumulátorok sérülés, rövidzárlat vagy túltöltés esetén meggyulladhatnak; soha ne töltse őket felügyelet nélkül.",
+    "Asztali tesztelés, konfigurálás vagy firmware-frissítés előtt vegye le a légcsavarokat.",
+    "Tartsa be a műszaki adatokban megadott feszültség- és áramhatárokat; a fordított polaritás tönkreteszi a panelt."
+  ],
+  "gpsr_warnings_frame_hu": [
+    "A szénszál vezeti az áramot: szigetelje a vezetékeket és a paneleket a váz lapjaitól és karjaitól.",
+    "A szénszálas élek élesek lehetnek; a vágásból vagy csiszolásból származó szénpor belélegezve ártalmas, ezért nedvesen dolgozzon és viseljen maszkot."
+  ],
+  "gpsr_warnings_motor_hu": [
+    "Asztali tesztelés, konfigurálás vagy firmware-frissítés előtt vegye le a légcsavarokat.",
+    "A forgó motorok és légcsavarok súlyos vágási sérülést okoznak; tartson távolságot, amikor a légi jármű aktiválva van.",
+    "A motorok használat közben felforrósodnak; kezelés előtt hagyja kihűlni őket."
+  ],
+  "gpsr_warnings_ro": [
+    "Nu este o jucărie. Nu este destinat persoanelor sub 14 ani; minorii numai sub supravegherea unui adult.",
+    "Componentă pentru aeronave fără pilot construite de utilizator: constructorul răspunde de aeronava asamblată și de utilizarea ei legală."
+  ],
+  "gpsr_warnings_electronics_ro": [
+    "Bateriile LiPo se pot aprinde dacă sunt deteriorate, scurtcircuitate sau supraîncărcate; nu le încărcați niciodată nesupravegheate.",
+    "Scoateți elicele înainte de testele pe banc, configurare sau actualizări de firmware.",
+    "Respectați limitele de tensiune și curent din specificații; inversarea polarității distruge placa."
+  ],
+  "gpsr_warnings_frame_ro": [
+    "Fibra de carbon conduce electricitatea: izolați cablurile și plăcile electronice de plăcile și brațele cadrului.",
+    "Marginile din carbon pot fi tăioase; praful de carbon rezultat la tăiere sau șlefuire este nociv dacă este inhalat, așa că lucrați umed și purtați mască."
+  ],
+  "gpsr_warnings_motor_ro": [
+    "Scoateți elicele înainte de testele pe banc, configurare sau actualizări de firmware.",
+    "Motoarele și elicele în rotație provoacă tăieturi grave; păstrați distanța când aeronava este activată.",
+    "Motoarele se încălzesc în timpul utilizării; lăsați-le să se răcească înainte de a le manipula."
+  ],
+  "gpsr_warnings_bg": [
+    "Това не е играчка. Не е предназначено за лица под 14 години; непълнолетни само под надзора на възрастен.",
+    "Компонент за самостоятелно изградени безпилотни летателни апарати: конструкторът отговаря за сглобения летателен апарат и за законосъобразната му експлоатация."
+  ],
+  "gpsr_warnings_electronics_bg": [
+    "LiPo батериите могат да се запалят при повреда, късо съединение или презареждане; никога не ги зареждайте без надзор.",
+    "Свалете витлата преди изпитвания на стенд, конфигуриране или актуализиране на фърмуера.",
+    "Спазвайте ограниченията за напрежение и ток от спецификациите; обратната полярност унищожава платката."
+  ],
+  "gpsr_warnings_frame_bg": [
+    "Въглеродните влакна провеждат ток: изолирайте кабелите и платките от плочите и рамената на рамата.",
+    "Ръбовете от въглеродни влакна може да са остри; прахът от рязане или шлайфане е вреден при вдишване, затова работете мокро и носете маска."
+  ],
+  "gpsr_warnings_motor_bg": [
+    "Свалете витлата преди изпитвания на стенд, конфигуриране или актуализиране на фърмуера.",
+    "Въртящите се двигатели и витла причиняват сериозни порязвания; стойте настрана, когато летателният апарат е активиран.",
+    "Двигателите се нагряват по време на работа; оставете ги да изстинат, преди да ги пипате."
+  ],
+  "gpsr_warnings_el": [
+    "Δεν είναι παιχνίδι. Δεν προορίζεται για άτομα κάτω των 14 ετών· ανήλικοι μόνο υπό την επίβλεψη ενήλικα.",
+    "Εξάρτημα για ιδιοκατασκευαζόμενα μη επανδρωμένα αεροσκάφη: αυτός που το συναρμολογεί ευθύνεται για το συναρμολογημένο αεροσκάφος και τη νόμιμη χρήση του."
+  ],
+  "gpsr_warnings_electronics_el": [
+    "Οι μπαταρίες LiPo μπορεί να αναφλεγούν όταν έχουν υποστεί ζημιά, βραχυκύκλωμα ή υπερφόρτιση· μην τις φορτίζετε ποτέ χωρίς επίβλεψη.",
+    "Αφαιρέστε τις έλικες πριν από δοκιμές σε πάγκο, ρύθμιση ή ενημερώσεις υλικολογισμικού.",
+    "Τηρείτε τα όρια τάσης και ρεύματος των προδιαγραφών· η αντιστροφή πολικότητας καταστρέφει την πλακέτα."
+  ],
+  "gpsr_warnings_frame_el": [
+    "Οι ίνες άνθρακα είναι αγώγιμες: μονώστε την καλωδίωση και τις πλακέτες από τις πλάκες και τους βραχίονες του σκελετού.",
+    "Οι άκρες από ίνες άνθρακα μπορεί να είναι αιχμηρές· η σκόνη άνθρακα από κοπή ή λείανση είναι επιβλαβής όταν εισπνέεται, γι' αυτό εργάζεστε με νερό και φοράτε μάσκα."
+  ],
+  "gpsr_warnings_motor_el": [
+    "Αφαιρέστε τις έλικες πριν από δοκιμές σε πάγκο, ρύθμιση ή ενημερώσεις υλικολογισμικού.",
+    "Οι περιστρεφόμενοι κινητήρες και έλικες προκαλούν σοβαρά τραύματα· κρατήστε απόσταση όταν το αεροσκάφος είναι ενεργοποιημένο.",
+    "Οι κινητήρες θερμαίνονται κατά τη λειτουργία· αφήστε τους να κρυώσουν πριν τους πιάσετε."
+  ],
+  "gpsr_warnings_da": [
+    "Ikke legetøj. Ikke til personer under 14 år; mindreårige kun under opsyn af en voksen.",
+    "Komponent til selvbyggede ubemandede luftfartøjer: byggeren er ansvarlig for det samlede luftfartøj og for lovlig brug af det."
+  ],
+  "gpsr_warnings_electronics_da": [
+    "LiPo-batterier kan bryde i brand, hvis de beskadiges, kortsluttes eller overoplades; oplad dem aldrig uden opsyn.",
+    "Fjern propellerne før bænktest, konfiguration eller firmwareopdateringer.",
+    "Overhold spændings- og strømgrænserne i specifikationerne; forkert polaritet ødelægger printkortet."
+  ],
+  "gpsr_warnings_frame_da": [
+    "Kulfiber leder strøm: isolér ledninger og printkort fra rammens plader og arme.",
+    "Kulfiberkanter kan være skarpe; kulstøv fra savning eller slibning er skadeligt at indånde, så arbejd vådt og bær maske."
+  ],
+  "gpsr_warnings_motor_da": [
+    "Fjern propellerne før bænktest, konfiguration eller firmwareopdateringer.",
+    "Roterende motorer og propeller giver alvorlige snitsår; hold afstand, når luftfartøjet er aktiveret.",
+    "Motorerne bliver varme under brug; lad dem køle af, før du rører dem."
+  ],
+  "gpsr_warnings_sv": [
+    "Ingen leksak. Inte för personer under 14 år; minderåriga endast under uppsikt av en vuxen.",
+    "Komponent för egenbyggda obemannade luftfartyg: byggaren ansvarar för det monterade luftfartyget och för att det används lagligt."
+  ],
+  "gpsr_warnings_electronics_sv": [
+    "LiPo-batterier kan fatta eld om de skadas, kortsluts eller överladdas; ladda aldrig utan tillsyn.",
+    "Ta bort propellrarna före bänktester, konfiguration eller uppdateringar av firmware.",
+    "Följ spännings- och strömgränserna i specifikationerna; omvänd polaritet förstör kretskortet."
+  ],
+  "gpsr_warnings_frame_sv": [
+    "Kolfiber leder ström: isolera kablage och kretskort från ramens plattor och armar.",
+    "Kolfiberkanter kan vara vassa; koldamm från sågning eller slipning är skadligt att andas in, så arbeta vått och bär mask."
+  ],
+  "gpsr_warnings_motor_sv": [
+    "Ta bort propellrarna före bänktester, konfiguration eller uppdateringar av firmware.",
+    "Roterande motorer och propellrar orsakar allvarliga skärsår; håll avstånd när luftfartyget är aktiverat.",
+    "Motorerna blir varma vid användning; låt dem svalna innan du hanterar dem."
+  ],
+  "gpsr_warnings_fi": [
+    "Ei lelu. Ei alle 14-vuotiaille; alaikäiset vain aikuisen valvonnassa.",
+    "Komponentti itse rakennettuihin miehittämättömiin ilma-aluksiin: rakentaja vastaa kootusta ilma-aluksesta ja sen lainmukaisesta käytöstä."
+  ],
+  "gpsr_warnings_electronics_fi": [
+    "LiPo-akut voivat syttyä palamaan, jos ne vaurioituvat, oikosulkeutuvat tai ylilatautuvat; älä koskaan lataa niitä valvomatta.",
+    "Irrota potkurit ennen pöytätestausta, määritystä tai laiteohjelmiston päivitystä.",
+    "Noudata teknisissä tiedoissa annettuja jännite- ja virtarajoja; väärä napaisuus tuhoaa piirilevyn."
+  ],
+  "gpsr_warnings_frame_fi": [
+    "Hiilikuitu johtaa sähköä: eristä johdotus ja piirilevyt rungon levyistä ja varsista.",
+    "Hiilikuidun reunat voivat olla teräviä; sahaamisesta tai hiomisesta syntyvä hiilipöly on haitallista hengittää, joten työskentele märkänä ja käytä hengityssuojainta."
+  ],
+  "gpsr_warnings_motor_fi": [
+    "Irrota potkurit ennen pöytätestausta, määritystä tai laiteohjelmiston päivitystä.",
+    "Pyörivät moottorit ja potkurit aiheuttavat vakavia viiltohaavoja; pysy etäällä, kun ilma-alus on aktivoitu.",
+    "Moottorit kuumenevat käytössä; anna niiden jäähtyä ennen käsittelyä."
+  ],
+  "gpsr_warnings_et": [
+    "Ei ole mänguasi. Ei ole mõeldud alla 14-aastastele; alaealised ainult täiskasvanu järelevalve all.",
+    "Komponent isetehtud mehitamata õhusõidukitele: kokkupandud õhusõiduki ja selle seadusliku kasutamise eest vastutab ehitaja."
+  ],
+  "gpsr_warnings_electronics_et": [
+    "LiPo-akud võivad kahjustuse, lühise või ülelaadimise korral süttida; ärge laadige neid kunagi järelevalveta.",
+    "Eemaldage propellerid enne katsetamist laual, seadistamist või püsivara uuendamist.",
+    "Järgige tehnilistes andmetes toodud pinge- ja voolupiiranguid; vale polaarsus hävitab plaadi."
+  ],
+  "gpsr_warnings_frame_et": [
+    "Süsinikkiud juhib elektrit: isoleerige juhtmestik ja trükkplaadid raami plaatidest ja kaartest.",
+    "Süsinikkiu servad võivad olla teravad; lõikamisel või lihvimisel tekkiv süsinikutolm on sissehingamisel kahjulik, seega töötage märjalt ja kandke maski."
+  ],
+  "gpsr_warnings_motor_et": [
+    "Eemaldage propellerid enne katsetamist laual, seadistamist või püsivara uuendamist.",
+    "Pöörlevad mootorid ja propellerid põhjustavad raskeid lõikevigastusi; hoidke eemale, kui õhusõiduk on aktiveeritud.",
+    "Mootorid lähevad kasutamisel kuumaks; laske neil enne käsitsemist jahtuda."
+  ],
+  "gpsr_warnings_lv": [
+    "Nav rotaļlieta. Nav paredzēts personām, kas jaunākas par 14 gadiem; nepilngadīgie tikai pieaugušā uzraudzībā.",
+    "Detaļa pašbūvētiem bezpilota gaisa kuģiem: par samontēto gaisa kuģi un tā likumīgu lietošanu atbild būvētājs."
+  ],
+  "gpsr_warnings_electronics_lv": [
+    "LiPo akumulatori var aizdegties, ja tie ir bojāti, īssavienoti vai pārlādēti; nekad nelādējiet tos bez uzraudzības.",
+    "Pirms testēšanas uz galda, konfigurēšanas vai programmaparatūras atjaunināšanas noņemiet propellerus.",
+    "Ievērojiet specifikācijās norādītos sprieguma un strāvas ierobežojumus; nepareiza polaritāte sabojā plati."
+  ],
+  "gpsr_warnings_frame_lv": [
+    "Oglekļa šķiedra vada elektrību: izolējiet vadus un plates no rāmja plāksnēm un sijām.",
+    "Oglekļa šķiedras malas var būt asas; griešanas vai slīpēšanas putekļi ir kaitīgi ieelpot, tāpēc strādājiet mitri un valkājiet masku."
+  ],
+  "gpsr_warnings_motor_lv": [
+    "Pirms testēšanas uz galda, konfigurēšanas vai programmaparatūras atjaunināšanas noņemiet propellerus.",
+    "Rotējoši motori un propelleri rada smagus griezumus; turieties atstatus, kad gaisa kuģis ir aktivizēts.",
+    "Motori lietošanas laikā sakarst; pirms pieskaršanās ļaujiet tiem atdzist."
+  ],
+  "gpsr_warnings_lt": [
+    "Tai ne žaislas. Neskirta jaunesniems nei 14 metų asmenims; nepilnamečiai tik prižiūrimi suaugusiojo.",
+    "Komponentas savadarbiams bepiločiams orlaiviams: už surinktą orlaivį ir teisėtą jo naudojimą atsako jo surinkėjas."
+  ],
+  "gpsr_warnings_electronics_lt": [
+    "LiPo akumuliatoriai gali užsidegti, jei yra pažeisti, trumpai sujungti ar perkrauti; niekada nekraukite be priežiūros.",
+    "Prieš bandymus ant stendo, konfigūravimą ar programinės aparatinės įrangos atnaujinimą nuimkite propelerius.",
+    "Laikykitės specifikacijose nurodytų įtampos ir srovės ribų; atvirkštinis poliškumas sugadina plokštę."
+  ],
+  "gpsr_warnings_frame_lt": [
+    "Anglies pluoštas praleidžia elektros srovę: izoliuokite laidus ir plokštes nuo rėmo plokščių ir svirčių.",
+    "Anglies pluošto kraštai gali būti aštrūs; pjaunant ar šlifuojant susidariusios anglies dulkės kenksmingos įkvėpus, todėl dirbkite drėgnai ir dėvėkite kaukę."
+  ],
+  "gpsr_warnings_motor_lt": [
+    "Prieš bandymus ant stendo, konfigūravimą ar programinės aparatinės įrangos atnaujinimą nuimkite propelerius.",
+    "Besisukantys varikliai ir propeleriai sukelia sunkius pjautinius sužalojimus; laikykitės atokiau, kai orlaivis aktyvuotas.",
+    "Varikliai naudojant įkaista; prieš liesdami leiskite jiems atvėsti."
+  ],
   "firmware_freedom_title": "Flash what you want",
   "firmware_freedom_body": "Ships with {project}, no activation, no locked bootloader. Flashing other firmware does not by itself void the 2-year warranty.",
   "firmware_freedom_link": "Warranty",
   "teardown_render_note": "Render from the design files. Silkscreen may differ.",
   "os_card_repo_name": "Design files: {repo}",
   "connectors_title": "Plugs and pin order",
-  "gpsr_other_languages": "Veiligheid · Sécurité · Sicherheit (NL / FR / DE)",
+  "gpsr_other_languages": "Other EU languages",
   "buy_shops_only": "Available through shops",
-  "buy_shops_trade": "Are you a shop?"
+  "buy_shops_trade": "Are you a shop?",
+  "buy_closed": "Opening in {country} soon"
 }

@@ -1,10 +1,27 @@
 import {useState, useSyncExternalStore} from 'react';
-import {useRevalidator} from 'react-router';
+import {useRevalidator, useRouteLoaderData} from 'react-router';
 import {trackEvent} from '~/lib/growth/plausible';
 import {attributionSource} from '~/lib/growth/attribution';
 import {announceCartAdded, CartAddError, postCartAdd, skusFromFields} from '~/lib/cart-client';
 import {copyText} from '~/lib/copy';
+import {countryName, notSoldDirect} from '~/lib/shipping-rates';
+import type {RootLoader} from '~/root';
 import {beginCartAdd, endCartAdd, isCartAddBusy, subscribeCartAdd} from './cart-add-lock';
+
+/** What shows in place of a buy button for a visitor who cannot buy
+ *  direct: outside the EU "Available through shops", in an EU country not
+ *  open yet "Opening in Germany soon". Null where the button shows. */
+export function notSoldNote(country: string | null): string | null {
+  const reason = notSoldDirect(country);
+  if (reason === 'shops') return copyText('product-chrome.buy_shops_only') ?? 'Available through shops';
+  if (reason === 'closed') {
+    return (copyText('product-chrome.buy_closed') ?? 'Opening in {country} soon').replace(
+      '{country}',
+      countryName(country ?? ''),
+    );
+  }
+  return null;
+}
 
 /**
  * The buy button: a POST form to the cart action (`/api/shopify/cart`,
@@ -14,6 +31,10 @@ import {beginCartAdd, endCartAdd, isCartAddBusy, subscribeCartAdd} from './cart-
  *
  * POST prevents crawlers and link previewers from creating carts by
  * following the public product link.
+ *
+ * A visitor from a country not sold direct (`notSoldDirect`) gets a plain
+ * status line instead, on every surface that sells: product page, cards,
+ * /preorder and the build suggestions.
  */
 export function AddToCartButton({
   children,
@@ -51,6 +72,15 @@ export function AddToCartButton({
   // quick taps never race on the cart and drop a line.
   const anyBusy = useSyncExternalStore(subscribeCartAdd, isCartAddBusy, () => false);
   const otherBusy = anyBusy && state !== 'adding';
+  const rootData = useRouteLoaderData<RootLoader>('root');
+  const note = notSoldNote(rootData?.visitorCountry ?? null);
+  if (note) {
+    return (
+      <span className="buy-notsold" role="status">
+        {note}
+      </span>
+    );
+  }
   if (disabled) {
     return (
       <button

@@ -78,7 +78,8 @@ import {fetchStatusFlagsFast, statusForHandle} from '~/lib/roadmap-data';
 import {parseCampaignConfig, priceLadder, tiersFor} from '~/lib/preorder-campaign';
 import {stepBarView, stepLayout} from '~/lib/preorder-meter';
 import {paysEuVat} from '~/lib/visitor-country';
-import {soldThroughShops} from '~/lib/shipping-rates';
+import {notSoldDirect} from '~/lib/shipping-rates';
+import {registrationNumbers} from '~/lib/registrations';
 import preorders from '../../content/preorders.json';
 import {trackEvent} from '~/lib/growth/plausible';
 import {attributionSource} from '~/lib/growth/attribution';
@@ -1636,10 +1637,12 @@ function ProductPage() {
   const vatNote = paysEuVat(rootData?.visitorCountry ?? null)
     ? say('product-chrome.buy_vat_note', 'incl. VAT')
     : null;
-  // Consumers buy direct only inside the EU. Elsewhere (unless blocked) the
-  // button reads "Available through shops" and the module links the trade
-  // page and the launch-news signup instead of the ship date.
-  const throughShops = soldThroughShops(rootData?.visitorCountry ?? null);
+  // Consumers buy direct only in the open EU countries. Elsewhere (unless
+  // blocked) the buy button is a status line (AddToCartButton): outside the
+  // EU "Available through shops" with a link to the trade page, in an EU
+  // country not open yet "Opening in <country> soon"; both with the
+  // launch-news signup instead of the ship date.
+  const notDirect = notSoldDirect(rootData?.visitorCountry ?? null);
   // Coming-soon buy module: the price/stock/add-to-cart block becomes a
   // COMING SOON plate + notify-at-launch signup (same newsletter action,
   // tagged with this product's handle). Everything else on the PDP stays.
@@ -1749,18 +1752,17 @@ function ProductPage() {
         quantity={isBundle ? undefined : buyQuantity}
         maxQuantity={maxQuantity}
         maxQuantityNote={maxQuantityNote}
-        onQuantityChange={isBundle || throughShops ? undefined : setQuantity}
-        notSoldLabel={
-          throughShops ? say('product-chrome.buy_shops_only', 'Available through shops') : undefined
-        }
+        onQuantityChange={isBundle || notDirect ? undefined : setQuantity}
       />
-      {throughShops ? (
+      {notDirect ? (
         <>
-          <p className="product-buy-ship">
-            <Link prefetch="intent" to="/wholesale" className="product-buy-terms-link">
-              {say('product-chrome.buy_shops_trade', 'Are you a shop?')}
-            </Link>
-          </p>
+          {notDirect === 'shops' ? (
+            <p className="product-buy-ship">
+              <Link prefetch="intent" to="/wholesale" className="product-buy-terms-link">
+                {say('product-chrome.buy_shops_trade', 'Are you a shop?')}
+              </Link>
+            </p>
+          ) : null}
           <NewsletterSignup
             notify={{productHandle: product.handle, productTitle: product.title}}
             turnstileSiteKey={rootData?.turnstileSiteKey ?? null}
@@ -1791,7 +1793,7 @@ function ProductPage() {
                 : copyText('product-chrome.buy_stock_out')}
         </p>
       )}
-      {preorder && !isBundle && !throughShops ? (
+      {preorder && !isBundle && !notDirect ? (
         <p className="product-buy-ship">
           <Link prefetch="intent" to="/preorder" className="product-buy-terms-link">
             {say('product-chrome.buy_terms_link', 'Pre-order terms')}
@@ -1802,7 +1804,7 @@ function ProductPage() {
           is a catalog availability state, not a launch to be notified of. */}
       {!isBundle &&
       !preorder &&
-      !throughShops &&
+      !notDirect &&
       selectedVariant &&
       !selectedVariant.availableForSale ? (
         <NewsletterSignup
@@ -2853,6 +2855,24 @@ function ProductPage() {
             {railBuyModule}
             <div ref={setRailSentinel} className="buy-rail-sentinel" aria-hidden="true" />
           </div>
+          {/* GPSR Art. 19 listing information (docs/store-compliance.md,
+              section 1): manufacturer identity, contact, product identifier
+              and safety warnings, visible before purchase, directly under
+              the buy module. */}
+          {rootData?.company ? (
+            <GpsrBlock
+              company={rootData.company}
+              productTitle={
+                catalogAxisValue && isInternalSku(product.handle, catalogAxisValue)
+                  ? `${product.title} ${variantDisplayName(product.handle, catalogAxisValue)}`
+                  : product.title
+              }
+              sku={shownSku}
+              kind={safetyKind(product.handle)}
+              country={rootData.visitorCountry ?? null}
+              registrations={registrationNumbers(rootData.visitorCountry ?? null)}
+            />
+          ) : null}
           {/* The compact bar, portaled to <body> so the fixed overlay escapes
               the hero's stacking context. Coming soon: the chips alone. */}
           {railPinned && !footerInView && typeof document !== 'undefined'
@@ -2881,22 +2901,6 @@ function ProductPage() {
 
       <RelatedProducts recommendations={recommendations} />
 
-      {/* GPSR Art. 19 listing information (docs/store-compliance.md, section 1):
-          manufacturer identity, contact, product identifier and safety warnings
-          must be visible before purchase. Kept out of the product story,
-          rendered as a quiet compliance strip at the very end of the page. */}
-      {rootData?.company ? (
-        <GpsrBlock
-          company={rootData.company}
-          productTitle={
-            catalogAxisValue && isInternalSku(product.handle, catalogAxisValue)
-              ? `${product.title} ${variantDisplayName(product.handle, catalogAxisValue)}`
-              : product.title
-          }
-          sku={shownSku}
-          kind={safetyKind(product.handle)}
-        />
-      ) : null}
 
     </div>
   );
