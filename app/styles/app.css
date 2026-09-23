@@ -201,7 +201,7 @@
   --rail-gutter: 1.25rem;
   /* The one content rail every full-width surface shares. The cap dropped
      from 1520 to 1440: on a 16:9 monitor the old rail ran nearly edge to
-     edge and the pages read as a wall. Margins are part of the design —
+     edge and the pages read as a wall. Margins are part of the design -
      they are where the eye rests and what makes the column the obvious
      place to look. Change the rail here, never per page. */
   --rail-width: min(calc(100% - (2 * var(--rail-gutter))), 1440px);
@@ -275,7 +275,7 @@ html.light {
 html.light .scene-dim {
   background-color: rgba(247, 246, 243, 0.9);
 }
-/* header pill + frame slider now use --pod-bg, which has its own light twin —
+/* header pill + frame slider now use --pod-bg, which has its own light twin -
    no per-surface light override needed. */
 html.light .product-gallery-controls {
   background: rgba(255, 255, 255, 0.7);
@@ -318,8 +318,6 @@ html.light .schematic-sheet {
    says "engineering" everywhere a price/spec/SKU is rendered. */
 .product-buy-sku,
 .spec-sheet td,
-.in-the-box-qty,
-.teardown-pin-cost,
 .trust-chip,
 .download-size,
 [class*="font-mono"] {
@@ -1616,7 +1614,7 @@ html.anim-paused .board-sheet.is-active {
 .product-pod-wrap:focus-within {
   background: var(--color-gold-soft);
 }
-/* Fixed-basis link column so every row's price lands on the same edge —
+/* Fixed-basis link column so every row's price lands on the same edge -
    the action bar unfolds in the horizontal space beyond it. */
 .product-pod-wrap .product-pod {
   flex: 0 0 19rem;
@@ -1866,7 +1864,7 @@ html.light .header-cat-pod {
 
 /* Category families live in segmented bubbles, not a plain row: FC/ESC/Stack in
    one (a Stack is just an FC + ESC), RX/Frame in another, and All Products in
-   its own accented bubble as the route into the full catalogue. No dividers —
+   its own accented bubble as the route into the full catalogue. No dividers -
    the bubbles do the grouping. Items carry fixed padding so the active state
    only swaps colour; the bubbles never resize as you navigate. */
 .site-header-categories .site-header-cat-group {
@@ -3555,192 +3553,12 @@ button.reset {
   color: color-mix(in srgb, var(--color-text-muted) 50%, transparent);
 }
 
-/* Related products. The element is a <section>, so reset.css adds
-   another 32px of vertical padding on top of these values: keep the
-   internal spacing modest so the row of cards doesn't sit in a stack
-   of dead space. */
-.related-products {
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  padding-bottom: 0;
-  border-top: 1px solid var(--color-border);
-}
-
-/* Related cards: spec-forward tiles (board render, catalog-file eyebrow,
-   one-line spec, mono price) with a pointer-following gold spotlight on
-   hover. All tokens, so light mode comes for free. */
-.related-grid {
-  /* Same rhythm as .products-grid so the strip reads as one catalog. */
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: var(--sp-4);
-}
-
-.related-card {
-  --spot-x: 50%;
-  --spot-y: 0px;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-md);
-  overflow: hidden;
-  transition: border-color 0.2s ease;
-}
-
 /* Spotlight on pointer devices only ((hover: hover)): on touch, :hover
    sticks after a tap and would pin a phantom glow. Same gate as
    .product-card::after. */
-@media (hover: hover) {
-  .related-card::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(
-      240px circle at var(--spot-x) var(--spot-y),
-      var(--color-gold-soft),
-      transparent 70%
-    );
-    opacity: 0;
-    transition: opacity 0.25s ease;
-    pointer-events: none;
-  }
-
-  .related-card:hover::after {
-    opacity: 1;
-  }
-}
-
-.related-card:hover {
-  border-color: var(--color-border-strong);
-}
-
-.related-card-link {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  color: inherit;
-  text-decoration: none;
-}
-
-.related-card-media {
-  position: relative;
-  aspect-ratio: 1 / 1;
-  background: var(--color-bg-elevated);
-  overflow: hidden;
-}
-
-.related-card-media.is-empty {
-  display: grid;
-  place-items: center;
-}
-
-.related-card-media img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-
-.related-card:hover .related-card-media img {
-  transform: scale(1.04);
-}
 
 /* Reduced-motion twin of the .product-card block: kill the spotlight fade
    and the media zoom, keep the border-color cue. */
-@media (prefers-reduced-motion: reduce) {
-  .related-card,
-  .related-card::after,
-  .related-card-media img {
-    transition: none;
-  }
-
-  .related-card:hover .related-card-media img {
-    transform: none;
-  }
-}
-
-.related-card-body {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  gap: 0.3rem;
-  padding: var(--sp-3) var(--sp-4) var(--sp-4);
-  border-top: 1px solid var(--color-border);
-}
-
-.related-card-file {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-dim);
-  margin: 0;
-}
-
-.related-card-title {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: var(--fs-md);
-  letter-spacing: -0.01em;
-  line-height: 1.2;
-  color: var(--color-text);
-  margin: 0;
-  transition: color 0.15s ease;
-}
-
-.related-card:hover .related-card-title {
-  color: var(--color-gold-text);
-}
-
-.related-card-spec {
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  color: var(--color-text-muted);
-  letter-spacing: 0.04em;
-  line-height: 1.4;
-  margin: 0;
-}
-
-.related-card-price {
-  display: flex;
-  align-items: baseline;
-  gap: 0.35rem;
-  margin: auto 0 0;
-  padding-top: 0.4rem;
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  font-variant-numeric: tabular-nums;
-  color: var(--color-text);
-}
-
-.related-card-from {
-  font-size: var(--fs-xs);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--color-text-dim);
-}
-
-/* Quick-add overlay: same reveal recipe as the browse cards; sibling of
-   the card link (a form can't nest inside an anchor). */
-.related-card-quickadd {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  aspect-ratio: 1 / 1;
-  display: flex;
-  align-items: flex-end;
-  justify-content: flex-end;
-  padding: 0.6rem;
-  pointer-events: none;
-  z-index: 4;
-}
-
-.related-card-quickadd > * {
-  pointer-events: auto;
-}
 
 .related-card-quickadd .product-card-quickadd-btn {
   opacity: 0;
@@ -3759,10 +3577,6 @@ button.reset {
     opacity: 1;
     transform: none;
   }
-}
-
-.related-card-skeleton {
-  pointer-events: none;
 }
 
 .product-card-skeleton {
@@ -3784,7 +3598,7 @@ button.reset {
   row-gap: 0.25rem;
   align-items: end;
   max-width: none;
-  /* A full step of air between the page title row and the product grid —
+  /* A full step of air between the page title row and the product grid -
      the grid shouldn't crowd the headline. */
   margin-bottom: var(--sp-6);
 }
@@ -4190,16 +4004,8 @@ button.reset {
       transform: none;
     }
   }
-  .product-hero-gallery-col,
-  .product-hero-eyebrow,
-  .product-hero-headline {
+  .product-hero-gallery-col {
     animation: pdp-hero-rise 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-  }
-  .product-hero-eyebrow {
-    animation-delay: 0.04s;
-  }
-  .product-hero-headline {
-    animation-delay: 0.1s;
   }
 }
 
@@ -4230,36 +4036,6 @@ button.reset {
   }
 }
 
-.product-hero-eyebrow {
-  font-family: var(--font-mono);
-  font-weight: 500;
-  font-size: var(--fs-xs);
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-dim);
-  margin: 0;
-}
-
-/* Roadmap status chip beside the eyebrow. Same vocabulary as /roadmap: the
-   dot inherits the kanban's [data-status] coloring, the label is the same
-   copy key, and the chip links back to the board where the legend explains
-   what the word means. Status appears ONLY via this flag, never in prose. */
-.product-status-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45em;
-  margin-left: 0.9em;
-  padding: 0.2em 0.7em;
-  border: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
-  border-radius: 999px;
-  color: var(--color-text-muted);
-  transition: border-color 0.15s ease, color 0.15s ease;
-}
-.product-status-chip:hover {
-  border-color: color-mix(in srgb, var(--color-gold) 55%, transparent);
-  color: var(--color-text);
-}
-
 /* Product name. Single block, refined display weight, restrained size.
    The 3-line span pattern from product-content stays in the markup
    (no text change) but renders inline so it reads as one engineered
@@ -4271,32 +4047,6 @@ button.reset {
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--color-text);
-}
-
-.product-hero-headline {
-  font-family: var(--font-display);
-  font-weight: 600;
-  line-height: 1.05;
-  letter-spacing: -0.025em;
-  font-size: var(--fs-3xl);
-  margin: 0;
-  color: var(--color-text);
-}
-
-/* Word gaps between the headline spans come from the literal space in the
-   markup, never from margins: a real space collapses at a line wrap, a
-   margin does not, and the two together rendered a double-wide gap. */
-.product-hero-headline span {
-  display: inline;
-}
-
-/* Drop the italic. The gold-italic middle-word is the AI-slop tell;
-   keep the emphasized word visible but in roman, soft-gold, same
-   weight as the rest. */
-.product-hero-headline em {
-  font-style: normal;
-  color: var(--color-gold-text);
-  font-weight: 600;
 }
 
 .product-hero-gallery-col,
@@ -4797,37 +4547,6 @@ button.reset {
   border-bottom-color: var(--color-gold);
 }
 
-/* Concept plate: what /products/<handle> renders while the product is
-   planned or in-progress. Reuses the PDP eyebrow, headline, status chip and
-   idea-CTA idioms so it reads as the same family, minus everything that
-   would state a spec that can still change. */
-.concept-plate {
-  min-height: 60vh;
-  display: flex;
-  align-items: center;
-}
-.concept-plate-inner {
-  width: min(100% - 2 * var(--sp-6), 40rem);
-  margin: 0 auto;
-  padding: var(--sp-8) 0;
-}
-.concept-plate .product-hero-headline {
-  margin-top: var(--sp-3);
-}
-.concept-plate-body {
-  margin: var(--sp-5) 0 0;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  line-height: 1.6;
-  color: var(--color-text-dim);
-}
-.concept-plate-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-4);
-  margin-top: var(--sp-6);
-}
-
 /* Morphing buy rail: wraps the ladder + buy module. At rest it's a
    transparent passthrough; pinned (desktop, scrolled into the chapters) it
    floats over the page in its own column lane and CSS collapses it to a row
@@ -5034,65 +4753,10 @@ button.reset {
 /* Chapters: two-column grid on wide viewports: content left,
    media placeholder right (real images later). Single column on
    narrower screens; media slot drops out of layout below 880px. */
-/* Vertical rhythm: the root font is 15px, so the small tokens are smaller than
-   they read on paper. At --sp-6 a chapter had 30px of air above and below and
-   no gap to its neighbour, which put a 41px title 30px from the previous
-   chapter's last line. Chapters are the page's big structural break, so give
-   them one: --sp-8 a side is ~135px between one chapter's content and the
-   next. */
-.chapter {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--sp-7);
-  /* 1.35x the old rhythm: chapters need to end before the next one starts.
-     The gap between them is the pause that keeps a dense engineering page
-     from reading as one wall. */
-  padding: calc(var(--sp-8) * 1.35) 0;
-  border-top: 1px solid var(--color-border);
-  opacity: 1;
-  transform: translateY(0);
-  /* Skip layout+paint for chapters that are far offscreen: the PDP is a very
-     long page and browsers otherwise render every chapter on load. The
-     intrinsic-size placeholder keeps the scrollbar stable; the scroll-reveal
-     IO fires as normal once a chapter approaches the viewport. */
-  content-visibility: auto;
-  contain-intrinsic-size: auto 640px;
-}
-/* Reading measure: chapter paragraphs never run the full rail. The
-   whitespace right of the text is deliberate: it is what directs the eye
-   down the column instead of across a 900px line. Interactive full-width
-   blocks (schematic, teardown, tables, card grids) are untouched. */
-.chapter p {
-  max-width: 68ch;
-}
 /* Phones: the desktop pause between chapters (about 200 px) read as empty
    screens on a narrow column. */
-@media (max-width: 959px) {
-  .chapter {
-    padding: var(--sp-7) 0;
-    gap: var(--sp-5);
-  }
-  .chapter .chapter-title {
-    font-size: var(--fs-xl);
-    margin-bottom: var(--sp-4);
-  }
-}
-
-/* content-visibility's paint containment clips descendants at the chapter's
-   box: but the teardown board art bleeds past its media column into the page
-   margin. Those chapters give up the skip-render optimisation so the bleed
-   stays visible. */
-.chapter:has(.board-art),
-.chapter[data-backdrop] {
-  content-visibility: visible;
-}
 
 @media (min-width: 880px) {
-  .chapter {
-    grid-template-columns: minmax(0, 1fr) clamp(220px, 24vw, 340px);
-    column-gap: clamp(var(--sp-5), 4vw, var(--sp-7));
-    align-items: start;
-  }
   /* Every chapter keeps the same two tracks, whether or not it fills the
      media slot. A chapter without media leaves the right track empty rather
      than reflowing, so the body column is the same width and starts on the
@@ -5100,142 +4764,29 @@ button.reset {
   .chapter-index {
     grid-column: 1 / -1;
   }
-  /* Except a chapter that declares no media at all (the datasheet): its
-     table spans both tracks so the specs use the full rail width. */
-  .chapter[data-no-media] .chapter-body-col {
-    grid-column: 1 / -1;
-    max-width: none;
-  }
-  /* Firmware chapter, same idea: the support card shrink-wraps, the project
-     logo grows into the freed width. The wide slot drops the logo's leftward
-     gutter bleed so it can't reach the card. */
-  .chapter:has(.firmware-support) {
-    grid-template-columns: fit-content(40rem) minmax(0, 1fr);
-  }
-  .chapter:has(.firmware-support) .firmware-logo {
-    margin-left: 0;
-  }
-  /* The logo tracks the chapter's own height and hugs the right edge
-     (maintainer, 2026-08-12): square tile marks (AM32, ExpressLRS) take the
-     full row height; Betaflight's wide transparent mark keeps its
-     width-driven size, right-aligned and vertically centred. The tile is
-     absolutely positioned so its 100% height reads the text column's
-     height instead of feeding back into the row's own sizing. */
-  .chapter:has(.firmware-support) .chapter-media {
-    align-self: stretch;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-  }
-  /* The frame wrapper stays static so the tile's height: 100% resolves
-     against the stretched aside, not the collapsed frame box. */
-  .chapter:has(.firmware-support) .chapter-media-frame {
-    position: static;
-  }
-  .chapter:has(.firmware-support) .firmware-logo--tile {
-    position: absolute;
-    top: 0;
-    right: 0;
-    height: 100%;
-    width: auto;
-    max-width: none;
-    margin-inline: 0;
-  }
-  /* Contributors chapter: the join button rides the title line (top right),
-     not the grid row (maintainer, 2026-08-12). The one-line title leaves that
-     corner free at every desktop width. */
-  .chapter:has(.contributors-row) .chapter-body-col {
-    position: relative;
-  }
-  .chapter:has(.contributors-row) .contributors-cta-btn {
-    position: absolute;
-    top: 0;
-    right: 0;
-  }
-  .chapter-wide {
-    grid-column: 1 / -1;
-  }
-  /* Teardown with the schematic under it: keep the board inside its
-     column and not sticky, so it never slides over the schematic. */
-  .chapter:has(.chapter-wide) .board-art {
-    margin-left: calc(100% - var(--board-w));
-  }
-  .chapter:has(.chapter-wide) .chapter-media {
-    position: static;
-  }
-  .chapter:has(.chapter-wide) .chapter-wide {
-    margin-top: calc(-1 * var(--sp-5));
-  }
-}
-
-/* Media placeholder. Sits in the right column, sticky relative to
-   its chapter so it tracks the body as the user reads. Real images
-   slot in by replacing the SVG glyph. */
-.chapter-media {
-  display: none;
-  margin: 0;
 }
 
 @media (min-width: 880px) {
-  .chapter-media {
-    display: block;
-    position: sticky;
-    top: calc(var(--header-height) + var(--sp-4));
-  }
   /* The teardown copy slides in from the left AFTER the board layers fly in
      (the PDP drops data-text-pending once the fly completes). Scoped to the
      board chapter via :has(.board-art) so other chapters are untouched. */
-  .chapter:has(.board-art) .chapter-index,
-  .chapter:has(.board-art) .chapter-body-col {
+  .chapter:has(.board-art) .chapter-index {
     transition: opacity 0.55s ease,
       translate 0.6s cubic-bezier(0.16, 0.84, 0.3, 1);
   }
-  .chapter[data-text-pending] .chapter-index,
-  .chapter[data-text-pending] .chapter-body-col {
+  .chapter[data-text-pending] .chapter-index {
     opacity: 0;
     translate: -30px 0;
   }
-  /* Schematic chapter: text + cards sit on top, the schematic spans the full
-   * content width below. Single column so the dense sheet uses every pixel. */
-  .chapter[data-wide-media] {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .chapter[data-wide-media] .chapter-media {
-    position: static;
-    top: auto;
-  }
-}
-
-/* The schematic media is full-width and useful on every breakpoint (unlike the
- * decorative chapter glyph), so keep it visible on mobile too where the base
- * .chapter-media is hidden. */
-.chapter[data-wide-media] .chapter-media {
-  display: block;
-}
-
-/* On mobile the cards sit two-across (a top row and a bottom row) so the set is
- * compact instead of one tall stack; at the desktop breakpoint they become a
- * 3-across row beside the title (below). */
-.chapter[data-wide-media] .open-source-cards {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 /* On mobile the 16:9 bubbles left a lot of dead vertical space (the copy is
  * short, centred in a tall box). Size the cards to their content with tight
  * padding instead: a row still equalises height via align-items: stretch. */
 @media (max-width: 879px) {
-  .chapter[data-wide-media] .open-source-card,
   .chapter[data-wide-media] .latest-commit-card {
     aspect-ratio: auto;
     padding: 0.7rem 0.8rem;
-  }
-  .chapter[data-wide-media] .open-source-card-title {
-    font-size: 1rem;
-    margin-bottom: 0.3rem;
-  }
-  .chapter[data-wide-media] .open-source-cards {
-    gap: 0.6rem;
   }
 }
 
@@ -5245,109 +4796,15 @@ button.reset {
  * narrow side column made it the only head on the page that wrapped to four
  * lines, which is what broke the page's vertical rhythm. */
 @media (min-width: 880px) {
-  .chapter[data-wide-media] .chapter-body-col {
-    /* Span the whole chapter width so the card row reaches the right edge,
-     * flush with the full-width schematic below. */
-    grid-column: 1 / -1;
-    max-width: none;
-  }
-  /* Resource cards + the latest-commit card abreast, filling the row;
-   * a gold edge + lift on hover gives them a bit of life. */
-  .chapter[data-wide-media] .open-source-cards {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: var(--sp-5);
-  }
-  /* Four cards and a dense schematic in one chapter: the densest block on the
-     page, so it gets more than the default chapter rhythm, not less. */
-  .chapter[data-wide-media] {
-    row-gap: var(--sp-8);
-  }
-  .chapter[data-wide-media] .open-source-card,
   .chapter[data-wide-media] .latest-commit-card {
     border-top: 2px solid transparent;
     transition: border-color 0.2s ease, background 0.2s ease,
       transform 0.2s ease;
   }
-  .chapter[data-wide-media] .open-source-card:hover,
   .chapter[data-wide-media] .latest-commit-card:hover {
     transform: translateY(-4px);
     border-top-color: var(--color-gold);
   }
-}
-
-.chapter-media-frame {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-lg);
-  color: var(--color-text-dim);
-  overflow: hidden;
-  position: relative;
-}
-
-.chapter-media-frame::after {
-  content: "PLACEHOLDER";
-  position: absolute;
-  bottom: 0.65rem;
-  left: 0.85rem;
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: var(--ls-label);
-  color: color-mix(in srgb, var(--color-text-dim) 60%, transparent);
-}
-
-/* The chapter media slot opens up when a live <BoardArt /> sits in it —
- * no card chrome, no PLACEHOLDER tag, and overflow: visible so the SVG
- * can bleed beyond the right column into the page margin. */
-.chapter-media-frame--live {
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  aspect-ratio: auto;
-  overflow: visible;
-  padding: 0;
-}
-.chapter-media-frame--live::after {
-  content: none;
-}
-
-/* Firmware project wordmark in the "The €1" chapter media slot. Sits roughly at
- * column width, pulled a little left into the gutter so it isn't jammed against
- * the page edge. The media frame is overflow: visible, so the bleed shows. */
-.firmware-logo {
-  width: 100%;
-  max-width: none;
-  height: auto;
-  display: block;
-  margin-left: -25%;
-  margin-right: 0;
-}
-
-/* The firmware mark doesn't need to track the scroll like the board art does —
- * pin it in place by dropping the sticky on its media column. */
-.chapter-media:has(.firmware-logo) {
-  position: static;
-  top: auto;
-}
-
-/* White-on-transparent marks (e.g. AM32) sit on a fixed dark tile that reads
- * in both themes (like the Discord embed), rather than the transparent blow-up
- * a multi-colour mark uses. Kept a compact square centred in the slot: a big
- * square tile leaves dead vertical space next to the short price block. */
-.firmware-logo--tile {
-  width: 78%;
-  max-width: 340px;
-  margin-inline: auto;
-  aspect-ratio: 1 / 1;
-  object-fit: contain;
-  background: #14171c;
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-lg);
-  padding: clamp(1.5rem, 7%, 3rem);
 }
 
 /* Light mode: a near-black slab reads far too heavy (maintainer, 2026-08-12), so
@@ -5358,82 +4815,6 @@ html.light .firmware-logo--tile {
   background: transparent;
   border: none;
   filter: invert(1);
-}
-
-.board-art {
-  position: relative;
-  /* Blow the block up well past its (capped) media column so the rail + stack
-     fill the chapter's height; margin-left grows it leftward into the empty
-     gutter rather than overflowing the page to the right. `--board-w` is the
-     blow-up factor: 220% by default, dialled down by BoardArt's placement
-     effect when the gutter is too tight to hold the full layer rail (the board
-     gives up size to keep the menu legible). The matching margin keeps the
-     board's right edge pinned (width + margin = 125%) as it scales. */
-  --board-w: 220%;
-  width: var(--board-w);
-  margin-left: calc(125% - var(--board-w));
-}
-/* Reserve a square-ish slot while the board SVG streams in, so the loading
-   skeleton has a box to sit in instead of collapsing to zero height. */
-.board-art:not(.is-revealed) {
-  min-height: clamp(320px, 32vw, 460px);
-}
-/* The fade lives on the board *content*, not the container: the container
-   stays opaque so the loading skeleton (its child) is visible while the
-   content is still at opacity 0. */
-.board-folder-body {
-  opacity: 0;
-  transition: opacity 1.2s cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-.board-art.is-revealed .board-folder-body {
-  opacity: 1;
-}
-/* === Folder stack: every copper layer is a sheet; the selected one floats up
-   like pulling a file out of a folder. === */
-.board-folder {
-  overflow: visible;
-}
-.board-folder-stack {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  /* Headroom above the stack so the floated-up sheet isn't clipped. */
-  margin-top: 12%;
-  perspective: 1700px;
-  transform-style: preserve-3d;
-}
-.board-sheet {
-  position: absolute;
-  inset: 0;
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: none;
-  cursor: pointer;
-  transform-origin: 50% 50%;
-  /* Fan the stack back-and-down by physical layer index (--depth). */
-  transform: translateY(calc(var(--depth) * 7%))
-    translateX(calc(var(--depth) * 2.4%)) translateZ(calc(var(--depth) * -70px))
-    scale(calc(1 - var(--depth) * 0.035));
-  z-index: calc(30 - var(--depth));
-  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.45s ease;
-  /* Dim + drop-shadow the un-selected sheets so the stack reads with depth. The
-     shadows are GPU-heavy (blur filter per layer), so they're stripped under
-     html.anim-paused (idle / unfocused): see that block below. */
-  filter: brightness(0.55) saturate(0.7)
-    drop-shadow(0 14px 22px rgba(0, 0, 0, 0.55));
-}
-.board-sheet:hover {
-  filter: brightness(0.78) saturate(0.85)
-    drop-shadow(0 14px 22px rgba(0, 0, 0, 0.55));
-}
-/* Gold GLOW only on the active (top, selected) layer; cast shadow for depth. */
-.board-sheet.is-active {
-  transform: translateY(-11%) translateZ(120px) scale(1.05);
-  z-index: 50;
-  filter: saturate(0.95) contrast(1.05)
-    drop-shadow(0 0 26px color-mix(in srgb, var(--color-gold) 38%, transparent))
-    drop-shadow(0 26px 34px rgba(0, 0, 0, 0.55));
 }
 /* First-reveal entrance: each layer flies in from the left to its resting fan
    position, staggered by --depth. The layers keep their FULL resting look
@@ -5453,40 +4834,6 @@ html.light .firmware-logo--tile {
     translate: 0 0;
     opacity: 1;
   }
-}
-.board-art.is-armed .board-sheet {
-  animation: board-sheet-fly 1.2s cubic-bezier(0.16, 0.84, 0.3, 1)
-    calc(var(--depth) * 0.11s) both;
-  animation-play-state: paused;
-}
-/* Non-active layers grey out one-by-one as each lands: in fly order, so the
-   first layer to fly in is the first to grey: instead of all snapping grey at
-   the end. A second, layered animation (sharing the same paused/running gate)
-   eases the filter from the bright fly state to the resting dim, staggered by
-   --depth and timed to begin ~as each layer arrives. Same total duration; the
-   greying just starts sooner (over the fly's tail). The active layer is excluded
-  : it stays bright and gains its glow at the end. */
-.board-art.is-armed .board-sheet:not(.is-active) {
-  animation: board-sheet-fly 1.2s cubic-bezier(0.16, 0.84, 0.3, 1)
-      calc(var(--depth) * 0.11s) both,
-    board-sheet-grey 0.5s ease calc(var(--depth) * 0.11s + 1s) forwards;
-  animation-play-state: paused;
-}
-/* The active layer's gold glow eases in with a long, gentle fade right after it
-   lands: instead of snapping on the instant the fly ends. Landing-driven timing,
-   same idea as the greys, so the whole stack settles as one smooth motion. */
-.board-art.is-armed .board-sheet.is-active {
-  animation: board-sheet-fly 1.2s cubic-bezier(0.16, 0.84, 0.3, 1) 0s both,
-    board-sheet-glow 0.9s ease 1.1s forwards;
-  animation-play-state: paused;
-}
-/* Unpause ALL sheets when flying. The :not(.is-active) / .is-active selectors
-   match the (0,4,0) specificity of the armed rules above so their `paused`
-   doesn't win (that bug left only the active layer flying in). */
-.board-art.is-flying .board-sheet,
-.board-art.is-flying .board-sheet:not(.is-active),
-.board-art.is-flying .board-sheet.is-active {
-  animation-play-state: running;
 }
 /* PERF - same trade the variant swap makes: the grey-out animates ONLY the
    color ops (brightness/saturate, compositor-accelerated on the promoted
@@ -5510,48 +4857,6 @@ html.light .firmware-logo--tile {
       drop-shadow(0 26px 34px rgba(0, 0, 0, 0.55));
   }
 }
-/* During the fly, every layer starts at full brightness with no shadow: each
-   flies in clearly distinguishable (not greyed/masked): then the non-active
-   ones grey via the staggered animation above; the active one stays bright.
-   (Animations override this, so it's the bright base before each grey begins.) */
-.board-art.is-flying .board-sheet,
-.board-art.is-flying .board-sheet.is-active {
-  filter: none;
-}
-/* Lock layer + part selection during the fly so interaction can't fight it. */
-.board-art.is-flying .board-sheet,
-.board-art.is-flying .board-folder-rail {
-  pointer-events: none;
-}
-/* The rail stays hidden through the entrance fly, then fades in once it's done —
-   at its final settled gutter position. It animates OPACITY ONLY: a translate /
-   transform here fights place() (which resets+measures the rail's box to position
-   it in the gutter), which made the rail jump around and overlap the board. By
-   appearing only after the fly, the during-fly→settled reposition never shows. */
-.board-art.is-armed .board-folder-rail {
-  opacity: 0;
-}
-/* …but reveal the rail 0.5s BEFORE the fly fully settles (is-rail-in is set on a
-   timer in BoardArt) so the layer table reads a beat sooner. Same specificity as
-   the is-armed rule above, so this MUST stay after it to win the opacity. */
-.board-art.is-rail-in .board-folder-rail {
-  opacity: 1;
-}
-@media (prefers-reduced-motion: reduce) {
-  .board-art.is-armed .board-sheet,
-  .board-art.is-armed .board-sheet:not(.is-active),
-  .board-art.is-armed .board-sheet.is-active {
-    animation: none;
-  }
-  .board-art.is-armed .board-folder-rail {
-    opacity: 1;
-  }
-}
-.board-sheet-svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
 /* Turn the board over for the bottom face.
    The copper sheets are an X-ray stack: every one of them is drawn looking
    straight down through the board, which is why a back-side part sits at its
@@ -5566,66 +4871,6 @@ html.light .firmware-logo--tile {
 .board-sheet-svg-back {
   transform: scaleX(-1);
 }
-/* The board silhouette under each layer: a faint engraved sheet edge. */
-.board-sheet-edge {
-  fill: none;
-  stroke: color-mix(in srgb, var(--color-gold) 28%, transparent);
-  stroke-width: 0.35;
-  vector-effect: non-scaling-stroke;
-  opacity: 0.6;
-}
-
-/* Rail and board sit side by side: the rail takes its own fixed column on the
-   left (so it can never cover the teardown text to its left), the board takes
-   the rest, and align-items centres the rail vertically against the board. */
-.board-folder-body {
-  display: flex;
-  align-items: center;
-  gap: clamp(8px, 1vw, 18px);
-}
-.board-stack-wrap {
-  flex: 1 1 auto;
-  min-width: 0;
-  /* Overlap the live stack and its flying-out ghost in one cell so the swap
-     lines up pixel-for-pixel. */
-  display: grid;
-}
-.board-stack-wrap > .board-folder-stack {
-  grid-area: 1 / 1;
-}
-.board-folder-stack {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-/* Variant swap. The ghost (freeze-frame of the old board) sits on top of the
-   incoming live stack in the same grid cell; pointer-events off so it never
-   eats a click while it flies away. The motion itself is split by breakpoint:
-   per-layer on desktop (below), whole-board cross-slide on mobile (the mobile
-   block flattens the fan and disables per-sheet animation). */
-/* Variant swap (rewritten). The OUTGOING board is a real React subtree
-   (.board-swap-out), NOT an innerHTML clone: see BoardArt.tsx. The incoming
-   (live) board rides ABOVE it (z 5 > 1) so a swap reads as the NEW board sweeping
-   in from the left and SHOVING the old one off to the right. Both stacks share
-   one grid cell (.board-stack-wrap grid 1/1) and are position:relative, so the
-   z-index settles paint order regardless of DOM source order. Durations come
-   from --swap-dur / --swap-stagger / --swap-exit, set on .board-art from the JS
-   SWAP_TIMING contract (app/lib/board-swap-timing.ts) so CSS + the JS settle
-   backstop read identical numbers. The swap end is detected by COUNTING
-   board-swap-out animationend events (N per-sheet on desktop, 1 whole-board on
-   mobile), never a wall-clock timer. */
-.board-folder-stack.is-swapping {
-  z-index: 5;
-}
-.board-swap-out {
-  z-index: 1;
-  pointer-events: none;
-}
-/* will-change is applied (via .is-swap-ready on .board-art, set at flyDone) BEFORE
-   the first swap so the GPU layer already exists at frame 0: promoting at swap
-   start drops the first frames. */
-.board-art.is-swap-ready .board-sheet {
-  will-change: translate;
-}
 /* Same trade, one animation earlier: the ENTRANCE fly also animates `translate`,
    and it used to start on unpromoted sheets, so frame 0 paid layer creation plus
    first raster for the whole stack. `.is-warm` is set by an observer ~800px
@@ -5634,63 +4879,13 @@ html.light .firmware-logo--tile {
    over to .is-swap-ready at flyDone, so will-change is continuous, never doubled.
    Desktop only: the mobile board swaps as one element rather than per sheet, and
    promoting a whole stack is the wrong trade on a phone's GPU budget. */
-@media (min-width: 880px) {
-  .board-art.is-warm .board-sheet {
-    will-change: translate;
-  }
-}
-/* PERF: strip the per-layer drop-shadow (a gaussian blur) for the flight on BOTH
-   stacks; animating ~16 blurred layers at once saturates fill-rate and drops
-   frames. Only the cheap brightness/saturate is kept (no brightness pop). The
-   resting shadows return the instant .is-swapping / the outgoing stack drop. */
-.board-folder-stack.is-swapping .board-sheet,
-.board-swap-out .board-sheet {
-  filter: brightness(0.6) saturate(0.72) !important;
-  /* CRITICAL: kill the base `transition: filter 0.45s`: else the browser ANIMATES
-     the drop-shadow blur radius to zero over 0.45s, re-blurring every layer per
-     frame. That, not the translate, is what made the swap lag. Drop it instantly. */
-  transition: none !important;
-}
-.board-folder-stack.is-swapping .board-sheet.is-active,
-.board-swap-out .board-sheet.is-active {
-  filter: saturate(0.95) contrast(1.05) !important;
-  transition: none !important;
-}
 /* Desktop: per-layer cascade. The NEW board flies in layer-by-layer (board-swap-in,
    ease-OUT, decelerate into slot) while the OLD board's matching layer is shoved
    out to the right (board-swap-out, ease-IN, accelerate away). Short duration +
    large --depth stagger reads as a one-by-one push, not a block slide. */
-@media (min-width: 1024px) {
-  .board-folder-stack.is-swapping .board-sheet {
-    animation: board-swap-in var(--swap-dur, 0.55s)
-      cubic-bezier(0.16, 0.84, 0.3, 1)
-      calc(
-        var(--swap-in-delay, 0s) + var(--depth) * var(--swap-stagger, 0.1s)
-      )
-      both;
-  }
-  .board-swap-out .board-sheet {
-    animation: board-swap-out var(--swap-exit, 0.65s)
-      cubic-bezier(0.5, 0, 0.85, 0.2) calc(var(--depth) * var(--swap-stagger, 0.1s))
-      both;
-  }
-}
 /* Mobile: the fan is flattened, so the swap is a whole-board cross-slide on the
    CONTAINER (per-sheet animation off → exactly ONE board-swap-out event fires,
    the count JS captures for mobile). */
-@media (max-width: 1023px) {
-  .board-stack-wrap > .board-folder-stack.is-swapping {
-    animation: board-swap-in var(--swap-dur, 0.55s)
-      cubic-bezier(0.2, 0.8, 0.2, 1) var(--swap-in-delay, 0s) both;
-  }
-  .board-swap-out {
-    animation: board-swap-out var(--swap-exit, 0.65s)
-      cubic-bezier(0.5, 0, 0.85, 0.2) both;
-  }
-  .board-swap-out .board-sheet {
-    animation: none !important;
-  }
-}
 /* The new board decelerates into place (board-swap-in) while the old one
    accelerates away beneath it (board-swap-out): the "shoved off" beat. Travel in
    % (of board width) so it reads identically at every breakpoint. */
@@ -5721,302 +4916,13 @@ html.light .firmware-logo--tile {
 }
 /* Reduced motion never mounts the outgoing stack (JS hard-cuts the swap); this is
    belt-and-braces so no exit can ever play. */
-@media (prefers-reduced-motion: reduce) {
-  .board-swap-out {
-    display: none;
-  }
-}
-/* Layer rail crossfade: only added (BoardArt, guarded by layer-label signature)
-   when the layer SET actually changes between boards, so identical layers never
-   pulse. Reuses the parts-list dip: old tabs fade out, the set switches while
-   hidden (235ms), new fade in. */
-.board-folder-rail.is-swapping {
-  animation: teardown-pins-swap 0.52s ease both;
-}
-/* Layer / sheet rail: a self-contained vertical selector beside the board or
-   schematic. The schematic viewer reuses this exact selector style. */
-.board-folder-rail,
-.schematic-rail {
-  flex: 0 0 auto;
-  z-index: 60;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
-  padding: 10px 9px 11px;
-  /* Container is a notch rounder than its pills (--r-lg) so the nesting reads
-     concentric. */
-  border-radius: var(--r-pod);
-  background: color-mix(in srgb, var(--color-bg) 50%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-gold) 13%, transparent);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
-  outline: none;
-}
-/* Each board layer carries a name (F.Cu / In1) plus a function blurb ("Ground
-   plane", "Signal · 5V"), so the rail is a wider column than the schematic's.
-   Size scales with the board across aspect ratios. */
-.board-folder-rail {
-  /* Size to the longest layer label (capped) instead of a fixed column, so
-     the tabs don't trail empty width past "Signal + components". */
-  width: max-content;
-  max-width: clamp(150px, 13vw, 200px);
-  /* Fade in once the fly is done (the is-armed rule holds it at opacity 0 during
-     the entrance). No transform transition until .is-swap-ready (end of this
-     file); place() reads layout boxes, which ignore a mid-glide transform. */
-  transition: opacity 0.6s ease;
-}
-/* Schematic sheets are full words (MCU / BLACKBOX / CONNECTORS), so size the
-   rail to its longest label: capped: instead of clipping inside a fixed
-   column. Labels stay on one line; the page column takes whatever's left. */
-.schematic-rail {
-  width: max-content;
-  max-width: clamp(130px, 13vw, 200px);
-}
-.board-folder-rail:focus-visible,
-.schematic-rail:focus-visible {
-  border-color: color-mix(in srgb, var(--color-gold) 45%, transparent);
-}
-.board-folder-rail-head,
-.schematic-rail-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  padding: 0 3px 1px;
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-.board-folder-rail-count,
-.schematic-rail-count {
-  color: var(--color-gold-text);
-  letter-spacing: 0.06em;
-}
-.board-folder-tabs,
-.schematic-rail-tabs {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
-}
-/* A faint spine threading the buttons: like a via through the copper stack. */
-.board-folder-tabs::before,
-.schematic-rail-tabs::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 8px;
-  bottom: 8px;
-  width: 2px;
-  transform: translateX(-50%);
-  background: color-mix(in srgb, var(--color-gold) 16%, transparent);
-  border-radius: 1px;
-}
-.board-folder-tabs button,
-.schematic-rail-tabs button {
-  position: relative;
-  appearance: none;
-  border: 1px solid color-mix(in srgb, var(--color-gold) 16%, transparent);
-  background: color-mix(in srgb, var(--color-bg) 78%, transparent);
-  cursor: pointer;
-  font-family: var(--font-mono);
-  font-size: clamp(10.5px, 0.74vw, 13px);
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  text-align: center;
-  /* Full text colour: the muted grey read as low-contrast
-     (maintainer, 2026-08-12). */
-  color: var(--color-text);
-  padding: 0.48em 0.4em;
-  /* Standardised viewer-pill radius (schematic sheets + PCB layers share it). */
-  border-radius: var(--r-lg);
-  transition: color 0.2s, background 0.2s, border-color 0.2s, transform 0.2s,
-    box-shadow 0.2s;
-}
-.board-folder-tabs button:hover,
-.schematic-rail-tabs button:hover {
-  color: var(--color-text);
-  border-color: color-mix(in srgb, var(--color-gold) 40%, transparent);
-}
-.board-folder-tabs button.is-active,
-.schematic-rail-tabs button.is-active {
-  color: var(--color-bg);
-  background: var(--color-text);
-  border-color: var(--color-text);
-}
-/* Layer buttons stack a name over a function blurb, left-aligned: so the
-   centred via-spine would cut through the text; drop it on the board rail. */
-.board-folder-tabs::before {
-  display: none;
-}
-.board-folder-tabs button {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  text-align: left;
-  border-radius: var(--r-lg);
-  padding: 0.44em 0.72em;
-}
-.board-folder-tab-name {
-  font-size: clamp(10.5px, 0.74vw, 13px);
-  letter-spacing: var(--ls-label);
-  line-height: 1;
-}
 /* The names-only compact rail variant was removed 2026-08-12 (maintainer): its
    tight-gutter trigger misfired under the repo-scope layout and a wrapped
    names-only pill read worse than the full rail overlapping slightly. */
-/* The rail sizes to its longest label, so normal sheet names stay on one line.
-   Tighter tracking keeps it compact, and wrapping (rather than nowrap) is the
-   safety net for a very long sheet name (e.g. the OpenRX single sheet): it
-   stacks onto extra lines inside the capped width instead of leaking out. */
-.schematic-rail-tabs button {
-  letter-spacing: 0.1em;
-  overflow-wrap: anywhere;
-}
 /* Below this the left gutter is too tight to float the rail without crowding the
    teardown text: drop it back to a horizontal bar above the board instead. */
-@media (max-width: 1024px) {
-  .board-folder-body,
-  .schematic-body {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .board-folder-rail,
-  .schematic-rail {
-    width: auto;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    margin-bottom: 0.5rem;
-    padding: 0;
-    border: none;
-    background: none;
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
-  .board-folder-rail-head,
-  .schematic-rail-head {
-    width: 100%;
-    justify-content: center;
-    gap: 0.5em;
-  }
-  /* One horizontal scroll row instead of wrapping into a tall stack: the
-     sheets/layers sit side by side and use the full width; swipe for the rest.
-     Far more screen-efficient than 3 stacked rows of half-empty pills. */
-  .board-folder-tabs,
-  .schematic-rail-tabs {
-    flex-direction: row;
-    flex-wrap: nowrap;
-    justify-content: flex-start;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    gap: 6px;
-    padding-bottom: 2px;
-  }
-  .board-folder-tabs::-webkit-scrollbar,
-  .schematic-rail-tabs::-webkit-scrollbar {
-    display: none;
-  }
-  .board-folder-tabs::before,
-  .schematic-rail-tabs::before {
-    display: none;
-  }
-  /* Pills don't shrink: they scroll. The function blurbs would bloat the row,
-     so names only here. */
-  .board-folder-tabs button,
-  .schematic-rail-tabs button {
-    flex: 0 0 auto;
-    white-space: nowrap;
-  }
-  .board-folder-tabs button {
-    flex-direction: row;
-    align-items: center;
-    border-radius: var(--r-pill);
-    padding: 0.48em 0.7em;
-  }
-}
-
-/* === Schematic viewer: paged sheets of the KiCad schematic, the analogue of
-   the board folder. In the wide-media chapter it fills the dominant column and
-   bleeds a little into the right gutter for maximum legible width. === */
-.schematic-viewer {
-  width: 100%;
-  margin-left: 0;
-  /* The lazy-load gate IntersectionObserves this box with a 0.01 threshold,
-     which NEVER fires on a zero-area target: and before the manifest loads
-     the viewer is empty. The floor gives the observer something to hit. */
-  min-height: 160px;
-}
-/* Rail + sheet sit side by side, mirroring the board folder: the rail takes a
-   fixed column on the left, the sheet fills the rest, centred vertically. */
-.schematic-body {
-  display: flex;
-  align-items: center;
-  gap: clamp(8px, 1vw, 18px);
-}
-/* Fixed stage: at most one screen tall, so the entire sheet is visible without
- * scrolling, and the height never changes as you page through sheets of
- * differing proportions. Every sheet is contained + centred inside this box. */
-.schematic-page {
-  position: relative;
-  flex: 1 1 auto;
-  min-width: 0;
-  /* Short enough that pins + board + schematic read as one screenful
-     (72vh/700px pushed the schematic below the fold; maintainer, 2026-08-12). */
-  height: min(58vh, 560px);
-}
 /* The sheet rail rides the schematic's RIGHT edge on desktop, mirroring the
    layer rail sitting left of the board above it. Mobile keeps the top bar. */
-@media (min-width: 1025px) {
-  .schematic-rail {
-    order: 2;
-  }
-}
-.schematic-sheet {
-  position: absolute;
-  inset: 0;
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center;
-  /* B&W export → white blueprint lines on the dark page. Contrast lifts the
-   * thin anti-aliased strokes so the sheet reads at preview scale. */
-  filter: invert(1) contrast(1.45) brightness(1.05);
-  opacity: 0;
-  transition: opacity 0.5s ease;
-}
-/* Every sheet is rendered now (so a mobile drag can slide the neighbour in), so
-   gate visibility to the active one: otherwise the whole sheaf would stack
-   opaque. Desktop pages by crossfading active↔active. */
-.schematic-sheet.is-active.is-loaded {
-  opacity: 1;
-}
-/* Component spotlight: gold boxes over the hovered teardown part. The svg
-   shares the sheet's viewBox and letterboxes exactly like the imgs
-   (object-fit: contain ≡ xMidYMid meet), so boxes land on the symbols at
-   any size. Boxes come from the invisible <text> metadata in the export. */
-.schematic-hl {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-.schematic-hl rect {
-  fill: color-mix(in srgb, var(--color-gold) 20%, transparent);
-  stroke: var(--color-gold);
-  stroke-width: 2px;
-  vector-effect: non-scaling-stroke;
-  animation: schematic-hl-in 0.16s ease both;
-}
 @keyframes schematic-hl-in {
   from {
     opacity: 0;
@@ -6024,12 +4930,6 @@ html.light .firmware-logo--tile {
   to {
     opacity: 1;
   }
-}
-/* Scroll-back reveal: when a SKU was switched while the schematic was off-screen
-   (the wipe was skipped), fade the new active sheet in once it comes into view —
-   the schematic's "entrance again", cheap (opacity only). */
-.schematic-page.is-revealing .schematic-sheet.is-active.is-loaded {
-  animation: schematic-reveal 0.5s ease both;
 }
 @keyframes schematic-reveal {
   from {
@@ -6052,9 +4952,6 @@ html.light .firmware-logo--tile {
   inherits: true;
   initial-value: 1;
 }
-.schematic-page.is-wiping {
-  animation: schematic-wipe 0.62s cubic-bezier(0.7, 0, 0.3, 1) both;
-}
 @keyframes schematic-wipe {
   from {
     --wipe: 0;
@@ -6063,154 +4960,9 @@ html.light .firmware-logo--tile {
     --wipe: 1;
   }
 }
-/* The OLD sheet is clipped to the COMPLEMENT: everything RIGHT of the line: so
-   the new (left) and old (right) each own one side of the wipe edge and never
-   overlap. (Leaving it unclipped let the old image show through the new one's
-   anti-aliased edge / where the two near-identical schematics differed → the
-   "double vision". Now there is exactly one schematic in any given pixel.) As
-   --wipe→1 this region shrinks to nothing and the old sheet is fully wiped away. */
-.schematic-sheet--leaving {
-  z-index: 1;
-  opacity: 1;
-  clip-path: polygon(
-    calc(var(--wipe) * 128%) 0,
-    100% 0,
-    100% 100%,
-    calc(var(--wipe) * 128% - 28%) 100%
-  );
-}
-/* Revealed region = everything LEFT of the diagonal edge. The edge runs from
-   (--wipe*128%, 0) at the top to (--wipe*128% - 28%, 100%) at the bottom: a
-   constant 28%-of-width lean that sweeps from fully-hidden (--wipe 0) to
-   fully-shown (--wipe 1). No own animation; it reads the inherited --wipe. */
-.schematic-sheet--entering {
-  z-index: 2;
-  opacity: 1; /* sibling tiers are pre-warmed → reveal by clip, not by fade */
-  transition: none;
-  animation: none;
-  clip-path: polygon(
-    0 0,
-    calc(var(--wipe) * 128%) 0,
-    calc(var(--wipe) * 128% - 28%) 100%,
-    0 100%
-  );
-}
-/* The line is that SAME diagonal edge, drawn as a thin band hugging it (±0.4%),
-   in the SAME box → pixel-locked to the entering sheet's reveal edge. The
-   drop-shadow runs AFTER the clip, so the glow haloes the band. */
-.schematic-swap-line {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  background: var(--color-gold-fill);
-  filter: drop-shadow(
-    0 0 10px color-mix(in srgb, var(--color-gold) 75%, transparent)
-  );
-  pointer-events: none;
-  clip-path: polygon(
-    calc(var(--wipe) * 128% - 0.4%) 0,
-    calc(var(--wipe) * 128% + 0.4%) 0,
-    calc(var(--wipe) * 128% - 28% + 0.4%) 100%,
-    calc(var(--wipe) * 128% - 28% - 0.4%) 100%
-  );
-}
-/* Mobile sheet deck: the swipe-first replacement for the sheet-tab rail (which
-   is a mouse-era button strip). Hidden on desktop, where the rail is shown;
-   shown below the page on mobile. Reuses the board explorer's tick + meta
-   chrome (.board-deck-*) so schematic and board page "the same way". */
-.schematic-deck {
-  display: none;
-}
-@media (max-width: 1023px) {
-  .schematic-deck {
-    display: block;
-    margin-top: 0.6rem;
-  }
-  /* Drop the sheet-tab rail on touch: swipe + the deck above replace it. */
-  .schematic-rail {
-    display: none;
-  }
-}
-.schematic-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 0.7rem;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-dim);
-}
-@media (max-width: 879px) {
-  .schematic-viewer {
-    width: 100%;
-    margin-left: 0;
-  }
-}
-.board-art-inspect {
-  display: inline-block;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-dim);
-  text-decoration: none;
-}
-.board-art-inspect:hover {
-  color: var(--color-gold-text);
-}
-.board-art-fallback {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--color-text-dim);
-}
-@media (max-width: 879px) {
-  .board-art {
-    width: 100%;
-    margin-left: 0;
-  }
-}
-
-/* === Frame viewer: the CAD analogue of .board-art. A big, non-interactive
-   layer of gold vector outlines that fan apart on scroll, sitting BEHIND the
-   teardown text. The chapter goes position:relative; the backdrop is an
-   over-bleeding absolute layer; the text/cards lift above it via z-index. === */
-/* The frame is a decorative layer clipped to its own chapter: nothing
-   draws over the safety block or the footer below it. */
-.chapter[data-backdrop] {
-  position: relative;
-  overflow: clip;
-}
-.chapter-backdrop {
-  position: absolute;
-  inset: 0 -4vw 0 -10vw;
-  z-index: 0;
-  pointer-events: none;
-}
-.chapter[data-backdrop] .chapter-index,
-.chapter[data-backdrop] .chapter-body-col {
+.chapter[data-backdrop] .chapter-index {
   position: relative;
   z-index: 1; /* text/cards sit on top of the outlines */
-}
-.frame-viewer {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  transition: opacity 1.1s cubic-bezier(0.2, 0.7, 0.2, 1);
-  pointer-events: none;
-}
-.frame-viewer[data-loaded='true'] {
-  opacity: 1;
-}
-.frame-viewer canvas {
-  display: block;
-}
-@media (max-width: 879px) {
-  /* The teardown media column is hidden on mobile, so drop the backdrop. */
-  .chapter-backdrop {
-    display: none;
-  }
 }
 
 .chapter-media-glyph {
@@ -6218,18 +4970,6 @@ html.light .firmware-logo--tile {
   height: 38%;
   color: color-mix(in srgb, var(--color-gold) 65%, var(--color-text-dim));
   opacity: 0.8;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .chapter:not(.is-visible) {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  .chapter {
-    transition:
-      opacity 0.5s cubic-bezier(0.2, 0.7, 0.2, 1),
-      transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
-  }
 }
 
 .chapter-index {
@@ -6261,75 +5001,6 @@ html.light .firmware-logo--tile {
   color: var(--color-text-dim);
   text-transform: uppercase;
 }
-
-.chapter-body-col {
-  display: block;
-  max-width: 980px;
-}
-
-.chapter-title {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: var(--fs-2xl);
-  line-height: 1.1;
-  letter-spacing: -0.025em;
-  color: var(--color-text);
-  /* 15px under a 41px head read as one block with the body. */
-  margin: 0 0 var(--sp-6);
-  /* No measure cap: chapter heads are one-line statements and should stay on
-     one line wherever the column allows. The old 24ch (~630px) broke a
-     39-character head across two lines inside a 975px column, which is why
-     the firmware and schematic chapters had each grown their own
-     max-width: none override. The column is the constraint now, so narrow
-     viewports still wrap naturally. */
-  max-width: none;
-}
-
-/* Emphasis segments keep the title colour (2026-08-12, maintainer: gold highlights
-   in chapter heads read as cheesy); the markup keeps its <em> semantics. */
-.chapter-title em {
-  font-style: normal;
-  color: inherit;
-  font-weight: 600;
-}
-
-.chapter-body {
-  font-family: var(--font-sans);
-  font-size: var(--fs-base);
-  line-height: 1.6;
-  color: var(--color-text-muted);
-  max-width: 64ch;
-  margin: 0 0 var(--sp-4);
-}
-
-/* Two side "bubbles" (Top / Bottom), each a mini-table of component rows. The
-   gradient + inset top-light give the card some depth instead of a flat slab.
-   width: fit-content shrink-wraps the PAIR to its widest row (the I/O chip
-   row opts out of that measure below), and both bubbles stretch to the same
-   track, so they stay equal width and aligned with no dead width. */
-.teardown-sides {
-  display: grid;
-  gap: 0.85rem;
-  width: fit-content;
-  max-width: 30rem;
-}
-/* Locked while the board fly-in animates: a hover mustn't fight the animation. */
-.teardown-sides.is-locked {
-  pointer-events: none;
-}
-/* A tier swap switches the part list to the new pins AT swap start (handleSwapStart
-   in products.$handle.tsx sets displayedPins in the same commit that adds this
-   class), so the dip just hides the old content instantly and fades the new in —
-   no mid-animation content switch to time. The class is removed by the board's
-   onSwapSettle (~1.3s later), long after this 0.45s fade has finished, so it can
-   never snap back mid-fade. Pointer-events off so a hover can't catch it mid-change. */
-.teardown-sides.is-swapping {
-  pointer-events: none;
-  /* Self-contained crossfade (0.52s): fade the OLD rows out, hold hidden through
-     the 44–56% trough while products.$handle.tsx swaps displayedPins at 235ms,
-     then fade the NEW rows in: so the content change is never visible. */
-  animation: teardown-pins-swap 0.52s ease both;
-}
 @keyframes teardown-pins-swap {
   0% {
     opacity: 1;
@@ -6344,198 +5015,11 @@ html.light .firmware-logo--tile {
     opacity: 1;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .teardown-sides.is-swapping {
-    animation: none;
-  }
-}
-.teardown-side {
-  /* zero the global `section { padding: 1rem 0 }` so rows fill the bubble edge
-     to edge (no dead space above the first row / below the last). */
-  padding: 0;
-  border-top: 1px solid var(--color-border);
-}
-/* Plain hairline rows, no card: rows form a table: each row gets ONE divider line, no per-row
-   card: so there's no boundary between components as you scroll/hover down. */
-.teardown-pins {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-.teardown-pins li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  /* extra left pad leaves room for the hover accent bar without shifting text */
-  padding: 0.55rem 0.7rem 0.55rem 0.95rem;
-  /* kill the global `li { margin-bottom: 0.5rem }` (reset.css): that gap between
-     rows is a hover dead zone: the cursor crossing it hits no row, so the
-     spotlight drops out and flickers. Rows are contiguous, divided only by the
-     1px border. */
-  margin: 0;
-  border-bottom: 1px solid
-    color-mix(in srgb, var(--color-border) 60%, transparent);
-  position: relative;
-}
-.teardown-pins li:last-child {
-  border-bottom: none;
-}
-
-.teardown-pin-part {
-  color: var(--color-text);
-  font-size: 0.9rem;
-  transition: color 0.12s;
-}
-
-/* count/qty badge (e.g. ×24) as a small mono pill */
-.teardown-pin-cost {
-  flex: none;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  padding: 0.1rem 0.45rem;
-  border-radius: var(--r-pill);
-  background: color-mix(in srgb, var(--color-gold) 14%, transparent);
-  color: var(--color-gold-text);
-}
-
-/* A pin that maps to footprints on the board: interactive. Hover fills the whole
-   row (instant: no fade that looks half-painted while the cursor moves) and a
-   gold accent bar wipes in on the left for a bit of life. */
-.teardown-pin-hoverable {
-  cursor: pointer;
-}
-.teardown-pin-hoverable::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: var(--color-gold-fill);
-  transform: scaleY(0);
-  transform-origin: center;
-  transition: transform 0.14s ease;
-}
-.teardown-pin-hoverable:hover,
-.teardown-pin-hoverable:focus-visible {
-  background: color-mix(in srgb, var(--color-gold) 13%, transparent);
-  /* extend the tint 1px upward to fill where the divider above used to sit (the
-     :has rule below turns it transparent), so the whole row reads as one gold
-     block with no uncovered sliver at the top. */
-  box-shadow: 0 -1px 0 0 color-mix(in srgb, var(--color-gold) 13%, transparent);
-  outline: none;
-}
-/* Kill the divider directly ABOVE the hovered row: it belongs to the previous
-   row, so the hovered row's fill can't reach it; left visible it reads as a dark
-   sliver at the row's top (the "dead zone"). Gone, the box-shadow fills clean
-   bubble-bg with the same gold tint → seamless, and the spotlight slides
-   row-to-row with no flicker. */
-.teardown-pins li:has(+ .teardown-pin-hoverable:hover) {
-  border-bottom-color: transparent;
-}
-
-/* I/O chip row: one row holding a horizontal set of hoverable pad-group chips.
-   width: 0 + min-width: 100% keeps this row out of the bubble's intrinsic
-   width (a full chip set unwrapped is ~415px and used to force the whole
-   bubble that wide); the text rows set the width and the chips wrap to it. */
-.teardown-pins li.teardown-io-row {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-  width: 0;
-  min-width: 100%;
-}
-.teardown-io-tag {
-  flex: none;
-  font-size: 0.7rem;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-.teardown-io-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-.teardown-io-chip {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  padding: 0.2rem 0.55rem;
-  border-radius: var(--r-pill);
-  border: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-text) 4%, transparent);
-  color: var(--color-text);
-  cursor: pointer;
-  transition: background 0.12s, border-color 0.12s, color 0.12s;
-}
-.teardown-io-chip:hover,
-.teardown-io-chip:focus-visible {
-  background: color-mix(in srgb, var(--color-gold) 16%, transparent);
-  border-color: color-mix(in srgb, var(--color-gold) 55%, transparent);
-  color: var(--color-gold-text);
-  outline: none;
-}
-.teardown-pin-hoverable:hover .teardown-pin-part,
-.teardown-pin-hoverable:focus-visible .teardown-pin-part {
-  color: var(--color-gold-text);
-}
-.teardown-pin-hoverable:hover::before,
-.teardown-pin-hoverable:focus-visible::before {
-  transform: scaleY(1);
-}
-
-/* === Component highlights === Drawn ANCHORED inside the active sheet's <svg>
-   (BoardArt appends a `<g class="board-hilite">`), so they scroll with the board
-   and sit exactly on the part. Only present on the Front/Back faces: never on a
-   copper layer. The whole group fades in on hover. */
-.board-hilite {
-  pointer-events: none;
-}
-/* A face's spotlight is built once and kept; when nothing is highlighted (or
-   another face is showing) it's hidden, not destroyed: so re-lighting it is
-   instant and never re-decodes the board image (the flicker). */
-.board-hilite.is-hidden {
-  display: none;
-}
-/* Fade in ONLY on first appearance (cursor entering the list from nothing). When
-   moving row-to-row the group is rebuilt every hover; replaying the fade then made
-   the whole spotlight flash out/in. `is-fresh` (added by BoardArt only when there
-   was no prior highlight) keeps the dim constant and just moves the bright spot. */
-.board-hilite.is-fresh {
-  animation: board-hilite-in 0.25s ease both;
-}
-/* Dim veil over the board OUTSIDE the spotlight window (masked + clipped to the
-   board outline) so everything but the selected part(s) recedes. Over the board
-   face only (not the page), so it reads the same in both themes. */
-.board-hilite-dim {
-  fill: #05070a;
-  opacity: 0.62;
-  pointer-events: none;
-}
-/* The face re-shown at the highlighted box, on top of the dim: nudged brighter
-   so the selected region pops out of the dimmed board. */
-.board-hilite-face {
-  filter: brightness(1.12) saturate(1.08);
-  pointer-events: none;
-}
 /* (legacy) Brighten INSIDE a rect window: kept for the no-face fallback path. */
 .board-hilite-bright {
   fill: #fff;
   opacity: 0.16;
   mix-blend-mode: screen;
-  pointer-events: none;
-}
-/* The crisp gold box is the primary "this is selected" marker, drawn on top of
-   the dim. Non-scaling stroke keeps it ~2px at any board zoom. */
-.board-highlight-shape {
-  fill: color-mix(in srgb, var(--color-gold) 10%, transparent);
-  stroke: var(--color-gold);
-  stroke-width: 2;
-  vector-effect: non-scaling-stroke;
   pointer-events: none;
 }
 @keyframes board-hilite-in {
@@ -6545,323 +5029,6 @@ html.light .firmware-logo--tile {
   to {
     opacity: 1;
   }
-}
-
-/* Open source cards */
-.open-source-cards {
-  display: grid;
-  gap: 0.75rem;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  /* Every card is a 16:9 bubble (set on .open-source-card / .latest-commit-card),
-     so equal-width columns give a uniform-height row. */
-  align-items: stretch;
-}
-
-/* This chapter stacks a two-line title, a four-card row and the full-width
-   schematic. At the old 1rem the title and the cards read as one dense block;
-   the row needs to land clearly after the head, not under it. */
-.open-source-cards {
-  margin-top: var(--sp-8);
-}
-
-/* One quiet mono link under the card row, pointing at /open-source. Same
-   voice as .firmware-support-links: muted at rest, gold on hover. The repo
-   lead line (the next chapter's ::before) crosses this row on its way from
-   the GitHub card down to the scope outline: the label sits above the line
-   with its own background, so the line reads as passing behind a station
-   on the route rather than striking through the words. */
-.open-source-story-link {
-  margin: var(--sp-3) 0 0;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  position: relative;
-  z-index: 1;
-}
-
-.open-source-story-link a {
-  display: inline-block;
-  padding: 0.3rem 0.6rem;
-  margin-left: -0.6rem;
-  background: var(--color-bg);
-  color: var(--color-text-muted);
-  text-decoration: none;
-}
-
-.open-source-story-link a:hover {
-  color: var(--color-gold-text);
-}
-
-/* Subtle bubble: same quiet card as the latest-commit cards beside it so the
-   row reads as one consistent set (a bare top-hairline left the text floating).
-   Kept light: card bg + hairline border, gold on hover. */
-.open-source-card {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  /* 16:9 bubble: uniform across the resource row. */
-  aspect-ratio: 16 / 9;
-  overflow: hidden;
-  padding: 1.15rem 1.35rem;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-md);
-  transition: border-color 0.2s ease, background 0.2s ease;
-}
-
-.open-source-card:hover {
-  border-color: color-mix(in srgb, var(--color-gold) 50%, var(--color-border));
-}
-
-.open-source-card-label {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  margin: 0 0 0.25rem;
-}
-
-.open-source-card-title {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 1.1rem;
-  color: var(--color-text);
-  margin: 0 0 0.5rem;
-}
-
-.open-source-card-sub {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  line-height: 1.6;
-  letter-spacing: 0.04em;
-  color: var(--color-text-muted);
-  margin: 0;
-}
-
-/* Brand-logo watermark: a big, faint full-card mark behind the text on the
-   GitHub (Study) and CERN (License) cards. Rendered via CSS mask so it follows
-   the theme (painted with the text colour at low opacity) rather than baking a
-   fixed fill into the SVG. */
-.open-source-card--github,
-.open-source-card--cern,
-.open-source-card--kicad,
-.open-source-card--onshape {
-  position: relative;
-  overflow: hidden;
-}
-
-.open-source-card--github > p,
-.open-source-card--cern > p,
-.open-source-card--kicad > p,
-.open-source-card--onshape > p {
-  position: relative;
-  z-index: 1;
-}
-
-.open-source-card--github::after,
-.open-source-card--cern::after,
-.open-source-card--kicad::after,
-.open-source-card--onshape::after {
-  content: '';
-  position: absolute;
-  right: -8%;
-  bottom: -14%;
-  width: 68%;
-  height: 78%;
-  background-color: var(--color-text);
-  opacity: 0.06;
-  pointer-events: none;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: right bottom;
-  mask-position: right bottom;
-  -webkit-mask-size: contain;
-  mask-size: contain;
-}
-
-.open-source-card--github::after {
-  -webkit-mask-image: url(/logos/github.svg);
-  mask-image: url(/logos/github.svg);
-}
-
-.open-source-card--cern::after {
-  -webkit-mask-image: url(/logos/cern.svg);
-  mask-image: url(/logos/cern.svg);
-}
-
-/* Iterate card: the design tool's wordmark. Wordmarks are wide, so the
-   mask box takes more of the card width than the square marks do. */
-.open-source-card--kicad::after,
-.open-source-card--onshape::after {
-  width: 82%;
-}
-.open-source-card--kicad::after {
-  -webkit-mask-image: url(/logos/kicad.svg);
-  mask-image: url(/logos/kicad.svg);
-}
-.open-source-card--onshape::after {
-  -webkit-mask-image: url(/logos/onshape.svg);
-  mask-image: url(/logos/onshape.svg);
-}
-
-/* "Wanna help?" card: the row's 4th bubble, an internal hand-off to
-   /contributing. A dimmed board render sits behind the text; the gradient
-   wash keeps the label side legible in both themes (bg-card is a token).
-   SWAP POINT: the intended background PNG never arrived. When it lands,
-   drop it in /public and change the url() in ::before below; the gradient
-   overlay in ::after stays as is. */
-.open-source-card--help {
-  position: relative;
-  overflow: hidden;
-}
-
-.open-source-card--help > p {
-  position: relative;
-  z-index: 1;
-}
-
-.open-source-card--help::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: url(/boards/openfc-lite/front-w800.webp);
-  background-repeat: no-repeat;
-  background-position: right -22% center;
-  background-size: auto 150%;
-  opacity: 0.18;
-  pointer-events: none;
-}
-
-.open-source-card--help::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    90deg,
-    var(--color-bg-card) 10%,
-    color-mix(in srgb, var(--color-bg-card) 55%, transparent) 62%,
-    transparent 100%
-  );
-  pointer-events: none;
-}
-
-/* OSHWA-certified card: the license card upgraded when a product carries an
-   OSHWA UID. Gold-accented so the certification reads as the headline credential
-   (the CERN-OHL-S name moves to the sub-line). All tokens, so it themes for free. */
-.open-source-card--oshwa {
-  position: relative;
-  overflow: hidden;
-  border-color: var(--color-gold-soft);
-  /* The mark IS the card: it fills the whole bubble (positioned absolute below),
-     so drop the card's own padding and centring. */
-  padding: 0;
-}
-
-/* The OSHWA certification mark fills the entire card: the credential as the
-   hero, not a small inset graphic. Absolutely positioned so it ignores the card
-   padding and spans edge to edge (a little breathing room top/sides, more at the
-   bottom for the caption). The tightened viewBox means little dead space, so the
-   OSHW box + UID render large. `color` drives the SVG currentColor (box + UID);
-   the "W" keeps its own red. */
-.open-source-card-oshwa-mark {
-  display: block;
-  /* Flex-fill the card height (the mark contains within, so it never clips the
-     UID: unlike width-filling, which pushed the UID off the bottom edge). The
-     top margin clears the absolute caption; the tightened viewBox means this
-     height renders a large OSHW box + UID. */
-  flex: 1 1 0;
-  min-height: 0;
-  width: 100%;
-  height: 100%;
-  margin: 1.15rem 0 0.2rem;
-  color: var(--color-text);
-}
-
-/* CERN-OHL-S caption along the TOP: the mark's UID owns the bottom, so the
-   caption can't ride on top of it. */
-.open-source-card-sub--oshwa {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0.5rem;
-  margin: 0;
-  text-align: center;
-  color: var(--color-gold-text);
-}
-
-/* "Watch" bubble: the video card that replaces the issues card on products
-   with a build film. A 16:9 bubble (aspect-ratio inherited from
-   .open-source-card) showing just the YouTube thumbnail with a centred gold
-   play glyph: no caption. Clicking opens the lightbox player. */
-.watch-card {
-  position: relative;
-  display: block;
-  width: 100%;
-  padding: 0;
-  overflow: hidden;
-  background-color: var(--color-bg-elevated);
-  cursor: pointer;
-  font: inherit;
-}
-
-/* The thumbnail fills the 16:9 card (object-fit cover: a 16:9 frame, so no
-   real crop on a maxres poster). */
-.watch-card-thumb {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s ease;
-}
-
-.watch-card:hover .watch-card-thumb {
-  transform: scale(1.04);
-}
-
-/* Soft centred scrim so the gold play glyph pops without hiding the thumbnail. */
-.watch-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(0, 0, 0, 0.42) 0%,
-    rgba(0, 0, 0, 0.16) 55%,
-    rgba(0, 0, 0, 0.26) 100%
-  );
-}
-
-/* Content layer: the YouTube play glyph, centred over the thumbnail. */
-.watch-card-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.watch-card-yt {
-  width: 48px;
-  height: auto;
-  color: var(--color-gold-text);
-  transition: transform 0.2s ease;
-}
-
-.watch-card:hover .watch-card-yt {
-  transform: scale(1.08);
-}
-
-/* The play triangle reads against the gold mark via the dark accent ink. */
-.watch-card-yt-tri {
-  fill: var(--color-on-accent);
-}
-
-.watch-card:hover {
-  border-color: color-mix(in srgb, var(--color-gold) 50%, var(--color-border));
 }
 
 /* Sub-heading inside a chapter: divider between card groups. */
@@ -6974,122 +5141,6 @@ html.light .firmware-logo--tile {
   }
 }
 
-/* Contributor grid + the join button on one line: the grid takes the room,
-   the button holds the right edge. Wraps below the grid when the row runs
-   out of width. */
-.contributors-row {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem 2.5rem;
-  flex-wrap: wrap;
-}
-.contributors-row > *:first-child {
-  flex: 1 1 24rem;
-  min-width: 0;
-}
-.contributors-cta-btn {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  padding: 0.75rem 1.5rem;
-  border: 1px solid color-mix(in srgb, var(--color-gold) 55%, transparent);
-  border-radius: 999px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-gold-text);
-  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
-}
-.contributors-cta-btn:hover {
-  background: var(--color-gold-fill);
-  border-color: var(--color-gold-fill);
-  color: var(--color-on-accent);
-}
-
-/* Downloads grid: schematic / STEP / BOM / manual chapter. */
-/* Contributor grid: gold-ruled tiles in the downloads-card idiom.
-   Avatars stay square with a hairline border: technical file, not
-   social feed. The "+ you" tile is the standing invitation. */
-.contributor-grid {
-  list-style: none;
-  margin: var(--sp-4) 0 0;
-  padding: 0;
-  display: grid;
-  gap: 0.75rem;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-}
-.contributor-tile {
-  display: grid;
-  grid-template-columns: 60px 1fr;
-  grid-template-rows: auto auto;
-  column-gap: 0.75rem;
-  align-items: center;
-  padding: var(--sp-3) 0 0;
-  /* Per-contributor accent, hash-colored like their ticks on the commit
-     strip below; gold when no accent is set (skeleton, the "+ you" tile). */
-  border-top: 2px solid
-    color-mix(in srgb, var(--contrib-accent, var(--color-gold)) 55%, var(--color-border));
-  color: var(--color-text);
-  text-decoration: none;
-  transition: border-color 0.2s ease;
-}
-.contributor-tile:hover {
-  border-top-color: var(--contrib-accent, var(--color-gold));
-}
-.contributor-avatar {
-  grid-row: 1 / span 2;
-  width: 60px;
-  height: 60px;
-  border-radius: var(--r-sm);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  object-fit: cover;
-}
-.contributor-avatar--you {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-mono);
-  font-size: 1.6rem;
-  color: var(--color-gold-text);
-  border-style: dashed;
-}
-.contributor-login {
-  align-self: end;
-  font-family: var(--font-mono);
-  font-weight: 600;
-  font-size: var(--fs-sm);
-  overflow-wrap: anywhere;
-}
-.contributor-count {
-  align-self: start;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  color: var(--color-text-dim);
-}
-/* The maintainer's tile. Commit counts used to fill this slot and read as a
-   ranking, which credited whoever churned the most files; the one fact worth
-   stating is who holds the board. Gold rule at full strength, gold label. */
-.contributor-tile--lead {
-  border-top-color: var(--color-gold);
-}
-.contributor-role {
-  align-self: start;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-gold-text);
-}
-.contributor-tile.is-skeleton {
-  pointer-events: none;
-}
-.contributor-tile.is-skeleton .contributor-avatar {
-  background: var(--color-border);
-}
-
 .downloads-grid {
   display: grid;
   gap: 0.75rem;
@@ -7161,100 +5212,6 @@ html.light .firmware-logo--tile {
   color: var(--color-gold-text);
 }
 
-/* Bundle components: richer cards than the generic open-source cards
-   because this is the "what's in the box" moment on a bundle PDP. */
-.bundle-components {
-  display: grid;
-  gap: var(--sp-5);
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-}
-
-.bundle-component-card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: var(--sp-3) 0 0;
-  border-top: 2px solid color-mix(in srgb, var(--color-gold) 45%, var(--color-border));
-  color: var(--color-text);
-  transition: border-color 0.2s ease;
-}
-
-.bundle-component-card:hover {
-  border-top-color: var(--color-gold);
-  color: var(--color-text);
-  transform: translateY(-1px);
-}
-
-.bundle-component-title {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 1.25rem;
-  letter-spacing: -0.01em;
-  margin: 0;
-  color: var(--color-text);
-}
-
-.bundle-component-blurb {
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
-  line-height: 1.6;
-  color: var(--color-text-muted);
-  margin: 0;
-}
-
-.bundle-component-firmware {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  margin: 0.25rem 0 0;
-}
-
-.bundle-component-firmware span {
-  color: var(--color-gold-text);
-}
-
-.bundle-component-more {
-  margin-top: 0.5rem;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  color: var(--color-gold-text);
-}
-
-/* In the box: plain "1x item" rows. */
-.in-the-box {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  max-width: 34rem;
-}
-.in-the-box li {
-  display: flex;
-  align-items: baseline;
-  gap: 0.9rem;
-  padding: 9px 0;
-  border-bottom: 1px solid var(--color-border);
-}
-.in-the-box-qty {
-  flex: none;
-  width: 2rem;
-  font-family: var(--font-mono);
-  font-size: 13px;
-  color: var(--color-text-muted);
-}
-.in-the-box-item {
-  color: var(--color-text);
-  font-size: 14px;
-  line-height: 1.4;
-}
-.in-the-box-note {
-  margin-left: auto;
-  font-size: 13px;
-  color: var(--color-gold-text);
-}
-
 /* Spec sheet: label muted, value mono. One value column per variant, the
    selected one bold; phones keep only the selected column past two. */
 .spec-sheet {
@@ -7307,28 +5264,2368 @@ html.light .firmware-logo--tile {
     display: none;
   }
 }
-.spec-pinout {
-  margin-top: var(--sp-6);
-}
-.spec-pinout-title {
-  margin: 0 0 var(--sp-3);
-  font-family: var(--font-sans);
-  font-size: var(--fs-md);
-  font-weight: 600;
-  color: var(--color-text);
-}
-.spec-pinout-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1.5rem;
-  margin: var(--sp-3) 0 0;
-  font-size: 14px;
-}
-.spec-pinout-links a {
-  color: var(--color-gold-text);
+
+
+/* ============================================
+   Product page chapters (below the buy box)
+   ============================================ */
+
+
+/* Tabular numerals everywhere a number appears. Cheap and unambiguously
+   says "engineering" everywhere a price/spec/SKU is rendered. */
+.spec-table dd,
+.spec-table dt,
+.in-the-box-qty,
+.teardown-pin-cost {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "cv11" 1, "ss01" 1;
 }
 
-/* Firmware credit: the project the board runs, with direct-donation links.
+/* Related products. The element is a <section>, so reset.css adds
+   another 32px of vertical padding on top of these values - keep the
+   internal spacing modest so the row of cards doesn't sit in a stack
+   of dead space. */
+.related-products {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  padding-bottom: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+/* Related cards - spec-forward tiles (board render, catalog-file eyebrow,
+   one-line spec, mono price) with a pointer-following gold spotlight on
+   hover. All tokens, so light mode comes for free. */
+.related-grid {
+  /* Same rhythm as .products-grid so the strip reads as one catalog. */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--sp-4);
+}
+
+.related-card {
+  --spot-x: 50%;
+  --spot-y: 0px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  transition: border-color 0.2s ease;
+}
+@media (hover: hover) {
+  .related-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      240px circle at var(--spot-x) var(--spot-y),
+      var(--color-gold-soft),
+      transparent 70%
+    );
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    pointer-events: none;
+  }
+
+  .related-card:hover::after {
+    opacity: 1;
+  }
+}
+
+.related-card:hover {
+  border-color: var(--color-border-strong);
+}
+
+.related-card-link {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  color: inherit;
+  text-decoration: none;
+}
+
+.related-card-media {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  background: var(--color-bg-elevated);
+  overflow: hidden;
+}
+
+.related-card-media.is-empty {
+  display: grid;
+  place-items: center;
+}
+
+.related-card-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.related-card:hover .related-card-media img {
+  transform: scale(1.04);
+}
+@media (prefers-reduced-motion: reduce) {
+  .related-card,
+  .related-card::after,
+  .related-card-media img {
+    transition: none;
+  }
+
+  .related-card:hover .related-card-media img {
+    transform: none;
+  }
+}
+
+.related-card-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 0.3rem;
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.related-card-file {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+  margin: 0;
+}
+
+.related-card-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--fs-md);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  color: var(--color-text);
+  margin: 0;
+  transition: color 0.15s ease;
+}
+
+.related-card:hover .related-card-title {
+  color: var(--color-gold);
+}
+
+.related-card-spec {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.related-card-price {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  margin: auto 0 0;
+  padding-top: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.related-card-from {
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+}
+
+/* Quick-add overlay - same reveal recipe as the browse cards; sibling of
+   the card link (a form can't nest inside an anchor). */
+.related-card-quickadd {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 0.6rem;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.related-card-quickadd > * {
+  pointer-events: auto;
+}
+
+.related-card-skeleton {
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .product-hero-eyebrow,
+  .product-hero-headline {
+    animation: pdp-hero-rise 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .product-hero-eyebrow {
+    animation-delay: 0.04s;
+  }
+  .product-hero-headline {
+    animation-delay: 0.1s;
+  }
+}
+
+.product-hero-eyebrow {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--fs-xs);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+  margin: 0;
+}
+
+/* Roadmap status chip beside the eyebrow. Same vocabulary as /roadmap: the
+   dot inherits the kanban's [data-status] coloring, the label is the same
+   copy key, and the chip links back to the board where the legend explains
+   what the word means. Status appears ONLY via this flag, never in prose. */
+.product-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  margin-left: 0.9em;
+  padding: 0.2em 0.7em;
+  border: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
+  border-radius: 999px;
+  color: var(--color-text-muted);
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.product-status-chip:hover {
+  border-color: color-mix(in srgb, var(--color-gold) 55%, transparent);
+  color: var(--color-text);
+}
+
+/* Product name. Single block, refined display weight, restrained size.
+   The 3-line span pattern from product-content stays in the markup
+   (no text change) but renders inline so it reads as one engineered
+   title rather than an editorial pull-quote. */
+.product-hero-headline {
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  font-size: var(--fs-3xl);
+  margin: 0;
+  color: var(--color-text);
+}
+
+/* Word gaps between the headline spans come from the literal space in the
+   markup, never from margins: a real space collapses at a line wrap, a
+   margin does not, and the two together rendered a double-wide gap. */
+.product-hero-headline span {
+  display: inline;
+}
+
+/* Drop the italic. The gold-italic middle-word is the AI-slop tell;
+   keep the emphasized word visible but in roman, soft-gold, same
+   weight as the rest. */
+.product-hero-headline em {
+  font-style: normal;
+  color: var(--color-gold);
+  font-weight: 600;
+}
+
+/* Concept plate: what /products/<handle> renders while the product is
+   planned or in-progress. Reuses the PDP eyebrow, headline, status chip and
+   idea-CTA idioms so it reads as the same family, minus everything that
+   would state a spec that can still change. */
+.concept-plate {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+}
+.concept-plate-inner {
+  width: min(100% - 2 * var(--sp-6), 40rem);
+  margin: 0 auto;
+  padding: var(--sp-8) 0;
+}
+.concept-plate .product-hero-headline {
+  margin-top: var(--sp-3);
+}
+.concept-plate-body {
+  margin: var(--sp-5) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+  color: var(--color-text-dim);
+}
+.concept-plate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  margin-top: var(--sp-6);
+}
+/* Vertical rhythm: the root font is 15px, so the small tokens are smaller than
+   they read on paper. At --sp-6 a chapter had 30px of air above and below and
+   no gap to its neighbour, which put a 41px title 30px from the previous
+   chapter's last line. Chapters are the page's big structural break, so give
+   them one: --sp-8 a side is ~135px between one chapter's content and the
+   next. */
+.chapter {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sp-7);
+  /* 1.35x the old rhythm: chapters need to end before the next one starts.
+     The gap between them is the pause that keeps a dense engineering page
+     from reading as one wall. */
+  padding: calc(var(--sp-8) * 1.35) 0;
+  border-top: 1px solid var(--color-border);
+  opacity: 1;
+  transform: translateY(0);
+  /* Skip layout+paint for chapters that are far offscreen - the PDP is a very
+     long page and browsers otherwise render every chapter on load. The
+     intrinsic-size placeholder keeps the scrollbar stable; the scroll-reveal
+     IO fires as normal once a chapter approaches the viewport. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 640px;
+}
+/* Reading measure: chapter paragraphs never run the full rail. The
+   whitespace right of the text is deliberate - it is what directs the eye
+   down the column instead of across a 900px line. Interactive full-width
+   blocks (schematic, teardown, tables, card grids) are untouched. */
+.chapter p {
+  max-width: 68ch;
+}
+
+/* content-visibility's paint containment clips descendants at the chapter's
+   box - but the teardown board art bleeds past its media column into the page
+   margin, and the frame-viewer backdrop over-bleeds into the neighbouring
+   sections. Those chapters give up the skip-render optimisation so the bleed
+   stays visible. */
+.chapter:has(.board-art),
+.chapter[data-backdrop] {
+  content-visibility: visible;
+}
+
+@media (min-width: 880px) {
+  .chapter {
+    grid-template-columns: minmax(0, 1fr) clamp(220px, 24vw, 340px);
+    column-gap: clamp(var(--sp-5), 4vw, var(--sp-7));
+    align-items: start;
+  }
+  .chapter[data-no-media] .chapter-body-col {
+    grid-column: 1 / -1;
+    max-width: none;
+  }
+  .chapter:has(.in-the-box) {
+    grid-template-columns: fit-content(34rem) minmax(0, 1fr);
+  }
+  .chapter:has(.in-the-box) .in-the-box,
+  .chapter:has(.in-the-box) .provenance-card {
+    min-width: 100%;
+  }
+  .chapter:has(.in-the-box) .chapter-media {
+    position: static;
+    align-self: stretch;
+    padding-top: calc(1.1 * var(--fs-2xl) + var(--sp-6));
+  }
+  .chapter:has(.in-the-box) .chapter-media-frame {
+    height: 100%;
+    aspect-ratio: auto;
+  }
+  .chapter:has(.firmware-support) {
+    grid-template-columns: fit-content(40rem) minmax(0, 1fr);
+  }
+  .chapter:has(.firmware-support) .firmware-logo {
+    margin-left: 0;
+  }
+  .chapter:has(.firmware-support) .chapter-media {
+    align-self: stretch;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
+  .chapter:has(.firmware-support) .chapter-media-frame {
+    position: static;
+  }
+  .chapter:has(.firmware-support) .firmware-logo--tile {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: auto;
+    max-width: none;
+    margin-inline: 0;
+  }
+  .chapter:has(.contributors-row) .chapter-body-col {
+    position: relative;
+  }
+  .chapter:has(.contributors-row) .contributors-cta-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
+  }
+  .chapter[data-repo-scope] {
+    position: relative;
+    border: 2px solid color-mix(in srgb, var(--color-gold) 30%, transparent);
+    border-radius: var(--r-lg);
+    padding: var(--sp-7) var(--sp-6) var(--sp-6);
+    margin-inline: calc(-1 * var(--sp-6));
+  }
+  .chapter[data-repo-scope] .board-art {
+    margin-left: calc(100% - var(--board-w));
+  }
+  .chapter[data-repo-scope] .chapter-media {
+    position: static;
+  }
+  .chapter[data-repo-scope]::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: var(--repo-lead-x, 50%);
+    width: 2px;
+    height: var(--repo-lead-h, 0px);
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-gold) 50%, transparent),
+      color-mix(in srgb, var(--color-gold) 30%, transparent)
+    );
+  }
+  .product-page:has(.chapter[data-repo-scope]) .open-source-card--github {
+    border: 2px solid color-mix(in srgb, var(--color-gold) 30%, transparent);
+  }
+  .chapter-scope-tag {
+    position: absolute;
+    top: 0;
+    left: var(--sp-6);
+    translate: 0 -50%;
+    padding: 0.35rem 0.9rem;
+    background: var(--color-bg);
+    border: 1px solid color-mix(in srgb, var(--color-gold) 40%, transparent);
+    border-radius: var(--r-pill);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-gold);
+  }
+  .chapter-wide {
+    grid-column: 1 / -1;
+  }
+  .chapter[data-repo-scope] .chapter-wide {
+    margin-top: calc(-1 * var(--sp-5));
+  }
+}
+
+/* Media placeholder. Sits in the right column, sticky relative to
+   its chapter so it tracks the body as the user reads. Real images
+   slot in by replacing the SVG glyph. */
+.chapter-media {
+  display: none;
+  margin: 0;
+}
+
+@media (min-width: 880px) {
+  .chapter-media {
+    display: block;
+    position: sticky;
+    top: calc(var(--header-height) + var(--sp-4));
+  }
+  .chapter-media:has(.board-art) {
+    top: calc(var(--header-height) + var(--sp-4) + 3.75rem);
+  }
+  .chapter:has(.board-art) .chapter-body-col {
+    transition: opacity 0.55s ease,
+      translate 0.6s cubic-bezier(0.16, 0.84, 0.3, 1);
+  }
+  .chapter[data-text-pending] .chapter-body-col {
+    opacity: 0;
+    translate: -30px 0;
+  }
+  .chapter[data-wide-media] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .chapter[data-wide-media] .chapter-media {
+    position: static;
+    top: auto;
+  }
+}
+
+/* The schematic media is full-width and useful on every breakpoint (unlike the
+ * decorative chapter glyph), so keep it visible on mobile too where the base
+ * .chapter-media is hidden. */
+.chapter[data-wide-media] .chapter-media {
+  display: block;
+}
+
+/* On mobile the cards sit two-across (a top row and a bottom row) so the set is
+ * compact instead of one tall stack; at the desktop breakpoint they become a
+ * 3-across row beside the title (below). */
+.chapter[data-wide-media] .open-source-cards {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 879px) {
+  .chapter[data-wide-media] .open-source-card {
+    aspect-ratio: auto;
+    padding: 0.7rem 0.8rem;
+  }
+  .chapter[data-wide-media] .open-source-card-title {
+    font-size: 1rem;
+    margin-bottom: 0.3rem;
+  }
+  .chapter[data-wide-media] .open-source-cards {
+    gap: 0.6rem;
+  }
+}
+@media (min-width: 880px) {
+  .chapter[data-wide-media] .chapter-body-col {
+    /* Span the whole chapter width so the card row reaches the right edge,
+     * flush with the full-width schematic below. */
+    grid-column: 1 / -1;
+    max-width: none;
+  }
+  .chapter[data-wide-media] .open-source-cards {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--sp-5);
+  }
+  .chapter[data-wide-media] {
+    row-gap: var(--sp-8);
+  }
+  .chapter[data-wide-media] .open-source-card {
+    border-top: 2px solid transparent;
+    transition: border-color 0.2s ease, background 0.2s ease,
+      transform 0.2s ease;
+  }
+  .chapter[data-wide-media] .open-source-card:hover {
+    transform: translateY(-4px);
+    border-top-color: var(--color-gold);
+  }
+}
+
+.chapter-media-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-lg);
+  color: var(--color-text-dim);
+  overflow: hidden;
+  position: relative;
+}
+
+.chapter-media-frame::after {
+  content: "PLACEHOLDER";
+  position: absolute;
+  bottom: 0.65rem;
+  left: 0.85rem;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  color: color-mix(in srgb, var(--color-text-dim) 60%, transparent);
+}
+
+/* The chapter media slot opens up when a live <BoardArt /> sits in it -
+ * no card chrome, no PLACEHOLDER tag, and overflow: visible so the SVG
+ * can bleed beyond the right column into the page margin. */
+.chapter-media-frame--live {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  aspect-ratio: auto;
+  overflow: visible;
+  padding: 0;
+}
+.chapter-media-frame--live::after {
+  content: none;
+}
+
+/* Firmware project wordmark in the "The €1" chapter media slot. Sits roughly at
+ * column width, pulled a little left into the gutter so it isn't jammed against
+ * the page edge. The media frame is overflow: visible, so the bleed shows. */
+.firmware-logo {
+  width: 100%;
+  max-width: none;
+  height: auto;
+  display: block;
+  margin-left: -25%;
+  margin-right: 0;
+}
+
+/* The firmware mark doesn't need to track the scroll like the board art does -
+ * pin it in place by dropping the sticky on its media column. */
+.chapter-media:has(.firmware-logo) {
+  position: static;
+  top: auto;
+}
+
+/* White-on-transparent marks (e.g. AM32) sit on a fixed dark tile that reads
+ * in both themes (like the Discord embed), rather than the transparent blow-up
+ * a multi-colour mark uses. Kept a compact square centred in the slot - a big
+ * square tile leaves dead vertical space next to the short price block. */
+.firmware-logo--tile {
+  width: 78%;
+  max-width: 340px;
+  margin-inline: auto;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  background: #14171c;
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-lg);
+  padding: clamp(1.5rem, 7%, 3rem);
+}
+
+.board-art {
+  position: relative;
+  /* Blow the block up well past its (capped) media column so the rail + stack
+     fill the chapter's height; margin-left grows it leftward into the empty
+     gutter rather than overflowing the page to the right. `--board-w` is the
+     blow-up factor: 220% by default, dialled down by BoardArt's placement
+     effect when the gutter is too tight to hold the full layer rail (the board
+     gives up size to keep the menu legible). The matching margin keeps the
+     board's right edge pinned (width + margin = 125%) as it scales. */
+  --board-w: 220%;
+  width: var(--board-w);
+  margin-left: calc(125% - var(--board-w));
+}
+/* Reserve a square-ish slot while the board SVG streams in, so the loading
+   skeleton has a box to sit in instead of collapsing to zero height. */
+.board-art:not(.is-revealed) {
+  min-height: clamp(320px, 32vw, 460px);
+}
+/* The fade lives on the board *content*, not the container - the container
+   stays opaque so the loading skeleton (its child) is visible while the
+   content is still at opacity 0. */
+.board-folder-body {
+  opacity: 0;
+  transition: opacity 1.2s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.board-art.is-revealed .board-folder-body {
+  opacity: 1;
+}
+/* === Folder stack: every copper layer is a sheet; the selected one floats up
+   like pulling a file out of a folder. === */
+.board-folder {
+  overflow: visible;
+}
+.board-folder-stack {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  /* Headroom above the stack so the floated-up sheet isn't clipped. */
+  margin-top: 12%;
+  perspective: 1700px;
+  transform-style: preserve-3d;
+}
+.board-sheet {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  transform-origin: 50% 50%;
+  /* Fan the stack back-and-down by physical layer index (--depth). */
+  transform: translateY(calc(var(--depth) * 7%))
+    translateX(calc(var(--depth) * 2.4%)) translateZ(calc(var(--depth) * -70px))
+    scale(calc(1 - var(--depth) * 0.035));
+  z-index: calc(30 - var(--depth));
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.45s ease;
+  /* Dim + drop-shadow the un-selected sheets so the stack reads with depth. The
+     shadows are GPU-heavy (blur filter per layer), so they're stripped under
+     html.anim-paused (idle / unfocused) - see that block below. */
+  filter: brightness(0.55) saturate(0.7)
+    drop-shadow(0 14px 22px rgba(0, 0, 0, 0.55));
+}
+.board-sheet:hover {
+  filter: brightness(0.78) saturate(0.85)
+    drop-shadow(0 14px 22px rgba(0, 0, 0, 0.55));
+}
+/* Gold GLOW only on the active (top, selected) layer; cast shadow for depth. */
+.board-sheet.is-active {
+  transform: translateY(-11%) translateZ(120px) scale(1.05);
+  z-index: 50;
+  filter: saturate(0.95) contrast(1.05)
+    drop-shadow(0 0 26px color-mix(in srgb, var(--color-gold) 38%, transparent))
+    drop-shadow(0 26px 34px rgba(0, 0, 0, 0.55));
+}
+.board-art.is-armed .board-sheet {
+  animation: board-sheet-fly 1.2s cubic-bezier(0.16, 0.84, 0.3, 1)
+    calc(var(--depth) * 0.11s) both;
+  animation-play-state: paused;
+}
+/* Non-active layers grey out one-by-one as each lands - in fly order, so the
+   first layer to fly in is the first to grey - instead of all snapping grey at
+   the end. A second, layered animation (sharing the same paused/running gate)
+   eases the filter from the bright fly state to the resting dim, staggered by
+   --depth and timed to begin ~as each layer arrives. Same total duration; the
+   greying just starts sooner (over the fly's tail). The active layer is excluded
+   - it stays bright and gains its glow at the end. */
+.board-art.is-armed .board-sheet:not(.is-active) {
+  animation: board-sheet-fly 1.2s cubic-bezier(0.16, 0.84, 0.3, 1)
+      calc(var(--depth) * 0.11s) both,
+    board-sheet-grey 0.5s ease calc(var(--depth) * 0.11s + 1s) forwards;
+  animation-play-state: paused;
+}
+/* The active layer's gold glow eases in with a long, gentle fade right after it
+   lands - instead of snapping on the instant the fly ends. Landing-driven timing,
+   same idea as the greys, so the whole stack settles as one smooth motion. */
+.board-art.is-armed .board-sheet.is-active {
+  animation: board-sheet-fly 1.2s cubic-bezier(0.16, 0.84, 0.3, 1) 0s both,
+    board-sheet-glow 0.9s ease 1.1s forwards;
+  animation-play-state: paused;
+}
+/* Unpause ALL sheets when flying. The :not(.is-active) / .is-active selectors
+   match the (0,4,0) specificity of the armed rules above so their `paused`
+   doesn't win (that bug left only the active layer flying in). */
+.board-art.is-flying .board-sheet,
+.board-art.is-flying .board-sheet:not(.is-active),
+.board-art.is-flying .board-sheet.is-active {
+  animation-play-state: running;
+}
+/* During the fly, every layer starts at full brightness with no shadow - each
+   flies in clearly distinguishable (not greyed/masked) - then the non-active
+   ones grey via the staggered animation above; the active one stays bright.
+   (Animations override this, so it's the bright base before each grey begins.) */
+.board-art.is-flying .board-sheet,
+.board-art.is-flying .board-sheet.is-active {
+  filter: none;
+}
+/* Lock layer + part selection during the fly so interaction can't fight it. */
+.board-art.is-flying .board-sheet,
+.board-art.is-flying .board-folder-rail {
+  pointer-events: none;
+}
+/* The rail stays hidden through the entrance fly, then fades in once it's done -
+   at its final settled gutter position. It animates OPACITY ONLY: a translate /
+   transform here fights place() (which resets+measures the rail's box to position
+   it in the gutter), which made the rail jump around and overlap the board. By
+   appearing only after the fly, the during-fly→settled reposition never shows. */
+.board-art.is-armed .board-folder-rail {
+  opacity: 0;
+}
+/* …but reveal the rail 0.5s BEFORE the fly fully settles (is-rail-in is set on a
+   timer in BoardArt) so the layer table reads a beat sooner. Same specificity as
+   the is-armed rule above, so this MUST stay after it to win the opacity. */
+.board-art.is-rail-in .board-folder-rail {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .board-art.is-armed .board-sheet,
+  .board-art.is-armed .board-sheet:not(.is-active),
+  .board-art.is-armed .board-sheet.is-active {
+    animation: none;
+  }
+  .board-art.is-armed .board-folder-rail {
+    opacity: 1;
+  }
+}
+.board-sheet-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+/* The board silhouette under each layer - a faint engraved sheet edge. */
+.board-sheet-edge {
+  fill: none;
+  stroke: color-mix(in srgb, var(--color-gold) 28%, transparent);
+  stroke-width: 0.35;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.6;
+}
+
+/* Rail and board sit side by side: the rail takes its own fixed column on the
+   left (so it can never cover the teardown text to its left), the board takes
+   the rest, and align-items centres the rail vertically against the board. */
+.board-folder-body {
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 1vw, 18px);
+}
+.board-stack-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+  /* Overlap the live stack and its flying-out ghost in one cell so the swap
+     lines up pixel-for-pixel. */
+  display: grid;
+}
+.board-stack-wrap > .board-folder-stack {
+  grid-area: 1 / 1;
+}
+.board-folder-stack {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* Variant swap (rewritten). The OUTGOING board is a real React subtree
+   (.board-swap-out), NOT an innerHTML clone - see BoardArt.tsx. The incoming
+   (live) board rides ABOVE it (z 5 > 1) so a swap reads as the NEW board sweeping
+   in from the left and SHOVING the old one off to the right. Both stacks share
+   one grid cell (.board-stack-wrap grid 1/1) and are position:relative, so the
+   z-index settles paint order regardless of DOM source order. Durations come
+   from --swap-dur / --swap-stagger / --swap-exit, set on .board-art from the JS
+   SWAP_TIMING contract (app/lib/board-swap-timing.ts) so CSS + the JS settle
+   backstop read identical numbers. The swap end is detected by COUNTING
+   board-swap-out animationend events (N per-sheet on desktop, 1 whole-board on
+   mobile), never a wall-clock timer. */
+.board-folder-stack.is-swapping {
+  z-index: 5;
+}
+.board-swap-out {
+  z-index: 1;
+  pointer-events: none;
+}
+/* will-change is applied (via .is-swap-ready on .board-art, set at flyDone) BEFORE
+   the first swap so the GPU layer already exists at frame 0 - promoting at swap
+   start drops the first frames. */
+.board-art.is-swap-ready .board-sheet {
+  will-change: translate;
+}
+@media (min-width: 880px) {
+  .board-art.is-warm .board-sheet {
+    will-change: translate;
+  }
+}
+/* PERF - strip the per-layer drop-shadow (a gaussian blur) for the flight on BOTH
+   stacks; animating ~16 blurred layers at once saturates fill-rate and drops
+   frames. Only the cheap brightness/saturate is kept (no brightness pop). The
+   resting shadows return the instant .is-swapping / the outgoing stack drop. */
+.board-folder-stack.is-swapping .board-sheet,
+.board-swap-out .board-sheet {
+  filter: brightness(0.6) saturate(0.72) !important;
+  /* CRITICAL: kill the base `transition: filter 0.45s` - else the browser ANIMATES
+     the drop-shadow blur radius to zero over 0.45s, re-blurring every layer per
+     frame. That, not the translate, is what made the swap lag. Drop it instantly. */
+  transition: none !important;
+}
+.board-folder-stack.is-swapping .board-sheet.is-active,
+.board-swap-out .board-sheet.is-active {
+  filter: saturate(0.95) contrast(1.05) !important;
+  transition: none !important;
+}
+@media (min-width: 1024px) {
+  .board-folder-stack.is-swapping .board-sheet {
+    animation: board-swap-in var(--swap-dur, 0.55s)
+      cubic-bezier(0.16, 0.84, 0.3, 1)
+      calc(
+        var(--swap-in-delay, 0s) + var(--depth) * var(--swap-stagger, 0.1s)
+      )
+      both;
+  }
+  .board-swap-out .board-sheet {
+    animation: board-swap-out var(--swap-exit, 0.65s)
+      cubic-bezier(0.5, 0, 0.85, 0.2) calc(var(--depth) * var(--swap-stagger, 0.1s))
+      both;
+  }
+}
+@media (max-width: 1023px) {
+  .board-stack-wrap > .board-folder-stack.is-swapping {
+    animation: board-swap-in var(--swap-dur, 0.55s)
+      cubic-bezier(0.2, 0.8, 0.2, 1) var(--swap-in-delay, 0s) both;
+  }
+  .board-swap-out {
+    animation: board-swap-out var(--swap-exit, 0.65s)
+      cubic-bezier(0.5, 0, 0.85, 0.2) both;
+  }
+  .board-swap-out .board-sheet {
+    animation: none !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .board-swap-out {
+    display: none;
+  }
+}
+/* Layer rail crossfade - only added (BoardArt, guarded by layer-label signature)
+   when the layer SET actually changes between boards, so identical layers never
+   pulse. Reuses the parts-list dip: old tabs fade out, the set switches while
+   hidden (235ms), new fade in. */
+.board-folder-rail.is-swapping {
+  animation: teardown-pins-swap 0.52s ease both;
+}
+/* Layer / sheet rail - a self-contained vertical selector beside the board or
+   schematic. The schematic viewer reuses this exact selector style. */
+.board-folder-rail,
+.schematic-rail {
+  flex: 0 0 auto;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 10px 9px 11px;
+  /* Container is a notch rounder than its pills (--r-lg) so the nesting reads
+     concentric. */
+  border-radius: var(--r-pod);
+  background: color-mix(in srgb, var(--color-bg) 50%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-gold) 13%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  outline: none;
+}
+/* Each board layer carries a name (F.Cu / In1) plus a function blurb ("Ground
+   plane", "Signal · 5V"), so the rail is a wider column than the schematic's.
+   Size scales with the board across aspect ratios. */
+.board-folder-rail {
+  /* Size to the longest layer label (capped) instead of a fixed column, so
+     the tabs don't trail empty width past "Signal + components". */
+  width: max-content;
+  max-width: clamp(150px, 13vw, 200px);
+  /* Fade in once the fly is done (the is-armed rule holds it at opacity 0 during
+     the entrance). NO transform transition here - place() measures this box to
+     position it, and a transitioned transform makes that read a mid-glide value
+     → the rail jumps/overlaps. Opacity is safe (doesn't affect the measurement). */
+  transition: opacity 0.6s ease;
+}
+/* Schematic sheets are full words (MCU / BLACKBOX / CONNECTORS), so size the
+   rail to its longest label - capped - instead of clipping inside a fixed
+   column. Labels stay on one line; the page column takes whatever's left. */
+.schematic-rail {
+  width: max-content;
+  max-width: clamp(130px, 13vw, 200px);
+}
+.board-folder-rail:focus-visible,
+.schematic-rail:focus-visible {
+  border-color: color-mix(in srgb, var(--color-gold) 45%, transparent);
+}
+.board-folder-rail-head,
+.schematic-rail-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 3px 1px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.board-folder-rail-count,
+.schematic-rail-count {
+  color: var(--color-gold);
+  letter-spacing: 0.06em;
+}
+.board-folder-tabs,
+.schematic-rail-tabs {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+/* A faint spine threading the buttons - like a via through the copper stack. */
+.board-folder-tabs::before,
+.schematic-rail-tabs::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  transform: translateX(-50%);
+  background: color-mix(in srgb, var(--color-gold) 16%, transparent);
+  border-radius: 1px;
+}
+.board-folder-tabs button,
+.schematic-rail-tabs button {
+  position: relative;
+  appearance: none;
+  border: 1px solid color-mix(in srgb, var(--color-gold) 16%, transparent);
+  background: color-mix(in srgb, var(--color-bg) 78%, transparent);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: clamp(10.5px, 0.74vw, 13px);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-align: center;
+  /* Full text colour: the muted grey read as low-contrast
+     (maintainer, 2026-08-12). */
+  color: var(--color-text);
+  padding: 0.48em 0.4em;
+  /* Standardised viewer-pill radius (schematic sheets + PCB layers share it). */
+  border-radius: var(--r-lg);
+  transition: color 0.2s, background 0.2s, border-color 0.2s, transform 0.2s,
+    box-shadow 0.2s;
+}
+.board-folder-tabs button:hover,
+.schematic-rail-tabs button:hover {
+  color: var(--color-text);
+  border-color: color-mix(in srgb, var(--color-gold) 40%, transparent);
+}
+.board-folder-tabs button.is-active,
+.schematic-rail-tabs button.is-active {
+  color: var(--color-on-accent);
+  background: var(--color-gold-fill);
+  border-color: var(--color-gold-fill);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--color-gold-fill) 35%, transparent);
+}
+/* Layer buttons stack a name over a function blurb, left-aligned - so the
+   centred via-spine would cut through the text; drop it on the board rail. */
+.board-folder-tabs::before {
+  display: none;
+}
+.board-folder-tabs button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  border-radius: var(--r-lg);
+  padding: 0.44em 0.72em;
+}
+.board-folder-tab-name {
+  font-size: clamp(10.5px, 0.74vw, 13px);
+  letter-spacing: 0.14em;
+  line-height: 1;
+}
+.board-folder-tab-fn {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  line-height: 1.2;
+  color: var(--color-text-muted);
+}
+.board-folder-tabs button:hover .board-folder-tab-fn {
+  color: var(--color-text-muted);
+}
+.board-folder-tabs button.is-active .board-folder-tab-fn {
+  color: color-mix(in srgb, var(--color-on-accent) 72%, transparent);
+}
+/* The rail sizes to its longest label, so normal sheet names stay on one line.
+   Tighter tracking keeps it compact, and wrapping (rather than nowrap) is the
+   safety net for a very long sheet name (e.g. the OpenRX single sheet) - it
+   stacks onto extra lines inside the capped width instead of leaking out. */
+.schematic-rail-tabs button {
+  letter-spacing: 0.1em;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 1024px) {
+  .board-folder-body,
+  .schematic-body {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .board-folder-rail,
+  .schematic-rail {
+    width: auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    margin-bottom: 0.5rem;
+    padding: 0;
+    border: none;
+    background: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .board-folder-rail-head,
+  .schematic-rail-head {
+    width: 100%;
+    justify-content: center;
+    gap: 0.5em;
+  }
+  .board-folder-tabs,
+  .schematic-rail-tabs {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 6px;
+    padding-bottom: 2px;
+  }
+  .board-folder-tabs::-webkit-scrollbar,
+  .schematic-rail-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .board-folder-tabs::before,
+  .schematic-rail-tabs::before {
+    display: none;
+  }
+  .board-folder-tabs button,
+  .schematic-rail-tabs button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+  .board-folder-tabs button {
+    flex-direction: row;
+    align-items: center;
+    border-radius: var(--r-pill);
+    padding: 0.48em 0.7em;
+  }
+  .board-folder-tab-fn {
+    display: none;
+  }
+}
+
+/* === Schematic viewer - paged sheets of the KiCad schematic, the analogue of
+   the board folder. In the wide-media chapter it fills the dominant column and
+   bleeds a little into the right gutter for maximum legible width. === */
+.schematic-viewer {
+  width: 100%;
+  margin-left: 0;
+  /* The lazy-load gate IntersectionObserves this box with a 0.01 threshold,
+     which NEVER fires on a zero-area target - and before the manifest loads
+     the viewer is empty. The floor gives the observer something to hit. */
+  min-height: 160px;
+}
+/* Rail + sheet sit side by side, mirroring the board folder: the rail takes a
+   fixed column on the left, the sheet fills the rest, centred vertically. */
+.schematic-body {
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 1vw, 18px);
+}
+/* Fixed stage: at most one screen tall, so the entire sheet is visible without
+ * scrolling, and the height never changes as you page through sheets of
+ * differing proportions. Every sheet is contained + centred inside this box. */
+.schematic-page {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  /* Short enough that pins + board + schematic read as one screenful
+     (72vh/700px pushed the schematic below the fold; maintainer, 2026-08-12). */
+  height: min(58vh, 560px);
+}
+@media (min-width: 1025px) {
+  .schematic-rail {
+    order: 2;
+  }
+}
+.schematic-sheet {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  /* B&W export → white blueprint lines on the dark page. Contrast lifts the
+   * thin anti-aliased strokes so the sheet reads at preview scale. */
+  filter: invert(1) contrast(1.45) brightness(1.05);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+/* Every sheet is rendered now (so a mobile drag can slide the neighbour in), so
+   gate visibility to the active one - otherwise the whole sheaf would stack
+   opaque. Desktop pages by crossfading active↔active. */
+.schematic-sheet.is-active.is-loaded {
+  opacity: 1;
+}
+/* Component spotlight: gold boxes over the hovered teardown part. The svg
+   shares the sheet's viewBox and letterboxes exactly like the imgs
+   (object-fit: contain ≡ xMidYMid meet), so boxes land on the symbols at
+   any size. Boxes come from the invisible <text> metadata in the export. */
+.schematic-hl {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.schematic-hl rect {
+  fill: color-mix(in srgb, var(--color-gold) 20%, transparent);
+  stroke: var(--color-gold);
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+  animation: schematic-hl-in 0.16s ease both;
+}
+/* Scroll-back reveal: when a SKU was switched while the schematic was off-screen
+   (the wipe was skipped), fade the new active sheet in once it comes into view -
+   the schematic's "entrance again", cheap (opacity only). */
+.schematic-page.is-revealing .schematic-sheet.is-active.is-loaded {
+  animation: schematic-reveal 0.5s ease both;
+}
+.schematic-page.is-wiping {
+  animation: schematic-wipe 0.62s cubic-bezier(0.7, 0, 0.3, 1) both;
+}
+/* The OLD sheet is clipped to the COMPLEMENT - everything RIGHT of the line - so
+   the new (left) and old (right) each own one side of the wipe edge and never
+   overlap. (Leaving it unclipped let the old image show through the new one's
+   anti-aliased edge / where the two near-identical schematics differed → the
+   "double vision". Now there is exactly one schematic in any given pixel.) As
+   --wipe→1 this region shrinks to nothing and the old sheet is fully wiped away. */
+.schematic-sheet--leaving {
+  z-index: 1;
+  opacity: 1;
+  clip-path: polygon(
+    calc(var(--wipe) * 128%) 0,
+    100% 0,
+    100% 100%,
+    calc(var(--wipe) * 128% - 28%) 100%
+  );
+}
+/* Revealed region = everything LEFT of the diagonal edge. The edge runs from
+   (--wipe*128%, 0) at the top to (--wipe*128% - 28%, 100%) at the bottom - a
+   constant 28%-of-width lean that sweeps from fully-hidden (--wipe 0) to
+   fully-shown (--wipe 1). No own animation; it reads the inherited --wipe. */
+.schematic-sheet--entering {
+  z-index: 2;
+  opacity: 1; /* sibling tiers are pre-warmed → reveal by clip, not by fade */
+  transition: none;
+  animation: none;
+  clip-path: polygon(
+    0 0,
+    calc(var(--wipe) * 128%) 0,
+    calc(var(--wipe) * 128% - 28%) 100%,
+    0 100%
+  );
+}
+/* The line is that SAME diagonal edge, drawn as a thin band hugging it (±0.4%),
+   in the SAME box → pixel-locked to the entering sheet's reveal edge. The
+   drop-shadow runs AFTER the clip, so the glow haloes the band. */
+.schematic-swap-line {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: var(--color-gold-fill);
+  filter: drop-shadow(
+    0 0 10px color-mix(in srgb, var(--color-gold) 75%, transparent)
+  );
+  pointer-events: none;
+  clip-path: polygon(
+    calc(var(--wipe) * 128% - 0.4%) 0,
+    calc(var(--wipe) * 128% + 0.4%) 0,
+    calc(var(--wipe) * 128% - 28% + 0.4%) 100%,
+    calc(var(--wipe) * 128% - 28% - 0.4%) 100%
+  );
+}
+/* Mobile sheet deck - the swipe-first replacement for the sheet-tab rail (which
+   is a mouse-era button strip). Hidden on desktop, where the rail is shown;
+   shown below the page on mobile. Reuses the board explorer's tick + meta
+   chrome (.board-deck-*) so schematic and board page "the same way". */
+.schematic-deck {
+  display: none;
+}
+@media (max-width: 1023px) {
+  .schematic-deck {
+    display: block;
+    margin-top: 0.6rem;
+  }
+  .schematic-rail {
+    display: none;
+  }
+}
+.schematic-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+}
+@media (max-width: 879px) {
+  .schematic-viewer {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+.board-art-inspect {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+  text-decoration: none;
+}
+/* Inspect link in the teardown's left column - sits in the gap under the pins. */
+.teardown-inspect {
+  margin-top: 1.4rem;
+}
+.board-art-inspect:hover {
+  color: var(--color-gold);
+}
+.board-art-fallback {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-dim);
+}
+@media (max-width: 879px) {
+  .board-art {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+/* No extra height - the chapter sizes to its text. The frame is an overlay
+   that flows OVER the neighbouring sections via a big over-bleeding layer. */
+.chapter[data-backdrop] {
+  position: relative;
+}
+/* Over-bleeds far above (into the section above) and below (into chapter 2)
+   and into the side margins, so the exploded outlines spill over the rest of
+   the page. Purely decorative. */
+.chapter-backdrop {
+  position: absolute;
+  top: -6vh; /* barely above the section - keep clear of the hero / buy button */
+  bottom: -70vh; /* flow down into chapter 2. NB: the model paints at this
+                    layer's vertical centre, so don't grow this much further or
+                    the assembled frame drops out of the chapter-1 view. */
+  left: -10vw;
+  right: -4vw;
+  z-index: 0;
+  pointer-events: none;
+}
+.chapter[data-backdrop] .chapter-body-col {
+  position: relative;
+  z-index: 1; /* text/cards sit on top of the outlines */
+}
+.frame-viewer {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 1.1s cubic-bezier(0.2, 0.7, 0.2, 1);
+  pointer-events: none;
+}
+.frame-viewer[data-loaded='true'] {
+  opacity: 1;
+}
+.frame-viewer canvas {
+  display: block;
+}
+@media (max-width: 879px) {
+  .chapter-backdrop {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .chapter:not(.is-visible) {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  .chapter {
+    transition:
+      opacity 0.5s cubic-bezier(0.2, 0.7, 0.2, 1),
+      transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+}
+
+.chapter-body-col {
+  display: block;
+  max-width: 980px;
+}
+
+.chapter-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--fs-2xl);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  color: var(--color-text);
+  /* 15px under a 41px head read as one block with the body. */
+  margin: 0 0 var(--sp-6);
+  /* No measure cap: chapter heads are one-line statements and should stay on
+     one line wherever the column allows. The old 24ch (~630px) broke a
+     39-character head across two lines inside a 975px column, which is why
+     the firmware and schematic chapters had each grown their own
+     max-width: none override. The column is the constraint now, so narrow
+     viewports still wrap naturally. */
+  max-width: none;
+}
+
+/* Emphasis segments keep the title colour (2026-08-12, maintainer: gold highlights
+   in chapter heads read as cheesy); the markup keeps its <em> semantics. */
+.chapter-title em {
+  font-style: normal;
+  color: inherit;
+  font-weight: 600;
+}
+
+.chapter-body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: 1.6;
+  color: var(--color-text-muted);
+  max-width: 64ch;
+  margin: 0 0 var(--sp-4);
+}
+
+/* Two side "bubbles" (Top / Bottom), each a mini-table of component rows. The
+   gradient + inset top-light give the card some depth instead of a flat slab.
+   width: fit-content shrink-wraps the PAIR to its widest row (the I/O chip
+   row opts out of that measure below), and both bubbles stretch to the same
+   track, so they stay equal width and aligned with no dead width. */
+.teardown-sides {
+  display: grid;
+  gap: 0.85rem;
+  width: fit-content;
+  max-width: 30rem;
+}
+/* Locked while the board fly-in animates - a hover mustn't fight the animation. */
+.teardown-sides.is-locked {
+  pointer-events: none;
+}
+/* A tier swap switches the part list to the new pins AT swap start (handleSwapStart
+   in products.$handle.tsx sets displayedPins in the same commit that adds this
+   class), so the dip just hides the old content instantly and fades the new in -
+   no mid-animation content switch to time. The class is removed by the board's
+   onSwapSettle (~1.3s later), long after this 0.45s fade has finished, so it can
+   never snap back mid-fade. Pointer-events off so a hover can't catch it mid-change. */
+.teardown-sides.is-swapping {
+  pointer-events: none;
+  /* Self-contained crossfade (0.52s): fade the OLD rows out, hold hidden through
+     the 44–56% trough while products.$handle.tsx swaps displayedPins at 235ms,
+     then fade the NEW rows in - so the content change is never visible. */
+  animation: teardown-pins-swap 0.52s ease both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .teardown-sides.is-swapping {
+    animation: none;
+  }
+}
+.teardown-side {
+  /* zero the global `section { padding: 1rem 0 }` so rows fill the bubble edge
+     to edge (no dead space above the first row / below the last). */
+  padding: 0;
+  background: linear-gradient(
+    180deg,
+    var(--color-bg-elevated),
+    var(--color-bg-card)
+  );
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+/* Rows inside a bubble form a table: each row gets ONE divider line, no per-row
+   card - so there's no boundary between components as you scroll/hover down. */
+.teardown-pins {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.teardown-pins li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  /* extra left pad leaves room for the hover accent bar without shifting text */
+  padding: 0.55rem 0.7rem 0.55rem 0.95rem;
+  /* kill the global `li { margin-bottom: 0.5rem }` (reset.css) - that gap between
+     rows is a hover dead zone: the cursor crossing it hits no row, so the
+     spotlight drops out and flickers. Rows are contiguous, divided only by the
+     1px border. */
+  margin: 0;
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--color-border) 60%, transparent);
+  position: relative;
+}
+.teardown-pins li:last-child {
+  border-bottom: none;
+}
+
+.teardown-pin-part {
+  color: var(--color-text);
+  font-size: 0.9rem;
+  transition: color 0.12s;
+}
+
+/* count/qty badge (e.g. ×24) as a small mono pill */
+.teardown-pin-cost {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  padding: 0.1rem 0.45rem;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--color-gold) 14%, transparent);
+  color: var(--color-gold);
+}
+
+/* A pin that maps to footprints on the board: interactive. Hover fills the whole
+   row (instant - no fade that looks half-painted while the cursor moves) and a
+   gold accent bar wipes in on the left for a bit of life. */
+.teardown-pin-hoverable {
+  cursor: pointer;
+}
+.teardown-pin-hoverable::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-gold-fill);
+  transform: scaleY(0);
+  transform-origin: center;
+  transition: transform 0.14s ease;
+}
+.teardown-pin-hoverable:hover,
+.teardown-pin-hoverable:focus-visible {
+  background: color-mix(in srgb, var(--color-gold) 13%, transparent);
+  /* extend the tint 1px upward to fill where the divider above used to sit (the
+     :has rule below turns it transparent), so the whole row reads as one gold
+     block with no uncovered sliver at the top. */
+  box-shadow: 0 -1px 0 0 color-mix(in srgb, var(--color-gold) 13%, transparent);
+  outline: none;
+}
+/* Kill the divider directly ABOVE the hovered row - it belongs to the previous
+   row, so the hovered row's fill can't reach it; left visible it reads as a dark
+   sliver at the row's top (the "dead zone"). Gone, the box-shadow fills clean
+   bubble-bg with the same gold tint → seamless, and the spotlight slides
+   row-to-row with no flicker. */
+.teardown-pins li:has(+ .teardown-pin-hoverable:hover) {
+  border-bottom-color: transparent;
+}
+
+/* I/O chip row: one row holding a horizontal set of hoverable pad-group chips.
+   width: 0 + min-width: 100% keeps this row out of the bubble's intrinsic
+   width (a full chip set unwrapped is ~415px and used to force the whole
+   bubble that wide); the text rows set the width and the chips wrap to it. */
+.teardown-pins li.teardown-io-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  width: 0;
+  min-width: 100%;
+}
+.teardown-io-tag {
+  flex: none;
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.teardown-io-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.teardown-io-chip {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.teardown-io-chip:hover,
+.teardown-io-chip:focus-visible {
+  background: color-mix(in srgb, var(--color-gold) 16%, transparent);
+  border-color: color-mix(in srgb, var(--color-gold) 55%, transparent);
+  color: var(--color-gold);
+  outline: none;
+}
+.teardown-pin-hoverable:hover .teardown-pin-part,
+.teardown-pin-hoverable:focus-visible .teardown-pin-part {
+  color: var(--color-gold);
+}
+.teardown-pin-hoverable:hover::before,
+.teardown-pin-hoverable:focus-visible::before {
+  transform: scaleY(1);
+}
+
+/* === Component highlights === Drawn ANCHORED inside the active sheet's <svg>
+   (BoardArt appends a `<g class="board-hilite">`), so they scroll with the board
+   and sit exactly on the part. Only present on the Front/Back faces - never on a
+   copper layer. The whole group fades in on hover. */
+.board-hilite {
+  pointer-events: none;
+}
+/* A face's spotlight is built once and kept; when nothing is highlighted (or
+   another face is showing) it's hidden, not destroyed - so re-lighting it is
+   instant and never re-decodes the board image (the flicker). */
+.board-hilite.is-hidden {
+  display: none;
+}
+/* Fade in ONLY on first appearance (cursor entering the list from nothing). When
+   moving row-to-row the group is rebuilt every hover; replaying the fade then made
+   the whole spotlight flash out/in. `is-fresh` (added by BoardArt only when there
+   was no prior highlight) keeps the dim constant and just moves the bright spot. */
+.board-hilite.is-fresh {
+  animation: board-hilite-in 0.25s ease both;
+}
+/* Dim veil over the board OUTSIDE the spotlight window (masked + clipped to the
+   board outline) so everything but the selected part(s) recedes. Over the board
+   face only (not the page), so it reads the same in both themes. */
+.board-hilite-dim {
+  fill: #05070a;
+  opacity: 0.62;
+  pointer-events: none;
+}
+/* The face re-shown at the highlighted box, on top of the dim - nudged brighter
+   so the selected region pops out of the dimmed board. */
+.board-hilite-face {
+  filter: brightness(1.12) saturate(1.08);
+  pointer-events: none;
+}
+/* The crisp gold box is the primary "this is selected" marker, drawn on top of
+   the dim. Non-scaling stroke keeps it ~2px at any board zoom. */
+.board-highlight-shape {
+  fill: color-mix(in srgb, var(--color-gold) 10%, transparent);
+  stroke: var(--color-gold);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+/* Open source cards */
+.open-source-cards {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  /* Every card is a 16:9 bubble (set on .open-source-card / .latest-commit-card),
+     so equal-width columns give a uniform-height row. */
+  align-items: stretch;
+}
+
+/* This chapter stacks a two-line title, a four-card row and the full-width
+   schematic. At the old 1rem the title and the cards read as one dense block;
+   the row needs to land clearly after the head, not under it. */
+.open-source-cards {
+  margin-top: var(--sp-8);
+}
+
+/* One quiet mono link under the card row, pointing at /open-source. Same
+   voice as .firmware-support-links: muted at rest, gold on hover. The repo
+   lead line (the next chapter's ::before) crosses this row on its way from
+   the GitHub card down to the scope outline: the label sits above the line
+   with its own background, so the line reads as passing behind a station
+   on the route rather than striking through the words. */
+.open-source-story-link {
+  margin: var(--sp-3) 0 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  position: relative;
+  z-index: 1;
+}
+
+.open-source-story-link a {
+  display: inline-block;
+  padding: 0.3rem 0.6rem;
+  margin-left: -0.6rem;
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.open-source-story-link a:hover {
+  color: var(--color-gold);
+}
+
+
+/* Subtle bubble - same quiet card as the latest-commit cards beside it so the
+   row reads as one consistent set (a bare top-hairline left the text floating).
+   Kept light: card bg + hairline border, gold on hover. */
+.open-source-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* 16:9 bubble - uniform across the resource row. */
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  padding: 1.15rem 1.35rem;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.open-source-card:hover {
+  border-color: color-mix(in srgb, var(--color-gold) 50%, var(--color-border));
+}
+
+.open-source-card-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin: 0 0 0.25rem;
+}
+
+.open-source-card-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--color-text);
+  margin: 0 0 0.5rem;
+}
+
+.open-source-card-sub {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.6;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+/* Brand-logo watermark - a big, faint full-card mark behind the text on the
+   GitHub (Study) and CERN (License) cards. Rendered via CSS mask so it follows
+   the theme (painted with the text colour at low opacity) rather than baking a
+   fixed fill into the SVG. */
+.open-source-card--github,
+.open-source-card--cern,
+.open-source-card--kicad,
+.open-source-card--onshape {
+  position: relative;
+  overflow: hidden;
+}
+
+.open-source-card--github > p,
+.open-source-card--cern > p,
+.open-source-card--kicad > p,
+.open-source-card--onshape > p {
+  position: relative;
+  z-index: 1;
+}
+
+.open-source-card--github::after,
+.open-source-card--cern::after,
+.open-source-card--kicad::after,
+.open-source-card--onshape::after {
+  content: '';
+  position: absolute;
+  right: -8%;
+  bottom: -14%;
+  width: 68%;
+  height: 78%;
+  background-color: var(--color-text);
+  opacity: 0.06;
+  pointer-events: none;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: right bottom;
+  mask-position: right bottom;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+.open-source-card--github::after {
+  -webkit-mask-image: url(/logos/github.svg);
+  mask-image: url(/logos/github.svg);
+}
+
+.open-source-card--cern::after {
+  -webkit-mask-image: url(/logos/cern.svg);
+  mask-image: url(/logos/cern.svg);
+}
+
+/* Iterate card: the design tool's wordmark. Wordmarks are wide, so the
+   mask box takes more of the card width than the square marks do. */
+.open-source-card--kicad::after,
+.open-source-card--onshape::after {
+  width: 82%;
+}
+.open-source-card--kicad::after {
+  -webkit-mask-image: url(/logos/kicad.svg);
+  mask-image: url(/logos/kicad.svg);
+}
+.open-source-card--onshape::after {
+  -webkit-mask-image: url(/logos/onshape.svg);
+  mask-image: url(/logos/onshape.svg);
+}
+
+/* "Wanna help?" card: the row's 4th bubble, an internal hand-off to
+   /contributing. A dimmed board render sits behind the text; the gradient
+   wash keeps the label side legible in both themes (bg-card is a token).
+   SWAP POINT: the intended background PNG never arrived. When it lands,
+   drop it in /public and change the url() in ::before below; the gradient
+   overlay in ::after stays as is. */
+.open-source-card--help {
+  position: relative;
+  overflow: hidden;
+}
+
+.open-source-card--help > p {
+  position: relative;
+  z-index: 1;
+}
+
+.open-source-card--help::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url(/boards/openfc-lite/front-w800.webp);
+  background-repeat: no-repeat;
+  background-position: right -22% center;
+  background-size: auto 150%;
+  opacity: 0.18;
+  pointer-events: none;
+}
+
+.open-source-card--help::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-card) 10%,
+    color-mix(in srgb, var(--color-bg-card) 55%, transparent) 62%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+/* OSHWA-certified card - the license card upgraded when a product carries an
+   OSHWA UID. Gold-accented so the certification reads as the headline credential
+   (the CERN-OHL-S name moves to the sub-line). All tokens, so it themes for free. */
+.open-source-card--oshwa {
+  position: relative;
+  overflow: hidden;
+  border-color: var(--color-gold-soft);
+  /* The mark IS the card - it fills the whole bubble (positioned absolute below),
+     so drop the card's own padding and centring. */
+  padding: 0;
+}
+
+/* The OSHWA certification mark fills the entire card - the credential as the
+   hero, not a small inset graphic. Absolutely positioned so it ignores the card
+   padding and spans edge to edge (a little breathing room top/sides, more at the
+   bottom for the caption). The tightened viewBox means little dead space, so the
+   OSHW box + UID render large. `color` drives the SVG currentColor (box + UID);
+   the "W" keeps its own red. */
+.open-source-card-oshwa-mark {
+  display: block;
+  /* Flex-fill the card height (the mark contains within, so it never clips the
+     UID - unlike width-filling, which pushed the UID off the bottom edge). The
+     top margin clears the absolute caption; the tightened viewBox means this
+     height renders a large OSHW box + UID. */
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  margin: 1.15rem 0 0.2rem;
+  color: var(--color-text);
+}
+
+/* CERN-OHL-S caption along the TOP - the mark's UID owns the bottom, so the
+   caption can't ride on top of it. */
+.open-source-card-sub--oshwa {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0.5rem;
+  margin: 0;
+  text-align: center;
+  color: var(--color-gold);
+}
+
+/* "Watch" bubble - the video card that replaces the issues card on products
+   with a build film. A 16:9 bubble (aspect-ratio inherited from
+   .open-source-card) showing just the YouTube thumbnail with a centred gold
+   play glyph - no caption. Clicking opens the lightbox player. */
+.watch-card {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  background-color: var(--color-bg-elevated);
+  cursor: pointer;
+  font: inherit;
+}
+
+/* The thumbnail fills the 16:9 card (object-fit cover - a 16:9 frame, so no
+   real crop on a maxres poster). */
+.watch-card-thumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.watch-card:hover .watch-card-thumb {
+  transform: scale(1.04);
+}
+
+/* Soft centred scrim so the gold play glyph pops without hiding the thumbnail. */
+.watch-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0.42) 0%,
+    rgba(0, 0, 0, 0.16) 55%,
+    rgba(0, 0, 0, 0.26) 100%
+  );
+}
+
+/* Content layer: the YouTube play glyph, centred over the thumbnail. */
+.watch-card-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.watch-card-yt {
+  width: 48px;
+  height: auto;
+  color: var(--color-gold);
+  transition: transform 0.2s ease;
+}
+
+.watch-card:hover .watch-card-yt {
+  transform: scale(1.08);
+}
+
+/* The play triangle reads against the gold mark via the dark accent ink. */
+.watch-card-yt-tri {
+  fill: var(--color-on-accent);
+}
+
+
+.watch-card:hover {
+  border-color: color-mix(in srgb, var(--color-gold) 50%, var(--color-border));
+}
+/* Its own card (maintainer, 2026-08-12), in the in-the-box table idiom: label as
+   the header, hairline-divided rows, the story links as buttons along the
+   bottom. Shrink-wrapped like the other chapter cards. */
+.provenance-card {
+  margin-top: var(--sp-5);
+  width: fit-content;
+  min-width: min(24rem, 100%);
+  padding: 1rem 1.2rem 1.2rem;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-lg);
+}
+
+.provenance-links {
+  margin: 1rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Contributor grid + the join button on one line: the grid takes the room,
+   the button holds the right edge. Wraps below the grid when the row runs
+   out of width. */
+.contributors-row {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem 2.5rem;
+  flex-wrap: wrap;
+}
+.contributors-row > *:first-child {
+  flex: 1 1 24rem;
+  min-width: 0;
+}
+.contributors-cta-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  border: 1px solid color-mix(in srgb, var(--color-gold) 55%, transparent);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+.contributors-cta-btn:hover {
+  background: var(--color-gold-fill);
+  border-color: var(--color-gold-fill);
+  color: var(--color-on-accent);
+}
+
+/* Same button treatment as the contributors CTA, one size down, so the two
+   story links read as actions instead of body-text asides. */
+.provenance-links a {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.55rem 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--color-gold) 55%, transparent);
+  border-radius: 999px;
+  font-weight: 600;
+  color: var(--color-gold);
+  text-decoration: none;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+.provenance-links a:hover {
+  background: var(--color-gold-fill);
+  border-color: var(--color-gold-fill);
+  color: var(--color-on-accent);
+}
+
+.provenance-label {
+  display: inline-block;
+  margin: 0 0 var(--sp-3);
+  padding-bottom: var(--sp-2);
+  border-bottom: 2px solid var(--color-gold);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+}
+
+.provenance-rows {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0;
+}
+
+.provenance-rows li {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  column-gap: 0.9rem;
+  align-items: baseline;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.provenance-rows li:last-child {
+  border-bottom: none;
+}
+
+.provenance-row-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+
+.provenance-row-value {
+  color: var(--color-text);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+/* Contributor grid: gold-ruled tiles in the downloads-card idiom.
+   Avatars stay square with a hairline border - technical file, not
+   social feed. The "+ you" tile is the standing invitation. */
+.contributor-grid {
+  list-style: none;
+  margin: var(--sp-4) 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+.contributor-tile {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 0.75rem;
+  align-items: center;
+  padding: var(--sp-3) 0 0;
+  /* Per-contributor accent, hash-colored like their ticks on the commit
+     strip below; gold when no accent is set (skeleton, the "+ you" tile). */
+  border-top: 2px solid
+    color-mix(in srgb, var(--contrib-accent, var(--color-gold)) 55%, var(--color-border));
+  color: var(--color-text);
+  text-decoration: none;
+  transition: border-color 0.2s ease;
+}
+.contributor-tile:hover {
+  border-top-color: var(--contrib-accent, var(--color-gold));
+}
+.contributor-avatar {
+  grid-row: 1 / span 2;
+  width: 60px;
+  height: 60px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  object-fit: cover;
+}
+.contributor-avatar--you {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 1.6rem;
+  color: var(--color-gold);
+  border-style: dashed;
+}
+.contributor-login {
+  align-self: end;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  overflow-wrap: anywhere;
+}
+.contributor-count {
+  align-self: start;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--color-text-dim);
+}
+/* The maintainer's tile. Commit counts used to fill this slot and read as a
+   ranking, which credited whoever churned the most files; the one fact worth
+   stating is who holds the board. Gold rule at full strength, gold label. */
+.contributor-tile--lead {
+  border-top-color: var(--color-gold);
+}
+.contributor-role {
+  align-self: start;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+}
+.contributor-tile.is-skeleton {
+  pointer-events: none;
+}
+.contributor-tile.is-skeleton .contributor-avatar {
+  background: var(--color-border);
+}
+
+/* Bundle components - richer cards than the generic open-source cards
+   because this is the "what's in the box" moment on a bundle PDP. */
+.bundle-components {
+  display: grid;
+  gap: var(--sp-5);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.bundle-component-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: var(--sp-3) 0 0;
+  border-top: 2px solid color-mix(in srgb, var(--color-gold) 45%, var(--color-border));
+  color: var(--color-text);
+  transition: border-color 0.2s ease;
+}
+
+.bundle-component-card:hover {
+  border-top-color: var(--color-gold);
+  color: var(--color-text);
+  transform: translateY(-1px);
+}
+
+.bundle-component-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
+  margin: 0;
+  color: var(--color-text);
+}
+
+.bundle-component-blurb {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.bundle-component-firmware {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin: 0.25rem 0 0;
+}
+
+.bundle-component-firmware span {
+  color: var(--color-gold);
+}
+
+.bundle-component-more {
+  margin-top: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--color-gold);
+}
+/* A single bubble around the whole parts list - a "table card" that sets the
+   contents apart from the surrounding copy. Rows are hairline-divided inside. */
+.in-the-box {
+  list-style: none;
+  padding: 0.35rem 1.1rem;
+  margin: 0 0 1.5rem;
+  display: grid;
+  gap: 0;
+  /* Hug the longest row instead of spanning the ~980px body column: the card
+     used to carry ~470px of empty width past the note text. fit-content still
+     caps at the column, so long notes wrap as before on narrow screens. */
+  width: fit-content;
+  min-width: min(24rem, 100%);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-lg);
+}
+
+/* De-boxed (Img 6) - a plain parts list, hairline-divided rows instead of a
+   bubble around every line. */
+.in-the-box li {
+  display: grid;
+  grid-template-columns: 3rem 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 0.9rem;
+  row-gap: 0.15rem;
+  padding: 0.75rem 0.1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.in-the-box li:last-child {
+  border-bottom: none;
+}
+
+.in-the-box-qty {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  align-self: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--color-gold);
+  text-transform: uppercase;
+}
+
+.in-the-box-item {
+  grid-column: 2;
+  grid-row: 1;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.in-the-box-note {
+  grid-column: 2;
+  grid-row: 2;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--color-text-muted);
+}
+
+
+/* The signal chain, in hero-scroll order: this product's stage is lit gold,
+   stages we sell link their boards. One glance places the part; the homepage
+   hero tells the same story as a scroll. */
+.what-chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0;
+  margin: 0 0 var(--sp-5);
+}
+
+.what-chain-step {
+  display: inline-flex;
+  align-items: center;
+}
+
+.what-chain-arrow {
+  margin: 0 0.5rem;
+  color: var(--color-text-dim);
+  font-size: 12px;
+}
+
+.what-chain-chip {
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-pill);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+a.what-chain-chip:hover {
+  color: var(--color-gold);
+  border-color: color-mix(in srgb, var(--color-gold) 55%, transparent);
+}
+
+.what-chain-chip.is-active {
+  background: var(--color-gold-fill);
+  border-color: var(--color-gold-fill);
+  color: var(--color-on-accent);
+  font-weight: 600;
+}
+
+
+.what-home-link {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--color-gold);
+}
+
+.what-home-link:hover {
+  color: var(--color-accent);
+}
+
+/* Spec table */
+.spec-table {
+  display: grid;
+  column-gap: 2.5rem;
+  row-gap: 0;
+  grid-template-columns: 1fr;
+  border-top: 1px solid var(--color-border);
+  margin: 0;
+}
+
+@media (min-width: 720px) {
+  .spec-table {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.spec-table > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.spec-table dt {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.spec-table dd {
+  color: var(--color-text);
+  font-size: 0.9rem;
+  margin: 0;
+  text-align: right;
+}
+
+/* Firmware credit - the project the board runs, with direct-donation links.
    Replaced the price-split block when the per-board fee was cancelled. */
 .firmware-support {
   border: 1px solid var(--color-border);
@@ -7376,17 +7673,342 @@ html.light .firmware-logo--tile {
 }
 
 .firmware-support-links a:hover {
-  color: var(--color-gold-text);
+  color: var(--color-gold);
 }
 
 .firmware-support-links a.firmware-support-donate {
-  color: var(--color-gold-text);
+  color: var(--color-gold);
 }
 
 .firmware-support-nodonate {
   color: color-mix(in srgb, var(--color-text-muted) 75%, transparent);
   text-transform: none;
   letter-spacing: 0.04em;
+}
+
+/* Buy-area aggregate line: stars + average + count, links to #reviews. */
+.product-buy-reviews {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  text-decoration: none;
+}
+
+.product-buy-reviews-count {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--fs-xs);
+  letter-spacing: 0.04em;
+  color: var(--color-text-dim);
+  font-variant-numeric: tabular-nums;
+  transition: color 0.2s ease;
+}
+
+.product-buy-reviews:hover .product-buy-reviews-count {
+  color: var(--color-text);
+}
+
+.review-stars {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.12em;
+  color: var(--color-gold);
+  line-height: 1;
+}
+
+.review-count-line {
+  margin: 1rem 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.04em;
+  color: var(--color-text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Heavy-asset loading skeletons (board art + schematic viewer) ────────────
+   Shown while a multi-MB SVG downloads + parses, so the slot reads as
+   "loading" rather than a blank/black box. Removed once the asset reveals. */
+.board-art-skeleton {
+  position: absolute;
+  inset: 0;
+}
+.board-art-skeleton,
+.schematic-skeleton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  pointer-events: none;
+}
+.schematic-skeleton {
+  min-height: clamp(260px, 30vw, 420px);
+}
+/* Ghost of the incoming board render behind the spinner. */
+.board-art-skeleton-preview {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: min(52%, 460px);
+  max-height: 70%;
+  object-fit: contain;
+  opacity: 0.18;
+  filter: saturate(0.5);
+}
+
+.board-art-skeleton-spinner {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-gold);
+  animation: board-art-spin 0.8s linear infinite;
+}
+.board-art-skeleton-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  animation: latest-commit-pulse 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .board-art-skeleton-spinner {
+    animation-duration: 2.4s;
+  }
+}
+
+@media (max-width: 1023px) {
+  .board-art-inspect,
+  .board-folder-tabs button,
+  .schematic-rail-tabs button {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .product-hero-eyebrow,
+  .teardown-pin-cost,
+  .open-source-card-label,
+  .open-source-card-sub,
+  .board-art-inspect,
+  .board-art-skeleton-label,
+  .provenance-label,
+  .provenance-row-label,
+  .bundle-component-firmware {
+    font-size: 12px;
+  }
+  .chapter-media:has(.board-art) {
+    display: block;
+    margin: 0 0 var(--sp-4);
+  }
+  .board-art .board-folder-rail {
+    display: none;
+  }
+  .board-folder-stack {
+    perspective: none;
+    transform-style: flat;
+    margin-top: 0;
+    position: relative;
+    /* Clip the off-screen layers so the peel slides cleanly in/out. */
+    overflow: hidden;
+    /* pan-y: vertical drags scroll the page like anywhere else. The swipe hook
+       only claims a gesture once it reads as horizontal (and it's biased toward
+       horizontal, so a near-sideways drag isn't mistaken for a scroll), and it
+       preventDefaults that horizontal move so the page never slides out from
+       under a layer peel. */
+    touch-action: pan-y;
+  }
+  .board-art .board-sheet {
+    animation: none !important;
+    filter: none;
+    transition: transform 0.42s cubic-bezier(0.22, 0.8, 0.3, 1);
+    transform: translateX(calc((var(--rel, 1) + var(--drag, 0)) * 100%));
+    opacity: 1;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .board-art .board-sheet.is-active {
+    z-index: 2;
+    pointer-events: auto;
+  }
+  .board-art .board-folder-stack.is-dragging .board-sheet {
+    transition: none;
+  }
+  .board-folder-rail {
+    display: none;
+  }
+  .board-deck-progress {
+    margin: 0.7rem 0 0;
+  }
+  .board-deck-meta {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.2rem 0.55rem;
+    margin: 0.5rem 0 0;
+    font-family: var(--font-mono);
+  }
+  .board-deck-count {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--color-gold);
+    letter-spacing: 0.04em;
+  }
+  .board-deck-name {
+    font-size: 0.82rem;
+    color: var(--color-text);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .board-deck-hint {
+    margin-left: auto;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    /* muted (not dim) so the gesture cue stays legible on bright light-mode
+       displays; it's the primary "how to explore" affordance now. */
+    color: var(--color-text-muted);
+  }
+  .board-part-tour {
+    margin-top: 0.75rem;
+    padding-top: 0.7rem;
+    border-top: 1px solid var(--color-border);
+  }
+  .board-part-tour-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.55rem;
+    margin: 0 0 0.5rem;
+    font-family: var(--font-mono);
+  }
+  .board-part-chips {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+    /* horizontal scroll of the chip row only - never hijack vertical page scroll */
+    touch-action: pan-x;
+  }
+  .board-part-chips + .board-part-chips {
+    margin-top: 6px;
+  }
+  .board-part-chips-side {
+    position: sticky;
+    left: 0;
+    flex: 0 0 auto;
+    align-self: stretch;
+    display: inline-flex;
+    align-items: center;
+    padding-right: 8px;
+    background: var(--color-bg);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-text-dim);
+  }
+  .board-part-chips::-webkit-scrollbar {
+    display: none;
+  }
+  .board-part-chip {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    min-height: 40px;
+    padding: 0.45em 0.9em;
+    white-space: nowrap;
+    border-radius: var(--r-pill);
+    border: 1px solid var(--color-border-strong);
+    background: var(--color-bg-card);
+    color: var(--color-text-muted);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    transition: border-color 0.18s ease, color 0.18s ease, background 0.18s ease;
+  }
+  .board-part-chip.is-active {
+    border-color: var(--color-gold);
+    background: color-mix(in srgb, var(--color-gold) 16%, transparent);
+    color: var(--color-text);
+  }
+  .board-part-chip-qty {
+    font-size: 0.78em;
+    color: var(--color-text-dim);
+  }
+  .board-art.is-armed .board-folder-rail,
+  .board-art.is-flying .board-folder-rail {
+    opacity: 1;
+  }
+  .chapter:has(.board-art) .chapter-media {
+    margin-top: 0;
+  }
+  .chapter-media-frame--live:has(.board-art) {
+    display: block;
+    aspect-ratio: auto;
+    background: none;
+    border: none;
+    overflow: visible;
+    color: inherit;
+  }
+  .chapter[data-backdrop] {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .chapter[data-backdrop] .chapter-backdrop {
+    display: block;
+    position: relative;
+    inset: auto;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    order: -1;
+    margin: 0 0 var(--sp-4);
+  }
+  .chapter[data-backdrop] .frame-viewer {
+    position: absolute;
+    inset: 0;
+  }
+  .schematic-page {
+    /* Out of flex sizing so aspect-ratio derives height from a definite width
+       (the sheet img is position:absolute, so flex-auto height collapses to 0). */
+    flex: none;
+    width: 100%;
+    height: auto;
+    aspect-ratio: var(--sheet-ar, 5 / 2);
+    max-height: min(52vh, 440px);
+    /* Clip the parked neighbours so the drag-peel slides cleanly; pan-y leaves
+       vertical scrolling to the page (the swipe hook claims only horizontal). */
+    overflow: hidden;
+    touch-action: pan-y;
+  }
+  .schematic-sheet {
+    opacity: 1;
+    transform: translateX(calc((var(--rel, 1) + var(--drag, 0)) * 100%));
+    transition: transform 0.42s cubic-bezier(0.22, 0.8, 0.3, 1);
+  }
+  .schematic-page.is-dragging .schematic-sheet {
+    transition: none;
+  }
+  .schematic-sheet--leaving,
+  .schematic-sheet--entering {
+    transform: none;
+  }
+  .teardown-sides {
+    display: none;
+  }
+  .board-art-inspect,
+  .schematic-foot {
+    display: none;
+  }
+}
+@media (max-width: 879px) {
+  .chapter-scope-tag {
+    display: none;
+  }
 }
 
 /* Category chips */
@@ -10641,40 +11263,6 @@ html.light .editorial-watermark {
   margin: 0.3rem 0 0;
 }
 
-/* ── PDP reviews: provider data, own markup (no third-party widget).
-   Engineering-document voice: hairline rows, mono numerals/dates, gold
-   stars. Tokens only, so light/dark theme for free. ─────────────────── */
-
-/* Buy-area aggregate line: stars + average + count, links to #reviews. */
-.product-buy-reviews {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.55rem;
-  text-decoration: none;
-}
-
-.product-buy-reviews-count {
-  font-family: var(--font-mono);
-  font-weight: 500;
-  font-size: var(--fs-xs);
-  letter-spacing: 0.04em;
-  color: var(--color-text-dim);
-  font-variant-numeric: tabular-nums;
-  transition: color 0.2s ease;
-}
-
-.product-buy-reviews:hover .product-buy-reviews-count {
-  color: var(--color-text);
-}
-
-.review-stars {
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  letter-spacing: var(--ls-label);
-  color: var(--color-gold-text);
-  line-height: 1;
-}
-
 /* Anchor lands below the fixed header, not underneath it. */
 #reviews {
   scroll-margin-top: 96px;
@@ -10741,15 +11329,6 @@ html.light .editorial-watermark {
   line-height: 1.65;
   color: var(--color-text-muted);
   white-space: pre-line;
-}
-
-.review-count-line {
-  margin: 1rem 0 0;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  letter-spacing: 0.04em;
-  color: var(--color-text-dim);
-  font-variant-numeric: tabular-nums;
 }
 
 /* Trust-chip link state: chips can now be clickable. */
@@ -13294,7 +13873,7 @@ html.light .editorial-watermark {
   max-width: 460px;
 }
 
-/* Empty state should never expand to dominate when messages arrive —
+/* Empty state should never expand to dominate when messages arrive -
    the log itself is a flex column, the empty card auto-margins. Once
    the messages render we align them top-down naturally. */
 
@@ -14569,64 +15148,12 @@ html.light .editorial-watermark {
   border-radius: 0 var(--r-2xs) var(--r-2xs) 0;
   transition: width 0.2s ease-out, opacity 0.28s ease-out;
 }
-
-/* ── Heavy-asset loading skeletons (board art + schematic viewer) ────────────
-   Shown while a multi-MB SVG downloads + parses, so the slot reads as
-   "loading" rather than a blank/black box. Removed once the asset reveals. */
-.board-art-skeleton {
-  position: absolute;
-  inset: 0;
-}
-.board-art-skeleton,
-.schematic-skeleton {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.85rem;
-  pointer-events: none;
-}
-.schematic-skeleton {
-  min-height: clamp(260px, 30vw, 420px);
-}
-/* Ghost of the incoming board render behind the spinner. */
-.board-art-skeleton-preview {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  max-width: min(52%, 460px);
-  max-height: 70%;
-  object-fit: contain;
-  opacity: 0.18;
-  filter: saturate(0.5);
-}
-
-.board-art-skeleton-spinner {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  border: 2px solid var(--color-border);
-  border-top-color: var(--color-gold);
-  animation: board-art-spin 0.8s linear infinite;
-}
-.board-art-skeleton-label {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  animation: latest-commit-pulse 1.4s ease-in-out infinite;
-}
 @keyframes board-art-spin {
   to {
     transform: rotate(360deg);
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .board-art-skeleton-spinner {
-    animation-duration: 2.4s;
-  }
   /* Transient action spinner: slowed but kept: the "Adding…" label already
      carries the state, the rotation is just reinforcement. */
   .btn-spinner,
@@ -14714,12 +15241,9 @@ html.light .editorial-watermark {
   .collection-sort select,
   .collection-sort-control,
   .trust-chip,
-  .board-art-inspect,
   .search-submit,
   .product-gallery-arrow,
-  .hero-cta-primary,
-  .board-folder-tabs button,
-  .schematic-rail-tabs button {
+  .hero-cta-primary {
     min-height: 44px;
     display: inline-flex;
     align-items: center;
@@ -14741,30 +15265,23 @@ html.light .editorial-watermark {
      phone that's below the 12px comfortable-reading floor; nudge them to
      11.5px (still clearly a label, just legible). Scoped to the exact
      classes the audit flagged so body copy scale is untouched. */
-  .product-hero-eyebrow,
   .product-buy-sku,
   .product-buy-stock,
   .variant-tier-flag,
   .chapter-number,
   .chapter-label,
   .product-card-meta,
-  .teardown-pin-cost,
   .section-label,
   .product-gallery-counter,
   .page-eyebrow,
   .incutec-hint,
   .catalog-filter-head,
   .collection-sort-label,
-  .open-source-card-label,
-  .open-source-card-sub,
   .rn-year-count,
   .rn-version,
   .rn-tag,
   .partner-label,
-  .board-art-inspect,
-  .board-art-skeleton-label,
   .latest-commit-label,
-  .bundle-component-firmware,
   .trust-chip {
     font-size: 12px;
   }
@@ -14799,75 +15316,6 @@ html.light .editorial-watermark {
    desktop 3D fan / sticky / gutter math.
    ============================================================ */
 @media (max-width: 1023px) {
-  /* Un-hide the board explorer and let it flow inline. The chapter reads as one
-     continuous scroll: the title + teardown copy come first (natural DOM order),
-     then the board viewer + component chips below. No sticky pin (the board no
-     longer hangs at the top) and no order flip: the explanation leads, the GUI
-     viewer follows. Board size is unchanged (full-width square). */
-  .chapter-media:has(.board-art) {
-    display: block;
-    margin: 0 0 var(--sp-4);
-  }
-
-  /* Flatten the fanned 3D stack: only the active sheet renders, flat and
-     full-width. No perspective, no depth fan, no fly-in. The stack keeps its
-     square aspect so the board fills the column at a stable height. */
-  /* The swipe-deck (peek + flick + counter) IS the layer control now, so the
-     horizontal pill rail is redundant on mobile: hide it (also removes the
-     rail-vs-header overlap entirely). */
-  .board-art .board-folder-rail {
-    display: none;
-  }
-  .board-folder-stack {
-    perspective: none;
-    transform-style: flat;
-    margin-top: 0;
-    position: relative;
-    /* Clip the off-screen layers so the peel slides cleanly in/out. */
-    overflow: hidden;
-    /* pan-y: vertical drags scroll the page like anywhere else. The swipe hook
-       only claims a gesture once it reads as horizontal (and it's biased toward
-       horizontal, so a near-sideways drag isn't mistaken for a scroll), and it
-       preventDefaults that horizontal move so the page never slides out from
-       under a layer peel. */
-    touch-action: pan-y;
-  }
-  /* Layers turn like book pages, dragging under the finger: each sheet sits at
-     (--rel + --drag) cards from centre, where --rel is its distance from the
-     active layer (0 = on screen) and --drag is the live finger offset (0 at
-     rest). So the active layer slides out as you drag while the next/prev layer
-    : parked one card off the opposite edge: chases straight in behind it. */
-  .board-art .board-sheet {
-    animation: none !important;
-    filter: none;
-    transition: transform 0.42s cubic-bezier(0.22, 0.8, 0.3, 1);
-    transform: translateX(calc((var(--rel, 1) + var(--drag, 0)) * 100%));
-    opacity: 1;
-    z-index: 1;
-    pointer-events: none;
-  }
-  .board-art .board-sheet.is-active {
-    z-index: 2;
-    pointer-events: auto;
-  }
-  /* While dragging, drop the snap transition so the layers track the finger 1:1;
-     it returns on release to animate the commit / snap-back from where you let
-     go. */
-  .board-art .board-folder-stack.is-dragging .board-sheet {
-    transition: none;
-  }
-
-  /* Swipe-first: the layer-pill rail is a mouse-era affordance. On touch you peel
-     layers by flicking the board ↑/↓ and the tick deck below shows where you are,
-     so the pill strip is dropped. */
-  .board-folder-rail {
-    display: none;
-  }
-  /* Lightweight progress under the board: a tick per layer (how far through the
-     stack) + the layer name + a hint. Each tick is tappable to jump there. */
-  .board-deck-progress {
-    margin: 0.7rem 0 0;
-  }
   .board-deck-dots {
     display: flex;
     gap: 0.3rem;
@@ -14901,167 +15349,12 @@ html.light .editorial-watermark {
   .board-deck-dot.is-active {
     background: var(--color-gold-fill);
   }
-  .board-deck-meta {
-    display: flex;
-    align-items: baseline;
-    flex-wrap: wrap;
-    gap: 0.2rem 0.55rem;
-    margin: 0.5rem 0 0;
-    font-family: var(--font-mono);
-  }
-  .board-deck-count {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--color-gold-text);
-    letter-spacing: 0.04em;
-  }
-  .board-deck-name {
-    font-size: 0.82rem;
-    color: var(--color-text);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-  }
   /* Qty / I/O chip beside the toured part's name: carries the detail the old
      row list used to show (×1, I/O) now the list is gone on mobile. */
   .board-deck-cost {
     font-size: 0.72rem;
     color: var(--color-text-muted);
     letter-spacing: 0.06em;
-  }
-  .board-deck-hint {
-    margin-left: auto;
-    font-size: 11px;
-    letter-spacing: 0.04em;
-    /* muted (not dim) so the gesture cue stays legible on bright light-mode
-       displays; it's the primary "how to explore" affordance now. */
-    color: var(--color-text-muted);
-  }
-  /* Part tour sits under the layer progress, separated by a hairline. Same
-     tick + meta chrome as the layer deck: components work "the same". */
-  .board-part-tour {
-    margin-top: 0.75rem;
-    padding-top: 0.7rem;
-    border-top: 1px solid var(--color-border);
-  }
-  .board-part-tour-head {
-    display: flex;
-    align-items: baseline;
-    gap: 0.55rem;
-    margin: 0 0 0.5rem;
-    font-family: var(--font-mono);
-  }
-  /* Scrollable row of real, labelled, thumb-sized component chips: replaces the
-     old strip of tiny untappable dots. */
-  .board-part-chips {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    padding-bottom: 2px;
-    /* horizontal scroll of the chip row only: never hijack vertical page scroll */
-    touch-action: pan-x;
-  }
-  /* Second row (bottom-side chips) sits just under the top-side row. */
-  .board-part-chips + .board-part-chips {
-    margin-top: 6px;
-  }
-  /* Sticky side tag at the start of each chip row: labels which board face the
-     row's parts live on, stays put while the chips scroll past it. */
-  .board-part-chips-side {
-    position: sticky;
-    left: 0;
-    flex: 0 0 auto;
-    align-self: stretch;
-    display: inline-flex;
-    align-items: center;
-    padding-right: 8px;
-    background: var(--color-bg);
-    font-family: var(--font-mono);
-    font-size: 10px;
-    letter-spacing: var(--ls-label);
-    text-transform: uppercase;
-    color: var(--color-text-dim);
-  }
-  .board-part-chips::-webkit-scrollbar {
-    display: none;
-  }
-  .board-part-chip {
-    flex: 0 0 auto;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4em;
-    min-height: 40px;
-    padding: 0.45em 0.9em;
-    white-space: nowrap;
-    border-radius: var(--r-pill);
-    border: 1px solid var(--color-border-strong);
-    background: var(--color-bg-card);
-    color: var(--color-text-muted);
-    font-family: var(--font-mono);
-    font-size: 13px;
-    letter-spacing: 0.02em;
-    transition: border-color 0.18s ease, color 0.18s ease, background 0.18s ease;
-  }
-  .board-part-chip.is-active {
-    border-color: var(--color-gold);
-    background: color-mix(in srgb, var(--color-gold) 16%, transparent);
-    color: var(--color-text);
-  }
-  .board-part-chip-qty {
-    font-size: 0.78em;
-    color: var(--color-text-dim);
-  }
-  /* The rail's first-reveal opacity-0 hold (is-armed) never clears without the
-     fly animation: force it visible on mobile. */
-  .board-art.is-armed .board-folder-rail,
-  .board-art.is-flying .board-folder-rail {
-    opacity: 1;
-  }
-
-  /* The board flows below the copy now: the bottom margin set above is the only
-     spacing it needs; clear any inherited top offset. */
-  .chapter:has(.board-art) .chapter-media {
-    margin-top: 0;
-  }
-
-  /* The board's media frame is a 1:1 card; let the board fill it cleanly (no
-     card border/bg around it on the explorer). */
-  .chapter-media-frame--live:has(.board-art) {
-    display: block;
-    aspect-ratio: auto;
-    background: none;
-    border: none;
-    overflow: visible;
-    color: inherit;
-  }
-}
-
-@media (max-width: 1023px) {
-  /* Frame viewer (exploded carbon frame): desktop renders it as an absolute
-     full-bleed backdrop behind the chapter text; that's dropped on mobile,
-     leaving the frame product with no hero visual. Re-flow it inline as a
-     contained, full-width square that sits above the copy. Its scroll-driven
-     explode maps straight onto touch page-scroll: the frame blooms apart as
-     you scroll past it. */
-  .chapter[data-backdrop] {
-    display: flex;
-    flex-direction: column;
-    position: relative;
-  }
-  .chapter[data-backdrop] .chapter-backdrop {
-    display: block;
-    position: relative;
-    inset: auto;
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    order: -1;
-    margin: 0 0 var(--sp-4);
-  }
-  .chapter[data-backdrop] .frame-viewer {
-    position: absolute;
-    inset: 0;
   }
 }
 
@@ -15077,47 +15370,6 @@ html.light .editorial-watermark {
 
 /* ---- Council pass 1: kill remaining voids + make touch explorers legible --- */
 @media (max-width: 1023px) {
-  /* Schematic stage was a fixed 72vh box, so a wide/sparse sheet left ~⅔ of it
-     black. Size the stage to the active sheet's real aspect ratio (--sheet-ar
-     from the manifest) so it hugs the drawing: capped so a tall sheet can't run
-     off-screen. The wide OVERVIEW sheet now fills its box instead of stranding a
-     half-screen of void. */
-  .schematic-page {
-    /* Out of flex sizing so aspect-ratio derives height from a definite width
-       (the sheet img is position:absolute, so flex-auto height collapses to 0). */
-    flex: none;
-    width: 100%;
-    height: auto;
-    aspect-ratio: var(--sheet-ar, 5 / 2);
-    max-height: min(52vh, 440px);
-    /* Clip the parked neighbours so the drag-peel slides cleanly; pan-y leaves
-       vertical scrolling to the page (the swipe hook claims only horizontal). */
-    overflow: hidden;
-    touch-action: pan-y;
-  }
-  /* Drag-to-peel paging, mirroring the board explorer: each sheet sits at
-     (--rel + --drag) cards from centre and slides under the finger; the next/prev
-     sheet chases in from the opposite edge. */
-  .schematic-sheet {
-    opacity: 1;
-    transform: translateX(calc((var(--rel, 1) + var(--drag, 0)) * 100%));
-    transition: transform 0.42s cubic-bezier(0.22, 0.8, 0.3, 1);
-  }
-  .schematic-page.is-dragging .schematic-sheet {
-    transition: none;
-  }
-  /* Tier-swap overlays stay centred (they wipe via clip/opacity, not the peel). */
-  .schematic-sheet--leaving,
-  .schematic-sheet--entering {
-    transform: none;
-  }
-
-  /* Mobile is swipe-first: the tappable component list is a mouse-era affordance.
-     On touch you tour the parts by flicking the board ←/→ (the part deck below it
-     shows which component is lit), so the whole row list is dropped here. */
-  .teardown-sides {
-    display: none;
-  }
 
   /* Discoverability hint under the teardown title (mobile only: desktop has
      hover to teach the interaction). */
@@ -15149,14 +15401,6 @@ html.light .editorial-watermark {
     border-radius: 50%;
     background: var(--color-gold-fill);
     vertical-align: middle;
-  }
-  /* The KiCanvas deep-dive links ("Inspect interactively", "Open schematic")
-     don't work on touch (KiCanvas is a mouse/keyboard viewer), so they're
-     dropped on mobile: board + schematic alike. The empty schematic foot that
-     held the link goes with them. */
-  .board-art-inspect,
-  .schematic-foot {
-    display: none;
   }
 }
 /* The hint is mobile-only; the desktop layout teaches via hover. (Scoped to the
@@ -16299,30 +16543,63 @@ html.light .cart-added-line img {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.cart-added-stack {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--sp-3);
+.cart-added-build {
+  display: grid;
+  gap: var(--sp-2);
+}
+.cart-added-build-title {
   margin: 0;
   font-size: var(--fs-sm);
-  color: var(--color-text-muted);
+  font-weight: 600;
+  color: var(--color-text);
 }
-.cart-added-stack button {
-  flex: none;
+.cart-added-suggestions {
+  display: grid;
+  margin: 0;
   padding: 0;
-  border: 0;
-  background: none;
+  list-style: none;
+}
+.cart-added-suggestion {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) 0;
+  border-top: 1px solid var(--color-border);
+  font-size: var(--fs-sm);
+}
+.cart-added-suggestion img,
+.cart-added-suggestion .cart-line-noimage {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  border-radius: var(--r-sm);
+  background: var(--color-bg-elevated);
+}
+html.light .cart-added-suggestion img {
+  mix-blend-mode: multiply;
+}
+.cart-added-suggestion-name {
+  display: block;
+  color: var(--color-text);
+}
+.cart-added-add {
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--r-pill);
+  background: transparent;
   color: var(--color-text);
   font: inherit;
+  font-size: var(--fs-sm);
   font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
   cursor: pointer;
 }
-.cart-added-stack button:disabled {
+.cart-added-add:hover:not(:disabled) {
+  border-color: var(--color-gold);
+}
+.cart-added-add:disabled {
   color: var(--color-text-muted);
-  text-decoration: none;
   cursor: default;
 }
 .cart-added-foot {
@@ -16483,25 +16760,6 @@ html.light .cart-added-line img {
   visibility: hidden;
 }
 
-/* After the entrance, a SKU swap can change the board's shape, so the
-   repo-outline offset (root translate) and the rail's gutter position change
-   with it. place() sets both from layout boxes the moment the new board
-   mounts, so they glide over the swap instead of jumping once it settles. */
-.board-art.is-swap-ready {
-  transition: translate 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.board-art.is-swap-ready .board-folder-rail {
-  transition:
-    opacity 0.6s ease,
-    transform 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-@media (prefers-reduced-motion: reduce) {
-  .board-art.is-swap-ready,
-  .board-art.is-swap-ready .board-folder-rail {
-    transition: none;
-  }
-}
-
 /* --------------------------------------------------------------------- */
 /* Launched-state home and help chrome                                   */
 /* --------------------------------------------------------------------- */
@@ -16567,12 +16825,6 @@ html.light .cart-added-line img {
 /* ============================================
    PDP anchors and cart polish
    ============================================ */
-
-/* In-page links (#specs, #in-the-box) land below the
-   floating header, not under it. */
-.chapter[id] {
-  scroll-margin-top: calc(var(--header-height) + 1.5rem);
-}
 .cart-line-max {
   display: block;
   margin-top: 0.3rem;
@@ -16932,28 +17184,8 @@ html:not(.light) .trust-chip-oshwa-mark {
 .chapter-media .render-chip {
   z-index: 5;
 }
-/* Teardown viewer: the tag sits in the viewer's top-left corner, clear of
-   the board outline. */
-.chapter-media .board-art-render-chip {
-  top: 0;
-  left: 0;
-}
 /* The exploded layer stack hangs about 110px below the board box on desktop:
    the schematic below starts after it. */
-@media (min-width: 1024px) {
-  .chapter:has(.board-art) .schematic-viewer {
-    margin-top: 8rem;
-  }
-}
-
-/* The sticky frame drawing of the teardown chapter must not paint over the
-   spec rows that follow it. */
-.chapter#specs,
-.chapter#in-the-box {
-  position: relative;
-  z-index: 1;
-  background: var(--color-bg);
-}
 
 /* ==================================================================
    Shop UI system: buttons, labels, chips, cards, tables, the docked
@@ -17016,18 +17248,11 @@ html:not(.light) .trust-chip-oshwa-mark {
 }
 
 /* --- Sentences and controls are Inter in sentence case -------------- */
-.product-status-chip,
-.board-art-skeleton-label,
 .cart-sheet-item small,
 .product-card-quickadd-btn {
   font-family: var(--font-sans);
   letter-spacing: 0;
   text-transform: none;
-}
-
-.product-status-chip {
-  font-size: 12px;
-  font-weight: 500;
 }
 /* Short labels that stay mono keep the calm tracking on small screens. */
 @media (max-width: 380px) {
@@ -17066,8 +17291,7 @@ html:not(.light) .trust-chip-oshwa-mark {
 }
 /* The image box holds its shape in the surface colour while the photo
    loads, instead of a black square. */
-.product-card-media,
-.related-card-media {
+.product-card-media {
   background: #ece9e3;
 }
 .product-card-media .smooth-media-cover,
@@ -17110,18 +17334,6 @@ html:not(.light) .trust-chip-oshwa-mark {
 .trust-chip-oshwa-uid {
   font-variant-numeric: tabular-nums;
 }
-
-/* The eyebrow and the status chip share one line; on phones the chip
-   drops under the category instead of indenting. */
-.product-hero-eyebrow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 10px;
-}
-.product-hero-eyebrow .product-status-chip {
-  margin-left: 0;
-}
 /* The gallery fills its frame on the photo backdrop, no inner card. */
 .product-hero-media {
   padding: 0;
@@ -17147,30 +17359,6 @@ html:not(.light) .trust-chip-oshwa-mark {
   font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 600;
-}
-
-/* --- Chapter rhythm: one display size per page (the product name) --- */
-.chapter-title {
-  font-size: var(--fs-xl);
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-@media (min-width: 960px) {
-  .chapter {
-    padding-block: clamp(2.5rem, 5vw, 4rem);
-    gap: var(--sp-6);
-  }
-}
-
-/* --- Teardown loading: the board photo, with a small label ----------- */
-.board-art-skeleton-preview {
-  opacity: 0.85;
-  filter: none;
-  max-width: min(70%, 520px);
-}
-.board-art-skeleton-label {
-  font-size: 12px;
-  color: var(--color-text-muted);
 }
 /* Touch targets: 44 px steppers and remove button. */
 .cart-line-quantity--sheet .cart-sheet-stepper button,
@@ -17217,31 +17405,6 @@ html:not(.light) .trust-chip-oshwa-mark {
   color: var(--color-text-muted);
   text-align: right;
 }
-/* Ship-to picker: a full-size control. */
-.cart-ship-select {
-  min-height: 44px;
-  max-width: 100%;
-  padding: 0 0.6rem;
-  font-family: var(--font-sans);
-  font-size: 15px;
-  color: var(--color-text);
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--r-md);
-}
-.cart-ship-row {
-  align-items: center;
-}
-.cart-ship-row dt {
-  min-width: 0;
-}
-.cart-ship-row dt label {
-  white-space: nowrap;
-}
-.cart-ship-select {
-  min-width: 0;
-  flex: 1 1 auto;
-}
 /* Summary labels in the body face: "Subtotal", "Shipping to [country]",
    "Total (incl. VAT)" bold. */
 .cart-register dt {
@@ -17252,37 +17415,6 @@ html:not(.light) .trust-chip-oshwa-mark {
 }
 .cart-register-row.is-total dt {
   font-weight: 600;
-}
-
-.open-source-story-link,
-.open-source-story-link a {
-  font-family: var(--font-sans);
-  font-size: 14px;
-  letter-spacing: 0;
-  text-transform: none;
-}
-.open-source-story-link a {
-  color: var(--color-gold-text);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-/* Teardown loading: the board photo stays in view; a small label pill
-   sits under it instead of a spinner over the chips. */
-.board-art-skeleton {
-  justify-content: flex-end;
-  padding-bottom: 0.75rem;
-}
-.board-art-skeleton-spinner {
-  display: none;
-}
-.board-art-skeleton-label {
-  position: relative;
-  z-index: 1;
-  padding: 4px 10px;
-  border-radius: var(--r-pill);
-  background: var(--pod-bg-strong);
-  border: 1px solid var(--pod-border);
 }
 
 
@@ -17313,6 +17445,22 @@ html:not(.light) .trust-chip-oshwa-mark {
   flex-direction: column;
   gap: var(--sp-4);
   margin-top: var(--sp-3);
+}
+/* Desktop fold: the gallery square is capped to the viewport under the
+   header, and the buy column is centred on the gallery's height, so the
+   fold holds the whole buy box with no empty band under it. */
+@media (min-width: 960px) {
+  .product-hero {
+    align-items: stretch;
+  }
+  .product-hero-media {
+    width: min(100%, calc(100svh - 9.5rem));
+    margin-inline: 0;
+  }
+  .product-hero-copy {
+    align-self: stretch;
+    justify-content: center;
+  }
 }
 /* Size: segmented buttons, name and price on one line, two across. */
 .product-hero-copy .variant-ladder-track {
@@ -17434,49 +17582,6 @@ html:not(.light) .trust-chip-oshwa-mark {
   color: var(--color-text);
   text-decoration: underline;
   text-underline-offset: 3px;
-}
-
-/* GPSR block at the foot of the product page: manufacturer, model, warnings. */
-.gpsr-block {
-  max-width: 1102px;
-  margin: var(--sp-8, 4rem) auto 0;
-  padding: 2rem 0;
-  border-top: 1px solid var(--color-border);
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--color-text-muted);
-}
-.gpsr-block p {
-  margin: 0 0 0.4rem;
-  font-size: 12px;
-}
-.gpsr-heading {
-  margin-bottom: 0.8rem;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-}
-.gpsr-warnings {
-  margin: 0.8rem 0 0;
-  padding-left: 1rem;
-  list-style: disc;
-}
-.gpsr-languages {
-  margin-top: 1rem;
-}
-.gpsr-languages summary {
-  cursor: pointer;
-}
-.gpsr-languages-grid {
-  display: grid;
-  gap: 1.5rem;
-  margin-top: 0.8rem;
-}
-@media (min-width: 768px) {
-  .gpsr-languages-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
 }
 
 /* Mixed ship dates: one line, the split link muted beside it. */

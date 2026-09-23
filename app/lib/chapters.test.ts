@@ -36,11 +36,12 @@ describe('DEFAULT_CHAPTERS', () => {
   });
 
   it('is the order the page was designed in', () => {
-    // Guards the argument the page makes: published,
+    // Guards the argument the page makes: what this even is, then published,
     // then made of, then measures, then ships, then who built it.
     assert.deepEqual(
       DEFAULT_CHAPTERS.map((c) => c.type),
       [
+        'whatIsThis',
         'openSource',
         'teardown',
         'specs',
@@ -59,7 +60,7 @@ describe('resolveChapters numbering', () => {
     const out = resolveChapters(null, all);
     assert.deepEqual(
       out.map((c) => c.number),
-      ['01', '02', '03', '04', '05', '06', '07', '08'],
+      ['01', '02', '03', '04', '05', '06', '07', '08', '09'],
     );
   });
 
@@ -70,7 +71,7 @@ describe('resolveChapters numbering', () => {
     const out = resolveChapters(null, skipTeardown);
     assert.deepEqual(
       out.map((c) => c.number),
-      ['01', '02', '03', '04', '05', '06', '07'],
+      ['01', '02', '03', '04', '05', '06', '07', '08'],
     );
     assert.ok(!out.some((c) => c.type === 'teardown'));
   });

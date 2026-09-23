@@ -65,30 +65,6 @@ export function announceCartAdded(detail: CartAddedDetail): void {
   window.dispatchEvent(new CustomEvent(CART_ADDED_EVENT, {detail}));
 }
 
-/** The destination a buyer picked in the cart's shipping row, kept in this
- *  browser only so the drawer and the cart agree. Display only: checkout
- *  charges the rate for the address the buyer enters there. */
-const SHIP_COUNTRY_KEY = 'opendrone:ship-country';
-export const SHIP_COUNTRY_EVENT = 'opendrone:ship-country';
-
-export function storedShipCountry(): string | null {
-  try {
-    const value = window.localStorage.getItem(SHIP_COUNTRY_KEY);
-    return value && /^[A-Z]{2}$/.test(value) ? value : null;
-  } catch {
-    return null;
-  }
-}
-
-export function storeShipCountry(country: string): void {
-  try {
-    window.localStorage.setItem(SHIP_COUNTRY_KEY, country);
-  } catch {
-    // Private mode or blocked storage: the choice lasts for this page only.
-  }
-  window.dispatchEvent(new CustomEvent(SHIP_COUNTRY_EVENT, {detail: country}));
-}
-
 /** Lines taken out of the cart for a second order: name, quantity and SKU,
  *  so the buyer can add the same quantities back after checkout. Kept in
  *  this browser until they are added back or dismissed. */

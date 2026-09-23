@@ -119,8 +119,10 @@ export type BoardArtProps = {
   handle?: string;
   /** Optional "Inspect interactively" deep-dive link (e.g. KiCanvas hosted). */
   inspectUrl?: string;
-  /** Small "Render" tag pinned to the top-left corner of the viewer. */
-  renderTag?: string;
+  /** Per-layer function blurbs keyed by copper-layer slug (`f`, `in1`…`b`),
+   *  shown beside each name in the rail. Slugs left unset fall back to a
+   *  position-based guess (see {@link layerFunction}). */
+  layerFns?: Record<string, string>;
   /** Public path to the component manifest (`components.json`) for the active
    *  board. Fetched lazily; when a `highlightRefs` ref matches a component its
    *  footprint is drawn as a gold highlight over the active sheet. */
@@ -177,6 +179,34 @@ function parseManifest(raw: unknown): {
     if (c?.ref) map.set(c.ref, c);
   }
   return {viewBox: m.viewBox ?? '', map};
+}
+
+/**
+ * Short function blurb for a copper layer. A content-supplied `override` wins;
+ * otherwise guess from the layer's position in the stack - the outermost pair
+ * carries signals + components, the pair just inside them is almost always a
+ * solid reference (ground) plane, and everything between is signal + power.
+ */
+function layerFunction(
+  slug: string,
+  index: number,
+  total: number,
+  override?: Record<string, string>,
+): string {
+  if (override?.[slug]) return override[slug];
+  // The realistic composite faces describe the physical board side, not a
+  // copper stack position, so they must not get the position-based guess.
+  // Both faces carry components on these boards (double-sided SMT).
+  if (slug === 'front') return 'Component side';
+  if (slug === 'back') return 'Component side';
+  // The position guess applies to the copper sheets only. Front sits at index 0
+  // and back at index total-1, so exclude those ends from the copper logic by
+  // measuring position within the copper run (front=1st sheet, back=last).
+  const copperFirst = index === 1; // first copper sheet (after front)
+  const copperLast = index === total - 2; // last copper sheet (before back)
+  if (copperFirst || copperLast) return 'Signal + components';
+  if (index === 2 || index === total - 3) return 'Ground plane';
+  return 'Signal + power';
 }
 
 /** Human label for each known layer slug, in physical top→bottom order. */
@@ -388,7 +418,7 @@ export function BoardArt({
   srcs,
   handle,
   inspectUrl,
-  renderTag,
+  layerFns,
   componentsSrc,
   highlightRefs,
   highlightUnion,
@@ -808,20 +838,6 @@ export function BoardArt({
       }
       return max;
     };
-    // Layout box in document coordinates from the offset chain: it ignores
-    // every CSS transform and translate, so it reads the same final answer
-    // mid-fly, mid-swap and settled. Placing from it means the board and the
-    // rail are set to their resting spot the moment a board mounts, instead
-    // of being measured again (and jumping) once the motion ends.
-    const docBox = (el: HTMLElement) => {
-      let x = 0;
-      let y = 0;
-      for (let n: HTMLElement | null = el; n; n = n.offsetParent as HTMLElement | null) {
-        x += n.offsetLeft;
-        y += n.offsetTop;
-      }
-      return {x, y, w: el.offsetWidth, h: el.offsetHeight};
-    };
     const place = () => {
       // Below the breakpoint the rail is a full-width top bar - reset both.
       if (!window.matchMedia('(min-width: 1025px)').matches) {
@@ -830,58 +846,97 @@ export function BoardArt({
         root.style.removeProperty('translate');
         return;
       }
+      // Mid variant-swap: leave the rail exactly where it is. The board is flying
+      // in (translated), so any measurement now would mis-place it; placeNonce
+      // re-runs this once the swap settles and the board's box is stable again.
+      if (swapActiveRef.current) return;
+      rail.style.transform = '';
       setBoardW(DEFAULT_W); // the board stays at full size; the rail takes what is left
-      // The LIVE stack only - never the outgoing (.board-swap-out) one.
-      const stack = body.querySelector<HTMLElement>('[data-role="live"]');
+      // Scope to the LIVE stack - never the outgoing (.board-swap-out) one, whose
+      // box is mid-flight and would mis-place the rail during a swap.
+      const stack = body.querySelector('[data-role="live"]');
       if (!stack) return;
-      const st = docBox(stack);
-      if (!st.w || !st.h) return;
-      // Where the active sheet rests, from the sheet's resting transform model:
-      // letterboxed in the square stack by the board's viewBox aspect, then
-      // translateY(-11%) translateZ(120px) scale(1.05) under the stack's 1700px
-      // perspective, so it projects at 1.05 * 1700/(1700-120) about the centre.
-      const anySvg = stack.querySelector<SVGSVGElement>('.board-sheet svg');
-      const vb = anySvg?.viewBox?.baseVal;
-      const aspect = vb && vb.height ? vb.width / vb.height : 1;
-      const PROJ = 1700 / (1700 - 120);
-      const S = 1.05 * PROJ;
-      const cx = st.x + st.w / 2;
-      const cy = st.y + st.h / 2 - st.h * 0.11 * PROJ;
-      const drawnW = Math.min(st.w, st.h * aspect) * S;
-      const drawnH = drawnW / aspect;
-      // Repo-scope alignment: the visible board's top-right corner sits just
-      // inside the outline's top-right border (maintainer, 2026-08-12).
-      let dx = 0;
-      let dy = 0;
-      const scope = root.closest<HTMLElement>('.chapter[data-repo-scope]');
+      const sr = stack.getBoundingClientRect();
+      // Board's VISIBLE left edge. The active sheet is scaled up (~1.05) and is
+      // rendered WIDER than its stack column, centred over it, so the visible
+      // board bleeds left of the stack box - by an amount that is NOT a fixed
+      // fraction of the stack (the sheet keeps roughly its own size as the column
+      // narrows, so the bleed grows as the column shrinks). Once the entrance has
+      // settled (flyDone) the active sheet's rect is stable and gives the exact
+      // edge, so read it directly. DURING the fly the sheets are flown off-screen
+      // and the sheet rect would mis-place the rail and snap it at the end - so
+      // fall back to the never-translating stack box (rough but only momentary).
+      const activeSheet = stack.querySelector(
+        '.board-sheet.is-active svg, .board-sheet.is-active img',
+      );
+      // Repo-scope alignment: pin the VISIBLE board's top-right corner just
+      // inside the outline's top-right border (maintainer, 2026-08-12). Derived
+      // from the NEVER-TRANSLATING stack box plus the sheet's resting
+      // transform model, not from the transformed sheet element, so the
+      // value is correct BEFORE the fly-in finishes and the flight lands on
+      // the aligned spot with no post-animation jump. Model: the sheet is
+      // letterboxed in the square stack (viewBox aspect), then the active
+      // sheet rests at translateY(-11%) translateZ(120px) scale(1.05) under
+      // the stack's 1700px perspective, so it projects at
+      // 1.05 * 1700/(1700-120) about the stack centre.
+      root.style.removeProperty('translate');
+      const scope = root.closest('.chapter[data-repo-scope]');
+      const anySvg = stack.querySelector('.board-sheet svg');
       if (scope && anySvg) {
-        const sc = docBox(scope);
-        const INSET = 12; // px inside the outline's border
-        dx = sc.x + sc.w - INSET - (cx + drawnW / 2);
-        dy = sc.y + INSET - (cy - drawnH / 2);
-        if (!Number.isFinite(dx) || !Number.isFinite(dy)) dx = dy = 0;
+        const vb = (anySvg as SVGSVGElement).viewBox?.baseVal;
+        const aspect = vb && vb.height ? vb.width / vb.height : 1;
+        const sr0 = stack.getBoundingClientRect();
+        if (sr0.width && sr0.height) {
+          const PROJ = 1700 / (1700 - 120);
+          const S = 1.05 * PROJ;
+          const cx = sr0.left + sr0.width / 2;
+          const cy = sr0.top + sr0.height / 2 - sr0.height * 0.11 * PROJ;
+          const drawnW = Math.min(sr0.width, sr0.height * aspect) * S;
+          const drawnH = drawnW / aspect;
+          const sc = scope.getBoundingClientRect();
+          const INSET = 12; // px inside the outline's border
+          const dx = sc.right - INSET - (cx + drawnW / 2);
+          const dy = sc.top + INSET - (cy - drawnH / 2);
+          if (Number.isFinite(dx) && Number.isFinite(dy)) {
+            root.style.translate = `${Math.round(dx)}px ${Math.round(dy)}px`;
+          }
+        }
       }
-      if (dx || dy) root.style.translate = `${Math.round(dx)}px ${Math.round(dy)}px`;
-      else root.style.removeProperty('translate');
-      // Rail: centred in the gutter between the copy and the board's visible
-      // left edge, in document x. The rail lives inside the translated root.
-      const boardLeft = cx - drawnW / 2 + dx;
-      const railBox = docBox(rail);
-      const railLeft = railBox.x + (root.contains(rail) ? dx : 0);
-      const railFull = railBox.w;
-      // The stack box is the rail's vertical anchor; inset the band from its top
-      // so a chapter title dipping into it is not counted as copy in the lane.
-      const topVp = st.y + dy - window.scrollY;
-      const bandTop = topVp + st.h * 0.1;
-      const textRight = contentRight(bandTop, topVp + st.h) + window.scrollX;
+      const sheetRect = flyDone ? activeSheet?.getBoundingClientRect() : null;
+      const boardLeft =
+        sheetRect && sheetRect.width
+          ? sheetRect.left
+          : sr.left - sr.width * 0.065;
+      const railFull = widthOf(rail);
+      // The rail floats centred on the board; the stack box is its stable vertical
+      // anchor. Inset the band a little from the stack's top so the chapter title
+      // - which can dip a hair into the stack's top edge - never gets counted as
+      // copy in the rail's lane (it lives above the rail).
+      const bandTop = sr.top + sr.height * 0.1;
+      const textRight = contentRight(bandTop, sr.bottom);
+      // The gutter is the clear span between the copy and the board, with the
+      // mandated clearances carved out at each end.
       const gutterStart = textRight + MARGIN; // nearest the rail may sit to the copy
       const gutterEnd = boardLeft - GAP; // nearest the rail may sit to the board
-      // Hug the board: the rail sits GAP left of the board's visible edge, so it
-      // depends only on the board (known the moment it mounts) and travels with
-      // it on a swap. Only copy that reaches into that spot pushes it right,
-      // floored at the copy, overlapping the board edge as a last resort.
-      const target = Math.max(gutterStart, gutterEnd - railFull);
-      rail.style.transform = `translateX(${Math.round(target - railLeft)}px)`;
+      // Centre a pill of the given width in the gutter, but ALWAYS keep its right
+      // edge at/left of gutterEnd (the board-side wall) - so even if boardLeft is
+      // measured a hair generous, the rail can't creep onto the silk. When the
+      // pill can't fit, this still floors at gutterStart so it never crosses the
+      // copy (it may then overlap the board's edge - the last-resort overlay).
+      const placeWidth = (w: number) => {
+        const slack = gutterEnd - gutterStart - w;
+        const centred = gutterStart + slack / 2;
+        return Math.min(
+          Math.max(centred, gutterStart),
+          Math.max(gutterStart, gutterEnd - w),
+        );
+      };
+      // Always the full rail (names + function blurbs): the names-only
+      // is-compact fallback was dropped 2026-08-12 (maintainer) - under the
+      // repo-scope layout its tight-gutter trigger misfired on tall boards
+      // and a wrapping names-only pill reads worse than a slight overlap.
+      const target = placeWidth(railFull);
+      rail.style.transform = `translateX(${target - leftOf(rail)}px)`;
     };
     // Coalesce resize bursts into one placement per frame - `place` forces a
     // handful of layout reads against the large board SVG.
@@ -900,10 +955,7 @@ export function BoardArt({
       if (scheduled) cancelAnimationFrame(scheduled);
       window.removeEventListener('resize', schedule);
     };
-    // flyIn: measure again the moment the entrance starts. The first run can
-    // happen while the chapter above is still settling, and a stale offset
-    // made the board land and then jump a few pixels when flyDone re-measured.
-  }, [sheets, revealed, flyIn, flyDone, placeNonce]);
+  }, [sheets, revealed, flyDone, placeNonce]);
 
   // The index/refs actually rendered - the manual layer + tap/swipe-driven
   // highlight.
@@ -1532,8 +1584,6 @@ export function BoardArt({
       }
       data-board={handle}
     >
-      {/* The tag labels the render, so it waits for the render. */}
-      {renderTag && revealed ? <span className="render-chip board-art-render-chip">{renderTag}</span> : null}
       {sheets.length ? (
         <div className="board-folder-body" ref={bodyRef}>
           {/* Roving keyboard-nav group: arrow keys step the layer stack. The
@@ -1574,6 +1624,9 @@ export function BoardArt({
                   onClick={() => selectLayer(i)}
                 >
                   <span className="board-folder-tab-name">{s.label}</span>
+                  <span className="board-folder-tab-fn">
+                    {layerFunction(s.slug, i, railCount, layerFns)}
+                  </span>
                 </button>
               ))}
             </div>
@@ -1652,6 +1705,7 @@ export function BoardArt({
                 <span className="board-deck-name">
                   {sheets[shownIndex]?.label}
                 </span>
+                <span className="board-deck-hint">Swipe ←/→</span>
               </p>
             </div>
           ) : null}
@@ -1673,7 +1727,7 @@ export function BoardArt({
             decoding="async"
           />
           <span className="board-art-skeleton-spinner" />
-          <span className="board-art-skeleton-label">Loading the layer view…</span>
+          <span className="board-art-skeleton-label">Rendering board…</span>
         </div>
       ) : null}
       {failed ? (

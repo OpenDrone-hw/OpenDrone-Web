@@ -10,15 +10,14 @@
     "lead": "It picks up the commands from your radio and passes them to the flight controller. All four versions work with a radio that has 2.4 GHz ExpressLRS. Not sure which to pick? Take Lite for a 3-inch build or Lite-UFL for a 5-inch. Take Mono or Gemini only if the radio also has a sub-GHz ExpressLRS module."
   },
   "whatIsThis": {
-    "intro": "A receiver picks up the commands from your radio and passes them to the flight controller. OpenRX runs ExpressLRS, which uses LoRa, so it keeps a solid link even on the busy 2.4 GHz band. It connects to the flight controller with CRSF over one UART, runs on 5 V, and updates over Wi-Fi or Betaflight passthrough. There are four versions, from the Lite with a ceramic antenna to the Gemini with two radios.",
+    "intro": "A receiver has one job: get your commands off the air and hand them to the flight controller. OpenRX runs ExpressLRS, which uses LoRa modulation: the signal is a frequency chirp. That is why a receiver this small keeps a robust link on the same 2.4 GHz band where Wi-Fi drops out. It speaks CRSF to the flight controller over one UART wire, is powered from a 5V pad, and flashes over Wi-Fi or Betaflight passthrough. Four variants, from ceramic antenna Lite to dual-radio Gemini.",
     "needs": [
       "A radio with an ExpressLRS transmitter, internal or module, on 2.4 GHz",
-      "DJI remotes and motion controllers do not use ExpressLRS and cannot control this receiver. You need a radio with ExpressLRS built in, or a radio with a module bay and an ExpressLRS module.",
-      "Binding pairs the receiver with your radio so it only listens to you. With ExpressLRS you either set the same binding phrase (a password) on the radio and the receiver, or put the receiver in bind mode and press Bind on the radio. The quick-start card in the box shows the steps.",
+      "The same binding phrase flashed on both ends",
       "A flight controller with a free UART and a 5 V pad",
-      "The rest of the drone"
+      "The rest of the aircraft: it only carries commands, it moves nothing"
     ],
-    "fit": "It is the link between your radio and the drone.",
+    "fit": "The aircraft's ear, the first stop for everything you do on the sticks.",
     "chain": "rx"
   },
   "firmware": {
@@ -109,16 +108,25 @@
   },
   "inTheBox": [
     {
-      "qty": "1x",
+      "qty": "1×",
       "item": "OpenRX board"
     },
     {
-      "qty": "1x",
-      "item": "30AWG wire set"
+      "qty": "1×",
+      "item": "Silicone hook-up wire set, 30 AWG, four wires"
     },
     {
-      "qty": "1x",
-      "item": "Clear heat shrink"
+      "qty": "1×",
+      "item": "Heat-shrink sleeve, clear, two-piece"
+    },
+    {
+      "qty": "1×",
+      "item": "Bind and quick-start card"
+    },
+    {
+      "qty": "1×",
+      "item": "ESD bag (OpenDrone logo)",
+      "note": "everything above ships inside it"
     }
   ],
   "downloads": [],
@@ -257,17 +265,7 @@
         "src": "/boards/openrx-lite/board.svg",
         "inspectUrl": "https://kicanvas.org/?github=https://github.com/OpenDrone-hw/OpenRX-Lite/blob/main/hardware/OpenRX-Lite.kicad_pcb",
         "schematicUrl": "https://kicanvas.org/?github=https://github.com/OpenDrone-hw/OpenRX-Lite/blob/main/hardware/OpenRX-Lite.kicad_sch"
-      },
-      "inTheBox": [
-        {
-          "qty": "1x",
-          "item": "Bind card"
-        },
-        {
-          "qty": "1x",
-          "item": "ESD bag"
-        }
-      ]
+      }
     },
     "Lite-UFL": {
       "subtitle": "ELRS 2.4GHz · SX1281 · U.FL · CRSF",
@@ -291,16 +289,8 @@
       ],
       "inTheBox": [
         {
-          "qty": "1x",
-          "item": "2.4 GHz U.FL T antenna"
-        },
-        {
-          "qty": "1x",
-          "item": "Bind card"
-        },
-        {
-          "qty": "1x",
-          "item": "ESD bag"
+          "qty": "1×",
+          "item": "2.4 GHz U.FL T-dipole antenna"
         }
       ],
       "pins": [
@@ -416,16 +406,8 @@
       ],
       "inTheBox": [
         {
-          "qty": "1x",
-          "item": "Dual-band U.FL T antenna"
-        },
-        {
-          "qty": "1x",
-          "item": "Bind card"
-        },
-        {
-          "qty": "1x",
-          "item": "ESD bag"
+          "qty": "1×",
+          "item": "Dual-band U.FL T-dipole antenna"
         }
       ],
       "pins": [
@@ -541,16 +523,9 @@
       ],
       "inTheBox": [
         {
-          "qty": "2x",
-          "item": "Dual-band U.FL T antenna"
-        },
-        {
-          "qty": "1x",
-          "item": "Bind card"
-        },
-        {
-          "qty": "1x",
-          "item": "ESD bag"
+          "qty": "2×",
+          "item": "Dual-band U.FL T-dipole antenna",
+          "note": "diversity pair"
         }
       ],
       "pins": [
