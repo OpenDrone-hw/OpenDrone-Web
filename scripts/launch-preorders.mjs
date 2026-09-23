@@ -18,9 +18,11 @@
 //   2. Shopify prices: every campaign SKU in content/preorders.json is on
 //      the storefront channel, has a compare-at (retail) price, and its
 //      price equals the first price step (retail less priceTiers[0].off).
+//      Every shipsWith SKU (accessories, spares) is on the channel at a
+//      flat price: a price and no compare-at above it.
 //   3. Worker secrets on opendrone-web, in one `wrangler secret bulk`:
-//      SHOPIFY_PREVIEW_POLICY_JSON (the campaign SKUs as preorder, every
-//      other storefront SKU sold_out), SHOPIFY_WEBHOOK_SECRET (from .env)
+//      SHOPIFY_PREVIEW_POLICY_JSON (the campaign and shipsWith SKUs as
+//      preorder, every other storefront SKU sold_out), SHOPIFY_WEBHOOK_SECRET (from .env)
 //      and SHOPIFY_PRICE_TIER_WRITE_ENABLED=1. Production stays closed:
 //      its [vars] on main still say PUBLIC_COMING_SOON=1 and
 //      SHOPIFY_CHECKOUT_WRITE_ENABLED=0.
@@ -87,6 +89,30 @@ export function campaignSkus(preorders) {
   const skus = Object.keys(preorders?.skus ?? {});
   if (!skus.length) throw new Error('content/preorders.json lists no campaign SKUs');
   return skus;
+}
+
+/** The SKUs that ship with a campaign SKU (shipsWith), in file order. */
+export function shipsWithSkus(preorders) {
+  return Object.keys(preorders?.shipsWith ?? {});
+}
+
+/**
+ * Check the flat-price SKUs (shipsWith): each is on the storefront channel
+ * with a price and no compare-at above it, since it has no price steps and
+ * the storefront shows its price as the price. One problem string per SKU.
+ */
+export function checkFlatPrices(variants, skus) {
+  const bySku = new Map(variants.map((v) => [v.sku, v]));
+  const problems = [];
+  for (const sku of skus) {
+    const v = bySku.get(sku);
+    if (!v) problems.push(`${sku}: not on the storefront channel`);
+    else if (!(v.price > 0)) problems.push(`${sku}: no price`);
+    else if (v.compareAt != null && v.compareAt > v.price + 0.005) {
+      problems.push(`${sku}: compare-at ${v.compareAt.toFixed(2)} above the flat price ${v.price.toFixed(2)}`);
+    }
+  }
+  return problems;
 }
 
 /** Price of the first step, as the Worker computes it (tierPrice). */
@@ -270,11 +296,11 @@ export function unsoldInFeed(feed, skus) {
 }
 
 /** The step list printed by a dry run and followed by --apply. */
-export function plan({pr, skus}) {
+export function plan({pr, skus, flat = []}) {
   return [
     ['preflight', `Check branch ${BRANCH}, a clean ${PROD_CONFIG}, PR #${pr} open against main, credentials present by name, wrangler and gh signed in, Admin token scopes (${REQUIRED_ADMIN_SCOPES.join(', ')}), every market prices tax-inclusive.`],
-    ['prices', `Read the storefront catalog and check ${skus.length} campaign SKUs: each has a compare-at price and sells at the first price step.`],
-    ['secrets', `npx wrangler secret bulk --config ${PROD_CONFIG} (stdin): SHOPIFY_PREVIEW_POLICY_JSON (${skus.length} SKUs preorder, the rest sold_out), SHOPIFY_WEBHOOK_SECRET (from .env), SHOPIFY_PRICE_TIER_WRITE_ENABLED=1. Production stays closed by its [vars].`],
+    ['prices', `Read the storefront catalog and check ${skus.length} campaign SKUs: each has a compare-at price and sells at the first price step. Check ${flat.length} shipsWith SKUs sell at a flat price.`],
+    ['secrets', `npx wrangler secret bulk --config ${PROD_CONFIG} (stdin): SHOPIFY_PREVIEW_POLICY_JSON (${skus.length + flat.length} SKUs preorder, the rest sold_out), SHOPIFY_WEBHOOK_SECRET (from .env), SHOPIFY_PRICE_TIER_WRITE_ENABLED=1. Production stays closed by its [vars].`],
     ['launch-commit', `Set ${PROD_CONFIG} [vars] PUBLIC_COMING_SOON="0", SHOPIFY_CHECKOUT_WRITE_ENABLED="1"; git commit; git push origin ${BRANCH}.`],
     ['merge', `gh pr checks ${pr} --watch, then gh pr merge ${pr} --squash --match-head-commit <launch commit>. This deploys production.`],
     ['deploy', `Wait for ${DEPLOY_WORKFLOW} on the merge commit: gh run watch --exit-status.`],
@@ -419,9 +445,11 @@ async function main() {
   loadEnv();
   const preorders = JSON.parse(fs.readFileSync(path.join(ROOT, 'content/preorders.json'), 'utf8'));
   const skus = campaignSkus(preorders);
+  const flat = shipsWithSkus(preorders);
+  const sold = [...skus, ...flat];
 
   console.log(opts.apply ? 'APPLY: opening preorders on production.' : 'DRY RUN: nothing is written. Plan:');
-  for (const [id, text] of plan({pr: opts.pr, skus})) console.log(`  [${id}] ${text}`);
+  for (const [id, text] of plan({pr: opts.pr, skus, flat})) console.log(`  [${id}] ${text}`);
   console.log('');
 
   const pre = await preflight(opts);
@@ -442,12 +470,15 @@ async function main() {
         Object.entries(preorders.skus).flatMap(([sku, e]) => (e.priceTiers ? [[sku, e.priceTiers]] : [])),
       ),
     );
+    priceProblems.push(...checkFlatPrices(variants, flat));
     for (const p of priceProblems) console.log(`prices: ${p}`);
-    if (!priceProblems.length) console.log(`prices: ${skus.length} campaign SKUs at the first step`);
+    if (!priceProblems.length) {
+      console.log(`prices: ${skus.length} campaign SKUs at the first step, ${flat.length} at a flat price`);
+    }
     pre.push(...priceProblems);
-    policy = buildLaunchPolicy(variants.map((v) => v.sku), skus);
-    const others = Object.keys(policy).length - skus.length;
-    console.log(`policy: ${skus.length} SKUs preorder, ${others} sold_out`);
+    policy = buildLaunchPolicy(variants.map((v) => v.sku), sold);
+    const others = Object.keys(policy).length - sold.length;
+    console.log(`policy: ${sold.length} SKUs preorder, ${others} sold_out`);
   }
 
   const vars = launchVars({prelaunchFlagInUse: prelaunchFlagInUse()});
@@ -522,7 +553,7 @@ async function main() {
   console.log('[smoke]');
   process.env.BASE = PROD_ORIGIN;
   delete process.env.SMOKE_AUTH;
-  const problems = await smoke(skus);
+  const problems = await smoke(sold);
   for (const p of problems) console.log(`  smoke: ${p}`);
   if (problems.length) process.exit(1);
   console.log('\nPreorders are open on production.');

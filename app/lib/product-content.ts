@@ -1077,6 +1077,8 @@ export const PRODUCT_CONTENT_FALLBACK: ProductContent = loadedFallback ?? {
 /** Spec rows for a product with no editorial file (an accessory), from
  *  `content/accessories.json`, keyed by catalog handle. */
 export type AccessorySpecs = {
+  /** The spec line under the name on the product page. */
+  subtitle?: string;
   specs: Array<[string, string]>;
   /** Spec keys whose value is a placeholder. Never rendered. */
   placeholders?: string[];
@@ -1118,6 +1120,7 @@ export function pageContent(handle: string): ProductContent {
   if (!accessory) return PRODUCT_CONTENT_FALLBACK;
   return {
     ...PRODUCT_CONTENT_FALLBACK,
+    ...(accessory.subtitle ? {subtitle: accessory.subtitle} : {}),
     specs: accessory.specs,
     placeholders: accessory.placeholders,
   };

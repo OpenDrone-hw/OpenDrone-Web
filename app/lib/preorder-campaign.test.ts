@@ -18,6 +18,7 @@ import {
   shipLabel,
   shipLabelFromPromise,
   shortCampaignDate,
+  tiersFor,
   type CampaignBatch,
 } from './preorder-campaign.ts';
 
@@ -571,5 +572,83 @@ describe('shipLabel', () => {
     assert.equal(cartShipNote(['ships late October 2026', PENDING, PENDING]), LONG);
     assert.equal(cartShipNote(['ships late October 2026', null]), null);
     assert.equal(cartShipNote([]), null);
+  });
+});
+
+describe('SKUs that ship with a campaign SKU', () => {
+  const WITH = {
+    ...CONFIG,
+    skus: {'OPENFRAME-5': {batches: FRAME}, 'OPENFC-LITE-2020': {batches: STACK}},
+    shipsWith: {
+      'ACC-STRAP-20X220': {sku: 'OPENFC-LITE-2020', batch: 1},
+      'ACC-FRM-ARM-5': {sku: 'OPENFRAME-5'},
+    },
+  };
+  const spare = (catalogIn: Catalog) => {
+    catalogIn.products[0].variants.push({
+      ...catalogIn.products[0].variants[1],
+      sku: 'ACC-FRM-ARM-5',
+      price: 7.5,
+      ship_promise: null,
+    });
+    return catalogIn;
+  };
+
+  it('parses the real config: every accessory rides a campaign SKU', () => {
+    const real = parseCampaignConfig(JSON.parse(fs.readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8')));
+    const rules = Object.entries(real.shipsWith ?? {});
+    assert.ok(rules.length > 0);
+    for (const [sku, rule] of rules) {
+      assert.ok(sku.startsWith('ACC-'), sku);
+      assert.ok(real.skus[rule.sku], `${sku} rides ${rule.sku}`);
+      assert.deepEqual(tiersFor(real, sku), [], `${sku} has a flat price`);
+    }
+    assert.equal(real.shipsWith?.['ACC-PROP-5-HQ-J37']?.batch, 1);
+    assert.equal(real.shipsWith?.['ACC-FRM-ARM-3']?.sku, 'OPENFRAME-3');
+  });
+
+  it('rejects a lead that is not a campaign SKU or a pinned batch without a date', () => {
+    assert.throws(() => parseCampaignConfig({...WITH, shipsWith: {X: {sku: 'NOPE'}}}), /unknown campaign SKU/);
+    assert.throws(
+      () => parseCampaignConfig({...WITH, shipsWith: {X: {sku: 'OPENFC-LITE-2020', batch: 2}}}),
+      /no ship date/,
+    );
+    assert.throws(
+      () => parseCampaignConfig({...WITH, shipsWith: {'OPENFRAME-5': {sku: 'OPENFC-LITE-2020'}}}),
+      /cannot ship with another/,
+    );
+  });
+
+  it('pins stock accessories to the dated batch at a flat price, whatever the lead sold', () => {
+    const [, strap] = applyCampaign(catalog('preorder'), WITH, {'OPENFC-LITE-2020': 400}, OPEN).products[0].variants;
+    assert.equal(strap.availability, 'preorder');
+    assert.equal(strap.ship_promise, 'ships late October 2026');
+    assert.equal(strap.campaign?.earlyPrice, false);
+    assert.equal(strap.campaign?.paidStock, false);
+    assert.equal(strap.campaign?.shipsOnTarget, false);
+    assert.equal(strap.campaign?.price, 2);
+    assert.equal(shipLabel(strap.campaign!, 'short'), 'Ships Oct 2026');
+  });
+
+  it('lets spares follow the frame target, grouped with the frame in a cart', () => {
+    const [frame, , arm] = applyCampaign(spare(catalog('preorder')), WITH, {'OPENFRAME-5': 12}, OPEN).products[0].variants;
+    assert.equal(arm.ship_promise, frame.ship_promise);
+    assert.equal(arm.campaign?.latestShip, '11 March 2027');
+    assert.equal(arm.campaign?.earlyPrice, false);
+    assert.equal(arm.campaign?.price, 7.5);
+    assert.equal(shipGroupKey('ACC-FRM-ARM-5', arm.ship_promise, arm.campaign), shipGroupKey('OPENFRAME-5', frame.ship_promise, frame.campaign));
+  });
+
+  it('closes spares after the deadline and keeps the pinned accessories selling', () => {
+    const late = new Date('2027-01-05T12:00:00Z');
+    const [, strap, arm] = applyCampaign(spare(catalog('preorder')), WITH, {'OPENFRAME-5': 12}, late).products[0].variants;
+    assert.equal(arm.availability, 'sold_out');
+    assert.equal(strap.availability, 'preorder');
+  });
+
+  it('asks for counts when only an accessory is on preorder', () => {
+    const c = catalog('sold_out');
+    c.products[0].variants[1] = {...c.products[0].variants[1], availability: 'preorder'};
+    assert.equal(needsCampaignCounts(c, WITH), true);
   });
 });

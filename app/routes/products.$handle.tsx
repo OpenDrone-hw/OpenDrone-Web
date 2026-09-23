@@ -1470,8 +1470,10 @@ function ProductPage() {
   const campaign = !isBundle && preorder ? (selectedVariant?.campaign ?? null) : null;
   const retail = selectedVariant?.sku ? (retailBySku[selectedVariant.sku] ?? null) : null;
   const tiers = tiersFor(CAMPAIGN_CONFIG, selectedVariant?.sku ?? '');
+  // A flat-price SKU (an accessory shipping with a campaign SKU) has no
+  // steps: no ladder, no step bar, no Early bird.
   const ladder =
-    campaign && retail != null && retail > 0 ? priceLadder(retail, tiers) : null;
+    campaign && tiers.length && retail != null && retail > 0 ? priceLadder(retail, tiers) : null;
   const currency = selectedVariant?.price.currencyCode ?? 'EUR';
   // The step bar: units sold, a tick at each step end, "37 / 250", with
   // every step as an absolute price over it. No "% off", no struck price.
@@ -1482,9 +1484,8 @@ function ProductPage() {
     range: step.to === null ? `${step.from}+` : `${step.from}-${step.to}`,
     current: nextUnit >= step.from && (step.to === null || nextUnit <= step.to),
   }));
-  const stepBarState = campaign
-    ? stepBarView(campaign, tiers.map((tier) => tier.upTo))
-    : null;
+  const stepBarState =
+    campaign && tiers.length ? stepBarView(campaign, tiers.map((tier) => tier.upTo)) : null;
   const stepBar =
     campaign && stepBarState ? (
       <StepBar

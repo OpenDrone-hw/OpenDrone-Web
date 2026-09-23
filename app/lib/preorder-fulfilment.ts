@@ -13,7 +13,10 @@
  *
  * Batches follow the campaign count (`shopify-orders.ts`): counted orders in
  * creation order, each line's `currentQuantity` taking the next units of its
- * SKU. A line that runs over a batch boundary gets both batch tags.
+ * SKU. A line that runs over a batch boundary gets both batch tags. A SKU
+ * that ships with another (`shipsWith` in `content/preorders.json`) takes
+ * the lead SKU's batch tag: its pinned batch, or the batch the lead's next
+ * unit fell into when the order was placed. It adds no units to the lead.
  *
  * Idempotent: the `preorder` tag marks an order as done, and a fulfillment
  * order that already carries the `opendrone-preorder` hold is not held
@@ -29,7 +32,7 @@
  * (`node --experimental-strip-types`) can load it.
  */
 
-import type {CampaignBatch, CampaignConfig} from './preorder-campaign.ts';
+import type {CampaignBatch, CampaignConfig, ShipsWith} from './preorder-campaign.ts';
 
 const DEFAULT_ADMIN_API_VERSION = '2026-07';
 const PAGE_SIZE = 100;
@@ -129,8 +132,10 @@ export type PreorderOrder = {
   };
 };
 
-/** One campaign batch an order line's units fall into. */
-export type LineBatch = {sku: string; batch: number; units: number; shipPromise: string};
+/** One campaign batch an order line's units fall into. `sku` is the
+ *  campaign SKU the batch belongs to; `item` is the line's own SKU when it
+ *  ships with that one. */
+export type LineBatch = {sku: string; batch: number; units: number; shipPromise: string; item?: string};
 
 export type HoldPlan = {
   orderId: string;
@@ -267,14 +272,24 @@ export function assignBatches(
   for (const order of sorted) {
     if (!isCountedOrder(order)) continue;
     const found: LineBatch[] = [];
+    // The lead counts as the storefront showed them when the order was placed.
+    const before = {...cumulative};
     for (const line of order.lineItems.nodes) {
       const sku = line.sku?.trim();
+      const rule = sku ? config.shipsWith?.[sku] : undefined;
+      if (sku && rule && config.skus[rule.sku] && line.currentQuantity > 0) {
+        const lead = config.skus[rule.sku].batches;
+        const batch = rule.batch ?? batchOfUnit(lead, (before[rule.sku] ?? 0) + 1).batch;
+        const ships = lead[batch - 1]?.ships?.trim() || config.pendingShips;
+        found.push({sku: rule.sku, batch, units: line.currentQuantity, shipPromise: ships, item: sku});
+        continue;
+      }
       const entry = sku ? config.skus[sku] : undefined;
       if (!sku || !entry || !(line.currentQuantity > 0)) continue;
       const start = cumulative[sku] ?? 0;
       for (let unit = start + 1; unit <= start + line.currentQuantity; unit += 1) {
         const {batch, entry: batchEntry} = batchOfUnit(entry.batches, unit);
-        const existing = found.find((b) => b.sku === sku && b.batch === batch);
+        const existing = found.find((b) => b.sku === sku && b.batch === batch && !b.item);
         if (existing) existing.units += 1;
         else {
           found.push({sku, batch, units: 1, shipPromise: batchEntry.ships?.trim() || config.pendingShips});
@@ -289,7 +304,9 @@ export function assignBatches(
 
 /** The hold note: which batch the order waits for, in plain words. */
 export function holdNote(batches: LineBatch[]): string {
-  const parts = batches.map((b) => `${b.sku} batch ${b.batch} (${b.shipPromise})`);
+  const parts = batches.map(
+    (b) => `${b.item ? `${b.item} with ` : ''}${b.sku} batch ${b.batch} (${b.shipPromise})`,
+  );
   const text = parts.length
     ? `Preorder: hold until every batch ships. ${parts.join('; ')}.`
     : 'Preorder: hold until the preorder items ship.';
@@ -317,7 +334,7 @@ export function planPreorderHolds(orders: PreorderOrder[], config: CampaignConfi
     plans.push({
       orderId: order.id,
       orderName: order.name,
-      tags: [PREORDER_TAG, ...orderBatches.map((b) => batchTag(b.sku, b.batch))],
+      tags: [PREORDER_TAG, ...new Set(orderBatches.map((b) => batchTag(b.sku, b.batch)))],
       hold,
       note: holdNote(orderBatches),
       batches: orderBatches,
@@ -379,10 +396,17 @@ export async function syncPreorderHolds(
 }
 
 /** The batches of an order read back from its tags, ignoring SKUs whose
- *  lines are gone (refunded or removed, `currentQuantity` 0). */
-export function orderBatchesFromTags(order: PreorderOrder): Array<{sku: string; batch: number}> {
+ *  lines are gone (refunded or removed, `currentQuantity` 0). A live line
+ *  of a SKU that ships with another keeps its lead's tags live. */
+export function orderBatchesFromTags(
+  order: PreorderOrder,
+  shipsWith: Record<string, ShipsWith> = {},
+): Array<{sku: string; batch: number}> {
   const live = new Set(
-    order.lineItems.nodes.filter((l) => l.currentQuantity > 0 && l.sku).map((l) => l.sku!.trim()),
+    order.lineItems.nodes
+      .filter((l) => l.currentQuantity > 0 && l.sku)
+      .map((l) => l.sku!.trim())
+      .map((sku) => shipsWith[sku]?.sku ?? sku),
   );
   return order.tags
     .map(parseBatchTag)
@@ -408,6 +432,7 @@ export function planRelease(
   sku: string,
   batch: number,
   ready: ReadonlySet<string>,
+  shipsWith: Record<string, ShipsWith> = {},
 ): ReleasePlan[] {
   const covered = new Set([batchTag(sku, batch), ...ready]);
   const plans: ReleasePlan[] = [];
@@ -421,7 +446,7 @@ export function planRelease(
       }))
       .filter((fo) => fo.holdIds.length > 0);
     if (!release.length) continue;
-    const waitsFor = orderBatchesFromTags(order)
+    const waitsFor = orderBatchesFromTags(order, shipsWith)
       .map((b) => batchTag(b.sku, b.batch))
       .filter((tag) => !covered.has(tag));
     plans.push({orderId: order.id, orderName: order.name, release, waitsFor});

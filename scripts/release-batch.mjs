@@ -113,7 +113,7 @@ async function main() {
         .join(', ')}). The Worker reconcile does that every five minutes; check /api/status/campaign.`,
     );
   }
-  const plans = lib.planRelease(orders, opts.sku, opts.batch, new Set(opts.with));
+  const plans = lib.planRelease(orders, opts.sku, opts.batch, new Set(opts.with), preorders.shipsWith ?? {});
   for (const line of describePlans(plans, opts)) console.log(line);
 
   const ready = plans.filter((p) => !p.waitsFor.length);

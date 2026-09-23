@@ -294,3 +294,48 @@ describe('reconcilePreorders', () => {
     assert.match(opsStatus().holdSync?.lastError?.error ?? '', /Access denied/);
   });
 });
+
+describe('SKUs that ship with a campaign SKU', () => {
+  const WITH = parseCampaignConfig({
+    ...CONFIG,
+    shipsWith: {
+      'ACC-PROP-5-HQ-J37': {sku: 'OPENFC-LITE-2020', batch: 1},
+      'ACC-FRM-ARM-5': {sku: 'OPENRX-LITE'},
+    },
+  });
+
+  it('tags an accessory with its lead batch and adds no units to the lead', () => {
+    const props = order({lines: [['ACC-PROP-5-HQ-J37', 3]]});
+    const fc = order({lines: [['OPENFC-LITE-2020', 250]]});
+    const late = order({lines: [['OPENFC-LITE-2020', 1], ['ACC-PROP-5-HQ-J37', 1]]});
+    const assigned = assignBatches([props, fc, late], WITH);
+    assert.deepEqual(assigned.get(props.id), [
+      {sku: 'OPENFC-LITE-2020', batch: 1, units: 3, shipPromise: 'ships late October 2026', item: 'ACC-PROP-5-HQ-J37'},
+    ]);
+    // The props did not use up FC units: unit 251 is the 251st FC.
+    assert.deepEqual(assigned.get(late.id)?.map((b) => [b.sku, b.batch, b.item ?? null]), [
+      ['OPENFC-LITE-2020', 2, null],
+      ['OPENFC-LITE-2020', 1, 'ACC-PROP-5-HQ-J37'],
+    ]);
+    const [plan] = planPreorderHolds([props], WITH);
+    assert.deepEqual(plan.tags, ['preorder', 'batch:OPENFC-LITE-2020:1']);
+    assert.match(plan.note, /ACC-PROP-5-HQ-J37 with OPENFC-LITE-2020 batch 1/);
+  });
+
+  it('puts a follower on the batch its lead next unit falls into', () => {
+    const rx = order({lines: [['OPENRX-LITE', 250]]});
+    const arm = order({lines: [['ACC-FRM-ARM-5', 2]]});
+    assert.deepEqual(assignBatches([rx, arm], WITH).get(arm.id)?.map((b) => [b.sku, b.batch]), [['OPENRX-LITE', 2]]);
+  });
+
+  it('keeps a lead tag live for release while an accessory line still ships', () => {
+    const hold = [{id: 'h1', handle: PREORDER_HOLD_HANDLE}];
+    const mixed = order({
+      lines: [['OPENRX-LITE', 1], ['ACC-PROP-5-HQ-J37', 1]],
+      tags: ['preorder', 'batch:OPENRX-LITE:1', 'batch:OPENFC-LITE-2020:1'],
+      holds: hold,
+    });
+    const [plan] = planRelease([mixed], 'OPENRX-LITE', 1, new Set(), WITH.shipsWith);
+    assert.deepEqual(plan.waitsFor, ['batch:OPENFC-LITE-2020:1']);
+  });
+});

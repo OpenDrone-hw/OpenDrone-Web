@@ -9,16 +9,35 @@
 
 import type {ProductCardFragment, ProductVariantFragment} from './product-shapes.ts';
 
-export type BuildRole = 'flight-controller' | 'esc' | 'frame' | 'motors' | 'receiver';
+export type BuildRole =
+  | 'flight-controller'
+  | 'esc'
+  | 'frame'
+  | 'motors'
+  | 'receiver'
+  | 'props'
+  | 'antenna'
+  | 'strap';
 
 export type BuildsConfig = {
-  roles: Record<BuildRole, {handle: string; sizeNeutral?: boolean}>;
+  roles: Record<BuildRole, {handle?: string; sizeNeutral?: boolean}>;
   builds: Array<{
     id: string;
     label: string;
-    parts: Array<{role: BuildRole; sku: string; quantity: number}>;
+    /** `handle` names the product when the role has none of its own (each
+     *  prop set is its own product). `suggest: false` keeps a part out of
+     *  the add-to-cart drawer; the build guide still lists it. */
+    parts: Array<{role: BuildRole; sku: string; quantity: number; handle?: string; suggest?: boolean}>;
   }>;
 };
+
+/** The product handle of a build part: its own, else its role's. */
+export function partHandle(
+  config: BuildsConfig,
+  part: {role: BuildRole; handle?: string},
+): string {
+  return part.handle ?? config.roles[part.role].handle ?? '';
+}
 
 export type BuildPart = {role: BuildRole; handle: string; sku: string; quantity: number};
 
@@ -38,6 +57,9 @@ export function parseBuilds(body: unknown): BuildsConfig {
   for (const build of c.builds) {
     for (const part of build.parts ?? []) {
       if (!c.roles[part.role]) throw new Error(`builds: ${build.id} uses unknown role ${part.role}`);
+      if (!part.handle && !c.roles[part.role].handle) {
+        throw new Error(`builds: ${build.id} ${part.sku} has no product handle`);
+      }
       if (!Number.isSafeInteger(part.quantity) || part.quantity < 1) {
         throw new Error(`builds: ${build.id} ${part.sku} needs a positive quantity`);
       }
@@ -103,11 +125,11 @@ export function buildSuggestionSpecs(
   }
   const rank = new Map(preferredHandles.map((handle, index) => [handle, index]));
   return build.parts
-    .filter((p) => !filled.has(p.role))
+    .filter((p) => !filled.has(p.role) && p.suggest !== false)
     .map((p, index) => ({
       part: {
         ...p,
-        handle: config.roles[p.role].handle,
+        handle: partHandle(config, p),
         replaces: otherSize.get(p.role) ?? null,
       },
       index,

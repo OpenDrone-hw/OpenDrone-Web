@@ -58,10 +58,25 @@ export type CampaignConfig = {
   /** Per SKU: its batches, and optionally its own price steps in place of
    *  the campaign's (`tiersFor`). */
   skus: Record<string, {batches: CampaignBatch[]; priceTiers?: PriceTier[]}>;
+  /** SKUs that ship with a campaign SKU instead of running their own count:
+   *  accessories and spares. Flat price (no steps), and their units do not
+   *  count toward the lead's batches. With `batch` the SKU ships with that
+   *  batch of the lead, which must carry its own ship date; without it the
+   *  SKU follows whatever batch the lead's next unit falls into. */
+  shipsWith?: Record<string, ShipsWith>;
 };
 
-/** The price steps one SKU sells on: its own when set, else the campaign's. */
+export type ShipsWith = {
+  /** The campaign SKU this one ships with. */
+  sku: string;
+  /** 1-based batch of the lead SKU, pinned. */
+  batch?: number;
+};
+
+/** The price steps one SKU sells on: its own when set, else the campaign's.
+ *  A SKU that ships with another has a flat price: no steps. */
 export function tiersFor(config: CampaignConfig, sku: string): PriceTier[] {
+  if (config.shipsWith?.[sku]) return [];
   return config.skus[sku]?.priceTiers ?? config.priceTiers;
 }
 
@@ -102,6 +117,9 @@ export type CampaignState = {
   /** The next unit's batch has no ship date of its own: it ships a set time
    *  after its funding target is reached, so its date depends on this SKU. */
   shipsOnTarget?: boolean;
+  /** Set for a SKU that ships with another (`CampaignConfig.shipsWith`): the
+   *  lead SKU whose batch, target and promise this state mirrors. */
+  shipsWith?: string;
   /** The target deadline as a date, "31 December 2026". Set by
    *  `applyCampaign`; absent in a bare `campaignState`. */
   deadline?: string;
@@ -172,6 +190,22 @@ export function parseCampaignConfig(body: unknown): CampaignConfig {
       }
     }
     if (entry.priceTiers !== undefined) checkTiers(entry.priceTiers, `${sku} priceTiers`);
+  }
+  if (c.shipsWith !== undefined) {
+    if (!c.shipsWith || typeof c.shipsWith !== 'object' || Array.isArray(c.shipsWith)) {
+      throw new Error('preorders: shipsWith must be an object');
+    }
+    for (const [sku, rule] of Object.entries(c.shipsWith)) {
+      if (c.skus[sku]) throw new Error(`preorders: ${sku} is a campaign SKU and cannot ship with another`);
+      const lead = rule && typeof rule.sku === 'string' ? c.skus[rule.sku] : undefined;
+      if (!lead) throw new Error(`preorders: ${sku} ships with an unknown campaign SKU`);
+      if (rule.batch !== undefined) {
+        const batch = Number.isSafeInteger(rule.batch) ? lead.batches[rule.batch - 1] : undefined;
+        if (!batch?.ships?.trim()) {
+          throw new Error(`preorders: ${sku} ships with ${rule.sku} batch ${rule.batch}, which has no ship date`);
+        }
+      }
+    }
   }
   return c as CampaignConfig;
 }
@@ -296,7 +330,8 @@ export function shipGroupKey(
   campaign: CampaignState | null | undefined,
 ): string {
   if (campaign && campaign.shipsOnTarget && !campaign.paidStock) {
-    return `target:${sku ?? ''}:${campaign.batch}`;
+    // A SKU that ships with another waits for the lead's target.
+    return `target:${campaign.shipsWith ?? sku ?? ''}:${campaign.batch}`;
   }
   return `date:${shipPromise ?? ''}`;
 }
@@ -372,6 +407,66 @@ export function campaignState(
 }
 
 /**
+ * The state of a SKU that ships with a campaign SKU: the lead's batch,
+ * target and ship promise, at a flat price. It never counts as paid stock,
+ * so a cart line is not capped by the lead's batch, and it has no price
+ * step. `leadOrdered` is the lead's paid units.
+ */
+export function shipsWithState(
+  config: CampaignConfig,
+  rule: ShipsWith,
+  leadOrdered: number,
+  price: number | null,
+): CampaignState {
+  const lead = config.skus[rule.sku];
+  const state = rule.batch
+    ? pinnedBatchState(lead.batches, rule.batch, config.pendingShips)
+    : campaignState(lead.batches, leadOrdered, config.pendingShips, tiersFor(config, rule.sku));
+  return {
+    ...state,
+    paidStock: false,
+    paidLeft: null,
+    shipsWith: rule.sku,
+    earlyPrice: false,
+    tierUpTo: null,
+    tierLeft: 0,
+    tierOff: 0,
+    price,
+    nextPrice: null,
+  };
+}
+
+/** A lead batch with its own ship date, as the state of a SKU pinned to it. */
+function pinnedBatchState(
+  batches: CampaignBatch[],
+  batch: number,
+  pendingShips: string,
+): CampaignState {
+  const entry = batches[batch - 1];
+  const promise = entry.ships?.trim() || pendingShips;
+  return {
+    ordered: 0,
+    batch,
+    batchUnits: entry.units,
+    batchOrdered: 0,
+    paidStock: false,
+    target: null,
+    targetOrdered: 0,
+    targetReached: false,
+    shipPromise: promise,
+    shipsOnTarget: false,
+    paidLeft: null,
+    earlyPrice: false,
+    tierUpTo: null,
+    tierLeft: 0,
+    tierOff: 0,
+    price: null,
+    nextPrice: null,
+    batches: [{batch, units: entry.units, status: 'current', shipPromise: promise}],
+  };
+}
+
+/**
  * Apply the campaign to a catalog. Only a variant the catalog policy already
  * sells as `preorder` and that has a campaign entry is touched: it gets the
  * campaign state and the batch's ship promise. With `units` null (the paid
@@ -383,6 +478,10 @@ export function campaignState(
  * whose next unit would wait for a funding target closes as sold out: its
  * ship promise names a deadline that has passed. Paid stock, and a batch
  * with its own ship date (its supplier order is placed), keep selling.
+ *
+ * A SKU in `shipsWith` gets its lead's state at its own flat price
+ * ({@link shipsWithState}) and closes on the same conditions, except the
+ * price-step check: it has no steps.
  */
 export function applyCampaign(
   catalog: Catalog,
@@ -398,10 +497,24 @@ export function applyCampaign(
       ...product,
       variants: product.variants.map((variant): CatalogVariant => {
         const entry = config.skus[variant.sku];
-        if (!entry || variant.availability !== 'preorder') return variant;
+        const rule = config.shipsWith?.[variant.sku];
+        if ((!entry && !rule) || variant.availability !== 'preorder') return variant;
         if (!units) {
           return {...variant, availability: 'sold_out', ship_promise: null, campaign: null};
         }
+        if (rule) {
+          const state = shipsWithState(config, rule, units[rule.sku] ?? 0, variant.price);
+          if (closed && state.shipsOnTarget) {
+            return {...variant, availability: 'sold_out', ship_promise: null, campaign: null};
+          }
+          const dated: CampaignState = {
+            ...state,
+            deadline: campaignDate(config.endsOn),
+            latestShip: state.shipsOnTarget ? latestShipDate(config) : null,
+          };
+          return {...variant, ship_promise: state.shipPromise, campaign: dated};
+        }
+        if (!entry) return variant;
         const state = campaignState(
           entry.batches,
           units[variant.sku] ?? 0,
@@ -432,7 +545,9 @@ export function applyCampaign(
 export function needsCampaignCounts(catalog: Catalog, config: CampaignConfig): boolean {
   return catalog.products.some((product) =>
     product.variants.some(
-      (variant) => variant.availability === 'preorder' && Boolean(config.skus[variant.sku]),
+      (variant) =>
+        variant.availability === 'preorder' &&
+        Boolean(config.skus[variant.sku] || config.shipsWith?.[variant.sku]),
     ),
   );
 }

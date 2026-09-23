@@ -127,8 +127,9 @@ type Card = {
   /** Stack mounting of a flight controller or ESC tier ('20x20', '30x30'),
    *  null for every other part. */
   mount: string | null;
-  /** The card's unit is paid stock (true), waits for a funding target
-   *  (false), or has no preorder campaign (null). */
+  /** The card's unit ships on a date (true: paid stock, or an accessory
+   *  riding a dated batch), waits for a funding target (false), or has no
+   *  preorder campaign (null). See {@link datedOf}. */
   paidStock: boolean | null;
 };
 
@@ -138,6 +139,14 @@ function mountOf(value: string): string | null {
   return m ? m[1] : null;
 }
 const STACK_SIZES = ['20x20', '30x30'];
+
+/** Whether a card's unit ships on a date (paid stock, or an accessory that
+ *  ships with a dated batch), waits for a funding target, or has no
+ *  campaign (null). */
+function datedOf(campaign: {paidStock: boolean; shipsOnTarget?: boolean; shipsWith?: string} | null | undefined): boolean | null {
+  if (!campaign) return null;
+  return campaign.shipsWith ? !campaign.shipsOnTarget : campaign.paidStock;
+}
 
 const num = (m?: MoneyV2 | null) => (m ? parseFloat(m.amount) || 0 : 0);
 
@@ -364,7 +373,7 @@ export default function ProductsIndex() {
             searchText: searchTextFor(p, value),
             build: buildOf(BUILDS, sv?.sku),
             mount: mountOf(value),
-            paidStock: sv?.campaign ? sv.campaign.paidStock : null,
+            paidStock: datedOf(sv?.campaign),
             to: `/products/${p.handle}?${encodeURIComponent(axis)}=${encodeURIComponent(value)}`,
             price,
             image: sv?.image ?? p.featuredImage,
@@ -392,12 +401,10 @@ export default function ProductsIndex() {
           product: p,
           title: p.title,
           searchText: searchTextFor(p),
-          build: null,
+          // A prop set or strap named in a build belongs to that size.
+          build: firstVariant ? buildOf(BUILDS, firstVariant.sku) : null,
           mount: null,
-          paidStock: (() => {
-            const c = p.variants.nodes.find((v) => v.campaign)?.campaign;
-            return c ? c.paidStock : null;
-          })(),
+          paidStock: datedOf(p.variants.nodes.find((v) => v.campaign)?.campaign),
           to: `/products/${p.handle}`,
           price: p.priceRange.minVariantPrice,
           priceFrom:

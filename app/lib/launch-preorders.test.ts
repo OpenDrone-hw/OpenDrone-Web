@@ -5,6 +5,8 @@ import {
   buildLaunchPolicy,
   campaignSkus,
   checkFirstStepPrices,
+  checkFlatPrices,
+  shipsWithSkus,
   firstStepPrice,
   hasWebhook,
   launchComment,
@@ -21,7 +23,7 @@ import {verifyShopifyHmac} from './shopify-webhook.ts';
 
 const preorders = JSON.parse(
   readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8'),
-) as {skus: Record<string, unknown>};
+) as {skus: Record<string, unknown>; shipsWith: Record<string, unknown>};
 
 const TIERS = [
   {upTo: 100, off: 0.2},
@@ -40,6 +42,35 @@ test('the campaign lists the 12 preorder SKUs', () => {
   assert.equal(skus.length, 12);
   assert.ok(skus.includes('OPENFC-LITE-2020'));
   assert.ok(skus.includes('OPENMOTOR-2207'));
+});
+
+test('the 29 accessory and spare SKUs sell as flat-price preorders', () => {
+  // stock/product_skus.json lists these ACC-* SKUs with sales_mode preorder.
+  const flat = shipsWithSkus(preorders);
+  assert.equal(flat.length, 29);
+  assert.ok(flat.every((sku) => sku.startsWith('ACC-')));
+  assert.ok(flat.includes('ACC-FRM-PAD') && flat.includes('ACC-ANT-DUAL-T'));
+  const policy = buildLaunchPolicy(
+    ['ACC-OLD', ...campaignSkus(preorders), ...shipsWithSkus(preorders)],
+    [...campaignSkus(preorders), ...shipsWithSkus(preorders)],
+  ) as Record<string, {saleMode: string}>;
+  assert.equal(policy['ACC-PROP-5-HQ-J37'].saleMode, 'preorder');
+  assert.equal(policy['ACC-OLD'].saleMode, 'sold_out');
+});
+
+test('flat-price check passes accessories without price tiers', () => {
+  const problems = checkFlatPrices(
+    [
+      {sku: 'A', price: 2.5, compareAt: null},
+      {sku: 'B', price: 2.5, compareAt: 3},
+      {sku: 'C', price: 0, compareAt: null},
+    ],
+    ['A', 'B', 'C', 'D'],
+  );
+  assert.equal(problems.length, 3);
+  assert.match(problems[0], /^B: compare-at 3.00 above the flat price 2.50/);
+  assert.match(problems[1], /^C: no price/);
+  assert.match(problems[2], /^D: not on the storefront/);
 });
 
 test('the first step price matches the Worker tierPrice', () => {

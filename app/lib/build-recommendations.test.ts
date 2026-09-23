@@ -35,8 +35,20 @@ describe('buildSuggestionSpecs', () => {
     const specs = buildSuggestionSpecs(BUILDS, '3-inch', [{sku: 'OPENFC-LITE-2020', handle: 'openfc-lite'}]);
     assert.deepEqual(
       specs.map(({sku, quantity}) => [sku, quantity]),
-      [['OPENESC-2020', 1], ['OPENFRAME-3', 1], ['OPENMOTOR-1604', 4], ['OPENRX-LITE', 1]],
+      [['OPENESC-2020', 1], ['OPENFRAME-3', 1], ['OPENMOTOR-1604', 4], ['OPENRX-LITE', 1], ['ACC-PROP-3-HQ-T3X3X3', 1]],
     );
+  });
+
+  it('suggests props for the size and an antenna for the U.FL receiver, never the strap', () => {
+    const specs = buildSuggestionSpecs(BUILDS, '5-inch', [{sku: 'OPENMOTOR-2207', handle: 'openmotor'}]);
+    const props = specs.find((s) => s.role === 'props');
+    assert.equal(props?.sku, 'ACC-PROP-5-HQ-5X43X3-V2S');
+    assert.equal(props?.handle, 'hqprop-5x4-3x3-v2s-propeller-set-5-inch');
+    assert.equal(specs.find((s) => s.role === 'antenna')?.handle, 'elrs-antenna-24');
+    assert.equal(specs.some((s) => s.role === 'strap'), false);
+    const three = buildSuggestionSpecs(BUILDS, '3-inch', [{sku: 'OPENFRAME-3', handle: 'openframe'}]);
+    assert.equal(three.some((s) => s.role === 'antenna'), false);
+    assert.equal(buildOf(BUILDS, 'ACC-PROP-3-HQ-T3X3X3'), '3-inch');
   });
 
   it('suggests the 2.4 GHz plug-in antenna receiver for a 5-inch build, not the dual-band one', () => {
@@ -65,7 +77,13 @@ describe('buildSuggestionSpecs', () => {
       [{sku: 'OPENFC-LITE-2020', handle: 'openfc-lite'}],
       ['openrx', 'openmotor', 'elsewhere'],
     );
-    assert.deepEqual(ranked.map(({handle}) => handle), ['openrx', 'openmotor', 'openesc', 'openframe']);
+    assert.deepEqual(ranked.map(({handle}) => handle), [
+      'openrx',
+      'openmotor',
+      'openesc',
+      'openframe',
+      'hqprop-t3x3x3-propeller-set-3-inch-t-mount',
+    ]);
     assert.ok(ranked.every(({sku}) => !sku.endsWith('3030') && !sku.endsWith('2207')));
   });
 

@@ -1,5 +1,6 @@
 {
   "battery-strap": {
+    "subtitle": "20 × 220 mm · woven · metal buckle",
     "specs": [
       [
         "Size",
@@ -23,6 +24,7 @@
     ]
   },
   "battery-strap-15-x-200-mm-woven-logo": {
+    "subtitle": "15 × 200 mm · woven · metal buckle",
     "specs": [
       [
         "Size",
@@ -43,6 +45,7 @@
     ]
   },
   "elrs-antenna-24": {
+    "subtitle": "ELRS 2.4 GHz · T-style · U.FL",
     "specs": [
       [
         "Band",
@@ -76,6 +79,7 @@
     ]
   },
   "elrs-868-915-mhz-2-4-ghz-u-fl-t-style-antenna": {
+    "subtitle": "ELRS 868/915 MHz + 2.4 GHz · T-style · U.FL",
     "specs": [
       [
         "Band",
@@ -108,6 +112,7 @@
     ]
   },
   "capacitor-470uf-35v-low-esr": {
+    "subtitle": "470 µF · 35 V · low-ESR · Rubycon PX",
     "specs": [
       [
         "Capacitance",
@@ -143,6 +148,7 @@
     ]
   },
   "capacitor-470uf-50v-low-esr": {
+    "subtitle": "470 µF · 50 V · low-ESR · Rubycon PX",
     "specs": [
       [
         "Capacitance",
@@ -178,6 +184,7 @@
     ]
   },
   "hqprop-t3x3x3-propeller-set-3-inch-t-mount": {
+    "subtitle": "3\" · tri-blade · T-mount · 4 props",
     "specs": [
       [
         "Diameter",
@@ -210,6 +217,7 @@
     ]
   },
   "hqprop-durable-t3x2x3-propeller-set-3-inch-t-mount": {
+    "subtitle": "3\" · tri-blade · T-mount · 4 props",
     "specs": [
       [
         "Diameter",
@@ -242,6 +250,7 @@
     ]
   },
   "gemfan-3020-3-propeller-set-3-inch-t-mount": {
+    "subtitle": "3\" · tri-blade · T-mount · 4 props",
     "specs": [
       [
         "Diameter",
@@ -277,6 +286,7 @@
     ]
   },
   "hqprop-5x4-3x3-v2s-propeller-set-5-inch": {
+    "subtitle": "5\" · tri-blade · 5 mm shaft · 4 props",
     "specs": [
       [
         "Diameter",
@@ -309,6 +319,7 @@
     ]
   },
   "hqprop-juicy-j37-propeller-set-5-inch": {
+    "subtitle": "5\" · tri-blade · 5 mm shaft · 4 props",
     "specs": [
       [
         "Diameter",
@@ -341,6 +352,7 @@
     ]
   },
   "gemfan-hurricane-51466-v2-propeller-set-5-inch": {
+    "subtitle": "5\" · tri-blade · 5 mm shaft · 4 props",
     "specs": [
       [
         "Diameter",
@@ -373,6 +385,7 @@
     ]
   },
   "openframe-spares": {
+    "subtitle": "T700 carbon · 3\" and 5\" · single parts",
     "specs": [
       [
         "Fits",
