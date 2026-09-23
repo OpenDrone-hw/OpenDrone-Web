@@ -10,15 +10,16 @@
     "lead": ""
   },
   "whatIsThis": {
-    "intro": "An ESC turns battery power into AC signals needed for BLDC motors to spin. This one specifically is sensorless. Do that four times over: per motor a microcontroller running AM32, a gate driver, and six MOSFETs doing the power switching. It listens for throttle commands from the flight controller over DShot and reports motor RPM back on the same wire, which Betaflight uses to filter gyro noise at exactly the motors' frequencies. Current sensing is on board, exposed through the connector to the Flight Controller.",
+    "intro": "A 4-in-1 ESC: it takes battery power and drives four brushless motors. Each motor has its own microcontroller running AM32, a gate driver and six MOSFETs. It takes throttle from the flight controller over DShot and sends motor RPM back on the same wire, which Betaflight uses for RPM filtering. Current sensing is on board and goes to the flight controller through the connector.",
     "needs": [
       "A flight controller to command it (OpenFC Lite; the 8-pin cable comes in its box)",
       "Four brushless motors soldered to the pads",
       "A LiPo on the included XT connector and wires, with the included low-ESR capacitor across the battery pads",
-      "A frame, props, receiver, radio; the usual rest of the aircraft"
+      "A frame, props, receiver and radio"
     ],
-    "fit": "The layer between the flight controller's digital requests and the raw battery current that actually spins the props.",
-    "chain": "esc"
+    "fit": "It sits between the flight controller and the battery and powers the motors.",
+    "chain": "esc",
+    "hero": "Turns battery power into motor speed. 4in1: all four motor drivers on one board, stacked under the FC."
   },
   "install": "Solder",
   "firmware": {

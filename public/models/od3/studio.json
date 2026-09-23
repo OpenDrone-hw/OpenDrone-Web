@@ -267,16 +267,16 @@
     {
       "id": "whole",
       "title": "OpenDrone 3\"",
-      "note": "complete airframe",
+      "note": "3\" freestyle build",
       "select": {
         "none": true
       }
     },
     {
       "id": "fc",
-      "title": "OpenFC-Lite-Mini",
-      "note": "RP2354B flight controller",
-      "hint": "Receiver in, ESC out: everything passes through it.",
+      "title": "OpenFC Lite",
+      "note": "RP2354 · BMI270 · Betaflight",
+      "hint": "RX in, ESC out.",
       "href": "/products/openfc-lite",
       "select": {
         "board": "OpenFC"
@@ -285,9 +285,9 @@
     },
     {
       "id": "esc",
-      "title": "OpenESC-20x20",
-      "note": "4-in-1 AM32 ESC",
-      "hint": "Between the flight controller's requests and a hundred amps of battery current.",
+      "title": "OpenESC",
+      "note": "4in1 · AM32 · 40A",
+      "hint": "Battery in, four motors out.",
       "href": "/products/openesc",
       "select": {
         "board": "4in1-mini"
@@ -297,7 +297,7 @@
     {
       "id": "rx",
       "title": "OpenRX",
-      "note": "ELRS receiver lineup. Lite-UFL fits a 3 inch; Mono's 900 MHz antenna wants a bigger frame.",
+      "note": "ELRS receivers: Lite, Lite-UFL, Mono, Gemini",
       "select": {
         "board": "OpenRX-Lite-UFL"
       },
@@ -305,8 +305,8 @@
     },
     {
       "id": "motor",
-      "title": "Motor and propeller",
-      "note": "1604 class, 3in tri-blade",
+      "title": "Motors + props",
+      "note": "1604 · 3\" tri-blade",
       "select": {
         "cluster": "^Admi",
         "withProp": true
@@ -314,8 +314,8 @@
     },
     {
       "id": "frame",
-      "title": "Airframe",
-      "note": "top plate off, then the video stack lifts out and stays",
+      "title": "OpenFrame",
+      "note": "3\" · T700 carbon",
       "select": {
         "complement": true,
         "plus": "videoModule"
@@ -326,16 +326,15 @@
       "stops": [
         {
           "at": 0,
-          "title": "Airframe",
-          "note": "T700 carbon, standoffs, hardware, camera cage",
-          "caption": "Carbon plates and arms, the body everything else mounts to. Stiffness is not cosmetic: the gyro feels every bit of flex.",
-          "hint": "Holds the stack in the middle and a motor at each arm tip.",
+          "title": "OpenFrame 3\"",
+          "note": "T700 carbon · 141 mm wheelbase",
+          "caption": "Carbon plates and arms. Everything bolts onto it and it takes the crashes.",
           "href": "/products/openframe"
         },
         {
           "at": 0.62,
-          "title": "Video module",
-          "note": "air unit, antennas and camera lift out as one"
+          "title": "Camera + VTX",
+          "note": "Not sold here: DJI, Walksnail, HDZero or analog"
         }
       ],
       "handle": "openframe"
