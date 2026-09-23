@@ -4397,18 +4397,23 @@ button.reset {
 
 /* Selected look lives on a layoutId element so it *glides* between cards on
    selection instead of snapping. The base card keeps its neutral border to
-   avoid layout shift; this draws a neutral ring on top. Gold stays on the
-   Pre-order button. */
+   avoid layout shift; this draws a gold ring and a faint gold tint on top.
+   The tint is not a fill: the one gold fill stays the Pre-order button. */
 .variant-tier-glow {
   position: absolute;
   inset: -1px;
   z-index: 0;
   border-radius: var(--r-md);
-  box-shadow: 0 0 0 1.5px var(--color-text);
+  box-shadow: 0 0 0 1.75px var(--color-gold);
+  background: color-mix(in srgb, var(--color-gold) 11%, var(--color-bg-card));
   pointer-events: none;
 }
 .variant-tier.is-selected .variant-tier-name {
   font-weight: 700;
+}
+.variant-tier-check {
+  display: inline-flex;
+  color: var(--color-gold-text);
 }
 
 .variant-tier.is-soldout {
@@ -5019,9 +5024,55 @@ html.light .firmware-logo--tile {
   color: var(--color-text);
   font-weight: 600;
 }
+/* A column header selects its version. */
+.spec-sheet-pick {
+  padding: 2px 6px;
+  border: 0;
+  border-radius: var(--r-sm, 6px);
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.spec-sheet-pick:hover {
+  color: var(--color-gold-text);
+}
+th.is-active .spec-sheet-pick {
+  cursor: default;
+}
+/* The Specs chapter: heading centred, the table one centred block with
+   the value columns centred under their variant names. */
+section.chapter[data-centered] .chapter-body-col {
+  grid-column: 1 / -1;
+  width: 100%;
+  max-width: 60rem;
+  margin-inline: auto;
+}
+.chapter[data-centered] .chapter-title {
+  text-align: center;
+}
+.chapter[data-centered] .spec-sheet {
+  max-width: none;
+  margin-inline: auto;
+}
+.chapter[data-centered] .spec-sheet td,
+.chapter[data-centered] .spec-sheet thead th:not(:first-child) {
+  padding-inline: 12px;
+  text-align: center;
+}
+.chapter[data-centered] .spec-sheet:not(.spec-sheet--multi) {
+  max-width: 40rem;
+}
+.chapter[data-centered] .spec-sheet:not(.spec-sheet--multi) td {
+  text-align: left;
+}
 @media (max-width: 639px) {
   .spec-sheet tbody th {
     width: 6.5rem;
+  }
+  .chapter[data-centered] .spec-sheet td,
+  .chapter[data-centered] .spec-sheet thead th:not(:first-child) {
+    padding-inline: 6px;
   }
   .spec-sheet--many thead th:not(.is-active):not(:first-child),
   .spec-sheet--many td:not(.is-active) {
@@ -17464,4 +17515,156 @@ html:not(.light) .trust-chip-oshwa-mark {
   display: inline;
   color: var(--color-text-muted);
   font-size: inherit;
+}
+
+/* Pinned buy bar (main's): the variant chips, price and Pre-order, shown
+   once the top fold's buy module has scrolled under the header. A pill under
+   the header on desktop, a bottom strip on phones. The chips keep their
+   gold selected ring; the step bar, quantity, ship line and terms stay in
+   the top fold. */
+.buy-rail-sentinel {
+  height: 0;
+  margin: 0;
+}
+.buy-rail.is-pinned {
+  display: flex;
+  z-index: 60;
+}
+.buy-rail.is-pinned .step-bar,
+.buy-rail.is-pinned .product-buy-tag,
+.buy-rail.is-pinned .product-buy-vat,
+.buy-rail.is-pinned .product-buy-unit,
+.buy-rail.is-pinned .product-buy-sku,
+.buy-rail.is-pinned .product-buy-stock,
+.buy-rail.is-pinned .product-buy-ship,
+.buy-rail.is-pinned .product-buy-reviews,
+.buy-rail.is-pinned .product-qty-note,
+.buy-rail.is-pinned .product-form > div,
+.buy-rail.is-pinned .variant-tier-price {
+  display: none;
+}
+.buy-rail.is-pinned .product-buy {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: 0;
+}
+.buy-rail.is-pinned .product-buy-price .product-price {
+  font-size: 1.05rem;
+}
+.buy-rail.is-pinned .product-form {
+  margin: 0;
+}
+.buy-rail.is-pinned .product-form .btn-primary {
+  width: auto;
+  min-height: 36px;
+  padding: 0.4rem 1.05rem;
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+  border-radius: var(--r-pill);
+}
+.buy-rail.is-pinned .variant-ladder-track {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--sp-2);
+}
+.buy-rail.is-pinned .variant-tier {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 0.25rem 0.8rem;
+  border-radius: var(--r-pill);
+  background: transparent;
+}
+.buy-rail.is-pinned .variant-tier-glow {
+  border-radius: var(--r-pill);
+}
+.buy-rail.is-pinned .variant-tier-name {
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+.buy-rail.is-pinned.is-suppressed,
+body:has(.cart-added-overlay) .buy-rail.is-pinned {
+  display: none;
+}
+@media (min-width: 960px) {
+  .buy-rail.is-pinned {
+    position: fixed;
+    top: calc(var(--header-height) + 1.1rem);
+    right: max(var(--rail-gutter, 1rem), calc((100vw - 1240px) / 2));
+    left: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: 0.4rem 0.4rem 0.4rem 0.6rem;
+    background: var(--pod-bg-strong, var(--color-bg-elevated));
+    border: 1px solid var(--pod-border, var(--color-border));
+    border-radius: var(--r-pill);
+    box-shadow: var(--pod-shadow, none);
+    animation: buy-rail-drop 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .buy-rail.is-pinned.is-ladderonly {
+    padding: 0.4rem;
+  }
+}
+@media (max-width: 959px) {
+  .buy-rail.is-pinned {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.35rem;
+    padding: 0.45rem max(0.8rem, env(safe-area-inset-left))
+      max(0.45rem, calc(env(safe-area-inset-bottom) * 0.5)) max(0.8rem, env(safe-area-inset-right));
+    background: var(--pod-bg-strong, var(--color-bg-elevated));
+    border-top: 1px solid var(--pod-border, var(--color-border));
+    animation: buy-rail-rise 0.2s ease;
+  }
+  .buy-rail.is-pinned .variant-ladder-track {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .buy-rail.is-pinned .product-buy-price {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-left: 0.3rem;
+  }
+  .buy-rail.is-pinned .product-form {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .buy-rail.is-pinned .product-form .btn-primary {
+    width: 100%;
+  }
+}
+@keyframes buy-rail-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes buy-rail-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .buy-rail.is-pinned {
+    animation: none;
+  }
 }

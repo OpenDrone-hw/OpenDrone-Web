@@ -1,5 +1,5 @@
 {
-  "$comment": "Build compatibility for the add-to-cart dialog's 'complete your build' (app/lib/build-recommendations.ts). A SKU listed in a build belongs to that size; the parts of a build are what is suggested around it, with the quantity one quad needs. A role marked sizeNeutral (receivers) is filled by any product with that handle, whatever its variant. Shopify's recommendations may reorder parts, never add one that is not listed here. A part may name its own product handle (each prop set is its own product); `suggest: false` keeps it out of the drawer while the build guide (/build) still lists it.",
+  "$comment": "Build compatibility for the add-to-cart dialog's 'complete your build' (app/lib/build-recommendations.ts). A SKU listed in a build belongs to that size; the parts of a build are what is suggested around it, with the quantity one quad needs. A role marked sizeNeutral (receivers) is filled by any product with that handle, whatever its variant. Shopify's recommendations may reorder parts, never add one that is not listed here. A part may name its own product handle (each prop set is its own product); `suggest: false` keeps it out of the drawer.",
   "roles": {
     "flight-controller": {
       "handle": "openfc-lite"

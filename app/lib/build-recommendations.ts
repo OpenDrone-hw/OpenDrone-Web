@@ -26,7 +26,7 @@ export type BuildsConfig = {
     label: string;
     /** `handle` names the product when the role has none of its own (each
      *  prop set is its own product). `suggest: false` keeps a part out of
-     *  the add-to-cart drawer; the build guide still lists it. */
+     *  the add-to-cart drawer. */
     parts: Array<{role: BuildRole; sku: string; quantity: number; handle?: string; suggest?: boolean}>;
   }>;
 };

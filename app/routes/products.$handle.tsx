@@ -1,10 +1,13 @@
 import {BOARD_ART_VERSION} from '~/data/board-art-version';
 import {Fragment, Suspense, useEffect, useMemo, useRef, useState} from 'react';
+import {createPortal} from 'react-dom';
+import {useAside} from '~/components/Aside';
 import {
   Await,
   Link,
   redirect,
   useLoaderData,
+  useNavigate,
   useRouteLoaderData,
   useSearchParams,
   type ShouldRevalidateFunctionArgs,
@@ -494,6 +497,7 @@ function Chapter({
   backdrop,
   wideMedia,
   noMedia,
+  centered,
   textReveal,
   id,
   wide,
@@ -538,12 +542,16 @@ function Chapter({
    *  table) needs no image. The grid tracks stay put, so the body column
    *  keeps the same width and left edge as every other chapter. */
   noMedia?: boolean;
+  /** Centre the heading and the body as one narrower block (the Specs
+   *  chapter's table). */
+  centered?: boolean;
 }) {
   return (
     <section
       id={id}
       className="chapter"
       data-chapter={number}
+      data-centered={centered ? '' : undefined}
       data-backdrop={backdrop ? '' : undefined}
       data-wide-media={wideMedia ? '' : undefined}
       data-no-media={noMedia ? '' : undefined}
@@ -789,6 +797,53 @@ function ProductPage() {
   // matching option, the buy module follows via the selected variant.
   const variantKeys = content.variants ? Object.keys(content.variants) : [];
   const hasLadder = Boolean(content.optionAxis && variantKeys.length > 0);
+
+  // Compact buy bar (main's): once the top fold's buy module has scrolled
+  // under the header, a copy of the variant chips, price and Pre-order pins
+  // to the top (a bottom bar under 960px), so a buyer can switch variants
+  // from anywhere on the page. Driven by a zero-height sentinel below the
+  // in-hero buy module; it steps aside while the footer is on screen.
+  // A state ref: the hero can mount after this effect's first run (the
+  // phone layout re-renders), and the observer must follow the element.
+  const [railSentinel, setRailSentinel] = useState<HTMLDivElement | null>(null);
+  const [railPinned, setRailPinned] = useState(false);
+  const [footerInView, setFooterInView] = useState(false);
+  const [railBox, setRailBox] = useState<{right: number} | null>(null);
+  const [railMobile, setRailMobile] = useState(false);
+  const {type: asideType} = useAside();
+  useEffect(() => {
+    if (!hasLadder) return;
+    const sentinel = railSentinel;
+    const section = sentinel?.closest('.product-hero');
+    if (!sentinel || !section) return;
+    const HEADER = 56; // --header-height
+    const measure = () => {
+      // Line the pinned bar's right edge up with the header pill's.
+      const headerEl = document.querySelector('.site-header-main');
+      const refRight = (headerEl ?? section).getBoundingClientRect().right;
+      setRailBox({right: Math.round(document.documentElement.clientWidth - refRight)});
+      setRailMobile(!window.matchMedia('(min-width: 960px)').matches);
+    };
+    measure();
+    const io = new IntersectionObserver(
+      ([entry]) => setRailPinned(!entry.isIntersecting && entry.boundingClientRect.top < HEADER),
+      // Everything below the header line counts as in view, so a jump past
+      // the buy module (a phone fling, an anchor link) still flips the state.
+      {rootMargin: `-${HEADER}px 0px 100000px 0px`, threshold: 0},
+    );
+    io.observe(sentinel);
+    const footer = document.querySelector('footer');
+    const footerIo = footer
+      ? new IntersectionObserver(([entry]) => setFooterInView(entry.isIntersecting), {threshold: 0})
+      : null;
+    if (footer) footerIo?.observe(footer);
+    window.addEventListener('resize', measure);
+    return () => {
+      io.disconnect();
+      footerIo?.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [railSentinel, hasLadder]);
   const matchKey = (val?: string) =>
     val
       ? variantKeys.find(
@@ -1440,6 +1495,31 @@ function ProductPage() {
         activeValue={activeTier}
         onSelect={selectTier}
         showPrices={!soon}
+      />
+    ) : null;
+  // A Specs column header selects its version the way a ladder button does:
+  // preview at once, then select the catalog variant through the URL.
+  const navigate = useNavigate();
+  const pickTier = (value: string) => {
+    if (content.variants?.[value]?.comingSoon) return;
+    selectTier(value);
+    const norm = (s: string) => s.trim().toLowerCase();
+    const option = productOptions
+      .find((o) => norm(o.name) === norm(content.optionAxis ?? ''))
+      ?.optionValues.find((v) => norm(v.name) === norm(value));
+    if (option?.variantUriQuery && !option.selected) {
+      void navigate(`?${option.variantUriQuery}`, {replace: true, preventScrollReset: true});
+    }
+  };
+  // The pinned bar's chips: names only, its buy module carries the price.
+  const railLadderPinned =
+    hasLadder && content.optionAxis && content.variants ? (
+      <VariantLadder
+        axis={content.optionAxis}
+        variants={content.variants}
+        productOptions={productOptions}
+        activeValue={activeTier}
+        onSelect={selectTier}
       />
     ) : null;
   const isBundle = Boolean(content.bundle);
@@ -2272,6 +2352,7 @@ function ProductPage() {
           title={title}
           titleId="product-chrome.ch_specs_title"
           noMedia
+          centered
         >
           {/* Final values only, never a count-up: a buyer who reads or
               screenshots a spec must never see a wrong current or voltage. */}
@@ -2292,7 +2373,14 @@ function ProductPage() {
                       key={col}
                       className={col === activeTier ? 'is-active' : undefined}
                     >
-                      {variantDisplayName(product.handle, col)}
+                      <button
+                        type="button"
+                        className="spec-sheet-pick"
+                        aria-pressed={col === activeTier}
+                        onClick={() => pickTier(col)}
+                      >
+                        {variantDisplayName(product.handle, col)}
+                      </button>
                     </th>
                   ))}
                 </tr>
@@ -2668,7 +2756,24 @@ function ProductPage() {
           <div className="buy-rail">
             {railLadder}
             {railBuyModule}
+            <div ref={setRailSentinel} className="buy-rail-sentinel" aria-hidden="true" />
           </div>
+          {/* The compact bar, portaled to <body> so the fixed overlay escapes
+              the hero's stacking context. Coming soon: the chips alone. */}
+          {railPinned && !footerInView && typeof document !== 'undefined'
+            ? createPortal(
+                <div
+                  className={`buy-rail is-pinned${railMobile ? ' is-mobile' : ''}${soon ? ' is-ladderonly' : ''}${
+                    asideType !== 'closed' ? ' is-suppressed' : ''
+                  }`}
+                  style={railBox && !railMobile ? {right: railBox.right} : undefined}
+                >
+                  {railLadderPinned}
+                  {soon ? null : railBuyModule}
+                </div>,
+                document.body,
+              )
+            : null}
         </div>
       </section>
 
