@@ -721,20 +721,18 @@ function fromCountry(values: Record<string, string>, country: string | null): Re
 }
 
 describe('Shopify cart action: buyer country', () => {
-  it('takes the visitor country when the shop ships there', () => {
-    assert.equal(cartCountry(fromCountry({}, 'US')), 'US');
+  it('takes the visitor country when it is sold direct (the EU)', () => {
     assert.equal(cartCountry(fromCountry({}, 'be')), 'BE');
-    // Rest of the world, Bulgaria included, is still a shipping country.
     assert.equal(cartCountry(fromCountry({}, 'BG')), 'BG');
-    assert.equal(cartCountry(fromCountry({}, 'JP')), 'JP');
+    assert.equal(cartCountry(fromCountry({}, 'SE')), 'SE');
   });
 
-  it('leaves the country out when it is unknown or blocked', () => {
+  it('leaves the country out when it is unknown, blocked or sold through shops', () => {
     assert.equal(cartCountry(fromCountry({}, null)), undefined);
     assert.equal(cartCountry(fromCountry({}, 'XX')), undefined);
     assert.equal(cartCountry(fromCountry({}, 'T1')), undefined);
-    for (const blocked of ['RU', 'BY', 'IR', 'KP', 'SY', 'CU']) {
-      assert.equal(cartCountry(fromCountry({}, blocked)), undefined, blocked);
+    for (const other of ['RU', 'BY', 'IR', 'KP', 'SY', 'CU', 'US', 'GB', 'CH', 'NO', 'JP']) {
+      assert.equal(cartCountry(fromCountry({}, other)), undefined, other);
     }
   });
 
@@ -750,10 +748,10 @@ describe('Shopify cart action: buyer country', () => {
   it('passes the visitor country when it creates a cart', async () => {
     let country: string | undefined = 'unset';
     await handleShopifyCartAction(
-      fromCountry({sku: 'OPENRX-LITE', qty: '1'}, 'US'), ENABLED_ENV,
+      fromCountry({sku: 'OPENRX-LITE', qty: '1'}, 'NL'), ENABLED_ENV,
       {fetchCatalog: async () => CATALOG, createCart: async (_lines, code) => { country = code; return cart(); }},
     );
-    assert.equal(country, 'US');
+    assert.equal(country, 'NL');
     await handleShopifyCartAction(
       fromCountry({sku: 'OPENRX-LITE', qty: '1'}, 'RU'), ENABLED_ENV,
       {fetchCatalog: async () => CATALOG, createCart: async (_lines, code) => { country = code; return cart(); }},

@@ -91,12 +91,13 @@ export function lineLimitMessage(inCart: number): string {
  * picked (`od_ship_country` cookie), else the visitor's country
  * (Cloudflare's `CF-IPCountry`, then `Accept-Language`), so Shopify checkout
  * opens in that market with its shipping rate and tax treatment. Undefined
- * when the country is unknown or blocked: the cart then starts in the shop's
- * primary market and checkout still decides from the shipping address.
+ * when the country is unknown, blocked or sold only through shops: the cart
+ * then starts in the shop's primary market and checkout still decides from
+ * the shipping address.
  */
 export function cartCountry(request: Request): string | undefined {
   const quote = shippingQuote(shipCountryForRequest(request));
-  return quote && !quote.blocked ? quote.country : undefined;
+  return quote?.kind === 'direct' ? quote.country : undefined;
 }
 
 export const CART_BUYER_IDENTITY_MUTATION = `#graphql

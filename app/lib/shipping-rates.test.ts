@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import {
   BLOCKED_COUNTRIES,
+  EU_COUNTRIES,
   SHIPPING_ZONES,
   LIKELY_SHIP_COUNTRIES,
   SHIP_COUNTRY_CODES,
@@ -14,57 +15,56 @@ import {
   shipCountryOptions,
   shipCountryPicker,
   shippingQuote,
+  soldThroughShops,
 } from './shipping-rates.ts';
 
 describe('shippingQuote', () => {
-  it('uses the flat bpost rate table', () => {
-    const rate = (c: string) => {
-      const q = shippingQuote(c);
-      return q && !q.blocked ? q.rate : null;
-    };
+  const rate = (c: string) => {
+    const q = shippingQuote(c);
+    return q?.kind === 'direct' ? q.rate : null;
+  };
+
+  it('uses the flat bpost rate table inside the EU', () => {
     assert.equal(rate('BE'), 8.5);
     for (const c of ['DE', 'FR', 'LU', 'NL']) assert.equal(rate(c), 9.95);
     for (const c of ['AT', 'ES', 'IT', 'PL', 'SE']) assert.equal(rate(c), 12.95);
     for (const c of ['CY', 'EE', 'MT']) assert.equal(rate(c), 16.95);
-    for (const c of ['GB', 'CH', 'NO', 'IS', 'LI']) assert.equal(rate(c), 24.95);
-    assert.equal(rate('US'), 19.95);
-    for (const c of ['CA', 'AU', 'JP']) assert.equal(rate(c), 39.95);
   });
 
-  it('bills Bulgaria at the rest-of-world rate with no import duty', () => {
-    const q = shippingQuote('BG');
-    assert.ok(q && !q.blocked);
-    assert.equal(q.rate, 39.95);
-    assert.equal(q.zone, 'world');
-    assert.equal(q.duty, 'none');
+  it('sells Bulgaria direct at its own rate', () => {
+    assert.deepEqual(shippingQuote('BG'), {country: 'BG', kind: 'direct', zone: 'eu_bg', rate: 39.95});
   });
 
-  it('does not ship to the blocked countries', () => {
+  it('sells direct to exactly the EU27, each in one zone', () => {
+    const all = SHIPPING_ZONES.flatMap((z) => z.countries);
+    assert.equal(new Set(all).size, all.length);
+    assert.deepEqual([...all].sort(), [...EU_COUNTRIES].sort());
+    assert.equal(EU_COUNTRIES.size, 27);
+    for (const c of EU_COUNTRIES) assert.equal(shippingQuote(c)?.kind, 'direct', c);
+  });
+
+  it('sends every other country that is not blocked to the shops', () => {
+    for (const c of ['US', 'GB', 'CH', 'NO', 'IS', 'LI', 'CA', 'AU', 'JP']) {
+      assert.deepEqual(shippingQuote(c), {country: c, kind: 'shops'});
+      assert.equal(soldThroughShops(c), true, c);
+    }
+    assert.equal(soldThroughShops('DE'), false);
+    assert.equal(soldThroughShops('RU'), false);
+    assert.equal(soldThroughShops(null), false);
+  });
+
+  it('does not sell to the blocked countries', () => {
     for (const c of ['RU', 'BY', 'IR', 'KP', 'SY', 'CU']) {
-      assert.deepEqual(shippingQuote(c), {country: c, blocked: true});
+      assert.deepEqual(shippingQuote(c), {country: c, kind: 'blocked'});
     }
     assert.equal(BLOCKED_COUNTRIES.size, 6);
   });
 
-  it('never collects duties at checkout: none in the EU, the carrier elsewhere', () => {
-    const duty = (c: string) => {
-      const q = shippingQuote(c);
-      return q && !q.blocked ? q.duty : null;
-    };
-    assert.equal(duty('BE'), 'none');
-    assert.equal(duty('BG'), 'none');
-    assert.equal(duty('US'), 'us');
-    assert.equal(duty('GB'), 'intl');
-    assert.equal(duty('CA'), 'intl');
-  });
-
-  it('ignores an unknown or malformed country and lists each country once', () => {
+  it('ignores an unknown or malformed country', () => {
     assert.equal(shippingQuote(null), null);
     assert.equal(shippingQuote('Belgium'), null);
+    assert.equal(shippingQuote('ZZ'), null);
     assert.equal(shippingQuote('be')?.country, 'BE');
-    const all = SHIPPING_ZONES.flatMap((z) => z.countries);
-    assert.equal(new Set(all).size, all.length);
-    assert.equal(all.length, 26 + 5 + 1);
   });
 
   it('names a country in English', () => {
@@ -74,14 +74,14 @@ describe('shippingQuote', () => {
 });
 
 describe('shipCountryOptions', () => {
-  it('leaves out every blocked country and quotes a rate for every one it lists', () => {
+  it('leaves out every blocked country and quotes every one it lists', () => {
     const codes = shipCountryOptions().map((o) => o.code);
     for (const blocked of BLOCKED_COUNTRIES) assert.ok(!codes.includes(blocked), blocked);
     assert.equal(codes.length, SHIP_COUNTRY_CODES.length);
     assert.equal(new Set(codes).size, codes.length);
     for (const code of codes) {
       const q = shippingQuote(code);
-      assert.ok(q && !q.blocked, code);
+      assert.ok(q && q.kind !== 'blocked', code);
     }
     for (const c of ['BE', 'US', 'GB', 'BG', 'JP']) assert.ok(codes.includes(c), c);
   });
@@ -103,7 +103,8 @@ describe('shipCountryPicker', () => {
     assert.equal(likely.length + rest.length, SHIP_COUNTRY_CODES.length);
     const names = rest.map((o) => o.name);
     assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b, 'en')));
-    assert.equal(rest.find((o) => o.code === 'US')?.rate, 19.95);
+    assert.equal(rest.find((o) => o.code === 'US')?.rate, null);
+    assert.equal(rest.find((o) => o.code === 'BG')?.rate, 39.95);
   });
 
   it('leaves out uninhabited territories and blocked countries', () => {
@@ -114,7 +115,10 @@ describe('shipCountryPicker', () => {
       assert.ok(!codes.includes(c), c);
     }
     for (const c of BLOCKED_COUNTRIES) assert.ok(!codes.includes(c), c);
-    for (const o of [...likely, ...rest]) assert.ok(o.rate > 0, o.code);
+    // A rate for every EU country, "through shops" (null) for the others.
+    for (const o of [...likely, ...rest]) {
+      assert.equal(o.rate !== null && o.rate > 0, EU_COUNTRIES.has(o.code), o.code);
+    }
   });
 });
 

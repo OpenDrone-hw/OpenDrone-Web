@@ -41,5 +41,8 @@
   "build_title": "Complete the build",
   "build_add": "Add",
   "build_added": "Added",
-  "build_retry": "Try again"
+  "build_retry": "Try again",
+  "checkout_shops": "Available through shops in {country}.",
+  "checkout_shops_trade": "Are you a shop?",
+  "checkout_shops_notify": "Get launch news"
 }

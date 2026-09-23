@@ -3,7 +3,7 @@
  * shows. Cloudflare sets `CF-IPCountry` on every request to the Worker; a
  * `?country=XX` query overrides it so a page can be checked as seen from
  * another country. Nothing about the order depends on it: Shopify checkout
- * decides tax, shipping and duties from the shipping address.
+ * decides tax and shipping from the shipping address.
  *
  * Bundler-free (no imports) so the node:test suites can load it.
  */
@@ -25,12 +25,9 @@ export function paysEuVat(country: string | null): boolean {
 }
 
 /** Which price note a visitor sees: EU VAT included, or, outside the EU,
- *  import duties and taxes paid to the carrier on delivery ('us' adds the
- *  high US duty on China-made electronics). No duties are charged at
- *  checkout for any country. */
-export type PriceNote = 'vat' | 'us' | 'intl';
+ *  that the products are sold through shops there. */
+export type PriceNote = 'vat' | 'shops';
 
 export function priceNote(country: string | null): PriceNote {
-  if (paysEuVat(country)) return 'vat';
-  return country === 'US' ? 'us' : 'intl';
+  return paysEuVat(country) ? 'vat' : 'shops';
 }

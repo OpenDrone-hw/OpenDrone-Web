@@ -31,10 +31,10 @@ function deps(cartId: string | null = 'gid://shopify/Cart/abc') {
 describe('handleCartCountry', () => {
   it('puts the picked country on the session cart', async () => {
     const d = deps();
-    const res = await handleCartCountry(post('us'), OPEN, d);
+    const res = await handleCartCountry(post('de'), OPEN, d);
     assert.equal(res.status, 200);
-    assert.deepEqual(await res.json(), {country: 'US', applied: true});
-    assert.deepEqual(d.calls, [['gid://shopify/Cart/abc', 'US']]);
+    assert.deepEqual(await res.json(), {country: 'DE', applied: true});
+    assert.deepEqual(d.calls, [['gid://shopify/Cart/abc', 'DE']]);
     assert.equal(res.headers.get('Cache-Control'), 'no-store');
   });
 
@@ -43,6 +43,16 @@ describe('handleCartCountry', () => {
     const res = await handleCartCountry(post('RU'), OPEN, d);
     assert.equal(res.status, 200);
     assert.deepEqual(await res.json(), {country: 'RU', applied: false});
+    assert.equal(d.calls.length, 0);
+  });
+
+  it('never puts a country sold through shops on the cart', async () => {
+    const d = deps();
+    for (const c of ['US', 'GB', 'CH', 'NO']) {
+      const res = await handleCartCountry(post(c), OPEN, d);
+      assert.equal(res.status, 200);
+      assert.deepEqual(await res.json(), {country: c, applied: false});
+    }
     assert.equal(d.calls.length, 0);
   });
 
@@ -81,7 +91,7 @@ describe('handleCartCountry', () => {
 
   it('reports a Shopify refusal without throwing', async () => {
     const logged: string[] = [];
-    const res = await handleCartCountry(post('US'), OPEN, {
+    const res = await handleCartCountry(post('FR'), OPEN, {
       getCartId: () => 'gid://shopify/Cart/abc',
       setCountry: async () => {
         throw new Error('shopify: cartBuyerIdentityUpdate failed');
@@ -89,7 +99,7 @@ describe('handleCartCountry', () => {
       logError: (m) => logged.push(m),
     });
     assert.equal(res.status, 502);
-    assert.deepEqual(await res.json(), {country: 'US', applied: false});
+    assert.deepEqual(await res.json(), {country: 'FR', applied: false});
     assert.equal(logged.length, 1);
   });
 });

@@ -78,6 +78,7 @@ import {fetchStatusFlagsFast, statusForHandle} from '~/lib/roadmap-data';
 import {parseCampaignConfig, priceLadder, tiersFor} from '~/lib/preorder-campaign';
 import {stepBarView, stepLayout} from '~/lib/preorder-meter';
 import {paysEuVat} from '~/lib/visitor-country';
+import {soldThroughShops} from '~/lib/shipping-rates';
 import preorders from '../../content/preorders.json';
 import {trackEvent} from '~/lib/growth/plausible';
 import {attributionSource} from '~/lib/growth/attribution';
@@ -1635,6 +1636,10 @@ function ProductPage() {
   const vatNote = paysEuVat(rootData?.visitorCountry ?? null)
     ? say('product-chrome.buy_vat_note', 'incl. VAT')
     : null;
+  // Consumers buy direct only inside the EU. Elsewhere (unless blocked) the
+  // button reads "Available through shops" and the module links the trade
+  // page and the launch-news signup instead of the ship date.
+  const throughShops = soldThroughShops(rootData?.visitorCountry ?? null);
   // Coming-soon buy module: the price/stock/add-to-cart block becomes a
   // COMING SOON plate + notify-at-launch signup (same newsletter action,
   // tagged with this product's handle). Everything else on the PDP stays.
@@ -1745,10 +1750,26 @@ function ProductPage() {
         maxQuantity={maxQuantity}
         maxQuantityNote={maxQuantityNote}
         onQuantityChange={isBundle ? undefined : setQuantity}
+        notSoldLabel={
+          throughShops ? say('product-chrome.buy_shops_only', 'Available through shops') : undefined
+        }
       />
-      {/* Ship date right under the button (WER VI.43), and for a funding
-          target its deadline and the "if funded" condition. */}
-      {preorder && !isBundle ? (
+      {throughShops ? (
+        <>
+          <p className="product-buy-ship">
+            <Link prefetch="intent" to="/wholesale" className="product-buy-terms-link">
+              {say('product-chrome.buy_shops_trade', 'Are you a shop?')}
+            </Link>
+          </p>
+          <NewsletterSignup
+            notify={{productHandle: product.handle, productTitle: product.title}}
+            turnstileSiteKey={rootData?.turnstileSiteKey ?? null}
+            className="product-buy-notify"
+          />
+        </>
+      ) : /* Ship date right under the button (WER VI.43), and for a funding
+          target its deadline and the "if funded" condition. */
+      preorder && !isBundle ? (
         <ShipLine campaign={campaign} promise={shipPromise} className="product-buy-stock" />
       ) : (
         <p className={`product-buy-stock${buyAvailable ? '' : ' is-out'}`}>
@@ -1770,7 +1791,7 @@ function ProductPage() {
                 : copyText('product-chrome.buy_stock_out')}
         </p>
       )}
-      {preorder && !isBundle ? (
+      {preorder && !isBundle && !throughShops ? (
         <p className="product-buy-ship">
           <Link prefetch="intent" to="/preorder" className="product-buy-terms-link">
             {say('product-chrome.buy_terms_link', 'Pre-order terms')}
@@ -1781,6 +1802,7 @@ function ProductPage() {
           is a catalog availability state, not a launch to be notified of. */}
       {!isBundle &&
       !preorder &&
+      !throughShops &&
       selectedVariant &&
       !selectedVariant.availableForSale ? (
         <NewsletterSignup

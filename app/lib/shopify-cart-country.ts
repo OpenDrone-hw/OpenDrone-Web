@@ -21,10 +21,10 @@ function reply(body: Record<string, unknown>, status: number): Response {
  * country's market with its shipping rate, instead of the market of the
  * visitor's IP address. The form body carries `country` (ISO 3166-1 alpha-2).
  *
- * The line prices do not change: every market prices tax-inclusive, so a
- * buyer outside the EU pays the listed price and Shopify charges no Belgian
- * VAT on it. No cart yet is not an error: the next cart starts from the
- * visitor's country, and checkout still decides from the shipping address.
+ * Only an EU country is set: the others are blocked or buy through shops,
+ * and the cart page refuses checkout for them. No cart yet is not an error:
+ * the next cart starts from the visitor's country, and checkout still
+ * decides from the shipping address.
  */
 export async function handleCartCountry(
   request: Request,
@@ -56,9 +56,9 @@ export async function handleCartCountry(
   }
   const quote = shippingQuote(/^[A-Z]{2}$/.test(country) ? country : null);
   if (!quote) return reply({error: 'unknown country'}, 400);
-  // A blocked country never goes on the cart; the cart page already refuses
-  // checkout for it.
-  if (quote.blocked) return reply({country: quote.country, applied: false}, 200);
+  // A blocked or shops-only country never goes on the cart; the cart page
+  // already refuses checkout for it.
+  if (quote.kind !== 'direct') return reply({country: quote.country, applied: false}, 200);
 
   const cartId = dependencies.getCartId();
   if (!cartId) return reply({country: quote.country, applied: false}, 200);

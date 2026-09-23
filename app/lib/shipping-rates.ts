@@ -1,8 +1,9 @@
 /**
  * Flat shipping rates per destination, in EUR including VAT, as set in the
  * Shopify shipping profile (bpost). Display only: Shopify checkout charges
- * the rate for the shipping address. Import duties are never collected at
- * checkout; outside the EU the buyer pays them to the carrier on delivery.
+ * the rate for the shipping address. Consumers buy direct only inside the
+ * EU, where no import duty or customs clearance is due; every other country
+ * that is not blocked buys through shops.
  *
  * Bundler-free (no imports) so the node:test suites can load it.
  */
@@ -10,15 +11,15 @@
 /** Countries Incutec does not ship to. */
 export const BLOCKED_COUNTRIES: ReadonlySet<string> = new Set(['RU', 'BY', 'IR', 'KP', 'SY', 'CU']);
 
-const EU = new Set([
+/** The 27 EU member states: the only destinations sold direct. */
+export const EU_COUNTRIES: ReadonlySet<string> = new Set([
   'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE',
   'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE',
 ]);
 
 export type ShippingZone = {
-  id: 'be' | 'near' | 'eu' | 'eu_far' | 'europe' | 'us' | 'world';
-  /** Countries in the zone; empty for the rest of the world, which
-   *  includes Bulgaria (an EU country billed at the world rate). */
+  id: 'be' | 'near' | 'eu' | 'eu_far' | 'eu_bg';
+  /** Countries in the zone. Together the zones hold the EU27, once each. */
   countries: string[];
   /** Flat rate in EUR, VAT included. */
   rate: number;
@@ -30,38 +31,39 @@ export const SHIPPING_ZONES: ShippingZone[] = [
   {id: 'near', countries: ['DE', 'FR', 'LU', 'NL'], rate: 9.95},
   {
     id: 'eu',
-    countries: [...EU].filter((c) => !['BE', 'DE', 'FR', 'LU', 'NL', 'CY', 'EE', 'MT', 'BG'].includes(c)).sort(),
+    countries: [...EU_COUNTRIES].filter((c) => !['BE', 'DE', 'FR', 'LU', 'NL', 'CY', 'EE', 'MT', 'BG'].includes(c)).sort(),
     rate: 12.95,
   },
   {id: 'eu_far', countries: ['CY', 'EE', 'MT'], rate: 16.95},
-  {id: 'europe', countries: ['GB', 'CH', 'NO', 'IS', 'LI'], rate: 24.95},
-  {id: 'us', countries: ['US'], rate: 19.95},
-  {id: 'world', countries: [], rate: 39.95},
+  // The rate mirrors the Shopify profile, which bills Bulgaria at its world rate.
+  {id: 'eu_bg', countries: ['BG'], rate: 39.95},
 ];
 
-/** Who collects import duties for an order to this country: none inside the
- *  EU, the carrier on delivery everywhere else. */
-export type DutyNote = 'none' | 'us' | 'intl';
-
+/**
+ * What a destination gets: `direct`, a consumer order at the zone's flat
+ * rate (EU only); `shops`, not sold direct, available through shops;
+ * `blocked`, not sold at all (`BLOCKED_COUNTRIES`).
+ */
 export type ShippingQuote =
-  | {country: string; blocked: true}
-  | {country: string; blocked: false; zone: ShippingZone['id']; rate: number; duty: DutyNote};
+  | {country: string; kind: 'blocked'}
+  | {country: string; kind: 'shops'}
+  | {country: string; kind: 'direct'; zone: ShippingZone['id']; rate: number};
 
-/** The flat rate to one ISO country code, or null for an unknown country. */
+/** The quote for one ISO country code, or null for an unknown country. */
 export function shippingQuote(country: string | null): ShippingQuote | null {
-  const code = country?.trim().toUpperCase();
-  if (!code || !/^[A-Z]{2}$/.test(code)) return null;
-  if (BLOCKED_COUNTRIES.has(code)) return {country: code, blocked: true};
-  const zone =
-    SHIPPING_ZONES.find((z) => z.countries.includes(code)) ??
-    SHIPPING_ZONES[SHIPPING_ZONES.length - 1];
-  return {
-    country: code,
-    blocked: false,
-    zone: zone.id,
-    rate: zone.rate,
-    duty: EU.has(code) ? 'none' : code === 'US' ? 'us' : 'intl',
-  };
+  const code = isoCode(country);
+  if (!code) return null;
+  if (BLOCKED_COUNTRIES.has(code)) return {country: code, kind: 'blocked'};
+  const zone = SHIPPING_ZONES.find((z) => z.countries.includes(code));
+  if (!zone) return {country: code, kind: 'shops'};
+  return {country: code, kind: 'direct', zone: zone.id, rate: zone.rate};
+}
+
+/** True for a known country outside the EU that is not blocked: it buys
+ *  through shops. False for the EU, a blocked country and an unknown one
+ *  (which the shop treats as its default EU market). */
+export function soldThroughShops(country: string | null): boolean {
+  return shippingQuote(country)?.kind === 'shops';
 }
 
 /** Every ISO 3166-1 country code. */
@@ -83,9 +85,9 @@ export const UNINHABITED_TERRITORIES: ReadonlySet<string> = new Set([
   'AQ', 'BV', 'HM', 'GS', 'TF', 'UM', 'IO',
 ]);
 
-/** Every country code Incutec ships to: all of ISO 3166-1 minus
- *  `BLOCKED_COUNTRIES` and `UNINHABITED_TERRITORIES`, for a destination
- *  picker. */
+/** Every country the destination picker lists: all of ISO 3166-1 minus
+ *  `BLOCKED_COUNTRIES` and `UNINHABITED_TERRITORIES`. The EU ones are sold
+ *  direct, the others through shops. */
 export const SHIP_COUNTRY_CODES: readonly string[] = ISO_COUNTRIES.filter(
   (code) => !BLOCKED_COUNTRIES.has(code) && !UNINHABITED_TERRITORIES.has(code),
 );
@@ -96,7 +98,7 @@ export const LIKELY_SHIP_COUNTRIES: readonly string[] = ['BE', 'NL', 'DE', 'FR',
 
 const optionsByLocale = new Map<string, Array<{code: string; name: string}>>();
 
-/** The destination picker's options: every country Incutec ships to, by
+/** The destination picker's options: every listed country, by
  *  name. The blocked countries are left out, from the same set
  *  `shippingQuote` refuses. Built once per locale. */
 export function shipCountryOptions(locale = 'en'): Array<{code: string; name: string}> {
@@ -110,18 +112,20 @@ export function shipCountryOptions(locale = 'en'): Array<{code: string; name: st
   return options;
 }
 
-export type ShipCountryOption = {code: string; name: string; rate: number};
+/** One picker option: `rate` is the flat rate for a country sold direct,
+ *  null for one that buys through shops. */
+export type ShipCountryOption = {code: string; name: string; rate: number | null};
 
 /**
  * The destination picker in two groups: `likely` (Belgium, the
  * Netherlands, Germany, France, Luxembourg, in that order) goes first,
- * then a divider, then `rest`, every other shippable country by name.
- * Each option carries its flat rate.
+ * then a divider, then `rest`, every other listed country by name.
+ * Each option carries its flat rate, or null where it buys through shops.
  */
 export function shipCountryPicker(locale = 'en'): {likely: ShipCountryOption[]; rest: ShipCountryOption[]} {
   const withRate = ({code, name}: {code: string; name: string}): ShipCountryOption => {
     const q = shippingQuote(code);
-    return {code, name, rate: q && !q.blocked ? q.rate : 0};
+    return {code, name, rate: q?.kind === 'direct' ? q.rate : null};
   };
   const all = shipCountryOptions(locale);
   return {
@@ -154,8 +158,8 @@ function isoCode(value: string | null | undefined): string | null {
 }
 
 /** The `document.cookie` / `Set-Cookie` string that keeps a picked
- *  destination for a year on the whole site. Null for a code that is not a
- *  country Incutec ships to, so a blocked or bogus pick is never kept. */
+ *  destination for a year on the whole site. Null for a code the picker does
+ *  not list, so a blocked or bogus pick is never kept. */
 export function shipCountryCookie(country: string, secure = true): string | null {
   const code = isoCode(country);
   if (!code || !SHIP_COUNTRY_CODES.includes(code)) return null;
@@ -204,8 +208,8 @@ export function countryFromAcceptLanguage(header: string | null | undefined): st
  * a `?country=XX` query (to check a page as seen from another country), the
  * buyer's own pick in the `od_ship_country` cookie, Cloudflare's
  * `CF-IPCountry`, then the region in `Accept-Language`. Null when none of
- * them names a country. A blocked country from the IP or the browser is
- * returned as is, so the page can say it does not ship there.
+ * them names a country. A blocked or shops-only country from the IP or the
+ * browser is returned as is, so the page can say so.
  */
 export function shipCountryForRequest(request: Request): string | null {
   const override = isoCode(new URL(request.url).searchParams.get('country'));

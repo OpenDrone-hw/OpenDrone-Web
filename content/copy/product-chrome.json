@@ -189,5 +189,7 @@
   "teardown_render_note": "Render from the design files. Silkscreen may differ.",
   "os_card_repo_name": "Design files: {repo}",
   "connectors_title": "Plugs and pin order",
-  "gpsr_other_languages": "Veiligheid · Sécurité · Sicherheit (NL / FR / DE)"
+  "gpsr_other_languages": "Veiligheid · Sécurité · Sicherheit (NL / FR / DE)",
+  "buy_shops_only": "Available through shops",
+  "buy_shops_trade": "Are you a shop?"
 }

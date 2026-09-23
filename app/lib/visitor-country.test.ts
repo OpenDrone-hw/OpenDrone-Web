@@ -28,10 +28,10 @@ describe('paysEuVat', () => {
 });
 
 describe('priceNote', () => {
-  it('tells EU, US and other visitors apart', () => {
+  it('tells EU visitors from the ones who buy through shops', () => {
     assert.equal(priceNote('NL'), 'vat');
     assert.equal(priceNote(null), 'vat');
-    assert.equal(priceNote('US'), 'us');
-    assert.equal(priceNote('GB'), 'intl');
+    assert.equal(priceNote('US'), 'shops');
+    assert.equal(priceNote('GB'), 'shops');
   });
 });

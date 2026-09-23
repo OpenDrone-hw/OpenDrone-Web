@@ -11,6 +11,7 @@ import {
 } from '~/lib/product-content';
 import {ShipChip, parcelPromise, shipChipText} from './ShipChip';
 import {paysEuVat} from '~/lib/visitor-country';
+import {countryName, soldThroughShops} from '~/lib/shipping-rates';
 import {
   buildSuggestionSpecs,
   parseBuilds,
@@ -112,9 +113,11 @@ export function CartAddedDialog() {
     : null;
   const subtotal = summary.subtotal ?? null;
   // Same rule as the buy module and the cart: "incl. VAT" only where EU VAT
-  // applies. The International and US markets keep the same price with no
-  // EU VAT in it (Shopify: taxes included in price).
-  const vatIncluded = paysEuVat(rootData?.visitorCountry ?? null);
+  // applies.
+  const visitor = rootData?.visitorCountry ?? null;
+  const vatIncluded = paysEuVat(visitor);
+  // Outside the EU checkout is not offered, as in the cart.
+  const throughShops = soldThroughShops(visitor);
 
   // The parts that complete the build, judged on the cart as it was when
   // the drawer opened, so a part added from here stays listed as "Added".
@@ -281,24 +284,34 @@ export function CartAddedDialog() {
               {`${t('mixed_one_parcel', 'One parcel')} · ${parcel.text}`}
             </p>
           ) : null}
-          {/* A plain form post: the cart action checks every line again and
-              redirects to Shopify checkout, or back to /cart with a notice. */}
-          <form
-            method="post"
-            action={CART_ACTION}
-            onSubmit={() =>
-              trackCheckoutClick(
-                subtotal ? {currency: subtotal.currencyCode, amount: Number(subtotal.amount)} : null,
-              )
-            }
-          >
-            <input type="hidden" name="intent" value="checkout" />
-            {/* The parcel line above names the date, so checkout may go on. */}
-            {parcel ? <input type="hidden" name={DATES_SEEN_FIELD} value="1" /> : null}
-            <button type="submit" className="cart-added-checkout">
-              {copyText('cart.checkout_cta') ?? 'Checkout'}
-            </button>
-          </form>
+          {/* Checkout is a plain form post: the cart action checks every line
+              again and redirects to Shopify checkout, or back to /cart with
+              a notice. */}
+          {throughShops ? (
+            <p className="cart-added-parcel" role="note">
+              {t('checkout_shops', 'Available through shops in {country}.', {country: countryName(visitor ?? '')})}{' '}
+              <Link to="/wholesale">{t('checkout_shops_trade', 'Are you a shop?')}</Link>
+              {' · '}
+              <Link to="/newsletter">{t('checkout_shops_notify', 'Get launch news')}</Link>
+            </p>
+          ) : (
+            <form
+              method="post"
+              action={CART_ACTION}
+              onSubmit={() =>
+                trackCheckoutClick(
+                  subtotal ? {currency: subtotal.currencyCode, amount: Number(subtotal.amount)} : null,
+                )
+              }
+            >
+              <input type="hidden" name="intent" value="checkout" />
+              {/* The parcel line above names the date, so checkout may go on. */}
+              {parcel ? <input type="hidden" name={DATES_SEEN_FIELD} value="1" /> : null}
+              <button type="submit" className="cart-added-checkout">
+                {copyText('cart.checkout_cta') ?? 'Checkout'}
+              </button>
+            </form>
+          )}
           <Link className="cart-added-viewcart" to="/cart" prefetch="intent">
             {t('added_view', 'View cart ({count})', {count: String(summary.totalQuantity)})}
           </Link>

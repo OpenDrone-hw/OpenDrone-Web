@@ -21,6 +21,7 @@ export function ProductForm({
   maxQuantity = 50,
   maxQuantityNote,
   onQuantityChange,
+  notSoldLabel,
 }: {
   productOptions: MappedProductOptions[];
   selectedVariant: ProductVariantFragment | null;
@@ -45,6 +46,9 @@ export function ProductForm({
    *  clamped number is explained ("Max 50 per order"). */
   maxQuantityNote?: string;
   onQuantityChange?: (next: number) => void;
+  /** Set where the visitor's country is not sold direct: the button is
+   *  disabled and carries this label ("Available through shops"). */
+  notSoldLabel?: string;
 }) {
   const navigate = useNavigate();
   // Variant switches are server navigations; on a slow connection the pill
@@ -80,6 +84,7 @@ export function ProductForm({
   const href = buyUrl ?? withQuantity(selectedVariant?.cartAddUrl ?? '', qty);
   const disabled =
     soon ||
+    Boolean(notSoldLabel) ||
     !href ||
     (isBundle ? Boolean(buyDisabled) : !selectedVariant?.availableForSale);
   const amount = Number.parseFloat(selectedVariant?.price?.amount ?? '');
@@ -193,7 +198,9 @@ export function ProductForm({
             : null
         }
       >
-        {isBundle
+        {notSoldLabel
+          ? notSoldLabel
+          : isBundle
           ? (buyCtaLabel ?? 'Add to cart')
           : selectedVariant?.availableForSale
             ? ctaLabelAvailable
