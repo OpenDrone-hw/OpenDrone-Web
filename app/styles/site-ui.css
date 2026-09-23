@@ -472,30 +472,76 @@
 }
 
 /* ============================================
-   Home: launch strip, load bar, stage offset
+   Home: promo line, load bar, stage offset
    ============================================ */
 
-.preorder-strip-home:not(.is-mobile) {
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px 18px 10px;
-  border-radius: var(--r-md);
-  background: var(--color-bg-card);
-}
-.preorder-strip-home-what {
-  font-size: 15px;
-  font-weight: 600;
+/* One line, no box: "PRE-ORDER · FC + ESC ship Oct 2026 · ...", the whole
+   line a link to /preorder. */
+.home-promo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 0;
+  min-height: 44px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.02em;
   color: var(--color-text);
+  text-decoration: none;
 }
-.preorder-strip-home.is-mobile .preorder-strip-home-what {
-  margin-bottom: 6px;
+.home-promo-group {
+  display: inline-flex;
+  align-items: center;
+}
+.home-promo-tag + span::before,
+.home-promo-group > span + span::before,
+.home-promo-group + .home-promo-group::before {
+  content: '·';
+  margin: 0 10px;
+  color: var(--color-text-dim);
+}
+.home-promo-tag {
+  font-weight: 600;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-gold-text);
+}
+.home-promo svg {
+  margin-left: 10px;
+  color: var(--color-gold-text);
+  transition: transform 0.2s ease;
+}
+.home-promo:hover .home-promo-group > span {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.home-promo:hover svg {
+  transform: translateX(3px);
+}
+/* Desktop: full width under the header. */
+.hero-promo {
+  position: absolute;
+  top: 4.75rem;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  padding: 0 16px;
+}
+/* Phone: the first row of the page, the two groups on two lines. */
+.home-promo.is-mobile {
+  flex-direction: column;
+  align-items: flex-start;
+  font-size: 12px;
+}
+.home-promo.is-mobile .home-promo-group + .home-promo-group::before {
+  content: none;
 }
 
-/* While the shop is open the launch strip sits under the header; the 3D
-   stage starts below it so the model never slides under the strip. */
+/* While the shop is open the 3D stage starts below the promo line. */
 @media (min-width: 48em) {
   .homepage .hero-stage-below-strip {
-    top: 10.5rem;
+    top: 7.5rem;
   }
 }
 
@@ -540,16 +586,12 @@
   letter-spacing: 0;
   text-transform: none;
 }
-.preorder-strip-home.is-mobile .preorder-strip-home-what {
-  display: none;
-}
-
 /* ============================================
    Buttons: small size and the plain link
    ============================================ */
 
-/* A compact button for rows of choices (the home launch card, the build
-   guide): 36px high, Inter 14px, sized to its label. */
+/* A compact button for rows of choices (the build guide): 36px high,
+   Inter 14px, sized to its label. */
 .btn-primary.btn-sm,
 .btn-secondary.btn-sm {
   width: auto;
@@ -565,96 +607,6 @@
 .btn-secondary.btn-sm {
   font-weight: 500;
   background: var(--color-bg-card);
-}
-/* A text action with the weight of a link, not a button. */
-.btn-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  min-height: 44px;
-  font-family: var(--font-sans);
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--color-text-muted);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.btn-link:hover {
-  color: var(--color-text);
-}
-
-/* ============================================
-   Home launch card (desktop and phone)
-   ============================================ */
-
-.preorder-strip-home:not(.is-mobile) {
-  gap: 8px;
-  padding: 14px 18px;
-}
-/* Wide enough for the four buttons on one row. */
-.hero-top-center {
-  max-width: min(94vw, 52rem);
-}
-@media (min-width: 900px) {
-  .hero-top-center .preorder-strip-home {
-    width: max-content;
-    max-width: 100%;
-  }
-  .preorder-strip-home:not(.is-mobile) .preorder-strip-home-links {
-    flex-wrap: nowrap;
-  }
-  .preorder-strip-home:not(.is-mobile) .preorder-strip-home-links a {
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-}
-.preorder-strip-home-text span {
-  font-size: 14px;
-  color: var(--color-text);
-}
-.preorder-strip-home-sizes {
-  font-size: 13px;
-  color: var(--color-text-muted);
-}
-.preorder-strip-home-links {
-  gap: 8px;
-  margin-top: 4px;
-}
-.preorder-strip-home-links a.btn-sm {
-  min-height: 36px;
-  font-weight: 600;
-}
-.preorder-strip-home-links a.btn-secondary.btn-sm {
-  font-weight: 500;
-  color: var(--color-text);
-}
-.preorder-strip-home-links a.btn-primary.btn-sm,
-.preorder-strip-home-links a.btn-primary.btn-sm:hover {
-  color: var(--color-on-accent);
-}
-@media (min-width: 48em) {
-  .homepage .hero-stage-below-strip {
-    top: 13rem;
-  }
-}
-
-/* Phone: the card reads left-aligned, its buttons wrap from the left. */
-.preorder-strip-home.is-mobile {
-  align-items: flex-start;
-  justify-content: flex-start;
-  text-align: left;
-  margin-top: 0;
-  gap: 8px;
-}
-.preorder-strip-home.is-mobile .preorder-strip-home-text,
-.preorder-strip-home.is-mobile .preorder-strip-home-links {
-  justify-content: flex-start;
-}
-.preorder-strip-home.is-mobile .preorder-strip-home-links a {
-  min-height: 40px;
-}
-.home-mobile-strip {
-  align-self: stretch;
 }
 
 /* Desktop Shop button: the site's primary button at its own width, not a
@@ -672,40 +624,28 @@
   gap: 0.75rem;
 }
 
-/* Phone home: one full-width Shop button, the source as a link under it. */
+/* Phone home: one full-width Shop button. */
 .home-mobile-cta {
   flex-direction: column;
   align-items: stretch;
-  gap: 0.25rem;
   margin-top: 0;
 }
 .home-mobile-cta .btn-primary {
   min-height: 48px;
-}
-.home-mobile-cta .btn-link {
-  align-self: center;
 }
 /* The phone flagship line uses the /products two-column grid. */
 .home-mobile-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
-/* A small phone: a shorter board render so the launch card and the Shop
-   button reach the first screen. */
+/* A small phone: a shorter board render so the Shop button reaches the
+   first screen. */
 @media (max-width: 400px) {
   .home-mobile-stage {
     height: min(28vh, 160px);
   }
   .home-mobile-board {
     width: clamp(120px, 36vw, 150px);
-  }
-  /* The launch card's one-line pitch stands in for the longer tagline. */
-  .home-mobile-tagline {
-    display: none;
-  }
-  .preorder-strip-home.is-mobile .preorder-strip-home-what {
-    display: block;
-    margin-bottom: 0;
   }
   .home-mobile-hero {
     gap: 0.9rem;

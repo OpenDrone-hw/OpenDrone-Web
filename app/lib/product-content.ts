@@ -84,10 +84,6 @@ export type WhatIsThis = {
   /** Which signal-chain stage this product IS; the chapter's chain strip
    *  lights it. Stages: radio, rx, fc, esc, motors, frame. */
   chain?: 'radio' | 'rx' | 'fc' | 'esc' | 'motors' | 'frame';
-  /** Optional hero-length line for the homepage walkthrough caption. When
-   *  absent, the caption derives from `intro` (heroCaption below), so the
-   *  hero and the PDP's What-does-this-do chapter cannot drift apart. */
-  hero?: string;
 };
 
 /**
@@ -140,35 +136,8 @@ export function specHelp(key: string): string | undefined {
   return Object.prototype.hasOwnProperty.call(SPEC_HELP, key) ? SPEC_HELP[key] : undefined;
 }
 
-/**
- * The homepage hero caption for a product: `whatIsThis.hero` when set,
- * otherwise the intro's first two sentences (first one only when two run
- * past 200 characters, hero copy is a caption, not a chapter). One
- * derivation, used by the homepage loader, so the hero explainers are the
- * What-does-this-do words by construction (maintainer, 2026-08-15).
- */
-/** DOM id of the "What does this do?" chapter on a product page; the
- *  homepage walkthrough links each part straight to it. */
+/** DOM id of the "What does this do?" chapter on a product page. */
 export const WHAT_IS_THIS_ID = 'what-is-this';
-
-/** `/products/<handle>#what-is-this`, when the product has that chapter. */
-export function whatIsThisHref(handle: string): string | undefined {
-  return PRODUCT_CONTENT[handle]?.whatIsThis
-    ? `/products/${handle}#${WHAT_IS_THIS_ID}`
-    : undefined;
-}
-
-export function heroCaption(handle: string): string | undefined {
-  const wit = PRODUCT_CONTENT[handle]?.whatIsThis;
-  if (!wit) return undefined;
-  if (wit.hero) return wit.hero;
-  // A sentence ends at . ! or ? followed by whitespace or the end of the
-  // text, so a decimal point ("2.4 GHz") stays inside its sentence.
-  const sentences = wit.intro.match(/(?:[^.!?]|[.!?](?!\s|$))+[.!?]+(?=\s|$)\s*/g);
-  if (!sentences?.length) return wit.intro || undefined;
-  const two = sentences.slice(0, 2).join('').trim();
-  return two.length > 200 ? sentences[0].trim() : two;
-}
 
 /**
  * Downloadable asset rendered in the Downloads chapter. `kind` picks
@@ -787,6 +756,18 @@ export function shortShipPromise(promise: string | null | undefined): ShortShipP
   if (target) return {kind: 'target', label: 'Funding target', text: `ships by ${target[1]} if reached`};
   if (/after its target/i.test(text)) return {kind: 'target', label: 'Funding target', text: 'ships after its target is reached'};
   return {kind: 'date', label: null, text: text.charAt(0).toUpperCase() + text.slice(1)};
+}
+
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+/**
+ * The month and year of a dated ship promise, short: "ships late October
+ * 2026" gives "Oct 2026". Null when the promise names no month and year.
+ */
+export function shipMonth(promise: string | null | undefined): string | null {
+  const m = /\b([A-Z][a-z]+) (\d{4})\b/.exec(promise ?? '');
+  if (!m || !MONTHS.includes(m[1])) return null;
+  return `${m[1].slice(0, 3)} ${m[2]}`;
 }
 
 /**

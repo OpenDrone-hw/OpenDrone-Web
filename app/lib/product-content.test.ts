@@ -12,6 +12,7 @@ import {
   displaySpecValue,
   fundingTargetTerms,
   shortShipPromise,
+  shipMonth,
   type BoxItem,
   type ChapterPin,
   type DownloadAsset,
@@ -281,6 +282,11 @@ describe('short ship promise', () => {
       text: 'Ships late October 2026',
     });
     assert.equal(shortShipPromise(null), null);
+  });
+  it('shortens a dated promise to month and year', () => {
+    assert.equal(shipMonth('ships late October 2026'), 'Oct 2026');
+    assert.equal(shipMonth('ships after its target is reached'), null);
+    assert.equal(shipMonth(null), null);
   });
   it('states the full condition once, with both dates', () => {
     const terms = fundingTargetTerms(target) ?? '';

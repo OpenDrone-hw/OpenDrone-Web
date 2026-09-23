@@ -1028,9 +1028,7 @@ html {
 }
 
 /* Thin-line scroll hint under the hero - fades out over the first ~13% of
-   scroll. Driven by --hero-p so it needs no per-frame React render. Named
-   distinctly from .hero-scroll-hint (the "scroll to explore" text cue below,
-   which gates on .is-visible and would zero this element's opacity). */
+   scroll. Driven by --hero-p so it needs no per-frame React render. */
 .hero-scroll-fade {
   opacity: clamp(0, calc(0.4 - var(--hero-p, 0) * 3), 0.4);
 }
@@ -1095,90 +1093,6 @@ html {
 }
 html.light .hero-reveal-soon {
   color: var(--color-gold-text);
-}
-
-/* Drag-to-view hint — centred over the drone, fades in after a few idle
-   seconds and dismisses on first interaction. */
-.hero-drag-hint {
-  position: absolute;
-  top: 60%;
-  left: 50%;
-  transform: translate(-50%, 0);
-  z-index: 20;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 0.85rem;
-  border-radius: var(--r-pill);
-  background: var(--pod-bg);
-  border: 1px solid var(--pod-border);
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.5s ease, transform 0.5s ease;
-}
-.hero-drag-hint.is-visible {
-  opacity: 1;
-  transform: translate(-50%, -6px);
-  animation: hero-drag-bob 2.4s ease-in-out 0.5s infinite;
-}
-.hero-drag-hint svg {
-  color: var(--color-gold-text);
-}
-@keyframes hero-drag-bob {
-  0%, 100% { transform: translate(-50%, -6px); }
-  50% { transform: translate(-50%, -10px); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .hero-drag-hint.is-visible {
-    animation: none;
-  }
-}
-
-/* Scroll-to-explore cue — anchored at the bottom of the hero, fades in with the
-   drag hint and dismisses on first interaction. Stacks vertically (label over a
-   bobbing double-chevron) to read as a downward invitation. */
-.hero-scroll-hint {
-  position: absolute;
-  /* Below the progress rail, which sits on the bottom strip's shared line. */
-  bottom: 0.75rem;
-  left: 50%;
-  transform: translate(-50%, 0);
-  z-index: 20;
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.35rem;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.5s ease;
-}
-.hero-scroll-hint.is-visible {
-  opacity: 1;
-}
-.hero-scroll-hint svg {
-  color: var(--color-gold-text);
-}
-.hero-scroll-hint.is-visible svg {
-  animation: hero-scroll-bob 2.4s ease-in-out 0.5s infinite;
-}
-@keyframes hero-scroll-bob {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(5px); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .hero-scroll-hint.is-visible svg {
-    animation: none;
-  }
 }
 
 /* Hero scene glow — a soft warm radial behind the drone so the stage isn't a
@@ -1594,16 +1508,12 @@ html[data-cart-preview] .site-header {
    chapter reveals) mid-flight and strand them off-screen. */
 html.anim-paused .site-wordmark-sheen,
 html.anim-paused .placeholder-banner__dot::after,
-html.anim-paused .hero-drag-hint.is-visible,
-html.anim-paused .hero-scroll-hint.is-visible svg,
 html.anim-paused .latest-commit-dot,
 html.anim-paused .support-typing span,
 html.anim-paused .home-mobile-board-float--front,
 html.anim-paused .home-mobile-board-float--rear,
 html.perf-lite .site-wordmark-sheen,
 html.perf-lite .placeholder-banner__dot::after,
-html.perf-lite .hero-drag-hint.is-visible,
-html.perf-lite .hero-scroll-hint.is-visible svg,
 html.perf-lite .latest-commit-dot,
 html.perf-lite .support-typing span,
 html.perf-lite .home-mobile-board-float--front,
@@ -2274,15 +2184,6 @@ html.hero-header-in .homepage-layout .site-header {
   height: clamp(2.75rem, 13vw, 4rem);
 }
 
-.home-mobile-tagline {
-  margin: 0;
-  font-family: var(--font-sans);
-  font-size: 1rem;
-  line-height: 1.55;
-  color: var(--color-text-muted);
-  max-width: 44ch;
-}
-
 /* Two full-width hero actions side by side — Shop (gold) + GitHub (ghost).
    Each is its own pill spanning half the row, using the phone's full width. */
 .home-mobile-cta {
@@ -2351,45 +2252,6 @@ html.hero-header-in .homepage-layout .site-header {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
   gap: 1rem;
-}
-
-/* Open-hardware index band — reuses .spec-table for the rows so the
-   homepage speaks the PDP datasheet language verbatim. Single column even
-   past 720px: this band lives on the phone layout's narrow rail. */
-.home-mobile-ledger {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.home-mobile-ledger .spec-table {
-  grid-template-columns: 1fr;
-}
-
-.home-mobile-ledger .spec-table dd {
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-}
-
-.home-mobile-browse {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  align-self: flex-start;
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: var(--ls-label);
-  color: var(--color-text);
-  padding-bottom: 0.35rem;
-  border-bottom: 1px solid
-    color-mix(in srgb, var(--color-gold) 55%, transparent);
-  transition: color 0.2s ease, border-color 0.2s ease;
-}
-
-.home-mobile-browse:hover {
-  color: var(--color-gold-text);
-  border-color: var(--color-gold);
 }
 
 /* ============================================
@@ -16486,7 +16348,6 @@ html.light .editorial-watermark {
   .collection-sort select,
   .collection-sort-control,
   .trust-chip,
-  .home-mobile-browse,
   .board-art-inspect,
   .search-submit,
   .product-gallery-arrow,
@@ -16507,11 +16368,6 @@ html.light .editorial-watermark {
   .product-gallery-arrow {
     min-width: 44px;
     justify-content: center;
-  }
-  /* The home "browse the full catalog" underline link — keep its underline
-     hugging the text, not the padded box. */
-  .home-mobile-browse {
-    align-self: flex-start;
   }
 
   /* ---- D) Micro-label legibility floors -------------------------------- */
@@ -17449,53 +17305,31 @@ body:has(.buy-rail.is-pinned.is-mobile) .placeholder-banner {
   from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: none; }
 }
-.hp-title {
-  font-size: clamp(1.6rem, 3.4vw, 2.7rem);
-  line-height: 1.08;
-  margin: 0 0 0.7rem;
-  color: var(--color-text);
-  /* Product names read as one line, always (OpenFC-Lite-Mini must not
-     break); the widened panel above gives them the room. */
-  white-space: nowrap;
-}
-.hp-note {
-  font-size: 0.95rem;
-  line-height: 1.55;
-  color: var(--color-text-muted);
-  margin: 0;
-}
-/* Beginner explainer block under the spec note: what the part does, a mono
-   "connects to" line, and the product link. Same panel, same tokens; the
-   panel is absolutely positioned so none of this shifts layout. */
-.hp-explain {
-  font-size: 1rem;
-  line-height: 1.6;
-  color: var(--color-text-muted);
-  margin: 0.7rem 0 0;
-}
-.hp-connect {
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 0.72rem;
-  line-height: 1.5;
-  letter-spacing: 0.04em;
-  color: var(--color-text-dim);
-  margin: 0.7rem 0 0;
-}
-.hp-copy-link {
+.hp-label {
   display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-top: 0.75rem;
-  font-size: 0.85rem;
-  color: var(--color-gold-text);
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  color: var(--color-text);
   text-decoration: none;
 }
-.hp-copy-link:hover,
-.hp-copy-link:focus-visible {
-  text-decoration: underline;
+.hp-label-name {
+  font-size: clamp(1.25rem, 2vw, 1.6rem);
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
 }
-.hp-copy-link svg {
-  flex: none;
+.hp-label-meta {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+a.hp-label:hover .hp-label-name,
+a.hp-label:focus-visible .hp-label-name {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-color: var(--color-gold);
 }
 .hp-hint {
   position: absolute;
@@ -17555,8 +17389,6 @@ body:has(.buy-rail.is-pinned.is-mobile) .placeholder-banner {
 .hp-stage:not(:has(canvas)) { height: auto; min-height: 60vh; }
 .hp-stage:not(:has(canvas)) .hp-rail,
 .hp-stage:not(:has(canvas)) .hp-copy { display: none; }
-.hp-fallback h3 { font-size: 1.15rem; margin: 0 0 0.3rem; color: var(--color-text); }
-.hp-fallback p { margin: 0; color: var(--color-text-muted); }
 .hp-dot { padding: 0; cursor: pointer; }
 .hp-dot:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
 /* Between the 768px mobile switch and ~1040px the strip cannot hold all three
@@ -18871,84 +18703,13 @@ html.light .cart-added-continue {
   transform: none;
 }
 
-/* Top centre of the desktop hero: preorder line, then the size toggle.  */
+/* Top centre of the desktop hero: the size toggle.                      */
 .hero-top-center {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--sp-3, 12px);
   max-width: min(92vw, 44rem);
-}
-
-/* "Preorders open" line on the homepage.                                */
-.preorder-strip-home {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 8px 16px;
-  padding: 8px 12px 8px 16px;
-  border: 1px solid color-mix(in srgb, var(--color-gold) 45%, var(--color-border));
-  border-radius: var(--r-pill, 999px);
-  background: color-mix(in srgb, var(--color-bg-card) 88%, transparent);
-  font-size: var(--fs-sm, 0.875rem);
-  color: var(--color-text);
-  text-align: center;
-}
-.preorder-strip-home p {
-  margin: 0;
-}
-.preorder-strip-home-text {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 4px 10px;
-}
-.preorder-strip-home-tag {
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs, 0.75rem);
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-gold-text);
-}
-.preorder-strip-home-links {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px 14px;
-}
-.preorder-strip-home-links a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 32px;
-  font-weight: 600;
-  text-decoration: none;
-}
-.preorder-strip-home-primary {
-  padding: 0 12px;
-  border-radius: 999px;
-  background: var(--color-gold-fill, var(--color-gold));
-  color: var(--color-on-accent);
-}
-.preorder-strip-home-primary:hover {
-  color: var(--color-on-accent);
-  filter: brightness(1.08);
-}
-.preorder-strip-home-secondary {
-  color: var(--color-text-muted);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.preorder-strip-home-secondary:hover {
-  color: var(--color-text);
-}
-.preorder-strip-home.is-mobile {
-  margin-top: var(--sp-4, 16px);
-  border-radius: var(--r-md, 12px);
-  padding: 12px 14px;
-}
-.preorder-strip-home.is-mobile .preorder-strip-home-links a {
-  min-height: 44px;
 }
 
 /* /preorder: the model in four steps.                                   */
@@ -19093,9 +18854,6 @@ html.light .cart-added-continue {
 /* A strip with one figure spans the row instead of squeezing into half. */
 .preorder-strip-cell:only-child {
   grid-column: 1 / -1;
-}
-.preorder-strip-home-text {
-  align-items: baseline;
 }
 
 /* ============================================

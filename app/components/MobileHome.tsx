@@ -5,8 +5,8 @@ import type {ProductCardFragment as CollectionItemFragment} from '~/lib/product-
 import {HeroWordmark} from '~/components/HeroWordmark';
 import {ProductItem} from '~/components/ProductItem';
 import {Txt} from '~/components/Txt';
-import {PreorderStrip, type StripPrices} from '~/components/PreorderStrip';
-import {PRODUCT_CONTENT, isConceptFor} from '~/lib/product-content';
+import {PreorderStrip, type HomePrices} from '~/components/PreorderStrip';
+import {isConceptFor} from '~/lib/product-content';
 import {useRoadmapStatusResolver} from '~/lib/coming-soon';
 import {BOARD_ART_VERSION} from '~/data/board-art-version';
 import {assetUrl} from '~/lib/asset-url';
@@ -22,36 +22,6 @@ const boardThumb = (handle: string, w: 528 | 800) =>
 // Mirrors .home-mobile-board: width clamp(178px, 54vw, 264px).
 const BOARD_THUMB_SIZES = '(min-width: 489px) 264px, 54vw';
 
-
-/* Below-fold "index" band - the open-hardware ledger in the PDP's
- * spec-table language. Every row is a fact already published elsewhere on
- * the site (open-source page, PDP downloads); the design count is derived
- * from the product-content registry so it can't drift. */
-const OPEN_DESIGN_COUNT = Object.values(PRODUCT_CONTENT).filter(
-  // Resold parts (`editorial: false`) are catalog, not open designs, and a
-  // design counts as published only once its repository is public
-  // (`repoUrl` set): the frames are not, so they are not counted.
-  (c) => Boolean(c.fileNumber) && c.fileNumber !== '-' && c.editorial !== false && Boolean(c.repoUrl),
-).length;
-
-/* Row order and which row is derived. Labels are copy
- * (`home.m_ledger_<key>_label`), and so is every value EXCEPT the design
- * count, which is computed from the registry so it can't drift - a value here
- * wins over the copy file. Only that derived count is a quantity worth
- * sweeping; licence versions, tool versions and prices are identifiers/fixed
- * figures and render static. */
-const HOME_LEDGER: Array<{key: string; value?: string}> = [
-  {
-    key: 'designs',
-    // Static: a count-up renders the figure twice (a screen-reader copy
-    // plus the animated one), which page text and copy both pick up.
-    value: String(OPEN_DESIGN_COUNT).padStart(2, '0'),
-  },
-  {key: 'licence'},
-  {key: 'source_format'},
-  {key: 'designed_in'},
-];
-
 /**
  * Phone homepage (≤768px). The desktop homepage IS the WebGL hero scene +
  * scroll-pinned choreography (DesktopHome in routes/_index.tsx) - ~6.3 MB of
@@ -59,19 +29,18 @@ const HOME_LEDGER: Array<{key: string; value?: string}> = [
  * phone. This is the mobile counterpart: not a plain fallback but a hero in its
  * own right - the animated wordmark, a floating "stack" of the real board
  * renders under a gold glow (the desktop hero's product showcase, distilled),
- * and a Dynamic-Island Shop pill - then a clear path to the flagship line and
- * the full catalogue. No 3D, no scroll tricks: fast, legible, touch-first.
+ * and the Shop button - then the product tiles. No 3D, no scroll tricks.
  */
 export function MobileHome({
   featured,
   preorderShips = null,
-  prices = null,
+  prices,
 }: {
   featured: CollectionItemFragment[] | Promise<CollectionItemFragment[]>;
-  /** Set while the shop is open: the launch card above the actions. */
+  /** Set while the shop is open: the promo line at the top. */
   preorderShips?: string | null;
-  /** The launch card's "from" prices for the flight controller and ESC. */
-  prices?: StripPrices | null;
+  /** Price per product handle for the promo line. */
+  prices: HomePrices;
 }) {
   const reduce = useReducedMotion();
 
@@ -92,6 +61,9 @@ export function MobileHome({
 
   return (
     <div className="home-mobile">
+      {preorderShips !== null ? (
+        <PreorderStrip ships={preorderShips || null} prices={prices} className="is-mobile" />
+      ) : null}
       <section className="home-mobile-hero">
         {/* Floating board "stack" - the two flagship boards (FC over ESC),
             offset like a mounted stack, on a gold-glow island. The desktop
@@ -139,27 +111,8 @@ export function MobileHome({
           <HeroWordmark progress={1} className="is-filled" />
         </motion.h1>
 
-        <Txt
-          id="home.m_tagline"
-          as={motion.p}
-          className="home-mobile-tagline"
-          {...rise(2)}
-        />
-
-        {/* The launch card (price hook and ship date) comes before the
-            actions, so a skimming buyer sees why to stay on a small phone. */}
-        {preorderShips !== null ? (
-          <motion.div className="home-mobile-strip" {...rise(3)}>
-            <PreorderStrip
-              ships={preorderShips || null}
-              prices={prices}
-              className="is-mobile"
-            />
-          </motion.div>
-        ) : null}
-
-        {/* One primary action at full width; the source is a plain link. */}
-        <motion.div className="home-mobile-cta" {...rise(4)}>
+        {/* One primary action at full width. */}
+        <motion.div className="home-mobile-cta" {...rise(2)}>
           <Link prefetch="viewport" to="/collections/all" className="btn-primary">
             <Txt id="home.shop" />
             <svg
@@ -175,14 +128,6 @@ export function MobileHome({
               <polyline points="12 5 19 12 12 19" />
             </svg>
           </Link>
-          <a
-            href="https://github.com/OpenDrone-hw"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-link"
-          >
-            <Txt id="home.m_github" />
-          </a>
         </motion.div>
       </section>
 
@@ -190,7 +135,7 @@ export function MobileHome({
           in the shell here with no Suspense boundary: React's streaming
           renderer outlines any boundary once the shell passes its progressive
           chunk size, so a resolved value inside <Await> still arrived as a
-          late chunk and shifted the ledger below (CLS 0.22). A promise (the
+          late chunk and shifted the page (CLS 0.22). A promise (the
           desktop-first path resized down to a phone) still streams. */}
       {Array.isArray(featured) ? (
         <FeaturedGrid items={featured} />
@@ -201,46 +146,6 @@ export function MobileHome({
           </Await>
         </Suspense>
       )}
-
-      {/* Open-hardware index - spec-table rows (hairline rules, mono keys,
-          right-aligned values) with count-ups on the numerals. Reuses the
-          PDP's .spec-table so the band IS the house datasheet language. */}
-      <section className="home-mobile-ledger" aria-label="Open hardware index">
-        <Txt id="home.m_ledger_label" as="p" className="section-label" />
-        <dl className="spec-table">
-          {HOME_LEDGER.map(({key, value}) => (
-            <div key={key}>
-              <Txt id={`home.m_ledger_${key}_label`} as="dt" />
-              <dd>
-                {value === undefined ? (
-                  <Txt id={`home.m_ledger_${key}_value`} />
-                ) : (
-                  value
-                )}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-
-      <Link
-        prefetch="viewport"
-        to="/collections/all"
-        className="home-mobile-browse"
-      >
-        <Txt id="home.m_browse" />
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-        >
-          <line x1="5" y1="12" x2="19" y2="12" />
-          <polyline points="12 5 19 12 12 19" />
-        </svg>
-      </Link>
     </div>
   );
 }
@@ -254,7 +159,6 @@ function FeaturedGrid({items: all}: {items: CollectionItemFragment[]}) {
   if (items.length === 0) return null;
   return (
     <section className="home-mobile-featured">
-      <Txt id="home.m_featured_label" as="p" className="section-label" />
       <div className="home-mobile-grid">
         {items.map((product, i) => (
           <ProductItem

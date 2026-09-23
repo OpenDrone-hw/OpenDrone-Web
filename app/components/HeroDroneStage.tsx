@@ -4,7 +4,8 @@
  *
  * This is an absolutely-positioned layer, not a section of its own - it fills
  * the hero's sticky pane so the wordmark, size selector and buy bubble sit over
- * the same drone. The route owns the splash; this owns the drone.
+ * the same drone. The route owns the splash; this owns the drone and the one
+ * label line per part ("OpenFC Lite · 20x20 / 30x30 · 3-6S · €23.20").
  *
  * Rendering rules live here rather than in the scene: the 3D is skipped under
  * 768px or `prefers-reduced-motion`, matching the policy the rest of the
@@ -18,8 +19,7 @@ import type {
   HeroDroneSceneProps,
   HeroLoadState,
 } from '~/components/HeroDroneScene';
-import {Txt} from '~/components/Txt';
-import {WHAT_IS_THIS_ID} from '~/lib/product-content';
+import type {HomePrices} from '~/components/PreorderStrip';
 
 function shouldLoad3D() {
   if (typeof window === 'undefined') return false;
@@ -42,19 +42,38 @@ let scenePromise: ReturnType<typeof loadScene> | null =
     ? loadScene()
     : null;
 
-/** Link label for a beat: the chapter's own title when the href points at
- *  the What-does-this-do chapter, the generic product link otherwise. */
-function BeatLinkLabel({href}: {href: string}) {
-  return href.endsWith(`#${WHAT_IS_THIS_ID}`) ? (
-    <Txt id="product-chrome.ch_what_is_this_title" fallback="What does this do?" />
+/** One label line: name, spec note, price, linked to the product when the
+ *  part is sold here. */
+function BeatLabel({
+  beat,
+  prices,
+  className,
+}: {
+  beat: Pick<HeroBeat, 'title' | 'note' | 'handle' | 'href'>;
+  prices?: HomePrices;
+  className: string;
+}) {
+  const price = beat.handle ? prices?.[beat.handle] : null;
+  const text = [beat.note, price].filter(Boolean).join(' · ');
+  const body = (
+    <>
+      <span className="hp-label-name">{beat.title}</span>
+      {text ? <span className="hp-label-meta">{text}</span> : null}
+    </>
+  );
+  return beat.href ? (
+    <Link className={className} to={beat.href} prefetch="intent">
+      {body}
+    </Link>
   ) : (
-    <Txt id="home.walkthrough_link" fallback="See the product" />
+    <span className={className}>{body}</span>
   );
 }
 
 export function HeroDroneStage({
   model,
   size,
+  prices,
   onLoad,
   onReady,
   onProgress,
@@ -63,6 +82,8 @@ export function HeroDroneStage({
 }: {
   model?: string;
   size?: string;
+  /** Price per product handle for the label lines. */
+  prices?: HomePrices;
   /** Model download progress, for the route's splash. */
   onLoad?: (s: HeroLoadState) => void;
   /** Fires once the drone is rigged and the walkthrough is live. */
@@ -175,63 +196,26 @@ export function HeroDroneStage({
       ) : null}
 
       {/* The spotlight cuts as a part leaves; that is the cue for this.
-          During a rest the panel clears entirely: the whole drone is the
-          content, and a caption would race ahead of the next part. */}
+          During a rest the label clears: the whole drone is the content. */}
       {use3D && !resting && shown ? (
         <div className="hp-copy" key={shown.id} aria-live="polite">
-          {/* No step counter: the rail's dots already say where you are. */}
-          <h2 className="hp-title">{shown.title}</h2>
-          <p className="hp-note">{shown.note}</p>
-          {/* Beginner explainer: what the part does, one line of how it
-              connects, and the product page when we sell it. Strings come
-              from studio.json with the rest of the beat copy. */}
-          {shown.caption ? <p className="hp-explain">{shown.caption}</p> : null}
-          {shown.hint ? <p className="hp-connect">{shown.hint}</p> : null}
-          {shown.href ? (
-            <Link className="hp-copy-link" to={shown.href} prefetch="intent">
-              <BeatLinkLabel href={shown.href} />
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                aria-hidden="true"
-              >
-                <line x1="5" y1="12" x2="19" y2="12" />
-                <polyline points="12 5 19 12 12 19" />
-              </svg>
-            </Link>
-          ) : null}
+          <BeatLabel beat={shown} prices={prices} className="hp-label" />
         </div>
       ) : null}
 
-      {/* Every beat's copy in the DOM, always. Without this most of the text
-          exists only in JS state: invisible to crawlers, to screen readers, and
-          to anyone whose device never loads the scene. */}
+      {/* Every label in the DOM, always, for crawlers, screen readers and
+          devices that never load the scene. */}
       <ul className="hp-fallback">
-        {beats.map((b) => {
-          // A beat with mid-hold stops carries its copy on the stops (the
-          // beat-level title/note duplicate the first stop), so render those
-          // instead of the beat's own.
-          const entries = b.stops?.length
-            ? b.stops.map((s, j) => ({...s, id: `${b.id}:${j}`}))
-            : [{...b, id: b.id}];
-          return entries.map((e) => (
-            <li key={e.id}>
-              <h3>{e.title}</h3>
-              <p>{e.note}</p>
-              {e.caption ? <p>{e.caption}</p> : null}
-              {e.hint ? <p>{e.hint}</p> : null}
-              {e.href ? (
-                <Link to={e.href}>
-                  <BeatLinkLabel href={e.href} />
-                </Link>
-              ) : null}
-            </li>
-          ));
-        })}
+        {beats.flatMap((b) =>
+          // A beat with mid-hold stops carries its labels on the stops.
+          (b.stops?.length ? b.stops.map((st, j) => ({...st, id: `${b.id}:${j}`})) : [b]).map(
+            (e) => (
+              <li key={e.id}>
+                <BeatLabel beat={e} prices={prices} className="hp-label" />
+              </li>
+            ),
+          ),
+        )}
       </ul>
     </div>
   );

@@ -1,7 +1,7 @@
 import {Await, PrefetchPageLinks, useLoaderData, useRouteLoaderData} from 'react-router';
 import type {RootLoader} from '~/root';
 import {CAMPAIGN} from '~/lib/catalog-client';
-import {PreorderStrip, type StripPrices} from '~/components/PreorderStrip';
+import {PreorderStrip, type HomePrices} from '~/components/PreorderStrip';
 import {shopifyImageUrl} from '~/lib/shopify-image';
 import {AnimatePresence, motion, useReducedMotion} from 'motion/react';
 import {Link} from '~/components/nav';
@@ -221,7 +221,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
   const home: Promise<{
     featured: HomeProduct[];
     heroStacks: HeroStacks;
-    prices: StripPrices;
+    prices: HomePrices;
   }> = context.catalog
     .get()
     .then((catalog) => {
@@ -248,15 +248,19 @@ export async function loader({request, context}: Route.LoaderArgs) {
         // The frame is one shared SKU. Built off the HERO_AIRFRAMES registry,
         // so a new size is a config edit - see app/lib/hero-airframes.ts.
         heroStacks: buildHeroStacks(d),
-        // The launch card's price hook: the lowest current price of each
-        // stack board, straight from the catalog so it follows the steps.
-        prices: {fc: fromPrice(d.fc), esc: fromPrice(d.esc)},
+        // The promo line and hotspot labels: the lowest current price per
+        // product, straight from the catalog so it follows the steps.
+        prices: {
+          'openfc-lite': fromPrice(d.fc),
+          openesc: fromPrice(d.esc),
+          openrx: fromPrice(d.rx),
+        },
       };
     })
     .catch(() => ({
       featured: [],
       heroStacks: emptyHeroStacks(),
-      prices: {fc: null, esc: null},
+      prices: {},
     }));
 
   const heroStacks = home.then((h) => h.heroStacks);
@@ -277,7 +281,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
       .find((batch) => batch.paid && batch.ships?.trim())
       ?.ships?.trim() ?? null;
 
-  // The launch card paints with the first HTML on every layout, so its
+  // The promo line paints with the first HTML on every layout, so its
   // prices are awaited. The catalog is worker-cached, the same fetch the
   // phone layout already awaits.
   const prices = await home.then((h) => h.prices);
@@ -383,13 +387,23 @@ function DesktopHome({
   prices,
 }: {
   heroStacks: Promise<HeroStacks>;
-  /** Set while the shop is open: the strip names the stack's ship date. */
+  /** Set while the shop is open: the promo line names the stack's ship date. */
   preorderShips: string | null;
-  prices: StripPrices;
+  prices: HomePrices;
 }) {
   // Coming-soon reveal cards keep their link + title but swap the price
   // for a Soon tag (per-card handle resolved server-side on the card).
   const productStatus = useProductStatusResolver();
+  // Hotspot labels carry a price only for a part that can be bought.
+  const labelPrices = useMemo<HomePrices>(
+    () =>
+      Object.fromEntries(
+        Object.entries(prices).filter(([handle]) =>
+          isPurchasableStatus(productStatus(handle)),
+        ),
+      ),
+    [prices, productStatus],
+  );
   const roadmapStatus = useRoadmapStatusResolver();
   const scrollRef = useRef(0);
   const rafId = useRef(0);
@@ -408,7 +422,6 @@ function DesktopHome({
   // revealed past its interactive point (r > 0.6 within its window).
   const [heroGates, setHeroGates] = useState(0);
   const stackVisibleGate = (heroGates & 1) !== 0;
-  const tourEndGate = (heroGates & (1 << 30)) !== 0;
   const cardInteractiveGate = (i: number) => (heroGates & (1 << (i + 1))) !== 0;
   // Which airframe the hero shows - 5-inch or 3-inch. Toggling swaps the
   // GLB trio loaded by HeroScene.
@@ -518,12 +531,6 @@ function DesktopHome({
     },
     [handleSceneProgress],
   );
-  // "drag to rotate" hint - pops up a few seconds after the splash settles if
-  // the visitor hasn't touched anything yet, and dismisses on the first drag or
-  // scroll. The drone auto-rotates on its own, so this only nudges discovery of
-  // the drag-to-view interaction.
-  const [showDragHint, setShowDragHint] = useState(false);
-  const [interacted, setInteracted] = useState(false);
   // The top product header bar drops in a beat AFTER the rest of the islands
   // have splashed in - 2s after the splash settles - so the hero reads first
   // and the chrome arrives second. Starting to scroll brings it in early. On
@@ -548,8 +555,6 @@ function DesktopHome({
     // setState is a no-op re-render-wise while the mask is unchanged.
     const windows = windowsRef.current;
     let gates = p >= 0.02 ? 1 : 0;
-    // Bit 30: the tour has reached its last step, so the build choice shows.
-    if (p >= 0.97) gates |= 1 << 30;
     for (let i = 0; i < windows.length; i++) {
       const [lo, hi] = windows[i];
       if (p > lo + 0.6 * (hi - lo)) gates |= 1 << (i + 1);
@@ -711,33 +716,6 @@ function DesktopHome({
     document.documentElement.classList.add('splash-settled');
   }, [splashSettled]);
 
-  // Arm the drag hint ~4s after the splash settles, unless the visitor has
-  // already interacted (dragged or scrolled).
-  useEffect(() => {
-    if (!splashSettled || interacted) return;
-    const t = window.setTimeout(() => setShowDragHint(true), 4000);
-    return () => window.clearTimeout(t);
-  }, [splashSettled, interacted]);
-
-  // First drag (pointerdown anywhere) or first real scroll dismisses the hint
-  // for good.
-  useEffect(() => {
-    if (!splashSettled || interacted) return;
-    const done = () => {
-      setInteracted(true);
-      setShowDragHint(false);
-    };
-    const onScroll = () => {
-      if (window.scrollY > 4) done();
-    };
-    window.addEventListener('pointerdown', done, {once: true});
-    window.addEventListener('scroll', onScroll, {passive: true});
-    return () => {
-      window.removeEventListener('pointerdown', done);
-      window.removeEventListener('scroll', onScroll);
-    };
-  }, [splashSettled, interacted]);
-
   // Bring the top header bar in 1s after the splash settles, or immediately if
   // the visitor starts scrolling. Once in, it stays in (and the class persists
   // across SPA nav like splash-settled does, so it doesn't re-hide on return).
@@ -877,6 +855,7 @@ function DesktopHome({
                   stepper is gone - two things cannot own the wheel. */}
               <HeroDroneStage
                 size={heroSize}
+                prices={labelPrices}
                 onLoad={handleModelLoad}
                 onReady={handleSceneReady}
                 onProgress={handleWalkthroughProgress}
@@ -1149,29 +1128,6 @@ function DesktopHome({
                 }}
               </Await>
             </Suspense>
-            {/* The tour's closing step: pick a build size, straight into the
-                build guide with every part of that size and its total. */}
-            {tourEndGate ? (
-              <nav
-                className="pointer-events-auto mb-2 flex items-center justify-end gap-2"
-                aria-label={copyText('home.tour_pick_label') ?? 'Pick a build'}
-              >
-                <Link
-                  prefetch="viewport"
-                  to="/products#build-3-inch"
-                  className="inline-flex min-h-[44px] items-center rounded-[var(--r-pill)] border border-[var(--color-border-strong)] bg-[var(--color-bg-card)] px-4 text-[15px] font-semibold text-[var(--color-text)] hover:border-[var(--color-gold)]"
-                >
-                  <Txt id="home.tour_pick_3" />
-                </Link>
-                <Link
-                  prefetch="viewport"
-                  to="/products#build-5-inch"
-                  className="inline-flex min-h-[44px] items-center rounded-[var(--r-pill)] border border-[var(--color-border-strong)] bg-[var(--color-bg-card)] px-4 text-[15px] font-semibold text-[var(--color-text)] hover:border-[var(--color-gold)]"
-                >
-                  <Txt id="home.tour_pick_5" />
-                </Link>
-              </nav>
-            ) : null}
             <Link
               prefetch="viewport"
               to="/collections/all"
@@ -1192,34 +1148,35 @@ function DesktopHome({
             </Link>
           </div>
 
-          {/* Top centre: the preorder line while the shop is open, then the
-            airframe size toggle when more than one assembly is built. Stays
-            visible through the scroll so both are always reachable. */}
+          {/* Promo line, full width under the header while the shop is
+            open. Paints with the page; it never waits for the models. */}
+          {preorderShips !== null ? (
+            <div className="hero-promo pointer-events-auto">
+              <PreorderStrip ships={preorderShips || null} prices={prices} />
+            </div>
+          ) : null}
+
+          {/* Top centre: the airframe size toggle when more than one assembly
+            is built. Stays visible through the scroll. */}
           <div
             className="hero-top-center absolute left-1/2 -translate-x-1/2 z-20 pointer-events-auto"
             style={{
               // Springs down from the top edge when the splash settles, resting
               // high (2.5rem). When the header bar lands ~2s later it shoves the
               // selector down to 6rem - the spring `top` transition sells the push.
-              // While the shop is open the launch card is there from the
-              // first paint: prices and the ship date never wait for the
-              // models.
-              top:
-                preorderShips !== null
-                  ? '5.25rem'
-                  : !splashSettled
-                    ? '-3rem'
-                    : headerIn
-                      ? '6rem'
-                      : '2.5rem',
-              opacity: splashSettled || preorderShips !== null ? 1 : 0,
+              // Below the promo line while the shop is open.
+              top: !splashSettled
+                ? '-3rem'
+                : preorderShips !== null
+                  ? '8rem'
+                  : headerIn
+                    ? '6rem'
+                    : '2.5rem',
+              opacity: splashSettled ? 1 : 0,
               transition:
                 'top 0.7s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease',
             }}
           >
-            {preorderShips !== null ? (
-              <PreorderStrip ships={preorderShips || null} prices={prices} />
-            ) : null}
             {HERO_SIZES.length > 1 ? (
               <HeroSizeSlider
                 value={heroSize}
@@ -1236,47 +1193,6 @@ function DesktopHome({
             <div className="w-px h-5 bg-gradient-to-b from-[var(--color-text-muted)] to-transparent animate-pulse" />
           </div>
 
-          {/* Drag-to-view hint - appears a few seconds in if the visitor hasn't
-            touched the drone yet, dismissed on first drag/scroll. */}
-          <div
-            className={`hero-drag-hint${showDragHint ? ' is-visible' : ''}`}
-            aria-hidden="true"
-          >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <polyline points="7 8 3 12 7 16" />
-              <polyline points="17 8 21 12 17 16" />
-              <line x1="3" y1="12" x2="21" y2="12" />
-            </svg>
-            <Txt id="home.drag_hint" />
-          </div>
-
-          {/* Scroll-to-explore cue - anchored at the bottom of the hero, shares the
-            drag hint's lifecycle (fades in a few seconds in, dismissed on the
-            first drag/scroll). */}
-          <div
-            className={`hero-scroll-hint${showDragHint ? ' is-visible' : ''}`}
-            aria-hidden="true"
-          >
-            <Txt id="home.scroll_hint" />
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <polyline points="8 7 12 11 16 7" />
-              <polyline points="8 13 12 17 16 13" />
-            </svg>
-          </div>
         </div>
       </div>
     </div>

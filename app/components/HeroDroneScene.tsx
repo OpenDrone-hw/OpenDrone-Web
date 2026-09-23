@@ -17,25 +17,22 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {heroCaption, whatIsThisHref} from '~/lib/product-content';
 
 export type HeroBeat = {
   id: string;
+  /** Part name, the start of the label line. */
   title: string;
-  note: string;
-  /** Beginner explainer shown under the note (studio-editable, studio.json). */
-  caption?: string;
-  /** One-line "connects to" hint below the caption. */
-  hint?: string;
-  /** Product page for this part, when we sell it. */
+  /** Spec suffix after the name ("20x20 / 30x30 · 3-6S"). */
+  note?: string;
+  /** Product handle; the label adds that product's price. */
+  handle?: string;
+  /** Product page for this part, when it is sold here. */
   href?: string;
-  /** Mid-hold caption changes, in hold order. Only the fallback DOM renders
-   *  these as a list; live, the reported beat IS the active stop's copy. */
+  /** Mid-hold label changes, in hold order. Only the fallback DOM renders
+   *  these as a list; live, the reported beat IS the active stop's label. */
   stops?: Array<{
     title: string;
-    note: string;
-    caption?: string;
-    hint?: string;
+    note?: string;
     href?: string;
   }>;
 };
@@ -767,9 +764,8 @@ export function HeroDroneScene({
       type Beat = {
         id: string;
         title: string;
-        note: string;
-        caption?: string;
-        hint?: string;
+        note?: string;
+        handle?: string;
         href?: string;
         faceOn?: boolean;
         fade?: number;
@@ -777,15 +773,13 @@ export function HeroDroneScene({
          *  height the part fills under the spotlight. >0.9 deliberately
          *  crops (the airframe reads better close, top plate off screen). */
         partSize?: number;
-        /** Caption changes partway through the hold, at that fraction of it.
-         *  An active stop's copy REPLACES the beat's wholesale (caption, hint
-         *  and href included), so a stop with no href renders no link. */
+        /** Label changes partway through the hold, at that fraction of it.
+         *  An active stop's label REPLACES the beat's wholesale (href
+         *  included), so a stop with no href renders no link. */
         stops?: Array<{
           at: number;
           title: string;
-          note: string;
-          caption?: string;
-          hint?: string;
+          note?: string;
           href?: string;
         }>;
         choreo?: string;
@@ -845,16 +839,9 @@ export function HeroDroneScene({
           id: b.id,
           title: b.title,
           note: b.note,
-          // A beat naming a product handle takes its caption from that
-          // product's What-does-this-do content (whatIsThis.hero, else the
-          // intro's opening), so the homepage and the PDP explain a part
-          // with one voice (maintainer, 2026-08-15). Beats without a handle keep
-          // their studio.json caption.
-          caption: (b.handle && heroCaption(b.handle)) || b.caption,
-          hint: b.hint,
-          // Same rule for the pointer: a handle beat links to that chapter
-          // on the product page, so the caption and its source stay one.
-          href: (b.handle && whatIsThisHref(b.handle)) || b.href,
+          handle: b.handle,
+          // A beat naming a product handle links to that product page.
+          href: b.handle ? `/products/${b.handle}` : b.href,
           fade: b.fade,
           partSize: b.partSize,
           stops: b.stops,
@@ -911,22 +898,17 @@ export function HeroDroneScene({
             id: `${b.id}:${stopIdx}`,
             title: st.title,
             note: st.note,
-            caption: st.caption,
-            hint: st.hint,
             href: st.href,
           };
         return {
           id: b.id,
           title: b.title,
           note: b.note,
-          caption: b.caption,
-          hint: b.hint,
+          handle: b.handle,
           href: b.href,
           stops: b.stops?.map((s) => ({
             title: s.title,
             note: s.note,
-            caption: s.caption,
-            hint: s.hint,
             href: s.href,
           })),
         };
@@ -1574,16 +1556,12 @@ export function HeroDroneScene({
         const kRaw = envelope(t);
         const k = b.nodes.length ? kRaw : 0;
 
-        // The copy panel follows the SPOTLIGHT, not the timeline: it shows a
+        // The label follows the SPOTLIGHT, not the timeline: it shows a
         // part while that part is out (k high) and clears during travel and
-        // rests, so a rest reads as the whole drone with no caption racing
-        // ahead to the next part. A whole-drone beat shows its copy on the
-        // same envelope when it carries a caption (the establishing hold is
-        // where the beginner intro reads); without one it stays silent, since
-        // the size tab already names what is on screen.
+        // rests, so a rest reads as the whole drone with no label racing
+        // ahead to the next part. A whole-drone beat stays silent.
         {
-          const display =
-            (b.nodes.length || b.caption) && kRaw > 0.3 ? beatIdx : -1;
+          const display = b.nodes.length && kRaw > 0.3 ? beatIdx : -1;
           // Which mid-hold stop is active, matching the studio's activeStop():
           // the last stop whose `at` the hold progress has passed. This is the
           // wiring that used to be missing: `stops` was parsed and ignored, so
