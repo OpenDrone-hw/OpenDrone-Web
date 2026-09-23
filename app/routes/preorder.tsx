@@ -139,7 +139,9 @@ export async function loader({context}: Route.LoaderArgs) {
 
   const rows: Row[] = toCards(catalog).flatMap((card) =>
     card.variants.nodes.flatMap((v): Row[] => {
-      if (!v.campaign || !v.sku || !v.shipPromise) return [];
+      // Only the campaign's main parts: accessories that ship with them are
+      // sold on their own pages, not tracked here.
+      if (!v.campaign || !v.sku || !v.shipPromise || !CAMPAIGN.skus[v.sku]) return [];
       const status = resolveStatus(card.handle, globalSoon, statusFlags, v.availability);
       if (!isPurchasableStatus(status)) return [];
       const unit = PRODUCT_CONTENT[card.handle]?.priceUnit ?? null;
@@ -232,6 +234,11 @@ export default function PreorderRoute() {
             <span className="po-group-meta">{dot + shipWord('deadline', ends)}</span>
             <span className="po-group-meta">{dot + shipWord('eta', eta)}</span>
           </h2>
+          {stackMonth ? (
+            <p className="po-group-line">
+              {(copyText('preorder.targets_line') ?? '').replace('{month}', stackMonth)}
+            </p>
+          ) : null}
           <Cards rows={targetRows} eta={eta} />
         </section>
       ) : null}

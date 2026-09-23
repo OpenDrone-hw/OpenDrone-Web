@@ -375,153 +375,26 @@ html {
 /* Airframe size slider: a draggable gold sled between 5″ and 3″. The thumb
    sits behind the two labels; the active label flips to on-accent ink as the
    thumb covers it. Drag is a pointer enhancement on top of two real buttons. */
-.hero-size-slider {
-  position: relative;
-  display: inline-flex;
-  padding: 5px; /* PAD in HeroSizeSlider.tsx */
-  border: 1px solid var(--pod-border);
-  border-radius: var(--r-pill);
-  background: var(--pod-bg);
-  backdrop-filter: blur(var(--pod-blur));
-  -webkit-backdrop-filter: blur(var(--pod-blur));
-  touch-action: none; /* let the thumb own horizontal drag on touch */
-  user-select: none;
-}
 
 /* Thumb sits ABOVE the labels (z 2) so it actually receives the drag: the
    label buttons (z 1) would otherwise intercept every pointer event. The
    thumb carries its own label so the gold still shows text. The inset top
    highlight + grip dots make it read as a tactile, grabbable handle. */
-.hero-size-slider__thumb {
-  position: absolute;
-  z-index: 2;
-  top: 5px;
-  bottom: 5px;
-  left: 5px;
-  width: calc(50% - 5px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--r-pill);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--color-gold-fill) 88%, white) 0%,
-    var(--color-gold-fill) 55%
-  );
-  box-shadow:
-    0 2px 10px -2px color-mix(in srgb, var(--color-gold) 55%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35);
-  cursor: grab;
-  touch-action: none;
-}
-
-.hero-size-slider__thumb:active {
-  cursor: grabbing;
-}
-
-.hero-size-slider__thumb-label {
-  color: var(--color-on-accent);
-  font-family: var(--font-sans);
-  font-size: 0.95rem;
-  font-weight: 600;
-  letter-spacing: -0.005em;
-  white-space: nowrap;
-  pointer-events: none;
-}
 
 /* Uncached size toggle: the trio is still fetching/building, so the thumb
    carries a small spinner next to its label. Purely additive - the control
    keeps working and the label stays put. */
-.hero-size-slider__spinner {
-  position: absolute;
-  right: 0.55rem;
-  width: 0.7rem;
-  height: 0.7rem;
-  border-radius: 50%;
-  border: 2px solid color-mix(in srgb, var(--color-on-accent) 35%, transparent);
-  border-top-color: var(--color-on-accent);
-  animation: hero-size-spin 0.7s linear infinite;
-  pointer-events: none;
-}
 
 /* Make room for the spinner so it never overlaps the thumb label on narrow
    slider widths. */
-.hero-size-slider__thumb.is-busy .hero-size-slider__thumb-label {
-  padding-right: 1.2rem;
-}
-
-@keyframes hero-size-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.hero-size-slider__opt {
-  position: relative;
-  z-index: 1;
-  min-width: 8.5rem;
-  flex: 1 1 0;
-  padding: 0.6rem 1.2rem;
-  border: none;
-  border-radius: var(--r-pill);
-  background: transparent;
-  color: var(--color-text-muted);
-  font-family: var(--font-sans);
-  font-size: 0.95rem;
-  font-weight: 600;
-  letter-spacing: -0.005em;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: color 0.2s ease;
-}
-
-.hero-size-slider__opt:hover {
-  color: var(--color-text);
-}
-
-.hero-size-slider__opt:focus-visible {
-  outline: 2px solid var(--color-focus);
-  outline-offset: 3px;
-}
-
-.hero-size-slider__opt:focus-visible {
-  outline: 2px solid var(--color-focus);
-  outline-offset: 3px;
-}
 
 /* Hero wordmark: the splash. Centred and large while the models load (a
    transform from its bottom-left anchor, so the motion is one tween), then it
    fades out in place (.is-settled). */
-.hero-wordmark {
-  position: absolute;
-  bottom: 2.5rem;
-  left: 2.5rem;
-  z-index: 35;
-  margin: 0;
-  transform-origin: center;
-  transform: translate(calc(50vw - 2.5rem - 50%), calc(-50vh + 2.5rem + 50%))
-    scale(1.7);
-  /* Snappy S-curve, same timing as the header drop-in so they land together. */
-  transition: transform 0.65s cubic-bezier(0.72, 0, 0.28, 1);
-  pointer-events: none;
-  line-height: 0;
-}
-
-.hero-wordmark img {
-  display: block;
-  height: clamp(2.5rem, 5vw, 4.5rem);
-  width: auto;
-}
 
 /* SVG wordmark: same height as the img variant, width auto-scales from
    the viewBox. overflow:visible so the fly-in transforms don't get
    clipped at the SVG edge during the draw phase. */
-.hero-wordmark-svg {
-  display: block;
-  height: clamp(2.5rem, 5vw, 4.5rem);
-  width: auto;
-  overflow: visible;
-}
 
 /*
   Phase 1: stroke draws. Each <path> in .hw-strokes has pathLength=100
@@ -576,10 +449,6 @@ html {
 /* Once the parent flags the wordmark as fully filled, kill any
    remaining stroke wireframe completely: no flicker if a per-letter
    calc rounds to non-zero. */
-.hero-wordmark-svg.is-filled .hw-stroke {
-  opacity: 0 !important;
-  animation: none !important;
-}
 
 .hw-strokes .hw-stroke--open,
 .hw-strokes .hw-stroke--drone {
@@ -639,199 +508,21 @@ html {
 
 /* Settled: the splash is over, the wordmark fades out where it stands. The
    header carries the brand; the hero's left side is the caption panel's. */
-.hero-wordmark.is-settled {
-  transform: translate(calc(50vw - 2.5rem - 50%), calc(-50vh + 2.5rem + 50%))
-    scale(1.6);
-  /* Opacity only, not visibility: it stays the page's h1 for screen readers. */
-  transition: opacity 0.45s ease, transform 0.65s cubic-bezier(0.72, 0, 0.28, 1);
-}
 
 /* Hero tagline: top-left, appears after the wordmark settles */
-.hero-tagline {
-  position: absolute;
-  top: calc(var(--header-height) + 1.5rem);
-  left: 2.5rem;
-  z-index: 20;
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-  letter-spacing: 0.32em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  transform: translateY(-6px);
-  transition: transform 0.6s ease-out 0.4s;
-  pointer-events: none;
-}
-
-.hero-tagline.is-visible {
-  transform: translateY(0);
-}
 
 /* Hero actions: bottom-right CTAs, appear after the wordmark settles */
-.hero-actions {
-  position: absolute;
-  bottom: 2.5rem;
-  right: 2.5rem;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  transform: translateY(8px);
-  transition: transform 0.6s ease-out 0.5s;
-  pointer-events: none;
-}
-
-.hero-actions.is-visible {
-  transform: translateY(0);
-  pointer-events: auto;
-}
-
-.hero-action-primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  min-width: 26rem; /* 30% wider than the old 20rem anchor */
-  padding: 1rem 2.25rem;
-  background: var(--color-gold-fill);
-  color: var(--color-on-accent);
-  font-family: var(--font-mono);
-  font-size: 0.95rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: var(--ls-label);
-  border-radius: var(--r-xs);
-  transition: background-color 0.2s ease;
-}
-
-.hero-action-primary:hover {
-  background: var(--color-gold-fill-hover);
-  color: var(--color-on-accent);
-}
-
-.hero-action-secondary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 54px;
-  height: 54px;
-  border: 1px solid color-mix(in srgb, var(--color-text-muted) 30%, transparent);
-  color: var(--color-text);
-  border-radius: var(--r-xs);
-  transition: border-color 0.2s ease, color 0.2s ease;
-}
-
-.hero-action-secondary:hover {
-  border-color: color-mix(in srgb, var(--color-gold) 60%, transparent);
-  color: var(--color-text);
-}
 
 /* Hero scroll showcase: a Pod of the on-screen components (FC/ESC/Frame)
    that rises from the bottom as the hero finishes. Pointer-events re-enabled
    on the Pod (the riser wrapper is none so the hero stays interactive). */
-.hero-showcase {
-  pointer-events: auto;
-  width: min(620px, 92vw);
-  padding: var(--sp-4);
-}
-.hero-showcase-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--sp-4);
-  margin-bottom: var(--sp-3);
-}
-.hero-showcase-title {
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  text-transform: uppercase;
-  letter-spacing: var(--ls-label);
-  color: var(--color-text-muted);
-}
-.hero-showcase-all {
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  letter-spacing: 0.08em;
-  color: var(--color-gold-text);
-  transition: color 0.15s ease;
-}
-.hero-showcase-all:hover {
-  color: var(--color-gold-text-hover);
-}
-.hero-showcase-loading {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: var(--sp-4);
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  color: var(--color-text-muted);
-}
 
 /* Thin-line scroll hint under the hero - fades out over the first ~13% of
    scroll. Driven by --hero-p so it needs no per-frame React render. */
-.hero-scroll-fade {
-  opacity: clamp(0, calc(0.4 - var(--hero-p, 0) * 3), 0.4);
-}
 /* Hero scene glow: a soft warm radial behind the drone so the stage isn't a
    flat slab of background. Dark mode lifts the centre with a gold-tinted glow;
    light mode (twin below) tints the centre warm and feathers a faint vignette
    to the edges so it reads as a gradient instead of one flat colour. */
-.hero-scene-glow {
-  background: radial-gradient(
-    ellipse at 50% 45%,
-    rgba(80, 65, 20, 0.3) 0%,
-    transparent 60%
-  );
-}
-html.light .hero-scene-glow {
-  background:
-    radial-gradient(
-      ellipse at 50% 45%,
-      rgba(199, 154, 50, 0.18) 0%,
-      transparent 50%
-    ),
-    radial-gradient(
-      ellipse at 50% 42%,
-      transparent 15%,
-      rgba(38, 36, 40, 0.28) 70%,
-      rgba(28, 26, 32, 0.45) 100%
-    );
-}
-
-@media (max-width: 640px) {
-  .hero-wordmark {
-    bottom: 1.5rem;
-    left: 1.5rem;
-    transform: translate(calc(50vw - 1.5rem - 50%), calc(-50vh + 1.5rem + 50%))
-      scale(1.5);
-  }
-  .hero-wordmark img {
-    height: clamp(2rem, 9vw, 3.25rem);
-  }
-  .hero-wordmark.is-settled {
-    transform: translate(calc(50vw - 1.5rem - 50%), calc(-50vh + 1.5rem + 50%))
-      scale(1.4);
-  }
-  .hero-tagline {
-    top: calc(var(--header-height) + 1rem);
-    left: 1.5rem;
-    font-size: 0.7rem;
-  }
-  .hero-actions {
-    bottom: 1.5rem;
-    right: 1.5rem;
-    gap: 0.5rem;
-  }
-  .hero-action-primary {
-    padding: 0.75rem 1.5rem;
-    font-size: 0.85rem;
-  }
-  .hero-action-secondary {
-    width: 46px;
-    height: 46px;
-  }
-}
 
 body {
   min-height: 100vh;
@@ -1008,52 +699,7 @@ a:hover {
   display: inline-flex;
   align-items: center;
 }
-.incutec-hint {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  margin-top: 0.55rem;
-  display: inline-flex;
-  align-items: center;
-  padding: 0.4rem 0.75rem;
-  background: var(--color-gold-fill);
-  color: var(--color-on-accent);
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-  border-radius: var(--r-md);
-  box-shadow: var(--pod-shadow);
-  opacity: 0;
-  transform: translateY(-6px);
-  pointer-events: none;
-  transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
-}
 /* Little caret pointing up at the mark. */
-.incutec-hint::before {
-  content: '';
-  position: absolute;
-  top: -5px;
-  left: 1rem;
-  width: 10px;
-  height: 10px;
-  background: var(--color-gold-fill);
-  transform: rotate(45deg);
-  border-radius: 1px;
-}
-html.hero-incutec-hint .incutec-hint {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-}
-.incutec-hint:hover,
-.incutec-hint:focus-visible {
-  /* Keep the dark ink: the global `a:hover` would otherwise recolor the text
-     gold, leaving it gold-on-gold with no contrast. */
-  background: var(--color-gold-fill-hover);
-  color: var(--color-on-accent);
-}
 
 /* Floating pill header. The .site-header is a transparent fixed band that
    provides the top gap + side gutters and lets pointer events fall through to
@@ -1724,151 +1370,9 @@ html.light .header-cat-pod {
    Mobile homepage (static, ≤768px): replaces the WebGL hero + scroll
    choreography with a plain hero, flagship cards, and a catalogue link.
    ============================================ */
-.home-mobile {
-  width: var(--rail-width);
-  margin: 0 auto;
-  padding-block: 1.5rem 3rem;
-  display: flex;
-  flex-direction: column;
-  gap: 2.5rem;
-}
-
-.home-mobile-glow {
-  position: absolute;
-  inset: -8% -4%;
-  background: radial-gradient(
-    circle at 50% 50%,
-    color-mix(in srgb, var(--color-gold) 26%, transparent) 0%,
-    color-mix(in srgb, var(--color-gold) 8%, transparent) 38%,
-    transparent 70%
-  );
-  pointer-events: none;
-}
 
 /* Phone walkthrough: the step's still, the step controls, then the caption
    as a sheet. Stacked in flow, so the three never overlap. */
-.tour-m {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-.tour-m-stage {
-  position: relative;
-  align-self: center;
-  width: min(100%, 26rem);
-  aspect-ratio: 1 / 0.82;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  touch-action: pan-y;
-  user-select: none;
-}
-.tour-m-still {
-  position: relative;
-  width: 100%;
-  height: auto;
-  animation: tour-m-in 0.35s ease both;
-  -webkit-user-drag: none;
-}
-@keyframes tour-m-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-.tour-m-controls {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.tour-m-arrow {
-  flex: 0 0 auto;
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 1px solid var(--color-border-strong);
-  background: var(--color-bg-card);
-  color: var(--color-text);
-}
-.tour-m-arrow:disabled {
-  opacity: 0.35;
-}
-.tour-m-rail {
-  flex: 1 1 auto;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: relative;
-  min-width: 0;
-}
-.tour-m-rail::before {
-  content: '';
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  top: 50%;
-  height: 2px;
-  margin-top: -1px;
-  background: color-mix(in srgb, var(--color-text-dim) 30%, transparent);
-}
-.tour-m-dot {
-  position: relative;
-  width: 24px;
-  height: 44px;
-  padding: 0;
-  border: 0;
-  background: none;
-}
-.tour-m-dot::before {
-  content: '';
-  position: absolute;
-  left: 7px;
-  top: 17px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--color-bg);
-  border: 1px solid color-mix(in srgb, var(--color-text-dim) 60%, transparent);
-}
-.tour-m-dot.done::before { background: color-mix(in srgb, var(--color-accent) 45%, transparent); }
-.tour-m-dot.on::before {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-  transform: scale(1.4);
-}
-.tour-m-sheet {
-  padding: 1.1rem 1.25rem 1.25rem;
-  background: var(--pod-bg-strong);
-  border: 1px solid var(--pod-border);
-  border-radius: var(--r-md);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-}
-.tour-m-sheet .tour-panel-body { align-self: stretch; }
-.tour-m-sheet .tour-role { font-size: 1.6rem; margin: 0.35rem 0 0.5rem; }
-.tour-m-sheet .tour-text { font-size: 1rem; }
-.tour-m-sheet .tour-picks { margin-top: 0.9rem; }
-.tour-m-still-link {
-  display: block;
-  width: 100%;
-  -webkit-user-drag: none;
-}
-@media (prefers-reduced-motion: reduce) {
-  .tour-m-still { animation: none; }
-}
-
-.home-mobile-featured {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.home-mobile-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
-  gap: 1rem;
-}
 
 /* ============================================
    Homepage sections
@@ -1886,47 +1390,6 @@ html.light .header-cat-pod {
 /* ============================================
    Hero CTAs
    ============================================ */
-
-.hero-cta-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.5rem 1.25rem;
-  background: var(--color-gold-fill);
-  color: var(--color-on-accent);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  border-radius: var(--r-xs);
-  transition: background-color 150ms ease;
-}
-
-.hero-cta-primary:hover {
-  background: var(--color-gold-fill-hover);
-  color: var(--color-on-accent);
-}
-
-.hero-cta-secondary {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.5rem 1.25rem;
-  border: 1px solid var(--color-border);
-  color: var(--color-text-muted);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  border-radius: var(--r-xs);
-  transition: border-color 150ms ease, color 150ms ease;
-}
-
-.hero-cta-secondary:hover {
-  border-color: var(--color-text-muted);
-  color: var(--color-text);
-}
 
 /* ============================================
    Feature cards
@@ -15000,12 +14463,7 @@ html.light .editorial-watermark {
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
 }
-
 @media (max-width: 1023px) {
-  /* ---- B) Horizontal-overflow kills ------------------------------------ */
-
-  /* The catalog sort control (label + native select) wouldn't shrink, so the
-     toolbar overran the viewport by ~7px. Let it shrink and the toolbar wrap. */
   .catalog-toolbar {
     flex-wrap: wrap;
   }
@@ -15014,9 +14472,6 @@ html.light .editorial-watermark {
     min-width: 0;
     max-width: 100%;
   }
-
-  /* FirmwareSplit's amount row (€44 + €1 = €45) must stay on ONE line: scale
-     the figure down to fit the phone instead of wrapping. */
   .firmware-split-amounts {
     flex-wrap: nowrap;
     gap: 0.4rem;
@@ -15026,12 +14481,6 @@ html.light .editorial-watermark {
   .firmware-split-total {
     min-width: 0;
   }
-
-  /* Catalog content (catalog-main) was 315px inside a 298px grid track: the
-     single `1fr` column = minmax(auto, 1fr), whose `auto` floor is min-content,
-     so a wide child (toolbar/cards) stretched the track past the viewport.
-     minmax(0, 1fr) drops the floor to 0 and min-width:0 lets the grid item
-     shrink to the track: content reflows instead of forcing page scroll. */
   .catalog-layout {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -15043,78 +14492,23 @@ html.light .editorial-watermark {
     max-width: 100%;
     box-sizing: border-box;
   }
-
-  /* Header inner row was 362px wide on a 320px phone: keep brand + icons
-     within the viewport. */
   .site-header-main {
     max-width: 100%;
     box-sizing: border-box;
   }
-
-  /* ---- C) Tap-target floors (WCAG 2.5.5: 44px) ------------------------ */
-  /* Block/inline-block interactive controls that rendered under 44px tall on
-     a phone. Inline-flex + min-height centres existing content without
-     reflowing it; a touch of inline padding widens the hit area. */
-  .catalog-filter,
-  .collection-sort select,
-  .collection-sort-control,
-  .trust-chip,
-  .search-submit,
-  .product-gallery-arrow,
-  .hero-cta-primary {
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
-  }
-  /* Mobile slide-out nav links: full-width 44px touch rows. */
   .site-mobile-nav a {
     min-height: 44px;
     display: flex;
     align-items: center;
   }
-  /* Arrows are square: give them width too. */
   .product-gallery-arrow {
     min-width: 44px;
     justify-content: center;
   }
-
-  /* ---- D) Micro-label legibility floors -------------------------------- */
-  /* A curated set of uppercase/mono micro-labels rendered at ~10.3px. On a
-     phone that's below the 12px comfortable-reading floor; nudge them to
-     11.5px (still clearly a label, just legible). Scoped to the exact
-     classes the audit flagged so body copy scale is untouched. */
-  .product-buy-sku,
-  .product-buy-stock,
-  .variant-tier-flag,
-  .chapter-number,
-  .chapter-label,
-  .product-card-meta,
-  .section-label,
-  .product-gallery-counter,
-  .page-eyebrow,
-  .incutec-hint,
-  .catalog-filter-head,
-  .collection-sort-label,
-  .rn-year-count,
-  .rn-version,
-  .rn-tag,
-  .partner-label,
-  .latest-commit-label,
-  .trust-chip {
-    font-size: 12px;
-  }
-  /* Corner badges (New/Sale/Coming soon) and the pre-launch tag read at
-     ~10px: floor them to the 12px mobile legibility minimum. */
   .product-card-badge,
   .placeholder-banner__tag {
     font-size: 12px;
   }
-
-  /* Systemic root: the base font is 15px, so Tailwind's rem-based `text-xs`
-     (0.75rem) and the --fs-xs token (11px) both land below the 12px mobile
-     floor wherever they're used. Floor them once here instead of chasing
-     every utility-styled label. Plain class selectors outrank the layered
-     Tailwind utility, so this wins on mobile only. */
   :root {
     --fs-xs: 12px; /* 11px token -> 12px mobile floor */
   }
@@ -15575,342 +14969,32 @@ body:has(.overlay.expanded) .placeholder-banner {
    --------------------------------------------------------------------------- */
 /* The walkthrough is a layer inside the hero's sticky pane, not a section of
    its own. Pointer events are re-enabled here because the pane sets none. */
-.hp-stage {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: auto;
-}
-.hp-loading {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 0.7rem;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-dim);
-  pointer-events: none;
-}
 /* The walkthrough's layout. Desktop: the drone centred as the scene frames
    it, the text block on the right, top-anchored where the part label always
    sat, and the rail centred along the bottom. The scene reads
    --hero-shift-x (drone whole), --hero-shift-x-part (a part out),
    --hero-shift-y and --hero-zoom from here; on desktop they stay neutral. */
-.hp-stage {
-  --tour-gutter: 2.5rem;
-  --hero-shift-x: 0;
-  --hero-shift-x-part: 0;
-  --hero-shift-y: 0;
-  --hero-zoom: 1;
-}
-.tour-panel {
-  position: absolute;
-  right: clamp(20px, 5vw, 96px);
-  /* Top-anchored, not centred: the counter and heading stay put while the
-     text length changes between steps. */
-  top: clamp(96px, 14vh, 160px);
-  width: min(25rem, 32vw);
-  z-index: 22;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-}
-.tour-panel-body {
-  /* A halo in the page colour keeps the words readable where the orbiting
-     drone's prop passes behind them. */
-  text-shadow: 0 0 14px var(--color-bg), 0 0 4px var(--color-bg);
-  animation: hp-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-@keyframes hp-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: none; }
-}
-.tour-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-.tour-count {
-  margin: 0;
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 0.8rem;
-  letter-spacing: 0.14em;
-  color: var(--color-gold-text);
-}
 /* 3" / 5": which build the picks are for. */
-.tour-build-toggle {
-  display: inline-flex;
-  padding: 2px;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--r-pill);
-  background: color-mix(in srgb, var(--color-bg) 70%, transparent);
-}
-.tour-build-toggle button {
-  min-width: 2.75rem;
-  min-height: 28px;
-  padding: 0 0.7rem;
-  border: 0;
-  border-radius: var(--r-pill);
-  background: none;
-  color: var(--color-text-muted);
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-.tour-build-toggle button:hover { color: var(--color-text); }
-.tour-build-toggle button[aria-pressed='true'] {
-  background: var(--color-text);
-  color: var(--color-bg);
-}
-.tour-build-toggle button:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
-.tour-role {
-  margin: 0.5rem 0 0.6rem;
-  font-size: clamp(1.75rem, 2.4vw, 2.25rem);
-  font-weight: 600;
-  line-height: 1.1;
-  letter-spacing: -0.01em;
-  color: var(--color-text);
-}
-.tour-text {
-  margin: 0;
-  max-width: 40ch;
-  font-size: 1rem;
-  line-height: 1.5;
-  color: var(--color-text-muted);
-}
 /* The build's pick for the part: name (to its product page) and price, then
    the ship date and Add. */
-.tour-picks {
-  margin: 1.1rem 0 0;
-  padding: 0;
-  list-style: none;
-  border-top: 1px solid var(--color-border);
-}
-.tour-pick {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.35rem 1rem;
-  padding: 0.7rem 0;
-  border-bottom: 1px solid var(--color-border);
-}
-.tour-pick.is-compact {
-  padding: 0.4rem 0;
-  border-bottom: 0;
-}
-.tour-pick-name {
-  font-weight: 600;
-  color: var(--color-text);
-  text-decoration: underline;
-  text-decoration-color: var(--color-border-strong);
-  text-underline-offset: 4px;
-}
-.tour-pick-name:hover,
-.tour-pick-name:focus-visible {
-  text-decoration-color: var(--color-gold);
-}
-.tour-pick.is-compact .tour-pick-name { font-weight: 500; font-size: 0.95rem; }
-.tour-pick-price {
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 0.9rem;
-  color: var(--color-text);
-  text-align: right;
-  white-space: nowrap;
-}
-.tour-pick .ship-chip { justify-self: start; }
-.tour-pick-add {
-  grid-column: 2;
-  min-height: 34px;
-  padding: 0 1.1rem;
-  border: 1px solid var(--color-gold);
-  border-radius: var(--r-pill);
-  background: transparent;
-  color: var(--color-text);
-  font: inherit;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-.tour-pick-add:hover { background: var(--color-gold-fill); color: var(--color-on-accent); }
-.tour-pick-add:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-.tour-pick .cart-line-error { grid-column: 1 / -1; }
 /* The last step: the whole list, the total and one add. */
-.tour-summary .tour-picks { margin-top: 1rem; padding-top: 0.35rem; }
-.tour-total {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  margin: 0.35rem 0 0;
-  padding-top: 0.6rem;
-  border-top: 1px solid var(--color-border);
-  font-weight: 600;
-  color: var(--color-text);
-}
-.tour-total .tour-pick-price { font-size: 1rem; }
-.tour-summary .tour-add-build { margin-top: 1rem; width: 100%; }
-.tour-not-sold {
-  margin: 0.8rem 0 0;
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-}
 
 /* Step rail, centred along the bottom. Each dot is a button that jumps to its
    step; the active step's name shows under it, any other on hover or focus. */
-.hp-rail {
-  position: absolute;
-  --hp-rail-w: min(34rem, 44vw);
-  left: 50%;
-  bottom: 3.25rem;
-  transform: translateX(-50%);
-  width: var(--hp-rail-w);
-  height: 2px;
-  background: color-mix(in srgb, var(--color-text-dim) 30%, transparent);
-  border-radius: 2px;
-  z-index: 22;
-}
-.hp-rail-fill {
-  position: absolute;
-  inset-block: 0;
-  left: 0;
-  width: 0;
-  height: 100%;
-  background: var(--color-accent);
-  border-radius: 2px;
-  transition: none;
-}
-.hp-dot {
-  position: absolute;
-  top: -11px;
-  width: 24px;
-  height: 24px;
-  margin-left: -12px;
-  padding: 0;
-  border: 0;
-  background: none;
-  cursor: pointer;
-}
-.hp-dot::before {
-  content: '';
-  position: absolute;
-  left: 7px;
-  top: 7px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--color-bg);
-  border: 1px solid color-mix(in srgb, var(--color-text-dim) 60%, transparent);
-  transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
-}
-.hp-dot.done::before { background: color-mix(in srgb, var(--color-accent) 45%, transparent); }
-.hp-dot.on::before {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-  transform: scale(1.4);
-}
-.hp-dot:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 0; border-radius: 50%; }
-.hp-dot-label {
-  position: absolute;
-  top: 26px;
-  left: 50%;
-  transform: translateX(-50%);
-  white-space: nowrap;
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 0.68rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease;
-}
-.hp-dot.on .hp-dot-label { opacity: 1; color: var(--color-text); }
 /* A hovered or focused dot's name replaces the active one's, so two names
    never sit side by side. */
-.hp-rail:has(.hp-dot:hover, .hp-dot:focus-visible) .hp-dot.on .hp-dot-label { opacity: 0; }
-.hp-dot:hover .hp-dot-label,
-.hp-dot:focus-visible .hp-dot-label { opacity: 1 !important; color: var(--color-text); }
 /* The first and last names hang inward so they never leave the rail's side. */
-.hp-dot:first-of-type .hp-dot-label { left: 0; transform: translateX(-12px); }
-.hp-dot:last-of-type .hp-dot-label { left: auto; right: 0; transform: translateX(12px); }
-
-@media (prefers-reduced-motion: reduce) {
-  .tour-panel-body { animation: none; }
-  .hp-dot::before, .hp-dot-label { transition: none; }
-}
 
 /* Between the phone layout (768px) and ~1040px there is no room beside the
    drone: the text block becomes a sheet at the bottom, the drone is framed
    above it and the rail sits between the two. */
-@media (max-width: 65em) {
-  .hp-stage {
-    --tour-gutter: 1.5rem;
-    --hero-shift-y: 0.2;
-    --hero-zoom: 0.85;
-  }
-  .tour-panel {
-    left: var(--tour-gutter);
-    right: var(--tour-gutter);
-    top: auto;
-    bottom: 1.5rem;
-    width: auto;
-    padding: 1.1rem 1.4rem;
-    background: var(--pod-bg-strong);
-    border: 1px solid var(--pod-border);
-    border-radius: var(--r-md);
-  }
-  .tour-panel .tour-role { font-size: 1.6rem; margin: 0.35rem 0 0.4rem; }
-  .tour-panel .tour-text { max-width: 60ch; }
-  .tour-panel .tour-summary .tour-picks { columns: 2; column-gap: 2rem; }
-  .hp-rail {
-    --hp-rail-w: min(28rem, 64vw);
-    bottom: calc(1.5rem + var(--tour-sheet-h, 15rem) + 1.75rem);
-  }
-}
 
 /* /hero-preview: the page after the hero. */
-.hp-after {
-  min-height: 60vh;
-  display: grid;
-  place-items: center;
-  color: var(--color-text-muted);
-  padding: 4rem 1rem;
-}
 
 /* Every step's caption lives in the DOM for crawlers and assistive tech. It
    is visually hidden while the 3D drives the presentation, and becomes the
    page when the scene is not loaded (reduced motion, no WebGL). */
-.hp-fallback {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
 /* The stage is one pinned screen, so the list scrolls inside it. */
-.hp-stage.is-static {
-  overflow-y: auto;
-}
-.hp-stage.is-static .hp-fallback {
-  position: static;
-  width: auto;
-  height: auto;
-  overflow: visible;
-  clip-path: none;
-  white-space: normal;
-  display: grid;
-  gap: 2.5rem;
-  max-width: 60ch;
-  margin: 0 auto;
-  padding: 3rem 1.5rem 5rem;
-}
-.hp-stage.is-static .tour-role { font-size: 1.75rem; }
 
 /* Named load stage under the splash wordmark. The assembly arrives as several
    files and the drone visibly builds up behind this, so it reads as "the
@@ -15919,61 +15003,6 @@ body:has(.overlay.expanded) .placeholder-banner {
    under the centred wordmark. Pending lines sit dim, the arriving line
    carries the accent marker, landed lines tick off. It reads as a build
    sheet being checked off while the drone assembles behind the dim layer. */
-.hero-load-manifest {
-  position: absolute;
-  left: 50%;
-  top: calc(50% + 5.5rem);
-  transform: translateX(-50%);
-  z-index: 26;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.28rem;
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 0.62rem;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  pointer-events: none;
-  animation: hero-load-manifest-in 0.5s ease both;
-}
-@keyframes hero-load-manifest-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-.hero-load-piece {
-  display: flex;
-  align-items: baseline;
-  gap: 0.6rem;
-  color: color-mix(in srgb, var(--color-text-dim) 45%, transparent);
-  transition: color 0.3s ease;
-}
-.hero-load-piece__mark {
-  width: 1em;
-  text-align: center;
-}
-.hero-load-piece.is-active {
-  color: var(--color-text-muted);
-}
-.hero-load-piece.is-active .hero-load-piece__mark {
-  color: var(--color-gold-text);
-  animation: hero-load-piece-pulse 0.9s ease-in-out infinite;
-}
-.hero-load-piece.is-done {
-  color: var(--color-text-dim);
-}
-.hero-load-piece.is-done .hero-load-piece__mark {
-  color: var(--color-gold-text);
-}
-@keyframes hero-load-piece-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .hero-load-manifest { animation: none; }
-  .hero-load-piece.is-active .hero-load-piece__mark { animation: none; }
-}
 
 /* ---- /learn: the FPV knowledge layer (draft) ---------------------------
    Claim-first rendering for the research corpus. Every rule here is scoped
@@ -16722,30 +15751,6 @@ html.light .cart-added-suggestion img {
 /* --------------------------------------------------------------------- */
 /* Splash loader: the manifest and the slow-load escape stack in one      */
 /* column, so the "loading models" line never draws over the checklist.  */
-.hero-load-panel {
-  position: absolute;
-  left: 50%;
-  top: calc(50% + 5.5rem);
-  transform: translateX(-50%);
-  z-index: 35;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  pointer-events: none;
-}
-.hero-load-panel:empty {
-  display: none;
-}
-.hero-load-panel .hero-load-manifest,
-/* Top centre of the desktop hero: the size toggle.                      */
-.hero-top-center {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--sp-3, 12px);
-  max-width: min(92vw, 44rem);
-}
 
 /* /support: the help page.                                              */
 .support-page {
@@ -17678,6 +16683,66 @@ body:has(.cart-added-overlay) .buy-rail.is-pinned {
     width: 100%;
   }
 }
+/* One height for everything in the pinned bar: chips, price and button all
+   sit on a 36px line inside a 4px pill padding. */
+.buy-rail.is-pinned {
+  --pin-h: 36px;
+}
+.buy-rail.is-pinned .variant-ladder-track {
+  align-items: center;
+  gap: 6px;
+}
+.buy-rail.is-pinned .variant-tier.variant-tier {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0;
+  height: var(--pin-h);
+  min-height: 0;
+  padding: 0 14px;
+  border-radius: var(--r-pill);
+}
+.buy-rail.is-pinned .variant-tier .variant-tier-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  line-height: 1;
+}
+.buy-rail.is-pinned .variant-tier .variant-tier-name {
+  font-size: 13px;
+  line-height: 1;
+}
+.buy-rail.is-pinned .variant-tier .variant-tier-check svg {
+  width: 12px;
+  height: 12px;
+}
+.buy-rail.is-pinned .variant-tier .variant-tier-glow {
+  inset: 0;
+  box-shadow: inset 0 0 0 1.5px var(--color-gold);
+}
+.buy-rail.is-pinned .product-buy .product-buy-price,
+.buy-rail.is-pinned .product-buy .product-buy-price .product-price {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.buy-rail.is-pinned .product-form .btn-primary.btn-primary {
+  height: var(--pin-h);
+  min-height: 0;
+  padding: 0 18px;
+  font-size: 14px;
+  line-height: 1;
+}
+@media (min-width: 960px) {
+  .buy-rail.is-pinned.is-pinned {
+    gap: 12px;
+    padding: 4px;
+  }
+}
+
 @keyframes buy-rail-drop {
   from {
     opacity: 0;
@@ -17702,4 +16767,1247 @@ body:has(.cart-added-overlay) .buy-rail.is-pinned {
   .buy-rail.is-pinned {
     animation: none;
   }
+}
+
+/* Homepage hero, as on main. */
+.hero-size-slider {
+  position: relative;
+  display: inline-flex;
+  padding: 5px; /* PAD in HeroSizeSlider.tsx */
+  border: 1px solid var(--pod-border);
+  border-radius: var(--r-pill);
+  background: var(--pod-bg);
+  backdrop-filter: blur(var(--pod-blur));
+  -webkit-backdrop-filter: blur(var(--pod-blur));
+  touch-action: none; /* let the thumb own horizontal drag on touch */
+  user-select: none;
+}
+.hero-size-slider__thumb {
+  position: absolute;
+  z-index: 2;
+  top: 5px;
+  bottom: 5px;
+  left: 5px;
+  width: calc(50% - 5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-pill);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-gold-fill) 88%, white) 0%,
+    var(--color-gold-fill) 55%
+  );
+  box-shadow:
+    0 2px 10px -2px color-mix(in srgb, var(--color-gold) 55%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  cursor: grab;
+  touch-action: none;
+}
+
+.hero-size-slider__thumb:active {
+  cursor: grabbing;
+}
+
+.hero-size-slider__thumb-label {
+  color: var(--color-on-accent);
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.hero-size-slider__spinner {
+  position: absolute;
+  right: 0.55rem;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--color-on-accent) 35%, transparent);
+  border-top-color: var(--color-on-accent);
+  animation: hero-size-spin 0.7s linear infinite;
+  pointer-events: none;
+}
+.hero-size-slider__thumb.is-busy .hero-size-slider__thumb-label {
+  padding-right: 1.2rem;
+}
+
+@keyframes hero-size-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.hero-size-slider__opt {
+  position: relative;
+  z-index: 1;
+  min-width: 8.5rem;
+  flex: 1 1 0;
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.hero-size-slider__opt:hover {
+  color: var(--color-text);
+}
+
+.hero-size-slider__opt:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+.hero-size-slider__opt:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+.hero-wordmark {
+  position: absolute;
+  bottom: 2.5rem;
+  left: 2.5rem;
+  z-index: 35;
+  margin: 0;
+  transform-origin: center;
+  transform: translate(calc(50vw - 2.5rem - 50%), calc(-50vh + 2.5rem + 50%))
+    scale(1.7);
+  /* Snappy S-curve, same timing as the header drop-in so they land together. */
+  transition: transform 0.65s cubic-bezier(0.72, 0, 0.28, 1);
+  pointer-events: none;
+  line-height: 0;
+}
+
+.hero-wordmark img {
+  display: block;
+  height: clamp(2.5rem, 5vw, 4.5rem);
+  width: auto;
+}
+.hero-wordmark-svg {
+  display: block;
+  height: clamp(2.5rem, 5vw, 4.5rem);
+  width: auto;
+  overflow: visible;
+}
+.hero-wordmark-svg.is-filled .hw-stroke {
+  opacity: 0 !important;
+  animation: none !important;
+}
+.hero-wordmark.is-settled {
+  transform: translate(0, 0) scale(1);
+}
+.hero-load-overflow {
+  position: absolute;
+  top: calc(50vh + clamp(2.5rem, 5vw, 4.5rem) * 1.4);
+  left: 50vw;
+  transform: translateX(-50%);
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  pointer-events: none;
+  opacity: 0;
+  animation: hero-overflow-in 420ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  white-space: nowrap;
+  transition: opacity 0.5s ease-out;
+}
+
+.hero-load-overflow.is-hidden {
+  opacity: 0 !important;
+}
+
+.hero-load-overflow__text {
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.hero-load-overflow__skip {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.95rem;
+  border: 1px solid color-mix(in srgb, var(--color-text-muted) 35%, transparent);
+  color: var(--color-text);
+  border-radius: var(--r-xs);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.hero-load-overflow__skip:hover {
+  border-color: color-mix(in srgb, var(--color-gold) 55%, transparent);
+  color: var(--color-gold);
+}
+
+@keyframes hero-overflow-in {
+  to {
+    opacity: 1;
+  }
+}
+@media (max-width: 640px) {
+  .hero-load-overflow {
+    flex-direction: column;
+    gap: 0.85rem;
+    font-size: 0.7rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-load-overflow {
+    animation: none;
+    opacity: 1;
+  }
+}
+.hero-tagline {
+  position: absolute;
+  top: calc(var(--header-height) + 1.5rem);
+  left: 2.5rem;
+  z-index: 20;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  transform: translateY(-6px);
+  transition: transform 0.6s ease-out 0.4s;
+  pointer-events: none;
+}
+
+.hero-tagline.is-visible {
+  transform: translateY(0);
+}
+.hero-actions {
+  position: absolute;
+  bottom: 2.5rem;
+  right: 2.5rem;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transform: translateY(8px);
+  transition: transform 0.6s ease-out 0.5s;
+  pointer-events: none;
+}
+
+.hero-actions.is-visible {
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.hero-github {
+  position: absolute;
+  bottom: calc(var(--hero-strip-mid, 76px) - 32px);
+  left: calc(2.5rem + clamp(2.5rem, 5vw, 4.5rem) * 5.29 + 1.75rem);
+  z-index: 25;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 64px muted, not 88px solid: a quiet side-door, not a second focal
+     point competing with the 3D scene. Full presence returns on hover. */
+  width: 64px;
+  height: 64px;
+  color: var(--color-text-muted);
+  /* Hidden resting state: parked below the bottom edge. The is-visible
+     class glides it up from there. */
+  transform: translateY(150%);
+  opacity: 0;
+  transition: color 0.2s ease;
+  pointer-events: none;
+}
+.hero-github.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+  animation: island-splash-bottom 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.hero-github:hover {
+  color: var(--color-gold);
+}
+@keyframes island-splash-left {
+  0% {
+    opacity: 0;
+    transform: translateX(-160%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes island-splash-bottom {
+  0% {
+    opacity: 0;
+    transform: translateY(150%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-github,
+  .hero-github.is-visible,
+  .hero-buy,
+  .hero-buy.is-visible {
+    animation: none;
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.hero-action-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-width: 26rem; /* 30% wider than the old 20rem anchor */
+  padding: 1rem 2.25rem;
+  background: var(--color-gold-fill);
+  color: var(--color-on-accent);
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  border-radius: var(--r-xs);
+  transition: background-color 0.2s ease;
+}
+
+.hero-action-primary:hover {
+  background: var(--color-gold-fill-hover);
+  color: var(--color-on-accent);
+}
+
+.hero-action-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  border: 1px solid color-mix(in srgb, var(--color-text-muted) 30%, transparent);
+  color: var(--color-text);
+  border-radius: var(--r-xs);
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.hero-action-secondary:hover {
+  border-color: color-mix(in srgb, var(--color-gold) 60%, transparent);
+  color: var(--color-text);
+}
+.hero-showcase {
+  pointer-events: auto;
+  width: min(620px, 92vw);
+  padding: var(--sp-4);
+}
+.hero-showcase-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-3);
+}
+.hero-showcase-title {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--color-text-muted);
+}
+.hero-showcase-all {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.08em;
+  color: var(--color-gold);
+  transition: color 0.15s ease;
+}
+.hero-showcase-all:hover {
+  color: var(--color-gold-hover);
+}
+.hero-showcase-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: var(--sp-4);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+}
+.hero-buy {
+  position: absolute;
+  /* The Shop button (~52px tall: 2rem padding + ~20px line) centres on the
+     bottom strip's shared line, same as the wordmark and the rail. */
+  bottom: calc(var(--hero-strip-mid, 76px) - 26px);
+  right: 2.5rem;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+  /* Hidden resting state: parked below the bottom edge. is-visible glides it
+     up from there. */
+  transform: translateY(150%);
+  opacity: 0;
+  pointer-events: none;
+}
+.hero-buy.is-visible {
+  opacity: 1;
+  animation: island-splash-bottom 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.hero-buy-btn {
+  pointer-events: auto;
+}
+.hero-buy-swap {
+  position: relative;
+}
+.hero-buy-stack {
+  display: flex;
+  flex-direction: column-reverse;
+  /* gap:0: a fixed gap would reserve space for the collapsed (0-height) cards
+     and leave a phantom band above the button. Inter-card spacing is instead
+     baked into each card's reveal (inline margin scaled by progress). */
+  gap: 0;
+  /* Cross-slide zoom dip scales from the bottom (the bubble/Shop anchor) so the
+     stack's base stays put while it pulls back mid-swap. */
+  transform-origin: bottom center;
+  will-change: transform, opacity;
+}
+.hero-reveal-card {
+  --r: clamp(0, calc((var(--hero-p, 0) - var(--lo, 1)) / var(--win, 1)), 1);
+  max-height: calc(var(--r) * 7.5rem);
+  margin-top: calc(var(--r) * 0.55rem);
+  opacity: var(--r);
+  transform: translateY(calc((1 - var(--r)) * 28px));
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  overflow: hidden;
+  /* No backdrop-filter: this card's max-height/opacity are scrubbed inline
+     every scroll frame, and a live blur would re-composite on each of those
+     frames. --pod-bg-strong already provides the legibility (same trade as
+     the header pill, see the GPU note above .site-header-main). */
+  background: var(--pod-bg-strong);
+  border: 1px solid var(--pod-border);
+  border-radius: var(--r-md);
+  box-shadow: var(--pod-shadow);
+  color: var(--color-text);
+  transition: border-color 0.15s ease;
+}
+.hero-reveal-card:hover {
+  border-color: color-mix(in srgb, var(--color-gold) 50%, transparent);
+}
+.hero-scroll-fade {
+  opacity: clamp(0, calc(0.4 - var(--hero-p, 0) * 3), 0.4);
+}
+.hero-reveal-media {
+  flex: 0 0 auto;
+  width: 4.25rem;
+  height: 4.25rem;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background: var(--color-bg-elevated);
+  display: grid;
+  place-items: center;
+}
+.hero-reveal-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.hero-reveal-ph {
+  width: 100%;
+  height: 100%;
+  background: var(--color-bg-card);
+}
+.hero-reveal-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.hero-reveal-title {
+  font-size: var(--fs-md);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hero-reveal-sub {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.hero-reveal-price {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);
+  color: var(--color-gold);
+}
+.hero-reveal-soon {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  /* On the dark reveal card, use full-brightness brand gold so the badge
+     pops; light mode swaps back to --color-gold (the card goes near-white). */
+  color: var(--color-gold-bright);
+}
+html.light .hero-reveal-soon {
+  color: var(--color-gold);
+}
+.hero-drag-hint {
+  position: absolute;
+  top: 60%;
+  left: 50%;
+  transform: translate(-50%, 0);
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: var(--r-pill);
+  background: var(--pod-bg);
+  border: 1px solid var(--pod-border);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.hero-drag-hint.is-visible {
+  opacity: 1;
+  transform: translate(-50%, -6px);
+  animation: hero-drag-bob 2.4s ease-in-out 0.5s infinite;
+}
+.hero-drag-hint svg {
+  color: var(--color-gold);
+}
+@keyframes hero-drag-bob {
+  0%, 100% { transform: translate(-50%, -6px); }
+  50% { transform: translate(-50%, -10px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-drag-hint.is-visible {
+    animation: none;
+  }
+}
+.hero-scroll-hint {
+  position: absolute;
+  /* Below the progress rail, which sits on the bottom strip's shared line. */
+  bottom: 0.75rem;
+  left: 50%;
+  transform: translate(-50%, 0);
+  z-index: 20;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+.hero-scroll-hint.is-visible {
+  opacity: 1;
+}
+.hero-scroll-hint svg {
+  color: var(--color-gold);
+}
+.hero-scroll-hint.is-visible svg {
+  animation: hero-scroll-bob 2.4s ease-in-out 0.5s infinite;
+}
+@keyframes hero-scroll-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(5px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-scroll-hint.is-visible svg {
+    animation: none;
+  }
+}
+.hero-scene-glow {
+  background: radial-gradient(
+    ellipse at 50% 45%,
+    rgba(80, 65, 20, 0.3) 0%,
+    transparent 60%
+  );
+}
+html.light .hero-scene-glow {
+  background:
+    radial-gradient(
+      ellipse at 50% 45%,
+      rgba(199, 154, 50, 0.18) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse at 50% 42%,
+      transparent 15%,
+      rgba(38, 36, 40, 0.28) 70%,
+      rgba(28, 26, 32, 0.45) 100%
+    );
+}
+@media (max-width: 640px) {
+  .hero-wordmark {
+    bottom: 1.5rem;
+    left: 1.5rem;
+    transform: translate(calc(50vw - 1.5rem - 50%), calc(-50vh + 1.5rem + 50%))
+      scale(1.5);
+  }
+  .hero-wordmark img {
+    height: clamp(2rem, 9vw, 3.25rem);
+  }
+  .hero-wordmark.is-settled {
+    transform: translate(0, 0) scale(1);
+  }
+  .hero-tagline {
+    top: calc(var(--header-height) + 1rem);
+    left: 1.5rem;
+    font-size: 0.7rem;
+  }
+  .hero-actions {
+    bottom: 1.5rem;
+    right: 1.5rem;
+    gap: 0.5rem;
+  }
+  .hero-action-primary {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.85rem;
+  }
+  .hero-action-secondary {
+    width: 46px;
+    height: 46px;
+  }
+}
+.incutec-hint {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 0.55rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 0.75rem;
+  background: var(--color-gold-fill);
+  color: var(--color-on-accent);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  border-radius: var(--r-md);
+  box-shadow: var(--pod-shadow);
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+  transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.incutec-hint::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: 1rem;
+  width: 10px;
+  height: 10px;
+  background: var(--color-gold-fill);
+  transform: rotate(45deg);
+  border-radius: 1px;
+}
+html.hero-incutec-hint .incutec-hint {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.incutec-hint:hover,
+.incutec-hint:focus-visible {
+  /* Keep the dark ink: the global `a:hover` would otherwise recolor the text
+     gold, leaving it gold-on-gold with no contrast. */
+  background: var(--color-gold-fill-hover);
+  color: var(--color-on-accent);
+}
+html.anim-paused .site-wordmark-sheen,
+html.anim-paused .placeholder-banner__dot::after,
+html.anim-paused .hero-drag-hint.is-visible,
+html.anim-paused .hero-scroll-hint.is-visible svg,
+html.anim-paused .latest-commit-dot,
+html.anim-paused .support-typing span,
+html.anim-paused .home-mobile-board-float--front,
+html.anim-paused .home-mobile-board-float--rear,
+html.perf-lite .site-wordmark-sheen,
+html.perf-lite .placeholder-banner__dot::after,
+html.perf-lite .hero-drag-hint.is-visible,
+html.perf-lite .hero-scroll-hint.is-visible svg,
+html.perf-lite .latest-commit-dot,
+html.perf-lite .support-typing span,
+html.perf-lite .home-mobile-board-float--front,
+html.perf-lite .home-mobile-board-float--rear {
+  animation-play-state: paused !important;
+}
+
+html.hero-header-in .homepage-layout .site-header {
+  transform: translateY(0);
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .homepage-layout .site-header,
+  html.hero-header-in .homepage-layout .site-header {
+    transform: none;
+    opacity: 1;
+    transition: none;
+  }
+}
+.home-mobile {
+  width: var(--rail-width);
+  margin: 0 auto;
+  padding-block: 1.5rem 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.home-mobile-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.25rem;
+  padding-top: 0.5rem;
+}
+.home-mobile-stage {
+  position: relative;
+  align-self: stretch;
+  height: clamp(210px, 56vw, 300px);
+  margin-bottom: 0.25rem;
+  display: grid;
+  place-items: center;
+}
+.home-mobile-glow {
+  position: absolute;
+  inset: -8% -4%;
+  background: radial-gradient(
+    circle at 50% 50%,
+    color-mix(in srgb, var(--color-gold) 34%, transparent) 0%,
+    color-mix(in srgb, var(--color-gold) 11%, transparent) 38%,
+    transparent 70%
+  );
+  filter: blur(2px);
+  pointer-events: none;
+}
+.home-mobile-board {
+  display: block;
+  width: clamp(178px, 54vw, 264px);
+  height: auto;
+  border-radius: var(--r-md);
+  filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.45));
+}
+.home-mobile-board-float {
+  position: absolute;
+  will-change: transform;
+}
+.home-mobile-board-float--rear {
+  transform: translate(15%, 9%) rotate(8deg) scale(0.85);
+  opacity: 0.8;
+  animation: home-board-float-rear 7s ease-in-out infinite;
+}
+.home-mobile-board-float--front {
+  transform: translate(-13%, -4%) rotate(-6deg);
+  animation: home-board-float-front 6s ease-in-out infinite;
+}
+@keyframes home-board-float-front {
+  0%, 100% { transform: translate(-13%, -4%) rotate(-6deg); }
+  50% { transform: translate(-13%, -7%) rotate(-6deg); }
+}
+@keyframes home-board-float-rear {
+  0%, 100% { transform: translate(15%, 9%) rotate(8deg) scale(0.85); }
+  50% { transform: translate(15%, 12%) rotate(8deg) scale(0.85); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-mobile-board-float--front,
+  .home-mobile-board-float--rear {
+    animation: none;
+  }
+}
+
+.home-mobile-wordmark {
+  margin: 0;
+  display: block;
+}
+
+.home-mobile-wordmark .hero-wordmark-svg {
+  height: clamp(2.75rem, 13vw, 4rem);
+}
+
+.home-mobile-tagline {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--color-text-muted);
+  max-width: 44ch;
+}
+.home-mobile-cta {
+  display: flex;
+  align-items: stretch;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+  width: 100%;
+}
+.home-mobile-cta-btn {
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 52px;
+  padding: 0 1rem;
+  border-radius: var(--r-pill);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease,
+    background 0.18s ease, color 0.18s ease;
+}
+.home-mobile-cta-btn:active {
+  transform: translateY(1px);
+}
+.home-mobile-cta-shop {
+  background: var(--color-gold-fill);
+  color: var(--color-on-accent);
+  border: 1px solid var(--color-gold-fill);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--color-gold-fill) 28%, transparent);
+}
+.home-mobile-cta-shop:hover {
+  background: var(--color-gold-fill-hover);
+}
+.home-mobile-cta-github {
+  background: var(--color-bg-card);
+  color: var(--color-text);
+  border: 1px solid var(--color-border-strong);
+}
+.home-mobile-cta-github:hover {
+  border-color: var(--color-gold);
+  color: var(--color-gold);
+}
+@media (min-width: 1024px) {
+  .home-mobile-footer {
+    display: none;
+  }
+}
+
+
+.home-mobile-featured {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.home-mobile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: 1rem;
+}
+.home-mobile-ledger {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.home-mobile-ledger .spec-table {
+  grid-template-columns: 1fr;
+}
+
+.home-mobile-ledger .spec-table dd {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+
+.home-mobile-browse {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  align-self: flex-start;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-text);
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--color-gold) 55%, transparent);
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.home-mobile-browse:hover {
+  color: var(--color-gold);
+  border-color: var(--color-gold);
+}
+
+.hero-cta-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1.25rem;
+  background: var(--color-gold-fill);
+  color: var(--color-on-accent);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-radius: var(--r-xs);
+  transition: background-color 150ms ease;
+}
+
+.hero-cta-primary:hover {
+  background: var(--color-gold-fill-hover);
+  color: var(--color-on-accent);
+}
+
+.hero-cta-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1.25rem;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-radius: var(--r-xs);
+  transition: border-color 150ms ease, color 150ms ease;
+}
+
+.hero-cta-secondary:hover {
+  border-color: var(--color-text-muted);
+  color: var(--color-text);
+}
+@media (max-width: 1023px) {
+  .catalog-filter,
+  .collection-sort select,
+  .collection-sort-control,
+  .trust-chip,
+  .home-mobile-browse,
+  .board-art-inspect,
+  .search-submit,
+  .product-gallery-arrow,
+  .hero-cta-primary,
+  .board-folder-tabs button,
+  .schematic-rail-tabs button {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .home-mobile-browse {
+    align-self: flex-start;
+  }
+  .product-hero-eyebrow,
+  .product-buy-sku,
+  .product-buy-stock,
+  .variant-ladder-axis,
+  .variant-ladder-axis-hint,
+  .variant-tier-flag,
+  .variant-tier-specs,
+  .chapter-number,
+  .chapter-label,
+  .product-card-meta,
+  .teardown-pin-cost,
+  .section-label,
+  .product-gallery-counter,
+  .page-eyebrow,
+  .incutec-hint,
+  .catalog-filter-head,
+  .collection-sort-label,
+  .open-source-card-label,
+  .open-source-card-sub,
+  .rn-year-count,
+  .rn-version,
+  .rn-tag,
+  .partner-label,
+  .board-art-inspect,
+  .board-art-skeleton-label,
+  .latest-commit-label,
+  .provenance-label,
+  .provenance-row-label,
+  .bundle-component-firmware,
+  .chapter-footnote,
+  .trust-chip {
+    font-size: 12px;
+  }
+}
+.hp-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: auto;
+}
+.hp-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+  pointer-events: none;
+}
+.hp-rail {
+  position: absolute;
+  /* Width gives twice before position does: capped at 440px, then at 42vw,
+     then at the room actually left between the brand block (wordmark + GitHub
+     mark, --hero-brand-right) and the buy bubble's reserve on the right.
+     Centred while there is room; when the viewport narrows the centre is
+     pushed right just enough to clear the brand block instead of sliding
+     under it. */
+  /* 29.5rem right reserve = the buy bubble's ~24.5rem column + its 2.5rem
+     inset + breathing room, measured at rest. Rem, not px: the bubble's
+     width tracks the user's font size, so a px reserve under-reserves the
+     moment a visitor bumps their browser font scaling. */
+  --hp-rail-w: min(
+    27.5rem,
+    42vw,
+    calc(100vw - var(--hero-brand-right, 32rem) - 1.5rem - 29.5rem)
+  );
+  left: max(
+    50%,
+    calc(var(--hero-brand-right, 32rem) + 1.5rem + var(--hp-rail-w) / 2)
+  );
+  /* Centred on the bottom strip's shared line (the 2px track straddles it). */
+  bottom: calc(var(--hero-strip-mid, 93px) - 1px);
+  transform: translateX(-50%);
+  width: var(--hp-rail-w);
+  height: 2px;
+  background: color-mix(in srgb, var(--color-text-dim) 30%, transparent);
+  border-radius: 2px;
+  z-index: 22;
+}
+.hp-rail-fill {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 0;
+  height: 100%;
+  background: var(--color-accent);
+  border-radius: 2px;
+  transition: none;
+}
+.hp-dot {
+  position: absolute;
+  top: -4px;
+  margin-left: -5px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-bg);
+  border: 1px solid color-mix(in srgb, var(--color-text-dim) 50%, transparent);
+  transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+}
+.hp-dot.done { background: color-mix(in srgb, var(--color-accent) 45%, transparent); }
+.hp-dot.on {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  transform: scale(1.4);
+}
+.hp-copy {
+  position: absolute;
+  right: clamp(20px, 5vw, 96px);
+  top: clamp(120px, 19vh, 210px);
+  /* Wider measure (2026-08-12, maintainer): the copy owns this side of the stage,
+     let it breathe instead of wrapping tight at 34ch. */
+  max-width: min(46ch, 38vw);
+  animation: hp-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes hp-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+.hp-title {
+  font-size: clamp(1.6rem, 3.4vw, 2.7rem);
+  line-height: 1.08;
+  margin: 0 0 0.7rem;
+  color: var(--color-text);
+  /* Product names read as one line, always (OpenFC-Lite-Mini must not
+     break); the widened panel above gives them the room. */
+  white-space: nowrap;
+}
+.hp-note {
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+.hp-explain {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+  margin: 0.7rem 0 0;
+}
+.hp-connect {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  letter-spacing: 0.04em;
+  color: var(--color-text-dim);
+  margin: 0.7rem 0 0;
+}
+.hp-copy-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--color-accent);
+  text-decoration: none;
+}
+.hp-copy-link:hover,
+.hp-copy-link:focus-visible {
+  text-decoration: underline;
+}
+.hp-copy-link svg {
+  flex: none;
+}
+.hp-hint {
+  position: absolute;
+  left: 50%;
+  /* Below the rail, which now sits on the bottom strip's shared line. */
+  bottom: 10px;
+  transform: translateX(-50%);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.6rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+  animation: hp-bob 2.4s ease-in-out infinite;
+}
+@keyframes hp-bob { 0%,100% {opacity:.4; transform:translate(-50%,0);} 50% {opacity:.9; transform:translate(-50%,4px);} }
+.hp-after {
+  min-height: 60vh;
+  display: grid;
+  place-items: center;
+  color: var(--color-text-muted);
+  padding: 4rem 1rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hp-copy, .hp-hint { animation: none; }
+}
+@media (max-width: 720px) {
+  .hp-copy { right: 16px; left: 16px; max-width: none; top: auto; bottom: 130px; }
+}
+.hp-fallback {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.hp-stage:not(:has(canvas)) .hp-fallback {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip-path: none;
+  white-space: normal;
+  display: grid;
+  gap: 1.75rem;
+  max-width: 60ch;
+  margin: 0 auto;
+  padding: 6rem 1.25rem;
+}
+.hp-stage:not(:has(canvas)) { height: auto; min-height: 60vh; }
+.hp-stage:not(:has(canvas)) .hp-rail,
+.hp-stage:not(:has(canvas)) .hp-copy { display: none; }
+.hp-fallback h3 { font-size: 1.15rem; margin: 0 0 0.3rem; color: var(--color-text); }
+.hp-fallback p { margin: 0; color: var(--color-text-muted); }
+.hp-dot { padding: 0; cursor: pointer; }
+.hp-dot:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+@media (max-width: 65em) {
+  .hp-rail {
+    display: none;
+  }
+}
+.hero-load-manifest {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 5.5rem);
+  transform: translateX(-50%);
+  z-index: 26;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  pointer-events: none;
+  animation: hero-load-manifest-in 0.5s ease both;
+}
+@keyframes hero-load-manifest-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.hero-load-piece {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  color: color-mix(in srgb, var(--color-text-dim) 45%, transparent);
+  transition: color 0.3s ease;
+}
+.hero-load-piece__mark {
+  width: 1em;
+  text-align: center;
+}
+.hero-load-piece.is-active {
+  color: var(--color-text-muted);
+}
+.hero-load-piece.is-active .hero-load-piece__mark {
+  color: var(--color-accent);
+  animation: hero-load-piece-pulse 0.9s ease-in-out infinite;
+}
+.hero-load-piece.is-done {
+  color: var(--color-text-dim);
+}
+.hero-load-piece.is-done .hero-load-piece__mark {
+  color: var(--color-accent);
+}
+@keyframes hero-load-piece-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-load-manifest { animation: none; }
+  .hero-load-piece.is-active .hero-load-piece__mark { animation: none; }
 }

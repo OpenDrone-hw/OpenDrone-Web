@@ -235,8 +235,8 @@
   width: 1rem;
   height: 1rem;
   border-radius: 50%;
-  border: 2px solid var(--color-text-muted);
-  background: var(--color-text-muted);
+  border: 2px solid var(--color-gold);
+  background: var(--color-gold);
 }
 .po-event[data-kind='deadline'] .po-event-dot {
   border-color: var(--color-text-muted);
@@ -318,9 +318,7 @@
 /* The price steps once, over the cards: a label and three chips, kept
    clear of the timeline so they do not read as time spans. */
 .po-legend {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
+  margin-top: var(--sp-7);
   font-size: var(--fs-sm);
 }
 .po-legend-line {
@@ -329,8 +327,13 @@
   align-items: center;
   gap: var(--sp-2) var(--sp-3);
 }
+.po-legend-line + .po-legend-line {
+  margin-top: var(--sp-2);
+}
+.po-legend-line .po-legend-label {
+  min-width: 5.5rem;
+}
 .po-legend-label {
-  min-width: 7.5rem;
   font-weight: 600;
   color: var(--color-text);
 }
@@ -350,6 +353,9 @@
   border-radius: 999px;
   color: var(--color-text-muted);
 }
+.po-legend li:first-child {
+  border-color: var(--color-gold);
+}
 .po-legend-units {
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
@@ -360,8 +366,6 @@
 @media (max-width: 42em) {
   .po-legend {
     margin-top: calc(var(--sp-3) - var(--sp-7));
-  }
-  .po-legend-line {
     gap: var(--sp-2);
   }
   .po-legend-label {
@@ -392,6 +396,11 @@
   font-weight: 500;
   color: var(--color-text-muted);
 }
+.po-group-line {
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+}
 .po-cards {
   list-style: none;
   margin: var(--sp-5) 0 0;
@@ -407,23 +416,28 @@
   min-width: 0;
 }
 .po-card-media {
-  position: relative;
   display: block;
   aspect-ratio: 3 / 2;
   margin-bottom: var(--sp-2);
   border-radius: var(--r-md);
+  background: var(--color-bg-card);
   overflow: hidden;
-}
-/* Board photos and CAD renders on one light tile, as on the product grid. */
-.po-card-media,
-.po-card-media.is-render {
-  background: #ece9e3;
 }
 .po-card-media img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+html.light .po-card-media img {
+  mix-blend-mode: multiply;
+}
+/* CAD renders on the same paper tone as the board photos. */
+.po-card-media.is-render {
+  position: relative;
+  background: #ece4dc;
+}
+.po-card-media.is-render img {
   mix-blend-mode: multiply;
 }
 .po-card-title {
@@ -459,8 +473,7 @@
 .po-card form {
   margin: 0;
 }
-/* Neutral outline: gold only on hover, so no card button outshouts the
-   others. */
+/* Outline: one gold fill per screen, and this page has none. */
 .po-card-cta {
   display: inline-flex;
   align-items: center;
@@ -469,18 +482,20 @@
   min-height: 44px;
   margin-top: var(--sp-2);
   padding: 0 var(--sp-4);
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid var(--color-gold);
   border-radius: var(--r-pill);
   background: transparent;
-  color: var(--color-text);
+  color: var(--color-gold-text);
   font-size: var(--fs-sm);
   font-weight: 600;
   cursor: pointer;
   transition: background-color 150ms ease, color 150ms ease;
 }
 .po-card-cta:hover {
-  border-color: var(--color-gold);
-  color: var(--color-gold-text);
+  background: var(--color-gold-soft);
+}
+html.light .po-card-cta {
+  color: var(--color-text);
 }
 .po-card-cta:disabled {
   border-color: var(--color-border);
@@ -514,7 +529,7 @@
 }
 .po-terms svg {
   grid-row: span 2;
-  color: var(--color-text-muted);
+  color: var(--color-gold-text);
 }
 .po-terms strong {
   font-weight: 600;
@@ -639,14 +654,6 @@
   transform: translateX(3px);
 }
 /* Desktop: full width under the header. */
-.hero-promo {
-  position: absolute;
-  top: 4.75rem;
-  left: 0;
-  right: 0;
-  z-index: 20;
-  padding: 0 16px;
-}
 /* Phone: the first row of the page, the two groups on two lines. */
 .home-promo.is-mobile {
   flex-direction: column;
@@ -658,43 +665,9 @@
 }
 
 /* While the shop is open the 3D stage starts below the promo line. */
-@media (min-width: 48em) {
-  .homepage .hero-stage-below-strip {
-    top: 7.5rem;
-  }
-}
 
 /* Splash: the wordmark and one thin gold bar. The per-piece list stays in
    the document for screen readers only. */
-.hero-load-bar {
-  position: relative;
-  z-index: 26;
-  width: 12rem;
-  height: 2px;
-  border-radius: 1px;
-  background: color-mix(in srgb, var(--color-text-dim) 35%, transparent);
-  overflow: hidden;
-  pointer-events: none;
-}
-.hero-load-bar > span {
-  display: block;
-  width: 100%;
-  height: 100%;
-  background: var(--color-gold-fill);
-  transform-origin: left center;
-  transition: transform 0.3s ease;
-}
-.hero-load-manifest {
-  position: absolute !important;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
 
 /* ============================================
    Buttons: small size and the plain link
@@ -720,16 +693,7 @@
 }
 
 /* The phone flagship line uses the /products two-column grid. */
-.home-mobile-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
 /* A small phone: a shorter still so the caption reaches the first screen. */
-@media (max-width: 400px) {
-  .tour-m-stage {
-    aspect-ratio: 1 / 0.7;
-  }
-}
 
 /* ============================================
    /products: sticky rail, quick-filter chips, build summary

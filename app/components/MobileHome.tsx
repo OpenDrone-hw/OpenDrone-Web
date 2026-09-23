@@ -1,52 +1,183 @@
-import {Suspense, useEffect, useRef, useState} from 'react';
-import {Await, Link, useLocation} from 'react-router';
+import {Suspense} from 'react';
+import {Await, Link} from 'react-router';
+import {motion, useReducedMotion, type MotionProps} from 'motion/react';
 import type {ProductCardFragment as CollectionItemFragment} from '~/lib/product-shapes';
+import {HeroWordmark} from '~/components/HeroWordmark';
 import {ProductItem} from '~/components/ProductItem';
-import {PreorderStrip, type HomePrices} from '~/components/PreorderStrip';
-import {
-  DEFAULT_BUILD,
-  TourCaption,
-  stepProductUrl,
-  useHeroBuilds,
-} from '~/components/TourCaption';
-import {copyText} from '~/lib/copy';
-import {isConceptFor} from '~/lib/product-content';
+import {AnimatedNumber} from '~/components/AnimatedNumber';
+import {Txt} from '~/components/Txt';
+import {PRODUCT_CONTENT, isConceptFor} from '~/lib/product-content';
 import {useRoadmapStatusResolver} from '~/lib/coming-soon';
-import {HOME_TOUR_STEPS, tourStillUrl} from '~/lib/home-tour-steps';
+import {BOARD_ART_VERSION} from '~/data/board-art-version';
+import {assetUrl} from '~/lib/asset-url';
+
+// Downscaled WebP thumbnails written by scripts/export-board-art.mjs next to
+// front.png. The stage slot is at most 264 CSS px, so 528 (2x) and 800 (3x)
+// cover every phone at a tenth of the 1568 px PNG. Same ?v= cache-bust as
+// BoardArt so a regenerated render is refetched.
+const boardThumb = (handle: string, w: 528 | 800) =>
+  assetUrl(
+    `/boards/${handle}/front-w${w}.webp${BOARD_ART_VERSION ? `?v=${BOARD_ART_VERSION}` : ''}`,
+  );
+// Mirrors .home-mobile-board: width clamp(178px, 54vw, 264px).
+const BOARD_THUMB_SIZES = '(min-width: 489px) 264px, 54vw';
+
+
+/* Below-fold "index" band - the open-hardware ledger in the PDP's
+ * spec-table language. Every row is a fact already published elsewhere on
+ * the site (open-source page, PDP downloads); the design count is derived
+ * from the product-content registry so it can't drift. */
+const OPEN_DESIGN_COUNT = Object.values(PRODUCT_CONTENT).filter(
+  // Resold parts (`editorial: false`) are catalog, not open designs.
+  (c) => c.fileNumber !== '-' && c.editorial !== false,
+).length;
+
+/* Row order and which row is derived. Labels are copy
+ * (`home.m_ledger_<key>_label`), and so is every value EXCEPT the design
+ * count, which is computed from the registry so it can't drift - a value here
+ * wins over the copy file. Only that derived count is a quantity worth
+ * sweeping; licence versions, tool versions and prices are identifiers/fixed
+ * figures and render static. */
+const HOME_LEDGER: Array<{key: string; value?: string; countUp?: boolean}> = [
+  {
+    key: 'designs',
+    value: String(OPEN_DESIGN_COUNT).padStart(2, '0'),
+    countUp: true,
+  },
+  {key: 'licence'},
+  {key: 'source_format'},
+  {key: 'designed_in'},
+];
 
 /**
- * Phone homepage (≤768px). The desktop homepage is the WebGL walkthrough
- * (DesktopHome in routes/_index.tsx), ~6 MB of GLBs, deliberately never loaded
- * on a phone. This is its phone counterpart: the same steps and words
- * (studio.json), a still of the scene per step, and the text block as a
- * sheet under it with the same build picks and Add buttons. Tap a dot, the
- * arrows, or swipe the picture to step; tap the picture of a part to open its
- * product page. Then the product tiles.
+ * Phone homepage (≤768px). The desktop homepage IS the WebGL hero scene +
+ * scroll-pinned choreography (DesktopHome in routes/_index.tsx) - ~6.3 MB of
+ * GLBs and a scroll story tuned for a mouse, deliberately never loaded on a
+ * phone. This is the mobile counterpart: not a plain fallback but a hero in its
+ * own right - the animated wordmark, a floating "stack" of the real board
+ * renders under a gold glow (the desktop hero's product showcase, distilled),
+ * and a Dynamic-Island Shop pill - then a clear path to the flagship line and
+ * the full catalogue. No 3D, no scroll tricks: fast, legible, touch-first.
  */
 export function MobileHome({
   featured,
-  preorderShips = null,
-  prices,
 }: {
   featured: CollectionItemFragment[] | Promise<CollectionItemFragment[]>;
-  /** Set while the shop is open: the promo line at the top. */
-  preorderShips?: string | null;
-  /** Price per product handle for the promo line. */
-  prices: HomePrices;
 }) {
+  const reduce = useReducedMotion();
+
+  // Staggered entrance: each block rises + fades a beat after the last. Skipped
+  // wholesale under prefers-reduced-motion (rendered static, no transform).
+  const rise = (i: number): MotionProps =>
+    reduce
+      ? {}
+      : {
+          initial: {opacity: 0, y: 18},
+          animate: {opacity: 1, y: 0},
+          transition: {
+            duration: 0.55,
+            delay: i * 0.09,
+            ease: [0.22, 1, 0.36, 1],
+          },
+        };
+
   return (
     <div className="home-mobile">
-      {preorderShips !== null ? (
-        <PreorderStrip ships={preorderShips || null} prices={prices} className="is-mobile" />
-      ) : null}
-      <h1 className="sr-only">OpenDrone</h1>
-      <MobileTour />
+      <section className="home-mobile-hero">
+        {/* Floating board "stack" - the two flagship boards (FC over ESC),
+            offset like a mounted stack, on a gold-glow island. The desktop
+            hero's rotatable 3D trio, distilled to a still that loads instantly. */}
+        <motion.div className="home-mobile-stage" {...rise(0)} aria-hidden="true">
+          <span className="home-mobile-glow" />
+          {/* Float animation lives on the wrapper, drop-shadow on the img:
+              animating transform on the filtered element itself forces weak
+              GPUs to re-rasterize the shadow every frame of the infinite loop. */}
+          <span className="home-mobile-board-float home-mobile-board-float--rear">
+            <img
+              className="home-mobile-board"
+              src={boardThumb('openesc', 800)}
+              srcSet={`${boardThumb('openesc', 528)} 528w, ${boardThumb('openesc', 800)} 800w`}
+              sizes={BOARD_THUMB_SIZES}
+              alt=""
+              width={520}
+              height={520}
+              loading="eager"
+              fetchPriority="low"
+              decoding="async"
+            />
+          </span>
+          <span className="home-mobile-board-float home-mobile-board-float--front">
+            <img
+              className="home-mobile-board"
+              src={boardThumb('openfc-lite', 800)}
+              srcSet={`${boardThumb('openfc-lite', 528)} 528w, ${boardThumb('openfc-lite', 800)} 800w`}
+              sizes={BOARD_THUMB_SIZES}
+              alt=""
+              width={520}
+              height={520}
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
+            />
+          </span>
+        </motion.div>
+
+        <motion.h1
+          className="home-mobile-wordmark"
+          aria-label="OpenDrone"
+          {...rise(1)}
+        >
+          <HeroWordmark progress={1} className="is-filled" />
+        </motion.h1>
+
+        <Txt
+          id="home.m_tagline"
+          as={motion.p}
+          className="home-mobile-tagline"
+          {...rise(2)}
+        />
+
+        {/* Two full-width actions side by side - Shop (gold) + GitHub (ghost).
+            Each is its own pill spanning half the row, not nested in one pod. */}
+        <motion.div className="home-mobile-cta" {...rise(3)}>
+          <Link
+            prefetch="viewport"
+            to="/collections/all"
+            className="home-mobile-cta-btn home-mobile-cta-shop"
+          >
+            <Txt id="home.shop" />
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+            >
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
+          </Link>
+          <a
+            href="https://github.com/OpenDrone-hw"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="home-mobile-cta-btn home-mobile-cta-github"
+            aria-label="View source on GitHub"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+            </svg>
+            <Txt id="home.m_github" />
+          </a>
+        </motion.div>
+      </section>
 
       {/* The loader resolves `featured` for a mobile UA, so the cards render
           in the shell here with no Suspense boundary: React's streaming
           renderer outlines any boundary once the shell passes its progressive
           chunk size, so a resolved value inside <Await> still arrived as a
-          late chunk and shifted the page (CLS 0.22). A promise (the
+          late chunk and shifted the ledger below (CLS 0.22). A promise (the
           desktop-first path resized down to a phone) still streams. */}
       {Array.isArray(featured) ? (
         <FeaturedGrid items={featured} />
@@ -57,154 +188,49 @@ export function MobileHome({
           </Await>
         </Suspense>
       )}
-    </div>
-  );
-}
 
-function Chevron({dir}: {dir: 1 | -1}) {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
-      <polyline points={dir < 0 ? '15 5 8 12 15 19' : '9 5 16 12 9 19'} />
-    </svg>
-  );
-}
-
-/** The walkthrough on a phone: still, step controls, caption sheet. */
-function MobileTour() {
-  const steps = HOME_TOUR_STEPS;
-  const total = steps.length;
-  const [active, setActive] = useState(0);
-  const go = (i: number) => setActive(Math.max(0, Math.min(total - 1, i)));
-  const step = steps[active];
-  const builds = useHeroBuilds();
-  const [buildId, setBuildId] = useState(DEFAULT_BUILD);
-  const productUrl = stepProductUrl(step, builds.find((b) => b.id === buildId));
-
-  // /#build (the footer's build guide) and the part deep links open on
-  // their step.
-  const {hash} = useLocation();
-  useEffect(() => {
-    const id = hash.slice(1).toLowerCase();
-    const i = steps.findIndex((st) => st.id === (id === 'motors' ? 'motor' : id));
-    if (i >= 0) setActive(i);
-  }, [hash, steps]);
-
-  // Warm the neighbouring stills so a step never waits on its picture.
-  useEffect(() => {
-    for (const j of [active - 1, active + 1]) {
-      const st = steps[j];
-      if (st) new Image().src = tourStillUrl(st.id);
-    }
-  }, [active, steps]);
-
-  // A horizontal swipe on the picture steps; vertical movement stays the
-  // page's scroll (touch-action: pan-y on the stage).
-  const start = useRef<{x: number; y: number} | null>(null);
-  const swiped = useRef(false);
-  const onPointerDown = (e: React.PointerEvent) => {
-    start.current = {x: e.clientX, y: e.clientY};
-    swiped.current = false;
-  };
-  const onPointerUp = (e: React.PointerEvent) => {
-    const s0 = start.current;
-    start.current = null;
-    if (!s0) return;
-    const dx = e.clientX - s0.x;
-    const dy = e.clientY - s0.y;
-    if (Math.abs(dx) > 10 || Math.abs(dy) > 10) swiped.current = true;
-    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) go(active + (dx < 0 ? 1 : -1));
-  };
-
-  return (
-    <section className="tour-m" aria-label={copyText('home.tour_label') ?? undefined}>
-      <div
-        className="tour-m-stage"
-        onPointerDown={onPointerDown}
-        onPointerUp={onPointerUp}
-        onPointerCancel={() => (start.current = null)}
-      >
-        <span className="home-mobile-glow" aria-hidden="true" />
-        {(() => {
-          const still = (
-            <img
-              key={step.id}
-              className="tour-m-still"
-              src={tourStillUrl(step.id)}
-              alt=""
-              width={900}
-              height={738}
-              decoding="async"
-              fetchPriority={active === 0 ? 'high' : 'auto'}
-              draggable={false}
-            />
-          );
-          // The still of a part opens that part's product page.
-          return productUrl ? (
-            <Link
-              to={productUrl}
-              prefetch="intent"
-              className="tour-m-still-link"
-              aria-label={step.title}
-              draggable={false}
-              onClick={(e) => {
-                // A swipe that ends on the picture steps, it does not open.
-                if (swiped.current) e.preventDefault();
-              }}
-            >
-              {still}
-            </Link>
-          ) : (
-            still
-          );
-        })()}
-      </div>
-
-      <div className="tour-m-controls">
-        <button
-          type="button"
-          className="tour-m-arrow"
-          aria-label={copyText('home.tour_prev') ?? undefined}
-          disabled={active === 0}
-          onClick={() => go(active - 1)}
-        >
-          <Chevron dir={-1} />
-        </button>
-        <nav className="tour-m-rail" aria-label={copyText('home.tour_label') ?? undefined}>
-          {steps.map((st, i) => (
-            <button
-              key={st.id}
-              type="button"
-              className={`tour-m-dot${i === active ? ' on' : ''}${i < active ? ' done' : ''}`}
-              aria-label={`${i + 1}. ${st.title}`}
-              aria-current={i === active ? 'step' : undefined}
-              onClick={() => go(i)}
-            />
+      {/* Open-hardware index - spec-table rows (hairline rules, mono keys,
+          right-aligned values) with count-ups on the numerals. Reuses the
+          PDP's .spec-table so the band IS the house datasheet language. */}
+      <section className="home-mobile-ledger" aria-label="Open hardware index">
+        <Txt id="home.m_ledger_label" as="p" className="section-label" />
+        <dl className="spec-table">
+          {HOME_LEDGER.map(({key, value, countUp}) => (
+            <div key={key}>
+              <Txt id={`home.m_ledger_${key}_label`} as="dt" />
+              <dd>
+                {value === undefined ? (
+                  <Txt id={`home.m_ledger_${key}_value`} />
+                ) : countUp ? (
+                  <AnimatedNumber value={value} />
+                ) : (
+                  value
+                )}
+              </dd>
+            </div>
           ))}
-        </nav>
-        <button
-          type="button"
-          className="tour-m-arrow"
-          aria-label={copyText('home.tour_next') ?? undefined}
-          disabled={active === total - 1}
-          onClick={() => go(active + 1)}
-        >
-          <Chevron dir={1} />
-        </button>
-      </div>
+        </dl>
+      </section>
 
-      <div className="tour-m-sheet">
-        <div className="tour-panel-body" key={step.id} aria-live="polite">
-          <TourCaption
-            step={step}
-            index={active}
-            total={total}
-            builds={builds}
-            buildId={buildId}
-            onBuild={setBuildId}
-          />
-        </div>
-      </div>
-    </section>
+      <Link
+        prefetch="viewport"
+        to="/collections/all"
+        className="home-mobile-browse"
+      >
+        <Txt id="home.m_browse" />
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+        >
+          <line x1="5" y1="12" x2="19" y2="12" />
+          <polyline points="12 5 19 12 12 19" />
+        </svg>
+      </Link>
+    </div>
   );
 }
 
@@ -217,6 +243,7 @@ function FeaturedGrid({items: all}: {items: CollectionItemFragment[]}) {
   if (items.length === 0) return null;
   return (
     <section className="home-mobile-featured">
+      <Txt id="home.m_featured_label" as="p" className="section-label" />
       <div className="home-mobile-grid">
         {items.map((product, i) => (
           <ProductItem

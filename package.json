@@ -28,7 +28,6 @@
     "audit:perf": "node scripts/perf-audit.mjs",
     "audit:lh": "node scripts/lh-audit.mjs",
     "gen:board-art": "node scripts/export-board-art.mjs --all",
-    "gen:tour-stills": "node scripts/capture-tour-stills.mjs",
     "gen:shopify-templates": "node scripts/shopify-templates/gen.mjs",
     "gen:components": "node scripts/export-board-art.mjs --all --components-only",
     "gen:schematics": "node scripts/export-schematics.mjs --all",

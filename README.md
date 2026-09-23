@@ -44,7 +44,6 @@ Node 22 (what CI uses).
 | `npm run sync:legal` | copies four Dutch legal pages from `COMPLIANCE_SRC`; with it unset, keeps the committed snapshots |
 | `npm run gen:board-art` | export every PCB as layered SVG and copper rasters (needs KiCad and cwebp) |
 | `npm run gen:schematics` | render the schematic sheets from the board checkouts |
-| `npm run gen:tour-stills` | render the phone walkthrough's still per step from the running dev server (`BASE`, needs cwebp) |
 | `npm run sync:specs` / `sync:specs:check` | mirror each board README's `## Specifications` table into `content/products/<handle>.json`, or diff |
 | `npm run specs:placeholders` | list every spec value still marked as a placeholder |
 | `npm run sync:downloads` | diff the latest GitHub release assets against the product JSON (`--check` only; the downloads chapter is not switched on) |
@@ -121,23 +120,12 @@ values awaiting the final figure, never marked on the page; `npm run
 specs:placeholders` lists them and the preorder launch dry run warns while any
 remain.
 
-**Homepage hero.** A guided walkthrough of the drone that is also the build
-guide, one part per step: a three.js scene (`app/components/HeroDroneScene.tsx`)
-plays the Onshape assembly, exported as one GLB and chunked by
-`scripts/hero-assets/build-hero.mjs` into `public/models/<design>/`, and a
-text block on the right names each part, says what it does and shows the
-chosen build's pick for it (3" or 5", from `content/builds.json`: name,
-price, ship date, Add, product link). Clicking the part in the spotlight
-opens its product page. The last step (`/#build`, linked from the footer) is
-the whole build with its total and one Add for everything. The steps and
-their words are the `beats` in `public/models/od3/studio.json` (`title`,
-`caption`, `handle`; a beat's `stops` are steps of their own; `view`
-reframes a whole-drone beat). The 3D loads only from 768px wide with
-`prefers-reduced-motion: no-preference`. Phones get the same steps, picks
-and Add buttons with a still per step (`public/models/od3/tour/`,
-`npm run gen:tour-stills`, rerun after a change to the model or a beat);
-reduced motion gets the steps as a list. Pipeline and tuning:
-`docs/hero-studio.md`.
+**Homepage hero.** A three.js scene (`app/components/HeroDroneScene.tsx`) plays
+the Onshape assembly, exported as one GLB and chunked by
+`scripts/hero-assets/build-hero.mjs` into `public/models/<design>/`. It loads
+only on desktop with `prefers-reduced-motion: no-preference`; everyone else
+gets a static splash, and every beat's copy is plain DOM text. Pipeline and
+tuning: `docs/hero-studio.md`.
 
 **Timeline.** `/timeline` combines a curated list in `app/routes/timeline.tsx`
 with `timeline-ledger.json` on this repository's unprotected `data` branch,

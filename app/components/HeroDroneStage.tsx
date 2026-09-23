@@ -1,35 +1,25 @@
 /**
- * The hero's 3D layer: the scroll-driven walkthrough, the caption panel that
- * explains each step, and the rail of step buttons.
+ * The hero's 3D layer: the scroll-driven walkthrough, its progress rail, and the
+ * copy panel that follows it.
  *
- * This is an absolutely-positioned layer, not a section of its own: it fills
- * the hero's sticky pane. The route owns the splash; this owns the drone and
- * the text block on the right (counter, 3" / 5" build toggle, part role, what
- * it does, the build's pick for that part with its Add, and the whole build on
- * the last step). The words come from studio.json (app/lib/home-tour.ts), the
- * picks from content/builds.json (app/lib/hero-build.ts). Clicking the part
- * in the spotlight opens its product page.
+ * This is an absolutely-positioned layer, not a section of its own - it fills
+ * the hero's sticky pane so the wordmark, size selector and buy bubble sit over
+ * the same drone. The route owns the splash; this owns the drone.
  *
  * Rendering rules live here rather than in the scene: the 3D is skipped under
  * 768px or `prefers-reduced-motion`, matching the policy the rest of the
- * homepage uses, and in that case the step list becomes the actual content
+ * homepage uses, and in that case the fallback list becomes the actual content
  * instead of being visually hidden.
  */
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {useLocation, useNavigate} from 'react-router';
+import {Link} from 'react-router';
 import type {
   HeroBeat,
   HeroDroneSceneProps,
   HeroLoadState,
 } from '~/components/HeroDroneScene';
-import {
-  DEFAULT_BUILD,
-  TourCaption,
-  stepProductUrl,
-  useHeroBuilds,
-} from '~/components/TourCaption';
-import {copyText} from '~/lib/copy';
-import {HOME_TOUR_STEPS} from '~/lib/home-tour-steps';
+import {Txt} from '~/components/Txt';
+import {WHAT_IS_THIS_ID} from '~/lib/product-content';
 
 function shouldLoad3D() {
   if (typeof window === 'undefined') return false;
@@ -42,15 +32,20 @@ function shouldLoad3D() {
 // instead, so this must stay a dynamic import or every phone downloads a
 // renderer it never uses. Started at module eval rather than in an effect so it
 // races hydration; the type-only import above adds no runtime dependency.
-// Only on a page that shows the stage: other routes can evaluate this module
-// through a prefetched home route, and must not pull three.js with it.
-const loadScene = () => import('~/components/HeroDroneScene');
-let scenePromise: ReturnType<typeof loadScene> | null =
-  typeof window !== 'undefined' &&
-  /^\/(hero-preview)?$/.test(window.location.pathname) &&
-  shouldLoad3D()
-    ? loadScene()
+const scenePromise =
+  typeof window !== 'undefined' && shouldLoad3D()
+    ? import('~/components/HeroDroneScene')
     : null;
+
+/** Link label for a beat: the chapter's own title when the href points at
+ *  the What-does-this-do chapter, the generic product link otherwise. */
+function BeatLinkLabel({href}: {href: string}) {
+  return href.endsWith(`#${WHAT_IS_THIS_ID}`) ? (
+    <Txt id="product-chrome.ch_what_is_this_title" fallback="What does this do?" />
+  ) : (
+    <Txt id="home.walkthrough_link" fallback="See the product" />
+  );
+}
 
 export function HeroDroneStage({
   model,
@@ -69,72 +64,54 @@ export function HeroDroneStage({
   onReady?: () => void;
   /** Walkthrough position 0..1, every frame. */
   onProgress?: (f: number) => void;
-  /** Presented step, or null while the drone rests whole between parts. */
+  /** Presented beat, or null while the drone rests whole between parts. */
   onBeat?: (beat: HeroBeat | null, index: number) => void;
-  /** Every step once known, in order. */
+  /** The whole beat list once known, in order. */
   onBeats?: (beats: HeroBeat[]) => void;
 }) {
   // The homepage drives this from its size selector. The scene falls back to
   // the 3 inch if the requested design has no assembly built yet, so adding
   // od5/ later is the only step needed to light this up.
   const folder = model ?? `od${size ?? '3'}`;
-  // pending until mounted, then 3d or static (no 3D: the step list is the page).
-  const [mode, setMode] = useState<'pending' | '3d' | 'static'>('pending');
+  const [use3D, setUse3D] = useState(false);
   const [Scene, setScene] = useState<React.ComponentType<HeroDroneSceneProps> | null>(
     null,
   );
   useEffect(() => {
-    if (!shouldLoad3D()) {
-      setMode('static');
+    if (!shouldLoad3D() || !scenePromise) {
       // Tell the route now, or it sits behind the splash's dim layer waiting out
       // the safety timeout on a machine that will never show a drone.
       onReady?.();
       return;
     }
-    setMode('3d');
-    scenePromise ??= loadScene();
+    setUse3D(true);
     scenePromise
       .then((m) => setScene(() => m.HeroDroneScene))
       .catch((err) => {
         console.error('[hero] failed to load the 3D scene chunk:', err);
-        setMode('static');
         onReady?.();
       });
   }, [onReady]);
 
-  // The bundled steps render on the server and until the scene reports its
-  // own (the same file, read at runtime so /studio edits show live).
-  const [steps, setSteps] = useState<HeroBeat[]>(HOME_TOUR_STEPS);
-  // The step the caption panel shows. It follows the spotlight, and holds the
-  // last part's step while the drone rests whole between two parts.
+  const [beats, setBeats] = useState<HeroBeat[]>([]);
   const [active, setActive] = useState(0);
+  // The copy the scene is presenting RIGHT NOW: the beat's, or an active
+  // mid-hold stop's (same shape, different id). The panel renders this rather
+  // than looking the beat up in `beats`, or a stop's caption change could
+  // never show.
+  const [shown, setShown] = useState<HeroBeat | null>(null);
+  // True while the drone rests whole between parts (the scene reports beat
+  // null). The copy panel clears; the rail keeps the last part's dot lit.
+  // Starts true: the scene only reports once something is presented (the
+  // opening whole-drone hold reports too, carrying the beginner intro).
+  const [resting, setResting] = useState(true);
   const seek = useRef<((i: number) => void) | null>(null);
   const fillRef = useRef<HTMLDivElement>(null);
-  const stageRef = useRef<HTMLDivElement>(null);
-  const panelRef = useRef<HTMLElement>(null);
-  // The panel's height, for layouts that stack the rail above it as a sheet.
-  useEffect(() => {
-    const panel = panelRef.current;
-    const stage = stageRef.current;
-    if (!panel || !stage || typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(() =>
-      stage.style.setProperty('--tour-sheet-h', `${panel.offsetHeight}px`),
-    );
-    ro.observe(panel);
-    return () => ro.disconnect();
-  }, [mode]);
 
-  // A rail jump flies past the parts in between. The panel shows the
-  // destination at once and ignores the fly-past until it lands.
-  const jumpTo = useRef<{step: number; until: number} | null>(null);
   const handleBeat = useCallback(
     (b: HeroBeat | null, i: number) => {
-      const jump = jumpTo.current;
-      if (jump && performance.now() < jump.until && i !== jump.step) {
-        onBeat?.(b, i);
-        return;
-      }
-      jumpTo.current = null;
+      setResting(!b);
+      if (b) setShown(b);
       if (b && i >= 0) setActive(i);
       onBeat?.(b, i);
     },
@@ -142,7 +119,7 @@ export function HeroDroneStage({
   );
   const handleBeats = useCallback(
     (b: HeroBeat[]) => {
-      if (b.length) setSteps(b);
+      setBeats(b);
       onBeats?.(b);
     },
     [onBeats],
@@ -160,52 +137,8 @@ export function HeroDroneStage({
     [onProgress],
   );
 
-  const total = steps.length;
-  const current = steps[Math.min(active, total - 1)];
-  const builds = useHeroBuilds();
-  const [buildId, setBuildId] = useState(DEFAULT_BUILD);
-  const build = builds.find((b) => b.id === buildId);
-  // A click on the part in the spotlight opens its product page, on the
-  // variant the chosen build uses.
-  const navigate = useNavigate();
-  const latest = useRef({steps, build});
-  useEffect(() => {
-    latest.current = {steps, build};
-  }, [steps, build]);
-  const handlePick = useCallback(
-    (i: number) => {
-      const st = latest.current.steps[i];
-      const url = st ? stepProductUrl(st, latest.current.build) : null;
-      if (url) void navigate(url);
-    },
-    [navigate],
-  );
-  // A link to /#build (the footer's build guide) or a part while the page is
-  // open is a client navigation with no reload: fly to that step. On a fresh
-  // load the scene reads the hash itself.
-  const {hash} = useLocation();
-  useEffect(() => {
-    const id = hash.slice(1).toLowerCase();
-    const i = latest.current.steps.findIndex((st) => st.id === (id === 'motors' ? 'motor' : id));
-    if (i < 0 || !seek.current) return;
-    jumpTo.current = {step: i, until: performance.now() + 4000};
-    setActive(i);
-    seek.current(i);
-  }, [hash]);
-  const caption = (st: HeroBeat, i: number, extra: {as?: 'h3'; toggle?: boolean} = {}) => (
-    <TourCaption
-      step={st}
-      index={i}
-      total={total}
-      builds={builds}
-      buildId={buildId}
-      onBuild={setBuildId}
-      {...extra}
-    />
-  );
-
   return (
-    <div ref={stageRef} className={`hp-stage${mode === 'static' ? ' is-static' : ''}`}>
+    <div className="hp-stage">
       {Scene ? (
         <Scene
           model={folder}
@@ -215,54 +148,85 @@ export function HeroDroneStage({
           onLoad={onLoad}
           onReady={onReady}
           onSeeker={onSeeker}
-          onPick={handlePick}
         />
       ) : null}
 
-      {mode !== 'static' && current ? (
-        <aside ref={panelRef} className="tour-panel" aria-label={copyText('home.tour_label') ?? undefined}>
-          {/* Keyed on the step so each new step's words fade in. */}
-          <div className="tour-panel-body" key={current.id} aria-live="polite">
-            {caption(current, active)}
-          </div>
-        </aside>
-      ) : null}
-
-      {mode !== 'static' ? (
-        <nav className="hp-rail" aria-label={copyText('home.tour_label') ?? undefined}>
+      {use3D ? (
+        <nav className="hp-rail" aria-label="Drone parts">
           <div className="hp-rail-fill" ref={fillRef} />
-          {steps.map((b, i) => (
+          {beats.map((b, i) => (
             <button
               key={b.id}
               type="button"
               className={`hp-dot${i === active ? ' on' : ''}${i < active ? ' done' : ''}`}
-              style={{left: `${(i / Math.max(1, total - 1)) * 100}%`}}
-              aria-label={`${i + 1}. ${b.title}`}
-              aria-current={i === active ? 'step' : undefined}
-              onClick={() => {
-                jumpTo.current = {step: i, until: performance.now() + 4000};
-                setActive(i);
-                seek.current?.(i);
-              }}
-            >
-              <span className="hp-dot-label" aria-hidden="true">
-                {b.title}
-              </span>
-            </button>
+              style={{left: `${(i / Math.max(1, beats.length - 1)) * 100}%`}}
+              aria-label={b.title}
+              aria-current={i === active ? 'true' : undefined}
+              onClick={() => seek.current?.(i)}
+            />
           ))}
         </nav>
       ) : null}
 
-      {/* Every step in the DOM, always, for crawlers, screen readers and
-          devices that never load the scene; the page itself when there is
-          no 3D. */}
-      <ol className="hp-fallback">
-        {steps.map((b, i) => (
-          <li key={b.id}>
-            {caption(b, i, {as: 'h3', toggle: i === 0})}
-          </li>
-        ))}
-      </ol>
+      {/* The spotlight cuts as a part leaves; that is the cue for this.
+          During a rest the panel clears entirely: the whole drone is the
+          content, and a caption would race ahead of the next part. */}
+      {use3D && !resting && shown ? (
+        <div className="hp-copy" key={shown.id} aria-live="polite">
+          {/* No step counter: the rail's dots already say where you are. */}
+          <h2 className="hp-title">{shown.title}</h2>
+          <p className="hp-note">{shown.note}</p>
+          {/* Beginner explainer: what the part does, one line of how it
+              connects, and the product page when we sell it. Strings come
+              from studio.json with the rest of the beat copy. */}
+          {shown.caption ? <p className="hp-explain">{shown.caption}</p> : null}
+          {shown.hint ? <p className="hp-connect">{shown.hint}</p> : null}
+          {shown.href ? (
+            <Link className="hp-copy-link" to={shown.href} prefetch="intent">
+              <BeatLinkLabel href={shown.href} />
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                aria-hidden="true"
+              >
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* Every beat's copy in the DOM, always. Without this most of the text
+          exists only in JS state: invisible to crawlers, to screen readers, and
+          to anyone whose device never loads the scene. */}
+      <ul className="hp-fallback">
+        {beats.map((b) => {
+          // A beat with mid-hold stops carries its copy on the stops (the
+          // beat-level title/note duplicate the first stop), so render those
+          // instead of the beat's own.
+          const entries = b.stops?.length
+            ? b.stops.map((s, j) => ({...s, id: `${b.id}:${j}`}))
+            : [{...b, id: b.id}];
+          return entries.map((e) => (
+            <li key={e.id}>
+              <h3>{e.title}</h3>
+              <p>{e.note}</p>
+              {e.caption ? <p>{e.caption}</p> : null}
+              {e.hint ? <p>{e.hint}</p> : null}
+              {e.href ? (
+                <Link to={e.href}>
+                  <BeatLinkLabel href={e.href} />
+                </Link>
+              ) : null}
+            </li>
+          ));
+        })}
+      </ul>
     </div>
   );
 }

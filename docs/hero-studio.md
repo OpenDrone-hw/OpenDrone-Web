@@ -103,13 +103,10 @@ cost, filterable, with anything unclaimed flagged in red. Check this reads
 0 orphans before you call a design done.
 
 **Beats.** Pick a beat and the view jumps to it and holds, so you edit what you
-are looking at. Its `title` (the part's role) and `caption` (what it does, 25
-words at most), the same on each stop, and the numbers (`fade`, `partSize`, each
-stop's `at`) are editable. A stop is a walkthrough step of its own: the site
-counts it, parks the scroll at its `park` and shows its title, caption and
-product (`handle`) instead of the beat's. `handle`, `park` and `view` (a
-whole-drone beat's reframing: `x` shift as a fraction of the width, `zoom`)
-are file edits. `fade` and `partSize` each have a
+are looking at. Its caption, its stop captions, the beginner explainer fields
+(`caption`, `hint`, `href`, on the beat and on each stop; an active stop's set
+replaces the beat's on the site), and the numbers (`fade`, `partSize`, each
+stop's `at`) are editable. `fade` and `partSize` each have a
 tick box: unticked means the key is absent and the beat inherits
 `spotlight.darkenRest` and `sequence.partSize`.
 
@@ -164,7 +161,7 @@ Say you are adding the 5-inch.
      different motors and mounts. Work through the parts audit until it reads
      0 orphans and no material class has zero members.
    - `videoModule`, `notFrame`, `boardExclude`: same exercise.
-   - `beats[]`: ids, titles and captions are free text; `select` is one of
+   - `beats[]`: ids, titles and notes are free text; `select` is one of
      `{none}`, `{board: "<id>"}`, `{cluster: "<regex>", withProp: true}` or
      `{complement: true, plus: "videoModule"}`.
 3. **Copy `_studio.html` and a `studio.json` into the new folder** and open it.
@@ -280,14 +277,14 @@ items remain as design rationale; the rest describe current behavior.
   the site already uses: no 3D under 768px or under `prefers-reduced-motion`.
 - **`stops` was parsed and never used**, so the second caption of the airframe
   beat ("Video module") never appeared even though the choreography ran. The
-  site now honours stops the same way the studio does: each stop is a step of
-  its own, and the text block switches to the active stop's mid-hold.
+  site now honours stops the same way the studio does: the copy panel switches
+  to the active stop's title, note, caption, hint and href mid-hold.
 
 ### Still open
 
-- **No touch scrolling.** Phones get the stills walkthrough, not the scene.
-  Tablets over 768px load the 3D and step with the rail buttons, but a swipe
-  does not move the sequence. A `touchmove` path is the missing piece.
+- **No touch support.** The gate above means phones get the DOM copy rather than
+  a broken scene, but tablets over 768px will load the 3D and be unable to drive
+  it. A `touchmove` path is the missing piece.
 - **The 3D is hardcoded dark** and does not follow the site's light/dark toggle.
   Hemisphere and beam colours are literals, and `darkenRest: 1.0` would drive
   non-focused parts to black on a white page.

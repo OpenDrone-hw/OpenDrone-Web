@@ -78,10 +78,38 @@ export type WhatIsThis = {
   /** Which signal-chain stage this product IS; the chapter's chain strip
    *  lights it. Stages: radio, rx, fc, esc, motors, frame. */
   chain?: 'radio' | 'rx' | 'fc' | 'esc' | 'motors' | 'frame';
+  /** Optional hero-length line for the homepage walkthrough caption. When
+   *  absent, the caption derives from `intro` (heroCaption below), so the
+   *  hero and the PDP's What-does-this-do chapter cannot drift apart. */
+  hero?: string;
 };
 
 /** DOM id of the "What does this do?" chapter on a product page. */
 export const WHAT_IS_THIS_ID = 'what-is-this';
+
+/** `/products/<handle>#what-is-this`, when the product has that chapter. */
+export function whatIsThisHref(handle: string): string | undefined {
+  return PRODUCT_CONTENT[handle]?.whatIsThis
+    ? `/products/${handle}#${WHAT_IS_THIS_ID}`
+    : undefined;
+}
+
+/**
+ * The homepage hero caption for a product: `whatIsThis.hero` when set,
+ * otherwise the intro's first two sentences (first one only when two run
+ * past 200 characters). The hero explainers are the What-does-this-do words.
+ */
+export function heroCaption(handle: string): string | undefined {
+  const wit = PRODUCT_CONTENT[handle]?.whatIsThis;
+  if (!wit) return undefined;
+  if (wit.hero) return wit.hero;
+  // A sentence ends at . ! or ? followed by whitespace or the end of the
+  // text, so a decimal point ("2.4 GHz") stays inside its sentence.
+  const sentences = wit.intro.match(/(?:[^.!?]|[.!?](?!\s|$))+[.!?]+(?=\s|$)\s*/g);
+  if (!sentences?.length) return wit.intro || undefined;
+  const two = sentences.slice(0, 2).join('').trim();
+  return two.length > 200 ? sentences[0].trim() : two;
+}
 
 /**
  * Downloadable asset rendered in the Downloads chapter. `kind` picks

@@ -245,12 +245,12 @@
   "boards": [
     {
       "id": "OpenFC",
-      "title": "OpenFC Lite 20×20",
-      "note": "RP2354A flight controller"
+      "title": "OpenFC-Lite-Mini",
+      "note": "RP2354B flight controller"
     },
     {
       "id": "4in1-mini",
-      "title": "OpenESC 20×20",
+      "title": "OpenESC-20x20",
       "note": "4-in-1 AM32 ESC"
     },
     {
@@ -262,20 +262,22 @@
   "boardExclude": "(screw|hex nut|pressnut|press nut|washer|softmount|Standoff|20mmx4mm|Casing|^Arm$|^Cross$|^Base-|^Top$|DJI|VTX-Mount|Bumper|AirTag|Boot-|Admi|BM6B|^[0-9]+$)",
   "videoModule": "^(Top Casing|Bottom Casing|DJI|VTX-Mount|USB C|Body|Lens|BM6B)",
   "notFrame": "^(Admi|prop-pivot|[0-9]+$)",
-  "_beatNote": "select is one of: {board}, {names}, {cluster} one spatial cluster, {complement} everything not in another beat. choreo names a built-in behaviour. Each beat is one step of the homepage walkthrough, or one step per stop when it has stops. The text block shows the step number, title (the part's role), caption (what it does, 25 words at most) and, when handle names a product, the chosen build's pick for that part from content/builds.json: name, price, ship date, Add and the product link. A stop's title, caption and handle replace the beat's while it is active; id is its /#<id> deep link and park where the scroll rests inside the hold. The step with id build closes the tour with the whole build list from content/builds.json. view reframes a beat's shot: x moves the picture by that fraction of the width, zoom scales it.",
+  "_beatNote": "select is one of: {board}, {names}, {cluster} one spatial cluster, {complement} everything not in another beat. choreo names a built-in behaviour. caption is the beginner explainer under the note, hint is a one-line 'connects to', href links the beat to its product page; a stop that is active shows its own caption/hint/href, not the beat's. Copy baseline: drafts/beginner-narrative.md.",
   "beats": [
     {
       "id": "whole",
-      "title": "The quad",
-      "caption": "A 3\" freestyle quad built around OpenDrone parts, taken apart one part at a time.",
+      "title": "OpenDrone 3\"",
+      "note": "complete airframe",
       "select": {
         "none": true
       }
     },
     {
       "id": "fc",
-      "title": "Flight controller",
-      "caption": "The brain. Runs Betaflight, reads the gyro and your sticks, and tells the ESC how fast to spin each motor.",
+      "title": "OpenFC-Lite-Mini",
+      "note": "RP2354B flight controller",
+      "hint": "Receiver in, ESC out: everything passes through it.",
+      "href": "/products/openfc-lite",
       "select": {
         "board": "OpenFC"
       },
@@ -283,8 +285,10 @@
     },
     {
       "id": "esc",
-      "title": "ESC",
-      "caption": "Turns battery power into motor speed. 4in1: all four motor drivers on one board, stacked under the FC.",
+      "title": "OpenESC-20x20",
+      "note": "4-in-1 AM32 ESC",
+      "hint": "Between the flight controller's requests and a hundred amps of battery current.",
+      "href": "/products/openesc",
       "select": {
         "board": "4in1-mini"
       },
@@ -292,8 +296,8 @@
     },
     {
       "id": "rx",
-      "title": "Receiver",
-      "caption": "Picks up your radio. ELRS 2.4 GHz, wired to a UART on the FC.",
+      "title": "OpenRX",
+      "note": "ELRS receiver lineup. Lite-UFL fits a 3 inch; Mono's 900 MHz antenna wants a bigger frame.",
       "select": {
         "board": "OpenRX-Lite-UFL"
       },
@@ -301,17 +305,17 @@
     },
     {
       "id": "motor",
-      "title": "Motors + props",
-      "caption": "Four brushless motors. Speed up one side and the quad tilts toward the other. That is how it flies.",
+      "title": "Motor and propeller",
+      "note": "1604 class, 3in tri-blade",
       "select": {
         "cluster": "^Admi",
         "withProp": true
-      },
-      "handle": "openmotor"
+      }
     },
     {
       "id": "frame",
-      "title": "Frame",
+      "title": "Airframe",
+      "note": "top plate off, then the video stack lifts out and stays",
       "select": {
         "complement": true,
         "plus": "videoModule"
@@ -321,33 +325,20 @@
       "choreo": "frame-teardown",
       "stops": [
         {
-          "id": "frame",
           "at": 0,
-          "park": 0.5,
-          "title": "Frame",
-          "caption": "T700 carbon fibre. Holds the stack, motors and camera, and takes the crashes.",
-          "handle": "openframe"
+          "title": "Airframe",
+          "note": "T700 carbon, standoffs, hardware, camera cage",
+          "caption": "Carbon plates and arms, the body everything else mounts to. Stiffness is not cosmetic: the gyro feels every bit of flex.",
+          "hint": "Holds the stack in the middle and a motor at each arm tip.",
+          "href": "/products/openframe"
         },
         {
-          "id": "camera",
           "at": 0.62,
-          "park": 0.8,
-          "title": "Camera + VTX",
-          "caption": "Sends live video to your goggles. Bring your own: DJI, Walksnail, HDZero or analog."
+          "title": "Video module",
+          "note": "air unit, antennas and camera lift out as one"
         }
-      ]
-    },
-    {
-      "id": "build",
-      "title": "The build",
-      "caption": "Every part from the tour, sized for one quad.",
-      "select": {
-        "none": true
-      },
-      "view": {
-        "x": -0.12,
-        "zoom": 0.72
-      }
+      ],
+      "handle": "openframe"
     }
   ],
   "camera": {

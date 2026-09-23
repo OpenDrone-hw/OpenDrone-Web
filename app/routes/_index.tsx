@@ -1,28 +1,50 @@
-import {PrefetchPageLinks, useLoaderData, useRouteLoaderData} from 'react-router';
-import type {RootLoader} from '~/root';
-import {CAMPAIGN} from '~/lib/catalog-client';
-import {PreorderStrip, type HomePrices} from '~/components/PreorderStrip';
+import {Await, PrefetchPageLinks, useLoaderData} from 'react-router';
+import {AnimatePresence, motion, useReducedMotion} from 'motion/react';
+import {Link} from '~/components/nav';
 import type {Route} from './+types/_index';
-import {useEffect, useRef, useState, useCallback} from 'react';
-import type {ProductCardFragment} from '~/lib/product-shapes';
+import {
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  useMemo,
+  Suspense,
+} from 'react';
+import type {MoneyV2, ProductCardFragment} from '~/lib/product-shapes';
 import {byHandle, formatPrice, toCard} from '~/lib/catalog';
 import {INCUTEC_HINT_SEEN_KEY} from '~/lib/incutec-hint';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
+import {useProductStatusResolver, useRoadmapStatusResolver} from '~/lib/coming-soon';
+import {
+  isComingSoon,
+  isConceptFor,
+  isPurchasableStatus,
+} from '~/lib/product-content';
 import {HeroDroneStage} from '~/components/HeroDroneStage';
 import type {HeroLoadState} from '~/components/HeroDroneScene';
 import {HeroWordmark} from '~/components/HeroWordmark';
 import {HeroSizeSlider} from '~/components/HeroSizeSlider';
-import {HERO_AIRFRAME_KEYS} from '~/lib/hero-airframes';
+import {
+  HERO_AIRFRAMES,
+  HERO_AIRFRAME_KEYS,
+  HERO_BOARDS,
+  HERO_VARIANT_AXIS,
+  DEFAULT_HERO_SIZE,
+  type HeroBoardKey,
+} from '~/lib/hero-airframes';
 import {MobileHome} from '~/components/MobileHome';
 import {SceneErrorBoundary} from '~/components/SceneErrorBoundary';
+import {HERO_REVEAL_WINDOWS, HERO_SLOTS} from '~/lib/builder/registry';
+import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
 
 /**
- * The homepage's words live in `content/copy/home.json` (shared with
- * `MobileHome`) and, for the walkthrough's steps, in the studio.json beats
- * (app/lib/home-tour.ts); the build picks come from content/builds.json. Everything else here is machinery: scroll progress,
- * splash phases, the `--hero-p` custom property. Product titles, prices and
- * the load manifest's piece labels are runtime data, not editable strings.
+ * The homepage's words live in `content/copy/home.json`, shared with
+ * `MobileHome` (its keys are prefixed `m_`; the Shop label is one key used by
+ * both layouts so it is edited once). Everything else here is machinery -
+ * scroll progress, reveal windows, splash phases, the `--hero-p` custom
+ * property - and none of it is copy. Product titles, prices and the load
+ * manifest's piece labels are runtime data, not editable strings.
  */
 export const meta: Route.MetaFunction = ({location}) =>
   buildSeoMeta({
@@ -32,37 +54,108 @@ export const meta: Route.MetaFunction = ({location}) =>
     url: `${SITE_ORIGIN}${location.pathname}`,
   });
 
+type HomeMoney = Pick<MoneyV2, 'amount' | 'currencyCode'>;
 type HomeProduct = ProductCardFragment;
 type HomeFeaturedResult = {
   frame: HomeProduct | null;
   rx: HomeProduct | null;
   fc: HomeProduct | null;
   esc: HomeProduct | null;
-  motor: HomeProduct | null;
 };
 
-/**
- * Airframe sizes whose 3D assembly is built (`public/models/od<size>/`).
- * The hero only offers these: a size without an assembly would show the
- * 3 inch drone under a 5 inch label and price. Add '5' here once
- * `public/models/od5/` exists; the size toggle appears when two are built.
- */
-const HERO_BUILT_SIZES: readonly string[] = ['3'];
-
-/**
- * Shop names for the pieces the splash manifest ticks off. `chunks.json` is
- * written by the hero build from the CAD part names ("OpenFC", "4in1-mini");
- * a buyer reads the names the shop sells, so a known chunk id is shown under
- * its product name and an unknown one keeps its build label.
- */
-const HERO_PIECE_NAMES: Readonly<Record<string, string>> = {
-  frame: 'OpenFrame 3" Freestyle',
-  'board-4in1-mini': 'OpenESC 20x20',
-  'board-OpenFC': 'OpenFC Lite 20x20',
-  'board-OpenRX-Lite-UFL': 'OpenRX Lite-UFL',
+// A ready-to-render hero reveal card - resolved server-side so the view stays
+// data-driven (the client just maps over the active size's stack).
+export type HeroCard = {
+  boardKey: HeroBoardKey;
+  handle: string;
+  /** PDP link, including `?Model=…` for size-variant boards. */
+  url: string;
+  title: string;
+  productType: string | null;
+  image: {url: string; altText: string | null} | null;
+  price: HomeMoney | null;
 };
-const HERO_SIZES = HERO_AIRFRAME_KEYS.filter((k) => HERO_BUILT_SIZES.includes(k));
-const HERO_START_SIZE = HERO_SIZES[0] ?? HERO_AIRFRAME_KEYS[0];
+/** Keyed by airframe size key (see HERO_AIRFRAMES). */
+export type HeroStacks = Record<string, HeroCard[]>;
+
+function emptyHeroStacks(): HeroStacks {
+  const stacks: HeroStacks = {};
+  for (const af of HERO_AIRFRAMES) stacks[af.key] = [];
+  return stacks;
+}
+
+// Resolve each airframe size's [FC, ESC, Frame] cards from the queried
+// products. Size-variant boards (FC/ESC) match the size's `model` against the
+// product's "Model" option values, linking to that variant and using its
+// price; a size with no matching variant falls back to the base product link
+// + min price so the card still renders. Fully driven by the HERO_AIRFRAMES /
+// HERO_BOARDS registry - adding a size needs no change here.
+function buildHeroStacks(d: HomeFeaturedResult): HeroStacks {
+  const byBoard: Record<HeroBoardKey, HomeProduct | null> = {
+    fc: d.fc,
+    esc: d.esc,
+    frame: (d.frame as HomeProduct | null) ?? null,
+  };
+  const stacks: HeroStacks = {};
+  for (const af of HERO_AIRFRAMES) {
+    const cards: HeroCard[] = [];
+    for (const board of HERO_BOARDS) {
+      const p = byBoard[board.boardKey];
+      if (!p) continue;
+      let url = `/products/${board.handle}`;
+      let price: HomeMoney | null = p.priceRange.minVariantPrice ?? null;
+      // Default to the product's featured image; a matched size variant
+      // overrides it below (the featured image is the mini/first variant).
+      let image = p.featuredImage
+        ? {url: p.featuredImage.url, altText: p.featuredImage.altText ?? null}
+        : null;
+      const model = board.sizeVariant ? af.model : undefined;
+      if (model) {
+        const axis = HERO_VARIANT_AXIS.toLowerCase();
+        const want = model.trim().toLowerCase();
+        const variant = p.variants.nodes.find((v) =>
+          v.selectedOptions.some(
+            (o) =>
+              o.name.trim().toLowerCase() === axis &&
+              o.value.trim().toLowerCase() === want,
+          ),
+        );
+        if (variant) {
+          // Link with the value the LIVE variant carries (preserves exact
+          // casing/encoding) so the PDP resolves it cleanly.
+          const liveValue =
+            variant.selectedOptions.find(
+              (o) => o.name.trim().toLowerCase() === axis,
+            )?.value ?? model;
+          url += `?${HERO_VARIANT_AXIS}=${encodeURIComponent(liveValue)}`;
+          if (variant.price) price = variant.price;
+          if (variant.image)
+            image = {
+              url: variant.image.url,
+              altText: variant.image.altText ?? null,
+            };
+        }
+      }
+      cards.push({
+        boardKey: board.boardKey,
+        handle: board.handle,
+        url,
+        // Size-variant boards spell out which mount they are (e.g. "OpenESC
+        // 30×30") so the two airframes' cards aren't indistinguishable; the
+        // shared frame keeps its plain title.
+        title:
+          board.sizeVariant && !p.title.includes(af.model)
+            ? `${p.title} ${af.model}`
+            : p.title,
+        productType: p.productType ?? null,
+        image,
+        price,
+      });
+    }
+    stacks[af.key] = cards;
+  }
+  return stacks;
+}
 
 export async function loader({request, context}: Route.LoaderArgs) {
   // UA hint picks the SSR layout so a phone gets the static MobileHome on
@@ -79,7 +172,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
   // the cards instead of blanking the page.
   const home: Promise<{
     featured: HomeProduct[];
-    prices: HomePrices;
+    heroStacks: HeroStacks;
   }> = context.catalog
     .get()
     .then((catalog) => {
@@ -92,27 +185,24 @@ export async function loader({request, context}: Route.LoaderArgs) {
         rx: card('openrx'),
         fc: card('openfc-lite'),
         esc: card('openesc'),
-        motor: card('openmotor'),
       };
       const keep = (p: HomeProduct | null): p is HomeProduct => Boolean(p);
       return {
         // Mobile flagship line: the four core parts (FC, ESC, RX, frame). The
         // OpenStack is intentionally NOT here - it's just the FC + ESC bundled,
         // surfaced as a note on the showcase, not as a separate flagship slot.
-        featured: [d.fc, d.esc, d.rx, d.frame, d.motor].filter(keep),
-        // The promo line: the lowest current price per product.
-        prices: {
-          'openfc-lite': fromPrice(d.fc),
-          openesc: fromPrice(d.esc),
-          openrx: fromPrice(d.rx),
-        },
+        featured: [d.fc, d.esc, d.rx, d.frame].filter(keep),
+        // The three hero boards, resolved per airframe size. FC + ESC are
+        // single products with a size variant axis ("Model"): each size links
+        // them to its own variant (?Model=…) and shows that variant's price.
+        // The frame is one shared SKU. Built off the HERO_AIRFRAMES registry,
+        // so a new size is a config edit - see app/lib/hero-airframes.ts.
+        heroStacks: buildHeroStacks(d),
       };
     })
-    .catch(() => ({
-      featured: [],
-      prices: {},
-    }));
+    .catch(() => ({featured: [], heroStacks: emptyHeroStacks()}));
 
+  const heroStacks = home.then((h) => h.heroStacks);
   // On a phone the featured cards are the first thing under the hero and the
   // section's arrival used to shift everything below it (CLS 0.22) and delay
   // the LCP image until the deferred chunk streamed in. The query is
@@ -123,26 +213,61 @@ export async function loader({request, context}: Route.LoaderArgs) {
     ? await home.then((h) => h.featured)
     : home.then((h) => h.featured);
 
-  // The one fixed ship date of the campaign: the stack's paid batch.
-  const stackShips =
-    Object.values(CAMPAIGN.skus)
-      .flatMap((entry) => entry.batches)
-      .find((batch) => batch.paid && batch.ships?.trim())
-      ?.ships?.trim() ?? null;
-
-  // The promo line paints with the first HTML on every layout, so its
-  // prices are awaited. The catalog is worker-cached, the same fetch the
-  // phone layout already awaits.
-  const {prices} = await home;
-
-  return {isMobileHint, featured, stackShips, prices};
+  return {isMobileHint, featured, heroStacks};
 }
 
-/** A product's lowest current price, formatted, or null. */
-function fromPrice(p: HomeProduct | null): string | null {
-  const min = p?.priceRange?.minVariantPrice;
-  return min ? formatPrice(min.amount, min.currencyCode) || null : null;
-}
+// Hero scroll budget - the 3D scene + phased UI stays pinned for this many
+// screen heights. Pinned budget (spacer − 100, for the h-screen child) is a
+// touch larger than HERO_PROGRESS_VH so progress comfortably reaches 1 and
+// the finished state holds for a brief beat before the sticky releases.
+// 205 (not the old 220): progress finishes at 100vh and the CTA rise ends at
+// p=0.96, so a 5vh settle beat is enough - the extra 15vh was pinned scroll
+// where nothing on screen changed, reading as a stuck page.
+const HERO_SPACER_VH_DESKTOP = 205;
+const HERO_SPACER_VH_MOBILE = 205;
+// Scroll denominator for 0..1 progress - how many viewport heights of
+// scroll drive the phased animation from start to finish. One viewport
+// height means the whole sequence plays out in a single continuous scroll
+// gesture, instead of needing several wheel/trackpad flicks to get through.
+const HERO_PROGRESS_VH_DESKTOP = 1;
+const HERO_PROGRESS_VH_MOBILE = 1;
+
+// Buy-card stack swap on a size change - a horizontal cross-slide timed to MATCH
+// the 3D airframe's cross-slide so the cards and the drone move as one gesture.
+// Mirrors HeroScene's swap: same duration (TRANS_DUR), same easeInOutCubic, same
+// direction, and the same mid-swap zoom dip (both stacks pull back toward the
+// middle of the travel). `custom` is the direction (+1 = the new size sits later
+// in the registry, so its cards fly in from the right and the old stack flies
+// out left; −1 = reverse). The exiting stack is taken out of flow (absolute,
+// bottom-anchored to match .hero-buy-stack's column-reverse) so it doesn't shove
+// the Shop button while both stacks overlap mid-swap.
+const HERO_SWAP_DUR = 0.85; // seconds - must track HeroScene TRANS_DUR
+const HERO_SWAP_EASE = [0.65, 0, 0.35, 1] as const; // easeInOutCubic ≈ HeroScene easeSwap
+const HERO_SWAP_DIST = 110; // px of horizontal travel
+const HERO_SWAP_DIP = 0.9; // mid-swap scale (the zoom-out dip), ~ HeroScene's 0.18 sine dip
+const HERO_STACK_SWAP = {
+  enter: (dir: number) => ({
+    x: dir * HERO_SWAP_DIST,
+    opacity: 0,
+    scale: HERO_SWAP_DIP,
+  }),
+  center: {
+    x: 0,
+    opacity: 1,
+    scale: 1,
+    transition: {duration: HERO_SWAP_DUR, ease: HERO_SWAP_EASE},
+  },
+  exit: (dir: number) => ({
+    x: -dir * HERO_SWAP_DIST,
+    opacity: 0,
+    scale: HERO_SWAP_DIP,
+    position: 'absolute' as const,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    transition: {duration: HERO_SWAP_DUR, ease: HERO_SWAP_EASE},
+  }),
+};
 
 // Module-scoped flag that survives across remounts of the homepage during
 // a single browser session. Hard refresh tears down the JS module and
@@ -159,9 +284,7 @@ let splashHasPlayedThisSession = false;
  * hooks never mount on a phone.
  */
 export default function Homepage() {
-  const {isMobileHint, featured, stackShips, prices} = useLoaderData<typeof loader>();
-  const shopOpen = useRouteLoaderData<RootLoader>('root')?.shopOpen ?? false;
-  const strip = shopOpen ? stackShips ?? '' : null;
+  const {isMobileHint, featured, heroStacks} = useLoaderData<typeof loader>();
   const [isMobile, setIsMobile] = useState(isMobileHint);
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 768px)');
@@ -171,34 +294,61 @@ export default function Homepage() {
     return () => mq.removeEventListener('change', update);
   }, []);
 
-  if (isMobile)
-    return (
-      <MobileHome featured={featured} preorderShips={strip} prices={prices} />
-    );
-  return <DesktopHome preorderShips={strip} prices={prices} />;
+  if (isMobile) return <MobileHome featured={featured} />;
+  return <DesktopHome heroStacks={heroStacks} />;
 }
 
-function DesktopHome({
-  preorderShips,
-  prices,
-}: {
-  /** Set while the shop is open: the promo line names the stack's ship date. */
-  preorderShips: string | null;
-  prices: HomePrices;
-}) {
+function DesktopHome({heroStacks}: {heroStacks: Promise<HeroStacks>}) {
+  // Coming-soon reveal cards keep their link + title but swap the price
+  // for a Soon tag (per-card handle resolved server-side on the card).
+  const productStatus = useProductStatusResolver();
+  const roadmapStatus = useRoadmapStatusResolver();
   const scrollRef = useRef(0);
   const rafId = useRef(0);
-  // Scroll progress reaches the DOM as the `--hero-p` custom property (the
-  // scroll-hint fade reads it), written imperatively once per frame below:
-  // no React re-render per frame.
+  // Scroll progress reaches the DOM two ways:
+  //  - visuals (card reveal geometry, scroll-hint fade) read the `--hero-p`
+  //    custom property, written imperatively once per scroll frame below -
+  //    smooth, and NO React re-render per frame;
+  //  - interactivity gates (stack aria-hidden, per-card focus/pointer) are a
+  //    small state BITMASK that only changes when a threshold is crossed - a
+  //    handful of renders per scroll instead of one per frame. Re-rendering
+  //    the whole route at every scroll frame was the single biggest CPU cost
+  //    on slow machines. Gate and consumer read the same bit, so the two
+  //    can't disagree at a boundary the way a duplicated `> 0.6` check did.
   const heroVarRef = useRef<HTMLDivElement | null>(null);
-  // Which airframe the hero shows. The toggle appears once two are built.
-  const [heroSize, setHeroSize] = useState<string>(HERO_START_SIZE);
-  const changeHeroSize = useCallback((next: string) => setHeroSize(next), []);
+  // Bit 0: the buy stack is on screen (p >= 0.1). Bits 1..n: card i has
+  // revealed past its interactive point (r > 0.6 within its window).
+  const [heroGates, setHeroGates] = useState(0);
+  const stackVisibleGate = (heroGates & 1) !== 0;
+  const cardInteractiveGate = (i: number) => (heroGates & (1 << (i + 1))) !== 0;
+  // Which airframe the hero shows - 5-inch or 3-inch. Toggling swaps the
+  // GLB trio loaded by HeroScene.
+  const [heroSize, setHeroSize] = useState<string>(DEFAULT_HERO_SIZE);
+  const reduceMotion = useReducedMotion();
+  // Slide direction for the buy-card swap, mirroring the 3D cross-slide: +1 =
+  // moving to a later registry index (new cards fly in from the right, old fly
+  // out left), −1 = the reverse. A ref because AnimatePresence reads it via the
+  // `custom` prop at exit/enter time - no extra render needed. Written by
+  // changeHeroSize before the size state updates.
+  const heroSwapDirRef = useRef(1);
+  const changeHeroSize = useCallback((next: string) => {
+    setHeroSize((prev) => {
+      if (next !== prev) {
+        const order = HERO_AIRFRAME_KEYS;
+        const d = order.indexOf(next) - order.indexOf(prev);
+        heroSwapDirRef.current = d < 0 ? -1 : 1;
+      }
+      return next;
+    });
+  }, []);
   // Live drag fraction (0→1) while the size slider is dragged, else null. A ref
   // (not state) so dragging it 60×/s doesn't re-render the page - the render
   // loop reads it each frame. The slider writes it; HeroScene reads it.
   const heroScrubRef = useRef<number | null>(null);
+  // Which board the visitor is hovering on the right-side product cards, or
+  // null. A ref (not state) so hovering doesn't re-render the page; HeroScene
+  // reads it each frame to pin that board's spotlight on.
+  const heroSpotlightRef = useRef<'fc' | 'esc' | 'frame' | null>(null);
   // Splash starts centered and large. It settles when the 3D scene has
   // finished loading AND a minimum wait has elapsed (so the wordmark
   // always gets a readable beat), or when a max timeout fires as a
@@ -230,6 +380,9 @@ function DesktopHome({
   const [displayedProgress, setDisplayedProgress] = useState(
     splashHasPlayedThisSession ? 1 : 0,
   );
+  // Overflow UI - only shown if scene isn't ready within
+  // EXPECTED_LOAD_BUDGET_MS. Hidden again as soon as it lands.
+  const [showOverflow, setShowOverflow] = useState(false);
   // Tracks whether at least one real (non-synthetic) progress event has
   // come back from GLTFLoader. If not, the time-based ramp drives the
   // wordmark fill so a cached/Content-Length-less load still animates.
@@ -265,11 +418,7 @@ function DesktopHome({
   const [loadActive, setLoadActive] = useState<string | null>(null);
   const handleModelLoad = useCallback(
     (s: HeroLoadState) => {
-      setLoadPieces((prev) =>
-        prev.length
-          ? prev
-          : s.pieces.map((p) => ({id: p.id, label: HERO_PIECE_NAMES[p.id] ?? p.label})),
-      );
+      setLoadPieces((prev) => (prev.length ? prev : s.pieces));
       setLoadActive(s.chunk);
       if (s.done)
         setLoadDone((prev) =>
@@ -279,10 +428,76 @@ function DesktopHome({
     },
     [handleSceneProgress],
   );
+  // "drag to rotate" hint - pops up a few seconds after the splash settles if
+  // the visitor hasn't touched anything yet, and dismisses on the first drag or
+  // scroll. The drone auto-rotates on its own, so this only nudges discovery of
+  // the drag-to-view interaction.
+  const [showDragHint, setShowDragHint] = useState(false);
+  const [interacted, setInteracted] = useState(false);
+  // The top product header bar drops in a beat AFTER the rest of the islands
+  // have splashed in - 2s after the splash settles - so the hero reads first
+  // and the chrome arrives second. Starting to scroll brings it in early. On
+  // repeat visits (splash already played) it's in from the first frame. When
+  // it lands it shoves the airframe selector down to make room (see the
+  // selector's `top` below, which keys off this).
+  const [headerIn, setHeaderIn] = useState(splashHasPlayedThisSession);
+  // Each product card's reveal window, as fractions of the walkthrough. Derived
+  // from where that card's beat actually sits in the sequence (see
+  // revealWindows below) rather than from the registry's even spacing: the
+  // walkthrough has six beats and only three of them have a card, so evenly
+  // spaced windows put the ESC card on screen while the receiver is spotlit.
+  const windowsRef = useRef<ReadonlyArray<readonly [number, number]>>(
+    HERO_REVEAL_WINDOWS,
+  );
   const tick = useCallback(() => {
-    heroVarRef.current?.style.setProperty('--hero-p', scrollRef.current.toFixed(4));
+    const p = scrollRef.current;
+    // Smooth visuals: one style-property write, no reconciliation.
+    heroVarRef.current?.style.setProperty('--hero-p', p.toFixed(4));
+    // Discrete gates: stack visibility (0.1) and each card's interactive
+    // threshold (r > 0.6 within its reveal window), packed into a bitmask.
+    // setState is a no-op re-render-wise while the mask is unchanged.
+    const windows = windowsRef.current;
+    let gates = p >= 0.02 ? 1 : 0;
+    for (let i = 0; i < windows.length; i++) {
+      const [lo, hi] = windows[i];
+      if (p > lo + 0.6 * (hi - lo)) gates |= 1 << (i + 1);
+    }
+    setHeroGates(gates);
     rafId.current = 0;
   }, []);
+
+  // The walkthrough's own position drives --hero-p, which is what the buy-bubble
+  // reveal cards and the scroll-hint fades are already keyed off. Previously
+  // this came from window.scrollY; the hero no longer scrolls the document, so
+  // the sequence is the source of truth.
+  // The walkthrough's beat list, once the scene reports it. Each product card
+  // reveals as ITS beat is presented, so the card the reader can click always
+  // matches the part in the spotlight.
+  const [beatIds, setBeatIds] = useState<string[]>([]);
+  const handleBeats = useCallback(
+    (b: Array<{id: string}>) => setBeatIds(b.map((x) => x.id)),
+    [],
+  );
+  const revealWindows = useMemo<ReadonlyArray<readonly [number, number]>>(() => {
+    const n = beatIds.length;
+    // Before the scene reports in, fall back to the registry's even spacing so
+    // the cards are never left permanently hidden.
+    if (n < 2) return HERO_REVEAL_WINDOWS;
+    return HERO_SLOTS.map((slot) => {
+      const j = beatIds.indexOf(slot.id);
+      // A slot with no beat (a future part with no walkthrough step) stays shut
+      // rather than popping in at an arbitrary point.
+      if (j <= 0) return [1, 1] as const;
+      const at = j / (n - 1);
+      const prev = (j - 1) / (n - 1);
+      // Opens as the previous part leaves, complete by the time this one is
+      // presented, so the card lands with the spotlight rather than after it.
+      return [prev + 0.45 * (at - prev), at] as const;
+    });
+  }, [beatIds]);
+  useEffect(() => {
+    windowsRef.current = revealWindows;
+  }, [revealWindows]);
 
   const handleWalkthroughProgress = useCallback(
     (f: number) => {
@@ -386,19 +601,91 @@ function DesktopHome({
     return () => cancelAnimationFrame(raf);
   }, [progress, drawPhaseDone, sceneReady]);
 
-  // Once the splash has played in this browser session it stays settled,
-  // also after client-side navigation back to "/".
+  // Show "loading models…" + Skip button if the scene takes longer than
+  // the expected budget. Hides immediately when sceneReady fires.
+  useEffect(() => {
+    if (splashHasPlayedThisSession || sceneReady) {
+      setShowOverflow(false);
+      return;
+    }
+    const t = window.setTimeout(
+      () => setShowOverflow(true),
+      EXPECTED_LOAD_BUDGET_MS,
+    );
+    return () => window.clearTimeout(t);
+  }, [sceneReady]);
+
+  // Drive the site-header drop-in animation from splash state. The
+  // header lives outside this component (PageLayout in root.tsx), so
+  // we signal via a class on <html> that the header CSS can key off.
+  // Class is only meaningful inside `.homepage-layout`, so other pages
+  // are unaffected.
+  //
+  // No cleanup on unmount: once the splash has played in this browser
+  // session, the class stays on <html>. Removing it on navigation away
+  // caused the header to briefly re-hide when the user came back to "/"
+  // via client-side nav (e.g. clicking the wordmark). The class only
+  // matters inside `.homepage-layout`, so leaving it set has no effect
+  // on other routes.
   useEffect(() => {
     if (!splashSettled) return;
     splashHasPlayedThisSession = true;
     document.documentElement.classList.add('splash-settled');
   }, [splashSettled]);
 
-  // 3s after load, drop a small "Who's incutec?" hint
+  // Arm the drag hint ~4s after the splash settles, unless the visitor has
+  // already interacted (dragged or scrolled).
+  useEffect(() => {
+    if (!splashSettled || interacted) return;
+    const t = window.setTimeout(() => setShowDragHint(true), 4000);
+    return () => window.clearTimeout(t);
+  }, [splashSettled, interacted]);
+
+  // First drag (pointerdown anywhere) or first real scroll dismisses the hint
+  // for good.
+  useEffect(() => {
+    if (!splashSettled || interacted) return;
+    const done = () => {
+      setInteracted(true);
+      setShowDragHint(false);
+    };
+    const onScroll = () => {
+      if (window.scrollY > 4) done();
+    };
+    window.addEventListener('pointerdown', done, {once: true});
+    window.addEventListener('scroll', onScroll, {passive: true});
+    return () => {
+      window.removeEventListener('pointerdown', done);
+      window.removeEventListener('scroll', onScroll);
+    };
+  }, [splashSettled, interacted]);
+
+  // Bring the top header bar in 1s after the splash settles, or immediately if
+  // the visitor starts scrolling. Once in, it stays in (and the class persists
+  // across SPA nav like splash-settled does, so it doesn't re-hide on return).
+  useEffect(() => {
+    if (!splashSettled || headerIn) return;
+    const t = window.setTimeout(() => setHeaderIn(true), 1000);
+    const onScroll = () => {
+      if (window.scrollY > 4) setHeaderIn(true);
+    };
+    window.addEventListener('scroll', onScroll, {passive: true});
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener('scroll', onScroll);
+    };
+  }, [splashSettled, headerIn]);
+
+  useEffect(() => {
+    if (headerIn) document.documentElement.classList.add('hero-header-in');
+  }, [headerIn]);
+
+  // A beat after the header bar lands (3s), drop a small "Who's incutec?" hint
   // out from under the Incutec mark, nudging discovery of the company page.
   // Once the visitor has clicked through (flag in localStorage) the hint is
   // retired - don't arm it, and clear any stale class from this session.
   useEffect(() => {
+    if (!headerIn) return;
     let seen = false;
     try {
       seen = localStorage.getItem(INCUTEC_HINT_SEEN_KEY) === '1';
@@ -414,7 +701,7 @@ function DesktopHome({
       3000,
     );
     return () => window.clearTimeout(t);
-  }, []);
+  }, [headerIn]);
 
   // One screen, no spacer. The walkthrough consumes the wheel itself and hands
   // the page back at its last beat, so extra document height would only be dead
@@ -456,28 +743,41 @@ function DesktopHome({
     };
   }, [splashSettled]);
 
+  // Per-card reveal windows (shared 0..1 progress with the 3D scene). Each
+  // product pops out of the Shop bubble in turn - FC, then ESC, then the frame
+  // last. Generated from the parts registry's slot order - the SAME array
+  // HeroScene's useFrame reads to spotlight the matching board + pull the
+  // camera back as the frame (last card) reveals, so the two sides can no
+  // longer drift apart. For the current three slots this is exactly the
+  // historical [0.08, 0.3] / [0.4, 0.62] / [0.72, 0.94] (asserted in the
+  // registry). Reversing the scroll reverses all of it.
+  const REVEAL_WINDOWS = revealWindows;
+
   return (
     <div className="homepage" ref={heroVarRef}>
 
       {/*
-        Warm the three flagship PDPs the walkthrough's picks and part clicks
-        open, so following one is an instant SPA transition with its loader
-        data already in cache.
+        Warm the three flagship PDPs (the live handles the 3D part hotspots
+        navigate to) so clicking a part is an instant SPA transition with its
+        loader data already in cache. The FC hotspot targets openfc-lite -
+        the live product; the old `openfc` handle is archived in Shopify.
       */}
       <PrefetchPageLinks page="/products/openfc-lite" />
       <PrefetchPageLinks page="/products/openesc" />
       <PrefetchPageLinks page="/products/openframe" />
 
       {/*
-        One screen: the sticky child pins the 3D scene and its UI while the
-        walkthrough owns the wheel; past its last step the page scrolls on
-        to the footer.
+        Scroll spacer - gives us HERO_SPACER_VH of scroll to drive the
+        phased animation. The sticky child below pins the 3D scene + UI to
+        the viewport while the user scrolls through the spacer. Once the
+        user scrolls past the bottom of the spacer the sticky releases and
+        the legal footer (in normal document flow below) comes into view.
       */}
       <div className="relative" style={{height: `${heroSpacerVh}vh`}}>
         <div className="sticky top-0 h-screen overflow-hidden pointer-events-none">
           {/* Full-screen 3D - pinned behind everything via sticky parent */}
           <div
-            className={`absolute inset-0 z-0${preorderShips !== null ? ' hero-stage-below-strip' : ''}`}
+            className="absolute inset-0 z-0"
             style={{
               // Let the browser own vertical panning (page scroll) while
               // horizontal drags still reach the r3f pointer handlers for
@@ -502,6 +802,7 @@ function DesktopHome({
                 onLoad={handleModelLoad}
                 onReady={handleSceneReady}
                 onProgress={handleWalkthroughProgress}
+                onBeats={handleBeats}
               />
             </SceneErrorBoundary>
             {/* Dim overlay - only covers the 3D scene, not the wordmark.
@@ -513,22 +814,31 @@ function DesktopHome({
             />
           </div>
 
-          {/* The splash wordmark: centred and large, its letters drawn and
-              filled as the models stream in (the SVG owns that animation;
-              progress is the GLB load, or a synthetic ramp without
-              Content-Length). While the splash runs, `transform` is driven
-              inline, 1.95 down to 1.7, with `transition: none` so the scrub
-              stays smooth. Once it settles it fades out in place (see
-              .hero-wordmark.is-settled). */}
+          {/* Single wordmark - starts centered + large, animates to
+              bottom-left at settled size. Inline opacity drives the
+              scroll-based fade once the hero starts scrolling away.
+              The SVG inside owns the per-letter draw + fill animation;
+              progress maps to the GLB load progress (or a synthetic
+              ramp when Content-Length is missing).
+
+              While the splash is active we drive `transform` inline
+              with a per-frame scale that lerps from 1.95 (during the
+              wireframe) down to 1.7 (the CSS-rule splash size). This
+              gives a subtle "zoom out as the letters fill in" feel.
+              `transition: none` overrides the CSS-rule transition so
+              the per-frame scrub stays smooth. Once the splash settles,
+              both inline overrides are removed and the CSS rule's
+              0.65s transition takes over to slide the wordmark to its
+              bottom-left settled position. */}
           {(() => {
             const splashScale = 1.95 - displayedProgress * 0.25;
             return (
               <h1
                 className={`hero-wordmark${splashSettled ? ' is-settled' : ''}`}
                 style={{
-                  // The splash's wordmark fades out where it stands once the
-                  // drone is ready: the header carries the brand.
-                  opacity: splashSettled ? 0 : 1,
+                  // Stays put bottom-left through the whole scroll now - the
+                  // brand anchors the hero while the product cards reveal.
+                  opacity: 1,
                   ...(splashSettled
                     ? {}
                     : {
@@ -550,24 +860,6 @@ function DesktopHome({
               each piece gets its line: pending is dim, arriving pulses, landed
               ticks off. Part of the splash and leaves with it; on a slow
               network it stays up and names exactly what is still coming. */}
-          {/* The manifest and the slow-load escape share one column, so the
-              "loading models" line and the Skip button always sit below the
-              checklist instead of on top of it. */}
-          <div className="hero-load-panel">
-          {/* A thin progress bar under the wordmark while the model streams
-              in. The per-piece list below it stays for screen readers. */}
-          {!splashSettled ? (
-            <div
-              className="hero-load-bar"
-              role="progressbar"
-              aria-label={copyText('home.loading_models') ?? 'Loading models'}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={Math.round(displayedProgress * 100)}
-            >
-              <span style={{transform: `scaleX(${Math.min(1, Math.max(0, displayedProgress))})`}} />
-            </div>
-          ) : null}
           {!splashSettled && loadPieces.length ? (
             <ul className="hero-load-manifest" role="status" aria-live="polite">
               {loadPieces.map((p) => {
@@ -588,41 +880,224 @@ function DesktopHome({
             </ul>
           ) : null}
 
-          </div>
-
-          {/* Promo line, full width under the header while the shop is
-            open. Paints with the page; it never waits for the models. */}
-          {preorderShips !== null ? (
-            <div className="hero-promo pointer-events-auto">
-              <PreorderStrip ships={preorderShips || null} prices={prices} />
+          {/* Overflow UI - only renders when the scene takes longer than
+              the expected animation budget. Gives the user a way out so
+              they aren't trapped behind the dim layer on slow networks. */}
+          {showOverflow && !sceneReady ? (
+            <div
+              className={`hero-load-overflow${splashSettled ? ' is-hidden' : ''}`}
+              role="status"
+              aria-live="polite"
+            >
+              <Txt
+                id="home.loading_models"
+                as="span"
+                className="hero-load-overflow__text"
+              />
+              <Link
+                prefetch="viewport"
+                to="/collections/all"
+                className="hero-load-overflow__skip"
+                onClick={() => setSplashSettled(true)}
+              >
+                <Txt id="home.skip_to_catalog" />
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                >
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <polyline points="12 5 19 12 12 19" />
+                </svg>
+              </Link>
             </div>
           ) : null}
 
-          {/* Top centre: the airframe size toggle when more than one assembly
-            is built. Stays visible through the scroll. */}
+          {/* GitHub logo - bare mark (no circle), sitting to the right of the
+              settled wordmark in the bottom-left corner, centred on the
+              wordmark's height. Persists through the scroll. */}
+          <a
+            href="https://github.com/OpenDrone-hw"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`hero-github${splashSettled ? ' is-visible' : ''}`}
+            style={{opacity: splashSettled ? 1 : 0}}
+            aria-label="GitHub"
+          >
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+            </svg>
+          </a>
+
+          {/* Buy bubble - bottom-right. The Shop button is the anchor; as the
+              user scrolls, the on-screen hardware (FC → ESC → Frame) pops out
+              of it one by one, the stack growing upward. Each card's reveal is
+              driven off --hero-p and mirrors the spotlight in HeroScene.
+              Scrolling back up retracts them in reverse. */}
           <div
-            className="hero-top-center absolute left-1/2 -translate-x-1/2 z-20 pointer-events-auto"
+            className={`hero-buy${splashSettled ? ' is-visible' : ''}`}
+            style={{opacity: splashSettled ? 1 : 0}}
+          >
+            <Suspense fallback={null}>
+              <Await resolve={heroStacks}>
+                {(stacks) => {
+                  // The active size's resolved cards, already in [FC, ESC, Frame]
+                  // order with the right per-size variant URL + price baked in by
+                  // the loader. Index maps directly to the 3D board it spotlights.
+                  const items = stacks[heroSize] ?? [];
+                  const dir = heroSwapDirRef.current;
+                  return (
+                    <div className="hero-buy-swap">
+                      <AnimatePresence custom={dir} initial={false} mode="sync">
+                        <motion.div
+                          key={heroSize}
+                          className="hero-buy-stack"
+                          aria-hidden={!stackVisibleGate}
+                          custom={dir}
+                          variants={HERO_STACK_SWAP}
+                          initial={reduceMotion ? false : 'enter'}
+                          animate="center"
+                          exit={reduceMotion ? undefined : 'exit'}
+                        >
+                          {items.slice(0, HERO_SLOTS.length).map((card, i) => {
+                            const [lo, hi] = REVEAL_WINDOWS[i] ?? [1, 1];
+                            // Interactivity gate only - the reveal GEOMETRY
+                            // (max-height/opacity/transform) is CSS driven by
+                            // --hero-p + the per-card --lo/--win below, so it
+                            // stays per-frame smooth without React renders. The
+                            // gate bit is computed in tick(), the single place
+                            // that owns the thresholds.
+                            const interactive = cardInteractiveGate(i);
+                            const setSpot = (v: HeroBoardKey | null) => {
+                              heroSpotlightRef.current = v;
+                            };
+                            // A concept product (planned / in-progress) has
+                            // no settled render or name to preview; its slot
+                            // stays empty so the other cards keep their
+                            // reveal windows.
+                            if (
+                              isConceptFor(
+                                card.handle,
+                                roadmapStatus(card.handle),
+                              )
+                            )
+                              return null;
+                            return (
+                              <Link
+                                key={card.boardKey}
+                                to={card.url}
+                                prefetch="intent"
+                                className="hero-reveal-card"
+                                style={
+                                  {
+                                    '--lo': lo,
+                                    '--win': hi - lo,
+                                    pointerEvents: interactive
+                                      ? 'auto'
+                                      : 'none',
+                                  } as React.CSSProperties
+                                }
+                                tabIndex={interactive ? undefined : -1}
+                                aria-hidden={!interactive}
+                                onMouseEnter={() => setSpot(card.boardKey)}
+                                onMouseLeave={() => setSpot(null)}
+                                onFocus={() => setSpot(card.boardKey)}
+                                onBlur={() => setSpot(null)}
+                              >
+                                <span className="hero-reveal-media">
+                                  {card.image?.url ? (
+                                    <img
+                                      src={card.image.url}
+                                      alt={card.image.altText ?? ''}
+                                      loading="lazy"
+                                      decoding="async"
+                                    />
+                                  ) : (
+                                    <span
+                                      className="hero-reveal-ph"
+                                      aria-hidden="true"
+                                    />
+                                  )}
+                                </span>
+                                <span className="hero-reveal-text">
+                                  <span className="hero-reveal-title">
+                                    {card.title}
+                                  </span>
+                                  {card.productType ? (
+                                    <span className="hero-reveal-sub">
+                                      {card.productType}
+                                    </span>
+                                  ) : null}
+                                </span>
+                                {!isPurchasableStatus(
+                                  productStatus(card.handle),
+                                ) ? (
+                                  <Txt
+                                    id="home.reveal_soon"
+                                    as="span"
+                                    className="hero-reveal-soon"
+                                  />
+                                ) : card.price ? (
+                                  <span className="hero-reveal-price">
+                                    {formatPrice(
+                                      card.price.amount,
+                                      card.price.currencyCode,
+                                    )}
+                                  </span>
+                                ) : null}
+                              </Link>
+                            );
+                          })}
+                        </motion.div>
+                      </AnimatePresence>
+                    </div>
+                  );
+                }}
+              </Await>
+            </Suspense>
+            <Link
+              prefetch="viewport"
+              to="/collections/all"
+              className="hero-action-primary hero-buy-btn"
+            >
+              <Txt id="home.shop" />
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </Link>
+          </div>
+
+          {/* Airframe size toggle - swaps the 5" / 3" GLB trio in the hero.
+            Stays visible through the scroll so the toggle is always reachable. */}
+          <div
+            className="absolute left-1/2 -translate-x-1/2 z-20 pointer-events-auto"
             style={{
-              // Springs down from the top edge when the splash settles, below
-              // the header, and below the promo line while the shop is open.
-              top: !splashSettled
-                ? '-3rem'
-                : preorderShips !== null
-                  ? '8rem'
-                  : '6rem',
+              // Springs down from the top edge when the splash settles, resting
+              // high (2.5rem). When the header bar lands ~2s later it shoves the
+              // selector down to 6rem - the spring `top` transition sells the push.
+              top: !splashSettled ? '-3rem' : headerIn ? '6rem' : '2.5rem',
               opacity: splashSettled ? 1 : 0,
               transition:
                 'top 0.7s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease',
             }}
           >
-            {HERO_SIZES.length > 1 ? (
-              <HeroSizeSlider
-                value={heroSize}
-                onChange={changeHeroSize}
-                scrubRef={heroScrubRef}
-                busy={heroBuilding}
-              />
-            ) : null}
+            <HeroSizeSlider
+              value={heroSize}
+              onChange={changeHeroSize}
+              scrubRef={heroScrubRef}
+              busy={heroBuilding}
+            />
           </div>
 
           {/* Scroll hint - fade driven by --hero-p in CSS (see .hero-scroll-fade)
@@ -631,6 +1106,47 @@ function DesktopHome({
             <div className="w-px h-5 bg-gradient-to-b from-[var(--color-text-muted)] to-transparent animate-pulse" />
           </div>
 
+          {/* Drag-to-view hint - appears a few seconds in if the visitor hasn't
+            touched the drone yet, dismissed on first drag/scroll. */}
+          <div
+            className={`hero-drag-hint${showDragHint ? ' is-visible' : ''}`}
+            aria-hidden="true"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <polyline points="7 8 3 12 7 16" />
+              <polyline points="17 8 21 12 17 16" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+            </svg>
+            <Txt id="home.drag_hint" />
+          </div>
+
+          {/* Scroll-to-explore cue - anchored at the bottom of the hero, shares the
+            drag hint's lifecycle (fades in a few seconds in, dismissed on the
+            first drag/scroll). */}
+          <div
+            className={`hero-scroll-hint${showDragHint ? ' is-visible' : ''}`}
+            aria-hidden="true"
+          >
+            <Txt id="home.scroll_hint" />
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <polyline points="8 7 12 11 16 7" />
+              <polyline points="8 13 12 17 16 13" />
+            </svg>
+          </div>
         </div>
       </div>
     </div>
