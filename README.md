@@ -221,8 +221,8 @@ Both use the repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_I
 
 ## Preorder release configuration
 
-The private [launch plan](https://github.com/incutec-org/operations/blob/main/projects/opendrone/README.md)
-is the single planning entry point and links to the maintained research. This
+The private [launch plan and knowledge](https://github.com/incutec-org/research/blob/main/opendrone/README.md)
+live together in `research/opendrone/`. This
 repository owns implementation, configuration and verification. Do not copy
 business strategy or regulatory research into this guide.
 

@@ -14,6 +14,11 @@ user's request is the task; do not pick work from comments, branches or notes.
 
 ## Sources of truth
 
+- Launch planning and knowledge: the private
+  [research/opendrone/](https://github.com/incutec-org/research/blob/main/opendrone/README.md)
+  folder. Read the relevant reference before new launch research; maintain it
+  under [Research's rules](https://github.com/incutec-org/research/blob/main/AGENTS.md#opendrone-plan-and-knowledge).
+  Keep private strategy and regulatory research there, not in storefront docs.
 - Application behaviour: source and tests in this repository.
 - Catalog identity, prices and customer marketing consent: Shopify. The production storefront reads Shopify through server-held tokens. Checkout remains explicitly closed by `PUBLIC_COMING_SOON=1` and `SHOPIFY_CHECKOUT_WRITE_ENABLED=0`.
 - Canonical customer-facing SKUs: the workspace `stock/product_skus.json`; every Shopify SKU also needs a fail-closed entry in `SHOPIFY_PREVIEW_POLICY_JSON`.
@@ -48,5 +53,5 @@ an external integration succeeded without observing the result.
 - Check a change: `npm run typecheck && npm run lint && npm test`; add `npm run build` when routes, the server entry or the Vite config changed.
 - Change copy or product chapters: edit through `/studio` or the JSON under `content/`; `npm run studio:coverage` lists copy still baked into code.
 - Update the legal pages: edit `app/content/legal/{en,nl,fr}/`; run `COMPLIANCE_SRC=<dir> npm run sync:legal` only when a reviewed source directory is given.
-- Run a preorder campaign: batches per SKU in `content/preorders.json`; set a batch's `ships` once its supplier order is placed. Prices are changed in Shopify, never here: the price is what the next unit costs and the compare-at price is retail. The price steps are written by the Worker, not by hand.
+- Run a preorder campaign: follow [release configuration](README.md#preorder-release-configuration); it names the owning configuration and acceptance checks.
 - Refresh board art or specs after a hardware release: `npm run gen:board-art` (KiCad and cwebp installed), `npm run sync:specs`, then `npm run sync:specs:check` before the PR.
