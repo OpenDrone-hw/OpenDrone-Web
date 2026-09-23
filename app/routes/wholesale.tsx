@@ -56,7 +56,6 @@ export async function loader({context}: Route.LoaderArgs) {
     sku: s.sku,
     label: s.label,
     group: s.group,
-    notFor: s.notFor ?? [],
   }));
   return {email: company.email, products};
 }
@@ -146,9 +145,6 @@ function TradeForm() {
   const taxLabel =
     taxKind === 'ein' ? t('ein_label') : taxKind === 'vat' ? t('vat_label') : taxKind ? t('tax_other_label') : t('tax_label');
   const taxPlaceholder = taxKind === 'ein' ? '12-3456789' : taxKind === 'vat' ? `${chosen?.vatPrefix}…` : '';
-  // Products this country is not quoted are left out; the server refuses
-  // them as well.
-  const offered = products.filter((p) => !p.notFor.includes(country));
   const failure = result?.failure;
 
   return (
@@ -220,7 +216,7 @@ function TradeForm() {
               <select name="sku" defaultValue="" aria-label={t('products')} className={`${field} mt-0!`} aria-invalid={!!errors.lines}>
                 <option value="">{t('product_choose')}</option>
                 {TRADE_GROUPS.map((group) => {
-                  const items = offered.filter((p) => p.group === group);
+                  const items = products.filter((p) => p.group === group);
                   return items.length ? (
                     <optgroup key={group} label={t(`group_${group}`)}>
                       {items.map((p) => (

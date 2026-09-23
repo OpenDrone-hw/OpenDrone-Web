@@ -15,7 +15,7 @@ only the storefront evidence a release review must inspect.
 | Prices and tax | Reviewed price presentation, tax-inclusive totals and accepted destination VAT treatment |
 | Fulfilment | Held preorder, authorised release, accepted label, tracking and reconciliation, including mixed and refunded orders |
 | Privacy and interest | Consent, unsubscribe and failure states; no fabricated retail availability or sales evidence |
-| US enquiries | No consumer checkout or automatic order; receiver exclusion and country/SKU validation on the server |
+| US enquiries | OpenRX included; country/SKU validation on the server, no consumer checkout or automatic order, and product/import review before order acceptance |
 
 Evidence is attached to the existing release tasks, not copied into a second
 checklist here. A local build does not establish payment-provider acceptance,

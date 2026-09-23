@@ -21,18 +21,17 @@ export type TradeGroup = 'fc' | 'esc' | 'rx' | 'motor' | 'frame' | 'strap' | 'pr
 /** The order the groups are listed in. */
 export const TRADE_GROUPS: readonly TradeGroup[] = ['fc', 'esc', 'rx', 'motor', 'frame', 'strap', 'prop'];
 
-/** `notFor`: shop countries this SKU is not quoted to. */
-export type TradeSku = {sku: string; group: TradeGroup; label: string; notFor?: readonly string[]};
+export type TradeSku = {sku: string; group: TradeGroup; label: string};
 
 export const TRADE_SKUS: readonly TradeSku[] = [
   {sku: 'OPENFC-LITE-2020', group: 'fc', label: 'OpenFC Lite Mini, 20x20'},
   {sku: 'OPENFC-LITE-3030', group: 'fc', label: 'OpenFC Lite, 30x30'},
   {sku: 'OPENESC-2020', group: 'esc', label: 'OpenESC 20x20'},
   {sku: 'OPENESC-3030', group: 'esc', label: 'OpenESC 30x30'},
-  {sku: 'OPENRX-LITE', group: 'rx', label: 'OpenRX Lite', notFor: ['US']},
-  {sku: 'OPENRX-LITE-UFL', group: 'rx', label: 'OpenRX Lite U.FL', notFor: ['US']},
-  {sku: 'OPENRX-MONO', group: 'rx', label: 'OpenRX Mono', notFor: ['US']},
-  {sku: 'OPENRX-GEMINI', group: 'rx', label: 'OpenRX Gemini', notFor: ['US']},
+  {sku: 'OPENRX-LITE', group: 'rx', label: 'OpenRX Lite'},
+  {sku: 'OPENRX-LITE-UFL', group: 'rx', label: 'OpenRX Lite U.FL'},
+  {sku: 'OPENRX-MONO', group: 'rx', label: 'OpenRX Mono'},
+  {sku: 'OPENRX-GEMINI', group: 'rx', label: 'OpenRX Gemini'},
   {sku: 'OPENMOTOR-1604', group: 'motor', label: 'OpenMotor 1604, 3" class'},
   {sku: 'OPENMOTOR-2207', group: 'motor', label: 'OpenMotor 2207, 5" class'},
   {sku: 'OPENFRAME-5', group: 'frame', label: 'OpenFrame 5" Freestyle'},
@@ -70,10 +69,9 @@ export function isTradeSku(sku: string): boolean {
   return TRADE_SKU_MAP.has(sku);
 }
 
-/** True when the SKU is on the list and quoted to a shop in this country. */
+/** True when the SKU and country accept enquiries, not import approval. */
 export function tradeSkuAvailable(sku: string, countryCode: string): boolean {
-  const entry = TRADE_SKU_MAP.get(sku);
-  return Boolean(tradeCountry(countryCode) && entry && !entry.notFor?.includes(countryCode));
+  return Boolean(tradeCountry(countryCode) && isTradeSku(sku));
 }
 
 /** Countries eligible for retailer enquiries: the EU27 and United States. `vatPrefix` is the VIES

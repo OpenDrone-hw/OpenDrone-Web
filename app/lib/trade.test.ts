@@ -164,14 +164,17 @@ describe('validateTradeRequest', () => {
     for (const s of TRADE_SKUS) assert.ok(TRADE_GROUPS.includes(s.group), s.sku);
   });
 
-  it('refuses receivers to a US shop, on the server', () => {
+  it('accepts every OpenRX variant in US and EU retailer enquiries', () => {
     for (const sku of ['OPENRX-LITE', 'OPENRX-LITE-UFL', 'OPENRX-MONO', 'OPENRX-GEMINI']) {
-      assert.equal(tradeSkuAvailable(sku, 'US'), false, sku);
+      assert.equal(tradeSkuAvailable(sku, 'US'), true, sku);
       assert.equal(tradeSkuAvailable(sku, 'DE'), true, sku);
       assert.equal(tradeSkuAvailable(sku, 'GB'), false, sku);
       const us = validateTradeRequest(form({...US_SHOP, sku: [sku], qty: ['10']}));
-      assert.equal(us.ok, false, sku);
-      if (!us.ok) assert.equal(us.errors.lines, 'Not available for this country');
+      assert.equal(us.ok, true, sku);
+      if (us.ok) {
+        assert.equal(us.request.lines[0].sku, sku);
+        assert.match(buildTradeEmail(us.request).text, /Agree the importer, broker, product eligibility and duties before accepting an order/);
+      }
       assert.equal(validateTradeRequest(form({...EU_SHOP, sku: [sku], qty: ['10']})).ok, true, sku);
     }
     assert.equal(validateTradeRequest(form({...US_SHOP, sku: ['OPENFC-LITE-3030'], qty: ['10']})).ok, true);
