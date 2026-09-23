@@ -24,6 +24,7 @@ const STATIC_PATHS = [
   '/timeline',
   '/firmware-partners',
   '/newsletter',
+  '/wholesale',
 ];
 
 const LEGAL_SLUGS = [
