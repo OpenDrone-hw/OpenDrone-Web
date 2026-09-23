@@ -144,7 +144,7 @@ repos and `status-*` flips across the public OpenDrone-hw repositories.
 `/{en,nl,fr}/<slug>`; the bare `/<slug>` redirects to the visitor's cached
 locale, and `LangToggle` appears only on legal paths. `npm run sync:legal`
 (run by `prebuild`) overwrites four Dutch pages only when `COMPLIANCE_SRC`
-names a source directory. The site UI is English-only.
+names a source directory. The site UI is English-only. `/recycling` adds the producer (EPR) registration numbers per EU country from `content/registrations.json` under its text; a number still `null` is not shown.
 
 **Other routes.** `/products` is the one browse page; `/collections/*`,
 `/search`, `/cart/*` and `/discount/*` redirect to it. `/open-source`,

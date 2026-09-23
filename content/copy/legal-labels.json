@@ -105,6 +105,23 @@
       "description": "Garantie légale de conformité de 2 ans sur le matériel OpenDrone vendu par Incutec BV."
     }
   },
+  "recycling": {
+    "en": {
+      "title": "Recycling and take-back",
+      "eyebrow": "Legal",
+      "description": "Returning OpenDrone electronics and packaging for recycling, and the producer registration numbers of Incutec BV."
+    },
+    "nl": {
+      "title": "Recyclage en terugname",
+      "eyebrow": "Juridisch",
+      "description": "OpenDrone-elektronica en -verpakking terugbrengen voor recyclage, en de producentenregistratienummers van Incutec BV."
+    },
+    "fr": {
+      "title": "Recyclage et reprise",
+      "eyebrow": "Juridique",
+      "description": "Rapporter l’électronique et les emballages OpenDrone pour le recyclage, et les numéros d’enregistrement de producteur d’Incutec BV."
+    }
+  },
   "security": {
     "en": {
       "title": "Security · Vulnerability Disclosure",

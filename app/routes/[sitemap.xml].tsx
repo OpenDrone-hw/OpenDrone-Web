@@ -34,6 +34,7 @@ const LEGAL_SLUGS = [
   'herroepingsrecht',
   'shipping',
   'warranty',
+  'recycling',
   'security',
   'cookies',
   'end-use',

@@ -11,6 +11,7 @@ export const LEGAL_SLUGS = [
   'herroepingsrecht',
   'shipping',
   'warranty',
+  'recycling',
   'security',
   'end-use',
   'legal',

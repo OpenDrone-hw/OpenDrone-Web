@@ -68,6 +68,7 @@ const LEGAL_LINKS: Array<{to: string; copy: string}> = [
   {to: '/cookies', copy: 'nav_cookies'},
   {to: '/herroepingsrecht#withdraw', copy: 'nav_withdrawal'},
   {to: '/end-use', copy: 'nav_end_use'},
+  {to: '/recycling', copy: 'nav_recycling'},
   {to: '/security', copy: 'nav_security'},
   {to: '/cookie-settings', copy: 'nav_cookie_settings'},
 ];

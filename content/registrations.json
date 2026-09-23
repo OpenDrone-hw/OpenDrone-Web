@@ -1,0 +1,112 @@
+{
+  "$comment": "Incutec BV's producer (EPR) registration numbers per EU country, rendered on /recycling. weee: the national WEEE register number; packaging: the packaging register number; idu (France only): the identifiant unique. null until registered; a null entry is not shown. Keys are exactly the 27 EU member states (app/lib/registrations.test.ts).",
+  "AT": {
+    "weee": null,
+    "packaging": null
+  },
+  "BE": {
+    "weee": null,
+    "packaging": null
+  },
+  "BG": {
+    "weee": null,
+    "packaging": null
+  },
+  "CY": {
+    "weee": null,
+    "packaging": null
+  },
+  "CZ": {
+    "weee": null,
+    "packaging": null
+  },
+  "DE": {
+    "weee": null,
+    "packaging": null
+  },
+  "DK": {
+    "weee": null,
+    "packaging": null
+  },
+  "EE": {
+    "weee": null,
+    "packaging": null
+  },
+  "ES": {
+    "weee": null,
+    "packaging": null
+  },
+  "FI": {
+    "weee": null,
+    "packaging": null
+  },
+  "FR": {
+    "weee": null,
+    "packaging": null,
+    "idu": null
+  },
+  "GR": {
+    "weee": null,
+    "packaging": null
+  },
+  "HR": {
+    "weee": null,
+    "packaging": null
+  },
+  "HU": {
+    "weee": null,
+    "packaging": null
+  },
+  "IE": {
+    "weee": null,
+    "packaging": null
+  },
+  "IT": {
+    "weee": null,
+    "packaging": null
+  },
+  "LT": {
+    "weee": null,
+    "packaging": null
+  },
+  "LU": {
+    "weee": null,
+    "packaging": null
+  },
+  "LV": {
+    "weee": null,
+    "packaging": null
+  },
+  "MT": {
+    "weee": null,
+    "packaging": null
+  },
+  "NL": {
+    "weee": null,
+    "packaging": null
+  },
+  "PL": {
+    "weee": null,
+    "packaging": null
+  },
+  "PT": {
+    "weee": null,
+    "packaging": null
+  },
+  "RO": {
+    "weee": null,
+    "packaging": null
+  },
+  "SE": {
+    "weee": null,
+    "packaging": null
+  },
+  "SI": {
+    "weee": null,
+    "packaging": null
+  },
+  "SK": {
+    "weee": null,
+    "packaging": null
+  }
+}

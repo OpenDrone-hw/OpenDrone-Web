@@ -119,6 +119,15 @@ const PAGES: PageEntry[] = [
     },
   },
   {
+    slug: 'recycling',
+    label: {en: 'Recycling and take-back', nl: 'Recyclage en terugname', fr: 'Recyclage et reprise'},
+    desc: {
+      en: 'Returning electronics and packaging; producer registration numbers.',
+      nl: 'Elektronica en verpakking terugbrengen; producentenregistratienummers.',
+      fr: 'Reprise de l’électronique et des emballages ; numéros de producteur.',
+    },
+  },
+  {
     slug: 'end-use',
     label: {en: 'End-Use Policy', nl: 'End-Use Beleid', fr: 'Politique d’Usage Final'},
     desc: {

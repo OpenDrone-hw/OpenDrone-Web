@@ -25,6 +25,7 @@ import herroepingNl from '~/content/legal/nl/herroepingsformulier.md?raw';
 import vulnPolicyNl from '~/content/legal/nl/vulnerability-handling-policy.md?raw';
 import warrantyNl from '~/content/legal/nl/warranty.md?raw';
 import shippingNl from '~/content/legal/nl/shipping.md?raw';
+import recyclingNl from '~/content/legal/nl/recycling.md?raw';
 import endUseNl from '~/content/legal/nl/end-use-policy.md?raw';
 
 import algemeneVoorwaardenFr from '~/content/legal/fr/algemene-voorwaarden.md?raw';
@@ -34,6 +35,7 @@ import herroepingFr from '~/content/legal/fr/herroepingsformulier.md?raw';
 import vulnPolicyFr from '~/content/legal/fr/vulnerability-handling-policy.md?raw';
 import warrantyFr from '~/content/legal/fr/warranty.md?raw';
 import shippingFr from '~/content/legal/fr/shipping.md?raw';
+import recyclingFr from '~/content/legal/fr/recycling.md?raw';
 import endUseFr from '~/content/legal/fr/end-use-policy.md?raw';
 
 import algemeneVoorwaardenEn from '~/content/legal/en/algemene-voorwaarden.md?raw';
@@ -43,6 +45,7 @@ import herroepingEn from '~/content/legal/en/herroepingsformulier.md?raw';
 import vulnPolicyEn from '~/content/legal/en/vulnerability-handling-policy.md?raw';
 import warrantyEn from '~/content/legal/en/warranty.md?raw';
 import shippingEn from '~/content/legal/en/shipping.md?raw';
+import recyclingEn from '~/content/legal/en/recycling.md?raw';
 import endUseEn from '~/content/legal/en/end-use-policy.md?raw';
 
 export type LegalSlug =
@@ -53,6 +56,7 @@ export type LegalSlug =
   | 'vulnerability-handling-policy'
   | 'warranty'
   | 'shipping'
+  | 'recycling'
   | 'end-use-policy';
 
 const SOURCES_NL: Record<LegalSlug, string> = {
@@ -63,6 +67,7 @@ const SOURCES_NL: Record<LegalSlug, string> = {
   'vulnerability-handling-policy': vulnPolicyNl,
   warranty: warrantyNl,
   shipping: shippingNl,
+  recycling: recyclingNl,
   'end-use-policy': endUseNl,
 };
 
@@ -74,6 +79,7 @@ const SOURCES_EN: Record<LegalSlug, string> = {
   'vulnerability-handling-policy': vulnPolicyEn,
   warranty: warrantyEn,
   shipping: shippingEn,
+  recycling: recyclingEn,
   'end-use-policy': endUseEn,
 };
 
@@ -85,6 +91,7 @@ const SOURCES_FR: Record<LegalSlug, string> = {
   'vulnerability-handling-policy': vulnPolicyFr,
   warranty: warrantyFr,
   shipping: shippingFr,
+  recycling: recyclingFr,
   'end-use-policy': endUseFr,
 };
 
