@@ -21,8 +21,8 @@ user's request is the task; do not pick work from comments, branches or notes.
   mirrored from each board README by `npm run sync:specs`; board art and
   schematics are exported from the board checkouts (`../hardware`, or
   `OPENDRONE_HARDWARE`).
-- What is public and buyable: the `status-*` topic on each board repository
-  (`docs/product-status.md`).
+- Roadmap display and checkout gates: `docs/product-status.md`. Board
+  `status-*` topics do not override server-side purchase authorization.
 - Legal text: `app/content/legal/`, reviewed before publication. `npm run
   sync:legal` overwrites four Dutch pages only when `COMPLIANCE_SRC` is set.
 - Branch and work status: Git itself.
