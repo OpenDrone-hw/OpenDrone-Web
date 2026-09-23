@@ -10,7 +10,7 @@
     "line1": "",
     "line2Italic": "",
     "line3": "",
-    "lead": "Brushless motors for the OpenFrame 3\" and 5\", sold per motor: a quad needs four. They are OEM motors, not open hardware. The supplier order for each size is placed once its funding target is reached. The exact size and speed rating (KV) of the 5\" motor are not final. Before its supplier order, every buyer of the 5\" motor is told both and can cancel for a full refund."
+    "lead": "Brushless motors for OpenFrame 3\" and 5\". Sold per motor, 4 per quad. OEM motors, not open hardware."
   },
   "firmware": {
     "project": "-"
@@ -45,16 +45,11 @@
       "1 motor"
     ]
   ],
-  "glance": [
-    "Frame",
-    "Prop size",
-    "KV",
-    "Sold as"
-  ],
   "optionAxis": "Model",
   "variants": {
     "1604": {
       "label": "3\" (1604)",
+      "subtitle": "1604 · 2850KV · 3\" props",
       "highlights": [
         [
           "KV",
@@ -74,11 +69,8 @@
     },
     "2207": {
       "label": "5\"",
+      "subtitle": "5\" props",
       "highlights": [
-        [
-          "KV",
-          "KV to be confirmed"
-        ],
         [
           "Prop size",
           "5\""
@@ -87,11 +79,11 @@
       "specs": [
         [
           "Stator",
-          "To be confirmed"
+          null
         ],
         [
           "KV",
-          "To be confirmed"
+          null
         ],
         [
           "Prop size",
@@ -111,11 +103,9 @@
       ]
     }
   },
-  "footnote": "The 3\" motor is a 1604 at 2850 KV. The stator size and KV of the 5\" motor are not final. They are set before its supplier order is placed, and every buyer of the 5\" motor is told them then and can cancel for a full refund. Weight, mount pattern, shaft diameter, cell count and lead length are published once the supplier datasheet or measured samples are on file.",
   "keywords": [
     "motor",
     "brushless"
   ],
-  "setOf": 4,
-  "pickNote": "Not sure it fits? Ask the pilot for the frame size, or email contact@opendrone.be. Fit on frames other than OpenFrame is not confirmed yet."
+  "setOf": 4
 }

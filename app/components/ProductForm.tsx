@@ -1,7 +1,6 @@
 import {useLocation, useNavigate, useNavigation} from 'react-router';
 import {useEffect, useState} from 'react';
 import {AddToCartButton} from './AddToCartButton';
-import {StackQuickAdd, type StackOffer} from './StackQuickAdd';
 import {useComingSoon, useProductStatus} from '~/lib/coming-soon';
 import {copyText} from '~/lib/copy';
 import {trackEvent} from '~/lib/growth/plausible';
@@ -18,7 +17,6 @@ export function ProductForm({
   buyUrl,
   buyDisabled,
   buyCtaLabel,
-  stackOffers,
   quantity,
   maxQuantity = 50,
   maxQuantityNote,
@@ -37,9 +35,6 @@ export function ProductForm({
   buyUrl?: string;
   buyDisabled?: boolean;
   buyCtaLabel?: string;
-  /** "Buy it as a stack" offers revealed on hover of the CTA: one click
-   *  orders this board plus the size-matched partner (FC to ESC). */
-  stackOffers?: StackOffer[];
   /** Units to add. With `onQuantityChange` set, a stepper renders next to
    *  the button; the caller holds the number so every copy of the buy
    *  module (hero and pinned rail) adds the same quantity. */
@@ -189,24 +184,22 @@ export function ProductForm({
           </button>
         </div>
       ) : null}
-      <StackQuickAdd offers={stackOffers ?? []} inline quantity={qty}>
-        <AddToCartButton
-          href={href}
-          disabled={disabled}
-          product={selectedVariant?.product?.handle}
-          revenue={
-            Number.isFinite(amount) && selectedVariant?.price?.currencyCode
-              ? {currency: selectedVariant.price.currencyCode, amount: amount * qty}
-              : null
-          }
-        >
-          {isBundle
-            ? (buyCtaLabel ?? 'Add to cart')
-            : selectedVariant?.availableForSale
-              ? ctaLabelAvailable
-              : ctaLabelSoldOut}
-        </AddToCartButton>
-      </StackQuickAdd>
+      <AddToCartButton
+        href={href}
+        disabled={disabled}
+        product={selectedVariant?.product?.handle}
+        revenue={
+          Number.isFinite(amount) && selectedVariant?.price?.currencyCode
+            ? {currency: selectedVariant.price.currencyCode, amount: amount * qty}
+            : null
+        }
+      >
+        {isBundle
+          ? (buyCtaLabel ?? 'Add to cart')
+          : selectedVariant?.availableForSale
+            ? ctaLabelAvailable
+            : ctaLabelSoldOut}
+      </AddToCartButton>
       {onQuantityChange && !isBundle && maxQuantityNote && qty >= maxQuantity ? (
         <p className="product-qty-note" role="status">
           {maxQuantityNote}

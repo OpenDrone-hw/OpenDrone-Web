@@ -1,19 +1,17 @@
 import {useLocation, useNavigate, useNavigation} from 'react-router';
 import {useEffect, useState} from 'react';
 import {motion} from 'motion/react';
-import {Check} from 'lucide-react';
 import type {MappedProductOptions} from '~/lib/product-shapes';
 import type {VariantContent} from '~/lib/product-content';
 import {copyText} from '~/lib/copy';
 import {formatPrice} from '~/lib/catalog';
 
 /**
- * Comparison ladder - the variant selector for a product *line*
- * (OpenRX: Lite/Lite-UFL/Mono/Gemini; OpenESC: 20×20/30×30). Each tier
- * is a card showing the cells that differ between variants; clicking a
- * card both updates the on-page preview (`onSelect`) and, when a matching
- * catalog variant exists, navigates to select it so price and stock
- * follow.
+ * The version selector for a product *line* (OpenRX: Lite/Lite-UFL/Mono/
+ * Gemini; OpenESC: 20x20/30x30): one segmented button per version, name
+ * and price. Clicking one both updates the on-page preview (`onSelect`)
+ * and, when a matching catalog variant exists, navigates to select it so
+ * price and stock follow.
  *
  * Editorial (`variants`, keyed by option value) is the source of truth
  * for which tiers exist. The catalog is matched in by name: we find the
@@ -30,23 +28,18 @@ export function VariantLadder({
   onSelect,
   compact = false,
   showPrices = false,
-  compareHref,
 }: {
   axis: string;
   variants: Record<string, VariantContent>;
   productOptions: MappedProductOptions[];
   activeValue: string;
   onSelect: (value: string) => void;
-  /** Compact mode: a single horizontal row of name-only pills (no axis label,
-   *  spec line) - for the pinned mobile buy bar where space is tight
-   *  but variant switching still needs to be reachable. */
+  /** Compact mode: name-only pills, no price - for the pinned mobile buy
+   *  bar where space is tight. */
   compact?: boolean;
-  /** Print each tier's price on its card. Off while the product is not
-   *  for sale, so a locked page never shows a price. */
+  /** Print each version's price on its button. Off while the product is
+   *  not for sale, so a locked page never shows a price. */
   showPrices?: boolean;
-  /** Anchor of the full "How the versions differ" table, linked next to the
-   *  axis label. */
-  compareHref?: string;
 }) {
   const navigate = useNavigate();
   // The tier card previews instantly via onSelect, but price/stock/cart wiring
@@ -79,19 +72,6 @@ export function VariantLadder({
       role="radiogroup"
       aria-label={`${axis} ${copyText('product-chrome.ladder_aria_suffix') ?? ''}`}
     >
-      {compact ? null : (
-        <p className="variant-ladder-axis">
-          {axis}
-          <span className="variant-ladder-axis-hint">
-            {copyText('product-chrome.ladder_axis_hint')}
-          </span>
-          {compareHref ? (
-            <a className="variant-ladder-compare" href={compareHref}>
-              {copyText('product-chrome.ladder_compare') ?? 'Compare versions'}
-            </a>
-          ) : null}
-        </p>
-      )}
       <div className="variant-ladder-track">
         {tiers.map(({value, content, optionValue}) => {
           const selected = norm(value) === norm(activeValue);
@@ -105,8 +85,8 @@ export function VariantLadder({
             optionValue && optionValue.exists && !optionValue.available,
           );
           const disabled = comingSoon || soldOut;
-          // Each tier's own price on its card, as FPV shops show it on the
-          // option: the buyer compares sizes without clicking through.
+          // Each version's own price on its button, as FPV shops show it on
+          // the option: the buyer compares without clicking through.
           const tierPrice =
             showPrices && !compact && !comingSoon && optionValue?.firstSelectableVariant
               ? formatPrice(
@@ -148,7 +128,7 @@ export function VariantLadder({
                 />
               ) : null}
               <span className="variant-tier-head">
-                <span className="variant-tier-name">{content.label ?? value}</span>
+                <span className="variant-tier-name">{shopName(content.label ?? value)}</span>
                 {comingSoon ? (
                   <span className="variant-tier-flag">
                     {copyText('product-chrome.ladder_flag_coming_soon')}
@@ -157,53 +137,11 @@ export function VariantLadder({
                   <span className="variant-tier-flag">
                     {copyText('product-chrome.ladder_flag_sold_out')}
                   </span>
-                ) : selected ? (
-                  <span className="variant-tier-flag is-selected" aria-hidden="true">
-                    <Check size={12} strokeWidth={3} />
-                  </span>
                 ) : null}
               </span>
-              {/* One line of the specs that actually differ, on EVERY card
-                  so the tiers compare at a glance (maintainer, 2026-08-18: the
-                  selected-only spec table hid the comparison and the prose
-                  tagline said nothing a spec doesn't). Keys ride along for
-                  screen readers only; keep the values short enough to hold
-                  one line. */}
               {tierPrice ? (
                 <span className="variant-tier-price">{tierPrice}</span>
               ) : null}
-              {compact || !content.tag ? null : (
-                <span className="variant-tier-tag">{content.tag}</span>
-              )}
-              {compact || !content.highlights.length ? null : (
-                <span className="variant-tier-specs">
-                  {content.highlights.map(([k, v], i) => (
-                    <span className="variant-tier-spec" key={k}>
-                      {i > 0 ? (
-                        <span className="variant-tier-sep" aria-hidden="true">
-                          ·
-                        </span>
-                      ) : null}
-                      <span className="sr-only">{k}: </span>
-                      {v}
-                    </span>
-                  ))}
-                </span>
-              )}
-              {/* Which frame the size fits, read from the tier's own "Frame
-                  fit" spec, and who the tier is for: never hand-written
-                  here, so the card cannot drift from the spec table. */}
-              {compact ? null : frameFit(content) ? (
-                <span className="variant-tier-fit">
-                  {(copyText('product-chrome.ladder_fits') ?? 'Fits {fit}').replace(
-                    '{fit}',
-                    frameFit(content) ?? '',
-                  )}
-                </span>
-              ) : null}
-              {compact || !content.pickIf ? null : (
-                <span className="variant-tier-fit variant-tier-pick">{content.pickIf}</span>
-              )}
             </button>
           );
         })}
@@ -212,7 +150,7 @@ export function VariantLadder({
   );
 }
 
-/** The tier's "Frame fit" spec value, when it has one. */
-function frameFit(content: VariantContent): string | null {
-  return content.specs?.find(([key]) => key === 'Frame fit')?.[1] ?? null;
+/** A size as FPV shops write it: "20x20", not "20×20". */
+function shopName(name: string): string {
+  return name.replace(/(\d)\s*×\s*(\d)/g, '$1x$2');
 }

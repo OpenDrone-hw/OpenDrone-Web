@@ -22,7 +22,6 @@ import {
   lineDisplayName,
   setSize,
   shortShipPromise,
-  variantCartNote,
   variantDisplayName,
 } from '~/lib/product-content';
 import {Txt} from '~/components/Txt';
@@ -879,10 +878,6 @@ function CartLine({line, info, pending}: {line: ShopifyCartLine; info: CartLineI
         <div className="cart-sheet-item">
           <Link to={variantLink(line.handle, line.selectedOptions)}><strong>{line.title}</strong></Link>
           {options.map(({name, value}) => <small key={name}>{name}: {variantDisplayName(line.handle, value)}</small>)}
-          {options.map(({name, value}) => {
-            const note = variantCartNote(line.handle, value);
-            return note ? <small key={`${name}-note`} className="cart-line-note">{note}</small> : null;
-          })}
           <ShipChip promise={line.shipPromise} />
           {max !== null && line.quantity > max ? (
             <small className="cart-line-error" role="alert">{paidBatchMessage(max, line.shipPromise)}</small>

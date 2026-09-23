@@ -199,17 +199,6 @@ export type StackConfig = {
 };
 
 /**
- * Playful cross-sell card rendered under the buy strip. Use it to point
- * one product at another - e.g. OpenFC ↔ OpenESC both pointing at
- * OpenStack. Keep line copy short: it's a wink, not a paragraph.
- */
-export type PairCta = {
-  eyebrow: string;     // small uppercase line above (e.g. "PAIR WITH")
-  title: string;       // main line (e.g. "OpenStack - FC + ESC, one solder-free stack")
-  to: string;          // href to the paired product PDP
-};
-
-/**
  * A component of a bundle product (OpenStack et al). Each entry points
  * at an existing PDP and names the firmware that the component carries,
  * so the bundle PDP can render a "what's in the box" chapter without
@@ -301,18 +290,10 @@ export type VariantContent = {
    *  final, as OPENMOTOR-2207 does: the PDP then keeps the SKU off the page
    *  and out of the structured data. The SKU stays the internal ID. */
   internalSku?: boolean;
-  /** One plain line shown under this variant's cart line: what is not final
-   *  about it and what the buyer can do (OpenMotor 5": stator and KV). */
-  cartNote?: string;
-  /** One plain line on the model card saying who this version is for
-   *  ("Also receives 900 MHz. Only useful if..."). Published facts only. */
-  pickIf?: string;
-  /**
-   * A short tag on the version card for someone who does not know which to
-   * pick, e.g. "Start here if unsure" or "Used in the 5-inch build". Plain
-   * words that match content/builds.json, no specs.
-   */
-  tag?: string;
+  /** The mono line under the product name while this version is picked,
+   *  spec-sheet style: "RP2354 · BMI270 · Betaflight · 3-6S · 20x20".
+   *  Published facts only; unset prints nothing. */
+  subtitle?: string;
   /** Other spellings of this option value a link may carry (the visible
    *  label `5"`, `5in`). The PDP redirects them to the catalog value. */
   aliases?: string[];
@@ -323,9 +304,6 @@ export type VariantContent = {
    *  image, e.g. "Render of the 5-inch frame". */
   imageNote?: string;
 };
-
-/** A plain link printed under the hero lead or the model picker. */
-export type ContentLink = {label: string; href: string};
 
 export type ProductContent = {
   fileNumber: string;           // "01" etc - shown in the eyebrow
@@ -405,10 +383,6 @@ export type ProductContent = {
    *  "Weight", "Mount", "Shaft", "Rated cells", "Max current". */
   specs: Array<[string, string]>;
   footnote?: string;            // appears under the spec table
-  /** Spec row names shown in the "At a glance" box beside the buy module,
-   *  in order. Each must be a row of the merged (variant) spec table; a
-   *  name the selected variant lacks is skipped, so nothing is invented. */
-  glance?: string[];
   /** Extra words the catalog search matches for this product, the terms FPV
    *  buyers type that the name does not carry ("stack", "4in1"). */
   keywords?: string[];
@@ -421,8 +395,7 @@ export type ProductContent = {
   /** OSHWA certification UID for a single-board product (no per-tier split).
    *  Lines whose tiers each carry their own UID set it on the variant instead. */
   oshwaUid?: string;
-  pairCta?: PairCta;            // playful cross-sell under the buy strip
-  stack?: StackConfig;          // "complete the stack" cross-sell in the buy box
+  stack?: StackConfig;          // FC/ESC pairing offered on the catalog cards
   bundle?: {                    // when set, the PDP renders as a bundle
     components: BundleComponent[];
   };
@@ -466,13 +439,9 @@ export type ProductContent = {
    *  quad). The PDP starts the quantity there and the cart says so when a
    *  line is not a whole set. */
   setOf?: number;
-  /** One line under the hero lead, with optional links (the RX's DJI note). */
-  heroNote?: {text: string; links?: ContentLink[]};
-  /** One plain line under the model picker for a buyer unsure which
-   *  version to take. Facts already on the page only. */
-  pickNote?: string;
-  /** Extra "At a glance" rows that are not spec rows (spare arms). */
-  glanceExtra?: Array<{label: string; value: string; href?: string}>;
+  /** The mono line under the product name, for a product without
+   *  versions or as the default for versions without their own. */
+  subtitle?: string;
   /** Connector and pin-order rows shown under the spec table, from the
    *  board repo's design notes. Not part of the README-mirrored `specs`. */
   connectors?: Array<[string, string]>;
@@ -677,8 +646,6 @@ export function lineDisplayName(handle: string | null | undefined, title: string
     : title;
 }
 
-/** The cart-line note for one variant, if its content sets one. See
- *  {@link VariantContent.cartNote}. */
 /** Units one build uses for a product sold singly (4 motors), or null. */
 export function setSize(handle: string | null | undefined): number | null {
   if (!handle) return null;
@@ -705,11 +672,6 @@ export function canonicalOptionValue(
     if (v.aliases?.some((a) => norm(a) === wanted)) return key;
   }
   return null;
-}
-
-export function variantCartNote(handle: string | null | undefined, value: string | null | undefined): string | null {
-  if (!handle || !value) return null;
-  return PRODUCT_CONTENT[handle]?.variants?.[value]?.cartNote ?? null;
 }
 
 /**

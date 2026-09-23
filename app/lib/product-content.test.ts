@@ -8,7 +8,6 @@ import {
   isInternalSku,
   variantDisplayName,
   lineDisplayName,
-  variantCartNote,
   displaySpecValue,
   fundingTargetTerms,
   shortShipPromise,
@@ -244,9 +243,11 @@ describe('openmotor 5-inch variant', () => {
   it('claims no stator size or KV that sourcing has not confirmed', () => {
     const v = PRODUCT_CONTENT.openmotor?.variants?.['2207'];
     assert.ok(v);
+    // null hides the 3" motor's row: an unknown value renders nothing.
     const specs = new Map(v.specs ?? []);
-    assert.equal(specs.get('Stator'), 'To be confirmed');
-    assert.equal(specs.get('KV'), 'To be confirmed');
+    assert.equal(specs.get('Stator'), null);
+    assert.equal(specs.get('KV'), null);
+    assert.ok(!v.highlights.some(([k]) => k === 'KV'));
     assert.ok(!JSON.stringify(PRODUCT_CONTENT.openmotor).includes('22 × 7'));
   });
   it('shows the option value "2207" as 5" and keeps its SKU internal', () => {
@@ -257,11 +258,9 @@ describe('openmotor 5-inch variant', () => {
     assert.equal(variantDisplayName(null, 'Lite'), 'Lite');
   });
 
-  it('never names the 5" motor 2207 in a cart line name or note', () => {
+  it('never names the 5" motor 2207 in a cart line name', () => {
     assert.equal(lineDisplayName('openmotor', 'OpenMotor', '2207'), 'OpenMotor 5"');
     assert.equal(lineDisplayName('openesc', 'OpenESC', 'Default Title'), 'OpenESC');
-    assert.equal(variantCartNote('openmotor', '2207'), null);
-    assert.equal(variantCartNote('openmotor', '1604'), null);
   });
 });
 

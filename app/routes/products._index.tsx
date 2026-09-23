@@ -20,7 +20,6 @@ import {
   isConceptFor,
   isPurchasableStatus,
   lineDisplayName,
-  variantCartNote,
 } from '~/lib/product-content';
 import {useProductStatusResolver, useRoadmapStatusResolver} from '~/lib/coming-soon';
 import {stackDiscountedPrice} from '~/lib/stack-discount';
@@ -1028,9 +1027,6 @@ function resolveBuilds(
               : null,
           latestShip: waits ? (variant.campaign?.latestShip ?? null) : null,
           untested: waits && roadmapStatus(product.handle) === 'in-progress',
-          // What is not final about this exact part (the 5" motor's stator
-          // and KV), from the same product-content field as the cart line.
-          note: variantCartNote(product.handle, variant.title),
           stage: waits ? stageLine(roadmapStatus(product.handle)) : null,
           buyable:
             Boolean(variant.availableForSale && variant.sku) && isBuyable(product.handle),
@@ -1270,11 +1266,6 @@ function BuildGuide({
                       {part.stage ? (
                         <p className="mt-1 text-[13px] leading-snug text-[var(--color-text-muted)]">
                           {part.stage}
-                        </p>
-                      ) : null}
-                      {part.note ? (
-                        <p className="mt-1 text-[13px] leading-snug text-[var(--color-gold-text)]">
-                          {part.note}
                         </p>
                       ) : null}
                       {part.role === 'receiver' ? (

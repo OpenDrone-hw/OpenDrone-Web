@@ -49,15 +49,6 @@ function warnings(key: string): string[] {
   return DE_FALLBACK[key] ?? [];
 }
 
-/** The age and assembly facts a buyer needs before paying, from the same
- *  safety data as this block: every part is 14+, and the electronics and
- *  motors are soldered in. */
-export function buyerFacts(kind: SafetyKind): string {
-  return kind === 'electronics' || kind === 'motor'
-    ? (copyText('product-chrome.buy_facts_solder') ?? 'Age 14+ · needs soldering to install')
-    : (copyText('product-chrome.buy_facts_age') ?? 'Age 14+');
-}
-
 /** Which extra warnings a product carries, on top of the shared ones. */
 export type SafetyKind = 'electronics' | 'frame' | 'motor' | 'accessory';
 

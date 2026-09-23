@@ -168,17 +168,10 @@
       "6-layer, 1.0 mm"
     ]
   ],
-  "glance": [
-    "Band",
-    "Antenna",
-    "Input",
-    "Dimensions"
-  ],
   "optionAxis": "Model",
   "variants": {
     "Lite": {
-      "tag": "Start here · 3-inch build",
-      "pickIf": "Antenna built onto the board, nothing to mount. 2.4 GHz only.",
+      "subtitle": "ELRS 2.4GHz · SX1281 · ceramic antenna · CRSF",
       "repoUrl": "https://github.com/OpenDrone-hw/OpenRX-Lite",
       "oshwaUid": "BE000030",
       "highlights": [
@@ -277,8 +270,7 @@
       ]
     },
     "Lite-UFL": {
-      "tag": "Used in the 5-inch build",
-      "pickIf": "Plug-in 2.4 GHz antenna (included), which usually gives more range than the ceramic one.",
+      "subtitle": "ELRS 2.4GHz · SX1281 · U.FL · CRSF",
       "repoUrl": "https://github.com/OpenDrone-hw/OpenRX-Lite-UFL",
       "oshwaUid": "BE000031",
       "highlights": [
@@ -387,7 +379,7 @@
       }
     },
     "Mono": {
-      "pickIf": "Also receives sub-GHz. Only useful if your radio has a sub-GHz ExpressLRS module.",
+      "subtitle": "ELRS 2.4GHz + sub-GHz · LR1121 · U.FL · CRSF",
       "repoUrl": "https://github.com/OpenDrone-hw/OpenRX-Mono",
       "oshwaUid": "BE000032",
       "highlights": [
@@ -512,7 +504,7 @@
       }
     },
     "Gemini": {
-      "pickIf": "Two radios and two antennas. Sub-GHz is only useful if your radio has a sub-GHz ExpressLRS module.",
+      "subtitle": "ELRS Gemini Xrossband · 2x LR1121 · 2x U.FL · CRSF",
       "repoUrl": "https://github.com/OpenDrone-hw/OpenRX-Gemini",
       "oshwaUid": "BE000033",
       "highlights": [
@@ -655,20 +647,5 @@
     "receiver",
     "rx",
     "expresslrs"
-  ],
-  "footnote": "Weight is published once production boards are weighed.",
-  "heroNote": {
-    "text": "A DJI remote or motion controller cannot control OpenRX.",
-    "links": [
-      {
-        "label": "Which radio you need, and how binding works",
-        "href": "/products#coming-from-dji"
-      },
-      {
-        "label": "Range test write-up",
-        "href": "/newsletter/openrx-range-test"
-      }
-    ]
-  },
-  "pickNote": "Not sure it fits? Ask the pilot which radio they fly, or email contact@opendrone.be."
+  ]
 }

@@ -35,36 +35,7 @@ export type StackOffer = {
   /** Handle of the board the visitor is looking at, for event props. */
   product?: string | null;
   available: boolean;
-  /** What the partner adds, for the inline wording: 'ESC', 'flight
-   *  controller'. */
-  adds?: string;
-  /** Plain sum of both boards' prices, shown as the stack total. */
-  total?: MoneyV2 | null;
-  /** One short fact under the offer, e.g. "Stack runs on 3–6S". */
-  note?: string;
 };
-
-/** The hand-off link with every `lines` count multiplied by `quantity`, so
- *  a buyer who set the stepper to 2 gets two stacks. */
-export function scaleLines(href: string, quantity: number): string {
-  if (quantity <= 1 || !href.includes('?')) return href;
-  const [path, query] = href.split('?');
-  const params = new URLSearchParams(query);
-  const lines = params.get('lines');
-  if (!lines) return href;
-  params.set(
-    'lines',
-    lines
-      .split(',')
-      .map((line) => {
-        const at = line.lastIndexOf(':');
-        const count = at > 0 ? Number(line.slice(at + 1)) : NaN;
-        return Number.isFinite(count) ? `${line.slice(0, at)}:${count * quantity}` : line;
-      })
-      .join(','),
-  );
-  return `${path}?${params.toString()}`;
-}
 
 /**
  * Wraps a primary buy control with a hover/focus flyout of stack offers,
@@ -76,31 +47,22 @@ export function StackQuickAdd({
   children,
   offers,
   onAdd,
-  inline = false,
-  quantity = 1,
 }: {
   /** The primary CTA (usually an AddToCartButton). */
   children: React.ReactNode;
   offers: StackOffer[];
   onAdd?: () => void;
-  /** Always-visible row under the CTA (the product page buy box) instead
-   *  of the hover flyout, worded "Pre-order the stack: this board +
-   *  OpenESC 20×20 · €62.40". */
-  inline?: boolean;
-  /** Stacks to add (the buy box stepper); the price shows the total. */
-  quantity?: number;
 }) {
-  const n = Math.max(1, Math.round(quantity));
   if (!offers.length) return <>{children}</>;
   return (
-    <div className={`cta-stack-group${inline ? ' cta-stack-group--inline' : ''}`}>
+    <div className="cta-stack-group">
       {children}
       <div className="cta-stack-flyout" aria-label="Buy as a stack">
         {offers.map((o) => (
           <AddToCartButton
             key={o.key}
             className="cta-stack-offer"
-            href={scaleLines(o.href, n)}
+            href={o.href}
             product={o.product}
             disabled={!o.available}
             onClick={() => {
@@ -121,21 +83,9 @@ export function StackQuickAdd({
               +
             </span>
             <span className="cta-stack-offer-label">
-              {/* Inline, the label names BOTH boards: the offer adds this
-                  board and its partner, so a buyer who also presses the
-                  main button knows they would get this board twice. */}
-              {inline
-                ? n > 1
-                  ? `Pre-order ${n} stacks: ${n}× this board + ${n}× ${o.label}${o.size ? ` ${o.size}` : ''}`
-                  : `Pre-order the stack: this board + ${o.label}${o.size ? ` ${o.size}` : ''}`
-                : `${o.label}${o.size ? ` · ${o.size}` : ''}`}
-              {inline && o.note ? <span className="cta-stack-meta">{o.note}</span> : null}
+              {`${o.label}${o.size ? ` · ${o.size}` : ''}`}
             </span>
-            {inline && o.total ? (
-              <span className="cta-stack-offer-price">
-                {formatPrice(Number(o.total.amount) * n, o.total.currencyCode)}
-              </span>
-            ) : o.price ? (
+            {o.price ? (
               <span className="cta-stack-offer-price">
                 {o.compareAtPrice ? (
                   <s className="cta-stack-offer-was">

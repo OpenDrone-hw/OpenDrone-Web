@@ -296,16 +296,10 @@
       "6-layer, 1.6 mm"
     ]
   ],
-  "glance": [
-    "Frame fit",
-    "Input",
-    "Firmware",
-    "UARTs"
-  ],
   "optionAxis": "Model",
   "variants": {
     "20×20": {
-      "tag": "Fits 3-inch and 5-inch frames",
+      "subtitle": "RP2354 · BMI270 · Betaflight · 3-6S · 20x20",
       "oshwaUid": "BE000027",
       "repoUrl": "https://github.com/OpenDrone-hw/OpenFC-Lite-Mini",
       "highlights": [
@@ -576,7 +570,7 @@
       ]
     },
     "30×30": {
-      "tag": "Used in the 5-inch build",
+      "subtitle": "RP2354 · BMI270 · Betaflight · 3-8S · 30x30",
       "oshwaUid": "BE000026",
       "highlights": [
         [
@@ -638,8 +632,6 @@
     ],
     "matchOption": "Model"
   },
-  "footnote": "Weight is published once production boards are weighed.",
-  "pickNote": "For a 5-inch build take 30×30: it takes up to 8S and pairs with the bigger ESC that has the XT60 plug. 20×20 also fits the 5-inch frame, for light builds.",
   "connectors": [
     [
       "ESC plug",

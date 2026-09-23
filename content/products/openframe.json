@@ -99,15 +99,10 @@
       "T700 carbon, aluminium camera mounts"
     ]
   ],
-  "glance": [
-    "Prop size",
-    "Stack mounting",
-    "Arm thickness",
-    "Video systems"
-  ],
   "optionAxis": "Model",
   "variants": {
     "5\" Freestyle": {
+      "subtitle": "5\" freestyle · 226 mm · 6 mm arms · 30x30 / 20x20",
       "highlights": [
         [
           "Wheelbase",
@@ -153,6 +148,7 @@
       ]
     },
     "3\" Freestyle": {
+      "subtitle": "3\" freestyle · 141 mm · 4 mm arms · 25.5 / 20x20",
       "highlights": [
         [
           "Wheelbase",
@@ -225,16 +221,9 @@
       ]
     }
   },
-  "footnote": "These are design values from the CAD model, not measurements of a finished frame. Weight is published once a finished frame is weighed.",
+  "footnote": "Values from the CAD model.",
   "keywords": [
     "frame",
     "chassis"
-  ],
-  "glanceExtra": [
-    {
-      "label": "Spare arms",
-      "value": "Sold separately. Sold out for now: get an email when they can be ordered.",
-      "href": "/products/openframe-spares"
-    }
   ]
 }

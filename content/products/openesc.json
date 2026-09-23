@@ -314,16 +314,10 @@
       "6-layer, 1.6 mm, 2 oz copper"
     ]
   ],
-  "glance": [
-    "Frame fit",
-    "Input",
-    "Continuous",
-    "FC connector"
-  ],
   "optionAxis": "Model",
   "variants": {
     "20×20": {
-      "tag": "Fits 3-inch and 5-inch frames",
+      "subtitle": "4in1 · AM32 · 40A · 2-6S · 20x20",
       "oshwaUid": "BE000028",
       "highlights": [
         [
@@ -377,7 +371,7 @@
       ]
     },
     "30×30": {
-      "tag": "Used in the 5-inch build",
+      "subtitle": "4in1 · AM32 · 60A · 2-8S · 30x30",
       "oshwaUid": "BE000029",
       "repoUrl": "https://github.com/OpenDrone-hw/OpenESC-30x30",
       "highlights": [
@@ -688,8 +682,6 @@
     ],
     "matchOption": "Model"
   },
-  "footnote": "Weight is published once production boards are weighed.",
-  "pickNote": "For a 5-inch build take 30×30: it takes up to 8S and comes with the bigger XT60 battery plug. 20×20 also fits the 5-inch frame, for light builds.",
   "connectors": [
     [
       "FC plug",

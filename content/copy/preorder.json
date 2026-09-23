@@ -49,14 +49,5 @@
   "ship_ships": "Ships {date}",
   "ship_eta": "ETA {date}",
   "ship_deadline": "Deadline {date}",
-  "meter_paid": "Batch {batch} is paid for and in production · {left} of {units} left in this batch",
-  "meter_target": "{ordered} of {target} ordered toward the funding target",
-  "meter_target_bar": "{ordered} of {target} ordered",
-  "meter_reached": "Funding target reached · {ordered} ordered",
-  "meter_next": "Batch {batch}: {ordered} of {units}",
-  "meter_early": "This price for {left} more units, up to unit {units}, then {price}",
-  "meter_link": "How preorders work",
-  "batch_label": "Batch {batch}",
-  "batch_sold_out": "sold out",
-  "batch_next": "next, {units} units"
+  "ship_eta_if_funded": "ETA {date} if funded"
 }

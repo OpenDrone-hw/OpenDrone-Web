@@ -19,7 +19,6 @@ import {
   selectVariant,
   selectedOptionsFromRequest,
   formatPrice,
-  paysInOtherCurrency,
   toCard,
   toProduct,
 } from '~/lib/catalog';
@@ -60,13 +59,12 @@ import {
 } from '~/components/ProductReviews';
 import {OshwaMark} from '~/components/OshwaMark';
 import {useNoHover, useIsMobile} from '~/lib/use-media-query';
-import {GpsrBlock, buyerFacts, safetyKind} from '~/components/GpsrBlock';
+import {GpsrBlock, safetyKind} from '~/components/GpsrBlock';
 import {
   PRODUCT_CONTENT,
   PRODUCT_CONTENT_FALLBACK,
   displaySpecValue,
   shortShipPromise,
-  isComingSoon,
   isConceptFor,
   isInternalSku,
   imagesAreRenders,
@@ -76,16 +74,9 @@ import {
 } from '~/lib/product-content';
 import {useProductStatus} from '~/lib/coming-soon';
 import {shipPromiseFor} from '~/lib/preorder';
-import {
-  campaignChip,
-  fetchStatusFlagsFast,
-  statusForHandle,
-} from '~/lib/roadmap-data';
-import {
-  priceLadder,
-  type LadderStep,
-  type PriceTier,
-} from '~/lib/preorder-campaign';
+import {fetchStatusFlagsFast, statusForHandle} from '~/lib/roadmap-data';
+import {priceLadder, type PriceTier} from '~/lib/preorder-campaign';
+import {stepBarView} from '~/lib/preorder-meter';
 import {countryName, shippingQuote, SHIPPING_ZONES} from '~/lib/shipping-rates';
 import {SHIP_COUNTRY_EVENT, storeShipCountry, storedShipCountry} from '~/lib/cart-client';
 import preorders from '../../content/preorders.json';
@@ -93,7 +84,8 @@ import {trackEvent} from '~/lib/growth/plausible';
 import {attributionSource} from '~/lib/growth/attribution';
 import {NewsletterSignup} from '~/components/NewsletterSignup';
 import {ProductGhostTile} from '~/components/ProductGhostTile';
-import {PreorderMeter} from '~/components/PreorderMeter';
+import {StepBar} from '~/components/PreorderMeter';
+import {ShipLine} from '~/components/ShipChip';
 import type {
   ChapterPin,
   DownloadAsset,
@@ -103,17 +95,12 @@ import type {
 /** The price steps every campaign SKU follows (content/preorders.json). */
 const PRICE_TIERS: PriceTier[] = preorders.priceTiers;
 
-/** The funding-target deadline as the buyer reads it: "31 December 2026".
- *  UTC on both sides, so the server render and hydration agree. */
-const CAMPAIGN_DEADLINE = new Date(`${preorders.endsOn}T00:00:00Z`).toLocaleDateString(
-  'en-GB',
-  {day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC'},
-);
+/** The unit counts where a price step ends: the ticks on the step bar. */
+const STEP_ENDS = PRICE_TIERS.map((tier) => tier.upTo);
 
 /** The cheapest flat shipping rate, for "shipping from" when the visitor's
  *  country is unknown. */
 const SHIPPING_FROM = Math.min(...SHIPPING_ZONES.map((z) => z.rate));
-const SHIPPING_TO = Math.max(...SHIPPING_ZONES.map((z) => z.rate));
 
 /** Fill `{name}` slots in a copy template. */
 function fill(template: string, vars: Record<string, string | number>): string {
@@ -125,12 +112,6 @@ function fill(template: string, vars: Record<string, string | number>): string {
 /** Copy with a readable fallback while a key is missing from the copy file. */
 function say(id: string, fallback: string, vars: Record<string, string | number> = {}): string {
   return fill(copyText(id) ?? fallback, vars);
-}
-
-/** The first sentence of a paragraph ("... drone's onboard computer."). */
-function firstSentence(text: string): string {
-  const match = /^.+?[.!?](?=\s|$)/.exec(text.trim());
-  return match ? match[0] : text.trim();
 }
 
 /** Largest quantity one add may ask for: the cart action's per-line cap. */
@@ -242,15 +223,12 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
   }
 
   // Bundle products render from their own product but add the *component*
-  // variants to cart; the stack builder needs its partner products' variants
-  // the same way. Both come out of the same catalog document as the
+  // variants to cart. They come out of the same catalog document as the
   // product itself, so resolving them costs nothing extra.
   const bundleHandles =
     PRODUCT_CONTENT[handle]?.bundle?.components.map((c) => c.handle) ?? [];
-  const stackHandles =
-    PRODUCT_CONTENT[handle]?.stack?.partners.map((p) => p.handle) ?? [];
 
-  // Roadmap status for the chip near the title. The 600ms fast fetch races
+  // Roadmap status for the concept plate. The 600ms fast fetch races
   // the GitHub topic lookup against the static ROADMAP fallback, so a cold
   // cache or an API failure degrades to the checked-in status, never a 500.
   const statusFlagsPromise = fetchStatusFlagsFast(
@@ -272,18 +250,12 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
     selectedOptionsFromRequest(request),
   );
 
-  // Partner products for the bundle lines and the stack builder, from the
-  // same catalog: no second round-trip, no second source of prices.
-  const partnerProducts = [...bundleHandles, ...stackHandles]
+  // Component products for the bundle lines, from the same catalog: no
+  // second round-trip, no second source of prices.
+  const bundleProducts = bundleHandles
     .map((h) => byHandle(catalog, h))
     .filter((p): p is NonNullable<typeof p> => Boolean(p))
     .map((p) => toProduct(catalog, p));
-  const bundleProducts = partnerProducts.filter((p) =>
-    bundleHandles.includes(p.handle),
-  );
-  const stackProducts = partnerProducts.filter((p) =>
-    stackHandles.includes(p.handle),
-  );
 
   // Shopify's compare-at price per SKU is the retail price a campaign SKU
   // steps up to. The PDP variant shape drops it for campaign SKUs (no
@@ -295,12 +267,11 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
   return {
     product,
     bundleProducts,
-    stackProducts,
     retailBySku,
     commerceHandoff: commerceHandoff(catalog),
-    // The roadmap status this page's boards carry (beta, alpha, ...), for
-    // the chip near the title. Undefined for products off the roadmap
-    // (accessories); the chip simply doesn't render.
+    // The roadmap status this page's boards carry (beta, alpha, ...): a
+    // concept renders the concept plate. Undefined for products off the
+    // roadmap (accessories).
     roadmapStatus: statusForHandle(handle, await statusFlagsPromise),
   };
 }
@@ -488,24 +459,6 @@ function repoName(url: string | null | undefined): string | null {
 }
 
 /**
- * The LiPo cell range two boards share, from Input values such as
- * "3–6S LiPo (9.0–25.2 V)" and "2–6S LiPo (6.0–25.2 V)": "3–6S". Null when
- * either value has no cell range.
- */
-function stackCellRange(a: string | undefined, b: string | undefined): string | null {
-  const parse = (v: string | undefined) => {
-    const m = v ? /(\d+)\s*[–-]\s*(\d+)\s*S\b/.exec(v) : null;
-    return m ? [Number(m[1]), Number(m[2])] : null;
-  };
-  const ra = parse(a);
-  const rb = parse(b);
-  if (!ra || !rb) return null;
-  const low = Math.max(ra[0], rb[0]);
-  const high = Math.min(ra[1], rb[1]);
-  return low <= high ? `${low}–${high}S` : null;
-}
-
-/**
  * The rows that differ between a product's variants, for the side-by-side
  * comparison under the spec table: every variant's merged table, keeping
  * only keys whose value is not the same everywhere. "-" marks a row a
@@ -553,7 +506,7 @@ function ClientFrameViewer(props: FrameViewerProps) {
   return <Viewer {...props} />;
 }
 
-/** DOM ids of the spec and box chapters, for the "At a glance" links. */
+/** DOM ids of the spec and box chapters. */
 const SPECS_ID = 'specs';
 const IN_THE_BOX_ID = 'in-the-box';
 /** DOM id of the "How the versions differ" table, for the model picker. */
@@ -605,148 +558,6 @@ function SpecRow({
           {help}
         </dd>
       ) : null}
-    </div>
-  );
-}
-
-/**
- * The preorder price steps under the price: every step as an absolute
- * price, with its plain percentage below the standard (last) step. No
- * struck-through price anywhere (Directive 98/6/EC art. 6a): the standard
- * price is the future price, stated once as text. The rows count units
- * sold in the shop, not units in one order, and
- * say so. The step the next unit falls in is marked "now". Under the
- * table ONE availability line: units left at this price and, for paid
- * stock, what is left in the batch. The steps come from `priceLadder()`
- * over the Shopify retail price, so they match what the price-step writer
- * charges.
- */
-function PriceLadder({
-  steps,
-  nextUnit,
-  left,
-  currency,
-  vatNote,
-  unit,
-  batchLine,
-}: {
-  /** "per motor" for a product sold singly, else null. */
-  unit?: string | null;
-  steps: LadderStep[];
-  nextUnit: number;
-  /** Units left at the current step's price. */
-  left: number;
-  currency: string;
-  /** "incl. VAT" or the export wording, next to the price. */
-  vatNote: string | null;
-  /** The paid batch in words ("Batch 1: 250 paid for, 250 left"), or null. */
-  batchLine: string | null;
-}) {
-  const currentStep = steps.find(
-    (step) => nextUnit >= step.from && (step.to === null || nextUnit <= step.to),
-  );
-  // The step table is folded on phones so the Pre-order button sits near
-  // the top of the page; desktop opens it after mount.
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    if (window.matchMedia?.('(min-width: 960px)').matches) setOpen(true);
-  }, []);
-  // The standard price is the last step (no end). Each earlier step is a
-  // plain percentage below it, never a struck-through price.
-  const standard = steps.find((step) => step.to === null)?.price ?? null;
-  const offPct = (price: number) =>
-    standard && standard > 0 ? Math.round((1 - price / standard) * 100) : 0;
-  const currentOff = currentStep ? offPct(currentStep.price) : 0;
-  const relLine =
-    currentStep && standard && currentOff > 0
-      ? say('product-chrome.ladder_rel', '{pct}% below the standard {price}', {
-          pct: currentOff,
-          price: formatPrice(standard, currency),
-        })
-      : null;
-  const leftLine =
-    currentStep && currentStep.to !== null && left > 0
-      ? say('product-chrome.ladder_left_at', '{left} left at this price', {left})
-      : null;
-  return (
-    <div className="product-price-ladder">
-      <p className="product-price-ladder-now">
-        <span className="product-price-ladder-now-label">
-          {say('product-chrome.ladder_early_head', 'Early-order price')}
-        </span>{' '}
-        <strong className="product-price-ladder-now-price">
-          {currentStep ? formatPrice(currentStep.price, currency) : null}
-        </strong>
-        {unit ? <span className="product-price-ladder-now-vat"> {unit}</span> : null}
-        {vatNote ? <span className="product-price-ladder-now-vat"> {vatNote}</span> : null}
-      </p>
-      {relLine || leftLine ? (
-        <p className="product-price-ladder-rel">
-          {relLine ? <span>{relLine}</span> : null}
-          {leftLine ? <span>{leftLine}</span> : null}
-        </p>
-      ) : null}
-      {batchLine ? (
-        <p className="product-price-ladder-left">
-          {batchLine}
-          <span className="product-price-ladder-after">
-            {say(
-              'preorder.meter_paid_after',
-              'Once batch 1 is gone, these boards get a funding target like the rest.',
-            )}
-          </span>
-        </p>
-      ) : null}
-      <details
-        className="product-price-ladder-steps"
-        open={open}
-        onToggle={(event) => setOpen((event.currentTarget as HTMLDetailsElement).open)}
-      >
-        <summary>{say('product-chrome.ladder_steps_summary', 'See the price steps')}</summary>
-        <p className="product-price-ladder-sub">
-          {say(
-            'product-chrome.ladder_early_sub',
-            'The same for every buyer. It goes up as more of this model are sold in the shop, not with how many you buy.',
-          )}
-        </p>
-        <ol>
-          {steps.map((step, i) => {
-            const current = step === currentStep;
-            const range =
-              step.to === null
-                ? say('product-chrome.ladder_after', 'After that')
-                : i === 0
-                  ? say('product-chrome.ladder_first', 'First {count} sold', {count: step.to})
-                  : say('product-chrome.ladder_next', 'Next {count} sold', {
-                      count: step.to - step.from + 1,
-                    });
-            const past = step.to !== null && nextUnit > step.to;
-            const pct = offPct(step.price);
-            const off =
-              step.to === null || pct <= 0
-                ? say('product-chrome.ladder_standard', 'Standard price')
-                : say('product-chrome.ladder_off', '{pct}% off', {pct});
-            const note = past
-              ? `${off} · ${say('product-chrome.ladder_price_past', 'sold out')}`
-              : current
-                ? `${off} · ${say('product-chrome.ladder_now', 'now')}`
-                : off;
-            return (
-              <li
-                key={step.from}
-                data-current={current ? '' : undefined}
-                data-past={past ? '' : undefined}
-              >
-                <span className="product-price-ladder-range">{range}</span>
-                <span className="product-price-ladder-price">
-                  {formatPrice(step.price, currency)}
-                </span>
-                <span className="product-price-ladder-note">{note}</span>
-              </li>
-            );
-          })}
-        </ol>
-      </details>
     </div>
   );
 }
@@ -967,11 +778,9 @@ function ProductPage() {
   const {
     product,
     bundleProducts,
-    stackProducts,
     recommendations,
     contributors,
     commerceHandoff,
-    roadmapStatus,
     retailBySku,
   } = useLoaderData<typeof loader>();
   useChapterReveal(product.handle);
@@ -1084,9 +893,8 @@ function ProductPage() {
   const {type: asideType} = useAside();
 
   // Coming-soon state: no prices, no add-to-cart - the buy module becomes a
-  // notify-at-launch signup. Root data feeds the global flag + Turnstile key.
+  // notify-at-launch signup. Root data feeds the Turnstile key.
   const rootData = useRouteLoaderData<RootLoader>('root');
-  const globalComingSoon = rootData?.comingSoon ?? true;
   // Lifecycle status drives the buy module: 'idea' and 'development' are
   // both not-purchasable (`soon`), but render different plates; 'preorder'
   // buys like 'live' with the ship promise on the stock line.
@@ -1117,7 +925,6 @@ function ProductPage() {
     Boolean(PRODUCT_CONTENT[product.handle]) &&
     PRODUCT_CONTENT[product.handle]?.editorial !== false;
   const content = PRODUCT_CONTENT[product.handle] ?? PRODUCT_CONTENT_FALLBACK;
-  const hasHeroCopy = Boolean(content.hero.line1);
   // The Downloads chapter's editorial assets. Declarations of Conformity are
   // internal records: no DoC entry is rendered.
   const downloads = content.downloads;
@@ -1220,17 +1027,6 @@ function ProductPage() {
   // chip, no repo or licence cards and no contributor wall, because every
   // one of those would point a buyer at a 404.
   const hasPublicSource = hasPublicRepo(product.handle);
-  // The name the board carries in its repo and on its OSHWA certificate
-  // ("OpenFC Lite Mini"), when it differs from the shop name of this
-  // version, so the certificate a buyer opens matches what they picked.
-  const upstreamName = (() => {
-    const repo = repoName(activeRepoUrl);
-    if (!repo || !activeVariant?.repoUrl) return null;
-    const spaced = repo.replace(/-/g, ' ');
-    const norm = (v: string) => v.toLowerCase().replace(/×/g, 'x');
-    const shop = norm(`${product.title} ${activeTier}`);
-    return shop.includes(norm(spaced)) || norm(spaced) === norm(product.title) ? null : spaced;
-  })();
   // Printed circuit boards: the provenance card (designed in Leuven,
   // assembled in Shenzhen) describes these and nothing else.
   const isBoard =
@@ -1239,16 +1035,13 @@ function ProductPage() {
   // OSHWA certification follows the selected tier - each certified board has its
   // own UID, so the chip links to the directory page for the active variant.
   const activeOshwaUid = activeVariant?.oshwaUid ?? content.oshwaUid;
+  // The spec-sheet line under the name follows the selected version.
+  const subtitle = activeVariant?.subtitle ?? content.subtitle ?? null;
   const mergedSpecs = mergeSpecs(content.specs, activeVariant?.specs);
   const comparison = variantComparison(content.specs, content.variants);
   const mergedBox = [...content.inTheBox, ...(activeVariant?.inTheBox ?? [])];
-  // The key rows beside the buy module, from the same merged table, so the
-  // glance box and the spec chapter can never disagree.
   // Connector rows: a version's own list replaces the product's list.
   const activeConnectors = activeVariant?.connectors ?? content.connectors ?? [];
-  const glanceRows = (content.glance ?? [])
-    .map((key) => mergedSpecs.find(([k]) => k === key))
-    .filter((row): row is [string, string] => Boolean(row));
 
   // Studio click-to-edit for per-product strings. Copy files get their
   // `data-edit` tag from `<Txt>`/`editAttrs`, but everything rendered out of
@@ -1305,108 +1098,6 @@ function ProductPage() {
         currencyCode: bundleVariants[0]!.price.currencyCode,
       }
     : undefined;
-
-  // "Buy it as a stack": for each configured partner (FC↔ESC), resolve the
-  // variant matching the selected mount size and put BOTH SKUs on one
-  // hand-off link. The offers surface as a hover flyout on the buy CTA, so
-  // ordering the pair is one extra click; more partners later (an OpenFC
-  // Pro) just become more rows. Any pair discount is a Shopify discount, off
-  // the discountedHandle board ONLY, never the pair; it is unconfigured
-  // today, so no offer carries a percent.
-  const stackCfg = content.stack;
-  const stackAxis = (stackCfg?.matchOption ?? 'Model').trim().toLowerCase();
-  const stackMatchValue =
-    selectedVariant?.selectedOptions?.find(
-      (o: {name: string; value: string}) =>
-        o.name.trim().toLowerCase() === stackAxis,
-    )?.value ?? activeTier;
-  const stackOffers = useMemo(() => {
-    if (!stackCfg || !selectedVariant) return [];
-    return stackCfg.partners.flatMap((pc) => {
-      // A partner that hasn't launched can't join a stack offer - its price
-      // and add-to-cart must stay hidden even when this product is live.
-      if (isComingSoon(pc.handle, globalComingSoon)) return [];
-      const pp = stackProducts?.find((p) => p.handle === pc.handle);
-      const nodes = pp?.variants.nodes ?? [];
-      // Exact size match ONLY: the pill names the selected size, so a
-      // fallback variant of another size would silently add the wrong board.
-      // No match -> no offer.
-      const match = nodes.find((n) =>
-        n.selectedOptions?.some(
-          (o) =>
-            o.name.trim().toLowerCase() === stackAxis &&
-            o.value.trim().toLowerCase() ===
-              stackMatchValue.trim().toLowerCase(),
-        ),
-      );
-      if (!match) return [];
-      // The cell range both boards accept, from their own Input rows: a
-      // 2S build from the ESC page must not get an FC that does not boot.
-      const partnerContent = PRODUCT_CONTENT[pc.handle];
-      const partnerSpecs = partnerContent
-        ? mergeSpecs(partnerContent.specs, partnerContent.variants?.[stackMatchValue]?.specs)
-        : [];
-      const ownSpecs = mergeSpecs(content.specs, content.variants?.[stackMatchValue]?.specs);
-      const ownInput = ownSpecs.find(([k]) => k === 'Input')?.[1];
-      const partnerInput = partnerSpecs.find(([k]) => k === 'Input')?.[1];
-      const cells = stackCellRange(ownInput, partnerInput);
-      // When the two boards start at different cell counts, say which one
-      // sets the lower limit (the FC needs 3S, the ESC runs from 2S).
-      const lowCells = (v: string | undefined) => {
-        const m = v ? /(\d+)\s*[–-]\s*\d+\s*S\b/.exec(v) : null;
-        return m ? Number(m[1]) : null;
-      };
-      const ownLow = lowCells(ownInput);
-      const partnerLow = lowCells(partnerInput);
-      const limitHandle =
-        ownLow !== null && partnerLow !== null && ownLow !== partnerLow
-          ? ownLow > partnerLow
-            ? product.handle
-            : pc.handle
-          : null;
-      const limitNote = limitHandle
-        ? say('product-chrome.stack_cells_limit', '{board} needs {low}S or more', {
-            board: limitHandle === 'openfc-lite' ? 'the flight controller' : 'the ESC',
-            low: Math.max(ownLow ?? 0, partnerLow ?? 0),
-          })
-        : null;
-      return [
-        {
-          key: pc.handle,
-          label: pc.label ?? pp?.title ?? pc.handle,
-          size: stackMatchValue,
-          adds: stackCfg.adds,
-          price: match.price,
-          // No struck "was" price on a pair offer (EU Omnibus art. 6a):
-          // the retail compare-at stays off it.
-          compareAtPrice: null,
-          // The plain sum of the two boards, no pair discount.
-          total:
-            match.price && selectedVariant.price &&
-            match.price.currencyCode === selectedVariant.price.currencyCode
-              ? {
-                  amount: (
-                    Number(match.price.amount) + Number(selectedVariant.price.amount)
-                  ).toFixed(2),
-                  currencyCode: match.price.currencyCode,
-                }
-              : null,
-          product: product.handle,
-          note: cells
-            ? `${say('product-chrome.stack_cells', 'Stack runs on {cells}', {cells})}${limitNote ? `: ${limitNote}` : ''}`
-            : undefined,
-          available:
-            match.availableForSale &&
-            Boolean(selectedVariant.availableForSale),
-          // Both SKUs on one link: ?lines=SELF:1,PARTNER:1.
-          href: buyUrl(commerceHandoff, [
-            {sku: selectedVariant.sku ?? '', quantity: 1},
-            {sku: match.sku ?? '', quantity: 1},
-          ]),
-        },
-      ];
-    });
-  }, [stackCfg, stackProducts, selectedVariant, stackAxis, stackMatchValue, globalComingSoon, product.handle, commerceHandoff, content]);
 
   // The teardown board art follows the selected tier: a variant's own
   // `boardArt` wins, otherwise the shared `teardown.boardArt` (the default
@@ -1895,9 +1586,6 @@ function ProductPage() {
     };
   }, [product.handle, hasLadder]);
 
-  // primaryCollection is retained in the loader but we deliberately
-  // don't render a breadcrumb on the PDP - the editorial hero with
-  // the "File 0N · Family" eyebrow is the navigation clue instead.
   // Bundles advertise the composed component price (what add-to-cart actually
   // charges), not a single component's price. Coming soon: no
   // offer at all: structured data must not leak a price the page hides.
@@ -2000,7 +1688,6 @@ function ProductPage() {
         activeValue={activeTier}
         onSelect={selectTier}
         showPrices={!soon}
-        compareHref={comparison ? `#${COMPARE_ID}` : undefined}
       />
     ) : null;
   // Compact (name-pill) variant switcher for the pinned MOBILE buy bar - keeps
@@ -2016,16 +1703,6 @@ function ProductPage() {
         onSelect={selectTier}
       />
     ) : null;
-  // The two firmware trust chips stay ONE editable sentence each: the firmware
-  // project's name and the component count are data, so the copy marks their
-  // slots with `{project}` / `{count}` / `{firmwares}` and the sentence is split
-  // around them here.
-  const firmwareChipParts = (
-    copyText('product-chrome.trust_chip_firmware') ?? ''
-  ).split('{project}');
-  const bundleChipParts = (
-    copyText('product-chrome.trust_chip_firmware_bundle') ?? ''
-  ).split('{firmwares}');
   const isBundle = Boolean(content.bundle);
   // The ship promise shown on the buy module: the catalog's per-product word
   // (frozen onto the order line and printed in the order mail by the same
@@ -2056,6 +1733,22 @@ function ProductPage() {
   const ladder =
     campaign && retail != null && retail > 0 ? priceLadder(retail, PRICE_TIERS) : null;
   const currency = selectedVariant?.price.currencyCode ?? 'EUR';
+  // The step bar: units sold, a tick at each step end, "37 / 250", with
+  // every step as an absolute price over it. No "% off", no struck price.
+  const nextUnit = campaign ? campaign.ordered + 1 : 0;
+  const stepPrices = (ladder ?? []).map((step) => ({
+    key: step.from,
+    text: formatPrice(step.price, currency),
+    range: step.to === null ? `${step.from}+` : `${step.from}-${step.to}`,
+    current: nextUnit >= step.from && (step.to === null || nextUnit <= step.to),
+  }));
+  const stepBar = campaign ? (
+    <StepBar
+      bar={stepBarView(campaign, STEP_ENDS)}
+      prices={stepPrices}
+      fundedLabel={copyText('preorder.funded') ?? 'Funded'}
+    />
+  ) : null;
   // Units left in the paid batch: one add must not ask for more than the
   // batch that carries the ship date still holds.
   const paidLeft = campaign?.paidStock
@@ -2112,123 +1805,22 @@ function ProductPage() {
       ? say('product-chrome.buy_vat_note', 'incl. VAT')
       : null;
   const shipNote = !quote
-    ? say('product-chrome.buy_ship_flat', 'Flat shipping per order: {low} in Belgium, up to {high} worldwide.', {
-        low: formatPrice(SHIPPING_FROM, 'EUR'),
-        high: formatPrice(SHIPPING_TO, 'EUR'),
+    ? say('product-chrome.buy_ship_from', 'Shipping from {price}', {
+        price: formatPrice(SHIPPING_FROM, 'EUR'),
       })
     : quote.blocked
-      ? say('product-chrome.buy_ship_blocked', 'We do not ship to {country}.', {
+      ? say('product-chrome.buy_ship_blocked', 'No shipping to {country}', {
           country: countryName(quote.country),
         })
-      : say('product-chrome.buy_ship_to', 'Shipping to {country}: {price}', {
+      : say('product-chrome.buy_ship_to', 'Shipping to {country} {price}', {
           country: countryName(quote.country),
           price: formatPrice(quote.rate, 'EUR'),
         });
+  // Outside the EU the carrier collects duties and import VAT on delivery.
   const dutiesNote =
-    quote && !quote.blocked && quote.duty === 'us'
-      ? say(
-          'product-chrome.buy_duties_us_short',
-          'US import duty is paid to the carrier on delivery, about 35 to 40% of the value. None is charged at checkout.',
-        )
-      : quote && !quote.blocked && quote.duty === 'intl'
-        ? say(
-            'product-chrome.buy_duties_intl',
-            'No import duties are charged at checkout. Import duties and taxes may be due to the carrier on delivery.',
-          )
-        : null;
-  // What a preorder buyer agrees to, next to the button: paid in full now,
-  // and for a funding target what happens if it is missed.
-  const campaignTerms = !campaign
-    ? null
-    : !campaign.paidStock && campaign.target !== null && !campaign.targetReached
-      ? say(
-          'product-chrome.buy_terms_target',
-          'Paid in full when you order. The supplier order is placed once {target} are ordered. If that has not happened by {deadline}, you choose a refund or to keep waiting.',
-          {target: campaign.target, deadline: CAMPAIGN_DEADLINE},
-        )
-      : say('product-chrome.buy_terms_paid', 'Paid in full when you order.');
-
-  // The chip beside the eyebrow. While the selected variant sells in a
-  // campaign it says what the order is (paid first batch, or a funding
-  // target) and links to how preorders work; the roadmap word describes the
-  // design and on a product taking full payment would read as "cannot be
-  // bought yet". A preorder product outside a counted campaign shows none.
-  const chip = campaignChip(campaign);
-  const statusChip = chip ? (
-    <Link
-      prefetch="viewport"
-      to="/preorder"
-      className="product-status-chip"
-      data-campaign={chip}
-      title={
-        chip === 'first-batch'
-          ? say(
-              'product-chrome.chip_first_batch_legend',
-              'Batch {batch} is paid for and in production: {ships}.',
-              {batch: campaign!.batch, ships: campaign!.shipPromise},
-            )
-          : chip === 'funding'
-            ? say(
-                'product-chrome.chip_funding_legend',
-                'The supplier order is placed once {target} are ordered. If that has not happened by {deadline}, you choose a refund or to keep waiting.',
-                {target: campaign!.target ?? 0, deadline: CAMPAIGN_DEADLINE},
-              )
-            : say(
-                'product-chrome.chip_funded_legend',
-                'The funding target is reached. New orders count toward the next batch.',
-              )
-      }
-    >
-      <span className="kanban-dot" aria-hidden="true" />
-      {chip === 'first-batch'
-        ? say('product-chrome.chip_first_batch', 'First production batch')
-        : chip === 'funding'
-          ? say('product-chrome.chip_funding_short', 'Funding target')
-          : say('product-chrome.chip_funded', 'Funding target reached')}
-    </Link>
-  ) : roadmapStatus && !preorder ? (
-    <Link
-      prefetch="viewport"
-      to="/roadmap"
-      className="product-status-chip"
-      data-status={roadmapStatus}
-      title={copyText(`roadmap.status_${roadmapStatus}_legend`)}
-    >
-      <span className="kanban-dot" aria-hidden="true" />
-      {copyText(`roadmap.status_${roadmapStatus}_label`)}
-    </Link>
-  ) : null;
-
-  // A funding-target product takes full payment, so the design stage sits
-  // next to the funding chip instead of only on the roadmap: a buyer sees
-  // that a frame or motor is not yet tested before paying for it.
-  const stageText =
-    chip === 'funding' || chip === 'funded'
-      ? roadmapStatus === 'in-progress'
-        ? say('product-chrome.stage_in_progress_line', 'Design stage: prototypes ordered, not yet tested')
-        : roadmapStatus === 'alpha'
-          ? say('product-chrome.stage_alpha_line', 'Design stage: prototypes built and flown by testers')
-          : null
+    quote && !quote.blocked && quote.duty !== 'none'
+      ? say('product-chrome.buy_duties_short', 'duties on delivery')
       : null;
-  // The design stage in sentence case under the name (not a second
-  // uppercase chip), with what a missed target means for the buyer.
-  const stageLine = stageText ? (
-    <p className="product-stage-line" data-status={roadmapStatus}>
-      <Link prefetch="viewport" to="/roadmap">
-        {stageText}
-      </Link>
-      {chip === 'funding' ? (
-        <>
-          {'. '}
-          {say(
-            'product-chrome.stage_terms',
-            'Paid in full now. If the target is not reached by {deadline}, you choose a refund or to keep waiting.',
-            {deadline: CAMPAIGN_DEADLINE},
-          )}
-        </>
-      ) : null}
-    </p>
-  ) : null;
   // Coming-soon buy module: the price/stock/add-to-cart block becomes a
   // COMING SOON plate + notify-at-launch signup (same newsletter action,
   // tagged with this product's handle). Everything else on the PDP stays.
@@ -2287,23 +1879,23 @@ function ProductPage() {
       ) : null}
     </div>
   ) : (
-    <div className="product-buy" data-buy-module data-has-ladder={ladder && campaign ? '' : undefined}>
+    <div className="product-buy" data-buy-module>
       <div className="product-buy-price">
-        {/* Price + the "incl. VAT" qualifier (Art. VI.45 WER pre-contractual
-            info) grouped together - also fills the dead space beside the price. */}
+        {/* Price + "incl. VAT" (art. VI.45 WER pre-contractual info). */}
         <span className="product-buy-amount">
-          <ProductPrice
-            price={buyPrice}
-            compareAtPrice={isBundle ? undefined : selectedVariant?.compareAtPrice}
-          />
+          <ProductPrice price={buyPrice} />
           {content.priceUnit && !isBundle ? (
             <span className="product-buy-unit" {...prodEdit('priceUnit')}>
               {content.priceUnit}
             </span>
           ) : null}
           {vatNote ? <span className="product-buy-vat">{vatNote}</span> : null}
+          {campaign?.earlyPrice && ladder ? (
+            <span className="product-buy-tag">
+              {say('product-chrome.buy_early_bird', 'Early bird')}
+            </span>
+          ) : null}
         </span>
-
         {isBundle ? (
           (() => {
             // Name the actual pair for the tier (20×20 ships the Mini).
@@ -2322,35 +1914,7 @@ function ProductPage() {
           })()
         ) : null}
       </div>
-      {/* The price ladder: every step as plain text, the current one marked.
-          No struck-through price (EU Price Indication Directive, art. 6a). */}
-      {ladder && campaign ? (
-        <PriceLadder
-          steps={ladder}
-          nextUnit={campaign.ordered + 1}
-          left={campaign.tierLeft}
-          currency={currency}
-          vatNote={vatNote}
-          unit={content.priceUnit ?? null}
-          batchLine={
-            campaign.paidStock
-              ? say('product-chrome.ladder_batch_paid', 'Batch {batch}: {units} paid for, {left} left', {
-                  batch: campaign.batch,
-                  units: campaign.batchUnits,
-                  left: paidLeft ?? campaign.batchUnits - campaign.batchOrdered,
-                })
-              : null
-          }
-        />
-      ) : null}
-      {setOf && buyPrice ? (
-        <p className="product-buy-set">
-          {say('product-chrome.buy_set_line', '{count} for one quad: {price}', {
-            count: setOf,
-            price: formatPrice(Number(buyPrice.amount) * setOf, buyPrice.currencyCode),
-          })}
-        </p>
-      ) : null}
+      {stepBar}
       {/* Star aggregate + link to the reviews chapter. Renders nothing
           without reviews; CSS hides it in the compact pinned rail. */}
       <ReviewAggregateLine aggregate={reviewAggregate} />
@@ -2363,40 +1927,22 @@ function ProductPage() {
         buyCtaLabel={
           isBundle ? copyText('product-chrome.buy_bundle_cta') : undefined
         }
-        stackOffers={stackOffers}
         quantity={isBundle ? undefined : buyQuantity}
         maxQuantity={maxQuantity}
         maxQuantityNote={maxQuantityNote}
         onQuantityChange={isBundle ? undefined : setQuantity}
       />
-      {/* Pre-order: the stock line carries the catalog ship promise (the
-          product's own, else the shop-wide default). The catalog
-          availability still decides whether the buy button is enabled. */}
-      <span
-        className={`product-buy-stock${
-          preorder && !isBundle ? ' is-preorder' : buyAvailable ? '' : ' is-out'
-        }`}
-      >
-        {isBundle
-          ? copyText(
-              buyAvailable
-                ? 'product-chrome.buy_stock_bundle_in'
-                : 'product-chrome.buy_stock_bundle_out',
-            )
-          : preorder
-            ? (
-                // One text run, so the flex row wraps it as a sentence
-                // instead of stranding the separator on its own line.
-                <span>
-                  {copyText('product-chrome.buy_stock_preorder_prefix') ?? ''} ·{' '}
-                  {shipPromise ? (
-                    // One short line; the full condition is in the terms
-                    // sentence and the stage line.
-                    <span>{shortShipPromise(shipPromise)?.text.replace(/^Ships/, 'ships') ?? shipPromise}</span>
-                  ) : (
-                    <Txt id="product-chrome.preorder_lead_default" as="span" />
-                  )}
-                </span>
+      {/* Ship date right under the button (WER VI.43), and for a funding
+          target its deadline and the "if funded" condition. */}
+      {preorder && !isBundle ? (
+        <ShipLine campaign={campaign} promise={shipPromise} className="product-buy-stock" />
+      ) : (
+        <p className={`product-buy-stock${buyAvailable ? '' : ' is-out'}`}>
+          {isBundle
+            ? copyText(
+                buyAvailable
+                  ? 'product-chrome.buy_stock_bundle_in'
+                  : 'product-chrome.buy_stock_bundle_out',
               )
             : selectedVariant?.availableForSale
               ? copyText('product-chrome.buy_stock_in')
@@ -2408,57 +1954,20 @@ function ProductPage() {
                     </>
                   )
                 : copyText('product-chrome.buy_stock_out')}
-      </span>
-      {/* Campaign meter: paid stock left, or progress to the funding target.
-          The numbers and the ship promise above come from the same catalog
-          read. */}
-      {campaignTerms && !campaign?.paidStock ? <p className="product-buy-terms">{campaignTerms}</p> : null}
-      {/* Someone buying a present needs the date in those words. */}
-      {campaign && !campaign.paidStock ? (
-        <Txt id="collections-all.help_gift" as="p" className="product-buy-gift" />
-      ) : null}
-      {/* Paid stock with the price steps shown: the steps' availability
-          line already says what is left, so only the explainer link stays.
-          A funding target keeps its progress bar. The batch list lives on
-          /preorder, behind that link. */}
-      {campaign ? (
-        ladder && campaign.paidStock ? (
-          <Link className="funding-meter-link" prefetch="intent" to="/preorder">
-            {copyText('preorder.meter_link') ?? 'How preorders work'}
-          </Link>
-        ) : (
-          <PreorderMeter
-            campaign={campaign}
-            priceAfter={selectedVariant?.priceAfter}
-            showEarly={!ladder}
-            showBatchPromise={false}
-            showBatches={false}
-            zeroLabel={
-              campaign.target
-                ? say('product-chrome.meter_zero', 'Funding target: {target} by {deadline}', {
-                    target: campaign.target,
-                    deadline: CAMPAIGN_DEADLINE,
-                  })
-                : undefined
-            }
-          />
-        )
-      ) : null}
-      <p className="product-buy-ship">
-        {shipNote}{' '}
-        <Link prefetch="intent" to="/shipping" className="product-buy-ship-link">
-          {say('product-chrome.buy_ship_link', 'All rates')}
-        </Link>
-      </p>
-      {dutiesNote ? <p className="product-buy-duties">{dutiesNote}</p> : null}
-      {quote && !quote.blocked && paysInOtherCurrency(quote.country) ? (
-        <p className="product-buy-duties">
-          {say(
-            'product-chrome.buy_currency_note',
-            'Prices are in euro. Your card issuer converts at its own rate.',
-          )}
         </p>
-      ) : null}
+      )}
+      <p className="product-buy-ship">
+        {shipNote}
+        {dutiesNote ? ` · ${dutiesNote}` : null}
+        {preorder && !isBundle ? (
+          <>
+            {' · '}
+            <Link prefetch="intent" to="/preorder" className="product-buy-terms-link">
+              {say('product-chrome.buy_terms_link', 'Pre-order terms')}
+            </Link>
+          </>
+        ) : null}
+      </p>
       {/* Sold-out signup: not for pre-order products, whose "unavailable"
           is a catalog availability state, not a launch to be notified of. */}
       {!isBundle &&
@@ -2471,33 +1980,6 @@ function ProductPage() {
           className="product-buy-notify"
         />
       ) : null}
-      <ul
-        className="product-buy-trust"
-        aria-label={say('product-chrome.buy_trust_aria', 'Buying from OpenDrone')}
-      >
-        {campaign?.paidStock ? (
-          <li>{say('product-chrome.buy_terms_paid', 'Paid in full when you order.')}</li>
-        ) : null}
-        <li>{say('product-chrome.buy_trust_checkout', 'Secure checkout by Shopify')}</li>
-        <li>{say('product-chrome.buy_trust_origin_plain', 'Ships from Belgium')}</li>
-        <li>
-          {preorder && !isBundle ? (
-            <Link prefetch="intent" to="/preorder#how-it-works">
-              {say('product-chrome.buy_trust_cancel', 'Cancel any time before delivery, full refund')}
-            </Link>
-          ) : (
-            <Link prefetch="intent" to="/herroepingsrecht">
-              {say('product-chrome.buy_trust_withdrawal', '14-day right of withdrawal')}
-            </Link>
-          )}
-        </li>
-        <li>
-          <Link prefetch="intent" to="/warranty">
-            {say('product-chrome.buy_trust_warranty', '2-year warranty')}
-          </Link>
-        </li>
-      </ul>
-      <p className="product-buy-facts">{buyerFacts(safetyKind(product.handle))}</p>
     </div>
   );
 
@@ -2512,14 +1994,6 @@ function ProductPage() {
   // teardown chapter (the board no longer pins full-screen there) so variant/SKU
   // switching is reachable everywhere on the page, not just above the fold.
   const railSuppressed = railPinned && asideType !== 'closed';
-  // "What does this do?" in one or two plain lines under the name: the
-  // first sentence of the beginner intro plus where the part sits, for
-  // products whose hero has no lead of its own.
-  const heroLeadFromIntro = content.whatIsThis
-    ? [firstSentence(content.whatIsThis.intro), content.whatIsThis.fit]
-        .filter(Boolean)
-        .join(' ')
-    : '';
   // Coming soon (alpha): there is nothing to buy, and a notify form fixed to
   // the viewport would be noise, so the pinned copy carries the ladder ALONE.
   // The variants are the whole point of an alpha page, so switching them stays
@@ -3232,8 +2706,7 @@ function ProductPage() {
               </table>
             </div>
           ) : null}
-          {/* Printed once: the glance box above already carries it. */}
-          {content.footnote && !glanceRows.length ? (
+          {content.footnote ? (
             <p className="chapter-footnote" {...prodEdit('footnote')}>
               {content.footnote}
             </p>
@@ -3557,213 +3030,62 @@ function ProductPage() {
         </div>
 
         <div className="product-hero-copy">
-          <p className="product-hero-eyebrow">
-            {/* The product type only: the internal file number meant nothing
-                to a buyer. A resold part without an editorial file shows the
-                catalog product type. */}
-            {content.fileNumber !== '-' ? (
-              <span {...prodEdit('family')}>{content.family}</span>
-            ) : (
-              <span>{product.productType || content.family}</span>
-            )}
-            {statusChip}
-          </p>
-          {/* The product name is the page heading; the editorial tagline
-              follows it at display size. */}
-          {hasHeroCopy ? <h1 className="product-hero-name">{title}</h1> : null}
-          {hasHeroCopy ? (
-            <p className="product-hero-headline">
-              {/* Skip empty lines - single-line heroes (OpenESC) otherwise
-                  render stray empty <em>/<span> nodes and join spaces. */}
-              <span {...prodEdit('hero.line1')}>{content.hero.line1}</span>
-              {content.hero.line2Italic ? (
-                <>
-                  {' '}
-                  <span {...prodEdit('hero.line2Italic')}>
-                    <em>{content.hero.line2Italic}</em>
-                  </span>
-                </>
-              ) : null}
-              {content.hero.line3 ? (
-                <>
-                  {' '}
-                  <span {...prodEdit('hero.line3')}>{content.hero.line3}</span>
-                </>
-              ) : null}
-            </p>
-          ) : (
-            <h1 className="product-hero-headline">
-              <span>{title}</span>
-            </h1>
-          )}
-          {stageLine}
-          {/* Phones: price and ship date right under the name, so the
-              buyer does not scroll past the gallery and chips to find them.
-              Hidden from 720px, where the buy box sits beside the gallery. */}
-          {!soon && buyPrice ? (
-            <p className="product-hero-price-mobile">
-              <strong>{formatPrice(buyPrice.amount, buyPrice.currencyCode)}</strong>
-              {content.priceUnit && !isBundle ? <span> {content.priceUnit}</span> : null}
-              {vatNote ? <span> {vatNote}</span> : null}
-              {preorder && shipPromise ? (
-                <span> · {shortShipPromise(shipPromise)?.text.replace(/^Ships/, 'ships') ?? shipPromise}</span>
-              ) : null}
+          <h1 className="product-hero-name">{title}</h1>
+          {subtitle ? (
+            <p
+              className="product-hero-sub"
+              {...prodEdit(activeVariant?.subtitle ? `variants.${activeTier}.subtitle` : 'subtitle')}
+            >
+              {subtitle}
             </p>
           ) : null}
-          {content.hero.lead ? (
-            <p className="product-hero-lead" {...prodEdit('hero.lead')}>
-              {content.hero.lead}
-            </p>
-          ) : heroLeadFromIntro ? (
-            <p className="product-hero-lead">{heroLeadFromIntro}</p>
-          ) : null}
-          {content.heroNote ? (
-            <p className="product-hero-note">
-              <span {...prodEdit('heroNote.text')}>{content.heroNote.text}</span>
-              {content.heroNote.links?.map((l) => (
-                <Fragment key={l.href}>
-                  {' '}
-                  <Link prefetch="intent" to={l.href} className="text-link">
-                    {l.label}
-                  </Link>
-                </Fragment>
-              ))}
-            </p>
+          {activeOshwaUid || hasPublicSource ? (
+            <ul
+              className="trust-chips"
+              aria-label={copyText('product-chrome.trust_chips_aria')}
+            >
+              {activeOshwaUid ? (
+                <li>
+                  <a
+                    href={`https://certification.oshwa.org/${activeOshwaUid.toLowerCase()}.html`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="trust-chip trust-chip-oshwa trust-chip-link"
+                    title={`${copyText('product-chrome.oshwa_mark_title') ?? ''} · ${activeOshwaUid}`}
+                  >
+                    <img
+                      src="/logos/oshwa.svg"
+                      alt=""
+                      aria-hidden="true"
+                      className="trust-chip-oshwa-mark"
+                    />
+                    <span className="trust-chip-oshwa-word">OSHWA</span>
+                    <span className="trust-chip-oshwa-uid">{activeOshwaUid}</span>
+                  </a>
+                </li>
+              ) : null}
+              {hasPublicSource ? (
+                <li>
+                  <a
+                    href={activeRepoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="trust-chip trust-chip-link"
+                    title={repoName(activeRepoUrl) ?? undefined}
+                  >
+                    {say('product-chrome.trust_chip_source', 'GitHub')}
+                  </a>
+                </li>
+              ) : null}
+            </ul>
           ) : null}
 
-          <ul
-            className="trust-chips"
-            aria-label={copyText('product-chrome.trust_chips_aria')}
-          >
-            {hasPublicSource ? (
-              <li>
-                {/* The first click after the name is "show me the files":
-                    the chip opens this version's repository. */}
-                <a
-                  href={activeRepoUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="trust-chip trust-chip-green trust-chip-link"
-                  title={repoName(activeRepoUrl) ?? undefined}
-                >
-                  {say('product-chrome.trust_chip_source', 'Source on GitHub')}
-                </a>
-              </li>
-            ) : null}
-            {activeOshwaUid ? (
-              <li>
-                <a
-                  href={`https://certification.oshwa.org/${activeOshwaUid.toLowerCase()}.html`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="trust-chip trust-chip-oshwa trust-chip-link"
-                  title={`${copyText('product-chrome.oshwa_mark_title') ?? ''} · ${activeOshwaUid}`}
-                >
-                  <img
-                    src="/logos/oshwa.svg"
-                    alt=""
-                    aria-hidden="true"
-                    className="trust-chip-oshwa-mark"
-                  />
-                  <span className="trust-chip-oshwa-word">OSHWA</span>
-                  <span className="trust-chip-oshwa-uid">{activeOshwaUid}</span>
-                  {upstreamName ? (
-                    <span className="trust-chip-oshwa-as">
-                      {say('product-chrome.trust_chip_oshwa_as', 'certified as {name}', {name: upstreamName})}
-                    </span>
-                  ) : null}
-                </a>
-              </li>
-            ) : null}
-            {content.bundle ? (
-              <li>
-                <Link
-                  to="/firmware-partners"
-                  prefetch="viewport"
-                  className="trust-chip trust-chip-gold trust-chip-link"
-                >
-                  {bundleChipParts[0]}
-                  {content.bundle.components.map((c) => c.firmware).join(' + ')}
-                  {bundleChipParts[1]}
-                </Link>
-              </li>
-            ) : content.firmware.project && content.firmware.project !== '-' ? (
-              <li>
-                <Link
-                  to="/firmware-partners"
-                  prefetch="viewport"
-                  className="trust-chip trust-chip-gold trust-chip-link"
-                >
-                  {firmwareChipParts[0]}
-                  {content.firmware.project}
-                  {firmwareChipParts[1]}
-                </Link>
-              </li>
-            ) : null}
-          </ul>
-
-          {/* In-flow buy box - scrolls past with the page like any content,
-              so nothing vanishes or leaves a gap. The sentinel sits BELOW the
-              buy module: the compact top bar takes over only once the whole
-              module (CTA included) is under the header, otherwise the two
-              overlap now that the column scrolls normally. */}
+          {/* In-flow buy box. The sentinel below the column hands over to
+              the compact pinned bar once the whole box is under the header. */}
           <div className="buy-rail" ref={inflowBuyRef}>
             {railLadder}
-            {content.pickNote && !soon ? (
-              <p className="product-pick-note" {...prodEdit('pickNote')}>
-                {content.pickNote}
-              </p>
-            ) : null}
             {railBuyModule}
           </div>
-          {glanceRows.length ? (
-            <section className="product-glance" aria-labelledby="product-glance-title">
-              <h2 id="product-glance-title" className="product-glance-title">
-                {say('product-chrome.glance_title', 'At a glance')}
-              </h2>
-              <dl className="spec-table product-glance-table">
-                {glanceRows.map(([k, v]) => (
-                  <SpecRow key={k} name={k} value={displaySpecValue(k, v, mergedBox)} />
-                ))}
-                {content.glanceExtra?.map((row) => (
-                  <div key={row.label}>
-                    <dt>{row.label}</dt>
-                    <dd>
-                      {row.href ? (
-                        <Link prefetch="intent" to={row.href}>
-                          {row.value}
-                        </Link>
-                      ) : (
-                        row.value
-                      )}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-              <p className="product-glance-links">
-                <a href={`#${SPECS_ID}`}>{say('product-chrome.glance_specs', 'All specs')}</a>
-                {mergedBox.length ? (
-                  <a href={`#${IN_THE_BOX_ID}`}>{say('product-chrome.glance_box', 'What is in the box')}</a>
-                ) : null}
-              </p>
-              {content.footnote ? (
-                <p className="product-glance-footnote">{content.footnote}</p>
-              ) : null}
-              {content.whatIsThis?.needs.length ? (
-                <details className="product-glance-new">
-                  <summary>{say('product-chrome.glance_new', 'New to FPV? What else you need to fly')}</summary>
-                  <ul>
-                    {content.whatIsThis.needs.map((need) => (
-                      <li key={need}>{need}</li>
-                    ))}
-                  </ul>
-                  <a href={`#${WHAT_IS_THIS_ID}`}>
-                    {say('product-chrome.glance_what', 'What this part does')}
-                  </a>
-                </details>
-              ) : null}
-            </section>
-          ) : null}
           {/* Separate compact bar pinned to the top while the in-hero selector
               is out of view, so variants stay switchable from anywhere. Coming
               soon: ladder only (see pinnedRail), and nothing at all when the
@@ -3772,23 +3094,8 @@ function ProductPage() {
             ? createPortal(pinnedRail, document.body)
             : null}
 
-          {content.pairCta ? (
-            <Link className="pair-cta" to={content.pairCta.to} prefetch="viewport">
-              <span
-                className="pair-cta-eyebrow"
-                {...prodEdit('pairCta.eyebrow')}
-              >
-                {content.pairCta.eyebrow}
-              </span>
-              <span className="pair-cta-title" {...prodEdit('pairCta.title')}>
-                {content.pairCta.title}
-              </span>
-              <span className="pair-cta-arrow" aria-hidden="true">→</span>
-            </Link>
-          ) : null}
-          {/* Below everything in this column (buy module, glance box): the
-              pinned bar takes over only once all of it is under the header,
-              so it never covers the glance rows. */}
+          {/* Below the whole buy box: the pinned bar takes over only once
+              all of it is under the header. */}
           <div
             ref={railSentinelRef}
             className="buy-rail-sentinel"

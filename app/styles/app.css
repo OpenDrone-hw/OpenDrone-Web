@@ -315,22 +315,6 @@ html.light .schematic-sheet {
   line-height: 1;
 }
 
-.product-price-row {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.55rem;
-}
-
-.product-price-sale {
-  color: var(--color-gold-text);
-}
-
-.product-price-compare {
-  font-size: var(--fs-base);
-  color: var(--color-text-dim);
-  text-decoration: line-through;
-}
-
 /* Tabular numerals everywhere a number appears. Cheap and unambiguously
    says "engineering" everywhere a price/spec/SKU is rendered. */
 .product-buy-sku,
@@ -2240,7 +2224,6 @@ html.hero-header-in .homepage-layout .site-header {
     display: none;
   }
 }
-
 
 .home-mobile-featured {
   display: flex;
@@ -4371,8 +4354,7 @@ button.reset {
   }
   .product-hero-gallery-col,
   .product-hero-eyebrow,
-  .product-hero-headline,
-  .product-hero-lead {
+  .product-hero-headline {
     animation: pdp-hero-rise 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
   }
   .product-hero-eyebrow {
@@ -4380,9 +4362,6 @@ button.reset {
   }
   .product-hero-headline {
     animation-delay: 0.1s;
-  }
-  .product-hero-lead {
-    animation-delay: 0.16s;
   }
 }
 
@@ -4482,15 +4461,6 @@ button.reset {
   font-weight: 600;
 }
 
-.product-hero-lead {
-  font-family: var(--font-sans);
-  font-size: var(--fs-base);
-  line-height: 1.55;
-  color: var(--color-text-muted);
-  max-width: 52ch;
-  margin: 0;
-}
-
 .product-hero-gallery-col,
 .product-hero-right {
   display: flex;
@@ -4549,16 +4519,6 @@ button.reset {
   white-space: nowrap;
   color: var(--color-text-muted);
   background: transparent;
-}
-
-.trust-chip-green {
-  color: var(--color-stock);
-  border-color: color-mix(in srgb, var(--color-stock) 35%, var(--color-border));
-}
-
-.trust-chip-gold {
-  color: var(--color-gold-text);
-  border-color: color-mix(in srgb, var(--color-gold) 35%, var(--color-border));
 }
 
 /* OSHWA open-source-hardware certification chip. The mark carries the brand
@@ -4625,9 +4585,7 @@ button.reset {
 
 /* Buy module detail lines: shipping to the visitor's country, the duties
    note outside the EU, and the preorder terms. Small, muted, wrapping. */
-.product-buy-ship,
-.product-buy-duties,
-.product-buy-terms {
+.product-buy-ship {
   margin: 0;
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
@@ -4636,63 +4594,10 @@ button.reset {
   color: var(--color-text-muted);
   overflow-wrap: anywhere;
 }
-.product-buy-terms {
-  color: var(--color-text);
-}
-.product-buy-ship-link {
-  color: var(--color-gold-text);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  white-space: nowrap;
-}
-
-/* Preorder price ladder: every step as plain text, the current one marked.
-   Deliberately no struck-through price (EU Price Indication Directive). */
-.product-price-ladder {
-  display: grid;
-  gap: 0.35rem;
-  padding: 0.6rem 0.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-md);
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-}
 .product-price-ladder-head {
   margin: 0;
   color: var(--color-text-dim);
   letter-spacing: 0.04em;
-}
-.product-price-ladder ol {
-  display: grid;
-  gap: 0.2rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.product-price-ladder li {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: baseline;
-  gap: 0.6rem;
-  color: var(--color-text-muted);
-  font-variant-numeric: tabular-nums;
-}
-.product-price-ladder li[data-current] {
-  color: var(--color-text);
-  font-weight: 600;
-}
-.product-price-ladder li[data-current] .product-price-ladder-note {
-  color: var(--color-gold-text);
-}
-.product-price-ladder li[data-past] {
-  color: var(--color-text-dim);
-}
-.product-price-ladder-price {
-  text-align: right;
-}
-.product-price-ladder-note {
-  text-align: right;
-  overflow-wrap: anywhere;
 }
 
 /* Quantity stepper beside the buy button. */
@@ -4727,25 +4632,6 @@ button.reset {
 }
 .product-price-ladder-head {
   font-size: var(--fs-xs);
-}
-.product-price-ladder li {
-  grid-template-columns: max-content max-content minmax(0, 1fr);
-}
-/* Trust row under the CTA: a two-column grid, no separators, so a wrap
-   never starts a line with a stray dot. */
-.product-buy .product-buy-trust {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.35rem 0.75rem;
-}
-.product-buy .product-buy-trust li + li::before {
-  content: none;
-}
-.product-buy .product-buy-trust a {
-  color: inherit;
-  text-decoration: underline;
-  text-decoration-color: var(--color-border-strong);
-  text-underline-offset: 3px;
 }
 .product-qty {
   display: inline-flex;
@@ -4827,29 +4713,17 @@ button.reset {
 
 /* The pinned buy rails carry price and button only; the detail lines stay
    in the in-hero buy module. */
-.buy-rail.is-pinned .product-price-ladder,
 .buy-rail.is-pinned .product-buy-ship,
-.buy-rail.is-pinned .product-buy-duties,
-.buy-rail.is-pinned .product-buy-terms,
-.buy-rail.is-pinned .product-buy-trust,
 .buy-rail.is-pinned .product-buy-vat,
 .buy-rail.is-pinned .product-qty,
 .buy-rail.is-pinned .product-qty-note,
-.buy-rail.is-pinned .product-buy-facts,
 .buy-rail.is-pinned .product-buy-civilian,
 .buy-rail.is-pinned .product-buy-notify,
 .buy-rail.is-pinned .product-buy-usd,
 .buy-rail.is-pinned .product-buy-summary,
-.buy-rail.is-pinned .funding-meter-link,
-.buy-rail.is-pinned .preorder-meter,
-.buy-rail.is-pinned .funding-meter,
-.buy-rail.is-pinned .variant-tier-fit,
 .buy-rail.is-pinned .variant-tier-price,
-.buy-rail.is-pinned .variant-tier-pick,
-.buy-rail.is-pinned .variant-tier-specs,
 .buy-rail.is-pinned .cta-stack-flyout,
-.buy-rail.is-pinned .cta-stack-offer,
-.buy-rail.is-pinned .cta-stack-meta {
+.buy-rail.is-pinned .cta-stack-offer {
   display: none;
 }
 
@@ -5017,35 +4891,6 @@ button.reset {
   background: color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 
-/* Buy-module trust microcopy row — sits under the primary CTA.
-   Three dot-separated items: shipping, returns, warranty. Mono so
-   the numeric tokens (14-day, 2-year) line up. */
-.product-buy-trust {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem 0.65rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  color: var(--color-text-dim);
-  line-height: 1.4;
-}
-
-.product-buy-trust li {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.product-buy-trust li + li::before {
-  content: "·";
-  color: var(--color-border-strong);
-  margin-right: 0.5rem;
-}
-
 /* Stock indicator — green dot + label, replaces the awkward chip. */
 .product-buy-stock {
   display: inline-flex;
@@ -5073,21 +4918,6 @@ button.reset {
 .product-buy-stock.is-out::before {
   background: var(--color-text-dim);
   box-shadow: none;
-}
-
-/* Pre-order: gold dot (same treatment as the coming-soon module below),
-   the label reads "Pre-order · <ship promise>". */
-.product-buy-stock.is-preorder {
-  align-items: flex-start;
-  color: var(--color-gold-text);
-}
-.product-buy-stock.is-preorder::before {
-  flex: none;
-  margin-top: 0.35em;
-}
-.product-buy-stock.is-preorder::before {
-  background: var(--color-gold-fill);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-gold) 18%, transparent);
 }
 
 /* Coming-soon buy module — the price slot carries a hairline COMING SOON
@@ -5420,9 +5250,6 @@ button.reset {
     min-width: 0;
     gap: 0;
   }
-  .buy-rail.is-pinned .variant-ladder-axis {
-    display: none;
-  }
   .buy-rail.is-pinned .variant-ladder-track {
     display: flex;
     flex-wrap: nowrap;
@@ -5443,7 +5270,6 @@ button.reset {
   .buy-rail.is-pinned .variant-tier-glow {
     border-radius: var(--r-pill);
   }
-  .buy-rail.is-pinned .variant-tier-specs,
   .buy-rail.is-pinned .variant-tier-flag {
     display: none;
   }
@@ -5505,22 +5331,6 @@ button.reset {
   margin: 0;
 }
 
-.variant-ladder-axis {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  text-transform: uppercase;
-  letter-spacing: var(--ls-label);
-  color: var(--color-text-muted);
-}
-
-.variant-ladder-axis-hint {
-  margin-left: 0.5rem;
-  text-transform: none;
-  letter-spacing: 0;
-  color: var(--color-text-dim);
-}
-
 .variant-ladder-track {
   display: grid;
   /* Always two columns: a 4-tier line reads as a stable 2×2 at any column
@@ -5565,8 +5375,7 @@ button.reset {
 }
 
 /* Card content sits above the gliding selection highlight. */
-.variant-tier-head,
-.variant-tier-specs {
+.variant-tier-head {
   position: relative;
   z-index: 1;
 }
@@ -5620,35 +5429,6 @@ button.reset {
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   letter-spacing: 0.04em;
-  color: var(--color-text-dim);
-}
-
-.variant-tier-flag.is-selected {
-  color: var(--color-gold-text);
-}
-
-/* The differing specs as ONE dotted line under the tier name, on every card.
-   Values only (keys are .sr-only): the card name plus two short values is the
-   whole comparison, and it has to survive a 2-up grid in the hero column, so
-   the line stays mono, tight and unwrapped where it fits. */
-.variant-tier-specs {
-  display: block;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  line-height: 1.4;
-  color: var(--color-text-muted);
-  font-variant-numeric: tabular-nums;
-  /* Each value holds together; the line breaks only between values. */
-  overflow-wrap: normal;
-}
-
-.variant-tier-spec {
-  white-space: nowrap;
-  color: var(--color-text);
-}
-
-.variant-tier-sep {
-  padding: 0 0.4em;
   color: var(--color-text-dim);
 }
 
@@ -5781,41 +5561,6 @@ button.reset {
   }
 }
 
-/* Product page buy box: the stack offer is an always-visible row under the
-   Pre-order button, not a hover flyout. Pinned rails keep it hidden. */
-.cta-stack-group--inline .cta-stack-flyout {
-  position: static;
-  opacity: 1;
-  transform: none;
-  pointer-events: auto;
-  padding-bottom: 0;
-  padding-top: 0.5rem;
-}
-.cta-stack-group--inline .cta-stack-offer {
-  box-shadow: none;
-  border-radius: var(--r-md);
-}
-.cta-stack-group--inline .cta-stack-offer-label {
-  white-space: normal;
-}
-.buy-rail.is-pinned .cta-stack-group--inline .cta-stack-flyout {
-  display: none;
-}
-/* Next to the quantity stepper the group dissolves into the buy row: the
-   Pre-order button keeps its place beside the stepper and the offer wraps
-   onto its own full-width line below both. */
-.product-buy .product-form:has(> .product-qty) > .cta-stack-group--inline {
-  display: contents;
-}
-.product-buy .product-form:has(> .product-qty) > .cta-stack-group--inline > .add-to-cart-form > button {
-  flex: 1 1 0;
-  min-width: 0;
-}
-.product-buy .product-form:has(> .product-qty) > .cta-stack-group--inline > .cta-stack-flyout {
-  flex: 1 1 100%;
-  padding-top: 0;
-}
-
 /* Catalog card quick-add: a pill pinned to the bottom-right of the media
    square (the wrapper mirrors the 1:1 media box so it anchors to the image,
    not the text body), revealed on card hover. Touch: always visible. */
@@ -5887,58 +5632,6 @@ button.reset {
   .product-card-quickadd .cta-stack-flyout {
     display: none;
   }
-}
-
-.pair-cta {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  padding: 1.1rem 3.25rem 1.1rem 1.4rem;
-  margin-top: 0.25rem;
-  background: color-mix(in srgb, var(--color-gold) 6%, var(--color-bg-card));
-  border: 1px solid color-mix(in srgb, var(--color-gold) 35%, var(--color-border));
-  border-radius: var(--r-lg);
-  color: var(--color-text);
-  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
-}
-
-.pair-cta:hover {
-  border-color: var(--color-gold);
-  background: color-mix(in srgb, var(--color-gold) 10%, var(--color-bg-card));
-  color: var(--color-text);
-  transform: translateY(-1px);
-}
-
-.pair-cta-eyebrow {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-gold-text);
-}
-
-.pair-cta-title {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 1.25rem;
-  line-height: 1.25;
-  letter-spacing: -0.01em;
-  color: var(--color-text);
-}
-
-.pair-cta-arrow {
-  position: absolute;
-  right: 1.4rem;
-  bottom: 1.1rem;
-  font-family: var(--font-mono);
-  font-size: 1.4rem;
-  color: var(--color-gold-text);
-  transition: transform 0.2s ease;
-}
-
-.pair-cta:hover .pair-cta-arrow {
-  transform: translateX(4px);
 }
 
 /* Chapters — two-column grid on wide viewports: content left,
@@ -7641,7 +7334,6 @@ html.light .firmware-logo--tile {
   color: var(--color-gold-text);
 }
 
-
 /* Subtle bubble — same quiet card as the latest-commit cards beside it so the
    row reads as one consistent set (a bare top-hairline left the text floating).
    Kept light: card bg + hairline border, gold on hover. */
@@ -7908,7 +7600,6 @@ html.light .firmware-logo--tile {
 .watch-card-yt-tri {
   fill: var(--color-on-accent);
 }
-
 
 .watch-card:hover {
   border-color: color-mix(in srgb, var(--color-gold) 50%, var(--color-border));
@@ -8445,7 +8136,6 @@ html.light .firmware-logo--tile {
    column) so "what ships" and "what's still missing" read as siblings; the
    fit line + homepage link close it out. */
 
-
 /* The signal chain, in hero-scroll order: this product's stage is lit gold,
    stages we sell link their boards. One glance places the part; the homepage
    hero tells the same story as a scroll. */
@@ -8492,7 +8182,6 @@ a.what-chain-chip:hover {
   color: var(--color-on-accent);
   font-weight: 600;
 }
-
 
 .what-home-link {
   display: inline-block;
@@ -11282,9 +10971,6 @@ html.light .editorial-watermark {
   margin-bottom: 1.5rem;
 }
 
-
-
-
 @media (min-width: 1120px) {
   .editorial-shell,
   .editorial-shell.is-narrow {
@@ -11585,7 +11271,6 @@ html.light .editorial-watermark {
 .pipeline li.is-now .pipeline-label {
   color: var(--color-text);
 }
-
 
 /* Firmware partner cards */
 .partners-grid {
@@ -12184,7 +11869,6 @@ html.light .editorial-watermark {
   color: color-mix(in srgb, var(--color-text-muted) 80%, transparent);
 }
 
-
 /* Upstream merged-PR receipts (/firmware-partners, section hidden while
    the MERGED_PRS array is empty). */
 .upstream-list {
@@ -12357,15 +12041,6 @@ html.light .editorial-watermark {
   color: var(--color-text);
   border-color: color-mix(in srgb, var(--color-gold) 60%, var(--color-border));
   background: color-mix(in srgb, var(--color-gold) 6%, var(--color-bg-card));
-}
-
-.trust-chip-link.trust-chip-green:hover {
-  color: var(--color-gold-text);
-  border-color: color-mix(in srgb, var(--color-accent-light) 60%, var(--color-border));
-}
-
-.trust-chip-link.trust-chip-gold:hover {
-  color: var(--color-gold-text-hover);
 }
 
 .trust-chip-link.trust-chip-oshwa:hover {
@@ -16378,10 +16053,7 @@ html.light .editorial-watermark {
   .product-hero-eyebrow,
   .product-buy-sku,
   .product-buy-stock,
-  .variant-ladder-axis,
-  .variant-ladder-axis-hint,
   .variant-tier-flag,
-  .variant-tier-specs,
   .chapter-number,
   .chapter-label,
   .product-card-meta,
@@ -17759,76 +17431,6 @@ a.hp-label:focus-visible .hp-label-name {
 .add-to-cart-form {
   display: contents;
 }
-
-/* Funded preorder meter (PreorderMeter, .funding-meter). Progress toward a
-   SKU's unit target under the buy module's stock line; the compact form sits
-   in the /preorder tracker rows. Paid stock has no bar, only the units left.
-   A reached target reads in the stock green. The pinned buy rail drops it. */
-.funding-meter {
-  display: grid;
-  gap: var(--sp-2);
-  width: 100%;
-}
-.preorder-meter {
-  margin: var(--sp-2) 0 var(--sp-3);
-}
-.funding-meter-track {
-  display: block;
-  width: 100%;
-  height: 6px;
-  border-radius: var(--r-2xs);
-  background: color-mix(in srgb, var(--color-border-strong) 70%, transparent);
-  overflow: hidden;
-}
-.funding-meter-track.is-thin {
-  height: 3px;
-}
-.funding-meter-fill {
-  display: block;
-  min-width: 3px;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--color-gold);
-  transition: width 0.6s ease;
-}
-.funding-meter-fill[data-empty] {
-  min-width: 0;
-}
-.funding-meter[data-funding-state='funded'] .funding-meter-track:not(.is-thin) .funding-meter-fill {
-  background: var(--color-stock);
-}
-.funding-meter-status,
-.funding-meter-label {
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  letter-spacing: 0.04em;
-  line-height: 1.5;
-  color: var(--color-text-muted);
-}
-.funding-meter-status {
-  color: var(--color-text);
-}
-.funding-meter[data-funding-state='funded'] .funding-meter-status {
-  color: var(--color-stock);
-}
-.funding-meter-link {
-  justify-self: start;
-  margin-top: var(--sp-1);
-  padding-block: 4px;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  letter-spacing: 0.04em;
-  color: var(--color-gold-text);
-  text-decoration: none;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-gold) 40%, transparent);
-}
-.funding-meter-link:hover {
-  color: var(--color-gold-text-hover);
-  border-bottom-color: var(--color-gold-hover);
-}
-.buy-rail.is-pinned .funding-meter {
-  display: none;
-}
 /* StepBar: units sold as one bar, a tick at each price-step end, the step
    prices above it with the current one in ink. */
 .step-bar {
@@ -17889,13 +17491,8 @@ a.hp-label:focus-visible .hp-label-name {
 }
 /* Light theme: gold text is a brand accent only there (see html.light), so
    the preorder words go to ink and the gold stays on dots and bars. */
-html.light .product-buy-stock.is-preorder,
-html.light .funding-meter-link,
 html.light .cart-sheet-item .cart-line-preorder {
   color: var(--color-text);
-}
-html.light .funding-meter-link {
-  border-bottom-color: var(--color-border-strong);
 }
 
 /* The desktop thumbnail strip sits below the square media frame, which
@@ -17956,11 +17553,6 @@ html.light .funding-meter-link {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .funding-meter-fill {
-    transition: none;
-  }
-}
 .cart-mixed-warning ul {
   margin: var(--sp-2) 0 0;
   padding-left: 1.1rem;
@@ -18269,7 +17861,6 @@ html.light .cart-added-continue {
   }
 }
 
-
 .cart-added-replaces {
   font-size: var(--fs-xs);
   line-height: 1.45;
@@ -18329,40 +17920,11 @@ html.light .cart-added-continue {
   }
 }
 
-
 .cart-added-note {
   margin: 0;
   font-size: var(--fs-xs, 0.75rem);
   color: var(--color-text-muted);
 }
-
-/* Batch list under the buy-box meter: every batch up to the next one, with
-   its ship date; sold-out batches stay visible, struck through. */
-.funding-meter-batches {
-  display: grid;
-  gap: 0.2rem;
-  margin: 0.35rem 0 0;
-  padding: 0;
-  list-style: none;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs, 0.75rem);
-  color: var(--color-text-muted);
-}
-.funding-meter-batches li {
-  display: flex;
-  gap: 0.6rem;
-}
-.funding-meter-batches li > span:first-child {
-  flex: 0 0 5.5em;
-}
-.funding-meter-batches li[data-batch-status='current'] {
-  color: var(--color-text);
-}
-.funding-meter-batches li[data-batch-status='sold_out'] {
-  text-decoration: line-through;
-  opacity: 0.7;
-}
-
 
 /* Side-by-side variant comparison under the spec table: only the rows that
    differ. Scrolls sideways on phones instead of squeezing columns. */
@@ -18580,7 +18142,7 @@ html.light .cart-added-continue {
 }
 
 /* ============================================
-   PDP "At a glance", spec help and cart polish
+   PDP spec help and cart polish
    ============================================ */
 
 /* In-page links (#specs, #in-the-box, #what-is-this) land below the
@@ -18643,82 +18205,6 @@ html.light .cart-added-continue {
   display: none;
 }
 
-/* At a glance: the five rows a buyer checks first, right under the buy
-   module, with links down to the full table and the box contents. */
-.product-glance {
-  margin-top: var(--sp-5);
-  padding: var(--sp-4) var(--sp-5);
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-lg);
-  background: var(--color-bg-card);
-}
-.product-glance-title {
-  margin: 0 0 var(--sp-2);
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  font-weight: 500;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-.product-glance .product-glance-table {
-  grid-template-columns: 1fr;
-  border-top: 0;
-}
-.product-glance-table > div {
-  padding: 0.55rem 0;
-}
-.product-glance-table > div:last-child {
-  border-bottom: 0;
-}
-.product-glance-table dd {
-  font-size: var(--fs-sm);
-}
-.product-glance-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem 1.25rem;
-  margin: var(--sp-3) 0 0;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  letter-spacing: 0.06em;
-}
-.product-glance-links a,
-.product-glance-new a {
-  color: var(--color-gold-text);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.product-glance-new {
-  margin-top: var(--sp-3);
-  padding-top: var(--sp-3);
-  border-top: 1px solid var(--color-border);
-  font-size: var(--fs-sm);
-  line-height: 1.5;
-}
-.product-glance-new summary {
-  cursor: pointer;
-  color: var(--color-text);
-  font-weight: 500;
-}
-.product-glance-new ul {
-  margin: var(--sp-2) 0;
-  padding-left: 1.1rem;
-  color: var(--color-text-muted);
-}
-.product-glance-new li + li {
-  margin-top: 0.25rem;
-}
-
-/* Price ladder: the step the next unit falls in reads as a highlighted
-   band, not only bold text. */
-.product-price-ladder li[data-current] {
-  margin: 0 -0.4rem;
-  padding: 0.2rem 0.4rem;
-  border-radius: var(--r-sm);
-  background: var(--color-gold-soft);
-}
-
 /* Phones: the pinned buy bar (75 px) rides the bottom of the screen, so the
    page ends above it instead of under it (safety block, footer). */
 @media (max-width: 959px) {
@@ -18776,20 +18262,13 @@ html.light .cart-added-continue {
   }
 }
 
-/* Desktop PDP: the photo stays beside the buy column while it scrolls past
-   the price, the terms and the glance box, instead of leaving an empty
-   column under it. */
+/* Desktop PDP: the photo stays beside the buy column while it scrolls
+   past, instead of leaving an empty column under it. */
 @media (min-width: 960px) {
   .product-hero-gallery-col {
     position: sticky;
     top: calc(var(--header-height) + 2.5rem);
   }
-}
-.product-glance-footnote {
-  margin: var(--sp-2) 0 0;
-  font-size: var(--fs-xs);
-  line-height: 1.5;
-  color: var(--color-text-dim);
 }
 .cart-mixed-warning p,
 .cart-mixed-warning li {
@@ -18813,15 +18292,6 @@ html.light .cart-added-continue {
 
 /* Buy box sentences: sans, body-ish size, readable contrast. */
 .product-buy-ship,
-.product-buy-duties,
-.product-buy-terms,
-.product-buy-facts,
-.product-price-ladder-sub,
-.product-price-ladder-left,
-.product-buy .funding-meter-status,
-.product-buy .funding-meter-label,
-.product-buy .product-buy-trust,
-.product-buy .product-buy-trust a,
 .product-buy .product-qty-note {
   font-family: var(--font-sans);
   font-size: 0.875rem;
@@ -18829,37 +18299,8 @@ html.light .cart-added-continue {
   letter-spacing: 0;
   text-transform: none;
 }
-.product-buy-ship,
-.product-buy-duties,
-.product-price-ladder-sub,
-.product-buy-facts {
+.product-buy-ship {
   color: color-mix(in srgb, var(--color-text) 72%, var(--color-text-muted));
-}
-.product-buy-stock.is-preorder,
-.product-buy-stock.is-preorder > span {
-  font-family: var(--font-sans);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  letter-spacing: 0;
-  text-transform: none;
-}
-.product-buy-facts {
-  margin: 0;
-  font-weight: 600;
-}
-.product-buy > .funding-meter-link {
-  justify-self: start;
-  font-family: var(--font-sans);
-  font-size: 0.875rem;
-  letter-spacing: 0;
-  text-transform: none;
-}
-
-/* Early-order price table: sans sentences, mono only for the prices. */
-.product-price-ladder {
-  font-family: var(--font-sans);
-  font-size: 0.875rem;
-  gap: 0.4rem;
 }
 .product-price-ladder-head {
   font-family: var(--font-mono);
@@ -18867,88 +18308,6 @@ html.light .cart-added-continue {
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
-}
-.product-price-ladder-sub,
-.product-price-ladder-left {
-  margin: 0;
-  font-size: 0.8125rem;
-}
-.product-price-ladder-left {
-  color: var(--color-text);
-  font-weight: 600;
-}
-.product-price-ladder li {
-  grid-template-columns: minmax(0, 1fr) auto 3.2rem;
-  gap: 0.75rem;
-}
-.product-price-ladder-price {
-  font-family: var(--font-mono);
-  font-size: 0.8125rem;
-}
-.product-price-ladder-note {
-  font-size: 0.8125rem;
-}
-
-/* Model cards: which frame each size fits, and who a version is for. */
-.variant-tier-fit {
-  position: relative;
-  z-index: 1;
-  display: block;
-  margin-top: 0.3rem;
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  line-height: 1.4;
-  color: color-mix(in srgb, var(--color-text) 72%, var(--color-text-muted));
-  text-align: left;
-}
-.variant-ladder-compare {
-  margin-left: 0.75rem;
-  font-family: var(--font-sans);
-  text-transform: none;
-  letter-spacing: 0;
-  color: var(--color-gold-text);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-/* Stack offer under Pre-order: one row, label then price, full width;
-   stacked into two lines on narrow screens instead of a squeezed column. */
-.cta-stack-group--inline .cta-stack-offer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem 0.75rem;
-  width: 100%;
-  min-height: 44px;
-  text-align: left;
-  font-family: var(--font-sans);
-  text-transform: none;
-  letter-spacing: 0;
-}
-.cta-stack-group--inline .cta-stack-offer .btn-label {
-  display: flex;
-  flex: 1 1 auto;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem 0.75rem;
-  flex-wrap: wrap;
-  min-width: 0;
-}
-.cta-stack-group--inline .cta-stack-offer .cta-stack-offer-label,
-.cta-stack-group--inline .cta-stack-offer .cta-stack-offer-plus {
-  font-family: var(--font-sans);
-  font-size: 0.875rem;
-  font-weight: 600;
-  letter-spacing: 0;
-  text-transform: none;
-}
-.cta-stack-group--inline .cta-stack-offer-label {
-  flex: 1 1 12rem;
-  white-space: normal;
-}
-.cta-stack-group--inline .cta-stack-offer-price {
-  flex: 0 0 auto;
-  font-family: var(--font-mono);
 }
 /* Another add is running: this button waits for it. */
 button[data-waiting] {
@@ -19194,25 +18553,7 @@ button[data-waiting] {
   font-size: var(--fs-sm);
   color: var(--color-text-muted);
 }
-
-/* Phones: price under the name, one scrolling row of chips, a shorter
-   gallery, so the buy box comes up a screen sooner. */
-.product-hero-price-mobile {
-  display: none;
-}
 @media (max-width: 719px) {
-  .product-hero-price-mobile {
-    display: block;
-    margin: 0.25rem 0 0;
-    font-family: var(--font-sans);
-    font-size: 0.8125rem;
-    color: var(--color-text-muted);
-  }
-  .product-hero-price-mobile strong {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--color-text);
-  }
   .product-hero-copy .trust-chips {
     flex-wrap: nowrap;
     overflow-x: auto;
@@ -19407,96 +18748,8 @@ body:has(.cart-added-overlay) .buy-rail.is-pinned {
   cursor: pointer;
   list-style: revert;
 }
-
-/* ------------------------------------------------------------------
-   Product buy box: the early price in one line (the ladder carries the
-   price, so the in-page price above it steps aside), the steps folded
-   behind "See the price steps", then quantity and Pre-order.
-   ------------------------------------------------------------------ */
-.product-hero-copy .product-buy[data-has-ladder] > .product-buy-price {
-  display: none;
-}
-.product-price-ladder {
-  font-family: var(--font-sans);
-  font-size: var(--fs-sm);
-}
-.product-price-ladder-now {
-  margin: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0 0.4rem;
-  color: var(--color-text-muted);
-}
-.product-price-ladder-now-price {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 1.875rem;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
-  color: var(--color-text);
-  font-variant-numeric: tabular-nums;
-}
-.product-price-ladder-now-label {
-  flex-basis: 100%;
-  font-size: var(--fs-xs);
-  color: var(--color-text-muted);
-}
-.product-price-ladder-now-vat,
 .product-price-ladder-now-left {
   font-size: var(--fs-sm);
-}
-.product-price-ladder-left {
-  margin: 0;
-  font-size: var(--fs-sm);
-  color: var(--color-text-muted);
-}
-.product-price-ladder-steps > summary {
-  cursor: pointer;
-  font-size: var(--fs-sm);
-  color: var(--color-text-muted);
-  text-decoration: underline;
-  text-decoration-color: var(--color-border-strong);
-  text-underline-offset: 3px;
-  width: max-content;
-}
-.product-price-ladder-steps[open] > summary {
-  margin-bottom: 0.35rem;
-}
-.product-price-ladder-steps ol {
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-}
-.product-price-ladder-sub {
-  margin: 0 0 0.35rem;
-  font-size: var(--fs-xs);
-  color: var(--color-text-muted);
-}
-
-/* The stack offer's cell range, under its label. */
-.cta-stack-meta {
-  display: block;
-  margin-top: 0.15rem;
-  font-family: var(--font-sans);
-  font-size: var(--fs-xs);
-  color: var(--color-text-muted);
-}
-
-/* A version's plain-words tag on its card ("Used in the 5-inch build"). */
-.variant-tier-tag {
-  justify-self: start;
-  align-self: start;
-  padding: 0.05rem 0.45rem;
-  border: 1px solid color-mix(in srgb, var(--color-gold) 55%, transparent);
-  border-radius: var(--r-pill);
-  font-family: var(--font-sans);
-  font-size: 12px;
-  line-height: 1.5;
-  letter-spacing: 0;
-  color: var(--color-text);
-}
-.buy-rail.is-pinned .variant-tier-tag {
-  display: none;
 }
 
 /* Phones: the version cards shrink to name, price and tag, two across; the
@@ -19505,10 +18758,6 @@ body:has(.cart-added-overlay) .buy-rail.is-pinned {
   .product-hero-copy .variant-ladder:not(.variant-ladder--compact) .variant-ladder-track {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .product-hero-copy .variant-ladder:not(.variant-ladder--compact) .variant-tier-specs,
-  .product-hero-copy .variant-ladder:not(.variant-ladder--compact) .variant-tier-fit {
-    display: none;
-  }
   .product-hero-copy .variant-ladder:not(.variant-ladder--compact) .variant-tier {
     scroll-margin-top: calc(var(--header-height) + 1rem);
   }
@@ -19516,11 +18765,6 @@ body:has(.cart-added-overlay) .buy-rail.is-pinned {
 .product-buy,
 .variant-tier {
   scroll-margin-top: calc(var(--header-height) + 1rem);
-}
-@media (max-width: 959px) {
-  .product-hero-copy .variant-ladder:not(.variant-ladder--compact) .variant-tier.is-selected .variant-tier-pick {
-    display: block;
-  }
 }
 
 /* OSHWA chip: the mark is an <img>, so its currentColor paths render
@@ -19679,7 +18923,6 @@ html:not(.light) .trust-chip-oshwa-mark {
 .product-status-chip,
 .board-art-skeleton-label,
 .cart-sheet-item small,
-.cart-line-note,
 .product-card-quickadd-btn {
   font-family: var(--font-sans);
   letter-spacing: 0;
@@ -19690,12 +18933,6 @@ html:not(.light) .trust-chip-oshwa-mark {
   font-size: 14px;
   font-weight: 500;
   color: var(--color-text);
-}
-.cart-line-note {
-  display: block;
-  font-size: 13px !important;
-  line-height: 1.45;
-  color: var(--color-text-muted);
 }
 .product-status-chip {
   font-size: 12px;
@@ -19775,11 +19012,6 @@ html:not(.light) .trust-chip-oshwa-mark {
   color: var(--color-text-muted);
   border-color: var(--color-border-strong);
 }
-.trust-chip-green,
-.trust-chip-gold {
-  color: var(--color-text-muted);
-  border-color: var(--color-border-strong);
-}
 .trust-chip-link:hover {
   color: var(--color-text);
   border-color: var(--color-text-muted);
@@ -19787,22 +19019,7 @@ html:not(.light) .trust-chip-oshwa-mark {
 .trust-chip-oshwa-uid {
   font-variant-numeric: tabular-nums;
 }
-.trust-chip-oshwa-as {
-  color: var(--color-text-dim);
-}
-@media (max-width: 360px) {
-  .trust-chip-oshwa-as {
-    display: none;
-  }
-}
-/* Guidance tag on a version card: soft gold, no border. */
-.variant-tier-tag {
-  border: 0;
-  background: var(--color-gold-soft);
-  color: var(--color-gold-text);
-  font-weight: 600;
-  padding: 2px 8px;
-}
+
 /* The eyebrow and the status chip share one line; on phones the chip
    drops under the category instead of indenting. */
 .product-hero-eyebrow {
@@ -19813,21 +19030,6 @@ html:not(.light) .trust-chip-oshwa-mark {
 }
 .product-hero-eyebrow .product-status-chip {
   margin-left: 0;
-}
-.product-hero-note {
-  margin: var(--sp-2) 0 0;
-  font-size: var(--fs-sm);
-  line-height: 1.55;
-  color: var(--color-text-muted);
-}
-.product-hero-note .text-link {
-  margin-left: 0.5rem;
-}
-.product-pick-note {
-  margin: calc(var(--sp-2) * -1) 0 0;
-  font-size: var(--fs-sm);
-  line-height: 1.5;
-  color: var(--color-text-muted);
 }
 /* The gallery fills its frame on the photo backdrop, no inner card. */
 .product-hero-media {
@@ -19855,87 +19057,13 @@ html:not(.light) .trust-chip-oshwa-mark {
   font-size: 13px;
   font-weight: 600;
 }
-
-/* --- Buy box --------------------------------------------------------- */
-/* One surface: the price block and its steps sit on the buy box itself. */
-.product-buy .product-price-ladder {
-  border: 0;
-  background: none;
-  padding: 0;
-}
-.product-price-ladder-rel {
-  display: flex;
-  flex-wrap: wrap;
-  margin: 0.2rem 0 0;
-  font-size: 14px;
-  color: var(--color-text-muted);
-}
-/* Separator dots belong to the item after them, so no line starts with one. */
-.product-price-ladder-rel > span + span::before {
-  content: '·';
-  margin: 0 0.4rem;
-}
-.product-price-ladder-after {
-  display: block;
-  margin-top: 0.15rem;
-}
-.product-buy-set {
-  margin: 0;
-  font-size: 14px;
-  color: var(--color-text);
-}
-.product-buy-gift {
-  margin: 0;
-  font-size: var(--fs-sm);
-  line-height: 1.5;
-  color: var(--color-text-muted);
-}
-.product-buy-gift a,
 .cart-gift-note a {
   color: var(--color-gold-text);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-/* Trust list: one column, links and plain rows look the same. */
-.product-buy .product-buy-trust,
-.product-buy-trust {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
-  font-family: var(--font-sans);
-  font-size: 14px;
-}
-.product-buy .product-buy-trust li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  line-height: 1.4;
-  color: var(--color-text-muted);
-}
-.product-buy .product-buy-trust li::before,
-.product-buy .product-buy-trust li + li::before {
-  margin: 0;
-  content: '';
-  flex: none;
-  width: 16px;
-  height: 16px;
-  background: currentColor;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3 3 7-7' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3 3 7-7' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
-  opacity: 0.8;
-}
-.product-buy-trust a {
-  color: var(--color-text-muted);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.product-buy-trust a:hover {
-  color: var(--color-text);
-}
 
-/* --- Spec tables and At a glance: label column, value column -------- */
+/* --- Spec tables: label column, value column ------------------------ */
 .spec-table > div {
   display: grid;
   grid-template-columns: minmax(7rem, 9rem) 1fr;
@@ -20234,21 +19362,6 @@ html:not(.light) .trust-chip-oshwa-mark {
   margin-top: 0.4rem;
 }
 
-/* Price steps: range, price, and a note column wide enough for
-   "20% off · now" on one line. */
-.product-price-ladder li {
-  grid-template-columns: minmax(0, 1fr) max-content minmax(7.5rem, max-content);
-}
-.product-price-ladder-note {
-  text-align: right;
-  white-space: nowrap;
-  font-family: var(--font-sans);
-}
-.product-price-ladder-after {
-  font-weight: 400;
-  color: var(--color-text-muted);
-}
-
 /* Links under the provenance card and the open-source cards: Inter,
    sentence case, the secondary button and the text link. */
 .provenance-links {
@@ -20282,11 +19395,7 @@ html:not(.light) .trust-chip-oshwa-mark {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-@media (max-width: 480px) {
-  .trust-chip-oshwa-as {
-    display: none;
-  }
-}
+
 /* Teardown loading: the board photo stays in view; a small label pill
    sits under it instead of a spinner over the chips. */
 .board-art-skeleton {
@@ -20304,14 +19413,7 @@ html:not(.light) .trust-chip-oshwa-mark {
   background: var(--pod-bg-strong);
   border: 1px solid var(--pod-border);
 }
-@media (max-width: 600px) {
-  .product-price-ladder-rel {
-    flex-direction: column;
-  }
-  .product-price-ladder-rel > span + span::before {
-    content: none;
-  }
-}
+
 .cart-ship-row dt {
   text-align: left;
   width: 100%;
@@ -20322,3 +19424,123 @@ html:not(.light) .trust-chip-oshwa-mark {
 .cart-line-group .cart-lines-scroll {
   min-height: 0;
 }
+
+/* === PDP buy column ===================================================
+   Name, spec line, badges, size, price, step bar, [qty][Pre-order], ship
+   line, shipping line. No outer box: the selected size is the one box and
+   Pre-order the one gold fill. Four type styles: title, price, body, mono. */
+.product-hero-copy {
+  gap: var(--sp-3);
+}
+.product-hero-copy .product-hero-name {
+  margin: 0;
+  font-size: clamp(1.75rem, 1.4rem + 1vw, 2.25rem);
+  line-height: 1.1;
+}
+.product-hero-sub {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+.product-hero-copy .trust-chips {
+  margin-top: 0;
+}
+.product-hero-copy .buy-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  margin-top: var(--sp-3);
+}
+/* Size: segmented buttons, name and price on one line, two across. */
+.product-hero-copy .variant-ladder-track {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.product-hero-copy .variant-tier {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  min-height: 48px;
+  padding: 0 var(--sp-3);
+  background: transparent;
+}
+.product-hero-copy .variant-tier-price {
+  position: relative;
+  z-index: 1;
+  color: var(--color-text-muted);
+}
+.product-hero-copy .variant-tier.is-selected .variant-tier-price {
+  color: var(--color-text);
+}
+.product-hero-copy .product-buy {
+  gap: var(--sp-3);
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+}
+.product-hero-copy .product-buy-price .product-price {
+  font-size: 2rem;
+}
+.product-buy-tag {
+  align-self: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--color-gold-soft);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--color-gold-text);
+}
+/* Step bar with the step prices over it: price, then the units it covers. */
+.product-hero-copy .step-bar-prices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-2);
+}
+.product-hero-copy .step-bar-prices li + li::before {
+  content: none;
+}
+.step-bar-prices li:has(.step-bar-range) {
+  display: flex;
+  flex-direction: column;
+}
+.step-bar-range {
+  color: var(--color-text-dim);
+  font-weight: 400;
+}
+.product-hero-copy .product-form .product-qty-step,
+.product-hero-copy .product-form .add-to-cart-form > button {
+  min-height: 48px;
+}
+/* Ship line right under the button. */
+.ship-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--color-text);
+}
+.product-hero-copy .ship-line.product-buy-stock::before {
+  content: none;
+}
+.ship-line-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-stock);
+}
+.product-hero-copy .product-buy-ship {
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  letter-spacing: 0;
+}
+.product-buy-terms-link {
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
