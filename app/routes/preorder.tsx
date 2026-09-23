@@ -184,13 +184,14 @@ export default function PreorderRoute() {
       <Txt id="preorder.title" as="h1" className="po-title" />
 
       <Timeline data={data} />
-      <StepLegend />
 
       {unavailable ? (
         <Txt id="preorder.strip_unavailable" as="p" className="po-empty" />
       ) : !rows.length ? (
         <Txt id="preorder.tracker_empty" as="p" className="po-empty" />
       ) : null}
+
+      {!unavailable && rows.length ? <StepLegend /> : null}
 
       {!unavailable && stackRows.length ? (
         <section className="po-group" id="stack">
@@ -347,7 +348,8 @@ function Timeline({data}: {data: ReturnType<typeof useLoaderData<typeof loader>>
   );
 }
 
-/** The price steps once, for every card: "Units 1-100 · Early bird". */
+/** The price steps once, for every card, as three chips over the cards:
+ *  "1-100 Early bird", "101-250 Step 2", "251+ Standard". */
 function StepLegend() {
   const names = copy('preorder.legend_steps');
   const labels = Array.isArray(names) ? names : [];
@@ -366,10 +368,7 @@ function StepLegend() {
       <ol>
         {cells.map((units, i) => (
           <li key={units}>
-            <span className="po-legend-units">
-              {i === 0 ? `${copyText('preorder.legend_units') ?? 'Units'} ` : ''}
-              {units}
-            </span>
+            <span className="po-legend-units">{units}</span>
             <span>{labels[i] ?? ''}</span>
           </li>
         ))}

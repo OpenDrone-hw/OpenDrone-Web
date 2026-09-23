@@ -5303,77 +5303,18 @@ button.reset {
     top: 0;
     right: 0;
   }
-  /* Repo scope (the teardown): one outline around the pin tables, the layer
-     explorer and the schematic viewer, tied by the lead line to the
-     GitHub-repo card in the chapter above — the lines alone carry the claim
-     that everything inside is the contents of the product's GitHub repo
-     (the border tag was dropped, maintainer 2026-08-12). Negative margins keep
-     the body column's left edge aligned with the other chapters. */
-  .chapter[data-repo-scope] {
-    position: relative;
-    border: 2px solid color-mix(in srgb, var(--color-gold) 30%, transparent);
-    border-radius: var(--r-lg);
-    padding: var(--sp-7) var(--sp-6) var(--sp-6);
-    margin-inline: calc(-1 * var(--sp-6));
-  }
-  /* Keep the board inside the outline: pin its right edge to its column
-     (not the default 125% overshoot); it still grows leftward into the
-     open gutter. */
-  .chapter[data-repo-scope] .board-art {
-    margin-left: calc(100% - var(--board-w));
-  }
-  /* No sticky media inside the scope: the schematic row below gives a
-     sticky board ~700px of travel, which slid it straight over the
-     schematic. Static keeps it beside the pin tables. */
-  .chapter[data-repo-scope] .chapter-media {
-    position: static;
-  }
-  /* The lead line from the GitHub-repo study card in the chapter above down
-     to this outline. Coordinates come from the measuring effect in
-     products.$handle.tsx (--repo-lead-x/-h); with no measurement the height
-     is 0 and nothing draws. */
-  .chapter[data-repo-scope]::before {
-    content: '';
-    position: absolute;
-    bottom: 100%;
-    left: var(--repo-lead-x, 50%);
-    width: 2px;
-    height: var(--repo-lead-h, 0px);
-    background: linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--color-gold) 50%, transparent),
-      color-mix(in srgb, var(--color-gold) 30%, transparent)
-    );
-  }
-  /* The GitHub-repo study card wears the same gold outline as the scope it
-     leads into: card, line and chapter read as one repo statement. Guarded
-     on the outline existing (the frame page has none). */
-  .product-page:has(.chapter[data-repo-scope]) .open-source-card--github {
-    border: 2px solid color-mix(in srgb, var(--color-gold) 30%, transparent);
-  }
-  /* Label riding the outline's top border, left side: names what the gold
-     scope IS (a live view of the KiCad designs from the repo). */
-  .chapter-scope-tag {
-    position: absolute;
-    top: 0;
-    left: var(--sp-6);
-    translate: 0 -50%;
-    padding: 0.35rem 0.9rem;
-    background: var(--color-bg);
-    border: 1px solid color-mix(in srgb, var(--color-gold) 40%, transparent);
-    border-radius: var(--r-pill);
-    font-family: var(--font-mono);
-    font-size: 11px;
-    letter-spacing: var(--ls-label);
-    text-transform: uppercase;
-    color: var(--color-gold-text);
-  }
   .chapter-wide {
     grid-column: 1 / -1;
   }
-  /* Pull the schematic up toward the board so the scope reads as one
-     screenful rather than two stacked blocks. */
-  .chapter[data-repo-scope] .chapter-wide {
+  /* Teardown with the schematic under it: keep the board inside its
+     column and not sticky, so it never slides over the schematic. */
+  .chapter:has(.chapter-wide) .board-art {
+    margin-left: calc(100% - var(--board-w));
+  }
+  .chapter:has(.chapter-wide) .chapter-media {
+    position: static;
+  }
+  .chapter:has(.chapter-wide) .chapter-wide {
     margin-top: calc(-1 * var(--sp-5));
   }
 }
@@ -6383,10 +6324,6 @@ html.light .firmware-logo--tile {
   text-transform: uppercase;
   color: var(--color-text-dim);
   text-decoration: none;
-}
-/* Inspect link in the teardown's left column — sits in the gap under the pins. */
-.teardown-inspect {
-  margin-top: 1.4rem;
 }
 .board-art-inspect:hover {
   color: var(--color-gold-text);
@@ -11994,7 +11931,7 @@ html.light .editorial-watermark {
 }
 
 /* =========================================================
-   Support redesign (Apr 2026) — contact, /support, /account/support,
+   Support redesign (Apr 2026): contact, /support, /account/support,
    feedback modal. Token aliases below map handoff names onto the
    project's existing variables; no new tokens are introduced.
    ========================================================= */
@@ -16030,13 +15967,6 @@ a.hp-label:focus-visible .hp-label-name {
   .hero-load-piece.is-active .hero-load-piece__mark { animation: none; }
 }
 
-/* The outline (and thus its label) is a desktop idiom. */
-@media (max-width: 879px) {
-  .chapter-scope-tag {
-    display: none;
-  }
-}
-
 /* ---- /learn: the FPV knowledge layer (draft) ---------------------------
    Claim-first rendering for the research corpus. Every rule here is scoped
    to `.learn-*`, so this block owns no shared selector. Tokens only, so both
@@ -17128,17 +17058,28 @@ button[data-waiting] {
    the accent only on the "Funding target" label. The full condition
    is stated once in the summary (.cart-target-terms).
    ------------------------------------------------------------------ */
+/* One ship chip everywhere (PDP, cards, drawer, cart): mono, body ink,
+   a green dot for a dated batch. Same look as the PDP .ship-line. */
 .ship-chip,
-.cart-sheet-item .ship-chip {
-  display: block;
+.cart-sheet-item .ship-chip,
+.cart-added .ship-chip,
+html.light .cart-sheet-item .ship-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   margin-top: 0.2rem;
-  font-family: var(--font-sans);
+  font-family: var(--font-mono);
   font-size: var(--fs-sm);
   font-weight: 400;
   line-height: 1.4;
   letter-spacing: 0;
   text-transform: none;
-  color: var(--color-text-muted);
+  color: var(--color-text);
+}
+.ship-chip .ship-line-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
 }
 .ship-chip-label {
   color: var(--color-gold-text);
@@ -17623,11 +17564,24 @@ html:not(.light) .trust-chip-oshwa-mark {
   font-size: var(--fs-xs);
   color: var(--color-gold-text);
 }
-/* Step bar with the step prices over it: price, then the units it covers. */
+/* Step bar with the step prices over it: price, then the units it covers.
+   Placed labels sit over the start of their own stretch of the bar. */
 .product-hero-copy .step-bar-prices {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--sp-2);
+  font-size: 12px;
+  color: var(--color-text);
+}
+.product-hero-copy .step-bar-prices.is-placed {
+  display: block;
+  position: relative;
+  height: 2.9em;
+}
+.step-bar-prices.is-placed li {
+  position: absolute;
+  top: 0;
+  white-space: nowrap;
 }
 .product-hero-copy .step-bar-prices li + li::before {
   content: none;
@@ -17637,8 +17591,25 @@ html:not(.light) .trust-chip-oshwa-mark {
   flex-direction: column;
 }
 .step-bar-range {
-  color: var(--color-text-dim);
+  color: var(--color-text-muted);
   font-weight: 400;
+}
+/* The steps past the batch: a dashed tail after the bar's end. */
+.step-bar-track[data-tail]::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 80%;
+  right: 0;
+  border-top: 2px dashed var(--color-border-strong);
+  translate: 0 -50%;
+}
+.step-bar-track[data-tail] {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-border-strong) 70%, transparent) 80%,
+    transparent 80%
+  );
 }
 .product-hero-copy .product-form .product-qty-step,
 .product-hero-copy .product-form .add-to-cart-form > button {
@@ -17715,4 +17686,15 @@ html:not(.light) .trust-chip-oshwa-mark {
   .gpsr-languages-grid {
     grid-template-columns: repeat(3, 1fr);
   }
+}
+
+/* Mixed ship dates: one line, the split link muted beside it. */
+.cart-mixed-line .cart-split-form {
+  display: inline;
+}
+.cart-summary-page .cart-mixed-line .cart-split-link,
+.cart-summary-page .cart-mixed-line .cart-split-link:hover {
+  display: inline;
+  color: var(--color-text-muted);
+  font-size: inherit;
 }

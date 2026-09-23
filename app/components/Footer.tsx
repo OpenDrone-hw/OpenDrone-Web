@@ -250,6 +250,13 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
               ))}
             </nav>
           </FooterGroup>
+            {/* Phone: the Legal group folds, so the withdrawal link also
+                stands outside it and is always one tap away. */}
+            <div className="mt-2 sm:hidden">
+              <FooterNavLink to={legalHref('/herroepingsrecht#withdraw', legalLocale)}>
+                <Txt id="chrome.nav_withdrawal" />
+              </FooterNavLink>
+            </div>
             <LegalLanguages className="footer-small mt-4 text-[var(--color-text-muted)]" />
           </div>
         </div>

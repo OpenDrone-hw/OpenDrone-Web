@@ -1,7 +1,6 @@
 import {BOARD_ART_VERSION} from '~/data/board-art-version';
-import {Fragment, Suspense, useEffect, useMemo, useRef, useState} from 'react';
+import {Fragment, useEffect, useMemo, useRef, useState} from 'react';
 import {
-  Await,
   Link,
   redirect,
   useLoaderData,
@@ -18,24 +17,19 @@ import {
   selectVariant,
   selectedOptionsFromRequest,
   formatPrice,
-  toCard,
   toProduct,
 } from '~/lib/catalog';
 import {buyUrl, commerceHandoff} from '~/lib/shop-links';
 import {Txt} from '~/components/Txt';
 import {ConceptPlate} from '~/components/ConceptPlate';
-import {CONTRIBUTING_URL} from '~/lib/company';
 import {ProductPrice} from '~/components/ProductPrice';
 import {ProductGallery} from '~/components/ProductGallery';
 import {ProductForm} from '~/components/ProductForm';
-import {RelatedProducts} from '~/components/RelatedProducts';
-import {FirmwareSupport} from '~/components/FirmwareSupport';
 import {VariantLadder} from '~/components/VariantLadder';
 import {BoardArt} from '~/components/BoardArt';
 import {SchematicViewer} from '~/components/SchematicViewer';
 import type {FrameViewerProps} from '~/components/FrameViewer';
 import {SceneErrorBoundary} from '~/components/SceneErrorBoundary';
-import {WatchCard} from '~/components/WatchCard';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 import {copy, copyText, editAttrs} from '~/lib/copy';
 import {
@@ -45,15 +39,11 @@ import {
 } from '~/lib/chapters';
 import {buildSeoMeta, buildProductJsonLd,
   buildBreadcrumbJsonLd, SITE_ORIGIN} from '~/lib/seo';
-import {fetchContributors} from '~/lib/github';
-import {orderByCredits, snapshotContributors} from '~/lib/contributors-snapshot';
-import {ContributorGrid, ContributorGridSkeleton} from '~/components/Contributors';
 import {
   ReviewAggregateLine,
   ReviewList,
   toReviewAggregate,
 } from '~/components/ProductReviews';
-import {OshwaMark} from '~/components/OshwaMark';
 import {useNoHover, useIsMobile} from '~/lib/use-media-query';
 import {GpsrBlock, safetyKind} from '~/components/GpsrBlock';
 import {
@@ -71,7 +61,7 @@ import {useProductStatus} from '~/lib/coming-soon';
 import {shipPromiseFor} from '~/lib/preorder';
 import {fetchStatusFlagsFast, statusForHandle} from '~/lib/roadmap-data';
 import {priceLadder, type PriceTier} from '~/lib/preorder-campaign';
-import {stepBarView} from '~/lib/preorder-meter';
+import {stepBarView, stepLayout} from '~/lib/preorder-meter';
 import {countryName, shippingQuote, SHIPPING_ZONES} from '~/lib/shipping-rates';
 import {SHIP_COUNTRY_EVENT, storeShipCountry, storedShipCountry} from '~/lib/cart-client';
 import preorders from '../../content/preorders.json';
@@ -164,8 +154,8 @@ export const meta: Route.MetaFunction = ({data, location}) =>
 /**
  * Selecting a SKU only mutates this PDP's option query params (e.g. ?Model=…).
  * Skip the loader on those same-path navigations: re-running it means a
- * catalog round-trip plus a full PDP re-render (3D viewer, chapters, deferred
- * recommendations) on every click - the source of the variant-switch lag. The
+ * catalog round-trip plus a full PDP re-render (3D viewer, chapters) on every
+ * click - the source of the variant-switch lag. The
  * variant is resolved client-side from the already-loaded data instead.
  */
 export function shouldRevalidate({
@@ -178,13 +168,7 @@ export function shouldRevalidate({
 }
 
 export async function loader(args: Route.LoaderArgs) {
-  // Start fetching non-critical data without blocking time to first byte
-  const deferredData = loadDeferredData(args);
-
-  // Await the critical data required to render initial state of the page
-  const criticalData = await loadCriticalData(args);
-
-  return {...deferredData, ...criticalData};
+  return loadCriticalData(args);
 }
 
 /**
@@ -269,71 +253,6 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
     // roadmap (accessories).
     roadmapStatus: statusForHandle(handle, await statusFlagsPromise),
   };
-}
-
-/**
- * Load data for rendering content below the fold. This data is deferred and will be
- * fetched after the initial page load. If it's unavailable, the page should still 200.
- * Make sure to not throw any errors here, as it will cause the page to 500.
- */
-function loadDeferredData({context, params}: Route.LoaderArgs) {
-  const {handle} = params;
-
-  if (!handle) {
-    return {
-      recommendations: Promise.resolve(null),
-      contributors: Promise.resolve([]),
-    };
-  }
-
-  const content = PRODUCT_CONTENT[handle];
-  // Optional GITHUB_TOKEN lifts the API ceiling from 60 to 5000 calls an
-  // hour; unset, the contributor fetch degrades to its empty state.
-  const ghToken = context.env.GITHUB_TOKEN;
-
-  // Contributor grid: every repo in the line (tier repos included) so the
-  // section credits people whichever mount they worked on. Same
-  // unauthenticated GitHub budget as the commit fetch; edge-cached 1 h in
-  // fetchContributors, and the chapter renders its invitation state when
-  // the list comes back empty.
-  const contributorRepoUrls: string[] = [];
-  if (content) {
-    if (content.bundle) {
-      for (const c of content.bundle.components) {
-        const sub = PRODUCT_CONTENT[c.handle];
-        if (sub?.repoUrl) contributorRepoUrls.push(sub.repoUrl);
-      }
-    } else {
-      if (content.repoUrl) contributorRepoUrls.push(content.repoUrl);
-      for (const v of Object.values(content.variants ?? {})) {
-        if (v.repoUrl) contributorRepoUrls.push(v.repoUrl);
-      }
-    }
-  }
-  // Oxygen's egress IP is shared, so the unauthenticated GitHub budget is
-  // usually spent before a visitor arrives and the fetch 403s. The committed
-  // roster (content/contributors.json, weekly sync) is the floor under that:
-  // live data still wins, an empty or failed fetch falls back to it instead
-  // of leaving the wall with nothing but its invitation tile.
-  const recorded = snapshotContributors(handle);
-  const contributors = fetchContributors(contributorRepoUrls, 12, ghToken)
-    .then((list) => (list.length ? list : recorded))
-    .catch(() => recorded);
-
-  // "You might also like": the other products in the catalog. The catalog
-  // is small enough that the whole rest of it IS the honest answer.
-  const recommendations = context.catalog
-    .get()
-    .then((catalog) =>
-      catalog.products
-        // Every other product: the strip drops unlisted and concept ones
-        // and ranks what can be bought first before it takes four.
-        .filter((p) => p.handle !== handle)
-        .map((p) => toCard(catalog, p)),
-    )
-    .catch(() => null);
-
-  return {recommendations, contributors};
 }
 
 const DOWNLOAD_ICONS: Record<DownloadKind, string> = {
@@ -519,7 +438,6 @@ function Chapter({
   textReveal,
   id,
   wide,
-  repoScope,
 }: {
   number: string;
   label: string;
@@ -528,11 +446,6 @@ function Chapter({
   /** Full-width slot rendered below the body + media columns (the teardown's
    *  schematic viewer). Plain flow on mobile, spans both tracks on desktop. */
   wide?: React.ReactNode;
-  /** When set, the chapter draws the repo-scope outline around everything it
-   *  contains - the visual claim (together with the lead line from the
-   *  GitHub-repo card above) that the whole chapter is the contents of the
-   *  product's repo. */
-  repoScope?: boolean;
   /**
    * The designed title, as a copy id. Rendered straight into the `<h2>` so the
    * heading carries its own studio annotation and its inline `*emphasis*`
@@ -569,18 +482,9 @@ function Chapter({
       data-backdrop={backdrop ? '' : undefined}
       data-wide-media={wideMedia ? '' : undefined}
       data-no-media={noMedia ? '' : undefined}
-      data-repo-scope={repoScope ? '' : undefined}
       data-text-pending={textReveal === false ? '' : undefined}
     >
       {backdrop ? <div className="chapter-backdrop">{backdrop}</div> : null}
-      {repoScope ? (
-        <Txt
-          id="product-chrome.teardown_scope_tag"
-          as="span"
-          className="chapter-scope-tag"
-          aria-hidden="true"
-        />
-      ) : null}
       <div className="chapter-body-col">
         {title ? (
           <h2 className="chapter-title">{title}</h2>
@@ -649,99 +553,14 @@ export default function Product() {
   return <ProductPage />;
 }
 
-/** Document-space layout box via the offsetParent chain: unaffected by CSS
- *  transforms, unlike getBoundingClientRect. */
-function layoutBox(el: HTMLElement) {
-  let top = 0;
-  let left = 0;
-  for (let n: HTMLElement | null = el; n; n = n.offsetParent as HTMLElement | null) {
-    top += n.offsetTop;
-    left += n.offsetLeft;
-  }
-  return {top, left, width: el.offsetWidth, height: el.offsetHeight};
-}
-
 function ProductPage() {
   const {
     product,
     bundleProducts,
-    recommendations,
-    contributors,
     commerceHandoff,
     retailBySku,
   } = useLoaderData<typeof loader>();
   useChapterReveal(product.handle);
-
-  // Lead line: ties the GitHub-repo study card to the repo-scope outline in
-  // the chapter below it (maintainer, 2026-08-12). Measured rather than pure CSS
-  // because the card's column shifts with which cards a product shows, and
-  // the card clips its own pseudo-elements (overflow: hidden). Written as
-  // CSS vars on the scope chapter; the ::before there draws the line.
-  // Re-measured on resize and once the scope scrolls into view (the reveal
-  // translate shifts boxes ~16px until chapters settle).
-  useEffect(() => {
-    const measure = () => {
-      const scope = document.querySelector<HTMLElement>(
-        '.chapter[data-repo-scope]',
-      );
-      const card = document.querySelector<HTMLElement>(
-        '.open-source-card--github',
-      );
-      if (!scope) return;
-      // Layout boxes, not getBoundingClientRect: the chapter reveal
-      // translates both the card's chapter and the scope, and a rect read
-      // mid-transition left the line short or long depending on when the
-      // measure ran. offsetTop/offsetLeft ignore transforms entirely, so
-      // the timing of the reveal no longer matters.
-      const s = layoutBox(scope);
-      const c = card ? layoutBox(card) : null;
-      const x = c ? c.left + c.width / 2 - s.left : -1;
-      const h = c ? s.top - (c.top + c.height) : 0;
-      if (c && h > 8 && h < 400 && x > 0 && x < s.width) {
-        scope.style.setProperty('--repo-lead-x', `${Math.round(x)}px`);
-        scope.style.setProperty('--repo-lead-h', `${Math.round(h)}px`);
-      } else {
-        scope.style.removeProperty('--repo-lead-x');
-        scope.style.removeProperty('--repo-lead-h');
-      }
-    };
-    const t = setTimeout(measure, 900);
-    const scope = document.querySelector('.chapter[data-repo-scope]');
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    let io: IntersectionObserver | undefined;
-    if (scope && typeof IntersectionObserver !== 'undefined') {
-      io = new IntersectionObserver(([e]) => {
-        // Twice: once as the reveal transform is ending and once well after,
-        // because a rect measured mid-translate leaves the line short or
-        // long (transforms move rects without resizing anything, so the
-        // ResizeObserver below cannot see them).
-        if (e.isIntersecting) {
-          timers.push(setTimeout(measure, 700), setTimeout(measure, 1500));
-        }
-      });
-      io.observe(scope);
-    }
-    // One-shot timers miss late layout: images decoding, fonts swapping,
-    // fetched sections filling in. All of those change an element's height
-    // somewhere above the scope, which shifts the card/scope distance, so a
-    // body-size observer catches them; the card observer catches the card
-    // itself rewrapping.
-    let ro: ResizeObserver | undefined;
-    if (typeof ResizeObserver !== 'undefined') {
-      ro = new ResizeObserver(() => measure());
-      ro.observe(document.body);
-      const card = document.querySelector('.open-source-card--github');
-      if (card) ro.observe(card);
-    }
-    window.addEventListener('resize', measure);
-    return () => {
-      clearTimeout(t);
-      timers.forEach(clearTimeout);
-      io?.disconnect();
-      ro?.disconnect();
-      window.removeEventListener('resize', measure);
-    };
-  }, [product.handle]);
 
   // Funnel step 1: one `PDP View` per product per navigation, carrying the
   // product handle + first-touch channel props that aggregate pageviews
@@ -1522,13 +1341,20 @@ function ProductPage() {
     range: step.to === null ? `${step.from}+` : `${step.from}-${step.to}`,
     current: nextUnit >= step.from && (step.to === null || nextUnit <= step.to),
   }));
-  const stepBar = campaign ? (
-    <StepBar
-      bar={stepBarView(campaign, STEP_ENDS)}
-      prices={stepPrices}
-      fundedLabel={copyText('preorder.funded') ?? 'Funded'}
-    />
-  ) : null;
+  const stepBarState = campaign ? stepBarView(campaign, STEP_ENDS) : null;
+  const stepBar =
+    campaign && stepBarState ? (
+      <StepBar
+        bar={stepBarState}
+        prices={stepPrices}
+        fundedLabel={copyText('preorder.funded') ?? 'Funded'}
+        layout={stepLayout(
+          campaign,
+          stepBarState,
+          (ladder ?? []).map((step) => step.from),
+        )}
+      />
+    ) : null;
   // Units left in the paid batch: one add must not ask for more than the
   // batch that carries the ship date still holds.
   const paidLeft = campaign?.paidStock
@@ -1777,10 +1603,8 @@ function ProductPage() {
    */
   const present = (type: ChapterType, entry: ChapterEntry): boolean => {
     switch (type) {
-      // Accessories (fallback content) aren't open-hardware products - no
-      // "Open for learning" chapter, and no chapter number burnt on it.
-      case 'openSource':
-        return hasPublicSource;
+      // Open source, firmware and contributors live on /open-source and
+      // /firmware-partners, not on the product page: they fall to default.
       case 'teardown':
         return Boolean(content.teardown);
       case 'specs':
@@ -1789,19 +1613,6 @@ function ProductPage() {
         return content.inTheBox.length > 0 || Boolean(content.bundle);
       case 'downloads':
         return downloads.length > 0;
-      // The firmware credit needs no price, so it shows even while the
-      // product is coming soon.
-      case 'firmware':
-        return (
-          !content.bundle &&
-          Boolean(content.firmware.project) &&
-          content.firmware.project !== '-'
-        );
-      // Every editorial product has a public repo, so the chapter always exists
-      // for them - the grid degrades to the "+ you" invitation when the GitHub
-      // API is rate-limited.
-      case 'contributors':
-        return hasPublicSource;
       // Only when the feature is enabled AND the synced metafields carry at
       // least one rating, so a zero-review store shows no trace of it.
       case 'reviews':
@@ -1829,215 +1640,6 @@ function ProductPage() {
       (n: string, title?: string, id?: string) => React.ReactNode
     >
   > = {
-    /** What the board is published as: repos, license, latest commit. */
-    openSource: (n, title) => (
-      <Chapter
-        number={n}
-        label="Open for learning"
-        title={title}
-        titleId="product-chrome.ch_open_source_title"
-        // The schematic viewer moved into the teardown chapter (2026-08-12,
-        // maintainer: both viewers live under one repo-scope outline). wideMedia
-        // keeps the 4-across card-row layout; noMedia stops the empty media
-        // slot from rendering the placeholder glyph.
-        wideMedia={!!schematicHandle}
-        noMedia={!!schematicHandle}
-      >
-        <div className="open-source-cards">
-          {content.bundle ? (
-            content.bundle.components.map((c) => {
-              const repo = PRODUCT_CONTENT[c.handle]?.repoUrl;
-              if (!repo) return null;
-              return (
-                <a
-                  key={c.handle}
-                  href={repo}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="open-source-card open-source-card--github"
-                >
-                  <p className="open-source-card-label">{c.title}</p>
-                  <Txt
-                    id="product-chrome.os_card_repo_title"
-                    as="p"
-                    className="open-source-card-title"
-                  />
-                  <Txt
-                    id="product-chrome.os_card_repo_sub_bundle"
-                    as="p"
-                    className="open-source-card-sub"
-                  />
-                </a>
-              );
-            })
-          ) : (
-            <>
-              {/* Build-video bubble leads the row on products that have a
-                  film; film-less pages show the issues card instead. */}
-              {content.video ? (
-                <WatchCard
-                  videoId={content.video.id}
-                  title={content.video.title}
-                  channel={content.video.channel}
-                />
-              ) : null}
-              <a
-                href={activeRepoUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="open-source-card open-source-card--github"
-              >
-                <Txt
-                  id="product-chrome.os_card_study_label"
-                  as="p"
-                  className="open-source-card-label"
-                />
-                <Txt
-                  id="product-chrome.os_card_repo_title"
-                  as="p"
-                  className="open-source-card-title"
-                />
-                {/* CAD products (the frame) have no schematic/PCB. */}
-                <Txt
-                  id={
-                    content.teardown?.frameViewer
-                      ? 'product-chrome.os_card_repo_sub_cad'
-                      : 'product-chrome.os_card_repo_sub'
-                  }
-                  as="p"
-                  className="open-source-card-sub"
-                />
-                {/* The repository's own name, which can differ from the
-                    shop name (the 20×20 FC is OpenFC-Lite-Mini). */}
-                {repoName(activeRepoUrl) ? (
-                  <p className="open-source-card-repo">
-                    {say('product-chrome.os_card_repo_name', 'Design files: {repo}', {
-                      repo: repoName(activeRepoUrl) ?? '',
-                    })}
-                    {activeVariant && content.variants && Object.keys(content.variants).length > 1
-                      ? ` (${say('product-chrome.os_card_repo_for', 'the {model}', {
-                          model: variantDisplayName(product.handle, activeTier),
-                        })})`
-                      : ''}
-                  </p>
-                ) : null}
-              </a>
-              {content.video ? null : (
-                <a
-                  href={`${activeRepoUrl}/issues`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  // Watermark of the tool the design is iterated in: KiCad
-                  // for boards, Onshape for the frame, same treatment as the
-                  // GitHub and CERN cards.
-                  className={`open-source-card ${
-                    frameViewer
-                      ? 'open-source-card--onshape'
-                      : 'open-source-card--kicad'
-                  }`}
-                >
-                  <Txt
-                    id="product-chrome.os_card_issues_label"
-                    as="p"
-                    className="open-source-card-label"
-                  />
-                  <Txt
-                    id="product-chrome.os_card_issues_title"
-                    as="p"
-                    className="open-source-card-title"
-                  />
-                  <Txt
-                    id="product-chrome.os_card_issues_sub"
-                    as="p"
-                    className="open-source-card-sub"
-                  />
-                </a>
-              )}
-            </>
-          )}
-          {activeOshwaUid ? (
-            // OSHWA-certified: lead with the open-hardware certification (links
-            // the public cert page for this UID) and keep the CERN-OHL-S license
-            // name on the sub-line - the certification attests the license, it
-            // doesn't replace it.
-            <a
-              href={`https://certification.oshwa.org/${activeOshwaUid.toLowerCase()}.html`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="open-source-card open-source-card--oshwa"
-            >
-              <OshwaMark
-                uid={activeOshwaUid}
-                title={`${copyText('product-chrome.oshwa_mark_title') ?? ''} · ${activeOshwaUid}`}
-                className="open-source-card-oshwa-mark"
-              />
-              <Txt
-                id="product-chrome.os_card_oshwa_sub"
-                as="p"
-                className="open-source-card-sub open-source-card-sub--oshwa"
-              />
-            </a>
-          ) : (
-            <a
-              href="https://ohwr.org/cern_ohl_s_v2.txt"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="open-source-card open-source-card--cern"
-            >
-              <Txt
-                id="product-chrome.os_card_license_label"
-                as="p"
-                className="open-source-card-label"
-              />
-              <Txt
-                id="product-chrome.os_card_license_title"
-                as="p"
-                className="open-source-card-title"
-              />
-              <Txt
-                id="product-chrome.os_card_license_sub"
-                as="p"
-                className="open-source-card-sub"
-              />
-            </a>
-          )}
-          {/* The row's 4th card hands the reader to the org's contributing
-              guide. It replaced the changelog / latest-commit slot
-              (2026-08-12): a recruiting card beats a sha for the reader who
-              got this far. */}
-          <a
-            href={CONTRIBUTING_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="open-source-card open-source-card--help"
-          >
-            <Txt
-              id="product-chrome.os_card_help_label"
-              as="p"
-              className="open-source-card-label"
-            />
-            <Txt
-              id="product-chrome.os_card_help_title"
-              as="p"
-              className="open-source-card-title"
-            />
-            <Txt
-              id="product-chrome.os_card_help_sub"
-              as="p"
-              className="open-source-card-sub"
-            />
-          </a>
-        </div>
-        {/* One quiet mono link under the card row: the why behind the cards
-            lives once, on /open-source, same idiom as the firmware chapter's
-            "All firmware partners →". */}
-        <p className="open-source-story-link">
-          <Link prefetch="viewport" to="/open-source">
-            <Txt id="product-chrome.os_link_story" />
-          </Link>
-        </p>
-      </Chapter>
-    ),
     /** What it is made of: board art or exploded frame, plus the pin map. */
     teardown: (n, title) => (
         <Chapter
@@ -2050,10 +1652,6 @@ function ProductPage() {
               : 'product-chrome.ch_teardown_title'
           }
           textReveal={frameViewer ? undefined : textIn}
-          // Board explorer + schematic viewer share one repo-scope outline,
-          // tied by the lead line to the GitHub-repo card above: the chapter
-          // IS the repo's contents. The frame (backdrop, no schematic) opts out.
-          repoScope={!frameViewer}
           wide={
             schematicHandle ? (
               // No key: keep the viewer mounted across tier switches so it
@@ -2236,16 +1834,6 @@ function ProductPage() {
               </section>
             </div>
           )}
-          {!frameViewer && activeBoardArt?.inspectUrl ? (
-            <a
-              className="board-art-inspect teardown-inspect"
-              href={activeBoardArt.inspectUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {copyText('product-chrome.teardown_inspect_cta')}
-            </a>
-          ) : null}
         </Chapter>
     ),
     /** What it measures, and the plug pinouts. */
@@ -2472,94 +2060,6 @@ function ProductPage() {
           />
         </Chapter>
     ),
-    /** The open firmware the board runs, and how to support its devs. */
-    firmware: (n, title) => (
-        <Chapter
-          number={n}
-          label="Firmware"
-          title={title}
-          titleId="product-chrome.ch_firmware_title"
-          media={
-            content.firmware.logo ? (
-              /* Not loading="lazy": same reason as the contributor avatars,
-                 a lazy image inside a content-visibility: auto chapter is
-                 treated as far offscreen and never fetched. */
-              <img
-                className={
-                  content.firmware.logoDark
-                    ? 'firmware-logo firmware-logo--tile'
-                    : 'firmware-logo'
-                }
-                src={content.firmware.logo}
-                alt={`${content.firmware.project} ${copyText('product-chrome.firmware_logo_alt_suffix') ?? ''}`}
-                decoding="async"
-              />
-            ) : undefined
-          }
-        >
-          <div className="firmware-freedom">
-            <p className="firmware-freedom-title">
-              {copyText('product-chrome.firmware_freedom_title') ?? 'Flash what you want'}
-            </p>
-            <p>
-              {(copyText('product-chrome.firmware_freedom_body') ??
-                'Ships with {project}. No activation, no locked bootloader, no account. Flashing another build or another project is normal use and does not by itself affect the 2-year guarantee.').replace(
-                '{project}',
-                content.firmware.project,
-              )}{' '}
-              <Link prefetch="intent" to="/warranty">
-                {copyText('product-chrome.firmware_freedom_link') ?? 'Warranty'}
-              </Link>
-            </p>
-          </div>
-          <FirmwareSupport
-            firmwareProject={content.firmware.project}
-            firmwareUrl={content.firmware.projectUrl}
-          />
-        </Chapter>
-    ),
-    /**
-     * Who built it. GitHub accounts with commits on the product's repos,
-     * streamed in deferred. The grid always closes with a "+ you" tile pointing
-     * at Discord (talk before touching files); when GitHub rate-limits the
-     * fetch the chapter still renders with just that invitation.
-     */
-    contributors: (n, title) => (
-        <Chapter
-          number={n}
-          label="Contributors"
-          title={title}
-          titleId="product-chrome.ch_contributors_title"
-          noMedia
-        >
-          {/* No prose above the grid; the how-and-why lives once, on the
-              org contributing guide. The button sits to the grid's right - the
-              row of people ends in the door you walk through to join them. */}
-          <div className="contributors-row">
-            <Suspense fallback={<ContributorGridSkeleton />}>
-              <Await
-                resolve={contributors}
-                errorElement={<ContributorGrid contributors={[]} />}
-              >
-                {(list) => (
-                  <ContributorGrid
-                    contributors={orderByCredits(list ?? [], content.credits)}
-                    lead={content.credits?.[0]}
-                  />
-                )}
-              </Await>
-            </Suspense>
-            <a
-              href={CONTRIBUTING_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="contributors-cta-btn"
-            >
-              <Txt id="product-chrome.contributors_link_contribute" />
-            </a>
-          </div>
-        </Chapter>
-    ),
     /**
      * Published product ratings from the catalog, own markup (no widget).
      */
@@ -2723,8 +2223,6 @@ function ProductPage() {
           {chapterNodes[c.type]?.(c.number, c.title, c.id)}
         </Fragment>
       ))}
-
-      <RelatedProducts recommendations={recommendations} />
 
       {/* GPSR Art. 19 listing information (docs/store-compliance.md, section 1):
           manufacturer identity, contact, product identifier and safety warnings

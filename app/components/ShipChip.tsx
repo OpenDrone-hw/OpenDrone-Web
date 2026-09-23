@@ -41,6 +41,7 @@ export function ShipChip({
   }
   return (
     <small className={`ship-chip ${className}`} data-kind={short.kind}>
+      {short.kind === 'date' ? <span className="ship-line-dot" aria-hidden="true" /> : null}
       {text}
     </small>
   );

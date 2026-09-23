@@ -254,7 +254,7 @@ describe('openmotor 5-inch variant', () => {
     assert.equal(variantDisplayName('openmotor', '2207'), '5"');
     assert.equal(isInternalSku('openmotor', '2207'), true);
     assert.equal(isInternalSku('openmotor', '1604'), false);
-    assert.equal(variantDisplayName('openesc', '30×30'), '30×30');
+    assert.equal(variantDisplayName('openesc', '30×30'), '30x30');
     assert.equal(variantDisplayName(null, 'Lite'), 'Lite');
   });
 
@@ -319,6 +319,21 @@ describe('spec sheet', () => {
         ['Gyro', ['BMI270', 'BMI270']],
         ['Input', ['3-6S', '3-8S']],
         ['KV', ['2850', null]],
+      ],
+    );
+  });
+  it('adds the Install row after PCB in every column', () => {
+    const sheet = specSheet({
+      specs: [['PCB', '6-layer'], ['Input', '3–6S LiPo']],
+      inTheBox: [],
+      install: 'Solder',
+    });
+    assert.deepEqual(
+      sheet.rows.map((r) => [r.label, r.values]),
+      [
+        ['Input', ['3-6S']],
+        ['PCB', ['6-layer']],
+        ['Install', ['Solder']],
       ],
     );
   });

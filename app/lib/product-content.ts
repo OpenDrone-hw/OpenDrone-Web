@@ -253,6 +253,10 @@ export type ProductContent = {
     line3: string;
     lead: string;               // subhead paragraph in mono
   };
+  /** How the part goes in a build, shown as the spec row "Install"
+   *  ("Solder"). Kept out of `specs` because those rows are mirrored from
+   *  the board README by `npm run sync:specs`. */
+  install?: string;
   firmware: {
     project: string;            // "AM32" / "Betaflight" / "ExpressLRS" / null
     projectUrl?: string;
@@ -570,8 +574,13 @@ export const PRODUCT_CONTENT: Record<string, ProductContent> =
  * chosen.
  */
 export function variantDisplayName(handle: string | null | undefined, value: string): string {
-  if (!handle) return value;
-  return PRODUCT_CONTENT[handle]?.variants?.[value]?.label ?? value;
+  if (!handle) return shopSize(value);
+  return shopSize(PRODUCT_CONTENT[handle]?.variants?.[value]?.label ?? value);
+}
+
+/** A size as FPV shops write it: "20x20", not "20×20". */
+export function shopSize(name: string): string {
+  return name.replace(/(\d)\s*×\s*(\d)/g, '$1x$2');
 }
 
 /** A cart line's name as the buyer reads it: the product title plus the
@@ -727,14 +736,16 @@ export type SpecSheetRow = {
  * rows with at least one value render.
  */
 export function specSheet(
-  content: Pick<ProductContent, 'specs' | 'inTheBox' | 'variants'>,
+  content: Pick<ProductContent, 'specs' | 'inTheBox' | 'variants' | 'install'>,
 ): {columns: string[]; rows: SpecSheetRow[]} {
   const keys = Object.keys(content.variants ?? {});
   const columns = keys.length > 1 ? keys : [keys[0] ?? ''];
   const tables = columns.map((k) => {
     const variant = k ? content.variants?.[k] : undefined;
     const box = [...content.inTheBox, ...(variant?.inTheBox ?? [])];
-    return {table: new Map(mergeSpecs(content.specs, variant?.specs)), box};
+    const table = new Map(mergeSpecs(content.specs, variant?.specs));
+    if (content.install) table.set('Install', content.install);
+    return {table, box};
   });
   const order: string[] = [];
   for (const {table} of tables) for (const key of table.keys()) if (!order.includes(key)) order.push(key);

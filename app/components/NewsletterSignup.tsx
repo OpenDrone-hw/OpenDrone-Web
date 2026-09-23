@@ -384,9 +384,13 @@ export function NewsletterSignup({
             disabled={isSubmitting}
             className={[
               'font-mono text-xs uppercase tracking-[0.14em] font-bold',
-              'bg-[var(--color-gold-fill)] text-[var(--color-on-accent)]',
+              // The footer form sits under every page's own gold action, so
+              // it takes the outline style: one gold fill per screen.
+              isFooter
+                ? 'border border-[var(--color-gold)] text-[var(--color-gold-text)] bg-transparent hover:bg-[color-mix(in_srgb,var(--color-gold)_12%,transparent)]'
+                : 'bg-[var(--color-gold-fill)] text-[var(--color-on-accent)] hover:bg-[var(--color-gold-fill-hover)]',
               'px-5 py-2.5 min-h-[44px] inline-flex items-center justify-center rounded-sm',
-              'transition-colors hover:bg-[var(--color-gold-fill-hover)]',
+              'transition-colors',
               'disabled:opacity-60 disabled:cursor-not-allowed',
               isWide || isFooter ? 'sm:shrink-0' : '',
             ].join(' ')}

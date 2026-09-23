@@ -21,6 +21,7 @@
     "fit": "It sits in the middle of the stack. The receiver, ESC, camera and VTX all connect to it.",
     "chain": "fc"
   },
+  "install": "Solder",
   "firmware": {
     "project": "Betaflight",
     "projectUrl": "https://github.com/betaflight/betaflight",

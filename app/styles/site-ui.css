@@ -374,12 +374,14 @@
   }
 }
 
-/* The price steps once: three equal cells on a hairline. */
+/* The price steps once, over the cards: a label and three chips, kept
+   clear of the timeline so they do not read as time spans. */
 .po-legend {
-  display: grid;
-  grid-template-columns: var(--po-label, 11.5rem) minmax(0, 1fr);
-  align-items: start;
-  margin-top: calc(var(--sp-5) - var(--sp-7));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
+  margin-top: var(--sp-7);
   font-size: var(--fs-sm);
 }
 .po-legend-label {
@@ -390,34 +392,26 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-.po-legend li {
   display: flex;
   flex-wrap: wrap;
-  gap: 0 var(--sp-2);
-  padding-top: var(--sp-2);
-  border-top: 3px solid var(--color-border-strong);
+  gap: var(--sp-2);
+}
+.po-legend li {
+  display: inline-flex;
+  gap: var(--sp-2);
+  padding: 0.2rem 0.65rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
   color: var(--color-text-muted);
 }
 .po-legend li:first-child {
-  border-top-color: var(--color-gold);
-}
-.po-legend li + li {
-  margin-left: 3px;
+  border-color: var(--color-gold);
 }
 .po-legend-units {
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   color: var(--color-text);
   line-height: 1.7;
-}
-@media (max-width: 42em) {
-  .po-legend {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--sp-2);
-  }
 }
 
 /* Groups: a title with its ship words, then the cards. */

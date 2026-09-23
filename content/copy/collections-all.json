@@ -94,7 +94,6 @@
     "Setup software, both free: [Betaflight Configurator](https://github.com/betaflight/betaflight-configurator) for the flight controller and the [ExpressLRS Configurator](https://github.com/ExpressLRS/ExpressLRS-Configurator) for the receiver. [The three steps after it arrives](/products#coming-from-dji)."
   ],
   "help_spare": "Every part is sold on its own, so a crashed quad needs only the broken part: each flight controller and ESC size, each frame and single motors. Spare arms and plates: [OpenFrame spare parts](/products/openframe-spares), sold out for now. The warranty covers defects, not crash damage: see [Warranty](/warranty).",
-  "help_gift": "Buying for someone else? The flight controller and ESC ship from late October 2026. The other parts ship by 11 March 2027 if their funding target is reached; if not, you choose a refund or to keep waiting. The order can go to the recipient's address. [Buying as a gift](/preorder#gift).",
   "guide_also_note": "Radio, goggles and video system usually cost more than the drone parts; many pilots already own them. Each line below links to a plain explainer.",
   "guide_tag_progress": "{ordered} of {target} ordered",
   "guide_add_summary": "Whole build: ships in one parcel when the {parts} reach their funding targets, planned by {latest}.",

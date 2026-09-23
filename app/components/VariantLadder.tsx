@@ -2,7 +2,7 @@ import {useLocation, useNavigate, useNavigation} from 'react-router';
 import {useEffect, useState} from 'react';
 import {motion} from 'motion/react';
 import type {MappedProductOptions} from '~/lib/product-shapes';
-import type {VariantContent} from '~/lib/product-content';
+import {shopSize, type VariantContent} from '~/lib/product-content';
 import {copyText} from '~/lib/copy';
 import {formatPrice} from '~/lib/catalog';
 
@@ -124,7 +124,7 @@ export function VariantLadder({
                 />
               ) : null}
               <span className="variant-tier-head">
-                <span className="variant-tier-name">{shopName(content.label ?? value)}</span>
+                <span className="variant-tier-name">{shopSize(content.label ?? value)}</span>
                 {comingSoon ? (
                   <span className="variant-tier-flag">
                     {copyText('product-chrome.ladder_flag_coming_soon')}
@@ -144,9 +144,4 @@ export function VariantLadder({
       </div>
     </div>
   );
-}
-
-/** A size as FPV shops write it: "20x20", not "20×20". */
-function shopName(name: string): string {
-  return name.replace(/(\d)\s*×\s*(\d)/g, '$1x$2');
 }

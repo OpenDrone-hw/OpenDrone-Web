@@ -12,7 +12,6 @@
   "timeline_deadline": "Deadline",
   "timeline_eta": "Ships if funded",
   "legend_label": "Price per unit",
-  "legend_units": "Units",
   "legend_steps": ["Early bird", "Step 2", "Standard"],
   "stack_title": "Stack",
   "targets_title": "Funding targets",

@@ -19,7 +19,10 @@ import {
   isConceptFor,
   isPurchasableStatus,
   lineDisplayName,
+  shipMonth,
+  variantDisplayName,
 } from '~/lib/product-content';
+import {shipWord} from '~/components/ShipChip';
 import {useProductStatusResolver, useRoadmapStatusResolver} from '~/lib/coming-soon';
 import {Txt} from '~/components/Txt';
 import {copyText, editAttrs} from '~/lib/copy';
@@ -256,10 +259,6 @@ const SEARCH_HELP: Array<{match: RegExp; copyId: string; surface?: string[]}> = 
     copyId: 'collections-all.help_spare',
   },
   {
-    match: /\b(?:gifts?|cadeaus?|cadeau|verjaardag|birthday|present|christmas|kerst|sinterklaas)\b/,
-    copyId: 'collections-all.help_gift',
-  },
-  {
     match: /\b(?:[6-9]|1[0-9])\s*(?:inch|in)\b|\blong\s*range\b|\blr\b|cinelifter/,
     copyId: 'collections-all.help_size',
   },
@@ -375,7 +374,7 @@ export default function ProductsIndex() {
           out.push({
             key: `${p.handle}:${value}`,
             product: p,
-            title: joinTitle(p.title, content?.variants?.[value]?.label ?? value),
+            title: joinTitle(p.title, variantDisplayName(p.handle, value)),
             searchText: searchTextFor(p, value),
             build: buildOf(BUILDS, sv?.sku),
             firmware: firmwareOf(p.handle),
@@ -739,10 +738,12 @@ export default function ProductsIndex() {
                   aria-pressed={activeShips === 'paid'}
                   onClick={() => setParam('ships', activeShips === 'paid' ? null : 'paid')}
                 >
-                  {(copyText('collections-all.chip_paid') ?? 'Ships {ships}').replace(
-                    '{ships}',
-                    stackShips.replace(/^ships\s+/i, ''),
-                  )}
+                  {shipMonth(stackShips)
+                    ? shipWord('ships', shipMonth(stackShips) ?? '')
+                    : (copyText('collections-all.chip_paid') ?? 'Ships {ships}').replace(
+                        '{ships}',
+                        stackShips.replace(/^ships\s+/i, ''),
+                      )}
                 </button>
               ) : null}
               <button

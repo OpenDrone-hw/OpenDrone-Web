@@ -141,7 +141,9 @@ export function CartAddedDialog() {
 
   const added = summary.lines.filter((l) => l.sku && detail.skus.includes(l.sku));
   const subtotal = summary.subtotal ?? null;
-  // Same rule as the buy module: "incl. VAT" only where EU VAT applies.
+  // Same rule as the buy module and the cart: "incl. VAT" only where EU VAT
+  // applies. The International and US markets keep the same price with no
+  // EU VAT in it (Shopify: taxes included in price).
   const quote = shippingQuote(shipCountry ?? rootData?.visitorCountry ?? null);
   const vatIncluded = !quote || (!quote.blocked && quote.duty === 'none');
   const shipBlocked = quote?.blocked === true;
@@ -231,7 +233,7 @@ export function CartAddedDialog() {
                     {`${line.quantity} × ${formatPrice(Number(line.total.amount) / line.quantity, line.total.currencyCode)}`}
                   </span>
                 ) : null}
-                <ShipChip promise={line.shipPromise} className="cart-added-ship" />
+                <ShipChip promise={line.shipPromise} className="cart-added-ship" ifFunded />
               </div>
               {line.total ? (
                 <span className="cart-added-price">

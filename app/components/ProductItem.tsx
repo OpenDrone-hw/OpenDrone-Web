@@ -12,6 +12,7 @@ import {useVariantUrl} from '~/lib/variants';
 import {useProductStatus, useRoadmapStatus} from '~/lib/coming-soon';
 import {PRODUCT_CONTENT, imagesAreRenders, isPurchasableStatus} from '~/lib/product-content';
 import {AddToCartButton} from './AddToCartButton';
+import {ShipChip} from './ShipChip';
 import {copyText} from '~/lib/copy';
 
 /** Hover quick-add for catalog cards: the card's own hand-off link, so
@@ -173,42 +174,18 @@ export function ProductItem({
       : product.variants.nodes.length > 0 &&
         product.variants.nodes.every((v) => !v.availableForSale));
   // The card's own variant (the quick-add one, else the first campaign
-  // SKU) says when it ships: paid stock carries its date, a funding target
-  // its target and deadline. Same campaign data as the product page.
+  // SKU) says when it ships, in the same ship chip as the product page,
+  // drawer and cart.
   const cardVariant =
     product.variants.nodes.find((v) => quickAdd && v.cartAddUrl === quickAdd.href) ??
     product.variants.nodes.find((v) => v.campaign) ??
     null;
   const campaign = status === 'preorder' && !comingSoon ? (cardVariant?.campaign ?? null) : null;
-  const shipState = campaign
-    ? campaign.paidStock
-      ? {
-          cls: 'is-ships',
-          // A status word on the photo; the date is the text line below.
-          badge: copyText('product-chrome.card_badge_in_production') ?? 'In production',
-          line: capitalize(campaign.shipPromise),
-        }
-      : campaign.target !== null && !campaign.targetReached
-        ? {
-            cls: 'is-target',
-            badge: copyText('product-chrome.card_badge_target') ?? 'Funding target',
-            line: (copyText('product-chrome.card_line_target') ?? 'Target {target} by {deadline}')
-              .replace('{target}', String(campaign.target))
-              .replace('{deadline}', campaign.deadline ?? ''),
-          }
-        : {
-            cls: 'is-ships',
-            badge: copyText('product-chrome.card_badge_funded') ?? 'Target reached',
-            line: capitalize(campaign.shipPromise),
-          }
-    : null;
   const badge = soldOut ? (
     <span className="product-card-badge is-soldout">
       {copyText('product-chrome.buy_stock_out') ?? 'Sold out'}
     </span>
-  ) : shipState ? (
-    <span className={`product-card-badge ${shipState.cls}`}>{shipState.badge}</span>
-  ) : status === 'preorder' && !comingSoon ? (
+  ) : campaign ? null : status === 'preorder' && !comingSoon ? (
       <span className="product-card-badge is-preorder">
         {copyText('product-chrome.card_badge_preorder')}
       </span>
@@ -355,8 +332,12 @@ export function ProductItem({
           <h2 className="product-card-title">{displayTitle}</h2>
           {showPrice ? priceLabel(price.amount, price.currencyCode, fromPrice) : null}
         </div>
-        {shipState && !soldOut && shipState.line ? (
-          <p className="product-card-ship">{shipState.line}</p>
+        {campaign && !soldOut ? (
+          <ShipChip
+            promise={campaign.shipPromise}
+            className="product-card-ship"
+            ifFunded={!campaign.paidStock && !campaign.targetReached}
+          />
         ) : null}
         {'productType' in product && product.productType ? (
           <p className="product-card-meta">{product.productType}</p>
@@ -426,8 +407,4 @@ export function ProductItem({
       {modelStrip}
     </div>
   );
-}
-
-function capitalize(text: string): string {
-  return text ? text.charAt(0).toUpperCase() + text.slice(1) : text;
 }

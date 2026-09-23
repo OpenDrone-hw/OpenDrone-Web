@@ -20,6 +20,7 @@
     "fit": "It sits between the flight controller and the battery and powers the motors.",
     "chain": "esc"
   },
+  "install": "Solder",
   "firmware": {
     "project": "AM32",
     "projectUrl": "https://github.com/am32-firmware/AM32",

@@ -1,4 +1,4 @@
-import {barPercent, type StepBarView} from '~/lib/preorder-meter';
+import {TRACK_SHARE, barPercent, type StepBarView} from '~/lib/preorder-meter';
 
 /**
  * Units sold as one bar: the fill is units sold, a tick marks each price-step
@@ -10,19 +10,30 @@ export function StepBar({
   bar,
   prices = [],
   fundedLabel,
+  layout = null,
 }: {
   bar: StepBarView;
   prices?: Array<{key: string | number; text: string; range?: string; current: boolean}>;
   fundedLabel?: string;
+  /** From `stepLayout`: each price placed over its own stretch of the bar,
+   *  and a tail after the bar for a step past its end. */
+  layout?: {lefts: number[]; tail: boolean} | null;
 }) {
-  const pct = barPercent(bar);
+  const share = layout?.tail ? TRACK_SHARE : 1;
+  const pct = barPercent(bar) * share;
+  const at = (units: number) => `${(units / bar.max) * share * 100}%`;
   const label = bar.funded && fundedLabel ? fundedLabel : bar.label;
+  const placed = layout && layout.lefts.length === prices.length;
   return (
     <div className="step-bar" data-funded={bar.funded ? '' : undefined}>
       {prices.length > 1 ? (
-        <ol className="step-bar-prices">
-          {prices.map((p) => (
-            <li key={p.key} aria-current={p.current ? 'true' : undefined}>
+        <ol className={`step-bar-prices${placed ? ' is-placed' : ''}`}>
+          {prices.map((p, i) => (
+            <li
+              key={p.key}
+              aria-current={p.current ? 'true' : undefined}
+              style={placed ? {left: `${layout.lefts[i]}%`} : undefined}
+            >
               {p.text}
               {p.range ? <span className="step-bar-range">{p.range}</span> : null}
             </li>
@@ -31,6 +42,7 @@ export function StepBar({
       ) : null}
       <span
         className="step-bar-track"
+        data-tail={layout?.tail ? '' : undefined}
         role="progressbar"
         aria-label={label}
         aria-valuemin={0}
@@ -40,8 +52,9 @@ export function StepBar({
       >
         <span className="step-bar-fill" style={{width: `${pct}%`}} />
         {bar.ticks.map((tick) => (
-          <span key={tick} className="step-bar-tick" style={{left: `${(tick / bar.max) * 100}%`}} />
+          <span key={tick} className="step-bar-tick" style={{left: at(tick)}} />
         ))}
+        {layout?.tail ? <span className="step-bar-tick" style={{left: at(bar.max)}} /> : null}
       </span>
       <span className="step-bar-label">{label}</span>
     </div>

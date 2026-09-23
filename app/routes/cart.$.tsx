@@ -2,7 +2,7 @@ import {createContext, useCallback, useContext, useEffect, useRef, useState} fro
 import {Form, Link, redirect, useLoaderData, useRevalidator, useRouteLoaderData} from 'react-router';
 import {shopifyImageUrl} from '~/lib/shopify-image';
 import type {Route} from './+types/cart.$';
-import {getCart, type ShopifyCart, type ShopifyCartLine} from '~/lib/shopify-storefront';
+import {fetchPaymentMethods, getCart, type ShopifyCart, type ShopifyCartLine} from '~/lib/shopify-storefront';
 import {
   CART_CHECK,
   DATES_SEEN_FIELD,
@@ -65,12 +65,6 @@ function sortCartLines(lines: ShopifyCartLine[]): ShopifyCartLine[] {
     .map(({line}) => line);
 }
 
-/** "A", "A and B", "A, B and C". */
-function joinNames(list: string[]): string {
-  if (list.length <= 1) return list[0] ?? '';
-  return `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}`;
-}
-
 /**
  * The cart: every line with its quantity, total and ship chip, then the
  * subtotal, shipping to the picked country, the total and Checkout. While
@@ -105,7 +99,15 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
     info = cartLineInfo(cart, catalog);
   }
   const check = new URL(request.url).searchParams.get('check');
-  return {cart, info, check};
+  let payments: string[] = [];
+  if (cart?.lines.length) {
+    try {
+      payments = await fetchPaymentMethods(context.env);
+    } catch (error) {
+      console.error('[shopify-cart] payment settings read failed', error instanceof Error ? error.message : 'unknown error');
+    }
+  }
+  return {cart, info, check, payments};
 }
 
 type Removed = SplitItem[];
@@ -129,14 +131,15 @@ function checkNotice(check: string | null): string | null {
 }
 
 export default function CartPage() {
-  const {cart, info, check} = useLoaderData<typeof loader>();
+  const {cart, info, check, payments} = useLoaderData<typeof loader>();
   const rootData = useRouteLoaderData<RootLoader>('root');
   // Lines moved out for a second order: kept in this browser so the list
   // survives a reload and the trip through checkout.
   const [removed, setRemoved] = useState<Removed>([]);
-  // The destination the shipping row quotes: the visitor's country until
-  // the buyer picks another one.
-  const [country, setCountry] = useState<string | null>(rootData?.visitorCountry ?? null);
+  // The destination the shipping row quotes: the visitor's country, else
+  // Belgium, until the buyer picks another one. Never empty, so shipping
+  // and the total always show before Checkout.
+  const [country, setCountry] = useState<string | null>(rootData?.visitorCountry ?? 'BE');
   useEffect(() => {
     setRemoved(storedSplitItems());
     const picked = storedShipCountry();
@@ -168,6 +171,7 @@ export default function CartPage() {
         <PopulatedCart
           cart={cart}
           info={info}
+          payments={payments}
           country={country}
           onCountry={pickCountry}
           onSplit={(items) => updateRemoved([...removed.filter((r) => !items.some((i) => i.id === r.id)), ...items])}
@@ -330,12 +334,14 @@ function ShippingRow({country, onCountry}: {country: string | null; onCountry: (
 function PopulatedCart({
   cart,
   info,
+  payments,
   country,
   onCountry,
   onSplit,
 }: {
   cart: ShopifyCart;
   info: Record<string, CartLineInfo>;
+  payments: string[];
   country: string | null;
   onCountry: (code: string) => void;
   onSplit: (items: Removed) => void;
@@ -357,7 +363,8 @@ function PopulatedCart({
     quote && !quote.blocked
       ? {amount: Number(cart.subtotal.amount) + quote.rate, currencyCode: cart.subtotal.currencyCode}
       : null;
-  // Outside the EU no EU VAT is charged and the carrier collects duties.
+  // Outside the EU the same price holds with no EU VAT in it (Shopify
+  // markets: taxes included in price), and the carrier collects duties.
   const outsideEu = Boolean(quote && !quote.blocked && quote.duty !== 'none');
   const overLimit = cart.lines.some((line) => {
     const max = info[line.id]?.maxQuantity;
@@ -388,12 +395,16 @@ function PopulatedCart({
               <dd style={pendingStyle}>{formatPrice(cart.subtotal.amount, cart.subtotal.currencyCode)}</dd>
             </div>
             <ShippingRow country={country} onCountry={onCountry} />
-            {total ? (
-              <div className="cart-register-row is-total">
-                <dt>{outsideEu ? t('register_total', 'Total') : t('register_total_vat', 'Total (incl. VAT)')}</dt>
-                <dd style={pendingStyle}>{formatPrice(total.amount, total.currencyCode)}</dd>
-              </div>
-            ) : null}
+            <div className="cart-register-row is-total">
+              <dt>{outsideEu ? t('register_total_export', 'Total (no EU VAT)') : t('register_total_vat', 'Total (incl. VAT)')}</dt>
+              <dd style={pendingStyle}>
+                {total
+                  ? formatPrice(total.amount, total.currencyCode)
+                  : t('total_plus_shipping', '{subtotal} + shipping', {
+                      subtotal: formatPrice(cart.subtotal.amount, cart.subtotal.currencyCode),
+                    })}
+              </dd>
+            </div>
           </dl>
           {outsideEu ? <p className="cart-summary-note">{t('note_duties', 'Import duties paid on delivery.')}</p> : null}
           {mixed ? <MixedNote cart={cart} info={info} onSplit={onSplit} /> : null}
@@ -422,10 +433,39 @@ function PopulatedCart({
               </button>
             </Form>
           )}
+          <PaymentMarks methods={payments} />
           <Txt id="cart.note_terms" as="p" className="cart-summary-note cart-terms" />
         </div>
       </section>
     </PendingContext.Provider>
+  );
+}
+
+/** Shopify's names for the marks, as a buyer knows them. */
+const PAYMENT_NAMES: Record<string, string> = {
+  VISA: 'Visa',
+  MASTERCARD: 'Mastercard',
+  AMERICAN_EXPRESS: 'Amex',
+  DISCOVER: 'Discover',
+  DINERS_CLUB: 'Diners',
+  JCB: 'JCB',
+  APPLE_PAY: 'Apple Pay',
+  GOOGLE_PAY: 'Google Pay',
+  SHOPIFY_PAY: 'Shop Pay',
+  ANDROID_PAY: 'Google Pay',
+};
+
+/** One muted row of the payment methods checkout accepts, from the shop's
+ *  payment settings. Nothing when Shopify reports none. */
+function PaymentMarks({methods}: {methods: string[]}) {
+  const names = [...new Set(methods.map((m) => PAYMENT_NAMES[m]).filter(Boolean))];
+  if (!names.length) return null;
+  return (
+    <ul className="cart-payments" aria-label={t('payments_aria', 'Payment methods')}>
+      {names.map((name) => (
+        <li key={name}>{name}</li>
+      ))}
+    </ul>
   );
 }
 
@@ -448,8 +488,6 @@ function MixedNote({
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const plan = splitPlan(cart, info);
-  const names = (ids: string[]) =>
-    joinNames(cart.lines.filter((l) => ids.includes(l.id)).map(lineName));
 
   const split = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -481,16 +519,26 @@ function MixedNote({
 
   return (
     <div className="cart-mixed-note" role="note">
-      <p className="cart-summary-note">{t('mixed_one_parcel', 'Ships in one parcel when the last item is ready.')}</p>
-      {plan ? (
-        <Form method="post" action="/api/shopify/cart" onSubmit={(event) => void split(event)}>
-          <input type="hidden" name="intent" value="remove" />
-          {plan.later.map((id) => <input key={id} type="hidden" name="lineId" value={id} />)}
-          <button type="submit" className="cart-split-link" disabled={busy}>
-            {busy ? t('split_busy', 'Removing…') : t('split_link', 'Ship {keep} first (second order, second shipping fee)', {keep: names(plan.keep)})}
-          </button>
-        </Form>
-      ) : null}
+      <div className="cart-summary-note cart-mixed-line">
+        {t('mixed_one_parcel', 'One parcel, ships with the last item')}
+        {plan ? (
+          <>
+            {' · '}
+            <Form
+              method="post"
+              action="/api/shopify/cart"
+              onSubmit={(event) => void split(event)}
+              className="cart-split-form"
+            >
+              <input type="hidden" name="intent" value="remove" />
+              {plan.later.map((id) => <input key={id} type="hidden" name="lineId" value={id} />)}
+              <button type="submit" className="cart-split-link" disabled={busy}>
+                {busy ? t('split_busy', 'Removing…') : t('split_link', 'Split order')}
+              </button>
+            </Form>
+          </>
+        ) : null}
+      </div>
       {failed ? (
         <small className="cart-line-error" role="alert">
           {copyText('cart.line_update_failed') ?? 'Could not update. Try again.'}

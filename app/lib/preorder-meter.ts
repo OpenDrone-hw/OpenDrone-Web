@@ -40,6 +40,30 @@ export function stepBarView(state: CampaignState, stepEnds: number[]): StepBarVi
   };
 }
 
+/**
+ * Where each price step starts along the step bar, in percent, so a step's
+ * price sits over its own stretch of the bar. A step that starts past the
+ * bar's end (251+ over a 250-unit batch) gets a tail after the bar: the
+ * bar then takes `TRACK_SHARE` of the width. Null once the bar counts a
+ * later batch or a reached target, where the steps no longer line up.
+ */
+export const TRACK_SHARE = 0.8;
+
+export function stepLayout(
+  state: CampaignState,
+  bar: StepBarView,
+  froms: number[],
+): {lefts: number[]; tail: boolean} | null {
+  const counted = state.paidStock ? state.batchOrdered : state.targetOrdered;
+  if (bar.funded || state.ordered - counted > 0 || bar.max <= 0 || !froms.length) return null;
+  const tail = froms.some((from) => from > bar.max);
+  const share = tail ? TRACK_SHARE : 1;
+  return {
+    lefts: froms.map((from) => (Math.min(bar.max, from - 1) / bar.max) * share * 100),
+    tail,
+  };
+}
+
 /** 0 to 100, integer, clamped: a bar width that never reaches the DOM as NaN. */
 export function barPercent(bar: MeterBar): number {
   if (!Number.isFinite(bar.value) || !Number.isFinite(bar.max) || bar.max <= 0) return 0;

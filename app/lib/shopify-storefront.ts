@@ -576,3 +576,27 @@ export async function removeCartLines(
   );
   return payloadCart(env, data.cartLinesRemove, 'cartLinesRemove', cartId);
 }
+
+const PAYMENT_SETTINGS_QUERY = `#graphql
+  query PaymentSettings {
+    shop {
+      paymentSettings {
+        acceptedCardBrands
+        supportedDigitalWallets
+      }
+    }
+  }
+`;
+
+/** The card brands and wallets the shop's checkout accepts, as Shopify
+ *  reports them ("VISA", "APPLE_PAY"). Empty when none are reported. */
+export async function fetchPaymentMethods(
+  env: StorefrontEnv,
+  fetcher: typeof fetch = fetch,
+): Promise<string[]> {
+  const data = await storefrontRequest<{
+    shop: {paymentSettings: {acceptedCardBrands: string[]; supportedDigitalWallets: string[]}};
+  }>(env, PAYMENT_SETTINGS_QUERY, {}, fetcher);
+  const settings = data.shop.paymentSettings;
+  return [...settings.acceptedCardBrands, ...settings.supportedDigitalWallets];
+}
