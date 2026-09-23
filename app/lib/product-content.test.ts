@@ -75,6 +75,11 @@ function assertBoxItems(items: BoxItem[], where: string) {
   for (const [i, item] of items.entries()) {
     assert.equal(typeof item.item, 'string', `${where}: inTheBox[${i}].item`);
     assert.notEqual(item.item, '', `${where}: inTheBox[${i}].item is empty`);
+    assert.deepEqual(
+      Object.keys(item).filter((k) => k !== 'qty' && k !== 'item'),
+      [],
+      `${where}: inTheBox[${i}] carries only qty and item`,
+    );
   }
 }
 

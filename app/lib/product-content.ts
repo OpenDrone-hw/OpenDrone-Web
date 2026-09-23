@@ -53,9 +53,10 @@ export type ChapterPin = {
 /**
  * Physical item that ships in the box. `qty` is free text so entries
  * can read "1×" or "kit" or "set". Keep items factual - only list
- * things that genuinely ship. No speculative filler.
+ * things that genuinely ship. No speculative filler. One line per item:
+ * a count and a name, no second line.
  */
-export type BoxItem = {qty?: string; item: string; note?: string};
+export type BoxItem = {qty?: string; item: string};
 
 /**
  * The beginner chapter ("What does this do?"), rendered first on the PDP.
@@ -278,6 +279,10 @@ export type VariantContent = {
   /** One short line over the gallery when this tier shows another tier's
    *  image, e.g. "Render of the 5-inch frame". */
   imageNote?: string;
+  /** Per-tier plug and pin-order rows. They replace the product's
+   *  `connectors` while this tier is picked. From the board repo's design
+   *  notes. */
+  connectors?: Array<[string, string]>;
 };
 
 export type ProductContent = {
@@ -428,6 +433,11 @@ export type ProductContent = {
   /** The mono line under the product name, for a product without
    *  versions or as the default for versions without their own. */
   subtitle?: string;
+  /** Plug and pin-order rows shown under the spec table, from the board
+   *  repo's design notes. Not part of the README-mirrored `specs`. */
+  connectors?: Array<[string, string]>;
+  /** One line under `connectors`. */
+  connectorsNote?: string;
 };
 
 /*

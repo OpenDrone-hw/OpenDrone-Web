@@ -16,7 +16,12 @@
     "project": "-"
   },
   "repoUrl": "https://github.com/OpenDrone-hw",
-  "inTheBox": [],
+  "inTheBox": [
+    {
+      "qty": "1×",
+      "item": "Motor"
+    }
+  ],
   "downloads": [],
   "specs": [
     [

@@ -1,18 +1,18 @@
-import {Link} from 'react-router';
 import type {CompanyIdentity} from '~/lib/company';
 import {copy, copyText, editAttrs} from '~/lib/copy';
 
 /**
  * GPSR (EU) 2023/988 Art. 19 information for product listings: manufacturer
  * identity with postal and electronic address, the product identifier, safety
- * warnings in EN/NL/FR/DE, and the EU DoC pointer. Required before purchase by
+ * warnings in EN/NL/FR/DE. Required before purchase by
  * docs/store-compliance.md section 1. Rendered as a quiet compliance strip at
  * the very bottom of the product page, deliberately outside the product story.
  * The email is plain text here on purpose: Art. 19 requires an electronic
  * address on the offer itself, so the site-wide no-mailto rule does not apply
  * to product pages. Strings live in content/copy/product-chrome.json under
- * the gpsr_* keys; the warning lists render in all four languages at once
- * because product pages are English-only chrome serving NL/FR/DE markets.
+ * the gpsr_* keys; the English list shows and the NL/FR/DE lists sit in a
+ * folded disclosure on the same page, because product pages are English-only
+ * chrome serving NL/FR/DE markets.
  */
 
 const WARNING_LANGS = ['en', 'nl', 'fr', 'de'] as const;
@@ -79,9 +79,9 @@ export function GpsrBlock({
   return (
     <section
       aria-label="Manufacturer and safety information"
-      className="mt-16 border-t border-[var(--color-border)] px-6 py-8 text-[11px] leading-relaxed text-[var(--color-text-muted)]"
+      className="mt-16 border-t border-[var(--color-border)] py-8 text-[11px] leading-relaxed text-[var(--color-text-muted)]"
     >
-      <div className="mx-auto max-w-6xl">
+      <div>
         <p
           className="mb-4 font-mono text-[10px] uppercase tracking-[0.2em]"
           {...editAttrs('product-chrome.gpsr_heading')}
@@ -91,11 +91,7 @@ export function GpsrBlock({
         </p>
         <p className="mb-2">
           {company.name}, {company.address} &middot; {company.email} &middot;{' '}
-          KBO/BCE {company.kbo} &middot;{' '}
-          <Link to="/doc" className="underline underline-offset-2">
-            {copyText('product-chrome.gpsr_doc_link') ??
-              'EU Declaration of Conformity'}
-          </Link>
+          KBO/BCE {company.kbo}
         </p>
         <p className="mb-4">
           {copyText('product-chrome.gpsr_product_label') ?? 'Product type'}:{' '}
@@ -108,22 +104,40 @@ export function GpsrBlock({
             </>
           ) : null}
         </p>
-        <div className="grid gap-6 md:grid-cols-4">
-          {WARNING_LANGS.map((lang) => {
-            const lines = [
-              ...warnings(`gpsr_warnings_${lang}`),
-              ...warnings(`gpsr_warnings_${kind}_${lang}`),
-            ];
-            if (lines.length === 0) return null;
-            return (
+        {/* The shop is English, so the English lines show; the Dutch,
+            French and German lines stay on the page, folded (GPSR Art. 9(7)
+            asks for the languages of the markets served). */}
+        {(() => {
+          const linesFor = (lang: (typeof WARNING_LANGS)[number]) => [
+            ...warnings(`gpsr_warnings_${lang}`),
+            ...warnings(`gpsr_warnings_${kind}_${lang}`),
+          ];
+          const list = (lang: (typeof WARNING_LANGS)[number]) => {
+            const lines = linesFor(lang);
+            return lines.length ? (
               <ul key={lang} lang={lang} className="list-disc space-y-1 pl-4">
                 {lines.map((line) => (
                   <li key={line}>{line}</li>
                 ))}
               </ul>
-            );
-          })}
-        </div>
+            ) : null;
+          };
+          const others = WARNING_LANGS.filter((lang) => lang !== 'en' && linesFor(lang).length);
+          return (
+            <>
+              {list('en')}
+              {others.length ? (
+                <details className="gpsr-languages mt-4">
+                  <summary className="cursor-pointer">
+                    {copyText('product-chrome.gpsr_other_languages') ??
+                      'Veiligheid · Sécurité · Sicherheit (NL / FR / DE)'}
+                  </summary>
+                  <div className="mt-3 grid gap-6 md:grid-cols-3">{others.map(list)}</div>
+                </details>
+              ) : null}
+            </>
+          );
+        })()}
       </div>
     </section>
   );

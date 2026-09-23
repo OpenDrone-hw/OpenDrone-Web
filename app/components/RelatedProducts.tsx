@@ -4,9 +4,13 @@ import type {ProductCardFragment} from '~/lib/product-shapes';
 import {formatPrice} from '~/lib/catalog';
 import {SmoothImage} from '~/components/SmoothImage';
 import {AddToCartButton} from '~/components/AddToCartButton';
-import {useComingSoon, useRoadmapStatusResolver} from '~/lib/coming-soon';
-import {isConceptFor} from '~/lib/product-content';
-import {PRODUCT_CONTENT} from '~/lib/product-content';
+import {
+  useComingSoon,
+  useProductStatus,
+  useRoadmapStatusResolver,
+} from '~/lib/coming-soon';
+import {copyText} from '~/lib/copy';
+import {PRODUCT_CONTENT, hiddenWhileSoldOut, isConceptFor} from '~/lib/product-content';
 
 /** The related strip renders catalog cards, same as every listing. */
 export type RelatedProduct = ProductCardFragment;
@@ -31,12 +35,40 @@ function specLineOf(p: RelatedProduct): string | null {
   const parts: string[] = [];
   const fw = c.firmware?.project;
   if (fw && fw !== '-') parts.push(fw);
-  const chip = cell('mcu') ?? cell('radio');
-  if (chip) parts.push(clause(chip));
+  const chipKey = cell('mcu') !== undefined ? 'mcu' : 'radio';
+  const baseChip = cell(chipKey);
+  if (baseChip) {
+    // The base table is one variant's; when variants name different chips
+    // (the 20x20 FC runs an RP2354A, the 30x30 an RP2354B) the card names
+    // what they share, so the "from" price and the chip always agree.
+    const chips = new Set([clause(baseChip)]);
+    for (const v of Object.values(c.variants ?? {})) {
+      const own = v.specs?.find(([k]) => k.toLowerCase() === chipKey)?.[1];
+      if (own) chips.add(clause(own));
+    }
+    parts.push(chips.size > 1 ? sharedStem([...chips]) || clause(baseChip) : clause(baseChip));
+  }
+  // The base table describes one variant; with several (3" and 5" frames)
+  // its first rows would contradict the "from" price, so name the variants.
+  const variantNames = Object.entries(c.variants ?? {}).map(([k, v]) => v.label ?? k);
+  if (parts.length === 0 && variantNames.length > 1) return variantNames.join(' · ');
   if (parts.length === 0) {
     for (const [, v] of rows.slice(0, 2)) parts.push(clause(v));
   }
   return parts.slice(0, 2).join(' · ') || null;
+}
+
+/** The common start of several chip names, "RP2354A" + "RP2354B" →
+ *  "RP2354". Empty when they share fewer than three characters. */
+function sharedStem(names: string[]): string {
+  let stem = names[0];
+  for (const n of names.slice(1)) {
+    let i = 0;
+    while (i < stem.length && i < n.length && stem[i] === n[i]) i++;
+    stem = stem.slice(0, i);
+  }
+  stem = stem.replace(/[\s,·-]+$/, '');
+  return stem.length >= 3 ? stem : '';
 }
 
 /** Mono eyebrow in catalog-number language: "FILE 02 · FLIGHT CONTROLLER". */
@@ -59,9 +91,17 @@ export function RelatedProducts({
         <Await resolve={recommendations} errorElement={null}>
           {(items) => {
             // Concept products (planned / in-progress) never list.
-            const listed = (items ?? []).filter(
-              (p) => !isConceptFor(p.handle, roadmapStatus(p.handle)),
-            );
+            // Resold parts that cannot be bought yet are left out, and
+            // what can be bought now comes before what is sold out.
+            const listed = (items ?? [])
+              .filter(
+                (p) =>
+                  !isConceptFor(p.handle, roadmapStatus(p.handle)) &&
+                  !hiddenWhileSoldOut(p),
+              )
+              .map((p, i) => ({p, i, open: p.variants.nodes.some((v) => v.availableForSale)}))
+              .sort((a, b) => Number(b.open) - Number(a.open) || a.i - b.i)
+              .map(({p}) => p);
             if (listed.length === 0) return null;
             return (
               <div className="related-grid">
@@ -79,6 +119,8 @@ export function RelatedProducts({
 
 function RelatedCard({product}: {product: RelatedProduct}) {
   const comingSoon = useComingSoon(product.handle);
+  const status = useProductStatus(product.handle);
+  const priceUnit = PRODUCT_CONTENT[product.handle]?.priceUnit;
   const image = product.featuredImage;
   const min = product.priceRange.minVariantPrice;
   const max = product.priceRange.maxVariantPrice;
@@ -125,7 +167,8 @@ function RelatedCard({product}: {product: RelatedProduct}) {
               aspectRatio="1/1"
               data={image}
               loading="lazy"
-              sizes="(min-width: 45em) 260px, 50vw"
+              sizes="(min-width: 45em) 260px, 100vw"
+              maxWidth={800}
             />
           ) : (
             <span className="product-card-media-ghost" aria-hidden="true">
@@ -145,9 +188,14 @@ function RelatedCard({product}: {product: RelatedProduct}) {
             {priced && !comingSoon ? (
               <>
                 {fromPrice ? (
-                  <span className="related-card-from">from</span>
+                  <span className="related-card-from">
+                    {copyText('product-chrome.card_price_from') ?? 'from'}
+                  </span>
                 ) : null}
                 <span>{formatPrice(min.amount, min.currencyCode)}</span>
+                {priceUnit ? (
+                  <span className="related-card-unit">{priceUnit}</span>
+                ) : null}
               </>
             ) : (
               <span>&nbsp;</span>
@@ -163,7 +211,11 @@ function RelatedCard({product}: {product: RelatedProduct}) {
             product={product.handle}
             disabled={!only.availableForSale}
           >
-            Add to cart
+            {!only.availableForSale
+              ? (copyText('product-chrome.buy_stock_out') ?? 'Sold out')
+              : status === 'preorder'
+                ? (copyText('product-chrome.buy_cta_preorder') ?? 'Pre-order')
+                : (copyText('product-chrome.card_add_to_cart') ?? 'Add to cart')}
           </AddToCartButton>
         </div>
       ) : null}

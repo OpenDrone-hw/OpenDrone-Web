@@ -4673,7 +4673,7 @@ section.chapter[data-centered] .chapter-body-col {
 .related-card-file {
   font-family: var(--font-mono);
   font-size: 10px;
-  letter-spacing: 0.16em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-dim);
   margin: 0;
@@ -4691,7 +4691,7 @@ section.chapter[data-centered] .chapter-body-col {
 }
 
 .related-card:hover .related-card-title {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .related-card-spec {
@@ -4979,20 +4979,20 @@ section.chapter[data-centered] .chapter-body-col {
     border: 2px solid color-mix(in srgb, var(--color-gold) 30%, transparent);
   }
   .chapter-scope-tag {
-    position: absolute;
-    top: 0;
-    left: var(--sp-6);
-    translate: 0 -50%;
-    padding: 0.35rem 0.9rem;
-    background: var(--color-bg);
-    border: 1px solid color-mix(in srgb, var(--color-gold) 40%, transparent);
-    border-radius: var(--r-pill);
-    font-family: var(--font-mono);
-    font-size: 11px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--color-gold);
-  }
+  position: absolute;
+  top: 0;
+  left: var(--sp-6);
+  translate: 0 -50%;
+  padding: 0.35rem 0.9rem;
+  background: var(--color-bg);
+  border: 1px solid color-mix(in srgb, var(--color-gold) 40%, transparent);
+  border-radius: var(--r-pill);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-gold-text);
+}
   .chapter-wide {
     grid-column: 1 / -1;
   }
@@ -5107,7 +5107,7 @@ section.chapter[data-centered] .chapter-body-col {
   left: 0.85rem;
   font-family: var(--font-mono);
   font-size: 9px;
-  letter-spacing: 0.22em;
+  letter-spacing: var(--ls-label);
   color: color-mix(in srgb, var(--color-text-dim) 60%, transparent);
 }
 
@@ -5482,13 +5482,13 @@ section.chapter[data-centered] .chapter-body-col {
   padding: 0 3px 1px;
   font-family: var(--font-mono);
   font-size: 9px;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
 .board-folder-rail-count,
 .schematic-rail-count {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   letter-spacing: 0.06em;
 }
 .board-folder-tabs,
@@ -5521,17 +5521,13 @@ section.chapter[data-centered] .chapter-body-col {
   cursor: pointer;
   font-family: var(--font-mono);
   font-size: clamp(10.5px, 0.74vw, 13px);
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   text-align: center;
-  /* Full text colour: the muted grey read as low-contrast
-     (maintainer, 2026-08-12). */
   color: var(--color-text);
   padding: 0.48em 0.4em;
-  /* Standardised viewer-pill radius (schematic sheets + PCB layers share it). */
   border-radius: var(--r-lg);
-  transition: color 0.2s, background 0.2s, border-color 0.2s, transform 0.2s,
-    box-shadow 0.2s;
+  transition: color 0.2s, background 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s;
 }
 .board-folder-tabs button:hover,
 .schematic-rail-tabs button:hover {
@@ -5561,7 +5557,7 @@ section.chapter[data-centered] .chapter-body-col {
 }
 .board-folder-tab-name {
   font-size: clamp(10.5px, 0.74vw, 13px);
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   line-height: 1;
 }
 .board-folder-tab-fn {
@@ -5803,7 +5799,7 @@ section.chapter[data-centered] .chapter-body-col {
   margin-top: 0.7rem;
   font-family: var(--font-mono);
   font-size: 10px;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-dim);
 }
@@ -5817,7 +5813,7 @@ section.chapter[data-centered] .chapter-body-col {
   display: inline-block;
   font-family: var(--font-mono);
   font-size: 10px;
-  letter-spacing: 0.22em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-dim);
   text-decoration: none;
@@ -5827,7 +5823,7 @@ section.chapter[data-centered] .chapter-body-col {
   margin-top: 1.4rem;
 }
 .board-art-inspect:hover {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 .board-art-fallback {
   font-family: var(--font-mono);
@@ -6023,7 +6019,7 @@ section.chapter[data-centered] .chapter-body-col {
   padding: 0.1rem 0.45rem;
   border-radius: var(--r-pill);
   background: color-mix(in srgb, var(--color-gold) 14%, transparent);
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 /* A pin that maps to footprints on the board: interactive. Hover fills the whole
@@ -6077,7 +6073,7 @@ section.chapter[data-centered] .chapter-body-col {
 .teardown-io-tag {
   flex: none;
   font-size: 0.7rem;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
@@ -6102,12 +6098,12 @@ section.chapter[data-centered] .chapter-body-col {
 .teardown-io-chip:focus-visible {
   background: color-mix(in srgb, var(--color-gold) 16%, transparent);
   border-color: color-mix(in srgb, var(--color-gold) 55%, transparent);
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   outline: none;
 }
 .teardown-pin-hoverable:hover .teardown-pin-part,
 .teardown-pin-hoverable:focus-visible .teardown-pin-part {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 .teardown-pin-hoverable:hover::before,
 .teardown-pin-hoverable:focus-visible::before {
@@ -6201,7 +6197,7 @@ section.chapter[data-centered] .chapter-body-col {
 }
 
 .open-source-story-link a:hover {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 
@@ -6229,7 +6225,7 @@ section.chapter[data-centered] .chapter-body-col {
 .open-source-card-label {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
   margin: 0 0 0.25rem;
@@ -6400,7 +6396,7 @@ section.chapter[data-centered] .chapter-body-col {
   top: 0.5rem;
   margin: 0;
   text-align: center;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 /* "Watch" bubble - the video card that replaces the issues card on products
@@ -6459,7 +6455,7 @@ section.chapter[data-centered] .chapter-body-col {
 .watch-card-yt {
   width: 48px;
   height: auto;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   transition: transform 0.2s ease;
 }
 
@@ -6523,9 +6519,9 @@ section.chapter[data-centered] .chapter-body-col {
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
 }
 .contributors-cta-btn:hover {
@@ -6561,9 +6557,9 @@ section.chapter[data-centered] .chapter-body-col {
   border-bottom: 2px solid var(--color-gold);
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .provenance-rows {
@@ -6590,7 +6586,7 @@ section.chapter[data-centered] .chapter-body-col {
 .provenance-row-label {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text);
 }
@@ -6644,7 +6640,7 @@ section.chapter[data-centered] .chapter-body-col {
   justify-content: center;
   font-family: var(--font-mono);
   font-size: 1.6rem;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   border-style: dashed;
 }
 .contributor-login {
@@ -6672,7 +6668,7 @@ section.chapter[data-centered] .chapter-body-col {
   font-size: var(--fs-xs);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 .contributor-tile.is-skeleton {
   pointer-events: none;
@@ -6725,14 +6721,14 @@ section.chapter[data-centered] .chapter-body-col {
 .bundle-component-firmware {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
   margin: 0.25rem 0 0;
 }
 
 .bundle-component-firmware span {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .bundle-component-more {
@@ -6740,7 +6736,7 @@ section.chapter[data-centered] .chapter-body-col {
   font-family: var(--font-mono);
   font-size: 12px;
   letter-spacing: 0.08em;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 /* A single bubble around the whole parts list - a "table card" that sets the
    contents apart from the surrounding copy. Rows are hairline-divided inside. */
@@ -6783,7 +6779,7 @@ section.chapter[data-centered] .chapter-body-col {
   font-family: var(--font-mono);
   font-size: 12px;
   letter-spacing: 0.08em;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   text-transform: uppercase;
 }
 
@@ -6840,8 +6836,20 @@ section.chapter[data-centered] .chapter-body-col {
   transition: color 0.15s ease, border-color 0.15s ease;
 }
 
+/* A chip that links to a product reads as a button; the one stage with no
+   product (the radio) stays a dim, dashed label. */
+a.what-chain-chip {
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+.what-chain-chip.is-plain {
+  border-style: dashed;
+  color: var(--color-text-dim);
+  cursor: default;
+}
+
 a.what-chain-chip:hover {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   border-color: color-mix(in srgb, var(--color-gold) 55%, transparent);
 }
 
@@ -6858,11 +6866,11 @@ a.what-chain-chip:hover {
   font-family: var(--font-mono);
   font-size: 12px;
   letter-spacing: 0.08em;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .what-home-link:hover {
-  color: var(--color-accent);
+  color: var(--color-gold-text);
 }
 
 /* Spec table */
@@ -6954,11 +6962,11 @@ a.what-chain-chip:hover {
 }
 
 .firmware-support-links a:hover {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .firmware-support-links a.firmware-support-donate {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .firmware-support-nodonate {
@@ -7131,11 +7139,11 @@ a.what-chain-chip:hover {
     font-family: var(--font-mono);
   }
   .board-deck-count {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--color-gold);
-    letter-spacing: 0.04em;
-  }
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-gold-text);
+  letter-spacing: 0.04em;
+}
   .board-deck-name {
     font-size: 0.82rem;
     color: var(--color-text);
@@ -7177,20 +7185,20 @@ a.what-chain-chip:hover {
     margin-top: 6px;
   }
   .board-part-chips-side {
-    position: sticky;
-    left: 0;
-    flex: 0 0 auto;
-    align-self: stretch;
-    display: inline-flex;
-    align-items: center;
-    padding-right: 8px;
-    background: var(--color-bg);
-    font-family: var(--font-mono);
-    font-size: 10px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--color-text-dim);
-  }
+  position: sticky;
+  left: 0;
+  flex: 0 0 auto;
+  align-self: stretch;
+  display: inline-flex;
+  align-items: center;
+  padding-right: 8px;
+  background: var(--color-bg);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+}
   .board-part-chips::-webkit-scrollbar {
     display: none;
   }
@@ -18010,4 +18018,236 @@ html.hero-header-in .homepage-layout .site-header {
 @media (prefers-reduced-motion: reduce) {
   .hero-load-manifest { animation: none; }
   .hero-load-piece.is-active .hero-load-piece__mark { animation: none; }
+}
+
+/* Product page chapters, ported from 75548a4 (the approved chapter layout). */
+@media (max-width: 959px) {
+  .chapter {
+    padding: var(--sp-7) 0;
+    gap: var(--sp-5);
+  }
+}
+@media (max-width: 959px) {
+  .chapter .chapter-title {
+    font-size: var(--fs-xl);
+    margin-bottom: var(--sp-4);
+  }
+}
+@media (min-width: 880px) {
+  .chapter:has(.board-art) .chapter-index, .chapter:has(.board-art) .chapter-body-col {
+    transition: opacity 0.55s ease, translate 0.6s cubic-bezier(0.16, 0.84, 0.3, 1);
+  }
+}
+@media (min-width: 880px) {
+  .chapter[data-text-pending] .chapter-index, .chapter[data-text-pending] .chapter-body-col {
+    opacity: 0;
+    translate: -30px 0;
+  }
+}
+@media (max-width: 879px) {
+  .chapter[data-wide-media] .open-source-card, .chapter[data-wide-media] .latest-commit-card {
+    aspect-ratio: auto;
+    padding: 0.7rem 0.8rem;
+  }
+}
+@media (min-width: 880px) {
+  .chapter[data-wide-media] .open-source-card, .chapter[data-wide-media] .latest-commit-card {
+    border-top: 2px solid transparent;
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+  }
+}
+@media (min-width: 880px) {
+  .chapter[data-wide-media] .open-source-card:hover, .chapter[data-wide-media] .latest-commit-card:hover {
+    transform: translateY(-4px);
+    border-top-color: var(--color-gold);
+  }
+}
+.chapter[data-backdrop] .chapter-index, .chapter[data-backdrop] .chapter-body-col {
+  position: relative;
+  z-index: 1;
+}
+.chapter-footnote {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  color: var(--color-text-dim);
+  max-width: 64ch;
+  margin: var(--sp-4) 0 0;
+}
+.provenance-links a {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.55rem 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--color-gold) 55%, transparent);
+  border-radius: 999px;
+  font-weight: 600;
+  color: var(--color-gold-text);
+  text-decoration: none;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+.provenance-foot {
+  margin: 1rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--color-text-muted);
+}
+.spec-table dt {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.board-art-skeleton-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  animation: latest-commit-pulse 1.4s ease-in-out infinite;
+}
+.board-art.is-swap-ready {
+  transition: translate 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.board-art.is-swap-ready .board-folder-rail {
+  transition: opacity 0.6s ease, transform 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .board-art.is-swap-ready, .board-art.is-swap-ready .board-folder-rail {
+    transition: none;
+  }
+}
+.chapter[id] {
+  scroll-margin-top: calc(var(--header-height) + 1.5rem);
+}
+.spec-table > div {
+  flex-wrap: wrap;
+}
+.spec-table dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.teardown-render-note {
+  margin: var(--sp-3) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+}
+.chapter#specs, .chapter#in-the-box {
+  position: relative;
+  z-index: 1;
+  background: var(--color-bg);
+}
+.spec-table > div {
+  display: grid;
+  grid-template-columns: minmax(7rem, 9rem) 1fr;
+  column-gap: 16px;
+  align-items: baseline;
+  padding: 10px 0;
+}
+.spec-table dt {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-text-muted);
+  white-space: normal;
+}
+.spec-table dd {
+  font-size: 14px;
+  text-align: left;
+  color: var(--color-text);
+}
+.spec-table dd a {
+  color: var(--color-gold-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.spec-connectors {
+  margin-top: var(--sp-6);
+}
+.spec-connectors-title {
+  margin: 0 0 var(--sp-3);
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--color-text);
+}
+.spec-connectors .spec-table {
+  grid-template-columns: 1fr;
+}
+.spec-connectors-note {
+  margin: var(--sp-3) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+}
+.chapter-title {
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+@media (min-width: 960px) {
+  .chapter {
+    padding-block: clamp(2.5rem, 5vw, 4rem);
+    gap: var(--sp-6);
+  }
+}
+.board-art-skeleton-preview {
+  opacity: 0.85;
+  filter: none;
+  max-width: min(70%, 520px);
+}
+.board-art-skeleton-label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+.provenance-links {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.provenance-links a {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--r-md);
+  font-weight: 600;
+  color: var(--color-text);
+}
+.provenance-links a:hover {
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+  color: var(--color-text);
+  border-color: var(--color-text-muted);
+}
+.open-source-story-link, .open-source-story-link a {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.open-source-story-link a {
+  color: var(--color-gold-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.board-art-skeleton {
+  justify-content: flex-end;
+  padding-bottom: 0.75rem;
+}
+.board-art-skeleton-spinner {
+  display: none;
+}
+.board-art-skeleton-label {
+  position: relative;
+  z-index: 1;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  background: var(--pod-bg-strong);
+  border: 1px solid var(--pod-border);
+}
+.related-card-media {
+  background: #ece9e3;
 }

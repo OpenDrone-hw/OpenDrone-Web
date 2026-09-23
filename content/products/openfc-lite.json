@@ -229,24 +229,6 @@
     {
       "qty": "1×",
       "item": "JST-SH 1.0 mm 8-pin FC-to-ESC cable"
-    },
-    {
-      "qty": "4×",
-      "item": "Silicone soft-mount grommets",
-      "note": "M3 on 30×30, M2 on 20×20"
-    },
-    {
-      "qty": "1×",
-      "item": "Silicone hook-up wire set, 28 AWG, four colours"
-    },
-    {
-      "qty": "1×",
-      "item": "Quick-start card"
-    },
-    {
-      "qty": "1×",
-      "item": "ESD bag (OpenDrone logo)",
-      "note": "everything above ships inside it"
     }
   ],
   "downloads": [],
@@ -556,6 +538,50 @@
       ],
       "placeholders": [
         "Weight"
+      ],
+      "inTheBox": [
+        {
+          "qty": "4×",
+          "item": "Silicone soft-mount grommets, M2"
+        },
+        {
+          "qty": "1×",
+          "item": "Silicone hook-up wire set, 28 AWG, four colours"
+        },
+        {
+          "qty": "1×",
+          "item": "Quick-start card"
+        },
+        {
+          "qty": "1×",
+          "item": "ESD bag"
+        }
+      ],
+      "connectors": [
+        [
+          "ESC plug",
+          "JST-SH 8-pin, Betaflight order: 1 VBAT, 2 GND, 3 current, 4 ESC telemetry, 5-8 motors 1-4."
+        ],
+        [
+          "Video plug",
+          "JST-SH 6-pin: 1 10V (switchable), 2 GND, 3 UART0 TX, 4 UART0 RX, 5 GND, 6 UART1 RX."
+        ],
+        [
+          "Digital air unit",
+          "On the 6-pin video plug: 10V, GND, UART for OSD. Check the cable's pin order first."
+        ],
+        [
+          "Receiver",
+          "UART1 pads (TX, RX). SBUS inverted in firmware."
+        ],
+        [
+          "I2C",
+          "SDA, SCL pads. For a compass."
+        ],
+        [
+          "BEC rails",
+          "10V switchable + 5V always-on, 3A each."
+        ]
       ]
     },
     "30×30": {
@@ -585,6 +611,24 @@
           "Frame fit",
           "30.5 × 30.5 mm stack frames, such as OpenFrame 5\""
         ]
+      ],
+      "inTheBox": [
+        {
+          "qty": "4×",
+          "item": "Silicone soft-mount grommets, M3"
+        },
+        {
+          "qty": "1×",
+          "item": "Silicone hook-up wire set, 28 AWG, four colours"
+        },
+        {
+          "qty": "1×",
+          "item": "Quick-start card"
+        },
+        {
+          "qty": "1×",
+          "item": "ESD bag"
+        }
       ]
     }
   },
@@ -615,5 +659,36 @@
   ],
   "placeholders": [
     "Weight"
-  ]
+  ],
+  "connectors": [
+    [
+      "ESC plug",
+      "JST-SH 8-pin, Betaflight order: 1 VBAT, 2 GND, 3 current, 4 ESC telemetry, 5-8 motors 1-4."
+    ],
+    [
+      "Video plug",
+      "JST-SH 6-pin: 1 10V (switchable), 2 GND, 3 UART0 TX, 4 UART0 RX, 5 GND, 6 UART1 RX."
+    ],
+    [
+      "Digital air unit",
+      "On the 6-pin video plug: 10V, GND, UART for OSD. Check the cable's pin order first."
+    ],
+    [
+      "Receiver plug",
+      "JST-SH 4-pin: 5V, GND, PIO UART0 RX, TX."
+    ],
+    [
+      "Peripheral plug",
+      "JST-SH 6-pin: 4.5V, GND, PIO UART1 RX, TX, I2C SDA, SCL. For GPS + compass."
+    ],
+    [
+      "Camera plug",
+      "JST-SH 3-pin: 5V, GND, video in."
+    ],
+    [
+      "BEC rails",
+      "10V switchable + 5V always-on, 3.5A each."
+    ]
+  ],
+  "connectorsNote": "Port names as in the schematic. Other pads are solder pads."
 }

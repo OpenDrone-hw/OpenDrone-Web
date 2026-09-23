@@ -162,7 +162,21 @@ export function SchematicViewer({
       {rootMargin: '1800px 0px', threshold: 0.01},
     );
     io.observe(el);
-    return () => io.disconnect();
+    // On a desktop the first sheet is also loaded once the page is idle
+    // after load: parsing an SVG sheet takes the main thread for a few
+    // hundred ms on a slow CPU, which is a stall when it lands mid-scroll
+    // (the teardown sits far down the page) and nothing when it lands idle.
+    let idleId: number | undefined;
+    const wide =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(min-width: 901px)').matches;
+    if (wide && typeof requestIdleCallback !== 'undefined') {
+      idleId = requestIdleCallback(() => setInView(true), {timeout: 4000});
+    }
+    return () => {
+      io.disconnect();
+      if (idleId != null && typeof cancelIdleCallback !== 'undefined') cancelIdleCallback(idleId);
+    };
   }, []);
 
   // Load the active board's manifest + warm its sheets, then warm every sibling

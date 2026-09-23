@@ -401,6 +401,26 @@ function DownloadsGrid({
   );
 }
 
+/**
+ * The chapters with the buying facts first: after the beginner chapter,
+ * Specs and In the box come before the open-source cards, the teardown and
+ * the rest. Numbers follow the new order.
+ */
+function buyingOrder<T extends {type: string; number: string}>(chapters: T[]): T[] {
+  const facts = (c: T) => c.type === 'specs' || c.type === 'inTheBox';
+  const intro = chapters.filter((c) => c.type === 'whatIsThis');
+  const ordered = [
+    ...intro,
+    ...chapters.filter(facts),
+    ...chapters.filter((c) => !facts(c) && c.type !== 'whatIsThis'),
+  ];
+  return ordered.map((c, i) => ({...c, number: String(i + 1).padStart(2, '0')}));
+}
+
+/** DOM ids of the spec and box chapters. */
+const SPECS_ID = 'specs';
+const IN_THE_BOX_ID = 'in-the-box';
+
 /** "OpenFC-Lite-Mini" from https://github.com/OpenDrone-hw/OpenFC-Lite-Mini. */
 function repoName(url: string | null | undefined): string | null {
   const m = url ? /github\.com\/[^/]+\/([^/?#]+)/.exec(url) : null;
@@ -940,6 +960,13 @@ function ProductPage() {
   const subtitle = activeVariant?.subtitle ?? content.subtitle ?? null;
   const sheet = specSheet(content);
   const mergedBox = [...content.inTheBox, ...(activeVariant?.inTheBox ?? [])];
+  // Plug and pin-order rows: the tier's own list wins over the product's.
+  const activeConnectors = activeVariant?.connectors ?? content.connectors ?? [];
+  // Printed circuit boards: the provenance card (designed in Leuven,
+  // assembled in Shenzhen) describes these and nothing else.
+  const isBoard =
+    Boolean(content.teardown?.boardArt) ||
+    Object.values(content.variants ?? {}).some((v) => Boolean(v.boardArt));
 
   // Studio click-to-edit for per-product strings. Copy files get their
   // `data-edit` tag from `<Txt>`/`editAttrs`, but everything rendered out of
@@ -1858,7 +1885,7 @@ function ProductPage() {
         {id: 'rx', copy: 'what_chain_receiver', to: '/products/openrx'},
         {id: 'fc', copy: 'what_chain_fc', to: '/products/openfc-lite'},
         {id: 'esc', copy: 'what_chain_esc', to: '/products/openesc'},
-        {id: 'motors', copy: 'what_chain_motors'},
+        {id: 'motors', copy: 'what_chain_motors', to: '/products/openmotor'},
         {id: 'frame', copy: 'what_chain_frame', to: '/products/openframe'},
       ];
       return (
@@ -1901,7 +1928,8 @@ function ProductPage() {
                 ) : (
                   <span
                     key={c.id}
-                    className={`what-chain-chip${active ? ' is-active' : ''}`}
+                    className={`what-chain-chip${active ? ' is-active' : ' is-plain'}`}
+                    aria-current={active ? 'page' : undefined}
                   >
                     <Txt id={`product-chrome.${c.copy}`} />
                   </span>
@@ -2016,6 +2044,15 @@ function ProductPage() {
                   as="p"
                   className="open-source-card-sub"
                 />
+                {/* The repository's own name, which can differ from the
+                    shop name (the 20x20 FC is OpenFC-Lite-Mini). */}
+                {repoName(activeRepoUrl) ? (
+                  <p className="open-source-card-repo">
+                    {say('product-chrome.os_card_repo_name', 'Design files: {repo}', {
+                      repo: repoName(activeRepoUrl) ?? '',
+                    })}
+                  </p>
+                ) : null}
               </a>
               {content.video && !content.whatIsThis ? null : (
                 <a
@@ -2330,6 +2367,11 @@ function ProductPage() {
               </section>
             </div>
           )}
+          {!frameViewer && activeBoardArt ? (
+            <p className="teardown-render-note">
+              {say('product-chrome.teardown_render_note', 'Render from the design files. Silkscreen may differ.')}
+            </p>
+          ) : null}
           {!frameViewer && activeBoardArt?.inspectUrl ? (
             <a
               className="board-art-inspect teardown-inspect"
@@ -2347,6 +2389,7 @@ function ProductPage() {
       const multi = sheet.columns.length > 1;
       return (
         <Chapter
+          id={SPECS_ID}
           number={n}
           label="Specs"
           title={title}
@@ -2410,15 +2453,37 @@ function ProductPage() {
               ))}
             </tbody>
           </table>
+          {activeConnectors.length ? (
+            <div className="spec-connectors">
+              <h3 className="spec-connectors-title">
+                {say('product-chrome.connectors_title', 'Plugs and pin order')}
+              </h3>
+              <dl className="spec-table">
+                {activeConnectors.map(([k, v]) => (
+                  <div key={k}>
+                    <dt>{k}</dt>
+                    <dd>{v}</dd>
+                  </div>
+                ))}
+              </dl>
+              {content.connectorsNote ? (
+                <p className="spec-connectors-note" {...prodEdit('connectorsNote')}>
+                  {content.connectorsNote}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </Chapter>
       );
     },
     /** What ships. */
     inTheBox: (n, title) => (
         <Chapter
+          id={IN_THE_BOX_ID}
           number={n}
           label="In the box"
           title={title}
+          noMedia
           titleId={
             content.bundle
               ? 'product-chrome.ch_in_the_box_title_bundle'
@@ -2457,14 +2522,6 @@ function ProductPage() {
                     >
                       {it.item}
                     </span>
-                    {it.note ? (
-                      <span
-                        className="in-the-box-note"
-                        {...prodEdit(`${boxBase}.note`)}
-                      >
-                        {it.note}
-                      </span>
-                    ) : null}
                   </li>
                 );
               })}
@@ -2507,7 +2564,7 @@ function ProductPage() {
               ))}
             </div>
           ) : null}
-          <ProvenanceCard />
+          {isBoard ? <ProvenanceCard /> : null}
         </Chapter>
     ),
     /** The files themselves. */
@@ -2516,6 +2573,7 @@ function ProductPage() {
           number={n}
           label="Downloads"
           title={title}
+          noMedia
           titleId="product-chrome.ch_downloads_title"
         >
           <Txt
@@ -2555,6 +2613,21 @@ function ProductPage() {
             ) : undefined
           }
         >
+          <div className="firmware-freedom">
+            <p className="firmware-freedom-title">
+              {say('product-chrome.firmware_freedom_title', 'Flash what you want')}
+            </p>
+            <p>
+              {say(
+                'product-chrome.firmware_freedom_body',
+                'Ships with {project}. No activation, no locked bootloader. Reflashing keeps the 2-year warranty.',
+                {project: content.firmware.project},
+              )}{' '}
+              <Link prefetch="intent" to="/warranty">
+                {say('product-chrome.firmware_freedom_link', 'Warranty')}
+              </Link>
+            </p>
+          </div>
           <FirmwareSupport
             firmwareProject={content.firmware.project}
             firmwareUrl={content.firmware.projectUrl}
@@ -2778,7 +2851,7 @@ function ProductPage() {
       </section>
 
       {/* === Chapters, in the order `content/chapters.json` puts them === */}
-      {resolveChapters(product.handle, present).map((c) => (
+      {buyingOrder(resolveChapters(product.handle, present)).map((c) => (
         <Fragment key={c.id}>
           {chapterNodes[c.type]?.(c.number, c.title, c.id)}
         </Fragment>
