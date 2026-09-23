@@ -11,18 +11,23 @@ import {
   MAX_LINES,
   MAX_QTY,
   TRADE_COUNTRIES,
+  TRADE_GROUPS,
   TRADE_SKUS,
   sendTradeRequest,
+  taxIdKind,
+  tradeCountry,
   tradeLeadTimes,
   validateTradeRequest,
   type TradeField,
+  type TradeGroup,
+  type TradeLeadTime,
 } from '~/lib/trade';
 import preorders from '../../content/preorders.json';
 
 /**
- * The trade page: a shop asks for a proforma invoice here instead of using
- * the consumer checkout, so it buys under Article 16 of the terms, not the
- * consumer contract. The form emails the company inbox; nothing touches the
+ * The trade page: a shop asks for a quote here instead of using the consumer
+ * checkout, so it buys under Article 16 of the terms, not the consumer
+ * contract. The form emails the company inbox; nothing touches the
  * Shopify cart. Words in `content/copy/wholesale.json`; what is sold, the
  * validation and the mail in `app/lib/trade.ts`.
  */
@@ -54,6 +59,8 @@ export async function loader({context}: Route.LoaderArgs) {
   const products = TRADE_SKUS.filter((s) => !inCatalog || inCatalog.has(s.sku)).map((s) => ({
     sku: s.sku,
     label: s.label,
+    group: s.group,
+    notFor: s.notFor ?? [],
   }));
   const lead = tradeLeadTimes(parseCampaignConfig(preorders));
   return {email: company.email, products, lead};
@@ -139,9 +146,14 @@ function TradeForm() {
     );
   }
 
-  const taxLabel = country === 'US' ? t('ein_label') : country ? t('vat_label') : t('tax_label');
-  const taxPlaceholder =
-    country === 'US' ? '12-3456789' : country ? `${country === 'GR' ? 'EL' : country}…` : '';
+  const chosen = tradeCountry(country);
+  const taxKind = chosen ? taxIdKind(chosen) : null;
+  const taxLabel =
+    taxKind === 'ein' ? t('ein_label') : taxKind === 'vat' ? t('vat_label') : taxKind ? t('tax_other_label') : t('tax_label');
+  const taxPlaceholder = taxKind === 'ein' ? '12-3456789' : taxKind === 'vat' ? `${chosen?.vatPrefix}…` : '';
+  // Products this country is not quoted are left out; the server refuses
+  // them as well.
+  const offered = products.filter((p) => !p.notFor.includes(country));
   const failure = result?.failure;
 
   return (
@@ -212,11 +224,18 @@ function TradeForm() {
             <div key={id} className="grid grid-cols-[1fr_5.5rem_auto] gap-2">
               <select name="sku" defaultValue="" aria-label={t('products')} className={`${field} mt-0!`} aria-invalid={!!errors.lines}>
                 <option value="">{t('product_choose')}</option>
-                {products.map((p) => (
-                  <option key={p.sku} value={p.sku}>
-                    {p.label}
-                  </option>
-                ))}
+                {TRADE_GROUPS.map((group) => {
+                  const items = offered.filter((p) => p.group === group);
+                  return items.length ? (
+                    <optgroup key={group} label={t(`group_${group}`)}>
+                      {items.map((p) => (
+                        <option key={p.sku} value={p.sku}>
+                          {p.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ) : null;
+                })}
               </select>
               <input
                 name="qty"
@@ -272,12 +291,30 @@ function TradeForm() {
   );
 }
 
+/** One line per lead time, naming every group that ships then: a dated
+ *  batch, or the latest date of a funding target and its deadline. */
+function leadLines(lead: Record<TradeGroup, TradeLeadTime>): string[] {
+  const byLead = new Map<string, {time: TradeLeadTime; groups: string[]}>();
+  for (const group of TRADE_GROUPS) {
+    const time = lead[group];
+    const key = `${time.date}|${time.targetBy ?? ''}`;
+    const entry = byLead.get(key) ?? {time, groups: []};
+    entry.groups.push(t(`group_${group}`));
+    byLead.set(key, entry);
+  }
+  // "Flight controllers, ESCs, straps": names after the first in lower case.
+  const list = (groups: string[]) =>
+    groups.map((g, i) => (i && /^[A-Z][a-z]/.test(g) ? g[0].toLowerCase() + g.slice(1) : g)).join(', ');
+  return [...byLead.values()].map(({time, groups}) =>
+    time.targetBy
+      ? t('lead_line_target', {groups: list(groups), date: time.date, deadline: time.targetBy})
+      : t('lead_line', {groups: list(groups), date: time.date}),
+  );
+}
+
 export default function WholesaleRoute() {
   const {lead} = useLoaderData<typeof loader>();
   const [before, after] = t('lead').split(t('lead_link'));
-  const frameLead = lead.frame.targetBy
-    ? t('lead_frame_target', {date: lead.frame.date, deadline: lead.frame.targetBy})
-    : t('lead_frame', {date: lead.frame.date});
   const contractLink = t('contract_link');
   const [contractBefore, contractAfter] = t('contract').split(contractLink);
 
@@ -298,12 +335,15 @@ export default function WholesaleRoute() {
           <dl aria-label={t('terms_title')} className="m-0">
             <Row label={t('row_price')}>{t('price')}</Row>
             <Row label={t('row_vat')}>{t('vat')}</Row>
-            <Row label={t('row_us')}>{t('us')}</Row>
+            <Row label={t('row_export')}>{t('export')}</Row>
             <Row label={t('row_sold')}>{t('sold')}</Row>
-            <Row label={t('row_not_sold')}>{t('not_sold')}</Row>
             <Row label={t('row_minimum')}>{t('minimum')}</Row>
             <Row label={t('row_lead')}>
-              {t('lead_strap', {date: lead.strap.date})} {frameLead}
+              {leadLines(lead).map((line) => (
+                <span key={line} className="block">
+                  {line}
+                </span>
+              ))}
             </Row>
             <Row label={t('row_payment')}>{t('payment')}</Row>
             <Row label={t('row_contract')}>

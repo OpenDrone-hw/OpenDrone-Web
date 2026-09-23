@@ -5,6 +5,8 @@ import {parseCampaignConfig} from './preorder-campaign.ts';
 import {
   MAX_LINES,
   MAX_QTY,
+  TRADE_COUNTRIES,
+  TRADE_GROUPS,
   TRADE_SKUS,
   buildTradeEmail,
   isTradeSku,
@@ -12,6 +14,7 @@ import {
   normalizeVat,
   sendTradeRequest,
   tradeLeadTimes,
+  tradeSkuAvailable,
   validateTradeRequest,
   type TradeRequest,
 } from './trade.ts';
@@ -123,12 +126,26 @@ describe('validateTradeRequest', () => {
     ]);
   });
 
-  it('refuses countries outside the EU and the US', () => {
-    for (const country of ['GB', 'CH', 'RU', 'CN', '']) {
+  it('ships to the EU27, the United Kingdom, Switzerland, Norway and the US', () => {
+    assert.equal(TRADE_COUNTRIES.length, 31);
+    assert.equal(TRADE_COUNTRIES.filter((c) => c.vatPrefix).length, 27);
+    for (const country of ['GB', 'CH', 'RU', 'CN', 'JP', '']) {
       const r = validateTradeRequest(form({...US_SHOP, country}));
-      assert.equal(r.ok, false);
-      if (!r.ok) assert.ok(r.errors.country);
+      if (['GB', 'CH'].includes(country)) continue;
+      assert.equal(r.ok, false, country);
+      if (!r.ok) assert.ok(r.errors.country, country);
     }
+  });
+
+  it('takes a free-text VAT or tax number outside the EU and the US', () => {
+    for (const country of ['GB', 'CH', 'NO']) {
+      const r = validateTradeRequest(form({...US_SHOP, country, taxId: 'GB 123 4567 89'}));
+      assert.equal(r.ok, true, country);
+      if (r.ok) assert.equal(r.request.taxId, 'GB 123 4567 89');
+    }
+    const empty = validateTradeRequest(form({...US_SHOP, country: 'CH', taxId: ' '}));
+    assert.equal(empty.ok, false);
+    if (!empty.ok) assert.match(empty.errors.taxId ?? '', /Switzerland/);
   });
 
   it('bounds the quantity', () => {
@@ -141,13 +158,35 @@ describe('validateTradeRequest', () => {
     assert.equal(max.ok, true);
   });
 
-  it('only sells the allow-listed SKUs', () => {
-    for (const sku of ['OPENFC-LITE-2020', 'OPENESC-3030', 'OPENRX-LITE', 'OPENMOTOR-2207', 'ACC-ANT-T', 'ACC-PROP-5-HQ-J37', 'x']) {
+  it('quotes the whole range and nothing else', () => {
+    for (const sku of [
+      'OPENFC-LITE-2020', 'OPENFC-LITE-3030', 'OPENESC-2020', 'OPENESC-3030',
+      'OPENRX-LITE', 'OPENRX-LITE-UFL', 'OPENRX-MONO', 'OPENRX-GEMINI',
+      'OPENMOTOR-1604', 'OPENMOTOR-2207', 'OPENFRAME-3', 'OPENFRAME-5',
+      'ACC-FRM-PAD', 'ACC-STRAP-15X200', 'ACC-PROP-5-HQ-J37', 'ACC-PROP-3-GF-3020',
+    ]) {
+      assert.equal(isTradeSku(sku), true, sku);
+    }
+    for (const sku of ['ACC-ANT-T', 'ACC-CAP-470UF-35V', 'x']) {
       assert.equal(isTradeSku(sku), false, sku);
-      const r = validateTradeRequest(form({...US_SHOP, sku: [sku], qty: ['10']}));
+      const r = validateTradeRequest(form({...EU_SHOP, sku: [sku], qty: ['10']}));
       assert.equal(r.ok, false, sku);
     }
-    assert.ok(TRADE_SKUS.every((s) => /^(OPENFRAME-|ACC-FRM-|ACC-STRAP-)/.test(s.sku)));
+    assert.equal(new Set(TRADE_SKUS.map((s) => s.sku)).size, TRADE_SKUS.length);
+    for (const s of TRADE_SKUS) assert.ok(TRADE_GROUPS.includes(s.group), s.sku);
+  });
+
+  it('refuses receivers to a US shop, on the server', () => {
+    for (const sku of ['OPENRX-LITE', 'OPENRX-LITE-UFL', 'OPENRX-MONO', 'OPENRX-GEMINI']) {
+      assert.equal(tradeSkuAvailable(sku, 'US'), false, sku);
+      assert.equal(tradeSkuAvailable(sku, 'DE'), true, sku);
+      assert.equal(tradeSkuAvailable(sku, 'GB'), true, sku);
+      const us = validateTradeRequest(form({...US_SHOP, sku: [sku], qty: ['10']}));
+      assert.equal(us.ok, false, sku);
+      if (!us.ok) assert.equal(us.errors.lines, 'Not available for this country');
+      assert.equal(validateTradeRequest(form({...EU_SHOP, sku: [sku], qty: ['10']})).ok, true, sku);
+    }
+    assert.equal(validateTradeRequest(form({...US_SHOP, sku: ['OPENFC-LITE-3030'], qty: ['10']})).ok, true);
   });
 
   it('refuses a SKU twice and too many lines', () => {
@@ -175,7 +214,7 @@ function request(values = US_SHOP): TradeRequest {
 describe('buildTradeEmail', () => {
   it('carries every field', () => {
     const {subject, text} = buildTradeEmail(request());
-    assert.equal(subject, 'Trade request: Rotor Riot Depot (US)');
+    assert.equal(subject, 'Quote request: Rotor Riot Depot (US)');
     for (const part of [
       'Rotor Riot Depot',
       'https://rotordepot.example.com',
@@ -202,6 +241,9 @@ describe('buildTradeEmail', () => {
       buildTradeEmail(request({...EU_SHOP, country: 'BE', taxId: 'BE0123456789'})).text,
       /Belgian VAT 21%/,
     );
+    const gb = buildTradeEmail(request({...US_SHOP, country: 'GB', taxId: 'GB123456789'})).text;
+    assert.match(gb, /Tax number:\s+GB123456789/);
+    assert.match(gb, /no Belgian VAT/);
   });
 
   it('has no em dash', () => {
@@ -231,7 +273,7 @@ describe('sendTradeRequest', () => {
     assert.deepEqual(await sendTradeRequest(ENV, request(), fetcher), {configured: true, sent: true});
     assert.deepEqual(body.to, ['contact@opendrone.be']);
     assert.equal(body.reply_to, 'buyer@rotordepot.example.com');
-    assert.equal(body.subject, 'Trade request: Rotor Riot Depot (US)');
+    assert.equal(body.subject, 'Quote request: Rotor Riot Depot (US)');
   });
 
   it('reports a provider error or a network error as not sent', async () => {
@@ -250,8 +292,17 @@ describe('tradeLeadTimes', () => {
       JSON.parse(fs.readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8')),
     );
     const lead = tradeLeadTimes(config);
-    assert.deepEqual(lead.strap, {date: 'late October 2026', targetBy: null});
-    assert.deepEqual(lead.frame, {date: '11 March 2027', targetBy: '31 December 2026'});
+    const dated = {date: 'late October 2026', targetBy: null};
+    const target = {date: '11 March 2027', targetBy: '31 December 2026'};
+    assert.deepEqual(lead, {
+      fc: dated,
+      esc: dated,
+      rx: target,
+      motor: target,
+      frame: target,
+      strap: dated,
+      prop: dated,
+    });
   });
 
   it('follows a frame batch once it has a ship date', () => {

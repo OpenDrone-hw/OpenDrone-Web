@@ -1,8 +1,8 @@
 /**
- * Trade orders: a shop asks for a proforma invoice through /wholesale instead
- * of using the consumer checkout. This module holds what the page sells, the
- * request validation, the email to the shop inbox and the lead time read from
- * `content/preorders.json`.
+ * Trade orders: a shop asks for a quote through /wholesale instead of using
+ * the consumer checkout; an accepted quote becomes a proforma invoice. This
+ * module holds what the page quotes, the request validation, the email to
+ * the shop inbox and the lead times read from `content/preorders.json`.
  *
  * Mail goes through Resend with the same variables as the withdrawal form
  * (`RESEND_API_KEY`, `SUPPORT_FROM_EMAIL`, `PUBLIC_COMPANY_EMAIL`). Without a
@@ -15,13 +15,26 @@
 
 import {campaignDate, latestShipDate, type CampaignConfig} from './preorder-campaign.ts';
 
-/** What a shop can order. The FC, ESC, receiver and motors are not sold to
- *  trade; the ESC joins once a customs broker has classified it. */
-export type TradeGroup = 'frame' | 'strap';
+/** What a shop can ask a quote for: the whole range, by product group. */
+export type TradeGroup = 'fc' | 'esc' | 'rx' | 'motor' | 'frame' | 'strap' | 'prop';
 
-export type TradeSku = {sku: string; group: TradeGroup; label: string};
+/** The order the groups are listed in. */
+export const TRADE_GROUPS: readonly TradeGroup[] = ['fc', 'esc', 'rx', 'motor', 'frame', 'strap', 'prop'];
+
+/** `notFor`: shop countries this SKU is not quoted to. */
+export type TradeSku = {sku: string; group: TradeGroup; label: string; notFor?: readonly string[]};
 
 export const TRADE_SKUS: readonly TradeSku[] = [
+  {sku: 'OPENFC-LITE-2020', group: 'fc', label: 'OpenFC Lite Mini, 20x20'},
+  {sku: 'OPENFC-LITE-3030', group: 'fc', label: 'OpenFC Lite, 30x30'},
+  {sku: 'OPENESC-2020', group: 'esc', label: 'OpenESC 20x20'},
+  {sku: 'OPENESC-3030', group: 'esc', label: 'OpenESC 30x30'},
+  {sku: 'OPENRX-LITE', group: 'rx', label: 'OpenRX Lite', notFor: ['US']},
+  {sku: 'OPENRX-LITE-UFL', group: 'rx', label: 'OpenRX Lite U.FL', notFor: ['US']},
+  {sku: 'OPENRX-MONO', group: 'rx', label: 'OpenRX Mono', notFor: ['US']},
+  {sku: 'OPENRX-GEMINI', group: 'rx', label: 'OpenRX Gemini', notFor: ['US']},
+  {sku: 'OPENMOTOR-1604', group: 'motor', label: 'OpenMotor 1604, 3" class'},
+  {sku: 'OPENMOTOR-2207', group: 'motor', label: 'OpenMotor 2207, 5" class'},
   {sku: 'OPENFRAME-5', group: 'frame', label: 'OpenFrame 5" Freestyle'},
   {sku: 'OPENFRAME-3', group: 'frame', label: 'OpenFrame 3" Freestyle'},
   {sku: 'ACC-FRM-ARM-5', group: 'frame', label: 'OpenFrame spare: arm, 5"'},
@@ -43,30 +56,56 @@ export const TRADE_SKUS: readonly TradeSku[] = [
   {sku: 'ACC-FRM-PAD', group: 'frame', label: 'OpenFrame spare: battery pad'},
   {sku: 'ACC-STRAP-20X220', group: 'strap', label: 'Battery strap, 20 x 220 mm'},
   {sku: 'ACC-STRAP-15X200', group: 'strap', label: 'Battery strap, 15 x 200 mm'},
+  {sku: 'ACC-PROP-3-HQ-T3X3X3', group: 'prop', label: 'HQProp T3x3x3, 3" T-mount'},
+  {sku: 'ACC-PROP-3-HQ-T3X2X3-DUR', group: 'prop', label: 'HQProp Durable T3x2x3, 3" T-mount'},
+  {sku: 'ACC-PROP-3-GF-3020', group: 'prop', label: 'Gemfan 3020-3, 3" T-mount'},
+  {sku: 'ACC-PROP-5-HQ-5X43X3-V2S', group: 'prop', label: 'HQProp 5x4.3x3 V2S, 5"'},
+  {sku: 'ACC-PROP-5-HQ-J37', group: 'prop', label: 'HQProp Juicy J37, 5"'},
+  {sku: 'ACC-PROP-5-GF-51466', group: 'prop', label: 'Gemfan Hurricane 51466 V2, 5"'},
 ];
 
-const TRADE_SKU_SET = new Set(TRADE_SKUS.map((s) => s.sku));
+const TRADE_SKU_MAP = new Map(TRADE_SKUS.map((s) => [s.sku, s]));
 
 export function isTradeSku(sku: string): boolean {
-  return TRADE_SKU_SET.has(sku);
+  return TRADE_SKU_MAP.has(sku);
 }
 
-/** Countries a trade order ships to: the EU and the United States.
- *  `vatPrefix` is the VIES prefix, which is EL for Greece. */
+/** True when the SKU is on the list and quoted to a shop in this country. */
+export function tradeSkuAvailable(sku: string, countryCode: string): boolean {
+  const entry = TRADE_SKU_MAP.get(sku);
+  return Boolean(entry && !entry.notFor?.includes(countryCode));
+}
+
+/** Countries a trade order ships to: the EU27, the United Kingdom,
+ *  Switzerland, Norway and the United States. `vatPrefix` is the VIES
+ *  prefix (EL for Greece), null outside the EU. */
 export type TradeCountry = {code: string; name: string; vatPrefix: string | null};
 
-export const TRADE_COUNTRIES: readonly TradeCountry[] = [
+const EU_TRADE: ReadonlyArray<[string, string]> = [
   ['AT', 'Austria'], ['BE', 'Belgium'], ['BG', 'Bulgaria'], ['HR', 'Croatia'],
   ['CY', 'Cyprus'], ['CZ', 'Czechia'], ['DK', 'Denmark'], ['EE', 'Estonia'],
   ['FI', 'Finland'], ['FR', 'France'], ['DE', 'Germany'], ['GR', 'Greece'],
   ['HU', 'Hungary'], ['IE', 'Ireland'], ['IT', 'Italy'], ['LV', 'Latvia'],
   ['LT', 'Lithuania'], ['LU', 'Luxembourg'], ['MT', 'Malta'], ['NL', 'Netherlands'],
   ['PL', 'Poland'], ['PT', 'Portugal'], ['RO', 'Romania'], ['SK', 'Slovakia'],
-  ['SI', 'Slovenia'], ['ES', 'Spain'], ['SE', 'Sweden'], ['US', 'United States'],
-].map(([code, name]) => ({code, name, vatPrefix: code === 'US' ? null : code === 'GR' ? 'EL' : code}));
+  ['SI', 'Slovenia'], ['ES', 'Spain'], ['SE', 'Sweden'],
+];
+
+export const TRADE_COUNTRIES: readonly TradeCountry[] = [
+  ...EU_TRADE.map(([code, name]) => ({code, name, vatPrefix: code === 'GR' ? 'EL' : code})),
+  ...[['NO', 'Norway'], ['CH', 'Switzerland'], ['GB', 'United Kingdom'], ['US', 'United States']].map(
+    ([code, name]) => ({code, name, vatPrefix: null}),
+  ),
+];
 
 export function tradeCountry(code: string): TradeCountry | undefined {
   return TRADE_COUNTRIES.find((c) => c.code === code);
+}
+
+/** Which tax id a shop gives: an EU VAT number, a US EIN, or elsewhere its
+ *  VAT or tax number as written. */
+export function taxIdKind(country: TradeCountry): 'vat' | 'ein' | 'other' {
+  return country.vatPrefix ? 'vat' : country.code === 'US' ? 'ein' : 'other';
 }
 
 /** VAT number formats by VIES prefix, the part after the prefix. A format
@@ -131,7 +170,8 @@ export type TradeRequest = {
   shop: string;
   website: string;
   country: TradeCountry;
-  /** VIES-form VAT number for an EU shop, EIN for a US shop. */
+  /** VIES-form VAT number for an EU shop, EIN for a US shop, the number as
+   *  given elsewhere. */
   taxId: string;
   contactName: string;
   email: string;
@@ -190,17 +230,21 @@ export function validateTradeRequest(
   if (!siteOk) errors.website = 'Enter the shop website.';
 
   const country = tradeCountry(str(form.get('country'), 2).toUpperCase());
-  if (!country) errors.country = 'Choose an EU country or the United States.';
+  if (!country) errors.country = 'Choose a country from the list.';
 
   const rawTax = str(form.get('taxId'), 40);
   let taxId = '';
   if (country) {
-    if (country.code === 'US') {
+    const kind = taxIdKind(country);
+    if (kind === 'ein') {
       taxId = normalizeEin(rawTax) ?? '';
       if (!taxId) errors.taxId = 'Enter the EIN as 12-3456789.';
-    } else {
+    } else if (kind === 'vat') {
       taxId = normalizeVat(country.code, rawTax) ?? '';
       if (!taxId) errors.taxId = `Enter a ${country.vatPrefix} VAT number for ${country.name}.`;
+    } else {
+      taxId = rawTax.replace(/\s+/g, ' ');
+      if (taxId.length < 4) errors.taxId = `Enter the VAT or tax number for ${country.name}.`;
     }
   }
 
@@ -222,6 +266,8 @@ export function validateTradeRequest(
     if (!sku && !qtyText) continue;
     if (!isTradeSku(sku)) {
       lineError = 'Choose a product from the list.';
+    } else if (country && !tradeSkuAvailable(sku, country.code)) {
+      lineError = 'Not available for this country';
     } else if (!/^\d+$/.test(qtyText) || Number(qtyText) < 1 || Number(qtyText) > MAX_QTY) {
       lineError = `Quantity is a whole number from 1 to ${MAX_QTY}.`;
     } else if (seen.has(sku)) {
@@ -257,9 +303,9 @@ export function validateTradeRequest(
   };
 }
 
-/** VAT treatment the proforma starts from, by destination. */
+/** VAT treatment the quote starts from, by destination. */
 export function vatTreatment(country: TradeCountry): string {
-  if (country.code === 'US') return 'Export outside the EU: no Belgian VAT (art. 39 WBTW). Shop is the importer.';
+  if (!country.vatPrefix) return 'Export outside the EU: no Belgian VAT (art. 39 WBTW). Shop is the importer.';
   if (country.code === 'BE') return 'Domestic sale: Belgian VAT 21%.';
   return 'Intra-Community supply: exempt (art. 39bis WBTW), check the VAT number in VIES first.';
 }
@@ -267,12 +313,12 @@ export function vatTreatment(country: TradeCountry): string {
 export function buildTradeEmail(req: TradeRequest): {subject: string; text: string} {
   const pad = (label: string) => `${label}:`.padEnd(14, ' ');
   const lines = [
-    'Trade request from opendrone.be/wholesale',
+    'Quote request from opendrone.be/wholesale',
     '',
     `${pad('Shop')}${req.shop}`,
     `${pad('Website')}${req.website}`,
     `${pad('Country')}${req.country.name} (${req.country.code})`,
-    `${pad(req.country.code === 'US' ? 'EIN' : 'VAT')}${req.taxId}`,
+    `${pad({vat: 'VAT', ein: 'EIN', other: 'Tax number'}[taxIdKind(req.country)])}${req.taxId}`,
     `${pad('Contact')}${req.contactName}`,
     `${pad('Email')}${req.email}`,
     '',
@@ -287,10 +333,10 @@ export function buildTradeEmail(req: TradeRequest): {subject: string; text: stri
     `${pad('VAT')}${vatTreatment(req.country)}`,
     `${pad('Submitted')}${req.submittedAt}`,
     '',
-    'Reply to this email with a proforma invoice. Business terms: Article 16 of the terms.',
+    'Reply to this email with a quote. Business terms: Article 16 of the terms.',
   ];
   return {
-    subject: `Trade request: ${req.shop} (${req.country.code})`,
+    subject: `Quote request: ${req.shop} (${req.country.code})`,
     text: lines.join('\n'),
   };
 }
@@ -348,7 +394,7 @@ export async function sendTradeRequest(
 
 /**
  * When each trade group ships, from the preorder campaign: the first batch
- * of the group's lead SKU. A batch with a ship date gives that date; a
+ * of the group's lead SKU (for an accessory, the batch it ships with). A batch with a ship date gives that date; a
  * funding target gives the latest planned date and its deadline, as terms
  * 7bis.2 do. Trade goods ship with that batch because they go through
  * Leuven for QC and packing like every other unit.
@@ -362,9 +408,17 @@ export type TradeLeadTime = {
 };
 
 export function tradeLeadTimes(config: CampaignConfig): Record<TradeGroup, TradeLeadTime> {
-  const leadOf: Record<TradeGroup, string> = {frame: 'OPENFRAME-5', strap: 'ACC-STRAP-20X220'};
+  const leadOf: Record<TradeGroup, string> = {
+    fc: 'OPENFC-LITE-2020',
+    esc: 'OPENESC-2020',
+    rx: 'OPENRX-LITE',
+    motor: 'OPENMOTOR-2207',
+    frame: 'OPENFRAME-5',
+    strap: 'ACC-STRAP-20X220',
+    prop: 'ACC-PROP-5-HQ-J37',
+  };
   const out = {} as Record<TradeGroup, TradeLeadTime>;
-  for (const group of Object.keys(leadOf) as TradeGroup[]) {
+  for (const group of TRADE_GROUPS) {
     const sku = leadOf[group];
     const rule = config.shipsWith?.[sku];
     const campaignSku = rule ? rule.sku : sku;
