@@ -3,14 +3,11 @@ import type {RootLoader} from '~/root';
 import {CAMPAIGN} from '~/lib/catalog-client';
 import {PreorderStrip, type HomePrices} from '~/components/PreorderStrip';
 import type {Route} from './+types/_index';
-import {useEffect, useRef, useState, useCallback, useMemo} from 'react';
+import {useEffect, useRef, useState, useCallback} from 'react';
 import type {ProductCardFragment} from '~/lib/product-shapes';
 import {byHandle, formatPrice, toCard} from '~/lib/catalog';
 import {INCUTEC_HINT_SEEN_KEY} from '~/lib/incutec-hint';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
-import {useProductStatusResolver} from '~/lib/coming-soon';
-import {isPurchasableStatus, PRODUCT_CONTENT} from '~/lib/product-content';
-import type {TourProducts} from '~/lib/home-tour';
 import {HeroDroneStage} from '~/components/HeroDroneStage';
 import type {HeroLoadState} from '~/components/HeroDroneScene';
 import {HeroWordmark} from '~/components/HeroWordmark';
@@ -23,7 +20,7 @@ import {copyText} from '~/lib/copy';
 /**
  * The homepage's words live in `content/copy/home.json` (shared with
  * `MobileHome`) and, for the walkthrough's steps, in the studio.json beats
- * (app/lib/home-tour.ts). Everything else here is machinery: scroll progress,
+ * (app/lib/home-tour.ts); the build picks come from content/builds.json. Everything else here is machinery: scroll progress,
  * splash phases, the `--hero-p` custom property. Product titles, prices and
  * the load manifest's piece labels are runtime data, not editable strings.
  */
@@ -83,7 +80,6 @@ export async function loader({request, context}: Route.LoaderArgs) {
   const home: Promise<{
     featured: HomeProduct[];
     prices: HomePrices;
-    tourProducts: TourProducts;
   }> = context.catalog
     .get()
     .then((catalog) => {
@@ -104,18 +100,6 @@ export async function loader({request, context}: Route.LoaderArgs) {
         // OpenStack is intentionally NOT here - it's just the FC + ESC bundled,
         // surfaced as a note on the showcase, not as a separate flagship slot.
         featured: [d.fc, d.esc, d.rx, d.frame, d.motor].filter(keep),
-        // The walkthrough's product lines: catalog title and lowest current
-        // price per product, so the price follows the preorder steps.
-        tourProducts: Object.fromEntries(
-          [d.fc, d.esc, d.rx, d.frame, d.motor].filter(keep).map((p) => [
-            p.handle,
-            {
-              title: p.title,
-              price: fromPrice(p),
-              unit: PRODUCT_CONTENT[p.handle]?.priceUnit?.replace(/^per\s+/i, '/ ') ?? null,
-            },
-          ]),
-        ),
         // The promo line: the lowest current price per product.
         prices: {
           'openfc-lite': fromPrice(d.fc),
@@ -127,7 +111,6 @@ export async function loader({request, context}: Route.LoaderArgs) {
     .catch(() => ({
       featured: [],
       prices: {},
-      tourProducts: {},
     }));
 
   // On a phone the featured cards are the first thing under the hero and the
@@ -150,9 +133,9 @@ export async function loader({request, context}: Route.LoaderArgs) {
   // The promo line paints with the first HTML on every layout, so its
   // prices are awaited. The catalog is worker-cached, the same fetch the
   // phone layout already awaits.
-  const {prices, tourProducts} = await home;
+  const {prices} = await home;
 
-  return {isMobileHint, featured, stackShips, prices, tourProducts};
+  return {isMobileHint, featured, stackShips, prices};
 }
 
 /** A product's lowest current price, formatted, or null. */
@@ -176,8 +159,7 @@ let splashHasPlayedThisSession = false;
  * hooks never mount on a phone.
  */
 export default function Homepage() {
-  const {isMobileHint, featured, stackShips, prices, tourProducts} =
-    useLoaderData<typeof loader>();
+  const {isMobileHint, featured, stackShips, prices} = useLoaderData<typeof loader>();
   const shopOpen = useRouteLoaderData<RootLoader>('root')?.shopOpen ?? false;
   const strip = shopOpen ? stackShips ?? '' : null;
   const [isMobile, setIsMobile] = useState(isMobileHint);
@@ -189,40 +171,20 @@ export default function Homepage() {
     return () => mq.removeEventListener('change', update);
   }, []);
 
-  // A walkthrough step shows its product line only for a part that can be
-  // bought.
-  const productStatus = useProductStatusResolver();
-  const products = useMemo<TourProducts>(
-    () =>
-      Object.fromEntries(
-        Object.entries(tourProducts).filter(([handle]) =>
-          isPurchasableStatus(productStatus(handle)),
-        ),
-      ),
-    [tourProducts, productStatus],
-  );
-
   if (isMobile)
     return (
-      <MobileHome
-        featured={featured}
-        preorderShips={strip}
-        prices={prices}
-        products={products}
-      />
+      <MobileHome featured={featured} preorderShips={strip} prices={prices} />
     );
-  return <DesktopHome preorderShips={strip} prices={prices} products={products} />;
+  return <DesktopHome preorderShips={strip} prices={prices} />;
 }
 
 function DesktopHome({
   preorderShips,
   prices,
-  products,
 }: {
   /** Set while the shop is open: the promo line names the stack's ship date. */
   preorderShips: string | null;
   prices: HomePrices;
-  products: TourProducts;
 }) {
   const scrollRef = useRef(0);
   const rafId = useRef(0);
@@ -498,9 +460,9 @@ function DesktopHome({
     <div className="homepage" ref={heroVarRef}>
 
       {/*
-        Warm the three flagship PDPs the walkthrough's product lines link to,
-        so following one is an instant SPA transition with its loader data
-        already in cache.
+        Warm the three flagship PDPs the walkthrough's picks and part clicks
+        open, so following one is an instant SPA transition with its loader
+        data already in cache.
       */}
       <PrefetchPageLinks page="/products/openfc-lite" />
       <PrefetchPageLinks page="/products/openesc" />
@@ -537,7 +499,6 @@ function DesktopHome({
                   stepper is gone - two things cannot own the wheel. */}
               <HeroDroneStage
                 size={heroSize}
-                products={products}
                 onLoad={handleModelLoad}
                 onReady={handleSceneReady}
                 onProgress={handleWalkthroughProgress}
@@ -566,8 +527,7 @@ function DesktopHome({
                 className={`hero-wordmark${splashSettled ? ' is-settled' : ''}`}
                 style={{
                   // The splash's wordmark fades out where it stands once the
-                  // drone is ready: the header carries the brand, and the
-                  // left of the hero belongs to the caption panel.
+                  // drone is ready: the header carries the brand.
                   opacity: splashSettled ? 0 : 1,
                   ...(splashSettled
                     ? {}

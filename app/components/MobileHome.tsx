@@ -1,36 +1,38 @@
 import {Suspense, useEffect, useRef, useState} from 'react';
-import {Await} from 'react-router';
+import {Await, Link, useLocation} from 'react-router';
 import type {ProductCardFragment as CollectionItemFragment} from '~/lib/product-shapes';
 import {ProductItem} from '~/components/ProductItem';
 import {PreorderStrip, type HomePrices} from '~/components/PreorderStrip';
-import {TourCaption, TourShop} from '~/components/TourCaption';
+import {
+  DEFAULT_BUILD,
+  TourCaption,
+  stepProductUrl,
+  useHeroBuilds,
+} from '~/components/TourCaption';
 import {copyText} from '~/lib/copy';
 import {isConceptFor} from '~/lib/product-content';
 import {useRoadmapStatusResolver} from '~/lib/coming-soon';
-import type {TourProducts} from '~/lib/home-tour';
 import {HOME_TOUR_STEPS, tourStillUrl} from '~/lib/home-tour-steps';
 
 /**
  * Phone homepage (≤768px). The desktop homepage is the WebGL walkthrough
  * (DesktopHome in routes/_index.tsx), ~6 MB of GLBs, deliberately never loaded
  * on a phone. This is its phone counterpart: the same steps and words
- * (studio.json), a still of the scene per step, and the caption as a sheet
- * under it. Tap a dot, the arrows, or swipe the picture to step. Then the
- * product tiles.
+ * (studio.json), a still of the scene per step, and the text block as a
+ * sheet under it with the same build picks and Add buttons. Tap a dot, the
+ * arrows, or swipe the picture to step; tap the picture of a part to open its
+ * product page. Then the product tiles.
  */
 export function MobileHome({
   featured,
   preorderShips = null,
   prices,
-  products = {},
 }: {
   featured: CollectionItemFragment[] | Promise<CollectionItemFragment[]>;
   /** Set while the shop is open: the promo line at the top. */
   preorderShips?: string | null;
   /** Price per product handle for the promo line. */
   prices: HomePrices;
-  /** The shop's product per handle, for the walkthrough's product lines. */
-  products?: TourProducts;
 }) {
   return (
     <div className="home-mobile">
@@ -38,7 +40,7 @@ export function MobileHome({
         <PreorderStrip ships={preorderShips || null} prices={prices} className="is-mobile" />
       ) : null}
       <h1 className="sr-only">OpenDrone</h1>
-      <MobileTour products={products} />
+      <MobileTour />
 
       {/* The loader resolves `featured` for a mobile UA, so the cards render
           in the shell here with no Suspense boundary: React's streaming
@@ -68,13 +70,24 @@ function Chevron({dir}: {dir: 1 | -1}) {
 }
 
 /** The walkthrough on a phone: still, step controls, caption sheet. */
-function MobileTour({products}: {products: TourProducts}) {
+function MobileTour() {
   const steps = HOME_TOUR_STEPS;
   const total = steps.length;
   const [active, setActive] = useState(0);
   const go = (i: number) => setActive(Math.max(0, Math.min(total - 1, i)));
   const step = steps[active];
-  const product = step.handle ? products[step.handle] : undefined;
+  const builds = useHeroBuilds();
+  const [buildId, setBuildId] = useState(DEFAULT_BUILD);
+  const productUrl = stepProductUrl(step, builds.find((b) => b.id === buildId));
+
+  // /#build (the footer's build guide) and the part deep links open on
+  // their step.
+  const {hash} = useLocation();
+  useEffect(() => {
+    const id = hash.slice(1).toLowerCase();
+    const i = steps.findIndex((st) => st.id === (id === 'motors' ? 'motor' : id));
+    if (i >= 0) setActive(i);
+  }, [hash, steps]);
 
   // Warm the neighbouring stills so a step never waits on its picture.
   useEffect(() => {
@@ -87,8 +100,10 @@ function MobileTour({products}: {products: TourProducts}) {
   // A horizontal swipe on the picture steps; vertical movement stays the
   // page's scroll (touch-action: pan-y on the stage).
   const start = useRef<{x: number; y: number} | null>(null);
+  const swiped = useRef(false);
   const onPointerDown = (e: React.PointerEvent) => {
     start.current = {x: e.clientX, y: e.clientY};
+    swiped.current = false;
   };
   const onPointerUp = (e: React.PointerEvent) => {
     const s0 = start.current;
@@ -96,6 +111,7 @@ function MobileTour({products}: {products: TourProducts}) {
     if (!s0) return;
     const dx = e.clientX - s0.x;
     const dy = e.clientY - s0.y;
+    if (Math.abs(dx) > 10 || Math.abs(dy) > 10) swiped.current = true;
     if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) go(active + (dx < 0 ? 1 : -1));
   };
 
@@ -108,17 +124,39 @@ function MobileTour({products}: {products: TourProducts}) {
         onPointerCancel={() => (start.current = null)}
       >
         <span className="home-mobile-glow" aria-hidden="true" />
-        <img
-          key={step.id}
-          className="tour-m-still"
-          src={tourStillUrl(step.id)}
-          alt=""
-          width={900}
-          height={738}
-          decoding="async"
-          fetchPriority={active === 0 ? 'high' : 'auto'}
-          draggable={false}
-        />
+        {(() => {
+          const still = (
+            <img
+              key={step.id}
+              className="tour-m-still"
+              src={tourStillUrl(step.id)}
+              alt=""
+              width={900}
+              height={738}
+              decoding="async"
+              fetchPriority={active === 0 ? 'high' : 'auto'}
+              draggable={false}
+            />
+          );
+          // The still of a part opens that part's product page.
+          return productUrl ? (
+            <Link
+              to={productUrl}
+              prefetch="intent"
+              className="tour-m-still-link"
+              aria-label={step.title}
+              draggable={false}
+              onClick={(e) => {
+                // A swipe that ends on the picture steps, it does not open.
+                if (swiped.current) e.preventDefault();
+              }}
+            >
+              {still}
+            </Link>
+          ) : (
+            still
+          );
+        })()}
       </div>
 
       <div className="tour-m-controls">
@@ -156,9 +194,15 @@ function MobileTour({products}: {products: TourProducts}) {
 
       <div className="tour-m-sheet">
         <div className="tour-panel-body" key={step.id} aria-live="polite">
-          <TourCaption step={step} index={active} total={total} product={product} />
+          <TourCaption
+            step={step}
+            index={active}
+            total={total}
+            builds={builds}
+            buildId={buildId}
+            onBuild={setBuildId}
+          />
         </div>
-        <TourShop primary={active === total - 1} />
       </div>
     </section>
   );

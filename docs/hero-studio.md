@@ -107,7 +107,9 @@ are looking at. Its `title` (the part's role) and `caption` (what it does, 25
 words at most), the same on each stop, and the numbers (`fade`, `partSize`, each
 stop's `at`) are editable. A stop is a walkthrough step of its own: the site
 counts it, parks the scroll at its `park` and shows its title, caption and
-product (`handle`) instead of the beat's. `handle` and `park` are file edits. `fade` and `partSize` each have a
+product (`handle`) instead of the beat's. `handle`, `park` and `view` (a
+whole-drone beat's reframing: `x` shift as a fraction of the width, `zoom`)
+are file edits. `fade` and `partSize` each have a
 tick box: unticked means the key is absent and the beat inherits
 `spotlight.darkenRest` and `sequence.partSize`.
 
@@ -279,7 +281,7 @@ items remain as design rationale; the rest describe current behavior.
 - **`stops` was parsed and never used**, so the second caption of the airframe
   beat ("Video module") never appeared even though the choreography ran. The
   site now honours stops the same way the studio does: each stop is a step of
-  its own, and the caption panel switches to the active stop's mid-hold.
+  its own, and the text block switches to the active stop's mid-hold.
 
 ### Still open
 

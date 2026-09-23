@@ -1,5 +1,5 @@
 import studio from '../../public/models/od3/studio.json';
-import {tourSteps} from '~/lib/home-tour';
+import {tourStillId, tourSteps} from '~/lib/home-tour';
 import {assetUrl} from '~/lib/asset-url';
 
 /**
@@ -19,5 +19,5 @@ const V = encodeURIComponent(
 /** The phone walkthrough's still of one step, written by
  *  `npm run gen:tour-stills` (scripts/capture-tour-stills.mjs). */
 export function tourStillUrl(id: string): string {
-  return assetUrl(`/models/od3/tour/${id}.webp?v=${V}`);
+  return assetUrl(`/models/od3/tour/${tourStillId(id)}.webp?v=${V}`);
 }

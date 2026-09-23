@@ -59,6 +59,9 @@ export type HeroDroneSceneProps = {
   onReady?: () => void;
   /** Handed a jump function once ready, so the rail dots can seek a step. */
   onSeeker?: (goTo: (i: number) => void) => void;
+  /** A click (not a drag) on the part in the spotlight, with its step index.
+   *  Only steps that name a product handle are clickable. */
+  onPick?: (step: number) => void;
 };
 
 /* three.js mangles imported names three ways: it appends _1/_2 to duplicates,
@@ -120,8 +123,14 @@ export function HeroDroneScene({
   onLoad,
   onReady,
   onSeeker,
+  onPick,
 }: HeroDroneSceneProps) {
   const host = useRef<HTMLDivElement>(null);
+  // Read through a ref so a new callback never rebuilds the scene.
+  const pickRef = useRef(onPick);
+  useEffect(() => {
+    pickRef.current = onPick;
+  }, [onPick]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -758,6 +767,8 @@ export function HeroDroneScene({
          *  height the part fills under the spotlight. >0.9 deliberately
          *  crops (the airframe reads better close, top plate off screen). */
         partSize?: number;
+        /** Reframes the shot while this beat is on screen (see applyFraming). */
+        view?: {x?: number; zoom?: number};
         /** Steps inside one hold. A stop's caption takes over at `at` (a
          *  fraction of the hold) and REPLACES the beat's wholesale, handle
          *  included. `park` is where the scroll rests for that step, default
@@ -830,6 +841,7 @@ export function HeroDroneScene({
           handle: b.handle,
           fade: b.fade,
           partSize: b.partSize,
+          view: b.view,
           stops: b.stops,
           choreo: b.choreo,
           faceOn: !!b.select?.board,
@@ -934,6 +946,8 @@ export function HeroDroneScene({
         l < TRAVEL ? ease(l / TRAVEL) : l < TRAVEL + HOLD ? 1 : 1 - ease(Math.min(1, (l - TRAVEL - HOLD) / TRAVEL));
 
       let beatIdx = 0;
+      // The step whose part is out and captioned right now, or -1 in a rest.
+      let presented = -1;
       let t = 0;
       let camH = cfg.camera?.height ?? 0.5;
       let orbitAngle = 0;
@@ -1285,15 +1299,44 @@ export function HeroDroneScene({
       let dragging = false;
       let dragTilt = 0;
       let lastPtr = {x: 0, y: 0};
+      // A press that ends within a few pixels of where it started is a click:
+      // on the part in the spotlight it opens that part's product page.
+      let press: {x: number; y: number; t: number} | null = null;
+      const ray = new THREE.Raycaster();
+      const ndc = new THREE.Vector2();
+      // The part under the pointer, as its step index, or -1. Only a step that
+      // names a product and whose part is out (presented) is hit-tested.
+      const pickAt = (clientX: number, clientY: number): number => {
+        if (presented < 0 || !STEPS[presented]?.handle) return -1;
+        const b = BEATS[beatIdx];
+        if (!b?.nodes.length) return -1;
+        const r = renderer.domElement.getBoundingClientRect();
+        if (!r.width || !r.height) return -1;
+        ndc.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
+        ray.setFromCamera(ndc, camera);
+        return ray.intersectObjects(b.nodes.map((n) => n.node), true).length ? presented : -1;
+      };
+      let hoverAt = 0;
+      let hoverPick = false;
       const onPtrDown = (e: PointerEvent) => {
         // Left button / touch / pen only, and never on the rail's buttons.
         if (e.button !== 0) return;
         dragging = true;
         lastPtr = {x: e.clientX, y: e.clientY};
+        press = {x: e.clientX, y: e.clientY, t: performance.now()};
         el.setPointerCapture?.(e.pointerId);
       };
       const onPtrMove = (e: PointerEvent) => {
-        if (!dragging) return;
+        if (!dragging) {
+          // The pointer cursor over a clickable part, checked a few times a
+          // second rather than on every move.
+          if (e.pointerType !== 'mouse' || e.target !== renderer.domElement) return;
+          const now = performance.now();
+          if (now - hoverAt < 80) return;
+          hoverAt = now;
+          hoverPick = Boolean(pickRef.current) && pickAt(e.clientX, e.clientY) >= 0;
+          return;
+        }
         const dx = e.clientX - lastPtr.x;
         const dy = e.clientY - lastPtr.y;
         lastPtr = {x: e.clientX, y: e.clientY};
@@ -1307,8 +1350,20 @@ export function HeroDroneScene({
         // the asymptote comfortably away.
         dragTilt = THREE.MathUtils.clamp(dragTilt + dy * 0.007, -2.5, 2.5);
       };
-      const onPtrUp = () => {
+      const onPtrUp = (e: PointerEvent) => {
+        const p = press;
+        press = null;
+        if (!dragging) return;
         dragging = false;
+        if (
+          e.type === 'pointerup' &&
+          p &&
+          Math.hypot(e.clientX - p.x, e.clientY - p.y) < 6 &&
+          performance.now() - p.t < 600
+        ) {
+          const hit = pickAt(e.clientX, e.clientY);
+          if (hit >= 0) pickRef.current?.(hit);
+        }
       };
       el.addEventListener('pointerdown', onPtrDown);
       window.addEventListener('pointermove', onPtrMove);
@@ -1404,7 +1459,8 @@ export function HeroDroneScene({
       let lastDimBeat = -1;
       let sizedTo = '';
       // Where the page wants the drone framed, from CSS custom properties on
-      // the host, so the layout (caption column, bottom sheet) owns it:
+      // the host, so the layout owns it (desktop: centred, the defaults; the
+      // tablet sheet and the phone stills move it):
       // --hero-shift-x / --hero-shift-x-part move the picture right by that
       // fraction of the width with the drone whole / a part out, --hero-shift-y
       // moves it up, --hero-zoom scales it. Read on resize only.
@@ -1420,18 +1476,30 @@ export function HeroDroneScene({
         frame0.sy = num('--hero-shift-y', 0);
         frame0.zoom = num('--hero-zoom', 1);
       };
-      let lastShift = NaN;
-      const applyFraming = (k: number) => {
+      // A whole-drone beat may reframe the shot ("view" in studio.json: x
+      // moves the picture by that fraction of the width, zoom scales it), so
+      // the drone clears a tall text block. Eased, so the move reads as a
+      // camera move rather than a cut.
+      const view = {x: 0, zoom: 1};
+      let lastShift = '';
+      const applyFraming = (k: number, dt: number) => {
         const w = renderer.domElement.clientWidth || el.clientWidth;
         const h = renderer.domElement.clientHeight || el.clientHeight;
         if (!w || !h) return;
-        const sx = THREE.MathUtils.lerp(frame0.sx, frame0.sxPart, k);
-        const key = sx * 1e4 + frame0.sy * 1e2 + frame0.zoom + w + h * 1e-3;
+        const want = BEATS[beatIdx]?.view;
+        const ease = dt > 0 ? 1 - 0.06 ** dt : 1;
+        view.x += ((want?.x ?? 0) - view.x) * ease;
+        view.zoom += ((want?.zoom ?? 1) - view.zoom) * ease;
+        if (Math.abs(view.x - (want?.x ?? 0)) < 1e-4) view.x = want?.x ?? 0;
+        if (Math.abs(view.zoom - (want?.zoom ?? 1)) < 1e-4) view.zoom = want?.zoom ?? 1;
+        const sx = THREE.MathUtils.lerp(frame0.sx, frame0.sxPart, k) + view.x;
+        const zoom = frame0.zoom * view.zoom;
+        const key = `${sx.toFixed(4)} ${frame0.sy} ${zoom.toFixed(4)} ${w}x${h}`;
         if (key === lastShift) return;
         lastShift = key;
-        // The drone is about 1.3 times wider than tall, so a narrow frame
-        // (a portrait tablet, a square still) zooms out to keep it whole.
-        camera.zoom = frame0.zoom * Math.min(1, camera.aspect / 1.5);
+        // A portrait frame (a tablet held upright) zooms out to keep the
+        // drone whole; a landscape one keeps the full-size framing.
+        camera.zoom = zoom * Math.min(1, camera.aspect);
         if (sx || frame0.sy) camera.setViewOffset(w, h, -sx * w, frame0.sy * h, w, h);
         else camera.clearViewOffset();
         camera.updateProjectionMatrix();
@@ -1448,7 +1516,7 @@ export function HeroDroneScene({
         renderer.setSize(w, h, true);
         camera.aspect = w / h;
         readFraming();
-        lastShift = NaN;
+        lastShift = '';
         camera.updateProjectionMatrix();
       };
 
@@ -1591,6 +1659,7 @@ export function HeroDroneScene({
           const shown = display < 0 ? -1 : display * 100 + stopIdx + 1;
           if (shown !== lastBeat) {
             lastBeat = shown;
+            presented = display >= 0 ? stepOf(display, stopIdx) : -1;
             onBeat?.(
               display >= 0 ? STEPS[stepOf(display, stopIdx)] : null,
               display >= 0 ? stepOf(display, stopIdx) : -1,
@@ -1633,7 +1702,8 @@ export function HeroDroneScene({
             if (Math.abs(dragTilt) < 0.0005) dragTilt = 0;
           }
         }
-        el.style.cursor = dragging ? 'grabbing' : 'grab';
+        if (presented < 0) hoverPick = false;
+        el.style.cursor = dragging ? 'grabbing' : hoverPick ? 'pointer' : 'grab';
         const wantH = b.faceOn ? (cfg.camera?.heightOnBoard ?? 0.72) : (cfg.camera?.height ?? 0.5);
         camH += (THREE.MathUtils.lerp(cfg.camera?.height ?? 0.5, wantH, k) - camH) * (1 - 0.35 ** dt);
         const back = droneRadius * ((cfg.camera?.distance ?? 2.15) + (cfg.camera?.dollyOnShow ?? 0.92) * k);
@@ -1651,7 +1721,7 @@ export function HeroDroneScene({
         else camera.position.lerp(focus.clone().add(off), 1 - 0.004 ** dt);
         camera.lookAt(focus);
 
-        applyFraming(k);
+        applyFraming(k, dt);
 
         // The camera must be posed BEFORE the presentation: a spotlit part is
         // anchored to the camera, so presenting against last frame's pose makes

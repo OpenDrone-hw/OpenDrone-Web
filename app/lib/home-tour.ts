@@ -42,13 +42,9 @@ export function stepCounter(index: number, total: number): string {
   return `${pad(index + 1)} / ${pad(total)}`;
 }
 
-/** A product as a tour step's product line shows it. */
-export type TourProduct = {
-  /** Catalog title ("OpenFC Lite"). */
-  title: string;
-  /** Lowest current price, formatted ("€23.20"), or null when unknown. */
-  price: string | null;
-  /** Price unit suffix ("/ motor"), or null. */
-  unit: string | null;
-};
-export type TourProducts = Readonly<Record<string, TourProduct>>;
+/** The phone still a step shows: its own, except the closing build step,
+ *  which shows the whole drone (`whole.webp`) rather than a still of its
+ *  own. */
+export function tourStillId(id: string): string {
+  return id === 'build' ? 'whole' : id;
+}
