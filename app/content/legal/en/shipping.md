@@ -24,6 +24,8 @@ Incutec BV does not collect import duties or import taxes at checkout. Within th
 
 United States: US import duty on electronics and motors made in China is high, often around 35 to 40% of the value. US customs sets the amount, not Incutec BV, and the carrier may charge a fee for clearing the parcel.
 
+Buying for a shop? [Trade terms](/wholesale)
+
 United Kingdom: the price paid at checkout does not include UK VAT. The carrier can hold a parcel to the United Kingdom until UK VAT and a carrier handling fee are paid.
 
 ### Pre-orders

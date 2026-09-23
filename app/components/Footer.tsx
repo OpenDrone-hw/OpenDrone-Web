@@ -22,6 +22,7 @@ const SHOP_LINKS: Array<{to: string; copy: string}> = [
   {to: '/products', copy: 'nav_all_products'},
   {to: '/preorder', copy: 'nav_preorder'},
   {to: '/newsletter', copy: 'nav_newsletter'},
+  {to: '/wholesale', copy: 'nav_trade'},
 ];
 
 /**

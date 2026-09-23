@@ -134,6 +134,8 @@ repos and `status-*` flips across the public OpenDrone-hw repositories.
 
 **Support.** `/support` links to the configured OpenDrone Discord invite and `mailto:` company address. Existing-conversation links lead to the same native contacts. The retired `/api/support/*` surface returns `410` at the Worker boundary. Historical ticket exports remain private outside this repository.
 
+**Trade.** `/wholesale` takes shop orders on a proforma invoice, outside the Shopify cart and checkout, so a shop buys under Article 16 of the terms. The form emails `PUBLIC_COMPANY_EMAIL` through Resend (`RESEND_API_KEY`, `SUPPORT_FROM_EMAIL`) with reply-to the shop; without a key it reports the request as not sent. The SKUs a shop can order, the VAT/EIN checks and the lead time read from `content/preorders.json` are in `app/lib/trade.ts`.
+
 **Reviews.** The PDP's rating line and reviews chapter read Shopify's standard `reviews.rating` and `reviews.rating_count` product metafields, which the installed review app (Judge.me) maintains. No third-party script runs on the page. A product without those metafields renders no trace of the feature, so the chapter appears by itself once the first review is published.
 
 **Newsletter.** Posts are Markdown in `content/posts/` (`published: true` publishes at `/newsletter/<slug>` and in `/newsletter.rss`). The footer signup records single-opt-in consent in Shopify and adds the `newsletter` tag plus `notify-<handle>` for product launch interest. `/newsletter/unsubscribe` changes Shopify consent to `UNSUBSCRIBED`; it sends no welcome or confirmation email. `SHOPIFY_NEWSLETTER_WRITE_ENABLED` is a separate runtime gate.
@@ -146,8 +148,8 @@ names a source directory. The site UI is English-only.
 
 **Other routes.** `/products` is the one browse page; `/collections/*`,
 `/search`, `/cart/*` and `/discount/*` redirect to it. `/open-source`,
-`/production`, `/wholesale`, `/firmware-partners` and `/contact` are content
-pages; `/account/support` sends visitors to the native support contacts. `robots.txt`, `sitemap.xml`,
+`/production` and `/firmware-partners` are content pages; `/contact`
+redirects to `/support`; `/account/support` sends visitors to the native support contacts. `robots.txt`, `sitemap.xml`,
 `security.txt`, `healthz`, `llms.txt` and `products.json` are generated live
 from the catalog. `/blog*`, `/releases*`, `/contribute`, `/incutec` are 301
 stubs.
