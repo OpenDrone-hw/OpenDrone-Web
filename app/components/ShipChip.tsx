@@ -33,3 +33,13 @@ export function ShipChip({
     </small>
   );
 }
+
+/**
+ * The ship words every surface uses, from `content/copy/preorder.json`:
+ * `Ships Oct 2026` for a dated batch, `ETA 11 Mar 2027` for a funding
+ * target, `Deadline 31 Dec 2026` for its deadline. Dates come in short.
+ */
+export function shipWord(kind: 'ships' | 'eta' | 'deadline', date: string): string {
+  const fallback = {ships: 'Ships {date}', eta: 'ETA {date}', deadline: 'Deadline {date}'}[kind];
+  return (copyText(`preorder.ship_${kind}`) ?? fallback).replace('{date}', date);
+}

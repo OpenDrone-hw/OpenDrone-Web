@@ -1,14 +1,14 @@
 import type {Route} from './+types/preorder';
-import {shopifyImageUrl} from '~/lib/shopify-image';
-import {useEffect} from 'react';
+import {CreditCard, Globe, RotateCcw, Target} from 'lucide-react';
+import type {ComponentType} from 'react';
 import {Link, useLoaderData} from 'react-router';
+import {shopifyImageUrl} from '~/lib/shopify-image';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {EditorialShell} from '~/components/EditorialShell';
-import {PreorderMeter} from '~/components/PreorderMeter';
+import {StepBar} from '~/components/PreorderMeter';
+import {shipWord} from '~/components/ShipChip';
 import {AddToCartButton} from '~/components/AddToCartButton';
-import {TeamStrip} from '~/components/TeamStrip';
 import {Txt} from '~/components/Txt';
-import {parseRich} from '~/lib/rich-text';
 import {copy, copyText} from '~/lib/copy';
 import {formatPrice, toCards} from '~/lib/catalog';
 import {comingSoonFlag} from '~/lib/coming-soon';
@@ -16,46 +16,40 @@ import {
   isPurchasableStatus,
   PRODUCT_CONTENT,
   resolveStatus,
-  variantCartNote,
+  shipMonth,
   variantDisplayName,
 } from '~/lib/product-content';
-import {useRoadmapStatusResolver} from '~/lib/coming-soon';
 import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
 import {CAMPAIGN} from '~/lib/catalog-client';
 import {
+  campaignDate,
+  latestShipDay,
   priceLadder,
+  shortCampaignDate,
   type CampaignState,
   type LadderStep,
-  type PriceTier,
 } from '~/lib/preorder-campaign';
+import {stepBarView} from '~/lib/preorder-meter';
 import type {MoneyV2, ProductImage, SelectedOption} from '~/lib/product-shapes';
 
 /**
- * The campaign page: the hero with an at-a-glance card, the model in four
- * steps, the price steps once, then the tracker in two groups (paid stock
- * with its one ship date, funding targets with their one deadline), one
- * compact card per product option, each orderable from here. Then the
- * background sections, the questions, a short Dutch and French summary
- * and the dated updates.
+ * The pre-order page: the ship dates as a timeline, the price steps once,
+ * the stack and the funding targets as product cards with a step bar each,
+ * the terms as four tiles, six short questions and the dated updates.
  *
- * Words live in `content/copy/preorder.json`. The tracker reads the
- * campaign-aware catalog, so every row carries the same numbers and ship
- * promise as its product page, and a row appears only for a variant the
- * status system lets the shop sell: this page never shows a price the
- * product page hides.
- *
- * `rail={false}` and no entry in EDITORIAL_SERIES: the series is a reading
- * sequence about the project, and a page a buyer is sent to from a product
- * page is not a chapter of it.
+ * Words live in `content/copy/preorder.json`. The cards read the
+ * campaign-aware catalog, so every card carries the same numbers as its
+ * product page, and a card appears only for a variant the status system
+ * lets the shop sell.
  */
 export const meta: Route.MetaFunction = () =>
   buildSeoMeta({
-    title: copyText('preorder.meta_title') ?? 'Preorders',
+    title: copyText('preorder.meta_title') ?? 'Pre-orders',
     description: copyText('preorder.meta_description') ?? '',
     canonical: `${SITE_ORIGIN}/preorder`,
   });
 
-type TrackerRow = {
+type Row = {
   sku: string;
   handle: string;
   /** Product page link that opens this exact variant. */
@@ -64,24 +58,23 @@ type TrackerRow = {
   variant: string;
   image: ProductImage | null;
   price: MoneyV2;
-  priceAfter: MoneyV2 | null;
   shipPromise: string;
   cartAddUrl: string;
   campaign: CampaignState;
   /** Units and price per step, retail last. Empty without a retail price. */
   ladder: LadderStep[];
-  /** What one unit of the price buys ("per motor"), from the product content. */
+  /** "/ motor" for a part sold per piece, from the product content. */
   priceUnit: string | null;
-  /** What is not final about this option (the 5" motor's stator and KV),
-   *  the same product-content line the cart shows. */
-  note: string | null;
 };
 
-/** Background sections under the tracker. The model itself is the four
- *  steps at the top; these are what it is, the risks and who runs it. */
-const SECTIONS = [1, 6, 7];
-const STEPS = [1, 2, 3, 4];
-const FAQ = ['1', '_price', '2', '3', '9', '_cancel', '4', '5', '_duties', '6', '7', '8'];
+const FAQ = ['pay', 'cancel', 'missed', 'eta', 'duties', 'risks'];
+
+const TERMS: Array<{key: string; Icon: ComponentType<{size?: number; 'aria-hidden'?: boolean}>}> = [
+  {key: 'pay', Icon: CreditCard},
+  {key: 'cancel', Icon: RotateCcw},
+  {key: 'missed', Icon: Target},
+  {key: 'ships', Icon: Globe},
+];
 
 /** `/products/<handle>?Model=30%C3%9730`: the link selects the variant. */
 function variantUrl(handle: string, options: SelectedOption[]): string {
@@ -93,63 +86,16 @@ function variantUrl(handle: string, options: SelectedOption[]): string {
   return `/products/${handle}${query ? `?${query}` : ''}`;
 }
 
-function fill(template: string, values: Record<string, string | number>): string {
-  return template.replace(/\{(\w+)\}/g, (m, key: string) =>
-    key in values ? String(values[key]) : m,
-  );
-}
+const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
 
-/** The price steps as one plain sentence, from `priceTiers`: "Units 1 to
- *  100: the early-order price. ..." Named steps, never a reduction against
- *  a reference price nobody was charged, and no struck-through price
- *  anywhere (EU Omnibus, art. 6a). */
-function ladderSentence(tiers: PriceTier[]): string {
-  const parts: string[] = [];
-  let from = 1;
-  tiers.forEach((tier, i) => {
-    const template =
-      copyText(i === 0 ? 'preorder.ladder_first' : 'preorder.ladder_step') ??
-      'Units {from} to {to}: {off}% off.';
-    parts.push(fill(template, {from, to: tier.upTo, off: Math.round(tier.off * 100)}));
-    from = tier.upTo + 1;
-  });
-  parts.push(fill(copyText('preorder.ladder_retail') ?? 'From unit {from}: retail price.', {from}));
-  return parts.join(' ');
-}
-
-/** The price steps as a row of cells: "Units 1-100" / "Early-order price".
- *  No "off retail": the steps are named, each card lists its own prices. */
-function ladderCells(tiers: PriceTier[]): Array<{units: string; price: string}> {
-  const cells: Array<{units: string; price: string}> = [];
-  let from = 1;
-  for (const [i, tier] of tiers.entries()) {
-    cells.push({
-      units: fill(copyText('preorder.ladder_row_units') ?? 'Units {from}-{to}', {from, to: tier.upTo}),
-      price: fill(
-        copyText(i === 0 ? 'preorder.ladder_row_first' : 'preorder.ladder_row_off') ??
-          (i === 0 ? 'Early-order price' : 'Next price step'),
-        {off: Math.round(tier.off * 100)},
-      ),
-    });
-    from = tier.upTo + 1;
-  }
-  cells.push({
-    units: fill(copyText('preorder.ladder_row_open') ?? 'From unit {from}', {from}),
-    price: copyText('preorder.ladder_row_retail') ?? 'Standard price',
-  });
-  return cells;
-}
-
-/** 2026-12-31 -> "31 December 2026". */
-function longDate(iso: string): string {
-  const d = new Date(`${iso}T00:00:00Z`);
-  if (Number.isNaN(d.getTime())) return iso;
-  return new Intl.DateTimeFormat('en-GB', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }).format(d);
+/** "ships late October 2026" as a day for the timeline: early 5th, mid
+ *  15th, late 25th. Null when the promise names no month. */
+function promiseDay(promise: string | null): string | null {
+  const m = /\b(early|mid|late)?\s*([A-Za-z]+) (\d{4})\b/i.exec(promise ?? '');
+  const month = m ? MONTHS.indexOf(m[2].toLowerCase()) : -1;
+  if (!m || month < 0) return null;
+  const day = {early: 5, mid: 15, late: 25}[(m[1] ?? 'mid').toLowerCase() as 'mid'] ?? 15;
+  return `${m[3]}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
 export async function loader({context}: Route.LoaderArgs) {
@@ -158,7 +104,7 @@ export async function loader({context}: Route.LoaderArgs) {
     context.catalog.get(),
     fetchStatusFlagsFast(context.env.GITHUB_STATUS_TOKEN, undefined, context.waitUntil),
   ]);
-  // Shopify's compare-at price is the retail price the ladder steps up to.
+  // Shopify's compare-at price is the retail price the steps climb to.
   const retail = new Map<string, number>();
   for (const product of catalog.products) {
     for (const variant of product.variants) {
@@ -174,11 +120,12 @@ export async function loader({context}: Route.LoaderArgs) {
       .find((batch) => batch.paid && batch.ships?.trim())
       ?.ships?.trim() ?? null;
 
-  const rows: TrackerRow[] = toCards(catalog).flatMap((card) =>
-    card.variants.nodes.flatMap((v): TrackerRow[] => {
+  const rows: Row[] = toCards(catalog).flatMap((card) =>
+    card.variants.nodes.flatMap((v): Row[] => {
       if (!v.campaign || !v.sku || !v.shipPromise) return [];
       const status = resolveStatus(card.handle, globalSoon, statusFlags, v.availability);
       if (!isPurchasableStatus(status)) return [];
+      const unit = PRODUCT_CONTENT[card.handle]?.priceUnit ?? null;
       return [
         {
           sku: v.sku,
@@ -188,69 +135,35 @@ export async function loader({context}: Route.LoaderArgs) {
           variant: v.title === 'Default Title' ? '' : variantDisplayName(card.handle, v.title),
           image: v.image,
           price: v.price,
-          priceAfter: v.priceAfter,
           shipPromise: v.shipPromise,
           cartAddUrl: v.cartAddUrl,
           campaign: v.campaign,
           ladder: retail.has(v.sku) ? priceLadder(retail.get(v.sku)!, CAMPAIGN.priceTiers) : [],
-          priceUnit: PRODUCT_CONTENT[card.handle]?.priceUnit ?? null,
-          note: variantCartNote(card.handle, v.title),
+          priceUnit: unit ? unit.replace(/^per\s+/i, '/ ') : null,
         },
       ];
     }),
   );
 
-  // Only figures that say something: a zero is left out rather than shown.
-  const stock = rows.filter((r) => r.campaign.paidStock);
-  const funding = rows.filter((r) => !r.campaign.paidStock);
-  const ordered = rows.reduce((sum, r) => sum + r.campaign.ordered, 0);
+  const latestDay = latestShipDay(CAMPAIGN);
   return {
     rows,
-    ladder: ladderSentence(CAMPAIGN.priceTiers),
-    ladderCells: ladderCells(CAMPAIGN.priceTiers),
-    stackShips,
-    endsOn: longDate(CAMPAIGN.endsOn),
+    stackMonth: shipMonth(stackShips),
+    stackDay: promiseDay(stackShips),
+    endsDay: CAMPAIGN.endsOn,
+    etaDay: latestDay,
+    ends: shortCampaignDate(campaignDate(CAMPAIGN.endsOn)) ?? CAMPAIGN.endsOn,
+    eta: shortCampaignDate(campaignDate(latestDay)) ?? latestDay,
+    // The server's day, so the "Today" marker renders the same on hydration.
+    today: new Date().toISOString().slice(0, 10),
+    stepEnds: CAMPAIGN.priceTiers.map((tier) => tier.upTo),
     unavailable: catalog.campaign_counts === 'unavailable',
-    summary: {
-      // One figure per board and size: a single total ("1000 left") reads
-      // like 1000 of one board, while each option has its own batch.
-      // Flight controller before ESC, then by size: the stack's order.
-      stackLeft: [...stock]
-        .sort((a, b) => b.product.localeCompare(a.product) || a.variant.localeCompare(b.variant))
-        .map((r) => ({
-        sku: r.sku,
-        name: r.variant ? `${r.product} ${r.variant}` : r.product,
-        left: r.campaign.batchUnits - r.campaign.batchOrdered,
-        units: r.campaign.batchUnits,
-      })),
-      ordered: ordered > 0 ? ordered : null,
-      // Shown once a target is reached; "0 / 8" only discourages.
-      reached: funding.some((r) => r.campaign.targetReached)
-        ? `${funding.filter((r) => r.campaign.targetReached).length} / ${funding.length}`
-        : null,
-    },
   };
 }
 
 export default function PreorderRoute() {
-  const {rows, ladder, ladderCells, stackShips, endsOn, unavailable, summary} =
-    useLoaderData<typeof loader>();
-  // Step and FAQ texts that carry campaign numbers are filled from
-  // content/preorders.json, so the page cannot drift from the price the
-  // Worker writes to Shopify.
-  const values = {
-    ladder,
-    stack_ships: stackShips ?? '',
-    // "late October 2026", for a sentence that already says "ship".
-    stack_ships_short: (stackShips ?? '').replace(/^ships\s+/i, ''),
-    ends_on: endsOn,
-  };
-  const shortRaw = copy('preorder.short_items');
-  const shortItems = (Array.isArray(shortRaw) ? shortRaw : []).map((t) => fill(t, values));
-  const filled = (id: string): string | null => {
-    const text = copyText(id);
-    return text ? fill(text, values) : null;
-  };
+  const data = useLoaderData<typeof loader>();
+  const {rows, stackMonth, ends, eta, unavailable} = data;
   const updates = copy('preorder.updates');
   // Entries are "YYYY-MM-DD · text", newest first, never edited: a
   // correction is a new entry. The section stays hidden until the first one.
@@ -259,233 +172,82 @@ export default function PreorderRoute() {
     return {raw, date: m?.[1] ?? null, text: m?.[2] ?? raw};
   });
 
-  type Cell = {key: string; label: string; value: string};
-  const stackCells: Cell[] = summary.stackLeft.map((row) => ({
-    key: `stack-${row.sku}`,
-    label: fill(copyText('preorder.strip_stack_each') ?? '{name}', {name: row.name}),
-    value: fill(copyText('preorder.strip_stack_value') ?? '{left} of {units} left', {
-      left: row.left,
-      units: row.units,
-    }),
-  }));
-  const cells: Cell[] = [
-    ...stackCells,
-    summary.reached !== null
-      ? {key: 'reached', label: copyText('preorder.strip_reached_label') ?? '', value: summary.reached}
-      : null,
-    summary.ordered !== null
-      ? {key: 'ordered', label: copyText('preorder.strip_ordered_label') ?? '', value: String(summary.ordered)}
-      : null,
-  ].filter((c): c is Cell => c !== null);
-
-  // Flight controller before ESC, then by size: the stack's order.
-  // The footer links to #nl and #fr: open that summary on arrival.
-  useEffect(() => {
-    const open = () => {
-      const target = document.getElementById(window.location.hash.slice(1));
-      if (target instanceof HTMLDetailsElement && target.classList.contains('preorder-lang')) {
-        target.open = true;
-        target.scrollIntoView();
-      }
-    };
-    open();
-    window.addEventListener('hashchange', open);
-    return () => window.removeEventListener('hashchange', open);
-  }, []);
-
-  const paidRows = rows
+  // FC before ESC, then by size: 20x20 FC, 20x20 ESC, 30x30 FC, 30x30 ESC.
+  const stackRows = rows
     .filter((r) => r.campaign.paidStock)
-    .sort((a, b) => b.product.localeCompare(a.product) || a.variant.localeCompare(b.variant));
+    .sort((a, b) => a.variant.localeCompare(b.variant) || b.product.localeCompare(a.product));
   const targetRows = rows.filter((r) => !r.campaign.paidStock);
+  const dot = ' · ';
 
   return (
     <EditorialShell slug="preorder" rail={false} reveal={false} pageClassName="preorder-page">
-      <header className="editorial-hero preorder-hero">
-        <div className="preorder-hero-text">
-          <Txt id="preorder.title" as="h1" className="editorial-title" />
-          <Txt id="preorder.lead" as="p" className="editorial-lead" />
-          {/* The short version: the five rules a skimming buyer needs. The
-              full text follows below. */}
-          {shortItems.length ? (
-            <div className="preorder-short">
-              <Txt id="preorder.short_title" as="h2" className="preorder-short-title" />
-              <ul className="preorder-short-list">
-                {shortItems.map((item) => (
-                  <li key={item}>
-                    {parseRich(item).map((n) =>
-                      n.t === 'strong' || n.t === 'em' ? (
-                        <strong key={`b:${n.v}`}>{n.v}</strong>
-                      ) : (
-                        <span key={`t:${n.v}`}>{n.v}</span>
-                      ),
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-          <div className="preorder-hero-actions">
-            <a className="btn-primary btn-sm" href="#tracker">
-              <Txt id="preorder.cta_primary" />
-            </a>
-            <Link prefetch="viewport" to="/production" className="btn-secondary btn-sm">
-              <Txt id="preorder.cta_secondary" />
-            </Link>
-          </div>
-        </div>
-        <aside
-          className="preorder-glance"
-          aria-label={copyText('preorder.glance_title') ?? 'At a glance'}
-        >
-          <Txt id="preorder.glance_title" as="h2" className="preorder-glance-title" />
-          {stackShips ? <p className="preorder-glance-line">{filled('preorder.glance_stack')}</p> : null}
-          {unavailable ? (
-            <Txt id="preorder.strip_unavailable" as="p" className="preorder-empty" />
-          ) : cells.length ? (
-            <>
-              <Txt id="preorder.strip_caption" as="p" className="preorder-strip-caption" />
-              <dl className="preorder-strip">
-                {cells.map((cell) => (
-                  <div className="preorder-strip-cell" key={cell.key}>
-                    <dt className="preorder-strip-label">{cell.label}</dt>
-                    <dd className="preorder-strip-value">{cell.value}</dd>
-                  </div>
-                ))}
-              </dl>
-            </>
-          ) : null}
-          <p className="preorder-glance-line">{filled('preorder.glance_targets')}</p>
-        </aside>
-      </header>
+      <Txt id="preorder.title" as="h1" className="po-title" />
 
-      <section className="editorial-section preorder-wide" id="how-it-works">
-        <Txt id="preorder.steps_title" as="h2" className="editorial-section-title" />
-        <ol className="preorder-steps">
-          {STEPS.map((n) => {
-            const id = `preorder.step${n}_body`;
-            const text = filled(id);
-            return (
-              <li className="preorder-step" key={n}>
-                <span className="preorder-step-n" aria-hidden="true">
-                  {n}
-                </span>
-                <Txt id={`preorder.step${n}_title`} as="h3" className="preorder-step-title" />
-                {text && /\{\w+\}/.test(copyText(id) ?? '') ? (
-                  <p className="preorder-step-body">{text}</p>
-                ) : (
-                  <Txt id={id} as="p" className="preorder-step-body" />
-                )}
-              </li>
-            );
-          })}
-        </ol>
-      </section>
+      <Timeline data={data} />
+      <StepLegend />
 
-      <section className="editorial-section preorder-wide" id="tracker">
-        <Txt id="preorder.tracker_title" as="h2" className="editorial-section-title" />
-        <Txt id="preorder.tracker_lead" as="p" className="preorder-tracker-lead" />
-        <div className="preorder-price-steps">
-          <Txt id="preorder.price_steps_title" as="h3" className="preorder-price-steps-title" />
-          <ol className="preorder-price-steps-row">
-            {ladderCells.map((cell) => (
-              <li key={cell.units}>
-                <span className="preorder-price-steps-units">{cell.units}</span>
-                <span className="preorder-price-steps-price">{cell.price}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
-        {rows.length ? (
-          <>
-            {paidRows.length ? (
-              <TrackerGroup
-                title={filled('preorder.group_paid_title') ?? ''}
-                lead={filled('preorder.group_paid_lead')}
-                rows={paidRows}
-              />
-            ) : null}
-            {targetRows.length ? (
-              <TrackerGroup
-                title={filled('preorder.group_target_title') ?? ''}
-                lead={filled('preorder.group_target_lead')}
-                rows={targetRows}
-              />
-            ) : null}
-          </>
-        ) : (
-          <Txt id="preorder.tracker_empty" as="p" className="preorder-empty" />
-        )}
-      </section>
+      {unavailable ? (
+        <Txt id="preorder.strip_unavailable" as="p" className="po-empty" />
+      ) : !rows.length ? (
+        <Txt id="preorder.tracker_empty" as="p" className="po-empty" />
+      ) : null}
 
-      {SECTIONS.map((n) => (
-        <section key={n} className="editorial-section">
-          <Txt id={`preorder.s${n}_title`} as="h2" className="editorial-section-title" />
-          <Txt id={`preorder.s${n}_body`} as="p" />
-          {n === 7 ? <TeamStrip /> : null}
-        </section>
-      ))}
-
-      {copyText('preorder.gift_title') ? (
-        <section className="editorial-section" id="gift">
-          <Txt id="preorder.gift_title" as="h2" className="editorial-section-title" />
-          <Txt id="preorder.gift_body" as="p" />
-          <Txt id="preorder.gift_nl" as="p" lang="nl" />
-          <Txt id="preorder.gift_fr" as="p" lang="fr" />
+      {!unavailable && stackRows.length ? (
+        <section className="po-group" id="stack">
+          <h2 className="po-group-title">
+            <Txt id="preorder.stack_title" />
+            {stackMonth ? <span className="po-group-meta">{dot + shipWord('ships', stackMonth)}</span> : null}
+          </h2>
+          <Cards rows={stackRows} stepEnds={data.stepEnds} eta={eta} />
         </section>
       ) : null}
 
-      <section className="editorial-section" id="questions">
-        <Txt id="preorder.faq_title" as="h2" className="editorial-section-title" />
-        <div className="preorder-faq">
-          {FAQ.map((n) => {
-            const answerId = `preorder.faq_a${n}`;
-            const raw = copyText(answerId) ?? '';
-            if (!copyText(`preorder.faq_q${n}`) || !raw) return null;
-            return (
-              <details className="preorder-faq-item" key={n} id={`faq${n}`}>
-                <summary className="preorder-faq-q">
-                  <Txt id={`preorder.faq_q${n}`} />
-                </summary>
-                {/\{\w+\}/.test(raw) ? (
-                  <p className="preorder-faq-a">{filled(answerId)}</p>
-                ) : (
-                  <Txt id={answerId} as="p" className="preorder-faq-a" />
-                )}
-              </details>
-            );
-          })}
-        </div>
-      </section>
+      {!unavailable && targetRows.length ? (
+        <section className="po-group" id="targets">
+          <h2 className="po-group-title">
+            <Txt id="preorder.targets_title" />
+            <span className="po-group-meta">{dot + shipWord('deadline', ends)}</span>
+            <span className="po-group-meta">{dot + shipWord('eta', eta)}</span>
+          </h2>
+          {stackMonth ? (
+            <p className="po-group-line">
+              {(copyText('preorder.targets_line') ?? '').replace('{month}', stackMonth)}
+            </p>
+          ) : null}
+          <Cards rows={targetRows} stepEnds={data.stepEnds} eta={eta} />
+        </section>
+      ) : null}
 
-      {/* The shop is in English; these two short summaries give Dutch and
-          French readers the preorder rules in their own language. The
-          terms, which apply, exist in both. */}
-      <section className="editorial-section preorder-langs">
-        {(['nl', 'fr'] as const).map((lang) =>
-          copyText(`preorder.${lang}_title`) ? (
-            <details className="preorder-lang" id={lang} lang={lang} key={lang}>
-              <summary className="preorder-lang-title">
-                <Txt id={`preorder.${lang}_title`} />
+      <ul className="po-terms" aria-label={copyText('preorder.terms_label') ?? 'Pre-order terms'}>
+        {TERMS.map(({key, Icon}) => (
+          <li key={key}>
+            <Icon size={22} aria-hidden />
+            <Txt id={`preorder.terms_${key}`} as="strong" />
+            <Txt id={`preorder.terms_${key}_sub`} />
+          </li>
+        ))}
+      </ul>
+
+      <section className="po-faq" id="questions">
+        <Txt id="preorder.faq_title" as="h2" className="po-group-title" />
+        {FAQ.map((key) =>
+          copyText(`preorder.faq_q_${key}`) ? (
+            <details className="po-faq-item" key={key}>
+              <summary>
+                <Txt id={`preorder.faq_q_${key}`} />
               </summary>
-              <Txt id={`preorder.${lang}_body`} as="p" />
+              <Txt id={`preorder.faq_a_${key}`} as="p" />
             </details>
           ) : null,
         )}
       </section>
 
       {updateList.length ? (
-        <section className="editorial-section" id="updates">
-          <Txt id="preorder.updates_title" as="h2" className="editorial-section-title" />
-          <Txt id="preorder.updates_lead" as="p" />
-          {updateList[0].date ? (
-            <p className="preorder-updated">
-              {copyText('preorder.updates_last') ?? 'Last updated'}{' '}
-              <time dateTime={updateList[0].date}>{updateList[0].date}</time>
-            </p>
-          ) : null}
-          <ol className="preorder-updates">
+        <section className="po-updates" id="updates">
+          <Txt id="preorder.updates_title" as="h2" className="po-group-title" />
+          <ol>
             {updateList.map((entry) => (
-              <li className="preorder-update" key={entry.raw}>
+              <li key={entry.raw}>
                 {entry.date ? <time dateTime={entry.date}>{entry.date}</time> : null}
                 <span>{entry.text}</span>
               </li>
@@ -497,176 +259,173 @@ export default function PreorderRoute() {
   );
 }
 
-/** One group of the tracker: a heading that carries the ship rule once,
- *  then a grid of compact product cards. */
-function TrackerGroup({
-  title,
-  lead,
-  rows,
-}: {
-  title: string;
-  lead: string | null;
-  rows: TrackerRow[];
-}) {
+const dayMs = (iso: string) => Date.parse(`${iso}T00:00:00Z`);
+
+/**
+ * Two lanes on one time axis: the stack's ship month, and the funding
+ * targets' deadline and latest ship date, with a "Today" marker. On a
+ * phone the lanes read as two rows of dates.
+ */
+function Timeline({data}: {data: ReturnType<typeof useLoaderData<typeof loader>>}) {
+  const {stackDay, stackMonth, endsDay, etaDay, ends, eta, today} = data;
+  const days = [today, endsDay, etaDay, ...(stackDay ? [stackDay] : [])].map(dayMs);
+  const first = new Date(Math.min(...days));
+  const last = new Date(Math.max(...days));
+  const start = Date.UTC(first.getUTCFullYear(), first.getUTCMonth(), 1);
+  const end = Date.UTC(last.getUTCFullYear(), last.getUTCMonth() + 1, 1);
+  const at = (iso: string) => `${(((dayMs(iso) - start) / (end - start)) * 100).toFixed(2)}%`;
+  const todayPos = at(today);
+
+  const lanes = [
+    stackDay && stackMonth
+      ? {
+          key: 'stack',
+          label: copyText('preorder.timeline_stack') ?? 'Stack',
+          events: [{day: stackDay, date: stackMonth, what: copyText('preorder.timeline_ships') ?? 'Ships', kind: 'ship'}],
+        }
+      : null,
+    {
+      key: 'targets',
+      label: copyText('preorder.timeline_targets') ?? 'RX · Frames · Motors',
+      events: [
+        {day: endsDay, date: ends, what: copyText('preorder.timeline_deadline') ?? 'Deadline', kind: 'deadline'},
+        {day: etaDay, date: eta, what: copyText('preorder.timeline_eta') ?? 'Ships if funded', kind: 'eta'},
+      ],
+    },
+  ].filter((lane) => lane !== null);
+
+  const months: Array<{key: number; pos: string; label: string}> = [];
+  for (let t = start; t < end; ) {
+    const d = new Date(t);
+    const label = new Intl.DateTimeFormat('en-US', {month: 'short', timeZone: 'UTC'}).format(d);
+    months.push({
+      key: t,
+      pos: `${(((t - start) / (end - start)) * 100).toFixed(2)}%`,
+      label: d.getUTCMonth() === 0 ? `${label} ${d.getUTCFullYear()}` : label,
+    });
+    t = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
+  }
+
   return (
-    <div className="preorder-group">
-      <h3 className="preorder-group-title">{title}</h3>
-      {lead ? <p className="preorder-group-lead">{lead}</p> : null}
-      <ul className="preorder-tracker">
-        {rows.map((row) => (
-          <TrackerCard key={row.sku} row={row} />
+    <figure className="po-timeline" aria-label={copyText('preorder.timeline_label') ?? 'Ship dates'}>
+      {lanes.map((lane) => {
+        const lastDay = lane.events[lane.events.length - 1].day;
+        const from = Math.min(dayMs(today), dayMs(lane.events[0].day));
+        return (
+          <div className="po-lane" key={lane.key} data-lane={lane.key}>
+            <span className="po-lane-label">{lane.label}</span>
+            <div className="po-lane-track">
+              <span
+                className="po-lane-line"
+                style={{
+                  left: `${(((from - start) / (end - start)) * 100).toFixed(2)}%`,
+                  width: `${(((dayMs(lastDay) - from) / (end - start)) * 100).toFixed(2)}%`,
+                }}
+              />
+              {lane.events.map((e) => (
+                <span className="po-event" data-kind={e.kind} key={e.kind} style={{left: at(e.day)}}>
+                  <span className="po-event-dot" aria-hidden="true" />
+                  <strong>{e.date}</strong>
+                  <span>{e.what}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+      <div className="po-axis" aria-hidden="true">
+        {months.map((m) => (
+          <span key={m.key} style={{left: m.pos}}>
+            {m.label}
+          </span>
         ))}
-      </ul>
+      </div>
+      <div className="po-today" aria-hidden="true">
+        <span style={{left: todayPos}}>{copyText('preorder.timeline_today') ?? 'Today'}</span>
+      </div>
+    </figure>
+  );
+}
+
+/** The price steps once, for every card: "Units 1-100 · Early bird". */
+function StepLegend() {
+  const names = copy('preorder.legend_steps');
+  const labels = Array.isArray(names) ? names : [];
+  const cells: string[] = [];
+  let from = 1;
+  for (const tier of CAMPAIGN.priceTiers) {
+    cells.push(`${from}-${tier.upTo}`);
+    from = tier.upTo + 1;
+  }
+  cells.push(`${from}+`);
+  return (
+    <div className="po-legend">
+      <span className="po-legend-label">
+        <Txt id="preorder.legend_label" />
+      </span>
+      <ol>
+        {cells.map((units, i) => (
+          <li key={units}>
+            <span className="po-legend-units">
+              {i === 0 ? `${copyText('preorder.legend_units') ?? 'Units'} ` : ''}
+              {units}
+            </span>
+            <span>{labels[i] ?? ''}</span>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }
 
-/** A funding-target option's design stage, in the product page's words
- *  (content/copy/product-chrome.json), so a buyer sees before paying that a
- *  frame or motor is not yet tested. */
-function stageText(status: string | undefined): string | null {
-  if (status === 'in-progress')
-    return copyText('product-chrome.stage_in_progress') ?? 'Design stage: prototypes ordered, not yet tested';
-  if (status === 'alpha')
-    return copyText('product-chrome.stage_alpha') ?? 'Design stage: prototypes built and flown by testers';
-  return null;
+function Cards({rows, stepEnds, eta}: {rows: Row[]; stepEnds: number[]; eta: string}) {
+  return (
+    <ul className="po-cards">
+      {rows.map((row) => (
+        <Card key={row.sku} row={row} stepEnds={stepEnds} eta={eta} />
+      ))}
+    </ul>
+  );
 }
 
-function TrackerCard({row}: {row: TrackerRow}) {
-  const roadmapStatus = useRoadmapStatusResolver();
-  const stage = row.campaign.paidStock ? null : stageText(roadmapStatus(row.handle));
+function Card({row, stepEnds, eta}: {row: Row; stepEnds: number[]; eta: string}) {
   const name = row.variant ? `${row.product} ${row.variant}` : row.product;
-  const cta = copyText('product-chrome.buy_cta_preorder') ?? 'Add to cart';
+  const cta = copyText('preorder.card_cta') ?? 'Pre-order';
   const currency = row.price.currencyCode;
-  // The step after the one the next unit falls in: what the price becomes.
-  const nextUnit = row.campaign.ordered + 1;
-  const current = row.ladder.findIndex(
-    (step) => nextUnit >= step.from && (step.to === null || nextUnit <= step.to),
-  );
-  const nextStep = current >= 0 ? row.ladder[current + 1] : undefined;
-  return (
-    <li className="preorder-track">
-      <Link
-        prefetch="viewport"
-        to={row.url}
-        className="preorder-track-media"
-        aria-hidden="true"
-        tabIndex={-1}
-      >
-        {row.image ? (
-          <img src={shopifyImageUrl(row.image.url, 128)} alt="" loading="lazy" width={64} height={64} />
-        ) : (
-          <span className="preorder-track-initial">{row.product.slice(4, 5) || row.product[0]}</span>
-        )}
-      </Link>
-      <div className="preorder-track-body">
-        <h4 className="preorder-track-title">
-          <Link prefetch="viewport" to={row.url}>
-            {row.product} {row.variant ? <span>{row.variant}</span> : null}
-          </Link>
-        </h4>
-        <p className="preorder-track-price">
-          <strong>{formatPrice(row.price.amount, currency)}</strong>
-          {row.priceUnit ? (
-            <span className="preorder-track-unit">
-              {' '}
-              {row.priceUnit}
-              {row.priceUnit === 'per motor'
-                ? ` · ${copyText('preorder.track_per_quad') ?? '4 per quad'}`
-                : ''}
-            </span>
-          ) : null}
-          {nextStep ? (
-            <span className="preorder-track-next">
-              {' '}
-              {fill(copyText('preorder.track_next') ?? 'then {price} from unit {from}', {
-                price: formatPrice(nextStep.price, currency),
-                from: nextStep.from,
-              })}
-            </span>
-          ) : row.priceAfter && row.ladder.length < 2 ? (
-            <span className="preorder-track-next">
-              {' '}
-              {(copyText('preorder.track_price_after') ?? 'then {price}').replace(
-                '{price}',
-                formatPrice(row.priceAfter.amount, row.priceAfter.currencyCode),
-              )}
-            </span>
-          ) : null}
-        </p>
-        {stage ? <p className="preorder-track-stage text-[13px]! leading-snug! text-[var(--color-text-muted)]">{stage}</p> : null}
-        {row.note ? (
-          <p className="preorder-track-note text-[13px]! leading-snug! text-[var(--color-gold-text)]">{row.note}</p>
-        ) : null}
-        <PreorderMeter campaign={row.campaign} priceAfter={row.priceAfter} compact />
-        <div className="preorder-track-foot">
-          {row.ladder.length > 1 ? (
-            <details className="preorder-track-steps">
-              <summary>{copyText('preorder.track_steps_summary') ?? 'All price steps'}</summary>
-              <PriceLadder row={row} />
-            </details>
-          ) : (
-            <span />
-          )}
-          <AddToCartButton
-            className="preorder-track-cta"
-            href={row.cartAddUrl}
-            product={row.handle}
-            revenue={{currency: row.price.currencyCode, amount: Number(row.price.amount) || 0}}
-            ariaLabel={`${cta}: ${name}`}
-          >
-            {cta}
-          </AddToCartButton>
-        </div>
-      </div>
-    </li>
-  );
-}
-
-/**
- * The whole price ladder of one product option as plain text: every step
- * with its units and price, the current one marked. No struck-through
- * price: the retail figure is the last step, not a "was" price.
- */
-function PriceLadder({row}: {row: TrackerRow}) {
   const next = row.campaign.ordered + 1;
-  const currency = row.price.currencyCode;
-  const now = copyText('preorder.track_ladder_now') ?? 'now';
+  const prices = row.ladder.map((step) => ({
+    key: step.from,
+    text: formatPrice(step.price, currency),
+    current: next >= step.from && (step.to === null || next <= step.to),
+  }));
+  const bar = stepBarView(row.campaign, stepEnds);
+  const funded = `${copyText('preorder.funded') ?? 'Funded'} · ${shipWord('eta', shortCampaignDate(row.campaign.latestShip) ?? shipMonth(row.shipPromise) ?? eta)}`;
   return (
-    <table className="preorder-ladder">
-      <caption className="sr-only">
-        {copyText('preorder.track_ladder_label') ?? 'Price per unit'}
-      </caption>
-      <tbody>
-        {row.ladder.map((step) => {
-          const current = next >= step.from && (step.to === null || next <= step.to);
-          const units =
-            step.to === null
-              ? fill(copyText('preorder.track_ladder_units_open') ?? 'from unit {from}', {from: step.from})
-              : fill(copyText('preorder.track_ladder_units') ?? 'units {from}-{to}', {
-                  from: step.from,
-                  to: step.to,
-                });
-          return (
-            <tr
-              key={step.from}
-              className={`preorder-ladder-step${current ? ' is-current' : ''}`}
-              aria-current={current ? 'true' : undefined}
-            >
-              <th scope="row">{units}</th>
-              <td>
-                {formatPrice(step.price, currency)}
-                {current ? (
-                  <>
-                    {' '}
-                    <em>({now})</em>
-                  </>
-                ) : null}
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
+    <li className="po-card">
+      <Link prefetch="viewport" to={row.url} className="po-card-media" aria-hidden="true" tabIndex={-1}>
+        {row.image ? (
+          <img src={shopifyImageUrl(row.image.url, 480)} alt="" loading="lazy" width={240} height={240} />
+        ) : null}
+      </Link>
+      <h3 className="po-card-title">
+        <Link prefetch="viewport" to={row.url}>
+          {row.product} {row.variant ? <span>{row.variant}</span> : null}
+        </Link>
+      </h3>
+      <p className="po-card-price">
+        {formatPrice(row.price.amount, currency)}
+        {row.priceUnit ? <span> {row.priceUnit}</span> : null}
+      </p>
+      <StepBar bar={bar} prices={prices} fundedLabel={funded} />
+      <AddToCartButton
+        className="po-card-cta"
+        href={row.cartAddUrl}
+        product={row.handle}
+        revenue={{currency, amount: Number(row.price.amount) || 0}}
+        ariaLabel={`${cta}: ${name}`}
+      >
+        {cta}
+      </AddToCartButton>
+    </li>
   );
 }

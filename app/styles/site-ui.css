@@ -197,9 +197,8 @@
    /preorder: the campaign page
    ============================================ */
 
-/* The page uses the full content width (1120px) for the hero, the steps
-   and the tracker; prose sections keep the 680px reading measure. The
-   brand watermark stays off this page: it sat behind the product list. */
+/* Full content width (1120px). The brand watermark stays off this page:
+   it sat behind the product cards. */
 .editorial-shell:has(> .editorial-page.preorder-page) {
   grid-template-columns: minmax(0, 1120px);
   justify-content: center;
@@ -211,266 +210,430 @@
   max-width: 1120px;
   width: 100%;
 }
-.preorder-page > .editorial-section:not(.preorder-wide) {
-  max-width: 680px;
-}
-
-.preorder-hero {
+/* Four text styles: the title, the group titles, body, mono labels. Groups
+   are separated by whitespace; the only surfaces are the card image tiles. */
+.preorder-page {
   display: grid;
-  gap: var(--sp-5);
-  align-items: start;
+  gap: var(--sp-7);
 }
-@media (min-width: 60em) {
-  .preorder-hero {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 24rem);
-    gap: var(--sp-7, 3rem);
-  }
-}
-.preorder-hero .editorial-lead {
-  max-width: 62ch;
-}
-.preorder-glance {
-  display: grid;
-  gap: var(--sp-3);
-  padding: var(--sp-5);
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-md);
-  background: var(--color-bg-card);
-}
-.preorder-glance-title {
+.preorder-page .po-title {
   margin: 0;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--color-gold-text);
-}
-.preorder-glance-line {
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.5;
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
   color: var(--color-text);
 }
-.preorder-strip-caption {
-  margin: var(--sp-2) 0 0;
+.preorder-page .po-title + .po-timeline {
+  margin-top: calc(var(--sp-5) - var(--sp-7));
+}
+.po-empty {
+  margin: 0;
+  font-family: var(--font-mono);
   font-size: var(--fs-sm);
   color: var(--color-text-muted);
 }
-.preorder-glance .preorder-strip {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: none;
-  gap: var(--sp-3) var(--sp-4);
-}
-.preorder-glance .preorder-strip-label {
-  font-family: var(--font-sans);
-  font-size: var(--fs-sm);
-  letter-spacing: 0;
-  text-transform: none;
-}
-.preorder-glance .preorder-strip-value {
-  font-family: var(--font-sans);
-  font-size: var(--fs-md);
-  white-space: nowrap;
-}
 
-/* The price steps, once, as three cells. */
-.preorder-price-steps {
-  margin: var(--sp-4) 0 var(--sp-6);
+/* Timeline: two lanes on one axis, a dot per date, a Today line. */
+.po-timeline {
+  position: relative;
+  display: grid;
+  gap: var(--sp-5);
+  margin: 0;
+  padding-top: var(--sp-5);
+  --po-label: 11.5rem;
 }
-.preorder-price-steps-title {
-  margin: 0 0 var(--sp-2);
+.po-lane {
+  display: grid;
+  grid-template-columns: var(--po-label) minmax(0, 1fr);
+  align-items: start;
+}
+.po-lane-label {
+  padding-top: 2px;
   font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--color-text);
 }
-.preorder-price-steps-row {
+.po-lane-track {
+  position: relative;
+  height: 3.1rem;
+}
+.po-lane-line {
+  position: absolute;
+  top: 0.5rem;
+  height: 2px;
+  margin-top: -1px;
+  background: var(--color-border-strong);
+}
+.po-lane[data-lane='stack'] .po-lane-line {
+  background: var(--color-gold);
+}
+.po-event {
+  position: absolute;
+  top: 0;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: var(--fs-sm);
+  line-height: 1.3;
+}
+.po-event strong {
+  margin-top: var(--sp-1);
+  font-weight: 600;
+  color: var(--color-text);
+}
+.po-event > span:last-child {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+}
+.po-event-dot {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  border: 2px solid var(--color-gold);
+  background: var(--color-gold);
+}
+.po-event[data-kind='deadline'] .po-event-dot {
+  border-color: var(--color-text-muted);
+  background: var(--color-bg);
+}
+.po-event[data-kind='eta'] .po-event-dot {
+  background: var(--color-bg);
+}
+.po-axis {
+  position: relative;
+  height: 1.2rem;
+  margin-left: var(--po-label);
+  border-top: 1px solid var(--color-border);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--color-text-dim);
+}
+.po-axis > span {
+  position: absolute;
+  top: 4px;
+  padding-left: 4px;
+  border-left: 1px solid var(--color-border);
+}
+.po-today {
+  position: absolute;
+  top: 0;
+  bottom: 1.2rem;
+  left: var(--po-label);
+  right: 0;
+  pointer-events: none;
+}
+.po-today > span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  padding-left: 6px;
+  border-left: 1px dashed var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  line-height: 1;
+  color: var(--color-text-muted);
+}
+@media (max-width: 42em) {
+  .po-timeline {
+    gap: var(--sp-3);
+    padding-top: 0;
+  }
+  .po-lane {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--sp-1);
+  }
+  .po-lane-track {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-1) var(--sp-4);
+    height: auto;
+  }
+  .po-lane-line,
+  .po-axis,
+  .po-today {
+    display: none;
+  }
+  .po-event {
+    position: static;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    transform: none;
+  }
+  .po-event strong {
+    margin: 0;
+  }
+  .po-event-dot {
+    width: 0.7rem;
+    height: 0.7rem;
+  }
+}
+
+/* The price steps once: three equal cells on a hairline. */
+.po-legend {
+  display: grid;
+  grid-template-columns: var(--po-label, 11.5rem) minmax(0, 1fr);
+  align-items: start;
+  margin-top: calc(var(--sp-5) - var(--sp-7));
+  font-size: var(--fs-sm);
+}
+.po-legend-label {
+  font-weight: 600;
+  color: var(--color-text);
+}
+.po-legend ol {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-md);
-  background: var(--color-bg-card);
 }
-.preorder-price-steps-row li {
-  display: grid;
-  gap: 2px;
-  padding: var(--sp-3) var(--sp-4);
+.po-legend li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--sp-2);
+  padding-top: var(--sp-2);
+  border-top: 3px solid var(--color-border-strong);
+  color: var(--color-text-muted);
 }
-.preorder-price-steps-row li + li {
-  border-left: 1px solid var(--color-border);
+.po-legend li:first-child {
+  border-top-color: var(--color-gold);
 }
-.preorder-price-steps-units {
+.po-legend li + li {
+  margin-left: 3px;
+}
+.po-legend-units {
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
-  color: var(--color-text-muted);
-}
-.preorder-price-steps-price {
-  font-size: 15px;
-  font-weight: 600;
   color: var(--color-text);
+  line-height: 1.7;
+}
+@media (max-width: 42em) {
+  .po-legend {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--sp-2);
+  }
 }
 
-/* Tracker: two groups, each a grid of compact cards. */
-.preorder-group + .preorder-group {
-  margin-top: var(--sp-6);
-}
-.preorder-group-title {
+/* Groups: a title with its ship words, then the cards. */
+.po-group-title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 1.25rem;
+  font-size: var(--fs-lg);
   font-weight: 700;
+  line-height: 1.25;
   color: var(--color-text);
 }
-.preorder-group-lead {
-  margin: var(--sp-1, 4px) 0 0;
-  font-size: 15px;
+.po-group-meta {
+  font-weight: 500;
   color: var(--color-text-muted);
 }
-.preorder-page .preorder-tracker {
-  margin-top: var(--sp-4);
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: var(--sp-4);
-}
-.preorder-page .preorder-track {
-  grid-template-columns: 4rem minmax(0, 1fr);
-  grid-template-rows: auto auto;
-  align-items: start;
-  column-gap: var(--sp-4);
-  row-gap: var(--sp-3);
-}
-.preorder-page .preorder-track > form,
-.preorder-page .preorder-track > button {
-  grid-column: 2;
-  justify-self: start;
-}
-.preorder-page .preorder-track-body {
-  gap: var(--sp-2);
-}
-.preorder-page .preorder-track-title {
-  font-size: 1rem;
-}
-.preorder-page .preorder-track-price {
-  margin: 0;
-  font-family: var(--font-sans);
+.po-group-line {
+  margin: var(--sp-2) 0 0;
   font-size: var(--fs-sm);
   color: var(--color-text-muted);
-  white-space: normal;
 }
-.preorder-page .preorder-track-price strong {
+.po-cards {
+  list-style: none;
+  margin: var(--sp-5) 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: var(--sp-6) var(--sp-5);
+}
+.po-card {
+  display: grid;
+  grid-template-rows: auto auto auto 1fr auto;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+.po-card-media {
+  display: block;
+  aspect-ratio: 3 / 2;
+  margin-bottom: var(--sp-2);
+  border-radius: var(--r-md);
+  background: var(--color-bg-card);
+  overflow: hidden;
+}
+.po-card-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+html.light .po-card-media img {
+  mix-blend-mode: multiply;
+}
+.po-card-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  font-weight: 700;
+  line-height: 1.25;
+}
+.po-card-title a {
+  color: var(--color-text);
+  text-decoration: none;
+}
+.po-card-title a:hover {
+  color: var(--color-gold-text);
+}
+.po-card-title span {
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+.po-card-price {
+  margin: 0;
+  font-family: var(--font-display);
   font-size: var(--fs-md);
   font-weight: 700;
   color: var(--color-text);
 }
-.preorder-track-steps summary {
-  cursor: pointer;
+.po-card-price span {
+  font-weight: 400;
   font-size: var(--fs-sm);
   color: var(--color-text-muted);
-  text-decoration: underline;
-  text-decoration-color: var(--color-border-strong);
-  text-underline-offset: 3px;
-  width: max-content;
 }
-.preorder-track-steps summary:hover {
+.po-card form {
+  margin: 0;
+}
+/* Outline: one gold fill per screen, and this page has none. */
+.po-card-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  margin-top: var(--sp-2);
+  padding: 0 var(--sp-4);
+  border: 1px solid var(--color-gold);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--color-gold-text);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.po-card-cta:hover {
+  background: var(--color-gold-soft);
+}
+html.light .po-card-cta {
   color: var(--color-text);
 }
-.preorder-page .preorder-ladder {
-  display: table;
-  margin-top: var(--sp-2);
-  border-collapse: collapse;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
+.po-card-cta:disabled {
+  border-color: var(--color-border);
+  color: var(--color-text-dim);
+  cursor: not-allowed;
 }
-.preorder-page .preorder-ladder th,
-.preorder-page .preorder-ladder td {
-  padding: 2px 0;
-  text-align: left;
-  font-weight: 400;
-  white-space: nowrap;
+@media (max-width: 42em) {
+  .po-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-5) var(--sp-3);
+  }
 }
-.preorder-page .preorder-ladder th {
-  padding-right: var(--sp-4);
+
+/* Terms: four icons, a label and a value each. */
+.po-terms {
+  list-style: none;
+  margin: 0;
+  padding: var(--sp-5) 0 0;
+  border-top: 1px solid var(--color-border);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--sp-5);
+}
+.po-terms li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--sp-3);
+  align-items: start;
+  font-size: var(--fs-sm);
   color: var(--color-text-muted);
 }
-.preorder-page .preorder-ladder td {
-  color: var(--color-text);
-}
-.preorder-page .preorder-ladder .is-current td {
-  font-weight: 700;
-}
-.preorder-page .preorder-ladder em {
-  font-style: normal;
-  font-weight: 400;
+.po-terms svg {
+  grid-row: span 2;
   color: var(--color-gold-text);
 }
-
-@media (max-width: 42em) {
-  .preorder-page .preorder-tracker {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .preorder-price-steps-row {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .preorder-price-steps-row li + li {
-    border-left: none;
-    border-top: 1px solid var(--color-border);
-  }
-  .preorder-price-steps-row li {
-    grid-template-columns: 1fr auto;
-    align-items: baseline;
-  }
-}
-.preorder-hero .editorial-title {
-  width: auto;
-  max-width: none;
-  white-space: normal;
-  text-wrap: balance;
-}
-.preorder-page .preorder-track > form,
-.preorder-page .preorder-track > button {
-  grid-column: auto;
-}
-.preorder-track-foot {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--sp-3);
-  margin-top: var(--sp-1, 4px);
-}
-.preorder-track-foot .preorder-track-steps {
-  padding-top: 0.55rem;
-}
-.preorder-track-foot .preorder-track-cta {
-  min-width: 0;
-  flex: 0 0 auto;
-}
-
-/* Dutch and French summaries: closed until asked for. */
-.preorder-langs {
-  display: grid;
-  gap: var(--sp-2);
-}
-.preorder-lang {
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-md);
-  background: var(--color-bg-card);
-  padding: 0 var(--sp-4);
-}
-.preorder-lang-title {
-  cursor: pointer;
-  padding: var(--sp-3) 0;
+.po-terms strong {
   font-weight: 600;
   color: var(--color-text);
 }
-.preorder-lang[open] {
-  padding-bottom: var(--sp-3);
+@media (max-width: 60em) {
+  .po-terms {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
+/* FAQ: one line per question on a hairline, closed. */
+.po-faq {
+  max-width: 44rem;
+}
+.po-faq .po-group-title {
+  margin-bottom: var(--sp-3);
+}
+.po-faq-item {
+  border-top: 1px solid var(--color-border);
+}
+.po-faq-item:last-child {
+  border-bottom: 1px solid var(--color-border);
+}
+.po-faq-item summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  min-height: 44px;
+  padding: var(--sp-2) 0;
+  cursor: pointer;
+  list-style: none;
+  color: var(--color-text);
+}
+.po-faq-item summary::-webkit-details-marker {
+  display: none;
+}
+.po-faq-item summary::after {
+  content: '+';
+  font-family: var(--font-mono);
+  color: var(--color-text-muted);
+}
+.po-faq-item[open] summary::after {
+  content: '\2212';
+}
+.po-faq-item p {
+  margin: 0;
+  padding: 0 0 var(--sp-3);
+  color: var(--color-text-muted);
+}
+.po-faq-item a {
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Updates: date and text, one row each. */
+.po-updates ol {
+  list-style: none;
+  margin: var(--sp-3) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-2);
+}
+.po-updates li {
+  display: grid;
+  grid-template-columns: 7.5em minmax(0, 1fr);
+  gap: var(--sp-3);
+  color: var(--color-text-muted);
+}
+.po-updates time {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+}
 /* ============================================
    Home: promo line, load bar, stage offset
    ============================================ */
@@ -767,62 +930,7 @@
   transition-delay: var(--rv-d, 0ms);
 }
 
-/* ============================================
-   /preorder: the short version and anchors
-   ============================================ */
-.preorder-short {
-  margin-top: var(--sp-5, 24px);
-  padding: 16px 18px;
-  border: 1px solid var(--color-border);
-  border-left: 3px solid var(--color-gold-fill);
-  border-radius: var(--r-md);
-  background: var(--color-bg-card);
-  max-width: 62ch;
-}
-.preorder-short-title {
-  margin: 0 0 8px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-.preorder-short-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 8px;
-}
-.preorder-short-list li {
-  position: relative;
-  padding-left: 18px;
-  font-size: 15px;
-  line-height: 1.5;
-  color: var(--color-text-muted);
-}
-.preorder-short-list li::before {
-  content: '';
-  position: absolute;
-  left: 2px;
-  top: 0.62em;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--color-gold-fill);
-}
-.preorder-short-list strong {
-  font-weight: 600;
-  color: var(--color-text);
-}
-.preorder-hero-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: var(--sp-5, 24px);
-}
-/* In-page targets (#gift, #nl, #fr, #tracker) land below the header pill. */
+/* /preorder in-page targets (#stack, #targets, #questions) land below the header pill. */
 .preorder-page [id] {
   scroll-margin-top: calc(var(--header-height) + 2rem);
 }

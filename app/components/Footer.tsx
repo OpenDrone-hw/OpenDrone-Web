@@ -250,11 +250,6 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
             </nav>
           </FooterGroup>
             <LegalLanguages className="footer-small mt-4 text-[var(--color-text-muted)]" />
-            <Txt
-              id="chrome.footer_order_help"
-              as="p"
-              className="footer-small mt-2 text-[var(--color-text-muted)] [&_a]:underline [&_a]:underline-offset-2"
-            />
           </div>
         </div>
 

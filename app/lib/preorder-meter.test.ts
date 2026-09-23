@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import {campaignState, priceLadder, type CampaignBatch} from './preorder-campaign.ts';
-import {barPercent, ladderText, meterView} from './preorder-meter.ts';
+import {barPercent, ladderText, meterView, stepBarView} from './preorder-meter.ts';
 
 const PENDING =
   'ships about 10 weeks after its target is reached: by 11 March 2027 if the target is reached by 31 December 2026, otherwise you choose a refund or to wait';
@@ -10,13 +10,39 @@ const FRAME: CampaignBatch[] = [{units: 250}, {units: 1000}];
 const TIERS = [{upTo: 100, off: 0.2}, {upTo: 250, off: 0.1}];
 const none = () => undefined;
 
+describe('stepBarView', () => {
+  const ENDS = TIERS.map((t) => t.upTo);
+
+  it('counts paid stock sold out of batch 1, ticked at the step end inside it', () => {
+    const bar = stepBarView(campaignState(STACK, 37, PENDING, TIERS), ENDS);
+    assert.deepEqual(bar, {value: 37, max: 250, ticks: [100], funded: false, label: '37 / 250'});
+  });
+
+  it('shows an empty target as 0 of its size, both step ends inside a 1000 target', () => {
+    const bar = stepBarView(campaignState([{units: 1000}, {units: 4000}], 0, PENDING, TIERS), ENDS);
+    assert.equal(bar.label, '0 / 1000');
+    assert.deepEqual(bar.ticks, [100, 250]);
+  });
+
+  it('fills a reached target', () => {
+    const bar = stepBarView(campaignState(FRAME, 300, PENDING, TIERS), ENDS);
+    assert.equal(bar.funded, true);
+    assert.equal(bar.value, bar.max);
+  });
+
+  it('drops the ticks once the bar counts a later batch', () => {
+    const bar = stepBarView(campaignState(STACK, 260, PENDING, TIERS), ENDS);
+    assert.equal(bar.label, '10 / 250');
+    assert.deepEqual(bar.ticks, []);
+  });
+});
+
 describe('meterView', () => {
   it('shows paid stock as units left, with the price after batch 1', () => {
     const view = meterView(campaignState(STACK, 107, PENDING, TIERS), none, '€55.00');
     assert.equal(view.headline, 'Batch 1 is paid for and in production · 143 of 250 left');
     assert.equal(view.early, 'Preorder price for the first 250 · 143 left, then €55.00');
     assert.equal(view.bar, null);
-    assert.equal(view.count, '143 left');
     assert.equal(view.stretch, null);
   });
 
@@ -25,7 +51,6 @@ describe('meterView', () => {
     assert.equal(view.headline, '187 of 250 ordered toward the funding target');
     assert.equal(view.early, 'Preorder price for the first 250 · 63 left, then €99.00');
     assert.equal(barPercent(view.bar!), 75);
-    assert.equal(view.count, '187 / 250');
   });
 
   it('leads with the target and deadline, and draws no bar, before the first order', () => {
@@ -35,7 +60,6 @@ describe('meterView', () => {
     assert.equal(view.bar, null);
     assert.equal(view.state, 'open');
     assert.equal(view.reached, false);
-    assert.equal(view.count, 'Target: 1000 units');
     assert.equal(
       meterView(campaignState(FRAME, 0, PENDING, TIERS), none).headline,
       'Funding target: 250 units. Orders so far: 0',

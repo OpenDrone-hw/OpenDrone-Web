@@ -23,8 +23,6 @@ export type MeterView = {
   bar: MeterBar | null;
   /** The funding target is reached: the bar reads as done. */
   reached: boolean;
-  /** Short count for a compact row: "187 / 250", "143 left". */
-  count: string;
   /** After the target: the next batch filling, as a second, thinner bar. */
   stretch: MeterBar | null;
   /** "Preorder price for the first 100 · 43 left, then €X", when it applies. */
@@ -67,7 +65,6 @@ export function meterView(
       }),
       bar: null,
       reached: false,
-      count: t('meter_paid_count', '{left} left', {left}),
       stretch: null,
       early,
     };
@@ -90,7 +87,6 @@ export function meterView(
           }),
       bar: null,
       reached: false,
-      count: t('meter_target_zero_count', 'Target: {target} units', {target: state.target}),
       stretch: null,
       early,
     };
@@ -112,7 +108,6 @@ export function meterView(
         }),
       },
       reached: false,
-      count: `${state.targetOrdered} / ${state.target}`,
       stretch: null,
       early,
     };
@@ -133,7 +128,6 @@ export function meterView(
       }),
     },
     reached: true,
-    count: t('meter_reached_count', '{ordered} ordered', {ordered: state.ordered}),
     stretch: {
       value: state.batchOrdered,
       max: state.batchUnits,
@@ -144,6 +138,29 @@ export function meterView(
       }),
     },
     early,
+  };
+}
+
+/**
+ * The step bar of one SKU: units sold against the current batch (paid
+ * stock) or funding target, "37 / 250", with a tick at each price-step end
+ * that falls inside the bar. Ticks only while the bar counts from unit 1:
+ * a later batch starts past the price steps.
+ */
+export type StepBarView = {value: number; max: number; ticks: number[]; funded: boolean; label: string};
+
+export function stepBarView(state: CampaignState, stepEnds: number[]): StepBarView {
+  const funded = !state.paidStock && state.targetReached;
+  const max = state.paidStock ? state.batchUnits : (state.target ?? state.batchUnits);
+  const counted = state.paidStock ? state.batchOrdered : state.targetOrdered;
+  const offset = Math.max(0, state.ordered - counted);
+  const value = funded ? max : Math.min(max, Math.max(0, counted));
+  return {
+    value,
+    max,
+    ticks: stepEnds.map((end) => end - offset).filter((end) => end > 0 && end < max),
+    funded,
+    label: `${value} / ${max}`,
   };
 }
 

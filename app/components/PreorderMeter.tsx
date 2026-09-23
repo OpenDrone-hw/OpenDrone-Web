@@ -3,7 +3,7 @@ import {copyText} from '~/lib/copy';
 import {formatPrice} from '~/lib/catalog';
 import type {CampaignState} from '~/lib/preorder-campaign';
 import type {MoneyV2} from '~/lib/product-shapes';
-import {barPercent, meterView, type MeterBar} from '~/lib/preorder-meter';
+import {barPercent, meterView, type MeterBar, type StepBarView} from '~/lib/preorder-meter';
 
 /**
  * The preorder campaign meter for one SKU: paid stock left, or progress to
@@ -11,12 +11,12 @@ import {barPercent, meterView, type MeterBar} from '~/lib/preorder-meter';
  * `content/copy/preorder.json`; the numbers are computed server-side in the
  * catalog client, so the server render and hydration agree.
  *
- * `compact` is the tracker row: bar and short count only.
+ * `StepBar` below is the short form: units sold as one bar with the
+ * price-step ends ticked, "37 / 250".
  */
 export function PreorderMeter({
   campaign,
   priceAfter,
-  compact = false,
   showEarly = true,
   showBatchPromise = true,
   showBatches = true,
@@ -25,7 +25,6 @@ export function PreorderMeter({
   campaign: CampaignState;
   /** Shopify's compare-at price: the price once the target is reached. */
   priceAfter?: MoneyV2 | null;
-  compact?: boolean;
   /** The "preorder price for the first N" line. The product page turns it
    *  off where it shows the whole price ladder instead. */
   showEarly?: boolean;
@@ -47,7 +46,6 @@ export function PreorderMeter({
   );
   const state = view.reached ? 'funded' : view.bar ? 'open' : 'stock';
   if (
-    !compact &&
     zeroLabel &&
     !view.reached &&
     !campaign.paidStock &&
@@ -59,14 +57,6 @@ export function PreorderMeter({
         <Link className="funding-meter-link" prefetch="intent" to="/preorder">
           {copyText('preorder.meter_link') ?? 'How preorders work'}
         </Link>
-      </div>
-    );
-  }
-  if (compact) {
-    return (
-      <div className="funding-meter is-compact" data-funding-state={state}>
-        {view.bar ? <Bar bar={view.bar} /> : null}
-        <span className="funding-meter-label">{view.bar ? view.bar.label : view.count}</span>
       </div>
     );
   }
@@ -129,5 +119,52 @@ function Bar({bar, thin = false}: {bar: MeterBar; thin?: boolean}) {
         style={{width: `${pct}%`}}
       />
     </span>
+  );
+}
+
+/**
+ * Units sold as one bar: the fill is units sold, a tick marks each price-step
+ * end inside the bar, the label is "37 / 250" (or `fundedLabel` once a
+ * target is reached). `prices` is the step price row above the bar, the
+ * current step marked.
+ */
+export function StepBar({
+  bar,
+  prices = [],
+  fundedLabel,
+}: {
+  bar: StepBarView;
+  prices?: Array<{key: string | number; text: string; current: boolean}>;
+  fundedLabel?: string;
+}) {
+  const pct = barPercent(bar);
+  const label = bar.funded && fundedLabel ? fundedLabel : bar.label;
+  return (
+    <div className="step-bar" data-funded={bar.funded ? '' : undefined}>
+      {prices.length > 1 ? (
+        <ol className="step-bar-prices">
+          {prices.map((p) => (
+            <li key={p.key} aria-current={p.current ? 'true' : undefined}>
+              {p.text}
+            </li>
+          ))}
+        </ol>
+      ) : null}
+      <span
+        className="step-bar-track"
+        role="progressbar"
+        aria-label={label}
+        aria-valuemin={0}
+        aria-valuemax={bar.max}
+        aria-valuenow={bar.value}
+        aria-valuetext={label}
+      >
+        <span className="step-bar-fill" style={{width: `${pct}%`}} />
+        {bar.ticks.map((tick) => (
+          <span key={tick} className="step-bar-tick" style={{left: `${(tick / bar.max) * 100}%`}} />
+        ))}
+      </span>
+      <span className="step-bar-label">{label}</span>
+    </div>
   );
 }

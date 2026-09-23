@@ -17826,19 +17826,70 @@ a.hp-label:focus-visible .hp-label-name {
   color: var(--color-gold-text-hover);
   border-bottom-color: var(--color-gold-hover);
 }
-.funding-meter.is-compact {
-  gap: var(--sp-1);
-}
-.funding-meter.is-compact .funding-meter-track {
-  height: 4px;
-}
 .buy-rail.is-pinned .funding-meter {
   display: none;
+}
+/* StepBar: units sold as one bar, a tick at each price-step end, the step
+   prices above it with the current one in ink. */
+.step-bar {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+}
+.step-bar-prices {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--color-text-dim);
+}
+.step-bar-prices li + li::before {
+  content: '\00b7';
+  padding: 0 0.5em;
+  color: var(--color-text-dim);
+}
+.step-bar-prices li[aria-current] {
+  color: var(--color-text);
+  font-weight: 600;
+}
+.step-bar-track {
+  position: relative;
+  display: block;
+  height: 6px;
+  border-radius: var(--r-2xs);
+  background: color-mix(in srgb, var(--color-border-strong) 70%, transparent);
+}
+.step-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-gold);
+}
+.step-bar[data-funded] .step-bar-fill {
+  background: var(--color-stock);
+}
+.step-bar-tick {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--color-text-muted);
+}
+.step-bar-label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+}
+.step-bar[data-funded] .step-bar-label {
+  color: var(--color-stock);
 }
 /* Light theme: gold text is a brand accent only there (see html.light), so
    the preorder words go to ink and the gold stays on dots and bars. */
 html.light .product-buy-stock.is-preorder,
-html.light .preorder-track-ship,
 html.light .funding-meter-link,
 html.light .cart-sheet-item .cart-line-preorder {
   color: var(--color-text);
@@ -17860,8 +17911,7 @@ html.light .funding-meter-link {
 .cart-sheet-item .cart-line-preorder {
   color: var(--color-gold-text);
 }
-.cart-line-noimage,
-.preorder-track-initial {
+.cart-line-noimage {
   display: grid;
   place-items: center;
   width: 56px;
@@ -17872,10 +17922,6 @@ html.light .funding-meter-link {
   font-family: var(--font-mono);
   font-size: var(--fs-md);
   color: var(--color-text-dim);
-}
-.preorder-track-initial {
-  width: 100%;
-  height: 100%;
 }
 .cart-mixed-warning {
   max-width: 72ch;
@@ -17910,225 +17956,7 @@ html.light .funding-meter-link {
   }
 }
 
-/* ═══ /preorder: the campaign page ═══════════════════════════════════════
-   Summary strip in the hero, one card per SKU goal in the tracker, native
-   <details> questions and dated updates. Everything sits inside the
-   editorial reading column and borrows its measure and section rhythm. */
-.preorder-page :is(#tracker, #questions, #updates) {
-  scroll-margin-top: 5rem;
-}
-.preorder-empty {
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  letter-spacing: 0.06em;
-  color: var(--color-text-muted);
-}
-.preorder-strip {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--sp-3);
-  margin: var(--sp-5) 0 0;
-  padding: var(--sp-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-md);
-  background: var(--color-bg-card);
-}
-@media (min-width: 34em) {
-  .preorder-strip {
-    grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
-  }
-}
-.preorder-strip-cell {
-  display: grid;
-  gap: var(--sp-1);
-  min-width: 0;
-}
-.preorder-strip-label {
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-.preorder-strip-value {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: var(--fs-md);
-  font-weight: 700;
-  color: var(--color-text);
-}
-.preorder-tracker {
-  list-style: none;
-  margin: var(--sp-5) 0 0;
-  padding: 0;
-  display: grid;
-  gap: var(--sp-3);
-}
-.preorder-track {
-  display: grid;
-  grid-template-columns: 4.5rem minmax(0, 1fr) auto;
-  gap: var(--sp-4);
-  align-items: center;
-  padding: var(--sp-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-md);
-  background: var(--color-bg-card);
-}
-.preorder-track-media {
-  display: block;
-  aspect-ratio: 1 / 1;
-  border-radius: var(--r-sm);
-  overflow: hidden;
-  background: var(--color-bg-elevated);
-}
-.preorder-track-media img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.preorder-track-body {
-  display: grid;
-  gap: var(--sp-2);
-  min-width: 0;
-}
-.preorder-track-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: var(--sp-3);
-}
-.preorder-track-title {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: var(--fs-md);
-  font-weight: 700;
-  line-height: 1.2;
-}
-.preorder-track-title a {
-  color: var(--color-text);
-  text-decoration: none;
-}
-.preorder-track-title a:hover {
-  color: var(--color-gold-text);
-}
-.preorder-track-title span {
-  color: var(--color-text-muted);
-  font-weight: 500;
-}
-.preorder-track-price {
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  color: var(--color-text);
-  white-space: nowrap;
-}
-.preorder-track-ship {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  color: var(--color-gold-text);
-}
-/* Outline, sentence case: twelve solid gold pills read as a wall. */
-.preorder-track-cta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 7.5rem;
-  min-height: 40px;
-  padding: 0 var(--sp-4);
-  border: 1px solid var(--color-gold);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--color-gold-text);
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 150ms ease, color 150ms ease;
-}
-.preorder-track-cta:hover {
-  background: var(--color-gold-fill);
-  color: var(--color-on-accent);
-}
-html.light .preorder-track-cta {
-  color: var(--color-text);
-}
-html.light .preorder-track-cta:hover {
-  color: var(--color-on-accent);
-}
-.preorder-track-cta:disabled {
-  border-color: var(--color-border);
-  color: var(--color-text-dim);
-  cursor: not-allowed;
-}
-.preorder-track form {
-  margin: 0;
-}
-@media (max-width: 42em) {
-  .preorder-track {
-    grid-template-columns: 4rem minmax(0, 1fr);
-  }
-  .preorder-track > form,
-  .preorder-track > button {
-    grid-column: 2;
-    justify-self: start;
-  }
-}
-html.light .preorder-track-media img {
-  mix-blend-mode: multiply;
-}
-.preorder-faq {
-  display: grid;
-  gap: var(--sp-2);
-  margin-top: var(--sp-4);
-}
-.preorder-faq-item {
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-sm);
-  background: var(--color-bg-card);
-}
-.preorder-faq-q {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-3);
-  min-height: 44px;
-  padding: var(--sp-3) var(--sp-4);
-  cursor: pointer;
-  font-size: 1rem;
-  color: var(--color-text);
-  list-style: none;
-}
-.preorder-faq-q::-webkit-details-marker {
-  display: none;
-}
-.preorder-faq-q::after {
-  content: '+';
-  font-family: var(--font-mono);
-  color: var(--color-gold-text);
-  transition: transform 0.2s ease;
-}
-.preorder-faq-item[open] .preorder-faq-q::after {
-  transform: rotate(45deg);
-}
-.preorder-faq-a {
-  margin: 0;
-  padding: 0 var(--sp-4) var(--sp-4);
-  color: var(--color-text-muted);
-}
-.preorder-updates {
-  list-style: none;
-  margin: var(--sp-4) 0 0;
-  padding: 0;
-  display: grid;
-  gap: var(--sp-4);
-}
-.preorder-update {
-  padding-left: var(--sp-4);
-  border-left: 2px solid color-mix(in srgb, var(--color-gold) 45%, transparent);
-  color: var(--color-text-muted);
-}
 @media (prefers-reduced-motion: reduce) {
-  .preorder-faq-q::after,
   .funding-meter-fill {
     transition: none;
   }
@@ -18441,13 +18269,6 @@ html.light .cart-added-continue {
   }
 }
 
-.preorder-track-price em {
-  display: block;
-  font-style: normal;
-  font-size: var(--fs-xs);
-  color: var(--color-text-dim);
-  text-align: right;
-}
 
 .cart-added-replaces {
   font-size: var(--fs-xs);
@@ -18542,20 +18363,6 @@ html.light .cart-added-continue {
   opacity: 0.7;
 }
 
-.preorder-updated {
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs, 0.75rem);
-  color: var(--color-text-muted);
-}
-.preorder-update {
-  display: grid;
-  grid-template-columns: 7.5em 1fr;
-  gap: 0.75rem;
-}
-.preorder-update time {
-  font-family: var(--font-mono);
-  color: var(--color-text-muted);
-}
 
 /* Side-by-side variant comparison under the spec table: only the rows that
    differ. Scrolls sideways on phones instead of squeezing columns. */
@@ -18712,86 +18519,6 @@ html.light .cart-added-continue {
   max-width: min(92vw, 44rem);
 }
 
-/* /preorder: the model in four steps.                                   */
-.preorder-steps {
-  list-style: none;
-  margin: var(--sp-5, 24px) 0 0;
-  padding: 0;
-  display: grid;
-  gap: var(--sp-3, 12px);
-  grid-template-columns: minmax(0, 1fr);
-}
-@media (min-width: 48em) {
-  .preorder-steps {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-.preorder-step {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  column-gap: var(--sp-3, 12px);
-  row-gap: var(--sp-2, 8px);
-  align-content: start;
-  padding: var(--sp-4, 16px);
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-md, 12px);
-  background: var(--color-bg-card);
-}
-.preorder-step-n {
-  grid-row: span 2;
-  display: grid;
-  place-items: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 999px;
-  border: 1px solid var(--color-gold);
-  font-family: var(--font-mono);
-  font-weight: 700;
-  color: var(--color-gold-text);
-}
-.preorder-step-title {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: var(--fs-md, 1.05rem);
-  font-weight: 700;
-  line-height: 1.25;
-}
-.preorder-step-body {
-  margin: 0;
-  color: var(--color-text-muted);
-}
-
-/* /preorder tracker: the price ladder of one product option, plain text. */
-.preorder-ladder {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 14px;
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs, 0.75rem);
-  color: var(--color-text-muted);
-}
-.preorder-ladder-label {
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-.preorder-ladder-step {
-  white-space: nowrap;
-  color: var(--color-text);
-}
-.preorder-ladder-step span {
-  color: var(--color-text-muted);
-}
-.preorder-ladder-step em {
-  margin-left: 4px;
-  font-style: normal;
-  color: var(--color-gold-text);
-}
-.preorder-ladder-step.is-current {
-  font-weight: 700;
-}
-
 /* /support: the help page.                                              */
 .support-page {
   max-width: 52rem;
@@ -18850,10 +18577,6 @@ html.light .cart-added-continue {
 .support-topic-desc {
   font-size: var(--fs-sm, 0.875rem);
   color: var(--color-text-muted);
-}
-/* A strip with one figure spans the row instead of squeezing into half. */
-.preorder-strip-cell:only-child {
-  grid-column: 1 / -1;
 }
 
 /* ============================================

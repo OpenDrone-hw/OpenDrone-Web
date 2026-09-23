@@ -260,7 +260,7 @@ describe('openmotor 5-inch variant', () => {
   it('never names the 5" motor 2207 in a cart line name or note', () => {
     assert.equal(lineDisplayName('openmotor', 'OpenMotor', '2207'), 'OpenMotor 5"');
     assert.equal(lineDisplayName('openesc', 'OpenESC', 'Default Title'), 'OpenESC');
-    assert.ok(!/2207/.test(variantCartNote('openmotor', '2207') ?? '2207'));
+    assert.equal(variantCartNote('openmotor', '2207'), null);
     assert.equal(variantCartNote('openmotor', '1604'), null);
   });
 });
