@@ -30,6 +30,8 @@ export type CampaignBatch = {
   /** The ship promise once the supplier order is placed, e.g.
    *  "ships late October 2026". Required for paid stock. */
   ships?: string;
+  /** Reviewed final customer delivery date, separate from dispatch. Null keeps the launch preflight closed. */
+  deliveryBy?: string | null;
 };
 
 export type PriceTier = {
@@ -38,6 +40,12 @@ export type PriceTier = {
   /** Share off the retail price, 0.2 for 20% off. */
   off: number;
 };
+
+/** One promise flows to product pages, cart lines and order confirmations. */
+function batchPromise(batch: CampaignBatch, fallback: string): string {
+  const dispatch = batch.ships?.trim() || fallback;
+  return batch.deliveryBy ? `${dispatch}; delivery by ${batch.deliveryBy}` : dispatch;
+}
 
 export type CampaignConfig = {
   /** First day whose paid Shopify orders count, YYYY-MM-DD. */
@@ -188,6 +196,12 @@ export function parseCampaignConfig(body: unknown): CampaignConfig {
       if (batch.paid && !batch.ships?.trim()) {
         throw new Error(`preorders: ${sku} paid batch needs a ship promise`);
       }
+      if (batch.deliveryBy != null && (
+        typeof batch.deliveryBy !== 'string' ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(batch.deliveryBy) ||
+        !Number.isFinite(Date.parse(batch.deliveryBy)) ||
+        new Date(batch.deliveryBy).toISOString().slice(0, 10) !== batch.deliveryBy
+      )) throw new Error(`preorders: ${sku} deliveryBy must be a calendar date`);
     }
     if (entry.priceTiers !== undefined) checkTiers(entry.priceTiers, `${sku} priceTiers`);
   }
@@ -388,7 +402,7 @@ export function campaignState(
     target,
     targetOrdered,
     targetReached,
-    shipPromise: current.ships?.trim() || pendingShips,
+    shipPromise: batchPromise(current, pendingShips),
     shipsOnTarget: !current.ships?.trim(),
     paidLeft: current.paid ? current.units - (units - start) : null,
     earlyPrice: tier !== null,
@@ -401,7 +415,7 @@ export function campaignState(
       batch: i + 1,
       units: b.units,
       status: i < index ? 'sold_out' : i === index ? 'current' : 'next',
-      shipPromise: b.ships?.trim() || pendingShips,
+      shipPromise: batchPromise(b, pendingShips),
     })),
   };
 }
@@ -443,7 +457,7 @@ function pinnedBatchState(
   pendingShips: string,
 ): CampaignState {
   const entry = batches[batch - 1];
-  const promise = entry.ships?.trim() || pendingShips;
+  const promise = batchPromise(entry, pendingShips);
   return {
     ordered: 0,
     batch,

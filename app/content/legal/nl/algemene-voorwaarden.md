@@ -75,13 +75,13 @@
 
 7.3. Het risico van beschadiging en/of vermissing van producten berust tot het moment van bezorging aan de consument bij Incutec BV.
 
-7.4. Incutec BV verkoopt aan consumenten met een leveradres in een lidstaat van de Europese Unie. Bestellingen worden met bpost verzonden, tegen het vaste tarief voor de bestemming dat op de verzendpagina (opendrone.be/shipping) vermeld staat en aan de checkout wordt getoond.
+7.4. Levering aan consumenten is beperkt tot goedgekeurde EU-bestemmingen. De beschikbare bezorgdienst en de volledige bezorgkosten worden vóór de betaling getoond.
 
 ### Artikel 7bis: Voorverkoop
 
 7bis.1. Sommige producten worden verkocht als voorverkoop (pre-order). Zij worden als dusdanig vermeld, met hun verzenddatum, op de productpagina, aan de checkout en op de orderbevestiging. De consument betaalt de volledige prijs en de verzendkosten die aan de checkout worden getoond bij het plaatsen van de bestelling.
 
-7bis.2. Voorverkoopproducten worden in batches geproduceerd. De flight controller en de ESC uit de eerste batch worden eind oktober 2026 verzonden. Elk ander voorverkoopproduct heeft een financieringsdoel, vermeld op de productpagina, en wordt ongeveer 10 weken na het bereiken van dat doel verzonden. Elk financieringsdoel heeft een deadline op 31 december 2026. Wordt het financieringsdoel uiterlijk op 31 december 2026 bereikt, dan is de verzending van het product gepland tegen 11 maart 2027. Is het product op 11 maart 2027 nog niet verzonden, dan kan de consument de overeenkomst voor dat artikel ontbinden, met terugbetaling van alle daarvoor betaalde bedragen binnen 14 dagen. De verzenddatum die bij het plaatsen van de bestelling voor een artikel wordt vermeld, is de tussen de consument en Incutec BV overeengekomen leveringstermijn in de zin van Art. VI.43 WER, zodat de standaardtermijn van 30 dagen uit Artikel 7.1 niet geldt voor voorverkoopartikelen.
+7bis.2. Pre-orderproducten worden in batches geproduceerd. Het aanbod en de orderbevestiging vermelden de batch, het eventuele financieringsdoel en de deadline, de geplande verzending en de afzonderlijk overeengekomen uiterste leverdatum. Verzending is geen levering. De voor de betaling meegedeelde leveringstermijn geldt overeenkomstig Art. VI.43 WER; zonder uitdrukkelijk overeengekomen afwijkende termijn geldt de standaardtermijn van 30 dagen uit Art. 7.1.
 
 7bis.3. Indien een verzenddatum verschuift, brengt Incutec BV de consument daarvan per e-mail op de hoogte en vermeldt zij de nieuwe datum. Dit doet geen afbreuk aan de rechten van de consument uit Art. VI.43 §2 WER.
 

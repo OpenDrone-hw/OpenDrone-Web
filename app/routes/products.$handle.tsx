@@ -1639,7 +1639,7 @@ function ProductPage() {
     : null;
   // Consumers buy direct only in the open EU countries. Elsewhere (unless
   // blocked) the buy button is a status line (AddToCartButton): outside the
-  // EU "Available through shops" with a link to the trade page, in an EU
+  // EU "EU consumer orders only" with a link to the trade page, in an EU
   // country not open yet "Opening in <country> soon"; both with the
   // launch-news signup instead of the ship date.
   const notDirect = notSoldDirect(rootData?.visitorCountry ?? null);
@@ -1759,7 +1759,7 @@ function ProductPage() {
           {notDirect === 'shops' ? (
             <p className="product-buy-ship">
               <Link prefetch="intent" to="/wholesale" className="product-buy-terms-link">
-                {say('product-chrome.buy_shops_trade', 'Are you a shop?')}
+                {say('product-chrome.buy_shops_trade', 'EU or US retailer enquiries')}
               </Link>
             </p>
           ) : null}

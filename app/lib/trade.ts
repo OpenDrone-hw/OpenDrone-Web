@@ -1,6 +1,6 @@
 /**
  * Trade orders: a shop asks for a quote through /wholesale instead of using
- * the consumer checkout; an accepted quote becomes a proforma invoice. This
+ * the consumer checkout. A request is not an accepted order. This
  * module holds what the page quotes, the request validation, the email to
  * the shop inbox and the lead times read from `content/preorders.json`.
  *
@@ -73,11 +73,10 @@ export function isTradeSku(sku: string): boolean {
 /** True when the SKU is on the list and quoted to a shop in this country. */
 export function tradeSkuAvailable(sku: string, countryCode: string): boolean {
   const entry = TRADE_SKU_MAP.get(sku);
-  return Boolean(entry && !entry.notFor?.includes(countryCode));
+  return Boolean(tradeCountry(countryCode) && entry && !entry.notFor?.includes(countryCode));
 }
 
-/** Countries a trade order ships to: the EU27, the United Kingdom,
- *  Switzerland, Norway and the United States. `vatPrefix` is the VIES
+/** Countries eligible for retailer enquiries: the EU27 and United States. `vatPrefix` is the VIES
  *  prefix (EL for Greece), null outside the EU. */
 export type TradeCountry = {code: string; name: string; vatPrefix: string | null};
 
@@ -93,7 +92,7 @@ const EU_TRADE: ReadonlyArray<[string, string]> = [
 
 export const TRADE_COUNTRIES: readonly TradeCountry[] = [
   ...EU_TRADE.map(([code, name]) => ({code, name, vatPrefix: code === 'GR' ? 'EL' : code})),
-  ...[['NO', 'Norway'], ['CH', 'Switzerland'], ['GB', 'United Kingdom'], ['US', 'United States']].map(
+  ...[['US', 'United States']].map(
     ([code, name]) => ({code, name, vatPrefix: null}),
   ),
 ];
@@ -305,9 +304,9 @@ export function validateTradeRequest(
 
 /** VAT treatment the quote starts from, by destination. */
 export function vatTreatment(country: TradeCountry): string {
-  if (!country.vatPrefix) return 'Export outside the EU: no Belgian VAT (art. 39 WBTW). Shop is the importer.';
+  if (!country.vatPrefix) return 'US export enquiry: verify export evidence and VAT treatment. Agree the importer, broker, product eligibility and duties before accepting an order.';
   if (country.code === 'BE') return 'Domestic sale: Belgian VAT 21%.';
-  return 'Intra-Community supply: exempt (art. 39bis WBTW), check the VAT number in VIES first.';
+  return 'Potential intra-Community exemption: verify VIES and qualifying transport evidence before quoting VAT treatment.';
 }
 
 export function buildTradeEmail(req: TradeRequest): {subject: string; text: string} {

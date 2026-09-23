@@ -126,26 +126,14 @@ describe('validateTradeRequest', () => {
     ]);
   });
 
-  it('ships to the EU27, the United Kingdom, Switzerland, Norway and the US', () => {
-    assert.equal(TRADE_COUNTRIES.length, 31);
+  it('accepts retailer enquiries only for the EU27 and the US', () => {
+    assert.equal(TRADE_COUNTRIES.length, 28);
     assert.equal(TRADE_COUNTRIES.filter((c) => c.vatPrefix).length, 27);
-    for (const country of ['GB', 'CH', 'RU', 'CN', 'JP', '']) {
+    for (const country of ['GB', 'CH', 'NO', 'RU', 'CN', 'JP', '']) {
       const r = validateTradeRequest(form({...US_SHOP, country}));
-      if (['GB', 'CH'].includes(country)) continue;
       assert.equal(r.ok, false, country);
       if (!r.ok) assert.ok(r.errors.country, country);
     }
-  });
-
-  it('takes a free-text VAT or tax number outside the EU and the US', () => {
-    for (const country of ['GB', 'CH', 'NO']) {
-      const r = validateTradeRequest(form({...US_SHOP, country, taxId: 'GB 123 4567 89'}));
-      assert.equal(r.ok, true, country);
-      if (r.ok) assert.equal(r.request.taxId, 'GB 123 4567 89');
-    }
-    const empty = validateTradeRequest(form({...US_SHOP, country: 'CH', taxId: ' '}));
-    assert.equal(empty.ok, false);
-    if (!empty.ok) assert.match(empty.errors.taxId ?? '', /Switzerland/);
   });
 
   it('bounds the quantity', () => {
@@ -180,7 +168,7 @@ describe('validateTradeRequest', () => {
     for (const sku of ['OPENRX-LITE', 'OPENRX-LITE-UFL', 'OPENRX-MONO', 'OPENRX-GEMINI']) {
       assert.equal(tradeSkuAvailable(sku, 'US'), false, sku);
       assert.equal(tradeSkuAvailable(sku, 'DE'), true, sku);
-      assert.equal(tradeSkuAvailable(sku, 'GB'), true, sku);
+      assert.equal(tradeSkuAvailable(sku, 'GB'), false, sku);
       const us = validateTradeRequest(form({...US_SHOP, sku: [sku], qty: ['10']}));
       assert.equal(us.ok, false, sku);
       if (!us.ok) assert.equal(us.errors.lines, 'Not available for this country');
@@ -228,7 +216,7 @@ describe('buildTradeEmail', () => {
       'Austin TX 78701',
       'Note:',
       '(none)',
-      'no Belgian VAT',
+      'verify export evidence',
       '2026-09-23T10:00:00.000Z',
     ]) {
       assert.ok(text.includes(part), part);
@@ -236,14 +224,12 @@ describe('buildTradeEmail', () => {
   });
 
   it('states the VAT treatment by destination', () => {
-    assert.match(buildTradeEmail(request(EU_SHOP)).text, /VAT:\s+DE123456789[\s\S]*39bis/);
+    assert.match(buildTradeEmail(request(EU_SHOP)).text, /VAT:\s+DE123456789[\s\S]*qualifying transport evidence/);
     assert.match(
       buildTradeEmail(request({...EU_SHOP, country: 'BE', taxId: 'BE0123456789'})).text,
       /Belgian VAT 21%/,
     );
-    const gb = buildTradeEmail(request({...US_SHOP, country: 'GB', taxId: 'GB123456789'})).text;
-    assert.match(gb, /Tax number:\s+GB123456789/);
-    assert.match(gb, /no Belgian VAT/);
+    assert.match(buildTradeEmail(request(US_SHOP)).text, /Agree the importer, broker/);
   });
 
   it('has no em dash', () => {

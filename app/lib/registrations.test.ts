@@ -26,7 +26,8 @@ describe('content/registrations.json', () => {
     for (const [code, entry] of Object.entries(FILE)) {
       if (code.startsWith('$')) continue;
       assert.equal(typeof entry, 'object', code);
-      const {offerNeedsNumber, ...numbers} = entry as CountryRegistrations;
+      const {offerNeedsNumber, saleApproved, ...numbers} = entry as CountryRegistrations;
+      assert.equal(saleApproved, false, code);
       assert.equal(offerNeedsNumber, ['DE', 'FR', 'ES', 'IE'].includes(code), code);
       assert.deepEqual(Object.keys(numbers).sort(), code === 'FR' ? ['idu', 'packaging', 'weee'] : ['packaging', 'weee'], code);
       for (const value of Object.values(numbers)) {
@@ -42,9 +43,9 @@ describe('content/registrations.json', () => {
 
 describe('euSaleOpen', () => {
   const file = (de: string | null, idu: string | null = null): RegistrationsFile => ({
-    DE: {weee: de, packaging: null, offerNeedsNumber: true},
-    FR: {weee: 'FR-WEEE', packaging: null, idu, offerNeedsNumber: true},
-    NL: {weee: null, packaging: null, offerNeedsNumber: false},
+    DE: {weee: de, packaging: null, saleApproved: true, offerNeedsNumber: true},
+    FR: {weee: 'FR-WEEE', packaging: null, idu, saleApproved: true, offerNeedsNumber: true},
+    NL: {weee: null, packaging: null, saleApproved: true, offerNeedsNumber: false},
   });
 
   it('keeps Germany closed with a null WEEE number and opens it once set', () => {
@@ -58,9 +59,17 @@ describe('euSaleOpen', () => {
     assert.equal(euSaleOpen('FR', file(null, 'FR123456_01ABCD')), true);
   });
 
-  it('opens a country with no number duty, and closes one missing from the file', () => {
+  it('opens an approved country with no offer-number requirement, and closes an unknown one', () => {
     assert.equal(euSaleOpen('NL', file(null)), true);
     assert.equal(euSaleOpen('BE', file(null)), false);
+  });
+
+  it('never opens on numbers alone or a false approval', () => {
+    for (const saleApproved of [undefined, false]) {
+      assert.equal(euSaleOpen('DE', {DE: {saleApproved, weee: 'DE123', offerNeedsNumber: true}}), false);
+      assert.equal(euSaleOpen('NL', {NL: {saleApproved, offerNeedsNumber: false}}), false);
+    }
+    for (const country of EU_COUNTRIES) assert.equal(euSaleOpen(country), false, country);
   });
 
   it('lists the numbers set for one country', () => {

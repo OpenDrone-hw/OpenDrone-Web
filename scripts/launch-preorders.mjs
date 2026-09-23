@@ -91,6 +91,30 @@ export function campaignSkus(preorders) {
   return skus;
 }
 
+/** A deploy cannot turn unreviewed destinations or dispatch estimates into promises. */
+export function checkLaunchReadiness(preorders, registrations) {
+  const problems = [];
+  const approved = Object.entries(registrations).filter(([code, entry]) =>
+    /^[A-Z]{2}$/.test(code) && entry?.saleApproved === true,
+  );
+  if (!approved.length) problems.push('No consumer destination has reviewed sale approval.');
+  for (const [code, entry] of approved) {
+    if (entry.offerNeedsNumber && !entry[code === 'FR' ? 'idu' : 'weee']?.trim()) {
+      problems.push(`${code}: required offer number is missing.`);
+    }
+  }
+  for (const [sku, entry] of Object.entries(preorders.skus ?? {})) {
+    for (const [index, batch] of (entry.batches ?? []).entries()) {
+      const date = batch.deliveryBy;
+      if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+          !Number.isFinite(Date.parse(date)) || new Date(date).toISOString().slice(0, 10) !== date) {
+        problems.push(`${sku} batch ${index + 1}: reviewed final delivery date is missing or invalid.`);
+      }
+    }
+  }
+  return problems;
+}
+
 /** The SKUs that ship with a campaign SKU (shipsWith), in file order. */
 export function shipsWithSkus(preorders) {
   return Object.keys(preorders?.shipsWith ?? {});
@@ -452,7 +476,8 @@ async function main() {
   for (const [id, text] of plan({pr: opts.pr, skus, flat})) console.log(`  [${id}] ${text}`);
   console.log('');
 
-  const pre = await preflight(opts);
+  const registrations = JSON.parse(fs.readFileSync(path.join(ROOT, 'content/registrations.json'), 'utf8'));
+  const pre = [...checkLaunchReadiness(preorders, registrations), ...await preflight(opts)];
   for (const p of pre) console.log(`preflight: ${p}`);
   if (!pre.length) console.log('preflight: ok');
   // A warning, not a blocker: placeholder specs render as normal values.

@@ -21,7 +21,7 @@ import {
 } from './shipping-rates.ts';
 
 /** Every EU country open: the rate table alone, without the sale gate. */
-const ALL_OPEN = Object.fromEntries([...EU_COUNTRIES].map((c) => [c, {offerNeedsNumber: false}]));
+const ALL_OPEN = Object.fromEntries([...EU_COUNTRIES].map((c) => [c, {saleApproved: true, offerNeedsNumber: false}]));
 
 describe('shippingQuote', () => {
   const rate = (c: string) => {
@@ -50,8 +50,8 @@ describe('shippingQuote', () => {
 
   it('keeps an EU country closed until the number its offer needs is set', () => {
     const file = (de: string | null) => ({
-      DE: {weee: de, packaging: null, offerNeedsNumber: true},
-      NL: {weee: null, packaging: null, offerNeedsNumber: false},
+      DE: {weee: de, packaging: null, saleApproved: true, offerNeedsNumber: true},
+      NL: {weee: null, packaging: null, saleApproved: true, offerNeedsNumber: false},
     });
     assert.deepEqual(shippingQuote('DE', file(null)), {country: 'DE', kind: 'closed'});
     assert.equal(shippingQuote('DE', file('DE12345678'))?.kind, 'direct');
@@ -63,7 +63,7 @@ describe('shippingQuote', () => {
 
   it('gates DE, FR, ES and IE on the committed file while their numbers are null', () => {
     for (const c of ['DE', 'FR', 'ES', 'IE']) assert.equal(notSoldDirect(c), 'closed', c);
-    for (const c of ['BE', 'NL', 'LU', 'AT', 'BG']) assert.equal(notSoldDirect(c), null, c);
+    for (const c of ['BE', 'NL', 'LU', 'AT', 'BG']) assert.equal(notSoldDirect(c), 'closed', c);
   });
 
   it('sends every other country that is not blocked to the shops', () => {
@@ -138,14 +138,14 @@ describe('shipCountryPicker', () => {
     const {likely, rest} = shipCountryPicker();
     assert.deepEqual(likely.map((o) => o.code), ['BE', 'NL', 'DE', 'FR', 'LU']);
     // Germany and France stay closed until their offer numbers are set.
-    assert.deepEqual(likely.map((o) => o.rate), [8.5, 9.95, null, null, 9.95]);
+    assert.deepEqual(likely.map((o) => o.rate), [null, null, null, null, null]);
     assert.equal(likely[0].name, 'Belgium');
     for (const code of LIKELY_SHIP_COUNTRIES) assert.ok(!rest.some((o) => o.code === code), code);
     assert.equal(likely.length + rest.length, SHIP_COUNTRY_CODES.length);
     const names = rest.map((o) => o.name);
     assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b, 'en')));
     assert.equal(rest.find((o) => o.code === 'US')?.rate, null);
-    assert.equal(rest.find((o) => o.code === 'BG')?.rate, 39.95);
+    assert.equal(rest.find((o) => o.code === 'BG')?.rate, null);
   });
 
   it('leaves out uninhabited territories and blocked countries', () => {

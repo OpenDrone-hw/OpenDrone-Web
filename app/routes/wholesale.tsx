@@ -6,7 +6,6 @@ import {copyText} from '~/lib/copy';
 import {getCompanyIdentity} from '~/lib/company';
 import {legalHref} from '~/components/LangToggle';
 import {checkRateLimit, clientIp} from '~/lib/rate-limit';
-import {parseCampaignConfig} from '~/lib/preorder-campaign';
 import {
   MAX_LINES,
   MAX_QTY,
@@ -16,13 +15,10 @@ import {
   sendTradeRequest,
   taxIdKind,
   tradeCountry,
-  tradeLeadTimes,
   validateTradeRequest,
   type TradeField,
   type TradeGroup,
-  type TradeLeadTime,
 } from '~/lib/trade';
-import preorders from '../../content/preorders.json';
 
 /**
  * The trade page: a shop asks for a quote here instead of using the consumer
@@ -62,8 +58,7 @@ export async function loader({context}: Route.LoaderArgs) {
     group: s.group,
     notFor: s.notFor ?? [],
   }));
-  const lead = tradeLeadTimes(parseCampaignConfig(preorders));
-  return {email: company.email, products, lead};
+  return {email: company.email, products};
 }
 
 type TradeResult = {
@@ -291,29 +286,7 @@ function TradeForm() {
   );
 }
 
-/** One line per lead time, naming every group that ships then: a dated
- *  batch, or the latest date of a funding target and its deadline. */
-function leadLines(lead: Record<TradeGroup, TradeLeadTime>): string[] {
-  const byLead = new Map<string, {time: TradeLeadTime; groups: string[]}>();
-  for (const group of TRADE_GROUPS) {
-    const time = lead[group];
-    const key = `${time.date}|${time.targetBy ?? ''}`;
-    const entry = byLead.get(key) ?? {time, groups: []};
-    entry.groups.push(t(`group_${group}`));
-    byLead.set(key, entry);
-  }
-  // "Flight controllers, ESCs, straps": names after the first in lower case.
-  const list = (groups: string[]) =>
-    groups.map((g, i) => (i && /^[A-Z][a-z]/.test(g) ? g[0].toLowerCase() + g.slice(1) : g)).join(', ');
-  return [...byLead.values()].map(({time, groups}) =>
-    time.targetBy
-      ? t('lead_line_target', {groups: list(groups), date: time.date, deadline: time.targetBy})
-      : t('lead_line', {groups: list(groups), date: time.date}),
-  );
-}
-
 export default function WholesaleRoute() {
-  const {lead} = useLoaderData<typeof loader>();
   const [before, after] = t('lead').split(t('lead_link'));
   const contractLink = t('contract_link');
   const [contractBefore, contractAfter] = t('contract').split(contractLink);
@@ -338,13 +311,7 @@ export default function WholesaleRoute() {
             <Row label={t('row_export')}>{t('export')}</Row>
             <Row label={t('row_sold')}>{t('sold')}</Row>
             <Row label={t('row_minimum')}>{t('minimum')}</Row>
-            <Row label={t('row_lead')}>
-              {leadLines(lead).map((line) => (
-                <span key={line} className="block">
-                  {line}
-                </span>
-              ))}
-            </Row>
+            <Row label={t('row_lead')}>{t('timing')}</Row>
             <Row label={t('row_payment')}>{t('payment')}</Row>
             <Row label={t('row_contract')}>
               {contractBefore}

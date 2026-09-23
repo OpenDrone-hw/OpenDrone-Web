@@ -1,6 +1,6 @@
 ## Shipping and delivery
 
-Incutec BV sells direct to consumers with a delivery address in one of the 27 member states of the European Union, and ships those orders by bpost from Belgium. The rate is shown in your cart and again at checkout, before you pay.
+Incutec BV starts with direct consumer orders to approved destinations in the European Union, dispatched from Belgium. Select your delivery country on the product page. A destination that is not open cannot proceed to checkout. The available delivery service and total charge are confirmed before payment.
 
 ### Shipping rates
 
@@ -22,21 +22,13 @@ Prices and shipping rates include VAT. Within the European Union there are no cu
 
 ### Outside the European Union
 
-Incutec BV does not sell direct to consumers outside the European Union yet. There, OpenDrone products are available through shops. Shops find the trade terms at [/wholesale](/wholesale).
+Incutec BV does not offer direct consumer checkout outside the EU. US retailers can [request a bulk quote](/wholesale). Product eligibility, importing and delivery must be agreed before an order is accepted. Consumers can [sign up for launch news](/newsletter). No overseas retailer availability is promised.
 
 ### Pre-orders
 
-Some products are sold as pre-orders. They are marked as such, with their ship date, on the product page, at checkout and on the order confirmation. The full price and the shipping costs shown at checkout are paid when the order is placed.
+Preorders are paid in full. The product offer and order confirmation identify the batch, funding conditions, planned dispatch and a separate final delivery date. The campaign dates are shown on [/preorder](/preorder). Dispatch is not delivery.
 
-Pre-order products are produced in batches. The flight controller and ESC from the first batch ship late October 2026. Every other pre-order product has a funding target, stated on its product page: the quantity Incutec BV orders from its supplier. It ships about 10 weeks after that target is reached, and every target has a deadline of 31 December 2026. If the target is reached by 31 December 2026, the product is planned to ship by 11 March 2027; if it has not shipped by then, the consumer may cancel that item for a refund of all amounts paid for it within 14 days. If a target is not reached, everyone who ordered that product chooses by email between a refund of all amounts paid for that product within 14 days, including the shipping costs if no other item in the order is still to ship, and keeping the order for the new ship date stated in that email. Without a reply within 30 days of that email, the item is cancelled and refunded within 14 days of the end of that period. A consumer who keeps the order can still withdraw at any time until delivery, as set out below. The ship date stated for an item when the order is placed is the delivery time agreed between the consumer and Incutec BV within the meaning of Art. VI.43 of the Belgian Code of Economic Law, so the 30-day default deadline below does not apply to pre-order items.
-
-If a ship date moves, Incutec BV informs the consumer by email and states the new date. This is without prejudice to the consumer's rights under Art. VI.43 §2 of the Belgian Code of Economic Law.
-
-The consumer may withdraw from a pre-order at any time until delivery, through the [withdrawal form](/herroepingsrecht) or as set out in Article 5.4 of the General Terms and Conditions (Art. 7bis.4 of the General Terms and Conditions).
-
-An order that combines items with different ship dates ships as one parcel once every item is available: one delivery per order. If a funding target for an item in the order is not reached, the rest of the order ships as soon as it is available, whichever the consumer chooses for that item. If the consumer keeps the order for that item, it ships separately at its new ship date at no extra shipping cost.
-
-Pre-order payments fund the production run and stock purchase for the order. They carry no interest and confer no equity, revenue share or other ownership interest in Incutec BV.
+Cancellation, missed targets, changes to delivery dates, refunds and mixed-batch orders follow [Article 7bis of the terms](/en/algemene-voorwaarden#art-7bis). You may withdraw before delivery and retain the statutory withdrawal rights after receipt. Use the [online withdrawal form](/en/herroepingsrecht#withdraw).
 
 ### Delivery time for items in stock
 

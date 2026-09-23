@@ -1,6 +1,6 @@
 ## Expédition et livraison
 
-Incutec BV vend directement aux consommateurs dont l’adresse de livraison se trouve dans l’un des 27 États membres de l’Union européenne, et expédie ces commandes par bpost depuis la Belgique. Le tarif est affiché dans votre panier, puis à nouveau lors du passage en caisse, avant le paiement.
+Incutec BV commence par des commandes directes aux consommateurs vers les destinations approuvées de l’Union européenne, expédiées depuis la Belgique. Choisissez votre pays de livraison sur la page produit. Une destination non ouverte ne permet pas de passer en caisse. Le service de livraison disponible et le coût total sont confirmés avant le paiement.
 
 ### Tarifs d’expédition
 
@@ -22,21 +22,13 @@ Les prix et les tarifs d’expédition incluent la TVA. Dans l’Union européen
 
 ### Hors de l’Union européenne
 
-Incutec BV ne vend pas encore directement aux consommateurs hors de l’Union européenne. Les produits OpenDrone y sont disponibles auprès de revendeurs. Les revendeurs trouvent les conditions professionnelles sur [/wholesale](/wholesale).
+Incutec BV ne propose pas de commande directe aux consommateurs hors de l’UE. Les revendeurs américains peuvent [demander un devis](/wholesale). L’admissibilité des produits, l’importation et la livraison doivent être convenues avant l’acceptation d’une commande. Les consommateurs peuvent [recevoir les nouvelles du lancement](/newsletter). Aucune disponibilité auprès de revendeurs étrangers n’est promise.
 
 ### Précommandes
 
-Certains produits sont vendus en précommande. Ils sont indiqués comme tels, avec leur date d’expédition, sur la page produit, lors du passage en caisse et sur la confirmation de commande. Le prix intégral et les frais d’expédition affichés lors du passage en caisse sont payés lors de la commande.
+Les précommandes sont payées intégralement. L’offre et la confirmation précisent le lot, les conditions de financement, l’expédition prévue et une date limite de livraison distincte. Les dates de campagne figurent sur [/preorder](/preorder). L’expédition n’est pas la livraison.
 
-Les produits en précommande sont fabriqués par lots. Le contrôleur de vol et l’ESC du premier lot sont expédiés fin octobre 2026. Tout autre produit en précommande a un objectif de financement, indiqué sur sa page produit : la quantité qu’Incutec BV commande à son fournisseur. Il est expédié environ 10 semaines après que cet objectif est atteint, et chaque objectif a une échéance au 31 décembre 2026. Si l’objectif est atteint au plus tard le 31 décembre 2026, l’expédition du produit est prévue pour le 11 mars 2027 ; si le produit n’est pas expédié à cette date, le consommateur peut annuler cet article et obtenir le remboursement de tous les montants payés pour celui-ci dans les 14 jours. Si un objectif n’est pas atteint, chaque personne ayant commandé ce produit choisit par e-mail entre le remboursement de tous les montants payés pour ce produit dans les 14 jours, frais d’expédition compris si aucun autre article de la commande ne reste à expédier, et le maintien de la commande pour la nouvelle date d’expédition indiquée dans cet e-mail. Sans réponse dans les 30 jours suivant cet e-mail, l’article est annulé et remboursé dans les 14 jours suivant la fin de ce délai. Le consommateur qui maintient la commande peut toujours se rétracter à tout moment jusqu’à la livraison, comme prévu ci-dessous. La date d’expédition indiquée pour un article lors de la commande constitue le délai de livraison convenu entre le consommateur et Incutec BV au sens de l’Art. VI.43 du Code de droit économique belge, de sorte que le délai par défaut de 30 jours mentionné ci-dessous ne s’applique pas aux articles en précommande.
-
-Si une date d’expédition change, Incutec BV en informe le consommateur par e-mail et indique la nouvelle date. Ceci est sans préjudice des droits du consommateur au titre de l’Art. VI.43 §2 du Code de droit économique belge.
-
-Le consommateur peut se rétracter d’une précommande à tout moment jusqu’à la livraison, via le [formulaire de rétractation](/herroepingsrecht) ou comme prévu à l’article 5.4 des Conditions Générales de Vente (art. 7bis.4 des Conditions Générales de Vente).
-
-Une commande combinant des articles ayant des dates d’expédition différentes est expédiée en un seul colis dès que chaque article est disponible : une seule livraison par commande. Si l’objectif de financement d’un article de la commande n’est pas atteint, le reste de la commande est expédié dès qu’il est disponible, quel que soit le choix du consommateur pour cet article. Si le consommateur maintient la commande pour cet article, celui-ci est expédié séparément à sa nouvelle date d’expédition, sans frais d’expédition supplémentaires.
-
-Les paiements de précommande financent la production et l’achat du stock pour la commande. Ils ne portent aucun intérêt et ne confèrent aucune participation, partage de revenus ni autre intérêt de propriété dans Incutec BV.
+L’annulation, les objectifs non atteints, les modifications des dates de livraison, les remboursements et les commandes de plusieurs lots suivent [l’Article 7bis des conditions](/fr/algemene-voorwaarden#art-7bis). Vous pouvez vous rétracter avant la livraison et conservez les droits légaux de rétractation après réception. Utilisez le [formulaire en ligne](/fr/herroepingsrecht#withdraw).
 
 ### Délai de livraison des articles en stock
 

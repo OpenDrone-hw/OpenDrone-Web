@@ -532,7 +532,7 @@
   "os_card_repo_name": "Design files: {repo}",
   "connectors_title": "Plugs and pin order",
   "gpsr_other_languages": "Other EU languages",
-  "buy_shops_only": "Available through shops",
-  "buy_shops_trade": "Are you a shop?",
-  "buy_closed": "Opening in {country} soon"
+  "buy_shops_only": "EU consumer orders only",
+  "buy_shops_trade": "EU or US retailer enquiries",
+  "buy_closed": "Orders are not open for {country}"
 }

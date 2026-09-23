@@ -1,12 +1,7 @@
 /**
- * Incutec BV's producer (EPR) registration numbers per EU country, from
- * `content/registrations.json`, and the consumer sale gate they set: DE,
- * FR, ES and IE require a number on the offer itself (`offerNeedsNumber`),
- * so consumer sale there opens only once that number is set.
- *
- * The file is bundled by Vite (`import.meta.glob`, as `app/lib/copy.ts`
- * does) and read from disk under node:test, so the gate and its tests use
- * the same data. Relative imports only, no worker APIs.
+ * Producer numbers and reviewed consumer destination approval share the
+ * committed registrations file. Numbers alone never open a country.
+ * Vite and node:test read the same data.
  */
 
 export type RegistrationKind = 'weee' | 'packaging' | 'idu';
@@ -15,6 +10,8 @@ export type RegistrationKind = 'weee' | 'packaging' | 'idu';
  *  France, null until registered; `offerNeedsNumber` where the law wants
  *  a number on the offer before selling. */
 export type CountryRegistrations = Partial<Record<RegistrationKind, string | null>> & {
+  /** Explicit reviewed launch approval. Missing or false always closes sales. */
+  saleApproved?: boolean;
   offerNeedsNumber?: boolean;
 };
 
@@ -56,14 +53,11 @@ function requiredKind(country: string): RegistrationKind {
   return country === 'FR' ? 'idu' : 'weee';
 }
 
-/**
- * Whether an EU country is open for consumer sale: it does not require a
- * number on the offer, or the number it requires is set. A country missing
- * from the file is closed. The caller decides which countries are EU.
- */
+/** Explicit destination approval plus any configured offer-number requirement.
+ * The caller determines EU membership. This is not a legal scope assessment. */
 export function euSaleOpen(country: string, file: RegistrationsFile = REGISTRATIONS): boolean {
   const entry = entryOf(file, country);
-  if (!entry) return false;
+  if (!entry || entry.saleApproved !== true) return false;
   if (!entry.offerNeedsNumber) return true;
   return Boolean(entry[requiredKind(country)]?.trim());
 }

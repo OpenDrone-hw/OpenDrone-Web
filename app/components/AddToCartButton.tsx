@@ -9,13 +9,13 @@ import type {RootLoader} from '~/root';
 import {beginCartAdd, endCartAdd, isCartAddBusy, subscribeCartAdd} from './cart-add-lock';
 
 /** What shows in place of a buy button for a visitor who cannot buy
- *  direct: outside the EU "Available through shops", in an EU country not
+ *  direct: outside the EU "EU consumer orders only", in an EU country not
  *  open yet "Opening in Germany soon". Null where the button shows. */
 export function notSoldNote(country: string | null): string | null {
   const reason = notSoldDirect(country);
-  if (reason === 'shops') return copyText('product-chrome.buy_shops_only') ?? 'Available through shops';
+  if (reason === 'shops') return copyText('product-chrome.buy_shops_only') ?? 'EU consumer orders only';
   if (reason === 'closed') {
-    return (copyText('product-chrome.buy_closed') ?? 'Opening in {country} soon').replace(
+    return (copyText('product-chrome.buy_closed') ?? 'Orders are not open for {country}').replace(
       '{country}',
       countryName(country ?? ''),
     );

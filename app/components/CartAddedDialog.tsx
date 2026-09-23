@@ -290,14 +290,14 @@ export function CartAddedDialog() {
               a notice. */}
           {notDirect === 'shops' ? (
             <p className="cart-added-parcel" role="note">
-              {t('checkout_shops', 'Available through shops in {country}.', {country: countryName(visitor ?? '')})}{' '}
-              <Link to="/wholesale">{t('checkout_shops_trade', 'Are you a shop?')}</Link>
+              {t('checkout_shops', 'Direct consumer orders are limited to the EU.', {country: countryName(visitor ?? '')})}{' '}
+              <Link to="/wholesale">{t('checkout_shops_trade', 'EU or US retailer enquiries')}</Link>
               {' · '}
               <Link to="/newsletter">{t('checkout_shops_notify', 'Get launch news')}</Link>
             </p>
           ) : notDirect === 'closed' ? (
             <p className="cart-added-parcel" role="note">
-              {t('checkout_closed', 'Opening in {country} soon.', {country: countryName(visitor ?? '')})}{' '}
+              {t('checkout_closed', 'Orders are not open for {country}.', {country: countryName(visitor ?? '')})}{' '}
               <Link to="/newsletter">{t('checkout_shops_notify', 'Get launch news')}</Link>
             </p>
           ) : (

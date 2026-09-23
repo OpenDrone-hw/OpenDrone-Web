@@ -75,13 +75,13 @@
 
 7.3. Le risque de dommage et/ou de perte des produits incombe à Incutec BV jusqu’au moment de la livraison au consommateur.
 
-7.4. Incutec BV vend aux consommateurs dont l’adresse de livraison se trouve dans un État membre de l’Union européenne. Les commandes sont expédiées par bpost au tarif fixe de la destination indiqué sur la page d’expédition (opendrone.be/shipping) et affiché lors du passage en caisse.
+7.4. La livraison aux consommateurs est limitée aux destinations approuvées de l’UE. Le service de livraison disponible et les frais complets sont indiqués avant le paiement.
 
 ### Article 7bis : Précommandes
 
 7bis.1. Certains produits sont vendus en précommande. Ils sont indiqués comme tels, avec leur date d’expédition, sur la page produit, lors du passage en caisse et sur la confirmation de commande. Le consommateur paie le prix intégral et les frais d’expédition affichés lors du passage en caisse au moment de la commande.
 
-7bis.2. Les produits en précommande sont fabriqués par lots. Le contrôleur de vol et l’ESC du premier lot sont expédiés fin octobre 2026. Tout autre produit en précommande a un objectif de financement, indiqué sur sa page produit, et est expédié environ 10 semaines après que cet objectif est atteint. Chaque objectif de financement a une échéance au 31 décembre 2026. Si l’objectif de financement est atteint au plus tard le 31 décembre 2026, l’expédition du produit est prévue pour le 11 mars 2027. Si le produit n’est pas expédié le 11 mars 2027, le consommateur peut résoudre le contrat pour cet article, avec le remboursement de tous les montants payés pour celui-ci dans les 14 jours. La date d’expédition indiquée pour un article lors de la commande constitue le délai de livraison convenu entre le consommateur et Incutec BV au sens de l’art. VI.43 CDE, de sorte que le délai par défaut de 30 jours de l’article 7.1 ne s’applique pas aux articles en précommande.
+7bis.2. Les produits en précommande sont fabriqués par lots. L’offre et la confirmation indiquent le lot, l’éventuel objectif de financement et son échéance, l’expédition prévue et la date limite de livraison convenue séparément. L’expédition n’est pas la livraison. Le délai communiqué avant le paiement s’applique conformément à l’Art. VI.43 CDE ; sans autre délai expressément convenu, le délai par défaut de 30 jours de l’Art. 7.1 s’applique.
 
 7bis.3. Si une date d’expédition change, Incutec BV en informe le consommateur par e-mail et indique la nouvelle date. Ceci est sans préjudice des droits du consommateur au titre de l’art. VI.43 §2 CDE.
 

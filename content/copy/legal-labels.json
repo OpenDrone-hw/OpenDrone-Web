@@ -212,16 +212,16 @@
       "title": "Ship dates",
       "rows": [
         [
-          "Stack · FC + ESC",
-          "Ships Oct 2026"
+          "Consumer orders",
+          "Approved EU destinations"
         ],
         [
-          "RX · Frames · Motors",
-          "ETA 11 Mar 2027 if funded"
+          "Preorders",
+          "Dates and conditions on the product offer"
         ],
         [
-          "Outside the EU",
-          "Through shops"
+          "US retailers",
+          "Bulk enquiries at /wholesale"
         ]
       ]
     },
@@ -229,16 +229,16 @@
       "title": "Verzenddata",
       "rows": [
         [
-          "Stack · FC + ESC",
-          "Verzending okt 2026"
+          "Consumenten",
+          "Goedgekeurde EU-bestemmingen"
         ],
         [
-          "RX · Frames · Motoren",
-          "ETA 11 mrt 2027 als gefinancierd"
+          "Pre-orders",
+          "Data en voorwaarden in het productaanbod"
         ],
         [
-          "Buiten de EU",
-          "Via winkels"
+          "Amerikaanse winkels",
+          "Offerteaanvragen via /wholesale"
         ]
       ]
     },
@@ -246,16 +246,16 @@
       "title": "Dates d'expédition",
       "rows": [
         [
-          "Stack · FC + ESC",
-          "Expédition oct. 2026"
+          "Consommateurs",
+          "Destinations approuvées de l’UE"
         ],
         [
-          "RX · Châssis · Moteurs",
-          "ETA 11 mars 2027 si financé"
+          "Précommandes",
+          "Dates et conditions dans l’offre"
         ],
         [
-          "Hors UE",
-          "Via les revendeurs"
+          "Revendeurs américains",
+          "Demandes de devis via /wholesale"
         ]
       ]
     }

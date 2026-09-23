@@ -75,13 +75,13 @@
 
 7.3. The risk of damage and/or loss of products lies with Incutec BV until the moment of delivery to the consumer.
 
-7.4. Incutec BV sells to consumers with a delivery address in a member state of the European Union. Orders ship by bpost at the flat rate for the destination stated on the shipping page (opendrone.be/shipping) and shown at checkout.
+7.4. Consumer delivery is limited to approved EU destinations. The available carrier service and full delivery charge are shown before payment.
 
 ### Article 7bis: Pre-orders
 
 7bis.1. Some products are sold as pre-orders. They are disclosed as such, with their ship date, on the product page, at checkout and on the order confirmation. The consumer pays the full price and the shipping costs shown at checkout when the order is placed.
 
-7bis.2. Pre-order products are produced in batches. The flight controller and ESC from the first batch ship late October 2026. Every other pre-order product has a funding target, stated on its product page, and ships about 10 weeks after that target is reached. Every funding target has a deadline of 31 December 2026. If the funding target is reached by 31 December 2026, the product is planned to ship by 11 March 2027. If it has not shipped by 11 March 2027, the consumer may terminate the contract for that item, with a refund of all amounts paid for it within 14 days. The ship date disclosed for an item when the order is placed is the delivery time agreed between the consumer and Incutec BV within the meaning of Art. VI.43 WER, so the 30-day default deadline in Article 7.1 does not apply to pre-order items.
+7bis.2. Pre-order products are produced in batches. The offer and order confirmation state the batch, any funding target and deadline, planned dispatch and the separately agreed final delivery date. Dispatch is not delivery. The delivery period disclosed before payment applies under Art. VI.43 WER; if no different delivery period is expressly agreed, the 30-day default in Article 7.1 applies.
 
 7bis.3. If a ship date moves, Incutec BV informs the consumer by email and states the new date. This is without prejudice to the consumer's rights under Art. VI.43 §2 WER.
 

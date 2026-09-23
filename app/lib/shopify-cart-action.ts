@@ -3,6 +3,7 @@ import {shipGroupKey, shipLabelFromPromise} from './preorder-campaign.ts';
 import {isPurchasableStatus, resolveStatus} from './product-content.ts';
 import {requestedLines} from './shopify-cart-input.ts';
 import {shipCountryForRequest, shippingQuote} from './shipping-rates.ts';
+import {type RegistrationsFile} from './registrations.ts';
 import {
   PREORDER_ATTRIBUTE,
   storefrontRequest,
@@ -18,6 +19,8 @@ type CartEnv = Pick<
   'SHOPIFY_CHECKOUT_WRITE_ENABLED' | 'PUBLIC_COMING_SOON'
 >;
 export type ShopifyCartDependencies = {
+  /** An explicit destination fixture for isolated tests; runtime uses committed approvals. */
+  registrations?: RegistrationsFile;
   fetchCatalog: () => Promise<Catalog>;
   /** A new cart; `countryCode` is the visitor's country when the shop
    *  ships there, so checkout opens in that country's market. */
@@ -95,8 +98,8 @@ export function lineLimitMessage(inCart: number): string {
  * then starts in the shop's primary market and checkout still decides from
  * the shipping address.
  */
-export function cartCountry(request: Request): string | undefined {
-  const quote = shippingQuote(shipCountryForRequest(request));
+export function cartCountry(request: Request, registrations?: RegistrationsFile): string | undefined {
+  const quote = shippingQuote(shipCountryForRequest(request), registrations);
   return quote?.kind === 'direct' ? quote.country : undefined;
 }
 
@@ -393,6 +396,10 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
     }
 
     if (intent === 'checkout') {
+      const destination = shippingQuote(shipCountryForRequest(request), dependencies.registrations);
+      if (!destination || destination.kind !== 'direct') {
+        throw fail('Choose an approved EU delivery country before checkout.', 403);
+      }
       if (!existingId || !dependencies.getCart) throw fail('Cart is empty.', 409);
       const [cart, catalog] = await Promise.all([
         dependencies.getCart(existingId),
@@ -475,7 +482,7 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
       dependencies.unsetCartId?.();
     }
     checkPaidBatches(catalog, lines, new Map());
-    const cart = await dependencies.createCart(lines, cartCountry(request));
+    const cart = await dependencies.createCart(lines, cartCountry(request, dependencies.registrations));
     dependencies.setCartId?.(cart.id);
     return wantsSummary
       ? Response.json(cartSummary(cart), {headers: NO_STORE})

@@ -207,6 +207,20 @@ export default function PreorderRoute() {
     <EditorialShell slug="preorder" rail={false} reveal={false} pageClassName="preorder-page">
       <Txt id="preorder.title" as="h1" className="po-title" />
 
+      <Txt id="preorder.intro" as="p" className="mb-8 max-w-2xl text-lg text-[var(--color-text-muted)]" />
+      <section aria-label="Ordering and retailer enquiries" className="mb-10 grid gap-4 sm:grid-cols-2">
+        <div className="rounded-[var(--r-xs)] border border-[var(--color-border)] p-5">
+          <Txt id="preorder.channel_eu_title" as="h2" className="mb-2 text-lg font-medium" />
+          <Txt id="preorder.channel_eu_text" as="p" className="text-sm text-[var(--color-text-muted)]" />
+        </div>
+        <div className="rounded-[var(--r-xs)] border border-[var(--color-border)] p-5">
+          <Txt id="preorder.channel_us_title" as="h2" className="mb-2 text-lg font-medium" />
+          <Txt id="preorder.channel_us_text" as="p" className="mb-3 text-sm text-[var(--color-text-muted)]" />
+          <Link to="/wholesale" className="underline underline-offset-4"><Txt id="preorder.channel_us_cta" /></Link>
+        </div>
+      </section>
+      <p className="mb-8 text-sm"><Link to="/newsletter" className="underline underline-offset-4"><Txt id="preorder.channel_interest" /></Link></p>
+
       <Timeline data={data} />
 
       {unavailable ? (

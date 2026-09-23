@@ -149,12 +149,14 @@
 }
 .editorial-page.preorder-page {
   max-width: 1120px;
+  min-width: 0;
   width: 100%;
 }
 /* Four text styles: the title, the group titles, body, mono labels. Groups
    are separated by whitespace; the only surfaces are the card image tiles. */
 .preorder-page {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--sp-7);
 }
 .preorder-page .po-title {
@@ -372,7 +374,7 @@
     flex-basis: 100%;
   }
   .po-legend ol {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: var(--sp-1);
   }
   .po-legend li {

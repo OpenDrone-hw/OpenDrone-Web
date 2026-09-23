@@ -1,6 +1,6 @@
 ## Verzending en levering
 
-Incutec BV verkoopt rechtstreeks aan consumenten met een leveradres in een van de 27 lidstaten van de Europese Unie, en verzendt die bestellingen met bpost vanuit België. Het tarief staat in je winkelmandje en opnieuw aan de checkout, voordat je betaalt.
+Incutec BV begint met rechtstreekse consumentenbestellingen naar goedgekeurde bestemmingen in de Europese Unie, verzonden vanuit België. Kies je leverland op de productpagina. Voor een land dat niet open is, kan je niet afrekenen. De beschikbare bezorgdienst en de totale kosten worden vóór de betaling bevestigd.
 
 ### Verzendtarieven
 
@@ -22,21 +22,13 @@ Prijzen en verzendtarieven zijn inclusief btw. Binnen de Europese Unie zijn er g
 
 ### Buiten de Europese Unie
 
-Incutec BV verkoopt nog niet rechtstreeks aan consumenten buiten de Europese Unie. Daar zijn OpenDrone-producten verkrijgbaar via winkels. Winkels vinden de handelsvoorwaarden op [/wholesale](/wholesale).
+Incutec BV biedt geen rechtstreekse consumentencheckout buiten de EU. Amerikaanse winkels kunnen [een offerte aanvragen](/wholesale). Producttoelating, invoer en levering moeten worden overeengekomen voordat een bestelling wordt aanvaard. Consumenten kunnen [lanceringsnieuws ontvangen](/newsletter). Beschikbaarheid bij buitenlandse winkels wordt niet beloofd.
 
 ### Pre-orders
 
-Sommige producten worden verkocht als pre-order. Zij zijn als dusdanig gemarkeerd, met hun verzenddatum, op de productpagina, aan de checkout en op de orderbevestiging. De volledige prijs en de verzendkosten die aan de checkout worden getoond, worden betaald bij het plaatsen van de bestelling.
+Pre-orders worden volledig betaald. Het productaanbod en de orderbevestiging vermelden de batch, financieringsvoorwaarden, geplande verzending en een afzonderlijke uiterste leverdatum. De campagnedata staan op [/preorder](/preorder). Verzending is geen levering.
 
-Pre-orderproducten worden in batches geproduceerd. De flight controller en de ESC uit de eerste batch worden eind oktober 2026 verzonden. Elk ander pre-orderproduct heeft een financieringsdoel, vermeld op de productpagina: de hoeveelheid die Incutec BV bij haar leverancier bestelt. Het wordt ongeveer 10 weken na het bereiken van dat doel verzonden, en elk doel heeft een deadline op 31 december 2026. Wordt het doel uiterlijk op 31 december 2026 bereikt, dan is de verzending van het product gepland tegen 11 maart 2027; is het dan nog niet verzonden, dan kan de consument dat artikel annuleren met terugbetaling van alle daarvoor betaalde bedragen binnen 14 dagen. Wordt een doel niet bereikt, dan kiest iedereen die dat product bestelde per e-mail tussen de terugbetaling van alle voor dat product betaalde bedragen binnen 14 dagen, met inbegrip van de verzendkosten als geen ander artikel uit de bestelling nog verzonden moet worden, en het behouden van de bestelling voor de nieuwe verzenddatum die in die e-mail vermeld wordt. Zonder antwoord binnen 30 dagen na die e-mail wordt het artikel geannuleerd en binnen 14 dagen na het einde van die termijn terugbetaald. Een consument die de bestelling behoudt, kan ze tot de levering nog steeds herroepen, zoals hieronder bepaald. De verzenddatum die bij het plaatsen van de bestelling voor een artikel wordt vermeld, is de tussen de consument en Incutec BV overeengekomen leveringstermijn in de zin van Art. VI.43 WER, zodat de standaardtermijn van 30 dagen hieronder niet geldt voor pre-orderartikelen.
-
-Indien een verzenddatum verschuift, brengt Incutec BV de consument daarvan per e-mail op de hoogte en vermeldt zij de nieuwe datum. Dit doet geen afbreuk aan de rechten van de consument uit Art. VI.43 §2 WER.
-
-De consument kan een pre-order tot de levering herroepen, via het [herroepingsformulier](/herroepingsrecht) of zoals bepaald in Art. 5.4 van de Algemene Voorwaarden (Art. 7bis.4 Algemene Voorwaarden).
-
-Een bestelling die artikelen met verschillende verzenddata combineert, wordt in één pakket verzonden zodra elk artikel beschikbaar is: één levering per bestelling. Wordt een financieringsdoel voor een artikel uit de bestelling niet bereikt, dan wordt de rest van de bestelling verzonden zodra die beschikbaar is, ongeacht wat de consument voor dat artikel kiest. Behoudt de consument de bestelling voor dat artikel, dan wordt het afzonderlijk verzonden op de nieuwe verzenddatum, zonder extra verzendkosten.
-
-Betalingen voor pre-orders financieren de productie en de voorraadaankoop voor de bestelling. Zij dragen geen interest en verlenen geen aandeel, omzetdeling of ander eigendomsbelang in Incutec BV.
+Annulering, niet-behaalde doelen, gewijzigde leverdata, terugbetalingen en bestellingen met meerdere batches volgen [Artikel 7bis van de voorwaarden](/nl/algemene-voorwaarden#art-7bis). Je kan vóór de levering herroepen en behoudt de wettelijke herroepingsrechten na ontvangst. Gebruik het [online herroepingsformulier](/nl/herroepingsrecht#withdraw).
 
 ### Leveringstermijn voor artikelen op voorraad
 

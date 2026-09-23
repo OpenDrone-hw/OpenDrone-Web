@@ -1,13 +1,8 @@
 /**
- * Flat shipping rates per destination, in EUR including VAT, as set in the
- * Shopify shipping profile (bpost). Display only: Shopify checkout charges
- * the rate for the shipping address. Consumers buy direct only inside the
- * EU, where no import duty or customs clearance is due; every other country
- * that is not blocked buys through shops. An EU country whose law wants a
- * registration number on the offer stays closed until that number is set
- * (`euSaleOpen` in ./registrations.ts).
- *
- * Relative imports only, so the node:test suites can load it.
+ * Proposed flat customer charges in EUR, including VAT. Shopify's accepted
+ * shipping profile must match before launch; checkout charges the final address.
+ * Consumer delivery is limited to explicitly approved EU destinations.
+ * Outside the EU, only retailer enquiries are offered, without a stock promise.
  */
 
 import {REGISTRATIONS, euSaleOpen, type RegistrationsFile} from './registrations.ts';
@@ -39,15 +34,14 @@ export const SHIPPING_ZONES: ShippingZone[] = [
     rate: 12.95,
   },
   {id: 'eu_far', countries: ['CY', 'EE', 'MT'], rate: 16.95},
-  // The rate mirrors the Shopify profile, which bills Bulgaria at its world rate.
+  // Proposed Bulgaria charge; verify the accepted Shopify profile before launch.
   {id: 'eu_bg', countries: ['BG'], rate: 39.95},
 ];
 
 /**
  * What a destination gets: `direct`, a consumer order at the zone's flat
- * rate (EU only); `closed`, an EU country not open yet because a
- * registration number the offer must show is missing; `shops`, not sold
- * direct, available through shops; `blocked`, not sold at all
+ * rate (EU only); `closed`, an EU country not approved for sale; `shops`, not sold
+ * direct, retailer enquiries only; `blocked`, not sold at all
  * (`BLOCKED_COUNTRIES`).
  */
 export type ShippingQuote =
@@ -71,8 +65,7 @@ export function shippingQuote(
   return {country: code, kind: 'direct', zone: zone.id, rate: zone.rate};
 }
 
-/** True for a known country outside the EU that is not blocked: it buys
- *  through shops. False for the EU, a blocked country and an unknown one
+/** True for a known country outside the EU that is not blocked: it cannot buy direct. False for the EU, a blocked country and an unknown one
  *  (which the shop treats as its default EU market). */
 export function soldThroughShops(country: string | null): boolean {
   return shippingQuote(country)?.kind === 'shops';

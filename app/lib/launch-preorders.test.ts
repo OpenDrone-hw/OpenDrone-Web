@@ -259,3 +259,16 @@ test('marketPricingProblems accepts the live tax-inclusive setup and names an ex
   assert.match(problems[0], /Settings > Taxes/);
   assert.match(problems[1], /^market us: /);
 });
+
+test('launch readiness rejects missing approvals and delivery promises', async () => {
+  const {checkLaunchReadiness} = await import('../../scripts/launch-preorders.mjs');
+  const draft = {skus: {A: {batches: [{units: 10, ships: 'ships October 2026'}]}}};
+  assert.equal(checkLaunchReadiness(draft, {BE: {saleApproved: false}}).length, 2);
+  const approved = {BE: {saleApproved: true}};
+  const campaign = {skus: {A: {batches: [{units: 10, deliveryBy: '2027-03-20'}]}}};
+  assert.deepEqual(checkLaunchReadiness(campaign, approved), []);
+  assert.match(checkLaunchReadiness(campaign, {DE: {saleApproved: true, offerNeedsNumber: true}})[0], /offer number/);
+  for (const deliveryBy of [null, '', '2027-02-30', 'after dispatch']) {
+    assert.match(checkLaunchReadiness({skus: {A: {batches: [{units: 10, deliveryBy}]}}}, approved)[0], /final delivery date/);
+  }
+});

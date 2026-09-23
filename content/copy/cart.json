@@ -42,8 +42,8 @@
   "build_add": "Add",
   "build_added": "Added",
   "build_retry": "Try again",
-  "checkout_shops": "Available through shops in {country}.",
-  "checkout_shops_trade": "Are you a shop?",
+  "checkout_shops": "Direct consumer orders are limited to the EU.",
+  "checkout_shops_trade": "EU or US retailer enquiries",
   "checkout_shops_notify": "Get launch news",
-  "checkout_closed": "Opening in {country} soon."
+  "checkout_closed": "Orders are not open for {country}."
 }

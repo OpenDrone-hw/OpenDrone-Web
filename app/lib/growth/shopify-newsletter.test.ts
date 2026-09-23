@@ -106,7 +106,10 @@ describe('Shopify newsletter ownership', () => {
     bodies.length = 0;
     await subscribeWithShopify(ENV, 'pilot@example.com', undefined, 'DE');
     assert.deepEqual(bodies[1].variables.input?.tags, ['newsletter', 'country-DE']);
-    for (const country of ['NL', 'RU', null, 'ZZ']) {
+    bodies.length = 0;
+    await subscribeWithShopify(ENV, 'pilot@example.com', undefined, 'NL');
+    assert.deepEqual(bodies[1].variables.input?.tags, ['newsletter', 'country-NL']);
+    for (const country of ['RU', null, 'ZZ']) {
       bodies.length = 0;
       await subscribeWithShopify(ENV, 'pilot@example.com', undefined, country);
       assert.deepEqual(bodies[1].variables.input?.tags, ['newsletter'], String(country));

@@ -1,139 +1,166 @@
 {
-  "$comment": "Incutec BV's producer (EPR) registration numbers per EU country, rendered on /recycling and in the product page safety block for a visitor from that country. weee: the national WEEE register number; packaging: the packaging register number; idu (France only): the identifiant unique. null until registered; a null number is not shown. offerNeedsNumber: the country requires the number on the offer itself (DE, ES, IE: the WEEE number; FR: the IDU), so consumer sale there stays closed until that number is set (app/lib/registrations.ts). Keys are exactly the 27 EU member states (app/lib/registrations.test.ts).",
+  "$comment": "Producer registration numbers and explicit consumer destination approval. Numbers are displayed on recycling/product pages. saleApproved opens a country only after its product, tax, EPR, shipping and delivery evidence has been reviewed. A number alone is not approval. null numbers are not displayed; offerNeedsNumber requires the configured offer number in addition to approval. Private evidence stays in its owning records.",
   "AT": {
     "weee": null,
     "packaging": null,
-    "offerNeedsNumber": false
+    "offerNeedsNumber": false,
+    "saleApproved": false
   },
   "BE": {
     "weee": null,
     "packaging": null,
-    "offerNeedsNumber": false
+    "offerNeedsNumber": false,
+    "saleApproved": false
   },
   "BG": {
     "weee": null,
     "packaging": null,
-    "offerNeedsNumber": false
+    "offerNeedsNumber": false,
+    "saleApproved": false
   },
   "CY": {
     "weee": null,
     "packaging": null,
-    "offerNeedsNumber": false
+    "offerNeedsNumber": false,
+    "saleApproved": false
   },
   "CZ": {
     "weee": null,
     "packaging": null,
-    "offerNeedsNumber": false
+    "offerNeedsNumber": false,
+    "saleApproved": false
   },
   "DE": {
     "weee": null,
     "packaging": null,
-    "offerNeedsNumber": true
+    "offerNeedsNumber": true,
+    "saleApproved": false
   },
   "DK": {
     "weee": null,
     "packaging": null,
-    "offerNeedsNumber": false
+    "offerNeedsNumber": false,
+    "saleApproved": false
   },
   "EE": {
     "weee": null,
     "packaging": null,
-    "offerNeedsNumber": false
+    "offerNeedsNumber": false,
+    "saleApproved": false
   },
   "ES": {
     "weee": null,
     "packaging": null,
-    "offerNeedsNumber": true
+    "offerNeedsNumber": true,
+    "saleApproved": false
   },
   "FI": {
     "weee": null,
     "packaging": null,
-    "offerNeedsNumber": false
+    "offerNeedsNumber": false,
+    "saleApproved": false
   },
   "FR": {
     "weee": null,
     "packaging": null,
     "idu": null,
-    "offerNeedsNumber": true
+    "offerNeedsNumber": true,
+    "saleApproved": false
   },
   "GR": {
     "weee": null,
     "packaging": null,
-    "offerNeedsNumber": false
+    "offerNeedsNumber": false,
+    "saleApproved": false
   },
   "HR": {
     "weee": null,
     "packaging": null,
-    "offerNeedsNumber": false
+    "offerNeedsNumber": false,
+    "saleApproved": false
   },
   "HU": {
     "weee": null,
     "packaging": null,
-    "offerNeedsNumber": false
+    "offerNeedsNumber": false,
+    "saleApproved": false
   },
   "IE": {
     "weee": null,
     "packaging": null,
-    "offerNeedsNumber": true
+    "offerNeedsNumber": true,
+    "saleApproved": false
   },
   "IT": {
     "weee": null,
     "packaging": null,
-    "offerNeedsNumber": false
+    "offerNeedsNumber": false,
+    "saleApproved": false
   },
   "LT": {
     "weee": null,
     "packaging": null,
-    "offerNeedsNumber": false
+    "offerNeedsNumber": false,
+    "saleApproved": false
   },
   "LU": {
     "weee": null,
     "packaging": null,
-    "offerNeedsNumber": false
+    "offerNeedsNumber": false,
+    "saleApproved": false
   },
   "LV": {
     "weee": null,
     "packaging": null,
-    "offerNeedsNumber": false
+    "offerNeedsNumber": false,
+    "saleApproved": false
   },
   "MT": {
     "weee": null,
     "packaging": null,
-    "offerNeedsNumber": false
+    "offerNeedsNumber": false,
+    "saleApproved": false
   },
   "NL": {
     "weee": null,
     "packaging": null,
-    "offerNeedsNumber": false
+    "offerNeedsNumber": false,
+    "saleApproved": false
   },
   "PL": {
     "weee": null,
     "packaging": null,
-    "offerNeedsNumber": false
+    "offerNeedsNumber": false,
+    "saleApproved": false
   },
   "PT": {
     "weee": null,
     "packaging": null,
-    "offerNeedsNumber": false
+    "offerNeedsNumber": false,
+    "saleApproved": false
   },
   "RO": {
     "weee": null,
     "packaging": null,
-    "offerNeedsNumber": false
+    "offerNeedsNumber": false,
+    "saleApproved": false
   },
   "SE": {
     "weee": null,
     "packaging": null,
-    "offerNeedsNumber": false
+    "offerNeedsNumber": false,
+    "saleApproved": false
   },
   "SI": {
     "weee": null,
     "packaging": null,
-    "offerNeedsNumber": false
+    "offerNeedsNumber": false,
+    "saleApproved": false
   },
   "SK": {
     "weee": null,
     "packaging": null,
-    "offerNeedsNumber": false
+    "offerNeedsNumber": false,
+    "saleApproved": false
   }
 }

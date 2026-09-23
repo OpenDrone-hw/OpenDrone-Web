@@ -4,10 +4,10 @@ import type {Catalog} from './catalog.ts';
 import {PRODUCT_CONTENT} from './product-content.ts';
 import {campaignState} from './preorder-campaign.ts';
 import {
-  handleShopifyCartAction,
+  handleShopifyCartAction as actualCartAction,
   handleShopifyCartLoader,
   loadSessionCart,
-  cartCountry,
+  cartCountry as actualCartCountry,
   cartLineInfo,
   createCartInCountry,
   setCartCountry,
@@ -20,6 +20,11 @@ import {
 } from './shopify-cart-action.ts';
 import type {ShopifyCart, ShopifyCartLine} from './shopify-storefront.ts';
 
+const APPROVED = Object.fromEntries(['BE', 'BG', 'SE', 'NL', 'AT'].map((c) => [c, {saleApproved: true}]));
+const handleShopifyCartAction: typeof actualCartAction = (request, env, deps) =>
+  actualCartAction(request, env, {registrations: APPROVED, ...deps});
+const cartCountry = (request: Request) => actualCartCountry(request, APPROVED);
+
 function request(values: Record<string, string | string[]>): Request {
   const body = new URLSearchParams();
   for (const [key, value] of Object.entries(values)) {
@@ -27,7 +32,7 @@ function request(values: Record<string, string | string[]>): Request {
   }
   return new Request('https://opendrone.be/api/shopify/cart', {
     method: 'POST',
-    headers: {'Content-Type': 'application/x-www-form-urlencoded', Origin: 'https://opendrone.be'},
+    headers: {'Content-Type': 'application/x-www-form-urlencoded', Origin: 'https://opendrone.be', 'CF-IPCountry': 'BE'},
     body,
   });
 }
@@ -162,7 +167,7 @@ describe('Shopify cart action: gates', () => {
     assert.equal((await thrownResponse(handleShopifyCartAction(oversized, ENABLED_ENV, deps))).status, 413);
     const json = new Request('https://opendrone.be/api/shopify/cart', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json', Origin: 'https://opendrone.be'},
+      headers: {'Content-Type': 'application/json', Origin: 'https://opendrone.be', 'CF-IPCountry': 'BE'},
       body: '{"sku":"OPENRX-LITE"}',
     });
     assert.equal((await thrownResponse(handleShopifyCartAction(json, ENABLED_ENV, deps))).status, 400);
@@ -717,6 +722,7 @@ describe('cart page and legacy cart link', () => {
 function fromCountry(values: Record<string, string>, country: string | null): Request {
   const r = request(values);
   if (country) r.headers.set('CF-IPCountry', country);
+  else r.headers.delete('CF-IPCountry');
   return r;
 }
 
@@ -858,5 +864,35 @@ describe('Shopify cart action: a line across a price step', () => {
       },
     );
     assert.equal(response.headers.get('Location'), '/cart?check=paid-batch');
+  });
+});
+
+describe('destination approval at checkout', () => {
+  it('rejects US, unapproved EU and unknown destinations before reading a cart', async () => {
+    let calls = 0;
+    for (const country of ['US', 'DE', null]) {
+      await assert.rejects(
+        () => actualCartAction(fromCountry({intent: 'checkout'}, country), ENABLED_ENV, {
+          registrations: APPROVED,
+          getCartId: () => { calls++; return 'cart'; },
+          fetchCatalog: async () => { calls++; return CATALOG; },
+          createCart: async () => { calls++; return cart(); },
+          getCart: async () => { calls++; return cart(); },
+        }),
+        (error: unknown) => error instanceof Response && error.status === 403,
+      );
+    }
+    // getCartId is local; no Shopify read or write is made for these requests.
+    assert.equal(calls, 3);
+  });
+
+  it('does not open a committed unapproved destination even when global checkout gates are open', async () => {
+    await assert.rejects(
+      () => actualCartAction(fromCountry({intent: 'checkout'}, 'BE'), ENABLED_ENV, {
+        fetchCatalog: async () => { throw new Error('must not fetch'); },
+        createCart: async () => { throw new Error('must not create'); },
+      }),
+      (error: unknown) => error instanceof Response && error.status === 403,
+    );
   });
 });

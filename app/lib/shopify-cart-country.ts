@@ -1,8 +1,10 @@
 import {shippingQuote} from './shipping-rates.ts';
+import {type RegistrationsFile} from './registrations.ts';
 
 type CartCountryEnv = Pick<Env, 'SHOPIFY_CHECKOUT_WRITE_ENABLED' | 'PUBLIC_COMING_SOON'>;
 
 export type CartCountryDependencies = {
+  registrations?: RegistrationsFile;
   getCartId: () => string | undefined;
   /** `cartBuyerIdentityUpdate` with the country code; throws on a user error. */
   setCountry: (cartId: string, countryCode: string) => Promise<void>;
@@ -54,7 +56,7 @@ export async function handleCartCountry(
   } catch {
     return reply({error: 'invalid body'}, 400);
   }
-  const quote = shippingQuote(/^[A-Z]{2}$/.test(country) ? country : null);
+  const quote = shippingQuote(/^[A-Z]{2}$/.test(country) ? country : null, dependencies.registrations);
   if (!quote) return reply({error: 'unknown country'}, 400);
   // A blocked or shops-only country never goes on the cart; the cart page
   // already refuses checkout for it.

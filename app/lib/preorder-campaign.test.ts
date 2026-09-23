@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {describe, it} from 'node:test';
+import {describe, it, test} from 'node:test';
 import type {Catalog} from './catalog.ts';
 import {
   applyCampaign,
@@ -15,6 +15,7 @@ import {
   priceLadder,
   cartShipNote,
   shipGroupKey,
+  shipsWithState,
   shipLabel,
   shipLabelFromPromise,
   shortCampaignDate,
@@ -651,4 +652,17 @@ describe('SKUs that ship with a campaign SKU', () => {
     c.products[0].variants[1] = {...c.products[0].variants[1], availability: 'preorder'};
     assert.equal(needsCampaignCounts(c, WITH), true);
   });
+});
+
+test('a reviewed final delivery promise follows the batch into the catalog and its accessories', () => {
+  const config = parseCampaignConfig({
+    countFrom: '2026-09-21', endsOn: '2026-12-31', pendingShips: 'ships once funded', priceTiers: [],
+    skus: {A: {batches: [{units: 20, paid: true, ships: 'ships October 2026', deliveryBy: '2026-11-15'}]}},
+    shipsWith: {B: {sku: 'A', batch: 1}},
+  });
+  const state = campaignState(config.skus.A.batches, 0, config.pendingShips, []);
+  assert.equal(state.shipPromise, 'ships October 2026; delivery by 2026-11-15');
+  assert.equal(state.batches[0].shipPromise, state.shipPromise);
+  assert.equal(shipsWithState(config, config.shipsWith!.B, 0, 10).shipPromise, state.shipPromise);
+  assert.throws(() => parseCampaignConfig({...config, skus: {A: {batches: [{units: 1, deliveryBy: '2027-02-30'}]}}}), /calendar date/);
 });

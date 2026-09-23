@@ -21,6 +21,7 @@ function deps(cartId: string | null = 'gid://shopify/Cart/abc') {
   const calls: Array<[string, string]> = [];
   return {
     calls,
+    registrations: {NL: {saleApproved: true}},
     getCartId: () => cartId ?? undefined,
     setCountry: async (id: string, code: string) => {
       calls.push([id, code]);
@@ -92,6 +93,7 @@ describe('handleCartCountry', () => {
   it('reports a Shopify refusal without throwing', async () => {
     const logged: string[] = [];
     const res = await handleCartCountry(post('AT'), OPEN, {
+      registrations: {AT: {saleApproved: true}},
       getCartId: () => 'gid://shopify/Cart/abc',
       setCountry: async () => {
         throw new Error('shopify: cartBuyerIdentityUpdate failed');
