@@ -15,6 +15,7 @@ import {comingSoonFlag} from '~/lib/coming-soon';
 import {
   isPurchasableStatus,
   PRODUCT_CONTENT,
+  imagesAreRenders,
   resolveStatus,
   shipMonth,
   variantDisplayName,
@@ -65,6 +66,8 @@ type Row = {
   ladder: LadderStep[];
   /** "/ motor" for a part sold per piece, from the product content. */
   priceUnit: string | null;
+  /** The image is a CAD render, tagged like the home tiles. */
+  render: boolean;
 };
 
 const FAQ = ['pay', 'cancel', 'missed', 'eta', 'duties', 'risks'];
@@ -140,6 +143,7 @@ export async function loader({context}: Route.LoaderArgs) {
           campaign: v.campaign,
           ladder: retail.has(v.sku) ? priceLadder(retail.get(v.sku)!, CAMPAIGN.priceTiers) : [],
           priceUnit: unit ? unit.replace(/^per\s+/i, '/ ') : null,
+          render: imagesAreRenders(card.handle),
         },
       ];
     }),
@@ -401,7 +405,16 @@ function Card({row, stepEnds, eta}: {row: Row; stepEnds: number[]; eta: string})
   const funded = `${copyText('preorder.funded') ?? 'Funded'} · ${shipWord('eta', shortCampaignDate(row.campaign.latestShip) ?? shipMonth(row.shipPromise) ?? eta)}`;
   return (
     <li className="po-card">
-      <Link prefetch="viewport" to={row.url} className="po-card-media" aria-hidden="true" tabIndex={-1}>
+      <Link
+        prefetch="viewport"
+        to={row.url}
+        className={`po-card-media${row.image && row.render ? ' is-render' : ''}`}
+        aria-hidden="true"
+        tabIndex={-1}
+      >
+        {row.image && row.render ? (
+          <span className="render-chip">{copyText('product-chrome.render_chip') ?? 'Render'}</span>
+        ) : null}
         {row.image ? (
           <img src={shopifyImageUrl(row.image.url, 480)} alt="" loading="lazy" width={240} height={240} />
         ) : null}

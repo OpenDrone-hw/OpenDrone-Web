@@ -942,7 +942,7 @@ function ProductPage() {
             union: pin.box === 'union',
             groups: pin.boxGroups,
             name: pin.part,
-            cost: pin.cost ?? '×1',
+            cost: pin.cost && pin.cost !== '×1' ? pin.cost : undefined,
           });
         }
       }
@@ -1185,12 +1185,11 @@ function ProductPage() {
         <span className="teardown-pin-part" {...pinEdit('part')}>
           {pin.part}
         </span>
-        <span
-          className="teardown-pin-cost"
-          {...(pin.cost ? pinEdit('cost') : {})}
-        >
-          {pin.cost ?? '×1'}
-        </span>
+        {pin.cost && pin.cost !== '×1' ? (
+          <span className="teardown-pin-cost" {...pinEdit('cost')}>
+            {pin.cost}
+          </span>
+        ) : null}
       </li>
     );
   };
@@ -1693,13 +1692,12 @@ function ProductPage() {
               // fly-in re-arms and plays for the new board. `srcs` prefetches the
               // tiers up front.
               <>
-                <span className="render-chip">{say('product-chrome.render_chip', 'Render')}</span>
                 <BoardArt
                   key={product.handle}
+                  renderTag={say('product-chrome.render_chip', 'Render')}
                   src={activeBoardArt.src}
                   srcs={boardArtSrcs}
                   inspectUrl={activeBoardArt.inspectUrl}
-                  layerFns={activeBoardArt.layers}
                   handle={product.handle}
                   componentsSrc={activeBoardArt.src.replace(
                     /board\.svg$/,
@@ -1721,11 +1719,6 @@ function ProductPage() {
                         id="product-chrome.teardown_tour_heading"
                         as="span"
                         className="board-deck-name"
-                      />
-                      <Txt
-                        id="product-chrome.teardown_tour_hint"
-                        as="span"
-                        className="board-deck-hint"
                       />
                     </p>
                     {/* Real, labelled, thumb-sized chips split into a top-side and
@@ -1783,7 +1776,7 @@ function ProductPage() {
                                 {/* Just the model/short name on the chip (e.g.
                                     "RP2354A"), not the whole descriptive sentence
                                     - split off anything after a dash/middot. */}
-                                {p.name.split(/\s+[—–·-]\s+/)[0]}
+                                {p.name.split(/\s+[\u2014\u2013·-]\s+/)[0]}
                                 {p.cost && p.cost !== '×1' ? (
                                   <span className="board-part-chip-qty">{p.cost}</span>
                                 ) : null}

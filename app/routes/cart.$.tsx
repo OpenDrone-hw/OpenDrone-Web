@@ -363,8 +363,8 @@ function PopulatedCart({
     quote && !quote.blocked
       ? {amount: Number(cart.subtotal.amount) + quote.rate, currencyCode: cart.subtotal.currencyCode}
       : null;
-  // Outside the EU the same price holds with no EU VAT in it (Shopify
-  // markets: taxes included in price), and the carrier collects duties.
+  // Outside the EU the total reads plain "Total" and the carrier collects
+  // duties.
   const outsideEu = Boolean(quote && !quote.blocked && quote.duty !== 'none');
   const overLimit = cart.lines.some((line) => {
     const max = info[line.id]?.maxQuantity;
@@ -396,7 +396,7 @@ function PopulatedCart({
             </div>
             <ShippingRow country={country} onCountry={onCountry} />
             <div className="cart-register-row is-total">
-              <dt>{outsideEu ? t('register_total_export', 'Total (no EU VAT)') : t('register_total_vat', 'Total (incl. VAT)')}</dt>
+              <dt>{outsideEu ? t('register_total', 'Total') : t('register_total_vat', 'Total (incl. VAT)')}</dt>
               <dd style={pendingStyle}>
                 {total
                   ? formatPrice(total.amount, total.currencyCode)

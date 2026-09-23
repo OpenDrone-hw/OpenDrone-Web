@@ -172,7 +172,11 @@ export function mdToHtml(src: string): string {
     const h = /^(#{1,6})\s+(.*)$/.exec(line);
     if (h) {
       const level = h[1].length;
-      out.push(`<h${level}>${inline(h[2].trim())}</h${level}>`);
+      // "Article 7bis: ..." / "Artikel 7bis: ..." gets id="art-7bis" so a
+      // link can land on it in every language.
+      const art = /^(?:Article|Artikel)\s+(\d+[a-z]*)\b/i.exec(h[2].trim());
+      const id = art ? ` id="art-${art[1].toLowerCase()}"` : '';
+      out.push(`<h${level}${id}>${inline(h[2].trim())}</h${level}>`);
       i++;
       continue;
     }

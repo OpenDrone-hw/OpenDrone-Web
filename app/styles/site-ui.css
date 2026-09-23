@@ -414,6 +414,26 @@
   line-height: 1.7;
 }
 
+@media (max-width: 42em) {
+  .po-legend {
+    margin-top: calc(var(--sp-3) - var(--sp-7));
+    gap: var(--sp-2);
+  }
+  .po-legend-label {
+    flex-basis: 100%;
+  }
+  .po-legend ol {
+    flex-wrap: nowrap;
+    gap: var(--sp-1);
+  }
+  .po-legend li {
+    gap: 0.3rem;
+    padding: 0.15rem 0.5rem;
+    white-space: nowrap;
+    font-size: var(--fs-xs);
+  }
+}
+
 /* Groups: a title with its ship words, then the cards. */
 .po-group-title {
   margin: 0;
@@ -461,6 +481,14 @@
   object-fit: contain;
 }
 html.light .po-card-media img {
+  mix-blend-mode: multiply;
+}
+/* CAD renders on the same paper tone as the board photos. */
+.po-card-media.is-render {
+  position: relative;
+  background: #ece4dc;
+}
+.po-card-media.is-render img {
   mix-blend-mode: multiply;
 }
 .po-card-title {
@@ -734,15 +762,6 @@ html.light .po-card-cta {
   border: 0;
 }
 
-/* The site menu on the right of the pill (Preorders, Support) in the same
-   plain type as the family nav. */
-.site-header-main > nav:not(.site-header-categories) a {
-  font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0;
-  text-transform: none;
-}
 /* ============================================
    Buttons: small size and the plain link
    ============================================ */

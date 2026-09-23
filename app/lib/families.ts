@@ -60,3 +60,20 @@ export const FAMILIES: Family[] = [
     copyId: 'collections-all.category_frame',
   },
 ];
+
+/**
+ * The pilot shorthand a product tile shows under its title. The `family`
+ * value stays the grouping key; only the tile label is shortened.
+ */
+const TILE_LABELS: Readonly<Record<string, string>> = {
+  'Flight Controller': 'FC',
+  '4-in-1 ESC': '4in1 ESC',
+  'ELRS Receiver': 'ELRS RX',
+  'Carbon Frame': 'Frame',
+  Motors: 'Motors',
+};
+
+export function tileFamilyLabel(family: string | null | undefined): string | null {
+  if (!family) return null;
+  return TILE_LABELS[family] ?? family;
+}

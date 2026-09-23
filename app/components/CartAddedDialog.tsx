@@ -270,7 +270,7 @@ export function CartAddedDialog() {
               <span>
                 {vatIncluded
                   ? t('added_subtotal', 'Subtotal (incl. VAT)')
-                  : t('added_subtotal_export', 'Subtotal (no EU VAT)')}
+                  : t('added_subtotal_plain', 'Subtotal')}
               </span>
               <span className="cart-added-price">
                 {formatPrice(subtotal.amount, subtotal.currencyCode)}

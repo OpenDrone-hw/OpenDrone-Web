@@ -14,6 +14,7 @@ import {PRODUCT_CONTENT, imagesAreRenders, isPurchasableStatus} from '~/lib/prod
 import {AddToCartButton} from './AddToCartButton';
 import {ShipChip} from './ShipChip';
 import {copyText} from '~/lib/copy';
+import {tileFamilyLabel} from '~/lib/families';
 
 /** Hover quick-add for catalog cards: the card's own hand-off link, so
  *  ordering never requires opening the PDP. */
@@ -290,7 +291,7 @@ export function ProductItem({
                 : null}
             </div>
             {'productType' in product && product.productType ? (
-              <p className="product-card-meta">{product.productType}</p>
+              <p className="product-card-meta">{tileFamilyLabel(product.productType)}</p>
             ) : null}
           </Link>
           {lead ? <p className="product-feature-lead">{lead}</p> : null}
@@ -336,11 +337,10 @@ export function ProductItem({
           <ShipChip
             promise={campaign.shipPromise}
             className="product-card-ship"
-            ifFunded={!campaign.paidStock && !campaign.targetReached}
           />
         ) : null}
         {'productType' in product && product.productType ? (
-          <p className="product-card-meta">{product.productType}</p>
+          <p className="product-card-meta">{tileFamilyLabel(product.productType)}</p>
         ) : null}
       </div>
     </>

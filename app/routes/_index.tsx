@@ -40,6 +40,7 @@ import {SceneErrorBoundary} from '~/components/SceneErrorBoundary';
 import {HERO_REVEAL_WINDOWS, HERO_SLOTS} from '~/lib/builder/registry';
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
+import {tileFamilyLabel} from '~/lib/families';
 
 /**
  * The homepage's words live in `content/copy/home.json`, shared with
@@ -98,8 +99,8 @@ const HERO_BUILT_SIZES: readonly string[] = ['3'];
  */
 const HERO_PIECE_NAMES: Readonly<Record<string, string>> = {
   frame: 'OpenFrame 3" Freestyle',
-  'board-4in1-mini': 'OpenESC 20×20',
-  'board-OpenFC': 'OpenFC Lite 20×20',
+  'board-4in1-mini': 'OpenESC 20x20',
+  'board-OpenFC': 'OpenFC Lite 20x20',
   'board-OpenRX-Lite-UFL': 'OpenRX Lite-UFL',
 };
 const HERO_SIZES = HERO_AIRFRAME_KEYS.filter((k) => HERO_BUILT_SIZES.includes(k));
@@ -1098,7 +1099,7 @@ function DesktopHome({
                                   </span>
                                   {card.productType ? (
                                     <span className="hero-reveal-sub">
-                                      {card.productType}
+                                      {tileFamilyLabel(card.productType)}
                                     </span>
                                   ) : null}
                                 </span>

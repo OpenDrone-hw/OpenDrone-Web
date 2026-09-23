@@ -47,7 +47,7 @@
       },
       {
         "ref": "②",
-        "part": "6-axis IMU",
+        "part": "Gyro (BMI270)",
         "refs": [
           "U9"
         ]
@@ -92,7 +92,7 @@
       },
       {
         "ref": "⑥",
-        "part": "Gyro 1.8 V LDO",
+        "part": "Gyro LDO 1.8V",
         "refs": [
           "U15"
         ]
@@ -353,7 +353,7 @@
         },
         {
           "ref": "②",
-          "part": "6-axis IMU",
+          "part": "Gyro (BMI270)",
           "refs": [
             "U9"
           ]
@@ -398,7 +398,7 @@
         },
         {
           "ref": "⑥",
-          "part": "Gyro 1.8 V LDO",
+          "part": "Gyro LDO 1.8V",
           "refs": [
             "U12"
           ]

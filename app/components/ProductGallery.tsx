@@ -200,18 +200,10 @@ export function ProductGallery({
             </button>
           </div>
         )}
-        {images.length > 1 && (
-          <Txt
-            id="product-chrome.swipe_hint"
-            as="span"
-            className="product-gallery-swipe-hint"
-            aria-hidden="true"
-          />
-        )}
       </div>
       {/* Mobile swipe bar - the touch-first replacement for the arrow pill +
           thumbnail strip (both hidden on mobile via CSS). A tick per image (tap
-          to jump) + counter + swipe hint, matching the board/schematic decks. */}
+          to jump) + counter, matching the board/schematic decks. */}
       {images.length > 1 && (
         <div className="product-gallery-deck">
           <div
@@ -235,11 +227,6 @@ export function ProductGallery({
             <span className="board-deck-count">
               {index + 1}/{images.length}
             </span>
-            <Txt
-              id="product-chrome.swipe_hint"
-              as="span"
-              className="board-deck-hint"
-            />
           </p>
         </div>
       )}

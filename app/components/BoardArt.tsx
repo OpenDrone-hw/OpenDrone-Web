@@ -119,10 +119,8 @@ export type BoardArtProps = {
   handle?: string;
   /** Optional "Inspect interactively" deep-dive link (e.g. KiCanvas hosted). */
   inspectUrl?: string;
-  /** Per-layer function blurbs keyed by copper-layer slug (`f`, `in1`…`b`),
-   *  shown beside each name in the rail. Slugs left unset fall back to a
-   *  position-based guess (see {@link layerFunction}). */
-  layerFns?: Record<string, string>;
+  /** Small "Render" tag pinned to the top-left corner of the viewer. */
+  renderTag?: string;
   /** Public path to the component manifest (`components.json`) for the active
    *  board. Fetched lazily; when a `highlightRefs` ref matches a component its
    *  footprint is drawn as a gold highlight over the active sheet. */
@@ -179,34 +177,6 @@ function parseManifest(raw: unknown): {
     if (c?.ref) map.set(c.ref, c);
   }
   return {viewBox: m.viewBox ?? '', map};
-}
-
-/**
- * Short function blurb for a copper layer. A content-supplied `override` wins;
- * otherwise guess from the layer's position in the stack - the outermost pair
- * carries signals + components, the pair just inside them is almost always a
- * solid reference (ground) plane, and everything between is signal + power.
- */
-function layerFunction(
-  slug: string,
-  index: number,
-  total: number,
-  override?: Record<string, string>,
-): string {
-  if (override?.[slug]) return override[slug];
-  // The realistic composite faces describe the physical board side, not a
-  // copper stack position, so they must not get the position-based guess.
-  // Both faces carry components on these boards (double-sided SMT).
-  if (slug === 'front') return 'Component side';
-  if (slug === 'back') return 'Component side';
-  // The position guess applies to the copper sheets only. Front sits at index 0
-  // and back at index total-1, so exclude those ends from the copper logic by
-  // measuring position within the copper run (front=1st sheet, back=last).
-  const copperFirst = index === 1; // first copper sheet (after front)
-  const copperLast = index === total - 2; // last copper sheet (before back)
-  if (copperFirst || copperLast) return 'Signal + components';
-  if (index === 2 || index === total - 3) return 'Ground plane';
-  return 'Signal + power';
 }
 
 /** Human label for each known layer slug, in physical top→bottom order. */
@@ -418,7 +388,7 @@ export function BoardArt({
   srcs,
   handle,
   inspectUrl,
-  layerFns,
+  renderTag,
   componentsSrc,
   highlightRefs,
   highlightUnion,
@@ -1562,6 +1532,7 @@ export function BoardArt({
       }
       data-board={handle}
     >
+      {renderTag ? <span className="render-chip board-art-render-chip">{renderTag}</span> : null}
       {sheets.length ? (
         <div className="board-folder-body" ref={bodyRef}>
           {/* Roving keyboard-nav group: arrow keys step the layer stack. The
@@ -1602,9 +1573,6 @@ export function BoardArt({
                   onClick={() => selectLayer(i)}
                 >
                   <span className="board-folder-tab-name">{s.label}</span>
-                  <span className="board-folder-tab-fn">
-                    {layerFunction(s.slug, i, railCount, layerFns)}
-                  </span>
                 </button>
               ))}
             </div>
@@ -1683,7 +1651,6 @@ export function BoardArt({
                 <span className="board-deck-name">
                   {sheets[shownIndex]?.label}
                 </span>
-                <span className="board-deck-hint">Swipe ←/→</span>
               </p>
             </div>
           ) : null}

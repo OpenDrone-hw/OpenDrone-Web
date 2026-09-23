@@ -43,6 +43,6 @@
   "line_max": "Max {count} per order",
   "total_plus_shipping": "{subtotal} + shipping",
   "payments_aria": "Payment methods",
-  "added_subtotal_export": "Subtotal (no EU VAT)",
-  "register_total_export": "Total (no EU VAT)"
+  "added_subtotal_plain": "Subtotal",
+  "register_total": "Total"
 }

@@ -277,8 +277,7 @@ html.light .scene-dim {
 }
 /* header pill + frame slider now use --pod-bg, which has its own light twin —
    no per-surface light override needed. */
-html.light .product-gallery-controls,
-html.light .product-gallery-swipe-hint {
+html.light .product-gallery-controls {
   background: rgba(255, 255, 255, 0.7);
 }
 /* Schematic sheets are black-on-white KiCad exports. Dark mode inverts them
@@ -1879,7 +1878,7 @@ html.light .header-cat-pod {
   height: 4.5rem;
 }
 .site-header-categories .header-cat-pod .product-pod-title {
-  color: var(--color-gold-text);
+  color: var(--color-gold);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-size: 0.95rem;
@@ -1906,9 +1905,9 @@ html.light .header-cat-pod {
 .site-header-categories a {
   font-family: var(--font-mono);
   font-size: var(--fs-sm);
-  letter-spacing: var(--ls-label);
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--color-gold-text);
+  color: var(--color-gold);
   opacity: 0.7;
   font-weight: 500;
   position: relative;
@@ -1917,21 +1916,15 @@ html.light .header-cat-pod {
   transition: opacity 0.15s ease, color 0.15s ease, font-weight 0.15s ease;
 }
 
-/* Light: the dimmed-chip idle state drops the deep gold under AA, so
-   chips stay fully opaque and the active chip is marked by its pill. */
-html.light .site-header-categories a {
-  opacity: 1;
-}
-
 .site-header-categories a:hover {
   opacity: 1;
-  color: var(--color-gold-text-hover);
+  color: var(--color-gold-hover);
 }
 
 .site-header-categories a.active,
 .site-header-categories a[aria-current="page"] {
   opacity: 1;
-  color: var(--color-gold-text-hover);
+  color: var(--color-gold-hover);
   font-weight: 600;
 }
 
@@ -1968,7 +1961,7 @@ html.light .site-header-categories a {
 }
 .site-header-categories .site-header-cat-group a:hover {
   opacity: 1;
-  color: var(--color-gold-text-hover);
+  color: var(--color-gold-hover);
 }
 /* Active = high-contrast label (white in dark, black in light) on a raised
    chip. A gold fill washed the text out — gold is a mid-tone, so neither dark
@@ -1994,19 +1987,19 @@ html.light .site-header-categories a {
   border-radius: var(--r-pill);
   background: var(--color-gold-soft);
   border: 1px solid color-mix(in srgb, var(--color-gold) 50%, transparent);
-  color: var(--color-gold-text);
+  color: var(--color-gold);
   opacity: 1;
 }
 .site-header-categories .site-header-cat-all:hover {
   background: color-mix(in srgb, var(--color-gold) 20%, transparent);
   border-color: var(--color-gold);
-  color: var(--color-gold-text-hover);
+  color: var(--color-gold-hover);
 }
 .site-header-categories .site-header-cat-all.active,
 .site-header-categories .site-header-cat-all[aria-current='page'] {
   background: color-mix(in srgb, var(--color-gold) 24%, transparent);
   border-color: var(--color-gold);
-  color: var(--color-gold-text-hover);
+  color: var(--color-gold-hover);
   font-weight: 600;
 }
 .site-header-categories .site-header-cat-all::after {
@@ -3579,32 +3572,6 @@ button.reset {
   padding: 0 0.25rem;
 }
 
-/* Swipe affordance — only shown on touch (no hover), where the flick gesture
-   exists. Mirrors the board explorer's dim mono hint. Tucked top-centre so it
-   doesn't collide with the arrow/counter pill at the bottom. */
-.product-gallery-swipe-hint {
-  display: none;
-}
-@media (hover: none) {
-  .product-gallery-swipe-hint {
-    display: block;
-    position: absolute;
-    top: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 0.25rem 0.6rem;
-    background: rgba(13, 13, 16, 0.6);
-    border-radius: var(--r-pill);
-    backdrop-filter: blur(6px);
-    font-family: var(--font-mono);
-    font-size: 10px;
-    letter-spacing: var(--ls-label);
-    text-transform: uppercase;
-    color: var(--color-text-dim);
-    pointer-events: none;
-  }
-}
-
 .product-gallery-thumbs {
   display: flex;
   gap: 0.5rem;
@@ -3650,10 +3617,25 @@ button.reset {
     display: block;
     margin-top: 0.2rem;
   }
-  /* Drop the tap-to-navigate controls on touch — swipe + the deck replace them. */
+  /* Neutral image indicator: the Pre-order button stays the only gold fill. */
+  .product-gallery-deck .board-deck-dot {
+    height: 4px;
+    min-height: 4px;
+  }
+  .product-gallery-deck .board-deck-dot.is-done {
+    background: var(--color-border-strong);
+  }
+  .product-gallery-deck .board-deck-dot.is-active {
+    background: var(--color-text-muted);
+  }
+  .product-gallery-deck .board-deck-count {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--color-text-muted);
+  }
+  /* Drop the tap-to-navigate controls on touch: swipe + the deck replace them. */
   .product-gallery-controls,
-  .product-gallery-thumbs,
-  .product-gallery-swipe-hint {
+  .product-gallery-thumbs {
     display: none;
   }
 }
@@ -6017,20 +5999,6 @@ html.light .firmware-logo--tile {
   letter-spacing: var(--ls-label);
   line-height: 1;
 }
-.board-folder-tab-fn {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.06em;
-  text-transform: none;
-  line-height: 1.2;
-  color: var(--color-text-muted);
-}
-.board-folder-tabs button:hover .board-folder-tab-fn {
-  color: var(--color-text-muted);
-}
-.board-folder-tabs button.is-active .board-folder-tab-fn {
-  color: color-mix(in srgb, var(--color-on-accent) 72%, transparent);
-}
 /* The names-only compact rail variant was removed 2026-08-12 (maintainer): its
    tight-gutter trigger misfired under the repo-scope layout and a wrapped
    names-only pill read worse than the full rail overlapping slightly. */
@@ -6105,9 +6073,6 @@ html.light .firmware-logo--tile {
     align-items: center;
     border-radius: var(--r-pill);
     padding: 0.48em 0.7em;
-  }
-  .board-folder-tab-fn {
-    display: none;
   }
 }
 
@@ -6528,17 +6493,9 @@ html.light .firmware-logo--tile {
   /* zero the global `section { padding: 1rem 0 }` so rows fill the bubble edge
      to edge (no dead space above the first row / below the last). */
   padding: 0;
-  background: linear-gradient(
-    180deg,
-    var(--color-bg-elevated),
-    var(--color-bg-card)
-  );
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-lg);
-  overflow: hidden;
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 6%, transparent);
+  border-top: 1px solid var(--color-border);
 }
-/* Rows inside a bubble form a table: each row gets ONE divider line, no per-row
+/* Plain hairline rows, no card: rows form a table: each row gets ONE divider line, no per-row
    card — so there's no boundary between components as you scroll/hover down. */
 .teardown-pins {
   list-style: none;
@@ -8037,7 +7994,7 @@ html.light .firmware-logo--tile {
 .cart-sheet-head,
 .cart-sheet-row {
   display: grid;
-  grid-template-columns: 56px minmax(0, 1fr) 7.5rem 7rem;
+  grid-template-columns: 56px minmax(0, 1fr) 14rem 7rem;
   column-gap: 1rem;
   align-items: center;
 }
@@ -17155,6 +17112,19 @@ html:not(.light) .trust-chip-oshwa-mark {
 .chapter-media .render-chip {
   z-index: 5;
 }
+/* Teardown viewer: the tag sits in the viewer's top-left corner, clear of
+   the board outline. */
+.chapter-media .board-art-render-chip {
+  top: 0;
+  left: 0;
+}
+/* The exploded layer stack hangs about 110px below the board box on desktop:
+   the schematic below starts after it. */
+@media (min-width: 1024px) {
+  .chapter:has(.board-art) .schematic-viewer {
+    margin-top: 8rem;
+  }
+}
 
 /* The sticky frame drawing of the teardown chapter must not paint over the
    spec rows that follow it. */
@@ -17558,11 +17528,12 @@ html:not(.light) .trust-chip-oshwa-mark {
 .product-buy-tag {
   align-self: center;
   padding: 2px 8px;
+  border: 1px solid var(--color-border-strong);
   border-radius: 999px;
-  background: var(--color-gold-soft);
+  background: transparent;
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
-  color: var(--color-gold-text);
+  color: var(--color-text-muted);
 }
 /* Step bar with the step prices over it: price, then the units it covers.
    Placed labels sit over the start of their own stretch of the bar. */

@@ -41,7 +41,7 @@
   "faq_q_duties": "Duties outside the EU?",
   "faq_a_duties": "Paid on delivery. [Shipping](/en/shipping)",
   "faq_q_risks": "Risks?",
-  "faq_a_risks": "[Terms, art. 7bis](/en/algemene-voorwaarden)",
+  "faq_a_risks": "[Terms, art. 7bis](/en/algemene-voorwaarden#art-7bis)",
   "updates_title": "Updates",
   "$comment_updates": "updates: \"YYYY-MM-DD · text\" strings, newest first. Never edit or delete an entry; add a new one.",
   "updates": [],

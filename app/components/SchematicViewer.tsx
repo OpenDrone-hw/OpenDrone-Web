@@ -574,11 +574,6 @@ export function SchematicViewer({
                 {active + 1}/{sheets.length}
               </span>
               <span className="board-deck-name">{current?.label}</span>
-              <Txt
-                id="product-chrome.swipe_hint"
-                as="span"
-                className="board-deck-hint"
-              />
             </p>
           </div>
           {inspectUrl ? (
