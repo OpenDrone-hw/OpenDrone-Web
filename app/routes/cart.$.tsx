@@ -21,20 +21,14 @@ import {Txt} from '~/components/Txt';
 import {ShipChip, parcelPromise, shipChipText} from '~/components/ShipChip';
 import {buildSeoMeta} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
-import {
-  BLOCKED_COUNTRIES,
-  countryName,
-  shipCountryOptions,
-  shippingQuote,
-} from '~/lib/shipping-rates';
+import {BLOCKED_COUNTRIES, countryName} from '~/lib/shipping-rates';
+import {paysEuVat} from '~/lib/visitor-country';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
 import type {RootLoader} from '~/root';
 import {
   CartAddError,
   postCart,
-  storedShipCountry,
   storedSplitItems,
-  storeShipCountry,
   storeSplitItems,
   type SplitItem,
 } from '~/lib/cart-client';
@@ -67,7 +61,7 @@ function sortCartLines(lines: ShopifyCartLine[]): ShopifyCartLine[] {
 
 /**
  * The cart: every line with its quantity, total and ship chip, then the
- * subtotal, shipping to the picked country, the total and Checkout. While
+ * subtotal and Checkout. Shipping is priced at Shopify checkout. While
  * the store is closed, /cart and the old /cart/<variant>:<qty> permalinks
  * go to the product listing.
  */
@@ -112,16 +106,6 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
 
 type Removed = SplitItem[];
 
-/** Put the picked destination on the Shopify cart so checkout opens in
- *  that country's market (see `/api/shopify/cart-country`). A blocked
- *  country is never sent; a failure leaves checkout to decide from the
- *  shipping address. */
-function sendCartCountry(code: string) {
-  if (BLOCKED_COUNTRIES.has(code)) return;
-  const body = new URLSearchParams({country: code});
-  fetch('/api/shopify/cart-country', {method: 'POST', body}).catch(() => {});
-}
-
 /** The one-line notice for a checkout the server sent back to the cart. */
 function checkNotice(check: string | null): string | null {
   if (check === CART_CHECK.paidBatch) return t('check_paid_batch', 'Not enough left in batch 1. Lower the quantity where shown.');
@@ -135,23 +119,9 @@ export default function CartPage() {
   // Lines moved out for a second order: kept in this browser so the list
   // survives a reload and the trip through checkout.
   const [removed, setRemoved] = useState<Removed>([]);
-  // The destination the shipping row quotes: the visitor's country, else
-  // Belgium, until the buyer picks another one. Never empty, so shipping
-  // and the total always show before Checkout.
-  const [country, setCountry] = useState<string | null>(rootData?.visitorCountry ?? 'BE');
   useEffect(() => {
     setRemoved(storedSplitItems());
-    const picked = storedShipCountry();
-    if (picked) {
-      setCountry(picked);
-      if (picked !== rootData?.visitorCountry) sendCartCountry(picked);
-    }
   }, []);
-  const pickCountry = (code: string) => {
-    setCountry(code);
-    storeShipCountry(code);
-    sendCartCountry(code);
-  };
   const updateRemoved = (items: Removed) => {
     setRemoved(items);
     storeSplitItems(items);
@@ -171,8 +141,7 @@ export default function CartPage() {
           cart={cart}
           info={info}
           payments={payments}
-          country={country}
-          onCountry={pickCountry}
+          country={rootData?.visitorCountry ?? null}
           onSplit={(items) => updateRemoved([...removed.filter((r) => !items.some((i) => i.id === r.id)), ...items])}
         />
       ) : (
@@ -264,85 +233,19 @@ function lineName(line: ShopifyCartLine): string {
  *  checkout waits until Shopify has confirmed them. */
 const PendingContext = createContext<(delta: number) => void>(() => {});
 
-/** Where most orders go, first in the picker. */
-const COMMON_COUNTRIES = ['BE', 'NL', 'DE', 'FR', 'LU', 'GB', 'US'];
-
-/** The picker in rate groups: the common destinations first, then the
- *  others by the flat-rate groups on /shipping, each by name. Blocked
- *  countries and territories with no postal address are left out. */
-let countryGroups: Array<{label: string; options: Array<{code: string; name: string}>}> | null = null;
-function pickerGroups(): Array<{label: string; options: Array<{code: string; name: string}>}> {
-  if (countryGroups) return countryGroups;
-  const all = shipCountryOptions('en').filter(({code}) => !COMMON_COUNTRIES.includes(code));
-  const zoneOf = (code: string) => {
-    const q = shippingQuote(code);
-    return q && !q.blocked ? q.zone : 'world';
-  };
-  const pick = (zones: string[]) => all.filter(({code}) => zones.includes(zoneOf(code)));
-  countryGroups = [
-    {
-      label: t('shipping_group_common', 'Common'),
-      options: COMMON_COUNTRIES.map((code) => ({code, name: countryName(code)})),
-    },
-    {label: t('shipping_group_eu', 'European Union'), options: pick(['eu', 'eu_far', 'near', 'be'])},
-    {label: t('shipping_group_europe', 'Rest of Europe'), options: pick(['europe'])},
-    {label: t('shipping_group_world', 'Rest of the world'), options: pick(['us', 'world'])},
-  ].filter((g) => g.options.length);
-  return countryGroups;
-}
-
-/** "Shipping to [country]" with the flat rate to it. */
-function ShippingRow({country, onCountry}: {country: string | null; onCountry: (code: string) => void}) {
-  const quote = shippingQuote(country);
-  return (
-    <div className="cart-register-row cart-ship-row">
-      <dt>
-        <label htmlFor="cart-ship-country">{t('shipping_label_ship_to', 'Shipping to')}</label>
-        <select
-          id="cart-ship-country"
-          className="cart-ship-select"
-          value={quote?.country ?? ''}
-          onChange={(event) => onCountry(event.target.value)}
-        >
-          {quote ? null : <option value="">{t('shipping_pick', 'Choose a country')}</option>}
-          {/* No shipping there, so not offered; only a visitor located in
-              one sees it, selected, next to the "not available" line. */}
-          {quote && (BLOCKED_COUNTRIES.has(quote.country) || !pickerGroups().some((g) => g.options.some((o) => o.code === quote.country))) ? (
-            <option value={quote.country}>{countryName(quote.country)}</option>
-          ) : null}
-          {pickerGroups().map((group) => (
-            <optgroup key={group.label} label={group.label}>
-              {group.options.map(({code, name}) => (
-                <option key={code} value={code}>{name}</option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
-      </dt>
-      <dd>
-        {!quote
-          ? t('shipping_at_checkout', 'at checkout')
-          : quote.blocked
-            ? t('shipping_blocked', 'not available')
-            : formatPrice(quote.rate, 'EUR')}
-      </dd>
-    </div>
-  );
-}
-
 function PopulatedCart({
   cart,
   info,
   payments,
   country,
-  onCountry,
   onSplit,
 }: {
   cart: ShopifyCart;
   info: Record<string, CartLineInfo>;
   payments: string[];
+  /** The visitor's country: the VAT wording and the end-use block only.
+   *  Shipping is priced at Shopify checkout from the address. */
   country: string | null;
-  onCountry: (code: string) => void;
   onSplit: (items: Removed) => void;
 }) {
   const revalidator = useRevalidator();
@@ -355,16 +258,8 @@ function PopulatedCart({
   // not ship together even when their promise reads the same.
   const groupOf = (line: ShopifyCartLine) => info[line.id]?.group ?? `date:${line.shipPromise ?? ''}`;
   const mixed = new Set(cart.lines.map(groupOf)).size > 1;
-  const quote = shippingQuote(country);
-  const shipBlocked = quote?.blocked === true;
-  // Subtotal plus the flat rate for the picked country; checkout confirms it.
-  const total =
-    quote && !quote.blocked
-      ? {amount: Number(cart.subtotal.amount) + quote.rate, currencyCode: cart.subtotal.currencyCode}
-      : null;
-  // Outside the EU the total reads plain "Total" and the carrier collects
-  // duties.
-  const outsideEu = Boolean(quote && !quote.blocked && quote.duty !== 'none');
+  const shipBlocked = Boolean(country && BLOCKED_COUNTRIES.has(country));
+  const vatIncluded = paysEuVat(country);
   const overLimit = cart.lines.some((line) => {
     const max = info[line.id]?.maxQuantity;
     return max != null && line.quantity > max;
@@ -389,27 +284,20 @@ function PopulatedCart({
         </div>
         <div className="cart-summary-page" aria-busy={pending || undefined}>
           <dl className="cart-register">
-            <div className="cart-register-row">
-              <Txt id="cart.register_subtotal" as="dt" />
+            <div className="cart-register-row is-total">
+              <dt>
+                {vatIncluded
+                  ? t('register_subtotal_vat', 'Subtotal (incl. VAT)')
+                  : t('register_subtotal', 'Subtotal')}
+              </dt>
               <dd style={pendingStyle}>{formatPrice(cart.subtotal.amount, cart.subtotal.currencyCode)}</dd>
             </div>
-            <ShippingRow country={country} onCountry={onCountry} />
-            <div className="cart-register-row is-total">
-              <dt>{outsideEu ? t('register_total', 'Total') : t('register_total_vat', 'Total (incl. VAT)')}</dt>
-              <dd style={pendingStyle}>
-                {total
-                  ? formatPrice(total.amount, total.currencyCode)
-                  : t('total_plus_shipping', '{subtotal} + shipping', {
-                      subtotal: formatPrice(cart.subtotal.amount, cart.subtotal.currencyCode),
-                    })}
-              </dd>
-            </div>
           </dl>
-          {outsideEu ? <p className="cart-summary-note">{t('note_duties', 'Import duties paid on delivery.')}</p> : null}
+          <p className="cart-summary-note">{t('shipping_at_checkout', 'Shipping calculated at checkout')}</p>
           {mixed ? <MixedNote cart={cart} info={info} onSplit={onSplit} /> : null}
           {shipBlocked ? (
             <p className="cart-summary-note" role="note">
-              {t('checkout_blocked', 'Not available in {country}.', {country: countryName(quote?.country ?? '')})}{' '}
+              {t('checkout_blocked', 'Not available in {country}.', {country: countryName(country ?? '')})}{' '}
               <Link to="/end-use">{t('checkout_blocked_link', 'End-Use Policy')}</Link>
             </p>
           ) : (

@@ -10,15 +10,15 @@
     "lead": ""
   },
   "whatIsThis": {
-    "intro": "The flight controller is the drone's onboard computer. It runs Betaflight on an RP2354 (Raspberry Pi) and reads a 6-axis IMU to keep the drone stable and follow your sticks. It logs blackbox to a microSD card, draws an OSD on analog video, sends OSD data to digital video systems, and has a switchable 10 V output to power your VTX.",
+    "intro": "The flight controller is the aircraft's onboard computer. This one runs Betaflight on an RP2354, a dual-core chip from the Raspberry Pi Pico family, reading a 6-axis IMU thousands of times per second and correcting all four motors to follow your commands. It records blackbox to a microSD card, draws OSD over your analog video feed, and has a switchable 10 V rail so you can power your VTX from it. ",
     "needs": [
       "A 4-in-1 ESC and four motors (OpenESC pairs directly, one plug)",
       "A receiver wired to a UART (OpenRX, CRSF)",
       "A camera and VTX if you want a live video feed",
-      "A frame, props, and a LiPo battery: 3-6S for the 20×20, 3-8S for the 30×30",
+      "A frame, props, and a 3-6S LiPo",
       "A radio and goggles on your side of the link"
     ],
-    "fit": "It sits in the middle of the stack. The receiver, ESC, camera and VTX all connect to it.",
+    "fit": "In the middle of the stack and in the middle of every signal path; everything the aircraft does passes through this board.",
     "chain": "fc"
   },
   "install": "Solder",
@@ -40,14 +40,14 @@
     "pins": [
       {
         "ref": "①",
-        "part": "RP2354B",
+        "part": "RP2354B ",
         "refs": [
           "U2"
         ]
       },
       {
         "ref": "②",
-        "part": "Gyro (BMI270)",
+        "part": "6-axis IMU",
         "refs": [
           "U9"
         ]
@@ -92,7 +92,7 @@
       },
       {
         "ref": "⑥",
-        "part": "Gyro LDO 1.8V",
+        "part": "Gyro 1.8 V LDO",
         "refs": [
           "U15"
         ]
@@ -222,12 +222,30 @@
   },
   "inTheBox": [
     {
-      "qty": "1x",
+      "qty": "1×",
       "item": "OpenFC Lite board"
     },
     {
-      "qty": "1x",
-      "item": "8-pin JST-SH ESC cable"
+      "qty": "1×",
+      "item": "JST-SH 1.0 mm 8-pin FC-to-ESC cable"
+    },
+    {
+      "qty": "4×",
+      "item": "Silicone soft-mount grommets",
+      "note": "M3 on 30×30, M2 on 20×20"
+    },
+    {
+      "qty": "1×",
+      "item": "Silicone hook-up wire set, 28 AWG, four colours"
+    },
+    {
+      "qty": "1×",
+      "item": "Quick-start card"
+    },
+    {
+      "qty": "1×",
+      "item": "ESD bag (OpenDrone logo)",
+      "note": "everything above ships inside it"
     }
   ],
   "downloads": [],
@@ -353,7 +371,7 @@
         },
         {
           "ref": "②",
-          "part": "Gyro (BMI270)",
+          "part": "6-axis IMU",
           "refs": [
             "U9"
           ]
@@ -398,7 +416,7 @@
         },
         {
           "ref": "⑥",
-          "part": "Gyro LDO 1.8V",
+          "part": "Gyro 1.8 V LDO",
           "refs": [
             "U12"
           ]
@@ -517,24 +535,6 @@
         "inspectUrl": "https://kicanvas.org/?github=https://github.com/OpenDrone-hw/OpenFC-Lite-Mini/blob/main/hardware/OpenFC.kicad_pcb",
         "schematicUrl": "https://kicanvas.org/?github=https://github.com/OpenDrone-hw/OpenFC-Lite-Mini/blob/main/hardware/OpenFC.kicad_sch"
       },
-      "inTheBox": [
-        {
-          "qty": "4x",
-          "item": "M2 soft-mount grommets"
-        },
-        {
-          "qty": "1x",
-          "item": "28AWG wire set"
-        },
-        {
-          "qty": "1x",
-          "item": "Quick-start card"
-        },
-        {
-          "qty": "1x",
-          "item": "ESD bag"
-        }
-      ],
       "keywords": [
         "mini"
       ],
@@ -542,24 +542,6 @@
         "20x20",
         "2020",
         "mini"
-      ],
-      "connectors": [
-        [
-          "ESC plug",
-          "JST-SH 8p · 1 VBAT, 2 GND, 3 CURR, 4 TLM, 5-8 M1-M4"
-        ],
-        [
-          "VTX plug",
-          "JST-SH 6p · 1 10V, 2 GND, 3 TX0, 4 RX0, 5 GND, 6 RX1"
-        ],
-        [
-          "RX",
-          "Pads · UART1 TX, RX"
-        ],
-        [
-          "I2C",
-          "Pads · SDA, SCL"
-        ]
       ]
     },
     "30×30": {
@@ -580,24 +562,6 @@
         "inspectUrl": "https://kicanvas.org/?github=https://github.com/OpenDrone-hw/OpenFC-Lite/blob/main/hardware/OpenFC.kicad_pcb",
         "schematicUrl": "https://kicanvas.org/?github=https://github.com/OpenDrone-hw/OpenFC-Lite/blob/main/hardware/OpenFC.kicad_sch"
       },
-      "inTheBox": [
-        {
-          "qty": "4x",
-          "item": "M3 soft-mount grommets"
-        },
-        {
-          "qty": "1x",
-          "item": "28AWG wire set"
-        },
-        {
-          "qty": "1x",
-          "item": "Quick-start card"
-        },
-        {
-          "qty": "1x",
-          "item": "ESD bag"
-        }
-      ],
       "specs": [
         [
           "Frame fit",
@@ -624,27 +588,5 @@
       }
     ],
     "matchOption": "Model"
-  },
-  "connectors": [
-    [
-      "ESC plug",
-      "JST-SH 8p · 1 VBAT, 2 GND, 3 CURR, 4 TLM, 5-8 M1-M4"
-    ],
-    [
-      "VTX plug",
-      "JST-SH 6p · 1 10V, 2 GND, 3 TX0, 4 RX0, 5 GND, 6 RX1"
-    ],
-    [
-      "RX plug",
-      "JST-SH 4p · 5V, GND, RX, TX"
-    ],
-    [
-      "GPS plug",
-      "JST-SH 6p · 4.5V, GND, RX, TX, SDA, SCL"
-    ],
-    [
-      "Camera plug",
-      "JST-SH 3p · 5V, GND, VIDEO"
-    ]
-  ]
+  }
 }

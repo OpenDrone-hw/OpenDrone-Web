@@ -5,73 +5,39 @@ import type {RootLoader} from '~/root';
 import {copyText} from '~/lib/copy';
 import {formatPrice} from '~/lib/catalog';
 import {
-  PRODUCT_CONTENT,
   isPurchasableStatus,
   lineDisplayName,
   variantDisplayName,
 } from '~/lib/product-content';
-import type {ProductCardFragment, ProductVariantFragment} from '~/lib/product-shapes';
 import {ShipChip, parcelPromise, shipChipText} from './ShipChip';
-import {shippingQuote} from '~/lib/shipping-rates';
+import {paysEuVat} from '~/lib/visitor-country';
+import {
+  buildSuggestionSpecs,
+  parseBuilds,
+  resolveBuild,
+  resolveBuildSuggestions,
+  type BuildSuggestion,
+} from '~/lib/build-recommendations';
+import buildsJson from '../../content/builds.json';
 import {beginCartAdd, endCartAdd} from './cart-add-lock';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
 import {DATES_SEEN_FIELD, type CartSummary} from '~/lib/shopify-cart-action';
 import {trackEvent} from '~/lib/growth/plausible';
-import {attributionSource} from '~/lib/growth/attribution';
-import {
-  CART_ADDED_EVENT,
-  postCartAdd,
-  storedShipCountry,
-  type CartAddedDetail,
-} from '~/lib/cart-client';
+import {CART_ADDED_EVENT, postCartAdd, type CartAddedDetail} from '~/lib/cart-client';
 
 const CART_ACTION = '/api/shopify/cart';
+const BUILDS = parseBuilds(buildsJson);
 
 function t(key: string, fallback: string, vars: Record<string, string> = {}): string {
   return (copyText(`cart.${key}`) ?? fallback).replace(/\{(\w+)\}/g, (m, k: string) => vars[k] ?? m);
 }
 
-type CartLine = CartSummary['lines'][number];
-
-/**
- * The size-matched partner board for a single FC or ESC line: the ESC for
- * an FC, the FC for an ESC, same mount size, sellable now and not in the
- * cart yet. Null for anything else.
- */
-function stackPartner(
-  line: CartLine | undefined,
-  products: readonly ProductCardFragment[],
-  cart: readonly CartLine[],
-  sellable: (handle: string) => boolean,
-): {label: string; variant: ProductVariantFragment} | null {
-  const stack = line ? PRODUCT_CONTENT[line.handle]?.stack : undefined;
-  if (!line || !stack || !line.variantTitle || line.variantTitle === 'Default Title') return null;
-  const option = (stack.matchOption ?? 'Model').trim().toLowerCase();
-  const size = line.variantTitle.trim().toLowerCase();
-  for (const partner of stack.partners) {
-    if (!sellable(partner.handle)) continue;
-    const product = products.find((p) => p.handle === partner.handle);
-    const variant = product?.variants.nodes.find(
-      (v) =>
-        v.availableForSale &&
-        v.selectedOptions.some(
-          (o) => o.name.trim().toLowerCase() === option && o.value.trim().toLowerCase() === size,
-        ),
-    );
-    if (!product || !variant?.sku || cart.some((l) => l.sku === variant.sku)) continue;
-    return {
-      label: `${partner.label ?? product.title} ${variantDisplayName(product.handle, variant.title)}`,
-      variant,
-    };
-  }
-  return null;
-}
-
 /**
  * The drawer that opens after a background add to cart: the added line
- * with its ship chip, one optional stack row (FC <-> ESC, same size), the
- * subtotal and Checkout. One instance for the whole site, opened by the
- * `opendrone:cart-added` event every AddToCartButton sends.
+ * with its ship chip, the parts that complete the same build as compact
+ * rows with an Add button each, the subtotal and Checkout. One instance
+ * for the whole site, opened by the `opendrone:cart-added` event every
+ * AddToCartButton sends. Shipping is priced at Shopify checkout only.
  */
 export function CartAddedDialog() {
   const rootData = useRouteLoaderData<RootLoader>('root');
@@ -79,11 +45,9 @@ export function CartAddedDialog() {
   const {pathname} = useLocation();
   const [detail, setDetail] = useState<CartAddedDetail | null>(null);
   const [summary, setSummary] = useState<CartSummary | null>(null);
-  const [busy, setBusy] = useState(false);
-  // The stack SKU added from this drawer: it joins the added lines.
-  const [stacked, setStacked] = useState<string | null>(null);
-  // The destination picked in the cart, when the buyer picked one.
-  const [shipCountry, setShipCountry] = useState<string | null>(null);
+  // The suggestion SKU being added, and the one whose add failed.
+  const [busy, setBusy] = useState<string | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
@@ -99,8 +63,7 @@ export function CartAddedDialog() {
       returnFocus.current = document.activeElement as HTMLElement | null;
       setDetail(next);
       setSummary(next.summary);
-      setShipCountry(storedShipCountry());
-      setStacked(null);
+      setFailed(null);
     };
     window.addEventListener(CART_ADDED_EVENT, open);
     return () => window.removeEventListener(CART_ADDED_EVENT, open);
@@ -139,10 +102,8 @@ export function CartAddedDialog() {
 
   if (!detail || !summary) return null;
 
-  // The lines added this time, with the stack partner once it is added here.
-  const added = summary.lines
-    .filter((l) => l.sku && (detail.skus.includes(l.sku) || l.sku === stacked))
-    .sort((a, b) => Number(a.sku === stacked) - Number(b.sku === stacked));
+  // The lines added this time.
+  const added = summary.lines.filter((l) => l.sku && detail.skus.includes(l.sku));
   // One parcel per order: when the cart's lines ship at different times,
   // the drawer names the parcel's date above Checkout, as the cart does.
   const mixed = new Set(summary.lines.map((l) => l.shipPromise ?? '')).size > 1;
@@ -153,41 +114,42 @@ export function CartAddedDialog() {
   // Same rule as the buy module and the cart: "incl. VAT" only where EU VAT
   // applies. The International and US markets keep the same price with no
   // EU VAT in it (Shopify: taxes included in price).
-  const quote = shippingQuote(shipCountry ?? rootData?.visitorCountry ?? null);
-  const vatIncluded = !quote || (!quote.blocked && quote.duty === 'none');
-  const shipBlocked = quote?.blocked === true;
+  const vatIncluded = paysEuVat(rootData?.visitorCountry ?? null);
 
-  // The stack row: judged on the cart as it was when the drawer opened; once
-  // the partner is added here it shows as a line instead.
+  // The parts that complete the build, judged on the cart as it was when
+  // the drawer opened, so a part added from here stays listed as "Added".
+  const openedWith = detail.summary.lines;
   const statuses = rootData?.productStatuses ?? {};
-  const partner =
-    added.length === 1
-      ? stackPartner(added[0], rootData?.familyProducts ?? [], detail.summary.lines, (handle) =>
-          isPurchasableStatus(statuses[handle]),
-        )
-      : null;
+  const suggestions = resolveBuildSuggestions(
+    rootData?.familyProducts ?? [],
+    buildSuggestionSpecs(
+      BUILDS,
+      resolveBuild(BUILDS, detail.skus[0], openedWith.map((l) => l.sku)),
+      openedWith,
+    ),
+    (handle) => isPurchasableStatus(statuses[handle]),
+  );
 
-  const addStack = async () => {
-    const sku = partner?.variant.sku;
-    if (!partner || !sku || !beginCartAdd()) return;
-    setBusy(true);
+  const addPart = async (part: BuildSuggestion) => {
+    if (!beginCartAdd()) return;
+    setBusy(part.sku);
+    setFailed(null);
     try {
-      setSummary(await postCartAdd(CART_ACTION, [['sku', sku], ['qty', '1']]));
-      setStacked(sku);
-      trackEvent('Stack Toggle', {
+      setSummary(await postCartAdd(CART_ACTION, [['sku', part.sku], ['qty', String(part.quantity)]]));
+      trackEvent('Recommendation Add', {
         props: {
-          product: added[0]?.handle ?? 'unknown',
-          partner: partner.variant.product.handle,
-          surface: 'drawer',
-          source: attributionSource(),
+          product: part.handle,
+          source_product: detail.handle ?? 'unknown',
+          role: part.role,
+          strategy: 'compatibility',
         },
       });
       void revalidator.revalidate();
     } catch {
-      // The button stays; a second click tries again.
+      setFailed(part.sku);
     } finally {
       endCartAdd();
-      setBusy(false);
+      setBusy(null);
     }
   };
 
@@ -253,18 +215,52 @@ export function CartAddedDialog() {
           ))}
         </ul>
 
-        {partner && stacked !== partner.variant.sku ? (
-          <p className="cart-added-stack">
-            <span>
-              {`${t('added_stack', 'Stack it:')} ${partner.label} · ${formatPrice(
-                partner.variant.price.amount,
-                partner.variant.price.currencyCode,
-              )}`}
-            </span>
-            <button type="button" disabled={busy} onClick={() => void addStack()}>
-              {t('added_stack_add', 'Add')}
-            </button>
-          </p>
+        {suggestions.length ? (
+          <div className="cart-added-build">
+            <p className="cart-added-build-title">{t('build_title', 'Complete the build')}</p>
+            <ul className="cart-added-suggestions">
+              {suggestions.map((part) => {
+                const image = part.variant.image ?? part.product.featuredImage;
+                const inCart = summary.lines.some((l) => l.sku === part.sku);
+                return (
+                  <li className="cart-added-suggestion" key={part.sku}>
+                    {image ? (
+                      <img src={shopifyImageUrl(image.url, 96)} alt="" width={48} height={48} loading="lazy" />
+                    ) : (
+                      <span className="cart-line-noimage" aria-hidden="true" />
+                    )}
+                    <div>
+                      <span className="cart-added-suggestion-name">
+                        {part.quantity > 1 ? `${part.quantity}x ` : ''}
+                        {part.variant.title !== 'Default Title'
+                          ? `${part.product.title} ${variantDisplayName(part.product.handle, part.variant.title)}`
+                          : part.product.title}
+                      </span>
+                      <ShipChip promise={part.variant.shipPromise} className="cart-added-ship" />
+                    </div>
+                    <span className="cart-added-price">
+                      {formatPrice(
+                        Number(part.variant.price.amount) * part.quantity,
+                        part.variant.price.currencyCode,
+                      )}
+                    </span>
+                    <button
+                      type="button"
+                      className="cart-added-add"
+                      disabled={inCart || busy !== null}
+                      onClick={() => void addPart(part)}
+                    >
+                      {inCart
+                        ? t('build_added', 'Added')
+                        : failed === part.sku
+                          ? t('build_retry', 'Try again')
+                          : t('build_add', 'Add')}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         ) : null}
 
         <div className="cart-added-foot">
@@ -285,26 +281,24 @@ export function CartAddedDialog() {
               {`${t('mixed_one_parcel', 'One parcel')} · ${parcel.text}`}
             </p>
           ) : null}
-          {shipBlocked ? null : (
-            // A plain form post: the cart action checks every line again and
-            // redirects to Shopify checkout, or back to /cart with a notice.
-            <form
-              method="post"
-              action={CART_ACTION}
-              onSubmit={() =>
-                trackCheckoutClick(
-                  subtotal ? {currency: subtotal.currencyCode, amount: Number(subtotal.amount)} : null,
-                )
-              }
-            >
-              <input type="hidden" name="intent" value="checkout" />
-              {/* The parcel line above names the date, so checkout may go on. */}
-              {parcel ? <input type="hidden" name={DATES_SEEN_FIELD} value="1" /> : null}
-              <button type="submit" className="cart-added-checkout">
-                {copyText('cart.checkout_cta') ?? 'Checkout'}
-              </button>
-            </form>
-          )}
+          {/* A plain form post: the cart action checks every line again and
+              redirects to Shopify checkout, or back to /cart with a notice. */}
+          <form
+            method="post"
+            action={CART_ACTION}
+            onSubmit={() =>
+              trackCheckoutClick(
+                subtotal ? {currency: subtotal.currencyCode, amount: Number(subtotal.amount)} : null,
+              )
+            }
+          >
+            <input type="hidden" name="intent" value="checkout" />
+            {/* The parcel line above names the date, so checkout may go on. */}
+            {parcel ? <input type="hidden" name={DATES_SEEN_FIELD} value="1" /> : null}
+            <button type="submit" className="cart-added-checkout">
+              {copyText('cart.checkout_cta') ?? 'Checkout'}
+            </button>
+          </form>
           <Link className="cart-added-viewcart" to="/cart" prefetch="intent">
             {t('added_view', 'View cart ({count})', {count: String(summary.totalQuantity)})}
           </Link>

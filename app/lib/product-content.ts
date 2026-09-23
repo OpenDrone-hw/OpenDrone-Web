@@ -55,28 +55,33 @@ export type ChapterPin = {
  * can read "1×" or "kit" or "set". Keep items factual - only list
  * things that genuinely ship. No speculative filler.
  */
-export type BoxItem = {
-  qty?: string;
-  item: string;
-  note?: string;
-  /** Site path the note links to, e.g. the spare-parts page. */
-  href?: string;
-};
+export type BoxItem = {qty?: string; item: string; note?: string};
 
 /**
- * Beginner notes on the part. Not rendered on the PDP: `intro` is the
- * page's meta description, the rest is source material for /learn.
+ * The beginner chapter ("What does this do?"), rendered first on the PDP.
+ * Written for someone who has never built a drone: what the part IS, what
+ * else a first build needs before it flies, and where it sits in the whole
+ * machine. A professional scrolls past without losing anything. Absent =
+ * the chapter does not render (accessories, bundles until written).
+ * Keep the copy tier-neutral on lines whose tiers share one file.
  */
 export type WhatIsThis = {
   /** ~100 words of plain language: what this part is and does. */
   intro: string;
-  /** "Before this flies you also need": one line per missing piece. */
+  /** "Before this flies you also need": one line per missing piece.
+   *  Not rendered on the PDP (2026-08-12): reserved for the planned
+   *  general FPV intro page. */
   needs: string[];
-  /** One line: where the part sits in the drone's signal chain. */
+  /** One line: where the part sits in the drone's signal chain. Kept as
+   *  data for the studio; the chapter SHOWS the position via `chain`. */
   fit: string;
-  /** Which signal-chain stage this product is. */
+  /** Which signal-chain stage this product IS; the chapter's chain strip
+   *  lights it. Stages: radio, rx, fc, esc, motors, frame. */
   chain?: 'radio' | 'rx' | 'fc' | 'esc' | 'motors' | 'frame';
 };
+
+/** DOM id of the "What does this do?" chapter on a product page. */
+export const WHAT_IS_THIS_ID = 'what-is-this';
 
 /**
  * Downloadable asset rendered in the Downloads chapter. `kind` picks
@@ -236,9 +241,6 @@ export type VariantContent = {
   /** Other spellings of this option value a link may carry (the visible
    *  label `5"`, `5in`). The PDP redirects them to the catalog value. */
   aliases?: string[];
-  /** Per-tier connector and pin-order rows, appended to the product's
-   *  `connectors`. Taken from the board repo's design notes. */
-  connectors?: Array<[string, string]>;
   /** One short line over the gallery when this tier shows another tier's
    *  image, e.g. "Render of the 5-inch frame". */
   imageNote?: string;
@@ -313,7 +315,7 @@ export type ProductContent = {
      *  teardown renders FrameViewer instead of BoardArt. */
     frameViewer?: {src: string; inspectUrl?: string};
   };
-  /** Beginner notes. See {@link WhatIsThis}. */
+  /** Beginner orientation chapter. See {@link WhatIsThis}. */
   whatIsThis?: WhatIsThis;
   inTheBox: BoxItem[];          // physical items shipped
   /** Schematic PDFs, STEP files, manuals, etc. Each SKU also carries its
@@ -384,9 +386,6 @@ export type ProductContent = {
   /** The mono line under the product name, for a product without
    *  versions or as the default for versions without their own. */
   subtitle?: string;
-  /** Connector and pin-order rows shown under the spec table, from the
-   *  board repo's design notes. Not part of the README-mirrored `specs`. */
-  connectors?: Array<[string, string]>;
 };
 
 /*
