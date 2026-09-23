@@ -107,7 +107,7 @@
   --color-gold-fill: var(--color-gold);
   --color-gold-fill-hover: var(--color-gold-hover);
 
-  /* Brand / PCB green. --color-green is the emerald brand green — a
+  /* Brand / PCB green. --color-green is the emerald brand green: a
      physical product color (#147A31, used on the motors). Rendered
      lighter on dark for legibility (#4ea866); the true #147A31 takes over
      on light (AA 5.4:1 on white, see html.light). --color-green-deep is
@@ -123,7 +123,7 @@
   --color-border-strong: #34343c;
 
   /* Text/icon color that sits ON the gold accent (filled buttons, badges,
-     active toggles). Dark in both themes — gold reads best with dark ink.
+     active toggles). Dark in both themes: gold reads best with dark ink.
      Decoupled from --color-bg so light mode can flip the page background
      without dragging on-accent text light with it. */
   --color-on-accent: #0d0d10;
@@ -132,7 +132,7 @@
      it stays; html.light swaps it for ink, where gold would be 1.62:1. */
   --color-focus: var(--color-gold);
 
-  /* Legacy alias map — collapses the old dual gold/green CTA system
+  /* Legacy alias map: collapses the old dual gold/green CTA system
      into a single gold accent. Any CSS still referencing the old
      names keeps working without an audit. */
   --color-accent: var(--color-gold);
@@ -166,7 +166,7 @@
   --fs-2xl: clamp(2rem, 3.4vw, 2.75rem);
   --fs-3xl: clamp(2.5rem, 4vw, 3.5rem);
 
-  /* Spacing scale — replaces ad-hoc 0.5/0.75/1/1.25/2 mix. */
+  /* Spacing scale: replaces ad-hoc 0.5/0.75/1/1.25/2 mix. */
   --sp-1: 0.25rem;
   --sp-2: 0.5rem;
   --sp-3: 0.75rem;
@@ -185,7 +185,7 @@
   --r-pod: 22px; /* floating Pods: dropdowns, hero showcase, PDP scroll-bubble */
   --r-pill: 999px;
 
-  /* Pod surface — ONE recipe shared by every floating surface (header pill,
+  /* Pod surface: ONE recipe shared by every floating surface (header pill,
      dropdowns, hero showcase, PDP scroll-bubble) so they read as one material
      and theme-swap together. See incutec/content/opendrone-web-architecture.md. */
   --pod-bg: rgba(13, 13, 16, 0.8);
@@ -243,7 +243,7 @@ html.light {
      more. The 2026-07-12 pass unified the two themes on #c89d2e and accepted
      ~2.6:1 for gold text on white; this pass keeps that decision and fixes the
      colour it was made with. Every gold token now inherits from @theme
-     unchanged, so nothing is overridden here — deleting these overrides IS the
+     unchanged, so nothing is overridden here: deleting these overrides IS the
      change. Gold as text goes through --color-gold-text, which swaps to a
      deep gold here (6.1:1); fills, borders and rules keep the brand gold.
      Focus rings use --color-focus. */
@@ -287,14 +287,14 @@ html.light .schematic-sheet {
   filter: contrast(1.15);
 }
 
-/* ── Gold tags — REMOVED (maintainer 2026-07-12) ──────────────────────────────
+/* ── Gold tags: REMOVED (maintainer 2026-07-12) ──────────────────────────────
    The old "gold text is always on a near-black chip" rule lived here: in
    light mode every gold label/eyebrow/badge got a --color-tag-bg chip so
    gold never touched white. It scattered black boxes across light pages
    and read as broken, so the whole block is gone. Gold text now sits
    directly on the light background as a ~2.6:1 brand accent (see the
    light-mode --color-gold note above). The `.gold-tag` JSX class is now
-   inert — safe to leave in markup, no styling attached. If you need gold
+   inert: safe to leave in markup, no styling attached. If you need gold
    on a genuinely dark surface within a light page, set the text to
    var(--color-gold-bright) and give the element its own dark background;
    don't reintroduce a blanket chip rule. */
@@ -332,7 +332,7 @@ html.light .schematic-sheet {
   font-family: var(--font-display);
 }
 
-/* Base styles. Set font-family explicitly to Inter — Tailwind v4
+/* Base styles. Set font-family explicitly to Inter: Tailwind v4
    defines its own --font-sans default which would otherwise win
    against our @theme override at the html selector. */
 html {
@@ -345,14 +345,14 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overscroll-behavior-y: none;
-  /* `clip` (not `hidden`) — prevents horizontal scroll bleed from
+  /* `clip` (not `hidden`): prevents horizontal scroll bleed from
      off-screen fixed elements like the cart aside without creating a
      scroll container, which would otherwise break position: sticky on
      the header and the homepage hero pin. */
   overflow-x: clip;
 }
 
-/* Scene dim — sits on top of the 3D scene while models load. Sibling
+/* Scene dim: sits on top of the 3D scene while models load. Sibling
    of the Canvas (not the wordmark), so the wordmark always reads
    bright. Fades out once the scene reports ready and the minimum
    splash beat has elapsed. */
@@ -373,8 +373,8 @@ html {
   opacity: 0;
 }
 
-/* Airframe size toggle — segmented 5"/3" switch centered above the hero. */
-/* Airframe size slider — a draggable gold sled between 5″ and 3″. The thumb
+/* Airframe size toggle: segmented 5"/3" switch centered above the hero. */
+/* Airframe size slider: a draggable gold sled between 5″ and 3″. The thumb
    sits behind the two labels; the active label flips to on-accent ink as the
    thumb covers it. Drag is a pointer enhancement on top of two real buttons. */
 .hero-size-slider {
@@ -390,7 +390,7 @@ html {
   user-select: none;
 }
 
-/* Thumb sits ABOVE the labels (z 2) so it actually receives the drag — the
+/* Thumb sits ABOVE the labels (z 2) so it actually receives the drag: the
    label buttons (z 1) would otherwise intercept every pointer event. The
    thumb carries its own label so the gold still shows text. The inset top
    highlight + grip dots make it read as a tactile, grabbable handle. */
@@ -491,7 +491,7 @@ html {
   outline-offset: 3px;
 }
 
-/* Hero wordmark — single element that animates from centered-large
+/* Hero wordmark: single element that animates from centered-large
    (splash) to bottom-left-small (settled). Anchor is the settled
    position; the splash state is a transform that moves+scales it up
    to viewport center so the motion is a single tween, not a swap. */
@@ -530,7 +530,7 @@ html {
   width: auto;
 }
 
-/* SVG wordmark — same height as the img variant, width auto-scales from
+/* SVG wordmark: same height as the img variant, width auto-scales from
    the viewBox. overflow:visible so the fly-in transforms don't get
    clipped at the SVG edge during the draw phase. */
 .hero-wordmark-svg {
@@ -541,7 +541,7 @@ html {
 }
 
 /*
-  Phase 1 — stroke draws. Each <path> in .hw-strokes has pathLength=100
+  Phase 1: stroke draws. Each <path> in .hw-strokes has pathLength=100
   so a single 100→0 dashoffset keyframe works for every letter. Letters
   start with a small random translate+rotate offset (set per-letter via
   --dx, --dy, --rot in JS) so they "fly in" while the outline draws.
@@ -549,8 +549,8 @@ html {
 /*
   Stroke layer. Two parallel animations:
     - hw-draw-shape: backwards + forwards on stroke-dashoffset and the
-      fly-in transform — locks the drawn shape after the keyframe ends.
-    - hw-draw-opacity: backwards-only on opacity — fades the stroke in
+      fly-in transform: locks the drawn shape after the keyframe ends.
+    - hw-draw-opacity: backwards-only on opacity: fades the stroke in
       during Phase A, then RELEASES so the inline `opacity: 1 - fill`
       value takes over once Phase B (fill) starts. This is how the
       per-letter outline-to-fill handoff stays smooth: as each letter's
@@ -575,11 +575,11 @@ html {
      over and the stroke fades as the fill ramps. */
   opacity: calc(1 - var(--fill-opacity, 0));
   /* Letters fly in and stitch together. Curve is ease-out-cubic
-     instead of the original quart-ease — quart had so much slow-tail
+     instead of the original quart-ease: quart had so much slow-tail
      that letters were visually done after ~190ms but the timeline
      waited another 760ms to fire the next phase. Duration shortened
      to match perceived motion. fill-mode: backwards so the offset
-     transform is applied BEFORE the delay window — without this the
+     transform is applied BEFORE the delay window: without this the
      letter sits at rest pose during the delay and the fly-in is
      invisible. */
   animation:
@@ -591,7 +591,7 @@ html {
 }
 
 /* Once the parent flags the wordmark as fully filled, kill any
-   remaining stroke wireframe completely — no flicker if a per-letter
+   remaining stroke wireframe completely: no flicker if a per-letter
    calc rounds to non-zero. */
 .hero-wordmark-svg.is-filled .hw-stroke {
   opacity: 0 !important;
@@ -625,7 +625,7 @@ html {
 }
 
 /*
-  Phase 2 — fill layer. Each glyph has its own per-letter opacity set
+  Phase 2: fill layer. Each glyph has its own per-letter opacity set
   inline from the React side, computed as a ramp around its progress
   threshold (letter-index / N). No SVG mask: the letters fade in one at
   a time as `progress` advances. CSS transition smooths the per-frame
@@ -659,7 +659,7 @@ html {
   transform: translate(0, 0) scale(1);
 }
 
-/* Hero load overflow — appears below the centered wordmark only when
+/* Hero load overflow: appears below the centered wordmark only when
    the 3D scene is taking longer than the expected animation budget.
    Sits at the centered-splash position; once the splash settles (or
    the user clicks Skip) it fades away. */
@@ -735,7 +735,7 @@ html {
   }
 }
 
-/* Hero tagline — top-left, appears after the wordmark settles */
+/* Hero tagline: top-left, appears after the wordmark settles */
 .hero-tagline {
   position: absolute;
   top: calc(var(--header-height) + 1.5rem);
@@ -756,7 +756,7 @@ html {
   transform: translateY(0);
 }
 
-/* Hero actions — bottom-right CTAs, appear after the wordmark settles */
+/* Hero actions: bottom-right CTAs, appear after the wordmark settles */
 .hero-actions {
   position: absolute;
   bottom: 2.5rem;
@@ -788,7 +788,7 @@ html {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* 64px muted, not 88px solid — a quiet side-door, not a second focal
+  /* 64px muted, not 88px solid: a quiet side-door, not a second focal
      point competing with the 3D scene. Full presence returns on hover. */
   width: 64px;
   height: 64px;
@@ -809,9 +809,9 @@ html {
   color: var(--color-gold-text);
 }
 
-/* Island entrances — the floating "islands" glide in from their nearest screen
+/* Island entrances: the floating "islands" glide in from their nearest screen
    edge and settle with a single smooth deceleration (easeOutExpo on the
-   .is-visible rule). No overshoot, no squash — a clean, weighted slide that
+   .is-visible rule). No overshoot, no squash: a clean, weighted slide that
    reads premium rather than springy/cheap. */
 @keyframes island-splash-left {
   0% {
@@ -834,7 +834,7 @@ html {
   }
 }
 
-/* Reduced motion: no splash, no spring — just present the islands in place. */
+/* Reduced motion: no splash, no spring: just present the islands in place. */
 @media (prefers-reduced-motion: reduce) {
   .hero-github,
   .hero-github.is-visible,
@@ -886,7 +886,7 @@ html {
   color: var(--color-text);
 }
 
-/* Hero scroll showcase — a Pod of the on-screen components (FC/ESC/Frame)
+/* Hero scroll showcase: a Pod of the on-screen components (FC/ESC/Frame)
    that rises from the bottom as the hero finishes. Pointer-events re-enabled
    on the Pod (the riser wrapper is none so the hero stays interactive). */
 .hero-showcase {
@@ -928,7 +928,7 @@ html {
   color: var(--color-text-muted);
 }
 
-/* Buy bubble — bottom-right anchor. The Shop button sits at the bottom; the
+/* Buy bubble: bottom-right anchor. The Shop button sits at the bottom; the
    product cards stack ABOVE it and grow upward as they reveal (column-reverse
    so the first revealed card, FC, sits nearest the button and the frame ends
    up on top). Container is pointer-events:none so the gaps between revealed
@@ -945,7 +945,7 @@ html {
   flex-direction: column;
   align-items: stretch;
   gap: 0.5rem;
-  /* Hidden resting state — parked below the bottom edge. is-visible glides it
+  /* Hidden resting state: parked below the bottom edge. is-visible glides it
      up from there. */
   transform: translateY(150%);
   opacity: 0;
@@ -966,7 +966,7 @@ html {
 .hero-buy-stack {
   display: flex;
   flex-direction: column-reverse;
-  /* gap:0 — a fixed gap would reserve space for the collapsed (0-height) cards
+  /* gap:0: a fixed gap would reserve space for the collapsed (0-height) cards
      and leave a phantom band above the button. Inter-card spacing is instead
      baked into each card's reveal (inline margin scaled by progress). */
   gap: 0;
@@ -1077,7 +1077,7 @@ html.light .hero-reveal-soon {
   color: var(--color-gold-text);
 }
 
-/* Hero scene glow — a soft warm radial behind the drone so the stage isn't a
+/* Hero scene glow: a soft warm radial behind the drone so the stage isn't a
    flat slab of background. Dark mode lifts the centre with a gold-tinted glow;
    light mode (twin below) tints the centre warm and feathers a faint vignette
    to the edges so it reads as a gradient instead of one flat colour. */
@@ -1141,7 +1141,7 @@ body {
   overscroll-behavior-y: none;
 }
 
-/* Homepage has no footer — the hero uses a sticky container inside a
+/* Homepage has no footer: the hero uses a sticky container inside a
    spacer sized so the sticky releases exactly when the phased animation
    completes. The page ends there; no footer, no trailing dead scroll. */
 
@@ -1185,7 +1185,7 @@ a:hover {
 }
 
 /* ============================================
-   Pod — the shared floating-surface primitive
+   Pod: the shared floating-surface primitive
    ============================================ */
 
 /* Every floating/grouping/expanding surface is a Pod: one translucent,
@@ -1208,7 +1208,7 @@ a:hover {
   border-radius: var(--r-pill);
 }
 
-/* ProductPods — shared thumbnail content for the hero showcase (grid) and the
+/* ProductPods: shared thumbnail content for the hero showcase (grid) and the
    header family dropdowns (row). Hover cue is a soft gold wash, no underline. */
 .product-pods--row {
   display: flex;
@@ -1303,7 +1303,7 @@ a:hover {
    Header
    ============================================ */
 
-/* Incutec brand slot (hero only) — wraps the mark so the "Who's incutec?" hint
+/* Incutec brand slot (hero only): wraps the mark so the "Who's incutec?" hint
    can drop out from beneath it. The hint is hidden until the homepage sets
    `html.hero-incutec-hint` (~3s after the header lands), then glides down. */
 .site-header-incutec-slot {
@@ -1352,7 +1352,7 @@ html.hero-incutec-hint .incutec-hint {
 }
 .incutec-hint:hover,
 .incutec-hint:focus-visible {
-  /* Keep the dark ink — the global `a:hover` would otherwise recolor the text
+  /* Keep the dark ink: the global `a:hover` would otherwise recolor the text
      gold, leaving it gold-on-gold with no contrast. */
   background: var(--color-gold-fill-hover);
   color: var(--color-on-accent);
@@ -1372,20 +1372,20 @@ html.hero-incutec-hint .incutec-hint {
   pointer-events: none;
 }
 /* While a family dropdown is open, lift the whole header above the pinned
-   buy rail (z 60) — otherwise the pod and its buy strip slide underneath. */
+   buy rail (z 60): otherwise the pod and its buy strip slide underneath. */
 .site-header:has(.header-cat-pod) {
   z-index: 70;
 }
 /* While the cart drawer is open as a hover PREVIEW (html attr set by
    CartBadge), lift the header above the drawer overlay (z 40) + panel (z 50)
-   so the cart icon stays hoverable and — critically — clickable: hovering
+   so the cart icon stays hoverable and: critically: clickable: hovering
    opens the peek, but the commit-click must still land on the icon and
    navigate to /cart. Cleared the moment the preview pins or closes. */
 html[data-cart-preview] .site-header {
   z-index: 70;
 }
 
-/* The header bar is a pill Pod — shares the .pod surface tokens so it's the
+/* The header bar is a pill Pod: shares the .pod surface tokens so it's the
    same material as the dropdowns / hero showcase / PDP scroll-bubble. */
 /* GPU note: unlike the transient pods (dropdowns, PDP bubble) this pill is on
    screen on every route AND carries the always-running wordmark sheen. A live
@@ -1393,7 +1393,7 @@ html[data-cart-preview] .site-header {
    animation over it pins the GPU re-blurring the full 1240×56 bar at the
    display refresh rate (measured ~40% idle GPU on a 120 Hz panel, even with the
    sheen converted to a compositor-only property). We trade the live blur for
-   the more-opaque `--pod-bg-strong` token — it obscures the scrolling backdrop
+   the more-opaque `--pod-bg-strong` token: it obscures the scrolling backdrop
    the same way the blur did (legibility is the blur's real job here) at zero
    per-frame cost, and stays theme-aware. The other pods keep their blur; they're
    transient, so they never sustain the cost. */
@@ -1440,7 +1440,7 @@ html[data-cart-preview] .site-header {
 }
 
 /* Incutec mark sits a touch larger and nudged in, so its left edge lands on the
-   centre of the pill's rounded-left end — reads as concentric with the corner. */
+   centre of the pill's rounded-left end: reads as concentric with the corner. */
 .site-header-incutec {
   height: 1.5rem;
 }
@@ -1456,17 +1456,17 @@ html[data-cart-preview] .site-header {
   width: auto;
 }
 
-/* Ambient wordmark sheen — a faint highlight sweeps left→right across the gold
+/* Ambient wordmark sheen: a faint highlight sweeps left→right across the gold
    "Drone" letters, as if light catches the gold. Deliberately low-amplitude
    (gold → a hair brighter) and slow; the per-letter delay makes it a wave, not
    a blink. Off under reduced-motion.
 
    Implemented as a brighter-gold overlay copy of each gold letter (see
-   SiteWordmark) whose OPACITY is animated — not the base letter's `fill`.
+   SiteWordmark) whose OPACITY is animated: not the base letter's `fill`.
    Opacity is a compositor-only property, so the sweep runs on the GPU without
    repainting the glyphs each frame. The previous version animated `fill` (a
-   paint property); every frame repainted the wordmark, which — sitting inside
-   the blurred header — forced a full per-frame backdrop re-blur and pinned the
+   paint property); every frame repainted the wordmark, which: sitting inside
+   the blurred header: forced a full per-frame backdrop re-blur and pinned the
    GPU. Crossfading a bright copy over the static base reproduces the same
    gold→brighter→gold sweep visually, at near-zero cost. */
 @keyframes wordmark-sheen {
@@ -1485,7 +1485,7 @@ html[data-cart-preview] .site-header {
 
 /* When the window is unfocused / tab hidden, freeze the always-running ambient
    animations (the only continuous GPU cost) so they don't keep the compositor
-   busy while nobody's watching. Scoped to those infinite decorations — NOT a
+   busy while nobody's watching. Scoped to those infinite decorations: NOT a
    global `*`, which would also freeze one-time entrances (the board fly-in,
    chapter reveals) mid-flight and strand them off-screen. */
 html.anim-paused .site-wordmark-sheen,
@@ -1528,7 +1528,7 @@ html.anim-paused .board-sheet.is-active {
   }
 }
 
-/* Theme toggle — same muted-icon treatment as the search/cart actions. */
+/* Theme toggle: same muted-icon treatment as the search/cart actions. */
 .theme-toggle {
   display: inline-flex;
   align-items: center;
@@ -1545,7 +1545,7 @@ html.anim-paused .board-sheet.is-active {
   color: var(--color-text);
 }
 
-/* Circular theme reveal — the new theme wipes in as a circle expanding from
+/* Circular theme reveal: the new theme wipes in as a circle expanding from
    the toggle click point (set on --vt-x/--vt-y in ThemeToggle). Old stays put,
    new clips open over it. Only active while .theme-vt is on <html>, so it
    never affects any other view transition. JS skips this under reduced-motion
@@ -1566,7 +1566,7 @@ html.anim-paused .board-sheet.is-active {
     }
   }
 
-  /* Navigation View Transitions — viewTransition-enabled links cross-fade the
+  /* Navigation View Transitions: viewTransition-enabled links cross-fade the
      page instead of swapping flat, so moving between products / sections feels
      continuous (no "refresh"). The floating header/island gets its own
      transition name so it PERSISTS and morphs in place across routes rather
@@ -1634,7 +1634,7 @@ html.anim-paused .board-sheet.is-active {
 }
 
 /* The hamburger is the only nav on mobile (the center menu, family chips and
-   text links are all hidden ≤768px). It must NOT show on desktop — but the
+   text links are all hidden ≤768px). It must NOT show on desktop: but the
    Tailwind `md:hidden` utility loses the cascade to `.site-header-icon`'s
    `display: inline-flex`, so hide it explicitly here (this rule wins by source
    order over .site-header-icon). */
@@ -1648,7 +1648,7 @@ html.anim-paused .board-sheet.is-active {
   opacity: 0.85;
 }
 
-/* Gold category links — inline next to the primary nav. Show
+/* Gold category links: inline next to the primary nav. Show
    on tablet+ with reduced gap; full spacing on wider desktop. */
 .site-header-categories {
   display: none;
@@ -1680,7 +1680,7 @@ html.anim-paused .board-sheet.is-active {
   padding: var(--sp-2);
 }
 /* Buyable dropdown row = one band: PDP link + always-on buy cell. No hover
-   chrome — the only hover effects are color; nothing appears, moves, or
+   chrome: the only hover effects are color; nothing appears, moves, or
    resizes. The wash paints the whole band on hover/focus. */
 .product-pod-wrap {
   display: flex;
@@ -1857,7 +1857,7 @@ html.anim-paused .board-sheet.is-active {
   transform: none;
 }
 /* The chip rules (.site-header-categories a / .site-header-cat-group a) also
-   match the pod's product links — they bled gold colour, UPPERCASE tracking and
+   match the pod's product links: they bled gold colour, UPPERCASE tracking and
    a 0.7 opacity onto the whole dropdown row, which washed the text out (worst in
    light mode). Reset the row to full contrast, pin a concentric radius, then
    style each line explicitly: the SKU title gold, family + price neutral. */
@@ -1964,7 +1964,7 @@ html.light .header-cat-pod {
   color: var(--color-gold-hover);
 }
 /* Active = high-contrast label (white in dark, black in light) on a raised
-   chip. A gold fill washed the text out — gold is a mid-tone, so neither dark
+   chip. A gold fill washed the text out: gold is a mid-tone, so neither dark
    nor light ink reads cleanly on it in both themes. */
 .site-header-categories .site-header-cat-group a.active,
 .site-header-categories .site-header-cat-group a[aria-current='page'] {
@@ -1979,7 +1979,7 @@ html.light .header-cat-pod {
 .site-header-categories .site-header-cat-group a[aria-current='page']::after {
   display: none;
 }
-/* All Products — an accented bubble so it reads as the catalogue entry, not
+/* All Products: an accented bubble so it reads as the catalogue entry, not
    just another family. Gold-tinted fill + outline + label, kept legible
    (gold-on-tint) rather than a solid gold fill that would wash the text out. */
 .site-header-categories .site-header-cat-all {
@@ -2019,7 +2019,7 @@ html.light .header-cat-pod {
   width: 100%;
   transform: translateY(-100%);
   opacity: 0;
-  /* Smooth weighted drop (easeOutExpo) — glides down and settles without an
+  /* Smooth weighted drop (easeOutExpo): glides down and settles without an
      overshoot bounce. Gated on `hero-header-in`, which the homepage sets ~2s
      after the splash settles (or on first scroll). */
   transition:
@@ -2041,7 +2041,7 @@ html.hero-header-in .homepage-layout .site-header {
 /* The header-hide above is gated on `html.splash-settled`, which only the
    desktop 3D hero ever sets. The mobile homepage (MobileHome) is static and
    never settles a splash, so on phones the homepage header must show
-   unconditionally — otherwise it stays translated off-screen forever. */
+   unconditionally: otherwise it stays translated off-screen forever. */
 @media (max-width: 768px) {
   .homepage-layout .site-header {
     position: sticky;
@@ -2054,7 +2054,7 @@ html.hero-header-in .homepage-layout .site-header {
 
 /* Reduced motion: the homepage header's translateY drop-in is decorative
    transform motion. Under reduced-motion the 3D hero never loads and the
-   splash settles instantly, so just present the header in place — no slide,
+   splash settles instantly, so just present the header in place: no slide,
    no transition. (Hover color/opacity micro-transitions are left intact;
    they're not motion in the vestibular sense.) */
 @media (prefers-reduced-motion: reduce) {
@@ -2067,7 +2067,7 @@ html.hero-header-in .homepage-layout .site-header {
 }
 
 /* ============================================
-   Mobile homepage (static, ≤768px) — replaces the WebGL hero + scroll
+   Mobile homepage (static, ≤768px): replaces the WebGL hero + scroll
    choreography with a plain hero, flagship cards, and a catalogue link.
    ============================================ */
 .home-mobile {
@@ -2087,7 +2087,7 @@ html.hero-header-in .homepage-layout .site-header {
   padding-top: 0.5rem;
 }
 
-/* Floating board "stage" — the flagship FC + ESC renders fanned like the
+/* Floating board "stage": the flagship FC + ESC renders fanned like the
    OpenStack bundle, on a gold-glow island. The desktop hero's rotatable 3D
    trio, distilled to a still that paints instantly on a phone. */
 .home-mobile-stage {
@@ -2160,7 +2160,7 @@ html.hero-header-in .homepage-layout .site-header {
   height: clamp(2.75rem, 13vw, 4rem);
 }
 
-/* Two full-width hero actions side by side — Shop (gold) + GitHub (ghost).
+/* Two full-width hero actions side by side: Shop (gold) + GitHub (ghost).
    Each is its own pill spanning half the row, using the phone's full width. */
 .home-mobile-cta {
   display: flex;
@@ -2337,7 +2337,7 @@ html.hero-header-in .homepage-layout .site-header {
    ============================================ */
 
 .product-card {
-  /* Spotlight anchor defaults — overwritten per-frame by the card's
+  /* Spotlight anchor defaults: overwritten per-frame by the card's
      pointermove handler (ProductItem.tsx). */
   --spot-x: 50%;
   --spot-y: 0px;
@@ -2356,9 +2356,9 @@ html.hero-header-in .homepage-layout .site-header {
   transform: translateY(-2px);
 }
 
-/* Cursor-tracked gold spotlight on hover — the same treatment as the PDP's
+/* Cursor-tracked gold spotlight on hover: the same treatment as the PDP's
    related cards, so the whole catalog speaks one hover language. Pointer
-   devices only ((hover: hover) — touch gets no phantom glow), sits below
+   devices only ((hover: hover): touch gets no phantom glow), sits below
    the quick-add overlay (z-4) and never intercepts clicks. */
 @media (hover: hover) {
   .product-card::after {
@@ -2410,7 +2410,7 @@ html.hero-header-in .homepage-layout .site-header {
   transform: scale(1.04);
 }
 
-/* Streaming-image cover — SmoothImage.tsx. Appears only after hydration
+/* Streaming-image cover: SmoothImage.tsx. Appears only after hydration
    while the file is still in flight: a blurred ~1 KB CDN thumb of the same
    image over a token background, crossfading away on load. Cached images
    never see it. */
@@ -2430,7 +2430,7 @@ html.hero-header-in .homepage-layout .site-header {
   pointer-events: none;
 }
 
-/* Doubled class for specificity — later context rules like
+/* Doubled class for specificity: later context rules like
    `.product-gallery-main img` must not re-fit or un-blur the thumb. */
 .smooth-media-cover.smooth-media-cover img {
   width: 100%;
@@ -2455,7 +2455,7 @@ html.hero-header-in .homepage-layout .site-header {
   opacity: 0;
 }
 
-/* No CDN thumb derivable — flat token cover with the quiet pulse. */
+/* No CDN thumb derivable: flat token cover with the quiet pulse. */
 .smooth-media-cover.no-thumb {
   animation: media-pulse 1.8s ease-in-out infinite;
 }
@@ -2482,7 +2482,7 @@ html.hero-header-in .homepage-layout .site-header {
   }
 }
 
-/* No-render-yet tile — keeps the media square so the grid rhythm holds and
+/* No-render-yet tile: keeps the media square so the grid rhythm holds and
    an imageless product doesn't read as broken. Typographic, no asset. */
 .product-card-media.is-empty {
   display: grid;
@@ -2501,10 +2501,10 @@ html.hero-header-in .homepage-layout .site-header {
   padding: 6px 12px;
 }
 
-/* Engineering-document ghost tile — ProductGhostTile.tsx. Products without
+/* Engineering-document ghost tile: ProductGhostTile.tsx. Products without
    photography render as a catalog figure: hairline rules, product type as
    the document header, a line glyph as the figure, title as the catalog
-   line. Tokens only — themes for free. */
+   line. Tokens only: themes for free. */
 .product-card-media.is-empty .ghost-tile,
 .product-feature-media .ghost-tile {
   position: absolute;
@@ -2616,7 +2616,7 @@ html.hero-header-in .homepage-layout .site-header {
 .product-card-meta {
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
-  /* Muted, not dim — the category (Flight Controller / ESC / …) is useful
+  /* Muted, not dim: the category (Flight Controller / ESC / …) is useful
      scanning info and `--color-text-dim` all but vanished on the dark cards. */
   color: var(--color-text-muted);
   letter-spacing: 0.04em;
@@ -2624,7 +2624,7 @@ html.hero-header-in .homepage-layout .site-header {
   line-height: 1.4;
 }
 
-/* Model chips — surfaces a product line's variants (the Model axis) under
+/* Model chips: surfaces a product line's variants (the Model axis) under
    the browse card. The card chrome/hover stays on .product-card; the tile
    body becomes .product-card-link and each model is a sibling link so we
    don't nest anchors. Real models deep-link to the PDP with the model
@@ -2670,7 +2670,7 @@ a.product-card-model:hover {
   cursor: default;
 }
 
-/* Feature card — wide horizontal layout for a single-product category row
+/* Feature card: wide horizontal layout for a single-product category row
    (browse page). Image left, editorial copy + model chips right, so the
    flagship fills the rail instead of leaving one capped card with a big
    empty band beside it. Collapses to a stacked card on narrow screens. */
@@ -2735,7 +2735,7 @@ a.product-card-model:hover {
   font-size: var(--fs-lg);
 }
 
-/* Keep the price beside the title rather than flung to the far edge — the
+/* Keep the price beside the title rather than flung to the far edge: the
    feature row is much wider than a normal card, so space-between would
    strand it. */
 .product-feature-headline .product-card-row {
@@ -3025,7 +3025,7 @@ button.reset {
 .page-shell {
   /* Universal content rail. Every top-level route wrapper sits on
      --rail-width so left edges align across pages. Prose-heavy pages
-     narrow their body inside this rail with `.reading-column` — the
+     narrow their body inside this rail with `.reading-column`: the
      outer rail stays put, only the text column tightens. */
   width: var(--rail-width);
   margin: 0 auto;
@@ -3069,7 +3069,7 @@ button.reset {
   }
 }
 
-/* Prose-column wrapper — constrains long-form text inside the rail
+/* Prose-column wrapper: constrains long-form text inside the rail
    without breaking alignment with header/footer/product grids.
    Centred horizontally so legal/contact/search pages don't sit
    awkwardly against the left edge of the wider rail on desktop. */
@@ -3078,7 +3078,7 @@ button.reset {
   margin-inline: auto;
 }
 
-/* PCB via-grid accent — a faint grid of drill-hit dots that fades out, used
+/* PCB via-grid accent: a faint grid of drill-hit dots that fades out, used
    as a subject-grounded texture in otherwise-empty corners. Kept ≤6% so it
    reads as engineering paper, never decoration. `z-index:-1` keeps it behind
    the host's own content. Honors the theme via --color-gold. */
@@ -3290,7 +3290,7 @@ button.reset {
   transform: translateY(-1px);
 }
 
-/* Legal links are not products — a transparent row whose title underlines on
+/* Legal links are not products: a transparent row whose title underlines on
    hover, not a bordered commerce card. */
 .policy-card {
   display: block;
@@ -3300,7 +3300,7 @@ button.reset {
   transition: color 0.15s ease;
 }
 
-/* Hover cue is a color lift to gold — no underline (underlining on hover read
+/* Hover cue is a color lift to gold: no underline (underlining on hover read
    as noisy). */
 .policy-card:hover {
   color: var(--color-text);
@@ -3606,7 +3606,7 @@ button.reset {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-gold) 35%, transparent);
 }
 
-/* Mobile swipe bar — desktop keeps the arrow pill + thumbnail strip; on touch
+/* Mobile swipe bar: desktop keeps the arrow pill + thumbnail strip; on touch
    those are dropped in favour of a swipe-first tick deck (the board/schematic
    deck chrome). Shown only ≤1023px, where the board-deck-* styles live. */
 .product-gallery-deck {
@@ -3684,7 +3684,7 @@ button.reset {
 }
 
 /* Related products. The element is a <section>, so reset.css adds
-   another 32px of vertical padding on top of these values — keep the
+   another 32px of vertical padding on top of these values: keep the
    internal spacing modest so the row of cards doesn't sit in a stack
    of dead space. */
 .related-products {
@@ -3694,7 +3694,7 @@ button.reset {
   border-top: 1px solid var(--color-border);
 }
 
-/* Related cards — spec-forward tiles (board render, catalog-file eyebrow,
+/* Related cards: spec-forward tiles (board render, catalog-file eyebrow,
    one-line spec, mono price) with a pointer-following gold spotlight on
    hover. All tokens, so light mode comes for free. */
 .related-grid {
@@ -3717,7 +3717,7 @@ button.reset {
   transition: border-color 0.2s ease;
 }
 
-/* Spotlight on pointer devices only ((hover: hover)) — on touch, :hover
+/* Spotlight on pointer devices only ((hover: hover)): on touch, :hover
    sticks after a tap and would pin a phantom glow. Same gate as
    .product-card::after. */
 @media (hover: hover) {
@@ -3850,7 +3850,7 @@ button.reset {
   color: var(--color-text-dim);
 }
 
-/* Quick-add overlay — same reveal recipe as the browse cards; sibling of
+/* Quick-add overlay: same reveal recipe as the browse cards; sibling of
    the card link (a form can't nest inside an anchor). */
 .related-card-quickadd {
   position: absolute;
@@ -3897,7 +3897,7 @@ button.reset {
   pointer-events: none;
 }
 
-/* Collection header + sort — horizontal layout so the right-side
+/* Collection header + sort: horizontal layout so the right-side
    whitespace isn't wasted. Eyebrow sits on its own row; title,
    description, and sort share a single row when there's horizontal
    room, and wrap to stacked on narrow viewports. */
@@ -3988,7 +3988,7 @@ button.reset {
 }
 
 /* ============================================
-   All Products — faceted browse (sidebar + grid)
+   All Products: faceted browse (sidebar + grid)
    ============================================ */
 /* Left filter rail + main column. The rail is a fixed, sticky column; the
    grid takes the rest. Collapses to a stacked layout below the breakpoint. */
@@ -4049,13 +4049,13 @@ button.reset {
 }
 
 /* auto-fill (not auto-fit) so a filtered/small result keeps the cards at one
-   consistent size — empty tracks stay instead of stretching a lone card to
+   consistent size: empty tracks stay instead of stretching a lone card to
    span the whole rail. */
 .catalog-main .products-grid {
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
 }
 
-/* Toolbar above the grid — product count left, sort dropdown right. */
+/* Toolbar above the grid: product count left, sort dropdown right. */
 .catalog-toolbar {
   display: flex;
   align-items: center;
@@ -4115,7 +4115,7 @@ button.reset {
 
 /* Roadmap status chip on a product card: same vocabulary and dot colors as
    the kanban and the PDP chip (the [data-status] rules), quiet pill on the
-   card corner. Not a link — the card is one; the roadmap button beside
+   card corner. Not a link: the card is one; the roadmap button beside
    the search box explains the vocabulary once. */
 .product-card-status {
   position: absolute;
@@ -4262,7 +4262,7 @@ button.reset {
   background: var(--color-gold-fill);
 }
 
-/* Unreleased product — greyed, non-interactive (no link, no hover lift). */
+/* Unreleased product: greyed, non-interactive (no link, no hover lift). */
 .product-card.is-comingsoon {
   opacity: 0.55;
   cursor: default;
@@ -4273,11 +4273,11 @@ button.reset {
 }
 
 /* ============================================
-   Product page — editorial layout
+   Product page: editorial layout
    ============================================ */
 
 /* Product page uses the same container width as the rest of the site
-   for a consistent gutter. Top padding kept small — the breadcrumb
+   for a consistent gutter. Top padding kept small: the breadcrumb
    was dropped and the hero is the opening statement. */
 /* Product pages run a tighter rail than the shared 1520px one. At full rail
    width the chapters reach nearly edge to edge on a large display and the
@@ -4293,7 +4293,7 @@ button.reset {
   padding: var(--sp-5) 0 var(--sp-7);
 }
 
-/* Hero layout — gallery LEFT, copy + buy module RIGHT. Engineering
+/* Hero layout: gallery LEFT, copy + buy module RIGHT. Engineering
    shops (Framework, Peak Design, B&O) all lead with the product
    image; copy and the buy module sit to its right as a sticky rail. */
 .product-hero {
@@ -4306,7 +4306,7 @@ button.reset {
 
 /* Entrance: the PDP no longer snaps in flat. The gallery and the copy lines
    rise + fade on load with a small stagger (the .chapter reveal curve). Only
-   the non-sticky hero elements animate — the buy module is left untouched so
+   the non-sticky hero elements animate: the buy module is left untouched so
    the sticky rail never fights a moving container. */
 @media (prefers-reduced-motion: no-preference) {
   @keyframes pdp-hero-rise {
@@ -4450,7 +4450,7 @@ button.reset {
 
 @media (min-width: 960px) {
   .product-hero-media {
-    /* Cap to a viewport-height-bound square — the gallery never falls
+    /* Cap to a viewport-height-bound square: the gallery never falls
        below the fold on 16:9. Width = min(column width, vh-bound). */
     width: min(100%, calc(100vh - var(--header-height) - var(--sp-6)));
     aspect-ratio: 1 / 1;
@@ -4458,7 +4458,7 @@ button.reset {
   }
 }
 
-/* Trust chips — denser, no uppercase-with-wide-letterspacing. Status
+/* Trust chips: denser, no uppercase-with-wide-letterspacing. Status
    green narrows to literal stock indicators only. */
 .trust-chips {
   display: flex;
@@ -4504,7 +4504,7 @@ button.reset {
   color: var(--color-text);
 }
 
-/* Buy module — the page's center of mass. Vertical stack:
+/* Buy module: the page's center of mass. Vertical stack:
    price (large) → SKU/stock row → primary CTA (full-width gold) →
    trust microcopy → civilian-use disclosure. */
 .product-buy {
@@ -4697,7 +4697,7 @@ button.reset {
   color: var(--color-text-dim);
 }
 
-/* Art. VI.45 WER price microcopy — "incl. VAT · excl. shipping". */
+/* Art. VI.45 WER price microcopy: "incl. VAT · excl. shipping". */
 .product-buy-vat {
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
@@ -4731,7 +4731,7 @@ button.reset {
   line-height: 1.5;
 }
 
-/* Primary CTA — full-width by default, used for Add-to-cart and any
+/* Primary CTA: full-width by default, used for Add-to-cart and any
    page-level primary action. Inter (not mono) so it reads as a
    confident shop button, not a terminal command. */
 .btn-primary {
@@ -4769,7 +4769,7 @@ button.reset {
   box-shadow: none;
 }
 
-/* Pending (submitting) state — keep the button bright so the spinner reads,
+/* Pending (submitting) state: keep the button bright so the spinner reads,
    overriding the dimmed :disabled look. Source order matters: this must
    follow :disabled to win at equal specificity. */
 .btn-primary[data-pending] {
@@ -4789,7 +4789,7 @@ button.reset {
   animation: board-art-spin 0.7s linear infinite;
 }
 
-/* Generic inline spinner that inherits text color — drop it into any link or
+/* Generic inline spinner that inherits text color: drop it into any link or
    text button to show a pending fetch. */
 .inline-spinner {
   display: inline-block;
@@ -4811,7 +4811,7 @@ button.reset {
   cursor: progress;
 }
 
-/* Secondary CTA — outlined, used for Shop Pay express / cart drawer
+/* Secondary CTA: outlined, used for Shop Pay express / cart drawer
    secondary actions. */
 .btn-secondary {
   display: inline-flex;
@@ -4836,7 +4836,7 @@ button.reset {
   background: color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 
-/* Stock indicator — green dot + label, replaces the awkward chip. */
+/* Stock indicator: green dot + label, replaces the awkward chip. */
 .product-buy-stock {
   display: inline-flex;
   align-items: center;
@@ -4865,7 +4865,7 @@ button.reset {
   box-shadow: none;
 }
 
-/* Coming-soon buy module — the price slot carries a hairline COMING SOON
+/* Coming-soon buy module: the price slot carries a hairline COMING SOON
    plate instead of a figure; the stock dot goes gold ("in development"),
    and the notify signup drops its section chrome to sit inside the card. */
 .product-buy-soon {
@@ -4957,7 +4957,7 @@ button.reset {
   margin-top: var(--sp-6);
 }
 
-/* Morphing buy rail — wraps the ladder + buy module. At rest it's a
+/* Morphing buy rail: wraps the ladder + buy module. At rest it's a
    transparent passthrough; pinned (desktop, scrolled into the chapters) it
    floats over the page in its own column lane and CSS collapses it to a row
    of bare tier names + a small add-to-cart. The PDP route portals it to
@@ -4980,7 +4980,7 @@ button.reset {
   margin-top: var(--sp-4);
 }
 
-/* Comparison ladder — the variant selector for a product line. Tier
+/* Comparison ladder: the variant selector for a product line. Tier
    cards that double as the radio group; the selected card drives the
    spec/in-the-box preview and (when Shopify carries the option) the
    buy module. Auto-fit grid so it reads as a horizontal ladder when
@@ -5162,7 +5162,7 @@ button.reset {
   }
 }
 
-/* Chapters — two-column grid on wide viewports: content left,
+/* Chapters: two-column grid on wide viewports: content left,
    media placeholder right (real images later). Single column on
    narrower screens; media slot drops out of layout below 880px. */
 /* Vertical rhythm: the root font is 15px, so the small tokens are smaller than
@@ -5182,7 +5182,7 @@ button.reset {
   border-top: 1px solid var(--color-border);
   opacity: 1;
   transform: translateY(0);
-  /* Skip layout+paint for chapters that are far offscreen — the PDP is a very
+  /* Skip layout+paint for chapters that are far offscreen: the PDP is a very
      long page and browsers otherwise render every chapter on load. The
      intrinsic-size placeholder keeps the scrollbar stable; the scroll-reveal
      IO fires as normal once a chapter approaches the viewport. */
@@ -5190,7 +5190,7 @@ button.reset {
   contain-intrinsic-size: auto 640px;
 }
 /* Reading measure: chapter paragraphs never run the full rail. The
-   whitespace right of the text is deliberate — it is what directs the eye
+   whitespace right of the text is deliberate: it is what directs the eye
    down the column instead of across a 900px line. Interactive full-width
    blocks (schematic, teardown, tables, card grids) are untouched. */
 .chapter p {
@@ -5210,7 +5210,7 @@ button.reset {
 }
 
 /* content-visibility's paint containment clips descendants at the chapter's
-   box — but the teardown board art bleeds past its media column into the page
+   box: but the teardown board art bleeds past its media column into the page
    margin, and the frame-viewer backdrop over-bleeds into the neighbouring
    sections. Those chapters give up the skip-render optimisation so the bleed
    stays visible. */
@@ -5355,7 +5355,7 @@ button.reset {
 
 /* On mobile the 16:9 bubbles left a lot of dead vertical space (the copy is
  * short, centred in a tall box). Size the cards to their content with tight
- * padding instead — a row still equalises height via align-items: stretch. */
+ * padding instead: a row still equalises height via align-items: stretch. */
 @media (max-width: 879px) {
   .chapter[data-wide-media] .open-source-card,
   .chapter[data-wide-media] .latest-commit-card {
@@ -5468,7 +5468,7 @@ button.reset {
 
 /* White-on-transparent marks (e.g. AM32) sit on a fixed dark tile that reads
  * in both themes (like the Discord embed), rather than the transparent blow-up
- * a multi-colour mark uses. Kept a compact square centred in the slot — a big
+ * a multi-colour mark uses. Kept a compact square centred in the slot: a big
  * square tile leaves dead vertical space next to the short price block. */
 .firmware-logo--tile {
   width: 78%;
@@ -5510,7 +5510,7 @@ html.light .firmware-logo--tile {
 .board-art:not(.is-revealed) {
   min-height: clamp(320px, 32vw, 460px);
 }
-/* The fade lives on the board *content*, not the container — the container
+/* The fade lives on the board *content*, not the container: the container
    stays opaque so the loading skeleton (its child) is visible while the
    content is still at opacity 0. */
 .board-folder-body {
@@ -5551,7 +5551,7 @@ html.light .firmware-logo--tile {
   transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.45s ease;
   /* Dim + drop-shadow the un-selected sheets so the stack reads with depth. The
      shadows are GPU-heavy (blur filter per layer), so they're stripped under
-     html.anim-paused (idle / unfocused) — see that block below. */
+     html.anim-paused (idle / unfocused): see that block below. */
   filter: brightness(0.55) saturate(0.7)
     drop-shadow(0 14px 22px rgba(0, 0, 0, 0.55));
 }
@@ -5569,7 +5569,7 @@ html.light .firmware-logo--tile {
 }
 /* First-reveal entrance: each layer flies in from the left to its resting fan
    position, staggered by --depth. The layers keep their FULL resting look
-   (filters/glow) throughout — only `translate` animates, ending at 0 — so the
+   (filters/glow) throughout: only `translate` animates, ending at 0: so the
    end IS the resting state: no plop. `translate` is compositor-accelerated.
    Held paused (off-screen) until the board reaches the viewport centre
    (.is-flying); both classes drop when done so a SKU swap shows it instantly. */
@@ -5591,13 +5591,13 @@ html.light .firmware-logo--tile {
     calc(var(--depth) * 0.11s) both;
   animation-play-state: paused;
 }
-/* Non-active layers grey out one-by-one as each lands — in fly order, so the
-   first layer to fly in is the first to grey — instead of all snapping grey at
+/* Non-active layers grey out one-by-one as each lands: in fly order, so the
+   first layer to fly in is the first to grey: instead of all snapping grey at
    the end. A second, layered animation (sharing the same paused/running gate)
    eases the filter from the bright fly state to the resting dim, staggered by
    --depth and timed to begin ~as each layer arrives. Same total duration; the
    greying just starts sooner (over the fly's tail). The active layer is excluded
-   — it stays bright and gains its glow at the end. */
+  : it stays bright and gains its glow at the end. */
 .board-art.is-armed .board-sheet:not(.is-active) {
   animation: board-sheet-fly 1.2s cubic-bezier(0.16, 0.84, 0.3, 1)
       calc(var(--depth) * 0.11s) both,
@@ -5605,7 +5605,7 @@ html.light .firmware-logo--tile {
   animation-play-state: paused;
 }
 /* The active layer's gold glow eases in with a long, gentle fade right after it
-   lands — instead of snapping on the instant the fly ends. Landing-driven timing,
+   lands: instead of snapping on the instant the fly ends. Landing-driven timing,
    same idea as the greys, so the whole stack settles as one smooth motion. */
 .board-art.is-armed .board-sheet.is-active {
   animation: board-sheet-fly 1.2s cubic-bezier(0.16, 0.84, 0.3, 1) 0s both,
@@ -5642,8 +5642,8 @@ html.light .firmware-logo--tile {
       drop-shadow(0 26px 34px rgba(0, 0, 0, 0.55));
   }
 }
-/* During the fly, every layer starts at full brightness with no shadow — each
-   flies in clearly distinguishable (not greyed/masked) — then the non-active
+/* During the fly, every layer starts at full brightness with no shadow: each
+   flies in clearly distinguishable (not greyed/masked): then the non-active
    ones grey via the staggered animation above; the active one stays bright.
    (Animations override this, so it's the bright base before each grey begins.) */
 .board-art.is-flying .board-sheet,
@@ -5688,7 +5688,7 @@ html.light .firmware-logo--tile {
    The copper sheets are an X-ray stack: every one of them is drawn looking
    straight down through the board, which is why a back-side part sits at its
    true XY under the layer above it. The photoreal BOTTOM face inherits that
-   frame, and the result was a board whose silkscreen read backwards — REV3.1
+   frame, and the result was a board whose silkscreen read backwards: REV3.1
    mirrored, the wordmark mirrored, the USB on the wrong edge. Nobody reads a
    component side that way; they flip the board.
    Flipping the whole sheet takes the highlight boxes with it, because
@@ -5698,7 +5698,7 @@ html.light .firmware-logo--tile {
 .board-sheet-svg-back {
   transform: scaleX(-1);
 }
-/* The board silhouette under each layer — a faint engraved sheet edge. */
+/* The board silhouette under each layer: a faint engraved sheet edge. */
 .board-sheet-edge {
   fill: none;
   stroke: color-mix(in srgb, var(--color-gold) 28%, transparent);
@@ -5735,7 +5735,7 @@ html.light .firmware-logo--tile {
    per-layer on desktop (below), whole-board cross-slide on mobile (the mobile
    block flattens the fan and disables per-sheet animation). */
 /* Variant swap (rewritten). The OUTGOING board is a real React subtree
-   (.board-swap-out), NOT an innerHTML clone — see BoardArt.tsx. The incoming
+   (.board-swap-out), NOT an innerHTML clone: see BoardArt.tsx. The incoming
    (live) board rides ABOVE it (z 5 > 1) so a swap reads as the NEW board sweeping
    in from the left and SHOVING the old one off to the right. Both stacks share
    one grid cell (.board-stack-wrap grid 1/1) and are position:relative, so the
@@ -5753,7 +5753,7 @@ html.light .firmware-logo--tile {
   pointer-events: none;
 }
 /* will-change is applied (via .is-swap-ready on .board-art, set at flyDone) BEFORE
-   the first swap so the GPU layer already exists at frame 0 — promoting at swap
+   the first swap so the GPU layer already exists at frame 0: promoting at swap
    start drops the first frames. */
 .board-art.is-swap-ready .board-sheet {
   will-change: translate;
@@ -5771,14 +5771,14 @@ html.light .firmware-logo--tile {
     will-change: translate;
   }
 }
-/* PERF — strip the per-layer drop-shadow (a gaussian blur) for the flight on BOTH
+/* PERF: strip the per-layer drop-shadow (a gaussian blur) for the flight on BOTH
    stacks; animating ~16 blurred layers at once saturates fill-rate and drops
    frames. Only the cheap brightness/saturate is kept (no brightness pop). The
    resting shadows return the instant .is-swapping / the outgoing stack drop. */
 .board-folder-stack.is-swapping .board-sheet,
 .board-swap-out .board-sheet {
   filter: brightness(0.6) saturate(0.72) !important;
-  /* CRITICAL: kill the base `transition: filter 0.45s` — else the browser ANIMATES
+  /* CRITICAL: kill the base `transition: filter 0.45s`: else the browser ANIMATES
      the drop-shadow blur radius to zero over 0.45s, re-blurring every layer per
      frame. That, not the translate, is what made the swap lag. Drop it instantly. */
   transition: none !important;
@@ -5824,7 +5824,7 @@ html.light .firmware-logo--tile {
   }
 }
 /* The new board decelerates into place (board-swap-in) while the old one
-   accelerates away beneath it (board-swap-out) — the "shoved off" beat. Travel in
+   accelerates away beneath it (board-swap-out): the "shoved off" beat. Travel in
    % (of board width) so it reads identically at every breakpoint. */
 @keyframes board-swap-in {
   from {
@@ -5858,14 +5858,14 @@ html.light .firmware-logo--tile {
     display: none;
   }
 }
-/* Layer rail crossfade — only added (BoardArt, guarded by layer-label signature)
+/* Layer rail crossfade: only added (BoardArt, guarded by layer-label signature)
    when the layer SET actually changes between boards, so identical layers never
    pulse. Reuses the parts-list dip: old tabs fade out, the set switches while
    hidden (235ms), new fade in. */
 .board-folder-rail.is-swapping {
   animation: teardown-pins-swap 0.52s ease both;
 }
-/* Layer / sheet rail — a self-contained vertical selector beside the board or
+/* Layer / sheet rail: a self-contained vertical selector beside the board or
    schematic. The schematic viewer reuses this exact selector style. */
 .board-folder-rail,
 .schematic-rail {
@@ -5899,7 +5899,7 @@ html.light .firmware-logo--tile {
   transition: opacity 0.6s ease;
 }
 /* Schematic sheets are full words (MCU / BLACKBOX / CONNECTORS), so size the
-   rail to its longest label — capped — instead of clipping inside a fixed
+   rail to its longest label: capped: instead of clipping inside a fixed
    column. Labels stay on one line; the page column takes whatever's left. */
 .schematic-rail {
   width: max-content;
@@ -5934,7 +5934,7 @@ html.light .firmware-logo--tile {
   align-items: stretch;
   gap: 6px;
 }
-/* A faint spine threading the buttons — like a via through the copper stack. */
+/* A faint spine threading the buttons: like a via through the copper stack. */
 .board-folder-tabs::before,
 .schematic-rail-tabs::before {
   content: '';
@@ -5980,7 +5980,7 @@ html.light .firmware-logo--tile {
   border-color: var(--color-gold-fill);
   box-shadow: 0 0 16px color-mix(in srgb, var(--color-gold-fill) 35%, transparent);
 }
-/* Layer buttons stack a name over a function blurb, left-aligned — so the
+/* Layer buttons stack a name over a function blurb, left-aligned: so the
    centred via-spine would cut through the text; drop it on the board rail. */
 .board-folder-tabs::before {
   display: none;
@@ -6004,14 +6004,14 @@ html.light .firmware-logo--tile {
    names-only pill read worse than the full rail overlapping slightly. */
 /* The rail sizes to its longest label, so normal sheet names stay on one line.
    Tighter tracking keeps it compact, and wrapping (rather than nowrap) is the
-   safety net for a very long sheet name (e.g. the OpenRX single sheet) — it
+   safety net for a very long sheet name (e.g. the OpenRX single sheet): it
    stacks onto extra lines inside the capped width instead of leaking out. */
 .schematic-rail-tabs button {
   letter-spacing: 0.1em;
   overflow-wrap: anywhere;
 }
 /* Below this the left gutter is too tight to float the rail without crowding the
-   teardown text — drop it back to a horizontal bar above the board instead. */
+   teardown text: drop it back to a horizontal bar above the board instead. */
 @media (max-width: 1024px) {
   .board-folder-body,
   .schematic-body {
@@ -6039,7 +6039,7 @@ html.light .firmware-logo--tile {
     justify-content: center;
     gap: 0.5em;
   }
-  /* One horizontal scroll row instead of wrapping into a tall stack — the
+  /* One horizontal scroll row instead of wrapping into a tall stack: the
      sheets/layers sit side by side and use the full width; swipe for the rest.
      Far more screen-efficient than 3 stacked rows of half-empty pills. */
   .board-folder-tabs,
@@ -6061,7 +6061,7 @@ html.light .firmware-logo--tile {
   .schematic-rail-tabs::before {
     display: none;
   }
-  /* Pills don't shrink — they scroll. The function blurbs would bloat the row,
+  /* Pills don't shrink: they scroll. The function blurbs would bloat the row,
      so names only here. */
   .board-folder-tabs button,
   .schematic-rail-tabs button {
@@ -6076,14 +6076,14 @@ html.light .firmware-logo--tile {
   }
 }
 
-/* === Schematic viewer — paged sheets of the KiCad schematic, the analogue of
+/* === Schematic viewer: paged sheets of the KiCad schematic, the analogue of
    the board folder. In the wide-media chapter it fills the dominant column and
    bleeds a little into the right gutter for maximum legible width. === */
 .schematic-viewer {
   width: 100%;
   margin-left: 0;
   /* The lazy-load gate IntersectionObserves this box with a 0.01 threshold,
-     which NEVER fires on a zero-area target — and before the manifest loads
+     which NEVER fires on a zero-area target: and before the manifest loads
      the viewer is empty. The floor gives the observer something to hit. */
   min-height: 160px;
 }
@@ -6127,7 +6127,7 @@ html.light .firmware-logo--tile {
   transition: opacity 0.5s ease;
 }
 /* Every sheet is rendered now (so a mobile drag can slide the neighbour in), so
-   gate visibility to the active one — otherwise the whole sheaf would stack
+   gate visibility to the active one: otherwise the whole sheaf would stack
    opaque. Desktop pages by crossfading active↔active. */
 .schematic-sheet.is-active.is-loaded {
   opacity: 1;
@@ -6172,13 +6172,13 @@ html.light .firmware-logo--tile {
     opacity: 1;
   }
 }
-/* Variant swap — the gold scan line IS the reveal boundary: the new sheet is
+/* Variant swap: the gold scan line IS the reveal boundary: the new sheet is
    clipped in exactly behind the line as it sweeps L→R. Both the entering sheet
    and the line are full-box (inset:0) overlays clipped with clip-path in the
    SAME element coordinate space, both driven by ONE shared, animated --wipe
-   (0→1) on the page — so they cannot desync, at any aspect ratio. (The old
+   (0→1) on the page: so they cannot desync, at any aspect ratio. (The old
    version animated the line's `left`/skewX and the sheet's clip on SEPARATE
-   timelines + geometry, so the line never sat on the wipe edge — it read as
+   timelines + geometry, so the line never sat on the wipe edge: it read as
    "just update + scan", two unrelated things.) */
 @property --wipe {
   syntax: "<number>";
@@ -6196,7 +6196,7 @@ html.light .firmware-logo--tile {
     --wipe: 1;
   }
 }
-/* The OLD sheet is clipped to the COMPLEMENT — everything RIGHT of the line — so
+/* The OLD sheet is clipped to the COMPLEMENT: everything RIGHT of the line: so
    the new (left) and old (right) each own one side of the wipe edge and never
    overlap. (Leaving it unclipped let the old image show through the new one's
    anti-aliased edge / where the two near-identical schematics differed → the
@@ -6213,7 +6213,7 @@ html.light .firmware-logo--tile {
   );
 }
 /* Revealed region = everything LEFT of the diagonal edge. The edge runs from
-   (--wipe*128%, 0) at the top to (--wipe*128% - 28%, 100%) at the bottom — a
+   (--wipe*128%, 0) at the top to (--wipe*128% - 28%, 100%) at the bottom: a
    constant 28%-of-width lean that sweeps from fully-hidden (--wipe 0) to
    fully-shown (--wipe 1). No own animation; it reads the inherited --wipe. */
 .schematic-sheet--entering {
@@ -6247,7 +6247,7 @@ html.light .firmware-logo--tile {
     calc(var(--wipe) * 128% - 28% - 0.4%) 100%
   );
 }
-/* Mobile sheet deck — the swipe-first replacement for the sheet-tab rail (which
+/* Mobile sheet deck: the swipe-first replacement for the sheet-tab rail (which
    is a mouse-era button strip). Hidden on desktop, where the rail is shown;
    shown below the page on mobile. Reuses the board explorer's tick + meta
    chrome (.board-deck-*) so schematic and board page "the same way". */
@@ -6259,7 +6259,7 @@ html.light .firmware-logo--tile {
     display: block;
     margin-top: 0.6rem;
   }
-  /* Drop the sheet-tab rail on touch — swipe + the deck above replace it. */
+  /* Drop the sheet-tab rail on touch: swipe + the deck above replace it. */
   .schematic-rail {
     display: none;
   }
@@ -6305,11 +6305,11 @@ html.light .firmware-logo--tile {
   }
 }
 
-/* === Frame viewer — the CAD analogue of .board-art. A big, non-interactive
+/* === Frame viewer: the CAD analogue of .board-art. A big, non-interactive
    layer of gold vector outlines that fan apart on scroll, sitting BEHIND the
    teardown text. The chapter goes position:relative; the backdrop is an
    over-bleeding absolute layer; the text/cards lift above it via z-index. === */
-/* No extra height — the chapter sizes to its text. The frame is an overlay
+/* No extra height: the chapter sizes to its text. The frame is an overlay
    that flows OVER the neighbouring sections via a big over-bleeding layer. */
 .chapter[data-backdrop] {
   position: relative;
@@ -6319,7 +6319,7 @@ html.light .firmware-logo--tile {
    the page. Purely decorative. */
 .chapter-backdrop {
   position: absolute;
-  top: -6vh; /* barely above the section — keep clear of the hero / buy button */
+  top: -6vh; /* barely above the section: keep clear of the hero / buy button */
   bottom: -70vh; /* flow down into chapter 2. NB: the model paints at this
                     layer's vertical centre, so don't grow this much further or
                     the assembled frame drops out of the chapter-1 view. */
@@ -6453,7 +6453,7 @@ html.light .firmware-logo--tile {
   width: fit-content;
   max-width: 30rem;
 }
-/* Locked while the board fly-in animates — a hover mustn't fight the animation. */
+/* Locked while the board fly-in animates: a hover mustn't fight the animation. */
 .teardown-sides.is-locked {
   pointer-events: none;
 }
@@ -6467,7 +6467,7 @@ html.light .firmware-logo--tile {
   pointer-events: none;
   /* Self-contained crossfade (0.52s): fade the OLD rows out, hold hidden through
      the 44–56% trough while products.$handle.tsx swaps displayedPins at 235ms,
-     then fade the NEW rows in — so the content change is never visible. */
+     then fade the NEW rows in: so the content change is never visible. */
   animation: teardown-pins-swap 0.52s ease both;
 }
 @keyframes teardown-pins-swap {
@@ -6496,7 +6496,7 @@ html.light .firmware-logo--tile {
   border-top: 1px solid var(--color-border);
 }
 /* Plain hairline rows, no card: rows form a table: each row gets ONE divider line, no per-row
-   card — so there's no boundary between components as you scroll/hover down. */
+   card: so there's no boundary between components as you scroll/hover down. */
 .teardown-pins {
   list-style: none;
   padding: 0;
@@ -6509,7 +6509,7 @@ html.light .firmware-logo--tile {
   gap: 0.75rem;
   /* extra left pad leaves room for the hover accent bar without shifting text */
   padding: 0.55rem 0.7rem 0.55rem 0.95rem;
-  /* kill the global `li { margin-bottom: 0.5rem }` (reset.css) — that gap between
+  /* kill the global `li { margin-bottom: 0.5rem }` (reset.css): that gap between
      rows is a hover dead zone: the cursor crossing it hits no row, so the
      spotlight drops out and flickers. Rows are contiguous, divided only by the
      1px border. */
@@ -6541,7 +6541,7 @@ html.light .firmware-logo--tile {
 }
 
 /* A pin that maps to footprints on the board: interactive. Hover fills the whole
-   row (instant — no fade that looks half-painted while the cursor moves) and a
+   row (instant: no fade that looks half-painted while the cursor moves) and a
    gold accent bar wipes in on the left for a bit of life. */
 .teardown-pin-hoverable {
   cursor: pointer;
@@ -6567,7 +6567,7 @@ html.light .firmware-logo--tile {
   box-shadow: 0 -1px 0 0 color-mix(in srgb, var(--color-gold) 13%, transparent);
   outline: none;
 }
-/* Kill the divider directly ABOVE the hovered row — it belongs to the previous
+/* Kill the divider directly ABOVE the hovered row: it belongs to the previous
    row, so the hovered row's fill can't reach it; left visible it reads as a dark
    sliver at the row's top (the "dead zone"). Gone, the box-shadow fills clean
    bubble-bg with the same gold tint → seamless, and the spotlight slides
@@ -6630,13 +6630,13 @@ html.light .firmware-logo--tile {
 
 /* === Component highlights === Drawn ANCHORED inside the active sheet's <svg>
    (BoardArt appends a `<g class="board-hilite">`), so they scroll with the board
-   and sit exactly on the part. Only present on the Front/Back faces — never on a
+   and sit exactly on the part. Only present on the Front/Back faces: never on a
    copper layer. The whole group fades in on hover. */
 .board-hilite {
   pointer-events: none;
 }
 /* A face's spotlight is built once and kept; when nothing is highlighted (or
-   another face is showing) it's hidden, not destroyed — so re-lighting it is
+   another face is showing) it's hidden, not destroyed: so re-lighting it is
    instant and never re-decodes the board image (the flicker). */
 .board-hilite.is-hidden {
   display: none;
@@ -6656,13 +6656,13 @@ html.light .firmware-logo--tile {
   opacity: 0.62;
   pointer-events: none;
 }
-/* The face re-shown at the highlighted box, on top of the dim — nudged brighter
+/* The face re-shown at the highlighted box, on top of the dim: nudged brighter
    so the selected region pops out of the dimmed board. */
 .board-hilite-face {
   filter: brightness(1.12) saturate(1.08);
   pointer-events: none;
 }
-/* (legacy) Brighten INSIDE a rect window — kept for the no-face fallback path. */
+/* (legacy) Brighten INSIDE a rect window: kept for the no-face fallback path. */
 .board-hilite-bright {
   fill: #fff;
   opacity: 0.16;
@@ -6733,14 +6733,14 @@ html.light .firmware-logo--tile {
   color: var(--color-gold-text);
 }
 
-/* Subtle bubble — same quiet card as the latest-commit cards beside it so the
+/* Subtle bubble: same quiet card as the latest-commit cards beside it so the
    row reads as one consistent set (a bare top-hairline left the text floating).
    Kept light: card bg + hairline border, gold on hover. */
 .open-source-card {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  /* 16:9 bubble — uniform across the resource row. */
+  /* 16:9 bubble: uniform across the resource row. */
   aspect-ratio: 16 / 9;
   overflow: hidden;
   padding: 1.15rem 1.35rem;
@@ -6780,7 +6780,7 @@ html.light .firmware-logo--tile {
   margin: 0;
 }
 
-/* Brand-logo watermark — a big, faint full-card mark behind the text on the
+/* Brand-logo watermark: a big, faint full-card mark behind the text on the
    GitHub (Study) and CERN (License) cards. Rendered via CSS mask so it follows
    the theme (painted with the text colour at low opacity) rather than baking a
    fixed fill into the SVG. */
@@ -6887,19 +6887,19 @@ html.light .firmware-logo--tile {
   pointer-events: none;
 }
 
-/* OSHWA-certified card — the license card upgraded when a product carries an
+/* OSHWA-certified card: the license card upgraded when a product carries an
    OSHWA UID. Gold-accented so the certification reads as the headline credential
    (the CERN-OHL-S name moves to the sub-line). All tokens, so it themes for free. */
 .open-source-card--oshwa {
   position: relative;
   overflow: hidden;
   border-color: var(--color-gold-soft);
-  /* The mark IS the card — it fills the whole bubble (positioned absolute below),
+  /* The mark IS the card: it fills the whole bubble (positioned absolute below),
      so drop the card's own padding and centring. */
   padding: 0;
 }
 
-/* The OSHWA certification mark fills the entire card — the credential as the
+/* The OSHWA certification mark fills the entire card: the credential as the
    hero, not a small inset graphic. Absolutely positioned so it ignores the card
    padding and spans edge to edge (a little breathing room top/sides, more at the
    bottom for the caption). The tightened viewBox means little dead space, so the
@@ -6908,7 +6908,7 @@ html.light .firmware-logo--tile {
 .open-source-card-oshwa-mark {
   display: block;
   /* Flex-fill the card height (the mark contains within, so it never clips the
-     UID — unlike width-filling, which pushed the UID off the bottom edge). The
+     UID: unlike width-filling, which pushed the UID off the bottom edge). The
      top margin clears the absolute caption; the tightened viewBox means this
      height renders a large OSHW box + UID. */
   flex: 1 1 0;
@@ -6919,7 +6919,7 @@ html.light .firmware-logo--tile {
   color: var(--color-text);
 }
 
-/* CERN-OHL-S caption along the TOP — the mark's UID owns the bottom, so the
+/* CERN-OHL-S caption along the TOP: the mark's UID owns the bottom, so the
    caption can't ride on top of it. */
 .open-source-card-sub--oshwa {
   position: absolute;
@@ -6931,10 +6931,10 @@ html.light .firmware-logo--tile {
   color: var(--color-gold-text);
 }
 
-/* "Watch" bubble — the video card that replaces the issues card on products
+/* "Watch" bubble: the video card that replaces the issues card on products
    with a build film. A 16:9 bubble (aspect-ratio inherited from
    .open-source-card) showing just the YouTube thumbnail with a centred gold
-   play glyph — no caption. Clicking opens the lightbox player. */
+   play glyph: no caption. Clicking opens the lightbox player. */
 .watch-card {
   position: relative;
   display: block;
@@ -6946,7 +6946,7 @@ html.light .firmware-logo--tile {
   font: inherit;
 }
 
-/* The thumbnail fills the 16:9 card (object-fit cover — a 16:9 frame, so no
+/* The thumbnail fills the 16:9 card (object-fit cover: a 16:9 frame, so no
    real crop on a maxres poster). */
 .watch-card-thumb {
   position: absolute;
@@ -7004,7 +7004,7 @@ html.light .firmware-logo--tile {
   border-color: color-mix(in srgb, var(--color-gold) 50%, var(--color-border));
 }
 
-/* Sub-heading inside a chapter — divider between card groups. */
+/* Sub-heading inside a chapter: divider between card groups. */
 .chapter-subhead {
   margin: 1.75rem 0 0.75rem;
   font-family: var(--font-mono);
@@ -7014,7 +7014,7 @@ html.light .firmware-logo--tile {
   color: var(--color-text-muted);
 }
 
-/* Latest commit — live card under the open-source row. Fetched from
+/* Latest commit: live card under the open-source row. Fetched from
    GitHub in the loader (deferred), with a skeleton while it streams. */
 .latest-commits {
   display: grid;
@@ -7148,9 +7148,9 @@ html.light .firmware-logo--tile {
   color: var(--color-on-accent);
 }
 
-/* Downloads grid — schematic / STEP / BOM / manual chapter. */
+/* Downloads grid: schematic / STEP / BOM / manual chapter. */
 /* Contributor grid: gold-ruled tiles in the downloads-card idiom.
-   Avatars stay square with a hairline border — technical file, not
+   Avatars stay square with a hairline border: technical file, not
    social feed. The "+ you" tile is the standing invitation. */
 .contributor-grid {
   list-style: none;
@@ -7301,7 +7301,7 @@ html.light .firmware-logo--tile {
   color: var(--color-gold-text);
 }
 
-/* Bundle components — richer cards than the generic open-source cards
+/* Bundle components: richer cards than the generic open-source cards
    because this is the "what's in the box" moment on a bundle PDP. */
 .bundle-components {
   display: grid;
@@ -7468,7 +7468,7 @@ html.light .firmware-logo--tile {
   color: var(--color-gold-text);
 }
 
-/* Firmware credit — the project the board runs, with direct-donation links.
+/* Firmware credit: the project the board runs, with direct-donation links.
    Replaced the price-split block when the per-board fee was cancelled. */
 .firmware-support {
   border: 1px solid var(--color-border);
@@ -7564,7 +7564,7 @@ html.light .firmware-logo--tile {
   border-color: var(--color-gold);
 }
 
-/* Catalog browse — one labelled section per category */
+/* Catalog browse: one labelled section per category */
 .catalog-category {
   margin: 0 0 var(--sp-7);
 }
@@ -7963,7 +7963,7 @@ html.light .firmware-logo--tile {
   /* The drawer scrolls as ONE context (lines + companion row) with the
      summary pinned below. The old split (lines scroll, rest in fixed flow)
      collapsed the line list to 0px whenever the fixed part filled the
-     drawer — the cart showed everything except its items. */
+     drawer: the cart showed everything except its items. */
   overflow-y: auto;
 }
 
@@ -7983,13 +7983,13 @@ html.light .firmware-logo--tile {
 }
 
 /* ============================================
-   /cart build sheet — the page cart as an engineering invoice: a
+   /cart build sheet: the page cart as an engineering invoice: a
    hairline-ruled table with fixed mono columns (item · qty · total), a
    column-caption header, and a subtotal/VAT/total register. The drawer
    keeps its compact stacked layout; everything here is layout='page' only.
    ============================================ */
 
-/* Shared column template — header and rows must agree or nothing lines up.
+/* Shared column template: header and rows must agree or nothing lines up.
    ITEM = thumb + name, QTY and TOTAL are fixed so every row registers. */
 .cart-sheet-head,
 .cart-sheet-row {
@@ -8026,7 +8026,7 @@ html.light .firmware-logo--tile {
   height: 56px;
 }
 
-/* Pin each cell to its column — a line without an image (no auto-placed
+/* Pin each cell to its column: a line without an image (no auto-placed
    <img> in column 1) must not slide the whole row one column left. The
    phone layout below overrides these via grid-area. */
 .cart-sheet-row > img {
@@ -8098,7 +8098,7 @@ html.light .firmware-logo--tile {
 
 /* The stepper's + form is the last child of ITS parent, so the generic
    text-remove rule (.cart-line-quantity form:last-child button) would
-   restyle it — pin the stepper buttons back to the boxed look. */
+   restyle it: pin the stepper buttons back to the boxed look. */
 .cart-line-quantity--sheet .cart-sheet-stepper form:last-child button {
   width: 26px;
   padding: 0;
@@ -8170,7 +8170,7 @@ html.light .firmware-logo--tile {
   }
 }
 
-/* Summary register — subtotal / VAT share / total in hairline rows. */
+/* Summary register: subtotal / VAT share / total in hairline rows. */
 .cart-register {
   margin: 0;
 }
@@ -8721,7 +8721,7 @@ html.light .firmware-logo--tile {
   gap: 1rem;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   /* Size each card to its own content instead of stretching to the tallest in
-     the row — that stretch is what left big empty gaps under the shorter cards. */
+     the row: that stretch is what left big empty gaps under the shorter cards. */
   align-items: start;
 }
 
@@ -8795,7 +8795,7 @@ html.light .firmware-logo--tile {
   margin: 0;
 }
 
-/* Primary card action — styled as an actual (soft-gold) button so it reads as
+/* Primary card action: styled as an actual (soft-gold) button so it reads as
    clickable, not as another line of text. Shared by the dashboard card CTAs and
    the newsletter toggle. */
 .account-dashboard-cta,
@@ -9108,7 +9108,7 @@ html.light .firmware-logo--tile {
 }
 
 /* The top-bar lang toggle would overflow a 320px header row on legal pages,
-   so hide it on phones — MobileMenuAside renders the full-size toggle inside
+   so hide it on phones: MobileMenuAside renders the full-size toggle inside
    the slide-out drawer instead. */
 @media (max-width: 768px) {
   .lang-toggle.header-lang-toggle {
@@ -9523,7 +9523,7 @@ html.light .editorial-watermark {
 
 /* Margin art: one stroke-only drawing per section, floated into the free
    canvas right of the prose column and aligned with its section's top.
-   Dim gray linework — it should register as a sketch in the margin, not
+   Dim gray linework: it should register as a sketch in the margin, not
    an image. Hidden when the viewport has no spare right margin. */
 .editorial-section {
   position: relative;
@@ -9670,8 +9670,8 @@ html.light .editorial-watermark {
   color: var(--color-on-accent);
 }
 
-/* Partner logo on the page's art layer — outside the card, in the right
-   margin like the section sketches — but pinned to ITS card: vertically
+/* Partner logo on the page's art layer: outside the card, in the right
+   margin like the section sketches: but pinned to ITS card: vertically
    centered on the box that talks about that firmware. */
 .partner-card {
   position: relative;
@@ -9801,7 +9801,7 @@ html.light .editorial-watermark {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   Editorial shell — series rail | prose | page visual
+   Editorial shell: series rail | prose | page visual
 
    The long-form pages read as one series, so every page carries the index
    of the whole series and a picture of its own argument. `.editorial-page`
@@ -9811,7 +9811,7 @@ html.light .editorial-watermark {
    Column budget at the 1360px breakpoint: 13rem rail + 640 prose + 19rem
    aside + two 3rem gaps = 1208px, inside the rail gutters. Below that the
    rail drops under the prose; below 1120px the aside does too. Nothing is
-   display:none at any width — the rail IS the navigation for the series.
+   display:none at any width: the rail IS the navigation for the series.
    ═══════════════════════════════════════════════════════════════════════ */
 .editorial-shell {
   width: var(--rail-width);
@@ -9866,7 +9866,7 @@ html.light .editorial-watermark {
     position: sticky;
     /* Rides DOWN with the reader: it scrolls with the page until its top
        reaches a comfortable line well below the header, then travels with
-       the scroll — never pinned at the page top getting its head clipped. */
+       the scroll: never pinned at the page top getting its head clipped. */
     top: clamp(5rem, 16vh, 10rem);
     margin-top: 1.25rem;
     align-self: start;
@@ -10212,7 +10212,7 @@ html.light .editorial-watermark {
   color: var(--color-gold-text-hover);
 }
 
-/* Roadmap (/roadmap) — hairline rows, mono status chips. Tokens only,
+/* Roadmap (/roadmap): hairline rows, mono status chips. Tokens only,
    so light mode themes itself. */
 /* ── Status kanban (roadmap page) ──────────────────────────────────────
    The working board, drawn with hairlines and the three-state dot
@@ -10791,7 +10791,7 @@ html.light .editorial-watermark {
   margin: 0.3rem 0 0;
 }
 
-/* ── PDP reviews — provider data, own markup (no third-party widget).
+/* ── PDP reviews: provider data, own markup (no third-party widget).
    Engineering-document voice: hairline rows, mono numerals/dates, gold
    stars. Tokens only, so light/dark theme for free. ─────────────────── */
 
@@ -10902,7 +10902,7 @@ html.light .editorial-watermark {
   font-variant-numeric: tabular-nums;
 }
 
-/* Trust-chip link state — chips can now be clickable. */
+/* Trust-chip link state: chips can now be clickable. */
 .trust-chip-link {
   cursor: pointer;
   transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
@@ -10919,7 +10919,7 @@ html.light .editorial-watermark {
 }
 
 /* --------------------------------------------------------------------- */
-/* Contact page — tiered visual hierarchy                                  */
+/* Contact page: tiered visual hierarchy                                  */
 /* Discord first, web ticket second, direct/security third, legal pinned   */
 /* at the bottom for compliance.                                           */
 /* --------------------------------------------------------------------- */
@@ -11387,7 +11387,7 @@ html.light .editorial-watermark {
   transition: background 0.15s ease, opacity 0.15s ease;
 }
 
-/* Signed-out branch — shown in place of the intake form when the
+/* Signed-out branch: shown in place of the intake form when the
    visitor isn't authenticated with the Customer Account API. */
 .support-signin {
   display: flex;
@@ -11612,7 +11612,7 @@ html.light .editorial-watermark {
 }
 
 /* --------------------------------------------------------------------- */
-/* Support widget — file picker + chips                                   */
+/* Support widget: file picker + chips                                   */
 /* --------------------------------------------------------------------- */
 
 .support-files {
@@ -11741,7 +11741,7 @@ html.light .editorial-watermark {
 }
 
 /* --------------------------------------------------------------------- */
-/* Support widget — resume-by-email + banner                              */
+/* Support widget: resume-by-email + banner                              */
 /* --------------------------------------------------------------------- */
 
 .support-banner {
@@ -11918,7 +11918,7 @@ html.light .editorial-watermark {
 /* .od-page-wide intentionally inherits the global rail-width so the
    horizontal gutter matches the header, footer, and PDP. Was previously
    capped at 1320px which left a 60px gutter at 1440 viewport while the
-   header used 32px — caused inconsistent left edges across routes. */
+   header used 32px: caused inconsistent left edges across routes. */
 
 .od-page-head {
   padding: 0 0 32px;
@@ -13308,7 +13308,7 @@ html.light .editorial-watermark {
 }
 
 /* =========================================================
-   /contact — Apr 2026 layout pass: widget + side-stack on
+   /contact: Apr 2026 layout pass: widget + side-stack on
    wide viewports, single column on narrow. Caps page-frame
    so dead zones disappear on ultrawide. Re-uses --od-* tokens.
    ========================================================= */
@@ -13324,7 +13324,7 @@ html.light .editorial-watermark {
   display: grid;
   grid-template-columns: 1fr;
   gap: 22px;
-  /* stretch so the side-stack matches the Discord widget height — kills
+  /* stretch so the side-stack matches the Discord widget height: kills
      the dead space that otherwise opens below the right column on wide
      viewports where the iframe is taller than two tiles. */
   align-items: stretch;
@@ -13332,7 +13332,7 @@ html.light .editorial-watermark {
 
 @media (min-width: 960px) {
   .contact-main-grid {
-    /* Discord widget is the primary CTA — let it take the wide column
+    /* Discord widget is the primary CTA: let it take the wide column
        and pin the side rail to a fixed narrow width so we don't get a
        blank middle on big monitors. */
     grid-template-columns: 1fr minmax(320px, 380px);
@@ -13365,7 +13365,7 @@ html.light .editorial-watermark {
   background: transparent;
 }
 
-/* Fallback invite card (only shown when guildId is missing) — uncap
+/* Fallback invite card (only shown when guildId is missing): uncap
    width so it doesn't leave a dead strip on wide viewports. */
 .contact-main-grid .discord-invite-card {
   max-width: none;
@@ -13396,7 +13396,7 @@ html.light .editorial-watermark {
 .support-page-frame .od-page-head p {max-width: none;}
 
 /* =========================================================
-   Support thread — Apr 2026 dead-space pass.
+   Support thread: Apr 2026 dead-space pass.
    Drop the outer card on the standalone /support page so
    the chat lives in the page rhythm. Centre inner content
    at a chat-friendly column (max 880px) so the log + bubbles
@@ -14155,7 +14155,7 @@ html.light .editorial-watermark {
   border-top: 1px dashed var(--od-line);
 }
 
-/* Homepage strip — three variants --------------------------------- */
+/* Homepage strip: three variants --------------------------------- */
 .rn-strip {
   border: 1.5px solid var(--od-line-strong);
   border-radius: var(--r-xs);
@@ -14309,7 +14309,7 @@ html.light .editorial-watermark {
 }
 
 /* =========================================================
-   /support active state — sidebar + main layout (Apr 2026)
+   /support active state: sidebar + main layout (Apr 2026)
    Two-col grid: ticket meta + replies sidebar on the left,
    chat thread on the right. The .support-thread keeps its
    original bordered card so it visually anchors. Composer
@@ -14543,7 +14543,7 @@ html.light .editorial-watermark {
 }
 
 /* Expanding halo. A pseudo-element disc the size of the dot scales up and fades
-   — a compositor-only transform/opacity ripple that reproduces the old
+  : a compositor-only transform/opacity ripple that reproduces the old
    box-shadow pulse without animating on the paint path (box-shadow repaints an
    expanding ring every frame). scale(3.3) ≈ the old 8px spread (7px dot →
    ~23px). */
@@ -14631,7 +14631,7 @@ html.light .editorial-watermark {
   }
 }
 
-/* Newsletter landing — recent-posts list under the signup form */
+/* Newsletter landing: recent-posts list under the signup form */
 .newsletter-recent {
   margin-top: 56px;
 }
@@ -14777,7 +14777,7 @@ html.light .editorial-watermark {
   .board-art-skeleton-spinner {
     animation-duration: 2.4s;
   }
-  /* Transient action spinner: slowed but kept — the "Adding…" label already
+  /* Transient action spinner: slowed but kept: the "Adding…" label already
      carries the state, the rotation is just reinforcement. */
   .btn-spinner,
   .inline-spinner {
@@ -14795,7 +14795,7 @@ html.light .editorial-watermark {
    C) tap-target floors  D) micro-label legibility floors.
    ============================================================ */
 
-/* A) Safe-area inset custom props — resolve to 0 where unsupported.
+/* A) Safe-area inset custom props: resolve to 0 where unsupported.
    viewport-fit=cover (root.tsx) is what makes env() non-zero on
    notched phones. Fixed chrome reads these so nothing hides under
    the notch / home indicator. */
@@ -14820,7 +14820,7 @@ html.light .editorial-watermark {
     max-width: 100%;
   }
 
-  /* FirmwareSplit's amount row (€44 + €1 = €45) must stay on ONE line — scale
+  /* FirmwareSplit's amount row (€44 + €1 = €45) must stay on ONE line: scale
      the figure down to fit the phone instead of wrapping. */
   .firmware-split-amounts {
     flex-wrap: nowrap;
@@ -14836,7 +14836,7 @@ html.light .editorial-watermark {
      single `1fr` column = minmax(auto, 1fr), whose `auto` floor is min-content,
      so a wide child (toolbar/cards) stretched the track past the viewport.
      minmax(0, 1fr) drops the floor to 0 and min-width:0 lets the grid item
-     shrink to the track — content reflows instead of forcing page scroll. */
+     shrink to the track: content reflows instead of forcing page scroll. */
   .catalog-layout {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -14849,14 +14849,14 @@ html.light .editorial-watermark {
     box-sizing: border-box;
   }
 
-  /* Header inner row was 362px wide on a 320px phone — keep brand + icons
+  /* Header inner row was 362px wide on a 320px phone: keep brand + icons
      within the viewport. */
   .site-header-main {
     max-width: 100%;
     box-sizing: border-box;
   }
 
-  /* ---- C) Tap-target floors (WCAG 2.5.5 — 44px) ------------------------ */
+  /* ---- C) Tap-target floors (WCAG 2.5.5: 44px) ------------------------ */
   /* Block/inline-block interactive controls that rendered under 44px tall on
      a phone. Inline-flex + min-height centres existing content without
      reflowing it; a touch of inline padding widens the hit area. */
@@ -14874,13 +14874,13 @@ html.light .editorial-watermark {
     display: inline-flex;
     align-items: center;
   }
-  /* Mobile slide-out nav links — full-width 44px touch rows. */
+  /* Mobile slide-out nav links: full-width 44px touch rows. */
   .site-mobile-nav a {
     min-height: 44px;
     display: flex;
     align-items: center;
   }
-  /* Arrows are square — give them width too. */
+  /* Arrows are square: give them width too. */
   .product-gallery-arrow {
     min-width: 44px;
     justify-content: center;
@@ -14919,7 +14919,7 @@ html.light .editorial-watermark {
     font-size: 12px;
   }
   /* Corner badges (New/Sale/Coming soon) and the pre-launch tag read at
-     ~10px — floor them to the 12px mobile legibility minimum. */
+     ~10px: floor them to the 12px mobile legibility minimum. */
   .product-card-badge,
   .placeholder-banner__tag {
     font-size: 12px;
@@ -14939,10 +14939,10 @@ html.light .editorial-watermark {
 }
 
 /* ============================================================
-   MOBILE EXPLORATION — board layers, schematic, frame (island-v2)
+   MOBILE EXPLORATION: board layers, schematic, frame (island-v2)
    The desktop hid .chapter-media below 880px, so the PCB layer
-   explorer and exploded frame — the whole point of the product
-   story — were absent on phones (text-only chapters reading as
+   explorer and exploded frame: the whole point of the product
+   story: were absent on phones (text-only chapters reading as
    a void). Bring them back as a flat, touch-first single-column
    view: active layer full-width, pill tabs switch layers, tap a
    component to spotlight it. Standard, screen-efficient, no
@@ -14952,7 +14952,7 @@ html.light .editorial-watermark {
   /* Un-hide the board explorer and let it flow inline. The chapter reads as one
      continuous scroll: the title + teardown copy come first (natural DOM order),
      then the board viewer + component chips below. No sticky pin (the board no
-     longer hangs at the top) and no order flip — the explanation leads, the GUI
+     longer hangs at the top) and no order flip: the explanation leads, the GUI
      viewer follows. Board size is unchanged (full-width square). */
   .chapter-media:has(.board-art) {
     display: block;
@@ -14963,7 +14963,7 @@ html.light .editorial-watermark {
      full-width. No perspective, no depth fan, no fly-in. The stack keeps its
      square aspect so the board fills the column at a stable height. */
   /* The swipe-deck (peek + flick + counter) IS the layer control now, so the
-     horizontal pill rail is redundant on mobile — hide it (also removes the
+     horizontal pill rail is redundant on mobile: hide it (also removes the
      rail-vs-header overlap entirely). */
   .board-art .board-folder-rail {
     display: none;
@@ -14986,7 +14986,7 @@ html.light .editorial-watermark {
      (--rel + --drag) cards from centre, where --rel is its distance from the
      active layer (0 = on screen) and --drag is the live finger offset (0 at
      rest). So the active layer slides out as you drag while the next/prev layer
-     — parked one card off the opposite edge — chases straight in behind it. */
+    : parked one card off the opposite edge: chases straight in behind it. */
   .board-art .board-sheet {
     animation: none !important;
     filter: none;
@@ -15024,7 +15024,7 @@ html.light .editorial-watermark {
   }
   .board-deck-dot {
     flex: 1 1 0;
-    /* 12px visible bar (was 4px — the only pagination affordance on touch
+    /* 12px visible bar (was 4px: the only pagination affordance on touch
        was near-invisible and untappable, QA P2-6). */
     height: 12px;
     min-height: 12px;
@@ -15071,7 +15071,7 @@ html.light .editorial-watermark {
     text-transform: uppercase;
     letter-spacing: 0.1em;
   }
-  /* Qty / I/O chip beside the toured part's name — carries the detail the old
+  /* Qty / I/O chip beside the toured part's name: carries the detail the old
      row list used to show (×1, I/O) now the list is gone on mobile. */
   .board-deck-cost {
     font-size: 0.72rem;
@@ -15087,7 +15087,7 @@ html.light .editorial-watermark {
     color: var(--color-text-muted);
   }
   /* Part tour sits under the layer progress, separated by a hairline. Same
-     tick + meta chrome as the layer deck — components work "the same". */
+     tick + meta chrome as the layer deck: components work "the same". */
   .board-part-tour {
     margin-top: 0.75rem;
     padding-top: 0.7rem;
@@ -15100,7 +15100,7 @@ html.light .editorial-watermark {
     margin: 0 0 0.5rem;
     font-family: var(--font-mono);
   }
-  /* Scrollable row of real, labelled, thumb-sized component chips — replaces the
+  /* Scrollable row of real, labelled, thumb-sized component chips: replaces the
      old strip of tiny untappable dots. */
   .board-part-chips {
     display: flex;
@@ -15110,14 +15110,14 @@ html.light .editorial-watermark {
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
     padding-bottom: 2px;
-    /* horizontal scroll of the chip row only — never hijack vertical page scroll */
+    /* horizontal scroll of the chip row only: never hijack vertical page scroll */
     touch-action: pan-x;
   }
   /* Second row (bottom-side chips) sits just under the top-side row. */
   .board-part-chips + .board-part-chips {
     margin-top: 6px;
   }
-  /* Sticky side tag at the start of each chip row — labels which board face the
+  /* Sticky side tag at the start of each chip row: labels which board face the
      row's parts live on, stays put while the chips scroll past it. */
   .board-part-chips-side {
     position: sticky;
@@ -15164,13 +15164,13 @@ html.light .editorial-watermark {
     color: var(--color-text-dim);
   }
   /* The rail's first-reveal opacity-0 hold (is-armed) never clears without the
-     fly animation — force it visible on mobile. */
+     fly animation: force it visible on mobile. */
   .board-art.is-armed .board-folder-rail,
   .board-art.is-flying .board-folder-rail {
     opacity: 1;
   }
 
-  /* The board flows below the copy now — the bottom margin set above is the only
+  /* The board flows below the copy now: the bottom margin set above is the only
      spacing it needs; clear any inherited top offset. */
   .chapter:has(.board-art) .chapter-media {
     margin-top: 0;
@@ -15189,7 +15189,7 @@ html.light .editorial-watermark {
 }
 
 @media (max-width: 1023px) {
-  /* Frame viewer (exploded carbon frame) — desktop renders it as an absolute
+  /* Frame viewer (exploded carbon frame): desktop renders it as an absolute
      full-bleed backdrop behind the chapter text; that's dropped on mobile,
      leaving the frame product with no hero visual. Re-flow it inline as a
      contained, full-width square that sits above the copy. Its scroll-driven
@@ -15216,7 +15216,7 @@ html.light .editorial-watermark {
 }
 
 @media (max-width: 640px) {
-  /* Catalog as a 2-up grid on phones — twice the products per screen than the
+  /* Catalog as a 2-up grid on phones: twice the products per screen than the
      single 240px-min column, which is the efficient mobile-store default and
      keeps the board renders large enough to read. */
   .catalog-main .products-grid {
@@ -15229,7 +15229,7 @@ html.light .editorial-watermark {
 @media (max-width: 1023px) {
   /* Schematic stage was a fixed 72vh box, so a wide/sparse sheet left ~⅔ of it
      black. Size the stage to the active sheet's real aspect ratio (--sheet-ar
-     from the manifest) so it hugs the drawing — capped so a tall sheet can't run
+     from the manifest) so it hugs the drawing: capped so a tall sheet can't run
      off-screen. The wide OVERVIEW sheet now fills its box instead of stranding a
      half-screen of void. */
   .schematic-page {
@@ -15269,7 +15269,7 @@ html.light .editorial-watermark {
     display: none;
   }
 
-  /* Discoverability hint under the teardown title (mobile only — desktop has
+  /* Discoverability hint under the teardown title (mobile only: desktop has
      hover to teach the interaction). */
   /* Manual-explorer guide: a "slide down" hint + a Skip button (jumps past the
      teardown for visitors who don't want to explore). */
@@ -15302,7 +15302,7 @@ html.light .editorial-watermark {
   }
   /* The KiCanvas deep-dive links ("Inspect interactively", "Open schematic")
      don't work on touch (KiCanvas is a mouse/keyboard viewer), so they're
-     dropped on mobile — board + schematic alike. The empty schematic foot that
+     dropped on mobile: board + schematic alike. The empty schematic foot that
      held the link goes with them. */
   .board-art-inspect,
   .schematic-foot {
@@ -15325,7 +15325,7 @@ html.light .editorial-watermark {
   :root {
     --aside-width: min(86vw, 360px);
   }
-  /* The × was a ~10×23px hit target — the worst on the site. Floor it to 44px. */
+  /* The × was a ~10×23px hit target: the worst on the site. Floor it to 44px. */
   .overlay aside header .close {
     display: inline-flex;
     align-items: center;
@@ -15355,7 +15355,7 @@ html.light .editorial-watermark {
   .site-mobile-nav-label:first-child {
     margin-top: 0;
   }
-  /* Search affordance — a real search field at the top of the drawer (submits
+  /* Search affordance: a real search field at the top of the drawer (submits
      to /search and closes the drawer). The form is the pill; the input fills it. */
   .site-mobile-nav-search {
     display: flex;
@@ -15410,7 +15410,7 @@ html.light .editorial-watermark {
   }
 }
 @media (max-width: 1023px) {
-  /* Consent / form checkboxes were ~13px hit targets — enlarge on touch. */
+  /* Consent / form checkboxes were ~13px hit targets: enlarge on touch. */
   input[type='checkbox'] {
     width: 20px;
     height: 20px;
@@ -15461,7 +15461,7 @@ body:has(.overlay.expanded) .placeholder-banner {
   display: none;
 }
 
-/* Cart controls on touch: the steppers and Remove were ~26px tall — below
+/* Cart controls on touch: the steppers and Remove were ~26px tall: below
    any usable tap target. Pad them up only where there is no fine pointer. */
 @media (hover: none) {
   .cart-line-quantity button {
