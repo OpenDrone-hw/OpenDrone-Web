@@ -100,7 +100,7 @@ export function firstStepPrice(retail, priceTiers) {
  * [{sku, price, compareAt}] with numbers (compareAt null when unset).
  * Returns one problem string per campaign SKU that is missing or mispriced.
  */
-export function checkFirstStepPrices(variants, skus, priceTiers) {
+export function checkFirstStepPrices(variants, skus, priceTiers, tiersBySku = {}) {
   const bySku = new Map(variants.map((v) => [v.sku, v]));
   const problems = [];
   for (const sku of skus) {
@@ -113,7 +113,7 @@ export function checkFirstStepPrices(variants, skus, priceTiers) {
       problems.push(`${sku}: no compare-at (retail) price`);
       continue;
     }
-    const expected = firstStepPrice(v.compareAt, priceTiers);
+    const expected = firstStepPrice(v.compareAt, tiersBySku[sku] ?? priceTiers);
     if (expected == null || Math.abs(v.price - expected) > 0.005) {
       problems.push(`${sku}: price ${v.price.toFixed(2)}, first step is ${expected?.toFixed(2)} (retail ${v.compareAt.toFixed(2)})`);
     }
@@ -430,7 +430,14 @@ async function main() {
   let policy = null;
   if (REQUIRED_ENV.every((k) => process.env[k]?.trim())) {
     const variants = await storefrontVariants();
-    const priceProblems = checkFirstStepPrices(variants, skus, preorders.priceTiers);
+    const priceProblems = checkFirstStepPrices(
+      variants,
+      skus,
+      preorders.priceTiers,
+      Object.fromEntries(
+        Object.entries(preorders.skus).flatMap(([sku, e]) => (e.priceTiers ? [[sku, e.priceTiers]] : [])),
+      ),
+    );
     for (const p of priceProblems) console.log(`prices: ${p}`);
     if (!priceProblems.length) console.log(`prices: ${skus.length} campaign SKUs at the first step`);
     pre.push(...priceProblems);

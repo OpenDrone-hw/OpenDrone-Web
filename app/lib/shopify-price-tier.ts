@@ -17,7 +17,7 @@
  * The Admin token needs `write_products` on top of the order scopes.
  */
 
-import {tierPrice, type CampaignConfig} from './preorder-campaign.ts';
+import {tierPrice, tiersFor, type CampaignConfig} from './preorder-campaign.ts';
 
 const DEFAULT_ADMIN_API_VERSION = '2026-07';
 
@@ -117,8 +117,10 @@ export function targetPrice(
   config: CampaignConfig,
   units: number,
   retail: number,
+  sku?: string,
 ): {price: number; compareAt: number | null} {
-  const tier = config.priceTiers.find((t) => units < t.upTo);
+  const tiers = sku ? tiersFor(config, sku) : config.priceTiers;
+  const tier = tiers.find((t) => units < t.upTo);
   if (!tier) return {price: retail, compareAt: null};
   return {price: tierPrice(retail, tier.off) ?? retail, compareAt: retail};
 }
@@ -169,7 +171,7 @@ export async function syncPriceTiers(
       skipped[sku] = 'no retail price in Shopify';
       continue;
     }
-    const target = targetPrice(config, units[sku] ?? 0, retail);
+    const target = targetPrice(config, units[sku] ?? 0, retail, sku);
     const samePrice = cents(price) === cents(target.price);
     const sameCompare =
       target.compareAt == null ? compareAt == null : compareAt != null && cents(compareAt) === cents(target.compareAt);

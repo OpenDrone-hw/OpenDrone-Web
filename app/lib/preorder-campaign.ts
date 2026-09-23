@@ -55,8 +55,31 @@ export type CampaignConfig = {
   /** Price steps by paid units, in order: `upTo` is the last unit of the
    *  step and `off` its share off retail. Past the last step: retail. */
   priceTiers: PriceTier[];
-  skus: Record<string, {batches: CampaignBatch[]}>;
+  /** Per SKU: its batches, and optionally its own price steps in place of
+   *  the campaign's (`tiersFor`). */
+  skus: Record<string, {batches: CampaignBatch[]; priceTiers?: PriceTier[]}>;
 };
+
+/** The price steps one SKU sells on: its own when set, else the campaign's. */
+export function tiersFor(config: CampaignConfig, sku: string): PriceTier[] {
+  return config.skus[sku]?.priceTiers ?? config.priceTiers;
+}
+
+function checkTiers(tiers: unknown, where: string): void {
+  if (!Array.isArray(tiers)) {
+    throw new Error(`preorders: ${where} must be an array`);
+  }
+  let last = 0;
+  for (const tier of tiers as PriceTier[]) {
+    if (!Number.isSafeInteger(tier?.upTo) || tier.upTo <= last) {
+      throw new Error(`preorders: ${where} need whole, increasing upTo values`);
+    }
+    if (!(typeof tier.off === 'number') || !(tier.off > 0) || tier.off >= 1) {
+      throw new Error(`preorders: ${where} ${tier.upTo} needs an off share between 0 and 1`);
+    }
+    last = tier.upTo;
+  }
+}
 
 export type CampaignState = {
   /** Paid units ordered since `countFrom`. */
@@ -123,19 +146,7 @@ export function parseCampaignConfig(body: unknown): CampaignConfig {
   if (typeof c.endsOn !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(c.endsOn)) {
     throw new Error('preorders: endsOn must be YYYY-MM-DD');
   }
-  if (!Array.isArray(c.priceTiers)) {
-    throw new Error('preorders: priceTiers must be an array');
-  }
-  let last = 0;
-  for (const tier of c.priceTiers) {
-    if (!Number.isSafeInteger(tier?.upTo) || tier.upTo <= last) {
-      throw new Error('preorders: priceTiers need whole, increasing upTo values');
-    }
-    if (!(typeof tier.off === 'number') || !(tier.off > 0) || tier.off >= 1) {
-      throw new Error(`preorders: priceTiers ${tier.upTo} needs an off share between 0 and 1`);
-    }
-    last = tier.upTo;
-  }
+  checkTiers(c.priceTiers, 'priceTiers');
   if (typeof c.pendingShips !== 'string' || !c.pendingShips.trim()) {
     throw new Error('preorders: pendingShips is required');
   }
@@ -160,6 +171,7 @@ export function parseCampaignConfig(body: unknown): CampaignConfig {
         throw new Error(`preorders: ${sku} paid batch needs a ship promise`);
       }
     }
+    if (entry.priceTiers !== undefined) checkTiers(entry.priceTiers, `${sku} priceTiers`);
   }
   return c as CampaignConfig;
 }
@@ -394,7 +406,7 @@ export function applyCampaign(
           entry.batches,
           units[variant.sku] ?? 0,
           config.pendingShips,
-          config.priceTiers,
+          tiersFor(config, variant.sku),
           variant.compare_price,
         );
         if (closed && state.shipsOnTarget && !state.paidStock) {
