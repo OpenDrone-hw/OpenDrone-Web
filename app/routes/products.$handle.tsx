@@ -1749,7 +1749,7 @@ function ProductPage() {
         quantity={isBundle ? undefined : buyQuantity}
         maxQuantity={maxQuantity}
         maxQuantityNote={maxQuantityNote}
-        onQuantityChange={isBundle ? undefined : setQuantity}
+        onQuantityChange={isBundle || throughShops ? undefined : setQuantity}
         notSoldLabel={
           throughShops ? say('product-chrome.buy_shops_only', 'Available through shops') : undefined
         }
