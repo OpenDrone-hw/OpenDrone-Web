@@ -426,7 +426,7 @@ export function needsCampaignCounts(catalog: Catalog, config: CampaignConfig): b
 }
 
 /** How much ship text a surface shows: `short` for a cart line, a dialog
- *  card, a listing card or the pinned rail; `long` once, in the PDP buy box
+ *  card or a listing card; `long` once, in the PDP buy box
  *  and as the one mixed-date note of a cart. */
 export type ShipLabelForm = 'short' | 'long';
 

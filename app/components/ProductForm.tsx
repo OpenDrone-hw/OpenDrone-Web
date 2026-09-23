@@ -36,8 +36,7 @@ export function ProductForm({
   buyDisabled?: boolean;
   buyCtaLabel?: string;
   /** Units to add. With `onQuantityChange` set, a stepper renders next to
-   *  the button; the caller holds the number so every copy of the buy
-   *  module (hero and pinned rail) adds the same quantity. */
+   *  the button; the caller holds the number. */
   quantity?: number;
   /** The most one add may ask for: the cart line cap, or the units left in
    *  a paid preorder batch. */

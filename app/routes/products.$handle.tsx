@@ -1,6 +1,5 @@
 import {BOARD_ART_VERSION} from '~/data/board-art-version';
 import {Fragment, Suspense, useEffect, useMemo, useRef, useState} from 'react';
-import {createPortal} from 'react-dom';
 import {
   Await,
   Link,
@@ -23,7 +22,6 @@ import {
   toProduct,
 } from '~/lib/catalog';
 import {buyUrl, commerceHandoff} from '~/lib/shop-links';
-import {useAside} from '~/components/Aside';
 import {Txt} from '~/components/Txt';
 import {ConceptPlate} from '~/components/ConceptPlate';
 import {CONTRIBUTING_URL} from '~/lib/company';
@@ -62,7 +60,6 @@ import {
   PRODUCT_CONTENT,
   PRODUCT_CONTENT_FALLBACK,
   specSheet,
-  shortShipPromise,
   isConceptFor,
   isInternalSku,
   imagesAreRenders,
@@ -778,10 +775,6 @@ function ProductPage() {
     );
   }, [searchKey, product]);
 
-  // Hide the pinned buy rail while an aside (cart/search/mobile nav) is open -
-  // otherwise the fixed overlay sits on top of the cart drawer.
-  const {type: asideType} = useAside();
-
   // Coming-soon state: no prices, no add-to-cart - the buy module becomes a
   // notify-at-launch signup. Root data feeds the Turnstile key.
   const rootData = useRouteLoaderData<RootLoader>('root');
@@ -1185,39 +1178,6 @@ function ProductPage() {
     [boardArtSrcs],
   );
 
-  // Compact buy bar (line products, desktop): the in-hero ladder + add-to-cart
-  // scroll past normally; once the in-hero selector passes under the header a
-  // separate compact bar pins to the top so a buyer can switch SKUs from
-  // anywhere and compare spec tables. Scrolling back up hides it again. The pin
-  // is driven by a zero-height sentinel sitting just below the in-hero selector.
-  // The pinned bar shrink-wraps to its content (chips + price + add-to-cart) and
-  // anchors to the content's right edge, so it grows leftward as more SKUs are
-  // added rather than stretching into a full-width banner. `railBox.right`
-  // mirrors the gap from the viewport's right edge to the hero's right edge.
-  const heroSectionRef = useRef<HTMLElement>(null);
-  const railSentinelRef = useRef<HTMLDivElement>(null);
-  const [railPinned, setRailPinned] = useState(false);
-  // The in-page buy box and the footer: while either is on screen the
-  // pinned bar steps aside, so two Pre-order buttons never show at once
-  // and the last content on the page is never covered.
-  const inflowBuyRef = useRef<HTMLDivElement>(null);
-  const [inflowBuyVisible, setInflowBuyVisible] = useState(true);
-  const [footerVisible, setFooterVisible] = useState(false);
-  useEffect(() => {
-    if (typeof IntersectionObserver === 'undefined') return;
-    const buy = inflowBuyRef.current;
-    const footer = document.querySelector('footer');
-    const io = new IntersectionObserver((entries) => {
-      for (const e of entries) {
-        if (e.target === buy) setInflowBuyVisible(e.isIntersecting);
-        else setFooterVisible(e.isIntersecting);
-      }
-    });
-    if (buy) io.observe(buy);
-    if (footer) io.observe(footer);
-    return () => io.disconnect();
-  }, [product.handle]);
-  const [, setRailBox] = useState<{right: number} | null>(null);
   // Refdes of the teardown pin the visitor is hovering/focusing - highlighted
   // on the board by BoardArt. Lives here (the common ancestor of the pin list
   // and the board) so a hover lights the matching footprint.
@@ -1423,53 +1383,6 @@ function ProductPage() {
     document.documentElement.classList.toggle('board-focus', on);
     return () => document.documentElement.classList.remove('board-focus');
   }, [hoveredRefs]);
-  // <960px the pinned rail becomes a bottom bar (price + add-to-cart only):
-  // phones previously had NO sticky buy control at all once the in-hero buy
-  // module scrolled away.
-  const [railMobile, setRailMobile] = useState(false);
-
-  // The mobile PCB explorer is now FULLY MANUAL - no auto-play, no scroll-driven
-  // body-class toggles (those fed an IntersectionObserver→layout→observer loop
-  // that flickered even when idle). The board stays sticky, the layer rail is
-  // tappable, and tapping a part highlights it. Nothing here moves the elements
-  // the observers watch, so it's stable.
-  useEffect(() => {
-    if (!hasLadder) return;
-    const sentinel = railSentinelRef.current;
-    const section = heroSectionRef.current;
-    if (!sentinel || !section) return;
-    const HEADER = 56; // --header-height
-    const isDesktop = () => window.matchMedia('(min-width: 960px)').matches;
-    const measure = () => {
-      // Anchor the pinned rail's right edge to the floating header pill's right
-      // edge so the two pills line up exactly (fall back to the hero section if
-      // the header isn't found). clientWidth excludes the scrollbar so the edge
-      // sits on the content gutter, not over the scrollbar.
-      const headerEl = document.querySelector('.site-header-main');
-      const refRight = (headerEl ?? section).getBoundingClientRect().right;
-      const right = Math.round(document.documentElement.clientWidth - refRight);
-      setRailBox({right});
-      setRailMobile(!isDesktop());
-    };
-    measure();
-    const io = new IntersectionObserver(
-      ([entry]) =>
-        setRailPinned(
-          !entry.isIntersecting && entry.boundingClientRect.top < HEADER,
-        ),
-      {rootMargin: `-${HEADER}px 0px 0px 0px`, threshold: 0},
-    );
-    io.observe(sentinel);
-    const onResize = () => {
-      measure();
-    };
-    window.addEventListener('resize', onResize);
-    return () => {
-      io.disconnect();
-      window.removeEventListener('resize', onResize);
-    };
-  }, [product.handle, hasLadder]);
-
   // Bundles advertise the composed component price (what add-to-cart actually
   // charges), not a single component's price. Coming soon: no
   // offer at all: structured data must not leak a price the page hides.
@@ -1541,11 +1454,7 @@ function ProductPage() {
     delete productJsonLd.sku;
   }
 
-  // The ladder + buy module. These two nodes are rendered twice: once in the
-  // hero (in normal flow - it scrolls past like any content) and, once the
-  // in-hero selector has scrolled under the header, again in a compact bar
-  // pinned to the top so a variant switcher + add-to-cart is always reachable.
-  // Both copies share `activeTier`, so switching in either keeps them in sync.
+  // The ladder + buy module, rendered once in the hero in normal flow.
   // Ladder clicks are the PDP's main variant switch: track them as
   // `Variant Select` (user-initiated only; deep links and catalog
   // re-syncs go through setActiveTier directly and stay silent). Only an
@@ -1572,19 +1481,6 @@ function ProductPage() {
         activeValue={activeTier}
         onSelect={selectTier}
         showPrices={!soon}
-      />
-    ) : null;
-  // Compact (name-pill) variant switcher for the pinned MOBILE buy bar - keeps
-  // variant selection reachable there without the full spec ladder's height.
-  const railLadderCompact =
-    hasLadder && content.optionAxis && content.variants ? (
-      <VariantLadder
-        compact
-        axis={content.optionAxis}
-        variants={content.variants}
-        productOptions={productOptions}
-        activeValue={activeTier}
-        onSelect={selectTier}
       />
     ) : null;
   const isBundle = Boolean(content.bundle);
@@ -1640,8 +1536,7 @@ function ProductPage() {
     : null;
   const maxQuantity =
     paidLeft != null ? Math.max(1, Math.min(MAX_LINE_QUANTITY, paidLeft)) : MAX_LINE_QUANTITY;
-  // One quantity for both copies of the buy module (in the hero and in the
-  // pinned rail), reset to 1 whenever the variant changes.
+  // The buy module's quantity, reset whenever the variant changes.
   // A product sold singly but used in sets (4 motors per quad) starts at
   // one set; the stepper still moves by one.
   const setOf = !isBundle && content.setOf && content.setOf > 1 ? content.setOf : null;
@@ -1800,7 +1695,7 @@ function ProductPage() {
       </div>
       {stepBar}
       {/* Star aggregate + link to the reviews chapter. Renders nothing
-          without reviews; CSS hides it in the compact pinned rail. */}
+          without reviews. */}
       <ReviewAggregateLine aggregate={reviewAggregate} />
       <ProductForm
         productOptions={productOptions}
@@ -1866,46 +1761,6 @@ function ProductPage() {
       ) : null}
     </div>
   );
-
-  // The compact pinned copy. Desktop: top-right bar with ladder + buy module.
-  // Mobile (<960px): bottom bar with the buy module only - the ladder chips
-  // don't fit and the in-hero selector is a short scroll away. Portaled to
-  // <body> so the fixed overlay escapes the hero's sticky/stacking context -
-  // otherwise the chapter media (sticky to the same top-right spot) paints
-  // over it and swallows clicks. Suppressed (CSS-hidden, not unmounted - an
-  // in-flight add-to-cart submit must survive opening the drawer) while an
-  // aside is open so it doesn't sit on top of the cart. It stays live through the
-  // teardown chapter (the board no longer pins full-screen there) so variant/SKU
-  // switching is reachable everywhere on the page, not just above the fold.
-  const railSuppressed = railPinned && asideType !== 'closed';
-  // Coming soon (alpha): there is nothing to buy, and a notify form fixed to
-  // the viewport would be noise, so the pinned copy carries the ladder ALONE.
-  // The variants are the whole point of an alpha page, so switching them stays
-  // reachable from anywhere on it (maintainer, 2026-08-18).
-  const railAway = inflowBuyVisible || footerVisible;
-  const pinnedRail = (
-    <div
-      className={`buy-rail is-pinned${railMobile ? ' is-mobile' : ''}${soon ? ' is-ladderonly' : ''}${railSuppressed ? ' is-suppressed' : ''}${railAway ? ' is-away' : ''}`}
-      aria-hidden={railAway || undefined}
-    >
-      {railMobile ? null : (
-        <div className="buy-rail-id">
-          <strong>{title}{activeTier && hasLadder ? ` ${activeVariant?.label ?? activeTier}` : ''}</strong>
-          {shipPromise ? (
-            <span>{shortShipPromise(shipPromise)?.text ?? shipPromise}</span>
-          ) : null}
-        </div>
-      )}
-      {railMobile ? railLadderCompact : railLadder}
-      {soon ? null : railBuyModule}
-    </div>
-  );
-  // Room under the last content while the desktop bar is docked.
-  useEffect(() => {
-    const on = railPinned && !railMobile && !railAway;
-    document.body.classList.toggle('has-buy-dock', on);
-    return () => document.body.classList.remove('has-buy-dock');
-  }, [railPinned, railMobile, railAway]);
 
   /** Copy id behind a free-text chapter: one pair of strings per chapter id. */
   const proseKey = (id: string | undefined, part: 'title' | 'body') =>
@@ -2781,7 +2636,7 @@ function ProductPage() {
         }}
       />
       {/* === HERO: gallery left, copy + sticky buy module right === */}
-      <section className="product-hero" ref={heroSectionRef}>
+      <section className="product-hero">
         <div className="product-hero-gallery-col">
           <div
             className={`product-hero-media${
@@ -2855,27 +2710,10 @@ function ProductPage() {
             </ul>
           ) : null}
 
-          {/* In-flow buy box. The sentinel below the column hands over to
-              the compact pinned bar once the whole box is under the header. */}
-          <div className="buy-rail" ref={inflowBuyRef}>
+          <div className="buy-rail">
             {railLadder}
             {railBuyModule}
           </div>
-          {/* Separate compact bar pinned to the top while the in-hero selector
-              is out of view, so variants stay switchable from anywhere. Coming
-              soon: ladder only (see pinnedRail), and nothing at all when the
-              product has no variants to switch. */}
-          {railPinned && (!soon || hasLadder)
-            ? createPortal(pinnedRail, document.body)
-            : null}
-
-          {/* Below the whole buy box: the pinned bar takes over only once
-              all of it is under the header. */}
-          <div
-            ref={railSentinelRef}
-            className="buy-rail-sentinel"
-            aria-hidden="true"
-          />
         </div>
       </section>
 

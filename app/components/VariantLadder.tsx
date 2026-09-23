@@ -26,7 +26,6 @@ export function VariantLadder({
   productOptions,
   activeValue,
   onSelect,
-  compact = false,
   showPrices = false,
 }: {
   axis: string;
@@ -34,9 +33,6 @@ export function VariantLadder({
   productOptions: MappedProductOptions[];
   activeValue: string;
   onSelect: (value: string) => void;
-  /** Compact mode: name-only pills, no price - for the pinned mobile buy
-   *  bar where space is tight. */
-  compact?: boolean;
   /** Print each version's price on its button. Off while the product is
    *  not for sale, so a locked page never shows a price. */
   showPrices?: boolean;
@@ -68,7 +64,7 @@ export function VariantLadder({
 
   return (
     <div
-      className={`variant-ladder${compact ? ' variant-ladder--compact' : ''}`}
+      className="variant-ladder"
       role="radiogroup"
       aria-label={`${axis} ${copyText('product-chrome.ladder_aria_suffix') ?? ''}`}
     >
@@ -88,7 +84,7 @@ export function VariantLadder({
           // Each version's own price on its button, as FPV shops show it on
           // the option: the buyer compares without clicking through.
           const tierPrice =
-            showPrices && !compact && !comingSoon && optionValue?.firstSelectableVariant
+            showPrices && !comingSoon && optionValue?.firstSelectableVariant
               ? formatPrice(
                   optionValue.firstSelectableVariant.price.amount,
                   optionValue.firstSelectableVariant.price.currencyCode,
