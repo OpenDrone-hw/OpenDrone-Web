@@ -1,5 +1,5 @@
 import {BOARD_ART_VERSION} from '~/data/board-art-version';
-import {Fragment, Suspense, useEffect, useId, useMemo, useRef, useState} from 'react';
+import {Fragment, Suspense, useEffect, useMemo, useRef, useState} from 'react';
 import {createPortal} from 'react-dom';
 import {
   Await,
@@ -26,7 +26,6 @@ import {buyUrl, commerceHandoff} from '~/lib/shop-links';
 import {useAside} from '~/components/Aside';
 import {Txt} from '~/components/Txt';
 import {ConceptPlate} from '~/components/ConceptPlate';
-import {WHAT_IS_THIS_ID, specHelp} from '~/lib/product-content';
 import {CONTRIBUTING_URL} from '~/lib/company';
 import {ProductPrice} from '~/components/ProductPrice';
 import {ProductGallery} from '~/components/ProductGallery';
@@ -38,7 +37,6 @@ import {BoardArt} from '~/components/BoardArt';
 import {SchematicViewer} from '~/components/SchematicViewer';
 import type {FrameViewerProps} from '~/components/FrameViewer';
 import {SceneErrorBoundary} from '~/components/SceneErrorBoundary';
-import {ProvenanceCard} from '~/components/ProvenanceCard';
 import {WatchCard} from '~/components/WatchCard';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 import {copy, copyText, editAttrs} from '~/lib/copy';
@@ -63,7 +61,7 @@ import {GpsrBlock, safetyKind} from '~/components/GpsrBlock';
 import {
   PRODUCT_CONTENT,
   PRODUCT_CONTENT_FALLBACK,
-  displaySpecValue,
+  specSheet,
   shortShipPromise,
   isConceptFor,
   isInternalSku,
@@ -411,44 +409,13 @@ function DownloadsGrid({
 }
 
 /**
- * Merge a variant's spec deltas over the product's shared spec table,
- * matched by row key. A delta value of `null` hides the base row (e.g. the
- * cost-down Lite drops a sensor the standard board carries); a value
- * replaces the base row in place; an unknown key appends. Keeps every
- * tier's table coherent off one base instead of duplicating shared rows.
- */
-function mergeSpecs(
-  base: Array<[string, string]>,
-  overrides?: Array<[string, string | null]>,
-): Array<[string, string]> {
-  if (!overrides?.length) return base;
-  const out: Array<[string, string]> = base.map(([k, v]) => [k, v]);
-  for (const [k, v] of overrides) {
-    const idx = out.findIndex(([bk]) => bk === k);
-    if (v === null) {
-      if (idx !== -1) out.splice(idx, 1);
-    } else if (idx !== -1) {
-      out[idx] = [k, v];
-    } else {
-      out.push([k, v]);
-    }
-  }
-  return out;
-}
-
-/**
- * The chapters with the buying facts first: after the beginner chapter,
- * Specs and In the box come before the teardown, schematic and the rest, so
- * a buyer reads them right under the buy box. Numbers follow the new order.
+ * The chapters with the buying facts first: Specs and In the box come
+ * before the teardown, schematic and the rest, so a buyer reads them right
+ * under the buy box. Numbers follow the new order.
  */
 function buyingOrder<T extends {type: string; number: string}>(chapters: T[]): T[] {
   const facts = (c: T) => c.type === 'specs' || c.type === 'inTheBox';
-  const intro = chapters.filter((c) => c.type === 'whatIsThis');
-  const ordered = [
-    ...intro,
-    ...chapters.filter(facts),
-    ...chapters.filter((c) => !facts(c) && c.type !== 'whatIsThis'),
-  ];
+  const ordered = [...chapters.filter(facts), ...chapters.filter((c) => !facts(c))];
   return ordered.map((c, i) => ({...c, number: String(i + 1).padStart(2, '0')}));
 }
 
@@ -456,31 +423,6 @@ function buyingOrder<T extends {type: string; number: string}>(chapters: T[]): T
 function repoName(url: string | null | undefined): string | null {
   const m = url ? /github\.com\/[^/]+\/([^/?#]+)/.exec(url) : null;
   return m ? m[1] : null;
-}
-
-/**
- * The rows that differ between a product's variants, for the side-by-side
- * comparison under the spec table: every variant's merged table, keeping
- * only keys whose value is not the same everywhere. "-" marks a row a
- * variant does not have.
- */
-function variantComparison(
-  base: Array<[string, string]>,
-  variants:
-    | Record<string, {label?: string; specs?: Array<[string, string | null]>}>
-    | undefined,
-): {names: string[]; rows: Array<[string, string[]]>} | null {
-  const keys0 = Object.keys(variants ?? {});
-  if (keys0.length < 2) return null;
-  // Column heads use the shown name, as the ladder cards do.
-  const names = keys0.map((k) => variants![k].label ?? k);
-  const tables = keys0.map((k) => new Map(mergeSpecs(base, variants![k].specs)));
-  const keys: string[] = [];
-  for (const table of tables) for (const key of table.keys()) if (!keys.includes(key)) keys.push(key);
-  const rows = keys
-    .map((key): [string, string[]] => [key, tables.map((t) => t.get(key) ?? '-')])
-    .filter(([, values]) => new Set(values).size > 1);
-  return rows.length ? {names, rows} : null;
 }
 
 /**
@@ -509,58 +451,6 @@ function ClientFrameViewer(props: FrameViewerProps) {
 /** DOM ids of the spec and box chapters. */
 const SPECS_ID = 'specs';
 const IN_THE_BOX_ID = 'in-the-box';
-/** DOM id of the "How the versions differ" table, for the model picker. */
-const COMPARE_ID = 'compare-versions';
-/** Model values that belong to a 5-inch build. The homepage tour is a
- *  3-inch drone, so these link to the build guide instead. */
-const FIVE_INCH_MODELS = new Set(['30×30', '5" Freestyle', '2207']);
-
-/**
- * One row of a spec table. A row name with a plain-language line in
- * `SPEC_HELP` gets a "?" button that shows the line under the row, for
- * buyers who do not know what a UART or a KV is. Tap, click or keyboard;
- * no hover-only tooltip.
- */
-function SpecRow({
-  name,
-  value,
-  nameProps,
-  valueProps,
-}: {
-  name: string;
-  value: string;
-  nameProps?: Record<string, string>;
-  valueProps?: Record<string, string>;
-}) {
-  const help = specHelp(name);
-  const [open, setOpen] = useState(false);
-  const helpId = useId();
-  return (
-    <div data-help-open={open ? '' : undefined}>
-      <dt>
-        <span {...nameProps}>{name}</span>
-        {help ? (
-          <button
-            type="button"
-            className="spec-help-toggle"
-            aria-expanded={open}
-            aria-controls={helpId}
-            aria-label={say('product-chrome.spec_help_aria', 'What is {name}?', {name})}
-            onClick={() => setOpen((o) => !o)}
-          >
-            ?
-          </button>
-        ) : null}
-      </dt>
-      <dd {...valueProps}>{value}</dd>
-      {help ? (
-        <dd id={helpId} className="spec-help-text" hidden={!open}>
-          {help}
-        </dd>
-      ) : null}
-    </div>
-  );
-}
 
 /** Placeholder media slot. Renders a soft card with a geometric icon
  *  picked from `kind` until real images are wired in. */
@@ -1027,18 +917,12 @@ function ProductPage() {
   // chip, no repo or licence cards and no contributor wall, because every
   // one of those would point a buyer at a 404.
   const hasPublicSource = hasPublicRepo(product.handle);
-  // Printed circuit boards: the provenance card (designed in Leuven,
-  // assembled in Shenzhen) describes these and nothing else.
-  const isBoard =
-    Boolean(content.teardown?.boardArt) ||
-    Object.values(content.variants ?? {}).some((v) => Boolean(v.boardArt));
   // OSHWA certification follows the selected tier - each certified board has its
   // own UID, so the chip links to the directory page for the active variant.
   const activeOshwaUid = activeVariant?.oshwaUid ?? content.oshwaUid;
   // The spec-sheet line under the name follows the selected version.
   const subtitle = activeVariant?.subtitle ?? content.subtitle ?? null;
-  const mergedSpecs = mergeSpecs(content.specs, activeVariant?.specs);
-  const comparison = variantComparison(content.specs, content.variants);
+  const sheet = specSheet(content);
   const mergedBox = [...content.inTheBox, ...(activeVariant?.inTheBox ?? [])];
   // Connector rows: a version's own list replaces the product's list.
   const activeConnectors = activeVariant?.connectors ?? content.connectors ?? [];
@@ -1050,14 +934,14 @@ function ProductPage() {
   // studio matches it to `products/<handle>` by suffix, and the rest is the
   // leaf path inside that file.
   const prodEdit = (path: string) => editAttrs(`${product.handle}.${path}`);
-  // A merged spec row renders from the variant override when one replaced or
-  // appended it, from the shared table otherwise: point the tag at the leaf
-  // the words actually live in, or a studio edit lands on the wrong row.
-  const specEditBase = (key: string): string => {
+  // A spec cell renders from the column's variant override when one
+  // replaced or appended the row, from the shared table otherwise: point the
+  // tag at the leaf the words live in.
+  const specEditBase = (column: string, key: string): string => {
     const o =
-      activeVariant?.specs?.findIndex(([k, v]) => k === key && v !== null) ??
+      content.variants?.[column]?.specs?.findIndex(([k, v]) => k === key && v !== null) ??
       -1;
-    if (o >= 0) return `variants.${activeTier}.specs.${o}`;
+    if (o >= 0) return `variants.${column}.specs.${o}`;
     return `specs.${content.specs.findIndex(([k]) => k === key)}`;
   };
 
@@ -2038,10 +1922,6 @@ function ProductPage() {
    */
   const present = (type: ChapterType, entry: ChapterEntry): boolean => {
     switch (type) {
-      // Only when the product's JSON carries the beginner copy: accessories
-      // and bundles have no `whatIsThis` block and skip the chapter cleanly.
-      case 'whatIsThis':
-        return Boolean(content.whatIsThis);
       // Accessories (fallback content) aren't open-hardware products - no
       // "Open for learning" chapter, and no chapter number burnt on it.
       case 'openSource':
@@ -2094,110 +1974,6 @@ function ProductPage() {
       (n: string, title?: string, id?: string) => React.ReactNode
     >
   > = {
-    /**
-     * Beginner orientation. What the part IS in plain language, what else a
-     * first build needs before it flies, and where it sits in the whole
-     * drone. Per-product words live in `content/products/<handle>.json`
-     * (`whatIsThis`); the framing strings are product-chrome copy. noMedia:
-     * this chapter is a calm read, not a showpiece, and the placeholder
-     * glyph would out-shout the words.
-     */
-    whatIsThis: (n, title) => {
-      const wit = content.whatIsThis;
-      if (!wit) return null;
-      // The signal chain, in hero-scroll order. The product's own stage is
-      // lit; stages we sell link their product page, the rest are plain.
-      // This strip is the interface to the homepage story: same parts, same
-      // order, one screen instead of one scroll.
-      const chain: Array<{id: string; copy: string; to?: string}> = [
-        {id: 'radio', copy: 'what_chain_radio'},
-        {id: 'rx', copy: 'what_chain_receiver', to: '/products/openrx'},
-        {id: 'fc', copy: 'what_chain_fc', to: '/products/openfc-lite'},
-        {id: 'esc', copy: 'what_chain_esc', to: '/products/openesc'},
-        {id: 'motors', copy: 'what_chain_motors'},
-        {id: 'frame', copy: 'what_chain_frame', to: '/products/openframe'},
-      ];
-      return (
-        <Chapter
-          id={WHAT_IS_THIS_ID}
-          number={n}
-          label="What is this"
-          title={title}
-          titleId="product-chrome.ch_what_is_this_title"
-          noMedia={!content.video}
-          media={
-            content.video ? (
-              // The go-to source: the maintainer's own explainer video for
-              // this exact board type carries the depth; the chapter stays a
-              // quick orientation.
-              <WatchCard
-                videoId={content.video.id}
-                title={content.video.title}
-                channel={content.video.channel}
-              />
-            ) : undefined
-          }
-        >
-          <p className="chapter-body" {...prodEdit('whatIsThis.intro')}>
-            {wit.intro}
-          </p>
-          <div className="what-chain" aria-label={copyText('product-chrome.what_chain_aria')}>
-            {chain.map((c, i) => {
-              const active = wit.chain === c.id;
-              const chip =
-                c.to && !active ? (
-                  <Link
-                    key={c.id}
-                    prefetch="viewport"
-                    to={c.to}
-                    className="what-chain-chip"
-                  >
-                    <Txt id={`product-chrome.${c.copy}`} />
-                  </Link>
-                ) : (
-                  <span
-                    key={c.id}
-                    className={`what-chain-chip${active ? ' is-active' : ''}`}
-                  >
-                    <Txt id={`product-chrome.${c.copy}`} />
-                  </span>
-                );
-              return (
-                <span key={c.id} className="what-chain-step">
-                  {i > 0 ? (
-                    <span className="what-chain-arrow" aria-hidden="true">
-                      →
-                    </span>
-                  ) : null}
-                  {chip}
-                </span>
-              );
-            })}
-          </div>
-          {/* The "before this flies you also need" list moved out of the
-              chapter (maintainer, 2026-08-12): that story belongs to a general
-              FPV intro page, planned. The data stays in whatIsThis.needs
-              for that page. */}
-          {/* The homepage hero walks the whole machine part by part; this is
-              the "zoom out" for the reader who wants the full picture. The
-              hash opens the walkthrough ON this product's part (the hero
-              maps `motors` to its singular beat id). */}
-          {FIVE_INCH_MODELS.has(activeTier) ? (
-            <Link prefetch="viewport" to="/products#new-to-fpv" className="what-home-link">
-              {say('product-chrome.what_is_this_link_build', 'The parts of a 5-inch drone, and what else you need →')}
-            </Link>
-          ) : (
-            <Link
-              prefetch="viewport"
-              to={wit.chain ? `/#${wit.chain}` : '/'}
-              className="what-home-link"
-            >
-              <Txt id="product-chrome.what_is_this_link_home" />
-            </Link>
-          )}
-        </Chapter>
-      );
-    },
     /** What the board is published as: repos, license, latest commit. */
     openSource: (n, title) => (
       <Chapter
@@ -2242,10 +2018,8 @@ function ProductPage() {
           ) : (
             <>
               {/* Build-video bubble leads the row on products that have a
-                  film, UNLESS the What-does-this-do chapter above already
-                  plays it (no reason to sell the same video twice); those
-                  pages fall through to the issues card like film-less ones. */}
-              {content.video && !content.whatIsThis ? (
+                  film; film-less pages show the issues card instead. */}
+              {content.video ? (
                 <WatchCard
                   videoId={content.video.id}
                   title={content.video.title}
@@ -2293,7 +2067,7 @@ function ProductPage() {
                   </p>
                 ) : null}
               </a>
-              {content.video && !content.whatIsThis ? null : (
+              {content.video ? null : (
                 <a
                   href={`${activeRepoUrl}/issues`}
                   target="_blank"
@@ -2466,6 +2240,7 @@ function ProductPage() {
               // fly-in re-arms and plays for the new board. `srcs` prefetches the
               // tiers up front.
               <>
+                <span className="render-chip">{say('product-chrome.render_chip', 'Render')}</span>
                 <BoardArt
                   key={product.handle}
                   src={activeBoardArt.src}
@@ -2606,14 +2381,6 @@ function ProductPage() {
               </section>
             </div>
           )}
-          {!frameViewer && activeBoardArt ? (
-            <p className="teardown-render-note">
-              {say(
-                'product-chrome.teardown_render_note',
-                'Rendered from the design files, so the silkscreen can differ. The board you receive is the one in the product photos.',
-              )}
-            </p>
-          ) : null}
           {!frameViewer && activeBoardArt?.inspectUrl ? (
             <a
               className="board-art-inspect teardown-inspect"
@@ -2626,93 +2393,102 @@ function ProductPage() {
           ) : null}
         </Chapter>
     ),
-    /** What it measures. */
-    specs: (n, title) => (
+    /** What it measures, and the plug pinouts. */
+    specs: (n, title) => {
+      const multi = sheet.columns.length > 1;
+      // The KiCanvas link carries the schematic's GitHub URL.
+      const kicanvas = activeBoardArt?.schematicUrl ?? '';
+      const schematicHref = /[?&]github=([^&]+)/.exec(kicanvas)?.[1];
+      return (
         <Chapter
           id={SPECS_ID}
           number={n}
-          label="Datasheet"
+          label="Specs"
           title={title}
           titleId="product-chrome.ch_specs_title"
           noMedia
         >
-          <dl className="spec-table">
-            {/* Final values only, never a count-up: a buyer who reads or
-                screenshots a spec must never see a wrong current or voltage. */}
-            {mergedSpecs.map(([k, v]) => {
-              const shown = displaySpecValue(k, v, mergedBox);
-              return (
-                <SpecRow
-                  key={k}
-                  name={k}
-                  value={shown}
-                  nameProps={prodEdit(`${specEditBase(k)}.0`)}
-                  // The studio edits the mirrored value, so a clarified
-                  // row is shown but not editable in place.
-                  valueProps={shown === v ? prodEdit(`${specEditBase(k)}.1`) : undefined}
-                />
-              );
-            })}
-          </dl>
+          {/* Final values only, never a count-up: a buyer who reads or
+              screenshots a spec must never see a wrong current or voltage. */}
+          <table
+            className={`spec-sheet${multi ? ' spec-sheet--multi' : ''}${
+              sheet.columns.length > 2 ? ' spec-sheet--many' : ''
+            }`}
+          >
+            {multi ? (
+              <thead>
+                <tr>
+                  <th scope="col">
+                    <span className="sr-only">{say('product-chrome.compare_spec', 'Spec')}</span>
+                  </th>
+                  {sheet.columns.map((col) => (
+                    <th
+                      scope="col"
+                      key={col}
+                      className={col === activeTier ? 'is-active' : undefined}
+                    >
+                      {variantDisplayName(product.handle, col)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+            ) : null}
+            <tbody>
+              {sheet.rows.map((row) => (
+                <tr key={row.key}>
+                  <th scope="row">{row.label}</th>
+                  {row.values.map((value, i) => {
+                    const col = sheet.columns[i];
+                    return (
+                      <td
+                        key={col || i}
+                        className={multi && col === activeTier ? 'is-active' : undefined}
+                        // The studio edits the mirrored value, so a tersed
+                        // cell is shown but not editable in place.
+                        {...(value && row.raw[i] === value
+                          ? prodEdit(`${specEditBase(col, row.key)}.1`)
+                          : {})}
+                      >
+                        {value ?? ''}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
           {activeConnectors.length ? (
-            <div className="spec-connectors">
-              <h3 className="spec-connectors-title">
-                {say('product-chrome.connectors_title', 'Plugs and pin order')}
+            <div className="spec-pinout">
+              <h3 className="spec-pinout-title">
+                {say('product-chrome.pinout_title', 'Pinout')}
               </h3>
-              <dl className="spec-table">
-                {activeConnectors.map(([k, v]) => (
-                  <div key={k}>
-                    <dt>{k}</dt>
-                    <dd>{v}</dd>
-                  </div>
-                ))}
-              </dl>
-              {content.connectorsNote ? (
-                <p className="spec-connectors-note">{content.connectorsNote}</p>
-              ) : null}
-            </div>
-          ) : null}
-          {comparison ? (
-            <div className="variant-compare-wrap" id={COMPARE_ID}>
-              <table className="variant-compare">
-                <caption>{copyText('product-chrome.compare_caption') ?? 'How the versions differ'}</caption>
-                <thead>
-                  <tr>
-                    <th scope="col"><span className="sr-only">{copyText('product-chrome.compare_spec') ?? 'Spec'}</span></th>
-                    {comparison.names.map((name) => (
-                      <th scope="col" key={name}>{name}</th>
-                    ))}
-                  </tr>
-                </thead>
+              <table className="spec-sheet">
                 <tbody>
-                  {comparison.rows.map(([key, values]) => (
-                    <tr key={key}>
-                      <th scope="row">{key}</th>
-                      {values.map((value, i) => {
-                        const variantKey = Object.keys(content.variants ?? {})[i];
-                        const box = [
-                          ...content.inTheBox,
-                          ...((variantKey ? content.variants?.[variantKey]?.inTheBox : undefined) ?? []),
-                        ];
-                        return (
-                          <td key={comparison.names[i]}>
-                            {value === '-' ? value : displaySpecValue(key, value, box)}
-                          </td>
-                        );
-                      })}
+                  {activeConnectors.map(([k, v]) => (
+                    <tr key={k}>
+                      <th scope="row">{k}</th>
+                      <td>{v}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              <p className="spec-pinout-links">
+                {schematicHref ? (
+                  <a href={decodeURIComponent(schematicHref)} target="_blank" rel="noopener noreferrer">
+                    {say('product-chrome.pinout_schematic_link', 'Schematic on GitHub →')}
+                  </a>
+                ) : null}
+                {hasPublicSource && activeRepoUrl ? (
+                  <a href={activeRepoUrl} target="_blank" rel="noopener noreferrer">
+                    {say('product-chrome.pinout_files_link', 'Design files →')}
+                  </a>
+                ) : null}
+              </p>
             </div>
           ) : null}
-          {content.footnote ? (
-            <p className="chapter-footnote" {...prodEdit('footnote')}>
-              {content.footnote}
-            </p>
-          ) : null}
         </Chapter>
-    ),
+      );
+    },
     /** What ships. */
     inTheBox: (n, title) => (
         <Chapter
@@ -2818,7 +2594,6 @@ function ProductPage() {
               ))}
             </div>
           ) : null}
-          {isBoard ? <ProvenanceCard /> : null}
         </Chapter>
     ),
     /** The files themselves. */

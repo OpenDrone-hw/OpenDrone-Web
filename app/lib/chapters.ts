@@ -33,7 +33,6 @@
  * something here", which is what "add a chapter" means in practice.
  */
 export const CHAPTER_TYPES = [
-  'whatIsThis',
   'openSource',
   'teardown',
   'specs',
@@ -79,15 +78,12 @@ export type ChapterConfig = {
  * The order shipped today, kept as code so a missing or unreadable config file
  * degrades to the designed page rather than to a blank one.
  *
- * Order is the argument the page makes: what this part even is, then what the
+ * Order is the argument the page makes: what the
  * board is published as, then what it is made of, then what it measures, then
  * what ships, then who built it. Changing it in the studio changes the
  * argument, which is the point, but this is the version that was designed.
  */
 export const DEFAULT_CHAPTERS: ChapterEntry[] = [
-  // First on purpose: a first-time builder gets oriented before the page
-  // starts arguing licenses and layer stacks. Professionals scroll past.
-  {id: 'what-is-this', type: 'whatIsThis'},
   {id: 'open-source', type: 'openSource'},
   {id: 'teardown', type: 'teardown'},
   {id: 'specs', type: 'specs'},

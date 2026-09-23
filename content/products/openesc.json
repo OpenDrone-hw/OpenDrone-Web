@@ -255,7 +255,7 @@
   },
   "inTheBox": [
     {
-      "qty": "1×",
+      "qty": "1x",
       "item": "OpenESC board"
     }
   ],
@@ -331,27 +331,27 @@
       ],
       "inTheBox": [
         {
-          "qty": "1×",
-          "item": "XT30 battery connector, ESC-side half"
+          "qty": "1x",
+          "item": "XT30 connector"
         },
         {
-          "qty": "2×",
-          "item": "Silicone power wire, 16 AWG, 100 mm, red and black"
+          "qty": "2x",
+          "item": "16AWG silicone wire, 100 mm"
         },
         {
-          "qty": "1×",
-          "item": "Low-ESR electrolytic capacitor, 470 µF 35 V"
+          "qty": "1x",
+          "item": "470µF 35V low-ESR cap"
         },
         {
-          "qty": "4×",
-          "item": "Silicone soft-mount grommets, M2"
+          "qty": "4x",
+          "item": "M2 soft-mount grommets"
         },
         {
-          "qty": "1×",
+          "qty": "1x",
           "item": "Quick-start card"
         },
         {
-          "qty": "1×",
+          "qty": "1x",
           "item": "ESD bag"
         }
       ],
@@ -636,27 +636,27 @@
       },
       "inTheBox": [
         {
-          "qty": "1×",
-          "item": "XT60 battery connector, ESC-side half"
+          "qty": "1x",
+          "item": "XT60 connector"
         },
         {
-          "qty": "2×",
-          "item": "Silicone power wire, 12 AWG, 100 mm, red and black"
+          "qty": "2x",
+          "item": "12AWG silicone wire, 100 mm"
         },
         {
-          "qty": "1×",
-          "item": "Low-ESR electrolytic capacitor, 470 µF 50 V"
+          "qty": "1x",
+          "item": "470µF 50V low-ESR cap"
         },
         {
-          "qty": "4×",
-          "item": "Silicone soft-mount grommets, M3"
+          "qty": "4x",
+          "item": "M3 soft-mount grommets"
         },
         {
-          "qty": "1×",
+          "qty": "1x",
           "item": "Quick-start card"
         },
         {
-          "qty": "1×",
+          "qty": "1x",
           "item": "ESD bag"
         }
       ],
@@ -685,11 +685,7 @@
   "connectors": [
     [
       "FC plug",
-      "8-pin JST-SH, Betaflight standard. Pin 1 battery +, 2 ground, 3 current sense, 4 not connected (telemetry goes over bidirectional DShot), 5 to 8 motor signals 1 to 4."
-    ],
-    [
-      "Other flight controllers",
-      "Works with any flight controller that uses the same 8-pin order. Otherwise re-pin the cable."
+      "JST-SH 8p · 1 VBAT, 2 GND, 3 CURR, 4 NC, 5-8 M1-M4"
     ]
   ]
 }

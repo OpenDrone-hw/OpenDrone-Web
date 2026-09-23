@@ -30,16 +30,6 @@
   "buy_stock_bundle_in": "Both boards in stock · ships from Belgium",
   "buy_stock_bundle_out": "One or both boards unavailable",
   "buy_bundle_cta": "Add the stack: both boards",
-  "ch_what_is_this_title": "What does this do?",
-  "what_chain_aria": "The signal chain",
-  "what_chain_radio": "Radio",
-  "what_chain_receiver": "Receiver",
-  "what_chain_fc": "Flight controller",
-  "what_chain_esc": "ESC",
-  "what_chain_motors": "Motors",
-  "what_chain_frame": "Frame",
-  "what_is_this_fit_label": "Where it sits",
-  "what_is_this_link_home": "How the parts of a drone fit together →",
   "ch_open_source_title": "Open source",
   "ch_teardown_title": "Teardown",
   "ch_teardown_title_frame": "Teardown",
@@ -82,14 +72,6 @@
   "in_the_box_bundle_body": "The bundle is OpenFC Lite and OpenESC shipped together: the same boards you can buy on their own, in one parcel.",
   "bundle_component_firmware_label": "Firmware ·",
   "bundle_component_more": "View the board →",
-  "provenance_aria": "Where this is made",
-  "provenance_label": "Provenance",
-  "provenance_designed_label": "Designed",
-  "provenance_designed_value": "Leuven, Belgium",
-  "provenance_assembled_label": "Assembled",
-  "provenance_assembled_value": "Shenzhen, China",
-  "provenance_link_production": "The production story →",
-  "provenance_link_contribute": "How to contribute →",
   "downloads_intro": "Straight from the GitHub repo. If a link is broken, open an issue on that repo and we will fix it.",
   "download_cta": "Download ↗",
   "firmware_logo_alt_suffix": "logo",
@@ -132,9 +114,9 @@
   "card_model_soon_title": "Coming soon",
   "card_add_to_cart": "Add to cart",
   "gpsr_heading": "Manufacturer & safety information",
-  "gpsr_product_label": "Product type",
+  "gpsr_product_label": "Model",
   "gpsr_warnings_en": [
-    "Not a toy. Not for persons under 14; minors only under adult supervision.",
+    "14+ · Not a toy. Minors only under adult supervision.",
     "Component for self-built unmanned aircraft: the builder is responsible for the assembled aircraft and its lawful operation."
   ],
   "gpsr_warnings_nl": [
@@ -145,7 +127,6 @@
     "Ceci n'est pas un jouet. Interdit aux moins de 14 ans ; mineurs uniquement sous surveillance d'un adulte.",
     "Composant pour aéronefs sans équipage auto-construits : le constructeur est responsable de l'appareil assemblé et de son utilisation licite."
   ],
-  "compare_caption": "How the versions differ",
   "compare_spec": "Spec",
   "firmware_freedom_title": "Flash what you want",
   "firmware_freedom_body": "Ships with {project}. No activation, no locked bootloader, no account. Flashing another build or another project is normal use and does not by itself affect the 2-year guarantee.",
@@ -192,5 +173,9 @@
     "Les moteurs et hélices en rotation provoquent des coupures graves ; tenez-vous à distance lorsque l’appareil est armé.",
     "Les moteurs chauffent en fonctionnement ; laissez-les refroidir avant de les manipuler."
   ],
-  "buy_duties_gb": "No UK VAT or import duties are charged at checkout. The carrier can hold the parcel until UK VAT and a carrier handling fee are paid."
+  "buy_duties_gb": "No UK VAT or import duties are charged at checkout. The carrier can hold the parcel until UK VAT and a carrier handling fee are paid.",
+  "pinout_title": "Pinout",
+  "pinout_schematic_link": "Schematic on GitHub →",
+  "pinout_files_link": "Design files →",
+  "gpsr_other_languages": "NL · FR · DE"
 }

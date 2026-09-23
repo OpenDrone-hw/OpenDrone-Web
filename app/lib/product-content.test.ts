@@ -8,7 +8,8 @@ import {
   isInternalSku,
   variantDisplayName,
   lineDisplayName,
-  displaySpecValue,
+  specSheet,
+  terseSpecValue,
   fundingTargetTerms,
   shortShipPromise,
   shipMonth,
@@ -297,21 +298,38 @@ describe('short ship promise', () => {
   });
 });
 
-describe('spec display values', () => {
-  it('says a current-sense range is not a current rating', () => {
-    assert.equal(
-      displaySpecValue('Current sense', 'On-board, 165 A'),
-      'On-board, reads up to 165 A (measuring range, not a current rating)',
-    );
-    assert.equal(displaySpecValue('Current sense', 'Yes'), 'Yes');
+describe('spec sheet', () => {
+  it('writes mirrored values the way a spec sheet does', () => {
+    assert.equal(terseSpecValue('Input', '3–6S LiPo (9.0–25.2 V)'), '3-6S');
+    assert.equal(terseSpecValue('Current sensor', 'On-board, 165 A'), '0-165A');
+    assert.equal(terseSpecValue('BEC', '10 V switchable + 5 V always-on, 3.5 A'), '5V + 10V, 3.5A');
+    assert.equal(terseSpecValue('MCU', 'AT32F421, one per motor'), '4x AT32F421');
+    assert.equal(terseSpecValue('Motor outputs', '4× DShot, bidirectional'), '4x bidir DShot');
+    assert.equal(terseSpecValue('Size', '26.9 × 26.9 mm'), '26.9x26.9 mm');
   });
   it('names the grommet screw size from the box on the mounting row', () => {
-    const box: BoxItem[] = [{qty: '4×', item: 'Silicone soft-mount grommets, M2'}];
-    assert.equal(
-      displaySpecValue('Mounting', '20 × 20 mm, 3.0 mm holes', box),
-      '20 × 20 mm, 3.0 mm holes, M2 with included grommets',
+    const box: BoxItem[] = [{qty: '4x', item: 'M2 soft-mount grommets'}];
+    assert.equal(terseSpecValue('Mounting', '20 × 20 mm, 3.0 mm holes', box), '20x20, M2');
+    assert.equal(terseSpecValue('Mounting', '20 × 20 mm, 3.0 mm holes'), '20x20');
+  });
+  it('puts one column per variant and drops rows with no value', () => {
+    const sheet = specSheet({
+      specs: [['Barometer', 'None'], ['Input', '3–8S LiPo'], ['IMU', 'BMI270'], ['KV', '2850']],
+      inTheBox: [],
+      variants: {
+        a: {specs: [['Input', '3–6S LiPo']]},
+        b: {specs: [['KV', null]]},
+      } as unknown as ProductContent['variants'],
+    });
+    assert.deepEqual(sheet.columns, ['a', 'b']);
+    assert.deepEqual(
+      sheet.rows.map((r) => [r.label, r.values]),
+      [
+        ['Gyro', ['BMI270', 'BMI270']],
+        ['Input', ['3-6S', '3-8S']],
+        ['KV', ['2850', null]],
+      ],
     );
-    assert.equal(displaySpecValue('Mounting', '20 × 20 mm, 3.0 mm holes'), '20 × 20 mm, 3.0 mm holes');
   });
   it('never shows the internal 2207 name for the 5" motor', () => {
     assert.doesNotMatch(variantDisplayName('openmotor', '2207'), /2207/);

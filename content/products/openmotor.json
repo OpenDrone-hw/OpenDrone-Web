@@ -18,7 +18,7 @@
   "repoUrl": "https://github.com/OpenDrone-hw",
   "inTheBox": [
     {
-      "qty": "1×",
+      "qty": "1x",
       "item": "Motor"
     }
   ],
@@ -26,19 +26,15 @@
   "specs": [
     [
       "Stator",
-      "16 × 4 mm"
+      "1604"
     ],
     [
       "KV",
       "2850"
     ],
     [
-      "Prop size",
+      "Props",
       "3\""
-    ],
-    [
-      "Frame",
-      "OpenFrame 3\""
     ],
     [
       "Sold as",
@@ -86,12 +82,8 @@
           null
         ],
         [
-          "Prop size",
+          "Props",
           "5\""
-        ],
-        [
-          "Frame",
-          "OpenFrame 5\""
         ]
       ],
       "internalSku": true,

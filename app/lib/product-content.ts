@@ -64,80 +64,19 @@ export type BoxItem = {
 };
 
 /**
- * The beginner chapter ("What does this do?"), rendered first on the PDP.
- * Written for someone who has never built a drone: what the part IS, what
- * else a first build needs before it flies, and where it sits in the whole
- * machine. A professional scrolls past without losing anything. Absent =
- * the chapter does not render (accessories, bundles until written).
- * Keep the copy tier-neutral on lines whose tiers share one file.
+ * Beginner notes on the part. Not rendered on the PDP: `intro` is the
+ * page's meta description, the rest is source material for /learn.
  */
 export type WhatIsThis = {
   /** ~100 words of plain language: what this part is and does. */
   intro: string;
-  /** "Before this flies you also need": one line per missing piece.
-   *  Not rendered on the PDP (2026-08-12): reserved for the planned
-   *  general FPV intro page. */
+  /** "Before this flies you also need": one line per missing piece. */
   needs: string[];
-  /** One line: where the part sits in the drone's signal chain. Kept as
-   *  data for the studio; the chapter now SHOWS the position via `chain`. */
+  /** One line: where the part sits in the drone's signal chain. */
   fit: string;
-  /** Which signal-chain stage this product IS; the chapter's chain strip
-   *  lights it. Stages: radio, rx, fc, esc, motors, frame. */
+  /** Which signal-chain stage this product is. */
   chain?: 'radio' | 'rx' | 'fc' | 'esc' | 'motors' | 'frame';
 };
-
-/**
- * One plain line per spec row name, for buyers new to FPV: what the row
- * means, never a claim about a product. The PDP shows it behind a "?"
- * button next to the row name. Rows without an entry get no button.
- */
-export const SPEC_HELP: Readonly<Record<string, string>> = {
-  Mounting: 'Spacing of the mounting holes. A flight controller, ESC and frame stack together when they share it: 20 × 20 with 20 × 20, 30.5 × 30.5 with 30.5 × 30.5.',
-  'Stack mounting': 'Hole patterns in the middle of the frame for the flight controller and ESC stack.',
-  'Motor mounting': 'Bolt pattern at each arm tip. The base of your motors must match it.',
-  'Frame fit': 'Frames this board bolts into: any frame with the same stack mounting holes. OpenDrone frames are named as examples.',
-  Frame: 'The OpenDrone frame this motor is sized for.',
-  Input: 'Battery voltage it accepts. "S" is the number of LiPo cells in series; one full cell is 4.2 V.',
-  UARTs: 'Serial ports for add-ons such as the receiver, a GPS or a digital video system. More ports, more add-ons.',
-  Firmware: 'The software that runs on it. Open source, and you can update it yourself.',
-  MCU: 'The main processor chip.',
-  IMU: 'The motion sensor: a gyroscope and accelerometer that tell the flight controller how the drone moves.',
-  Barometer: 'Air-pressure sensor used for altitude hold.',
-  Blackbox: 'Flight data logger, used to tune the drone and find problems.',
-  OSD: 'On-screen display: flight data such as battery voltage drawn over your video feed.',
-  'Motor outputs': 'Signal outputs to the ESC, one per motor.',
-  RX: 'How a separate receiver connects.',
-  BEC: 'On-board power supply for the camera, video transmitter and receiver.',
-  'Current sense': 'Measures battery current, so you can see how much of the pack you have used.',
-  Continuous: 'Current each motor channel carries without a break. Bigger motors and props draw more.',
-  'ESC protocol': 'How the flight controller sends throttle to the ESC. Bidirectional DShot also reports motor speed back.',
-  Telemetry: 'Data the ESC sends back to the flight controller, such as motor speed.',
-  'FC connector': 'The plug that links the ESC to the flight controller.',
-  MOSFETs: 'The power switches that drive each motor.',
-  Band: 'Radio frequency of the control link. Your radio needs a transmitter on the same band.',
-  Radio: 'The radio chip.',
-  Antenna: 'Ceramic is built onto the board. U.FL is a socket for an external antenna, which usually gives more range.',
-  'Telemetry power': 'Power the receiver uses to send data back to your radio.',
-  Protocol: 'How the receiver talks to the flight controller.',
-  Flashing: 'How you update the firmware.',
-  Dimensions: 'Outside size of the board.',
-  'Prop size': 'Propeller diameter in inches. It sets the class of the drone: a 3-inch or a 5-inch.',
-  Wheelbase: 'Diagonal distance between two opposite motor centres.',
-  'Max stack height': 'Tallest flight controller and ESC stack that fits between the plates.',
-  'Camera width': 'Widest FPV camera the mounts take.',
-  'Video systems': 'FPV camera systems the frame has mounts for.',
-  Stator: 'Motor size as stator width × height in mm: a 1604 is 16 mm wide and 4 mm tall.',
-  KV: 'Motor speed per volt with no load. Lower KV turns bigger props or runs on more cells.',
-  'Sold as': 'What one price buys. A quadcopter needs four motors.',
-};
-
-/** The help line for a spec row name, if there is one. */
-export function specHelp(key: string): string | undefined {
-  return Object.prototype.hasOwnProperty.call(SPEC_HELP, key) ? SPEC_HELP[key] : undefined;
-}
-
-/** DOM id of the "What does this do?" chapter on a product page. */
-export const WHAT_IS_THIS_ID = 'what-is-this';
 
 /**
  * Downloadable asset rendered in the Downloads chapter. `kind` picks
@@ -370,7 +309,7 @@ export type ProductContent = {
      *  teardown renders FrameViewer instead of BoardArt. */
     frameViewer?: {src: string; inspectUrl?: string};
   };
-  /** Beginner orientation chapter. See {@link WhatIsThis}. */
+  /** Beginner notes. See {@link WhatIsThis}. */
   whatIsThis?: WhatIsThis;
   inTheBox: BoxItem[];          // physical items shipped
   /** Schematic PDFs, STEP files, manuals, etc. Each SKU also carries its
@@ -382,7 +321,6 @@ export type ProductContent = {
    *  the common FPV rows once a measured or supplier value exists:
    *  "Weight", "Mount", "Shaft", "Rated cells", "Max current". */
   specs: Array<[string, string]>;
-  footnote?: string;            // appears under the spec table
   /** Extra words the catalog search matches for this product, the terms FPV
    *  buyers type that the name does not carry ("stack", "4in1"). */
   keywords?: string[];
@@ -445,8 +383,6 @@ export type ProductContent = {
   /** Connector and pin-order rows shown under the spec table, from the
    *  board repo's design notes. Not part of the README-mirrored `specs`. */
   connectors?: Array<[string, string]>;
-  /** One line under `connectors`. */
-  connectorsNote?: string;
 };
 
 /*
@@ -675,28 +611,158 @@ export function canonicalOptionValue(
 }
 
 /**
- * A spec value as the page shows it. The spec arrays mirror the board
- * READMEs (npm run sync:specs), so plain-words clarifications are added
- * here at render time instead of in the mirrored data:
- * - a current-sense range ("On-board, 165 A") says it is a measuring range,
- *   so it does not read as a burst rating;
- * - a mounting row names the screw size of the soft-mount grommets in the
- *   box ("20 × 20 mm, 3.0 mm holes, M2 with included grommets").
+ * Merge a variant's spec overrides into the product's base spec table,
+ * matched by row key. A delta value of `null` hides the base row; a value
+ * replaces the base row in place; an unknown key appends.
  */
-export function displaySpecValue(
-  key: string,
+export function mergeSpecs(
+  base: Array<[string, string]>,
+  overrides?: Array<[string, string | null]>,
+): Array<[string, string]> {
+  if (!overrides?.length) return base;
+  const out: Array<[string, string]> = base.map(([k, v]) => [k, v]);
+  for (const [k, v] of overrides) {
+    const idx = out.findIndex(([bk]) => bk === k);
+    if (v === null) {
+      if (idx !== -1) out.splice(idx, 1);
+    } else if (idx !== -1) {
+      out[idx] = [k, v];
+    } else {
+      out.push([k, v]);
+    }
+  }
+  return out;
+}
+
+/** Row names as a spec sheet shows them. The mirrored data keeps the
+ *  board README names. */
+const SPEC_LABELS: Readonly<Record<string, string>> = {
+  IMU: 'Gyro',
+  Dimensions: 'Size',
+  'Current sense': 'Current sensor',
+  'ESC protocol': 'Protocol',
+};
+
+/** Rows the spec sheet leaves out: covered by Pinout or not a spec. */
+const SPEC_HIDDEN = new Set(['Barometer', 'Frame fit', 'FC connector']);
+
+/** Row order. Rows not listed keep their data order, before Mounting. */
+const SPEC_ORDER = [
+  'MCU',
+  'Gyro',
+  'Firmware',
+  'Input',
+  'Continuous',
+  'BEC',
+  'UARTs',
+  'Motor outputs',
+  'Protocol',
+  'Telemetry',
+  'MOSFETs',
+  'RX',
+  'OSD',
+  'Blackbox',
+  'Current sensor',
+  'USB',
+  'Band',
+  'Radio',
+  'Antenna',
+  'Telemetry power',
+  'Flashing',
+  'Mounting',
+  'Size',
+  'PCB',
+  'Install',
+  'Weight',
+];
+
+/**
+ * A mirrored spec value in spec-sheet form: "3–6S LiPo (9.0–25.2 V)" is
+ * "3-6S", "20 × 20 mm, 3.0 mm holes" with M2 grommets in the box is
+ * "20x20, M2". A value no rule matches shows as written.
+ */
+export function terseSpecValue(
+  label: string,
   value: string,
   box: readonly BoxItem[] = [],
 ): string {
-  if (key === 'Current sense' && /\d+\s*A\b/.test(value)) {
-    return `${value.replace(/(\d+\s*A)\b/, 'reads up to $1')} (measuring range, not a current rating)`;
+  let v = value
+    .replace(/(\d)\s*×\s*(\d)/g, '$1x$2')
+    .replace(/(\d)×(?=\s)/g, '$1x')
+    .replace(/(\d)[–-](?=\d)/g, '$1-')
+    .replace(/(\d) ([AV])\b/g, '$1$2')
+    .replace(/\bbidirectional\b/g, 'bidir')
+    .replace(/DShot, bidir/g, 'bidir DShot')
+    .replace(/^External, /, '')
+    .replace(/ and /g, ' + ')
+    .replace(/ or /g, ', ');
+  if (label === 'Input') v = v.replace(/\s*LiPo\b\s*(\([^)]*\))?/, '');
+  if (label === 'MCU') v = v.replace(/^(.+), one per motor$/, '4x $1');
+  if (label === 'Current sensor') v = v.replace(/^On-board, (\d+A)$/, '0-$1');
+  if (label === 'PCB') v = v.replace(/ copper$/, '');
+  if (label === 'BEC') {
+    v = v.replace(/^(\d+V) switchable \+ (\d+V) always-on, ([\d.]+A)$/, '$2 + $1, $3');
   }
-  if (key === 'Mounting') {
+  if (label === 'Mounting') {
     const grommet = box.find((b) => /grommet/i.test(b.item));
     const screw = grommet ? /\b(M\d)\b/.exec(grommet.item)?.[1] : undefined;
-    if (screw && !value.includes(screw)) return `${value}, ${screw} with included grommets`;
+    v = v.replace(/^([\d.]+x[\d.]+) mm, [\d.]+ mm holes$/, screw ? `$1, ${screw}` : '$1');
   }
-  return value;
+  return v;
+}
+
+export type SpecSheetRow = {
+  /** Row key in the data, for studio edit tags. */
+  key: string;
+  label: string;
+  /** One value per column; null where that column has no value. */
+  values: Array<string | null>;
+  /** The data value behind each shown value. */
+  raw: Array<string | null>;
+};
+
+/**
+ * The product's spec table as a sheet: one column per variant (one column
+ * without variants), rows renamed, ordered and tersed for display. Only
+ * rows with at least one value render.
+ */
+export function specSheet(
+  content: Pick<ProductContent, 'specs' | 'inTheBox' | 'variants'>,
+): {columns: string[]; rows: SpecSheetRow[]} {
+  const keys = Object.keys(content.variants ?? {});
+  const columns = keys.length > 1 ? keys : [keys[0] ?? ''];
+  const tables = columns.map((k) => {
+    const variant = k ? content.variants?.[k] : undefined;
+    const box = [...content.inTheBox, ...(variant?.inTheBox ?? [])];
+    return {table: new Map(mergeSpecs(content.specs, variant?.specs)), box};
+  });
+  const order: string[] = [];
+  for (const {table} of tables) for (const key of table.keys()) if (!order.includes(key)) order.push(key);
+  const mountAt = SPEC_ORDER.indexOf('Mounting');
+  const rank = (label: string) => {
+    const i = SPEC_ORDER.indexOf(label);
+    return i === -1 ? mountAt - 0.5 : i;
+  };
+  const rows = order
+    .filter((key) => !SPEC_HIDDEN.has(key))
+    .map((key): SpecSheetRow => {
+      const label = SPEC_LABELS[key] ?? key;
+      const raw = tables.map(({table}) => {
+        const value = table.get(key);
+        return value && !/^none$/i.test(value.trim()) ? value : null;
+      });
+      const values = raw.map((value, i) =>
+        value === null ? null : terseSpecValue(label, value, tables[i].box),
+      );
+      return {key, label, values, raw};
+    })
+    .filter((row) => row.values.some((v) => v !== null));
+  // Stable sort: equal ranks keep data order.
+  const sorted = rows
+    .map((row, i) => ({row, i}))
+    .sort((a, b) => rank(a.row.label) - rank(b.row.label) || a.i - b.i)
+    .map(({row}) => row);
+  return {columns, rows: sorted};
 }
 
 /**

@@ -76,69 +76,48 @@ export function GpsrBlock({
   sku?: string | null;
   kind: SafetyKind;
 }) {
+  const linesFor = (lang: (typeof WARNING_LANGS)[number]) => [
+    ...warnings(`gpsr_warnings_${lang}`),
+    ...warnings(`gpsr_warnings_${kind}_${lang}`),
+  ];
+  const list = (lang: (typeof WARNING_LANGS)[number]) => {
+    const lines = linesFor(lang);
+    return lines.length ? (
+      <ul key={lang} lang={lang} className="gpsr-warnings">
+        {lines.map((line) => (
+          <li key={line}>{line}</li>
+        ))}
+      </ul>
+    ) : null;
+  };
+  const others = WARNING_LANGS.filter((lang) => lang !== 'en' && linesFor(lang).length);
   return (
-    <section
-      aria-label="Manufacturer and safety information"
-      className="mt-16 border-t border-[var(--color-border)] py-8 text-[11px] leading-relaxed text-[var(--color-text-muted)]"
-    >
-      <div>
-        <p
-          className="mb-4 font-mono text-[10px] uppercase tracking-[0.2em]"
-          {...editAttrs('product-chrome.gpsr_heading')}
-        >
-          {copyText('product-chrome.gpsr_heading') ??
-            'Manufacturer & safety information'}
-        </p>
-        <p className="mb-2">
-          {company.name}, {company.address} &middot; {company.email} &middot;{' '}
-          KBO/BCE {company.kbo}
-        </p>
-        <p className="mb-4">
-          {copyText('product-chrome.gpsr_product_label') ?? 'Product type'}:{' '}
-          {productTitle}
-          {sku ? (
-            <>
-              {' '}
-              &middot; {copyText('product-chrome.buy_sku_prefix') ?? 'SKU'}{' '}
-              {sku}
-            </>
-          ) : null}
-        </p>
-        {/* The shop is English, so the English lines show; the Dutch,
-            French and German lines stay on the page, folded (GPSR Art. 9(7)
-            asks for the languages of the markets served). */}
-        {(() => {
-          const linesFor = (lang: (typeof WARNING_LANGS)[number]) => [
-            ...warnings(`gpsr_warnings_${lang}`),
-            ...warnings(`gpsr_warnings_${kind}_${lang}`),
-          ];
-          const list = (lang: (typeof WARNING_LANGS)[number]) => {
-            const lines = linesFor(lang);
-            return lines.length ? (
-              <ul key={lang} lang={lang} className="list-disc space-y-1 pl-4">
-                {lines.map((line) => (
-                  <li key={line}>{line}</li>
-                ))}
-              </ul>
-            ) : null;
-          };
-          const others = WARNING_LANGS.filter((lang) => lang !== 'en' && linesFor(lang).length);
-          return (
-            <>
-              {list('en')}
-              {others.length ? (
-                <details className="gpsr-languages mt-4">
-                  <summary className="cursor-pointer">
-                    {copyText('product-chrome.gpsr_other_languages') ??
-                      'Veiligheid · Sécurité · Sicherheit (NL / FR / DE)'}
-                  </summary>
-                  <div className="mt-3 grid gap-6 md:grid-cols-3">{others.map(list)}</div>
-                </details>
-              ) : null}
-            </>
-          );
-        })()}
-      </div>
+    <section aria-label="Manufacturer and safety information" className="gpsr-block">
+      <p className="gpsr-heading" {...editAttrs('product-chrome.gpsr_heading')}>
+        {copyText('product-chrome.gpsr_heading') ?? 'Manufacturer & safety information'}
+      </p>
+      <p>
+        {company.name}, {company.address} &middot; {company.email} &middot; KBO/BCE{' '}
+        {company.kbo}
+      </p>
+      <p>
+        {copyText('product-chrome.gpsr_product_label') ?? 'Model'}: {productTitle}
+        {sku ? (
+          <>
+            {' '}
+            &middot; {copyText('product-chrome.buy_sku_prefix') ?? 'SKU'} {sku}
+          </>
+        ) : null}
+      </p>
+      {/* English shows; NL/FR/DE stay on the page, folded (GPSR Art. 9(7)
+          asks for the languages of the markets served). */}
+      {list('en')}
+      {others.length ? (
+        <details className="gpsr-languages">
+          <summary>{copyText('product-chrome.gpsr_other_languages') ?? 'NL · FR · DE'}</summary>
+          <div className="gpsr-languages-grid">{others.map(list)}</div>
+        </details>
+      ) : null}
     </section>
   );
 }

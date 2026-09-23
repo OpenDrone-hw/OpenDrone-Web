@@ -109,16 +109,16 @@
   },
   "inTheBox": [
     {
-      "qty": "1×",
+      "qty": "1x",
       "item": "OpenRX board"
     },
     {
-      "qty": "1×",
-      "item": "Silicone hook-up wire set, 30 AWG, four wires"
+      "qty": "1x",
+      "item": "30AWG wire set"
     },
     {
-      "qty": "1×",
-      "item": "Heat-shrink sleeve, clear, two-piece"
+      "qty": "1x",
+      "item": "Clear heat shrink"
     }
   ],
   "downloads": [],
@@ -260,11 +260,11 @@
       },
       "inTheBox": [
         {
-          "qty": "1×",
-          "item": "Bind and quick-start card"
+          "qty": "1x",
+          "item": "Bind card"
         },
         {
-          "qty": "1×",
+          "qty": "1x",
           "item": "ESD bag"
         }
       ]
@@ -291,15 +291,15 @@
       ],
       "inTheBox": [
         {
-          "qty": "1×",
-          "item": "2.4 GHz U.FL T-dipole antenna"
+          "qty": "1x",
+          "item": "2.4 GHz U.FL T antenna"
         },
         {
-          "qty": "1×",
-          "item": "Bind and quick-start card"
+          "qty": "1x",
+          "item": "Bind card"
         },
         {
-          "qty": "1×",
+          "qty": "1x",
           "item": "ESD bag"
         }
       ],
@@ -416,15 +416,15 @@
       ],
       "inTheBox": [
         {
-          "qty": "1×",
-          "item": "Dual-band U.FL T-dipole antenna"
+          "qty": "1x",
+          "item": "Dual-band U.FL T antenna"
         },
         {
-          "qty": "1×",
-          "item": "Bind and quick-start card"
+          "qty": "1x",
+          "item": "Bind card"
         },
         {
-          "qty": "1×",
+          "qty": "1x",
           "item": "ESD bag"
         }
       ],
@@ -541,15 +541,15 @@
       ],
       "inTheBox": [
         {
-          "qty": "2×",
-          "item": "Dual-band U.FL T-dipole antenna"
+          "qty": "2x",
+          "item": "Dual-band U.FL T antenna"
         },
         {
-          "qty": "1×",
-          "item": "Bind and quick-start card"
+          "qty": "1x",
+          "item": "Bind card"
         },
         {
-          "qty": "1×",
+          "qty": "1x",
           "item": "ESD bag"
         }
       ],

@@ -27,7 +27,6 @@ const FILE = 'chapters.json';
 
 /** Human labels. The type name is an implementation detail the editor should not read. */
 const LABELS: Record<ChapterType, string> = {
-  whatIsThis: 'What does this do?',
   openSource: 'Open for learning',
   teardown: 'Teardown',
   specs: 'Datasheet',
@@ -47,7 +46,6 @@ const SINGLETON: ChapterType[] = CHAPTER_TYPES.filter((t) => t !== 'prose');
 
 /** Why a chapter might show nothing even when it is switched on. */
 const CAVEATS: Partial<Record<ChapterType, string>> = {
-  whatIsThis: 'Needs a whatIsThis block in the product file.',
   contributors: 'Fills itself from GitHub. Nothing to write here.',
   reviews: 'Appears only once the catalog carries published ratings for a product.',
   teardown: 'Needs board art or a frame viewer for this product.',

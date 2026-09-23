@@ -221,12 +221,12 @@
   },
   "inTheBox": [
     {
-      "qty": "1×",
+      "qty": "1x",
       "item": "OpenFC Lite board"
     },
     {
-      "qty": "1×",
-      "item": "JST-SH 1.0 mm 8-pin FC-to-ESC cable"
+      "qty": "1x",
+      "item": "8-pin JST-SH ESC cable"
     }
   ],
   "downloads": [],
@@ -518,19 +518,19 @@
       },
       "inTheBox": [
         {
-          "qty": "4×",
-          "item": "Silicone soft-mount grommets, M2"
+          "qty": "4x",
+          "item": "M2 soft-mount grommets"
         },
         {
-          "qty": "1×",
-          "item": "Silicone hook-up wire set, 28 AWG, four colours"
+          "qty": "1x",
+          "item": "28AWG wire set"
         },
         {
-          "qty": "1×",
+          "qty": "1x",
           "item": "Quick-start card"
         },
         {
-          "qty": "1×",
+          "qty": "1x",
           "item": "ESD bag"
         }
       ],
@@ -545,27 +545,19 @@
       "connectors": [
         [
           "ESC plug",
-          "8-pin JST-SH, Betaflight standard. Pin 1 battery +, 2 ground, 3 current sense, 4 ESC telemetry, 5 to 8 motor signals 1 to 4."
+          "JST-SH 8p · 1 VBAT, 2 GND, 3 CURR, 4 TLM, 5-8 M1-M4"
         ],
         [
-          "Video plug",
-          "6-pin JST-SH. Pin 1 +10 V (switchable), 2 ground, 3 UART0 TX, 4 UART0 RX, 5 ground, 6 UART1 RX."
+          "VTX plug",
+          "JST-SH 6p · 1 10V, 2 GND, 3 TX0, 4 RX0, 5 GND, 6 RX1"
         ],
         [
-          "Digital air unit",
-          "Its cable goes on the 6-pin video plug: 10 V, ground and a UART for the on-screen display. Check that your cable has the same pin order before you plug it in."
-        ],
-        [
-          "Receiver",
-          "Solder pads on UART1 (TX and RX). SBUS is inverted in firmware, no extra pad needed."
+          "RX",
+          "Pads · UART1 TX, RX"
         ],
         [
           "I2C",
-          "Solder pads (SDA, SCL), for example for a compass."
-        ],
-        [
-          "BEC rails",
-          "Two separate regulators: 10 V (switchable) and 5 V (always on), each rated 3 A."
+          "Pads · SDA, SCL"
         ]
       ]
     },
@@ -589,19 +581,19 @@
       },
       "inTheBox": [
         {
-          "qty": "4×",
-          "item": "Silicone soft-mount grommets, M3"
+          "qty": "4x",
+          "item": "M3 soft-mount grommets"
         },
         {
-          "qty": "1×",
-          "item": "Silicone hook-up wire set, 28 AWG, four colours"
+          "qty": "1x",
+          "item": "28AWG wire set"
         },
         {
-          "qty": "1×",
+          "qty": "1x",
           "item": "Quick-start card"
         },
         {
-          "qty": "1×",
+          "qty": "1x",
           "item": "ESD bag"
         }
       ],
@@ -635,32 +627,23 @@
   "connectors": [
     [
       "ESC plug",
-      "8-pin JST-SH, Betaflight standard. Pin 1 battery +, 2 ground, 3 current sense, 4 ESC telemetry, 5 to 8 motor signals 1 to 4."
+      "JST-SH 8p · 1 VBAT, 2 GND, 3 CURR, 4 TLM, 5-8 M1-M4"
     ],
     [
-      "Video plug",
-      "6-pin JST-SH. Pin 1 +10 V (switchable), 2 ground, 3 UART0 TX, 4 UART0 RX, 5 ground, 6 UART1 RX."
+      "VTX plug",
+      "JST-SH 6p · 1 10V, 2 GND, 3 TX0, 4 RX0, 5 GND, 6 RX1"
     ],
     [
-      "Digital air unit",
-      "Its cable goes on the 6-pin video plug: 10 V, ground and a UART for the on-screen display. Check that your cable has the same pin order before you plug it in."
+      "RX plug",
+      "JST-SH 4p · 5V, GND, RX, TX"
     ],
     [
-      "Receiver plug",
-      "4-pin JST-SH. +5 V, ground, PIO UART0 RX and TX."
-    ],
-    [
-      "Peripheral plug",
-      "6-pin JST-SH with a UART and I2C, the pair a GPS with compass uses. +4.5 V, ground, PIO UART1 RX and TX, I2C SDA and SCL."
+      "GPS plug",
+      "JST-SH 6p · 4.5V, GND, RX, TX, SDA, SCL"
     ],
     [
       "Camera plug",
-      "3-pin JST-SH. +5 V, ground, video in."
-    ],
-    [
-      "BEC rails",
-      "Two separate regulators: 10 V (switchable) and 5 V (always on), each rated 3.5 A."
+      "JST-SH 3p · 5V, GND, VIDEO"
     ]
-  ],
-  "connectorsNote": "Port names are the ones in the schematic. Other pads are solder pads."
+  ]
 }
