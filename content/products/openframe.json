@@ -116,7 +116,15 @@
     ],
     [
       "Material",
-      "T700 carbon"
+      "T700 carbon, 3K twill"
+    ],
+    [
+      "Hardware",
+      "M3"
+    ],
+    [
+      "Weight",
+      "115 g"
     ]
   ],
   "optionAxis": "Model",
@@ -179,6 +187,14 @@
         [
           "Motor mount",
           "9x9, 12x12, M2"
+        ],
+        [
+          "Hardware",
+          "M2, M2.5"
+        ],
+        [
+          "Weight",
+          "55 g"
         ]
       ],
       "frameViewer": {
@@ -190,11 +206,17 @@
         "3\"",
         "3in",
         "3-inch"
+      ],
+      "placeholders": [
+        "Weight"
       ]
     }
   },
   "keywords": [
     "frame",
     "chassis"
+  ],
+  "placeholders": [
+    "Weight"
   ]
 }

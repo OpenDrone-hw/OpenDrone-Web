@@ -355,10 +355,6 @@
         [
           "Dimensions",
           "26.9 × 26.9 mm"
-        ],
-        [
-          "Frame fit",
-          "20 × 20 mm stack frames, such as OpenFrame 3\" and 5\""
         ]
       ],
       "pins": [
@@ -542,6 +538,23 @@
         "20x20",
         "2020",
         "mini"
+      ],
+      "specsExtra": [
+        [
+          "Frame fit",
+          "20 × 20 mm stack frames, such as OpenFrame 3\" and 5\""
+        ],
+        [
+          "Connectors",
+          "JST-SH: ESC 8-pin, VTX 6-pin"
+        ],
+        [
+          "Weight",
+          "4 g"
+        ]
+      ],
+      "placeholders": [
+        "Weight"
       ]
     },
     "30×30": {
@@ -562,15 +575,15 @@
         "inspectUrl": "https://kicanvas.org/?github=https://github.com/OpenDrone-hw/OpenFC-Lite/blob/main/hardware/OpenFC.kicad_pcb",
         "schematicUrl": "https://kicanvas.org/?github=https://github.com/OpenDrone-hw/OpenFC-Lite/blob/main/hardware/OpenFC.kicad_sch"
       },
-      "specs": [
+      "aliases": [
+        "30x30",
+        "3030"
+      ],
+      "specsExtra": [
         [
           "Frame fit",
           "30.5 × 30.5 mm stack frames, such as OpenFrame 5\""
         ]
-      ],
-      "aliases": [
-        "30x30",
-        "3030"
       ]
     }
   },
@@ -588,5 +601,18 @@
       }
     ],
     "matchOption": "Model"
-  }
+  },
+  "specsExtra": [
+    [
+      "Connectors",
+      "JST-SH: ESC 8-pin, VTX 6-pin, RX 4-pin, camera 3-pin, peripheral 6-pin"
+    ],
+    [
+      "Weight",
+      "7 g"
+    ]
+  ],
+  "placeholders": [
+    "Weight"
+  ]
 }

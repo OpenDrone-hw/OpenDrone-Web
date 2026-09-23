@@ -317,7 +317,7 @@
     ],
     [
       "MCU",
-      "AT32F421, one per motor"
+      "One per motor"
     ],
     [
       "MOSFETs",
@@ -362,16 +362,16 @@
       "keywords": [
         "mini"
       ],
-      "specs": [
-        [
-          "Frame fit",
-          "20 × 20 mm stack frames, such as OpenFrame 3\" and 5\""
-        ]
-      ],
       "aliases": [
         "20x20",
         "2020",
         "mini"
+      ],
+      "specsExtra": [
+        [
+          "Frame fit",
+          "20 × 20 mm stack frames, such as OpenFrame 3\" and 5\""
+        ]
       ]
     },
     "30×30": {
@@ -408,10 +408,6 @@
         [
           "Dimensions",
           "41.6 × 42.5 mm"
-        ],
-        [
-          "Frame fit",
-          "30.5 × 30.5 mm stack frames, such as OpenFrame 5\""
         ]
       ],
       "pins": [
@@ -641,6 +637,24 @@
       "aliases": [
         "30x30",
         "3030"
+      ],
+      "specsExtra": [
+        [
+          "Frame fit",
+          "30.5 × 30.5 mm stack frames, such as OpenFrame 5\""
+        ],
+        [
+          "Burst",
+          "70 A / channel"
+        ],
+        [
+          "Weight",
+          "15 g"
+        ]
+      ],
+      "placeholders": [
+        "Burst",
+        "Weight"
       ]
     }
   },
@@ -659,5 +673,23 @@
       }
     ],
     "matchOption": "Model"
-  }
+  },
+  "specsExtra": [
+    [
+      "MCU",
+      "AT32F421, one per motor"
+    ],
+    [
+      "Burst",
+      "45 A / channel"
+    ],
+    [
+      "Weight",
+      "7.5 g"
+    ]
+  ],
+  "placeholders": [
+    "Burst",
+    "Weight"
+  ]
 }

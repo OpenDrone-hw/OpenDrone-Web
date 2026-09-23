@@ -483,7 +483,16 @@
         "src": "/boards/openrx-mono/board.svg",
         "inspectUrl": "https://kicanvas.org/?github=https://github.com/OpenDrone-hw/OpenRX-Mono/blob/main/hardware/OpenRX-Mono.kicad_pcb",
         "schematicUrl": "https://kicanvas.org/?github=https://github.com/OpenDrone-hw/OpenRX-Mono/blob/main/hardware/OpenRX-Mono.kicad_sch"
-      }
+      },
+      "specsExtra": [
+        [
+          "Weight",
+          "0.8 g"
+        ]
+      ],
+      "placeholders": [
+        "Weight"
+      ]
     },
     "Gemini": {
       "subtitle": "ELRS Gemini Xrossband · 2x LR1121 · 2x U.FL · CRSF",
@@ -506,11 +515,11 @@
         ],
         [
           "Radio",
-          "2× LR1121"
+          null
         ],
         [
           "Antenna",
-          "2× U.FL"
+          null
         ],
         [
           "Telemetry power",
@@ -519,6 +528,14 @@
         [
           "Dimensions",
           "17.0 × 15.7 mm"
+        ],
+        [
+          "Radios",
+          "2× LR1121"
+        ],
+        [
+          "Antennas",
+          "2× U.FL"
         ]
       ],
       "inTheBox": [
@@ -615,12 +632,58 @@
         "src": "/boards/openrx-gemini/board.svg",
         "inspectUrl": "https://kicanvas.org/?github=https://github.com/OpenDrone-hw/OpenRX-Gemini/blob/main/hardware/OpenRX-Gemini.kicad_pcb",
         "schematicUrl": "https://kicanvas.org/?github=https://github.com/OpenDrone-hw/OpenRX-Gemini/blob/main/hardware/OpenRX-Gemini.kicad_sch"
-      }
+      },
+      "specsExtra": [
+        [
+          "Radios",
+          null
+        ],
+        [
+          "Antennas",
+          null
+        ],
+        [
+          "Radio",
+          "2× LR1121"
+        ],
+        [
+          "Antenna",
+          "2× U.FL"
+        ],
+        [
+          "Weight",
+          "1.5 g"
+        ]
+      ],
+      "placeholders": [
+        "Weight"
+      ]
     }
   },
   "keywords": [
     "receiver",
     "rx",
     "expresslrs"
+  ],
+  "specsExtra": [
+    [
+      "ELRS version",
+      "3.5.0+"
+    ],
+    [
+      "Telemetry",
+      "Yes"
+    ],
+    [
+      "Pads",
+      "5V, GND, TX, RX"
+    ],
+    [
+      "Weight",
+      "0.5 g"
+    ]
+  ],
+  "placeholders": [
+    "Weight"
   ]
 }

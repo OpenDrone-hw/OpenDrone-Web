@@ -28,8 +28,36 @@
       "2850"
     ],
     [
+      "Configuration",
+      "12N14P"
+    ],
+    [
+      "Shaft",
+      "1.5 mm"
+    ],
+    [
+      "Mount",
+      "9 × 9 mm, M2"
+    ],
+    [
+      "Weight",
+      "11.6 g"
+    ],
+    [
       "Props",
       "3\""
+    ],
+    [
+      "Rated cells",
+      "6S"
+    ],
+    [
+      "Max current",
+      "15.8 A"
+    ],
+    [
+      "Max power",
+      "395 W"
     ],
     [
       "Sold as",
@@ -70,15 +98,39 @@
       "specs": [
         [
           "Stator",
-          null
+          "2306.5"
         ],
         [
           "KV",
-          null
+          "1950"
+        ],
+        [
+          "Shaft",
+          "4 mm"
+        ],
+        [
+          "Mount",
+          "16 × 16 mm, M3"
+        ],
+        [
+          "Weight",
+          "29.4 g"
         ],
         [
           "Props",
           "5\""
+        ],
+        [
+          "Rated cells",
+          "4–6S"
+        ],
+        [
+          "Max current",
+          "37.4 A"
+        ],
+        [
+          "Max power",
+          "902 W"
         ]
       ],
       "internalSku": true,
@@ -87,6 +139,10 @@
         "5",
         "5in",
         "5-inch"
+      ],
+      "placeholders": [
+        "Stator",
+        "KV"
       ]
     }
   },
@@ -94,5 +150,8 @@
     "motor",
     "brushless"
   ],
-  "setOf": 4
+  "setOf": 4,
+  "placeholders": [
+    "Shaft"
+  ]
 }

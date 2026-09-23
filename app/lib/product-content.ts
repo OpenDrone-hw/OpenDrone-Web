@@ -191,6 +191,12 @@ export type VariantContent = {
    *  value replaces the base row, `null` hides it (a cost-down tier dropping
    *  a sensor), and an unknown key appends. See `mergeSpecs` in the PDP. */
   specs?: Array<[string, string | null]>;
+  /** Storefront-side rows for this tier, merged after `specs` the same way.
+   *  `npm run sync:specs` never touches them. */
+  specsExtra?: Array<[string, string | null]>;
+  /** Spec keys whose value at this tier's level (`specs` or `specsExtra`)
+   *  is a placeholder awaiting the final value. Never rendered. */
+  placeholders?: string[];
   /** Box lines specific to this tier, appended to the shared inTheBox. */
   inTheBox?: BoxItem[];
   /** Per-tier layered board SVG (same shape as `teardown.boardArt`). When the
@@ -322,11 +328,19 @@ export type ProductContent = {
    *  EU Declaration of Conformity here (kind: 'doc') once CE closes -
    *  don't add DoC entries before the signed PDF exists. */
   downloads: DownloadAsset[];
-  /** Spec rows in display order. A row renders only when it is set, so a
-   *  value that is not on file stays off the page. Use these row names for
-   *  the common FPV rows once a measured or supplier value exists:
-   *  "Weight", "Mount", "Shaft", "Rated cells", "Max current". */
+  /** Spec rows in display order. A row renders only when it is set. A
+   *  value not yet on file is a placeholder named in `placeholders`. Use
+   *  these row names for the common FPV rows: "Weight", "Mount", "Shaft",
+   *  "Rated cells", "Max current". */
   specs: Array<[string, string]>;
+  /** Storefront-side spec rows merged after the mirrored `specs` (and each
+   *  tier's `specs`) with {@link mergeSpecs} rules. Rows the board README does
+   *  not carry live here, so `npm run sync:specs` leaves them alone. */
+  specsExtra?: Array<[string, string | null]>;
+  /** Spec keys whose product-level value (`specs` or `specsExtra`) is a
+   *  placeholder awaiting the final value. Never rendered; listed by
+   *  `npm run specs:placeholders`. */
+  placeholders?: string[];
   /** Extra words the catalog search matches for this product, the terms FPV
    *  buyers type that the name does not carry ("stack", "4in1"). */
   keywords?: string[];
@@ -456,22 +470,21 @@ export type ProductContent = {
  *
  * openframe
  * - Frame content is a planned-product fallback. It does not claim a public
- *   CAD source, measured weight, or material grade.
+ *   CAD source. Material and thicknesses follow the OpenFrame repo's
+ *   docs/DESIGN.md; the weights are placeholders.
  * - `repoUrl` is empty while OpenFrame-5F and OpenFrame-3F are private
  *   repositories: an empty repoUrl drops the Open Source chip, the licence
  *   card and the contributor wall on the PDP. Set it the day a repo is
  *   public.
  *
  * openmotor
- * - Not open hardware (`editorial: false`). Specs come only from the
- *   sourcing records (`sourcing/comparisons/openmotor.md` and the T-Motor
- *   sales contract YB-2026070103): the 1604 is ordered at KV2850. The stator
- *   rows restate the size in the model name. The 5-inch motor sells under
- *   the legacy SKU OPENMOTOR-2207 (option value "2207", shown as 5"), but
- *   no 2207 is chosen: the ordered 5-inch sample is a 2306.5 at KV1950. Its
- *   stator and KV read "To be confirmed" until the founder confirms them.
- *   Weight, shaft, mount pattern and cell count are not on file and stay
- *   off the page until they are.
+ * - Not open hardware (`editorial: false`). The sourcing records
+ *   (`sourcing/comparisons/openmotor.md`, T-Motor sales contract
+ *   YB-2026070103) order the 1604 at KV2850 and a 5-inch sample as the
+ *   V2306.5 V2 at KV1950. The 5-inch motor sells under the legacy SKU
+ *   OPENMOTOR-2207 (option value "2207", shown as 5"); its stator and KV are
+ *   placeholders until the founder confirms them. The other motor rows are
+ *   T-Motor's published P1604 and V2306.5 V2 figures.
  * - `teardown.frameViewer` is the fallback when a tier defines none. Both
  *   tiers override it and it seeds the viewer's preload set, so it points at
  *   a current model (the 5") rather than the stale generic frame.glb.
@@ -649,6 +662,7 @@ const SPEC_LABELS: Readonly<Record<string, string>> = {
   Dimensions: 'Size',
   'Current sense': 'Current sensor',
   'ESC protocol': 'Protocol',
+  Band: 'Frequency',
 };
 
 /** Rows the spec sheet leaves out: covered by Pinout or not a spec. */
@@ -659,8 +673,10 @@ const SPEC_ORDER = [
   'MCU',
   'Gyro',
   'Firmware',
+  'ELRS version',
   'Input',
   'Continuous',
+  'Burst',
   'BEC',
   'UARTs',
   'Motor outputs',
@@ -672,7 +688,8 @@ const SPEC_ORDER = [
   'Blackbox',
   'Current sensor',
   'USB',
-  'Band',
+  'Connectors',
+  'Frequency',
   'Radio',
   'Antenna',
   'Telemetry power',
@@ -727,7 +744,68 @@ export type SpecSheetRow = {
   values: Array<string | null>;
   /** The data value behind each shown value. */
   raw: Array<string | null>;
+  /** Where each raw value lives in the product JSON (`specs.3`,
+   *  `variants.20×20.specsExtra.0`), for studio edit tags. */
+  paths: Array<string | null>;
 };
+
+type SpecLayer = {rows?: Array<[string, string | null]>; path: string};
+
+/** The four spec layers of one column, lowest first. */
+function specLayers(
+  content: Pick<ProductContent, 'specs' | 'specsExtra' | 'variants'>,
+  column: string,
+): SpecLayer[] {
+  const variant = column ? content.variants?.[column] : undefined;
+  return [
+    {rows: content.specs, path: 'specs'},
+    {rows: variant?.specs, path: `variants.${column}.specs`},
+    {rows: content.specsExtra, path: 'specsExtra'},
+    {rows: variant?.specsExtra, path: `variants.${column}.specsExtra`},
+  ];
+}
+
+/** One column's spec table: mirrored rows, tier deltas, then storefront rows. */
+export function columnSpecs(
+  content: Pick<ProductContent, 'specs' | 'specsExtra' | 'variants'>,
+  column: string,
+): Array<[string, string]> {
+  return specLayers(content, column).reduce(
+    (table, layer) => mergeSpecs(table, layer.rows),
+    [] as Array<[string, string]>,
+  );
+}
+
+/** The JSON path of the value a column shows for `key`, or null. */
+function specPath(
+  content: Pick<ProductContent, 'specs' | 'specsExtra' | 'variants'>,
+  column: string,
+  key: string,
+): string | null {
+  for (const layer of specLayers(content, column).reverse()) {
+    const i = layer.rows?.findIndex(([k, v]) => k === key && v !== null) ?? -1;
+    if (i >= 0) return `${layer.path}.${i}`;
+  }
+  return null;
+}
+
+/**
+ * Whether a column's value for `key` is a placeholder: the tier's
+ * `placeholders` decide when the tier's own layers set the key, the
+ * product's `placeholders` otherwise.
+ */
+export function isPlaceholderSpec(
+  content: Pick<ProductContent, 'specs' | 'specsExtra' | 'variants' | 'placeholders'>,
+  column: string,
+  key: string,
+): boolean {
+  const path = specPath(content, column, key);
+  if (!path) return false;
+  if (path.startsWith('variants.')) {
+    return content.variants?.[column]?.placeholders?.includes(key) ?? false;
+  }
+  return content.placeholders?.includes(key) ?? false;
+}
 
 /**
  * The product's spec table as a sheet: one column per variant (one column
@@ -735,14 +813,14 @@ export type SpecSheetRow = {
  * rows with at least one value render.
  */
 export function specSheet(
-  content: Pick<ProductContent, 'specs' | 'inTheBox' | 'variants' | 'install'>,
+  content: Pick<ProductContent, 'specs' | 'specsExtra' | 'inTheBox' | 'variants' | 'install'>,
 ): {columns: string[]; rows: SpecSheetRow[]} {
   const keys = Object.keys(content.variants ?? {});
   const columns = keys.length > 1 ? keys : [keys[0] ?? ''];
   const tables = columns.map((k) => {
     const variant = k ? content.variants?.[k] : undefined;
     const box = [...content.inTheBox, ...(variant?.inTheBox ?? [])];
-    const table = new Map(mergeSpecs(content.specs, variant?.specs));
+    const table = new Map(columnSpecs(content, k));
     if (content.install) table.set('Install', content.install);
     return {table, box};
   });
@@ -764,7 +842,10 @@ export function specSheet(
       const values = raw.map((value, i) =>
         value === null ? null : terseSpecValue(label, value, tables[i].box),
       );
-      return {key, label, values, raw};
+      const paths = raw.map((value, i) =>
+        value === null ? null : specPath(content, columns[i], key),
+      );
+      return {key, label, values, raw, paths};
     })
     .filter((row) => row.values.some((v) => v !== null));
   // Stable sort: equal ranks keep data order.
@@ -992,6 +1073,55 @@ export const PRODUCT_CONTENT_FALLBACK: ProductContent = loadedFallback ?? {
   downloads: [],
   specs: [],
 };
+
+/** Spec rows for a product with no editorial file (an accessory), from
+ *  `content/accessories.json`, keyed by catalog handle. */
+export type AccessorySpecs = {
+  specs: Array<[string, string]>;
+  /** Spec keys whose value is a placeholder. Never rendered. */
+  placeholders?: string[];
+};
+
+type AccessoryFile = {default: Record<string, AccessorySpecs>};
+
+/** The disk twin of the glob below, for the node:test suites. */
+function readAccessoriesFromDisk(): Record<string, AccessoryFile> {
+  const fs = (
+    globalThis as unknown as {
+      process?: {getBuiltinModule?: (id: string) => NodeFs};
+    }
+  ).process?.getBuiltinModule?.('node:fs');
+  if (!fs) return {};
+  const file = new URL(['..', '..', 'content', 'accessories.json'].join('/'), import.meta.url);
+  return {
+    '/content/accessories.json': {
+      default: JSON.parse(fs.readFileSync(file, 'utf8')) as Record<string, AccessorySpecs>,
+    },
+  };
+}
+
+export const ACCESSORY_SPECS: Readonly<Record<string, AccessorySpecs>> =
+  Object.values(
+    import.meta.env
+      ? import.meta.glob<AccessoryFile>('/content/accessories.json', {eager: true})
+      : readAccessoriesFromDisk(),
+  )[0]?.default ?? {};
+
+/**
+ * The content a PDP renders: the product's editorial file, else the fallback
+ * carrying the accessory's spec rows when `content/accessories.json` has them.
+ */
+export function pageContent(handle: string): ProductContent {
+  const own = PRODUCT_CONTENT[handle];
+  if (own) return own;
+  const accessory = ACCESSORY_SPECS[handle];
+  if (!accessory) return PRODUCT_CONTENT_FALLBACK;
+  return {
+    ...PRODUCT_CONTENT_FALLBACK,
+    specs: accessory.specs,
+    placeholders: accessory.placeholders,
+  };
+}
 
 /** Whether a product's images are CAD renders rather than photos. */
 export function imagesAreRenders(handle: string | null | undefined): boolean {

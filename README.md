@@ -46,6 +46,7 @@ Node 22 (what CI uses).
 | `npm run gen:schematics` | render the schematic sheets from the board checkouts |
 | `npm run gen:tour-stills` | render the phone walkthrough's still per step from the running dev server (`BASE`, needs cwebp) |
 | `npm run sync:specs` / `sync:specs:check` | mirror each board README's `## Specifications` table into `content/products/<handle>.json`, or diff |
+| `npm run specs:placeholders` | list every spec value still marked as a placeholder |
 | `npm run sync:downloads` | diff the latest GitHub release assets against the product JSON (`--check` only; the downloads chapter is not switched on) |
 | `npm run sync:timeline` | append releases, new repos and status flips to the timeline ledger |
 | `npm run sync:contributors` | refresh `content/contributors.json` from GitHub |
@@ -113,7 +114,12 @@ each PCB (`scripts/boards.config.json` maps handles to `.kicad_pcb` paths
 relative to the directory holding the board checkouts, `../hardware` by default,
 `OPENDRONE_HARDWARE` overrides). `npm run sync:specs` reads each mapped
 README's `## Specifications` table (`scripts/repo-sync.config.json`) into the
-product JSON. OpenRX stays hand-maintained.
+product JSON.
+Rows a README does not carry go in `specsExtra` (product or tier), accessory
+rows in `content/accessories.json`. Keys named in a `placeholders` array are
+values awaiting the final figure, never marked on the page; `npm run
+specs:placeholders` lists them and the preorder launch dry run warns while any
+remain.
 
 **Homepage hero.** A guided walkthrough of the drone, one part per step: a
 three.js scene (`app/components/HeroDroneScene.tsx`) plays the Onshape

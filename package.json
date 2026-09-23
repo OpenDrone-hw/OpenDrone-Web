@@ -40,7 +40,8 @@
     "goals:update": "node scripts/update-goals.mjs",
     "sync:specs": "node scripts/import-specs.mjs --write",
     "sync:downloads": "node scripts/sync-downloads.mjs --check",
-    "sync:specs:check": "node scripts/import-specs.mjs --check"
+    "sync:specs:check": "node scripts/import-specs.mjs --check",
+    "specs:placeholders": "node scripts/spec-placeholders.mjs"
   },
   "prettier": "@shopify/prettier-config",
   "dependencies": {

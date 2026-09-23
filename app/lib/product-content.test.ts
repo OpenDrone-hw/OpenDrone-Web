@@ -10,6 +10,10 @@ import {
   lineDisplayName,
   specSheet,
   terseSpecValue,
+  columnSpecs,
+  isPlaceholderSpec,
+  pageContent,
+  ACCESSORY_SPECS,
   shortShipPromise,
   shipMonth,
   type BoxItem,
@@ -240,13 +244,13 @@ describe('hiddenWhileSoldOut', () => {
 });
 
 describe('openmotor 5-inch variant', () => {
-  it('claims no stator size or KV that sourcing has not confirmed', () => {
-    const v = PRODUCT_CONTENT.openmotor?.variants?.['2207'];
-    assert.ok(v);
-    // null hides the 3" motor's row: an unknown value renders nothing.
-    const specs = new Map(v.specs ?? []);
-    assert.equal(specs.get('Stator'), null);
-    assert.equal(specs.get('KV'), null);
+  it('keeps the unconfirmed stator size and KV marked as placeholders', () => {
+    const content = PRODUCT_CONTENT.openmotor;
+    const v = content?.variants?.['2207'];
+    assert.ok(content && v);
+    assert.equal(isPlaceholderSpec(content, '2207', 'Stator'), true);
+    assert.equal(isPlaceholderSpec(content, '2207', 'KV'), true);
+    assert.equal(isPlaceholderSpec(content, '1604', 'KV'), false);
     assert.ok(!v.highlights.some(([k]) => k === 'KV'));
     assert.ok(!JSON.stringify(PRODUCT_CONTENT.openmotor).includes('22 × 7'));
   });
@@ -339,5 +343,57 @@ describe('spec sheet', () => {
   });
   it('never shows the internal 2207 name for the 5" motor', () => {
     assert.doesNotMatch(variantDisplayName('openmotor', '2207'), /2207/);
+  });
+});
+
+describe('storefront spec rows and placeholders', () => {
+  it('merges specsExtra after the mirrored rows and tier deltas', () => {
+    const content = {
+      specs: [['MCU', 'One per motor'], ['Input', '3–8S LiPo']],
+      specsExtra: [['MCU', 'AT32F421, one per motor'], ['Weight', '7 g']],
+      placeholders: ['Weight'],
+      inTheBox: [],
+      variants: {
+        a: {specs: [['Input', '3–6S LiPo']], specsExtra: [['Weight', '4 g']], placeholders: ['Weight']},
+        b: {},
+      },
+    } as unknown as ProductContent;
+    assert.deepEqual(columnSpecs(content, 'a'), [
+      ['MCU', 'AT32F421, one per motor'],
+      ['Input', '3–6S LiPo'],
+      ['Weight', '4 g'],
+    ]);
+    assert.equal(isPlaceholderSpec(content, 'a', 'Weight'), true);
+    assert.equal(isPlaceholderSpec(content, 'b', 'Weight'), true);
+    assert.equal(isPlaceholderSpec(content, 'a', 'MCU'), false);
+    const sheet = specSheet(content);
+    assert.deepEqual(sheet.rows.find((r) => r.key === 'Weight')?.paths, [
+      'variants.a.specsExtra.0',
+      'specsExtra.1',
+    ]);
+  });
+  it('names only keys the same level carries as placeholders', () => {
+    const keysOf = (...layers: Array<Array<[string, string | null]> | undefined>) =>
+      new Set(layers.flatMap((l) => (l ?? []).filter(([, v]) => v !== null).map(([k]) => k)));
+    for (const [handle, c] of Object.entries(PRODUCT_CONTENT)) {
+      const own = keysOf(c.specs, c.specsExtra);
+      for (const key of c.placeholders ?? []) assert.ok(own.has(key), `${handle}: placeholder ${key}`);
+      for (const [tier, v] of Object.entries(c.variants ?? {})) {
+        const mine = keysOf(v.specs, v.specsExtra);
+        for (const key of v.placeholders ?? []) assert.ok(mine.has(key), `${handle} ${tier}: placeholder ${key}`);
+      }
+    }
+    for (const [handle, a] of Object.entries(ACCESSORY_SPECS)) {
+      const own = keysOf(a.specs);
+      for (const key of a.placeholders ?? []) assert.ok(own.has(key), `${handle}: placeholder ${key}`);
+      assertSpecRows(a.specs, handle, false);
+      assert.equal(PRODUCT_CONTENT[handle], undefined, `${handle} has an editorial file`);
+    }
+  });
+  it('gives an accessory page its spec rows on the fallback content', () => {
+    const [handle, a] = Object.entries(ACCESSORY_SPECS)[0] ?? [];
+    assert.ok(handle && a);
+    assert.deepEqual(pageContent(handle).specs, a.specs);
+    assert.deepEqual(pageContent('no-such-handle').specs, []);
   });
 });

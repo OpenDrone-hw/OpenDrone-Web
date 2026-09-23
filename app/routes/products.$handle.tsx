@@ -59,8 +59,8 @@ import {useNoHover, useIsMobile} from '~/lib/use-media-query';
 import {GpsrBlock, safetyKind} from '~/components/GpsrBlock';
 import {
   PRODUCT_CONTENT,
-  PRODUCT_CONTENT_FALLBACK,
   WHAT_IS_THIS_ID,
+  pageContent,
   specSheet,
   isConceptFor,
   isInternalSku,
@@ -775,7 +775,7 @@ function ProductPage() {
 
   const {title} = product;
 
-  const content = PRODUCT_CONTENT[product.handle] ?? PRODUCT_CONTENT_FALLBACK;
+  const content = pageContent(product.handle);
   // The Downloads chapter's editorial assets. Declarations of Conformity are
   // internal records: no DoC entry is rendered.
   const downloads = content.downloads;
@@ -893,16 +893,9 @@ function ProductPage() {
   // studio matches it to `products/<handle>` by suffix, and the rest is the
   // leaf path inside that file.
   const prodEdit = (path: string) => editAttrs(`${product.handle}.${path}`);
-  // A spec cell renders from the column's variant override when one
-  // replaced or appended the row, from the shared table otherwise: point the
-  // tag at the leaf the words live in.
-  const specEditBase = (column: string, key: string): string => {
-    const o =
-      content.variants?.[column]?.specs?.findIndex(([k, v]) => k === key && v !== null) ??
-      -1;
-    if (o >= 0) return `variants.${column}.specs.${o}`;
-    return `specs.${content.specs.findIndex(([k]) => k === key)}`;
-  };
+  // Accessory rows come from content/accessories.json, not a product file
+  // the studio can write, so only editorial files get spec edit tags.
+  const specsEditable = Boolean(PRODUCT_CONTENT[product.handle]);
 
   // Bundle (OpenStack): resolve each component's variant for the active size,
   // so add-to-cart drops the real FC + ESC lines and the buy module shows the
@@ -2316,8 +2309,8 @@ function ProductPage() {
                         className={multi && col === activeTier ? 'is-active' : undefined}
                         // The studio edits the mirrored value, so a tersed
                         // cell is shown but not editable in place.
-                        {...(value && row.raw[i] === value
-                          ? prodEdit(`${specEditBase(col, row.key)}.1`)
+                        {...(specsEditable && value && row.raw[i] === value && row.paths[i]
+                          ? prodEdit(`${row.paths[i]}.1`)
                           : {})}
                       >
                         {value ?? ''}

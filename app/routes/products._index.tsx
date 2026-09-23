@@ -13,6 +13,7 @@ import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {EmptyState} from '~/components/EmptyState';
 import {
   PRODUCT_CONTENT,
+  columnSpecs,
   hiddenWhileSoldOut,
   isConceptFor,
   shipMonth,
@@ -319,7 +320,7 @@ function searchTextFor(p: ProductCardFragment, value = ''): string {
     content?.firmware?.project,
     ...(content?.keywords ?? []),
     ...(tier?.keywords ?? []),
-    ...tierSpecValues(content?.specs ?? [], tier?.specs),
+    ...tierSpecValues(content ? columnSpecs(content, tier ? value : '') : [], undefined),
   ]
     .filter(Boolean)
     .join(' ');

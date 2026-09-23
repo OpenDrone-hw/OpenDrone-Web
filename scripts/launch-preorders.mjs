@@ -45,6 +45,7 @@ import {createHmac} from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
+import {listPlaceholders} from './spec-placeholders.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BRANCH = 'feat/preorders';
@@ -426,6 +427,9 @@ async function main() {
   const pre = await preflight(opts);
   for (const p of pre) console.log(`preflight: ${p}`);
   if (!pre.length) console.log('preflight: ok');
+  // A warning, not a blocker: placeholder specs render as normal values.
+  const placeholders = listPlaceholders(ROOT).length;
+  if (placeholders) console.log(`preflight: warning: ${placeholders} placeholder spec value(s) remain (npm run specs:placeholders)`);
 
   let policy = null;
   if (REQUIRED_ENV.every((k) => process.env[k]?.trim())) {
