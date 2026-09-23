@@ -75,7 +75,7 @@
 
 7.3. Le risque de dommage et/ou de perte des produits incombe à Incutec BV jusqu’au moment de la livraison au consommateur.
 
-7.4. Les commandes sont expédiées par bpost au tarif fixe de la destination indiqué sur la page d’expédition (opendrone.be/shipping) et affiché lors du passage en caisse.
+7.4. Incutec BV vend aux consommateurs dont l’adresse de livraison se trouve dans un État membre de l’Union européenne. Les commandes sont expédiées par bpost au tarif fixe de la destination indiqué sur la page d’expédition (opendrone.be/shipping) et affiché lors du passage en caisse.
 
 ### Article 7bis : Précommandes
 
@@ -93,7 +93,7 @@
 
 7bis.6. Les paiements de précommande financent la production et l’achat du stock pour la commande. Ils ne portent aucun intérêt et ne confèrent aucune participation, partage de revenus ni autre intérêt de propriété dans Incutec BV.
 
-7bis.7. Incutec BV ne perçoit aucun droit ni aucune taxe d’importation lors du passage en caisse. Les colis à destination de pays hors de l’Union européenne, y compris les États-Unis, peuvent être soumis à des droits d’importation, des taxes d’importation et des frais du transporteur, que le consommateur paie au transporteur à la livraison. Pour les colis à destination du Royaume-Uni, le prix payé lors du passage en caisse n’inclut pas la TVA britannique, et le transporteur peut retenir le colis jusqu’au paiement de la TVA britannique et de frais de traitement du transporteur.
+7bis.7. Dans l’Union européenne, aucun droit ni aucune taxe d’importation n’est dû sur une commande.
 
 ### Article 8 : Paiement
 

@@ -75,7 +75,7 @@
 
 7.3. The risk of damage and/or loss of products lies with Incutec BV until the moment of delivery to the consumer.
 
-7.4. Orders ship by bpost at the flat rate for the destination stated on the shipping page (opendrone.be/shipping) and shown at checkout.
+7.4. Incutec BV sells to consumers with a delivery address in a member state of the European Union. Orders ship by bpost at the flat rate for the destination stated on the shipping page (opendrone.be/shipping) and shown at checkout.
 
 ### Article 7bis: Pre-orders
 
@@ -93,7 +93,7 @@
 
 7bis.6. Pre-order payments fund the production run and stock purchase for the order. They carry no interest and confer no equity, revenue share or other ownership interest in Incutec BV.
 
-7bis.7. Incutec BV does not collect import duties or import taxes at checkout. Parcels to destinations outside the European Union, including the United States, may be subject to import duties, import taxes and carrier fees, which the consumer pays to the carrier on delivery. For parcels to the United Kingdom, the price paid at checkout does not include UK VAT, and the carrier can hold the parcel until UK VAT and a carrier handling fee are paid.
+7bis.7. Within the European Union no import duties or import taxes are due on an order.
 
 ### Article 8: Payment
 

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import {describe, it} from 'node:test';
 import {
   BLOCKED_COUNTRIES,
@@ -70,6 +71,23 @@ describe('shippingQuote', () => {
   it('names a country in English', () => {
     assert.equal(countryName('BE'), 'Belgium');
     assert.equal(countryName('GB'), 'United Kingdom');
+  });
+});
+
+describe('shipping page', () => {
+  it('lists the rate table of the code in every language', () => {
+    const rates = SHIPPING_ZONES.map((z) => z.rate).sort((a, b) => a - b);
+    for (const locale of ['en', 'nl', 'fr']) {
+      const md = fs.readFileSync(new URL(`../content/legal/${locale}/shipping.md`, import.meta.url), 'utf8');
+      const listed = md
+        .split('\n')
+        .filter((line) => line.startsWith('|'))
+        .map((line) => /(\d+)[.,](\d{2})/.exec(line))
+        .filter((m): m is RegExpExecArray => m !== null)
+        .map((m) => Number(`${m[1]}.${m[2]}`))
+        .sort((a, b) => a - b);
+      assert.deepEqual(listed, rates, locale);
+    }
   });
 });
 

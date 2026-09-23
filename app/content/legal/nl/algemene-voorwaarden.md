@@ -75,7 +75,7 @@
 
 7.3. Het risico van beschadiging en/of vermissing van producten berust tot het moment van bezorging aan de consument bij Incutec BV.
 
-7.4. Bestellingen worden met bpost verzonden, tegen het vaste tarief voor de bestemming dat op de verzendpagina (opendrone.be/shipping) vermeld staat en aan de checkout wordt getoond.
+7.4. Incutec BV verkoopt aan consumenten met een leveradres in een lidstaat van de Europese Unie. Bestellingen worden met bpost verzonden, tegen het vaste tarief voor de bestemming dat op de verzendpagina (opendrone.be/shipping) vermeld staat en aan de checkout wordt getoond.
 
 ### Artikel 7bis: Voorverkoop
 
@@ -93,7 +93,7 @@
 
 7bis.6. Betalingen voor voorverkoop financieren de productie en de voorraadaankoop voor de bestelling. Zij dragen geen interest en verlenen geen aandeel, omzetdeling of ander eigendomsbelang in Incutec BV.
 
-7bis.7. Incutec BV int geen invoerrechten of invoerbelastingen aan de checkout. Pakketten naar bestemmingen buiten de Europese Unie, ook naar de Verenigde Staten, kunnen onderworpen zijn aan invoerrechten, invoerbelastingen en kosten van de vervoerder, die de consument bij levering aan de vervoerder betaalt. Voor pakketten naar het Verenigd Koninkrijk bevat de prijs die aan de checkout betaald wordt geen Britse btw, en kan de vervoerder het pakket vasthouden tot de Britse btw en behandelingskosten van de vervoerder betaald zijn.
+7bis.7. Binnen de Europese Unie zijn op een bestelling geen invoerrechten of invoerbelastingen verschuldigd.
 
 ### Artikel 8: Betaling
 

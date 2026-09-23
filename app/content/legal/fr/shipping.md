@@ -1,30 +1,28 @@
 ## Expédition et livraison
 
-Incutec BV expédie les commandes par bpost depuis la Belgique vers tous les pays de l’Union européenne et vers les autres destinations du tableau ci-dessous. Le tarif est affiché dans votre panier, puis à nouveau lors du passage en caisse, avant le paiement.
+Incutec BV vend directement aux consommateurs dont l’adresse de livraison se trouve dans l’un des 27 États membres de l’Union européenne, et expédie ces commandes par bpost depuis la Belgique. Le tarif est affiché dans votre panier, puis à nouveau lors du passage en caisse, avant le paiement.
 
 ### Tarifs d’expédition
 
-Un tarif fixe par commande, en euros. Pour les destinations dans l’UE, la TVA est comprise ; hors de l’UE, aucune TVA de l’UE n’est facturée :
+Un tarif fixe par commande, en euros, TVA comprise :
 
 | Destination | Tarif |
 |---|---|
 | Belgique | 8,50 € |
 | Allemagne, France, Luxembourg, Pays-Bas | 9,95 € |
-| Autres pays de l’Union européenne, sauf la Bulgarie | 12,95 € |
+| Tous les autres pays de l’Union européenne | 12,95 € |
 | Chypre, Estonie, Malte | 16,95 € |
-| Royaume-Uni, Suisse, Norvège, Islande, Liechtenstein | 24,95 € |
-| États-Unis | 19,95 € |
-| Bulgarie et tous les autres pays | 39,95 € |
+| Bulgarie | 39,95 € |
 
 Incutec BV n’expédie pas vers la Russie, le Bélarus, l’Iran, la Corée du Nord, la Syrie et Cuba, ni vers d’autres destinations soumises à des mesures restrictives : voir notre [politique d’usage final](/end-use).
 
-### Droits et taxes d’importation
+### TVA et douane
 
-Incutec BV ne perçoit aucun droit ni aucune taxe d’importation lors du passage en caisse. Dans l’Union européenne, rien d’autre n’est dû après le passage en caisse. Les colis à destination de pays hors de l’Union européenne, y compris les États-Unis, peuvent être soumis à des droits d’importation, des taxes d’importation et des frais du transporteur, que le consommateur paie au transporteur à la livraison.
+Les prix et les tarifs d’expédition incluent la TVA. Dans l’Union européenne, il n’y a pas de formalités douanières, et aucun droit ni aucune taxe d’importation n’est dû après le passage en caisse.
 
-États-Unis : les droits d’importation américains sur l’électronique et les moteurs fabriqués en Chine sont élevés, souvent environ 35 à 40 % de la valeur. Les douanes américaines fixent le montant, pas Incutec BV, et le transporteur peut facturer des frais de dédouanement.
+### Hors de l’Union européenne
 
-Royaume-Uni : le prix payé lors du passage en caisse n’inclut pas la TVA britannique. Le transporteur peut retenir un colis à destination du Royaume-Uni jusqu’au paiement de la TVA britannique et de frais de traitement du transporteur.
+Incutec BV ne vend pas encore directement aux consommateurs hors de l’Union européenne. Les produits OpenDrone y sont disponibles auprès de revendeurs. Les revendeurs trouvent les conditions professionnelles sur [/wholesale](/wholesale).
 
 ### Précommandes
 

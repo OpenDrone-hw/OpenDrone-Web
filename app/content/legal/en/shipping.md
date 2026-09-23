@@ -1,32 +1,28 @@
 ## Shipping and delivery
 
-Incutec BV ships orders by bpost from Belgium to every European Union country and to the other destinations in the table below. The rate is shown in your cart and again at checkout, before you pay.
+Incutec BV sells direct to consumers with a delivery address in one of the 27 member states of the European Union, and ships those orders by bpost from Belgium. The rate is shown in your cart and again at checkout, before you pay.
 
 ### Shipping rates
 
-One flat rate per order, in euro. For EU destinations the rate includes VAT; outside the EU no EU VAT is charged:
+One flat rate per order, in euro, VAT included:
 
 | Destination | Rate |
 |---|---|
 | Belgium | €8.50 |
 | Germany, France, Luxembourg, Netherlands | €9.95 |
-| Other European Union countries, except Bulgaria | €12.95 |
+| All other European Union countries | €12.95 |
 | Cyprus, Estonia, Malta | €16.95 |
-| United Kingdom, Switzerland, Norway, Iceland, Liechtenstein | €24.95 |
-| United States | €19.95 |
-| Bulgaria and all other countries | €39.95 |
+| Bulgaria | €39.95 |
 
 Incutec BV does not ship to Russia, Belarus, Iran, North Korea, Syria or Cuba, or to other destinations under restrictive measures: see our [end-use policy](/end-use).
 
-### Import duties and taxes
+### VAT and customs
 
-Incutec BV does not collect import duties or import taxes at checkout. Within the European Union nothing more is due after checkout. Parcels to destinations outside the European Union, including the United States, may be subject to import duties, import taxes and carrier fees, which the consumer pays to the carrier on delivery.
+Prices and shipping rates include VAT. Within the European Union there are no customs formalities, and no import duties or import taxes are due after checkout.
 
-United States: US import duty on electronics and motors made in China is high, often around 35 to 40% of the value. US customs sets the amount, not Incutec BV, and the carrier may charge a fee for clearing the parcel.
+### Outside the European Union
 
-Buying for a shop? [Trade terms](/wholesale)
-
-United Kingdom: the price paid at checkout does not include UK VAT. The carrier can hold a parcel to the United Kingdom until UK VAT and a carrier handling fee are paid.
+Incutec BV does not sell direct to consumers outside the European Union yet. There, OpenDrone products are available through shops. Shops find the trade terms at [/wholesale](/wholesale).
 
 ### Pre-orders
 

@@ -1,30 +1,28 @@
 ## Verzending en levering
 
-Incutec BV verzendt bestellingen met bpost vanuit België naar elk land van de Europese Unie en naar de andere bestemmingen in de tabel hieronder. Het tarief staat in je winkelmandje en opnieuw aan de checkout, voordat je betaalt.
+Incutec BV verkoopt rechtstreeks aan consumenten met een leveradres in een van de 27 lidstaten van de Europese Unie, en verzendt die bestellingen met bpost vanuit België. Het tarief staat in je winkelmandje en opnieuw aan de checkout, voordat je betaalt.
 
 ### Verzendtarieven
 
-Eén vast tarief per bestelling, in euro. Voor bestemmingen in de EU is de btw inbegrepen; buiten de EU wordt geen EU-btw aangerekend:
+Eén vast tarief per bestelling, in euro, btw inbegrepen:
 
 | Bestemming | Tarief |
 |---|---|
 | België | € 8,50 |
 | Duitsland, Frankrijk, Luxemburg, Nederland | € 9,95 |
-| Andere landen van de Europese Unie, behalve Bulgarije | € 12,95 |
+| Alle andere landen van de Europese Unie | € 12,95 |
 | Cyprus, Estland, Malta | € 16,95 |
-| Verenigd Koninkrijk, Zwitserland, Noorwegen, IJsland, Liechtenstein | € 24,95 |
-| Verenigde Staten | € 19,95 |
-| Bulgarije en alle andere landen | € 39,95 |
+| Bulgarije | € 39,95 |
 
 Incutec BV verzendt niet naar Rusland, Belarus, Iran, Noord-Korea, Syrië en Cuba, noch naar andere bestemmingen waarvoor beperkende maatregelen gelden: zie ons [end-use beleid](/end-use).
 
-### Invoerrechten en -belastingen
+### Btw en douane
 
-Incutec BV int geen invoerrechten of invoerbelastingen aan de checkout. Binnen de Europese Unie is na de checkout niets meer verschuldigd. Pakketten naar bestemmingen buiten de Europese Unie, ook naar de Verenigde Staten, kunnen onderworpen zijn aan invoerrechten, invoerbelastingen en kosten van de vervoerder, die de consument bij levering aan de vervoerder betaalt.
+Prijzen en verzendtarieven zijn inclusief btw. Binnen de Europese Unie zijn er geen douaneformaliteiten, en na de checkout zijn geen invoerrechten of invoerbelastingen verschuldigd.
 
-Verenigde Staten: de Amerikaanse invoerrechten op elektronica en motoren die in China zijn gemaakt zijn hoog, vaak ongeveer 35 tot 40% van de waarde. De Amerikaanse douane bepaalt het bedrag, niet Incutec BV, en de vervoerder kan kosten voor de inklaring aanrekenen.
+### Buiten de Europese Unie
 
-Verenigd Koninkrijk: de prijs die aan de checkout betaald wordt, bevat geen Britse btw. De vervoerder kan een pakket naar het Verenigd Koninkrijk vasthouden tot de Britse btw en behandelingskosten van de vervoerder betaald zijn.
+Incutec BV verkoopt nog niet rechtstreeks aan consumenten buiten de Europese Unie. Daar zijn OpenDrone-producten verkrijgbaar via winkels. Winkels vinden de handelsvoorwaarden op [/wholesale](/wholesale).
 
 ### Pre-orders
 
