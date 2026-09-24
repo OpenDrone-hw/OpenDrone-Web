@@ -886,9 +886,9 @@ describe('destination approval at checkout', () => {
     assert.equal(calls, 3);
   });
 
-  it('does not open a committed unapproved destination even when global checkout gates are open', async () => {
+  it('does not open a committed destination missing its offer number even when global checkout gates are open', async () => {
     await assert.rejects(
-      () => actualCartAction(fromCountry({intent: 'checkout'}, 'BE'), ENABLED_ENV, {
+      () => actualCartAction(fromCountry({intent: 'checkout'}, 'DE'), ENABLED_ENV, {
         fetchCatalog: async () => { throw new Error('must not fetch'); },
         createCart: async () => { throw new Error('must not create'); },
       }),

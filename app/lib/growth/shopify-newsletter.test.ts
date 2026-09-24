@@ -108,7 +108,8 @@ describe('Shopify newsletter ownership', () => {
     assert.deepEqual(bodies[1].variables.input?.tags, ['newsletter', 'country-DE']);
     bodies.length = 0;
     await subscribeWithShopify(ENV, 'pilot@example.com', undefined, 'NL');
-    assert.deepEqual(bodies[1].variables.input?.tags, ['newsletter', 'country-NL']);
+    // An open EU country is sold direct and gets no country tag.
+    assert.deepEqual(bodies[1].variables.input?.tags, ['newsletter']);
     for (const country of ['RU', null, 'ZZ']) {
       bodies.length = 0;
       await subscribeWithShopify(ENV, 'pilot@example.com', undefined, country);

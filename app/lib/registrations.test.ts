@@ -22,12 +22,12 @@ describe('content/registrations.json', () => {
     assert.equal(codes.length, 27);
   });
 
-  it('has weee and packaging everywhere, idu only in France, and the offer flag', () => {
+  it('has weee and packaging everywhere, idu only in France, the offer flag and sale approval', () => {
     for (const [code, entry] of Object.entries(FILE)) {
       if (code.startsWith('$')) continue;
       assert.equal(typeof entry, 'object', code);
       const {offerNeedsNumber, saleApproved, ...numbers} = entry as CountryRegistrations;
-      assert.equal(saleApproved, false, code);
+      assert.equal(saleApproved, true, code);
       assert.equal(offerNeedsNumber, ['DE', 'FR', 'ES', 'IE'].includes(code), code);
       assert.deepEqual(Object.keys(numbers).sort(), code === 'FR' ? ['idu', 'packaging', 'weee'] : ['packaging', 'weee'], code);
       for (const value of Object.values(numbers)) {
@@ -64,12 +64,13 @@ describe('euSaleOpen', () => {
     assert.equal(euSaleOpen('BE', file(null)), false);
   });
 
-  it('never opens on numbers alone or a false approval', () => {
+  it('never opens on numbers alone or a false approval, nor without a required offer number', () => {
     for (const saleApproved of [undefined, false]) {
       assert.equal(euSaleOpen('DE', {DE: {saleApproved, weee: 'DE123', offerNeedsNumber: true}}), false);
       assert.equal(euSaleOpen('NL', {NL: {saleApproved, offerNeedsNumber: false}}), false);
     }
-    for (const country of EU_COUNTRIES) assert.equal(euSaleOpen(country), false, country);
+    // The committed file approves every country; DE, FR, ES and IE stay closed until their offer numbers are set.
+    for (const country of EU_COUNTRIES) assert.equal(euSaleOpen(country), !['DE', 'FR', 'ES', 'IE'].includes(country), country);
   });
 
   it('lists the numbers set for one country', () => {
