@@ -28,7 +28,7 @@ describe('content/registrations.json', () => {
       assert.equal(typeof entry, 'object', code);
       const {offerNeedsNumber, saleApproved, ...numbers} = entry as CountryRegistrations;
       assert.equal(saleApproved, true, code);
-      assert.equal(offerNeedsNumber, ['DE', 'FR', 'ES', 'IE'].includes(code), code);
+      assert.equal(offerNeedsNumber, false, code);
       assert.deepEqual(Object.keys(numbers).sort(), code === 'FR' ? ['idu', 'packaging', 'weee'] : ['packaging', 'weee'], code);
       for (const value of Object.values(numbers)) {
         assert.ok(value === null || (typeof value === 'string' && value.trim() !== ''), code);
@@ -69,8 +69,10 @@ describe('euSaleOpen', () => {
       assert.equal(euSaleOpen('DE', {DE: {saleApproved, weee: 'DE123', offerNeedsNumber: true}}), false);
       assert.equal(euSaleOpen('NL', {NL: {saleApproved, offerNeedsNumber: false}}), false);
     }
-    // The committed file approves every country; DE, FR, ES and IE stay closed until their offer numbers are set.
-    for (const country of EU_COUNTRIES) assert.equal(euSaleOpen(country), !['DE', 'FR', 'ES', 'IE'].includes(country), country);
+    assert.equal(euSaleOpen('DE', {DE: {saleApproved: true, weee: null, offerNeedsNumber: true}}), false);
+    assert.equal(euSaleOpen('DE', {DE: {saleApproved: true, weee: 'DE123', offerNeedsNumber: true}}), true);
+    // The committed file opens every EU country.
+    for (const country of EU_COUNTRIES) assert.equal(euSaleOpen(country), true, country);
   });
 
   it('lists the numbers set for one country', () => {

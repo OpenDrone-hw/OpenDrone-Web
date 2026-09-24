@@ -62,9 +62,8 @@ describe('shippingQuote', () => {
     assert.equal(notSoldDirect(null), null);
   });
 
-  it('gates DE, FR, ES and IE on the committed file while their numbers are null', () => {
-    for (const c of ['DE', 'FR', 'ES', 'IE']) assert.equal(notSoldDirect(c), 'closed', c);
-    for (const c of ['BE', 'NL', 'LU', 'AT', 'BG']) assert.equal(notSoldDirect(c), null, c);
+  it('sells direct to every EU country on the committed file', () => {
+    for (const c of EU_COUNTRIES) assert.equal(notSoldDirect(c), null, c);
   });
 
   it('sends every other country that is not blocked to the shops', () => {
@@ -138,8 +137,7 @@ describe('shipCountryPicker', () => {
   it('lists Belgium, the Netherlands, Germany, France and Luxembourg first', () => {
     const {likely, rest} = shipCountryPicker();
     assert.deepEqual(likely.map((o) => o.code), ['BE', 'NL', 'DE', 'FR', 'LU']);
-    // Germany and France stay closed until their offer numbers are set.
-    assert.deepEqual(likely.map((o) => o.rate), [8.5, 9.95, null, null, 9.95]);
+    assert.deepEqual(likely.map((o) => o.rate), [8.5, 9.95, 9.95, 9.95, 9.95]);
     assert.equal(likely[0].name, 'Belgium');
     for (const code of LIKELY_SHIP_COUNTRIES) assert.ok(!rest.some((o) => o.code === code), code);
     assert.equal(likely.length + rest.length, SHIP_COUNTRY_CODES.length);

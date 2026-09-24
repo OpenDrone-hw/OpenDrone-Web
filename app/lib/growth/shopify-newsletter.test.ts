@@ -102,10 +102,6 @@ describe('Shopify newsletter ownership', () => {
     });
     assert.equal(await subscribeWithShopify(ENV, 'pilot@example.com', 'openrx', 'us'), 'subscribed');
     assert.deepEqual(bodies[1].variables.input?.tags, ['newsletter', 'notify-openrx', 'country-US']);
-    // An EU country not open yet (Germany while its WEEE number is null).
-    bodies.length = 0;
-    await subscribeWithShopify(ENV, 'pilot@example.com', undefined, 'DE');
-    assert.deepEqual(bodies[1].variables.input?.tags, ['newsletter', 'country-DE']);
     bodies.length = 0;
     await subscribeWithShopify(ENV, 'pilot@example.com', undefined, 'NL');
     // An open EU country is sold direct and gets no country tag.

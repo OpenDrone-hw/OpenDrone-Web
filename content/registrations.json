@@ -33,7 +33,7 @@
   "DE": {
     "weee": null,
     "packaging": null,
-    "offerNeedsNumber": true,
+    "offerNeedsNumber": false,
     "saleApproved": true
   },
   "DK": {
@@ -51,7 +51,7 @@
   "ES": {
     "weee": null,
     "packaging": null,
-    "offerNeedsNumber": true,
+    "offerNeedsNumber": false,
     "saleApproved": true
   },
   "FI": {
@@ -64,7 +64,7 @@
     "weee": null,
     "packaging": null,
     "idu": null,
-    "offerNeedsNumber": true,
+    "offerNeedsNumber": false,
     "saleApproved": true
   },
   "GR": {
@@ -88,7 +88,7 @@
   "IE": {
     "weee": null,
     "packaging": null,
-    "offerNeedsNumber": true,
+    "offerNeedsNumber": false,
     "saleApproved": true
   },
   "IT": {
