@@ -232,7 +232,7 @@ export function ProductItem({
           <Link
             key={m.value}
             className="product-card-model"
-            prefetch="viewport"
+            prefetch="intent"
             to={`${variantUrl}?${encodeURIComponent(m.axis)}=${encodeURIComponent(
               m.value,
             )}`}
@@ -253,7 +253,7 @@ export function ProductItem({
       <article className="product-feature">
         <Link
           className="product-feature-media"
-          prefetch="viewport"
+          prefetch="intent"
           to={variantUrl}
           aria-hidden="true"
           tabIndex={-1}
@@ -276,7 +276,7 @@ export function ProductItem({
         <div className="product-feature-body">
           <Link
             className="product-feature-headline"
-            prefetch="viewport"
+            prefetch="intent"
             to={variantUrl}
           >
             <div className="product-card-row">
@@ -363,7 +363,7 @@ export function ProductItem({
         <div className="product-card has-quickadd" onPointerMove={onSpotMove}>
           <Link
             className="product-card-link"
-            prefetch="viewport"
+            prefetch="intent"
             viewTransition
             to={url}
           >
@@ -376,7 +376,7 @@ export function ProductItem({
     return (
       <Link
         className="product-card"
-        prefetch="viewport"
+        prefetch="intent"
         viewTransition
         to={url}
         onPointerMove={onSpotMove}
@@ -387,7 +387,7 @@ export function ProductItem({
   }
 
   // Card with a model strip. The card chrome (border, hover lift) stays on
-  // the outer element, but it can't be a <Link prefetch="viewport"> - the chips are their own
+  // the outer element, but it can't be a <Link prefetch="intent"> - the chips are their own
   // links and nesting anchors is invalid HTML. So the tile body is one link
   // and each model is a sibling link below it.
   return (
@@ -397,7 +397,7 @@ export function ProductItem({
     >
       <Link
         className="product-card-link"
-        prefetch="viewport"
+        prefetch="intent"
         viewTransition
         to={variantUrl}
       >

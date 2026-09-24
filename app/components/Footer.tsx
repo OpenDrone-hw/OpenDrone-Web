@@ -138,7 +138,7 @@ function FooterNavLink({to, children}: {to: string; children: React.ReactNode}) 
   return (
     <NavLink
       end
-      prefetch="viewport"
+      prefetch="intent"
       to={to}
       className={({isActive}) =>
         `text-xs transition-colors flex items-center min-h-[36px] md:min-h-0 ${

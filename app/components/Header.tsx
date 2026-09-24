@@ -154,7 +154,7 @@ export function Header({
           </span>
         ) : (
           <NavLink
-            prefetch="viewport"
+            prefetch="intent"
             to="/"
             end
             className="site-header-logo"
@@ -430,7 +430,7 @@ function FamilyNav({
         }}
       >
         <NavLink
-          prefetch="viewport"
+          prefetch="intent"
           to={cat.to}
           aria-expanded={open === cat.label}
         >
@@ -474,7 +474,7 @@ function FamilyNav({
         </span>
       ))}
       <NavLink
-        prefetch="viewport"
+        prefetch="intent"
         to="/products"
         className="site-header-cat-all"
       >
@@ -542,7 +542,7 @@ export function HeaderMenu({
             <NavLink
               key={c.to}
               onClick={close}
-              prefetch="viewport"
+              prefetch="intent"
               to={c.to}
               className="text-sm font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
             >
@@ -551,7 +551,7 @@ export function HeaderMenu({
           ))}
           <NavLink
             onClick={close}
-            prefetch="viewport"
+            prefetch="intent"
             to="/products"
             className="text-sm font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
           >
@@ -565,7 +565,7 @@ export function HeaderMenu({
           <NavLink
             end
             onClick={close}
-            prefetch="viewport"
+            prefetch="intent"
             to="/"
             className="text-sm font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
           >
@@ -576,17 +576,12 @@ export function HeaderMenu({
       {HEADER_MENU.items.map((item) => {
         if (!item.url) return null;
         const url = item.url;
-        // Catalog and Contact render in the right-side CTA group, and
-        // Newsletter and Open Source render there / in the footer too
-        // (HeaderCtas below, and the footer's "Open Source & Incutec"
-        // link): skip all four here on desktop so the center menu isn't
-        // a duplicate row. Production's live center nav is empty for the
-        // same reason (mirrors that empty `<nav>` byte-for-byte). Mobile
-        // keeps every item since the drawer has no CTA group to fall
-        // back on.
+        // Desktop already exposes these destinations in its category bar,
+        // action links or footer. The mobile drawer keeps the full menu.
         if (
           !isMobile &&
-          (url === '/products' ||
+          (url === '/preorder' ||
+            url === '/products' ||
             url === '/support' ||
             url === '/newsletter' ||
             url === 'https://github.com/OpenDrone-hw')
@@ -616,7 +611,7 @@ export function HeaderMenu({
             end
             key={item.id}
             onClick={close}
-            prefetch="viewport"
+            prefetch="intent"
             to={url}
             className={({isActive}) =>
               `${isMobile ? 'text-sm tracking-wider' : 'text-[12px] tracking-[0.15em]'} font-mono uppercase transition-colors ${
@@ -639,7 +634,7 @@ export function HeaderMenu({
         <NavLink
           end
           onClick={close}
-          prefetch="viewport"
+          prefetch="intent"
           to="/newsletter"
           className={({isActive}) =>
             `${isMobile ? 'text-sm tracking-wider' : 'text-[12px] tracking-[0.15em]'} font-mono uppercase transition-colors ${
@@ -689,8 +684,8 @@ function HeaderCtas({
           legal pages); MobileMenuAside renders it inside the drawer instead. */}
       <LangToggle className="header-lang-toggle" />
       <NavLink
-        prefetch="viewport"
-        to="/newsletter"
+        prefetch="intent"
+        to="/preorder"
         className={({isActive}) =>
           `font-mono text-[12px] uppercase tracking-[0.15em] transition-colors hidden md:block ${
             isActive
@@ -699,10 +694,10 @@ function HeaderCtas({
           }`
         }
       >
-        <Txt id="chrome.nav_newsletter" />
+        <Txt id="chrome.nav_preorder" />
       </NavLink>
       <NavLink
-        prefetch="viewport"
+        prefetch="intent"
         to="/support"
         className={({isActive}) =>
           `font-mono text-[12px] uppercase tracking-[0.15em] transition-colors hidden md:block ${
@@ -832,6 +827,7 @@ function CartIcon() {
 const HEADER_MENU = {
   items: [
     {id: 'menu-products', title: 'Catalog', url: '/products'},
+    {id: 'menu-preorder', title: 'Preorders', url: '/preorder'},
     {id: 'menu-newsletter', title: 'Newsletter', url: '/newsletter'},
     {
       id: 'menu-open-source',

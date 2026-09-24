@@ -1,7 +1,7 @@
 import {Canvas, useFrame, invalidate} from '@react-three/fiber';
 import {useEffect, useReducer, useRef, useState} from 'react';
 import * as THREE from 'three';
-import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {ModelLoader as GLTFLoader} from '~/lib/model-loader';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {useIsMobile, usePrefersReducedMotion} from '~/lib/use-media-query';

@@ -7,11 +7,11 @@
   "title": "All products",
   "filter_aria": "Filter products",
   "filter_heading": "Categories",
-  "filter_all": "All products",
+  "filter_all": "All",
   "filter_on_sale": "On sale",
-  "category_flight_controller": "Flight Controllers",
+  "category_flight_controller": "FCs",
   "category_esc": "ESCs",
-  "category_receiver": "Receivers",
+  "category_receiver": "RXs",
   "category_motors": "Motors",
   "category_frame": "Frames",
   "category_bundle": "Bundles",
@@ -49,6 +49,11 @@
   "results_title": "Results for \"{term}\"",
   "chips_aria": "Quick filters",
   "chip_build": "{label}",
-  "chip_stack": "{size} stack",
-  "chip_paid": "Ships {ships}"
+  "chip_stack": "{size}",
+  "chip_paid": "Ships {ships}",
+  "more_filters": "Filters",
+  "clear_filters": "Clear filters",
+  "mount_filter": "Stack mount",
+  "build_filter": "Build size",
+  "shipping_filter": "Shipping"
 }

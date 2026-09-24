@@ -1,5 +1,8 @@
 import type {Route} from './+types/products._index';
-import {useMemo} from 'react';
+import {useEffect, useMemo, useState} from 'react';
+import {useAutoAnimate} from '@formkit/auto-animate/react';
+import {SlidersHorizontal, X} from 'lucide-react';
+import type {ShouldRevalidateFunctionArgs} from 'react-router';
 import type {ReactNode} from 'react';
 import {Form, useLoaderData, useSearchParams} from 'react-router';
 import {ProductItem, type ProductQuickAdd} from '~/components/ProductItem';
@@ -33,24 +36,31 @@ function withTerm(id: string, fallback: string, term: string): string {
   return (copyText(id) ?? fallback).replace('{term}', term);
 }
 
-export const meta: Route.MetaFunction = ({data, location}) =>
-  buildSeoMeta({
-    title: data?.term
-      ? withTerm(
-          'collections-all.meta_title_term',
-          'Search results for "{term}"',
-          data.term,
-        )
+export const meta: Route.MetaFunction = ({location}) => {
+  const term = new URLSearchParams(location.search).get('q')?.trim() ?? '';
+  return buildSeoMeta({
+    title: term
+      ? withTerm('collections-all.meta_title_term', 'Search results for "{term}"', term)
       : copyText('collections-all.meta_title') ?? 'All Products',
-    description:
-      copyText('collections-all.meta_description') ??
-      'Browse every OpenDrone product in one place: Open Source flight controllers, ESCs, receivers, frames, bundles, and accessories. Filter by category and sort by price or newest.',
+    description: copyText('collections-all.meta_description') ?? '',
     type: 'product',
-    // Canonical without filter/sort/search queries so variants don't splinter.
     url: `${SITE_ORIGIN}${location.pathname}`,
-    // A search result set is not a page worth indexing.
-    robots: data?.term ? 'noindex,follow' : undefined,
+    robots: term ? 'noindex,follow' : undefined,
   });
+};
+
+/** Browsing filters use the loaded catalog; mutations and refresh still revalidate. */
+export function shouldRevalidate({currentUrl, nextUrl, formMethod, defaultShouldRevalidate}: ShouldRevalidateFunctionArgs) {
+  if (formMethod && formMethod.toUpperCase() !== 'GET') return defaultShouldRevalidate;
+  if (currentUrl.pathname !== nextUrl.pathname || currentUrl.search === nextUrl.search) return defaultShouldRevalidate;
+  const serverParams = (url: URL) => {
+    const params = new URLSearchParams(url.search);
+    for (const key of ['q', 'type', 'sale', 'sort', 'build', 'stack', 'ships', 'cursor', 'direction']) params.delete(key);
+    params.sort();
+    return params.toString();
+  };
+  return serverParams(currentUrl) !== serverParams(nextUrl) ? defaultShouldRevalidate : false;
+}
 
 /**
  * Sidebar order for the known families (app/lib/families.ts, shared with
@@ -336,8 +346,23 @@ function searchTextFor(p: ProductCardFragment, value = ''): string {
 }
 
 export default function ProductsIndex() {
-  const {products, term, stackShips} = useLoaderData<typeof loader>();
+  const {products, stackShips} = useLoaderData<typeof loader>();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [gridRef, animateGrid] = useAutoAnimate<HTMLDivElement>({
+    duration: 180,
+    easing: 'ease-out',
+    // Keep the preference live when it changes with the page open.
+    disrespectUserMotionPreference: true,
+  });
+  useEffect(() => {
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const sync = () => animateGrid(!preference.matches);
+    sync();
+    preference.addEventListener('change', sync);
+    return () => preference.removeEventListener('change', sync);
+  }, [animateGrid]);
+  const term = searchParams.get('q')?.trim() ?? '';
   const activeType = searchParams.get('type');
   const onlySale = searchParams.get('sale') === '1';
   const activeBuild = searchParams.get('build');
@@ -539,7 +564,7 @@ export default function ProductsIndex() {
   const hasProducts = products.length > 0;
   // Keep the active filters when a new term is submitted: the form only
   // carries `q`, so the rest ride along as hidden fields.
-  const carried = ['type', 'sale', 'sort'].filter((k) => searchParams.get(k));
+  const carried = ['type', 'sale', 'sort', 'build', 'stack', 'ships'].filter((k) => searchParams.get(k));
 
   return (
     <div className="collection page-shell">
@@ -643,51 +668,22 @@ export default function ProductsIndex() {
 
           {/* Main column - toolbar (count + sort) above the product grid. */}
           <div className="catalog-main">
-            <div
-              className="catalog-chips"
-              role="group"
-              aria-label={copyText('collections-all.chips_aria') ?? 'Quick filters'}
-            >
-              {BUILDS.builds.map((b) => (
-                <button
-                  key={`chip-build-${b.id}`}
-                  type="button"
-                  className="catalog-chip"
-                  aria-pressed={activeBuild === b.id}
-                  onClick={() => setParam('build', activeBuild === b.id ? null : b.id)}
-                >
-                  {b.label}
-                </button>
-              ))}
-              {STACK_SIZES.map((size) => (
-                <button
-                  key={`chip-stack-${size}`}
-                  type="button"
-                  className="catalog-chip"
-                  aria-pressed={activeStack === size}
-                  onClick={() => setParam('stack', activeStack === size ? null : size)}
-                >
-                  {(copyText('collections-all.chip_stack') ?? '{size} stack').replace('{size}', size)}
-                </button>
-              ))}
-              {stackShips ? (
-                <button
-                  type="button"
-                  className="catalog-chip"
-                  aria-pressed={activeShips === 'paid'}
-                  onClick={() => setParam('ships', activeShips === 'paid' ? null : 'paid')}
-                >
-                  {shipMonth(stackShips)
-                    ? shipWord('ships', shipMonth(stackShips) ?? '')
-                    : (copyText('collections-all.chip_paid') ?? 'Ships {ships}').replace(
-                        '{ships}',
-                        stackShips.replace(/^ships\s+/i, ''),
-                      )}
-                </button>
-              ) : null}
-            </div>
             <div className="catalog-toolbar">
-              <p className="catalog-count">
+              <div className="catalog-filter-controls">
+                <button type="button" className="catalog-filter-toggle" aria-expanded={filtersOpen} aria-controls="catalog-filters" onClick={() => setFiltersOpen(!filtersOpen)}>
+                  <SlidersHorizontal size={16} aria-hidden="true" /><Txt id="collections-all.more_filters" />
+                  {[activeBuild, activeStack, activeShips].filter(Boolean).length > 0 ? <span className="catalog-filter-count">{[activeBuild, activeStack, activeShips].filter(Boolean).length}</span> : null}
+                </button>
+                {activeBuild || activeStack || activeShips || activeType || onlySale ? (
+                  <button type="button" className="catalog-filter-clear" onClick={() => {
+                    const next = new URLSearchParams(searchParams);
+                    for (const key of ['type', 'sale', 'build', 'stack', 'ships']) next.delete(key);
+                    setSearchParams(next, {preventScrollReset: true});
+                  }}><X size={14} aria-hidden="true" /><Txt id="collections-all.clear_filters" /></button>
+                ) : null}
+              </div>
+
+              <p className="catalog-count" role="status" aria-live="polite" aria-atomic="true">
                 {visible.length}{' '}
                 <Txt
                   id={
@@ -739,13 +735,61 @@ export default function ProductsIndex() {
               </label>
             </div>
 
+            <div
+              className="catalog-chips"
+              id="catalog-filters"
+              hidden={!filtersOpen}
+              role="group"
+              aria-label={copyText('collections-all.chips_aria') ?? 'Quick filters'}
+            >
+              <span className="catalog-chip-label"><Txt id="collections-all.build_filter" /></span>
+              {BUILDS.builds.map((b) => (
+                <button
+                  key={`chip-build-${b.id}`}
+                  type="button"
+                  className="catalog-chip"
+                  aria-pressed={activeBuild === b.id}
+                  onClick={() => setParam('build', activeBuild === b.id ? null : b.id)}
+                >
+                  {b.label}
+                </button>
+              ))}
+              <span className="catalog-chip-label"><Txt id="collections-all.mount_filter" /></span>
+              {STACK_SIZES.map((size) => (
+                <button
+                  key={`chip-stack-${size}`}
+                  type="button"
+                  className="catalog-chip"
+                  aria-pressed={activeStack === size}
+                  onClick={() => setParam('stack', activeStack === size ? null : size)}
+                >
+                  {(copyText('collections-all.chip_stack') ?? '{size} stack').replace('{size}', size)}
+                </button>
+              ))}
+              {stackShips ? (
+                <button
+                  type="button"
+                  className="catalog-chip"
+                  aria-pressed={activeShips === 'paid'}
+                  onClick={() => setParam('ships', activeShips === 'paid' ? null : 'paid')}
+                >
+                  {shipMonth(stackShips)
+                    ? shipWord('ships', shipMonth(stackShips) ?? '')
+                    : (copyText('collections-all.chip_paid') ?? 'Ships {ships}').replace(
+                        '{ships}',
+                        stackShips.replace(/^ships\s+/i, ''),
+                      )}
+                </button>
+              ) : null}
+            </div>
+
             {help ? (
               <div className="catalog-search-help" role="note">
                 <Txt id={help.copyId} as="p" />
               </div>
             ) : null}
             {shown.length > 0 ? (
-              <div className="products-grid">
+              <div className="products-grid catalog-animated-grid" ref={gridRef}>
                 {shown.map((card, index) => (
                   <ProductItem
                     key={card.key}

@@ -1,6 +1,6 @@
 import type {Route} from './+types/preorder';
-import {CreditCard, Globe, RotateCcw, Target} from 'lucide-react';
-import type {ComponentType} from 'react';
+import {CreditCard} from 'lucide-react';
+import {InfoHint} from '~/components/InfoHint';
 import {Link, useLoaderData} from 'react-router';
 import {shopifyImageUrl} from '~/lib/shopify-image';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
@@ -36,9 +36,8 @@ import {stepBarView} from '~/lib/preorder-meter';
 import type {MoneyV2, ProductImage, SelectedOption} from '~/lib/product-shapes';
 
 /**
- * The pre-order page: the ship dates as a timeline, the price steps once,
- * the stack and the funding targets as product cards with a step bar each,
- * the terms as four tiles, six short questions and the dated updates.
+ * Ship dates and batch progress stay visible; supporting explanations
+ * and price schedules open on demand.
  *
  * Words live in `content/copy/preorder.json`. The cards read the
  * campaign-aware catalog, so every card carries the same numbers as its
@@ -77,13 +76,6 @@ type Row = {
 };
 
 const FAQ = ['pay', 'cancel', 'missed', 'eta', 'shops', 'risks'];
-
-const TERMS: Array<{key: string; Icon: ComponentType<{size?: number; 'aria-hidden'?: boolean}>}> = [
-  {key: 'pay', Icon: CreditCard},
-  {key: 'cancel', Icon: RotateCcw},
-  {key: 'missed', Icon: Target},
-  {key: 'ships', Icon: Globe},
-];
 
 /** `/products/<handle>?Model=30%C3%9730`: the link selects the variant. */
 function variantUrl(handle: string, options: SelectedOption[]): string {
@@ -205,31 +197,26 @@ export default function PreorderRoute() {
 
   return (
     <EditorialShell slug="preorder" rail={false} reveal={false} pageClassName="preorder-page">
-      <Txt id="preorder.title" as="h1" className="po-title" />
-
-      <Txt id="preorder.intro" as="p" className="mb-8 max-w-2xl text-lg text-[var(--color-text-muted)]" />
-      <section aria-label="Ordering and retailer enquiries" className="mb-10 grid gap-4 sm:grid-cols-2">
-        <div className="rounded-[var(--r-xs)] border border-[var(--color-border)] p-5">
-          <Txt id="preorder.channel_eu_title" as="h2" className="mb-2 text-lg font-medium" />
-          <Txt id="preorder.channel_eu_text" as="p" className="text-sm text-[var(--color-text-muted)]" />
+      <header className="po-header">
+        <div>
+          <Txt id="preorder.title" as="h1" className="po-title" />
+          <Txt id="preorder.intro" as="p" className="po-intro" />
         </div>
-        <div className="rounded-[var(--r-xs)] border border-[var(--color-border)] p-5">
-          <Txt id="preorder.channel_us_title" as="h2" className="mb-2 text-lg font-medium" />
-          <Txt id="preorder.channel_us_text" as="p" className="mb-3 text-sm text-[var(--color-text-muted)]" />
-          <Link to="/wholesale" className="underline underline-offset-4"><Txt id="preorder.channel_us_cta" /></Link>
-        </div>
-      </section>
-      <p className="mb-8 text-sm"><Link to="/newsletter" className="underline underline-offset-4"><Txt id="preorder.channel_interest" /></Link></p>
-
+        <Link to="#questions" className="po-help-link"><Txt id="preorder.how_it_works" /> <span aria-hidden="true">↓</span></Link>
+      </header>
       <Timeline data={data} />
+      <div className="po-order-notes">
+        <span><CreditCard size={16} aria-hidden="true" /><Txt id="preorder.terms_summary" /></span>
+        <InfoHint label={copyText('preorder.shipping_summary') ?? 'EU orders'}>
+          <Txt id="preorder.channel_eu_text" as="p" />
+        </InfoHint>
+      </div>
 
       {unavailable ? (
         <Txt id="preorder.strip_unavailable" as="p" className="po-empty" />
       ) : !rows.length ? (
         <Txt id="preorder.tracker_empty" as="p" className="po-empty" />
       ) : null}
-
-      {!unavailable && rows.length ? <StepLegend rows={rows} /> : null}
 
       {!unavailable && stackRows.length ? (
         <section className="po-group" id="stack">
@@ -246,7 +233,7 @@ export default function PreorderRoute() {
           <h2 className="po-group-title">
             <Txt id="preorder.targets_title" />
             <span className="po-group-meta">{dot + shipWord('deadline', ends)}</span>
-            <span className="po-group-meta">{dot + shipWord('eta', eta)}</span>
+            <span className="po-group-meta">{dot + (copyText('preorder.ship_eta_if_funded') ?? 'ETA {date} if funded').replace('{date}', eta)}</span>
           </h2>
           {stackMonth ? (
             <p className="po-group-line">
@@ -256,16 +243,6 @@ export default function PreorderRoute() {
           <Cards rows={targetRows} eta={eta} />
         </section>
       ) : null}
-
-      <ul className="po-terms" aria-label={copyText('preorder.terms_label') ?? 'Pre-order terms'}>
-        {TERMS.map(({key, Icon}) => (
-          <li key={key}>
-            <Icon size={22} aria-hidden />
-            <Txt id={`preorder.terms_${key}`} as="strong" />
-            <Txt id={`preorder.terms_${key}_sub`} />
-          </li>
-        ))}
-      </ul>
 
       <section className="po-faq" id="questions">
         <Txt id="preorder.faq_title" as="h2" className="po-group-title" />
@@ -280,6 +257,11 @@ export default function PreorderRoute() {
           ) : null,
         )}
       </section>
+
+      <nav className="po-channels" aria-label="Retailers and launch news">
+        <Link to="/wholesale"><Txt id="preorder.channel_us_cta" /> <span aria-hidden="true">↗</span></Link>
+        <Link to="/newsletter"><Txt id="preorder.channel_interest" /> <span aria-hidden="true">→</span></Link>
+      </nav>
 
       {updateList.length ? (
         <section className="po-updates" id="updates">
@@ -386,51 +368,6 @@ function Timeline({data}: {data: ReturnType<typeof useLoaderData<typeof loader>>
   );
 }
 
-/** The price steps once, as chips over the cards: "1-100 Early bird",
- *  "101-250 Step 2", "251+ Standard". A product with its own steps (the
- *  motors) gets its own line, named after it. */
-function StepLegend({rows}: {rows: Row[]}) {
-  const names = copy('preorder.legend_steps');
-  const labels = Array.isArray(names) ? names : [];
-  const base = CAMPAIGN.priceTiers.map((tier) => tier.upTo).join(',');
-  const sets = new Map<string, {ends: number[]; products: string[]}>();
-  sets.set(base, {ends: CAMPAIGN.priceTiers.map((tier) => tier.upTo), products: []});
-  for (const row of rows) {
-    const key = row.stepEnds.join(',');
-    const set = sets.get(key) ?? {ends: row.stepEnds, products: []};
-    if (key !== base && !set.products.includes(row.product)) set.products.push(row.product);
-    sets.set(key, set);
-  }
-  return (
-    <div className="po-legend">
-      {[...sets.entries()].map(([key, set], line) => {
-        const cells: string[] = [];
-        let from = 1;
-        for (const end of set.ends) {
-          cells.push(`${from}-${end}`);
-          from = end + 1;
-        }
-        cells.push(`${from}+`);
-        return (
-          <div className="po-legend-line" key={key}>
-            <span className="po-legend-label">
-              {line === 0 ? <Txt id="preorder.legend_label" /> : set.products.join(', ')}
-            </span>
-            <ol>
-              {cells.map((units, i) => (
-                <li key={units}>
-                  <span className="po-legend-units">{units}</span>
-                  <span>{labels[i] ?? ''}</span>
-                </li>
-              ))}
-            </ol>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 function Cards({rows, eta}: {rows: Row[]; eta: string}) {
   return (
     <ul className="po-cards">
@@ -449,6 +386,7 @@ function Card({row, eta}: {row: Row; eta: string}) {
   const prices = row.ladder.map((step) => ({
     key: step.from,
     text: formatPrice(step.price, currency),
+    range: step.to === null ? `${step.from}+` : `${step.from}-${step.to}`,
     current: next >= step.from && (step.to === null || next <= step.to),
   }));
   const bar = stepBarView(row.campaign, row.stepEnds);
@@ -456,7 +394,7 @@ function Card({row, eta}: {row: Row; eta: string}) {
   return (
     <li className="po-card">
       <Link
-        prefetch="viewport"
+        prefetch="intent"
         to={row.url}
         className={`po-card-media${row.image && row.render ? ' is-render' : ''}`}
         aria-hidden="true"
@@ -470,7 +408,7 @@ function Card({row, eta}: {row: Row; eta: string}) {
         ) : null}
       </Link>
       <h3 className="po-card-title">
-        <Link prefetch="viewport" to={row.url}>
+        <Link prefetch="intent" to={row.url}>
           {row.product} {row.variant ? <span>{row.variant}</span> : null}
         </Link>
       </h3>

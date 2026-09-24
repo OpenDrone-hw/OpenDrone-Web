@@ -1,5 +1,6 @@
 import {useState, useSyncExternalStore} from 'react';
 import {useRevalidator, useRouteLoaderData} from 'react-router';
+import {LoaderCircle} from 'lucide-react';
 import {trackEvent} from '~/lib/growth/plausible';
 import {attributionSource} from '~/lib/growth/attribution';
 import {announceCartAdded, CartAddError, postCartAdd, skusFromFields} from '~/lib/cart-client';
@@ -46,6 +47,7 @@ export function AddToCartButton({
   className = 'btn-primary',
   ariaLabel,
   dataTip,
+  compactError = false,
 }: {
   children: React.ReactNode;
   disabled?: boolean;
@@ -62,6 +64,8 @@ export function AddToCartButton({
   ariaLabel?: string;
   /** Attr-driven CSS tooltip content (see .pod-buy-stack[data-tip]). */
   dataTip?: string;
+  /** Show a retryable failure in the button, without an extra message row. */
+  compactError?: boolean;
 }) {
   const [state, setState] = useState<'idle' | 'adding' | 'error'>('idle');
   // Why the last add failed, in the buyer's words: the per-order limit
@@ -165,12 +169,14 @@ export function AddToCartButton({
         aria-busy={state === 'adding'}
         aria-disabled={otherBusy || undefined}
         data-waiting={otherBusy ? '' : undefined}
+        title={compactError && state === 'error' ? message ?? undefined : undefined}
       >
-        <span className="btn-label">
-          {state === 'adding' ? 'Adding…' : state === 'error' ? 'Try again' : children}
+        <span className="btn-label cart-action-label" aria-live="polite" aria-atomic="true">
+          {state === 'adding' ? <LoaderCircle className="cart-action-spinner" size={16} aria-hidden="true" /> : null}
+          {state === 'adding' ? 'Adding…' : state === 'error' ? (compactError ? 'Couldn’t add · Retry' : 'Try again') : children}
         </span>
       </button>
-      {message ? (
+      {message && (!compactError || state !== 'error') ? (
         // The form is display: contents, so this sits in the buy row as its
         // own full-width item.
         <small className="cart-line-error" role="alert" style={{flex: '1 1 100%', width: '100%'}}>

@@ -1,0 +1,47 @@
+{
+  "_note": "Written by build-hero.mjs --split. Array order is load order: the runtime shows each chunk as it lands.",
+  "chunks": [
+    {
+      "id": "frame",
+      "label": "airframe",
+      "file": "frame.glb",
+      "bytes": 541608,
+      "verts": 62353
+    },
+    {
+      "id": "drive",
+      "label": "motors and props",
+      "file": "drive.glb",
+      "bytes": 177456,
+      "verts": 21377
+    },
+    {
+      "id": "board-OpenESC-30x30-4in1",
+      "label": "OpenESC-30x30-4in1",
+      "file": "board-OpenESC-30x30-4in1.glb",
+      "bytes": 634492,
+      "verts": 116380
+    },
+    {
+      "id": "board-OpenFC-Lite",
+      "label": "OpenFC-Lite",
+      "file": "board-OpenFC-Lite.glb",
+      "bytes": 707056,
+      "verts": 130170
+    },
+    {
+      "id": "board-OpenRX-Mono",
+      "label": "OpenRX-Mono",
+      "file": "board-OpenRX-Mono.glb",
+      "bytes": 302096,
+      "verts": 45189
+    },
+    {
+      "id": "video",
+      "label": "video system",
+      "file": "video.glb",
+      "bytes": 581736,
+      "verts": 81289
+    }
+  ]
+}

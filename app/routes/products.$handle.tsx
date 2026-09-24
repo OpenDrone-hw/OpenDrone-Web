@@ -29,6 +29,7 @@ import {Txt} from '~/components/Txt';
 import {ConceptPlate} from '~/components/ConceptPlate';
 import {ProductPrice} from '~/components/ProductPrice';
 import {ProductGallery} from '~/components/ProductGallery';
+import {ProductSilhouette} from '~/components/ProductSilhouette';
 import {ProductForm} from '~/components/ProductForm';
 import {RelatedProducts} from '~/components/RelatedProducts';
 import {FirmwareSupport} from '~/components/FirmwareSupport';
@@ -76,7 +77,7 @@ import {useProductStatus} from '~/lib/coming-soon';
 import {shipPromiseFor} from '~/lib/preorder';
 import {fetchStatusFlagsFast, statusForHandle} from '~/lib/roadmap-data';
 import {parseCampaignConfig, priceLadder, tiersFor} from '~/lib/preorder-campaign';
-import {stepBarView, stepLayout} from '~/lib/preorder-meter';
+import {stepBarView} from '~/lib/preorder-meter';
 import {paysEuVat} from '~/lib/visitor-country';
 import {notSoldDirect} from '~/lib/shipping-rates';
 import {registrationNumbers} from '~/lib/registrations';
@@ -670,6 +671,7 @@ function layoutBox(el: HTMLElement) {
 }
 
 function ProductPage() {
+  const specsRef = useRef<HTMLDivElement>(null);
   const {
     product,
     bundleProducts,
@@ -1023,6 +1025,7 @@ function ProductPage() {
   // `boardArt` wins, otherwise the shared `teardown.boardArt` (the default
   // board) is shown. Lines without per-tier art just keep the default.
   const activeBoardArt = activeVariant?.boardArt ?? content.teardown?.boardArt;
+  const silhouetteImage = selectedVariant?.image?.url ?? galleryImages[0]?.url;
   // The teardown pin list follows the tier the same way the board art does:
   // each board in a line has its own refdes layout, so a tier's own `pins`
   // win over the shared `teardown.pins` default. Keeps the hover-highlight
@@ -1584,8 +1587,7 @@ function ProductPage() {
   const ladder =
     campaign && tiers.length && retail != null && retail > 0 ? priceLadder(retail, tiers) : null;
   const currency = selectedVariant?.price.currencyCode ?? 'EUR';
-  // The step bar: units sold, a tick at each step end, "37 / 250", with
-  // every step as an absolute price over it. No "% off", no struck price.
+  // Batch progress with its price schedule available on demand.
   const nextUnit = campaign ? campaign.ordered + 1 : 0;
   const stepPrices = (ladder ?? []).map((step) => ({
     key: step.from,
@@ -1601,11 +1603,6 @@ function ProductPage() {
         bar={stepBarState}
         prices={stepPrices}
         fundedLabel={copyText('preorder.funded') ?? 'Funded'}
-        layout={stepLayout(
-          campaign,
-          stepBarState,
-          (ladder ?? []).map((step) => step.from),
-        )}
       />
     ) : null;
   // Units left in the paid batch: one add must not ask for more than the
@@ -1943,7 +1940,7 @@ function ProductPage() {
                 c.to && !active ? (
                   <Link
                     key={c.id}
-                    prefetch="viewport"
+                    prefetch="intent"
                     to={c.to}
                     className="what-chain-chip"
                   >
@@ -1979,7 +1976,7 @@ function ProductPage() {
               hash opens the walkthrough ON this product's part (the hero
               maps `motors` to its singular beat id). */}
           <Link
-            prefetch="viewport"
+            prefetch="intent"
             to={wit.chain ? `/#${wit.chain}` : '/'}
             className="what-home-link"
           >
@@ -2188,7 +2185,7 @@ function ProductPage() {
             lives once, on /open-source, same idiom as the firmware chapter's
             "All firmware partners →". */}
         <p className="open-source-story-link">
-          <Link prefetch="viewport" to="/open-source">
+          <Link prefetch="intent" to="/open-source">
             <Txt id="product-chrome.os_link_story" />
           </Link>
         </p>
@@ -2421,62 +2418,69 @@ function ProductPage() {
           noMedia
           centered
         >
-          {/* Final values only, never a count-up: a buyer who reads or
-              screenshots a spec must never see a wrong current or voltage. */}
-          <table
-            className={`spec-sheet${multi ? ' spec-sheet--multi' : ''}${
-              sheet.columns.length > 2 ? ' spec-sheet--many' : ''
-            }`}
-          >
-            {multi ? (
-              <thead>
-                <tr>
-                  <th scope="col">
-                    <span className="sr-only">{say('product-chrome.compare_spec', 'Spec')}</span>
-                  </th>
-                  {sheet.columns.map((col) => (
-                    <th
-                      scope="col"
-                      key={col}
-                      className={col === activeTier ? 'is-active' : undefined}
-                    >
-                      <button
-                        type="button"
-                        className="spec-sheet-pick"
-                        aria-pressed={col === activeTier}
-                        onClick={() => pickTier(col)}
-                      >
-                        {variantDisplayName(product.handle, col)}
-                      </button>
+          <div className="product-specs" ref={specsRef}>
+            <ProductSilhouette
+              boardSrc={activeBoardArt?.src ?? null}
+              imageSrc={silhouetteImage ?? null}
+              target={specsRef}
+            />
+            {/* Final values only, never a count-up: a buyer who reads or
+                screenshots a spec must never see a wrong current or voltage. */}
+            <table
+              className={`spec-sheet${multi ? ' spec-sheet--multi' : ''}${
+                sheet.columns.length > 2 ? ' spec-sheet--many' : ''
+              }`}
+            >
+              {multi ? (
+                <thead>
+                  <tr>
+                    <th scope="col">
+                      <span className="sr-only">{say('product-chrome.compare_spec', 'Spec')}</span>
                     </th>
-                  ))}
-                </tr>
-              </thead>
-            ) : null}
-            <tbody>
-              {sheet.rows.map((row) => (
-                <tr key={row.key}>
-                  <th scope="row">{row.label}</th>
-                  {row.values.map((value, i) => {
-                    const col = sheet.columns[i];
-                    return (
-                      <td
-                        key={col || i}
-                        className={multi && col === activeTier ? 'is-active' : undefined}
-                        // The studio edits the mirrored value, so a tersed
-                        // cell is shown but not editable in place.
-                        {...(specsEditable && value && row.raw[i] === value && row.paths[i]
-                          ? prodEdit(`${row.paths[i]}.1`)
-                          : {})}
+                    {sheet.columns.map((col) => (
+                      <th
+                        scope="col"
+                        key={col}
+                        className={col === activeTier ? 'is-active' : undefined}
                       >
-                        {value ?? ''}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                        <button
+                          type="button"
+                          className="spec-sheet-pick"
+                          aria-pressed={col === activeTier}
+                          onClick={() => pickTier(col)}
+                        >
+                          {variantDisplayName(product.handle, col)}
+                        </button>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+              ) : null}
+              <tbody>
+                {sheet.rows.map((row) => (
+                  <tr key={row.key}>
+                    <th scope="row">{row.label}</th>
+                    {row.values.map((value, i) => {
+                      const col = sheet.columns[i];
+                      return (
+                        <td
+                          key={col || i}
+                          className={multi && col === activeTier ? 'is-active' : undefined}
+                          // The studio edits the mirrored value, so a tersed
+                          // cell is shown but not editable in place.
+                          {...(specsEditable && value && row.raw[i] === value && row.paths[i]
+                            ? prodEdit(`${row.paths[i]}.1`)
+                            : {})}
+                        >
+                          {value ?? ''}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           {activeConnectors.length ? (
             <div className="spec-connectors">
               <h3 className="spec-connectors-title">
@@ -2557,7 +2561,7 @@ function ProductPage() {
                 <Link
                   key={c.handle}
                   to={`/products/${c.handle}`}
-                  prefetch="viewport"
+                  prefetch="intent"
                   className="bundle-component-card"
                 >
                   <p
@@ -2809,6 +2813,11 @@ function ProductPage() {
               {subtitle}
             </p>
           ) : null}
+          <div className="buy-rail">
+            {railLadder}
+            {railBuyModule}
+            <div ref={setRailSentinel} className="buy-rail-sentinel" aria-hidden="true" />
+          </div>
           {activeOshwaUid || hasPublicSource ? (
             <ul
               className="trust-chips"
@@ -2850,29 +2859,6 @@ function ProductPage() {
             </ul>
           ) : null}
 
-          <div className="buy-rail">
-            {railLadder}
-            {railBuyModule}
-            <div ref={setRailSentinel} className="buy-rail-sentinel" aria-hidden="true" />
-          </div>
-          {/* GPSR Art. 19 listing information (docs/store-compliance.md,
-              section 1): manufacturer identity, contact, product identifier
-              and safety warnings, visible before purchase, directly under
-              the buy module. */}
-          {rootData?.company ? (
-            <GpsrBlock
-              company={rootData.company}
-              productTitle={
-                catalogAxisValue && isInternalSku(product.handle, catalogAxisValue)
-                  ? `${product.title} ${variantDisplayName(product.handle, catalogAxisValue)}`
-                  : product.title
-              }
-              sku={shownSku}
-              kind={safetyKind(product.handle)}
-              country={rootData.visitorCountry ?? null}
-              registrations={registrationNumbers(rootData.visitorCountry ?? null)}
-            />
-          ) : null}
           {/* The compact bar, portaled to <body> so the fixed overlay escapes
               the hero's stacking context. Coming soon: the chips alone. */}
           {railPinned && !footerInView && typeof document !== 'undefined'
@@ -2901,7 +2887,24 @@ function ProductPage() {
 
       <RelatedProducts recommendations={recommendations} />
 
-
+      {rootData?.company ? (
+        <details className="product-safety" id="product-safety">
+          <summary><Txt id="product-chrome.gpsr_heading" /></summary>
+          <GpsrBlock
+            compact
+            company={rootData.company}
+            productTitle={
+              catalogAxisValue && isInternalSku(product.handle, catalogAxisValue)
+                ? `${product.title} ${variantDisplayName(product.handle, catalogAxisValue)}`
+                : product.title
+            }
+            sku={shownSku}
+            kind={safetyKind(product.handle)}
+            country={rootData.visitorCountry ?? null}
+            registrations={registrationNumbers(rootData.visitorCountry ?? null)}
+          />
+        </details>
+      ) : null}
     </div>
   );
 }

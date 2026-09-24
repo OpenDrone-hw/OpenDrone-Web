@@ -6,8 +6,7 @@ import type {RegistrationNumber} from '~/lib/registrations';
 /**
  * GPSR (EU) 2023/988 Art. 19 information for product listings: manufacturer
  * identity with postal and electronic address, the product identifier and
- * the safety warnings. Required before purchase by docs/store-compliance.md
- * section 1, so it sits directly under the buy module.
+ * the safety warnings, available with the product's supporting information.
  * The email is plain text here on purpose: Art. 19 requires an electronic
  * address on the offer itself, so the site-wide no-mailto rule does not apply
  * to product pages. Strings live in content/copy/product-chrome.json under
@@ -61,6 +60,7 @@ export function GpsrBlock({
   kind,
   country,
   registrations = [],
+  compact = false,
 }: {
   company: CompanyIdentity;
   productTitle: string;
@@ -70,6 +70,8 @@ export function GpsrBlock({
   country: string | null;
   /** Incutec's registration numbers for the visitor's country, when set. */
   registrations?: RegistrationNumber[];
+  /** The containing disclosure already names this information. */
+  compact?: boolean;
 }) {
   const linesFor = (lang: string) => [
     ...warnings(`gpsr_warnings_${lang}`),
@@ -93,14 +95,14 @@ export function GpsrBlock({
   return (
     <section
       aria-label="Manufacturer and safety information"
-      className="mt-6 border-t border-[var(--color-border)] pt-5 text-[14px] leading-relaxed text-[var(--color-text)]"
+      className={`${compact ? 'pb-6' : 'mt-6 border-t border-[var(--color-border)] pt-5'} text-[14px] leading-relaxed text-[var(--color-text)]`}
     >
-      <p
+      {!compact ? <p
         className="mb-3 font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--color-text-muted)]"
         {...editAttrs('product-chrome.gpsr_heading')}
       >
         {copyText('product-chrome.gpsr_heading') ?? 'Manufacturer & safety information'}
-      </p>
+      </p> : null}
       <p className="mb-2">
         {company.name}, {company.address} &middot; {company.email} &middot; KBO/BCE {company.kbo}
       </p>

@@ -16,6 +16,7 @@
   "scripts": {
     "prebuild": "npm run sync:legal",
     "build": "react-router build",
+    "postbuild": "node scripts/compress-models.mjs",
     "dev": "react-router dev",
     "preview": "npm run build && wrangler dev --config wrangler.production.toml",
     "lint": "eslint --no-error-on-unmatched-pattern .",

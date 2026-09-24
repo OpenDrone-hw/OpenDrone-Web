@@ -56,28 +56,33 @@ behind a native dialog.
 
 ```bash
 cd scripts/hero-assets
-npm install                      # first time only
-node --max-old-space-size=8192 build-hero.mjs ~/Downloads/<export>.glb \
-     ../../public/models/<design> --all --ratio 0.2 --error 0.008
+npm install
+node --max-old-space-size=8192 build-hero.mjs <export.glb> \
+     ../../public/models/<design> --split --assembly-json <assembly.json> \
+     --ratio 0.2 --error 0.004
 ```
 
-`--all` keeps the entire assembly. `--ratio` and `--error` control decimation:
-`error` is the real governor, so simple parts stop early while dense ones
-collapse. For the 3-inch, 0.2/0.008 took 1.43M triangles to 600k and the GLB
-from 9.4 MB to 6.0 MB with no visible loss.
+For API exports, use the assembly translations endpoint with `formatName: GLB`,
+`grouping: true`, `resolution: medium`, `useGlbCompression: false`,
+`excludeHiddenEntities: true` and `storeInDocument: false`. Save the assembly
+response at the same microversion as `assembly.json`. Source document,
+workspace, element and microversion are recorded in each `studio.json`.
 
-What the build does, and why each step is not optional:
+The builder matches leaf occurrence IDs to CAD part identities, shares repeated
+parts with matching materials and bounds, batches each board by material, and
+compresses geometry with meshopt. Board simplification uses a tighter error
+bound of 0.0005. Silkscreen triangles are preserved, and boards use 16-bit
+position quantization. Named frame parts remain separate
+for the exploded animation. Final assemblies retain all exported visible parts;
+legacy imports without assembly metadata retain their stray-geometry filter.
 
-- **Merges primitives per material within each mesh.** Onshape emits one
-  primitive per B-rep face; one payload mesh arrived with 3340 primitives across
-  2 materials. Each primitive costs an accessor and a bufferView in the JSON
-  chunk, so the file was ~9.8 MB of JSON wrapped around ~1.9 MB of vertex data.
-- **Culls strays.** Several KiCad footprints have a broken 3D-model offset from
-  easyeda2kicad that places geometry about 1.2 m from the board. Left in, they
-  wreck the camera framing and every bounding box.
-- **Keeps meshes shared.** No `flatten()` or `join()`: those bake node
-  transforms into geometry, which would turn four identical arms into four
-  copies. `dedup()` does the opposite.
+`npm run build` fingerprints hero chunks and gzip-compresses deployment GLBs.
+The shared model loader decodes gzip payloads after HTTP decoding; source files
+remain ordinary GLBs. Manifests and studio configuration revalidate on each visit.
+The runtime downloads chunks concurrently, prepares geometry in batches and
+pauses rendering outside the visible hero. Settled views pause after five
+seconds without input and wake on interaction; active rendering is capped at
+60 frames per second.
 
 ## Stage 3: tune in the studio
 

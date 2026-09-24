@@ -4,5 +4,8 @@
 /boards/*
   Cache-Control: public, max-age=31536000, immutable
 
-/models/*
+/models/*.glb
   Cache-Control: public, max-age=86400
+
+/models/*.json
+  Cache-Control: no-cache

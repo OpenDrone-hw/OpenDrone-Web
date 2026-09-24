@@ -156,7 +156,7 @@ function RelatedCard({product}: {product: RelatedProduct}) {
     >
       <Link
         className="related-card-link"
-        prefetch="viewport"
+        prefetch="intent"
         viewTransition
         to={`/products/${product.handle}`}
       >

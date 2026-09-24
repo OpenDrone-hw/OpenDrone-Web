@@ -1,4 +1,4 @@
-import {Suspense} from 'react';
+import {Suspense, useState} from 'react';
 import {Await, Link} from 'react-router';
 import {motion, useReducedMotion, type MotionProps} from 'motion/react';
 import type {ProductCardFragment as CollectionItemFragment} from '~/lib/product-shapes';
@@ -10,6 +10,9 @@ import {PRODUCT_CONTENT, isConceptFor} from '~/lib/product-content';
 import {useRoadmapStatusResolver} from '~/lib/coming-soon';
 import {BOARD_ART_VERSION} from '~/data/board-art-version';
 import {assetUrl} from '~/lib/asset-url';
+import {HeroBuildGuide} from '~/components/HeroBuildGuide';
+import type {HeroBuild} from '~/lib/hero-build';
+import {HERO_AIRFRAMES, DEFAULT_HERO_SIZE} from '~/lib/hero-airframes';
 
 // Downscaled WebP thumbnails written by scripts/export-board-art.mjs next to
 // front.png. The stage slot is at most 264 CSS px, so 528 (2x) and 800 (3x)
@@ -61,10 +64,13 @@ const HOME_LEDGER: Array<{key: string; value?: string; countUp?: boolean}> = [
  */
 export function MobileHome({
   featured,
+  heroBuilds,
 }: {
   featured: CollectionItemFragment[] | Promise<CollectionItemFragment[]>;
+  heroBuilds: Promise<HeroBuild[]>;
 }) {
   const reduce = useReducedMotion();
+  const [buildSize, setBuildSize] = useState(DEFAULT_HERO_SIZE);
 
   // Staggered entrance: each block rises + fades a beat after the last. Skipped
   // wholesale under prefers-reduced-motion (rendered static, no transform).
@@ -141,11 +147,11 @@ export function MobileHome({
             Each is its own pill spanning half the row, not nested in one pod. */}
         <motion.div className="home-mobile-cta" {...rise(3)}>
           <Link
-            prefetch="viewport"
-            to="/collections/all"
+            prefetch="intent"
+            to="#build-guide"
             className="home-mobile-cta-btn home-mobile-cta-shop"
           >
-            <Txt id="home.shop" />
+            <Txt id="home.build_mobile" />
             <svg
               width="18"
               height="18"
@@ -171,6 +177,20 @@ export function MobileHome({
             <Txt id="home.m_github" />
           </a>
         </motion.div>
+      </section>
+
+      <section className="home-mobile-build" id="build-guide" aria-label="Build a quad">
+        <div className="hero-build-sizes" role="group" aria-label="Build size">
+          {HERO_AIRFRAMES.map(frame => <button key={frame.key} type="button" aria-pressed={frame.key === buildSize} onClick={() => setBuildSize(frame.key)}>{frame.label}</button>)}
+        </div>
+        <Suspense fallback={<p>Loading build…</p>}>
+          <Await resolve={heroBuilds}>
+            {builds => {
+              const build = builds.find(item => item.size === buildSize);
+              return build ? <HeroBuildGuide key={build.id} build={build} /> : <Link to="/products">Browse parts</Link>;
+            }}
+          </Await>
+        </Suspense>
       </section>
 
       {/* The loader resolves `featured` for a mobile UA, so the cards render
@@ -213,7 +233,7 @@ export function MobileHome({
       </section>
 
       <Link
-        prefetch="viewport"
+        prefetch="intent"
         to="/collections/all"
         className="home-mobile-browse"
       >

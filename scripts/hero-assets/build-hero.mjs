@@ -1,18 +1,18 @@
 // Onshape assembly GLB -> per-group web GLBs for the hero scene.
 //
-// The Onshape export is the single source of truth for POSITION. Geometry for
-// the PCBs is not taken from it: a STEP round-trip through Onshape fragments
-// each board into hundreds of occurrences and still loses nothing we want that
-// kicad-cli can't produce better (see export-boards.mjs). So each board is
-// located here, measured, culled, and its placement written out so the KiCad
-// GLB can be dropped in at exactly the same spot.
+// Final Onshape assemblies supply both geometry and placement. --assembly-json
+// attaches source part identity for deduplication and groups PCB fragments
+// into material batches before bounded simplification and meshopt compression.
 //
 // Usage:
 //   node --max-old-space-size=8192 build-hero.mjs <onshape.glb> <outdir>
 
 import {makeIO} from './io.mjs';
-import {dedup, weld, prune, meshopt, simplify, instance, quantize, reorder, palette, cloneDocument,
-  joinPrimitives} from '@gltf-transform/functions';
+import {mergePrimitives} from './merge-primitives.mjs';
+import {prepareBoard} from './prepare-boards.mjs';
+import {readAssembly} from './onshape-identity.mjs';
+import {dedup, weld, prune, meshopt, simplifyPrimitive, instance, quantize, reorder, palette, cloneDocument,
+  } from '@gltf-transform/functions';
 import {MeshoptEncoder, MeshoptSimplifier} from 'meshoptimizer';
 import {statSync, writeFileSync, mkdirSync} from 'node:fs';
 import {join as pjoin} from 'node:path';
@@ -70,7 +70,10 @@ const FRAME = /^(Arm|Cross|Base-Top|Base-Bot|Top)$/i;
 
 const io = await makeIO();
 console.log(`reading ${SRC} (${(statSync(SRC).size/1024/1024).toFixed(1)} MB)`);
-const doc = await io.read(SRC);
+const definitionIndex = process.argv.indexOf('--assembly-json');
+const doc = definitionIndex >= 0
+  ? await readAssembly(io, SRC, process.argv[definitionIndex + 1])
+  : await io.read(SRC);
 // Onshape ships some exports Draco-compressed. io.read decodes it, but the
 // extension declaration lingers and makes three demand a DRACOLoader at
 // runtime; we re-encode with meshopt, so drop it.
@@ -151,14 +154,15 @@ const SPLIT = process.argv.includes('--split');
 // stripped. Kept in sync with public/models/<design>/studio.json by hand: these
 // decide which file a part ships in, that file decides how it is lit.
 const CHUNK_MATCH = {
-  video: /^(Top Casing|Bottom Casing|DJI|VTX-Mount|USB C|Body|Lens|BM6B)/i,
-  drive: /^(Admi|softmount|[0-9]+$)/i,
+  video: /^(Top Casing|Bottom Casing|Front Housing|DJI|VTX-Mount|USB C|Body|Lens|BM6B)/i,
+  drive: /^(Admi|2306|softmount|CW_PROP|CCW_PROP|5in-prop|[0-9]+$)/i,
 };
 // Each PCB is its own chunk. Together they are ~70% of the download (2048
 // occurrences of SMD parts), so one "electronics" chunk would be a single long
 // stall with nothing happening; one per board lets each appear as it lands, and
 // it lines up with the three board beats the walkthrough opens on.
 const chunkOf = (o) => {
+  if (o.occ.getExtras().boardId) return `board-${o.occ.getExtras().boardId}`;
   if (CHUNK_MATCH.video.test(o.name)) return 'video';
   if (CHUNK_MATCH.drive.test(o.name)) return 'drive';
   const sub = SUBSTRATE.exec(o.name);
@@ -193,7 +197,7 @@ const culledVerts = {board: 0, hardware: 0, far: 0};
 // The Onshape export carries its own outliers (construction geometry, stray
 // imports). A 3-inch airframe is ~0.14 m corner to corner, so anything whose
 // centre is past 0.25 m of the origin is not part of the drone.
-const FAR_RADIUS = 0.25;
+const FAR_RADIUS = definitionIndex >= 0 ? Infinity : 0.25;
 for (const o of info) {
   if (!o.c) continue;
   if (Math.hypot(o.c[0], o.c[1], o.c[2]) > FAR_RADIUS) {
@@ -271,6 +275,15 @@ for (const [gname, members] of Object.entries(groups)) {
   cOccs.forEach((n, i) => { if (!wanted.has(i)) disposeTree(n); });
 
   await clone.transform(prune({keepAttributes: false}));
+  if (gname.startsWith('board-')) {
+    const prepared = await prepareBoard(clone, cAsm, gname.slice(6));
+    console.log('  prepared board', prepared);
+  }
+  for (const node of cRoot.listNodes()) {
+    if (/^anti-slip pad$/i.test(node.getName())) {
+      node.getMesh()?.setExtras({preserveDetail: true});
+    }
+  }
   const merged = mergePrimitives(clone);
   // The dedicated 'frame' group is left un-decimated because it is already
   // tiny. The whole-assembly 'drone' group must be decimated (2.5M verts) but
@@ -284,7 +297,7 @@ for (const [gname, members] of Object.entries(groups)) {
   const ratio = RATIO;
   const error = ERROR;
   const ops = [
-    weld({tolerance: 0.0001}),
+    weld(),
     dedup(),                                   // <- N placements, ONE mesh
   ];
   if (!isFrameLike) {
@@ -293,7 +306,18 @@ for (const [gname, members] of Object.entries(groups)) {
     // on parts that cannot decimate further without exceeding the deviation
     // bound. So a low ratio collapses the dense DJI casing hard while leaving
     // an already-simple carbon plate essentially untouched.
-    ops.push(simplify({simplifier: MeshoptSimplifier, ratio, error}), dedup());
+    {
+      // Ink is thin geometry. Keep its exact triangles instead of treating
+      // letters as removable detail in the rest of the board.
+      ops.push(async (document) => {
+        for (const mesh of document.getRoot().listMeshes()) {
+          if (/_silkscreen$/.test(mesh.getName()) || mesh.getExtras().preserveDetail) continue;
+          for (const primitive of mesh.listPrimitives()) {
+            simplifyPrimitive(primitive, {simplifier: MeshoptSimplifier, ratio, error: gname.startsWith('board-') ? Math.min(error, 0.0005) : error});
+          }
+        }
+      }, dedup());
+    }
   }
   if (WANT_INSTANCE) ops.push(instance({min: 2}));
   // palette() folds flat colours into a texture atlas to cut draw calls, but it
@@ -302,10 +326,10 @@ for (const [gname, members] of Object.entries(groups)) {
   if (process.argv.includes('--palette')) ops.push(palette({min: 5}));
   ops.push(
     reorder({encoder: MeshoptEncoder}),        // vertex-cache order
-    quantize({quantizePosition: 14, quantizeNormal: 10, quantizeTexcoord: 12}),
+    quantize({quantizePosition: (gname.startsWith('board-') || gname === 'frame') ? 16 : 14, quantizeNormal: 10, quantizeTexcoord: 12}),
   );
   await clone.transform(...ops);
-  await clone.transform(meshopt({encoder: MeshoptEncoder, level: 'high'}));
+  await clone.transform(meshopt({encoder: MeshoptEncoder, level: 'high', quantizePosition: (gname.startsWith('board-') || gname === 'frame') ? 16 : 14}));
 
   const out = pjoin(OUT, `${gname}${WANT_INSTANCE ? '-inst' : ''}.glb`);
   console.log(`  ${gname}: primitives ${merged.before} -> ${merged.after}`);
@@ -349,39 +373,6 @@ if (SPLIT) {
 // material WITHIN each mesh fixes that while leaving the mesh/node graph alone,
 // so shared meshes and per-part names both survive. join() would also fix it,
 // but only by flattening the node graph and duplicating the shared arm mesh.
-function mergePrimitives(doc) {
-  let before = 0, after = 0;
-  const mats = doc.getRoot().listMaterials();
-  for (const mesh of doc.getRoot().listMeshes()) {
-    const prims = mesh.listPrimitives();
-    before += prims.length;
-    const groups = new Map();
-    for (const p of prims) {
-      // Key on everything joinPrimitives validates: material, draw mode, the
-      // exact attribute set, and whether indices are present.
-      const key = [
-        mats.indexOf(p.getMaterial()),
-        p.getMode(),
-        p.listSemantics().sort().join(','),
-        p.getIndices() ? 'idx' : 'noidx',
-      ].join('|');
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key).push(p);
-    }
-    for (const group of groups.values()) {
-      if (group.length < 2) continue;
-      try {
-        const joined = joinPrimitives(group);
-        for (const p of group) { mesh.removePrimitive(p); p.dispose(); }
-        mesh.addPrimitive(joined);
-      } catch {
-        // Incompatible despite the key; leave this group untouched.
-      }
-    }
-    after += mesh.listPrimitives().length;
-  }
-  return {before, after};
-}
 
 function disposeTree(node) {
   for (const c of [...node.listChildren()]) disposeTree(c);

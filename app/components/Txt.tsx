@@ -30,7 +30,7 @@ function Rich({value}: {value: string}) {
           );
         }
         return (
-          <Link key={i} prefetch="viewport" to={n.href}>
+          <Link key={i} prefetch="intent" to={n.href}>
             {n.v}
           </Link>
         );

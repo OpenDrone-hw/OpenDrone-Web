@@ -1,0 +1,384 @@
+{
+  "name": "OpenDrone 5\"",
+  "model": "drone.glb",
+  "_howto": [
+    "Flow for a new design: export the assembly from Onshape, run",
+    "scripts/hero-assets/build-hero.mjs --all into public/models/<design>/, then",
+    "copy this file and _studio.html in beside the GLB and open that folder's",
+    "_studio.html. The studio loads this file on open and writes it back, so no",
+    "JavaScript edit is needed for the values below. See _status for what the",
+    "panel does not cover.",
+    "",
+    "Name matching, verified against this assembly: three.js appends _1/_2 to",
+    "duplicate node names, turns spaces into underscores, and DELETES the",
+    "characters [ ] . : / (three/src/animation/PropertyBinding.js sanitizeNodeName).",
+    "Onshape also wraps each part in occurrence_of_<name>. Note the deletion means",
+    "the tpu match below, which contains a slash, does not currently fire for",
+    "Airtag/Antenna-Mount.",
+    "",
+    "Colour: baseColorFactor in these exports is 8-bit sRGB written into a field",
+    "glTF defines as linear (measured: 183 of 183 components are exact n/255), so",
+    "the studio decodes it on load. Set tint only where the CAD colour is wrong or",
+    "missing, never to correct brightness."
+  ],
+  "lighting": {
+    "exposure": 1,
+    "environment": 0.3,
+    "ambient": 0,
+    "background": "#0a0c0f",
+    "key": {
+      "power": 2.6,
+      "azimuth": 89,
+      "elevation": 46,
+      "colour": "#e69728"
+    },
+    "fill": {
+      "power": 0.55,
+      "azimuth": 135,
+      "elevation": 36,
+      "colour": "#e5f7de"
+    },
+    "rim": {
+      "power": 2.2,
+      "azimuth": 283,
+      "elevation": 31,
+      "colour": "#cfe2ff"
+    },
+    "bounce": {
+      "power": 0.3,
+      "colour": "#7d7417"
+    }
+  },
+  "spotlight": {
+    "power": 22.5,
+    "beam": 0.44,
+    "strike": 0.27,
+    "coneAngle": 26,
+    "softness": 0.6,
+    "sideAngle": 35,
+    "height": 0.48,
+    "darkenRest": 1,
+    "dimLights": 0.28,
+    "shrinkDrone": 0.55,
+    "stageLeft": 0.28,
+    "boardTilt": 0.04,
+    "stageLift": -0.06,
+    "colour": "#ffd7a0",
+    "beamColour": "#ffcf96",
+    "beamGain": 4
+  },
+  "sequence": {
+    "speed": 0.85,
+    "hold": 8.4,
+    "travel": 4.6,
+    "partSize": 0.6,
+    "inspectSpin": 0.06,
+    "autoOrbit": 0.195,
+    "propRate": 1.25,
+    "propHanded": -1,
+    "_note": "travel and hold are timeline units, not seconds: they set the SHAPE of a transition (how much of it the part spends flying versus held under the spotlight). scroll.springHz sets the SPEED. speed/autoOrbit/inspectSpin are read by the studio's autoplay; the hero drives position from the scroll spring instead and ignores speed."
+  },
+  "_materialNote": "match is a regex tried against the normalised occurrence name. Order matters; the last entry should be a catch-all. Board substrate is matched by suffix before any of these.",
+  "materials": [
+    {
+      "id": "antislip",
+      "label": "Battery grip pad",
+      "match": "^anti-slip pad$",
+      "tint": null,
+      "metalness": 0,
+      "roughness": 0.85,
+      "env": 0.4,
+      "sat": 1
+    },
+    {
+      "id": "carbon",
+      "label": "carbon fibre",
+      "match": "^(Arm|Cross|Base-Top|Base-Bot|Top)$",
+      "tint": "#000000",
+      "metalness": 0,
+      "roughness": 0.19,
+      "env": 0.37,
+      "sat": 2.04
+    },
+    {
+      "id": "alu",
+      "label": "aluminium",
+      "match": "^(Cam-Mount|Standoff|20mmx4mm)",
+      "tint": null,
+      "metalness": 0.74,
+      "roughness": 0.13,
+      "env": 0.87,
+      "sat": 1.06
+    },
+    {
+      "id": "motor",
+      "label": "motor (anodised)",
+      "match": "^2306",
+      "tint": null,
+      "metalness": 1,
+      "roughness": 0.32,
+      "env": 0.9,
+      "sat": 1
+    },
+    {
+      "id": "heatsink",
+      "label": "air unit heatsink",
+      "match": "^(Top Casing|Bottom Casing)",
+      "tint": null,
+      "metalness": 1,
+      "roughness": 0.5,
+      "env": 0,
+      "sat": 1
+    },
+    {
+      "id": "tpu",
+      "label": "TPU print",
+      "match": "^(Bumper|AirtagAntenna-Mount|VTX-Mount|Boot-)",
+      "tint": null,
+      "metalness": 0.79,
+      "roughness": 1,
+      "env": 0,
+      "sat": 1
+    },
+    {
+      "id": "rubber",
+      "label": "rubber / grommet",
+      "match": "^softmount",
+      "tint": null,
+      "metalness": 1,
+      "roughness": 1,
+      "env": 0.05,
+      "sat": 1
+    },
+    {
+      "id": "antenna",
+      "label": "antenna sleeve",
+      "match": "^DJI",
+      "tint": null,
+      "metalness": 0.22,
+      "roughness": 0.39,
+      "env": 0.1,
+      "sat": 1
+    },
+    {
+      "id": "prop",
+      "label": "propeller",
+      "match": "^5in-prop (cw|ccw)$",
+      "tint": null,
+      "metalness": 0.21,
+      "roughness": 0.44,
+      "env": 0.35,
+      "sat": 1
+    },
+    {
+      "id": "camera",
+      "label": "camera + lens",
+      "match": "^(Body|Lens|Front Housing)",
+      "tint": null,
+      "metalness": 0.54,
+      "roughness": 0.19,
+      "env": 0.65,
+      "sat": 1
+    },
+    {
+      "id": "tag",
+      "label": "AirTag",
+      "match": "^AirTag",
+      "tint": null,
+      "metalness": 0.58,
+      "roughness": 0.38,
+      "env": 0.55,
+      "sat": 1
+    },
+    {
+      "id": "steel",
+      "label": "steel fasteners",
+      "match": "(screw|hex nut|pressnut|press nut|washer)",
+      "tint": null,
+      "metalness": 1,
+      "roughness": 0.36,
+      "env": 0.9,
+      "sat": 1
+    },
+    {
+      "id": "mask",
+      "label": "PCB soldermask",
+      "match": null,
+      "tint": "#175634",
+      "metalness": 0.71,
+      "roughness": 0.96,
+      "env": 0.6,
+      "sat": 1
+    },
+    {
+      "id": "silk",
+      "label": "PCB silkscreen",
+      "match": null,
+      "tint": "#dfe3e0",
+      "metalness": 0.26,
+      "roughness": 0.63,
+      "env": 0.45,
+      "sat": 1
+    },
+    {
+      "id": "padgold",
+      "label": "PCB pads (ENIG)",
+      "match": null,
+      "tint": "#d9a441",
+      "metalness": 0.58,
+      "roughness": 0.25,
+      "env": 0.23,
+      "sat": 1
+    },
+    {
+      "id": "fr4",
+      "label": "PCB core / edge",
+      "match": null,
+      "tint": null,
+      "metalness": 0.71,
+      "roughness": 0.96,
+      "env": 0.6,
+      "sat": 1
+    },
+    {
+      "id": "smd",
+      "label": "SMD components",
+      "match": ".",
+      "tint": null,
+      "metalness": 1,
+      "roughness": 0.44,
+      "env": 0.5,
+      "sat": 1
+    }
+  ],
+  "_boardNote": "Each entry merges into one group at load: substrate fragments named <prefix>_pad/_silkscreen/_soldermask/_PCB, plus every occurrence standing on the board. 'exclude' keeps things that merely pass through the board plane (standoffs, stack screws) out of it.",
+  "boards": [
+    {
+      "id": "OpenFC-Lite",
+      "title": "OpenFC-Lite",
+      "note": ""
+    },
+    {
+      "id": "OpenESC-30x30-4in1",
+      "title": "OpenESC-30x30-4in1",
+      "note": ""
+    },
+    {
+      "id": "OpenRX-Mono",
+      "title": "OpenRX-Mono",
+      "note": ""
+    }
+  ],
+  "boardExclude": "(screw|hex nut|pressnut|press nut|washer|softmount|Standoff|20mmx4mm|Casing|^Arm$|^Cross$|^Base-|^Top$|DJI|VTX-Mount|Bumper|AirTag|Boot-|Admi|BM6B|^[0-9]+$)",
+  "videoModule": "^(Top Casing|Bottom Casing|Front Housing|DJI|VTX-Mount|USB C|Body|Lens|BM6B)",
+  "notFrame": "^(Admi|2306|prop-pivot|CW PROP|CCW PROP|5in-prop|[0-9]+$)",
+  "_beatNote": "select is one of: {board}, {names}, {cluster} one spatial cluster, {complement} everything not in another beat. choreo names a built-in behaviour. caption is the beginner explainer under the note, hint is a one-line 'connects to', href links the beat to its product page; a stop that is active shows its own caption/hint/href, not the beat's. Copy baseline: drafts/beginner-narrative.md.",
+  "beats": [
+    {
+      "id": "whole",
+      "title": "OpenDrone 5\"",
+      "note": "5\" freestyle build",
+      "select": {
+        "none": true
+      }
+    },
+    {
+      "id": "fc",
+      "title": "OpenFC Lite",
+      "note": "RP2354 \u00b7 BMI270 \u00b7 Betaflight",
+      "hint": "RX in, ESC out.",
+      "href": "/products/openfc-lite",
+      "select": {
+        "board": "OpenFC-Lite"
+      },
+      "handle": "openfc-lite"
+    },
+    {
+      "id": "esc",
+      "title": "OpenESC",
+      "note": "4in1 \u00b7 AM32 \u00b7 40A",
+      "hint": "Battery in, four motors out.",
+      "href": "/products/openesc",
+      "select": {
+        "board": "OpenESC-30x30-4in1"
+      },
+      "handle": "openesc"
+    },
+    {
+      "id": "rx",
+      "title": "OpenRX Mono",
+      "note": "ELRS receiver",
+      "select": {
+        "board": "OpenRX-Mono"
+      },
+      "handle": "openrx"
+    },
+    {
+      "id": "motor",
+      "title": "OpenMotor",
+      "note": "2207",
+      "select": {
+        "cluster": "^2306",
+        "withProp": true
+      },
+      "caption": "Brushless, sold per motor, four per quad.",
+      "hint": "Three wires each to the ESC.",
+      "href": "/products/openmotor",
+      "handle": "openmotor"
+    },
+    {
+      "id": "frame",
+      "title": "OpenFrame",
+      "note": "5\" \u00b7 T700 carbon",
+      "select": {
+        "complement": true,
+        "plus": "videoModule"
+      },
+      "fade": 0.99,
+      "partSize": 0.72,
+      "choreo": "frame-teardown",
+      "stops": [
+        {
+          "at": 0,
+          "title": "OpenFrame 5\"",
+          "note": "T700 carbon",
+          "caption": "Carbon plates and arms. Everything bolts onto it and it takes the crashes.",
+          "href": "/products/openframe"
+        },
+        {
+          "at": 0.62,
+          "title": "Camera + VTX",
+          "note": "Not sold here: DJI, Walksnail, HDZero or analog"
+        }
+      ],
+      "handle": "openframe"
+    }
+  ],
+  "camera": {
+    "distance": 2.15,
+    "height": 0.5,
+    "heightOnBoard": 0.72,
+    "dollyOnShow": 0.92,
+    "lift": 0.24
+  },
+  "_saved": "2026-08-08, saved from the studio panel",
+  "_status": "WIRED BOTH WAYS. app/components/HeroDroneScene.tsx reads this file at runtime. public/models/od3/_studio.html loads it on open, including the beat timeline, so every control starts on the value the site renders, and its save button POSTs the whole file back through the dev-only /__studio/write endpoint. The panel edits beat titles, notes, captions, hints, hrefs, fade, partSize and stops (each stop with its own caption, hint and href, which replace the beat-level ones while the stop is active), but not the shape of the timeline: adding, deleting and reordering beats, and every `select` and `choreo`, are file edits. Also carried through untouched on save: name, model, boards, boardExclude, videoModule, notFrame, scroll.minDwellS, spotlight.beamGain (which the panel renderer has no equivalent for), and each material id, label and match.",
+  "scroll": {
+    "_note": "Weight comes from springHz: it is a critically damped spring, so a lower frequency reads as more mass.  commitAt how much of a stop-to-stop move a gesture must cover before it counts as intent to advance.",
+    "springHz": 0.55,
+    "magnet": 0.11,
+    "commitAt": 0.24,
+    "minDwellS": 0.5,
+    "restDwellS": 0.7
+  },
+  "yAxisUp": false,
+  "motorMatch": "^2306",
+  "propMatch": "^5in-prop (cw|ccw)$",
+  "source": {
+    "document": "78e093d02798373a79bc68d0",
+    "workspace": "c0ca752de47c1227bb727503",
+    "element": "fce8fc1bdf426e13532126f3",
+    "microversion": "a3dc5abdd42d600429eab3d8"
+  },
+  "motorHardwareMatch": "^Prevailing torque nut M5"
+}

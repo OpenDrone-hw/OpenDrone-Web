@@ -50,13 +50,18 @@
         },
         {
           "role": "receiver",
-          "sku": "OPENRX-LITE",
+          "sku": "OPENRX-LITE-UFL",
           "quantity": 1
         },
         {
           "role": "props",
           "sku": "ACC-PROP-3-HQ-T3X3X3",
           "handle": "hqprop-t3x3x3-propeller-set-3-inch-t-mount",
+          "quantity": 1
+        },
+        {
+          "role": "antenna",
+          "sku": "ACC-ANT-T",
           "quantity": 1
         }
       ]
@@ -87,7 +92,7 @@
         },
         {
           "role": "receiver",
-          "sku": "OPENRX-LITE-UFL",
+          "sku": "OPENRX-MONO",
           "quantity": 1
         },
         {
@@ -98,8 +103,9 @@
         },
         {
           "role": "antenna",
-          "sku": "ACC-ANT-T",
-          "quantity": 1
+          "sku": "ACC-ANT-DUAL-T",
+          "quantity": 1,
+          "handle": "elrs-868-915-mhz-2-4-ghz-u-fl-t-style-antenna"
         }
       ]
     }

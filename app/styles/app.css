@@ -15161,31 +15161,11 @@ html.light .editorial-watermark {
 .add-to-cart-form {
   display: contents;
 }
-/* StepBar: units sold as one bar, a tick at each price-step end, the step
-   prices above it with the current one in ink. */
+/* Batch progress with a tick at each price-step boundary. */
 .step-bar {
   display: grid;
   gap: 6px;
   width: 100%;
-}
-.step-bar-prices {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  color: var(--color-text-dim);
-}
-.step-bar-prices li + li::before {
-  content: '\00b7';
-  padding: 0 0.5em;
-  color: var(--color-text-dim);
-}
-.step-bar-prices li[aria-current] {
-  color: var(--color-text);
-  font-weight: 600;
 }
 .step-bar-track {
   position: relative;
@@ -16336,53 +16316,6 @@ html:not(.light) .trust-chip-oshwa-mark {
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   color: var(--color-text-muted);
-}
-/* Step bar with the step prices over it: price, then the units it covers.
-   Placed labels sit over the start of their own stretch of the bar. */
-.product-hero-copy .step-bar-prices {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--sp-2);
-  font-size: 12px;
-  color: var(--color-text);
-}
-.product-hero-copy .step-bar-prices.is-placed {
-  display: block;
-  position: relative;
-  height: 2.9em;
-}
-.step-bar-prices.is-placed li {
-  position: absolute;
-  top: 0;
-  white-space: nowrap;
-}
-.product-hero-copy .step-bar-prices li + li::before {
-  content: none;
-}
-.step-bar-prices li:has(.step-bar-range) {
-  display: flex;
-  flex-direction: column;
-}
-.step-bar-range {
-  color: var(--color-text-muted);
-  font-weight: 400;
-}
-/* The steps past the batch: a dashed tail after the bar's end. */
-.step-bar-track[data-tail]::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 80%;
-  right: 0;
-  border-top: 2px dashed var(--color-border-strong);
-  translate: 0 -50%;
-}
-.step-bar-track[data-tail] {
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--color-border-strong) 70%, transparent) 80%,
-    transparent 80%
-  );
 }
 .product-hero-copy .product-form .product-qty-step,
 .product-hero-copy .product-form .add-to-cart-form > button {
@@ -17801,7 +17734,7 @@ html.hero-header-in .homepage-layout .site-header {
   padding: 0;
   list-style: none;
 }
-.hp-stage:not(:has(canvas)) .hp-fallback {
+.hp-stage:not(:has(canvas:not([data-hero-snapshot]))) .hp-fallback {
   position: static;
   width: auto;
   height: auto;
@@ -17814,9 +17747,9 @@ html.hero-header-in .homepage-layout .site-header {
   margin: 0 auto;
   padding: 6rem 1.25rem;
 }
-.hp-stage:not(:has(canvas)) { height: auto; min-height: 60vh; }
-.hp-stage:not(:has(canvas)) .hp-rail,
-.hp-stage:not(:has(canvas)) .hp-copy { display: none; }
+.hp-stage:not(:has(canvas:not([data-hero-snapshot]))) { height: auto; min-height: 60vh; }
+.hp-stage:not(:has(canvas:not([data-hero-snapshot]))) .hp-rail,
+.hp-stage:not(:has(canvas:not([data-hero-snapshot]))) .hp-copy { display: none; }
 .hp-fallback h3 { font-size: 1.15rem; margin: 0 0 0.3rem; color: var(--color-text); }
 .hp-fallback p { margin: 0; color: var(--color-text-muted); }
 .hp-dot { padding: 0; cursor: pointer; }

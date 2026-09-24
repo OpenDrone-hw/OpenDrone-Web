@@ -1,4 +1,3 @@
-import {BackgroundWarmup} from '~/components/BackgroundWarmup';
 import {useLocation} from 'react-router';
 import {MotionConfig} from 'motion/react';
 import type {CompanyIdentity} from '~/lib/company';
@@ -41,7 +40,6 @@ export function PageLayout({
             is its own overlay, opened by every AddToCartButton. */}
         <MobileMenuAside accountUrl={accountUrl} />
         <CartAddedDialog />
-        <BackgroundWarmup />
         <div className={isHomepage ? 'homepage-layout' : ''}>
           <a className="skip-link" href="#main-content">
             <Txt id="chrome.skip_link" />
@@ -56,10 +54,12 @@ export function PageLayout({
           <main id="main-content" className="site-main">
             {children}
           </main>
-          <Footer
-            company={company}
-            turnstileSiteKey={turnstileSiteKey ?? null}
-          />
+          {!isHomepage && (
+            <Footer
+              company={company}
+              turnstileSiteKey={turnstileSiteKey ?? null}
+            />
+          )}
         </div>
       </Aside.Provider>
     </MotionConfig>

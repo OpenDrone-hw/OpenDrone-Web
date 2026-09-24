@@ -1,5 +1,4 @@
-import {Await, PrefetchPageLinks, useLoaderData} from 'react-router';
-import {AnimatePresence, motion, useReducedMotion} from 'motion/react';
+import {Await, useLoaderData} from 'react-router';
 import {Link} from '~/components/nav';
 import type {Route} from './+types/_index';
 import {
@@ -7,41 +6,23 @@ import {
   useRef,
   useState,
   useCallback,
-  useMemo,
   Suspense,
 } from 'react';
-import type {MoneyV2, ProductCardFragment} from '~/lib/product-shapes';
-import {byHandle, formatPrice, toCard} from '~/lib/catalog';
+import type {ProductCardFragment} from '~/lib/product-shapes';
+import {byHandle, toCard} from '~/lib/catalog';
 import {INCUTEC_HINT_SEEN_KEY} from '~/lib/incutec-hint';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
-import {useProductStatusResolver, useRoadmapStatusResolver} from '~/lib/coming-soon';
-import {
-  isComingSoon,
-  isConceptFor,
-  isPurchasableStatus,
-} from '~/lib/product-content';
 import {HeroDroneStage} from '~/components/HeroDroneStage';
 import type {HeroLoadState} from '~/components/HeroDroneScene';
 import {HeroWordmark} from '~/components/HeroWordmark';
 import {HeroSizeSlider} from '~/components/HeroSizeSlider';
-import {
-  HERO_AIRFRAMES,
-  HERO_AIRFRAME_KEYS,
-  HERO_BOARDS,
-  HERO_VARIANT_AXIS,
-  DEFAULT_HERO_SIZE,
-} from '~/lib/hero-airframes';
+import {DEFAULT_HERO_SIZE} from '~/lib/hero-airframes';
+import {HeroBuildGuide} from '~/components/HeroBuildGuide';
+import {resolveHeroBuilds, type HeroBuild} from '~/lib/hero-build';
+import {parseBuilds} from '~/lib/build-recommendations';
+import buildsJson from '../../content/builds.json';
 import {MobileHome} from '~/components/MobileHome';
 import {SceneErrorBoundary} from '~/components/SceneErrorBoundary';
-import {heroRevealWindows} from '~/lib/builder/registry';
-
-/** The hero's reveal cards in walkthrough order, each keyed by the studio
- *  beat it appears with. Motors are not a builder slot, so their card is
- *  resolved here: one Shopify product with a per-size `Model` variant. */
-const HERO_CARD_KEYS = ['fc', 'esc', 'motor', 'frame'] as const;
-type HeroCardKey = (typeof HERO_CARD_KEYS)[number];
-const HERO_CARD_WINDOWS = heroRevealWindows(HERO_CARD_KEYS.length);
-const MOTOR_MODEL_BY_SIZE: Record<string, string> = {'3': '1604', '5': '2207'};
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
 
@@ -61,7 +42,6 @@ export const meta: Route.MetaFunction = ({location}) =>
     url: `${SITE_ORIGIN}${location.pathname}`,
   });
 
-type HomeMoney = Pick<MoneyV2, 'amount' | 'currencyCode'>;
 type HomeProduct = ProductCardFragment;
 type HomeFeaturedResult = {
   frame: HomeProduct | null;
@@ -71,105 +51,7 @@ type HomeFeaturedResult = {
   esc: HomeProduct | null;
 };
 
-// A ready-to-render hero reveal card - resolved server-side so the view stays
-// data-driven (the client just maps over the active size's stack).
-export type HeroCard = {
-  boardKey: HeroCardKey;
-  handle: string;
-  /** PDP link, including `?Model=…` for size-variant boards. */
-  url: string;
-  title: string;
-  productType: string | null;
-  image: {url: string; altText: string | null} | null;
-  price: HomeMoney | null;
-};
-/** Keyed by airframe size key (see HERO_AIRFRAMES). */
-export type HeroStacks = Record<string, HeroCard[]>;
-
-function emptyHeroStacks(): HeroStacks {
-  const stacks: HeroStacks = {};
-  for (const af of HERO_AIRFRAMES) stacks[af.key] = [];
-  return stacks;
-}
-
-// Resolve each airframe size's [FC, ESC, Motor, Frame] cards from the queried
-// products. Size-variant boards (FC/ESC) match the size's `model` against the
-// product's "Model" option values, linking to that variant and using its
-// price; a size with no matching variant falls back to the base product link
-// + min price so the card still renders. Fully driven by the HERO_AIRFRAMES /
-// HERO_BOARDS registry - adding a size needs no change here.
-function buildHeroStacks(d: HomeFeaturedResult): HeroStacks {
-  const byBoard: Record<HeroCardKey, HomeProduct | null> = {
-    fc: d.fc,
-    esc: d.esc,
-    motor: d.motor,
-    frame: (d.frame as HomeProduct | null) ?? null,
-  };
-  type Board = {boardKey: HeroCardKey; handle: string; sizeVariant: boolean};
-  const motor: Board = {boardKey: 'motor', handle: 'openmotor', sizeVariant: true};
-  const boards: Board[] = [...HERO_BOARDS, motor].sort((a, b) => HERO_CARD_KEYS.indexOf(a.boardKey) - HERO_CARD_KEYS.indexOf(b.boardKey));
-  const stacks: HeroStacks = {};
-  for (const af of HERO_AIRFRAMES) {
-    const cards: HeroCard[] = [];
-    for (const board of boards) {
-      const p = byBoard[board.boardKey];
-      if (!p) continue;
-      let url = `/products/${board.handle}`;
-      let price: HomeMoney | null = p.priceRange.minVariantPrice ?? null;
-      // Default to the product's featured image; a matched size variant
-      // overrides it below (the featured image is the mini/first variant).
-      let image = p.featuredImage
-        ? {url: p.featuredImage.url, altText: p.featuredImage.altText ?? null}
-        : null;
-      const model = !board.sizeVariant
-        ? undefined
-        : board.boardKey === 'motor'
-          ? MOTOR_MODEL_BY_SIZE[af.key]
-          : af.model;
-      if (model) {
-        const axis = HERO_VARIANT_AXIS.toLowerCase();
-        const want = model.trim().toLowerCase();
-        const variant = p.variants.nodes.find((v) =>
-          v.selectedOptions.some(
-            (o) =>
-              o.name.trim().toLowerCase() === axis &&
-              o.value.trim().toLowerCase() === want,
-          ),
-        );
-        if (variant) {
-          // Link with the value the LIVE variant carries (preserves exact
-          // casing/encoding) so the PDP resolves it cleanly.
-          const liveValue =
-            variant.selectedOptions.find(
-              (o) => o.name.trim().toLowerCase() === axis,
-            )?.value ?? model;
-          url += `?${HERO_VARIANT_AXIS}=${encodeURIComponent(liveValue)}`;
-          if (variant.price) price = variant.price;
-          if (variant.image)
-            image = {
-              url: variant.image.url,
-              altText: variant.image.altText ?? null,
-            };
-        }
-      }
-      cards.push({
-        boardKey: board.boardKey,
-        handle: board.handle,
-        url,
-        // Size-variant boards spell out which mount they are (e.g. "OpenESC
-        // 30×30") so the two airframes' cards aren't indistinguishable; the
-        // shared frame keeps its plain title.
-        title:
-          model && !p.title.includes(model) ? `${p.title} ${model}` : p.title,
-        productType: p.productType ?? null,
-        image,
-        price,
-      });
-    }
-    stacks[af.key] = cards;
-  }
-  return stacks;
-}
+const BUILDS = parseBuilds(buildsJson);
 
 export async function loader({request, context}: Route.LoaderArgs) {
   // UA hint picks the SSR layout so a phone gets the static MobileHome on
@@ -186,7 +68,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
   // the cards instead of blanking the page.
   const home: Promise<{
     featured: HomeProduct[];
-    heroStacks: HeroStacks;
+    heroBuilds: HeroBuild[];
   }> = context.catalog
     .get()
     .then((catalog) => {
@@ -207,17 +89,12 @@ export async function loader({request, context}: Route.LoaderArgs) {
         // OpenStack is intentionally NOT here - it's just the FC + ESC bundled,
         // surfaced as a note on the showcase, not as a separate flagship slot.
         featured: [d.fc, d.esc, d.rx, d.motor, d.frame].filter(keep),
-        // The hero cards, resolved per airframe size. FC, ESC and motor are
-        // single products with a size variant axis ("Model"): each size links
-        // them to its own variant (?Model=…) and shows that variant's price.
-        // The frame is one shared SKU. Built off the HERO_AIRFRAMES registry,
-        // so a new size is a config edit - see app/lib/hero-airframes.ts.
-        heroStacks: buildHeroStacks(d),
+        heroBuilds: resolveHeroBuilds(BUILDS, catalog),
       };
     })
-    .catch(() => ({featured: [], heroStacks: emptyHeroStacks()}));
+    .catch(() => ({featured: [], heroBuilds: []}));
 
-  const heroStacks = home.then((h) => h.heroStacks);
+  const heroBuilds = home.then((h) => h.heroBuilds);
   // On a phone the featured cards are the first thing under the hero and the
   // section's arrival used to shift everything below it (CLS 0.22) and delay
   // the LCP image until the deferred chunk streamed in. The query is
@@ -228,7 +105,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
     ? await home.then((h) => h.featured)
     : home.then((h) => h.featured);
 
-  return {isMobileHint, featured, heroStacks};
+  return {isMobileHint, featured, heroBuilds};
 }
 
 // Hero scroll budget - the 3D scene + phased UI stays pinned for this many
@@ -247,43 +124,6 @@ const HERO_SPACER_VH_MOBILE = 205;
 const HERO_PROGRESS_VH_DESKTOP = 1;
 const HERO_PROGRESS_VH_MOBILE = 1;
 
-// Buy-card stack swap on a size change - a horizontal cross-slide timed to MATCH
-// the 3D airframe's cross-slide so the cards and the drone move as one gesture.
-// Mirrors HeroScene's swap: same duration (TRANS_DUR), same easeInOutCubic, same
-// direction, and the same mid-swap zoom dip (both stacks pull back toward the
-// middle of the travel). `custom` is the direction (+1 = the new size sits later
-// in the registry, so its cards fly in from the right and the old stack flies
-// out left; −1 = reverse). The exiting stack is taken out of flow (absolute,
-// bottom-anchored to match .hero-buy-stack's column-reverse) so it doesn't shove
-// the Shop button while both stacks overlap mid-swap.
-const HERO_SWAP_DUR = 0.85; // seconds - must track HeroScene TRANS_DUR
-const HERO_SWAP_EASE = [0.65, 0, 0.35, 1] as const; // easeInOutCubic ≈ HeroScene easeSwap
-const HERO_SWAP_DIST = 110; // px of horizontal travel
-const HERO_SWAP_DIP = 0.9; // mid-swap scale (the zoom-out dip), ~ HeroScene's 0.18 sine dip
-const HERO_STACK_SWAP = {
-  enter: (dir: number) => ({
-    x: dir * HERO_SWAP_DIST,
-    opacity: 0,
-    scale: HERO_SWAP_DIP,
-  }),
-  center: {
-    x: 0,
-    opacity: 1,
-    scale: 1,
-    transition: {duration: HERO_SWAP_DUR, ease: HERO_SWAP_EASE},
-  },
-  exit: (dir: number) => ({
-    x: -dir * HERO_SWAP_DIST,
-    opacity: 0,
-    scale: HERO_SWAP_DIP,
-    position: 'absolute' as const,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    transition: {duration: HERO_SWAP_DUR, ease: HERO_SWAP_EASE},
-  }),
-};
-
 // Module-scoped flag that survives across remounts of the homepage during
 // a single browser session. Hard refresh tears down the JS module and
 // resets this back to false → splash plays again. Client-side nav back
@@ -299,7 +139,7 @@ let splashHasPlayedThisSession = false;
  * hooks never mount on a phone.
  */
 export default function Homepage() {
-  const {isMobileHint, featured, heroStacks} = useLoaderData<typeof loader>();
+  const {isMobileHint, featured, heroBuilds} = useLoaderData<typeof loader>();
   const [isMobile, setIsMobile] = useState(isMobileHint);
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 768px)');
@@ -309,61 +149,30 @@ export default function Homepage() {
     return () => mq.removeEventListener('change', update);
   }, []);
 
-  if (isMobile) return <MobileHome featured={featured} />;
-  return <DesktopHome heroStacks={heroStacks} />;
+  if (isMobile) return <MobileHome featured={featured} heroBuilds={heroBuilds} />;
+  return <DesktopHome heroBuilds={heroBuilds} />;
 }
 
-function DesktopHome({heroStacks}: {heroStacks: Promise<HeroStacks>}) {
-  // Coming-soon reveal cards keep their link + title but swap the price
-  // for a Soon tag (per-card handle resolved server-side on the card).
-  const productStatus = useProductStatusResolver();
-  const roadmapStatus = useRoadmapStatusResolver();
+function DesktopHome({heroBuilds}: {heroBuilds: Promise<HeroBuild[]>}) {
   const scrollRef = useRef(0);
   const rafId = useRef(0);
-  // Scroll progress reaches the DOM two ways:
-  //  - visuals (card reveal geometry, scroll-hint fade) read the `--hero-p`
-  //    custom property, written imperatively once per scroll frame below -
-  //    smooth, and NO React re-render per frame;
-  //  - interactivity gates (stack aria-hidden, per-card focus/pointer) are a
-  //    small state BITMASK that only changes when a threshold is crossed - a
-  //    handful of renders per scroll instead of one per frame. Re-rendering
-  //    the whole route at every scroll frame was the single biggest CPU cost
-  //    on slow machines. Gate and consumer read the same bit, so the two
-  //    can't disagree at a boundary the way a duplicated `> 0.6` check did.
   const heroVarRef = useRef<HTMLDivElement | null>(null);
-  // Bit 0: the buy stack is on screen (p >= 0.1). Bits 1..n: card i has
-  // revealed past its interactive point (r > 0.6 within its window).
-  const [heroGates, setHeroGates] = useState(0);
-  const stackVisibleGate = (heroGates & 1) !== 0;
-  const cardInteractiveGate = (i: number) => (heroGates & (1 << (i + 1))) !== 0;
   // Which airframe the hero shows - 5-inch or 3-inch. Toggling swaps the
   // GLB trio loaded by HeroScene.
   const [heroSize, setHeroSize] = useState<string>(DEFAULT_HERO_SIZE);
-  const reduceMotion = useReducedMotion();
-  // Slide direction for the buy-card swap, mirroring the 3D cross-slide: +1 =
-  // moving to a later registry index (new cards fly in from the right, old fly
-  // out left), −1 = the reverse. A ref because AnimatePresence reads it via the
-  // `custom` prop at exit/enter time - no extra render needed. Written by
-  // changeHeroSize before the size state updates.
-  const heroSwapDirRef = useRef(1);
-  const changeHeroSize = useCallback((next: string) => {
-    setHeroSize((prev) => {
-      if (next !== prev) {
-        const order = HERO_AIRFRAME_KEYS;
-        const d = order.indexOf(next) - order.indexOf(prev);
-        heroSwapDirRef.current = d < 0 ? -1 : 1;
-      }
-      return next;
-    });
+  const changeHeroSize = useCallback((next: string) => setHeroSize(next), []);
+  const inspectPart = useRef<((id: string) => void) | null>(null);
+  const [canInspect, setCanInspect] = useState(false);
+  const handleSeeker = useCallback((seek: ((id: string) => void) | null) => {
+    inspectPart.current = seek;
+    setCanInspect(Boolean(seek));
   }, []);
+  const [activePart, setActivePart] = useState<string | null>(null);
+  const handleBeat = useCallback((beat: {id: string} | null) => setActivePart(beat?.id.split(':')[0] ?? null), []);
   // Live drag fraction (0→1) while the size slider is dragged, else null. A ref
   // (not state) so dragging it 60×/s doesn't re-render the page - the render
   // loop reads it each frame. The slider writes it; HeroScene reads it.
   const heroScrubRef = useRef<number | null>(null);
-  // Which board the visitor is hovering on the right-side product cards, or
-  // null. A ref (not state) so hovering doesn't re-render the page; HeroScene
-  // reads it each frame to pin that board's spotlight on.
-  const heroSpotlightRef = useRef<HeroCardKey | null>(null);
   // Splash starts centered and large. It settles when the 3D scene has
   // finished loading AND a minimum wait has elapsed (so the wordmark
   // always gets a readable beat), or when a max timeout fires as a
@@ -456,63 +265,10 @@ function DesktopHome({heroStacks}: {heroStacks: Promise<HeroStacks>}) {
   // it lands it shoves the airframe selector down to make room (see the
   // selector's `top` below, which keys off this).
   const [headerIn, setHeaderIn] = useState(splashHasPlayedThisSession);
-  // Each product card's reveal window, as fractions of the walkthrough. Derived
-  // from where that card's beat actually sits in the sequence (see
-  // revealWindows below) rather than from the registry's even spacing: the
-  // walkthrough has six beats and only four of them have a card, so evenly
-  // spaced windows put the ESC card on screen while the receiver is spotlit.
-  const windowsRef = useRef<ReadonlyArray<readonly [number, number]>>(
-    HERO_CARD_WINDOWS,
-  );
   const tick = useCallback(() => {
-    const p = scrollRef.current;
-    // Smooth visuals: one style-property write, no reconciliation.
-    heroVarRef.current?.style.setProperty('--hero-p', p.toFixed(4));
-    // Discrete gates: stack visibility (0.1) and each card's interactive
-    // threshold (r > 0.6 within its reveal window), packed into a bitmask.
-    // setState is a no-op re-render-wise while the mask is unchanged.
-    const windows = windowsRef.current;
-    let gates = p >= 0.02 ? 1 : 0;
-    for (let i = 0; i < windows.length; i++) {
-      const [lo, hi] = windows[i];
-      if (p > lo + 0.6 * (hi - lo)) gates |= 1 << (i + 1);
-    }
-    setHeroGates(gates);
+    heroVarRef.current?.style.setProperty('--hero-p', scrollRef.current.toFixed(4));
     rafId.current = 0;
   }, []);
-
-  // The walkthrough's own position drives --hero-p, which is what the buy-bubble
-  // reveal cards and the scroll-hint fades are already keyed off. Previously
-  // this came from window.scrollY; the hero no longer scrolls the document, so
-  // the sequence is the source of truth.
-  // The walkthrough's beat list, once the scene reports it. Each product card
-  // reveals as ITS beat is presented, so the card the reader can click always
-  // matches the part in the spotlight.
-  const [beatIds, setBeatIds] = useState<string[]>([]);
-  const handleBeats = useCallback(
-    (b: Array<{id: string}>) => setBeatIds(b.map((x) => x.id)),
-    [],
-  );
-  const revealWindows = useMemo<ReadonlyArray<readonly [number, number]>>(() => {
-    const n = beatIds.length;
-    // Before the scene reports in, fall back to the registry's even spacing so
-    // the cards are never left permanently hidden.
-    if (n < 2) return HERO_CARD_WINDOWS;
-    return HERO_CARD_KEYS.map((key) => {
-      const j = beatIds.indexOf(key);
-      // A slot with no beat (a future part with no walkthrough step) stays shut
-      // rather than popping in at an arbitrary point.
-      if (j <= 0) return [1, 1] as const;
-      const at = j / (n - 1);
-      const prev = (j - 1) / (n - 1);
-      // Opens as the previous part leaves, complete by the time this one is
-      // presented, so the card lands with the spotlight rather than after it.
-      return [prev + 0.45 * (at - prev), at] as const;
-    });
-  }, [beatIds]);
-  useEffect(() => {
-    windowsRef.current = revealWindows;
-  }, [revealWindows]);
 
   const handleWalkthroughProgress = useCallback(
     (f: number) => {
@@ -758,37 +514,10 @@ function DesktopHome({heroStacks}: {heroStacks: Promise<HeroStacks>}) {
     };
   }, [splashSettled]);
 
-  // Per-card reveal windows (shared 0..1 progress with the 3D scene). Each
-  // product pops out of the Shop bubble in turn - FC, then ESC, then the frame
-  // last. Generated from the parts registry's slot order - the SAME array
-  // HeroScene's useFrame reads to spotlight the matching board + pull the
-  // camera back as the frame (last card) reveals, so the two sides can no
-  // longer drift apart. For the current three slots this is exactly the
-  // historical [0.08, 0.3] / [0.4, 0.62] / [0.72, 0.94] (asserted in the
-  // registry). Reversing the scroll reverses all of it.
-  const REVEAL_WINDOWS = revealWindows;
-
   return (
     <div className="homepage" ref={heroVarRef}>
 
-      {/*
-        Warm the hero cards' PDPs (the live handles the 3D part hotspots
-        navigate to) so clicking a part is an instant SPA transition with its
-        loader data already in cache. The FC hotspot targets openfc-lite -
-        the live product; the old `openfc` handle is archived in Shopify.
-      */}
-      <PrefetchPageLinks page="/products/openfc-lite" />
-      <PrefetchPageLinks page="/products/openesc" />
-      <PrefetchPageLinks page="/products/openmotor" />
-      <PrefetchPageLinks page="/products/openframe" />
-
-      {/*
-        Scroll spacer - gives us HERO_SPACER_VH of scroll to drive the
-        phased animation. The sticky child below pins the 3D scene + UI to
-        the viewport while the user scrolls through the spacer. Once the
-        user scrolls past the bottom of the spacer the sticky releases and
-        the legal footer (in normal document flow below) comes into view.
-      */}
+      {/* One viewport holds the walkthrough and build guide. */}
       <div className="relative" style={{height: `${heroSpacerVh}vh`}}>
         <div className="sticky top-0 h-screen overflow-hidden pointer-events-none">
           {/* Full-screen 3D - pinned behind everything via sticky parent */}
@@ -817,8 +546,10 @@ function DesktopHome({heroStacks}: {heroStacks: Promise<HeroStacks>}) {
                 size={heroSize}
                 onLoad={handleModelLoad}
                 onReady={handleSceneReady}
+                onBuilding={handleSceneBuilding}
                 onProgress={handleWalkthroughProgress}
-                onBeats={handleBeats}
+                onSeeker={handleSeeker}
+                onBeat={handleBeat}
               />
             </SceneErrorBoundary>
             {/* Dim overlay - only covers the 3D scene, not the wordmark.
@@ -911,8 +642,8 @@ function DesktopHome({heroStacks}: {heroStacks: Promise<HeroStacks>}) {
                 className="hero-load-overflow__text"
               />
               <Link
-                prefetch="viewport"
-                to="/collections/all"
+                prefetch="intent"
+                to="/products"
                 className="hero-load-overflow__skip"
                 onClick={() => setSplashSettled(true)}
               >
@@ -948,150 +679,19 @@ function DesktopHome({heroStacks}: {heroStacks: Promise<HeroStacks>}) {
             </svg>
           </a>
 
-          {/* Buy bubble - bottom-right. The Shop button is the anchor; as the
-              user scrolls, the on-screen hardware (FC → ESC → Frame) pops out
-              of it one by one, the stack growing upward. Each card's reveal is
-              driven off --hero-p and mirrors the spotlight in HeroScene.
-              Scrolling back up retracts them in reverse. */}
           <div
-            className={`hero-buy${splashSettled ? ' is-visible' : ''}`}
+            className={`hero-buy hero-buy--guide${splashSettled ? ' is-visible' : ''}`}
+            inert={!splashSettled}
             style={{opacity: splashSettled ? 1 : 0}}
           >
-            <Suspense fallback={null}>
-              <Await resolve={heroStacks}>
-                {(stacks) => {
-                  // The active size's resolved cards, already in [FC, ESC, Motor, Frame]
-                  // order with the right per-size variant URL + price baked in by
-                  // the loader. Index maps directly to the 3D board it spotlights.
-                  const items = stacks[heroSize] ?? [];
-                  const dir = heroSwapDirRef.current;
-                  return (
-                    <div className="hero-buy-swap">
-                      <AnimatePresence custom={dir} initial={false} mode="sync">
-                        <motion.div
-                          key={heroSize}
-                          className="hero-buy-stack"
-                          aria-hidden={!stackVisibleGate}
-                          custom={dir}
-                          variants={HERO_STACK_SWAP}
-                          initial={reduceMotion ? false : 'enter'}
-                          animate="center"
-                          exit={reduceMotion ? undefined : 'exit'}
-                        >
-                          {items.slice(0, HERO_CARD_KEYS.length).map((card, i) => {
-                            const [lo, hi] = REVEAL_WINDOWS[i] ?? [1, 1];
-                            // Interactivity gate only - the reveal GEOMETRY
-                            // (max-height/opacity/transform) is CSS driven by
-                            // --hero-p + the per-card --lo/--win below, so it
-                            // stays per-frame smooth without React renders. The
-                            // gate bit is computed in tick(), the single place
-                            // that owns the thresholds.
-                            const interactive = cardInteractiveGate(i);
-                            const setSpot = (v: HeroCardKey | null) => {
-                              heroSpotlightRef.current = v;
-                            };
-                            // A concept product (planned / in-progress) has
-                            // no settled render or name to preview; its slot
-                            // stays empty so the other cards keep their
-                            // reveal windows.
-                            if (
-                              isConceptFor(
-                                card.handle,
-                                roadmapStatus(card.handle),
-                              )
-                            )
-                              return null;
-                            return (
-                              <Link
-                                key={card.boardKey}
-                                to={card.url}
-                                prefetch="intent"
-                                className="hero-reveal-card"
-                                style={
-                                  {
-                                    '--lo': lo,
-                                    '--win': hi - lo,
-                                    pointerEvents: interactive
-                                      ? 'auto'
-                                      : 'none',
-                                  } as React.CSSProperties
-                                }
-                                tabIndex={interactive ? undefined : -1}
-                                aria-hidden={!interactive}
-                                onMouseEnter={() => setSpot(card.boardKey)}
-                                onMouseLeave={() => setSpot(null)}
-                                onFocus={() => setSpot(card.boardKey)}
-                                onBlur={() => setSpot(null)}
-                              >
-                                <span className="hero-reveal-media">
-                                  {card.image?.url ? (
-                                    <img
-                                      src={card.image.url}
-                                      alt={card.image.altText ?? ''}
-                                      loading="lazy"
-                                      decoding="async"
-                                    />
-                                  ) : (
-                                    <span
-                                      className="hero-reveal-ph"
-                                      aria-hidden="true"
-                                    />
-                                  )}
-                                </span>
-                                <span className="hero-reveal-text">
-                                  <span className="hero-reveal-title">
-                                    {card.title}
-                                  </span>
-                                  {card.productType ? (
-                                    <span className="hero-reveal-sub">
-                                      {card.productType}
-                                    </span>
-                                  ) : null}
-                                </span>
-                                {!isPurchasableStatus(
-                                  productStatus(card.handle),
-                                ) ? (
-                                  <Txt
-                                    id="home.reveal_soon"
-                                    as="span"
-                                    className="hero-reveal-soon"
-                                  />
-                                ) : card.price ? (
-                                  <span className="hero-reveal-price">
-                                    {formatPrice(
-                                      card.price.amount,
-                                      card.price.currencyCode,
-                                    )}
-                                  </span>
-                                ) : null}
-                              </Link>
-                            );
-                          })}
-                        </motion.div>
-                      </AnimatePresence>
-                    </div>
-                  );
+            <Suspense fallback={<Link to="/products" className="hero-build-loading">Loading build…</Link>}>
+              <Await resolve={heroBuilds}>
+                {(builds) => {
+                  const build = builds.find(item => item.size === heroSize);
+                  return build ? <HeroBuildGuide key={build.id} build={build} onInspect={canInspect ? id => inspectPart.current?.(id) : undefined} activePart={activePart} /> : <Link to="/products" className="hero-build-loading">Browse parts</Link>;
                 }}
               </Await>
             </Suspense>
-            <Link
-              prefetch="viewport"
-              to="/collections/all"
-              className="hero-action-primary hero-buy-btn"
-            >
-              <Txt id="home.shop" />
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-              >
-                <line x1="5" y1="12" x2="19" y2="12" />
-                <polyline points="12 5 19 12 12 19" />
-              </svg>
-            </Link>
           </div>
 
           {/* Airframe size toggle - swaps the 5" / 3" GLB trio in the hero.
@@ -1099,10 +699,8 @@ function DesktopHome({heroStacks}: {heroStacks: Promise<HeroStacks>}) {
           <div
             className="absolute left-1/2 -translate-x-1/2 z-20 pointer-events-auto"
             style={{
-              // Springs down from the top edge when the splash settles, resting
-              // high (2.5rem). When the header bar lands ~2s later it shoves the
-              // selector down to 6rem - the spring `top` transition sells the push.
-              top: !splashSettled ? '-3rem' : headerIn ? '6rem' : '2.5rem',
+              // Keep the size switch below the header, including repeat visits.
+              top: !splashSettled ? '-3rem' : 'calc(var(--header-height) + 1.5rem)',
               opacity: splashSettled ? 1 : 0,
               transition:
                 'top 0.7s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease',
