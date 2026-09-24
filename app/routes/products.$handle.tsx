@@ -1634,11 +1634,12 @@ function ProductPage() {
   const vatNote = paysEuVat(rootData?.visitorCountry ?? null)
     ? say('product-chrome.buy_vat_note', 'incl. VAT')
     : null;
-  // Consumers buy direct only in the open EU countries. Elsewhere (unless
-  // blocked) the buy button is a status line (AddToCartButton): outside the
-  // EU "EU consumer orders only" with a link to the trade page, in an EU
-  // country not open yet "Opening in <country> soon"; both with the
-  // launch-news signup instead of the ship date.
+  // Consumers buy direct only in the open EU countries. Elsewhere the buy
+  // button is a status line (AddToCartButton): outside the EU "EU consumer
+  // orders only" with a link to the trade page, in an EU country not open
+  // yet "Orders are not open for <country>"; both with the launch-news
+  // signup instead of the ship date. A blocked country gets "Not available
+  // in <country>" and the End-Use Policy link, with no signup.
   const notDirect = notSoldDirect(rootData?.visitorCountry ?? null);
   // Coming-soon buy module: the price/stock/add-to-cart block becomes a
   // COMING SOON plate + notify-at-launch signup (same newsletter action,
@@ -1751,7 +1752,13 @@ function ProductPage() {
         maxQuantityNote={maxQuantityNote}
         onQuantityChange={isBundle || notDirect ? undefined : setQuantity}
       />
-      {notDirect ? (
+      {notDirect === 'blocked' ? (
+        <p className="product-buy-ship">
+          <Link prefetch="intent" to="/end-use" className="product-buy-terms-link">
+            {say('product-chrome.buy_blocked_link', 'End-Use Policy')}
+          </Link>
+        </p>
+      ) : notDirect ? (
         <>
           {notDirect === 'shops' ? (
             <p className="product-buy-ship">

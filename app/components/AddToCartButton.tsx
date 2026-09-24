@@ -11,9 +11,16 @@ import {beginCartAdd, endCartAdd, isCartAddBusy, subscribeCartAdd} from './cart-
 
 /** What shows in place of a buy button for a visitor who cannot buy
  *  direct: outside the EU "EU consumer orders only", in an EU country not
- *  open yet "Opening in Germany soon". Null where the button shows. */
+ *  open yet "Orders are not open for Germany", in a blocked country "Not
+ *  available in Russia". Null where the button shows. */
 export function notSoldNote(country: string | null): string | null {
   const reason = notSoldDirect(country);
+  if (reason === 'blocked') {
+    return (copyText('product-chrome.buy_blocked') ?? 'Not available in {country}').replace(
+      '{country}',
+      countryName(country ?? ''),
+    );
+  }
   if (reason === 'shops') return copyText('product-chrome.buy_shops_only') ?? 'EU consumer orders only';
   if (reason === 'closed') {
     return (copyText('product-chrome.buy_closed') ?? 'Orders are not open for {country}').replace(

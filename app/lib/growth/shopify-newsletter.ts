@@ -110,7 +110,9 @@ export async function subscribeWithShopify(
     const tags = [
       'newsletter',
       ...(productHandle ? [`notify-${productHandle}`] : []),
-      ...(country && notSoldDirect(country) ? [`country-${country.trim().toUpperCase()}`] : []),
+      ...(country && ['shops', 'closed'].includes(notSoldDirect(country) ?? '')
+        ? [`country-${country.trim().toUpperCase()}`]
+        : []),
     ];
     if (existing) {
       const written = await admin<{

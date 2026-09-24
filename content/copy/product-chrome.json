@@ -534,5 +534,7 @@
   "gpsr_other_languages": "Other EU languages",
   "buy_shops_only": "EU consumer orders only",
   "buy_shops_trade": "EU or US retailer enquiries",
-  "buy_closed": "Orders are not open for {country}"
+  "buy_closed": "Orders are not open for {country}",
+  "buy_blocked": "Not available in {country}",
+  "buy_blocked_link": "End-Use Policy"
 }

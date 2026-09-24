@@ -116,8 +116,8 @@ export function CartAddedDialog() {
   // applies.
   const visitor = rootData?.visitorCountry ?? null;
   const vatIncluded = paysEuVat(visitor);
-  // Outside the EU, and in an EU country not open yet, checkout is not
-  // offered, as in the cart.
+  // Outside the EU, in an EU country not open yet and in a blocked
+  // country, checkout is not offered, as in the cart.
   const notDirect = notSoldDirect(visitor);
 
   // The parts that complete the build, judged on the cart as it was when
@@ -288,7 +288,12 @@ export function CartAddedDialog() {
           {/* Checkout is a plain form post: the cart action checks every line
               again and redirects to Shopify checkout, or back to /cart with
               a notice. */}
-          {notDirect === 'shops' ? (
+          {notDirect === 'blocked' ? (
+            <p className="cart-added-parcel" role="note">
+              {t('checkout_blocked', 'Not available in {country}.', {country: countryName(visitor ?? '')})}{' '}
+              <Link to="/end-use">{t('checkout_blocked_link', 'End-Use Policy')}</Link>
+            </p>
+          ) : notDirect === 'shops' ? (
             <p className="cart-added-parcel" role="note">
               {t('checkout_shops', 'Direct consumer orders are limited to the EU.', {country: countryName(visitor ?? '')})}{' '}
               <Link to="/wholesale">{t('checkout_shops_trade', 'EU or US retailer enquiries')}</Link>

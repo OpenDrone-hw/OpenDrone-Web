@@ -71,13 +71,13 @@ export function soldThroughShops(country: string | null): boolean {
   return shippingQuote(country)?.kind === 'shops';
 }
 
-/** Why a visitor from this country cannot buy direct, when the page offers
- *  something instead: `shops` (outside the EU) or `closed` (an EU country
- *  not open yet). Null for a country sold direct, a blocked one (the cart
- *  refuses it) and an unknown one. */
-export function notSoldDirect(country: string | null): 'shops' | 'closed' | null {
+/** Why a visitor from this country cannot buy direct: `shops` (outside
+ *  the EU), `closed` (an EU country not open yet) or `blocked` (not sold
+ *  at all, `BLOCKED_COUNTRIES`). Null for a country sold direct and an
+ *  unknown one. */
+export function notSoldDirect(country: string | null): 'shops' | 'closed' | 'blocked' | null {
   const kind = shippingQuote(country)?.kind;
-  return kind === 'shops' || kind === 'closed' ? kind : null;
+  return kind === 'shops' || kind === 'closed' || kind === 'blocked' ? kind : null;
 }
 
 /** Every ISO 3166-1 country code. */

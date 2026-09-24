@@ -57,7 +57,8 @@ describe('shippingQuote', () => {
     assert.equal(shippingQuote('DE', file('DE12345678'))?.kind, 'direct');
     assert.equal(shippingQuote('NL', file(null))?.kind, 'direct');
     assert.equal(notSoldDirect('US'), 'shops');
-    assert.equal(notSoldDirect('RU'), null);
+    assert.equal(notSoldDirect('RU'), 'blocked');
+    assert.equal(notSoldDirect('BY'), 'blocked');
     assert.equal(notSoldDirect(null), null);
   });
 
