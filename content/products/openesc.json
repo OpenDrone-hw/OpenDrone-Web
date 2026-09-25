@@ -716,14 +716,52 @@
     "Burst",
     "Weight"
   ],
-  "connectors": [
-    [
-      "FC plug",
-      "JST-SH 8-pin, Betaflight order: 1 VBAT, 2 GND, 3 current, 4 not connected, 5-8 motors 1-4. Telemetry runs over bidir DShot."
-    ],
-    [
-      "Other FCs",
-      "Same 8-pin order, or re-pin the cable."
-    ]
+  "plugs": [
+    {
+      "name": "FC plug",
+      "kind": "jst-sh",
+      "pins": [
+        {
+          "label": "VBAT",
+          "kind": "power",
+          "title": "Battery voltage"
+        },
+        {
+          "label": "GND",
+          "kind": "ground",
+          "title": "Ground"
+        },
+        {
+          "label": "CUR",
+          "kind": "signal",
+          "title": "Current sensor"
+        },
+        {
+          "label": "NC",
+          "kind": "nc",
+          "title": "Not connected. Telemetry runs over bidir DShot."
+        },
+        {
+          "label": "M1",
+          "kind": "motor",
+          "title": "Motor 1"
+        },
+        {
+          "label": "M2",
+          "kind": "motor",
+          "title": "Motor 2"
+        },
+        {
+          "label": "M3",
+          "kind": "motor",
+          "title": "Motor 3"
+        },
+        {
+          "label": "M4",
+          "kind": "motor",
+          "title": "Motor 4"
+        }
+      ]
+    }
   ]
 }

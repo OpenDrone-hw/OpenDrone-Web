@@ -279,10 +279,9 @@ export type VariantContent = {
   /** One short line over the gallery when this tier shows another tier's
    *  image, e.g. "Render of the 5-inch frame". */
   imageNote?: string;
-  /** Per-tier plug and pin-order rows. They replace the product's
-   *  `connectors` while this tier is picked. From the board repo's design
-   *  notes. */
-  connectors?: Array<[string, string]>;
+  /** Per-tier plugs. They replace the product's `plugs` while this tier
+   *  is picked. */
+  plugs?: Plug[];
 };
 
 export type ProductContent = {
@@ -434,12 +433,45 @@ export type ProductContent = {
   /** The mono line under the product name, for a product without
    *  versions or as the default for versions without their own. */
   subtitle?: string;
-  /** Plug and pin-order rows shown under the spec table, from the board
-   *  repo's design notes. Not part of the README-mirrored `specs`. */
-  connectors?: Array<[string, string]>;
-  /** One line under `connectors`. */
-  connectorsNote?: string;
+  /** Plugs, solder-pad groups and power rails drawn under the spec
+   *  table, pin order checked against the board schematic. Not part of the
+   *  README-mirrored `specs`. */
+  plugs?: Plug[];
 };
+
+/** What a pin carries; sets its colour in the plug drawing. */
+export type PlugPinKind = 'power' | 'ground' | 'signal' | 'motor' | 'nc';
+
+/** One contact, numbered by position, pin 1 first. */
+export type PlugPin = {
+  /** Short silkscreen-style label under the pin: "VBAT", "GND", "M1". */
+  label: string;
+  kind: PlugPinKind;
+  /** The full name, shown as the pin's tooltip: "Battery voltage". */
+  title?: string;
+};
+
+/** One regulated output of an on-board supply. */
+export type PlugRail = {
+  voltage: string;
+  /** "switchable", "always-on". */
+  mode: string;
+  current: string;
+};
+
+/**
+ * One entry of the plug drawings: a JST-SH plug (`pins` in pin order) or a
+ * set of power rails (`rails`).
+ */
+export type Plug = {
+  name: string;
+  kind: 'jst-sh' | 'rail';
+  pins?: PlugPin[];
+  rails?: PlugRail[];
+};
+
+export const PLUG_KINDS: ReadonlyArray<Plug['kind']> = ['jst-sh', 'rail'];
+export const PLUG_PIN_KINDS: readonly PlugPinKind[] = ['power', 'ground', 'signal', 'motor', 'nc'];
 
 /*
  * Provenance and open items.

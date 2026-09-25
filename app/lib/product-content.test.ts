@@ -16,7 +16,10 @@ import {
   ACCESSORY_SPECS,
   shortShipPromise,
   shipMonth,
+  PLUG_KINDS,
+  PLUG_PIN_KINDS,
   type BoxItem,
+  type Plug,
   type ChapterPin,
   type DownloadAsset,
   type ProductContent,
@@ -118,6 +121,35 @@ function assertPins(pins: ChapterPin[], where: string) {
   }
 }
 
+function assertPlugs(plugs: Plug[], where: string) {
+  assert.ok(Array.isArray(plugs), `${where}: plugs must be an array`);
+  for (const [i, plug] of plugs.entries()) {
+    const at = `${where}: plugs[${i}]`;
+    assert.equal(typeof plug.name, 'string', `${at}.name`);
+    assert.notEqual(plug.name, '', `${at}.name is empty`);
+    assert.ok(PLUG_KINDS.includes(plug.kind), `${at}.kind "${plug.kind}"`);
+    if (plug.kind === 'rail') {
+      assert.ok(plug.rails?.length, `${at}: a rail entry needs rails`);
+      assert.equal(plug.pins, undefined, `${at}: a rail entry has no pins`);
+      for (const [j, rail] of plug.rails.entries()) {
+        for (const key of ['voltage', 'mode', 'current'] as const) {
+          assert.equal(typeof rail[key], 'string', `${at}.rails[${j}].${key}`);
+          assert.notEqual(rail[key], '', `${at}.rails[${j}].${key} is empty`);
+        }
+      }
+      continue;
+    }
+    assert.ok(plug.pins && plug.pins.length >= 2, `${at}: a plug needs its pins`);
+    assert.equal(plug.rails, undefined, `${at}: a plug has no rails`);
+    for (const [j, pin] of plug.pins.entries()) {
+      assert.equal(typeof pin.label, 'string', `${at}.pins[${j}].label`);
+      assert.notEqual(pin.label, '', `${at}.pins[${j}].label is empty`);
+      assert.ok(PLUG_PIN_KINDS.includes(pin.kind), `${at}.pins[${j}].kind "${pin.kind}"`);
+      if (pin.title !== undefined) assert.equal(typeof pin.title, 'string', `${at}.pins[${j}].title`);
+    }
+  }
+}
+
 function assertVariant(variant: VariantContent, where: string) {
   assert.ok(Array.isArray(variant.highlights), `${where}: highlights`);
   for (const [i, row] of variant.highlights.entries()) {
@@ -128,6 +160,7 @@ function assertVariant(variant: VariantContent, where: string) {
   if (variant.specs) assertSpecRows(variant.specs, where, true);
   if (variant.inTheBox) assertBoxItems(variant.inTheBox, where);
   if (variant.pins) assertPins(variant.pins, where);
+  if (variant.plugs) assertPlugs(variant.plugs, where);
 }
 
 /** The fields {@link ProductContent} declares without `?`. */
@@ -208,6 +241,15 @@ describe('product content shape', () => {
         for (const [i, line] of wit.needs.entries()) {
           assert.equal(typeof line, 'string', `${handle}: needs[${i}]`);
           assert.notEqual(line, '', `${handle}: needs[${i}] is empty`);
+        }
+      });
+
+      it('has well-formed plugs and no legacy connector rows', () => {
+        if (content.plugs) assertPlugs(content.plugs, handle);
+        const legacy = (o: object) => ['connectors', 'connectorsNote'].filter((k) => k in o);
+        assert.deepEqual(legacy(content), [], `${handle}: connectors were replaced by plugs`);
+        for (const [key, variant] of Object.entries(content.variants ?? {})) {
+          assert.deepEqual(legacy(variant), [], `${handle}/${key}: connectors were replaced by plugs`);
         }
       });
 
@@ -402,5 +444,32 @@ describe('storefront spec rows and placeholders', () => {
     assert.ok(handle && a);
     assert.deepEqual(pageContent(handle).specs, a.specs);
     assert.deepEqual(pageContent('no-such-handle').specs, []);
+  });
+});
+
+describe('stack plug pin order', () => {
+  // The FC's ESC plug and the ESC's FC plug are the two ends of one cable:
+  // every pin but 4 carries the same signal (checked against both
+  // schematics). Pin 4 is ESC telemetry on the FC and not connected on the
+  // ESC, which sends telemetry over bidir DShot.
+  it('matches between the FC and the ESC', () => {
+    const esc = PRODUCT_CONTENT.openesc?.plugs?.find((p) => p.name === 'FC plug');
+    const fcs = [
+      PRODUCT_CONTENT['openfc-lite']?.plugs,
+      ...Object.values(PRODUCT_CONTENT['openfc-lite']?.variants ?? {}).map((v) => v.plugs),
+    ]
+      .filter((list): list is Plug[] => Boolean(list))
+      .map((list) => list.find((p) => p.name === 'ESC plug'));
+    assert.ok(esc?.pins, 'openesc has an FC plug');
+    assert.ok(fcs.length > 0);
+    for (const fc of fcs) {
+      assert.ok(fc?.pins, 'openfc-lite has an ESC plug');
+      assert.equal(fc.pins.length, esc.pins.length);
+      fc.pins.forEach((pin, i) => {
+        if (i === 3) return;
+        assert.equal(pin.label, esc.pins![i].label, `pin ${i + 1}`);
+      });
+      assert.equal(esc.pins[3].kind, 'nc');
+    }
   });
 });

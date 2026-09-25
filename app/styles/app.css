@@ -4973,6 +4973,13 @@ section.chapter[data-centered] .chapter-body-col {
       color-mix(in srgb, var(--color-gold) 50%, transparent),
       color-mix(in srgb, var(--color-gold) 30%, transparent)
     );
+    /* A gap where the open-source link crosses the line (measured in JS). */
+    mask-image: linear-gradient(
+      180deg,
+      #000 0 var(--repo-gap-a, 0px),
+      transparent var(--repo-gap-a, 0px) var(--repo-gap-b, 0px),
+      #000 var(--repo-gap-b, 0px)
+    );
   }
   .product-page:has(.chapter[data-repo-scope]) .open-source-card--github {
     border: 2px solid color-mix(in srgb, var(--color-gold) 30%, transparent);
@@ -17976,23 +17983,209 @@ html.hero-header-in .homepage-layout .site-header {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-.spec-connectors {
+/* Plug drawings under the spec table (app/components/PlugDiagrams.tsx):
+   housings and pads in the footer sheet's gold ink, contacts coloured by
+   what they carry. */
+.plugs {
+  --ink: var(--color-gold-text);
+  --ink-line: color-mix(in srgb, var(--color-gold) 28%, transparent);
+  --pin-power: var(--color-error);
+  --pin-ground: var(--color-text-dim);
+  --pin-signal: #6ea8fe;
+  --pin-motor: var(--color-green);
+  --pin-nc: var(--color-text-dim);
   margin-top: var(--sp-6);
 }
-.spec-connectors-title {
-  margin: 0 0 var(--sp-3);
+html.light .plugs {
+  --ink-line: color-mix(in srgb, var(--color-gold-text) 35%, transparent);
+  --pin-signal: #1f5fbf;
+}
+.plugs-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2) var(--sp-4);
+  margin-bottom: var(--sp-3);
+}
+.plugs-title {
+  margin: 0;
   font-family: var(--font-sans);
   font-size: var(--fs-md);
   font-weight: 600;
   color: var(--color-text);
 }
-.spec-connectors .spec-table {
-  grid-template-columns: 1fr;
-}
-.spec-connectors-note {
-  margin: var(--sp-3) 0 0;
-  font-size: var(--fs-sm);
+.plugs-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
   color: var(--color-text-muted);
+}
+.plugs li {
+  margin: 0;
+}
+.plugs-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.plugs-swatch {
+  width: 12px;
+  height: 8px;
+  border-radius: 1px;
+  background: var(--pin);
+}
+.plugs-legend .plug-pin--nc .plugs-swatch {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--pin-nc) 0 1px,
+    transparent 1px 3px
+  );
+  outline: 1px solid var(--pin-nc);
+  outline-offset: -1px;
+}
+.plugs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+  gap: var(--sp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.plug-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px 14px 12px;
+  border: 1px solid var(--ink-line);
+}
+.plug-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 12px;
+}
+.plug-name {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+.plug-meta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink);
+  opacity: 0.85;
+}
+.plug-svg {
+  display: block;
+  height: auto;
+  margin-inline: auto;
+  overflow: visible;
+}
+.plug-line {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.25;
+  vector-effect: non-scaling-stroke;
+}
+.plug-line--thin {
+  stroke-width: 1;
+  opacity: 0.7;
+}
+.plug-line--sep {
+  stroke-width: 1;
+  opacity: 0.25;
+}
+.plug-marker {
+  fill: var(--ink);
+}
+.plug-num {
+  fill: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-anchor: middle;
+}
+.plug-label {
+  fill: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  text-anchor: middle;
+}
+.plug-pin--power { --pin: var(--pin-power); }
+.plug-pin--ground { --pin: var(--pin-ground); }
+.plug-pin--signal { --pin: var(--pin-signal); }
+.plug-pin--motor { --pin: var(--pin-motor); }
+.plug-pin--nc { --pin: var(--pin-nc); }
+.plug-contact {
+  fill: var(--pin);
+  stroke: var(--pin);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.plug-pin--nc .plug-contact {
+  fill: none;
+  stroke-dasharray: 2 2;
+}
+.plug-hatch {
+  stroke: var(--pin-nc);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.plug-pin--nc .plug-label {
+  fill: var(--color-text-dim);
+}
+.plug-pin:hover .plug-contact {
+  stroke: var(--color-text);
+  stroke-width: 2;
+}
+.plug-pin:hover .plug-label {
+  fill: var(--ink);
+}
+.plug-rails {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.plug-rail {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: baseline;
+  gap: 0 10px;
+  padding: 6px 12px 7px 10px;
+  border: 1px solid var(--ink-line);
+  border-left: 3px solid var(--pin-power);
+}
+.plug-rail-v {
+  grid-row: span 2;
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+.plug-rail-mode,
+.plug-rail-a {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--color-text-muted);
+}
+.plug-rail-a {
+  color: var(--color-text);
 }
 .chapter-title {
   font-size: var(--fs-xl);

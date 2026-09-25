@@ -34,6 +34,7 @@ import {ProductForm} from '~/components/ProductForm';
 import {RelatedProducts} from '~/components/RelatedProducts';
 import {FirmwareSupport} from '~/components/FirmwareSupport';
 import {VariantLadder} from '~/components/VariantLadder';
+import {PlugDiagrams} from '~/components/PlugDiagrams';
 import {BoardArt} from '~/components/BoardArt';
 import {SchematicViewer} from '~/components/SchematicViewer';
 import type {FrameViewerProps} from '~/components/FrameViewer';
@@ -710,9 +711,25 @@ function ProductPage() {
       if (c && h > 8 && h < 400 && x > 0 && x < s.width) {
         scope.style.setProperty('--repo-lead-x', `${Math.round(x)}px`);
         scope.style.setProperty('--repo-lead-h', `${Math.round(h)}px`);
+        // The "Open source at OpenDrone" link sits in the line's path: break
+        // the line around the link text instead of striking through it.
+        const link = document.querySelector<HTMLElement>('.open-source-story-link a');
+        const l = link ? layoutBox(link) : null;
+        const lineX = s.left + x;
+        const lineTop = c.top + c.height;
+        if (l && lineX >= l.left - 12 && lineX <= l.left + l.width + 12) {
+          const pad = 12;
+          scope.style.setProperty('--repo-gap-a', `${Math.max(0, Math.round(l.top - lineTop - pad))}px`);
+          scope.style.setProperty('--repo-gap-b', `${Math.round(l.top + l.height - lineTop + pad)}px`);
+        } else {
+          scope.style.removeProperty('--repo-gap-a');
+          scope.style.removeProperty('--repo-gap-b');
+        }
       } else {
         scope.style.removeProperty('--repo-lead-x');
         scope.style.removeProperty('--repo-lead-h');
+        scope.style.removeProperty('--repo-gap-a');
+        scope.style.removeProperty('--repo-gap-b');
       }
     };
     const t = setTimeout(measure, 900);
@@ -977,8 +994,9 @@ function ProductPage() {
   const subtitle = activeVariant?.subtitle ?? content.subtitle ?? null;
   const sheet = specSheet(content);
   const mergedBox = [...content.inTheBox, ...(activeVariant?.inTheBox ?? [])];
-  // Plug and pin-order rows: the tier's own list wins over the product's.
-  const activeConnectors = activeVariant?.connectors ?? content.connectors ?? [];
+  // Plug drawings: the tier's own list wins over the product's.
+  const activePlugs = activeVariant?.plugs ?? content.plugs ?? [];
+  const plugsEditBase = activeVariant?.plugs ? `variants.${activeTier}.plugs` : 'plugs';
   // Printed circuit boards: the provenance card (designed in Leuven,
   // assembled in Shenzhen) describes these and nothing else.
   const isBoard =
@@ -2522,25 +2540,13 @@ function ProductPage() {
               </div>
             ) : null}
           </div>
-          {activeConnectors.length ? (
-            <div className="spec-connectors">
-              <h3 className="spec-connectors-title">
-                {say('product-chrome.connectors_title', 'Plugs and pin order')}
-              </h3>
-              <dl className="spec-table">
-                {activeConnectors.map(([k, v]) => (
-                  <div key={k}>
-                    <dt>{k}</dt>
-                    <dd>{v}</dd>
-                  </div>
-                ))}
-              </dl>
-              {content.connectorsNote ? (
-                <p className="spec-connectors-note" {...prodEdit('connectorsNote')}>
-                  {content.connectorsNote}
-                </p>
-              ) : null}
-            </div>
+          {activePlugs.length ? (
+            <PlugDiagrams
+              plugs={activePlugs}
+              editBase={plugsEditBase}
+              edit={prodEdit}
+              title={say('product-chrome.connectors_title', 'Plugs and pin order')}
+            />
           ) : null}
         </Chapter>
       );
