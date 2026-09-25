@@ -777,20 +777,24 @@ html.light .po-card-cta {
 }
 .footer-sheet-heading::after { content: ':'; }
 
-/* NOTES on the left, the drawing view in the empty space to their right. */
-.footer-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 15rem); gap: 48px; align-items: start; padding-bottom: 28px; }
-/* Drawing view: very low contrast. */
+/* NOTES take the sheet's full width. */
+.footer-top { padding-bottom: 28px; }
+/* Drawing view: very low contrast, in the open area left of the title block. */
 .footer-view {
+  flex: none;
+  width: 200px;
+  margin: 0 0 16px 8px;
   color: var(--color-gold-text);
-  opacity: 0.22;
+  opacity: 0.24;
   pointer-events: none;
 }
+.footer-foot-left { display: flex; align-items: flex-end; gap: 40px; min-width: 0; }
 .footer-view svg { display: block; width: 100%; height: auto; overflow: visible; }
 .footer-view-outline { fill: none; stroke: currentColor; stroke-width: 1; }
 .footer-view-dim { fill: none; stroke: currentColor; stroke-width: 0.75; opacity: 0.8; }
 .footer-view-text { fill: currentColor; font-family: var(--font-mono); }
 .footer-view-label {
-  margin-top: 4px;
+  margin-top: 2px;
   text-align: center;
   font-family: var(--font-mono);
   font-size: 9px;
@@ -816,7 +820,7 @@ html.light .po-card-cta {
 }
 
 /* The number sits level with the newsletter's first line. */
-.footer-note--newsletter .newsletter-signup { align-items: start; padding-top: 0; }
+.footer-note--newsletter .newsletter-signup { align-items: start; padding: 0; }
 .footer-tb-value a { text-decoration: underline; text-underline-offset: 2px; }
 .footer-tb-value a:hover { color: var(--color-gold-text); }
 
@@ -884,7 +888,6 @@ html.light .po-card-cta {
 
 @media (max-width: 1023px) {
   .footer-parts-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .footer-top { grid-template-columns: minmax(0, 1fr); }
   .footer-view { display: none; }
 }
 @media (max-width: 767px) {
@@ -1082,13 +1085,19 @@ html.light .po-card-cta {
 @media (max-width: 767px) {
   .product-silhouette-art { width: min(149.6vw, 119svh); opacity: 0.02; }
 }
-/* A board export is the part itself: it reads clearly behind the table while
-   the spec text keeps its contrast. */
+/* A board export is the part itself: it reads clearly around the table, and
+   a scrim over the table's columns quiets it under the spec text. */
 .product-silhouette[data-board] .product-silhouette-art { opacity: 0.1; }
 html.light .product-silhouette[data-board] .product-silhouette-art { opacity: 0.12; }
+.product-silhouette[data-board] .product-silhouette-art {
+  -webkit-mask-image: linear-gradient(90deg, #000 12%, rgb(0 0 0 / 0.4) 26%, rgb(0 0 0 / 0.4) 74%, #000 88%);
+  mask-image: linear-gradient(90deg, #000 12%, rgb(0 0 0 / 0.4) 26%, rgb(0 0 0 / 0.4) 74%, #000 88%);
+}
 @media (max-width: 767px) {
-  .product-silhouette[data-board] .product-silhouette-art { opacity: 0.08; }
-  html.light .product-silhouette[data-board] .product-silhouette-art { opacity: 0.1; }
+  /* The table spans the phone's width: no clear sides, so a lower flat value. */
+  .product-silhouette[data-board] .product-silhouette-art { opacity: 0.06; }
+  html.light .product-silhouette[data-board] .product-silhouette-art { opacity: 0.08; }
+  .product-silhouette[data-board] .product-silhouette-art { -webkit-mask-image: none; mask-image: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .product-silhouette-light { opacity: 0.45 !important; }

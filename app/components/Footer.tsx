@@ -356,7 +356,6 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
                   </li>
                 </ol>
               </div>
-              <DrawingView />
             </div>
 
             {/* PARTS LIST: every link group, complete. */}
@@ -453,17 +452,20 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
               </div>
             </div>
 
-            {/* The sheet foot: languages and copyright on the left, the
+            {/* The sheet foot: the drawing view, languages and copyright on the left, the
                 title block with the seller's legal identity on the right.
                 Year and legal entity stay in code: one is the clock, the
                 other is the identity in `company.ts` that also feeds the
                 JSON-LD. */}
             <div className="footer-foot">
-              <div className="footer-foot-meta">
-                <LegalLanguages className="footer-small text-[var(--color-text-muted)]" />
-                <p className="footer-copyright">
-                  &copy; {new Date().getFullYear()} {company.name}
-                </p>
+              <div className="footer-foot-left">
+                <DrawingView />
+                <div className="footer-foot-meta">
+                  <LegalLanguages className="footer-small text-[var(--color-text-muted)]" />
+                  <p className="footer-copyright">
+                    &copy; {new Date().getFullYear()} {company.name}
+                  </p>
+                </div>
               </div>
               <dl className="footer-tb">
                 <TitleCell label="chrome.footer_tb_title" span={6}>
