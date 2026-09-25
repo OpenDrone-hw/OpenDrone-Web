@@ -376,6 +376,8 @@ describe('storefront spec rows and placeholders', () => {
       'variants.a.specsExtra.0',
       'specsExtra.1',
     ]);
+    assert.deepEqual(sheet.rows.find((r) => r.key === 'Weight')?.values, ['4 g (est.)', '7 g (est.)']);
+    assert.ok(!sheet.rows.find((r) => r.key === 'MCU')?.values.some((v) => v?.includes('(est.)')));
   });
   it('names only keys the same level carries as placeholders', () => {
     const keysOf = (...layers: Array<Array<[string, string | null]> | undefined>) =>

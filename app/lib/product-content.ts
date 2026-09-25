@@ -851,7 +851,7 @@ export function isPlaceholderSpec(
  * rows with at least one value render.
  */
 export function specSheet(
-  content: Pick<ProductContent, 'specs' | 'specsExtra' | 'inTheBox' | 'variants' | 'install'>,
+  content: Pick<ProductContent, 'specs' | 'specsExtra' | 'inTheBox' | 'variants' | 'install' | 'placeholders'>,
 ): {columns: string[]; rows: SpecSheetRow[]} {
   const keys = Object.keys(content.variants ?? {});
   const columns = keys.length > 1 ? keys : [keys[0] ?? ''];
@@ -877,8 +877,12 @@ export function specSheet(
         const value = table.get(key);
         return value && !/^none$/i.test(value.trim()) ? value : null;
       });
+      // A placeholder is not a measured value: it shows marked as an estimate.
       const values = raw.map((value, i) =>
-        value === null ? null : terseSpecValue(label, value, tables[i].box),
+        value === null
+          ? null
+          : terseSpecValue(label, value, tables[i].box) +
+            (isPlaceholderSpec(content, columns[i], key) ? ' (est.)' : ''),
       );
       const paths = raw.map((value, i) =>
         value === null ? null : specPath(content, columns[i], key),
