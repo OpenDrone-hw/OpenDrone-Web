@@ -10,6 +10,7 @@ import {
   useRoadmapStatusResolver,
 } from '~/lib/coming-soon';
 import {copyText} from '~/lib/copy';
+import {Txt} from '~/components/Txt';
 import {PRODUCT_CONTENT, hiddenWhileSoldOut, isConceptFor} from '~/lib/product-content';
 
 /** The related strip renders catalog cards, same as every listing. */
@@ -85,8 +86,11 @@ export function RelatedProducts({
 }) {
   const roadmapStatus = useRoadmapStatusResolver();
   return (
-    <section className="related-products" aria-label="Related products">
-      <h2 className="section-heading">Related hardware</h2>
+    <section
+      className="related-products"
+      aria-label={copyText('product-chrome.related_aria') ?? 'Related products'}
+    >
+      <Txt id="product-chrome.related_heading" as="h2" className="section-heading" fallback="Related hardware" />
       <Suspense fallback={<RelatedSkeleton />}>
         <Await resolve={recommendations} errorElement={null}>
           {(items) => {

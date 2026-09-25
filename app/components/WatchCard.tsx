@@ -1,4 +1,5 @@
 import {useState} from 'react';
+import {copyFill} from '~/lib/copy';
 
 /**
  * The "Watch" bubble in the Open-for-learning chapter. A 16:9 card showing just
@@ -36,7 +37,7 @@ export function WatchCard({
       href={`https://www.youtube.com/watch?v=${videoId}`}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label={`Watch on YouTube: ${title}`}
+      aria-label={copyFill('product-chrome.watch_aria', 'Watch on YouTube: {title}', {title})}
     >
       <img
         className="watch-card-thumb"

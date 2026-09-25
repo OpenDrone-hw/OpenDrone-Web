@@ -19,6 +19,7 @@ import type {
   HeroLoadState,
 } from '~/components/HeroDroneScene';
 import {Txt} from '~/components/Txt';
+import {copyFill, copyText} from '~/lib/copy';
 import {WHAT_IS_THIS_ID} from '~/lib/product-content';
 
 function shouldLoad3D() {
@@ -183,11 +184,18 @@ export function HeroDroneStage({
       ) : null}
 
       {use3D && resolvedModel && resolvedModel !== requestedFolder ? (
-        <p className="hp-model-note">{resolvedModel.replace(/^od/, '')}″ assembly preview</p>
+        <p className="hp-model-note">
+          {copyFill('home.hero_model_note', '{size}″ assembly preview', {
+            size: resolvedModel.replace(/^od/, ''),
+          })}
+        </p>
       ) : null}
 
       {use3D ? (
-        <nav className="hp-rail" aria-label="Drone parts">
+        <nav
+          className="hp-rail"
+          aria-label={copyText('home.hero_rail_aria') ?? 'Drone parts'}
+        >
           <div className="hp-rail-fill" ref={fillRef} />
           {beats.map((b, i) => (
             <button

@@ -8,6 +8,7 @@ import {
   useState,
 } from 'react';
 import {useId} from 'react';
+import {copyText} from '~/lib/copy';
 
 /**
  * The only aside left is the mobile menu drawer. The cart drawer went
@@ -211,11 +212,11 @@ export function Aside({
       ref={dialogRef}
       tabIndex={-1}
     >
-      <button className="close-outside" onClick={close} aria-label="Close" tabIndex={-1} />
+      <button className="close-outside" onClick={close} aria-label={copyText('chrome.aside_close_aria') ?? 'Close'} tabIndex={-1} />
       <aside>
         <header>
           <h3 id={id}>{heading}</h3>
-          <button className="close reset" onClick={close} aria-label="Close">
+          <button className="close reset" onClick={close} aria-label={copyText('chrome.aside_close_aria') ?? 'Close'}>
             &times;
           </button>
         </header>

@@ -684,11 +684,11 @@ function DesktopHome({heroBuilds}: {heroBuilds: Promise<HeroBuild[]>}) {
             inert={!splashSettled}
             style={{opacity: splashSettled ? 1 : 0}}
           >
-            <Suspense fallback={<Link to="/products" className="hero-build-loading">Loading build…</Link>}>
+            <Suspense fallback={<Link to="/products" className="hero-build-loading"><Txt id="home.build_loading" fallback="Loading build…" /></Link>}>
               <Await resolve={heroBuilds}>
                 {(builds) => {
                   const build = builds.find(item => item.size === heroSize);
-                  return build ? <HeroBuildGuide key={build.id} build={build} onInspect={canInspect ? id => inspectPart.current?.(id) : undefined} activePart={activePart} /> : <Link to="/products" className="hero-build-loading">Browse parts</Link>;
+                  return build ? <HeroBuildGuide key={build.id} build={build} onInspect={canInspect ? id => inspectPart.current?.(id) : undefined} activePart={activePart} /> : <Link to="/products" className="hero-build-loading"><Txt id="home.build_browse" fallback="Browse parts" /></Link>;
                 }}
               </Await>
             </Suspense>

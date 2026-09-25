@@ -1,3 +1,4 @@
+import {copyFill} from '~/lib/copy';
 /**
  * Official OSHWA certification mark (stacked v2.6) with the project UID baked in
  * - the open-hardware credential as a real mark, not just the raw number.
@@ -25,7 +26,7 @@ export function OshwaMark({
       viewBox="40 50 470 355"
       className={className}
       role="img"
-      aria-label={title ?? `OSHWA certified · ${uid}`}
+      aria-label={title ?? copyFill('product-chrome.oshwa_mark_aria', 'OSHWA certified · {uid}', {uid})}
       xmlns="http://www.w3.org/2000/svg"
       style={{
         fillRule: 'evenodd',

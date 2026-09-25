@@ -98,3 +98,18 @@ export function copyKeys(page: string): string[] {
 export function editAttrs(id: string): Record<string, string> {
   return import.meta.env.DEV ? {'data-edit': id} : {};
 }
+
+/**
+ * A copy string with `{name}` placeholders filled from `vars`, or the
+ * fallback with the same placeholders filled. Unknown placeholders stay as
+ * written, so a typo in the studio is visible rather than silently blank.
+ */
+export function copyFill(
+  id: string,
+  fallback: string,
+  vars: Record<string, string | number> = {},
+): string {
+  return (copyText(id) ?? fallback).replace(/\{(\w+)\}/g, (match, name: string) =>
+    name in vars ? String(vars[name]) : match,
+  );
+}

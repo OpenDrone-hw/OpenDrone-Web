@@ -66,7 +66,7 @@ export function ProductForm({
   const ctaLabelAvailable =
     productStatus === 'preorder'
       ? (copyText('product-chrome.buy_cta_preorder') ?? 'Pre-order')
-      : 'Add to cart';
+      : (copyText('product-chrome.buy_cta_add') ?? 'Add to cart');
   const ctaLabelSoldOut = copyText('product-chrome.buy_stock_out') ?? 'Sold out';
   const hidden = new Set(
     (hideOptionNames ?? []).map((n) => n.trim().toLowerCase()),
@@ -203,7 +203,7 @@ export function ProductForm({
         }
       >
         {isBundle
-          ? (buyCtaLabel ?? 'Add to cart')
+          ? (buyCtaLabel ?? copyText('product-chrome.buy_cta_add') ?? 'Add to cart')
           : selectedVariant?.availableForSale
             ? ctaLabelAvailable
             : ctaLabelSoldOut}

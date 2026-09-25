@@ -61,10 +61,10 @@ interface HeaderProps {
 type Viewport = 'desktop' | 'mobile';
 
 // The header's own words live in `content/copy/chrome.json` and are rendered
-// through <Txt>. Three sets of strings deliberately do NOT: the site menu
-// titles in HEADER_MENU below, anything derived from product data, and the
-// family labels below - those double as dropdown state keys and as the short
-// names on the buy buttons, so they are structure, not copy.
+// through <Txt> or copyText. The family labels below also double as dropdown
+// state keys, so the code keeps `short`/`long` as the key and fallback and
+// only the rendered label reads the copy store (`chrome.family_<slug>_short`,
+// `_long`). Product data is never copy.
 //
 // The family chips. Accessories get no dedicated link: they live (with
 // everything else) on the All Products page, reachable via the CTA on the
@@ -99,14 +99,39 @@ const STACK_COMPANIONS: Record<string, Array<{handle: string; short: string}>> =
   '4-in-1 ESC': [{handle: 'openfc-lite', short: 'FC'}],
 };
 
-/** Short family label ("FC", "ESC") for a family type. */
+/** Copy slug of a family: the suffix of its listing copy id
+ *  (`collections-all.category_esc` -> `esc`). */
+function familySlug(type: string): string | undefined {
+  return FAMILIES.find((f) => f.type === type)?.copyId.split('.category_')[1];
+}
+
+/** Rendered chip label ("FC", "ESC") for a family, editable in the studio. */
+function familyShort(type: string, fallback: string): string {
+  const slug = familySlug(type);
+  return (slug ? copyText(`chrome.family_${slug}_short`) : undefined) ?? fallback;
+}
+
+/** Rendered drawer label ("Flight Controllers") for a family. */
+function familyLong(type: string, fallback: string): string {
+  const slug = familySlug(type);
+  return (slug ? copyText(`chrome.family_${slug}_long`) : undefined) ?? fallback;
+}
+
+/** Rendered "+X" label of a stack companion button. */
+function companionShort(handle: string, fallback: string): string {
+  return copyText(`chrome.stack_companion_${handle}_short`) ?? fallback;
+}
+
 
 /** Families bought in sets: a row also offers "×N" (a quad takes four
  *  motors), one click for N units. */
 const SET_OF: Record<string, number> = {Motors: 4};
 
 function selfShortFor(type: string): string {
-  return CATEGORY_LINKS.find((c) => c.type === type)?.label ?? 'board';
+  const label = CATEGORY_LINKS.find((c) => c.type === type)?.label;
+  return label
+    ? familyShort(type, label)
+    : (copyText('chrome.family_fallback_short') ?? 'board');
 }
 
 export function Header({
@@ -277,7 +302,8 @@ function FamilyNav({
       stack?.discountPct && stack.discountedHandle
         ? stack.discountPct
         : undefined;
-    const options = cfg.flatMap(({handle: h, short}) => {
+    const options = cfg.flatMap(({handle: h, short: shortCode}) => {
+      const short = companionShort(h, shortCode);
       // Unlaunched partners can't cascade into a stack add.
       if (!isPurchasableStatus(productStatus(h))) return [];
       const partner = (products ?? []).find((p) => p.handle === h);
@@ -446,7 +472,7 @@ function FamilyNav({
           to={cat.to}
           aria-expanded={open === cat.label}
         >
-          {cat.label}
+          {familyShort(cat.type, cat.label)}
         </NavLink>
         <div className="header-cat-pod-wrap">
           <AnimatePresence>
@@ -458,7 +484,9 @@ function FamilyNav({
                 origin="top center"
                 className="header-cat-pod"
                 role="group"
-                ariaLabel={`${cat.label} products`}
+                ariaLabel={(
+                  copyText('chrome.family_pod_aria') ?? '{family} products'
+                ).replace('{family}', familyShort(cat.type, cat.label))}
               >
                 <ProductPods
                   items={items}
@@ -474,7 +502,10 @@ function FamilyNav({
   }
 
   return (
-    <nav className="site-header-categories" aria-label="Product categories">
+    <nav
+      className="site-header-categories"
+      aria-label={copyText('chrome.categories_aria') ?? 'Product categories'}
+    >
       {/* FC and ESC share one bubble (a stack is bought from their rows);
           RX, Motors and Frame are standalone families with their own bubbles. */}
       <span className="site-header-cat-group">
@@ -558,7 +589,7 @@ export function HeaderMenu({
               to={c.to}
               className="text-sm font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
             >
-              {MOBILE_FAMILY_LABEL[c.type] ?? c.label}
+              {familyLong(c.type, MOBILE_FAMILY_LABEL[c.type] ?? c.label)}
             </NavLink>
           ))}
           <NavLink
@@ -613,7 +644,7 @@ export function HeaderMenu({
               rel="noopener noreferrer"
               target="_blank"
             >
-              {item.title}
+              {menuTitle(item)}
             </a>
           );
         }
@@ -633,7 +664,7 @@ export function HeaderMenu({
               }`
             }
           >
-            {item.title}
+            {menuTitle(item)}
           </NavLink>
         );
       })}
@@ -790,7 +821,10 @@ function CartToggle({cartUrl, hasCart}: {cartUrl: string | null; hasCart: boolea
     return (
       <span
         className="site-header-icon site-header-cart"
-        aria-label="Cart unavailable in checkout preview"
+        aria-label={
+          copyText('chrome.cart_unavailable_aria') ??
+          'Cart unavailable in checkout preview'
+        }
         aria-disabled="true"
       >
         <CartIcon />
@@ -831,11 +865,14 @@ function CartIcon() {
 
 /**
  * The site menu. It used to be edited in the Shopify admin and read
- * through the Storefront API; it is three links, and they are these
- * three. Titles stay here rather than in the copy store for the same
- * reason they always did: they are structure shared with the CTA group,
- * not editable prose.
+ * through the Storefront API; it is these few links. The id and url are
+ * structure; the rendered title reads `chrome.menu_<id>` and falls back to
+ * `title` here.
  */
+function menuTitle(item: {id: string; title: string}): string {
+  return copyText(`chrome.${item.id.replace(/-/g, '_')}`) ?? item.title;
+}
+
 const HEADER_MENU = {
   items: [
     {id: 'menu-products', title: 'Catalog', url: '/products'},

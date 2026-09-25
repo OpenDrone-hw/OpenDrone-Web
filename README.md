@@ -37,11 +37,10 @@ Node 22 (what CI uses).
 | `npm run typecheck` | `react-router typegen` then `tsc --noEmit` |
 | `npm run lint` | ESLint over the repository |
 | `npm test` | `node --test` over `app/**/*.test.ts`, no test framework |
-| `npm run build` | `sync:legal`, then the production build into `dist/` |
+| `npm run build` | the production build into `dist/` |
 | `npm run preview` | build, then serve `dist/` locally with `wrangler dev` and the production Worker config |
 | `npm run check:registry` | the product registry's data invariants (CI runs it; lint and tsc never evaluate them) |
 | `npm run check:status` | fails when a static roadmap status is ahead of its repo's `status-*` topic |
-| `npm run sync:legal` | copies four Dutch legal pages from `COMPLIANCE_SRC`; with it unset, keeps the committed snapshots |
 | `npm run gen:board-art` | export every PCB as layered SVG and copper rasters (needs KiCad and cwebp) |
 | `npm run gen:schematics` | render the schematic sheets from the board checkouts |
 | `npm run sync:specs` / `sync:specs:check` | mirror each board README's `## Specifications` table into `content/products/<handle>.json`, or diff |
@@ -50,6 +49,7 @@ Node 22 (what CI uses).
 | `npm run sync:timeline` | append releases, new repos and status flips to the timeline ledger |
 | `npm run sync:contributors` | refresh `content/contributors.json` from GitHub |
 | `npm run studio:coverage` | which files still have copy baked into code |
+| `npm run studio:keys` | fails when code uses a copy id missing from `content/copy/` |
 | `npm run audit:perf`, `audit:lh`, `audit:mobile` | performance lab, Lighthouse, mobile screenshots |
 | `npm run gen:shopify-templates` | render the Shopify notification emails from `scripts/shopify-templates/` into `out/`, ready to paste into Shopify |
 | `node scripts/launch-preorders.mjs` | dry run of the preorder launch: read-only checks and the plan; `--apply` performs it (see "Launch preorders") |
@@ -143,9 +143,8 @@ repos and `status-*` flips across the public OpenDrone-hw repositories.
 
 **Legal.** The legal documents in `app/content/legal/{en,nl,fr}/` serve at
 `/{en,nl,fr}/<slug>`; the bare `/<slug>` redirects to the visitor's cached
-locale, and `LangToggle` appears only on legal paths. `npm run sync:legal`
-(run by `prebuild`) overwrites four Dutch pages only when `COMPLIANCE_SRC`
-names a source directory. The site UI is English-only. `/recycling` adds the producer (EPR) registration numbers per EU country from `content/registrations.json` under its text; a number still `null` is not shown.
+locale, and `LangToggle` appears only on legal paths. This repository is the
+authoring source for them. The site UI is English-only. `/recycling` adds the producer (EPR) registration numbers per EU country from `content/registrations.json` under its text; a number still `null` is not shown.
 
 **Other routes.** `/products` is the one browse page; `/collections/*`,
 `/search`, `/cart/*` and `/discount/*` redirect to it. `/open-source`,
@@ -167,7 +166,8 @@ step; `git diff` is the changelog.
 | Chapters | product page sections: order, titles, on or off | `content/chapters.json` (created on first save) |
 | Design | design tokens | `content/theme.json` |
 | Media | browse images and where each is used | read-only, `public/` |
-| Legal | policy pages in en, nl, fr | `app/content/legal/**` |
+| Docs | legal pages in en, nl, fr; newsletter posts (new post from the template); learn articles | `app/content/legal/**`, `content/posts/*.md`, `app/content/learn/*.md` |
+| Data | batches, targets, price steps, dates, builds, accessories, team, registrations, as validated JSON | `content/*.json` |
 | Hero | the 3D scene: lighting, timeline, camera, materials | `public/models/<design>/studio.json` |
 | Goals | goal meters and vote tallies | `content/goals.json`, `content/votes.json` |
 

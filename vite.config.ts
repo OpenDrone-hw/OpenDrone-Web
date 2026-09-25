@@ -77,14 +77,9 @@ export default defineConfig({
   server: {
     port: 3000,
     watch: {
-      // iCloud Drive constantly touches mtime on the synced legal
-      // markdown snapshots which makes Vite's file watcher reload the
-      // page every few seconds. Those files only change via
-      // `npm run sync:legal` which is run manually, so it's safe to
-      // ignore them for HMR. Same story for the tsc incremental build
-      // info file rewritten on every typegen pass.
+      // The tsc incremental build info file is rewritten on every typegen
+      // pass and macOS scatters metadata files; neither is source.
       ignored: [
-        '**/app/content/legal/**',
         '**/tsconfig.tsbuildinfo',
         '**/.DS_Store',
         '**/.icloud',

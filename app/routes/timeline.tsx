@@ -292,7 +292,7 @@ export default function TimelineRoute() {
         <div
           className="tl-filters"
           role="group"
-          aria-label="Filter timeline by product"
+          aria-label={copyText('timeline.filter_aria') ?? 'Filter timeline by product'}
         >
           {FILTERS.map((f) => (
             <button

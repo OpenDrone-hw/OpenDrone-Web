@@ -35,6 +35,7 @@
   "form_title": "Request a quote",
   "shop": "Shop name",
   "site": "Website",
+  "site_placeholder": "shop.example",
   "country": "Country",
   "country_choose": "Choose",
   "vat_label": "VAT number",

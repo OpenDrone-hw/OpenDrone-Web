@@ -1,5 +1,6 @@
 import {Link, useLocation} from 'react-router';
 import {Txt} from '~/components/Txt';
+import {copyText} from '~/lib/copy';
 import {
   LANG_COOKIE,
   isLegalPath,
@@ -99,7 +100,7 @@ export function LangToggle({className}: {className?: string} = {}) {
     <div
       className={`lang-toggle${className ? ` ${className}` : ''}`}
       role="group"
-      aria-label="Language"
+      aria-label={copyText('chrome.lang_toggle_aria') ?? 'Language'}
     >
       {ORDER.map((loc) => (
         <Link

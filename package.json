@@ -14,7 +14,6 @@
     "url": "https://github.com/OpenDrone-hw/OpenDrone-Web/issues"
   },
   "scripts": {
-    "prebuild": "npm run sync:legal",
     "build": "react-router build",
     "postbuild": "node scripts/compress-models.mjs",
     "dev": "react-router dev",
@@ -24,7 +23,6 @@
     "test": "node --experimental-strip-types --test \"app/**/*.test.ts\"",
     "check:registry": "node --experimental-strip-types scripts/check-registry.mjs",
     "check:status": "node --experimental-strip-types scripts/check-status-fallback.mjs",
-    "sync:legal": "node scripts/sync-legal.mjs",
     "audit:mobile": "node scripts/mobile-shots.mjs",
     "audit:perf": "node scripts/perf-audit.mjs",
     "audit:lh": "node scripts/lh-audit.mjs",
@@ -35,6 +33,7 @@
     "studio:tokens": "node scripts/studio-tokens.mjs",
     "studio:products": "node --experimental-strip-types scripts/migrate-product-content.mjs",
     "studio:coverage": "node scripts/studio-coverage.mjs",
+    "studio:keys": "node scripts/studio-keys.mjs",
     "sync:contributors": "node scripts/sync-contributors.mjs",
     "sync:timeline": "node scripts/sync-timeline.mjs",
     "goals:update": "node scripts/update-goals.mjs",

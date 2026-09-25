@@ -11,6 +11,7 @@ import {Link} from '~/components/nav';
 import {AddToCartButton} from '~/components/AddToCartButton';
 import {InfoHint} from '~/components/InfoHint';
 import {Txt} from '~/components/Txt';
+import {copyFill, copyText} from '~/lib/copy';
 import {useProductStatusResolver} from '~/lib/coming-soon';
 import {formatPrice} from '~/lib/catalog';
 import {isPurchasableStatus} from '~/lib/product-content';
@@ -39,13 +40,13 @@ export function HeroBuildGuide({
   return (
     <section
       className="hero-build-guide"
-      aria-label={`${build.size}-inch build`}
+      aria-label={copyFill('home.build_aria', '{size}-inch build', {size: build.size})}
     >
       <div className="hero-build-heading">
         <h2>
           {build.size}″ <Txt id="home.build_title" />
         </h2>
-        <InfoHint label="About this build" iconOnly>
+        <InfoHint label={copyText('home.build_help_label') ?? 'About this build'} iconOnly>
           <Txt id="home.build_help" />
         </InfoHint>
       </div>
@@ -57,6 +58,7 @@ export function HeroBuildGuide({
           const included = selected.has(part.sku);
           const available = part.available && sellable(part.handle);
           const role = BUILD_ROLES[part.role];
+          const roleLabel = copyText(`home.build_role_${part.role}`) ?? role.label;
           const contents = (
             <>
               <span className="hero-build-thumb">
@@ -80,7 +82,7 @@ export function HeroBuildGuide({
               <span className="hero-build-name">
                 <strong>{part.title}</strong>
                 <small>
-                  {part.quantity}× {role.label}
+                  {part.quantity}× {roleLabel}
                 </small>
               </span>
             </>
@@ -94,7 +96,7 @@ export function HeroBuildGuide({
                 <input
                   type="checkbox"
                   checked={included}
-                  aria-label={`Include ${part.title}`}
+                  aria-label={copyFill('home.build_include_aria', 'Include {part}', {part: part.title})}
                   onChange={() =>
                     setSelected((previous) => {
                       const next = new Set(previous);
@@ -113,7 +115,7 @@ export function HeroBuildGuide({
                   type="button"
                   className="hero-build-inspect"
                   onClick={() => onInspect(role.beat)}
-                  aria-label={`Explore ${role.label}`}
+                  aria-label={copyFill('home.build_explore_aria', 'Explore {role}', {role: roleLabel})}
                 >
                   {contents}
                 </button>
@@ -142,7 +144,7 @@ export function HeroBuildGuide({
                 className="hero-build-detail"
                 to={part.url}
                 prefetch="intent"
-                aria-label={`View ${part.title}`}
+                aria-label={copyFill('home.build_view_aria', 'View {part}', {part: part.title})}
               >
                 <ArrowUpRight size={15} aria-hidden="true" />
               </Link>

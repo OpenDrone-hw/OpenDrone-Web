@@ -170,7 +170,7 @@ function TradeForm() {
       </label>
       <label className={labelCls}>
         {t('site')}
-        <input name="site" required inputMode="url" autoComplete="url" placeholder="shop.example" className={field} aria-invalid={!!errors.website} />
+        <input name="site" required inputMode="url" autoComplete="url" placeholder={t('site_placeholder')} className={field} aria-invalid={!!errors.website} />
         <FieldError msg={errors.website} />
       </label>
       <label className={labelCls}>

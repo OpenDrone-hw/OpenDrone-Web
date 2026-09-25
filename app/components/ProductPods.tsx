@@ -5,6 +5,7 @@ import {ShoppingCart} from 'lucide-react';
 import {AddToCartButton} from './AddToCartButton';
 import {trackEvent} from '~/lib/growth/plausible';
 import {attributionSource} from '~/lib/growth/attribution';
+import {copyFill, copyText} from '~/lib/copy';
 
 /** A stack companion for a pod row: one candidate partner board,
  *  size-matched, on one multi-line hand-off link so a single click puts
@@ -137,7 +138,9 @@ export function ProductPods({
               ) : null}
             </span>
             {it.soon ? (
-              <span className="product-pod-soon">Soon</span>
+              <span className="product-pod-soon">
+                {copyText('product-chrome.pod_soon') ?? 'Soon'}
+              </span>
             ) : it.price && !it.buy ? (
               <span className="product-pod-price">{fmt(it.price)}</span>
             ) : null}
@@ -146,7 +149,9 @@ export function ProductPods({
 
         if (!it.buy) return link;
 
-        const self = it.buy.selfShort ?? 'board';
+        const self =
+          it.buy.selfShort ?? copyText('chrome.family_fallback_short') ?? 'board';
+        const outOfStock = copyText('product-chrome.pod_out_of_stock') ?? 'Out of stock';
         return (
           <div
             key={it.key}
@@ -164,7 +169,7 @@ export function ProductPods({
             <div
               className="product-pod-actionbar"
               role="group"
-              aria-label={`Buy ${it.title}`}
+              aria-label={copyFill('product-chrome.pod_buy_aria', 'Buy {title}', {title: it.title})}
             >
               <AddToCartButton
                 className="pod-buy-add"
@@ -172,8 +177,11 @@ export function ProductPods({
                 product={it.buy.product}
                 disabled={!it.buy.available}
                 onClick={onAdd}
-                ariaLabel={`Add ${it.title} ${self} to cart`}
-                dataTip={it.buy.available ? `${self} · ${fmt(it.price)}` : 'Out of stock'}
+                ariaLabel={copyFill('product-chrome.pod_add_aria', 'Add {title} {self} to cart', {
+                  title: it.title,
+                  self,
+                })}
+                dataTip={it.buy.available ? `${self} · ${fmt(it.price)}` : outOfStock}
               >
                 <ShoppingCart size={18} strokeWidth={2.25} aria-hidden="true" />
               </AddToCartButton>
@@ -184,7 +192,11 @@ export function ProductPods({
                   product={it.buy.product}
                   disabled={!it.buy.available}
                   onClick={onAdd}
-                  ariaLabel={`Add ${it.buy.set.quantity} × ${it.title} ${self} to cart`}
+                  ariaLabel={copyFill(
+                    'product-chrome.pod_add_set_aria',
+                    'Add {quantity} × {title} {self} to cart',
+                    {quantity: it.buy.set.quantity, title: it.title, self},
+                  )}
                   dataTip={
                     it.buy.available
                       ? `${it.buy.set.quantity} × ${self} · ${fmt(
@@ -195,7 +207,7 @@ export function ProductPods({
                               }
                             : null,
                         )}`
-                      : 'Out of stock'
+                      : outOfStock
                   }
                 >
                   <span className="pod-buy-set-label">×{it.buy.set.quantity}</span>
@@ -222,24 +234,55 @@ export function ProductPods({
                     });
                     onAdd?.();
                   }}
-                  ariaLabel={`Add ${it.title} and ${o.title} as a stack${
+                  ariaLabel={
                     o.pct && o.discountedShort
-                      ? `, ${o.discountedShort} ${o.pct}% off in the cart`
-                      : ''
-                  }`}
+                      ? copyFill(
+                          'product-chrome.pod_stack_aria_discount',
+                          'Add {title} and {partner} as a stack, {board} {pct}% off in the cart',
+                          {title: it.title, partner: o.title, board: o.discountedShort, pct: o.pct},
+                        )
+                      : copyFill(
+                          'product-chrome.pod_stack_aria',
+                          'Add {title} and {partner} as a stack',
+                          {title: it.title, partner: o.title},
+                        )
+                  }
                   dataTip={
                     o.available
                       ? // When the shown price is already the derived
                         // discounted one, spell out full -> discounted so
                         // the pct can't read as a further cut on it.
                         o.fullPrice && o.pct && o.discountedShort
-                        ? `${self} + ${o.short} stack · +${fmt(o.fullPrice)} → ${fmt(o.price)} (${o.discountedShort} −${o.pct}% in the cart)`
-                        : `${self} + ${o.short} stack · +${fmt(o.price)}${
-                            o.pct && o.discountedShort
-                              ? ` · ${o.discountedShort} −${o.pct}% in the cart`
-                              : ''
-                          }`
-                      : 'Out of stock'
+                        ? copyFill(
+                            'product-chrome.pod_stack_tip_full',
+                            '{self} + {partner} stack · +{full} → {price} ({board} −{pct}% in the cart)',
+                            {
+                              self,
+                              partner: o.short,
+                              full: fmt(o.fullPrice),
+                              price: fmt(o.price),
+                              board: o.discountedShort,
+                              pct: o.pct,
+                            },
+                          )
+                        : o.pct && o.discountedShort
+                          ? copyFill(
+                              'product-chrome.pod_stack_tip_discount',
+                              '{self} + {partner} stack · +{price} · {board} −{pct}% in the cart',
+                              {
+                                self,
+                                partner: o.short,
+                                price: fmt(o.price),
+                                board: o.discountedShort,
+                                pct: o.pct,
+                              },
+                            )
+                          : copyFill(
+                              'product-chrome.pod_stack_tip',
+                              '{self} + {partner} stack · +{price}',
+                              {self, partner: o.short, price: fmt(o.price)},
+                            )
+                      : outOfStock
                   }
                 >
                   {it.imageUrl && o.imageUrl ? (

@@ -1,4 +1,6 @@
 import {Link, useSearchParams} from 'react-router';
+import {Txt} from '~/components/Txt';
+import {copyText} from '~/lib/copy';
 
 /**
  * Single-select filter row. Filter state lives in the URL (`?tag=...`)
@@ -19,6 +21,7 @@ export const FILTER_TAGS = [
 
 export type FilterTag = (typeof FILTER_TAGS)[number];
 
+/** Fallback labels; the rendered label reads `newsletter.filter_tag_<tag>`. */
 const LABELS: Record<FilterTag, string> = {
   hardware: 'Hardware',
   firmware: 'Firmware',
@@ -46,14 +49,18 @@ export function TagFilter({
   };
 
   return (
-    <div className="rn-filters" role="group" aria-label="Filter posts by tag">
-      <span className="rn-k">Filter</span>
+    <div
+      className="rn-filters"
+      role="group"
+      aria-label={copyText('newsletter.filter_aria') ?? 'Filter posts by tag'}
+    >
+      <Txt id="newsletter.filter_label" className="rn-k" fallback="Filter" />
       <Link
         to={buildHref(null)}
         className={'rn-filter' + (active === null ? ' is-on' : '')}
         prefetch="viewport"
       >
-        All <span className="rn-n">{total}</span>
+        {copyText('newsletter.filter_all') ?? 'All'} <span className="rn-n">{total}</span>
       </Link>
       {FILTER_TAGS.map((tag) => (
         <Link
@@ -62,7 +69,7 @@ export function TagFilter({
           className={'rn-filter' + (active === tag ? ' is-on' : '')}
           prefetch="viewport"
         >
-          {LABELS[tag]} <span className="rn-n">{counts[tag] ?? 0}</span>
+          {copyText(`newsletter.filter_tag_${tag}`) ?? LABELS[tag]} <span className="rn-n">{counts[tag] ?? 0}</span>
         </Link>
       ))}
     </div>

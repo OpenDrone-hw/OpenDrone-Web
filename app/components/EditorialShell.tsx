@@ -9,6 +9,8 @@ const useBeforePaint =
   typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 import {Link} from 'react-router';
 import {BrandWatermark} from '~/components/BrandWatermark';
+import {Txt} from '~/components/Txt';
+import {copyText} from '~/lib/copy';
 import {EDITORIAL_SERIES, nextInSeries} from '~/lib/editorial-index';
 
 /**
@@ -174,7 +176,10 @@ export function EditorialShell({
  */
 export function SeriesRail({slug}: {slug: string}) {
   return (
-    <nav className="series-rail" aria-label="Reading series">
+    <nav
+      className="series-rail"
+      aria-label={copyText('chrome.editorial_series_aria') ?? 'Reading series'}
+    >
       <ol className="series-rail-list">
         {EDITORIAL_SERIES.map((entry, i) => {
           const current = entry.slug === slug;
@@ -204,7 +209,11 @@ function EditorialNext({slug}: {slug: string}) {
   if (!next) return null;
   return (
     <Link prefetch="viewport" to={`/${next.slug}`} className="editorial-next">
-      <span className="editorial-next-label">Next in the series</span>
+      <Txt
+        id="chrome.editorial_next_label"
+        className="editorial-next-label"
+        fallback="Next in the series"
+      />
       <span className="editorial-next-title">{next.title}</span>
       <span className="editorial-next-hook">{next.hook}</span>
       <span className="editorial-next-min">{next.minutes} min read →</span>

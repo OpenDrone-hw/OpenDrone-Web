@@ -69,6 +69,7 @@ export const STUDIO_CSS = `
 }
 
 .studio-actions { display: flex; gap: 8px; }
+.studio-actions[hidden] { display: none; }
 .studio-actions button {
   background: #1a1a20;
   border: 1px solid #2b2b33;
@@ -93,6 +94,8 @@ export const STUDIO_CSS = `
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr) 320px;
 }
+/* A document editor has no inspector column. */
+.studio-grid.is-two { grid-template-columns: 260px minmax(0, 1fr); }
 
 .studio-rail, .studio-inspector {
   overflow-y: auto;
@@ -288,7 +291,7 @@ export const STUDIO_CSS = `
 
 
 
-/* ---- legal tab ---- */
+/* ---- docs and data tabs ---- */
 .studio-doc {
   flex: 1;
   width: 100%;
@@ -305,17 +308,17 @@ export const STUDIO_CSS = `
   scrollbar-color: #2b2b33 transparent;
 }
 .studio-doc:focus { outline: none; }
-.studio-doc[readonly] { color: #8b8b95; }
-.studio-locked {
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #55555e;
-  border: 1px solid #2b2b33;
-  border-radius: 3px;
-  padding: 0 3px;
-  margin-left: 5px;
+.studio-new-doc { display: flex; gap: 6px; margin: 6px 8px 14px; }
+.studio-new-doc input {
+  flex: 1; min-width: 0; background: #0b0b0e; color: #d8d8dc;
+  border: 1px solid #2b2b33; border-radius: 5px; padding: 5px 8px;
+  font: 12px ui-monospace, Menlo, monospace;
 }
+.studio-new-doc button {
+  background: #1a1a20; color: #d8d8dc; border: 1px solid #2b2b33;
+  border-radius: 5px; padding: 5px 10px; font-size: 12px; cursor: pointer;
+}
+.studio-new-doc button:disabled { opacity: 0.4; cursor: default; }
 
 /* ---- media tab ---- */
 .studio-media {

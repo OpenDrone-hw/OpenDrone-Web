@@ -258,7 +258,10 @@ export default function PreorderRoute() {
         )}
       </section>
 
-      <nav className="po-channels" aria-label="Retailers and launch news">
+      <nav
+        className="po-channels"
+        aria-label={copyText('preorder.channels_aria') ?? 'Retailers and launch news'}
+      >
         <Link to="/wholesale"><Txt id="preorder.channel_us_cta" /> <span aria-hidden="true">↗</span></Link>
         <Link to="/newsletter"><Txt id="preorder.channel_interest" /> <span aria-hidden="true">→</span></Link>
       </nav>

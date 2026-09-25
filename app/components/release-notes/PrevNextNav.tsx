@@ -1,4 +1,6 @@
 import {Link} from 'react-router';
+import {Txt} from '~/components/Txt';
+import {copyText} from '~/lib/copy';
 
 type Sibling = {handle: string; title: string; publishedAt: string};
 
@@ -24,14 +26,17 @@ export function PrevNextNav({
   next: Sibling | null;
 }) {
   return (
-    <nav className="rn-post-footer" aria-label="Post navigation">
+    <nav
+      className="rn-post-footer"
+      aria-label={copyText('newsletter.post_nav_aria') ?? 'Post navigation'}
+    >
       {previous ? (
         <Link
           to={`/newsletter/${previous.handle}`}
           className="rn-pn rn-prev"
           prefetch="viewport"
         >
-          <span className="rn-k">← Previous</span>
+          <Txt id="newsletter.post_nav_previous" className="rn-k" fallback="← Previous" />
           <span className="rn-pn-title">{previous.title}</span>
           <span className="rn-pn-date">{formatDate(previous.publishedAt)}</span>
         </Link>
@@ -44,7 +49,7 @@ export function PrevNextNav({
           className="rn-pn rn-next"
           prefetch="viewport"
         >
-          <span className="rn-k">Next →</span>
+          <Txt id="newsletter.post_nav_next" className="rn-k" fallback="Next →" />
           <span className="rn-pn-title">{next.title}</span>
           <span className="rn-pn-date">{formatDate(next.publishedAt)}</span>
         </Link>

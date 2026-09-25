@@ -13,6 +13,8 @@ import {
   type Claim,
   type Confidence,
 } from '~/lib/learn';
+import {Txt} from '~/components/Txt';
+import {copyFill, copyText} from '~/lib/copy';
 
 /**
  * /learn/<slug> - one research dossier, rendered claim by claim.
@@ -24,8 +26,10 @@ import {
 
 export const meta: Route.MetaFunction = ({data}) =>
   buildSeoMeta({
-    title: data?.dossier ? `${data.dossier.title} - draft` : 'Learn - draft',
-    description: 'FPV research notes, unpublished.',
+    title: data?.dossier
+      ? copyFill('learn.dossier_meta_title', '{title} - draft', {title: data.dossier.title})
+      : (copyText('learn.meta_title') ?? 'Learn - draft'),
+    description: copyText('learn.meta_description') ?? 'FPV research notes, unpublished.',
     robots: 'noindex, nofollow',
   });
 
@@ -83,6 +87,7 @@ function BlockItem({block}: {block: Block}) {
   );
 }
 
+/** Fallback tooltips; the rendered one reads `learn.confidence_<tag>_title`. */
 const CONFIDENCE_TITLE: Record<Confidence, string> = {
   verified: 'Two independent sources, or one primary source',
   single: 'One secondary source only, needs corroboration',
@@ -98,7 +103,10 @@ function ClaimItem({claim}: {claim: Claim}) {
       <p className="learn-claim-meta">
         <span
           className={`learn-tag learn-tag-${claim.confidence}`}
-          title={CONFIDENCE_TITLE[claim.confidence]}
+          title={
+            copyText(`learn.confidence_${claim.confidence}_title`) ??
+            CONFIDENCE_TITLE[claim.confidence]
+          }
         >
           {claim.confidence}
           {claim.note ? ` · ${claim.note}` : ''}
@@ -117,13 +125,18 @@ function ClaimItem({claim}: {claim: Claim}) {
         {circular ? (
           <span
             className="learn-tag learn-tag-circular"
-            title="Cites OpenBrain's own fact pool, so it cannot be fed back into it"
+            title={
+              copyText('learn.circular_title') ??
+              "Cites OpenBrain's own fact pool, so it cannot be fed back into it"
+            }
           >
-            circular
+            {copyText('learn.circular_tag') ?? 'circular'}
           </span>
         ) : null}
         {!claim.sources.length && !circular ? (
-          <span className="learn-source learn-source-none">no link</span>
+          <span className="learn-source learn-source-none">
+            {copyText('learn.no_link') ?? 'no link'}
+          </span>
         ) : null}
       </p>
     </li>
@@ -144,38 +157,43 @@ export default function LearnDossier() {
       <div className="reading-column">
         <div className="policy-back-link">
           <Link prefetch="intent" to="/learn">
-            All research
+            <Txt id="learn.back_link" fallback="All research" />
           </Link>
         </div>
 
         <header className="page-header">
-          <p className="page-eyebrow">Learn, draft</p>
+          <Txt id="learn.dossier_eyebrow" as="p" className="page-eyebrow" fallback="Learn, draft" />
           <h1 className="page-title">{meta.title}</h1>
         </header>
 
         <dl className="learn-stats">
           <div>
-            <dt>Claims</dt>
+            <Txt id="learn.stat_claims" as="dt" fallback="Claims" />
             <dd>{total}</dd>
           </div>
           <div>
-            <dt>Verified</dt>
+            <Txt id="learn.stat_verified" as="dt" fallback="Verified" />
             <dd>{dossier.counts.verified}</dd>
           </div>
           <div>
-            <dt>Single source</dt>
+            <Txt id="learn.stat_single" as="dt" fallback="Single source" />
             <dd>{dossier.counts.single}</dd>
           </div>
           <div>
-            <dt>Linked</dt>
+            <Txt id="learn.stat_linked" as="dt" fallback="Linked" />
             <dd>
-              {withSource} of {total}
+              {copyFill('learn.stat_linked_value', '{linked} of {total}', {
+                linked: withSource,
+                total,
+              })}
             </dd>
           </div>
         </dl>
 
         <p className="learn-draft-notice" role="note">
-          <strong>Draft, unreviewed.</strong> {meta.blurb} Feeds {meta.feeds}.
+          <strong>{copyText('learn.draft_notice_strong') ?? 'Draft, unreviewed.'}</strong>{' '}
+          {meta.blurb}{' '}
+          {copyFill('learn.feeds_sentence', 'Feeds {feeds}.', {feeds: meta.feeds})}
         </p>
 
         {dossier.intro.length ? (
@@ -187,7 +205,10 @@ export default function LearnDossier() {
         ) : null}
 
         {headings.length > 2 ? (
-          <nav className="learn-toc" aria-label="Sections">
+          <nav
+            className="learn-toc"
+            aria-label={copyText('learn.toc_aria') ?? 'Sections'}
+          >
             <ul>
               {headings.map((s) => (
                 <li key={s.id}>

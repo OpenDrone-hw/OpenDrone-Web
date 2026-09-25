@@ -180,7 +180,13 @@ export function AddToCartButton({
       >
         <span className="btn-label cart-action-label" aria-live="polite" aria-atomic="true">
           {state === 'adding' ? <LoaderCircle className="cart-action-spinner" size={16} aria-hidden="true" /> : null}
-          {state === 'adding' ? 'Adding…' : state === 'error' ? (compactError ? 'Couldn’t add · Retry' : 'Try again') : children}
+          {state === 'adding'
+            ? (copyText('cart.add_busy') ?? 'Adding…')
+            : state === 'error'
+              ? compactError
+                ? (copyText('cart.add_error_compact') ?? 'Couldn’t add · Retry')
+                : (copyText('cart.add_retry') ?? 'Try again')
+              : children}
         </span>
       </button>
       {message && (!compactError || state !== 'error') ? (

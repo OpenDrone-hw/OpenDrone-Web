@@ -1,4 +1,5 @@
 import {Link} from 'react-router';
+import {copyText} from '~/lib/copy';
 
 // `label` is a ReactNode so a crumb can be a <Txt> from the copy store and
 // stay editable in the studio; catalog-sourced crumbs stay plain strings.
@@ -7,7 +8,10 @@ export type Crumb = {label: React.ReactNode; to?: string};
 export function Breadcrumb({items}: {items: Crumb[]}) {
   if (items.length === 0) return null;
   return (
-    <nav aria-label="Breadcrumb" className="breadcrumb">
+    <nav
+      aria-label={copyText('chrome.breadcrumb_aria') ?? 'Breadcrumb'}
+      className="breadcrumb"
+    >
       <ol>
         {items.map((item, i) => {
           const isLast = i === items.length - 1;

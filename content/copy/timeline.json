@@ -7,6 +7,7 @@
   "title": "Dated, like everything else in the repo.",
   "lead": "",
   "filter_all": "Everything",
+  "filter_aria": "Filter timeline by product",
   "filter_esc": "OpenESC",
   "filter_fc": "OpenFC",
   "filter_rx": "OpenRX",

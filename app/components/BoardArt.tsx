@@ -26,6 +26,8 @@ import {BOARD_ART_VERSION} from '~/data/board-art-version';
 import {assetUrl} from '~/lib/asset-url';
 import {useIsMobile} from '~/lib/use-media-query';
 import {useLayerSwipe} from '~/lib/use-layer-swipe';
+import {copyText} from '~/lib/copy';
+import {Txt} from '~/components/Txt';
 import {
   SWAP_TIMING,
   layerSweepDelays,
@@ -197,16 +199,21 @@ function layerFunction(
   // The realistic composite faces describe the physical board side, not a
   // copper stack position, so they must not get the position-based guess.
   // Both faces carry components on these boards (double-sided SMT).
-  if (slug === 'front') return 'Component side';
-  if (slug === 'back') return 'Component side';
+  if (slug === 'front' || slug === 'back') {
+    return copyText('product-chrome.board_role_component_side') ?? 'Component side';
+  }
   // The position guess applies to the copper sheets only. Front sits at index 0
   // and back at index total-1, so exclude those ends from the copper logic by
   // measuring position within the copper run (front=1st sheet, back=last).
   const copperFirst = index === 1; // first copper sheet (after front)
   const copperLast = index === total - 2; // last copper sheet (before back)
-  if (copperFirst || copperLast) return 'Signal + components';
-  if (index === 2 || index === total - 3) return 'Ground plane';
-  return 'Signal + power';
+  if (copperFirst || copperLast) {
+    return copyText('product-chrome.board_role_signal_components') ?? 'Signal + components';
+  }
+  if (index === 2 || index === total - 3) {
+    return copyText('product-chrome.board_role_ground') ?? 'Ground plane';
+  }
+  return copyText('product-chrome.board_role_signal_power') ?? 'Signal + power';
 }
 
 /** Human label for each known layer slug, in physical top→bottom order. */
@@ -223,6 +230,25 @@ const LAYER_LABELS: Record<string, string> = {
   copper: 'Top',
   'b-copper': 'Bottom',
 };
+
+/** The layer's display name: copy for the faces and outer copper, the
+ *  inner layer ids (In1..In4) as they are. */
+function layerLabel(slug: string): string {
+  switch (slug) {
+    case 'front':
+    case 'copper':
+      return copyText('product-chrome.board_layer_top') ?? 'Top';
+    case 'back':
+    case 'b-copper':
+      return copyText('product-chrome.board_layer_bottom') ?? 'Bottom';
+    case 'f':
+      return copyText('product-chrome.board_layer_top_cu') ?? 'Top Cu';
+    case 'b':
+      return copyText('product-chrome.board_layer_bottom_cu') ?? 'Bottom Cu';
+    default:
+      return LAYER_LABELS[slug] ?? slug.toUpperCase();
+  }
+}
 
 /** Folder stack order: realistic front first, the copper stack top→bottom, the
  *  realistic back last. Any unknown layer slug falls in after the knowns. */
@@ -288,7 +314,7 @@ function parseSheets(raw: string): Sheet[] {
       const faceClass = isFace ? ` board-sheet-svg-${slug}` : '';
       return {
         slug,
-        label: LAYER_LABELS[slug] ?? slug.toUpperCase(),
+        label: layerLabel(slug),
         html:
           `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" ` +
           `preserveAspectRatio="xMidYMid meet" class="board-sheet-svg${faceClass}">` +
@@ -1414,7 +1440,7 @@ export function BoardArt({
             ['--depth' as string]: i,
             ['--rel' as string]: i - shownIndex,
           }}
-          aria-label={`Show ${s.label} layer`}
+          aria-label={(copyText('product-chrome.board_show_layer') ?? 'Show {layer} layer').replace('{layer}', s.label)}
           aria-pressed={i === shownIndex}
           onClick={() => selectLayer(i)}
           dangerouslySetInnerHTML={{__html: s.html}}
@@ -1628,7 +1654,7 @@ export function BoardArt({
             className={`board-folder-rail${railSwapping ? ' is-swapping' : ''}`}
             ref={railRef}
             role="group"
-            aria-label="Copper layer"
+            aria-label={copyText('product-chrome.board_rail_aria') ?? 'Copper layer'}
             tabIndex={0}
             onKeyDown={(e) => {
               if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
@@ -1717,7 +1743,10 @@ export function BoardArt({
             <div className="board-deck-progress">
               {/* Lightweight progress: a tick per layer (how far through the
                   stack you are) - and each is tappable to jump straight there. */}
-              <div className="board-deck-dots" aria-label="Board layer">
+              <div
+                className="board-deck-dots"
+                aria-label={copyText('product-chrome.board_deck_aria') ?? 'Board layer'}
+              >
                 {sheets.map((s, i) => (
                   <button
                     type="button"
@@ -1725,7 +1754,7 @@ export function BoardArt({
                     className={`board-deck-dot${i === shownIndex ? ' is-active' : ''}${
                       i < shownIndex ? ' is-done' : ''
                     }`}
-                    aria-label={`Show ${s.label} layer`}
+                    aria-label={(copyText('product-chrome.board_show_layer') ?? 'Show {layer} layer').replace('{layer}', s.label)}
                     aria-current={i === shownIndex ? 'true' : undefined}
                     onClick={() => selectLayer(i)}
                   />
@@ -1738,7 +1767,7 @@ export function BoardArt({
                 <span className="board-deck-name">
                   {sheets[shownIndex]?.label}
                 </span>
-                <span className="board-deck-hint">Swipe ←/→</span>
+                <Txt id="product-chrome.board_swipe_hint" className="board-deck-hint" fallback="Swipe ←/→" />
               </p>
             </div>
           ) : null}
@@ -1760,15 +1789,19 @@ export function BoardArt({
             decoding="async"
           />
           <span className="board-art-skeleton-spinner" />
-          <span className="board-art-skeleton-label">Loading the layer view…</span>
+          <Txt
+            id="product-chrome.board_loading"
+            className="board-art-skeleton-label"
+            fallback="Loading the layer view…"
+          />
         </div>
       ) : null}
       {failed ? (
         <p className="board-art-fallback">
-          Board art unavailable.{' '}
+          {copyText('product-chrome.board_unavailable') ?? 'Board art unavailable.'}{' '}
           {inspectUrl ? (
             <a href={inspectUrl} target="_blank" rel="noopener noreferrer">
-              Open on KiCanvas ↗
+              {copyText('product-chrome.board_kicanvas_link') ?? 'Open on KiCanvas ↗'}
             </a>
           ) : null}
         </p>

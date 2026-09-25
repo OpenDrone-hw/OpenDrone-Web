@@ -24,7 +24,8 @@ import {StudioChapters} from '~/studio/StudioChapters';
 import {StudioGoals} from '~/studio/StudioGoals';
 import {StudioHero} from '~/studio/StudioHero';
 import {StudioMedia} from '~/studio/StudioMedia';
-import {StudioLegal} from '~/studio/StudioLegal';
+import {StudioDocs} from '~/studio/StudioDocs';
+import {StudioData} from '~/studio/StudioData';
 import {flattenLeaves, leafLabel, setLeaf} from '~/studio/leaves';
 import {PRODUCT_CONTENT} from '~/lib/product-content';
 
@@ -36,7 +37,7 @@ export const meta: MetaFunction = () => [
 ];
 
 type CopyFile = Record<string, unknown>;
-type Tab = 'words' | 'chapters' | 'goals' | 'design' | 'media' | 'legal' | 'hero';
+type Tab = 'words' | 'chapters' | 'goals' | 'design' | 'media' | 'docs' | 'data' | 'hero';
 
 /** Handles that have editorial content, so a chapter list means something. */
 const PRODUCT_HANDLES = Object.keys(PRODUCT_CONTENT).sort();
@@ -321,10 +322,17 @@ export default function Studio() {
           </button>
           <button
             type="button"
-            className={tab === 'legal' ? 'is-on' : undefined}
-            onClick={() => setTab('legal')}
+            className={tab === 'docs' ? 'is-on' : undefined}
+            onClick={() => setTab('docs')}
           >
-            Legal
+            Docs
+          </button>
+          <button
+            type="button"
+            className={tab === 'data' ? 'is-on' : undefined}
+            onClick={() => setTab('data')}
+          >
+            Data
           </button>
           <button
             type="button"
@@ -335,7 +343,8 @@ export default function Studio() {
           </button>
         </nav>
         <span className="studio-status">{status}</span>
-        <div className="studio-actions">
+        {/* Words saves here; every other tab carries its own Save. */}
+        <div className="studio-actions" hidden={tab !== 'words'}>
           <button type="button" onClick={revert} disabled={!isDirty}>
             Revert
           </button>
@@ -350,8 +359,10 @@ export default function Studio() {
         </div>
       </header>
 
-      {tab === 'legal' ? (
-        <StudioLegal setStatus={setStatus} />
+      {tab === 'docs' ? (
+        <StudioDocs setStatus={setStatus} />
+      ) : tab === 'data' ? (
+        <StudioData setStatus={setStatus} />
       ) : tab === 'media' ? (
         <StudioMedia setStatus={setStatus} />
       ) : tab === 'hero' ? (

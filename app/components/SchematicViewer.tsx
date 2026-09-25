@@ -10,7 +10,7 @@ import {SCHEMATICS_VERSION} from '~/data/schematics-version';
 import {useIsMobile} from '~/lib/use-media-query';
 import {useLayerSwipe} from '~/lib/use-layer-swipe';
 import {Txt} from './Txt';
-import {copyText} from '~/lib/copy';
+import {copyFill, copyText} from '~/lib/copy';
 
 export type SchematicViewerProps = {
   /** Board handle whose schematic lives at /schematics/<handle>/manifest.json */
@@ -577,7 +577,9 @@ export function SchematicViewer({
                   className={`board-deck-dot${i === active ? ' is-active' : ''}${
                     i < active ? ' is-done' : ''
                   }`}
-                  aria-label={`Show ${s.label} sheet`}
+                  aria-label={copyFill('product-chrome.schematic_show_sheet', 'Show {sheet} sheet', {
+                    sheet: s.label,
+                  })}
                   aria-current={i === active ? 'true' : undefined}
                   onClick={() => setActive(i)}
                 />

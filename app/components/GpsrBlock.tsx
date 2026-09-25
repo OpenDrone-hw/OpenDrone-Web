@@ -37,6 +37,14 @@ const REGISTRATION_LABELS: Record<RegistrationNumber['kind'], string> = {
   idu: 'IDU',
 };
 
+function registrationLabel(kind: RegistrationNumber['kind']): string {
+  if (kind === 'weee') return copyText('product-chrome.gpsr_reg_weee') ?? REGISTRATION_LABELS.weee;
+  if (kind === 'packaging') {
+    return copyText('product-chrome.gpsr_reg_packaging') ?? REGISTRATION_LABELS.packaging;
+  }
+  return copyText('product-chrome.gpsr_reg_idu') ?? REGISTRATION_LABELS[kind];
+}
+
 /** Which extra warnings a product carries, on top of the shared ones. */
 export type SafetyKind = 'electronics' | 'frame' | 'motor' | 'accessory';
 
@@ -94,7 +102,7 @@ export function GpsrBlock({
   const others = folded.filter((lang) => linesFor(lang).length);
   return (
     <section
-      aria-label="Manufacturer and safety information"
+      aria-label={copyText('product-chrome.gpsr_aria') ?? 'Manufacturer and safety information'}
       className={`${compact ? 'pb-6' : 'mt-6 border-t border-[var(--color-border)] pt-5'} text-[14px] leading-relaxed text-[var(--color-text)]`}
     >
       {!compact ? <p
@@ -108,7 +116,7 @@ export function GpsrBlock({
       </p>
       {registrations.length ? (
         <p className="mb-2">
-          {registrations.map((r) => `${REGISTRATION_LABELS[r.kind]} ${r.value}`).join(' · ')}
+          {registrations.map((r) => `${registrationLabel(r.kind)} ${r.value}`).join(' · ')}
         </p>
       ) : null}
       <p className="mb-4">
