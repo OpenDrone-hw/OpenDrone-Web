@@ -75,10 +75,11 @@ const fmt = (p?: {amount: string; currencyCode: string} | null) =>
  * hero) can spotlight the matching 3D model. Hover cue is brightness/opacity -
  * no underlines.
  *
- * Buyable rows (header dropdowns) render a fixed-width buy cell that exists
- * BEFORE any pointer event: an ADD chip and a stack chip with an overlapped
- * two-board glyph. Nothing appears, moves, or resizes on hover - the only
- * hover effect is color. Deal detail lives in an attr-driven tooltip.
+ * Buyable rows (header dropdowns) show the price under the name and an
+ * always-on column of icon buttons stacked in the row's height: a cart for
+ * the board alone, and an overlapped two-board glyph per stack partner.
+ * Nothing appears, moves, or resizes on hover; what each button adds is in
+ * its tooltip and aria label.
  */
 export function ProductPods({
   items,
@@ -127,10 +128,15 @@ export function ProductPods({
               {it.subtitle ? (
                 <span className="product-pod-subtitle">{it.subtitle}</span>
               ) : null}
+              {/* A buyable row shows its price once, under the name; the
+                  buttons beside it carry no text. */}
+              {it.buy && it.price ? (
+                <span className="product-pod-price">{fmt(it.price)}</span>
+              ) : null}
             </span>
             {it.soon ? (
               <span className="product-pod-soon">Soon</span>
-            ) : it.price ? (
+            ) : it.price && !it.buy ? (
               <span className="product-pod-price">{fmt(it.price)}</span>
             ) : null}
           </Link>
@@ -149,10 +155,10 @@ export function ProductPods({
             onBlur={() => onHover?.(null)}
           >
             {link}
-            {/* Hover/focus-revealed action bar across the full row width.
-                Every button says exactly what it adds: "<FC> only" vs
-                "<FC> + <ESC> stack". Keyboard: focusing a button opens the
-                bar via :focus-within. */}
+            {/* Always-on icon column, stacked in the row's height: a cart
+                for this board alone, and the two-board glyph for the stack.
+                No text on the buttons; the tooltip and aria label say
+                exactly what each adds. */}
             <div
               className="product-pod-actionbar"
               role="group"
@@ -164,13 +170,10 @@ export function ProductPods({
                 product={it.buy.product}
                 disabled={!it.buy.available}
                 onClick={onAdd}
-                ariaLabel={`Add ${it.title} to cart`}
+                ariaLabel={`Add ${it.title} ${self} to cart`}
+                dataTip={it.buy.available ? `${self} · ${fmt(it.price)}` : 'Out of stock'}
               >
-                <ShoppingCart size={15} strokeWidth={2.25} aria-hidden="true" />
-                {self} only
-                {it.price ? (
-                  <span className="pod-buy-price">{fmt(it.price)}</span>
-                ) : null}
+                <ShoppingCart size={18} strokeWidth={2.25} aria-hidden="true" />
               </AddToCartButton>
               {(it.buy.companions ?? []).map((o) => (
                 <AddToCartButton
@@ -204,8 +207,8 @@ export function ProductPods({
                         // discounted one, spell out full -> discounted so
                         // the pct can't read as a further cut on it.
                         o.fullPrice && o.pct && o.discountedShort
-                        ? `${o.title} · +${fmt(o.fullPrice)} → ${fmt(o.price)} (${o.discountedShort} −${o.pct}% in the cart)`
-                        : `${o.title} · +${fmt(o.price)}${
+                        ? `${self} + ${o.short} stack · +${fmt(o.fullPrice)} → ${fmt(o.price)} (${o.discountedShort} −${o.pct}% in the cart)`
+                        : `${self} + ${o.short} stack · +${fmt(o.price)}${
                             o.pct && o.discountedShort
                               ? ` · ${o.discountedShort} −${o.pct}% in the cart`
                               : ''
@@ -230,10 +233,9 @@ export function ProductPods({
                         loading="lazy"
                       />
                     </span>
-                  ) : null}
-                  <span className="pod-buy-stack-label">
-                    {self} + {o.short} stack
-                  </span>
+                  ) : (
+                    <span className="pod-buy-stack-label">+{o.short}</span>
+                  )}
                   {o.pct && o.discountedShort ? (
                     <span className="pod-buy-stack-pct">
                       {o.discountedShort} −{o.pct}%

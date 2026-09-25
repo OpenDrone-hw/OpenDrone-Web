@@ -670,7 +670,8 @@ a:hover {
   font-size: var(--fs-sm);
   color: var(--color-text-muted);
 }
-.product-pods--grid .product-pod-price {
+.product-pods--grid .product-pod-price,
+.product-pod-text .product-pod-price {
   margin-left: 0;
 }
 /* Coming-soon rows: a quiet mono tag holds the price slot. */
@@ -1011,8 +1012,8 @@ html.anim-paused .board-sheet.is-active {
 }
 .header-cat-pod {
   width: max-content;
-  /* Wide enough for a row + its unfolded action bar; clamped so it can
-     never run off screen. */
+  /* Wide enough for a row and its icon column; clamped so it can never
+     run off screen. */
   max-width: min(48rem, calc(100vw - 3rem));
   padding: var(--sp-2);
 }
@@ -1029,63 +1030,43 @@ html.anim-paused .board-sheet.is-active {
 .product-pod-wrap:focus-within {
   background: var(--color-gold-soft);
 }
-/* Fixed-basis link column so every row's price lands on the same edge -
-   the action bar unfolds in the horizontal space beyond it. */
+/* The link takes the row; the icon column sits at its right edge. */
 .product-pod-wrap .product-pod {
-  flex: 0 0 19rem;
-  min-width: 0;
+  flex: 1 1 auto;
+  min-width: 13rem;
 }
 .product-pod-wrap .product-pod:hover,
 .product-pod-wrap .product-pod:focus-visible {
   background: transparent;
 }
 
-/* Hover/focus-revealed action bar IN-LINE with the row: collapsed it holds
-   zero width; hovering the row (or tabbing to a button) unfolds it sideways
-   and the center-anchored pod grows left+right around it. No vertical
-   growth, nothing below gets pushed. */
+/* Always-on icon column at the row's right edge, its buttons stacked to
+   fill the row height: cart on top, stack glyph below. */
 .product-pod-actionbar {
+  align-self: stretch;
   display: flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 0;
-  opacity: 0;
-  overflow: hidden;
-  transition: max-width 0.22s ease, opacity 0.15s ease;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: var(--sp-2) var(--sp-2) var(--sp-2) 0;
   text-transform: none;
   letter-spacing: normal;
-}
-.product-pod-wrap:hover .product-pod-actionbar,
-.product-pod-wrap:focus-within .product-pod-actionbar {
-  max-width: 28rem;
-  opacity: 1;
-  padding-right: var(--sp-2);
-}
-@media (prefers-reduced-motion: reduce) {
-  .product-pod-actionbar {
-    transition: none;
-  }
 }
 .pod-buy-add,
 .pod-buy-stack {
   position: relative;
-  flex: none;
+  flex: 1 1 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 2.5rem;
-  padding: 0 0.9rem;
+  width: 3.5rem;
+  min-height: 2.25rem;
+  padding: 0;
   border-radius: var(--r-md);
   cursor: pointer;
   font-family: var(--font-mono);
-  font-size: 0.82rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: 0.72rem;
   white-space: nowrap;
-}
-.pod-buy-price {
-  opacity: 0.85;
-  font-weight: 400;
 }
 .pod-buy-add {
   background: var(--color-gold-fill);
@@ -1135,7 +1116,15 @@ html.anim-paused .board-sheet.is-active {
   text-align: center;
 }
 .pod-buy-stack-pct {
-  color: var(--color-gold-text);
+  position: absolute;
+  top: -0.35rem;
+  right: -0.35rem;
+  padding: 0 0.25rem;
+  border-radius: var(--r-xs);
+  background: var(--color-gold-fill);
+  color: var(--color-on-accent);
+  font-size: 0.62rem;
+  line-height: 1.3;
 }
 
 /* The stack, physically: two board thumbs mounted with a diagonal offset. */
@@ -1165,12 +1154,14 @@ html.anim-paused .board-sheet.is-active {
   box-shadow: 0 0 0 2px var(--color-bg-elevated);
 }
 
-/* Deal-detail tooltip (attr-driven, Pod material, 250ms intent delay). */
+/* What the button adds (attr-driven, Pod material, 250ms intent delay),
+   shown to the button's right, outside the pod, so it covers no row. */
+.pod-buy-add[data-tip]::after,
 .pod-buy-stack[data-tip]::after {
   content: attr(data-tip);
   position: absolute;
-  bottom: calc(100% + 0.4rem);
-  right: 0;
+  top: 50%;
+  left: calc(100% + 0.9rem);
   white-space: nowrap;
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
@@ -1183,15 +1174,17 @@ html.anim-paused .board-sheet.is-active {
   color: var(--color-text);
   box-shadow: var(--pod-shadow);
   opacity: 0;
-  transform: translateY(2px);
+  transform: translate(-2px, -50%);
   pointer-events: none;
   transition: opacity 0.12s ease 0.25s, transform 0.12s ease 0.25s;
   z-index: 30;
 }
+.pod-buy-add:hover::after,
+.pod-buy-add:focus-visible::after,
 .pod-buy-stack:hover::after,
 .pod-buy-stack:focus-visible::after {
   opacity: 1;
-  transform: none;
+  transform: translate(0, -50%);
 }
 /* The chip rules (.site-header-categories a / .site-header-cat-group a) also
    match the pod's product links: they bled gold colour, UPPERCASE tracking and
