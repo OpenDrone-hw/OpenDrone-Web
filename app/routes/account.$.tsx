@@ -8,12 +8,12 @@ import {customerAccountUrl} from '~/lib/shop-links';
  * order, invoice or address endpoint is invented.
  *
  * /account/support is the exception: the support desk never belonged to
- * the shop, so it lands on the support page.
+ * the shop, so it lands on "find my ticket".
  */
 export function loader({params, context}: Route.LoaderArgs) {
   const rest = (params['*'] ?? '').replace(/^\/+/, '');
   if (/^support(\/|$)/.test(rest)) {
-    throw redirect('/support?existing=1', 301);
+    throw redirect('/support/find', 301);
   }
   const destination = customerAccountUrl(context.env);
   if (!destination) {

@@ -167,9 +167,10 @@ infer status from prose anywhere else.
 
 ## Support
 
-- [Support chat](${origin}/support) - live support on the site
-- Email: contact@opendrone.be
-- [Discord](https://discord.gg/ABajnacUsS)
+- [Support tickets](${origin}/support) - open a ticket; the team answers on the ticket page
+- [Find a ticket](${origin}/support/find) - with the email and the order or ticket number
+- [Discord](https://discord.gg/ABajnacUsS) - community help
+- Sales and trade: [trade enquiries](${origin}/wholesale), contact@opendrone.be
 `;
 
   return new Response(body, {

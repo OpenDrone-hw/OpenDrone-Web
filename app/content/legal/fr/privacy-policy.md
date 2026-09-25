@@ -24,7 +24,7 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 | Données de commande | Nom, adresse, courriel, numéro de téléphone | Traitement et livraison des commandes |
 | Données de paiement | Moyen de paiement, ID de transaction | Traitement du paiement (via prestataire de paiement) |
 | Données de compte | Courriel (connexion par code à usage unique via Shopify) | Compte client sur la boutique en ligne |
-| Communication | Courriel, contenu des messages | Service client, gestion des plaintes |
+| Communication | Nom, courriel, numéro de commande, contenu des messages et pièces jointes (tickets de support) | Service client, gestion des plaintes |
 | Utilisation du site | Adresse IP, navigateur, pages visitées | Optimisation du site, sécurité |
 | Newsletter | Courriel, pays (déduit de l’adresse IP) | Communication marketing (uniquement avec consentement) |
 | Demandes professionnelles | Nom de l’entreprise et du contact, courriel, numéro de téléphone, adresses de livraison et de facturation, numéro de TVA ou EIN, informations sur le magasin, produits demandés | Réponse et devis pour une demande de vente en gros d’un magasin |
@@ -48,7 +48,7 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 |------|-----------------|
 | Données de commande et factures | 10 ans à compter du 1er janvier suivant la clôture de l’exercice (art. III.86 CDE ; art. 60 §4 Code TVA) |
 | Compte client | Jusqu’à sa suppression à votre demande, au plus tard 3 ans après votre dernière connexion ou commande |
-| Communication de service client | 2 ans après clôture |
+| Communication de service client (tickets de support sur le site, dans Discord et la référence du ticket sur votre fiche client Shopify) | 24 mois après la clôture du ticket, puis suppression automatique. Un ticket auquel nous avons répondu est clôturé après 30 jours sans réponse de votre part |
 | Fichiers journaux du site | 6 mois |
 | Inscription à la newsletter | Jusqu’au désabonnement |
 | Demandes professionnelles sans commande | 2 ans après le dernier contact |
@@ -57,20 +57,21 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 
 | Destinataire | Finalité | Lieu |
 |-----------|---------|----------|
-| Shopify International Limited | Plateforme de boutique : catalogue, panier, paiement, commandes, comptes clients, notifications de commande et d’expédition et consentement à la newsletter | Irlande (UE) ; les transferts vers Shopify Inc. au Canada reposent sur la décision d’adéquation de l’UE pour le Canada, les autres transferts sur des CCT ; politique de confidentialité de Shopify : https://www.shopify.com/legal/privacy |
+| Shopify International Limited | Plateforme de boutique : catalogue, panier, paiement, commandes, comptes clients, notifications de commande et d’expédition, consentement à la newsletter et une référence à vos tickets de support sur votre fiche client | Irlande (UE) ; les transferts vers Shopify Inc. au Canada reposent sur la décision d’adéquation de l’UE pour le Canada, les autres transferts sur des CCT ; politique de confidentialité de Shopify : https://www.shopify.com/legal/privacy |
 | Shopify Payments, traité par Stripe Payments Europe, Ltd. | Traitement des paiements pour les moyens de paiement affichés lors du passage en caisse : données de paiement, e-mail, adresse de facturation ; données de l'appareil pour la prévention de la fraude | 1 Grand Canal Street Lower, Dublin 2, Irlande (UE) ; politique de confidentialité de Stripe : https://stripe.com/privacy |
 | bpost NV/SA | Livraison des colis et étiquettes d’expédition | Belgique (UE) |
 | Judge.me | Demandes d’avis après livraison et publication des avis : nom, e-mail, produits commandés, texte de l’avis | politique de confidentialité de Judge.me : https://judge.me/privacy |
 | Google Workspace (Google Ireland Ltd.) | Boîtes mail de l’entreprise, messagerie et connexion du personnel | Irlande (UE) ; les clauses contractuelles types de Google couvrent tout transfert hors EEE |
 | Plausible Analytics | Analyse de site sans cookies | Plausible Insights OÜ, Estonie (UE) ; hébergement en Allemagne |
 | Polar Advisory BV (comptable) | Facturation et comptes annuels | Belgique |
-| Resend (Plus Five Five, Inc.) | E-mails envoyés par opendrone.be : confirmations de rétractation, e-mails de bienvenue et de newsletter, demandes des revendeurs | Infrastructure en région UE ; entité légale É-U : CCT |
-| Cloudflare, Inc. | Hébergement et diffusion du site (adresse IP, données de requête, pays déduit) ; anti-spam Turnstile sur les formulaires de newsletter et de demande professionnelle | É-U : EU-US Data Privacy Framework (art. 45 RGPD) |
+| Resend (Plus Five Five, Inc.) | E-mails envoyés par opendrone.be : confirmations de rétractation, e-mails de bienvenue et de newsletter, demandes des revendeurs, avis de nouvelle réponse à un ticket de support (un lien seulement, sans contenu du message) | Infrastructure en région UE ; entité légale É-U : CCT |
+| Discord Inc. (sous-traitant) | Tickets de support : notre équipe les lit et y répond dans un canal Discord réservé au personnel (votre prénom, courriel, numéro et détails de commande, messages, pièces jointes) | É-U : EU-US Data Privacy Framework (art. 45 RGPD) ; conditions de sous-traitance de Discord : https://support.discord.com/hc/en-us/articles/37891902561687 |
+| Cloudflare, Inc. | Hébergement et diffusion du site (adresse IP, données de requête, pays déduit) ; stockage des tickets de support (Cloudflare D1) ; anti-spam Turnstile sur les formulaires de newsletter, de demande professionnelle et de support | É-U : EU-US Data Privacy Framework (art. 45 RGPD) |
 | Commission européenne (VIES) | Vérification du numéro de TVA indiqué dans une demande professionnelle | UE |
 
 Les données de commande et de client (nom, adresse, e-mail, référence de paiement, historique des commandes) et le consentement à la newsletter sont traités dans Shopify.
 
-**Discord.** Le serveur communautaire OpenDrone fonctionne sur Discord. Discord Inc. est un responsable du traitement indépendant pour le serveur communautaire que vous choisissez de rejoindre ; Incutec BV ne transmet aucune donnée personnelle à Discord. Politique de confidentialité de Discord : https://discord.com/privacy
+**Discord.** Le serveur communautaire OpenDrone fonctionne sur Discord. Discord Inc. est un responsable du traitement indépendant pour le serveur communautaire que vous choisissez de rejoindre. Pour les tickets de support, Discord Inc. traite le ticket pour notre compte en tant que sous-traitant (tableau ci-dessus) ; aucun compte Discord n’est nécessaire pour ouvrir un ticket. Politique de confidentialité de Discord : https://discord.com/privacy
 
 **Transferts hors EEE.** Certains destinataires traitent des données hors de l’EEE. Ces transferts reposent sur une décision d’adéquation (art. 45 RGPD : Canada, Royaume-Uni, ou l’EU-US Data Privacy Framework pour les destinataires américains certifiés) ou sur des clauses contractuelles types (art. 46 RGPD, Décision 2021/914). La base applicable à chaque destinataire figure dans le tableau ci-dessus.
 

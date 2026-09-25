@@ -1,17 +1,37 @@
-import {Link, useLoaderData} from 'react-router';
+import {useEffect, useRef, useState} from 'react';
+import {data, Form, Link, redirect, useActionData, useLoaderData, useNavigation, useRouteLoaderData} from 'react-router';
 import type {Route} from './+types/support';
 import {buildSeoMeta} from '~/lib/seo';
-import {Txt} from '~/components/Txt';
-import {legalHref} from '~/components/LangToggle';
 import {copyText} from '~/lib/copy';
 import {getCompanyIdentity} from '~/lib/company';
-import {customerAccountUrl} from '~/lib/shop-links';
+import {legalHref} from '~/components/LangToggle';
+import {Txt} from '~/components/Txt';
+import {FilePicker, fill, StatusPill, Stamp, TurnstileBox} from '~/components/SupportUi';
+import {clientIp} from '~/lib/rate-limit';
+import {verifyTurnstile} from '~/lib/turnstile';
+import {emailOverDailyLimit, supportRateLimit} from '~/lib/support/limits';
+import {notifyEnabled} from '~/lib/support/notify';
+import {originOf, sameOrigin, secureCookies, supportDeps, supportReady} from '~/lib/support/server';
+import {
+  createTicket,
+  parseNewTicket,
+  publicTicket,
+  TOPIC_FIELDS,
+  TOPICS,
+  type FieldError,
+  type NewTicketInput,
+} from '~/lib/support/tickets';
+import {readTicketCookie, withTicket} from '~/lib/support/tokens';
+import {extractAttachments} from '~/lib/support/uploads';
+import type {TicketTopic} from '~/lib/support/store';
 
 /**
- * The help page: order questions by email, build questions on Discord, and
- * a plain list of the policy pages (pre-orders, shipping, returns,
- * warranty, terms). Words come from `content/copy/support.json`. /contact
- * redirects here and the footer's Contact link lands on `#contact`.
+ * The support front door: pick a topic, fill in the few fields it needs,
+ * and the ticket opens in the team's Discord. The customer lands on the
+ * ticket page (support_.t.$ref.tsx). Tickets this browser opened are
+ * listed; a lost link is recovered at /support/find. Email is offered for
+ * sales only. Words in content/copy/support.json; rules in
+ * app/lib/support/tickets.ts.
  */
 export const meta: Route.MetaFunction = () =>
   buildSeoMeta({
@@ -19,82 +39,400 @@ export const meta: Route.MetaFunction = () =>
     description: copyText('support.meta_description') ?? '',
   });
 
-const TOPICS: Array<{to: string; key: string}> = [
-  {to: '/preorder#questions', key: 'preorder'},
-  {to: '/shipping', key: 'shipping'},
-  {to: '/herroepingsrecht', key: 'returns'},
-  {to: '/warranty', key: 'warranty'},
-  {to: '/algemene-voorwaarden', key: 'terms'},
+const t = (key: string, vars: Record<string, string> = {}) => fill(copyText(`support.${key}`), vars);
+
+const HELP_LINKS: Array<{to: string; key: string}> = [
+  {to: '/preorder#questions', key: 'topic_preorder'},
+  {to: '/shipping', key: 'topic_shipping'},
+  {to: '/herroepingsrecht', key: 'topic_returns'},
+  {to: '/warranty', key: 'topic_warranty'},
+  {to: '/algemene-voorwaarden', key: 'topic_terms'},
 ];
 
-export function loader({request, context}: Route.LoaderArgs) {
+export async function loader({request, context}: Route.LoaderArgs) {
   const env = context.env;
-  const url = new URL(request.url);
   const company = getCompanyIdentity(env as unknown as Record<string, string | undefined>);
-  let accountUrl: string | null = null;
+  const ready = supportReady(env);
+  const topic = new URL(request.url).searchParams.get('topic');
+
+  let products: string[] = [];
   try {
-    accountUrl = customerAccountUrl(env);
+    const catalog = await context.catalog.get();
+    products = [...new Set(catalog.products.map((p) => p.title).filter(Boolean))].sort();
   } catch {
-    accountUrl = null;
+    products = [];
   }
-  return {
-    discordInvite: env.DISCORD_SUPPORT_INVITE ?? 'https://discord.gg/ABajnacUsS',
-    email: company.email,
-    company,
-    accountUrl,
-    existingConversation: url.searchParams.get('existing') === '1',
-  };
+
+  let yours: ReturnType<typeof publicTicket>[] = [];
+  if (ready) {
+    try {
+      const deps = supportDeps(env, originOf(request));
+      const cookie = await readTicketCookie(env, request);
+      const found = await deps.store.ticketsByRefs(cookie.map((c) => c.r));
+      yours = cookie
+        .map((c) => found.find((f) => f.ref === c.r && f.linkVersion === c.k))
+        .filter((x): x is NonNullable<typeof x> => Boolean(x))
+        .map(publicTicket);
+    } catch {
+      yours = [];
+    }
+  }
+
+  return data(
+    {
+      ready,
+      notify: notifyEnabled(env),
+      products,
+      yours,
+      initialTopic: TOPICS.includes(topic as TicketTopic) ? (topic as TicketTopic) : null,
+      salesEmail: company.email,
+      discordInvite: env.DISCORD_SUPPORT_INVITE ?? env.PUBLIC_DISCORD_INVITE ?? 'https://discord.gg/ABajnacUsS',
+    },
+    {headers: {'Cache-Control': 'private, no-store'}},
+  );
+}
+
+type Failure = 'unavailable' | 'rate' | 'email_limit' | 'turnstile' | 'send' | 'forbidden' | 'files';
+
+type ActionResult = {
+  ok: false;
+  failure?: Failure;
+  fileProblem?: string;
+  errors?: Partial<Record<keyof NewTicketInput, FieldError>>;
+  at: number;
+};
+
+export async function action({request, context}: Route.ActionArgs) {
+  const env = context.env;
+  const fail = (body: Omit<ActionResult, 'ok' | 'at'>, status: number) =>
+    data<ActionResult>({ok: false, at: Date.now(), ...body}, {status});
+
+  if (!sameOrigin(request)) return fail({failure: 'forbidden'}, 403);
+  if (!supportReady(env)) return fail({failure: 'unavailable'}, 503);
+  const ip = clientIp(request);
+  let form: FormData;
+  try {
+    form = await request.formData();
+  } catch {
+    return fail({failure: 'send'}, 400);
+  }
+  // Honeypot: invisible to people.
+  if (String(form.get('website') ?? '') !== '') return fail({failure: 'forbidden'}, 400);
+
+  const parsed = parseNewTicket(form);
+  if (!parsed.ok) return fail({errors: parsed.errors}, 400);
+  const files = await extractAttachments(form);
+  if (!files.ok) return fail({failure: 'files', fileProblem: t(`file_${files.problem}`, {file: files.file ?? ''})}, 400);
+
+  // Counted only for complete submissions, so fixing a typo never locks anyone out.
+  if (!supportRateLimit('create', ip).allowed) return fail({failure: 'rate'}, 429);
+  const turnstile = await verifyTurnstile(env, String(form.get('cf-turnstile-response') ?? ''), ip);
+  if (!turnstile.ok) return fail({failure: 'turnstile'}, 400);
+
+  const deps = supportDeps(env, originOf(request), context.waitUntil);
+  try {
+    if (await emailOverDailyLimit(deps.store, parsed.input.email)) return fail({failure: 'email_limit'}, 429);
+    const ticket = await createTicket(deps, parsed.input, files.files);
+    const current = await readTicketCookie(env, request);
+    const cookie = await withTicket(env, current, {r: ticket.ref, k: ticket.linkVersion}, secureCookies(request));
+    return redirect(`/support/t/${ticket.ref}?new=1`, {headers: {'Set-Cookie': cookie}});
+  } catch (err) {
+    console.error('[support] ticket not created', err instanceof Error ? err.message : 'error');
+    return fail({failure: 'send'}, 502);
+  }
+}
+
+function FieldError({error, field}: {error?: FieldError; field: string}) {
+  if (!error) return null;
+  const key =
+    error === 'invalid' ? (field === 'email' ? 'err_invalid_email' : 'err_invalid_order') : `err_${error}`;
+  return (
+    <span className="sp-field-error" id={`sp-${field}-error`}>
+      {t(key)}
+    </span>
+  );
+}
+
+function TicketForm() {
+  const {products, notify, initialTopic} = useLoaderData<typeof loader>();
+  const root = useRouteLoaderData('root') as {turnstileSiteKey?: string | null} | undefined;
+  const result = useActionData<ActionResult>();
+  const nav = useNavigation();
+  const busy = nav.state !== 'idle' && nav.formMethod?.toLowerCase() === 'post';
+  const [topic, setTopic] = useState<TicketTopic | null>(initialTopic);
+  const [touched, setTouched] = useState(false);
+  const detailsRef = useRef<HTMLDivElement>(null);
+  // A field's error clears as soon as it is edited; the next submit decides again.
+  const [edited, setEdited] = useState<Set<string>>(new Set());
+  useEffect(() => setEdited(new Set()), [result]);
+  const errors = Object.fromEntries(
+    Object.entries(result?.errors ?? {}).filter(([k]) => !edited.has(k === 'orderNumber' ? 'order' : k)),
+  ) as NonNullable<ActionResult['errors']>;
+  const fields = topic ? TOPIC_FIELDS[topic] : null;
+
+  function choose(next: TicketTopic) {
+    const first = topic === null;
+    setTopic(next);
+    setTouched(true);
+    if (first) window.setTimeout(() => detailsRef.current?.scrollIntoView({behavior: 'smooth', block: 'start'}), 60);
+  }
+
+  useEffect(() => {
+    if (result?.errors) document.querySelector<HTMLElement>('.sp-form [aria-invalid="true"]')?.focus();
+  }, [result]);
+
+  const failure = result?.failure;
+  const invalid = (k: keyof NewTicketInput) => (errors[k] ? {'aria-invalid': true, 'aria-describedby': `sp-${k}-error`} : {});
+
+  return (
+    <Form
+      method="post"
+      encType="multipart/form-data"
+      className="sp-form"
+      noValidate
+      onFocus={() => setTouched(true)}
+      onInput={(e) => {
+        const name = (e.target as HTMLInputElement).name;
+        if (name && !edited.has(name)) setEdited((cur) => new Set(cur).add(name));
+      }}
+    >
+      <fieldset className="sp-topics">
+        <legend className="sp-step">
+          <span className="sp-step-num">1</span>
+          {t('step_topic')}
+        </legend>
+        <div className="sp-topic-grid">
+          {TOPICS.map((key) => (
+            <label key={key} className={`sp-topic${topic === key ? ' is-selected' : ''}`}>
+              <input
+                type="radio"
+                name="topic"
+                value={key}
+                checked={topic === key}
+                onChange={() => choose(key)}
+                className="sp-visually-hidden"
+              />
+              <span className="sp-topic-title">{t(`topic_${key}_title`)}</span>
+              <span className="sp-topic-hint">{t(`topic_${key}_hint`)}</span>
+            </label>
+          ))}
+        </div>
+        {errors.topic ? <span className="sp-field-error">{t('err_required')}</span> : null}
+      </fieldset>
+
+      {topic && fields ? (
+        <div className="sp-details" ref={detailsRef}>
+          <h2 className="sp-step">
+            <span className="sp-step-num">2</span>
+            {t('step_details')}
+          </h2>
+
+          {failure ? (
+            <p role="alert" className="sp-banner sp-banner-error">
+              {failure === 'files' ? result?.fileProblem : t(failure === 'rate' ? 'err_rate' : `err_${failure}`)}
+            </p>
+          ) : Object.keys(errors).length ? (
+            <p role="alert" className="sp-banner sp-banner-error">
+              {t('err_check')}
+            </p>
+          ) : null}
+
+          <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="sp-honeypot" />
+
+          <div className="sp-row">
+            <label className="sp-field">
+              <span className="sp-label">{t('field_name')}</span>
+              <input name="name" autoComplete="name" maxLength={80} required className="sp-input" {...invalid('name')} />
+              <FieldError error={errors.name} field="name" />
+            </label>
+            <label className="sp-field">
+              <span className="sp-label">{t('field_email')}</span>
+              <input
+                name="email"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                required
+                className="sp-input"
+                {...invalid('email')}
+              />
+              <FieldError error={errors.email} field="email" />
+              <span className="sp-hint">{t(notify ? 'email_hint_notify' : 'email_hint')}</span>
+            </label>
+          </div>
+
+          {fields.order || fields.product ? (
+            <div className="sp-row">
+              {fields.order ? (
+                <label className="sp-field">
+                  <span className="sp-label">
+                    {t('field_order')}
+                    {fields.order === 'optional' ? <span className="sp-optional"> ({t('optional')})</span> : null}
+                  </span>
+                  <input
+                    name="order"
+                    inputMode="numeric"
+                    placeholder="#1042"
+                    maxLength={20}
+                    required={fields.order === 'required'}
+                    className="sp-input"
+                    {...invalid('orderNumber')}
+                  />
+                  <FieldError error={errors.orderNumber} field="orderNumber" />
+                  <span className="sp-hint">{t('order_hint')}</span>
+                </label>
+              ) : null}
+              {fields.product ? (
+                <label className="sp-field">
+                  <span className="sp-label">{t('field_product')}</span>
+                  {products.length ? (
+                    <select name="product" defaultValue="" required className="sp-input" {...invalid('product')}>
+                      <option value="" disabled>
+                        {t('product_choose')}
+                      </option>
+                      {products.map((p) => (
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
+                      ))}
+                      <option value="Other">{t('product_other')}</option>
+                    </select>
+                  ) : (
+                    <input name="product" maxLength={80} required className="sp-input" {...invalid('product')} />
+                  )}
+                  <FieldError error={errors.product} field="product" />
+                </label>
+              ) : null}
+            </div>
+          ) : null}
+
+          {fields.firmware ? (
+            <label className="sp-field sp-field-half">
+              <span className="sp-label">
+                {t('field_firmware')}
+                <span className="sp-optional"> ({t('optional')})</span>
+              </span>
+              <input name="firmware" maxLength={60} placeholder={t('firmware_placeholder')} className="sp-input" />
+            </label>
+          ) : null}
+
+          <label className="sp-field">
+            <span className="sp-label">{t('field_message')}</span>
+            <textarea
+              name="message"
+              rows={7}
+              maxLength={4000}
+              required
+              placeholder={t(`message_placeholder_${topic}`)}
+              className="sp-input sp-textarea"
+              {...invalid('message')}
+            />
+            <FieldError error={errors.message} field="message" />
+          </label>
+
+          <div className="sp-field">
+            <span className="sp-label">
+              {t('field_files')}
+              <span className="sp-optional"> ({t('optional')})</span>
+            </span>
+            <FilePicker disabled={busy} />
+          </div>
+
+          <TurnstileBox siteKey={root?.turnstileSiteKey ?? null} active={touched} resetKey={result?.at} />
+
+          <div className="sp-submit-row">
+            <button type="submit" className="od-btn od-btn-primary" disabled={busy}>
+              {busy ? t('submitting') : t('submit')}
+            </button>
+            <p className="sp-hint">
+              <Txt id="support.privacy_note" />
+            </p>
+          </div>
+        </div>
+      ) : null}
+    </Form>
+  );
 }
 
 export default function SupportRoute() {
-  const data = useLoaderData<typeof loader>();
-  const emailCta = (copyText('support.email_cta') ?? 'Email {email}').replace(
-    '{email}',
-    data.email,
-  );
+  const {ready, yours, salesEmail, discordInvite} = useLoaderData<typeof loader>();
   return (
-    <div className="page-shell support-page">
+    <div className="page-shell sp-page">
       <header className="page-header">
         <Txt id="support.title" as="h1" className="page-title" />
+        <Txt id="support.lede" as="p" className="page-description" />
       </header>
 
-      <section className="support-block" id="contact">
-        <Txt id="support.orders_title" as="h2" className="support-block-title" />
-        <div className="support-intake-form-actions">
-          <a className="od-btn od-btn-primary" href={`mailto:${data.email}`}>
-            {emailCta}
-          </a>
-          {data.accountUrl ? (
-            <a className="od-btn od-btn-secondary" href={data.accountUrl}>
-              <Txt id="support.account_cta" />
-            </a>
-          ) : null}
+      <div className="sp-layout">
+        <div className="sp-main">
+          {ready ? (
+            <TicketForm />
+          ) : (
+            <p role="status" className="sp-banner">
+              {t('unavailable')}
+            </p>
+          )}
         </div>
-        <Txt id="support.orders_note" as="p" className="support-note" />
-        {data.existingConversation ? (
-          <Txt id="support.existing_note" as="p" className="support-note" />
-        ) : null}
-      </section>
 
-      <section className="support-block">
-        <Txt id="support.discord_title" as="h2" className="support-block-title" />
-        <a href={data.discordInvite} target="_blank" rel="noopener noreferrer">
-          <Txt id="support.discord_cta" />
-        </a>
-      </section>
+        <aside className="sp-aside">
+          {yours.length ? (
+            <section className="sp-card">
+              <h2 className="sp-card-title">{t('yours_title')}</h2>
+              <ul className="sp-ticket-list">
+                {yours.map((ticket) => (
+                  <li key={ticket.ref}>
+                    <Link to={`/support/t/${ticket.ref}`} className="sp-ticket-link">
+                      <span className="sp-ticket-ref">{ticket.ref}</span>
+                      <span className="sp-ticket-subject">{ticket.subject}</span>
+                      <span className="sp-ticket-meta">
+                        <StatusPill status={ticket.status} />
+                        <Stamp at={ticket.updatedAt} />
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
 
-      <section className="support-block">
-        <Txt id="support.topics_title" as="h2" className="support-block-title" />
-        <ul className="support-topics">
-          {TOPICS.map((t) => (
-            <li key={t.key}>
-              <Link prefetch="viewport" to={legalHref(t.to, 'en')}>
-                <Txt id={`support.topic_${t.key}`} />
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
+          <section className="sp-card">
+            <h2 className="sp-card-title">{t('find_title')}</h2>
+            <p>{t('find_body')}</p>
+            <Link to="/support/find" className="od-btn od-btn-secondary od-btn-sm">
+              {t('find_cta')}
+            </Link>
+          </section>
+
+          <section className="sp-card">
+            <h2 className="sp-card-title">{t('community_title')}</h2>
+            <p>{t('community_body')}</p>
+            <a href={discordInvite} target="_blank" rel="noopener noreferrer" className="od-btn od-btn-secondary od-btn-sm">
+              {t('community_cta')}
+            </a>
+          </section>
+
+          <section className="sp-card">
+            <h2 className="sp-card-title">{t('topics_title')}</h2>
+            <ul className="sp-links">
+              {HELP_LINKS.map((l) => (
+                <li key={l.key}>
+                  <Link prefetch="intent" to={legalHref(l.to, 'en')}>
+                    {t(l.key)}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="sp-card" id="sales">
+            <h2 className="sp-card-title">{t('sales_title')}</h2>
+            <p>
+              <Txt id="support.sales_body" />{' '}
+              <a href={`mailto:${salesEmail}`}>{salesEmail}</a>
+            </p>
+          </section>
+        </aside>
+      </div>
     </div>
   );
 }

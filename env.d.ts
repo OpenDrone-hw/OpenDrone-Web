@@ -38,6 +38,24 @@ declare global {
     }>;
   }
 
+  // Minimal D1 shape (the support ticket store, `SUPPORT_DB`). Only the
+  // calls app/lib/support/store.ts makes are declared.
+  interface D1Result<T = Record<string, unknown>> {
+    results: T[];
+    success: boolean;
+    meta: {changes?: number; last_row_id?: number};
+  }
+  interface D1PreparedStatement {
+    bind(...values: unknown[]): D1PreparedStatement;
+    first<T = Record<string, unknown>>(): Promise<T | null>;
+    all<T = Record<string, unknown>>(): Promise<D1Result<T>>;
+    run(): Promise<D1Result>;
+  }
+  interface D1Database {
+    prepare(query: string): D1PreparedStatement;
+    batch(statements: D1PreparedStatement[]): Promise<D1Result[]>;
+  }
+
   // Cloudflare Workers Rate Limiting binding (wrangler.toml
   // `[[ratelimits]]`), declared minimally like KVNamespace above.
   interface RateLimit {
@@ -118,10 +136,37 @@ declare global {
     PUBLIC_COMPANY_EMAIL?: string;
     PUBLIC_COMPANY_TEL?: string;
 
-    // Public Discord invite used by /support and the /contact card.
+    // Public Discord invite for the community, linked from /support.
     DISCORD_SUPPORT_INVITE?: string;
     PUBLIC_DISCORD_INVITE?: string;
-    // Cloudflare Turnstile for the newsletter signup.
+
+    // Support tickets (app/lib/support/, README "Support"). SUPPORT_DB is
+    // the D1 ticket index; the conversation itself lives in one private
+    // Discord thread per ticket under DISCORD_SUPPORT_CHANNEL_ID.
+    SUPPORT_DB?: D1Database;
+    DISCORD_BOT_TOKEN?: string;
+    DISCORD_GUILD_ID?: string;
+    DISCORD_SUPPORT_CHANNEL_ID?: string;
+    DISCORD_STAFF_METADATA_CHANNEL_ID?: string;
+    SUPPORT_MOD_ROLE_ID?: string;
+    SUPPORT_MODERATION_MODE?: string;
+    SUPPORT_APPROVE_EMOJI?: string;
+    // Signs resume links and the ticket cookie.
+    SUPPORT_SESSION_SECRET?: string;
+    // Bearer token for POST /api/support/cleanup.
+    SUPPORT_CLEANUP_SECRET?: string;
+    // '1' emails "you have a new reply" (no content) through Resend.
+    // Anything else sends nothing; turning it on needs the founder's go.
+    SUPPORT_EMAIL_NOTIFY_ENABLED?: string;
+    // '1' tags the matched Shopify customer `support` and records the
+    // ticket in its `support.tickets` metafield.
+    SUPPORT_SHOPIFY_WRITE_ENABLED?: string;
+    // Dev server only (ignored in a build): point the Discord and Shopify
+    // Admin calls at a local stub for end-to-end runs.
+    SUPPORT_DEV_DISCORD_API?: string;
+    SUPPORT_DEV_SHOPIFY_ADMIN_URL?: string;
+
+    // Cloudflare Turnstile for the newsletter signup and support forms.
     TURNSTILE_SITE_KEY?: string;
     TURNSTILE_SECRET_KEY?: string;
     SUPPORT_TURNSTILE_DEV_SKIP?: string;

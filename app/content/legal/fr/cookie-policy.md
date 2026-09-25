@@ -14,12 +14,13 @@ Les cookies sont de petits fichiers texte placés sur votre appareil par un site
 
 #### Cookies d’opendrone.be et du checkout (pas de consentement requis)
 
-Ce site (opendrone.be) place lui-même deux cookies. Le paiement se déroule sur Shopify, qui place ses propres cookies sur les pages de paiement.
+Ce site (opendrone.be) place lui-même trois cookies. Le paiement se déroule sur Shopify, qui place ses propres cookies sur les pages de paiement.
 
 | Cookie | Finalité | Conservation |
 |--------|---------|-----------|
 | `session` (opendrone.be) | Conserve, dès que vous ajoutez un produit à votre panier, la référence de votre panier Shopify | Session |
 | `opendrone_lang` (opendrone.be) | Mémorise la langue que vous choisissez pour les pages juridiques | 1 an |
+| `od_support` (opendrone.be) | Retient les tickets de support que ce navigateur peut ouvrir ; placé uniquement lorsque vous ouvrez ou retrouvez un ticket | 180 jours |
 | Cookies du checkout Shopify | Maintiennent votre panier, le paiement et votre connexion au compte client, et préviennent la fraude au paiement ; placés par Shopify sur les pages de paiement, pas sur opendrone.be. Liste des cookies de Shopify : https://www.shopify.com/legal/cookies | Session à 1 an, selon le cookie |
 | Cookies Stripe (`m`, `__stripe_mid`, `__stripe_sid`) | Prévention de la fraude au paiement : placés par Stripe, qui traite Shopify Payments, sur les pages de paiement pendant le paiement, pas sur opendrone.be (strictement nécessaire au service expressément demandé ; art. 10/2 de la loi du 30 juillet 2018 (inséré par la loi du 21 décembre 2021) ; Directive ePrivacy 2002/58/CE) | Session à 1 an, selon le cookie |
 

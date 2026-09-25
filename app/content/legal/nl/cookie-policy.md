@@ -12,12 +12,13 @@ Cookies zijn kleine tekstbestanden die door een website op uw apparaat worden ge
 
 #### Cookies van opendrone.be en de checkout (geen toestemming vereist)
 
-Deze site (opendrone.be) plaatst zelf twee cookies. Het afrekenen verloopt via Shopify, dat op de checkoutpagina's zijn eigen cookies plaatst.
+Deze site (opendrone.be) plaatst zelf drie cookies. Het afrekenen verloopt via Shopify, dat op de checkoutpagina's zijn eigen cookies plaatst.
 
 | Cookie | Doel | Bewaartermijn |
 |--------|------|--------------|
 | `session` (opendrone.be) | Bewaart, zodra u een product in uw winkelmandje legt, de verwijzing naar uw Shopify-winkelmandje | Sessie |
 | `opendrone_lang` (opendrone.be) | Onthoudt de taal die u kiest voor de juridische pagina's | 1 jaar |
+| `od_support` (opendrone.be) | Onthoudt welke supporttickets deze browser mag openen; enkel geplaatst wanneer u een ticket opent of terugvindt | 180 dagen |
 | Shopify-checkoutcookies | Houden uw winkelmandje, het afrekenen en uw aanmelding op uw klantenaccount werkend en voorkomen betalingsfraude; geplaatst door Shopify op de checkoutpagina's, niet op opendrone.be. Cookielijst van Shopify: https://www.shopify.com/legal/cookies | Sessie tot 1 jaar, afhankelijk van de cookie |
 | Stripe-cookies (`m`, `__stripe_mid`, `__stripe_sid`) | Fraudepreventie bij betaling: geplaatst door Stripe, dat Shopify Payments verwerkt, op de checkoutpagina's tijdens de betaling, niet op opendrone.be (strikt noodzakelijk voor de uitdrukkelijk gevraagde dienst; Art. 10/2 Wet van 30 juli 2018 (zoals ingevoegd door de Wet van 21 december 2021); Art. 5(3) ePrivacy-richtlijn 2002/58/EG) | Sessie tot 1 jaar, afhankelijk van de cookie |
 

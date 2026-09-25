@@ -24,7 +24,7 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Order data | Name, address, email, telephone number | Processing and delivery of orders |
 | Payment data | Payment method, transaction ID | Payment processing (via payment provider) |
 | Account data | Email (sign-in with a one-time code via Shopify) | Customer account on the webshop |
-| Communication | Email, content of messages | Customer service, complaint handling |
+| Communication | Name, email, order number, content of messages and attachments (support tickets) | Customer service, complaint handling |
 | Website usage | IP address, browser, pages visited | Website optimisation, security |
 | Newsletter | Email, country (derived from IP address) | Marketing communication (only with consent) |
 | Trade enquiries | Company and contact name, email, telephone number, shipping and billing address, VAT or EIN number, shop details, requested products | Answering and quoting a shop's wholesale request |
@@ -48,7 +48,7 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 |------|-----------------|
 | Order and invoice data | 10 years from 1 January after the close of the financial year (Art. III.86 WER; Art. 60 §4 VAT Code) |
 | Customer account | Until deleted at your request, at the latest 3 years after your last sign-in or order |
-| Customer service communication | 2 years after closure |
+| Customer service communication (support tickets on the site, in Discord and the ticket reference on your Shopify customer record) | 24 months after the ticket is closed, then deleted automatically. A ticket we answered closes after 30 days without a reply from you |
 | Website log files | 6 months |
 | Newsletter subscription | Until unsubscribed |
 | Trade enquiries without an order | 2 years after the last contact |
@@ -57,20 +57,21 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 
 | Recipient | Purpose | Location |
 |-----------|---------|----------|
-| Shopify International Limited | Webshop platform: catalog, cart, checkout, orders, customer accounts, order and shipping notifications, and newsletter consent | Ireland (EU); transfers to Shopify Inc. in Canada rely on the EU adequacy decision for Canada, other transfers on SCCs; Shopify's privacy policy: https://www.shopify.com/legal/privacy |
+| Shopify International Limited | Webshop platform: catalog, cart, checkout, orders, customer accounts, order and shipping notifications, newsletter consent, and a reference to your support tickets on your customer record | Ireland (EU); transfers to Shopify Inc. in Canada rely on the EU adequacy decision for Canada, other transfers on SCCs; Shopify's privacy policy: https://www.shopify.com/legal/privacy |
 | Shopify Payments, processed by Stripe Payments Europe, Ltd. | Payment processing for the payment methods shown at checkout: payment data, email, billing address; device data for fraud prevention | 1 Grand Canal Street Lower, Dublin 2, Ireland (EU); Stripe's privacy policy: https://stripe.com/privacy |
 | bpost NV/SA | Parcel delivery and shipping labels | Belgium (EU) |
 | Judge.me | Review requests after delivery and publication of reviews: name, email, ordered products, review text | Judge.me's privacy policy: https://judge.me/privacy |
 | Google Workspace (Google Ireland Ltd.) | Company mailboxes, staff email and sign-in | Ireland (EU); Google's standard contractual clauses cover any transfer outside the EEA |
 | Plausible Analytics | Cookieless website analytics | Plausible Insights OÜ, Estonia (EU); hosting in Germany |
 | Polar Advisory BV (accountant) | Invoicing and annual accounts | Belgium |
-| Resend (Plus Five Five, Inc.) | Mail sent by opendrone.be: withdrawal confirmations, welcome and newsletter mail, trade requests | EU region infrastructure; US legal entity: SCCs |
-| Cloudflare, Inc. | Hosting and delivery of the website (IP address, request data, derived country); Turnstile anti-spam on the newsletter and trade forms | US: EU-US Data Privacy Framework (Art. 45 GDPR) |
+| Resend (Plus Five Five, Inc.) | Mail sent by opendrone.be: withdrawal confirmations, welcome and newsletter mail, trade requests, notices of a new reply on a support ticket (link only, no message content) | EU region infrastructure; US legal entity: SCCs |
+| Discord Inc. (processor) | Support tickets: our team reads and answers them in a staff-only Discord channel (your first name, email, order number and order details, messages, attachments) | US: EU-US Data Privacy Framework (Art. 45 GDPR); Discord's processor terms: https://support.discord.com/hc/en-us/articles/37891902561687 |
+| Cloudflare, Inc. | Hosting and delivery of the website (IP address, request data, derived country); storage of support tickets (Cloudflare D1); Turnstile anti-spam on the newsletter, trade and support forms | US: EU-US Data Privacy Framework (Art. 45 GDPR) |
 | European Commission (VIES) | Check of the VAT number given in a trade enquiry | EU |
 
 Order and customer data (name, address, email, payment reference, order history) and newsletter consent are processed in Shopify.
 
-**Discord.** The OpenDrone community server runs on Discord. Discord Inc. is an independent controller for the community server you choose to join; Incutec BV passes no personal data to Discord. Discord's privacy policy: https://discord.com/privacy
+**Discord.** The OpenDrone community server runs on Discord. Discord Inc. is an independent controller for the community server you choose to join. For support tickets, Discord Inc. processes the ticket on our behalf as a processor (table above); you do not need a Discord account to open a ticket. Discord's privacy policy: https://discord.com/privacy
 
 **Transfers outside the EEA.** Some recipients process data outside the EEA. Those transfers rely on an adequacy decision (Art. 45 GDPR: Canada, UK, or the EU-US Data Privacy Framework for certified US recipients) or on standard contractual clauses (Art. 46 GDPR, Decision 2021/914). The basis per recipient is in the table above.
 

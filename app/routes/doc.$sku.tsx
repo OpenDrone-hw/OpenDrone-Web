@@ -96,8 +96,8 @@ export default function DocSkuRoute() {
             <p {...editAttrs('doc.pending_note')}>
               {copyFill(
                 'doc.pending_note',
-                'The declaration of conformity for this product is published on this page per hardware revision once its evidence set is complete and the declaration is signed. It is not published yet. Conformity documentation can be requested from the manufacturer at {email}.',
-                {email: company.email},
+                'The declaration of conformity for this product is published on this page per hardware revision once its evidence set is complete and the declaration is signed. It is not published yet. Conformity documentation can be requested from the manufacturer at the address above.',
+                {},
               )}
             </p>
           ) : null}

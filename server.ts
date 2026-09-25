@@ -4,6 +4,8 @@ import {createAppLoadContext} from '~/lib/context';
 import {parseCampaignConfig} from '~/lib/preorder-campaign';
 import {reconcilePreorders} from '~/lib/preorder-ops';
 import {priceTierWritesEnabled} from '~/lib/shopify-price-tier';
+import {supportDeps, supportReady} from '~/lib/support/server';
+import {runScheduled} from '~/lib/support/tickets';
 import preordersJson from './content/preorders.json';
 
 /**
@@ -55,6 +57,12 @@ function markStaging(response: Response, env: Env): Response {
   }
 }
 
+/** Links written by the cron (reply notices) point at the live site. */
+const SUPPORT_ORIGIN = 'https://opendrone.be';
+
+const RETIRED_SUPPORT_API =
+  /^\/api\/support\/(start|send|poll|list|lookup|status|thread|close|notify|feedback)(\/|$)/;
+
 /**
  * Export a fetch handler in module format.
  *
@@ -81,9 +89,10 @@ async function handleFetch(
       return Response.redirect(url.toString(), 301);
     }
 
-    // The custom ticket API is retired as one unit. Support is the public
-    // Discord/email page; old API URLs answer 410 so clients stop retrying.
-    if (url.pathname.startsWith('/api/support/')) {
+    // Endpoints of the earlier ticket widget stay gone: they answer 410 so
+    // old clients stop retrying. The current API is /api/support/tickets/*
+    // and /api/support/cleanup.
+    if (RETIRED_SUPPORT_API.test(url.pathname)) {
       return new Response('Support API retired. Use /support.', {
         status: 410,
         headers: {'Cache-Control': 'no-store'},
@@ -118,29 +127,49 @@ export default {
   },
 
   /**
-   * Reconcile the preorder price steps and holds (wrangler `[triggers]
-   * crons`, every five minutes). The orders/paid webhook does this the
-   * moment an order is paid; this catches a delivery Shopify never made and
-   * any paid preorder order not yet held and tagged. Off unless
-   * SHOPIFY_PRICE_TIER_WRITE_ENABLED is '1'.
+   * Every five minutes (wrangler `[triggers] crons`, production only):
+   *
+   * - Reconcile the preorder price steps and holds. The orders/paid webhook
+   *   does this the moment an order is paid; this catches a delivery Shopify
+   *   never made and any paid preorder order not yet held and tagged. Off
+   *   unless SHOPIFY_PRICE_TIER_WRITE_ENABLED is '1'.
+   * - Support tickets (app/lib/support/tickets.ts runScheduled): read open
+   *   threads, send reply notices when enabled, auto-close silent answered
+   *   tickets and delete tickets closed more than 24 months ago. Off until
+   *   SUPPORT_DB and the Discord secrets exist.
    */
   async scheduled(_event: unknown, env: Env, executionContext: ExecutionContext): Promise<void> {
-    if (!priceTierWritesEnabled(env)) return;
-    executionContext.waitUntil(
-      (async () => {
-        try {
-          const config = parseCampaignConfig(preordersJson);
-          const result = await reconcilePreorders(env, config);
-          if (result.changed.length) {
-            console.log('preorder price steps written', JSON.stringify(result.changed));
+    if (priceTierWritesEnabled(env)) {
+      executionContext.waitUntil(
+        (async () => {
+          try {
+            const config = parseCampaignConfig(preordersJson);
+            const result = await reconcilePreorders(env, config);
+            if (result.changed.length) {
+              console.log('preorder price steps written', JSON.stringify(result.changed));
+            }
+            if (result.held.length) {
+              console.log('preorder orders held', JSON.stringify(result.held));
+            }
+          } catch (error) {
+            console.error('preorder price step reconcile failed', error);
           }
-          if (result.held.length) {
-            console.log('preorder orders held', JSON.stringify(result.held));
+        })(),
+      );
+    }
+    if (supportReady(env)) {
+      executionContext.waitUntil(
+        (async () => {
+          try {
+            const report = await runScheduled(supportDeps(env, SUPPORT_ORIGIN));
+            if (report.notified || report.autoClosed.length || report.deleted.length) {
+              console.log('support jobs', JSON.stringify(report));
+            }
+          } catch (error) {
+            console.error('support jobs failed', error instanceof Error ? error.message : 'error');
           }
-        } catch (error) {
-          console.error('preorder price step reconcile failed', error);
-        }
-      })(),
-    );
+        })(),
+      );
+    }
   },
 };
