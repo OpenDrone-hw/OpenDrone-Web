@@ -57,6 +57,6 @@ an external integration succeeded without observing the result.
 - Change copy or product chapters: edit through `/studio` or the JSON under `content/`; `npm run studio:coverage` lists copy still baked into code; `npm run studio:keys` fails when code uses a copy id missing from `content/copy/`.
 - Update the legal pages: edit `app/content/legal/{en,nl,fr}/` (or the studio Docs tab) and keep the three languages in step.
 - Open or close the shop, run a preorder campaign, release a batch or mail buyers: the README sections of those names. Every order script is a dry run until `--apply` or `--send`; those need an explicit request.
-- Work on support tickets: README "Support tickets". Local runs use `node scripts/support-stub.mjs` and `.env.local`, never the real Discord or Shopify writes.
+- Work on support tickets: README "Support tickets". Local runs use `npm run support:sandbox` (README "Test support locally"), never the real Discord or Shopify writes. Parallel dev servers need `VITE_CACHE_DIR=.vite-cache`.
 - Check the live site: `BASE=https://opendrone.be node scripts/smoke.mjs` (read-only GETs) and `/api/status/campaign`.
 - Refresh board art or specs after a hardware release: `npm run gen:board-art` (KiCad and cwebp installed), `npm run sync:specs`, then `npm run sync:specs:check` before the PR.

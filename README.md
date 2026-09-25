@@ -47,6 +47,7 @@ catalog policy or tax configuration is missing. Node 22 (what CI uses).
 | `npm run preview` | build, then serve `dist/` locally with `wrangler dev` and the production Worker config |
 | `npm run check:registry` | the product registry's data invariants (CI runs it; lint and tsc never evaluate them) |
 | `npm run db:migrate:local` | apply `migrations/` to the local D1 the dev server uses |
+| `npm run support:sandbox`, `support:staff` | fake Discord and Shopify for local ticket runs, and the team's side of them ("Test support locally") |
 | `npm run check:status` | fails when a static roadmap status is ahead of its repo's `status-*` topic |
 | `npm run gen:board-art` | export every PCB as layered SVG and copper rasters (needs KiCad and cwebp) |
 | `npm run gen:schematics` | render the schematic sheets from the board checkouts |
@@ -335,13 +336,34 @@ done
 New migrations in `migrations/` are applied the same way before the deploy
 that needs them.
 
-### Run support locally
+### Test support locally
 
-`npm run db:migrate:local` creates the local D1. `node scripts/support-stub.mjs`
-stands in for Discord and the Shopify Admin API; point the dev server at it in
-`.env.local` (the variables are listed in `.env.example`, a build ignores
-them) and play the team with `curl -XPOST localhost:5196/control/staff -d
-'{"ref":"OD-XXXX-XXXX","content":"Hello"}'`.
+A sandbox stands in for Discord and the Shopify Admin API, in memory, so a
+ticket runs end to end without posting to Discord or writing to Shopify.
+Each worktree gets its own local D1 (`.wrangler/`), so parallel testers pick
+their own two ports.
+
+```sh
+npm run support:sandbox -- --port 5196 --dev-port 5195 --write-env          # terminal 1
+VITE_CACHE_DIR=.vite-cache npm run dev -- --port 5195 --strictPort           # terminal 2
+open http://localhost:5195/support                                           # jan@example.com, order #1042
+SUPPORT_SANDBOX_PORT=5196 npm run support:staff -- reply OD-XXXX-XXXX "Hi"   # act as the team
+```
+
+| Step | Does |
+|---|---|
+| `support:sandbox` | applies `migrations/` to the local D1, writes `.env.local` (`--write-env`, else prints the lines), serves the fake APIs; `--moderation enforce` holds replies until approved |
+| `.env.local` | `SUPPORT_DEV_DISCORD_API`, `SUPPORT_DEV_SHOPIFY_ADMIN_URL` (localhost only), sandbox Discord ids, a sandbox signing secret, Cloudflare's test Turnstile key with the dev-only skip. Restart the dev server after changing it; delete it when done |
+| `VITE_CACHE_DIR=.vite-cache` | a private Vite cache; worktrees sharing `node_modules` otherwise share `node_modules/.vite` and serve each other stale modules |
+| `support:staff -- <command> <ref> [text]` | `reply`, `note` (`//`), `waiting`, `close`, `open`, `lock`, `approve` (moderator ✅ on the last staff message), `state` (threads, metadata posts, Shopify writes as JSON) |
+
+The fake Shopify knows one customer, `jan@example.com`, with order `#1042`
+(preorder batch 2); any other email is "no Shopify customer". Rate limits
+stay on: six tickets an hour per dev server and five a day per email, so
+use fresh emails for volume. The overrides work on the dev server only:
+`app/lib/support/dev-overrides.ts` needs Vite's `DEV` flag, which a build
+folds to `false`, and `dev-overrides.test.ts` checks a built Worker holds
+no trace of them.
 
 ## The studio
 

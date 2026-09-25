@@ -17,6 +17,8 @@
  * read_orders.
  */
 
+import {devOverride} from './dev-overrides.ts';
+
 const DEFAULT_VERSION = '2026-07';
 
 export type ShopifyEnv = {
@@ -44,12 +46,11 @@ export type SupportTicketEntry = {ref: string; topic: string; status: string; op
 
 type Fetcher = typeof fetch;
 
-function endpoint(env: ShopifyEnv): {url: string; token: string} | null {
-  const dev = typeof import.meta.env !== 'undefined' && import.meta.env.DEV;
+export function adminEndpoint(env: ShopifyEnv): {url: string; token: string} | null {
   const token = env.SHOPIFY_ADMIN_API_TOKEN?.trim();
-  if (dev && env.SUPPORT_DEV_SHOPIFY_ADMIN_URL) {
-    return {url: env.SUPPORT_DEV_SHOPIFY_ADMIN_URL, token: token || 'dev'};
-  }
+  const sandbox =
+    typeof import.meta.env !== 'undefined' && import.meta.env.DEV ? devOverride(env.SUPPORT_DEV_SHOPIFY_ADMIN_URL) : null;
+  if (sandbox) return {url: sandbox, token: token || 'dev'};
   const domain = env.SHOPIFY_STORE_DOMAIN?.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/+$/, '');
   if (!domain || !token || !/^[a-z0-9][a-z0-9.-]*\.myshopify\.com$/.test(domain)) return null;
   const version = env.SHOPIFY_ADMIN_API_VERSION?.trim() || DEFAULT_VERSION;
@@ -58,7 +59,7 @@ function endpoint(env: ShopifyEnv): {url: string; token: string} | null {
 }
 
 export function shopifyConfigured(env: ShopifyEnv): boolean {
-  return endpoint(env) !== null;
+  return adminEndpoint(env) !== null;
 }
 
 /** Admin link to a customer, for the staff-only metadata post. */
@@ -69,7 +70,7 @@ export function customerAdminUrl(env: ShopifyEnv, customerId: string): string | 
 }
 
 async function gql<T>(env: ShopifyEnv, query: string, variables: Record<string, unknown>, fetcher: Fetcher): Promise<T> {
-  const ep = endpoint(env);
+  const ep = adminEndpoint(env);
   if (!ep) throw new Error('shopify admin not configured');
   const res = await fetcher(ep.url, {
     method: 'POST',

@@ -13,6 +13,8 @@
  * `fetch` is injectable so tests run against a fake Discord.
  */
 
+import {devOverride} from './dev-overrides.ts';
+
 export const DISCORD_API = 'https://discord.com/api/v10';
 const TIMEOUT_MS = 6000;
 const USER_AGENT = 'opendrone-support (https://opendrone.be, 2)';
@@ -51,9 +53,8 @@ export class DiscordError extends Error {
 
 /** The dev server may point at a local stub; a build always talks to Discord. */
 export function discordApiBase(env: DiscordEnv): string {
-  const dev = typeof import.meta.env !== 'undefined' && import.meta.env.DEV;
-  if (dev && env.SUPPORT_DEV_DISCORD_API) return env.SUPPORT_DEV_DISCORD_API.replace(/\/+$/, '');
-  return DISCORD_API;
+  const sandbox = typeof import.meta.env !== 'undefined' && import.meta.env.DEV ? devOverride(env.SUPPORT_DEV_DISCORD_API) : null;
+  return sandbox ?? DISCORD_API;
 }
 
 export function discordConfigured(env: DiscordEnv): boolean {

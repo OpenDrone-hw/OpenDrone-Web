@@ -28,6 +28,7 @@ export default [
       '**/build/',
       '**/dist/',
       '**/.wrangler/',
+      '**/.vite-cache/',
       '**/*.graphql.d.ts',
       '**/*.graphql.ts',
       '**/*.generated.d.ts',
