@@ -48,8 +48,6 @@ export const TRADE_SKUS: readonly TradeSku[] = [
   {sku: 'ACC-FRM-CROSS-3', group: 'frame', label: 'OpenFrame spare: cross, 3"'},
   {sku: 'ACC-FRM-CAM-5', group: 'frame', label: 'OpenFrame spare: camera mount pair, 5"'},
   {sku: 'ACC-FRM-CAM-3', group: 'frame', label: 'OpenFrame spare: camera mount pair, 3"'},
-  {sku: 'ACC-FRM-TPU-5', group: 'frame', label: 'OpenFrame spare: TPU parts set, 5"'},
-  {sku: 'ACC-FRM-TPU-3', group: 'frame', label: 'OpenFrame spare: TPU parts set, 3"'},
   {sku: 'ACC-FRM-HW-5', group: 'frame', label: 'OpenFrame spare: hardware kit, 5"'},
   {sku: 'ACC-FRM-HW-3', group: 'frame', label: 'OpenFrame spare: hardware kit, 3"'},
   {sku: 'ACC-FRM-PAD', group: 'frame', label: 'OpenFrame spare: battery pad'},

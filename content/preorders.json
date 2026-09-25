@@ -38,7 +38,6 @@
     "ACC-FRM-BOT-3": {"sku": "OPENFRAME-3"},
     "ACC-FRM-CROSS-3": {"sku": "OPENFRAME-3"},
     "ACC-FRM-CAM-3": {"sku": "OPENFRAME-3"},
-    "ACC-FRM-TPU-3": {"sku": "OPENFRAME-3"},
     "ACC-FRM-HW-3": {"sku": "OPENFRAME-3"},
     "ACC-FRM-ARM-5": {"sku": "OPENFRAME-5"},
     "ACC-FRM-TOP-5": {"sku": "OPENFRAME-5"},
@@ -46,7 +45,6 @@
     "ACC-FRM-BOT-5": {"sku": "OPENFRAME-5"},
     "ACC-FRM-CROSS-5": {"sku": "OPENFRAME-5"},
     "ACC-FRM-CAM-5": {"sku": "OPENFRAME-5"},
-    "ACC-FRM-TPU-5": {"sku": "OPENFRAME-5"},
     "ACC-FRM-HW-5": {"sku": "OPENFRAME-5"},
     "ACC-FRM-PAD": {"sku": "OPENFRAME-5"}
   }

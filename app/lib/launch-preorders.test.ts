@@ -44,10 +44,12 @@ test('the campaign lists the 12 preorder SKUs', () => {
   assert.ok(skus.includes('OPENMOTOR-2207'));
 });
 
-test('the 29 accessory and spare SKUs sell as flat-price preorders', () => {
+test('the 27 accessory and spare SKUs sell as flat-price preorders', () => {
   // stock/product_skus.json lists these ACC-* SKUs with sales_mode preorder.
   const flat = shipsWithSkus(preorders);
-  assert.equal(flat.length, 29);
+  assert.equal(flat.length, 27);
+  // TPU parts are printed by the builder, not sold.
+  assert.ok(!flat.some((sku) => sku.startsWith('ACC-FRM-TPU')));
   assert.ok(flat.every((sku) => sku.startsWith('ACC-')));
   assert.ok(flat.includes('ACC-FRM-PAD') && flat.includes('ACC-ANT-DUAL-T'));
   const policy = buildLaunchPolicy(
