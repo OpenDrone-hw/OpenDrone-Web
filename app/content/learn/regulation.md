@@ -408,7 +408,7 @@ CAA page). [single] = one secondary source only.
 - Whether any Brennan v. Dickson cert petition was filed and its outcome: not verified.
 - TRUST completion totals, the TRUST launch date, and the number of approved test administrators: no FAA published figures located.
 - The number of accepted Remote ID declarations of compliance, standard and broadcast module: uasdoc.faa.gov is a JavaScript application whose data endpoint was not reachable.
-- Whether any open source flight controller firmware Remote ID implementation appears on the FAA declaration of compliance list: not verified.
+- Whether any Open Source flight controller firmware Remote ID implementation appears on the FAA declaration of compliance list: not verified.
 - Whether the 2,688 FRIA records equal 2,688 distinct physical sites: treat as a record count.
 - Exact AMA membership counts for any year. AMA marketing copy claims "more than 175,000" (2015), "more than 195,000" (2016 and 2018), "nearly 200,000" (2020) and "165,000" (2026), but these are boilerplate, not audited figures, and they rise across a period AMA itself describes as decline. Do not build an argument on the 195,000 to 165,000 delta. The 990 revenue series is the better proxy.
 - 2016, 2017 and 2018 FAA registration totals: no archived by_the_numbers snapshot exists before August 2019, and the "300,000 in 30 days" and "one million registered" milestone claims were not traced to a primary FAA source.

@@ -185,7 +185,7 @@ Note on method: GitHub REST API was queried directly for repo creation dates, co
 
 - The ExpressLRS git history begins 2018-10-01T09:26:11Z with commit "Initial commit" authored by GitHub user `AlessandroAU`, and the repository `ExpressLRS/ExpressLRS` was created 2018-10-01T09:27:55Z (GitHub API `repos/ExpressLRS/ExpressLRS`, `repos/ExpressLRS/ExpressLRS/commits`) [verified]
 - The first commit's file tree is an Arduino-style ESP sketch plus 3D-printed case parts: `src/ExpressLRS/ExpressLRS.ino`, `Bluetooth.ino`, `EEPROM.ino`, `RCin.ino`, `RadioAPI.ino`, `Platform.h`, plus `STL/ExpressLRS_top_plate.stl` and `STL/ExpressLRS_bottom.stl`. There is no OpenLRS or openLRSng source in it (GitHub API commit `2e05bb8450430bd0a662eb3006e84f6386bbec16`) [verified]
-- ExpressLRS is therefore NOT a fork or code descendant of OpenLRS/openLRSng: it is an independent codebase started by AlessandroAU. The shared ancestry is conceptual only, both are open source sub-GHz/2.4 GHz RC links built on Semtech radios (GitHub API commit tree above; openLRSng repo history) [verified]
+- ExpressLRS is therefore NOT a fork or code descendant of OpenLRS/openLRSng: it is an independent codebase started by AlessandroAU. The shared ancestry is conceptual only, both are Open Source sub-GHz/2.4 GHz RC links built on Semtech radios (GitHub API commit tree above; openLRSng repo history) [verified]
 - The project originally lived at `github.com/AlessandroAU/ExpressLRS`, confirmed by a 2018-11-04 merge commit message referencing that URL, before moving to the `ExpressLRS` organisation (GitHub API `repos/ExpressLRS/ExpressLRS/commits`, commit 2018-11-04T13:21:42Z) [verified]
 - The ExpressLRS GitHub organisation was created 2021-01-11T15:50:29Z, which is the real moment the project became a multi-maintainer effort rather than one person's repo (GitHub API `orgs/ExpressLRS`) [verified]
 - The README in early 2019 read "Imcomplete Project, if you clone this do not expect anything to work!!!" (typo in original), so for its first two years ExpressLRS was a hobby experiment, not a product (GitHub API contents `README.md` at commit before 2019-03-01) [verified]
@@ -251,7 +251,7 @@ Note on method: GitHub REST API was queried directly for repo creation dates, co
 - CRSF carries 16 channels; CRSFv3 raised this to 24 via subset frames with selectable 10, 11, 12 or 13 bit channel resolution (`CRSF_MAX_CHANNEL 16`, `CRSFV3_MAX_CHANNEL 24`, `CRSF_SUBSET_RC_RES_*`, https://github.com/betaflight/betaflight/blob/master/src/main/rx/crsf.h) [verified]
 - CRSF frames are at most 64 bytes including a 2 byte header (`CRSF_FRAME_SIZE_MAX = 64`, crsf_protocol.h) [verified]
 - CRSF's link statistics carry RSSI in dBm over the range -130 to 0 and SNR over -30 to +20 dB, which is why FPV OSDs can show real dBm rather than a scaled 0 to 100 RSSI (`CRSF_RSSI_MIN`, `CRSF_SNR_MIN`, crsf.h) [verified]
-- CRSF entered the open source FC world on 2016-10-05 with Cleanflight commit 890eab20 "First cut of CRSF RX and telemetry code" by Martin Budden (GitHub handle `martinbudden`) (GitHub commit search, repo cleanflight/cleanflight) [verified]
+- CRSF entered the Open Source FC world on 2016-10-05 with Cleanflight commit 890eab20 "First cut of CRSF RX and telemetry code" by Martin Budden (GitHub handle `martinbudden`) (GitHub commit search, repo cleanflight/cleanflight) [verified]
 - CRSF was made bidirectional in Cleanflight on 2016-11-16 ("Changed CRSF RX to be bidirectional") and merged into Betaflight via PR #1504 on 2016-11-20, so Crossfire telemetry support in Betaflight dates from late 2016 (GitHub commit search, cleanflight and betaflight repos) [verified]
 - FrSky F.Port support landed in Betaflight on 2017-09-12, authored by `mikeller` ("Added support for the FrSky FPort protocol") (GitHub API `repos/betaflight/betaflight/commits?path=src/main/rx/fport.c`) [verified]
 - Spektrum SRXL2 support landed in Betaflight on 2019-08-06 by `DieHertz`, with the commit noting "Currently only SPM4650 released", dating the SRXL2 receiver launch to 2019 (GitHub API commits for `src/main/rx/srxl2.c`) [verified]
@@ -357,7 +357,7 @@ Note on method: GitHub REST API was queried directly for repo creation dates, co
 - The Tandem X20, FrSky's flagship Ethos radio, has FCC grant XYF-TDX20HDSP dated 2021-04-30, and its announcement page is first archived 2021-05-14, one week after EdgeTX forked (https://fccid.io/XYF, Wayback) [verified]
 - FrSky is still shipping Ethos actively, with release 26.1.0-RC7 published 2026-08-06 (https://github.com/FrSkyRC/ETHOS-Feedback-Community/releases) [verified]
 - FrSky's FCC filing cadence for new radio systems has thinned to roughly one product per year since 2022: Tandem X18 2022-06-01, Twin X-Lite 2022-09-29, TD Pro module 2023-09-20, Twin X14 2024-01-29, Remote ID module 2024-05-15 (https://fccid.io/XYF) [single]
-- FrSky's ecosystem is now closed at both ends: ACCESS module firmware upgrades are authenticated, Ethos is not open source, and FrSky publishes only a feedback tracker rather than source (https://www.frsky-rc.com/access-2-x-x-important-firmware-update/, https://github.com/FrSkyRC/ETHOS-Feedback-Community) [single]
+- FrSky's ecosystem is now closed at both ends: ACCESS module firmware upgrades are authenticated, Ethos is not Open Source, and FrSky publishes only a feedback tracker rather than source (https://www.frsky-rc.com/access-2-x-x-important-firmware-update/, https://github.com/FrSkyRC/ETHOS-Feedback-Community) [single]
 
 ## RF fundamentals and regulation
 
@@ -417,7 +417,7 @@ Note on method: GitHub REST API was queried directly for repo creation dates, co
 - Raphael Pirker is the respondent in the FAA enforcement case that defined whether model aircraft are "aircraft" in US law; the NTSB caption is Michael P. Huerta, Administrator, Federal Aviation Administration v. Raphael Pirker, Docket CP-217 (NTSB Order No. EA-5730, https://www.ntsb.gov/legal/alj/OnODocuments/Aviation/5730.pdf) [verified]
 - AlessandroAU is the originating author of ExpressLRS; his GitHub account was created 2016-09-05 and carries no name, bio or location, so his real identity is not established from primary sources (GitHub API `users/AlessandroAU`) [verified]
 - Kari Hautio (`kh4`) is the author of openLRSng with 559 of its commits (GitHub API contributors) [verified]
-- Martin Budden (`martinbudden`) wrote the first CRSF implementation in open source flight controller firmware (Cleanflight, 2016-10-05) (GitHub commit search) [verified]
+- Martin Budden (`martinbudden`) wrote the first CRSF implementation in Open Source flight controller firmware (Cleanflight, 2016-10-05) (GitHub commit search) [verified]
 
 ## Numbers found
 

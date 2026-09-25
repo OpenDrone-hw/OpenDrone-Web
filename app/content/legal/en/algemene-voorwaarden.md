@@ -110,14 +110,14 @@
 
 9.2. **Legal warranty:** 2 years in accordance with Directive (EU) 2019/771 (transposed into Belgian law by the Act of 20 March 2022). Where a lack of conformity becomes apparent within **2 years** of delivery, the defect is presumed to have existed at the time of delivery (reversal of the burden of proof). Belgium applies the full 2-year reversal of the burden of proof, not the EU minimum of 1 year.
 
-9.2bis. **Goods with digital elements:** Incutec BV's products contain firmware (digital elements) which is necessary for their functioning, within the meaning of Directive (EU) 2019/771 Art. 2(5b). Incutec BV ensures that the consumer is informed of available firmware updates necessary to maintain the product's conformity during the 2-year warranty period. Firmware updates are made available through the open source projects on which the products are based (Betaflight, AM32, ExpressLRS). Incutec BV maintains the hardware-specific support (board target definitions) needed to install these updates.
+9.2bis. **Goods with digital elements:** Incutec BV's products contain firmware (digital elements) which is necessary for their functioning, within the meaning of Directive (EU) 2019/771 Art. 2(5b). Incutec BV ensures that the consumer is informed of available firmware updates necessary to maintain the product's conformity during the 2-year warranty period. Firmware updates are made available through the Open Source projects on which the products are based (Betaflight, AM32, ExpressLRS). Incutec BV maintains the hardware-specific support (board target definitions) needed to install these updates.
 
 9.2ter. **Hierarchy of remedies:** In the event of a lack of conformity the consumer has the right to request, at their choice, repair or replacement of the product. The consumer may request a price reduction or termination of the contract where repair or replacement is impossible or disproportionate, where Incutec BV has not carried out or has refused the repair or replacement, or has not done so free of charge, within a reasonable time or without significant inconvenience, where the defect reappears despite an attempted remedy, or where the defect is so serious that an immediate price reduction or termination is justified (Art. 1649quinquies old Civil Code; Directive (EU) 2019/771 Art. 13(4)).
 
 9.3. The legal warranty does not cover a defect caused by:
 - Improper use or installation (deviation from the user manual), to the extent the defect was caused by it
 - Normal wear and tear
-- Modifications or reprogramming by the consumer, to the extent the defect was caused by them. Modifying open-source firmware or hardware does not void the warranty for defects unrelated to the modification (see the warranty page)
+- Modifications or reprogramming by the consumer, to the extent the defect was caused by them. Modifying Open Source firmware or hardware does not void the warranty for defects unrelated to the modification (see the warranty page)
 - External causes (water damage, lightning, voltage or current outside specifications), to the extent the defect was caused by them
 
 9.4. **Inspection on a warranty claim.** On a claim, Incutec BV examines the returned product and shares its findings with the consumer (photos and measurements where relevant). Traces of causes outside conformity, such as soldering damage to pads or connectors, reversed or excessive supply voltage, mechanical damage or water damage, can serve as proof to the contrary that the defect did not exist at delivery, or show that the legal presumption is incompatible with the nature of the defect (Art. 1649quater §4 old Civil Code). Return shipping, repair and replacement under the legal warranty are free of charge for the consumer. Before desoldering a product for a claim, the consumer is asked to send photos of it as mounted, so the cause can be assessed. This article does not limit the legal warranty; it describes how claims are assessed.
@@ -142,7 +142,7 @@
 
 10bis.3. **No safety-critical use.** The products are designed for unmanned recreational and professional multirotors and model aviation. They are not designed, tested or approved for manned aviation, medical applications, nuclear installations, military applications, or any other application in which the failure of a component could reasonably lead to personal injury or significant damage. Such use is expressly outside the intended use.
 
-10bis.4. **Open-source firmware.** The products run open-source firmware (including AM32, Betaflight, ExpressLRS). Reflashing or modifying firmware by the customer is technically possible and anticipated by the open nature of the products; the behaviour and regulatory conformity of the product with modified firmware are the customer's responsibility (see also Art. 9.3 and the warranty page). The software licences (GPL, MIT) concern the firmware as software and do not affect the consumer's statutory rights in respect of the purchased product.
+10bis.4. **Open Source firmware.** The products run Open Source firmware (including AM32, Betaflight, ExpressLRS). Reflashing or modifying firmware by the customer is technically possible and anticipated by the open nature of the products; the behaviour and regulatory conformity of the product with modified firmware are the customer's responsibility (see also Art. 9.3 and the warranty page). The software licences (GPL, MIT) concern the firmware as software and do not affect the consumer's statutory rights in respect of the purchased product.
 
 10bis.5. **Not a toy.** The products are not toys and are not intended for persons under 14 years of age. Assembly and use by minors only under adult supervision. LiPo batteries, spinning propellers and soldering carry real risks; the safety information supplied with the product must be read before use.
 
@@ -150,7 +150,7 @@
 
 11.1. Incutec BV's published hardware designs are licensed under CERN-OHL-S-2.0 (see product page). The firmware is licensed under MIT or GPL (see product page).
 
-11.2. The "Incutec" brand, the logo and product brand names are owned by Incutec BV. The use of open source licences does not grant any right to use Incutec BV's brand names.
+11.2. The "Incutec" brand, the logo and product brand names are owned by Incutec BV. The use of Open Source licences does not grant any right to use Incutec BV's brand names.
 
 ### Article 12: Personal data
 

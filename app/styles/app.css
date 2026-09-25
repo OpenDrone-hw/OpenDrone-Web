@@ -1244,8 +1244,7 @@ html.light .header-cat-pod {
   font-size: var(--fs-sm);
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--color-gold);
-  opacity: 0.7;
+  color: var(--color-gold-text);
   font-weight: 500;
   position: relative;
   padding-bottom: 4px;
@@ -1253,15 +1252,24 @@ html.light .header-cat-pod {
   transition: opacity 0.15s ease, color 0.15s ease, font-weight 0.15s ease;
 }
 
+/* Dark keeps the quiet 0.7 resting state; on the light header the deep
+   gold at reduced opacity drops below readable contrast. */
+html:not(.light) .site-header-categories a:not(:hover):not(.active):not([aria-current='page']) {
+  opacity: 0.7;
+}
+html:not(.light) .site-header-categories .site-header-cat-group a:not(:hover):not(.active):not([aria-current='page']) {
+  opacity: 0.72;
+}
+
 .site-header-categories a:hover {
   opacity: 1;
-  color: var(--color-gold-hover);
+  color: var(--color-gold-text-hover);
 }
 
 .site-header-categories a.active,
 .site-header-categories a[aria-current="page"] {
   opacity: 1;
-  color: var(--color-gold-hover);
+  color: var(--color-gold-text-hover);
   font-weight: 600;
 }
 
@@ -1294,11 +1302,10 @@ html.light .header-cat-pod {
 .site-header-categories .site-header-cat-group a {
   padding: 0.36em 0.82em;
   border-radius: var(--r-pill);
-  opacity: 0.72;
 }
 .site-header-categories .site-header-cat-group a:hover {
   opacity: 1;
-  color: var(--color-gold-hover);
+  color: var(--color-gold-text-hover);
 }
 /* Active = high-contrast label (white in dark, black in light) and a gold
    rim on the group's own pill. No inner chip: a pill inside a pill read as
@@ -1324,19 +1331,19 @@ html.light .header-cat-pod {
   border-radius: var(--r-pill);
   background: var(--color-gold-soft);
   border: 1px solid color-mix(in srgb, var(--color-gold) 50%, transparent);
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   opacity: 1;
 }
 .site-header-categories .site-header-cat-all:hover {
   background: color-mix(in srgb, var(--color-gold) 20%, transparent);
   border-color: var(--color-gold);
-  color: var(--color-gold-hover);
+  color: var(--color-gold-text-hover);
 }
 .site-header-categories .site-header-cat-all.active,
 .site-header-categories .site-header-cat-all[aria-current='page'] {
   background: color-mix(in srgb, var(--color-gold) 24%, transparent);
   border-color: var(--color-gold);
-  color: var(--color-gold-hover);
+  color: var(--color-gold-text-hover);
   font-weight: 600;
 }
 .site-header-categories .site-header-cat-all::after {
