@@ -1599,9 +1599,11 @@ function ProductPage() {
   // one. `??` treated that deliberate null as "no opinion" and fell through to
   // the content file, republishing a dispatch date the policy had just
   // withdrawn. Only an absent key falls back.
+  // A closed shop (coming soon or checkout closed) shows no ship promise.
   const shipPromise = shipPromiseFor(
     selectedVariant?.shipPromise,
     content.statusNote,
+    rootData?.shopOpen ?? false,
   );
   const buyPrice = isBundle ? bundlePrice : selectedVariant?.price;
   const buyAvailable = isBundle

@@ -64,4 +64,12 @@ describe('shipPromiseFor', () => {
     );
     assert.equal(shipPromiseFor(undefined, undefined), null);
   });
+
+  it('prints no promise while the shop is closed, and keeps it when open', () => {
+    const promise = 'ships about 10 weeks after its target is reached';
+    assert.equal(shipPromiseFor(promise, 'ships in about 10 weeks', false), null);
+    assert.equal(shipPromiseFor(undefined, 'ships in about 10 weeks', false), null);
+    assert.equal(shipPromiseFor(promise, undefined, true), promise);
+    assert.equal(shipPromiseFor(promise), promise);
+  });
 });

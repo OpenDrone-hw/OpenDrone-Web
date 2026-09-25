@@ -43,11 +43,17 @@ export function preorderNote(
  * closed SKU that carries one. Coalescing that null with `??` republished a
  * dispatch date the policy had just withdrawn, on a storefront whose checkout
  * is closed.
+ *
+ * A closed shop (`shopOpen` false: coming soon or checkout closed) prints no
+ * promise at all: a dispatch date next to "Coming soon" reads as an offer
+ * nobody can take up.
  */
 export function shipPromiseFor(
   variantPromise: string | null | undefined,
   statusNote?: string | null,
+  shopOpen = true,
 ): string | null {
+  if (!shopOpen) return null;
   if (variantPromise !== undefined) return variantPromise;
   return statusNote ?? null;
 }
