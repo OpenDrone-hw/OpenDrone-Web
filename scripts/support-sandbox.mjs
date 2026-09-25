@@ -63,7 +63,7 @@ if (process.argv[2] === 'staff') {
   }
   const body = await res.json();
   const out = command === 'state' && ref ? {threads: body.threads.filter((t) => t.name.startsWith(ref))} : body;
-  console.log(JSON.stringify(out, null, 2));
+  process.stdout.write(`${JSON.stringify(out, null, 2)}\n`);
   process.exit(res.ok ? 0 : 1);
 }
 
@@ -89,7 +89,7 @@ function addMessage(thread, content, author, attachments = []) {
   return m;
 }
 
-const publicMessage = ({reactors, ...m}) => m;
+const publicMessage = (m) => ({...m, reactors: undefined});
 
 const JAN_ORDER = {
   name: '#1042',
