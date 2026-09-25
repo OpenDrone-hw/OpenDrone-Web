@@ -272,3 +272,16 @@ test('launch readiness rejects missing approvals and delivery promises', async (
     assert.match(checkLaunchReadiness({skus: {A: {batches: [{units: 10, deliveryBy}]}}}, approved)[0], /final delivery date/);
   }
 });
+
+test('launch sets countFrom to the Brussels launch day and keeps the formatting', async () => {
+  const {setCountFrom, brusselsDay} = await import('../../scripts/launch-preorders.mjs');
+  const json = '{\n  "countFrom": "2026-09-21",\n  "endsOn": "2026-12-31"\n}';
+  assert.equal(setCountFrom(json, '2026-10-06'), '{\n  "countFrom": "2026-10-06",\n  "endsOn": "2026-12-31"\n}');
+  assert.equal(setCountFrom(json, '2026-09-21'), json);
+  assert.throws(() => setCountFrom(json, '6 Oct'));
+  assert.throws(() => setCountFrom('{}', '2026-10-06'));
+  // 23:30 UTC on 5 October is already 6 October in Brussels.
+  assert.equal(brusselsDay(new Date('2026-10-05T23:30:00Z')), '2026-10-06');
+  const real = readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8');
+  assert.match(setCountFrom(real, '2026-10-06'), /"countFrom": "2026-10-06"/);
+});

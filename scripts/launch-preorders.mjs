@@ -9,7 +9,7 @@
 // The founder's own steps come first (README "Launch preorders"): payments,
 // the redirect theme and the password page. This script does the rest:
 //
-//   1. Preflight: branch feat/preorders, a clean wrangler.production.toml,
+//   1. Preflight: branch feat/preorders, a clean tree equal to its origin,
 //      the pull request open against main, the credentials present by name,
 //      wrangler and gh signed in, the Admin token's scopes (orders,
 //      order tags, products, fulfillment holds), and every Shopify market
@@ -27,7 +27,8 @@
 //      its [vars] on main still say PUBLIC_COMING_SOON=1 and
 //      SHOPIFY_CHECKOUT_WRITE_ENABLED=0.
 //   4. Launch commit on feat/preorders: wrangler.production.toml [vars]
-//      PUBLIC_COMING_SOON=0 and SHOPIFY_CHECKOUT_WRITE_ENABLED=1, pushed.
+//      PUBLIC_COMING_SOON=0 and SHOPIFY_CHECKOUT_WRITE_ENABLED=1, and
+//      countFrom in content/preorders.json set to launch day, pushed.
 //   5. Wait for the pull request checks, then squash-merge it. This is the
 //      production deploy.
 //   6. Wait for the cloudflare-production workflow of the merge commit.
@@ -52,6 +53,7 @@ import {listPlaceholders} from './spec-placeholders.mjs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BRANCH = 'feat/preorders';
 const PROD_CONFIG = 'wrangler.production.toml';
+const PREORDERS_FILE = 'content/preorders.json';
 const PROD_ORIGIN = 'https://opendrone.be';
 const WEBHOOK_PATH = '/api/shopify/orders-paid';
 const DEPLOY_WORKFLOW = 'cloudflare-production.yml';
@@ -233,6 +235,19 @@ export function launchVars({prelaunchFlagInUse}) {
 }
 
 /** Replace the closed-store comment above the vars once the store opens. */
+/** The first counting day in Europe/Brussels, YYYY-MM-DD, for `now`. */
+export function brusselsDay(now = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', {timeZone: 'Europe/Brussels'}).format(now);
+}
+
+/** content/preorders.json with countFrom set to `day`, formatting kept. */
+export function setCountFrom(json, day) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) throw new Error(`countFrom must be YYYY-MM-DD, got ${day}`);
+  const out = json.replace(/("countFrom":\s*)"\d{4}-\d{2}-\d{2}"/, `$1"${day}"`);
+  if (out === json && !json.includes(`"countFrom": "${day}"`)) throw new Error('countFrom not found in preorders.json');
+  return out;
+}
+
 export function launchComment(toml) {
   return toml.replace(
     /# Shopify catalog reads are active, while every commerce write remains closed\.\n# The domain, tokens, closed per-SKU policy and newsletter write switch are\n# configured separately by the reviewed runtime secret update\.\n/,
@@ -325,7 +340,7 @@ export function plan({pr, skus, flat = []}) {
     ['preflight', `Check branch ${BRANCH}, a clean ${PROD_CONFIG}, PR #${pr} open against main, credentials present by name, wrangler and gh signed in, Admin token scopes (${REQUIRED_ADMIN_SCOPES.join(', ')}), every market prices tax-inclusive.`],
     ['prices', `Read the storefront catalog and check ${skus.length} campaign SKUs: each has a compare-at price and sells at the first price step. Check ${flat.length} shipsWith SKUs sell at a flat price.`],
     ['secrets', `npx wrangler secret bulk --config ${PROD_CONFIG} (stdin): SHOPIFY_PREVIEW_POLICY_JSON (${skus.length + flat.length} SKUs preorder, the rest sold_out), SHOPIFY_WEBHOOK_SECRET (from .env), SHOPIFY_PRICE_TIER_WRITE_ENABLED=1. Production stays closed by its [vars].`],
-    ['launch-commit', `Set ${PROD_CONFIG} [vars] PUBLIC_COMING_SOON="0", SHOPIFY_CHECKOUT_WRITE_ENABLED="1"; git commit; git push origin ${BRANCH}.`],
+    ['launch-commit', `Set ${PROD_CONFIG} [vars] PUBLIC_COMING_SOON="0", SHOPIFY_CHECKOUT_WRITE_ENABLED="1" and countFrom in ${PREORDERS_FILE} to today (Europe/Brussels); git commit; git push origin ${BRANCH}.`],
     ['merge', `gh pr checks ${pr} --watch, then gh pr merge ${pr} --squash --match-head-commit <launch commit>. This deploys production.`],
     ['deploy', `Wait for ${DEPLOY_WORKFLOW} on the merge commit: gh run watch --exit-status.`],
     ['webhook', `Admin API: webhookSubscriptionCreate(ORDERS_PAID, ${PROD_ORIGIN}${WEBHOOK_PATH}, JSON) unless it already exists.`],
@@ -410,9 +425,14 @@ async function preflight(opts) {
   if (missing.length) problems.push(`missing credentials (by name): ${missing.join(', ')}`);
   const branch = sh('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {allowFail: true}).stdout;
   if (branch !== BRANCH) problems.push(`on branch ${branch || '?'}, need ${BRANCH}`);
-  if (sh('git', ['status', '--porcelain', '--', PROD_CONFIG], {allowFail: true}).stdout) {
-    problems.push(`${PROD_CONFIG} has uncommitted changes`);
+  // The deploy ships what is pushed, so the checks below must read the same.
+  if (sh('git', ['status', '--porcelain'], {allowFail: true}).stdout) {
+    problems.push('the working tree has uncommitted changes: commit or stash them first');
   }
+  sh('git', ['fetch', 'origin', BRANCH], {allowFail: true});
+  const local = sh('git', ['rev-parse', 'HEAD'], {allowFail: true}).stdout;
+  const remote = sh('git', ['rev-parse', `origin/${BRANCH}`], {allowFail: true}).stdout;
+  if (!local || local !== remote) problems.push(`HEAD is not origin/${BRANCH}: pull or push first`);
   const pr = sh('gh', ['pr', 'view', String(opts.pr), '--json', 'state,headRefName,baseRefName'], {allowFail: true});
   if (pr.status !== 0) problems.push(`gh cannot read PR #${opts.pr} (gh auth status?)`);
   else {
@@ -467,7 +487,7 @@ async function smoke(skus) {
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
   loadEnv();
-  const preorders = JSON.parse(fs.readFileSync(path.join(ROOT, 'content/preorders.json'), 'utf8'));
+  const preorders = JSON.parse(fs.readFileSync(path.join(ROOT, PREORDERS_FILE), 'utf8'));
   const skus = campaignSkus(preorders);
   const flat = shipsWithSkus(preorders);
   const sold = [...skus, ...flat];
@@ -530,9 +550,13 @@ async function main() {
   console.log('[launch-commit]');
   const tomlPath = path.join(ROOT, PROD_CONFIG);
   fs.writeFileSync(tomlPath, launchComment(setTomlVars(fs.readFileSync(tomlPath, 'utf8'), vars)));
-  if (sh('git', ['status', '--porcelain', '--', PROD_CONFIG]).stdout) {
-    sh('git', ['add', '--', PROD_CONFIG]);
-    sh('git', ['commit', '-m', 'Open preorders on production\n\nPUBLIC_COMING_SOON=0 and SHOPIFY_CHECKOUT_WRITE_ENABLED=1 in the\nproduction [vars]. The per-SKU policy, webhook secret and price-step\nswitch were set as Worker secrets by scripts/launch-preorders.mjs.', '--', PROD_CONFIG]);
+  // Orders count from launch day, so rehearsal orders never reach the meters.
+  const preordersPath = path.join(ROOT, PREORDERS_FILE);
+  const day = brusselsDay();
+  fs.writeFileSync(preordersPath, setCountFrom(fs.readFileSync(preordersPath, 'utf8'), day));
+  if (sh('git', ['status', '--porcelain', '--', PROD_CONFIG, PREORDERS_FILE]).stdout) {
+    sh('git', ['add', '--', PROD_CONFIG, PREORDERS_FILE]);
+    sh('git', ['commit', '-m', `Open preorders on production\n\nPUBLIC_COMING_SOON=0 and SHOPIFY_CHECKOUT_WRITE_ENABLED=1 in the\nproduction [vars]; paid orders count from ${day}. The per-SKU policy,\nwebhook secret and price-step switch were set as Worker secrets by\nscripts/launch-preorders.mjs.`, '--', PROD_CONFIG, PREORDERS_FILE]);
   } else {
     console.log('  launch vars already committed');
   }
