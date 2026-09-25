@@ -31,24 +31,51 @@
     "pins": [
       {
         "ref": "①",
-        "part": "Top plate: carbon, carries the camera + VTX bay"
+        "part": "Top plate: 2.5 mm carbon"
       },
       {
         "ref": "②",
-        "part": "Arms: replaced individually",
-        "cost": "×4"
+        "part": "Middle plate: 3 mm carbon"
       },
       {
         "ref": "③",
-        "part": "Bottom plate: dual stack pattern"
+        "part": "Bottom plate: 3 mm carbon"
       },
       {
         "ref": "④",
-        "part": "M3 aluminium standoffs + hardware kit"
+        "part": "Arms: 6 mm carbon, replaced individually",
+        "cost": "×4"
+      },
+      {
+        "ref": "⑤",
+        "part": "Cross brace: 6 mm carbon"
+      },
+      {
+        "ref": "⑥",
+        "part": "Aluminium side plates: the camera mount",
+        "cost": "×2"
+      },
+      {
+        "ref": "⑦",
+        "part": "18 mm aluminium standoffs",
+        "cost": "×4"
+      },
+      {
+        "ref": "⑧",
+        "part": "Silicone anti-slip pad"
+      },
+      {
+        "ref": "⑨",
+        "part": "M3 hardware kit"
+      },
+      {
+        "ref": "⑩",
+        "part": "TPU arm boots, camera and antenna mounts: print files, not included",
+        "cost": "print"
       }
     ],
     "frameViewer": {
-      "src": "/models/frame5.glb"
+      "src": "/models/od5/frame.glb"
     }
   },
   "inTheBox": [
@@ -123,7 +150,7 @@
         ]
       ],
       "frameViewer": {
-        "src": "/models/frame5.glb"
+        "src": "/models/od5/frame.glb"
       },
       "aliases": [
         "5",
@@ -200,8 +227,54 @@
           "55 g"
         ]
       ],
+      "pins": [
+        {
+          "ref": "①",
+          "part": "Top plate: 2 mm carbon"
+        },
+        {
+          "ref": "②",
+          "part": "Middle plate: 2.5 mm carbon"
+        },
+        {
+          "ref": "③",
+          "part": "Bottom plate: 2.5 mm carbon"
+        },
+        {
+          "ref": "④",
+          "part": "Arms: 4 mm carbon, replaced individually",
+          "cost": "×4"
+        },
+        {
+          "ref": "⑤",
+          "part": "Cross brace: 4 mm carbon"
+        },
+        {
+          "ref": "⑥",
+          "part": "Aluminium side plates: the camera mount",
+          "cost": "×2"
+        },
+        {
+          "ref": "⑦",
+          "part": "20 mm aluminium standoffs",
+          "cost": "×4"
+        },
+        {
+          "ref": "⑧",
+          "part": "Silicone anti-slip pad"
+        },
+        {
+          "ref": "⑨",
+          "part": "M2 and M2.5 hardware kit"
+        },
+        {
+          "ref": "⑩",
+          "part": "TPU arm boots, camera and antenna mounts: print files, not included",
+          "cost": "print"
+        }
+      ],
       "frameViewer": {
-        "src": "/models/frame3.glb"
+        "src": "/models/od3/frame.glb"
       },
       "imageNote": "Render of the 5-inch frame. The 3-inch frame has the same layout.",
       "aliases": [

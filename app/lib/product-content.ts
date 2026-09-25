@@ -255,7 +255,7 @@ export type VariantContent = {
    *  CAD analogue of `boardArt` for frames: the 3" and 5" tiers each carry
    *  their own GLB so the teardown viewer explodes the selected model. Tiers
    *  without their own model fall back to `teardown.frameViewer`. */
-  frameViewer?: {src: string; inspectUrl?: string};
+  frameViewer?: {src: string; inspectUrl?: string; kind?: 'frame' | 'motor'};
   /** When true the tier renders as a greyed, non-selectable "Coming soon"
    *  card: a designed model that is not yet a purchasable catalog variant.
    *  It shows on the ladder for line completeness but can't be added to cart. */
@@ -348,11 +348,12 @@ export type ProductContent = {
     };
     /** Optional exploded 3D model - the CAD analogue of `boardArt`, for
      *  products that are an OnShape assembly rather than a KiCad board
-     *  (the frame, later motors). `src` is a public GLB whose nodes follow
-     *  the top/base/arm naming the {@link FrameViewer} explodes by; set
-     *  `inspectUrl` to the public OnShape document. When present the
+     *  (the frame, the motors). `src` is a public Onshape assembly GLB whose
+     *  direct children are the part occurrences the {@link FrameViewer}
+     *  explodes; `kind: 'motor'` shows one motor of a drive assembly. Set
+     *  `inspectUrl` to the public Onshape document. When present the
      *  teardown renders FrameViewer instead of BoardArt. */
-    frameViewer?: {src: string; inspectUrl?: string};
+    frameViewer?: {src: string; inspectUrl?: string; kind?: 'frame' | 'motor'};
   };
   /** Beginner orientation chapter. See {@link WhatIsThis}. */
   whatIsThis?: WhatIsThis;

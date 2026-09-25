@@ -2242,6 +2242,7 @@ function ProductPage() {
                 <ClientFrameViewer
                   src={frameViewer.src}
                   srcs={frameViewerSrcs}
+                  kind={frameViewer.kind}
                   inspectUrl={frameViewer.inspectUrl}
                 />
               </SceneErrorBoundary>

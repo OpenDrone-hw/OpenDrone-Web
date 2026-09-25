@@ -16,6 +16,26 @@
     "project": "-"
   },
   "repoUrl": "https://github.com/OpenDrone-hw",
+  "teardown": {
+    "pins": [
+      {
+        "ref": "①",
+        "part": "Bell: carries the magnets and the shaft"
+      },
+      {
+        "ref": "②",
+        "part": "Stator: 12N14P windings"
+      },
+      {
+        "ref": "③",
+        "part": "Base: 9 × 9 mm M2 mount"
+      }
+    ],
+    "frameViewer": {
+      "src": "/models/od3/drive.glb",
+      "kind": "motor"
+    }
+  },
   "inTheBox": [
     {
       "qty": "1×",
@@ -89,7 +109,11 @@
         "3",
         "3in",
         "3-inch"
-      ]
+      ],
+      "frameViewer": {
+        "src": "/models/od3/drive.glb",
+        "kind": "motor"
+      }
     },
     "2207": {
       "label": "5\"",
@@ -138,6 +162,24 @@
           "902 W"
         ]
       ],
+      "pins": [
+        {
+          "ref": "①",
+          "part": "Bell: carries the magnets and the shaft"
+        },
+        {
+          "ref": "②",
+          "part": "Stator and windings"
+        },
+        {
+          "ref": "③",
+          "part": "Base: 16 × 16 mm M3 mount"
+        }
+      ],
+      "frameViewer": {
+        "src": "/models/od5/drive.glb",
+        "kind": "motor"
+      },
       "internalSku": true,
       "aliases": [
         "5\"",
