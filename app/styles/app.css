@@ -1115,6 +1115,13 @@ html.anim-paused .board-sheet.is-active {
 .pod-buy-stack-label {
   text-align: center;
 }
+/* The set button ("×4"): a bold count, same outline as the stack button. */
+.pod-buy-set-label {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
 .pod-buy-stack-pct {
   position: absolute;
   top: -0.35rem;
@@ -1293,17 +1300,17 @@ html.light .header-cat-pod {
   opacity: 1;
   color: var(--color-gold-hover);
 }
-/* Active = high-contrast label (white in dark, black in light) on a raised
-   chip. A gold fill washed the text out: gold is a mid-tone, so neither dark
-   nor light ink reads cleanly on it in both themes. */
+/* Active = high-contrast label (white in dark, black in light) and a gold
+   rim on the group's own pill. No inner chip: a pill inside a pill read as
+   a nested button. */
 .site-header-categories .site-header-cat-group a.active,
 .site-header-categories .site-header-cat-group a[aria-current='page'] {
   color: var(--color-text);
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-strong);
-  padding: calc(0.36em - 1px) calc(0.82em - 1px);
   opacity: 1;
   font-weight: 600;
+}
+.site-header-categories .site-header-cat-group:has(a.active, a[aria-current='page']) {
+  border-color: color-mix(in srgb, var(--color-gold) 55%, var(--color-border));
 }
 .site-header-categories .site-header-cat-group a.active::after,
 .site-header-categories .site-header-cat-group a[aria-current='page']::after {

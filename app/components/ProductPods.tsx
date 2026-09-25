@@ -59,6 +59,8 @@ export type ProductPodItem = {
     /** Short family name of the row's own product ("FC", "ESC") - names the
      *  buttons so it's unambiguous what each one adds. */
     selfShort?: string;
+    /** A set of N units on one link ("×4" for motors). */
+    set?: {quantity: number; href: string};
     companions?: PodCompanionOption[];
   };
 };
@@ -175,6 +177,30 @@ export function ProductPods({
               >
                 <ShoppingCart size={18} strokeWidth={2.25} aria-hidden="true" />
               </AddToCartButton>
+              {it.buy.set ? (
+                <AddToCartButton
+                  className="pod-buy-stack pod-buy-set"
+                  href={it.buy.set.href}
+                  product={it.buy.product}
+                  disabled={!it.buy.available}
+                  onClick={onAdd}
+                  ariaLabel={`Add ${it.buy.set.quantity} × ${it.title} ${self} to cart`}
+                  dataTip={
+                    it.buy.available
+                      ? `${it.buy.set.quantity} × ${self} · ${fmt(
+                          it.price
+                            ? {
+                                amount: (parseFloat(it.price.amount) * it.buy.set.quantity).toFixed(2),
+                                currencyCode: it.price.currencyCode,
+                              }
+                            : null,
+                        )}`
+                      : 'Out of stock'
+                  }
+                >
+                  <span className="pod-buy-set-label">×{it.buy.set.quantity}</span>
+                </AddToCartButton>
+              ) : null}
               {(it.buy.companions ?? []).map((o) => (
                 <AddToCartButton
                   key={o.key}

@@ -101,6 +101,10 @@ const STACK_COMPANIONS: Record<string, Array<{handle: string; short: string}>> =
 
 /** Short family label ("FC", "ESC") for a family type. */
 
+/** Families bought in sets: a row also offers "×N" (a quad takes four
+ *  motors), one click for N units. */
+const SET_OF: Record<string, number> = {Motors: 4};
+
 function selfShortFor(type: string): string {
   return CATEGORY_LINKS.find((c) => c.type === type)?.label ?? 'board';
 }
@@ -321,6 +325,12 @@ function FamilyNav({
     return options.length ? options : undefined;
   }
 
+  function setFor(type: string, sku: string | null | undefined) {
+    const quantity = SET_OF[type];
+    if (!quantity || !sku) return undefined;
+    return {quantity, href: buyUrl(commerceHandoff, [{sku, quantity}])};
+  }
+
   function itemsFor(type: string): ProductPodItem[] {
     return (products ?? [])
       .filter((p) => (p.productType || '') === type)
@@ -357,6 +367,7 @@ function FamilyNav({
                     product: p.handle,
                     available: Boolean(only.availableForSale),
                     selfShort: selfShortFor(type),
+                    set: setFor(type, only.sku),
                   }
                 : undefined,
             },
@@ -385,6 +396,7 @@ function FamilyNav({
                   product: p.handle,
                   available: Boolean(v.availableForSale),
                   selfShort: selfShortFor(type),
+                  set: setFor(type, v.sku),
                   companions: companionsFor(type, v, {
                     title: p.title,
                     handle: p.handle,
