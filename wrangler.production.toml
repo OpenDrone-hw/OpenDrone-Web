@@ -33,9 +33,10 @@ crons = ["*/5 * * * *"]
 # per-environment secret set with `wrangler secret put SESSION_SECRET` and is
 # never written here.
 [vars]
-# Preorders are open: checkout writes on, coming-soon off. The domain,
-# tokens, per-SKU policy, webhook secret and price-step switch are Worker
-# secrets, set by scripts/launch-preorders.mjs.
-SHOPIFY_CHECKOUT_WRITE_ENABLED = "1"
-PUBLIC_COMING_SOON = "0"
+# Ordering is closed: product pages show coming soon with the newsletter
+# signup and the server refuses cart and checkout writes. Set both to open
+# ("1" and "0") to take orders again. The checkout domain, tokens, per-SKU
+# policy, webhook secret and price-step switch are Worker secrets.
+SHOPIFY_CHECKOUT_WRITE_ENABLED = "0"
+PUBLIC_COMING_SOON = "1"
 PUBLIC_PRELAUNCH = "0"
