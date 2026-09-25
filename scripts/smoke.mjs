@@ -1,14 +1,14 @@
 #!/usr/bin/env node
-// Smoke test for OpenDrone web — hits the most important routes against
+// Smoke test for OpenDrone web: hits the most important routes against
 // a running dev or preview server and asserts status, headers, and a
 // few content invariants. Default base URL: http://localhost:3000.
 //
 //   node scripts/smoke.mjs               # local dev
-//   BASE=https://opendrone.store node scripts/smoke.mjs
+//   BASE=https://opendrone.be node scripts/smoke.mjs
 //   BASE=<staging url> SMOKE_AUTH=opendrone:<STAGING_PASSWORD> node scripts/smoke.mjs
 //
-// Exits non-zero on the first failure. Designed to run in CI or before
-// a deploy without spinning up a test framework.
+// Passes with the shop open or closed. Exits non-zero when any case fails.
+// Designed to run in CI or before a deploy without a test framework.
 
 const BASE = (process.env.BASE || 'http://localhost:3000').replace(/\/$/, '');
 // Staging sits behind HTTP basic auth; SMOKE_AUTH is `user:password`.
@@ -51,8 +51,12 @@ const cases = [
   // Machine-readable surfaces.
   {path: '/products.json', expectStatus: 200},
   {path: '/llms.txt', expectStatus: 200, expectInBody: ['/products.json']},
-  // The cart, the old collections URLs and search all land on /products.
-  {path: '/cart', expectStatus: 200, expectRedirect: '/products'},
+  // An open shop renders the cart; a closed one sends it to /products.
+  {path: '/cart', expectStatus: 200, expectEither: [{url: '/cart', body: 'Cart'}, {url: '/products', body: 'Products'}]},
+  {path: '/preorder', expectStatus: 200, expectInBody: ['Pre-order']},
+  {path: '/wholesale', expectStatus: 200, expectInBody: ['Trade']},
+  // Old collections URLs, cart subpaths and search land on /products.
+  {path: '/cart/c/old', expectStatus: 200, expectRedirect: '/products'},
   {path: '/collections/all', expectStatus: 200, expectRedirect: '/products'},
   {path: '/search', expectStatus: 200, expectRedirect: '/products'},
   // 404 path returns 404, not 500.
@@ -87,6 +91,17 @@ async function run() {
       bad++;
       fail(tc.path, `expected redirect to ${tc.expectRedirect}, got ${res.url}`);
       continue;
+    }
+    if (tc.expectEither) {
+      const {pathname} = new URL(res.url);
+      const hit = tc.expectEither.some(
+        ({url, body: needle}) => pathname === url && body.toLowerCase().includes(needle.toLowerCase()),
+      );
+      if (!hit) {
+        bad++;
+        fail(tc.path, `landed on ${pathname}, expected one of ${tc.expectEither.map((e) => e.url).join(' / ')}`);
+        continue;
+      }
     }
     if (tc.expectInBodyAny) {
       const hit = tc.expectInBodyAny.some((needle) =>

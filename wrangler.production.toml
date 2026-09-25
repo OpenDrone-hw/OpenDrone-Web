@@ -33,10 +33,9 @@ crons = ["*/5 * * * *"]
 # per-environment secret set with `wrangler secret put SESSION_SECRET` and is
 # never written here.
 [vars]
-# Ordering is closed: product pages show coming soon with the newsletter
-# signup and the server refuses cart and checkout writes. Set both to open
-# ("1" and "0") to take orders again. The checkout domain, tokens, per-SKU
-# policy, webhook secret and price-step switch are Worker secrets.
+# Shop gates (README "Open or close the shop"). Closed: coming soon with the
+# newsletter signup, cart and checkout writes refused. Open: "1" and "0".
+# The Shopify domains and tokens, the per-SKU policy, the webhook secret and
+# the price-step switch are Worker secrets.
 SHOPIFY_CHECKOUT_WRITE_ENABLED = "0"
 PUBLIC_COMING_SOON = "1"
-PUBLIC_PRELAUNCH = "0"

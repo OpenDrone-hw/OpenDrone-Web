@@ -2,12 +2,14 @@ name: Deploy Cloudflare staging
 
 # Isolated staging Worker (wrangler.toml): no custom-domain routes, basic
 # auth, checkout open against the same Shopify store for end-to-end tests.
-# Deploys on every push to feat/preorders so the branch under review has a
-# live, non-production URL without touching opendrone.be. Production deploys
-# from cloudflare-production.yml instead.
+# Deploys on every push to the `staging` branch, and on a manual run from the
+# Actions tab for the branch picked there. To preview any branch, push it to
+# staging: `git push --force origin HEAD:staging`. Production deploys from
+# cloudflare-production.yml instead.
 on:
   push:
-    branches: [feat/preorders]
+    branches: [staging]
+  workflow_dispatch:
 
 permissions:
   contents: read
