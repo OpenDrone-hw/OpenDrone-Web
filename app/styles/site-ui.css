@@ -911,6 +911,14 @@ html.light .po-card-cta {
 @media (max-width: 767px) {
   .product-silhouette-art { width: min(149.6vw, 119svh); opacity: 0.02; }
 }
+/* A board export is the part itself: it reads clearly behind the table while
+   the spec text keeps its contrast. */
+.product-silhouette[data-board] .product-silhouette-art { opacity: 0.1; }
+html.light .product-silhouette[data-board] .product-silhouette-art { opacity: 0.12; }
+@media (max-width: 767px) {
+  .product-silhouette[data-board] .product-silhouette-art { opacity: 0.08; }
+  html.light .product-silhouette[data-board] .product-silhouette-art { opacity: 0.1; }
+}
 @media (prefers-reduced-motion: reduce) {
   .product-silhouette-light { opacity: 0.45 !important; }
 }
