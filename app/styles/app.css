@@ -2543,6 +2543,15 @@ button.reset {
   color: var(--color-text);
 }
 
+/* The only value an axis has for the chosen earlier option: a label, not a
+   choice. */
+.product-options-item--fixed,
+.product-options-item--fixed:hover {
+  cursor: default;
+  border-color: var(--color-border);
+  background-color: transparent;
+}
+
 /* Variant switch in flight: the clicked pill pulses its border until the
    server navigation lands, so slow connections read as loading rather than
    a dead click. */

@@ -210,6 +210,54 @@ describe('variant selection', () => {
   });
 });
 
+describe('mapProductOptions with two axes', () => {
+  // Part x Size, where one part comes in a single size for both frames.
+  const base = FIXTURE.products[1];
+  const variant = (sku: string, part: string, size: string) => ({
+    ...base.variants[0],
+    sku,
+    title: `${part} / ${size}`,
+    options: {Part: part, Size: size},
+  });
+  const spares = {
+    ...base,
+    handle: 'spares',
+    variants: [
+      variant('ARM-3', 'Arm', '3"'),
+      variant('ARM-5', 'Arm', '5"'),
+      variant('MID-3', 'Middle plate', '3"'),
+      variant('MID-5', 'Middle plate', '5"'),
+      variant('PAD', 'Battery pad', '3" and 5"'),
+    ],
+  };
+  const options = (sel: Array<{name: string; value: string}>) =>
+    Object.fromEntries(
+      mapProductOptions(toProduct(FIXTURE, spares, sel)).map((o) => [
+        o.name,
+        Object.fromEntries(o.optionValues.map((v) => [v.name, v])),
+      ]),
+    );
+
+  it('offers only the sizes the selected part has', () => {
+    const arm = options([{name: 'Part', value: 'Arm'}, {name: 'Size', value: '5"'}]);
+    assert.equal(arm.Size['3"'].exists, true);
+    assert.equal(arm.Size['3" and 5"'].exists, false);
+    const pad = options([{name: 'Part', value: 'Battery pad'}]);
+    assert.deepEqual(
+      Object.values(pad.Size).filter((v) => v.exists).map((v) => v.name),
+      ['3" and 5"'],
+    );
+  });
+
+  it('keeps the size when the part has it, else takes the part\'s first', () => {
+    const arm5 = options([{name: 'Part', value: 'Arm'}, {name: 'Size', value: '5"'}]);
+    assert.equal(arm5.Part['Middle plate'].variantUriQuery, 'Part=Middle+plate&Size=5%22');
+    assert.equal(arm5.Part['Battery pad'].variantUriQuery, 'Part=Battery+pad&Size=3%22+and+5%22');
+    const pad = options([{name: 'Part', value: 'Battery pad'}]);
+    assert.equal(pad.Part.Arm.variantUriQuery, 'Part=Arm&Size=3%22');
+  });
+});
+
 describe('cards', () => {
   it('maps every product to a card', () => {
     assert.equal(toCards(FIXTURE).length, 2);

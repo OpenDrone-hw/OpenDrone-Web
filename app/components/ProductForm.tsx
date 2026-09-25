@@ -90,6 +90,10 @@ export function ProductForm({
         if (option.optionValues.length === 1) return null;
         // Skip axes owned by another selector (the comparison ladder).
         if (hidden.has(option.name.trim().toLowerCase())) return null;
+        // A later axis offers only what the earlier choice has (the battery
+        // pad comes in one size that fits both frames).
+        const values = option.optionValues.filter((v) => v.exists);
+        if (!values.length) return null;
 
         return (
           <div key={option.name} className="mb-4">
@@ -97,7 +101,12 @@ export function ProductForm({
               {option.name}
             </h3>
             <div className="product-options-grid">
-              {option.optionValues.map((value) => {
+              {values.length === 1 ? (
+                <span className="product-options-item product-options-item--fixed">
+                  {values[0].name}
+                </span>
+              ) : null}
+              {values.length === 1 ? null : values.map((value) => {
                 const {name, variantUriQuery, selected, available, exists} =
                   value;
                 // SEO: render as a button with a scripted navigation so

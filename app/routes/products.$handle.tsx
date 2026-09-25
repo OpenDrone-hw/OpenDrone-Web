@@ -919,6 +919,10 @@ function ProductPage() {
       seen.add(key);
       return true;
     });
+    // The catalog lists a product's first images only; a variant whose own
+    // image falls outside them still shows it.
+    const own = selectedVariant?.image;
+    if (own && !seen.has(own.url.split('?')[0])) deduped.push(own);
     const tierKeys = content.variants ? Object.keys(content.variants) : [];
     if (tierKeys.length < 2) return deduped;
     const norm = (v: string) =>
@@ -936,9 +940,9 @@ function ProductPage() {
     // hyphenated key (openesc-20x20-back.png).
     const loose = (v: string) => v.replace(/[-_]/g, '');
     const looseKeys = keys.map(loose);
-    const featuredId = selectedVariant?.image?.id ?? null;
+    const featuredUrl = selectedVariant?.image?.url.split('?')[0] ?? null;
     return deduped.filter((img) => {
-      if (featuredId && img.id === featuredId) return true;
+      if (featuredUrl && img.url.split('?')[0] === featuredUrl) return true;
       const name = img.url.split('?')[0].toLowerCase();
       const alt = loose(norm(img.altText ?? ''));
       const best = keys
@@ -947,6 +951,15 @@ function ProductPage() {
       return !best || best === active;
     });
   }, [product.images, selectedVariant?.image, content.variants, activeTier]);
+  // The selected variant's own image, matched by URL: the catalog numbers
+  // product images by position, so a variant image carries a different id
+  // than the same image in the product list.
+  const activeImageId = useMemo(() => {
+    const url = selectedVariant?.image?.url.split('?')[0];
+    return url
+      ? (galleryImages.find((img) => img.url.split('?')[0] === url)?.id ?? null)
+      : null;
+  }, [galleryImages, selectedVariant?.image]);
 
   // GitHub links (repo card / issues / latest commit) follow the selected tier:
   // split-repo lines (OpenFC-Lite ↔ OpenFC-Lite-Mini, OpenESC-20x20 ↔
@@ -2803,7 +2816,7 @@ function ProductPage() {
             ) : null}
             <ProductGallery
               images={galleryImages}
-              activeImageId={selectedVariant?.image?.id ?? null}
+              activeImageId={activeImageId}
               emptyFallback={
                 <ProductGhostTile type={product.productType} title={product.title} />
               }

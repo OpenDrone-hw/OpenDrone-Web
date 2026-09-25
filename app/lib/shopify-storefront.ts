@@ -13,7 +13,7 @@ const CATALOG_QUERY = `#graphql
         description
         productType
         featuredImage { url altText }
-        images(first: 10) { nodes { url altText } }
+        images(first: 20) { nodes { url altText } }
         # Shopify's standard review metafields. Judge.me writes them once a
         # product has published reviews; absent means no reviews yet, and the
         # PDP then renders no trace of the feature.
