@@ -347,29 +347,39 @@ function PopulatedCart({
   );
 }
 
-/** Shopify's names for the marks, as a buyer knows them. */
-const PAYMENT_NAMES: Record<string, string> = {
-  VISA: 'Visa',
-  MASTERCARD: 'Mastercard',
-  AMERICAN_EXPRESS: 'Amex',
-  DISCOVER: 'Discover',
-  DINERS_CLUB: 'Diners',
-  JCB: 'JCB',
-  APPLE_PAY: 'Apple Pay',
-  GOOGLE_PAY: 'Google Pay',
-  SHOPIFY_PAY: 'Shop Pay',
-  ANDROID_PAY: 'Google Pay',
+/** Shopify's names for the marks, as a buyer knows them, and the official
+ *  mark (activemerchant/payment_icons, MIT) under /payments where one exists. */
+const PAYMENT_MARKS: Record<string, {name: string; icon?: string}> = {
+  VISA: {name: 'Visa', icon: 'visa'},
+  MASTERCARD: {name: 'Mastercard', icon: 'master'},
+  AMERICAN_EXPRESS: {name: 'American Express', icon: 'american_express'},
+  DISCOVER: {name: 'Discover'},
+  DINERS_CLUB: {name: 'Diners'},
+  JCB: {name: 'JCB'},
+  APPLE_PAY: {name: 'Apple Pay', icon: 'apple_pay'},
+  GOOGLE_PAY: {name: 'Google Pay', icon: 'google_pay'},
+  SHOPIFY_PAY: {name: 'Shop Pay', icon: 'shopify_pay'},
+  ANDROID_PAY: {name: 'Google Pay', icon: 'google_pay'},
 };
 
-/** One muted row of the payment methods checkout accepts, from the shop's
- *  payment settings. Nothing when Shopify reports none. */
+/** One row of the payment marks checkout accepts, from the shop's payment
+ *  settings. Nothing when Shopify reports none. */
 function PaymentMarks({methods}: {methods: string[]}) {
-  const names = [...new Set(methods.map((m) => PAYMENT_NAMES[m]).filter(Boolean))];
-  if (!names.length) return null;
+  const seen = new Set<string>();
+  const marks = methods
+    .map((m) => PAYMENT_MARKS[m])
+    .filter((m): m is {name: string; icon?: string} => Boolean(m) && !seen.has(m.name) && Boolean(seen.add(m.name)));
+  if (!marks.length) return null;
   return (
     <ul className="cart-payments" aria-label={t('payments_aria', 'Payment methods')}>
-      {names.map((name) => (
-        <li key={name}>{name}</li>
+      {marks.map((m) => (
+        <li key={m.name} title={m.name}>
+          {m.icon ? (
+            <img src={`/payments/${m.icon}.svg`} alt={m.name} width={38} height={24} loading="lazy" decoding="async" />
+          ) : (
+            <span className="cart-payments-name">{m.name}</span>
+          )}
+        </li>
       ))}
     </ul>
   );

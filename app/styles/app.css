@@ -7989,6 +7989,30 @@ a.what-chain-chip:hover {
   font-weight: 600;
 }
 
+/* Accepted payment marks under Checkout: one row of official card marks. */
+.cart-payments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: var(--sp-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.cart-payments li {
+  display: flex;
+}
+.cart-payments img {
+  display: block;
+  width: 38px;
+  height: 24px;
+}
+.cart-payments-name {
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+  padding: 0.2rem 0.4rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-xs);
+}
 .cart-summary-note {
   margin-top: 1rem;
   color: var(--color-text-muted);
