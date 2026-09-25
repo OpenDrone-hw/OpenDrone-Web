@@ -1,4 +1,4 @@
-import {Canvas, useFrame, invalidate} from '@react-three/fiber';
+import {Canvas, useFrame, useThree, invalidate} from '@react-three/fiber';
 import {useEffect, useReducer, useRef, useState} from 'react';
 import * as THREE from 'three';
 import {ModelLoader as GLTFLoader} from '~/lib/model-loader';
@@ -40,12 +40,12 @@ export type FrameViewerProps = {
  * Exploded-assembly backdrop for the carbon frame and the motors - the CAD
  * analogue of {@link BoardArt}. The frame is a 3D Onshape assembly, so
  * instead of revealing flat PCB layers it pulls its parts apart as the user
- * scrolls: top plate lifts, bottom plates drop, arms and boots fan out,
- * screws back out of their holes. A motor expands along its shaft (bell up,
- * stator down) while the bell spins.
+ * scrolls: top plate lifts, bottom plates drop, arms and boots fan out.
+ * A motor expands along its shaft (bell up, stator down) while the bell
+ * spins.
  *
- * Purely decorative and NON-interactive: a big over-bleeding layer of gold
- * vector outlines that flows over the neighbouring sections, behind the
+ * Purely decorative and NON-interactive: a layer of gold vector outlines
+ * contained in the teardown section, behind the
  * teardown text. The explode amount is recomputed from the section's
  * viewport position every rendered frame, and a scroll listener invalidates
  * (frameloop="demand") - so it animates smoothly while scrolling and the GPU
@@ -68,18 +68,18 @@ export type ModelKind = 'frame' | 'motor';
 // (M5), and on the drive model the props and the stack softmounts. Matched
 // against the normalised node name (see `partName`).
 const EXCLUDE = /^airtag$|ufl|rear housing|nut m5|prop|softmount/;
-// Frame roles. Plates and pads stack along the frame's vertical axis; fasteners
-// also pull out along their own axis; every other part (arms, boots, standoffs,
-// aluminium side plates, camera mounts) moves out radially.
+// Frame roles. Plates and pads stack along the frame's vertical axis; every
+// other part (arms, boots, standoffs, aluminium side plates, camera mounts)
+// moves out radially. Screws and nuts are left out of the frame drawing: at
+// this scale they explode into a cloud of tiny circles.
 const PLATE = /^(top|base|cross|anti-slip|airtagantenna|vtx)/;
 const FASTENER = /screw|nut/;
-const ROLE = {plate: 0, radial: 1, fastener: 2} as const;
+const ROLE = {plate: 0, radial: 1} as const;
 
 // Explode travel as a fraction of the assembly's largest dimension. These set
 // the spread at e = 1 (the "fully exploded" hero look as chapter 2 arrives).
 const PLATE_TRAVEL = 0.9;
-const ARM_TRAVEL = 0.78;
-const FASTENER_TRAVEL = 0.1;
+const ARM_TRAVEL = 0.5;
 // Motor: the lowest body (stator and base) drops, the rest (bell, shaft,
 // bearings, clips) lift in even steps up to MOTOR_LIFT.
 const MOTOR_DROP = 0.25;
@@ -90,16 +90,24 @@ const DENSE_EDGES = 1500;
 const MOTOR_SPIN = 0.9;
 
 // Per-kind rig: how far the explode may run with scroll, the model's size in
-// scene units, and the fixed three-quarter view.
+// scene units, the fixed three-quarter view, and `fit`: the model's size as a
+// fraction of the free drawing area (the smaller of its width and height), so
+// the exploded parts stay inside the section. `shiftX` (fraction of the free
+// width) recentres a drawing whose three-quarter view is lopsided.
 const KIND = {
-  // e keeps growing past 1 as you scroll further, so the parts fly off screen.
-  // At e = 1 arms are ~at the frame edge; ~e = 2.5-3 takes everything off.
-  frame: {explodeMax: 3, size: 1.9, rot: {x: 0.42, y: -0.5}, lift: 0},
-  // One motor stays in frame: it expands to about twice its height and holds.
-  // The motor chapter is short, so on desktop the model sits above the
-  // canvas centre, level with the part list.
-  motor: {explodeMax: 1, size: 0.75, rot: {x: -1.2, y: 0}, lift: 0.85},
+  frame: {
+    explodeMax: 1,
+    size: 1,
+    rot: {x: 0.42, y: -0.5},
+    fit: 0.48,
+    shiftX: -0.06,
+  },
+  // One motor: it expands to about twice its height and holds.
+  motor: {explodeMax: 1, size: 1, rot: {x: -1.2, y: 0}, fit: 0.42, shiftX: 0},
 } as const;
+// Desktop: the part list covers the left of the section, so the drawing is
+// centred in the space to its right.
+const LIST_FRACTION = 0.42;
 
 type Part = {
   obj: THREE.Object3D;
@@ -202,13 +210,12 @@ async function prepareModel(
       role: number;
       centre: THREE.Vector3;
     };
+    for (const c of [...assemblyRoot.children]) {
+      if (FASTENER.test(partName(c))) assemblyRoot.remove(c);
+    }
     const drafts: Draft[] = assemblyRoot.children.map((obj) => {
       const name = partName(obj);
-      const role = PLATE.test(name)
-        ? ROLE.plate
-        : FASTENER.test(name)
-          ? ROLE.fastener
-          : ROLE.radial;
+      const role = PLATE.test(name) ? ROLE.plate : ROLE.radial;
       return {obj, name, role, centre: centreOf(obj)};
     });
     const plates = drafts.filter((d) => d.role === ROLE.plate);
@@ -253,20 +260,6 @@ async function prepareModel(
             ARM_TRAVEL * unit * Math.min(1, r / armR),
           );
         }
-      }
-      if (d.role === ROLE.fastener) {
-        // A screw or nut is modelled along its local Z: pull it out along
-        // that axis, away from the stack centre.
-        const axis = new THREE.Vector3(0, 0, 1).applyQuaternion(
-          (d.obj.children[0] ?? d.obj).getWorldQuaternion(
-            new THREE.Quaternion(),
-          ),
-        );
-        const away = d.centre.clone().sub(axisPoint).dot(axis);
-        world.addScaledVector(
-          axis,
-          (away < 0 ? -1 : 1) * FASTENER_TRAVEL * unit,
-        );
       }
       found.push({
         obj: d.obj,
@@ -454,10 +447,20 @@ function FrameModel({
   // visitors who opt out we hold the frame assembled (e = 0) - they get the
   // wireframe backdrop without parts flying as they scroll.
   const reducedMotion = usePrefersReducedMotion();
-  const {rot, explodeMax, lift} = KIND[kind];
+  const {rot, explodeMax, fit, shiftX} = KIND[kind];
   const spinAngle = useRef(0);
-  const offsetX = isMobile ? 0 : 1.0;
-  const rigScale = isMobile ? 1.35 : 1;
+  // Fit the drawing to the canvas (world units at the model's depth): on
+  // desktop into the space right of the part list, on mobile into the
+  // square above it.
+  const viewport = useThree((st) => st.viewport);
+  const freeW = isMobile
+    ? viewport.width
+    : viewport.width * (1 - LIST_FRACTION);
+  const offsetX =
+    (isMobile ? 0 : viewport.width * (LIST_FRACTION / 2)) + freeW * shiftX;
+  // The phone square holds nothing else, so the drawing fills more of it.
+  const rigScale =
+    Math.min(freeW, viewport.height) * fit * (isMobile ? 1.3 : 1);
   // All loaded models, keyed by src. Only the active one is `visible`.
   const models = useRef<Map<string, Model>>(new Map());
   // Escape hatch for the tier-switch effect below: kick an immediate load of
@@ -557,9 +560,9 @@ function FrameModel({
     if (!groupRef.current) return;
     groupRef.current.rotation.set(rot.x, rot.y, 0);
     groupRef.current.position.x = offsetX;
-    groupRef.current.position.y = isMobile ? 0 : lift;
     groupRef.current.scale.setScalar(rigScale);
-  }, [rot.x, rot.y, offsetX, lift, rigScale, isMobile]);
+    invalidate();
+  }, [rot.x, rot.y, offsetX, rigScale]);
 
   // Instant tier switch: show the requested model, hide the rest. If the model
   // hasn't finished loading yet it simply becomes visible once it lands; if

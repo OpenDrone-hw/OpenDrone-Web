@@ -5845,12 +5845,9 @@ section.chapter[data-centered] .chapter-body-col {
    the page. Purely decorative. */
 .chapter-backdrop {
   position: absolute;
-  top: -6vh; /* barely above the section - keep clear of the hero / buy button */
-  bottom: -70vh; /* flow down into chapter 2. NB: the model paints at this
-                    layer's vertical centre, so don't grow this much further or
-                    the assembled frame drops out of the chapter-1 view. */
-  left: -10vw;
-  right: -4vw;
+  /* Contained in the section: the drawing never spills over the next one. */
+  inset: 0;
+  overflow: hidden;
   z-index: 0;
   pointer-events: none;
 }
@@ -7287,6 +7284,17 @@ a.what-chain-chip:hover {
   }
   .teardown-sides {
     display: none;
+  }
+  /* The frame and motor teardowns have no part tour, so their list stays,
+     compact, under the drawing. */
+  .chapter[data-backdrop] .teardown-sides {
+    display: block;
+  }
+  .chapter[data-backdrop] .teardown-pins li {
+    padding: 0.4rem 0.6rem 0.4rem 0.75rem;
+  }
+  .chapter[data-backdrop] .teardown-pin-part {
+    font-size: 0.85rem;
   }
   .board-art-inspect,
   .schematic-foot {
