@@ -4,6 +4,9 @@ import * as THREE from 'three';
 import {ModelLoader as GLTFLoader} from '~/lib/model-loader';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
+import {LineSegments2} from 'three/addons/lines/LineSegments2.js';
+import {LineSegmentsGeometry} from 'three/addons/lines/LineSegmentsGeometry.js';
+import {LineMaterial} from 'three/addons/lines/LineMaterial.js';
 import {usePrefersReducedMotion} from '~/lib/use-media-query';
 import {getActiveTheme} from '~/lib/theme';
 import {SLICE_BUDGET_MS, yieldToMain} from '~/lib/scheduling';
@@ -11,10 +14,16 @@ import {SLICE_BUDGET_MS, yieldToMain} from '~/lib/scheduling';
 // Wireframe stroke per theme. Gold-on-near-black reads fine in dark; on light's
 // cream page that same gold is nearly invisible, so light uses a dark bronze at
 // higher opacity. Applied at build and refreshed live on a theme toggle.
+// `fill` tints the faces of the carbon plates and motor bodies, the drawing's
+// counterpart of the filled pads in a board's art.
 const FRAME_LINE = {
-  dark: {color: 0xc8b27a, opacity: 0.55},
-  light: {color: 0x5c4611, opacity: 0.92},
+  dark: {color: 0xc8b27a, opacity: 0.8, fill: 0.07},
+  light: {color: 0x5c4611, opacity: 0.92, fill: 0.08},
 } as const;
+// Outline stroke in CSS pixels (WebGL lines are otherwise always 1 px).
+const LINE_WIDTH = 1.7;
+// Parts drawn with a face tint: the carbon plates, arms and cross.
+const FILLED = /^(top|base|arm|cross)/;
 
 // Memoise fetched GLB bytes by URL so a model that's been loaded once (e.g. the
 // other tier, preloaded in the background) never hits the network again - the
@@ -99,7 +108,7 @@ const MOTOR_SPIN = 0.9;
 const KIND = {
   frame: {size: 1, rot: {x: 0.42, y: -0.5}, fit: 0.45, shiftX: -0.02},
   // One motor: it expands along its shaft to about twice its height.
-  motor: {size: 1, rot: {x: -1.2, y: 0}, fit: 0.42, shiftX: 0},
+  motor: {size: 1, rot: {x: -1.2, y: 0}, fit: 0.6, shiftX: 0},
 } as const;
 
 type Part = {
@@ -109,6 +118,8 @@ type Part = {
   explode: THREE.Vector3;
   /** Motor rotor bodies spin about their local Y (the shaft axis). */
   spin?: boolean;
+  /** Faces tinted as well as outlined. */
+  fill?: boolean;
 };
 type Model = {root: THREE.Object3D; parts: Part[]};
 
@@ -194,6 +205,7 @@ async function prepareModel(
         base: obj.position.clone(),
         explode: toParentFrame(obj, up.clone().multiplyScalar(travel * unit)),
         spin: rank > 0,
+        fill: true,
       });
     });
   } else {
@@ -258,6 +270,7 @@ async function prepareModel(
         obj: d.obj,
         base: d.obj.position.clone(),
         explode: toParentFrame(d.obj, world),
+        fill: FILLED.test(d.name),
       });
     }
   }
@@ -274,11 +287,22 @@ async function prepareModel(
   // baked into its owning part's local space, so the explode still moves
   // whole parts, and the source meshes are dropped from the graph entirely.
   const style = FRAME_LINE[getActiveTheme()];
-  const lineMat = new THREE.LineBasicMaterial({
+  const lineMat = new LineMaterial({
     color: style.color,
+    linewidth: LINE_WIDTH,
     transparent: true,
     opacity: style.opacity,
   });
+  const fillMat = new THREE.MeshBasicMaterial({
+    color: style.color,
+    transparent: true,
+    opacity: style.fill,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  fillMat.userData.fill = true;
+  scene.userData.lineMat = lineMat;
+  const filled = new Set(found.filter((f) => f.fill).map((f) => f.obj));
   const allMeshes: THREE.Mesh[] = [];
   scene.traverse((o) => {
     const m = o as THREE.Mesh;
@@ -311,7 +335,24 @@ async function prepareModel(
   for (const [owner, meshes] of byOwner) {
     inv.copy(owner.matrixWorld).invert();
     const edgeGeoms: THREE.BufferGeometry[] = [];
+    const faceGeoms: THREE.BufferGeometry[] = [];
     for (const m of meshes) {
+      if (filled.has(owner)) {
+        // Positions only, as plain floats: the quantized source attributes
+        // do not merge across meshes.
+        const pa = m.geometry.getAttribute('position');
+        const arr = new Float32Array(pa.count * 3);
+        for (let i = 0; i < pa.count; i++) {
+          arr[i * 3] = pa.getX(i);
+          arr[i * 3 + 1] = pa.getY(i);
+          arr[i * 3 + 2] = pa.getZ(i);
+        }
+        const fg = new THREE.BufferGeometry();
+        fg.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+        if (m.geometry.index) fg.setIndex(m.geometry.index.clone());
+        fg.applyMatrix4(tmpMat.copy(inv).multiply(m.matrixWorld));
+        faceGeoms.push(fg);
+      }
       let cached = edgeCache.get(m.geometry);
       if (!cached) {
         cached = new THREE.EdgesGeometry(m.geometry, 24);
@@ -337,11 +378,29 @@ async function prepareModel(
         sliceStart = performance.now();
       }
     }
+    if (faceGeoms.length) {
+      const faces =
+        faceGeoms.length === 1
+          ? faceGeoms[0]
+          : mergeGeometries(faceGeoms, false);
+      if (faceGeoms.length > 1) faceGeoms.forEach((g) => g.dispose());
+      if (faces) {
+        const fm = new THREE.Mesh(faces, fillMat);
+        fm.renderOrder = -1;
+        owner.add(fm);
+      }
+    }
     if (!edgeGeoms.length) continue;
     const merged =
       edgeGeoms.length === 1 ? edgeGeoms[0] : mergeGeometries(edgeGeoms, false);
     if (edgeGeoms.length > 1) edgeGeoms.forEach((g) => g.dispose());
-    if (merged) owner.add(new THREE.LineSegments(merged, lineMat));
+    if (merged) {
+      const lg = new LineSegmentsGeometry().setPositions(
+        merged.getAttribute('position').array as Float32Array,
+      );
+      merged.dispose();
+      owner.add(new LineSegments2(lg, lineMat));
+    }
   }
   // Drop the source meshes: their edges are baked into the merged outlines,
   // and keeping them (even material-hidden) is what kept the per-frame
@@ -558,13 +617,16 @@ function FrameModel({
       const style = FRAME_LINE[getActiveTheme()];
       for (const m of models.current.values()) {
         m.root.traverse((o) => {
-          const ls = o as THREE.LineSegments;
-          if (!ls.isLineSegments) return;
-          const mats = Array.isArray(ls.material) ? ls.material : [ls.material];
+          const mesh = o as THREE.Mesh;
+          if (!mesh.isMesh) return;
+          const mats = Array.isArray(mesh.material)
+            ? mesh.material
+            : [mesh.material];
           for (const mat of mats) {
-            const lm = mat as THREE.LineBasicMaterial;
+            const lm = mat as THREE.MeshBasicMaterial;
+            if (!lm.color) continue;
             lm.color.setHex(style.color);
-            lm.opacity = style.opacity;
+            lm.opacity = lm.userData.fill ? style.fill : style.opacity;
             lm.needsUpdate = true;
           }
         });
@@ -640,9 +702,14 @@ function FrameModel({
       ro?.disconnect();
     };
   }, []);
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     const active = models.current.get(src);
     if (!active || !active.parts.length) return;
+    // Fat lines size their stroke in pixels against the canvas resolution.
+    (active.root.userData.lineMat as LineMaterial | undefined)?.resolution.set(
+      state.size.width,
+      state.size.height,
+    );
     // The bell spins continuously while the canvas is mounted (on screen);
     // reduced motion keeps it still. Clamp delta so a backgrounded tab does
     // not jump on return.
