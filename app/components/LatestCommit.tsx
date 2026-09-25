@@ -1,6 +1,6 @@
 import type {LatestCommit} from '~/lib/github';
 import {Txt} from './Txt';
-import {copyText} from '~/lib/copy';
+import {copyFill, copyText} from '~/lib/copy';
 
 function relativeTime(iso: string): string {
   if (!iso) return '';
@@ -8,17 +8,17 @@ function relativeTime(iso: string): string {
   if (Number.isNaN(then)) return '';
   const diff = Math.max(0, Date.now() - then);
   const s = Math.floor(diff / 1000);
-  if (s < 60) return 'just now';
+  if (s < 60) return copyText('product-chrome.commit_just_now') ?? 'just now';
   const m = Math.floor(s / 60);
-  if (m < 60) return `${m} min ago`;
+  if (m < 60) return copyFill('product-chrome.commit_ago_min', '{n} min ago', {n: m});
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h} h ago`;
+  if (h < 24) return copyFill('product-chrome.commit_ago_hour', '{n} h ago', {n: h});
   const d = Math.floor(h / 24);
-  if (d < 30) return `${d} d ago`;
+  if (d < 30) return copyFill('product-chrome.commit_ago_day', '{n} d ago', {n: d});
   const mo = Math.floor(d / 30);
-  if (mo < 12) return `${mo} mo ago`;
+  if (mo < 12) return copyFill('product-chrome.commit_ago_month', '{n} mo ago', {n: mo});
   const y = Math.floor(d / 365);
-  return `${y} y ago`;
+  return copyFill('product-chrome.commit_ago_year', '{n} y ago', {n: y});
 }
 
 export function LatestCommitCard({commit}: {commit: LatestCommit}) {

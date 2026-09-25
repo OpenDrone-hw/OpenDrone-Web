@@ -9,6 +9,8 @@ const useBeforePaint =
   typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 import {Link} from 'react-router';
 import {BrandWatermark} from '~/components/BrandWatermark';
+import {Txt} from '~/components/Txt';
+import {copyText} from '~/lib/copy';
 import {EDITORIAL_SERIES, nextInSeries} from '~/lib/editorial-index';
 
 /**
@@ -36,6 +38,7 @@ export function EditorialShell({
   pageClassName,
   children,
   rail = true,
+  reveal = true,
 }: {
   /** This page's slug, matched against EDITORIAL_SERIES. */
   slug: string;
@@ -47,6 +50,10 @@ export function EditorialShell({
   /** Render the series strip. Pages that place it themselves (the roadmap
    *  puts it above its board band) pass false. */
   rail?: boolean;
+  /** Run the reading cascade. Commerce and policy pages (/preorder) pass
+   *  false: prices, refund and risk text must be there when the reader
+   *  scrolls to it, never fading in behind them. */
+  reveal?: boolean;
 }) {
   const shellRef = useRef<HTMLDivElement>(null);
 
@@ -59,7 +66,7 @@ export function EditorialShell({
   // reduced-motion readers never enter the system at all.
   useBeforePaint(() => {
     const root = shellRef.current;
-    if (!root) return;
+    if (!root || !reveal) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     // One performance per page per session. Re-arming on every client-side
     // navigation made already-read paragraphs vanish and fade back in when
@@ -94,13 +101,15 @@ export function EditorialShell({
         // StrictMode) would skip before anything ever showed.
         if (entering.length > 0) seenSlugs.add(slug);
         entering.forEach((el, i) => {
-          el.style.setProperty('--rv-d', `${Math.min(i, 14) * 110}ms`);
+          el.style.setProperty('--rv-d', `${Math.min(i, 4) * 40}ms`);
           el.classList.add('is-revealed');
           if (el.classList.contains('section-art')) el.classList.add('is-drawn');
           io.unobserve(el);
         });
       },
-      {rootMargin: '0px 0px -8% 0px'},
+      // Blocks reveal just before they scroll into view, so the reader
+      // never waits on an empty screen.
+      {rootMargin: '0px 0px 20% 0px'},
     );
     // Only the hero and the FIRST chapter greet the reader; everything
     // below arms when scrolling starts. A tall viewport otherwise floods
@@ -110,7 +119,9 @@ export function EditorialShell({
     const later: Element[] = [];
     for (const el of items) {
       const parent = el.parentElement;
-      (parent?.classList.contains('editorial-hero') || parent === firstSection
+      // Anything inside the hero greets immediately, including a CTA row
+      // nested in it: those buttons otherwise waited for a scroll.
+      (parent?.closest('.editorial-hero') || parent === firstSection
         ? immediate
         : later
       ).push(el);
@@ -134,10 +145,15 @@ export function EditorialShell({
       for (const el of items) el.classList.remove('reveal-item');
       root.classList.remove('cascade-armed');
     };
-  }, [slug]);
+  }, [slug, reveal]);
 
   return (
-    <div className={`editorial-shell${aside ? '' : ' is-narrow'}`} ref={shellRef}>
+    <div
+      // Without the cascade the shell starts armed, so the pre-paint
+      // blanket in root.tsx never hides a section.
+      className={`editorial-shell${aside ? '' : ' is-narrow'}${reveal ? '' : ' cascade-armed'}`}
+      ref={shellRef}
+    >
       <BrandWatermark />
       <div className={`editorial-page${pageClassName ? ` ${pageClassName}` : ''}`}>
         {children}
@@ -160,7 +176,10 @@ export function EditorialShell({
  */
 export function SeriesRail({slug}: {slug: string}) {
   return (
-    <nav className="series-rail" aria-label="Reading series">
+    <nav
+      className="series-rail"
+      aria-label={copyText('chrome.editorial_series_aria') ?? 'Reading series'}
+    >
       <ol className="series-rail-list">
         {EDITORIAL_SERIES.map((entry, i) => {
           const current = entry.slug === slug;
@@ -190,7 +209,11 @@ function EditorialNext({slug}: {slug: string}) {
   if (!next) return null;
   return (
     <Link prefetch="viewport" to={`/${next.slug}`} className="editorial-next">
-      <span className="editorial-next-label">Next in the series</span>
+      <Txt
+        id="chrome.editorial_next_label"
+        className="editorial-next-label"
+        fallback="Next in the series"
+      />
       <span className="editorial-next-title">{next.title}</span>
       <span className="editorial-next-hook">{next.hook}</span>
       <span className="editorial-next-min">{next.minutes} min read →</span>

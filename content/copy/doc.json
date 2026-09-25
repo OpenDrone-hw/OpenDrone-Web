@@ -1,0 +1,21 @@
+{
+  "$route": "/doc",
+  "$title": "EU Declarations of Conformity",
+  "index_meta_title": "EU Declarations of Conformity",
+  "meta_description": "EU declarations of conformity for OpenDrone hardware, published per hardware revision.",
+  "eyebrow": "Compliance",
+  "index_title": "EU Declarations of Conformity",
+  "index_intro": "{company} issues an EU declaration of conformity per product and hardware revision, and publishes each signed declaration on its product page here. A declaration is published only when the evidence behind it is complete; until then its status is shown as in preparation.",
+  "status_published": "published",
+  "status_in_preparation": "in preparation",
+  "status_no_ce": "no CE marking applies",
+  "sku_meta_title": "EU Declaration of Conformity: {product}",
+  "sku_title": "EU Declaration of Conformity",
+  "back_link": "All declarations",
+  "manufacturer_line": "Manufacturer: {name}, {address}. KBO/BCE {kbo}, VAT {vat}. {email}",
+  "legislation_line": "Union harmonisation legislation for this product: {legislation}.",
+  "no_legislation": "No Union harmonisation legislation applies to this product. It carries no CE marking and no EU declaration of conformity is drawn up for it; its technical documentation is kept by the manufacturer.",
+  "download_link": "Download the signed declaration (PDF)",
+  "download_note": "The declaration names the hardware revision and, for radio equipment, the firmware build it covers.",
+  "pending_note": "The declaration of conformity for this product is published on this page per hardware revision once its evidence set is complete and the declaration is signed. It is not published yet. Conformity documentation can be requested from the manufacturer at {email}."
+}

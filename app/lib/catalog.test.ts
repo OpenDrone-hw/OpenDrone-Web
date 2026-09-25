@@ -172,6 +172,17 @@ describe('variant selection', () => {
     );
   });
 
+  it('ignores page params that are not options', () => {
+    assert.equal(
+      selectVariant(product.variants.nodes, [
+        {name: 'Model', value: 'Gemini'},
+        {name: 'image', value: '1'},
+        {name: 'country', value: 'US'},
+      ])?.sku,
+      'OPENRX-GEMINI',
+    );
+  });
+
   it('falls back to the first buyable variant', () => {
     assert.equal(
       selectVariant(product.variants.nodes, [{name: 'Model', value: 'Ghost'}])
@@ -199,6 +210,54 @@ describe('variant selection', () => {
   });
 });
 
+describe('mapProductOptions with two axes', () => {
+  // Part x Size, where one part comes in a single size for both frames.
+  const base = FIXTURE.products[1];
+  const variant = (sku: string, part: string, size: string) => ({
+    ...base.variants[0],
+    sku,
+    title: `${part} / ${size}`,
+    options: {Part: part, Size: size},
+  });
+  const spares = {
+    ...base,
+    handle: 'spares',
+    variants: [
+      variant('ARM-3', 'Arm', '3"'),
+      variant('ARM-5', 'Arm', '5"'),
+      variant('MID-3', 'Middle plate', '3"'),
+      variant('MID-5', 'Middle plate', '5"'),
+      variant('PAD', 'Battery pad', '3" and 5"'),
+    ],
+  };
+  const options = (sel: Array<{name: string; value: string}>) =>
+    Object.fromEntries(
+      mapProductOptions(toProduct(FIXTURE, spares, sel)).map((o) => [
+        o.name,
+        Object.fromEntries(o.optionValues.map((v) => [v.name, v])),
+      ]),
+    );
+
+  it('offers only the sizes the selected part has', () => {
+    const arm = options([{name: 'Part', value: 'Arm'}, {name: 'Size', value: '5"'}]);
+    assert.equal(arm.Size['3"'].exists, true);
+    assert.equal(arm.Size['3" and 5"'].exists, false);
+    const pad = options([{name: 'Part', value: 'Battery pad'}]);
+    assert.deepEqual(
+      Object.values(pad.Size).filter((v) => v.exists).map((v) => v.name),
+      ['3" and 5"'],
+    );
+  });
+
+  it('keeps the size when the part has it, else takes the part\'s first', () => {
+    const arm5 = options([{name: 'Part', value: 'Arm'}, {name: 'Size', value: '5"'}]);
+    assert.equal(arm5.Part['Middle plate'].variantUriQuery, 'Part=Middle+plate&Size=5%22');
+    assert.equal(arm5.Part['Battery pad'].variantUriQuery, 'Part=Battery+pad&Size=3%22+and+5%22');
+    const pad = options([{name: 'Part', value: 'Battery pad'}]);
+    assert.equal(pad.Part.Arm.variantUriQuery, 'Part=Arm&Size=3%22');
+  });
+});
+
 describe('cards', () => {
   it('maps every product to a card', () => {
     assert.equal(toCards(FIXTURE).length, 2);
@@ -218,5 +277,32 @@ describe('formatPrice', () => {
   it('is empty for a missing amount', () => {
     assert.equal(formatPrice(null, 'EUR'), '');
     assert.equal(formatPrice('', 'EUR'), '');
+  });
+});
+
+describe('campaign pricing', () => {
+  it('never shows a struck-through price on a campaign SKU; the higher price is the price after', () => {
+    const campaign = {
+      ordered: 0, batch: 1, batchUnits: 250, batchOrdered: 0, paidStock: false,
+      target: 250, targetOrdered: 0, targetReached: false, shipPromise: 'x', earlyPrice: true, tierUpTo: 100, tierLeft: 100,
+      tierOff: 0.2, price: 39.99, nextPrice: 49.99, batches: [],
+    };
+    const withCampaign: Catalog = {
+      ...FIXTURE,
+      products: FIXTURE.products.map((p) => ({
+        ...p,
+        variants: p.variants.map((v) => (v.sku === 'OPENRX-GEMINI' ? {...v, campaign} : v)),
+      })),
+    };
+    const gemini = toProduct(withCampaign, byHandle(withCampaign, 'openrx')!).variants.nodes.find(
+      (v) => v.sku === 'OPENRX-GEMINI',
+    )!;
+    assert.equal(gemini.compareAtPrice, null);
+    assert.equal(gemini.priceAfter?.amount, '49.99');
+    const plain = toProduct(FIXTURE, byHandle(FIXTURE, 'openrx')!).variants.nodes.find(
+      (v) => v.sku === 'OPENRX-GEMINI',
+    )!;
+    assert.equal(plain.compareAtPrice?.amount, '49.99');
+    assert.equal(plain.priceAfter, null);
   });
 });

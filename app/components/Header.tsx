@@ -15,6 +15,7 @@ import {
 } from '~/components/ProductPods';
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
+import {CART_UPDATED_EVENT} from '~/lib/cart-client';
 import {INCUTEC_HINT_SEEN_KEY} from '~/lib/incutec-hint';
 import {
   useProductStatusResolver,
@@ -53,15 +54,17 @@ interface HeaderProps {
   commerceHandoff: CommerceHandoff;
   accountUrl: string | null;
   familyProducts?: HeaderFamilyProduct[];
+  /** Checkout is open: the cart icon links to /cart and shows the count. */
+  shopOpen?: boolean;
 }
 
 type Viewport = 'desktop' | 'mobile';
 
 // The header's own words live in `content/copy/chrome.json` and are rendered
-// through <Txt>. Three sets of strings deliberately do NOT: the site menu
-// titles in HEADER_MENU below, anything derived from product data, and the
-// family labels below - those double as dropdown state keys and as the short
-// names on the buy buttons, so they are structure, not copy.
+// through <Txt> or copyText. The family labels below also double as dropdown
+// state keys, so the code keeps `short`/`long` as the key and fallback and
+// only the rendered label reads the copy store (`chrome.family_<slug>_short`,
+// `_long`). Product data is never copy.
 //
 // The family chips. Accessories get no dedicated link: they live (with
 // everything else) on the All Products page, reachable via the CTA on the
@@ -96,13 +99,47 @@ const STACK_COMPANIONS: Record<string, Array<{handle: string; short: string}>> =
   '4-in-1 ESC': [{handle: 'openfc-lite', short: 'FC'}],
 };
 
-/** Short family label ("FC", "ESC") for a family type. */
-
-function selfShortFor(type: string): string {
-  return CATEGORY_LINKS.find((c) => c.type === type)?.label ?? 'board';
+/** Copy slug of a family: the suffix of its listing copy id
+ *  (`collections-all.category_esc` -> `esc`). */
+function familySlug(type: string): string | undefined {
+  return FAMILIES.find((f) => f.type === type)?.copyId.split('.category_')[1];
 }
 
-export function Header({commerceHandoff, accountUrl, familyProducts}: HeaderProps) {
+/** Rendered chip label ("FC", "ESC") for a family, editable in the studio. */
+function familyShort(type: string, fallback: string): string {
+  const slug = familySlug(type);
+  return (slug ? copyText(`chrome.family_${slug}_short`) : undefined) ?? fallback;
+}
+
+/** Rendered drawer label ("Flight Controllers") for a family. */
+function familyLong(type: string, fallback: string): string {
+  const slug = familySlug(type);
+  return (slug ? copyText(`chrome.family_${slug}_long`) : undefined) ?? fallback;
+}
+
+/** Rendered "+X" label of a stack companion button. */
+function companionShort(handle: string, fallback: string): string {
+  return copyText(`chrome.stack_companion_${handle}_short`) ?? fallback;
+}
+
+
+/** Families bought in sets: a row also offers "×N" (a quad takes four
+ *  motors), one click for N units. */
+const SET_OF: Record<string, number> = {Motors: 4};
+
+function selfShortFor(type: string): string {
+  const label = CATEGORY_LINKS.find((c) => c.type === type)?.label;
+  return label
+    ? familyShort(type, label)
+    : (copyText('chrome.family_fallback_short') ?? 'board');
+}
+
+export function Header({
+  commerceHandoff,
+  accountUrl,
+  familyProducts,
+  shopOpen = false,
+}: HeaderProps) {
   // Dynamic-Island logo slot. On the hero ("/") the OpenDrone wordmark already
   // lives bottom-left in the 3D scene, so the bar instead credits the parent
   // company - the Incutec mark linking to incutec.eu (OpenDrone is an Incutec
@@ -146,7 +183,7 @@ export function Header({commerceHandoff, accountUrl, familyProducts}: HeaderProp
           </span>
         ) : (
           <NavLink
-            prefetch="viewport"
+            prefetch="intent"
             to="/"
             end
             className="site-header-logo"
@@ -160,21 +197,25 @@ export function Header({commerceHandoff, accountUrl, familyProducts}: HeaderProp
         {/* Center: primary nav + gold category links on the same row */}
         <HeaderMenu viewport="desktop" accountUrl={accountUrl} />
         {/* Category families in segmented bubbles: FC and ESC share one
-            (their rows sell the stack), while RX and Frame are standalone
+            (their rows sell the stack), while RX, Motors and Frame are standalone
             families so each gets its own bubble; All Products follows in its
             own accented bubble as the route into the full catalogue. No
             dividers - the bubbles do the grouping. */}
         <FamilyNav familyProducts={familyProducts} commerceHandoff={commerceHandoff} />
 
         {/* Right: actions */}
-        <HeaderCtas accountUrl={accountUrl} cartUrl={commerceHandoff.cartUrl} />
+        <HeaderCtas
+          accountUrl={accountUrl}
+          cartUrl={shopOpen ? '/cart' : commerceHandoff.cartUrl}
+          hasCart={commerceHandoff.cartUrl !== null}
+        />
       </div>
     </header>
   );
 }
 
 /**
- * The gold family chips (FC/ESC/Stack/RX/Frame) - segmented bubbles that, on
+ * The gold family chips (FC/ESC/Stack/RX/Motors/Frame) - segmented bubbles that, on
  * hover/focus, drop a Pod listing every SKU of that productType (thumbnail +
  * title + price). The chip itself still links to the family's PDP. Deferred
  * product data is resolved once on first hover so the chips render instantly.
@@ -261,7 +302,8 @@ function FamilyNav({
       stack?.discountPct && stack.discountedHandle
         ? stack.discountPct
         : undefined;
-    const options = cfg.flatMap(({handle: h, short}) => {
+    const options = cfg.flatMap(({handle: h, short: shortCode}) => {
+      const short = companionShort(h, shortCode);
       // Unlaunched partners can't cascade into a stack add.
       if (!isPurchasableStatus(productStatus(h))) return [];
       const partner = (products ?? []).find((p) => p.handle === h);
@@ -309,6 +351,12 @@ function FamilyNav({
     return options.length ? options : undefined;
   }
 
+  function setFor(type: string, sku: string | null | undefined) {
+    const quantity = SET_OF[type];
+    if (!quantity || !sku) return undefined;
+    return {quantity, href: buyUrl(commerceHandoff, [{sku, quantity}])};
+  }
+
   function itemsFor(type: string): ProductPodItem[] {
     return (products ?? [])
       .filter((p) => (p.productType || '') === type)
@@ -345,6 +393,7 @@ function FamilyNav({
                     product: p.handle,
                     available: Boolean(only.availableForSale),
                     selfShort: selfShortFor(type),
+                    set: setFor(type, only.sku),
                   }
                 : undefined,
             },
@@ -373,6 +422,7 @@ function FamilyNav({
                   product: p.handle,
                   available: Boolean(v.availableForSale),
                   selfShort: selfShortFor(type),
+                  set: setFor(type, v.sku),
                   companions: companionsFor(type, v, {
                     title: p.title,
                     handle: p.handle,
@@ -418,11 +468,11 @@ function FamilyNav({
         }}
       >
         <NavLink
-          prefetch="viewport"
+          prefetch="intent"
           to={cat.to}
           aria-expanded={open === cat.label}
         >
-          {cat.label}
+          {familyShort(cat.type, cat.label)}
         </NavLink>
         <div className="header-cat-pod-wrap">
           <AnimatePresence>
@@ -434,7 +484,9 @@ function FamilyNav({
                 origin="top center"
                 className="header-cat-pod"
                 role="group"
-                ariaLabel={`${cat.label} products`}
+                ariaLabel={(
+                  copyText('chrome.family_pod_aria') ?? '{family} products'
+                ).replace('{family}', familyShort(cat.type, cat.label))}
               >
                 <ProductPods
                   items={items}
@@ -450,9 +502,12 @@ function FamilyNav({
   }
 
   return (
-    <nav className="site-header-categories" aria-label="Product categories">
+    <nav
+      className="site-header-categories"
+      aria-label={copyText('chrome.categories_aria') ?? 'Product categories'}
+    >
       {/* FC and ESC share one bubble (a stack is bought from their rows);
-          RX and Frame are standalone families with their own bubbles. */}
+          RX, Motors and Frame are standalone families with their own bubbles. */}
       <span className="site-header-cat-group">
         {CATEGORY_LINKS.slice(0, 2).map(chip)}
       </span>
@@ -462,7 +517,7 @@ function FamilyNav({
         </span>
       ))}
       <NavLink
-        prefetch="viewport"
+        prefetch="intent"
         to="/products"
         className="site-header-cat-all"
       >
@@ -530,16 +585,16 @@ export function HeaderMenu({
             <NavLink
               key={c.to}
               onClick={close}
-              prefetch="viewport"
+              prefetch="intent"
               to={c.to}
               className="text-sm font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
             >
-              {MOBILE_FAMILY_LABEL[c.type] ?? c.label}
+              {familyLong(c.type, MOBILE_FAMILY_LABEL[c.type] ?? c.label)}
             </NavLink>
           ))}
           <NavLink
             onClick={close}
-            prefetch="viewport"
+            prefetch="intent"
             to="/products"
             className="text-sm font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
           >
@@ -553,7 +608,7 @@ export function HeaderMenu({
           <NavLink
             end
             onClick={close}
-            prefetch="viewport"
+            prefetch="intent"
             to="/"
             className="text-sm font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
           >
@@ -564,17 +619,12 @@ export function HeaderMenu({
       {HEADER_MENU.items.map((item) => {
         if (!item.url) return null;
         const url = item.url;
-        // Catalog and Contact render in the right-side CTA group, and
-        // Newsletter and Open Source render there / in the footer too
-        // (HeaderCtas below, and the footer's "Open Source & Incutec"
-        // link): skip all four here on desktop so the center menu isn't
-        // a duplicate row. Production's live center nav is empty for the
-        // same reason (mirrors that empty `<nav>` byte-for-byte). Mobile
-        // keeps every item since the drawer has no CTA group to fall
-        // back on.
+        // Desktop already exposes these destinations in its category bar,
+        // action links or footer. The mobile drawer keeps the full menu.
         if (
           !isMobile &&
-          (url === '/products' ||
+          (url === '/preorder' ||
+            url === '/products' ||
             url === '/support' ||
             url === '/newsletter' ||
             url === 'https://github.com/OpenDrone-hw')
@@ -594,7 +644,7 @@ export function HeaderMenu({
               rel="noopener noreferrer"
               target="_blank"
             >
-              {item.title}
+              {menuTitle(item)}
             </a>
           );
         }
@@ -604,7 +654,7 @@ export function HeaderMenu({
             end
             key={item.id}
             onClick={close}
-            prefetch="viewport"
+            prefetch="intent"
             to={url}
             className={({isActive}) =>
               `${isMobile ? 'text-sm tracking-wider' : 'text-[12px] tracking-[0.15em]'} font-mono uppercase transition-colors ${
@@ -614,7 +664,7 @@ export function HeaderMenu({
               }`
             }
           >
-            {item.title}
+            {menuTitle(item)}
           </NavLink>
         );
       })}
@@ -627,7 +677,7 @@ export function HeaderMenu({
         <NavLink
           end
           onClick={close}
-          prefetch="viewport"
+          prefetch="intent"
           to="/newsletter"
           className={({isActive}) =>
             `${isMobile ? 'text-sm tracking-wider' : 'text-[12px] tracking-[0.15em]'} font-mono uppercase transition-colors ${
@@ -662,15 +712,23 @@ export function HeaderMenu({
   );
 }
 
-function HeaderCtas({accountUrl, cartUrl}: {accountUrl: string | null; cartUrl: string | null}) {
+function HeaderCtas({
+  accountUrl,
+  cartUrl,
+  hasCart,
+}: {
+  accountUrl: string | null;
+  cartUrl: string | null;
+  hasCart: boolean;
+}) {
   return (
     <nav className="flex items-center gap-2 md:gap-5 ml-auto" role="navigation">
       {/* Hidden in the top bar on phones (it would overflow a 320px row on
           legal pages); MobileMenuAside renders it inside the drawer instead. */}
       <LangToggle className="header-lang-toggle" />
       <NavLink
-        prefetch="viewport"
-        to="/newsletter"
+        prefetch="intent"
+        to="/preorder"
         className={({isActive}) =>
           `font-mono text-[12px] uppercase tracking-[0.15em] transition-colors hidden md:block ${
             isActive
@@ -679,10 +737,10 @@ function HeaderCtas({accountUrl, cartUrl}: {accountUrl: string | null; cartUrl: 
           }`
         }
       >
-        <Txt id="chrome.nav_newsletter" />
+        <Txt id="chrome.nav_preorder" />
       </NavLink>
       <NavLink
-        prefetch="viewport"
+        prefetch="intent"
         to="/support"
         className={({isActive}) =>
           `font-mono text-[12px] uppercase tracking-[0.15em] transition-colors hidden md:block ${
@@ -706,7 +764,7 @@ function HeaderCtas({accountUrl, cartUrl}: {accountUrl: string | null; cartUrl: 
         </a>
       ) : null}
       <ThemeToggle className="site-header-icon" />
-      <CartToggle cartUrl={cartUrl} />
+      <CartToggle cartUrl={cartUrl} hasCart={hasCart} />
       <HeaderMenuMobileToggle />
     </nav>
   );
@@ -730,15 +788,43 @@ function HeaderMenuMobileToggle() {
 }
 
 /**
- * The cart icon links, after the first add, to the local server route that
- * resolves the session's hosted Shopify checkout.
+ * The cart icon links, after the first add or whenever the shop is open, to
+ * the local cart page, with a count badge once the session's cart has items.
  */
-function CartToggle({cartUrl}: {cartUrl: string | null}) {
+function CartToggle({cartUrl, hasCart}: {cartUrl: string | null; hasCart: boolean}) {
+  const [quantity, setQuantity] = useState(0);
+  useEffect(() => {
+    if (!cartUrl || !hasCart) {
+      setQuantity(0);
+      return;
+    }
+    let live = true;
+    fetch('/api/shopify/cart?summary=1', {credentials: 'same-origin'})
+      .then((r) => (r.ok ? (r.json() as Promise<{totalQuantity?: number}>) : null))
+      .then((d) => {
+        if (live && typeof d?.totalQuantity === 'number') setQuantity(d.totalQuantity);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [cartUrl, hasCart]);
+  useEffect(() => {
+    const update = (event: Event) => {
+      const total = (event as CustomEvent<{totalQuantity?: number}>).detail?.totalQuantity;
+      if (typeof total === 'number') setQuantity(total);
+    };
+    window.addEventListener(CART_UPDATED_EVENT, update);
+    return () => window.removeEventListener(CART_UPDATED_EVENT, update);
+  }, []);
   if (!cartUrl) {
     return (
       <span
         className="site-header-icon site-header-cart"
-        aria-label="Cart unavailable in checkout preview"
+        aria-label={
+          copyText('chrome.cart_unavailable_aria') ??
+          'Cart unavailable in checkout preview'
+        }
         aria-disabled="true"
       >
         <CartIcon />
@@ -749,9 +835,12 @@ function CartToggle({cartUrl}: {cartUrl: string | null}) {
     <a
       className="site-header-icon site-header-cart"
       href={cartUrl}
-      aria-label={copyText('chrome.cart_aria') ?? 'Cart'}
+      aria-label={`${copyText('chrome.cart_aria') ?? 'Cart'}${quantity ? ` (${quantity})` : ''}`}
     >
       <CartIcon />
+      {quantity > 0 ? (
+        <span className="site-header-cart-count">{quantity > 99 ? '99+' : quantity}</span>
+      ) : null}
     </a>
   );
 }
@@ -776,14 +865,18 @@ function CartIcon() {
 
 /**
  * The site menu. It used to be edited in the Shopify admin and read
- * through the Storefront API; it is three links, and they are these
- * three. Titles stay here rather than in the copy store for the same
- * reason they always did: they are structure shared with the CTA group,
- * not editable prose.
+ * through the Storefront API; it is these few links. The id and url are
+ * structure; the rendered title reads `chrome.menu_<id>` and falls back to
+ * `title` here.
  */
+function menuTitle(item: {id: string; title: string}): string {
+  return copyText(`chrome.${item.id.replace(/-/g, '_')}`) ?? item.title;
+}
+
 const HEADER_MENU = {
   items: [
     {id: 'menu-products', title: 'Catalog', url: '/products'},
+    {id: 'menu-preorder', title: 'Preorders', url: '/preorder'},
     {id: 'menu-newsletter', title: 'Newsletter', url: '/newsletter'},
     {
       id: 'menu-open-source',

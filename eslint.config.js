@@ -27,6 +27,7 @@ export default [
       '**/node_modules/',
       '**/build/',
       '**/dist/',
+      '**/.wrangler/',
       '**/*.graphql.d.ts',
       '**/*.graphql.ts',
       '**/*.generated.d.ts',

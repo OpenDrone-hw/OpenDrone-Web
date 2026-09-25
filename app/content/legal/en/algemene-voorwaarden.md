@@ -1,9 +1,8 @@
 # Terms and Conditions: Incutec BV
 
-**Legally required for the webshop. Must be downloadable as PDF. Must be accepted before order.**
-**The Dutch version (/algemene-voorwaarden) prevails in case of conflict, except toward consumers, for whom the reading most favourable to them applies (Art. 19). This English translation is provided for convenience.**
-
 ---
+
+*The Dutch version prevails in case of conflict, except toward consumers, for whom the reading most favourable to them applies (Art. 19 of the Terms).*
 
 ## GENERAL TERMS OF SALE: INCUTEC BV
 
@@ -39,15 +38,15 @@
 
 4.2. Incutec BV confirms receipt of the acceptance of the offer electronically without delay. As long as receipt has not been confirmed, the consumer may rescind the contract.
 
-4.3. The order button displays the words "order with obligation to pay" in accordance with Art. VI.46 §2 of the Belgian Code of Economic Law (WER).
+4.3. The final button at checkout states unambiguously that placing the order involves an obligation to pay, in accordance with Art. VI.46 §2 of the Belgian Code of Economic Law (WER).
 
 ### Article 5: Right of withdrawal
 
-> **Art. VI.47 WER: 14 calendar days cooling-off period for consumers**
+**Art. VI.47 WER: 14 calendar days cooling-off period for consumers**
 
 5.1. The consumer may rescind a contract for the purchase of a product during a cooling-off period of **14 calendar days** without giving any reason (right of withdrawal).
 
-5.2. The cooling-off period starts on the day after the consumer, or a third party designated in advance by the consumer that is not the carrier, has received the product.
+5.2. The cooling-off period starts on the day after the consumer, or a third party designated in advance by the consumer that is not the carrier, has received the product. If one order is delivered in several parcels, the period starts on the day after the consumer receives the last item.
 
 5.3. During the cooling-off period the consumer shall handle the product and its packaging with care. The consumer shall only unpack or use the product to the extent necessary to establish its nature, characteristics and functioning.
 
@@ -55,19 +54,17 @@
 
 5.5. The costs of returning the product are borne by the consumer.
 
-5.6. Incutec BV reimburses all payments made by the consumer, including the standard delivery costs (not the surcharge for a more expensive delivery method chosen by the consumer), no later than **14 days** after Incutec BV has received the product back, or after the consumer has demonstrated that the product has been returned.
+5.6. Incutec BV refunds all payments, including standard delivery costs, no later than 14 days after receiving the withdrawal. It may withhold the refund until it has received the product back or the consumer has shown that it was sent back, whichever is earlier.
 
 5.7. Reimbursement is made using the same means of payment as the original transaction, unless the consumer expressly agrees to a different means of payment.
 
-5.8. **Diminished value.** The consumer is liable for any diminished value of the product resulting from handling beyond what is necessary to establish its nature, characteristics and functioning (Art. VI.51 §2 WER). For electronics components this specifically means: soldering to the product, mounting it in a system, connecting battery power or motors, flashing other firmware and flight use go beyond that assessment; connecting via USB to check that it works does not. The diminished value is substantiated by Incutec BV, assessed on the actual residual value and deducted from the refund; only where the product has no residual value left can it amount to the full purchase price. The right of withdrawal itself is not lost.
+5.8. **Diminished value.** The consumer is liable for any diminished value of the product resulting from handling beyond what is necessary to establish its nature, characteristics and functioning (Art. VI.51 §2 WER). For electronics components this specifically means: soldering to the product, mounting it in a system, connecting battery power or motors and flight use go beyond that assessment; connecting via USB to check that it works does not. The diminished value is substantiated by Incutec BV, assessed on the actual residual value and deducted from the refund; only where the product has no residual value left can it amount to the full purchase price. The right of withdrawal itself is not lost.
 
 ### Article 6: Exclusion of the right of withdrawal
 
 6.1. The right of withdrawal does not apply to:
 - Products which after delivery are inseparably mixed with other products by their nature
 - Products made to the consumer's specifications or clearly intended for a specific person
-
-> **Note:** Drone electronics are standard products: the right of withdrawal applies in practically all cases.
 
 ### Article 7: Delivery
 
@@ -77,27 +74,33 @@
 
 7.3. The risk of damage and/or loss of products lies with Incutec BV until the moment of delivery to the consumer.
 
-7.4. Incutec BV offers at least **two substantially different delivery methods** (Art. VI.45/2 WER).
+7.4. Consumer delivery is limited to approved EU destinations. The available carrier service and full delivery charge are shown before payment.
 
 ### Article 7bis: Pre-orders
 
-7bis.1. Some products are sold as pre-orders. They are disclosed as such, with their ship window, on the product page, in the cart and on the order confirmation. The consumer pays the full price at checkout.
+7bis.1. Some products are sold as pre-orders. They are disclosed as such, with their ship date, on the product page, at checkout and on the order confirmation. The consumer pays the full price and the shipping costs shown at checkout when the order is placed.
 
-7bis.2. Launch ship windows: the flight controller and ESC ship from mid-October 2026; every other pre-order product ships in about 10 weeks after the order. The disclosed ship window is the delivery time agreed between the consumer and Incutec BV within the meaning of Art. VI.43 WER, so the 30-day default deadline in Article 7.1 does not apply to pre-order items.
+7bis.2. Pre-order products are produced in batches. The offer and order confirmation state the batch, any funding target and deadline, planned dispatch and the separately agreed final delivery date. Dispatch is not delivery. The delivery period disclosed before payment applies under Art. VI.43 WER; if no different delivery period is expressly agreed, the 30-day default in Article 7.1 applies. The target and deadline stated at checkout do not change for that order.
 
-7bis.3. If Incutec BV cannot ship within the disclosed window, it informs the consumer and offers, at the consumer's choice, a new ship date or a full refund within 14 days.
+7bis.3. If a ship date moves, Incutec BV informs the consumer by email and states the new date. This is without prejudice to the consumer's rights under Art. VI.43 §2 WER. A moved ship date does not extend the agreed final delivery date. If that date is missed, the consumer may terminate the contract for that item immediately, with a refund within 14 days.
 
-7bis.4. The consumer may cancel a pre-order before shipment for a full refund. This is without prejudice to the right of withdrawal under Article 5, which runs from delivery and which the consumer may also exercise at any time before delivery.
+7bis.3bis. If a funding target is not reached by its deadline, Incutec BV informs every consumer who ordered that product by email. The consumer then chooses either to terminate the contract for that item, with a refund of all amounts paid for it within 14 days, or to keep the order for the new ship date stated in that email. If the consumer does not reply within 30 days of that email, the contract for that item is terminated and Incutec BV refunds all amounts paid for it within 14 days of the end of that period. A consumer who keeps the order may still withdraw at any time until delivery under Article 7bis.4, with a refund of all payments. If the refund leaves no item in the order still to ship, the shipping costs paid for the order are refunded as well.
 
-7bis.5. An order that combines in-stock and pre-order items ships as one parcel, once every item is available (one delivery per order).
+7bis.4. The right of withdrawal under Article 5 applies to pre-orders. The consumer may also exercise it before delivery, through the online form at opendrone.be/herroepingsrecht or as set out in Article 5.4. If the consumer withdraws before delivery, Incutec BV refunds all payments within 14 days of receiving the withdrawal.
 
-7bis.6. Pre-order payments fund the production run and stock purchase for the order. They carry no interest and confer no equity, revenue share or other ownership interest in Incutec BV.
+7bis.5. An order that combines items with different ship dates ships as one parcel, once every item is available (one delivery per order). If a funding target for an item in the order is not reached by its deadline, the rest of the order ships as soon as it is available, whichever the consumer chooses under Article 7bis.3bis. If the consumer keeps the order for that item, it ships separately at its new ship date at no extra shipping cost.
 
-7bis.7. Parcels shipped outside the European Union may be subject to import duties and taxes payable by the consumer on delivery, unless the chosen delivery method states that duties are paid by Incutec BV.
+7bis.6. A pre-order payment is payment of the purchase price of the product ordered. It is not an investment, carries no interest and confers no share or other right in Incutec BV.
+
+7bis.7. Within the European Union no import duties or import taxes are due on an order.
+
+7bis.8. The price of a pre-order product rises in steps as paid units are counted. The price shown at checkout is the price of the order; later steps do not change it.
+
+7bis.9. The delivered product matches the characteristics and specifications on the product page when the order was placed. Any material change is emailed before dispatch; the consumer may then terminate the contract for that item free of charge, with a refund within 14 days.
 
 ### Article 8: Payment
 
-8.1. Payment is made via the payment methods offered on the website (credit card, Bancontact, iDEAL, bank transfer, etc.).
+8.1. Payment is made by one of the payment methods shown at checkout before the order is placed. Payment is due in full when the order is placed.
 
 8.2. The consumer has the duty to notify Incutec BV without delay of any inaccuracies in the payment details provided.
 
@@ -117,7 +120,7 @@
 - Modifications or reprogramming by the consumer, to the extent the defect was caused by them. Modifying open-source firmware or hardware does not void the warranty for defects unrelated to the modification (see the warranty page)
 - External causes (water damage, lightning, voltage or current outside specifications), to the extent the defect was caused by them
 
-9.4. **Inspection on a warranty claim.** On a claim, Incutec BV examines the returned product and shares its findings with the consumer (photos and measurements where relevant). Traces of causes outside conformity, such as soldering damage to pads or connectors, reversed or excessive supply voltage, mechanical damage or water damage, can serve as proof to the contrary that the defect did not exist at delivery, or show that the legal presumption is incompatible with the nature of the defect (Art. 1649quater §4 old Civil Code). Return shipping, repair and replacement under the legal warranty are free of charge for the consumer. This article does not limit the legal warranty; it describes how claims are assessed.
+9.4. **Inspection on a warranty claim.** On a claim, Incutec BV examines the returned product and shares its findings with the consumer (photos and measurements where relevant). Traces of causes outside conformity, such as soldering damage to pads or connectors, reversed or excessive supply voltage, mechanical damage or water damage, can serve as proof to the contrary that the defect did not exist at delivery, or show that the legal presumption is incompatible with the nature of the defect (Art. 1649quater §4 old Civil Code). Return shipping, repair and replacement under the legal warranty are free of charge for the consumer. Before desoldering a product for a claim, the consumer is asked to send photos of it as mounted, so the cause can be assessed. This article does not limit the legal warranty; it describes how claims are assessed.
 
 9.5. **No commercial guarantee.** Incutec BV offers no commercial guarantee on top of the legal conformity warranty. Any reference to "warranty" on the website or in product documentation refers to the legal warranty of Art. 9.2.
 
@@ -145,7 +148,7 @@
 
 ### Article 11: Intellectual property
 
-11.1. Incutec BV's hardware designs are licensed under CERN-OHL-S-2.0. The firmware is licensed under MIT or GPL (see product page).
+11.1. Incutec BV's published hardware designs are licensed under CERN-OHL-S-2.0 (see product page). The firmware is licensed under MIT or GPL (see product page).
 
 11.2. The "Incutec" brand, the logo and product brand names are owned by Incutec BV. The use of open source licences does not grant any right to use Incutec BV's brand names.
 
@@ -167,7 +170,7 @@
 
 14.2. The consumer may file a complaint with the Consumer Mediation Service / *Consumentenombudsdienst* (https://consumentenombudsdienst.be).
 
-14.3. In disputes with consumers, the court of the consumer's place of residence has jurisdiction (Art. 17–18 of Regulation (EU) 1215/2012 — Brussels I bis; Art. 624 of the Belgian Judicial Code). In disputes with businesses, the Leuven Enterprise Court has jurisdiction.
+14.3. In disputes with consumers, the court of the consumer's place of residence has jurisdiction (Art. 17–18 of Regulation (EU) 1215/2012, Brussels I bis; Art. 624 of the Belgian Judicial Code). In disputes with businesses, the Leuven Enterprise Court has jurisdiction.
 
 ### Article 15: Amendments
 
@@ -193,9 +196,9 @@
 
 ### Article 18: Acceptable End-Use
 
-18.1. By placing an order, the Customer accepts the Incutec End-Use Policy published at /end-use, and warrants that the goods will not be used for any of the excluded end-uses set out in §3 of that policy. Breach of this warranty constitutes a material breach of contract and entitles Incutec BV to cancel the order, refuse delivery, and pursue any remedy available under Belgian law and applicable EU regulations.
+18.1. By placing an order, the customer accepts the Incutec End-Use Policy published at /end-use, and warrants that the goods will not be used for any of the excluded end-uses set out in §3 of that policy. Breach of this warranty constitutes a material breach of contract and entitles Incutec BV to cancel the order, refuse delivery, and pursue any remedy available under Belgian law and applicable EU regulations. On cancellation or refusal of delivery, Incutec BV refunds a consumer all payments within 14 days.
 
-18.2. **No re-export to Russia or Belarus.** The Customer undertakes not to sell, export or re-export the goods, directly or indirectly, to the Russian Federation or Belarus, or for use there (Art. 12g Regulation (EU) 833/2014; Art. 8g Regulation (EC) 765/2006). This undertaking constitutes an essential element of the contract. The Customer shall inform Incutec BV immediately of any breach; on breach, Incutec BV may terminate the contract and claim damages. Incutec BV refuses delivery where there are indications of circumvention of this provision.
+18.2. **No re-export to Russia or Belarus.** The customer undertakes not to sell, export or re-export the goods, directly or indirectly, to the Russian Federation or Belarus, or for use there (Art. 12g Regulation (EU) 833/2014; Art. 8g Regulation (EC) 765/2006). This undertaking constitutes an essential element of the contract. The customer shall inform Incutec BV immediately of any breach; on breach, Incutec BV may terminate the contract and claim damages. Incutec BV refuses delivery where there are indications of circumvention of this provision.
 
 ### Article 19: Language
 
@@ -207,4 +210,4 @@
 
 ---
 
-*Version: 2.1, last updated 2026-08-15*
+*Version: 2.4, last updated 2026-09-25*

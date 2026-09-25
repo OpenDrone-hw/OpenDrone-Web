@@ -1,9 +1,16 @@
-# Isolated Cloudflare preview Worker config. Deployed by
-# .github/workflows/cloudflare-preview.yml on every push to
-# feat/cloudflare-hosting. No custom-domain routes (a plain workers.dev URL
-# only) and no rate limit bindings, so a preview deploy never touches
-# production DNS or shares state with the production Worker. The Shopify
-# catalog configuration is set as Worker secrets, like production.
+# Isolated Cloudflare staging Worker config. Deployed by
+# .github/workflows/cloudflare-preview.yml on every push to feat/preorders.
+# No custom-domain routes (a plain workers.dev URL only) and no rate limit
+# bindings, so a staging deploy never touches production DNS or shares state
+# with the production Worker. The Shopify catalog configuration is set as
+# Worker secrets, like production.
+#
+# Staging runs the shop end to end: checkout is open and prices are shown,
+# which production does not do yet. It talks to the SAME Shopify store, so
+# it stays behind HTTP basic auth (the STAGING_PASSWORD secret), and it
+# never writes prices: SHOPIFY_PRICE_TIER_WRITE_ENABLED is absent here and
+# only production steps a price. Pay with Shopify's test payment gateway;
+# test orders are excluded from the campaign counts.
 #
 # wrangler.production.toml is the real opendrone.be/www.opendrone.be Worker.
 name = "opendrone-web-preview"
@@ -17,5 +24,5 @@ directory = "dist/client"
 # per-environment secret set with `wrangler secret put SESSION_SECRET` and is
 # never written here.
 [vars]
-SHOPIFY_CHECKOUT_WRITE_ENABLED = "0"
-PUBLIC_COMING_SOON = "1"
+SHOPIFY_CHECKOUT_WRITE_ENABLED = "1"
+PUBLIC_COMING_SOON = "0"

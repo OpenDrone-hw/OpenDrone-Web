@@ -1,10 +1,8 @@
 # Cookie Policy: Incutec BV
 
-**Required if any non-essential cookies are used. Belgian DPA: opt-in only, cookie walls prohibited.**
-**Consent valid for 6 months, then re-ask.**
-**The Dutch version (/cookies) is the legally authoritative text for visitors residing in Belgium. This English translation is informative only.**
-
 ---
+
+*The Dutch version prevails in case of conflict, except toward consumers, for whom the reading most favourable to them applies (Art. 19 of the Terms).*
 
 ## COOKIE POLICY: INCUTEC BV
 
@@ -14,30 +12,41 @@ Cookies are small text files placed on your device by a website when you visit i
 
 ### Which cookies do we use?
 
-#### Strictly necessary cookies (no consent required)
+#### Cookies of opendrone.be and checkout (no consent required)
 
-This site (opendrone.be) sets one cookie of its own. Checkout runs on Shopify, which sets its own cookies on the checkout pages.
+This site (opendrone.be) sets two cookies of its own. Checkout runs on Shopify, which sets its own cookies on the checkout pages.
 
 | Cookie | Purpose | Retention |
 |--------|---------|-----------|
-| `session` (opendrone.be) | Remembers your language choice and, once you add a product to your cart, the reference to your Shopify cart | Session |
+| `session` (opendrone.be) | Keeps the reference to your Shopify cart once you add a product to your cart | Session |
+| `opendrone_lang` (opendrone.be) | Remembers the language you choose for the legal pages | 1 year |
 | Shopify checkout cookies | Keep your cart, checkout and customer-account sign-in working and prevent payment fraud; set by Shopify on the checkout pages, not on opendrone.be. Shopify's cookie list: https://www.shopify.com/legal/cookies | Session to 1 year, depending on the cookie |
-| Stripe cookies (`m`, `__stripe_mid`, `__stripe_sid`) | Payment fraud prevention — set by Stripe on the checkout pages during payment, not on opendrone.be (strictly necessary for the payment explicitly requested; Art. 10/2 of the Act of 30 July 2018 (as inserted by the Act of 21 December 2021); ePrivacy Directive 2002/58/EC) | Session to 1 year, depending on the cookie |
-| Payment cookies (Mollie's hosted payment page, fallback only if Stripe is unavailable) | Payment fraud prevention — set **only on the hosted payment page** during payment, not on opendrone.be (Art. 10/2 of the Act of 30 July 2018 (as inserted by the Act of 21 December 2021), strictly necessary for the service explicitly requested; ePrivacy Directive 2002/58/EC) | Session |
+| Stripe cookies (`m`, `__stripe_mid`, `__stripe_sid`) | Payment fraud prevention: set by Stripe, which processes Shopify Payments, on the checkout pages during payment, not on opendrone.be (strictly necessary for the payment explicitly requested; Art. 10/2 of the Act of 30 July 2018 (as inserted by the Act of 21 December 2021); ePrivacy Directive 2002/58/EC) | Session to 1 year, depending on the cookie |
 
-#### Analytics
+#### Storage in your browser
 
-We use **Plausible Analytics** on opendrone.be (EU-hosted, cookieless). Plausible sets no cookies and stores no persistent identifier; the IP address is hashed and not retained. This processing falls outside the ePrivacy consent requirement and relies on our legitimate interest (Art. 6.1.f GDPR). That is why we do not show a consent banner for analytics.
+Besides cookies, opendrone.be keeps a few items in your browser's storage (localStorage and sessionStorage).
+
+| Key | Storage | Purpose | Retention |
+|-----|---------|---------|-----------|
+| `od-theme` | localStorage | Remembers whether you chose the light or the dark view | Until you clear browser data |
+| `od-incutec-seen` | localStorage | Remembers that you already opened the Incutec page, so the pointer to it on the home page disappears | Until you clear browser data |
+| `opendrone:split-order` | localStorage | Remembers the items you took out of your cart for a second order, so you can add them back after checkout | 30 days |
+| `od-attribution`, `od-attribution-sent` | sessionStorage | Campaign source of the visit (e.g. a utm parameter) and the first page visited; used for aggregated statistics and, when you add a product to your cart, passed on as an attribute of the order in Shopify | Session |
+
+#### Website statistics
+
+We use **Plausible Analytics** on opendrone.be (EU-hosted). Plausible sets no cookies and keeps no IP address; we process these aggregated statistics on the basis of our legitimate interest (Art. 6.1.f GDPR) to improve the website.
 
 #### Marketing cookies
 
-Incutec BV uses **no marketing or remarketing cookies** at launch. If that changes, this cookie policy will be updated and we will ask for your consent again.
+Incutec BV uses **no marketing or remarketing cookies**. If that changes, this cookie policy will be updated first and we will ask for your consent beforehand.
 
 ### Consent
 
-- We currently set **only strictly necessary cookies**, which is why no consent banner is shown.
+- We set no marketing or remarketing cookies and show no consent banner.
 - If we ever introduce non-essential cookies, they will **only be placed after your explicit consent** (opt-in), and this policy will be updated first.
-- The [cookie settings](/cookie-settings) page lets you clear the cookies this site has set at any time.
+- The [cookie settings](/cookie-settings) page lets you clear this site's cookies and browser storage at any time.
 - **Cookie walls are prohibited:** we will never refuse you access to the website if you refuse cookies.
 
 ### Managing cookies

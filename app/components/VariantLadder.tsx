@@ -1,18 +1,18 @@
 import {useLocation, useNavigate, useNavigation} from 'react-router';
-import {useEffect, useState} from 'react';
-import {motion} from 'motion/react';
+import {useEffect, useId, useState} from 'react';
+import {motion, useReducedMotion} from 'motion/react';
 import {Check} from 'lucide-react';
 import type {MappedProductOptions} from '~/lib/product-shapes';
-import type {VariantContent} from '~/lib/product-content';
+import {shopSize, type VariantContent} from '~/lib/product-content';
 import {copyText} from '~/lib/copy';
+import {formatPrice} from '~/lib/catalog';
 
 /**
- * Comparison ladder - the variant selector for a product *line*
- * (OpenRX: Lite/Lite-UFL/Mono/Gemini; OpenESC: 20×20/30×30). Each tier
- * is a card showing the cells that differ between variants; clicking a
- * card both updates the on-page preview (`onSelect`) and, when a matching
- * catalog variant exists, navigates to select it so price and stock
- * follow.
+ * The version selector for a product *line* (OpenRX: Lite/Lite-UFL/Mono/
+ * Gemini; OpenESC: 20x20/30x30): one segmented button per version, name
+ * and price. Clicking one both updates the on-page preview (`onSelect`)
+ * and, when a matching catalog variant exists, navigates to select it so
+ * price and stock follow.
  *
  * Editorial (`variants`, keyed by option value) is the source of truth
  * for which tiers exist. The catalog is matched in by name: we find the
@@ -27,19 +27,20 @@ export function VariantLadder({
   productOptions,
   activeValue,
   onSelect,
-  compact = false,
+  showPrices = false,
 }: {
   axis: string;
   variants: Record<string, VariantContent>;
   productOptions: MappedProductOptions[];
   activeValue: string;
   onSelect: (value: string) => void;
-  /** Compact mode: a single horizontal row of name-only pills (no axis label,
-   *  spec line) - for the pinned mobile buy bar where space is tight
-   *  but variant switching still needs to be reachable. */
-  compact?: boolean;
+  /** Print each version's price on its button. Off while the product is
+   *  not for sale, so a locked page never shows a price. */
+  showPrices?: boolean;
 }) {
   const navigate = useNavigate();
+  const groupId = useId();
+  const reducedMotion = useReducedMotion();
   // The tier card previews instantly via onSelect, but price/stock/cart wiring
   // arrive with the server navigation. Mark the clicked tier busy until the
   // navigation settles so a slow connection reads as syncing, not as a broken
@@ -61,25 +62,32 @@ export function VariantLadder({
     const optionValue = axisOption?.optionValues.find(
       (v) => norm(v.name) === norm(value),
     );
-    return {value, content, optionValue};
+    const disabled = Boolean(content.comingSoon || (optionValue?.exists && !optionValue.available));
+    return {value, content, optionValue, disabled};
   });
+  const tabValue = tiers.find((tier) => !tier.disabled && norm(tier.value) === norm(activeValue))?.value
+    ?? tiers.find((tier) => !tier.disabled)?.value;
 
   return (
     <div
-      className={`variant-ladder${compact ? ' variant-ladder--compact' : ''}`}
+      className="variant-ladder"
       role="radiogroup"
+      tabIndex={-1}
       aria-label={`${axis} ${copyText('product-chrome.ladder_aria_suffix') ?? ''}`}
+      onKeyDown={(event) => {
+        if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return;
+        const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'));
+        const current = buttons.indexOf(event.target as HTMLButtonElement);
+        if (current < 0) return;
+        event.preventDefault();
+        const direction = event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 1;
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : (current + direction + buttons.length) % buttons.length;
+        buttons[next].focus();
+        buttons[next].click();
+      }}
     >
-      {compact ? null : (
-        <p className="variant-ladder-axis">
-          {axis}
-          <span className="variant-ladder-axis-hint">
-            {copyText('product-chrome.ladder_axis_hint')}
-          </span>
-        </p>
-      )}
       <div className="variant-ladder-track">
-        {tiers.map(({value, content, optionValue}) => {
+        {tiers.map(({value, content, optionValue, disabled}) => {
           const selected = norm(value) === norm(activeValue);
           // Coming-soon: a designed model with no purchasable variant yet.
           // Editorial only: greyed and non-selectable whatever the catalog says.
@@ -90,16 +98,26 @@ export function VariantLadder({
           const soldOut = Boolean(
             optionValue && optionValue.exists && !optionValue.available,
           );
-          const disabled = comingSoon || soldOut;
+          // Each version's own price on its button, as FPV shops show it on
+          // the option: the buyer compares without clicking through.
+          const tierPrice =
+            showPrices && !comingSoon && optionValue?.firstSelectableVariant
+              ? formatPrice(
+                  optionValue.firstSelectableVariant.price.amount,
+                  optionValue.firstSelectableVariant.price.currencyCode,
+                )
+              : '';
           const pending = pendingValue === value;
           return (
-            <button
+            <motion.button
               type="button"
               key={value}
               role="radio"
               aria-checked={selected}
               aria-disabled={disabled}
               disabled={disabled}
+              tabIndex={value === tabValue ? 0 : -1}
+              whileTap={disabled || reducedMotion ? undefined : {scale: 0.98}}
               aria-busy={pending || undefined}
               className={`variant-tier${selected ? ' is-selected' : ''}${
                 comingSoon ? ' is-comingsoon' : soldOut ? ' is-soldout' : ''
@@ -119,13 +137,13 @@ export function VariantLadder({
               {selected ? (
                 <motion.span
                   className="variant-tier-glow"
-                  layoutId="variant-tier-glow"
-                  transition={{type: 'spring', stiffness: 380, damping: 34}}
+                  layoutId={`${groupId}-selection`}
+                  transition={reducedMotion ? {duration: 0} : {type: 'spring', stiffness: 500, damping: 38}}
                   aria-hidden="true"
                 />
               ) : null}
               <span className="variant-tier-head">
-                <span className="variant-tier-name">{content.label ?? value}</span>
+                <span className="variant-tier-name">{shopSize(content.label ?? value)}</span>
                 {comingSoon ? (
                   <span className="variant-tier-flag">
                     {copyText('product-chrome.ladder_flag_coming_soon')}
@@ -135,33 +153,15 @@ export function VariantLadder({
                     {copyText('product-chrome.ladder_flag_sold_out')}
                   </span>
                 ) : selected ? (
-                  <span className="variant-tier-flag is-selected" aria-hidden="true">
-                    <Check size={12} strokeWidth={3} />
+                  <span className="variant-tier-check" aria-hidden="true">
+                    <Check size={13} strokeWidth={3} />
                   </span>
                 ) : null}
               </span>
-              {/* One line of the specs that actually differ, on EVERY card
-                  so the tiers compare at a glance (maintainer, 2026-08-18: the
-                  selected-only spec table hid the comparison and the prose
-                  tagline said nothing a spec doesn't). Keys ride along for
-                  screen readers only; keep the values short enough to hold
-                  one line. */}
-              {compact || !content.highlights.length ? null : (
-                <span className="variant-tier-specs">
-                  {content.highlights.map(([k, v], i) => (
-                    <span className="variant-tier-spec" key={k}>
-                      {i > 0 ? (
-                        <span className="variant-tier-sep" aria-hidden="true">
-                          ·
-                        </span>
-                      ) : null}
-                      <span className="sr-only">{k}: </span>
-                      {v}
-                    </span>
-                  ))}
-                </span>
-              )}
-            </button>
+              {tierPrice ? (
+                <span className="variant-tier-price">{tierPrice}</span>
+              ) : null}
+            </motion.button>
           );
         })}
       </div>

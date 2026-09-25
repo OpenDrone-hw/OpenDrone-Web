@@ -13,11 +13,13 @@
  */
 import {useEffect, useRef, useState} from 'react';
 import * as THREE from 'three';
-import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {ModelLoader as GLTFLoader} from '~/lib/model-loader';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {heroCaption, whatIsThisHref} from '~/lib/product-content';
+import {instanceHeroDraws, mergeHeroGeometry, updateHeroMatrices} from '~/lib/hero-geometry';
+import {forEachSliced, yieldToMain} from '~/lib/scheduling';
 
 export type HeroBeat = {
   id: string;
@@ -64,6 +66,7 @@ const FALLBACK_MODEL = 'od3';
 export type HeroDroneSceneProps = {
   /** Folder under /public/models holding drone.glb + studio.json. */
   model?: string;
+  onModel?: (folder: string) => void;
   /** Fires as the reader moves through the sequence, 0..1. */
   onProgress?: (frac: number) => void;
   /** Fires when the presented beat changes; null while the drone rests whole. */
@@ -74,6 +77,7 @@ export type HeroDroneSceneProps = {
   onLoad?: (state: HeroLoadState) => void;
   /** Fires once the model is on screen. */
   onReady?: () => void;
+  onBuilding?: (building: boolean) => void;
   /** Handed a jump function once ready, so the rail dots can seek. */
   onSeeker?: (goTo: (i: number) => void) => void;
 };
@@ -105,6 +109,10 @@ type MatProfile = {
 };
 type StudioConfig = {
   model?: string;
+  yAxisUp?: boolean;
+  motorMatch?: string;
+  motorHardwareMatch?: string;
+  propMatch?: string;
   lighting: any;
   spotlight: any;
   sequence: any;
@@ -131,21 +139,30 @@ type StudioConfig = {
 
 export function HeroDroneScene({
   model = 'od3',
+  onModel,
   onProgress,
   onBeat,
   onBeats,
   onLoad,
   onReady,
+  onBuilding,
   onSeeker,
 }: HeroDroneSceneProps) {
   const host = useRef<HTMLDivElement>(null);
+  const snapshot = useRef<HTMLCanvasElement>(null);
+  const snapshotFade = useRef<Animation | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const el = host.current;
     if (!el) return;
     let disposed = false;
+    let capture: (() => void) | null = null;
+    setError(null);
+    onBuilding?.(true);
     const cleanup: Array<() => void> = [];
+    const controller = new AbortController();
+    cleanup.push(() => controller.abort());
 
     const TEST = typeof location !== 'undefined' && new URLSearchParams(location.search).has('herotest');
     // /public is served with a one-year max-age and these files are not
@@ -162,22 +179,24 @@ export function HeroDroneScene({
       // Only some sizes have an assembly built. Fall back rather than 404ing,
       // so the size selector keeps working before the other models exist.
       let folder = model;
-      let res = await fetch(modelUrl(folder, 'studio.json'));
+      let res = await fetch(modelUrl(folder, 'studio.json'), {signal: controller.signal});
       if (!res.ok && folder !== FALLBACK_MODEL) {
         console.warn(`[hero] no assembly for "${folder}", showing ${FALLBACK_MODEL}`);
         folder = FALLBACK_MODEL;
-        res = await fetch(modelUrl(folder, 'studio.json'));
+        res = await fetch(modelUrl(folder, 'studio.json'), {signal: controller.signal});
       }
       if (!res.ok) throw new Error(`studio.json ${res.status}`);
       const cfg = (await res.json()) as StudioConfig;
 
       if (disposed) return;
+      onModel?.(folder);
       const renderer = new THREE.WebGLRenderer({antialias: true, alpha: true});
       renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = cfg.lighting.exposure;
       el.append(renderer.domElement);
       renderer.domElement.style.display = 'block';
+      renderer.domElement.style.opacity = snapshot.current?.width ? '0' : '1';
       cleanup.push(() => {
         // dispose() alone does not release the WebGL context, and browsers cap
         // them at around 16 per page. Without forceContextLoss a few remounts
@@ -190,7 +209,9 @@ export function HeroDroneScene({
 
       const scene = new THREE.Scene();
       const pmrem = new THREE.PMREMGenerator(renderer);
-      const envRT = pmrem.fromScene(new RoomEnvironment(), 0.04);
+      const room = new RoomEnvironment();
+      const envRT = pmrem.fromScene(room, 0.04);
+      room.dispose();
       scene.environment = envRT.texture;
       cleanup.push(() => {
         envRT.dispose();
@@ -199,6 +220,28 @@ export function HeroDroneScene({
       scene.environmentIntensity = cfg.lighting.environment;
 
       const camera = new THREE.PerspectiveCamera(34, 1, 0.002, 60);
+      let needsResize = true;
+      let lastDpr = 0;
+      let sizedTo = '';
+      const resizeIfNeeded = () => {
+        const dpr = Math.min(devicePixelRatio, 2);
+        if (!needsResize && dpr === lastDpr) return;
+        needsResize = false;
+        lastDpr = dpr;
+        const w = Math.round(el.clientWidth);
+        const h = Math.round(el.clientHeight);
+        if (!w || !h) return;
+        const key = `${w}x${h}@${dpr}`;
+        if (key === sizedTo) return;
+        sizedTo = key;
+        renderer.setPixelRatio(dpr);
+        renderer.setSize(w, h, true);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+      };
+      const resizeObserver = new ResizeObserver(() => { needsResize = true; });
+      resizeObserver.observe(el);
+      cleanup.push(() => resizeObserver.disconnect());
 
       const aim = (l: THREE.DirectionalLight, az: number, elv: number) => {
         const a = THREE.MathUtils.degToRad(az);
@@ -357,7 +400,7 @@ export function HeroDroneScene({
       // Onshape is Z-up, three is Y-up. `pivot` scales the drone about its own
       // centre so the airframe can recede without dragging the shown part.
       const world = new THREE.Group();
-      world.rotation.x = -Math.PI / 2;
+      world.rotation.x = cfg.yAxisUp ? 0 : -Math.PI / 2;
       scene.add(world);
       const pivot = new THREE.Group();
       world.add(pivot);
@@ -366,15 +409,16 @@ export function HeroDroneScene({
 
       /* ------------------------------------------------------- materials */
       const profiles = new Map<string, MatProfile>(cfg.materials.map((m) => [m.id, m]));
-      const classMats = new Map<string, THREE.MeshStandardMaterial[]>();
       const nameRules = cfg.materials.filter((m) => m.match);
 
       function classOf(raw0: string) {
         const raw = (raw0 || '').replace(/_\d+$/, '');
-        if (/_PCB\b/i.test(raw)) return 'fr4';
-        if (/_pad\b/i.test(raw)) return 'padgold';
-        if (/_silkscreen\b/i.test(raw)) return 'silk';
-        if (/_soldermask\b/i.test(raw)) return 'mask';
+        if (/^(?:occurrence[_ ]of[_ ])?Open/i.test(raw)) {
+          if (/_PCB\b/i.test(raw)) return 'fr4';
+          if (/_pad\b/i.test(raw)) return 'padgold';
+          if (/_silkscreen\b/i.test(raw)) return 'silk';
+          if (/_soldermask\b/i.test(raw)) return 'mask';
+        }
         const n = tidy(raw);
         for (const r of nameRules) if (new RegExp(r.match as string, 'i').test(n)) return r.id;
         return 'smd';
@@ -388,14 +432,18 @@ export function HeroDroneScene({
         mat.metalness = p.metalness;
         mat.roughness = p.roughness;
         mat.envMapIntensity = p.env;
+        if (key === 'silk') {
+          // Ink sits almost on the soldermask. Bias depth, not its CAD pose,
+          // so letters remain visible from both sides at grazing angles.
+          mat.polygonOffset = true;
+          mat.polygonOffsetFactor = -1;
+          mat.polygonOffsetUnits = -1;
+        }
         if (p.tint) mat.color.set(p.tint);
         if (p.sat !== 1) {
           mat.color.getHSL(hsl);
           mat.color.setHSL(hsl.h, Math.min(1, hsl.s * p.sat), hsl.l);
         }
-        const list = classMats.get(key) ?? [];
-        list.push(mat);
-        classMats.set(key, list);
       }
 
       /* ------------------------------------------------------------ load
@@ -406,8 +454,13 @@ export function HeroDroneScene({
        * assembly node, every occurrence under it -- so nothing below this point
        * knows or cares which file a part came from.
        */
-      const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder as any);
+      const manager = new THREE.LoadingManager();
+      const loader = new GLTFLoader(manager).setMeshoptDecoder(MeshoptDecoder as any);
+      const fileLoader = new THREE.FileLoader(manager).setResponseType('arraybuffer');
+      cleanup.push(() => manager.abort());
       const cache = new Map<string, THREE.MeshStandardMaterial>();
+      const equivalentMaterials = new Map<string, THREE.MeshStandardMaterial>();
+      const sourceMaterials = new Set<THREE.Material>();
       const paint = (sub: THREE.Object3D, root: THREE.Object3D) => {
         sub.traverse((o: any) => {
           if (!o.isMesh || o.userData.painted) return;
@@ -424,10 +477,18 @@ export function HeroDroneScene({
           }
           const key = classOf(name || o.name || '');
           const ck = `${o.material.uuid}|${key}`;
+          sourceMaterials.add(o.material);
           let m = cache.get(ck);
           if (!m) {
             m = o.material.clone();
             applyProfile(m as THREE.MeshStandardMaterial, key);
+            const {uuid: _uuid, name: _name, ...properties} = m!.toJSON();
+            const signature = JSON.stringify(properties);
+            const shared = equivalentMaterials.get(signature);
+            if (shared) {
+              m!.dispose();
+              m = shared;
+            } else equivalentMaterials.set(signature, m!);
             cache.set(ck, m as THREE.MeshStandardMaterial);
           }
           o.material = m;
@@ -438,7 +499,7 @@ export function HeroDroneScene({
       droneRoot.name = 'assembly-root';
       rig.add(droneRoot);
       cleanup.push(() => {
-        for (const m of cache.values()) m.dispose();
+        for (const m of new Set([...cache.values(), ...sourceMaterials])) m.dispose();
         droneRoot.traverse((o: any) => {
           if (o.isMesh) o.geometry?.dispose?.();
         });
@@ -464,18 +525,14 @@ export function HeroDroneScene({
         if (b.isEmpty()) return;
         b.getCenter(previewCentre);
         previewRadius = Math.max(previewRadius, b.getBoundingSphere(new THREE.Sphere()).radius);
+        camera.near = previewRadius / 300;
+        camera.far = previewRadius * 60;
+        camera.updateProjectionMatrix();
       };
       const previewFrame = () => {
         if (!previewOn) return;
-        const w = Math.round(el.clientWidth);
-        const h = Math.round(el.clientHeight);
-        if (w && h) {
-          renderer.setSize(w, h, true);
-          camera.aspect = w / h;
-          camera.near = previewRadius / 300;
-          camera.far = previewRadius * 60;
-          camera.updateProjectionMatrix();
-        }
+        if (document.hidden) return;
+        resizeIfNeeded();
         previewAngle += Math.min(previewClock.getDelta(), 0.05) * 0.24;
         const off = new THREE.Vector3(Math.cos(previewAngle), 0.5, Math.sin(previewAngle))
           .normalize()
@@ -486,9 +543,10 @@ export function HeroDroneScene({
       };
       renderer.setAnimationLoop(previewFrame);
 
-      const manifest = await fetch(modelUrl(folder, 'chunks.json'))
+      const manifest = await fetch(modelUrl(folder, 'chunks.json'), {signal: controller.signal})
         .then((r) => (r.ok ? (r.json() as Promise<ChunkManifest>) : null))
         .catch(() => null);
+      if (disposed) return;
       // No manifest means an older single-file build. Still supported.
       // Smallest chunks first: the whole download happens behind the splash,
       // so the order's only job is to get the first pieces in fast and keep
@@ -500,21 +558,42 @@ export function HeroDroneScene({
       const pieces = chunks.map((c) => ({id: c.id, label: c.label}));
       let bytesDone = 0;
       let asm: THREE.Group | null = null;
-      for (const c of chunks) {
+      let activeChunk = '';
+      const downloads = new Map<string, Promise<ArrayBuffer>>();
+      const download = (c: Chunk) => {
+        let pending = downloads.get(c.id);
+        if (!pending) {
+          pending = fileLoader.loadAsync(modelUrl(folder, c.file), (e) => {
+            if (disposed || activeChunk !== c.id || !e.total) return;
+            const frac = (bytesDone + (c.bytes || 1) * (e.loaded / e.total)) / totalBytes;
+            onLoad?.({label: c.label, frac, chunk: c.id, done: false, pieces});
+          }) as Promise<ArrayBuffer>;
+          downloads.set(c.id, pending);
+          // A look-ahead request can fail before its turn to be awaited.
+          void pending.catch(() => {});
+        }
+        return pending;
+      };
+      // Let HTTP/2 share the connection across all pieces. Parsing remains
+      // serial and yields between pieces so downloads cannot stack CPU work.
+      for (const chunk of chunks) void download(chunk);
+      for (let i = 0; i < chunks.length; i++) {
+        const c = chunks[i];
+        activeChunk = c.id;
         onLoad?.({label: c.label, frac: bytesDone / totalBytes, chunk: c.id, done: false, pieces});
-        const g = await new Promise<{scene: THREE.Group}>((resolve, reject) =>
-          loader.load(
-            modelUrl(folder, c.file),
-            resolve as any,
-            (e) => {
-              if (!e.total) return;
-              const frac = (bytesDone + (c.bytes || 1) * (e.loaded / e.total)) / totalBytes;
-              onLoad?.({label: c.label, frac, chunk: c.id, done: false, pieces});
-            },
-            reject,
-          ),
-        );
-        if (disposed) return;   // torn down mid-download
+        const pending = download(c);
+        const data = await pending;
+        downloads.delete(c.id);
+        if (disposed) return;
+        const g = await loader.parseAsync(data, `/models/${folder}/`);
+        if (disposed) {
+          g.scene.traverse((object) => {
+            if (!(object instanceof THREE.Mesh)) return;
+            object.geometry.dispose();
+            for (const mat of Array.isArray(object.material) ? object.material : [object.material]) mat.dispose();
+          });
+          return;
+        }
         const src = g.scene.children.length === 1 ? g.scene.children[0] : g.scene;
         if (!asm) {
           // Every chunk is a clone of one source document, so they all carry the
@@ -604,15 +683,22 @@ export function HeroDroneScene({
       }
       scene.updateMatrixWorld(true);
       const inv = new THREE.Matrix4().copy(occRoot.matrixWorld).invert();
-      const merged = new Map<string, THREE.Group>();
+      const merged = new Map<string, THREE.Object3D>();
       for (const b of cfg.boards) {
+        const prepared = occRoot.children.find((node) => node.userData.boardId === b.id);
+        if (prepared) {
+          prepared.name = `BOARD_${b.id}`;
+          merged.set(b.id, prepared);
+          continue;
+        }
         const members = boardMembers(b.id);
         if (!members.length) {
           console.warn(`[hero] board "${b.id}" matched no substrate fragments`);
           continue;
         }
         const byMat = new Map<THREE.Material, THREE.BufferGeometry[]>();
-        for (const node of members) {
+        await forEachSliced(members, (node) => {
+          if (disposed) return;
           node.traverse((o: any) => {
             if (!o.isMesh) return;
             const g = o.geometry.clone();
@@ -624,11 +710,16 @@ export function HeroDroneScene({
             arr.push(g);
             byMat.set(o.material, arr);
           });
+        });
+        if (disposed) {
+          for (const geometries of byMat.values()) for (const geometry of geometries) geometry.dispose();
+          return;
         }
         const group = new THREE.Group();
         group.name = `BOARD_${b.id}`;
         for (const [mat, geos] of byMat) {
           const g = geos.length === 1 ? geos[0] : mergeGeometries(geos, false);
+          if (geos.length > 1) for (const source of geos) source.dispose();
           if (!g) continue;
           const mesh = new THREE.Mesh(g, mat);
           mesh.frustumCulled = false;
@@ -648,6 +739,8 @@ export function HeroDroneScene({
         cleanup.push(() => {
           for (const m of group.children as THREE.Mesh[]) m.geometry?.dispose?.();
         });
+        await yieldToMain();
+        if (disposed) return;
       }
 
       /* --------------------------------------------------------- geometry */
@@ -665,13 +758,15 @@ export function HeroDroneScene({
       {
         scene.updateMatrixWorld(true);
         const motors: THREE.Vector3[] = [];
-        for (const b of topLevel(pick(/^Admi/i))) {
+        const motorPattern = new RegExp(cfg.motorMatch ?? '^Admi', 'i');
+        const propPattern = cfg.propMatch ? new RegExp(cfg.propMatch, 'i') : null;
+        for (const b of topLevel(pick(motorPattern))) {
           const c = new THREE.Box3().setFromObject(b).getCenter(new THREE.Vector3());
           const hit = motors.find((m) => Math.hypot(m.x - c.x, m.z - c.z) < 0.015);
           if (!hit) motors.push(c);
         }
         const propNodes = occRoot.children.filter((c) =>
-          /^occurrence[_ ]of[_ ][0-9]+(_[0-9]+)?$/i.test(c.name || ''),
+          propPattern ? propPattern.test(tidy(c.name)) : /^occurrence[_ ]of[_ ][0-9]+(_[0-9]+)?$/i.test(c.name || ''),
         );
         for (const p of propNodes) {
           const pc = new THREE.Box3().setFromObject(p).getCenter(new THREE.Vector3());
@@ -702,6 +797,20 @@ export function HeroDroneScene({
           (g as any).userData = {spin: sp, dir: dx * dz < 0 ? 1 : -1};
           propPivots.push(g);
         }
+        // Retaining nuts belong to the prop hub, including in the motor
+        // inspection beat. Match the CAD hardware name and nearest axis.
+        if (cfg.motorHardwareMatch) {
+          const hardware = new RegExp(cfg.motorHardwareMatch, 'i');
+          for (const node of [...occRoot.children]) {
+            if (!hardware.test(tidy(node.name))) continue;
+            const centre = new THREE.Box3().setFromObject(node).getCenter(new THREE.Vector3());
+            const hub = propPivots.find((g) => {
+              const p = g.getWorldPosition(new THREE.Vector3());
+              return Math.hypot(p.x - centre.x, p.z - centre.z) < 0.008 && Math.abs(p.y - centre.y) < 0.02;
+            });
+            if (hub) (hub.userData.spin as THREE.Group).attach(node);
+          }
+        }
         if (propPivots.length !== 4)
           console.warn(`[hero] expected 4 props, rigged ${propPivots.length}`);
 
@@ -714,7 +823,7 @@ export function HeroDroneScene({
         // on its spinner.
         scene.updateMatrixWorld(true);
         const byMotor = new Map<number, Array<{node: THREE.Object3D; vol: number; size: THREE.Vector3}>>();
-        for (const n of topLevel(pick(/^Admi/i))) {
+        for (const n of topLevel(pick(motorPattern))) {
           const bb = new THREE.Box3().setFromObject(n);
           const c = bb.getCenter(new THREE.Vector3());
           const mi = motors.findIndex((m) => Math.hypot(m.x - c.x, m.z - c.z) < 0.015);
@@ -872,7 +981,7 @@ export function HeroDroneScene({
             const pbb = new THREE.Box3().setFromObject(plate.node);
             for (const p of nodes) {
               const n = tidy(p.node.name);
-              if (n === 'Top') {
+              if (n === 'Top' || n === 'anti-slip pad') {
                 p.withTop = true;
                 continue;
               }
@@ -932,6 +1041,18 @@ export function HeroDroneScene({
         };
       };
       onBeats?.(BEATS.map((b) => toHeroBeat(b)));
+      await yieldToMain();
+      if (disposed) return;
+
+      const moving = new Set<THREE.Object3D>([pivot]);
+      for (const b of BEATS) for (const p of b.nodes) moving.add(p.node);
+      for (const p of propPivots) moving.add(p.userData.spin);
+      cleanup.push(mergeHeroGeometry(droneRoot, moving));
+      for (const node of moving) node.matrixAutoUpdate = false;
+      world.updateMatrix();
+      rig.updateMatrix();
+      world.matrixAutoUpdate = false;
+      rig.matrixAutoUpdate = false;
 
       /* --------------------------------------------- dim everything else */
       const twin = new Map<THREE.Material, THREE.MeshStandardMaterial>();
@@ -947,12 +1068,14 @@ export function HeroDroneScene({
           };
           twin.set(m, t!);
           twin.set(t!, t!);
+          dimMaterials.add(t!);
         }
         return t!;
       };
       let dimmed: any[] = [];
+      const dimMaterials = new Set<THREE.MeshStandardMaterial>();
       cleanup.push(() => {
-        for (const t of twin.values()) t.dispose();
+        for (const t of dimMaterials) t.dispose();
       });
       const dimSetFor = (b: Beat) => {
         if (b.dim) return b.dim;
@@ -968,8 +1091,13 @@ export function HeroDroneScene({
       function setDim(b: Beat | null) {
         for (const m of dimmed) if (m.material.userData?.normal) m.material = m.material.userData.normal;
         dimmed = b ? dimSetFor(b) : [];
-        for (const m of dimmed) m.material = twinOf(m.material);
+        for (const m of dimmed) {
+          m.material = twinOf(m.material);
+          dimMaterials.add(m.material);
+        }
       }
+      const batches = instanceHeroDraws(scene, droneRoot, twinOf);
+      cleanup.push(() => batches.dispose());
 
       /* ------------------------------------------------------- sequencing */
       const Q = cfg.sequence;
@@ -1187,9 +1315,19 @@ export function HeroDroneScene({
       const seenStops = new Set<number>();
       // Only render, and only take keys, when the hero is actually on screen.
       let onScreen = true;
+      let idlePaused = false;
+      let lastInteraction = performance.now();
+      let syncPlayback = () => {};
+      const wake = () => {
+        lastInteraction = performance.now();
+        idlePaused = false;
+        syncPlayback();
+      };
       const io = new IntersectionObserver(
         (es) => {
           onScreen = es[0]?.isIntersecting ?? true;
+          if (onScreen) wake();
+          else syncPlayback();
         },
         {threshold: 0},
       );
@@ -1364,6 +1502,7 @@ export function HeroDroneScene({
       // beats. The rail dots call goTo with a BEAT index; the keyboard walks
       // the stop list itself so it gets the rests too.
       const goToStop = (si: number) => {
+        wake();
         const idx = Math.max(0, Math.min(STOPS.length - 1, si));
         gestureFrom = idx;
         gestureDir = 0;
@@ -1439,31 +1578,55 @@ export function HeroDroneScene({
       const clock = new THREE.Clock();
       let lastBeat = -1;
       let lastDimBeat = -1;
-      let sizedTo = '';
-      const resizeIfNeeded = () => {
-        const w = Math.round(el.clientWidth);
-        const h = Math.round(el.clientHeight);
-        if (!w || !h) return;
-        const dpr = Math.min(devicePixelRatio, 2);
-        const key = `${w}x${h}@${dpr}`;
-        if (key === sizedTo) return;
-        sizedTo = key;
-        renderer.setPixelRatio(dpr);
-        renderer.setSize(w, h, true);
-        camera.aspect = w / h;
-        camera.updateProjectionMatrix();
-      };
 
       camera.position.copy(droneCentre).add(new THREE.Vector3(1, 0.5, 1).normalize().multiplyScalar(droneRadius * 2.15));
       camera.near = droneRadius / 300;
       camera.far = droneRadius * 60;
+      camera.updateProjectionMatrix();
       resizeIfNeeded();
+      await yieldToMain();
+      if (disposed) return;
+
+      // Compile the spotlight and particle variants before the first gesture.
+      beam.visible = true;
+      motes.visible = true;
+      await renderer.compileAsync(scene, camera);
+      if (disposed) return;
+      beam.visible = false;
+      motes.visible = false;
 
       let loopErrors = 0;
       let testDt: number | null = null;
+      let lastProgress = -1;
+      let lastBrightness = -1;
+      let presentedBeat: Beat | null = null;
+      let lastRenderedAt = 0;
+      for (const event of ['pointerdown', 'pointermove', 'wheel', 'keydown']) {
+        el.addEventListener(event, wake, {passive: true});
+        cleanup.push(() => el.removeEventListener(event, wake));
+      }
+      window.addEventListener('resize', wake);
+      cleanup.push(() => window.removeEventListener('resize', wake));
+      // Keep the fully shaded image when settled. A gesture wakes the scene
+      // immediately; an untouched tab does not keep orbiting at full GPU load.
+      lastInteraction = performance.now();
+      // The frame explicitly updates the rig before presentation, then only
+      // the moved parts. Prevent a second full traversal inside render().
+      scene.matrixAutoUpdate = false;
+      scene.matrixWorldAutoUpdate = false;
       const frame = () => {
        try {
         if (!TEST && (!onScreen || document.hidden)) return;
+        const now = performance.now();
+        if (!TEST && !dragging && now - lastInteraction > 5000 &&
+            Math.abs(target - pos) < dur() * 0.001 && Math.abs(vel) < dur() * 0.001) {
+          idlePaused = true;
+          syncPlayback();
+          return;
+        }
+        // High-refresh displays must not double the animation's GPU budget.
+        if (!TEST && now - lastRenderedAt < 1000 / 60 - 1) return;
+        lastRenderedAt = now;
         resizeIfNeeded();
         const dt = testDt ?? Math.min(clock.getDelta(), 0.05);
         if (testDt !== null) clock.getDelta();   // keep the clock in step
@@ -1509,7 +1672,12 @@ export function HeroDroneScene({
         // reaches either end and the rail never lines up with its own dots.
         const p0 = stopPos(0);
         const p1 = stopPos(STOPS.length - 1);
-        onProgress?.(THREE.MathUtils.clamp((pos - p0) / Math.max(p1 - p0, 1e-6), 0, 1));
+        const progress = THREE.MathUtils.clamp((pos - p0) / Math.max(p1 - p0, 1e-6), 0, 1);
+        const progressPixel = Math.round(progress * 10000);
+        if (progressPixel !== lastProgress) {
+          lastProgress = progressPixel;
+          onProgress?.(progress);
+        }
 
         // The hold is "seen" once the part has arrived and its hold has run
         // long enough for the spotlight to strike and settle. A rest just has
@@ -1604,10 +1772,12 @@ export function HeroDroneScene({
         for (const g of propPivots)
           (g as any).userData.spin.rotation.z += dt * Q.propRate * (1 - k) * (g as any).userData.dir * Q.propHanded;
 
-        for (const other of BEATS) if (other !== b) restore(other);
+        if (presentedBeat && presentedBeat !== b) restore(presentedBeat);
+        presentedBeat = b;
         pivot.scale.setScalar(THREE.MathUtils.lerp(1, S.shrinkDrone, k));
         const bright = THREE.MathUtils.lerp(1, 1 - (b.fade ?? S.darkenRest), k);
-        for (const m of twin.values()) {
+        for (const m of dimMaterials) {
+          if (bright === lastBrightness && m.userData.brightness === bright) continue;
           const u = (m as any).userData;
           if (!u?.baseColor) continue;
           m.color.copy(u.baseColor).multiplyScalar(bright);
@@ -1617,7 +1787,9 @@ export function HeroDroneScene({
           // backgrounded drone out to white. Fade metalness out with it.
           if (u.baseMetal === undefined) u.baseMetal = m.metalness;
           m.metalness = u.baseMetal * bright;
+          u.brightness = bright;
         }
+        lastBrightness = bright;
         const d = THREE.MathUtils.lerp(1, 1 - S.dimLights, k);
         hemi.intensity = BASE.hemi * d;
         keyL.intensity = BASE.key * d;
@@ -1636,7 +1808,8 @@ export function HeroDroneScene({
             if (Math.abs(dragTilt) < 0.0005) dragTilt = 0;
           }
         }
-        el.style.cursor = dragging ? 'grabbing' : 'grab';
+        const cursor = dragging ? 'grabbing' : 'grab';
+        if (el.style.cursor !== cursor) el.style.cursor = cursor;
         const wantH = b.faceOn ? (cfg.camera?.heightOnBoard ?? 0.72) : (cfg.camera?.height ?? 0.5);
         camH += (THREE.MathUtils.lerp(cfg.camera?.height ?? 0.5, wantH, k) - camH) * (1 - 0.35 ** dt);
         const back = droneRadius * ((cfg.camera?.distance ?? 2.15) + (cfg.camera?.dollyOnShow ?? 0.92) * k);
@@ -1658,8 +1831,15 @@ export function HeroDroneScene({
         // anchored to the camera, so presenting against last frame's pose makes
         // the part chase the camera one frame behind. Under a drag (camera
         // written directly, no smoothing) that lag reads as vibration.
-        scene.updateMatrixWorld(true);
+        updateHeroMatrices(moving);
+        scene.updateMatrixWorld();
         present(b, k, t);
+        updateHeroMatrices(moving);
+        for (const p of b.nodes) if (p.node.matrixWorldNeedsUpdate) p.node.updateMatrixWorld();
+        spotL.updateMatrixWorld();
+        beam.updateMatrixWorld();
+        motes.updateMatrixWorld();
+        batches?.update();
 
         renderer.render(scene, camera);
        } catch (err) {
@@ -1672,7 +1852,17 @@ export function HeroDroneScene({
         }
        }
       };
-      renderer.setAnimationLoop(frame);
+      let playing: boolean | null = null;
+      syncPlayback = () => {
+        const play = TEST || (onScreen && !document.hidden && !idlePaused);
+        if (play === playing) return;
+        playing = play;
+        clock.getDelta();
+        renderer.setAnimationLoop(play ? frame : null);
+      };
+      document.addEventListener('visibilitychange', syncPlayback);
+      cleanup.push(() => document.removeEventListener('visibilitychange', syncPlayback));
+      syncPlayback();
       cleanup.push(() => renderer.setAnimationLoop(null));
 
       // requestAnimationFrame is suspended in a backgrounded tab, so an
@@ -1717,28 +1907,60 @@ export function HeroDroneScene({
           dur: dur(),
         };
       }
+      // Capture one outgoing frame when changing size, then release its GPU
+      // context. Only the incoming scene renders during the crossfade.
+      frame();
+      capture = () => {
+        const still = snapshot.current;
+        if (!still) return;
+        snapshotFade.current?.cancel();
+        renderer.render(scene, camera);
+        still.width = renderer.domElement.width;
+        still.height = renderer.domElement.height;
+        still.getContext('2d')?.drawImage(renderer.domElement, 0, 0);
+        still.style.display = 'block';
+        still.style.opacity = '1';
+      };
+      if (snapshot.current?.width) {
+        const still = snapshot.current;
+        renderer.domElement.style.opacity = '1';
+        renderer.domElement.animate([{opacity: 0}, {opacity: 1}], {duration: 500, easing: 'ease-in-out'});
+        const fade = still.animate([{opacity: 1}, {opacity: 0}], {duration: 500, easing: 'ease-in-out', fill: 'forwards'});
+        snapshotFade.current = fade;
+        void fade.finished.then(() => {
+          if (snapshotFade.current !== fade) return;
+          still.style.display = 'none';
+          still.width = 0;
+          still.height = 0;
+        }).catch(() => {});
+      }
+      onBuilding?.(false);
       onReady?.();
     })().catch((e: unknown) => {
+      if (disposed) return;
       console.error('[hero]', e);
       setError(e instanceof Error ? e.message : String(e));
+      onBuilding?.(false);
       // Always release the splash, or a 404 leaves the page reading LOADING
       // forever behind a dim layer.
       onReady?.();
     });
 
     return () => {
+      capture?.();
       disposed = true;
       for (const fn of cleanup.reverse()) fn();
       // Belt and braces: if an in-flight instance still managed to append, do
       // not leave a dead canvas stacked over the live one.
       for (const c of Array.from(el.querySelectorAll('canvas'))) c.remove();
     };
-  }, [model, onBeat, onBeats, onLoad, onProgress, onReady, onSeeker]);
+  }, [model, onModel, onBeat, onBeats, onLoad, onProgress, onReady, onBuilding, onSeeker]);
 
   return (
     // Decorative: every beat's copy is in the DOM in .hp-fallback, and
     // keyboard control is the rail's real buttons, so the canvas itself carries
     // no semantics and is not a tab stop.
+    <>
     <div ref={host} aria-hidden="true" style={{position: 'absolute', inset: 0}}>
       {error ? (
         <div style={{position: 'absolute', left: 16, bottom: 16, color: '#ff8574', font: '12px ui-monospace'}}>
@@ -1746,5 +1968,7 @@ export function HeroDroneScene({
         </div>
       ) : null}
     </div>
+    <canvas ref={snapshot} data-hero-snapshot="" width={0} height={0} aria-hidden="true" style={{position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1, display: 'none'}} />
+    </>
   );
 }

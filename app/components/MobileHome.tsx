@@ -1,4 +1,4 @@
-import {Suspense} from 'react';
+import {Suspense, useState} from 'react';
 import {Await, Link} from 'react-router';
 import {motion, useReducedMotion, type MotionProps} from 'motion/react';
 import type {ProductCardFragment as CollectionItemFragment} from '~/lib/product-shapes';
@@ -6,10 +6,14 @@ import {HeroWordmark} from '~/components/HeroWordmark';
 import {ProductItem} from '~/components/ProductItem';
 import {AnimatedNumber} from '~/components/AnimatedNumber';
 import {Txt} from '~/components/Txt';
+import {copyText} from '~/lib/copy';
 import {PRODUCT_CONTENT, isConceptFor} from '~/lib/product-content';
 import {useRoadmapStatusResolver} from '~/lib/coming-soon';
 import {BOARD_ART_VERSION} from '~/data/board-art-version';
 import {assetUrl} from '~/lib/asset-url';
+import {HeroBuildGuide} from '~/components/HeroBuildGuide';
+import type {HeroBuild} from '~/lib/hero-build';
+import {HERO_AIRFRAMES, DEFAULT_HERO_SIZE, airframeLabel} from '~/lib/hero-airframes';
 
 // Downscaled WebP thumbnails written by scripts/export-board-art.mjs next to
 // front.png. The stage slot is at most 264 CSS px, so 528 (2x) and 800 (3x)
@@ -61,10 +65,13 @@ const HOME_LEDGER: Array<{key: string; value?: string; countUp?: boolean}> = [
  */
 export function MobileHome({
   featured,
+  heroBuilds,
 }: {
   featured: CollectionItemFragment[] | Promise<CollectionItemFragment[]>;
+  heroBuilds: Promise<HeroBuild[]>;
 }) {
   const reduce = useReducedMotion();
+  const [buildSize, setBuildSize] = useState(DEFAULT_HERO_SIZE);
 
   // Staggered entrance: each block rises + fades a beat after the last. Skipped
   // wholesale under prefers-reduced-motion (rendered static, no transform).
@@ -141,11 +148,11 @@ export function MobileHome({
             Each is its own pill spanning half the row, not nested in one pod. */}
         <motion.div className="home-mobile-cta" {...rise(3)}>
           <Link
-            prefetch="viewport"
-            to="/collections/all"
+            prefetch="intent"
+            to="#build-guide"
             className="home-mobile-cta-btn home-mobile-cta-shop"
           >
-            <Txt id="home.shop" />
+            <Txt id="home.build_mobile" />
             <svg
               width="18"
               height="18"
@@ -163,7 +170,7 @@ export function MobileHome({
             target="_blank"
             rel="noopener noreferrer"
             className="home-mobile-cta-btn home-mobile-cta-github"
-            aria-label="View source on GitHub"
+            aria-label={copyText('home.m_github_aria') ?? 'View source on GitHub'}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
@@ -171,6 +178,28 @@ export function MobileHome({
             <Txt id="home.m_github" />
           </a>
         </motion.div>
+      </section>
+
+      <section
+        className="home-mobile-build"
+        id="build-guide"
+        aria-label={copyText('home.m_build_aria') ?? 'Build a quad'}
+      >
+        <div
+          className="hero-build-sizes"
+          role="group"
+          aria-label={copyText('home.build_size_aria') ?? 'Build size'}
+        >
+          {HERO_AIRFRAMES.map(frame => <button key={frame.key} type="button" aria-pressed={frame.key === buildSize} onClick={() => setBuildSize(frame.key)}>{airframeLabel(frame.key)}</button>)}
+        </div>
+        <Suspense fallback={<Txt id="home.build_loading" as="p" fallback="Loading build…" />}>
+          <Await resolve={heroBuilds}>
+            {builds => {
+              const build = builds.find(item => item.size === buildSize);
+              return build ? <HeroBuildGuide key={build.id} build={build} /> : <Link to="/products"><Txt id="home.build_browse" fallback="Browse parts" /></Link>;
+            }}
+          </Await>
+        </Suspense>
       </section>
 
       {/* The loader resolves `featured` for a mobile UA, so the cards render
@@ -192,7 +221,10 @@ export function MobileHome({
       {/* Open-hardware index - spec-table rows (hairline rules, mono keys,
           right-aligned values) with count-ups on the numerals. Reuses the
           PDP's .spec-table so the band IS the house datasheet language. */}
-      <section className="home-mobile-ledger" aria-label="Open hardware index">
+      <section
+        className="home-mobile-ledger"
+        aria-label={copyText('home.m_ledger_aria') ?? 'Open hardware index'}
+      >
         <Txt id="home.m_ledger_label" as="p" className="section-label" />
         <dl className="spec-table">
           {HOME_LEDGER.map(({key, value, countUp}) => (
@@ -213,7 +245,7 @@ export function MobileHome({
       </section>
 
       <Link
-        prefetch="viewport"
+        prefetch="intent"
         to="/collections/all"
         className="home-mobile-browse"
       >

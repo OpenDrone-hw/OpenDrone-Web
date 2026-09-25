@@ -2,6 +2,8 @@ import {Link, useLoaderData} from 'react-router';
 import type {Route} from './+types/learn._index';
 import {buildSeoMeta} from '~/lib/seo';
 import {LEARN_DOSSIERS, learnDraftEnabled} from '~/lib/learn';
+import {Txt} from '~/components/Txt';
+import {copyFill, copyText} from '~/lib/copy';
 
 /**
  * /learn - index of the FPV knowledge layer.
@@ -13,8 +15,8 @@ import {LEARN_DOSSIERS, learnDraftEnabled} from '~/lib/learn';
 
 export const meta: Route.MetaFunction = () =>
   buildSeoMeta({
-    title: 'Learn - draft',
-    description: 'FPV research notes, unpublished.',
+    title: copyText('learn.meta_title') ?? 'Learn - draft',
+    description: copyText('learn.meta_description') ?? 'FPV research notes, unpublished.',
     robots: 'noindex, nofollow',
   });
 
@@ -31,25 +33,23 @@ export default function LearnIndex() {
     <article className="page-shell learn-page">
       <div className="reading-column">
         <header className="page-header">
-          <p className="page-eyebrow">Learn</p>
-          <h1 className="page-title">The FPV Field Guide</h1>
+          <Txt id="learn.index_eyebrow" as="p" className="page-eyebrow" fallback="Learn" />
+          <Txt
+            id="learn.index_title"
+            as="h1"
+            className="page-title"
+            fallback="The FPV Field Guide"
+          />
         </header>
 
         <div className="rich-content">
-          <p className="learn-draft-notice" role="note">
-            <strong>Draft, unreviewed.</strong> What follows is the research
-            layer, not the guide. Every claim is one bullet carrying its own
-            sources and a confidence tag, so it can be checked line by line.
-            None of it has been through the fact-check pass yet, and none of it
-            is written in the engineer-to-consumer voice the chapters will use.
-            This page exists to be read and argued with.
-          </p>
-          <p>
-            The plan is a layered explanation of the whole FPV stack, built on
-            one spine: a drone is a stack of nested control loops, each faster
-            than the one around it, and every component exists to serve one
-            loop. Most myths come from not knowing which loop a spec lives in.
-          </p>
+          <Txt
+            id="learn.index_notice"
+            as="p"
+            className="learn-draft-notice"
+            role="note"
+          />
+          <Txt id="learn.index_plan" as="p" />
         </div>
 
         <ul className="learn-index">
@@ -59,7 +59,9 @@ export default function LearnIndex() {
                 <h2>{d.title}</h2>
               </Link>
               <p>{d.blurb}</p>
-              <p className="learn-feeds">Feeds {d.feeds}</p>
+              <p className="learn-feeds">
+                {copyFill('learn.feeds', 'Feeds {feeds}', {feeds: d.feeds})}
+              </p>
             </li>
           ))}
         </ul>

@@ -1,5 +1,6 @@
 import {useEffect, useRef, useState} from 'react';
 import type {ProductImage} from '~/lib/product-shapes';
+import {shopifySrcSet} from '~/lib/shopify-image';
 
 export type SmoothImageProps = {
   /** The image to render; null renders nothing. */
@@ -9,6 +10,8 @@ export type SmoothImageProps = {
   className?: string;
   loading?: 'eager' | 'lazy';
   sizes?: string;
+  /** Widest rendered size in device pixels; caps the Shopify srcset. */
+  maxWidth?: number;
   aspectRatio?: string;
   fetchPriority?: 'high' | 'low' | 'auto';
 };
@@ -74,14 +77,18 @@ export function SmoothImage(props: SmoothImageProps) {
   return (
     <div ref={wrapRef} className="smooth-media">
       {srcUrl ? (
+        // Attribute order is the order React sets them on a client render:
+        // loading, sizes and srcset must land before src, or the browser
+        // starts fetching the full-size original the moment src is set.
         <img
+          loading={props.loading ?? 'lazy'}
+          decoding="async"
+          fetchPriority={props.fetchPriority}
+          sizes={props.sizes}
+          srcSet={props.sizes ? shopifySrcSet(srcUrl, props.maxWidth) : undefined}
           src={srcUrl}
           alt={props.alt ?? props.data?.altText ?? ''}
           className={props.className}
-          loading={props.loading ?? 'lazy'}
-          decoding="async"
-          sizes={props.sizes}
-          fetchPriority={props.fetchPriority}
           style={props.aspectRatio ? {aspectRatio: props.aspectRatio} : undefined}
         />
       ) : null}

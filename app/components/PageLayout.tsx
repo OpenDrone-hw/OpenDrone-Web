@@ -5,9 +5,9 @@ import {Aside} from '~/components/Aside';
 import {Footer} from '~/components/Footer';
 import {Header, HeaderMenu, type HeaderFamilyProduct} from '~/components/Header';
 import {LangToggle} from '~/components/LangToggle';
-import {PlaceholderBanner} from '~/components/PlaceholderBanner';
 import {RouteProgress} from '~/components/RouteProgress';
 import {Txt} from '~/components/Txt';
+import {CartAddedDialog} from '~/components/CartAddedDialog';
 import type {CommerceHandoff} from '~/lib/shop-links';
 
 interface PageLayoutProps {
@@ -15,7 +15,8 @@ interface PageLayoutProps {
   accountUrl: string | null;
   company: CompanyIdentity;
   turnstileSiteKey?: string | null;
-  prelaunch?: boolean;
+  /** Both commerce gates are open (root loader). */
+  shopOpen?: boolean;
   familyProducts?: HeaderFamilyProduct[];
   children?: React.ReactNode;
 }
@@ -26,7 +27,7 @@ export function PageLayout({
   accountUrl,
   company,
   turnstileSiteKey,
-  prelaunch = true,
+  shopOpen = false,
   familyProducts,
 }: PageLayoutProps) {
   const {pathname} = useLocation();
@@ -35,48 +36,29 @@ export function PageLayout({
   return (
     <MotionConfig reducedMotion="user">
       <Aside.Provider>
-        {/* The cart aside is gone with the local cart: the cart icon links
-            to the Shopify checkout. The mobile menu drawer is the only aside
-            left. */}
+        {/* The mobile menu drawer is the only aside; the add-to-cart dialog
+            is its own overlay, opened by every AddToCartButton. */}
         <MobileMenuAside accountUrl={accountUrl} />
+        <CartAddedDialog />
         <div className={isHomepage ? 'homepage-layout' : ''}>
           <a className="skip-link" href="#main-content">
             <Txt id="chrome.skip_link" />
           </a>
           <RouteProgress />
-          {/* On PDPs the bottom-right corner belongs to the buy rail's
-              notify-at-launch form (consent checkbox + Privacy link at
-              common scroll positions) - park the pill bottom-left there. */}
-          {prelaunch && (
-            <PlaceholderBanner
-              side={pathname.startsWith('/products/') ? 'left' : 'right'}
-            />
-          )}
           <Header
             commerceHandoff={commerceHandoff}
             accountUrl={accountUrl}
             familyProducts={familyProducts}
+            shopOpen={shopOpen}
           />
           <main id="main-content" className="site-main">
             {children}
           </main>
-          {/* The desktop homepage is the scroll-pinned WebGL hero and owns its
-              own ending, so it ships no footer. The mobile homepage (MobileHome)
-              is an ordinary scrolling page - without a footer it ends in a void
-              with no nav/legal/newsletter. Render the footer there too, hidden
-              above the mobile breakpoint so the desktop hero is untouched. */}
-          {!isHomepage ? (
+          {!isHomepage && (
             <Footer
               company={company}
               turnstileSiteKey={turnstileSiteKey ?? null}
             />
-          ) : (
-            <div className="home-mobile-footer">
-              <Footer
-                company={company}
-                turnstileSiteKey={turnstileSiteKey ?? null}
-              />
-            </div>
           )}
         </div>
       </Aside.Provider>

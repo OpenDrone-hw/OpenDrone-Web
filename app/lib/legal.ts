@@ -14,10 +14,11 @@
  * rendered.
  */
 
-// NL = authoritative text synced from the compliance repo via scripts/sync-legal.mjs.
-// EN = hand-authored translations, stored in the webshop repo.
-// When a new legal language is added later (FR/DE), mirror this pattern:
-// add a new directory under app/content/legal/<lang>/ and a new SOURCES_<lang> map.
+// Three languages: NL, FR and EN, all stored in this repo. The Dutch text
+// prevails in case of conflict, except toward consumers, for whom the most
+// favourable reading applies (Art. 19 of the terms). Keep article numbering
+// identical across languages. A new language gets its own directory under
+// app/content/legal/<lang>/ and its own SOURCES_<lang> map.
 import algemeneVoorwaardenNl from '~/content/legal/nl/algemene-voorwaarden.md?raw';
 import privacyPolicyNl from '~/content/legal/nl/privacy-policy.md?raw';
 import cookiePolicyNl from '~/content/legal/nl/cookie-policy.md?raw';
@@ -25,6 +26,7 @@ import herroepingNl from '~/content/legal/nl/herroepingsformulier.md?raw';
 import vulnPolicyNl from '~/content/legal/nl/vulnerability-handling-policy.md?raw';
 import warrantyNl from '~/content/legal/nl/warranty.md?raw';
 import shippingNl from '~/content/legal/nl/shipping.md?raw';
+import recyclingNl from '~/content/legal/nl/recycling.md?raw';
 import endUseNl from '~/content/legal/nl/end-use-policy.md?raw';
 
 import algemeneVoorwaardenFr from '~/content/legal/fr/algemene-voorwaarden.md?raw';
@@ -34,6 +36,7 @@ import herroepingFr from '~/content/legal/fr/herroepingsformulier.md?raw';
 import vulnPolicyFr from '~/content/legal/fr/vulnerability-handling-policy.md?raw';
 import warrantyFr from '~/content/legal/fr/warranty.md?raw';
 import shippingFr from '~/content/legal/fr/shipping.md?raw';
+import recyclingFr from '~/content/legal/fr/recycling.md?raw';
 import endUseFr from '~/content/legal/fr/end-use-policy.md?raw';
 
 import algemeneVoorwaardenEn from '~/content/legal/en/algemene-voorwaarden.md?raw';
@@ -43,6 +46,7 @@ import herroepingEn from '~/content/legal/en/herroepingsformulier.md?raw';
 import vulnPolicyEn from '~/content/legal/en/vulnerability-handling-policy.md?raw';
 import warrantyEn from '~/content/legal/en/warranty.md?raw';
 import shippingEn from '~/content/legal/en/shipping.md?raw';
+import recyclingEn from '~/content/legal/en/recycling.md?raw';
 import endUseEn from '~/content/legal/en/end-use-policy.md?raw';
 
 export type LegalSlug =
@@ -53,6 +57,7 @@ export type LegalSlug =
   | 'vulnerability-handling-policy'
   | 'warranty'
   | 'shipping'
+  | 'recycling'
   | 'end-use-policy';
 
 const SOURCES_NL: Record<LegalSlug, string> = {
@@ -63,6 +68,7 @@ const SOURCES_NL: Record<LegalSlug, string> = {
   'vulnerability-handling-policy': vulnPolicyNl,
   warranty: warrantyNl,
   shipping: shippingNl,
+  recycling: recyclingNl,
   'end-use-policy': endUseNl,
 };
 
@@ -74,6 +80,7 @@ const SOURCES_EN: Record<LegalSlug, string> = {
   'vulnerability-handling-policy': vulnPolicyEn,
   warranty: warrantyEn,
   shipping: shippingEn,
+  recycling: recyclingEn,
   'end-use-policy': endUseEn,
 };
 
@@ -85,6 +92,7 @@ const SOURCES_FR: Record<LegalSlug, string> = {
   'vulnerability-handling-policy': vulnPolicyFr,
   warranty: warrantyFr,
   shipping: shippingFr,
+  recycling: recyclingFr,
   'end-use-policy': endUseFr,
 };
 
@@ -119,6 +127,9 @@ function inline(s: string) {
   // bold, italic, inline code, images, links
   let out = escapeHtml(s);
   out = out.replace(/`([^`]+)`/g, '<code>$1</code>');
+  // The model withdrawal form marks "delete as appropriate" with a literal
+  // "(*)"; keep it out of the emphasis rules below.
+  out = out.replace(/\(\*\)/g, '(&#42;)');
   out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   out = out.replace(/\*([^*]+)\*/g, '<em>$1</em>');
   // Images before links: `![alt](src)` is a link pattern with a `!` in
@@ -169,7 +180,11 @@ export function mdToHtml(src: string): string {
     const h = /^(#{1,6})\s+(.*)$/.exec(line);
     if (h) {
       const level = h[1].length;
-      out.push(`<h${level}>${inline(h[2].trim())}</h${level}>`);
+      // "Article 7bis: ..." / "Artikel 7bis: ..." gets id="art-7bis" so a
+      // link can land on it in every language.
+      const art = /^(?:Article|Artikel)\s+(\d+[a-z]*)\b/i.exec(h[2].trim());
+      const id = art ? ` id="art-${art[1].toLowerCase()}"` : '';
+      out.push(`<h${level}${id}>${inline(h[2].trim())}</h${level}>`);
       i++;
       continue;
     }
@@ -301,11 +316,11 @@ function cleanSource(src: string): string {
 }
 
 /**
- * Render a legal page to HTML for a given locale.
- * The Dutch version is legally authoritative for consumers residing in
- * Belgium; the English version is informative only. Both are bundled at
- * build time via Vite's `?raw` imports so they work on Oxygen's edge
- * runtime without filesystem access.
+ * Render a legal page to HTML for a given locale (NL, FR or EN).
+ * The Dutch version prevails in case of conflict, except toward consumers,
+ * for whom the most favourable reading applies (Art. 19 of the terms). All
+ * three are bundled at build time via Vite's `?raw` imports so they work on
+ * the edge runtime without filesystem access.
  */
 export function loadLegal(
   slug: LegalSlug,

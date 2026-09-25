@@ -5,7 +5,7 @@
   "meta_description": "OpenDrone is a community project, Incutec is a Belgian startup that started the initiative and hosts this website, sells the products here, and does what the community can't do on their own. Why everything is Open Source, and how the bills get paid.",
   "eyebrow": "Open Source",
   "title": "We sell hardware. The designs are yours.",
-  "lead": "Every OpenDrone product comes with its full source on GitHub. Incutec is the Belgian startup that started the initiative, hosts this website, sells the products here, and does what the community can't do on their own.",
+  "lead": "Every OpenDrone board comes with its full source on GitHub. Incutec is the Belgian startup that started the initiative, hosts this website, sells the products here, and does what the community can't do on their own.",
   "s1_title": "*01* · Job one: the community designs it",
   "s1_body": [
     "The direction of OpenDrone belongs to the people who fly. The community designs, reviews, tests and decides. We try to support where we can.",
@@ -13,7 +13,7 @@
   ],
   "s2_title": "*02* · Job two: Incutec brings it to market",
   "s2_body": [
-    "Incutec handles the part you cant fork: production, quality control, certification, distribution, and the legal responsibility for what is sold. That does not change because the design is open. The best support comes from community members helping each other; our job as a small team is vertical integration, building the capability to make these things well.",
+    "Incutec handles the part you cannot fork: production, quality control, certification, distribution, and the legal responsibility for what is sold. That does not change because the design is open. The best support comes from community members helping each other; our job as a small team is vertical integration, building the capability to make these things well.",
     "The community project needs no revenue; the company manufacturing and supporting the boards does. We don't make money from ads, affiliate trackers, resold analytics, bundled apps, or features locked behind firmware keys. Our analytics are cookieless (Plausible), and the product works whether or not this web store exists."
   ],
   "s3_title": "*03* · Why a company is in the loop",
@@ -28,7 +28,7 @@
   ],
   "s5_title": "*05* · What you buy",
   "s5_body": [
-    "A [finished, tested, packaged product](/collections/all), sold by Incutec. The price covers the PCB, the components, the assembly, the QC time, the packaging, the courier, VAT, support, and the engineering for the next revision. Nothing hidden in it. Where it is made today and what we are building toward is [the production page](/production)'s story."
+    "A [packaged product](/collections/all), inspected and flashed in Belgium, sold by Incutec. The price covers the PCB, the components, the assembly, the QC time, the packaging, VAT, support, and the engineering for the next revision. Shipping is charged at checkout at a flat rate per destination (see [Shipping](/en/shipping)). Where it is made today and what we are building toward is [the production page](/production)'s story."
   ],
   "s6_title": "*06* · Why CERN-OHL-S",
   "s6_body": [

@@ -23,12 +23,19 @@ routes = [
 [assets]
 directory = "dist/client"
 
+# Reconcile the preorder price steps every five minutes, in case Shopify
+# never delivered an orders/paid webhook. server.ts `scheduled` returns at
+# once unless SHOPIFY_PRICE_TIER_WRITE_ENABLED is "1".
+[triggers]
+crons = ["*/5 * * * *"]
+
 # Public, non-secret defaults (see .env.example). SESSION_SECRET is a
 # per-environment secret set with `wrangler secret put SESSION_SECRET` and is
 # never written here.
 [vars]
-# Shopify catalog reads are active, while every commerce write remains closed.
-# The domain, tokens, closed per-SKU policy and newsletter write switch are
-# configured separately by the reviewed runtime secret update.
-SHOPIFY_CHECKOUT_WRITE_ENABLED = "0"
-PUBLIC_COMING_SOON = "1"
+# Preorders are open: checkout writes on, coming-soon off. The domain,
+# tokens, per-SKU policy, webhook secret and price-step switch are Worker
+# secrets, set by scripts/launch-preorders.mjs.
+SHOPIFY_CHECKOUT_WRITE_ENABLED = "1"
+PUBLIC_COMING_SOON = "0"
+PUBLIC_PRELAUNCH = "0"

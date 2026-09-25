@@ -3,13 +3,14 @@ import {
   fetchJsonCached,
   fetchTextCached,
   peekJson,
+  prefetchBytes,
   prefetchImage,
 } from '~/lib/asset-prefetch';
 import {SCHEMATICS_VERSION} from '~/data/schematics-version';
 import {useIsMobile} from '~/lib/use-media-query';
 import {useLayerSwipe} from '~/lib/use-layer-swipe';
 import {Txt} from './Txt';
-import {copyText} from '~/lib/copy';
+import {copyFill, copyText} from '~/lib/copy';
 
 export type SchematicViewerProps = {
   /** Board handle whose schematic lives at /schematics/<handle>/manifest.json */
@@ -161,7 +162,21 @@ export function SchematicViewer({
       {rootMargin: '1800px 0px', threshold: 0.01},
     );
     io.observe(el);
-    return () => io.disconnect();
+    // On a desktop the first sheet is also loaded once the page is idle
+    // after load: parsing an SVG sheet takes the main thread for a few
+    // hundred ms on a slow CPU, which is a stall when it lands mid-scroll
+    // (the teardown sits far down the page) and nothing when it lands idle.
+    let idleId: number | undefined;
+    const wide =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(min-width: 901px)').matches;
+    if (wide && typeof requestIdleCallback !== 'undefined') {
+      idleId = requestIdleCallback(() => setInView(true), {timeout: 4000});
+    }
+    return () => {
+      io.disconnect();
+      if (idleId != null && typeof cancelIdleCallback !== 'undefined') cancelIdleCallback(idleId);
+    };
   }, []);
 
   // Load the active board's manifest + warm its sheets, then warm every sibling
@@ -186,8 +201,12 @@ export function SchematicViewer({
           activeRef.current,
           Math.max(0, sheets.length - 1),
         );
+        // The visible sheet is parsed now; the rest are only fetched (an SVG
+        // image parses on the main thread, ~200 ms a sheet on a slow CPU).
         sheets.forEach((s, i) =>
-          prefetchImage(sheetUrl(handle, s.file), {decode: i === visible}),
+          i === visible
+            ? prefetchImage(sheetUrl(handle, s.file), {decode: true})
+            : prefetchBytes(sheetUrl(handle, s.file)),
         );
       })
       .catch(() => {
@@ -216,7 +235,7 @@ export function SchematicViewer({
             .then((m) => {
               if (frugal) return;
               for (const s of m.sheets ?? [])
-                prefetchImage(sheetUrl(h, s.file));
+                prefetchBytes(sheetUrl(h, s.file));
             })
             .catch(() => {});
         }
@@ -503,7 +522,9 @@ export function SchematicViewer({
                     style={
                       {['--rel' as string]: i - active} as React.CSSProperties
                     }
-                    src={sheetUrl(dh, s.file)}
+                    // Only the active sheet and its neighbours carry a source:
+                    // every mounted SVG image is parsed on the main thread.
+                    src={Math.abs(i - active) <= 1 ? sheetUrl(dh, s.file) : undefined}
                     alt={`${s.label} ${copyText('product-chrome.schematic_sheet_alt_suffix') ?? ''}`}
                     loading="lazy"
                     decoding="async"
@@ -556,7 +577,9 @@ export function SchematicViewer({
                   className={`board-deck-dot${i === active ? ' is-active' : ''}${
                     i < active ? ' is-done' : ''
                   }`}
-                  aria-label={`Show ${s.label} sheet`}
+                  aria-label={copyFill('product-chrome.schematic_show_sheet', 'Show {sheet} sheet', {
+                    sheet: s.label,
+                  })}
                   aria-current={i === active ? 'true' : undefined}
                   onClick={() => setActive(i)}
                 />

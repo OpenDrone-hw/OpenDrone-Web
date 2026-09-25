@@ -5,43 +5,43 @@
       "id": "frame",
       "label": "airframe",
       "file": "frame.glb",
-      "bytes": 383740,
-      "verts": 37433
+      "bytes": 386524,
+      "verts": 38659
     },
     {
       "id": "drive",
       "label": "motors and props",
       "file": "drive.glb",
-      "bytes": 221428,
-      "verts": 32375
+      "bytes": 187380,
+      "verts": 21548
     },
     {
-      "id": "board-4in1-mini",
-      "label": "4in1-mini",
-      "file": "board-4in1-mini.glb",
-      "bytes": 2299636,
-      "verts": 153101
+      "id": "board-OpenESC-20x20-4in1-mini",
+      "label": "OpenESC-20x20-4in1-mini",
+      "file": "board-OpenESC-20x20-4in1-mini.glb",
+      "bytes": 605596,
+      "verts": 109303
     },
     {
-      "id": "board-OpenFC",
-      "label": "OpenFC",
-      "file": "board-OpenFC.glb",
-      "bytes": 1424528,
-      "verts": 89036
+      "id": "board-OpenFC-Lite-Mini",
+      "label": "OpenFC-Lite-Mini",
+      "file": "board-OpenFC-Lite-Mini.glb",
+      "bytes": 515020,
+      "verts": 89268
     },
     {
       "id": "board-OpenRX-Lite-UFL",
-      "label": "OpenRX Lite-UFL",
+      "label": "OpenRX-Lite-UFL",
       "file": "board-OpenRX-Lite-UFL.glb",
-      "bytes": 361580,
-      "verts": 58216
+      "bytes": 268836,
+      "verts": 39157
     },
     {
       "id": "video",
       "label": "video system",
       "file": "video.glb",
-      "bytes": 1277620,
-      "verts": 183062
+      "bytes": 1278312,
+      "verts": 182394
     }
   ]
 }

@@ -2,24 +2,26 @@
   "fileNumber": "01",
   "family": "4-in-1 ESC",
   "status": "preorder",
-  "statusNote": "ships from early October 2026",
+  "statusNote": "ships late October 2026",
   "hero": {
-    "line1": "An ESC (or 4)",
+    "line1": "",
     "line2Italic": "",
     "line3": "",
     "lead": ""
   },
   "whatIsThis": {
-    "intro": "An ESC turns battery power into AC signals needed for BLDC motors to spin. This one specifically is sensorless. Do that four times over: per motor a microcontroller running AM32, a gate driver, and six MOSFETs doing the power switching. It listens for throttle commands from the flight controller over DShot and reports motor RPM back on the same wire, which Betaflight uses to filter gyro noise at exactly the motors' frequencies. Current sensing is on board, exposed through the connector to the Flight Controller.",
+    "intro": "A 4-in-1 ESC: it takes battery power and drives four brushless motors. Each motor has its own microcontroller running AM32, a gate driver and six MOSFETs. It takes throttle from the flight controller over DShot and sends motor RPM back on the same wire, which Betaflight uses for RPM filtering. Current sensing is on board and goes to the flight controller through the connector.",
     "needs": [
       "A flight controller to command it (OpenFC Lite; the 8-pin cable comes in its box)",
       "Four brushless motors soldered to the pads",
       "A LiPo on the included XT connector and wires, with the included low-ESR capacitor across the battery pads",
-      "A frame, props, receiver, radio; the usual rest of the aircraft"
+      "A frame, props, receiver and radio"
     ],
-    "fit": "The layer between the flight controller's digital requests and the raw battery current that actually spins the props.",
-    "chain": "esc"
+    "fit": "It sits between the flight controller and the battery and powers the motors.",
+    "chain": "esc",
+    "hero": "Turns battery power into motor speed. 4in1: all four motor drivers on one board, stacked under the FC."
   },
+  "install": "Solder",
   "firmware": {
     "project": "AM32",
     "projectUrl": "https://github.com/am32-firmware/AM32",
@@ -257,35 +259,6 @@
     {
       "qty": "1×",
       "item": "OpenESC board"
-    },
-    {
-      "qty": "1×",
-      "item": "Battery connector, ESC-side half",
-      "note": "XT60 on 30×30, XT30 on 20×20"
-    },
-    {
-      "qty": "2×",
-      "item": "Silicone power wire, 100 mm, red and black",
-      "note": "12 AWG on 30×30, 16 AWG on 20×20; you solder the pigtail"
-    },
-    {
-      "qty": "1×",
-      "item": "Low-ESR electrolytic capacitor, 470 µF",
-      "note": "50 V on 30×30, 35 V on 20×20"
-    },
-    {
-      "qty": "4×",
-      "item": "Silicone soft-mount grommets",
-      "note": "M3 on 30×30, M2 on 20×20"
-    },
-    {
-      "qty": "1×",
-      "item": "Quick-start card"
-    },
-    {
-      "qty": "1×",
-      "item": "ESD bag (OpenDrone logo)",
-      "note": "everything above ships inside it"
     }
   ],
   "downloads": [],
@@ -346,6 +319,7 @@
   "optionAxis": "Model",
   "variants": {
     "20×20": {
+      "subtitle": "4in1 · AM32 · 40A · 2-6S · 20x20",
       "oshwaUid": "BE000028",
       "highlights": [
         [
@@ -356,9 +330,50 @@
           "Input",
           "2–6S"
         ]
+      ],
+      "keywords": [
+        "mini"
+      ],
+      "aliases": [
+        "20x20",
+        "2020",
+        "mini"
+      ],
+      "specsExtra": [
+        [
+          "Frame fit",
+          "20 × 20 mm stack frames, such as OpenFrame 3\" and 5\""
+        ]
+      ],
+      "inTheBox": [
+        {
+          "qty": "1×",
+          "item": "XT30 battery connector, ESC-side half"
+        },
+        {
+          "qty": "2×",
+          "item": "Silicone power wire, 16 AWG, 100 mm, red and black"
+        },
+        {
+          "qty": "1×",
+          "item": "Low-ESR electrolytic capacitor, 470 µF 35 V"
+        },
+        {
+          "qty": "4×",
+          "item": "Silicone soft-mount grommets, M2"
+        },
+        {
+          "qty": "1×",
+          "item": "Quick-start card"
+        },
+        {
+          "qty": "1×",
+          "item": "ESD bag"
+        }
       ]
     },
     "30×30": {
+      "subtitle": "4in1 · AM32 · 60A · 2-8S · 30x30",
       "oshwaUid": "BE000029",
       "repoUrl": "https://github.com/OpenDrone-hw/OpenESC-30x30",
       "highlights": [
@@ -616,9 +631,63 @@
           "in4": "Ground plane",
           "b": "Signal + components"
         }
-      }
+      },
+      "aliases": [
+        "30x30",
+        "3030"
+      ],
+      "specsExtra": [
+        [
+          "Frame fit",
+          "30.5 × 30.5 mm stack frames, such as OpenFrame 5\""
+        ],
+        [
+          "Burst",
+          "70 A / channel"
+        ],
+        [
+          "Weight",
+          "15 g"
+        ]
+      ],
+      "placeholders": [
+        "Burst",
+        "Weight"
+      ],
+      "inTheBox": [
+        {
+          "qty": "1×",
+          "item": "XT60 battery connector, ESC-side half"
+        },
+        {
+          "qty": "2×",
+          "item": "Silicone power wire, 12 AWG, 100 mm, red and black"
+        },
+        {
+          "qty": "1×",
+          "item": "Low-ESR electrolytic capacitor, 470 µF 50 V"
+        },
+        {
+          "qty": "4×",
+          "item": "Silicone soft-mount grommets, M3"
+        },
+        {
+          "qty": "1×",
+          "item": "Quick-start card"
+        },
+        {
+          "qty": "1×",
+          "item": "ESD bag"
+        }
+      ]
     }
   },
+  "keywords": [
+    "stack",
+    "4in1",
+    "4-in-1",
+    "esc"
+  ],
   "stack": {
     "adds": "flight controller",
     "partners": [
@@ -628,5 +697,71 @@
       }
     ],
     "matchOption": "Model"
-  }
+  },
+  "specsExtra": [
+    [
+      "MCU",
+      "AT32F421, one per motor"
+    ],
+    [
+      "Burst",
+      "45 A / channel"
+    ],
+    [
+      "Weight",
+      "7.5 g"
+    ]
+  ],
+  "placeholders": [
+    "Burst",
+    "Weight"
+  ],
+  "plugs": [
+    {
+      "name": "FC plug",
+      "kind": "jst-sh",
+      "pins": [
+        {
+          "label": "VBAT",
+          "kind": "power",
+          "title": "Battery voltage"
+        },
+        {
+          "label": "GND",
+          "kind": "ground",
+          "title": "Ground"
+        },
+        {
+          "label": "CUR",
+          "kind": "signal",
+          "title": "Current sensor"
+        },
+        {
+          "label": "NC",
+          "kind": "nc",
+          "title": "Not connected. Telemetry runs over bidir DShot."
+        },
+        {
+          "label": "M1",
+          "kind": "motor",
+          "title": "Motor 1"
+        },
+        {
+          "label": "M2",
+          "kind": "motor",
+          "title": "Motor 2"
+        },
+        {
+          "label": "M3",
+          "kind": "motor",
+          "title": "Motor 3"
+        },
+        {
+          "label": "M4",
+          "kind": "motor",
+          "title": "Motor 4"
+        }
+      ]
+    }
+  ]
 }

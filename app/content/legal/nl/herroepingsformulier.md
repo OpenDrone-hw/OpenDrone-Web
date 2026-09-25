@@ -1,9 +1,5 @@
 # Modelformulier voor Herroeping
 
-**EU standard withdrawal form: must accompany every B2C order.**
-**Required by Art. VI.49 §2 WER (Belgium) / Directive 2011/83/EU, Annex I.B**
-**Failure to provide = 14-day withdrawal period extends to 12 months.**
-
 ---
 
 ## MODELFORMULIER VOOR HERROEPING
@@ -44,14 +40,15 @@ ____________________
 
 ## Instructies voor de consument
 
-1. U heeft **14 kalenderdagen** bedenktijd vanaf de dag nadat u het product heeft ontvangen.
+1. U heeft **14 kalenderdagen** bedenktijd vanaf de dag nadat u het product heeft ontvangen. Komt één bestelling in meerdere pakketten aan, dan begint de termijn op de dag nadat u het laatste artikel heeft ontvangen.
 2. U kunt dit formulier invullen en terugsturen per e-mail naar contact@opendrone.be of per post naar bovenstaand adres.
 3. U kunt ook op een andere ondubbelzinnige wijze verklaren dat u de overeenkomst wilt herroepen.
 4. Na herroeping heeft u **14 dagen** om het product terug te sturen.
 5. **Terugzendkosten** zijn voor uw rekening.
-6. Incutec BV vergoedt alle betalingen (inclusief standaard leveringskosten) uiterlijk **14 dagen** nadat wij het product hebben terugontvangen of u bewijs van terugzending heeft geleverd.
+6. Incutec BV betaalt alle betalingen, inclusief de standaard leveringskosten, terug uiterlijk **14 dagen** nadat zij uw herroeping heeft ontvangen. Zij mag wachten tot zij het product heeft terugontvangen of u heeft aangetoond dat u het heeft teruggezonden, naargelang welk tijdstip eerst valt.
 7. Terugbetaling geschiedt via hetzelfde betaalmiddel als bij uw oorspronkelijke aankoop.
-8. U mag het product uitpakken en testen zoals in een winkel; enkel de waardevermindering door gebruik dat verder gaat, wordt in mindering gebracht. Voor elektronicacomponenten gaan solderen, montage, het aansluiten van batterijvoeding of motoren, het flashen van andere firmware en vlieggebruik verder dan die beoordeling; controleren via USB niet (zie Algemene Voorwaarden Art. 5.8).
+8. U mag het product uitpakken en testen zoals in een winkel; enkel de waardevermindering door gebruik dat verder gaat, wordt in mindering gebracht. Voor elektronicacomponenten gaan solderen, montage, het aansluiten van batterijvoeding of motoren en vlieggebruik verder dan die beoordeling; controleren via USB niet (zie Algemene Voorwaarden Art. 5.8).
+9. **Pre-order nog niet geleverd?** U kunt de bestelling tot de levering op elk moment herroepen, zonder opgave van redenen. Laat "Ontvangen op" leeg. Wij betalen al uw betalingen terug binnen **14 dagen** nadat wij uw herroeping hebben ontvangen (Algemene Voorwaarden Art. 7bis.4).
 
 ---
 

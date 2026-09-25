@@ -35,7 +35,13 @@ interface NewsletterSignupProps {
    * `notify-<handle>` tag on the Resend contact. Registering interest in
    * the SKU is the point, not the subscription itself.
    */
-  notify?: {productHandle: string; productTitle: string} | null;
+  notify?: {
+    productHandle: string;
+    productTitle: string;
+    /** A sold-out product that already sold: "email me when it is back in
+     *  stock" instead of the launch-list wording. */
+    restock?: boolean;
+  } | null;
 }
 
 type TurnstileRenderOpts = {
@@ -192,6 +198,11 @@ export function NewsletterSignup({
   const isWide = variant === 'wide';
   const isFooter = variant === 'footer';
   const isNotify = Boolean(notify);
+  const isRestock = Boolean(notify?.restock);
+  // Restock wording: copy keys with plain fallbacks until the copy file
+  // carries them.
+  const say = (key: string, fallback: string) =>
+    copyText(`newsletter.${key}`) ?? fallback;
   // Notify mode never short-circuits to the subscribed panel: an existing
   // subscriber still needs to submit to get the per-product notify tag.
   const message = clientError ?? serverMessage;
@@ -220,15 +231,21 @@ export function NewsletterSignup({
         .join(' ')}
     >
       <div>
-        <Txt
-          id={
-            isNotify
-              ? 'newsletter.signup_eyebrow_notify'
-              : 'newsletter.signup_eyebrow'
-          }
-          as="p"
-          className="gold-tag font-mono text-[12px] uppercase tracking-[0.2em] text-[var(--color-gold)] mb-0.5"
-        />
+        {isRestock ? (
+          <p className="gold-tag font-mono text-[12px] uppercase tracking-[0.2em] text-[var(--color-gold-text)] mb-0.5">
+            {say('signup_eyebrow_restock', 'Back in stock')}
+          </p>
+        ) : (
+          <Txt
+            id={
+              isNotify
+                ? 'newsletter.signup_eyebrow_notify'
+                : 'newsletter.signup_eyebrow'
+            }
+            as="p"
+            className={`font-mono text-[12px] uppercase tracking-[0.2em] mb-0.5 ${isFooter ? 'text-[var(--color-text-muted)]' : 'gold-tag text-[var(--color-gold-text)]'}`}
+          />
+        )}
         {/* The heading keeps its DOM id in code: `aria-labelledby` on the
             section points at it, and <Txt> spends its own `id` prop on the
             copy key. */}
@@ -240,13 +257,17 @@ export function NewsletterSignup({
               : 'font-display text-sm font-bold tracking-[0.04em] uppercase text-[var(--color-text)] mb-0.5'
           }
         >
-          <Txt
-            id={
-              isNotify
-                ? 'newsletter.signup_title_notify'
-                : 'newsletter.signup_title'
-            }
-          />
+          {isRestock ? (
+            say('signup_title_restock', 'Email me when it can be ordered.')
+          ) : (
+            <Txt
+              id={
+                isNotify
+                  ? 'newsletter.signup_title_notify'
+                  : 'newsletter.signup_title'
+              }
+            />
+          )}
         </h3>
         <p
           className={
@@ -255,7 +276,12 @@ export function NewsletterSignup({
               : 'text-[12px] text-[var(--color-text-muted)] leading-snug'
           }
         >
-          {isNotify ? (
+          {isRestock ? (
+            say(
+              'signup_lede_restock',
+              'One email when {product} can be ordered again, plus occasional engineering notes. One click to leave, any time.',
+            ).replace('{product}', notify!.productTitle)
+          ) : isNotify ? (
             <>
               <Txt id="newsletter.signup_lede_notify_before" />{' '}
               {notify!.productTitle}{' '}
@@ -272,13 +298,22 @@ export function NewsletterSignup({
         <div className="flex flex-col gap-1">
           <p
             role="status"
-            className="gold-tag inline-flex items-center gap-1.5 font-mono text-[12px] uppercase tracking-[0.14em] text-[var(--color-gold)]"
+            className="gold-tag inline-flex items-center gap-1.5 font-mono text-[12px] uppercase tracking-[0.14em] text-[var(--color-gold-text)]"
           >
             <Check size={13} strokeWidth={2.5} aria-hidden="true" />
-            <Txt id="newsletter.signup_notify_badge" />
+            {isRestock ? (
+              say('signup_restock_badge', 'We will email you')
+            ) : (
+              <Txt id="newsletter.signup_notify_badge" />
+            )}
           </p>
           <p className="text-[12px] text-[var(--color-text-muted)] leading-snug">
-            {serverMessage}
+            {isRestock
+              ? say(
+                  'signup_restock_done',
+                  'You are on the list. We will email you when this product is back in stock.',
+                )
+              : serverMessage}
           </p>
         </div>
       ) : (
@@ -349,9 +384,13 @@ export function NewsletterSignup({
             disabled={isSubmitting}
             className={[
               'font-mono text-xs uppercase tracking-[0.14em] font-bold',
-              'bg-[var(--color-gold-fill)] text-[var(--color-on-accent)]',
+              // The footer form sits under every page's own gold action, so
+              // it takes a neutral outline: gold stays on the page's action.
+              isFooter
+                ? 'border border-[var(--color-border-strong)] text-[var(--color-text)] bg-transparent hover:border-[var(--color-text)]'
+                : 'bg-[var(--color-gold-fill)] text-[var(--color-on-accent)] hover:bg-[var(--color-gold-fill-hover)]',
               'px-5 py-2.5 min-h-[44px] inline-flex items-center justify-center rounded-sm',
-              'transition-colors hover:bg-[var(--color-gold-fill-hover)]',
+              'transition-colors',
               'disabled:opacity-60 disabled:cursor-not-allowed',
               isWide || isFooter ? 'sm:shrink-0' : '',
             ].join(' ')}

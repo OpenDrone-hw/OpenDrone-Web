@@ -57,7 +57,6 @@ export function ProductGhostTile({
     <div className="ghost-tile" aria-hidden="true">
       <div className="ghost-tile-rule">
         <span className="ghost-tile-type">{type || 'OpenDrone'}</span>
-        <span className="ghost-tile-fig">Fig. -</span>
       </div>
       <div className="ghost-tile-figure">
         <svg

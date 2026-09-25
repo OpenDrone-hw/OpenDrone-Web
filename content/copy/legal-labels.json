@@ -71,18 +71,21 @@
   "shipping": {
     "en": {
       "title": "Shipping & Delivery",
-      "eyebrow": "Legal",
-      "description": "Shipping options, delivery times, and country restrictions."
+      "eyebrow": "Help",
+      "description": "Shipping options, delivery times, and country restrictions.",
+      "back": "← Support"
     },
     "nl": {
       "title": "Verzending & Levering",
-      "eyebrow": "Juridisch",
-      "description": "Verzendopties, leveringstermijnen en landbeperkingen."
+      "eyebrow": "Hulp",
+      "description": "Verzendopties, leveringstermijnen en landbeperkingen.",
+      "back": "← Support"
     },
     "fr": {
       "title": "Expédition & Livraison",
-      "eyebrow": "Juridique",
-      "description": "Options d’expédition, délais de livraison et restrictions par pays."
+      "eyebrow": "Aide",
+      "description": "Options d’expédition, délais de livraison et restrictions par pays.",
+      "back": "← Support"
     }
   },
   "warranty": {
@@ -100,6 +103,23 @@
       "title": "Garantie",
       "eyebrow": "Juridique",
       "description": "Garantie légale de conformité de 2 ans sur le matériel OpenDrone vendu par Incutec BV."
+    }
+  },
+  "recycling": {
+    "en": {
+      "title": "Recycling and take-back",
+      "eyebrow": "Legal",
+      "description": "Returning OpenDrone electronics and packaging for recycling, and the producer registration numbers of Incutec BV."
+    },
+    "nl": {
+      "title": "Recyclage en terugname",
+      "eyebrow": "Juridisch",
+      "description": "OpenDrone-elektronica en -verpakking terugbrengen voor recyclage, en de producentenregistratienummers van Incutec BV."
+    },
+    "fr": {
+      "title": "Recyclage et reprise",
+      "eyebrow": "Juridique",
+      "description": "Rapporter l’électronique et les emballages OpenDrone pour le recyclage, et les numéros d’enregistrement de producteur d’Incutec BV."
     }
   },
   "security": {
@@ -185,6 +205,59 @@
       "title": "Conditions Générales de Vente",
       "eyebrow": "Juridique",
       "description": "Conditions de vente entre Incutec BV et les clients OpenDrone."
+    }
+  },
+  "shipping_glance": {
+    "en": {
+      "title": "Ship dates",
+      "rows": [
+        [
+          "Consumer orders",
+          "Approved EU destinations"
+        ],
+        [
+          "Preorders",
+          "Dates and conditions on the product offer"
+        ],
+        [
+          "EU and US retailers",
+          "Bulk enquiries at /wholesale"
+        ]
+      ]
+    },
+    "nl": {
+      "title": "Verzenddata",
+      "rows": [
+        [
+          "Consumenten",
+          "Goedgekeurde EU-bestemmingen"
+        ],
+        [
+          "Pre-orders",
+          "Data en voorwaarden in het productaanbod"
+        ],
+        [
+          "Winkels in de EU en de VS",
+          "Offerteaanvragen via /wholesale"
+        ]
+      ]
+    },
+    "fr": {
+      "title": "Dates d'expédition",
+      "rows": [
+        [
+          "Consommateurs",
+          "Destinations approuvées de l’UE"
+        ],
+        [
+          "Précommandes",
+          "Dates et conditions dans l’offre"
+        ],
+        [
+          "Revendeurs de l’UE et des États-Unis",
+          "Demandes de devis via /wholesale"
+        ]
+      ]
     }
   }
 }

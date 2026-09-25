@@ -4,7 +4,22 @@ import {readdirSync} from 'node:fs';
 import {
   PRODUCT_CONTENT,
   PRODUCT_CONTENT_FALLBACK,
+  hiddenWhileSoldOut,
+  isInternalSku,
+  variantDisplayName,
+  lineDisplayName,
+  specSheet,
+  terseSpecValue,
+  columnSpecs,
+  isPlaceholderSpec,
+  pageContent,
+  ACCESSORY_SPECS,
+  shortShipPromise,
+  shipMonth,
+  PLUG_KINDS,
+  PLUG_PIN_KINDS,
   type BoxItem,
+  type Plug,
   type ChapterPin,
   type DownloadAsset,
   type ProductContent,
@@ -63,6 +78,11 @@ function assertBoxItems(items: BoxItem[], where: string) {
   for (const [i, item] of items.entries()) {
     assert.equal(typeof item.item, 'string', `${where}: inTheBox[${i}].item`);
     assert.notEqual(item.item, '', `${where}: inTheBox[${i}].item is empty`);
+    assert.deepEqual(
+      Object.keys(item).filter((k) => k !== 'qty' && k !== 'item'),
+      [],
+      `${where}: inTheBox[${i}] carries only qty and item`,
+    );
   }
 }
 
@@ -101,6 +121,35 @@ function assertPins(pins: ChapterPin[], where: string) {
   }
 }
 
+function assertPlugs(plugs: Plug[], where: string) {
+  assert.ok(Array.isArray(plugs), `${where}: plugs must be an array`);
+  for (const [i, plug] of plugs.entries()) {
+    const at = `${where}: plugs[${i}]`;
+    assert.equal(typeof plug.name, 'string', `${at}.name`);
+    assert.notEqual(plug.name, '', `${at}.name is empty`);
+    assert.ok(PLUG_KINDS.includes(plug.kind), `${at}.kind "${plug.kind}"`);
+    if (plug.kind === 'rail') {
+      assert.ok(plug.rails?.length, `${at}: a rail entry needs rails`);
+      assert.equal(plug.pins, undefined, `${at}: a rail entry has no pins`);
+      for (const [j, rail] of plug.rails.entries()) {
+        for (const key of ['voltage', 'mode', 'current'] as const) {
+          assert.equal(typeof rail[key], 'string', `${at}.rails[${j}].${key}`);
+          assert.notEqual(rail[key], '', `${at}.rails[${j}].${key} is empty`);
+        }
+      }
+      continue;
+    }
+    assert.ok(plug.pins && plug.pins.length >= 2, `${at}: a plug needs its pins`);
+    assert.equal(plug.rails, undefined, `${at}: a plug has no rails`);
+    for (const [j, pin] of plug.pins.entries()) {
+      assert.equal(typeof pin.label, 'string', `${at}.pins[${j}].label`);
+      assert.notEqual(pin.label, '', `${at}.pins[${j}].label is empty`);
+      assert.ok(PLUG_PIN_KINDS.includes(pin.kind), `${at}.pins[${j}].kind "${pin.kind}"`);
+      if (pin.title !== undefined) assert.equal(typeof pin.title, 'string', `${at}.pins[${j}].title`);
+    }
+  }
+}
+
 function assertVariant(variant: VariantContent, where: string) {
   assert.ok(Array.isArray(variant.highlights), `${where}: highlights`);
   for (const [i, row] of variant.highlights.entries()) {
@@ -111,6 +160,7 @@ function assertVariant(variant: VariantContent, where: string) {
   if (variant.specs) assertSpecRows(variant.specs, where, true);
   if (variant.inTheBox) assertBoxItems(variant.inTheBox, where);
   if (variant.pins) assertPins(variant.pins, where);
+  if (variant.plugs) assertPlugs(variant.plugs, where);
 }
 
 /** The fields {@link ProductContent} declares without `?`. */
@@ -194,6 +244,15 @@ describe('product content shape', () => {
         }
       });
 
+      it('has well-formed plugs and no legacy connector rows', () => {
+        if (content.plugs) assertPlugs(content.plugs, handle);
+        const legacy = (o: object) => ['connectors', 'connectorsNote'].filter((k) => k in o);
+        assert.deepEqual(legacy(content), [], `${handle}: connectors were replaced by plugs`);
+        for (const [key, variant] of Object.entries(content.variants ?? {})) {
+          assert.deepEqual(legacy(variant), [], `${handle}/${key}: connectors were replaced by plugs`);
+        }
+      });
+
       it('has a coherent teardown', () => {
         if (!content.teardown) return;
         assertPins(content.teardown.pins, handle);
@@ -213,4 +272,204 @@ describe('product content shape', () => {
       });
     });
   }
+});
+
+describe('hiddenWhileSoldOut', () => {
+  const card = (handle: string, open: boolean[]) => ({
+    handle,
+    variants: {nodes: open.map((availableForSale) => ({availableForSale}))},
+  });
+  it('hides a sold-out part with no editorial file', () => {
+    assert.equal(hiddenWhileSoldOut(card('battery-strap', [false])), true);
+  });
+  it('lists that part once a variant can be bought', () => {
+    assert.equal(hiddenWhileSoldOut(card('openframe-spares', [false, true])), false);
+  });
+  it('keeps an editorial product listed when sold out', () => {
+    assert.equal(hiddenWhileSoldOut(card('openmotor', [false, false])), false);
+  });
+});
+
+describe('openmotor 5-inch variant', () => {
+  it('keeps the unconfirmed stator size and KV marked as placeholders', () => {
+    const content = PRODUCT_CONTENT.openmotor;
+    const v = content?.variants?.['2207'];
+    assert.ok(content && v);
+    assert.equal(isPlaceholderSpec(content, '2207', 'Stator'), true);
+    assert.equal(isPlaceholderSpec(content, '2207', 'KV'), true);
+    assert.equal(isPlaceholderSpec(content, '1604', 'KV'), false);
+    assert.ok(!v.highlights.some(([k]) => k === 'KV'));
+    assert.ok(!JSON.stringify(PRODUCT_CONTENT.openmotor).includes('22 × 7'));
+  });
+  it('shows the option value "2207" as 5" and keeps its SKU internal', () => {
+    assert.equal(variantDisplayName('openmotor', '2207'), '5"');
+    assert.equal(isInternalSku('openmotor', '2207'), true);
+    assert.equal(isInternalSku('openmotor', '1604'), false);
+    assert.equal(variantDisplayName('openesc', '30×30'), '30x30');
+    assert.equal(variantDisplayName(null, 'Lite'), 'Lite');
+  });
+
+  it('never names the 5" motor 2207 in a cart line name', () => {
+    assert.equal(lineDisplayName('openmotor', 'OpenMotor', '2207'), 'OpenMotor 5"');
+    assert.equal(lineDisplayName('openesc', 'OpenESC', 'Default Title'), 'OpenESC');
+  });
+});
+
+describe('short ship promise', () => {
+  const target =
+    'ships about 10 weeks after its target is reached: by 11 March 2027 if the target is reached by 31 December 2026, otherwise you choose a refund or to wait';
+  it('turns a funding-target promise into one short line', () => {
+    assert.deepEqual(shortShipPromise(target), {
+      kind: 'target',
+      label: 'Funding target',
+      text: 'ships by 11 March 2027 if reached',
+    });
+  });
+  it('keeps a dated promise, capitalised', () => {
+    assert.deepEqual(shortShipPromise('ships late October 2026'), {
+      kind: 'date',
+      label: null,
+      text: 'Ships late October 2026',
+    });
+    assert.equal(shortShipPromise(null), null);
+  });
+  it('shortens a dated promise to month and year', () => {
+    assert.equal(shipMonth('ships late October 2026'), 'Oct 2026');
+    assert.equal(shipMonth('ships after its target is reached'), null);
+    assert.equal(shipMonth(null), null);
+  });
+});
+
+describe('spec sheet', () => {
+  it('writes mirrored values the way a spec sheet does', () => {
+    assert.equal(terseSpecValue('Input', '3–6S LiPo (9.0–25.2 V)'), '3-6S');
+    assert.equal(terseSpecValue('Current sensor', 'On-board, 165 A'), '0-165A');
+    assert.equal(terseSpecValue('BEC', '10 V switchable + 5 V always-on, 3.5 A'), '5V + 10V, 3.5A');
+    assert.equal(terseSpecValue('MCU', 'AT32F421, one per motor'), '4x AT32F421');
+    assert.equal(terseSpecValue('Motor outputs', '4× DShot, bidirectional'), '4x bidir DShot');
+    assert.equal(terseSpecValue('Size', '26.9 × 26.9 mm'), '26.9x26.9 mm');
+  });
+  it('names the grommet screw size from the box on the mounting row', () => {
+    const box: BoxItem[] = [{qty: '4x', item: 'M2 soft-mount grommets'}];
+    assert.equal(terseSpecValue('Mounting', '20 × 20 mm, 3.0 mm holes', box), '20x20, M2');
+    assert.equal(terseSpecValue('Mounting', '20 × 20 mm, 3.0 mm holes'), '20x20');
+  });
+  it('puts one column per variant and drops rows with no value', () => {
+    const sheet = specSheet({
+      specs: [['Barometer', 'None'], ['Input', '3–8S LiPo'], ['IMU', 'BMI270'], ['KV', '2850']],
+      inTheBox: [],
+      variants: {
+        a: {specs: [['Input', '3–6S LiPo']]},
+        b: {specs: [['KV', null]]},
+      } as unknown as ProductContent['variants'],
+    });
+    assert.deepEqual(sheet.columns, ['a', 'b']);
+    assert.deepEqual(
+      sheet.rows.map((r) => [r.label, r.values]),
+      [
+        ['Gyro', ['BMI270', 'BMI270']],
+        ['Input', ['3-6S', '3-8S']],
+        ['KV', ['2850', null]],
+      ],
+    );
+  });
+  it('adds the Install row after PCB in every column', () => {
+    const sheet = specSheet({
+      specs: [['PCB', '6-layer'], ['Input', '3–6S LiPo']],
+      inTheBox: [],
+      install: 'Solder',
+    });
+    assert.deepEqual(
+      sheet.rows.map((r) => [r.label, r.values]),
+      [
+        ['Input', ['3-6S']],
+        ['PCB', ['6-layer']],
+        ['Install', ['Solder']],
+      ],
+    );
+  });
+  it('never shows the internal 2207 name for the 5" motor', () => {
+    assert.doesNotMatch(variantDisplayName('openmotor', '2207'), /2207/);
+  });
+});
+
+describe('storefront spec rows and placeholders', () => {
+  it('merges specsExtra after the mirrored rows and tier deltas', () => {
+    const content = {
+      specs: [['MCU', 'One per motor'], ['Input', '3–8S LiPo']],
+      specsExtra: [['MCU', 'AT32F421, one per motor'], ['Weight', '7 g']],
+      placeholders: ['Weight'],
+      inTheBox: [],
+      variants: {
+        a: {specs: [['Input', '3–6S LiPo']], specsExtra: [['Weight', '4 g']], placeholders: ['Weight']},
+        b: {},
+      },
+    } as unknown as ProductContent;
+    assert.deepEqual(columnSpecs(content, 'a'), [
+      ['MCU', 'AT32F421, one per motor'],
+      ['Input', '3–6S LiPo'],
+      ['Weight', '4 g'],
+    ]);
+    assert.equal(isPlaceholderSpec(content, 'a', 'Weight'), true);
+    assert.equal(isPlaceholderSpec(content, 'b', 'Weight'), true);
+    assert.equal(isPlaceholderSpec(content, 'a', 'MCU'), false);
+    const sheet = specSheet(content);
+    assert.deepEqual(sheet.rows.find((r) => r.key === 'Weight')?.paths, [
+      'variants.a.specsExtra.0',
+      'specsExtra.1',
+    ]);
+    assert.deepEqual(sheet.rows.find((r) => r.key === 'Weight')?.values, ['4 g (est.)', '7 g (est.)']);
+    assert.ok(!sheet.rows.find((r) => r.key === 'MCU')?.values.some((v) => v?.includes('(est.)')));
+  });
+  it('names only keys the same level carries as placeholders', () => {
+    const keysOf = (...layers: Array<Array<[string, string | null]> | undefined>) =>
+      new Set(layers.flatMap((l) => (l ?? []).filter(([, v]) => v !== null).map(([k]) => k)));
+    for (const [handle, c] of Object.entries(PRODUCT_CONTENT)) {
+      const own = keysOf(c.specs, c.specsExtra);
+      for (const key of c.placeholders ?? []) assert.ok(own.has(key), `${handle}: placeholder ${key}`);
+      for (const [tier, v] of Object.entries(c.variants ?? {})) {
+        const mine = keysOf(v.specs, v.specsExtra);
+        for (const key of v.placeholders ?? []) assert.ok(mine.has(key), `${handle} ${tier}: placeholder ${key}`);
+      }
+    }
+    for (const [handle, a] of Object.entries(ACCESSORY_SPECS)) {
+      const own = keysOf(a.specs);
+      for (const key of a.placeholders ?? []) assert.ok(own.has(key), `${handle}: placeholder ${key}`);
+      assertSpecRows(a.specs, handle, false);
+      assert.equal(PRODUCT_CONTENT[handle], undefined, `${handle} has an editorial file`);
+    }
+  });
+  it('gives an accessory page its spec rows on the fallback content', () => {
+    const [handle, a] = Object.entries(ACCESSORY_SPECS)[0] ?? [];
+    assert.ok(handle && a);
+    assert.deepEqual(pageContent(handle).specs, a.specs);
+    assert.deepEqual(pageContent('no-such-handle').specs, []);
+  });
+});
+
+describe('stack plug pin order', () => {
+  // The FC's ESC plug and the ESC's FC plug are the two ends of one cable:
+  // every pin but 4 carries the same signal (checked against both
+  // schematics). Pin 4 is ESC telemetry on the FC and not connected on the
+  // ESC, which sends telemetry over bidir DShot.
+  it('matches between the FC and the ESC', () => {
+    const esc = PRODUCT_CONTENT.openesc?.plugs?.find((p) => p.name === 'FC plug');
+    const fcs = [
+      PRODUCT_CONTENT['openfc-lite']?.plugs,
+      ...Object.values(PRODUCT_CONTENT['openfc-lite']?.variants ?? {}).map((v) => v.plugs),
+    ]
+      .filter((list): list is Plug[] => Boolean(list))
+      .map((list) => list.find((p) => p.name === 'ESC plug'));
+    assert.ok(esc?.pins, 'openesc has an FC plug');
+    assert.ok(fcs.length > 0);
+    for (const fc of fcs) {
+      assert.ok(fc?.pins, 'openfc-lite has an ESC plug');
+      assert.equal(fc.pins.length, esc.pins.length);
+      fc.pins.forEach((pin, i) => {
+        if (i === 3) return;
+        assert.equal(pin.label, esc.pins![i].label, `pin ${i + 1}`);
+      });
+      assert.equal(esc.pins[3].kind, 'nc');
+    }
+  });
 });

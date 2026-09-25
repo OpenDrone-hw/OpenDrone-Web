@@ -1,11 +1,3 @@
----
-type: compliance
-status: final
-owner: incutec
-last_updated: 2026-04-28
-tags: [policy, end-use, export-control]
----
-
 # End-Use Policy
 
 **Issuer:** Incutec BV
@@ -37,13 +29,13 @@ Incutec BV does not knowingly sell, supply, or distribute goods for use in:
 ## 4. Operational Implementation
 
 ### 4.1 Geographic restrictions
-The webshop applies country-level restrictions corresponding to (a) destinations subject to EU and UN restrictive measures, and (b) destinations on the Active-Conflict Block list maintained in `compliance/export-sanctions/sanctions-screening.md`. The Active-Conflict Block list is reviewed quarterly against the Armed Conflict Location & Event Data Project (ACLED) and the Uppsala Conflict Data Program (UCDP).
+The webshop delivers only to addresses in EU member states. It does not deliver to Russia, Belarus or any destination under EU or UN restrictive measures.
 
-### 4.2 Customer screening
-Direct-to-consumer orders are screened against EU consolidated sanctions lists. Business-to-business orders are additionally subject to end-use review and, where applicable, the no-re-export-to-Russia clause required by Article 12g of EU Regulation 833/2014.
+### 4.2 No re-export
+Every order is subject to the no-re-export clause for Russia and Belarus required by Article 12g of EU Regulation 833/2014 and Article 8g of Regulation (EC) 765/2006 (General Terms and Conditions, Article 18.2).
 
 ### 4.3 Acceptable end-use clause
-Order placement on the Incutec webshop constitutes acceptance of the Acceptable End-Use clause set out in the General Terms and Conditions (`compliance/webshop/algemene-voorwaarden.md`).
+Order placement on the Incutec webshop constitutes acceptance of the Acceptable End-Use clause set out in the General Terms and Conditions ([/en/algemene-voorwaarden](/en/algemene-voorwaarden#art-18), Article 18).
 
 ### 4.4 Downstream resale
 This policy applies to direct sales by Incutec BV. Resale by commercial customers established in the European Union is governed by the contractual no-re-export clause referenced in §4.2 and is not subject to additional audit obligations imposed by Incutec.
@@ -51,7 +43,7 @@ This policy applies to direct sales by Incutec BV. Resale by commercial customer
 ## 5. Limitations
 
 This policy:
-- does not classify any party to a conflict; the geographic restrictions in §4.1 apply uniformly to active-conflict territories regardless of the political status of the parties involved;
+- does not classify any party to a conflict;
 - does not restrict purchases by individuals who are employed by defence-related entities and who purchase goods in a private capacity for non-military use;
 - does not constitute a representation that goods supplied by Incutec BV will not, through means outside the control of Incutec BV, reach restricted end-uses;
 - does not preclude employees, contractors, or shareholders of Incutec BV from supporting humanitarian or civil-society causes in their personal capacity.
@@ -61,12 +53,8 @@ This policy:
 - EU Regulation 2021/821 (dual-use): https://eur-lex.europa.eu/eli/reg/2021/821/oj/eng
 - EU Regulation 833/2014 (Russia): https://eur-lex.europa.eu/eli/reg/2014/833/oj
 - EU Regulation 765/2006 (Belarus): https://eur-lex.europa.eu/eli/reg/2006/765/oj
-- ACLED: https://acleddata.com/
-- UCDP: https://ucdp.uu.se/
-- `compliance/export-sanctions/sanctions-screening.md`
-- `compliance/webshop/algemene-voorwaarden.md`
 
 ---
 
 **Signed for Incutec BV:**
-Stan Coene, Bestuurder
+Stan Coene, Director

@@ -1,0 +1,9 @@
+{
+  "$comment": "The people behind OpenDrone, shown by app/components/TeamStrip.tsx. Same names, roles and photos as the Incutec site (site/src/components/home/Team.astro); photos in public/team/.",
+  "people": [
+    {"name": "Stan Coene", "role": "Founder · Electronics", "img": "/team/stan.jpg"},
+    {"name": "Iebe Nijs", "role": "Co-founder · Operations", "img": "/team/iebe.jpg"},
+    {"name": "Bastian Springer", "role": "PCB engineering", "img": "/team/bastian.jpg"},
+    {"name": "Thomas Deseure", "role": "Mechanical engineering", "img": "/team/thomas.jpg"}
+  ]
+}

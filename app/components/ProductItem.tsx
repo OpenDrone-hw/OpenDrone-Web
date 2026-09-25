@@ -10,10 +10,11 @@ import type {
 } from '~/lib/product-shapes';
 import {useVariantUrl} from '~/lib/variants';
 import {useProductStatus, useRoadmapStatus} from '~/lib/coming-soon';
-import {isPurchasableStatus} from '~/lib/product-content';
+import {PRODUCT_CONTENT, imagesAreRenders, isPurchasableStatus} from '~/lib/product-content';
 import {AddToCartButton} from './AddToCartButton';
-import {StackQuickAdd, type StackOffer} from './StackQuickAdd';
+import {ShipChip} from './ShipChip';
 import {copyText} from '~/lib/copy';
+import {tileFamilyLabel} from '~/lib/families';
 
 /** Hover quick-add for catalog cards: the card's own hand-off link, so
  *  ordering never requires opening the PDP. */
@@ -38,6 +39,7 @@ export type ProductModelChip = {
 export function ProductItem({
   product,
   loading,
+  imageSizes,
   models,
   feature,
   lead,
@@ -46,13 +48,16 @@ export function ProductItem({
   to,
   title,
   priceOverride,
+  priceFrom,
   imageOverride,
   comingSoon,
   quickAdd,
-  stackOffers,
 }: {
   product: ProductCardFragment;
   loading?: 'eager' | 'lazy';
+  /** The card image's rendered width, for the srcset; defaults to a
+   *  full-width card on phones. */
+  imageSizes?: string;
   models?: ProductModelChip[];
   /** Wide horizontal layout for a single-product category row, so the
    *  flagship fills the rail instead of leaving it empty. */
@@ -72,6 +77,9 @@ export function ProductItem({
   title?: string;
   /** Price override - the specific variant's price for per-variant cards. */
   priceOverride?: MoneyV2;
+  /** The shown price is the cheapest of several: print "from". Unset, a
+   *  card without `priceOverride` decides from the product's price range. */
+  priceFrom?: boolean;
   /** Image override - the specific variant's image for per-variant cards.
    *  Without it every tier card falls back to the product's featuredImage
    *  (the first uploaded render), so 20×20 and 30×30 show the same board. */
@@ -81,9 +89,6 @@ export function ProductItem({
   comingSoon?: boolean;
   /** Hover quick-add: adds this card's variant without opening the PDP. */
   quickAdd?: ProductQuickAdd;
-  /** Stack offers layered on the quick-add (FC/ESC cards): hovering the add
-   *  button also offers the size-matched pair in one click. */
-  stackOffers?: StackOffer[];
 }) {
   const variantUrl = useVariantUrl(product.handle);
 
@@ -102,6 +107,26 @@ export function ProductItem({
   const price = priceOverride ?? product.priceRange.minVariantPrice;
   const image = imageOverride ?? product.featuredImage;
   const hasModels = Boolean(models && models.length > 0);
+  // "from" when the card shows the cheapest of several prices: a product
+  // card without a per-variant price override whose variants differ.
+  const fromPrice =
+    priceFrom ??
+    (!priceOverride &&
+      Number(product.priceRange.maxVariantPrice.amount) >
+        Number(product.priceRange.minVariantPrice.amount));
+  // "per motor" and the like: what one unit of the price buys.
+  const priceUnit = PRODUCT_CONTENT[product.handle]?.priceUnit;
+  const priceLabel = (amount: string, currencyCode: string, from: boolean) => (
+    <span className="product-card-price">
+      {from ? (
+        <span className="product-card-price-from">
+          {copyText('product-chrome.card_price_from') ?? 'from'}{' '}
+        </span>
+      ) : null}
+      {formatPrice(amount, currencyCode)}
+      {priceUnit ? <span className="product-card-price-unit"> {priceUnit}</span> : null}
+    </span>
+  );
 
   // Product-level coming-soon (PUBLIC_COMING_SOON / per-SKU override):
   // unlike the `comingSoon` prop (unreleased tier, non-clickable tile) the
@@ -118,16 +143,18 @@ export function ProductItem({
   const quickAddNode =
     quickAdd && !comingSoon && !launchPending && !feature ? (
       <div className="product-card-quickadd">
-        <StackQuickAdd offers={stackOffers ?? []}>
           <AddToCartButton
             className="product-card-quickadd-btn"
             href={quickAdd.href}
             product={product.handle}
             disabled={!quickAdd.available}
           >
-            {copyText('product-chrome.card_add_to_cart')}
+            {!quickAdd.available
+              ? (copyText('product-chrome.buy_stock_out') ?? 'Sold out')
+              : status === 'preorder'
+                ? (copyText('product-chrome.buy_cta_preorder') ?? 'Pre-order')
+                : copyText('product-chrome.card_add_to_cart')}
           </AddToCartButton>
-        </StackQuickAdd>
       </div>
     ) : null;
 
@@ -138,8 +165,28 @@ export function ProductItem({
   // A pre-order product wears the pre-order badge instead of its roadmap
   // chip: the buyable state is the news on a card. Unreleased tiers
   // (`comingSoon` prop) keep their own badge.
-  const badge =
-    status === 'preorder' && !comingSoon ? (
+  // Nothing on this card can be ordered: say so on the card, the same word
+  // the product page uses, instead of a live-looking card.
+  const soldOut =
+    showPrice &&
+    !comingSoon &&
+    (quickAdd
+      ? !quickAdd.available
+      : product.variants.nodes.length > 0 &&
+        product.variants.nodes.every((v) => !v.availableForSale));
+  // The card's own variant (the quick-add one, else the first campaign
+  // SKU) says when it ships, in the same ship chip as the product page,
+  // drawer and cart.
+  const cardVariant =
+    product.variants.nodes.find((v) => quickAdd && v.cartAddUrl === quickAdd.href) ??
+    product.variants.nodes.find((v) => v.campaign) ??
+    null;
+  const campaign = status === 'preorder' && !comingSoon ? (cardVariant?.campaign ?? null) : null;
+  const badge = soldOut ? (
+    <span className="product-card-badge is-soldout">
+      {copyText('product-chrome.buy_stock_out') ?? 'Sold out'}
+    </span>
+  ) : campaign ? null : status === 'preorder' && !comingSoon ? (
       <span className="product-card-badge is-preorder">
         {copyText('product-chrome.card_badge_preorder')}
       </span>
@@ -185,7 +232,7 @@ export function ProductItem({
           <Link
             key={m.value}
             className="product-card-model"
-            prefetch="viewport"
+            prefetch="intent"
             to={`${variantUrl}?${encodeURIComponent(m.axis)}=${encodeURIComponent(
               m.value,
             )}`}
@@ -206,7 +253,7 @@ export function ProductItem({
       <article className="product-feature">
         <Link
           className="product-feature-media"
-          prefetch="viewport"
+          prefetch="intent"
           to={variantUrl}
           aria-hidden="true"
           tabIndex={-1}
@@ -217,6 +264,7 @@ export function ProductItem({
               data={image}
               loading={loading}
               sizes="(min-width: 64em) 340px, 100vw"
+              maxWidth={960}
             />
           ) : (
             <ProductGhostTile
@@ -228,22 +276,22 @@ export function ProductItem({
         <div className="product-feature-body">
           <Link
             className="product-feature-headline"
-            prefetch="viewport"
+            prefetch="intent"
             to={variantUrl}
           >
             <div className="product-card-row">
               <h2 className="product-card-title">{product.title}</h2>
-              {showPrice ? (
-                <span className="product-card-price">
-                  {formatPrice(
+              {showPrice
+                ? priceLabel(
                     product.priceRange.minVariantPrice.amount,
                     product.priceRange.minVariantPrice.currencyCode,
-                  )}
-                </span>
-              ) : null}
+                    Number(product.priceRange.maxVariantPrice.amount) >
+                      Number(product.priceRange.minVariantPrice.amount),
+                  )
+                : null}
             </div>
             {'productType' in product && product.productType ? (
-              <p className="product-card-meta">{product.productType}</p>
+              <p className="product-card-meta">{tileFamilyLabel(product.productType)}</p>
             ) : null}
           </Link>
           {lead ? <p className="product-feature-lead">{lead}</p> : null}
@@ -255,15 +303,23 @@ export function ProductItem({
 
   const inner = (
     <>
-      <div className={`product-card-media${image ? '' : ' is-empty'}`}>
+      <div
+        className={`product-card-media${image ? '' : ' is-empty'}${
+          image && imagesAreRenders(product.handle) ? ' is-render' : ''
+        }`}
+      >
         {badge}
+        {image && imagesAreRenders(product.handle) ? (
+          <span className="render-chip">{copyText('product-chrome.render_chip') ?? 'Render'}</span>
+        ) : null}
         {image ? (
           <SmoothImage
             alt={image.altText || product.title}
             aspectRatio="1/1"
             data={image}
             loading={loading}
-            sizes="(min-width: 45em) 400px, 100vw"
+            sizes={imageSizes ?? '(min-width: 45em) 400px, 100vw'}
+            maxWidth={800}
           />
         ) : (
           <ProductGhostTile
@@ -275,14 +331,16 @@ export function ProductItem({
       <div className="product-card-body">
         <div className="product-card-row">
           <h2 className="product-card-title">{displayTitle}</h2>
-          {showPrice ? (
-            <span className="product-card-price">
-              {formatPrice(price.amount, price.currencyCode)}
-            </span>
-          ) : null}
+          {showPrice ? priceLabel(price.amount, price.currencyCode, fromPrice) : null}
         </div>
+        {campaign && !soldOut ? (
+          <ShipChip
+            promise={campaign.shipPromise}
+            className="product-card-ship"
+          />
+        ) : null}
         {'productType' in product && product.productType ? (
-          <p className="product-card-meta">{product.productType}</p>
+          <p className="product-card-meta">{tileFamilyLabel(product.productType)}</p>
         ) : null}
       </div>
     </>
@@ -305,7 +363,7 @@ export function ProductItem({
         <div className="product-card has-quickadd" onPointerMove={onSpotMove}>
           <Link
             className="product-card-link"
-            prefetch="viewport"
+            prefetch="intent"
             viewTransition
             to={url}
           >
@@ -318,7 +376,7 @@ export function ProductItem({
     return (
       <Link
         className="product-card"
-        prefetch="viewport"
+        prefetch="intent"
         viewTransition
         to={url}
         onPointerMove={onSpotMove}
@@ -329,7 +387,7 @@ export function ProductItem({
   }
 
   // Card with a model strip. The card chrome (border, hover lift) stays on
-  // the outer element, but it can't be a <Link prefetch="viewport"> - the chips are their own
+  // the outer element, but it can't be a <Link prefetch="intent"> - the chips are their own
   // links and nesting anchors is invalid HTML. So the tile body is one link
   // and each model is a sibling link below it.
   return (
@@ -339,7 +397,7 @@ export function ProductItem({
     >
       <Link
         className="product-card-link"
-        prefetch="viewport"
+        prefetch="intent"
         viewTransition
         to={variantUrl}
       >

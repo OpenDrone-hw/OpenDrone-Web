@@ -102,6 +102,24 @@ cart dependencies for local tests. Explicit founder approval and a separately
 reviewed cart surface are required before opening production. Never use a
 production flag change or a JSON `live` override as a test shortcut.
 
+**Launch preorders:** on the founder's go, `node scripts/launch-preorders.mjs
+--apply` opens the store (README "Launch preorders"). After the deploy the
+script flips only the boards with a first production batch to `status-beta`
+(OpenFC-Lite, OpenFC-Lite-Mini, OpenESC-20x20, OpenESC-30x30). OpenRX,
+OpenFrame and OpenMotor are funding targets: they keep their status until
+their target is reached and the supplier order is placed. Update the static
+statuses in `roadmap-data.ts` in a follow-up PR, after the flip is live.
+
+**A SKU crosses a price step:** the `orders/paid` webhook and the Worker's
+five-minute reconcile write the new price to Shopify (`priceTiers` in
+`content/preorders.json`); the last step clears the compare-at price. While
+Shopify is still under the step, that SKU is closed. If one stays closed,
+check `SHOPIFY_PRICE_TIER_WRITE_ENABLED=1` and the `write_products` scope.
+
+**A funding target is reached:** place the supplier order, then set that
+batch's `ships` in `content/preorders.json`. New orders fall into the next
+batch. Customer mail about the target and the date stays a human send.
+
 **Emergency lock:** the JSON `development` override locks that handle's lifecycle
 resolution. Either `PUBLIC_COMING_SOON` other than `0` or checkout writes
 other than `1` closes cart POSTs before catalog access. Review the deployed

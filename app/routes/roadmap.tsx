@@ -14,6 +14,10 @@ import {
   type RoadmapItem,
 } from '~/lib/roadmap-data';
 import {voteShares, voteTally} from '~/lib/votes';
+import {launchedStatusFlags} from '~/lib/launched-roadmap';
+import {CAMPAIGN} from '~/lib/catalog-client';
+import {comingSoonFlag} from '~/lib/coming-soon';
+import {checkoutOpen} from '~/lib/shopify-cart-action';
 import {BOARD_ART_VERSION} from '~/data/board-art-version';
 import {assetUrl} from '~/lib/asset-url';
 
@@ -56,7 +60,10 @@ export async function loader({context}: Route.LoaderArgs) {
     undefined,
     context.waitUntil,
   );
-  return {roadmap: resolveRoadmap(flags)};
+  // Same launched-state overlay as the root loader, so the board and the
+  // product pages agree on the boards with a paid first batch.
+  const shopOpen = !comingSoonFlag(env) && checkoutOpen(env);
+  return {roadmap: resolveRoadmap(launchedStatusFlags(flags, shopOpen, CAMPAIGN))};
 }
 
 // ROADMAP, STATUS_ORDER and the vote-candidate rule live in

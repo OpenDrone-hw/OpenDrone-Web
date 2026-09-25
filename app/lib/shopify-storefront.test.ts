@@ -1,11 +1,6 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {
-  createCheckout,
-  fetchShopifyCatalog,
-  getCart,
-  storefrontEndpoint,
-} from './shopify-storefront.ts';
+import {createCart, fetchShopifyCatalog, getCart, productRating, storefrontEndpoint} from './shopify-storefront.ts';
 
 const ENV = {
   SHOPIFY_STORE_DOMAIN: 'open-drone-test.myshopify.com',
@@ -151,17 +146,17 @@ describe('Shopify hosted checkout handoff', () => {
       }).variables;
       return response({
         cartCreate: {
-          cart: {id: 'gid://shopify/Cart/test?key=secret', checkoutUrl: 'https://checkout.opendrone.be/checkouts/cn/abc', lines: {pageInfo: {hasNextPage: false}, nodes: []}},
+          cart: {id: 'gid://shopify/Cart/test?key=secret', checkoutUrl: 'https://checkout.opendrone.be/checkouts/cn/abc', totalQuantity: 0, cost: {subtotalAmount: {amount: '0.0', currencyCode: 'EUR'}, totalAmount: {amount: '0.0', currencyCode: 'EUR'}}, lines: {pageInfo: {hasNextPage: false}, nodes: []}},
           userErrors: [],
           warnings: [],
         },
       });
     };
-    const url = await createCheckout(
+    const url = (await createCart(
       ENV,
       [{merchandiseId: 'gid://shopify/ProductVariant/1', quantity: 2}],
       fetcher,
-    );
+    )).checkoutUrl;
     assert.equal(url, 'https://checkout.opendrone.be/checkouts/cn/abc');
     assert.deepEqual(variables, {input: {lines: [{
       merchandiseId: 'gid://shopify/ProductVariant/1', quantity: 2,
@@ -171,12 +166,12 @@ describe('Shopify hosted checkout handoff', () => {
   it('rejects checkout redirects to an unexpected host', async () => {
     const fetcher: typeof fetch = async () => response({
       cartCreate: {
-        cart: {id: 'gid://shopify/Cart/test?key=secret', checkoutUrl: 'https://attacker.test/checkout', lines: {pageInfo: {hasNextPage: false}, nodes: []}},
+        cart: {id: 'gid://shopify/Cart/test?key=secret', checkoutUrl: 'https://attacker.test/checkout', totalQuantity: 0, cost: {subtotalAmount: {amount: '0.0', currencyCode: 'EUR'}, totalAmount: {amount: '0.0', currencyCode: 'EUR'}}, lines: {pageInfo: {hasNextPage: false}, nodes: []}},
         userErrors: [], warnings: [],
       },
     });
     await assert.rejects(
-      createCheckout(ENV, [{merchandiseId: 'gid://shopify/ProductVariant/1', quantity: 1}], fetcher),
+      createCart(ENV, [{merchandiseId: 'gid://shopify/ProductVariant/1', quantity: 1}], fetcher),
       /unexpected origin/,
     );
   });
@@ -187,10 +182,10 @@ describe('Shopify hosted checkout handoff', () => {
       'https://checkout.opendrone.be:8443/checkouts/x',
     ]) {
       const fetcher: typeof fetch = async () => response({
-        cartCreate: {cart: {id: 'gid://shopify/Cart/test?key=secret', checkoutUrl, lines: {pageInfo: {hasNextPage: false}, nodes: []}}, userErrors: [], warnings: []},
+        cartCreate: {cart: {id: 'gid://shopify/Cart/test?key=secret', checkoutUrl, totalQuantity: 0, cost: {subtotalAmount: {amount: '0.0', currencyCode: 'EUR'}, totalAmount: {amount: '0.0', currencyCode: 'EUR'}}, lines: {pageInfo: {hasNextPage: false}, nodes: []}}, userErrors: [], warnings: []},
       });
       await assert.rejects(
-        createCheckout(ENV, [{merchandiseId: 'gid://shopify/ProductVariant/1', quantity: 1}], fetcher),
+        createCart(ENV, [{merchandiseId: 'gid://shopify/ProductVariant/1', quantity: 1}], fetcher),
         /unexpected origin/,
       );
     }
@@ -199,13 +194,34 @@ describe('Shopify hosted checkout handoff', () => {
   it('rejects Shopify cart warnings instead of silently adjusting lines', async () => {
     const fetcher: typeof fetch = async () => response({
       cartCreate: {
-        cart: {id: 'gid://shopify/Cart/test?key=secret', checkoutUrl: 'https://checkout.opendrone.be/checkouts/cn/abc', lines: {pageInfo: {hasNextPage: false}, nodes: []}},
+        cart: {id: 'gid://shopify/Cart/test?key=secret', checkoutUrl: 'https://checkout.opendrone.be/checkouts/cn/abc', totalQuantity: 0, cost: {subtotalAmount: {amount: '0.0', currencyCode: 'EUR'}, totalAmount: {amount: '0.0', currencyCode: 'EUR'}}, lines: {pageInfo: {hasNextPage: false}, nodes: []}},
         userErrors: [], warnings: [{message: 'Quantity adjusted'}],
       },
     });
     await assert.rejects(
-      createCheckout(ENV, [{merchandiseId: 'gid://shopify/ProductVariant/1', quantity: 1}], fetcher),
+      createCart(ENV, [{merchandiseId: 'gid://shopify/ProductVariant/1', quantity: 1}], fetcher),
       /cartCreate failed/,
     );
+  });
+});
+
+describe('productRating', () => {
+  it('reads the rating metafield JSON and the count', () => {
+    assert.deepEqual(
+      productRating('{"value":"4.7","scale_min":"1.0","scale_max":"5.0"}', '12'),
+      {average: 4.7, count: 12},
+    );
+  });
+
+  it('accepts a bare number, in case the app writes one', () => {
+    assert.deepEqual(productRating('4.5', '3'), {average: 4.5, count: 3});
+  });
+
+  it('is null without reviews, with a zero count, or on junk', () => {
+    assert.equal(productRating(undefined, undefined), null);
+    assert.equal(productRating('{"value":"4.7"}', undefined), null);
+    assert.equal(productRating('{"value":"4.7"}', '0'), null);
+    assert.equal(productRating('not json', '5'), null);
+    assert.equal(productRating('{"value":"0"}', '5'), null);
   });
 });

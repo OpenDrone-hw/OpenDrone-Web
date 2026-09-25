@@ -88,6 +88,31 @@ describe('Shopify newsletter ownership', () => {
     assert.deepEqual(bodies[1].variables.input?.tags, ['newsletter']);
   });
 
+  it('tags a subscriber from a country not sold direct with that country', async () => {
+    const bodies: Array<{query: string; variables: {input?: {tags?: string[]}}}> = [];
+    mock.method(globalThis, 'fetch', async (
+      _input: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      const body = JSON.parse(String(init?.body)) as (typeof bodies)[number];
+      bodies.push(body);
+      return body.query.includes('NewsletterCustomerByEmail')
+        ? Response.json({data: {customers: {nodes: []}}})
+        : Response.json({data: {customerCreate: {customer: customer('SUBSCRIBED'), userErrors: []}}});
+    });
+    assert.equal(await subscribeWithShopify(ENV, 'pilot@example.com', 'openrx', 'us'), 'subscribed');
+    assert.deepEqual(bodies[1].variables.input?.tags, ['newsletter', 'notify-openrx', 'country-US']);
+    bodies.length = 0;
+    await subscribeWithShopify(ENV, 'pilot@example.com', undefined, 'NL');
+    // An open EU country is sold direct and gets no country tag.
+    assert.deepEqual(bodies[1].variables.input?.tags, ['newsletter']);
+    for (const country of ['RU', null, 'ZZ']) {
+      bodies.length = 0;
+      await subscribeWithShopify(ENV, 'pilot@example.com', undefined, country);
+      assert.deepEqual(bodies[1].variables.input?.tags, ['newsletter'], String(country));
+    }
+  });
+
   it('unsubscribes the exact customer and verifies the returned state', async () => {
     let call = 0;
     mock.method(globalThis, 'fetch', async () => ++call === 1

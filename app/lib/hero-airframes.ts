@@ -24,6 +24,7 @@ import {
   type HeroSlotId,
   type PartCommerce,
 } from '~/lib/builder/registry';
+import {copyText} from '~/lib/copy';
 
 export type HeroAirframe = {
   /** Stable id; also the GLB filename suffix (`frame5.glb` → key `"5"`). */
@@ -50,6 +51,14 @@ export const HERO_AIRFRAMES: HeroAirframe[] = AIRFRAMES.map((a) => ({
 
 export const HERO_AIRFRAME_KEYS: string[] = HERO_AIRFRAMES.map((a) => a.key);
 export const DEFAULT_HERO_SIZE: string = HERO_AIRFRAMES[0].key;
+
+/** The size's display label, editable as `home.airframe_<key>_label`; the
+ *  registry label is the fallback. */
+export function airframeLabel(key: string): string {
+  return (
+    copyText(`home.airframe_${key}_label`) ?? findAirframe(key)?.label ?? key
+  );
+}
 
 export function findAirframe(key: string): HeroAirframe | undefined {
   return HERO_AIRFRAMES.find((a) => a.key === key);

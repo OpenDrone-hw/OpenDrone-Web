@@ -115,16 +115,17 @@ export const ROADMAP: RoadmapItem[] = [
     // Samples ordered, nothing under test yet (2026-08-15).
     status: 'in-progress',
     productPath: '/products/openframe',
-    // OpenDrone-hw/OpenFrame carries status-in-progress but is still a private
-    // repo (purged supplier quotes remain reachable through refs/pull/8), so
-    // it has no public link yet and its topic cannot be fetched. Add the link
+    // OpenDrone-hw/OpenFrame carries status-in-progress but is a private repo,
+    // so it has no public link and its topic cannot be fetched. Add the link
     // the day the repo goes public; until then the static value IS the status.
     repo: 'OpenFrame',
   },
   {
     id: 'motors',
     added: '2026-08-11',
+    // Samples ordered from the supplier, nothing under test yet.
     status: 'in-progress',
+    productPath: '/products/openmotor',
   },
   {
     id: 'openvtx',
@@ -350,4 +351,33 @@ export function isConceptHandle(
   flags: Record<string, ProductStatus> = {},
 ): boolean {
   return isConceptStatus(statusForHandle(handle, flags));
+}
+
+/**
+ * The status chip a product page and a card show while the selected variant
+ * sells in a preorder campaign, in place of the roadmap word. The roadmap
+ * word describes the design (alpha: testers fly it), not what a buyer gets
+ * for their money now, and "alpha" reads as "cannot be bought" on a page that
+ * takes full payment. The campaign says what the order is:
+ *
+ * - `first-batch`: the next unit comes out of a paid production batch with
+ *   its own ship date (FC and ESC batch 1).
+ * - `funding`: the next unit counts toward a funding target; the supplier
+ *   order is placed once it is reached (receivers, frames, motors).
+ * - `funded`: the target is reached and the next unit fills the batch after it.
+ *
+ * Null outside a campaign: the roadmap chip stands.
+ */
+export type CampaignChip = 'first-batch' | 'funding' | 'funded';
+
+export function campaignChip(
+  campaign:
+    | {paidStock: boolean; target: number | null; targetReached: boolean}
+    | null
+    | undefined,
+): CampaignChip | null {
+  if (!campaign) return null;
+  if (campaign.paidStock) return 'first-batch';
+  if (campaign.target !== null && !campaign.targetReached) return 'funding';
+  return 'funded';
 }

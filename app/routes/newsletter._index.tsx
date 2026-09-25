@@ -4,8 +4,9 @@ import {buildSeoMeta} from '~/lib/seo';
 import {checkRateLimit, clientIp} from '~/lib/rate-limit';
 import {verifyTurnstile} from '~/lib/turnstile';
 import {subscribeWithShopify} from '~/lib/growth/shopify-newsletter';
+import {visitorCountry} from '~/lib/visitor-country';
 import {sendWelcomeEmail} from '~/lib/growth/welcome-email';
-import {archivePosts} from '~/lib/posts';
+import {archivePosts, shopIsOpen} from '~/lib/posts';
 import {
   ReleaseRow,
   type ReleaseRowArticle,
@@ -48,8 +49,8 @@ export const meta: Route.MetaFunction = () => {
   ];
 };
 
-export function loader() {
-  const visible: ReleaseRowArticle[] = archivePosts().map((p) => ({
+export function loader({context}: Route.LoaderArgs) {
+  const visible: ReleaseRowArticle[] = archivePosts(shopIsOpen(context.env)).map((p) => ({
     id: p.handle,
     handle: p.handle,
     title: p.title,
@@ -220,6 +221,7 @@ export async function action({request, context}: Route.ActionArgs) {
     context.env,
     email,
     notifyProduct ?? undefined,
+    visitorCountry(request),
   );
   const subscribed =
     shopifyResult === 'subscribed' ||

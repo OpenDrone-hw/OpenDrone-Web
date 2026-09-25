@@ -1,14 +1,13 @@
 import {useEffect, useRef, useState} from 'react';
 import {animate, motion, useMotionValue, useReducedMotion} from 'motion/react';
-import {HERO_AIRFRAMES} from '~/lib/hero-airframes';
+import {HERO_AIRFRAMES, airframeLabel} from '~/lib/hero-airframes';
+import {copyText} from '~/lib/copy';
 
 // Sizes + labels come from the single hero registry (app/lib/hero-airframes.ts)
 // so adding an airframe is a config edit there, not a change here.
 type Size = string;
 const SIZES: Size[] = HERO_AIRFRAMES.map((a) => a.key);
-const LABELS: Record<Size, string> = Object.fromEntries(
-  HERO_AIRFRAMES.map((a) => [a.key, a.label]),
-);
+const sizeLabel = airframeLabel;
 
 const PAD = 5; // px - must match .hero-size-slider padding in app.css
 // The "other" side for the 2-position drag. NOTE: the drag-scrub gesture is
@@ -118,7 +117,7 @@ export function HeroSizeSlider({
     <div
       className="hero-size-slider"
       role="group"
-      aria-label="Airframe size"
+      aria-label={copyText('home.airframe_size_aria') ?? 'Airframe size'}
       aria-busy={busy || undefined}
       ref={trackRef}
     >
@@ -135,7 +134,7 @@ export function HeroSizeSlider({
         onDragEnd={onDragEnd}
         whileTap={{scale: 0.97}}
       >
-        <span className="hero-size-slider__thumb-label">{LABELS[active]}</span>
+        <span className="hero-size-slider__thumb-label">{sizeLabel(active)}</span>
         {busy ? (
           <span className="hero-size-slider__spinner" aria-hidden="true" />
         ) : null}
@@ -145,11 +144,11 @@ export function HeroSizeSlider({
           key={s}
           type="button"
           className={`hero-size-slider__opt${active === s ? ' is-active' : ''}`}
-          aria-label={LABELS[s]}
+          aria-label={sizeLabel(s)}
           aria-pressed={value === s}
           onClick={() => onChange(s)}
         >
-          {LABELS[s]}
+          {sizeLabel(s)}
         </button>
       ))}
     </div>

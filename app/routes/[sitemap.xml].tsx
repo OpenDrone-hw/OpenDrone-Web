@@ -17,12 +17,14 @@ import type {Route} from './+types/[sitemap.xml]';
 const STATIC_PATHS = [
   '/',
   '/products',
+  '/preorder',
   '/open-source',
   '/production',
   '/roadmap',
   '/timeline',
   '/firmware-partners',
   '/newsletter',
+  '/wholesale',
 ];
 
 const LEGAL_SLUGS = [
@@ -32,6 +34,7 @@ const LEGAL_SLUGS = [
   'herroepingsrecht',
   'shipping',
   'warranty',
+  'recycling',
   'security',
   'cookies',
   'end-use',

@@ -2,15 +2,16 @@
   "fileNumber": "04",
   "family": "Carbon Frame",
   "status": "preorder",
-  "statusNote": "ships in about 10 weeks",
+  "imagesAreRenders": true,
+  "statusNote": "ships about 10 weeks after its target is reached (target deadline 31 December 2026)",
   "hero": {
-    "line1": "The body",
-    "line2Italic": "everything else",
-    "line3": "mounts to.",
+    "line1": "",
+    "line2Italic": "",
+    "line3": "",
     "lead": ""
   },
   "whatIsThis": {
-    "intro": "The frame is the skeleton: the one part with no electrons in it, and the one that takes the crashes. T700 carbon plates and arms, a 226 mm wheelbase for 5-inch props, 30.5 and 20 mm stack mounting in the middle, 16x16 motor mounts at the arm tips, and an aluminium camera mount at the nose. It decides what fits: stack height, camera width, prop size. Less obviously, it decides what your gyro feels. Every arm has a resonant frequency, and flex and vibration land straight in the flight controller's filters, so stiffness is a flight characteristic, not a cosmetic one. OpenFC Lite and OpenESC drop in without spacers.",
+    "intro": "A freestyle frame in T700 carbon, in two sizes: 3-inch (141 mm wheelbase) and 5-inch (226 mm). The stack mounts in the middle, the motors at the arm tips, and the camera in an aluminium mount at the front. A stiff frame vibrates less, which gives the flight controller a cleaner gyro signal. The 20 × 20 OpenFC Lite and OpenESC fit both sizes. The 30 × 30 versions fit the 5-inch frame only.",
     "needs": [
       "A flight controller and ESC stack bolted in the middle",
       "Four motors and props at the arm tips",
@@ -18,61 +19,69 @@
       "A LiPo and a battery strap",
       "A radio and goggles on the ground"
     ],
-    "fit": "Everything else mounts to it; it turns a bag of boards into an aircraft.",
-    "chain": "frame"
+    "fit": "Everything else bolts onto it.",
+    "chain": "frame",
+    "hero": "T700 carbon. Holds the stack, motors and camera, and takes the crashes."
   },
   "firmware": {
     "project": "-"
   },
-  "repoUrl": "https://github.com/OpenDrone-hw/OpenFrame",
+  "repoUrl": "",
   "teardown": {
     "pins": [
       {
         "ref": "①",
-        "part": "Top plate: carbon, carries the camera + VTX bay"
+        "part": "Top plate: 2.5 mm carbon"
       },
       {
         "ref": "②",
-        "part": "Arms: replaced individually",
-        "cost": "×4"
+        "part": "Middle plate: 3 mm carbon"
       },
       {
         "ref": "③",
-        "part": "Bottom plate: dual stack pattern"
+        "part": "Bottom plate: 3 mm carbon"
       },
       {
         "ref": "④",
-        "part": "M3 aluminium standoffs + hardware kit"
+        "part": "Arms: 6 mm carbon, replaced individually",
+        "cost": "×4"
+      },
+      {
+        "ref": "⑤",
+        "part": "Cross brace: 6 mm carbon"
+      },
+      {
+        "ref": "⑥",
+        "part": "Aluminium side plates: the camera mount",
+        "cost": "×2"
+      },
+      {
+        "ref": "⑦",
+        "part": "18 mm aluminium standoffs",
+        "cost": "×4"
+      },
+      {
+        "ref": "⑧",
+        "part": "Silicone anti-slip pad"
+      },
+      {
+        "ref": "⑨",
+        "part": "M3 hardware kit"
+      },
+      {
+        "ref": "⑩",
+        "part": "TPU arm boots, camera and antenna mounts: print files, not included",
+        "cost": "print"
       }
     ],
     "frameViewer": {
-      "src": "/models/frame5.glb"
+      "src": "/models/od5/frame.glb"
     }
   },
   "inTheBox": [
     {
       "qty": "1×",
       "item": "Top plate + bottom plate"
-    },
-    {
-      "qty": "4×",
-      "item": "5\" arms"
-    },
-    {
-      "qty": "1×",
-      "item": "Hardware kit"
-    },
-    {
-      "qty": "1×",
-      "item": "Camera mount"
-    },
-    {
-      "qty": "1×",
-      "item": "VTX antenna tube clamp"
-    },
-    {
-      "qty": "1×",
-      "item": "Build card"
     }
   ],
   "downloads": [],
@@ -82,45 +91,54 @@
       "226 mm"
     ],
     [
-      "Prop size",
+      "Props",
       "5\""
     ],
     [
-      "Arm thickness",
+      "Arms",
       "6 mm carbon"
     ],
     [
-      "Plate thickness",
-      "2.5 · 3.0 · 3.0 mm"
+      "Plates",
+      "2.5/3.0/3.0 mm"
     ],
     [
-      "Stack mounting",
-      "30.5 × 30.5 (M3) + 20 × 20"
+      "Stack mount",
+      "30.5x30.5 M3, 20x20"
     ],
     [
-      "Motor mounting",
-      "16 × 16 (M3)"
+      "Motor mount",
+      "16x16, M3"
     ],
     [
-      "Max stack height",
-      "20 mm"
+      "Stack height",
+      "20 mm max"
     ],
     [
       "Camera width",
-      "Up to 20 mm"
+      "20 mm max"
     ],
     [
-      "Video systems",
-      "Analog · DJI · Walksnail · HDZero"
+      "Cam mounts",
+      "Analog, DJI, Walksnail, HDZero"
     ],
     [
       "Material",
-      "T700 carbon, aluminium camera mounts"
+      "T700 carbon, 3K twill"
+    ],
+    [
+      "Hardware",
+      "M3"
+    ],
+    [
+      "Weight",
+      "115 g"
     ]
   ],
   "optionAxis": "Model",
   "variants": {
     "5\" Freestyle": {
+      "subtitle": "5\" freestyle · 226 mm · 6 mm arms · 30x30 / 20x20",
       "highlights": [
         [
           "Wheelbase",
@@ -132,10 +150,39 @@
         ]
       ],
       "frameViewer": {
-        "src": "/models/frame5.glb"
-      }
+        "src": "/models/od5/frame.glb"
+      },
+      "aliases": [
+        "5",
+        "5\"",
+        "5in",
+        "5-inch"
+      ],
+      "inTheBox": [
+        {
+          "qty": "4×",
+          "item": "5\" arms"
+        },
+        {
+          "qty": "1×",
+          "item": "Hardware kit"
+        },
+        {
+          "qty": "1×",
+          "item": "Camera mount"
+        },
+        {
+          "qty": "1×",
+          "item": "VTX antenna tube clamp"
+        },
+        {
+          "qty": "1×",
+          "item": "Build card"
+        }
+      ]
     },
     "3\" Freestyle": {
+      "subtitle": "3\" freestyle · 141 mm · 4 mm arms · 25.5 / 20x20",
       "highlights": [
         [
           "Wheelbase",
@@ -152,29 +199,122 @@
           "141 mm"
         ],
         [
-          "Prop size",
+          "Props",
           "3\""
         ],
         [
-          "Arm thickness",
+          "Arms",
           "4 mm carbon"
         ],
         [
-          "Plate thickness",
-          "2.0 · 2.5 · 2.5 mm"
+          "Plates",
+          "2.0/2.5/2.5 mm"
         ],
         [
-          "Stack mounting",
-          "25.5 × 25.5 + 20 × 20 (M2)"
+          "Stack mount",
+          "25.5x25.5, 20x20, M2"
         ],
         [
-          "Motor mounting",
-          "9 × 9 · 12 × 12 (M2)"
+          "Motor mount",
+          "9x9, 12x12, M2"
+        ],
+        [
+          "Hardware",
+          "M2, M2.5"
+        ],
+        [
+          "Weight",
+          "55 g"
         ]
       ],
+      "pins": [
+        {
+          "ref": "①",
+          "part": "Top plate: 2 mm carbon"
+        },
+        {
+          "ref": "②",
+          "part": "Middle plate: 2.5 mm carbon"
+        },
+        {
+          "ref": "③",
+          "part": "Bottom plate: 2.5 mm carbon"
+        },
+        {
+          "ref": "④",
+          "part": "Arms: 4 mm carbon, replaced individually",
+          "cost": "×4"
+        },
+        {
+          "ref": "⑤",
+          "part": "Cross brace: 4 mm carbon"
+        },
+        {
+          "ref": "⑥",
+          "part": "Aluminium side plates: the camera mount",
+          "cost": "×2"
+        },
+        {
+          "ref": "⑦",
+          "part": "20 mm aluminium standoffs",
+          "cost": "×4"
+        },
+        {
+          "ref": "⑧",
+          "part": "Silicone anti-slip pad"
+        },
+        {
+          "ref": "⑨",
+          "part": "M2 and M2.5 hardware kit"
+        },
+        {
+          "ref": "⑩",
+          "part": "TPU arm boots, camera and antenna mounts: print files, not included",
+          "cost": "print"
+        }
+      ],
       "frameViewer": {
-        "src": "/models/frame3.glb"
-      }
+        "src": "/models/od3/frame.glb"
+      },
+      "imageNote": "Render of the 5-inch frame. The 3-inch frame has the same layout.",
+      "aliases": [
+        "3",
+        "3\"",
+        "3in",
+        "3-inch"
+      ],
+      "placeholders": [
+        "Weight"
+      ],
+      "inTheBox": [
+        {
+          "qty": "4×",
+          "item": "3\" arms"
+        },
+        {
+          "qty": "1×",
+          "item": "Hardware kit"
+        },
+        {
+          "qty": "1×",
+          "item": "Camera mount"
+        },
+        {
+          "qty": "1×",
+          "item": "VTX antenna tube clamp"
+        },
+        {
+          "qty": "1×",
+          "item": "Build card"
+        }
+      ]
     }
-  }
+  },
+  "keywords": [
+    "frame",
+    "chassis"
+  ],
+  "placeholders": [
+    "Weight"
+  ]
 }

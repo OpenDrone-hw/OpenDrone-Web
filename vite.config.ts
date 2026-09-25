@@ -1,3 +1,4 @@
+import {execSync} from 'node:child_process';
 import {defineConfig} from 'vite';
 import {cloudflare} from '@cloudflare/vite-plugin';
 import {reactRouter} from '@react-router/dev/vite';
@@ -8,7 +9,24 @@ import {
   studioPlugin,
 } from './studio/vite-plugin-studio';
 
+// The footer's drawing title block names the build: the commit it was built
+// from and the build date. No git (a source tarball) leaves the revision
+// empty and the footer omits that cell.
+function buildRevision(): string {
+  try {
+    return execSync('git rev-parse --short HEAD', {stdio: ['ignore', 'pipe', 'ignore']})
+      .toString()
+      .trim();
+  } catch {
+    return '';
+  }
+}
+
 export default defineConfig({
+  define: {
+    __BUILD_REV__: JSON.stringify(buildRevision()),
+    __BUILD_DATE__: JSON.stringify(new Date().toISOString().slice(0, 10)),
+  },
   plugins: [
     // MUST stay ahead of cloudflare(). The studio registers `configureServer`
     // with `order: 'pre'` so its write endpoint is answered by real Node
@@ -59,14 +77,9 @@ export default defineConfig({
   server: {
     port: 3000,
     watch: {
-      // iCloud Drive constantly touches mtime on the synced legal
-      // markdown snapshots which makes Vite's file watcher reload the
-      // page every few seconds. Those files only change via
-      // `npm run sync:legal` which is run manually, so it's safe to
-      // ignore them for HMR. Same story for the tsc incremental build
-      // info file rewritten on every typegen pass.
+      // The tsc incremental build info file is rewritten on every typegen
+      // pass and macOS scatters metadata files; neither is source.
       ignored: [
-        '**/app/content/legal/**',
         '**/tsconfig.tsbuildinfo',
         '**/.DS_Store',
         '**/.icloud',

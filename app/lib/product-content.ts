@@ -53,9 +53,10 @@ export type ChapterPin = {
 /**
  * Physical item that ships in the box. `qty` is free text so entries
  * can read "1×" or "kit" or "set". Keep items factual - only list
- * things that genuinely ship. No speculative filler.
+ * things that genuinely ship. No speculative filler. One line per item:
+ * a count and a name, no second line.
  */
-export type BoxItem = {qty?: string; item: string; note?: string};
+export type BoxItem = {qty?: string; item: string};
 
 /**
  * The beginner chapter ("What does this do?"), rendered first on the PDP.
@@ -73,7 +74,7 @@ export type WhatIsThis = {
    *  general FPV intro page. */
   needs: string[];
   /** One line: where the part sits in the drone's signal chain. Kept as
-   *  data for the studio; the chapter now SHOWS the position via `chain`. */
+   *  data for the studio; the chapter SHOWS the position via `chain`. */
   fit: string;
   /** Which signal-chain stage this product IS; the chapter's chain strip
    *  lights it. Stages: radio, rx, fc, esc, motors, frame. */
@@ -84,15 +85,7 @@ export type WhatIsThis = {
   hero?: string;
 };
 
-/**
- * The homepage hero caption for a product: `whatIsThis.hero` when set,
- * otherwise the intro's first two sentences (first one only when two run
- * past 200 characters, hero copy is a caption, not a chapter). One
- * derivation, used by the homepage loader, so the hero explainers are the
- * What-does-this-do words by construction (maintainer, 2026-08-15).
- */
-/** DOM id of the "What does this do?" chapter on a product page; the
- *  homepage walkthrough links each part straight to it. */
+/** DOM id of the "What does this do?" chapter on a product page. */
 export const WHAT_IS_THIS_ID = 'what-is-this';
 
 /** `/products/<handle>#what-is-this`, when the product has that chapter. */
@@ -102,11 +95,18 @@ export function whatIsThisHref(handle: string): string | undefined {
     : undefined;
 }
 
+/**
+ * The homepage hero caption for a product: `whatIsThis.hero` when set,
+ * otherwise the intro's first two sentences (first one only when two run
+ * past 200 characters). The hero explainers are the What-does-this-do words.
+ */
 export function heroCaption(handle: string): string | undefined {
   const wit = PRODUCT_CONTENT[handle]?.whatIsThis;
   if (!wit) return undefined;
   if (wit.hero) return wit.hero;
-  const sentences = wit.intro.match(/[^.!?]+[.!?]+(?:\s|$)/g);
+  // A sentence ends at . ! or ? followed by whitespace or the end of the
+  // text, so a decimal point ("2.4 GHz") stays inside its sentence.
+  const sentences = wit.intro.match(/(?:[^.!?]|[.!?](?!\s|$))+[.!?]+(?=\s|$)\s*/g);
   if (!sentences?.length) return wit.intro || undefined;
   const two = sentences.slice(0, 2).join('').trim();
   return two.length > 200 ? sentences[0].trim() : two;
@@ -172,17 +172,6 @@ export type StackConfig = {
 };
 
 /**
- * Playful cross-sell card rendered under the buy strip. Use it to point
- * one product at another - e.g. OpenFC ↔ OpenESC both pointing at
- * OpenStack. Keep line copy short: it's a wink, not a paragraph.
- */
-export type PairCta = {
-  eyebrow: string;     // small uppercase line above (e.g. "PAIR WITH")
-  title: string;       // main line (e.g. "OpenStack - FC + ESC, one solder-free stack")
-  to: string;          // href to the paired product PDP
-};
-
-/**
  * A component of a bundle product (OpenStack et al). Each entry points
  * at an existing PDP and names the firmware that the component carries,
  * so the bundle PDP can render a "what's in the box" chapter without
@@ -225,10 +214,18 @@ export type VariantContent = {
    *  line has to hold a single row in the hero column's 2-up grid, and the
    *  full matrix lives in the Datasheet chapter. */
   highlights: Array<[string, string]>;
+  /** Extra catalog search words for this tier only ("mini" for 20x20). */
+  keywords?: string[];
   /** Per-tier spec deltas merged over the shared `specs` by row key: a
    *  value replaces the base row, `null` hides it (a cost-down tier dropping
    *  a sensor), and an unknown key appends. See `mergeSpecs` in the PDP. */
   specs?: Array<[string, string | null]>;
+  /** Storefront-side rows for this tier, merged after `specs` the same way.
+   *  `npm run sync:specs` never touches them. */
+  specsExtra?: Array<[string, string | null]>;
+  /** Spec keys whose value at this tier's level (`specs` or `specsExtra`)
+   *  is a placeholder awaiting the final value. Never rendered. */
+  placeholders?: string[];
   /** Box lines specific to this tier, appended to the shared inTheBox. */
   inTheBox?: BoxItem[];
   /** Per-tier layered board SVG (same shape as `teardown.boardArt`). When the
@@ -258,7 +255,7 @@ export type VariantContent = {
    *  CAD analogue of `boardArt` for frames: the 3" and 5" tiers each carry
    *  their own GLB so the teardown viewer explodes the selected model. Tiers
    *  without their own model fall back to `teardown.frameViewer`. */
-  frameViewer?: {src: string; inspectUrl?: string};
+  frameViewer?: {src: string; inspectUrl?: string; kind?: 'frame' | 'motor'};
   /** When true the tier renders as a greyed, non-selectable "Coming soon"
    *  card: a designed model that is not yet a purchasable catalog variant.
    *  It shows on the ladder for line completeness but can't be added to cart. */
@@ -268,6 +265,23 @@ export type VariantContent = {
    *  certification chip linking to `certification.oshwa.org/<uid>.html` for the
    *  selected tier; falls back to the product-level `oshwaUid` when unset. */
   oshwaUid?: string;
+  /** True when the Shopify SKU (and option value) names a spec that is not
+   *  final, as OPENMOTOR-2207 does: the PDP then keeps the SKU off the page
+   *  and out of the structured data. The SKU stays the internal ID. */
+  internalSku?: boolean;
+  /** The mono line under the product name while this version is picked,
+   *  spec-sheet style: "RP2354 · BMI270 · Betaflight · 3-6S · 20x20".
+   *  Published facts only; unset prints nothing. */
+  subtitle?: string;
+  /** Other spellings of this option value a link may carry (the visible
+   *  label `5"`, `5in`). The PDP redirects them to the catalog value. */
+  aliases?: string[];
+  /** One short line over the gallery when this tier shows another tier's
+   *  image, e.g. "Render of the 5-inch frame". */
+  imageNote?: string;
+  /** Per-tier plugs. They replace the product's `plugs` while this tier
+   *  is picked. */
+  plugs?: Plug[];
 };
 
 export type ProductContent = {
@@ -279,6 +293,10 @@ export type ProductContent = {
     line3: string;
     lead: string;               // subhead paragraph in mono
   };
+  /** How the part goes in a build, shown as the spec row "Install"
+   *  ("Solder"). Kept out of `specs` because those rows are mirrored from
+   *  the board README by `npm run sync:specs`. */
+  install?: string;
   firmware: {
     project: string;            // "AM32" / "Betaflight" / "ExpressLRS" / null
     projectUrl?: string;
@@ -329,11 +347,12 @@ export type ProductContent = {
     };
     /** Optional exploded 3D model - the CAD analogue of `boardArt`, for
      *  products that are an OnShape assembly rather than a KiCad board
-     *  (the frame, later motors). `src` is a public GLB whose nodes follow
-     *  the top/base/arm naming the {@link FrameViewer} explodes by; set
-     *  `inspectUrl` to the public OnShape document. When present the
+     *  (the frame, the motors). `src` is a public Onshape assembly GLB whose
+     *  direct children are the part occurrences the {@link FrameViewer}
+     *  explodes; `kind: 'motor'` shows one motor of a drive assembly. Set
+     *  `inspectUrl` to the public Onshape document. When present the
      *  teardown renders FrameViewer instead of BoardArt. */
-    frameViewer?: {src: string; inspectUrl?: string};
+    frameViewer?: {src: string; inspectUrl?: string; kind?: 'frame' | 'motor'};
   };
   /** Beginner orientation chapter. See {@link WhatIsThis}. */
   whatIsThis?: WhatIsThis;
@@ -342,8 +361,22 @@ export type ProductContent = {
    *  EU Declaration of Conformity here (kind: 'doc') once CE closes -
    *  don't add DoC entries before the signed PDF exists. */
   downloads: DownloadAsset[];
+  /** Spec rows in display order. A row renders only when it is set. A
+   *  value not yet on file is a placeholder named in `placeholders`. Use
+   *  these row names for the common FPV rows: "Weight", "Mount", "Shaft",
+   *  "Rated cells", "Max current". */
   specs: Array<[string, string]>;
-  footnote?: string;            // appears under the family card
+  /** Storefront-side spec rows merged after the mirrored `specs` (and each
+   *  tier's `specs`) with {@link mergeSpecs} rules. Rows the board README does
+   *  not carry live here, so `npm run sync:specs` leaves them alone. */
+  specsExtra?: Array<[string, string | null]>;
+  /** Spec keys whose product-level value (`specs` or `specsExtra`) is a
+   *  placeholder awaiting the final value. Never rendered; listed by
+   *  `npm run specs:placeholders`. */
+  placeholders?: string[];
+  /** Extra words the catalog search matches for this product, the terms FPV
+   *  buyers type that the name does not carry ("stack", "4in1"). */
+  keywords?: string[];
   /** When set, the PDP renders a comparison-ladder selector. `optionAxis`
    *  is the catalog option NAME that carries the line's variants
    *  (standardised to "Model"); `variants` is keyed by the option VALUE. See
@@ -353,8 +386,7 @@ export type ProductContent = {
   /** OSHWA certification UID for a single-board product (no per-tier split).
    *  Lines whose tiers each carry their own UID set it on the variant instead. */
   oshwaUid?: string;
-  pairCta?: PairCta;            // playful cross-sell under the buy strip
-  stack?: StackConfig;          // "complete the stack" cross-sell in the buy box
+  stack?: StackConfig;          // FC/ESC pairing offered on the catalog cards
   bundle?: {                    // when set, the PDP renders as a bundle
     components: BundleComponent[];
   };
@@ -386,7 +418,60 @@ export type ProductContent = {
    *  expected late August", "First prototypes at the mill". Free text,
    *  keep it current fact only. */
   statusNote?: string;
+  /** What one unit of the price buys, printed after the price on the PDP
+   *  and the cards: "per motor" for a product sold singly that buyers
+   *  expect in sets of four. Unset prints nothing. */
+  priceUnit?: string;
+  /** The product images are CAD renders, not photos: cards and the
+   *  gallery set them on the paper tone of the board photos and label them
+   *  "Render". */
+  imagesAreRenders?: boolean;
+  /** Units one build uses, when the product is sold singly (4 motors per
+   *  quad). The PDP starts the quantity there and the cart says so when a
+   *  line is not a whole set. */
+  setOf?: number;
+  /** The mono line under the product name, for a product without
+   *  versions or as the default for versions without their own. */
+  subtitle?: string;
+  /** Plugs, solder-pad groups and power rails drawn under the spec
+   *  table, pin order checked against the board schematic. Not part of the
+   *  README-mirrored `specs`. */
+  plugs?: Plug[];
 };
+
+/** What a pin carries; sets its colour in the plug drawing. */
+export type PlugPinKind = 'power' | 'ground' | 'signal' | 'motor' | 'nc';
+
+/** One contact, numbered by position, pin 1 first. */
+export type PlugPin = {
+  /** Short silkscreen-style label under the pin: "VBAT", "GND", "M1". */
+  label: string;
+  kind: PlugPinKind;
+  /** The full name, shown as the pin's tooltip: "Battery voltage". */
+  title?: string;
+};
+
+/** One regulated output of an on-board supply. */
+export type PlugRail = {
+  voltage: string;
+  /** "switchable", "always-on". */
+  mode: string;
+  current: string;
+};
+
+/**
+ * One entry of the plug drawings: a JST-SH plug (`pins` in pin order) or a
+ * set of power rails (`rails`).
+ */
+export type Plug = {
+  name: string;
+  kind: 'jst-sh' | 'rail';
+  pins?: PlugPin[];
+  rails?: PlugRail[];
+};
+
+export const PLUG_KINDS: ReadonlyArray<Plug['kind']> = ['jst-sh', 'rail'];
+export const PLUG_PIN_KINDS: readonly PlugPinKind[] = ['power', 'ground', 'signal', 'motor', 'nc'];
 
 /*
  * Provenance and open items.
@@ -456,7 +541,21 @@ export type ProductContent = {
  *
  * openframe
  * - Frame content is a planned-product fallback. It does not claim a public
- *   CAD source, measured weight, or material grade.
+ *   CAD source. Material and thicknesses follow the OpenFrame repo's
+ *   docs/DESIGN.md; the weights are placeholders.
+ * - `repoUrl` is empty while OpenFrame-5F and OpenFrame-3F are private
+ *   repositories: an empty repoUrl drops the Open Source chip, the licence
+ *   card and the contributor wall on the PDP. Set it the day a repo is
+ *   public.
+ *
+ * openmotor
+ * - Not open hardware (`editorial: false`). The sourcing records
+ *   (`sourcing/comparisons/openmotor.md`, T-Motor sales contract
+ *   YB-2026070103) order the 1604 at KV2850 and a 5-inch sample as the
+ *   V2306.5 V2 at KV1950. The 5-inch motor sells under the legacy SKU
+ *   OPENMOTOR-2207 (option value "2207", shown as 5"); its stator and KV are
+ *   placeholders until the founder confirms them. The other motor rows are
+ *   T-Motor's published P1604 and V2306.5 V2 figures.
  * - `teardown.frameViewer` is the fallback when a tier defines none. Both
  *   tiers override it and it seeds the viewer's preload set, so it points at
  *   a current model (the 5") rather than the stale generic frame.glb.
@@ -550,6 +649,327 @@ LOADED.sort(([handleA, a], [handleB, b]) => {
 export const PRODUCT_CONTENT: Record<string, ProductContent> =
   Object.fromEntries(LOADED);
 
+/**
+ * The name a buyer sees for one variant (option value) of a product: the
+ * variant's content `label` when set, else the value itself. The Shopify
+ * option value stays the key for links and the cart; only the shown text
+ * changes. OpenMotor's value "2207" is shown as 5" because no 2207 is
+ * chosen.
+ */
+export function variantDisplayName(handle: string | null | undefined, value: string): string {
+  if (!handle) return shopSize(value);
+  return shopSize(PRODUCT_CONTENT[handle]?.variants?.[value]?.label ?? value);
+}
+
+/** A size as FPV shops write it: "20x20", not "20×20". */
+export function shopSize(name: string): string {
+  return name.replace(/(\d)\s*×\s*(\d)/g, '$1x$2');
+}
+
+/** A cart line's name as the buyer reads it: the product title plus the
+ *  variant's display name, never a raw legacy option value ("2207"). */
+export function lineDisplayName(handle: string | null | undefined, title: string, variantTitle: string | null | undefined): string {
+  return variantTitle && variantTitle !== 'Default Title'
+    ? `${title} ${variantDisplayName(handle, variantTitle)}`
+    : title;
+}
+
+/** Units one build uses for a product sold singly (4 motors), or null. */
+export function setSize(handle: string | null | undefined): number | null {
+  if (!handle) return null;
+  const n = PRODUCT_CONTENT[handle]?.setOf;
+  return n && n > 1 ? n : null;
+}
+
+/**
+ * The catalog option value a link means, when it carries an alias
+ * (`?Model=5"` for the value `2207`). Case, spaces and inch marks are
+ * ignored. Null when the value is already canonical or unknown.
+ */
+export function canonicalOptionValue(
+  handle: string | null | undefined,
+  value: string | null | undefined,
+): string | null {
+  if (!handle || !value) return null;
+  const variants = PRODUCT_CONTENT[handle]?.variants;
+  if (!variants || value in variants) return null;
+  const norm = (v: string) => v.toLowerCase().replace(/["”″\s-]|inch|in$/g, '');
+  const wanted = norm(value);
+  for (const [key, v] of Object.entries(variants)) {
+    if (norm(key) === wanted) return key;
+    if (v.aliases?.some((a) => norm(a) === wanted)) return key;
+  }
+  return null;
+}
+
+/**
+ * Merge a variant's spec overrides into the product's base spec table,
+ * matched by row key. A delta value of `null` hides the base row; a value
+ * replaces the base row in place; an unknown key appends.
+ */
+export function mergeSpecs(
+  base: Array<[string, string]>,
+  overrides?: Array<[string, string | null]>,
+): Array<[string, string]> {
+  if (!overrides?.length) return base;
+  const out: Array<[string, string]> = base.map(([k, v]) => [k, v]);
+  for (const [k, v] of overrides) {
+    const idx = out.findIndex(([bk]) => bk === k);
+    if (v === null) {
+      if (idx !== -1) out.splice(idx, 1);
+    } else if (idx !== -1) {
+      out[idx] = [k, v];
+    } else {
+      out.push([k, v]);
+    }
+  }
+  return out;
+}
+
+/** Row names as a spec sheet shows them. The mirrored data keeps the
+ *  board README names. */
+const SPEC_LABELS: Readonly<Record<string, string>> = {
+  IMU: 'Gyro',
+  Dimensions: 'Size',
+  'Current sense': 'Current sensor',
+  'ESC protocol': 'Protocol',
+  Band: 'Frequency',
+};
+
+/** Rows the spec sheet leaves out: covered by Pinout or not a spec. */
+const SPEC_HIDDEN = new Set(['Barometer', 'Frame fit', 'FC connector']);
+
+/** Row order. Rows not listed keep their data order, before Mounting. */
+const SPEC_ORDER = [
+  'MCU',
+  'Gyro',
+  'Firmware',
+  'ELRS version',
+  'Input',
+  'Continuous',
+  'Burst',
+  'BEC',
+  'UARTs',
+  'Motor outputs',
+  'Protocol',
+  'Telemetry',
+  'MOSFETs',
+  'RX',
+  'OSD',
+  'Blackbox',
+  'Current sensor',
+  'USB',
+  'Connectors',
+  'Frequency',
+  'Radio',
+  'Antenna',
+  'Telemetry power',
+  'Flashing',
+  'Mounting',
+  'Size',
+  'PCB',
+  'Install',
+  'Weight',
+];
+
+/**
+ * A mirrored spec value in spec-sheet form: "3–6S LiPo (9.0–25.2 V)" is
+ * "3-6S", "20 × 20 mm, 3.0 mm holes" with M2 grommets in the box is
+ * "20x20, M2". A value no rule matches shows as written.
+ */
+export function terseSpecValue(
+  label: string,
+  value: string,
+  box: readonly BoxItem[] = [],
+): string {
+  let v = value
+    .replace(/(\d)\s*×\s*(\d)/g, '$1x$2')
+    .replace(/(\d)×(?=\s)/g, '$1x')
+    .replace(/(\d)[–-](?=\d)/g, '$1-')
+    .replace(/(\d) ([AV])\b/g, '$1$2')
+    .replace(/\bbidirectional\b/g, 'bidir')
+    .replace(/DShot, bidir/g, 'bidir DShot')
+    .replace(/^External, /, '')
+    .replace(/ and /g, ' + ')
+    .replace(/ or /g, ', ');
+  if (label === 'Input') v = v.replace(/\s*LiPo\b\s*(\([^)]*\))?/, '');
+  if (label === 'MCU') v = v.replace(/^(.+), one per motor$/, '4x $1');
+  if (label === 'Current sensor') v = v.replace(/^On-board, (\d+A)$/, '0-$1');
+  if (label === 'PCB') v = v.replace(/ copper$/, '');
+  if (label === 'BEC') {
+    v = v.replace(/^(\d+V) switchable \+ (\d+V) always-on, ([\d.]+A)$/, '$2 + $1, $3');
+  }
+  if (label === 'Mounting') {
+    const grommet = box.find((b) => /grommet/i.test(b.item));
+    const screw = grommet ? /\b(M\d)\b/.exec(grommet.item)?.[1] : undefined;
+    v = v.replace(/^([\d.]+x[\d.]+) mm, [\d.]+ mm holes$/, screw ? `$1, ${screw}` : '$1');
+  }
+  return v;
+}
+
+export type SpecSheetRow = {
+  /** Row key in the data, for studio edit tags. */
+  key: string;
+  label: string;
+  /** One value per column; null where that column has no value. */
+  values: Array<string | null>;
+  /** The data value behind each shown value. */
+  raw: Array<string | null>;
+  /** Where each raw value lives in the product JSON (`specs.3`,
+   *  `variants.20×20.specsExtra.0`), for studio edit tags. */
+  paths: Array<string | null>;
+};
+
+type SpecLayer = {rows?: Array<[string, string | null]>; path: string};
+
+/** The four spec layers of one column, lowest first. */
+function specLayers(
+  content: Pick<ProductContent, 'specs' | 'specsExtra' | 'variants'>,
+  column: string,
+): SpecLayer[] {
+  const variant = column ? content.variants?.[column] : undefined;
+  return [
+    {rows: content.specs, path: 'specs'},
+    {rows: variant?.specs, path: `variants.${column}.specs`},
+    {rows: content.specsExtra, path: 'specsExtra'},
+    {rows: variant?.specsExtra, path: `variants.${column}.specsExtra`},
+  ];
+}
+
+/** One column's spec table: mirrored rows, tier deltas, then storefront rows. */
+export function columnSpecs(
+  content: Pick<ProductContent, 'specs' | 'specsExtra' | 'variants'>,
+  column: string,
+): Array<[string, string]> {
+  return specLayers(content, column).reduce(
+    (table, layer) => mergeSpecs(table, layer.rows),
+    [] as Array<[string, string]>,
+  );
+}
+
+/** The JSON path of the value a column shows for `key`, or null. */
+function specPath(
+  content: Pick<ProductContent, 'specs' | 'specsExtra' | 'variants'>,
+  column: string,
+  key: string,
+): string | null {
+  for (const layer of specLayers(content, column).reverse()) {
+    const i = layer.rows?.findIndex(([k, v]) => k === key && v !== null) ?? -1;
+    if (i >= 0) return `${layer.path}.${i}`;
+  }
+  return null;
+}
+
+/**
+ * Whether a column's value for `key` is a placeholder: the tier's
+ * `placeholders` decide when the tier's own layers set the key, the
+ * product's `placeholders` otherwise.
+ */
+export function isPlaceholderSpec(
+  content: Pick<ProductContent, 'specs' | 'specsExtra' | 'variants' | 'placeholders'>,
+  column: string,
+  key: string,
+): boolean {
+  const path = specPath(content, column, key);
+  if (!path) return false;
+  if (path.startsWith('variants.')) {
+    return content.variants?.[column]?.placeholders?.includes(key) ?? false;
+  }
+  return content.placeholders?.includes(key) ?? false;
+}
+
+/**
+ * The product's spec table as a sheet: one column per variant (one column
+ * without variants), rows renamed, ordered and tersed for display. Only
+ * rows with at least one value render.
+ */
+export function specSheet(
+  content: Pick<ProductContent, 'specs' | 'specsExtra' | 'inTheBox' | 'variants' | 'install' | 'placeholders'>,
+): {columns: string[]; rows: SpecSheetRow[]} {
+  const keys = Object.keys(content.variants ?? {});
+  const columns = keys.length > 1 ? keys : [keys[0] ?? ''];
+  const tables = columns.map((k) => {
+    const variant = k ? content.variants?.[k] : undefined;
+    const box = [...content.inTheBox, ...(variant?.inTheBox ?? [])];
+    const table = new Map(columnSpecs(content, k));
+    if (content.install) table.set('Install', content.install);
+    return {table, box};
+  });
+  const order: string[] = [];
+  for (const {table} of tables) for (const key of table.keys()) if (!order.includes(key)) order.push(key);
+  const mountAt = SPEC_ORDER.indexOf('Mounting');
+  const rank = (label: string) => {
+    const i = SPEC_ORDER.indexOf(label);
+    return i === -1 ? mountAt - 0.5 : i;
+  };
+  const rows = order
+    .filter((key) => !SPEC_HIDDEN.has(key))
+    .map((key): SpecSheetRow => {
+      const label = SPEC_LABELS[key] ?? key;
+      const raw = tables.map(({table}) => {
+        const value = table.get(key);
+        return value && !/^none$/i.test(value.trim()) ? value : null;
+      });
+      // A placeholder is not a measured value: it shows marked as an estimate.
+      const values = raw.map((value, i) =>
+        value === null
+          ? null
+          : terseSpecValue(label, value, tables[i].box) +
+            (isPlaceholderSpec(content, columns[i], key) ? ' (est.)' : ''),
+      );
+      const paths = raw.map((value, i) =>
+        value === null ? null : specPath(content, columns[i], key),
+      );
+      return {key, label, values, raw, paths};
+    })
+    .filter((row) => row.values.some((v) => v !== null));
+  // Stable sort: equal ranks keep data order.
+  const sorted = rows
+    .map((row, i) => ({row, i}))
+    .sort((a, b) => rank(a.row.label) - rank(b.row.label) || a.i - b.i)
+    .map(({row}) => row);
+  return {columns, rows: sorted};
+}
+
+/**
+ * A ship promise as one short line for a cart row or a dialog row. A
+ * funding-target promise ("ships about 10 weeks after its target is
+ * reached: by 11 March 2027 if the target is reached by 31 December 2026,
+ * otherwise ...") becomes a label plus "ships by 11 March 2027 if reached";
+ * a dated promise ("ships late October 2026") keeps its words.
+ */
+export type ShortShipPromise = {kind: 'target' | 'date'; label: string | null; text: string};
+
+const TARGET_PROMISE = /by (\d{1,2} [A-Z][a-z]+ \d{4}) if the target is reached by (\d{1,2} [A-Z][a-z]+ \d{4})/;
+
+export function shortShipPromise(promise: string | null | undefined): ShortShipPromise | null {
+  const text = promise?.trim();
+  if (!text) return null;
+  const target = TARGET_PROMISE.exec(text);
+  if (target) return {kind: 'target', label: 'Funding target', text: `ships by ${target[1]} if reached`};
+  if (/after its target/i.test(text)) return {kind: 'target', label: 'Funding target', text: 'ships after its target is reached'};
+  return {kind: 'date', label: null, text: text.charAt(0).toUpperCase() + text.slice(1)};
+}
+
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+/**
+ * The month and year of a dated ship promise, short: "ships late October
+ * 2026" gives "Oct 2026". Null when the promise names no month and year.
+ */
+export function shipMonth(promise: string | null | undefined): string | null {
+  const m = /\b([A-Z][a-z]+) (\d{4})\b/.exec(promise ?? '');
+  if (!m || !MONTHS.includes(m[1])) return null;
+  return `${m[1].slice(0, 3)} ${m[2]}`;
+}
+
+/** Whether a variant's SKU stays off customer-facing pages. See
+ *  {@link VariantContent.internalSku}. */
+export function isInternalSku(handle: string | null | undefined, value: string | null | undefined): boolean {
+  if (!handle || !value) return false;
+  return PRODUCT_CONTENT[handle]?.variants?.[value]?.internalSku === true;
+}
+
 /** Product lifecycle. See {@link ProductContent.status}. */
 export type ProductStatus = 'idea' | 'development' | 'preorder' | 'live';
 
@@ -574,6 +994,19 @@ export function hasExplicitPurchasableStatus(
 ): boolean {
   const s = handle ? PRODUCT_CONTENT[handle]?.status : undefined;
   return s !== undefined && isPurchasableStatus(s);
+}
+
+/**
+ * A resold part with no editorial file (antenna, strap, spare parts) stays
+ * out of the catalog grid and the Related strip while none of its variants
+ * can be bought: a launched store does not lead with sold-out placeholders.
+ * Editorial products stay listed when sold out, with their badge.
+ */
+export function hiddenWhileSoldOut(p: {
+  handle: string;
+  variants: {nodes: Array<{availableForSale: boolean}>};
+}): boolean {
+  return !PRODUCT_CONTENT[p.handle] && !p.variants.nodes.some((v) => v.availableForSale);
 }
 
 /**
@@ -715,3 +1148,60 @@ export const PRODUCT_CONTENT_FALLBACK: ProductContent = loadedFallback ?? {
   downloads: [],
   specs: [],
 };
+
+/** Spec rows for a product with no editorial file (an accessory), from
+ *  `content/accessories.json`, keyed by catalog handle. */
+export type AccessorySpecs = {
+  /** The spec line under the name on the product page. */
+  subtitle?: string;
+  specs: Array<[string, string]>;
+  /** Spec keys whose value is a placeholder. Never rendered. */
+  placeholders?: string[];
+};
+
+type AccessoryFile = {default: Record<string, AccessorySpecs>};
+
+/** The disk twin of the glob below, for the node:test suites. */
+function readAccessoriesFromDisk(): Record<string, AccessoryFile> {
+  const fs = (
+    globalThis as unknown as {
+      process?: {getBuiltinModule?: (id: string) => NodeFs};
+    }
+  ).process?.getBuiltinModule?.('node:fs');
+  if (!fs) return {};
+  const file = new URL(['..', '..', 'content', 'accessories.json'].join('/'), import.meta.url);
+  return {
+    '/content/accessories.json': {
+      default: JSON.parse(fs.readFileSync(file, 'utf8')) as Record<string, AccessorySpecs>,
+    },
+  };
+}
+
+export const ACCESSORY_SPECS: Readonly<Record<string, AccessorySpecs>> =
+  Object.values(
+    import.meta.env
+      ? import.meta.glob<AccessoryFile>('/content/accessories.json', {eager: true})
+      : readAccessoriesFromDisk(),
+  )[0]?.default ?? {};
+
+/**
+ * The content a PDP renders: the product's editorial file, else the fallback
+ * carrying the accessory's spec rows when `content/accessories.json` has them.
+ */
+export function pageContent(handle: string): ProductContent {
+  const own = PRODUCT_CONTENT[handle];
+  if (own) return own;
+  const accessory = ACCESSORY_SPECS[handle];
+  if (!accessory) return PRODUCT_CONTENT_FALLBACK;
+  return {
+    ...PRODUCT_CONTENT_FALLBACK,
+    ...(accessory.subtitle ? {subtitle: accessory.subtitle} : {}),
+    specs: accessory.specs,
+    placeholders: accessory.placeholders,
+  };
+}
+
+/** Whether a product's images are CAD renders rather than photos. */
+export function imagesAreRenders(handle: string | null | undefined): boolean {
+  return Boolean(handle && PRODUCT_CONTENT[handle]?.imagesAreRenders);
+}

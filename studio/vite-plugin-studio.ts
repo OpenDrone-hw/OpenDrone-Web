@@ -61,47 +61,31 @@ const LOOPBACK = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
 const HERO_SETTINGS = /^public\/models\/[A-Za-z0-9_-]+\/studio\.json$/;
 
 /**
- * Legal pages, which are Markdown rather than JSON.
+ * Markdown documents: the legal pages, the newsletter posts and the learn
+ * articles.
  *
- * Same exact-shape reasoning as the hero settings: one fixed directory prefix,
- * one locale segment from a closed set, one filename with no separators.
- *
- * Five of the Dutch files are overwritten by `npm run sync:legal` from the
- * external compliance repo, so editing them here would be undone on the next
- * build. They are refused rather than silently wasted. Everything else under
- * `app/content/legal/` is hand-authored: all of `en/`, all of `fr/`, and the
- * four `nl/` files the sync deliberately skips because their compliance-repo
- * masters are English and a blind sync clobbered the Dutch translation once
- * already.
+ * Same exact-shape reasoning as the hero settings: fixed directory prefixes,
+ * a locale segment from a closed set for legal pages, one filename with no
+ * separators. The storefront is the authoring source for all of them.
  */
-const LEGAL_DOC = /^app\/content\/legal\/(en|nl|fr)\/[A-Za-z0-9_-]+\.md$/;
+const DOC_PATTERNS = [
+  /^app\/content\/legal\/(en|nl|fr)\/[A-Za-z0-9_-]+\.md$/,
+  /^app\/content\/learn\/[A-Za-z0-9_-]+\.md$/,
+  /^content\/posts\/[A-Za-z0-9_-]+\.md$/,
+];
+const isDoc = (rel: string) => DOC_PATTERNS.some((re) => re.test(rel));
 
-/** The exact basenames `scripts/sync-legal.mjs` copies into `nl/`. */
-const SYNCED_NL = new Set([
-  'algemene-voorwaarden.md',
-  'privacy-policy.md',
-  'cookie-policy.md',
-  'herroepingsformulier.md',
-  'peppol-e-invoicing.md',
-]);
-
-/** True when a write would be undone by the next `sync:legal` run. */
-export function isSyncManaged(rel: string): boolean {
-  const m = /^app\/content\/legal\/nl\/(.+)$/.exec(rel);
-  return Boolean(m && SYNCED_NL.has(m[1]));
-}
-
-/** Resolve a legal Markdown path, or null. */
-function resolveLegalPath(repoRoot: string, rel: string): string | null {
+/** Resolve a Markdown document path, or null. */
+function resolveDocPath(repoRoot: string, rel: string): string | null {
   if (typeof rel !== 'string' || rel.includes('\0')) return null;
-  if (!LEGAL_DOC.test(rel)) return null;
+  if (!isDoc(rel)) return null;
   const abs = path.resolve(repoRoot, ...rel.split('/'));
   return abs === path.resolve(repoRoot, rel) ? abs : null;
 }
 
 /** Which root a request's path is checked against. */
 function rootFor(rel: string): string {
-  if (HERO_SETTINGS.test(rel) || LEGAL_DOC.test(rel)) return path.posix.dirname(rel);
+  if (HERO_SETTINGS.test(rel) || isDoc(rel)) return path.posix.dirname(rel);
   return WRITE_ROOT;
 }
 
@@ -426,10 +410,10 @@ async function handle(
      * means dropping a file in `public/` and it appears here, which keeps binary
      * assets going through git the same way everything else does.
      */
-    /** Read a legal Markdown page as raw text. */
+    /** Read a Markdown document as raw text. */
     if (route === '/read-text' && req.method === 'POST') {
       const {file} = JSON.parse(await readBody(req)) as {file?: string};
-      const abs = resolveLegalPath(repoRoot, file ?? '');
+      const abs = resolveDocPath(repoRoot, file ?? '');
       if (!abs) return send(res, 400, {error: 'bad path'});
       if (!(await realContained(repoRoot, abs, rootFor(file ?? ''))))
         return send(res, 400, {error: 'path escapes its allowed root'});
@@ -437,48 +421,43 @@ async function handle(
         return send(res, 200, {
           ok: true,
           text: await fs.readFile(abs, 'utf8'),
-          syncManaged: isSyncManaged(file ?? ''),
         });
       } catch {
         return send(res, 404, {error: 'not found'});
       }
     }
 
-    /** Write a legal Markdown page, unless the compliance sync owns it. */
+    /** Write a Markdown document. */
     if (route === '/write-text' && req.method === 'POST') {
       const {file, text} = JSON.parse(await readBody(req)) as {
         file?: string;
         text?: string;
       };
-      const abs = resolveLegalPath(repoRoot, file ?? '');
+      const abs = resolveDocPath(repoRoot, file ?? '');
       if (!abs) return send(res, 400, {error: 'bad path'});
       if (typeof text !== 'string') return send(res, 400, {error: 'no text'});
-      if (isSyncManaged(file ?? '')) {
-        return send(res, 409, {
-          error:
-            'This page is synced from the compliance repo. Editing it here would be undone by the next build. Edit it there instead.',
-        });
-      }
       if (!(await realContained(repoRoot, abs, rootFor(file ?? ''))))
         return send(res, 400, {error: 'path escapes its allowed root'});
       await writeAtomic(abs, text);
       return send(res, 200, {ok: true, file});
     }
 
-    /** Every legal page, grouped by locale. */
-    if (route === '/legal' && req.method === 'GET') {
-      const root = path.resolve(repoRoot, 'app/content/legal');
-      const out: Array<{file: string; locale: string; name: string; syncManaged: boolean}> = [];
-      for (const locale of ['en', 'nl', 'fr']) {
-        const dir = path.join(root, locale);
-        const names = await fs.readdir(dir).catch(() => [] as string[]);
+    /** Every Markdown document, grouped: legal per locale, posts, learn. */
+    if (route === '/docs' && req.method === 'GET') {
+      const out: Array<{file: string; group: string; name: string}> = [];
+      const add = async (dir: string, group: string) => {
+        const names = await fs.readdir(path.resolve(repoRoot, dir)).catch(() => [] as string[]);
         for (const n of names.sort()) {
-          if (!n.endsWith('.md')) continue;
-          const rel = `app/content/legal/${locale}/${n}`;
-          out.push({file: rel, locale, name: n, syncManaged: isSyncManaged(rel)});
+          const rel = `${dir}/${n}`;
+          if (isDoc(rel)) out.push({file: rel, group, name: n});
         }
+      };
+      for (const locale of ['en', 'nl', 'fr']) {
+        await add(`app/content/legal/${locale}`, `Legal ${locale.toUpperCase()}`);
       }
-      return send(res, 200, {ok: true, pages: out});
+      await add('content/posts', 'Newsletter');
+      await add('app/content/learn', 'Learn');
+      return send(res, 200, {ok: true, docs: out});
     }
 
     if (route === '/media' && req.method === 'GET') {

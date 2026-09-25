@@ -3,9 +3,8 @@
  * be read. The index rail on every editorial page renders this list, so
  * adding an entry here is what puts a page in the sequence.
  *
- * Wholesale is deliberately absent. It is an editorial page by layout but
- * it addresses shops, not the reader this series is written for, and
- * dropping it into the middle of the story breaks the through-line.
+ * The trade page (/wholesale) is deliberately absent: it addresses shops,
+ * not the reader this series is written for.
  *
  * `minutes` is a reading estimate at ~200 wpm, measured against the
  * rendered `.editorial-page` text. It is stored rather than derived

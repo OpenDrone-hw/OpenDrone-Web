@@ -4,7 +4,7 @@ import {useRef, useState, useEffect, useCallback} from 'react';
 import {useNavigate} from 'react-router';
 import type {Group} from 'three';
 import * as THREE from 'three';
-import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {ModelLoader as GLTFLoader} from '~/lib/model-loader';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {HERO_AIRFRAME_KEYS, DEFAULT_HERO_SIZE} from '~/lib/hero-airframes';

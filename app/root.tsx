@@ -16,12 +16,17 @@ import type {Route} from './+types/root';
 import favicon from '~/assets/favicon.svg';
 import interVarWoff2 from '~/assets/fonts/inter-var.woff2';
 import jetbrainsMonoWoff2 from '~/assets/fonts/jetbrains-mono-Regular.woff2';
-import {resolveAllStatuses, roadmapStatusMap} from '~/lib/coming-soon';
+import {comingSoonFlag, resolveAllStatuses, roadmapStatusMap} from '~/lib/coming-soon';
+import {checkoutOpen} from '~/lib/shopify-cart-action';
 import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
+import {launchedStatusFlags} from '~/lib/launched-roadmap';
+import {CAMPAIGN} from '~/lib/catalog-client';
 import {toCards} from '~/lib/catalog';
+import {visitorCountry} from '~/lib/visitor-country';
 import {commerceHandoff, customerAccountUrl} from '~/lib/shop-links';
 import resetStyles from '~/styles/reset.css?url';
 import appStyles from '~/styles/app.css?url';
+import siteUiStyles from '~/styles/site-ui.css?url';
 import {PageLayout} from './components/PageLayout';
 import {SignalLost} from './components/SignalLost';
 import {Txt} from './components/Txt';
@@ -147,20 +152,28 @@ export async function loader(args: Route.LoaderArgs) {
   // answer. 400ms cap: cache warm resolves instantly, cache cold falls back
   // to the static statuses while the fetch fills the cache for the next
   // request.
-  const globalComingSoon = env.PUBLIC_COMING_SOON !== '0';
-  const statusFlags = await fetchStatusFlagsFast(
-    env.GITHUB_STATUS_TOKEN,
-    400,
-    args.context.waitUntil,
+  const globalComingSoon = comingSoonFlag(env);
+  const shopOpen = !globalComingSoon && checkoutOpen(env);
+  // An open shop files the boards with a paid first batch under beta, as the
+  // launch's topic flip will (app/lib/launched-roadmap.ts).
+  const statusFlags = launchedStatusFlags(
+    await fetchStatusFlagsFast(
+      env.GITHUB_STATUS_TOKEN,
+      400,
+      args.context.waitUntil,
+    ),
+    shopOpen,
+    CAMPAIGN,
   );
 
   return {
     ...criticalData,
     company,
     locale,
-    // Pre-launch banner kill switch: defaults ON; set PUBLIC_PRELAUNCH=0 in
-    // Oxygen the day orders open.
-    prelaunch: env.PUBLIC_PRELAUNCH !== '0',
+    // The shop is open only when both commerce gates are: the coming-soon
+    // flag is off and checkout writes are on. The preorder strip and cart
+    // link follow this answer; destination approval remains independent.
+    shopOpen,
     // Coming-soon kill switch: defaults ON; set PUBLIC_COMING_SOON=0 the day
     // orders open. Per-product overrides in product-content.ts win over this.
     comingSoon: globalComingSoon,
@@ -176,6 +189,11 @@ export async function loader(args: Route.LoaderArgs) {
     // and listings (display vocabulary; buyability is the map above).
     roadmapStatuses: roadmapStatusMap(statusFlags),
     turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? null,
+    // Display only: picks the buy module's price note (VAT vs duties).
+    visitorCountry: visitorCountry(args.request),
+    // Plausible counts the production site only: staging, previews and
+    // local runs would otherwise add review crawls to the shop's numbers.
+    analytics: /^(www\.)?opendrone\.be$/i.test(new URL(args.request.url).hostname),
   };
 }
 
@@ -263,6 +281,8 @@ export function Layout({children}: {children?: React.ReactNode}) {
             wiped class/attribute markers off <html>, which is why this is
             a style node and not a selector gate. */}
         <script
+          nonce={nonce}
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html:
               "var s=document.createElement('style');s.textContent='@media (prefers-reduced-motion: no-preference){.editorial-shell:not(.cascade-armed) .editorial-section:not(:first-of-type)>*,.editorial-shell:not(.cascade-armed) .editorial-cta>*{visibility:hidden}}';document.head.appendChild(s)",
@@ -300,6 +320,7 @@ export function Layout({children}: {children?: React.ReactNode}) {
         />
         <link rel="stylesheet" href={resetStyles}></link>
         <link rel="stylesheet" href={appStyles}></link>
+        <link rel="stylesheet" href={siteUiStyles}></link>
         {/* Design-token overrides authored in the studio (content/theme.json).
             After the stylesheet so it wins on order, before <Meta/> so route
             styles can still override it. Empty string when nothing is
@@ -323,14 +344,17 @@ export function Layout({children}: {children?: React.ReactNode}) {
             this deferred script loads are replayed on init.
             suppressHydrationWarning: nonce is per-request and only meaningful
             server-side; the client-side value is empty, which React would
-            otherwise flag as a hydration mismatch. */}
-        <script
-          defer
-          data-domain="opendrone.be"
-          src="https://plausible.io/js/script.tagged-events.revenue.js"
-          nonce={nonce}
-          suppressHydrationWarning
-        />
+            otherwise flag as a hydration mismatch. Rendered only when the
+            request host is opendrone.be (root loader `analytics`). */}
+        {data?.analytics ? (
+          <script
+            defer
+            data-domain="opendrone.be"
+            src="https://plausible.io/js/script.tagged-events.revenue.js"
+            nonce={nonce}
+            suppressHydrationWarning
+          />
+        ) : null}
         {orgJsonLd ? (
           <script
             type="application/ld+json"
@@ -374,6 +398,7 @@ export default function App() {
 
 export function ErrorBoundary() {
   const error = useRouteError();
+  const rootData = useRouteLoaderData<RootLoader>('root');
   let errorMessage = '';
   let errorStatus = 500;
 
@@ -387,9 +412,16 @@ export function ErrorBoundary() {
 
   const isNotFound = errorStatus === 404;
 
-  // 404 gets the easter egg: an FPV "lost signal / failsafe" screen.
+  // 404 gets the easter egg: an FPV "lost signal / failsafe" screen, inside
+  // the site header and footer so nav, cart and search stay.
   if (isNotFound) {
-    return <SignalLost />;
+    return rootData ? (
+      <PageLayout {...rootData}>
+        <SignalLost />
+      </PageLayout>
+    ) : (
+      <SignalLost />
+    );
   }
 
   return (

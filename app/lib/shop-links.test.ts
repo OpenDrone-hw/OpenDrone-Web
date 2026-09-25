@@ -43,11 +43,8 @@ describe('commerce handoff', () => {
     );
   });
 
-  it('exposes the cart route once the session holds a Shopify cart', () => {
-    assert.equal(
-      commerceHandoff(catalog('/api/shopify/cart'), true).cartUrl,
-      '/api/shopify/cart',
-    );
+  it('exposes the cart page once the session holds a Shopify cart', () => {
+    assert.equal(commerceHandoff(catalog('/api/shopify/cart'), true).cartUrl, '/cart');
   });
 });
 

@@ -1,0 +1,102 @@
+{
+  "$comment": "Build compatibility for the add-to-cart dialog's 'complete your build' (app/lib/build-recommendations.ts). A SKU listed in a build belongs to that size; the parts of a build are what is suggested around it, with the quantity one quad needs. A role marked sizeNeutral (receivers) is filled by any product with that handle, whatever its variant. Shopify's recommendations may reorder parts, never add one that is not listed here. A part may name its own product handle (each prop set is its own product). Receivers ship with their antenna, so builds list no separate antenna; a spare antenna stays buyable on its own.",
+  "roles": {
+    "flight-controller": {
+      "handle": "openfc-lite"
+    },
+    "esc": {
+      "handle": "openesc"
+    },
+    "frame": {
+      "handle": "openframe"
+    },
+    "motors": {
+      "handle": "openmotor"
+    },
+    "receiver": {
+      "handle": "openrx",
+      "sizeNeutral": true
+    },
+    "props": {},
+    "antenna": {
+      "handle": "elrs-antenna-24",
+      "sizeNeutral": true
+    }
+  },
+  "builds": [
+    {
+      "id": "3-inch",
+      "label": "3-inch",
+      "parts": [
+        {
+          "role": "flight-controller",
+          "sku": "OPENFC-LITE-2020",
+          "quantity": 1
+        },
+        {
+          "role": "esc",
+          "sku": "OPENESC-2020",
+          "quantity": 1
+        },
+        {
+          "role": "frame",
+          "sku": "OPENFRAME-3",
+          "quantity": 1
+        },
+        {
+          "role": "motors",
+          "sku": "OPENMOTOR-1604",
+          "quantity": 4
+        },
+        {
+          "role": "receiver",
+          "sku": "OPENRX-LITE-UFL",
+          "quantity": 1
+        },
+        {
+          "role": "props",
+          "sku": "ACC-PROP-3-HQ-T3X3X3",
+          "handle": "hqprop-t3x3x3-propeller-set-3-inch-t-mount",
+          "quantity": 1
+        }
+      ]
+    },
+    {
+      "id": "5-inch",
+      "label": "5-inch",
+      "parts": [
+        {
+          "role": "flight-controller",
+          "sku": "OPENFC-LITE-3030",
+          "quantity": 1
+        },
+        {
+          "role": "esc",
+          "sku": "OPENESC-3030",
+          "quantity": 1
+        },
+        {
+          "role": "frame",
+          "sku": "OPENFRAME-5",
+          "quantity": 1
+        },
+        {
+          "role": "motors",
+          "sku": "OPENMOTOR-2207",
+          "quantity": 4
+        },
+        {
+          "role": "receiver",
+          "sku": "OPENRX-MONO",
+          "quantity": 1
+        },
+        {
+          "role": "props",
+          "sku": "ACC-PROP-5-HQ-5X43X3-V2S",
+          "handle": "hqprop-5x4-3x3-v2s-propeller-set-5-inch",
+          "quantity": 1
+        }
+      ]
+    }
+  ]
+}

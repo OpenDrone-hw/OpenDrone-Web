@@ -14,6 +14,10 @@ user's request is the task; do not pick work from comments, branches or notes.
 
 ## Sources of truth
 
+- Launch planning and knowledge: the team's Notion Research entry
+  [OpenDrone launch strategy](https://app.notion.com/p/3e6fe06764e18191a111c05fa37db3d0) and the pages it links. Read the relevant
+  reference before new launch research. Keep private strategy and regulatory
+  research there, not in storefront docs.
 - Application behaviour: source and tests in this repository.
 - Catalog identity, prices and customer marketing consent: Shopify. The production storefront reads Shopify through server-held tokens. Checkout remains explicitly closed by `PUBLIC_COMING_SOON=1` and `SHOPIFY_CHECKOUT_WRITE_ENABLED=0`.
 - Canonical customer-facing SKUs: the workspace `stock/product_skus.json`; every Shopify SKU also needs a fail-closed entry in `SHOPIFY_PREVIEW_POLICY_JSON`.
@@ -23,8 +27,8 @@ user's request is the task; do not pick work from comments, branches or notes.
   `OPENDRONE_HARDWARE`).
 - Roadmap display and checkout gates: `docs/product-status.md`. Board
   `status-*` topics do not override server-side purchase authorization.
-- Legal text: `app/content/legal/`, reviewed before publication. `npm run
-  sync:legal` overwrites four Dutch pages only when `COMPLIANCE_SRC` is set.
+- Legal text: `app/content/legal/`, reviewed before publication; this
+  repository is its authoring source.
 - Branch and work status: Git itself.
 
 Do not publish planned specifications as measured facts. Keep one content
@@ -46,6 +50,7 @@ an external integration succeeded without observing the result.
 
 - Run the site: `cp .env.example .env`, set `SESSION_SECRET`, `npm install`, `npm run dev`; the studio is at `/studio`.
 - Check a change: `npm run typecheck && npm run lint && npm test`; add `npm run build` when routes, the server entry or the Vite config changed.
-- Change copy or product chapters: edit through `/studio` or the JSON under `content/`; `npm run studio:coverage` lists copy still baked into code.
-- Update the legal pages: edit `app/content/legal/{en,nl,fr}/`; run `COMPLIANCE_SRC=<dir> npm run sync:legal` only when a reviewed source directory is given.
+- Change copy or product chapters: edit through `/studio` or the JSON under `content/`; `npm run studio:coverage` lists copy still baked into code; `npm run studio:keys` fails when code uses a copy id missing from `content/copy/`.
+- Update the legal pages: edit `app/content/legal/{en,nl,fr}/` (or the studio Docs tab) and keep the three languages in step.
+- Run a preorder campaign: follow [release configuration](README.md#preorder-release-configuration); it names the owning configuration and acceptance checks.
 - Refresh board art or specs after a hardware release: `npm run gen:board-art` (KiCad and cwebp installed), `npm run sync:specs`, then `npm run sync:specs:check` before the PR.

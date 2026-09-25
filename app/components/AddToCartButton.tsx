@@ -1,15 +1,48 @@
+import {useState, useSyncExternalStore} from 'react';
+import {useRevalidator, useRouteLoaderData} from 'react-router';
+import {LoaderCircle} from 'lucide-react';
 import {trackEvent} from '~/lib/growth/plausible';
 import {attributionSource} from '~/lib/growth/attribution';
-import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
+import {announceCartAdded, CartAddError, postCartAdd, skusFromFields} from '~/lib/cart-client';
+import {copyText} from '~/lib/copy';
+import {countryName, notSoldDirect} from '~/lib/shipping-rates';
+import type {RootLoader} from '~/root';
+import {beginCartAdd, endCartAdd, isCartAddBusy, subscribeCartAdd} from './cart-add-lock';
+
+/** What shows in place of a buy button for a visitor who cannot buy
+ *  direct: outside the EU "EU consumer orders only", in an EU country not
+ *  open yet "Orders are not open for Germany", in a blocked country "Not
+ *  available in Russia". Null where the button shows. */
+export function notSoldNote(country: string | null): string | null {
+  const reason = notSoldDirect(country);
+  if (reason === 'blocked') {
+    return (copyText('product-chrome.buy_blocked') ?? 'Not available in {country}').replace(
+      '{country}',
+      countryName(country ?? ''),
+    );
+  }
+  if (reason === 'shops') return copyText('product-chrome.buy_shops_only') ?? 'EU consumer orders only';
+  if (reason === 'closed') {
+    return (copyText('product-chrome.buy_closed') ?? 'Orders are not open for {country}').replace(
+      '{country}',
+      countryName(country ?? ''),
+    );
+  }
+  return null;
+}
 
 /**
- * The buy button: a regular POST form to the cart action
- * (`/api/shopify/cart`, fields `sku`, `qty`, `next`), which creates the
- * visitor's Shopify cart and redirects them to its checkout.
+ * The buy button: a POST form to the cart action (`/api/shopify/cart`,
+ * fields `sku`, `qty` or `lines`). With JavaScript it adds in the
+ * background, the visitor stays on the page and the add-to-cart dialog
+ * opens (`CartAddedDialog`); without it the form posts and lands on /cart.
  *
  * POST prevents crawlers and link previewers from creating carts by
- * following the public product link. The click still fires funnel events
- * before the browser navigates to checkout.
+ * following the public product link.
+ *
+ * A visitor from a country not sold direct (`notSoldDirect`) gets a plain
+ * status line instead, on every surface that sells: product page, cards,
+ * /preorder and the build suggestions.
  */
 export function AddToCartButton({
   children,
@@ -21,6 +54,7 @@ export function AddToCartButton({
   className = 'btn-primary',
   ariaLabel,
   dataTip,
+  compactError = false,
 }: {
   children: React.ReactNode;
   disabled?: boolean;
@@ -37,7 +71,27 @@ export function AddToCartButton({
   ariaLabel?: string;
   /** Attr-driven CSS tooltip content (see .pod-buy-stack[data-tip]). */
   dataTip?: string;
+  /** Show a retryable failure in the button, without an extra message row. */
+  compactError?: boolean;
 }) {
+  const [state, setState] = useState<'idle' | 'adding' | 'error'>('idle');
+  // Why the last add failed, in the buyer's words: the per-order limit
+  // (400) or the paid-batch units left (409) come from the server.
+  const [message, setMessage] = useState<string | null>(null);
+  const revalidator = useRevalidator();
+  // Another buy button's add is still running: this one waits, so two
+  // quick taps never race on the cart and drop a line.
+  const anyBusy = useSyncExternalStore(subscribeCartAdd, isCartAddBusy, () => false);
+  const otherBusy = anyBusy && state !== 'adding';
+  const rootData = useRouteLoaderData<RootLoader>('root');
+  const note = notSoldNote(rootData?.visitorCountry ?? null);
+  if (note) {
+    return (
+      <span className="buy-notsold" role="status">
+        {note}
+      </span>
+    );
+  }
   if (disabled) {
     return (
       <button
@@ -71,17 +125,44 @@ export function AddToCartButton({
       method="post"
       className="add-to-cart-form"
       onSubmit={(e) => {
-        // The hand-off leaves this site, so every click is a checkout
-        // click: the Plausible event plus the chk:<day> beacon that is
-        // the buy-rate denominator (app/lib/growth/ledger.ts).
+        e.preventDefault();
+        if (state === 'adding' || !beginCartAdd()) return;
         trackEvent('Add to Cart', {
           props: {product: product ?? 'unknown', source: attributionSource()},
+          ...(revenue && Number.isFinite(revenue.amount) ? {revenue} : {}),
         });
-        trackCheckoutClick(revenue ?? null);
         // Drop focus after the click so :focus-within doesn't pin
         // hover-revealed quick-add UI open once the pointer leaves.
         e.currentTarget.querySelector('button')?.blur();
         onClick?.();
+        setState('adding');
+        setMessage(null);
+        const submitted = keyedFields.map(({name, value}) => [name, value] as [string, string]);
+        postCartAdd(action, submitted)
+          .then((summary) => {
+            endCartAdd();
+            setState('idle');
+            announceCartAdded({summary, skus: skusFromFields(submitted), handle: product ?? null});
+            // The first add creates the session cart: refresh the header's
+            // cart link.
+            void revalidator.revalidate();
+          })
+          .catch((caught: unknown) => {
+            endCartAdd();
+            const refused =
+              caught instanceof CartAddError &&
+              (caught.status === 400 || caught.status === 409) &&
+              Boolean(caught.message) &&
+              caught.message.length < 400;
+            // A refused quantity fails the same way on a retry: keep the
+            // label and say why. Anything else may pass on a second try.
+            setState(refused ? 'idle' : 'error');
+            setMessage(
+              refused
+                ? (caught as CartAddError).message
+                : (copyText('cart.add_failed') ?? 'Could not add to cart. Try again in a minute.'),
+            );
+          });
       }}
     >
       {keyedFields.map(({name, value, key}) => (
@@ -92,9 +173,29 @@ export function AddToCartButton({
         aria-label={ariaLabel}
         data-tip={dataTip}
         className={className}
+        aria-busy={state === 'adding'}
+        aria-disabled={otherBusy || undefined}
+        data-waiting={otherBusy ? '' : undefined}
+        title={compactError && state === 'error' ? message ?? undefined : undefined}
       >
-        <span className="btn-label">{children}</span>
+        <span className="btn-label cart-action-label" aria-live="polite" aria-atomic="true">
+          {state === 'adding' ? <LoaderCircle className="cart-action-spinner" size={16} aria-hidden="true" /> : null}
+          {state === 'adding'
+            ? (copyText('cart.add_busy') ?? 'Adding…')
+            : state === 'error'
+              ? compactError
+                ? (copyText('cart.add_error_compact') ?? 'Couldn’t add · Retry')
+                : (copyText('cart.add_retry') ?? 'Try again')
+              : children}
+        </span>
       </button>
+      {message && (!compactError || state !== 'error') ? (
+        // The form is display: contents, so this sits in the buy row as its
+        // own full-width item.
+        <small className="cart-line-error" role="alert" style={{flex: '1 1 100%', width: '100%'}}>
+          {message}
+        </small>
+      ) : null}
     </form>
   );
 }

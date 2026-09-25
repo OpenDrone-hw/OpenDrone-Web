@@ -19,6 +19,7 @@ import type {
   HeroLoadState,
 } from '~/components/HeroDroneScene';
 import {Txt} from '~/components/Txt';
+import {copyFill, copyText} from '~/lib/copy';
 import {WHAT_IS_THIS_ID} from '~/lib/product-content';
 
 function shouldLoad3D() {
@@ -37,6 +38,10 @@ const scenePromise =
     ? import('~/components/HeroDroneScene')
     : null;
 
+// Resolve packaged assemblies before mounting the renderer. Sizes sharing an
+// assembly keep its GPU resources and inspection pose when the SKU changes.
+const assemblies = import.meta.glob('/public/models/*/studio.json');
+
 /** Link label for a beat: the chapter's own title when the href points at
  *  the What-does-this-do chapter, the generic product link otherwise. */
 function BeatLinkLabel({href}: {href: string}) {
@@ -52,9 +57,11 @@ export function HeroDroneStage({
   size,
   onLoad,
   onReady,
+  onBuilding,
   onProgress,
   onBeat,
   onBeats,
+  onSeeker,
 }: {
   model?: string;
   size?: string;
@@ -62,17 +69,22 @@ export function HeroDroneStage({
   onLoad?: (s: HeroLoadState) => void;
   /** Fires once the drone is rigged and the walkthrough is live. */
   onReady?: () => void;
+  onBuilding?: (building: boolean) => void;
   /** Walkthrough position 0..1, every frame. */
   onProgress?: (f: number) => void;
   /** Presented beat, or null while the drone rests whole between parts. */
   onBeat?: (beat: HeroBeat | null, index: number) => void;
   /** The whole beat list once known, in order. */
   onBeats?: (beats: HeroBeat[]) => void;
+  onSeeker?: (seek: ((id: string) => void) | null) => void;
 }) {
   // The homepage drives this from its size selector. The scene falls back to
   // the 3 inch if the requested design has no assembly built yet, so adding
   // od5/ later is the only step needed to light this up.
-  const folder = model ?? `od${size ?? '3'}`;
+  const requestedFolder = model ?? `od${size ?? '3'}`;
+  const folder = `/public/models/${requestedFolder}/studio.json` in assemblies
+    ? requestedFolder
+    : 'od3';
   const [use3D, setUse3D] = useState(false);
   const [Scene, setScene] = useState<React.ComponentType<HeroDroneSceneProps> | null>(
     null,
@@ -95,6 +107,7 @@ export function HeroDroneStage({
 
   const [beats, setBeats] = useState<HeroBeat[]>([]);
   const [active, setActive] = useState(0);
+  const [resolvedModel, setResolvedModel] = useState<string | null>(null);
   // The copy the scene is presenting RIGHT NOW: the beat's, or an active
   // mid-hold stop's (same shape, different id). The panel renders this rather
   // than looking the beat up in `beats`, or a stop's caption change could
@@ -107,6 +120,16 @@ export function HeroDroneStage({
   const [resting, setResting] = useState(true);
   const seek = useRef<((i: number) => void) | null>(null);
   const fillRef = useRef<HTMLDivElement>(null);
+  const handleBuilding = useCallback((building: boolean) => {
+    onBuilding?.(building);
+    if (building) {
+      seek.current = null;
+      setBeats([]);
+      setShown(null);
+      setActive(0);
+      setResting(true);
+    }
+  }, [onBuilding]);
 
   const handleBeat = useCallback(
     (b: HeroBeat | null, i: number) => {
@@ -124,9 +147,16 @@ export function HeroDroneStage({
     },
     [onBeats],
   );
-  const onSeeker = useCallback((fn: (i: number) => void) => {
+  const handleSeeker = useCallback((fn: (i: number) => void) => {
     seek.current = fn;
   }, []);
+  useEffect(() => {
+    onSeeker?.(use3D && beats.length ? (id) => {
+      const index = beats.findIndex(beat => beat.id === id);
+      if (index >= 0) seek.current?.(index);
+    } : null);
+    return () => onSeeker?.(null);
+  }, [beats, onSeeker, use3D]);
   // Fires every frame, so it writes straight to the DOM rather than to state.
   const handleProgress = useCallback(
     (f: number) => {
@@ -142,17 +172,30 @@ export function HeroDroneStage({
       {Scene ? (
         <Scene
           model={folder}
+          onModel={setResolvedModel}
           onBeat={handleBeat}
           onBeats={handleBeats}
           onProgress={handleProgress}
           onLoad={onLoad}
           onReady={onReady}
-          onSeeker={onSeeker}
+          onBuilding={handleBuilding}
+          onSeeker={handleSeeker}
         />
       ) : null}
 
+      {use3D && resolvedModel && resolvedModel !== requestedFolder ? (
+        <p className="hp-model-note">
+          {copyFill('home.hero_model_note', '{size}″ assembly preview', {
+            size: resolvedModel.replace(/^od/, ''),
+          })}
+        </p>
+      ) : null}
+
       {use3D ? (
-        <nav className="hp-rail" aria-label="Drone parts">
+        <nav
+          className="hp-rail"
+          aria-label={copyText('home.hero_rail_aria') ?? 'Drone parts'}
+        >
           <div className="hp-rail-fill" ref={fillRef} />
           {beats.map((b, i) => (
             <button

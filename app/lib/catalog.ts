@@ -23,6 +23,7 @@ import type {
   ProductVariantFragment,
 } from './product-shapes.ts';
 import {PRODUCT_CONTENT} from './product-content.ts';
+import type {CampaignState} from './preorder-campaign.ts';
 
 export type {CartLine, CatalogAvailability};
 
@@ -37,11 +38,15 @@ export type CatalogVariant = {
   availability: CatalogAvailability;
   ship_promise: string | null;
   image: string | null;
+  /** Shopify's alt text for `image`, which names the tier it shows. */
+  image_alt?: string | null;
   url: string;
   cart_add_url: string;
   cart_add_method?: 'POST';
   /** Server-only Shopify variant identity. Never accepted from a browser. */
   merchandise_id?: string;
+  /** Preorder campaign state, set by `applyCampaign` for campaign SKUs. */
+  campaign?: CampaignState | null;
 };
 
 export type CatalogProduct = {
@@ -51,6 +56,8 @@ export type CatalogProduct = {
   description: string | null;
   url: string;
   images: string[];
+  /** Shopify's alt text per entry of `images`, same order. */
+  image_alts?: Array<string | null>;
   rating: {average: number; count: number} | null;
   variants: CatalogVariant[];
 };
@@ -65,6 +72,8 @@ export type Catalog = {
   cart_url: string;
   add_url: string;
   add_method?: 'POST';
+  /** Set by `applyCampaign`: whether the paid preorder counts were read. */
+  campaign_counts?: 'verified' | 'unavailable';
   products: CatalogProduct[];
 };
 
@@ -196,12 +205,21 @@ function mapVariant(
     title: variant.title,
     availableForSale: availabilityToAvailableForSale(variant.availability),
     price: money(variant.price, variant.currency || catalog.currency),
+    // A campaign SKU never shows a struck-through price: it was never sold
+    // at the higher one, so a "was" price would be a misleading reduction
+    // (EU Price Indication Directive, art. 6a). Shopify's compare-at price
+    // is its price after the funding target instead: `priceAfter`.
     compareAtPrice:
-      variant.compare_price != null && variant.compare_price > variant.price
+      !variant.campaign && variant.compare_price != null && variant.compare_price > variant.price
         ? money(variant.compare_price, variant.currency || catalog.currency)
         : null,
+    // The price after the current step: the next step's price, or retail.
+    priceAfter:
+      variant.campaign?.nextPrice != null && variant.campaign.nextPrice > variant.price
+        ? money(variant.campaign.nextPrice, variant.currency || catalog.currency)
+        : null,
     image:
-      image(variant.image, variant.title) ??
+      image(variant.image, variant.image_alt || variant.title) ??
       image(product.images[0] ?? null, product.title),
     product: {title: product.title, handle: product.handle},
     selectedOptions: Object.entries(variant.options ?? {}).map(
@@ -210,6 +228,7 @@ function mapVariant(
     cartAddUrl:
       variant.cart_add_url || cartAddUrl(catalog.add_url, [{sku: variant.sku}]),
     shipPromise: variant.ship_promise,
+    campaign: variant.campaign ?? null,
     availability: variant.availability,
     shopUrl: variant.url || product.url || null,
   };
@@ -226,7 +245,10 @@ export function selectVariant(
   selectedOptions: Array<{name: string; value: string}>,
 ): ProductVariantFragment | null {
   const norm = (s: string) => s.trim().toLowerCase();
-  const wanted = selectedOptions.filter((o) => o.value);
+  // Only real option names count: other query params on the page URL
+  // (?image=1 from the gallery, ?country=US) must not void the match.
+  const optionNames = new Set(variants.flatMap((v) => v.selectedOptions.map((o) => norm(o.name))));
+  const wanted = selectedOptions.filter((o) => o.value && optionNames.has(norm(o.name)));
   if (wanted.length) {
     const match = variants.find((v) =>
       wanted.every((w) =>
@@ -265,7 +287,9 @@ export function toProduct(
   const selected = selectVariant(variants, selectedOptions);
   const prices = variants.map((v) => Number(v.price.amount));
   const currency = variants[0]?.price.currencyCode ?? catalog.currency;
-  const images = product.images.map((url, i) => image(url, product.title, i)!);
+  const images = product.images.map(
+    (url, i) => image(url, product.image_alts?.[i] || product.title, i)!,
+  );
   return {
     id: `product:${product.handle}`,
     handle: product.handle,
@@ -338,40 +362,68 @@ export function toCards(catalog: Catalog): ProductCardFragment[] {
  * The selector model: every value of every axis with its selected /
  * available / exists flags and the query string that selects it. Local
  * replacement for Hydrogen's `getProductOptions`.
+ *
+ * Axes are hierarchical in catalog order (Part, then Size): a value `exists`
+ * when some variant carries it together with the selected values of every
+ * earlier axis, so a later axis offers only the combinations the earlier
+ * choice has. Picking a value keeps the other selected values when that
+ * combination exists, else it lands on the first variant with the value
+ * (available first), and the query names that variant's full option set.
  */
 export function mapProductOptions(
   product: ProductFragment,
 ): MappedProductOptions[] {
   const selected = product.selectedOrFirstAvailableVariant;
   const norm = (s: string) => s.trim().toLowerCase();
-  return optionAxes(product.variants.nodes).map((axis) => ({
+  const variants = product.variants.nodes;
+  const valueOf = (
+    v: {selectedOptions: Array<{name: string; value: string}>},
+    name: string,
+  ) => v.selectedOptions.find((o) => norm(o.name) === norm(name))?.value;
+  const same = (a: string | undefined, b: string | undefined) =>
+    a != null && b != null && norm(a) === norm(b);
+  const selectedOf = (name: string) =>
+    selected ? valueOf(selected, name) : undefined;
+  const axes = optionAxes(variants);
+  return axes.map((axis, axisIndex) => ({
     name: axis.name,
     optionValues: axis.values.map((value) => {
-      const variant =
-        product.variants.nodes.find((v) =>
-          v.selectedOptions.some(
-            (o) => norm(o.name) === norm(axis.name) && norm(o.value) === norm(value),
+      const withValue = variants.filter((v) => same(valueOf(v, axis.name), value));
+      const earlier = axes.slice(0, axisIndex);
+      const inContext = withValue.filter((v) =>
+        earlier.every((a) => {
+          const want = selectedOf(a.name);
+          return want == null || same(valueOf(v, a.name), want);
+        }),
+      );
+      const combination =
+        withValue.find((v) =>
+          axes.every(
+            (a) =>
+              a.name === axis.name ||
+              selectedOf(a.name) == null ||
+              same(valueOf(v, a.name), selectedOf(a.name)),
           ),
         ) ?? null;
+      const target =
+        combination ??
+        withValue.find((v) => v.availableForSale) ??
+        withValue[0] ??
+        null;
       const query = new URLSearchParams();
-      for (const o of selected?.selectedOptions ?? []) {
-        if (norm(o.name) !== norm(axis.name)) query.set(o.name, o.value);
+      for (const o of target?.selectedOptions ?? [{name: axis.name, value}]) {
+        query.set(o.name, o.value);
       }
-      query.set(axis.name, value);
       return {
         name: value,
         handle: product.handle,
         variantUriQuery: query.toString(),
-        selected: Boolean(
-          selected?.selectedOptions.some(
-            (o) => norm(o.name) === norm(axis.name) && norm(o.value) === norm(value),
-          ),
-        ),
-        available: Boolean(variant?.availableForSale),
-        exists: Boolean(variant),
+        selected: same(selectedOf(axis.name), value),
+        available: Boolean(target?.availableForSale),
+        exists: inContext.length > 0,
         isDifferentProduct: false,
         swatch: null,
-        firstSelectableVariant: variant,
+        firstSelectableVariant: target,
       };
     }),
   }));

@@ -1,7 +1,6 @@
 import {useLocation, useNavigate, useNavigation} from 'react-router';
 import {useEffect, useState} from 'react';
 import {AddToCartButton} from './AddToCartButton';
-import {StackQuickAdd, type StackOffer} from './StackQuickAdd';
 import {useComingSoon, useProductStatus} from '~/lib/coming-soon';
 import {copyText} from '~/lib/copy';
 import {trackEvent} from '~/lib/growth/plausible';
@@ -18,7 +17,10 @@ export function ProductForm({
   buyUrl,
   buyDisabled,
   buyCtaLabel,
-  stackOffers,
+  quantity,
+  maxQuantity = 50,
+  maxQuantityNote,
+  onQuantityChange,
 }: {
   productOptions: MappedProductOptions[];
   selectedVariant: ProductVariantFragment | null;
@@ -33,9 +35,16 @@ export function ProductForm({
   buyUrl?: string;
   buyDisabled?: boolean;
   buyCtaLabel?: string;
-  /** "Buy it as a stack" offers revealed on hover of the CTA: one click
-   *  orders this board plus the size-matched partner (FC to ESC). */
-  stackOffers?: StackOffer[];
+  /** Units to add. With `onQuantityChange` set, a stepper renders next to
+   *  the button; the caller holds the number. */
+  quantity?: number;
+  /** The most one add may ask for: the cart line cap, or the units left in
+   *  a paid preorder batch. */
+  maxQuantity?: number;
+  /** Shown under the buy row once the stepper reaches `maxQuantity`, so a
+   *  clamped number is explained ("Max 50 per order"). */
+  maxQuantityNote?: string;
+  onQuantityChange?: (next: number) => void;
 }) {
   const navigate = useNavigate();
   // Variant switches are server navigations; on a slow connection the pill
@@ -57,15 +66,18 @@ export function ProductForm({
   const ctaLabelAvailable =
     productStatus === 'preorder'
       ? (copyText('product-chrome.buy_cta_preorder') ?? 'Pre-order')
-      : 'Add to cart';
-  const ctaLabelSoldOut = 'Sold out';
+      : (copyText('product-chrome.buy_cta_add') ?? 'Add to cart');
+  const ctaLabelSoldOut = copyText('product-chrome.buy_stock_out') ?? 'Sold out';
   const hidden = new Set(
     (hideOptionNames ?? []).map((n) => n.trim().toLowerCase()),
   );
   // Belt and braces: the PDP already swaps this whole form for the notify
   // signup while a product is locked, so a locked shop renders no buy link.
   const soon = useComingSoon(selectedVariant?.product?.handle);
-  const href = buyUrl ?? selectedVariant?.cartAddUrl ?? '';
+  const qty = Math.max(1, Math.min(maxQuantity, Math.round(quantity ?? 1)));
+  // The single-line hand-off carries `qty`; the bundle link keeps its own
+  // per-line counts.
+  const href = buyUrl ?? withQuantity(selectedVariant?.cartAddUrl ?? '', qty);
   const disabled =
     soon ||
     !href ||
@@ -78,6 +90,10 @@ export function ProductForm({
         if (option.optionValues.length === 1) return null;
         // Skip axes owned by another selector (the comparison ladder).
         if (hidden.has(option.name.trim().toLowerCase())) return null;
+        // A later axis offers only what the earlier choice has (the battery
+        // pad comes in one size that fits both frames).
+        const values = option.optionValues.filter((v) => v.exists);
+        if (!values.length) return null;
 
         return (
           <div key={option.name} className="mb-4">
@@ -85,7 +101,12 @@ export function ProductForm({
               {option.name}
             </h3>
             <div className="product-options-grid">
-              {option.optionValues.map((value) => {
+              {values.length === 1 ? (
+                <span className="product-options-item product-options-item--fixed">
+                  {values[0].name}
+                </span>
+              ) : null}
+              {values.length === 1 ? null : values.map((value) => {
                 const {name, variantUriQuery, selected, available, exists} =
                   value;
                 // SEO: render as a button with a scripted navigation so
@@ -135,24 +156,73 @@ export function ProductForm({
           </div>
         );
       })}
-      <StackQuickAdd offers={stackOffers ?? []}>
-        <AddToCartButton
-          href={href}
-          disabled={disabled}
-          product={selectedVariant?.product?.handle}
-          revenue={
-            Number.isFinite(amount) && selectedVariant?.price?.currencyCode
-              ? {currency: selectedVariant.price.currencyCode, amount}
-              : null
-          }
-        >
-          {isBundle
-            ? (buyCtaLabel ?? 'Add to cart')
-            : selectedVariant?.availableForSale
-              ? ctaLabelAvailable
-              : ctaLabelSoldOut}
-        </AddToCartButton>
-      </StackQuickAdd>
+      {onQuantityChange && !isBundle ? (
+        <div className="product-qty" role="group" aria-label={copyText('product-chrome.buy_qty_aria') ?? 'Quantity'}>
+          <button
+            type="button"
+            className="product-qty-step"
+            onClick={() => onQuantityChange(qty - 1)}
+            disabled={disabled || qty <= 1}
+            aria-label={copyText('product-chrome.buy_qty_decrease') ?? 'Decrease quantity'}
+          >
+            −
+          </button>
+          <input
+            className="product-qty-value"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={maxQuantity}
+            value={qty}
+            disabled={disabled}
+            aria-label={copyText('product-chrome.buy_qty_aria') ?? 'Quantity'}
+            onChange={(e) => {
+              const next = Number.parseInt(e.target.value, 10);
+              if (Number.isFinite(next)) onQuantityChange(Math.max(1, Math.min(maxQuantity, next)));
+            }}
+          />
+          <button
+            type="button"
+            className="product-qty-step"
+            onClick={() => onQuantityChange(qty + 1)}
+            disabled={disabled || qty >= maxQuantity}
+            aria-label={copyText('product-chrome.buy_qty_increase') ?? 'Increase quantity'}
+          >
+            +
+          </button>
+        </div>
+      ) : null}
+      <AddToCartButton
+        href={href}
+        disabled={disabled}
+        product={selectedVariant?.product?.handle}
+        revenue={
+          Number.isFinite(amount) && selectedVariant?.price?.currencyCode
+            ? {currency: selectedVariant.price.currencyCode, amount: amount * qty}
+            : null
+        }
+      >
+        {isBundle
+          ? (buyCtaLabel ?? copyText('product-chrome.buy_cta_add') ?? 'Add to cart')
+          : selectedVariant?.availableForSale
+            ? ctaLabelAvailable
+            : ctaLabelSoldOut}
+      </AddToCartButton>
+      {onQuantityChange && !isBundle && maxQuantityNote && qty >= maxQuantity ? (
+        <p className="product-qty-note" role="status">
+          {maxQuantityNote}
+        </p>
+      ) : null}
     </div>
   );
+}
+
+/** The hand-off link with its `qty` field set; other links pass through. */
+function withQuantity(href: string, qty: number): string {
+  if (!href || qty === 1) return href;
+  const [path, query = ''] = href.split('?');
+  const params = new URLSearchParams(query);
+  if (!params.has('sku')) return href;
+  params.set('qty', String(qty));
+  return `${path}?${params.toString()}`;
 }

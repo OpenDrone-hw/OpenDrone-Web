@@ -10,6 +10,10 @@
  */
 
 import {mdToHtml} from '~/lib/legal';
+import {checkoutOpen} from '~/lib/shopify-cart-action';
+
+/** The shop is open by the rule the chrome uses: both commerce gates. */
+export const shopIsOpen = checkoutOpen;
 
 export type Post = {
   /** URL slug, the file name without .md. */
@@ -25,6 +29,12 @@ export type Post = {
   image: {url: string; altText: string | null} | null;
   /** The body, Markdown source. */
   body: string;
+  /** `launch: true`: about the open shop, so it exists only once the shop
+   *  is open (a closed production site must not announce preorders). */
+  launch: boolean;
+  /** `superseded_by: <slug>`: once the shop is open this post leaves the
+   *  archive and feed, and its page points at the newer post. */
+  supersededBy: string | null;
 };
 
 const FILES: Record<string, string> = import.meta.env
@@ -107,6 +117,8 @@ function build(): Post[] {
       author: meta.author || null,
       image: image ? {url: image, altText: null} : null,
       body,
+      launch: meta.launch === 'true',
+      supersededBy: meta.superseded_by || null,
     });
   }
   // Newest first, the order the archive and the feed both read in.
@@ -116,13 +128,29 @@ function build(): Post[] {
 
 export const POSTS: Post[] = build();
 
-/** The archive list. `no-archive` keeps a post out of it (rare). */
-export function archivePosts(): Post[] {
-  return POSTS.filter((p) => !p.tags.includes('no-archive'));
+/** Whether a post exists for a site whose shop is open or closed. */
+function visible(p: Post, shopOpen: boolean): boolean {
+  return shopOpen || !p.launch;
 }
 
-export function postByHandle(handle: string | undefined): Post | null {
-  return POSTS.find((p) => p.handle === handle) ?? null;
+/** The archive list. `no-archive` keeps a post out of it (rare); launch
+ *  posts appear only once the shop is open, and superseded posts leave it
+ *  then. */
+export function archivePosts(shopOpen = false): Post[] {
+  return POSTS.filter(
+    (p) =>
+      !p.tags.includes('no-archive') &&
+      visible(p, shopOpen) &&
+      !(shopOpen && p.supersededBy),
+  );
+}
+
+export function postByHandle(
+  handle: string | undefined,
+  shopOpen = false,
+): Post | null {
+  const post = POSTS.find((p) => p.handle === handle) ?? null;
+  return post && visible(post, shopOpen) ? post : null;
 }
 
 /** The post body as HTML, using the same converter as the legal pages. */

@@ -1,24 +1,32 @@
 import type {Route} from './+types/products._index';
-import {useMemo} from 'react';
+import {useEffect, useMemo, useState} from 'react';
+import {useAutoAnimate} from '@formkit/auto-animate/react';
+import {SlidersHorizontal, X} from 'lucide-react';
+import type {ShouldRevalidateFunctionArgs} from 'react-router';
 import type {ReactNode} from 'react';
-import {Form, Link, useLoaderData, useSearchParams} from 'react-router';
+import {Form, useLoaderData, useSearchParams} from 'react-router';
 import {ProductItem, type ProductQuickAdd} from '~/components/ProductItem';
-import type {StackOffer} from '~/components/StackQuickAdd';
 import type {MoneyV2, ProductCardFragment} from '~/lib/product-shapes';
 import {toCards} from '~/lib/catalog';
-import {buyUrl, commerceHandoff} from '~/lib/shop-links';
+import {CAMPAIGN} from '~/lib/catalog-client';
 import {FAMILIES} from '~/lib/families';
+import {buildOf, parseBuilds} from '~/lib/build-recommendations';
+import buildsJson from '../../content/builds.json';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {EmptyState} from '~/components/EmptyState';
 import {
   PRODUCT_CONTENT,
+  columnSpecs,
+  hiddenWhileSoldOut,
   isConceptFor,
-  isPurchasableStatus,
+  shipMonth,
+  variantDisplayName,
 } from '~/lib/product-content';
-import {useProductStatusResolver, useRoadmapStatusResolver} from '~/lib/coming-soon';
-import {stackDiscountedPrice} from '~/lib/stack-discount';
+import {shipWord} from '~/components/ShipChip';
+import {useRoadmapStatusResolver} from '~/lib/coming-soon';
 import {Txt} from '~/components/Txt';
 import {copyText, editAttrs} from '~/lib/copy';
+import {helpText, normalise, sizes, termWords} from '~/lib/catalog-search';
 
 /**
  * The term-bearing meta string carries a `{term}` token rather than being
@@ -28,24 +36,31 @@ function withTerm(id: string, fallback: string, term: string): string {
   return (copyText(id) ?? fallback).replace('{term}', term);
 }
 
-export const meta: Route.MetaFunction = ({data, location}) =>
-  buildSeoMeta({
-    title: data?.term
-      ? withTerm(
-          'collections-all.meta_title_term',
-          'Search results for "{term}"',
-          data.term,
-        )
+export const meta: Route.MetaFunction = ({location}) => {
+  const term = new URLSearchParams(location.search).get('q')?.trim() ?? '';
+  return buildSeoMeta({
+    title: term
+      ? withTerm('collections-all.meta_title_term', 'Search results for "{term}"', term)
       : copyText('collections-all.meta_title') ?? 'All Products',
-    description:
-      copyText('collections-all.meta_description') ??
-      'Browse every OpenDrone product in one place: Open Source flight controllers, ESCs, receivers, frames, bundles, and accessories. Filter by category and sort by price or newest.',
+    description: copyText('collections-all.meta_description') ?? '',
     type: 'product',
-    // Canonical without filter/sort/search queries so variants don't splinter.
     url: `${SITE_ORIGIN}${location.pathname}`,
-    // A search result set is not a page worth indexing.
-    robots: data?.term ? 'noindex,follow' : undefined,
+    robots: term ? 'noindex,follow' : undefined,
   });
+};
+
+/** Browsing filters use the loaded catalog; mutations and refresh still revalidate. */
+export function shouldRevalidate({currentUrl, nextUrl, formMethod, defaultShouldRevalidate}: ShouldRevalidateFunctionArgs) {
+  if (formMethod && formMethod.toUpperCase() !== 'GET') return defaultShouldRevalidate;
+  if (currentUrl.pathname !== nextUrl.pathname || currentUrl.search === nextUrl.search) return defaultShouldRevalidate;
+  const serverParams = (url: URL) => {
+    const params = new URLSearchParams(url.search);
+    for (const key of ['q', 'type', 'sale', 'sort', 'build', 'stack', 'ships', 'cursor', 'direction']) params.delete(key);
+    params.sort();
+    return params.toString();
+  };
+  return serverParams(currentUrl) !== serverParams(nextUrl) ? defaultShouldRevalidate : false;
+}
 
 /**
  * Sidebar order for the known families (app/lib/families.ts, shared with
@@ -60,10 +75,12 @@ const CATEGORY_ORDER: Array<{type: string; copyId: string}> = [
   {type: 'Accessory', copyId: 'collections-all.category_accessory'},
 ];
 
-/** Sort options for the toolbar dropdown. `newest` is the default and matches
- *  the loader's CREATED_AT-desc fetch order, so it needs no client re-sort.
+/** Sort options for the toolbar dropdown. `featured` is the default: the
+ *  families in sidebar order (boards first, accessories last), newest first
+ *  inside each. `newest` is the loader's CREATED_AT-desc fetch order.
  *  `label` is the fallback for a missing copy key. */
 const SORT_OPTIONS: Array<{value: string; copyId: string; label: string}> = [
+  {value: 'featured', copyId: 'collections-all.sort_featured', label: 'Featured'},
   {value: 'newest', copyId: 'collections-all.sort_newest', label: 'Newest'},
   {value: 'price-asc', copyId: 'collections-all.sort_price_asc', label: 'Price: low to high'},
   {value: 'price-desc', copyId: 'collections-all.sort_price_desc', label: 'Price: high to low'},
@@ -78,10 +95,17 @@ export async function loader({request, context}: Route.LoaderArgs) {
   // shareable browse hub that lists every model on its own card. The
   // search term filters the same cards.
   const catalog = await context.catalog.get();
+  // The one fixed ship date of the campaign, the stack's paid batch, for
+  // the "Ships Oct 2026" filter chip.
+  const stackShips =
+    Object.values(CAMPAIGN.skus)
+      .flatMap((entry) => entry.batches)
+      .find((batch) => batch.paid && batch.ships?.trim())
+      ?.ships?.trim() ?? null;
   return {
     products: toCards(catalog),
-    commerceHandoff: commerceHandoff(catalog),
     term,
+    stackShips,
   };
 }
 
@@ -96,6 +120,8 @@ type Card = {
   searchText: string;
   to: string;
   price: MoneyV2;
+  /** `price` is the cheapest of several variant prices: the card says "from". */
+  priceFrom?: boolean;
   /** The tier's own variant image, so each size card shows its real board
    *  instead of falling back to the product's featuredImage. */
   image?: CatalogProduct['featuredImage'];
@@ -105,15 +131,38 @@ type Card = {
   comingSoon?: boolean;
   /** Hover quick-add: this card's own hand-off link. */
   quickAdd?: ProductQuickAdd;
-  /** Stack offers layered on the quick-add (FC/ESC cards only). */
-  stackOffers?: StackOffer[];
+  /** Build size from content/builds.json ('3-inch', '5-inch'), or null
+   *  for a part that fits both. */
+  build: string | null;
+  /** Stack mounting of a flight controller or ESC tier ('20x20', '30x30'),
+   *  null for every other part. */
+  mount: string | null;
+  /** The card's unit ships on a date (true: paid stock, or an accessory
+   *  riding a dated batch), waits for a funding target (false), or has no
+   *  preorder campaign (null). See {@link datedOf}. */
+  paidStock: boolean | null;
 };
+
+/** A tier value that names a stack mounting ("20×20") as its filter key. */
+function mountOf(value: string): string | null {
+  const m = normalise(value).match(/^(20x20|30x30)$/);
+  return m ? m[1] : null;
+}
+const STACK_SIZES = ['20x20', '30x30'];
+
+/** Whether a card's unit ships on a date (paid stock, or an accessory that
+ *  ships with a dated batch), waits for a funding target, or has no
+ *  campaign (null). */
+function datedOf(campaign: {paidStock: boolean; shipsOnTarget?: boolean; shipsWith?: string} | null | undefined): boolean | null {
+  if (!campaign) return null;
+  return campaign.shipsWith ? !campaign.shipsOnTarget : campaign.paidStock;
+}
 
 const num = (m?: MoneyV2 | null) => (m ? parseFloat(m.amount) || 0 : 0);
 
-/** A product is "on sale" when any of its variants has a compare price. */
+/** Campaign compare prices are planned future steps, not previous sale prices. */
 const productOnSale = (p: CatalogProduct) =>
-  p.variants.nodes.some((v) => v.compareAtPrice != null);
+  p.variants.nodes.some((v) => !v.campaign && num(v.compareAtPrice) > num(v.price));
 
 /** The Shopify variant carrying a given option value (e.g. Model = "Gemini"),
  *  so a tier card shows its real price/sale even though the tiers themselves
@@ -151,32 +200,179 @@ function joinTitle(title: string, value: string): string {
   return rest ? `${title} ${rest}` : title;
 }
 
-/** Case- and accent-insensitive token match: every word of the term must
- *  occur somewhere in the card's searchable text. */
-function normalise(s: string): string {
-  return s
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase();
-}
+const BUILDS = parseBuilds(buildsJson);
+
 function matchesTerm(haystack: string, term: string): boolean {
-  const words = normalise(term).split(/\s+/).filter(Boolean);
+  const words = termWords(term);
   if (!words.length) return true;
-  const hay = normalise(haystack);
+  const hay = sizes(normalise(haystack));
   return words.every((w) => hay.includes(w));
 }
 
+/** The words that name what a card is: its product, handle and family. */
+function familyTextOf(product: ProductCardFragment): string {
+  return sizes(
+    normalise(
+      [
+        product.title,
+        product.handle,
+        product.productType,
+        PRODUCT_CONTENT[product.handle]?.family,
+      ]
+        .filter(Boolean)
+        .join(' '),
+    ),
+  );
+}
+
+/**
+ * A search word that names a product family ("motor", "esc", "receiver")
+ * keeps only the cards of that family: "5 inch motor" lists the 5" motor,
+ * not the ESC whose spec table mentions a motor and a 5" frame. Words that
+ * name no family (sizes, specs such as "BEC") narrow nothing.
+ */
+function narrowToFamily<T extends {title: string; product: ProductCardFragment}>(
+  list: T[],
+  term: string,
+): T[] {
+  const words = termWords(term);
+  const familyWords = words.filter((w) => list.some((c) => familyTextOf(c.product).includes(w)));
+  if (!familyWords.length) return list;
+  return list.filter((c) => {
+    const own = `${sizes(normalise(c.title))} ${familyTextOf(c.product)}`;
+    return familyWords.every((w) => own.includes(w));
+  });
+}
+
+/**
+ * Searches for things this shop does not sell, or sizes it does not make,
+ * get a plain answer above the results instead of a bare "Nothing found".
+ * `surface` lists cards (`handle:option value`) worth showing when nothing
+ * else matches. The texts live in content/copy/collections-all.json.
+ */
+const SEARCH_HELP: Array<{match: RegExp; copyId: string; surface?: string[]}> = [
+  {
+    match: /\b(?:whoops?|tinywhoops?|tiny|micro|1s|65\s*mm|75\s*mm|65mm|75mm)\b/,
+    copyId: 'collections-all.help_whoop',
+    surface: ['openrx:Lite'],
+  },
+  {
+    match:
+      /\b(?:goggles?|dji|o3|o4|avata|radio|remote|transmitter|walksnail|hdzero|vtx|camera|bind|binding|elrs|expresslrs|(?<!flight\s)controllers?)\b/,
+    copyId: 'collections-all.help_video_radio',
+  },
+  {
+    match: /\b(?:spares?|replacements?|repairs?|arms?|crash(?:ed|es)?|broken)\b/,
+    copyId: 'collections-all.help_spare',
+  },
+  {
+    match: /\b(?:[6-9]|1[0-9])\s*(?:inch|in)\b|\blong\s*range\b|\blr\b|cinelifter/,
+    copyId: 'collections-all.help_size',
+  },
+  {match: /\bgps\b/, copyId: 'collections-all.help_gps'},
+];
+
+function searchHelpFor(term: string) {
+  if (!term) return null;
+  const t = helpText(term);
+  return SEARCH_HELP.find((h) => h.match.test(t)) ?? null;
+}
+
+/**
+ * How well a card answers the search term, lower is better: the card's own
+ * name equal to the term, then every word in its name, then every word in
+ * its handle or family, then a match on specs and keywords only. Searching
+ * "OpenRX" or "receiver" lists the receivers before the flight controller
+ * whose spec table mentions a receiver.
+ */
+function termRelevance(card: {title: string; product: ProductCardFragment}, term: string): number {
+  const words = termWords(term);
+  if (!words.length) return 0;
+  const name = sizes(normalise(card.title));
+  if (name === words.join(' ')) return 0;
+  if (words.every((w) => name.includes(w))) return 1;
+  const family = sizes(
+    normalise(
+      [
+        card.product.title,
+        card.product.handle,
+        card.product.productType,
+        PRODUCT_CONTENT[card.product.handle]?.family,
+      ]
+        .filter(Boolean)
+        .join(' '),
+    ),
+  );
+  if (words.every((w) => name.includes(w) || family.includes(w))) return 2;
+  return 3;
+}
+
+/** A tier's spec values: the shared table with the tier's rows replacing
+ *  (or, when null, removing) the shared row of the same key, so a 20x20 card
+ *  does not match on the 30x30 board's mount pattern. */
+function tierSpecValues(
+  base: Array<[string, string]>,
+  overrides: Array<[string, string | null]> | undefined,
+): string[] {
+  const table = new Map<string, string | null>(base);
+  for (const [k, v] of overrides ?? []) table.set(k, v);
+  // Label and value both, so "BEC" or "telemetry" finds the boards that
+  // list one. A row whose value is "None" is not a match for its label.
+  return [...table.entries()].flatMap(([k, v]) =>
+    v && !/^none$/i.test(v.trim()) ? [k, v] : [],
+  );
+}
+
+/** What a card is searched on: names, family, firmware and spec rows. */
+function searchTextFor(p: ProductCardFragment, value = ''): string {
+  const content = PRODUCT_CONTENT[p.handle];
+  const tier = value ? content?.variants?.[value] : undefined;
+  // A labelled tier is searched by its label only: OpenMotor's option value
+  // "2207" is a legacy key, not a size anyone should find it by.
+  return [
+    p.title,
+    tier?.label ? '' : value,
+    tier?.label,
+    p.handle,
+    p.productType,
+    content?.family,
+    content?.firmware?.project,
+    ...(content?.keywords ?? []),
+    ...(tier?.keywords ?? []),
+    ...tierSpecValues(content ? columnSpecs(content, tier ? value : '') : [], undefined),
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
 export default function ProductsIndex() {
-  const {products, commerceHandoff, term} = useLoaderData<typeof loader>();
+  const {products, stackShips} = useLoaderData<typeof loader>();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [gridRef, animateGrid] = useAutoAnimate<HTMLDivElement>({
+    duration: 180,
+    easing: 'ease-out',
+    // Keep the preference live when it changes with the page open.
+    disrespectUserMotionPreference: true,
+  });
+  useEffect(() => {
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const sync = () => animateGrid(!preference.matches);
+    sync();
+    preference.addEventListener('change', sync);
+    return () => preference.removeEventListener('change', sync);
+  }, [animateGrid]);
+  const term = searchParams.get('q')?.trim() ?? '';
   const activeType = searchParams.get('type');
   const onlySale = searchParams.get('sale') === '1';
-  const sort = searchParams.get('sort') || 'newest';
+  const activeBuild = searchParams.get('build');
+  const activeStack = searchParams.get('stack');
+  const activeShips = searchParams.get('ships');
+  const sort = searchParams.get('sort') || 'featured';
 
   // Expand each product into one card per purchasable model (skipping
   // coming-soon tiers); single products / bundles / accessories get one card.
   // Products arrive newest-first, so card order is newest-first by default.
-  const productStatus = useProductStatusResolver();
   const roadmapStatus = useRoadmapStatusResolver();
   const cards = useMemo<Card[]>(() => {
     const out: Card[] = [];
@@ -184,6 +380,8 @@ export default function ProductsIndex() {
       // Planned / in-progress products have no settled tiers or renders to
       // list; they live on /roadmap and their concept plate only.
       if (isConceptFor(p.handle, roadmapStatus(p.handle))) continue;
+      // Resold parts that cannot be bought yet stay off the grid.
+      if (hiddenWhileSoldOut(p)) continue;
       const content = PRODUCT_CONTENT[p.handle];
       const axis = content?.optionAxis;
       const allTiers =
@@ -193,62 +391,18 @@ export default function ProductsIndex() {
         for (const [value] of liveTiers) {
           const sv = variantFor(p, axis, value);
           const price = sv?.price ?? p.priceRange.minVariantPrice;
-          // "Buy it as a stack" offers for FC/ESC tier cards: the partner
-          // board at the same mount size, both lines prewired.
-          const stackOffers: StackOffer[] = (
-            content?.stack?.partners ?? []
-          ).flatMap((pc) => {
-            // Unlaunched partners can't join a stack offer (their price
-            // stays hidden everywhere).
-            if (!isPurchasableStatus(productStatus(pc.handle))) return [];
-            const partner = products.find((pp) => pp.handle === pc.handle);
-            if (!partner || !sv) return [];
-            const pv = variantFor(
-              partner,
-              content?.stack?.matchOption ?? 'Model',
-              value,
-            );
-            if (!pv) return [];
-            // A pair discount is claimed only while Shopify carries the
-            // matching discount (stack.discountPct is unset otherwise).
-            const pct = content?.stack?.discountPct;
-            const partnerDiscounted =
-              Boolean(pct) &&
-              content?.stack?.discountedHandle === pc.handle;
-            const selfDiscounted =
-              Boolean(pct) && content?.stack?.discountedHandle === p.handle;
-            return [
-              {
-                key: pc.handle,
-                label: pc.label ?? partner.title,
-                size: value,
-                price:
-                  partnerDiscounted && pct
-                    ? stackDiscountedPrice(pv.price, pct)
-                    : pv.price,
-                compareAtPrice: partnerDiscounted ? pv.price : null,
-                pct,
-                discountedLabel: selfDiscounted ? p.title : undefined,
-                product: p.handle,
-                available: Boolean(
-                  pv.availableForSale && sv.availableForSale,
-                ),
-                href: buyUrl(commerceHandoff, [
-                  {sku: sv.sku ?? '', quantity: 1},
-                  {sku: pv.sku ?? '', quantity: 1},
-                ]),
-              },
-            ];
-          });
           out.push({
             key: `${p.handle}:${value}`,
             product: p,
-            title: joinTitle(p.title, value),
-            searchText: [p.title, value, p.handle, p.productType].join(' '),
+            title: joinTitle(p.title, variantDisplayName(p.handle, value)),
+            searchText: searchTextFor(p, value),
+            build: buildOf(BUILDS, sv?.sku),
+            mount: mountOf(value),
+            paidStock: datedOf(sv?.campaign),
             to: `/products/${p.handle}?${encodeURIComponent(axis)}=${encodeURIComponent(value)}`,
             price,
             image: sv?.image ?? p.featuredImage,
-            onSale: sv?.compareAtPrice
+            onSale: sv?.campaign ? false : sv?.compareAtPrice
               ? num(sv.compareAtPrice) > num(price)
               : productOnSale(p),
             quickAdd: sv
@@ -257,7 +411,6 @@ export default function ProductsIndex() {
                   available: Boolean(sv.availableForSale),
                 }
               : undefined,
-            stackOffers,
           });
         }
       } else {
@@ -272,9 +425,15 @@ export default function ProductsIndex() {
           key: p.handle,
           product: p,
           title: p.title,
-          searchText: [p.title, p.handle, p.productType].join(' '),
+          searchText: searchTextFor(p),
+          // A prop set or strap named in a build belongs to that size.
+          build: firstVariant ? buildOf(BUILDS, firstVariant.sku) : null,
+          mount: null,
+          paidStock: datedOf(p.variants.nodes.find((v) => v.campaign)?.campaign),
           to: `/products/${p.handle}`,
           price: p.priceRange.minVariantPrice,
+          priceFrom:
+            num(p.priceRange.maxVariantPrice) > num(p.priceRange.minVariantPrice),
           onSale: comingSoon ? false : productOnSale(p),
           comingSoon,
           quickAdd:
@@ -288,11 +447,13 @@ export default function ProductsIndex() {
       }
     }
     return out;
-  }, [products, productStatus, roadmapStatus, commerceHandoff]);
+  }, [products, roadmapStatus]);
 
-  // Categories present in the catalog, in editorial order then any leftovers.
+  // Categories that hold at least one shown card, in editorial order then
+  // any leftovers. Counting the cards, not the raw catalog, keeps a family
+  // whose every product is hidden (unsellable, sold out) out of the rail.
   const categories = useMemo(() => {
-    const present = new Set(products.map((p) => p.productType || 'Other'));
+    const present = new Set(cards.map((c) => c.product.productType || 'Other'));
     const out: Array<{value: string; label: ReactNode}> = CATEGORY_ORDER.filter(
       (c) => present.has(c.type),
     ).map((c) => ({
@@ -311,7 +472,7 @@ export default function ProductsIndex() {
       }
     }
     return out;
-  }, [products]);
+  }, [cards]);
 
   const anyOnSale = useMemo(() => cards.some((c) => c.onSale), [cards]);
 
@@ -319,10 +480,15 @@ export default function ProductsIndex() {
   // loader's fetch order.
   const visible = useMemo(() => {
     let list = cards;
-    if (term) list = list.filter((c) => matchesTerm(c.searchText, term));
+    if (term) list = narrowToFamily(list.filter((c) => matchesTerm(c.searchText, term)), term);
     if (activeType)
       list = list.filter((c) => (c.product.productType || 'Other') === activeType);
     if (onlySale) list = list.filter((c) => c.onSale);
+    // A size-neutral part (receiver, accessory) fits either build.
+    if (activeBuild) list = list.filter((c) => c.build === null || c.build === activeBuild);
+    if (activeStack) list = list.filter((c) => c.mount === activeStack);
+    if (activeShips === 'paid') list = list.filter((c) => c.paidStock === true);
+    if (activeShips === 'target') list = list.filter((c) => c.paidStock === false);
     const sorted = [...list];
     switch (sort) {
       case 'price-asc':
@@ -337,11 +503,37 @@ export default function ProductsIndex() {
       case 'name-desc':
         sorted.sort((a, b) => b.title.localeCompare(a.title));
         break;
-      default:
-        break; // newest - already CREATED_AT desc from the loader
+      case 'newest':
+        break; // already CREATED_AT desc from the loader
+      default: {
+        const rank = (c: (typeof sorted)[number]) => {
+          const i = CATEGORY_ORDER.findIndex((o) => o.type === (c.product.productType || 'Other'));
+          return i === -1 ? CATEGORY_ORDER.length : i;
+        };
+        sorted.sort((a, b) => rank(a) - rank(b));
+      }
+    }
+    // With a search term and the default order, the best match leads and
+    // the family order breaks ties (Array.sort is stable). A sort the buyer
+    // picks (price, name, newest) is kept as picked.
+    if (term && sort === 'featured') {
+      const relevance = new Map(sorted.map((c) => [c.key, termRelevance(c, term)]));
+      sorted.sort((a, b) => relevance.get(a.key)! - relevance.get(b.key)!);
     }
     return sorted;
-  }, [cards, term, activeType, onlySale, sort]);
+  }, [cards, term, activeType, onlySale, activeBuild, activeStack, activeShips, sort]);
+
+  // A plain answer for searches the catalog cannot meet (whoop sizes,
+  // goggles, 7 inch), and the cards worth showing when nothing matched.
+  const help = searchHelpFor(term);
+  const surfaced = useMemo(
+    () =>
+      help?.surface && visible.length === 0
+        ? cards.filter((c) => help.surface!.includes(c.key))
+        : [],
+    [help, visible.length, cards],
+  );
+  const shown = visible.length > 0 ? visible : surfaced;
 
   const setParam = (key: string, value: string | null) => {
     const next = new URLSearchParams(searchParams);
@@ -372,55 +564,60 @@ export default function ProductsIndex() {
   const hasProducts = products.length > 0;
   // Keep the active filters when a new term is submitted: the form only
   // carries `q`, so the rest ride along as hidden fields.
-  const carried = ['type', 'sale', 'sort'].filter((k) => searchParams.get(k));
+  const carried = ['type', 'sale', 'sort', 'build', 'stack', 'ships'].filter((k) => searchParams.get(k));
 
   return (
     <div className="collection page-shell">
       <header className="page-header collection-header">
-        <Txt id="collections-all.eyebrow" as="p" className="page-eyebrow" />
-        <Txt id="collections-all.title" as="h1" className="page-title" />
+        <Txt id="collections-all.eyebrow" as="p" className="page-eyebrow max-sm:hidden" />
+        {term ? (
+          <h1 className="page-title" {...editAttrs('collections-all.results_title')}>
+            {withTerm('collections-all.results_title', 'Results for "{term}"', term)}
+          </h1>
+        ) : (
+          <Txt id="collections-all.title" as="h1" className="page-title" />
+        )}
         {/* The catalog is also the search page: the term filters the grid
-            below, client-side over the catalog. */}
-        <Form method="get" action="/products" className="catalog-search">
-          <div className="search-form-row catalog-search-row">
-              {carried.map((k) => (
-                <input
-                  key={k}
-                  type="hidden"
-                  name={k}
-                  value={searchParams.get(k) ?? ''}
-                />
-              ))}
+            below, client-side over the catalog. Enter submits; the
+            magnifier inside the field is the same submit for a pointer. */}
+        {/* On a phone the header's search icon is the way in; the field
+            shows here once a term is set, so the products sit higher. */}
+        <Form
+          method="get"
+          action="/products"
+          className={`catalog-search${term ? '' : ' max-sm:hidden'}`}
+          role="search"
+        >
+          <div className="catalog-search-field">
+            {carried.map((k) => (
               <input
-                className="search-input"
-                key={term}
-                defaultValue={term}
-                name="q"
-                placeholder={copyText('collections-all.search_placeholder')}
-                aria-label={copyText('collections-all.search_placeholder')}
-                type="search"
-                enterKeyHint="search"
-                {...editAttrs('collections-all.search_placeholder')}
+                key={k}
+                type="hidden"
+                name={k}
+                value={searchParams.get(k) ?? ''}
               />
-              <Txt
-                id="collections-all.search_submit"
-                as="button"
-                className="search-submit"
-                type="submit"
-              />
-              {/* Every card carries its roadmap status chip; the roadmap is
-                  where the vocabulary is explained, one button, beside the
-                  search box. */}
-              <Link
-                prefetch="viewport"
-                to="/roadmap"
-                className="catalog-roadmap-btn"
-              >
-                <Txt
-                  id="collections-all.roadmap_link"
-                  fallback="What the status labels mean →"
-                />
-              </Link>
+            ))}
+            <input
+              className="search-input"
+              key={term}
+              defaultValue={term}
+              name="q"
+              placeholder={copyText('collections-all.search_placeholder')}
+              aria-label={copyText('collections-all.search_placeholder')}
+              type="search"
+              enterKeyHint="search"
+              {...editAttrs('collections-all.search_placeholder')}
+            />
+            <button
+              type="submit"
+              className="catalog-search-submit"
+              aria-label={copyText('collections-all.search_submit') ?? 'Search'}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <circle cx="11" cy="11" r="7" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </button>
           </div>
         </Form>
       </header>
@@ -442,11 +639,14 @@ export default function ProductsIndex() {
                 {filterLink(
                   'all',
                   <Txt id="collections-all.filter_all" />,
-                  !activeType && !onlySale,
+                  !activeType && !onlySale && !activeBuild && !activeStack && !activeShips,
                   () => {
                     const next = new URLSearchParams(searchParams);
                     next.delete('type');
                     next.delete('sale');
+                    next.delete('build');
+                    next.delete('stack');
+                    next.delete('ships');
                     setSearchParams(next, {preventScrollReset: true});
                   },
                 )}
@@ -469,7 +669,21 @@ export default function ProductsIndex() {
           {/* Main column - toolbar (count + sort) above the product grid. */}
           <div className="catalog-main">
             <div className="catalog-toolbar">
-              <p className="catalog-count">
+              <div className="catalog-filter-controls">
+                <button type="button" className="catalog-filter-toggle" aria-expanded={filtersOpen} aria-controls="catalog-filters" onClick={() => setFiltersOpen(!filtersOpen)}>
+                  <SlidersHorizontal size={16} aria-hidden="true" /><Txt id="collections-all.more_filters" />
+                  {[activeBuild, activeStack, activeShips].filter(Boolean).length > 0 ? <span className="catalog-filter-count">{[activeBuild, activeStack, activeShips].filter(Boolean).length}</span> : null}
+                </button>
+                {activeBuild || activeStack || activeShips || activeType || onlySale ? (
+                  <button type="button" className="catalog-filter-clear" onClick={() => {
+                    const next = new URLSearchParams(searchParams);
+                    for (const key of ['type', 'sale', 'build', 'stack', 'ships']) next.delete(key);
+                    setSearchParams(next, {preventScrollReset: true});
+                  }}><X size={14} aria-hidden="true" /><Txt id="collections-all.clear_filters" /></button>
+                ) : null}
+              </div>
+
+              <p className="catalog-count" role="status" aria-live="polite" aria-atomic="true">
                 {visible.length}{' '}
                 <Txt
                   id={
@@ -503,7 +717,7 @@ export default function ProductsIndex() {
                 <select
                   value={sort}
                   onChange={(e) =>
-                    setParam('sort', e.target.value === 'newest' ? null : e.target.value)
+                    setParam('sort', e.target.value === 'featured' ? null : e.target.value)
                   }
                 >
                   {SORT_OPTIONS.map((o) => (
@@ -521,25 +735,79 @@ export default function ProductsIndex() {
               </label>
             </div>
 
-            {visible.length > 0 ? (
-              <div className="products-grid">
-                {visible.map((card, index) => (
+            <div
+              className="catalog-chips"
+              id="catalog-filters"
+              hidden={!filtersOpen}
+              role="group"
+              aria-label={copyText('collections-all.chips_aria') ?? 'Quick filters'}
+            >
+              <span className="catalog-chip-label"><Txt id="collections-all.build_filter" /></span>
+              {BUILDS.builds.map((b) => (
+                <button
+                  key={`chip-build-${b.id}`}
+                  type="button"
+                  className="catalog-chip"
+                  aria-pressed={activeBuild === b.id}
+                  onClick={() => setParam('build', activeBuild === b.id ? null : b.id)}
+                >
+                  {b.label}
+                </button>
+              ))}
+              <span className="catalog-chip-label"><Txt id="collections-all.mount_filter" /></span>
+              {STACK_SIZES.map((size) => (
+                <button
+                  key={`chip-stack-${size}`}
+                  type="button"
+                  className="catalog-chip"
+                  aria-pressed={activeStack === size}
+                  onClick={() => setParam('stack', activeStack === size ? null : size)}
+                >
+                  {(copyText('collections-all.chip_stack') ?? '{size} stack').replace('{size}', size)}
+                </button>
+              ))}
+              {stackShips ? (
+                <button
+                  type="button"
+                  className="catalog-chip"
+                  aria-pressed={activeShips === 'paid'}
+                  onClick={() => setParam('ships', activeShips === 'paid' ? null : 'paid')}
+                >
+                  {shipMonth(stackShips)
+                    ? shipWord('ships', shipMonth(stackShips) ?? '')
+                    : (copyText('collections-all.chip_paid') ?? 'Ships {ships}').replace(
+                        '{ships}',
+                        stackShips.replace(/^ships\s+/i, ''),
+                      )}
+                </button>
+              ) : null}
+            </div>
+
+            {help ? (
+              <div className="catalog-search-help" role="note">
+                <Txt id={help.copyId} as="p" />
+              </div>
+            ) : null}
+            {shown.length > 0 ? (
+              <div className="products-grid catalog-animated-grid" ref={gridRef}>
+                {shown.map((card, index) => (
                   <ProductItem
                     key={card.key}
                     product={card.product}
                     to={card.to}
                     title={card.title}
                     priceOverride={card.price}
+                    priceFrom={card.priceFrom ?? false}
                     imageOverride={card.image}
-                    loading={index < 8 ? 'eager' : undefined}
+                    loading={index < 4 ? 'eager' : undefined}
+                    imageSizes="(min-width: 64em) 300px, (min-width: 45em) 33vw, 50vw"
                     onSale={card.onSale}
                     comingSoon={card.comingSoon}
                     quickAdd={card.quickAdd}
-                    stackOffers={card.stackOffers}
                   />
                 ))}
               </div>
-            ) : term ? (
+            ) : help ? null : term ? (
               <EmptyState
                 title={<Txt id="collections-all.empty_search_title" />}
                 description={<Txt id="collections-all.empty_search_body" />}

@@ -1,5 +1,6 @@
+import {shopifyImageUrl} from '~/lib/shopify-image';
 import {useSearchParams} from 'react-router';
-import {useEffect, useMemo, useRef, useState} from 'react';
+import {useEffect, useMemo, useRef, useState, type ReactNode} from 'react';
 import {SmoothImage} from './SmoothImage';
 import {Txt} from './Txt';
 import {copyText} from '~/lib/copy';
@@ -17,9 +18,12 @@ const IMAGE_PARAM = 'image';
 export function ProductGallery({
   images,
   activeImageId,
+  emptyFallback,
 }: {
   images: GalleryImage[];
   activeImageId?: string | null;
+  /** Shown in place of the gallery when the product has no images yet. */
+  emptyFallback?: ReactNode;
 }) {
   const [searchParams, setSearchParams] = useSearchParams();
   // Swipe tracker (declared before any early return so the hook order is stable).
@@ -81,11 +85,13 @@ export function ProductGallery({
   if (images.length === 0) {
     return (
       <div className="product-gallery-empty">
-        <Txt
-          id="product-chrome.gallery_empty"
-          as="span"
-          className="product-card-media-ghost"
-        />
+        {emptyFallback ?? (
+          <Txt
+            id="product-chrome.gallery_empty"
+            as="span"
+            className="product-card-media-ghost"
+          />
+        )}
       </div>
     );
   }
@@ -153,7 +159,8 @@ export function ProductGallery({
                   ''
                 }
                 aspectRatio="1/1"
-                sizes="(min-width: 960px) 60vw, 100vw"
+                sizes="(min-width: 960px) 600px, 85vw"
+                maxWidth={1080}
                 // The active slide is the PDP's LCP element: without an
                 // explicit priority it competes with the route chunk + fonts
                 // at default priority. Neighbours (mounted after idle) are
@@ -193,18 +200,10 @@ export function ProductGallery({
             </button>
           </div>
         )}
-        {images.length > 1 && (
-          <Txt
-            id="product-chrome.swipe_hint"
-            as="span"
-            className="product-gallery-swipe-hint"
-            aria-hidden="true"
-          />
-        )}
       </div>
       {/* Mobile swipe bar - the touch-first replacement for the arrow pill +
           thumbnail strip (both hidden on mobile via CSS). A tick per image (tap
-          to jump) + counter + swipe hint, matching the board/schematic decks. */}
+          to jump), the active one in the text colour. */}
       {images.length > 1 && (
         <div className="product-gallery-deck">
           <div
@@ -224,16 +223,6 @@ export function ProductGallery({
               />
             ))}
           </div>
-          <p className="board-deck-meta" aria-live="polite">
-            <span className="board-deck-count">
-              {index + 1}/{images.length}
-            </span>
-            <Txt
-              id="product-chrome.swipe_hint"
-              as="span"
-              className="board-deck-hint"
-            />
-          </p>
         </div>
       )}
       {images.length > 1 && (
@@ -255,13 +244,14 @@ export function ProductGallery({
                 }`}
               >
                 <img
-                  src={img.url}
+                  src={shopifyImageUrl(img.url, 160)}
                   alt={
                     img.altText ||
                     `${copyText('product-chrome.gallery_thumb_alt_prefix') ?? ''} ${i + 1}`
                   }
                   style={{aspectRatio: '1/1'}}
-                  sizes="80px"
+                  width={80}
+                  height={80}
                   loading="lazy"
                   decoding="async"
                 />

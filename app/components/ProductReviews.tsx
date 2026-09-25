@@ -8,6 +8,8 @@
  * tokens only (see the "PDP reviews" section in app/styles/app.css).
  */
 
+import {copyFill, copyText} from '~/lib/copy';
+
 export type ReviewAggregate = {value: number; count: number};
 
 const STARS_FILLED = '★★★★★';
@@ -28,7 +30,7 @@ export function ReviewStars({rating}: {rating: number}) {
     <span
       className="review-stars"
       role="img"
-      aria-label={`Rated ${rating} out of 5`}
+      aria-label={copyFill('product-chrome.reviews_stars_aria', 'Rated {rating} out of 5', {rating})}
     >
       <span aria-hidden="true">
         {STARS_FILLED.slice(0, filled)}
@@ -54,7 +56,9 @@ export function ReviewAggregateLine({
       <ReviewStars rating={aggregate.value} />
       <span className="product-buy-reviews-count">
         {aggregate.value.toFixed(1)} · {aggregate.count}{' '}
-        {aggregate.count === 1 ? 'review' : 'reviews'}
+        {aggregate.count === 1
+          ? (copyText('product-chrome.reviews_word_one') ?? 'review')
+          : (copyText('product-chrome.reviews_word_many') ?? 'reviews')}
       </span>
     </a>
   );
@@ -74,14 +78,21 @@ export function ReviewList({
   return (
     <>
       <p className="review-count-line">
-        <ReviewStars rating={aggregate.value} /> {aggregate.value.toFixed(1)} out
-        of 5, from {aggregate.count}{' '}
-        {aggregate.count === 1 ? 'review' : 'reviews'}.
+        <ReviewStars rating={aggregate.value} />{' '}
+        {copyFill(
+          aggregate.count === 1
+            ? 'product-chrome.reviews_count_line_one'
+            : 'product-chrome.reviews_count_line_many',
+          aggregate.count === 1
+            ? '{average} out of 5, from {count} review.'
+            : '{average} out of 5, from {count} reviews.',
+          {average: aggregate.value.toFixed(1), count: aggregate.count},
+        )}
       </p>
       {shopUrl ? (
         <p className="review-count-line">
           <a href={shopUrl} target="_blank" rel="noopener noreferrer">
-            Read the reviews
+            {copyText('product-chrome.reviews_read_link') ?? 'Read the reviews'}
           </a>
         </p>
       ) : null}

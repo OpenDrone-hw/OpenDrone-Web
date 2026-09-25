@@ -299,8 +299,8 @@ Note on method: GitHub REST API was queried directly for repo creation dates, co
 
 ## Handset firmware lineage (OpenTX, EdgeTX)
 
-- th9x was written by Thomas Husterer (thus1@t-online.de), oldest exported commit 2010-04-06, described as alternative firmware for the 9 channel FlySky FS-TH9X, also sold as Turnigy 9X, Eurgle 9X and iMax 9X (https://github.com/thus1/th9x, https://storage.googleapis.com/google-code-archive/v2/code.google.com/th9x/project.json) [verified]
-- er9x was written by Erez Raviv (erezraviv@gmail.com), oldest exported commit 2010-08-11, summarised as "Custom firmware for the Eurgle/FlySky/Imax/Turnigy 9x r/c Transmitter" (https://storage.googleapis.com/google-code-archive/v2/code.google.com/er9x/project.json) [verified]
+- th9x was written by Thomas Husterer (`thus1`), oldest exported commit 2010-04-06, described as alternative firmware for the 9 channel FlySky FS-TH9X, also sold as Turnigy 9X, Eurgle 9X and iMax 9X (https://github.com/thus1/th9x, https://storage.googleapis.com/google-code-archive/v2/code.google.com/th9x/project.json) [verified]
+- er9x was written by Erez Raviv, oldest exported commit 2010-08-11, summarised as "Custom firmware for the Eurgle/FlySky/Imax/Turnigy 9x r/c Transmitter" (https://storage.googleapis.com/google-code-archive/v2/code.google.com/er9x/project.json) [verified]
 - gruvin9x was Bryan Rentoul's fork and its own project summary dates the split precisely: "forked from ER9X Oct. 2010", plus an enhanced controller board design (https://storage.googleapis.com/google-code-archive/v2/code.google.com/gruvin9x/project.json) [verified]
 - er9x and gruvin9x were both originally on Google Code and were auto-exported to GitHub in 2015, which is why their GitHub repo creation dates are misleading (https://github.com/MikeBland/er9x, https://github.com/gruvin/gruvin9x) [verified]
 - Bertrand Songis was committing into gruvin9x by 2011-12-29, before OpenTX existed under that name (https://github.com/gruvin/gruvin9x) [verified]

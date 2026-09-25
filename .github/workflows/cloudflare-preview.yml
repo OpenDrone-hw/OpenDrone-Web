@@ -1,12 +1,13 @@
-name: Deploy Cloudflare preview
+name: Deploy Cloudflare staging
 
-# Isolated preview Worker (wrangler.toml): no custom-domain routes, staging
-# catalog, coming-soon on. Deploys on every push to feat/cloudflare-hosting
-# so a branch under review gets a live, non-production URL without touching
-# opendrone.be. Production deploys from cloudflare-production.yml instead.
+# Isolated staging Worker (wrangler.toml): no custom-domain routes, basic
+# auth, checkout open against the same Shopify store for end-to-end tests.
+# Deploys on every push to feat/preorders so the branch under review has a
+# live, non-production URL without touching opendrone.be. Production deploys
+# from cloudflare-production.yml instead.
 on:
   push:
-    branches: [feat/cloudflare-hosting]
+    branches: [feat/preorders]
 
 permissions:
   contents: read
@@ -34,7 +35,7 @@ jobs:
           SESSION_SECRET: "ci-build-only-not-the-runtime-secret"
         run: npm run build
 
-      - name: Deploy preview Worker
+      - name: Deploy staging Worker
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}

@@ -1,10 +1,13 @@
+import {BOARD_ART_VERSION} from '~/data/board-art-version';
 import {Fragment, Suspense, useEffect, useMemo, useRef, useState} from 'react';
 import {createPortal} from 'react-dom';
+import {useAside} from '~/components/Aside';
 import {
   Await,
   Link,
   redirect,
   useLoaderData,
+  useNavigate,
   useRouteLoaderData,
   useSearchParams,
   type ShouldRevalidateFunctionArgs,
@@ -17,28 +20,32 @@ import {
   mapProductOptions,
   selectVariant,
   selectedOptionsFromRequest,
+  formatPrice,
   toCard,
   toProduct,
 } from '~/lib/catalog';
 import {buyUrl, commerceHandoff} from '~/lib/shop-links';
-import {useAside} from '~/components/Aside';
 import {Txt} from '~/components/Txt';
 import {ConceptPlate} from '~/components/ConceptPlate';
-import {WHAT_IS_THIS_ID} from '~/lib/product-content';
-import {CONTRIBUTING_URL} from '~/lib/company';
 import {ProductPrice} from '~/components/ProductPrice';
 import {ProductGallery} from '~/components/ProductGallery';
+import {ProductSilhouette} from '~/components/ProductSilhouette';
 import {ProductForm} from '~/components/ProductForm';
 import {RelatedProducts} from '~/components/RelatedProducts';
 import {FirmwareSupport} from '~/components/FirmwareSupport';
 import {VariantLadder} from '~/components/VariantLadder';
+import {PlugDiagrams} from '~/components/PlugDiagrams';
 import {BoardArt} from '~/components/BoardArt';
 import {SchematicViewer} from '~/components/SchematicViewer';
 import type {FrameViewerProps} from '~/components/FrameViewer';
 import {SceneErrorBoundary} from '~/components/SceneErrorBoundary';
 import {ProvenanceCard} from '~/components/ProvenanceCard';
-import {AnimatedNumber} from '~/components/AnimatedNumber';
 import {WatchCard} from '~/components/WatchCard';
+import {OshwaMark} from '~/components/OshwaMark';
+import {ContributorGrid, ContributorGridSkeleton} from '~/components/Contributors';
+import {fetchContributors} from '~/lib/github';
+import {orderByCredits, snapshotContributors} from '~/lib/contributors-snapshot';
+import {CONTRIBUTING_URL} from '~/lib/company';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 import {copy, copyText, editAttrs} from '~/lib/copy';
 import {
@@ -46,42 +53,104 @@ import {
   type ChapterEntry,
   type ChapterType,
 } from '~/lib/chapters';
-import {buildSeoMeta, buildProductJsonLd, SITE_ORIGIN} from '~/lib/seo';
-import {fetchContributors} from '~/lib/github';
-import {orderByCredits, snapshotContributors} from '~/lib/contributors-snapshot';
-import {ContributorGrid, ContributorGridSkeleton} from '~/components/Contributors';
+import {buildSeoMeta, buildProductJsonLd,
+  buildBreadcrumbJsonLd, SITE_ORIGIN} from '~/lib/seo';
 import {
   ReviewAggregateLine,
   ReviewList,
   toReviewAggregate,
 } from '~/components/ProductReviews';
-import {OshwaMark} from '~/components/OshwaMark';
 import {useNoHover, useIsMobile} from '~/lib/use-media-query';
-import {GpsrBlock} from '~/components/GpsrBlock';
+import {GpsrBlock, safetyKind} from '~/components/GpsrBlock';
 import {
   PRODUCT_CONTENT,
-  PRODUCT_CONTENT_FALLBACK,
-  isComingSoon,
+  WHAT_IS_THIS_ID,
+  pageContent,
+  specSheet,
   isConceptFor,
+  isInternalSku,
+  imagesAreRenders,
   isPurchasableStatus,
+  variantDisplayName,
+  canonicalOptionValue,
 } from '~/lib/product-content';
 import {useProductStatus} from '~/lib/coming-soon';
 import {shipPromiseFor} from '~/lib/preorder';
 import {fetchStatusFlagsFast, statusForHandle} from '~/lib/roadmap-data';
+import {parseCampaignConfig, priceLadder, tiersFor} from '~/lib/preorder-campaign';
+import {stepBarView} from '~/lib/preorder-meter';
+import {paysEuVat} from '~/lib/visitor-country';
+import {notSoldDirect} from '~/lib/shipping-rates';
+import {registrationNumbers} from '~/lib/registrations';
+import preorders from '../../content/preorders.json';
 import {trackEvent} from '~/lib/growth/plausible';
 import {attributionSource} from '~/lib/growth/attribution';
 import {NewsletterSignup} from '~/components/NewsletterSignup';
+import {ProductGhostTile} from '~/components/ProductGhostTile';
+import {StepBar} from '~/components/PreorderMeter';
+import {ShipLine} from '~/components/ShipChip';
 import type {
   ChapterPin,
   DownloadAsset,
   DownloadKind,
 } from '~/lib/product-content';
 
+/** The campaign (content/preorders.json): each SKU's price steps. */
+const CAMPAIGN_CONFIG = parseCampaignConfig(preorders);
+
+/** Fill `{name}` slots in a copy template. */
+function fill(template: string, vars: Record<string, string | number>): string {
+  return template.replace(/\{(\w+)\}/g, (match, name: string) =>
+    name in vars ? String(vars[name]) : match,
+  );
+}
+
+/** Copy with a readable fallback while a key is missing from the copy file. */
+function say(id: string, fallback: string, vars: Record<string, string | number> = {}): string {
+  return fill(copyText(id) ?? fallback, vars);
+}
+
+/** Largest quantity one add may ask for: the cart action's per-line cap. */
+const MAX_LINE_QUANTITY = 50;
+
+/**
+ * Whether a product's design files are public: an open-hardware content file
+ * with a repo link on the product or on one of its variants. The frames are
+ * open hardware whose repos are still private, so they are not.
+ */
+function hasPublicRepo(handle: string | null | undefined): boolean {
+  const content = handle ? PRODUCT_CONTENT[handle] : undefined;
+  if (!content || content.editorial === false) return false;
+  return (
+    Boolean(content.repoUrl) ||
+    Object.values(content.variants ?? {}).some((v) => Boolean(v.repoUrl))
+  );
+}
+
+/**
+ * The page description. Shopify's product description wins, except for
+ * open hardware whose repo is still private: its Shopify text names the
+ * open-source licence, which the page must not claim until the files are
+ * public, so the editorial intro stands in.
+ */
+function pageDescription(
+  handle: string | null | undefined,
+  shopify: string | null | undefined,
+): string | undefined {
+  const content = handle ? PRODUCT_CONTENT[handle] : undefined;
+  if (content && content.editorial !== false && !hasPublicRepo(handle)) {
+    return content.whatIsThis?.intro || content.hero.lead || undefined;
+  }
+  return shopify || undefined;
+}
+
 export const meta: Route.MetaFunction = ({data, location}) =>
   buildSeoMeta({
     title: data?.product?.seo?.title || data?.product?.title || 'Product',
-    description:
-      data?.product?.seo?.description || data?.product?.description || undefined,
+    description: pageDescription(
+      data?.product?.handle,
+      data?.product?.seo?.description || data?.product?.description,
+    ),
     image: data?.product?.selectedOrFirstAvailableVariant?.image?.url,
     type: 'product',
     // Canonical without the ?Model= query so variant links don't splinter.
@@ -96,8 +165,8 @@ export const meta: Route.MetaFunction = ({data, location}) =>
 /**
  * Selecting a SKU only mutates this PDP's option query params (e.g. ?Model=…).
  * Skip the loader on those same-path navigations: re-running it means a
- * catalog round-trip plus a full PDP re-render (3D viewer, chapters, deferred
- * recommendations) on every click - the source of the variant-switch lag. The
+ * catalog round-trip plus a full PDP re-render (3D viewer, chapters) on every
+ * click - the source of the variant-switch lag. The
  * variant is resolved client-side from the already-loaded data instead.
  */
 export function shouldRevalidate({
@@ -136,16 +205,26 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
     throw redirect('/products/openfc-lite', 301);
   }
 
+  // A link that names a version by its label or another spelling
+  // (?Model=5" for the 2207 value) lands on the catalog value instead of
+  // silently falling back to the first version.
+  const axis = PRODUCT_CONTENT[handle]?.optionAxis;
+  if (axis) {
+    const url = new URL(request.url);
+    const canonical = canonicalOptionValue(handle, url.searchParams.get(axis));
+    if (canonical) {
+      url.searchParams.set(axis, canonical);
+      throw redirect(`${url.pathname}?${url.searchParams.toString()}${url.hash}`, 301);
+    }
+  }
+
   // Bundle products render from their own product but add the *component*
-  // variants to cart; the stack builder needs its partner products' variants
-  // the same way. Both come out of the same catalog document as the
+  // variants to cart. They come out of the same catalog document as the
   // product itself, so resolving them costs nothing extra.
   const bundleHandles =
     PRODUCT_CONTENT[handle]?.bundle?.components.map((c) => c.handle) ?? [];
-  const stackHandles =
-    PRODUCT_CONTENT[handle]?.stack?.partners.map((p) => p.handle) ?? [];
 
-  // Roadmap status for the chip near the title. The 600ms fast fetch races
+  // Roadmap status for the concept plate. The 600ms fast fetch races
   // the GitHub topic lookup against the static ROADMAP fallback, so a cold
   // cache or an API failure degrades to the checked-in status, never a 500.
   const statusFlagsPromise = fetchStatusFlagsFast(
@@ -167,27 +246,28 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
     selectedOptionsFromRequest(request),
   );
 
-  // Partner products for the bundle lines and the stack builder, from the
-  // same catalog: no second round-trip, no second source of prices.
-  const partnerProducts = [...bundleHandles, ...stackHandles]
+  // Component products for the bundle lines, from the same catalog: no
+  // second round-trip, no second source of prices.
+  const bundleProducts = bundleHandles
     .map((h) => byHandle(catalog, h))
     .filter((p): p is NonNullable<typeof p> => Boolean(p))
     .map((p) => toProduct(catalog, p));
-  const bundleProducts = partnerProducts.filter((p) =>
-    bundleHandles.includes(p.handle),
-  );
-  const stackProducts = partnerProducts.filter((p) =>
-    stackHandles.includes(p.handle),
+
+  // Shopify's compare-at price per SKU is the retail price a campaign SKU
+  // steps up to. The PDP variant shape drops it for campaign SKUs (no
+  // struck-through price, EU art. 6a), so the price ladder reads it here.
+  const retailBySku: Record<string, number | null> = Object.fromEntries(
+    entry.variants.map((v) => [v.sku, v.compare_price ?? null]),
   );
 
   return {
     product,
     bundleProducts,
-    stackProducts,
+    retailBySku,
     commerceHandoff: commerceHandoff(catalog),
-    // The roadmap status this page's boards carry (beta, alpha, ...), for
-    // the chip near the title. Undefined for products off the roadmap
-    // (accessories); the chip simply doesn't render.
+    // The roadmap status this page's boards carry (beta, alpha, ...): a
+    // concept renders the concept plate. Undefined for products off the
+    // roadmap (accessories).
     roadmapStatus: statusForHandle(handle, await statusFlagsPromise),
   };
 }
@@ -326,29 +406,29 @@ function DownloadsGrid({
 }
 
 /**
- * Merge a variant's spec deltas over the product's shared spec table,
- * matched by row key. A delta value of `null` hides the base row (e.g. the
- * cost-down Lite drops a sensor the standard board carries); a value
- * replaces the base row in place; an unknown key appends. Keeps every
- * tier's table coherent off one base instead of duplicating shared rows.
+ * The chapters with the buying facts first: after the beginner chapter,
+ * Specs and In the box come before the open-source cards, the teardown and
+ * the rest. Numbers follow the new order.
  */
-function mergeSpecs(
-  base: Array<[string, string]>,
-  overrides?: Array<[string, string | null]>,
-): Array<[string, string]> {
-  if (!overrides?.length) return base;
-  const out: Array<[string, string]> = base.map(([k, v]) => [k, v]);
-  for (const [k, v] of overrides) {
-    const idx = out.findIndex(([bk]) => bk === k);
-    if (v === null) {
-      if (idx !== -1) out.splice(idx, 1);
-    } else if (idx !== -1) {
-      out[idx] = [k, v];
-    } else {
-      out.push([k, v]);
-    }
-  }
-  return out;
+function buyingOrder<T extends {type: string; number: string}>(chapters: T[]): T[] {
+  const facts = (c: T) => c.type === 'specs' || c.type === 'inTheBox';
+  const intro = chapters.filter((c) => c.type === 'whatIsThis');
+  const ordered = [
+    ...intro,
+    ...chapters.filter(facts),
+    ...chapters.filter((c) => !facts(c) && c.type !== 'whatIsThis'),
+  ];
+  return ordered.map((c, i) => ({...c, number: String(i + 1).padStart(2, '0')}));
+}
+
+/** DOM ids of the spec and box chapters. */
+const SPECS_ID = 'specs';
+const IN_THE_BOX_ID = 'in-the-box';
+
+/** "OpenFC-Lite-Mini" from https://github.com/OpenDrone-hw/OpenFC-Lite-Mini. */
+function repoName(url: string | null | undefined): string | null {
+  const m = url ? /github\.com\/[^/]+\/([^/?#]+)/.exec(url) : null;
+  return m ? m[1] : null;
 }
 
 /**
@@ -441,6 +521,7 @@ function Chapter({
   backdrop,
   wideMedia,
   noMedia,
+  centered,
   textReveal,
   id,
   wide,
@@ -485,12 +566,16 @@ function Chapter({
    *  table) needs no image. The grid tracks stay put, so the body column
    *  keeps the same width and left edge as every other chapter. */
   noMedia?: boolean;
+  /** Centre the heading and the body as one narrower block (the Specs
+   *  chapter's table). */
+  centered?: boolean;
 }) {
   return (
     <section
       id={id}
       className="chapter"
       data-chapter={number}
+      data-centered={centered ? '' : undefined}
       data-backdrop={backdrop ? '' : undefined}
       data-wide-media={wideMedia ? '' : undefined}
       data-no-media={noMedia ? '' : undefined}
@@ -587,14 +672,14 @@ function layoutBox(el: HTMLElement) {
 }
 
 function ProductPage() {
+  const specsRef = useRef<HTMLDivElement>(null);
   const {
     product,
     bundleProducts,
-    stackProducts,
+    retailBySku,
     recommendations,
     contributors,
     commerceHandoff,
-    roadmapStatus,
   } = useLoaderData<typeof loader>();
   useChapterReveal(product.handle);
 
@@ -626,9 +711,25 @@ function ProductPage() {
       if (c && h > 8 && h < 400 && x > 0 && x < s.width) {
         scope.style.setProperty('--repo-lead-x', `${Math.round(x)}px`);
         scope.style.setProperty('--repo-lead-h', `${Math.round(h)}px`);
+        // The "Open source at OpenDrone" link sits in the line's path: break
+        // the line around the link text instead of striking through it.
+        const link = document.querySelector<HTMLElement>('.open-source-story-link a');
+        const l = link ? layoutBox(link) : null;
+        const lineX = s.left + x;
+        const lineTop = c.top + c.height;
+        if (l && lineX >= l.left - 12 && lineX <= l.left + l.width + 12) {
+          const pad = 12;
+          scope.style.setProperty('--repo-gap-a', `${Math.max(0, Math.round(l.top - lineTop - pad))}px`);
+          scope.style.setProperty('--repo-gap-b', `${Math.round(l.top + l.height - lineTop + pad)}px`);
+        } else {
+          scope.style.removeProperty('--repo-gap-a');
+          scope.style.removeProperty('--repo-gap-b');
+        }
       } else {
         scope.style.removeProperty('--repo-lead-x');
         scope.style.removeProperty('--repo-lead-h');
+        scope.style.removeProperty('--repo-gap-a');
+        scope.style.removeProperty('--repo-gap-b');
       }
     };
     const t = setTimeout(measure, 900);
@@ -701,14 +802,9 @@ function ProductPage() {
     );
   }, [searchKey, product]);
 
-  // Hide the pinned buy rail while an aside (cart/search/mobile nav) is open -
-  // otherwise the fixed overlay sits on top of the cart drawer.
-  const {type: asideType} = useAside();
-
   // Coming-soon state: no prices, no add-to-cart - the buy module becomes a
-  // notify-at-launch signup. Root data feeds the global flag + Turnstile key.
+  // notify-at-launch signup. Root data feeds the Turnstile key.
   const rootData = useRouteLoaderData<RootLoader>('root');
-  const globalComingSoon = rootData?.comingSoon ?? true;
   // Lifecycle status drives the buy module: 'idea' and 'development' are
   // both not-purchasable (`soon`), but render different plates; 'preorder'
   // buys like 'live' with the ship promise on the stock line.
@@ -728,18 +824,7 @@ function ProductPage() {
 
   const {title} = product;
 
-
-
-  // isEditorial: this handle has a real PRODUCT_CONTENT entry that is open
-  // hardware. Fallback products (accessories like straps and hardware kits)
-  // and resold parts with `editorial: false` (motors) are not open-source
-  // hardware: they must not claim a CERN-OHL-S license or render the
-  // "Open for learning" chapter pointing at the GitHub org.
-  const isEditorial =
-    Boolean(PRODUCT_CONTENT[product.handle]) &&
-    PRODUCT_CONTENT[product.handle]?.editorial !== false;
-  const content = PRODUCT_CONTENT[product.handle] ?? PRODUCT_CONTENT_FALLBACK;
-  const hasHeroCopy = Boolean(content.hero.line1);
+  const content = pageContent(product.handle);
   // The Downloads chapter's editorial assets. Declarations of Conformity are
   // internal records: no DoC entry is rendered.
   const downloads = content.downloads;
@@ -753,6 +838,53 @@ function ProductPage() {
   // matching option, the buy module follows via the selected variant.
   const variantKeys = content.variants ? Object.keys(content.variants) : [];
   const hasLadder = Boolean(content.optionAxis && variantKeys.length > 0);
+
+  // Compact buy bar (main's): once the top fold's buy module has scrolled
+  // under the header, a copy of the variant chips, price and Pre-order pins
+  // to the top (a bottom bar under 960px), so a buyer can switch variants
+  // from anywhere on the page. Driven by a zero-height sentinel below the
+  // in-hero buy module; it steps aside while the footer is on screen.
+  // A state ref: the hero can mount after this effect's first run (the
+  // phone layout re-renders), and the observer must follow the element.
+  const [railSentinel, setRailSentinel] = useState<HTMLDivElement | null>(null);
+  const [railPinned, setRailPinned] = useState(false);
+  const [footerInView, setFooterInView] = useState(false);
+  const [railBox, setRailBox] = useState<{right: number} | null>(null);
+  const [railMobile, setRailMobile] = useState(false);
+  const {type: asideType} = useAside();
+  useEffect(() => {
+    if (!hasLadder) return;
+    const sentinel = railSentinel;
+    const section = sentinel?.closest('.product-hero');
+    if (!sentinel || !section) return;
+    const HEADER = 56; // --header-height
+    const measure = () => {
+      // Line the pinned bar's right edge up with the header pill's.
+      const headerEl = document.querySelector('.site-header-main');
+      const refRight = (headerEl ?? section).getBoundingClientRect().right;
+      setRailBox({right: Math.round(document.documentElement.clientWidth - refRight)});
+      setRailMobile(!window.matchMedia('(min-width: 960px)').matches);
+    };
+    measure();
+    const io = new IntersectionObserver(
+      ([entry]) => setRailPinned(!entry.isIntersecting && entry.boundingClientRect.top < HEADER),
+      // Everything below the header line counts as in view, so a jump past
+      // the buy module (a phone fling, an anchor link) still flips the state.
+      {rootMargin: `-${HEADER}px 0px 100000px 0px`, threshold: 0},
+    );
+    io.observe(sentinel);
+    const footer = document.querySelector('footer');
+    const footerIo = footer
+      ? new IntersectionObserver(([entry]) => setFooterInView(entry.isIntersecting), {threshold: 0})
+      : null;
+    if (footer) footerIo?.observe(footer);
+    window.addEventListener('resize', measure);
+    return () => {
+      io.disconnect();
+      footerIo?.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [railSentinel, hasLadder]);
   const matchKey = (val?: string) =>
     val
       ? variantKeys.find(
@@ -777,6 +909,11 @@ function ProductPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [catalogAxisValue]);
   const activeVariant = content.variants?.[activeTier];
+  // The SKU a buyer may see: none when the variant's SKU names a spec that
+  // is not final (OPENMOTOR-2207). It stays the internal ID everywhere else.
+  const shownSku = isInternalSku(product.handle, catalogAxisValue)
+    ? null
+    : (selectedVariant?.sku ?? null);
 
   // Gallery: dedupe by URL and, on tiered products, hide images whose
   // filename OR alt text names a DIFFERENT tier (openesc-20x20-back.png, or
@@ -799,6 +936,10 @@ function ProductPage() {
       seen.add(key);
       return true;
     });
+    // The catalog lists a product's first images only; a variant whose own
+    // image falls outside them still shows it.
+    const own = selectedVariant?.image;
+    if (own && !seen.has(own.url.split('?')[0])) deduped.push(own);
     const tierKeys = content.variants ? Object.keys(content.variants) : [];
     if (tierKeys.length < 2) return deduped;
     const norm = (v: string) =>
@@ -816,9 +957,9 @@ function ProductPage() {
     // hyphenated key (openesc-20x20-back.png).
     const loose = (v: string) => v.replace(/[-_]/g, '');
     const looseKeys = keys.map(loose);
-    const featuredId = selectedVariant?.image?.id ?? null;
+    const featuredUrl = selectedVariant?.image?.url.split('?')[0] ?? null;
     return deduped.filter((img) => {
-      if (featuredId && img.id === featuredId) return true;
+      if (featuredUrl && img.url.split('?')[0] === featuredUrl) return true;
       const name = img.url.split('?')[0].toLowerCase();
       const alt = loose(norm(img.altText ?? ''));
       const best = keys
@@ -827,16 +968,40 @@ function ProductPage() {
       return !best || best === active;
     });
   }, [product.images, selectedVariant?.image, content.variants, activeTier]);
+  // The selected variant's own image, matched by URL: the catalog numbers
+  // product images by position, so a variant image carries a different id
+  // than the same image in the product list.
+  const activeImageId = useMemo(() => {
+    const url = selectedVariant?.image?.url.split('?')[0];
+    return url
+      ? (galleryImages.find((img) => img.url.split('?')[0] === url)?.id ?? null)
+      : null;
+  }, [galleryImages, selectedVariant?.image]);
 
   // GitHub links (repo card / issues / latest commit) follow the selected tier:
   // split-repo lines (OpenFC-Lite ↔ OpenFC-Lite-Mini, OpenESC-20x20 ↔
   // OpenESC-30x30) point at the tier's repo, others at the product default.
   const activeRepoUrl = activeVariant?.repoUrl ?? content.repoUrl;
+  // Open hardware whose design files are public. A product whose repo is
+  // still private (the frames) carries an empty repoUrl: no Open Source
+  // chip, no repo or licence cards and no contributor wall, because every
+  // one of those would point a buyer at a 404.
+  const hasPublicSource = hasPublicRepo(product.handle);
   // OSHWA certification follows the selected tier - each certified board has its
   // own UID, so the chip links to the directory page for the active variant.
   const activeOshwaUid = activeVariant?.oshwaUid ?? content.oshwaUid;
-  const mergedSpecs = mergeSpecs(content.specs, activeVariant?.specs);
+  // The spec-sheet line under the name follows the selected version.
+  const subtitle = activeVariant?.subtitle ?? content.subtitle ?? null;
+  const sheet = specSheet(content);
   const mergedBox = [...content.inTheBox, ...(activeVariant?.inTheBox ?? [])];
+  // Plug drawings: the tier's own list wins over the product's.
+  const activePlugs = activeVariant?.plugs ?? content.plugs ?? [];
+  const plugsEditBase = activeVariant?.plugs ? `variants.${activeTier}.plugs` : 'plugs';
+  // Printed circuit boards: the provenance card (designed in Leuven,
+  // assembled in Shenzhen) describes these and nothing else.
+  const isBoard =
+    Boolean(content.teardown?.boardArt) ||
+    Object.values(content.variants ?? {}).some((v) => Boolean(v.boardArt));
 
   // Studio click-to-edit for per-product strings. Copy files get their
   // `data-edit` tag from `<Txt>`/`editAttrs`, but everything rendered out of
@@ -845,16 +1010,9 @@ function ProductPage() {
   // studio matches it to `products/<handle>` by suffix, and the rest is the
   // leaf path inside that file.
   const prodEdit = (path: string) => editAttrs(`${product.handle}.${path}`);
-  // A merged spec row renders from the variant override when one replaced or
-  // appended it, from the shared table otherwise: point the tag at the leaf
-  // the words actually live in, or a studio edit lands on the wrong row.
-  const specEditBase = (key: string): string => {
-    const o =
-      activeVariant?.specs?.findIndex(([k, v]) => k === key && v !== null) ??
-      -1;
-    if (o >= 0) return `variants.${activeTier}.specs.${o}`;
-    return `specs.${content.specs.findIndex(([k]) => k === key)}`;
-  };
+  // Accessory rows come from content/accessories.json, not a product file
+  // the studio can write, so only editorial files get spec edit tags.
+  const specsEditable = Boolean(PRODUCT_CONTENT[product.handle]);
 
   // Bundle (OpenStack): resolve each component's variant for the active size,
   // so add-to-cart drops the real FC + ESC lines and the buy module shows the
@@ -894,65 +1052,11 @@ function ProductPage() {
       }
     : undefined;
 
-  // "Buy it as a stack": for each configured partner (FC↔ESC), resolve the
-  // variant matching the selected mount size and put BOTH SKUs on one
-  // hand-off link. The offers surface as a hover flyout on the buy CTA, so
-  // ordering the pair is one extra click; more partners later (an OpenFC
-  // Pro) just become more rows. Any pair discount is a Shopify discount, off
-  // the discountedHandle board ONLY, never the pair; it is unconfigured
-  // today, so no offer carries a percent.
-  const stackCfg = content.stack;
-  const stackAxis = (stackCfg?.matchOption ?? 'Model').trim().toLowerCase();
-  const stackMatchValue =
-    selectedVariant?.selectedOptions?.find(
-      (o: {name: string; value: string}) =>
-        o.name.trim().toLowerCase() === stackAxis,
-    )?.value ?? activeTier;
-  const stackOffers = useMemo(() => {
-    if (!stackCfg || !selectedVariant) return [];
-    return stackCfg.partners.flatMap((pc) => {
-      // A partner that hasn't launched can't join a stack offer - its price
-      // and add-to-cart must stay hidden even when this product is live.
-      if (isComingSoon(pc.handle, globalComingSoon)) return [];
-      const pp = stackProducts?.find((p) => p.handle === pc.handle);
-      const nodes = pp?.variants.nodes ?? [];
-      // Exact size match ONLY: the pill names the selected size, so a
-      // fallback variant of another size would silently add the wrong board.
-      // No match -> no offer.
-      const match = nodes.find((n) =>
-        n.selectedOptions?.some(
-          (o) =>
-            o.name.trim().toLowerCase() === stackAxis &&
-            o.value.trim().toLowerCase() ===
-              stackMatchValue.trim().toLowerCase(),
-        ),
-      );
-      if (!match) return [];
-      return [
-        {
-          key: pc.handle,
-          label: pc.label ?? pp?.title ?? pc.handle,
-          size: stackMatchValue,
-          price: match.price,
-          compareAtPrice: match.compareAtPrice,
-          product: product.handle,
-          available:
-            match.availableForSale &&
-            Boolean(selectedVariant.availableForSale),
-          // Both SKUs on one link: ?lines=SELF:1,PARTNER:1.
-          href: buyUrl(commerceHandoff, [
-            {sku: selectedVariant.sku ?? '', quantity: 1},
-            {sku: match.sku ?? '', quantity: 1},
-          ]),
-        },
-      ];
-    });
-  }, [stackCfg, stackProducts, selectedVariant, stackAxis, stackMatchValue, globalComingSoon, product.handle, commerceHandoff]);
-
   // The teardown board art follows the selected tier: a variant's own
   // `boardArt` wins, otherwise the shared `teardown.boardArt` (the default
   // board) is shown. Lines without per-tier art just keep the default.
   const activeBoardArt = activeVariant?.boardArt ?? content.teardown?.boardArt;
+  const silhouetteImage = selectedVariant?.image?.url ?? galleryImages[0]?.url;
   // The teardown pin list follows the tier the same way the board art does:
   // each board in a line has its own refdes layout, so a tier's own `pins`
   // win over the shared `teardown.pins` default. Keeps the hover-highlight
@@ -967,9 +1071,10 @@ function ProductPage() {
   // Group the teardown pins by board side - Top (front) first, then Bottom
   // (back) - reading each refdes's side from the board's components.json. Done
   // at runtime so it stays accurate per tier with no manual side tagging.
+  // Versioned like the board art: /boards/* is cached as immutable.
   const componentsSrc = activeBoardArt?.src.replace(
     /board\.svg$/,
-    'components.json',
+    `components.json${BOARD_ART_VERSION ? `?v=${BOARD_ART_VERSION}` : ''}`,
   );
   const [pinSides, setPinSides] = useState<Map<string, 'F' | 'B'>>(new Map());
   useEffect(() => {
@@ -1150,19 +1255,6 @@ function ProductPage() {
     [boardArtSrcs],
   );
 
-  // Compact buy bar (line products, desktop): the in-hero ladder + add-to-cart
-  // scroll past normally; once the in-hero selector passes under the header a
-  // separate compact bar pins to the top so a buyer can switch SKUs from
-  // anywhere and compare spec tables. Scrolling back up hides it again. The pin
-  // is driven by a zero-height sentinel sitting just below the in-hero selector.
-  // The pinned bar shrink-wraps to its content (chips + price + add-to-cart) and
-  // anchors to the content's right edge, so it grows leftward as more SKUs are
-  // added rather than stretching into a full-width banner. `railBox.right`
-  // mirrors the gap from the viewport's right edge to the hero's right edge.
-  const heroSectionRef = useRef<HTMLElement>(null);
-  const railSentinelRef = useRef<HTMLDivElement>(null);
-  const [railPinned, setRailPinned] = useState(false);
-  const [railBox, setRailBox] = useState<{right: number} | null>(null);
   // Refdes of the teardown pin the visitor is hovering/focusing - highlighted
   // on the board by BoardArt. Lives here (the common ancestor of the pin list
   // and the board) so a hover lights the matching footprint.
@@ -1368,56 +1460,6 @@ function ProductPage() {
     document.documentElement.classList.toggle('board-focus', on);
     return () => document.documentElement.classList.remove('board-focus');
   }, [hoveredRefs]);
-  // <960px the pinned rail becomes a bottom bar (price + add-to-cart only):
-  // phones previously had NO sticky buy control at all once the in-hero buy
-  // module scrolled away.
-  const [railMobile, setRailMobile] = useState(false);
-
-  // The mobile PCB explorer is now FULLY MANUAL - no auto-play, no scroll-driven
-  // body-class toggles (those fed an IntersectionObserver→layout→observer loop
-  // that flickered even when idle). The board stays sticky, the layer rail is
-  // tappable, and tapping a part highlights it. Nothing here moves the elements
-  // the observers watch, so it's stable.
-  useEffect(() => {
-    if (!hasLadder) return;
-    const sentinel = railSentinelRef.current;
-    const section = heroSectionRef.current;
-    if (!sentinel || !section) return;
-    const HEADER = 56; // --header-height
-    const isDesktop = () => window.matchMedia('(min-width: 960px)').matches;
-    const measure = () => {
-      // Anchor the pinned rail's right edge to the floating header pill's right
-      // edge so the two pills line up exactly (fall back to the hero section if
-      // the header isn't found). clientWidth excludes the scrollbar so the edge
-      // sits on the content gutter, not over the scrollbar.
-      const headerEl = document.querySelector('.site-header-main');
-      const refRight = (headerEl ?? section).getBoundingClientRect().right;
-      const right = Math.round(document.documentElement.clientWidth - refRight);
-      setRailBox({right});
-      setRailMobile(!isDesktop());
-    };
-    measure();
-    const io = new IntersectionObserver(
-      ([entry]) =>
-        setRailPinned(
-          !entry.isIntersecting && entry.boundingClientRect.top < HEADER,
-        ),
-      {rootMargin: `-${HEADER}px 0px 0px 0px`, threshold: 0},
-    );
-    io.observe(sentinel);
-    const onResize = () => {
-      measure();
-    };
-    window.addEventListener('resize', onResize);
-    return () => {
-      io.disconnect();
-      window.removeEventListener('resize', onResize);
-    };
-  }, [product.handle, hasLadder]);
-
-  // primaryCollection is retained in the loader but we deliberately
-  // don't render a breadcrumb on the PDP - the editorial hero with
-  // the "File 0N · Family" eyebrow is the navigation clue instead.
   // Bundles advertise the composed component price (what add-to-cart actually
   // charges), not a single component's price. Coming soon: no
   // offer at all: structured data must not leak a price the page hides.
@@ -1428,11 +1470,11 @@ function ProductPage() {
       : selectedVariant?.price;
   const productJsonLd = buildProductJsonLd({
     title: product.title,
-    description: product.description,
+    description: pageDescription(product.handle, product.description) ?? '',
     imageUrl: selectedVariant?.image?.url ?? galleryImages[0]?.url ?? null,
     url: `${SITE_ORIGIN}/products/${product.handle}`,
     vendor: product.vendor,
-    sku: selectedVariant?.sku ?? null,
+    sku: shownSku,
     price: jsonLdPrice
       ? {
           amount: jsonLdPrice.amount,
@@ -1449,12 +1491,47 @@ function ProductPage() {
     // ratings the page doesn't show.
     rating: reviewAggregate,
   });
+  // Structured data for the whole product, not only the selected variant:
+  // the canonical URL carries no ?Model=, so a multi-variant product
+  // publishes one AggregateOffer with an Offer per variant. A campaign
+  // price holds only until its step's units are sold, never to a date, so
+  // preorder offers carry no priceValidUntil.
+  const offerBase = productJsonLd.offers as Record<string, unknown> | undefined;
+  if (offerBase && preorder) delete offerBase.priceValidUntil;
+  const offerNodes = product.variants.nodes;
+  if (offerBase && !content.bundle && offerNodes.length > 1) {
+    const availabilityOf = (v: (typeof offerNodes)[number]) =>
+      !v.availableForSale
+        ? 'https://schema.org/OutOfStock'
+        : v.availability === 'preorder'
+          ? 'https://schema.org/PreOrder'
+          : 'https://schema.org/InStock';
+    const amounts = offerNodes.map((v) => Number(v.price.amount));
+    const currency = offerNodes[0].price.currencyCode;
+    productJsonLd.offers = {
+      '@type': 'AggregateOffer',
+      priceCurrency: currency,
+      lowPrice: Math.min(...amounts).toFixed(2),
+      highPrice: Math.max(...amounts).toFixed(2),
+      offerCount: offerNodes.length,
+      offers: offerNodes.map((v) => ({
+        ...offerBase,
+        name: variantDisplayName(product.handle, v.title),
+        sku: isInternalSku(product.handle, v.title) ? undefined : (v.sku ?? undefined),
+        price: v.price.amount,
+        priceCurrency: v.price.currencyCode,
+        availability: availabilityOf(v),
+        url: v.selectedOptions.length
+          ? `${SITE_ORIGIN}/products/${product.handle}?${new URLSearchParams(
+              v.selectedOptions.map((o) => [o.name, o.value]),
+            ).toString()}`
+          : `${SITE_ORIGIN}/products/${product.handle}`,
+      })),
+    };
+    delete productJsonLd.sku;
+  }
 
-  // The ladder + buy module. These two nodes are rendered twice: once in the
-  // hero (in normal flow - it scrolls past like any content) and, once the
-  // in-hero selector has scrolled under the header, again in a compact bar
-  // pinned to the top so a variant switcher + add-to-cart is always reachable.
-  // Both copies share `activeTier`, so switching in either keeps them in sync.
+  // The ladder + buy module, rendered once in the hero in normal flow.
   // Ladder clicks are the PDP's main variant switch: track them as
   // `Variant Select` (user-initiated only; deep links and catalog
   // re-syncs go through setActiveTier directly and stay silent). Only an
@@ -1480,14 +1557,27 @@ function ProductPage() {
         productOptions={productOptions}
         activeValue={activeTier}
         onSelect={selectTier}
+        showPrices={!soon}
       />
     ) : null;
-  // Compact (name-pill) variant switcher for the pinned MOBILE buy bar - keeps
-  // variant selection reachable there without the full spec ladder's height.
-  const railLadderCompact =
+  // A Specs column header selects its version the way a ladder button does:
+  // preview at once, then select the catalog variant through the URL.
+  const navigate = useNavigate();
+  const pickTier = (value: string) => {
+    if (content.variants?.[value]?.comingSoon) return;
+    selectTier(value);
+    const norm = (s: string) => s.trim().toLowerCase();
+    const option = productOptions
+      .find((o) => norm(o.name) === norm(content.optionAxis ?? ''))
+      ?.optionValues.find((v) => norm(v.name) === norm(value));
+    if (option?.variantUriQuery && !option.selected) {
+      void navigate(`?${option.variantUriQuery}`, {replace: true, preventScrollReset: true});
+    }
+  };
+  // The pinned bar's chips: names only, its buy module carries the price.
+  const railLadderPinned =
     hasLadder && content.optionAxis && content.variants ? (
       <VariantLadder
-        compact
         axis={content.optionAxis}
         variants={content.variants}
         productOptions={productOptions}
@@ -1495,16 +1585,6 @@ function ProductPage() {
         onSelect={selectTier}
       />
     ) : null;
-  // The two firmware trust chips stay ONE editable sentence each: the firmware
-  // project's name and the component count are data, so the copy marks their
-  // slots with `{project}` / `{count}` / `{firmwares}` and the sentence is split
-  // around them here.
-  const firmwareChipParts = (
-    copyText('product-chrome.trust_chip_firmware') ?? ''
-  ).split('{project}');
-  const bundleChipParts = (
-    copyText('product-chrome.trust_chip_firmware_bundle') ?? ''
-  ).split('{firmwares}');
   const isBundle = Boolean(content.bundle);
   // The ship promise shown on the buy module: the catalog's per-product word
   // (frozen onto the order line and printed in the order mail by the same
@@ -1527,6 +1607,71 @@ function ProductPage() {
   const buyAvailable = isBundle
     ? bundleAvailable
     : Boolean(selectedVariant?.availableForSale);
+
+  // Preorder campaign of the selected variant: the price ladder, the ship
+  // terms and the quantity cap all read it.
+  const campaign = !isBundle && preorder ? (selectedVariant?.campaign ?? null) : null;
+  const retail = selectedVariant?.sku ? (retailBySku[selectedVariant.sku] ?? null) : null;
+  const tiers = tiersFor(CAMPAIGN_CONFIG, selectedVariant?.sku ?? '');
+  // A flat-price SKU (an accessory shipping with a campaign SKU) has no
+  // steps: no ladder, no step bar, no Early bird.
+  const ladder =
+    campaign && tiers.length && retail != null && retail > 0 ? priceLadder(retail, tiers) : null;
+  const currency = selectedVariant?.price.currencyCode ?? 'EUR';
+  // Batch progress with its price schedule available on demand.
+  const nextUnit = campaign ? campaign.ordered + 1 : 0;
+  const stepPrices = (ladder ?? []).map((step) => ({
+    key: step.from,
+    text: formatPrice(step.price, currency),
+    range: step.to === null ? `${step.from}+` : `${step.from}-${step.to}`,
+    current: nextUnit >= step.from && (step.to === null || nextUnit <= step.to),
+  }));
+  const stepBarState =
+    campaign && tiers.length ? stepBarView(campaign, tiers.map((tier) => tier.upTo)) : null;
+  const stepBar =
+    campaign && stepBarState ? (
+      <StepBar
+        bar={stepBarState}
+        prices={stepPrices}
+        fundedLabel={copyText('preorder.funded') ?? 'Target reached'}
+      />
+    ) : null;
+  // Units left in the paid batch: one add must not ask for more than the
+  // batch that carries the ship date still holds.
+  const paidLeft = campaign?.paidStock
+    ? (campaign.paidLeft ?? campaign.batchUnits - campaign.batchOrdered)
+    : null;
+  const maxQuantity =
+    paidLeft != null ? Math.max(1, Math.min(MAX_LINE_QUANTITY, paidLeft)) : MAX_LINE_QUANTITY;
+  // The buy module's quantity, reset whenever the variant changes.
+  // A product sold singly but used in sets (4 motors per quad) starts at
+  // one set; the stepper still moves by one.
+  const setOf = !isBundle && content.setOf && content.setOf > 1 ? content.setOf : null;
+  const [quantity, setQuantity] = useState(setOf ?? 1);
+  useEffect(() => {
+    setQuantity(setOf ?? 1);
+  }, [selectedVariant?.id, setOf]);
+  const buyQuantity = Math.min(quantity, maxQuantity);
+  // Why the stepper stops: the per-order cap, or the units left in the
+  // paid batch when fewer remain.
+  const maxQuantityNote =
+    maxQuantity < MAX_LINE_QUANTITY
+      ? say('product-chrome.buy_qty_max_batch', '{count} left in this batch', {count: maxQuantity})
+      : say('product-chrome.buy_qty_max', 'Max {count} per order', {count: maxQuantity});
+
+  // Inside the EU the price includes 21% Belgian VAT. Outside it the same
+  // euro price applies with no EU VAT charged on the export, so nothing is
+  // printed next to it. Shipping is shown at checkout only.
+  const vatNote = paysEuVat(rootData?.visitorCountry ?? null)
+    ? say('product-chrome.buy_vat_note', 'incl. VAT')
+    : null;
+  // Consumers buy direct only in the open EU countries. Elsewhere the buy
+  // button is a status line (AddToCartButton): outside the EU "EU consumer
+  // orders only" with a link to the trade page, in an EU country not open
+  // yet "Orders are not open for <country>"; both with the launch-news
+  // signup instead of the ship date. A blocked country gets "Not available
+  // in <country>" and the End-Use Policy link, with no signup.
+  const notDirect = notSoldDirect(rootData?.visitorCountry ?? null);
   // Coming-soon buy module: the price/stock/add-to-cart block becomes a
   // COMING SOON plate + notify-at-launch signup (same newsletter action,
   // tagged with this product's handle). Everything else on the PDP stays.
@@ -1554,10 +1699,10 @@ function ProductPage() {
           <span className="product-buy-sku" {...prodEdit('statusNote')}>
             {shipPromise}
           </span>
-        ) : selectedVariant?.sku ? (
+        ) : shownSku ? (
           <span className="product-buy-sku">
             {copyText('product-chrome.buy_sku_prefix')}{' '}
-            {selectedVariant.sku}
+            {shownSku}
           </span>
         ) : null}
       </div>
@@ -1587,18 +1732,20 @@ function ProductPage() {
   ) : (
     <div className="product-buy" data-buy-module>
       <div className="product-buy-price">
-        {/* Price + the "incl. VAT" qualifier (Art. VI.45 WER pre-contractual
-            info) grouped together - also fills the dead space beside the price. */}
+        {/* Price + "incl. VAT" (art. VI.45 WER pre-contractual info). */}
         <span className="product-buy-amount">
-          <ProductPrice
-            price={buyPrice}
-            compareAtPrice={isBundle ? undefined : selectedVariant?.compareAtPrice}
-          />
-          <Txt
-            id="product-chrome.buy_vat_note"
-            as="span"
-            className="product-buy-vat"
-          />
+          <ProductPrice price={buyPrice} />
+          {content.priceUnit && !isBundle ? (
+            <span className="product-buy-unit" {...prodEdit('priceUnit')}>
+              {content.priceUnit}
+            </span>
+          ) : null}
+          {vatNote ? <span className="product-buy-vat">{vatNote}</span> : null}
+          {campaign?.earlyPrice && ladder ? (
+            <span className="product-buy-tag">
+              {say('product-chrome.buy_early_bird', 'Price step 1')}
+            </span>
+          ) : null}
         </span>
         {isBundle ? (
           (() => {
@@ -1616,37 +1763,58 @@ function ProductPage() {
               </span>
             );
           })()
-        ) : selectedVariant?.sku ? (
-          <span className="product-buy-sku">
-            {copyText('product-chrome.buy_sku_prefix')}{' '}
-            {selectedVariant.sku}
-          </span>
         ) : null}
       </div>
-      {/* Pre-order: the stock line carries the catalog ship promise (the
-          product's own, else the shop-wide default). The catalog
-          availability still decides whether the buy button is enabled. */}
-      <span
-        className={`product-buy-stock${
-          preorder && !isBundle ? ' is-preorder' : buyAvailable ? '' : ' is-out'
-        }`}
-      >
-        {isBundle
-          ? copyText(
-              buyAvailable
-                ? 'product-chrome.buy_stock_bundle_in'
-                : 'product-chrome.buy_stock_bundle_out',
-            )
-          : preorder
-            ? (
-                <>
-                  {copyText('product-chrome.buy_stock_preorder_prefix') ?? ''} ·{' '}
-                  {shipPromise ? (
-                    <span {...prodEdit('statusNote')}>{shipPromise}</span>
-                  ) : (
-                    <Txt id="product-chrome.preorder_lead_default" as="span" />
-                  )}
-                </>
+      {stepBar}
+      {/* Star aggregate + link to the reviews chapter. Renders nothing
+          without reviews. */}
+      <ReviewAggregateLine aggregate={reviewAggregate} />
+      <ProductForm
+        productOptions={productOptions}
+        selectedVariant={selectedVariant}
+        hideOptionNames={content.optionAxis ? [content.optionAxis] : undefined}
+        buyUrl={isBundle ? (bundleBuyUrl ?? '') : undefined}
+        buyDisabled={isBundle ? !bundleAvailable : undefined}
+        buyCtaLabel={
+          isBundle ? copyText('product-chrome.buy_bundle_cta') : undefined
+        }
+        quantity={isBundle ? undefined : buyQuantity}
+        maxQuantity={maxQuantity}
+        maxQuantityNote={maxQuantityNote}
+        onQuantityChange={isBundle || notDirect ? undefined : setQuantity}
+      />
+      {notDirect === 'blocked' ? (
+        <p className="product-buy-ship">
+          <Link prefetch="intent" to="/end-use" className="product-buy-terms-link">
+            {say('product-chrome.buy_blocked_link', 'End-Use Policy')}
+          </Link>
+        </p>
+      ) : notDirect ? (
+        <>
+          {notDirect === 'shops' ? (
+            <p className="product-buy-ship">
+              <Link prefetch="intent" to="/wholesale" className="product-buy-terms-link">
+                {say('product-chrome.buy_shops_trade', 'EU or US retailer enquiries')}
+              </Link>
+            </p>
+          ) : null}
+          <NewsletterSignup
+            notify={{productHandle: product.handle, productTitle: product.title}}
+            turnstileSiteKey={rootData?.turnstileSiteKey ?? null}
+            className="product-buy-notify"
+          />
+        </>
+      ) : /* Ship date right under the button (WER VI.43), and for a funding
+          target its deadline and the "if funded" condition. */
+      preorder && !isBundle ? (
+        <ShipLine campaign={campaign} promise={shipPromise} className="product-buy-stock" />
+      ) : (
+        <p className={`product-buy-stock${buyAvailable ? '' : ' is-out'}`}>
+          {isBundle
+            ? copyText(
+                buyAvailable
+                  ? 'product-chrome.buy_stock_bundle_in'
+                  : 'product-chrome.buy_stock_bundle_out',
               )
             : selectedVariant?.availableForSale
               ? copyText('product-chrome.buy_stock_in')
@@ -1658,58 +1826,28 @@ function ProductPage() {
                     </>
                   )
                 : copyText('product-chrome.buy_stock_out')}
-      </span>
+        </p>
+      )}
+      {preorder && !isBundle && !notDirect ? (
+        <p className="product-buy-ship">
+          <Link prefetch="intent" to="/preorder" className="product-buy-terms-link">
+            {say('product-chrome.buy_terms_link', 'Pre-order terms')}
+          </Link>
+        </p>
+      ) : null}
       {/* Sold-out signup: not for pre-order products, whose "unavailable"
           is a catalog availability state, not a launch to be notified of. */}
       {!isBundle &&
       !preorder &&
+      !notDirect &&
       selectedVariant &&
       !selectedVariant.availableForSale ? (
         <NewsletterSignup
-          notify={{productHandle: product.handle, productTitle: product.title}}
+          notify={{productHandle: product.handle, productTitle: product.title, restock: true}}
           turnstileSiteKey={rootData?.turnstileSiteKey ?? null}
           className="product-buy-notify"
         />
       ) : null}
-      {/* Star aggregate + link to the reviews chapter. Renders nothing
-          without reviews; CSS hides it in the compact pinned rail. */}
-      <ReviewAggregateLine aggregate={reviewAggregate} />
-      <ProductForm
-        productOptions={productOptions}
-        selectedVariant={selectedVariant}
-        hideOptionNames={content.optionAxis ? [content.optionAxis] : undefined}
-        buyUrl={isBundle ? (bundleBuyUrl ?? '') : undefined}
-        buyDisabled={isBundle ? !bundleAvailable : undefined}
-        buyCtaLabel={
-          isBundle ? copyText('product-chrome.buy_bundle_cta') : undefined
-        }
-        stackOffers={stackOffers}
-      />
-    </div>
-  );
-
-  // The compact pinned copy. Desktop: top-right bar with ladder + buy module.
-  // Mobile (<960px): bottom bar with the buy module only - the ladder chips
-  // don't fit and the in-hero selector is a short scroll away. Portaled to
-  // <body> so the fixed overlay escapes the hero's sticky/stacking context -
-  // otherwise the chapter media (sticky to the same top-right spot) paints
-  // over it and swallows clicks. Suppressed (CSS-hidden, not unmounted - an
-  // in-flight add-to-cart submit must survive opening the drawer) while an
-  // aside is open so it doesn't sit on top of the cart. It stays live through the
-  // teardown chapter (the board no longer pins full-screen there) so variant/SKU
-  // switching is reachable everywhere on the page, not just above the fold.
-  const railSuppressed = railPinned && asideType !== 'closed';
-  // Coming soon (alpha): there is nothing to buy, and a notify form fixed to
-  // the viewport would be noise, so the pinned copy carries the ladder ALONE.
-  // The variants are the whole point of an alpha page, so switching them stays
-  // reachable from anywhere on it (maintainer, 2026-08-18).
-  const pinnedRail = (
-    <div
-      className={`buy-rail is-pinned${railMobile ? ' is-mobile' : ''}${soon ? ' is-ladderonly' : ''}${railSuppressed ? ' is-suppressed' : ''}`}
-      style={railBox && !railMobile ? {right: railBox.right} : undefined}
-    >
-      {railMobile ? railLadderCompact : railLadder}
-      {soon ? null : railBuyModule}
     </div>
   );
 
@@ -1734,10 +1872,15 @@ function ProductPage() {
         return Boolean(content.whatIsThis);
       // Accessories (fallback content) aren't open-hardware products - no
       // "Open for learning" chapter, and no chapter number burnt on it.
+      // Open hardware whose repo is still private (the frames) has no
+      // public files to study yet.
       case 'openSource':
-        return isEditorial;
+        return hasPublicSource;
+      // A frame or motor (a CAD model, no board) has its teardown part list
+      // and exploded drawing in the Specs chapter, like a board's art behind
+      // its spec table, so there is no separate Teardown chapter.
       case 'teardown':
-        return Boolean(content.teardown);
+        return Boolean(content.teardown) && frameViewerSrcs.length === 0;
       case 'specs':
         return content.specs.length > 0;
       case 'inTheBox':
@@ -1756,7 +1899,7 @@ function ProductPage() {
       // for them - the grid degrades to the "+ you" invitation when the GitHub
       // API is rate-limited.
       case 'contributors':
-        return isEditorial;
+        return hasPublicSource;
       // Only when the feature is enabled AND the synced metafields carry at
       // least one rating, so a zero-review store shows no trace of it.
       case 'reviews':
@@ -1778,6 +1921,45 @@ function ProductPage() {
    * so it cannot drift from the render order. `title` is the studio's optional
    * override - absent, the designed title (inline `<em>` and all) stands.
    */
+  // The teardown part list: the Teardown chapter's body on boards, the
+  // Specs chapter's second block on the frame and motor.
+  const teardownPinList = groupedPins.top.length > 0 && groupedPins.bottom.length > 0 ? (
+            <div
+              className={`teardown-sides${boardFlying ? ' is-locked' : ''}${
+                pinsSwapping ? ' is-swapping' : ''
+              }`}
+              onMouseLeave={noHover ? undefined : clearHover}
+            >
+              <section className="teardown-side">
+                <ul className="teardown-pins">
+                  {groupedPins.top.map(renderPin)}
+                </ul>
+              </section>
+              <section className="teardown-side">
+                <ul className="teardown-pins">
+                  {[...groupedPins.bottom, ...groupedPins.other].map(renderPin)}
+                </ul>
+              </section>
+            </div>
+          ) : (
+            <div
+              className={`teardown-sides${boardFlying ? ' is-locked' : ''}${
+                pinsSwapping ? ' is-swapping' : ''
+              }`}
+              onMouseLeave={noHover ? undefined : clearHover}
+            >
+              <section className="teardown-side">
+                <ul className="teardown-pins">
+                  {[
+                    ...groupedPins.top,
+                    ...groupedPins.bottom,
+                    ...groupedPins.other,
+                  ].map(renderPin)}
+                </ul>
+              </section>
+            </div>
+          );
+
   const chapterNodes: Partial<
     Record<
       ChapterType,
@@ -1804,7 +1986,7 @@ function ProductPage() {
         {id: 'rx', copy: 'what_chain_receiver', to: '/products/openrx'},
         {id: 'fc', copy: 'what_chain_fc', to: '/products/openfc-lite'},
         {id: 'esc', copy: 'what_chain_esc', to: '/products/openesc'},
-        {id: 'motors', copy: 'what_chain_motors'},
+        {id: 'motors', copy: 'what_chain_motors', to: '/products/openmotor'},
         {id: 'frame', copy: 'what_chain_frame', to: '/products/openframe'},
       ];
       return (
@@ -1838,7 +2020,7 @@ function ProductPage() {
                 c.to && !active ? (
                   <Link
                     key={c.id}
-                    prefetch="viewport"
+                    prefetch="intent"
                     to={c.to}
                     className="what-chain-chip"
                   >
@@ -1847,7 +2029,8 @@ function ProductPage() {
                 ) : (
                   <span
                     key={c.id}
-                    className={`what-chain-chip${active ? ' is-active' : ''}`}
+                    className={`what-chain-chip${active ? ' is-active' : ' is-plain'}`}
+                    aria-current={active ? 'page' : undefined}
                   >
                     <Txt id={`product-chrome.${c.copy}`} />
                   </span>
@@ -1873,7 +2056,7 @@ function ProductPage() {
               hash opens the walkthrough ON this product's part (the hero
               maps `motors` to its singular beat id). */}
           <Link
-            prefetch="viewport"
+            prefetch="intent"
             to={wit.chain ? `/#${wit.chain}` : '/'}
             className="what-home-link"
           >
@@ -1962,6 +2145,15 @@ function ProductPage() {
                   as="p"
                   className="open-source-card-sub"
                 />
+                {/* The repository's own name, which can differ from the
+                    shop name (the 20x20 FC is OpenFC-Lite-Mini). */}
+                {repoName(activeRepoUrl) ? (
+                  <p className="open-source-card-repo">
+                    {say('product-chrome.os_card_repo_name', 'Design files: {repo}', {
+                      repo: repoName(activeRepoUrl) ?? '',
+                    })}
+                  </p>
+                ) : null}
               </a>
               {content.video && !content.whatIsThis ? null : (
                 <a
@@ -2073,7 +2265,7 @@ function ProductPage() {
             lives once, on /open-source, same idiom as the firmware chapter's
             "All firmware partners →". */}
         <p className="open-source-story-link">
-          <Link prefetch="viewport" to="/open-source">
+          <Link prefetch="intent" to="/open-source">
             <Txt id="product-chrome.os_link_story" />
           </Link>
         </p>
@@ -2110,22 +2302,6 @@ function ProductPage() {
                 // the viewer pages to the sheet that carries the symbol.
                 highlightRefs={hoveredRefs}
               />
-            ) : undefined
-          }
-          backdrop={
-            frameViewer ? (
-              // No key on src: keep the canvas mounted across tier switches so
-              // the viewer toggles between preloaded models instantly rather
-              // than remounting and re-fetching the GLB. Wrapped so a WebGL
-              // failure drops the (decorative) viewer instead of crashing the
-              // whole product page.
-              <SceneErrorBoundary fallback={null}>
-                <ClientFrameViewer
-                  src={frameViewer.src}
-                  srcs={frameViewerSrcs}
-                  inspectUrl={frameViewer.inspectUrl}
-                />
-              </SceneErrorBoundary>
             ) : undefined
           }
           media={
@@ -2225,7 +2401,7 @@ function ProductPage() {
                                 {/* Just the model/short name on the chip (e.g.
                                     "RP2354A"), not the whole descriptive sentence
                                     - split off anything after a dash/middot. */}
-                                {p.name.split(/\s+[—–·-]\s+/)[0]}
+                                {p.name.split(/\s+[\u2014\u2013·-]\s+/)[0]}
                                 {p.cost && p.cost !== '×1' ? (
                                   <span className="board-part-chip-qty">{p.cost}</span>
                                 ) : null}
@@ -2240,42 +2416,12 @@ function ProductPage() {
             ) : undefined
           }
         >
-          {groupedPins.top.length > 0 && groupedPins.bottom.length > 0 ? (
-            <div
-              className={`teardown-sides${boardFlying ? ' is-locked' : ''}${
-                pinsSwapping ? ' is-swapping' : ''
-              }`}
-              onMouseLeave={noHover ? undefined : clearHover}
-            >
-              <section className="teardown-side">
-                <ul className="teardown-pins">
-                  {groupedPins.top.map(renderPin)}
-                </ul>
-              </section>
-              <section className="teardown-side">
-                <ul className="teardown-pins">
-                  {[...groupedPins.bottom, ...groupedPins.other].map(renderPin)}
-                </ul>
-              </section>
-            </div>
-          ) : (
-            <div
-              className={`teardown-sides${boardFlying ? ' is-locked' : ''}${
-                pinsSwapping ? ' is-swapping' : ''
-              }`}
-              onMouseLeave={noHover ? undefined : clearHover}
-            >
-              <section className="teardown-side">
-                <ul className="teardown-pins">
-                  {[
-                    ...groupedPins.top,
-                    ...groupedPins.bottom,
-                    ...groupedPins.other,
-                  ].map(renderPin)}
-                </ul>
-              </section>
-            </div>
-          )}
+          {teardownPinList}
+          {!frameViewer && activeBoardArt ? (
+            <p className="teardown-render-note">
+              {say('product-chrome.teardown_render_note', 'Render from the design files. Silkscreen may differ.')}
+            </p>
+          ) : null}
           {!frameViewer && activeBoardArt?.inspectUrl ? (
             <a
               className="board-art-inspect teardown-inspect"
@@ -2289,41 +2435,130 @@ function ProductPage() {
         </Chapter>
     ),
     /** What it measures. */
-    specs: (n, title) => (
+    specs: (n, title) => {
+      const multi = sheet.columns.length > 1;
+      return (
         <Chapter
+          id={SPECS_ID}
           number={n}
-          label="Datasheet"
+          label="Specs"
           title={title}
           titleId="product-chrome.ch_specs_title"
           noMedia
+          centered
         >
-          <dl className="spec-table">
-            {mergedSpecs.map(([k, v]) => (
-              <div key={k}>
-                <dt {...prodEdit(`${specEditBase(k)}.0`)}>{k}</dt>
-                {/* Count-up on the numeric runs the first time the table
-                    scrolls into view. spec-table already sets tabular-nums,
-                    so digits don't jitter mid-count; reduced-motion and
-                    variant-switch re-renders are handled inside. */}
-                <dd {...prodEdit(`${specEditBase(k)}.1`)}>
-                  <AnimatedNumber value={v} />
-                </dd>
+          <div
+            className={`product-specs${frameViewer ? ' product-specs--drawing' : ''}`}
+            ref={specsRef}
+          >
+            {frameViewer ? (
+              // The frame or motor explodes behind the table, the CAD
+              // counterpart of a board's art. No key on src: the canvas stays
+              // mounted across tier switches and toggles between preloaded
+              // models. A WebGL failure drops the (decorative) drawing only.
+              <div className="specs-drawing" aria-hidden="true">
+                <SceneErrorBoundary fallback={null}>
+                  <ClientFrameViewer
+                    src={frameViewer.src}
+                    srcs={frameViewerSrcs}
+                    inspectUrl={frameViewer.inspectUrl}
+                    kind={frameViewer.kind}
+                  />
+                </SceneErrorBoundary>
               </div>
-            ))}
-          </dl>
-          {content.footnote ? (
-            <p className="chapter-footnote" {...prodEdit('footnote')}>
-              {content.footnote}
-            </p>
+            ) : (
+              <ProductSilhouette
+                boardSrc={activeBoardArt?.src ?? null}
+                imageSrc={silhouetteImage ?? null}
+                target={specsRef}
+              />
+            )}
+            {/* Final values only, never a count-up: a buyer who reads or
+                screenshots a spec must never see a wrong current or voltage. */}
+            <table
+              className={`spec-sheet${multi ? ' spec-sheet--multi' : ''}${
+                sheet.columns.length > 2 ? ' spec-sheet--many' : ''
+              }`}
+            >
+              {multi ? (
+                <thead>
+                  <tr>
+                    <th scope="col">
+                      <span className="sr-only">{say('product-chrome.compare_spec', 'Spec')}</span>
+                    </th>
+                    {sheet.columns.map((col) => (
+                      <th
+                        scope="col"
+                        key={col}
+                        className={col === activeTier ? 'is-active' : undefined}
+                      >
+                        <button
+                          type="button"
+                          className="spec-sheet-pick"
+                          aria-pressed={col === activeTier}
+                          onClick={() => pickTier(col)}
+                        >
+                          {variantDisplayName(product.handle, col)}
+                        </button>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+              ) : null}
+              <tbody>
+                {sheet.rows.map((row) => (
+                  <tr key={row.key}>
+                    <th scope="row">{row.label}</th>
+                    {row.values.map((value, i) => {
+                      const col = sheet.columns[i];
+                      return (
+                        <td
+                          key={col || i}
+                          className={multi && col === activeTier ? 'is-active' : undefined}
+                          // The studio edits the mirrored value, so a tersed
+                          // cell is shown but not editable in place.
+                          {...(specsEditable && value && row.raw[i] === value && row.paths[i]
+                            ? prodEdit(`${row.paths[i]}.1`)
+                            : {})}
+                        >
+                          {value ?? ''}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {frameViewer ? (
+              <div className="specs-parts">
+                <Txt
+                  id="product-chrome.ch_teardown_title_frame"
+                  as="h3"
+                  className="specs-parts-title"
+                />
+                {teardownPinList}
+              </div>
+            ) : null}
+          </div>
+          {activePlugs.length ? (
+            <PlugDiagrams
+              plugs={activePlugs}
+              editBase={plugsEditBase}
+              edit={prodEdit}
+              title={say('product-chrome.connectors_title', 'Plugs and pin order')}
+            />
           ) : null}
         </Chapter>
-    ),
+      );
+    },
     /** What ships. */
     inTheBox: (n, title) => (
         <Chapter
+          id={IN_THE_BOX_ID}
           number={n}
           label="In the box"
           title={title}
+          noMedia
           titleId={
             content.bundle
               ? 'product-chrome.ch_in_the_box_title_bundle'
@@ -2362,14 +2597,6 @@ function ProductPage() {
                     >
                       {it.item}
                     </span>
-                    {it.note ? (
-                      <span
-                        className="in-the-box-note"
-                        {...prodEdit(`${boxBase}.note`)}
-                      >
-                        {it.note}
-                      </span>
-                    ) : null}
                   </li>
                 );
               })}
@@ -2381,7 +2608,7 @@ function ProductPage() {
                 <Link
                   key={c.handle}
                   to={`/products/${c.handle}`}
-                  prefetch="viewport"
+                  prefetch="intent"
                   className="bundle-component-card"
                 >
                   <p
@@ -2412,7 +2639,7 @@ function ProductPage() {
               ))}
             </div>
           ) : null}
-          <ProvenanceCard />
+          {isBoard ? <ProvenanceCard /> : null}
         </Chapter>
     ),
     /** The files themselves. */
@@ -2421,6 +2648,7 @@ function ProductPage() {
           number={n}
           label="Downloads"
           title={title}
+          noMedia
           titleId="product-chrome.ch_downloads_title"
         >
           <Txt
@@ -2460,6 +2688,21 @@ function ProductPage() {
             ) : undefined
           }
         >
+          <div className="firmware-freedom">
+            <p className="firmware-freedom-title">
+              {say('product-chrome.firmware_freedom_title', 'Flash what you want')}
+            </p>
+            <p>
+              {say(
+                'product-chrome.firmware_freedom_body',
+                'Ships with {project}. No activation, no locked bootloader. Reflashing keeps the 2-year warranty.',
+                {project: content.firmware.project},
+              )}{' '}
+              <Link prefetch="intent" to="/warranty">
+                {say('product-chrome.firmware_freedom_link', 'Warranty')}
+              </Link>
+            </p>
+          </div>
           <FirmwareSupport
             firmwareProject={content.firmware.project}
             firmwareUrl={content.firmware.projectUrl}
@@ -2571,77 +2814,69 @@ function ProductPage() {
          
         dangerouslySetInnerHTML={{__html: JSON.stringify(productJsonLd)}}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            buildBreadcrumbJsonLd([
+              {name: 'OpenDrone', path: '/'},
+              {name: 'Products', path: '/products'},
+              {name: product.title, path: `/products/${product.handle}`},
+            ]),
+          ),
+        }}
+      />
       {/* === HERO: gallery left, copy + sticky buy module right === */}
-      <section className="product-hero" ref={heroSectionRef}>
+      <section className="product-hero">
         <div className="product-hero-gallery-col">
-          <div className="product-hero-media">
+          <div
+            className={`product-hero-media${
+              galleryImages.length && imagesAreRenders(product.handle) ? ' is-render' : ''
+            }`}
+          >
+            {galleryImages.length && imagesAreRenders(product.handle) ? (
+              <span className="render-chip">{say('product-chrome.render_chip', 'Render')}</span>
+            ) : null}
+            {activeVariant?.imageNote && galleryImages.length ? (
+              <span className="product-image-note">{activeVariant.imageNote}</span>
+            ) : null}
             <ProductGallery
               images={galleryImages}
-              activeImageId={selectedVariant?.image?.id ?? null}
+              activeImageId={activeImageId}
+              emptyFallback={
+                <ProductGhostTile type={product.productType} title={product.title} />
+              }
             />
           </div>
         </div>
 
         <div className="product-hero-copy">
-          <p className="product-hero-eyebrow">
-            {copyText('product-chrome.hero_eyebrow_file')} {content.fileNumber} ·{' '}
-            <span {...prodEdit('family')}>{content.family}</span>
-            {roadmapStatus ? (
-              <Link
-                prefetch="viewport"
-                to="/roadmap"
-                className="product-status-chip"
-                data-status={roadmapStatus}
-                title={copyText(`roadmap.status_${roadmapStatus}_legend`)}
-              >
-                <span className="kanban-dot" aria-hidden="true" />
-                {copyText(`roadmap.status_${roadmapStatus}_label`)}
-              </Link>
-            ) : null}
-          </p>
-          {hasHeroCopy ? (
-            <h1 className="product-hero-headline">
-              {/* Skip empty lines - single-line heroes (OpenESC) otherwise
-                  render stray empty <em>/<span> nodes and join spaces. */}
-              <span {...prodEdit('hero.line1')}>{content.hero.line1}</span>
-              {content.hero.line2Italic ? (
-                <>
-                  {' '}
-                  <span {...prodEdit('hero.line2Italic')}>
-                    <em>{content.hero.line2Italic}</em>
-                  </span>
-                </>
-              ) : null}
-              {content.hero.line3 ? (
-                <>
-                  {' '}
-                  <span {...prodEdit('hero.line3')}>{content.hero.line3}</span>
-                </>
-              ) : null}
-            </h1>
-          ) : (
-            <h1 className="product-hero-headline">
-              <span>{title}</span>
-            </h1>
-          )}
-          {content.hero.lead ? (
-            <p className="product-hero-lead" {...prodEdit('hero.lead')}>
-              {content.hero.lead}
+          <h1 className="product-hero-name">{title}</h1>
+          {subtitle ? (
+            <p
+              className="product-hero-sub"
+              {...prodEdit(activeVariant?.subtitle ? `variants.${activeTier}.subtitle` : 'subtitle')}
+            >
+              {subtitle}
             </p>
           ) : null}
-
+          <div className="buy-rail">
+            {railLadder}
+            {railBuyModule}
+            <div ref={setRailSentinel} className="buy-rail-sentinel" aria-hidden="true" />
+          </div>
           <ul
             className="trust-chips"
             aria-label={copyText('product-chrome.trust_chips_aria')}
           >
-            {isEditorial ? (
+            {hasPublicSource ? (
               <li>
                 <Link
                   to="/open-source"
                   prefetch="viewport"
                   className="trust-chip trust-chip-green trust-chip-link"
                 >
-                  {copyText('product-chrome.trust_chip_open_source')}
+                  {say('product-chrome.trust_chip_open_source', 'Open Source')}
                 </Link>
               </li>
             ) : null}
@@ -2660,7 +2895,7 @@ function ProductPage() {
                     aria-hidden="true"
                     className="trust-chip-oshwa-mark"
                   />
-                  {copyText('product-chrome.trust_chip_oshwa')}
+                  {say('product-chrome.trust_chip_oshwa', 'OSHWA certified')}
                 </a>
               </li>
             ) : null}
@@ -2671,9 +2906,7 @@ function ProductPage() {
                   prefetch="viewport"
                   className="trust-chip trust-chip-gold trust-chip-link"
                 >
-                  {bundleChipParts[0]}
                   {content.bundle.components.map((c) => c.firmware).join(' + ')}
-                  {bundleChipParts[1]}
                 </Link>
               </li>
             ) : content.firmware.project && content.firmware.project !== '-' ? (
@@ -2683,55 +2916,33 @@ function ProductPage() {
                   prefetch="viewport"
                   className="trust-chip trust-chip-gold trust-chip-link"
                 >
-                  {firmwareChipParts[0]}
                   {content.firmware.project}
-                  {firmwareChipParts[1]}
                 </Link>
               </li>
             ) : null}
           </ul>
 
-          {/* In-flow buy box - scrolls past with the page like any content,
-              so nothing vanishes or leaves a gap. The sentinel sits BELOW the
-              buy module: the compact top bar takes over only once the whole
-              module (CTA included) is under the header, otherwise the two
-              overlap now that the column scrolls normally. */}
-          <div className="buy-rail">
-            {railLadder}
-            {railBuyModule}
-            <div
-              ref={railSentinelRef}
-              className="buy-rail-sentinel"
-              aria-hidden="true"
-            />
-          </div>
-          {/* Separate compact bar pinned to the top while the in-hero selector
-              is out of view, so variants stay switchable from anywhere. Coming
-              soon: ladder only (see pinnedRail), and nothing at all when the
-              product has no variants to switch. */}
-          {railPinned && (!soon || hasLadder)
-            ? createPortal(pinnedRail, document.body)
+          {/* The compact bar, portaled to <body> so the fixed overlay escapes
+              the hero's stacking context. Coming soon: the chips alone. */}
+          {railPinned && !footerInView && typeof document !== 'undefined'
+            ? createPortal(
+                <div
+                  className={`buy-rail is-pinned${railMobile ? ' is-mobile' : ''}${soon ? ' is-ladderonly' : ''}${
+                    asideType !== 'closed' ? ' is-suppressed' : ''
+                  }`}
+                  style={railBox && !railMobile ? {right: railBox.right} : undefined}
+                >
+                  {railLadderPinned}
+                  {soon ? null : railBuyModule}
+                </div>,
+                document.body,
+              )
             : null}
-
-          {content.pairCta ? (
-            <Link className="pair-cta" to={content.pairCta.to} prefetch="viewport">
-              <span
-                className="pair-cta-eyebrow"
-                {...prodEdit('pairCta.eyebrow')}
-              >
-                {content.pairCta.eyebrow}
-              </span>
-              <span className="pair-cta-title" {...prodEdit('pairCta.title')}>
-                {content.pairCta.title}
-              </span>
-              <span className="pair-cta-arrow" aria-hidden="true">→</span>
-            </Link>
-          ) : null}
         </div>
       </section>
 
       {/* === Chapters, in the order `content/chapters.json` puts them === */}
-      {resolveChapters(product.handle, present).map((c) => (
+      {buyingOrder(resolveChapters(product.handle, present)).map((c) => (
         <Fragment key={c.id}>
           {chapterNodes[c.type]?.(c.number, c.title, c.id)}
         </Fragment>
@@ -2739,18 +2950,24 @@ function ProductPage() {
 
       <RelatedProducts recommendations={recommendations} />
 
-      {/* GPSR Art. 19 listing information (docs/store-compliance.md, section 1):
-          manufacturer identity, contact, product identifier and safety warnings
-          must be visible before purchase. Kept out of the product story,
-          rendered as a quiet compliance strip at the very end of the page. */}
       {rootData?.company ? (
-        <GpsrBlock
-          company={rootData.company}
-          productTitle={product.title}
-          sku={selectedVariant?.sku ?? null}
-        />
+        <details className="product-safety" id="product-safety">
+          <summary><Txt id="product-chrome.gpsr_heading" /></summary>
+          <GpsrBlock
+            compact
+            company={rootData.company}
+            productTitle={
+              catalogAxisValue && isInternalSku(product.handle, catalogAxisValue)
+                ? `${product.title} ${variantDisplayName(product.handle, catalogAxisValue)}`
+                : product.title
+            }
+            sku={shownSku}
+            kind={safetyKind(product.handle)}
+            country={rootData.visitorCountry ?? null}
+            registrations={registrationNumbers(rootData.visitorCountry ?? null)}
+          />
+        </details>
       ) : null}
-
     </div>
   );
 }

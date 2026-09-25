@@ -1,8 +1,5 @@
 # Cookie Policy: Incutec BV
 
-**Required if using any non-essential cookies. Belgian DPA: opt-in only, cookie walls prohibited.**
-**Consent valid for 6 months, then re-ask.**
-
 ---
 
 ## COOKIEBELEID: INCUTEC BV
@@ -13,30 +10,41 @@ Cookies zijn kleine tekstbestanden die door een website op uw apparaat worden ge
 
 ### Welke cookies gebruiken wij?
 
-#### Strikt noodzakelijke cookies (geen toestemming vereist)
+#### Cookies van opendrone.be en de checkout (geen toestemming vereist)
 
-Deze site (opendrone.be) plaatst zelf één cookie. Het afrekenen verloopt via Shopify, dat op de checkoutpagina's zijn eigen cookies plaatst.
+Deze site (opendrone.be) plaatst zelf twee cookies. Het afrekenen verloopt via Shopify, dat op de checkoutpagina's zijn eigen cookies plaatst.
 
 | Cookie | Doel | Bewaartermijn |
 |--------|------|--------------|
-| `session` (opendrone.be) | Onthoudt uw taalkeuze en, zodra u een product in uw winkelmandje legt, de verwijzing naar uw Shopify-winkelmandje | Sessie |
+| `session` (opendrone.be) | Bewaart, zodra u een product in uw winkelmandje legt, de verwijzing naar uw Shopify-winkelmandje | Sessie |
+| `opendrone_lang` (opendrone.be) | Onthoudt de taal die u kiest voor de juridische pagina's | 1 jaar |
 | Shopify-checkoutcookies | Houden uw winkelmandje, het afrekenen en uw aanmelding op uw klantenaccount werkend en voorkomen betalingsfraude; geplaatst door Shopify op de checkoutpagina's, niet op opendrone.be. Cookielijst van Shopify: https://www.shopify.com/legal/cookies | Sessie tot 1 jaar, afhankelijk van de cookie |
-| Stripe-cookies (`m`, `__stripe_mid`, `__stripe_sid`) | Fraudepreventie bij betaling — geplaatst door Stripe op de checkoutpagina's tijdens de betaling, niet op opendrone.be (strikt noodzakelijk voor de uitdrukkelijk gevraagde dienst; Art. 10/2 Wet van 30 juli 2018 (zoals ingevoegd door de Wet van 21 december 2021); Art. 5(3) ePrivacy-richtlijn 2002/58/EG) | Sessie tot 1 jaar, afhankelijk van de cookie |
-| Betalingscookies (gehoste betaalpagina van Mollie, enkel als terugvaloptie indien Stripe niet beschikbaar is) | Fraudepreventie bij betaling — wordt **uitsluitend op de gehoste betaalpagina** geplaatst tijdens de betaling, niet op opendrone.be (Art. 10/2 Wet van 30 juli 2018 (zoals ingevoegd door de Wet van 21 december 2021), strikt noodzakelijk voor de uitdrukkelijk gevraagde dienst; Art. 5(3) ePrivacy-richtlijn 2002/58/EG) | Sessie |
+| Stripe-cookies (`m`, `__stripe_mid`, `__stripe_sid`) | Fraudepreventie bij betaling: geplaatst door Stripe, dat Shopify Payments verwerkt, op de checkoutpagina's tijdens de betaling, niet op opendrone.be (strikt noodzakelijk voor de uitdrukkelijk gevraagde dienst; Art. 10/2 Wet van 30 juli 2018 (zoals ingevoegd door de Wet van 21 december 2021); Art. 5(3) ePrivacy-richtlijn 2002/58/EG) | Sessie tot 1 jaar, afhankelijk van de cookie |
 
-#### Analytische cookies
+#### Opslag in uw browser
 
-Wij gebruiken **Plausible Analytics** op opendrone.be (EU-gehost, cookieloos). Plausible plaatst geen cookies en slaat geen persistente identifier op; het IP-adres wordt gehasht en niet bewaard. Deze verwerking valt niet onder de toestemmingsvereiste van de ePrivacy-regels en steunt op ons gerechtvaardigd belang (Art. 6.1.f AVG). Daarom tonen wij geen toestemmingsbanner voor analyse.
+Naast cookies bewaart opendrone.be enkele gegevens in de opslag van uw browser (localStorage en sessionStorage).
 
-#### Marketing cookies
+| Sleutel | Opslag | Doel | Bewaartermijn |
+|---------|--------|------|--------------|
+| `od-theme` | localStorage | Onthoudt of u de lichte of de donkere weergave koos | Tot u de browsergegevens wist |
+| `od-incutec-seen` | localStorage | Onthoudt dat u de Incutec-pagina al opende, zodat de verwijzing ernaar op de startpagina verdwijnt | Tot u de browsergegevens wist |
+| `opendrone:split-order` | localStorage | Onthoudt de artikelen die u uit uw winkelmandje haalde voor een tweede bestelling, zodat u ze na het afrekenen opnieuw kunt toevoegen | 30 dagen |
+| `od-attribution`, `od-attribution-sent` | sessionStorage | Campagnebron van uw bezoek (bv. een utm-parameter) en de eerste bezochte pagina; gebruikt voor geaggregeerde statistieken en, wanneer u een product in uw winkelmandje legt, meegegeven als kenmerk van de bestelling in Shopify | Sessie |
 
-Incutec BV gebruikt bij de lancering **geen marketing- of remarketingcookies**. Als dit verandert, wordt dit cookiebeleid bijgewerkt en vragen wij opnieuw uw toestemming.
+#### Websitestatistieken
+
+Wij gebruiken **Plausible Analytics** op opendrone.be (EU-gehost). Plausible plaatst geen cookies en bewaart geen IP-adres; wij verwerken deze geaggregeerde statistieken op grond van ons gerechtvaardigd belang (art. 6.1.f AVG) om de website te verbeteren.
+
+#### Marketingcookies
+
+Incutec BV gebruikt **geen marketing- of remarketingcookies**. Als dit verandert, wordt dit cookiebeleid eerst bijgewerkt en vragen wij vooraf uw toestemming.
 
 ### Toestemming
 
-- Wij plaatsen momenteel **uitsluitend strikt noodzakelijke cookies**; daarom tonen wij geen toestemmingsbanner.
+- Wij plaatsen geen marketing- of remarketingcookies en tonen geen toestemmingsbanner.
 - Als wij ooit niet-essentiële cookies introduceren, worden die **pas geplaatst na uw uitdrukkelijke toestemming** (opt-in), en wordt dit beleid eerst bijgewerkt.
-- Via de pagina [cookie-instellingen](/cookie-settings) kunt u de door deze site geplaatste cookies op elk moment wissen.
+- Via de pagina [cookie-instellingen](/cookie-settings) kunt u de cookies en de browseropslag van deze site op elk moment wissen.
 - **Cookie walls zijn verboden:** wij weigeren u nooit toegang tot de website als u cookies weigert.
 
 ### Cookies beheren

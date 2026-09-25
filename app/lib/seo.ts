@@ -1,4 +1,5 @@
-import type {CompanyIdentity} from '~/lib/company';
+import {DISCORD_INVITE_URL, type CompanyIdentity} from '~/lib/company';
+import preorders from '../../content/preorders.json';
 
 const STORE_NAME = 'OpenDrone';
 const DEFAULT_LOCALE = 'en_US';
@@ -184,8 +185,16 @@ export function buildOrgJsonLd(company: CompanyIdentity, siteUrl?: string) {
       '@type': 'Brand',
       name: STORE_NAME,
     },
+    logo: `${url}/opendrone-wordmark-1200.png`,
+    sameAs: [...ORG_PROFILES],
   };
 }
+
+/** Public profiles for Organization.sameAs. */
+const ORG_PROFILES = ['https://github.com/OpenDrone-hw', DISCORD_INVITE_URL] as const;
+
+/** The date a preorder price stops applying: the target deadline. */
+export const CAMPAIGN_END_ISO: string = preorders.endsOn;
 
 /**
  * schema.org Product JSON-LD - emit on PDP. Drives Google rich-result
@@ -252,7 +261,15 @@ export function buildProductJsonLd(input: ProductJsonLdInput) {
         : input.preorder
           ? 'https://schema.org/PreOrder'
           : 'https://schema.org/InStock',
-      priceValidUntil: nextYearIso(),
+      priceValidUntil: input.preorder ? CAMPAIGN_END_ISO : nextYearIso(),
+      // The statutory 14-day EU withdrawal period, returned by post.
+      hasMerchantReturnPolicy: {
+        '@type': 'MerchantReturnPolicy',
+        applicableCountry: 'BE',
+        returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
+        merchantReturnDays: 14,
+        returnMethod: 'https://schema.org/ReturnByMail',
+      },
     };
   }
   return product;
@@ -262,4 +279,18 @@ function nextYearIso(): string {
   const d = new Date();
   d.setFullYear(d.getFullYear() + 1);
   return d.toISOString().slice(0, 10);
+}
+
+/** schema.org BreadcrumbList for a page reached from `trail` (name, path). */
+export function buildBreadcrumbJsonLd(trail: ReadonlyArray<{name: string; path: string}>) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: trail.map((crumb, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: crumb.name,
+      item: `${SITE_ORIGIN}${crumb.path}`,
+    })),
+  };
 }

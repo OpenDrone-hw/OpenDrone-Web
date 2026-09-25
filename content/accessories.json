@@ -1,0 +1,424 @@
+{
+  "battery-strap": {
+    "subtitle": "20 × 220 mm · woven · metal buckle",
+    "specs": [
+      [
+        "Size",
+        "20 × 220 mm"
+      ],
+      [
+        "Material",
+        "Woven webbing, non-slip backing"
+      ],
+      [
+        "Buckle",
+        "Metal, black nickel"
+      ],
+      [
+        "Fits",
+        "5\" frames"
+      ]
+    ],
+    "placeholders": [
+      "Fits"
+    ]
+  },
+  "battery-strap-15-x-200-mm-woven-logo": {
+    "subtitle": "15 × 200 mm · woven · metal buckle",
+    "specs": [
+      [
+        "Size",
+        "15 × 200 mm"
+      ],
+      [
+        "Material",
+        "Woven webbing, non-slip backing"
+      ],
+      [
+        "Buckle",
+        "Metal, black nickel"
+      ],
+      [
+        "Fits",
+        "3\" frames"
+      ]
+    ]
+  },
+  "elrs-antenna-24": {
+    "subtitle": "ELRS 2.4 GHz · T-style · U.FL",
+    "specs": [
+      [
+        "Band",
+        "2.4 GHz"
+      ],
+      [
+        "Type",
+        "T-style dipole"
+      ],
+      [
+        "Connector",
+        "U.FL (IPEX1)"
+      ],
+      [
+        "Gain",
+        "2 dBi"
+      ],
+      [
+        "Cable length",
+        "65 mm"
+      ],
+      [
+        "Weight",
+        "1.8 g"
+      ]
+    ],
+    "placeholders": [
+      "Gain",
+      "Cable length",
+      "Weight"
+    ]
+  },
+  "elrs-868-915-mhz-2-4-ghz-u-fl-t-style-antenna": {
+    "subtitle": "ELRS 868/915 MHz + 2.4 GHz · T-style · U.FL",
+    "specs": [
+      [
+        "Band",
+        "868/915 MHz and 2.4 GHz"
+      ],
+      [
+        "Type",
+        "T-style dipole"
+      ],
+      [
+        "Connector",
+        "U.FL (IPEX1)"
+      ],
+      [
+        "Gain",
+        "3 dBi"
+      ],
+      [
+        "Cable length",
+        "65 mm"
+      ],
+      [
+        "Weight",
+        "3 g"
+      ]
+    ],
+    "placeholders": [
+      "Cable length",
+      "Weight"
+    ]
+  },
+  "capacitor-470uf-35v-low-esr": {
+    "subtitle": "470 µF · 35 V · low-ESR · Rubycon PX",
+    "specs": [
+      [
+        "Capacitance",
+        "470 µF ±20%"
+      ],
+      [
+        "Voltage",
+        "35 V"
+      ],
+      [
+        "Series",
+        "Rubycon PX, low-ESR"
+      ],
+      [
+        "ESR",
+        "0.08 Ω"
+      ],
+      [
+        "Max temp",
+        "105 °C"
+      ],
+      [
+        "Size",
+        "10 × 12.5 mm"
+      ],
+      [
+        "Lead spacing",
+        "5.0 mm"
+      ]
+    ],
+    "placeholders": [
+      "ESR"
+    ]
+  },
+  "capacitor-470uf-50v-low-esr": {
+    "subtitle": "470 µF · 50 V · low-ESR · Rubycon PX",
+    "specs": [
+      [
+        "Capacitance",
+        "470 µF ±20%"
+      ],
+      [
+        "Voltage",
+        "50 V"
+      ],
+      [
+        "Series",
+        "Rubycon PX, low-ESR"
+      ],
+      [
+        "ESR",
+        "0.06 Ω"
+      ],
+      [
+        "Max temp",
+        "105 °C"
+      ],
+      [
+        "Size",
+        "10 × 20 mm"
+      ],
+      [
+        "Lead spacing",
+        "5.0 mm"
+      ]
+    ],
+    "placeholders": [
+      "ESR"
+    ]
+  },
+  "hqprop-t3x3x3-propeller-set-3-inch-t-mount": {
+    "subtitle": "3\" · tri-blade · T-mount · 4 props",
+    "specs": [
+      [
+        "Diameter",
+        "3\""
+      ],
+      [
+        "Pitch",
+        "3\""
+      ],
+      [
+        "Blades",
+        "3"
+      ],
+      [
+        "Mount",
+        "T-mount, 1.5 mm"
+      ],
+      [
+        "Weight",
+        "1.48 g"
+      ],
+      [
+        "Material",
+        "Polycarbonate"
+      ],
+      [
+        "Pack",
+        "4 (2 CW, 2 CCW)"
+      ]
+    ]
+  },
+  "hqprop-durable-t3x2x3-propeller-set-3-inch-t-mount": {
+    "subtitle": "3\" · tri-blade · T-mount · 4 props",
+    "specs": [
+      [
+        "Diameter",
+        "3\""
+      ],
+      [
+        "Pitch",
+        "2\""
+      ],
+      [
+        "Blades",
+        "3"
+      ],
+      [
+        "Mount",
+        "T-mount, 1.5 mm"
+      ],
+      [
+        "Weight",
+        "1.2 g"
+      ],
+      [
+        "Material",
+        "Polycarbonate"
+      ],
+      [
+        "Pack",
+        "4 (2 CW, 2 CCW)"
+      ]
+    ]
+  },
+  "gemfan-3020-3-propeller-set-3-inch-t-mount": {
+    "subtitle": "3\" · tri-blade · T-mount · 4 props",
+    "specs": [
+      [
+        "Diameter",
+        "3\""
+      ],
+      [
+        "Pitch",
+        "2\""
+      ],
+      [
+        "Blades",
+        "3"
+      ],
+      [
+        "Mount",
+        "T-mount, 1.5 mm"
+      ],
+      [
+        "Weight",
+        "1.3 g"
+      ],
+      [
+        "Material",
+        "Polycarbonate"
+      ],
+      [
+        "Pack",
+        "4 (2 CW, 2 CCW)"
+      ]
+    ],
+    "placeholders": [
+      "Mount"
+    ]
+  },
+  "hqprop-5x4-3x3-v2s-propeller-set-5-inch": {
+    "subtitle": "5\" · tri-blade · 5 mm shaft · 4 props",
+    "specs": [
+      [
+        "Diameter",
+        "5\""
+      ],
+      [
+        "Pitch",
+        "4.3\""
+      ],
+      [
+        "Blades",
+        "3"
+      ],
+      [
+        "Mount",
+        "5 mm shaft"
+      ],
+      [
+        "Weight",
+        "3.8 g"
+      ],
+      [
+        "Material",
+        "Polycarbonate"
+      ],
+      [
+        "Pack",
+        "4 (2 CW, 2 CCW)"
+      ]
+    ]
+  },
+  "hqprop-juicy-j37-propeller-set-5-inch": {
+    "subtitle": "5\" · tri-blade · 5 mm shaft · 4 props",
+    "specs": [
+      [
+        "Diameter",
+        "4.9\""
+      ],
+      [
+        "Pitch",
+        "3.7\""
+      ],
+      [
+        "Blades",
+        "3"
+      ],
+      [
+        "Mount",
+        "5 mm shaft"
+      ],
+      [
+        "Weight",
+        "3.4 g"
+      ],
+      [
+        "Material",
+        "Polycarbonate"
+      ],
+      [
+        "Pack",
+        "4 (2 CW, 2 CCW)"
+      ]
+    ]
+  },
+  "gemfan-hurricane-51466-v2-propeller-set-5-inch": {
+    "subtitle": "5\" · tri-blade · 5 mm shaft · 4 props",
+    "specs": [
+      [
+        "Diameter",
+        "5.1\""
+      ],
+      [
+        "Pitch",
+        "3.6\""
+      ],
+      [
+        "Blades",
+        "3"
+      ],
+      [
+        "Mount",
+        "5 mm shaft"
+      ],
+      [
+        "Weight",
+        "4.2 g"
+      ],
+      [
+        "Material",
+        "Polycarbonate"
+      ],
+      [
+        "Pack",
+        "4 (2 CW, 2 CCW)"
+      ]
+    ]
+  },
+  "openframe-spares": {
+    "subtitle": "T700 carbon · 3\" and 5\" · single parts",
+    "specs": [
+      [
+        "Fits",
+        "OpenFrame 3\" and 5\""
+      ],
+      [
+        "Carbon",
+        "T700, 3K twill"
+      ],
+      [
+        "Arm",
+        "4 mm (3\"), 6 mm (5\")"
+      ],
+      [
+        "Cross",
+        "4 mm (3\"), 6 mm (5\")"
+      ],
+      [
+        "Plates",
+        "2.0/2.5/2.5 mm (3\"), 2.5/3.0/3.0 mm (5\")"
+      ],
+      [
+        "Camera mounts",
+        "Aluminium, pair"
+      ],
+      [
+        "Hardware",
+        "M2, M2.5 (3\"), M3 (5\")"
+      ],
+      [
+        "Sold as",
+        "Single part"
+      ]
+    ]
+  }
+}

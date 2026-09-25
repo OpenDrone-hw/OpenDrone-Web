@@ -2,25 +2,27 @@
   "fileNumber": "02",
   "family": "Flight Controller",
   "status": "preorder",
-  "statusNote": "ships from early October 2026",
+  "statusNote": "ships late October 2026",
   "hero": {
-    "line1": "A flight controller,",
-    "line2Italic": "minus",
-    "line3": "what you don’t need.",
+    "line1": "",
+    "line2Italic": "",
+    "line3": "",
     "lead": ""
   },
   "whatIsThis": {
-    "intro": "The flight controller is the aircraft's onboard computer. This one runs Betaflight on an RP2354, a dual-core chip from the Raspberry Pi Pico family, reading a 6-axis IMU thousands of times per second and correcting all four motors to follow your commands. It records blackbox to a microSD card, draws OSD over your analog video feed, and has a switchable 10 V rail so you can power your VTX from it. ",
+    "intro": "The flight controller is the drone's onboard computer. It runs Betaflight on an RP2354 (Raspberry Pi) and reads a 6-axis IMU to keep the drone stable and follow your sticks. It logs blackbox to a microSD card, draws an OSD on analog video, sends OSD data to digital video systems, and has a switchable 10 V output to power your VTX.",
     "needs": [
       "A 4-in-1 ESC and four motors (OpenESC pairs directly, one plug)",
       "A receiver wired to a UART (OpenRX, CRSF)",
       "A camera and VTX if you want a live video feed",
-      "A frame, props, and a 3-6S LiPo",
+      "A frame, props, and a LiPo battery: 3-6S for the 20×20, 3-8S for the 30×30",
       "A radio and goggles on your side of the link"
     ],
-    "fit": "In the middle of the stack and in the middle of every signal path; everything the aircraft does passes through this board.",
-    "chain": "fc"
+    "fit": "It sits in the middle of the stack. The receiver, ESC, camera and VTX all connect to it.",
+    "chain": "fc",
+    "hero": "The brain. Runs Betaflight, reads the gyro and your sticks, and tells the ESC how fast to spin each motor."
   },
+  "install": "Solder",
   "firmware": {
     "project": "Betaflight",
     "projectUrl": "https://github.com/betaflight/betaflight",
@@ -227,24 +229,6 @@
     {
       "qty": "1×",
       "item": "JST-SH 1.0 mm 8-pin FC-to-ESC cable"
-    },
-    {
-      "qty": "4×",
-      "item": "Silicone soft-mount grommets",
-      "note": "M3 on 30×30, M2 on 20×20"
-    },
-    {
-      "qty": "1×",
-      "item": "Silicone hook-up wire set, 28 AWG, four colours"
-    },
-    {
-      "qty": "1×",
-      "item": "Quick-start card"
-    },
-    {
-      "qty": "1×",
-      "item": "ESD bag (OpenDrone logo)",
-      "note": "everything above ships inside it"
     }
   ],
   "downloads": [],
@@ -317,6 +301,7 @@
   "optionAxis": "Model",
   "variants": {
     "20×20": {
+      "subtitle": "RP2354 · BMI270 · Betaflight · 3-6S · 20x20",
       "oshwaUid": "BE000027",
       "repoUrl": "https://github.com/OpenDrone-hw/OpenFC-Lite-Mini",
       "highlights": [
@@ -528,9 +513,153 @@
         "src": "/boards/openfc-lite-mini/board.svg",
         "inspectUrl": "https://kicanvas.org/?github=https://github.com/OpenDrone-hw/OpenFC-Lite-Mini/blob/main/hardware/OpenFC.kicad_pcb",
         "schematicUrl": "https://kicanvas.org/?github=https://github.com/OpenDrone-hw/OpenFC-Lite-Mini/blob/main/hardware/OpenFC.kicad_sch"
-      }
+      },
+      "keywords": [
+        "mini"
+      ],
+      "aliases": [
+        "20x20",
+        "2020",
+        "mini"
+      ],
+      "specsExtra": [
+        [
+          "Frame fit",
+          "20 × 20 mm stack frames, such as OpenFrame 3\" and 5\""
+        ],
+        [
+          "Connectors",
+          "JST-SH: ESC 8-pin, VTX 6-pin"
+        ],
+        [
+          "Weight",
+          "4 g"
+        ]
+      ],
+      "placeholders": [
+        "Weight"
+      ],
+      "inTheBox": [
+        {
+          "qty": "4×",
+          "item": "Silicone soft-mount grommets, M2"
+        },
+        {
+          "qty": "1×",
+          "item": "Silicone hook-up wire set, 28 AWG, four colours"
+        },
+        {
+          "qty": "1×",
+          "item": "Quick-start card"
+        },
+        {
+          "qty": "1×",
+          "item": "ESD bag"
+        }
+      ],
+      "plugs": [
+        {
+          "name": "ESC plug",
+          "kind": "jst-sh",
+          "pins": [
+            {
+              "label": "VBAT",
+              "kind": "power",
+              "title": "Battery voltage"
+            },
+            {
+              "label": "GND",
+              "kind": "ground",
+              "title": "Ground"
+            },
+            {
+              "label": "CUR",
+              "kind": "signal",
+              "title": "Current sensor"
+            },
+            {
+              "label": "TLM",
+              "kind": "signal",
+              "title": "ESC telemetry"
+            },
+            {
+              "label": "M1",
+              "kind": "motor",
+              "title": "Motor 1"
+            },
+            {
+              "label": "M2",
+              "kind": "motor",
+              "title": "Motor 2"
+            },
+            {
+              "label": "M3",
+              "kind": "motor",
+              "title": "Motor 3"
+            },
+            {
+              "label": "M4",
+              "kind": "motor",
+              "title": "Motor 4"
+            }
+          ]
+        },
+        {
+          "name": "Video plug",
+          "kind": "jst-sh",
+          "pins": [
+            {
+              "label": "10V",
+              "kind": "power",
+              "title": "10V, switchable"
+            },
+            {
+              "label": "GND",
+              "kind": "ground",
+              "title": "Ground"
+            },
+            {
+              "label": "TX0",
+              "kind": "signal",
+              "title": "UART0 TX"
+            },
+            {
+              "label": "RX0",
+              "kind": "signal",
+              "title": "UART0 RX"
+            },
+            {
+              "label": "GND",
+              "kind": "ground",
+              "title": "Ground"
+            },
+            {
+              "label": "RX1",
+              "kind": "signal",
+              "title": "UART1 RX"
+            }
+          ]
+        },
+        {
+          "name": "BEC rails",
+          "kind": "rail",
+          "rails": [
+            {
+              "voltage": "10V",
+              "mode": "switchable",
+              "current": "3A"
+            },
+            {
+              "voltage": "5V",
+              "mode": "always-on",
+              "current": "3A"
+            }
+          ]
+        }
+      ]
     },
     "30×30": {
+      "subtitle": "RP2354 · BMI270 · Betaflight · 3-8S · 30x30",
       "oshwaUid": "BE000026",
       "highlights": [
         [
@@ -546,9 +675,42 @@
         "src": "/boards/openfc-lite/board.svg",
         "inspectUrl": "https://kicanvas.org/?github=https://github.com/OpenDrone-hw/OpenFC-Lite/blob/main/hardware/OpenFC.kicad_pcb",
         "schematicUrl": "https://kicanvas.org/?github=https://github.com/OpenDrone-hw/OpenFC-Lite/blob/main/hardware/OpenFC.kicad_sch"
-      }
+      },
+      "aliases": [
+        "30x30",
+        "3030"
+      ],
+      "specsExtra": [
+        [
+          "Frame fit",
+          "30.5 × 30.5 mm stack frames, such as OpenFrame 5\""
+        ]
+      ],
+      "inTheBox": [
+        {
+          "qty": "4×",
+          "item": "Silicone soft-mount grommets, M3"
+        },
+        {
+          "qty": "1×",
+          "item": "Silicone hook-up wire set, 28 AWG, four colours"
+        },
+        {
+          "qty": "1×",
+          "item": "Quick-start card"
+        },
+        {
+          "qty": "1×",
+          "item": "ESD bag"
+        }
+      ]
     }
   },
+  "keywords": [
+    "stack",
+    "fc",
+    "flight controller"
+  ],
   "stack": {
     "adds": "ESC",
     "partners": [
@@ -558,5 +720,201 @@
       }
     ],
     "matchOption": "Model"
-  }
+  },
+  "specsExtra": [
+    [
+      "Connectors",
+      "JST-SH: ESC 8-pin, VTX 6-pin, RX 4-pin, camera 3-pin, peripheral 6-pin"
+    ],
+    [
+      "Weight",
+      "7 g"
+    ]
+  ],
+  "placeholders": [
+    "Weight"
+  ],
+  "plugs": [
+    {
+      "name": "ESC plug",
+      "kind": "jst-sh",
+      "pins": [
+        {
+          "label": "VBAT",
+          "kind": "power",
+          "title": "Battery voltage"
+        },
+        {
+          "label": "GND",
+          "kind": "ground",
+          "title": "Ground"
+        },
+        {
+          "label": "CUR",
+          "kind": "signal",
+          "title": "Current sensor"
+        },
+        {
+          "label": "TLM",
+          "kind": "signal",
+          "title": "ESC telemetry"
+        },
+        {
+          "label": "M1",
+          "kind": "motor",
+          "title": "Motor 1"
+        },
+        {
+          "label": "M2",
+          "kind": "motor",
+          "title": "Motor 2"
+        },
+        {
+          "label": "M3",
+          "kind": "motor",
+          "title": "Motor 3"
+        },
+        {
+          "label": "M4",
+          "kind": "motor",
+          "title": "Motor 4"
+        }
+      ]
+    },
+    {
+      "name": "Video plug",
+      "kind": "jst-sh",
+      "pins": [
+        {
+          "label": "10V",
+          "kind": "power",
+          "title": "10V, switchable"
+        },
+        {
+          "label": "GND",
+          "kind": "ground",
+          "title": "Ground"
+        },
+        {
+          "label": "TX0",
+          "kind": "signal",
+          "title": "UART0 TX"
+        },
+        {
+          "label": "RX0",
+          "kind": "signal",
+          "title": "UART0 RX"
+        },
+        {
+          "label": "GND",
+          "kind": "ground",
+          "title": "Ground"
+        },
+        {
+          "label": "RX1",
+          "kind": "signal",
+          "title": "UART1 RX"
+        }
+      ]
+    },
+    {
+      "name": "Receiver plug",
+      "kind": "jst-sh",
+      "pins": [
+        {
+          "label": "5V",
+          "kind": "power",
+          "title": "5V"
+        },
+        {
+          "label": "GND",
+          "kind": "ground",
+          "title": "Ground"
+        },
+        {
+          "label": "RX",
+          "kind": "signal",
+          "title": "PIO UART0 RX"
+        },
+        {
+          "label": "TX",
+          "kind": "signal",
+          "title": "PIO UART0 TX"
+        }
+      ]
+    },
+    {
+      "name": "Peripheral plug",
+      "kind": "jst-sh",
+      "pins": [
+        {
+          "label": "4.5V",
+          "kind": "power",
+          "title": "4.5V"
+        },
+        {
+          "label": "GND",
+          "kind": "ground",
+          "title": "Ground"
+        },
+        {
+          "label": "RX",
+          "kind": "signal",
+          "title": "PIO UART1 RX"
+        },
+        {
+          "label": "TX",
+          "kind": "signal",
+          "title": "PIO UART1 TX"
+        },
+        {
+          "label": "SDA",
+          "kind": "signal",
+          "title": "I2C SDA"
+        },
+        {
+          "label": "SCL",
+          "kind": "signal",
+          "title": "I2C SCL"
+        }
+      ]
+    },
+    {
+      "name": "Camera plug",
+      "kind": "jst-sh",
+      "pins": [
+        {
+          "label": "5V",
+          "kind": "power",
+          "title": "5V"
+        },
+        {
+          "label": "GND",
+          "kind": "ground",
+          "title": "Ground"
+        },
+        {
+          "label": "VID",
+          "kind": "signal",
+          "title": "Video in"
+        }
+      ]
+    },
+    {
+      "name": "BEC rails",
+      "kind": "rail",
+      "rails": [
+        {
+          "voltage": "10V",
+          "mode": "switchable",
+          "current": "3.5A"
+        },
+        {
+          "voltage": "5V",
+          "mode": "always-on",
+          "current": "3.5A"
+        }
+      ]
+    }
+  ]
 }

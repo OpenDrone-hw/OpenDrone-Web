@@ -3,6 +3,7 @@ import {AnimatePresence, motion} from 'motion/react';
 import {DURATION, EASE} from '~/lib/motion';
 import {applyTheme, getActiveTheme, type Theme} from '~/lib/theme';
 import {safeStartViewTransition} from '~/lib/view-transition';
+import {copyText} from '~/lib/copy';
 
 const MOON = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -71,6 +72,10 @@ export function ThemeToggle({className}: {className?: string}) {
   }
 
   const next = theme === 'dark' ? 'light' : 'dark';
+  const switchLabel =
+    next === 'light'
+      ? (copyText('chrome.theme_to_light') ?? 'Switch to light mode')
+      : (copyText('chrome.theme_to_dark') ?? 'Switch to dark mode');
   // Moon while in light mode (tap → dark), sun while in dark (tap → light).
   // Before mount, show the sun so SSR/first paint is stable.
   const showMoon = mounted && theme === 'light';
@@ -80,8 +85,8 @@ export function ThemeToggle({className}: {className?: string}) {
       type="button"
       onClick={toggle}
       className={`theme-toggle${className ? ' ' + className : ''}`}
-      aria-label={`Switch to ${next} mode`}
-      title={`Switch to ${next} mode`}
+      aria-label={switchLabel}
+      title={switchLabel}
       suppressHydrationWarning
       whileTap={{scale: 0.88}}
     >

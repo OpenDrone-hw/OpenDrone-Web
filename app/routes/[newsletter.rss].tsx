@@ -1,5 +1,6 @@
 import type {Route} from './+types/[newsletter.rss]';
-import {archivePosts, postHtml} from '~/lib/posts';
+import {archivePosts, postHtml, shopIsOpen} from '~/lib/posts';
+import {copyText} from '~/lib/copy';
 
 const FEED_LIMIT = 50;
 
@@ -12,10 +13,10 @@ const FEED_LIMIT = 50;
  * Cache-Control: 10 min on the edge - we publish at most a few times
  * per month, so a stale-by-10-min feed is fine.
  */
-export function loader({request}: Route.LoaderArgs) {
+export function loader({request, context}: Route.LoaderArgs) {
   const origin = new URL(request.url).origin;
 
-  const articles = archivePosts()
+  const articles = archivePosts(shopIsOpen(context.env))
     .slice(0, FEED_LIMIT)
     .map((p) => ({
       handle: p.handle,
@@ -74,10 +75,10 @@ function renderFeed({
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>OpenDrone · Newsletter</title>
+    <title>${esc(copyText('newsletter.rss_title') ?? 'OpenDrone · Newsletter')}</title>
     <link>${esc(origin)}/newsletter</link>
     <atom:link href="${esc(origin)}/newsletter.rss" rel="self" type="application/rss+xml" />
-    <description>Engineering notes, hardware releases, and write-ups from OpenDrone.</description>
+    <description>${esc(copyText('newsletter.rss_description') ?? 'Engineering notes, hardware releases, and write-ups from OpenDrone.')}</description>
     <language>en</language>
     <lastBuildDate>${lastBuild}</lastBuildDate>
 ${items}

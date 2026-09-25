@@ -8,8 +8,8 @@ import {PRODUCT_CONTENT} from './product-content.ts';
 
 describe('preorderNote', () => {
   it("is the product's own statusNote when the content file carries one", () => {
-    assert.equal(preorderNote('openesc'), 'ships from early October 2026');
-    assert.equal(preorderNote('openrx'), 'ships in about 10 weeks');
+    assert.equal(preorderNote('openesc'), 'ships late October 2026');
+    assert.equal(preorderNote('openrx'), 'ships about 10 weeks after its target is reached (target deadline 31 December 2026)');
   });
 
   it('falls back to the shop-wide default for a product without a note', () => {
@@ -37,8 +37,8 @@ describe("the catalog ship promise", () => {
   });
 
   it('falls through when the catalog carries none', () => {
-    assert.equal(preorderNote('openesc', null), 'ships from early October 2026');
-    assert.equal(preorderNote('openesc', ''), 'ships from early October 2026');
+    assert.equal(preorderNote('openesc', null), 'ships late October 2026');
+    assert.equal(preorderNote('openesc', ''), 'ships late October 2026');
   });
 });
 

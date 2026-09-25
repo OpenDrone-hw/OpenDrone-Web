@@ -659,8 +659,8 @@ function selectFor(spec) {
 const FALLBACK_BEATS = [
   // Establishing hold: nothing presents, nothing dims, the props just turn.
   {id:'whole', title:'OpenDrone 3"', note:'complete airframe', select:{none:true}},
-  {id:'fc',    title:'OpenFC-Lite-Mini', note:'RP2354B flight controller', select:{board:'OpenFC'}},
-  {id:'esc',   title:'OpenESC-20x20', note:'4-in-1 AM32 ESC', select:{board:'4in1-mini'}},
+  {id:'fc',    title:'OpenFC Lite 20×20', note:'RP2354A flight controller', select:{board:'OpenFC'}},
+  {id:'esc',   title:'OpenESC 20×20', note:'4-in-1 AM32 ESC', select:{board:'4in1-mini'}},
   {id:'rx',    title:'OpenRX-Mono', note:'ELRS receiver', select:{board:'OpenRX-Mono'}},
   {id:'motor', title:'Motor and propeller', note:'1604 class, 3in tri-blade',
    select:{cluster:'^Admi', withProp:true}},
@@ -1221,9 +1221,9 @@ function syncUI(){
   const b = BEATS[beat];
   const holdT = THREE.MathUtils.clamp((t - TRAVEL) / Math.max(HOLD, 1e-3), 0, 1);
   const st = b.stops ? activeStop(b, holdT) : b;
-  // Mirrors the site's panel: title, note, then the beginner caption and the
-  // "connects to" hint, so the copy is judged here at its real length.
-  const caption = `<b>${st.title}</b><i>${st.note}</i>`
+  // Mirrors the site's caption panel: the part's role, then what it does, so
+  // the copy is judged here at its real length.
+  const caption = `<b>${st.title}</b>` + (st.note ? `<i>${st.note}</i>` : '')
     + (st.caption ? `<i class="cap">${st.caption}</i>` : '')
     + (st.hint ? `<i class="cap">${st.hint}</i>` : '');
   if (caption !== lastCaption) { stage.innerHTML = caption; lastCaption = caption; }
@@ -1456,7 +1456,7 @@ function renderBeatEditor() {
     `<div class="row"><label>caption</label><input type="text" id="b_caption"></div>` +
     `<div class="row"><label>hint</label><input type="text" id="b_hint"></div>` +
     `<div class="row"><label>href</label><input type="text" id="b_href"></div>` +
-    `<div class="hint">caption is the beginner explainer under the note, hint the one-line "connects to", href the product page. Empty means the key is not written.</div>` +
+    `<div class="hint">title is the part's role, caption what it does in the quad (25 words at most); the site shows both in its caption panel. note, hint and href are not shown on the site. Empty means the key is not written.</div>` +
     `<div class="row"><label>fade</label><input type="checkbox" id="b_fadeon">` +
       `<input type="range" id="b_fade" min="0" max="1" step="0.005"><span class="val" id="b_fadev"></span></div>` +
     `<div class="row"><label>part size</label><input type="checkbox" id="b_pson">` +
@@ -1471,7 +1471,7 @@ function renderBeatEditor() {
       `<div class="row"><label>caption</label><input type="text" id="b_s${j}_caption"></div>` +
       `<div class="row"><label>hint</label><input type="text" id="b_s${j}_hint"></div>` +
       `<div class="row"><label>href</label><input type="text" id="b_s${j}_href"></div>`).join('') +
-    (stops.length ? `<div class="hint">a stop is a caption change partway through the hold, at that fraction of it. While a stop is active the site shows the stop's caption, hint and href INSTEAD of the beat's.</div>` : '');
+    (stops.length ? `<div class="hint">a stop is its own walkthrough step inside the hold: its caption takes over at that fraction of it, INSTEAD of the beat's, and the scroll parks at the stop's park (in the file).</div>` : '');
 
   const el = (id) => document.getElementById(id);
   const show = (id, v) => { el(id).textContent = (+v).toFixed(2); };

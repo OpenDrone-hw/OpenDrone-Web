@@ -5,10 +5,10 @@
   "meta_description": "OpenDrone ships on Betaflight, AM32 and ExpressLRS. Who they are, how to donate to them directly, and how Incutec supports them.",
   "eyebrow": "Firmware partners",
   "title": "We are nothing without firmware",
-  "lead": "Every OpenDrone board runs on community firmware we didn't write. We will try to support these projects in any way we can as soon as profits can be shared in that way.",
+  "lead": "Every OpenDrone board runs on community firmware we did not write. We support these projects as far as our profits allow.",
   "s1_title": "*01* · How we support them",
   "s1_body": [
-    "Every product page names the firmware its board runs and links both the project and its donation page, so our sales traffic lands on their doorstep, not just ours.",
+    "Every product page names the firmware its board runs and links to the project and its donation page.",
     "On our side: we pay the regular sums that come with certifying our hardware for their projects, and we make public donations when the numbers allow it."
   ],
   "s2_title": "*01* · The projects",

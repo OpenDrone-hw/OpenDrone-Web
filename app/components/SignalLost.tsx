@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState} from 'react';
-import {useLocation} from 'react-router';
+import {Link, useLocation} from 'react-router';
 import {TriangleAlert} from 'lucide-react';
 import {ScrambleText} from '~/components/ScrambleText';
 import {Txt} from '~/components/Txt';
@@ -8,7 +8,8 @@ import {copyText, editAttrs} from '~/lib/copy';
 /**
  * The 404 easter egg. An FPV "lost signal / failsafe" screen - the quad has
  * flown out of range, the OSD telemetry has flatlined, and the only way back
- * is RTH (Return To Home). Drone pilots will get the joke instantly.
+ * is RTH (Return To Home). Rendered inside the site header and footer;
+ * the one primary action is Shop.
  */
 export function SignalLost() {
   const location = useLocation();
@@ -87,7 +88,6 @@ export function SignalLost() {
           </p>
           <p className="signal-lost-sub">
             <Txt id="not-found.sub_prefix" /> <code>{path}</code>
-            <Txt id="not-found.sub_suffix" />
           </p>
         </div>
 
@@ -108,13 +108,12 @@ export function SignalLost() {
       </div>
 
       <div className="signal-lost-actions">
-        <a href="/" className="hero-cta-primary">
-          <Txt id="not-found.cta_home" />{' '}
-          <Txt id="not-found.cta_home_tag" className="rth-tag" />
-        </a>
-        <a href="/collections/all" className="hero-cta-secondary">
+        <Link to="/products" prefetch="intent" className="hero-cta-primary">
           <Txt id="not-found.cta_shop" />
-        </a>
+        </Link>
+        <Link to="/">
+          <Txt id="not-found.cta_home" />
+        </Link>
       </div>
     </div>
   );

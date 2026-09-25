@@ -1,0 +1,166 @@
+{
+  "$comment": "Producer registration numbers and explicit consumer destination approval. Numbers are displayed on recycling/product pages. saleApproved opens a country only after its product, tax, EPR, shipping and delivery evidence has been reviewed. A number alone is not approval. null numbers are not displayed; offerNeedsNumber requires the configured offer number in addition to approval. Private evidence stays in its owning records.",
+  "AT": {
+    "weee": null,
+    "packaging": null,
+    "offerNeedsNumber": false,
+    "saleApproved": true
+  },
+  "BE": {
+    "weee": null,
+    "packaging": null,
+    "offerNeedsNumber": false,
+    "saleApproved": true
+  },
+  "BG": {
+    "weee": null,
+    "packaging": null,
+    "offerNeedsNumber": false,
+    "saleApproved": true
+  },
+  "CY": {
+    "weee": null,
+    "packaging": null,
+    "offerNeedsNumber": false,
+    "saleApproved": true
+  },
+  "CZ": {
+    "weee": null,
+    "packaging": null,
+    "offerNeedsNumber": false,
+    "saleApproved": true
+  },
+  "DE": {
+    "weee": null,
+    "packaging": null,
+    "offerNeedsNumber": false,
+    "saleApproved": true
+  },
+  "DK": {
+    "weee": null,
+    "packaging": null,
+    "offerNeedsNumber": false,
+    "saleApproved": true
+  },
+  "EE": {
+    "weee": null,
+    "packaging": null,
+    "offerNeedsNumber": false,
+    "saleApproved": true
+  },
+  "ES": {
+    "weee": null,
+    "packaging": null,
+    "offerNeedsNumber": false,
+    "saleApproved": true
+  },
+  "FI": {
+    "weee": null,
+    "packaging": null,
+    "offerNeedsNumber": false,
+    "saleApproved": true
+  },
+  "FR": {
+    "weee": null,
+    "packaging": null,
+    "idu": null,
+    "offerNeedsNumber": false,
+    "saleApproved": true
+  },
+  "GR": {
+    "weee": null,
+    "packaging": null,
+    "offerNeedsNumber": false,
+    "saleApproved": true
+  },
+  "HR": {
+    "weee": null,
+    "packaging": null,
+    "offerNeedsNumber": false,
+    "saleApproved": true
+  },
+  "HU": {
+    "weee": null,
+    "packaging": null,
+    "offerNeedsNumber": false,
+    "saleApproved": true
+  },
+  "IE": {
+    "weee": null,
+    "packaging": null,
+    "offerNeedsNumber": false,
+    "saleApproved": true
+  },
+  "IT": {
+    "weee": null,
+    "packaging": null,
+    "offerNeedsNumber": false,
+    "saleApproved": true
+  },
+  "LT": {
+    "weee": null,
+    "packaging": null,
+    "offerNeedsNumber": false,
+    "saleApproved": true
+  },
+  "LU": {
+    "weee": null,
+    "packaging": null,
+    "offerNeedsNumber": false,
+    "saleApproved": true
+  },
+  "LV": {
+    "weee": null,
+    "packaging": null,
+    "offerNeedsNumber": false,
+    "saleApproved": true
+  },
+  "MT": {
+    "weee": null,
+    "packaging": null,
+    "offerNeedsNumber": false,
+    "saleApproved": true
+  },
+  "NL": {
+    "weee": null,
+    "packaging": null,
+    "offerNeedsNumber": false,
+    "saleApproved": true
+  },
+  "PL": {
+    "weee": null,
+    "packaging": null,
+    "offerNeedsNumber": false,
+    "saleApproved": true
+  },
+  "PT": {
+    "weee": null,
+    "packaging": null,
+    "offerNeedsNumber": false,
+    "saleApproved": true
+  },
+  "RO": {
+    "weee": null,
+    "packaging": null,
+    "offerNeedsNumber": false,
+    "saleApproved": true
+  },
+  "SE": {
+    "weee": null,
+    "packaging": null,
+    "offerNeedsNumber": false,
+    "saleApproved": true
+  },
+  "SI": {
+    "weee": null,
+    "packaging": null,
+    "offerNeedsNumber": false,
+    "saleApproved": true
+  },
+  "SK": {
+    "weee": null,
+    "packaging": null,
+    "offerNeedsNumber": false,
+    "saleApproved": true
+  }
+}
