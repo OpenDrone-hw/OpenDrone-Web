@@ -12,6 +12,7 @@ import {
   latestShipDay,
   needsCampaignCounts,
   parseCampaignConfig,
+  promiseDeliveredBy,
   priceLadder,
   cartShipNote,
   shipGroupKey,
@@ -661,7 +662,14 @@ test('a reviewed final delivery promise follows the batch into the catalog and i
     shipsWith: {B: {sku: 'A', batch: 1}},
   });
   const state = campaignState(config.skus.A.batches, 0, config.pendingShips, []);
-  assert.equal(state.shipPromise, 'ships October 2026; delivery by 2026-11-15');
+  assert.equal(state.shipPromise, 'ships October 2026, delivered by 15 November 2026');
+  const target = parseCampaignConfig({...config, shipsWith: {}, skus: {A: {batches: [{units: 20, deliveryBy: '2027-03-31'}]}}});
+  // A funding target states its delivery date on the condition of its target.
+  const pending = campaignState(target.skus.A.batches, 0, target.pendingShips, []).shipPromise;
+  assert.equal(pending, 'ships once funded; if the target is reached in time, delivered by 31 March 2027');
+  assert.equal(promiseDeliveredBy(state.shipPromise), '15 Nov 2026');
+  assert.equal(promiseDeliveredBy(pending), '31 Mar 2027');
+  assert.equal(promiseDeliveredBy('ships late October 2026'), null);
   assert.equal(state.batches[0].shipPromise, state.shipPromise);
   assert.equal(shipsWithState(config, config.shipsWith!.B, 0, 10).shipPromise, state.shipPromise);
   assert.throws(() => parseCampaignConfig({...config, skus: {A: {batches: [{units: 1, deliveryBy: '2027-02-30'}]}}}), /calendar date/);

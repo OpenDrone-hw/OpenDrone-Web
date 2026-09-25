@@ -4,6 +4,7 @@ import {
   campaignDate,
   latestShipDate,
   parseCampaignConfig,
+  promiseDeliveredBy,
   shortCampaignDate,
   type CampaignState,
 } from '~/lib/preorder-campaign';
@@ -31,7 +32,7 @@ export function shipChipText(
     const eta = shortCampaignDate(latestShipDate(CAMPAIGN));
     if (eta) {
       text = ifFunded
-        ? (copyText('preorder.ship_eta_if_funded') ?? 'ETA {date} if funded').replace('{date}', eta)
+        ? (copyText('preorder.ship_eta_if_funded') ?? 'Ships by {date} if funded').replace('{date}', eta)
         : shipWord('eta', eta);
     }
   }
@@ -80,8 +81,13 @@ export function ShipChip({
  * `Ships Oct 2026` for a dated batch, `ETA 11 Mar 2027` for a funding
  * target, `Deadline 31 Dec 2026` for its deadline. Dates come in short.
  */
-export function shipWord(kind: 'ships' | 'eta' | 'deadline', date: string): string {
-  const fallback = {ships: 'Ships {date}', eta: 'ETA {date}', deadline: 'Deadline {date}'}[kind];
+export function shipWord(kind: 'ships' | 'eta' | 'deadline' | 'delivered', date: string): string {
+  const fallback = {
+    ships: 'Ships {date}',
+    eta: 'Ships by {date}',
+    deadline: 'Deadline {date}',
+    delivered: 'Delivered by {date}',
+  }[kind];
   return (copyText(`preorder.ship_${kind}`) ?? fallback).replace('{date}', date);
 }
 
@@ -94,21 +100,26 @@ export function shipLine(
   campaign: CampaignState | null | undefined,
   promise: string | null | undefined,
 ): {kind: 'date' | 'target'; text: string} | null {
-  const short = shortShipPromise(campaign?.shipPromise ?? promise);
+  const full = campaign?.shipPromise ?? promise;
+  const short = shortShipPromise(full);
   if (!short) return null;
+  // The delivery date is shown before payment, next to the ship date.
+  const delivered = promiseDeliveredBy(full);
+  const withDelivery = (text: string) =>
+    delivered ? `${text} · ${shipWord('delivered', delivered)}` : text;
   if (short.kind === 'date') {
-    const month = shipMonth(campaign?.shipPromise ?? promise);
-    return {kind: 'date', text: month ? shipWord('ships', month) : short.text};
+    const month = shipMonth(full);
+    return {kind: 'date', text: withDelivery(month ? shipWord('ships', month) : short.text)};
   }
   const eta = shortCampaignDate(campaign?.latestShip ?? latestShipDate(CAMPAIGN)) ?? '';
-  if (campaign?.targetReached) return {kind: 'target', text: shipWord('eta', eta)};
+  if (campaign?.targetReached) return {kind: 'target', text: withDelivery(shipWord('eta', eta))};
   const deadline =
     shortCampaignDate(campaign?.deadline ?? campaignDate(CAMPAIGN.endsOn)) ?? CAMPAIGN.endsOn;
-  const ifFunded = (copyText('preorder.ship_eta_if_funded') ?? 'ETA {date} if funded').replace(
+  const ifFunded = (copyText('preorder.ship_eta_if_funded') ?? 'Ships by {date} if funded').replace(
     '{date}',
     eta,
   );
-  return {kind: 'target', text: `${shipWord('deadline', deadline)} · ${ifFunded}`};
+  return {kind: 'target', text: withDelivery(`${shipWord('deadline', deadline)} · ${ifFunded}`)};
 }
 
 export function ShipLine({

@@ -41,10 +41,22 @@ export type PriceTier = {
   off: number;
 };
 
-/** One promise flows to product pages, cart lines and order confirmations. */
+/** One promise flows to product pages, cart lines and order confirmations.
+ *  A batch with a placed supplier order (`ships`) states its delivery date
+ *  outright; a funding target states it on the condition of its target. */
 function batchPromise(batch: CampaignBatch, fallback: string): string {
-  const dispatch = batch.ships?.trim() || fallback;
-  return batch.deliveryBy ? `${dispatch}; delivery by ${batch.deliveryBy}` : dispatch;
+  const ships = batch.ships?.trim();
+  const delivery = batch.deliveryBy ? campaignDate(batch.deliveryBy) : null;
+  if (!ships) {
+    return delivery ? `${fallback}; if the target is reached in time, delivered by ${delivery}` : fallback;
+  }
+  return delivery ? `${ships}, delivered by ${delivery}` : ships;
+}
+
+/** The delivery date a promise names, short: "30 Nov 2026". Null without one. */
+export function promiseDeliveredBy(promise: string | null | undefined): string | null {
+  const m = /delivered by (\d{1,2} [A-Z][a-z]+ \d{4})/.exec(promise ?? '');
+  return m ? shortCampaignDate(m[1]) : null;
 }
 
 export type CampaignConfig = {
