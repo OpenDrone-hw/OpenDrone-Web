@@ -29,11 +29,12 @@ an empty diff.
 ## Colour
 
 **Do not look for the values here.** They live in
-[`tokens.json`](https://github.com/OpenDrone-hw/OpenDrone-Brand/blob/main/tokens.json)
-in OpenDrone-Brand, which is the source of truth for screen and physical colour
-alike, along with the reasoning, the contrast numbers, the retired hexes and the
-Pantone master. This file used to restate all of it, which is exactly how six
-different golds ended up in this repo.
+[screen tokens](https://github.com/OpenDrone-hw/OpenDrone-Brand/tree/main/tokens)
+in OpenDrone-Brand. Physical colour specifications have a separate owner:
+[`standards/production.json`](https://github.com/OpenDrone-hw/OpenDrone-Brand/blob/main/standards/production.json).
+Use its [brand rules](https://github.com/OpenDrone-hw/OpenDrone-Brand/blob/main/BRAND.md)
+and [retired values](https://github.com/OpenDrone-hw/OpenDrone-Brand/blob/main/standards/deprecations.json);
+do not infer a physical production colour from a screen token.
 
 What is true *here*, and nowhere else, is how the site consumes it:
 

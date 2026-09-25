@@ -10,8 +10,8 @@ It is a React Router 7 app, built with the Cloudflare Vite plugin, that runs as 
 Selling entity: Incutec BV. OpenDrone is the community project and product
 brand. This repository is MIT; the hardware repositories are CERN-OHL-S.
 
-Deep dives in `docs/`: `product-status.md` (the status system that decides
-what is public and buyable), `hero-studio.md` (the homepage 3D pipeline),
+Deep dives in `docs/`: `product-status.md` (roadmap display and checkout gates),
+`hero-studio.md` (the homepage 3D pipeline),
 `growth-architecture.md` (analytics, attribution, mail), `store-compliance.md`
 (implementation acceptance and evidence ownership).
 
@@ -94,11 +94,12 @@ to the catalog's variants by option name and value.
 
 **Product images** use Shopify CDN URLs directly.
 
-**Status.** What is public and buyable is decided by the `status-*` GitHub
-topic on each board repository, resolved per request and cached; the static
+**Status.** The `status-*` GitHub topics describe roadmap lifecycle. Catalog
+availability and content overrides also affect display; server-side checkout
+gates independently control purchase requests. Topics are cached; the static
 fallback in `app/lib/roadmap-data.ts` must lag the topic, never lead it.
 `/roadmap`, the product pages, the feeds and the README badge endpoint
-`/api/status/<Repo>.json` all read the same resolution. Read
+`/api/status/<Repo>.json` use these lifecycle inputs. Read
 `docs/product-status.md` before touching that chain.
 
 **Product pages** are a sequence of typed chapters (teardown, schematics, open
