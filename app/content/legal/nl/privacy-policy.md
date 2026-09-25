@@ -25,6 +25,7 @@ Incutec BV heeft geen Functionaris voor Gegevensbescherming (DPO) aangesteld aan
 | Communicatie | E-mail, inhoud berichten | Klantenservice, klachtenbehandeling |
 | Websitegebruik | IP-adres, browser, pagina's bezocht | Websiteoptimalisatie, beveiliging |
 | Nieuwsbrief | E-mail, land (afgeleid uit het IP-adres) | Marketingcommunicatie (enkel met toestemming) |
+| Handelsaanvragen | Bedrijfs- en contactnaam, e-mail, telefoonnummer, verzend- en factuuradres, btw- of EIN-nummer, winkelgegevens, gevraagde producten | Beantwoorden en offreren van een groothandelsaanvraag van een winkel |
 
 ### 3. Rechtsgronden (Art. 6 AVG)
 
@@ -36,6 +37,7 @@ Incutec BV heeft geen Functionaris voor Gegevensbescherming (DPO) aangesteld aan
 | Klantenservice | Gerechtvaardigd belang (Art. 6.1.f) |
 | Website-analyse | Gerechtvaardigd belang (Art. 6.1.f); cookieloos, geen persistente identifier |
 | Nieuwsbrief | Toestemming (Art. 6.1.a) |
+| Handelsaanvragen | Precontractuele maatregelen op verzoek van de aanvrager (Art. 6.1.b) |
 | Fraude-/misbruikpreventie | Gerechtvaardigd belang (Art. 6.1.f) |
 
 ### 4. Bewaartermijnen
@@ -47,6 +49,7 @@ Incutec BV heeft geen Functionaris voor Gegevensbescherming (DPO) aangesteld aan
 | Communicatie (klantenservice) | 2 jaar na afsluiting |
 | Website-logbestanden | 6 maanden |
 | Nieuwsbrief-abonnement | Tot uitschrijving |
+| Handelsaanvragen zonder bestelling | 2 jaar na het laatste contact |
 
 ### 5. Ontvangers / verwerkers
 
@@ -60,7 +63,8 @@ Incutec BV heeft geen Functionaris voor Gegevensbescherming (DPO) aangesteld aan
 | Plausible Analytics | Cookieloze websitestatistieken | Plausible Insights OÜ, Estland (EU); hosting in Duitsland |
 | Polar Advisory BV (boekhouder) | Facturatie en jaarrekening | België |
 | Resend (Plus Five Five, Inc.) | E-mail verzonden door opendrone.be: herroepingsbevestigingen, welkomst- en nieuwsbriefmails, handelsaanvragen | EU-regio infrastructuur; VS-rechtspersoon: SCC's |
-| Cloudflare, Inc. | Hosting en levering van de website (IP-adres, verzoekgegevens, afgeleid land); Turnstile-antispam op het nieuwsbriefformulier | VS: EU-VS Data Privacy Framework (art. 45 AVG) |
+| Cloudflare, Inc. | Hosting en levering van de website (IP-adres, verzoekgegevens, afgeleid land); Turnstile-antispam op het nieuwsbrief- en handelsformulier | VS: EU-VS Data Privacy Framework (art. 45 AVG) |
+| Europese Commissie (VIES) | Controle van het btw-nummer uit een handelsaanvraag | EU |
 
 Bestel- en klantgegevens (naam, adres, e-mail, betalingsreferentie, bestelgeschiedenis) en de nieuwsbrieftoestemming worden verwerkt in Shopify.
 

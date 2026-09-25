@@ -27,6 +27,7 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 | Communication | Courriel, contenu des messages | Service client, gestion des plaintes |
 | Utilisation du site | Adresse IP, navigateur, pages visitées | Optimisation du site, sécurité |
 | Newsletter | Courriel, pays (déduit de l’adresse IP) | Communication marketing (uniquement avec consentement) |
+| Demandes professionnelles | Nom de l’entreprise et du contact, courriel, numéro de téléphone, adresses de livraison et de facturation, numéro de TVA ou EIN, informations sur le magasin, produits demandés | Réponse et devis pour une demande de vente en gros d’un magasin |
 
 ### 3. Bases juridiques (Art. 6 RGPD)
 
@@ -38,6 +39,7 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 | Service client | Intérêt légitime (Art. 6.1.f) |
 | Analyse du site web | Intérêt légitime (Art. 6.1.f) ; sans cookies, sans identifiant persistant |
 | Newsletter | Consentement (Art. 6.1.a) |
+| Demandes professionnelles | Mesures précontractuelles prises à la demande du demandeur (Art. 6.1.b) |
 | Prévention de la fraude / des abus | Intérêt légitime (Art. 6.1.f) |
 
 ### 4. Durées de conservation
@@ -49,6 +51,7 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 | Communication de service client | 2 ans après clôture |
 | Fichiers journaux du site | 6 mois |
 | Inscription à la newsletter | Jusqu’au désabonnement |
+| Demandes professionnelles sans commande | 2 ans après le dernier contact |
 
 ### 5. Destinataires / sous-traitants
 
@@ -62,7 +65,8 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 | Plausible Analytics | Analyse de site sans cookies | Plausible Insights OÜ, Estonie (UE) ; hébergement en Allemagne |
 | Polar Advisory BV (comptable) | Facturation et comptes annuels | Belgique |
 | Resend (Plus Five Five, Inc.) | E-mails envoyés par opendrone.be : confirmations de rétractation, e-mails de bienvenue et de newsletter, demandes des revendeurs | Infrastructure en région UE ; entité légale É-U : CCT |
-| Cloudflare, Inc. | Hébergement et diffusion du site (adresse IP, données de requête, pays déduit) ; anti-spam Turnstile sur le formulaire de newsletter | É-U : EU-US Data Privacy Framework (art. 45 RGPD) |
+| Cloudflare, Inc. | Hébergement et diffusion du site (adresse IP, données de requête, pays déduit) ; anti-spam Turnstile sur les formulaires de newsletter et de demande professionnelle | É-U : EU-US Data Privacy Framework (art. 45 RGPD) |
+| Commission européenne (VIES) | Vérification du numéro de TVA indiqué dans une demande professionnelle | UE |
 
 Les données de commande et de client (nom, adresse, e-mail, référence de paiement, historique des commandes) et le consentement à la newsletter sont traités dans Shopify.
 

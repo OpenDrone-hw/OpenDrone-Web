@@ -27,6 +27,7 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Communication | Email, content of messages | Customer service, complaint handling |
 | Website usage | IP address, browser, pages visited | Website optimisation, security |
 | Newsletter | Email, country (derived from IP address) | Marketing communication (only with consent) |
+| Trade enquiries | Company and contact name, email, telephone number, shipping and billing address, VAT or EIN number, shop details, requested products | Answering and quoting a shop's wholesale request |
 
 ### 3. Legal bases (Art. 6 GDPR)
 
@@ -38,6 +39,7 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Customer service | Legitimate interest (Art. 6.1.f) |
 | Website analytics | Legitimate interest (Art. 6.1.f); cookieless, no persistent identifier |
 | Newsletter | Consent (Art. 6.1.a) |
+| Trade enquiries | Steps taken at the request of the enquirer before entering into a contract (Art. 6.1.b) |
 | Fraud / abuse prevention | Legitimate interest (Art. 6.1.f) |
 
 ### 4. Retention periods
@@ -49,6 +51,7 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Customer service communication | 2 years after closure |
 | Website log files | 6 months |
 | Newsletter subscription | Until unsubscribed |
+| Trade enquiries without an order | 2 years after the last contact |
 
 ### 5. Recipients / processors
 
@@ -62,7 +65,8 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Plausible Analytics | Cookieless website analytics | Plausible Insights OÜ, Estonia (EU); hosting in Germany |
 | Polar Advisory BV (accountant) | Invoicing and annual accounts | Belgium |
 | Resend (Plus Five Five, Inc.) | Mail sent by opendrone.be: withdrawal confirmations, welcome and newsletter mail, trade requests | EU region infrastructure; US legal entity: SCCs |
-| Cloudflare, Inc. | Hosting and delivery of the website (IP address, request data, derived country); Turnstile anti-spam on the newsletter form | US: EU-US Data Privacy Framework (Art. 45 GDPR) |
+| Cloudflare, Inc. | Hosting and delivery of the website (IP address, request data, derived country); Turnstile anti-spam on the newsletter and trade forms | US: EU-US Data Privacy Framework (Art. 45 GDPR) |
+| European Commission (VIES) | Check of the VAT number given in a trade enquiry | EU |
 
 Order and customer data (name, address, email, payment reference, order history) and newsletter consent are processed in Shopify.
 
