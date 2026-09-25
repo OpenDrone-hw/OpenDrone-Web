@@ -108,14 +108,14 @@
 
 9.2. **Wettelijke garantie:** 2 jaar conform Richtlijn (EU) 2019/771 (omgezet in Belgisch recht via Wet van 20 maart 2022). Bij gebrek aan overeenstemming dat zich manifesteert binnen **2 jaar** na levering wordt vermoed dat het gebrek bestond bij levering (bewijslastomkering). België past de volledige 2-jarige bewijslastomkering toe, niet het EU-minimum van 1 jaar.
 
-9.2bis. **Goederen met digitale elementen:** De producten van Incutec BV bevatten firmware (digitale elementen) die noodzakelijk is voor de werking ervan, in de zin van Richtlijn (EU) 2019/771 Art. 2(5b). Incutec BV zorgt ervoor dat de consument in kennis wordt gesteld van beschikbare firmware-updates die nodig zijn om de conformiteit van het product te behouden gedurende de garantieperiode van 2 jaar. Firmware-updates worden beschikbaar gesteld via de open source projecten waarop de producten gebaseerd zijn (Betaflight, AM32, ExpressLRS). Incutec BV onderhoudt de hardware-specifieke ondersteuning (board target definitions) die nodig is om deze updates te installeren.
+9.2bis. **Goederen met digitale elementen:** De producten van Incutec BV bevatten firmware (digitale elementen) die noodzakelijk is voor de werking ervan, in de zin van Richtlijn (EU) 2019/771 Art. 2(5b). Incutec BV zorgt ervoor dat de consument in kennis wordt gesteld van beschikbare firmware-updates die nodig zijn om de conformiteit van het product te behouden gedurende de garantieperiode van 2 jaar. Firmware-updates worden beschikbaar gesteld via de Open Source projecten waarop de producten gebaseerd zijn (Betaflight, AM32, ExpressLRS). Incutec BV onderhoudt de hardware-specifieke ondersteuning (board target definitions) die nodig is om deze updates te installeren.
 
 9.2ter. **Volgorde van remedies:** Bij gebrek aan overeenstemming heeft de consument het recht om naar keuze herstelling of vervanging van het product te vragen. De consument kan een prijsvermindering of ontbinding van de overeenkomst vragen wanneer herstelling of vervanging onmogelijk of onevenredig is, wanneer Incutec BV de herstelling of vervanging niet, niet kosteloos, niet binnen een redelijke termijn of niet zonder ernstige overlast heeft uitgevoerd of geweigerd heeft, wanneer het gebrek ondanks een poging tot herstel opnieuw optreedt, of wanneer het gebrek zo ernstig is dat onmiddellijke prijsvermindering of ontbinding gerechtvaardigd is (Art. 1649quinquies oud BW; Richtlijn (EU) 2019/771 Art. 13(4)).
 
 9.3. De wettelijke garantie dekt geen gebrek dat is veroorzaakt door:
 - Verkeerd gebruik of verkeerde installatie (afwijking van de gebruikshandleiding), in de mate dat het gebrek daardoor is veroorzaakt
 - Normale slijtage
-- Wijzigingen of herprogrammering door de consument, in de mate dat het gebrek daardoor is veroorzaakt. Het wijzigen van open-source firmware of hardware sluit de garantie niet uit voor gebreken die er geen verband mee houden (zie de garantiepagina)
+- Wijzigingen of herprogrammering door de consument, in de mate dat het gebrek daardoor is veroorzaakt. Het wijzigen van Open Source firmware of hardware sluit de garantie niet uit voor gebreken die er geen verband mee houden (zie de garantiepagina)
 - Externe oorzaken (waterschade, bliksem, spanning of stroom buiten de specificaties), in de mate dat het gebrek daardoor is veroorzaakt
 
 9.4. **Onderzoek bij een garantieclaim.** Bij een claim onderzoekt Incutec BV het teruggestuurde product en deelt het de bevindingen met de consument (foto's en meetresultaten waar relevant). Sporen van oorzaken buiten de conformiteit, zoals soldeerschade aan pads of connectoren, omgepoolde of te hoge voedingsspanning, mechanische schade of waterschade, kunnen als tegenbewijs dienen dat het gebrek niet bij levering bestond, of aantonen dat het wettelijke vermoeden onverenigbaar is met de aard van het gebrek (Art. 1649quater §4 oud BW). Terugzending, herstelling en vervanging onder de wettelijke garantie zijn kosteloos voor de consument. Vóór het lossolderen van een product voor een claim wordt de consument gevraagd foto's van het gemonteerde product te sturen, zodat de oorzaak beoordeeld kan worden. Dit artikel beperkt de wettelijke garantie niet; het beschrijft hoe claims worden beoordeeld.
@@ -140,7 +140,7 @@
 
 10bis.3. **Geen veiligheidskritisch gebruik.** De producten zijn ontworpen voor onbemande recreatieve en professionele multirotors en modelluchtvaart. Zij zijn niet ontworpen, getest of toegelaten voor bemande luchtvaart, medische toepassingen, nucleaire installaties, militaire toepassingen, of enige andere toepassing waarin het falen van een component redelijkerwijs kan leiden tot lichamelijk letsel of aanzienlijke schade. Dergelijk gebruik is uitdrukkelijk buiten het beoogde gebruik.
 
-10bis.4. **Open-source firmware.** De producten werken met open-source firmware (o.a. AM32, Betaflight, ExpressLRS). Het herflashen of aanpassen van firmware door de klant is technisch mogelijk en door het open karakter van de producten voorzien; het gedrag en de regelgevingsconformiteit van het product met gewijzigde firmware vallen onder de verantwoordelijkheid van de klant (zie ook Art. 9.3 en de garantiepagina). De softwarelicenties (GPL, MIT) betreffen de firmware als software en doen geen afbreuk aan de wettelijke rechten van de consument met betrekking tot het gekochte product.
+10bis.4. **Open Source firmware.** De producten werken met Open Source firmware (o.a. AM32, Betaflight, ExpressLRS). Het herflashen of aanpassen van firmware door de klant is technisch mogelijk en door het open karakter van de producten voorzien; het gedrag en de regelgevingsconformiteit van het product met gewijzigde firmware vallen onder de verantwoordelijkheid van de klant (zie ook Art. 9.3 en de garantiepagina). De softwarelicenties (GPL, MIT) betreffen de firmware als software en doen geen afbreuk aan de wettelijke rechten van de consument met betrekking tot het gekochte product.
 
 10bis.5. **Geen speelgoed.** De producten zijn geen speelgoed en niet bestemd voor personen jonger dan 14 jaar. Assemblage en gebruik door minderjarigen alleen onder toezicht van een volwassene. LiPo-batterijen, draaiende propellers en soldeerwerk brengen reële risico's mee; de veiligheidsinformatie bij het product moet vóór gebruik worden gelezen.
 
@@ -148,7 +148,7 @@
 
 11.1. De gepubliceerde hardware-ontwerpen van Incutec BV zijn gelicentieerd onder CERN-OHL-S-2.0 (zie productpagina). De firmware is gelicentieerd onder MIT of GPL (zie productpagina).
 
-11.2. Het merk "Incutec", het logo en productmerknamen zijn eigendom van Incutec BV. Het gebruik van open source licenties geeft geen recht op het gebruik van de merknamen van Incutec BV.
+11.2. Het merk "Incutec", het logo en productmerknamen zijn eigendom van Incutec BV. Het gebruik van Open Source licenties geeft geen recht op het gebruik van de merknamen van Incutec BV.
 
 ### Artikel 12: Persoonsgegevens
 

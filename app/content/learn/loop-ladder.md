@@ -79,7 +79,7 @@ Local sources used:
 - Ordering note for the chapter: AM32 had variable PWM first and BLHeli_32 copied it. AM32's
   "by RPM" mode and BLHeli_32's Rev32.9 RPM-controlled variable PWM are the same idea.
   Source: openbrain `facts`; corroborated by BLHeli_32 manual revision history dating Rev32.9 [verified]
-- Bluejay, the open-source BLHeli_S replacement, adds a selectable carrier of 24, 48 or 96 kHz,
+- Bluejay, the Open Source BLHeli_S replacement, adds a selectable carrier of 24, 48 or 96 kHz,
   chosen at compile time. The source defines `PWM_FREQ EQU 0 ; 0=24, 1=48, 2=96 kHz` and stores
   the display value as `(24 SHL PWM_FREQ)`.
   Source: https://github.com/bird-sanctuary/bluejay/blob/master/src/Bluejay.asm lines 135, 143, 345;
@@ -435,7 +435,7 @@ Local sources used:
   666 Hz = 1 to 5 ms; TBS Crossfire on a Taranis = 7 to 20 ms; FrSky X on a Taranis = 18 to
   37 ms; ExpressLRS at 1 kHz faster than all of them.
   Source: https://www.youtube.com/watch?v=7pQ06kFNEyg&t=0s [single]
-- ExpressLRS maintains an open-source hardware latency rig for exactly this measurement:
+- ExpressLRS maintains an Open Source hardware latency rig for exactly this measurement:
   an ESP8266 that measures end-to-end latency of CRSFv2, GHST and SBUS.
   Source: https://github.com/ExpressLRS/RClatencyTester [verified, primary tool, no published numbers in repo]
 
