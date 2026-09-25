@@ -24,7 +24,7 @@ const FRAME_LINE = {
 // Outline stroke in CSS pixels (WebGL lines are otherwise always 1 px).
 const LINE_WIDTH = 1.7;
 // Canvas width below which the drawing is a phone drawing, and how much the
-// model shrinks there so the exploded arms stay inside the width.
+// assembled model shrinks there to leave the arms room to fly out.
 const NARROW_PX = 700;
 const NARROW_FIT = 0.72;
 // Parts drawn with a face tint: the carbon plates, arms and cross.
@@ -91,10 +91,17 @@ const PLATE = /^(top|base|cross|anti-slip|airtagantenna|vtx)/;
 const FASTENER = /screw|nut/;
 const ROLE = {plate: 0, radial: 1} as const;
 
-// Explode travel as a fraction of the assembly's largest dimension. These set
-// the spread at e = 1 (the "fully exploded" hero look as chapter 2 arrives).
+// Explode travel as a fraction of the assembly's largest dimension at e = 1,
+// the moderately exploded pose (also the static reduced-motion pose).
 const PLATE_TRAVEL = 0.9;
 const ARM_TRAVEL = 0.5;
+// Frame: the explode keeps growing for as long as the Specs drawing is on
+// screen, from assembled as it enters to this many times the e = 1 spread as
+// it leaves. Radial parts travel further than the stack, so the arms fly out
+// past the table's sides and off the viewport edges while the plates, which
+// move along the scroll direction, stay within the chapter's height.
+const FRAME_STACK_END = 2.4;
+const FRAME_RADIAL_END = 4.2;
 // Motor: the lowest body (stator and base) drops, the rest (bell, shaft,
 // bearings, clips) lift in even steps up to MOTOR_LIFT.
 const MOTOR_DROP = 0.25;
@@ -119,8 +126,11 @@ const KIND = {
 type Part = {
   obj: THREE.Object3D;
   base: THREE.Vector3;
-  /** Explode vector in `obj.parent`'s local frame. */
+  /** Explode vector in `obj.parent`'s local frame: along the stack axis
+   *  (the motor's shaft) ... */
   explode: THREE.Vector3;
+  /** ... and, for frame parts, outward from the stack centreline. */
+  spread: THREE.Vector3;
   /** Motor rotor bodies spin about their local Y (the shaft axis). */
   spin?: boolean;
   /** Faces tinted as well as outlined. */
@@ -209,6 +219,7 @@ async function prepareModel(
         obj,
         base: obj.position.clone(),
         explode: toParentFrame(obj, up.clone().multiplyScalar(travel * unit)),
+        spread: new THREE.Vector3(),
         spin: rank > 0,
         fill: true,
       });
@@ -262,10 +273,11 @@ async function prepareModel(
     for (const d of drafts) {
       const {v, h} = split(d);
       const world = up.clone().multiplyScalar(v * vGain);
+      const out = new THREE.Vector3();
       if (d.role !== ROLE.plate) {
         const r = h.length();
         if (r > 1e-6) {
-          world.addScaledVector(
+          out.addScaledVector(
             h.normalize(),
             ARM_TRAVEL * unit * Math.min(1, r / armR),
           );
@@ -275,6 +287,7 @@ async function prepareModel(
         obj: d.obj,
         base: d.obj.position.clone(),
         explode: toParentFrame(d.obj, world),
+        spread: toParentFrame(d.obj, out),
         fill: FILLED.test(d.name),
       });
     }
@@ -496,15 +509,16 @@ function FrameModel({
 }) {
   const groupRef = useRef<THREE.Group>(null);
   // Respect reduced-motion: the explode is a scroll-coupled animation, so for
-  // visitors who opt out we hold the frame assembled (e = 0) - they get the
-  // wireframe backdrop without parts flying as they scroll.
+  // visitors who opt out it holds still - the frame in its moderately
+  // exploded e = 1 pose, the motor assembled - without parts flying as they
+  // scroll.
   const reducedMotion = usePrefersReducedMotion();
   const {rot, fit, shiftX} = KIND[kind];
   const spinAngle = useRef(0);
   // Fit the drawing to the canvas (world units at the model's depth), centred.
   const viewport = useThree((st) => st.viewport);
-  // Phones: the exploded frame must fit the width with padding, so it
-  // scales down; strokes and tint thin out (see useFrame).
+  // Phones: the frame starts smaller so the arms have room to fly out;
+  // strokes and tint thin out (see useFrame).
   const narrow = useThree((st) => st.size.width < NARROW_PX);
   const offsetX = viewport.width * shiftX;
   const rigScale =
@@ -681,13 +695,16 @@ function FrameModel({
     };
   }, []);
 
-  // Recompute the explode amount from scroll position each rendered frame:
-  // e = 0 (assembled) while the drawing's centre is 0.6 of a viewport below
-  // the viewport centre, rising to e = 1 (fully exploded) as its centre
-  // reaches the viewport centre, and held there after. So the parts spill out
-  // while the spec table scrolls into view.
+  // Recompute the explode amount from scroll position each rendered frame.
+  // Frame: progress runs from 0 as the drawing's top enters at the viewport
+  // bottom to 1 as its bottom leaves at the viewport top (the drawing spans
+  // the Specs chapter on wide screens), never clamped in between, so the
+  // parts keep flying out for the whole passage. Motor: e = 0 (assembled)
+  // while the drawing's centre is 0.6 of a viewport below the viewport
+  // centre, rising to e = 1 as its centre reaches the viewport centre, and
+  // held there after.
   //
-  // The drawing's centre is cached in DOCUMENT space - NOT read per frame.
+  // The drawing's box is cached in DOCUMENT space - NOT read per frame.
   // During a scroll each rendered frame runs right after other main-thread
   // work has dirtied style/layout, so a per-frame getBoundingClientRect
   // forced a full synchronous reflow of the PDP every frame (measured
@@ -695,7 +712,7 @@ function FrameModel({
   // any document-height change (ResizeObserver on <body> - late images,
   // lazily built viewers, accordions all change the body's height, which is
   // exactly when positions above/around the drawing shift).
-  const centersRef = useRef<{c1: number} | null>(null);
+  const centersRef = useRef<{top: number; height: number} | null>(null);
   useEffect(() => {
     const invalidateCenters = () => {
       centersRef.current = null;
@@ -732,22 +749,36 @@ function FrameModel({
     // not jump on return.
     const spinning = kind === 'motor' && !reducedMotion;
     if (spinning) spinAngle.current += Math.min(delta, 0.1) * MOTOR_SPIN;
-    let e = 0;
+    // e scales the stack/shaft travel, s the radial travel.
+    let e = kind === 'frame' && reducedMotion ? 1 : 0;
+    let s = e;
     const el = containerRef.current;
     if (el && !reducedMotion) {
       if (!centersRef.current) {
         const r = el.getBoundingClientRect();
-        centersRef.current = {c1: r.top + r.height / 2 + window.scrollY};
+        centersRef.current = {top: r.top + window.scrollY, height: r.height};
       }
       const vh = window.innerHeight || 1;
-      const below = centersRef.current.c1 - window.scrollY - vh / 2;
-      e = THREE.MathUtils.clamp(1 - below / (vh * 0.6), 0, 1);
+      const {top, height} = centersRef.current;
+      const rel = top - window.scrollY;
+      if (kind === 'frame') {
+        const p = THREE.MathUtils.clamp((vh - rel) / (height + vh), 0, 1);
+        // Slow start, then accelerating: the parts separate gently while the
+        // table arrives and are still gaining speed as the chapter leaves.
+        const k = p * (0.55 + 0.45 * p);
+        e = FRAME_STACK_END * k;
+        s = FRAME_RADIAL_END * k;
+      } else {
+        const below = rel + height / 2 - vh / 2;
+        e = THREE.MathUtils.clamp(1 - below / (vh * 0.6), 0, 1);
+        s = e;
+      }
     }
     for (const p of active.parts) {
       p.obj.position.set(
-        p.base.x + p.explode.x * e,
-        p.base.y + p.explode.y * e,
-        p.base.z + p.explode.z * e,
+        p.base.x + p.explode.x * e + p.spread.x * s,
+        p.base.y + p.explode.y * e + p.spread.y * s,
+        p.base.z + p.explode.z * e + p.spread.z * s,
       );
       if (p.spin) p.obj.rotation.y = spinAngle.current;
     }
