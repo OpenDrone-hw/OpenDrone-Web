@@ -1599,9 +1599,11 @@ function ProductPage() {
   // one. `??` treated that deliberate null as "no opinion" and fell through to
   // the content file, republishing a dispatch date the policy had just
   // withdrawn. Only an absent key falls back.
+  // A closed shop (coming soon or checkout closed) shows no ship promise.
   const shipPromise = shipPromiseFor(
     selectedVariant?.shipPromise,
     content.statusNote,
+    rootData?.shopOpen ?? false,
   );
   const buyPrice = isBundle ? bundlePrice : selectedVariant?.price;
   const buyAvailable = isBundle
@@ -1718,6 +1720,14 @@ function ProductPage() {
         turnstileSiteKey={rootData?.turnstileSiteKey ?? null}
         className="product-buy-notify"
       />
+      {status === 'idea' ? null : (
+        <p className="product-buy-ship">
+          {say('product-chrome.buy_soon_wholesale_lead', 'Ordering for a shop?')}{' '}
+          <Link prefetch="intent" to="/wholesale" className="product-buy-terms-link">
+            {say('product-chrome.buy_soon_wholesale_link', 'Request a wholesale quote')}
+          </Link>
+        </p>
+      )}
       {status === 'idea' ? (
         <a
           className="product-buy-idea-repo"

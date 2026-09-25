@@ -1,7 +1,7 @@
 import {useCallback, useEffect, useId, useRef, useState} from 'react';
 import {useFetcher} from 'react-router';
 import {Check} from 'lucide-react';
-import {getActiveTheme} from '~/lib/theme';
+import {useTurnstile} from '~/lib/use-turnstile';
 import {trackEvent} from '~/lib/growth/plausible';
 import {attributionSource} from '~/lib/growth/attribution';
 import {Txt} from '~/components/Txt';
@@ -44,18 +44,6 @@ interface NewsletterSignupProps {
   } | null;
 }
 
-type TurnstileRenderOpts = {
-  sitekey: string;
-  theme?: 'dark' | 'light' | 'auto';
-  size?: 'normal' | 'compact' | 'flexible' | 'invisible';
-  callback?: (token: string) => void;
-};
-
-type Turnstile = {
-  render: (el: HTMLElement, opts: TurnstileRenderOpts) => string | undefined;
-  reset: (id?: string) => void;
-};
-
 export function NewsletterSignup({
   variant = 'compact',
   className = '',
@@ -64,13 +52,13 @@ export function NewsletterSignup({
 }: NewsletterSignupProps) {
   const fetcher = useFetcher<NewsletterActionData>();
   const formRef = useRef<HTMLFormElement>(null);
-  const turnstileContainerRef = useRef<HTMLDivElement | null>(null);
-  const turnstileWidgetId = useRef<string | null>(null);
   const emailId = useId();
   const consentId = useId();
   const statusId = useId();
   const [clientError, setClientError] = useState<string | null>(null);
   const [interacted, setInteracted] = useState(false);
+  const {containerRef: turnstileContainerRef, reset: resetTurnstile} =
+    useTurnstile(turnstileSiteKey, interacted);
 
   // First-touch channel for the server-side growth ledger (Lane B).
   // Attribution lives in sessionStorage, so read it after hydration to
@@ -117,51 +105,11 @@ export function NewsletterSignup({
       formRef.current?.reset();
       setClientError(null);
     }
-    const cf = (window as unknown as {turnstile?: Turnstile}).turnstile;
-    if (cf && turnstileWidgetId.current) cf.reset(turnstileWidgetId.current);
-  }, [result, isSuccess]);
+    resetTurnstile();
+  }, [result, isSuccess, resetTurnstile]);
 
-  // Lazy-load the Turnstile script the first time the visitor actually
-  // interacts with the form. Keeps the script off the critical path for
-  // the 99% of page views that never submit a newsletter form.
-  useEffect(() => {
-    if (!interacted || !turnstileSiteKey) return;
-    const siteKey = turnstileSiteKey;
-    const SCRIPT_ID = 'cf-turnstile-script';
-    function render() {
-      const cf = (window as unknown as {turnstile?: Turnstile}).turnstile;
-      if (!cf || !turnstileContainerRef.current) return;
-      if (turnstileWidgetId.current) return;
-      const id = cf.render(turnstileContainerRef.current, {
-        sitekey: siteKey,
-        // Match the active site theme so the widget doesn't render a dark
-        // box on a light page (and vice-versa).
-        theme: getActiveTheme(),
-        size: 'flexible',
-      });
-      turnstileWidgetId.current = id ?? null;
-    }
-    if ((window as unknown as {turnstile?: Turnstile}).turnstile) {
-      render();
-      return;
-    }
-    if (document.getElementById(SCRIPT_ID)) {
-      const check = window.setInterval(() => {
-        if ((window as unknown as {turnstile?: Turnstile}).turnstile) {
-          window.clearInterval(check);
-          render();
-        }
-      }, 120);
-      return () => window.clearInterval(check);
-    }
-    const s = document.createElement('script');
-    s.id = SCRIPT_ID;
-    s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-    s.async = true;
-    s.defer = true;
-    s.onload = render;
-    document.head.appendChild(s);
-  }, [interacted, turnstileSiteKey]);
+  // The Turnstile script loads on the first interaction (useTurnstile):
+  // the form is in every footer and most visitors never submit it.
 
   const markInteracted = useCallback(() => {
     if (!interacted) setInteracted(true);

@@ -1,5 +1,5 @@
 import type {Route} from './+types/preorder';
-import {CreditCard} from 'lucide-react';
+import {CreditCard, Store} from 'lucide-react';
 import {InfoHint} from '~/components/InfoHint';
 import {Link, useLoaderData} from 'react-router';
 import {shopifyImageUrl} from '~/lib/shopify-image';
@@ -210,6 +210,9 @@ export default function PreorderRoute() {
         <InfoHint label={copyText('preorder.shipping_summary') ?? 'EU orders'}>
           <Txt id="preorder.channel_eu_text" as="p" />
         </InfoHint>
+        <Link to="/wholesale" className="po-trade-link">
+          <Store size={16} aria-hidden="true" /><Txt id="preorder.channel_trade" /> <span aria-hidden="true">→</span>
+        </Link>
       </div>
 
       {unavailable ? (

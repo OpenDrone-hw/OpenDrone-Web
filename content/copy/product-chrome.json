@@ -592,10 +592,12 @@
   "plugs_legend_nc": "Not connected",
   "gpsr_other_languages": "Other EU languages",
   "buy_shops_only": "EU consumer orders only",
-  "buy_shops_trade": "EU or US retailer enquiries",
+  "buy_shops_trade": "Shops: request a wholesale quote",
   "buy_closed": "Orders are not open for {country}",
   "buy_blocked": "Not available in {country}",
   "buy_blocked_link": "End-Use Policy",
   "trust_chip_open_source": "Open Source",
-  "trust_chip_oshwa": "OSHWA certified"
+  "trust_chip_oshwa": "OSHWA certified",
+  "buy_soon_wholesale_lead": "Ordering for a shop?",
+  "buy_soon_wholesale_link": "Request a wholesale quote"
 }

@@ -4,7 +4,8 @@ import {useAutoAnimate} from '@formkit/auto-animate/react';
 import {SlidersHorizontal, X} from 'lucide-react';
 import type {ShouldRevalidateFunctionArgs} from 'react-router';
 import type {ReactNode} from 'react';
-import {Form, useLoaderData, useSearchParams} from 'react-router';
+import {Form, Link, useLoaderData, useRouteLoaderData, useSearchParams} from 'react-router';
+import type {RootLoader} from '~/root';
 import {ProductItem, type ProductQuickAdd} from '~/components/ProductItem';
 import type {MoneyV2, ProductCardFragment} from '~/lib/product-shapes';
 import {toCards} from '~/lib/catalog';
@@ -346,7 +347,9 @@ function searchTextFor(p: ProductCardFragment, value = ''): string {
 }
 
 export default function ProductsIndex() {
-  const {products, stackShips} = useLoaderData<typeof loader>();
+  const {products, stackShips: campaignShips} = useLoaderData<typeof loader>();
+  // A closed shop offers no ship date, so no "Ships Oct 2026" filter either.
+  const stackShips = useRouteLoaderData<RootLoader>('root')?.shopOpen ? campaignShips : null;
   const [searchParams, setSearchParams] = useSearchParams();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [gridRef, animateGrid] = useAutoAnimate<HTMLDivElement>({
@@ -807,6 +810,14 @@ export default function ProductsIndex() {
                   />
                 ))}
               </div>
+            ) : null}
+            {shown.length > 0 ? (
+              <p className="catalog-trade-note">
+                <Txt id="collections-all.trade_note" />{' '}
+                <Link prefetch="intent" to="/wholesale">
+                  <Txt id="collections-all.trade_link" /> <span aria-hidden="true">→</span>
+                </Link>
+              </p>
             ) : help ? null : term ? (
               <EmptyState
                 title={<Txt id="collections-all.empty_search_title" />}

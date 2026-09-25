@@ -1289,3 +1289,9 @@ html.light .product-silhouette[data-board] .product-silhouette-art { opacity: 0.
   .hero-build-guide { animation: none; }
   .hero-buy--guide.is-visible { animation: none; transform: none; }
 }
+
+/* Wholesale entry points: /preorder order notes and the /products grid foot. */
+.po-trade-link { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; color: var(--color-text-muted); }
+.po-trade-link:hover { color: var(--color-text); }
+.catalog-trade-note { margin-top: 32px; padding-top: 14px; border-top: 1px solid var(--color-border); font-size: 13px; color: var(--color-text-muted); }
+.catalog-trade-note a { color: var(--color-text); text-decoration: underline; text-underline-offset: 3px; }

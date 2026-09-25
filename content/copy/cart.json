@@ -52,7 +52,7 @@
   "build_added": "Added",
   "build_retry": "Try again",
   "checkout_shops": "Direct consumer orders are limited to the EU.",
-  "checkout_shops_trade": "EU or US retailer enquiries",
+  "checkout_shops_trade": "Shops: request a wholesale quote",
   "checkout_shops_notify": "Get launch news",
   "checkout_closed": "Orders are not open for {country}."
 }

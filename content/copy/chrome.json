@@ -45,7 +45,7 @@
   "nav_all_products_mobile": "All products",
   "nav_home": "Home",
   "nav_newsletter": "Newsletter",
-  "nav_trade": "Trade",
+  "nav_trade": "Wholesale",
   "nav_contact": "Contact",
   "nav_sign_in": "Sign in",
   "nav_account": "Account",
@@ -92,5 +92,6 @@
   "footer_tb_rev": "Rev",
   "footer_tb_sheet": "Sheet",
   "footer_tb_date": "Date",
-  "footer_detail_newsletter": "Detail A: newsletter"
+  "footer_detail_newsletter": "Detail A: newsletter",
+  "menu_wholesale": "Wholesale"
 }

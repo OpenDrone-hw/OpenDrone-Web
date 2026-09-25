@@ -624,6 +624,7 @@ export function HeaderMenu({
         if (
           !isMobile &&
           (url === '/preorder' ||
+            url === '/wholesale' ||
             url === '/products' ||
             url === '/support' ||
             url === '/newsletter' ||
@@ -738,6 +739,19 @@ function HeaderCtas({
         }
       >
         <Txt id="chrome.nav_preorder" />
+      </NavLink>
+      <NavLink
+        prefetch="intent"
+        to="/wholesale"
+        className={({isActive}) =>
+          `font-mono text-[12px] uppercase tracking-[0.15em] transition-colors hidden md:block ${
+            isActive
+              ? 'text-[var(--color-text)]'
+              : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+          }`
+        }
+      >
+        <Txt id="chrome.nav_trade" />
       </NavLink>
       <NavLink
         prefetch="intent"
@@ -877,6 +891,7 @@ const HEADER_MENU = {
   items: [
     {id: 'menu-products', title: 'Catalog', url: '/products'},
     {id: 'menu-preorder', title: 'Preorders', url: '/preorder'},
+    {id: 'menu-wholesale', title: 'Wholesale', url: '/wholesale'},
     {id: 'menu-newsletter', title: 'Newsletter', url: '/newsletter'},
     {
       id: 'menu-open-source',
