@@ -50,5 +50,18 @@
   "nav_support": "Support",
   "nav_returns": "Returns",
   "cart_aria": "Cart",
-  "footer_email_label": "Email"
+  "footer_email_label": "Email",
+  "footer_notes": "Notes",
+  "footer_parts_list": "Parts list",
+  "footer_view_label": "OpenFC Lite, top view",
+  "footer_tb_title": "Title",
+  "footer_tb_company": "Company",
+  "footer_tb_address": "Address",
+  "footer_tb_kbo": "KBO/BCE",
+  "footer_tb_vat": "BTW/VAT",
+  "footer_tb_tel": "Tel",
+  "footer_tb_licence": "Licence",
+  "footer_tb_rev": "Rev",
+  "footer_tb_sheet": "Sheet",
+  "footer_tb_date": "Date"
 }

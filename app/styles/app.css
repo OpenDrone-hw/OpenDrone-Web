@@ -2140,31 +2140,6 @@ button.reset {
   margin: 0 auto;
   padding: 0.5rem 0 1.25rem;
 }
-/* Faint via-grid watermark drifting up the right side of the footer. */
-.site-footer-inner::before {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  pointer-events: none;
-  top: 0;
-  bottom: 0;
-  right: 0;
-  width: 40%;
-  background-image: radial-gradient(
-    circle,
-    var(--color-gold) 1px,
-    transparent 1.5px
-  );
-  background-size: 22px 22px;
-  opacity: 0.1;
-  -webkit-mask-image: radial-gradient(
-    ellipse at right,
-    black,
-    transparent 75%
-  );
-  mask-image: radial-gradient(ellipse at right, black, transparent 75%);
-}
-
 @media (min-width: 768px) {
   .site-footer-inner {
     padding: 0.75rem 0 1.5rem;
@@ -15977,7 +15952,7 @@ html.light .ship-chip-label {
   opacity: 0.4;
   border-color: var(--color-border-strong);
 }
-body:has(main.cart) footer .site-footer-inner > div:has(> .newsletter-signup) {
+body:has(main.cart) footer .footer-note--newsletter {
   display: none;
 }
 

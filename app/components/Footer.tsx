@@ -1,11 +1,17 @@
 import {NavLink} from '~/components/nav';
-import {DISCORD_INVITE_URL, CONTRIBUTING_URL, type CompanyIdentity} from '~/lib/company';
-import {CompanyFooterBlock} from '~/components/CompanyFooterBlock';
+import {
+  DISCORD_INVITE_URL,
+  CONTRIBUTING_URL,
+  type CompanyIdentity,
+} from '~/lib/company';
 import {NewsletterSignup} from '~/components/NewsletterSignup';
 import {Txt} from '~/components/Txt';
-import {LegalLanguages, legalHref, useLegalLocale} from '~/components/LangToggle';
-import {copyText} from '~/lib/copy';
-import {useEffect, useRef} from 'react';
+import {
+  LegalLanguages,
+  legalHref,
+  useLegalLocale,
+} from '~/components/LangToggle';
+import {useEffect, useRef, useState} from 'react';
 
 interface FooterProps {
   company: CompanyIdentity;
@@ -134,7 +140,24 @@ function FooterGroup({
   );
 }
 
-function FooterNavLink({to, children}: {to: string; children: React.ReactNode}) {
+/** A reference designator in front of a link: every link is a connector. */
+function RefTag({n}: {n?: number}) {
+  return n ? (
+    <span className="footer-ref" aria-hidden="true">
+      J{n}
+    </span>
+  ) : null;
+}
+
+function FooterNavLink({
+  to,
+  refNo,
+  children,
+}: {
+  to: string;
+  refNo?: number;
+  children: React.ReactNode;
+}) {
   return (
     <NavLink
       end
@@ -148,141 +171,370 @@ function FooterNavLink({to, children}: {to: string; children: React.ReactNode}) 
         }`
       }
     >
+      <RefTag n={refNo} />
       {children}
     </NavLink>
   );
 }
 
+// Zone marks along the drawing frame, as on a KiCad sheet border.
+const ZONE_COLUMNS = ['1', '2', '3', '4', '5', '6'];
+const ZONE_ROWS = ['A', 'B', 'C', 'D'];
+
+function ZoneRulers() {
+  return (
+    <div className="footer-zones" aria-hidden="true">
+      {(['top', 'bottom'] as const).map((edge) => (
+        <div key={edge} className={`footer-zone-row footer-zone-row--${edge}`}>
+          {ZONE_COLUMNS.map((z) => (
+            <span key={z}>{z}</span>
+          ))}
+        </div>
+      ))}
+      {(['left', 'right'] as const).map((edge) => (
+        <div key={edge} className={`footer-zone-col footer-zone-col--${edge}`}>
+          {ZONE_ROWS.map((z) => (
+            <span key={z}>{z}</span>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// The drawing view: the OpenFC Lite outline from its board export (the
+// clip path of the lighter layered SVG), with its width dimensioned. Fetched
+// once the footer nears the viewport; it is decoration and renders nothing
+// until then or if the fetch fails.
+const VIEW_BOARD = '/boards/openfc-lite/board-lite.svg';
+
+type Outline = {x: number; y: number; w: number; h: number; d: string};
+
+function DrawingView() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [outline, setOutline] = useState<Outline | null>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    let cancelled = false;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((e) => e.isIntersecting)) return;
+        io.disconnect();
+        fetch(VIEW_BOARD)
+          .then((r) => (r.ok ? r.text() : ''))
+          .then((svg) => {
+            const box = svg
+              .match(/viewBox="([^"]+)"/)?.[1]
+              .split(/\s+/)
+              .map(Number);
+            const d = svg.match(/<clipPath[^>]*>\s*<path d="([^"]+)"/)?.[1];
+            if (cancelled || !d || !box || box.length !== 4) return;
+            const [x, y, w, h] = box;
+            setOutline({x, y, w, h, d});
+          })
+          .catch(() => {});
+      },
+      {rootMargin: '400px 0px'},
+    );
+    io.observe(el);
+    return () => {
+      cancelled = true;
+      io.disconnect();
+    };
+  }, []);
+  const o = outline;
+  // Margins around the board for the dimension line and its text.
+  const pad = o ? o.w * 0.18 : 0;
+  return (
+    <div ref={ref} className="footer-view" aria-hidden="true">
+      {o ? (
+        <svg
+          viewBox={`${o.x - pad} ${o.y - pad} ${o.w + pad * 2} ${o.h + pad * 2.4}`}
+          focusable="false"
+        >
+          <path
+            d={o.d}
+            className="footer-view-outline"
+            vectorEffect="non-scaling-stroke"
+          />
+          {/* Centre marks. */}
+          <path
+            d={`M ${o.x + o.w / 2 - 3} ${o.y + o.h / 2} h 6 M ${o.x + o.w / 2} ${o.y + o.h / 2 - 3} v 6`}
+            className="footer-view-dim"
+            vectorEffect="non-scaling-stroke"
+          />
+          {/* Width dimension under the board. */}
+          <path
+            d={`M ${o.x} ${o.y + o.h + pad * 0.25} v ${pad * 0.7} M ${o.x + o.w} ${o.y + o.h + pad * 0.25} v ${pad * 0.7} M ${o.x} ${o.y + o.h + pad * 0.75} H ${o.x + o.w}`}
+            className="footer-view-dim"
+            vectorEffect="non-scaling-stroke"
+          />
+          <text
+            x={o.x + o.w / 2}
+            y={o.y + o.h + pad * 1.35}
+            textAnchor="middle"
+            className="footer-view-text"
+            style={{fontSize: o.w * 0.06}}
+          >
+            {o.w.toFixed(1)}
+          </text>
+        </svg>
+      ) : null}
+      <Txt id="chrome.footer_view_label" as="p" className="footer-view-label" />
+    </div>
+  );
+}
+
+/** One row of the title block. */
+function TitleCell({
+  label,
+  children,
+  span,
+}: {
+  label: string;
+  children: React.ReactNode;
+  /** Width in sixths of the block. */
+  span: 2 | 3 | 4 | 6;
+}) {
+  return (
+    <div
+      className={`footer-tb-cell footer-tb-s${span}`}
+      data-cell={label.replace(/^chrome\.footer_(tb_)?/, '')}
+    >
+      <Txt id={label} as="dt" className="footer-tb-label" />
+      <dd className="footer-tb-value">{children}</dd>
+    </div>
+  );
+}
+
+// Build stamp (vite.config.ts `define`); absent when the module runs outside
+// Vite, e.g. under node:test.
+const BUILD_REV = typeof __BUILD_REV__ === 'string' ? __BUILD_REV__ : '';
+const BUILD_DATE = typeof __BUILD_DATE__ === 'string' ? __BUILD_DATE__ : '';
+
 export function Footer({company, turnstileSiteKey}: FooterProps) {
   const legalLocale = useLegalLocale();
+  // Reference designators run across the whole parts list, J1 to Jn.
+  let refNo = 0;
+  const nextRef = () => ++refNo;
   return (
-    <footer className="mt-auto border-t border-[var(--color-border)]">
+    <footer className="mt-auto">
       <div className="site-footer-inner">
-        {/* Newsletter - separated by a hairline + whitespace, not a card
-            box. The form carries its own hierarchy. Consent lives on the
-            Shopify customer, and this form is anonymous, so there is no
-            signed-in subscription state to read and every visitor sees the
-            same form. */}
-        <div className="mb-8 pb-8 border-b border-[var(--color-border)]">
-          <NewsletterSignup
-            variant="footer"
-            turnstileSiteKey={turnstileSiteKey ?? null}
-          />
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-8 gap-y-3 sm:gap-8">
-          {/* Company identity */}
-          <div className="col-span-2 md:col-span-3 lg:col-span-1">
-            <h3 className="font-display text-sm font-bold tracking-[0.08em] uppercase text-[var(--color-text)] mb-3">
-              OpenDrone
-            </h3>
-            <Txt
-              id="chrome.footer_run_by"
-              as="p"
-              className="text-[13px] text-[var(--color-text-muted)] mb-3 leading-[1.6]"
-            />
-            <CompanyFooterBlock company={company} />
-            <NavLink
-              to="/open-source"
-              prefetch="intent"
-              className="mt-3 inline-flex items-center min-h-[44px] md:min-h-0 text-[13px] text-[var(--color-text-muted)] underline underline-offset-2 hover:text-[var(--color-text)]"
-            >
-              <Txt id="chrome.incutec_hint" />
-            </NavLink>
-          </div>
-
-          {/* Shop */}
-          <FooterGroup id="chrome.heading_shop" open>
-            <nav className="flex flex-col gap-1.5">
-              {SHOP_LINKS.map((link) => (
-                <FooterNavLink key={link.to} to={link.to}>
-                  <Txt id={`chrome.${link.copy}`} />
-                </FooterNavLink>
-              ))}
-            </nav>
-          </FooterGroup>
-
-          {/* Customer service */}
-          <FooterGroup id="chrome.heading_help" open>
-            <nav className="flex flex-col gap-1.5">
-              {HELP_LINKS.map((link) => (
-                <FooterNavLink key={link.to} to={legalHref(link.to, legalLocale)}>
-                  <Txt id={`chrome.${link.copy}`} />
-                </FooterNavLink>
-              ))}
-            </nav>
-          </FooterGroup>
-
-          {/* Open Source + Company */}
-          <div className="col-span-2 sm:col-span-1">
-          <FooterGroup id="chrome.heading_open_source">
-            <nav className="flex flex-col gap-1.5 sm:mb-6">
-              {SOCIAL_LINKS.map((link) => (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors flex items-center min-h-[36px] md:min-h-0"
-                >
-                  <Txt id={`chrome.${link.copy}`} />
-                </a>
-              ))}
-            </nav>
-          </FooterGroup>
-          <FooterGroup id="chrome.heading_company">
-            <nav className="flex flex-col gap-1.5">
-              {COMPANY_LINKS.map((link) => (
-                <FooterNavLink key={link.to} to={link.to}>
-                  <Txt id={`chrome.${link.copy}`} />
-                </FooterNavLink>
-              ))}
-            </nav>
-          </FooterGroup>
-          </div>
-
-          {/* Legal */}
-          <div className="col-span-2 sm:col-span-1">
-          <FooterGroup id="chrome.heading_legal">
-            <nav className="flex flex-col gap-1.5">
-              {LEGAL_LINKS.map((link) => (
-                <FooterNavLink key={link.to} to={legalHref(link.to, legalLocale)}>
-                  <Txt id={`chrome.${link.copy}`} />
-                </FooterNavLink>
-              ))}
-            </nav>
-          </FooterGroup>
-            {/* Phone: the Legal group folds, so the withdrawal link also
-                stands outside it and is always one tap away. */}
-            <div className="mt-2 sm:hidden">
-              <FooterNavLink to={legalHref('/herroepingsrecht#withdraw', legalLocale)}>
-                <Txt id="chrome.nav_withdrawal" />
-              </FooterNavLink>
+        <div className="footer-drawing">
+          <ZoneRulers />
+          <div className="footer-sheet">
+            <div className="footer-top">
+              {/* NOTES. The newsletter form keeps its own markup, consent
+                checkbox and behaviour; the drawing only numbers it. Consent
+                lives on the Shopify customer and this form is anonymous, so
+                every visitor sees the same form. */}
+              <div className="footer-notes">
+                <Txt
+                  id="chrome.footer_notes"
+                  as="h3"
+                  className="footer-sheet-heading"
+                />
+                <ol className="footer-notes-list">
+                  <li className="footer-note footer-note--newsletter">
+                    <NewsletterSignup
+                      variant="footer"
+                      turnstileSiteKey={turnstileSiteKey ?? null}
+                    />
+                  </li>
+                  <li className="footer-note">
+                    <p>
+                      <Txt id="chrome.footer_run_by" /> {company.name}.{' '}
+                      <NavLink
+                        to="/open-source"
+                        prefetch="intent"
+                        className="underline underline-offset-2 hover:text-[var(--color-text)]"
+                      >
+                        <Txt id="chrome.incutec_hint" />
+                      </NavLink>
+                    </p>
+                  </li>
+                </ol>
+              </div>
+              <DrawingView />
             </div>
-            <LegalLanguages className="footer-small mt-4 text-[var(--color-text-muted)]" />
-          </div>
-        </div>
 
-        {/* Bottom bar */}
-        <div className="mt-8 pt-5 border-t border-[var(--color-border)] flex flex-col md:flex-row items-center justify-between gap-3">
-          {/* Year and legal entity stay in code: one is the clock, the other is
-              the identity in `company.ts` that also feeds the JSON-LD. Only the
-              licence sentence after them is editable. */}
-          <p className="text-[12px] text-[var(--color-text-muted)] font-mono tracking-wide">
-            &copy; {new Date().getFullYear()} {company.name}.{' '}
-            <Txt id="chrome.footer_licence_line" />{' '}
-            <Txt id="chrome.footer_site_source_line" />
-          </p>
-          <a
-            href="https://github.com/OpenDrone-hw"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
-            aria-label={copyText('chrome.nav_github') ?? 'GitHub'}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-            </svg>
-          </a>
+            {/* PARTS LIST: every link group, complete. */}
+            <div className="footer-parts">
+              <Txt
+                id="chrome.footer_parts_list"
+                as="h3"
+                className="footer-sheet-heading"
+              />
+              <div className="footer-parts-grid">
+                <FooterGroup id="chrome.heading_shop" open>
+                  <nav className="flex flex-col gap-1.5">
+                    {SHOP_LINKS.map((link) => (
+                      <FooterNavLink
+                        key={link.to}
+                        to={link.to}
+                        refNo={nextRef()}
+                      >
+                        <Txt id={`chrome.${link.copy}`} />
+                      </FooterNavLink>
+                    ))}
+                  </nav>
+                </FooterGroup>
+
+                <FooterGroup id="chrome.heading_help" open>
+                  <nav className="flex flex-col gap-1.5">
+                    {HELP_LINKS.map((link) => (
+                      <FooterNavLink
+                        key={link.to}
+                        to={legalHref(link.to, legalLocale)}
+                        refNo={nextRef()}
+                      >
+                        <Txt id={`chrome.${link.copy}`} />
+                      </FooterNavLink>
+                    ))}
+                  </nav>
+                </FooterGroup>
+
+                <FooterGroup id="chrome.heading_open_source">
+                  <nav className="flex flex-col gap-1.5">
+                    {SOCIAL_LINKS.map((link) => (
+                      <a
+                        key={link.href}
+                        href={link.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors flex items-center min-h-[36px] md:min-h-0"
+                      >
+                        <RefTag n={nextRef()} />
+                        <Txt id={`chrome.${link.copy}`} />
+                      </a>
+                    ))}
+                  </nav>
+                </FooterGroup>
+
+                <FooterGroup id="chrome.heading_company">
+                  <nav className="flex flex-col gap-1.5">
+                    {COMPANY_LINKS.map((link) => (
+                      <FooterNavLink
+                        key={link.to}
+                        to={link.to}
+                        refNo={nextRef()}
+                      >
+                        <Txt id={`chrome.${link.copy}`} />
+                      </FooterNavLink>
+                    ))}
+                  </nav>
+                </FooterGroup>
+
+                <div>
+                  <FooterGroup id="chrome.heading_legal">
+                    <nav className="flex flex-col gap-1.5">
+                      {LEGAL_LINKS.map((link) => (
+                        <FooterNavLink
+                          key={link.to}
+                          to={legalHref(link.to, legalLocale)}
+                          refNo={nextRef()}
+                        >
+                          <Txt id={`chrome.${link.copy}`} />
+                        </FooterNavLink>
+                      ))}
+                    </nav>
+                  </FooterGroup>
+                  {/* Phone: the Legal group folds, so the withdrawal link also
+                      stands outside it and is always one tap away. */}
+                  <div className="mt-2 sm:hidden">
+                    <FooterNavLink
+                      to={legalHref('/herroepingsrecht#withdraw', legalLocale)}
+                    >
+                      <Txt id="chrome.nav_withdrawal" />
+                    </FooterNavLink>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* The sheet foot: languages and copyright on the left, the
+                title block with the seller's legal identity on the right.
+                Year and legal entity stay in code: one is the clock, the
+                other is the identity in `company.ts` that also feeds the
+                JSON-LD. */}
+            <div className="footer-foot">
+              <div className="footer-foot-meta">
+                <LegalLanguages className="footer-small text-[var(--color-text-muted)]" />
+                <p className="footer-copyright">
+                  &copy; {new Date().getFullYear()} {company.name}
+                </p>
+              </div>
+              <dl className="footer-tb">
+                <TitleCell label="chrome.footer_tb_title" span={6}>
+                  <span className="footer-tb-title">OpenDrone</span>
+                </TitleCell>
+                <TitleCell label="chrome.footer_tb_company" span={2}>
+                  {company.name}
+                </TitleCell>
+                <TitleCell label="chrome.footer_tb_address" span={4}>
+                  {company.address}
+                </TitleCell>
+                <TitleCell label="chrome.footer_tb_kbo" span={2}>
+                  <span className="tabular-nums">{company.kbo}</span>
+                </TitleCell>
+                <TitleCell label="chrome.footer_tb_vat" span={2}>
+                  <span className="tabular-nums">{company.vat}</span>
+                </TitleCell>
+                {company.email ? (
+                  <TitleCell label="chrome.footer_email_label" span={2}>
+                    <a
+                      href={`mailto:${company.email}`}
+                      className="underline underline-offset-2 hover:text-[var(--color-text)]"
+                    >
+                      {company.email}
+                    </a>
+                  </TitleCell>
+                ) : null}
+                {company.tel && company.tel !== '[pending]' ? (
+                  <TitleCell label="chrome.footer_tb_tel" span={6}>
+                    {company.tel}
+                  </TitleCell>
+                ) : null}
+                <TitleCell label="chrome.footer_tb_licence" span={6}>
+                  <Txt id="chrome.footer_licence_line" />{' '}
+                  <Txt id="chrome.footer_site_source_line" />
+                </TitleCell>
+                {BUILD_REV ? (
+                  <TitleCell label="chrome.footer_tb_rev" span={2}>
+                    <a
+                      href={`https://github.com/OpenDrone-hw/OpenDrone-Web/commit/${BUILD_REV}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline underline-offset-2 hover:text-[var(--color-text)]"
+                    >
+                      {BUILD_REV}
+                    </a>
+                  </TitleCell>
+                ) : null}
+                <TitleCell
+                  label="chrome.footer_tb_sheet"
+                  span={
+                    BUILD_REV && BUILD_DATE
+                      ? 2
+                      : BUILD_REV || BUILD_DATE
+                        ? 3
+                        : 6
+                  }
+                >
+                  1 / 1
+                </TitleCell>
+                {BUILD_DATE ? (
+                  <TitleCell
+                    label="chrome.footer_tb_date"
+                    span={BUILD_REV ? 2 : 3}
+                  >
+                    <span className="tabular-nums">{BUILD_DATE}</span>
+                  </TitleCell>
+                ) : null}
+              </dl>
+            </div>
+          </div>
         </div>
       </div>
     </footer>

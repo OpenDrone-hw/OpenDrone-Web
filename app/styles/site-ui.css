@@ -725,10 +725,181 @@ html.light .po-card-cta {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-/* The bottom bar line in the same small size as the rest of the footer. */
-.site-footer-inner > div:last-child > p {
-  font-size: 12px;
+/* ============================================
+   Footer: an engineering drawing sheet. A thin frame with zone marks, NOTES
+   (the newsletter), the PARTS LIST (every link group, each link a J
+   reference), a faint drawing view of a board, and the title block with the
+   seller's legal identity in the bottom-right corner.
+   ============================================ */
+.footer-drawing {
+  --zone: 18px;
+  --sheet-pad: 28px;
+  position: relative;
+  margin-top: 8px;
+  padding: var(--zone);
+  border: 1px solid var(--color-border);
+}
+.footer-zones { position: absolute; inset: 0; pointer-events: none; }
+.footer-zone-row,
+.footer-zone-col {
+  position: absolute;
+  display: grid;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--color-text-muted);
+  opacity: 0.8;
+}
+.footer-zone-row { left: var(--zone); right: var(--zone); height: var(--zone); grid-template-columns: repeat(6, 1fr); }
+.footer-zone-row--top { top: 0; }
+.footer-zone-row--bottom { bottom: 0; }
+.footer-zone-col { top: var(--zone); bottom: var(--zone); width: var(--zone); grid-template-rows: repeat(4, 1fr); }
+.footer-zone-col--left { left: 0; }
+.footer-zone-col--right { right: 0; }
+.footer-zone-row span,
+.footer-zone-col span { display: flex; align-items: center; justify-content: center; }
+.footer-zone-row span + span { border-left: 1px solid var(--color-border); }
+.footer-zone-col span + span { border-top: 1px solid var(--color-border); }
+
+.footer-sheet {
+  position: relative;
+  isolation: isolate;
+  padding: var(--sheet-pad) var(--sheet-pad) 0;
+  border: 1px solid var(--color-border-strong);
+}
+.footer-sheet-heading {
+  margin-bottom: 14px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+.footer-sheet-heading::after { content: ':'; }
+
+/* NOTES on the left, the drawing view in the empty space to their right. */
+.footer-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 15rem); gap: 48px; align-items: start; padding-bottom: 28px; }
+/* Drawing view: very low contrast. */
+.footer-view {
+  color: var(--color-gold-text);
+  opacity: 0.22;
+  pointer-events: none;
+}
+.footer-view svg { display: block; width: 100%; height: auto; overflow: visible; }
+.footer-view-outline { fill: none; stroke: currentColor; stroke-width: 1; }
+.footer-view-dim { fill: none; stroke: currentColor; stroke-width: 0.75; opacity: 0.8; }
+.footer-view-text { fill: currentColor; font-family: var(--font-mono); }
+.footer-view-label {
+  margin-top: 4px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.footer-notes { min-width: 0; }
+.footer-notes-list { list-style: none; margin: 0; padding: 0; counter-reset: note; display: flex; flex-direction: column; gap: 16px; }
+.footer-note {
+  counter-increment: note;
+  display: grid;
+  grid-template-columns: 2.2em minmax(0, 1fr);
+  font-size: 13px;
   line-height: 1.6;
+  color: var(--color-text-muted);
+}
+.footer-note::before {
+  content: counter(note) '.';
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* The number sits level with the newsletter's first line. */
+.footer-note--newsletter .newsletter-signup { align-items: start; padding-top: 0; }
+.footer-tb-value a { text-decoration: underline; text-underline-offset: 2px; }
+.footer-tb-value a:hover { color: var(--color-gold-text); }
+
+.footer-parts { padding: 24px 0 28px; border-top: 1px solid var(--color-border); }
+.footer-parts-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px 28px; }
+.footer-ref {
+  display: inline-block;
+  min-width: 2.6em;
+  margin-right: 0.35em;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+
+.footer-foot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  border-top: 1px solid var(--color-border);
+  padding-top: 20px;
+}
+.footer-foot-meta { padding-bottom: 16px; font-size: 12px; color: var(--color-text-muted); }
+.footer-copyright { margin-top: 6px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; }
+
+/* Title block, flush with the sheet's bottom-right corner. */
+.footer-tb {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  width: min(100%, 38rem);
+  margin: 0 calc(-1 * var(--sheet-pad) - 1px) -1px 0;
+  border-top: 1px solid var(--color-border-strong);
+  border-left: 1px solid var(--color-border-strong);
+  background: var(--color-bg);
+}
+.footer-tb-cell {
+  min-width: 0;
+  padding: 6px 10px 7px;
+  border-right: 1px solid var(--color-border-strong);
+  border-bottom: 1px solid var(--color-border-strong);
+}
+.footer-tb-s2 { grid-column: span 2; }
+.footer-tb-s3 { grid-column: span 3; }
+.footer-tb-s4 { grid-column: span 4; }
+.footer-tb-s6 { grid-column: span 6; }
+.footer-tb-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.footer-tb-value {
+  margin: 1px 0 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+.footer-tb-title { font-family: var(--font-display); font-size: 20px; font-weight: 700; letter-spacing: 0.02em; }
+
+@media (max-width: 1023px) {
+  .footer-parts-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .footer-top { grid-template-columns: minmax(0, 1fr); }
+  .footer-view { display: none; }
+}
+@media (max-width: 767px) {
+  .footer-foot { flex-direction: column-reverse; align-items: stretch; }
+  .footer-tb { width: auto; margin-left: calc(-1 * var(--sheet-pad)); }
+  .footer-foot-meta { padding-bottom: 20px; }
+}
+@media (max-width: 639px) {
+  .footer-drawing { --zone: 14px; --sheet-pad: 16px; }
+  .footer-zone-row, .footer-zone-col { font-size: 8px; }
+  .footer-parts-grid { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .footer-note { grid-template-columns: 1.8em minmax(0, 1fr); }
+  /* Phone: identity rows full width, the registration numbers paired. */
+  .footer-tb-cell:is([data-cell='company'], [data-cell='address'], [data-cell='email_label']) { grid-column: span 6; }
+  .footer-tb-cell:is([data-cell='kbo'], [data-cell='vat']) { grid-column: span 3; }
 }
 
 /* Shopping: one decision at a time, supporting detail on demand. */

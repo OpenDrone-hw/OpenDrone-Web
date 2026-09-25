@@ -7,6 +7,11 @@ import '@total-typescript/ts-reset';
 // Extend the Worker Env interface with project env vars so context.env.* is
 // strongly typed in routes.
 declare global {
+  // Build stamp from vite.config.ts `define`: short commit hash ('' when the
+  // build had no git) and ISO build date.
+  const __BUILD_REV__: string;
+  const __BUILD_DATE__: string;
+
   // The Workers runtime types are declared minimally here, only for what
   // the app uses. The full @cloudflare/workers-types package redeclares DOM
   // globals such as Element with Workers-only signatures, which breaks
