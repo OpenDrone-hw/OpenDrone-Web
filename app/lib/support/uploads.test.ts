@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {MAX_FILES, MAX_PER_FILE_BYTES, checkFiles, contentMatchesExtension, extractAttachments} from './uploads.ts';
+import {MAX_FILES, MAX_PER_FILE_BYTES, checkFileContent, checkFiles, contentMatchesExtension, extractAttachments, inspectContent} from './uploads.ts';
 
 const MB = 1024 * 1024;
 const f = (name: string, size: number, type = '') => ({name, size, type});
@@ -46,10 +46,10 @@ describe('file content checks (tester 2)', () => {
     assert.equal(contentMatchesExtension('x.jpg', exe), false);
     assert.equal(contentMatchesExtension('x.jpg', jpg), true);
     assert.equal(contentMatchesExtension('flight.mp4', mp4), true);
-    assert.equal(contentMatchesExtension('LOG00001.bbl', exe), true, 'logs have no signature');
+    assert.equal(contentMatchesExtension('LOG00001.bbl', new Uint8Array([1, 2, 3, 4])), true, 'logs have no signature');
     const form = new FormData();
     form.append('files', new File([exe], 'holiday.jpg', {type: 'image/jpeg'}));
-    assert.deepEqual(await extractAttachments(form), {ok: false, problem: 'type', file: 'holiday.jpg'});
+    assert.deepEqual(await extractAttachments(form), {ok: false, problem: 'program', file: 'holiday.jpg'});
   });
 
   it('treats an untouched file input as no file', async () => {
@@ -75,5 +75,37 @@ describe('extractAttachments', () => {
     form.append('files', new File(['<svg/>'], 'logo.svg', {type: 'image/svg+xml'}));
     const r = await extractAttachments(form);
     assert.deepEqual(r, {ok: false, problem: 'type', file: 'logo.svg'});
+  });
+});
+
+describe('content checks (round 3)', () => {
+  const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+  it('accepts a PNG saved as .jpg and passes on its real type', async () => {
+    assert.deepEqual(inspectContent('photo.jpg', png), {ok: true, type: 'image/png'});
+    const form = new FormData();
+    form.append('files', new File([png], 'photo.jpg', {type: 'image/jpeg'}));
+    const r = await extractAttachments(form);
+    assert.ok(r.ok);
+    assert.equal(r.files[0]!.type, 'image/png');
+  });
+
+  it('refuses Windows, Linux and macOS programs under any extension', () => {
+    const heads = [
+      [0x4d, 0x5a, 0x90, 0],
+      [0x7f, 0x45, 0x4c, 0x46, 2, 1],
+      [0xcf, 0xfa, 0xed, 0xfe],
+      [0xca, 0xfe, 0xba, 0xbe],
+    ];
+    for (const h of heads) {
+      for (const name of ['log.txt', 'LOG1.bbl', 'fw.bin', 'photo.png']) {
+        assert.deepEqual(inspectContent(name, new Uint8Array(h)), {ok: false, problem: 'program'}, `${name} ${h[0]}`);
+      }
+    }
+  });
+
+  it('says a non-image named .png does not match, before upload', async () => {
+    assert.deepEqual(await checkFileContent(new File(['hello'], 'shot.png')), {problem: 'mismatch', file: 'shot.png'});
+    assert.equal(await checkFileContent(new File([png], 'shot.png')), null);
   });
 });

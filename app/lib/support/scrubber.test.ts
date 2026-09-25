@@ -242,3 +242,34 @@ describe('scrubForPublic: tester findings', () => {
     assert.equal(scrubForPublic('Call us on +32 16 12 34 56.', {keepPhones: ['+32 16 12 34 56']}).content, 'Call us on +32 16 12 34 56.');
   });
 });
+
+describe('scrubForPublic: round 3 false positives', () => {
+  const same = (text: string) => assert.equal(scrubForPublic(text).content, text, text);
+
+  it('keeps tracking numbers, order ranges, motor specs, VAT numbers and date-times', () => {
+    same('Tracking: 3SABCD123456789, via PostNL.');
+    same('Orders #1042-1045 ship together.');
+    same('Use a 2207 1750KV motor.');
+    same('Invoice from Incutec, VAT BE 1038.934.039.');
+    same('BTW BE 0438.934.039 staat op de factuur.');
+    same('We ship on 2026-09-25 14:30 from Leuven.');
+    same('Pickup 25/09/2026 09:15.');
+  });
+
+  it('still redacts Belgian and international phone numbers, IBANs, emails and admin links', () => {
+    for (const phone of ['0470/12.34.56', '+32 470 12 34 56', '0032 470 12 34 56', '016 12 34 56', '+31 6 12345678']) {
+      assert.match(scrubForPublic(`bel ${phone} aub`).content, /\[phone redacted\]/, phone);
+    }
+    assert.match(scrubForPublic('BE68 5390 0754 7034').content, /\[iban redacted\]/);
+    assert.match(scrubForPublic('mail jan@gmail.com').content, /\[email redacted\]/);
+    assert.equal(scrubForPublic('mail returns@opendrone.be').content, 'mail returns@opendrone.be');
+    assert.match(scrubForPublic('https://admin.shopify.com/store/x/orders/1').content, /\[internal link redacted\]/);
+    assert.match(scrubForPublic('https://shop.myshopify.com/admin/orders/1').content, /\[internal link redacted\]/);
+  });
+
+  it('redacts spelled-out email addresses, except the company ones', () => {
+    assert.equal(scrubForPublic('write jan (at) example (dot) com').content, 'write [email redacted]');
+    assert.equal(scrubForPublic('write jan[at]example.com').content, 'write [email redacted]');
+    assert.equal(scrubForPublic('write returns (at) opendrone (dot) be').content, 'write returns (at) opendrone (dot) be');
+  });
+});

@@ -3,8 +3,12 @@ import {ticketRateLimit} from '~/lib/support/limits';
 import {authorizedTicket, originOf, supportDeps, supportReady} from '~/lib/support/server';
 import {publicMessage, syncTicket} from '~/lib/support/tickets';
 import {parseTicketRef} from '~/lib/support/tokens';
+import {handleTicketAction, jsonOutcome} from '~/lib/support/handlers';
 
 /**
+ * POST /api/support/tickets/<ref>: the ticket page's reply, solve and
+ * replace-link with JavaScript, as JSON (the page's own action without it).
+ *
  * GET /api/support/tickets/<ref>?after=<seq>: the ticket page's refresh.
  * Reads the Discord thread (throttled per ticket), then answers with the
  * status and the messages after `after`. Cookie-authorised like the page.
@@ -30,4 +34,8 @@ export async function loader({request, params, context}: Route.LoaderArgs) {
   await deps.store.updateTicket(ref, {customerSeenAt: Date.now()});
   const messages = await deps.store.messages(ref, after, 100);
   return json({ok: true, status: synced.status, locked: synced.locked, messages: messages.map(publicMessage)});
+}
+
+export async function action({request, params, context}: Route.ActionArgs) {
+  return jsonOutcome(await handleTicketAction(request, context, params.ref));
 }

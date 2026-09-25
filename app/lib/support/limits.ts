@@ -49,6 +49,16 @@ export const DOOR_LIMITS = {
 
 type Door = keyof typeof DOOR_LIMITS;
 
+/**
+ * Order-number misses in "find my ticket", per email and across every IP:
+ * a leaky bucket of FIND_MISS_CAPACITY that drains one miss every
+ * FIND_MISS_DRAIN_MS. Order numbers are sequential, so without it a guesser
+ * with many IPs could walk them for one email. The ticket number still
+ * finds a ticket while the bucket is full.
+ */
+export const FIND_MISS_CAPACITY = 8;
+export const FIND_MISS_DRAIN_MS = 6 * HOUR;
+
 const enc = new TextEncoder();
 
 async function hashKey(secret: string, parts: string[]): Promise<string> {
@@ -58,9 +68,30 @@ async function hashKey(secret: string, parts: string[]): Promise<string> {
 }
 
 /**
- * Count one attempt through an anonymous door against every rule given.
- * Returns false when any rule is over its limit. A counter that cannot be
- * written fails open: the in-memory per-IP limit below still applies.
+ * The address a limit counts: an IPv4 address as is, an IPv6 address by
+ * its /64 (one subscriber usually holds a whole /64, so counting single
+ * addresses would give them billions of tries).
+ */
+export function ipBucket(ip: string): string {
+  const raw = ip.trim().toLowerCase().replace(/^\[|\]$/g, '').replace(/%.*$/, '');
+  if (!raw.includes(':')) return raw;
+  const mapped = raw.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+  if (mapped) return mapped[1]!;
+  const [head = '', tail] = raw.split('::');
+  const left = head ? head.split(':') : [];
+  const right = tail !== undefined && tail ? tail.split(':') : [];
+  const fill = tail === undefined ? [] : Array<string>(Math.max(0, 8 - left.length - right.length)).fill('0');
+  const groups = [...left, ...fill, ...right];
+  if (groups.length !== 8 || groups.some((g) => !/^[0-9a-f]{1,4}$/.test(g))) return raw;
+  return `${groups.slice(0, 4).map((g) => g.replace(/^0+(?=.)/, '')).join(':')}::/64`;
+}
+
+/**
+ * Count one attempt through an anonymous door, rule by rule in the order
+ * given (per IP first). The first rule over its limit answers false and
+ * the later rules are not counted, so a blocked IP writes no IP-plus-email
+ * rows. A counter that cannot be written fails open: the in-memory limit
+ * still applies. The first part of every rule is the client IP.
  */
 export async function doorAllowed(
   store: SupportStore,
@@ -68,17 +99,39 @@ export async function doorAllowed(
   rules: Array<[Door, ...string[]]>,
   now = Date.now(),
 ): Promise<boolean> {
-  let allowed = true;
-  for (const [door, ...parts] of rules) {
+  for (const [door, ip = '', ...rest] of rules) {
+    const parts = [ipBucket(ip), ...rest];
     const {limit, windowMs} = DOOR_LIMITS[door];
     // Isolate-local first: cheap and survives a D1 hiccup.
-    if (!checkRateLimit(`support:${door}:${parts.join('|')}`, limit, windowMs).allowed) allowed = false;
+    if (!checkRateLimit(`support:${door}:${parts.join('|')}`, limit, windowMs).allowed) return false;
     try {
       const count = await store.hit(await hashKey(secret, [door, ...parts]), windowMs, now);
-      if (count > limit) allowed = false;
+      if (count > limit) return false;
     } catch {
       console.warn('[support] rate counter unavailable', door);
     }
   }
-  return allowed;
+  return true;
+}
+
+const DRAIN_PER_MS = 1 / FIND_MISS_DRAIN_MS;
+
+/** Whether this email may try another order number. Fails open without D1. */
+export async function orderGuessAllowed(store: SupportStore, secret: string, email: string, now = Date.now()): Promise<boolean> {
+  try {
+    const level = await store.bucket(await hashKey(secret, ['findMiss', email]), 0, DRAIN_PER_MS, now);
+    return level + 1 <= FIND_MISS_CAPACITY;
+  } catch {
+    console.warn('[support] find miss counter unavailable');
+    return true;
+  }
+}
+
+/** Record an order number Shopify did not confirm for this email. */
+export async function recordOrderMiss(store: SupportStore, secret: string, email: string, now = Date.now()): Promise<void> {
+  try {
+    await store.bucket(await hashKey(secret, ['findMiss', email]), 1, DRAIN_PER_MS, now);
+  } catch {
+    console.warn('[support] find miss counter unavailable');
+  }
 }

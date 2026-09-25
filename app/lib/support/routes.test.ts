@@ -4,6 +4,7 @@ import {describe, it} from 'node:test';
 import {supportHeaders} from './server.ts';
 
 const route = (name: string) => readFileSync(new URL(`../../routes/${name}`, import.meta.url), 'utf8');
+const lib = (name: string) => readFileSync(new URL(`./${name}`, import.meta.url), 'utf8');
 
 describe('support route headers (security finding 3)', () => {
   it('every support page exports headers', () => {
@@ -40,14 +41,17 @@ describe('per-ticket limits run after authorisation (findings 4 and 6)', () => {
   });
 
   it('reply, solve and replace-link share one write limit, after authorisation', () => {
-    const src = route('support_.t.$ref.tsx');
+    // The page action and its JSON twin both run handlers.ts.
+    for (const f of ['support_.t.$ref.tsx', 'api.support.tickets.$ref.tsx']) assert.match(route(f), /handleTicketAction\(/, f);
+    const src = lib('handlers.ts');
     assert.ok(after(src, 'authorizedTicket(', "ticketRateLimit('write'"));
     assert.ok(after(src, "ticketRateLimit('write'", "intent === 'solve'"));
     assert.ok(after(src, "ticketRateLimit('write'", "intent === 'reset'"));
   });
 
   it('anonymous doors count in D1 by IP and IP plus email, never email alone', () => {
-    assert.match(route('support.tsx'), /\['createPerIp', ip\],\s*\['createPerIpEmail', ip, parsed\.input\.email\]/);
+    for (const f of ['support.tsx', 'api.support.new.tsx']) assert.match(route(f), /handleCreate\(/, f);
+    assert.match(lib('handlers.ts'), /\['createPerIp', ip\],\s*\['createPerIpEmail', ip, parsed\.input\.email\]/);
     assert.match(route('support_.find.tsx'), /\['findPerIp', ip\],\s*\['findPerIpEmail', ip, email\]/);
   });
 });

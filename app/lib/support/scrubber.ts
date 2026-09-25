@@ -50,8 +50,13 @@ type Pattern = {
 /** The company's own mail domains: a reply may name returns@opendrone.be. */
 const OWN_DOMAIN = /@(?:[\w-]+\.)*(?:opendrone\.be|incutec\.[a-z]{2,})$/i;
 
-/** 2026-09-25, 25/09/2026, 25.09.26: dates, not phone numbers. */
-const DATE_RE = /^(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[./-]\d{1,2}[./-]\d{2,4})$/;
+/** 2026-09-25, 25/09/2026, 25.09.26, optionally with the hour of a time: dates, not phone numbers. */
+const DATE_RE = /^(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[./-]\d{1,2}[./-]\d{2,4})(?:[\sT]+\d{1,2})?$/;
+
+/** A Belgian company (VAT) number, 0438.934.039: not a phone number. */
+const COMPANY_NO_RE = /^[01]\d{3}\.\d{3}\.\d{3}$/;
+/** Words before a number that make it a company or VAT number. */
+const COMPANY_PREFIX_RE = /(?:\b(?:BE|VAT|BTW|TVA|KBO|BCE|ondernemingsnummer|numéro d'entreprise)\s*(?:nr\.?|no\.?)?\s*[:.]?\s*)$/i;
 
 // Bidi-override block (U+202A-U+202E, U+2066-U+2069) and C0/C1 control
 // chars (minus TAB/LF/CR). RegExp constructor form keeps ESLint
@@ -105,6 +110,13 @@ const PATTERNS: Pattern[] = [
     re: /\b\d{2}\.\d{2}\.\d{2}-\d{3}\.\d{2}\b/g,
     replace: '[id redacted]',
   },
+  // Spelled-out addresses: jan (at) example (dot) com, jan[at]example.com.
+  {
+    name: 'email-obfuscated',
+    re: /\b[\w.+-]+\s*[([{]\s*at\s*[)\]}]\s*[\w-]+(?:\s*(?:\.|[([{]\s*dot\s*[)\]}])\s*[\w-]+)+/gi,
+    replace: '[email redacted]',
+    keep: (m) => OWN_DOMAIN.test(m.replace(/\s*[([{]\s*at\s*[)\]}]\s*/i, '@').replace(/\s*[([{]\s*dot\s*[)\]}]\s*/gi, '.').replace(/\s+/g, '')),
+  },
   // Email addresses. Deliberately simple: we prefer false positives
   // (over-redacting a string that looks like an email) to false negatives.
   {
@@ -125,8 +137,20 @@ const PATTERNS: Pattern[] = [
 
 // Phone-number detection is done after the above because naive phone
 // regex will eat Discord numeric IDs. After mentions are stripped, we
-// can look for runs of digits with typical phone separators.
-const PHONE_RE = /\+?\d[\d\s()./-]{7,}\d/g;
+// look for runs of digits with typical phone separators that stand alone
+// (not glued to letters, as in a tracking number, and not after `#`, as in
+// an order range), then keep only runs shaped like a phone number:
+// international (+32, 0032) or national with a leading 0 (0470 12 34 56).
+const PHONE_RE = /(?<![\w#+])\+?\d[\d\s()./-]{6,}\d(?!\w)/g;
+
+function looksLikePhone(match: string): boolean {
+  const trimmed = match.trim();
+  const digits = trimmed.replace(/\D/g, '');
+  if (trimmed.startsWith('+')) return digits.length >= 8 && digits.length <= 15;
+  if (/^00[1-9]/.test(digits)) return digits.length - 2 >= 8 && digits.length - 2 <= 15;
+  if (/^0[1-9]/.test(digits)) return digits.length >= 9 && digits.length <= 12;
+  return false;
+}
 
 // Payment card. Luhn-validate to reduce false positives on serial
 // numbers, Discord IDs, and firmware build hashes.
@@ -166,17 +190,12 @@ export function scrubForPublic(raw: string, opts: ScrubOptions = {}): ScrubResul
       });
     }
 
-    content = content.replace(PHONE_RE, (match) => {
-      if (DATE_RE.test(match.trim())) return match;
+    content = content.replace(PHONE_RE, (match, offset: number, whole: string) => {
+      const trimmed = match.trim();
+      if (DATE_RE.test(trimmed) || COMPANY_NO_RE.test(trimmed)) return match;
+      if (COMPANY_PREFIX_RE.test(whole.slice(Math.max(0, offset - 40), offset))) return match;
       if (keepPhones.has(match.replace(/\D/g, ''))) return match;
-      // Don't redact short runs that are just version numbers (`1.2.3.4`)
-      // or IPs: the pattern already requires 8+ digits, so we mainly
-      // guard against "build 12345678" style strings by checking for any
-      // punctuation that isn't digit-or-separator. The regex itself
-      // already does that, but we also want to skip strings that are
-      // mostly dots (version) vs mostly spaces/dashes (phone).
-      const digits = match.replace(/\D/g, '');
-      if (digits.length < 8 || digits.length > 15) return match;
+      if (!looksLikePhone(match)) return match;
       redactions += 1;
       reasons.push('phone');
       return '[phone redacted]';

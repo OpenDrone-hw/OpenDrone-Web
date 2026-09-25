@@ -23,6 +23,7 @@ import {
   type SupportEnv,
 } from './tickets.ts';
 import {isEmail, normalizeOrderNumber} from './shopify.ts';
+import {FIND_MISS_CAPACITY, FIND_MISS_DRAIN_MS} from './limits.ts';
 import {fakeDiscord, fakeShopify, testD1, type ShopifyScript} from './testing.ts';
 
 const probe = await testD1();
@@ -151,7 +152,8 @@ describe('createTicket', {skip}, () => {
     assert.equal(t.customerId, 'gid://shopify/Customer/1');
     const thread = discord.threads.get(t.threadId)!;
     assert.match(thread.messages[0]!.content, new RegExp(t.ref));
-    assert.match(plain(thread.messages[0]!.content), /email verified by order #1042/);
+    assert.match(plain(thread.messages[0]!.content), /email and order #1042 match \(not proof of identity\)/);
+    assert.match(plain(thread.messages[0]!.content), /Do not change the address or refund on this ticket alone/);
     assert.match(plain(thread.messages[0]!.content), /#1042 · 2026-08-02 · PAID · UNFULFILLED · preorder · batch 2 of OD-FC-F4/);
     assert.doesNotMatch(thread.messages[0]!.content, /vip/);
     assert.match(thread.messages[1]!.content, /^\*\*Jan · customer\*\*\n>>> My preorder/);
@@ -213,7 +215,7 @@ describe('createTicket', {skip}, () => {
     const t = await createTicket(deps, input());
     assert.doesNotMatch(discord.threads.get(t.threadId)!.messages[0]!.content, /jan@example.com/);
     assert.equal(discord.channelPosts.length, 1);
-    assert.match(plain(discord.channelPosts[0]!.content), /<jan@example.com> · verified by order #1042/);
+    assert.match(plain(discord.channelPosts[0]!.content), /<jan@example.com> · email and order #1042 match \(not proof of identity\)/);
     assert.match(discord.channelPosts[0]!.content, /admin\.shopify\.com\/store\/opendrone-test\/customers\/1/);
   });
 
@@ -421,6 +423,20 @@ describe('findTickets', {skip}, () => {
     assert.equal(orderQueries, 2);
   });
 
+  it('stops order-number guesses for one email after a few misses, from any IP (finding a)', async () => {
+    const {deps} = await setup();
+    const real = await createTicket(deps, input());
+    for (let i = 0; i < FIND_MISS_CAPACITY; i++) assert.deepEqual(await findTickets(deps, 'jan@example.com', String(2000 + i)), []);
+    // Full: even the right order number finds nothing now, but the ticket number still does.
+    assert.deepEqual(await findTickets(deps, 'jan@example.com', '1042'), []);
+    assert.deepEqual((await findTickets(deps, 'jan@example.com', real.ref)).map((t) => t.ref), [real.ref]);
+    // Another email is not affected.
+    assert.equal((await findTickets(deps, 'eva@example.com', '1077')).length, 0);
+    // One miss drains every few hours.
+    clock += FIND_MISS_DRAIN_MS;
+    assert.deepEqual((await findTickets(deps, 'jan@example.com', '1042')).map((t) => t.ref), [real.ref]);
+  });
+
   it('answers nothing for malformed input', async () => {
     const {deps} = await setup();
     assert.deepEqual(await findTickets(deps, 'not-an-email', '1042'), []);
@@ -477,14 +493,15 @@ describe('notifications', {skip}, () => {
     }) as unknown as typeof fetch;
     const t = await createTicket(deps, input());
     clock += 60_000;
-    discord.staff(t.threadId, 'The secret answer is 42');
+    discord.staff(t.threadId, 'The secret answer is kumquat');
     clock += 11 * 60_000;
     assert.equal((await runScheduled(deps)).notified, 1);
     assert.equal((await runScheduled(deps)).notified, 0);
     assert.equal(sent.length, 1);
     assert.deepEqual(sent[0]!.to, ['jan@example.com']);
     assert.match(sent[0]!.text, /https:\/\/opendrone\.test\/support\/resume\?t=/);
-    assert.doesNotMatch(sent[0]!.text, /42/);
+    // A word that cannot occur in the random token, so the check never flakes.
+    assert.doesNotMatch(sent[0]!.text, /kumquat/);
   });
 });
 
@@ -553,6 +570,16 @@ describe('unverified email (security finding 2)', {skip}, () => {
     assert.equal(shopify.writes.length, writesBefore);
   });
 
+  it('marks earlier tickets without a matching order on a matched card', async () => {
+    const {deps, discord} = await setup();
+    const stranger = await createTicket(deps, input({topic: 'other', orderNumber: null, message: 'Change my address please.'}));
+    clock += 1000;
+    const real = await createTicket(deps, input());
+    const card = plain(discord.threads.get(real.threadId)!.messages[0]!.content);
+    assert.match(card, new RegExp(`${stranger.ref}\\]\\([^)]*\\) open \\(email not verified\\)`));
+    assert.match(card, /Do not change the address or refund on this ticket alone/);
+  });
+
   it('treats a typed order number of someone else as unverified', async () => {
     const {deps, discord, shopify} = await setup();
     const t = await createTicket(deps, input({orderNumber: '#1077'}));
@@ -590,7 +617,7 @@ describe('Discord text from customers (finding 7)', {skip}, () => {
     assert.match(card!, /Product: \\\[click\\\]\\\(https\\:/);
     assert.match(card!, /Firmware: \\<\\@&555\\>/);
     assert.match(post!, /^\*\*\\\*\\\*Admin\\\*\\\* · customer\*\*\n>>> /);
-    assert.match(post!, /opendrone\.be \(https:\/\/evil\.example\/pay\)/);
+    assert.match(post!, /opendrone\.be \\\(https:\/\/evil\.example\/pay\\\)/);
     assert.doesNotMatch(discord.threads.get(t.threadId)!.name, /[*@<>[\]]/);
   });
 });

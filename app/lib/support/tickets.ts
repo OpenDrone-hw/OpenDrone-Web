@@ -29,7 +29,7 @@ import {
   cleanText,
   compareSnowflakes,
   escapeDiscord,
-  neutralizeLinks,
+  customerBody,
   threadName,
   threadUrl,
   type DiscordClient,
@@ -54,6 +54,7 @@ import {
 } from './shopify.ts';
 import type {SupportStore, Ticket, TicketMessage, TicketStatus, TicketTopic} from './store.ts';
 import {newTicketRef, parseTicketRef, resumeUrl, signResumeToken} from './tokens.ts';
+import {FIND_MISS_CAPACITY, FIND_MISS_DRAIN_MS, orderGuessAllowed, recordOrderMiss} from './limits.ts';
 import {LIMITS, TOPIC_FIELDS, TOPICS, normalizeText} from './form.ts';
 
 export {LIMITS, TOPIC_FIELDS, TOPICS, normalizeText};
@@ -205,7 +206,9 @@ function identityLine(customer: CustomerContext, verifiedBy: string | null): str
         : customer.match === 'multiple'
           ? 'several Shopify customers share this email: not linked'
           : 'no Shopify customer account (guest order)';
-    return `email verified by order ${verifiedBy} · ${who}`;
+    // Order numbers are sequential and printed on shipping labels: a match
+    // is a strong hint, not proof that the writer owns the mailbox.
+    return `email and order ${verifiedBy} match (not proof of identity) · ${who}`;
   }
   if (customer.match === 'unverified') {
     return '**email not verified**: a Shopify customer uses this email, but no order of it was given. Ask for the order number before sharing any order details.';
@@ -221,7 +224,7 @@ export function staffCard(opts: {
   input: NewTicketInput;
   customer: CustomerContext;
   order: OrderSummary | null;
-  earlier?: Array<Pick<Ticket, 'ref' | 'status' | 'threadId'>>;
+  earlier?: Array<Pick<Ticket, 'ref' | 'status' | 'threadId' | 'orderVerified'>>;
 }): string {
   const {env, ref, input, customer, order, earlier = []} = opts;
   const role = env.SUPPORT_MOD_ROLE_ID ? ` <@&${env.SUPPORT_MOD_ROLE_ID}>` : '';
@@ -241,7 +244,16 @@ export function staffCard(opts: {
   }
   const others = earlier.filter((t) => t.ref !== ref).slice(0, 3);
   if (order && others.length) {
-    lines.push(`Earlier tickets: ${others.map((t) => `[${t.ref}](<${threadUrl(env, t.threadId)}>) ${t.status}`).join(', ')}`);
+    // A ticket without a matching order could have been opened by anyone
+    // typing this email: marked, so its words are not read as the customer's.
+    lines.push(
+      `Earlier tickets: ${others
+        .map((t) => `[${t.ref}](<${threadUrl(env, t.threadId)}>) ${t.status}${t.orderVerified ? '' : ' (email not verified)'}`)
+        .join(', ')}`,
+    );
+  }
+  if (order) {
+    lines.push('Do not change the address or refund on this ticket alone: wait for a reply from the email on the Shopify order.');
   }
   lines.push('', 'Reply in this thread to answer. `// note` stays internal. `!waiting` asks the customer, `!answered`, `!close` closes, `!open` reopens.');
   if (resolveMode(env) === 'enforce') {
@@ -256,7 +268,7 @@ export function staffCard(opts: {
  * so it can never pass for a staff message or hide a link.
  */
 export function customerPost(name: string, text: string): string[] {
-  const body = neutralizeLinks(text) || '(attachment)';
+  const body = customerBody(text) || '(attachment)';
   return chunkMessage(body, 1800).map((chunk, i) => `${i === 0 ? `**${escapeDiscord(firstName(name))} · customer**\n` : ''}>>> ${chunk}`);
 }
 
@@ -361,7 +373,7 @@ export async function createTicket(deps: Deps, input: NewTicketInput, files: Out
         metaChannel,
         [
           `**${ref}** · ${TOPIC_LABEL[input.topic]}`,
-          `${escapeDiscord(cleanText(input.name))} <${escapeDiscord(input.email)}> · ${order ? `verified by order ${order.name}` : 'email not verified'}`,
+          `${escapeDiscord(cleanText(input.name))} <${escapeDiscord(input.email)}> · ${order ? `email and order ${order.name} match (not proof of identity)` : 'email not verified'}`,
           customerId ? `Shopify: ${customerAdminUrl(deps.env, customerId) ?? customerId}` : `Shopify: ${customer.match}`,
           `Thread: ${threadUrl(deps.env, threadId)}`,
         ].join('\n'),
@@ -635,7 +647,9 @@ export async function syncTicket(deps: Deps, ticket: Ticket, opts: {force?: bool
  * - an order number Shopify confirms for this email: the tickets filed with
  *   that order. An order number typed into a ticket proves nothing.
  * Shopify is asked on every order-number attempt, so the answer time does
- * not reveal whether the email has tickets.
+ * not reveal whether the email has tickets. Order numbers Shopify does not
+ * confirm count against the email across all IPs (limits.ts
+ * `orderGuessAllowed`); past that, only the ticket number finds a ticket.
  */
 export async function findTickets(deps: Deps, email: string, key: string): Promise<Ticket[]> {
   const mail = email.trim().toLowerCase();
@@ -647,11 +661,17 @@ export async function findTickets(deps: Deps, email: string, key: string): Promi
   }
   const order = normalizeOrderNumber(key);
   if (!order) return [];
+  const now = (deps.now ?? Date.now)();
+  const secret = deps.env.SUPPORT_SESSION_SECRET || deps.env.SESSION_SECRET || '';
+  if (!(await orderGuessAllowed(deps.store, secret, mail, now))) return [];
   const [owned, all] = await Promise.all([
     ownedOrder(deps.env, order, mail, null, deps.fetcher ?? fetch),
     deps.store.ticketsByEmail(mail, 50),
   ]);
-  if (!owned) return [];
+  if (!owned) {
+    await recordOrderMiss(deps.store, secret, mail, now);
+    return [];
+  }
   return all.filter((t) => t.orderNumber === order);
 }
 
@@ -678,7 +698,11 @@ export async function cleanupExpired(deps: Deps, opts: {dryRun?: boolean; limit?
     try {
       if (t.customerId && shopifyWritesEnabled(deps.env)) {
         const removed = await recordOnCustomer(deps.env, t.customerId, shopifyEntry(deps, t), {remove: true}, deps.fetcher ?? fetch);
-        if (!removed) continue;
+        if (!removed) {
+          // Ticket reference only: no email, name or Shopify id in logs.
+          console.warn('[support] cleanup kept for retry', t.ref, 'shopify entry not removed');
+          continue;
+        }
       }
       await deps.discord.deleteThread(t.threadId);
       const meta = deps.env.DISCORD_STAFF_METADATA_CHANNEL_ID;
@@ -723,7 +747,7 @@ export async function runScheduled(deps: Deps): Promise<JobReport> {
   }
 
   report.deleted = await cleanupExpired(deps, {limit: 10});
-  await deps.store.pruneRate(now - DAY).catch(() => {});
+  await deps.store.pruneRate(now - DAY, now - FIND_MISS_CAPACITY * FIND_MISS_DRAIN_MS).catch(() => {});
   return report;
 }
 

@@ -73,6 +73,7 @@ export function fakeDiscord(opts: {failCreate?: boolean; now?: () => number} = {
   const reactions: Array<{thread: string; message: string; emoji: string}> = [];
   const reactorMap = new Map<string, string[]>();
   let roleMembers: string[] = [];
+  const lookups = {reactors: 0};
 
   function add(threadId: string, content: string, author: DiscordMessage['author'], files: OutboundFile[] = []): DiscordMessage {
     const t = threads.get(threadId);
@@ -145,6 +146,7 @@ export function fakeDiscord(opts: {failCreate?: boolean; now?: () => number} = {
       reactions.push({thread, message, emoji});
     },
     async reactors(_thread, message) {
+      lookups.reactors++;
       return reactorMap.get(message) ?? [];
     },
     async roleMembers() {
@@ -157,6 +159,7 @@ export function fakeDiscord(opts: {failCreate?: boolean; now?: () => number} = {
     threads,
     channelPosts,
     reactions,
+    lookups,
     /** A staff member writes in a thread. */
     staff(threadId: string, content: string, who = {id: 'u1', username: 'jan', globalName: 'Jan Peeters'}) {
       return add(threadId, content, {...who, bot: false});
@@ -172,7 +175,9 @@ export function fakeDiscord(opts: {failCreate?: boolean; now?: () => number} = {
       t.messages = t.messages.filter((x) => x.id !== messageId);
     },
     approve(message: DiscordMessage, userId: string, emoji = '✅') {
-      message.reactions.push({emoji, count: 1, me: false});
+      const r = message.reactions.find((x) => x.emoji === emoji);
+      if (r) r.count += 1;
+      else message.reactions.push({emoji, count: 1, me: false});
       reactorMap.set(message.id, [...(reactorMap.get(message.id) ?? []), userId]);
     },
     setRoleMembers(ids: string[]) {

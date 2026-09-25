@@ -1,5 +1,5 @@
-import {useEffect, useRef, useState} from 'react';
-import {data, Form, Link, useActionData, useFetcher, useLoaderData, useNavigate, useNavigation, useSearchParams} from 'react-router';
+import {useEffect, useRef, useState, type FormEvent} from 'react';
+import {data, Form, Link, useActionData, useFetcher, useLoaderData, useNavigate, useRevalidator, useSearchParams} from 'react-router';
 import {Paperclip} from 'lucide-react';
 import type {Route} from './+types/support_.t.$ref';
 import {buildSeoMeta} from '~/lib/seo';
@@ -10,29 +10,26 @@ import {
   FilePicker,
   fill,
   guardSubmit,
+  usePost,
   MessageBox,
   StatusPill,
   Stamp,
   SupportError,
   useDraft,
 } from '~/components/SupportUi';
-import {ticketRateLimit} from '~/lib/support/limits';
+import {handleTicketAction, type TicketActionResult} from '~/lib/support/handlers';
 import {notifyEnabled} from '~/lib/support/notify';
-import {authorizedTicket, originOf, sameOrigin, secureCookies, supportDeps, supportReady, supportHeaders} from '~/lib/support/server';
+import {authorizedTicket, originOf, supportDeps, supportReady, supportHeaders} from '~/lib/support/server';
 import {
-  addCustomerReply,
   byTime,
-  closeTicket,
   freshResumeUrl,
   publicMessage,
   publicTicket,
-  resetLink,
   syncTicket,
   type PublicMessage,
   type PublicTicket,
 } from '~/lib/support/tickets';
-import {parseTicketRef, withTicket} from '~/lib/support/tokens';
-import {extractAttachments} from '~/lib/support/uploads';
+import {parseTicketRef} from '~/lib/support/tokens';
 import type {TicketStatus} from '~/lib/support/store';
 
 /**
@@ -80,48 +77,11 @@ export async function loader({request, params, context}: Route.LoaderArgs) {
   );
 }
 
-type ActionResult = {ok: boolean; intent: string; error?: string; file?: string; at: number};
+type ActionResult = TicketActionResult;
 
 export async function action({request, params, context}: Route.ActionArgs) {
-  const env = context.env;
-  const answer = (body: Omit<ActionResult, 'at'>, status = 200, headers: Record<string, string> = {}) =>
-    data<ActionResult>({...body, at: Date.now()}, {status, headers: {...NO_STORE, ...headers}});
-  const ref = parseTicketRef(params.ref);
-  if (!sameOrigin(request)) return answer({ok: false, intent: 'unknown', error: 'err_forbidden'}, 403);
-  if (!ref || !supportReady(env)) return answer({ok: false, intent: 'unknown', error: 'err_unavailable'}, 404);
-  const deps = supportDeps(env, originOf(request), context.waitUntil);
-  const {ticket, cookie} = await authorizedTicket(deps, request, ref);
-  if (!ticket) return answer({ok: false, intent: 'unknown', error: 'err_forbidden'}, 403);
-
-  let form: FormData;
-  try {
-    form = await request.formData();
-  } catch {
-    return answer({ok: false, intent: 'reply', error: 'err_send'}, 400);
-  }
-  const intent = String(form.get('intent') ?? 'reply');
-  if (!ticketRateLimit('write', ref).allowed) return answer({ok: false, intent, error: 'err_rate'}, 429);
-
-  try {
-    if (ticket.locked && intent !== 'reset') return answer({ok: false, intent, error: 'err_locked'}, 409);
-    if (intent === 'solve') {
-      await closeTicket(deps, ticket, 'you');
-      return answer({ok: true, intent});
-    }
-    if (intent === 'reset') {
-      const next = await resetLink(deps, ticket);
-      const setCookie = await withTicket(env, cookie, {r: ref, k: next.linkVersion}, secureCookies(request));
-      return answer({ok: true, intent}, 200, {'Set-Cookie': setCookie});
-    }
-    const files = await extractAttachments(form);
-    if (!files.ok) return answer({ok: false, intent, error: `file_${files.problem}`, file: files.file}, 400);
-    const result = await addCustomerReply(deps, ticket, String(form.get('message') ?? ''), files.files);
-    if (!result.ok) return answer({ok: false, intent, error: `err_${result.error}`}, result.error === 'locked' ? 409 : 400);
-    return answer({ok: true, intent});
-  } catch (err) {
-    console.error('[support] ticket action failed', ref, intent, err instanceof Error ? err.message : 'error');
-    return answer({ok: false, intent, error: 'err_send'}, 502);
-  }
+  const o = await handleTicketAction(request, context, params.ref);
+  return data<ActionResult>(o.body, {status: o.status, headers: {...NO_STORE, ...(o.cookie ? {'Set-Cookie': o.cookie} : {})}});
 }
 
 const HINT: Record<TicketStatus, string> = {
@@ -232,10 +192,37 @@ function useLiveMessages(ref: string, initial: PublicMessage[], initialStatus: T
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ref, lastSeq]);
 
-  return {messages, status, locked, offline};
+  /** The team locked the ticket (a 409 on send): show it now, not at the next poll. */
+  function lockNow() {
+    setLocked(true);
+    setStatus('closed');
+  }
+
+  return {messages, status, locked, offline, lockNow};
 }
 
-function ReplaceLink() {
+type Post = ReturnType<typeof usePost<ActionResult>>['post'];
+
+/**
+ * Sends one of the ticket page's forms with fetch (the page stays, with
+ * its text and files, whatever happens) and reports the answer. Without
+ * JavaScript the same forms post to the page's action.
+ */
+function sendForm(post: Post, ref: string, intent: string, onDone: (r: ActionResult) => void) {
+  return (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    void post(`/api/support/tickets/${ref}`, form, {intent}).then((body) =>
+      onDone(body ?? {ok: false, intent, error: 'err_send', at: Date.now()}),
+    );
+  };
+}
+
+/**
+ * Kept on a locked ticket on purpose: the private link still opens the
+ * conversation, so its holder may want to revoke it.
+ */
+function ReplaceLink({onSubmit, busy}: {onSubmit: (e: FormEvent<HTMLFormElement>) => void; busy: boolean}) {
   const [asking, setAsking] = useState(false);
   const confirmRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -249,11 +236,11 @@ function ReplaceLink() {
     );
   }
   return (
-    <Form method="post" className="sp-confirm" role="group" aria-label={t('reset')}>
+    <Form method="post" className="sp-confirm" role="group" aria-label={t('reset')} onSubmit={onSubmit}>
       <input type="hidden" name="intent" value="reset" />
       <p>{t('reset_confirm')}</p>
       <div className="sp-actions">
-        <button ref={confirmRef} type="submit" className="od-btn od-btn-secondary od-btn-sm">
+        <button ref={confirmRef} type="submit" className="od-btn od-btn-secondary od-btn-sm" disabled={busy}>
           {t('reset_yes')}
         </button>
         <button type="button" className="od-btn od-btn-ghost od-btn-sm" onClick={() => setAsking(false)}>
@@ -277,21 +264,48 @@ function Ticket({ticket, messages: initial, link, notify}: Extract<Loaded, {foun
       clearDraft('new');
     }
   }, [params, navigate, ticket.ref]);
-  const result = useActionData<ActionResult>();
-  const nav = useNavigation();
-  const busyIntent = nav.state !== 'idle' ? String(nav.formData?.get('intent') ?? '') : '';
-  const sendingFiles = busyIntent === 'reply' && nav.formData?.getAll('files').some((f) => typeof f === 'object' && (f as File).size > 0);
-  const {messages, status, locked, offline} = useLiveMessages(ticket.ref, initial, ticket.status, ticket.locked);
+  // Without JavaScript the page's action answers; with it, sendForm.
+  const actionResult = useActionData<ActionResult>();
+  const [fetched, setFetched] = useState<ActionResult | null>(null);
+  const result = fetched ?? actionResult;
+  const {busy, sendingFiles: uploading, post} = usePost<ActionResult>();
+  const [busyIntent, setBusyIntent] = useState('');
+  const sendingFiles = busy && busyIntent === 'reply' && uploading;
+  const revalidator = useRevalidator();
+  const {messages, status, locked, offline, lockNow} = useLiveMessages(ticket.ref, initial, ticket.status, ticket.locked);
   const formRef = useRef<HTMLFormElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const [clientError, setClientError] = useState<string | null>(null);
+  // What is in the reply box, so a lock that lands mid-typing can show it as not sent.
+  const [draft, setDraft] = useState('');
+  const [errorDismissed, setErrorDismissed] = useState<number | null>(null);
   const count = messages.length;
   useDraft(formRef, ticket.ref);
+
+  function done(r: ActionResult) {
+    setBusyIntent('');
+    setFetched(r);
+    if (r.locked) lockNow();
+    if (r.ok) void revalidator.revalidate();
+  }
+  const send = (intent: string) => {
+    const handler = sendForm(post, ticket.ref, intent, done);
+    return (event: FormEvent<HTMLFormElement>) => {
+      if (intent === 'reply') {
+        const problem = guardSubmit(event);
+        setClientError(problem);
+        if (problem) return;
+      }
+      setBusyIntent(intent);
+      handler(event);
+    };
+  };
 
   useEffect(() => {
     if (result?.ok && result.intent === 'reply') {
       formRef.current?.reset();
       clearDraft(ticket.ref);
+      setDraft('');
       formRef.current?.querySelector('textarea')?.focus();
     }
     if (result && !result.ok) formRef.current?.querySelector<HTMLElement>('.sp-error')?.focus();
@@ -302,7 +316,8 @@ function Ticket({ticket, messages: initial, link, notify}: Extract<Loaded, {foun
   }, [count, initial.length]);
 
   const error =
-    clientError ?? (result && !result.ok && result.error ? t(result.error, {file: result.file ?? ''}) : null);
+    clientError ??
+    (result && !result.ok && result.error && errorDismissed !== result.at ? t(result.error, {file: result.file ?? ''}) : null);
 
   return (
     <div className="page-shell sp-page">
@@ -357,6 +372,14 @@ function Ticket({ticket, messages: initial, link, notify}: Extract<Loaded, {foun
 
           {locked ? (
             <div className="sp-locked">
+              {draft.trim() ? (
+                <div className="sp-unsent">
+                  <p className="sp-unsent-label">
+                    <span className="sp-status sp-status-closed">{t('unsent_label')}</span> {t('unsent_body')}
+                  </p>
+                  <textarea readOnly value={draft} rows={4} dir="auto" className="sp-input sp-textarea" aria-label={t('unsent_label')} />
+                </div>
+              ) : null}
               <p>{t('locked_body')}</p>
               <Link to="/support" className="od-btn od-btn-primary">
                 {t('find_new')}
@@ -369,7 +392,11 @@ function Ticket({ticket, messages: initial, link, notify}: Extract<Loaded, {foun
                 method="post"
                 encType="multipart/form-data"
                 className="sp-composer"
-                onSubmit={(e) => setClientError(guardSubmit(e))}
+                onSubmit={send('reply')}
+                onInput={(e) => {
+                  const el = e.target as HTMLTextAreaElement;
+                  if (el.name === 'message') setDraft(el.value);
+                }}
               >
                 <input type="hidden" name="intent" value="reply" />
                 <MessageBox label={t('reply_label')} placeholder={t('reply_placeholder')} rows={4} />
@@ -379,7 +406,14 @@ function Ticket({ticket, messages: initial, link, notify}: Extract<Loaded, {foun
                   </p>
                 ) : null}
                 <div className="sp-composer-row">
-                  <FilePicker compact disabled={busyIntent === 'reply'} />
+                  <FilePicker
+                    compact
+                    disabled={busyIntent === 'reply'}
+                    onChange={() => {
+                      setClientError(null);
+                      if (result) setErrorDismissed(result.at);
+                    }}
+                  />
                   <button type="submit" className="od-btn od-btn-primary" disabled={busyIntent === 'reply'}>
                     {busyIntent === 'reply' ? t('sending') : t('send')}
                   </button>
@@ -387,7 +421,7 @@ function Ticket({ticket, messages: initial, link, notify}: Extract<Loaded, {foun
                 {sendingFiles ? <p className="sp-hint">{t('uploading')}</p> : null}
               </Form>
               {status !== 'closed' ? (
-                <Form method="post" className="sp-solve">
+                <Form method="post" className="sp-solve" onSubmit={send('solve')}>
                   <input type="hidden" name="intent" value="solve" />
                   <button type="submit" className="od-btn od-btn-ghost od-btn-sm" disabled={busyIntent === 'solve'}>
                     {t('solve')}
@@ -408,7 +442,7 @@ function Ticket({ticket, messages: initial, link, notify}: Extract<Loaded, {foun
                 {t('reset_done')}
               </p>
             ) : (
-              <ReplaceLink />
+              <ReplaceLink onSubmit={send('reset')} busy={busyIntent === 'reset'} />
             )}
             <p className="sp-hint">{t(notify ? 'notify_on' : 'notify_off')}</p>
           </section>

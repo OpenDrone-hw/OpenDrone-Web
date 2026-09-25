@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
- * Support sandbox: a local, in-memory stand-in for the Discord API and the
- * Shopify Admin API, so the ticket system runs end to end on the dev server
- * without posting to the real Discord or touching the real Shopify store.
+ * Support sandbox: a local, in-memory stand-in for the Discord API, the
+ * Shopify Admin API and an empty Storefront catalogue, so the ticket system
+ * runs end to end on the dev server without posting to the real Discord or
+ * touching the real Shopify store.
  * README "Test support locally" has the walkthrough.
  *
  *   npm run support:sandbox -- [--port 5196] [--dev-port 5195] [--moderation off|enforce] [--write-env]
@@ -16,6 +17,8 @@
  *       waiting|close|open OD-XXXX-XXXX   the thread commands
  *       lock   OD-XXXX-XXXX          lock the thread (closes the ticket)
  *       approve OD-XXXX-XXXX [id]    a moderator ✅ on the last (or given) staff message
+ *       edit   OD-XXXX-XXXX [id] "text"   edit the last (or given) staff message
+ *       delete OD-XXXX-XXXX [id]     delete the last (or given) staff message
  *       state  [OD-XXXX-XXXX]        threads, metadata posts and Shopify writes as JSON
  *     SUPPORT_SANDBOX_PORT selects the sandbox (default 5196).
  *
@@ -48,7 +51,7 @@ function arg(name, fallback) {
 if (process.argv[2] === 'staff') {
   const [command, ref, ...rest] = process.argv.slice(3);
   const port = process.env.SUPPORT_SANDBOX_PORT || '5196';
-  const commands = ['reply', 'note', 'waiting', 'close', 'open', 'lock', 'approve', 'state'];
+  const commands = ['reply', 'note', 'waiting', 'close', 'open', 'lock', 'approve', 'edit', 'delete', 'state'];
   if (!commands.includes(command) || (command !== 'state' && !ref)) {
     console.error(`usage: npm run support:staff -- <${commands.join('|')}> <ticket-ref> [text]`);
     process.exit(2);
@@ -84,7 +87,7 @@ const shopifyWrites = [];
 
 function addMessage(thread, content, author, attachments = []) {
   thread.archived = false;
-  const m = {id: nextId(), content, timestamp: new Date().toISOString(), author, attachments, reactions: [], reactors: []};
+  const m = {id: nextId(), content, timestamp: new Date().toISOString(), edited_timestamp: null, author, attachments, reactions: [], reactors: []};
   thread.messages.push(m);
   return m;
 }
@@ -183,6 +186,10 @@ async function discord(req, res, url, body) {
   }
   const message = thread.messages.find((m) => m.id === parts[3]);
   if (!message) return send(res, 404, {});
+  if (parts.length === 4 && req.method === 'DELETE') {
+    thread.messages = thread.messages.filter((m) => m !== message);
+    return send(res, 204);
+  }
   if (parts.length === 4) return send(res, 200, publicMessage(message));
   if (parts[4] === 'reactions') {
     const emoji = decodeURIComponent(parts[5] ?? '');
@@ -249,9 +256,11 @@ function control(req, res, url, body) {
       shopifyWrites,
     });
   }
-  const {ref, text = ''} = JSON.parse(body.toString() || '{}');
-  // `approve REF <id>` passes the message id as the text.
-  const id = /^\d+$/.test(text.trim()) ? text.trim() : undefined;
+  const {ref, text: raw = ''} = JSON.parse(body.toString() || '{}');
+  // `approve|edit|delete REF <id> [text]`: a leading message id picks the message.
+  const picked = ['approve', 'edit', 'delete'].includes(command) ? raw.trim().match(/^(\d{6,})(?:\s+([\s\S]*))?$/) : null;
+  const id = picked?.[1];
+  const text = picked ? (picked[2] ?? '') : raw;
   const thread = [...threads.values()].find((t) => t.name.startsWith(`${ref} `));
   if (!thread) return send(res, 404, {error: `no thread for ${ref}`});
   if (command === 'lock') {
@@ -267,6 +276,18 @@ function control(req, res, url, body) {
     else m.reactions.push({emoji: {name: '✅'}, count: 1, me: false});
     m.reactors.push({emoji: '✅', user: MODERATOR.id});
     return send(res, 200, {ok: true, approved: m.id});
+  }
+  if (command === 'edit' || command === 'delete') {
+    const m = id ? thread.messages.find((x) => x.id === id) : thread.messages.filter((x) => !x.author.bot).at(-1);
+    if (!m || m.author.bot) return send(res, 404, {error: 'no staff message to change'});
+    if (command === 'delete') {
+      thread.messages = thread.messages.filter((x) => x !== m);
+      return send(res, 200, {ok: true, deleted: m.id});
+    }
+    if (!text) return send(res, 400, {error: 'edit needs text'});
+    m.content = text;
+    m.edited_timestamp = new Date().toISOString();
+    return send(res, 200, {ok: true, edited: m.id, content: text});
   }
   if (command === 'reply' && !text) return send(res, 400, {error: 'reply needs text'});
   const content = command === 'reply' ? text : STAFF_TEXT[command]?.(text);
@@ -294,6 +315,11 @@ const ENV_LINES = [
   // A dummy Admin token: the real one is never sent to the sandbox. (Preorder
   // paid counts, which use the same token, then fail closed on this dev server.)
   'SHOPIFY_ADMIN_API_TOKEN=sandbox-admin-token',
+  // A store domain that cannot resolve and an empty sandbox catalogue: no
+  // request of this dev server reaches the real store.
+  'SHOPIFY_STORE_DOMAIN=support-sandbox.invalid',
+  'SHOPIFY_STOREFRONT_TOKEN=sandbox-storefront-token',
+  `SUPPORT_DEV_STOREFRONT_URL=http://localhost:${PORT}/storefront`,
   'SUPPORT_SHOPIFY_WRITE_ENABLED=1',
   'SUPPORT_EMAIL_NOTIFY_ENABLED=0',
   // Cloudflare's always-pass test site key; the dev-only skip covers the missing secret.
@@ -324,6 +350,8 @@ http
     try {
       if (url.pathname.startsWith('/discord/')) return await discord(req, res, url, body);
       if (url.pathname === '/shopify') return shopify(res, body);
+      // Storefront API: an empty catalogue (no products, so no preorder counts either).
+      if (url.pathname === '/storefront') return send(res, 200, {data: {products: {pageInfo: {hasNextPage: false}, nodes: []}}});
       if (url.pathname.startsWith('/control/')) return control(req, res, url, body);
       if (url.pathname.startsWith('/cdn/')) {
         const f = files.get(url.pathname.split('/')[2]);

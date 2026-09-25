@@ -16123,7 +16123,9 @@ html.light .plugs {
 .sp-input::placeholder {color: var(--color-text-dim);}
 .sp-input:focus {outline: none; border-color: var(--color-gold);}
 .sp-input:focus-visible {outline: 2px solid var(--color-focus); outline-offset: 1px;}
-.sp-input[aria-invalid='true'] {border-color: var(--color-error);}
+.sp-input[aria-invalid='true'],
+.sp-input[aria-invalid='true']:focus,
+.sp-input[aria-invalid='true']:focus-visible {border-color: var(--color-error);}
 .sp-textarea {resize: vertical; min-height: 7.5rem;}
 .sp-hint {margin: 0; font-size: 13px; line-height: 1.5; color: var(--color-text-muted);}
 .sp-hint a {color: inherit; text-decoration: underline; text-underline-offset: 2px;}
@@ -16216,6 +16218,7 @@ html.light .plugs {
 /* Ticket page */
 .sp-crumbs {
   display: flex;
+  align-items: center;
   gap: 0.5rem;
   margin-bottom: 1rem;
   font-family: var(--font-mono);
@@ -16344,6 +16347,8 @@ html.light .plugs {
   border-radius: var(--r-sm);
 }
 .sp-locked p {margin: 0; color: var(--color-text-muted); font-size: 14px;}
+.sp-unsent {display: grid; gap: 0.5rem; width: 100%;}
+.sp-unsent .sp-textarea {opacity: 0.85; min-height: 5rem;}
 .sp-confirm {display: grid; gap: 0.5rem; width: 100%;}
 .sp-confirm p {margin: 0; font-size: 13px; color: var(--color-text);}
 .sp-banner:focus, .sp-error:focus {outline: 2px solid var(--color-focus); outline-offset: 2px;}

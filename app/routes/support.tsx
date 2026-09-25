@@ -1,5 +1,5 @@
-import {useEffect, useRef, useState} from 'react';
-import {data, Form, Link, redirect, useActionData, useLoaderData, useNavigation, useRouteLoaderData} from 'react-router';
+import {useEffect, useRef, useState, type FormEvent} from 'react';
+import {data, Form, Link, redirect, useActionData, useLoaderData, useNavigate, useRouteLoaderData} from 'react-router';
 import type {Route} from './+types/support';
 import {buildSeoMeta} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
@@ -10,26 +10,19 @@ import {
   FilePicker,
   fill,
   guardSubmit,
+  usePost,
   MessageBox,
   SupportError,
   TicketList,
   TurnstileBox,
   useDraft,
 } from '~/components/SupportUi';
-import {clientIp} from '~/lib/rate-limit';
-import {verifyTurnstile} from '~/lib/turnstile';
-import {doorAllowed} from '~/lib/support/limits';
+import {handleCreate, type CreateResult} from '~/lib/support/handlers';
 import {notifyEnabled} from '~/lib/support/notify';
-import {originOf, sameOrigin, secureCookies, supportDeps, supportReady, supportHeaders} from '~/lib/support/server';
-import {
-  createTicket,
-  parseNewTicket,
-  publicTicket,
-  type FieldError,
-  type NewTicketInput,
-} from '~/lib/support/tickets';
-import {readTicketCookie, withTicket} from '~/lib/support/tokens';
-import {extractAttachments} from '~/lib/support/uploads';
+import {originOf, supportDeps, supportReady, supportHeaders} from '~/lib/support/server';
+import {publicTicket, type FieldError, type NewTicketInput} from '~/lib/support/tickets';
+import type {FileProblem} from '~/lib/support/uploads';
+import {readTicketCookie} from '~/lib/support/tokens';
 import {TOPIC_FIELDS, TOPICS, type TicketTopic} from '~/lib/support/form';
 
 /**
@@ -102,57 +95,12 @@ export async function loader({request, context}: Route.LoaderArgs) {
   );
 }
 
-type Failure = 'unavailable' | 'rate' | 'turnstile' | 'send' | 'forbidden' | 'files';
-
-type ActionResult = {
-  ok: false;
-  failure?: Failure;
-  fileProblem?: string;
-  errors?: Partial<Record<keyof NewTicketInput, FieldError>>;
-  at: number;
-};
+type ActionResult = CreateResult;
 
 export async function action({request, context}: Route.ActionArgs) {
-  const env = context.env;
-  const fail = (body: Omit<ActionResult, 'ok' | 'at'>, status: number) =>
-    data<ActionResult>({ok: false, at: Date.now(), ...body}, {status});
-
-  if (!sameOrigin(request)) return fail({failure: 'forbidden'}, 403);
-  if (!supportReady(env)) return fail({failure: 'unavailable'}, 503);
-  const ip = clientIp(request);
-  let form: FormData;
-  try {
-    form = await request.formData();
-  } catch {
-    return fail({failure: 'send'}, 400);
-  }
-  // Honeypot: invisible to people.
-  if (String(form.get('website') ?? '') !== '') return fail({failure: 'forbidden'}, 400);
-
-  const parsed = parseNewTicket(form);
-  if (!parsed.ok) return fail({errors: parsed.errors}, 400);
-  const files = await extractAttachments(form);
-  if (!files.ok) return fail({failure: 'files', fileProblem: t(`file_${files.problem}`, {file: files.file ?? ''})}, 400);
-
-  const deps = supportDeps(env, originOf(request), context.waitUntil);
-  // Counted only for complete submissions, so fixing a typo never locks anyone out.
-  const allowed = await doorAllowed(deps.store, env.SUPPORT_SESSION_SECRET || env.SESSION_SECRET, [
-    ['createPerIp', ip],
-    ['createPerIpEmail', ip, parsed.input.email],
-  ]);
-  if (!allowed) return fail({failure: 'rate'}, 429);
-  const turnstile = await verifyTurnstile(env, String(form.get('cf-turnstile-response') ?? ''), ip);
-  if (!turnstile.ok) return fail({failure: 'turnstile'}, 400);
-
-  try {
-    const ticket = await createTicket(deps, parsed.input, files.files);
-    const current = await readTicketCookie(env, request);
-    const cookie = await withTicket(env, current, {r: ticket.ref, k: ticket.linkVersion}, secureCookies(request));
-    return redirect(`/support/t/${ticket.ref}?new=1`, {headers: {'Set-Cookie': cookie}});
-  } catch (err) {
-    console.error('[support] ticket not created', err instanceof Error ? err.message : 'error');
-    return fail({failure: 'send'}, 502);
-  }
+  const o = await handleCreate(request, context);
+  if (o.body.ok) return redirect(o.body.url, {headers: o.cookie ? {'Set-Cookie': o.cookie} : {}});
+  return data<ActionResult>(o.body, {status: o.status});
 }
 
 function FieldError({error, field}: {error?: FieldError; field: string}) {
@@ -169,17 +117,36 @@ function FieldError({error, field}: {error?: FieldError; field: string}) {
 function TicketForm() {
   const {products, notify, initialTopic} = useLoaderData<typeof loader>();
   const root = useRouteLoaderData('root') as {turnstileSiteKey?: string | null} | undefined;
-  const result = useActionData<ActionResult>();
-  const nav = useNavigation();
-  const busy = nav.state !== 'idle' && nav.formMethod?.toLowerCase() === 'post';
-  const sendingFiles = busy && nav.formData?.getAll('files').some((f) => typeof f === 'object' && (f as File).size > 0);
+  // Without JavaScript the page's action answers; with it, the fetch below.
+  const actionResult = useActionData<ActionResult>();
+  const [fetched, setFetched] = useState<ActionResult | null>(null);
+  const result = fetched ?? actionResult;
+  const {busy, sendingFiles, post} = usePost<ActionResult>();
+  const navigate = useNavigate();
   const [topic, setTopic] = useState<TicketTopic | null>(initialTopic);
   const [touched, setTouched] = useState(false);
   const [clientProblem, setClientProblem] = useState<string | null>(null);
+  // The banner of an answer goes once the files change: it may no longer apply.
+  const [bannerDismissed, setBannerDismissed] = useState<number | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const detailsRef = useRef<HTMLDivElement>(null);
   const bannerRef = useRef<HTMLParagraphElement>(null);
-  useDraft(formRef, 'new');
+  useDraft(formRef, 'new', initialTopic ? ['topic'] : []);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    const problem = guardSubmit(event);
+    setClientProblem(problem);
+    if (problem) return;
+    event.preventDefault();
+    const form = event.currentTarget;
+    const body = await post('/api/support/new', form);
+    if (body?.ok) {
+      void navigate(body.url);
+      return;
+    }
+    // No answer at all: the connection dropped. Everything typed and chosen stays.
+    setFetched(body ?? {ok: false, failure: 'send', at: Date.now()});
+  }
 
   // A field's error clears once it is edited after this answer; the next
   // submit decides again. Tied to the answer, so a new answer starts clean
@@ -187,8 +154,8 @@ function TicketForm() {
   const [edited, setEdited] = useState<{at: number; names: Set<string>}>({at: 0, names: new Set()});
   const editedNow = edited.at === result?.at ? edited.names : new Set<string>();
   const errors = Object.fromEntries(
-    Object.entries(result?.errors ?? {}).filter(([k]) => !editedNow.has(k === 'orderNumber' ? 'order' : k)),
-  ) as NonNullable<ActionResult['errors']>;
+    Object.entries((result && !result.ok ? result.errors : undefined) ?? {}).filter(([k]) => !editedNow.has(k === 'orderNumber' ? 'order' : k)),
+  ) as NonNullable<Extract<ActionResult, {ok: false}>['errors']>;
   const fields = topic ? TOPIC_FIELDS[topic] : null;
 
   function choose(next: TicketTopic) {
@@ -207,17 +174,20 @@ function TicketForm() {
     target?.focus({preventScroll: true});
   }, [result?.at]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const failure = result?.failure;
+  const failed = result && !result.ok ? result : null;
+  const failure = failed?.failure;
   const invalid = (k: keyof NewTicketInput) => (errors[k] ? {'aria-invalid': true, 'aria-describedby': `sp-${k}-error`} : {});
-  const bannerText = clientProblem
-    ? clientProblem
-    : failure
-      ? failure === 'files'
-        ? result?.fileProblem
-        : t(failure === 'rate' ? 'err_rate' : `err_${failure}`)
-      : Object.keys(errors).length
-        ? t('err_check')
-        : null;
+  const answerBanner =
+    !failed || bannerDismissed === failed.at
+      ? null
+      : failure
+        ? failure === 'files'
+          ? t(`file_${failed.file?.problem ?? ('type' satisfies FileProblem)}`, {file: failed.file?.name ?? ''})
+          : t(`err_${failure}`)
+        : Object.keys(errors).length
+          ? t('err_check')
+          : null;
+  const bannerText = clientProblem ?? answerBanner;
 
   return (
     <Form
@@ -227,7 +197,7 @@ function TicketForm() {
       className="sp-form"
       noValidate
       onFocus={() => setTouched(true)}
-      onSubmit={(e) => setClientProblem(guardSubmit(e))}
+      onSubmit={(e) => void submit(e)}
       onInput={(e) => {
         const name = (e.target as HTMLInputElement).name;
         if (!name || !result) return;
@@ -379,7 +349,13 @@ function TicketForm() {
               {t('field_files')}
               <span className="sp-optional"> ({t('optional')})</span>
             </span>
-            <FilePicker disabled={busy} />
+            <FilePicker
+              disabled={busy}
+              onChange={() => {
+                setClientProblem(null);
+                if (result) setBannerDismissed(result.at);
+              }}
+            />
           </div>
 
           <TurnstileBox siteKey={root?.turnstileSiteKey ?? null} active={touched} resetKey={result?.at} />

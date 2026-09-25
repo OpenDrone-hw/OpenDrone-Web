@@ -66,7 +66,7 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Polar Advisory BV (accountant) | Invoicing and annual accounts | Belgium |
 | Resend (Plus Five Five, Inc.) | Mail sent by opendrone.be: withdrawal confirmations, welcome and newsletter mail, trade requests, notices of a new reply on a support ticket (link only, no message content) | EU region infrastructure; US legal entity: SCCs |
 | Discord Inc. (processor) | Support tickets: our team reads and answers them in a staff-only Discord channel (your first name, email, order number and order details, messages, attachments) | US: EU-US Data Privacy Framework (Art. 45 GDPR); Discord's processor terms: https://support.discord.com/hc/en-us/articles/37891902561687 |
-| Cloudflare, Inc. | Hosting and delivery of the website (IP address, request data, derived country); storage of support tickets and of anti-abuse counters (Cloudflare D1; counters hold a keyed hash of IP address and email, never the values, and are deleted after a day); Turnstile anti-spam on the newsletter, trade and support forms | US: EU-US Data Privacy Framework (Art. 45 GDPR) |
+| Cloudflare, Inc. | Hosting and delivery of the website (IP address, request data, derived country); storage of support tickets and of anti-abuse counters (Cloudflare D1; counters hold a keyed hash of IP address and email, never the values, and are deleted after at most two days); Turnstile anti-spam on the newsletter, trade and support forms | US: EU-US Data Privacy Framework (Art. 45 GDPR) |
 | European Commission (VIES) | Check of the VAT number given in a trade enquiry | EU |
 
 Order and customer data (name, address, email, payment reference, order history) and newsletter consent are processed in Shopify.

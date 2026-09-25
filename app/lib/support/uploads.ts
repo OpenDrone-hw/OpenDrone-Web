@@ -40,14 +40,14 @@ export const ALLOWED_EXTENSIONS = [
   'pdf', 'txt', 'log', 'md', 'csv', 'tsv', 'json',
   'mp3', 'wav', 'm4a', 'ogg', 'mp4', 'mov', 'webm',
   'zip', 'tar', 'gz', 'tgz', '7z',
-  'bin', 'hex', 'elf', 'uf2', 'dfu', 'fw', 'bbl', 'bfl',
+  'bin', 'hex', 'uf2', 'dfu', 'fw', 'bbl', 'bfl',
 ];
 const EXT_SET = new Set(ALLOWED_EXTENSIONS);
 
 /** The file input's `accept` attribute. */
 export const ACCEPT = ALLOWED_EXTENSIONS.map((e) => `.${e}`).join(',');
 
-export type FileProblem = 'too_many' | 'too_big' | 'total_too_big' | 'type' | 'empty';
+export type FileProblem = 'too_many' | 'too_big' | 'total_too_big' | 'type' | 'empty' | 'program' | 'mismatch';
 
 export type FileLike = {name: string; size: number; type: string};
 
@@ -85,48 +85,89 @@ export async function extractAttachments(form: FormData, field = 'files'): Promi
   const files: OutboundFile[] = [];
   for (const f of raw) {
     const data = await f.arrayBuffer();
-    if (!contentMatchesExtension(f.name, new Uint8Array(data, 0, Math.min(16, data.byteLength)))) {
-      return {ok: false, problem: 'type', file: f.name};
-    }
-    files.push({name: f.name || 'file', type: (f.type || 'application/octet-stream').toLowerCase(), data});
+    const content = inspectContent(f.name, new Uint8Array(data, 0, Math.min(16, data.byteLength)));
+    if (!content.ok) return {ok: false, problem: content.problem, file: f.name};
+    files.push({name: f.name || 'file', type: content.type ?? (f.type || 'application/octet-stream').toLowerCase(), data});
   }
   return {ok: true, files};
 }
 
+/**
+ * The content check the browser runs on each chosen file before anything
+ * uploads (it reads only the first 16 bytes), the same one the Worker runs.
+ */
+export async function checkFileContent(file: Blob & {name: string}): Promise<{problem: FileProblem; file: string} | null> {
+  const head = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+  const content = inspectContent(file.name, head);
+  return content.ok ? null : {problem: content.problem, file: file.name};
+}
+
 const ascii = (b: Uint8Array, at: number, s: string) => [...s].every((c, i) => b[at + i] === c.charCodeAt(0));
+const bytes = (b: Uint8Array, at: number, sig: number[]) => sig.every((x, i) => b[at + i] === x);
+
+/** The image format a file starts with, whatever its name says. */
+export function sniffImage(head: Uint8Array): string | null {
+  if (bytes(head, 0, [0xff, 0xd8, 0xff])) return 'image/jpeg';
+  if (head[0] === 0x89 && ascii(head, 1, 'PNG')) return 'image/png';
+  if (ascii(head, 0, 'GIF8')) return 'image/gif';
+  if (ascii(head, 0, 'RIFF') && ascii(head, 8, 'WEBP')) return 'image/webp';
+  if (ascii(head, 0, 'BM')) return 'image/bmp';
+  if (ascii(head, 4, 'ftyp') && ['heic', 'heix', 'hevc', 'mif1', 'msf1', 'avif'].some((b) => ascii(head, 8, b))) return 'image/heic';
+  return null;
+}
 
 /**
- * Images, video and PDFs must start like what their extension says: an
- * .exe renamed .jpg is refused. Other allowed types (logs, firmware,
- * archives) have no reliable signature and pass on extension alone.
+ * Executables: Windows (MZ), Linux (ELF) and macOS (Mach-O, fat binaries).
+ * This protects staff from a mislabelled file; it is not a security
+ * boundary (a zip can still carry anything, and Discord serves files as
+ * downloads).
  */
-export function contentMatchesExtension(name: string, head: Uint8Array): boolean {
+export function isProgram(head: Uint8Array): boolean {
+  return (
+    ascii(head, 0, 'MZ') ||
+    bytes(head, 0, [0x7f, 0x45, 0x4c, 0x46]) ||
+    [[0xfe, 0xed, 0xfa, 0xce], [0xfe, 0xed, 0xfa, 0xcf], [0xce, 0xfa, 0xed, 0xfe], [0xcf, 0xfa, 0xed, 0xfe], [0xca, 0xfe, 0xba, 0xbe]].some((sig) =>
+      bytes(head, 0, sig),
+    )
+  );
+}
+
+const IMAGE_EXT = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'heic', 'heif']);
+
+/**
+ * What a file's first bytes say, against its extension. Programs are
+ * refused under any name. An image may be any real image format (a PNG
+ * saved as .jpg is fine; its real type is passed on). Video and PDFs must
+ * start like their extension says. Logs, firmware and archives have no
+ * reliable signature and pass on extension alone.
+ */
+export function inspectContent(name: string, head: Uint8Array): {ok: true; type?: string} | {ok: false; problem: 'program' | 'mismatch'} {
+  if (isProgram(head)) return {ok: false, problem: 'program'};
   const ext = (name.match(/\.([a-z0-9]+)$/i)?.[1] ?? '').toLowerCase();
-  switch (ext) {
-    case 'jpg':
-    case 'jpeg':
-      return head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff;
-    case 'png':
-      return head[0] === 0x89 && ascii(head, 1, 'PNG');
-    case 'gif':
-      return ascii(head, 0, 'GIF8');
-    case 'webp':
-      return ascii(head, 0, 'RIFF') && ascii(head, 8, 'WEBP');
-    case 'bmp':
-      return ascii(head, 0, 'BM');
-    case 'heic':
-    case 'heif':
-    case 'mp4':
-    case 'mov':
-    case 'm4a':
-      return ascii(head, 4, 'ftyp') || (ext === 'mov' && (ascii(head, 4, 'moov') || ascii(head, 4, 'wide') || ascii(head, 4, 'mdat')));
-    case 'webm':
-      return head[0] === 0x1a && head[1] === 0x45 && head[2] === 0xdf && head[3] === 0xa3;
-    case 'pdf':
-      return ascii(head, 0, '%PDF');
-    default:
-      return true;
+  if (IMAGE_EXT.has(ext)) {
+    const type = sniffImage(head);
+    return type ? {ok: true, type} : {ok: false, problem: 'mismatch'};
   }
+  const fits = (() => {
+    switch (ext) {
+      case 'mp4':
+      case 'mov':
+      case 'm4a':
+        return ascii(head, 4, 'ftyp') || (ext === 'mov' && (ascii(head, 4, 'moov') || ascii(head, 4, 'wide') || ascii(head, 4, 'mdat')));
+      case 'webm':
+        return bytes(head, 0, [0x1a, 0x45, 0xdf, 0xa3]);
+      case 'pdf':
+        return ascii(head, 0, '%PDF');
+      default:
+        return true;
+    }
+  })();
+  return fits ? {ok: true} : {ok: false, problem: 'mismatch'};
+}
+
+/** True when the content passes `inspectContent`. */
+export function contentMatchesExtension(name: string, head: Uint8Array): boolean {
+  return inspectContent(name, head).ok;
 }
 
 export function formatBytes(n: number): string {

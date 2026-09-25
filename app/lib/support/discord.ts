@@ -104,7 +104,18 @@ export function threadName(s: string): string {
  * disguise where a link goes.
  */
 export function neutralizeLinks(s: string): string {
-  return s.replace(/\[([^\]\n]{0,300})\]\(\s*<?([^)\s>]{1,2000})>?\s*\)/g, '$1 ($2)');
+  // [text](url), [text](<url with spaces>), each optionally with a title.
+  const masked = /\[([^\]\n]{0,300})\]\(\s*(?:<([^>\n]{1,2000})>|([^)\s]{1,2000}))(?:\s+(?:"[^"\n]*"|'[^'\n]*'|\([^)\n]*\)))?\s*\)/g;
+  return s.replace(masked, (_, text: string, angled: string | undefined, bare: string | undefined) => `${text} (${angled ?? bare})`);
+}
+
+/**
+ * A customer's message body for the staff thread: masked links shown as
+ * their target, then every bracket and parenthesis escaped, so no form of
+ * Discord link markdown survives, whatever the neutralizer missed.
+ */
+export function customerBody(s: string): string {
+  return neutralizeLinks(s).replace(/[[\]()]/g, (c) => `\\${c}`);
 }
 
 /**
@@ -162,8 +173,70 @@ export function normalizeMessage(raw: unknown): DiscordMessage {
 
 export type DiscordClient = ReturnType<typeof createDiscordClient>;
 
-export function createDiscordClient(env: DiscordEnv, fetcher: Fetcher = fetch) {
+/** Longest pause for a rate limit before a call gives up with a 429 instead. */
+export const MAX_RATE_WAIT_MS = 3000;
+
+/**
+ * The rate-limit route of a call: method plus path, with the major
+ * parameter (the channel or guild id) kept and other ids folded, the way
+ * Discord groups its buckets.
+ */
+export function rateRoute(method: string, path: string): string {
+  const [route = ''] = path.split('?');
+  const folded = route
+    .replace(/^(\/(?:channels|guilds)\/\d+)(.*)$/, (_, major: string, rest: string) => major + rest.replace(/\/\d+/g, '/:id'))
+    .replace(/\/reactions\/[^/]+(\/.*)?$/, '/reactions/:emoji');
+  return `${method} ${folded}`;
+}
+
+type RateOptions = {sleep?: (ms: number) => Promise<void>; now?: () => number};
+
+const pause = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+export function createDiscordClient(env: DiscordEnv, fetcher: Fetcher = fetch, rate: RateOptions = {}) {
   const base = discordApiBase(env);
+  const sleep = rate.sleep ?? pause;
+  const clock = rate.now ?? Date.now;
+  // Per client (one per request or cron pass): when each route, and the
+  // whole bot, may be called again. Filled from X-RateLimit-* headers and 429s.
+  const blockedUntil = new Map<string, number>();
+  let globalUntil = 0;
+
+  /** Wait out a known limit, or give up when it is longer than MAX_RATE_WAIT_MS. */
+  async function waitFor(what: string, route: string) {
+    const until = Math.max(globalUntil, blockedUntil.get(route) ?? 0);
+    const wait = until - clock();
+    if (wait <= 0) return;
+    if (wait > MAX_RATE_WAIT_MS) throw new DiscordError(what, 429);
+    await sleep(wait);
+  }
+
+  function seconds(v: string | null | undefined): number | null {
+    const n = v == null || v.trim() === '' ? NaN : Number(v);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  }
+
+  /** Remember what the answer says about this route's (or the global) limit. */
+  async function learn(res: Response, route: string): Promise<number | null> {
+    if (res.status === 429) {
+      let body: {retry_after?: number; global?: boolean} = {};
+      try {
+        body = (await res.clone().json()) as typeof body;
+      } catch {
+        body = {};
+      }
+      const after = seconds(body.retry_after == null ? null : String(body.retry_after)) ?? seconds(res.headers.get('Retry-After')) ?? seconds(res.headers.get('X-RateLimit-Reset-After')) ?? 1;
+      const until = clock() + Math.ceil(after * 1000);
+      if (body.global || res.headers.get('X-RateLimit-Global') === 'true' || res.headers.get('X-RateLimit-Scope') === 'global') globalUntil = until;
+      else blockedUntil.set(route, until);
+      return until - clock();
+    }
+    if (res.headers.get('X-RateLimit-Remaining') === '0') {
+      const after = seconds(res.headers.get('X-RateLimit-Reset-After'));
+      if (after !== null) blockedUntil.set(route, clock() + Math.ceil(after * 1000));
+    }
+    return null;
+  }
 
   function headers(json: boolean): Record<string, string> {
     if (!env.DISCORD_BOT_TOKEN) throw new Error('DISCORD_BOT_TOKEN not set');
@@ -189,12 +262,25 @@ export function createDiscordClient(env: DiscordEnv, fetcher: Fetcher = fetch) {
     } else if (init.body !== undefined) {
       body = JSON.stringify(init.body);
     }
-    const res = await fetcher(`${base}${path}`, {
-      method: init.method ?? 'GET',
-      headers: headers(!files.length && init.body !== undefined),
-      body,
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
+    const method = init.method ?? 'GET';
+    const route = rateRoute(method, path);
+    let res: Response | null = null;
+    // One retry after a 429 whose wait is short; a longer one fails the call
+    // (the sync tries again on its next pass) instead of holding the Worker.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await waitFor(what, route);
+      res = await fetcher(`${base}${path}`, {
+        method,
+        headers: headers(!files.length && init.body !== undefined),
+        body,
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+      const wait = await learn(res, route);
+      if (wait === null) break;
+      console.warn('[support] discord rate limited', route.replace(/\d{6,}/g, ':id'), `${wait} ms`);
+      if (attempt === 1 || wait > MAX_RATE_WAIT_MS) throw new DiscordError(what, 429);
+    }
+    if (!res) throw new DiscordError(what, 0);
     if (!res.ok) throw new DiscordError(what, res.status);
     if (res.status === 204) return null;
     return res.json() as Promise<unknown>;

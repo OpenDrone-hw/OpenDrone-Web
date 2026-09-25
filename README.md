@@ -269,23 +269,28 @@ flowchart LR
 |---|---|---|
 | Front door | `/support` (`app/routes/support.tsx`) | topic (order, product, warranty, other), the fields that topic needs, attachments, Turnstile; tickets this browser opened; find, community and sales links |
 | Ticket page | `/support/t/<ref>` | status, conversation, reply with attachments, mark solved, the private link (copy, replace); refreshes every 8 s while visible |
-| Way back | `/support/resume?t=<token>`, `/support/find` | an HMAC-signed link (90 days, per ticket link version); or the email plus the ticket number (that ticket), or plus an order number Shopify confirms for that email (the tickets about that order) |
+| Way back | `/support/resume?t=<token>`, `/support/find` | an HMAC-signed link (90 days, per ticket link version); or the email plus the ticket number (that ticket), or plus an order number Shopify confirms for that email (the tickets about that order; 8 wrong order numbers per email, from any IP, stop that route until one drains every 6 hours) |
 | Rules | `app/lib/support/tickets.ts` | create, relay both ways, status, find, scheduled jobs |
 | Discord | `app/lib/support/discord.ts` | REST only; private thread (text channel) or post (forum channel) per ticket |
 | Shopify | `app/lib/support/shopify.ts` | order ownership check, exact-email customer match, `support` tag and `support.tickets` metafield |
-| Safety | `scrubber.ts`, `moderation.ts`, `uploads.ts`, `tokens.ts`, `limits.ts` | scrub both directions, customer text escaped in Discord, optional approval gate, 5 files of 8 MB (24 MB total, images and video checked by content), signed cookie and links, rate limits (creating and finding counted in D1 per IP and per IP plus email) |
+| Safety | `scrubber.ts`, `moderation.ts`, `uploads.ts`, `tokens.ts`, `limits.ts` | scrub both directions, customer text escaped in Discord, optional approval gate, 5 files of 8 MB (24 MB total; images, video and PDFs checked by content in the browser and the Worker, programs refused under any name), signed cookie and links, rate limits (creating and finding counted in D1 per IP, an IPv6 client by its /64, then per IP plus email) |
 | Jobs | `server.ts` `scheduled`, `POST /api/support/cleanup` | sync open tickets, reply notices when enabled, close answered tickets after 30 silent days and any other after 90 idle days, delete tickets 24 months after closing |
 
-**Identity.** The email on a ticket is a claim. Only an order number that
-Shopify confirms for that email verifies it: then the ticket is linked to
-the Shopify customer, the staff card shows the order history and earlier
-tickets, and the customer record gets the `support` tag and the ticket in
-`support.tickets`. Without it the card says **email not verified** and
-shows none of that; ask for the order number before sharing order details.
+**Identity.** The email on a ticket is a claim. An order number that
+Shopify confirms for that email makes it a match, not proof: order numbers
+are sequential and printed on shipping labels. On a match the ticket is
+linked to the Shopify customer, the staff card says **email and order
+number match (not proof of identity)**, shows the order history and earlier
+tickets (those opened without a matching order marked **email not
+verified**), and the customer record gets the `support` tag and the ticket
+in `support.tickets`. Change an address or refund only after a reply from
+the email on the Shopify order. Without a match the card says **email not
+verified** and shows none of that; ask for the order number before sharing
+order details.
 
 **For the team, in the ticket thread.** The first message is the staff card:
-reference, topic, first name, whether the email is verified, and for a
-verified email the order with its preorder batch and recent orders. Customer
+reference, topic, first name, whether the email and order number match,
+and on a match the order with its preorder batch and recent orders. Customer
 messages arrive as a quote under "Name · customer", with markdown escaped
 and masked links shown as their real address. The email and the Shopify
 admin link go to `DISCORD_STAFF_METADATA_CHANNEL_ID` when set.
@@ -299,12 +304,16 @@ admin link go to `DISCORD_STAFF_METADATA_CHANNEL_ID` when set.
 | `!close` | Closed; a customer reply reopens it |
 | `!open` | Open again |
 | locking or deleting the thread | Closed and locked: the customer is told to open a new ticket |
-| editing or deleting a relayed reply | the customer's page follows (in enforce mode an edited reply is withdrawn; post it again) |
+| editing or deleting a relayed reply | the customer's page follows (in enforce mode an edited reply is withdrawn; post it again). Only the newest 100 messages of a thread are re-checked; for an older reply, post a correction |
 
 Messages are handled in thread order, once each. With
 `SUPPORT_MODERATION_MODE=enforce` a reply reaches the customer only after a
 holder of `SUPPORT_MOD_ROLE_ID` reacts ✅; the bot marks a held reply ⏳,
 and later messages and commands wait behind it until it is approved.
+Removing the ✅ after a reply was relayed does not withdraw it: delete the
+message instead. The Worker reads reactors only when a reply's ✅ count
+changes, and follows Discord's rate-limit headers: a wait up to 3 s is
+waited out once, a longer one ends that sync until the next pass.
 
 **Status.** Open (the team is up), Answered, Waiting on you, Closed.
 
@@ -316,7 +325,8 @@ fresh link and no message content.
 **Retention.** Tickets are deleted 24 months after closing: the entry in the
 customer's `support.tickets` metafield (a ticket waits while that fails),
 the Discord thread, the staff-metadata post and the D1 rows. Rate counters
-hold keyed hashes, never an IP or email, and go after a day. `POST /api/support/cleanup` with `Authorization: Bearer
+hold keyed hashes, never an IP or email, and go after a day (the per-email
+order-number misses once drained, at most two days). `POST /api/support/cleanup` with `Authorization: Bearer
 $SUPPORT_CLEANUP_SECRET` runs it by hand (`?dry=1` lists, `?jobs=1` runs
 the whole cron pass).
 
@@ -366,15 +376,16 @@ SUPPORT_SANDBOX_PORT=5196 npm run support:staff -- reply OD-XXXX-XXXX "Hi"   # a
 | Step | Does |
 |---|---|
 | `support:sandbox` | applies `migrations/` to the local D1, writes `.env.local` (`--write-env`, else prints the lines), serves the fake APIs; `--moderation enforce` holds replies until approved |
-| `.env.local` | `SUPPORT_DEV_DISCORD_API`, `SUPPORT_DEV_SHOPIFY_ADMIN_URL` (localhost only), sandbox Discord ids, a sandbox signing secret, Cloudflare's test Turnstile key with the dev-only skip. Restart the dev server after changing it; delete it when done |
+| `.env.local` | `SUPPORT_DEV_DISCORD_API`, `SUPPORT_DEV_SHOPIFY_ADMIN_URL`, `SUPPORT_DEV_STOREFRONT_URL` (localhost only), sandbox Discord ids, a sandbox signing secret, Cloudflare's test Turnstile key with the dev-only skip. Restart the dev server after changing it; delete it when done |
 | `VITE_CACHE_DIR=.vite-cache` | a private Vite cache; worktrees sharing `node_modules` otherwise share `node_modules/.vite` and serve each other stale modules |
-| `support:staff -- <command> <ref> [text]` | `reply`, `note` (`//`), `waiting`, `close`, `open`, `lock`, `approve` (moderator ✅ on the last staff message), `state` (threads, metadata posts, Shopify writes as JSON) |
+| `support:staff -- <command> <ref> [text]` | `reply`, `note` (`//`), `waiting`, `close`, `open`, `lock`, `approve` (moderator ✅ on the last staff message), `edit [id] text`, `delete [id]` (the last or given staff message), `state` (threads, metadata posts, Shopify writes as JSON) |
 
 The fake Shopify knows one customer, `jan@example.com`, with order `#1042`
 (preorder batch 2): that email with that order is verified, anything else
 is not. The fake team member is "Sam Support". `.env.local` carries a dummy
-`SHOPIFY_ADMIN_API_TOKEN`, so the real token never reaches the sandbox;
-preorder paid counts on that dev server then fail closed. Rate limits stay
+`SHOPIFY_ADMIN_API_TOKEN`, `SHOPIFY_STORE_DOMAIN=support-sandbox.invalid` and
+`SUPPORT_DEV_STOREFRONT_URL` (an empty catalogue from the sandbox), so no
+request reaches the real store; that dev server shows no products. Rate limits stay
 on and live in the local D1: six tickets an hour and ten find attempts an
 hour per IP; to reset, stop both, `rm -rf .wrangler/state`, and start them again. The overrides work on the dev server only:
 `app/lib/support/dev-overrides.ts` needs Vite's `DEV` flag, which a build

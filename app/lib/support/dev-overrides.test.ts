@@ -5,6 +5,7 @@ import {describe, it} from 'node:test';
 import {DISCORD_API, discordApiBase} from './discord.ts';
 import {devOverride} from './dev-overrides.ts';
 import {adminEndpoint} from './shopify.ts';
+import {storefrontEndpoint} from '../shopify-storefront.ts';
 
 const SANDBOX = {
   SUPPORT_DEV_DISCORD_API: 'http://localhost:5196/discord',
@@ -25,6 +26,10 @@ describe('sandbox overrides', () => {
   it('are ignored outside the Vite dev server', () => {
     assert.equal(discordApiBase(SANDBOX), DISCORD_API);
     assert.equal(adminEndpoint(SANDBOX)?.url, 'https://opendrone-test.myshopify.com/admin/api/2026-07/graphql.json');
+    assert.equal(
+      storefrontEndpoint({...SANDBOX, SUPPORT_DEV_STOREFRONT_URL: 'http://localhost:5196/storefront'} as never),
+      'https://opendrone-test.myshopify.com/api/2026-07/graphql.json',
+    );
   });
 
   // When a build exists (`npm run build`), the override variables must not
@@ -36,7 +41,7 @@ describe('sandbox overrides', () => {
     assert.ok(files.length > 0 && readdirSync(serverDir).length > 0);
     for (const f of files) {
       const code = readFileSync(f, 'utf8');
-      assert.doesNotMatch(code, /SUPPORT_DEV_DISCORD_API|SUPPORT_DEV_SHOPIFY_ADMIN_URL/, f);
+      assert.doesNotMatch(code, /SUPPORT_DEV_DISCORD_API|SUPPORT_DEV_SHOPIFY_ADMIN_URL|SUPPORT_DEV_STOREFRONT_URL/, f);
     }
   });
 });

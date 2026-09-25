@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {DOOR_LIMITS, TICKET_LIMITS, doorAllowed, ticketRateLimit} from './limits.ts';
+import {DOOR_LIMITS, TICKET_LIMITS, doorAllowed, ipBucket, ticketRateLimit} from './limits.ts';
 import {createStore} from './store.ts';
 import {testD1} from './testing.ts';
 
@@ -47,8 +47,32 @@ describe('door limits (D1, shared by isolates)', {skip}, () => {
     assert.ok(results.length > 0);
     for (const r of results) {
       assert.match(r.key, /^[0-9a-f]{32}$/);
-      assert.doesNotMatch(r.key, /203|example/);
+      // The literal values never appear (a hex digest may contain "203" by chance).
+      assert.ok(!r.key.includes('203.0.113.77') && !r.key.includes('secret-person'));
     }
+  });
+
+  it('stop at the first rule over its limit and write no IP-plus-email row then', async () => {
+    const store = createStore(db!);
+    const now = Date.parse('2026-09-03T12:00:00Z');
+    const ip = '198.51.100.250';
+    for (let i = 0; i < DOOR_LIMITS.findPerIp.limit; i++) {
+      assert.ok(await doorAllowed(store, SECRET, [['findPerIp', ip], ['findPerIpEmail', ip, `p${i}@example.com`]], now + i));
+    }
+    const before = await db!.prepare('SELECT count(*) AS n FROM support_rate').first<{n: number}>();
+    assert.equal(await doorAllowed(store, SECRET, [['findPerIp', ip], ['findPerIpEmail', ip, 'new@example.com']], now + 99), false);
+    const after = await db!.prepare('SELECT count(*) AS n FROM support_rate').first<{n: number}>();
+    assert.equal(Number(after!.n), Number(before!.n));
+  });
+
+  it('count an IPv6 client by its /64', async () => {
+    const store = createStore(db!);
+    const now = Date.parse('2026-09-04T12:00:00Z');
+    for (let i = 0; i < DOOR_LIMITS.createPerIp.limit; i++) {
+      assert.ok(await doorAllowed(store, SECRET, [['createPerIp', `2001:db8:aa:bb::${i + 1}`]], now + i));
+    }
+    assert.equal(await doorAllowed(store, SECRET, [['createPerIp', '2001:db8:aa:bb:ffff::9']], now + 50), false);
+    assert.ok(await doorAllowed(store, SECRET, [['createPerIp', '2001:db8:aa:bc::1']], now + 60));
   });
 
   it('prune old windows', async () => {
@@ -57,5 +81,16 @@ describe('door limits (D1, shared by isolates)', {skip}, () => {
     await store.pruneRate(10);
     const row = await db!.prepare("SELECT count(*) AS n FROM support_rate WHERE key = 'old-key'").first<{n: number}>();
     assert.equal(Number(row!.n), 0);
+  });
+});
+
+describe('ipBucket', () => {
+  it('keeps IPv4, maps IPv4-in-IPv6 and cuts IPv6 to its /64', () => {
+    assert.equal(ipBucket('203.0.113.9'), '203.0.113.9');
+    assert.equal(ipBucket('::ffff:203.0.113.9'), '203.0.113.9');
+    assert.equal(ipBucket('2001:0db8:0000:0001:0000:0000:0000:0001'), '2001:db8:0:1::/64');
+    assert.equal(ipBucket('2001:db8::1'), '2001:db8:0:0::/64');
+    assert.equal(ipBucket('2001:db8:0:1:ffff:1:2:3'), '2001:db8:0:1::/64');
+    assert.equal(ipBucket('[2001:db8:0:1::5]'), '2001:db8:0:1::/64');
   });
 });

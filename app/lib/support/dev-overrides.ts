@@ -1,6 +1,6 @@
 /**
- * Dev-server-only overrides that point the Discord and Shopify Admin calls
- * at the local sandbox (`npm run support:sandbox`).
+ * Dev-server-only overrides that point the Discord, Shopify Admin and
+ * Storefront calls at the local sandbox (`npm run support:sandbox`).
  *
  * Every caller gates on `import.meta.env.DEV` inline, at the call site:
  * a production build replaces it with the literal `false`, the minifier

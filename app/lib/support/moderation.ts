@@ -38,8 +38,24 @@ export function approveEmoji(env: ModerationEnv): string {
   return env.SUPPORT_APPROVE_EMOJI?.trim() || '✅';
 }
 
+/**
+ * Verdicts per message id and approve-reaction count, per isolate: a held
+ * reply is looked at on every sync, but its reactors are fetched again only
+ * when the number of reactions changed. An approval is final for the relay
+ * (removing the reaction later does not withdraw a delivered reply).
+ */
+const DECISIONS = new Map<string, Decision>();
+const DECISIONS_MAX = 500;
+
+function remember(key: string, d: Decision): Decision {
+  if (DECISIONS.size >= DECISIONS_MAX) DECISIONS.delete(DECISIONS.keys().next().value!);
+  DECISIONS.set(key, d);
+  return d;
+}
+
 export function _resetModCache(): void {
   MOD_CACHE.clear();
+  DECISIONS.clear();
 }
 
 async function moderatorIds(env: ModerationEnv, discord: DiscordClient): Promise<Set<string>> {
@@ -66,12 +82,19 @@ export async function decide(
   const hint = message.reactions.find((r) => r.emoji === emoji);
   const verdict: Decision = await (async () => {
     if (!hint || hint.count <= 0) return {approved: false, reason: 'no-reaction'};
+    // Only the bot's own reaction: nobody else approved, no lookup needed.
+    if (hint.count === 1 && hint.me) return {approved: false, reason: 'no-moderator-reaction'};
+    // Log mode delivers either way; who reacted does not change that.
+    if (mode === 'log') return {approved: true, reason: 'reaction-unchecked'};
+    const key = `${message.id}:${hint.count}`;
+    const known = DECISIONS.get(key) ?? DECISIONS.get(`${message.id}:approved`);
+    if (known) return known;
     const mods = await moderatorIds(env, discord);
     if (!mods.size) return {approved: true, reason: 'no-moderators-resolved'};
     const reactors = await discord.reactors(threadId, message.id, emoji);
     return reactors.some((id) => mods.has(id))
-      ? {approved: true, reason: 'approved'}
-      : {approved: false, reason: 'no-moderator-reaction'};
+      ? remember(`${message.id}:approved`, {approved: true, reason: 'approved'})
+      : remember(key, {approved: false, reason: 'no-moderator-reaction'});
   })();
   if (!verdict.approved && mode === 'log') {
     console.warn('[support] moderation log-mode would hold', message.id, verdict.reason);

@@ -2,7 +2,7 @@ import {useEffect, useId, useRef, useState, type FormEvent, type RefObject} from
 import {Check, Copy, Paperclip, X} from 'lucide-react';
 import {copyText} from '~/lib/copy';
 import {getActiveTheme} from '~/lib/theme';
-import {ACCEPT, checkFiles, formatBytes, MAX_FILES} from '~/lib/support/uploads';
+import {ACCEPT, checkFileContent, checkFiles, formatBytes, MAX_FILES} from '~/lib/support/uploads';
 import {LIMITS, normalizeText} from '~/lib/support/form';
 import {Link} from 'react-router';
 import type {TicketStatus} from '~/lib/support/store';
@@ -47,21 +47,47 @@ export function Stamp({at, day = false}: {at: number; day?: boolean}) {
  * server before anything uploads. The real <input type=file> carries the
  * files, so the form works as a plain multipart POST.
  */
-export function FilePicker({name = 'files', disabled = false, compact = false}: {name?: string; disabled?: boolean; compact?: boolean}) {
+export function FilePicker({
+  name = 'files',
+  disabled = false,
+  compact = false,
+  onChange,
+}: {
+  name?: string;
+  disabled?: boolean;
+  compact?: boolean;
+  /** Called whenever the list of chosen files changes. */
+  onChange?: () => void;
+}) {
   const inputRef = useRef<HTMLInputElement>(null);
   const addRef = useRef<HTMLLabelElement>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [problem, setProblem] = useState<string | null>(null);
+  const checkRun = useRef(0);
   const hintId = useId();
+
+  function report(p: {problem: string; file?: string} | null) {
+    const text = p ? t(`file_${p.problem}`, {file: p.file ?? ''}) : null;
+    setProblem(text);
+    inputRef.current?.setCustomValidity(text ?? '');
+  }
 
   function sync(next: File[]) {
     const dt = new DataTransfer();
     next.forEach((f) => dt.items.add(f));
     if (inputRef.current) inputRef.current.files = dt.files;
     setFiles(next);
+    onChange?.();
     const p = checkFiles(next.map((f) => ({name: f.name, size: f.size, type: f.type})));
-    setProblem(p ? t(`file_${p.problem}`, {file: p.file ?? ''}) : null);
-    inputRef.current?.setCustomValidity(p ? t(`file_${p.problem}`, {file: p.file ?? ''}) : '');
+    report(p);
+    // The content check reads each file's first bytes here, before any
+    // upload, so a mislabelled file is caught at once, not after sending.
+    const run = ++checkRun.current;
+    if (!p && next.length) {
+      void Promise.all(next.map((f) => checkFileContent(f).catch(() => null))).then((found) => {
+        if (run === checkRun.current) report(found.find(Boolean) ?? null);
+      });
+    }
   }
 
   // A form reset (after a sent reply) empties the input; mirror it.
@@ -69,8 +95,10 @@ export function FilePicker({name = 'files', disabled = false, compact = false}: 
     const form = inputRef.current?.form;
     if (!form) return;
     const onReset = () => {
+      checkRun.current++;
       setFiles([]);
       setProblem(null);
+      inputRef.current?.setCustomValidity('');
     };
     form.addEventListener('reset', onReset);
     return () => form.removeEventListener('reset', onReset);
@@ -286,8 +314,10 @@ export function guardSubmit(event: FormEvent<HTMLFormElement>): string | null {
   const input = form.querySelector<HTMLInputElement>('input[type=file]');
   if (!problem && input?.files?.length) {
     const p = checkFiles(Array.from(input.files).map((f) => ({name: f.name, size: f.size, type: f.type})));
-    if (p) {
-      problem = t(`file_${p.problem}`, {file: p.file ?? ''});
+    // The picker's own content check leaves its verdict as the validity message.
+    const text = p ? t(`file_${p.problem}`, {file: p.file ?? ''}) : input.validationMessage;
+    if (text) {
+      problem = text;
       focus = input;
     }
   }
@@ -308,26 +338,43 @@ const DRAFT_FIELDS = 'input[name]:not([type=file]):not([type=hidden]):not([name=
  * send or a dropped connection loses nothing but attached files. Cleared
  * by `clearDraft` once the message is sent.
  */
-export function useDraft(formRef: RefObject<HTMLFormElement | null>, key: string) {
+export function useDraft(formRef: RefObject<HTMLFormElement | null>, key: string, skip: string[] = []) {
+  const skipKey = skip.join(',');
   useEffect(() => {
     const form = formRef.current;
     if (!form) return;
     const storageKey = `od-support-draft:${key}`;
+    let saved: Record<string, string> = {};
     try {
-      const saved = JSON.parse(sessionStorage.getItem(storageKey) ?? '{}') as Record<string, string>;
-      for (const el of Array.from(form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(DRAFT_FIELDS))) {
-        const value = saved[el.name];
-        if (value === undefined) continue;
-        if (el instanceof HTMLInputElement && el.type === 'radio') {
-          if (el.value === value && !el.checked) el.click();
-        } else if (!el.value) {
-          el.value = value;
-          el.dispatchEvent(new Event('input', {bubbles: true}));
-        }
-      }
+      saved = JSON.parse(sessionStorage.getItem(storageKey) ?? '{}') as Record<string, string>;
     } catch {
       // Storage blocked: nothing to restore.
     }
+    // Fields can appear later (the /support details show once a topic is
+    // chosen), so each saved field is restored once, when it first exists.
+    const restored = new Set<string>();
+    const restore = () => {
+      for (const el of Array.from(form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(DRAFT_FIELDS))) {
+        const value = saved[el.name];
+        // A field the URL already decided (for example ?topic=warranty) wins over the draft.
+        if (value === undefined || skipKey.split(',').includes(el.name)) continue;
+        if (el instanceof HTMLInputElement && el.type === 'radio') {
+          if (el.value === value && !el.checked && !restored.has(el.name)) {
+            restored.add(el.name);
+            el.click();
+          }
+        } else if (!restored.has(el.name)) {
+          restored.add(el.name);
+          if (!el.value) {
+            el.value = value;
+            el.dispatchEvent(new Event('input', {bubbles: true}));
+          }
+        }
+      }
+    };
+    restore();
+    const observer = new MutationObserver(restore);
+    observer.observe(form, {childList: true, subtree: true});
     const save = () => {
       const values: Record<string, string> = {};
       for (const el of Array.from(form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(DRAFT_FIELDS))) {
@@ -343,10 +390,11 @@ export function useDraft(formRef: RefObject<HTMLFormElement | null>, key: string
     form.addEventListener('input', save);
     form.addEventListener('change', save);
     return () => {
+      observer.disconnect();
       form.removeEventListener('input', save);
       form.removeEventListener('change', save);
     };
-  }, [formRef, key]);
+  }, [formRef, key, skipKey]);
 }
 
 export function clearDraft(key: string) {
@@ -362,6 +410,11 @@ export function clearDraft(key: string) {
  * connection dropped mid-send). The typed text is still in this tab.
  */
 export function SupportError() {
+  // The router keeps the scroll position of the failed page; the heading
+  // would sit under the sticky header.
+  useEffect(() => {
+    window.scrollTo({top: 0});
+  }, []);
   return (
     <div className="page-shell sp-page">
       <header className="page-header">
@@ -401,4 +454,32 @@ export function TicketList({tickets}: {tickets: ListedTicket[]}) {
       ))}
     </ul>
   );
+}
+
+/**
+ * POST a support form with fetch and keep the page: a dropped connection
+ * or a refused send leaves every field and chosen file where it was. The
+ * page's own <Form method="post"> stays the path without JavaScript.
+ */
+export function usePost<T>() {
+  const [busy, setBusy] = useState(false);
+  const [sendingFiles, setSendingFiles] = useState(false);
+  async function post(url: string, form: HTMLFormElement, extra: Record<string, string> = {}): Promise<T | null> {
+    const body = new FormData(form);
+    for (const [k, v] of Object.entries(extra)) body.set(k, v);
+    setBusy(true);
+    setSendingFiles(body.getAll('files').some((f) => typeof f === 'object' && (f as File).size > 0));
+    try {
+      const res = await fetch(url, {method: 'POST', body, credentials: 'same-origin', headers: {Accept: 'application/json'}});
+      if (!(res.headers.get('Content-Type') ?? '').includes('application/json')) return null;
+      return (await res.json()) as T;
+    } catch {
+      // Offline, dropped connection or a proxy page: the caller says "not sent".
+      return null;
+    } finally {
+      setBusy(false);
+      setSendingFiles(false);
+    }
+  }
+  return {busy, sendingFiles, post};
 }

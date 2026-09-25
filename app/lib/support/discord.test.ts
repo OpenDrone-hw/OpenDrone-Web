@@ -5,8 +5,10 @@ import {
   cleanText,
   compareSnowflakes,
   createDiscordClient,
+  customerBody,
   escapeDiscord,
   neutralizeLinks,
+  rateRoute,
   sanitizeFilename,
   threadName,
 } from './discord.ts';
@@ -102,8 +104,65 @@ describe('Discord client', () => {
   });
 
   it('throws on other Discord errors', async () => {
-    const client = createDiscordClient(ENV, fakeFetch([['POST /api/v10/channels/9/messages', () => new Response('slow down', {status: 429})]]));
-    await assert.rejects(client.post('9', 'x'), /429/);
+    const client = createDiscordClient(ENV, fakeFetch([['POST /api/v10/channels/9/messages', () => new Response('nope', {status: 500})]]));
+    await assert.rejects(client.post('9', 'x'), /500/);
+  });
+});
+
+describe('Discord rate limits (finding b)', () => {
+  const noSleep = {sleep: async (ms: number) => void slept.push(ms), now: () => 1_000_000};
+  const slept: number[] = [];
+
+  it('waits Retry-After once after a 429, then succeeds', async () => {
+    slept.length = 0;
+    let n = 0;
+    const client = createDiscordClient(
+      ENV,
+      fakeFetch([
+        ['POST /api/v10/channels/9/messages', () => (n++ === 0 ? new Response(JSON.stringify({retry_after: 0.4, global: false}), {status: 429}) : {id: '10'})],
+      ]),
+      noSleep,
+    );
+    assert.equal(await client.post('9', 'x'), '10');
+    assert.deepEqual(slept, [400]);
+  });
+
+  it('gives up with a 429 when the wait is long, without retrying', async () => {
+    const calls: Call[] = [];
+    const client = createDiscordClient(
+      ENV,
+      fakeFetch([['GET /api/v10/channels/9/messages', () => new Response('{}', {status: 429, headers: {'Retry-After': '30'}})]], calls),
+      noSleep,
+    );
+    await assert.rejects(client.messagesAfter('9', null), /429/);
+    assert.equal(calls.length, 1);
+    // The route stays blocked for this client: no second request.
+    await assert.rejects(client.messagesAfter('9', null), /429/);
+    assert.equal(calls.length, 1);
+  });
+
+  it('pauses a route whose bucket is empty before the next call', async () => {
+    slept.length = 0;
+    const client = createDiscordClient(
+      ENV,
+      fakeFetch([
+        [
+          'GET /api/v10/channels/9/messages/11/reactions/%E2%9C%85',
+          () => new Response('[]', {status: 200, headers: {'X-RateLimit-Remaining': '0', 'X-RateLimit-Reset-After': '0.25'}}),
+        ],
+        ['GET /api/v10/channels/9/messages/12/reactions/%E2%9C%85', () => []],
+      ]),
+      noSleep,
+    );
+    await client.reactors('9', '11', '✅');
+    await client.reactors('9', '12', '✅');
+    assert.deepEqual(slept, [250]);
+  });
+
+  it('groups routes by channel, folding message ids and emoji', () => {
+    assert.equal(rateRoute('GET', '/channels/9/messages/11/reactions/%E2%9C%85?limit=25'), 'GET /channels/9/messages/:id/reactions/:emoji');
+    assert.equal(rateRoute('POST', '/channels/9/messages'), 'POST /channels/9/messages');
+    assert.equal(rateRoute('GET', '/guilds/7/members?limit=100'), 'GET /guilds/7/members');
   });
 });
 
@@ -129,6 +188,15 @@ describe('text helpers', () => {
   it('shows the real target of a masked link', () => {
     assert.equal(neutralizeLinks('pay [here](https://evil.example/p) now'), 'pay here (https://evil.example/p) now');
     assert.equal(neutralizeLinks('no links [just brackets]'), 'no links [just brackets]');
+    assert.equal(neutralizeLinks('[bank](https://evil.example/p "Your bank")'), 'bank (https://evil.example/p)');
+    assert.equal(neutralizeLinks("[bank](https://evil.example/p 'Your bank')"), 'bank (https://evil.example/p)');
+    assert.equal(neutralizeLinks('[bank](<https://evil.example/a b>)'), 'bank (https://evil.example/a b)');
+  });
+
+  it('escapes every bracket in a customer body, so no link markdown survives', () => {
+    assert.equal(customerBody('[x](<https://e.example/a b> "t")'), 'x \\(https://e.example/a b\\)');
+    assert.equal(customerBody('[a [b]](https://e.example)'), '\\[a \\[b\\]\\]\\(https://e.example\\)');
+    assert.doesNotMatch(customerBody('[[x]](y)'), /(?<!\\)[[\]()]/);
   });
 
   it('builds thread names without markup', () => {
@@ -165,6 +233,27 @@ describe('moderation gate', () => {
     assert.equal((await decide(env, d.client, thread, m)).approved, false);
     d.approve(m, 'mod');
     assert.equal((await decide(env, d.client, thread, m)).approved, true);
+  });
+
+  it('looks up reactors once per reaction count, and never for the bot alone (finding b)', async () => {
+    _resetModCache();
+    const d = fakeDiscord();
+    d.setRoleMembers(['mod']);
+    const env = {DISCORD_GUILD_ID: 'g', SUPPORT_MOD_ROLE_ID: 'r'};
+    const thread = await d.client.createThread({name: 't', card: 'c'});
+    const m = d.staff(thread, 'reply');
+    m.reactions.push({emoji: '✅', count: 1, me: true});
+    assert.equal((await decide(env, d.client, thread, m)).approved, false);
+    assert.equal(d.lookups.reactors, 0, 'only the bot reacted');
+    d.approve(m, 'rando');
+    await decide(env, d.client, thread, m);
+    await decide(env, d.client, thread, m);
+    await decide(env, d.client, thread, m);
+    assert.equal(d.lookups.reactors, 1, 'same count: cached');
+    d.approve(m, 'mod');
+    assert.equal((await decide(env, d.client, thread, m)).approved, true);
+    assert.equal((await decide(env, d.client, thread, m)).approved, true);
+    assert.equal(d.lookups.reactors, 2);
   });
 
   it('log mode delivers what enforce would hold', async () => {

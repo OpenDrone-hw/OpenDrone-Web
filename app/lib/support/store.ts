@@ -242,8 +242,31 @@ export function createStore(db: D1Database) {
       return Number(row?.count ?? 1);
     },
 
-    async pruneRate(before: number): Promise<void> {
+    /**
+     * A leaky bucket per key: its level drains by `drainPerMs` per ms since
+     * the last change. `add` 0 reads, 1 records a miss; returns the level.
+     */
+    async bucket(key: string, add: number, drainPerMs: number, now: number): Promise<number> {
+      if (add === 0) {
+        const row = await db.prepare('SELECT level, updated_at FROM support_find_misses WHERE key = ?').bind(key).first<{level: number; updated_at: number}>();
+        return row ? Math.max(0, Number(row.level) - (now - Number(row.updated_at)) * drainPerMs) : 0;
+      }
+      const row = await db
+        .prepare(
+          `INSERT INTO support_find_misses (key, level, updated_at) VALUES (?, ?, ?)
+           ON CONFLICT (key) DO UPDATE SET
+             level = MAX(0, level - (excluded.updated_at - updated_at) * ?) + excluded.level,
+             updated_at = excluded.updated_at
+           RETURNING level`,
+        )
+        .bind(key, add, now, drainPerMs)
+        .first<{level: number}>();
+      return Number(row?.level ?? add);
+    },
+
+    async pruneRate(before: number, bucketsBefore = before): Promise<void> {
       await db.prepare('DELETE FROM support_rate WHERE window_start < ?').bind(before).run();
+      await db.prepare('DELETE FROM support_find_misses WHERE updated_at < ?').bind(bucketsBefore).run();
     },
 
     /** Tickets the cron should read from Discord: not closed, least recently synced first. */
