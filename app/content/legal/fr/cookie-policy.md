@@ -34,7 +34,7 @@ Incutec BV n’utilise **aucun cookie marketing ou de reciblage** au lancement. 
 
 ### Consentement
 
-- Nous ne plaçons actuellement que des **cookies strictement nécessaires** ; c’est pourquoi aucun bandeau de consentement n’est affiché.
+- Nous ne plaçons que des **cookies strictement nécessaires** ; c’est pourquoi aucun bandeau de consentement n’est affiché.
 - Si nous introduisons un jour des cookies non essentiels, ils ne seront **placés qu’après votre consentement explicite** (opt-in), et cette politique sera d’abord mise à jour.
 - La page [paramètres des cookies](/cookie-settings) vous permet d’effacer à tout moment les cookies placés par ce site.
 - **Les murs à cookies sont interdits :** nous ne vous refuserons jamais l’accès au site si vous refusez les cookies.

@@ -22,7 +22,7 @@ Les prix et les tarifs d’expédition incluent la TVA. Dans l’Union européen
 
 ### Hors de l’Union européenne
 
-Incutec BV ne propose pas de commande directe aux consommateurs hors de l’UE. Les revendeurs américains peuvent [demander un devis](/wholesale). L’admissibilité des produits, l’importation et la livraison doivent être convenues avant l’acceptation d’une commande. Les consommateurs peuvent [recevoir les nouvelles du lancement](/newsletter). Aucune disponibilité auprès de revendeurs étrangers n’est promise.
+Incutec BV ne propose pas de commande directe aux consommateurs hors de l’UE. Les revendeurs de l’UE et des États-Unis peuvent [demander un devis](/wholesale). L’admissibilité des produits, l’importation et la livraison doivent être convenues avant l’acceptation d’une commande. Les consommateurs peuvent [recevoir les nouvelles du lancement](/newsletter). Aucune disponibilité auprès de revendeurs étrangers n’est promise.
 
 ### Précommandes
 

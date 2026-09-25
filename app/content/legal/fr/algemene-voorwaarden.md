@@ -47,7 +47,7 @@
 
 5.1. Le consommateur peut résilier un contrat d’achat d’un produit pendant un délai de réflexion de **14 jours calendrier** sans avoir à justifier sa décision (droit de rétractation).
 
-5.2. Le délai de réflexion commence le jour suivant celui où le consommateur, ou un tiers désigné à l’avance par le consommateur autre que le transporteur, a reçu le produit.
+5.2. Le délai de réflexion commence le jour suivant celui où le consommateur, ou un tiers désigné à l’avance par le consommateur autre que le transporteur, a reçu le produit. Si une même commande est livrée en plusieurs colis, le délai commence le lendemain de la réception du dernier article par le consommateur.
 
 5.3. Pendant le délai de réflexion, le consommateur manipule le produit et son emballage avec soin. Le consommateur ne déballe ou n’utilise le produit que dans la mesure nécessaire pour en établir la nature, les caractéristiques et le fonctionnement.
 
@@ -94,6 +94,8 @@
 7bis.6. Les paiements de précommande financent la production et l’achat du stock pour la commande. Ils ne portent aucun intérêt et ne confèrent aucune participation, partage de revenus ni autre intérêt de propriété dans Incutec BV.
 
 7bis.7. Dans l’Union européenne, aucun droit ni aucune taxe d’importation n’est dû sur une commande.
+
+7bis.8. Le prix d’un produit en précommande augmente par paliers à mesure que les unités payées sont comptabilisées. Le prix affiché lors du paiement est le prix de la commande ; les paliers ultérieurs ne le modifient pas.
 
 ### Article 8 : Paiement
 
@@ -207,4 +209,4 @@
 
 ---
 
-*Version : 2.3, dernière mise à jour 2026-09-22*
+*Version : 2.4, dernière mise à jour 2026-09-25*

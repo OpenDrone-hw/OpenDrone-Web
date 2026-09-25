@@ -47,7 +47,7 @@
 
 5.1. De consument kan een overeenkomst met betrekking tot de aankoop van een product gedurende een bedenktijd van **14 kalenderdagen** zonder opgave van redenen ontbinden (herroepingsrecht).
 
-5.2. De bedenktijd gaat in op de dag nadat de consument, of een vooraf door de consument aangewezen derde die niet de vervoerder is, het product heeft ontvangen.
+5.2. De bedenktijd gaat in op de dag nadat de consument, of een vooraf door de consument aangewezen derde die niet de vervoerder is, het product heeft ontvangen. Wordt één bestelling in meerdere pakketten geleverd, dan gaat de termijn in op de dag nadat de consument het laatste artikel heeft ontvangen.
 
 5.3. Tijdens de bedenktijd zal de consument zorgvuldig omgaan met het product en de verpakking. Hij zal het product slechts uitpakken of gebruiken in de mate die nodig is om de aard, de kenmerken en de werking van het product vast te stellen.
 
@@ -94,6 +94,8 @@
 7bis.6. Betalingen voor voorverkoop financieren de productie en de voorraadaankoop voor de bestelling. Zij dragen geen interest en verlenen geen aandeel, omzetdeling of ander eigendomsbelang in Incutec BV.
 
 7bis.7. Binnen de Europese Unie zijn op een bestelling geen invoerrechten of invoerbelastingen verschuldigd.
+
+7bis.8. De prijs van een pre-orderproduct stijgt in stappen naarmate betaalde eenheden worden geteld. De prijs die bij het afrekenen wordt getoond, is de prijs van de bestelling; latere stappen wijzigen die niet.
 
 ### Artikel 8: Betaling
 
@@ -207,4 +209,4 @@
 
 ---
 
-*Versie: 2.3, laatst bijgewerkt 2026-09-22*
+*Versie: 2.4, laatst bijgewerkt 2026-09-25*

@@ -45,7 +45,7 @@ ____________________
 
 ## Instructions for the consumer
 
-1. You have **14 calendar days** to withdraw starting from the day after you receive the product.
+1. You have **14 calendar days** to withdraw starting from the day after you receive the product. If one order arrives in several parcels, the period starts on the day after you receive the last item.
 2. You can complete this form and return it by email to contact@opendrone.be or by post to the address above.
 3. You may also declare, in any other unambiguous manner, that you wish to withdraw from the contract.
 4. After withdrawal, you have **14 days** to return the product.

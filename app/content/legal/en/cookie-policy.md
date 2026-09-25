@@ -34,7 +34,7 @@ Incutec BV uses **no marketing or remarketing cookies** at launch. If that chang
 
 ### Consent
 
-- We currently set **only strictly necessary cookies**, which is why no consent banner is shown.
+- We set **only strictly necessary cookies**, which is why no consent banner is shown.
 - If we ever introduce non-essential cookies, they will **only be placed after your explicit consent** (opt-in), and this policy will be updated first.
 - The [cookie settings](/cookie-settings) page lets you clear the cookies this site has set at any time.
 - **Cookie walls are prohibited:** we will never refuse you access to the website if you refuse cookies.

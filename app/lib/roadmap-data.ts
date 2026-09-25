@@ -115,9 +115,8 @@ export const ROADMAP: RoadmapItem[] = [
     // Samples ordered, nothing under test yet (2026-08-15).
     status: 'in-progress',
     productPath: '/products/openframe',
-    // OpenDrone-hw/OpenFrame carries status-in-progress but is still a private
-    // repo (purged supplier quotes remain reachable through refs/pull/8), so
-    // it has no public link yet and its topic cannot be fetched. Add the link
+    // OpenDrone-hw/OpenFrame carries status-in-progress but is a private repo,
+    // so it has no public link and its topic cannot be fetched. Add the link
     // the day the repo goes public; until then the static value IS the status.
     repo: 'OpenFrame',
   },

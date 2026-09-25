@@ -22,7 +22,7 @@ Prices and shipping rates include VAT. Within the European Union there are no cu
 
 ### Outside the European Union
 
-Incutec BV does not offer direct consumer checkout outside the EU. US retailers can [request a bulk quote](/wholesale). Product eligibility, importing and delivery must be agreed before an order is accepted. Consumers can [sign up for launch news](/newsletter). No overseas retailer availability is promised.
+Incutec BV does not offer direct consumer checkout outside the EU. EU and US retailers can [request a bulk quote](/wholesale). Product eligibility, importing and delivery must be agreed before an order is accepted. Consumers can [sign up for launch news](/newsletter). No overseas retailer availability is promised.
 
 ### Pre-orders
 

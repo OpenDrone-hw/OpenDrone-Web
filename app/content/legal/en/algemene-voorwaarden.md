@@ -47,7 +47,7 @@
 
 5.1. The consumer may rescind a contract for the purchase of a product during a cooling-off period of **14 calendar days** without giving any reason (right of withdrawal).
 
-5.2. The cooling-off period starts on the day after the consumer, or a third party designated in advance by the consumer that is not the carrier, has received the product.
+5.2. The cooling-off period starts on the day after the consumer, or a third party designated in advance by the consumer that is not the carrier, has received the product. If one order is delivered in several parcels, the period starts on the day after the consumer receives the last item.
 
 5.3. During the cooling-off period the consumer shall handle the product and its packaging with care. The consumer shall only unpack or use the product to the extent necessary to establish its nature, characteristics and functioning.
 
@@ -94,6 +94,8 @@
 7bis.6. Pre-order payments fund the production run and stock purchase for the order. They carry no interest and confer no equity, revenue share or other ownership interest in Incutec BV.
 
 7bis.7. Within the European Union no import duties or import taxes are due on an order.
+
+7bis.8. The price of a pre-order product rises in steps as paid units are counted. The price shown at checkout is the price of the order; later steps do not change it.
 
 ### Article 8: Payment
 
@@ -207,4 +209,4 @@
 
 ---
 
-*Version: 2.3, last updated 2026-09-22*
+*Version: 2.4, last updated 2026-09-25*

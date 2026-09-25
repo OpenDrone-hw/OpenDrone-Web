@@ -33,7 +33,7 @@ Incutec BV gebruikt bij de lancering **geen marketing- of remarketingcookies**. 
 
 ### Toestemming
 
-- Wij plaatsen momenteel **uitsluitend strikt noodzakelijke cookies**; daarom tonen wij geen toestemmingsbanner.
+- Wij plaatsen **uitsluitend strikt noodzakelijke cookies**; daarom tonen wij geen toestemmingsbanner.
 - Als wij ooit niet-essentiële cookies introduceren, worden die **pas geplaatst na uw uitdrukkelijke toestemming** (opt-in), en wordt dit beleid eerst bijgewerkt.
 - Via de pagina [cookie-instellingen](/cookie-settings) kunt u de door deze site geplaatste cookies op elk moment wissen.
 - **Cookie walls zijn verboden:** wij weigeren u nooit toegang tot de website als u cookies weigert.

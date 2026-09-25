@@ -67,4 +67,4 @@ La présente politique :
 ---
 
 **Signé pour Incutec BV :**
-Stan Coene, Bestuurder
+Stan Coene, Administrateur

@@ -45,7 +45,7 @@ ____________________
 
 ## Instructions pour le consommateur
 
-1. Vous disposez de **14 jours calendrier** pour vous rétracter à compter du lendemain de la réception du produit.
+1. Vous disposez de **14 jours calendrier** pour vous rétracter à compter du lendemain de la réception du produit. Si une même commande arrive en plusieurs colis, le délai commence le lendemain de la réception du dernier article.
 2. Vous pouvez compléter ce formulaire et le renvoyer par courriel à contact@opendrone.be ou par voie postale à l’adresse ci-dessus.
 3. Vous pouvez également déclarer, par toute autre manière non équivoque, que vous souhaitez vous rétracter du contrat.
 4. Après rétractation, vous disposez de **14 jours** pour retourner le produit.

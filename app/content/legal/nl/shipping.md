@@ -22,7 +22,7 @@ Prijzen en verzendtarieven zijn inclusief btw. Binnen de Europese Unie zijn er g
 
 ### Buiten de Europese Unie
 
-Incutec BV biedt geen rechtstreekse consumentencheckout buiten de EU. Amerikaanse winkels kunnen [een offerte aanvragen](/wholesale). Producttoelating, invoer en levering moeten worden overeengekomen voordat een bestelling wordt aanvaard. Consumenten kunnen [lanceringsnieuws ontvangen](/newsletter). Beschikbaarheid bij buitenlandse winkels wordt niet beloofd.
+Incutec BV biedt geen rechtstreekse consumentencheckout buiten de EU. Winkels in de EU en de VS kunnen [een offerte aanvragen](/wholesale). Producttoelating, invoer en levering moeten worden overeengekomen voordat een bestelling wordt aanvaard. Consumenten kunnen [lanceringsnieuws ontvangen](/newsletter). Beschikbaarheid bij buitenlandse winkels wordt niet beloofd.
 
 ### Pre-orders
 
@@ -40,4 +40,4 @@ Het risico van beschadiging of verlies tijdens verzending berust bij Incutec BV 
 
 ### Tracking
 
-Zodra uw bestelling verzonden is ontvangt u een bevestiging per e-mail met een tracking-nummer.
+Zodra je bestelling verzonden is, ontvang je een bevestiging per e-mail met een trackingnummer.
