@@ -35,22 +35,22 @@ describe('buildSuggestionSpecs', () => {
     const specs = buildSuggestionSpecs(BUILDS, '3-inch', [{sku: 'OPENFC-LITE-2020', handle: 'openfc-lite'}]);
     assert.deepEqual(
       specs.map(({sku, quantity}) => [sku, quantity]),
-      [['OPENESC-2020', 1], ['OPENFRAME-3', 1], ['OPENMOTOR-1604', 4], ['OPENRX-LITE-UFL', 1], ['ACC-PROP-3-HQ-T3X3X3', 1], ['ACC-ANT-T', 1]],
+      [['OPENESC-2020', 1], ['OPENFRAME-3', 1], ['OPENMOTOR-1604', 4], ['OPENRX-LITE-UFL', 1], ['ACC-PROP-3-HQ-T3X3X3', 1]],
     );
   });
 
-  it('suggests props for the size and an antenna for the U.FL receiver', () => {
+  it('suggests props for the size and no antenna: receivers ship with one', () => {
     const specs = buildSuggestionSpecs(BUILDS, '5-inch', [{sku: 'OPENMOTOR-2207', handle: 'openmotor'}]);
     const props = specs.find((s) => s.role === 'props');
     assert.equal(props?.sku, 'ACC-PROP-5-HQ-5X43X3-V2S');
     assert.equal(props?.handle, 'hqprop-5x4-3x3-v2s-propeller-set-5-inch');
-    assert.equal(specs.find((s) => s.role === 'antenna')?.handle, 'elrs-868-915-mhz-2-4-ghz-u-fl-t-style-antenna');
+    assert.equal(specs.some((s) => s.role === 'antenna'), false);
     const three = buildSuggestionSpecs(BUILDS, '3-inch', [{sku: 'OPENFRAME-3', handle: 'openframe'}]);
-    assert.equal(three.some((s) => s.role === 'antenna'), true);
+    assert.equal(three.some((s) => s.role === 'antenna'), false);
     assert.equal(buildOf(BUILDS, 'ACC-PROP-3-HQ-T3X3X3'), '3-inch');
   });
 
-  it('matches the final 5-inch CAD receiver and dual-band antenna', () => {
+  it('matches the final 5-inch CAD receiver', () => {
     const specs = buildSuggestionSpecs(BUILDS, '5-inch', [{sku: 'OPENFC-LITE-3030', handle: 'openfc-lite'}]);
     assert.equal(specs.find((s) => s.role === 'receiver')?.sku, 'OPENRX-MONO');
   });
@@ -82,7 +82,6 @@ describe('buildSuggestionSpecs', () => {
       'openesc',
       'openframe',
       'hqprop-t3x3x3-propeller-set-3-inch-t-mount',
-      'elrs-antenna-24',
     ]);
     assert.ok(ranked.every(({sku}) => !sku.endsWith('3030') && !sku.endsWith('2207')));
   });

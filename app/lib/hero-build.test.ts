@@ -98,13 +98,10 @@ describe('hero build shopping guide', () => {
       three.parts.find((part) => part.role === 'props')?.sku,
       'ACC-PROP-3-HQ-T3X3X3',
     );
+    // Receivers ship with their antenna: no build lists a separate one.
     assert.equal(
-      three.parts.some((part) => part.role === 'antenna'),
-      true,
-    );
-    assert.equal(
-      five.parts.find((part) => part.role === 'antenna')?.sku,
-      'ACC-ANT-DUAL-T',
+      [...three.parts, ...five.parts].some((part) => part.role === 'antenna'),
+      false,
     );
     assert.match(five.parts[2].url, /Size=5-inch/);
   });
@@ -125,9 +122,8 @@ describe('hero build shopping guide', () => {
       {sku: 'OPENMOTOR-2207', quantity: 4},
       {sku: 'OPENRX-MONO', quantity: 1},
       {sku: 'ACC-PROP-5-HQ-5X43X3-V2S', quantity: 1},
-      {sku: 'ACC-ANT-DUAL-T', quantity: 1},
     ]);
-    assert.equal(selection.total, 137.4);
+    assert.equal(selection.total, 127.3);
     assert.equal(selection.available, true);
     assert.equal(selection.complete, true);
   });
@@ -141,7 +137,7 @@ describe('hero build shopping guide', () => {
     const build = resolveHeroBuilds(config, source).find(
       (item) => item.size === '5',
     )!;
-    assert.equal(build.parts.length, 7);
+    assert.equal(build.parts.length, 6);
     assert.equal(
       build.parts.find((part) => part.role === 'receiver')?.available,
       false,
@@ -166,7 +162,7 @@ describe('hero build shopping guide', () => {
     const selection = heroBuildSelection(build, included, allowed);
     assert.equal(selection.available, true);
     assert.equal(selection.complete, false);
-    assert.equal(selection.total, 50.5);
+    assert.equal(selection.total, 40.4);
     assert.doesNotMatch(selection.href, /OPENFRAME|OPENMOTOR/);
   });
 
