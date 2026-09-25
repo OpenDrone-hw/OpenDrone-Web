@@ -1,12 +1,13 @@
 # Isolated Cloudflare staging Worker config. Deployed by
-# .github/workflows/cloudflare-preview.yml on every push to feat/preorders.
+# .github/workflows/cloudflare-preview.yml on every push to the `staging`
+# branch and on a manual run.
 # No custom-domain routes (a plain workers.dev URL only) and no rate limit
 # bindings, so a staging deploy never touches production DNS or shares state
 # with the production Worker. The Shopify catalog configuration is set as
 # Worker secrets, like production.
 #
 # Staging runs the shop end to end: checkout is open and prices are shown,
-# which production does not do yet. It talks to the SAME Shopify store, so
+# whatever production's state. It talks to the SAME Shopify store, so
 # it stays behind HTTP basic auth (the STAGING_PASSWORD secret), and it
 # never writes prices: SHOPIFY_PRICE_TIER_WRITE_ENABLED is absent here and
 # only production steps a price. Pay with Shopify's test payment gateway;

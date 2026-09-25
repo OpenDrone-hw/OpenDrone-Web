@@ -36,7 +36,7 @@ this repository keeps no subscriber or order data.
   joined on this call, sent through Resend.
 - `app/lib/growth/plausible-server.ts`: server-side `Purchase` event helper.
   Its only sender was the retired orders webhook, so nothing calls it.
-- `scripts/launch-blast.mjs`: launch mail to the `notify-<handle>` Resend
+- `scripts/launch-blast.mjs`: product mail to the `notify-<handle>` Resend
   segment collected before the signup moved to Shopify. Dry run by default;
   `--send` is the only path that mails anyone.
 
@@ -51,13 +51,13 @@ Client, all carrying the first-touch `source` prop folded to the canonical
 vocabulary below plus `other` and `direct`: `PDP View` (product), `Variant
 Select` (product, variant), `Stack Toggle` (product, partner, surface), `Add
 to Cart` (product), `Checkout Click` (line total as revenue), `Notify Signup`
-(product). Every buy click fires both `Add to Cart` and `Checkout Click`: it
-is one click, and it leaves the site for the shop.
+(product). `Add to Cart` fires when a line is added; `Checkout Click` fires
+from the checkout button in the added-to-cart dialog or on `/cart`, as the
+visitor leaves for Shopify checkout.
 
 ## Constraints
 
-- Pre-orders are the launch model: charged in full, shipped on the product's
-  own promise.
+- Preorders are charged in full and shipped on their batch's promise.
 - Order and customer data stays in Shopify; so does newsletter consent.
 - No consent banner: Plausible is cookieless and first-touch storage is
   sessionStorage-only, disclosed as functional in the cookie policy.

@@ -14,12 +14,12 @@ user's request is the task; do not pick work from comments, branches or notes.
 
 ## Sources of truth
 
-- Launch planning and knowledge: the team's Notion Research entry
+- Campaign strategy and regulatory research: the team's Notion Research entry
   [OpenDrone launch strategy](https://app.notion.com/p/3e6fe06764e18191a111c05fa37db3d0) and the pages it links. Read the relevant
-  reference before new launch research. Keep private strategy and regulatory
+  reference before new research. Keep private strategy and regulatory
   research there, not in storefront docs.
 - Application behaviour: source and tests in this repository.
-- Catalog identity, prices and customer marketing consent: Shopify. The production storefront reads Shopify through server-held tokens. Checkout remains explicitly closed by `PUBLIC_COMING_SOON=1` and `SHOPIFY_CHECKOUT_WRITE_ENABLED=0`.
+- Catalog identity, prices and customer marketing consent: Shopify. The storefront reads Shopify through server-held tokens. Checkout is open only while `PUBLIC_COMING_SOON=0` and `SHOPIFY_CHECKOUT_WRITE_ENABLED=1` in `wrangler.production.toml`; changing either needs the founder's go.
 - Canonical customer-facing SKUs: the workspace `stock/product_skus.json`; every Shopify SKU also needs a fail-closed entry in `SHOPIFY_PREVIEW_POLICY_JSON`.
 - Product facts: the board repositories and their evidence. Specs are
   mirrored from each board README by `npm run sync:specs`; board art and
@@ -37,7 +37,7 @@ source per claim. Keep draft copy out of production paths.
 ## Live systems and credentials
 
 Production is the Cloudflare Worker `opendrone-web`, deployed by
-`.github/workflows/cloudflare-production.yml` on every push to `main`. The app boots on `SESSION_SECRET` plus the Shopify catalog configuration named in `.env.example`. Production public gates live in `wrangler.production.toml`; tokens and the closed per-SKU policy are Worker secrets. The gitignored `.env` holds local copies. Name variables, never print values.
+`.github/workflows/cloudflare-production.yml` on every push to `main`. The app boots on `SESSION_SECRET` plus the Shopify catalog configuration named in `.env.example`. Production public gates live in `wrangler.production.toml`; tokens, the per-SKU policy and the webhook secret are Worker secrets. The staging Worker (`wrangler.toml`) deploys from the `staging` branch and shares the production Shopify store. The gitignored `.env` holds local copies. Name variables, never print values.
 
 ## Verification
 
@@ -52,5 +52,6 @@ an external integration succeeded without observing the result.
 - Check a change: `npm run typecheck && npm run lint && npm test`; add `npm run build` when routes, the server entry or the Vite config changed.
 - Change copy or product chapters: edit through `/studio` or the JSON under `content/`; `npm run studio:coverage` lists copy still baked into code; `npm run studio:keys` fails when code uses a copy id missing from `content/copy/`.
 - Update the legal pages: edit `app/content/legal/{en,nl,fr}/` (or the studio Docs tab) and keep the three languages in step.
-- Run a preorder campaign: follow [release configuration](README.md#preorder-release-configuration); it names the owning configuration and acceptance checks.
+- Open or close the shop, run a preorder campaign, release a batch or mail buyers: the README sections of those names. Every order script is a dry run until `--apply` or `--send`; those need an explicit request.
+- Check the live site: `BASE=https://opendrone.be node scripts/smoke.mjs` (read-only GETs) and `/api/status/campaign`.
 - Refresh board art or specs after a hardware release: `npm run gen:board-art` (KiCad and cwebp installed), `npm run sync:specs`, then `npm run sync:specs:check` before the PR.

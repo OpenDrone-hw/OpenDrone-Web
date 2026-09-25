@@ -1,11 +1,10 @@
 /**
  * The roadmap statuses an open shop shows.
  *
- * At launch, scripts/launch-preorders.mjs flips the repos of the boards with
- * a paid first production batch to `status-beta` (docs/product-status.md,
- * "Launch preorders"). That flip is an external change made on the
- * founder's go, so a shop opened before it (the preview Worker) would still
- * file those boards under alpha while their product pages say "First
+ * A board with a paid first production batch belongs under `status-beta`,
+ * but its repo topic is changed by hand (docs/product-status.md), so an open
+ * shop (production or the staging Worker) can run ahead of the topic and
+ * would file the board under alpha while its product page says "First
  * production batch". This overlay takes the paid batches in
  * `content/preorders.json` as the source instead: while the shop is open, a
  * roadmap entry whose SKU has a paid batch reads at least beta. A closed

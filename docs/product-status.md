@@ -2,9 +2,9 @@
 
 Repository topics describe roadmap lifecycle. Display status and server-side
 purchase authorization are separate gates; a topic change does not open orders.
-This reference describes `main`, not a preorder branch or an approved launch.
-Opening checkout or collecting funds requires explicit founder approval of the
-reviewed configuration. A merge to `main` deploys production.
+Opening or closing checkout is a production configuration change (README
+"Open or close the shop") and needs the founder's go. A merge to `main`
+deploys production.
 
 ## Roadmap taxonomy
 
@@ -59,11 +59,12 @@ map or catalog-aware display resolution.
 can deny availability; it cannot prove physical stock. The policy and other
 catalog validation remain separate from the global flags.
 
-The cart GET loader returns `410` unconditionally, including for old sessions.
-Changing flags alone does not restore that cart surface. The committed
-[production configuration](../wrangler.production.toml) keeps the global flag
-on and checkout writes off. Verify deployed policy separately; committed flags
-are not proof of live catalog settings or authorization to accept funds.
+The cart page (`app/routes/cart.$.tsx`) uses the same `checkoutOpen` test:
+open, `/cart` renders the session cart; closed, it and every `/cart/*` path
+redirect to `/products`. The committed
+[production configuration](../wrangler.production.toml) holds both flags in
+`[vars]`. The SKU policy is a Worker secret, so verify the deployed catalog
+(`/api/status/campaign`, the product pages) rather than the committed flags.
 
 ## Latency and failure model
 
@@ -96,19 +97,18 @@ admin/maintainer change the topic. Update the static fallback in a follow-up PR
 only after the topic is observed live. This changes lifecycle presentation;
 it does not replace catalog policy, checkout gates or founder approval.
 
-**Prepare checkout review:** verify the exact code revision, storefront-channel
-catalog, SKU policy and server gates in an isolated test environment. Use mocked
-cart dependencies for local tests. Explicit founder approval and a separately
-reviewed cart surface are required before opening production. Never use a
-production flag change or a JSON `live` override as a test shortcut.
+**Test a checkout change:** use mocked cart dependencies for local tests, then
+push the branch to `staging` (README "Hosting and deploy") and pay with
+Shopify's test gateway. Never use a production flag change or a JSON `live`
+override as a test shortcut.
 
-**Launch preorders:** on the founder's go, `node scripts/launch-preorders.mjs
---apply` opens the store (README "Launch preorders"). After the deploy the
-script flips only the boards with a first production batch to `status-beta`
-(OpenFC-Lite, OpenFC-Lite-Mini, OpenESC-20x20, OpenESC-30x30). OpenRX,
-OpenFrame and OpenMotor are funding targets: they keep their status until
-their target is reached and the supplier order is placed. Update the static
-statuses in `roadmap-data.ts` in a follow-up PR, after the flip is live.
+**A board's first production batch is paid:** flip its repository topic to
+`status-beta`. While the shop is open, `app/lib/launched-roadmap.ts` already
+shows a board with a paid batch in `content/preorders.json` as at least beta,
+so the roadmap does not wait for the flip. A funding-target board keeps its
+status until its target is reached and the supplier order is placed. Update
+the static status in `roadmap-data.ts` in a follow-up PR, after the flip is
+live.
 
 **A SKU crosses a price step:** the `orders/paid` webhook and the Worker's
 five-minute reconcile write the new price to Shopify (`priceTiers` in

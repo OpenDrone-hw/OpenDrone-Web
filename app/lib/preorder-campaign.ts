@@ -30,7 +30,7 @@ export type CampaignBatch = {
   /** The ship promise once the supplier order is placed, e.g.
    *  "ships late October 2026". Required for paid stock. */
   ships?: string;
-  /** Reviewed final customer delivery date, separate from dispatch. Null keeps the launch preflight closed. */
+  /** Reviewed final customer delivery date, separate from dispatch. The ship promise names it; null leaves it out. */
   deliveryBy?: string | null;
 };
 

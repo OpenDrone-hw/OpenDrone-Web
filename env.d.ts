@@ -49,8 +49,7 @@ declare global {
     SESSION_SECRET: string;
 
     // Checkout mutation gate. The catalog stays read-only unless this is
-    // exactly '1'. Production sets it in wrangler.production.toml [vars];
-    // scripts/launch-preorders.mjs flips it at launch.
+    // exactly '1'. Production and staging set it in their wrangler [vars].
     SHOPIFY_CHECKOUT_WRITE_ENABLED?: string;
     SHOPIFY_STORE_DOMAIN?: string;
     SHOPIFY_STOREFRONT_TOKEN?: string;
@@ -108,8 +107,7 @@ declare global {
 
     // Coming-soon kill switch: unset/anything ≠ '0' renders every product
     // as coming soon (no prices, notify-me signup instead of add-to-cart).
-    // Production sets it in wrangler.production.toml [vars];
-    // scripts/launch-preorders.mjs sets it to '0' at launch. Per-product
+    // Production and staging set it in their wrangler [vars]. Per-product
     // overrides live in content/products/<handle>.json (`status`).
     PUBLIC_COMING_SOON?: string;
 

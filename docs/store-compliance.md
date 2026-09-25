@@ -1,7 +1,7 @@
 # Storefront acceptance
 
-The team's Notion [launch plan and knowledge index](https://app.notion.com/p/3e6fe06764e18191a111c05fa37db3d0) owns the launch
-sequence and sourced regulatory references. Product conformity
+The team's Notion [launch strategy and knowledge index](https://app.notion.com/p/3e6fe06764e18191a111c05fa37db3d0) owns campaign
+planning and sourced regulatory references. Product conformity
 and signed declarations belong to the compliance repository. This file owns
 only the storefront evidence a release review must inspect.
 
@@ -19,6 +19,6 @@ only the storefront evidence a release review must inspect.
 
 Evidence is attached to the existing release tasks, not copied into a second
 checklist here. A local build does not establish payment-provider acceptance,
-carrier service or product conformity. Release commands and source locations
-are in the [README](../README.md#preorder-release-configuration).
+carrier service or product conformity. Configuration and commands are in the
+[README](../README.md#run-a-preorder-campaign).
 The [superseded brief](archive/2026-09-23-store-compliance.md) is historical.

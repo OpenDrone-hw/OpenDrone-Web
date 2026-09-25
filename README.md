@@ -5,15 +5,19 @@ hardware designed and sold from Belgium. Flight controllers (OpenFC), 4-in-1
 ESCs (OpenESC), ExpressLRS receivers (OpenRX), carbon frames (OpenFrame) and
 the OpenStack bundle.
 
-It is a React Router 7 app, built with the Cloudflare Vite plugin, that runs as a Cloudflare Worker. The public catalog comes from Shopify. The storefront is intentionally closed: product pages show coming-soon states, checkout writes are disabled, and old cart sessions cannot redirect to checkout. Shopify also owns newsletter consent and unsubscribe state. Support is the public Discord invite and company email; the retired ticket APIs return `410`.
+A React Router 7 app, built with the Cloudflare Vite plugin, running as a
+Cloudflare Worker. Shopify owns the catalog, prices, checkout, orders and
+newsletter consent; this repository owns the pages, the preorder campaign
+logic and the gates that open or close checkout. Support is the public Discord
+invite and company email.
 
 Selling entity: Incutec BV. OpenDrone is the community project and product
 brand. This repository is MIT; the hardware repositories are CERN-OHL-S.
 
 Deep dives in `docs/`: `product-status.md` (roadmap display and checkout gates),
-`hero-studio.md` (the homepage 3D pipeline),
-`growth-architecture.md` (analytics, attribution, mail), `store-compliance.md`
-(implementation acceptance and evidence ownership).
+`hero-studio.md` (the homepage 3D pipeline), `growth-architecture.md`
+(analytics, attribution, mail), `store-compliance.md` (storefront acceptance
+evidence).
 
 ## Run it locally
 
@@ -25,9 +29,10 @@ cp .env.example .env       # SESSION_SECRET is the only required value
 npm run dev                # http://localhost:3000
 ```
 
-For a Shopify-backed local run, set the `SHOPIFY_*` values described in `.env.example`. Keep `PUBLIC_COMING_SOON=1` and leave `SHOPIFY_CHECKOUT_WRITE_ENABLED` unset or `0`. The app fails closed when catalog policy or tax configuration is missing.
-
-Node 22 (what CI uses).
+For a Shopify-backed run, set the `SHOPIFY_*` values described in
+`.env.example`. Keep `PUBLIC_COMING_SOON=1` and `SHOPIFY_CHECKOUT_WRITE_ENABLED`
+unset or `0` unless you are testing checkout. The app fails closed when the
+catalog policy or tax configuration is missing. Node 22 (what CI uses).
 
 ## Commands
 
@@ -45,20 +50,19 @@ Node 22 (what CI uses).
 | `npm run gen:schematics` | render the schematic sheets from the board checkouts |
 | `npm run sync:specs` / `sync:specs:check` | mirror each board README's `## Specifications` table into `content/products/<handle>.json`, or diff |
 | `npm run specs:placeholders` | list every spec value still marked as a placeholder |
-| `npm run sync:downloads` | diff the latest GitHub release assets against the product JSON (`--check` only; the downloads chapter is not switched on) |
+| `npm run sync:downloads` | diff the latest GitHub release assets against the product JSON (`--check` only) |
 | `npm run sync:timeline` | append releases, new repos and status flips to the timeline ledger |
 | `npm run sync:contributors` | refresh `content/contributors.json` from GitHub |
 | `npm run studio:coverage` | which files still have copy baked into code |
 | `npm run studio:keys` | fails when code uses a copy id missing from `content/copy/` |
 | `npm run audit:perf`, `audit:lh`, `audit:mobile` | performance lab, Lighthouse, mobile screenshots |
 | `npm run gen:shopify-templates` | render the Shopify notification emails from `scripts/shopify-templates/` into `out/`, ready to paste into Shopify |
-| `node scripts/launch-preorders.mjs` | dry run of the preorder launch: read-only checks and the plan; `--apply` performs it (see "Launch preorders") |
 | `node --experimental-strip-types scripts/release-batch.mjs --sku <SKU>` | dry run: the held orders of a batch; `--apply` releases their holds (see "Fulfil a batch") |
 | `node --experimental-strip-types scripts/preorder-notify.mjs --kind moved\|missed --sku <SKU> --new-date <text>` | dry run: renders the ship-date or missed-target email per order; `--send` sends through Resend (see "Tell buyers") |
-| `node scripts/launch-blast.mjs <handle>` | dry run of the launch mail to the `notify-<handle>` Resend segment; `--create` drafts, `--send` sends |
+| `node scripts/launch-blast.mjs <handle>` | dry run of the product mail to the `notify-<handle>` Resend segment; `--create` drafts, `--send` sends |
+| `BASE=<url> node scripts/smoke.mjs` | GETs the main routes of any base URL and asserts status and content; passes with the shop open or closed (`SMOKE_AUTH=opendrone:<password>` for staging) |
 
-The PR gate is typecheck, lint and test. `scripts/smoke.mjs` hits the main
-routes of any base URL and asserts status and content invariants.
+The PR gate is typecheck, lint and test.
 
 ## Layout
 
@@ -69,12 +73,13 @@ app/
   routes/                  file-based routes
   components/              shared React components
   content/legal/{en,nl,fr} legal Markdown
-  lib/                     catalog, i18n, SEO, product content, growth
+  lib/                     catalog, campaign, cart, i18n, SEO, product content, growth
   studio/                  the studio's editor panels
   styles/app.css           the single CSS file (Tailwind v4)
-content/                   editable copy, product chapters, posts, theme tokens, goals, votes
+content/                   editable copy, product chapters, preorders, posts, theme tokens, goals, votes
 public/                    models (GLB), board art, schematics, logos
-scripts/                   board art export, hero build, sync and audit scripts
+scripts/                   board art export, hero build, sync, audit and order scripts
+server.ts                  Worker entry: fetch, and the five-minute scheduled reconcile
 studio/                    the dev-only Vite plugin (the studio's write endpoint)
 test/fixtures/catalog.json the catalog contract the mapper tests read
 docs/                      the deep dives listed above
@@ -82,25 +87,79 @@ docs/                      the deep dives listed above
 
 ## How the site works
 
-**Catalog and buying.** `app/lib/shopify-storefront.ts` reads the Shopify Storefront API into the repository's existing catalog shape. Every SKU requires an explicit policy entry; production entries are `sold_out` with no ship promise. `PUBLIC_COMING_SOON=1`, `SHOPIFY_CHECKOUT_WRITE_ENABLED=0`, and the cart loader's `410` response keep checkout closed. Customer-account links stay hidden unless an exact verified Shopify account URL is configured.
+```mermaid
+flowchart LR
+  V[Visitor] --> W[Worker opendrone-web]
+  W -->|Storefront API| S[(Shopify)]
+  W -->|Admin API: paid counts, price steps, holds, tags| S
+  W -->|cart POST, both gates open| C[Shopify checkout<br/>SHOPIFY_CHECKOUT_DOMAIN]
+  C -->|orders/paid webhook| W
+  CR[Cron every 5 min] --> W
+  G[GitHub status-* topics] --> W
+```
 
-**Preorders.** `content/preorders.json` lists production batches per SKU: paid stock with its own ship date, or a funding target whose supplier order is placed once that many units are ordered. The catalog client counts paid Shopify orders per SKU since `countFrom` (`app/lib/shopify-orders.ts`, Admin API, cached one minute per isolate) and `app/lib/preorder-campaign.ts` derives the batch, the meter and the ship promise. Only SKUs the catalog policy sells as `preorder` are affected; if the counts cannot be read, those SKUs close. Every preorder cart line carries its ship promise as a `Preorder` line attribute, so checkout and the order confirmation state it. Prices stay in Shopify: the compare-at price is retail and the price is what the next unit costs. `priceTiers` steps that price as paid units come in (the first 100 at 20% off, units 101 to 250 at 10% off, then retail). `app/lib/shopify-price-tier.ts` writes each step from the `orders/paid` webhook (`/api/shopify/orders-paid`, HMAC-verified) and from the Worker's five-minute `scheduled` reconcile, both gated on `SHOPIFY_PRICE_TIER_WRITE_ENABLED=1`. A SKU Shopify still prices under its step closes instead of selling under it. The same two runs hold every paid order with a `Preorder` line (`app/lib/preorder-fulfilment.ts`): each open fulfillment order gets a hold (reason Other, handle `opendrone-preorder`, a note naming the batch and its ship promise) and the order gets the tags `preorder` and `batch:<SKU>:<N>` for each batch its units fall into. `shipsWith` lists the accessories and spares: each rides a campaign SKU at a flat price with no steps, either pinned to a dated batch (antennas, capacitors, straps and props ship with FC batch 1) or following the batch the lead's next unit falls into (OpenFrame spares follow the frame target). Their units do not count toward the lead, and their order lines take the lead's batch tag. The `preorder` tag marks an order as done, so a released order is never held again. `/api/status/campaign` (never cached) reports per campaign SKU whether it is open, whether the paid counts and price steps read cleanly now, and the last run of each job in that Worker isolate; it answers 503 when a campaign SKU is closed, so an uptime monitor can alert on it. `/preorder` explains the model and tracks every target.
+**Catalog.** `app/lib/shopify-storefront.ts` reads the Shopify Storefront API
+into the catalog shape in `app/lib/catalog.ts`. Every Shopify SKU needs an
+entry in `SHOPIFY_PREVIEW_POLICY_JSON` (`saleMode` `in_stock`, `preorder` or
+`sold_out`, plus `shipPromise`); a missing entry, a non-EUR price or missing
+VAT confirmation fails the catalog closed. Shopify `availableForSale` can deny
+a SKU but never proves stock. Customer-account links stay hidden unless an
+exact Shopify account URL is configured.
 
-**Cart country.** A new cart gets the visitor's country (`CF-IPCountry`) as its Shopify buyer country, so checkout opens in that market with its shipping rate. `POST /api/shopify/cart-country` (form field `country`, same-origin, open only when checkout is) sets a different country on the session cart; a blocked country, or one outside the EU, is never set. Consumers buy direct in the 27 EU states only (`app/lib/shipping-rates.ts`); a visitor from any other country that is not blocked sees "EU consumer orders only" with links to `/wholesale` and the newsletter, and the cart offers no checkout. Check tax-inclusive prices and totals against the final address in the accepted Shopify configuration.
+**Checkout.** Checkout is open only when `SHOPIFY_CHECKOUT_WRITE_ENABLED=1` and
+`PUBLIC_COMING_SOON=0` (`checkoutOpen` in `app/lib/shopify-cart-action.ts`).
+Open, `/cart` renders the session cart and `POST /api/shopify/cart` adds
+lines after same-origin, SKU, availability and lifecycle checks; the checkout
+URL Shopify returns must be on `SHOPIFY_STORE_DOMAIN` or
+`SHOPIFY_CHECKOUT_DOMAIN`, otherwise the add fails. Closed, `/cart` redirects
+to `/products` and cart POSTs are refused. `PUBLIC_COMING_SOON` other than `0`
+also renders every product as coming soon, with a notify-me signup instead of
+prices.
+
+**Preorders.** `content/preorders.json` lists production batches per SKU: paid
+stock with its own ship date, or a funding target whose supplier order is
+placed once that many units are ordered. Only SKUs the policy sells as
+`preorder` are affected.
+
+| Piece | Where | Does |
+|---|---|---|
+| Paid counts | `app/lib/shopify-orders.ts` | counts paid Shopify orders per SKU since `countFrom`, cached one minute per isolate; if unreadable, campaign SKUs close |
+| Batch and promise | `app/lib/preorder-campaign.ts` | derives the batch, the meter and the ship promise (with `deliveryBy` when set) |
+| Cart line | `app/lib/shopify-cart-action.ts` | every preorder line carries its promise as a `Preorder` attribute, so checkout and the confirmation state it |
+| Price steps | `app/lib/shopify-price-tier.ts` | `priceTiers` steps the price off the compare-at (retail) price as paid units come in; written to Shopify only when `SHOPIFY_PRICE_TIER_WRITE_ENABLED=1`; a SKU Shopify prices under its step closes |
+| Holds and tags | `app/lib/preorder-fulfilment.ts` | holds each open fulfillment order (handle `opendrone-preorder`) and tags the order `preorder` and `batch:<SKU>:<N>`; a tagged order is never held again |
+| Accessories | `shipsWith` in `content/preorders.json` | spares ride a campaign SKU at a flat price, pinned to a dated batch or following the lead's next unit; they do not count toward the lead |
+| Health | `/api/status/campaign` | per campaign SKU: open or closed, paid counts, pending price steps, last job runs; `503` when a campaign SKU is closed |
+
+Price steps and holds run from the `orders/paid` webhook
+(`/api/shopify/orders-paid`, HMAC-verified with `SHOPIFY_WEBHOOK_SECRET`,
+`503` without it) and from the Worker's five-minute `scheduled` reconcile.
+`/preorder` explains the model and tracks every target. The model is an
+ordinary Shopify order paid in full with custom batch logic, not Shopify's
+selling-plan preorders.
+
+**Cart country.** A new cart gets the visitor's country (`CF-IPCountry`) as
+its Shopify buyer country. `POST /api/shopify/cart-country` (form field
+`country`, same-origin, open only when checkout is) sets another country on
+the session cart. Consumers buy direct only in an EU country marked
+`saleApproved` in `content/registrations.json`
+(`app/lib/shipping-rates.ts`); other EU countries show as not open, non-EU
+visitors see "EU consumer orders only" with links to `/wholesale` and the
+newsletter, and blocked countries get no checkout. The final address is
+restricted by Shopify's markets and shipping profiles, not by this gate.
 
 **Product lines.** OpenESC 20x20 / 30x30 and the four OpenRX variants are one
 Shopify product with a `Model` attribute; the page renders a tier ladder matched
-to the catalog's variants by option name and value.
+to the catalog's variants by option name and value. Product images use Shopify
+CDN URLs directly.
 
-**Product images** use Shopify CDN URLs directly.
-
-**Status.** The `status-*` GitHub topics describe roadmap lifecycle. Catalog
-availability and content overrides also affect display; server-side checkout
-gates independently control purchase requests. Topics are cached; the static
-fallback in `app/lib/roadmap-data.ts` must lag the topic, never lead it.
-`/roadmap`, the product pages, the feeds and the README badge endpoint
-`/api/status/<Repo>.json` use these lifecycle inputs. Read
-`docs/product-status.md` before touching that chain.
+**Status.** The `status-*` GitHub topics describe roadmap lifecycle; they never
+authorize a purchase. Topics are cached; the static fallback in
+`app/lib/roadmap-data.ts` must lag the topic, never lead it. While the shop is
+open, `app/lib/launched-roadmap.ts` shows a board with a paid batch as at least
+beta. `/roadmap`, the product pages, the feeds and the README badge endpoint
+`/api/status/<Repo>.json` use these inputs. Read `docs/product-status.md`
+before touching that chain.
 
 **Product pages** are a sequence of typed chapters (teardown, schematics, open
 source, specs, in the box, downloads, firmware, reviews, contributors, prose)
@@ -114,12 +173,10 @@ each PCB (`scripts/boards.config.json` maps handles to `.kicad_pcb` paths
 relative to the directory holding the board checkouts, `../hardware` by default,
 `OPENDRONE_HARDWARE` overrides). `npm run sync:specs` reads each mapped
 README's `## Specifications` table (`scripts/repo-sync.config.json`) into the
-product JSON.
-Rows a README does not carry go in `specsExtra` (product or tier), accessory
-rows in `content/accessories.json`. Keys named in a `placeholders` array are
-values awaiting the final figure, never marked on the page; `npm run
-specs:placeholders` lists them and the preorder launch dry run warns while any
-remain.
+product JSON. Rows a README does not carry go in `specsExtra` (product or
+tier), accessory rows in `content/accessories.json`. Keys named in a
+`placeholders` array are values awaiting the final figure, never marked on the
+page; `npm run specs:placeholders` lists them.
 
 **Homepage hero.** A three.js scene (`app/components/HeroDroneScene.tsx`) plays
 the Onshape assembly, exported as one GLB and chunked by
@@ -133,26 +190,50 @@ with `timeline-ledger.json` on this repository's unprotected `data` branch,
 appended daily by `.github/workflows/timeline-ledger.yml` from releases, new
 repos and `status-*` flips across the public OpenDrone-hw repositories.
 
-**Support.** `/support` links to the configured OpenDrone Discord invite and `mailto:` company address. Existing-conversation links lead to the same native contacts. The retired `/api/support/*` surface returns `410` at the Worker boundary. Historical ticket exports remain private outside this repository.
+**Support.** `/support` links to the configured Discord invite
+(`DISCORD_SUPPORT_INVITE`) and the `mailto:` company address. The retired
+`/api/support/*` surface returns `410` at the Worker boundary.
 
-**Trade.** `/wholesale` takes quote requests from shops for the whole range, outside the Shopify cart and checkout, without creating an order or promising import eligibility. Product, freight, importer and payment terms are settled in an accepted written quote. Shops in the EU27 and United States can enquire about the whole range, including OpenRX receivers. The form emails `PUBLIC_COMPANY_EMAIL` through Resend (`RESEND_API_KEY`, `SUPPORT_FROM_EMAIL`) with reply-to the shop; without a key it reports the request as not sent. The SKUs a shop can ask for, the VAT/EIN checks and the request validation are in `app/lib/trade.ts`.
+**Trade.** `/wholesale` takes quote requests from shops in the EU27 and the
+United States for the whole range, outside the Shopify cart, without creating
+an order or promising import eligibility. Terms are settled in an accepted
+written quote. The form emails `PUBLIC_COMPANY_EMAIL` through Resend
+(`RESEND_API_KEY`, `SUPPORT_FROM_EMAIL`) with reply-to the shop; without a key
+it reports the request as not sent. SKUs, VAT/EIN checks and validation are in
+`app/lib/trade.ts`.
 
-**Reviews.** The PDP's rating line and reviews chapter read Shopify's standard `reviews.rating` and `reviews.rating_count` product metafields, which the installed review app (Judge.me) maintains. No third-party script runs on the page. A product without those metafields renders no trace of the feature, so the chapter appears by itself once the first review is published.
+**Reviews.** The PDP's rating line and reviews chapter read Shopify's standard
+`reviews.rating` and `reviews.rating_count` product metafields, maintained by
+the installed review app (Judge.me). No third-party script runs on the page. A
+product without those metafields renders no trace of the feature.
 
-**Newsletter.** Posts are Markdown in `content/posts/` (`published: true` publishes at `/newsletter/<slug>` and in `/newsletter.rss`). The footer signup records single-opt-in consent in Shopify and adds the `newsletter` tag plus `notify-<handle>` for product launch interest, and `country-<CODE>` for a visitor from a country sold only through shops. `/newsletter/unsubscribe` changes Shopify consent to `UNSUBSCRIBED`; it sends no welcome or confirmation email. `SHOPIFY_NEWSLETTER_WRITE_ENABLED` is a separate runtime gate.
+**Newsletter.** Posts are Markdown in `content/posts/` (`published: true`
+publishes at `/newsletter/<slug>` and in `/newsletter.rss`). The footer signup
+records single-opt-in consent in Shopify and adds the `newsletter` tag plus
+`notify-<handle>` for product interest, and `country-<CODE>` for a visitor from
+a country sold only through shops. `/newsletter/unsubscribe` sets Shopify
+consent to `UNSUBSCRIBED`. `SHOPIFY_NEWSLETTER_WRITE_ENABLED` gates consent
+writes independently of checkout.
 
 **Legal.** The legal documents in `app/content/legal/{en,nl,fr}/` serve at
 `/{en,nl,fr}/<slug>`; the bare `/<slug>` redirects to the visitor's cached
 locale, and `LangToggle` appears only on legal paths. This repository is the
-authoring source for them. The site UI is English-only. `/recycling` adds the producer (EPR) registration numbers per EU country from `content/registrations.json` under its text; a number still `null` is not shown.
+authoring source for them. The site UI is English-only. `/recycling` adds the
+producer (EPR) registration numbers per EU country from
+`content/registrations.json`; a number still `null` is not shown.
 
-**Other routes.** `/products` is the one browse page; `/collections/*`,
-`/search`, `/cart/*` and `/discount/*` redirect to it. `/open-source`,
-`/production` and `/firmware-partners` are content pages; `/contact`
-redirects to `/support`; `/account/support` sends visitors to the native support contacts. `robots.txt`, `sitemap.xml`,
-`security.txt`, `healthz`, `llms.txt` and `products.json` are generated live
-from the catalog. `/blog*`, `/releases*`, `/contribute`, `/incutec` are 301
-stubs.
+**Other routes.**
+
+| Route | Behaviour |
+|---|---|
+| `/products` | the one browse page; `/collections/*`, `/search`, `/cart/*` and `/discount/*` redirect to it |
+| `/preorder`, `/wholesale`, `/shipping`, `/roadmap`, `/timeline` | content pages driven by the sources above |
+| `/open-source`, `/production`, `/firmware-partners` | content pages |
+| `/doc/<sku>` | per-SKU EU Declaration of Conformity page |
+| `/learn` | draft-gated, noindex knowledge pages |
+| `/contact` | redirects to `/support`; `/account/*` sends visitors to the support contacts |
+| `robots.txt`, `sitemap.xml`, `security.txt`, `healthz`, `llms.txt`, `products.json` | generated live from the catalog |
+| `/blog*`, `/releases*`, `/contribute`, `/incutec` | 301 stubs |
 
 ## The studio
 
@@ -178,8 +259,8 @@ build-stage plugin deletes the studio HTML from the output.
 Editable copy: create `content/copy/<page>.json` with `$route` and `$title`,
 render strings with `<Txt id="<page>.<key>" />` (`app/components/Txt.tsx`) or
 `copyText(id)` for attributes. Inline markup is `[label](/path)`, `*emphasis*`
-and `**strong**` only. Catalog data is edited in Shopify, synced Dutch legal pages
-are read-only, board art comes from KiCad and the hero model from Onshape.
+and `**strong**` only. Catalog data is edited in Shopify, board art comes from
+KiCad and the hero model from Onshape.
 
 ## Theming and i18n
 
@@ -193,127 +274,145 @@ Markdown by URL prefix and each legal route emits hreflang for en, nl, fr.
 
 ## Environment variables
 
-The annotated list is [`.env.example`](.env.example). Production uses `SESSION_SECRET`; Shopify Storefront domain/token/version; the closed SKU policy; explicit VAT confirmation; and Shopify Admin customer scopes for newsletter consent. `PUBLIC_COMING_SOON=1` and `SHOPIFY_CHECKOUT_WRITE_ENABLED=0` keep commerce closed. `SHOPIFY_NEWSLETTER_WRITE_ENABLED` gates consent writes independently. Native support uses `DISCORD_SUPPORT_INVITE` and `PUBLIC_COMPANY_EMAIL`. `PUBLIC_*` values reach the client bundle; tokens do not.
+The annotated list is [`.env.example`](.env.example). `PUBLIC_*` values reach
+the client bundle; tokens and the SKU policy never do.
+
+| Group | Variables | Set as |
+|---|---|---|
+| Session | `SESSION_SECRET` | Worker secret |
+| Shop gates | `PUBLIC_COMING_SOON`, `SHOPIFY_CHECKOUT_WRITE_ENABLED` | `[vars]` in the wrangler config |
+| Storefront | `SHOPIFY_STORE_DOMAIN`, `SHOPIFY_STOREFRONT_TOKEN`, `SHOPIFY_STOREFRONT_API_VERSION`, `SHOPIFY_CHECKOUT_DOMAIN`, `SHOPIFY_PRICES_INCLUDE_VAT`, `SHOPIFY_PREVIEW_POLICY_JSON`, `SHOPIFY_CUSTOMER_ACCOUNT_URL` | Worker secrets |
+| Admin | `SHOPIFY_ADMIN_API_TOKEN`, `SHOPIFY_ADMIN_API_VERSION`, `SHOPIFY_PRICE_TIER_WRITE_ENABLED`, `SHOPIFY_WEBHOOK_SECRET` | Worker secrets |
+| Mail and support | `SHOPIFY_NEWSLETTER_WRITE_ENABLED`, `RESEND_API_KEY`, `SUPPORT_FROM_EMAIL`, `TURNSTILE_*`, `DISCORD_SUPPORT_INVITE`, `PUBLIC_DISCORD_INVITE`, `PUBLIC_COMPANY_*` | Worker secrets or vars |
+| Roadmap | `GITHUB_STATUS_TOKEN` | Worker secret |
+| Staging only | `STAGING_PASSWORD` | Worker secret |
 
 ## Hosting and deploy
 
-Production (`opendrone.be`, `www.opendrone.be`) is the Cloudflare Worker
-`opendrone-web`: `wrangler.production.toml` declares both hostnames as Custom
-Domains and points the Worker at `dist/server/index.js` and the static assets
-in `dist/client`. `server.ts` redirects `www` to the apex. The `opendrone.be`
-zone is on Cloudflare nameservers.
+```mermaid
+flowchart LR
+  M[push to main] -->|cloudflare-production.yml| P[Worker opendrone-web<br/>opendrone.be, www]
+  S[push to staging<br/>or manual run] -->|cloudflare-preview.yml| T[Worker opendrone-web-preview<br/>workers.dev, basic auth]
+```
 
-Two workflows, one Worker each:
+| | Production | Staging |
+|---|---|---|
+| Config | `wrangler.production.toml` | `wrangler.toml` |
+| Trigger | every push to `main`: a merge is a production deploy | every push to `staging`, or a manual run of the workflow |
+| Hostnames | `opendrone.be`, `www.opendrone.be` (Custom Domains; `server.ts` redirects `www` to the apex) | a workers.dev URL, HTTP basic auth (user `opendrone`, `STAGING_PASSWORD`), `X-Robots-Tag: noindex, nofollow` |
+| Shop | the gates in its `[vars]` | always open, against the same Shopify store; pay with Shopify's test gateway |
+| Price steps and cron | yes | never writes prices |
 
-- `.github/workflows/cloudflare-production.yml`: every push to `main` builds
-  and runs `wrangler deploy --config wrangler.production.toml`. A merge to
-  `main` is a production deploy.
-- `.github/workflows/cloudflare-preview.yml`: every push to
-  `feat/preorders` deploys the isolated staging Worker `opendrone-web-preview`
-  (`wrangler.toml`): a workers.dev URL, no custom domains, HTTP basic auth
-  (user `opendrone`, the `STAGING_PASSWORD` secret) and `X-Robots-Tag:
-  noindex, nofollow` on every Worker response. Static files from
-  `dist/client` are served by Cloudflare before the Worker runs, so they
-  bypass both. Staging runs the shop open
-  (`PUBLIC_COMING_SOON=0`, checkout writes on) against the same Shopify
-  store, and never writes prices.
+To preview any branch on staging, push it to `staging`:
+`git push --force origin HEAD:staging`. Static files from `dist/client` are
+served by Cloudflare before the Worker runs, so they bypass basic auth and the
+noindex header. Both workflows use the repository secrets
+`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` and pin wrangler 4.
+`community-sync.yml` refreshes the contributor roster; `timeline-ledger.yml`
+updates the public repository timeline.
 
-Both use the repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` and pin wrangler 4. Storefront and Admin tokens are Worker secrets, never committed. `community-sync.yml` refreshes the contributor roster only; `timeline-ledger.yml` updates the public repository timeline.
+## Open or close the shop
 
-## Preorder release configuration
+Both gates must be open for checkout; closing either one closes it.
 
-The launch plan and knowledge live in the team's Notion
-([OpenDrone launch strategy](https://app.notion.com/p/3e6fe06764e18191a111c05fa37db3d0)). This repository owns implementation,
-configuration and verification. Do not copy business strategy or regulatory
-research into this guide.
+| Setting | Where | Open | Closed |
+|---|---|---|---|
+| `PUBLIC_COMING_SOON` | `wrangler.production.toml` `[vars]` | `"0"` | anything else: coming-soon pages, no prices |
+| `SHOPIFY_CHECKOUT_WRITE_ENABLED` | `wrangler.production.toml` `[vars]` | `"1"` | anything else: cart POSTs refused, `/cart` redirects |
+| `SHOPIFY_PREVIEW_POLICY_JSON` | Worker secret | `preorder` (campaign SKUs, `shipPromise: null`) or `in_stock` per SKU for sale | `sold_out` with `shipPromise: null` |
+| `SHOPIFY_CHECKOUT_DOMAIN` | Worker secret | the host of Shopify's checkout links | not needed |
+| `SHOPIFY_PRICE_TIER_WRITE_ENABLED` | Worker secret | `"1"` while a campaign steps prices | anything else |
+| `SHOPIFY_WEBHOOK_SECRET` | Worker secret | the signing secret of the app that registered the `orders/paid` webhook to `/api/shopify/orders-paid` | not needed |
+
+The gates change by a PR to `wrangler.production.toml` (a merge deploys it);
+secrets change with `wrangler secret put <NAME> --config
+wrangler.production.toml`. A JSON `status: development` in
+`content/products/<handle>.json` locks one product without closing the shop.
+
+An open shop also depends on Shopify settings this repository cannot check:
+
+| Shopify setting | Holds when |
+|---|---|
+| Payments active, automatic capture | a test order is paid, captured and refunded |
+| Admin API token scopes | `read_orders`, `read_all_orders` (campaigns over 60 days), `write_orders`, `write_products`, `write_merchant_managed_fulfillment_orders` |
+| Markets and shipping profiles | only approved EU addresses can check out |
+| Redirect theme published | the Shopify-hosted storefront forwards to opendrone.be |
+| Online Store password page off | checkout opens for customers, not only staff |
+
+After any change: `BASE=https://opendrone.be node scripts/smoke.mjs` and
+`curl https://opendrone.be/api/status/campaign`.
+
+## Run a preorder campaign
 
 | Source | Owns |
-| --- | --- |
-| `content/preorders.json` | Batch sizes, funding deadline, dispatch estimates, reviewed `deliveryBy` dates and price-step rules |
-| `content/registrations.json` | Public producer numbers and explicit `saleApproved` per EU destination |
-| Shopify | Product prices, catalog identity, orders, payments, customer consent and accepted shipping profiles |
-| `app/content/legal/{en,nl,fr}/` | Customer terms, with campaign dates supplied by the offer and order confirmation |
-| `scripts/launch-preorders.mjs` | Read-only preflight by default; its `--apply` path opens checkout and deploys production |
+|---|---|
+| `content/preorders.json` | `countFrom`, `endsOn`, `priceTiers`, `pendingShips`, per-SKU `batches` (`units`, `paid`, `ships`, `deliveryBy`) and `shipsWith` |
+| `content/registrations.json` | producer numbers and explicit `saleApproved` per EU destination |
+| Shopify | compare-at (retail) price, current price, catalog identity, orders, payments |
+| `SHOPIFY_PREVIEW_POLICY_JSON` | which SKUs sell as `preorder` |
+| `app/content/legal/{en,nl,fr}/` | customer terms (7bis) |
 
-A producer number alone cannot open a destination. `saleApproved` requires the
-relevant product, tax, EPR, language, carrier and delivery evidence. `deliveryBy`
-is a customer delivery date, not a
-supplier or carrier dispatch date. Null is deliberate when no supportable
-commitment exists. The launch preflight refuses missing approvals or dates;
-this technical check does not approve the underlying evidence.
+1. Edit `content/preorders.json` (by hand or the studio Data tab): set
+   `countFrom` to the first day whose paid orders count, the batches with
+   `units`, `paid` and `ships` for ordered stock, `deliveryBy` as the
+   reviewed customer delivery date, `endsOn` and `pendingShips` for funding
+   targets, and `priceTiers`. `npm test` checks that `pendingShips` names
+   `endsOn` and the latest ship date.
+2. In Shopify, set each campaign SKU's compare-at price to retail and its
+   price to the first step. A SKU priced under its step stays closed.
+3. Set the SKU to `preorder` in `SHOPIFY_PREVIEW_POLICY_JSON` with
+   `shipPromise: null`, and `SHOPIFY_PRICE_TIER_WRITE_ENABLED=1`.
+4. Open the shop (above) and check `/api/status/campaign`: every campaign SKU
+   `open`, `allOpen: true`, no pending price step.
 
-The implemented model is an ordinary Shopify order paid in full, with custom
-batch logic. It is not Shopify's native selling-plan preorder feature. Verify
-provider acceptance, capture, available methods, reserves, tax, refunds and
-notifications in an isolated rehearsal. The final Shopify address must be
-restricted by the accepted markets/shipping profile as well as the storefront
-gate; a cookie or visitor country alone cannot enforce that address.
-
-Production stays closed. Run the launch dry run only for a requested launch
-review. `--apply` requires a separate founder go: it changes production secrets
-and variables, merges the integration PR, deploys, registers the webhook and
-changes product topics. Never run it to preview this branch.
-
-## Launch preorders
-
-The founder's steps in the Shopify admin come first:
-
-| Step | Done when |
-| --- | --- |
-| Shopify Payments active, automatic capture | A test order is paid, captured and refunded |
-| Admin API token scopes | The dry run reports no missing scope (it needs `read_all_orders`, `read_orders`, `write_orders`, `write_products`, `write_merchant_managed_fulfillment_orders`) |
-| Markets and shipping profiles | Only EU-27 addresses can check out; a non-EU address is refused at checkout |
-| Redirect theme published | The Shopify-hosted storefront forwards to opendrone.be, so no buy link bypasses the storefront gates |
-| Online Store password page off | Checkout opens for a customer, not only for staff |
-
-Then, from a clean checkout of `feat/preorders` equal to its origin:
-
-1. `node scripts/launch-preorders.mjs`: the dry run must end with no problems.
-2. `node scripts/launch-preorders.mjs --apply`: sets the Worker secrets,
-   commits the launch variables and `countFrom` (launch day), merges PR #489,
-   waits for the production deploy, registers the `orders/paid` webhook, flips
-   the FC and ESC repositories to `status-beta` and runs the smoke checks.
-3. Place one real order on opendrone.be and confirm the hold, the batch tag
-   and the ship promise on the order, then refund it.
+A reached funding target: place the supplier order, then set that batch's
+`ships`; new orders fall into the next batch. `deliveryBy` is a customer
+delivery date, not a supplier or carrier date; `null` leaves it out of the
+promise. A producer number alone does not open a destination; `saleApproved`
+does, after its evidence is reviewed. The strategy behind a campaign lives in
+the team's Notion
+([OpenDrone launch strategy](https://app.notion.com/p/3e6fe06764e18191a111c05fa37db3d0)),
+not here.
 
 ## Fulfil a batch
 
 Paid preorder orders stay on hold until their batch is released. Verify in
-the accepted shipping integration that held orders cannot produce a label. When a batch arrives:
+the shipping integration that held orders cannot produce a label. When a
+batch arrives:
 
-1. `node --experimental-strip-types scripts/release-batch.mjs --sku OPENFC-LITE-2020 --batch 1`
-   lists the held orders tagged `batch:OPENFC-LITE-2020:1`: the ones that
-   ship now, and the ones that still wait for another batch in the same
-   order (an order ships as one parcel). Add `--with SKU:N` for any other
-   batch that is also in stock, or that is settled because its item was
-   refunded or the buyer chose to wait.
-2. Run it again with `--apply`. It releases the preorder hold on each
-   order that ships now. Nothing else changes.
+1. `node --experimental-strip-types scripts/release-batch.mjs --sku <SKU> --batch <N>`
+   lists the held orders tagged `batch:<SKU>:<N>`: the ones that ship now, and
+   the ones that still wait for another batch in the same order (an order
+   ships as one parcel). Add `--with <SKU>:<N>` for any other batch that is
+   also in stock, or settled because its item was refunded or the buyer chose
+   to wait.
+2. Run it again with `--apply`. It releases the preorder hold on each order
+   that ships now. Nothing else changes.
 3. In the bpost plugin, import the released orders and print the labels.
 
 The script reads the Shopify Admin credentials from `.env` and never prints
 them. An order with an item whose target was missed is released once that
-item is refunded in Shopify admin: a line with nothing left to ship no
-longer holds the order back.
+item is refunded in Shopify admin: a line with nothing left to ship no longer
+holds the order back.
 
 ## Tell buyers
 
-Terms 7bis.3 and 7bis.3bis promise an email when a ship date moves and
-when a funding target is missed. `scripts/preorder-notify.mjs` writes them
-per order, in the buyer's language (English, Dutch or French):
+Terms 7bis.3 and 7bis.3bis promise an email when a ship date moves and when a
+funding target is missed. `scripts/preorder-notify.mjs` writes them per order,
+in the buyer's language (English, Dutch or French):
 
-- Ship date moved: `node --experimental-strip-types scripts/preorder-notify.mjs --kind moved --sku OPENFC-LITE-2020 --batch 1 --new-date "mid November 2026" --new-date-nl "half november 2026" --new-date-fr "mi-novembre 2026"`.
-- Target missed by `endsOn`: `--kind missed --sku OPENRX-LITE --batch 1 --new-date "by the end of June 2027"`.
-  The email offers a refund or to wait, and states the 30-day reply
-  deadline after which the item is refunded.
+- Ship date moved: `node --experimental-strip-types scripts/preorder-notify.mjs --kind moved --sku <SKU> --batch <N> --new-date "<date>" --new-date-nl "<datum>" --new-date-fr "<date>"`.
+- Target missed by `endsOn`: `--kind missed --sku <SKU> --batch <N> --new-date "<new target date>"`.
+  The email offers a refund or to wait, and states the 30-day reply deadline
+  after which the item is refunded.
 
 Without `--send` it prints every email and sends nothing. With `--send` it
 sends through Resend from `SUPPORT_FROM_EMAIL` with replies to
-`contact@opendrone.be`, and tags each order `notified-<kind>:<SKU>:<N>` (a
+`PUBLIC_COMPANY_EMAIL`, and tags each order `notified-<kind>:<SKU>:<N>` (a
 rerun skips those orders; `--again` resends). Record each answer with
-`--record "#1001" --sku OPENRX-LITE --choice refund|wait --apply`, which
-tags the order `preorder-refund:<SKU>` or `preorder-wait:<SKU>`. Refunds
-are made in Shopify admin.
+`--record "#<order>" --sku <SKU> --choice refund|wait --apply`, which tags the
+order `preorder-refund:<SKU>` or `preorder-wait:<SKU>`. Refunds are made in
+Shopify admin.
 
 ## Security
 
@@ -321,10 +420,11 @@ are made in Shopify admin.
   `X-Frame-Options: DENY`, nosniff, strict referrer policy, restrictive
   Permissions-Policy, COOP and CORP.
 - Rate limits: a per-isolate sliding window on every public POST.
-- Commerce credentials are server-only Worker secrets. `.env` is gitignored; never expose tokens or the SKU policy in client data. Rotate the session secret,
-  the Resend key and the Turnstile secret annually or on suspicion.
-- Disclosure: GitHub private vulnerability reporting, `/.well-known/security.txt`,
-  policy at `/security`, default embargo 90 days.
+- Commerce credentials are server-only Worker secrets. `.env` is gitignored;
+  never expose tokens or the SKU policy in client data. Rotate the session
+  secret, the Resend key and the Turnstile secret annually or on suspicion.
+- Disclosure: GitHub private vulnerability reporting,
+  `/.well-known/security.txt`, policy at `/security`, default embargo 90 days.
 
 ## Contributing
 
