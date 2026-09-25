@@ -18,10 +18,15 @@ import {SLICE_BUDGET_MS, yieldToMain} from '~/lib/scheduling';
 // counterpart of the filled pads in a board's art.
 const FRAME_LINE = {
   dark: {color: 0xc8b27a, opacity: 0.8, fill: 0.07},
-  light: {color: 0x5c4611, opacity: 0.92, fill: 0.08},
+  // Light: half the tint, which otherwise reads milky over the cream page.
+  light: {color: 0x5c4611, opacity: 0.92, fill: 0.04},
 } as const;
 // Outline stroke in CSS pixels (WebGL lines are otherwise always 1 px).
 const LINE_WIDTH = 1.7;
+// Canvas width below which the drawing is a phone drawing, and how much the
+// model shrinks there so the exploded arms stay inside the width.
+const NARROW_PX = 700;
+const NARROW_FIT = 0.72;
 // Parts drawn with a face tint: the carbon plates, arms and cross.
 const FILLED = /^(top|base|arm|cross)/;
 
@@ -302,6 +307,7 @@ async function prepareModel(
   });
   fillMat.userData.fill = true;
   scene.userData.lineMat = lineMat;
+  scene.userData.fillMat = fillMat;
   const filled = new Set(found.filter((f) => f.fill).map((f) => f.obj));
   const allMeshes: THREE.Mesh[] = [];
   scene.traverse((o) => {
@@ -497,8 +503,12 @@ function FrameModel({
   const spinAngle = useRef(0);
   // Fit the drawing to the canvas (world units at the model's depth), centred.
   const viewport = useThree((st) => st.viewport);
+  // Phones: the exploded frame must fit the width with padding, so it
+  // scales down; strokes and tint thin out (see useFrame).
+  const narrow = useThree((st) => st.size.width < NARROW_PX);
   const offsetX = viewport.width * shiftX;
-  const rigScale = Math.min(viewport.width, viewport.height) * fit;
+  const rigScale =
+    Math.min(viewport.width, viewport.height) * fit * (narrow ? NARROW_FIT : 1);
   // All loaded models, keyed by src. Only the active one is `visible`.
   const models = useRef<Map<string, Model>>(new Map());
   // Escape hatch for the tier-switch effect below: kick an immediate load of
@@ -706,10 +716,17 @@ function FrameModel({
     const active = models.current.get(src);
     if (!active || !active.parts.length) return;
     // Fat lines size their stroke in pixels against the canvas resolution.
-    (active.root.userData.lineMat as LineMaterial | undefined)?.resolution.set(
-      state.size.width,
-      state.size.height,
-    );
+    // On a phone-width canvas a 1.7 px stroke and the face tint read as
+    // solid blobs: 1 px and half the tint there.
+    const thin = state.size.width < NARROW_PX;
+    const lm = active.root.userData.lineMat as LineMaterial | undefined;
+    if (lm) {
+      lm.resolution.set(state.size.width, state.size.height);
+      lm.linewidth = thin ? 1 : LINE_WIDTH;
+    }
+    const fm = active.root.userData.fillMat as
+      THREE.MeshBasicMaterial | undefined;
+    if (fm) fm.opacity = FRAME_LINE[getActiveTheme()].fill * (thin ? 0.5 : 1);
     // The bell spins continuously while the canvas is mounted (on screen);
     // reduced motion keeps it still. Clamp delta so a backgrounded tab does
     // not jump on return.
