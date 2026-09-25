@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import {ModelLoader as GLTFLoader} from '~/lib/model-loader';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {useIsMobile, usePrefersReducedMotion} from '~/lib/use-media-query';
+import {usePrefersReducedMotion} from '~/lib/use-media-query';
 import {getActiveTheme} from '~/lib/theme';
 import {SLICE_BUDGET_MS, yieldToMain} from '~/lib/scheduling';
 
@@ -45,9 +45,10 @@ export type FrameViewerProps = {
  * spins.
  *
  * Purely decorative and NON-interactive: a layer of gold vector outlines
- * contained in the teardown section, behind the
- * teardown text. The explode amount is recomputed from the section's
- * viewport position every rendered frame, and a scroll listener invalidates
+ * behind the Specs chapter's table and part list, the frame and motor
+ * counterpart of the board art behind a board's spec table. The explode
+ * amount is recomputed from the drawing's viewport position every rendered
+ * frame, and a scroll listener invalidates
  * (frameloop="demand") - so it animates smoothly while scrolling and the GPU
  * idles otherwise; off-screen the canvas unmounts entirely.
  *
@@ -89,25 +90,17 @@ const DENSE_EDGES = 1500;
 // Bell spin in radians per second.
 const MOTOR_SPIN = 0.9;
 
-// Per-kind rig: how far the explode may run with scroll, the model's size in
-// scene units, the fixed three-quarter view, and `fit`: the model's size as a
-// fraction of the free drawing area (the smaller of its width and height), so
-// the exploded parts stay inside the section. `shiftX` (fraction of the free
-// width) recentres a drawing whose three-quarter view is lopsided.
+// Per-kind rig: the model's size in scene units, the fixed three-quarter view,
+// and `fit`: the assembled model's size as a fraction of the drawing area (the
+// smaller of its width and height). The drawing sits behind the spec table
+// like the board art on the board pages, so it fills the chapter; exploded,
+// the parts spill out across it. `shiftX` (fraction of the width) recentres a
+// drawing whose three-quarter view is lopsided.
 const KIND = {
-  frame: {
-    explodeMax: 1,
-    size: 1,
-    rot: {x: 0.42, y: -0.5},
-    fit: 0.48,
-    shiftX: -0.06,
-  },
-  // One motor: it expands to about twice its height and holds.
-  motor: {explodeMax: 1, size: 1, rot: {x: -1.2, y: 0}, fit: 0.42, shiftX: 0},
+  frame: {size: 1, rot: {x: 0.42, y: -0.5}, fit: 0.45, shiftX: -0.02},
+  // One motor: it expands along its shaft to about twice its height.
+  motor: {size: 1, rot: {x: -1.2, y: 0}, fit: 0.42, shiftX: 0},
 } as const;
-// Desktop: the part list covers the left of the section, so the drawing is
-// centred in the space to its right.
-const LIST_FRACTION = 0.42;
 
 type Part = {
   obj: THREE.Object3D;
@@ -437,30 +430,16 @@ function FrameModel({
   containerRef: React.RefObject<HTMLDivElement | null>;
 }) {
   const groupRef = useRef<THREE.Group>(null);
-  // Fixed three-quarter top view. On desktop it's shifted right in its own local
-  // x so the model sits off to the right and the left arms fan into the text.
-  // On mobile the viewer is a centred square above the copy, so the offset is
-  // dropped and the model scaled up to fill it (otherwise it floats in a corner
-  // of a black void - the desktop right-bias has nothing to fan into).
-  const isMobile = useIsMobile();
   // Respect reduced-motion: the explode is a scroll-coupled animation, so for
   // visitors who opt out we hold the frame assembled (e = 0) - they get the
   // wireframe backdrop without parts flying as they scroll.
   const reducedMotion = usePrefersReducedMotion();
-  const {rot, explodeMax, fit, shiftX} = KIND[kind];
+  const {rot, fit, shiftX} = KIND[kind];
   const spinAngle = useRef(0);
-  // Fit the drawing to the canvas (world units at the model's depth): on
-  // desktop into the space right of the part list, on mobile into the
-  // square above it.
+  // Fit the drawing to the canvas (world units at the model's depth), centred.
   const viewport = useThree((st) => st.viewport);
-  const freeW = isMobile
-    ? viewport.width
-    : viewport.width * (1 - LIST_FRACTION);
-  const offsetX =
-    (isMobile ? 0 : viewport.width * (LIST_FRACTION / 2)) + freeW * shiftX;
-  // The phone square holds nothing else, so the drawing fills more of it.
-  const rigScale =
-    Math.min(freeW, viewport.height) * fit * (isMobile ? 1.3 : 1);
+  const offsetX = viewport.width * shiftX;
+  const rigScale = Math.min(viewport.width, viewport.height) * fit;
   // All loaded models, keyed by src. Only the active one is `visible`.
   const models = useRef<Map<string, Model>>(new Map());
   // Escape hatch for the tier-switch effect below: kick an immediate load of
@@ -473,10 +452,6 @@ function FrameModel({
   const activeSrcRef = useRef(src);
   activeSrcRef.current = src;
   const [, bump] = useReducer((c: number) => c + 1, 0);
-  // The chapter following the teardown ("Open for learning"). The explode is
-  // scrubbed across the gap between the two chapters' centres, so we need its
-  // box too. Resolved lazily and cached (re-resolved if it drops out of DOM).
-  const nextChapter = useRef<HTMLElement | null>(null);
 
   // Load every tier's model once, active one first so it shows ASAP; the rest
   // warm in the background so switching tiers is instant. THREE.Cache keeps the
@@ -634,22 +609,21 @@ function FrameModel({
     };
   }, []);
 
-  // Recompute the explode amount from scroll position each rendered frame.
-  // The throw spans chapter 1 (teardown) → chapter 2: e = 0 when the teardown
-  // chapter's centre sits at the viewport centre (assembled, in view), and
-  // e = 1 once the next chapter's centre reaches the viewport centre (fully
-  // exploded). Normalised by the centre-to-centre distance, so it's stable
-  // regardless of section heights or the gap between them.
+  // Recompute the explode amount from scroll position each rendered frame:
+  // e = 0 (assembled) while the drawing's centre is 0.6 of a viewport below
+  // the viewport centre, rising to e = 1 (fully exploded) as its centre
+  // reaches the viewport centre, and held there after. So the parts spill out
+  // while the spec table scrolls into view.
   //
-  // The chapter centres are cached in DOCUMENT space - NOT read per frame.
+  // The drawing's centre is cached in DOCUMENT space - NOT read per frame.
   // During a scroll each rendered frame runs right after other main-thread
   // work has dirtied style/layout, so a per-frame getBoundingClientRect
   // forced a full synchronous reflow of the PDP every frame (measured
   // 50-70ms/frame at 4x CPU). The cache invalidates on window resize AND on
   // any document-height change (ResizeObserver on <body> - late images,
   // lazily built viewers, accordions all change the body's height, which is
-  // exactly when positions above/around the chapters shift).
-  const centersRef = useRef<{c1: number; c2: number | null} | null>(null);
+  // exactly when positions above/around the drawing shift).
+  const centersRef = useRef<{c1: number} | null>(null);
   useEffect(() => {
     const invalidateCenters = () => {
       centersRef.current = null;
@@ -678,42 +652,12 @@ function FrameModel({
     const el = containerRef.current;
     if (el && !reducedMotion) {
       if (!centersRef.current) {
-        const section = (el.closest('.chapter') as HTMLElement | null) ?? el;
-        let next = nextChapter.current;
-        if (!next || !next.isConnected) {
-          let n = section.nextElementSibling as HTMLElement | null;
-          while (n && !n.classList.contains('chapter'))
-            n = n.nextElementSibling as HTMLElement | null;
-          nextChapter.current = next = n;
-        }
-        const r1 = section.getBoundingClientRect();
-        const c1 = r1.top + r1.height / 2 + window.scrollY;
-        let c2: number | null = null;
-        if (next) {
-          const r2 = next.getBoundingClientRect();
-          c2 = r2.top + r2.height / 2 + window.scrollY;
-        }
-        centersRef.current = {c1, c2};
+        const r = el.getBoundingClientRect();
+        centersRef.current = {c1: r.top + r.height / 2 + window.scrollY};
       }
       const vh = window.innerHeight || 1;
-      const cached = centersRef.current;
-      const c1 = cached.c1 - window.scrollY;
-      if (cached.c2 != null) {
-        const c2 = cached.c2 - window.scrollY;
-        // Hold the frame assembled (e = 0) through chapter 1 - it only starts
-        // coming apart once chapter 2 reaches the viewport centre. (vh/2 − c2)
-        // is how far ch.2's centre has risen past the centre; normalise by the
-        // ch.1→ch.2 centre distance so e ≈ 1 about one chapter later, then it
-        // keeps climbing to the kind's explodeMax so the parts fly off as you scroll on.
-        e = THREE.MathUtils.clamp(
-          (vh / 2 - c2) / (c2 - c1 || vh),
-          0,
-          explodeMax,
-        );
-      } else {
-        // No following chapter - fall back to a single-pass scrub.
-        e = THREE.MathUtils.clamp(1 - c1 / vh, 0, 1);
-      }
+      const below = centersRef.current.c1 - window.scrollY - vh / 2;
+      e = THREE.MathUtils.clamp(1 - below / (vh * 0.6), 0, 1);
     }
     for (const p of active.parts) {
       p.obj.position.set(

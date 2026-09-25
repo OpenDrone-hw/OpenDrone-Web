@@ -7285,15 +7285,15 @@ a.what-chain-chip:hover {
   .teardown-sides {
     display: none;
   }
-  /* The frame and motor teardowns have no part tour, so their list stays,
-     compact, under the drawing. */
-  .chapter[data-backdrop] .teardown-sides {
+  /* The frame and motor part list (in Specs) has no part tour, so it stays,
+     compact. */
+  .specs-parts .teardown-sides {
     display: block;
   }
-  .chapter[data-backdrop] .teardown-pins li {
+  .specs-parts .teardown-pins li {
     padding: 0.4rem 0.6rem 0.4rem 0.75rem;
   }
-  .chapter[data-backdrop] .teardown-pin-part {
+  .specs-parts .teardown-pin-part {
     font-size: 0.85rem;
   }
   .board-art-inspect,

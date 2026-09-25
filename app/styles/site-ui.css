@@ -1085,6 +1085,54 @@ html.light .po-card-cta {
 @media (max-width: 767px) {
   .product-silhouette-art { width: min(149.6vw, 119svh); opacity: 0.02; }
 }
+/* Frame and motor: the exploding outline drawing fills the Specs chapter
+   behind the table and the part list, the same footprint as a board's art,
+   with the same mask quieting it under the text columns. */
+.product-specs--drawing { padding-bottom: 1rem; }
+/* The drawing spills sideways past the rail but never out of the chapter's
+   top or bottom (the gallery above, In the box below). */
+.chapter#specs:has(.specs-drawing) { overflow: visible clip; }
+.specs-drawing {
+  position: absolute;
+  z-index: -1;
+  top: -12rem;
+  bottom: -2rem;
+  left: calc(50% - 50vw);
+  right: calc(50% - 50vw);
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0.6;
+  -webkit-mask-image: linear-gradient(90deg, #000 12%, rgb(0 0 0 / 0.35) 26%, rgb(0 0 0 / 0.35) 74%, #000 88%);
+  mask-image: linear-gradient(90deg, #000 12%, rgb(0 0 0 / 0.35) 26%, rgb(0 0 0 / 0.35) 74%, #000 88%);
+}
+.specs-parts { margin-top: 3rem; }
+/* The part list spans the table's width, in two columns on wide screens. */
+.specs-parts .teardown-sides { width: auto; max-width: none; }
+@media (min-width: 880px) {
+  .specs-parts .teardown-pins { display: grid; grid-template-columns: 1fr 1fr; column-gap: 1px; }
+}
+.specs-parts-title {
+  margin-bottom: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+@media (max-width: 767px) {
+  /* Phone: the drawing on top, full width, bleeding behind the first rows. */
+  .specs-drawing {
+    position: relative;
+    inset: auto;
+    width: 100vw;
+    aspect-ratio: 1;
+    margin: -2rem calc(50% - 50vw) -4rem;
+    opacity: 0.8;
+    -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent);
+    mask-image: linear-gradient(180deg, #000 70%, transparent);
+  }
+}
+
 /* A board export is the part itself: it reads clearly around the table, and
    a scrim over the table's columns quiets it under the spec text. */
 .product-silhouette[data-board] .product-silhouette-art { opacity: 0.1; }

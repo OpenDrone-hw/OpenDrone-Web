@@ -1858,8 +1858,11 @@ function ProductPage() {
       // public files to study yet.
       case 'openSource':
         return hasPublicSource;
+      // A frame or motor (a CAD model, no board) has its teardown part list
+      // and exploded drawing in the Specs chapter, like a board's art behind
+      // its spec table, so there is no separate Teardown chapter.
       case 'teardown':
-        return Boolean(content.teardown);
+        return Boolean(content.teardown) && frameViewerSrcs.length === 0;
       case 'specs':
         return content.specs.length > 0;
       case 'inTheBox':
@@ -1900,6 +1903,45 @@ function ProductPage() {
    * so it cannot drift from the render order. `title` is the studio's optional
    * override - absent, the designed title (inline `<em>` and all) stands.
    */
+  // The teardown part list: the Teardown chapter's body on boards, the
+  // Specs chapter's second block on the frame and motor.
+  const teardownPinList = groupedPins.top.length > 0 && groupedPins.bottom.length > 0 ? (
+            <div
+              className={`teardown-sides${boardFlying ? ' is-locked' : ''}${
+                pinsSwapping ? ' is-swapping' : ''
+              }`}
+              onMouseLeave={noHover ? undefined : clearHover}
+            >
+              <section className="teardown-side">
+                <ul className="teardown-pins">
+                  {groupedPins.top.map(renderPin)}
+                </ul>
+              </section>
+              <section className="teardown-side">
+                <ul className="teardown-pins">
+                  {[...groupedPins.bottom, ...groupedPins.other].map(renderPin)}
+                </ul>
+              </section>
+            </div>
+          ) : (
+            <div
+              className={`teardown-sides${boardFlying ? ' is-locked' : ''}${
+                pinsSwapping ? ' is-swapping' : ''
+              }`}
+              onMouseLeave={noHover ? undefined : clearHover}
+            >
+              <section className="teardown-side">
+                <ul className="teardown-pins">
+                  {[
+                    ...groupedPins.top,
+                    ...groupedPins.bottom,
+                    ...groupedPins.other,
+                  ].map(renderPin)}
+                </ul>
+              </section>
+            </div>
+          );
+
   const chapterNodes: Partial<
     Record<
       ChapterType,
@@ -2244,23 +2286,6 @@ function ProductPage() {
               />
             ) : undefined
           }
-          backdrop={
-            frameViewer ? (
-              // No key on src: keep the canvas mounted across tier switches so
-              // the viewer toggles between preloaded models instantly rather
-              // than remounting and re-fetching the GLB. Wrapped so a WebGL
-              // failure drops the (decorative) viewer instead of crashing the
-              // whole product page.
-              <SceneErrorBoundary fallback={null}>
-                <ClientFrameViewer
-                  src={frameViewer.src}
-                  srcs={frameViewerSrcs}
-                  kind={frameViewer.kind}
-                  inspectUrl={frameViewer.inspectUrl}
-                />
-              </SceneErrorBoundary>
-            ) : undefined
-          }
           media={
             !frameViewer && activeBoardArt ? (
               // Key by product HANDLE (not src): stays mounted across TIER swaps
@@ -2373,42 +2398,7 @@ function ProductPage() {
             ) : undefined
           }
         >
-          {groupedPins.top.length > 0 && groupedPins.bottom.length > 0 ? (
-            <div
-              className={`teardown-sides${boardFlying ? ' is-locked' : ''}${
-                pinsSwapping ? ' is-swapping' : ''
-              }`}
-              onMouseLeave={noHover ? undefined : clearHover}
-            >
-              <section className="teardown-side">
-                <ul className="teardown-pins">
-                  {groupedPins.top.map(renderPin)}
-                </ul>
-              </section>
-              <section className="teardown-side">
-                <ul className="teardown-pins">
-                  {[...groupedPins.bottom, ...groupedPins.other].map(renderPin)}
-                </ul>
-              </section>
-            </div>
-          ) : (
-            <div
-              className={`teardown-sides${boardFlying ? ' is-locked' : ''}${
-                pinsSwapping ? ' is-swapping' : ''
-              }`}
-              onMouseLeave={noHover ? undefined : clearHover}
-            >
-              <section className="teardown-side">
-                <ul className="teardown-pins">
-                  {[
-                    ...groupedPins.top,
-                    ...groupedPins.bottom,
-                    ...groupedPins.other,
-                  ].map(renderPin)}
-                </ul>
-              </section>
-            </div>
-          )}
+          {teardownPinList}
           {!frameViewer && activeBoardArt ? (
             <p className="teardown-render-note">
               {say('product-chrome.teardown_render_note', 'Render from the design files. Silkscreen may differ.')}
@@ -2439,12 +2429,32 @@ function ProductPage() {
           noMedia
           centered
         >
-          <div className="product-specs" ref={specsRef}>
-            <ProductSilhouette
-              boardSrc={activeBoardArt?.src ?? null}
-              imageSrc={silhouetteImage ?? null}
-              target={specsRef}
-            />
+          <div
+            className={`product-specs${frameViewer ? ' product-specs--drawing' : ''}`}
+            ref={specsRef}
+          >
+            {frameViewer ? (
+              // The frame or motor explodes behind the table, the CAD
+              // counterpart of a board's art. No key on src: the canvas stays
+              // mounted across tier switches and toggles between preloaded
+              // models. A WebGL failure drops the (decorative) drawing only.
+              <div className="specs-drawing" aria-hidden="true">
+                <SceneErrorBoundary fallback={null}>
+                  <ClientFrameViewer
+                    src={frameViewer.src}
+                    srcs={frameViewerSrcs}
+                    inspectUrl={frameViewer.inspectUrl}
+                    kind={frameViewer.kind}
+                  />
+                </SceneErrorBoundary>
+              </div>
+            ) : (
+              <ProductSilhouette
+                boardSrc={activeBoardArt?.src ?? null}
+                imageSrc={silhouetteImage ?? null}
+                target={specsRef}
+              />
+            )}
             {/* Final values only, never a count-up: a buyer who reads or
                 screenshots a spec must never see a wrong current or voltage. */}
             <table
@@ -2501,6 +2511,16 @@ function ProductPage() {
                 ))}
               </tbody>
             </table>
+            {frameViewer ? (
+              <div className="specs-parts">
+                <Txt
+                  id="product-chrome.ch_teardown_title_frame"
+                  as="h3"
+                  className="specs-parts-title"
+                />
+                {teardownPinList}
+              </div>
+            ) : null}
           </div>
           {activeConnectors.length ? (
             <div className="spec-connectors">
