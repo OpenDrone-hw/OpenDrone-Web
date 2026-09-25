@@ -197,9 +197,20 @@ repos and `status-*` flips across the public OpenDrone-hw repositories.
 **Trade.** `/wholesale` takes quote requests from shops in the EU27 and the
 United States for the whole range, outside the Shopify cart, without creating
 an order or promising import eligibility. Terms are settled in an accepted
-written quote. The form emails `PUBLIC_COMPANY_EMAIL` through Resend
-(`RESEND_API_KEY`, `SUPPORT_FROM_EMAIL`) with reply-to the shop; without a key
-it reports the request as not sent. SKUs, VAT/EIN checks and validation are in
+written quote. One request carries what a quote needs: company legal name,
+contact, email, phone, website (optional for a physical-only store), how the
+shop sells, country, VAT number (format-checked per EU country) or EIN,
+shipping address, billing address when it differs, SKU lines, and optionally a
+wanted delivery date, expected monthly reorders, how the shop heard of
+OpenDrone and a note. A honeypot, a per-IP limit and Turnstile guard it. An EU
+VAT number is looked up in VIES (the answer goes in the email, never blocks).
+The form emails `PUBLIC_COMPANY_EMAIL` through Resend (`RESEND_API_KEY`,
+`SUPPORT_FROM_EMAIL`) with reply-to the shop: the details, a table of SKUs,
+quantities and catalog list prices excluding VAT with a total, and the VAT
+treatment. Without a key it reports the request as not sent. The shop gets no
+email; the page shows what was sent. Entry points: header, mobile menu,
+footer, coming-soon product pages, `/preorder`, `/products` and the non-EU
+cart notes. SKUs, checks, VIES lookup, validation and email are in
 `app/lib/trade.ts`.
 
 **Reviews.** The PDP's rating line and reviews chapter read Shopify's standard

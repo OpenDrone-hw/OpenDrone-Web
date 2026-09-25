@@ -9,8 +9,10 @@ import {
   TRADE_GROUPS,
   TRADE_SKUS,
   buildTradeEmail,
+  checkVies,
   isTradeSku,
   normalizeEin,
+  normalizePhone,
   normalizeVat,
   sendTradeRequest,
   tradeLeadTimes,
@@ -35,16 +37,19 @@ function form(values: Record<string, string | string[]>) {
   };
 }
 
-const US_SHOP = {
-  shop: 'Rotor Riot Depot',
+const US_SHOP: Record<string, string | string[]> = {
+  company: 'Rotor Riot Depot LLC',
   site: 'rotordepot.example.com',
+  shopType: 'both',
   country: 'US',
   taxId: '12-3456789',
   contactName: 'Sam Seller',
   email: 'buyer@rotordepot.example.com',
+  phone: '+1 512 555 0100',
   sku: ['OPENFRAME-5', 'ACC-STRAP-20X220'],
   qty: ['20', '100'],
   shipTo: '100 Main St\nAustin TX 78701\nUnited States',
+  billingSame: 'on',
   note: '',
 };
 
@@ -116,12 +121,15 @@ describe('validateTradeRequest', () => {
     assert.equal(r.ok, false);
     if (r.ok) return;
     assert.deepEqual(Object.keys(r.errors).sort(), [
+      'billTo',
+      'company',
       'contactName',
       'country',
       'email',
       'lines',
+      'phone',
       'shipTo',
-      'shop',
+      'shopType',
       'website',
     ]);
   });
@@ -155,7 +163,10 @@ describe('validateTradeRequest', () => {
     ]) {
       assert.equal(isTradeSku(sku), true, sku);
     }
-    for (const sku of ['ACC-ANT-T', 'ACC-CAP-470UF-35V', 'x']) {
+    for (const sku of ['ACC-ANT-T', 'ACC-ANT-DUAL-T', 'ACC-CAP-470UF-35V', 'ACC-CAP-470UF-50V']) {
+      assert.equal(isTradeSku(sku), true, sku);
+    }
+    for (const sku of ['ACC-FRM-TPU-5', 'x']) {
       assert.equal(isTradeSku(sku), false, sku);
       const r = validateTradeRequest(form({...EU_SHOP, sku: [sku], qty: ['10']}));
       assert.equal(r.ok, false, sku);
@@ -205,18 +216,21 @@ function request(values = US_SHOP): TradeRequest {
 describe('buildTradeEmail', () => {
   it('carries every field', () => {
     const {subject, text} = buildTradeEmail(request());
-    assert.equal(subject, 'Quote request: Rotor Riot Depot (US)');
+    assert.equal(subject, 'Quote request: Rotor Riot Depot LLC (US), 120 units');
     for (const part of [
-      'Rotor Riot Depot',
+      'Rotor Riot Depot LLC',
       'https://rotordepot.example.com',
+      'Online and physical shop',
       'United States (US)',
       'EIN:',
       '12-3456789',
       'Sam Seller',
       'buyer@rotordepot.example.com',
-      '20 x OPENFRAME-5',
-      '100 x ACC-STRAP-20X220',
+      '+1 512 555 0100',
+      'OPENFRAME-5',
+      'ACC-STRAP-20X220',
       'Austin TX 78701',
+      'Same as ship to',
       'Note:',
       '(none)',
       'verify export evidence',
@@ -227,7 +241,7 @@ describe('buildTradeEmail', () => {
   });
 
   it('states the VAT treatment by destination', () => {
-    assert.match(buildTradeEmail(request(EU_SHOP)).text, /VAT:\s+DE123456789[\s\S]*qualifying transport evidence/);
+    assert.match(buildTradeEmail(request(EU_SHOP)).text, /VAT number:\s+DE123456789[\s\S]*qualifying transport evidence/);
     assert.match(
       buildTradeEmail(request({...EU_SHOP, country: 'BE', taxId: 'BE0123456789'})).text,
       /Belgian VAT 21%/,
@@ -236,7 +250,159 @@ describe('buildTradeEmail', () => {
   });
 
   it('has no em dash', () => {
-    assert.ok(!buildTradeEmail(request()).text.includes(String.fromCharCode(0x2014)));
+    const {text, html} = buildTradeEmail(request());
+    assert.ok(!text.includes(String.fromCharCode(0x2014)));
+    assert.ok(!html.includes(String.fromCharCode(0x2014)));
+  });
+});
+
+describe('the fields a quote needs', () => {
+  const at = new Date('2026-09-23T10:00:00Z');
+
+  it('checks the phone number', () => {
+    assert.equal(normalizePhone('+32 16 12 34 56'), '+32 16 12 34 56');
+    assert.equal(normalizePhone('(512) 555-0100'), '(512) 555-0100');
+    assert.equal(normalizePhone('12345'), null);
+    assert.equal(normalizePhone('call me'), null);
+    assert.equal(normalizePhone('+1234567890123456'), null);
+  });
+
+  it('lets a physical-only shop leave the website out, nobody else', () => {
+    const physical = validateTradeRequest(form({...US_SHOP, shopType: 'physical', site: ''}), at);
+    assert.equal(physical.ok, true);
+    if (physical.ok) assert.equal(physical.request.website, '');
+    const online = validateTradeRequest(form({...US_SHOP, shopType: 'online', site: ''}), at);
+    assert.equal(online.ok, false);
+    if (!online.ok) assert.ok(online.errors.website);
+    const bad = validateTradeRequest(form({...US_SHOP, shopType: 'physical', site: 'not a url'}), at);
+    assert.equal(bad.ok, false);
+    const unknownType = validateTradeRequest(form({...US_SHOP, shopType: 'mail-order'}), at);
+    assert.equal(unknownType.ok, false);
+    if (!unknownType.ok) assert.ok(unknownType.errors.shopType);
+  });
+
+  it('asks for a billing address only when it differs', () => {
+    const same = validateTradeRequest(form(US_SHOP), at);
+    assert.equal(same.ok && same.request.billTo, null);
+    const missing = validateTradeRequest(form({...US_SHOP, billingSame: '', billTo: ''}), at);
+    assert.equal(missing.ok, false);
+    if (!missing.ok) assert.ok(missing.errors.billTo);
+    const other = validateTradeRequest(
+      form({...US_SHOP, billingSame: '', billTo: 'Accounts, 1 Office Park\nDallas TX 75201'}),
+      at,
+    );
+    assert.equal(other.ok, true);
+    if (other.ok) assert.match(other.request.billTo ?? '', /Dallas/);
+  });
+
+  it('takes a delivery date from today up to two years ahead', () => {
+    for (const [date, ok] of [
+      ['2026-09-23', true],
+      ['2027-03-01', true],
+      ['2026-09-22', false],
+      ['2029-01-01', false],
+      ['2026-02-30', false],
+      ['soon', false],
+    ] as const) {
+      const r = validateTradeRequest(form({...US_SHOP, deliveryBy: date}), at);
+      assert.equal(r.ok, ok, date);
+    }
+  });
+
+  it('keeps the optional choices to their lists', () => {
+    const r = validateTradeRequest(form({...US_SHOP, volume: '1k-5k', source: 'event'}), at);
+    assert.equal(r.ok, true);
+    if (r.ok) assert.deepEqual([r.request.volume, r.request.source], ['1k-5k', 'event']);
+    const none = validateTradeRequest(form(US_SHOP), at);
+    if (none.ok) assert.deepEqual([none.request.volume, none.request.source, none.request.deliveryBy], [null, null, null]);
+    assert.equal(validateTradeRequest(form({...US_SHOP, volume: 'lots'}), at).ok, false);
+    assert.equal(validateTradeRequest(form({...US_SHOP, source: 'spam'}), at).ok, false);
+  });
+});
+
+describe('checkVies', () => {
+  const answer = (body: unknown, status = 200) =>
+    (async (url: string) => {
+      assert.match(String(url), /\/ms\/DE\/vat\/123456789$/);
+      return new Response(JSON.stringify(body), {status});
+    }) as typeof fetch;
+
+  it('reads a valid, an invalid and an unreachable answer', async () => {
+    assert.deepEqual(
+      await checkVies('DE123456789', answer({isValid: true, userError: 'VALID', name: 'ACME GMBH', address: 'Weg 1\n10115 Berlin'})),
+      {status: 'valid', name: 'ACME GMBH', address: 'Weg 1\n10115 Berlin'},
+    );
+    assert.deepEqual(
+      await checkVies('DE123456789', answer({isValid: true, userError: 'VALID', name: '---', address: '---'})),
+      {status: 'valid', name: undefined, address: undefined},
+    );
+    assert.deepEqual(await checkVies('DE123456789', answer({isValid: false, userError: 'INVALID'})), {status: 'invalid'});
+    assert.deepEqual(
+      await checkVies('DE123456789', answer({isValid: false, userError: 'MS_UNAVAILABLE'})),
+      {status: 'unavailable'},
+    );
+    assert.deepEqual(await checkVies('DE123456789', answer({}, 500)), {status: 'unavailable'});
+    const offline = (async () => {
+      throw new Error('offline');
+    }) as typeof fetch;
+    assert.deepEqual(await checkVies('DE123456789', offline), {status: 'unavailable'});
+  });
+});
+
+describe('the quote email', () => {
+  const prices = {
+    currency: 'EUR',
+    includesVat: true,
+    bySku: {'OPENFRAME-5': 60.5, 'ACC-STRAP-20X220': 6.05},
+  };
+
+  it('tables the products with list prices ex VAT and a total', () => {
+    const {text, html} = buildTradeEmail(request(), prices);
+    // 60.50 incl. 21% VAT is 50.00 ex VAT; 20 frames 1,000.00, 100 straps 500.00.
+    assert.match(text, /20\s+OPENFRAME-5\s+50\.00\s+1,000\.00\s+OpenFrame 5" Freestyle/);
+    assert.match(text, /100\s+ACC-STRAP-20X220\s+5\.00\s+500\.00/);
+    assert.match(text, /Total at list\s+1,500\.00/);
+    assert.match(text, /21% Belgian VAT removed/);
+    assert.match(html, /<td[^>]*>OPENFRAME-5<\/td>/);
+    assert.match(html, />1,500\.00</);
+  });
+
+  it('says so when there are no list prices', () => {
+    const {text} = buildTradeEmail(request());
+    assert.match(text, /List prices unavailable/);
+    assert.match(text, /OPENFRAME-5\s+-\s+-/);
+  });
+
+  it('carries the optional fields and the VIES answer', () => {
+    const req = request({
+      ...EU_SHOP,
+      billingSame: '',
+      billTo: 'Buchhaltung\nWeg 2\n10115 Berlin',
+      deliveryBy: '2026-11-15',
+      volume: '5k-20k',
+      source: 'referral',
+      note: 'Carton of 50 frames please',
+    });
+    req.vies = {status: 'valid', name: 'ACME GMBH', address: 'Weg 1\n10115 Berlin'};
+    const {text} = buildTradeEmail(req);
+    for (const part of [
+      'Buchhaltung',
+      '2026-11-15',
+      'EUR 5,000 to 20,000 per month',
+      'Recommendation',
+      'Carton of 50 frames please',
+      'valid when submitted: ACME GMBH, Weg 1, 10115 Berlin',
+    ]) {
+      assert.ok(text.includes(part), part);
+    }
+    req.vies = {status: 'invalid'};
+    assert.match(buildTradeEmail(req).text, /VIES:\s+NOT valid/);
+  });
+
+  it('escapes what the shop typed in the HTML', () => {
+    const {html} = buildTradeEmail(request({...US_SHOP, company: '<script>x</script> & Co'}));
+    assert.ok(!html.includes('<script>'));
+    assert.ok(html.includes('&lt;script&gt;x&lt;/script&gt; &amp; Co'));
   });
 });
 
@@ -262,7 +428,9 @@ describe('sendTradeRequest', () => {
     assert.deepEqual(await sendTradeRequest(ENV, request(), fetcher), {configured: true, sent: true});
     assert.deepEqual(body.to, ['contact@opendrone.be']);
     assert.equal(body.reply_to, 'buyer@rotordepot.example.com');
-    assert.equal(body.subject, 'Quote request: Rotor Riot Depot (US)');
+    assert.equal(body.subject, 'Quote request: Rotor Riot Depot LLC (US), 120 units');
+    assert.equal(typeof body.html, 'string');
+    assert.match(String(body.text), /Rotor Riot Depot LLC/);
   });
 
   it('reports a provider error or a network error as not sent', async () => {

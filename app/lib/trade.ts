@@ -7,7 +7,8 @@
  * Mail goes through Resend with the same variables as the withdrawal form
  * (`RESEND_API_KEY`, `SUPPORT_FROM_EMAIL`, `PUBLIC_COMPANY_EMAIL`). Without a
  * key nothing is sent and the result says so, so the page never tells a shop
- * its request arrived when it did not.
+ * its request arrived when it did not. An EU VAT number is also looked up
+ * in VIES; the answer goes in the email and never blocks a request.
  *
  * Kept pure and bundler-free (relative imports, no worker APIs) so the
  * node:test suites can load it.
@@ -28,10 +29,14 @@ export const TRADE_SKUS: readonly TradeSku[] = [
   {sku: 'OPENFC-LITE-3030', group: 'fc', label: 'OpenFC Lite, 30x30'},
   {sku: 'OPENESC-2020', group: 'esc', label: 'OpenESC 20x20'},
   {sku: 'OPENESC-3030', group: 'esc', label: 'OpenESC 30x30'},
+  {sku: 'ACC-CAP-470UF-35V', group: 'esc', label: 'Capacitor, 470 µF 35 V low-ESR'},
+  {sku: 'ACC-CAP-470UF-50V', group: 'esc', label: 'Capacitor, 470 µF 50 V low-ESR'},
   {sku: 'OPENRX-LITE', group: 'rx', label: 'OpenRX Lite'},
   {sku: 'OPENRX-LITE-UFL', group: 'rx', label: 'OpenRX Lite U.FL'},
   {sku: 'OPENRX-MONO', group: 'rx', label: 'OpenRX Mono'},
   {sku: 'OPENRX-GEMINI', group: 'rx', label: 'OpenRX Gemini'},
+  {sku: 'ACC-ANT-T', group: 'rx', label: 'ELRS 2.4 GHz U.FL T antenna'},
+  {sku: 'ACC-ANT-DUAL-T', group: 'rx', label: 'ELRS 868/915 MHz + 2.4 GHz U.FL T antenna'},
   {sku: 'OPENMOTOR-1604', group: 'motor', label: 'OpenMotor 1604, 3" class'},
   {sku: 'OPENMOTOR-2207', group: 'motor', label: 'OpenMotor 2207, 5" class'},
   {sku: 'OPENFRAME-5', group: 'frame', label: 'OpenFrame 5" Freestyle'},
@@ -159,33 +164,93 @@ export function normalizeEin(raw: string): string | null {
 export const MAX_LINES = 30;
 export const MAX_QTY = 10000;
 
+/** How the shop sells. */
+export type ShopType = 'online' | 'physical' | 'both';
+export const SHOP_TYPES: readonly ShopType[] = ['online', 'physical', 'both'];
+
+/** Expected reorders per month, excluding VAT. Optional on the form. */
+export const VOLUME_BANDS = ['unsure', 'lt1k', '1k-5k', '5k-20k', 'gt20k'] as const;
+export type VolumeBand = (typeof VOLUME_BANDS)[number];
+
+/** Where the shop heard of OpenDrone. Optional on the form. */
+export const LEAD_SOURCES = ['search', 'social', 'video', 'community', 'event', 'referral', 'other'] as const;
+export type LeadSource = (typeof LEAD_SOURCES)[number];
+
+/** The words the email uses. The page reads its own labels from
+ *  `content/copy/wholesale.json`. */
+const SHOP_TYPE_TEXT: Record<ShopType, string> = {
+  online: 'Online shop',
+  physical: 'Physical shop',
+  both: 'Online and physical shop',
+};
+const VOLUME_TEXT: Record<VolumeBand, string> = {
+  unsure: 'Not sure yet',
+  lt1k: 'Under EUR 1,000 per month',
+  '1k-5k': 'EUR 1,000 to 5,000 per month',
+  '5k-20k': 'EUR 5,000 to 20,000 per month',
+  gt20k: 'Over EUR 20,000 per month',
+};
+const SOURCE_TEXT: Record<LeadSource, string> = {
+  search: 'Search engine',
+  social: 'Social media',
+  video: 'YouTube or a review',
+  community: 'Discord or an FPV community',
+  event: 'Trade show or event',
+  referral: 'Recommendation',
+  other: 'Other',
+};
+
 export type TradeLine = {sku: string; label: string; qty: number};
 
+/** The live VIES answer for an EU VAT number. It never blocks a request:
+ *  it tells the quote whether the number was live when the shop sent it. */
+export type ViesResult = {
+  status: 'valid' | 'invalid' | 'unavailable';
+  name?: string;
+  address?: string;
+};
+
 export type TradeRequest = {
-  shop: string;
-  website: string;
-  country: TradeCountry;
-  /** VIES-form VAT number for an EU shop, EIN for a US shop, the number as
-   *  given elsewhere. */
-  taxId: string;
+  /** Company legal name, as it goes on the invoice. */
+  company: string;
   contactName: string;
   email: string;
+  phone: string;
+  /** Website or shop URL; may be empty for a physical-only shop. */
+  website: string;
+  shopType: ShopType;
+  country: TradeCountry;
+  /** VIES-form VAT number for an EU shop, EIN for a US shop. */
+  taxId: string;
   lines: TradeLine[];
   shipTo: string;
+  /** Null when billing goes to the shipping address. */
+  billTo: string | null;
+  volume: VolumeBand | null;
+  /** Wanted delivery date, YYYY-MM-DD, or null. */
+  deliveryBy: string | null;
+  source: LeadSource | null;
   note: string;
   submittedAt: string;
+  /** Set by the action after validation, for an EU VAT number. */
+  vies?: ViesResult | null;
 };
 
 export type TradeField =
-  | 'shop'
-  | 'website'
-  | 'country'
-  | 'taxId'
+  | 'company'
   | 'contactName'
   | 'email'
+  | 'phone'
+  | 'website'
+  | 'shopType'
+  | 'country'
+  | 'taxId'
   | 'lines'
   | 'shipTo'
-  | 'note';
+  | 'billTo'
+  | 'volume'
+  | 'deliveryBy'
+  | 'source';
 
 export type TradeValidation =
   | {ok: true; request: TradeRequest}
@@ -204,25 +269,54 @@ export function tradeLabel(sku: string, labels?: Record<string, string>): string
   return labels?.[sku] ?? TRADE_SKUS.find((s) => s.sku === sku)?.label ?? sku;
 }
 
+/** A phone number a carrier can use: 6 to 15 digits, an optional leading
+ *  +, and spaces, dots, dashes, slashes or brackets between them. */
+export function normalizePhone(raw: string): string | null {
+  const v = raw.replace(/\s+/g, ' ').trim();
+  if (!/^\+?[\d\s().\-/]+$/.test(v)) return null;
+  const digits = v.replace(/\D/g, '').length;
+  return digits >= 6 && digits <= 15 ? v : null;
+}
+
+const oneOf = <T extends string>(list: readonly T[], v: string): T | null =>
+  (list as readonly string[]).includes(v) ? (v as T) : null;
+
 export function validateTradeRequest(
   form: TradeInput,
   now: Date = new Date(),
 ): TradeValidation {
   const errors: Partial<Record<TradeField, string>> = {};
 
-  const shop = str(form.get('shop'), 200);
-  if (!shop) errors.shop = 'Enter the shop name.';
+  const company = str(form.get('company'), 200);
+  if (!company) errors.company = 'Enter the company legal name.';
 
+  const contactName = str(form.get('contactName'), 200);
+  if (!contactName) errors.contactName = 'Enter a contact name.';
+
+  const email = str(form.get('email'), 200);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'Enter an email address.';
+
+  const phone = normalizePhone(str(form.get('phone'), 40)) ?? '';
+  if (!phone) errors.phone = 'Enter a phone number with country code.';
+
+  const shopType = oneOf(SHOP_TYPES, str(form.get('shopType'), 10));
+  if (!shopType) errors.shopType = 'Choose how you sell.';
+
+  // A physical-only shop may have no website; everyone else needs one.
   let website = str(form.get('site'), 300);
   if (website && !/^https?:\/\//i.test(website)) website = `https://${website}`;
-  let siteOk = false;
-  try {
-    const u = new URL(website);
-    siteOk = /^https?:$/.test(u.protocol) && u.hostname.includes('.');
-  } catch {
-    siteOk = false;
+  if (website) {
+    let siteOk = false;
+    try {
+      const u = new URL(website);
+      siteOk = /^https?:$/.test(u.protocol) && u.hostname.includes('.');
+    } catch {
+      siteOk = false;
+    }
+    if (!siteOk) errors.website = 'Enter a web address, for example shop.example.';
+  } else if (shopType !== 'physical') {
+    errors.website = 'Enter the shop website.';
   }
-  if (!siteOk) errors.website = 'Enter the shop website.';
 
   const country = tradeCountry(str(form.get('country'), 2).toUpperCase());
   if (!country) errors.country = 'Choose a country from the list.';
@@ -242,12 +336,6 @@ export function validateTradeRequest(
       if (taxId.length < 4) errors.taxId = `Enter the VAT or tax number for ${country.name}.`;
     }
   }
-
-  const contactName = str(form.get('contactName'), 200);
-  if (!contactName) errors.contactName = 'Enter a contact name.';
-
-  const email = str(form.get('email'), 200);
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'Enter an email address.';
 
   const skus = form.getAll('sku');
   const qtys = form.getAll('qty');
@@ -276,26 +364,89 @@ export function validateTradeRequest(
   if (lineError) errors.lines = lineError;
 
   const shipTo = str(form.get('shipTo'), 1000);
-  if (shipTo.length < 10) errors.shipTo = 'Enter the full ship-to address.';
+  if (shipTo.length < 10) errors.shipTo = 'Enter the full shipping address.';
+
+  // The billing address is the shipping one unless the box is unticked.
+  const billingSame = form.get('billingSame') === 'on';
+  const billTo = billingSame ? null : str(form.get('billTo'), 1000);
+  if (billTo !== null && billTo.length < 10) errors.billTo = 'Enter the full billing address.';
+
+  const volumeText = str(form.get('volume'), 10);
+  const volume = volumeText ? oneOf(VOLUME_BANDS, volumeText) : null;
+  if (volumeText && !volume) errors.volume = 'Choose an option from the list.';
+
+  const sourceText = str(form.get('source'), 12);
+  const source = sourceText ? oneOf(LEAD_SOURCES, sourceText) : null;
+  if (sourceText && !source) errors.source = 'Choose an option from the list.';
+
+  // A wanted delivery date, from today up to two years ahead.
+  const deliveryText = str(form.get('deliveryBy'), 10);
+  let deliveryBy: string | null = null;
+  if (deliveryText) {
+    const day = /^\d{4}-\d{2}-\d{2}$/.test(deliveryText) ? Date.parse(`${deliveryText}T00:00:00Z`) : NaN;
+    const today = Date.parse(`${now.toISOString().slice(0, 10)}T00:00:00Z`);
+    if (Number.isNaN(day) || day < today || day > today + 731 * 86_400_000) {
+      errors.deliveryBy = 'Choose a date from today up to two years ahead.';
+    } else {
+      deliveryBy = deliveryText;
+    }
+  }
 
   const note = str(form.get('note'), 2000);
 
-  if (Object.keys(errors).length || !country) return {ok: false, errors};
+  if (Object.keys(errors).length || !country || !shopType) return {ok: false, errors};
   return {
     ok: true,
     request: {
-      shop,
-      website,
-      country,
-      taxId,
+      company,
       contactName,
       email,
+      phone,
+      website,
+      shopType,
+      country,
+      taxId,
       lines,
       shipTo,
+      billTo,
+      volume,
+      deliveryBy,
+      source,
       note,
       submittedAt: now.toISOString(),
     },
   };
+}
+
+const VIES_API = 'https://ec.europa.eu/taxation_customs/vies/rest-api/ms';
+
+/** Ask VIES whether a VIES-form VAT number (`DE123456789`) is live. Any
+ *  failure or timeout is `unavailable`, never a rejection. */
+export async function checkVies(
+  vat: string,
+  fetcher: typeof fetch = fetch,
+): Promise<ViesResult> {
+  const m = /^([A-Z]{2})([0-9A-Z+*]+)$/.exec(vat);
+  if (!m) return {status: 'unavailable'};
+  try {
+    const res = await fetcher(`${VIES_API}/${m[1]}/vat/${m[2]}`, {
+      headers: {Accept: 'application/json', 'User-Agent': 'opendrone.be trade form'},
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) {
+      console.warn('[trade/vies] lookup failed', res.status);
+      return {status: 'unavailable'};
+    }
+    const body = (await res.json()) as {isValid?: boolean; userError?: string; name?: string; address?: string};
+    const known = (v?: string) => (v && v.trim() && v.trim() !== '---' ? v.trim() : undefined);
+    if (body.isValid === true) {
+      return {status: 'valid', name: known(body.name), address: known(body.address)};
+    }
+    return body.userError === 'INVALID' ? {status: 'invalid'} : {status: 'unavailable'};
+  } catch (error) {
+    console.warn('[trade/vies] lookup failed', error instanceof Error ? error.message : error);
+    return {status: 'unavailable'};
+  }
 }
 
 /** VAT treatment the quote starts from, by destination. */
@@ -305,34 +456,133 @@ export function vatTreatment(country: TradeCountry): string {
   return 'Potential intra-Community exemption: verify VIES and qualifying transport evidence before quoting VAT treatment.';
 }
 
-export function buildTradeEmail(req: TradeRequest): {subject: string; text: string} {
+function viesText(vies: ViesResult | null | undefined): string | null {
+  if (!vies) return null;
+  if (vies.status === 'valid') {
+    const who = [vies.name, vies.address?.replace(/\s*\n\s*/g, ', ')].filter(Boolean).join(', ');
+    return `valid when submitted${who ? `: ${who}` : ''}`;
+  }
+  if (vies.status === 'invalid') return 'NOT valid when submitted; check the number before quoting';
+  return 'not reachable when submitted; check by hand';
+}
+
+/** List prices by SKU from the shop catalog: the consumer price a quote
+ *  starts from (a campaign SKU's compare-at price, else its price). */
+export type TradePrices = {
+  currency: string;
+  /** The catalog prices include Belgian VAT at 21%. */
+  includesVat: boolean;
+  bySku: Record<string, number>;
+};
+
+type PricedLine = TradeLine & {unit: number | null; total: number | null};
+
+function pricedLines(req: TradeRequest, prices?: TradePrices | null): {lines: PricedLine[]; total: number | null} {
+  const exVat = (n: number) => (prices?.includesVat ? n / 1.21 : n);
+  let total: number | null = 0;
+  const lines = req.lines.map((l) => {
+    const list = prices?.bySku[l.sku];
+    const unit = typeof list === 'number' && list > 0 ? Math.round(exVat(list) * 100) / 100 : null;
+    const lineTotal = unit === null ? null : Math.round(unit * l.qty * 100) / 100;
+    total = lineTotal === null || total === null ? null : total + lineTotal;
+    return {...l, unit, total: lineTotal};
+  });
+  return {lines, total: total === null ? null : Math.round(total * 100) / 100};
+}
+
+const money = (n: number | null) =>
+  n === null ? '-' : n.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+const escapeHtml = (s: string) =>
+  s.replace(/[&<>"']/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[c]!);
+
+/** The quote request as the company inbox reads it: the details as label
+ *  and value, then the products with list prices, then the terms to check.
+ *  Plain text and HTML carry the same content. */
+export function buildTradeEmail(
+  req: TradeRequest,
+  prices?: TradePrices | null,
+): {subject: string; text: string; html: string} {
+  const units = req.lines.reduce((n, l) => n + l.qty, 0);
+  const priced = pricedLines(req, prices);
+  const currency = prices?.currency ?? 'EUR';
+  const taxLabel = {vat: 'VAT number', ein: 'EIN', other: 'Tax number'}[taxIdKind(req.country)];
+  const vies = viesText(req.vies);
+
+  const details: Array<[string, string]> = [
+    ['Company', req.company],
+    ['Contact', req.contactName],
+    ['Email', req.email],
+    ['Phone', req.phone],
+    ['Website', req.website || '(none, physical shop)'],
+    ['Shop type', SHOP_TYPE_TEXT[req.shopType]],
+    ['Country', `${req.country.name} (${req.country.code})`],
+    [taxLabel, req.taxId],
+    ...(vies ? ([['VIES', vies]] as Array<[string, string]>) : []),
+    ['Ship to', req.shipTo],
+    ['Bill to', req.billTo ?? 'Same as ship to'],
+    ['Delivery by', req.deliveryBy ?? '(not given)'],
+    ['Volume', req.volume ? VOLUME_TEXT[req.volume] : '(not given)'],
+    ['Heard via', req.source ? SOURCE_TEXT[req.source] : '(not given)'],
+    ['Note', req.note || '(none)'],
+  ];
+  const priceBasis = prices
+    ? `List = the shop's consumer price per unit${prices.includesVat ? ', 21% Belgian VAT removed' : ''}, in ${currency}. Not a trade price.`
+    : 'List prices unavailable: the catalog did not answer.';
+
   const pad = (label: string) => `${label}:`.padEnd(14, ' ');
-  const lines = [
+  const indent = (value: string) => value.split(/\r?\n/).join(`\n${' '.repeat(14)}`);
+  const text = [
     'Quote request from opendrone.be/wholesale',
     '',
-    `${pad('Shop')}${req.shop}`,
-    `${pad('Website')}${req.website}`,
-    `${pad('Country')}${req.country.name} (${req.country.code})`,
-    `${pad({vat: 'VAT', ein: 'EIN', other: 'Tax number'}[taxIdKind(req.country)])}${req.taxId}`,
-    `${pad('Contact')}${req.contactName}`,
-    `${pad('Email')}${req.email}`,
+    ...details.map(([k, v]) => `${pad(k)}${indent(v)}`),
     '',
-    'Wanted:',
-    ...req.lines.map((l) => `  ${String(l.qty).padStart(5, ' ')} x ${l.sku}  ${l.label}`),
-    '',
-    'Ship to:',
-    ...req.shipTo.split(/\r?\n/).map((l) => `  ${l}`),
-    '',
-    `${pad('Note')}${req.note || '(none)'}`,
+    `Products (${units} units):`,
+    `  ${'Qty'.padStart(5)}  ${'SKU'.padEnd(26)}${'List ex VAT'.padStart(12)}${'Line'.padStart(12)}  Product`,
+    ...priced.lines.map(
+      (l) =>
+        `  ${String(l.qty).padStart(5)}  ${l.sku.padEnd(26)}${money(l.unit).padStart(12)}${money(l.total).padStart(12)}  ${l.label}`,
+    ),
+    `  ${''.padStart(5)}  ${'Total at list'.padEnd(26)}${''.padStart(12)}${money(priced.total).padStart(12)}`,
+    `  ${priceBasis}`,
     '',
     `${pad('VAT')}${vatTreatment(req.country)}`,
     `${pad('Submitted')}${req.submittedAt}`,
     '',
     'Reply to this email with a quote. Business terms: Article 16 of the terms.',
-  ];
+  ].join('\n');
+
+  const cell = 'padding:4px 8px;border-bottom:1px solid #ddd;vertical-align:top;';
+  const num = `${cell}text-align:right;white-space:nowrap;`;
+  const html = [
+    '<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:14px;color:#111;">',
+    '<p style="margin:0 0 12px;">Quote request from opendrone.be/wholesale</p>',
+    '<table style="border-collapse:collapse;margin-bottom:16px;">',
+    ...details.map(
+      ([k, v]) =>
+        `<tr><th style="${cell}text-align:left;color:#555;font-weight:600;white-space:nowrap;">${escapeHtml(k)}</th><td style="${cell}white-space:pre-line;">${escapeHtml(v)}</td></tr>`,
+    ),
+    '</table>',
+    `<p style="margin:0 0 6px;font-weight:600;">Products (${units} units)</p>`,
+    '<table style="border-collapse:collapse;margin-bottom:6px;">',
+    `<tr><th style="${num}">Qty</th><th style="${cell}text-align:left;">SKU</th><th style="${cell}text-align:left;">Product</th><th style="${num}">List ex VAT</th><th style="${num}">Line</th></tr>`,
+    ...priced.lines.map(
+      (l) =>
+        `<tr><td style="${num}">${l.qty}</td><td style="${cell}font-family:monospace;">${escapeHtml(l.sku)}</td><td style="${cell}">${escapeHtml(l.label)}</td><td style="${num}">${money(l.unit)}</td><td style="${num}">${money(l.total)}</td></tr>`,
+    ),
+    `<tr><td style="${num}font-weight:600;">${units}</td><td style="${cell}" colspan="3">Total at list</td><td style="${num}font-weight:600;">${money(priced.total)}</td></tr>`,
+    '</table>',
+    `<p style="margin:0 0 16px;color:#555;font-size:12px;">${escapeHtml(priceBasis)}</p>`,
+    `<p style="margin:0 0 4px;"><strong>VAT:</strong> ${escapeHtml(vatTreatment(req.country))}</p>`,
+    `<p style="margin:0 0 12px;color:#555;">Submitted ${escapeHtml(req.submittedAt)}</p>`,
+    '<p style="margin:0;">Reply to this email with a quote. Business terms: Article 16 of the terms.</p>',
+    '</div>',
+  ].join('\n');
+
   return {
-    subject: `Quote request: ${req.shop} (${req.country.code})`,
-    text: lines.join('\n'),
+    subject: `Quote request: ${req.company} (${req.country.code}), ${units} units`,
+    text,
+    html,
   };
 }
 
@@ -352,18 +602,20 @@ export type TradeSendResult = {
   sent: boolean;
 };
 
-/** Email the request to the company inbox, reply-to the shop. */
+/** Email the request to the company inbox, reply-to the shop. Nothing goes
+ *  to the shop: the page shows it what it sent. */
 export async function sendTradeRequest(
   env: MailEnv,
   req: TradeRequest,
   fetcher: typeof fetch = fetch,
+  prices?: TradePrices | null,
 ): Promise<TradeSendResult> {
   if (!env.RESEND_API_KEY) {
-    console.warn('[trade/email] RESEND_API_KEY not set - request not sent', {shop: req.shop});
+    console.warn('[trade/email] RESEND_API_KEY not set - request not sent', {company: req.company});
     return {configured: false, sent: false};
   }
   const from = env.SUPPORT_FROM_EMAIL || 'support@opendrone.be';
-  const {subject, text} = buildTradeEmail(req);
+  const {subject, text, html} = buildTradeEmail(req, prices);
   try {
     const res = await fetcher(RESEND_API, {
       method: 'POST',
@@ -376,6 +628,7 @@ export async function sendTradeRequest(
         to: [env.PUBLIC_COMPANY_EMAIL || 'contact@opendrone.be'],
         subject,
         text,
+        html,
         reply_to: req.email,
       }),
     });

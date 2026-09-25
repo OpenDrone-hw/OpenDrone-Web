@@ -1718,6 +1718,14 @@ function ProductPage() {
         turnstileSiteKey={rootData?.turnstileSiteKey ?? null}
         className="product-buy-notify"
       />
+      {status === 'idea' ? null : (
+        <p className="product-buy-ship">
+          {say('product-chrome.buy_soon_wholesale_lead', 'Ordering for a shop?')}{' '}
+          <Link prefetch="intent" to="/wholesale" className="product-buy-terms-link">
+            {say('product-chrome.buy_soon_wholesale_link', 'Request a wholesale quote')}
+          </Link>
+        </p>
+      )}
       {status === 'idea' ? (
         <a
           className="product-buy-idea-repo"

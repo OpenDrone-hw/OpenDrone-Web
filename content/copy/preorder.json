@@ -41,7 +41,7 @@
   "ship_delivered": "Delivered by {date}",
   "intro": "FPV hardware, batch by batch.",
   "channel_eu_text": "Buy directly from OpenDrone when orders open for your destination. Each batch has its own timing and funding conditions.",
-  "channel_us_cta": "Retailer enquiries",
+  "channel_us_cta": "Shops: request a wholesale quote",
   "channels_aria": "Retailers and launch news",
   "channel_interest": "Outside the EU? Get launch news",
   "price_steps": "Price steps",
@@ -50,5 +50,6 @@
   "ordered": "ordered",
   "terms_summary": "Pay in full · Incl. VAT",
   "shipping_summary": "EU orders · Ships from Belgium",
-  "how_it_works": "How it works"
+  "how_it_works": "How it works",
+  "channel_trade": "Shops order wholesale"
 }

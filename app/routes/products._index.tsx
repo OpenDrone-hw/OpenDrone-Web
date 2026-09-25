@@ -4,7 +4,7 @@ import {useAutoAnimate} from '@formkit/auto-animate/react';
 import {SlidersHorizontal, X} from 'lucide-react';
 import type {ShouldRevalidateFunctionArgs} from 'react-router';
 import type {ReactNode} from 'react';
-import {Form, useLoaderData, useSearchParams} from 'react-router';
+import {Form, Link, useLoaderData, useSearchParams} from 'react-router';
 import {ProductItem, type ProductQuickAdd} from '~/components/ProductItem';
 import type {MoneyV2, ProductCardFragment} from '~/lib/product-shapes';
 import {toCards} from '~/lib/catalog';
@@ -807,6 +807,14 @@ export default function ProductsIndex() {
                   />
                 ))}
               </div>
+            ) : null}
+            {shown.length > 0 ? (
+              <p className="catalog-trade-note">
+                <Txt id="collections-all.trade_note" />{' '}
+                <Link prefetch="intent" to="/wholesale">
+                  <Txt id="collections-all.trade_link" /> <span aria-hidden="true">→</span>
+                </Link>
+              </p>
             ) : help ? null : term ? (
               <EmptyState
                 title={<Txt id="collections-all.empty_search_title" />}

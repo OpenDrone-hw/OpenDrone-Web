@@ -55,5 +55,7 @@
   "clear_filters": "Clear filters",
   "mount_filter": "Stack mount",
   "build_filter": "Build size",
-  "shipping_filter": "Shipping"
+  "shipping_filter": "Shipping",
+  "trade_note": "Ordering for a shop?",
+  "trade_link": "Request a wholesale quote"
 }
