@@ -2865,46 +2865,62 @@ function ProductPage() {
             {railBuyModule}
             <div ref={setRailSentinel} className="buy-rail-sentinel" aria-hidden="true" />
           </div>
-          {activeOshwaUid || hasPublicSource ? (
-            <ul
-              className="trust-chips"
-              aria-label={copyText('product-chrome.trust_chips_aria')}
-            >
-              {activeOshwaUid ? (
-                <li>
-                  <a
-                    href={`https://certification.oshwa.org/${activeOshwaUid.toLowerCase()}.html`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="trust-chip trust-chip-oshwa trust-chip-link"
-                    title={`${copyText('product-chrome.oshwa_mark_title') ?? ''} · ${activeOshwaUid}`}
-                  >
-                    <img
-                      src="/logos/oshwa.svg"
-                      alt=""
-                      aria-hidden="true"
-                      className="trust-chip-oshwa-mark"
-                    />
-                    <span className="trust-chip-oshwa-word">OSHWA</span>
-                    <span className="trust-chip-oshwa-uid">{activeOshwaUid}</span>
-                  </a>
-                </li>
-              ) : null}
-              {hasPublicSource ? (
-                <li>
-                  <a
-                    href={activeRepoUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="trust-chip trust-chip-link"
-                    title={repoName(activeRepoUrl) ?? undefined}
-                  >
-                    {say('product-chrome.trust_chip_source', 'GitHub')}
-                  </a>
-                </li>
-              ) : null}
-            </ul>
-          ) : null}
+          <ul
+            className="trust-chips"
+            aria-label={copyText('product-chrome.trust_chips_aria')}
+          >
+            {hasPublicSource ? (
+              <li>
+                <Link
+                  to="/open-source"
+                  prefetch="viewport"
+                  className="trust-chip trust-chip-green trust-chip-link"
+                >
+                  {say('product-chrome.trust_chip_open_source', 'Open Source')}
+                </Link>
+              </li>
+            ) : null}
+            {activeOshwaUid ? (
+              <li>
+                <a
+                  href={`https://certification.oshwa.org/${activeOshwaUid.toLowerCase()}.html`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="trust-chip trust-chip-oshwa trust-chip-link"
+                  title={`${copyText('product-chrome.oshwa_mark_title') ?? ''} · ${activeOshwaUid}`}
+                >
+                  <img
+                    src="/logos/oshwa.svg"
+                    alt=""
+                    aria-hidden="true"
+                    className="trust-chip-oshwa-mark"
+                  />
+                  {say('product-chrome.trust_chip_oshwa', 'OSHWA certified')}
+                </a>
+              </li>
+            ) : null}
+            {content.bundle ? (
+              <li>
+                <Link
+                  to="/firmware-partners"
+                  prefetch="viewport"
+                  className="trust-chip trust-chip-gold trust-chip-link"
+                >
+                  {content.bundle.components.map((c) => c.firmware).join(' + ')}
+                </Link>
+              </li>
+            ) : content.firmware.project && content.firmware.project !== '-' ? (
+              <li>
+                <Link
+                  to="/firmware-partners"
+                  prefetch="viewport"
+                  className="trust-chip trust-chip-gold trust-chip-link"
+                >
+                  {content.firmware.project}
+                </Link>
+              </li>
+            ) : null}
+          </ul>
 
           {/* The compact bar, portaled to <body> so the fixed overlay escapes
               the hero's stacking context. Coming soon: the chips alone. */}

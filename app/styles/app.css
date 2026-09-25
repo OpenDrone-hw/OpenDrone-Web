@@ -3324,6 +3324,16 @@ button.reset {
 /* OSHWA open-source-hardware certification chip. The mark carries the brand
    red on its "W"; the wordmark + frame inherit the chip text colour (the SVG
    uses currentColor) so it reads in both themes. */
+.trust-chip.trust-chip-green {
+  color: var(--color-stock);
+  border-color: color-mix(in srgb, var(--color-stock) 35%, var(--color-border));
+}
+
+.trust-chip.trust-chip-gold {
+  color: var(--color-gold-text);
+  border-color: color-mix(in srgb, var(--color-gold) 35%, var(--color-border));
+}
+
 .trust-chip-oshwa {
   color: var(--color-text-muted);
 }
@@ -10670,6 +10680,15 @@ html.light .editorial-watermark {
   background: color-mix(in srgb, var(--color-gold) 6%, var(--color-bg-card));
 }
 
+.trust-chip-link.trust-chip-green:hover {
+  color: var(--color-accent-light);
+  border-color: color-mix(in srgb, var(--color-accent-light) 60%, var(--color-border));
+}
+
+.trust-chip-link.trust-chip-gold:hover {
+  color: var(--color-gold-text-hover);
+}
+
 .trust-chip-link.trust-chip-oshwa:hover {
   color: var(--color-text);
 }
@@ -15991,18 +16010,12 @@ body:has(main.cart) footer .footer-note--newsletter {
 }
 
 /* OSHWA chip: the mark is an <img>, so its currentColor paths render
-   black; a small light plate keeps it readable in the dark theme. The
-   certificate UID sits in the chip. */
+   black; a small light plate keeps it readable in the dark theme. */
 html:not(.light) .trust-chip-oshwa-mark {
   box-sizing: content-box;
   padding: 0.12em 0.2em;
   border-radius: 3px;
   background: #f7f6f3;
-}
-.trust-chip-oshwa-uid {
-  font-family: var(--font-mono);
-  font-size: 0.9em;
-  color: var(--color-text-muted);
 }
 .open-source-card-repo {
   margin: 0.4rem 0 0;
@@ -16167,9 +16180,6 @@ html:not(.light) .trust-chip-oshwa-mark {
 .trust-chip-link:hover {
   color: var(--color-text);
   border-color: var(--color-text-muted);
-}
-.trust-chip-oshwa-uid {
-  font-variant-numeric: tabular-nums;
 }
 /* The gallery fills its frame on the photo backdrop, no inner card. */
 .product-hero-media {

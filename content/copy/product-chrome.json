@@ -176,7 +176,6 @@
   ],
   "buy_early_bird": "Price step 1",
   "buy_terms_link": "Pre-order terms",
-  "trust_chip_source": "GitHub",
   "compare_spec": "Spec",
   "gpsr_warnings_electronics_en": [
     "LiPo batteries can ignite when damaged, shorted or overcharged; never charge unattended.",
@@ -596,5 +595,7 @@
   "buy_shops_trade": "EU or US retailer enquiries",
   "buy_closed": "Orders are not open for {country}",
   "buy_blocked": "Not available in {country}",
-  "buy_blocked_link": "End-Use Policy"
+  "buy_blocked_link": "End-Use Policy",
+  "trust_chip_open_source": "Open Source",
+  "trust_chip_oshwa": "OSHWA certified"
 }
