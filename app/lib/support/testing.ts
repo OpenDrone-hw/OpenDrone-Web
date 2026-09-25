@@ -3,8 +3,8 @@
  * migration, an in-memory Discord, and a scripted Shopify Admin API. Not
  * imported by application code.
  */
-import {readFileSync} from 'node:fs';
-import type {DiscordClient, DiscordMessage, OutboundFile} from './discord.ts';
+import {readdirSync, readFileSync} from 'node:fs';
+import {DiscordError, type DiscordClient, type DiscordMessage, type OutboundFile} from './discord.ts';
 
 type SqliteDb = {
   exec(sql: string): void;
@@ -30,7 +30,8 @@ export async function testD1(): Promise<D1Database | null> {
   const opened = await openSqlite();
   if (!opened) return null;
   const db = opened;
-  db.exec(readFileSync(new URL('../../../migrations/0001_support_tickets.sql', import.meta.url), 'utf8'));
+  const dir = new URL('../../../migrations/', import.meta.url);
+  for (const f of readdirSync(dir).filter((n) => n.endsWith('.sql')).sort()) db.exec(readFileSync(new URL(f, dir), 'utf8'));
   const norm = (v: unknown) => (v === undefined ? null : typeof v === 'boolean' ? Number(v) : v);
   function statement(sql: string, params: unknown[] = []): D1PreparedStatement {
     return {
@@ -68,21 +69,22 @@ export function nextSnowflake(): string {
 export function fakeDiscord(opts: {failCreate?: boolean; now?: () => number} = {}) {
   const now = opts.now ?? Date.now;
   const threads = new Map<string, FakeThread>();
-  const channelPosts: Array<{channel: string; content: string}> = [];
+  const channelPosts: Array<{channel: string; content: string; id: string; deleted: boolean}> = [];
   const reactions: Array<{thread: string; message: string; emoji: string}> = [];
   const reactorMap = new Map<string, string[]>();
   let roleMembers: string[] = [];
 
   function add(threadId: string, content: string, author: DiscordMessage['author'], files: OutboundFile[] = []): DiscordMessage {
     const t = threads.get(threadId);
-    if (!t || t.deleted) throw Object.assign(new Error('discord post 404'), {status: 404});
-    if (t.locked) throw Object.assign(new Error('discord post 403'), {status: 403});
+    if (!t || t.deleted) throw new DiscordError('post', 404);
+    if (t.locked) throw new DiscordError('post', 403);
     t.archived = false;
     const m: DiscordMessage = {
       id: nextSnowflake(),
       author,
       content,
       createdAt: new Date(now()).toISOString(),
+      editedAt: null,
       attachments: files.map((f) => ({id: nextSnowflake(), url: `https://cdn.example/${f.name}`, filename: f.name, size: f.data.byteLength})),
       reactions: [],
     };
@@ -103,12 +105,23 @@ export function fakeDiscord(opts: {failCreate?: boolean; now?: () => number} = {
       return add(threadId, content, bot, files).id;
     },
     async postToChannel(channel, content) {
-      channelPosts.push({channel, content});
+      const id = nextSnowflake();
+      channelPosts.push({channel, content, id, deleted: false});
+      return id;
     },
-    async messagesAfter(threadId, afterId) {
+    async deleteMessage(channel, messageId) {
+      const post = channelPosts.find((p) => p.channel === channel && p.id === messageId);
+      if (post) post.deleted = true;
+      const m = threads.get(channel)?.messages;
+      if (m) threads.get(channel)!.messages = m.filter((x) => x.id !== messageId);
+    },
+    async messagesAfter(threadId, afterId, limit = 100) {
       const t = threads.get(threadId);
       if (!t || t.deleted) throw new Error('discord messages 404');
-      return t.messages.filter((m) => !afterId || BigInt(m.id) > BigInt(afterId));
+      // Like Discord: with `after`, the oldest `limit` after it; without, the newest `limit`.
+      return afterId
+        ? t.messages.filter((m) => BigInt(m.id) > BigInt(afterId)).slice(0, limit)
+        : t.messages.slice(-limit);
     },
     async message(threadId, messageId) {
       const m = threads.get(threadId)?.messages.find((x) => x.id === messageId);
@@ -147,6 +160,16 @@ export function fakeDiscord(opts: {failCreate?: boolean; now?: () => number} = {
     /** A staff member writes in a thread. */
     staff(threadId: string, content: string, who = {id: 'u1', username: 'jan', globalName: 'Jan Peeters'}) {
       return add(threadId, content, {...who, bot: false});
+    },
+    /** A staff member edits or deletes a message already in the thread. */
+    edit(threadId: string, messageId: string, content: string) {
+      const m = threads.get(threadId)!.messages.find((x) => x.id === messageId)!;
+      m.content = content;
+      m.editedAt = new Date(now()).toISOString();
+    },
+    remove(threadId: string, messageId: string) {
+      const t = threads.get(threadId)!;
+      t.messages = t.messages.filter((x) => x.id !== messageId);
     },
     approve(message: DiscordMessage, userId: string, emoji = '✅') {
       message.reactions.push({emoji, count: 1, me: false});

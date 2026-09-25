@@ -34,6 +34,7 @@ Besides cookies, opendrone.be keeps a few items in your browser's storage (local
 | `od-incutec-seen` | localStorage | Remembers that you already opened the Incutec page, so the pointer to it on the home page disappears | Until you clear browser data |
 | `opendrone:split-order` | localStorage | Remembers the items you took out of your cart for a second order, so you can add them back after checkout | 30 days |
 | `od-attribution`, `od-attribution-sent` | sessionStorage | Campaign source of the visit (e.g. a utm parameter) and the first page visited; used for aggregated statistics and, when you add a product to your cart, passed on as an attribute of the order in Shopify | Session |
+| `od-support-draft:…` | sessionStorage | Keeps what you typed in a support form in this tab, so nothing is lost if sending fails; removed once the message is sent | Session |
 
 #### Website statistics
 

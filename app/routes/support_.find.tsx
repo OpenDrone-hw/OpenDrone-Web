@@ -3,11 +3,11 @@ import {data, Form, Link, redirect, useActionData, useNavigation, useRouteLoader
 import type {Route} from './+types/support_.find';
 import {buildSeoMeta} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
-import {fill, StatusPill, Stamp, TurnstileBox} from '~/components/SupportUi';
+import {fill, SupportError, TicketList, TurnstileBox} from '~/components/SupportUi';
 import {clientIp} from '~/lib/rate-limit';
 import {verifyTurnstile} from '~/lib/turnstile';
-import {supportRateLimit} from '~/lib/support/limits';
-import {originOf, sameOrigin, secureCookies, supportDeps, supportReady} from '~/lib/support/server';
+import {doorAllowed} from '~/lib/support/limits';
+import {originOf, sameOrigin, secureCookies, supportDeps, supportReady, supportHeaders} from '~/lib/support/server';
 import {findTickets, publicTicket, type PublicTicket} from '~/lib/support/tickets';
 import {readTicketCookie, ticketCookie} from '~/lib/support/tokens';
 
@@ -16,6 +16,9 @@ import {readTicketCookie, ticketCookie} from '~/lib/support/tokens';
  * adds the tickets to this browser's cookie; one match opens it directly.
  * A miss says only that nothing matched, never whether the email exists.
  */
+/** Private, never cached, never indexed; keeps loader and action headers. */
+export const headers = supportHeaders;
+
 export const meta: Route.MetaFunction = () =>
   buildSeoMeta({title: copyText('support.find_page_title') ?? 'Find your ticket', description: copyText('support.find_lede') ?? ''});
 
@@ -32,11 +35,15 @@ export async function action({request, context}: Route.ActionArgs) {
   const form = await request.formData();
   const email = String(form.get('email') ?? '').trim().toLowerCase().slice(0, 254);
   const key = String(form.get('key') ?? '').trim().slice(0, 40);
-  if (!supportRateLimit('find', ip).allowed || !supportRateLimit('find', email).allowed) return fail('err_rate', 429);
+  const deps = supportDeps(env, originOf(request));
+  const allowed = await doorAllowed(deps.store, env.SUPPORT_SESSION_SECRET || env.SESSION_SECRET, [
+    ['findPerIp', ip],
+    ['findPerIpEmail', ip, email],
+  ]);
+  if (!allowed) return fail('err_rate', 429);
   const turnstile = await verifyTurnstile(env, String(form.get('cf-turnstile-response') ?? ''), ip);
   if (!turnstile.ok) return fail('err_turnstile', 400);
 
-  const deps = supportDeps(env, originOf(request));
   const found = await findTickets(deps, email, key);
   if (!found.length) return fail('find_none', 404);
   const current = await readTicketCookie(env, request);
@@ -44,6 +51,10 @@ export async function action({request, context}: Route.ActionArgs) {
   const cookie = await ticketCookie(env, merged, secureCookies(request));
   if (found.length === 1) return redirect(`/support/t/${found[0]!.ref}`, {headers: {'Set-Cookie': cookie}});
   return data<Result>({ok: true, tickets: found.map(publicTicket), at: Date.now()}, {headers: {'Set-Cookie': cookie, 'Cache-Control': 'no-store'}});
+}
+
+export function ErrorBoundary() {
+  return <SupportError />;
 }
 
 export default function FindRoute() {
@@ -69,20 +80,7 @@ export default function FindRoute() {
         {result?.ok ? (
           <section className="sp-card">
             <h2 className="sp-card-title">{t('find_results')}</h2>
-            <ul className="sp-ticket-list">
-              {result.tickets.map((ticket) => (
-                <li key={ticket.ref}>
-                  <Link to={`/support/t/${ticket.ref}`} className="sp-ticket-link">
-                    <span className="sp-ticket-ref">{ticket.ref}</span>
-                    <span className="sp-ticket-subject">{ticket.subject}</span>
-                    <span className="sp-ticket-meta">
-                      <StatusPill status={ticket.status} />
-                      <Stamp at={ticket.updatedAt} />
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <TicketList tickets={result.tickets} />
           </section>
         ) : (
           <Form method="post" className="sp-form sp-find" onFocus={() => setTouched(true)}>

@@ -48,7 +48,7 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 |------|-----------------|
 | Données de commande et factures | 10 ans à compter du 1er janvier suivant la clôture de l’exercice (art. III.86 CDE ; art. 60 §4 Code TVA) |
 | Compte client | Jusqu’à sa suppression à votre demande, au plus tard 3 ans après votre dernière connexion ou commande |
-| Communication de service client (tickets de support sur le site, dans Discord et la référence du ticket sur votre fiche client Shopify) | 24 mois après la clôture du ticket, puis suppression automatique. Un ticket auquel nous avons répondu est clôturé après 30 jours sans réponse de votre part |
+| Communication de service client (tickets de support sur le site, dans Discord et la référence du ticket sur votre fiche client Shopify) | 24 mois après la clôture du ticket, puis suppression automatique. Un ticket auquel nous avons répondu est clôturé après 30 jours sans réponse de votre part, tout autre ticket après 90 jours sans activité |
 | Fichiers journaux du site | 6 mois |
 | Inscription à la newsletter | Jusqu’au désabonnement |
 | Demandes professionnelles sans commande | 2 ans après le dernier contact |
@@ -66,7 +66,7 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 | Polar Advisory BV (comptable) | Facturation et comptes annuels | Belgique |
 | Resend (Plus Five Five, Inc.) | E-mails envoyés par opendrone.be : confirmations de rétractation, e-mails de bienvenue et de newsletter, demandes des revendeurs, avis de nouvelle réponse à un ticket de support (un lien seulement, sans contenu du message) | Infrastructure en région UE ; entité légale É-U : CCT |
 | Discord Inc. (sous-traitant) | Tickets de support : notre équipe les lit et y répond dans un canal Discord réservé au personnel (votre prénom, courriel, numéro et détails de commande, messages, pièces jointes) | É-U : EU-US Data Privacy Framework (art. 45 RGPD) ; conditions de sous-traitance de Discord : https://support.discord.com/hc/en-us/articles/37891902561687 |
-| Cloudflare, Inc. | Hébergement et diffusion du site (adresse IP, données de requête, pays déduit) ; stockage des tickets de support (Cloudflare D1) ; anti-spam Turnstile sur les formulaires de newsletter, de demande professionnelle et de support | É-U : EU-US Data Privacy Framework (art. 45 RGPD) |
+| Cloudflare, Inc. | Hébergement et diffusion du site (adresse IP, données de requête, pays déduit) ; stockage des tickets de support et de compteurs anti-abus (Cloudflare D1 ; les compteurs contiennent un hachage à clé de l’adresse IP et du courriel, jamais les valeurs, et sont supprimés après un jour) ; anti-spam Turnstile sur les formulaires de newsletter, de demande professionnelle et de support | É-U : EU-US Data Privacy Framework (art. 45 RGPD) |
 | Commission européenne (VIES) | Vérification du numéro de TVA indiqué dans une demande professionnelle | UE |
 
 Les données de commande et de client (nom, adresse, e-mail, référence de paiement, historique des commandes) et le consentement à la newsletter sont traités dans Shopify.

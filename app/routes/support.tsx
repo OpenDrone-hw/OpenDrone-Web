@@ -6,24 +6,31 @@ import {copyText} from '~/lib/copy';
 import {getCompanyIdentity} from '~/lib/company';
 import {legalHref} from '~/components/LangToggle';
 import {Txt} from '~/components/Txt';
-import {FilePicker, fill, StatusPill, Stamp, TurnstileBox} from '~/components/SupportUi';
+import {
+  FilePicker,
+  fill,
+  guardSubmit,
+  MessageBox,
+  SupportError,
+  TicketList,
+  TurnstileBox,
+  useDraft,
+} from '~/components/SupportUi';
 import {clientIp} from '~/lib/rate-limit';
 import {verifyTurnstile} from '~/lib/turnstile';
-import {emailOverDailyLimit, supportRateLimit} from '~/lib/support/limits';
+import {doorAllowed} from '~/lib/support/limits';
 import {notifyEnabled} from '~/lib/support/notify';
-import {originOf, sameOrigin, secureCookies, supportDeps, supportReady} from '~/lib/support/server';
+import {originOf, sameOrigin, secureCookies, supportDeps, supportReady, supportHeaders} from '~/lib/support/server';
 import {
   createTicket,
   parseNewTicket,
   publicTicket,
-  TOPIC_FIELDS,
-  TOPICS,
   type FieldError,
   type NewTicketInput,
 } from '~/lib/support/tickets';
 import {readTicketCookie, withTicket} from '~/lib/support/tokens';
 import {extractAttachments} from '~/lib/support/uploads';
-import type {TicketTopic} from '~/lib/support/store';
+import {TOPIC_FIELDS, TOPICS, type TicketTopic} from '~/lib/support/form';
 
 /**
  * The support front door: pick a topic, fill in the few fields it needs,
@@ -33,6 +40,9 @@ import type {TicketTopic} from '~/lib/support/store';
  * sales only. Words in content/copy/support.json; rules in
  * app/lib/support/tickets.ts.
  */
+/** Private, never cached, never indexed; keeps loader and action headers. */
+export const headers = supportHeaders;
+
 export const meta: Route.MetaFunction = () =>
   buildSeoMeta({
     title: copyText('support.meta_title') ?? 'Support',
@@ -92,7 +102,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
   );
 }
 
-type Failure = 'unavailable' | 'rate' | 'email_limit' | 'turnstile' | 'send' | 'forbidden' | 'files';
+type Failure = 'unavailable' | 'rate' | 'turnstile' | 'send' | 'forbidden' | 'files';
 
 type ActionResult = {
   ok: false;
@@ -124,14 +134,17 @@ export async function action({request, context}: Route.ActionArgs) {
   const files = await extractAttachments(form);
   if (!files.ok) return fail({failure: 'files', fileProblem: t(`file_${files.problem}`, {file: files.file ?? ''})}, 400);
 
+  const deps = supportDeps(env, originOf(request), context.waitUntil);
   // Counted only for complete submissions, so fixing a typo never locks anyone out.
-  if (!supportRateLimit('create', ip).allowed) return fail({failure: 'rate'}, 429);
+  const allowed = await doorAllowed(deps.store, env.SUPPORT_SESSION_SECRET || env.SESSION_SECRET, [
+    ['createPerIp', ip],
+    ['createPerIpEmail', ip, parsed.input.email],
+  ]);
+  if (!allowed) return fail({failure: 'rate'}, 429);
   const turnstile = await verifyTurnstile(env, String(form.get('cf-turnstile-response') ?? ''), ip);
   if (!turnstile.ok) return fail({failure: 'turnstile'}, 400);
 
-  const deps = supportDeps(env, originOf(request), context.waitUntil);
   try {
-    if (await emailOverDailyLimit(deps.store, parsed.input.email)) return fail({failure: 'email_limit'}, 429);
     const ticket = await createTicket(deps, parsed.input, files.files);
     const current = await readTicketCookie(env, request);
     const cookie = await withTicket(env, current, {r: ticket.ref, k: ticket.linkVersion}, secureCookies(request));
@@ -159,14 +172,22 @@ function TicketForm() {
   const result = useActionData<ActionResult>();
   const nav = useNavigation();
   const busy = nav.state !== 'idle' && nav.formMethod?.toLowerCase() === 'post';
+  const sendingFiles = busy && nav.formData?.getAll('files').some((f) => typeof f === 'object' && (f as File).size > 0);
   const [topic, setTopic] = useState<TicketTopic | null>(initialTopic);
   const [touched, setTouched] = useState(false);
+  const [clientProblem, setClientProblem] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const detailsRef = useRef<HTMLDivElement>(null);
-  // A field's error clears as soon as it is edited; the next submit decides again.
-  const [edited, setEdited] = useState<Set<string>>(new Set());
-  useEffect(() => setEdited(new Set()), [result]);
+  const bannerRef = useRef<HTMLParagraphElement>(null);
+  useDraft(formRef, 'new');
+
+  // A field's error clears once it is edited after this answer; the next
+  // submit decides again. Tied to the answer, so a new answer starts clean
+  // in the same render (the focus below then finds the invalid field).
+  const [edited, setEdited] = useState<{at: number; names: Set<string>}>({at: 0, names: new Set()});
+  const editedNow = edited.at === result?.at ? edited.names : new Set<string>();
   const errors = Object.fromEntries(
-    Object.entries(result?.errors ?? {}).filter(([k]) => !edited.has(k === 'orderNumber' ? 'order' : k)),
+    Object.entries(result?.errors ?? {}).filter(([k]) => !editedNow.has(k === 'orderNumber' ? 'order' : k)),
   ) as NonNullable<ActionResult['errors']>;
   const fields = topic ? TOPIC_FIELDS[topic] : null;
 
@@ -177,23 +198,44 @@ function TicketForm() {
     if (first) window.setTimeout(() => detailsRef.current?.scrollIntoView({behavior: 'smooth', block: 'start'}), 60);
   }
 
+  // After an answer: move to the first invalid field, else to the message.
   useEffect(() => {
-    if (result?.errors) document.querySelector<HTMLElement>('.sp-form [aria-invalid="true"]')?.focus();
-  }, [result]);
+    if (!result) return;
+    const target =
+      formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]') ?? bannerRef.current ?? null;
+    target?.scrollIntoView({block: 'center', behavior: 'smooth'});
+    target?.focus({preventScroll: true});
+  }, [result?.at]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const failure = result?.failure;
   const invalid = (k: keyof NewTicketInput) => (errors[k] ? {'aria-invalid': true, 'aria-describedby': `sp-${k}-error`} : {});
+  const bannerText = clientProblem
+    ? clientProblem
+    : failure
+      ? failure === 'files'
+        ? result?.fileProblem
+        : t(failure === 'rate' ? 'err_rate' : `err_${failure}`)
+      : Object.keys(errors).length
+        ? t('err_check')
+        : null;
 
   return (
     <Form
+      ref={formRef}
       method="post"
       encType="multipart/form-data"
       className="sp-form"
       noValidate
       onFocus={() => setTouched(true)}
+      onSubmit={(e) => setClientProblem(guardSubmit(e))}
       onInput={(e) => {
         const name = (e.target as HTMLInputElement).name;
-        if (name && !edited.has(name)) setEdited((cur) => new Set(cur).add(name));
+        if (!name || !result) return;
+        setEdited((cur) => {
+          const names = new Set(cur.at === result.at ? cur.names : []);
+          names.add(name);
+          return {at: result.at, names};
+        });
       }}
     >
       <fieldset className="sp-topics">
@@ -227,13 +269,9 @@ function TicketForm() {
             {t('step_details')}
           </h2>
 
-          {failure ? (
-            <p role="alert" className="sp-banner sp-banner-error">
-              {failure === 'files' ? result?.fileProblem : t(failure === 'rate' ? 'err_rate' : `err_${failure}`)}
-            </p>
-          ) : Object.keys(errors).length ? (
-            <p role="alert" className="sp-banner sp-banner-error">
-              {t('err_check')}
+          {bannerText ? (
+            <p ref={bannerRef} role="alert" tabIndex={-1} className="sp-banner sp-banner-error">
+              {bannerText}
             </p>
           ) : null}
 
@@ -245,42 +283,52 @@ function TicketForm() {
               <input name="name" autoComplete="name" maxLength={80} required className="sp-input" {...invalid('name')} />
               <FieldError error={errors.name} field="name" />
             </label>
-            <label className="sp-field">
-              <span className="sp-label">{t('field_email')}</span>
+            <div className="sp-field">
+              <label className="sp-label" htmlFor="sp-email">
+                {t('field_email')}
+              </label>
               <input
+                id="sp-email"
                 name="email"
                 type="email"
                 inputMode="email"
                 autoComplete="email"
                 required
                 className="sp-input"
-                {...invalid('email')}
+                aria-invalid={errors.email ? true : undefined}
+                aria-describedby={[errors.email ? 'sp-email-error' : '', 'sp-email-hint'].filter(Boolean).join(' ')}
               />
               <FieldError error={errors.email} field="email" />
-              <span className="sp-hint">{t(notify ? 'email_hint_notify' : 'email_hint')}</span>
-            </label>
+              <span id="sp-email-hint" className="sp-hint">
+                {t(notify ? 'email_hint_notify' : 'email_hint')}
+              </span>
+            </div>
           </div>
 
           {fields.order || fields.product ? (
             <div className="sp-row">
               {fields.order ? (
-                <label className="sp-field">
-                  <span className="sp-label">
+                <div className="sp-field">
+                  <label className="sp-label" htmlFor="sp-order">
                     {t('field_order')}
                     {fields.order === 'optional' ? <span className="sp-optional"> ({t('optional')})</span> : null}
-                  </span>
+                  </label>
                   <input
+                    id="sp-order"
                     name="order"
                     inputMode="numeric"
                     placeholder="#1042"
                     maxLength={20}
                     required={fields.order === 'required'}
                     className="sp-input"
-                    {...invalid('orderNumber')}
+                    aria-invalid={errors.orderNumber ? true : undefined}
+                    aria-describedby={[errors.orderNumber ? 'sp-orderNumber-error' : '', 'sp-order-hint'].filter(Boolean).join(' ')}
                   />
                   <FieldError error={errors.orderNumber} field="orderNumber" />
-                  <span className="sp-hint">{t('order_hint')}</span>
-                </label>
+                  <span id="sp-order-hint" className="sp-hint">
+                    {t('order_hint')}
+                  </span>
+                </div>
               ) : null}
               {fields.product ? (
                 <label className="sp-field">
@@ -316,19 +364,15 @@ function TicketForm() {
             </label>
           ) : null}
 
-          <label className="sp-field">
-            <span className="sp-label">{t('field_message')}</span>
-            <textarea
-              name="message"
-              rows={7}
-              maxLength={4000}
-              required
+          <div>
+            <MessageBox
+              label={t('field_message')}
               placeholder={t(`message_placeholder_${topic}`)}
-              className="sp-input sp-textarea"
-              {...invalid('message')}
+              invalid={Boolean(errors.message)}
+              describedBy={errors.message ? 'sp-message-error' : undefined}
             />
             <FieldError error={errors.message} field="message" />
-          </label>
+          </div>
 
           <div className="sp-field">
             <span className="sp-label">
@@ -345,13 +389,17 @@ function TicketForm() {
               {busy ? t('submitting') : t('submit')}
             </button>
             <p className="sp-hint">
-              <Txt id="support.privacy_note" />
+              {sendingFiles ? t('uploading') : <Txt id="support.privacy_note" />}
             </p>
           </div>
         </div>
       ) : null}
     </Form>
   );
+}
+
+export function ErrorBoundary() {
+  return <SupportError />;
 }
 
 export default function SupportRoute() {
@@ -361,6 +409,7 @@ export default function SupportRoute() {
       <header className="page-header">
         <Txt id="support.title" as="h1" className="page-title" />
         <Txt id="support.lede" as="p" className="page-description" />
+        <Txt id="support.languages" as="p" className="sp-hint" />
       </header>
 
       <div className="sp-layout">
@@ -378,20 +427,8 @@ export default function SupportRoute() {
           {yours.length ? (
             <section className="sp-card">
               <h2 className="sp-card-title">{t('yours_title')}</h2>
-              <ul className="sp-ticket-list">
-                {yours.map((ticket) => (
-                  <li key={ticket.ref}>
-                    <Link to={`/support/t/${ticket.ref}`} className="sp-ticket-link">
-                      <span className="sp-ticket-ref">{ticket.ref}</span>
-                      <span className="sp-ticket-subject">{ticket.subject}</span>
-                      <span className="sp-ticket-meta">
-                        <StatusPill status={ticket.status} />
-                        <Stamp at={ticket.updatedAt} />
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+              <p>{t('yours_note')}</p>
+              <TicketList tickets={yours} />
             </section>
           ) : null}
 

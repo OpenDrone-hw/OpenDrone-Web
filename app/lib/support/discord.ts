@@ -33,6 +33,7 @@ export type DiscordMessage = {
   author: {id: string; username: string; globalName: string | null; bot: boolean};
   content: string;
   createdAt: string;
+  editedAt: string | null;
   attachments: Array<{id: string; url: string; filename: string; size: number}>;
   reactions: Array<{emoji: string; count: number; me: boolean}>;
 };
@@ -76,9 +77,34 @@ export function cleanText(s: string): string {
   return s.replace(BIDI, '').replace(CONTROL, '');
 }
 
+/** Safe file name for Discord: no paths or controls, at most 100 characters, extension kept. */
 export function sanitizeFilename(name: string): string {
-  const cleaned = cleanText(name).replace(/[\\/]/g, '_').slice(0, 100);
-  return cleaned || 'file';
+  const cleaned = cleanText(name).replace(/[\\/]/g, '_');
+  if (cleaned.length <= 100) return cleaned || 'file';
+  const ext = cleaned.match(/\.[A-Za-z0-9]{1,8}$/)?.[0] ?? '';
+  return Array.from(cleaned.slice(0, cleaned.length - ext.length)).slice(0, 100 - ext.length).join('') + ext;
+}
+
+/**
+ * Customer-typed words (name, product, firmware) as literal text inside a
+ * staff message: Discord markdown, mentions and emoji codes are escaped.
+ */
+export function escapeDiscord(s: string): string {
+  return cleanText(s).replace(/[\\*_~`|>#[\]()<@:-]/g, (c) => `\\${c}`);
+}
+
+/** A thread name from customer words: letters, digits, spaces and a little punctuation. */
+export function threadName(s: string): string {
+  return cleanText(s).replace(/[^\p{L}\p{N} .'-]/gu, '').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * A customer's message body for the staff thread: masked links show their
+ * real target (`[text](url)` becomes `text (url)`), so a message cannot
+ * disguise where a link goes.
+ */
+export function neutralizeLinks(s: string): string {
+  return s.replace(/\[([^\]\n]{0,300})\]\(\s*<?([^)\s>]{1,2000})>?\s*\)/g, '$1 ($2)');
 }
 
 /**
@@ -103,6 +129,7 @@ type RawMessage = {
   id: string;
   content?: string;
   timestamp: string;
+  edited_timestamp?: string | null;
   author: {id: string; username: string; global_name?: string | null; bot?: boolean};
   attachments?: Array<{id: string; url: string; filename: string; size?: number}>;
   reactions?: Array<{emoji?: {name?: string | null}; count?: number; me?: boolean}>;
@@ -114,6 +141,7 @@ export function normalizeMessage(raw: unknown): DiscordMessage {
     id: m.id,
     content: m.content ?? '',
     createdAt: m.timestamp,
+    editedAt: m.edited_timestamp ?? null,
     author: {
       id: m.author.id,
       username: m.author.username,
@@ -223,11 +251,23 @@ export function createDiscordClient(env: DiscordEnv, fetcher: Fetcher = fetch) {
       return msg.id;
     },
 
-    async postToChannel(channelId: string, content: string): Promise<void> {
-      await call('postChannel', `/channels/${channelId}/messages`, {
+    /** Post in a plain channel; returns the message id. */
+    async postToChannel(channelId: string, content: string): Promise<string> {
+      const msg = (await call('postChannel', `/channels/${channelId}/messages`, {
         method: 'POST',
         body: {content: cleanText(content).slice(0, 2000), allowed_mentions: {parse: []}},
-      });
+      })) as {id: string};
+      return msg.id;
+    },
+
+    /** Delete one message; already gone counts as done. */
+    async deleteMessage(channelId: string, messageId: string): Promise<void> {
+      try {
+        await call('deleteMessage', `/channels/${channelId}/messages/${messageId}`, {method: 'DELETE'});
+      } catch (err) {
+        if (err instanceof DiscordError && err.status === 404) return;
+        throw err;
+      }
     },
 
     /** Messages newer than `afterId`, oldest first (Discord answers newest first). */

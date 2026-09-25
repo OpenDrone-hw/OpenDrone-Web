@@ -102,6 +102,9 @@ beforeEach(() => {
   _resetModCache();
 });
 
+/** Discord text without markdown escapes, as staff read it. */
+const plain = (s: string) => s.replace(/\\(.)/g, '$1');
+
 describe('parseNewTicket', () => {
   it('accepts an order ticket and normalises the order number', () => {
     const r = parseNewTicket(form({topic: 'order', name: 'Jan', email: 'JAN@Example.com', order: '1042', message: 'Where is my parcel please?'}));
@@ -148,9 +151,10 @@ describe('createTicket', {skip}, () => {
     assert.equal(t.customerId, 'gid://shopify/Customer/1');
     const thread = discord.threads.get(t.threadId)!;
     assert.match(thread.messages[0]!.content, new RegExp(t.ref));
-    assert.match(thread.messages[0]!.content, /#1042 · 2026-08-02 · PAID · UNFULFILLED · preorder · batch:OD-FC-F4:2/);
+    assert.match(plain(thread.messages[0]!.content), /email verified by order #1042/);
+    assert.match(plain(thread.messages[0]!.content), /#1042 · 2026-08-02 · PAID · UNFULFILLED · preorder · batch 2 of OD-FC-F4/);
     assert.doesNotMatch(thread.messages[0]!.content, /vip/);
-    assert.match(thread.messages[1]!.content, /^\*\*Jan · customer\*\*\nMy preorder/);
+    assert.match(thread.messages[1]!.content, /^\*\*Jan · customer\*\*\n>>> My preorder/);
     const msgs = await deps.store.messages(t.ref);
     assert.equal(msgs.length, 1);
     assert.equal(msgs[0]!.role, 'customer');
@@ -209,7 +213,7 @@ describe('createTicket', {skip}, () => {
     const t = await createTicket(deps, input());
     assert.doesNotMatch(discord.threads.get(t.threadId)!.messages[0]!.content, /jan@example.com/);
     assert.equal(discord.channelPosts.length, 1);
-    assert.match(discord.channelPosts[0]!.content, /jan@example.com/);
+    assert.match(plain(discord.channelPosts[0]!.content), /<jan@example.com> · verified by order #1042/);
     assert.match(discord.channelPosts[0]!.content, /admin\.shopify\.com\/store\/opendrone-test\/customers\/1/);
   });
 
@@ -233,7 +237,7 @@ describe('relay both ways', {skip}, () => {
   it('copies a staff reply to the ticket with a first name only, and marks it answered', async () => {
     const {deps, discord} = await setup();
     const t = await createTicket(deps, input());
-    discord.staff(t.threadId, 'Batch 2 ships on 14 October. Mail me at jan.staff@opendrone.be');
+    discord.staff(t.threadId, 'Batch 2 ships on 14 October. Mail me at jan.private@gmail.com');
     const {ticket, added} = await syncTicket(deps, t, {force: true});
     assert.equal(added, 1);
     assert.equal(ticket.status, 'answered');
@@ -266,7 +270,7 @@ describe('relay both ways', {skip}, () => {
     assert.ok(r.ok);
     assert.equal(r.ticket.status, 'open');
     const last = discord.threads.get(t.threadId)!.messages.at(-1)!;
-    assert.equal(last.content, '**Jan · customer**\n4.5.1, flashed yesterday');
+    assert.equal(last.content, '**Jan · customer**\n>>> 4.5.1, flashed yesterday');
     // The bot's own relay is not copied back on the next sync.
     const again = await syncTicket(deps, r.ticket, {force: true});
     assert.equal(again.added, 0);
@@ -341,12 +345,16 @@ describe('status transitions', {skip}, () => {
     assert.deepEqual(events, ['closed_by_you', 'reopened_by_you', 'closed_by_team', 'reopened_by_team']);
   });
 
-  it('locking the thread in Discord closes the ticket', async () => {
+  it('locking the thread closes the ticket, after copying the last reply before the lock', async () => {
     const {deps, discord} = await setup();
     const t = await createTicket(deps, input());
+    discord.staff(t.threadId, 'We handle this by phone now.');
     discord.threads.get(t.threadId)!.locked = true;
     const {ticket} = await syncTicket(deps, t, {force: true});
     assert.equal(ticket.status, 'closed');
+    assert.equal(ticket.locked, true);
+    const bodies = (await deps.store.messages(t.ref)).map((m) => m.body);
+    assert.deepEqual(bodies.slice(-2), ['We handle this by phone now.', 'locked_by_team']);
   });
 
   it('updates the status on the Shopify customer', async () => {
@@ -379,14 +387,38 @@ describe('findTickets', {skip}, () => {
     assert.deepEqual(await findTickets(deps, 'eva@example.com', t.ref), []);
   });
 
-  it('finds by email and an order number the ticket carries or Shopify confirms', async () => {
+  it('finds only the tickets filed with an order Shopify confirms for the email', async () => {
     const {deps} = await setup();
     const a = await createTicket(deps, input());
-    const b = await createTicket(deps, input({topic: 'product', orderNumber: null, product: 'OpenESC 30x30'}));
-    assert.equal((await findTickets(deps, 'jan@example.com', '1042')).length, 2);
+    await createTicket(deps, input({topic: 'product', orderNumber: null, product: 'OpenESC 30x30'}));
+    assert.deepEqual((await findTickets(deps, 'jan@example.com', '1042')).map((t) => t.ref), [a.ref]);
     assert.deepEqual(await findTickets(deps, 'jan@example.com', '#1077'), []);
-    assert.deepEqual(await findTickets(deps, 'eva@example.com', '1077'), []);
-    assert.ok([a.ref, b.ref].every(Boolean));
+    assert.deepEqual(await findTickets(deps, 'eva@example.com', '1042'), []);
+  });
+
+  it('never accepts an order number that was only typed into a ticket (security finding 1)', async () => {
+    const {deps} = await setup();
+    // An attacker opens a ticket with the victim's email and an invented order number...
+    const fake = await createTicket(deps, input({orderNumber: '#9999'}));
+    assert.equal(fake.orderVerified, false);
+    const real = await createTicket(deps, input());
+    assert.equal(real.orderVerified, true);
+    // ...and then tries to use that number as proof.
+    assert.deepEqual(await findTickets(deps, 'jan@example.com', '9999'), []);
+    assert.deepEqual((await findTickets(deps, 'jan@example.com', '1042')).map((t) => t.ref), [real.ref]);
+  });
+
+  it('asks Shopify on every order-number attempt, tickets or not (timing, finding 8)', async () => {
+    const {deps} = await setup();
+    let orderQueries = 0;
+    const base = deps.fetcher!;
+    deps.fetcher = (async (url: string, init: RequestInit) => {
+      if (String(init.body).includes('SupportOrder')) orderQueries++;
+      return base(url, init);
+    }) as unknown as typeof fetch;
+    await findTickets(deps, 'nobody@example.com', '1042');
+    await findTickets(deps, 'jan@example.com', '1042');
+    assert.equal(orderQueries, 2);
   });
 
   it('answers nothing for malformed input', async () => {
@@ -503,5 +535,171 @@ describe('small parsers', () => {
     assert.ok(isEmail('jan@example.com'));
     assert.ok(!isEmail('jan"@example.com'));
     assert.ok(!isEmail('jan @example.com'));
+  });
+});
+
+describe('unverified email (security finding 2)', {skip}, () => {
+  it('shows no order history, earlier tickets or Shopify link, and writes nothing', async () => {
+    const {deps, discord, shopify} = await setup();
+    await createTicket(deps, input()); // the real Jan, verified by #1042
+    const writesBefore = shopify.writes.length;
+    // Someone else types Jan's email, no order number.
+    const t = await createTicket(deps, input({topic: 'other', orderNumber: null, message: 'Please send me my order details.'}));
+    assert.equal(t.customerMatch, 'unverified');
+    assert.equal(t.customerId, null);
+    const card = plain(discord.threads.get(t.threadId)!.messages[0]!.content);
+    assert.match(card, /email not verified/);
+    assert.doesNotMatch(card, /#1042|Recent orders|Earlier tickets|batch/);
+    assert.equal(shopify.writes.length, writesBefore);
+  });
+
+  it('treats a typed order number of someone else as unverified', async () => {
+    const {deps, discord, shopify} = await setup();
+    const t = await createTicket(deps, input({orderNumber: '#1077'}));
+    assert.equal(t.customerMatch, 'unverified');
+    const card = plain(discord.threads.get(t.threadId)!.messages[0]!.content);
+    assert.match(card, /Order #1077: not found for this email/);
+    assert.equal(shopify.writes.length, 0);
+  });
+
+  it('tags the customer once, on the ticket that is verified, not on every status change', async () => {
+    const {deps, shopify} = await setup();
+    const t = await createTicket(deps, input());
+    await closeTicket(deps, t, 'you');
+    assert.equal(shopify.writes.filter((w) => w.op === 'tagsAdd').length, 1);
+    assert.equal(shopify.writes.filter((w) => w.op === 'metafieldsSet').length, 2);
+  });
+});
+
+describe('Discord text from customers (finding 7)', {skip}, () => {
+  it('escapes markdown and mentions in the name, product and firmware, and quotes the body', async () => {
+    const {deps, discord} = await setup();
+    const t = await createTicket(
+      deps,
+      input({
+        topic: 'product',
+        orderNumber: null,
+        name: '**Admin** @everyone',
+        product: '[click](https://evil.example)',
+        firmware: '<@&555>',
+        message: '**Jan · team**\nPlease pay at [opendrone.be](https://evil.example/pay)',
+      }),
+    );
+    const [card, post] = discord.threads.get(t.threadId)!.messages.map((m) => m.content);
+    assert.match(card!, /From \*\*\\\*\\\*Admin\\\*\\\*\*\*/);
+    assert.match(card!, /Product: \\\[click\\\]\\\(https\\:/);
+    assert.match(card!, /Firmware: \\<\\@&555\\>/);
+    assert.match(post!, /^\*\*\\\*\\\*Admin\\\*\\\* · customer\*\*\n>>> /);
+    assert.match(post!, /opendrone\.be \(https:\/\/evil\.example\/pay\)/);
+    assert.doesNotMatch(discord.threads.get(t.threadId)!.name, /[*@<>[\]]/);
+  });
+});
+
+describe('staff lifecycle (tester 4)', {skip}, () => {
+  const ENFORCE = {SUPPORT_MODERATION_MODE: 'enforce', SUPPORT_MOD_ROLE_ID: 'mods'};
+
+  it('applies a command behind a held reply exactly once, after approval', async () => {
+    const {deps, discord} = await setup({env: ENFORCE});
+    discord.setRoleMembers(['mod-1']);
+    let t = await createTicket(deps, input());
+    const held = discord.staff(t.threadId, 'Draft: batch 2 ships soon');
+    discord.staff(t.threadId, '!waiting');
+    let r = await syncTicket(deps, t, {force: true});
+    assert.equal(r.ticket.status, 'open', 'nothing after the held reply is applied yet');
+    assert.ok(discord.reactions.some((x) => x.message === held.id && x.emoji === '⏳'));
+    // The customer writes meanwhile; later syncs must not flip the status back.
+    const reply = await addCustomerReply(deps, r.ticket, 'Any news?');
+    assert.ok(reply.ok);
+    t = (await syncTicket(deps, reply.ticket, {force: true})).ticket;
+    assert.equal(t.status, 'open');
+    discord.approve(held, 'mod-1');
+    r = await syncTicket(deps, t, {force: true});
+    assert.equal(r.added, 1);
+    assert.equal(r.ticket.status, 'waiting');
+    // Nothing is applied twice.
+    const again = await addCustomerReply(deps, r.ticket, 'Here is the photo');
+    assert.ok(again.ok);
+    const after = (await syncTicket(deps, again.ticket, {force: true})).ticket;
+    assert.equal(after.status, 'open');
+    const events = (await deps.store.messages(t.ref)).filter((m) => m.role === 'system');
+    assert.equal(events.length, 0);
+  });
+
+  it('lists the conversation by time, not by when a reply was copied', async () => {
+    const {deps, discord} = await setup({env: ENFORCE});
+    discord.setRoleMembers(['mod-1']);
+    const t = await createTicket(deps, input());
+    clock += 60_000;
+    const staff = discord.staff(t.threadId, 'Earlier staff answer');
+    clock += 60_000;
+    const r = await addCustomerReply(deps, t, 'Later customer message');
+    assert.ok(r.ok);
+    discord.approve(staff, 'mod-1');
+    await syncTicket(deps, r.ticket, {force: true});
+    const bodies = (await deps.store.messages(t.ref)).map((m) => m.body);
+    assert.deepEqual(bodies.slice(-2), ['Earlier staff answer', 'Later customer message']);
+  });
+
+  it('a locked thread refuses replies with a clear reason', async () => {
+    const {deps, discord} = await setup();
+    const t = await createTicket(deps, input());
+    discord.threads.get(t.threadId)!.locked = true;
+    // Locked since the last sync: the post fails and the ticket learns it.
+    const r = await addCustomerReply(deps, t, 'Hello?');
+    assert.deepEqual(r, {ok: false, error: 'locked'});
+    const stored = (await deps.store.getTicket(t.ref))!;
+    assert.equal(stored.locked, true);
+    assert.equal(stored.status, 'closed');
+    assert.deepEqual(await addCustomerReply(deps, stored, 'Again'), {ok: false, error: 'locked'});
+  });
+
+  it('withdraws a deleted reply and updates an edited one', async () => {
+    const {deps, discord} = await setup();
+    const t = await createTicket(deps, input());
+    const a = discord.staff(t.threadId, 'Wrong answer');
+    const b = discord.staff(t.threadId, 'Ships Monday');
+    const s1 = (await syncTicket(deps, t, {force: true})).ticket;
+    discord.remove(t.threadId, a.id);
+    discord.edit(t.threadId, b.id, 'Ships Tuesday');
+    await syncTicket(deps, s1, {force: true});
+    const msgs = await deps.store.messages(t.ref);
+    assert.ok(!msgs.some((m) => m.body === 'Wrong answer'));
+    assert.ok(msgs.some((m) => m.body === 'Ships Tuesday'));
+    assert.ok(msgs.some((m) => m.body === 'reply_withdrawn'));
+  });
+
+  it('in enforce mode an edit after approval withdraws the reply', async () => {
+    const {deps, discord} = await setup({env: ENFORCE});
+    discord.setRoleMembers(['mod-1']);
+    const t = await createTicket(deps, input());
+    const m = discord.staff(t.threadId, 'Approved text');
+    discord.approve(m, 'mod-1');
+    const s1 = (await syncTicket(deps, t, {force: true})).ticket;
+    discord.edit(t.threadId, m.id, 'Changed after approval');
+    await syncTicket(deps, s1, {force: true});
+    const bodies = (await deps.store.messages(t.ref)).map((x) => x.body);
+    assert.ok(!bodies.includes('Approved text') && !bodies.includes('Changed after approval'));
+  });
+
+  it('closes a never-answered ticket after 90 idle days so retention applies', async () => {
+    const {deps} = await setup();
+    const t = await createTicket(deps, input());
+    clock += 91 * 24 * 3600 * 1000;
+    const report = await runScheduled(deps);
+    assert.ok(report.autoClosed.includes(t.ref));
+    assert.equal((await deps.store.getTicket(t.ref))!.status, 'closed');
+  });
+
+  it('cleanup deletes the staff metadata post and keeps rows while Shopify removal fails', async () => {
+    const {deps, discord} = await setup({env: {DISCORD_STAFF_METADATA_CHANNEL_ID: '99'}});
+    const t = await closeTicket(deps, await createTicket(deps, input()), 'you');
+    clock += RETENTION_MS + 60_000;
+    const base = deps.fetcher!;
+    deps.fetcher = (async () => new Response('down', {status: 503})) as unknown as typeof fetch;
+    assert.deepEqual(await cleanupExpired(deps), []);
+    assert.ok(await deps.store.getTicket(t.ref));
+    deps.fetcher = base;
+    assert.deepEqual(await cleanupExpired(deps), [t.ref]);
+    assert.ok(discord.channelPosts.every((p) => p.deleted));
   });
 });

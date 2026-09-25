@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {MAX_FILES, MAX_PER_FILE_BYTES, checkFiles, extractAttachments} from './uploads.ts';
+import {MAX_FILES, MAX_PER_FILE_BYTES, checkFiles, contentMatchesExtension, extractAttachments} from './uploads.ts';
 
 const MB = 1024 * 1024;
 const f = (name: string, size: number, type = '') => ({name, size, type});
@@ -31,6 +31,31 @@ describe('checkFiles', () => {
     assert.equal(checkFiles([f('x.exe', 10, 'application/octet-stream')])?.problem, 'type');
     assert.equal(checkFiles([f('photo.png.exe', 10, 'image/png')])?.problem, 'type');
     assert.equal(checkFiles([f('noext', 10, 'image/png')])?.problem, 'type');
+  });
+});
+
+describe('file content checks (tester 2)', () => {
+  it('refuses an empty file', () => {
+    assert.deepEqual(checkFiles([f('photo.jpg', 0, 'image/jpeg')]), {problem: 'empty', file: 'photo.jpg'});
+  });
+
+  it('refuses a program renamed to .jpg and accepts real images and video', async () => {
+    const exe = new Uint8Array([0x4d, 0x5a, 0x90, 0, 3, 0, 0, 0]);
+    const jpg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0x10]);
+    const mp4 = new Uint8Array([0, 0, 0, 0x20, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d]);
+    assert.equal(contentMatchesExtension('x.jpg', exe), false);
+    assert.equal(contentMatchesExtension('x.jpg', jpg), true);
+    assert.equal(contentMatchesExtension('flight.mp4', mp4), true);
+    assert.equal(contentMatchesExtension('LOG00001.bbl', exe), true, 'logs have no signature');
+    const form = new FormData();
+    form.append('files', new File([exe], 'holiday.jpg', {type: 'image/jpeg'}));
+    assert.deepEqual(await extractAttachments(form), {ok: false, problem: 'type', file: 'holiday.jpg'});
+  });
+
+  it('treats an untouched file input as no file', async () => {
+    const form = new FormData();
+    form.append('files', new File([], '', {type: 'application/octet-stream'}));
+    assert.deepEqual(await extractAttachments(form), {ok: true, files: []});
   });
 });
 

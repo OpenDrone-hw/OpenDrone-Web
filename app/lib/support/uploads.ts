@@ -47,7 +47,7 @@ const EXT_SET = new Set(ALLOWED_EXTENSIONS);
 /** The file input's `accept` attribute. */
 export const ACCEPT = ALLOWED_EXTENSIONS.map((e) => `.${e}`).join(',');
 
-export type FileProblem = 'too_many' | 'too_big' | 'total_too_big' | 'type';
+export type FileProblem = 'too_many' | 'too_big' | 'total_too_big' | 'type' | 'empty';
 
 export type FileLike = {name: string; size: number; type: string};
 
@@ -56,6 +56,7 @@ export function checkFiles(files: FileLike[]): {problem: FileProblem; file?: str
   if (files.length > MAX_FILES) return {problem: 'too_many'};
   let total = 0;
   for (const f of files) {
+    if (f.size === 0) return {problem: 'empty', file: f.name};
     if (f.size > MAX_PER_FILE_BYTES) return {problem: 'too_big', file: f.name};
     total += f.size;
     if (total > MAX_TOTAL_BYTES) return {problem: 'total_too_big'};
@@ -74,14 +75,58 @@ export type ExtractedFiles =
 
 /** Read and validate the `files` fields of a multipart form. */
 export async function extractAttachments(form: FormData, field = 'files'): Promise<ExtractedFiles> {
-  const raw = form.getAll(field).filter((x): x is File => typeof x === 'object' && x !== null && 'arrayBuffer' in x && (x as File).size > 0);
+  // An empty file input submits one nameless, empty part: that is "no file".
+  const raw = form
+    .getAll(field)
+    .filter((x): x is File => typeof x === 'object' && x !== null && 'arrayBuffer' in x)
+    .filter((f) => f.size > 0 || f.name !== '');
   const problem = checkFiles(raw.map((f) => ({name: f.name, size: f.size, type: f.type})));
   if (problem) return {ok: false, ...problem};
   const files: OutboundFile[] = [];
   for (const f of raw) {
-    files.push({name: f.name || 'file', type: (f.type || 'application/octet-stream').toLowerCase(), data: await f.arrayBuffer()});
+    const data = await f.arrayBuffer();
+    if (!contentMatchesExtension(f.name, new Uint8Array(data, 0, Math.min(16, data.byteLength)))) {
+      return {ok: false, problem: 'type', file: f.name};
+    }
+    files.push({name: f.name || 'file', type: (f.type || 'application/octet-stream').toLowerCase(), data});
   }
   return {ok: true, files};
+}
+
+const ascii = (b: Uint8Array, at: number, s: string) => [...s].every((c, i) => b[at + i] === c.charCodeAt(0));
+
+/**
+ * Images, video and PDFs must start like what their extension says: an
+ * .exe renamed .jpg is refused. Other allowed types (logs, firmware,
+ * archives) have no reliable signature and pass on extension alone.
+ */
+export function contentMatchesExtension(name: string, head: Uint8Array): boolean {
+  const ext = (name.match(/\.([a-z0-9]+)$/i)?.[1] ?? '').toLowerCase();
+  switch (ext) {
+    case 'jpg':
+    case 'jpeg':
+      return head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff;
+    case 'png':
+      return head[0] === 0x89 && ascii(head, 1, 'PNG');
+    case 'gif':
+      return ascii(head, 0, 'GIF8');
+    case 'webp':
+      return ascii(head, 0, 'RIFF') && ascii(head, 8, 'WEBP');
+    case 'bmp':
+      return ascii(head, 0, 'BM');
+    case 'heic':
+    case 'heif':
+    case 'mp4':
+    case 'mov':
+    case 'm4a':
+      return ascii(head, 4, 'ftyp') || (ext === 'mov' && (ascii(head, 4, 'moov') || ascii(head, 4, 'wide') || ascii(head, 4, 'mdat')));
+    case 'webm':
+      return head[0] === 0x1a && head[1] === 0x45 && head[2] === 0xdf && head[3] === 0xa3;
+    case 'pdf':
+      return ascii(head, 0, '%PDF');
+    default:
+      return true;
+  }
 }
 
 export function formatBytes(n: number): string {

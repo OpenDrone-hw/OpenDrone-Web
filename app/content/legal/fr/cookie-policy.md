@@ -34,6 +34,7 @@ Outre les cookies, opendrone.be conserve quelques données dans le stockage de v
 | `od-incutec-seen` | localStorage | Mémorise que vous avez déjà ouvert la page Incutec, afin que le renvoi vers celle-ci disparaisse de la page d’accueil | Jusqu’à ce que vous effaciez les données du navigateur |
 | `opendrone:split-order` | localStorage | Mémorise les articles que vous avez retirés de votre panier pour une seconde commande, afin que vous puissiez les rajouter après le paiement | 30 jours |
 | `od-attribution`, `od-attribution-sent` | sessionStorage | Source de campagne de votre visite (par ex. un paramètre utm) et première page visitée ; utilisées pour des statistiques agrégées et, lorsque vous ajoutez un produit à votre panier, transmises comme attribut de la commande dans Shopify | Session |
+| `od-support-draft:…` | sessionStorage | Conserve ce que vous avez saisi dans un formulaire de support dans cet onglet, pour ne rien perdre si l’envoi échoue ; effacé dès que le message est envoyé | Session |
 
 #### Statistiques du site web
 

@@ -32,6 +32,7 @@ Naast cookies bewaart opendrone.be enkele gegevens in de opslag van uw browser (
 | `od-incutec-seen` | localStorage | Onthoudt dat u de Incutec-pagina al opende, zodat de verwijzing ernaar op de startpagina verdwijnt | Tot u de browsergegevens wist |
 | `opendrone:split-order` | localStorage | Onthoudt de artikelen die u uit uw winkelmandje haalde voor een tweede bestelling, zodat u ze na het afrekenen opnieuw kunt toevoegen | 30 dagen |
 | `od-attribution`, `od-attribution-sent` | sessionStorage | Campagnebron van uw bezoek (bv. een utm-parameter) en de eerste bezochte pagina; gebruikt voor geaggregeerde statistieken en, wanneer u een product in uw winkelmandje legt, meegegeven als kenmerk van de bestelling in Shopify | Sessie |
+| `od-support-draft:…` | sessionStorage | Bewaart wat u in een supportformulier typte in dit tabblad, zodat niets verloren gaat als verzenden mislukt; gewist zodra het bericht verzonden is | Sessie |
 
 #### Websitestatistieken
 

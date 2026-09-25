@@ -261,7 +261,7 @@ flowchart LR
   T[Team] -->|reply in the thread| D
   W -->|reads the thread: ticket page, every 5 min cron| D
   W -->|index, status, conversation copy| DB[(D1 SUPPORT_DB)]
-  W -->|match customer by email, tag support, support.tickets metafield| S[(Shopify)]
+  W -->|verify order for email, then tag support, support.tickets metafield| S[(Shopify)]
   W -->|ticket page, resume link| C
 ```
 
@@ -269,30 +269,42 @@ flowchart LR
 |---|---|---|
 | Front door | `/support` (`app/routes/support.tsx`) | topic (order, product, warranty, other), the fields that topic needs, attachments, Turnstile; tickets this browser opened; find, community and sales links |
 | Ticket page | `/support/t/<ref>` | status, conversation, reply with attachments, mark solved, the private link (copy, replace); refreshes every 8 s while visible |
-| Way back | `/support/resume?t=<token>`, `/support/find` | an HMAC-signed link (90 days, per ticket link version), or email plus order number or ticket number |
+| Way back | `/support/resume?t=<token>`, `/support/find` | an HMAC-signed link (90 days, per ticket link version); or the email plus the ticket number (that ticket), or plus an order number Shopify confirms for that email (the tickets about that order) |
 | Rules | `app/lib/support/tickets.ts` | create, relay both ways, status, find, scheduled jobs |
 | Discord | `app/lib/support/discord.ts` | REST only; private thread (text channel) or post (forum channel) per ticket |
-| Shopify | `app/lib/support/shopify.ts` | exact-email customer match, order ownership check, `support` tag and `support.tickets` metafield |
-| Safety | `scrubber.ts`, `moderation.ts`, `uploads.ts`, `tokens.ts`, `limits.ts` | scrub both directions, optional approval gate, 5 files of 8 MB (24 MB total), signed cookie and links, rate limits |
-| Jobs | `server.ts` `scheduled`, `POST /api/support/cleanup` | sync open tickets, reply notices when enabled, close answered tickets after 30 silent days, delete tickets 24 months after closing |
+| Shopify | `app/lib/support/shopify.ts` | order ownership check, exact-email customer match, `support` tag and `support.tickets` metafield |
+| Safety | `scrubber.ts`, `moderation.ts`, `uploads.ts`, `tokens.ts`, `limits.ts` | scrub both directions, customer text escaped in Discord, optional approval gate, 5 files of 8 MB (24 MB total, images and video checked by content), signed cookie and links, rate limits (creating and finding counted in D1 per IP and per IP plus email) |
+| Jobs | `server.ts` `scheduled`, `POST /api/support/cleanup` | sync open tickets, reply notices when enabled, close answered tickets after 30 silent days and any other after 90 idle days, delete tickets 24 months after closing |
+
+**Identity.** The email on a ticket is a claim. Only an order number that
+Shopify confirms for that email verifies it: then the ticket is linked to
+the Shopify customer, the staff card shows the order history and earlier
+tickets, and the customer record gets the `support` tag and the ticket in
+`support.tickets`. Without it the card says **email not verified** and
+shows none of that; ask for the order number before sharing order details.
 
 **For the team, in the ticket thread.** The first message is the staff card:
-reference, topic, first name, the Shopify match and the customer's recent
-orders with their preorder batch tags. An order number is shown with its
-details only when it belongs to the ticket's email. The email and the
-Shopify admin link go to `DISCORD_STAFF_METADATA_CHANNEL_ID` when set.
+reference, topic, first name, whether the email is verified, and for a
+verified email the order with its preorder batch and recent orders. Customer
+messages arrive as a quote under "Name · customer", with markdown escaped
+and masked links shown as their real address. The email and the Shopify
+admin link go to `DISCORD_STAFF_METADATA_CHANNEL_ID` when set.
 
 | In the thread | Effect |
 |---|---|
 | a message | relayed to the customer (first name only, emails, phone numbers, IBANs, cards, tokens and Discord mentions redacted); status Answered |
 | `// ...` | internal note, never relayed |
 | `!waiting` | status Waiting on you |
-| `!close`, locking or deleting the thread | Closed |
+| `!answered` | status Answered |
+| `!close` | Closed; a customer reply reopens it |
 | `!open` | Open again |
+| locking or deleting the thread | Closed and locked: the customer is told to open a new ticket |
+| editing or deleting a relayed reply | the customer's page follows (in enforce mode an edited reply is withdrawn; post it again) |
 
-With `SUPPORT_MODERATION_MODE=enforce` a reply reaches the customer only
-after a holder of `SUPPORT_MOD_ROLE_ID` reacts ✅. A customer reply to a
-closed ticket reopens it.
+Messages are handled in thread order, once each. With
+`SUPPORT_MODERATION_MODE=enforce` a reply reaches the customer only after a
+holder of `SUPPORT_MOD_ROLE_ID` reacts ✅; the bot marks a held reply ⏳,
+and later messages and commands wait behind it until it is approved.
 
 **Status.** Open (the team is up), Answered, Waiting on you, Closed.
 
@@ -301,9 +313,10 @@ not `1`; the ticket page and the private link carry the conversation.
 Turned on, the cron sends one "new reply" mail per unseen reply, with a
 fresh link and no message content.
 
-**Retention.** Tickets are deleted 24 months after closing: the Discord
-thread, the D1 rows and the entry in the customer's `support.tickets`
-metafield. `POST /api/support/cleanup` with `Authorization: Bearer
+**Retention.** Tickets are deleted 24 months after closing: the entry in the
+customer's `support.tickets` metafield (a ticket waits while that fails),
+the Discord thread, the staff-metadata post and the D1 rows. Rate counters
+hold keyed hashes, never an IP or email, and go after a day. `POST /api/support/cleanup` with `Authorization: Bearer
 $SUPPORT_CLEANUP_SECRET` runs it by hand (`?dry=1` lists, `?jobs=1` runs
 the whole cron pass).
 
@@ -358,9 +371,12 @@ SUPPORT_SANDBOX_PORT=5196 npm run support:staff -- reply OD-XXXX-XXXX "Hi"   # a
 | `support:staff -- <command> <ref> [text]` | `reply`, `note` (`//`), `waiting`, `close`, `open`, `lock`, `approve` (moderator ✅ on the last staff message), `state` (threads, metadata posts, Shopify writes as JSON) |
 
 The fake Shopify knows one customer, `jan@example.com`, with order `#1042`
-(preorder batch 2); any other email is "no Shopify customer". Rate limits
-stay on: six tickets an hour per dev server and five a day per email, so
-use fresh emails for volume. The overrides work on the dev server only:
+(preorder batch 2): that email with that order is verified, anything else
+is not. The fake team member is "Sam Support". `.env.local` carries a dummy
+`SHOPIFY_ADMIN_API_TOKEN`, so the real token never reaches the sandbox;
+preorder paid counts on that dev server then fail closed. Rate limits stay
+on and live in the local D1: six tickets an hour and ten find attempts an
+hour per IP; to reset, stop both, `rm -rf .wrangler/state`, and start them again. The overrides work on the dev server only:
 `app/lib/support/dev-overrides.ts` needs Vite's `DEV` flag, which a build
 folds to `false`, and `dev-overrides.test.ts` checks a built Worker holds
 no trace of them.

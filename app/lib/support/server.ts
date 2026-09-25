@@ -55,3 +55,26 @@ export async function authorizedTicket(
   if (!ticket || ticket.linkVersion !== entry.k) return {ticket: null, cookie};
   return {ticket, cookie};
 }
+
+type HeaderArgs = {loaderHeaders?: Headers; actionHeaders?: Headers; errorHeaders?: Headers};
+
+/**
+ * `headers` for the support routes. React Router drops headers a loader or
+ * action returns unless the route exports this: without it the private,
+ * no-store and noindex headers never reach the browser, and an action's
+ * Set-Cookie is lost on a no-JavaScript POST. Every support page is
+ * private and never cached.
+ */
+export function supportHeaders({loaderHeaders, actionHeaders, errorHeaders}: HeaderArgs): Headers {
+  const out = new Headers();
+  for (const h of [loaderHeaders, actionHeaders, errorHeaders]) {
+    if (!h) continue;
+    h.forEach((value, key) => {
+      if (key !== 'set-cookie') out.set(key, value);
+    });
+    for (const cookie of h.getSetCookie()) out.append('Set-Cookie', cookie);
+  }
+  out.set('Cache-Control', 'private, no-store');
+  out.set('X-Robots-Tag', 'noindex, nofollow');
+  return out;
+}

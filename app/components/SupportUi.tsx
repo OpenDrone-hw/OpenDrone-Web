@@ -1,8 +1,10 @@
-import {useEffect, useId, useRef, useState} from 'react';
+import {useEffect, useId, useRef, useState, type FormEvent, type RefObject} from 'react';
 import {Check, Copy, Paperclip, X} from 'lucide-react';
 import {copyText} from '~/lib/copy';
 import {getActiveTheme} from '~/lib/theme';
 import {ACCEPT, checkFiles, formatBytes, MAX_FILES} from '~/lib/support/uploads';
+import {LIMITS, normalizeText} from '~/lib/support/form';
+import {Link} from 'react-router';
 import type {TicketStatus} from '~/lib/support/store';
 
 /**
@@ -47,6 +49,7 @@ export function Stamp({at, day = false}: {at: number; day?: boolean}) {
  */
 export function FilePicker({name = 'files', disabled = false, compact = false}: {name?: string; disabled?: boolean; compact?: boolean}) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const addRef = useRef<HTMLLabelElement>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [problem, setProblem] = useState<string | null>(null);
   const hintId = useId();
@@ -75,7 +78,7 @@ export function FilePicker({name = 'files', disabled = false, compact = false}: 
 
   return (
     <div className={`sp-files${compact ? ' sp-files-compact' : ''}`}>
-      <label className="sp-files-add od-btn od-btn-secondary od-btn-sm" aria-disabled={disabled || files.length >= MAX_FILES}>
+      <label ref={addRef} className="sp-files-add od-btn od-btn-secondary od-btn-sm" aria-disabled={disabled || files.length >= MAX_FILES}>
         <Paperclip size={14} aria-hidden="true" />
         {t('files_add')}
         <input
@@ -105,7 +108,11 @@ export function FilePicker({name = 'files', disabled = false, compact = false}: 
                 type="button"
                 className="sp-file-remove"
                 aria-label={t('files_remove', {file: f.name})}
-                onClick={() => sync(files.filter((_, j) => j !== i))}
+                onClick={() => {
+                  sync(files.filter((_, j) => j !== i));
+                  // The chip and its button are gone: keep focus in the picker.
+                  inputRef.current?.focus();
+                }}
               >
                 <X size={14} aria-hidden="true" />
               </button>
@@ -114,7 +121,7 @@ export function FilePicker({name = 'files', disabled = false, compact = false}: 
         </ul>
       ) : null}
       {problem ? (
-        <p role="alert" className="sp-error">
+        <p role="alert" className="sp-error sp-file-error">
           {problem}
         </p>
       ) : null}
@@ -211,5 +218,187 @@ export function CopyLink({url}: {url: string}) {
         <span aria-live="polite">{copied ? t('copied') : t('copy')}</span>
       </button>
     </div>
+  );
+}
+
+/**
+ * Message box with a live count once the text gets long. No maxlength: a
+ * long paste is kept whole, marked over the limit, and the customer is told
+ * to attach the rest, instead of it being cut silently.
+ */
+export function MessageBox({
+  name = 'message',
+  label,
+  placeholder,
+  rows = 7,
+  invalid,
+  describedBy,
+  defaultValue,
+}: {
+  name?: string;
+  label: string;
+  placeholder?: string;
+  rows?: number;
+  invalid?: boolean;
+  describedBy?: string;
+  defaultValue?: string;
+}) {
+  const [length, setLength] = useState(0);
+  const countId = useId();
+  const over = length > LIMITS.message;
+  return (
+    <label className="sp-field">
+      <span className="sp-label">{label}</span>
+      <textarea
+        name={name}
+        rows={rows}
+        dir="auto"
+        placeholder={placeholder}
+        defaultValue={defaultValue}
+        className="sp-input sp-textarea"
+        aria-invalid={invalid || over || undefined}
+        aria-describedby={[describedBy, countId].filter(Boolean).join(' ')}
+        onInput={(e) => setLength(normalizeText(e.currentTarget.value).length)}
+      />
+      <span id={countId} className={`sp-count${over ? ' is-over' : ''}`} aria-live={over ? 'polite' : 'off'}>
+        {length > LIMITS.message * 0.75 ? `${length.toLocaleString('en')} / ${LIMITS.message.toLocaleString('en')}` : ''}
+        {over ? ` · ${t('err_too_long')}` : ''}
+      </span>
+    </label>
+  );
+}
+
+/**
+ * Checks a support form in the browser before it is sent: offline, a
+ * message over the limit, or files the server would refuse. Returns the
+ * problem (and stops the submit, focusing the culprit) or null.
+ */
+export function guardSubmit(event: FormEvent<HTMLFormElement>): string | null {
+  const form = event.currentTarget;
+  let problem: string | null = null;
+  let focus: HTMLElement | null = null;
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) problem = t('err_offline');
+  const message = form.elements.namedItem('message');
+  if (!problem && message instanceof HTMLTextAreaElement && normalizeText(message.value).length > LIMITS.message) {
+    problem = t('err_too_long');
+    focus = message;
+  }
+  const input = form.querySelector<HTMLInputElement>('input[type=file]');
+  if (!problem && input?.files?.length) {
+    const p = checkFiles(Array.from(input.files).map((f) => ({name: f.name, size: f.size, type: f.type})));
+    if (p) {
+      problem = t(`file_${p.problem}`, {file: p.file ?? ''});
+      focus = input;
+    }
+  }
+  if (problem) {
+    event.preventDefault();
+    window.setTimeout(() => {
+      focus?.scrollIntoView({block: 'center', behavior: 'smooth'});
+      focus?.focus({preventScroll: true});
+    }, 0);
+  }
+  return problem;
+}
+
+const DRAFT_FIELDS = 'input[name]:not([type=file]):not([type=hidden]):not([name=website]), textarea[name], select[name]';
+
+/**
+ * Keeps what was typed in a form in this tab (sessionStorage), so a failed
+ * send or a dropped connection loses nothing but attached files. Cleared
+ * by `clearDraft` once the message is sent.
+ */
+export function useDraft(formRef: RefObject<HTMLFormElement | null>, key: string) {
+  useEffect(() => {
+    const form = formRef.current;
+    if (!form) return;
+    const storageKey = `od-support-draft:${key}`;
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(storageKey) ?? '{}') as Record<string, string>;
+      for (const el of Array.from(form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(DRAFT_FIELDS))) {
+        const value = saved[el.name];
+        if (value === undefined) continue;
+        if (el instanceof HTMLInputElement && el.type === 'radio') {
+          if (el.value === value && !el.checked) el.click();
+        } else if (!el.value) {
+          el.value = value;
+          el.dispatchEvent(new Event('input', {bubbles: true}));
+        }
+      }
+    } catch {
+      // Storage blocked: nothing to restore.
+    }
+    const save = () => {
+      const values: Record<string, string> = {};
+      for (const el of Array.from(form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(DRAFT_FIELDS))) {
+        if (el instanceof HTMLInputElement && el.type === 'radio' && !el.checked) continue;
+        if (el.value) values[el.name] = el.value;
+      }
+      try {
+        sessionStorage.setItem(storageKey, JSON.stringify(values));
+      } catch {
+        // Storage blocked or full: the form still works.
+      }
+    };
+    form.addEventListener('input', save);
+    form.addEventListener('change', save);
+    return () => {
+      form.removeEventListener('input', save);
+      form.removeEventListener('change', save);
+    };
+  }, [formRef, key]);
+}
+
+export function clearDraft(key: string) {
+  try {
+    sessionStorage.removeItem(`od-support-draft:${key}`);
+  } catch {
+    // Nothing stored.
+  }
+}
+
+/**
+ * Shown when a support page or its form fails outright (for example the
+ * connection dropped mid-send). The typed text is still in this tab.
+ */
+export function SupportError() {
+  return (
+    <div className="page-shell sp-page">
+      <header className="page-header">
+        <h1 className="page-title">{t('error_title')}</h1>
+        <p className="page-description">{t('error_body')}</p>
+      </header>
+      <div className="sp-actions">
+        <a href={typeof window === 'undefined' ? '/support' : window.location.pathname} className="od-btn od-btn-primary">
+          {t('error_retry')}
+        </a>
+      </div>
+    </div>
+  );
+}
+
+type ListedTicket = {ref: string; subject: string; preview: string; status: TicketStatus; updatedAt: number};
+
+export function TicketList({tickets}: {tickets: ListedTicket[]}) {
+  return (
+    <ul className="sp-ticket-list">
+      {tickets.map((ticket) => (
+        <li key={ticket.ref}>
+          <Link to={`/support/t/${ticket.ref}`} className="sp-ticket-link">
+            <span className="sp-ticket-ref">{ticket.ref}</span>
+            <span className="sp-ticket-subject">{ticket.subject}</span>
+            {ticket.preview ? (
+              <span className="sp-ticket-preview" dir="auto">
+                {ticket.preview}
+              </span>
+            ) : null}
+            <span className="sp-ticket-meta">
+              <StatusPill status={ticket.status} />
+              <Stamp at={ticket.updatedAt} />
+            </span>
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }

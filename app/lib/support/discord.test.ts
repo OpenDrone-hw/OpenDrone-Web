@@ -1,6 +1,15 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {chunkMessage, cleanText, compareSnowflakes, createDiscordClient, sanitizeFilename} from './discord.ts';
+import {
+  chunkMessage,
+  cleanText,
+  compareSnowflakes,
+  createDiscordClient,
+  escapeDiscord,
+  neutralizeLinks,
+  sanitizeFilename,
+  threadName,
+} from './discord.ts';
 import {_resetModCache, cursorAfter, decide, resolveMode} from './moderation.ts';
 import {fakeDiscord} from './testing.ts';
 
@@ -110,6 +119,26 @@ describe('text helpers', () => {
   it('cleans control characters but keeps newlines and tabs', () => {
     assert.equal(cleanText('a\u0000b\tc\nd⁦e'), 'ab\tc\nde');
     assert.equal(sanitizeFilename(''), 'file');
+  });
+
+  it('escapes markdown, mentions and emoji codes in customer words', () => {
+    assert.equal(escapeDiscord('**Jan** @everyone <@&1>'), '\\*\\*Jan\\*\\* \\@everyone \\<\\@&1\\>');
+    assert.equal(escapeDiscord('[x](y) :smile:'), '\\[x\\]\\(y\\) \\:smile\\:');
+  });
+
+  it('shows the real target of a masked link', () => {
+    assert.equal(neutralizeLinks('pay [here](https://evil.example/p) now'), 'pay here (https://evil.example/p) now');
+    assert.equal(neutralizeLinks('no links [just brackets]'), 'no links [just brackets]');
+  });
+
+  it('builds thread names without markup', () => {
+    assert.equal(threadName('OD-AAAA order **Jan** <@1>'), 'OD-AAAA order Jan 1');
+  });
+
+  it('keeps the extension when shortening a long file name', () => {
+    const name = sanitizeFilename(`${'é'.repeat(140)}.jpg`);
+    assert.ok(name.endsWith('.jpg'));
+    assert.equal(Array.from(name).length, 100);
   });
 
   it('orders snowflakes numerically', () => {

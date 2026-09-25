@@ -46,7 +46,7 @@ Incutec BV heeft geen Functionaris voor Gegevensbescherming (DPO) aangesteld aan
 |---------|--------------|
 | Bestel- en factuurgegevens | 10 jaar vanaf 1 januari na afsluiting van het boekjaar (art. III.86 WER; art. 60 §4 WBTW) |
 | Klantaccount | Tot verwijdering op uw verzoek, uiterlijk 3 jaar na uw laatste aanmelding of bestelling |
-| Communicatie (klantenservice: supporttickets op de website, in Discord en de ticketverwijzing op uw klantrecord in Shopify) | 24 maanden na afsluiting van het ticket, daarna automatisch gewist. Een ticket dat wij beantwoordden, wordt afgesloten na 30 dagen zonder reactie van u |
+| Communicatie (klantenservice: supporttickets op de website, in Discord en de ticketverwijzing op uw klantrecord in Shopify) | 24 maanden na afsluiting van het ticket, daarna automatisch gewist. Een ticket dat wij beantwoordden, wordt afgesloten na 30 dagen zonder reactie van u, elk ander ticket na 90 dagen zonder activiteit |
 | Website-logbestanden | 6 maanden |
 | Nieuwsbrief-abonnement | Tot uitschrijving |
 | Handelsaanvragen zonder bestelling | 2 jaar na het laatste contact |
@@ -64,7 +64,7 @@ Incutec BV heeft geen Functionaris voor Gegevensbescherming (DPO) aangesteld aan
 | Polar Advisory BV (boekhouder) | Facturatie en jaarrekening | België |
 | Resend (Plus Five Five, Inc.) | E-mail verzonden door opendrone.be: herroepingsbevestigingen, welkomst- en nieuwsbriefmails, handelsaanvragen, meldingen van een nieuw antwoord op een supportticket (enkel een link, geen berichtinhoud) | EU-regio infrastructuur; VS-rechtspersoon: SCC's |
 | Discord Inc. (verwerker) | Supporttickets: ons team leest en beantwoordt ze in een Discord-kanaal dat enkel voor medewerkers toegankelijk is (uw voornaam, e-mail, ordernummer en ordergegevens, berichten, bijlagen) | VS: EU-VS Data Privacy Framework (art. 45 AVG); verwerkersvoorwaarden van Discord: https://support.discord.com/hc/en-us/articles/37891902561687 |
-| Cloudflare, Inc. | Hosting en levering van de website (IP-adres, verzoekgegevens, afgeleid land); opslag van supporttickets (Cloudflare D1); Turnstile-antispam op het nieuwsbrief-, handels- en supportformulieren | VS: EU-VS Data Privacy Framework (art. 45 AVG) |
+| Cloudflare, Inc. | Hosting en levering van de website (IP-adres, verzoekgegevens, afgeleid land); opslag van supporttickets en van tellers tegen misbruik (Cloudflare D1; tellers bevatten een gesleutelde hash van IP-adres en e-mail, nooit de waarden zelf, en worden na een dag gewist); Turnstile-antispam op het nieuwsbrief-, handels- en supportformulieren | VS: EU-VS Data Privacy Framework (art. 45 AVG) |
 | Europese Commissie (VIES) | Controle van het btw-nummer uit een handelsaanvraag | EU |
 
 Bestel- en klantgegevens (naam, adres, e-mail, betalingsreferentie, bestelgeschiedenis) en de nieuwsbrieftoestemming worden verwerkt in Shopify.

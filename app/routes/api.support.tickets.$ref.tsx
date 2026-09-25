@@ -1,5 +1,5 @@
 import type {Route} from './+types/api.support.tickets.$ref';
-import {supportRateLimit} from '~/lib/support/limits';
+import {ticketRateLimit} from '~/lib/support/limits';
 import {authorizedTicket, originOf, supportDeps, supportReady} from '~/lib/support/server';
 import {publicMessage, syncTicket} from '~/lib/support/tickets';
 import {parseTicketRef} from '~/lib/support/tokens';
@@ -19,14 +19,15 @@ export async function loader({request, params, context}: Route.LoaderArgs) {
   const env = context.env;
   const ref = parseTicketRef(params.ref);
   if (!ref || !supportReady(env)) return json({ok: false}, 404);
-  if (!supportRateLimit('poll', ref).allowed) return json({ok: false}, 429);
   const deps = supportDeps(env, originOf(request), context.waitUntil);
   const {ticket} = await authorizedTicket(deps, request, ref);
   if (!ticket) return json({ok: false}, 401);
+  // After authorisation: a stranger polling this ref cannot use up its owner's allowance.
+  if (!ticketRateLimit('poll', ref).allowed) return json({ok: false}, 429);
   const after = Math.max(0, Number(new URL(request.url).searchParams.get('after')) || 0);
   const {ticket: synced} = await syncTicket(deps, ticket);
   // The page only asks while it is visible, so an answer means seen.
   await deps.store.updateTicket(ref, {customerSeenAt: Date.now()});
   const messages = await deps.store.messages(ref, after, 100);
-  return json({ok: true, status: synced.status, messages: messages.map(publicMessage)});
+  return json({ok: true, status: synced.status, locked: synced.locked, messages: messages.map(publicMessage)});
 }

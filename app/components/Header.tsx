@@ -893,6 +893,8 @@ const HEADER_MENU = {
     {id: 'menu-preorder', title: 'Preorders', url: '/preorder'},
     {id: 'menu-wholesale', title: 'Wholesale', url: '/wholesale'},
     {id: 'menu-newsletter', title: 'Newsletter', url: '/newsletter'},
+    // Mobile drawer only: desktop shows Support as the Contact link.
+    {id: 'menu-support', title: 'Support', url: '/support'},
     {
       id: 'menu-open-source',
       title: 'Open Source',

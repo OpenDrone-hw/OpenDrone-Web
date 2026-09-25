@@ -5,8 +5,15 @@
  */
 
 export type TicketStatus = 'open' | 'waiting' | 'answered' | 'closed';
-export type TicketTopic = 'order' | 'product' | 'warranty' | 'other';
-export type CustomerMatch = 'matched' | 'none' | 'multiple' | 'unchecked';
+import type {TicketTopic} from './form.ts';
+
+export type {TicketTopic};
+/**
+ * matched: linked to the one Shopify customer with this email, proven by an
+ * order of that email. unverified: a customer has this email but nothing
+ * proves the writer is them, so nothing is linked or shown.
+ */
+export type CustomerMatch = 'matched' | 'unverified' | 'none' | 'multiple' | 'unchecked';
 
 export type Ticket = {
   ref: string;
@@ -16,6 +23,12 @@ export type Ticket = {
   name: string;
   email: string;
   orderNumber: string | null;
+  /** Shopify confirmed the order belongs to this email. */
+  orderVerified: boolean;
+  /** The team locked or deleted the thread; replies are refused. */
+  locked: boolean;
+  metaMessageId: string | null;
+  preview: string;
   product: string | null;
   threadId: string;
   cursor: string | null;
@@ -55,6 +68,10 @@ type TicketRow = {
   name: string;
   email: string;
   order_number: string | null;
+  order_verified: number;
+  locked: number;
+  meta_message_id: string | null;
+  preview: string;
   product: string | null;
   thread_id: string;
   cursor: string | null;
@@ -91,6 +108,10 @@ function toTicket(r: TicketRow): Ticket {
     name: r.name,
     email: r.email,
     orderNumber: r.order_number,
+    orderVerified: Number(r.order_verified) === 1,
+    locked: Number(r.locked) === 1,
+    metaMessageId: r.meta_message_id,
+    preview: r.preview ?? '',
     product: r.product,
     threadId: r.thread_id,
     cursor: r.cursor,
@@ -133,6 +154,8 @@ function toMessage(r: MessageRow): TicketMessage {
 /** Columns a caller may change with `update`, camelCase to column. */
 const COLUMNS = {
   status: 'status',
+  locked: 'locked',
+  metaMessageId: 'meta_message_id',
   cursor: 'cursor',
   customerId: 'customer_id',
   customerMatch: 'customer_match',
@@ -155,13 +178,13 @@ export function createStore(db: D1Database) {
     async insertTicket(t: Ticket): Promise<void> {
       await db
         .prepare(
-          `INSERT INTO support_tickets (ref, topic, subject, status, name, email, order_number, product, thread_id, cursor,
+          `INSERT INTO support_tickets (ref, topic, subject, status, name, email, order_number, order_verified, locked, meta_message_id, preview, product, thread_id, cursor,
             customer_id, customer_match, link_version, created_at, updated_at, last_customer_at, last_staff_at,
             customer_seen_at, notified_at, synced_at, closed_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .bind(
-          t.ref, t.topic, t.subject, t.status, t.name, t.email, t.orderNumber, t.product, t.threadId, t.cursor,
+          t.ref, t.topic, t.subject, t.status, t.name, t.email, t.orderNumber, t.orderVerified ? 1 : 0, t.locked ? 1 : 0, t.metaMessageId, t.preview, t.product, t.threadId, t.cursor,
           t.customerId, t.customerMatch, t.linkVersion, t.createdAt, t.updatedAt, t.lastCustomerAt, t.lastStaffAt,
           t.customerSeenAt, t.notifiedAt, t.syncedAt, t.closedAt,
         )
@@ -179,7 +202,7 @@ export function createStore(db: D1Database) {
       const sets = keys.map((k) => `${COLUMNS[k]} = ?`).join(', ');
       await db
         .prepare(`UPDATE support_tickets SET ${sets} WHERE ref = ?`)
-        .bind(...keys.map((k) => patch[k] ?? null), ref)
+        .bind(...keys.map((k) => (typeof patch[k] === 'boolean' ? (patch[k] ? 1 : 0) : (patch[k] ?? null))), ref)
         .run();
     },
 
@@ -200,12 +223,27 @@ export function createStore(db: D1Database) {
       return results.map(toTicket);
     },
 
-    async countByEmailSince(email: string, since: number): Promise<number> {
+    /**
+     * Count one hit on `key` in a fixed window of `windowMs`; returns the
+     * count in the current window. One statement, so concurrent isolates
+     * cannot both slip under a limit.
+     */
+    async hit(key: string, windowMs: number, now: number): Promise<number> {
       const row = await db
-        .prepare('SELECT COUNT(*) AS n FROM support_tickets WHERE email = ? AND created_at >= ?')
-        .bind(email, since)
-        .first<{n: number}>();
-      return Number(row?.n ?? 0);
+        .prepare(
+          `INSERT INTO support_rate (key, window_start, count) VALUES (?, ?, 1)
+           ON CONFLICT (key) DO UPDATE SET
+             count = CASE WHEN window_start <= ? THEN 1 ELSE count + 1 END,
+             window_start = CASE WHEN window_start <= ? THEN excluded.window_start ELSE window_start END
+           RETURNING count`,
+        )
+        .bind(key, now, now - windowMs, now - windowMs)
+        .first<{count: number}>();
+      return Number(row?.count ?? 1);
+    },
+
+    async pruneRate(before: number): Promise<void> {
+      await db.prepare('DELETE FROM support_rate WHERE window_start < ?').bind(before).run();
     },
 
     /** Tickets the cron should read from Discord: not closed, least recently synced first. */
@@ -261,10 +299,39 @@ export function createStore(db: D1Database) {
 
     async messages(ref: string, afterSeq = 0, limit = 500): Promise<TicketMessage[]> {
       const {results} = await db
-        .prepare('SELECT * FROM support_messages WHERE ref = ? AND seq > ? ORDER BY seq ASC LIMIT ?')
+        .prepare('SELECT * FROM support_messages WHERE ref = ? AND seq > ? ORDER BY created_at ASC, seq ASC LIMIT ?')
         .bind(ref, afterSeq, limit)
         .all<MessageRow>();
       return results.map(toMessage);
+    },
+
+    /** The team's replies relayed at or after `sinceDiscordId`, for re-checking edits and deletions. */
+    async staffMessagesSince(ref: string, sinceDiscordId: string): Promise<TicketMessage[]> {
+      const {results} = await db
+        .prepare(
+          `SELECT * FROM support_messages WHERE ref = ? AND role = 'staff' AND discord_id IS NOT NULL
+           AND (length(discord_id) > length(?) OR (length(discord_id) = length(?) AND discord_id >= ?))`,
+        )
+        .bind(ref, sinceDiscordId, sinceDiscordId, sinceDiscordId)
+        .all<MessageRow>();
+      return results.map(toMessage);
+    },
+
+    async updateMessageBody(seq: number, body: string): Promise<void> {
+      await db.prepare('UPDATE support_messages SET body = ? WHERE seq = ?').bind(body, seq).run();
+    },
+
+    async deleteMessage(seq: number): Promise<void> {
+      await db.prepare('DELETE FROM support_messages WHERE seq = ?').bind(seq).run();
+    },
+
+    /** Tickets with no activity since `before`, in any status but closed. */
+    async idleTickets(before: number, limit: number): Promise<Ticket[]> {
+      const {results} = await db
+        .prepare(`SELECT * FROM support_tickets WHERE status != 'closed' AND updated_at < ? LIMIT ?`)
+        .bind(before, limit)
+        .all<TicketRow>();
+      return results.map(toTicket);
     },
 
     async messageByDiscordId(ref: string, discordId: string): Promise<TicketMessage | null> {

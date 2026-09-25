@@ -40,7 +40,7 @@ export type OrderSummary = {
 
 export type CustomerContext =
   | {match: 'matched'; customerId: string; ordersCount: number; orders: OrderSummary[]; tickets: SupportTicketEntry[]}
-  | {match: 'none' | 'multiple' | 'unchecked'};
+  | {match: 'unverified' | 'none' | 'multiple' | 'unchecked'};
 
 export type SupportTicketEntry = {ref: string; topic: string; status: string; opened: string; link: string};
 
@@ -64,6 +64,9 @@ export function shopifyConfigured(env: ShopifyEnv): boolean {
 
 /** Admin link to a customer, for the staff-only metadata post. */
 export function customerAdminUrl(env: ShopifyEnv, customerId: string): string | null {
+  const sandbox =
+    typeof import.meta.env !== 'undefined' && import.meta.env.DEV ? devOverride(env.SUPPORT_DEV_SHOPIFY_ADMIN_URL) : null;
+  if (sandbox) return `${sandbox}/customers/${customerId.match(/(\d+)$/)?.[1] ?? ''}`;
   const handle = env.SHOPIFY_STORE_DOMAIN?.trim().toLowerCase().match(/^(?:https?:\/\/)?([a-z0-9-]+)\.myshopify\.com/)?.[1];
   const id = customerId.match(/(\d+)$/)?.[1];
   return handle && id ? `https://admin.shopify.com/store/${handle}/customers/${id}` : null;
@@ -230,14 +233,15 @@ export function shopifyWritesEnabled(env: ShopifyEnv): boolean {
 
 /**
  * Put `entry` on the customer's ticket list (replacing the same reference)
- * or, with `remove`, take it off. Adds the `support` tag on insert. Returns
+ * or, with `remove`, take it off. Adds the `support` tag with `tag` (a new
+ * ticket only, not every status change). Returns
  * whether Shopify was written. Never throws.
  */
 export async function recordOnCustomer(
   env: ShopifyEnv,
   customerId: string,
   entry: SupportTicketEntry,
-  opts: {remove?: boolean} = {},
+  opts: {remove?: boolean; tag?: boolean} = {},
   fetcher: Fetcher = fetch,
 ): Promise<boolean> {
   if (!shopifyWritesEnabled(env)) return false;
@@ -253,7 +257,7 @@ export async function recordOnCustomer(
       fetcher,
     );
     if (set.metafieldsSet.userErrors.length) throw new Error('metafieldsSet userErrors');
-    if (!opts.remove) {
+    if (opts.tag && !opts.remove) {
       const tag = await gql<{tagsAdd: {userErrors: Array<{message: string}>}}>(env, TAGS_ADD, {id: customerId, tags: ['support']}, fetcher);
       if (tag.tagsAdd.userErrors.length) throw new Error('tagsAdd userErrors');
     }

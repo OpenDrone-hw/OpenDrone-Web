@@ -48,7 +48,7 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 |------|-----------------|
 | Order and invoice data | 10 years from 1 January after the close of the financial year (Art. III.86 WER; Art. 60 §4 VAT Code) |
 | Customer account | Until deleted at your request, at the latest 3 years after your last sign-in or order |
-| Customer service communication (support tickets on the site, in Discord and the ticket reference on your Shopify customer record) | 24 months after the ticket is closed, then deleted automatically. A ticket we answered closes after 30 days without a reply from you |
+| Customer service communication (support tickets on the site, in Discord and the ticket reference on your Shopify customer record) | 24 months after the ticket is closed, then deleted automatically. A ticket we answered closes after 30 days without a reply from you, any other ticket after 90 days without activity |
 | Website log files | 6 months |
 | Newsletter subscription | Until unsubscribed |
 | Trade enquiries without an order | 2 years after the last contact |
@@ -66,7 +66,7 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Polar Advisory BV (accountant) | Invoicing and annual accounts | Belgium |
 | Resend (Plus Five Five, Inc.) | Mail sent by opendrone.be: withdrawal confirmations, welcome and newsletter mail, trade requests, notices of a new reply on a support ticket (link only, no message content) | EU region infrastructure; US legal entity: SCCs |
 | Discord Inc. (processor) | Support tickets: our team reads and answers them in a staff-only Discord channel (your first name, email, order number and order details, messages, attachments) | US: EU-US Data Privacy Framework (Art. 45 GDPR); Discord's processor terms: https://support.discord.com/hc/en-us/articles/37891902561687 |
-| Cloudflare, Inc. | Hosting and delivery of the website (IP address, request data, derived country); storage of support tickets (Cloudflare D1); Turnstile anti-spam on the newsletter, trade and support forms | US: EU-US Data Privacy Framework (Art. 45 GDPR) |
+| Cloudflare, Inc. | Hosting and delivery of the website (IP address, request data, derived country); storage of support tickets and of anti-abuse counters (Cloudflare D1; counters hold a keyed hash of IP address and email, never the values, and are deleted after a day); Turnstile anti-spam on the newsletter, trade and support forms | US: EU-US Data Privacy Framework (Art. 45 GDPR) |
 | European Commission (VIES) | Check of the VAT number given in a trade enquiry | EU |
 
 Order and customer data (name, address, email, payment reference, order history) and newsletter consent are processed in Shopify.

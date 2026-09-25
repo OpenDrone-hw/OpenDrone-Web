@@ -8,16 +8,36 @@
  *   open      waiting on the team (new ticket, or the customer wrote last)
  *   answered  the team replied
  *   waiting   the team needs something from the customer (`!waiting`)
- *   closed    solved: by the customer, by `!close`, by locking the thread,
- *             or after 30 days without an answer to a reply
+ *   closed    solved: by the customer, by `!close`, by locking the thread
+ *             (locked: no more replies), after 30 days without an answer to
+ *             a reply, or after 90 days without any activity
  *
  * Staff work in the thread: every message is relayed to the customer after
  * the scrubber (and the moderation gate when enabled), except messages that
  * start with `//` (internal notes) and the commands `!waiting`, `!answered`,
- * `!close` and `!open`.
+ * `!close` and `!open`. Messages are processed in thread order, once: a
+ * reply held by the moderation gate holds everything after it too.
+ *
+ * Identity: the email on a ticket is unverified. Only an order number that
+ * Shopify confirms for that email links the ticket to the Shopify customer,
+ * shows staff the order history and writes to Shopify, and only such an
+ * order number (or the ticket's own reference) finds tickets again.
  */
-import {chunkMessage, cleanText, threadUrl, type DiscordClient, type DiscordEnv, type DiscordMessage, type OutboundFile} from './discord.ts';
-import {cursorAfter, decide, type ModerationEnv} from './moderation.ts';
+import {
+  DiscordError,
+  chunkMessage,
+  cleanText,
+  compareSnowflakes,
+  escapeDiscord,
+  neutralizeLinks,
+  threadName,
+  threadUrl,
+  type DiscordClient,
+  type DiscordEnv,
+  type DiscordMessage,
+  type OutboundFile,
+} from './discord.ts';
+import {approveEmoji, decide, resolveMode, type ModerationEnv} from './moderation.ts';
 import {sendReplyNotice} from './notify.ts';
 import {extractFirstName, scrubForDiscord, scrubForPublic} from './scrubber.ts';
 import {
@@ -27,12 +47,16 @@ import {
   normalizeOrderNumber,
   ownedOrder,
   recordOnCustomer,
+  shopifyWritesEnabled,
   type CustomerContext,
   type OrderSummary,
   type ShopifyEnv,
 } from './shopify.ts';
 import type {SupportStore, Ticket, TicketMessage, TicketStatus, TicketTopic} from './store.ts';
 import {newTicketRef, parseTicketRef, resumeUrl, signResumeToken} from './tokens.ts';
+import {LIMITS, TOPIC_FIELDS, TOPICS, normalizeText} from './form.ts';
+
+export {LIMITS, TOPIC_FIELDS, TOPICS, normalizeText};
 
 export type SupportEnv = DiscordEnv &
   ModerationEnv &
@@ -42,6 +66,7 @@ export type SupportEnv = DiscordEnv &
     SUPPORT_EMAIL_NOTIFY_ENABLED?: string;
     RESEND_API_KEY?: string;
     SUPPORT_FROM_EMAIL?: string;
+    PUBLIC_COMPANY_TEL?: string;
   };
 
 export type Deps = {
@@ -57,8 +82,6 @@ export type Deps = {
   defer?: (p: Promise<unknown>) => void;
 };
 
-export const TOPICS: TicketTopic[] = ['order', 'product', 'warranty', 'other'];
-
 const TOPIC_LABEL: Record<TicketTopic, string> = {
   order: 'Order or preorder',
   product: 'Product or technical',
@@ -66,17 +89,10 @@ const TOPIC_LABEL: Record<TicketTopic, string> = {
   other: 'Other',
 };
 
-export const LIMITS = {
-  name: 80,
-  product: 80,
-  firmware: 60,
-  message: 4000,
-  minMessage: 10,
-};
-
 const DAY = 24 * 60 * 60 * 1000;
 export const RETENTION_MS = 730 * DAY;
 export const AUTO_CLOSE_MS = 30 * DAY;
+export const IDLE_CLOSE_MS = 90 * DAY;
 const NOTIFY_DELAY_MS = 10 * 60 * 1000;
 const SYNC_THROTTLE_MS = 4000;
 
@@ -95,14 +111,6 @@ export type NewTicketInput = {
 };
 
 export type FieldError = 'required' | 'invalid' | 'too_short' | 'too_long' | 'filtered';
-
-/** Which fields a topic asks for, and which of them are required. */
-export const TOPIC_FIELDS: Record<TicketTopic, {order: 'required' | 'optional' | null; product: 'required' | 'optional' | null; firmware: boolean}> = {
-  order: {order: 'required', product: null, firmware: false},
-  product: {order: 'optional', product: 'required', firmware: true},
-  warranty: {order: 'required', product: 'required', firmware: false},
-  other: {order: 'optional', product: null, firmware: false},
-};
 
 const str = (form: FormData, key: string, max: number) => String(form.get(key) ?? '').trim().slice(0, max);
 
@@ -134,7 +142,7 @@ export function parseNewTicket(
   }
   const firmware = fields.firmware ? cleanText(str(form, 'firmware', LIMITS.firmware)) || null : null;
 
-  const rawMessage = String(form.get('message') ?? '').trim();
+  const rawMessage = normalizeText(String(form.get('message') ?? ''));
   let message = '';
   if (rawMessage.length < LIMITS.minMessage) errors.message = rawMessage ? 'too_short' : 'required';
   else if (rawMessage.length > LIMITS.message) errors.message = 'too_long';
@@ -171,16 +179,40 @@ export function firstName(name: string): string {
 // Discord text
 // --------------------------------------------------------------------------
 
+/** "batch:OD-FC-F4:2" reads as "batch 2 of OD-FC-F4". */
+export function humanTag(tag: string): string {
+  const m = tag.match(/^batch:(.+):(\d+)$/i);
+  return m ? `batch ${m[2]} of ${m[1]}` : tag;
+}
+
 function orderLine(o: OrderSummary): string {
   const bits = [
     o.name,
     o.createdAt.slice(0, 10),
     o.financial ?? '',
     o.fulfillment ?? '',
-    ...o.batchTags,
+    ...o.batchTags.map(humanTag),
     o.items.map((i) => `${i.quantity}x ${i.title}${i.sku ? ` (${i.sku})` : ''}`).join(', '),
   ].filter(Boolean);
-  return bits.join(' · ').slice(0, 300);
+  return escapeDiscord(bits.join(' · ')).slice(0, 400);
+}
+
+function identityLine(customer: CustomerContext, verifiedBy: string | null): string {
+  if (verifiedBy) {
+    const who =
+      customer.match === 'matched'
+        ? `Shopify customer, ${customer.ordersCount} order${customer.ordersCount === 1 ? '' : 's'}`
+        : customer.match === 'multiple'
+          ? 'several Shopify customers share this email: not linked'
+          : 'no Shopify customer account (guest order)';
+    return `email verified by order ${verifiedBy} · ${who}`;
+  }
+  if (customer.match === 'unverified') {
+    return '**email not verified**: a Shopify customer uses this email, but no order of it was given. Ask for the order number before sharing any order details.';
+  }
+  if (customer.match === 'multiple') return 'email not verified · several Shopify customers share this email';
+  if (customer.match === 'none') return 'email not verified · no Shopify customer with this email';
+  return 'email not verified · Shopify not checked';
 }
 
 export function staffCard(opts: {
@@ -189,46 +221,43 @@ export function staffCard(opts: {
   input: NewTicketInput;
   customer: CustomerContext;
   order: OrderSummary | null;
+  earlier?: Array<Pick<Ticket, 'ref' | 'status' | 'threadId'>>;
 }): string {
-  const {env, ref, input, customer, order} = opts;
+  const {env, ref, input, customer, order, earlier = []} = opts;
   const role = env.SUPPORT_MOD_ROLE_ID ? ` <@&${env.SUPPORT_MOD_ROLE_ID}>` : '';
-  const shop =
-    customer.match === 'matched'
-      ? `Shopify customer, ${customer.ordersCount} order${customer.ordersCount === 1 ? '' : 's'}`
-      : customer.match === 'none'
-        ? 'no Shopify customer with this email'
-        : customer.match === 'multiple'
-          ? 'several Shopify customers share this email: not linked'
-          : 'Shopify not checked';
   const lines = [
     `**${ref}** · ${TOPIC_LABEL[input.topic]}${role}`,
-    `From **${firstName(input.name)}** · ${shop}`,
+    `From **${escapeDiscord(firstName(input.name))}** · ${identityLine(customer, order ? order.name : null)}`,
   ];
-  if (!env.DISCORD_STAFF_METADATA_CHANNEL_ID) lines.push(`Email: ${input.email}`);
+  if (!env.DISCORD_STAFF_METADATA_CHANNEL_ID) lines.push(`Email: ${escapeDiscord(input.email)}`);
   if (input.orderNumber) {
-    lines.push(
-      order
-        ? `Order: ${orderLine(order)}`
-        : `Order ${input.orderNumber}: not found for this email (details withheld)`,
-    );
+    lines.push(order ? `Order: ${orderLine(order)}` : `Order ${input.orderNumber}: not found for this email (typed by the customer, details withheld)`);
   }
-  if (input.product) lines.push(`Product: ${input.product}`);
-  if (input.firmware) lines.push(`Firmware: ${input.firmware}`);
-  if (customer.match === 'matched') {
-    const recent = customer.orders.filter((o) => o.name !== order?.name).slice(0, 3);
+  if (input.product) lines.push(`Product: ${escapeDiscord(input.product)}`);
+  if (input.firmware) lines.push(`Firmware: ${escapeDiscord(input.firmware)}`);
+  if (order && customer.match === 'matched') {
+    const recent = customer.orders.filter((o) => o.name !== order.name).slice(0, 3);
     if (recent.length) lines.push('Recent orders:', ...recent.map((o) => `- ${orderLine(o)}`));
-    const earlier = customer.tickets.filter((t) => t.ref !== ref).slice(0, 3);
-    if (earlier.length) lines.push(`Earlier tickets: ${earlier.map((t) => `${t.ref} (${t.status})`).join(', ')}`);
   }
-  lines.push(
-    '',
-    'Reply in this thread to answer. `// note` stays internal. `!waiting` asks the customer, `!close` closes, `!open` reopens.',
-  );
+  const others = earlier.filter((t) => t.ref !== ref).slice(0, 3);
+  if (order && others.length) {
+    lines.push(`Earlier tickets: ${others.map((t) => `[${t.ref}](<${threadUrl(env, t.threadId)}>) ${t.status}`).join(', ')}`);
+  }
+  lines.push('', 'Reply in this thread to answer. `// note` stays internal. `!waiting` asks the customer, `!answered`, `!close` closes, `!open` reopens.');
+  if (resolveMode(env) === 'enforce') {
+    lines.push(`Replies reach the customer after a moderator reacts ${approveEmoji(env)}. ⏳ marks a held reply; later messages and commands wait behind it.`);
+  }
   return lines.join('\n');
 }
 
-function customerPrefix(name: string): string {
-  return `**${firstName(name)} · customer**\n`;
+/**
+ * A customer message as posted in the thread: an escaped name header, then
+ * the text in a block quote with masked links shown as their real target,
+ * so it can never pass for a staff message or hide a link.
+ */
+export function customerPost(name: string, text: string): string[] {
+  const body = neutralizeLinks(text) || '(attachment)';
+  return chunkMessage(body, 1800).map((chunk, i) => `${i === 0 ? `**${escapeDiscord(firstName(name))} · customer**\n` : ''}>>> ${chunk}`);
 }
 
 // --------------------------------------------------------------------------
@@ -242,13 +271,12 @@ function run(deps: Deps, job: () => Promise<unknown>): Promise<unknown> | void {
 }
 
 async function postCustomerText(deps: Deps, threadId: string, name: string, text: string, files: OutboundFile[]) {
-  const chunks = chunkMessage(text, 1850);
-  let last: string | null = null;
-  for (let i = 0; i < chunks.length; i++) {
-    const isLast = i === chunks.length - 1;
-    last = await deps.discord.post(threadId, (i === 0 ? customerPrefix(name) : '') + chunks[i], isLast ? files : []);
+  const posts = customerPost(name, text);
+  let last = '';
+  for (let i = 0; i < posts.length; i++) {
+    last = await deps.discord.post(threadId, posts[i]!, i === posts.length - 1 ? files : []);
   }
-  return last!;
+  return last;
 }
 
 /** Attachment metadata as Discord stored it (ids are needed to fetch them later). */
@@ -272,17 +300,26 @@ function shopifyEntry(deps: Deps, t: Pick<Ticket, 'ref' | 'topic' | 'status' | '
   };
 }
 
+function preview(text: string): string {
+  const flat = text.replace(/\s+/g, ' ').trim();
+  return flat.length > 80 ? `${flat.slice(0, 79).trimEnd()}…` : flat;
+}
+
 export async function createTicket(deps: Deps, input: NewTicketInput, files: OutboundFile[] = []): Promise<Ticket> {
   const now = (deps.now ?? Date.now)();
   const fetcher = deps.fetcher ?? fetch;
   const ref = newTicketRef();
-  const customer = await lookupCustomer(deps.env, input.email, fetcher);
+  // The email is only a claim. An order Shopify confirms for it is the proof
+  // that links the Shopify customer and shows staff the order history.
+  const order = input.orderNumber ? await ownedOrder(deps.env, input.orderNumber, input.email, null, fetcher) : null;
+  const lookup = await lookupCustomer(deps.env, input.email, fetcher);
+  const customer: CustomerContext = lookup.match === 'matched' && !order ? {match: 'unverified'} : lookup;
   const customerId = customer.match === 'matched' ? customer.customerId : null;
-  const order = input.orderNumber ? await ownedOrder(deps.env, input.orderNumber, input.email, customerId, fetcher) : null;
+  const earlier = order ? await deps.store.ticketsByEmail(input.email, 4) : [];
 
   const threadId = await deps.discord.createThread({
-    name: `${ref} ${input.topic} ${firstName(input.name)}`,
-    card: staffCard({env: deps.env, ref, input, customer, order}),
+    name: `${ref} ${input.topic} ${threadName(firstName(input.name))}`,
+    card: staffCard({env: deps.env, ref, input, customer, order, earlier}),
   });
   const firstId = await postCustomerText(deps, threadId, input.name, input.message, files);
   const attachments = await attachmentsOf(deps, threadId, firstId, files);
@@ -295,6 +332,10 @@ export async function createTicket(deps: Deps, input: NewTicketInput, files: Out
     name: input.name,
     email: input.email,
     orderNumber: input.orderNumber,
+    orderVerified: Boolean(order),
+    locked: false,
+    metaMessageId: null,
+    preview: preview(input.message),
     product: input.product,
     threadId,
     cursor: firstId,
@@ -311,40 +352,44 @@ export async function createTicket(deps: Deps, input: NewTicketInput, files: Out
     closedAt: null,
   };
   await deps.store.insertTicket(ticket);
-  await deps.store.addMessage({
-    ref,
-    discordId: firstId,
-    role: 'customer',
-    author: firstName(input.name),
-    body: input.message,
-    attachments,
-    createdAt: now,
-  });
+  await deps.store.addMessage({ref, discordId: firstId, role: 'customer', author: firstName(input.name), body: input.message, attachments, createdAt: now});
 
   const metaChannel = deps.env.DISCORD_STAFF_METADATA_CHANNEL_ID;
   if (metaChannel) {
-    await run(deps, () =>
-      deps.discord.postToChannel(
+    await run(deps, async () => {
+      const id = await deps.discord.postToChannel(
         metaChannel,
         [
           `**${ref}** · ${TOPIC_LABEL[input.topic]}`,
-          `${cleanText(input.name)} <${input.email}>`,
+          `${escapeDiscord(cleanText(input.name))} <${escapeDiscord(input.email)}> · ${order ? `verified by order ${order.name}` : 'email not verified'}`,
           customerId ? `Shopify: ${customerAdminUrl(deps.env, customerId) ?? customerId}` : `Shopify: ${customer.match}`,
           `Thread: ${threadUrl(deps.env, threadId)}`,
         ].join('\n'),
-      ),
-    );
+      );
+      await deps.store.updateTicket(ref, {metaMessageId: id});
+    });
   }
   if (customerId) {
-    await run(deps, () => recordOnCustomer(deps.env, customerId, shopifyEntry(deps, ticket), {}, fetcher));
+    await run(deps, () => recordOnCustomer(deps.env, customerId, shopifyEntry(deps, ticket), {tag: true}, fetcher));
   }
   return ticket;
 }
 
-export type ReplyResult = {ok: true; ticket: Ticket} | {ok: false; error: 'too_short' | 'too_long' | 'filtered'};
+export type ReplyError = 'too_short' | 'too_long' | 'filtered' | 'locked';
+export type ReplyResult = {ok: true; ticket: Ticket} | {ok: false; error: ReplyError};
+
+async function markLocked(deps: Deps, ticket: Ticket, now: number): Promise<Ticket> {
+  const patch = {locked: true, status: 'closed' as TicketStatus, closedAt: ticket.closedAt ?? now, updatedAt: now};
+  await deps.store.updateTicket(ticket.ref, patch);
+  if (!ticket.locked) {
+    await deps.store.addMessage({ref: ticket.ref, discordId: null, role: 'system', author: '', body: 'locked_by_team', attachments: [], createdAt: now});
+  }
+  return {...ticket, ...patch};
+}
 
 export async function addCustomerReply(deps: Deps, ticket: Ticket, rawText: string, files: OutboundFile[] = []): Promise<ReplyResult> {
-  const text = rawText.trim();
+  if (ticket.locked) return {ok: false, error: 'locked'};
+  const text = normalizeText(rawText);
   if (!text && !files.length) return {ok: false, error: 'too_short'};
   if (text.length > LIMITS.message) return {ok: false, error: 'too_long'};
   const scrubbed = scrubForDiscord(text);
@@ -352,23 +397,23 @@ export async function addCustomerReply(deps: Deps, ticket: Ticket, rawText: stri
   const now = (deps.now ?? Date.now)();
 
   const reopening = ticket.status === 'closed';
-  if (reopening) {
-    await deps.discord.post(ticket.threadId, `*${ticket.ref}: the customer reopened this ticket.*`);
+  let id: string;
+  try {
+    if (reopening) await deps.discord.post(ticket.threadId, `*${ticket.ref}: the customer reopened this ticket.*`);
+    id = await postCustomerText(deps, ticket.threadId, ticket.name, scrubbed.content, files);
+  } catch (err) {
+    // The team locked or deleted the thread since the last sync.
+    if (err instanceof DiscordError && (err.status === 403 || err.status === 404)) {
+      await markLocked(deps, ticket, now);
+      return {ok: false, error: 'locked'};
+    }
+    throw err;
   }
-  const id = await postCustomerText(deps, ticket.threadId, ticket.name, scrubbed.content || '(attachment)', files);
   const attachments = await attachmentsOf(deps, ticket.threadId, id, files);
   if (reopening) {
     await deps.store.addMessage({ref: ticket.ref, discordId: null, role: 'system', author: '', body: 'reopened_by_you', attachments: [], createdAt: now});
   }
-  await deps.store.addMessage({
-    ref: ticket.ref,
-    discordId: id,
-    role: 'customer',
-    author: firstName(ticket.name),
-    body: scrubbed.content,
-    attachments,
-    createdAt: now,
-  });
+  await deps.store.addMessage({ref: ticket.ref, discordId: id, role: 'customer', author: firstName(ticket.name), body: scrubbed.content, attachments, createdAt: now});
   const patch = {status: 'open' as TicketStatus, closedAt: null, updatedAt: now, lastCustomerAt: now, customerSeenAt: now};
   await deps.store.updateTicket(ticket.ref, patch);
   const next = {...ticket, ...patch};
@@ -378,28 +423,24 @@ export async function addCustomerReply(deps: Deps, ticket: Ticket, rawText: stri
   return {ok: true, ticket: next};
 }
 
-type CloseBy = 'you' | 'team' | 'auto';
+type CloseBy = 'you' | 'team' | 'auto' | 'idle';
+
+const CLOSE_EVENT: Record<CloseBy, string> = {you: 'closed_by_you', team: 'closed_by_team', auto: 'auto_closed', idle: 'idle_closed'};
+const CLOSE_NOTE: Record<Exclude<CloseBy, 'team'>, string> = {
+  you: 'the customer marked it solved',
+  auto: 'no answer from the customer for 30 days',
+  idle: 'no activity for 90 days',
+};
 
 export async function closeTicket(deps: Deps, ticket: Ticket, by: CloseBy): Promise<Ticket> {
   if (ticket.status === 'closed') return ticket;
   const now = (deps.now ?? Date.now)();
   const patch = {status: 'closed' as TicketStatus, closedAt: now, updatedAt: now};
   await deps.store.updateTicket(ticket.ref, patch);
-  await deps.store.addMessage({
-    ref: ticket.ref,
-    discordId: null,
-    role: 'system',
-    author: '',
-    body: by === 'you' ? 'closed_by_you' : by === 'team' ? 'closed_by_team' : 'auto_closed',
-    attachments: [],
-    createdAt: now,
-  });
+  await deps.store.addMessage({ref: ticket.ref, discordId: null, role: 'system', author: '', body: CLOSE_EVENT[by], attachments: [], createdAt: now});
   const next = {...ticket, ...patch};
   await run(deps, async () => {
-    if (by !== 'team') {
-      const why = by === 'you' ? 'the customer marked it solved' : 'no answer from the customer for 30 days';
-      await deps.discord.post(ticket.threadId, `*${ticket.ref} closed: ${why}. A reply from the customer reopens it.*`);
-    }
+    if (by !== 'team') await deps.discord.post(ticket.threadId, `*${ticket.ref} closed: ${CLOSE_NOTE[by]}. A reply from the customer reopens it.*`);
     await deps.discord.setArchived(ticket.threadId, true);
   });
   if (ticket.customerId) {
@@ -419,42 +460,102 @@ export async function resetLink(deps: Deps, ticket: Ticket): Promise<Ticket> {
 // Discord -> site
 // --------------------------------------------------------------------------
 
+function companyPhones(env: SupportEnv): string[] {
+  return env.PUBLIC_COMPANY_TEL ? [env.PUBLIC_COMPANY_TEL] : [];
+}
+
 const COMMAND_RE = /^!(close|closed|solved|waiting|wait|answered|open|reopen)\b/i;
+const RECENT_WINDOW = 100;
+const HELD_EMOJI = '⏳';
 
 export type SyncResult = {ticket: Ticket; added: number; held: number};
 
 /**
- * Read the ticket's thread since its cursor and copy the team's replies to
- * the ticket. Throttled per ticket unless `force`; Discord failures leave
- * the ticket as it was.
+ * Read the ticket's thread and bring the ticket up to date. Throttled per
+ * ticket unless `force`; a Discord failure leaves the ticket as it was.
+ *
+ * - New messages (after the cursor) are handled in thread order, exactly
+ *   once: bot posts and `//` notes are skipped, commands set the status,
+ *   replies are scrubbed and copied. A reply the moderation gate holds
+ *   stops the pass there: the cursor stays before it, so it and everything
+ *   after it are handled, in order, once it is approved.
+ * - Replies already copied are re-checked against the latest messages: a
+ *   deleted one is withdrawn, an edited one updated (in enforce mode an
+ *   edit after approval withdraws it instead, for the team to repost).
+ * - A locked or deleted thread closes the ticket for good.
  */
 export async function syncTicket(deps: Deps, ticket: Ticket, opts: {force?: boolean} = {}): Promise<SyncResult> {
   const now = (deps.now ?? Date.now)();
-  if (!opts.force && ticket.syncedAt && now - ticket.syncedAt < SYNC_THROTTLE_MS) {
-    return {ticket, added: 0, held: 0};
-  }
-  let messages: DiscordMessage[];
+  if (!opts.force && ticket.syncedAt && now - ticket.syncedAt < SYNC_THROTTLE_MS) return {ticket, added: 0, held: 0};
+
+  let thread;
+  let recent: DiscordMessage[] = [];
+  let fresh: DiscordMessage[] = [];
   try {
-    messages = await deps.discord.messagesAfter(ticket.threadId, ticket.cursor);
+    thread = await deps.discord.thread(ticket.threadId);
+    if (thread) {
+      recent = await deps.discord.messagesAfter(ticket.threadId, null, RECENT_WINDOW);
+      const covered = !ticket.cursor || recent.length < RECENT_WINDOW || compareSnowflakes(recent[0]!.id, ticket.cursor) <= 0;
+      fresh = covered
+        ? recent.filter((m) => !ticket.cursor || compareSnowflakes(m.id, ticket.cursor) > 0)
+        : await deps.discord.messagesAfter(ticket.threadId, ticket.cursor, RECENT_WINDOW);
+    }
   } catch (err) {
     console.warn('[support] sync read failed', ticket.ref, err instanceof Error ? err.message : 'error');
     return {ticket, added: 0, held: 0};
   }
 
+  // A deleted thread has nothing left to read: closed and locked.
+  if (!thread) {
+    const locked = ticket.locked ? ticket : await markLocked(deps, ticket, now);
+    await deps.store.updateTicket(ticket.ref, {syncedAt: now});
+    if (!ticket.locked && ticket.customerId) {
+      await run(deps, () => recordOnCustomer(deps.env, ticket.customerId!, shopifyEntry(deps, locked), {}, deps.fetcher ?? fetch));
+    }
+    return {ticket: {...locked, syncedAt: now}, added: 0, held: 0};
+  }
+
   let status = ticket.status;
   let lastStaffAt = ticket.lastStaffAt;
   let closedAt = ticket.closedAt;
+  let cursor = ticket.cursor;
   let added = 0;
-  const held = new Set<string>();
+  let held = 0;
   const events: Array<{body: string; at: number}> = [];
 
-  for (const m of messages) {
-    if (m.author.bot) continue;
+  for (const m of fresh) {
     const text = m.content.trim();
     const at = Date.parse(m.createdAt) || now;
-    if (text.startsWith('//')) continue;
-    const command = text.match(COMMAND_RE)?.[1]?.toLowerCase();
-    if (command) {
+    const command = m.author.bot || text.startsWith('//') ? undefined : text.match(COMMAND_RE)?.[1]?.toLowerCase();
+    if (!m.author.bot && !text.startsWith('//') && !command) {
+      const decision = await decide(deps.env, deps.discord, ticket.threadId, m);
+      if (!decision.approved) {
+        held = fresh.filter((x) => !x.author.bot && compareSnowflakes(x.id, m.id) >= 0).length;
+        if (!m.reactions.some((r) => r.emoji === HELD_EMOJI && r.me)) {
+          deps.discord.react(ticket.threadId, m.id, HELD_EMOJI).catch(() => {});
+        }
+        break;
+      }
+      const scrubbed = scrubForPublic(text, {keepPhones: companyPhones(deps.env)});
+      if (scrubbed.blocked) {
+        console.warn('[support] reply blocked by scrubber', ticket.ref, m.id, scrubbed.reasons.join(','));
+      } else if (scrubbed.content || m.attachments.length) {
+        const inserted = await deps.store.addMessage({
+          ref: ticket.ref,
+          discordId: m.id,
+          role: 'staff',
+          author: extractFirstName([m.author.globalName, m.author.username]).replace(/^Helper$/, 'OpenDrone'),
+          body: scrubbed.content,
+          attachments: m.attachments.map((a) => ({id: a.id, filename: a.filename, size: a.size})),
+          createdAt: at,
+        });
+        if (inserted) added++;
+        if (status === 'closed') events.push({body: 'reopened_by_team', at});
+        status = status === 'waiting' ? 'waiting' : 'answered';
+        closedAt = null;
+        lastStaffAt = Math.max(lastStaffAt ?? 0, at);
+      }
+    } else if (command) {
       const wasClosed = status === 'closed';
       if (command.startsWith('clos') || command === 'solved') {
         if (!wasClosed) {
@@ -462,76 +563,55 @@ export async function syncTicket(deps: Deps, ticket: Ticket, opts: {force?: bool
           closedAt = at;
           events.push({body: 'closed_by_team', at});
         }
-      } else if (command.startsWith('wait')) {
-        status = 'waiting';
-        closedAt = null;
-        if (wasClosed) events.push({body: 'reopened_by_team', at});
-      } else if (command === 'answered') {
-        status = 'answered';
-        closedAt = null;
       } else {
-        status = 'open';
+        status = command.startsWith('wait') ? 'waiting' : command === 'answered' ? 'answered' : 'open';
         closedAt = null;
         if (wasClosed) events.push({body: 'reopened_by_team', at});
       }
       deps.discord.react(ticket.threadId, m.id, '👍').catch(() => {});
-      continue;
     }
-    const decision = await decide(deps.env, deps.discord, ticket.threadId, m);
-    if (!decision.approved) {
-      held.add(m.id);
-      continue;
-    }
-    // A reply after a held one waits too, so the customer reads them in order.
-    if (held.size) {
-      held.add(m.id);
-      continue;
-    }
-    const scrubbed = scrubForPublic(text);
-    if (scrubbed.blocked) {
-      console.warn('[support] reply blocked by scrubber', ticket.ref, m.id, scrubbed.reasons.join(','));
-      continue;
-    }
-    if (!scrubbed.content && !m.attachments.length) continue;
-    const inserted = await deps.store.addMessage({
-      ref: ticket.ref,
-      discordId: m.id,
-      role: 'staff',
-      author: extractFirstName([m.author.globalName, m.author.username]).replace(/^Helper$/, 'OpenDrone'),
-      body: scrubbed.content,
-      attachments: m.attachments.map((a) => ({id: a.id, filename: a.filename, size: a.size})),
-      createdAt: at,
-    });
-    if (inserted) added++;
-    if (status === 'closed') events.push({body: 'reopened_by_team', at});
-    status = status === 'waiting' ? 'waiting' : 'answered';
-    closedAt = null;
-    lastStaffAt = Math.max(lastStaffAt ?? 0, at);
+    cursor = m.id;
   }
 
-  // Staff closing the thread in Discord (lock, or delete) closes the ticket.
-  if (status !== 'closed') {
-    const thread = await deps.discord.thread(ticket.threadId).catch(() => undefined);
-    if (thread === null || thread?.locked) {
-      status = 'closed';
-      closedAt = now;
-      events.push({body: 'closed_by_team', at: now});
+  // Edits and deletions of replies already copied, within the recent window.
+  if (recent.length) {
+    const byId = new Map(recent.map((m) => [m.id, m]));
+    const enforce = resolveMode(deps.env) === 'enforce';
+    for (const stored of await deps.store.staffMessagesSince(ticket.ref, recent[0]!.id)) {
+      const live = byId.get(stored.discordId!);
+      if (!live) {
+        await deps.store.deleteMessage(stored.seq);
+        events.push({body: 'reply_withdrawn', at: now});
+        continue;
+      }
+      if (!live.editedAt) continue;
+      const scrubbed = scrubForPublic(live.content.trim(), {keepPhones: companyPhones(deps.env)});
+      if (scrubbed.content === stored.body) continue;
+      if (enforce || scrubbed.blocked) {
+        await deps.store.deleteMessage(stored.seq);
+        events.push({body: 'reply_withdrawn', at: now});
+        deps.discord
+          .post(ticket.threadId, `*${ticket.ref}: a reply edited after it was sent was withdrawn from the customer's page. Post it again to send it.*`)
+          .catch(() => {});
+      } else {
+        await deps.store.updateMessageBody(stored.seq, scrubbed.content);
+      }
     }
   }
 
+  // Locked in Discord: what was said before the lock is copied above, then
+  // the ticket closes for good. Unlocked again: replies are possible again.
+  const lockedNow = thread.locked;
+  if (lockedNow && !ticket.locked) {
+    if (status !== 'closed') closedAt = now;
+    status = 'closed';
+    events.push({body: 'locked_by_team', at: now});
+  }
   for (const e of events) {
     await deps.store.addMessage({ref: ticket.ref, discordId: null, role: 'system', author: '', body: e.body, attachments: [], createdAt: e.at});
   }
-  const cursor = cursorAfter(messages, held, ticket.cursor);
   const changed = status !== ticket.status || added > 0 || events.length > 0;
-  const patch = {
-    cursor,
-    syncedAt: now,
-    status,
-    closedAt,
-    lastStaffAt,
-    ...(changed ? {updatedAt: now} : {}),
-  };
+  const patch = {cursor, syncedAt: now, status, closedAt, lastStaffAt, locked: lockedNow, ...(changed ? {updatedAt: now} : {})};
   await deps.store.updateTicket(ticket.ref, patch);
   const next = {...ticket, ...patch};
   if (status !== ticket.status && ticket.customerId) {
@@ -540,7 +620,7 @@ export async function syncTicket(deps: Deps, ticket: Ticket, opts: {force?: bool
   if (status === 'closed' && ticket.status !== 'closed') {
     await run(deps, () => deps.discord.setArchived(ticket.threadId, true));
   }
-  return {ticket: next, added, held: held.size};
+  return {ticket: next, added, held};
 }
 
 // --------------------------------------------------------------------------
@@ -548,9 +628,14 @@ export async function syncTicket(deps: Deps, ticket: Ticket, opts: {force?: bool
 // --------------------------------------------------------------------------
 
 /**
- * Tickets for an email plus one proof: a ticket reference of that email, or
- * an order number (a ticket filed with it, or a Shopify order of that
- * email, which proves the same thing Shopify's own order lookup does).
+ * Tickets for an email plus one proof:
+ * - the ticket's reference: that one ticket, when it was opened with this
+ *   email (a reference is random, 40 bits, and shown only to its customer
+ *   and the team);
+ * - an order number Shopify confirms for this email: the tickets filed with
+ *   that order. An order number typed into a ticket proves nothing.
+ * Shopify is asked on every order-number attempt, so the answer time does
+ * not reveal whether the email has tickets.
  */
 export async function findTickets(deps: Deps, email: string, key: string): Promise<Ticket[]> {
   const mail = email.trim().toLowerCase();
@@ -562,11 +647,12 @@ export async function findTickets(deps: Deps, email: string, key: string): Promi
   }
   const order = normalizeOrderNumber(key);
   if (!order) return [];
-  const all = await deps.store.ticketsByEmail(mail);
-  if (!all.length) return [];
-  if (all.some((t) => t.orderNumber === order)) return all;
-  const owned = await ownedOrder(deps.env, order, mail, null, deps.fetcher ?? fetch);
-  return owned ? all : [];
+  const [owned, all] = await Promise.all([
+    ownedOrder(deps.env, order, mail, null, deps.fetcher ?? fetch),
+    deps.store.ticketsByEmail(mail, 50),
+  ]);
+  if (!owned) return [];
+  return all.filter((t) => t.orderNumber === order);
 }
 
 // --------------------------------------------------------------------------
@@ -578,7 +664,11 @@ export async function freshResumeUrl(deps: Deps, ticket: Ticket): Promise<string
   return resumeUrl(deps.origin, token);
 }
 
-/** Delete tickets closed more than 24 months ago: Discord thread, Shopify entry, rows. */
+/**
+ * Delete tickets closed more than 24 months ago: the Shopify entry first,
+ * then the Discord thread and the staff-metadata post, then the rows. A
+ * ticket whose Shopify entry could not be removed stays for the next run.
+ */
 export async function cleanupExpired(deps: Deps, opts: {dryRun?: boolean; limit?: number} = {}): Promise<string[]> {
   const now = (deps.now ?? Date.now)();
   const expired = await deps.store.expiredTickets(now - RETENTION_MS, opts.limit ?? 25);
@@ -586,8 +676,13 @@ export async function cleanupExpired(deps: Deps, opts: {dryRun?: boolean; limit?
   const done: string[] = [];
   for (const t of expired) {
     try {
+      if (t.customerId && shopifyWritesEnabled(deps.env)) {
+        const removed = await recordOnCustomer(deps.env, t.customerId, shopifyEntry(deps, t), {remove: true}, deps.fetcher ?? fetch);
+        if (!removed) continue;
+      }
       await deps.discord.deleteThread(t.threadId);
-      if (t.customerId) await recordOnCustomer(deps.env, t.customerId, shopifyEntry(deps, t), {remove: true}, deps.fetcher ?? fetch);
+      const meta = deps.env.DISCORD_STAFF_METADATA_CHANNEL_ID;
+      if (t.metaMessageId && meta) await deps.discord.deleteMessage(meta, t.metaMessageId);
       await deps.store.deleteTicket(t.ref);
       done.push(t.ref);
     } catch (err) {
@@ -603,17 +698,11 @@ export async function runScheduled(deps: Deps): Promise<JobReport> {
   const now = (deps.now ?? Date.now)();
   const report: JobReport = {synced: 0, notified: 0, autoClosed: [], deleted: []};
 
-  const active = await deps.store.ticketsToSync(now - 60 * DAY, 20);
-  for (const t of active) {
+  for (const t of await deps.store.ticketsToSync(now - 60 * DAY, 20)) {
     const {ticket} = await syncTicket(deps, t, {force: true});
     report.synced++;
     const seen = Math.max(ticket.customerSeenAt ?? 0, ticket.notifiedAt ?? 0);
-    if (
-      ticket.status !== 'closed' &&
-      ticket.lastStaffAt &&
-      ticket.lastStaffAt > seen &&
-      now - ticket.lastStaffAt >= NOTIFY_DELAY_MS
-    ) {
+    if (ticket.status !== 'closed' && ticket.lastStaffAt && ticket.lastStaffAt > seen && now - ticket.lastStaffAt >= NOTIFY_DELAY_MS) {
       const sent = await sendReplyNotice(deps.env, ticket.email, ticket.ref, await freshResumeUrl(deps, ticket), deps.fetcher ?? fetch);
       if (sent) {
         await deps.store.updateTicket(ticket.ref, {notifiedAt: now});
@@ -626,8 +715,15 @@ export async function runScheduled(deps: Deps): Promise<JobReport> {
     await closeTicket(deps, t, 'auto');
     report.autoClosed.push(t.ref);
   }
+  // Anything else untouched for 90 days (an unanswered ticket included)
+  // closes too, so every ticket reaches the 24-month deletion.
+  for (const t of await deps.store.idleTickets(now - IDLE_CLOSE_MS, 20)) {
+    await closeTicket(deps, t, 'idle');
+    report.autoClosed.push(t.ref);
+  }
 
   report.deleted = await cleanupExpired(deps, {limit: 10});
+  await deps.store.pruneRate(now - DAY).catch(() => {});
   return report;
 }
 
@@ -648,7 +744,9 @@ export type PublicTicket = {
   ref: string;
   topic: TicketTopic;
   subject: string;
+  preview: string;
   status: TicketStatus;
+  locked: boolean;
   name: string;
   orderNumber: string | null;
   product: string | null;
@@ -662,7 +760,9 @@ export function publicTicket(t: Ticket): PublicTicket {
     ref: t.ref,
     topic: t.topic,
     subject: t.subject,
+    preview: t.preview,
     status: t.status,
+    locked: t.locked,
     name: firstName(t.name),
     orderNumber: t.orderNumber,
     product: t.product,
@@ -685,4 +785,9 @@ export function publicMessage(m: TicketMessage): PublicMessage {
     })),
     at: m.createdAt,
   };
+}
+
+/** Conversation order: by time, then by arrival. */
+export function byTime(a: Pick<PublicMessage, 'at' | 'seq'>, b: Pick<PublicMessage, 'at' | 'seq'>): number {
+  return a.at - b.at || a.seq - b.seq;
 }

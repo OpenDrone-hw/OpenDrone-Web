@@ -33,7 +33,7 @@ const SUPPORT_CHANNEL = '100';
 const GUILD = '7';
 const MOD_ROLE = '555';
 const MODERATOR = {id: 'mod-1', username: 'mod', global_name: 'Mia Moderator', bot: false};
-const STAFF = {id: 'staff-1', username: 'jan', global_name: 'Jan Peeters', bot: false};
+const STAFF = {id: 'staff-1', username: 'sam', global_name: 'Sam Support', bot: false};
 const BOT = {id: 'bot', username: 'OpenDrone', global_name: null, bot: true};
 
 function arg(name, fallback) {
@@ -173,8 +173,13 @@ async function discord(req, res, url, body) {
   }
   if (!thread || thread.deleted) return send(res, 404, {});
   if (req.method === 'GET' && parts.length === 3) {
+    // Like Discord: with `after`, the oldest `limit` after it; without, the newest `limit`; newest first.
     const after = url.searchParams.get('after');
-    return send(res, 200, thread.messages.filter((m) => !after || BigInt(m.id) > BigInt(after)).reverse().map(publicMessage));
+    const limit = Math.min(Number(url.searchParams.get('limit')) || 50, 100);
+    const list = after
+      ? thread.messages.filter((m) => BigInt(m.id) > BigInt(after)).slice(0, limit)
+      : thread.messages.slice(-limit);
+    return send(res, 200, list.reverse().map(publicMessage));
   }
   const message = thread.messages.find((m) => m.id === parts[3]);
   if (!message) return send(res, 404, {});
@@ -232,6 +237,7 @@ function control(req, res, url, body) {
         locked: t.locked,
         deleted: t.deleted,
         messages: t.messages.map((m) => ({
+          reactions: m.reactions.map((r) => r.emoji.name),
           id: m.id,
           from: m.author.bot ? 'bot' : m.author.global_name,
           content: m.content,
@@ -243,7 +249,9 @@ function control(req, res, url, body) {
       shopifyWrites,
     });
   }
-  const {ref, text = '', id} = JSON.parse(body.toString() || '{}');
+  const {ref, text = ''} = JSON.parse(body.toString() || '{}');
+  // `approve REF <id>` passes the message id as the text.
+  const id = /^\d+$/.test(text.trim()) ? text.trim() : undefined;
   const thread = [...threads.values()].find((t) => t.name.startsWith(`${ref} `));
   if (!thread) return send(res, 404, {error: `no thread for ${ref}`});
   if (command === 'lock') {
@@ -282,6 +290,10 @@ const ENV_LINES = [
   `SUPPORT_MOD_ROLE_ID=${MOD_ROLE}`,
   `SUPPORT_MODERATION_MODE=${MODERATION}`,
   'SUPPORT_SESSION_SECRET=sandbox-only-secret',
+  'SUPPORT_CLEANUP_SECRET=sandbox-cleanup-secret',
+  // A dummy Admin token: the real one is never sent to the sandbox. (Preorder
+  // paid counts, which use the same token, then fail closed on this dev server.)
+  'SHOPIFY_ADMIN_API_TOKEN=sandbox-admin-token',
   'SUPPORT_SHOPIFY_WRITE_ENABLED=1',
   'SUPPORT_EMAIL_NOTIFY_ENABLED=0',
   // Cloudflare's always-pass test site key; the dev-only skip covers the missing secret.

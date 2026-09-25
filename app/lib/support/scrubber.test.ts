@@ -217,3 +217,28 @@ describe('integration: poll response projection', () => {
     assert.match(r.content, /cdn\.discordapp\.com/);
   });
 });
+
+describe('scrubForPublic: tester findings', () => {
+  it('redacts admin.shopify.com store links', () => {
+    const r = scrubForPublic('see https://admin.shopify.com/store/opendrone/orders/5550001 for it');
+    assert.match(r.content, /\[internal link redacted\]/);
+    assert.doesNotMatch(r.content, /admin\.shopify/);
+  });
+
+  it('redacts Belgian mobile numbers written with / and .', () => {
+    for (const phone of ['0470/12.34.56', '0470.12.34.56', '0470 12 34 56', '+32 470/12 34 56']) {
+      assert.match(scrubForPublic(`call ${phone} please`).content, /\[phone redacted\]/, phone);
+    }
+  });
+
+  it('keeps dates and the company mail addresses', () => {
+    const r = scrubForPublic('Send it to returns@opendrone.be or sales@incutec.eu before 2026-09-25 (or 25/09/2026).');
+    assert.equal(r.content, 'Send it to returns@opendrone.be or sales@incutec.eu before 2026-09-25 (or 25/09/2026).');
+    assert.match(scrubForPublic('or mail jan@gmail.com').content, /\[email redacted\]/);
+    assert.match(scrubForPublic('fake@opendrone.be.evil.example').content, /\[email redacted\]/);
+  });
+
+  it('keeps a phone number it is told to keep', () => {
+    assert.equal(scrubForPublic('Call us on +32 16 12 34 56.', {keepPhones: ['+32 16 12 34 56']}).content, 'Call us on +32 16 12 34 56.');
+  });
+});

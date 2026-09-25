@@ -1,5 +1,5 @@
 import type {Route} from './+types/api.support.tickets.$ref.files.$message.$attachment';
-import {supportRateLimit} from '~/lib/support/limits';
+import {ticketRateLimit} from '~/lib/support/limits';
 import {authorizedTicket, originOf, supportDeps, supportReady} from '~/lib/support/server';
 import {parseTicketRef} from '~/lib/support/tokens';
 
@@ -16,10 +16,10 @@ export async function loader({request, params, context}: Route.LoaderArgs) {
   if (!ref || !supportReady(env) || !/^\d{5,25}$/.test(params.message) || !/^\d{5,25}$/.test(params.attachment)) {
     return notFound();
   }
-  if (!supportRateLimit('file', ref).allowed) return new Response('Too many requests', {status: 429});
   const deps = supportDeps(env, originOf(request));
   const {ticket} = await authorizedTicket(deps, request, ref);
   if (!ticket) return notFound();
+  if (!ticketRateLimit('file', ref).allowed) return new Response('Too many requests', {status: 429});
   const stored = await deps.store.messageByDiscordId(ref, params.message);
   if (!stored || !stored.attachments.some((a) => a.id === params.attachment)) return notFound();
   try {

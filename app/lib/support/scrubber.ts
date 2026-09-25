@@ -43,7 +43,15 @@ type Pattern = {
   name: string;
   re: RegExp;
   replace: string;
+  /** Matches that stay: the company's own addresses. */
+  keep?: (match: string) => boolean;
 };
+
+/** The company's own mail domains: a reply may name returns@opendrone.be. */
+const OWN_DOMAIN = /@(?:[\w-]+\.)*(?:opendrone\.be|incutec\.[a-z]{2,})$/i;
+
+/** 2026-09-25, 25/09/2026, 25.09.26: dates, not phone numbers. */
+const DATE_RE = /^(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[./-]\d{1,2}[./-]\d{2,4})$/;
 
 // Bidi-override block (U+202A-U+202E, U+2066-U+2069) and C0/C1 control
 // chars (minus TAB/LF/CR). RegExp constructor form keeps ESLint
@@ -75,7 +83,7 @@ const PATTERNS: Pattern[] = [
   // Shopify admin URLs: these leak internal order / customer IDs.
   {
     name: 'shopify-admin-url',
-    re: /https?:\/\/[\w.-]+\.(?:myshopify\.com|shopify\.com)\/admin[^\s]*/gi,
+    re: /https?:\/\/(?:[\w.-]+\.(?:myshopify\.com|shopify\.com)\/admin|admin\.shopify\.com\/store\/)[^\s]*/gi,
     replace: '[internal link redacted]',
   },
   // IBAN: country code + 2 check digits + 11-30 alphanumeric.
@@ -103,6 +111,7 @@ const PATTERNS: Pattern[] = [
     name: 'email',
     re: /\b[\w.+-]+@[\w-]+(?:\.[\w.-]+)+\b/g,
     replace: '[email redacted]',
+    keep: (m) => OWN_DOMAIN.test(m),
   },
   // Discord mentions: <@123>, <@!123>, <#123>, <@&123>, <:emojiname:123>.
   // These leak internal server structure (role IDs, specific users,
@@ -117,7 +126,7 @@ const PATTERNS: Pattern[] = [
 // Phone-number detection is done after the above because naive phone
 // regex will eat Discord numeric IDs. After mentions are stripped, we
 // can look for runs of digits with typical phone separators.
-const PHONE_RE = /\+?\d[\d\s().-]{7,}\d/g;
+const PHONE_RE = /\+?\d[\d\s()./-]{7,}\d/g;
 
 // Payment card. Luhn-validate to reduce false positives on serial
 // numbers, Discord IDs, and firmware build hashes.
@@ -130,7 +139,13 @@ const CARD_RE = /(?<!\w)(?:\d[ -]?){13,19}(?!\w)/g;
 // above already caught them).
 const GENERIC_KEY_RE = /\b(?=\w*[A-Za-z])[A-Za-z0-9_-]{32,}\b/g;
 
-export function scrubForPublic(raw: string): ScrubResult {
+export type ScrubOptions = {
+  /** Phone numbers that stay, such as the company's own (digits compared). */
+  keepPhones?: string[];
+};
+
+export function scrubForPublic(raw: string, opts: ScrubOptions = {}): ScrubResult {
+  const keepPhones = new Set((opts.keepPhones ?? []).map((p) => p.replace(/\D/g, '')).filter((p) => p.length >= 8));
   if (!raw) {
     return {content: '', blocked: false, redactionCount: 0, reasons: []};
   }
@@ -143,7 +158,8 @@ export function scrubForPublic(raw: string): ScrubResult {
     content = content.replace(CONTROL_RANGE, '');
 
     for (const p of PATTERNS) {
-      content = content.replace(p.re, () => {
+      content = content.replace(p.re, (match) => {
+        if (p.keep?.(match)) return match;
         redactions += 1;
         reasons.push(p.name);
         return p.replace;
@@ -151,6 +167,8 @@ export function scrubForPublic(raw: string): ScrubResult {
     }
 
     content = content.replace(PHONE_RE, (match) => {
+      if (DATE_RE.test(match.trim())) return match;
+      if (keepPhones.has(match.replace(/\D/g, ''))) return match;
       // Don't redact short runs that are just version numbers (`1.2.3.4`)
       // or IPs: the pattern already requires 8+ digits, so we mainly
       // guard against "build 12345678" style strings by checking for any
