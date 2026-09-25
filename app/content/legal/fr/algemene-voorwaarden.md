@@ -1,9 +1,8 @@
 # Conditions Générales de Vente : Incutec BV
 
-**Obligatoires pour la boutique en ligne. Doivent être téléchargeables en PDF. Doivent être acceptées avant la commande.**
-**La version néerlandaise ([/nl/algemene-voorwaarden](/nl/algemene-voorwaarden)) prévaut en cas de contradiction, sauf à l’égard des consommateurs, pour lesquels l’interprétation la plus favorable s’applique (art. 19). Cette traduction française est fournie pour votre commodité.**
-
 ---
+
+*La version néerlandaise prévaut en cas de contradiction, sauf à l’égard des consommateurs, pour lesquels l’interprétation la plus favorable s’applique (art. 19 des Conditions Générales de Vente).*
 
 ## CONDITIONS GÉNÉRALES DE VENTE : INCUTEC BV
 
@@ -37,7 +36,7 @@
 
 4.1. Le contrat est conclu au moment où le consommateur accepte l’offre et se conforme aux conditions qui y sont énoncées.
 
-4.2. Incutec BV confirme sans délai par voie électronique la réception de l’acceptation de l’offre. Tant que la réception n’a pas été confirmée, le consommateur peut résilier le contrat.
+4.2. Incutec BV confirme sans délai par voie électronique la réception de l’acceptation de l’offre. Tant que la réception n’a pas été confirmée, le consommateur peut résoudre le contrat.
 
 4.3. Le dernier bouton lors du passage en caisse indique sans ambiguïté que passer la commande implique une obligation de paiement, conformément à l’Art. VI.46 §2 du Code de droit économique belge (CDE).
 
@@ -45,7 +44,7 @@
 
 **Art. VI.47 CDE : délai de réflexion de 14 jours calendrier pour les consommateurs**
 
-5.1. Le consommateur peut résilier un contrat d’achat d’un produit pendant un délai de réflexion de **14 jours calendrier** sans avoir à justifier sa décision (droit de rétractation).
+5.1. Le consommateur peut se rétracter d’un contrat d’achat d’un produit pendant un délai de réflexion de **14 jours calendrier** sans avoir à justifier sa décision (droit de rétractation).
 
 5.2. Le délai de réflexion commence le jour suivant celui où le consommateur, ou un tiers désigné à l’avance par le consommateur autre que le transporteur, a reçu le produit. Si une même commande est livrée en plusieurs colis, le délai commence le lendemain de la réception du dernier article par le consommateur.
 
@@ -55,11 +54,11 @@
 
 5.5. Les frais de retour du produit sont à la charge du consommateur.
 
-5.6. Incutec BV rembourse tous les paiements effectués par le consommateur, y compris les frais de livraison standard (hors supplément d’un mode de livraison plus coûteux choisi par le consommateur), au plus tard **14 jours** après qu’Incutec BV a reçu le produit retourné ou après que le consommateur a démontré que le produit a été renvoyé.
+5.6. Incutec BV rembourse tous les paiements, y compris les frais de livraison standard, au plus tard 14 jours après avoir reçu la rétractation. Elle peut différer le remboursement jusqu’à ce qu’elle ait récupéré le produit ou jusqu’à ce que le consommateur ait fourni la preuve de son renvoi, la date retenue étant celle du premier de ces faits.
 
 5.7. Le remboursement est effectué selon le même moyen de paiement que la transaction initiale, sauf si le consommateur accepte expressément un moyen de paiement différent.
 
-5.8. **Dépréciation.** Le consommateur est responsable de la dépréciation du produit résultant de manipulations allant au-delà de ce qui est nécessaire pour établir sa nature, ses caractéristiques et son fonctionnement (art. VI.51 §2 CDE). Pour des composants électroniques, cela signifie en particulier : souder sur le produit, le monter dans un système, raccorder une batterie ou des moteurs, flasher un autre firmware et l'utiliser en vol vont au-delà de cette évaluation ; le raccorder par USB pour vérifier son fonctionnement, non. La dépréciation est motivée par Incutec BV, évaluée sur la valeur résiduelle réelle et déduite du remboursement ; ce n'est que lorsque le produit n'a plus aucune valeur résiduelle qu'elle peut atteindre le prix d'achat intégral. Le droit de rétractation lui-même n'est pas perdu.
+5.8. **Dépréciation.** Le consommateur est responsable de la dépréciation du produit résultant de manipulations allant au-delà de ce qui est nécessaire pour établir sa nature, ses caractéristiques et son fonctionnement (art. VI.51 §2 CDE). Pour des composants électroniques, cela signifie en particulier : souder sur le produit, le monter dans un système, raccorder une batterie ou des moteurs et l'utiliser en vol vont au-delà de cette évaluation ; le raccorder par USB pour vérifier son fonctionnement, non. La dépréciation est motivée par Incutec BV, évaluée sur la valeur résiduelle réelle et déduite du remboursement ; ce n'est que lorsque le produit n'a plus aucune valeur résiduelle qu'elle peut atteindre le prix d'achat intégral. Le droit de rétractation lui-même n'est pas perdu.
 
 ### Article 6 : Exclusion du droit de rétractation
 
@@ -81,9 +80,9 @@
 
 7bis.1. Certains produits sont vendus en précommande. Ils sont indiqués comme tels, avec leur date d’expédition, sur la page produit, lors du passage en caisse et sur la confirmation de commande. Le consommateur paie le prix intégral et les frais d’expédition affichés lors du passage en caisse au moment de la commande.
 
-7bis.2. Les produits en précommande sont fabriqués par lots. L’offre et la confirmation indiquent le lot, l’éventuel objectif de financement et son échéance, l’expédition prévue et la date limite de livraison convenue séparément. L’expédition n’est pas la livraison. Le délai communiqué avant le paiement s’applique conformément à l’Art. VI.43 CDE ; sans autre délai expressément convenu, le délai par défaut de 30 jours de l’Art. 7.1 s’applique.
+7bis.2. Les produits en précommande sont fabriqués par lots. L’offre et la confirmation indiquent le lot, l’éventuel objectif de financement et son échéance, l’expédition prévue et la date limite de livraison convenue séparément. L’expédition n’est pas la livraison. Le délai communiqué avant le paiement s’applique conformément à l’Art. VI.43 CDE ; sans autre délai expressément convenu, le délai par défaut de 30 jours de l’Art. 7.1 s’applique. L’objectif et l’échéance indiqués lors du passage en caisse ne changent pas pour cette commande.
 
-7bis.3. Si une date d’expédition change, Incutec BV en informe le consommateur par e-mail et indique la nouvelle date. Ceci est sans préjudice des droits du consommateur au titre de l’art. VI.43 §2 CDE.
+7bis.3. Si une date d’expédition change, Incutec BV en informe le consommateur par e-mail et indique la nouvelle date. Ceci est sans préjudice des droits du consommateur au titre de l’art. VI.43 §2 CDE. Une date d’expédition reportée ne prolonge pas la date limite de livraison convenue. Si cette date n’est pas respectée, le consommateur peut résoudre immédiatement le contrat pour cet article, avec remboursement dans les 14 jours.
 
 7bis.3bis. Si un objectif de financement n’est pas atteint à son échéance, Incutec BV en informe par e-mail chaque consommateur ayant commandé ce produit. Le consommateur choisit alors soit de résoudre le contrat pour cet article, avec le remboursement de tous les montants payés pour celui-ci dans les 14 jours, soit de maintenir la commande pour la nouvelle date d’expédition indiquée dans cet e-mail. Si le consommateur ne répond pas dans les 30 jours suivant cet e-mail, le contrat pour cet article est résolu et Incutec BV rembourse tous les montants payés pour celui-ci dans les 14 jours suivant la fin de ce délai. Le consommateur qui maintient la commande peut toujours se rétracter à tout moment jusqu’à la livraison conformément à l’article 7bis.4, avec le remboursement de tous les paiements. Si, après le remboursement, aucun article de la commande ne reste à expédier, les frais d’expédition payés pour la commande sont également remboursés.
 
@@ -91,11 +90,13 @@
 
 7bis.5. Une commande combinant des articles ayant des dates d’expédition différentes est expédiée en un seul colis, dès que chaque article est disponible (une seule livraison par commande). Si l’objectif de financement d’un article de la commande n’est pas atteint à son échéance, le reste de la commande est expédié dès qu’il est disponible, quel que soit le choix du consommateur au titre de l’article 7bis.3bis. Si le consommateur maintient la commande pour cet article, celui-ci est expédié séparément à sa nouvelle date d’expédition, sans frais d’expédition supplémentaires.
 
-7bis.6. Les paiements de précommande financent la production et l’achat du stock pour la commande. Ils ne portent aucun intérêt et ne confèrent aucune participation, partage de revenus ni autre intérêt de propriété dans Incutec BV.
+7bis.6. Un paiement de précommande est le paiement du prix d’achat du produit commandé. Il ne constitue pas un investissement, ne porte aucun intérêt et ne confère aucune participation ni aucun autre droit dans Incutec BV.
 
 7bis.7. Dans l’Union européenne, aucun droit ni aucune taxe d’importation n’est dû sur une commande.
 
 7bis.8. Le prix d’un produit en précommande augmente par paliers à mesure que les unités payées sont comptabilisées. Le prix affiché lors du paiement est le prix de la commande ; les paliers ultérieurs ne le modifient pas.
+
+7bis.9. Le produit livré correspond aux caractéristiques et spécifications figurant sur la page produit au moment de la commande. Toute modification substantielle de celles-ci est communiquée par e-mail avant l’expédition ; le consommateur peut alors résoudre sans frais le contrat pour cet article, avec remboursement dans les 14 jours.
 
 ### Article 8 : Paiement
 
@@ -135,9 +136,9 @@
 
 ### Article 10bis : Auto-construction, drones et responsabilité de l’utilisateur
 
-10bis.1. **Drones auto-construits.** Les produits d’Incutec BV sont des composants individuels et ne constituent pas un système d’aéronef sans équipage (UAS) au sens du Règlement (UE) 2019/945 ; ils ne portent aucun label de classe (C0-C6). Quiconque assemble des composants en un drone pour son propre usage construit un « UAS construit à titre privé » au sens de l’article 2(16) du Règlement (UE) 2019/947 et est lui-même le constructeur et l’exploitant de cet aéronef. Toutes les obligations qui en découlent, y compris l’enregistrement en tant qu’exploitant, le respect des règles de catégorie et de sous-catégorie (notamment A1/A3 pour l’auto-construction), la navigabilité de l’aéronef assemblé et les assurances légalement requises, incombent au client et non à Incutec BV.
+10bis.1. **Drones auto-construits.** Les produits d’Incutec BV sont des composants individuels et ne constituent pas un système d’aéronef sans équipage (UAS) au sens du Règlement (UE) 2019/945 ; ils ne portent aucun label de classe (C0-C6). Les produits sont vendus individuellement et non comme kit prêt à assembler pour un aéronef complet. Quiconque assemble des composants achetés individuellement en un drone pour son propre usage construit un « UAS construit à titre privé » au sens de l’article 2(16) du Règlement (UE) 2019/947 et est lui-même le constructeur et l’exploitant de cet aéronef. Toutes les obligations qui en découlent, y compris l’enregistrement en tant qu’exploitant, le respect des règles de catégorie et de sous-catégorie (pour l’auto-construction : sous-catégorie A1 uniquement sous 250 g, sinon A3 ou la catégorie spécifique), la navigabilité de l’aéronef assemblé et les assurances légalement requises, incombent au client et non à Incutec BV.
 
-10bis.2. **Configuration radio.** Les produits équipés d’un émetteur radio ont des paramètres d’émission réglables par l’utilisateur (notamment la puissance d’émission, la bande de fréquences, le domaine réglementaire). Le client est responsable d’une configuration conforme à la réglementation du pays d’utilisation. La déclaration de conformité d’Incutec BV s’applique exclusivement à la configuration livrée et à la version de firmware qui y est consignée.
+10bis.2. **Configuration radio.** Les produits équipés d’un émetteur radio sont livrés avec un firmware dont les paramètres d’émission réglables restent dans les limites de l’UE ; tel que livré, le produit est conforme à la réglementation applicable. Modifier le domaine réglementaire, dépasser les limites UE de puissance d’émission ou utiliser des réglages UE hors de l’UE constitue une modification par l’utilisateur (art. 9.3) ; le client est responsable du respect de la réglementation du pays d’utilisation.
 
 10bis.3. **Aucune utilisation critique pour la sécurité.** Les produits sont conçus pour des multirotors récréatifs et professionnels sans équipage et pour l’aéromodélisme. Ils ne sont pas conçus, testés ou approuvés pour l’aviation habitée, les applications médicales, les installations nucléaires, les applications militaires, ni toute autre application dans laquelle la défaillance d’un composant pourrait raisonnablement entraîner des blessures ou des dommages importants. Une telle utilisation est expressément exclue de l’usage prévu.
 
@@ -195,9 +196,9 @@
 
 ### Article 18 : Usage final acceptable
 
-18.1. En passant une commande, le Client accepte la Politique d’usage final d’Incutec publiée sur /end-use et garantit que les biens ne seront pas utilisés pour l’un des usages finaux exclus énoncés au §3 de cette politique. La violation de cette garantie constitue un manquement essentiel au contrat et autorise Incutec BV à annuler la commande, refuser la livraison et exercer tout recours disponible en vertu du droit belge et des règlements de l’UE applicables.
+18.1. En passant une commande, le client accepte la Politique d’usage final d’Incutec publiée sur /end-use et garantit que les biens ne seront pas utilisés pour l’un des usages finaux exclus énoncés au §3 de cette politique. La violation de cette garantie constitue un manquement essentiel au contrat et autorise Incutec BV à annuler la commande, refuser la livraison et exercer tout recours disponible en vertu du droit belge et des règlements de l’UE applicables. En cas d’annulation ou de refus de livraison, Incutec BV rembourse à un consommateur tous les paiements dans les 14 jours.
 
-18.2. **Pas de réexportation vers la Russie ou le Bélarus.** Le Client s’engage à ne pas vendre, exporter ou réexporter les biens, directement ou indirectement, vers la Fédération de Russie ou le Bélarus, ou en vue d’une utilisation dans ces pays (art. 12g du Règlement (UE) 833/2014 ; art. 8g du Règlement (CE) 765/2006). Cet engagement constitue un élément essentiel du contrat. Incutec BV refuse la livraison en cas d’indices de contournement de cette disposition.
+18.2. **Pas de réexportation vers la Russie ou le Bélarus.** Le client s’engage à ne pas vendre, exporter ou réexporter les biens, directement ou indirectement, vers la Fédération de Russie ou le Bélarus, ou en vue d’une utilisation dans ces pays (art. 12g du Règlement (UE) 833/2014 ; art. 8g du Règlement (CE) 765/2006). Cet engagement constitue un élément essentiel du contrat. Le client informe immédiatement Incutec BV de toute violation ; en cas de violation, Incutec BV peut résoudre le contrat et réclamer des dommages et intérêts. Incutec BV refuse la livraison en cas d’indices de contournement de cette disposition.
 
 ### Article 19 : Langue
 

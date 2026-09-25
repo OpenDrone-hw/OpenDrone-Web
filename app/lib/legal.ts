@@ -14,10 +14,11 @@
  * rendered.
  */
 
-// NL = authoritative text synced from the compliance repo via scripts/sync-legal.mjs.
-// EN = hand-authored translations, stored in the webshop repo.
-// When a new legal language is added later (FR/DE), mirror this pattern:
-// add a new directory under app/content/legal/<lang>/ and a new SOURCES_<lang> map.
+// Three languages: NL, FR and EN, all stored in this repo. The Dutch text
+// prevails in case of conflict, except toward consumers, for whom the most
+// favourable reading applies (Art. 19 of the terms). Keep article numbering
+// identical across languages. A new language gets its own directory under
+// app/content/legal/<lang>/ and its own SOURCES_<lang> map.
 import algemeneVoorwaardenNl from '~/content/legal/nl/algemene-voorwaarden.md?raw';
 import privacyPolicyNl from '~/content/legal/nl/privacy-policy.md?raw';
 import cookiePolicyNl from '~/content/legal/nl/cookie-policy.md?raw';
@@ -315,11 +316,11 @@ function cleanSource(src: string): string {
 }
 
 /**
- * Render a legal page to HTML for a given locale.
- * The Dutch version is legally authoritative for consumers residing in
- * Belgium; the English version is informative only. Both are bundled at
- * build time via Vite's `?raw` imports so they work on Oxygen's edge
- * runtime without filesystem access.
+ * Render a legal page to HTML for a given locale (NL, FR or EN).
+ * The Dutch version prevails in case of conflict, except toward consumers,
+ * for whom the most favourable reading applies (Art. 19 of the terms). All
+ * three are bundled at build time via Vite's `?raw` imports so they work on
+ * the edge runtime without filesystem access.
  */
 export function loadLegal(
   slug: LegalSlug,

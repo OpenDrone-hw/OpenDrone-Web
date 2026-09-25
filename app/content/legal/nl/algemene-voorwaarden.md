@@ -1,8 +1,5 @@
 # Algemene Voorwaarden: Incutec BV
 
-**Legally required for webshop. Must be downloadable as PDF. Must be accepted before order.**
-**Language: Dutch version below. French translation also required for Belgian market.**
-
 ---
 
 ## ALGEMENE VERKOOPVOORWAARDEN: INCUTEC BV
@@ -55,11 +52,11 @@
 
 5.5. Terugzendkosten zijn voor rekening van de consument.
 
-5.6. Incutec BV vergoedt alle betalingen van de consument, inclusief de standaard leveringskosten (niet de meerkost van een door de consument gekozen duurdere leveringswijze), uiterlijk **14 dagen** nadat Incutec BV het product heeft terugontvangen of de consument heeft aangetoond dat hij het product heeft teruggezonden.
+5.6. Incutec BV betaalt alle betalingen, inclusief de standaard leveringskosten, terug uiterlijk 14 dagen nadat zij de herroeping heeft ontvangen. Zij mag wachten tot zij het product heeft terugontvangen of de consument heeft aangetoond dat hij het heeft teruggezonden, naargelang welk tijdstip eerst valt.
 
 5.7. Terugbetaling geschiedt via hetzelfde betaalmiddel als bij de oorspronkelijke transactie, tenzij de consument uitdrukkelijk met een ander betaalmiddel instemt.
 
-5.8. **Waardevermindering.** De consument is aansprakelijk voor de waardevermindering van het product die het gevolg is van gebruik dat verder gaat dan nodig om de aard, de kenmerken en de werking ervan vast te stellen (Art. VI.51 §2 WER). Voor elektronicacomponenten geldt in het bijzonder: solderen aan het product, montage in een systeem, het aansluiten van batterijvoeding of motoren, het flashen van andere firmware en vlieggebruik gaan verder dan die beoordeling; het aansluiten via USB om de werking te controleren niet. De waardevermindering wordt door Incutec BV gemotiveerd en op basis van de werkelijke restwaarde begroot en op de terugbetaling ingehouden; enkel wanneer het product geen restwaarde meer heeft, kan zij het volledige aankoopbedrag bedragen. Het herroepingsrecht zelf vervalt hierdoor niet.
+5.8. **Waardevermindering.** De consument is aansprakelijk voor de waardevermindering van het product die het gevolg is van gebruik dat verder gaat dan nodig om de aard, de kenmerken en de werking ervan vast te stellen (Art. VI.51 §2 WER). Voor elektronicacomponenten geldt in het bijzonder: solderen aan het product, montage in een systeem, het aansluiten van batterijvoeding of motoren en vlieggebruik gaan verder dan die beoordeling; het aansluiten via USB om de werking te controleren niet. De waardevermindering wordt door Incutec BV gemotiveerd en op basis van de werkelijke restwaarde begroot en op de terugbetaling ingehouden; enkel wanneer het product geen restwaarde meer heeft, kan zij het volledige aankoopbedrag bedragen. Het herroepingsrecht zelf vervalt hierdoor niet.
 
 ### Artikel 6: Uitsluiting herroepingsrecht
 
@@ -81,9 +78,9 @@
 
 7bis.1. Sommige producten worden verkocht als voorverkoop (pre-order). Zij worden als dusdanig vermeld, met hun verzenddatum, op de productpagina, aan de checkout en op de orderbevestiging. De consument betaalt de volledige prijs en de verzendkosten die aan de checkout worden getoond bij het plaatsen van de bestelling.
 
-7bis.2. Pre-orderproducten worden in batches geproduceerd. Het aanbod en de orderbevestiging vermelden de batch, het eventuele financieringsdoel en de deadline, de geplande verzending en de afzonderlijk overeengekomen uiterste leverdatum. Verzending is geen levering. De voor de betaling meegedeelde leveringstermijn geldt overeenkomstig Art. VI.43 WER; zonder uitdrukkelijk overeengekomen afwijkende termijn geldt de standaardtermijn van 30 dagen uit Art. 7.1.
+7bis.2. Pre-orderproducten worden in batches geproduceerd. Het aanbod en de orderbevestiging vermelden de batch, het eventuele financieringsdoel en de deadline, de geplande verzending en de afzonderlijk overeengekomen uiterste leverdatum. Verzending is geen levering. De voor de betaling meegedeelde leveringstermijn geldt overeenkomstig Art. VI.43 WER; zonder uitdrukkelijk overeengekomen afwijkende termijn geldt de standaardtermijn van 30 dagen uit Art. 7.1. Het doel en de deadline die aan de checkout vermeld staan, wijzigen niet voor die bestelling.
 
-7bis.3. Indien een verzenddatum verschuift, brengt Incutec BV de consument daarvan per e-mail op de hoogte en vermeldt zij de nieuwe datum. Dit doet geen afbreuk aan de rechten van de consument uit Art. VI.43 §2 WER.
+7bis.3. Indien een verzenddatum verschuift, brengt Incutec BV de consument daarvan per e-mail op de hoogte en vermeldt zij de nieuwe datum. Dit doet geen afbreuk aan de rechten van de consument uit Art. VI.43 §2 WER. Een verschoven verzenddatum verlengt de overeengekomen uiterste leverdatum niet. Wordt die datum niet gehaald, dan kan de consument de overeenkomst voor dat artikel onmiddellijk ontbinden, met terugbetaling binnen 14 dagen.
 
 7bis.3bis. Indien een financieringsdoel niet bereikt is op de deadline, brengt Incutec BV elke consument die dat product bestelde per e-mail op de hoogte. De consument kiest dan om de overeenkomst voor dat artikel te ontbinden, met terugbetaling van alle daarvoor betaalde bedragen binnen 14 dagen, of om de bestelling te behouden voor de nieuwe verzenddatum die in die e-mail vermeld wordt. Antwoordt de consument niet binnen 30 dagen na die e-mail, dan wordt de overeenkomst voor dat artikel ontbonden en betaalt Incutec BV alle daarvoor betaalde bedragen terug binnen 14 dagen na het einde van die termijn. Een consument die de bestelling behoudt, kan ze tot de levering nog steeds herroepen volgens Artikel 7bis.4, met terugbetaling van alle betalingen. Blijft er na de terugbetaling geen artikel uit de bestelling meer te verzenden, dan worden ook de voor de bestelling betaalde verzendkosten terugbetaald.
 
@@ -91,11 +88,13 @@
 
 7bis.5. Een bestelling die artikelen met verschillende verzenddata combineert, wordt verzonden als één pakket zodra elk artikel beschikbaar is (één levering per bestelling). Wordt een financieringsdoel voor een artikel uit de bestelling niet bereikt op de deadline, dan wordt de rest van de bestelling verzonden zodra die beschikbaar is, ongeacht wat de consument kiest onder Artikel 7bis.3bis. Behoudt de consument de bestelling voor dat artikel, dan wordt het afzonderlijk verzonden op de nieuwe verzenddatum, zonder extra verzendkosten.
 
-7bis.6. Betalingen voor voorverkoop financieren de productie en de voorraadaankoop voor de bestelling. Zij dragen geen interest en verlenen geen aandeel, omzetdeling of ander eigendomsbelang in Incutec BV.
+7bis.6. Een betaling voor een pre-order is de betaling van de koopprijs van het bestelde product. Zij is geen investering, draagt geen interest en verleent geen aandeel of ander recht in Incutec BV.
 
 7bis.7. Binnen de Europese Unie zijn op een bestelling geen invoerrechten of invoerbelastingen verschuldigd.
 
 7bis.8. De prijs van een pre-orderproduct stijgt in stappen naarmate betaalde eenheden worden geteld. De prijs die bij het afrekenen wordt getoond, is de prijs van de bestelling; latere stappen wijzigen die niet.
+
+7bis.9. Het geleverde product stemt overeen met de kenmerken en specificaties die op de productpagina vermeld stonden bij de bestelling. Een wezenlijke wijziging daarvan wordt vóór verzending per e-mail meegedeeld; de consument kan dan de overeenkomst voor dat artikel kosteloos ontbinden, met terugbetaling binnen 14 dagen.
 
 ### Artikel 8: Betaling
 
@@ -125,7 +124,7 @@
 
 ### Artikel 10: Aansprakelijkheid
 
-10.1. Behoudens opzet of grove schuld van Incutec BV of haar aangestelden, en behoudens de niet-uitvoering van een essentiële verbintenis anders dan door overmacht, is de aansprakelijkheid van Incutec BV voor indirecte of gevolgschade beperkt tot het factuurbedrag van de betreffende bestelling, onverminderd de wettelijke garantie (Art. 9) en productaansprakelijkheid. Deze beperking doet geen afbreuk aan de rechten van de consument op grond van de wettelijke garantie of enige andere dwingende wettelijke bepaling.
+10.1. Behoudens opzet of zware fout van Incutec BV of haar aangestelden, en behoudens de niet-uitvoering van een essentiële verbintenis anders dan door overmacht, is de aansprakelijkheid van Incutec BV voor indirecte of gevolgschade beperkt tot het factuurbedrag van de betreffende bestelling, onverminderd de wettelijke garantie (Art. 9) en productaansprakelijkheid. Deze beperking doet geen afbreuk aan de rechten van de consument op grond van de wettelijke garantie of enige andere dwingende wettelijke bepaling.
 
 10.2. De beperking in art. 10.1 doet geen afbreuk aan de wettelijke productaansprakelijkheid van de fabrikant (Wet van 25 februari 1991; na de omzetting Richtlijn (EU) 2024/2853) noch aan de rechten van de consument op grond van de wettelijke garantie (Richtlijn (EU) 2019/771). Aansprakelijkheid voor overlijden of lichamelijk letsel kan niet worden uitgesloten of beperkt (Art. VI.83, 25° WER).
 
@@ -195,7 +194,7 @@
 
 ### Artikel 18: Aanvaardbaar eindgebruik
 
-18.1. Door een bestelling te plaatsen, aanvaardt de klant het Incutec End-Use beleid gepubliceerd op /end-use, en garandeert hij dat de goederen niet zullen worden gebruikt voor enig uitgesloten eindgebruik zoals beschreven in §3 van dat beleid. Schending van deze garantie vormt een wezenlijke contractbreuk en geeft Incutec BV het recht de bestelling te annuleren, de levering te weigeren, en elk rechtsmiddel uit te oefenen dat beschikbaar is onder Belgisch recht en de toepasselijke EU-verordeningen.
+18.1. Door een bestelling te plaatsen, aanvaardt de klant het Incutec End-Use beleid gepubliceerd op /end-use, en garandeert hij dat de goederen niet zullen worden gebruikt voor enig uitgesloten eindgebruik zoals beschreven in §3 van dat beleid. Schending van deze garantie vormt een wezenlijke contractbreuk en geeft Incutec BV het recht de bestelling te annuleren, de levering te weigeren, en elk rechtsmiddel uit te oefenen dat beschikbaar is onder Belgisch recht en de toepasselijke EU-verordeningen. Bij annulering of weigering van levering betaalt Incutec BV aan een consument alle betalingen terug binnen 14 dagen.
 
 18.2. **Geen wederuitvoer naar Rusland of Belarus.** De klant verbindt zich ertoe de goederen niet direct of indirect te verkopen, uit te voeren of weder uit te voeren naar de Russische Federatie of Belarus, of voor gebruik aldaar (Art. 12g Verordening (EU) 833/2014; Art. 8g Verordening (EG) 765/2006). Deze verbintenis geldt als een essentieel element van de overeenkomst. De klant stelt Incutec BV onmiddellijk in kennis van elke schending; bij schending kan Incutec BV de overeenkomst ontbinden en schadevergoeding vorderen. Incutec BV weigert levering wanneer er aanwijzingen zijn van omzeiling van deze bepaling.
 

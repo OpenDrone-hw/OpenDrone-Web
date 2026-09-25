@@ -5,5 +5,3 @@ Déposez-les au parc à conteneurs ou dans un point de collecte de votre commune
 L’électronique contient des substances qui peuvent nuire à la santé et à l’environnement lorsqu’elles finissent avec les ordures ménagères ; la collecte séparée permet de les traiter et de les recycler en toute sécurité.
 
 Emballages : le carton avec les papiers-cartons, les emballages plastiques avec les PMC ou les emballages plastiques, selon les règles locales.
-
-Les numéros d’enregistrement de producteur d’Incutec BV par pays figurent ci-dessous au fur et à mesure de leur attribution.

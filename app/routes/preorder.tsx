@@ -233,7 +233,7 @@ export default function PreorderRoute() {
           <h2 className="po-group-title">
             <Txt id="preorder.targets_title" />
             <span className="po-group-meta">{dot + shipWord('deadline', ends)}</span>
-            <span className="po-group-meta">{dot + (copyText('preorder.ship_eta_if_funded') ?? 'ETA {date} if funded').replace('{date}', eta)}</span>
+            <span className="po-group-meta">{dot + (copyText('preorder.ship_eta_if_funded') ?? 'Ships by {date} if the target is reached').replace('{date}', eta)}</span>
           </h2>
           {stackMonth ? (
             <p className="po-group-line">
@@ -310,7 +310,7 @@ function Timeline({data}: {data: ReturnType<typeof useLoaderData<typeof loader>>
       label: copyText('preorder.timeline_targets') ?? 'RX · Frames · Motors',
       events: [
         {day: endsDay, date: ends, what: copyText('preorder.timeline_deadline') ?? 'Deadline', kind: 'deadline'},
-        {day: etaDay, date: eta, what: copyText('preorder.timeline_eta') ?? 'Ships if funded', kind: 'eta'},
+        {day: etaDay, date: eta, what: copyText('preorder.timeline_eta') ?? 'Ships if the target is reached', kind: 'eta'},
       ],
     },
   ].filter((lane) => lane !== null);
@@ -390,7 +390,7 @@ function Card({row, eta}: {row: Row; eta: string}) {
     current: next >= step.from && (step.to === null || next <= step.to),
   }));
   const bar = stepBarView(row.campaign, row.stepEnds);
-  const funded = `${copyText('preorder.funded') ?? 'Funded'} · ${shipWord('eta', shortCampaignDate(row.campaign.latestShip) ?? shipMonth(row.shipPromise) ?? eta)}`;
+  const funded = `${copyText('preorder.funded') ?? 'Target reached'} · ${shipWord('eta', shortCampaignDate(row.campaign.latestShip) ?? shipMonth(row.shipPromise) ?? eta)}`;
   return (
     <li className="po-card">
       <Link

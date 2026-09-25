@@ -1,9 +1,8 @@
 # Terms and Conditions: Incutec BV
 
-**Legally required for the webshop. Must be downloadable as PDF. Must be accepted before order.**
-**The Dutch version ([/nl/algemene-voorwaarden](/nl/algemene-voorwaarden)) prevails in case of conflict, except toward consumers, for whom the reading most favourable to them applies (Art. 19). This English translation is provided for convenience.**
-
 ---
+
+*The Dutch version prevails in case of conflict, except toward consumers, for whom the reading most favourable to them applies (Art. 19 of the Terms).*
 
 ## GENERAL TERMS OF SALE: INCUTEC BV
 
@@ -55,11 +54,11 @@
 
 5.5. The costs of returning the product are borne by the consumer.
 
-5.6. Incutec BV reimburses all payments made by the consumer, including the standard delivery costs (not the surcharge for a more expensive delivery method chosen by the consumer), no later than **14 days** after Incutec BV has received the product back, or after the consumer has demonstrated that the product has been returned.
+5.6. Incutec BV refunds all payments, including standard delivery costs, no later than 14 days after receiving the withdrawal. It may withhold the refund until it has received the product back or the consumer has shown that it was sent back, whichever is earlier.
 
 5.7. Reimbursement is made using the same means of payment as the original transaction, unless the consumer expressly agrees to a different means of payment.
 
-5.8. **Diminished value.** The consumer is liable for any diminished value of the product resulting from handling beyond what is necessary to establish its nature, characteristics and functioning (Art. VI.51 §2 WER). For electronics components this specifically means: soldering to the product, mounting it in a system, connecting battery power or motors, flashing other firmware and flight use go beyond that assessment; connecting via USB to check that it works does not. The diminished value is substantiated by Incutec BV, assessed on the actual residual value and deducted from the refund; only where the product has no residual value left can it amount to the full purchase price. The right of withdrawal itself is not lost.
+5.8. **Diminished value.** The consumer is liable for any diminished value of the product resulting from handling beyond what is necessary to establish its nature, characteristics and functioning (Art. VI.51 §2 WER). For electronics components this specifically means: soldering to the product, mounting it in a system, connecting battery power or motors and flight use go beyond that assessment; connecting via USB to check that it works does not. The diminished value is substantiated by Incutec BV, assessed on the actual residual value and deducted from the refund; only where the product has no residual value left can it amount to the full purchase price. The right of withdrawal itself is not lost.
 
 ### Article 6: Exclusion of the right of withdrawal
 
@@ -81,9 +80,9 @@
 
 7bis.1. Some products are sold as pre-orders. They are disclosed as such, with their ship date, on the product page, at checkout and on the order confirmation. The consumer pays the full price and the shipping costs shown at checkout when the order is placed.
 
-7bis.2. Pre-order products are produced in batches. The offer and order confirmation state the batch, any funding target and deadline, planned dispatch and the separately agreed final delivery date. Dispatch is not delivery. The delivery period disclosed before payment applies under Art. VI.43 WER; if no different delivery period is expressly agreed, the 30-day default in Article 7.1 applies.
+7bis.2. Pre-order products are produced in batches. The offer and order confirmation state the batch, any funding target and deadline, planned dispatch and the separately agreed final delivery date. Dispatch is not delivery. The delivery period disclosed before payment applies under Art. VI.43 WER; if no different delivery period is expressly agreed, the 30-day default in Article 7.1 applies. The target and deadline stated at checkout do not change for that order.
 
-7bis.3. If a ship date moves, Incutec BV informs the consumer by email and states the new date. This is without prejudice to the consumer's rights under Art. VI.43 §2 WER.
+7bis.3. If a ship date moves, Incutec BV informs the consumer by email and states the new date. This is without prejudice to the consumer's rights under Art. VI.43 §2 WER. A moved ship date does not extend the agreed final delivery date. If that date is missed, the consumer may terminate the contract for that item immediately, with a refund within 14 days.
 
 7bis.3bis. If a funding target is not reached by its deadline, Incutec BV informs every consumer who ordered that product by email. The consumer then chooses either to terminate the contract for that item, with a refund of all amounts paid for it within 14 days, or to keep the order for the new ship date stated in that email. If the consumer does not reply within 30 days of that email, the contract for that item is terminated and Incutec BV refunds all amounts paid for it within 14 days of the end of that period. A consumer who keeps the order may still withdraw at any time until delivery under Article 7bis.4, with a refund of all payments. If the refund leaves no item in the order still to ship, the shipping costs paid for the order are refunded as well.
 
@@ -91,11 +90,13 @@
 
 7bis.5. An order that combines items with different ship dates ships as one parcel, once every item is available (one delivery per order). If a funding target for an item in the order is not reached by its deadline, the rest of the order ships as soon as it is available, whichever the consumer chooses under Article 7bis.3bis. If the consumer keeps the order for that item, it ships separately at its new ship date at no extra shipping cost.
 
-7bis.6. Pre-order payments fund the production run and stock purchase for the order. They carry no interest and confer no equity, revenue share or other ownership interest in Incutec BV.
+7bis.6. A pre-order payment is payment of the purchase price of the product ordered. It is not an investment, carries no interest and confers no share or other right in Incutec BV.
 
 7bis.7. Within the European Union no import duties or import taxes are due on an order.
 
 7bis.8. The price of a pre-order product rises in steps as paid units are counted. The price shown at checkout is the price of the order; later steps do not change it.
+
+7bis.9. The delivered product matches the characteristics and specifications on the product page when the order was placed. Any material change is emailed before dispatch; the consumer may then terminate the contract for that item free of charge, with a refund within 14 days.
 
 ### Article 8: Payment
 
@@ -195,9 +196,9 @@
 
 ### Article 18: Acceptable End-Use
 
-18.1. By placing an order, the Customer accepts the Incutec End-Use Policy published at /end-use, and warrants that the goods will not be used for any of the excluded end-uses set out in §3 of that policy. Breach of this warranty constitutes a material breach of contract and entitles Incutec BV to cancel the order, refuse delivery, and pursue any remedy available under Belgian law and applicable EU regulations.
+18.1. By placing an order, the customer accepts the Incutec End-Use Policy published at /end-use, and warrants that the goods will not be used for any of the excluded end-uses set out in §3 of that policy. Breach of this warranty constitutes a material breach of contract and entitles Incutec BV to cancel the order, refuse delivery, and pursue any remedy available under Belgian law and applicable EU regulations. On cancellation or refusal of delivery, Incutec BV refunds a consumer all payments within 14 days.
 
-18.2. **No re-export to Russia or Belarus.** The Customer undertakes not to sell, export or re-export the goods, directly or indirectly, to the Russian Federation or Belarus, or for use there (Art. 12g Regulation (EU) 833/2014; Art. 8g Regulation (EC) 765/2006). This undertaking constitutes an essential element of the contract. The Customer shall inform Incutec BV immediately of any breach; on breach, Incutec BV may terminate the contract and claim damages. Incutec BV refuses delivery where there are indications of circumvention of this provision.
+18.2. **No re-export to Russia or Belarus.** The customer undertakes not to sell, export or re-export the goods, directly or indirectly, to the Russian Federation or Belarus, or for use there (Art. 12g Regulation (EU) 833/2014; Art. 8g Regulation (EC) 765/2006). This undertaking constitutes an essential element of the contract. The customer shall inform Incutec BV immediately of any breach; on breach, Incutec BV may terminate the contract and claim damages. Incutec BV refuses delivery where there are indications of circumvention of this provision.
 
 ### Article 19: Language
 

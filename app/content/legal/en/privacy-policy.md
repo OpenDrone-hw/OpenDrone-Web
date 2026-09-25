@@ -1,11 +1,8 @@
 # Privacy Policy: Incutec BV
 
-**Required by GDPR (Regulation (EU) 2016/679)**
-**Must be accessible on every page of the website**
-**Supervisory authority: Belgian Data Protection Authority (GBA)**
-**The Dutch version ([/nl/privacy](/nl/privacy)) is the legally authoritative text for data subjects residing in Belgium. This English translation is informative only.**
-
 ---
+
+*The Dutch version prevails in case of conflict, except toward consumers, for whom the reading most favourable to them applies (Art. 19 of the Terms).*
 
 ## PRIVACY POLICY: INCUTEC BV
 
@@ -26,10 +23,10 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 |----------|------|---------|
 | Order data | Name, address, email, telephone number | Processing and delivery of orders |
 | Payment data | Payment method, transaction ID | Payment processing (via payment provider) |
-| Account data | Email, password (hashed) | Customer account on the webshop |
+| Account data | Email (sign-in with a one-time code via Shopify) | Customer account on the webshop |
 | Communication | Email, content of messages | Customer service, complaint handling |
 | Website usage | IP address, browser, pages visited | Website optimisation, security |
-| Newsletter | Email | Marketing communication (only with consent) |
+| Newsletter | Email, country (derived from IP address) | Marketing communication (only with consent) |
 
 ### 3. Legal bases (Art. 6 GDPR)
 
@@ -47,8 +44,8 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 
 | Data | Retention period |
 |------|-----------------|
-| Order and invoice data | 7 years (Belgian Code of Economic Law Art. III.86, and the VAT Code) |
-| Customer account | Until the customer requests deletion |
+| Order and invoice data | 10 years from 1 January after the close of the financial year (Art. III.86 WER; Art. 60 §4 VAT Code) |
+| Customer account | Until deleted at your request, at the latest 3 years after your last sign-in or order |
 | Customer service communication | 2 years after closure |
 | Website log files | 6 months |
 | Newsletter subscription | Until unsubscribed |
@@ -64,16 +61,14 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Google Workspace (Google Ireland Ltd.) | Company mailboxes, staff email and sign-in | Ireland (EU); Google's standard contractual clauses cover any transfer outside the EEA |
 | Plausible Analytics | Cookieless website analytics | Plausible Insights OÜ, Estonia (EU); hosting in Germany |
 | Polar Advisory BV (accountant) | Invoicing and annual accounts | Belgium |
-| Discord Inc. | Community support tickets, opt-in via the Discord bridge (name, email, message content, attachments) | US: EU-US Data Privacy Framework |
-| Anthropic PBC | AI-assisted draft replies for support tickets | US: data processing agreement with SCCs |
-| Resend (Plus Five Five, Inc.) | Mail sent by opendrone.be: withdrawal confirmations, newsletter mail and support resume links | EU region infrastructure; US legal entity: SCCs |
-| Cloudflare, Inc. | Turnstile anti-spam verification on the support and newsletter forms | US: EU-US Data Privacy Framework |
+| Resend (Plus Five Five, Inc.) | Mail sent by opendrone.be: withdrawal confirmations, welcome and newsletter mail, trade requests | EU region infrastructure; US legal entity: SCCs |
+| Cloudflare, Inc. | Hosting and delivery of the website (IP address, request data, derived country); Turnstile anti-spam on the newsletter form | US: EU-US Data Privacy Framework (Art. 45 GDPR) |
 
 Order and customer data (name, address, email, payment reference, order history) and newsletter consent are processed in Shopify.
 
-**Transfers outside the EEA.** For the US processors listed above, Incutec BV transfers personal data on the basis of appropriate safeguards (Art. 46 GDPR): certification under the EU-US Data Privacy Framework or standard contractual clauses (SCCs, Decision 2021/914). All other processing keeps personal data inside the EEA.
+**Discord.** The OpenDrone community server runs on Discord. Discord Inc. is an independent controller for the community server you choose to join; Incutec BV passes no personal data to Discord. Discord's privacy policy: https://discord.com/privacy
 
-**AI assistance in support.** When you submit a support ticket, the content of your message may be passed to Anthropic to prepare a draft reply. A staff member reviews every reply before it is sent; no automated decision-making takes place.
+**Transfers outside the EEA.** Some recipients process data outside the EEA. Those transfers rely on an adequacy decision (Art. 45 GDPR: Canada, UK, or the EU-US Data Privacy Framework for certified US recipients) or on standard contractual clauses (Art. 46 GDPR, Decision 2021/914). The basis per recipient is in the table above.
 
 ### 6. Rights of the data subject
 
@@ -106,7 +101,6 @@ You may also lodge a complaint with the supervisory authority of your place of r
 
 Incutec BV takes appropriate technical and organisational measures to protect personal data against unauthorised access, loss or destruction:
 - SSL/TLS encryption on the website
-- Hashed passwords (bcrypt or equivalent)
 - Access control (need-to-know basis)
 - Regular backups
 

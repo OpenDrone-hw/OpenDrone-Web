@@ -1,6 +1,6 @@
 ## Expédition et livraison
 
-Incutec BV commence par des commandes directes aux consommateurs vers les destinations approuvées de l’Union européenne, expédiées depuis la Belgique. Choisissez votre pays de livraison sur la page produit. Une destination non ouverte ne permet pas de passer en caisse. Le service de livraison disponible et le coût total sont confirmés avant le paiement.
+Incutec BV vend directement aux consommateurs dans les pays de l’UE qui peuvent être choisis lors du passage en caisse, avec expédition depuis la Belgique. Choisissez votre pays de livraison sur la page produit. Une destination non ouverte ne permet pas de passer en caisse. Le service de livraison disponible et le coût total sont confirmés avant le paiement.
 
 ### Tarifs d’expédition
 
@@ -32,7 +32,7 @@ L’annulation, les objectifs non atteints, les modifications des dates de livra
 
 ### Délai de livraison des articles en stock
 
-Les articles en stock sont normalement expédiés dans les 2 jours ouvrables suivant la réception du paiement. Le délai final de livraison est de 30 jours calendrier après la commande, sauf accord exprès contraire (Art. VI.43 du Code de droit économique belge, Art. 7 de nos Conditions Générales de Vente). Si Incutec BV ne respecte pas le délai de livraison de 30 jours, le consommateur peut proposer un délai supplémentaire raisonnable. À défaut de livraison dans ce délai supplémentaire, le consommateur peut résilier le contrat sans frais (Art. VI.43 §2 CDE), à moins que le délai de livraison initial ait été essentiel ou qu’Incutec BV ait déjà refusé de livrer.
+Les articles en stock sont normalement expédiés dans les 2 jours ouvrables suivant la réception du paiement. Le délai final de livraison est de 30 jours calendrier après la commande, sauf accord exprès contraire (Art. VI.43 du Code de droit économique belge, Art. 7 de nos Conditions Générales de Vente). Si Incutec BV ne respecte pas le délai de livraison de 30 jours, le consommateur peut proposer un délai supplémentaire raisonnable. À défaut de livraison dans ce délai supplémentaire, le consommateur peut résoudre le contrat sans frais (Art. VI.43 §2 CDE). Si Incutec BV refuse de livrer, ou si le délai de livraison était essentiel, le consommateur peut résoudre le contrat immédiatement.
 
 ### Risque pendant l’expédition
 

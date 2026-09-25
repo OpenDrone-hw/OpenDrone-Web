@@ -8,7 +8,7 @@ The Dutch version prevails in case of conflict, except toward consumers, for who
 
 - Manufacturing defects and faults that occur during normal use of the product and that become apparent within 2 years of delivery.
 - Non-conformity with the description, specifications or intended use as stated by Incutec BV at the time of purchase.
-- A defect that manifests in flight (e.g. a component failing) remains covered; damage to other parts is governed by Article 10 of the Terms and Conditions.
+- A defect that manifests in flight (e.g. a component failing) remains covered; damage to other parts is governed by [Article 10 of the Terms and Conditions](/en/algemene-voorwaarden#art-10).
 - For products assembled by the consumer: incorrect assembly that results from incomplete or incorrect assembly instructions (Directive (EU) 2019/771, Art. 8).
 
 ### What is not covered
@@ -21,4 +21,4 @@ The Dutch version prevails in case of conflict, except toward consumers, for who
 
 Email [contact@opendrone.be](mailto:contact@opendrone.be) with your order number, a description of the defect and photos or a video of the issue. We acknowledge within 5 business days and coordinate return for inspection, repair or replacement where needed. Return shipping, repair and replacement under the statutory guarantee are free of charge for you.
 
-This page does not replace your rights as a consumer. See also Article 9 of our [General Terms and Conditions](/algemene-voorwaarden).
+This page does not replace your rights as a consumer. See also [Article 9 of our General Terms and Conditions](/en/algemene-voorwaarden#art-9).

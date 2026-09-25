@@ -1,11 +1,8 @@
 # Politique de Confidentialité : Incutec BV
 
-**Requis par le RGPD (Règlement (UE) 2016/679)**
-**Doit être accessible sur chaque page du site web**
-**Autorité de contrôle : Autorité belge de Protection des Données (APD)**
-**La version néerlandaise ([/nl/privacy](/nl/privacy)) constitue le texte juridiquement faisant foi pour les personnes concernées résidant en Belgique. Cette traduction française est fournie à titre informatif uniquement.**
-
 ---
+
+*La version néerlandaise prévaut en cas de contradiction, sauf à l’égard des consommateurs, pour lesquels l’interprétation la plus favorable s’applique (art. 19 des Conditions Générales de Vente).*
 
 ## POLITIQUE DE CONFIDENTIALITÉ : INCUTEC BV
 
@@ -26,10 +23,10 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 |----------|------|---------|
 | Données de commande | Nom, adresse, courriel, numéro de téléphone | Traitement et livraison des commandes |
 | Données de paiement | Moyen de paiement, ID de transaction | Traitement du paiement (via prestataire de paiement) |
-| Données de compte | Courriel, mot de passe (haché) | Compte client sur la boutique en ligne |
+| Données de compte | Courriel (connexion par code à usage unique via Shopify) | Compte client sur la boutique en ligne |
 | Communication | Courriel, contenu des messages | Service client, gestion des plaintes |
 | Utilisation du site | Adresse IP, navigateur, pages visitées | Optimisation du site, sécurité |
-| Newsletter | Courriel | Communication marketing (uniquement avec consentement) |
+| Newsletter | Courriel, pays (déduit de l’adresse IP) | Communication marketing (uniquement avec consentement) |
 
 ### 3. Bases juridiques (Art. 6 RGPD)
 
@@ -47,8 +44,8 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 
 | Données | Durée de conservation |
 |------|-----------------|
-| Données de commande et factures | 7 ans (Code de droit économique, art. III.86, et le Code de la TVA) |
-| Compte client | Jusqu’à la demande de suppression par le client |
+| Données de commande et factures | 10 ans à compter du 1er janvier suivant la clôture de l’exercice (art. III.86 CDE ; art. 60 §4 Code TVA) |
+| Compte client | Jusqu’à sa suppression à votre demande, au plus tard 3 ans après votre dernière connexion ou commande |
 | Communication de service client | 2 ans après clôture |
 | Fichiers journaux du site | 6 mois |
 | Inscription à la newsletter | Jusqu’au désabonnement |
@@ -64,16 +61,14 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 | Google Workspace (Google Ireland Ltd.) | Boîtes mail de l’entreprise, messagerie et connexion du personnel | Irlande (UE) ; les clauses contractuelles types de Google couvrent tout transfert hors EEE |
 | Plausible Analytics | Analyse de site sans cookies | Plausible Insights OÜ, Estonie (UE) ; hébergement en Allemagne |
 | Polar Advisory BV (comptable) | Facturation et comptes annuels | Belgique |
-| Discord Inc. | Support communautaire, opt-in via la passerelle Discord (nom, e-mail, contenu des messages, pièces jointes) | É-U : EU-US Data Privacy Framework |
-| Anthropic PBC | Projets de réponses assistés par IA pour les tickets de support | É-U : accord de sous-traitance avec CCT |
-| Resend (Plus Five Five, Inc.) | E-mails envoyés par opendrone.be : confirmations de rétractation, e-mails de newsletter et liens de reprise du support | Infrastructure en région UE ; entité légale É-U : CCT |
-| Cloudflare, Inc. | Vérification anti-spam Turnstile sur les formulaires de support et de newsletter | É-U : EU-US Data Privacy Framework |
+| Resend (Plus Five Five, Inc.) | E-mails envoyés par opendrone.be : confirmations de rétractation, e-mails de bienvenue et de newsletter, demandes des revendeurs | Infrastructure en région UE ; entité légale É-U : CCT |
+| Cloudflare, Inc. | Hébergement et diffusion du site (adresse IP, données de requête, pays déduit) ; anti-spam Turnstile sur le formulaire de newsletter | É-U : EU-US Data Privacy Framework (art. 45 RGPD) |
 
 Les données de commande et de client (nom, adresse, e-mail, référence de paiement, historique des commandes) et le consentement à la newsletter sont traités dans Shopify.
 
-**Transferts hors EEE.** Pour les sous-traitants américains mentionnés ci-dessus, Incutec BV transfère des données personnelles sur la base de garanties appropriées (Art. 46 RGPD) : certification au titre de l’EU-US Data Privacy Framework ou clauses contractuelles types (CCT, Décision 2021/914). Tous les autres traitements conservent les données personnelles au sein de l’EEE.
+**Discord.** Le serveur communautaire OpenDrone fonctionne sur Discord. Discord Inc. est un responsable du traitement indépendant pour le serveur communautaire que vous choisissez de rejoindre ; Incutec BV ne transmet aucune donnée personnelle à Discord. Politique de confidentialité de Discord : https://discord.com/privacy
 
-**Assistance IA au support.** Lorsque vous soumettez un ticket de support, le contenu de votre message peut être transmis à Anthropic afin de préparer un projet de réponse. Un collaborateur examine chaque réponse avant son envoi ; aucune prise de décision automatisée n’a lieu.
+**Transferts hors EEE.** Certains destinataires traitent des données hors de l’EEE. Ces transferts reposent sur une décision d’adéquation (art. 45 RGPD : Canada, Royaume-Uni, ou l’EU-US Data Privacy Framework pour les destinataires américains certifiés) ou sur des clauses contractuelles types (art. 46 RGPD, Décision 2021/914). La base applicable à chaque destinataire figure dans le tableau ci-dessus.
 
 ### 6. Droits de la personne concernée
 
@@ -106,7 +101,6 @@ Vous pouvez également introduire une plainte auprès de l’autorité de contr�
 
 Incutec BV prend des mesures techniques et organisationnelles appropriées pour protéger les données personnelles contre l’accès non autorisé, la perte ou la destruction :
 - Chiffrement SSL/TLS sur le site
-- Mots de passe hachés (bcrypt ou équivalent)
 - Contrôle d’accès (besoin d’en connaître)
 - Sauvegardes régulières
 

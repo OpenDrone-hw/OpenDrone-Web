@@ -1602,7 +1602,7 @@ function ProductPage() {
       <StepBar
         bar={stepBarState}
         prices={stepPrices}
-        fundedLabel={copyText('preorder.funded') ?? 'Funded'}
+        fundedLabel={copyText('preorder.funded') ?? 'Target reached'}
       />
     ) : null;
   // Units left in the paid batch: one add must not ask for more than the
@@ -1712,7 +1712,7 @@ function ProductPage() {
           {vatNote ? <span className="product-buy-vat">{vatNote}</span> : null}
           {campaign?.earlyPrice && ladder ? (
             <span className="product-buy-tag">
-              {say('product-chrome.buy_early_bird', 'Early bird')}
+              {say('product-chrome.buy_early_bird', 'Price step 1')}
             </span>
           ) : null}
         </span>

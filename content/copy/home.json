@@ -6,7 +6,7 @@
   "shop": "Shop",
   "build_title": "build",
   "build_mobile": "Build a quad",
-  "build_help": "A matched OpenDrone parts list for one quad. Four motors and a full propeller set are included. Untick anything you already own. Add your own video system, battery, radio, goggles and charger.",
+  "build_help": "A matched OpenDrone parts list for one quad. Four motors and a full propeller set are included. Untick anything you already own. Add your own video system, battery, radio, goggles and charger. Adds the parts as separate products. OpenDrone does not sell a drone kit; you design and build your own aircraft.",
   "build_add": "Add build to cart",
   "build_add_selected": "Add selected",
   "build_unavailable": "Unavailable",

@@ -8,17 +8,17 @@ La version néerlandaise prévaut en cas de contradiction, sauf à l’égard de
 
 - Les défauts de fabrication et dysfonctionnements qui surviennent dans le cadre d’un usage normal du produit et qui apparaissent dans les 2 ans suivant la livraison.
 - La non-conformité avec la description, les spécifications ou l’usage prévu tels qu’indiqués par Incutec BV au moment de l’achat.
-- Un crash causé par un défaut du produit lui-même (par ex. la défaillance d’un composant en vol) : le défaut et les dommages qui en résultent restent couverts.
+- Un défaut qui se manifeste en vol (par ex. la défaillance d’un composant) reste couvert ; les dommages causés à d’autres pièces relèvent de [l’article 10 des Conditions Générales](/fr/algemene-voorwaarden#art-10).
 - Pour les produits assemblés par le consommateur : un montage incorrect résultant d’instructions de montage incomplètes ou erronées (Directive (UE) 2019/771, art. 8).
 
 ### Ce qui n’est pas couvert
 
-- Les dommages de crash lorsque le crash n’a pas été causé par un défaut du produit (par ex. erreur de pilotage ou collision), ainsi que la mauvaise utilisation, la surcharge ou la modification.
+- Les dommages de crash lorsque le crash n’a pas été causé par un défaut du produit (par ex. erreur de pilotage ou collision), ainsi que la mauvaise utilisation ou la surcharge.
 - L’usure normale de pièces à durée de vie limitée (par ex. connecteurs après usages répétés).
-- Les dommages résultant manifestement de modifications du firmware ou du matériel par le consommateur ; les défauts sans lien causal avec ces modifications restent couverts. Flasher Betaflight, AM32, ExpressLRS ou un autre firmware est un usage normal de ces produits et n’affecte pas en soi la garantie.
+- Les dommages dont il est démontré qu’ils résultent de modifications du firmware ou du matériel par le consommateur ; les défauts sans lien causal avec ces modifications restent couverts. Flasher Betaflight, AM32, ExpressLRS ou un autre firmware est un usage normal de ces produits et n’affecte pas en soi la garantie.
 
 ### Comment introduire une réclamation de garantie
 
 Envoyez un courriel à [contact@opendrone.be](mailto:contact@opendrone.be) avec votre numéro de commande, une description du défaut et des photos ou une vidéo du problème. Nous accusons réception dans les 5 jours ouvrables et coordonnons le retour pour inspection, réparation ou remplacement si nécessaire. Le renvoi, la réparation et le remplacement au titre de la garantie légale sont gratuits pour vous.
 
-Cette page ne remplace pas vos droits en tant que consommateur. Voir également l’Article 9 de nos [Conditions Générales de Vente](/algemene-voorwaarden).
+Cette page ne remplace pas vos droits en tant que consommateur. Voir également [l’article 9 de nos Conditions Générales de Vente](/fr/algemene-voorwaarden#art-9).

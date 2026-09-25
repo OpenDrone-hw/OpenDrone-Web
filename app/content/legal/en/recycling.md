@@ -5,5 +5,3 @@ Bring them to a municipal container park or recycling point, or to a shop that s
 Electronics contain substances that can harm health and the environment when they are thrown away with household waste; separate collection lets them be treated and recycled safely.
 
 Packaging: put the cardboard with paper and cardboard, and plastic packaging with PMD or plastic packaging, following your local rules.
-
-The producer registration numbers of Incutec BV per country are listed below as they are issued.

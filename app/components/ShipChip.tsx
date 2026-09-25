@@ -15,7 +15,7 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 
 /**
  * The ship chip text for a line: "Ships Oct 2026" for a dated batch, "ETA
- * 11 Mar 2027" for a funding target, "ETA 11 Mar 2027 if funded" with
+ * 11 Mar 2027" for a funding target, "Ships by 11 Mar 2027 if the target is reached" with
  * `ifFunded` while the target is not met.
  */
 export function shipChipText(
@@ -32,7 +32,7 @@ export function shipChipText(
     const eta = shortCampaignDate(latestShipDate(CAMPAIGN));
     if (eta) {
       text = ifFunded
-        ? (copyText('preorder.ship_eta_if_funded') ?? 'Ships by {date} if funded').replace('{date}', eta)
+        ? (copyText('preorder.ship_eta_if_funded') ?? 'Ships by {date} if the target is reached').replace('{date}', eta)
         : shipWord('eta', eta);
     }
   }
@@ -78,7 +78,7 @@ export function ShipChip({
 
 /**
  * The ship words every surface uses, from `content/copy/preorder.json`:
- * `Ships Oct 2026` for a dated batch, `ETA 11 Mar 2027` for a funding
+ * `Ships Oct 2026` for a dated batch, `Ships by 11 Mar 2027` for a funding
  * target, `Deadline 31 Dec 2026` for its deadline. Dates come in short.
  */
 export function shipWord(kind: 'ships' | 'eta' | 'deadline' | 'delivered', date: string): string {
@@ -93,8 +93,8 @@ export function shipWord(kind: 'ships' | 'eta' | 'deadline' | 'delivered', date:
 
 /**
  * The ship line under a Pre-order button. A dated batch reads "Ships Oct
- * 2026"; a funding target "Deadline 31 Dec 2026 · ETA 11 Mar 2027 if
- * funded", and "ETA 11 Mar 2027" once it is funded.
+ * 2026"; a funding target "Deadline 31 Dec 2026 · Ships by 11 Mar 2027 if
+ * funded", and "Ships by 11 Mar 2027" once it is funded.
  */
 export function shipLine(
   campaign: CampaignState | null | undefined,
@@ -115,7 +115,7 @@ export function shipLine(
   if (campaign?.targetReached) return {kind: 'target', text: withDelivery(shipWord('eta', eta))};
   const deadline =
     shortCampaignDate(campaign?.deadline ?? campaignDate(CAMPAIGN.endsOn)) ?? CAMPAIGN.endsOn;
-  const ifFunded = (copyText('preorder.ship_eta_if_funded') ?? 'Ships by {date} if funded').replace(
+  const ifFunded = (copyText('preorder.ship_eta_if_funded') ?? 'Ships by {date} if the target is reached').replace(
     '{date}',
     eta,
   );

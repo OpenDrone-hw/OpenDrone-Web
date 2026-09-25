@@ -51,7 +51,7 @@
   "status_beta_label": "Beta",
   "status_beta_legend": "Launched, first production batch. You can buy it in the shop, early-batch pricing can be lower, and the design can still get updates between batches.",
   "status_alpha_label": "Alpha",
-  "status_alpha_legend": "Prototypes are built, and community testers and firmware maintainers fly them. Where the product has a page you can preorder it; the product page says whether it ships from a paid production batch or after a funding target. A paid production batch ships the design shown on its product page.",
+  "status_alpha_legend": "Prototypes are built, and community testers and firmware maintainers fly them. Where the product has a page you can preorder it; the product page says whether it ships from a paid production batch or after a funding target. Every batch ships the design shown on its product page at the time of order.",
   "status_in-progress_label": "In progress",
   "status_in-progress_legend": "A first design exists and prototypes may already be ordered, but nothing is under test yet. Where the product has a page you can preorder it toward a funding target; the product page shows the target and the deadline.",
   "status_planned_label": "Planned",

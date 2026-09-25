@@ -1,6 +1,6 @@
 ## Shipping and delivery
 
-Incutec BV starts with direct consumer orders to approved destinations in the European Union, dispatched from Belgium. Select your delivery country on the product page. A destination that is not open cannot proceed to checkout. The available delivery service and total charge are confirmed before payment.
+Incutec BV sells directly to consumers in the EU countries that can be selected at checkout, dispatched from Belgium. Select your delivery country on the product page. A destination that is not open cannot proceed to checkout. The available delivery service and total charge are confirmed before payment.
 
 ### Shipping rates
 
@@ -32,7 +32,7 @@ Cancellation, missed targets, changes to delivery dates, refunds and mixed-batch
 
 ### Delivery time for items in stock
 
-Items in stock are normally shipped within 2 business days of payment receipt. The final delivery deadline is 30 calendar days after the order, unless explicitly agreed otherwise (Art. VI.43 of the Belgian Code of Economic Law, Art. 7 of our General Terms and Conditions). If Incutec BV fails to deliver within the 30-day deadline, the consumer may set a reasonable additional period. If Incutec BV still fails to deliver within that additional period, the consumer is entitled to terminate the contract free of charge (Art. VI.43 §2 WER), unless the original delivery deadline was essential or Incutec BV has already refused to deliver.
+Items in stock are normally shipped within 2 business days of payment receipt. The final delivery deadline is 30 calendar days after the order, unless explicitly agreed otherwise (Art. VI.43 of the Belgian Code of Economic Law, Art. 7 of our General Terms and Conditions). If Incutec BV fails to deliver within the 30-day deadline, the consumer may set a reasonable additional period. If Incutec BV still fails to deliver within that additional period, the consumer may terminate the contract free of charge (Art. VI.43 §2 WER). If Incutec BV refuses to deliver, or the delivery deadline was essential, the consumer may terminate the contract immediately.
 
 ### Risk during shipping
 

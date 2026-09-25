@@ -377,7 +377,7 @@ function PaymentMarks({methods}: {methods: string[]}) {
 
 /**
  * Lines that ship at different times go in one parcel when the last is
- * ready: "One parcel · ETA 11 Mar 2027 if funded". When some lines have a
+ * ready: "One parcel · Ships by 11 Mar 2027 if funded". When some lines have a
  * date of their own, a quiet link takes the rest out of this order so they
  * can be ordered separately.
  */
@@ -466,7 +466,7 @@ function MixedNote({
 
 function CartLine({line, info, pending}: {line: ShopifyCartLine; info: CartLineInfo | undefined; pending: boolean}) {
   const max = info?.maxQuantity ?? null;
-  // A funding-target line reads "ETA ... if funded" until its target is met.
+  // A funding-target line reads "Ships by ... if the target is reached" until its target is met.
   const target = info?.target;
   const ifFunded = !target || target.ordered < target.units;
   return (

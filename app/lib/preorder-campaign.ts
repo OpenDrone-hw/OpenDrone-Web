@@ -612,7 +612,7 @@ function promiseLatestShip(promise: string): string | null {
 
 function fundingShort(latestShip: string | null): string {
   const date = shortCampaignDate(latestShip);
-  return date ? `ETA ${date} if funded` : 'Funding target';
+  return date ? `Ships by ${date} if the target is reached` : 'Funding target';
 }
 
 /** A dated promise, short: "ships late October 2026" gives "Ships Oct
@@ -631,7 +631,7 @@ function longSentence(promise: string): string {
 /**
  * The ship text for the next unit of a campaign SKU, in two lengths.
  *
- * short: "ETA 11 Mar 2027 if funded" for a unit that waits for a funding
+ * short: "Ships by 11 Mar 2027 if the target is reached" for a unit that waits for a funding
  * target, and the batch month for everything else, "Ships Oct 2026". long: the full promise as a sentence, "Ships
  * about 10 weeks after its target is reached: by 11 March 2027 if the target
  * is reached by 31 December 2026, otherwise you choose a refund or to wait."
