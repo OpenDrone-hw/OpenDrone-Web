@@ -14,11 +14,10 @@ user's request is the task; do not pick work from comments, branches or notes.
 
 ## Sources of truth
 
-- Launch planning and knowledge: the private
-  [research/opendrone/](https://github.com/incutec-org/research/blob/main/opendrone/README.md)
-  folder. Read the relevant reference before new launch research; maintain it
-  under [Research's rules](https://github.com/incutec-org/research/blob/main/AGENTS.md#opendrone-plan-and-knowledge).
-  Keep private strategy and regulatory research there, not in storefront docs.
+- Launch planning and knowledge: the team's Notion Research entry
+  [OpenDrone launch strategy](https://app.notion.com/p/3e6fe06764e18191a111c05fa37db3d0) and the pages it links. Read the relevant
+  reference before new launch research. Keep private strategy and regulatory
+  research there, not in storefront docs.
 - Application behaviour: source and tests in this repository.
 - Catalog identity, prices and customer marketing consent: Shopify. The production storefront reads Shopify through server-held tokens. Checkout remains explicitly closed by `PUBLIC_COMING_SOON=1` and `SHOPIFY_CHECKOUT_WRITE_ENABLED=0`.
 - Canonical customer-facing SKUs: the workspace `stock/product_skus.json`; every Shopify SKU also needs a fail-closed entry in `SHOPIFY_PREVIEW_POLICY_JSON`.

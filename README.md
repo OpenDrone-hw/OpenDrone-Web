@@ -222,10 +222,10 @@ Both use the repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_I
 
 ## Preorder release configuration
 
-The private [launch plan and knowledge](https://github.com/incutec-org/research/blob/main/opendrone/README.md)
-live together in `research/opendrone/`. This
-repository owns implementation, configuration and verification. Do not copy
-business strategy or regulatory research into this guide.
+The launch plan and knowledge live in the team's Notion
+([OpenDrone launch strategy](https://app.notion.com/p/3e6fe06764e18191a111c05fa37db3d0)). This repository owns implementation,
+configuration and verification. Do not copy business strategy or regulatory
+research into this guide.
 
 | Source | Owns |
 | --- | --- |
@@ -236,8 +236,8 @@ business strategy or regulatory research into this guide.
 | `scripts/launch-preorders.mjs` | Read-only preflight by default; its `--apply` path opens checkout and deploys production |
 
 A producer number alone cannot open a destination. `saleApproved` requires the
-relevant product, tax, EPR, language, carrier and delivery evidence. All entries
-remain false until reviewed. `deliveryBy` is a customer delivery date, not a
+relevant product, tax, EPR, language, carrier and delivery evidence. `deliveryBy`
+is a customer delivery date, not a
 supplier or carrier dispatch date. Null is deliberate when no supportable
 commitment exists. The launch preflight refuses missing approvals or dates;
 this technical check does not approve the underlying evidence.
@@ -253,6 +253,28 @@ Production stays closed. Run the launch dry run only for a requested launch
 review. `--apply` requires a separate founder go: it changes production secrets
 and variables, merges the integration PR, deploys, registers the webhook and
 changes product topics. Never run it to preview this branch.
+
+## Launch preorders
+
+The founder's steps in the Shopify admin come first:
+
+| Step | Done when |
+| --- | --- |
+| Shopify Payments active, automatic capture | A test order is paid, captured and refunded |
+| Admin API token scopes | The dry run reports no missing scope (it needs `read_all_orders`, `read_orders`, `write_orders`, `write_products`, `write_merchant_managed_fulfillment_orders`) |
+| Markets and shipping profiles | Only EU-27 addresses can check out; a non-EU address is refused at checkout |
+| Redirect theme published | The Shopify-hosted storefront forwards to opendrone.be, so no buy link bypasses the storefront gates |
+| Online Store password page off | Checkout opens for a customer, not only for staff |
+
+Then, from a clean checkout of `feat/preorders` equal to its origin:
+
+1. `node scripts/launch-preorders.mjs`: the dry run must end with no problems.
+2. `node scripts/launch-preorders.mjs --apply`: sets the Worker secrets,
+   commits the launch variables and `countFrom` (launch day), merges PR #489,
+   waits for the production deploy, registers the `orders/paid` webhook, flips
+   the FC and ESC repositories to `status-beta` and runs the smoke checks.
+3. Place one real order on opendrone.be and confirm the hold, the batch tag
+   and the ship promise on the order, then refund it.
 
 ## Fulfil a batch
 

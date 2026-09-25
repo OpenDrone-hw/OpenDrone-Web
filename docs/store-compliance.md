@@ -1,7 +1,7 @@
 # Storefront acceptance
 
-The private [launch plan and knowledge index](https://github.com/incutec-org/research/blob/main/opendrone/README.md)
-own the launch sequence and sourced regulatory references. Product conformity
+The team's Notion [launch plan and knowledge index](https://app.notion.com/p/3e6fe06764e18191a111c05fa37db3d0) owns the launch
+sequence and sourced regulatory references. Product conformity
 and signed declarations belong to the compliance repository. This file owns
 only the storefront evidence a release review must inspect.
 
