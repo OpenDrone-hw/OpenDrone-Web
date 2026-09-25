@@ -11,9 +11,11 @@ import preordersJson from './content/preorders.json';
  * for HTTP basic auth before any page or API response. Static files in
  * dist/client are served by Cloudflare without running the Worker, so they
  * are not gated. The production Worker leaves STAGING_PASSWORD unset and
- * never asks.
+ * never asks. The local dev server never asks either: `.env` carries the
+ * password for the staging scripts, and the studio runs locally.
  */
 function stagingGate(request: Request, env: Env): Response | null {
+  if (import.meta.env.DEV) return null;
   const password = env.STAGING_PASSWORD?.trim();
   if (!password) return null;
   const header = request.headers.get('Authorization') ?? '';
