@@ -38,7 +38,7 @@
 //      production batch). RX, frames and motors keep theirs.
 //   9. Smoke production: scripts/smoke.mjs, the product feed sells every
 //      campaign SKU, no staging noindex, the webhook refuses an unsigned
-//      request (401) and accepts one signed with the local secret (200).
+//      request (401) and accepts one signed with the local secret (202).
 //
 // Secret values are read from the environment or .env and passed to
 // wrangler on stdin. They are never printed, logged or written to disk.
@@ -337,7 +337,7 @@ export function unsoldInFeed(feed, skus) {
 /** The step list printed by a dry run and followed by --apply. */
 export function plan({pr, skus, flat = []}) {
   return [
-    ['preflight', `Check branch ${BRANCH}, a clean ${PROD_CONFIG}, PR #${pr} open against main, credentials present by name, wrangler and gh signed in, Admin token scopes (${REQUIRED_ADMIN_SCOPES.join(', ')}), every market prices tax-inclusive.`],
+    ['preflight', `Check branch ${BRANCH}, a clean tree equal to origin, PR #${pr} open against main, credentials present by name, wrangler and gh signed in, Admin token scopes (${REQUIRED_ADMIN_SCOPES.join(', ')}), every market prices tax-inclusive.`],
     ['prices', `Read the storefront catalog and check ${skus.length} campaign SKUs: each has a compare-at price and sells at the first price step. Check ${flat.length} shipsWith SKUs sell at a flat price.`],
     ['secrets', `npx wrangler secret bulk --config ${PROD_CONFIG} (stdin): SHOPIFY_PREVIEW_POLICY_JSON (${skus.length + flat.length} SKUs preorder, the rest sold_out), SHOPIFY_WEBHOOK_SECRET (from .env), SHOPIFY_PRICE_TIER_WRITE_ENABLED=1. Production stays closed by its [vars].`],
     ['launch-commit', `Set ${PROD_CONFIG} [vars] PUBLIC_COMING_SOON="0", SHOPIFY_CHECKOUT_WRITE_ENABLED="1" and countFrom in ${PREORDERS_FILE} to today (Europe/Brussels); git commit; git push origin ${BRANCH}.`],
@@ -345,7 +345,7 @@ export function plan({pr, skus, flat = []}) {
     ['deploy', `Wait for ${DEPLOY_WORKFLOW} on the merge commit: gh run watch --exit-status.`],
     ['webhook', `Admin API: webhookSubscriptionCreate(ORDERS_PAID, ${PROD_ORIGIN}${WEBHOOK_PATH}, JSON) unless it already exists.`],
     ['topics', `gh repo edit OpenDrone-hw/{${BETA_REPOS.join(',')}} --remove-topic status-alpha --add-topic status-beta.`],
-    ['smoke', `BASE=${PROD_ORIGIN} node scripts/smoke.mjs; /products.json sells every campaign SKU; no noindex header; ${WEBHOOK_PATH} answers 401 unsigned and 200 signed.`],
+    ['smoke', `BASE=${PROD_ORIGIN} node scripts/smoke.mjs; /products.json sells every campaign SKU; no noindex header; ${WEBHOOK_PATH} answers 401 unsigned and 202 signed.`],
   ];
 }
 
@@ -480,7 +480,7 @@ async function smoke(skus) {
     headers: {'Content-Type': 'application/json', 'X-Shopify-Hmac-Sha256': shopifyHmac(process.env.SHOPIFY_WEBHOOK_SECRET, body)},
     body,
   });
-  if (signed.status !== 200) problems.push(`signed webhook answered ${signed.status}, expected 200`);
+  if (signed.status !== 202) problems.push(`signed webhook answered ${signed.status}, expected 202`);
   return problems;
 }
 

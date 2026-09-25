@@ -15,10 +15,11 @@
  * pass re-reads all campaign orders, so it also covers an order Shopify's
  * search index has not caught up with on the next run.
  *
- * Shopify retries a webhook it does not get a 2xx for, so a price write
- * failure answers 500 and the scheduled reconcile in `server.ts` covers a
- * delivery that never arrives. A hold failure answers 200 and is retried by
- * that reconcile: Shopify removes a webhook that keeps failing.
+ * Shopify wants a 2xx within 5 seconds and removes a webhook that keeps
+ * failing. A full reconcile re-reads every campaign order, which a launch-day
+ * burst pushes past that, so a verified delivery answers 202 at once and the
+ * reconcile runs after the response (`waitUntil`). A failure there is logged
+ * and retried by the five-minute scheduled reconcile in `server.ts`.
  */
 
 import type {ActionFunctionArgs} from 'react-router';
@@ -47,16 +48,16 @@ export async function action({request, context}: ActionFunctionArgs) {
   }
 
   const config = parseCampaignConfig(preordersJson);
-  const result = await reconcilePreorders(env, config);
-  return Response.json(
-    {
-      changed: result.changed,
-      skipped: result.skipped,
-      held: result.held.length,
-      holdErrors: Object.keys(result.holdErrors).length,
-    },
-    {headers: {'Cache-Control': 'no-store'}},
+  context.waitUntil(
+    reconcilePreorders(env, config).then(
+      (result) => {
+        const holdErrors = Object.keys(result.holdErrors).length;
+        if (holdErrors) console.error('[orders-paid] hold errors', result.holdErrors);
+      },
+      (error: unknown) => console.error('[orders-paid] reconcile failed', error),
+    ),
   );
+  return new Response('Accepted', {status: 202, headers: {'Cache-Control': 'no-store'}});
 }
 
 /** A webhook endpoint answers POST only. */
