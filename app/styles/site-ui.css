@@ -726,18 +726,21 @@ html.light .po-card-cta {
   white-space: nowrap;
 }
 /* ============================================
-   Footer: an engineering drawing sheet. A thin frame with zone marks, NOTES
-   (the newsletter), the PARTS LIST (every link group, each link a J
-   reference), a faint drawing view of a board, and the title block with the
-   seller's legal identity in the bottom-right corner.
+   Footer: an engineering drawing sheet in gold ink. A thin frame with zone
+   marks and corner registration marks, NOTES, DETAIL A (the newsletter in
+   its own cell), the PARTS LIST (every link group, each link a J reference),
+   and at the foot a gold drawing view of a board beside the title block with
+   the seller's legal identity.
    ============================================ */
 .footer-drawing {
-  --zone: 18px;
-  --sheet-pad: 28px;
+  --zone: 16px;
+  --sheet-pad: 18px;
+  --ink: var(--color-gold-text);
+  --ink-line: color-mix(in srgb, var(--color-gold) 28%, transparent);
   position: relative;
   margin-top: 8px;
   padding: var(--zone);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--ink-line);
 }
 .footer-zones { position: absolute; inset: 0; pointer-events: none; }
 .footer-zone-row,
@@ -747,8 +750,8 @@ html.light .po-card-cta {
   font-family: var(--font-mono);
   font-size: 9px;
   letter-spacing: 0.1em;
-  color: var(--color-text-muted);
-  opacity: 0.8;
+  color: var(--ink);
+  opacity: 0.55;
 }
 .footer-zone-row { left: var(--zone); right: var(--zone); height: var(--zone); grid-template-columns: repeat(6, 1fr); }
 .footer-zone-row--top { top: 0; }
@@ -758,74 +761,110 @@ html.light .po-card-cta {
 .footer-zone-col--right { right: 0; }
 .footer-zone-row span,
 .footer-zone-col span { display: flex; align-items: center; justify-content: center; }
-.footer-zone-row span + span { border-left: 1px solid var(--color-border); }
-.footer-zone-col span + span { border-top: 1px solid var(--color-border); }
+.footer-zone-row span + span { border-left: 1px solid var(--ink-line); }
+.footer-zone-col span + span { border-top: 1px solid var(--ink-line); }
+/* Registration marks: a small gold cross in each corner of the margin. */
+.footer-corner {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  background:
+    linear-gradient(var(--ink), var(--ink)) center / 1px 100% no-repeat,
+    linear-gradient(var(--ink), var(--ink)) center / 100% 1px no-repeat;
+  opacity: 0.6;
+}
+.footer-corner--tl { top: 3px; left: 3px; }
+.footer-corner--tr { top: 3px; right: 3px; }
+.footer-corner--bl { bottom: 3px; left: 3px; }
+.footer-corner--br { bottom: 3px; right: 3px; }
 
 .footer-sheet {
   position: relative;
   isolation: isolate;
   padding: var(--sheet-pad) var(--sheet-pad) 0;
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid color-mix(in srgb, var(--color-gold) 40%, var(--color-border-strong));
 }
 .footer-sheet-heading {
-  margin-bottom: 14px;
+  margin-bottom: 8px;
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--color-text);
+  color: var(--ink);
+  opacity: 0.85;
 }
 .footer-sheet-heading::after { content: ':'; }
 
-/* NOTES take the sheet's full width. */
-.footer-top { padding-bottom: 28px; }
-/* Drawing view: very low contrast, in the open area left of the title block. */
-.footer-view {
-  flex: none;
-  width: 200px;
-  margin: 0 0 16px 8px;
-  color: var(--color-gold-text);
-  opacity: 0.24;
-  pointer-events: none;
+/* NOTES beside DETAIL A. */
+.footer-top {
+  display: grid;
+  grid-template-columns: minmax(0, 15rem) minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+  padding-bottom: 14px;
 }
-.footer-foot-left { display: flex; align-items: flex-end; gap: 40px; min-width: 0; }
-.footer-view svg { display: block; width: 100%; height: auto; overflow: visible; }
-.footer-view-outline { fill: none; stroke: currentColor; stroke-width: 1; }
-.footer-view-dim { fill: none; stroke: currentColor; stroke-width: 0.75; opacity: 0.8; }
-.footer-view-text { fill: currentColor; font-family: var(--font-mono); }
-.footer-view-label {
-  margin-top: 2px;
-  text-align: center;
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-}
-
 .footer-notes { min-width: 0; }
-.footer-notes-list { list-style: none; margin: 0; padding: 0; counter-reset: note; display: flex; flex-direction: column; gap: 16px; }
+.footer-notes-list { list-style: none; margin: 0; padding: 0; counter-reset: note; display: flex; flex-direction: column; gap: 6px; }
 .footer-note {
   counter-increment: note;
   display: grid;
-  grid-template-columns: 2.2em minmax(0, 1fr);
+  grid-template-columns: 2em minmax(0, 1fr);
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.5;
   color: var(--color-text-muted);
 }
 .footer-note::before {
   content: counter(note) '.';
   font-family: var(--font-mono);
   font-size: 12px;
-  color: var(--color-text-muted);
+  color: var(--ink);
+  opacity: 0.8;
 }
 
-/* The number sits level with the newsletter's first line. */
-.footer-note--newsletter .newsletter-signup { align-items: start; padding: 0; }
-.footer-tb-value a { text-decoration: underline; text-underline-offset: 2px; }
-.footer-tb-value a:hover { color: var(--color-gold-text); }
+/* DETAIL A: the newsletter in a bounded cell with its view label. */
+.footer-detail {
+  position: relative;
+  padding: 14px 16px 10px;
+  border: 1px solid color-mix(in srgb, var(--color-gold) 45%, transparent);
+  background: var(--color-gold-soft);
+}
+.footer-detail-label {
+  position: absolute;
+  top: -8px;
+  left: 12px;
+  padding: 0 6px;
+  background: var(--color-bg);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.footer-detail .newsletter-signup { align-items: center; padding: 0; gap: 12px 24px; }
+.footer-detail .newsletter-signup > div:first-child > p:first-child { color: var(--ink); }
+.footer-detail input[type='email'] { background: var(--color-bg); }
+.footer-detail input[type='email']:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 1px;
+  border-color: var(--color-gold);
+}
+.footer-detail button[type='submit'] {
+  border: 1px solid transparent;
+  background: var(--color-gold-fill);
+  color: var(--color-on-accent);
+}
+.footer-detail button[type='submit']:hover { background: var(--color-gold-fill-hover); }
+.footer-detail button[type='submit']:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 2px; }
 
-.footer-parts { padding: 24px 0 28px; border-top: 1px solid var(--color-border); }
-.footer-parts-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px 28px; }
+.footer-parts { padding: 12px 0 14px; border-top: 1px solid var(--ink-line); }
+.footer-parts-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 2.5fr); gap: 4px 24px; }
+.footer-parts h4 { color: var(--ink); opacity: 0.8; margin-bottom: 6px; }
+.site-footer-inner .footer-parts nav { gap: 4px; }
+.site-footer-inner .footer-parts nav a { line-height: 1.5; }
+/* Legal is the longest group: two sub-columns keep every column at five rows. */
+@media (min-width: 1024px) {
+  .footer-legal-nav { display: grid; grid-template-columns: auto auto; justify-content: start; grid-auto-flow: column; grid-template-rows: repeat(5, auto); column-gap: 20px; }
+}
 .footer-ref {
   display: inline-block;
   min-width: 2.6em;
@@ -833,35 +872,63 @@ html.light .po-card-cta {
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.04em;
-  color: var(--color-text-muted);
-  opacity: 0.7;
+  color: var(--ink);
+  opacity: 0.6;
   font-variant-numeric: tabular-nums;
+  transition: opacity 150ms;
 }
+.footer-link:hover { color: var(--ink); }
+.footer-link:hover .footer-ref,
+.footer-link:focus-visible .footer-ref { opacity: 1; }
 
 .footer-foot {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
-  border-top: 1px solid var(--color-border);
-  padding-top: 20px;
+  border-top: 1px solid var(--ink-line);
+  padding-top: 12px;
 }
-.footer-foot-meta { padding-bottom: 16px; font-size: 12px; color: var(--color-text-muted); }
-.footer-copyright { margin-top: 6px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; }
+.footer-foot-left { display: flex; align-items: flex-end; gap: 28px; min-width: 0; }
+.footer-foot-meta { padding-bottom: 12px; font-size: 12px; color: var(--color-text-muted); }
+.footer-copyright { margin-top: 4px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; }
 
-/* Title block, flush with the sheet's bottom-right corner. */
+/* Drawing view: the board outline in gold ink, sized to the title block. */
+.footer-view {
+  flex: none;
+  width: 120px;
+  margin: 0 0 10px 4px;
+  color: var(--ink);
+  opacity: 0.85;
+  pointer-events: none;
+}
+.footer-view svg { display: block; width: 100%; height: auto; overflow: visible; }
+.footer-view-outline { fill: none; stroke: currentColor; stroke-width: 1.25; }
+.footer-view-dim { fill: none; stroke: currentColor; stroke-width: 0.75; opacity: 0.8; }
+.footer-view-text { fill: currentColor; font-family: var(--font-mono); }
+.footer-view-label {
+  margin-top: 2px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Title block, flush with the sheet's bottom-right corner, three rows. */
 .footer-tb {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  width: min(100%, 38rem);
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  width: min(100%, 54rem);
   margin: 0 calc(-1 * var(--sheet-pad) - 1px) -1px 0;
-  border-top: 1px solid var(--color-border-strong);
-  border-left: 1px solid var(--color-border-strong);
+  border-top: 1px solid color-mix(in srgb, var(--color-gold) 40%, var(--color-border-strong));
+  border-left: 1px solid color-mix(in srgb, var(--color-gold) 40%, var(--color-border-strong));
   background: var(--color-bg);
 }
 .footer-tb-cell {
   min-width: 0;
-  padding: 6px 10px 7px;
+  padding: 5px 9px 6px;
   border-right: 1px solid var(--color-border-strong);
   border-bottom: 1px solid var(--color-border-strong);
 }
@@ -869,6 +936,7 @@ html.light .po-card-cta {
 .footer-tb-s3 { grid-column: span 3; }
 .footer-tb-s4 { grid-column: span 4; }
 .footer-tb-s6 { grid-column: span 6; }
+.footer-tb-s12 { grid-column: span 12; }
 .footer-tb-label {
   font-family: var(--font-mono);
   font-size: 9px;
@@ -880,29 +948,33 @@ html.light .po-card-cta {
   margin: 1px 0 0;
   font-family: var(--font-mono);
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.45;
   color: var(--color-text);
   overflow-wrap: anywhere;
 }
-.footer-tb-title { font-family: var(--font-display); font-size: 20px; font-weight: 700; letter-spacing: 0.02em; }
+.footer-tb-value a { text-decoration: underline; text-underline-offset: 2px; }
+.footer-tb-value a:hover { color: var(--ink); }
+.footer-tb-wordmark { display: block; height: 20px; width: auto; margin-top: 2px; }
 
 @media (max-width: 1023px) {
+  .footer-top { grid-template-columns: minmax(0, 1fr); gap: 20px; }
   .footer-parts-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .footer-view { display: none; }
 }
 @media (max-width: 767px) {
   .footer-foot { flex-direction: column-reverse; align-items: stretch; }
   .footer-tb { width: auto; margin-left: calc(-1 * var(--sheet-pad)); }
-  .footer-foot-meta { padding-bottom: 20px; }
+  .footer-foot-left { padding-bottom: 4px; }
+  .footer-view { display: none; }
 }
 @media (max-width: 639px) {
-  .footer-drawing { --zone: 14px; --sheet-pad: 16px; }
+  .footer-drawing { --zone: 12px; --sheet-pad: 12px; }
   .footer-zone-row, .footer-zone-col { font-size: 8px; }
   .footer-parts-grid { grid-template-columns: minmax(0, 1fr); gap: 0; }
-  .footer-note { grid-template-columns: 1.8em minmax(0, 1fr); }
+  .footer-detail { padding: 14px 12px 10px; }
   /* Phone: identity rows full width, the registration numbers paired. */
-  .footer-tb-cell:is([data-cell='company'], [data-cell='address'], [data-cell='email_label']) { grid-column: span 6; }
-  .footer-tb-cell:is([data-cell='kbo'], [data-cell='vat']) { grid-column: span 3; }
+  .footer-tb-cell:is([data-cell='title'], [data-cell='company'], [data-cell='address'], [data-cell='email_label'], [data-cell='licence']) { grid-column: span 12; }
+  .footer-tb-cell:is([data-cell='kbo'], [data-cell='vat']) { grid-column: span 6; }
+  .footer-tb-cell:is([data-cell='rev'], [data-cell='sheet'], [data-cell='date']) { grid-column: span 4; }
 }
 
 /* Shopping: one decision at a time, supporting detail on demand. */

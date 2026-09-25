@@ -6,6 +6,7 @@ import {
 } from '~/lib/company';
 import {NewsletterSignup} from '~/components/NewsletterSignup';
 import {Txt} from '~/components/Txt';
+import {SiteWordmark} from '~/components/SiteWordmark';
 import {
   LegalLanguages,
   legalHref,
@@ -164,10 +165,10 @@ function FooterNavLink({
       prefetch="intent"
       to={to}
       className={({isActive}) =>
-        `text-xs transition-colors flex items-center min-h-[36px] md:min-h-0 ${
+        `footer-link text-xs transition-colors flex items-center min-h-[36px] md:min-h-0 ${
           isActive
             ? 'text-[var(--color-text)]'
-            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+            : 'text-[var(--color-text-muted)]'
         }`
       }
     >
@@ -184,6 +185,9 @@ const ZONE_ROWS = ['A', 'B', 'C', 'D'];
 function ZoneRulers() {
   return (
     <div className="footer-zones" aria-hidden="true">
+      {(['tl', 'tr', 'bl', 'br'] as const).map((c) => (
+        <span key={c} className={`footer-corner footer-corner--${c}`} />
+      ))}
       {(['top', 'bottom'] as const).map((edge) => (
         <div key={edge} className={`footer-zone-row footer-zone-row--${edge}`}>
           {ZONE_COLUMNS.map((z) => (
@@ -294,8 +298,8 @@ function TitleCell({
 }: {
   label: string;
   children: React.ReactNode;
-  /** Width in sixths of the block. */
-  span: 2 | 3 | 4 | 6;
+  /** Width in twelfths of the block. */
+  span: 2 | 3 | 4 | 6 | 12;
 }) {
   return (
     <div
@@ -325,10 +329,6 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
           <ZoneRulers />
           <div className="footer-sheet">
             <div className="footer-top">
-              {/* NOTES. The newsletter form keeps its own markup, consent
-                checkbox and behaviour; the drawing only numbers it. Consent
-                lives on the Shopify customer and this form is anonymous, so
-                every visitor sees the same form. */}
               <div className="footer-notes">
                 <Txt
                   id="chrome.footer_notes"
@@ -336,25 +336,34 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
                   className="footer-sheet-heading"
                 />
                 <ol className="footer-notes-list">
-                  <li className="footer-note footer-note--newsletter">
-                    <NewsletterSignup
-                      variant="footer"
-                      turnstileSiteKey={turnstileSiteKey ?? null}
-                    />
-                  </li>
                   <li className="footer-note">
                     <p>
                       <Txt id="chrome.footer_run_by" /> {company.name}.{' '}
                       <NavLink
                         to="/open-source"
                         prefetch="intent"
-                        className="underline underline-offset-2 hover:text-[var(--color-text)]"
+                        className="underline underline-offset-2 hover:text-[var(--color-gold-text)]"
                       >
                         <Txt id="chrome.incutec_hint" />
                       </NavLink>
                     </p>
                   </li>
                 </ol>
+              </div>
+              {/* DETAIL A: the newsletter, its own bounded cell. The form
+                  keeps its markup, consent checkbox and behaviour; consent
+                  lives on the Shopify customer and this form is anonymous,
+                  so every visitor sees the same form. */}
+              <div className="footer-detail footer-note--newsletter">
+                <Txt
+                  id="chrome.footer_detail_newsletter"
+                  as="span"
+                  className="footer-detail-label"
+                />
+                <NewsletterSignup
+                  variant="footer"
+                  turnstileSiteKey={turnstileSiteKey ?? null}
+                />
               </div>
             </div>
 
@@ -402,7 +411,7 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
                         href={link.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors flex items-center min-h-[36px] md:min-h-0"
+                        className="footer-link text-xs text-[var(--color-text-muted)] transition-colors flex items-center min-h-[36px] md:min-h-0"
                       >
                         <RefTag n={nextRef()} />
                         <Txt id={`chrome.${link.copy}`} />
@@ -427,7 +436,7 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
 
                 <div>
                   <FooterGroup id="chrome.heading_legal">
-                    <nav className="flex flex-col gap-1.5">
+                    <nav className="footer-legal-nav flex flex-col gap-1.5">
                       {LEGAL_LINKS.map((link) => (
                         <FooterNavLink
                           key={link.to}
@@ -468,33 +477,28 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
                 </div>
               </div>
               <dl className="footer-tb">
-                <TitleCell label="chrome.footer_tb_title" span={6}>
-                  <span className="footer-tb-title">OpenDrone</span>
+                <TitleCell label="chrome.footer_tb_title" span={3}>
+                  <SiteWordmark className="footer-tb-wordmark" />
                 </TitleCell>
-                <TitleCell label="chrome.footer_tb_company" span={2}>
+                <TitleCell label="chrome.footer_tb_company" span={3}>
                   {company.name}
                 </TitleCell>
-                <TitleCell label="chrome.footer_tb_address" span={4}>
+                <TitleCell label="chrome.footer_tb_address" span={6}>
                   {company.address}
                 </TitleCell>
-                <TitleCell label="chrome.footer_tb_kbo" span={2}>
+                <TitleCell label="chrome.footer_tb_kbo" span={3}>
                   <span className="tabular-nums">{company.kbo}</span>
                 </TitleCell>
-                <TitleCell label="chrome.footer_tb_vat" span={2}>
+                <TitleCell label="chrome.footer_tb_vat" span={3}>
                   <span className="tabular-nums">{company.vat}</span>
                 </TitleCell>
                 {company.email ? (
-                  <TitleCell label="chrome.footer_email_label" span={2}>
-                    <a
-                      href={`mailto:${company.email}`}
-                      className="underline underline-offset-2 hover:text-[var(--color-text)]"
-                    >
-                      {company.email}
-                    </a>
+                  <TitleCell label="chrome.footer_email_label" span={6}>
+                    <a href={`mailto:${company.email}`}>{company.email}</a>
                   </TitleCell>
                 ) : null}
                 {company.tel && company.tel !== '[pending]' ? (
-                  <TitleCell label="chrome.footer_tb_tel" span={6}>
+                  <TitleCell label="chrome.footer_tb_tel" span={12}>
                     {company.tel}
                   </TitleCell>
                 ) : null}
@@ -508,7 +512,6 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
                       href={`https://github.com/OpenDrone-hw/OpenDrone-Web/commit/${BUILD_REV}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="underline underline-offset-2 hover:text-[var(--color-text)]"
                     >
                       {BUILD_REV}
                     </a>
