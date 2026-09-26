@@ -1,7 +1,7 @@
 import type {Route} from './+types/api.support.tickets.$ref';
 import {ticketRateLimit} from '~/lib/support/limits';
 import {authorizedTicket, originOf, supportDeps, supportReady} from '~/lib/support/server';
-import {publicMessage, syncTicket} from '~/lib/support/tickets';
+import {publicMessage, syncOrStored} from '~/lib/support/tickets';
 import {parseTicketRef} from '~/lib/support/tokens';
 import {handleTicketAction, jsonOutcome} from '~/lib/support/handlers';
 
@@ -29,7 +29,7 @@ export async function loader({request, params, context}: Route.LoaderArgs) {
   // After authorisation: a stranger polling this ref cannot use up its owner's allowance.
   if (!ticketRateLimit('poll', ref).allowed) return json({ok: false}, 429);
   const after = Math.max(0, Number(new URL(request.url).searchParams.get('after')) || 0);
-  const {ticket: synced} = await syncTicket(deps, ticket);
+  const synced = await syncOrStored(deps, ticket);
   // The page only asks while it is visible, so an answer means seen.
   await deps.store.updateTicket(ref, {customerSeenAt: Date.now()});
   const messages = await deps.store.messages(ref, after, 100);

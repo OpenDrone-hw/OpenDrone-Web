@@ -15,6 +15,7 @@ import {
   publicTicket,
   resetLink,
   runScheduled,
+  syncOrStored,
   staffCard,
   subjectFor,
   syncTicket,
@@ -378,6 +379,22 @@ describe('status transitions', {skip}, () => {
     const report = await runScheduled(deps);
     assert.deepEqual(report.autoClosed, [answered.ref]);
     assert.equal((await deps.store.getTicket(open.ref))!.status, 'open');
+  });
+
+  it('shows the stored conversation when the role lookup fails, and the cron moves on (members 403)', async () => {
+    const {deps, discord} = await setup({env: {SUPPORT_MODERATION_MODE: 'enforce', SUPPORT_MOD_ROLE_ID: 'mods'}});
+    const broken = await createTicket(deps, input());
+    const fine = await createTicket(deps, input({email: 'other@example.com', orderNumber: null, topic: 'other'}));
+    discord.approve(discord.staff(broken.threadId, 'Held reply'), 'mod-1');
+    discord.approve(discord.staff(fine.threadId, 'Approved reply'), 'mod-2');
+    discord.client.hasRole = async (userId) => {
+      if (userId === 'mod-1') throw new Error('discord member 403');
+      return true;
+    };
+    assert.equal((await syncOrStored(deps, broken)).ref, broken.ref);
+    const report = await runScheduled(deps);
+    assert.equal(report.synced, 1);
+    assert.equal((await deps.store.messages(fine.ref)).filter((m) => m.role === 'staff').length, 1);
   });
 });
 
