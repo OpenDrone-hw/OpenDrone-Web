@@ -4,6 +4,8 @@
  * imported by application code.
  */
 import {readdirSync, readFileSync} from 'node:fs';
+import type {ChatFpvClient} from './chatfpv.ts';
+import type {ChatAnswer, DraftOutcomeRequest, DraftRequest, DraftResponse} from './chatfpv-contract.ts';
 import {DiscordError, type DiscordClient, type DiscordMessage, type OutboundFile} from './discord.ts';
 
 type SqliteDb = {
@@ -230,4 +232,38 @@ export function fakeShopify(script: ShopifyScript) {
     return new Response('unknown', {status: 400});
   }) as unknown as typeof fetch;
   return {fetcher, writes, metafields};
+}
+
+/**
+ * A ChatFPV client that records every call. `draft` answers from `opts.draft`
+ * (default: a short grounded draft); `failOutcome` makes outcome posts fail
+ * (null), as a timeout or 5xx would.
+ */
+export function fakeChatFpv(opts: {draft?: (req: DraftRequest, n: number) => DraftResponse | null; answer?: ChatAnswer | null; failOutcome?: boolean} = {}) {
+  const drafts: DraftRequest[] = [];
+  const outcomes: DraftOutcomeRequest[] = [];
+  const asks: Array<{message: string; context: unknown}> = [];
+  const state = {failOutcome: opts.failOutcome ?? false};
+  const client: ChatFpvClient = {
+    async draft(req) {
+      drafts.push(req);
+      if (opts.draft) return opts.draft(req, drafts.length);
+      return {
+        draftId: `dr_${drafts.length}`,
+        draft: 'Flash the latest firmware with the configurator, then recalibrate the gyro [1].',
+        citations: [{n: 1, title: 'Flashing', url: 'https://docs.opendrone.be/flash', source: 'OpenDrone docs', kind: 'doc'}],
+        confidence: 0.82,
+        note: 'grounded in the OpenDrone docs',
+      };
+    },
+    async outcome(req) {
+      outcomes.push(req);
+      return state.failOutcome ? null : true;
+    },
+    async ask(message, context) {
+      asks.push({message, context});
+      return opts.answer ?? null;
+    },
+  };
+  return {client, drafts, outcomes, asks, state};
 }
