@@ -45,7 +45,57 @@ type Pattern = {
   replace: string;
   /** Matches that stay: the company's own addresses. */
   keep?: (match: string) => boolean;
+  /**
+   * Length of the match prefix that really is the value, or 0 when it is
+   * not. The rest of the match (a trailing word the loose regex swallowed)
+   * is kept as text.
+   */
+  validate?: (match: string) => number;
 };
+
+/** IBAN length per country, from the SWIFT IBAN registry. */
+const IBAN_LENGTHS: Record<string, number> = {
+  AD: 24, AE: 23, AL: 28, AT: 20, AZ: 28, BA: 20, BE: 16, BG: 22, BH: 22,
+  BI: 27, BR: 29, BY: 28, CH: 21, CR: 22, CY: 28, CZ: 24, DE: 22, DJ: 27,
+  DK: 18, DO: 28, EE: 20, EG: 29, ES: 24, FI: 18, FK: 18, FO: 18, FR: 27,
+  GB: 22, GE: 22, GI: 23, GL: 18, GR: 27, GT: 28, HN: 28, HR: 21, HU: 28,
+  IE: 22, IL: 23, IQ: 23, IS: 26, IT: 27, JO: 30, KW: 30, KZ: 20, LB: 28,
+  LC: 32, LI: 21, LT: 20, LU: 20, LV: 21, LY: 25, MC: 27, MD: 24, ME: 22,
+  MK: 19, MN: 20, MR: 27, MT: 31, MU: 30, NI: 28, NL: 18, NO: 15, OM: 23,
+  PK: 24, PL: 28, PS: 29, PT: 25, QA: 29, RO: 24, RS: 22, RU: 33, SA: 24,
+  SC: 31, SD: 18, SE: 24, SI: 19, SK: 24, SM: 27, SO: 23, ST: 25, SV: 28,
+  TL: 23, TN: 24, TR: 26, UA: 29, VA: 22, VG: 24, XK: 20, YE: 30,
+};
+
+/**
+ * Number of characters at the start of `match` that form a valid IBAN
+ * (registered country, exact length, mod-97 == 1), or 0.
+ */
+export function ibanPrefixLength(match: string): number {
+  const country = match.slice(0, 2).toUpperCase();
+  const length = IBAN_LENGTHS[country];
+  if (!length) return 0;
+  let compact = '';
+  let end = 0;
+  for (let i = 0; i < match.length && compact.length < length; i++) {
+    const ch = match[i];
+    if (ch === ' ') continue;
+    compact += ch.toUpperCase();
+    end = i + 1;
+  }
+  if (compact.length !== length) return 0;
+  // The prefix must end on a value boundary: not in the middle of a word.
+  const next = match[end];
+  if (next !== undefined && next !== ' ') return 0;
+  const rearranged = compact.slice(4) + compact.slice(0, 4);
+  let remainder = 0;
+  for (const ch of rearranged) {
+    const code = ch.charCodeAt(0);
+    const value = code >= 65 ? String(code - 55) : ch;
+    for (const digit of value) remainder = (remainder * 10 + Number(digit)) % 97;
+  }
+  return remainder === 1 ? end : 0;
+}
 
 /** The company's own mail domains: a reply may name returns@opendrone.be. */
 const OWN_DOMAIN = /@(?:[\w-]+\.)*(?:opendrone\.be|incutec\.[a-z]{2,})$/i;
@@ -91,14 +141,17 @@ const PATTERNS: Pattern[] = [
     re: /https?:\/\/(?:[\w.-]+\.(?:myshopify\.com|shopify\.com)\/admin|admin\.shopify\.com\/store\/)[^\s]*/gi,
     replace: '[internal link redacted]',
   },
-  // IBAN: country code + 2 check digits + 11-30 alphanumeric.
-  // Match with optional spaces every 4 chars (standard presentation).
-  // `i` flag: people type IBANs lowercase ("be68 ...") as often as upper,
-  // and an unredacted IBAN in the public channel is a real PII leak.
+  // IBAN candidates: country code + 2 check digits + 11-30 alphanumerics,
+  // compact or in the standard groups of 4. A candidate is only redacted
+  // when `ibanPrefixLength` confirms a registered country code, that
+  // country's exact length and the ISO 13616 mod-97 checksum, so part
+  // names such as "TX16S with an internal ELRS module", RP2350B or SX1281
+  // stay. `i` flag: people type IBANs lowercase as often as upper.
   {
     name: 'iban',
-    re: /\b[A-Z]{2}\d{2}(?:[ ]?[A-Z0-9]){11,30}\b/gi,
+    re: /\b[A-Z]{2}\d{2}(?:[A-Z0-9]{11,30}|(?: ?[A-Z0-9]{4}){2,7}(?: ?[A-Z0-9]{1,4})?)\b/gi,
     replace: '[iban redacted]',
+    validate: ibanPrefixLength,
   },
   // Belgian national number: punctuated presentation only
   // (YY.MM.DD-XXX.XX). The bare 11-digit form is intentionally NOT
@@ -184,6 +237,13 @@ export function scrubForPublic(raw: string, opts: ScrubOptions = {}): ScrubResul
     for (const p of PATTERNS) {
       content = content.replace(p.re, (match) => {
         if (p.keep?.(match)) return match;
+        if (p.validate) {
+          const valid = p.validate(match);
+          if (!valid) return match;
+          redactions += 1;
+          reasons.push(p.name);
+          return p.replace + match.slice(valid);
+        }
         redactions += 1;
         reasons.push(p.name);
         return p.replace;
