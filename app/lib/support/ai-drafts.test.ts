@@ -184,6 +184,21 @@ describe('draft post', {skip}, () => {
     assert.equal((await customerView(deps, ticket.ref)).length, 0);
   });
 
+  it('lists a source once when the draft already carries its own Sources block', async () => {
+    const body = 'Recalibrate the gyro [1].\n\nSources:\n[1] Flashing: https://docs.opendrone.be/flash';
+    const post = draftPost('✅', {
+      draft: body,
+      citations: [{n: 1, title: 'Flashing', url: 'https://docs.opendrone.be/flash', source: 'OpenDrone docs', kind: 'doc'}],
+      note: '',
+      confidence: 0.5,
+    })!;
+    assert.equal(post.split('https://docs.opendrone.be/flash').length - 1, 1);
+    const {approvedText} = await import('./ai-drafts.ts');
+    const text = approvedText({body, citations: [{n: 1, title: 'Flashing', url: 'https://docs.opendrone.be/flash', source: 'x', kind: 'doc'}]});
+    assert.equal(text.split('https://docs.opendrone.be/flash').length - 1, 1);
+    assert.equal(text.split('Sources:').length - 1, 1);
+  });
+
   it('drops sources before it would cut the body, and offers no draft that does not fit', () => {
     const many = Array.from({length: 40}, (_, i) => ({n: i + 1, title: `Source ${i + 1}`, url: `https://docs.opendrone.be/${i}`, source: 's', kind: 'doc' as const}));
     const post = draftPost('✅', {draft: 'x'.repeat(1500), citations: many, note: 'n', confidence: 0.5})!;
@@ -243,6 +258,29 @@ describe('approval', {skip}, () => {
     });
   }
 
+  it('a support-role reaction that replaced another reaction still approves', async () => {
+    const {deps, discord, drafts} = await setup({env: {SUPPORT_MODERATION_MODE: 'enforce'}});
+    const ticket = await createTicket(deps, input());
+    const draft = await onlyDraft(drafts, ticket.ref);
+    const post = messageOf(discord, ticket.threadId, draft.discordMessageId!);
+    discord.approve(post, 'stranger');
+    clock += 10_000;
+    await syncTicket(deps, (await deps.store.getTicket(ticket.ref))!, {force: true});
+    assert.equal((await customerView(deps, ticket.ref)).length, 0);
+    // The stranger's reaction goes, a moderator's comes: the count stays 1.
+    discord.approve(post, 'mod1');
+    post.reactions.find((r) => r.emoji === '✅')!.count = 1;
+    const realNow = Date.now;
+    Date.now = () => realNow() + 10 * 60_000;
+    try {
+      clock += 10_000;
+      await syncTicket(deps, (await deps.store.getTicket(ticket.ref))!, {force: true});
+    } finally {
+      Date.now = realNow;
+    }
+    assert.equal((await customerView(deps, ticket.ref)).length, 1);
+  });
+
   it('never approves without SUPPORT_MOD_ROLE_ID', async () => {
     const {deps, discord, drafts} = await setup({env: {SUPPORT_MOD_ROLE_ID: undefined, SUPPORT_MODERATION_MODE: 'off'}});
     const ticket = await createTicket(deps, input());
@@ -275,12 +313,12 @@ describe('approval', {skip}, () => {
 });
 
 describe('replaced, superseded, closed', {skip}, () => {
-  it('a staff reply while a draft is pending posts replaced with the scrubbed delivered text', async () => {
+  it('a support-role reply while a draft is pending posts replaced with the delivered text, customer identity redacted', async () => {
     const {deps, discord, drafts, server} = await setup();
     const ticket = await createTicket(deps, input());
     await onlyDraft(drafts, ticket.ref);
-    const reply = discord.staff(ticket.threadId, 'Reflash with 4.5.1 and mail returns@opendrone.be or me at jan.staff@gmail.com.', {
-      id: 'staff7',
+    const reply = discord.staff(ticket.threadId, 'Hi Jan, for order #1042: reflash with 4.5.1 and mail returns@opendrone.be or me at eva.staff@gmail.com.', {
+      id: 'mod1',
       username: 'eva',
       globalName: 'Eva',
     });
@@ -291,14 +329,34 @@ describe('replaced, superseded, closed', {skip}, () => {
       {
         draftId: 'dr_1',
         status: 'replaced',
-        finalText: 'Reflash with 4.5.1 and mail returns@opendrone.be or me at [email redacted].',
-        decidedBy: 'staff7',
+        finalText: 'Hi [name], for order [order]: reflash with 4.5.1 and mail returns@opendrone.be or me at [email redacted].',
+        decidedBy: 'mod1',
       },
     ]);
     assert.equal((await drafts.get('dr_1'))!.status, 'replaced');
-    assert.equal((await customerView(deps, ticket.ref)).length, 1);
+    // The customer still gets the reply itself, name and order included.
+    const sent = await customerView(deps, ticket.ref);
+    assert.equal(sent.length, 1);
+    assert.match(sent[0]!.body, /^Hi Jan, for order #1042/);
     assert.ok(reply.id);
   });
+
+  for (const mode of ['log', 'off']) {
+    it(`a reply by someone without the support role is never a correction (${mode} mode)`, async () => {
+      const {deps, discord, drafts, server} = await setup({env: {SUPPORT_MODERATION_MODE: mode}});
+      const ticket = await createTicket(deps, input());
+      await onlyDraft(drafts, ticket.ref);
+      discord.staff(ticket.threadId, 'The gyro on the OpenFC F4 is an ICM-42688-P.', {id: 'staff7', username: 'eva', globalName: 'Eva'});
+      clock += 10_000;
+      await syncTicket(deps, (await deps.store.getTicket(ticket.ref))!, {force: true});
+      assert.equal((await customerView(deps, ticket.ref)).length, 1, 'the mode still relays the reply');
+      assert.deepEqual(
+        server.calls.filter((c) => c.path === '/v1/draft/outcome').map((c) => c.body),
+        [{draftId: 'dr_1', status: 'rejected', decidedBy: 'staff7'}],
+      );
+      assert.equal((await drafts.get('dr_1'))!.status, 'rejected');
+    });
+  }
 
   it('a customer follow-up supersedes the older draft (outcome rejected) and gets a new one', async () => {
     const {deps, drafts, server} = await setup();
@@ -357,6 +415,23 @@ describe('ChatFPV failures', {skip}, () => {
       assert.ok(!discord.threads.get(ticket.threadId)!.messages.some((m) => /AI draft/.test(m.content)));
     });
   }
+
+  it('an outcome ChatFPV refuses for good (409, 404, 400) is not retried', async () => {
+    for (const status of [409, 404, 400]) {
+      _resetDraftCache();
+      const {deps, discord, drafts, server} = await setup();
+      server.outcomeStatus = status;
+      const ticket = await createTicket(deps, input());
+      const draft = await onlyDraft(drafts, ticket.ref);
+      discord.approve(messageOf(discord, ticket.threadId, draft.discordMessageId!), 'mod1');
+      clock += 10_000;
+      await syncTicket(deps, (await deps.store.getTicket(ticket.ref))!);
+      assert.equal((await drafts.get(draft.draftId))!.outcomePosted, true, `status ${status}`);
+      clock += 5 * 60_000;
+      await runScheduled(deps);
+      assert.equal(server.calls.filter((c) => c.path === '/v1/draft/outcome').length, 1, `status ${status}`);
+    }
+  });
 
   it('an outcome ChatFPV did not take is retried by the cron', async () => {
     const {deps, discord, drafts, server} = await setup();

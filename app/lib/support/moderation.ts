@@ -58,7 +58,8 @@ export function _resetModCache(): void {
   DECISIONS.clear();
 }
 
-async function isModerator(env: ModerationEnv, discord: DiscordClient, userId: string): Promise<boolean> {
+/** Whether a user holds SUPPORT_MOD_ROLE_ID (cached per isolate for an hour); false while it is unset. */
+export async function isModerator(env: ModerationEnv, discord: DiscordClient, userId: string): Promise<boolean> {
   if (!env.DISCORD_GUILD_ID || !env.SUPPORT_MOD_ROLE_ID) return false;
   const key = `${env.DISCORD_GUILD_ID}:${env.SUPPORT_MOD_ROLE_ID}:${userId}`;
   const hit = MOD_CACHE.get(key);

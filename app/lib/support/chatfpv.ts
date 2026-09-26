@@ -64,7 +64,11 @@ export type AskContext = {product?: string; page?: string};
 
 export type ChatFpvClient = {
   draft(req: DraftRequest): Promise<DraftResponse | null>;
-  /** True once ChatFPV accepted the outcome; null on any failure (retried by the cron). */
+  /**
+   * True once ChatFPV settled the outcome: accepted it, or refused it for
+   * good (400 invalid, 404 unknown draft, 409 already decided), which a
+   * retry would never change. Null on any other failure (retried by the cron).
+   */
   outcome(req: DraftOutcomeRequest): Promise<true | null>;
   ask(message: string, context?: AskContext): Promise<ChatAnswer | null>;
 };
@@ -136,8 +140,12 @@ export function createChatFpvClient(env: ChatFpvEnv, fetcher: typeof fetch = fet
   const timeoutMs = opts.timeoutMs ?? CHATFPV_TIMEOUT_MS;
   const origin = chatFpvOrigin(env);
 
-  /** `{data}` on a 2xx (data undefined when the body is not JSON), null on any failure. */
-  async function call(what: string, id: string, path: string, body: unknown): Promise<{data: unknown} | null> {
+  /**
+   * `{data}` on a 2xx (data undefined when the body is not JSON), null on
+   * any failure. `final` lists non-2xx statuses answered as `{data:
+   * undefined, status}` instead of null.
+   */
+  async function call(what: string, id: string, path: string, body: unknown, final: number[] = []): Promise<{data: unknown; status?: number} | null> {
     if (!origin) return null;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -154,7 +162,7 @@ export function createChatFpvClient(env: ChatFpvEnv, fetcher: typeof fetch = fet
       });
       if (!res.ok) {
         console.warn('[chatfpv] call failed', what, id, res.status);
-        return null;
+        return final.includes(res.status) ? {data: undefined, status: res.status} : null;
       }
       return {data: await res.json().catch(() => undefined)};
     } catch (err) {
@@ -188,7 +196,7 @@ export function createChatFpvClient(env: ChatFpvEnv, fetcher: typeof fetch = fet
       if (!env.CHATFPV_KEY) return null;
       const finalText = req.finalText === undefined ? undefined : scrubOutbound(req.finalText) ?? '';
       const body: DraftOutcomeRequest = {...req, ...(finalText === undefined ? {} : {finalText})};
-      const res = await call('outcome', req.draftId, '/v1/draft/outcome', body);
+      const res = await call('outcome', req.draftId, '/v1/draft/outcome', body, [400, 404, 409]);
       return res === null ? null : true;
     },
 

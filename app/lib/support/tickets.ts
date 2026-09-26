@@ -611,7 +611,7 @@ export async function syncTicket(deps: Deps, ticket: Ticket, opts: {force?: bool
           createdAt: at,
         });
         if (inserted) added++;
-        if (pendingDrafts.length && scrubbed.content) pendingDrafts = await draftsReplaced(deps, pendingDrafts, m, scrubbed.content);
+        if (pendingDrafts.length && scrubbed.content) pendingDrafts = await draftsReplaced(deps, ticket, pendingDrafts, m, scrubbed.content);
         if (status === 'closed') events.push({body: 'reopened_by_team', at});
         status = status === 'waiting' ? 'waiting' : 'answered';
         closedAt = null;
