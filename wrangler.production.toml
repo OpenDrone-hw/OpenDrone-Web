@@ -46,12 +46,11 @@ PUBLIC_COMING_SOON = "1"
 SUPPORT_SHOPIFY_WRITE_ENABLED = "1"
 SUPPORT_EMAIL_NOTIFY_ENABLED = "0"
 
-# Support tickets: the ticket index and conversation copy. Before the first
-# deploy with this block: `npx wrangler d1 create opendrone-support`, paste
-# the id below, then `npx wrangler d1 migrations apply SUPPORT_DB --remote
-# --config wrangler.production.toml`. The placeholder id fails the deploy.
+# Support tickets: the ticket index and conversation copy. A new migration is
+# applied with `npx wrangler d1 migrations apply SUPPORT_DB --remote
+# --config wrangler.production.toml` before the deploy that needs it.
 [[d1_databases]]
 binding = "SUPPORT_DB"
 database_name = "opendrone-support"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "0c84d763-1dd0-47f0-9950-53cce280296f"
 migrations_dir = "migrations"
