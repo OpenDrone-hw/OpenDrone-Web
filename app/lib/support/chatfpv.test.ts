@@ -6,14 +6,20 @@ import {
   askEnabled,
   chatFpvOrigin,
   chatFpvWidgetSrc,
+  chatFpvWidgetSrcWithProduct,
   cleanCitations,
   createChatFpvClient,
   draftsEnabled,
+  dropInternalCitations,
   handleAsk,
+  handoffReasonText,
+  productHandleFromCitation,
   widgetEnabled,
   type AskResult,
   type ChatFpvEnv,
 } from './chatfpv.ts';
+import type {Catalog} from '../catalog.ts';
+import type {CatalogClient} from '../catalog-client.ts';
 import {fakeChatFpv} from './testing.ts';
 
 const ENV: ChatFpvEnv = {CHATFPV_URL: 'https://chatfpv.test', CHATFPV_KEY: 'store-key'};
@@ -138,6 +144,20 @@ describe('helpers', () => {
     assert.equal(widgetEnabled({CHATFPV_URL: 'ftp://x', CHATFPV_WIDGET_ENABLED: '1'}), false);
   });
 
+  it('warns once when drafts are switched on but the key or URL is missing', () => {
+    const calls: unknown[][] = [];
+    const original = console.warn;
+    console.warn = (...args: unknown[]) => calls.push(args);
+    try {
+      assert.equal(draftsEnabled({CHATFPV_DRAFTS_ENABLED: '1'}), false);
+      assert.equal(draftsEnabled({CHATFPV_URL: 'https://chatfpv.test', CHATFPV_DRAFTS_ENABLED: '1'}), false);
+    } finally {
+      console.warn = original;
+    }
+    assert.equal(calls.length, 2);
+    assert.match(String(calls[0]![0]), /CHATFPV_DRAFTS_ENABLED/);
+  });
+
   it('build the widget address only while the widget flag is on', () => {
     assert.equal(chatFpvWidgetSrc({...ENV, CHATFPV_WIDGET_ENABLED: '0'}, 'product', 'openfc-f4'), null);
     assert.equal(
@@ -145,6 +165,43 @@ describe('helpers', () => {
       'https://chatfpv.test/embed?mode=opendrone&product=openfc-f4&page=product',
     );
     assert.equal(chatFpvOrigin({CHATFPV_URL: 'https://chatfpv.sales-ee0.workers.dev/'}), 'https://chatfpv.sales-ee0.workers.dev');
+  });
+
+  it('overrides the widget product with the selected variant, and passes through unset or invalid src', () => {
+    const src = chatFpvWidgetSrc({...ENV, CHATFPV_WIDGET_ENABLED: '1'}, 'product', 'openesc');
+    assert.equal(chatFpvWidgetSrcWithProduct(src, 'OpenESC 30x30'), 'https://chatfpv.test/embed?mode=opendrone&product=OpenESC+30x30&page=product');
+    assert.equal(chatFpvWidgetSrcWithProduct(src, null), src);
+    assert.equal(chatFpvWidgetSrcWithProduct(null, 'OpenESC 30x30'), null);
+    assert.equal(chatFpvWidgetSrcWithProduct('not a url', 'OpenESC 30x30'), 'not a url');
+  });
+
+  it('maps a ChatFPV handoff reason code to customer text, and a raw code never reaches a customer', () => {
+    for (const code of ['order', 'refund', 'return', 'warranty', 'shipping', 'tracking', 'invoice', 'cancel', 'rma', 'where is my', 'store']) {
+      const text = handoffReasonText(code);
+      assert.ok(text.length > 0);
+      assert.notEqual(text, code);
+    }
+    assert.equal(handoffReasonText('something-new'), handoffReasonText('another-unknown'));
+  });
+
+  it('drops a citation into AGENTS.md, CLAUDE.md, production/ or a jig script, keeps everything else', () => {
+    const kept = {n: 1, title: 'OpenESC', url: 'https://opendrone.be/products/openesc', source: 'OpenDrone storefront', kind: 'product' as const};
+    const out = dropInternalCitations([
+      kept,
+      {n: 2, title: 'agents', url: 'https://github.com/OpenDrone-hw/OpenDrone-Web/blob/main/AGENTS.md', source: 'repo', kind: 'doc'},
+      {n: 3, title: 'claude', url: 'https://github.com/x/y/blob/main/CLAUDE.md', source: 'repo', kind: 'doc'},
+      {n: 4, title: 'release', url: 'https://github.com/OpenDrone-hw/OpenESC/blob/main/production/release.md', source: 'repo', kind: 'doc'},
+      {n: 5, title: 'jig', url: 'https://github.com/OpenDrone-hw/OpenESC/blob/main/tools/st-link-jig.py', source: 'repo', kind: 'doc'},
+    ]);
+    assert.deepEqual(out, [kept]);
+  });
+
+  it('reads a product handle only from a product-kind citation on the storefront', () => {
+    const product = {n: 1, title: 'OpenESC', url: 'https://opendrone.be/products/openesc-30x30', source: 's', kind: 'product' as const};
+    assert.equal(productHandleFromCitation(product), 'openesc-30x30');
+    assert.equal(productHandleFromCitation({...product, kind: 'doc'}), null);
+    assert.equal(productHandleFromCitation({...product, url: 'https://opendrone.be/support'}), null);
+    assert.equal(productHandleFromCitation({...product, url: 'not a url'}), null);
   });
 });
 
@@ -202,5 +259,120 @@ describe('POST /api/support/ask', () => {
     const down = await handleAsk(req({message: 'Does the F4 run INAV?'}), ASK, fakeChatFpv({answer: null}).client);
     assert.equal(down.status, 502);
     assert.equal((await handleAsk(req({message: 'x'}), ASK, fakeChatFpv({answer: ANSWER}).client)).status, 400);
+  });
+
+  it('answers order, refund and bulk questions from the fixed rules, never asking ChatFPV', async () => {
+    const fake = fakeChatFpv({answer: ANSWER});
+    const order = await handleAsk(req({message: 'Where is my order? I have no tracking.'}), ASK, fake.client);
+    const orderBody = (await read(order)) as Extract<AskResult, {ok: true}>;
+    assert.equal(orderBody.ok, true);
+    assert.equal(orderBody.answer.handoff, true);
+    assert.ok(orderBody.answer.reason && orderBody.answer.reason.length > 0);
+    assert.equal(orderBody.answer.url, undefined);
+
+    const bulk = await handleAsk(req({message: 'Can I get a bulk discount for my club?'}), ASK, fake.client);
+    const bulkBody = (await read(bulk)) as Extract<AskResult, {ok: true}>;
+    assert.equal(bulkBody.answer.handoff, true);
+    assert.equal(bulkBody.answer.url, '/wholesale');
+
+    assert.equal(fake.asks.length, 0, 'ChatFPV was never called for a fixed-rule question');
+  });
+
+  it('answers a preorder charge/ship timing question from /preorder and the terms, never asking ChatFPV', async () => {
+    const fake = fakeChatFpv({answer: ANSWER});
+    for (const message of ['How does the preorder work, when am I charged?', 'When will preorders ship?']) {
+      const r = await handleAsk(req({message}), ASK, fake.client);
+      const body = (await read(r)) as Extract<AskResult, {ok: true}>;
+      assert.equal(body.answer.handoff, false);
+      assert.equal(body.answer.outcome, 'answered');
+      assert.ok(body.answer.citations.some((c) => c.url === '/preorder#questions'));
+      assert.ok(body.answer.citations.some((c) => c.url === '/algemene-voorwaarden'));
+    }
+    assert.equal(fake.asks.length, 0, 'ChatFPV was never called for a preorder timing question');
+  });
+
+  it('still hands a refund on a preorder to a ticket, not the preorder info answer', async () => {
+    const fake = fakeChatFpv({answer: ANSWER});
+    const r = await handleAsk(req({message: 'I want a refund for my preorder.'}), ASK, fake.client);
+    const body = (await read(r)) as Extract<AskResult, {ok: true}>;
+    assert.equal(body.answer.handoff, true);
+  });
+
+  it('shows a low-confidence answered result as uncertain, and a confident one as not', async () => {
+    const low = await handleAsk(req({message: 'Does the F4 run INAV?'}), ASK, fakeChatFpv({answer: {...ANSWER, confidence: 0.2}}).client);
+    assert.equal(((await read(low)) as Extract<AskResult, {ok: true}>).answer.uncertain, true);
+    const high = await handleAsk(req({message: 'Does the F4 run INAV?'}), ASK, fakeChatFpv({answer: ANSWER}).client);
+    assert.equal(((await read(high)) as Extract<AskResult, {ok: true}>).answer.uncertain, undefined);
+  });
+
+  it('drops an internal-source citation from a ChatFPV answer before it reaches the customer', async () => {
+    const withInternal = {
+      ...ANSWER,
+      citations: [
+        {n: 1, title: 'ok', url: 'https://opendrone.be/openesc', source: 's', kind: 'doc' as const},
+        {n: 2, title: 'agents', url: 'https://github.com/x/y/blob/main/AGENTS.md', source: 's', kind: 'doc' as const},
+      ],
+    };
+    const r = await handleAsk(req({message: 'Does the F4 run INAV?'}), ASK, fakeChatFpv({answer: withInternal}).client);
+    const body = (await read(r)) as Extract<AskResult, {ok: true}>;
+    assert.deepEqual(body.answer.citations.map((c) => c.n), [1]);
+  });
+
+  it('adds a buy card for a product citation the catalog still carries, none for a handle it does not', async () => {
+    const catalogFixture: Catalog = {
+      schema: 1,
+      generated_at: new Date().toISOString(),
+      max_age: 60,
+      currency: 'EUR',
+      prices_include_vat: true,
+      shop_url: 'https://opendrone.be',
+      cart_url: 'https://opendrone.be/cart',
+      add_url: 'https://opendrone.be/cart/add',
+      products: [
+        {
+          handle: 'openesc',
+          title: 'OpenESC',
+          family: 'esc',
+          description: null,
+          url: 'https://opendrone.be/products/openesc',
+          images: ['https://cdn.test/openesc.jpg'],
+          rating: null,
+          variants: [
+            {
+              sku: 'OPENESC-2020',
+              title: '20x20',
+              model: '2020',
+              options: {Size: '20x20'},
+              price: 39.99,
+              compare_price: null,
+              currency: 'EUR',
+              availability: 'in_stock',
+              ship_promise: null,
+              image: null,
+              url: 'https://opendrone.be/products/openesc?Size=20x20',
+              cart_add_url: 'https://opendrone.be/cart/add?sku=OPENESC-2020&qty=1',
+            },
+          ],
+        },
+      ],
+    };
+    const catalog: CatalogClient = {get: async () => catalogFixture};
+    const withProduct = {
+      ...ANSWER,
+      citations: [{n: 1, title: 'OpenESC', url: 'https://opendrone.be/products/openesc', source: 'OpenDrone storefront', kind: 'product' as const}],
+    };
+    const found = await handleAsk(req({message: 'Which ESC should I use?'}), ASK, fakeChatFpv({answer: withProduct}).client, catalog);
+    const foundBody = (await read(found)) as Extract<AskResult, {ok: true}>;
+    assert.equal(foundBody.answer.products?.length, 1);
+    assert.equal(foundBody.answer.products?.[0]!.handle, 'openesc');
+    assert.equal(foundBody.answer.products?.[0]!.addToCartHref, 'https://opendrone.be/cart/add?sku=OPENESC-2020&qty=1');
+
+    const withUnknownProduct = {
+      ...ANSWER,
+      citations: [{n: 1, title: 'OpenMotor', url: 'https://opendrone.be/products/openmotor', source: 'OpenDrone storefront', kind: 'product' as const}],
+    };
+    const missing = await handleAsk(req({message: 'Which motor should I use?'}), ASK, fakeChatFpv({answer: withUnknownProduct}).client, catalog);
+    const missingBody = (await read(missing)) as Extract<AskResult, {ok: true}>;
+    assert.equal(missingBody.answer.products, undefined);
   });
 });

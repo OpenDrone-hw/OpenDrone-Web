@@ -7,7 +7,7 @@ import {handleAsk} from '~/lib/support/chatfpv';
  * CHATFPV_ASK_ENABLED is not "1" (app/lib/support/chatfpv.ts `handleAsk`).
  */
 export async function action({request, context}: Route.ActionArgs) {
-  return handleAsk(request, context.env);
+  return handleAsk(request, context.env, undefined, context.catalog);
 }
 
 export function loader() {
