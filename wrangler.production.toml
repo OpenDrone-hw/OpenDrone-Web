@@ -49,7 +49,7 @@ SUPPORT_EMAIL_NOTIFY_ENABLED = "0"
 # /support Ask box and the product/preorder widget. "1" turns each on.
 # CHATFPV_KEY is a Worker secret.
 CHATFPV_URL = "https://chatfpv.sales-ee0.workers.dev"
-CHATFPV_DRAFTS_ENABLED = "0"
+CHATFPV_DRAFTS_ENABLED = "1"
 CHATFPV_ASK_ENABLED = "0"
 CHATFPV_WIDGET_ENABLED = "0"
 
