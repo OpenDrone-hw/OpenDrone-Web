@@ -36,6 +36,45 @@ describe('scrubForPublic: redactions', () => {
     assert.doesNotMatch(r.content, /5390/);
   });
 
+  it('redacts real IBANs from several countries, compact or grouped', () => {
+    for (const iban of [
+      'BE68 5390 0754 7034',
+      'BE68539007547034',
+      'NL91 ABNA 0417 1643 00',
+      'DE89 3704 0044 0532 0130 00',
+      'FR14 2004 1010 0505 0001 3M02 606',
+      'GB29 NWBK 6016 1331 9268 19',
+      'gb29nwbk60161331926819',
+    ]) {
+      const r = scrubForPublic(`refund to ${iban} thanks`);
+      assert.equal(r.content, 'refund to [iban redacted] thanks', iban);
+      assert.deepEqual(r.reasons, ['iban'], iban);
+    }
+  });
+
+  it('keeps a word the IBAN match ran into', () => {
+    assert.equal(scrubForPublic('BE68 5390 0754 7034 ok').content, '[iban redacted] ok');
+  });
+
+  it('keeps FPV part names that look like an IBAN', () => {
+    for (const text of [
+      'I use a TX16S with an internal ELRS module',
+      'the RP2350B runs the flight controller',
+      'the SX1281 radio on the receiver',
+      'RP2350B and SX1281 and TX16S MkII',
+      'ES24 motors on a GB22 frame and NL18 props',
+    ]) {
+      const r = scrubForPublic(text);
+      assert.equal(r.content, text, text);
+      assert.equal(r.redactionCount, 0, text);
+    }
+  });
+
+  it('keeps an IBAN-shaped string that fails the mod-97 checksum', () => {
+    const text = 'wire to BE68 5390 0754 7035 today';
+    assert.equal(scrubForPublic(text).content, text);
+  });
+
   it('redacts BE national number (punctuated)', () => {
     const r = scrubForPublic('rijksregister 85.07.12-123.45 voor de verzekering');
     assert.match(r.content, /\[id redacted\]/);
