@@ -75,6 +75,7 @@ export function fakeDiscord(opts: {failCreate?: boolean; now?: () => number} = {
   const reactions: Array<{thread: string; message: string; emoji: string}> = [];
   const reactorMap = new Map<string, string[]>();
   let roleMembers: string[] = [];
+  const botUsers = new Set<string>();
   const lookups = {reactors: 0};
 
   function add(threadId: string, content: string, author: DiscordMessage['author'], files: OutboundFile[] = []): DiscordMessage {
@@ -149,7 +150,8 @@ export function fakeDiscord(opts: {failCreate?: boolean; now?: () => number} = {
     },
     async reactors(_thread, message) {
       lookups.reactors++;
-      return reactorMap.get(message) ?? [];
+      // Like the real client: bot accounts are dropped.
+      return (reactorMap.get(message) ?? []).filter((id) => !botUsers.has(id));
     },
     async hasRole(userId) {
       return roleMembers.includes(userId);
@@ -176,10 +178,14 @@ export function fakeDiscord(opts: {failCreate?: boolean; now?: () => number} = {
       const t = threads.get(threadId)!;
       t.messages = t.messages.filter((x) => x.id !== messageId);
     },
-    approve(message: DiscordMessage, userId: string, emoji = '✅') {
+    /** A reaction by `userId`; `bot` marks a bot account, `self` the support bot itself. */
+    approve(message: DiscordMessage, userId: string, emoji = '✅', opts: {bot?: boolean; self?: boolean} = {}) {
+      if (opts.bot || opts.self) botUsers.add(userId);
       const r = message.reactions.find((x) => x.emoji === emoji);
-      if (r) r.count += 1;
-      else message.reactions.push({emoji, count: 1, me: false});
+      if (r) {
+        r.count += 1;
+        if (opts.self) r.me = true;
+      } else message.reactions.push({emoji, count: 1, me: Boolean(opts.self)});
       reactorMap.set(message.id, [...(reactorMap.get(message.id) ?? []), userId]);
     },
     setRoleMembers(ids: string[]) {

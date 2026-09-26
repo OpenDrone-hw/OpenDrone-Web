@@ -281,6 +281,30 @@ describe('approval', {skip}, () => {
     assert.equal((await customerView(deps, ticket.ref)).length, 1);
   });
 
+  for (const mode of ['enforce', 'log', 'off']) {
+    it(`a bot-only approve reaction never sends the draft (${mode} mode)`, async () => {
+      const {deps, discord, drafts, server} = await setup({env: {SUPPORT_MODERATION_MODE: mode}});
+      // The support bot and another bot both hold the support role.
+      discord.setRoleMembers(['mod1', 'bot', 'otherbot']);
+      const ticket = await createTicket(deps, input());
+      const draft = await onlyDraft(drafts, ticket.ref);
+      const post = messageOf(discord, ticket.threadId, draft.discordMessageId!);
+
+      discord.approve(post, 'bot', '✅', {self: true});
+      clock += 10_000;
+      await syncTicket(deps, (await deps.store.getTicket(ticket.ref))!, {force: true});
+      assert.equal(discord.lookups.reactors, 0, "the bot's own reaction needs no lookup");
+      assert.equal((await customerView(deps, ticket.ref)).length, 0);
+
+      discord.approve(post, 'otherbot', '✅', {bot: true});
+      clock += 10_000;
+      await syncTicket(deps, (await deps.store.getTicket(ticket.ref))!, {force: true});
+      assert.equal((await customerView(deps, ticket.ref)).length, 0, 'a bot holding the support role approves nothing');
+      assert.equal((await drafts.pending(ticket.ref)).length, 1);
+      assert.ok(!server.calls.some((c) => c.path === '/v1/draft/outcome'));
+    });
+  }
+
   it('never approves without SUPPORT_MOD_ROLE_ID', async () => {
     const {deps, discord, drafts} = await setup({env: {SUPPORT_MOD_ROLE_ID: undefined, SUPPORT_MODERATION_MODE: 'off'}});
     const ticket = await createTicket(deps, input());
