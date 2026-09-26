@@ -178,6 +178,8 @@ declare global {
     // for /v1/draft) is a Worker secret, read on the server only.
     CHATFPV_URL?: string;
     CHATFPV_KEY?: string;
+    /** Service binding to the ChatFPV Worker ([[services]] in the wrangler configs). */
+    CHATFPV?: Fetcher;
     CHATFPV_DRAFTS_ENABLED?: string;
     CHATFPV_ASK_ENABLED?: string;
     CHATFPV_WIDGET_ENABLED?: string;

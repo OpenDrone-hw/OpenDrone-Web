@@ -61,3 +61,9 @@ binding = "SUPPORT_DB"
 database_name = "opendrone-support"
 database_id = "0c84d763-1dd0-47f0-9950-53cce280296f"
 migrations_dir = "migrations"
+
+# ChatFPV Worker, called over a service binding: Cloudflare refuses a
+# Worker's fetch to another workers.dev Worker on the same account.
+[[services]]
+binding = "CHATFPV"
+service = "chatfpv"

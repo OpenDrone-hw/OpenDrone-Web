@@ -13,6 +13,10 @@
  * Everything sent is passed through `scrubForPublic` first; callers build
  * the request without name, email, phone, order data or attachments
  * (ai-drafts.ts `draftRequest`).
+ *
+ * Calls go through the CHATFPV service binding when the Worker has one.
+ * Cloudflare refuses a Worker's fetch to another workers.dev Worker on the
+ * same account (error 1042), so the public URL only works from outside it.
  */
 import type {ChatAnswer, ChatRequest, Citation, DraftOutcomeRequest, DraftRequest, DraftResponse} from './chatfpv-contract.ts';
 import {checkRateLimit, clientIp} from '../rate-limit.ts';
@@ -20,6 +24,8 @@ import {ipBucket} from './limits.ts';
 import {scrubForPublic} from './scrubber.ts';
 
 export type ChatFpvEnv = {
+  /** Service binding to the ChatFPV Worker (wrangler [[services]]); used instead of the public fetch when set. */
+  CHATFPV?: {fetch: typeof fetch};
   CHATFPV_URL?: string;
   CHATFPV_KEY?: string;
   /** "1": ticket drafts in the Discord thread (ai-drafts.ts). */
@@ -60,7 +66,24 @@ export function chatFpvWidgetSrc(env: ChatFpvEnv, page: string, product?: string
   return u.toString();
 }
 
-export type AskContext = {product?: string; page?: string};
+/**
+ * product and page go to ChatFPV as context; clientId is sent as
+ * X-ChatFPV-Client so ChatFPV rate limits each visitor on its own instead of
+ * every visitor behind the storefront's one address.
+ */
+export type AskContext = {product?: string; page?: string; clientId?: string};
+
+/**
+ * A stable, opaque ChatFPV client id for a visitor's IP bucket: SHA-256 of
+ * the store key and the bucket, so ChatFPV never sees the address and the
+ * id is useless without the key. Null without a key.
+ */
+export async function askClientId(env: ChatFpvEnv, bucket: string): Promise<string | null> {
+  if (!env.CHATFPV_KEY) return null;
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`opendrone-ask:${env.CHATFPV_KEY}:${bucket}`));
+  const hex = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  return `od_${hex.slice(0, 32)}`;
+}
 
 export type ChatFpvClient = {
   draft(req: DraftRequest): Promise<DraftResponse | null>;
@@ -136,7 +159,9 @@ function parseAnswer(raw: unknown): ChatAnswer | null {
   };
 }
 
-export function createChatFpvClient(env: ChatFpvEnv, fetcher: typeof fetch = fetch, opts: {timeoutMs?: number} = {}): ChatFpvClient {
+export function createChatFpvClient(env: ChatFpvEnv, fetcher?: typeof fetch, opts: {timeoutMs?: number} = {}): ChatFpvClient {
+  const binding = env.CHATFPV;
+  const send: typeof fetch = fetcher ?? (binding ? (input, init) => binding.fetch(input, init) : (input, init) => fetch(input, init));
   const timeoutMs = opts.timeoutMs ?? CHATFPV_TIMEOUT_MS;
   const origin = chatFpvOrigin(env);
 
@@ -145,17 +170,25 @@ export function createChatFpvClient(env: ChatFpvEnv, fetcher: typeof fetch = fet
    * any failure. `final` lists non-2xx statuses answered as `{data:
    * undefined, status}` instead of null.
    */
-  async function call(what: string, id: string, path: string, body: unknown, final: number[] = []): Promise<{data: unknown; status?: number} | null> {
+  async function call(
+    what: string,
+    id: string,
+    path: string,
+    body: unknown,
+    final: number[] = [],
+    extra: Record<string, string> = {},
+  ): Promise<{data: unknown; status?: number} | null> {
     if (!origin) return null;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const res = await fetcher(new URL(path, origin).toString(), {
+      const res = await send(new URL(path, origin).toString(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
           ...(env.CHATFPV_KEY ? {'X-ChatFPV-Key': env.CHATFPV_KEY} : {}),
+          ...extra,
         },
         body: JSON.stringify(body),
         signal: controller.signal,
@@ -213,7 +246,8 @@ export function createChatFpvClient(env: ChatFpvEnv, fetcher: typeof fetch = fet
           ...(context.page ? {page: context.page.slice(0, 80)} : {}),
         },
       };
-      return parseAnswer((await call('ask', context.page ?? 'ask', '/v1/chat', body))?.data);
+      const extra: Record<string, string> = context.clientId && env.CHATFPV_KEY ? {'X-ChatFPV-Client': context.clientId} : {};
+      return parseAnswer((await call('ask', context.page ?? 'ask', '/v1/chat', body, [], extra))?.data);
     },
   };
 }
@@ -248,7 +282,8 @@ export async function handleAsk(request: Request, env: ChatFpvEnv, client?: Chat
   if (request.method !== 'POST' || origin === null || origin !== new URL(request.url).origin) {
     return askJson({ok: false, error: 'forbidden'}, 403);
   }
-  if (!checkRateLimit(`chatfpv:ask:${ipBucket(clientIp(request))}`, ASK_LIMIT.limit, ASK_LIMIT.windowMs).allowed) {
+  const bucket = ipBucket(clientIp(request));
+  if (!checkRateLimit(`chatfpv:ask:${bucket}`, ASK_LIMIT.limit, ASK_LIMIT.windowMs).allowed) {
     return askJson({ok: false, error: 'rate'}, 429);
   }
   let body: {message?: unknown; product?: unknown};
@@ -260,7 +295,12 @@ export async function handleAsk(request: Request, env: ChatFpvEnv, client?: Chat
   const message = typeof body.message === 'string' ? body.message.replace(/\s+/g, ' ').trim() : '';
   if (message.length < 3 || message.length > ASK_MAX) return askJson({ok: false, error: 'invalid'}, 400);
   const product = typeof body.product === 'string' && /^[\w .'-]{1,80}$/.test(body.product) ? body.product : undefined;
-  const answer = await (client ?? createChatFpvClient(env)).ask(message, {page: 'support', ...(product ? {product} : {})});
+  const clientId = await askClientId(env, bucket);
+  const answer = await (client ?? createChatFpvClient(env)).ask(message, {
+    page: 'support',
+    ...(product ? {product} : {}),
+    ...(clientId ? {clientId} : {}),
+  });
   if (!answer) return askJson({ok: false, error: 'unavailable'}, 502);
   return askJson(
     {

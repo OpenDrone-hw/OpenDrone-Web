@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import {
   ASK_LIMIT,
+  askClientId,
   askEnabled,
   chatFpvOrigin,
   chatFpvWidgetSrc,
@@ -84,6 +85,30 @@ describe('createChatFpvClient', () => {
     assert.deepEqual(s.calls[0]!.body, {message: 'Does the F4 run INAV?', mode: 'opendrone', surface: 'widget', stream: false, context: {page: 'support'}});
   });
 
+  it('sends the visitor client id on ask only with the key, and uses the service binding when bound', async () => {
+    const s = server(() => Response.json({conversationId: 'c', messageId: 'm', answer: 'Yes.', citations: [], outcome: 'answered', confidence: 0.9}));
+    await createChatFpvClient(ENV, s.fetcher).ask('Does the F4 run INAV?', {page: 'support', clientId: 'od_0123456789abcdef'});
+    assert.equal(s.calls[0]!.headers.get('X-ChatFPV-Client'), 'od_0123456789abcdef');
+    assert.equal(s.calls[0]!.headers.get('X-ChatFPV-Key'), 'store-key');
+    await createChatFpvClient({CHATFPV_URL: ENV.CHATFPV_URL}, s.fetcher).ask('Does the F4 run INAV?', {clientId: 'od_0123456789abcdef'});
+    assert.equal(s.calls[1]!.headers.get('X-ChatFPV-Client'), null);
+
+    const bound = server(() => Response.json(DRAFT));
+    const c = createChatFpvClient({...ENV, CHATFPV: {fetch: bound.fetcher}});
+    assert.equal((await c.draft({ticketRef: 'R', topic: 'other', conversation: [{role: 'customer', text: 'hi there'}]}))?.draftId, 'dr_1');
+    assert.equal(bound.calls[0]!.url, 'https://chatfpv.test/v1/draft');
+  });
+
+  it('derives an opaque, stable client id per IP bucket from the key', async () => {
+    const a = await askClientId(ENV, '203.0.113.7');
+    assert.match(a!, /^od_[0-9a-f]{32}$/);
+    assert.equal(await askClientId(ENV, '203.0.113.7'), a);
+    assert.notEqual(await askClientId(ENV, '203.0.113.8'), a);
+    assert.notEqual(await askClientId({...ENV, CHATFPV_KEY: 'other'}, '203.0.113.7'), a);
+    assert.ok(!a!.includes('203'));
+    assert.equal(await askClientId({}, '203.0.113.7'), null);
+  });
+
   it('makes no call without a URL, and no draft or outcome call without the key', async () => {
     const s = server(() => Response.json(DRAFT));
     assert.equal(await createChatFpvClient({}, s.fetcher).ask('hello there'), null);
@@ -158,6 +183,15 @@ describe('POST /api/support/ask', () => {
     assert.equal(over.status, 429);
     assert.deepEqual(await read(over), {ok: false, error: 'rate'});
     assert.equal(fake.asks.length, ASK_LIMIT.limit);
+  });
+
+  it('passes the visitor client id for the IP bucket to ChatFPV', async () => {
+    const fake = fakeChatFpv({answer: ANSWER});
+    await handleAsk(req({message: 'Does the F4 run INAV?'}, {ip: '2001:db8:9:9::1'}), ASK, fake.client);
+    await handleAsk(req({message: 'Does the F4 run INAV?'}, {ip: '2001:db8:9:9::2'}), ASK, fake.client);
+    const ids = fake.asks.map((a) => a.context?.clientId);
+    assert.match(ids[0]!, /^od_[0-9a-f]{32}$/);
+    assert.equal(ids[1], ids[0], 'one /64, one client');
   });
 
   it('answers with the text, citations and whether to hand off to a ticket', async () => {
