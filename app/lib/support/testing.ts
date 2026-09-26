@@ -4,6 +4,8 @@
  * imported by application code.
  */
 import {readdirSync, readFileSync} from 'node:fs';
+import type {AskContext, ChatFpvClient} from './chatfpv.ts';
+import type {ChatAnswer, DraftOutcomeRequest, DraftRequest, DraftResponse} from './chatfpv-contract.ts';
 import {DiscordError, type DiscordClient, type DiscordMessage, type OutboundFile} from './discord.ts';
 
 type SqliteDb = {
@@ -73,6 +75,7 @@ export function fakeDiscord(opts: {failCreate?: boolean; now?: () => number} = {
   const reactions: Array<{thread: string; message: string; emoji: string}> = [];
   const reactorMap = new Map<string, string[]>();
   let roleMembers: string[] = [];
+  const botUsers = new Set<string>();
   const lookups = {reactors: 0};
 
   function add(threadId: string, content: string, author: DiscordMessage['author'], files: OutboundFile[] = []): DiscordMessage {
@@ -147,7 +150,8 @@ export function fakeDiscord(opts: {failCreate?: boolean; now?: () => number} = {
     },
     async reactors(_thread, message) {
       lookups.reactors++;
-      return reactorMap.get(message) ?? [];
+      // Like the real client: bot accounts are dropped.
+      return (reactorMap.get(message) ?? []).filter((id) => !botUsers.has(id));
     },
     async hasRole(userId) {
       return roleMembers.includes(userId);
@@ -174,10 +178,14 @@ export function fakeDiscord(opts: {failCreate?: boolean; now?: () => number} = {
       const t = threads.get(threadId)!;
       t.messages = t.messages.filter((x) => x.id !== messageId);
     },
-    approve(message: DiscordMessage, userId: string, emoji = '✅') {
+    /** A reaction by `userId`; `bot` marks a bot account, `self` the support bot itself. */
+    approve(message: DiscordMessage, userId: string, emoji = '✅', opts: {bot?: boolean; self?: boolean} = {}) {
+      if (opts.bot || opts.self) botUsers.add(userId);
       const r = message.reactions.find((x) => x.emoji === emoji);
-      if (r) r.count += 1;
-      else message.reactions.push({emoji, count: 1, me: false});
+      if (r) {
+        r.count += 1;
+        if (opts.self) r.me = true;
+      } else message.reactions.push({emoji, count: 1, me: Boolean(opts.self)});
       reactorMap.set(message.id, [...(reactorMap.get(message.id) ?? []), userId]);
     },
     setRoleMembers(ids: string[]) {
@@ -230,4 +238,38 @@ export function fakeShopify(script: ShopifyScript) {
     return new Response('unknown', {status: 400});
   }) as unknown as typeof fetch;
   return {fetcher, writes, metafields};
+}
+
+/**
+ * A ChatFPV client that records every call. `draft` answers from `opts.draft`
+ * (default: a short grounded draft); `failOutcome` makes outcome posts fail
+ * (null), as a timeout or 5xx would.
+ */
+export function fakeChatFpv(opts: {draft?: (req: DraftRequest, n: number) => DraftResponse | null; answer?: ChatAnswer | null; failOutcome?: boolean} = {}) {
+  const drafts: DraftRequest[] = [];
+  const outcomes: DraftOutcomeRequest[] = [];
+  const asks: Array<{message: string; context?: AskContext}> = [];
+  const state = {failOutcome: opts.failOutcome ?? false};
+  const client: ChatFpvClient = {
+    async draft(req) {
+      drafts.push(req);
+      if (opts.draft) return opts.draft(req, drafts.length);
+      return {
+        draftId: `dr_${drafts.length}`,
+        draft: 'Flash the latest firmware with the configurator, then recalibrate the gyro [1].',
+        citations: [{n: 1, title: 'Flashing', url: 'https://docs.opendrone.be/flash', source: 'OpenDrone docs', kind: 'doc'}],
+        confidence: 0.82,
+        note: 'grounded in the OpenDrone docs',
+      };
+    },
+    async outcome(req) {
+      outcomes.push(req);
+      return state.failOutcome ? null : true;
+    },
+    async ask(message, context) {
+      asks.push({message, context});
+      return opts.answer ?? null;
+    },
+  };
+  return {client, drafts, outcomes, asks, state};
 }

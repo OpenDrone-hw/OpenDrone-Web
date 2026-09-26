@@ -122,7 +122,13 @@ function send(res, status, body) {
 async function discord(req, res, url, body) {
   const parts = url.pathname.split('/').filter(Boolean).slice(1);
   if (parts[0] === 'guilds' && parts[2] === 'members') {
-    return send(res, 200, url.searchParams.get('after') ? [] : [{user: {id: MODERATOR.id}, roles: [MOD_ROLE]}, {user: {id: STAFF.id}, roles: []}]);
+    const members = [{user: {id: MODERATOR.id}, roles: [MOD_ROLE]}, {user: {id: STAFF.id}, roles: []}];
+    // GET /guilds/:id/members/:user is one member (moderation.ts hasRole); without :user, the list.
+    if (parts[3]) {
+      const member = members.find((m) => m.user.id === parts[3]);
+      return member ? send(res, 200, member) : send(res, 404, {message: 'Unknown Member', code: 10007});
+    }
+    return send(res, 200, url.searchParams.get('after') ? [] : members);
   }
   if (parts[0] !== 'channels') return send(res, 404, {message: `sandbox: no route ${req.method} ${url.pathname}`});
   const id = parts[1];

@@ -1,7 +1,7 @@
 import {ServerRouter} from 'react-router';
 import {isbot} from 'isbot';
 import {renderToReadableStream} from 'react-dom/server';
-import {createContentSecurityPolicy} from '~/lib/csp';
+import {chatFpvFrameSrc, createContentSecurityPolicy} from '~/lib/csp';
 import type {EntryContext} from 'react-router';
 import type {AppLoadContext} from '~/lib/context';
 
@@ -58,6 +58,8 @@ export default async function handleRequest(
       'https://challenges.cloudflare.com',
       // YouTube build-video lightbox (WatchCard) - privacy-enhanced host.
       'https://www.youtube-nocookie.com',
+      // ChatFPV widget iframe, only while CHATFPV_WIDGET_ENABLED is "1".
+      ...chatFpvFrameSrc(context.env),
     ],
     // plausible.io receives the analytics events the Plausible script
     // (loaded with the nonce in root.tsx) posts to /api/event.

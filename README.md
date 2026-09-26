@@ -333,6 +333,67 @@ the whole cron pass).
 **Retired.** `/api/support/{start,send,poll,list,lookup,status,thread,close,notify,feedback}`
 answer `410`.
 
+### ChatFPV (AI)
+
+ChatFPV (`CHATFPV_URL`, repository incutec-org/chatfpv) answers FPV and
+OpenDrone questions with sources. Three switches in `[vars]`, each off
+unless `"1"`: `"1"` in `wrangler.toml` (staging), `"0"` in
+`wrangler.production.toml`. `CHATFPV_KEY` is a Worker secret read on the
+server only. Server calls go through the `CHATFPV` service binding to the
+`chatfpv` Worker: Cloudflare refuses a Worker's fetch to another workers.dev
+Worker on the same account (error 1042), so the public URL fails from here.
+
+| Switch | Effect when `"1"` |
+|---|---|
+| `CHATFPV_DRAFTS_ENABLED` | AI drafts in ticket threads (also needs `CHATFPV_KEY`) |
+| `CHATFPV_ASK_ENABLED` | "Ask ChatFPV (AI)" box above the `/support` form; `POST /api/support/ask` |
+| `CHATFPV_WIDGET_ENABLED` | "Ask ChatFPV (AI)" button on product pages and `/preorder`, opening `CHATFPV_URL/embed` in an iframe; the ChatFPV origin is added to the CSP `frame-src` |
+
+```mermaid
+flowchart LR
+  N[new ticket or customer follow-up<br/>topic product or other] -->|scrubbed conversation, no name, email, phone, order| D[POST /v1/draft]
+  D -->|one bot message: AI draft, sources, note, confidence| T[(ticket thread)]
+  T -->|support-role approve reaction| A[stored body + AI note + sources<br/>scrubbed, sent as OpenDrone]
+  T -->|support-role reply instead| R[outcome replaced, final text<br/>name, email, order redacted]
+  T -->|reply by anyone else| X
+  T -->|follow-up or close| X[outcome rejected]
+  A -->|outcome approved, reactor id| O[POST /v1/draft/outcome]
+  R --> O
+  X --> O
+```
+
+**Drafts in the thread.** A draft is one bot message: "AI draft by ChatFPV,
+not sent to the customer", the text, its sources, ChatFPV's note and a
+confidence. It reaches the customer only when a holder of
+`SUPPORT_MOD_ROLE_ID` reacts with the approve emoji, whatever
+`SUPPORT_MODERATION_MODE` says (`log` and `off` never send a draft; no
+role configured means no draft is ever sent). The stored text is sent, not
+the Discord message, with "This reply was drafted with AI (ChatFPV) and
+checked by the OpenDrone team." and the source links, through the same
+scrubber as every staff reply. Replying normally instead sends your own
+reply and, when you hold `SUPPORT_MOD_ROLE_ID`, tells ChatFPV it was
+replaced: your reply, with the customer's name, email and order references
+redacted, is its correction. A reply by anyone else rejects the draft and
+is never a correction. A
+customer follow-up replaces a pending draft with a new one; closing the
+ticket or deleting the draft message drops it. With no draft, the thread
+gets at most ChatFPV's one-line note. Rows live in `support_ai_drafts`
+(migration `0004`); outcomes ChatFPV did not accept are retried by the
+cron, except those it refused for good (400, 404, 409). A ChatFPV timeout (20 s) or error never blocks a ticket.
+
+**Ask box and widget.** The box answers on the page with sources and the AI
+label; "Still need help? Open a ticket" opens the form with the question
+filled in, and a question ChatFPV hands off (orders, refunds, warranty) or
+cannot ground goes to the form directly. `/support?ticket=1` skips the box.
+`POST /api/support/ask` accepts same-origin requests only, 20 an hour per
+IP (an IPv6 client by its /64, per isolate), and asks ChatFPV `/v1/chat`
+server side, so the browser never talks to ChatFPV and the CSP needs no
+`connect-src` entry. Each call carries `X-ChatFPV-Client`, a hash of the
+store key and the visitor's IP bucket, so ChatFPV limits each visitor on its
+own rather than every visitor behind the storefront's one address. A
+`FLAG_TURNSTILE="1"` on ChatFPV would refuse these calls: it expects a
+browser Turnstile token.
+
 ### Set up support
 
 One-time, per environment (the production config ships with a placeholder

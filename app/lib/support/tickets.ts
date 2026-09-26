@@ -37,6 +37,16 @@ import {
   type DiscordMessage,
   type OutboundFile,
 } from './discord.ts';
+import {
+  SYSTEM_DECIDER,
+  draftDelivered,
+  draftsRejected,
+  draftsReplaced,
+  requestDraft,
+  reviewDrafts,
+  sweepDrafts,
+  type ChatFpvDeps,
+} from './ai-drafts.ts';
 import {approveEmoji, decide, resolveMode, type ModerationEnv} from './moderation.ts';
 import {sendReplyNotice} from './notify.ts';
 import {extractFirstName, scrubForDiscord, scrubForPublic} from './scrubber.ts';
@@ -81,6 +91,8 @@ export type Deps = {
   origin: string;
   /** Background work (waitUntil); awaited inline when absent. */
   defer?: (p: Promise<unknown>) => void;
+  /** ChatFPV ticket drafts (ai-drafts.ts); wired only while CHATFPV_DRAFTS_ENABLED is "1". */
+  chatfpv?: ChatFpvDeps;
 };
 
 const TOPIC_LABEL: Record<TicketTopic, string> = {
@@ -384,6 +396,7 @@ export async function createTicket(deps: Deps, input: NewTicketInput, files: Out
   if (customerId) {
     await run(deps, () => recordOnCustomer(deps.env, customerId, shopifyEntry(deps, ticket), {tag: true}, fetcher));
   }
+  if (deps.chatfpv) await run(deps, () => requestDraft(deps, ticket, input.firmware));
   return ticket;
 }
 
@@ -432,6 +445,7 @@ export async function addCustomerReply(deps: Deps, ticket: Ticket, rawText: stri
   if (reopening && ticket.customerId) {
     await run(deps, () => recordOnCustomer(deps.env, ticket.customerId!, shopifyEntry(deps, next), {}, deps.fetcher ?? fetch));
   }
+  if (deps.chatfpv) await run(deps, () => requestDraft(deps, next));
   return {ok: true, ticket: next};
 }
 
@@ -548,6 +562,28 @@ export async function syncTicket(deps: Deps, ticket: Ticket, opts: {force?: bool
   let held = 0;
   const events: Array<{body: string; at: number}> = [];
 
+  // ChatFPV drafts (ai-drafts.ts): a draft approved by a support-role
+  // reaction goes out as an OpenDrone reply, whatever the moderation mode.
+  // Draft posts are bot messages, so the loop below skips them.
+  const review = deps.chatfpv ? await reviewDrafts(deps, ticket, recent) : null;
+  let pendingDrafts = review?.pending ?? [];
+  let closedBy: string = SYSTEM_DECIDER;
+  for (const a of review?.approved ?? []) {
+    const inserted = await deps.store.addMessage({
+      ref: ticket.ref,
+      discordId: a.draft.discordMessageId,
+      role: 'staff',
+      author: 'OpenDrone',
+      body: a.body,
+      attachments: [],
+      createdAt: now,
+    });
+    if (inserted) added++;
+    status = status === 'waiting' ? 'waiting' : 'answered';
+    lastStaffAt = Math.max(lastStaffAt ?? 0, now);
+    await draftDelivered(deps, ticket, a);
+  }
+
   for (const m of fresh) {
     const text = m.content.trim();
     const at = Date.parse(m.createdAt) || now;
@@ -575,6 +611,7 @@ export async function syncTicket(deps: Deps, ticket: Ticket, opts: {force?: bool
           createdAt: at,
         });
         if (inserted) added++;
+        if (pendingDrafts.length && scrubbed.content) pendingDrafts = await draftsReplaced(deps, ticket, pendingDrafts, m, scrubbed.content);
         if (status === 'closed') events.push({body: 'reopened_by_team', at});
         status = status === 'waiting' ? 'waiting' : 'answered';
         closedAt = null;
@@ -586,6 +623,7 @@ export async function syncTicket(deps: Deps, ticket: Ticket, opts: {force?: bool
         if (!wasClosed) {
           status = 'closed';
           closedAt = at;
+          closedBy = m.author.id;
           events.push({body: 'closed_by_team', at});
         }
       } else {
@@ -604,6 +642,8 @@ export async function syncTicket(deps: Deps, ticket: Ticket, opts: {force?: bool
     const enforce = resolveMode(deps.env) === 'enforce';
     for (const stored of await deps.store.staffMessagesSince(ticket.ref, recent[0]!.id)) {
       const live = byId.get(stored.discordId!);
+      // An approved ChatFPV draft: the stored body is what was sent, never the bot post's text.
+      if (live?.author.bot) continue;
       if (!live) {
         await deps.store.deleteMessage(stored.seq);
         events.push({body: 'reply_withdrawn', at: now});
@@ -635,6 +675,8 @@ export async function syncTicket(deps: Deps, ticket: Ticket, opts: {force?: bool
   for (const e of events) {
     await deps.store.addMessage({ref: ticket.ref, discordId: null, role: 'system', author: '', body: e.body, attachments: [], createdAt: e.at});
   }
+  if (status === 'closed' && pendingDrafts.length) await draftsRejected(deps, pendingDrafts, closedBy);
+  if (deps.chatfpv && opts.force) await sweepDrafts(deps);
   const changed = status !== ticket.status || added > 0 || events.length > 0;
   const patch = {cursor, syncedAt: now, status, closedAt, lastStaffAt, locked: lockedNow, ...(changed ? {updatedAt: now} : {})};
   await deps.store.updateTicket(ticket.ref, patch);

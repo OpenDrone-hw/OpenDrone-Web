@@ -1,4 +1,6 @@
 import {BOARD_ART_VERSION} from '~/data/board-art-version';
+import {ChatFpvWidget} from '~/components/ChatFpvWidget';
+import {chatFpvWidgetSrc, chatFpvWidgetSrcWithProduct} from '~/lib/support/chatfpv';
 import {Fragment, Suspense, useEffect, useMemo, useRef, useState} from 'react';
 import {createPortal} from 'react-dom';
 import {useAside} from '~/components/Aside';
@@ -185,7 +187,12 @@ export async function loader(args: Route.LoaderArgs) {
   // Await the critical data required to render initial state of the page
   const criticalData = await loadCriticalData(args);
 
-  return {...deferredData, ...criticalData};
+  return {
+    ...deferredData,
+    ...criticalData,
+    // ChatFPV widget iframe address; null unless CHATFPV_WIDGET_ENABLED is "1".
+    chatfpvWidget: chatFpvWidgetSrc(args.context.env, 'product', args.params.handle),
+  };
 }
 
 /**
@@ -649,12 +656,17 @@ function useChapterReveal(key: string) {
 }
 
 export default function Product() {
-  const {product, roadmapStatus} = useLoaderData<typeof loader>();
+  const {product, roadmapStatus, chatfpvWidget} = useLoaderData<typeof loader>();
   // Nothing about a planned or in-progress product is settled, so it gets
   // the concept plate instead of a product page (docs/product-status.md),
   // unless its content file says it sells (pre-order frame).
   if (roadmapStatus && isConceptFor(product.handle, roadmapStatus)) {
-    return <ConceptPlate title={product.title} status={roadmapStatus} />;
+    return (
+      <>
+        <ConceptPlate title={product.title} status={roadmapStatus} />
+        <ChatFpvWidget src={chatfpvWidget} />
+      </>
+    );
   }
   return <ProductPage />;
 }
@@ -680,6 +692,7 @@ function ProductPage() {
     recommendations,
     contributors,
     commerceHandoff,
+    chatfpvWidget,
   } = useLoaderData<typeof loader>();
   useChapterReveal(product.handle);
 
@@ -909,6 +922,14 @@ function ProductPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [catalogAxisValue]);
   const activeVariant = content.variants?.[activeTier];
+  // ChatFPV's widget context: the product title plus the selected variant
+  // (e.g. "OpenESC 30x30"), so an answer about specs matches the size the
+  // visitor is actually looking at instead of the bare handle. Computed
+  // client-side because the selected variant itself is (see
+  // `shouldRevalidate` above); overrides `product` on the loader's src,
+  // which is null while the widget flag is off.
+  const chatfpvProduct = catalogAxisValue ? `${product.title} ${variantDisplayName(product.handle, catalogAxisValue)}`.trim() : product.title;
+  const chatfpvWidgetSrcVariant = useMemo(() => chatFpvWidgetSrcWithProduct(chatfpvWidget, chatfpvProduct), [chatfpvWidget, chatfpvProduct]);
   // The SKU a buyer may see: none when the variant's SKU names a spec that
   // is not final (OPENMOTOR-2207). It stays the internal ID everywhere else.
   const shownSku = isInternalSku(product.handle, catalogAxisValue)
@@ -2821,7 +2842,7 @@ function ProductPage() {
     <div className="product-page">
       <script
         type="application/ld+json"
-         
+
         dangerouslySetInnerHTML={{__html: JSON.stringify(productJsonLd)}}
       />
       <script
@@ -2978,6 +2999,7 @@ function ProductPage() {
           />
         </details>
       ) : null}
+      <ChatFpvWidget src={chatfpvWidgetSrcVariant} />
     </div>
   );
 }

@@ -1,4 +1,6 @@
 import type {Route} from './+types/preorder';
+import {ChatFpvWidget} from '~/components/ChatFpvWidget';
+import {chatFpvWidgetSrc} from '~/lib/support/chatfpv';
 import {CreditCard, Store} from 'lucide-react';
 import {InfoHint} from '~/components/InfoHint';
 import {Link, useLoaderData} from 'react-router';
@@ -108,6 +110,8 @@ function withQuantity(href: string, quantity: number): string {
 }
 
 export async function loader({context}: Route.LoaderArgs) {
+  // ChatFPV widget iframe address; null unless CHATFPV_WIDGET_ENABLED is "1".
+  const chatfpvWidget = chatFpvWidgetSrc(context.env, 'preorder');
   const globalSoon = comingSoonFlag(context.env);
   const [catalog, statusFlags] = await Promise.all([
     context.catalog.get(),
@@ -174,6 +178,7 @@ export async function loader({context}: Route.LoaderArgs) {
     // The server's day, so the "Today" marker renders the same on hydration.
     today: new Date().toISOString().slice(0, 10),
     unavailable: catalog.campaign_counts === 'unavailable',
+    chatfpvWidget,
   };
 }
 
@@ -282,6 +287,7 @@ export default function PreorderRoute() {
           </ol>
         </section>
       ) : null}
+      <ChatFpvWidget src={data.chatfpvWidget} />
     </EditorialShell>
   );
 }

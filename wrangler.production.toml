@@ -45,6 +45,13 @@ PUBLIC_COMING_SOON = "1"
 # off until the founder's go.
 SUPPORT_SHOPIFY_WRITE_ENABLED = "1"
 SUPPORT_EMAIL_NOTIFY_ENABLED = "0"
+# ChatFPV (README "Support tickets"): AI ticket drafts in Discord, the
+# /support Ask box and the product/preorder widget. "1" turns each on.
+# CHATFPV_KEY is a Worker secret.
+CHATFPV_URL = "https://chatfpv.sales-ee0.workers.dev"
+CHATFPV_DRAFTS_ENABLED = "0"
+CHATFPV_ASK_ENABLED = "0"
+CHATFPV_WIDGET_ENABLED = "0"
 
 # Support tickets: the ticket index and conversation copy. A new migration is
 # applied with `npx wrangler d1 migrations apply SUPPORT_DB --remote
@@ -54,3 +61,9 @@ binding = "SUPPORT_DB"
 database_name = "opendrone-support"
 database_id = "0c84d763-1dd0-47f0-9950-53cce280296f"
 migrations_dir = "migrations"
+
+# ChatFPV Worker, called over a service binding: Cloudflare refuses a
+# Worker's fetch to another workers.dev Worker on the same account.
+[[services]]
+binding = "CHATFPV"
+service = "chatfpv"

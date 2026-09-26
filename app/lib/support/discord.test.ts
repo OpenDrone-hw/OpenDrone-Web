@@ -70,6 +70,19 @@ describe('Discord client', () => {
     assert.equal((calls[1]!.body as {message: {content: string}}).message.content, 'card');
   });
 
+  it('never lists a bot account as a reactor', async () => {
+    const client = createDiscordClient(
+      ENV,
+      fakeFetch([
+        [
+          'GET /api/v10/channels/9/messages/10/reactions/%E2%9C%85',
+          () => [{id: '1', bot: true}, {id: '2'}, {id: '3', bot: false}],
+        ],
+      ]),
+    );
+    assert.deepEqual(await client.reactors('9', '10', '✅'), ['2', '3']);
+  });
+
   it('never lets a relayed message ping anyone and strips bidi overrides', async () => {
     const calls: Call[] = [];
     const client = createDiscordClient(ENV, fakeFetch([['POST /api/v10/channels/9/messages', () => ({id: '10'})]], calls));
