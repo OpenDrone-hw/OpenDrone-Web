@@ -29,11 +29,12 @@ SHOPIFY_CHECKOUT_WRITE_ENABLED = "1"
 PUBLIC_COMING_SOON = "0"
 # ChatFPV (README "Support tickets"): AI ticket drafts in Discord, the
 # /support Ask box and the product/preorder widget. "1" turns each on.
+# On for staging; production keeps them off (wrangler.production.toml).
 # CHATFPV_KEY is a Worker secret.
 CHATFPV_URL = "https://chatfpv.sales-ee0.workers.dev"
-CHATFPV_DRAFTS_ENABLED = "0"
-CHATFPV_ASK_ENABLED = "0"
-CHATFPV_WIDGET_ENABLED = "0"
+CHATFPV_DRAFTS_ENABLED = "1"
+CHATFPV_ASK_ENABLED = "1"
+CHATFPV_WIDGET_ENABLED = "1"
 
 # Support tickets: the ticket index and conversation copy (README "Support").
 # Apply new migrations with `npx wrangler d1 migrations apply SUPPORT_DB
