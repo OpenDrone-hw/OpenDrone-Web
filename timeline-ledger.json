@@ -1,18 +1,18 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-25T10:13:04.928Z",
+  "updatedAt": "2026-09-26T09:52:51.920Z",
   "repos": {
     "OpenESC-20x20": {
       "createdAt": "2026-03-09",
-      "status": "alpha",
-      "statusSince": "2026-08-15",
+      "status": "beta",
+      "statusSince": "2026-09-26",
       "archived": false,
       "releases": 3
     },
     "OpenESC-30x30": {
       "createdAt": "2026-03-14",
-      "status": "alpha",
-      "statusSince": "2026-08-15",
+      "status": "beta",
+      "statusSince": "2026-09-26",
       "archived": false,
       "releases": 3
     },
@@ -32,8 +32,8 @@
     },
     "OpenFC-Lite-Mini": {
       "createdAt": "2026-03-26",
-      "status": "alpha",
-      "statusSince": "2026-08-15",
+      "status": "beta",
+      "statusSince": "2026-09-26",
       "archived": false,
       "releases": 4
     },
@@ -53,8 +53,8 @@
     },
     "OpenFC-Lite": {
       "createdAt": "2026-06-03",
-      "status": "alpha",
-      "statusSince": "2026-08-15",
+      "status": "beta",
+      "statusSince": "2026-09-26",
       "archived": false,
       "releases": 3
     },
@@ -608,6 +608,46 @@
       "url": "https://github.com/OpenDrone-hw/OpenRX-Mono",
       "archived": false,
       "observed": "2026-09-02"
+    },
+    {
+      "id": "status:OpenESC-20x20:beta:2026-09-26",
+      "kind": "status",
+      "repo": "OpenESC-20x20",
+      "date": "2026-09-26",
+      "status": "beta",
+      "from": "alpha",
+      "url": "https://github.com/OpenDrone-hw/OpenESC-20x20",
+      "observed": "2026-09-26"
+    },
+    {
+      "id": "status:OpenESC-30x30:beta:2026-09-26",
+      "kind": "status",
+      "repo": "OpenESC-30x30",
+      "date": "2026-09-26",
+      "status": "beta",
+      "from": "alpha",
+      "url": "https://github.com/OpenDrone-hw/OpenESC-30x30",
+      "observed": "2026-09-26"
+    },
+    {
+      "id": "status:OpenFC-Lite-Mini:beta:2026-09-26",
+      "kind": "status",
+      "repo": "OpenFC-Lite-Mini",
+      "date": "2026-09-26",
+      "status": "beta",
+      "from": "alpha",
+      "url": "https://github.com/OpenDrone-hw/OpenFC-Lite-Mini",
+      "observed": "2026-09-26"
+    },
+    {
+      "id": "status:OpenFC-Lite:beta:2026-09-26",
+      "kind": "status",
+      "repo": "OpenFC-Lite",
+      "date": "2026-09-26",
+      "status": "beta",
+      "from": "alpha",
+      "url": "https://github.com/OpenDrone-hw/OpenFC-Lite",
+      "observed": "2026-09-26"
     }
   ]
 }
