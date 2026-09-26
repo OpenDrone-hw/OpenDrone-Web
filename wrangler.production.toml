@@ -23,9 +23,10 @@ routes = [
 [assets]
 directory = "dist/client"
 
-# Reconcile the preorder price steps every five minutes, in case Shopify
-# never delivered an orders/paid webhook. server.ts `scheduled` returns at
-# once unless SHOPIFY_PRICE_TIER_WRITE_ENABLED is "1".
+# Every five minutes, server.ts `scheduled` reconciles the preorder price
+# steps (only while SHOPIFY_PRICE_TIER_WRITE_ENABLED is "1"), in case Shopify
+# never delivered an orders/paid webhook, and runs the support ticket jobs
+# (only once SUPPORT_DB and the Discord secrets exist).
 [triggers]
 crons = ["*/5 * * * *"]
 
@@ -39,3 +40,17 @@ crons = ["*/5 * * * *"]
 # the price-step switch are Worker secrets.
 SHOPIFY_CHECKOUT_WRITE_ENABLED = "0"
 PUBLIC_COMING_SOON = "1"
+# Support tickets (README "Support"). Shopify writes: the `support` tag and
+# the `support.tickets` metafield on the matched customer. Reply emails stay
+# off until the founder's go.
+SUPPORT_SHOPIFY_WRITE_ENABLED = "1"
+SUPPORT_EMAIL_NOTIFY_ENABLED = "0"
+
+# Support tickets: the ticket index and conversation copy. A new migration is
+# applied with `npx wrangler d1 migrations apply SUPPORT_DB --remote
+# --config wrangler.production.toml` before the deploy that needs it.
+[[d1_databases]]
+binding = "SUPPORT_DB"
+database_name = "opendrone-support"
+database_id = "0c84d763-1dd0-47f0-9950-53cce280296f"
+migrations_dir = "migrations"

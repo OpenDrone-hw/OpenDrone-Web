@@ -1,4 +1,5 @@
 import type {Catalog, CatalogProduct, CatalogVariant} from './catalog.ts';
+import {devOverride} from './support/dev-overrides.ts';
 
 const DEFAULT_API_VERSION = '2026-07';
 const CART_PATH = '/api/shopify/cart';
@@ -183,6 +184,13 @@ function required(env: StorefrontEnv, key: keyof StorefrontEnv): string {
 }
 
 export function storefrontEndpoint(env: StorefrontEnv): string {
+  // The support sandbox (`npm run support:sandbox`) answers on the dev
+  // server only; a build folds the DEV flag to false and drops this.
+  const sandbox =
+    typeof import.meta.env !== 'undefined' && import.meta.env.DEV
+      ? devOverride((env as {SUPPORT_DEV_STOREFRONT_URL?: string}).SUPPORT_DEV_STOREFRONT_URL)
+      : null;
+  if (sandbox) return sandbox;
   const host = required(env, 'SHOPIFY_STORE_DOMAIN')
     .replace(/^https?:\/\//, '')
     .replace(/\/+$/, '');

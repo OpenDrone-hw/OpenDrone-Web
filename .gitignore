@@ -9,6 +9,7 @@ drafts/
 .env.*.local
 .dev.vars
 .wrangler/
+.vite-cache/
 .cache/
 dist/
 build/

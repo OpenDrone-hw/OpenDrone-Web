@@ -46,15 +46,15 @@ const SOCIAL_LINKS: Array<{href: string; copy: string}> = [
 
 /**
  * Customer service: the pages a buyer looks for before and after an order,
- * in the order shops usually list them. Contact lands on the email block of
- * the support page.
+ * in the order shops usually list them. Support opens a ticket; "Find my
+ * ticket" brings back an earlier one. Email is for sales only (/support#sales).
  */
 const HELP_LINKS: Array<{to: string; copy: string}> = [
   {to: '/support', copy: 'nav_support'},
   {to: '/shipping', copy: 'nav_shipping'},
   {to: '/herroepingsrecht', copy: 'nav_returns'},
   {to: '/warranty', copy: 'nav_warranty'},
-  {to: '/support#contact', copy: 'nav_contact'},
+  {to: '/support/find', copy: 'nav_find_ticket'},
 ];
 
 const COMPANY_LINKS: Array<{to: string; copy: string}> = [

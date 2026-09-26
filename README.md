@@ -8,8 +8,9 @@ the OpenStack bundle.
 A React Router 7 app, built with the Cloudflare Vite plugin, running as a
 Cloudflare Worker. Shopify owns the catalog, prices, checkout, orders and
 newsletter consent; this repository owns the pages, the preorder campaign
-logic and the gates that open or close checkout. Support is the public Discord
-invite and company email.
+logic and the gates that open or close checkout. Support runs on tickets:
+the customer writes on the site, the team answers in Discord. Email is for
+sales only.
 
 Selling entity: Incutec BV. OpenDrone is the community project and product
 brand. This repository is MIT; the hardware repositories are CERN-OHL-S.
@@ -45,6 +46,8 @@ catalog policy or tax configuration is missing. Node 22 (what CI uses).
 | `npm run build` | the production build into `dist/` |
 | `npm run preview` | build, then serve `dist/` locally with `wrangler dev` and the production Worker config |
 | `npm run check:registry` | the product registry's data invariants (CI runs it; lint and tsc never evaluate them) |
+| `npm run db:migrate:local` | apply `migrations/` to the local D1 the dev server uses |
+| `npm run support:sandbox`, `support:staff` | fake Discord and Shopify for local ticket runs, and the team's side of them ("Test support locally") |
 | `npm run check:status` | fails when a static roadmap status is ahead of its repo's `status-*` topic |
 | `npm run gen:board-art` | export every PCB as layered SVG and copper rasters (needs KiCad and cwebp) |
 | `npm run gen:schematics` | render the schematic sheets from the board checkouts |
@@ -79,7 +82,8 @@ app/
 content/                   editable copy, product chapters, preorders, posts, theme tokens, goals, votes
 public/                    models (GLB), board art, schematics, logos
 scripts/                   board art export, hero build, sync, audit and order scripts
-server.ts                  Worker entry: fetch, and the five-minute scheduled reconcile
+server.ts                  Worker entry: fetch, and the five-minute scheduled jobs
+migrations/                D1 schema of the support ticket store
 studio/                    the dev-only Vite plugin (the studio's write endpoint)
 test/fixtures/catalog.json the catalog contract the mapper tests read
 docs/                      the deep dives listed above
@@ -190,9 +194,7 @@ with `timeline-ledger.json` on this repository's unprotected `data` branch,
 appended daily by `.github/workflows/timeline-ledger.yml` from releases, new
 repos and `status-*` flips across the public OpenDrone-hw repositories.
 
-**Support.** `/support` links to the configured Discord invite
-(`DISCORD_SUPPORT_INVITE`) and the `mailto:` company address. The retired
-`/api/support/*` surface returns `410` at the Worker boundary.
+**Support.** See "Support tickets" below.
 
 **Trade.** `/wholesale` takes quote requests from shops in the EU27 and the
 United States for the whole range, outside the Shopify cart, without creating
@@ -242,9 +244,153 @@ producer (EPR) registration numbers per EU country from
 | `/open-source`, `/production`, `/firmware-partners` | content pages |
 | `/doc/<sku>` | per-SKU EU Declaration of Conformity page |
 | `/learn` | draft-gated, noindex knowledge pages |
-| `/contact` | redirects to `/support`; `/account/*` sends visitors to the support contacts |
+| `/contact` | redirects to `/support`; `/account/support` goes to `/support/find`, other `/account/*` to the Shopify account |
 | `robots.txt`, `sitemap.xml`, `security.txt`, `healthz`, `llms.txt`, `products.json` | generated live from the catalog |
 | `/blog*`, `/releases*`, `/contribute`, `/incutec` | 301 stubs |
+
+## Support tickets
+
+Every non-sales question goes through a ticket. The customer opens and
+follows it on the site; the team answers in Discord; Shopify's customer
+record is the CRM view. No Discord account is needed to open a ticket.
+
+```mermaid
+flowchart LR
+  C[Customer] -->|/support form, Turnstile| W[Worker]
+  W -->|private thread per ticket, staff card with orders| D[(Discord support channel)]
+  T[Team] -->|reply in the thread| D
+  W -->|reads the thread: ticket page, every 5 min cron| D
+  W -->|index, status, conversation copy| DB[(D1 SUPPORT_DB)]
+  W -->|verify order for email, then tag support, support.tickets metafield| S[(Shopify)]
+  W -->|ticket page, resume link| C
+```
+
+| Piece | Where | Does |
+|---|---|---|
+| Front door | `/support` (`app/routes/support.tsx`) | topic (order, product, warranty, other), the fields that topic needs, attachments, Turnstile; tickets this browser opened; find, community and sales links |
+| Ticket page | `/support/t/<ref>` | status, conversation, reply with attachments, mark solved, the private link (copy, replace); refreshes every 8 s while visible |
+| Way back | `/support/resume?t=<token>`, `/support/find` | an HMAC-signed link (90 days, per ticket link version); or the email plus the ticket number (that ticket), or plus an order number Shopify confirms for that email (the tickets about that order; 8 wrong order numbers per email, from any IP, stop that route until one drains every 6 hours) |
+| Rules | `app/lib/support/tickets.ts` | create, relay both ways, status, find, scheduled jobs |
+| Discord | `app/lib/support/discord.ts` | REST only; private thread (text channel) or post (forum channel) per ticket |
+| Shopify | `app/lib/support/shopify.ts` | order ownership check, exact-email customer match, `support` tag and `support.tickets` metafield |
+| Safety | `scrubber.ts`, `moderation.ts`, `uploads.ts`, `tokens.ts`, `limits.ts` | scrub both directions, customer text escaped in Discord, optional approval gate, 5 files of 8 MB (24 MB total; images, video and PDFs checked by content in the browser and the Worker, programs refused under any name), signed cookie and links, rate limits (creating and finding counted in D1 per IP, an IPv6 client by its /64, then per IP plus email) |
+| Jobs | `server.ts` `scheduled`, `POST /api/support/cleanup` | sync open tickets, reply notices when enabled, close answered tickets after 30 silent days and any other after 90 idle days, delete tickets 24 months after closing |
+
+**Identity.** The email on a ticket is a claim. An order number that
+Shopify confirms for that email makes it a match, not proof: order numbers
+are sequential and printed on shipping labels. On a match the ticket is
+linked to the Shopify customer, the staff card says **email and order
+number match (not proof of identity)**, shows the order history and earlier
+tickets (those opened without a matching order marked **email not
+verified**), and the customer record gets the `support` tag and the ticket
+in `support.tickets`. Change an address or refund only after a reply from
+the email on the Shopify order. Without a match the card says **email not
+verified** and shows none of that; ask for the order number before sharing
+order details.
+
+**For the team, in the ticket thread.** The first message is the staff card:
+reference, topic, first name, whether the email and order number match,
+and on a match the order with its preorder batch and recent orders. Customer
+messages arrive as a quote under "Name · customer", with markdown escaped
+and masked links shown as their real address. The email and the Shopify
+admin link go to `DISCORD_STAFF_METADATA_CHANNEL_ID` when set.
+
+| In the thread | Effect |
+|---|---|
+| a message | relayed to the customer (first name only, emails, phone numbers, IBANs, cards, tokens and Discord mentions redacted); status Answered |
+| `// ...` | internal note, never relayed |
+| `!waiting` | status Waiting on you |
+| `!answered` | status Answered |
+| `!close` | Closed; a customer reply reopens it |
+| `!open` | Open again |
+| locking or deleting the thread | Closed and locked: the customer is told to open a new ticket |
+| editing or deleting a relayed reply | the customer's page follows (in enforce mode an edited reply is withdrawn; post it again). Only the newest 100 messages of a thread are re-checked; for an older reply, post a correction |
+
+Messages are handled in thread order, once each. With
+`SUPPORT_MODERATION_MODE=enforce` a reply reaches the customer only after a
+holder of `SUPPORT_MOD_ROLE_ID` reacts ✅; the bot marks a held reply ⏳,
+and later messages and commands wait behind it until it is approved.
+Removing the ✅ after a reply was relayed does not withdraw it: delete the
+message instead. The Worker reads reactors only when a reply's ✅ count
+changes, and follows Discord's rate-limit headers: a wait up to 3 s is
+waited out once, a longer one ends that sync until the next pass.
+
+**Status.** Open (the team is up), Answered, Waiting on you, Closed.
+
+**Email.** Replies are not emailed while `SUPPORT_EMAIL_NOTIFY_ENABLED` is
+not `1`; the ticket page and the private link carry the conversation.
+Turned on, the cron sends one "new reply" mail per unseen reply, with a
+fresh link and no message content.
+
+**Retention.** Tickets are deleted 24 months after closing: the entry in the
+customer's `support.tickets` metafield (a ticket waits while that fails),
+the Discord thread, the staff-metadata post and the D1 rows. Rate counters
+hold keyed hashes, never an IP or email, and go after a day (the per-email
+order-number misses once drained, at most two days). `POST /api/support/cleanup` with `Authorization: Bearer
+$SUPPORT_CLEANUP_SECRET` runs it by hand (`?dry=1` lists, `?jobs=1` runs
+the whole cron pass).
+
+**Retired.** `/api/support/{start,send,poll,list,lookup,status,thread,close,notify,feedback}`
+answer `410`.
+
+### Set up support
+
+One-time, per environment (the production config ships with a placeholder
+database id that fails the deploy until it is replaced):
+
+```sh
+npx wrangler d1 create opendrone-support           # production; staging: opendrone-support-preview
+# paste the printed database_id into wrangler.production.toml (wrangler.toml for staging)
+npx wrangler d1 migrations apply SUPPORT_DB --remote --config wrangler.production.toml
+for s in DISCORD_BOT_TOKEN DISCORD_GUILD_ID DISCORD_SUPPORT_CHANNEL_ID DISCORD_STAFF_METADATA_CHANNEL_ID \
+         SUPPORT_MOD_ROLE_ID SUPPORT_MODERATION_MODE SUPPORT_SESSION_SECRET SUPPORT_CLEANUP_SECRET \
+         TURNSTILE_SITE_KEY TURNSTILE_SECRET_KEY; do
+  npx wrangler secret put "$s" --config wrangler.production.toml
+done
+```
+
+| System | Setting |
+|---|---|
+| Discord bot | in the guild; on the support channel: View Channel, Send Messages, Send Messages in Threads, Create Private Threads, Manage Threads, Read Message History, Attach Files, Add Reactions |
+| Discord channel | `DISCORD_SUPPORT_CHANNEL_ID` a text channel (private threads) or a forum only staff can see |
+| Shopify | Admin token scopes `read_customers`, `write_customers`, `read_orders`; a customer metafield definition `support.tickets` (JSON) pins the list on the customer page |
+| Staging | shares the Shopify store: leave `SUPPORT_SHOPIFY_WRITE_ENABLED` unset there and point its Discord secrets at a test channel |
+
+New migrations in `migrations/` are applied the same way before the deploy
+that needs them.
+
+### Test support locally
+
+A sandbox stands in for Discord and the Shopify Admin API, in memory, so a
+ticket runs end to end without posting to Discord or writing to Shopify.
+Each worktree gets its own local D1 (`.wrangler/`), so parallel testers pick
+their own two ports.
+
+```sh
+npm run support:sandbox -- --port 5196 --dev-port 5195 --write-env          # terminal 1
+VITE_CACHE_DIR=.vite-cache npm run dev -- --port 5195 --strictPort           # terminal 2
+open http://localhost:5195/support                                           # jan@example.com, order #1042
+SUPPORT_SANDBOX_PORT=5196 npm run support:staff -- reply OD-XXXX-XXXX "Hi"   # act as the team
+```
+
+| Step | Does |
+|---|---|
+| `support:sandbox` | applies `migrations/` to the local D1, writes `.env.local` (`--write-env`, else prints the lines), serves the fake APIs; `--moderation enforce` holds replies until approved |
+| `.env.local` | `SUPPORT_DEV_DISCORD_API`, `SUPPORT_DEV_SHOPIFY_ADMIN_URL`, `SUPPORT_DEV_STOREFRONT_URL` (localhost only), sandbox Discord ids, a sandbox signing secret, Cloudflare's test Turnstile key with the dev-only skip. Restart the dev server after changing it; delete it when done |
+| `VITE_CACHE_DIR=.vite-cache` | a private Vite cache; worktrees sharing `node_modules` otherwise share `node_modules/.vite` and serve each other stale modules |
+| `support:staff -- <command> <ref> [text]` | `reply`, `note` (`//`), `waiting`, `close`, `open`, `lock`, `approve` (moderator ✅ on the last staff message), `edit [id] text`, `delete [id]` (the last or given staff message), `state` (threads, metadata posts, Shopify writes as JSON) |
+
+The fake Shopify knows one customer, `jan@example.com`, with order `#1042`
+(preorder batch 2): that email with that order is verified, anything else
+is not. The fake team member is "Sam Support". `.env.local` carries a dummy
+`SHOPIFY_ADMIN_API_TOKEN`, `SHOPIFY_STORE_DOMAIN=support-sandbox.invalid` and
+`SUPPORT_DEV_STOREFRONT_URL` (an empty catalogue from the sandbox), so no
+request reaches the real store; that dev server shows no products. Rate limits stay
+on and live in the local D1: six tickets an hour and ten find attempts an
+hour per IP; to reset, stop both, `rm -rf .wrangler/state`, and start them again. The overrides work on the dev server only:
+`app/lib/support/dev-overrides.ts` needs Vite's `DEV` flag, which a build
+folds to `false`, and `dev-overrides.test.ts` checks a built Worker holds
+no trace of them.
 
 ## The studio
 
@@ -294,7 +440,9 @@ the client bundle; tokens and the SKU policy never do.
 | Shop gates | `PUBLIC_COMING_SOON`, `SHOPIFY_CHECKOUT_WRITE_ENABLED` | `[vars]` in the wrangler config |
 | Storefront | `SHOPIFY_STORE_DOMAIN`, `SHOPIFY_STOREFRONT_TOKEN`, `SHOPIFY_STOREFRONT_API_VERSION`, `SHOPIFY_CHECKOUT_DOMAIN`, `SHOPIFY_PRICES_INCLUDE_VAT`, `SHOPIFY_PREVIEW_POLICY_JSON`, `SHOPIFY_CUSTOMER_ACCOUNT_URL` | Worker secrets |
 | Admin | `SHOPIFY_ADMIN_API_TOKEN`, `SHOPIFY_ADMIN_API_VERSION`, `SHOPIFY_PRICE_TIER_WRITE_ENABLED`, `SHOPIFY_WEBHOOK_SECRET` | Worker secrets |
-| Mail and support | `SHOPIFY_NEWSLETTER_WRITE_ENABLED`, `RESEND_API_KEY`, `SUPPORT_FROM_EMAIL`, `TURNSTILE_*`, `DISCORD_SUPPORT_INVITE`, `PUBLIC_DISCORD_INVITE`, `PUBLIC_COMPANY_*` | Worker secrets or vars |
+| Mail | `SHOPIFY_NEWSLETTER_WRITE_ENABLED`, `RESEND_API_KEY`, `SUPPORT_FROM_EMAIL`, `TURNSTILE_*`, `DISCORD_SUPPORT_INVITE`, `PUBLIC_DISCORD_INVITE`, `PUBLIC_COMPANY_*` | Worker secrets or vars |
+| Support tickets | `SUPPORT_DB` (D1 binding), `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID`, `DISCORD_SUPPORT_CHANNEL_ID`, `DISCORD_STAFF_METADATA_CHANNEL_ID`, `SUPPORT_MOD_ROLE_ID`, `SUPPORT_MODERATION_MODE`, `SUPPORT_SESSION_SECRET`, `SUPPORT_CLEANUP_SECRET` | binding in the wrangler config, the rest Worker secrets |
+| Support switches | `SUPPORT_SHOPIFY_WRITE_ENABLED`, `SUPPORT_EMAIL_NOTIFY_ENABLED` | `[vars]` in `wrangler.production.toml` |
 | Roadmap | `GITHUB_STATUS_TOKEN` | Worker secret |
 | Staging only | `STAGING_PASSWORD` | Worker secret |
 
@@ -430,7 +578,11 @@ Shopify admin.
 - Headers (`app/entry.server.tsx`): nonce-based CSP, HSTS with preload,
   `X-Frame-Options: DENY`, nosniff, strict referrer policy, restrictive
   Permissions-Policy, COOP and CORP.
-- Rate limits: a per-isolate sliding window on every public POST.
+- Rate limits: a per-isolate sliding window on every public POST; support
+  also caps new tickets per email per day in D1.
+- Support: Turnstile and a same-origin check on every ticket POST, HMAC-signed
+  resume links and cookie, attachments checked by type, extension and size,
+  both relay directions scrubbed, no message content or email in logs.
 - Commerce credentials are server-only Worker secrets. `.env` is gitignored;
   never expose tokens or the SKU policy in client data. Rotate the session
   secret, the Resend key and the Turnstile secret annually or on suspicion.

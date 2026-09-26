@@ -19,6 +19,6 @@ The Dutch version prevails in case of conflict, except toward consumers, for who
 
 ### How to make a warranty claim
 
-Email [contact@opendrone.be](mailto:contact@opendrone.be) with your order number, a description of the defect and photos or a video of the issue. We acknowledge within 5 business days and coordinate return for inspection, repair or replacement where needed. Return shipping, repair and replacement under the statutory guarantee are free of charge for you.
+Open a warranty ticket at [opendrone.be/support](/support?topic=warranty) with your order number, a description of the defect and photos or a video of the issue. We acknowledge within 5 business days and coordinate return for inspection, repair or replacement where needed. Return shipping, repair and replacement under the statutory guarantee are free of charge for you.
 
 This page does not replace your rights as a consumer. See also [Article 9 of our General Terms and Conditions](/en/algemene-voorwaarden#art-9).

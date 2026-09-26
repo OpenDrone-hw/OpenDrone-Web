@@ -27,3 +27,13 @@ directory = "dist/client"
 [vars]
 SHOPIFY_CHECKOUT_WRITE_ENABLED = "1"
 PUBLIC_COMING_SOON = "0"
+
+# Support tickets: the ticket index and conversation copy (README "Support").
+# Apply new migrations with `npx wrangler d1 migrations apply SUPPORT_DB
+# --remote --config wrangler.toml`. Local dev uses a local copy of
+# this database under .wrangler/ (`npm run db:migrate:local`).
+[[d1_databases]]
+binding = "SUPPORT_DB"
+database_name = "opendrone-support-preview"
+database_id = "3ef6d8ce-e1f4-4d38-8306-c9afc0418b6d"
+migrations_dir = "migrations"

@@ -73,6 +73,12 @@ const KNOWN: CookieEntry[] = [
     nl: 'Onthoudt uw NL/FR/EN-voorkeur voor juridische pagina\u2019s.',
     fr: 'M\u00e9morise votre pr\u00e9f\u00e9rence linguistique pour les pages l\u00e9gales.',
   },
+  {
+    name: 'od_support',
+    en: 'Remembers which support tickets this browser may open. Set only when you open or find a ticket.',
+    nl: 'Onthoudt welke supporttickets deze browser mag openen. Enkel geplaatst wanneer u een ticket opent of terugvindt.',
+    fr: 'Retient les tickets de support que ce navigateur peut ouvrir. Plac\u00e9 uniquement lorsque vous ouvrez ou retrouvez un ticket.',
+  },
 ];
 
 const STRINGS = {

@@ -19,6 +19,6 @@ La version néerlandaise prévaut en cas de contradiction, sauf à l’égard de
 
 ### Comment introduire une réclamation de garantie
 
-Envoyez un courriel à [contact@opendrone.be](mailto:contact@opendrone.be) avec votre numéro de commande, une description du défaut et des photos ou une vidéo du problème. Nous accusons réception dans les 5 jours ouvrables et coordonnons le retour pour inspection, réparation ou remplacement si nécessaire. Le renvoi, la réparation et le remplacement au titre de la garantie légale sont gratuits pour vous.
+Ouvrez un ticket de garantie sur [opendrone.be/support](/support?topic=warranty) avec votre numéro de commande, une description du défaut et des photos ou une vidéo du problème. Nous accusons réception dans les 5 jours ouvrables et coordonnons le retour pour inspection, réparation ou remplacement si nécessaire. Le renvoi, la réparation et le remplacement au titre de la garantie légale sont gratuits pour vous.
 
 Cette page ne remplace pas vos droits en tant que consommateur. Voir également [l’article 9 de nos Conditions Générales de Vente](/fr/algemene-voorwaarden#art-9).

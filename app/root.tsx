@@ -366,7 +366,12 @@ export function Layout({children}: {children?: React.ReactNode}) {
       </head>
       <body className="bg-[var(--color-bg)] text-[var(--color-text)] min-h-screen flex flex-col">
         {children}
-        <ScrollRestoration nonce={nonce} />
+        {/* /support never restores an old position: Back after opening a
+            ticket would otherwise land at the bottom, where Submit was. */}
+        <ScrollRestoration
+          nonce={nonce}
+          getKey={(location) => (location.pathname === '/support' ? `/support:${Date.now()}` : location.key)}
+        />
         <Scripts nonce={nonce} />
       </body>
     </html>
