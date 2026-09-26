@@ -4,7 +4,7 @@
  * imported by application code.
  */
 import {readdirSync, readFileSync} from 'node:fs';
-import type {ChatFpvClient} from './chatfpv.ts';
+import type {AskContext, ChatFpvClient} from './chatfpv.ts';
 import type {ChatAnswer, DraftOutcomeRequest, DraftRequest, DraftResponse} from './chatfpv-contract.ts';
 import {DiscordError, type DiscordClient, type DiscordMessage, type OutboundFile} from './discord.ts';
 
@@ -248,7 +248,7 @@ export function fakeShopify(script: ShopifyScript) {
 export function fakeChatFpv(opts: {draft?: (req: DraftRequest, n: number) => DraftResponse | null; answer?: ChatAnswer | null; failOutcome?: boolean} = {}) {
   const drafts: DraftRequest[] = [];
   const outcomes: DraftOutcomeRequest[] = [];
-  const asks: Array<{message: string; context: unknown}> = [];
+  const asks: Array<{message: string; context?: AskContext}> = [];
   const state = {failOutcome: opts.failOutcome ?? false};
   const client: ChatFpvClient = {
     async draft(req) {

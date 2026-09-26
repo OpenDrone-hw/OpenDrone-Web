@@ -337,8 +337,11 @@ answer `410`.
 
 ChatFPV (`CHATFPV_URL`, repository incutec-org/chatfpv) answers FPV and
 OpenDrone questions with sources. Three switches in `[vars]`, each off
-unless `"1"`, all `"0"` in both wrangler files; `CHATFPV_KEY` is a Worker
-secret read on the server only.
+unless `"1"`: `"1"` in `wrangler.toml` (staging), `"0"` in
+`wrangler.production.toml`. `CHATFPV_KEY` is a Worker secret read on the
+server only. Server calls go through the `CHATFPV` service binding to the
+`chatfpv` Worker: Cloudflare refuses a Worker's fetch to another workers.dev
+Worker on the same account (error 1042), so the public URL fails from here.
 
 | Switch | Effect when `"1"` |
 |---|---|
@@ -385,7 +388,11 @@ cannot ground goes to the form directly. `/support?ticket=1` skips the box.
 `POST /api/support/ask` accepts same-origin requests only, 20 an hour per
 IP (an IPv6 client by its /64, per isolate), and asks ChatFPV `/v1/chat`
 server side, so the browser never talks to ChatFPV and the CSP needs no
-`connect-src` entry.
+`connect-src` entry. Each call carries `X-ChatFPV-Client`, a hash of the
+store key and the visitor's IP bucket, so ChatFPV limits each visitor on its
+own rather than every visitor behind the storefront's one address. A
+`FLAG_TURNSTILE="1"` on ChatFPV would refuse these calls: it expects a
+browser Turnstile token.
 
 ### Set up support
 
