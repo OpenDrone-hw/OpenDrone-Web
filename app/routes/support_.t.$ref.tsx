@@ -25,7 +25,7 @@ import {
   freshResumeUrl,
   publicMessage,
   publicTicket,
-  syncTicket,
+  syncOrStored,
   type PublicMessage,
   type PublicTicket,
 } from '~/lib/support/tickets';
@@ -62,7 +62,7 @@ export async function loader({request, params, context}: Route.LoaderArgs) {
   const deps = supportDeps(env, originOf(request), context.waitUntil);
   const {ticket} = await authorizedTicket(deps, request, ref);
   if (!ticket) return data<Loaded>({found: false}, {status: 404, headers: NO_STORE});
-  const synced = (await syncTicket(deps, ticket)).ticket;
+  const synced = await syncOrStored(deps, ticket);
   await deps.store.updateTicket(ref, {customerSeenAt: Date.now()});
   const messages = await deps.store.messages(ref);
   return data<Loaded>(

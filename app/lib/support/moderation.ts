@@ -10,7 +10,7 @@
  *
  * Unset mode means enforce when SUPPORT_MOD_ROLE_ID is set and log when it
  * is not: an empty allowlist must never silently swallow every reply.
- * Moderator ids are cached per isolate for an hour.
+ * Whether a reactor holds the role is cached per isolate for an hour.
  */
 import type {DiscordClient, DiscordMessage} from './discord.ts';
 
@@ -24,7 +24,7 @@ export type ModerationEnv = {
 export type ModerationMode = 'enforce' | 'log' | 'off';
 
 const MOD_CACHE_TTL_MS = 60 * 60 * 1000;
-const MOD_CACHE = new Map<string, {mods: Set<string>; expiresAt: number}>();
+const MOD_CACHE = new Map<string, {mod: boolean; expiresAt: number}>();
 
 export function resolveMode(env: ModerationEnv): ModerationMode {
   const raw = env.SUPPORT_MODERATION_MODE?.trim().toLowerCase();
@@ -58,14 +58,14 @@ export function _resetModCache(): void {
   DECISIONS.clear();
 }
 
-async function moderatorIds(env: ModerationEnv, discord: DiscordClient): Promise<Set<string>> {
-  if (!env.DISCORD_GUILD_ID || !env.SUPPORT_MOD_ROLE_ID) return new Set();
-  const key = `${env.DISCORD_GUILD_ID}:${env.SUPPORT_MOD_ROLE_ID}`;
+async function isModerator(env: ModerationEnv, discord: DiscordClient, userId: string): Promise<boolean> {
+  if (!env.DISCORD_GUILD_ID || !env.SUPPORT_MOD_ROLE_ID) return false;
+  const key = `${env.DISCORD_GUILD_ID}:${env.SUPPORT_MOD_ROLE_ID}:${userId}`;
   const hit = MOD_CACHE.get(key);
-  if (hit && hit.expiresAt > Date.now()) return hit.mods;
-  const mods = new Set(await discord.roleMembers(env.SUPPORT_MOD_ROLE_ID));
-  MOD_CACHE.set(key, {mods, expiresAt: Date.now() + MOD_CACHE_TTL_MS});
-  return mods;
+  if (hit && hit.expiresAt > Date.now()) return hit.mod;
+  const mod = await discord.hasRole(userId, env.SUPPORT_MOD_ROLE_ID);
+  MOD_CACHE.set(key, {mod, expiresAt: Date.now() + MOD_CACHE_TTL_MS});
+  return mod;
 }
 
 export type Decision = {approved: boolean; reason: string};
@@ -89,10 +89,10 @@ export async function decide(
     const key = `${message.id}:${hint.count}`;
     const known = DECISIONS.get(key) ?? DECISIONS.get(`${message.id}:approved`);
     if (known) return known;
-    const mods = await moderatorIds(env, discord);
-    if (!mods.size) return {approved: true, reason: 'no-moderators-resolved'};
     const reactors = await discord.reactors(threadId, message.id, emoji);
-    return reactors.some((id) => mods.has(id))
+    let approved = false;
+    for (const id of reactors) if ((approved = await isModerator(env, discord, id))) break;
+    return approved
       ? remember(`${message.id}:approved`, {approved: true, reason: 'approved'})
       : remember(key, {approved: false, reason: 'no-moderator-reaction'});
   })();

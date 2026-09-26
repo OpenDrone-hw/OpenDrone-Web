@@ -415,23 +415,19 @@ export function createDiscordClient(env: DiscordEnv, fetcher: Fetcher = fetch, r
       }
     },
 
-    /** User ids holding a role (paged, capped at 1000 members). */
-    async roleMembers(roleId: string): Promise<string[]> {
-      if (!env.DISCORD_GUILD_ID) return [];
-      const ids: string[] = [];
-      let after = '';
-      for (let page = 0; page < 10; page++) {
-        const raw = (await call(
-          'members',
-          `/guilds/${env.DISCORD_GUILD_ID}/members?limit=100${after ? `&after=${after}` : ''}`,
-        )) as Array<{user?: {id?: string}; roles?: string[]}>;
-        if (!Array.isArray(raw) || !raw.length) break;
-        for (const m of raw) if (m.user?.id && m.roles?.includes(roleId)) ids.push(m.user.id);
-        if (raw.length < 100) break;
-        after = raw[raw.length - 1]?.user?.id ?? '';
-        if (!after) break;
+    /**
+     * Whether a user holds a role in the guild. Reads one member, which needs
+     * no privileged intent (listing members needs Server Members Intent).
+     */
+    async hasRole(userId: string, roleId: string): Promise<boolean> {
+      if (!env.DISCORD_GUILD_ID) return false;
+      try {
+        const raw = (await call('member', `/guilds/${env.DISCORD_GUILD_ID}/members/${userId}`)) as {roles?: string[]};
+        return Array.isArray(raw?.roles) && raw.roles.includes(roleId);
+      } catch (err) {
+        if (err instanceof DiscordError && err.status === 404) return false;
+        throw err;
       }
-      return ids;
     },
   };
 }

@@ -149,8 +149,8 @@ export function fakeDiscord(opts: {failCreate?: boolean; now?: () => number} = {
       lookups.reactors++;
       return reactorMap.get(message) ?? [];
     },
-    async roleMembers() {
-      return roleMembers;
+    async hasRole(userId) {
+      return roleMembers.includes(userId);
     },
   };
 

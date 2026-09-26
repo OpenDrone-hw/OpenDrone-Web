@@ -496,6 +496,19 @@ export type SyncResult = {ticket: Ticket; added: number; held: number};
  *   edit after approval withdraws it instead, for the team to repost).
  * - A locked or deleted thread closes the ticket for good.
  */
+/**
+ * Sync for a customer read. A Discord or Shopify failure shows the stored
+ * conversation instead of an error page; the next read or cron pass retries.
+ */
+export async function syncOrStored(deps: Deps, ticket: Ticket): Promise<Ticket> {
+  try {
+    return (await syncTicket(deps, ticket)).ticket;
+  } catch (err) {
+    console.warn('[support] sync failed', ticket.ref, err instanceof Error ? err.message : 'error');
+    return ticket;
+  }
+}
+
 export async function syncTicket(deps: Deps, ticket: Ticket, opts: {force?: boolean} = {}): Promise<SyncResult> {
   const now = (deps.now ?? Date.now)();
   if (!opts.force && ticket.syncedAt && now - ticket.syncedAt < SYNC_THROTTLE_MS) return {ticket, added: 0, held: 0};
@@ -723,7 +736,14 @@ export async function runScheduled(deps: Deps): Promise<JobReport> {
   const report: JobReport = {synced: 0, notified: 0, autoClosed: [], deleted: []};
 
   for (const t of await deps.store.ticketsToSync(now - 60 * DAY, 20)) {
-    const {ticket} = await syncTicket(deps, t, {force: true});
+    let ticket: Ticket;
+    try {
+      ({ticket} = await syncTicket(deps, t, {force: true}));
+    } catch (err) {
+      // One failing thread must not stop the other tickets' sync.
+      console.warn('[support] scheduled sync failed', t.ref, err instanceof Error ? err.message : 'error');
+      continue;
+    }
     report.synced++;
     const seen = Math.max(ticket.customerSeenAt ?? 0, ticket.notifiedAt ?? 0);
     if (ticket.status !== 'closed' && ticket.lastStaffAt && ticket.lastStaffAt > seen && now - ticket.lastStaffAt >= NOTIFY_DELAY_MS) {

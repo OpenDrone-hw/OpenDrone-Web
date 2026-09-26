@@ -109,6 +109,20 @@ describe('Discord client', () => {
   });
 });
 
+describe('moderator lookup', () => {
+  it('reads one guild member instead of listing members, and treats a missing member as no role', async () => {
+    const calls: Call[] = [];
+    const client = createDiscordClient(
+      {...ENV, DISCORD_GUILD_ID: 'g'},
+      fakeFetch([['GET /api/v10/guilds/g/members/7', () => ({roles: ['1', '555']})]], calls),
+    );
+    assert.equal(await client.hasRole('7', '555'), true);
+    assert.equal(await client.hasRole('7', '999'), false);
+    assert.equal(await client.hasRole('8', '555'), false, '404: not a member');
+    assert.ok(calls.every((c) => !new URL(c.url).pathname.endsWith('/members')), 'never lists members');
+  });
+});
+
 describe('Discord rate limits (finding b)', () => {
   const noSleep = {sleep: async (ms: number) => void slept.push(ms), now: () => 1_000_000};
   const slept: number[] = [];

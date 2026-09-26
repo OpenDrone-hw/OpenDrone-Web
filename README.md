@@ -351,7 +351,8 @@ done
 
 | System | Setting |
 |---|---|
-| Discord bot | in the guild; on the support channel: View Channel, Send Messages, Send Messages in Threads, Create Private Threads, Manage Threads, Read Message History, Attach Files, Add Reactions |
+| Discord bot | in the guild; on the support channel: View Channel, Send Messages (Create Posts on a forum), Send Messages in Threads, Create Private Threads, Manage Threads, Read Message History, Attach Files, Add Reactions; on the staff metadata channel: View Channel, Send Messages. No privileged intents: moderator approval reads only the member who reacted |
+| Discord staff role | `SUPPORT_MOD_ROLE_ID`: View Channel, Send Messages in Threads, Read Message History and Add Reactions on the support channel; its ✅ releases a held reply |
 | Discord channel | `DISCORD_SUPPORT_CHANNEL_ID` a text channel (private threads) or a forum only staff can see |
 | Shopify | Admin token scopes `read_customers`, `write_customers`, `read_orders`; a customer metafield definition `support.tickets` (JSON) pins the list on the customer page |
 | Staging | shares the Shopify store: leave `SUPPORT_SHOPIFY_WRITE_ENABLED` unset there and point its Discord secrets at a test channel |
