@@ -173,6 +173,15 @@ declare global {
     RESEND_API_KEY?: string;
     SUPPORT_FROM_EMAIL?: string;
 
+    // ChatFPV (app/lib/support/chatfpv.ts, README "Support tickets"). The
+    // three switches are [vars], "1" to turn on; CHATFPV_KEY (the store key
+    // for /v1/draft) is a Worker secret, read on the server only.
+    CHATFPV_URL?: string;
+    CHATFPV_KEY?: string;
+    CHATFPV_DRAFTS_ENABLED?: string;
+    CHATFPV_ASK_ENABLED?: string;
+    CHATFPV_WIDGET_ENABLED?: string;
+
     // Newsletter / release-notes auto-dispatch
     // - NEWSLETTER_DISPATCH_SECRET: bearer token for the manual dispatch
     //   trigger (CLI/curl) AND HMAC key for per-recipient unsubscribe

@@ -1,4 +1,6 @@
 import {BOARD_ART_VERSION} from '~/data/board-art-version';
+import {ChatFpvWidget} from '~/components/ChatFpvWidget';
+import {chatFpvWidgetSrc} from '~/lib/support/chatfpv';
 import {Fragment, Suspense, useEffect, useMemo, useRef, useState} from 'react';
 import {createPortal} from 'react-dom';
 import {useAside} from '~/components/Aside';
@@ -185,7 +187,12 @@ export async function loader(args: Route.LoaderArgs) {
   // Await the critical data required to render initial state of the page
   const criticalData = await loadCriticalData(args);
 
-  return {...deferredData, ...criticalData};
+  return {
+    ...deferredData,
+    ...criticalData,
+    // ChatFPV widget iframe address; null unless CHATFPV_WIDGET_ENABLED is "1".
+    chatfpvWidget: chatFpvWidgetSrc(args.context.env, 'product', args.params.handle),
+  };
 }
 
 /**
@@ -649,14 +656,24 @@ function useChapterReveal(key: string) {
 }
 
 export default function Product() {
-  const {product, roadmapStatus} = useLoaderData<typeof loader>();
+  const {product, roadmapStatus, chatfpvWidget} = useLoaderData<typeof loader>();
   // Nothing about a planned or in-progress product is settled, so it gets
   // the concept plate instead of a product page (docs/product-status.md),
   // unless its content file says it sells (pre-order frame).
   if (roadmapStatus && isConceptFor(product.handle, roadmapStatus)) {
-    return <ConceptPlate title={product.title} status={roadmapStatus} />;
+    return (
+      <>
+        <ConceptPlate title={product.title} status={roadmapStatus} />
+        <ChatFpvWidget src={chatfpvWidget} />
+      </>
+    );
   }
-  return <ProductPage />;
+  return (
+    <>
+      <ProductPage />
+      <ChatFpvWidget src={chatfpvWidget} />
+    </>
+  );
 }
 
 /** Document-space layout box via the offsetParent chain: unaffected by CSS

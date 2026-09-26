@@ -3,12 +3,14 @@
  * Worker env, resolves which tickets a request may open, and checks that a
  * POST came from this site.
  */
+import {createDraftStore} from './ai-drafts.ts';
+import {createChatFpvClient, draftsEnabled, type ChatFpvEnv} from './chatfpv.ts';
 import {createDiscordClient, discordConfigured} from './discord.ts';
 import {createStore, type Ticket} from './store.ts';
 import type {Deps, SupportEnv} from './tickets.ts';
 import {readTicketCookie, type CookieTicket} from './tokens.ts';
 
-export type SupportWorkerEnv = SupportEnv & {SUPPORT_DB?: D1Database};
+export type SupportWorkerEnv = SupportEnv & ChatFpvEnv & {SUPPORT_DB?: D1Database};
 
 /** Tickets can be opened: storage, Discord and a signing secret are there. */
 export function supportReady(env: SupportWorkerEnv): boolean {
@@ -23,6 +25,8 @@ export function supportDeps(env: SupportWorkerEnv, origin: string, defer?: (p: P
     discord: createDiscordClient(env),
     origin,
     defer,
+    // ChatFPV ticket drafts: absent unless CHATFPV_DRAFTS_ENABLED is "1".
+    chatfpv: draftsEnabled(env) ? {client: createChatFpvClient(env), drafts: createDraftStore(env.SUPPORT_DB)} : undefined,
   };
 }
 

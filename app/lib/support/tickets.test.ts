@@ -25,7 +25,8 @@ import {
 } from './tickets.ts';
 import {isEmail, normalizeOrderNumber} from './shopify.ts';
 import {FIND_MISS_CAPACITY, FIND_MISS_DRAIN_MS} from './limits.ts';
-import {fakeDiscord, fakeShopify, testD1, type ShopifyScript} from './testing.ts';
+import {createDraftStore} from './ai-drafts.ts';
+import {fakeChatFpv, fakeDiscord, fakeShopify, testD1, type ShopifyScript} from './testing.ts';
 
 const probe = await testD1();
 const skip = probe ? false : 'node:sqlite unavailable';
@@ -745,5 +746,35 @@ describe('staff lifecycle (tester 4)', {skip}, () => {
     deps.fetcher = base;
     assert.deepEqual(await cleanupExpired(deps), [t.ref]);
     assert.ok(discord.channelPosts.every((p) => p.deleted));
+  });
+});
+
+describe('ChatFPV draft hooks (ai-drafts.ts)', {skip}, () => {
+  it('a failing draft call never blocks creating, replying or syncing', async () => {
+    const {deps, discord} = await setup();
+    const db = (await testD1())!;
+    const fake = fakeChatFpv({
+      draft: () => {
+        throw new Error('bug in the draft path');
+      },
+    });
+    deps.chatfpv = {client: fake.client, drafts: createDraftStore(db)};
+    const t = await createTicket(deps, input({topic: 'product', orderNumber: null, product: 'OpenFC F4'}));
+    assert.equal(t.status, 'open');
+    const r = await addCustomerReply(deps, t, 'One more detail.');
+    assert.ok(r.ok);
+    discord.staff(t.threadId, 'On it.');
+    const {added} = await syncTicket(deps, (await deps.store.getTicket(t.ref))!, {force: true});
+    assert.equal(added, 1);
+    assert.equal(fake.drafts.length, 2, 'both hooks ran and failed quietly');
+  });
+
+  it('asks nothing for order and warranty tickets', async () => {
+    const {deps} = await setup();
+    const fake = fakeChatFpv();
+    deps.chatfpv = {client: fake.client, drafts: createDraftStore((await testD1())!)};
+    await createTicket(deps, input());
+    await createTicket(deps, input({topic: 'warranty', product: 'OpenFC F4'}));
+    assert.equal(fake.drafts.length, 0);
   });
 });

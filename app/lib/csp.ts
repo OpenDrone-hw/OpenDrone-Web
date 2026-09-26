@@ -44,6 +44,23 @@ function randomNonce(): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+/**
+ * frame-src entry for the ChatFPV widget iframe: the https (or local
+ * http://localhost) origin of CHATFPV_URL while CHATFPV_WIDGET_ENABLED is "1", nothing otherwise.
+ * Self-contained (no import of the ChatFPV client) because this module
+ * also ships to the browser.
+ */
+export function chatFpvFrameSrc(env: {CHATFPV_URL?: string; CHATFPV_WIDGET_ENABLED?: string}): string[] {
+  if (env.CHATFPV_WIDGET_ENABLED?.trim() !== '1') return [];
+  try {
+    const url = new URL(env.CHATFPV_URL ?? '');
+    // http only for a local ChatFPV during development.
+    return url.protocol === 'https:' || (url.protocol === 'http:' && url.hostname === 'localhost') ? [url.origin] : [];
+  } catch {
+    return [];
+  }
+}
+
 function directive(name: string, values: string[]): string {
   return `${name} ${values.join(' ')}`;
 }
