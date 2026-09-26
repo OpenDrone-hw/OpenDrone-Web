@@ -407,8 +407,9 @@ export function createDiscordClient(env: DiscordEnv, fetcher: Fetcher = fetch, r
         const raw = (await call(
           'reactors',
           `/channels/${threadId}/messages/${messageId}/reactions/${encodeURIComponent(emoji)}?limit=25`,
-        )) as Array<{id?: string}>;
-        return Array.isArray(raw) ? raw.map((u) => u.id ?? '').filter(Boolean) : [];
+        )) as Array<{id?: string; bot?: boolean}>;
+        // Bot accounts never approve anything, whatever roles they hold.
+        return Array.isArray(raw) ? raw.filter((u) => !u?.bot).map((u) => u.id ?? '').filter(Boolean) : [];
       } catch (err) {
         if (err instanceof DiscordError && err.status === 404) return [];
         throw err;
