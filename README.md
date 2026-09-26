@@ -351,7 +351,8 @@ flowchart LR
   N[new ticket or customer follow-up<br/>topic product or other] -->|scrubbed conversation, no name, email, phone, order| D[POST /v1/draft]
   D -->|one bot message: AI draft, sources, note, confidence| T[(ticket thread)]
   T -->|support-role approve reaction| A[stored body + AI note + sources<br/>scrubbed, sent as OpenDrone]
-  T -->|staff reply instead| R[outcome replaced, final text]
+  T -->|support-role reply instead| R[outcome replaced, final text<br/>name, email, order redacted]
+  T -->|reply by anyone else| X
   T -->|follow-up or close| X[outcome rejected]
   A -->|outcome approved, reactor id| O[POST /v1/draft/outcome]
   R --> O
@@ -367,12 +368,15 @@ role configured means no draft is ever sent). The stored text is sent, not
 the Discord message, with "This reply was drafted with AI (ChatFPV) and
 checked by the OpenDrone team." and the source links, through the same
 scrubber as every staff reply. Replying normally instead sends your own
-reply and tells ChatFPV it was replaced (your reply is its correction). A
+reply and, when you hold `SUPPORT_MOD_ROLE_ID`, tells ChatFPV it was
+replaced: your reply, with the customer's name, email and order references
+redacted, is its correction. A reply by anyone else rejects the draft and
+is never a correction. A
 customer follow-up replaces a pending draft with a new one; closing the
 ticket or deleting the draft message drops it. With no draft, the thread
 gets at most ChatFPV's one-line note. Rows live in `support_ai_drafts`
 (migration `0004`); outcomes ChatFPV did not accept are retried by the
-cron. A ChatFPV timeout (20 s) or error never blocks a ticket.
+cron, except those it refused for good (400, 404, 409). A ChatFPV timeout (20 s) or error never blocks a ticket.
 
 **Ask box and widget.** The box answers on the page with sources and the AI
 label; "Still need help? Open a ticket" opens the form with the question

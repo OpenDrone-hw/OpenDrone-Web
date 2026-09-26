@@ -12,8 +12,13 @@
  *     -> the STORED body plus the AI suffix and source links, through
  *        scrubForPublic, relayed as an OpenDrone staff message
  *     -> outcome approved, decidedBy = the reactor
- *   a staff reply relayed after the draft while it is pending
- *     -> outcome replaced, finalText = the delivered scrubbed text
+ *   a reply by a support-role holder relayed after the draft while it is
+ *   pending
+ *     -> outcome replaced, finalText = the delivered text with the
+ *        customer's name, email and order references redacted (ChatFPV
+ *        learns from it as a staff correction)
+ *   a reply by anyone else relayed after the draft
+ *     -> outcome rejected (never a correction)
  *   the ticket closes with a draft pending
  *     -> outcome rejected
  *
@@ -24,7 +29,7 @@
 import type {ChatFpvClient} from './chatfpv.ts';
 import type {Citation, DraftOutcomeRequest, DraftRequest, DraftResponse} from './chatfpv-contract.ts';
 import {compareSnowflakes, escapeDiscord, type DiscordMessage} from './discord.ts';
-import {approveEmoji} from './moderation.ts';
+import {approveEmoji, isModerator} from './moderation.ts';
 import {scrubForPublic} from './scrubber.ts';
 import type {Ticket, TicketTopic} from './store.ts';
 import type {Deps} from './tickets.ts';
@@ -207,8 +212,11 @@ export async function draftRequest(deps: Deps, ticket: Ticket, firmware?: string
 // Posting
 // --------------------------------------------------------------------------
 
-function sourceLines(citations: Citation[], forDiscord: boolean): string[] {
-  return citations.map((c) => (forDiscord ? `[${c.n}] ${escapeDiscord(c.title)} <${c.url}>` : `[${c.n}] ${c.title}: ${c.url}`));
+/** Source lines for the citations the body does not already list (ChatFPV drafts carry their own "Sources:" block). */
+function sourceLines(citations: Citation[], forDiscord: boolean, body = ''): string[] {
+  return citations
+    .filter((c) => !body.includes(c.url))
+    .map((c) => (forDiscord ? `[${c.n}] ${escapeDiscord(c.title)} <${c.url}>` : `[${c.n}] ${c.title}: ${c.url}`));
 }
 
 /**
@@ -223,7 +231,7 @@ export function draftPost(emoji: string, d: Pick<DraftResponse, 'draft' | 'citat
   const base = `${head}\n\n${d.draft}\n\n`;
   if (base.length + tail.length > MAX_POST) return null;
   const sources: string[] = [];
-  for (const line of sourceLines(d.citations, true)) {
+  for (const line of sourceLines(d.citations, true, d.draft)) {
     const block = ['Sources:', ...sources, line].join('\n');
     if (base.length + block.length + 2 + tail.length > MAX_POST) break;
     sources.push(line);
@@ -241,7 +249,7 @@ export const APPROVED_SUFFIX = 'This reply was drafted with AI (ChatFPV) and che
 
 /** The customer-facing text of an approved draft, before the scrubber. */
 export function approvedText(d: Pick<StoredDraft, 'body' | 'citations'>): string {
-  const sources = sourceLines(d.citations, false);
+  const sources = sourceLines(d.citations, false, d.body);
   return [d.body.trim(), APPROVED_SUFFIX, ...(sources.length ? [`Sources:\n${sources.join('\n')}`] : [])].join('\n\n');
 }
 
@@ -255,10 +263,12 @@ const OUTCOME_OF: Record<Exclude<DraftStatus, 'pending'>, DraftOutcomeRequest['s
 /** Tell ChatFPV; a failure leaves outcome_posted 0 for the scheduled retry. */
 async function postOutcome(c: ChatFpvDeps, d: StoredDraft): Promise<void> {
   if (d.status === 'pending') return;
+  // ChatFPV refuses a replaced outcome without text: report it as rejected.
+  const replaced = d.status === 'replaced' && Boolean(d.finalText?.trim());
   const ok = await c.client.outcome({
     draftId: d.draftId,
-    status: OUTCOME_OF[d.status],
-    ...(d.status === 'replaced' && d.finalText !== null ? {finalText: d.finalText} : {}),
+    status: replaced ? 'replaced' : OUTCOME_OF[d.status === 'replaced' ? 'rejected' : d.status],
+    ...(replaced ? {finalText: d.finalText!} : {}),
     decidedBy: d.decidedBy ?? SYSTEM_DECIDER,
   });
   if (ok) await c.drafts.markPosted(d.draftId);
@@ -324,8 +334,13 @@ export async function requestDraft(deps: Deps, ticket: Ticket, firmware?: string
 // Sync: approval, replacement, close
 // --------------------------------------------------------------------------
 
-/** Reactor lookups that found no support-role holder, per message id and reaction count. */
-const NOT_APPROVED = new Set<string>();
+/**
+ * Reactor lookups that found no support-role holder, per message id and
+ * reaction count, until the entry expires: a reaction removed and replaced
+ * by a support-role holder's leaves the count unchanged.
+ */
+const NOT_APPROVED = new Map<string, number>();
+const NOT_APPROVED_TTL_MS = 5 * 60 * 1000;
 let lastSweep = 0;
 const SWEEP_EVERY_MS = 60 * 1000;
 
@@ -379,7 +394,7 @@ export async function reviewDrafts(
       const hint = live.reactions.find((r) => r.emoji === emoji);
       const others = hint ? hint.count - (hint.me ? 1 : 0) : 0;
       const key = `${d.discordMessageId}:${hint?.count ?? 0}`;
-      if (!role || others <= 0 || NOT_APPROVED.has(key)) {
+      if (!role || others <= 0 || (NOT_APPROVED.get(key) ?? 0) > Date.now()) {
         still.push(d);
         continue;
       }
@@ -392,7 +407,7 @@ export async function reviewDrafts(
       }
       if (!by) {
         if (NOT_APPROVED.size >= 500) NOT_APPROVED.clear();
-        NOT_APPROVED.add(key);
+        NOT_APPROVED.set(key, Date.now() + NOT_APPROVED_TTL_MS);
         still.push(d);
         continue;
       }
@@ -425,14 +440,33 @@ export async function draftDelivered(deps: Deps, ticket: Ticket, a: ApprovedDraf
 
 /**
  * A staff reply was relayed: every draft posted before it and still
- * pending is replaced by it. Returns the drafts that stay pending.
+ * pending is settled by it. Only a support-role holder's reply is a
+ * correction ('replaced', its text redacted like a draft request); anyone
+ * else's rejects the draft, whatever the moderation mode relayed.
+ * Returns the drafts that stay pending.
  */
-export async function draftsReplaced(deps: Deps, pending: StoredDraft[], reply: DiscordMessage, delivered: string): Promise<StoredDraft[]> {
+export async function draftsReplaced(
+  deps: Deps,
+  ticket: Pick<Ticket, 'name' | 'email' | 'orderNumber'>,
+  pending: StoredDraft[],
+  reply: DiscordMessage,
+  delivered: string,
+): Promise<StoredDraft[]> {
   const still: StoredDraft[] = [];
+  const before = pending.filter((d) => d.discordMessageId && compareSnowflakes(d.discordMessageId, reply.id) < 0);
+  if (!before.length) return pending;
+  let staff = false;
+  try {
+    staff = Boolean(deps.env.SUPPORT_MOD_ROLE_ID) && (await isModerator(deps.env, deps.discord, reply.author.id));
+  } catch {
+    staff = false;
+  }
+  const finalText = staff ? redactTicketText(delivered, ticket).trim() : '';
   for (const d of pending) {
-    if (d.discordMessageId && compareSnowflakes(d.discordMessageId, reply.id) < 0) {
+    if (before.includes(d)) {
       try {
-        await settleDraft(deps, d, 'replaced', reply.author.id, delivered);
+        if (finalText) await settleDraft(deps, d, 'replaced', reply.author.id, finalText);
+        else await settleDraft(deps, d, 'rejected', reply.author.id);
       } catch (err) {
         console.warn('[support] draft replace failed', d.ref, d.draftId, err instanceof Error ? err.message : 'error');
       }
