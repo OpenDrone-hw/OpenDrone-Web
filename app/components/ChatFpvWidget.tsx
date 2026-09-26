@@ -1,4 +1,5 @@
 import {useEffect, useRef, useState} from 'react';
+import {trackEvent} from '~/lib/growth/plausible';
 
 /**
  * The ChatFPV widget on product and preorder pages: a button that opens
@@ -93,7 +94,12 @@ export function ChatFpvWidget({src}: {src: string | null | undefined}) {
         type="button"
         className="od-btn od-btn-primary"
         aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() =>
+          setOpen((v) => {
+            if (!v) trackEvent('chatfpv_widget_open', {props: {surface: 'widget'}});
+            return !v;
+          })
+        }
       >
         {open ? 'Close ChatFPV' : 'Ask ChatFPV (AI)'}
       </button>

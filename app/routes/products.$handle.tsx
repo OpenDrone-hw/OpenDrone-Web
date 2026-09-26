@@ -1,6 +1,6 @@
 import {BOARD_ART_VERSION} from '~/data/board-art-version';
 import {ChatFpvWidget} from '~/components/ChatFpvWidget';
-import {chatFpvWidgetSrc} from '~/lib/support/chatfpv';
+import {chatFpvWidgetSrc, chatFpvWidgetSrcWithProduct} from '~/lib/support/chatfpv';
 import {Fragment, Suspense, useEffect, useMemo, useRef, useState} from 'react';
 import {createPortal} from 'react-dom';
 import {useAside} from '~/components/Aside';
@@ -668,12 +668,7 @@ export default function Product() {
       </>
     );
   }
-  return (
-    <>
-      <ProductPage />
-      <ChatFpvWidget src={chatfpvWidget} />
-    </>
-  );
+  return <ProductPage />;
 }
 
 /** Document-space layout box via the offsetParent chain: unaffected by CSS
@@ -697,6 +692,7 @@ function ProductPage() {
     recommendations,
     contributors,
     commerceHandoff,
+    chatfpvWidget,
   } = useLoaderData<typeof loader>();
   useChapterReveal(product.handle);
 
@@ -926,6 +922,14 @@ function ProductPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [catalogAxisValue]);
   const activeVariant = content.variants?.[activeTier];
+  // ChatFPV's widget context: the product title plus the selected variant
+  // (e.g. "OpenESC 30x30"), so an answer about specs matches the size the
+  // visitor is actually looking at instead of the bare handle. Computed
+  // client-side because the selected variant itself is (see
+  // `shouldRevalidate` above); overrides `product` on the loader's src,
+  // which is null while the widget flag is off.
+  const chatfpvProduct = catalogAxisValue ? `${product.title} ${variantDisplayName(product.handle, catalogAxisValue)}`.trim() : product.title;
+  const chatfpvWidgetSrcVariant = useMemo(() => chatFpvWidgetSrcWithProduct(chatfpvWidget, chatfpvProduct), [chatfpvWidget, chatfpvProduct]);
   // The SKU a buyer may see: none when the variant's SKU names a spec that
   // is not final (OPENMOTOR-2207). It stays the internal ID everywhere else.
   const shownSku = isInternalSku(product.handle, catalogAxisValue)
@@ -2838,7 +2842,7 @@ function ProductPage() {
     <div className="product-page">
       <script
         type="application/ld+json"
-         
+
         dangerouslySetInnerHTML={{__html: JSON.stringify(productJsonLd)}}
       />
       <script
@@ -2995,6 +2999,7 @@ function ProductPage() {
           />
         </details>
       ) : null}
+      <ChatFpvWidget src={chatfpvWidgetSrcVariant} />
     </div>
   );
 }

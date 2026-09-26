@@ -17,7 +17,7 @@ import {
   TurnstileBox,
   useDraft,
 } from '~/components/SupportUi';
-import {AskChatFPV} from '~/components/support/AskChatFPV';
+import {AskChatFPV, type AskReason} from '~/components/support/AskChatFPV';
 import {askEnabled} from '~/lib/support/chatfpv';
 import {handleCreate, type CreateResult} from '~/lib/support/handlers';
 import {notifyEnabled} from '~/lib/support/notify';
@@ -62,6 +62,10 @@ export async function loader({request, context}: Route.LoaderArgs) {
   // Ask ChatFPV (AI) before the form; ?ticket=1 (the box's "open a ticket" link without JavaScript) skips it.
   const ask = askEnabled(env);
   const skipAsk = new URL(request.url).searchParams.get('ticket') === '1' || Boolean(topic);
+  // A product a link named (e.g. "still need help?" from a product page):
+  // Ask ChatFPV context, same shape handleAsk itself checks.
+  const askProductParam = new URL(request.url).searchParams.get('product');
+  const initialProduct = askProductParam && /^[\w .'-]{1,80}$/.test(askProductParam) ? askProductParam : null;
 
   let products: string[] = [];
   try {
@@ -95,6 +99,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
       products,
       yours,
       initialTopic: TOPICS.includes(topic as TicketTopic) ? (topic as TicketTopic) : null,
+      initialProduct,
       salesEmail: company.email,
       discordInvite: env.DISCORD_SUPPORT_INVITE ?? env.PUBLIC_DISCORD_INVITE ?? 'https://discord.gg/ABajnacUsS',
     },
@@ -398,9 +403,13 @@ function prefillTicket(question: string) {
 }
 
 export default function SupportRoute() {
-  const {ready, ask, skipAsk, yours, salesEmail, discordInvite} = useLoaderData<typeof loader>();
+  const {ready, ask, skipAsk, yours, salesEmail, discordInvite, initialProduct} = useLoaderData<typeof loader>();
   const actionResult = useActionData<ActionResult>();
   const [formOpen, setFormOpen] = useState(!ask || skipAsk || Boolean(actionResult));
+  // Why the Ask box swapped to the form (AskChatFPV.tsx `AskReason`): shown
+  // here, above the form, because the box that knew the reason just
+  // unmounted, not inside it where it would already be gone.
+  const [askReason, setAskReason] = useState<AskReason | null>(null);
   return (
     <div className="page-shell sp-page">
       <header className="page-header">
@@ -413,15 +422,30 @@ export default function SupportRoute() {
         <div className="sp-main">
           {ask && !formOpen ? (
             <AskChatFPV
-              onTicket={(question) => {
+              product={initialProduct ?? undefined}
+              onTicket={(question, reason) => {
                 prefillTicket(question);
+                setAskReason(reason ?? null);
                 setFormOpen(true);
               }}
             />
           ) : null}
           {ready ? (
             formOpen ? (
-              <TicketForm />
+              <>
+                {askReason ? (
+                  <p role="status" className="sp-banner">
+                    {askReason.message}
+                    {askReason.url ? (
+                      <>
+                        {' '}
+                        <Link to={askReason.url}>Go to the wholesale form</Link>
+                      </>
+                    ) : null}
+                  </p>
+                ) : null}
+                <TicketForm />
+              </>
             ) : null
           ) : (
             <p role="status" className="sp-banner">
