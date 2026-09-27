@@ -185,11 +185,11 @@ on two surfaces:
 
 - ${origin}/support ("Ask ChatFPV"): ${
         copyText('support.ask_privacy_notice') ??
-        "Your question goes to ChatFPV, Incutec's AI assistant. Your name, email, phone and order numbers are removed first; conversations that do not become a ticket are deleted after 90 days idle."
+        "Your question goes to ChatFPV, Incutec's AI assistant. We remove emails, phone numbers, card numbers, IBANs and similar identifiers before sending it, but not your name or order number, so please leave those out yourself. Conversations that do not become a ticket are deleted after 90 days idle."
       }
 - The widget on product and preorder pages: ${
         copyText('chrome.chatfpv_widget_privacy_notice') ??
-        "Your question and the product on this page go to ChatFPV, Incutec's AI assistant. Your name, email, phone and order numbers are removed first; conversations that do not become a ticket are deleted after 90 days idle."
+        "Your question and the product on this page go straight to ChatFPV, Incutec's AI assistant, exactly as you type it: please do not include your name, email, phone or order number. Conversations that do not become a ticket are deleted after 90 days idle."
       }
 
 ChatFPV never has write access to orders, tickets or the Shopify catalog;

@@ -3,7 +3,7 @@ import {trackEvent} from '~/lib/growth/plausible';
 import {copyText} from '~/lib/copy';
 
 const PRIVACY_NOTICE_FALLBACK =
-  "Your question and the product on this page go to ChatFPV, Incutec's AI assistant. Your name, email, phone and order numbers are removed first; conversations that do not become a ticket are deleted after 90 days idle.";
+  "Your question and the product on this page go straight to ChatFPV, Incutec's AI assistant, exactly as you type it: please do not include your name, email, phone or order number. Conversations that do not become a ticket are deleted after 90 days idle.";
 const NOTICE_SUMMARY_FALLBACK = 'AI assistant. How your question is used.';
 
 /**
