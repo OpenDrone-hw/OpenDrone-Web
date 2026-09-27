@@ -24,9 +24,15 @@ const NOTICE_SUMMARY_FALLBACK = 'AI assistant. How your question is used.';
  * iteration 3 audit: a bottom-right panel covered the Pre-order button and
  * prices on desktop). Below it, the widget stays bottom-right and lifts
  * above whichever bottom-of-screen element it would otherwise cover: the
- * pinned mobile buy rail once scrolled that far, or the in-flow ship-promise
- * line ("Delivered by ...", `.product-buy-ship`) on first load before any
- * scroll (iteration 3 audit: the closed button covered that line on phone).
+ * pinned mobile buy rail once scrolled that far, or the in-flow buy button
+ * (`.product-form`) and ship-promise line ("Delivered by ...", `.ship-line`
+ * from `ShipChip.tsx`'s `<ShipLine>` on a preorder/campaign product, or the
+ * plain `.product-buy-ship` / `.product-buy-stock` paragraph other statuses
+ * use) on first load before any scroll (iteration 3 audit: the closed
+ * button covered the ship line on phone; iteration 4: a fix that lifted
+ * only above the ship line left an 11px gap to the buy button above it,
+ * which the 44px button then covered instead, so `.product-form` is
+ * included too, clearing whichever of the two is higher on the page).
  * Closed, the widget is only the button: the data-use disclosure lives
  * inside the open panel, as a one-line strip above the iframe with a
  * details toggle for the full text, so it is never floating over the page
@@ -38,7 +44,13 @@ const WIDE_QUERY = '(min-width: 960px)';
 /** Elements near the bottom of the screen the closed button or panel must
  *  not cover, checked only below `WIDE_QUERY` (above it the widget moves to
  *  the left, clear of the buy column entirely). */
-const BOTTOM_OBSTACLES = ['.buy-rail.is-pinned.is-mobile:not(.is-suppressed)', '.product-buy-ship'];
+const BOTTOM_OBSTACLES = [
+  '.buy-rail.is-pinned.is-mobile:not(.is-suppressed)',
+  '.product-form',
+  '.ship-line',
+  '.product-buy-ship',
+  '.product-buy-stock',
+];
 /** An obstacle only counts once its bottom edge is within this many pixels
  *  of the viewport bottom: close enough to reach where the fixed button
  *  (roughly 44-60px tall, 16px from the edge) actually sits. Elements
