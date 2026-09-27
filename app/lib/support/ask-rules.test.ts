@@ -293,4 +293,21 @@ describe('isOwnOrderVatOrCustoms tense and phrasing fixes (iteration 5)', () => 
     assert.equal(route('VAT invoice for my company order'), 'handoff');
     assert.equal(route('Can you check the VAT on my recent invoice?'), 'handoff');
   });
+
+  it('does not ticket a quantity or a not-yet-placed order', () => {
+    for (const q of [
+      'If I order 2 OpenESC to Germany, is VAT included?',
+      'Will VAT apply to my first order to Norway?',
+      'Do I pay customs on my next package to the UK?',
+      'I want to order 4 motors, are customs fees extra for Switzerland?',
+    ]) {
+      assert.notEqual(route(q), 'handoff', q);
+    }
+  });
+
+  it('tickets an order number in any common form', () => {
+    for (const q of ['Was I charged VAT twice on order #5512?', 'VAT on order number 77 looks wrong', 'Customs held order 10234, VAT?']) {
+      assert.equal(route(q), 'handoff', q);
+    }
+  });
 });

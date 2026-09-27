@@ -8,6 +8,8 @@ import {
   chatFpvWidgetSrc,
   chatFpvWidgetSrcWithProduct,
   cleanCitations,
+  cleanCitationsWithAliases,
+  remapCitationMarkers,
   createChatFpvClient,
   draftsEnabled,
   dropInternalCitations,
@@ -199,6 +201,16 @@ describe('helpers', () => {
         [4, 'https://opendrone.be/products/openfc-lite?variant=3030'],
       ],
     );
+  });
+
+  it('rewrites an inline marker of a dropped duplicate citation to the kept number', () => {
+    const {citations, alias} = cleanCitationsWithAliases([
+      {n: 1, title: 'A', url: 'https://opendrone.be/a', source: 's', kind: 'doc'},
+      {n: 2, title: 'B', url: 'https://opendrone.be/b', source: 's', kind: 'doc'},
+      {n: 3, title: 'A again', url: 'https://opendrone.be/a#spec', source: 's', kind: 'doc'},
+    ]);
+    assert.deepEqual(citations.map((c) => c.n), [1, 2]);
+    assert.equal(remapCitationMarkers('Fact one [1]. Fact two [2]. Fact three [3]. Literal [12].', alias), 'Fact one [1]. Fact two [2]. Fact three [1]. Literal [12].');
   });
 
   it('read the flags as exactly "1"', () => {

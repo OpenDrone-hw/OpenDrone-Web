@@ -189,9 +189,20 @@ export function scrubOutbound(text: string): string | null {
  * screenshots showing "[1]" and "[3]" pointing at the same URL).
  */
 export function cleanCitations(raw: unknown): Citation[] {
-  if (!Array.isArray(raw)) return [];
+  return cleanCitationsWithAliases(raw).citations;
+}
+
+/**
+ * `cleanCitations` plus the marker renumbering a dropped duplicate needs:
+ * `alias` maps each dropped duplicate's `n` to the kept citation's `n`, so
+ * an inline "[3]" in the answer text can be rewritten to the "[1]" that is
+ * still listed instead of pointing at a source the list no longer shows.
+ */
+export function cleanCitationsWithAliases(raw: unknown): {citations: Citation[]; alias: Map<number, number>} {
+  const alias = new Map<number, number>();
+  if (!Array.isArray(raw)) return {citations: [], alias};
   const out: Citation[] = [];
-  const seen = new Set<string>();
+  const seen = new Map<string, number>();
   for (const c of raw as Array<Partial<Citation>>) {
     if (!c || typeof c !== 'object' || typeof c.url !== 'string' || typeof c.title !== 'string') continue;
     let url: URL;
@@ -202,10 +213,15 @@ export function cleanCitations(raw: unknown): Citation[] {
     }
     if (url.protocol !== 'https:' && url.protocol !== 'http:') continue;
     const key = `${url.protocol}//${url.host.toLowerCase()}${url.pathname.replace(/\/$/, '')}${url.search}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
+    const kept = seen.get(key);
+    if (kept !== undefined) {
+      if (Number.isFinite(c.n) && Number(c.n) !== kept) alias.set(Number(c.n), kept);
+      continue;
+    }
+    const n = Number.isFinite(c.n) ? Number(c.n) : out.length + 1;
+    seen.set(key, n);
     out.push({
-      n: Number.isFinite(c.n) ? Number(c.n) : out.length + 1,
+      n,
       title: c.title.slice(0, 200),
       url: url.toString(),
       source: typeof c.source === 'string' ? c.source.slice(0, 100) : '',
@@ -214,7 +230,16 @@ export function cleanCitations(raw: unknown): Citation[] {
     });
     if (out.length >= 10) break;
   }
-  return out;
+  return {citations: out, alias};
+}
+
+/** Rewrites inline "[n]" markers of dropped duplicate citations to the kept citation's number. */
+export function remapCitationMarkers(text: string, alias: Map<number, number>): string {
+  if (!alias.size) return text;
+  return text.replace(/\[(\d{1,3})\]/g, (m, d: string) => {
+    const to = alias.get(Number(d));
+    return to === undefined ? m : `[${to}]`;
+  });
 }
 
 /**
@@ -339,10 +364,11 @@ function parseDraft(raw: unknown): DraftResponse | null {
   const r = raw as Partial<DraftResponse> | null;
   if (!r || typeof r !== 'object' || typeof r.draftId !== 'string' || !r.draftId) return null;
   if (r.draft !== null && typeof r.draft !== 'string') return null;
+  const {citations, alias} = cleanCitationsWithAliases(r.citations);
   return {
     draftId: r.draftId.slice(0, 100),
-    draft: typeof r.draft === 'string' && r.draft.trim() ? r.draft.trim() : null,
-    citations: cleanCitations(r.citations),
+    draft: typeof r.draft === 'string' && r.draft.trim() ? remapCitationMarkers(r.draft.trim(), alias) : null,
+    citations,
     confidence: confidenceOf(r.confidence),
     note: typeof r.note === 'string' ? r.note.replace(/\s+/g, ' ').trim().slice(0, 300) : '',
   };
@@ -353,11 +379,12 @@ const OUTCOMES = new Set(['answered', 'clarify', 'abstain', 'handoff', 'refused'
 function parseAnswer(raw: unknown): ChatAnswer | null {
   const r = raw as Partial<ChatAnswer> | null;
   if (!r || typeof r !== 'object' || typeof r.answer !== 'string' || !OUTCOMES.has(String(r.outcome))) return null;
+  const {citations, alias} = cleanCitationsWithAliases(r.citations);
   return {
     conversationId: typeof r.conversationId === 'string' ? r.conversationId : '',
     messageId: typeof r.messageId === 'string' ? r.messageId : '',
-    answer: r.answer.slice(0, 6000),
-    citations: cleanCitations(r.citations),
+    answer: remapCitationMarkers(r.answer.slice(0, 6000), alias),
+    citations,
     outcome: r.outcome!,
     confidence: confidenceOf(r.confidence),
     ...(r.handoff && typeof r.handoff === 'object' ? {handoff: {reason: String(r.handoff.reason ?? ''), url: String(r.handoff.url ?? '')}} : {}),

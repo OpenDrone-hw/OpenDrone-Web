@@ -34,7 +34,7 @@ type Rule = {test: RegExp | ((message: string) => boolean); reason: string; url?
  * "package" alone is not enough (a general "VAT on invoices for
  * businesses" question is still answered from published policy), so both a
  * personal/specific-order signal AND a VAT-or-customs word must be present.
- * `OWN_ORDER_REF` allows up to two words between "my" and the noun ("my
+ * `namesOwnOrder` allows up to two words between "my" and the noun ("my
  * company order", "my recent invoice"), not only the exact phrase "my
  * order": storefront-launch iteration 5 audit found "VAT invoice for my
  * company order" reached ChatFPV instead of a ticket because the tighter
@@ -52,13 +52,29 @@ type Rule = {test: RegExp | ((message: string) => boolean); reason: string; url?
  * 1234?" and "I paid VAT but I am in the UK, can I get it back?" all got
  * the published-policy answer instead of a ticket. See ask-rules.test.ts.
  */
-const OWN_ORDER_REF = /\bmy\b(?:\s+\w+){0,2}\s+(?:order|invoice|package|parcel)\b|\border\s*#?\s*\d/i;
+const PRE_PURCHASE_MODIFIER = /^(?:first|next|future|new|upcoming|planned|potential)$/i;
+const MY_ORDER_NOUN = /\bmy\b((?:\s+[\w-]+){0,2})\s+(?:order|invoice|package|parcel)\b/gi;
+/** An order number: "#1234", "order no. 12", "order number 5", or "order 1234" (4+ digits, so "order 2 ESCs" is a quantity). */
+const ORDER_NUMBER = /#\s*\d+|\border\s*(?:no\.?|number|nr\.?)\s*#?\s*\d|\border\s+\d{4,}\b/i;
+/**
+ * "my order/invoice/package/parcel" with up to two words between, unless one
+ * of them marks an order not yet placed ("my first order", "my next
+ * package"): a pre-purchase VAT or customs question is answered from
+ * published policy, not ticketed.
+ */
+function namesOwnOrder(message: string): boolean {
+  for (const m of message.matchAll(MY_ORDER_NOUN)) {
+    const between = m[1].trim().split(/\s+/).filter(Boolean);
+    if (!between.some((w) => PRE_PURCHASE_MODIFIER.test(w))) return true;
+  }
+  return ORDER_NUMBER.test(message);
+}
 const ALREADY_CHARGED_OR_PAID = /\b(?:was|were|got|been)\s+charged\b|\bi(?:'ve| have)?\s*(?:already\s+)?paid\b/i;
 const VAT_OR_CUSTOMS_WORD = /\bvat\b|\bbtw\b|\btva\b|\bcustoms\b/i;
 
 function isOwnOrderVatOrCustoms(message: string): boolean {
   if (!VAT_OR_CUSTOMS_WORD.test(message)) return false;
-  return OWN_ORDER_REF.test(message) || ALREADY_CHARGED_OR_PAID.test(message);
+  return namesOwnOrder(message) || ALREADY_CHARGED_OR_PAID.test(message);
 }
 
 const RULES: Rule[] = [
