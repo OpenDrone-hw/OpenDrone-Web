@@ -241,6 +241,12 @@ describe('test IdP rule', () => {
     assert.equal(testIdpActive(e, 'https://www.opendrone.be/account/login'), false);
     assert.equal(testIdpActive(e, 'https://OPENDRONE.BE./x'), false);
     assert.equal(testIdpActive(e, `${STAGING}/account/login`), true);
+    // The production Worker's own workers.dev and version-preview hosts, and any other host, are refused too.
+    assert.equal(testIdpActive(e, 'https://opendrone-web.sales-ee0.workers.dev/account/login'), false);
+    assert.equal(testIdpActive(e, 'https://abc12345-opendrone-web.sales-ee0.workers.dev/x'), false);
+    assert.equal(testIdpActive(e, 'https://opendrone-web-preview.sales-ee0.workers.dev.evil.example/x'), false);
+    assert.equal(testIdpActive(e, 'https://evil-opendrone-web-preview.example/x'), false);
+    assert.equal(testIdpActive(e, 'https://opendrone-web-preview.sales-ee0.workers.dev/x'), true);
     assert.equal(testIdpActive({...e, ACCOUNTS_TEST_IDP: '0'}, `${STAGING}/x`), false);
     assert.equal(testIdpActive({...e, ACCOUNTS_ENABLED: '0'}, `${STAGING}/x`), false);
     // On opendrone.be the provider is Shopify (null here: not configured), never the test form.

@@ -31,14 +31,27 @@ export const accountsEnabled = (env: {ACCOUNTS_ENABLED?: string}) => env.ACCOUNT
 export const PRODUCTION_HOSTS: ReadonlySet<string> = new Set(['opendrone.be', 'www.opendrone.be']);
 
 /**
+ * The only hosts where the test identity provider may run: the staging
+ * Worker `opendrone-web-preview` on workers.dev (and its version or alias
+ * previews, `<id>-opendrone-web-preview...`) and local development. The
+ * production Worker `opendrone-web` also answers on its own workers.dev and
+ * preview hosts, so a denylist of opendrone.be alone is not enough.
+ */
+const STAGING_HOST = 'opendrone-web-preview.sales-ee0.workers.dev';
+export function testIdpHost(host: string): boolean {
+  if (PRODUCTION_HOSTS.has(host)) return false;
+  return host === STAGING_HOST || host.endsWith('-' + STAGING_HOST) || host === 'localhost' || host === '127.0.0.1';
+}
+
+/**
  * The test identity provider (and the public /oauth/token it needs for
  * staging E2E) is active only when ACCOUNTS_TEST_IDP is "1" AND the request
- * host is not opendrone.be or www.opendrone.be (accounts contract).
+ * host is a staging or local host (`testIdpHost`), never opendrone.be, its
+ * www host, or the production Worker's workers.dev hosts (accounts contract).
  */
 export function testIdpActive(env: AccountsEnv, requestUrl: string | URL): boolean {
   if (!accountsEnabled(env) || env.ACCOUNTS_TEST_IDP?.trim() !== '1') return false;
-  const host = new URL(requestUrl).hostname.toLowerCase().replace(/\.$/, '');
-  return !PRODUCTION_HOSTS.has(host);
+  return testIdpHost(new URL(requestUrl).hostname.toLowerCase().replace(/\.$/, ''));
 }
 
 /**
