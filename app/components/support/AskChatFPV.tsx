@@ -53,13 +53,18 @@ function parseAskFrame(block: string): {type: string; data: unknown} | undefined
 }
 
 /**
- * Reads `POST /api/support/ask/stream`'s SSE body: `onDelta` fires with
- * each answer chunk as it streams in, and the returned promise resolves
+ * Reads `POST /api/support/ask/stream`'s SSE body: `onStatus` fires with
+ * each ChatFPV progress line while it works, `onDelta` with each answer
+ * chunk, and the returned promise resolves
  * with the `AskResult` its one `done` event carries. Resolves null when the
  * stream ends (a dropped connection, or the request was aborted) before a
  * `done` event ever arrived, same as a network failure.
  */
-export async function readAskStream(res: Response, onDelta: (text: string) => void): Promise<AskResult | null> {
+export async function readAskStream(
+  res: Response,
+  onDelta: (text: string) => void,
+  onStatus?: (text: string) => void,
+): Promise<AskResult | null> {
   const reader = res.body?.getReader();
   if (!reader) return null;
   const dec = new TextDecoder();
@@ -77,6 +82,9 @@ export async function readAskStream(res: Response, onDelta: (text: string) => vo
       if (frame.type === 'delta') {
         const text = (frame.data as {text?: unknown} | null)?.text;
         if (typeof text === 'string' && text) onDelta(text);
+      } else if (frame.type === 'status') {
+        const text = (frame.data as {text?: unknown} | null)?.text;
+        if (typeof text === 'string' && text) onStatus?.(text);
       } else if (frame.type === 'done') {
         result = frame.data as AskResult;
       }
@@ -105,6 +113,7 @@ export function AskChatFPV({
   const [question, setQuestion] = useState('');
   const [busy, setBusy] = useState(false);
   const [answer, setAnswer] = useState<Answer | null>(null);
+  const [status, setStatus] = useState('');
   const id = useId();
   const abortRef = useRef<AbortController | null>(null);
 
@@ -130,18 +139,21 @@ export function AskChatFPV({
         signal: controller.signal,
       });
       if (res.headers.get('Content-Type')?.startsWith('text/event-stream')) {
-        // A fixed-rule answer, an early refusal (flag off, rate limit,
-        // invalid body) or a ChatFPV rate-limit/unavailable result is plain
-        // JSON, not a stream (handleAskStream's doc comment); only an
-        // actual ChatFPV answer streams. Growing text is shown live as it
-        // arrives; the final shaping (citations, uncertain, buy cards, or a
-        // handoff swap to the ticket form) only happens once `done` settles
-        // it, same as the non-streaming result below.
+        // An early refusal or a fixed-rule answer is plain JSON (the else
+        // branch); a ChatFPV answer streams (handleAskStream's doc comment).
+        // Its status lines show on the button while ChatFPV works; the text
+        // grows as it arrives; the final shaping (citations, uncertain, buy
+        // cards, or a handoff swap to the ticket form) happens once `done`
+        // settles it.
         let streamed = '';
-        body = await readAskStream(res, (text) => {
-          streamed += text;
-          setAnswer({text: streamed, citations: [], outcome: 'answered', handoff: false});
-        });
+        body = await readAskStream(
+          res,
+          (text) => {
+            streamed += text;
+            setAnswer({text: streamed, citations: [], outcome: 'answered', handoff: false});
+          },
+          setStatus,
+        );
       } else {
         body = (await res.json()) as AskResult;
       }
@@ -150,6 +162,7 @@ export function AskChatFPV({
     }
     abortRef.current = null;
     setBusy(false);
+    setStatus('');
     const outcome = body?.ok ? body.answer.outcome : 'error';
     trackEvent('chatfpv_ask_result', {props: {outcome}});
     if (body?.ok && !body.answer.handoff) {
@@ -202,7 +215,7 @@ export function AskChatFPV({
         </label>
         <div className="sp-submit-row">
           <button type="submit" className="od-btn od-btn-primary" disabled={busy || question.trim().length < 3}>
-            {busy ? 'Asking…' : 'Ask ChatFPV'}
+            {busy ? `${status || 'Asking'}…` : 'Ask ChatFPV'}
           </button>
           <a
             href="/support?ticket=1"

@@ -139,9 +139,17 @@ export type ChatFpvClient = {
    * value is the same `ChatAnswer` the `done` event carries, a
    * `ChatFpvRateLimited` on a 429 (same as `ask`), or null on any other
    * failure (network, timeout, non-2xx, no body, a mid-stream `error`
-   * event, or a connection that ends before `done`).
+   * event, or a connection that ends before `done`). ChatFPV sends every
+   * `delta` in one burst right before `done`, so the only live signal while
+   * it works is its `status` events ("Searching the docs"), passed to
+   * `onStatus`.
    */
-  askStream(message: string, context: AskContext | undefined, onDelta: (text: string) => void): Promise<ChatAnswer | ChatFpvRateLimited | null>;
+  askStream(
+    message: string,
+    context: AskContext | undefined,
+    onDelta: (text: string) => void,
+    onStatus?: (text: string) => void,
+  ): Promise<ChatAnswer | ChatFpvRateLimited | null>;
 };
 
 /**
@@ -471,7 +479,7 @@ export function createChatFpvClient(env: ChatFpvEnv, fetcher?: typeof fetch, opt
       return parseAnswer(res?.data);
     },
 
-    async askStream(message, context = {}, onDelta) {
+    async askStream(message, context = {}, onDelta, onStatus) {
       const text = scrubOutbound(message);
       if (!text) return null;
       if (!origin) return null;
@@ -528,6 +536,9 @@ export function createChatFpvClient(env: ChatFpvEnv, fetcher?: typeof fetch, opt
               if (frame.type === 'delta') {
                 const t = (frame.data as {text?: unknown} | null)?.text;
                 if (typeof t === 'string' && t) onDelta(t);
+              } else if (frame.type === 'status') {
+                const t = (frame.data as {text?: unknown} | null)?.text;
+                if (typeof t === 'string' && t) onStatus?.(t.slice(0, 80));
               } else if (frame.type === 'done') {
                 result = parseAnswer((frame.data as {answer?: unknown} | null)?.answer);
               } else if (frame.type === 'error') {
@@ -689,23 +700,19 @@ export async function handleAsk(request: Request, env: ChatFpvEnv, client?: Chat
 }
 
 /**
- * SSE build of `handleAsk` for the same route (`POST /api/support/ask`
- * with `Accept: text/event-stream`): a fixed-rule or preorder-info answer,
- * an early refusal (flag off, origin, rate limit, invalid body) or a
- * ChatFPV rate-limit/unavailable result is a single, ordinary JSON response
- * exactly like `handleAsk` (`Content-Type: application/json`, same status
- * codes) - there is nothing to stream yet. Only once ChatFPV itself starts
- * answering does the response become `text/event-stream`: `delta` events
- * carry pieces of the already-computed answer text (widget.md "Not done
- * this iteration - Streaming": ChatFPV never streams a raw, ungated model
- * token; see `askStream`'s doc comment), and exactly one final `done` event
- * carries the same `AskResult` JSON `handleAsk` would have sent whole. A
- * client that gets a non-2xx or a JSON content type reads the body as
- * `AskResult` exactly as it would from `handleAsk`; only a 200 with
- * `text/event-stream` is read as SSE. `waitUntil` (the Worker's
- * `ExecutionContext.waitUntil`) keeps the background task running after
- * this function returns its still-open stream; omitted in tests, where
- * nothing recycles the isolate mid-task anyway.
+ * SSE build of `handleAsk` (`POST /api/support/ask/stream`). An early
+ * refusal (flag off, origin, rate limit, invalid body) or a fixed-rule or
+ * preorder-info answer is the same plain JSON response `handleAsk` sends
+ * (`Content-Type: application/json`, same status codes). Otherwise the
+ * response is a 200 `text/event-stream`: `status` events while ChatFPV
+ * works (its progress lines, the only live signal: ChatFPV computes and
+ * gates the whole answer before it sends any text), `delta` pieces of the
+ * finished answer text, and exactly one final `done` carrying the
+ * `AskResult` `handleAsk` would have sent whole, including a ChatFPV
+ * rate-limit or unavailable result (`ok: false`, still status 200).
+ * `waitUntil` (the Worker's `ExecutionContext.waitUntil`) keeps the
+ * background task running after the still-open stream is returned; omitted
+ * in tests.
  */
 export async function handleAskStream(
   request: Request,
@@ -741,6 +748,7 @@ export async function handleAskStream(
         message,
         {page: 'support', ...(product ? {product} : {}), ...(clientId ? {clientId} : {})},
         (text) => void send('delta', {text}),
+        (text) => void send('status', {text}),
       );
       await send('done', await shapeAskAnswer(answer, catalog));
     } catch (err) {

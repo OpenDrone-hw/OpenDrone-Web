@@ -252,6 +252,8 @@ export function fakeChatFpv(opts: {
   failOutcome?: boolean;
   /** `askStream`'s delta chunks before it resolves with `answer`; default one chunk of the whole answer text. */
   deltas?: string[];
+  /** `askStream`'s status lines, sent before any delta. */
+  statuses?: string[];
 } = {}) {
   const drafts: DraftRequest[] = [];
   const outcomes: DraftOutcomeRequest[] = [];
@@ -279,7 +281,8 @@ export function fakeChatFpv(opts: {
       if (opts.rateLimited) return opts.rateLimited;
       return opts.answer ?? null;
     },
-    async askStream(message, context, onDelta) {
+    async askStream(message, context, onDelta, onStatus) {
+      for (const st of opts.statuses ?? []) onStatus?.(st);
       const deltas = opts.deltas ?? (opts.answer ? [opts.answer.answer] : []);
       streamAsks.push({message, context, deltas});
       for (const d of deltas) onDelta(d);
