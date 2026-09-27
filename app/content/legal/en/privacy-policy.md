@@ -24,6 +24,7 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Order data | Name, address, email, telephone number | Processing and delivery of orders |
 | Payment data | Payment method, transaction ID | Payment processing (via payment provider) |
 | Account data | Email (sign-in with a one-time code via Shopify) | Customer account on the webshop |
+| Shared OpenDrone account (opendrone.be and chatfpv.com) | On opendrone.be: your Shopify customer id, when the account was created and last signed in, session start and expiry, the encrypted Shopify sign-in confirmation. On chatfpv.com: a pairwise account id only, and the ChatFPV conversations you have while signed in | One sign-in for opendrone.be and chatfpv.com; keeping your ChatFPV history |
 | Communication | Name, email, order number, content of messages and attachments (support tickets) | Customer service, complaint handling |
 | Website usage | IP address, browser, pages visited | Website optimisation, security |
 | Newsletter | Email, country (derived from IP address) | Marketing communication (only with consent) |
@@ -44,6 +45,7 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Newsletter | Consent (Art. 6.1.a) |
 | Trade enquiries | Steps taken at the request of the enquirer before entering into a contract (Art. 6.1.b) |
 | Fraud / abuse prevention | Legitimate interest (Art. 6.1.f) |
+| Shared OpenDrone account and ChatFPV history | Necessary for performance of a contract (Art. 6.1.b) |
 
 ### 4. Retention periods
 
@@ -53,6 +55,9 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Customer account | Until deleted at your request, at the latest 3 years after your last sign-in or order |
 | Customer service communication (support tickets on the site, in Discord and the ticket reference on your Shopify customer record) | 24 months after the ticket is closed, then deleted automatically. A ticket we answered closes after 30 days without a reply from you, any other ticket after 90 days without activity |
 | Website log files | 6 months |
+| Shared account sign-in sessions | 30 days after your last visit, or until you sign out; then deleted automatically |
+| Sign-in codes and sign-in cookies for chatfpv.com | 60 seconds (codes), 10 minutes (sign-in cookie); deleted automatically after expiry |
+| ChatFPV conversations made while signed in | Until you delete them, or until your customer account is deleted |
 | Newsletter subscription | Until unsubscribed |
 | Trade enquiries without an order | 2 years after the last contact |
 | ChatFPV conversations in the helper and the Ask box, with ratings | 90 days after the last message in the conversation |
@@ -84,6 +89,8 @@ Order and customer data (name, address, email, payment reference, order history)
 
 **Discord.** The OpenDrone community server runs on Discord. Discord Inc. is an independent controller for the community server you choose to join. For support tickets, Discord Inc. processes the ticket on our behalf as a processor (table above); you do not need a Discord account to open a ticket. Discord's privacy policy: https://discord.com/privacy
 
+**Shared sign-in with chatfpv.com.** chatfpv.com, the ChatFPV FPV assistant, is also run by Incutec BV. When you sign in to chatfpv.com with your OpenDrone account, opendrone.be confirms your sign-in to chatfpv.com with a pairwise account id: a code derived from your customer account that only chatfpv.com receives and that cannot be turned back into it. chatfpv.com never receives your name, email address or Shopify customer id. Shopify access tokens are discarded right after sign-in; opendrone.be keeps only the Shopify sign-in confirmation (ID token), encrypted, to end your Shopify session when you sign out. When chatfpv.com checks whether you are already signed in (silent sign-in), opendrone.be sets no cookie and stores nothing for a visitor who is not signed in.
+
 **Transfers outside the EEA.** Some recipients process data outside the EEA. Those transfers rely on an adequacy decision (Art. 45 GDPR: Canada, UK, or the EU-US Data Privacy Framework for certified US recipients) or on standard contractual clauses (Art. 46 GDPR, Decision 2021/914). The basis per recipient is in the table above.
 
 ### 6. Rights of the data subject
@@ -96,6 +103,8 @@ You have the right to:
 - **Object** to processing based on legitimate interest (Art. 21). You may object to processing for direct marketing at any time and free of charge; we then stop that processing immediately (Art. 21.2-21.3)
 - **Portability** of your data (Art. 20)
 - **Withdraw** your consent (Art. 7.3)
+
+**Your ChatFPV history.** Signed in on opendrone.be, the account page (opendrone.be/account) lets you export your ChatFPV conversations as a JSON file or delete them at once. When your customer account is deleted in Shopify, your OpenDrone account data and your ChatFPV history are deleted with it.
 
 Requests can be sent to: privacy@opendrone.be
 We respond to your request within **one month** (Art. 12(3) GDPR), extensible by a further two months for complex or numerous requests.

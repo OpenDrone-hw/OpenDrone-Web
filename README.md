@@ -487,12 +487,20 @@ sequenceDiagram
 | `GET /account/login?return_to=` | Start sign-in; `return_to` must be a same-origin path |
 | `GET /account/callback` | Finish sign-in, new session id |
 | `POST /account/logout` | Same Origin only; revokes the session, calls ChatFPV `/v1/auth/backchannel-logout {sid}` over the binding, ends the Shopify session |
-| `GET /account` | Orders link (`SHOPIFY_CUSTOMER_ACCOUNT_URL`), sign out |
+| `GET /account` | Orders link (`SHOPIFY_CUSTOMER_ACCOUNT_URL`), ChatFPV history export and delete, sign out |
+| `POST /account/chatfpv-history` | Same Origin, signed in; `intent=export` downloads ChatFPV `GET /v1/account/export` as JSON, `intent=delete` + `confirm=yes` calls `POST /v1/account/erase {sub}` |
+| `POST /webhooks/shopify/customers-redact` | Shopify `customers/redact`, signed with `SHOPIFY_WEBHOOK_SECRET`: deletes that customer's `od_accounts`, `od_sessions`, `oauth_codes` rows and erases ChatFPV once; 502 when ChatFPV fails, so Shopify redelivers |
+| `POST /webhooks/shopify/customers-data-request` | Shopify `customers/data_request`, same signature: answers JSON with the opendrone.be account rows and the ChatFPV export for that customer only |
 | `GET /oauth/authorize` | Codes for client `chatfpv` (60 s, single use; a reused code revokes the session) |
 | `POST /oauth/token` | Service binding only; public host 404 (staging test IdP excepted) |
 | `GET /oauth/logout` | Sign-out from chatfpv.com; `post_logout_redirect_uri` from `CHATFPV_POST_LOGOUT_REDIRECTS`; Shopify's registered logout URI |
 | `GET /api/account/widget-assertion` | 5-minute assertion the widget posts into the ChatFPV iframe; 204 signed out |
 | `GET /account/test-idp/authorize` | Test sign-in form, only with the test IdP rule below |
+
+ChatFPV calls for erase and export go by pairwise `sub` with `CHATFPV_KEY`
+over the `CHATFPV` binding (`app/lib/accounts/rights.ts`). Legal text for
+shared accounts is in `app/content/legal/{en,nl,fr}/` (privacy, cookies) and
+the cookie list on `/cookie-settings`.
 
 Test IdP rule: `ACCOUNTS_TEST_IDP="1"` replaces Shopify with the test form
 only when the request host is not `opendrone.be` or `www.opendrone.be`. It
@@ -550,6 +558,10 @@ eval or staging Worker it talks to.
 2. Put the storefront secrets above on `opendrone-web`, and the two shared
    secrets on `chatfpv`.
 3. Merge the storefront PR, then the ChatFPV PR, both with the flag `"0"`.
+   Point Shopify's `customers/redact` and `customers/data_request`
+   compliance webhooks at `https://opendrone.be/webhooks/shopify/customers-redact`
+   and `.../customers-data-request`, signed with the secret held in
+   `SHOPIFY_WEBHOOK_SECRET`; they answer 404 until the flag is `"1"`.
 4. Storefront: `ACCOUNTS_ENABLED = "1"` in `wrangler.production.toml`
    (squash-merged PR). Check sign-in and sign-out on opendrone.be.
 5. ChatFPV: its `ACCOUNTS_ENABLED` to `"1"`. Check "Sign in with OpenDrone"

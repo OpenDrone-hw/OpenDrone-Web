@@ -14,15 +14,20 @@ Cookies are small text files placed on your device by a website when you visit i
 
 #### Cookies of opendrone.be and checkout (no consent required)
 
-This site (opendrone.be) sets three cookies of its own. Checkout runs on Shopify, which sets its own cookies on the checkout pages.
+This site (opendrone.be) sets the cookies below of its own. Checkout runs on Shopify, which sets its own cookies on the checkout pages.
 
 | Cookie | Purpose | Retention |
 |--------|---------|-----------|
 | `session` (opendrone.be) | Keeps the reference to your Shopify cart once you add a product to your cart | Session |
 | `opendrone_lang` (opendrone.be) | Remembers the language you choose for the legal pages | 1 year |
 | `od_support` (opendrone.be) | Remembers which support tickets this browser may open; set only when you open or find a ticket | 180 days |
+| `__Host-od_sid` (opendrone.be) | Keeps you signed in to your OpenDrone account, also for signing in to chatfpv.com; set only when you sign in (strictly necessary) | 30 days after your last visit, or until you sign out |
+| `__Host-od_oauth` (opendrone.be) | Protects a sign-in in progress against forgery; set when you click Sign in (strictly necessary) | 10 minutes |
+| `__Host-od_logout` (opendrone.be) | Finishes a sign-out started on chatfpv.com; set only during that sign-out (strictly necessary) | 5 minutes |
 | Shopify checkout cookies | Keep your cart, checkout and customer-account sign-in working and prevent payment fraud; set by Shopify on the checkout pages, not on opendrone.be. Shopify's cookie list: https://www.shopify.com/legal/cookies | Session to 1 year, depending on the cookie |
 | Stripe cookies (`m`, `__stripe_mid`, `__stripe_sid`) | Payment fraud prevention: set by Stripe, which processes Shopify Payments, on the checkout pages during payment, not on opendrone.be (strictly necessary for the payment explicitly requested; Art. 10/2 of the Act of 30 July 2018 (as inserted by the Act of 21 December 2021); ePrivacy Directive 2002/58/EC) | Session to 1 year, depending on the cookie |
+
+When chatfpv.com checks whether you are already signed in with your OpenDrone account (silent sign-in), opendrone.be sets no cookie for a visitor who is not signed in.
 
 #### Storage in your browser
 
