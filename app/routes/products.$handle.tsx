@@ -1,6 +1,7 @@
 import {BOARD_ART_VERSION} from '~/data/board-art-version';
 import {ChatFpvWidget} from '~/components/ChatFpvWidget';
 import {chatFpvWidgetSrc, chatFpvWidgetSrcWithProduct} from '~/lib/support/chatfpv';
+import {handoffEnabled} from '~/lib/accounts/handoff';
 import {Fragment, Suspense, useEffect, useMemo, useRef, useState} from 'react';
 import {createPortal} from 'react-dom';
 import {useAside} from '~/components/Aside';
@@ -192,6 +193,8 @@ export async function loader(args: Route.LoaderArgs) {
     ...criticalData,
     // ChatFPV widget iframe address; null unless CHATFPV_WIDGET_ENABLED is "1".
     chatfpvWidget: chatFpvWidgetSrc(args.context.env, 'product', args.params.handle),
+    // "1": a `#cfh` ticket from ChatFPV opens the widget on its conversation.
+    chatfpvHandoff: handoffEnabled(args.context.env),
   };
 }
 
@@ -656,7 +659,7 @@ function useChapterReveal(key: string) {
 }
 
 export default function Product() {
-  const {product, roadmapStatus, chatfpvWidget} = useLoaderData<typeof loader>();
+  const {product, roadmapStatus, chatfpvWidget, chatfpvHandoff} = useLoaderData<typeof loader>();
   // Nothing about a planned or in-progress product is settled, so it gets
   // the concept plate instead of a product page (docs/product-status.md),
   // unless its content file says it sells (pre-order frame).
@@ -664,7 +667,7 @@ export default function Product() {
     return (
       <>
         <ConceptPlate title={product.title} status={roadmapStatus} />
-        <ChatFpvWidget src={chatfpvWidget} />
+        <ChatFpvWidget src={chatfpvWidget} handoff={chatfpvHandoff} />
       </>
     );
   }
@@ -693,6 +696,7 @@ function ProductPage() {
     contributors,
     commerceHandoff,
     chatfpvWidget,
+    chatfpvHandoff,
   } = useLoaderData<typeof loader>();
   useChapterReveal(product.handle);
 
@@ -2999,7 +3003,7 @@ function ProductPage() {
           />
         </details>
       ) : null}
-      <ChatFpvWidget src={chatfpvWidgetSrcVariant} />
+      <ChatFpvWidget src={chatfpvWidgetSrcVariant} handoff={chatfpvHandoff} />
     </div>
   );
 }

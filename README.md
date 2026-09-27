@@ -336,7 +336,7 @@ answer `410`.
 ### ChatFPV (AI)
 
 ChatFPV (`CHATFPV_URL`, repository incutec-org/chatfpv) answers FPV and
-OpenDrone questions with sources. Three switches in `[vars]`, each off
+OpenDrone questions with sources. Four switches in `[vars]`, each off
 unless `"1"`: `"1"` in `wrangler.toml` (staging), `"0"` in
 `wrangler.production.toml`. `CHATFPV_KEY` is a Worker secret read on the
 server only. Server calls go through the `CHATFPV` service binding to the
@@ -348,6 +348,7 @@ Worker on the same account (error 1042), so the public URL fails from here.
 | `CHATFPV_DRAFTS_ENABLED` | AI drafts in ticket threads (also needs `CHATFPV_KEY`) |
 | `CHATFPV_ASK_ENABLED` | "Ask ChatFPV (AI)" box above the `/support` form; `POST /api/support/ask` |
 | `CHATFPV_WIDGET_ENABLED` | "Ask ChatFPV (AI)" button on product pages and `/preorder`, opening `CHATFPV_URL/embed` in an iframe; the ChatFPV origin is added to the CSP `frame-src` |
+| `HANDOFF_ENABLED` | A product page URL ending in `#cfh=<ticket>` (a ChatFPV product link) loses the fragment from the address bar and opens the widget with `CHATFPV_URL/embed?...#cfh=<ticket>`, where ChatFPV redeems the ticket and shows that conversation; needs `CHATFPV_WIDGET_ENABLED` |
 
 ```mermaid
 flowchart LR
