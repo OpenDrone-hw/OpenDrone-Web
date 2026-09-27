@@ -183,6 +183,18 @@
         [
           "Antenna",
           "Ceramic"
+        ],
+        [
+          "Radio",
+          "SX1281"
+        ],
+        [
+          "Telemetry power",
+          "13 dBm (20 mW)"
+        ],
+        [
+          "Dimensions",
+          "10.0 × 11.5 mm"
         ]
       ],
       "pins": [
@@ -282,6 +294,18 @@
         [
           "Antenna",
           "U.FL"
+        ],
+        [
+          "Radio",
+          "SX1281"
+        ],
+        [
+          "Telemetry power",
+          "13 dBm (20 mW)"
+        ],
+        [
+          "Dimensions",
+          "10.0 × 11.5 mm"
         ]
       ],
       "specs": [
@@ -391,6 +415,18 @@
         [
           "Antenna",
           "U.FL × 1"
+        ],
+        [
+          "Radio",
+          "LR1121"
+        ],
+        [
+          "Telemetry power",
+          "Up to 22 dBm (158 mW)"
+        ],
+        [
+          "Dimensions",
+          "10.0 × 17.3 mm"
         ]
       ],
       "specs": [
@@ -525,6 +561,18 @@
         [
           "Antenna",
           "U.FL × 2"
+        ],
+        [
+          "Radios",
+          "2× LR1121"
+        ],
+        [
+          "Telemetry power",
+          "Up to 22 dBm (158 mW)"
+        ],
+        [
+          "Dimensions",
+          "17.0 × 15.7 mm"
         ]
       ],
       "specs": [
