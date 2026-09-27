@@ -109,10 +109,15 @@ export function ChatFpvWidget({src}: {src: string | null | undefined}) {
     const measure = () => {
       frame = 0;
       let obstacleTop = window.innerHeight;
+      // Horizontal extent of the right-anchored button column: an obstacle
+      // beside it (the desktop buy column left of the button) is not under it
+      // and must not lift the button or shrink the open panel.
+      const col = button.current?.getBoundingClientRect();
       for (const selector of BOTTOM_OBSTACLES) {
         for (const el of document.querySelectorAll<HTMLElement>(selector)) {
           const rect = el.getBoundingClientRect();
           if (rect.bottom <= 0 || rect.top >= window.innerHeight) continue; // off-screen
+          if (col && (rect.right <= col.left || rect.left >= col.right)) continue; // not under the button
           if (rect.top < window.innerHeight * (1 - OBSTACLE_ZONE_FRACTION)) continue; // not in the lower third
           obstacleTop = Math.min(obstacleTop, rect.top);
         }
