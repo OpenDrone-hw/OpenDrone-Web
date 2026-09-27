@@ -2,7 +2,7 @@
   "$title": "Header and footer",
   "skip_link": "Skip to main content",
   "chatfpv_widget_notice_summary": "AI assistant. How your question is used.",
-  "chatfpv_widget_privacy_notice": "Your question and the product on this page go to ChatFPV, Incutec's AI assistant. Your name, email, phone and order numbers are removed first; conversations that do not become a ticket are deleted after 90 days idle.",
+  "chatfpv_widget_privacy_notice": "Your question and the product on this page go straight to ChatFPV, Incutec's AI assistant, exactly as you type it: please do not include your name, email, phone or order number. Conversations that do not become a ticket are deleted after 90 days idle.",
   "aside_cart_heading": "CART",
   "aside_menu_heading": "MENU",
   "aside_close_aria": "Close",
