@@ -2,7 +2,7 @@ import {data, redirect, useLoaderData} from 'react-router';
 import type {Route} from './+types/account._index';
 import {accountsEnabled} from '~/lib/accounts/config';
 import {legacyAccountResponse} from '~/lib/accounts/legacy';
-import {readSession} from '~/lib/accounts/sessions';
+import {clearSessionCookie, hasSessionCookie, readSession} from '~/lib/accounts/sessions';
 import {customerAccountUrl} from '~/lib/shop-links';
 import {supportHeaders} from '~/lib/support/server';
 
@@ -20,7 +20,12 @@ export async function loader({request, context}: Route.LoaderArgs) {
   const {env} = context;
   if (!accountsEnabled(env)) return legacyAccountResponse('', env);
   const session = await readSession(env.SUPPORT_DB, request);
-  if (!session) throw redirect('/account/login?return_to=%2Faccount', {headers: {'Cache-Control': 'no-store'}});
+  if (!session) {
+    // A stale cookie (expired or revoked session) goes, so the header says "Sign in" again.
+    const headers = new Headers({'Cache-Control': 'no-store'});
+    if (hasSessionCookie(request)) headers.append('Set-Cookie', clearSessionCookie());
+    throw redirect('/account/login?return_to=%2Faccount', {headers});
+  }
   const headers = new Headers({'Cache-Control': 'no-store'});
   if (session.refreshCookie) headers.append('Set-Cookie', session.refreshCookie);
   return data({ordersUrl: customerAccountUrl(env), since: new Date(session.createdAt).toISOString().slice(0, 10)}, {headers});
