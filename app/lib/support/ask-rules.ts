@@ -87,3 +87,71 @@ export function matchPreorderInfo(message: string): FixedInfo | null {
     ],
   };
 }
+
+/**
+ * A VAT or non-EU/international shipping question ("is VAT included",
+ * "do you ship to the US"). This is published information (`/shipping`),
+ * not a ticket matter, but a customer asking it worded as a shipping
+ * question can otherwise be handed to a ticket with generic "help with your
+ * order" text (baseline iteration 1: s03 US shipping, s05 VAT). Checked
+ * after `matchFixedHandoff` and `matchPreorderInfo` (an actual shipment's
+ * customs problem or a wrong VAT charge on a placed order still goes to a
+ * ticket) and before ChatFPV. Labelled as OpenDrone shop information, not an
+ * AI answer, since it is a direct copy of the published shipping terms.
+ *
+ * storefront-launch iteration 2 audit (chatfpv-work/loop/storefront-launch/
+ * SUMMARY-2.md, b2/rule-probe.txt): the previous version read the pronoun
+ * "us" as the country and fired on any VAT mention, giving 7 wrong answers
+ * of 12 probed. This version requires the word to be unambiguously a
+ * country ("US" only as literal uppercase, or an unambiguous form such as
+ * "USA"/"U.S."/"United States"), never fires once an EU country or a
+ * hardware-spec word (a plug, an amperage, "continuous") is also named, and
+ * only answers the VAT rule for an "is VAT included" consumer question,
+ * never an invoice, company, VAT-number or reverse-charge one (those still
+ * reach ChatFPV or a ticket, since they need the actual order or company
+ * details, not the published rate card).
+ */
+const VAT_QUESTION = /\bvat\b|\bbtw\b|\btva\b/i;
+/** "included" in the three copy languages this rule answers in (see ask-rules.test.ts). */
+const VAT_INCLUDED_TERM = /\binclud(?:e|ed|es|ing)?\b|\bincl\.?\b|\binclusive\b|\binbegrepen\b|\bcomprise?s?\b|\bcompris(?:e|es)?\b/i;
+/**
+ * An invoice, company or reverse-charge question: needs the actual order or
+ * company registration, not the published consumer rate, so it must never
+ * get the "prices include VAT" answer (baseline: "VAT invoice for my
+ * company" and "VAT number ... reverse charge" both got it).
+ */
+const VAT_EXCLUDE = /\binvoice\b|\bfactuur\b|\bfacture\b|\bvat[- ]?number\b|\bbtw[- ]?nummer\b|num[eé]ro de tva|\breverse[- ]charge\b|\bautoliquidation\b|\bcompany\b|\bbusiness\b|\bb2b\b/i;
+
+/** Bare "US" only as literal uppercase; lower-case "us" is the pronoun, not the country. */
+const US_STRICT = /\bUS\b/;
+/** Unambiguous regardless of case: no English pronoun or common word reads this way. */
+const US_UNAMBIGUOUS = /\bUSA\b|\bU\.S\.A?\.?\b|\bUnited States\b/i;
+const OTHER_NON_EU_COUNTRY = /\b(?:UK|U\.K\.|United Kingdom|Canada|Australia|Switzerland|Norway|Japan)\b/i;
+const mentionsNonEuCountry = (message: string) => US_STRICT.test(message) || US_UNAMBIGUOUS.test(message) || OTHER_NON_EU_COUNTRY.test(message);
+
+const SHIP_WORD = /\bship(?:ping|s|ped)?\b|\bdeliver(?:ed|ing|y|ies)?\b/i;
+const OUTSIDE_EU = /\boutside (?:the )?(?:eu|europe)\b|\bnon[- ]eu\b|\binternational(?:ly)?\b/i;
+
+/** Any EU member state named, in English, Dutch or French, so a question about shipping "to us in Germany" or "chez nous en France" is never read as a non-EU question. */
+const EU_COUNTRY_NAMED =
+  /\b(?:belgium|belgi[eë]|belgique|germany|duitsland|allemagne|france|frankrijk|netherlands|nederland|pays-bas|luxembourg|luxemburg|spain|spanje|espagne|italy|itali[eë]|italie|poland|polen|pologne|austria|oostenrijk|autriche|portugal|ireland|ierland|irlande|sweden|zweden|su[eè]de|denmark|denemarken|danemark|finland|finlande|greece|griekenland|gr[eè]ce|czechia|czech republic|tsjechi[eë]|r[eé]publique tch[eè]que|hungary|hongarije|hongrie|romania|roemeni[eë]|roumanie|bulgaria|bulgarije|bulgarie|croatia|kroati[eë]|croatie|slovakia|slowakije|slovaquie|slovenia|sloveni[eë]|slov[eé]nie|estonia|estland|estonie|latvia|letland|lettonie|lithuania|litouwen|lituanie|malta|malte|cyprus|chypre)\b/i;
+
+/** A hardware spec word ("US or EU power plug", "60A continuous"): the message is asking about the product, not about where it ships. */
+const PRODUCT_SPEC_WORD = /\bplug\b|\bcontinuous\b|\b\d+\s?a\b/i;
+
+export function matchShippingVatInfo(message: string): FixedInfo | null {
+  const vat = !VAT_EXCLUDE.test(message) && VAT_QUESTION.test(message) && VAT_INCLUDED_TERM.test(message);
+  const nonEuShipping =
+    !EU_COUNTRY_NAMED.test(message) &&
+    !PRODUCT_SPEC_WORD.test(message) &&
+    SHIP_WORD.test(message) &&
+    (mentionsNonEuCountry(message) || OUTSIDE_EU.test(message));
+  if (!vat && !nonEuShipping) return null;
+  const text = vat
+    ? 'Every price and shipping rate shown already includes VAT. Within the EU there are no customs formalities and no import duties after checkout.'
+    : "Direct checkout only covers the EU countries offered at checkout, shipped from Belgium; VAT is included and there are no customs charges. Outside the EU, Incutec does not offer direct consumer checkout: retailers can request a bulk quote, and consumers can sign up for launch news for other countries.";
+  return {
+    text,
+    citations: [{n: 1, title: 'Shipping and delivery', url: '/shipping', source: 'OpenDrone storefront', kind: 'doc'}],
+  };
+}

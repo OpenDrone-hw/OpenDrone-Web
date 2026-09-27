@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {matchFixedHandoff, matchPreorderInfo} from './ask-rules.ts';
+import {matchFixedHandoff, matchPreorderInfo, matchShippingVatInfo} from './ask-rules.ts';
 
 // The order, compat, shipping and offtopic questions from the iteration-1
 // baseline eval (chatfpv-work/loop/storefront/i1/questions-40.jsonl):
@@ -90,5 +90,82 @@ describe('matchPreorderInfo', () => {
   it('does not swallow a real refund or cancellation on a preorder', () => {
     assert.equal(matchPreorderInfo('I want a refund for my preorder.'), null);
     assert.equal(matchPreorderInfo('Can I cancel my preorder and return the frame?'), null);
+  });
+});
+
+describe('matchShippingVatInfo', () => {
+  it('answers a VAT question and a non-EU shipping question from /shipping', () => {
+    for (const q of ['Do prices include VAT?', 'Is VAT included in the price?', 'Do you ship to the United States?', 'Can you deliver outside the EU?']) {
+      const info = matchShippingVatInfo(q);
+      assert.ok(info, q);
+      assert.ok(info!.text.length > 0, q);
+      assert.deepEqual(info!.citations.map((c) => c.url), ['/shipping']);
+    }
+  });
+
+  it('never catches an ordinary product, compatibility or offtopic question', () => {
+    const VAT_SHIPPING = new Set(['Do you ship to the United States?', 'Do prices include VAT?']);
+    for (const q of SHOULD_ANSWER.filter((q) => !VAT_SHIPPING.has(q))) assert.equal(matchShippingVatInfo(q), null, q);
+  });
+
+  it('does not swallow a real order-shipping problem (still a handoff)', () => {
+    assert.equal(matchShippingVatInfo('My package was damaged in transit, what do I do?'), null);
+    assert.equal(matchShippingVatInfo('Can I change the shipping address on my order?'), null);
+  });
+});
+
+// The storefront-launch iteration 2 precision probe
+// (chatfpv-work/loop/storefront-launch/b2/rule-probe.txt): 12 questions found
+// 7 wrong answers (the pronoun "us" read as the country, and any VAT
+// mention answered as "included"). Grown to 30 (en/nl/fr) and pinned here so
+// the rule can never regress silently.
+const SHIPPING_VAT_PROBE: Array<{q: string; answered: boolean}> = [
+  // Non-EU shipping: real non-EU destinations, still answered.
+  {q: 'Do you ship to the United States?', answered: true},
+  {q: 'Do you ship to the US?', answered: true},
+  {q: 'Do you ship to the UK?', answered: true},
+  {q: 'Ship to Norway?', answered: true},
+  {q: 'Do you ship to Switzerland?', answered: true},
+  {q: 'Do you ship to Japan?', answered: true},
+  {q: 'Do you ship to Australia?', answered: true},
+  {q: 'Do you ship internationally?', answered: true},
+  {q: 'Can you deliver outside the EU?', answered: true},
+  // The pronoun "us" naming an EU country: never a non-EU answer (the bug).
+  {q: 'Can you ship to us in Germany?', answered: false},
+  {q: 'Could you deliver it to us in Belgium by Friday?', answered: false},
+  {q: 'How fast do you ship to us in the Netherlands?', answered: false},
+  {q: 'Kunnen jullie leveren aan ons in Nederland?', answered: false},
+  {q: 'Livrez-vous chez nous en France?', answered: false},
+  // Lower-case "us" is the pronoun, not the country: never fires on it alone.
+  {q: 'do you ship to the us?', answered: false},
+  // A hardware-spec word, not a shipping question (the bug).
+  {q: 'Is the VTX delivered with a US or EU power plug?', answered: false},
+  {q: 'Does the ESC deliver 60A continuous for us?', answered: false},
+  // No ship/deliver word at all: falls through to ChatFPV, unchanged.
+  {q: 'Does OpenRX ship with the antenna?', answered: false},
+  // VAT-included: a plain consumer question, still answered, en/nl/fr.
+  {q: 'Do prices include VAT?', answered: true},
+  {q: 'Is VAT included in the price?', answered: true},
+  {q: 'Wat kost verzending naar Nederland, incl btw?', answered: true},
+  {q: 'Is BTW inbegrepen in de prijs?', answered: true},
+  {q: 'Est-ce que la TVA est comprise dans le prix?', answered: true},
+  {q: 'Is VAT included when I ship to Germany?', answered: true},
+  // Invoice, company, VAT-number and reverse-charge: need the order or
+  // company details, never the rate-card answer (the bug).
+  {q: 'Can I get a VAT invoice for my company?', answered: false},
+  {q: 'Do I need to pay VAT as a business with a VAT number (reverse charge)?', answered: false},
+  {q: "What's your VAT number?", answered: false},
+  {q: 'Kan ik een factuur met BTW-nummer krijgen?', answered: false},
+  {q: 'Puis-je avoir une facture avec autoliquidation de la TVA?', answered: false},
+  // A bare VAT mention with no "included" word: not the rate-card question.
+  {q: 'What is the price with VAT for the OpenESC?', answered: false},
+];
+
+describe('matchShippingVatInfo precision probe (storefront-launch iteration 2)', () => {
+  it('matches exactly the intended 12 of 30, not the pronoun/product/invoice false positives', () => {
+    for (const {q, answered} of SHIPPING_VAT_PROBE) {
+      const info = matchShippingVatInfo(q);
+      assert.equal(info !== null, answered, q);
+    }
   });
 });

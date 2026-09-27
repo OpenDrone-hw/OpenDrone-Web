@@ -4,7 +4,7 @@
  * imported by application code.
  */
 import {readdirSync, readFileSync} from 'node:fs';
-import type {AskContext, ChatFpvClient} from './chatfpv.ts';
+import type {AskContext, ChatFpvClient, ChatFpvRateLimited} from './chatfpv.ts';
 import type {ChatAnswer, DraftOutcomeRequest, DraftRequest, DraftResponse} from './chatfpv-contract.ts';
 import {DiscordError, type DiscordClient, type DiscordMessage, type OutboundFile} from './discord.ts';
 
@@ -245,7 +245,7 @@ export function fakeShopify(script: ShopifyScript) {
  * (default: a short grounded draft); `failOutcome` makes outcome posts fail
  * (null), as a timeout or 5xx would.
  */
-export function fakeChatFpv(opts: {draft?: (req: DraftRequest, n: number) => DraftResponse | null; answer?: ChatAnswer | null; failOutcome?: boolean} = {}) {
+export function fakeChatFpv(opts: {draft?: (req: DraftRequest, n: number) => DraftResponse | null; answer?: ChatAnswer | null; rateLimited?: ChatFpvRateLimited; failOutcome?: boolean} = {}) {
   const drafts: DraftRequest[] = [];
   const outcomes: DraftOutcomeRequest[] = [];
   const asks: Array<{message: string; context?: AskContext}> = [];
@@ -268,6 +268,7 @@ export function fakeChatFpv(opts: {draft?: (req: DraftRequest, n: number) => Dra
     },
     async ask(message, context) {
       asks.push({message, context});
+      if (opts.rateLimited) return opts.rateLimited;
       return opts.answer ?? null;
     },
   };

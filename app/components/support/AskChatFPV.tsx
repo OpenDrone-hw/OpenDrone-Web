@@ -2,6 +2,7 @@ import {useId, useState, type FormEvent} from 'react';
 import type {AskProductCard, AskResult} from '~/lib/support/chatfpv';
 import {ProductPods, type ProductPodItem} from '~/components/ProductPods';
 import {trackEvent} from '~/lib/growth/plausible';
+import {copyText} from '~/lib/copy';
 
 type Answer = Extract<AskResult, {ok: true}>['answer'];
 
@@ -81,7 +82,7 @@ export function AskChatFPV({
       onTicket(q, {message: body.answer.reason || REASON_TEXT.unavailable, ...(body.answer.url ? {url: body.answer.url} : {})});
       return;
     }
-    const message = body && !body.ok ? REASON_TEXT[body.error] : REASON_TEXT.unavailable;
+    const message = body && !body.ok ? body.message || REASON_TEXT[body.error] : REASON_TEXT.unavailable;
     onTicket(q, {message});
   }
 
@@ -100,6 +101,10 @@ export function AskChatFPV({
       <p className="sp-hint">
         An instant answer from ChatFPV, an AI assistant for FPV and OpenDrone hardware, with its sources. For orders,
         returns and warranty, open a ticket.
+      </p>
+      <p className="sp-hint sp-ask-privacy">
+        {copyText('support.ask_privacy_notice') ??
+          "Your question goes to ChatFPV, Incutec's AI assistant. Your name, email, phone and order numbers are removed first; conversations that do not become a ticket are deleted after 90 days idle."}
       </p>
       <form className="sp-form" onSubmit={(e) => void ask(e)}>
         <label className="sp-field">
