@@ -245,10 +245,18 @@ export function fakeShopify(script: ShopifyScript) {
  * (default: a short grounded draft); `failOutcome` makes outcome posts fail
  * (null), as a timeout or 5xx would.
  */
-export function fakeChatFpv(opts: {draft?: (req: DraftRequest, n: number) => DraftResponse | null; answer?: ChatAnswer | null; rateLimited?: ChatFpvRateLimited; failOutcome?: boolean} = {}) {
+export function fakeChatFpv(opts: {
+  draft?: (req: DraftRequest, n: number) => DraftResponse | null;
+  answer?: ChatAnswer | null;
+  rateLimited?: ChatFpvRateLimited;
+  failOutcome?: boolean;
+  /** `askStream`'s delta chunks before it resolves with `answer`; default one chunk of the whole answer text. */
+  deltas?: string[];
+} = {}) {
   const drafts: DraftRequest[] = [];
   const outcomes: DraftOutcomeRequest[] = [];
   const asks: Array<{message: string; context?: AskContext}> = [];
+  const streamAsks: Array<{message: string; context?: AskContext; deltas: string[]}> = [];
   const state = {failOutcome: opts.failOutcome ?? false};
   const client: ChatFpvClient = {
     async draft(req) {
@@ -271,6 +279,13 @@ export function fakeChatFpv(opts: {draft?: (req: DraftRequest, n: number) => Dra
       if (opts.rateLimited) return opts.rateLimited;
       return opts.answer ?? null;
     },
+    async askStream(message, context, onDelta) {
+      const deltas = opts.deltas ?? (opts.answer ? [opts.answer.answer] : []);
+      streamAsks.push({message, context, deltas});
+      for (const d of deltas) onDelta(d);
+      if (opts.rateLimited) return opts.rateLimited;
+      return opts.answer ?? null;
+    },
   };
-  return {client, drafts, outcomes, asks, state};
+  return {client, drafts, outcomes, asks, streamAsks, state};
 }

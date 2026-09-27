@@ -1,4 +1,4 @@
-import {useId, useState, type FormEvent} from 'react';
+import {useEffect, useId, useRef, useState, type FormEvent} from 'react';
 import type {AskProductCard, AskResult} from '~/lib/support/chatfpv';
 import {ProductPods, type ProductPodItem} from '~/components/ProductPods';
 import {trackEvent} from '~/lib/growth/plausible';
@@ -32,6 +32,61 @@ const REASON_TEXT: Record<Exclude<AskResult, {ok: true}>['error'], string> = {
 };
 
 /**
+ * One `text/event-stream` frame (`app/lib/support/chatfpv.ts`
+ * `handleAskStream`: `event: <type>\ndata: <json>\n\n`) parsed to its event
+ * name and JSON payload, or undefined for an incomplete or malformed frame -
+ * a chunk boundary mid-line must never be parsed as JSON.
+ */
+function parseAskFrame(block: string): {type: string; data: unknown} | undefined {
+  let type = '';
+  let data = '';
+  for (const line of block.split('\n')) {
+    if (line.startsWith('event: ')) type = line.slice(7);
+    else if (line.startsWith('data: ')) data += line.slice(6);
+  }
+  if (!type || !data) return undefined;
+  try {
+    return {type, data: JSON.parse(data)};
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Reads `POST /api/support/ask/stream`'s SSE body: `onDelta` fires with
+ * each answer chunk as it streams in, and the returned promise resolves
+ * with the `AskResult` its one `done` event carries. Resolves null when the
+ * stream ends (a dropped connection, or the request was aborted) before a
+ * `done` event ever arrived, same as a network failure.
+ */
+export async function readAskStream(res: Response, onDelta: (text: string) => void): Promise<AskResult | null> {
+  const reader = res.body?.getReader();
+  if (!reader) return null;
+  const dec = new TextDecoder();
+  let buf = '';
+  let result: AskResult | null = null;
+  for (;;) {
+    const {done, value} = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, {stream: true});
+    const blocks = buf.split('\n\n');
+    buf = blocks.pop() ?? '';
+    for (const block of blocks) {
+      const frame = parseAskFrame(block);
+      if (!frame) continue;
+      if (frame.type === 'delta') {
+        const text = (frame.data as {text?: unknown} | null)?.text;
+        if (typeof text === 'string' && text) onDelta(text);
+      } else if (frame.type === 'done') {
+        result = frame.data as AskResult;
+      }
+    }
+    if (result) break;
+  }
+  return result;
+}
+
+/**
  * "Ask ChatFPV (AI)" on /support, above the ticket form (only while
  * CHATFPV_ASK_ENABLED is "1"). The question goes to POST /api/support/ask,
  * which asks ChatFPV server side. The answer is plain text with its
@@ -51,6 +106,11 @@ export function AskChatFPV({
   const [busy, setBusy] = useState(false);
   const [answer, setAnswer] = useState<Answer | null>(null);
   const id = useId();
+  const abortRef = useRef<AbortController | null>(null);
+
+  // A visitor who navigates away or closes the tab mid-stream must not leave
+  // the fetch (and the storefront's own ChatFPV call it drives) running.
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   async function ask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -59,17 +119,36 @@ export function AskChatFPV({
     setBusy(true);
     setAnswer(null);
     trackEvent('chatfpv_ask_submit');
+    const controller = new AbortController();
+    abortRef.current = controller;
     let body: AskResult | null = null;
     try {
-      const res = await fetch('/api/support/ask', {
+      const res = await fetch('/api/support/ask/stream', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json', Accept: 'text/event-stream'},
         body: JSON.stringify({message: q, ...(product ? {product} : {})}),
+        signal: controller.signal,
       });
-      body = (await res.json()) as AskResult;
+      if (res.headers.get('Content-Type')?.startsWith('text/event-stream')) {
+        // A fixed-rule answer, an early refusal (flag off, rate limit,
+        // invalid body) or a ChatFPV rate-limit/unavailable result is plain
+        // JSON, not a stream (handleAskStream's doc comment); only an
+        // actual ChatFPV answer streams. Growing text is shown live as it
+        // arrives; the final shaping (citations, uncertain, buy cards, or a
+        // handoff swap to the ticket form) only happens once `done` settles
+        // it, same as the non-streaming result below.
+        let streamed = '';
+        body = await readAskStream(res, (text) => {
+          streamed += text;
+          setAnswer({text: streamed, citations: [], outcome: 'answered', handoff: false});
+        });
+      } else {
+        body = (await res.json()) as AskResult;
+      }
     } catch {
       body = null;
     }
+    abortRef.current = null;
     setBusy(false);
     const outcome = body?.ok ? body.answer.outcome : 'error';
     trackEvent('chatfpv_ask_result', {props: {outcome}});
@@ -77,6 +156,7 @@ export function AskChatFPV({
       setAnswer(body.answer);
       return;
     }
+    setAnswer(null);
     trackEvent('chatfpv_ticket_after_ask');
     if (body?.ok && body.answer.handoff) {
       onTicket(q, {message: body.answer.reason || REASON_TEXT.unavailable, ...(body.answer.url ? {url: body.answer.url} : {})});
