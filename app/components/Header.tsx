@@ -774,7 +774,7 @@ function HeaderCtas({
           href={accountUrl}
           className="font-mono text-[12px] uppercase tracking-[0.15em] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors hidden md:block"
         >
-          <Txt id="chrome.nav_account" />
+          <Txt id={accountUrl.startsWith('/account/login') ? 'chrome.nav_signin' : 'chrome.nav_account'} />
         </a>
       ) : null}
       <ThemeToggle className="site-header-icon" />

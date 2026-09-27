@@ -1,6 +1,10 @@
 import * as serverBuild from 'virtual:react-router/server-build';
 import {createRequestHandler} from 'react-router';
+import {accountsEnabled} from '~/lib/accounts/config';
+import {tokenEndpointReachable} from '~/lib/accounts/oauth';
+import {purgeExpired} from '~/lib/accounts/sessions';
 import {createAppLoadContext} from '~/lib/context';
+import {NO_FRAMING_HEADERS, NO_FRAMING_PATH} from '~/lib/csp';
 import {parseCampaignConfig} from '~/lib/preorder-campaign';
 import {reconcilePreorders} from '~/lib/preorder-ops';
 import {priceTierWritesEnabled} from '~/lib/shopify-price-tier';
@@ -18,6 +22,12 @@ import preordersJson from './content/preorders.json';
  */
 function stagingGate(request: Request, env: Env): Response | null {
   if (import.meta.env.DEV) return null;
+  // POST /oauth/token authenticates with the client secret; a caller that
+  // may reach it at all (service binding, or the staging test IdP rule)
+  // cannot send the staging password (app/lib/accounts/oauth.ts).
+  if (request.method === 'POST' && new URL(request.url).pathname === '/oauth/token' && tokenEndpointReachable(request, env)) {
+    return null;
+  }
   const password = env.STAGING_PASSWORD?.trim();
   if (!password) return null;
   const header = request.headers.get('Authorization') ?? '';
@@ -104,10 +114,19 @@ async function handleFetch(
       env,
       executionContext,
     );
-    const response = await handleRequest(request, context);
+    let response = await handleRequest(request, context);
 
     if (context.session.isPending) {
-      response.headers.set('Set-Cookie', await context.session.commit());
+      response.headers.append('Set-Cookie', await context.session.commit());
+    }
+
+    // Sign-in and OAuth responses are never framed, documents or not.
+    if (NO_FRAMING_PATH.test(url.pathname) && !response.headers.has('X-Frame-Options')) {
+      response = new Response(response.body, response);
+      for (const [k, v] of Object.entries(NO_FRAMING_HEADERS)) {
+        if (k === 'Content-Security-Policy' && response.headers.has(k)) continue;
+        response.headers.set(k, v);
+      }
     }
 
     return response;
@@ -155,6 +174,12 @@ export default {
             console.error('preorder price step reconcile failed', error);
           }
         })(),
+      );
+    }
+    if (accountsEnabled(env) && env.SUPPORT_DB) {
+      const db = env.SUPPORT_DB;
+      executionContext.waitUntil(
+        purgeExpired(db).catch((error) => console.error('accounts purge failed', error instanceof Error ? error.message : 'error')),
       );
     }
     if (supportReady(env)) {

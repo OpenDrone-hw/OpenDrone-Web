@@ -1,0 +1,152 @@
+/**
+ * Shopify Customer Account API as an OpenID Connect provider: discovery
+ * (`<issuer>/.well-known/openid-configuration`), confidential client
+ * (client_secret_basic) plus PKCE S256, nonce checked. The access and
+ * refresh tokens in the token response are dropped on the spot; only the
+ * id_token is kept (sealed) as the logout hint.
+ *
+ * The id_token comes straight from the token endpoint over TLS in a
+ * client-authenticated call, so its claims are checked (iss, aud, exp,
+ * nonce) and its signature is not (OpenID Connect Core 3.1.3.7, item 6).
+ */
+import type {AccountsEnv} from './config.ts';
+import {textFromB64url} from './crypto.ts';
+import {CUSTOMER_GID, IdpError, type IdentityProvider} from './idp.ts';
+
+export const SHOPIFY_SCOPE = 'openid email customer-account-api:full';
+
+type Discovery = {issuer: string; authorization_endpoint: string; token_endpoint: string; end_session_endpoint?: string};
+
+const discoveryCache = new Map<string, {at: number; value: Promise<Discovery>}>();
+const DISCOVERY_TTL_MS = 60 * 60 * 1000;
+
+/** Discovery base: SHOPIFY_CUSTOMER_ACCOUNT_ISSUER, else https://shopify.com/authentication/<shop id>. */
+export function shopifyIssuer(env: AccountsEnv): string | null {
+  const issuer = env.SHOPIFY_CUSTOMER_ACCOUNT_ISSUER?.trim();
+  if (issuer) return /^https:\/\/[^\s]+$/.test(issuer) ? issuer.replace(/\/+$/, '') : null;
+  const shopId = env.SHOPIFY_CUSTOMER_ACCOUNT_SHOP_ID?.trim();
+  return shopId && /^\d+$/.test(shopId) ? `https://shopify.com/authentication/${shopId}` : null;
+}
+
+function httpsUrl(value: unknown): value is string {
+  try {
+    return typeof value === 'string' && new URL(value).protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+async function discover(issuer: string, fetcher: typeof fetch, now: number): Promise<Discovery> {
+  const hit = discoveryCache.get(issuer);
+  if (hit && now - hit.at < DISCOVERY_TTL_MS) return hit.value;
+  const value = (async () => {
+    const res = await fetcher(`${issuer}/.well-known/openid-configuration`, {headers: {Accept: 'application/json'}});
+    if (!res.ok) throw new IdpError(`discovery ${res.status}`);
+    const d = (await res.json()) as Partial<Discovery>;
+    if (!httpsUrl(d.authorization_endpoint) || !httpsUrl(d.token_endpoint) || typeof d.issuer !== 'string') {
+      throw new IdpError('discovery document incomplete');
+    }
+    return {
+      issuer: d.issuer,
+      authorization_endpoint: d.authorization_endpoint,
+      token_endpoint: d.token_endpoint,
+      ...(httpsUrl(d.end_session_endpoint) ? {end_session_endpoint: d.end_session_endpoint} : {}),
+    };
+  })();
+  discoveryCache.set(issuer, {at: now, value});
+  value.catch(() => discoveryCache.delete(issuer));
+  return value;
+}
+
+/** Shopify's id_token `sub` as a customer GID (a bare numeric id gets the GID prefix). */
+export function customerGid(sub: unknown): string | null {
+  if (typeof sub !== 'string') return null;
+  const gid = /^\d+$/.test(sub) ? `gid://shopify/Customer/${sub}` : sub;
+  return CUSTOMER_GID.test(gid) ? gid : null;
+}
+
+export function decodeJwtPayload(jwt: string): Record<string, unknown> | null {
+  const parts = jwt.split('.');
+  if (parts.length !== 3) return null;
+  try {
+    const payload = JSON.parse(textFromB64url(parts[1])) as unknown;
+    return payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function shopifyIdentityProvider(
+  env: AccountsEnv,
+  origin: string,
+  fetcher: typeof fetch = fetch,
+  now: () => number = () => Date.now(),
+): IdentityProvider | null {
+  const issuer = shopifyIssuer(env);
+  const clientId = env.SHOPIFY_CUSTOMER_ACCOUNT_CLIENT_ID?.trim();
+  const clientSecret = env.SHOPIFY_CUSTOMER_ACCOUNT_CLIENT_SECRET?.trim();
+  if (!issuer || !clientId || !clientSecret) return null;
+  const config = () => discover(issuer, fetcher, now());
+
+  return {
+    async authorizeUrl(p) {
+      const d = await config();
+      const url = new URL(d.authorization_endpoint);
+      url.searchParams.set('client_id', clientId);
+      url.searchParams.set('response_type', 'code');
+      url.searchParams.set('redirect_uri', p.redirectUri);
+      url.searchParams.set('scope', SHOPIFY_SCOPE);
+      url.searchParams.set('state', p.state);
+      url.searchParams.set('nonce', p.nonce);
+      url.searchParams.set('code_challenge', p.codeChallenge);
+      url.searchParams.set('code_challenge_method', 'S256');
+      if (p.prompt) url.searchParams.set('prompt', p.prompt);
+      return url.toString();
+    },
+
+    async exchangeCode(p) {
+      const d = await config();
+      const res = await fetcher(d.token_endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          Accept: 'application/json',
+          Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
+          // Shopify refuses token calls from a Worker without these.
+          Origin: origin,
+          'User-Agent': 'opendrone-web',
+        },
+        body: new URLSearchParams({
+          grant_type: 'authorization_code',
+          client_id: clientId,
+          redirect_uri: p.redirectUri,
+          code: p.code,
+          code_verifier: p.codeVerifier,
+        }).toString(),
+      });
+      if (!res.ok) throw new IdpError(`token ${res.status}`);
+      // Only id_token is read; access_token and refresh_token go out of scope here.
+      const {id_token: idToken} = (await res.json()) as {id_token?: unknown};
+      if (typeof idToken !== 'string') throw new IdpError('no id_token');
+      const claims = decodeJwtPayload(idToken);
+      if (!claims) throw new IdpError('malformed id_token');
+      const aud = claims.aud;
+      const audOk = aud === clientId || (Array.isArray(aud) && aud.includes(clientId));
+      if (claims.iss !== d.issuer || !audOk) throw new IdpError('id_token issuer or audience');
+      if (typeof claims.exp !== 'number' || claims.exp * 1000 < now() - 60_000) throw new IdpError('id_token expired');
+      if (claims.nonce !== p.nonce) throw new IdpError('nonce mismatch');
+      const subject = customerGid(claims.sub);
+      if (!subject) throw new IdpError('id_token subject');
+      return {subject, idToken};
+    },
+
+    async logoutUrl(p) {
+      const d = await config();
+      if (!d.end_session_endpoint || !p.idTokenHint) return null;
+      const url = new URL(d.end_session_endpoint);
+      url.searchParams.set('id_token_hint', p.idTokenHint);
+      url.searchParams.set('post_logout_redirect_uri', p.postLogoutRedirectUri);
+      return url.toString();
+    },
+  };
+}

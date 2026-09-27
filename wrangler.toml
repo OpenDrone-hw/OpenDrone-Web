@@ -38,6 +38,12 @@ CHATFPV_WIDGET_ENABLED = "1"
 # ChatFPV handoff: a #cfh=<ticket> on a product page opens the widget on
 # that conversation (app/lib/accounts/handoff.ts). Production keeps it off.
 HANDOFF_ENABLED = "1"
+# Shared accounts (README "Shared accounts"). Off on staging until the
+# Shopify Customer Account client exists; E2E previews turn it on with
+# `--var ACCOUNTS_ENABLED:1 --var ACCOUNTS_TEST_IDP:1`.
+ACCOUNTS_ENABLED = "0"
+CHATFPV_OAUTH_REDIRECTS = "https://chatfpv.sales-ee0.workers.dev/auth/callback"
+CHATFPV_POST_LOGOUT_REDIRECTS = "https://chatfpv.sales-ee0.workers.dev/"
 
 # Support tickets: the ticket index and conversation copy (README "Support").
 # Apply new migrations with `npx wrangler d1 migrations apply SUPPORT_DB

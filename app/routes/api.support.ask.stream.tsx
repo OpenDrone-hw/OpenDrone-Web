@@ -1,4 +1,5 @@
 import type {Route} from './+types/api.support.ask.stream';
+import {accountSubFor} from '~/lib/accounts/assertion';
 import {handleAskStream} from '~/lib/support/chatfpv';
 
 /**
@@ -12,7 +13,8 @@ import {handleAskStream} from '~/lib/support/chatfpv';
  * CHATFPV_ASK_ENABLED is not "1" (app/lib/support/chatfpv.ts `handleAsk`).
  */
 export async function action({request, context}: Route.ActionArgs) {
-  return handleAskStream(request, context.env, undefined, context.catalog, context.waitUntil);
+  const accountSub = await accountSubFor(request, context.env).catch(() => null);
+  return handleAskStream(request, context.env, undefined, context.catalog, context.waitUntil, accountSub);
 }
 
 export function loader() {

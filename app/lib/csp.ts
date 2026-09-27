@@ -61,6 +61,21 @@ export function chatFpvFrameSrc(env: {CHATFPV_URL?: string; CHATFPV_WIDGET_ENABL
   }
 }
 
+/**
+ * Clickjacking guard for the sign-in and OAuth surfaces (accounts design
+ * section 7, row 5). Every HTML document already carries
+ * `frame-ancestors 'none'` below; responses under /oauth/* and /account/*
+ * that are not documents (redirects, JSON, plain text) set these headers
+ * themselves (app/lib/accounts/config.ts `accountHeaders`).
+ */
+export const NO_FRAMING_HEADERS: Readonly<Record<string, string>> = {
+  'Content-Security-Policy': "frame-ancestors 'none'",
+  'X-Frame-Options': 'DENY',
+};
+
+/** Paths that must never render inside a frame. */
+export const NO_FRAMING_PATH = /^\/(oauth|account)(\/|$)/;
+
 function directive(name: string, values: string[]): string {
   return `${name} ${values.join(' ')}`;
 }

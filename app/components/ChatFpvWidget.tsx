@@ -1,7 +1,9 @@
 import {useEffect, useRef, useState} from 'react';
+import {useRouteLoaderData} from 'react-router';
 import {trackEvent} from '~/lib/growth/plausible';
 import {copyText} from '~/lib/copy';
 import {takeHandoffTicket, withHandoffTicket} from '~/lib/accounts/handoff';
+import {fetchWidgetAssertion, postAssertion, refreshDelayMs} from '~/lib/accounts/widget-client';
 
 const PRIVACY_NOTICE_FALLBACK =
   "Your question and the product on this page go straight to ChatFPV, Incutec's AI assistant, exactly as you type it: please do not include your name, email, phone or order number. Conversations that do not become a ticket are deleted after 90 days idle.";
@@ -45,6 +47,12 @@ const NOTICE_SUMMARY_FALLBACK = 'AI assistant. How your question is used.';
  * closes, so a variant change cannot reload the iframe and redeem twice.
  * ChatFPV's "Continue on chatfpv.com" opens a new tab from inside the
  * iframe: the sandbox allows popups that escape it.
+ *
+ * Signed in (ACCOUNTS_ENABLED "1", root loader `accountSignedIn`): once the
+ * iframe loads, the page fetches /api/account/widget-assertion and posts it
+ * to the iframe with the exact ChatFPV origin as targetOrigin, again one
+ * minute before each assertion expires. ChatFPV then owns the conversation
+ * by account, and its "Continue on chatfpv.com" is a plain /chat/<id> link.
  */
 const BOTTOM_OBSTACLES = [
   '.buy-rail.is-pinned.is-mobile:not(.is-suppressed)',
@@ -89,6 +97,27 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
    *  pass, so it tracks the real header height instead of a guessed
    *  constant. */
   const [maxPanelHeight, setMaxPanelHeight] = useState(600);
+  const iframe = useRef<HTMLIFrameElement>(null);
+  const root = useRouteLoaderData('root') as {accountSignedIn?: boolean} | undefined;
+  const signedIn = Boolean(root?.accountSignedIn);
+
+  // Signed-in shoppers: hand the iframe a fresh assertion while it is loaded.
+  useEffect(() => {
+    if (!open || !loaded || !signedIn || !src) return;
+    let timer = 0;
+    let stopped = false;
+    const push = async () => {
+      const got = await fetchWidgetAssertion();
+      if (stopped || !got) return;
+      postAssertion(iframe.current?.contentWindow ?? null, src, got.assertion);
+      timer = window.setTimeout(() => void push(), refreshDelayMs(got.exp));
+    };
+    void push();
+    return () => {
+      stopped = true;
+      window.clearTimeout(timer);
+    };
+  }, [open, loaded, signedIn, src]);
 
   // Reset per open, so a second open re-arms the timeout and the loading
   // state instead of keeping a stale "not responding" from an earlier try.
@@ -280,6 +309,7 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
               </div>
             ) : null}
             <iframe
+              ref={iframe}
               src={handoffSrc ?? src}
               title="ChatFPV, an AI assistant for FPV and OpenDrone"
               onLoad={() => setLoaded(true)}

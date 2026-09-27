@@ -186,6 +186,29 @@ declare global {
     /** "1": ChatFPV handoff tickets (`#cfh`) open the product page widget (app/lib/accounts/handoff.ts). */
     HANDOFF_ENABLED?: string;
 
+    // Shared accounts (app/lib/accounts/, README "Shared accounts").
+    // ACCOUNTS_ENABLED "1" turns on /account/login, /account/callback,
+    // /account/logout, /account, /oauth/* and /api/account/widget-assertion.
+    // ACCOUNTS_TEST_IDP is never set in production; it is honoured only on
+    // hosts other than opendrone.be and www.opendrone.be.
+    ACCOUNTS_ENABLED?: string;
+    ACCOUNTS_TEST_IDP?: string;
+    /** Exact-match, comma-separated redirect_uri allowlist for the `chatfpv` OAuth client. */
+    CHATFPV_OAUTH_REDIRECTS?: string;
+    /** Exact-match, comma-separated post_logout_redirect_uri allowlist for /oauth/logout. */
+    CHATFPV_POST_LOGOUT_REDIRECTS?: string;
+    // Secrets (wrangler secret put).
+    SHOPIFY_CUSTOMER_ACCOUNT_CLIENT_ID?: string;
+    SHOPIFY_CUSTOMER_ACCOUNT_CLIENT_SECRET?: string;
+    /** Numeric shop id; discovery base https://shopify.com/authentication/<id>. Ignored when SHOPIFY_CUSTOMER_ACCOUNT_ISSUER is set. */
+    SHOPIFY_CUSTOMER_ACCOUNT_SHOP_ID?: string;
+    /** OIDC discovery base (issuer), overriding SHOPIFY_CUSTOMER_ACCOUNT_SHOP_ID. */
+    SHOPIFY_CUSTOMER_ACCOUNT_ISSUER?: string;
+    ACCOUNT_PAIRWISE_SALT?: string;
+    SESSION_ENC_KEY?: string;
+    CHATFPV_OAUTH_CLIENT_SECRET?: string;
+    WIDGET_ASSERTION_KEY?: string;
+
     // Newsletter / release-notes auto-dispatch
     // - NEWSLETTER_DISPATCH_SECRET: bearer token for the manual dispatch
     //   trigger (CLI/curl) AND HMAC key for per-recipient unsubscribe
