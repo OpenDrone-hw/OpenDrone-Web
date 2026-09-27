@@ -112,7 +112,16 @@ export function ChatFpvWidget({src}: {src: string | null | undefined}) {
       setLift(nextLift);
       const header = document.querySelector<HTMLElement>(HEADER);
       const headerBottom = header ? header.getBoundingClientRect().bottom : 0;
-      const available = window.innerHeight - Math.max(0, headerBottom) - HEADER_MARGIN_PX - (16 + nextLift);
+      // The fixed container is bottom-anchored and sized by its flex
+      // content: the panel PLUS the toggle button below it (column layout,
+      // 8px gap), not the panel alone. Leaving the button's own height out
+      // of this budget pushed the panel's top edge well above where the
+      // height alone predicted (iteration 5 audit: computed available=601
+      // capped the panel at 600px, but the button+gap added ~52px more,
+      // landing the panel's real top 52px higher than intended and
+      // reproducing the header overlap the cap was meant to remove).
+      const buttonSpace = (button.current?.getBoundingClientRect().height ?? 44) + 8;
+      const available = window.innerHeight - Math.max(0, headerBottom) - HEADER_MARGIN_PX - (16 + nextLift + buttonSpace);
       setMaxPanelHeight(Math.max(MIN_PANEL_HEIGHT_PX, Math.min(600, Math.round(available))));
     };
     const schedule = () => {
