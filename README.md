@@ -255,9 +255,13 @@ producer (EPR) registration numbers per EU country from
 
 ## Support tickets
 
-Every non-sales question goes through a ticket. The customer opens and
-follows it on the site; the team answers in Discord; Shopify's customer
-record is the CRM view. No Discord account is needed to open a ticket.
+Orders, payment, shipping, warranty and any private question go through a
+ticket. The customer opens and follows it on the site; the team answers in
+Discord; Shopify's customer record is the CRM view. No Discord account is
+needed to open a ticket. Public board questions go to `#help` on the
+OpenDrone Discord, which the `/support` Community card links; the
+OpenDrone-hw/discord README, "Support", has the routing for all three
+systems.
 
 ```mermaid
 flowchart LR
@@ -323,8 +327,8 @@ waited out once, a longer one ends that sync until the next pass.
 **Status.** Open (the team is up), Answered, Waiting on you, Closed.
 
 **Email.** Replies are not emailed while `SUPPORT_EMAIL_NOTIFY_ENABLED` is
-not `1`; the ticket page and the private link carry the conversation.
-Turned on, the cron sends one "new reply" mail per unseen reply, with a
+not `1`; the ticket page and the private link carry the conversation. It is
+`1` in `wrangler.production.toml`: the cron sends one "new reply" mail per unseen reply, with a
 fresh link and no message content.
 
 **Retention.** Tickets are deleted 24 months after closing: the entry in the
@@ -342,8 +346,9 @@ answer `410`.
 
 ChatFPV (`CHATFPV_URL`, repository incutec-org/chatfpv) answers FPV and
 OpenDrone questions with sources. Four switches in `[vars]`, each off
-unless `"1"`: `"1"` in `wrangler.toml` (staging), `"0"` in
-`wrangler.production.toml`. `CHATFPV_KEY` is a Worker secret read on the
+unless `"1"`: `"1"` in `wrangler.toml` (staging); in
+`wrangler.production.toml` `CHATFPV_DRAFTS_ENABLED`, `CHATFPV_ASK_ENABLED`,
+`CHATFPV_WIDGET_ENABLED` and `HANDOFF_ENABLED` are all `"1"`. `CHATFPV_KEY` is a Worker secret read on the
 server only. Server calls go through the `CHATFPV` service binding to the
 `chatfpv` Worker: Cloudflare refuses a Worker's fetch to another workers.dev
 Worker on the same account (error 1042), so the public URL fails from here.
@@ -419,8 +424,8 @@ done
 | System | Setting |
 |---|---|
 | Discord bot | in the guild; on the support channel: View Channel, Send Messages (Create Posts on a forum), Send Messages in Threads, Create Private Threads, Manage Threads, Read Message History, Attach Files, Add Reactions; on the staff metadata channel: View Channel, Send Messages. No privileged intents: moderator approval reads only the member who reacted |
-| Discord staff role | `SUPPORT_MOD_ROLE_ID`: View Channel, Send Messages in Threads, Read Message History and Add Reactions on the support channel; its ✅ releases a held reply |
-| Discord channel | `DISCORD_SUPPORT_CHANNEL_ID` a text channel (private threads) or a forum only staff can see |
+| Discord staff role | `SUPPORT_MOD_ROLE_ID` (production: the `Support` role): View Channel, Send Messages in Threads, Read Message History and Add Reactions on the support channel; its ✅ releases a held reply |
+| Discord channel | `DISCORD_SUPPORT_CHANNEL_ID` a text channel (private threads) or a forum only staff can see (production: the `#web-support` forum; its permissions are set in OpenDrone-hw/discord `server.json`) |
 | Shopify | Admin token scopes `read_customers`, `write_customers`, `read_orders`; a customer metafield definition `support.tickets` (JSON) pins the list on the customer page |
 | Staging | shares the Shopify store: leave `SUPPORT_SHOPIFY_WRITE_ENABLED` unset there and point its Discord secrets at a test channel |
 

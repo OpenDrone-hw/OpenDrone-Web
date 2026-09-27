@@ -4,7 +4,7 @@ import {Search, MessageCircle, Sparkles} from 'lucide-react';
 import type {Route} from './+types/support';
 import {buildSeoMeta} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
-import {getCompanyIdentity} from '~/lib/company';
+import {DISCORD_INVITE_URL, getCompanyIdentity} from '~/lib/company';
 import {legalHref} from '~/components/LangToggle';
 import {Txt} from '~/components/Txt';
 import {
@@ -142,7 +142,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
       initialTopic: TOPICS.includes(topic as TicketTopic) ? (topic as TicketTopic) : null,
       initialProduct,
       salesEmail: company.email,
-      discordInvite: env.DISCORD_SUPPORT_INVITE ?? env.PUBLIC_DISCORD_INVITE ?? 'https://discord.gg/ABajnacUsS',
+      discordInvite: env.DISCORD_SUPPORT_INVITE ?? env.PUBLIC_DISCORD_INVITE ?? DISCORD_INVITE_URL,
     },
     {headers: {'Cache-Control': 'private, no-store'}},
   );
