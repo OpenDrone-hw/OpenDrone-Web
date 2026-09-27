@@ -50,7 +50,7 @@
   "submitting": "Opening your ticket",
   "uploading": "Uploading your files. Large files can take a minute.",
   "privacy_note": "Tickets are kept for 24 months after they close. [Privacy policy](/privacy).",
-  "ask_privacy_notice": "Your question goes to ChatFPV, Incutec's AI assistant. Your name, email, phone and order numbers are removed first; conversations that do not become a ticket are deleted after 90 days idle.",
+  "ask_privacy_notice": "Your question goes to ChatFPV, Incutec's AI assistant. We remove emails, phone numbers, card numbers, IBANs and similar identifiers before sending it, but not your name or order number, so please leave those out yourself. Conversations that do not become a ticket are deleted after 90 days idle.",
   "err_required": "Required.",
   "err_invalid_email": "Enter an email address like name@example.com.",
   "err_invalid_order": "Order numbers are digits, like #1042.",

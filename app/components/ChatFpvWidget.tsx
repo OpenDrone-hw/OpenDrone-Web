@@ -3,7 +3,7 @@ import {trackEvent} from '~/lib/growth/plausible';
 import {copyText} from '~/lib/copy';
 
 const PRIVACY_NOTICE_FALLBACK =
-  "Your question and the product on this page go to ChatFPV, Incutec's AI assistant. Your name, email, phone and order numbers are removed first; conversations that do not become a ticket are deleted after 90 days idle.";
+  "Your question and the product on this page go straight to ChatFPV, Incutec's AI assistant, exactly as you type it: please do not include your name, email, phone or order number. Conversations that do not become a ticket are deleted after 90 days idle.";
 const NOTICE_SUMMARY_FALLBACK = 'AI assistant. How your question is used.';
 
 /**
@@ -15,17 +15,36 @@ const NOTICE_SUMMARY_FALLBACK = 'AI assistant. How your question is used.';
  * allows the ChatFPV origin in frame-src only while the flag is on
  * (app/lib/csp.ts `chatFpvFrameSrc`).
  *
- * On phones the product page pins its buy rail to the bottom edge
- * (`.buy-rail.is-pinned.is-mobile`, portaled to <body>); the widget sits
- * above it so neither covers the other. Closed, the widget is only the
- * button: the data-use disclosure lives inside the open panel, as a
- * one-line strip above the iframe with a details toggle for the full text,
- * so it is never floating over the page or the buy rail before the visitor
- * has opened the panel (storefront-launch iteration 2 audit: the previous
- * closed-state notice covered the buy rail on phone and floated with no
- * container on desktop dark).
+ * The product page's buy column sits on the right above 960px
+ * (`.product-hero` grid breakpoint, `app.css`), the same width the pinned
+ * buy bar switches from a bottom strip to a top pill at
+ * (`.buy-rail.is-pinned`). Above that width the widget anchors bottom-LEFT
+ * instead of bottom-right, so its panel never sits over the buy column
+ * regardless of scroll position or page length (storefront-launch
+ * iteration 3 audit: a bottom-right panel covered the Pre-order button and
+ * prices on desktop). Below it, the widget stays bottom-right and lifts
+ * above whichever bottom-of-screen element it would otherwise cover: the
+ * pinned mobile buy rail once scrolled that far, or the in-flow ship-promise
+ * line ("Delivered by ...", `.product-buy-ship`) on first load before any
+ * scroll (iteration 3 audit: the closed button covered that line on phone).
+ * Closed, the widget is only the button: the data-use disclosure lives
+ * inside the open panel, as a one-line strip above the iframe with a
+ * details toggle for the full text, so it is never floating over the page
+ * or the buy rail before the visitor has opened the panel (iteration 2
+ * audit: the previous closed-state notice covered the buy rail on phone and
+ * floated with no container on desktop dark).
  */
-const RAIL = '.buy-rail.is-pinned.is-mobile:not(.is-suppressed)';
+const WIDE_QUERY = '(min-width: 960px)';
+/** Elements near the bottom of the screen the closed button or panel must
+ *  not cover, checked only below `WIDE_QUERY` (above it the widget moves to
+ *  the left, clear of the buy column entirely). */
+const BOTTOM_OBSTACLES = ['.buy-rail.is-pinned.is-mobile:not(.is-suppressed)', '.product-buy-ship'];
+/** An obstacle only counts once its bottom edge is within this many pixels
+ *  of the viewport bottom: close enough to reach where the fixed button
+ *  (roughly 44-60px tall, 16px from the edge) actually sits. Elements
+ *  scrolled higher up the page are ignored so the button is not lifted for
+ *  no reason. */
+const OBSTACLE_ZONE_PX = 140;
 /** How long the panel waits for the iframe's `load` event before it shows
  *  "not responding" instead of a silent black rectangle (baseline iteration
  *  1: the panel was solid black at 150 ms on every open, indistinguishable
@@ -38,6 +57,7 @@ export function ChatFpvWidget({src}: {src: string | null | undefined}) {
   const [timedOut, setTimedOut] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
   const [lift, setLift] = useState(0);
+  const [wide, setWide] = useState(false);
 
   // Reset per open, so a second open re-arms the timeout and the loading
   // state instead of keeping a stale "not responding" from an earlier try.
@@ -50,12 +70,30 @@ export function ChatFpvWidget({src}: {src: string | null | undefined}) {
   }, [open]);
 
   useEffect(() => {
-    if (!src) return;
+    const mql = window.matchMedia(WIDE_QUERY);
+    setWide(mql.matches);
+    const onChange = (e: MediaQueryListEvent) => setWide(e.matches);
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, []);
+
+  useEffect(() => {
+    if (!src || wide) {
+      setLift(0);
+      return;
+    }
     let frame = 0;
     const measure = () => {
       frame = 0;
-      const rail = document.querySelector<HTMLElement>(RAIL);
-      const top = rail ? rail.getBoundingClientRect().top : window.innerHeight;
+      let top = window.innerHeight;
+      for (const selector of BOTTOM_OBSTACLES) {
+        for (const el of document.querySelectorAll<HTMLElement>(selector)) {
+          const rect = el.getBoundingClientRect();
+          if (rect.bottom <= 0 || rect.top >= window.innerHeight) continue; // off-screen
+          if (rect.bottom < window.innerHeight - OBSTACLE_ZONE_PX) continue; // not near the bottom
+          top = Math.min(top, rect.top);
+        }
+      }
       setLift(Math.max(0, Math.round(window.innerHeight - top)));
     };
     const schedule = () => {
@@ -79,7 +117,7 @@ export function ChatFpvWidget({src}: {src: string | null | undefined}) {
       timers.forEach((t) => window.clearTimeout(t));
       if (frame) cancelAnimationFrame(frame);
     };
-  }, [src]);
+  }, [src, wide]);
 
   useEffect(() => {
     if (!open) return;
@@ -95,7 +133,19 @@ export function ChatFpvWidget({src}: {src: string | null | undefined}) {
 
   if (!src) return null;
   return (
-    <div className="chatfpv-widget" style={{position: 'fixed', right: 16, bottom: 16 + lift, zIndex: 61, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8}}>
+    <div
+      className="chatfpv-widget"
+      style={{
+        position: 'fixed',
+        ...(wide ? {left: 16, right: 'auto'} : {right: 16, left: 'auto'}),
+        bottom: 16 + lift,
+        zIndex: 61,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: wide ? 'flex-start' : 'flex-end',
+        gap: 8,
+      }}
+    >
       {open ? (
         <div
           role="dialog"
