@@ -13,6 +13,7 @@ export const TEST_CUSTOMERS = ['gid://shopify/Customer/test-1', 'gid://shopify/C
 export const TEST_IDP_PATH = '/account/test-idp/authorize';
 const LABEL = 'od-test-idp-code';
 const CODE_TTL_SEC = 60;
+const REAL_CUSTOMER_GID = /^gid:\/\/shopify\/Customer\/[0-9]+$/;
 
 type TestCode = {gid: string; nonce: string; challenge: string; redirect_uri: string; exp: number};
 
@@ -29,6 +30,9 @@ export async function issueTestCode(
   nowSec = Math.floor(Date.now() / 1000),
 ): Promise<string> {
   if (!CUSTOMER_GID.test(p.gid)) throw new IdpError('invalid customer');
+  // Real Shopify customer ids are numeric: the test form never signs in as one, so a
+  // staging key shared by mistake cannot yield a real customer's pairwise sub.
+  if (REAL_CUSTOMER_GID.test(p.gid)) throw new IdpError('test customers only');
   if (p.redirectUri !== `${origin}/account/callback`) throw new IdpError('invalid redirect_uri');
   if (!PKCE_VALUE.test(p.challenge) || !p.nonce || p.nonce.length > 128) throw new IdpError('invalid request');
   return signBlob(secret(env), LABEL, {gid: p.gid, nonce: p.nonce, challenge: p.challenge, redirect_uri: p.redirectUri, exp: nowSec + CODE_TTL_SEC});

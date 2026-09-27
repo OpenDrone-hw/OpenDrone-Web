@@ -231,6 +231,7 @@ describe('sign-in', () => {
     await assert.rejects(idp.exchangeCode({code, codeVerifier: v, redirectUri, nonce: 'n2'}), /nonce/);
     assert.deepEqual(await idp.exchangeCode({code, codeVerifier: v, redirectUri, nonce: 'n1'}), {subject: GID, idToken: ''});
     await assert.rejects(issueTestCode(e, STAGING, {gid: GID, nonce: 'n', challenge: await pkceChallenge(v), redirectUri: 'https://evil.example/account/callback'}));
+    await assert.rejects(issueTestCode(e, STAGING, {gid: 'gid://shopify/Customer/7012345678901', nonce: 'n', challenge: await pkceChallenge(v), redirectUri}), /test customers only/);
   });
 });
 
