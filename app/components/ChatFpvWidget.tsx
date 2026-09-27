@@ -44,12 +44,21 @@ const BOTTOM_OBSTACLES = [
   '.product-buy-ship',
   '.product-buy-stock',
 ];
-/** An obstacle only counts once its bottom edge is within this many pixels
- *  of the viewport bottom: close enough to reach where the fixed button
- *  (roughly 44-60px tall, 16px from the edge) actually sits. Elements
- *  scrolled higher up the page are ignored so the button is not lifted for
- *  no reason. */
-const OBSTACLE_ZONE_PX = 140;
+/**
+ * An obstacle only counts once its top edge is in the bottom third of the
+ * viewport: these five selectors are all specific, curated buy-area
+ * elements that never appear elsewhere on a product page, so any one of
+ * them on screen down there is worth avoiding; one scrolled up into the top
+ * two-thirds is ignored so the button is not lifted for no reason. A fixed
+ * pixel distance from the bottom edge (the iteration-4 version of this
+ * check, 140px) instead of a viewport-proportional one left a gap: on
+ * `/products/openesc` at 390px wide, `.product-form`'s bottom sat 142.9px
+ * above the viewport bottom while a lower `.ship-line` still qualified, so
+ * only the ship-line was cleared and the button landed squarely on the
+ * Pre-order button above it (iteration 5 audit,
+ * `v2/day2/widget/after/mobile-overlap-report.json`).
+ */
+const OBSTACLE_ZONE_FRACTION = 2 / 3;
 const HEADER = '.site-header-main';
 /** Clear space kept below the header pill's measured bottom edge. */
 const HEADER_MARGIN_PX = 16;
@@ -104,7 +113,7 @@ export function ChatFpvWidget({src}: {src: string | null | undefined}) {
         for (const el of document.querySelectorAll<HTMLElement>(selector)) {
           const rect = el.getBoundingClientRect();
           if (rect.bottom <= 0 || rect.top >= window.innerHeight) continue; // off-screen
-          if (rect.bottom < window.innerHeight - OBSTACLE_ZONE_PX) continue; // not near the bottom
+          if (rect.top < window.innerHeight * (1 - OBSTACLE_ZONE_FRACTION)) continue; // not in the lower third
           obstacleTop = Math.min(obstacleTop, rect.top);
         }
       }
