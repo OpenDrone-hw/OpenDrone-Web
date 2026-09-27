@@ -19,7 +19,7 @@
  * same account (error 1042), so the public URL only works from outside it.
  */
 import type {ChatAnswer, ChatRequest, Citation, DraftOutcomeRequest, DraftRequest, DraftResponse} from './chatfpv-contract.ts';
-import {matchFixedHandoff, matchPreorderInfo} from './ask-rules.ts';
+import {matchFixedHandoff, matchPreorderInfo, matchShippingVatInfo} from './ask-rules.ts';
 import {checkRateLimit, clientIp} from '../rate-limit.ts';
 import {ipBucket} from './limits.ts';
 import {scrubForPublic} from './scrubber.ts';
@@ -128,8 +128,28 @@ export type ChatFpvClient = {
    * retry would never change. Null on any other failure (retried by the cron).
    */
   outcome(req: DraftOutcomeRequest): Promise<true | null>;
-  ask(message: string, context?: AskContext): Promise<ChatAnswer | null>;
+  ask(message: string, context?: AskContext): Promise<ChatAnswer | ChatFpvRateLimited | null>;
 };
+
+/**
+ * ChatFPV's own per-visitor or budget rate limit on `/v1/chat` (`{error:
+ * {code, message}}`, `common.ts` `tooMany`), distinct from the storefront's
+ * own hourly-per-IP cap on `/api/support/ask` (`ASK_LIMIT`). Carrying
+ * ChatFPV's own wait text lets `handleAsk` show it instead of a generic
+ * "unavailable" (baseline iteration 1: a ChatFPV 429 surfaced to the
+ * customer as a 502 "unavailable").
+ */
+export type ChatFpvRateLimited = {rateLimited: true; message: string};
+
+const DEFAULT_RATE_MESSAGE = 'ChatFPV is answering a lot of questions right now. Please wait a moment and try again, or open a ticket.';
+
+/** ChatFPV error body `{error: {code, message}}` -> its message, or undefined for any other shape. */
+function chatFpvErrorMessage(raw: unknown): string | undefined {
+  if (!raw || typeof raw !== 'object' || !('error' in raw)) return undefined;
+  const err = (raw as {error?: unknown}).error;
+  if (!err || typeof err !== 'object' || typeof (err as {message?: unknown}).message !== 'string') return undefined;
+  return (err as {message: string}).message.slice(0, 300);
+}
 
 /** Text for ChatFPV: scrubbed, or null when the scrubber blocks it. */
 export function scrubOutbound(text: string): string | null {
@@ -356,7 +376,8 @@ export function createChatFpvClient(env: ChatFpvEnv, fetcher?: typeof fetch, opt
       });
       if (!res.ok) {
         console.warn('[chatfpv] call failed', what, id, res.status);
-        return final.includes(res.status) ? {data: undefined, status: res.status} : null;
+        if (!final.includes(res.status)) return null;
+        return {data: await res.json().catch(() => undefined), status: res.status};
       }
       return {data: await res.json().catch(() => undefined)};
     } catch (err) {
@@ -408,7 +429,11 @@ export function createChatFpvClient(env: ChatFpvEnv, fetcher?: typeof fetch, opt
         },
       };
       const extra: Record<string, string> = context.clientId && env.CHATFPV_KEY ? {'X-ChatFPV-Client': context.clientId} : {};
-      return parseAnswer((await call('ask', context.page ?? 'ask', '/v1/chat', body, [], extra))?.data);
+      const res = await call('ask', context.page ?? 'ask', '/v1/chat', body, [429], extra);
+      if (res?.status === 429) {
+        return {rateLimited: true, message: chatFpvErrorMessage(res.data) ?? DEFAULT_RATE_MESSAGE};
+      }
+      return parseAnswer(res?.data);
     },
   };
 }
@@ -441,7 +466,7 @@ export type AskResult =
         products?: AskProductCard[];
       };
     }
-  | {ok: false; error: 'forbidden' | 'rate' | 'invalid' | 'unavailable'};
+  | {ok: false; error: 'forbidden' | 'rate' | 'invalid' | 'unavailable'; message?: string};
 
 function askJson(body: AskResult, status: number): Response {
   return new Response(JSON.stringify(body), {
@@ -495,7 +520,7 @@ export async function handleAsk(request: Request, env: ChatFpvEnv, client?: Chat
   // above (a real refund or cancellation on a preorder still needs a
   // ticket) and before ChatFPV, whose own store-handoff routing treats any
   // "preorder" mention as an order question (ask-rules.ts).
-  const info = matchPreorderInfo(message);
+  const info = matchPreorderInfo(message) ?? matchShippingVatInfo(message);
   if (info) {
     return askJson({ok: true, answer: {text: info.text, citations: info.citations, outcome: 'answered', handoff: false}}, 200);
   }
@@ -506,6 +531,7 @@ export async function handleAsk(request: Request, env: ChatFpvEnv, client?: Chat
     ...(product ? {product} : {}),
     ...(clientId ? {clientId} : {}),
   });
+  if (answer && 'rateLimited' in answer) return askJson({ok: false, error: 'rate', message: answer.message}, 429);
   if (!answer) return askJson({ok: false, error: 'unavailable'}, 502);
   const handoff = answer.outcome === 'handoff' || answer.outcome === 'abstain' || Boolean(answer.handoff);
   const citations = dropInternalCitations(answer.citations);

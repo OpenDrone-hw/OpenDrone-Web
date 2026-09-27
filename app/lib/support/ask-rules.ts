@@ -87,3 +87,32 @@ export function matchPreorderInfo(message: string): FixedInfo | null {
     ],
   };
 }
+
+/**
+ * A VAT or non-EU/international shipping question ("is VAT included",
+ * "do you ship to the US"). This is published information (`/shipping`),
+ * not a ticket matter, but a customer asking it worded as a shipping
+ * question can otherwise be handed to a ticket with generic "help with your
+ * order" text (baseline iteration 1: s03 US shipping, s05 VAT). Checked
+ * after `matchFixedHandoff` and `matchPreorderInfo` (an actual shipment's
+ * customs problem or a wrong VAT charge on a placed order still goes to a
+ * ticket) and before ChatFPV. Labelled as OpenDrone shop information, not an
+ * AI answer, since it is a direct copy of the published shipping terms.
+ */
+const VAT_QUESTION = /\bvat\b|\bbtw\b/i;
+const NON_EU_COUNTRY = /\b(us|usa|u\.s\.a?\.?|united states|uk|u\.k\.|united kingdom|canada|australia|switzerland|norway|japan)\b/i;
+const SHIP_WORD = /\bship(?:ping|s|ped)?\b|\bdeliver(?:ed|ing|y|ies)?\b/i;
+const OUTSIDE_EU = /\boutside (?:the )?(?:eu|europe)\b|\bnon[- ]eu\b|\binternational(?:ly)?\b/i;
+
+export function matchShippingVatInfo(message: string): FixedInfo | null {
+  const vat = VAT_QUESTION.test(message);
+  const nonEuShipping = SHIP_WORD.test(message) && (NON_EU_COUNTRY.test(message) || OUTSIDE_EU.test(message));
+  if (!vat && !nonEuShipping) return null;
+  const text = vat
+    ? 'Every price and shipping rate shown already includes VAT. Within the EU there are no customs formalities and no import duties after checkout.'
+    : "Direct checkout only covers the EU countries offered at checkout, shipped from Belgium; VAT is included and there are no customs charges. Outside the EU, Incutec does not offer direct consumer checkout: retailers can request a bulk quote, and consumers can sign up for launch news for other countries.";
+  return {
+    text,
+    citations: [{n: 1, title: 'Shipping and delivery', url: '/shipping', source: 'OpenDrone storefront', kind: 'doc'}],
+  };
+}

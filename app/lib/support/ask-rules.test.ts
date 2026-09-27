@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {matchFixedHandoff, matchPreorderInfo} from './ask-rules.ts';
+import {matchFixedHandoff, matchPreorderInfo, matchShippingVatInfo} from './ask-rules.ts';
 
 // The order, compat, shipping and offtopic questions from the iteration-1
 // baseline eval (chatfpv-work/loop/storefront/i1/questions-40.jsonl):
@@ -90,5 +90,26 @@ describe('matchPreorderInfo', () => {
   it('does not swallow a real refund or cancellation on a preorder', () => {
     assert.equal(matchPreorderInfo('I want a refund for my preorder.'), null);
     assert.equal(matchPreorderInfo('Can I cancel my preorder and return the frame?'), null);
+  });
+});
+
+describe('matchShippingVatInfo', () => {
+  it('answers a VAT question and a non-EU shipping question from /shipping', () => {
+    for (const q of ['Do prices include VAT?', 'Is VAT included in the price?', 'Do you ship to the United States?', 'Can you deliver outside the EU?']) {
+      const info = matchShippingVatInfo(q);
+      assert.ok(info, q);
+      assert.ok(info!.text.length > 0, q);
+      assert.deepEqual(info!.citations.map((c) => c.url), ['/shipping']);
+    }
+  });
+
+  it('never catches an ordinary product, compatibility or offtopic question', () => {
+    const VAT_SHIPPING = new Set(['Do you ship to the United States?', 'Do prices include VAT?']);
+    for (const q of SHOULD_ANSWER.filter((q) => !VAT_SHIPPING.has(q))) assert.equal(matchShippingVatInfo(q), null, q);
+  });
+
+  it('does not swallow a real order-shipping problem (still a handoff)', () => {
+    assert.equal(matchShippingVatInfo('My package was damaged in transit, what do I do?'), null);
+    assert.equal(matchShippingVatInfo('Can I change the shipping address on my order?'), null);
   });
 });

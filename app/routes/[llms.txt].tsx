@@ -11,6 +11,7 @@ import {
 } from '~/lib/coming-soon';
 import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
 import {toCards} from '~/lib/catalog';
+import {askEnabled, widgetEnabled} from '~/lib/support/chatfpv';
 
 /**
  * /llms.txt - the machine-readable front door for AI agents (llmstxt.org).
@@ -31,6 +32,8 @@ export async function loader({context, request}: Route.LoaderArgs) {
     ),
     context.catalog.get(),
   ]);
+
+  const chatfpvLive = askEnabled(context.env) || widgetEnabled(context.env);
 
   const catalog = toCards(feed)
     // Concept products (planned / in-progress) are not catalog.
@@ -171,7 +174,21 @@ infer status from prose anywhere else.
 - [Find a ticket](${origin}/support/find) - with the email and the order or ticket number
 - [Discord](https://discord.gg/ABajnacUsS) - community help
 - Sales and trade: [trade enquiries](${origin}/wholesale), contact@opendrone.be
-`;
+${
+  chatfpvLive
+    ? `
+## ChatFPV (AI assistant)
+
+ChatFPV is Incutec's AI assistant for FPV and OpenDrone hardware questions, on
+${origin}/support ("Ask ChatFPV") and as a widget on product pages. Question
+text and the page's product go to ChatFPV (Cloudflare Workers AI or Gemini).
+Name, email, phone and order numbers are removed before a question is sent.
+Idle conversations are deleted after 90 days. ChatFPV never has write access
+to orders, tickets or the Shopify catalog; order, refund, return and warranty
+questions are always routed to a human ticket.
+`
+    : ''
+}`;
 
   return new Response(body, {
     status: 200,

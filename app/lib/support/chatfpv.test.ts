@@ -86,9 +86,21 @@ describe('createChatFpvClient', () => {
   it('asks /v1/chat server side in opendrone mode on the widget surface, not streamed', async () => {
     const s = server(() => Response.json({conversationId: 'c', messageId: 'm', answer: 'Yes [1].', citations: DRAFT.citations, outcome: 'answered', confidence: 0.9}));
     const answer = await createChatFpvClient(ENV, s.fetcher).ask('Does the F4 run INAV?', {page: 'support'});
-    assert.equal(answer?.answer, 'Yes [1].');
+    assert.equal(answer && 'answer' in answer ? answer.answer : undefined, 'Yes [1].');
     assert.equal(s.calls[0]!.url, 'https://chatfpv.test/v1/chat');
     assert.deepEqual(s.calls[0]!.body, {message: 'Does the F4 run INAV?', mode: 'opendrone', surface: 'widget', stream: false, context: {page: 'support'}});
+  });
+
+  it('turns a ChatFPV 429 on /v1/chat into a rate-limited result carrying its own wait message, not null', async () => {
+    const s = server(() => new Response(JSON.stringify({error: {code: 'rate_limited', message: 'Please wait 42 seconds and try again.'}}), {status: 429}));
+    const res = await createChatFpvClient(ENV, s.fetcher).ask('Does the F4 run INAV?');
+    assert.deepEqual(res, {rateLimited: true, message: 'Please wait 42 seconds and try again.'});
+  });
+
+  it('falls back to a default rate-limit message when the 429 body is missing or malformed', async () => {
+    const s = server(() => new Response('not json', {status: 429}));
+    const res = await createChatFpvClient(ENV, s.fetcher).ask('Does the F4 run INAV?');
+    assert.equal(res && 'rateLimited' in res && res.rateLimited, true);
   });
 
   it('sends the visitor client id on ask only with the key, and uses the service binding when bound', async () => {
@@ -296,6 +308,29 @@ describe('POST /api/support/ask', () => {
     const r = await handleAsk(req({message: 'I want a refund for my preorder.'}), ASK, fake.client);
     const body = (await read(r)) as Extract<AskResult, {ok: true}>;
     assert.equal(body.answer.handoff, true);
+  });
+
+  it('answers a VAT or non-EU shipping question from /shipping, never asking ChatFPV', async () => {
+    const fake = fakeChatFpv({answer: ANSWER});
+    for (const message of ['Is VAT included in the price?', 'Do you ship to the US?', 'Can I get this delivered outside the EU?']) {
+      const r = await handleAsk(req({message}), ASK, fake.client);
+      const body = (await read(r)) as Extract<AskResult, {ok: true}>;
+      assert.equal(body.answer.handoff, false, message);
+      assert.equal(body.answer.outcome, 'answered', message);
+      assert.ok(body.answer.citations.some((c) => c.url === '/shipping'), message);
+    }
+    assert.equal(fake.asks.length, 0, 'ChatFPV was never called for a VAT/shipping-country question');
+  });
+
+  it('shows ChatFPV\'s own 429 wait message instead of a generic "unavailable"', async () => {
+    const fake = fakeChatFpv({rateLimited: {rateLimited: true, message: 'You have asked several questions in a short time. Please wait 30 seconds and try again, or open a support ticket.'}});
+    const r = await handleAsk(req({message: 'Does the F4 run INAV?'}), ASK, fake.client);
+    assert.equal(r.status, 429);
+    assert.deepEqual(await read(r), {
+      ok: false,
+      error: 'rate',
+      message: 'You have asked several questions in a short time. Please wait 30 seconds and try again, or open a support ticket.',
+    });
   });
 
   it('shows a low-confidence answered result as uncertain, and a confident one as not', async () => {

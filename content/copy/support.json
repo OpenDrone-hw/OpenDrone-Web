@@ -50,6 +50,7 @@
   "submitting": "Opening your ticket",
   "uploading": "Uploading your files. Large files can take a minute.",
   "privacy_note": "Tickets are kept for 24 months after they close. [Privacy policy](/privacy).",
+  "ask_privacy_notice": "Your question and this page's product go to ChatFPV, Incutec's AI assistant (Cloudflare Workers AI or Gemini). Your name, email, phone and order numbers are removed first. Idle conversations are deleted after 90 days.",
   "err_required": "Required.",
   "err_invalid_email": "Enter an email address like name@example.com.",
   "err_invalid_order": "Order numbers are digits, like #1042.",

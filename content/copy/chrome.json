@@ -1,6 +1,7 @@
 {
   "$title": "Header and footer",
   "skip_link": "Skip to main content",
+  "chatfpv_widget_privacy_notice": "Your question and this page's product go to ChatFPV, Incutec's AI assistant. Your name, email, phone and order numbers are removed first; idle conversations are deleted after 90 days.",
   "aside_cart_heading": "CART",
   "aside_menu_heading": "MENU",
   "aside_close_aria": "Close",
