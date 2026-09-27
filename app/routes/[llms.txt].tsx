@@ -12,6 +12,7 @@ import {
 import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
 import {toCards} from '~/lib/catalog';
 import {askEnabled, widgetEnabled} from '~/lib/support/chatfpv';
+import {copyText} from '~/lib/copy';
 
 /**
  * /llms.txt - the machine-readable front door for AI agents (llmstxt.org).
@@ -179,13 +180,21 @@ ${
     ? `
 ## ChatFPV (AI assistant)
 
-ChatFPV is Incutec's AI assistant for FPV and OpenDrone hardware questions, on
-${origin}/support ("Ask ChatFPV") and as a widget on product pages. Question
-text and the page's product go to ChatFPV (Cloudflare Workers AI or Gemini).
-Name, email, phone and order numbers are removed before a question is sent.
-Idle conversations are deleted after 90 days. ChatFPV never has write access
-to orders, tickets or the Shopify catalog; order, refund, return and warranty
-questions are always routed to a human ticket.
+ChatFPV is Incutec's AI assistant for FPV and OpenDrone hardware questions,
+on two surfaces:
+
+- ${origin}/support ("Ask ChatFPV"): ${
+        copyText('support.ask_privacy_notice') ??
+        "Your question goes to ChatFPV, Incutec's AI assistant. Your name, email, phone and order numbers are removed first; conversations that do not become a ticket are deleted after 90 days idle."
+      }
+- The widget on product and preorder pages: ${
+        copyText('chrome.chatfpv_widget_privacy_notice') ??
+        "Your question and the product on this page go to ChatFPV, Incutec's AI assistant. Your name, email, phone and order numbers are removed first; conversations that do not become a ticket are deleted after 90 days idle."
+      }
+
+ChatFPV never has write access to orders, tickets or the Shopify catalog;
+order, refund, return and warranty questions are always routed to a human
+ticket.
 `
     : ''
 }`;

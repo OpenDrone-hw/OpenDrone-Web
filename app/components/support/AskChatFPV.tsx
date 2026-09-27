@@ -104,7 +104,7 @@ export function AskChatFPV({
       </p>
       <p className="sp-hint sp-ask-privacy">
         {copyText('support.ask_privacy_notice') ??
-          "Your question and this page's product go to ChatFPV, Incutec's AI assistant. Your name, email, phone and order numbers are removed first; idle conversations are deleted after 90 days."}
+          "Your question goes to ChatFPV, Incutec's AI assistant. Your name, email, phone and order numbers are removed first; conversations that do not become a ticket are deleted after 90 days idle."}
       </p>
       <form className="sp-form" onSubmit={(e) => void ask(e)}>
         <label className="sp-field">
