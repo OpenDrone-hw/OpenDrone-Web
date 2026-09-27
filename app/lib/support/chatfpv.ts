@@ -178,10 +178,20 @@ export function scrubOutbound(text: string): string | null {
   return s.blocked ? null : s.content;
 }
 
-/** Citations with an http(s) URL only; anything else is dropped. */
+/**
+ * Citations with an http(s) URL only, deduplicated by normalized URL
+ * (scheme+host lower-cased, trailing slash and `#fragment` dropped; the
+ * query string is kept, since `?variant=` picks a different product). The
+ * first occurrence wins, so an earlier `n` beats a later duplicate of the
+ * same page (storefront-launch iteration 5 audit: ChatFPV's own citation
+ * list can repeat a source when several retrieved chunks come from the same
+ * page, and this box rendered every one of them, e.g. `sp-links` iteration
+ * screenshots showing "[1]" and "[3]" pointing at the same URL).
+ */
 export function cleanCitations(raw: unknown): Citation[] {
   if (!Array.isArray(raw)) return [];
   const out: Citation[] = [];
+  const seen = new Set<string>();
   for (const c of raw as Array<Partial<Citation>>) {
     if (!c || typeof c !== 'object' || typeof c.url !== 'string' || typeof c.title !== 'string') continue;
     let url: URL;
@@ -191,6 +201,9 @@ export function cleanCitations(raw: unknown): Citation[] {
       continue;
     }
     if (url.protocol !== 'https:' && url.protocol !== 'http:') continue;
+    const key = `${url.protocol}//${url.host.toLowerCase()}${url.pathname.replace(/\/$/, '')}${url.search}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
     out.push({
       n: Number.isFinite(c.n) ? Number(c.n) : out.length + 1,
       title: c.title.slice(0, 200),

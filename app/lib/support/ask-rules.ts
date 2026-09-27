@@ -19,7 +19,47 @@ import type {Citation} from './chatfpv-contract.ts';
 
 export type FixedHandoff = {reason: string; url?: string};
 
-type Rule = {test: RegExp; reason: string; url?: string};
+/** `test` is a plain RegExp for a single self-contained pattern, or a
+ *  predicate combining several signals (see `isOwnOrderVatOrCustoms` below)
+ *  when an order/invoice/package reference and a VAT/customs word must both
+ *  be present but neither alone is enough to route to a ticket. */
+type Rule = {test: RegExp | ((message: string) => boolean); reason: string; url?: string};
+
+/**
+ * A VAT, customs or invoice question that also names the customer's own
+ * order, package, parcel or invoice, or says VAT was already charged or
+ * paid: this needs the actual order, not published information, so it must
+ * go to a ticket rather than the shipping/VAT info rule
+ * (`matchShippingVatInfo`) or ChatFPV. A bare mention of "invoice" or
+ * "package" alone is not enough (a general "VAT on invoices for
+ * businesses" question is still answered from published policy), so both a
+ * personal/specific-order signal AND a VAT-or-customs word must be present.
+ * `OWN_ORDER_REF` allows up to two words between "my" and the noun ("my
+ * company order", "my recent invoice"), not only the exact phrase "my
+ * order": storefront-launch iteration 5 audit found "VAT invoice for my
+ * company order" reached ChatFPV instead of a ticket because the tighter
+ * `\bmy order\b` pattern does not match with "company" in between.
+ * `ALREADY_CHARGED_OR_PAID` requires past tense ("was charged", "I paid"),
+ * not the bare word "charged": iteration 5 audit found "Will I be charged
+ * VAT if I order to Norway?" (a pre-purchase, not-yet-placed question)
+ * wrongly opened a ticket under a bare `/\bcharged\b/` version of this
+ * check instead of getting the published shipping/VAT answer.
+ *
+ * storefront-launch iteration 3 held-out probe
+ * (chatfpv-work/loop/storefront-launch/i3/rule-probe.mts): "Why was VAT
+ * included on my order from Norway?", "My package to the USA was stuck in
+ * customs, VAT included?", "Was VAT included on my invoice for order
+ * 1234?" and "I paid VAT but I am in the UK, can I get it back?" all got
+ * the published-policy answer instead of a ticket. See ask-rules.test.ts.
+ */
+const OWN_ORDER_REF = /\bmy\b(?:\s+\w+){0,2}\s+(?:order|invoice|package|parcel)\b|\border\s*#?\s*\d/i;
+const ALREADY_CHARGED_OR_PAID = /\b(?:was|were|got|been)\s+charged\b|\bi(?:'ve| have)?\s*(?:already\s+)?paid\b/i;
+const VAT_OR_CUSTOMS_WORD = /\bvat\b|\bbtw\b|\btva\b|\bcustoms\b/i;
+
+function isOwnOrderVatOrCustoms(message: string): boolean {
+  if (!VAT_OR_CUSTOMS_WORD.test(message)) return false;
+  return OWN_ORDER_REF.test(message) || ALREADY_CHARGED_OR_PAID.test(message);
+}
 
 const RULES: Rule[] = [
   {
@@ -51,12 +91,17 @@ const RULES: Rule[] = [
     test: /\bmy order\b.*\b(where|track|status)\b|\b(where|track|status)\b.*\bmy order\b|\bno tracking\b/i,
     reason: 'Order status and tracking need a ticket so the team can pull up the order.',
   },
+  {
+    test: isOwnOrderVatOrCustoms,
+    reason: 'VAT or customs on a specific order needs a ticket so the team can check it.',
+  },
 ];
 
 /** The first fixed rule the message matches, or null. Checked before any ChatFPV call. */
 export function matchFixedHandoff(message: string): FixedHandoff | null {
   for (const rule of RULES) {
-    if (rule.test.test(message)) return {reason: rule.reason, ...(rule.url ? {url: rule.url} : {})};
+    const hit = typeof rule.test === 'function' ? rule.test(message) : rule.test.test(message);
+    if (hit) return {reason: rule.reason, ...(rule.url ? {url: rule.url} : {})};
   }
   return null;
 }
@@ -118,14 +163,25 @@ const VAT_INCLUDED_TERM = /\binclud(?:e|ed|es|ing)?\b|\bincl\.?\b|\binclusive\b|
  * An invoice, company or reverse-charge question: needs the actual order or
  * company registration, not the published consumer rate, so it must never
  * get the "prices include VAT" answer (baseline: "VAT invoice for my
- * company" and "VAT number ... reverse charge" both got it).
+ * company" and "VAT number ... reverse charge" both got it). Each noun
+ * matches its plural too ("invoices", "businesses", "companies"): the
+ * singular-only version let "Do you include VAT on invoices for
+ * businesses?" through (storefront-launch iteration 3 held-out probe,
+ * ask-rules.test.ts).
  */
-const VAT_EXCLUDE = /\binvoice\b|\bfactuur\b|\bfacture\b|\bvat[- ]?number\b|\bbtw[- ]?nummer\b|num[eé]ro de tva|\breverse[- ]charge\b|\bautoliquidation\b|\bcompany\b|\bbusiness\b|\bb2b\b/i;
+const VAT_EXCLUDE =
+  /\binvoices?\b|\bfactuur\b|\bfacture\b|\bvat[- ]?number\b|\bbtw[- ]?nummer\b|num[eé]ro de tva|\breverse[- ]charge\b|\bautoliquidation\b|\bcompan(?:y|ies)\b|\bbusiness(?:es)?\b|\bb2b\b/i;
 
 /** Bare "US" only as literal uppercase; lower-case "us" is the pronoun, not the country. */
 const US_STRICT = /\bUS\b/;
-/** Unambiguous regardless of case: no English pronoun or common word reads this way. */
-const US_UNAMBIGUOUS = /\bUSA\b|\bU\.S\.A?\.?\b|\bUnited States\b/i;
+/**
+ * Unambiguous regardless of case: no English pronoun or common word reads
+ * this way. A lookahead, not a trailing `\b`, closes the abbreviated forms:
+ * `\b` fails between two non-word characters (the final "." and a
+ * following "?"), which missed "Do you ship to the U.S.?" (storefront-launch
+ * iteration 3 held-out probe, ask-rules.test.ts).
+ */
+const US_UNAMBIGUOUS = /\bUSA\b|\bU\.S\.A?\.?(?=$|[^\w])|\bUnited States\b/i;
 const OTHER_NON_EU_COUNTRY = /\b(?:UK|U\.K\.|United Kingdom|Canada|Australia|Switzerland|Norway|Japan)\b/i;
 const mentionsNonEuCountry = (message: string) => US_STRICT.test(message) || US_UNAMBIGUOUS.test(message) || OTHER_NON_EU_COUNTRY.test(message);
 
@@ -138,12 +194,22 @@ const EU_COUNTRY_NAMED =
 
 /** A hardware spec word ("US or EU power plug", "60A continuous"): the message is asking about the product, not about where it ships. */
 const PRODUCT_SPEC_WORD = /\bplug\b|\bcontinuous\b|\b\d+\s?a\b/i;
+/**
+ * "shipped with", "ships with", "comes with": a product-contents question
+ * ("Is the VTX shipped with US frequency lock?"), never a shipping
+ * -destination one, no matter what country or region follows. Checked
+ * separately from `PRODUCT_SPEC_WORD` because these probes name no plug,
+ * amperage or "continuous" word (storefront-launch iteration 3 held-out
+ * probe, ask-rules.test.ts).
+ */
+const PRODUCT_INCLUDES_PHRASE = /\b(?:ships?|shipped|comes?|came)\s+with\b/i;
 
 export function matchShippingVatInfo(message: string): FixedInfo | null {
   const vat = !VAT_EXCLUDE.test(message) && VAT_QUESTION.test(message) && VAT_INCLUDED_TERM.test(message);
   const nonEuShipping =
     !EU_COUNTRY_NAMED.test(message) &&
     !PRODUCT_SPEC_WORD.test(message) &&
+    !PRODUCT_INCLUDES_PHRASE.test(message) &&
     SHIP_WORD.test(message) &&
     (mentionsNonEuCountry(message) || OUTSIDE_EU.test(message));
   if (!vat && !nonEuShipping) return null;

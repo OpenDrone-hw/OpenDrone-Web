@@ -16,16 +16,46 @@ const NOTICE_SUMMARY_FALLBACK = 'AI assistant. How your question is used.';
  * (app/lib/csp.ts `chatFpvFrameSrc`).
  *
  * On phones the product page pins its buy rail to the bottom edge
- * (`.buy-rail.is-pinned.is-mobile`, portaled to <body>); the widget sits
- * above it so neither covers the other. Closed, the widget is only the
- * button: the data-use disclosure lives inside the open panel, as a
+ * (`.buy-rail.is-pinned.is-mobile`, portaled to <body>); the widget also
+ * clears the in-flow buy button (`.product-form`) and the ship-promise line
+ * (`.ship-line` / `.product-buy-ship` / `.product-buy-stock`) before any
+ * scroll, and the pinned rail once scrolled that far (storefront-launch
+ * iteration 3/4 audit: a narrower obstacle list left the closed button
+ * sitting on top of the Pre-order button and the price-step/progress bar on
+ * `/products/openesc` and `/products/openrx`). Closed, the widget is only
+ * the button: the data-use disclosure lives inside the open panel, as a
  * one-line strip above the iframe with a details toggle for the full text,
  * so it is never floating over the page or the buy rail before the visitor
- * has opened the panel (storefront-launch iteration 2 audit: the previous
- * closed-state notice covered the buy rail on phone and floated with no
- * container on desktop dark).
+ * has opened the panel (iteration 2 audit: the previous closed-state notice
+ * covered the buy rail on phone and floated with no container on desktop
+ * dark).
+ *
+ * The open panel also never covers the site header: its height is capped to
+ * the live gap between the header pill's actual bottom edge (measured, not
+ * assumed) and the lifted bottom position, on every viewport width, not
+ * only phones (iteration 5 audit, `v2/day2/widget/before/report.json`: a
+ * fixed 96px top margin undershot the real header at 900px wide, giving a
+ * 35px overlap that 1440px and 390px happened not to expose).
  */
-const RAIL = '.buy-rail.is-pinned.is-mobile:not(.is-suppressed)';
+const BOTTOM_OBSTACLES = [
+  '.buy-rail.is-pinned.is-mobile:not(.is-suppressed)',
+  '.product-form',
+  '.ship-line',
+  '.product-buy-ship',
+  '.product-buy-stock',
+];
+/** An obstacle only counts once its bottom edge is within this many pixels
+ *  of the viewport bottom: close enough to reach where the fixed button
+ *  (roughly 44-60px tall, 16px from the edge) actually sits. Elements
+ *  scrolled higher up the page are ignored so the button is not lifted for
+ *  no reason. */
+const OBSTACLE_ZONE_PX = 140;
+const HEADER = '.site-header-main';
+/** Clear space kept below the header pill's measured bottom edge. */
+const HEADER_MARGIN_PX = 16;
+/** Panel floor so a very short viewport still gets a usable panel instead
+ *  of being squeezed to nothing by the header-clearance cap. */
+const MIN_PANEL_HEIGHT_PX = 280;
 /** How long the panel waits for the iframe's `load` event before it shows
  *  "not responding" instead of a silent black rectangle (baseline iteration
  *  1: the panel was solid black at 150 ms on every open, indistinguishable
@@ -37,7 +67,13 @@ export function ChatFpvWidget({src}: {src: string | null | undefined}) {
   const [loaded, setLoaded] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const [lift, setLift] = useState(0);
+  /** Tallest the panel may be without reaching above the header, given the
+   *  current lift. Recomputed alongside `lift` from the same measurement
+   *  pass, so it tracks the real header height instead of a guessed
+   *  constant. */
+  const [maxPanelHeight, setMaxPanelHeight] = useState(600);
 
   // Reset per open, so a second open re-arms the timeout and the loading
   // state instead of keeping a stale "not responding" from an earlier try.
@@ -49,14 +85,35 @@ export function ChatFpvWidget({src}: {src: string | null | undefined}) {
     return () => window.clearTimeout(timer);
   }, [open]);
 
+  // Move focus into the panel on open, and back to the button on close, so
+  // keyboard and screen-reader users land on the conversation instead of
+  // wherever focus happened to be on the page underneath.
+  useEffect(() => {
+    if (!open) return;
+    const id = window.setTimeout(() => panelRef.current?.focus(), 0);
+    return () => window.clearTimeout(id);
+  }, [open]);
+
   useEffect(() => {
     if (!src) return;
     let frame = 0;
     const measure = () => {
       frame = 0;
-      const rail = document.querySelector<HTMLElement>(RAIL);
-      const top = rail ? rail.getBoundingClientRect().top : window.innerHeight;
-      setLift(Math.max(0, Math.round(window.innerHeight - top)));
+      let obstacleTop = window.innerHeight;
+      for (const selector of BOTTOM_OBSTACLES) {
+        for (const el of document.querySelectorAll<HTMLElement>(selector)) {
+          const rect = el.getBoundingClientRect();
+          if (rect.bottom <= 0 || rect.top >= window.innerHeight) continue; // off-screen
+          if (rect.bottom < window.innerHeight - OBSTACLE_ZONE_PX) continue; // not near the bottom
+          obstacleTop = Math.min(obstacleTop, rect.top);
+        }
+      }
+      const nextLift = Math.max(0, Math.round(window.innerHeight - obstacleTop));
+      setLift(nextLift);
+      const header = document.querySelector<HTMLElement>(HEADER);
+      const headerBottom = header ? header.getBoundingClientRect().bottom : 0;
+      const available = window.innerHeight - Math.max(0, headerBottom) - HEADER_MARGIN_PX - (16 + nextLift);
+      setMaxPanelHeight(Math.max(MIN_PANEL_HEIGHT_PX, Math.min(600, Math.round(available))));
     };
     const schedule = () => {
       if (!frame) frame = requestAnimationFrame(measure);
@@ -98,14 +155,17 @@ export function ChatFpvWidget({src}: {src: string | null | undefined}) {
     <div className="chatfpv-widget" style={{position: 'fixed', right: 16, bottom: 16 + lift, zIndex: 61, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8}}>
       {open ? (
         <div
+          ref={panelRef}
           role="dialog"
+          aria-modal="true"
           aria-label="Ask ChatFPV (AI)"
+          tabIndex={-1}
           style={{
             position: 'relative',
             display: 'flex',
             flexDirection: 'column',
             width: 'min(400px, calc(100vw - 32px))',
-            height: `min(600px, calc(100vh - ${96 + lift}px))`,
+            height: maxPanelHeight,
             borderRadius: 12,
             overflow: 'hidden',
             boxShadow: '0 12px 40px rgba(0, 0, 0, 0.35)',
