@@ -12,6 +12,7 @@ import {
   draftsEnabled,
   dropInternalCitations,
   handleAsk,
+  handleAskStream,
   handoffReasonText,
   productHandleFromCitation,
   widgetEnabled,
@@ -89,6 +90,38 @@ describe('createChatFpvClient', () => {
     assert.equal(answer && 'answer' in answer ? answer.answer : undefined, 'Yes [1].');
     assert.equal(s.calls[0]!.url, 'https://chatfpv.test/v1/chat');
     assert.deepEqual(s.calls[0]!.body, {message: 'Does the F4 run INAV?', mode: 'opendrone', surface: 'widget', stream: false, context: {page: 'support'}});
+  });
+
+  it('parses a real /v1/chat SSE body split mid-frame: status and delta in order, the done answer, keep-alives ignored', async () => {
+    const done = {conversationId: 'c', messageId: 'm', answer: 'Yes [1].', citations: DRAFT.citations, outcome: 'answered', confidence: 0.9};
+    const wire =
+      'event: meta\ndata: {"type":"meta","conversationId":"c","messageId":"m"}\n\n' +
+      'event: status\ndata: {"type":"status","text":"Searching the docs"}\n\n: keep-alive\n\n' +
+      'event: delta\ndata: {"type":"delta","text":"Yes "}\n\nevent: delta\ndata: {"type":"delta","text":"[1]."}\n\n' +
+      `event: done\ndata: ${JSON.stringify({type: 'done', answer: done})}\n\n`;
+    const enc = new TextEncoder();
+    // Chunk boundaries every 7 bytes, so frames and JSON split mid-line.
+    const body = new ReadableStream<Uint8Array>({
+      start(c) {
+        for (let i = 0; i < wire.length; i += 7) c.enqueue(enc.encode(wire.slice(i, i + 7)));
+        c.close();
+      },
+    });
+    const s = server(() => new Response(body, {headers: {'Content-Type': 'text/event-stream'}}));
+    const seen: string[] = [];
+    const answer = await createChatFpvClient(ENV, s.fetcher).askStream(
+      'Does the F4 run INAV?',
+      {page: 'support'},
+      (t) => seen.push(`delta:${t}`),
+      (t) => seen.push(`status:${t}`),
+    );
+    assert.deepEqual(seen, ['status:Searching the docs', 'delta:Yes ', 'delta:[1].']);
+    assert.equal(answer && 'answer' in answer ? answer.answer : undefined, 'Yes [1].');
+    assert.equal(s.calls[0]!.body.stream, true);
+    assert.equal(s.calls[0]!.headers.get('Accept'), 'text/event-stream');
+
+    const errored = server(() => new Response('event: error\ndata: {"type":"error","message":"x"}\n\n', {headers: {'Content-Type': 'text/event-stream'}}));
+    assert.equal(await createChatFpvClient(ENV, errored.fetcher).askStream('Does the F4 run INAV?', {}, () => {}), null);
   });
 
   it('turns a ChatFPV 429 on /v1/chat into a rate-limited result carrying its own wait message, not null', async () => {
@@ -409,5 +442,163 @@ describe('POST /api/support/ask', () => {
     const missing = await handleAsk(req({message: 'Which motor should I use?'}), ASK, fakeChatFpv({answer: withUnknownProduct}).client, catalog);
     const missingBody = (await read(missing)) as Extract<AskResult, {ok: true}>;
     assert.equal(missingBody.answer.products, undefined);
+  });
+});
+
+describe('POST /api/support/ask/stream', () => {
+  const ASK: ChatFpvEnv = {...ENV, CHATFPV_ASK_ENABLED: '1'};
+  const ANSWER = {conversationId: 'c', messageId: 'm', answer: 'Yes, INAV 8 supports it [1].', citations: [], outcome: 'answered' as const, confidence: 0.9};
+  let ip = 0;
+  function req(body: unknown, opts: {origin?: string | null; ip?: string} = {}) {
+    const headers = new Headers({'Content-Type': 'application/json', 'CF-Connecting-IP': opts.ip ?? `203.0.114.${++ip}`});
+    if (opts.origin !== null) headers.set('Origin', opts.origin ?? 'https://opendrone.be');
+    return new Request('https://opendrone.be/api/support/ask/stream', {method: 'POST', headers, body: JSON.stringify(body)});
+  }
+
+  /** Every `event:`/`data:` frame of an SSE response body, in order. */
+  async function readFrames(res: Response): Promise<Array<{event: string; data: unknown}>> {
+    const reader = res.body?.getReader();
+    assert.ok(reader, 'a 200 stream response always has a body');
+    const dec = new TextDecoder();
+    let buf = '';
+    const out: Array<{event: string; data: unknown}> = [];
+    for (;;) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, {stream: true});
+      const blocks = buf.split('\n\n');
+      buf = blocks.pop() ?? '';
+      for (const block of blocks) {
+        let type = '';
+        let data = '';
+        for (const line of block.split('\n')) {
+          if (line.startsWith('event: ')) type = line.slice(7);
+          else if (line.startsWith('data: ')) data += line.slice(6);
+        }
+        if (type && data) out.push({event: type, data: JSON.parse(data) as unknown});
+      }
+    }
+    return out;
+  }
+
+  it('is off (404, plain JSON, no ChatFPV call) unless CHATFPV_ASK_ENABLED is 1', async () => {
+    const fake = fakeChatFpv({answer: ANSWER});
+    const r = await handleAskStream(req({message: 'Does the F4 run INAV?'}), {...ENV, CHATFPV_ASK_ENABLED: '0'}, fake.client);
+    assert.equal(r.status, 404);
+    assert.equal(r.headers.get('Content-Type'), 'application/json');
+    assert.equal(fake.streamAsks.length, 0);
+  });
+
+  it('rejects cross-origin and origin-less requests with plain JSON, before ever calling ChatFPV', async () => {
+    const fake = fakeChatFpv({answer: ANSWER});
+    const cross = await handleAskStream(req({message: 'Does the F4 run INAV?'}, {origin: 'https://evil.test'}), ASK, fake.client);
+    assert.equal(cross.status, 403);
+    assert.equal(cross.headers.get('Content-Type'), 'application/json');
+    assert.equal(fake.streamAsks.length, 0);
+  });
+
+  it('rate limits the same 20-an-hour IP bucket as /api/support/ask, with plain JSON', async () => {
+    const fake = fakeChatFpv({answer: ANSWER});
+    const ipAddr = '2001:db8:1:3::1';
+    for (let i = 0; i < ASK_LIMIT.limit; i++) {
+      const r = await handleAskStream(req({message: 'Does the F4 run INAV?'}, {ip: ipAddr}), ASK, fake.client);
+      assert.equal(r.status, 200);
+    }
+    const over = await handleAskStream(req({message: 'Does the F4 run INAV?'}, {ip: ipAddr}), ASK, fake.client);
+    assert.equal(over.status, 429);
+    assert.equal(over.headers.get('Content-Type'), 'application/json');
+  });
+
+  it('rejects an invalid body with plain JSON', async () => {
+    const fake = fakeChatFpv({answer: ANSWER});
+    const r = await handleAskStream(req({message: 'x'}), ASK, fake.client);
+    assert.equal(r.status, 400);
+    assert.equal(r.headers.get('Content-Type'), 'application/json');
+    assert.equal(fake.streamAsks.length, 0);
+  });
+
+  it('answers a fixed-rule handoff and a preorder-info question with plain JSON, never calling ChatFPV', async () => {
+    const fake = fakeChatFpv({answer: ANSWER});
+    const refund = await handleAskStream(req({message: 'I want a refund'}), ASK, fake.client);
+    assert.equal(refund.headers.get('Content-Type'), 'application/json');
+    const refundBody = (await refund.json()) as AskResult;
+    assert.ok(refundBody.ok && refundBody.answer.handoff);
+
+    const preorder = await handleAskStream(req({message: 'When will my preorder ship?'}), ASK, fake.client);
+    assert.equal(preorder.headers.get('Content-Type'), 'application/json');
+    const preorderBody = (await preorder.json()) as AskResult;
+    assert.ok(preorderBody.ok && !preorderBody.answer.handoff);
+    assert.equal(fake.streamAsks.length, 0);
+  });
+
+  it('streams the answer as delta chunks that concatenate to the full text, then one done event shaped like /api/support/ask', async () => {
+    const fake = fakeChatFpv({answer: ANSWER, deltas: ['Yes, ', 'INAV 8 supports it [1].']});
+    const r = await handleAskStream(req({message: 'Does the F4 run INAV?', product: 'openfc-f4'}), ASK, fake.client);
+    assert.equal(r.status, 200);
+    assert.equal(r.headers.get('Content-Type'), 'text/event-stream; charset=utf-8');
+    const frames = await readFrames(r);
+    const deltas = frames.filter((f) => f.event === 'delta').map((f) => (f.data as {text: string}).text);
+    assert.deepEqual(deltas, ['Yes, ', 'INAV 8 supports it [1].']);
+    assert.equal(deltas.join(''), ANSWER.answer);
+    assert.equal(frames.at(-1)?.event, 'done');
+    const finalResult = frames.at(-1)?.data as AskResult;
+
+    // Same shape a non-streaming call would have produced for the same answer.
+    const plain = await handleAsk(req({message: 'Does the F4 run INAV?', product: 'openfc-f4'}), ASK, fakeChatFpv({answer: ANSWER}).client);
+    assert.deepEqual(finalResult, await plain.json());
+    assert.equal(fake.streamAsks[0]?.context?.product, 'openfc-f4');
+  });
+
+  it('forwards ChatFPV status lines as status events before the answer text', async () => {
+    const fake = fakeChatFpv({answer: ANSWER, statuses: ['Searching the docs', 'Writing the answer']});
+    const frames = await readFrames(await handleAskStream(req({message: 'Does the F4 run INAV?'}), ASK, fake.client));
+    assert.deepEqual(
+      frames.map((f) => f.event),
+      ['status', 'status', 'delta', 'done'],
+    );
+    assert.deepEqual(frames[0]?.data, {text: 'Searching the docs'});
+  });
+
+  it('carries a mid-stream ChatFPV rate limit into the done event instead of a generic "unavailable"', async () => {
+    const fake = fakeChatFpv({rateLimited: {rateLimited: true, message: 'Please wait 30 seconds and try again.'}});
+    const r = await handleAskStream(req({message: 'Does the F4 run INAV?'}), ASK, fake.client);
+    const frames = await readFrames(r);
+    assert.deepEqual(frames.at(-1), {
+      event: 'done',
+      data: {ok: false, error: 'rate', message: 'Please wait 30 seconds and try again.'},
+    });
+  });
+
+  it('sends a done event with error "unavailable" when ChatFPV never answers', async () => {
+    const fake = fakeChatFpv({answer: null});
+    const r = await handleAskStream(req({message: 'Does the F4 run INAV?'}), ASK, fake.client);
+    const frames = await readFrames(r);
+    assert.deepEqual(frames.at(-1), {event: 'done', data: {ok: false, error: 'unavailable'}});
+  });
+
+  it('drops internal citations and adds buy cards in the streamed done event, same as the non-streaming route', async () => {
+    const withInternal = {
+      ...ANSWER,
+      citations: [
+        {n: 1, title: 'ok', url: 'https://opendrone.be/openesc', source: 's', kind: 'doc' as const},
+        {n: 2, title: 'agents', url: 'https://github.com/x/y/blob/main/AGENTS.md', source: 's', kind: 'doc' as const},
+      ],
+    };
+    const fake = fakeChatFpv({answer: withInternal, deltas: [withInternal.answer]});
+    const r = await handleAskStream(req({message: 'Does the F4 run INAV?'}), ASK, fake.client);
+    const frames = await readFrames(r);
+    const done = frames.at(-1)?.data as Extract<AskResult, {ok: true}>;
+    assert.deepEqual(done.answer.citations.map((c) => c.n), [1]);
+  });
+
+  it('calls waitUntil with the streaming task, so a Worker keeps it running after the response returns', async () => {
+    const fake = fakeChatFpv({answer: ANSWER, deltas: [ANSWER.answer]});
+    let waited: Promise<unknown> | null = null;
+    const r = await handleAskStream(req({message: 'Does the F4 run INAV?'}), ASK, fake.client, undefined, (p) => {
+      waited = p;
+    });
+    assert.ok(waited);
+    await readFrames(r); // drain the body so the task settles
+    await waited;
   });
 });

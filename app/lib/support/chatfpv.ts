@@ -129,6 +129,27 @@ export type ChatFpvClient = {
    */
   outcome(req: DraftOutcomeRequest): Promise<true | null>;
   ask(message: string, context?: AskContext): Promise<ChatAnswer | ChatFpvRateLimited | null>;
+  /**
+   * Same call as `ask`, but with `stream: true`: ChatFPV answers first, then
+   * sends the finished text as SSE `delta` chunks (its own `chat.ts`
+   * comment: "Streamed answers send text only after answer() has resolved,
+   * so nothing ungated reaches the client"), so `onDelta` only ever sees
+   * pieces of an already-computed, already-gated answer, never a raw model
+   * token. `onDelta` fires in order for each `delta` event; the resolved
+   * value is the same `ChatAnswer` the `done` event carries, a
+   * `ChatFpvRateLimited` on a 429 (same as `ask`), or null on any other
+   * failure (network, timeout, non-2xx, no body, a mid-stream `error`
+   * event, or a connection that ends before `done`). ChatFPV sends every
+   * `delta` in one burst right before `done`, so the only live signal while
+   * it works is its `status` events ("Searching the docs"), passed to
+   * `onStatus`.
+   */
+  askStream(
+    message: string,
+    context: AskContext | undefined,
+    onDelta: (text: string) => void,
+    onStatus?: (text: string) => void,
+  ): Promise<ChatAnswer | ChatFpvRateLimited | null>;
 };
 
 /**
@@ -330,6 +351,28 @@ function parseAnswer(raw: unknown): ChatAnswer | null {
   };
 }
 
+/**
+ * One `text/event-stream` frame (ChatFPV `worker/src/lib/sse.ts`
+ * `sseResponse`: `event: <type>\ndata: <json>\n\n`) parsed to its event name
+ * and parsed JSON payload. `undefined` for an incomplete or malformed frame,
+ * which the caller leaves in the buffer (incomplete) or drops (malformed) -
+ * a partial line at a chunk boundary must never be parsed as JSON.
+ */
+function parseSseFrame(block: string): {type: string; data: unknown} | undefined {
+  let type = '';
+  let data = '';
+  for (const line of block.split('\n')) {
+    if (line.startsWith('event: ')) type = line.slice(7);
+    else if (line.startsWith('data: ')) data += line.slice(6);
+  }
+  if (!type || !data) return undefined;
+  try {
+    return {type, data: JSON.parse(data)};
+  } catch {
+    return undefined;
+  }
+}
+
 export function createChatFpvClient(env: ChatFpvEnv, fetcher?: typeof fetch, opts: {timeoutMs?: number} = {}): ChatFpvClient {
   // The Vite dev server (`npm run dev`, including the support sandbox) has
   // no real service binding: `wrangler.toml`'s [[services]] binds CHATFPV to
@@ -435,6 +478,91 @@ export function createChatFpvClient(env: ChatFpvEnv, fetcher?: typeof fetch, opt
       }
       return parseAnswer(res?.data);
     },
+
+    async askStream(message, context = {}, onDelta, onStatus) {
+      const text = scrubOutbound(message);
+      if (!text) return null;
+      if (!origin) return null;
+      const id = context.page ?? 'ask';
+      const body: ChatRequest = {
+        message: text,
+        mode: 'opendrone',
+        surface: 'widget',
+        stream: true,
+        context: {
+          ...(context.product ? {product: context.product.slice(0, 80)} : {}),
+          ...(context.page ? {page: context.page.slice(0, 80)} : {}),
+        },
+      };
+      const extra: Record<string, string> = context.clientId && env.CHATFPV_KEY ? {'X-ChatFPV-Client': context.clientId} : {};
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const res = await send(new URL('/v1/chat', origin).toString(), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'text/event-stream',
+            ...(env.CHATFPV_KEY ? {'X-ChatFPV-Key': env.CHATFPV_KEY} : {}),
+            ...extra,
+          },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
+        if (!res.ok) {
+          console.warn('[chatfpv] call failed', 'askStream', id, res.status);
+          if (res.status === 429) {
+            const data = await res.json().catch(() => undefined);
+            return {rateLimited: true, message: chatFpvErrorMessage(data) ?? DEFAULT_RATE_MESSAGE};
+          }
+          return null;
+        }
+        if (!res.body) return null;
+        const reader = res.body.getReader();
+        const dec = new TextDecoder();
+        let buf = '';
+        let result: ChatAnswer | null = null;
+        let failed = false;
+        try {
+          for (;;) {
+            const {done, value} = await reader.read();
+            if (done) break;
+            buf += dec.decode(value, {stream: true});
+            const blocks = buf.split('\n\n');
+            buf = blocks.pop() ?? '';
+            for (const block of blocks) {
+              const frame = parseSseFrame(block);
+              if (!frame) continue;
+              if (frame.type === 'delta') {
+                const t = (frame.data as {text?: unknown} | null)?.text;
+                if (typeof t === 'string' && t) onDelta(t);
+              } else if (frame.type === 'status') {
+                const t = (frame.data as {text?: unknown} | null)?.text;
+                if (typeof t === 'string' && t) onStatus?.(t.slice(0, 80));
+              } else if (frame.type === 'done') {
+                result = parseAnswer((frame.data as {answer?: unknown} | null)?.answer);
+              } else if (frame.type === 'error') {
+                failed = true;
+              }
+            }
+            if (result || failed) break;
+          }
+        } finally {
+          try {
+            await reader.cancel();
+          } catch {
+            /* already closed */
+          }
+        }
+        return failed ? null : result;
+      } catch (err) {
+        const reason = err instanceof Error && err.name === 'AbortError' ? 'timeout' : 'network';
+        console.warn('[chatfpv] call failed', 'askStream', id, reason);
+        return null;
+      } finally {
+        clearTimeout(timer);
+      }
+    },
   };
 }
 
@@ -475,12 +603,15 @@ function askJson(body: AskResult, status: number): Response {
   });
 }
 
+type ParsedAsk = {message: string; product?: string; clientId: string | null};
+
 /**
- * The /support Ask box: same origin only, 20 an hour per IP bucket, then
- * /v1/chat server side (the browser never talks to ChatFPV, so the page
- * CSP needs no connect-src entry). Off unless CHATFPV_ASK_ENABLED is "1".
+ * The preamble both `/api/support/ask` handlers share: same-origin check,
+ * the storefront's own hourly-per-IP cap, and body validation. A `Response`
+ * is an early refusal the caller returns as is; otherwise the validated
+ * message, product and (key-derived) ChatFPV client id.
  */
-export async function handleAsk(request: Request, env: ChatFpvEnv, client?: ChatFpvClient, catalog?: CatalogClient): Promise<Response> {
+async function parseAskRequest(request: Request, env: ChatFpvEnv): Promise<Response | ParsedAsk> {
   if (!askEnabled(env)) return askJson({ok: false, error: 'unavailable'}, 404);
   const origin = request.headers.get('Origin');
   if (request.method !== 'POST' || origin === null || origin !== new URL(request.url).origin) {
@@ -499,58 +630,148 @@ export async function handleAsk(request: Request, env: ChatFpvEnv, client?: Chat
   const message = typeof body.message === 'string' ? body.message.replace(/\s+/g, ' ').trim() : '';
   if (message.length < 3 || message.length > ASK_MAX) return askJson({ok: false, error: 'invalid'}, 400);
   const product = typeof body.product === 'string' && /^[\w .'-]{1,80}$/.test(body.product) ? body.product : undefined;
+  const clientId = await askClientId(env, bucket);
+  return {message, product, clientId};
+}
 
+/** `fixed`/`matchPreorderInfo`/`matchShippingVatInfo` results shared by both handlers, already customer text. */
+function fixedAskAnswer(message: string): AskResult | undefined {
   // Order status, refunds, warranty, damage and bulk pricing route on fixed
   // keywords before ChatFPV ever sees the question: a model can misjudge
   // the wording, and every one of these needs a human on the order anyway
   // (see ask-rules.ts).
   const fixed = matchFixedHandoff(message);
   if (fixed) {
-    return askJson(
-      {
-        ok: true,
-        answer: {text: '', citations: [], outcome: 'handoff', handoff: true, reason: fixed.reason, ...(fixed.url ? {url: fixed.url} : {})},
-      },
-      200,
-    );
+    return {ok: true, answer: {text: '', citations: [], outcome: 'handoff', handoff: true, reason: fixed.reason, ...(fixed.url ? {url: fixed.url} : {})}};
   }
-
   // A preorder charge- or ship-timing question: published on /preorder and
   // in the terms, not a ticket matter. Checked after the fixed handoffs
   // above (a real refund or cancellation on a preorder still needs a
   // ticket) and before ChatFPV, whose own store-handoff routing treats any
   // "preorder" mention as an order question (ask-rules.ts).
   const info = matchPreorderInfo(message) ?? matchShippingVatInfo(message);
-  if (info) {
-    return askJson({ok: true, answer: {text: info.text, citations: info.citations, outcome: 'answered', handoff: false}}, 200);
-  }
+  if (info) return {ok: true, answer: {text: info.text, citations: info.citations, outcome: 'answered', handoff: false}};
+  return undefined;
+}
 
-  const clientId = await askClientId(env, bucket);
+/** A ChatFPV `ChatAnswer` shaped into the customer-facing `AskResult`, after a rate-limit/unavailable check. */
+async function shapeAskAnswer(answer: ChatAnswer | ChatFpvRateLimited | null, catalog: CatalogClient | undefined): Promise<AskResult> {
+  if (answer && 'rateLimited' in answer) return {ok: false, error: 'rate', message: answer.message};
+  if (!answer) return {ok: false, error: 'unavailable'};
+  const handoff = answer.outcome === 'handoff' || answer.outcome === 'abstain' || Boolean(answer.handoff);
+  const citations = dropInternalCitations(answer.citations);
+  const uncertain = !handoff && answer.outcome === 'answered' && answer.confidence < UNCERTAIN_CONFIDENCE;
+  const products = !handoff && catalog ? await productCardsFromCitations(citations, catalog) : [];
+  return {
+    ok: true,
+    answer: {
+      text: answer.answer,
+      citations,
+      outcome: answer.outcome,
+      handoff,
+      ...(handoff && answer.handoff?.reason ? {reason: handoffReasonText(answer.handoff.reason)} : {}),
+      ...(handoff && answer.handoff?.url ? {url: answer.handoff.url} : {}),
+      ...(uncertain ? {uncertain: true} : {}),
+      ...(products.length ? {products} : {}),
+    },
+  };
+}
+
+/**
+ * The /support Ask box: same origin only, 20 an hour per IP bucket, then
+ * /v1/chat server side (the browser never talks to ChatFPV, so the page
+ * CSP needs no connect-src entry). Off unless CHATFPV_ASK_ENABLED is "1".
+ */
+export async function handleAsk(request: Request, env: ChatFpvEnv, client?: ChatFpvClient, catalog?: CatalogClient): Promise<Response> {
+  const parsed = await parseAskRequest(request, env);
+  if (parsed instanceof Response) return parsed;
+  const {message, product, clientId} = parsed;
+
+  const fixed = fixedAskAnswer(message);
+  if (fixed) return askJson(fixed, 200);
+
   const answer = await (client ?? createChatFpvClient(env)).ask(message, {
     page: 'support',
     ...(product ? {product} : {}),
     ...(clientId ? {clientId} : {}),
   });
-  if (answer && 'rateLimited' in answer) return askJson({ok: false, error: 'rate', message: answer.message}, 429);
-  if (!answer) return askJson({ok: false, error: 'unavailable'}, 502);
-  const handoff = answer.outcome === 'handoff' || answer.outcome === 'abstain' || Boolean(answer.handoff);
-  const citations = dropInternalCitations(answer.citations);
-  const uncertain = !handoff && answer.outcome === 'answered' && answer.confidence < UNCERTAIN_CONFIDENCE;
-  const products = !handoff && catalog ? await productCardsFromCitations(citations, catalog) : [];
-  return askJson(
-    {
-      ok: true,
-      answer: {
-        text: answer.answer,
-        citations,
-        outcome: answer.outcome,
-        handoff,
-        ...(handoff && answer.handoff?.reason ? {reason: handoffReasonText(answer.handoff.reason)} : {}),
-        ...(handoff && answer.handoff?.url ? {url: answer.handoff.url} : {}),
-        ...(uncertain ? {uncertain: true} : {}),
-        ...(products.length ? {products} : {}),
-      },
+  const result = await shapeAskAnswer(answer, catalog);
+  return askJson(result, result.ok ? 200 : result.error === 'rate' ? 429 : 502);
+}
+
+/**
+ * SSE build of `handleAsk` (`POST /api/support/ask/stream`). An early
+ * refusal (flag off, origin, rate limit, invalid body) or a fixed-rule or
+ * preorder-info answer is the same plain JSON response `handleAsk` sends
+ * (`Content-Type: application/json`, same status codes). Otherwise the
+ * response is a 200 `text/event-stream`: `status` events while ChatFPV
+ * works (its progress lines, the only live signal: ChatFPV computes and
+ * gates the whole answer before it sends any text), `delta` pieces of the
+ * finished answer text, and exactly one final `done` carrying the
+ * `AskResult` `handleAsk` would have sent whole, including a ChatFPV
+ * rate-limit or unavailable result (`ok: false`, still status 200).
+ * `waitUntil` (the Worker's `ExecutionContext.waitUntil`) keeps the
+ * background task running after the still-open stream is returned; omitted
+ * in tests.
+ */
+export async function handleAskStream(
+  request: Request,
+  env: ChatFpvEnv,
+  client?: ChatFpvClient,
+  catalog?: CatalogClient,
+  waitUntil?: (p: Promise<unknown>) => void,
+): Promise<Response> {
+  const parsed = await parseAskRequest(request, env);
+  if (parsed instanceof Response) return parsed;
+  const {message, product, clientId} = parsed;
+
+  const fixed = fixedAskAnswer(message);
+  if (fixed) return askJson(fixed, 200);
+
+  const c = client ?? createChatFpvClient(env);
+  const {readable, writable} = new TransformStream<Uint8Array, Uint8Array>();
+  const writer = writable.getWriter();
+  const enc = new TextEncoder();
+  let closed = false;
+  const send = async (event: string, data: unknown) => {
+    if (closed) return;
+    try {
+      await writer.write(enc.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+    } catch {
+      closed = true; // the browser navigated away or aborted
+    }
+  };
+
+  const task = (async () => {
+    try {
+      const answer = await c.askStream(
+        message,
+        {page: 'support', ...(product ? {product} : {}), ...(clientId ? {clientId} : {})},
+        (text) => void send('delta', {text}),
+        (text) => void send('status', {text}),
+      );
+      await send('done', await shapeAskAnswer(answer, catalog));
+    } catch (err) {
+      console.warn('[chatfpv] ask stream failed', err instanceof Error ? err.message : err);
+      await send('done', {ok: false, error: 'unavailable'} satisfies AskResult);
+    } finally {
+      closed = true;
+      try {
+        await writer.close();
+      } catch {
+        /* already closed */
+      }
+    }
+  })();
+  waitUntil?.(task);
+
+  return new Response(readable, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'private, no-store, no-transform',
+      'X-Robots-Tag': 'noindex',
+      'X-Accel-Buffering': 'no',
     },
-    200,
-  );
+  });
 }
