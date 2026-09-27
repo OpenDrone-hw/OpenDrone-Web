@@ -45,18 +45,13 @@ const BOTTOM_OBSTACLES = [
   '.product-buy-stock',
 ];
 /**
- * An obstacle only counts once its top edge is in the bottom third of the
- * viewport: these five selectors are all specific, curated buy-area
- * elements that never appear elsewhere on a product page, so any one of
- * them on screen down there is worth avoiding; one scrolled up into the top
- * two-thirds is ignored so the button is not lifted for no reason. A fixed
- * pixel distance from the bottom edge (the iteration-4 version of this
- * check, 140px) instead of a viewport-proportional one left a gap: on
- * `/products/openesc` at 390px wide, `.product-form`'s bottom sat 142.9px
- * above the viewport bottom while a lower `.ship-line` still qualified, so
- * only the ship-line was cleared and the button landed squarely on the
- * Pre-order button above it (iteration 5 audit,
- * `v2/day2/widget/after/mobile-overlap-report.json`).
+ * Obstacles whose top edge is in the upper third of the viewport are
+ * ignored, so a buy form scrolled up the page never pushes the button
+ * toward the header. Below that line the button is stacked above every
+ * obstacle it overlaps (see `measure`): a single "lift above the lowest
+ * obstacle" left it on the Pre-order button on `/products/openesc` at
+ * 390px wide, and a vertical-only check lifted it mid-page on desktop,
+ * where the buy column sits beside it.
  */
 const OBSTACLE_ZONE_FRACTION = 2 / 3;
 const HEADER = '.site-header-main';
@@ -108,21 +103,39 @@ export function ChatFpvWidget({src}: {src: string | null | undefined}) {
     let frame = 0;
     const measure = () => {
       frame = 0;
-      let obstacleTop = window.innerHeight;
-      // Horizontal extent of the right-anchored button column: an obstacle
-      // beside it (the desktop buy column left of the button) is not under it
-      // and must not lift the button or shrink the open panel.
-      const col = button.current?.getBoundingClientRect();
+      // Stack the button above every buy-area element it would otherwise
+      // sit on: start at the viewport bottom, and whenever an obstacle under
+      // the button's column overlaps the button's box, move the box above
+      // that obstacle and check again (clearing the ship line can land the
+      // button on the Pre-order button right above it). An obstacle beside
+      // the button (the desktop buy column) or above it never lifts it.
+      const rects: DOMRect[] = [];
       for (const selector of BOTTOM_OBSTACLES) {
         for (const el of document.querySelectorAll<HTMLElement>(selector)) {
           const rect = el.getBoundingClientRect();
           if (rect.bottom <= 0 || rect.top >= window.innerHeight) continue; // off-screen
-          if (col && (rect.right <= col.left || rect.left >= col.right)) continue; // not under the button
-          if (rect.top < window.innerHeight * (1 - OBSTACLE_ZONE_FRACTION)) continue; // not in the lower third
-          obstacleTop = Math.min(obstacleTop, rect.top);
+          if (rect.top < window.innerHeight * (1 - OBSTACLE_ZONE_FRACTION)) continue; // above the lower two-thirds
+          rects.push(rect);
         }
       }
-      const nextLift = Math.max(0, Math.round(window.innerHeight - obstacleTop));
+      const col = button.current?.getBoundingClientRect();
+      const colLeft = col ? col.left : window.innerWidth - 16 - 160;
+      const colRight = col ? col.right : window.innerWidth - 16;
+      const buttonHeight = col?.height ?? 44;
+      let edge = window.innerHeight;
+      for (let moved = true; moved; ) {
+        moved = false;
+        const boxBottom = edge - 16;
+        const boxTop = boxBottom - buttonHeight;
+        for (const rect of rects) {
+          if (rect.right <= colLeft || rect.left >= colRight) continue;
+          if (rect.top < boxBottom && rect.bottom > boxTop && rect.top < edge) {
+            edge = rect.top;
+            moved = true;
+          }
+        }
+      }
+      const nextLift = Math.max(0, Math.round(window.innerHeight - edge));
       setLift(nextLift);
       const header = document.querySelector<HTMLElement>(HEADER);
       const headerBottom = header ? header.getBoundingClientRect().bottom : 0;
