@@ -467,6 +467,18 @@ describe('POST /api/support/ask', () => {
     assert.equal(foundBody.answer.products?.[0]!.handle, 'openesc');
     assert.equal(foundBody.answer.products?.[0]!.addToCartHref, 'https://opendrone.be/cart/add?sku=OPENESC-2020&qty=1');
 
+    const withCard = {
+      ...ANSWER,
+      citations: [],
+      blocks: [{kind: 'product' as const, title: 'OpenESC', url: 'https://opendrone.be/products/openesc', status: 'coming soon, not orderable yet, no price', variant: '20×20'}],
+    };
+    const carded = await handleAsk(req({message: 'What voltage can the OpenESC 20x20 take?'}), ASK, fakeChatFpv({answer: withCard}).client, catalog);
+    const card = ((await read(carded)) as Extract<AskResult, {ok: true}>).answer.products?.[0];
+    assert.equal(card?.handle, 'openesc');
+    assert.equal(card?.variant, '20×20');
+    assert.equal(card?.soon, true);
+    assert.equal(card?.addToCartHref, null);
+
     const withUnknownProduct = {
       ...ANSWER,
       citations: [{n: 1, title: 'OpenMotor', url: 'https://opendrone.be/products/openmotor', source: 'OpenDrone storefront', kind: 'product' as const}],

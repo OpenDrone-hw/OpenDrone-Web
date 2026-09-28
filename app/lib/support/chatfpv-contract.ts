@@ -44,6 +44,17 @@ export type ChatAnswer = {
   confidence: number; // 0..1
   handoff?: {reason: string; url: string}; // e.g. open a support ticket
   followups?: string[];
+  /** Answer blocks; the storefront reads only the product card kind. */
+  blocks?: ProductBlock[];
+};
+
+/** A product card for an answer about one OpenDrone product (ChatFPV `ProductBlock`, fields the storefront reads). */
+export type ProductBlock = {
+  kind: 'product';
+  title: string;
+  url: string; // https://opendrone.be/products/<handle>
+  status: string; // e.g. 'coming soon, not orderable yet, no price' or 'in stock, EUR 49.00'
+  variant?: string; // the variant the question or page names
 };
 
 /**
