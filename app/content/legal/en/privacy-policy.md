@@ -28,6 +28,7 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Website usage | IP address, browser, pages visited | Website optimisation, security |
 | Newsletter | Email, country (derived from IP address) | Marketing communication (only with consent) |
 | Trade enquiries | Company and contact name, email, telephone number, shipping and billing address, VAT or EIN number, shop details, requested products | Answering and quoting a shop's wholesale request |
+| ChatFPV assistant (the helper on product pages, the Ask box on /support, reply suggestions for support tickets) | The text you type and ChatFPV's replies; on product pages also the product you are viewing; a salted hash of your IP address (rate limits); your rating of an answer and any note. For a reply suggestion: the question text of your ticket without name, email, telephone number, order data or attachments | Answering product and FPV questions with an AI assistant; suggesting replies to our support staff; improving ChatFPV's answers |
 
 ### 3. Legal bases (Art. 6 GDPR)
 
@@ -37,6 +38,8 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Payment processing | Necessary for performance of a contract (Art. 6.1.b) |
 | Invoicing and bookkeeping | Legal obligation (Art. 6.1.c: VAT legislation, accounting law) |
 | Customer service | Legitimate interest (Art. 6.1.f) |
+| ChatFPV answers in the helper and the Ask box | Legitimate interest (Art. 6.1.f): answering product and FPV questions without a staff member for every message |
+| Unanswered questions, ratings and correction notes used to improve ChatFPV | Legitimate interest (Art. 6.1.f); you can object at any time |
 | Website analytics | Legitimate interest (Art. 6.1.f); cookieless, no persistent identifier |
 | Newsletter | Consent (Art. 6.1.a) |
 | Trade enquiries | Steps taken at the request of the enquirer before entering into a contract (Art. 6.1.b) |
@@ -52,6 +55,11 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Website log files | 6 months |
 | Newsletter subscription | Until unsubscribed |
 | Trade enquiries without an order | 2 years after the last contact |
+| ChatFPV conversations in the helper and the Ask box, with ratings | 90 days after the last message in the conversation |
+| ChatFPV reply suggestions for a support ticket | With the ticket: 24 months after the ticket is closed |
+| Unanswered questions copied to improve ChatFPV (no link to who asked) | 90 days after the question was last asked |
+| Your text copied into a proposed ChatFPV correction | 24 months, then deleted; the knowledge change stays without your text |
+| Prompts and replies at Google (Gemini API) | 55 days for abuse monitoring (30 days for Google Search grounding), by Google |
 
 ### 5. Recipients / processors
 
@@ -66,10 +74,13 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Polar Advisory BV (accountant) | Invoicing and annual accounts | Belgium |
 | Resend (Plus Five Five, Inc.) | Mail sent by opendrone.be: withdrawal confirmations, welcome and newsletter mail, trade requests, notices of a new reply on a support ticket (link only, no message content) | EU region infrastructure; US legal entity: SCCs |
 | Discord Inc. (processor) | Support tickets: our team reads and answers them in a staff-only Discord channel (your first name, email, order number and order details, messages, attachments) | US: EU-US Data Privacy Framework (Art. 45 GDPR); Discord's processor terms: https://support.discord.com/hc/en-us/articles/37891902561687 |
-| Cloudflare, Inc. | Hosting and delivery of the website (IP address, request data, derived country); storage of support tickets and of anti-abuse counters (Cloudflare D1; counters hold a keyed hash of IP address and email, never the values, and are deleted after at most two days); Turnstile anti-spam on the newsletter, trade and support forms | US: EU-US Data Privacy Framework (Art. 45 GDPR) |
+| Cloudflare, Inc. | Hosting and delivery of the website (IP address, request data, derived country); storage of support tickets and of anti-abuse counters (Cloudflare D1; counters hold a keyed hash of IP address and email, never the values, and are deleted after at most two days); Turnstile anti-spam on the newsletter, trade and support forms; running ChatFPV at chatfpv.com, which also answers in the helper and the Ask box (Workers, conversations in D1, the knowledge base in Vectorize, a fallback AI model in Workers AI that does not train on your content) | US: EU-US Data Privacy Framework (Art. 45 GDPR); SCCs (Art. 46 GDPR) in Cloudflare's data processing addendum for any transfer the Framework does not cover |
+| Google (Gemini API, paid tier) | Writing ChatFPV answers and reply suggestions from your question, the conversation so far and retrieved source text; Google Search grounding for answers and for researching unanswered questions. On the paid tier Google does not use prompts or replies to improve its products; it keeps them for 55 days only to detect abuse (30 days for Search grounding) | United States and other Google locations: EU-US Data Privacy Framework (Art. 45 GDPR) and SCCs (Art. 46 GDPR) in Google's processor terms |
 | European Commission (VIES) | Check of the VAT number given in a trade enquiry | EU |
 
 Order and customer data (name, address, email, payment reference, order history) and newsletter consent are processed in Shopify.
+
+**ChatFPV.** ChatFPV is an AI assistant for FPV and OpenDrone product questions, run by Incutec BV at chatfpv.com. Its replies are machine-generated and can be wrong: check the sources it cites. On opendrone.be it appears in two places. The helper in the corner of product pages is chatfpv.com loaded inside the page: your question and the product you are viewing go to chatfpv.com exactly as you type them, and chatfpv.com keeps a random conversation id in your browser's local storage (no name, no account). The Ask box on /support sends your question through opendrone.be, which first removes email addresses, phone numbers, card numbers, IBANs and similar identifiers, but not names or order numbers: leave those out. When our staff answer a support ticket, ChatFPV can suggest a reply from the ticket's question, without your name, email, telephone number, order data or attachments; a staff member decides what is sent. A question ChatFPV could not answer is copied, without who asked it and after email addresses, phone numbers and order numbers are removed, into a list our staff use to add missing knowledge; a rating note can become a proposed correction. You can object to this use via privacy@opendrone.be. ChatFPV's own privacy notice, with the cookies and browser storage chatfpv.com uses: https://chatfpv.com/privacy
 
 **Discord.** The OpenDrone community server runs on Discord. Discord Inc. is an independent controller for the community server you choose to join. For support tickets, Discord Inc. processes the ticket on our behalf as a processor (table above); you do not need a Discord account to open a ticket. Discord's privacy policy: https://discord.com/privacy
 
@@ -100,7 +111,7 @@ You have the right to file a complaint with the Belgian Data Protection Authorit
 | Website | https://www.gegevensbeschermingsautoriteit.be |
 | Email | contact@apd-gba.be |
 
-You may also lodge a complaint with the supervisory authority of your place of residence or work within the EU, if you do not reside in Belgium (Art. 77 GDPR).
+You may also lodge a complaint with the supervisory authority of your place of residence or work within the EU, if you do not reside in Belgium (Art. 77 GDPR). This includes complaints about ChatFPV.
 
 ### 8. Security
 
@@ -111,7 +122,7 @@ Incutec BV takes appropriate technical and organisational measures to protect pe
 
 ### 9. Automated decision-making
 
-Incutec BV does not carry out automated decision-making or profiling within the meaning of Art. 22 GDPR. Every order is processed and, where needed, reviewed by a staff member.
+Incutec BV does not carry out automated decision-making or profiling within the meaning of Art. 22 GDPR. Every order is processed and, where needed, reviewed by a staff member. ChatFPV's answers are generated automatically but decide nothing about you, and a reply to a support ticket is always sent by a staff member.
 
 **Whether providing data is required.** Name, address, email and payment details are needed to fulfil an order; without them no contract can be concluded. Invoicing data must be retained by law. All other data (phone number, newsletter, account details) is optional.
 

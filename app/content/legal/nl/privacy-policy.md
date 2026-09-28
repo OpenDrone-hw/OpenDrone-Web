@@ -26,6 +26,7 @@ Incutec BV heeft geen Functionaris voor Gegevensbescherming (DPO) aangesteld aan
 | Websitegebruik | IP-adres, browser, pagina's bezocht | Websiteoptimalisatie, beveiliging |
 | Nieuwsbrief | E-mail, land (afgeleid uit het IP-adres) | Marketingcommunicatie (enkel met toestemming) |
 | Handelsaanvragen | Bedrijfs- en contactnaam, e-mail, telefoonnummer, verzend- en factuuradres, btw- of EIN-nummer, winkelgegevens, gevraagde producten | Beantwoorden en offreren van een groothandelsaanvraag van een winkel |
+| ChatFPV-assistent (de hulp op productpagina's, het vraagvak op /support, antwoordvoorstellen voor supporttickets) | De tekst die u typt en de antwoorden van ChatFPV; op productpagina's ook het product dat u bekijkt; een gezouten hash van uw IP-adres (gebruikslimieten); uw beoordeling van een antwoord en een eventuele opmerking. Voor een antwoordvoorstel: de vraagtekst van uw ticket zonder naam, e-mail, telefoonnummer, bestelgegevens of bijlagen | Product- en FPV-vragen beantwoorden met een AI-assistent; antwoorden voorstellen aan onze supportmedewerkers; de antwoorden van ChatFPV verbeteren |
 
 ### 3. Rechtsgronden (Art. 6 AVG)
 
@@ -35,6 +36,8 @@ Incutec BV heeft geen Functionaris voor Gegevensbescherming (DPO) aangesteld aan
 | Betalingsverwerking | Noodzakelijk voor uitvoering overeenkomst (Art. 6.1.b) |
 | Facturatie en boekhouding | Wettelijke verplichting (Art. 6.1.c: BTW-wetgeving, boekhoudwet) |
 | Klantenservice | Gerechtvaardigd belang (Art. 6.1.f) |
+| Antwoorden van ChatFPV in de hulp en het vraagvak | Gerechtvaardigd belang (Art. 6.1.f): product- en FPV-vragen beantwoorden zonder dat voor elk bericht een medewerker nodig is |
+| Onbeantwoorde vragen, beoordelingen en correctie-opmerkingen gebruikt om ChatFPV te verbeteren | Gerechtvaardigd belang (Art. 6.1.f); u kunt op elk moment bezwaar maken |
 | Website-analyse | Gerechtvaardigd belang (Art. 6.1.f); cookieloos, geen persistente identifier |
 | Nieuwsbrief | Toestemming (Art. 6.1.a) |
 | Handelsaanvragen | Precontractuele maatregelen op verzoek van de aanvrager (Art. 6.1.b) |
@@ -50,6 +53,11 @@ Incutec BV heeft geen Functionaris voor Gegevensbescherming (DPO) aangesteld aan
 | Website-logbestanden | 6 maanden |
 | Nieuwsbrief-abonnement | Tot uitschrijving |
 | Handelsaanvragen zonder bestelling | 2 jaar na het laatste contact |
+| ChatFPV-gesprekken in de hulp en het vraagvak, met beoordelingen | 90 dagen na het laatste bericht in het gesprek |
+| Antwoordvoorstellen van ChatFPV voor een supportticket | Samen met het ticket: 24 maanden na afsluiting van het ticket |
+| Onbeantwoorde vragen gekopieerd om ChatFPV te verbeteren (zonder link naar wie de vraag stelde) | 90 dagen nadat de vraag voor het laatst werd gesteld |
+| Uw tekst gekopieerd in een voorgestelde ChatFPV-correctie | 24 maanden, daarna gewist; de kenniswijziging blijft zonder uw tekst |
+| Prompts en antwoorden bij Google (Gemini API) | 55 dagen voor misbruikdetectie (30 dagen voor Google Search grounding), door Google |
 
 ### 5. Ontvangers / verwerkers
 
@@ -64,10 +72,13 @@ Incutec BV heeft geen Functionaris voor Gegevensbescherming (DPO) aangesteld aan
 | Polar Advisory BV (boekhouder) | Facturatie en jaarrekening | België |
 | Resend (Plus Five Five, Inc.) | E-mail verzonden door opendrone.be: herroepingsbevestigingen, welkomst- en nieuwsbriefmails, handelsaanvragen, meldingen van een nieuw antwoord op een supportticket (enkel een link, geen berichtinhoud) | EU-regio infrastructuur; VS-rechtspersoon: SCC's |
 | Discord Inc. (verwerker) | Supporttickets: ons team leest en beantwoordt ze in een Discord-kanaal dat enkel voor medewerkers toegankelijk is (uw voornaam, e-mail, ordernummer en ordergegevens, berichten, bijlagen) | VS: EU-VS Data Privacy Framework (art. 45 AVG); verwerkersvoorwaarden van Discord: https://support.discord.com/hc/en-us/articles/37891902561687 |
-| Cloudflare, Inc. | Hosting en levering van de website (IP-adres, verzoekgegevens, afgeleid land); opslag van supporttickets en van tellers tegen misbruik (Cloudflare D1; tellers bevatten een gesleutelde hash van IP-adres en e-mail, nooit de waarden zelf, en worden na hoogstens twee dagen gewist); Turnstile-antispam op het nieuwsbrief-, handels- en supportformulieren | VS: EU-VS Data Privacy Framework (art. 45 AVG) |
+| Cloudflare, Inc. | Hosting en levering van de website (IP-adres, verzoekgegevens, afgeleid land); opslag van supporttickets en van tellers tegen misbruik (Cloudflare D1; tellers bevatten een gesleutelde hash van IP-adres en e-mail, nooit de waarden zelf, en worden na hoogstens twee dagen gewist); Turnstile-antispam op het nieuwsbrief-, handels- en supportformulieren; het draaien van ChatFPV op chatfpv.com, dat ook antwoordt in de hulp en het vraagvak (Workers, gesprekken in D1, de kennisbank in Vectorize, een terugval-AI-model in Workers AI dat niet op uw inhoud traint) | VS: EU-VS Data Privacy Framework (art. 45 AVG); SCC's (art. 46 AVG) in de verwerkersovereenkomst van Cloudflare voor elke doorgifte die het Framework niet dekt |
+| Google (Gemini API, betaald niveau) | Antwoorden en antwoordvoorstellen van ChatFPV schrijven op basis van uw vraag, het gesprek tot dan en opgehaalde brontekst; Google Search grounding voor antwoorden en voor onderzoek naar onbeantwoorde vragen. Op het betaalde niveau gebruikt Google prompts en antwoorden niet om zijn producten te verbeteren; het bewaart ze 55 dagen enkel om misbruik op te sporen (30 dagen voor Search grounding) | Verenigde Staten en andere locaties van Google: EU-VS Data Privacy Framework (art. 45 AVG) en SCC's (art. 46 AVG) in de verwerkersvoorwaarden van Google |
 | Europese Commissie (VIES) | Controle van het btw-nummer uit een handelsaanvraag | EU |
 
 Bestel- en klantgegevens (naam, adres, e-mail, betalingsreferentie, bestelgeschiedenis) en de nieuwsbrieftoestemming worden verwerkt in Shopify.
+
+**ChatFPV.** ChatFPV is een AI-assistent voor vragen over FPV en OpenDrone-producten, uitgebaat door Incutec BV op chatfpv.com. De antwoorden worden automatisch gegenereerd en kunnen fout zijn: controleer de bronnen die ChatFPV vermeldt. Op opendrone.be verschijnt ChatFPV op twee plaatsen. De hulp in de hoek van productpagina's is chatfpv.com, geladen binnen de pagina: uw vraag en het product dat u bekijkt gaan naar chatfpv.com precies zoals u ze typt, en chatfpv.com bewaart een willekeurige gespreks-id in de lokale opslag van uw browser (geen naam, geen account). Het vraagvak op /support stuurt uw vraag via opendrone.be, dat eerst e-mailadressen, telefoonnummers, kaartnummers, IBAN's en gelijkaardige identificatoren verwijdert, maar geen namen of ordernummers: laat die zelf weg. Wanneer onze medewerkers een supportticket beantwoorden, kan ChatFPV een antwoord voorstellen op basis van de vraag in het ticket, zonder uw naam, e-mail, telefoonnummer, bestelgegevens of bijlagen; een medewerker beslist wat er verstuurd wordt. Een vraag die ChatFPV niet kon beantwoorden, wordt zonder de vraagsteller en na verwijdering van e-mailadressen, telefoonnummers en ordernummers gekopieerd naar een lijst die onze medewerkers gebruiken om ontbrekende kennis toe te voegen; een opmerking bij een beoordeling kan een voorgestelde correctie worden. U kunt tegen dit gebruik bezwaar maken via privacy@opendrone.be. De eigen privacyverklaring van ChatFPV, met de cookies en browseropslag die chatfpv.com gebruikt: https://chatfpv.com/privacy
 
 **Discord.** De OpenDrone-communityserver draait op Discord. Discord Inc. is een zelfstandige verwerkingsverantwoordelijke voor de communityserver waar u zelf voor kiest lid te worden. Voor supporttickets verwerkt Discord Inc. het ticket in onze opdracht als verwerker (tabel hierboven); u hebt geen Discord-account nodig om een ticket te openen. Privacybeleid van Discord: https://discord.com/privacy
 
@@ -98,7 +109,7 @@ U heeft het recht om een klacht in te dienen bij de Gegevensbeschermingsautorite
 | Website | https://www.gegevensbeschermingsautoriteit.be |
 | E-mail | contact@apd-gba.be |
 
-U kunt ook een klacht indienen bij de toezichthoudende autoriteit van uw woonplaats of werkplaats binnen de EU, indien u niet in België woont (Art. 77 AVG).
+U kunt ook een klacht indienen bij de toezichthoudende autoriteit van uw woonplaats of werkplaats binnen de EU, indien u niet in België woont (Art. 77 AVG). Dit geldt ook voor klachten over ChatFPV.
 
 ### 8. Beveiliging
 
@@ -109,7 +120,7 @@ Incutec BV neemt passende technische en organisatorische maatregelen om persoons
 
 ### 9. Geautomatiseerde besluitvorming
 
-Incutec BV verricht geen geautomatiseerde besluitvorming of profilering in de zin van Art. 22 AVG. Elke bestelling wordt verwerkt en, waar nodig, beoordeeld door een medewerker.
+Incutec BV verricht geen geautomatiseerde besluitvorming of profilering in de zin van Art. 22 AVG. Elke bestelling wordt verwerkt en, waar nodig, beoordeeld door een medewerker. De antwoorden van ChatFPV worden automatisch gegenereerd maar beslissen niets over u, en een antwoord op een supportticket wordt altijd door een medewerker verstuurd.
 
 **Verplicht karakter van de gegevens.** Naam, adres, e-mail en betaalgegevens zijn nodig om een bestelling te kunnen uitvoeren; zonder deze gegevens kan geen overeenkomst worden gesloten. Facturatiegegevens moeten wettelijk worden bewaard. Alle andere gegevens (telefoonnummer, nieuwsbrief, accountgegevens) zijn vrijwillig.
 
