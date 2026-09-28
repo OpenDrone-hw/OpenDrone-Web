@@ -1,4 +1,6 @@
 import {useEffect, useId, useRef, useState, type FormEvent} from 'react';
+import {useNavigate} from 'react-router';
+import {ArrowUp} from 'lucide-react';
 import type {AskProductCard, AskResult} from '~/lib/support/chatfpv';
 import {ProductPods, type ProductPodItem} from '~/components/ProductPods';
 import {trackEvent} from '~/lib/growth/plausible';
@@ -21,13 +23,6 @@ function podItem(p: AskProductCard): ProductPodItem {
   };
 }
 
-/**
- * Why the Ask box swapped to the ticket form instead of showing an answer,
- * shown by `support.tsx` above the form: the box itself unmounts on the
- * swap, so a message that lived only in its own state would vanish with it.
- */
-export type AskReason = {message: string; url?: string};
-
 const REASON_TEXT: Record<Exclude<AskResult, {ok: true}>['error'], string> = {
   unavailable: "ChatFPV can't answer right now.",
   forbidden: "That request wasn't allowed from here.",
@@ -35,7 +30,7 @@ const REASON_TEXT: Record<Exclude<AskResult, {ok: true}>['error'], string> = {
   rate: 'Too many questions for now.',
 };
 
-/** Starter questions that fill the textarea: newcomer-shopping and
+/** Starter questions that fill the composer: newcomer-shopping and
  *  troubleshooting side by side, so the box is not only for problems.
  *  Through the copy system (`support.ask_starters`) so the team can tune
  *  them; falls back to this set when the key is missing. */
@@ -110,35 +105,34 @@ export async function readAskStream(
 }
 
 /**
- * "ChatFPV · AI assistant · Beta" on /support, above the ticket form (only
- * while CHATFPV_ASK_ENABLED is "1"). One flow, not two competing options:
- * try the assistant first (starter chips fill the box for a newcomer who
- * has nothing typed yet), then "Talk to the team: open a ticket" always sits
- * at the bottom of the card as the one obvious escalation path, whether or
- * not an answer came back. The question goes to POST /api/support/ask,
- * which asks ChatFPV server side. The answer renders ChatFPV's safe Markdown
- * subset (`AnswerMarkdown`, text nodes only) with its sources. The data-use
- * disclosure (`support.ask_privacy_notice`, wording unchanged) sits below
- * the input in a `<details>` toggle, same pattern as the product-page widget
- * (`ChatFpvWidget.tsx`), not ahead of the box where it used to dominate the
- * card. An answer ChatFPV hands off or abstains on, or no answer at all,
- * goes to the form straight away, with `onTicket`'s reason shown above it so
- * the swap never looks like a broken page.
+ * The optional "Quick answer: ChatFPV" panel: NOT the hero of /support
+ * (the ticket topic picker is - founder: "ChatFPV is not a main feature,
+ * it's something I'm testing out"). support.tsx expands this from a tile
+ * whose <summary> IS the tile (icon, title, one line): this component owns
+ * no heading of its own, just the composer down.
+ *
+ * A one-box, one-line composer (chatfpv.com style: the send arrow sits
+ * inside the box) with starter chips that fill it for someone who has not
+ * typed anything yet. The data-use disclosure (`support.ask_privacy_notice`,
+ * wording unchanged) is a one-line `<details>` toggle below the box, same
+ * pattern as the product-page widget (`ChatFpvWidget.tsx`).
+ *
+ * A ChatFPV answer that hands off to a specific URL (e.g. the wholesale
+ * form) navigates there directly. Every other non-answer (refusal, rate
+ * limit, abstain) shows one line; a real answer or that line both end in
+ * the same single escalation, `onEscalate`, which prefills the ticket
+ * message and scrolls back up to the topic picker - the hero of the page.
  */
-export function AskChatFPV({
-  onTicket,
-  product,
-}: {
-  onTicket: (question: string, reason?: AskReason) => void;
-  product?: string;
-}) {
+export function AskChatFPV({onEscalate, product}: {onEscalate: (question: string) => void; product?: string}) {
   const [question, setQuestion] = useState('');
   const [busy, setBusy] = useState(false);
   const [answer, setAnswer] = useState<Answer | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState('');
   const id = useId();
-  const abortRef = useRef<AbortController | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const navigate = useNavigate();
   const starters = askStarters();
 
   function pickStarter(starter: string) {
@@ -156,6 +150,7 @@ export function AskChatFPV({
     if (q.length < 3 || busy) return;
     setBusy(true);
     setAnswer(null);
+    setError(null);
     trackEvent('chatfpv_ask_submit');
     const controller = new AbortController();
     abortRef.current = controller;
@@ -170,10 +165,9 @@ export function AskChatFPV({
       if (res.headers.get('Content-Type')?.startsWith('text/event-stream')) {
         // An early refusal or a fixed-rule answer is plain JSON (the else
         // branch); a ChatFPV answer streams (handleAskStream's doc comment).
-        // Its status lines show on the button while ChatFPV works; the text
-        // grows as it arrives; the final shaping (citations, uncertain, buy
-        // cards, or a handoff swap to the ticket form) happens once `done`
-        // settles it.
+        // Its status lines show while ChatFPV works; the text grows as it
+        // arrives; the final shaping (citations, uncertain, buy cards, or a
+        // URL handoff) happens once `done` settles it.
         let streamed = '';
         body = await readAskStream(
           res,
@@ -199,45 +193,49 @@ export function AskChatFPV({
       return;
     }
     setAnswer(null);
-    trackEvent('chatfpv_ticket_after_ask');
-    if (body?.ok && body.answer.handoff) {
-      onTicket(q, {message: body.answer.reason || REASON_TEXT.unavailable, ...(body.answer.url ? {url: body.answer.url} : {})});
+    if (body?.ok && body.answer.handoff && body.answer.url) {
+      void navigate(body.answer.url);
       return;
     }
-    const message = body && !body.ok ? body.message || REASON_TEXT[body.error] : REASON_TEXT.unavailable;
-    onTicket(q, {message});
+    trackEvent('chatfpv_ticket_after_ask');
+    const message = body?.ok
+      ? body.answer.reason || REASON_TEXT.unavailable
+      : body && !body.ok
+        ? body.message || REASON_TEXT[body.error]
+        : REASON_TEXT.unavailable;
+    setError(message);
   }
 
-  function openTicket() {
+  function escalate() {
     trackEvent('chatfpv_ticket_after_ask');
-    onTicket(question.trim());
+    onEscalate(question.trim());
   }
+
+  const followup = copyText('support.ask_followup') ?? 'Not solved? Open a ticket with this conversation';
 
   return (
-    <section className="sp-card sp-ask" aria-labelledby={`${id}-title`}>
-      <h2 className="sp-card-title" id={`${id}-title`}>
-        ChatFPV <span className="sp-ask-kicker">· AI assistant</span>
-        <span className="sp-badge-beta">Beta</span>
-      </h2>
-      <p className="sp-hint">
-        Ask about FPV builds, compatibility or OpenDrone hardware; it answers with its sources. For orders, returns
-        and warranty, talk to the team below.
-      </p>
-      <form className="sp-form" onSubmit={(e) => void ask(e)}>
-        <label className="sp-field">
-          <span className="sp-label">Your question</span>
+    <div className="sp-ask-panel">
+      <form className="sp-composer" onSubmit={(e) => void ask(e)}>
+        <label className="sp-visually-hidden" htmlFor={`${id}-q`}>
+          Your question
+        </label>
+        <div className="sp-composer-box">
           <textarea
+            id={`${id}-q`}
             ref={textareaRef}
             name="question"
-            rows={4}
+            rows={2}
             maxLength={1000}
             dir="auto"
-            className="sp-input sp-textarea sp-ask-textarea"
+            className="sp-composer-input"
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            placeholder="Which receiver protocol does the OpenRX use?"
+            placeholder="Ask about a build, part or order"
           />
-        </label>
+          <button type="submit" className="sp-composer-send" disabled={busy || question.trim().length < 3} aria-label="Ask ChatFPV">
+            <ArrowUp size={18} aria-hidden="true" />
+          </button>
+        </div>
         {!question.trim() ? (
           <div className="sp-chip-row" role="group" aria-label="Example questions">
             {starters.map((s) => (
@@ -247,19 +245,31 @@ export function AskChatFPV({
             ))}
           </div>
         ) : null}
-        <div className="sp-submit-row">
-          <button type="submit" className="od-btn od-btn-primary" disabled={busy || question.trim().length < 3}>
-            {busy ? `${status || 'Asking'}…` : 'Ask ChatFPV'}
-          </button>
-        </div>
-        <details className="sp-ask-notice">
-          <summary>{copyText('support.ask_notice_summary') ?? 'How your question is used'}</summary>
-          <p className="sp-hint sp-ask-privacy">
-            {copyText('support.ask_privacy_notice') ??
-              "Your question goes to ChatFPV, Incutec's AI assistant. We remove emails, phone numbers, card numbers, IBANs and similar identifiers before sending it, but not your name or order number, so please leave those out yourself. Conversations that do not become a ticket are deleted after 90 days idle."}
-          </p>
-        </details>
       </form>
+
+      <details className="sp-ask-notice">
+        <summary>{copyText('support.ask_notice_summary') ?? 'How your question is used'}</summary>
+        <p className="sp-hint sp-ask-privacy">
+          {copyText('support.ask_privacy_notice') ??
+            "Your question goes to ChatFPV, Incutec's AI assistant. We remove emails, phone numbers, card numbers, IBANs and similar identifiers before sending it, but not your name or order number, so please leave those out yourself. Conversations that do not become a ticket are deleted after 90 days idle."}
+        </p>
+      </details>
+
+      {busy && status ? (
+        <p className="sp-hint" aria-live="polite">
+          {status}…
+        </p>
+      ) : null}
+
+      {error ? (
+        <p className="sp-hint" role="alert">
+          {error}{' '}
+          <button type="button" className="sp-hint-cta" onClick={escalate}>
+            {followup}
+          </button>
+        </p>
+      ) : null}
+
       {answer ? (
         <div className="sp-ask-answer" role="status" aria-live="polite">
           <p className="sp-hint">
@@ -267,7 +277,7 @@ export function AskChatFPV({
           </p>
           {answer.uncertain ? (
             <p className="sp-banner" role="note">
-              ChatFPV isn&apos;t confident about this one. Check the sources below, or open a ticket.
+              ChatFPV isn&apos;t confident about this one. Check the sources below.
             </p>
           ) : null}
           <AnswerMarkdown text={answer.text} citations={answer.citations} />
@@ -289,23 +299,13 @@ export function AskChatFPV({
               <ProductPods items={answer.products.map(podItem)} layout="row" />
             </div>
           ) : null}
+          <p className="sp-ask-followup">
+            <button type="button" className="sp-hint-cta" onClick={escalate}>
+              {followup}
+            </button>
+          </p>
         </div>
       ) : null}
-      <div className="sp-ask-ticket">
-        <p className="sp-hint">
-          {copyText('support.ask_ticket_prompt') ?? "Didn't find it, or it's about an order, return or warranty?"}
-        </p>
-        <a
-          href="/support?ticket=1"
-          className={answer?.uncertain ? 'od-btn od-btn-primary' : 'od-btn od-btn-secondary'}
-          onClick={(e) => {
-            e.preventDefault();
-            openTicket();
-          }}
-        >
-          {copyText('support.ask_ticket_cta') ?? 'Talk to the team: open a ticket'}
-        </a>
-      </div>
-    </section>
+    </div>
   );
 }
