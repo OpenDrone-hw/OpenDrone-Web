@@ -8628,17 +8628,11 @@ a.what-chain-chip:hover {
   color: var(--color-text);
 }
 
-.account-logout {
-  margin-left: auto;
-}
-
-/* /account ChatFPV history: export and delete (app/lib/accounts/rights.ts). */
+/* /account ChatFPV history: export and delete (app/lib/accounts/rights.ts).
+   Sits inside .account-danger-card, which supplies the section framing. */
 .account-chatfpv {
   display: grid;
   gap: 0.75rem;
-  margin: 1.5rem 0;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--color-border);
 }
 .account-chatfpv-title {
   margin: 0;
@@ -8947,6 +8941,108 @@ a.what-chain-chip:hover {
   font-size: 0.9rem;
   line-height: 1.5;
   margin: 0.2rem 0 0;
+}
+
+/* ============================================
+   polish/account: /account header row, danger zone,
+   and /account/login CTA + disclosure toggle.
+   Reuses .account-dashboard-* above for the card grid.
+   ============================================ */
+
+.account-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin-bottom: 2rem;
+}
+.account-head .page-header {
+  margin-bottom: 0;
+  flex: 1 1 320px;
+}
+.account-head-signout {
+  flex: 0 0 auto;
+  padding-top: 0.15rem;
+}
+
+.account-danger {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--color-border);
+}
+.account-danger-title {
+  margin: 0 0 0.85rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--ls-label);
+  color: var(--color-text-muted);
+}
+/* Copper accent (same tone as .od-btn-danger) marks this as the
+   destructive-but-deliberate zone without shouting red at every visitor. */
+.account-danger-card {
+  display: grid;
+  padding: 1.25rem 1.35rem;
+  background: var(--color-bg-card);
+  border: 1px solid color-mix(in srgb, var(--od-pcb-copper) 30%, var(--color-border));
+  border-radius: var(--r-md);
+}
+
+.account-login-cta {
+  margin-bottom: 1.25rem;
+}
+.od-btn.account-login-submit {
+  width: 100%;
+  justify-content: center;
+  padding: 1rem 1.5rem;
+  font-size: 13px;
+}
+
+.account-login-disclosure {
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-sm);
+  background: var(--color-bg-card);
+}
+.account-login-disclosure-summary {
+  padding: 0.85rem 1.1rem;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--ls-label);
+  color: var(--color-text);
+  cursor: pointer;
+  list-style: none;
+}
+.account-login-disclosure-summary::-webkit-details-marker {
+  display: none;
+}
+.account-login-disclosure-summary::before {
+  content: '+';
+  display: inline-block;
+  width: 1em;
+  color: var(--color-gold-text);
+}
+.account-login-disclosure[open] .account-login-disclosure-summary::before {
+  content: '\2212';
+}
+.account-login-disclosure-body {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0 1.1rem 1.1rem;
+  color: var(--color-text-muted);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+.account-login-disclosure-body p {
+  margin: 0;
+}
+.account-login-disclosure-body a {
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 /* ============================================

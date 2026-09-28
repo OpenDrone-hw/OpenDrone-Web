@@ -38,26 +38,30 @@ export default function AccountLoginRoute() {
           {chatfpv ? 'chatfpv.com asked you to sign in. ' : ''}One account for opendrone.be and chatfpv.com.
         </p>
       </header>
-      <div className="sp-narrow">
-        <section className="sp-card account-card account-signin-notice">
-          <p>
-            Shopify, which runs our shop, signs you in with a one-time code sent to your email address. If you have no customer account yet,
-            signing in creates a Shopify customer account that holds your email address. We add nothing else to it: no newsletter or marketing
-            consent, and no ChatFPV conversations.
-          </p>
-          <p>
-            chatfpv.com receives a separate account id, never your name, email address or Shopify customer id. While you are signed in, your
-            ChatFPV conversations are kept for 12 months after the last message; you can export or delete them on your account page at any time.
-          </p>
-          <p>
-            Details: <a href="/privacy">privacy policy</a>.
-          </p>
-          <p>
-            <a href={continueUrl} className="od-btn od-btn-primary">
-              Continue to sign in
-            </a>
-          </p>
+      <div className="sp-narrow account-login">
+        <section className="account-login-cta">
+          <a href={continueUrl} className="od-btn od-btn-primary account-login-submit">
+            Continue to sign in
+          </a>
         </section>
+
+        <details className="account-login-disclosure">
+          <summary className="account-login-disclosure-summary">How sign-in and your data work</summary>
+          <div className="account-login-disclosure-body">
+            <p>
+              Shopify, which runs our shop, signs you in with a one-time code sent to your email address. If you have no customer account yet,
+              signing in creates a Shopify customer account that holds your email address. We add nothing else to it: no newsletter or marketing
+              consent, and no ChatFPV conversations.
+            </p>
+            <p>
+              chatfpv.com receives a separate account id, never your name, email address or Shopify customer id. While you are signed in, your
+              ChatFPV conversations are kept for 12 months after the last message; you can export or delete them on your account page at any time.
+            </p>
+            <p>
+              Details: <a href="/privacy">privacy policy</a>.
+            </p>
+          </div>
+        </details>
       </div>
     </div>
   );
