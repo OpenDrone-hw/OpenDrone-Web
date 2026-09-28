@@ -16711,6 +16711,8 @@ html.light .plugs {
 /* Header: title + a small "EN · NL · FR" chip instead of a full
    sentence (the `title` attribute keeps that sentence, `support.
    languages`, reachable on hover/for a screen reader). */
+.sp-header {max-width: none;}
+.sp-header .page-description {max-width: 65ch;}
 .sp-header-row {display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;}
 .sp-header-row .page-title {margin: 0;}
 .sp-lang-chip {
