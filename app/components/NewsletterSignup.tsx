@@ -272,8 +272,8 @@ export function NewsletterSignup({
         onSubmit={handleSubmit}
         className={
           isWide
-            ? 'flex flex-col gap-3 md:max-w-xl'
-            : 'flex flex-col gap-2'
+            ? 'newsletter-signup-form flex flex-col gap-3 md:max-w-xl'
+            : 'newsletter-signup-form flex flex-col gap-2'
         }
         noValidate
       >
