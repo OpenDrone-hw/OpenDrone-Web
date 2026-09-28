@@ -474,7 +474,7 @@ sequenceDiagram
   OD->>B: 302 Shopify authorize (state, nonce, PKCE S256), cookie __Host-od_oauth
   B->>SH: sign in
   SH->>B: 302 /account/callback?code&state
-  OD->>SH: token (client secret + code_verifier), keep id_token only
+  OD->>SH: token (client_id + code_verifier, Origin), keep id_token only
   OD->>B: cookie __Host-od_sid (30 d sliding), 302 /path
   B->>OD: GET /oauth/authorize?client_id=chatfpv (from chatfpv.com)
   OD->>B: 302 chatfpv.com/auth/callback?code&state&iss
@@ -555,6 +555,10 @@ be listed under JavaScript origins.
    `/oauth/authorize`. The Worker reads the rest from
    `<issuer>/.well-known/openid-configuration`.
 
+Shopify answers 403 to a discovery or token fetch that has no `Origin` and
+`User-Agent` header, and sends the id_token `sub` as a JSON number;
+`shopify-idp.ts` covers both and `accounts.test.ts` pins them.
+
 Shopify accepts only HTTPS callbacks, so local development and version
 previews use the test IdP.
 
@@ -562,10 +566,10 @@ previews use the test IdP.
 
 | Name | Where | Value |
 |---|---|---|
-| `ACCOUNTS_ENABLED` | `[vars]` in both wrangler configs | `"0"`; `"1"` in the flip below |
+| `ACCOUNTS_ENABLED` | `[vars]` in both wrangler configs | `"1"` in `wrangler.production.toml`, `"0"` in `wrangler.toml` |
 | `CHATFPV_OAUTH_REDIRECTS` | `[vars]` | `https://chatfpv.com/auth/callback` (production) |
 | `CHATFPV_POST_LOGOUT_REDIRECTS` | `[vars]` | `https://chatfpv.com/` (production) |
-| `SHOPIFY_CUSTOMER_ACCOUNT_CLIENT_ID`, `SHOPIFY_CUSTOMER_ACCOUNT_SHOP_ID` (or `SHOPIFY_CUSTOMER_ACCOUNT_ISSUER`); `SHOPIFY_CUSTOMER_ACCOUNT_CLIENT_SECRET` only for a Headless channel confidential client (the Hydrogen channel client is public and has none) | `npx wrangler secret put <NAME> --config wrangler.production.toml` (Worker `opendrone-web`) | Step 5 above |
+| `SHOPIFY_CUSTOMER_ACCOUNT_CLIENT_ID`, `SHOPIFY_CUSTOMER_ACCOUNT_SHOP_ID` (or `SHOPIFY_CUSTOMER_ACCOUNT_ISSUER`); `SHOPIFY_CUSTOMER_ACCOUNT_CLIENT_SECRET` only for a Headless channel confidential client (the Hydrogen channel client is public and has none) | `npx wrangler secret put <NAME> --config wrangler.production.toml` (Worker `opendrone-web`) | Step 4 above |
 | `ACCOUNT_PAIRWISE_SALT` | secret, `opendrone-web` | `openssl rand -base64 32`; never rotate (every ChatFPV account id derives from it) |
 | `SESSION_ENC_KEY` | secret, `opendrone-web` | `openssl rand -base64 32` |
 | `CHATFPV_OAUTH_CLIENT_SECRET` | secret on `opendrone-web` AND on the ChatFPV Worker `chatfpv` (same value) | `openssl rand -base64 32` |
@@ -577,14 +581,16 @@ Staging (`opendrone-web-preview`) takes the same secrets with
 `--config wrangler.toml` and its own random values, shared with the ChatFPV
 eval or staging Worker it talks to.
 
-### Flip order
+### Enable order
+
+Accounts are on in production. To enable them on a new environment, or again
+after a rollback:
 
 1. Apply `migrations/0005_accounts.sql` and `0006_rights_requests.sql`:
    `npx wrangler d1 migrations apply SUPPORT_DB --remote --config wrangler.production.toml`.
 2. Put the storefront secrets above on `opendrone-web`, and the two shared
    secrets on `chatfpv`.
-3. Merge the storefront PR, then the ChatFPV PR, both with the flag `"0"`.
-   In the Shopify Dev Dashboard, open the custom app whose client secret is
+3. In the Shopify Dev Dashboard, open the custom app whose client secret is
    `SHOPIFY_WEBHOOK_SECRET`, Versions, and add the compliance webhooks:
    customer data request `https://opendrone.be/webhooks/shopify/customers-data-request`,
    customer erasure `.../customers-redact`, shop erasure `.../shop-redact`,
