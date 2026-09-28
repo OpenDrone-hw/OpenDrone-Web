@@ -1,5 +1,6 @@
 import {useEffect, useRef, useState, type FormEvent} from 'react';
 import {data, Form, Link, redirect, useActionData, useLoaderData, useNavigate, useRouteLoaderData} from 'react-router';
+import {Search, MessageCircle, Sparkles} from 'lucide-react';
 import type {Route} from './+types/support';
 import {buildSeoMeta} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
@@ -17,7 +18,7 @@ import {
   TurnstileBox,
   useDraft,
 } from '~/components/SupportUi';
-import {AskChatFPV, type AskReason} from '~/components/support/AskChatFPV';
+import {AskChatFPV} from '~/components/support/AskChatFPV';
 import {askEnabled} from '~/lib/support/chatfpv';
 import {handleCreate, type CreateResult} from '~/lib/support/handlers';
 import {notifyEnabled} from '~/lib/support/notify';
@@ -28,12 +29,16 @@ import {readTicketCookie} from '~/lib/support/tokens';
 import {TOPIC_FIELDS, TOPICS, type TicketTopic} from '~/lib/support/form';
 
 /**
- * The support front door: pick a topic, fill in the few fields it needs,
- * and the ticket opens in the team's Discord. The customer lands on the
- * ticket page (support_.t.$ref.tsx). Tickets this browser opened are
- * listed; a lost link is recovered at /support/find. Email is offered for
- * sales only. Words in content/copy/support.json; rules in
- * app/lib/support/tickets.ts.
+ * The support front door. The ticket topic picker is the hero (founder:
+ * "the support page is about getting help from the TEAM"): pick a topic,
+ * fill in the few fields it needs, the ticket opens in the team's Discord,
+ * and the customer lands on the ticket page (support_.t.$ref.tsx). Below
+ * it: tickets this browser opened (only when there are any), then three
+ * equal tiles - find a lost ticket, the Discord community, and (only while
+ * CHATFPV_ASK_ENABLED is "1") an optional "Quick answer: ChatFPV" tile that
+ * expands `AskChatFPV` in place. A hard text budget applies outside the
+ * form and the ChatFPV answer: no block longer than one line. Words in
+ * content/copy/support.json; rules in app/lib/support/tickets.ts.
  */
 /** Private, never cached, never indexed; keeps loader and action headers. */
 export const headers = supportHeaders;
@@ -54,16 +59,53 @@ const HELP_LINKS: Array<{to: string; key: string}> = [
   {to: '/algemene-voorwaarden', key: 'topic_terms'},
 ];
 
+/**
+ * Scrolls an id into view, optionally opening its ancestor `<details>`
+ * first (native fragment navigation already does this in evergreen
+ * browsers; called explicitly here so the JS-enhanced path is instant and
+ * does not depend on it). Used both ways on this page: the "quick answer"
+ * hint under the "Product or build" topic opens and scrolls down to the
+ * ChatFPV tile, and its own "open a ticket" escalation scrolls back up to
+ * the topic picker.
+ */
+function scrollToId(id: string, openDetails = false) {
+  if (typeof document === 'undefined') return;
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (openDetails) {
+    const details = el.closest('details');
+    if (details && !details.open) details.open = true;
+  }
+  el.scrollIntoView({behavior: 'smooth', block: 'start'});
+  window.setTimeout(() => {
+    const focusable = el.matches('input,button,a,textarea,select,summary')
+      ? el
+      : el.querySelector<HTMLElement>('input,button,a,textarea,select,summary');
+    focusable?.focus({preventScroll: true});
+  }, 320);
+}
+
+/** Hands the Ask ChatFPV question to the ticket form through its saved draft (SupportUi `useDraft`). */
+function prefillTicket(question: string) {
+  if (!question) return;
+  try {
+    const key = 'od-support-draft:new';
+    const saved = JSON.parse(sessionStorage.getItem(key) ?? '{}') as Record<string, string>;
+    sessionStorage.setItem(key, JSON.stringify({...saved, message: question}));
+  } catch {
+    // Storage blocked: the form opens empty.
+  }
+}
+
 export async function loader({request, context}: Route.LoaderArgs) {
   const env = context.env;
   const company = getCompanyIdentity(env as unknown as Record<string, string | undefined>);
   const ready = supportReady(env);
   const topic = new URL(request.url).searchParams.get('topic');
-  // Ask ChatFPV (AI) before the form; ?ticket=1 (the box's "open a ticket" link without JavaScript) skips it.
+  // The optional ChatFPV tile; off unless CHATFPV_ASK_ENABLED is "1".
   const ask = askEnabled(env);
-  const skipAsk = new URL(request.url).searchParams.get('ticket') === '1' || Boolean(topic);
   // A product a link named (e.g. "still need help?" from a product page):
-  // Ask ChatFPV context, same shape handleAsk itself checks.
+  // opens the ChatFPV tile straight away, with this as its context.
   const askProductParam = new URL(request.url).searchParams.get('product');
   const initialProduct = askProductParam && /^[\w .'-]{1,80}$/.test(askProductParam) ? askProductParam : null;
 
@@ -94,7 +136,6 @@ export async function loader({request, context}: Route.LoaderArgs) {
     {
       ready,
       ask,
-      skipAsk,
       notify: notifyEnabled(env),
       products,
       yours,
@@ -126,7 +167,9 @@ function FieldError({error, field}: {error?: FieldError; field: string}) {
   );
 }
 
-function TicketForm() {
+/** `onTryChatFpv` is only passed when the ChatFPV tile exists (`ask`); its one-line
+ *  hint under "Product or build" opens that tile and scrolls to it. */
+function TicketForm({onTryChatFpv}: {onTryChatFpv?: () => void}) {
   const {products, notify, initialTopic} = useLoaderData<typeof loader>();
   const root = useRouteLoaderData('root') as {turnstileSiteKey?: string | null} | undefined;
   // Without JavaScript the page's action answers; with it, the fetch below.
@@ -220,7 +263,7 @@ function TicketForm() {
         });
       }}
     >
-      <fieldset className="sp-topics">
+      <fieldset className="sp-topics" id="sp-topic">
         <legend className="sp-step">
           <span className="sp-step-num">1</span>
           {t('step_topic')}
@@ -242,6 +285,11 @@ function TicketForm() {
           ))}
         </div>
         {errors.topic ? <span className="sp-field-error">{t('err_required')}</span> : null}
+        {onTryChatFpv && topic === 'product' ? (
+          <button type="button" className="sp-hint-cta sp-try-ask" onClick={onTryChatFpv}>
+            {t('try_chatfpv_hint')}
+          </button>
+        ) : null}
       </fieldset>
 
       {topic && fields ? (
@@ -390,116 +438,92 @@ export function ErrorBoundary() {
   return <SupportError />;
 }
 
-/** Hands the Ask ChatFPV question to the ticket form through its saved draft (SupportUi `useDraft`). */
-function prefillTicket(question: string) {
-  if (!question) return;
-  try {
-    const key = 'od-support-draft:new';
-    const saved = JSON.parse(sessionStorage.getItem(key) ?? '{}') as Record<string, string>;
-    sessionStorage.setItem(key, JSON.stringify({...saved, message: question}));
-  } catch {
-    // Storage blocked: the form opens empty.
-  }
-}
-
 export default function SupportRoute() {
-  const {ready, ask, skipAsk, yours, salesEmail, discordInvite, initialProduct} = useLoaderData<typeof loader>();
-  const actionResult = useActionData<ActionResult>();
-  const [formOpen, setFormOpen] = useState(!ask || skipAsk || Boolean(actionResult));
-  // Why the Ask box swapped to the form (AskChatFPV.tsx `AskReason`): shown
-  // here, above the form, because the box that knew the reason just
-  // unmounted, not inside it where it would already be gone.
-  const [askReason, setAskReason] = useState<AskReason | null>(null);
+  const {ready, ask, yours, salesEmail, discordInvite, initialProduct} = useLoaderData<typeof loader>();
+
+  function openAskTile() {
+    scrollToId('sp-ask-tile', true);
+  }
+
+  function escalateToTicket(question: string) {
+    prefillTicket(question);
+    scrollToId('sp-topic');
+  }
+
   return (
     <div className="page-shell sp-page">
-      <header className="page-header">
-        <Txt id="support.title" as="h1" className="page-title" />
+      <header className="page-header sp-header">
+        <div className="sp-header-row">
+          <Txt id="support.title" as="h1" className="page-title" />
+          <span className="sp-lang-chip" title={copyText('support.languages')}>
+            {t('languages_chip')}
+          </span>
+        </div>
         <Txt id="support.lede" as="p" className="page-description" />
-        <Txt id="support.languages" as="p" className="sp-hint" />
       </header>
 
-      <div className="sp-layout">
-        <div className="sp-main">
-          {ask && !formOpen ? (
-            <AskChatFPV
-              product={initialProduct ?? undefined}
-              onTicket={(question, reason) => {
-                prefillTicket(question);
-                setAskReason(reason ?? null);
-                setFormOpen(true);
-              }}
-            />
-          ) : null}
-          {ready ? (
-            formOpen ? (
-              <>
-                {askReason ? (
-                  <p role="status" className="sp-banner">
-                    {askReason.message}
-                    {askReason.url ? (
-                      <>
-                        {' '}
-                        <Link to={askReason.url}>Go to the wholesale form</Link>
-                      </>
-                    ) : null}
-                  </p>
-                ) : null}
-                <TicketForm />
-              </>
-            ) : null
-          ) : (
-            <p role="status" className="sp-banner">
-              {t('unavailable')}
-            </p>
-          )}
-        </div>
+      {ready ? (
+        <TicketForm onTryChatFpv={ask ? openAskTile : undefined} />
+      ) : (
+        <p role="status" className="sp-banner">
+          {t('unavailable')}
+        </p>
+      )}
 
-        <aside className="sp-aside">
-          {yours.length ? (
-            <section className="sp-card">
-              <h2 className="sp-card-title">{t('yours_title')}</h2>
-              <p>{t('yours_note')}</p>
-              <TicketList tickets={yours} />
-            </section>
-          ) : null}
+      {yours.length ? (
+        <section className="sp-card sp-mytickets" aria-labelledby="sp-yours-title">
+          <h2 id="sp-yours-title" className="sp-card-title">
+            {t('yours_title')}
+          </h2>
+          <TicketList tickets={yours} />
+        </section>
+      ) : null}
 
-          <section className="sp-card">
-            <h2 className="sp-card-title">{t('find_title')}</h2>
-            <p>{t('find_body')}</p>
-            <Link to="/support/find" className="od-btn od-btn-secondary od-btn-sm">
-              {t('find_cta')}
-            </Link>
-          </section>
+      <div className={`sp-tiles${ask ? '' : ' sp-tiles-2'}`}>
+        <Link to="/support/find" className="sp-tile">
+          <Search size={18} className="sp-tile-icon" aria-hidden="true" />
+          <span className="sp-tile-title">{t('find_cta')}</span>
+          <span className="sp-tile-line">{t('find_body')}</span>
+        </Link>
 
-          <section className="sp-card">
-            <h2 className="sp-card-title">{t('community_title')}</h2>
-            <p>{t('community_body')}</p>
-            <a href={discordInvite} target="_blank" rel="noopener noreferrer" className="od-btn od-btn-secondary od-btn-sm">
-              {t('community_cta')}
-            </a>
-          </section>
+        <a href={discordInvite} target="_blank" rel="noopener noreferrer" className="sp-tile">
+          <MessageCircle size={18} className="sp-tile-icon" aria-hidden="true" />
+          <span className="sp-tile-title">{t('community_title')}</span>
+          <span className="sp-tile-line">{t('community_body')}</span>
+        </a>
 
-          <section className="sp-card">
-            <h2 className="sp-card-title">{t('topics_title')}</h2>
-            <ul className="sp-links">
-              {HELP_LINKS.map((l) => (
-                <li key={l.key}>
-                  <Link prefetch="intent" to={legalHref(l.to, 'en')}>
-                    {t(l.key)}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </section>
+        {ask ? (
+          <details className="sp-tile sp-tile-ask" open={Boolean(initialProduct)}>
+            <summary id="sp-ask-tile">
+              <Sparkles size={18} className="sp-tile-icon" aria-hidden="true" />
+              <span className="sp-tile-title">
+                {t('tile_ask_title')} <span className="sp-badge-beta">Beta</span>
+              </span>
+              <span className="sp-tile-line">{t('tile_ask_line')}</span>
+            </summary>
+            <div className="sp-tile-ask-panel">
+              <AskChatFPV product={initialProduct ?? undefined} onEscalate={escalateToTicket} />
+            </div>
+          </details>
+        ) : null}
+      </div>
 
-          <section className="sp-card" id="sales">
-            <h2 className="sp-card-title">{t('sales_title')}</h2>
-            <p>
-              <Txt id="support.sales_body" />{' '}
-              <a href={`mailto:${salesEmail}`}>{salesEmail}</a>
-            </p>
-          </section>
-        </aside>
+      <div className="sp-quicklinks">
+        <p className="sp-quickline">
+          <span className="sp-quickline-label">{t('topics_title')}:</span>{' '}
+          {HELP_LINKS.map((l, i) => (
+            <span key={l.key}>
+              {i > 0 ? ' · ' : ''}
+              <Link prefetch="intent" to={legalHref(l.to, 'en')}>
+                {t(l.key)}
+              </Link>
+            </span>
+          ))}
+        </p>
+        <p className="sp-quickline">
+          <span className="sp-quickline-label">{t('sales_title')}:</span>{' '}
+          <Link to="/wholesale">{t('sales_trade_link')}</Link> · <a href={`mailto:${salesEmail}`}>{salesEmail}</a>
+        </p>
       </div>
     </div>
   );

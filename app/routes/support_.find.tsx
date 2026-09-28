@@ -95,7 +95,18 @@ export default function FindRoute() {
             </label>
             <label className="sp-field">
               <span className="sp-label">{t('find_key')}</span>
-              <input name="key" required maxLength={40} placeholder={t('find_key_placeholder')} className="sp-input" autoCapitalize="characters" />
+              <input
+                name="key"
+                required
+                maxLength={40}
+                placeholder={t('find_key_placeholder')}
+                className="sp-input"
+                autoCapitalize="characters"
+                aria-describedby="sp-find-key-hint"
+              />
+              <span id="sp-find-key-hint" className="sp-hint">
+                {t('find_key_hint')}
+              </span>
             </label>
             <TurnstileBox siteKey={root?.turnstileSiteKey ?? null} active={touched} resetKey={result?.at} />
             <div className="sp-submit-row">

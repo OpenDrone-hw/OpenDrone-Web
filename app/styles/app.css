@@ -16695,4 +16695,249 @@ html.light .plugs {
   .sp-file-remove {min-width: 44px;}
   .sp-crumbs a {display: inline-flex; align-items: center; min-height: 44px;}
   .sp-links a {display: inline-flex; align-items: center; min-height: 44px;}
+  .sp-quickline a {display: inline-flex; align-items: center; min-height: 44px;}
+  .sp-chip {min-height: 44px;}
 }
+
+/* =========================================================
+   Support hub (segment: support): the ticket topic picker is
+   the hero; a compact "Your tickets" list when present; three
+   equal tiles (find / community / optional ChatFPV quick
+   answer); one-line Help/Shops strip. Hard text budget outside
+   the form and the ChatFPV answer: no block longer than one line.
+   app/routes/support.tsx, app/components/support/AskChatFPV.tsx
+   ========================================================= */
+
+/* Header: title + a small "EN · NL · FR" chip instead of a full
+   sentence (the `title` attribute keeps that sentence, `support.
+   languages`, reachable on hover/for a screen reader). */
+.sp-header {max-width: none;}
+.sp-header .page-description {max-width: 65ch;}
+.sp-header-row {display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;}
+.sp-header-row .page-title {margin: 0;}
+.sp-lang-chip {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-pill);
+  padding: 0.3rem 0.65rem;
+}
+
+/* A one-line hint under the "Product or build" topic, offering the
+   optional ChatFPV tile before a ticket. A small text link, not a
+   button, so it never competes with the topic grid above it. */
+.sp-hint-cta {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: 13px;
+  color: var(--color-gold);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.sp-try-ask {display: block; margin-top: 0.6rem;}
+
+/* "Your tickets": compact, content-height, only rendered when present. */
+.sp-mytickets {margin-top: 1.5rem;}
+
+/* Three equal tiles: whole tile clickable (Link / a / a <details>
+   summary for the optional ChatFPV tile), icon + title + one line. */
+.sp-tiles {display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-top: 1.5rem;}
+.sp-tiles-2 {grid-template-columns: repeat(2, minmax(0, 1fr));}
+@media (max-width: 640px) {
+  .sp-tiles, .sp-tiles-2 {grid-template-columns: 1fr;}
+}
+.sp-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-sm);
+  background: var(--color-bg-card);
+  color: var(--color-text);
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+.sp-tile:hover {border-color: var(--color-border-strong);}
+.sp-tile-icon {color: var(--color-gold);}
+.sp-tile-title {
+  display: flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text);
+}
+.sp-tile-line {font-size: 13px; color: var(--color-text-muted); margin: 0;}
+
+/* The ChatFPV tile is a native <details>: no JS required to expand it,
+   and a link to `#sp-ask-tile` (on its <summary>) auto-opens it in
+   every evergreen browser. Closed, it looks exactly like the other two
+   tiles; open, it spans the full row instead of squeezing the panel
+   into a one-third column. */
+.sp-tile-ask {padding: 0; overflow: hidden;}
+.sp-tile-ask > summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1rem 1.1rem;
+  list-style: none;
+  cursor: pointer;
+  scroll-margin-top: calc(var(--header-height) + 1rem);
+}
+.sp-tile-ask > summary::-webkit-details-marker {display: none;}
+.sp-tile-ask[open] {grid-column: 1 / -1;}
+.sp-tile-ask-panel {padding: 0 1.1rem 1.1rem;}
+
+/* The ChatFPV composer: one box, the send arrow inside it, chatfpv.com
+   style. `.sp-card` is not used here - the tile's <summary> already
+   carries the heading, badge and one-line description. */
+.sp-composer {display: grid; gap: 0.6rem;}
+.sp-composer-box {
+  position: relative;
+  display: flex;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--r-md, 14px);
+  background: var(--color-bg);
+}
+.sp-composer-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  resize: none;
+  padding: 0.75rem 3rem 0.75rem 1rem;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.4;
+  color: var(--color-text);
+}
+@media (min-width: 768px) {
+  .sp-composer-input {font-size: 15px;}
+}
+.sp-composer-input::placeholder {color: var(--color-text-dim);}
+.sp-composer-input:focus {outline: none;}
+.sp-composer-box:has(.sp-composer-input:focus-visible) {outline: 2px solid var(--color-focus); outline-offset: 1px;}
+.sp-composer-send {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: var(--od-pcb-gold);
+  color: #1b1400;
+  cursor: pointer;
+  transition: background-color 0.12s ease, opacity 0.12s ease;
+}
+.sp-composer-send:hover:not([disabled]) {background: var(--od-pcb-gold-2);}
+/* Disabled (no question typed yet) is a plain outline, not a dimmed
+   gold fill, which reads as broken/loading rather than "type
+   something first". */
+.sp-composer-send[disabled] {
+  background: transparent;
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text-dim);
+  cursor: not-allowed;
+}
+
+/* Starter chips: one row always. Short labels fit without wrapping on
+   desktop; on a narrow phone whatever does not fit scrolls sideways
+   instead of wrapping a lone last chip onto its own line. No visible
+   scrollbar chrome; a soft right-edge fade hints there is more to
+   scroll to (on desktop it sits over empty space, since all four
+   chips already fit, so it has no visible effect). */
+.sp-chip-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+  mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
+}
+.sp-chip-row::-webkit-scrollbar {display: none;}
+.sp-chip {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 12.5px;
+  line-height: 1.3;
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.sp-chip:hover {border-color: var(--color-border-strong); color: var(--color-text);}
+.sp-chip:focus-visible {outline: 2px solid var(--color-focus); outline-offset: 2px;}
+.sp-chip[disabled] {opacity: 0.5; cursor: default;}
+
+.sp-badge-beta {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.15rem 0.4rem;
+  border: 1px solid var(--color-gold);
+  border-radius: var(--r-pill);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  vertical-align: middle;
+  color: var(--color-gold);
+  text-transform: uppercase;
+}
+
+/* The data-use disclosure toggle: "How your question is used ›", a
+   trailing chevron that rotates open, not a leading +/- marker. */
+.sp-ask-notice {font-size: 12px; color: var(--color-text-muted);}
+.sp-ask-notice summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  list-style: none;
+}
+.sp-ask-notice summary::-webkit-details-marker {display: none;}
+.sp-ask-notice summary::after {content: '\203A'; font-family: var(--font-mono); transition: transform 0.15s ease;}
+.sp-ask-notice[open] summary::after {transform: rotate(90deg);}
+.sp-ask-notice p {margin: 0.4rem 0 0;}
+
+.sp-ask-answer {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+}
+.sp-ask-followup {margin: 0;}
+
+/* Help / Shops: two one-line strips, not cards - the whole point is
+   that nothing here is longer than a line. */
+.sp-quicklinks {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem 2rem;
+}
+.sp-quickline {margin: 0; font-size: 13px; color: var(--color-text-muted);}
+.sp-quickline-label {color: var(--color-text);}
+.sp-quickline a {color: var(--color-text-muted); text-decoration: underline; text-underline-offset: 2px;}
+.sp-quickline a:hover {color: var(--color-text);}
