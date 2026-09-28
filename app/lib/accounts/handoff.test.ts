@@ -108,8 +108,9 @@ describe('wrangler configs', () => {
   const staging = read('../../../wrangler.toml');
   const value = (toml: string, name: string) => new RegExp(`^${name}\\s*=\\s*"([^"]*)"`, 'm').exec(toml)?.[1];
 
-  it('production keeps handoff off and points at the canonical ChatFPV origin', () => {
-    assert.equal(value(prod, 'HANDOFF_ENABLED'), '0');
+  it('production turns handoff on and points at the canonical ChatFPV origin', () => {
+    assert.equal(value(prod, 'HANDOFF_ENABLED'), '1');
+    assert.equal(value(prod, 'ACCOUNTS_ENABLED'), '0');
     assert.equal(value(prod, 'CHATFPV_URL'), 'https://chatfpv.com');
     assert.deepEqual(chatFpvFrameSrc({CHATFPV_URL: value(prod, 'CHATFPV_URL'), CHATFPV_WIDGET_ENABLED: '1'}), ['https://chatfpv.com']);
   });
