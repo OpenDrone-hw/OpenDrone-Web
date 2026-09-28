@@ -17,6 +17,8 @@
  * that ships with another (`shipsWith` in `content/preorders.json`) takes
  * the lead SKU's batch tag: its pinned batch, or the batch the lead's next
  * unit fell into when the order was placed. It adds no units to the lead.
+ * One with `stock` counts its own units: those past its stock take the
+ * `after` batch tag.
  *
  * Idempotent: the `preorder` tag marks an order as done, and a fulfillment
  * order that already carries the `opendrone-preorder` hold is not held
@@ -32,7 +34,7 @@
  * (`node --experimental-strip-types`) can load it.
  */
 
-import type {CampaignBatch, CampaignConfig, ShipsWith} from './preorder-campaign.ts';
+import {batchOfUnit, type CampaignConfig, type ShipsWith} from './preorder-campaign.ts';
 
 const DEFAULT_ADMIN_API_VERSION = '2026-07';
 const PAGE_SIZE = 100;
@@ -237,16 +239,7 @@ export function isPreorderOrder(order: PreorderOrder): boolean {
   );
 }
 
-/** The 1-based batch that paid unit `unit` (1-based) of a SKU falls into.
- *  Past the last configured batch, batches repeat the last one's size. */
-export function batchOfUnit(batches: CampaignBatch[], unit: number): {batch: number; entry: CampaignBatch} {
-  let end = 0;
-  for (let i = 0; ; i += 1) {
-    const entry = i < batches.length ? batches[i] : {units: batches[batches.length - 1].units};
-    end += entry.units;
-    if (unit <= end) return {batch: i + 1, entry};
-  }
-}
+export {batchOfUnit};
 
 export function batchTag(sku: string, batch: number): string {
   return `batch:${sku}:${batch}`;
@@ -279,9 +272,23 @@ export function assignBatches(
       const rule = sku ? config.shipsWith?.[sku] : undefined;
       if (sku && rule && config.skus[rule.sku] && line.currentQuantity > 0) {
         const lead = config.skus[rule.sku].batches;
-        const batch = rule.batch ?? batchOfUnit(lead, (before[rule.sku] ?? 0) + 1).batch;
-        const ships = lead[batch - 1]?.ships?.trim() || config.pendingShips;
-        found.push({sku: rule.sku, batch, units: line.currentQuantity, shipPromise: ships, item: sku});
+        const add = (batch: number, units: number) => {
+          if (units <= 0) return;
+          const ships = lead[batch - 1]?.ships?.trim() || config.pendingShips;
+          const existing = found.find((b) => b.sku === rule.sku && b.batch === batch && b.item === sku);
+          if (existing) existing.units += units;
+          else found.push({sku: rule.sku, batch, units, shipPromise: ships, item: sku});
+        };
+        if (rule.stock !== undefined && rule.batch && rule.after) {
+          // Units on hand ship with the pinned batch, later ones with `after`.
+          const start = cumulative[sku] ?? 0;
+          const fromStock = Math.max(0, Math.min(line.currentQuantity, rule.stock - start));
+          add(rule.batch, fromStock);
+          add(rule.after, line.currentQuantity - fromStock);
+          cumulative[sku] = start + line.currentQuantity;
+        } else {
+          add(rule.batch ?? batchOfUnit(lead, (before[rule.sku] ?? 0) + 1).batch, line.currentQuantity);
+        }
         continue;
       }
       const entry = sku ? config.skus[sku] : undefined;

@@ -12,13 +12,14 @@ import {fetchShopifyCatalog} from './shopify-storefront.ts';
 import {
   applyCampaign,
   needsCampaignCounts,
+  countedSkus,
   parseCampaignConfig,
 } from './preorder-campaign.ts';
 import {paidUnits} from './shopify-orders.ts';
 import preorders from '../../content/preorders.json';
 
 export const CAMPAIGN = parseCampaignConfig(preorders);
-const CAMPAIGN_SKUS = new Set(Object.keys(CAMPAIGN.skus));
+const CAMPAIGN_SKUS = countedSkus(CAMPAIGN);
 
 export type CatalogClient = {
   /** The catalog, read from the Shopify Storefront API. */

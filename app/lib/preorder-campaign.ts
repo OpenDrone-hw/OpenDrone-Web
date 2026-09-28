@@ -63,12 +63,12 @@ export type CampaignConfig = {
   /** First day whose paid Shopify orders count, YYYY-MM-DD. */
   countFrom: string;
   /** Ship promise for a unit in a batch whose supplier order is not placed.
-   *  It names the target deadline (`endsOn`) and the latest planned ship
-   *  date (`latestShipDate`), as terms 7bis.2 do; the tests hold the three
-   *  in step. */
+   *  It names the target deadline (`endsOn`) and the ship-by date
+   *  (`shipsBy`), as terms 7bis.2 do; the tests hold the three in step. */
   pendingShips: string;
-  /** Weeks from a reached funding target to shipping; 10 when absent. */
-  shipWeeksAfterTarget?: number;
+  /** The one ship-by date of every funding-target unit, YYYY-MM-DD: a
+   *  target reached early does not ship earlier than planned. */
+  shipsBy: string;
   /** Last day a funding target can be reached, YYYY-MM-DD. A buyer whose
    *  target is missed by then chooses a refund or to keep waiting. */
   endsOn: string;
@@ -89,9 +89,25 @@ export type CampaignConfig = {
 export type ShipsWith = {
   /** The campaign SKU this one ships with. */
   sku: string;
-  /** 1-based batch of the lead SKU, pinned. */
+  /** 1-based batch of the lead SKU, pinned: a batch with its own ship date,
+   *  or a funding target, whose promise and target the SKU then shares. */
   batch?: number;
+  /** With `batch`: units on hand for that batch. The first `stock` paid
+   *  units of this SKU ship with `batch`, later ones with `after`. */
+  stock?: number;
+  /** With `stock`: the 1-based lead batch the units past stock ship with. */
+  after?: number;
 };
+
+/** SKUs whose own paid units the campaign counts: every campaign SKU, and
+ *  every SKU that ships with one from limited stock. */
+export function countedSkus(config: CampaignConfig): Set<string> {
+  const skus = new Set(Object.keys(config.skus));
+  for (const [sku, rule] of Object.entries(config.shipsWith ?? {})) {
+    if (rule.stock !== undefined) skus.add(sku);
+  }
+  return skus;
+}
 
 /** The price steps one SKU sells on: its own when set, else the campaign's.
  *  A SKU that ships with another has a flat price: no steps. */
@@ -140,11 +156,11 @@ export type CampaignState = {
   /** Set for a SKU that ships with another (`CampaignConfig.shipsWith`): the
    *  lead SKU whose batch, target and promise this state mirrors. */
   shipsWith?: string;
-  /** The target deadline as a date, "31 December 2026". Set by
+  /** The target deadline as a date, "22 November 2026". Set by
    *  `applyCampaign`; absent in a bare `campaignState`. */
   deadline?: string;
   /** For a unit waiting on a funding target: the latest planned ship date
-   *  if the target is reached by the deadline, "11 March 2027". */
+   *  if the target is reached by the deadline, "14 March 2027". */
   latestShip?: string | null;
   /** Units left in the paid batch the next unit comes out of; null when the
    *  next unit is not paid stock. A cart line must not ask for more. */
@@ -188,11 +204,8 @@ export function parseCampaignConfig(body: unknown): CampaignConfig {
   if (typeof c.pendingShips !== 'string' || !c.pendingShips.trim()) {
     throw new Error('preorders: pendingShips is required');
   }
-  if (
-    c.shipWeeksAfterTarget !== undefined &&
-    (!Number.isSafeInteger(c.shipWeeksAfterTarget) || c.shipWeeksAfterTarget < 1)
-  ) {
-    throw new Error('preorders: shipWeeksAfterTarget must be a whole number of weeks');
+  if (!isCalendarDay(c.shipsBy) || c.shipsBy <= c.endsOn) {
+    throw new Error('preorders: shipsBy must be a calendar date after endsOn');
   }
   if (!c.skus || typeof c.skus !== 'object' || Array.isArray(c.skus)) {
     throw new Error('preorders: skus must be an object');
@@ -208,12 +221,7 @@ export function parseCampaignConfig(body: unknown): CampaignConfig {
       if (batch.paid && !batch.ships?.trim()) {
         throw new Error(`preorders: ${sku} paid batch needs a ship promise`);
       }
-      if (batch.deliveryBy != null && (
-        typeof batch.deliveryBy !== 'string' ||
-        !/^\d{4}-\d{2}-\d{2}$/.test(batch.deliveryBy) ||
-        !Number.isFinite(Date.parse(batch.deliveryBy)) ||
-        new Date(batch.deliveryBy).toISOString().slice(0, 10) !== batch.deliveryBy
-      )) throw new Error(`preorders: ${sku} deliveryBy must be a calendar date`);
+      if (batch.deliveryBy != null && !isCalendarDay(batch.deliveryBy)) throw new Error(`preorders: ${sku} deliveryBy must be a calendar date`);
     }
     if (entry.priceTiers !== undefined) checkTiers(entry.priceTiers, `${sku} priceTiers`);
   }
@@ -225,15 +233,36 @@ export function parseCampaignConfig(body: unknown): CampaignConfig {
       if (c.skus[sku]) throw new Error(`preorders: ${sku} is a campaign SKU and cannot ship with another`);
       const lead = rule && typeof rule.sku === 'string' ? c.skus[rule.sku] : undefined;
       if (!lead) throw new Error(`preorders: ${sku} ships with an unknown campaign SKU`);
-      if (rule.batch !== undefined) {
-        const batch = Number.isSafeInteger(rule.batch) ? lead.batches[rule.batch - 1] : undefined;
-        if (!batch?.ships?.trim()) {
-          throw new Error(`preorders: ${sku} ships with ${rule.sku} batch ${rule.batch}, which has no ship date`);
+      const pinned = (n: unknown) => Number.isSafeInteger(n) ? lead.batches[(n as number) - 1] : undefined;
+      if (rule.batch !== undefined && !pinned(rule.batch)) {
+        throw new Error(`preorders: ${sku} ships with ${rule.sku} batch ${rule.batch}, which does not exist`);
+      }
+      if (rule.batch !== undefined && !pinned(rule.batch)?.ships?.trim() && rule.stock !== undefined) {
+        throw new Error(`preorders: ${sku} stock needs a ${rule.sku} batch with its own ship date`);
+      }
+      if ((rule.stock === undefined) !== (rule.after === undefined)) {
+        throw new Error(`preorders: ${sku} needs stock and after together`);
+      }
+      if (rule.stock !== undefined) {
+        if (rule.batch === undefined || !Number.isSafeInteger(rule.stock) || rule.stock < 0) {
+          throw new Error(`preorders: ${sku} stock must be a whole number with a pinned batch`);
+        }
+        if (!pinned(rule.after) || rule.after === rule.batch) {
+          throw new Error(`preorders: ${sku} after must name another ${rule.sku} batch`);
         }
       }
     }
   }
   return c as CampaignConfig;
+}
+
+function isCalendarDay(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+    Number.isFinite(Date.parse(value)) &&
+    new Date(value).toISOString().slice(0, 10) === value
+  );
 }
 
 /** The campaign's time zone: `endsOn` is a Brussels calendar day. */
@@ -276,10 +305,6 @@ export function fundingClosed(config: Pick<CampaignConfig, 'endsOn'>, now: Date 
   return now.getTime() >= campaignEndsAt(config.endsOn).getTime();
 }
 
-/** Weeks from a reached funding target to shipping, when the config
- *  does not say. */
-export const DEFAULT_SHIP_WEEKS = 10;
-
 /** A campaign day as the site writes it: "2026-12-31" is "31 December 2026". */
 export function campaignDate(isoDay: string): string {
   const [y, m, d] = isoDay.split('-').map(Number);
@@ -292,24 +317,16 @@ export function campaignDate(isoDay: string): string {
 }
 
 /**
- * The latest planned ship day for a funding target reached on the deadline:
- * `endsOn` plus `shipWeeksAfterTarget` weeks, YYYY-MM-DD. For 2026-12-31 and
- * 10 weeks that is 2027-03-11, the date in terms 7bis.2.
+ * The ship-by day of a funding target reached by the deadline, YYYY-MM-DD:
+ * `shipsBy`, the date in terms 7bis.2. Every funding-target unit ships by
+ * it, however early its target is reached.
  */
-export function latestShipDay(
-  config: Pick<CampaignConfig, 'endsOn' | 'shipWeeksAfterTarget'>,
-): string {
-  const [y, m, d] = config.endsOn.split('-').map(Number);
-  const weeks = config.shipWeeksAfterTarget ?? DEFAULT_SHIP_WEEKS;
-  return new Date(Date.UTC(y, m - 1, d + weeks * 7))
-    .toISOString()
-    .slice(0, 10);
+export function latestShipDay(config: Pick<CampaignConfig, 'shipsBy'>): string {
+  return config.shipsBy;
 }
 
-/** The latest planned ship date in words: "11 March 2027". */
-export function latestShipDate(
-  config: Pick<CampaignConfig, 'endsOn' | 'shipWeeksAfterTarget'>,
-): string {
+/** The ship-by date in words: "14 March 2027". */
+export function latestShipDate(config: Pick<CampaignConfig, 'shipsBy'>): string {
   return campaignDate(latestShipDay(config));
 }
 
@@ -347,7 +364,7 @@ export function priceLadder(retail: number, priceTiers: PriceTier[]): LadderStep
  * fixed date (in stock, paid stock, or a batch whose supplier order is
  * placed) groups by that date. A line whose batch ships only once its own
  * funding target is reached groups by SKU and batch: two products with the
- * same "ships about 10 weeks after its target" text still wait for two
+ * same "ships by 14 March 2027 if the target is reached" text still wait for two
  * different targets.
  */
 export function shipGroupKey(
@@ -363,9 +380,36 @@ export function shipGroupKey(
 }
 
 /**
- * The campaign state for one SKU after `ordered` paid units. Past the last
- * configured batch, further batches repeat the last batch's size with the
- * pending ship promise.
+ * The batch the next unit falls into after `units` paid units: its 0-based
+ * index, the units before it and the batch. The last batch has no end when
+ * it is a funding target: its `units` is the target, and every later unit
+ * ships with it. Past a last batch of paid stock, one such open funding
+ * batch of the same size follows.
+ */
+function batchAt(
+  batches: CampaignBatch[],
+  units: number,
+): {index: number; start: number; current: CampaignBatch} {
+  let start = 0;
+  for (let index = 0; ; index += 1) {
+    const last = index >= batches.length - 1;
+    const current =
+      index < batches.length ? batches[index] : {units: batches[batches.length - 1].units};
+    if ((last && !current.paid) || units < start + current.units) return {index, start, current};
+    start += current.units;
+  }
+}
+
+/** The 1-based batch that paid unit `unit` (1-based) of a SKU falls into
+ *  (see {@link batchAt}). */
+export function batchOfUnit(batches: CampaignBatch[], unit: number): {batch: number; entry: CampaignBatch} {
+  const {index, current} = batchAt(batches, Math.max(0, unit - 1));
+  return {batch: index + 1, entry: current};
+}
+
+/**
+ * The campaign state for one SKU after `ordered` paid units. Once a funding
+ * target is reached, later units ship with it (see {@link batchAt}).
  */
 export function campaignState(
   batches: CampaignBatch[],
@@ -375,18 +419,7 @@ export function campaignState(
   retail: number | null = null,
 ): CampaignState {
   const units = Math.max(0, Math.floor(Number.isFinite(ordered) ? ordered : 0));
-  let start = 0;
-  let index = 0;
-  let current: CampaignBatch = batches[0];
-  for (;;) {
-    current =
-      index < batches.length
-        ? batches[index]
-        : {units: batches[batches.length - 1].units};
-    if (units < start + current.units) break;
-    start += current.units;
-    index += 1;
-  }
+  const {index, start, current} = batchAt(batches, units);
 
   const tierIndex = priceTiers.findIndex((t) => units < t.upTo);
   const tier = tierIndex < 0 ? null : priceTiers[tierIndex];
@@ -434,24 +467,31 @@ export function campaignState(
 
 /**
  * The state of a SKU that ships with a campaign SKU: the lead's batch,
- * target and ship promise, at a flat price. It never counts as paid stock,
- * so a cart line is not capped by the lead's batch, and it has no price
- * step. `leadOrdered` is the lead's paid units.
+ * target and ship promise, at a flat price, with no price step and no units
+ * of its own toward the lead. `leadOrdered` is the lead's paid units and
+ * `ordered` this SKU's own. A SKU with `stock` sells its first `stock` units
+ * from the pinned batch like paid stock (a cart line is capped at what is
+ * left), then ships with the `after` batch. Otherwise it is never paid
+ * stock, so a cart line is not capped by the lead's batch.
  */
 export function shipsWithState(
   config: CampaignConfig,
   rule: ShipsWith,
   leadOrdered: number,
   price: number | null,
+  ordered = 0,
 ): CampaignState {
   const lead = config.skus[rule.sku];
-  const state = rule.batch
-    ? pinnedBatchState(lead.batches, rule.batch, config.pendingShips)
+  const own = Math.max(0, Math.floor(Number.isFinite(ordered) ? ordered : 0));
+  const fromStock = rule.stock !== undefined && own < rule.stock;
+  const batch = rule.stock !== undefined && !fromStock ? rule.after : rule.batch;
+  const state = batch
+    ? pinnedBatchState(lead.batches, batch, config.pendingShips, leadOrdered)
     : campaignState(lead.batches, leadOrdered, config.pendingShips, tiersFor(config, rule.sku));
   return {
     ...state,
-    paidStock: false,
-    paidLeft: null,
+    paidStock: fromStock,
+    paidLeft: fromStock ? rule.stock! - own : null,
     shipsWith: rule.sku,
     earlyPrice: false,
     tierUpTo: null,
@@ -462,25 +502,31 @@ export function shipsWithState(
   };
 }
 
-/** A lead batch with its own ship date, as the state of a SKU pinned to it. */
+/** A lead batch as the state of a SKU pinned to it: its own ship date, or
+ *  its funding target counted from the lead's `leadOrdered` paid units. */
 function pinnedBatchState(
   batches: CampaignBatch[],
   batch: number,
   pendingShips: string,
+  leadOrdered: number,
 ): CampaignState {
   const entry = batches[batch - 1];
   const promise = batchPromise(entry, pendingShips);
+  const dated = Boolean(entry.ships?.trim());
+  const start = batches.slice(0, batch - 1).reduce((sum, b) => sum + b.units, 0);
+  const counted = Math.max(0, Math.floor(Number.isFinite(leadOrdered) ? leadOrdered : 0));
+  const targetOrdered = dated ? 0 : Math.min(entry.units, Math.max(0, counted - start));
   return {
     ordered: 0,
     batch,
     batchUnits: entry.units,
     batchOrdered: 0,
     paidStock: false,
-    target: null,
-    targetOrdered: 0,
-    targetReached: false,
+    target: dated ? null : entry.units,
+    targetOrdered,
+    targetReached: !dated && targetOrdered >= entry.units,
     shipPromise: promise,
-    shipsOnTarget: false,
+    shipsOnTarget: !dated,
     paidLeft: null,
     earlyPrice: false,
     tierUpTo: null,
@@ -529,7 +575,13 @@ export function applyCampaign(
           return {...variant, availability: 'sold_out', ship_promise: null, campaign: null};
         }
         if (rule) {
-          const state = shipsWithState(config, rule, units[rule.sku] ?? 0, variant.price);
+          const state = shipsWithState(
+            config,
+            rule,
+            units[rule.sku] ?? 0,
+            variant.price,
+            units[variant.sku] ?? 0,
+          );
           if (closed && state.shipsOnTarget) {
             return {...variant, availability: 'sold_out', ship_promise: null, campaign: null};
           }
@@ -591,7 +643,7 @@ const LONG_MONTHS = [
   'july', 'august', 'september', 'october', 'november', 'december',
 ];
 
-/** "11 March 2027" as "11 Mar 2027"; null for anything else. */
+/** "14 March 2027" as "14 Mar 2027"; null for anything else. */
 export function shortCampaignDate(longDate: string | null | undefined): string | null {
   const match = longDate?.trim().match(/^(\d{1,2}) ([A-Za-z]+) (\d{4})$/);
   if (!match) return null;
@@ -603,8 +655,8 @@ function capitalizeFirst(text: string): string {
   return text ? text[0].toUpperCase() + text.slice(1) : text;
 }
 
-/** The latest planned ship date a funding-target promise names, "by 11
- *  March 2027 if the target is reached", or null when it names none. */
+/** The ship-by date a funding-target promise names, "by 14 March 2027 if
+ *  the target is reached", or null when it names none. */
 function promiseLatestShip(promise: string): string | null {
   const match = promise.match(/\bby (\d{1,2} [A-Za-z]+ \d{4}) if\b/);
   return match ? match[1] : null;
@@ -631,10 +683,10 @@ function longSentence(promise: string): string {
 /**
  * The ship text for the next unit of a campaign SKU, in two lengths.
  *
- * short: "Ships by 11 Mar 2027 if the target is reached" for a unit that waits for a funding
+ * short: "Ships by 14 Mar 2027 if the target is reached" for a unit that waits for a funding
  * target, and the batch month for everything else, "Ships Oct 2026". long: the full promise as a sentence, "Ships
- * about 10 weeks after its target is reached: by 11 March 2027 if the target
- * is reached by 31 December 2026, otherwise you choose a refund or to wait."
+ * by 14 March 2027 if the target is reached by 22 November 2026, otherwise
+ * you choose a refund or to wait."
  */
 export function shipLabel(
   campaign: Pick<CampaignState, 'shipPromise' | 'paidStock' | 'shipsOnTarget' | 'latestShip'>,

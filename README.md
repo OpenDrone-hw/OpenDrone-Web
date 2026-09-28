@@ -716,7 +716,7 @@ After any change: `BASE=https://opendrone.be node scripts/smoke.mjs` and
 
 | Source | Owns |
 |---|---|
-| `content/preorders.json` | `countFrom`, `endsOn`, `priceTiers`, `pendingShips`, per-SKU `batches` (`units`, `paid`, `ships`, `deliveryBy`) and `shipsWith` |
+| `content/preorders.json` | `countFrom`, `endsOn`, `shipsBy`, `priceTiers`, `pendingShips`, per-SKU `batches` (`units`, `paid`, `ships`, `deliveryBy`) and `shipsWith` (`sku`, `batch`, `stock`, `after`) |
 | `content/registrations.json` | producer numbers and explicit `saleApproved` per EU destination |
 | Shopify | compare-at (retail) price, current price, catalog identity, orders, payments |
 | `SHOPIFY_PREVIEW_POLICY_JSON` | which SKUs sell as `preorder` |
@@ -725,9 +725,9 @@ After any change: `BASE=https://opendrone.be node scripts/smoke.mjs` and
 1. Edit `content/preorders.json` (by hand or the studio Data tab): set
    `countFrom` to the first day whose paid orders count, the batches with
    `units`, `paid` and `ships` for ordered stock, `deliveryBy` as the
-   reviewed customer delivery date, `endsOn` and `pendingShips` for funding
-   targets, and `priceTiers`. `npm test` checks that `pendingShips` names
-   `endsOn` and the latest ship date.
+   reviewed customer delivery date, `endsOn`, `shipsBy` and `pendingShips`
+   for funding targets, and `priceTiers`. `npm test` checks that
+   `pendingShips` names `endsOn` and `shipsBy`.
 2. In Shopify, set each campaign SKU's compare-at price to retail and its
    price to the first step. A SKU priced under its step stays closed.
 3. Set the SKU to `preorder` in `SHOPIFY_PREVIEW_POLICY_JSON` with
@@ -735,8 +735,13 @@ After any change: `BASE=https://opendrone.be node scripts/smoke.mjs` and
 4. Open the shop (above) and check `/api/status/campaign`: every campaign SKU
    `open`, `allOpen: true`, no pending price step.
 
-A reached funding target: place the supplier order, then set that batch's
-`ships`; new orders fall into the next batch. `deliveryBy` is a customer
+Every funding-target unit ships by the one `shipsBy` date, however early
+its target is reached. A SKU's last batch has no end when it is a funding
+target: once its `units` are ordered, every later unit ships with it, with
+no new target and no cap. A reached funding target: place the supplier
+order, then set that batch's `ships`. An accessory with `stock` sells that
+many units with its dated `batch`, then ships with the lead's `after`
+batch; set `stock` from InvenTree stock on hand. `deliveryBy` is a customer
 delivery date, not a supplier or carrier date; `null` leaves it out of the
 promise. A producer number alone does not open a destination; `saleApproved`
 does, after its evidence is reviewed. The strategy behind a campaign lives in

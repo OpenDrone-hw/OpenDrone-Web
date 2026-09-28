@@ -7,6 +7,7 @@ import {
   campaignDate,
   campaignEndsAt,
   campaignState,
+  countedSkus,
   fundingClosed,
   latestShipDate,
   latestShipDay,
@@ -123,11 +124,29 @@ describe('campaignState', () => {
     assert.equal(campaignState(placed, 300, PENDING, TIERS).shipPromise, PENDING);
   });
 
-  it('repeats the last batch size past the configured batches', () => {
-    const s = campaignState(FRAME, 1250 + 1000 + 3, PENDING, TIERS);
-    assert.equal(s.batch, 4);
-    assert.equal(s.batchUnits, 1000);
-    assert.equal(s.batchOrdered, 3);
+  it('ships every unit past a reached last target with it: no new target, no cap', () => {
+    const run: CampaignBatch[] = [{units: 250}];
+    const s = campaignState(run, 1250 + 1000 + 3, PENDING, TIERS);
+    assert.equal(s.batch, 1);
+    assert.equal(s.batchOrdered, 2253);
+    assert.equal(s.target, 250);
+    assert.equal(s.targetOrdered, 250);
+    assert.equal(s.targetReached, true);
+    assert.equal(s.shipPromise, PENDING);
+    assert.equal(s.paidLeft, null);
+    assert.deepEqual(s.batches.map((b) => b.status), ['current']);
+
+    const stack = campaignState(STACK, 250 + 600, PENDING, TIERS);
+    assert.equal(stack.batch, 2, 'the stack run holds every unit past paid stock');
+    assert.equal(stack.targetReached, true);
+    assert.equal(stack.batchOrdered, 600);
+  });
+
+  it('follows a last batch of paid stock with one open funding target of its size', () => {
+    const s = campaignState([{units: 10, paid: true, ships: 'ships now'}], 10 + 500, PENDING, TIERS);
+    assert.equal(s.batch, 2);
+    assert.equal(s.paidStock, false);
+    assert.equal(s.batchOrdered, 500);
   });
 
   it('treats a negative or non-finite count as zero', () => {
@@ -161,32 +180,35 @@ describe('parseCampaignConfig', () => {
     );
     // Terms 7bis.2: a target reached by the deadline ships by that date.
     assert.ok(config.pendingShips.includes(campaignDate(config.endsOn)), 'names the deadline');
-    assert.ok(config.pendingShips.includes(latestShipDate(config)), 'names the latest ship date');
-    assert.ok(
-      config.pendingShips.includes(`${config.shipWeeksAfterTarget ?? 10} weeks`),
-      'names the weeks after the target',
+    assert.ok(config.pendingShips.includes(latestShipDate(config)), 'names the ship-by date');
+    assert.equal(config.endsOn, '2026-11-22');
+    assert.equal(config.shipsBy, '2027-03-14');
+    assert.equal(
+      config.pendingShips,
+      'ships by 14 March 2027 if the target is reached by 22 November 2026, otherwise you choose a refund or to wait',
     );
-    assert.equal(config.pendingShips, PENDING);
     assert.ok(!config.pendingShips.includes('\u2014'), 'no em dash');
   });
 
-  it('rejects a ship lead time that is not whole weeks', () => {
-    assert.throws(
-      () =>
-        parseCampaignConfig({
-          countFrom: '2026-09-21', endsOn: '2026-12-31', priceTiers: TIERS,
-          pendingShips: PENDING, shipWeeksAfterTarget: 2.5,
-          skus: {X: {batches: [{units: 10}]}},
-        }),
-      /shipWeeksAfterTarget/,
-    );
+  it('rejects a ship-by date that is missing, malformed or not after the deadline', () => {
+    for (const shipsBy of [undefined, '2027-3-11', '2027-02-30', '2026-12-31']) {
+      assert.throws(
+        () =>
+          parseCampaignConfig({
+            countFrom: '2026-09-21', endsOn: '2026-12-31', shipsBy, priceTiers: TIERS,
+            pendingShips: PENDING,
+            skus: {X: {batches: [{units: 10}]}},
+          }),
+        /shipsBy/,
+      );
+    }
   });
 
   it('rejects a paid batch without a ship promise', () => {
     assert.throws(
       () =>
         parseCampaignConfig({
-          countFrom: '2026-09-21', endsOn: '2026-12-31', priceTiers: TIERS,
+          countFrom: '2026-09-21', endsOn: '2026-12-31', shipsBy: '2027-03-11', priceTiers: TIERS,
           pendingShips: PENDING,
           skus: {A: {batches: [{units: 1, paid: true}]}},
         }),
@@ -199,7 +221,7 @@ describe('parseCampaignConfig', () => {
       assert.throws(
         () =>
           parseCampaignConfig({
-            countFrom: '2026-09-21', endsOn: '2026-12-31', priceTiers,
+            countFrom: '2026-09-21', endsOn: '2026-12-31', shipsBy: '2027-03-11', priceTiers,
             pendingShips: PENDING,
             skus: {A: {batches: [{units: 1}]}},
           }),
@@ -213,7 +235,7 @@ describe('parseCampaignConfig', () => {
       assert.throws(
         () =>
           parseCampaignConfig({
-            countFrom: '2026-09-21', endsOn: '2026-12-31', priceTiers: [{upTo: 100, off}],
+            countFrom: '2026-09-21', endsOn: '2026-12-31', shipsBy: '2027-03-11', priceTiers: [{upTo: 100, off}],
             pendingShips: PENDING,
             skus: {A: {batches: [{units: 1}]}},
           }),
@@ -226,7 +248,7 @@ describe('parseCampaignConfig', () => {
     assert.throws(
       () =>
         parseCampaignConfig({
-          countFrom: '2026-09-21', endsOn: '2026-12-31', priceTiers: TIERS,
+          countFrom: '2026-09-21', endsOn: '2026-12-31', shipsBy: '2027-03-11', priceTiers: TIERS,
           pendingShips: PENDING,
           skus: {A: {batches: [{units: 0}]}},
         }),
@@ -292,13 +314,12 @@ function catalog(availability: 'preorder' | 'sold_out' | 'in_stock'): Catalog {
 /** A moment the funding targets are open, so these tests do not change
  *  meaning after the real deadline. */
 const OPEN = new Date('2026-10-01T12:00:00Z');
-const CONFIG = {countFrom: '2026-09-21', endsOn: '2026-12-31', priceTiers: TIERS, pendingShips: PENDING, skus: {'OPENFRAME-5': {batches: FRAME}}};
+const CONFIG = {countFrom: '2026-09-21', endsOn: '2026-12-31', shipsBy: '2027-03-11', priceTiers: TIERS, pendingShips: PENDING, skus: {'OPENFRAME-5': {batches: FRAME}}};
 
 describe('latest ship date', () => {
-  it('is the deadline plus the weeks after the target', () => {
-    assert.equal(latestShipDay({endsOn: '2026-12-31', shipWeeksAfterTarget: 10}), '2027-03-11');
-    assert.equal(latestShipDate({endsOn: '2026-12-31', shipWeeksAfterTarget: 10}), '11 March 2027');
-    assert.equal(latestShipDate({endsOn: '2026-12-31'}), '11 March 2027', '10 weeks by default');
+  it('is the fixed ship-by date, however early the target is reached', () => {
+    assert.equal(latestShipDay({shipsBy: '2027-03-14'}), '2027-03-14');
+    assert.equal(latestShipDate({shipsBy: '2027-03-14'}), '14 March 2027');
     assert.equal(campaignDate('2026-12-31'), '31 December 2026');
   });
 });
@@ -486,9 +507,9 @@ describe('funding deadline (endsOn)', () => {
     assert.equal(frame.ship_promise, 'ships March 2027');
   });
 
-  it('reads the deadline from content/preorders.json as 31 December 2026', () => {
+  it('reads the deadline from content/preorders.json as 22 November 2026, end of day Brussels', () => {
     const config = parseCampaignConfig(JSON.parse(fs.readFileSync('content/preorders.json', 'utf8')));
-    assert.equal(campaignEndsAt(config.endsOn).toISOString(), '2026-12-31T23:00:00.000Z');
+    assert.equal(campaignEndsAt(config.endsOn).toISOString(), '2026-11-22T23:00:00.000Z');
   });
 });
 
@@ -605,15 +626,31 @@ describe('SKUs that ship with a campaign SKU', () => {
       assert.ok(real.skus[rule.sku], `${sku} rides ${rule.sku}`);
       assert.deepEqual(tiersFor(real, sku), [], `${sku} has a flat price`);
     }
-    assert.equal(real.shipsWith?.['ACC-PROP-5-HQ-J37']?.batch, 1);
+    // Props and the 15x200 strap have no stock: they ship with the FC run.
+    assert.equal(real.shipsWith?.['ACC-PROP-5-HQ-J37']?.batch, 2);
+    assert.equal(real.shipsWith?.['ACC-STRAP-15X200']?.batch, 2);
+    assert.deepEqual(real.shipsWith?.['ACC-ANT-T'], {sku: 'OPENFC-LITE-2020', batch: 1, stock: 100, after: 2});
+    assert.deepEqual(real.shipsWith?.['ACC-CAP-470UF-35V'], {sku: 'OPENFC-LITE-2020', batch: 1, stock: 50, after: 2});
     assert.equal(real.shipsWith?.['ACC-FRM-ARM-3']?.sku, 'OPENFRAME-3');
   });
 
-  it('rejects a lead that is not a campaign SKU or a pinned batch without a date', () => {
+  it('rejects an unknown lead or batch, and stock without a dated batch and an after batch', () => {
     assert.throws(() => parseCampaignConfig({...WITH, shipsWith: {X: {sku: 'NOPE'}}}), /unknown campaign SKU/);
     assert.throws(
-      () => parseCampaignConfig({...WITH, shipsWith: {X: {sku: 'OPENFC-LITE-2020', batch: 2}}}),
-      /no ship date/,
+      () => parseCampaignConfig({...WITH, shipsWith: {X: {sku: 'OPENFC-LITE-2020', batch: 3}}}),
+      /does not exist/,
+    );
+    assert.throws(
+      () => parseCampaignConfig({...WITH, shipsWith: {X: {sku: 'OPENFC-LITE-2020', batch: 2, stock: 5, after: 1}}}),
+      /own ship date/,
+    );
+    assert.throws(
+      () => parseCampaignConfig({...WITH, shipsWith: {X: {sku: 'OPENFC-LITE-2020', batch: 1, stock: 5}}}),
+      /stock and after together/,
+    );
+    assert.throws(
+      () => parseCampaignConfig({...WITH, shipsWith: {X: {sku: 'OPENFC-LITE-2020', batch: 1, stock: 5, after: 1}}}),
+      /another/,
     );
     assert.throws(
       () => parseCampaignConfig({...WITH, shipsWith: {'OPENFRAME-5': {sku: 'OPENFC-LITE-2020'}}}),
@@ -630,6 +667,42 @@ describe('SKUs that ship with a campaign SKU', () => {
     assert.equal(strap.campaign?.shipsOnTarget, false);
     assert.equal(strap.campaign?.price, 2);
     assert.equal(shipLabel(strap.campaign!, 'short'), 'Ships Oct 2026');
+  });
+
+  it('pins a no-stock accessory to the lead run: its target, date and cart group', () => {
+    const run = {...WITH, shipsWith: {...WITH.shipsWith, 'ACC-STRAP-20X220': {sku: 'OPENFC-LITE-2020', batch: 2}}};
+    const early = applyCampaign(catalog('preorder'), run, {'OPENFC-LITE-2020': 30}, OPEN).products[0].variants[1];
+    assert.equal(early.ship_promise, PENDING, 'waits for the run while paid stock still sells');
+    assert.equal(early.campaign?.shipsOnTarget, true);
+    assert.equal(early.campaign?.target, 250);
+    assert.equal(early.campaign?.targetOrdered, 0);
+    assert.equal(early.campaign?.latestShip, '11 March 2027');
+    const funded = applyCampaign(catalog('preorder'), run, {'OPENFC-LITE-2020': 250 + 260}, OPEN).products[0].variants[1];
+    assert.equal(funded.campaign?.targetReached, true);
+    assert.equal(
+      shipGroupKey('ACC-STRAP-20X220', funded.ship_promise, funded.campaign),
+      shipGroupKey('OPENFC-LITE-2020', PENDING, campaignState(STACK, 510, PENDING, TIERS)),
+    );
+    const late = new Date('2027-01-05T12:00:00Z');
+    assert.equal(applyCampaign(catalog('preorder'), run, {'OPENFC-LITE-2020': 30}, late).products[0].variants[1].availability, 'sold_out');
+  });
+
+  it('sells an accessory from stock with the dated batch, then ships the rest with the run', () => {
+    const rule = {sku: 'OPENFC-LITE-2020', batch: 1, stock: 100, after: 2};
+    const stocked = {...WITH, shipsWith: {...WITH.shipsWith, 'ACC-STRAP-20X220': rule}};
+    assert.ok(countedSkus(parseCampaignConfig(stocked)).has('ACC-STRAP-20X220'));
+    assert.ok(!countedSkus(parseCampaignConfig(stocked)).has('ACC-FRM-ARM-5'));
+    const on = (own: number) =>
+      applyCampaign(catalog('preorder'), stocked, {'OPENFC-LITE-2020': 30, 'ACC-STRAP-20X220': own}, OPEN).products[0].variants[1];
+    const inStock = on(97);
+    assert.equal(inStock.ship_promise, 'ships late October 2026');
+    assert.equal(inStock.campaign?.paidStock, true);
+    assert.equal(inStock.campaign?.paidLeft, 3, 'a cart line is capped at what is left');
+    const past = on(100);
+    assert.equal(past.ship_promise, PENDING);
+    assert.equal(past.campaign?.paidStock, false);
+    assert.equal(past.campaign?.paidLeft, null);
+    assert.equal(past.campaign?.shipsOnTarget, true);
   });
 
   it('lets spares follow the frame target, grouped with the frame in a cart', () => {
@@ -657,7 +730,7 @@ describe('SKUs that ship with a campaign SKU', () => {
 
 test('a reviewed final delivery promise follows the batch into the catalog and its accessories', () => {
   const config = parseCampaignConfig({
-    countFrom: '2026-09-21', endsOn: '2026-12-31', pendingShips: 'ships once funded', priceTiers: [],
+    countFrom: '2026-09-21', endsOn: '2026-12-31', shipsBy: '2027-03-11', pendingShips: 'ships once funded', priceTiers: [],
     skus: {A: {batches: [{units: 20, paid: true, ships: 'ships October 2026', deliveryBy: '2026-11-15'}]}},
     shipsWith: {B: {sku: 'A', batch: 1}},
   });

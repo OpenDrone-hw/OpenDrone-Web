@@ -450,7 +450,7 @@ describe('tradeLeadTimes', () => {
     );
     const lead = tradeLeadTimes(config);
     const dated = {date: 'late October 2026', targetBy: null};
-    const target = {date: '11 March 2027', targetBy: '31 December 2026'};
+    const target = {date: '14 March 2027', targetBy: '22 November 2026'};
     assert.deepEqual(lead, {
       fc: dated,
       esc: dated,
@@ -458,14 +458,14 @@ describe('tradeLeadTimes', () => {
       motor: target,
       frame: target,
       strap: dated,
-      prop: dated,
+      prop: target,
     });
   });
 
   it('follows a frame batch once it has a ship date', () => {
     const config = parseCampaignConfig({
       countFrom: '2026-09-21',
-      endsOn: '2026-12-31',
+      endsOn: '2026-12-31', shipsBy: '2027-03-11',
       priceTiers: [{upTo: 10, off: 0.1}],
       pendingShips: 'x',
       skus: {
