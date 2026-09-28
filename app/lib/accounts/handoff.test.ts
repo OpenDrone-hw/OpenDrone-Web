@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {describe, it} from 'node:test';
 import {chatFpvFrameSrc} from '../csp.ts';
-import {handoffEnabled, parseHandoffFragment, takeHandoffTicket, withHandoffTicket} from './handoff.ts';
+import {handoffEnabled, handoffPlacement, parseHandoffFragment, takeHandoffTicket, withHandoffTicket} from './handoff.ts';
 
 const TICKET = 'AbCdEfGhIjKlMnOpQrStUvWxYz0123456789-_abcde'; // 43 base64url chars
 const SRC = 'https://chatfpv.com/embed?mode=opendrone&product=openfc-lite&page=product';
@@ -78,6 +78,24 @@ describe('#cfh fragment', () => {
   });
 });
 
+describe('handoffPlacement', () => {
+  // Product column rects measured on opendrone.be/products/openfc-lite (.product-hero-copy).
+  it('opens beside the product column on the left at 1440 and 1024 (no room on the right)', () => {
+    assert.deepEqual(handoffPlacement(1440, {left: 815, right: 1271}), {side: 'left', width: 400});
+    assert.deepEqual(handoffPlacement(1024, {left: 593, right: 968}), {side: 'left', width: 400});
+  });
+
+  it('opens on the right when the right gutter has room (1920)', () => {
+    assert.deepEqual(handoffPlacement(1920, {left: 1055, right: 1511}), {side: 'right', width: 377});
+  });
+
+  it('never opens over a one-column phone layout or an unknown page', () => {
+    assert.equal(handoffPlacement(390, {left: 19, right: 371}), null);
+    assert.equal(handoffPlacement(800, {left: 300, right: 500}), null);
+    assert.equal(handoffPlacement(1440, null), null);
+  });
+});
+
 describe('widget wiring', () => {
   const widget = read('../../components/ChatFpvWidget.tsx');
   const route = read('../../routes/products.$handle.tsx');
@@ -88,6 +106,13 @@ describe('widget wiring', () => {
     assert.match(widget, /takeHandoffTicket\(window\)/);
     assert.match(widget, /setHandoffSrc\(withHandoffTicket\(src, ticket\)\)/);
     assert.match(widget, /src=\{handoffSrc \?\? src\}/);
+  });
+
+  it('docks or badges a handed-off conversation instead of covering the product column', () => {
+    assert.match(widget, /handoffPlacement\(window\.innerWidth, column\)/);
+    assert.match(widget, /setUnread\(true\)/);
+    assert.match(widget, /\{mounted \? \(/);
+    assert.match(widget, /display: open \? 'flex' : 'none'/);
   });
 
   it('keeps the sandbox open for the "Continue on chatfpv.com" new tab', () => {

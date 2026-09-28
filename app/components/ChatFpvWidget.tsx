@@ -2,7 +2,7 @@ import {useEffect, useRef, useState} from 'react';
 import {useRouteLoaderData} from 'react-router';
 import {trackEvent} from '~/lib/growth/plausible';
 import {copyText} from '~/lib/copy';
-import {takeHandoffTicket, withHandoffTicket} from '~/lib/accounts/handoff';
+import {handoffPlacement, takeHandoffTicket, withHandoffTicket, type HandoffPlacement} from '~/lib/accounts/handoff';
 import {fetchWidgetAssertion, postAssertion, refreshDelayMs} from '~/lib/accounts/widget-client';
 
 const PRIVACY_NOTICE_FALLBACK =
@@ -45,6 +45,14 @@ const NOTICE_SUMMARY_FALLBACK = 'AI assistant. How your question is used.';
  * the ticket in the iframe src fragment, where ChatFPV redeems it
  * (app/lib/accounts/handoff.ts). That src stays pinned until the panel
  * closes, so a variant change cannot reload the iframe and redeem twice.
+ * The handed-off panel never covers the product column (`PRODUCT_COLUMN`:
+ * title, variant options, notify/buy area; morning review 2026-09-28 shot
+ * 26: at 1440x900 the right-docked panel sat on the variant buttons). It
+ * opens beside the column where `handoffPlacement` finds room (right at
+ * 1920, left over the gallery at 1440 and 1024); where there is none (the
+ * one-column phone layout) it stays closed and the button shows an unread
+ * badge, with the iframe already loaded hidden so the 120 s ticket is
+ * redeemed now and the conversation is there on the first tap.
  * ChatFPV's "Continue on chatfpv.com" opens a new tab from inside the
  * iframe: the sandbox allows popups that escape it.
  *
@@ -74,6 +82,8 @@ const BOTTOM_OBSTACLES = [
  */
 const OBSTACLE_ZONE_FRACTION = 2 / 3;
 const HEADER = '.site-header-main';
+/** The product page column a handed-off panel must leave uncovered. */
+const PRODUCT_COLUMN = '.product-hero-copy, [data-buy-module]';
 /** Clear space kept below the header pill's measured bottom edge. */
 const HEADER_MARGIN_PX = 16;
 /** Panel floor so a very short viewport still gets a usable panel instead
@@ -99,13 +109,21 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
    *  pass, so it tracks the real header height instead of a guessed
    *  constant. */
   const [maxPanelHeight, setMaxPanelHeight] = useState(600);
+  /** Handoff only: where the auto-opened panel sits (null: the default
+   *  right-docked panel above the button). */
+  const [dock, setDock] = useState<HandoffPlacement>(null);
+  /** Handoff with no room beside the product column: the iframe loads
+   *  hidden and the button carries an unread badge until it is opened. */
+  const [unread, setUnread] = useState(false);
+  const [dockHeight, setDockHeight] = useState(600);
+  const mounted = open || unread;
   const iframe = useRef<HTMLIFrameElement>(null);
   const root = useRouteLoaderData('root') as {accountSignedIn?: boolean} | undefined;
   const signedIn = Boolean(root?.accountSignedIn);
 
   // Signed-in shoppers: hand the iframe a fresh assertion while it is loaded.
   useEffect(() => {
-    if (!open || !loaded || !signedIn || !src) return;
+    if (!mounted || !loaded || !signedIn || !src) return;
     let timer = 0;
     let stopped = false;
     const push = async () => {
@@ -119,17 +137,19 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
       stopped = true;
       window.clearTimeout(timer);
     };
-  }, [open, loaded, signedIn, src]);
+  }, [mounted, loaded, signedIn, src]);
 
   // Reset per open, so a second open re-arms the timeout and the loading
   // state instead of keeping a stale "not responding" from an earlier try.
+  // Keyed on `mounted`, so opening a panel preloaded behind the unread badge
+  // keeps its already-loaded iframe.
   useEffect(() => {
-    if (!open) return;
+    if (!mounted) return;
     setLoaded(false);
     setTimedOut(false);
     const timer = window.setTimeout(() => setTimedOut(true), LOAD_TIMEOUT_MS);
     return () => window.clearTimeout(timer);
-  }, [open]);
+  }, [mounted]);
 
   // Move focus into the panel on open, and back to the button on close, so
   // keyboard and screen-reader users land on the conversation instead of
@@ -192,6 +212,8 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
       const buttonSpace = (button.current?.getBoundingClientRect().height ?? 44) + 8;
       const available = window.innerHeight - Math.max(0, headerBottom) - HEADER_MARGIN_PX - (16 + nextLift + buttonSpace);
       setMaxPanelHeight(Math.max(MIN_PANEL_HEIGHT_PX, Math.min(600, Math.round(available))));
+      // A docked handoff panel has no button under it: header gap to the bottom gutter.
+      setDockHeight(Math.max(MIN_PANEL_HEIGHT_PX, Math.min(600, Math.round(window.innerHeight - Math.max(0, headerBottom) - HEADER_MARGIN_PX - 16))));
     };
     const schedule = () => {
       if (!frame) frame = requestAnimationFrame(measure);
@@ -222,7 +244,14 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
     const ticket = takeHandoffTicket(window);
     if (!ticket) return;
     setHandoffSrc(withHandoffTicket(src, ticket));
-    setOpen(true);
+    const column = document.querySelector<HTMLElement>(PRODUCT_COLUMN)?.getBoundingClientRect() ?? null;
+    const place = handoffPlacement(window.innerWidth, column);
+    if (place) {
+      setDock(place);
+      setOpen(true);
+    } else {
+      setUnread(true);
+    }
   }, [handoff, src]);
 
   useEffect(() => {
@@ -231,6 +260,7 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
       if (e.key === 'Escape') {
         setOpen(false);
         setHandoffSrc(null);
+        setDock(null);
         button.current?.focus();
       }
     };
@@ -241,19 +271,20 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
   if (!src) return null;
   return (
     <div className="chatfpv-widget" style={{position: 'fixed', right: 16, bottom: 16 + lift, zIndex: 61, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8}}>
-      {open ? (
+      {mounted ? (
         <div
           ref={panelRef}
           role="dialog"
           aria-modal="true"
           aria-label="Ask ChatFPV (AI)"
           tabIndex={-1}
+          hidden={!open}
           style={{
-            position: 'relative',
-            display: 'flex',
+            ...(dock
+              ? {position: 'fixed', bottom: 16, [dock.side]: 16, width: dock.width, height: dockHeight}
+              : {position: 'relative', width: 'min(400px, calc(100vw - 32px))', height: maxPanelHeight}),
+            display: open ? 'flex' : 'none',
             flexDirection: 'column',
-            width: 'min(400px, calc(100vw - 32px))',
-            height: maxPanelHeight,
             borderRadius: 12,
             overflow: 'hidden',
             boxShadow: '0 12px 40px rgba(0, 0, 0, 0.35)',
@@ -327,8 +358,14 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
         type="button"
         className="od-btn od-btn-primary"
         aria-expanded={open}
+        aria-label={unread && !open ? 'Ask ChatFPV (AI), 1 unread reply' : undefined}
+        style={{position: 'relative'}}
         onClick={() => {
-          if (open) setHandoffSrc(null);
+          if (open) {
+            setHandoffSrc(null);
+            setDock(null);
+          }
+          setUnread(false);
           setOpen((v) => {
             if (!v) {
               trackEvent('chatfpv_widget_open', {props: {surface: 'widget'}});
@@ -338,6 +375,15 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
         }}
       >
         {open ? 'Close ChatFPV' : 'Ask ChatFPV (AI)'}
+        {unread && !open ? (
+          <span
+            className="chatfpv-widget-unread"
+            aria-hidden="true"
+            style={{position: 'absolute', top: -7, right: -7, minWidth: 20, height: 20, padding: '0 6px', borderRadius: 10, background: '#e5484d', color: '#fff', fontSize: 12, fontWeight: 700, lineHeight: '20px', textAlign: 'center', boxShadow: '0 0 0 2px #0b0d10'}}
+          >
+            1
+          </span>
+        ) : null}
       </button>
     </div>
   );
