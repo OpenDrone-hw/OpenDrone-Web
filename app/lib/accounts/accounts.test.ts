@@ -412,6 +412,10 @@ describe('shopify provider', () => {
     assert.equal(customerGid('42'), 'gid://shopify/Customer/42');
     assert.equal(customerGid('gid://shopify/Customer/42'), 'gid://shopify/Customer/42');
     assert.equal(customerGid('gid://shopify/Order/42'), null);
+    // Shopify's Customer Account API id_token carries sub as a JSON number.
+    assert.equal(customerGid(7123456789012), 'gid://shopify/Customer/7123456789012');
+    assert.equal(customerGid(1.5), null);
+    assert.equal(customerGid(2 ** 60), null);
   });
 });
 
