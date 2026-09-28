@@ -1,7 +1,8 @@
 /**
  * ChatFPV handoff into the storefront widget (accounts contract, "Storefront
- * `#cfh`"). A ChatFPV product card links to `/products/<handle>?variant=<id>#cfh=<ticket>`;
- * the product page reads the ticket from the fragment, removes it from the
+ * `#cfh`"). A ChatFPV product card links to
+ * `/products/<handle>?Model=<option value>#cfh=<ticket>`, the option query
+ * selecting the card's variant as the variant chips do; the product page reads the ticket from the fragment, removes it from the
  * address bar and opens the widget with the ticket in the iframe src
  * fragment, where ChatFPV's /embed redeems it. The ticket never travels in a
  * query parameter, so it stays out of server logs and the Referer header.
