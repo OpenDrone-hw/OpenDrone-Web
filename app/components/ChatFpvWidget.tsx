@@ -238,6 +238,16 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
     };
   }, [src]);
 
+  // Marks the page while the launcher is mounted, so the stylesheet can keep
+  // the text it lifts next to clear of its column (`.chatfpv-widget-on` in
+  // app.css) instead of the button covering it.
+  useEffect(() => {
+    if (!src) return;
+    const html = document.documentElement;
+    html.classList.add('chatfpv-widget-on');
+    return () => html.classList.remove('chatfpv-widget-on');
+  }, [src]);
+
   useEffect(() => {
     if (!handoff || !src || handoffRead.current) return;
     handoffRead.current = true;

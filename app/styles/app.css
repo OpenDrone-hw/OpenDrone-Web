@@ -3765,6 +3765,20 @@ button.reset {
   gap: var(--sp-2);
 }
 
+/* Phones and tablets (single product column): the ChatFPV launcher (56 px,
+   16 px from the right edge) lifts to sit just above the notify form, level
+   with the eyebrow, title and lede. Keep that text out of its column. */
+@media (max-width: 959px) {
+  .chatfpv-widget-on .product-buy-notify > div:first-child {
+    padding-right: 64px;
+  }
+  /* At the end of the page the launcher rests on the footer frame's last
+     row: end the page 80 px (button + margins) higher. */
+  .chatfpv-widget-on footer {
+    padding-bottom: 80px;
+  }
+}
+
 /* Idea-stage buy module: the concept pitch + repo CTA that replace the
    price. Same mono/dim idiom as the SKU line. */
 .product-buy-idea-pitch {
