@@ -57,11 +57,14 @@ function httpsUrl(value: unknown): value is string {
   }
 }
 
-async function discover(issuer: string, fetcher: typeof fetch, now: number): Promise<Discovery> {
+async function discover(issuer: string, origin: string, fetcher: typeof fetch, now: number): Promise<Discovery> {
   const hit = discoveryCache.get(issuer);
   if (hit && now - hit.at < DISCOVERY_TTL_MS) return hit.value;
   const value = (async () => {
-    const res = await fetcher(`${issuer}/.well-known/openid-configuration`, {headers: {Accept: 'application/json'}});
+    // Shopify answers 403 to a Worker fetch without Origin and User-Agent, as on the token call.
+    const res = await fetcher(`${issuer}/.well-known/openid-configuration`, {
+      headers: {Accept: 'application/json', Origin: origin, 'User-Agent': 'opendrone-web'},
+    });
     if (!res.ok) throw new IdpError(`discovery ${res.status}`);
     const d = (await res.json()) as Partial<Discovery>;
     if (!httpsUrl(d.authorization_endpoint) || !httpsUrl(d.token_endpoint) || typeof d.issuer !== 'string') {
@@ -107,7 +110,7 @@ export function shopifyIdentityProvider(
   const clientId = env.SHOPIFY_CUSTOMER_ACCOUNT_CLIENT_ID?.trim();
   const clientSecret = env.SHOPIFY_CUSTOMER_ACCOUNT_CLIENT_SECRET?.trim();
   if (!issuer || !clientId) return null;
-  const config = () => discover(issuer, fetcher, now());
+  const config = () => discover(issuer, origin, fetcher, now());
 
   return {
     async authorizeUrl(p) {
