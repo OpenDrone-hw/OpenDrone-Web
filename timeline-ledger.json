@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-27T10:34:34.237Z",
+  "updatedAt": "2026-09-28T11:42:52.600Z",
   "repos": {
     "OpenESC-20x20": {
       "createdAt": "2026-03-09",
@@ -141,6 +141,13 @@
       "statusSince": "2026-09-02",
       "archived": false,
       "releases": 2
+    },
+    "discord": {
+      "createdAt": "2026-09-27",
+      "status": null,
+      "statusSince": "2026-09-28",
+      "archived": false,
+      "releases": 0
     }
   },
   "events": [
@@ -648,6 +655,15 @@
       "from": "alpha",
       "url": "https://github.com/OpenDrone-hw/OpenFC-Lite",
       "observed": "2026-09-26"
+    },
+    {
+      "id": "repo:discord",
+      "kind": "repo",
+      "repo": "discord",
+      "date": "2026-09-27",
+      "url": "https://github.com/OpenDrone-hw/discord",
+      "archived": false,
+      "observed": "2026-09-28"
     }
   ]
 }
