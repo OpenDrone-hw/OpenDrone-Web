@@ -178,6 +178,48 @@
   color: var(--color-text-muted);
 }
 
+/* === /preorder empty state (no campaign open): what is coming, a
+   newsletter CTA and a way to keep browsing, instead of the bare
+   "No pre-orders open." line. === */
+.po-empty-state {
+  display: grid;
+  gap: var(--sp-4);
+}
+.po-empty-coming {
+  display: grid;
+  gap: var(--sp-1);
+}
+.po-empty-line {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--color-text);
+}
+.po-empty-actions {
+  display: flex;
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  margin-top: var(--sp-2);
+}
+.po-empty-newsletter {
+  flex: 1 1 22rem;
+  min-width: 0;
+}
+.po-empty-products {
+  align-self: flex-start;
+  white-space: nowrap;
+}
+@media (max-width: 640px) {
+  .po-empty-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .po-empty-products {
+    align-self: stretch;
+    text-align: center;
+  }
+}
+
 /* Timeline: two lanes on one axis, a dot per date, a Today line. */
 .po-timeline {
   position: relative;
