@@ -29,25 +29,33 @@ export function commerceHandoff(
 }
 
 /**
- * The Shopify customer account URL. It is configuration supplied by the
- * store; this app does not derive login, order, profile, address or invoice
- * paths.
+ * The Shopify customer account URL: SHOPIFY_CUSTOMER_ACCOUNT_URL when set
+ * (store-supplied configuration, used as-is, no subpath invented on top of
+ * it); otherwise derived from SHOPIFY_CUSTOMER_ACCOUNT_SHOP_ID (the same
+ * numeric shop id the Customer Account API OIDC client already uses, see
+ * accounts/shopify-idp.ts) as `https://shopify.com/<shop id>/account` - the
+ * exact URL Shopify's own "Customer accounts" settings page shows once new
+ * customer accounts are on (README "Create the Shopify client"). null when
+ * neither is configured or the shop id is not purely numeric.
  */
 export function customerAccountUrl(
-  env: Pick<Env, 'SHOPIFY_CUSTOMER_ACCOUNT_URL'>,
+  env: Pick<Env, 'SHOPIFY_CUSTOMER_ACCOUNT_URL' | 'SHOPIFY_CUSTOMER_ACCOUNT_SHOP_ID'>,
 ): string | null {
   const configured = env.SHOPIFY_CUSTOMER_ACCOUNT_URL?.trim();
-  if (!configured) return null;
-  let url: URL;
-  try {
-    url = new URL(configured);
-  } catch {
-    throw new Error('shopify: SHOPIFY_CUSTOMER_ACCOUNT_URL is invalid');
+  if (configured) {
+    let url: URL;
+    try {
+      url = new URL(configured);
+    } catch {
+      throw new Error('shopify: SHOPIFY_CUSTOMER_ACCOUNT_URL is invalid');
+    }
+    if (url.protocol !== 'https:' || url.username || url.password) {
+      throw new Error('shopify: SHOPIFY_CUSTOMER_ACCOUNT_URL must be HTTPS');
+    }
+    return url.toString();
   }
-  if (url.protocol !== 'https:' || url.username || url.password) {
-    throw new Error('shopify: SHOPIFY_CUSTOMER_ACCOUNT_URL must be HTTPS');
-  }
-  return url.toString();
+  const shopId = env.SHOPIFY_CUSTOMER_ACCOUNT_SHOP_ID?.trim();
+  return shopId && /^\d+$/.test(shopId) ? `https://shopify.com/${shopId}/account` : null;
 }
 
 /**

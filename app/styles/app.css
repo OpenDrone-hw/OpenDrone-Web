@@ -8653,6 +8653,14 @@ a.what-chain-chip:hover {
   align-items: center;
   gap: 0.5rem;
 }
+/* CSS-only "disabled" look before the confirm box is ticked. The submit
+   itself is still guarded by the checkbox's `required` attribute (rights.ts
+   owns that logic); this is a visual cue only, never pointer-events: none,
+   so it stays reachable by keyboard and screen readers. */
+.account-chatfpv-delete:has(input[type='checkbox']:not(:checked)) .od-btn-danger {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 
 .account-form input:focus,
 .account-form select:focus {
@@ -8732,9 +8740,9 @@ a.what-chain-chip:hover {
   display: grid;
   gap: 1rem;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  /* Size each card to its own content instead of stretching to the tallest in
-     the row: that stretch is what left big empty gaps under the shorter cards. */
-  align-items: start;
+  /* Stretch (the default) so every card in a row matches the tallest one;
+     .account-dashboard-cta's margin-top: auto then pins each card's action
+     to the same bottom edge instead of trailing the shortest card's text. */
 }
 
 .account-dashboard-card {
@@ -8949,21 +8957,20 @@ a.what-chain-chip:hover {
    Reuses .account-dashboard-* above for the card grid.
    ============================================ */
 
-.account-head {
+/* The identity line under the title: "Signed in since ..." plus sign out as
+   its trailing item, not a button floating alone above the heading. */
+.account-identity {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: baseline;
   justify-content: space-between;
-  gap: 0.75rem 1.5rem;
-  margin-bottom: 2rem;
+  gap: 0.5rem 1.5rem;
 }
-.account-head .page-header {
-  margin-bottom: 0;
-  flex: 1 1 320px;
+.account-identity .page-description {
+  margin: 0;
 }
-.account-head-signout {
+.account-identity-signout {
   flex: 0 0 auto;
-  padding-top: 0.15rem;
 }
 
 .account-danger {
@@ -11161,12 +11168,15 @@ html.light .editorial-watermark {
   padding: 10px 12px;
 }
 .od-btn-ghost:hover {color: var(--od-ink);}
+/* Visible at rest, not only on hover: a destructive action should read as
+   destructive before the pointer ever reaches it. */
 .od-btn-danger {
   background: transparent;
-  color: var(--od-ink);
-  border-color: var(--od-line-strong);
+  color: var(--od-pcb-copper);
+  border-color: color-mix(in srgb, var(--od-pcb-copper) 55%, var(--od-line-strong));
 }
 .od-btn-danger:hover {
+  background: color-mix(in srgb, var(--od-pcb-copper) 12%, transparent);
   border-color: var(--od-pcb-copper);
   color: var(--od-pcb-copper);
 }

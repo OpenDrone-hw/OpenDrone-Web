@@ -1,4 +1,4 @@
-import {data, redirect, useLoaderData, useRouteLoaderData, Link} from 'react-router';
+import {data, redirect, useLoaderData, Link} from 'react-router';
 import type {Route} from './+types/account._index';
 import {accountsEnabled} from '~/lib/accounts/config';
 import {legacyAccountResponse} from '~/lib/accounts/legacy';
@@ -6,13 +6,14 @@ import {HISTORY_NOTICES, type HistoryNotice} from '~/lib/accounts/rights';
 import {clearSessionCookie, hasSessionCookie, readSession} from '~/lib/accounts/sessions';
 import {customerAccountUrl} from '~/lib/shop-links';
 import {supportHeaders} from '~/lib/support/server';
-import {NewsletterSignup} from '~/components/NewsletterSignup';
 
 /**
  * GET /account with ACCOUNTS_ENABLED "1": the signed-in dashboard. Orders and
- * addresses stay in Shopify customer accounts (SHOPIFY_CUSTOMER_ACCOUNT_URL);
- * unset in production today, so that card falls back to support instead of
- * rendering nothing. ChatFPV history export and delete post to
+ * addresses stay in Shopify customer accounts: customerAccountUrl resolves
+ * SHOPIFY_CUSTOMER_ACCOUNT_URL when set, else derives it from the numeric
+ * SHOPIFY_CUSTOMER_ACCOUNT_SHOP_ID the sign-in OIDC client already uses
+ * (app/lib/shop-links.ts); the card falls back to support only when neither
+ * is configured. ChatFPV history export and delete post to
  * /account/chatfpv-history; sign out posts to /account/logout. Signed out, it
  * starts sign-in. Flag off: the legacy Shopify redirect.
  */
@@ -45,21 +46,20 @@ const NOTICE_TEXT: Record<HistoryNotice, string> = {
 
 export default function AccountRoute() {
   const {ordersUrl, since, notice} = useLoaderData<typeof loader>();
-  const root = useRouteLoaderData('root') as {turnstileSiteKey?: string | null} | undefined;
 
   return (
     <div className="page-shell sp-page">
-      <div className="account-head">
-        <header className="page-header">
-          <h1 className="page-title">Your account</h1>
+      <header className="page-header">
+        <h1 className="page-title">Your account</h1>
+        <div className="account-identity">
           <p className="page-description">Signed in since {since}. This sign-in also works on chatfpv.com.</p>
-        </header>
-        <form method="post" action="/account/logout" className="account-head-signout">
-          <button type="submit" className="od-btn od-btn-secondary od-btn-sm">
-            Sign out
-          </button>
-        </form>
-      </div>
+          <form method="post" action="/account/logout" className="account-identity-signout">
+            <button type="submit" className="od-btn od-btn-secondary od-btn-sm">
+              Sign out
+            </button>
+          </form>
+        </div>
+      </header>
 
       <div className="account-dashboard-grid">
         <section className="account-dashboard-card" aria-labelledby="account-orders-title">
@@ -77,7 +77,7 @@ export default function AccountRoute() {
           ) : (
             <>
               <p className="account-dashboard-card-lede">
-                Order and address management is not linked here yet. Check your order confirmation email for order status, or reach support with
+                We don&rsquo;t have a link for your orders and addresses right now. Check your order confirmation email, or reach support with
                 your order number.
               </p>
               <div className="account-dashboard-card-actions">
@@ -107,8 +107,6 @@ export default function AccountRoute() {
             </Link>
           </div>
         </section>
-
-        <NewsletterSignup variant="compact" turnstileSiteKey={root?.turnstileSiteKey ?? null} className="account-dashboard-card" />
 
         <section className="account-dashboard-card" aria-labelledby="account-chatfpv-link-title">
           <p className="account-dashboard-eyebrow-mono">ChatFPV</p>
