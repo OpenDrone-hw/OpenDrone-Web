@@ -79,6 +79,24 @@ const KNOWN: CookieEntry[] = [
     nl: 'Onthoudt welke supporttickets deze browser mag openen. Enkel geplaatst wanneer u een ticket opent of terugvindt.',
     fr: 'Retient les tickets de support que ce navigateur peut ouvrir. Plac\u00e9 uniquement lorsque vous ouvrez ou retrouvez un ticket.',
   },
+  {
+    name: '__Host-od_sid',
+    en: 'Keeps you signed in to your OpenDrone account (also used for chatfpv.com sign-in). Set only when you sign in; 30 days. Strictly necessary.',
+    nl: 'Houdt u aangemeld bij uw OpenDrone-account (ook gebruikt voor aanmelding op chatfpv.com). Enkel geplaatst wanneer u zich aanmeldt; 30 dagen. Strikt noodzakelijk.',
+    fr: 'Vous garde connect\u00e9 \u00e0 votre compte OpenDrone (aussi utilis\u00e9 pour la connexion \u00e0 chatfpv.com). Plac\u00e9 uniquement lorsque vous vous connectez ; 30 jours. Strictement n\u00e9cessaire.',
+  },
+  {
+    name: '__Host-od_oauth',
+    en: 'Protects a sign-in in progress against forgery. Set when you click Sign in; 10 minutes. Strictly necessary.',
+    nl: 'Beschermt een lopende aanmelding tegen vervalsing. Geplaatst wanneer u op Aanmelden klikt; 10 minuten. Strikt noodzakelijk.',
+    fr: 'Prot\u00e8ge une connexion en cours contre la falsification. Plac\u00e9 lorsque vous cliquez sur Se connecter ; 10 minutes. Strictement n\u00e9cessaire.',
+  },
+  {
+    name: '__Host-od_logout',
+    en: 'Finishes a sign-out started on chatfpv.com. Set only during that sign-out; 5 minutes. Strictly necessary.',
+    nl: 'Rondt een afmelding af die op chatfpv.com begon. Enkel geplaatst tijdens die afmelding; 5 minuten. Strikt noodzakelijk.',
+    fr: 'Termine une d\u00e9connexion commenc\u00e9e sur chatfpv.com. Plac\u00e9 uniquement pendant cette d\u00e9connexion ; 5 minutes. Strictement n\u00e9cessaire.',
+  },
 ];
 
 const STRINGS = {

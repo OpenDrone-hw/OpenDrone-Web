@@ -9,7 +9,7 @@ import {b64url, hmacB64url, pairwiseSub, pkceChallenge, randomToken, seal, textF
 import {identityProvider} from './idp.ts';
 import {authorize, oauthLogout, token} from './oauth.ts';
 import {createSession, readSession, SESSION_COOKIE, upsertAccount} from './sessions.ts';
-import {customerGid, shopifyIdentityProvider} from './shopify-idp.ts';
+import {customerGid, shopifyIdentityProvider, shopifyScope} from './shopify-idp.ts';
 import {finishLogin, OAUTH_COOKIE, startLogin} from './signin.ts';
 import {issueTestCode, testIdentityProvider} from './test-idp.ts';
 import {frameOrigin, postAssertion, refreshDelayMs} from './widget-client.ts';
@@ -167,6 +167,13 @@ describe('oauth authorize and token', () => {
     assert.equal((await token(tokenRequest({code: 'x'}), e)).status, 404);
     assert.equal((await widgetAssertion(new Request('https://opendrone.be/api/account/widget-assertion'), e)).status, 404);
     assert.equal((await oauthLogout(new Request('https://opendrone.be/oauth/logout'), e, null)).status, 404);
+  });
+  it('asks for the minimal scope; the override accepts only known scopes with openid', () => {
+    assert.equal(shopifyScope({}), 'openid email');
+    assert.equal(shopifyScope({SHOPIFY_CUSTOMER_ACCOUNT_SCOPE: 'openid'}), 'openid');
+    assert.equal(shopifyScope({SHOPIFY_CUSTOMER_ACCOUNT_SCOPE: ' openid  email customer-account-api:full '}), 'openid email customer-account-api:full');
+    assert.equal(shopifyScope({SHOPIFY_CUSTOMER_ACCOUNT_SCOPE: 'email'}), 'openid email');
+    assert.equal(shopifyScope({SHOPIFY_CUSTOMER_ACCOUNT_SCOPE: 'openid write_orders'}), 'openid email');
   });
 });
 
@@ -361,7 +368,7 @@ describe('shopify provider', () => {
     const auth = new URL(await idp.authorizeUrl({state: 's', nonce: 'n', codeChallenge: 'c'.repeat(43), redirectUri: 'https://opendrone.be/account/callback'}));
     assert.equal(auth.origin + auth.pathname, discovery.authorization_endpoint);
     assert.equal(auth.searchParams.get('code_challenge_method'), 'S256');
-    assert.equal(auth.searchParams.get('scope'), 'openid email customer-account-api:full');
+    assert.equal(auth.searchParams.get('scope'), 'openid email');
     const out = await idp.exchangeCode({code: 'c', codeVerifier: 'v', redirectUri: 'https://opendrone.be/account/callback', nonce: 'n'});
     assert.equal(out.subject, 'gid://shopify/Customer/42');
     assert.ok(!JSON.stringify(out).includes('AT') && !JSON.stringify(out).includes('RT'));

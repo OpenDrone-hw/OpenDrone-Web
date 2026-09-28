@@ -1,14 +1,16 @@
 {
   "$generated": "npm run studio:tokens — do not hand-edit",
   "$source": "app/styles/app.css @theme",
-  "count": 63,
+  "count": 67,
   "tokens": [
     {
       "name": "--color-bg",
-      "value": "#0d0d10",
-      "group": "colour",
-      "derivedFrom": [],
-      "light": "#f7f6f3"
+      "value": "var(--od-color-neutral-surface-dark)",
+      "group": "derived",
+      "derivedFrom": [
+        "--od-color-neutral-surface-dark"
+      ],
+      "light": "var(--od-color-neutral-surface-light)"
     },
     {
       "name": "--color-bg-card",
@@ -26,10 +28,12 @@
     },
     {
       "name": "--color-text",
-      "value": "#e5e5e5",
-      "group": "colour",
-      "derivedFrom": [],
-      "light": "#1a1a1e"
+      "value": "var(--od-color-neutral-paper)",
+      "group": "derived",
+      "derivedFrom": [
+        "--od-color-neutral-paper"
+      ],
+      "light": "var(--od-color-neutral-ink)"
     },
     {
       "name": "--color-text-muted",
@@ -40,10 +44,10 @@
     },
     {
       "name": "--color-text-dim",
-      "value": "#6a6a6a",
+      "value": "#8b8b91",
       "group": "colour",
       "derivedFrom": [],
-      "light": "#86868c"
+      "light": "#6b6b70"
     },
     {
       "name": "--art-ink",
@@ -65,9 +69,11 @@
     },
     {
       "name": "--color-gold",
-      "value": "#ffb700",
-      "group": "colour",
-      "derivedFrom": [],
+      "value": "var(--od-color-brand-gold)",
+      "group": "derived",
+      "derivedFrom": [
+        "--od-color-brand-gold"
+      ],
       "light": null
     },
     {
@@ -78,6 +84,24 @@
         "--color-gold"
       ],
       "light": null
+    },
+    {
+      "name": "--color-gold-text",
+      "value": "var(--color-gold)",
+      "group": "derived",
+      "derivedFrom": [
+        "--color-gold"
+      ],
+      "light": "#7a5700"
+    },
+    {
+      "name": "--color-gold-text-hover",
+      "value": "var(--color-gold-hover)",
+      "group": "derived",
+      "derivedFrom": [
+        "--color-gold-hover"
+      ],
+      "light": "#5c4200"
     },
     {
       "name": "--color-gold-soft",
@@ -124,9 +148,11 @@
     },
     {
       "name": "--color-green-deep",
-      "value": "#327014",
-      "group": "colour",
-      "derivedFrom": [],
+      "value": "var(--od-color-brand-green-deep)",
+      "group": "derived",
+      "derivedFrom": [
+        "--od-color-brand-green-deep"
+      ],
       "light": null
     },
     {
@@ -161,9 +187,11 @@
     },
     {
       "name": "--color-on-accent",
-      "value": "#0d0d10",
-      "group": "colour",
-      "derivedFrom": [],
+      "value": "var(--od-color-neutral-surface-dark)",
+      "group": "derived",
+      "derivedFrom": [
+        "--od-color-neutral-surface-dark"
+      ],
       "light": null
     },
     {
@@ -229,6 +257,20 @@
       "name": "--font-mono",
       "value": "\"JetBrains Mono\", \"JetBrains Mono Fallback\", ui-monospace, Menlo, Monaco, \"SF Mono\", \"Cascadia Mono\", \"Segoe UI Mono\", Consolas, monospace",
       "group": "font",
+      "derivedFrom": [],
+      "light": null
+    },
+    {
+      "name": "--ls-label",
+      "value": "0.06em",
+      "group": "layout",
+      "derivedFrom": [],
+      "light": null
+    },
+    {
+      "name": "--fs-label",
+      "value": "0.75rem",
+      "group": "size",
       "derivedFrom": [],
       "light": null
     },

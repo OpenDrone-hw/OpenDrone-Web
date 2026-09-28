@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* OpenDrone identity tokens (--od-*), vendored from OpenDrone/brand; npm run tokens:check. */
+@import "./opendrone-tokens.css";
 
 /* Self-hosted typefaces. Inter Variable covers 100-900 in a single
    file; JetBrains Mono ships as three static weights for spec tables,
@@ -66,10 +68,10 @@
 }
 
 @theme {
-  --color-bg: #0d0d10;
+  --color-bg: var(--od-color-neutral-surface-dark);
   --color-bg-card: #141417;
   --color-bg-elevated: #1a1a1e;
-  --color-text: #e5e5e5;
+  --color-text: var(--od-color-neutral-paper);
   --color-text-muted: #9a9a9a;
   --color-text-dim: #8b8b91;
   /* Ink for the hand-drawn margin sketches and the masked partner logos.
@@ -84,12 +86,13 @@
 
      Source of truth is OpenDrone-Brand/tokens.json, which carries the reasoning,
      the contrast numbers, the retired hexes and the physical Pantone master.
-     Do not restate any of that here; this is the only gold literal in the file
-     and every token below is mixed from it.
+     Do not restate any of that here; the value arrives as --od-color-brand-gold
+     from the vendored opendrone-tokens.css, and every token below is mixed
+     from it.
 
      11.11:1 on --color-bg, 1.62:1 on the light surface. The low one is
      deliberate: gold is identity, never body copy, never a focus ring. */
-  --color-gold: #ffb700;
+  --color-gold: var(--od-color-brand-gold);
   /* Interaction states, mixed from the one gold rather than hand-picked, so
      there is nothing to keep in sync. Hover LIFTS toward white because the
      base is already at the chroma ceiling and cannot go brighter. */
@@ -115,7 +118,7 @@
      --color-stock aliases the brand green, so stock/success re-theme with
      it automatically. */
   --color-green: #4ea866;
-  --color-green-deep: #327014;
+  --color-green-deep: var(--od-color-brand-green-deep);
   --color-stock: var(--color-green);
   /* Form/validation error text. 7.02:1 on --color-bg #0d0d10 (AA). */
   --color-error: #f87171;
@@ -126,7 +129,7 @@
      active toggles). Dark in both themes: gold reads best with dark ink.
      Decoupled from --color-bg so light mode can flip the page background
      without dragging on-accent text light with it. */
-  --color-on-accent: #0d0d10;
+  --color-on-accent: var(--od-color-neutral-surface-dark);
   /* Focus ring. WCAG 1.4.11 wants 3:1 for focus indicators and, unlike a
      logo, a focus ring gets no exemption. Gold is 11.11:1 here on dark so
      it stays; html.light swaps it for ink, where gold would be 1.62:1. */
@@ -229,10 +232,10 @@
    before first paint.
    ============================================================ */
 html.light {
-  --color-bg: #f7f6f3;          /* warm off-white, not clinical #fff */
+  --color-bg: var(--od-color-neutral-surface-light); /* warm off-white, not clinical #fff */
   --color-bg-card: #ffffff;
   --color-bg-elevated: #efece6; /* recessed/raised neutral surface */
-  --color-text: #1a1a1e;
+  --color-text: var(--od-color-neutral-ink);
   --color-text-muted: #57575c;
   --color-text-dim: #6b6b70;
   /* Pencil on paper: dark ink at low opacity already reads on the warm
@@ -8470,6 +8473,34 @@ a.what-chain-chip:hover {
   margin-left: auto;
 }
 
+/* /account ChatFPV history: export and delete (app/lib/accounts/rights.ts). */
+.account-chatfpv {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-border);
+}
+.account-chatfpv-title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+.account-chatfpv-notice {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+.account-chatfpv-delete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+.account-chatfpv-delete label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .account-form input:focus,
 .account-form select:focus {
   border-color: var(--color-gold);
@@ -12845,7 +12876,7 @@ html.light .editorial-watermark {
 /* The tag carries the whole trust signal, so it must survive a greyscale
    print: weight and border do the work, colour only reinforces. The hue lives
    in the border and a soft fill rather than in the text, because --color-gold
-   is the same #ffb700 in both themes and gold text on the light background
+   is the same brand gold in both themes and gold text on the light background
    measures 1.6:1. Border plus wash reads at a glance and stays legible. */
 .learn-tag {
   font-family: var(--font-mono);
@@ -13729,7 +13760,7 @@ html:not(.light) .trust-chip-oshwa-mark {
   box-sizing: content-box;
   padding: 0.12em 0.2em;
   border-radius: 3px;
-  background: #f7f6f3;
+  background: var(--od-color-neutral-surface-light);
 }
 .open-source-card-repo {
   margin: 0.4rem 0 0;

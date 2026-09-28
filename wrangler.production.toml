@@ -60,6 +60,10 @@ HANDOFF_ENABLED = "1"
 ACCOUNTS_ENABLED = "0"
 CHATFPV_OAUTH_REDIRECTS = "https://chatfpv.com/auth/callback"
 CHATFPV_POST_LOGOUT_REDIRECTS = "https://chatfpv.com/"
+# Ops alerts (app/lib/ops-alerts.ts): a failed ChatFPV erase or a data request
+# waiting on the founder posts to DISCORD_STAFF_METADATA_CHANNEL_ID once per
+# UTC day. Production only: wrangler.toml never sets it.
+OPS_ALERTS_ENABLED = "1"
 
 # Support tickets: the ticket index and conversation copy. A new migration is
 # applied with `npx wrangler d1 migrations apply SUPPORT_DB --remote

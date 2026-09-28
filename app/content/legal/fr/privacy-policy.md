@@ -24,6 +24,7 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 | Données de commande | Nom, adresse, courriel, numéro de téléphone | Traitement et livraison des commandes |
 | Données de paiement | Moyen de paiement, ID de transaction | Traitement du paiement (via prestataire de paiement) |
 | Données de compte | Courriel (connexion par code à usage unique via Shopify) | Compte client sur la boutique en ligne |
+| Compte OpenDrone partagé (opendrone.be et chatfpv.com) | Sur opendrone.be : votre identifiant client Shopify, la date de création du compte et de la dernière connexion, le début et la fin de la session, la confirmation de connexion Shopify chiffrée. Sur chatfpv.com : uniquement un identifiant de compte par paire et les conversations ChatFPV que vous menez en étant connecté | Une seule connexion pour opendrone.be et chatfpv.com ; conservation de votre historique ChatFPV |
 | Communication | Nom, courriel, numéro de commande, contenu des messages et pièces jointes (tickets de support) | Service client, gestion des plaintes |
 | Utilisation du site | Adresse IP, navigateur, pages visitées | Optimisation du site, sécurité |
 | Newsletter | Courriel, pays (déduit de l’adresse IP) | Communication marketing (uniquement avec consentement) |
@@ -44,6 +45,7 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 | Newsletter | Consentement (Art. 6.1.a) |
 | Demandes professionnelles | Mesures précontractuelles prises à la demande du demandeur (Art. 6.1.b) |
 | Prévention de la fraude / des abus | Intérêt légitime (Art. 6.1.f) |
+| Compte OpenDrone partagé et historique ChatFPV | Nécessaire à l’exécution d’un contrat (Art. 6.1.b) |
 
 ### 4. Durées de conservation
 
@@ -53,6 +55,10 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 | Compte client | Jusqu’à sa suppression à votre demande, au plus tard 3 ans après votre dernière connexion ou commande |
 | Communication de service client (tickets de support sur le site, dans Discord et la référence du ticket sur votre fiche client Shopify) | 24 mois après la clôture du ticket, puis suppression automatique. Un ticket auquel nous avons répondu est clôturé après 30 jours sans réponse de votre part, tout autre ticket après 90 jours sans activité |
 | Fichiers journaux du site | 6 mois |
+| Sessions de connexion du compte partagé | 30 jours après votre dernière visite, ou jusqu’à votre déconnexion ; ensuite supprimées automatiquement |
+| Codes et cookies de connexion pour chatfpv.com | 60 secondes (codes), 10 minutes (cookie de connexion) ; supprimés automatiquement après expiration |
+| Conversations ChatFPV menées en étant connecté | 12 mois après le dernier message de la conversation ; plus tôt si vous les supprimez ou si votre compte client est supprimé |
+| Compte OpenDrone partagé (l’enregistrement du compte sur opendrone.be et l’identifiant de compte ChatFPV) | 3 ans après votre dernière connexion ; plus tôt si votre compte client est supprimé |
 | Inscription à la newsletter | Jusqu’au désabonnement |
 | Demandes professionnelles sans commande | 2 ans après le dernier contact |
 | Conversations ChatFPV dans l’aide et le champ de question, avec les évaluations | 90 jours après le dernier message de la conversation |
@@ -84,6 +90,8 @@ Les données de commande et de client (nom, adresse, e-mail, référence de paie
 
 **Discord.** Le serveur communautaire OpenDrone fonctionne sur Discord. Discord Inc. est un responsable du traitement indépendant pour le serveur communautaire que vous choisissez de rejoindre. Pour les tickets de support, Discord Inc. traite le ticket pour notre compte en tant que sous-traitant (tableau ci-dessus) ; aucun compte Discord n’est nécessaire pour ouvrir un ticket. Politique de confidentialité de Discord : https://discord.com/privacy
 
+**Connexion partagée avec chatfpv.com.** chatfpv.com, l’assistant FPV ChatFPV, est aussi exploité par Incutec BV. Lorsque vous vous connectez à chatfpv.com avec votre compte OpenDrone, opendrone.be confirme votre connexion à chatfpv.com au moyen d’un identifiant de compte distinct que seul chatfpv.com reçoit. chatfpv.com ne reçoit ni votre nom, ni votre adresse e-mail, ni votre identifiant client Shopify. Les jetons d’accès Shopify sont supprimés juste après la connexion ; opendrone.be conserve uniquement la confirmation de connexion Shopify (jeton d’identité), chiffrée, pour mettre fin à votre session Shopify lorsque vous vous déconnectez. Lorsque chatfpv.com vérifie si vous êtes déjà connecté (connexion silencieuse), opendrone.be ne place aucun cookie et n’enregistre rien pour un visiteur non connecté.
+
 **Transferts hors EEE.** Certains destinataires traitent des données hors de l’EEE. Ces transferts reposent sur une décision d’adéquation (art. 45 RGPD : Canada, Royaume-Uni, ou l’EU-US Data Privacy Framework pour les destinataires américains certifiés) ou sur des clauses contractuelles types (art. 46 RGPD, Décision 2021/914). La base applicable à chaque destinataire figure dans le tableau ci-dessus.
 
 ### 6. Droits de la personne concernée
@@ -96,6 +104,10 @@ Vous avez le droit :
 - **D’opposition** au traitement fondé sur un intérêt légitime (Art. 21). Vous pouvez vous opposer à tout moment et gratuitement au traitement à des fins de marketing direct ; nous y mettons alors fin immédiatement (Art. 21.2-21.3)
 - **À la portabilité** de vos données (Art. 20)
 - **De retirer** votre consentement (Art. 7.3)
+
+**La connexion crée un compte client Shopify.** La connexion avec votre compte OpenDrone, sur opendrone.be ou depuis chatfpv.com, passe par les comptes clients de Shopify : Shopify envoie un code à usage unique à votre adresse e-mail. Si vous n’avez pas encore de compte client, Shopify en crée un qui contient votre adresse e-mail. Nous n’y ajoutons rien : aucun consentement à la newsletter ou au marketing, aucune étiquette ou note et aucun contenu ChatFPV.
+
+**Votre historique ChatFPV.** Connecté sur opendrone.be, la page de compte (opendrone.be/account) vous permet d’exporter vos conversations ChatFPV dans un fichier JSON ou de les supprimer immédiatement. Lorsque votre compte client est supprimé dans Shopify, les données de votre compte OpenDrone et votre historique ChatFPV sont supprimés avec lui. Vous pouvez aussi demander à privacy@opendrone.be de les effacer ou de les exporter ; nous le faisons dans un délai d’un mois, sans attendre Shopify.
 
 Les demandes peuvent être envoyées à : privacy@opendrone.be
 Nous répondons à votre demande dans un délai d’**un mois** (Art. 12(3) RGPD, prolongeable de 2 mois en cas de demandes complexes ou nombreuses).

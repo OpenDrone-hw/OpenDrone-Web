@@ -38,11 +38,14 @@ do not infer a physical production colour from a screen token.
 
 What is true *here*, and nowhere else, is how the site consumes it:
 
-`#ffb700` is the only gold literal in `app/styles/app.css`. Every other gold
-token is mixed from it, so there is nothing to keep in sync:
+`app/styles/opendrone-tokens.css` is `tokens/dist/opendrone-tokens.css` from
+OpenDrone-Brand, vendored byte for byte under a header naming the brand commit
+and its SHA-256; `npm run tokens:check` fails on any drift. `app/styles/app.css`
+imports it and holds no gold literal: `--color-gold` is
+`--od-color-brand-gold`, and every other gold token is mixed from it:
 
 ```css
---color-gold:            #ffb700;
+--color-gold:            var(--od-color-brand-gold);   /* #ffb700 */
 --color-gold-hover:      color-mix(in oklab, var(--color-gold) 82%, white);
 --color-gold-soft:       color-mix(in srgb, var(--color-gold) 12%, transparent);
 --color-gold-bright:     var(--color-gold);   /* alias, prefer --color-gold */

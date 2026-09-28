@@ -13,7 +13,25 @@ import type {AccountsEnv} from './config.ts';
 import {textFromB64url} from './crypto.ts';
 import {CUSTOMER_GID, IdpError, type IdentityProvider} from './idp.ts';
 
-export const SHOPIFY_SCOPE = 'openid email customer-account-api:full';
+/**
+ * Data minimisation (GDPR Art 5(1)(c), 25): only the id_token's `sub` is
+ * used, and the access token is dropped unread, so `customer-account-api:full`
+ * (API access to orders and addresses) is not requested. `openid` is needed
+ * for the id_token. `email` stays: Shopify's Customer Account API reference
+ * lists `openid email customer-account-api:full` as the scope and documents
+ * no narrower accepted value, and its sign-in is an email one-time code, so
+ * the email is already known to Shopify, never to opendrone.be (the id_token
+ * is kept sealed only as the logout hint). If Shopify refuses this scope,
+ * SHOPIFY_CUSTOMER_ACCOUNT_SCOPE widens it without a code change.
+ */
+export const SHOPIFY_SCOPE = 'openid email';
+const KNOWN_SCOPES = new Set(['openid', 'email', 'customer-account-api:full']);
+
+/** The scope to request: the env override when every token is a known scope and `openid` is in it, else SHOPIFY_SCOPE. */
+export function shopifyScope(env: AccountsEnv): string {
+  const tokens = (env.SHOPIFY_CUSTOMER_ACCOUNT_SCOPE ?? '').trim().split(/\s+/).filter(Boolean);
+  return tokens.length && tokens.includes('openid') && tokens.every((t) => KNOWN_SCOPES.has(t)) ? tokens.join(' ') : SHOPIFY_SCOPE;
+}
 
 type Discovery = {issuer: string; authorization_endpoint: string; token_endpoint: string; end_session_endpoint?: string};
 
@@ -95,7 +113,7 @@ export function shopifyIdentityProvider(
       url.searchParams.set('client_id', clientId);
       url.searchParams.set('response_type', 'code');
       url.searchParams.set('redirect_uri', p.redirectUri);
-      url.searchParams.set('scope', SHOPIFY_SCOPE);
+      url.searchParams.set('scope', shopifyScope(env));
       url.searchParams.set('state', p.state);
       url.searchParams.set('nonce', p.nonce);
       url.searchParams.set('code_challenge', p.codeChallenge);

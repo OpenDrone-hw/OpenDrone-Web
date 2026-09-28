@@ -1,5 +1,6 @@
 import * as serverBuild from 'virtual:react-router/server-build';
 import {createRequestHandler} from 'react-router';
+import {complianceWebhooksActive, runRightsQueue} from '~/lib/accounts/compliance';
 import {accountsEnabled} from '~/lib/accounts/config';
 import {tokenEndpointReachable} from '~/lib/accounts/oauth';
 import {purgeExpired} from '~/lib/accounts/sessions';
@@ -156,6 +157,10 @@ export default {
    *   threads, send reply notices when enabled, auto-close silent answered
    *   tickets and delete tickets closed more than 24 months ago. Off until
    *   SUPPORT_DB and the Discord secrets exist.
+   * - Shared accounts (app/lib/accounts/): purge expired sessions and codes
+   *   and accounts 3 years without sign-in, work the data subject request
+   *   queue (compliance.ts). Runs while ACCOUNTS_ENABLED is "1" or the
+   *   compliance webhooks are live (SHOPIFY_WEBHOOK_SECRET set).
    */
   async scheduled(_event: unknown, env: Env, executionContext: ExecutionContext): Promise<void> {
     if (priceTierWritesEnabled(env)) {
@@ -176,10 +181,18 @@ export default {
         })(),
       );
     }
-    if (accountsEnabled(env) && env.SUPPORT_DB) {
+    if (env.SUPPORT_DB && (accountsEnabled(env) || complianceWebhooksActive(env))) {
       const db = env.SUPPORT_DB;
       executionContext.waitUntil(
-        purgeExpired(db).catch((error) => console.error('accounts purge failed', error instanceof Error ? error.message : 'error')),
+        (async () => {
+          await purgeExpired(db).catch((error) => console.error('accounts purge failed', error instanceof Error ? error.message : 'error'));
+          try {
+            const report = await runRightsQueue(env);
+            if (report.done.length || report.ready.length || report.failed.length) console.log('rights queue', JSON.stringify(report));
+          } catch (error) {
+            console.error('rights queue failed', error instanceof Error ? error.message : 'error');
+          }
+        })(),
       );
     }
     if (supportReady(env)) {

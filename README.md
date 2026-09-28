@@ -484,15 +484,46 @@ sequenceDiagram
 
 | Route | Purpose |
 |---|---|
-| `GET /account/login?return_to=` | Start sign-in; `return_to` must be a same-origin path |
+| `GET /account/login?return_to=` | Sign-in notice (signing in creates a Shopify customer account holding the email; ChatFPV gets a separate id), then `?go=1&return_to=` starts sign-in; `return_to` must be a same-origin path |
 | `GET /account/callback` | Finish sign-in, new session id |
 | `POST /account/logout` | Same Origin only; revokes the session, calls ChatFPV `/v1/auth/backchannel-logout {sid}` over the binding, ends the Shopify session |
-| `GET /account` | Orders link (`SHOPIFY_CUSTOMER_ACCOUNT_URL`), sign out |
+| `GET /account` | Orders link (`SHOPIFY_CUSTOMER_ACCOUNT_URL`), ChatFPV history export and delete, sign out |
+| `POST /account/chatfpv-history` | Same Origin, signed in; `intent=export` downloads ChatFPV `GET /v1/account/export` as JSON, `intent=delete` + `confirm=yes` calls `POST /v1/account/erase {sub}` |
+| `POST /webhooks/shopify/customers-redact` | Shopify `customers/redact`: deletes that customer's `od_accounts`, `od_sessions`, `oauth_codes` rows and erases ChatFPV; a failed ChatFPV erase becomes a pending `rights_requests` row and an ops alert |
+| `POST /webhooks/shopify/customers-delete` | Shopify `customers/delete`, the fallback when the app cannot subscribe compliance topics: the same erase |
+| `POST /webhooks/shopify/customers-data-request` | Shopify `customers/data_request`: recorded in `rights_requests`; the scheduled job builds the export into D1 for `scripts/accounts/rights.mjs fetch` |
+| `POST /webhooks/shopify/shop-redact` | Shopify `shop/redact`: recorded, nothing else to delete |
 | `GET /oauth/authorize` | Codes for client `chatfpv` (60 s, single use; a reused code revokes the session) |
 | `POST /oauth/token` | Service binding only; public host 404 (staging test IdP excepted) |
 | `GET /oauth/logout` | Sign-out from chatfpv.com; `post_logout_redirect_uri` from `CHATFPV_POST_LOGOUT_REDIRECTS`; Shopify's registered logout URI |
 | `GET /api/account/widget-assertion` | 5-minute assertion the widget posts into the ChatFPV iframe; 204 signed out |
 | `GET /account/test-idp/authorize` | Test sign-in form, only with the test IdP rule below |
+
+The four webhooks are live whenever `SHOPIFY_WEBHOOK_SECRET` is set,
+whatever `ACCOUNTS_ENABLED` says (404 without the secret, 401 on a bad
+signature, 200 once recorded). They are signed with the client secret of the
+custom app that holds `SHOPIFY_WEBHOOK_SECRET` (the one that sends
+`orders/paid`), so the compliance topics are subscribed on that app. The
+Headless channel cannot deliver them. The every-5-minute cron works the
+`rights_requests` queue (`app/lib/accounts/compliance.ts`), purges accounts
+1095 days after their last sign-in unless a session is live, and posts an ops
+alert (`app/lib/ops-alerts.ts`: production only through `OPS_ALERTS_ENABLED`,
+once per UTC day per key, to `DISCORD_STAFF_METADATA_CHANNEL_ID`) while a
+request fails or an export waits.
+
+Erase or export on an email request (one month, Art 12(3) GDPR; Shopify can
+withhold `customers/redact` for up to 6 months):
+
+```sh
+node scripts/accounts/rights.mjs erase <customer id> --apply    # or export
+node scripts/accounts/rights.mjs status
+node scripts/accounts/rights.mjs fetch <request id> --apply     # writes the export file
+```
+
+ChatFPV calls for erase and export go by pairwise `sub` with `CHATFPV_KEY`
+over the `CHATFPV` binding (`app/lib/accounts/rights.ts`). Legal text for
+shared accounts is in `app/content/legal/{en,nl,fr}/` (privacy, cookies) and
+the cookie list on `/cookie-settings`.
 
 Test IdP rule: `ACCOUNTS_TEST_IDP="1"` replaces Shopify with the test form
 only when the request host is not `opendrone.be` or `www.opendrone.be`. It
@@ -545,11 +576,17 @@ eval or staging Worker it talks to.
 
 ### Flip order
 
-1. Apply `migrations/0005_accounts.sql`:
+1. Apply `migrations/0005_accounts.sql` and `0006_rights_requests.sql`:
    `npx wrangler d1 migrations apply SUPPORT_DB --remote --config wrangler.production.toml`.
 2. Put the storefront secrets above on `opendrone-web`, and the two shared
    secrets on `chatfpv`.
 3. Merge the storefront PR, then the ChatFPV PR, both with the flag `"0"`.
+   In the Shopify Dev Dashboard, open the custom app whose client secret is
+   `SHOPIFY_WEBHOOK_SECRET`, Versions, and add the compliance webhooks:
+   customer data request `https://opendrone.be/webhooks/shopify/customers-data-request`,
+   customer erasure `.../customers-redact`, shop erasure `.../shop-redact`,
+   then release. If that app offers no compliance form, subscribe
+   `customers/delete` to `.../customers-delete` on the same app instead.
 4. Storefront: `ACCOUNTS_ENABLED = "1"` in `wrangler.production.toml`
    (squash-merged PR). Check sign-in and sign-out on opendrone.be.
 5. ChatFPV: its `ACCOUNTS_ENABLED` to `"1"`. Check "Sign in with OpenDrone"
