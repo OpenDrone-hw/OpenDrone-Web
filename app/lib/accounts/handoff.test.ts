@@ -111,8 +111,13 @@ describe('widget wiring', () => {
   it('docks or badges a handed-off conversation instead of covering the product column', () => {
     assert.match(widget, /handoffPlacement\(window\.innerWidth, column\)/);
     assert.match(widget, /setUnread\(true\)/);
-    assert.match(widget, /\{mounted \? \(/);
-    assert.match(widget, /display: open \? 'flex' : 'none'/);
+    // Rendered while mounted (open or a preloaded unread handoff), and kept
+    // a little longer while its roll-out animation plays back on close
+    // (`closing`, `panelInDom = mounted || closing`); its `is-open` class,
+    // not an inline display toggle, drives the open/closed CSS transform.
+    assert.match(widget, /\{panelInDom \? \(/);
+    assert.match(widget, /const panelInDom = mounted \|\| closing;/);
+    assert.match(widget, /className=\{`chatfpv-widget-panel\$\{expanded \? ' is-open' : ''\}`\}/);
   });
 
   it('keeps the sandbox open for the "Continue on chatfpv.com" new tab', () => {

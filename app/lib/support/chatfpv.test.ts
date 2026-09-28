@@ -239,14 +239,14 @@ describe('helpers', () => {
     assert.equal(chatFpvWidgetSrc({...ENV, CHATFPV_WIDGET_ENABLED: '0'}, 'product', 'openfc-f4'), null);
     assert.equal(
       chatFpvWidgetSrc({...ENV, CHATFPV_WIDGET_ENABLED: '1'}, 'product', 'openfc-f4'),
-      'https://chatfpv.test/embed?mode=opendrone&product=openfc-f4&page=product',
+      'https://chatfpv.test/embed?mode=opendrone&product=openfc-f4&page=product&chrome=compact',
     );
     assert.equal(chatFpvOrigin({CHATFPV_URL: 'https://chatfpv.sales-ee0.workers.dev/'}), 'https://chatfpv.sales-ee0.workers.dev');
   });
 
   it('overrides the widget product with the selected variant, and passes through unset or invalid src', () => {
     const src = chatFpvWidgetSrc({...ENV, CHATFPV_WIDGET_ENABLED: '1'}, 'product', 'openesc');
-    assert.equal(chatFpvWidgetSrcWithProduct(src, 'OpenESC 30x30'), 'https://chatfpv.test/embed?mode=opendrone&product=OpenESC+30x30&page=product');
+    assert.equal(chatFpvWidgetSrcWithProduct(src, 'OpenESC 30x30'), 'https://chatfpv.test/embed?mode=opendrone&product=OpenESC+30x30&page=product&chrome=compact');
     assert.equal(chatFpvWidgetSrcWithProduct(src, null), src);
     assert.equal(chatFpvWidgetSrcWithProduct(null, 'OpenESC 30x30'), null);
     assert.equal(chatFpvWidgetSrcWithProduct('not a url', 'OpenESC 30x30'), 'not a url');

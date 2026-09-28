@@ -178,6 +178,44 @@
   color: var(--color-text-muted);
 }
 
+/* === /preorder empty state (no campaign open): a newsletter CTA and a way
+   to keep browsing, instead of the bare "No pre-orders open." line. What
+   is coming stays only in the timeline above - this does not restate it. === */
+.po-empty-state {
+  display: grid;
+  gap: var(--sp-4);
+}
+/* Newsletter card, then the products link right under it, both the same
+   width so the link reads as part of the same block instead of floating
+   off to one side. */
+.po-empty-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  max-width: 34rem;
+}
+.po-empty-newsletter {
+  width: 100%;
+  min-width: 0;
+  /* The "wide" variant's own p-8/md:p-10 Tailwind classes are not taking
+     effect here (they resolve to no generated rule in this project's
+     build, leaving only reset.css's bare `section { padding: 1rem 0 }` -
+     vertical padding, none on the sides). Set it explicitly rather than
+     chase the Tailwind gap: a class selector already outranks that
+     element-selector reset. */
+  padding: var(--sp-6);
+}
+@media (min-width: 641px) {
+  .po-empty-newsletter {
+    padding: var(--sp-7);
+  }
+}
+.po-empty-products {
+  align-self: stretch;
+  text-align: center;
+}
+
 /* Timeline: two lanes on one axis, a dot per date, a Today line. */
 .po-timeline {
   position: relative;

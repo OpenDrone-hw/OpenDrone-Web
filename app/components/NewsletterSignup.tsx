@@ -42,6 +42,16 @@ interface NewsletterSignupProps {
      *  stock" instead of the launch-list wording. */
     restock?: boolean;
   } | null;
+  /**
+   * Copy id for the heading, in place of the normal `newsletter.signup_title`
+   * / `newsletter.signup_title_notify`. `newsletter.signup_title` is blank
+   * by default (the footer mount relies on the eyebrow line alone for its
+   * heading); a host that wants a real heading for its own placement points
+   * this at its own copy id instead of changing that shared default, which
+   * would also change the footer. Ignored in `notify` or restock mode,
+   * which keep their own fixed copy ids/wording.
+   */
+  titleId?: string;
 }
 
 export function NewsletterSignup({
@@ -49,6 +59,7 @@ export function NewsletterSignup({
   className = '',
   turnstileSiteKey = null,
   notify = null,
+  titleId,
 }: NewsletterSignupProps) {
   const fetcher = useFetcher<NewsletterActionData>();
   const formRef = useRef<HTMLFormElement>(null);
@@ -210,9 +221,10 @@ export function NewsletterSignup({
           ) : (
             <Txt
               id={
-                isNotify
+                titleId ??
+                (isNotify
                   ? 'newsletter.signup_title_notify'
-                  : 'newsletter.signup_title'
+                  : 'newsletter.signup_title')
               }
             />
           )}

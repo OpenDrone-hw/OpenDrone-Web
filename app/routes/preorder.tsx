@@ -3,13 +3,14 @@ import {ChatFpvWidget} from '~/components/ChatFpvWidget';
 import {chatFpvWidgetSrc} from '~/lib/support/chatfpv';
 import {CreditCard, Store} from 'lucide-react';
 import {InfoHint} from '~/components/InfoHint';
-import {Link, useLoaderData} from 'react-router';
+import {Link, useLoaderData, useRouteLoaderData} from 'react-router';
 import {shopifyImageUrl} from '~/lib/shopify-image';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {EditorialShell} from '~/components/EditorialShell';
 import {StepBar} from '~/components/PreorderMeter';
 import {shipWord} from '~/components/ShipChip';
 import {AddToCartButton} from '~/components/AddToCartButton';
+import {NewsletterSignup} from '~/components/NewsletterSignup';
 import {Txt} from '~/components/Txt';
 import {copy, copyText} from '~/lib/copy';
 import {formatPrice, toCards} from '~/lib/catalog';
@@ -185,6 +186,7 @@ export async function loader({context}: Route.LoaderArgs) {
 export default function PreorderRoute() {
   const data = useLoaderData<typeof loader>();
   const {rows, stackMonth, ends, eta, unavailable} = data;
+  const rootData = useRouteLoaderData('root') as {turnstileSiteKey?: string | null} | undefined;
   const updates = copy('preorder.updates');
   // Entries are "YYYY-MM-DD · text", newest first, never edited: a
   // correction is a new entry. The section stays hidden until the first one.
@@ -223,7 +225,22 @@ export default function PreorderRoute() {
       {unavailable ? (
         <Txt id="preorder.strip_unavailable" as="p" className="po-empty" />
       ) : !rows.length ? (
-        <Txt id="preorder.tracker_empty" as="p" className="po-empty" />
+        // What's coming lives in the timeline above (dates per lane); this
+        // does not repeat it, only the newsletter/browse follow-up.
+        <section className="po-empty-state">
+          <Txt id="preorder.tracker_empty" as="p" className="po-empty" />
+          <div className="po-empty-actions">
+            <NewsletterSignup
+              variant="wide"
+              titleId="preorder.empty_newsletter_title"
+              turnstileSiteKey={rootData?.turnstileSiteKey ?? null}
+              className="po-empty-newsletter"
+            />
+            <Link to="/products" className="od-btn od-btn-secondary po-empty-products">
+              {copyText('chrome.nav_all_products') ?? 'All products'} <span aria-hidden="true">→</span>
+            </Link>
+          </div>
+        </section>
       ) : null}
 
       {!unavailable && stackRows.length ? (

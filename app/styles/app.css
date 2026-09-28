@@ -3782,6 +3782,165 @@ button.reset {
   }
 }
 
+/* === ChatFPV widget chrome: the emblem launcher + a Beta tag + a panel
+   that rolls out of it (launch polish, `ChatFpvWidget.tsx`,
+   `chatfpv-widget-ui.ts`). The launcher stays the OpenDrone emblem exactly
+   as OpenDrone/brand ships it (never recoloured/restyled: its AGENTS.md);
+   the "Beta" tag is a separate small chip overlapping its top-right
+   corner, so a newcomer gets a warning without the mark itself changing.
+   The open panel used to have no header of its own - the data-use notice
+   doubled as one, reading as a separate floating strip. Panel positioning
+   (`lift`, `maxPanelHeight`, `dock`, the phone sheet's `sheetTop`) stays
+   inline in the component - it depends on runtime measurements a
+   stylesheet cannot know. Everything static (shape, type, colour, the
+   roll-out transition, the 959px "phones and tablets" breakpoint the
+   widget already uses elsewhere in this file) lives here instead. === */
+.chatfpv-widget-toggle {
+  position: relative;
+  display: inline-flex;
+  width: 56px;
+  height: 56px;
+  border: 0;
+  padding: 0;
+  border-radius: 13px;
+  background: transparent;
+  cursor: pointer;
+  line-height: 0;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+/* Phone sheet only, while it is open: the sheet has its own header and
+   close, so a second launcher sitting on its corner is redundant clutter.
+   Stays in the DOM (not display:none) so it is still there, focusable
+   again, the instant the sheet closes - see the focus-return effect in
+   ChatFpvWidget.tsx. */
+.chatfpv-widget-toggle.is-sheet-hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+/* The "Beta" tag beside the launcher emblem: a small dark pill so gold
+   text has contrast against the gold mark/background behind it, in both
+   themes (the widget itself stays dark-panelled regardless of site
+   theme - see the panel background below). */
+.chatfpv-widget-launcher-beta {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 999px;
+  color: var(--color-gold);
+  background: #0d0d10;
+  box-shadow: 0 0 0 2px #0d0d10;
+}
+
+/* The panel rolls out of the launcher's corner (`transformOrigin`, set
+   inline per `panelTransformOrigin` since it depends on `dock`) and rolls
+   back into it on close; `.is-open` is the only thing that changes. Kept
+   mounted a little past close (`closing` in the component) so this can
+   finish instead of the panel vanishing mid-shrink. */
+.chatfpv-widget-panel {
+  transform: scale(0.08);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1), opacity 200ms ease-out;
+}
+.chatfpv-widget-panel.is-open {
+  transform: scale(1);
+  opacity: 1;
+  pointer-events: auto;
+}
+/* The panel is focused programmatically on open (ChatFpvWidget.tsx) so
+   keyboard/AT users land inside it, not to invite the page-wide
+   `[tabindex]:focus-visible` ring (app.css "Global keyboard-focus
+   baseline"): its own border/shadow already frames it, and every real
+   interactive element inside (close button, iframe) keeps its own ring. */
+.chatfpv-widget-panel:focus-visible {
+  outline: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .chatfpv-widget-panel {
+    transition: none;
+  }
+}
+
+/* Open panel header: the same emblem (small, so the roll-out reads as one
+   identity), title, the same Beta tag, a one-line subtitle, and the
+   panel's own close button, instead of the data-use notice standing in
+   for a header. */
+.chatfpv-widget-panel-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 8px 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.chatfpv-widget-panel-icon {
+  flex: none;
+  display: flex;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.chatfpv-widget-panel-heading-col {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.chatfpv-widget-panel-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.chatfpv-widget-panel-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: #f2f2f2;
+}
+/* Shared "Beta" tag look (panel header; the launcher's own corner chip
+   above adds absolute positioning on top of this). Same dark-pill/gold-text
+   pairing so the tag reads identically in both places. */
+.chatfpv-widget-beta-tag {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 999px;
+  color: var(--color-gold);
+  background: #0d0d10;
+}
+.chatfpv-widget-panel-subtitle {
+  margin: 2px 0 0;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: #8b8b91;
+}
+.chatfpv-widget-panel-close {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #c7c7cc;
+  cursor: pointer;
+}
+.chatfpv-widget-panel-close:hover,
+.chatfpv-widget-panel-close:focus-visible {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
 /* Idea-stage buy module: the concept pitch + repo CTA that replace the
    price. Same mono/dim idiom as the SKU line. */
 .product-buy-idea-pitch {
