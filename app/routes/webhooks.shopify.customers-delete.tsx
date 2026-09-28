@@ -1,14 +1,14 @@
-import type {Route} from './+types/webhooks.shopify.customers-data-request';
+import type {Route} from './+types/webhooks.shopify.customers-delete';
 import {complianceWebhooksActive, handleComplianceWebhook} from '~/lib/accounts/compliance';
 import {notFound} from '~/lib/accounts/config';
 
 /**
- * POST /webhooks/shopify/customers-data-request: Shopify `customers/data_request` webhook
- * (app/lib/accounts/compliance.ts): records the request; the scheduled job builds the export for the founder CLI. Signed with
+ * POST /webhooks/shopify/customers-delete: Shopify `customers/delete` webhook
+ * (app/lib/accounts/compliance.ts): the fallback when Shopify refuses compliance topics for the custom app: erases like customers/redact. Signed with
  * SHOPIFY_WEBHOOK_SECRET; live whenever that secret is set, whatever ACCOUNTS_ENABLED says.
  */
 export function action({request, context}: Route.ActionArgs) {
-  return handleComplianceWebhook('customers/data_request', request, context.env);
+  return handleComplianceWebhook('customers/delete', request, context.env);
 }
 
 export function loader({context}: Route.LoaderArgs) {

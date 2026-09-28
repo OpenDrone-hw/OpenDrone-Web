@@ -103,10 +103,26 @@ export async function sessionIdToken(env: AccountsEnv, session: AccountSession):
   return unseal(env.SESSION_ENC_KEY, session.sealedIdToken);
 }
 
-/** Retention (accounts design section 7): expired codes and dead sessions go. */
+/** An account with no sign-in for this long, and no live session, is deleted (privacy policy "Customer account"). */
+export const ACCOUNT_IDLE_MS = 1095 * 24 * 60 * 60 * 1000;
+
+const IDLE_ACCOUNTS =
+  'SELECT id FROM od_accounts WHERE last_login_at < ? AND NOT EXISTS (SELECT 1 FROM od_sessions s WHERE s.account_id = od_accounts.id AND s.revoked_at IS NULL AND s.expires_at > ?)';
+
+/**
+ * Retention (accounts design section 7): expired codes and dead sessions go,
+ * and an account goes 3 years (1095 days) after its last sign-in unless a
+ * session is still live (a sliding session keeps an active user signed in
+ * without a new sign-in). ChatFPV deletes its pairwise account on the same
+ * 1095-day rule, so no erase call is needed here.
+ */
 export async function purgeExpired(db: D1Database, now = Date.now()): Promise<void> {
+  const cutoff = now - ACCOUNT_IDLE_MS;
   await db.batch([
     db.prepare('DELETE FROM oauth_codes WHERE expires_at < ?').bind(now - 60_000),
     db.prepare('DELETE FROM od_sessions WHERE expires_at < ? OR revoked_at < ?').bind(now, now - SLIDE_AFTER_MS),
+    db.prepare(`DELETE FROM oauth_codes WHERE account_id IN (${IDLE_ACCOUNTS})`).bind(cutoff, now),
+    db.prepare(`DELETE FROM od_sessions WHERE account_id IN (${IDLE_ACCOUNTS})`).bind(cutoff, now),
+    db.prepare(`DELETE FROM od_accounts WHERE id IN (${IDLE_ACCOUNTS})`).bind(cutoff, now),
   ]);
 }

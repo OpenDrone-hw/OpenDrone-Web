@@ -57,7 +57,8 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Website log files | 6 months |
 | Shared account sign-in sessions | 30 days after your last visit, or until you sign out; then deleted automatically |
 | Sign-in codes and sign-in cookies for chatfpv.com | 60 seconds (codes), 10 minutes (sign-in cookie); deleted automatically after expiry |
-| ChatFPV conversations made while signed in | Until you delete them, or until your customer account is deleted |
+| ChatFPV conversations made while signed in | 12 months after the last message in the conversation; earlier when you delete them or your customer account is deleted |
+| Shared OpenDrone account (the opendrone.be account record and the ChatFPV account id) | 3 years after your last sign-in; earlier when your customer account is deleted |
 | Newsletter subscription | Until unsubscribed |
 | Trade enquiries without an order | 2 years after the last contact |
 | ChatFPV conversations in the helper and the Ask box, with ratings | 90 days after the last message in the conversation |
@@ -89,7 +90,7 @@ Order and customer data (name, address, email, payment reference, order history)
 
 **Discord.** The OpenDrone community server runs on Discord. Discord Inc. is an independent controller for the community server you choose to join. For support tickets, Discord Inc. processes the ticket on our behalf as a processor (table above); you do not need a Discord account to open a ticket. Discord's privacy policy: https://discord.com/privacy
 
-**Shared sign-in with chatfpv.com.** chatfpv.com, the ChatFPV FPV assistant, is also run by Incutec BV. When you sign in to chatfpv.com with your OpenDrone account, opendrone.be confirms your sign-in to chatfpv.com with a pairwise account id: a code derived from your customer account that only chatfpv.com receives and that cannot be turned back into it. chatfpv.com never receives your name, email address or Shopify customer id. Shopify access tokens are discarded right after sign-in; opendrone.be keeps only the Shopify sign-in confirmation (ID token), encrypted, to end your Shopify session when you sign out. When chatfpv.com checks whether you are already signed in (silent sign-in), opendrone.be sets no cookie and stores nothing for a visitor who is not signed in.
+**Shared sign-in with chatfpv.com.** chatfpv.com, the ChatFPV FPV assistant, is also run by Incutec BV. When you sign in to chatfpv.com with your OpenDrone account, opendrone.be confirms your sign-in to chatfpv.com with a separate account id that only chatfpv.com receives. chatfpv.com receives no name, email address or Shopify customer id. Shopify access tokens are discarded right after sign-in; opendrone.be keeps only the Shopify sign-in confirmation (ID token), encrypted, to end your Shopify session when you sign out. When chatfpv.com checks whether you are already signed in (silent sign-in), opendrone.be sets no cookie and stores nothing for a visitor who is not signed in.
 
 **Transfers outside the EEA.** Some recipients process data outside the EEA. Those transfers rely on an adequacy decision (Art. 45 GDPR: Canada, UK, or the EU-US Data Privacy Framework for certified US recipients) or on standard contractual clauses (Art. 46 GDPR, Decision 2021/914). The basis per recipient is in the table above.
 
@@ -104,7 +105,9 @@ You have the right to:
 - **Portability** of your data (Art. 20)
 - **Withdraw** your consent (Art. 7.3)
 
-**Your ChatFPV history.** Signed in on opendrone.be, the account page (opendrone.be/account) lets you export your ChatFPV conversations as a JSON file or delete them at once. When your customer account is deleted in Shopify, your OpenDrone account data and your ChatFPV history are deleted with it.
+**Signing in creates a Shopify customer account.** Signing in with your OpenDrone account, on opendrone.be or from chatfpv.com, uses Shopify customer accounts: Shopify sends a one-time code to your email address. If you have no customer account yet, Shopify creates one that holds your email address. We add nothing else to it: no newsletter or marketing consent, no tags or notes and no ChatFPV content.
+
+**Your ChatFPV history.** Signed in on opendrone.be, the account page (opendrone.be/account) lets you export your ChatFPV conversations as a JSON file or delete them at once. When your customer account is deleted in Shopify, your OpenDrone account data and your ChatFPV history are deleted with it. You can also ask privacy@opendrone.be to erase or export them; we do so within one month, without waiting for Shopify.
 
 Requests can be sent to: privacy@opendrone.be
 We respond to your request within **one month** (Art. 12(3) GDPR), extensible by a further two months for complex or numerous requests.

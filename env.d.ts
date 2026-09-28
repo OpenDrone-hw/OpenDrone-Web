@@ -193,6 +193,10 @@ declare global {
     // hosts other than opendrone.be and www.opendrone.be.
     ACCOUNTS_ENABLED?: string;
     ACCOUNTS_TEST_IDP?: string;
+    /** "1" (wrangler.production.toml only): ops alerts to DISCORD_STAFF_METADATA_CHANNEL_ID, once per UTC day per key (app/lib/ops-alerts.ts). */
+    OPS_ALERTS_ENABLED?: string;
+    /** Space-separated Shopify Customer Account API scope override; default `openid email` (shopify-idp.ts). */
+    SHOPIFY_CUSTOMER_ACCOUNT_SCOPE?: string;
     /** Exact-match, comma-separated redirect_uri allowlist for the `chatfpv` OAuth client. */
     CHATFPV_OAUTH_REDIRECTS?: string;
     /** Exact-match, comma-separated post_logout_redirect_uri allowlist for /oauth/logout. */

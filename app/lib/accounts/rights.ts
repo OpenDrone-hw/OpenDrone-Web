@@ -1,14 +1,13 @@
 /**
  * Data subject rights for shared accounts (accounts design section 7, GDPR
- * table): Shopify `customers/redact` and `customers/data_request` webhooks,
- * and the export/delete buttons on /account. ChatFPV holds only the pairwise
+ * table): the erase and export used by the Shopify compliance webhooks and
+ * the founder CLI (compliance.ts), and the export/delete buttons on /account. ChatFPV holds only the pairwise
  * `sub`, so every call to it goes by `sub`: `POST /v1/account/erase {sub}`
  * and `GET /v1/account/export?sub=`, with the store key, over the CHATFPV
  * service binding when the Worker has one (ChatFPV refuses them otherwise).
  */
 import {chatFpvOrigin} from '../support/chatfpv.ts';
-import {verifyShopifyHmac} from '../shopify-webhook.ts';
-import {accountHeaders, accountsEnabled, jsonResponse, notFound, redirectTo, sameOrigin, type AccountsEnv} from './config.ts';
+import {accountHeaders, accountsEnabled, notFound, redirectTo, sameOrigin, type AccountsEnv} from './config.ts';
 import {pairwiseSub} from './crypto.ts';
 import {readSession} from './sessions.ts';
 
@@ -61,11 +60,19 @@ export const chatFpvExport = (env: RightsEnv, sub: string, fetcher?: typeof fetc
 
 /**
  * Remove every opendrone.be account row of one Shopify customer (account,
- * sessions, OAuth codes) and erase its ChatFPV history once. Idempotent: a
- * Shopify retry deletes nothing more and erases again by the same `sub`,
- * which is derived from the GID, so it works after the local rows are gone.
+ * sessions, OAuth codes) and erase its ChatFPV history. ChatFPV is called
+ * when a local account existed, or always with `alwaysChatFpv` (a queued
+ * retry or a founder request, where the local rows may already be gone).
+ * `chatfpv` is null when ChatFPV was not called.
+ * Idempotent: `sub` is derived from the GID, so a repeat deletes nothing more
+ * and erases again by the same `sub`.
  */
-export async function redactCustomer(env: RightsEnv, gid: string, fetcher?: typeof fetch): Promise<{accounts: number; chatfpv: ChatFpvCall}> {
+export async function redactCustomer(
+  env: RightsEnv,
+  gid: string,
+  fetcher?: typeof fetch,
+  alwaysChatFpv = false,
+): Promise<{accounts: number; chatfpv: ChatFpvCall | null}> {
   const db = env.SUPPORT_DB;
   let accounts = 0;
   if (db) {
@@ -79,8 +86,10 @@ export async function redactCustomer(env: RightsEnv, gid: string, fetcher?: type
       accounts = 1;
     }
   }
+  if (!accounts && !alwaysChatFpv) return {accounts, chatfpv: null};
+  // Without the salt no pairwise ChatFPV account can exist: nothing to erase there.
   const sub = await chatFpvSub(env, gid);
-  const chatfpv = sub ? await chatFpvErase(env, sub, fetcher) : {ok: false, status: 0, body: null};
+  const chatfpv = sub ? await chatFpvErase(env, sub, fetcher) : null;
   return {accounts, chatfpv};
 }
 
@@ -103,8 +112,8 @@ export async function exportCustomer(env: RightsEnv, gid: string, fetcher?: type
       sessions = res.results ?? [];
     }
   }
-  // No account row: the customer never signed in, or was redacted (a redact whose
-  // ChatFPV erase failed answers 502, so Shopify redelivers it until the erase lands).
+  // No account row: the customer never signed in, was redacted, or was purged
+  // after 3 years without sign-in (ChatFPV purges its side on the same rule).
   if (!account) return {complete: true, data: {opendrone: {account, sessions}, chatfpv: null}};
   const sub = await chatFpvSub(env, gid);
   const chatfpv = sub ? await chatFpvExport(env, sub, fetcher) : {ok: false, status: 0, body: null};
@@ -117,57 +126,6 @@ export async function exportCustomer(env: RightsEnv, gid: string, fetcher?: type
   };
 }
 
-export type ComplianceTopic = 'customers/redact' | 'customers/data_request';
-
-/** `gid://shopify/Customer/<id>` from a compliance payload's `customer.id`, or null. */
-export function payloadCustomerGid(payload: unknown): string | null {
-  const id = (payload as {customer?: {id?: unknown}} | null)?.customer?.id;
-  const text = typeof id === 'number' && Number.isSafeInteger(id) ? String(id) : typeof id === 'string' ? id.trim() : '';
-  return /^[1-9][0-9]{0,19}$/.test(text) ? `gid://shopify/Customer/${text}` : null;
-}
-
-/**
- * One Shopify compliance webhook. Order: flag, method, secret, signature,
- * payload; nothing is read or written before the signature matches the raw
- * body (same pattern as api.shopify.orders-paid). A failed ChatFPV call
- * answers 502 so Shopify retries the delivery.
- */
-export async function handleComplianceWebhook(
-  topic: ComplianceTopic,
-  request: Request,
-  env: RightsEnv,
-  fetcher?: typeof fetch,
-): Promise<Response> {
-  if (!accountsEnabled(env)) return notFound();
-  if (request.method !== 'POST') return new Response('Method not allowed', {status: 405, headers: accountHeaders({Allow: 'POST'})});
-  const secret = env.SHOPIFY_WEBHOOK_SECRET?.trim();
-  if (!secret) return new Response('Webhook not configured', {status: 503, headers: accountHeaders()});
-  const body = await request.text();
-  if (!(await verifyShopifyHmac(secret, body, request.headers.get('X-Shopify-Hmac-Sha256')))) {
-    return new Response('Bad signature', {status: 401, headers: accountHeaders()});
-  }
-  const headerTopic = request.headers.get('X-Shopify-Topic');
-  if (headerTopic && headerTopic !== topic) return new Response('Wrong topic', {status: 400, headers: accountHeaders()});
-  let payload: unknown;
-  try {
-    payload = JSON.parse(body);
-  } catch {
-    return new Response('Bad payload', {status: 400, headers: accountHeaders()});
-  }
-  const gid = payloadCustomerGid(payload);
-  if (!gid) return new Response('No customer', {status: 400, headers: accountHeaders()});
-
-  if (topic === 'customers/redact') {
-    const result = await redactCustomer(env, gid, fetcher);
-    console.log('[accounts] customers/redact', {accounts: result.accounts, chatfpv: result.chatfpv.status});
-    if (!result.chatfpv.ok) return jsonResponse({redacted: {opendrone: true, chatfpv: false}}, 502);
-    return jsonResponse({redacted: {opendrone: true, chatfpv: true}});
-  }
-  const result = await exportCustomer(env, gid, fetcher);
-  console.log('[accounts] customers/data_request', {complete: result.complete});
-  return jsonResponse({customer: gid, ...result.data}, result.complete ? 200 : 502);
-}
-
 export const HISTORY_NOTICES = ['deleted', 'unavailable', 'confirm'] as const;
 export type HistoryNotice = (typeof HISTORY_NOTICES)[number];
 
@@ -177,7 +135,7 @@ const toAccount = (notice: HistoryNotice) => redirectTo(`/account?chatfpv=${noti
  * POST /account/chatfpv-history (same Origin, signed in): `intent=export`
  * downloads the signed-in customer's ChatFPV history as JSON;
  * `intent=delete` with `confirm=yes` erases it. The opendrone.be account
- * itself stays; deleting that goes through Shopify (customers/redact).
+ * itself stays; deleting that goes through Shopify (compliance.ts).
  */
 export async function accountHistory(request: Request, env: RightsEnv, fetcher?: typeof fetch, now = Date.now()): Promise<Response> {
   if (!accountsEnabled(env)) return notFound();

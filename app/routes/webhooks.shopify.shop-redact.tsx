@@ -1,14 +1,14 @@
-import type {Route} from './+types/webhooks.shopify.customers-data-request';
+import type {Route} from './+types/webhooks.shopify.shop-redact';
 import {complianceWebhooksActive, handleComplianceWebhook} from '~/lib/accounts/compliance';
 import {notFound} from '~/lib/accounts/config';
 
 /**
- * POST /webhooks/shopify/customers-data-request: Shopify `customers/data_request` webhook
- * (app/lib/accounts/compliance.ts): records the request; the scheduled job builds the export for the founder CLI. Signed with
+ * POST /webhooks/shopify/shop-redact: Shopify `shop/redact` webhook
+ * (app/lib/accounts/compliance.ts): recorded; the store holds nothing else to delete. Signed with
  * SHOPIFY_WEBHOOK_SECRET; live whenever that secret is set, whatever ACCOUNTS_ENABLED says.
  */
 export function action({request, context}: Route.ActionArgs) {
-  return handleComplianceWebhook('customers/data_request', request, context.env);
+  return handleComplianceWebhook('shop/redact', request, context.env);
 }
 
 export function loader({context}: Route.LoaderArgs) {

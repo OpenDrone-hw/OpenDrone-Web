@@ -55,7 +55,8 @@ Incutec BV heeft geen Functionaris voor Gegevensbescherming (DPO) aangesteld aan
 | Website-logbestanden | 6 maanden |
 | Aanmeldsessies van het gedeelde account | 30 dagen na uw laatste bezoek, of tot u zich afmeldt; daarna automatisch verwijderd |
 | Aanmeldcodes en aanmeldcookies voor chatfpv.com | 60 seconden (codes), 10 minuten (aanmeldcookie); na afloop automatisch verwijderd |
-| ChatFPV-gesprekken gevoerd terwijl u aangemeld bent | Tot u ze verwijdert, of tot uw klantaccount wordt verwijderd |
+| ChatFPV-gesprekken gevoerd terwijl u aangemeld bent | 12 maanden na het laatste bericht in het gesprek; eerder wanneer u ze verwijdert of uw klantaccount wordt verwijderd |
+| Gedeeld OpenDrone-account (het accountrecord op opendrone.be en de ChatFPV-account-id) | 3 jaar na uw laatste aanmelding; eerder wanneer uw klantaccount wordt verwijderd |
 | Nieuwsbrief-abonnement | Tot uitschrijving |
 | Handelsaanvragen zonder bestelling | 2 jaar na het laatste contact |
 | ChatFPV-gesprekken in de hulp en het vraagvak, met beoordelingen | 90 dagen na het laatste bericht in het gesprek |
@@ -87,7 +88,7 @@ Bestel- en klantgegevens (naam, adres, e-mail, betalingsreferentie, bestelgeschi
 
 **Discord.** De OpenDrone-communityserver draait op Discord. Discord Inc. is een zelfstandige verwerkingsverantwoordelijke voor de communityserver waar u zelf voor kiest lid te worden. Voor supporttickets verwerkt Discord Inc. het ticket in onze opdracht als verwerker (tabel hierboven); u hebt geen Discord-account nodig om een ticket te openen. Privacybeleid van Discord: https://discord.com/privacy
 
-**Gedeelde aanmelding met chatfpv.com.** chatfpv.com, de FPV-assistent ChatFPV, wordt ook door Incutec BV uitgebaat. Wanneer u zich op chatfpv.com aanmeldt met uw OpenDrone-account, bevestigt opendrone.be uw aanmelding aan chatfpv.com met een paarsgewijze account-id: een code afgeleid van uw klantaccount die enkel chatfpv.com ontvangt en die niet naar uw klantaccount kan worden teruggerekend. chatfpv.com ontvangt nooit uw naam, e-mailadres of Shopify-klant-id. De toegangstokens van Shopify worden meteen na de aanmelding verwijderd; opendrone.be bewaart enkel de aanmeldbevestiging van Shopify (ID-token), versleuteld, om uw Shopify-sessie te beëindigen wanneer u zich afmeldt. Wanneer chatfpv.com nagaat of u al aangemeld bent (stille aanmelding), plaatst opendrone.be geen cookie en bewaart het niets voor een bezoeker die niet aangemeld is.
+**Gedeelde aanmelding met chatfpv.com.** chatfpv.com, de FPV-assistent ChatFPV, wordt ook door Incutec BV uitgebaat. Wanneer u zich op chatfpv.com aanmeldt met uw OpenDrone-account, bevestigt opendrone.be uw aanmelding aan chatfpv.com met een aparte account-id die enkel chatfpv.com ontvangt. chatfpv.com ontvangt geen naam, e-mailadres of Shopify-klant-id. De toegangstokens van Shopify worden meteen na de aanmelding verwijderd; opendrone.be bewaart enkel de aanmeldbevestiging van Shopify (ID-token), versleuteld, om uw Shopify-sessie te beëindigen wanneer u zich afmeldt. Wanneer chatfpv.com nagaat of u al aangemeld bent (stille aanmelding), plaatst opendrone.be geen cookie en bewaart het niets voor een bezoeker die niet aangemeld is.
 
 **Doorgifte buiten de EER.** Sommige ontvangers verwerken gegevens buiten de EER. Die doorgiften steunen op een adequaatheidsbesluit (art. 45 AVG: Canada, VK, of het EU-VS Data Privacy Framework voor gecertificeerde Amerikaanse ontvangers) of op standaardcontractuele clausules (art. 46 AVG, Besluit 2021/914). De grondslag per ontvanger staat in de tabel hierboven.
 
@@ -102,7 +103,9 @@ U heeft het recht om:
 - **Overdraagbaarheid** van uw gegevens te vragen (Art. 20)
 - Uw **toestemming** in te trekken (Art. 7.3)
 
-**Uw ChatFPV-geschiedenis.** Aangemeld op opendrone.be kunt u op de accountpagina (opendrone.be/account) uw ChatFPV-gesprekken exporteren als JSON-bestand of ze meteen verwijderen. Wanneer uw klantaccount in Shopify wordt verwijderd, worden uw OpenDrone-accountgegevens en uw ChatFPV-geschiedenis mee verwijderd.
+**Aanmelden maakt een Shopify-klantaccount aan.** Aanmelden met uw OpenDrone-account, op opendrone.be of vanuit chatfpv.com, gebeurt via de klantaccounts van Shopify: Shopify stuurt een eenmalige code naar uw e-mailadres. Hebt u nog geen klantaccount, dan maakt Shopify er een aan met uw e-mailadres. Wij voegen er niets aan toe: geen nieuwsbrief- of marketingtoestemming, geen tags of notities en geen ChatFPV-inhoud.
+
+**Uw ChatFPV-geschiedenis.** Aangemeld op opendrone.be kunt u op de accountpagina (opendrone.be/account) uw ChatFPV-gesprekken exporteren als JSON-bestand of ze meteen verwijderen. Wanneer uw klantaccount in Shopify wordt verwijderd, worden uw OpenDrone-accountgegevens en uw ChatFPV-geschiedenis mee verwijderd. U kunt ook privacy@opendrone.be vragen ze te wissen of te exporteren; wij doen dat binnen een maand, zonder op Shopify te wachten.
 
 Verzoeken kunt u richten aan: privacy@opendrone.be
 Wij reageren binnen **één maand** op uw verzoek (Art. 12(3) AVG, verlengbaar met 2 maanden bij complexe of talrijke verzoeken).
