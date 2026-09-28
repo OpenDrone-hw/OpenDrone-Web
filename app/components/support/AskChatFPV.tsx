@@ -12,9 +12,12 @@ function podItem(p: AskProductCard): ProductPodItem {
     key: p.handle,
     to: p.href,
     title: p.title,
+    ...(p.variant ? {subtitle: p.variant} : {}),
     imageUrl: p.image,
-    price: {amount: p.price.amount, currencyCode: p.price.currencyCode},
-    buy: p.addToCartHref ? {href: p.addToCartHref, product: p.handle, available: p.available} : undefined,
+    // A coming-soon card shows the SOON tag in the price slot and nothing to add.
+    price: p.soon ? null : {amount: p.price.amount, currencyCode: p.price.currencyCode},
+    soon: p.soon,
+    buy: !p.soon && p.addToCartHref ? {href: p.addToCartHref, product: p.handle, available: p.available} : undefined,
   };
 }
 

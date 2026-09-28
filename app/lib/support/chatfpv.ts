@@ -18,7 +18,7 @@
  * Cloudflare refuses a Worker's fetch to another workers.dev Worker on the
  * same account (error 1042), so the public URL only works from outside it.
  */
-import type {ChatAnswer, ChatRequest, Citation, DraftOutcomeRequest, DraftRequest, DraftResponse} from './chatfpv-contract.ts';
+import type {ChatAnswer, ChatRequest, Citation, DraftOutcomeRequest, DraftRequest, DraftResponse, ProductBlock} from './chatfpv-contract.ts';
 import {matchFixedHandoff, matchPreorderInfo, matchShippingVatInfo} from './ask-rules.ts';
 import {checkRateLimit, clientIp} from '../rate-limit.ts';
 import {ipBucket} from './limits.ts';
@@ -313,6 +313,10 @@ export type AskProductCard = {
   href: string;
   addToCartHref: string | null;
   available: boolean;
+  /** The variant ChatFPV's product card names ('20×20'). */
+  variant?: string;
+  /** ChatFPV's card says coming soon: a SOON tag, no price and no add-to-cart. */
+  soon?: boolean;
 };
 
 /** A citation's product handle, from `https://opendrone.be/products/<handle>`
@@ -336,8 +340,14 @@ export function productHandleFromCitation(citation: Citation): string | null {
  * variant. Never throws: a catalog outage just means no cards, not a
  * broken answer.
  */
-export async function productCardsFromCitations(citations: Citation[], catalog: CatalogClient): Promise<AskProductCard[]> {
-  const handles = [...new Set(citations.map(productHandleFromCitation).filter((h): h is string => Boolean(h)))].slice(0, 3);
+export async function productCardsFromCitations(citations: Citation[], catalog: CatalogClient, blocks: ProductBlock[] = []): Promise<AskProductCard[]> {
+  // ChatFPV's own product card comes first and decides the variant and the coming-soon state.
+  const fromBlocks = new Map<string, ProductBlock>();
+  for (const b of blocks) {
+    const h = productHandleFromCitation({n: 0, title: b.title, url: b.url, source: '', kind: 'product'});
+    if (h && !fromBlocks.has(h)) fromBlocks.set(h, b);
+  }
+  const handles = [...new Set([...fromBlocks.keys(), ...citations.map(productHandleFromCitation).filter((h): h is string => Boolean(h))])].slice(0, 3);
   if (!handles.length) return [];
   let data: Catalog;
   try {
@@ -349,8 +359,25 @@ export async function productCardsFromCitations(citations: Citation[], catalog: 
   for (const handle of handles) {
     const product = byHandle(data, handle);
     if (!product) continue;
-    const variant = product.variants.find((v) => v.availability !== 'sold_out') ?? product.variants[0];
+    const block = fromBlocks.get(handle);
+    const norm = (t: string) => t.toLowerCase().replace(/[×x]/g, 'x').replace(/[^a-z0-9]/g, '');
+    const named = block?.variant ? product.variants.find((v) => norm(v.title) === norm(block.variant!)) : undefined;
+    const variant = named ?? product.variants.find((v) => v.availability !== 'sold_out') ?? product.variants[0];
     if (!variant) continue;
+    if (block && /^coming soon|^not currently available/i.test(block.status)) {
+      cards.push({
+        handle: product.handle,
+        title: product.title,
+        image: variant.image ?? product.images[0] ?? null,
+        price: {amount: variant.price.toFixed(2), currencyCode: variant.currency || data.currency},
+        href: product.url || `/products/${product.handle}`,
+        addToCartHref: null,
+        available: false,
+        ...(block.variant ? {variant: block.variant} : {}),
+        soon: true,
+      });
+      continue;
+    }
     cards.push({
       handle: product.handle,
       title: product.title,
@@ -394,7 +421,19 @@ function parseAnswer(raw: unknown): ChatAnswer | null {
     outcome: r.outcome!,
     confidence: confidenceOf(r.confidence),
     ...(r.handoff && typeof r.handoff === 'object' ? {handoff: {reason: String(r.handoff.reason ?? ''), url: String(r.handoff.url ?? '')}} : {}),
+    ...productBlocksOf(r.blocks),
   };
+}
+
+/** The product-card blocks of a raw answer, checked field by field; every other block kind is dropped. */
+function productBlocksOf(raw: unknown): {blocks?: ProductBlock[]} {
+  if (!Array.isArray(raw)) return {};
+  const blocks: ProductBlock[] = [];
+  for (const b of raw as Array<Record<string, unknown>>) {
+    if (!b || b.kind !== 'product' || typeof b.title !== 'string' || typeof b.url !== 'string' || typeof b.status !== 'string') continue;
+    blocks.push({kind: 'product', title: b.title.slice(0, 120), url: b.url, status: b.status.slice(0, 200), ...(typeof b.variant === 'string' ? {variant: b.variant.slice(0, 60)} : {})});
+  }
+  return blocks.length ? {blocks} : {};
 }
 
 /**
@@ -709,7 +748,7 @@ async function shapeAskAnswer(answer: ChatAnswer | ChatFpvRateLimited | null, ca
   const handoff = answer.outcome === 'handoff' || answer.outcome === 'abstain' || Boolean(answer.handoff);
   const citations = dropInternalCitations(answer.citations);
   const uncertain = !handoff && answer.outcome === 'answered' && answer.confidence < UNCERTAIN_CONFIDENCE;
-  const products = !handoff && catalog ? await productCardsFromCitations(citations, catalog) : [];
+  const products = !handoff && catalog ? await productCardsFromCitations(citations, catalog, answer.blocks) : [];
   return {
     ok: true,
     answer: {
