@@ -1,12 +1,15 @@
 /**
  * Shopify Customer Account API as an OpenID Connect provider: discovery
- * (`<issuer>/.well-known/openid-configuration`), confidential client
- * (client_secret_basic) plus PKCE S256, nonce checked. The access and
+ * (`<issuer>/.well-known/openid-configuration`), PKCE S256, nonce checked.
+ * A Hydrogen channel storefront gets a public client (Client ID only, the
+ * token call carries `client_id` and an `Origin` listed under JavaScript
+ * origins); a Headless channel confidential client adds its secret as
+ * client_secret_basic when SHOPIFY_CUSTOMER_ACCOUNT_CLIENT_SECRET is set. The access and
  * refresh tokens in the token response are dropped on the spot; only the
  * id_token is kept (sealed) as the logout hint.
  *
- * The id_token comes straight from the token endpoint over TLS in a
- * client-authenticated call, so its claims are checked (iss, aud, exp,
+ * The id_token comes straight from the token endpoint over TLS in the
+ * PKCE-bound code exchange, so its claims are checked (iss, aud, exp,
  * nonce) and its signature is not (OpenID Connect Core 3.1.3.7, item 6).
  */
 import type {AccountsEnv} from './config.ts';
@@ -103,7 +106,7 @@ export function shopifyIdentityProvider(
   const issuer = shopifyIssuer(env);
   const clientId = env.SHOPIFY_CUSTOMER_ACCOUNT_CLIENT_ID?.trim();
   const clientSecret = env.SHOPIFY_CUSTOMER_ACCOUNT_CLIENT_SECRET?.trim();
-  if (!issuer || !clientId || !clientSecret) return null;
+  if (!issuer || !clientId) return null;
   const config = () => discover(issuer, fetcher, now());
 
   return {
@@ -129,7 +132,7 @@ export function shopifyIdentityProvider(
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
           Accept: 'application/json',
-          Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
+          ...(clientSecret ? {Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`} : {}),
           // Shopify refuses token calls from a Worker without these.
           Origin: origin,
           'User-Agent': 'opendrone-web',

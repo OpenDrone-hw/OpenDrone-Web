@@ -531,23 +531,26 @@ is never set in `wrangler.production.toml` (a unit test fails if it is).
 
 ### Create the Shopify client (founder, Shopify admin)
 
-1. Settings > Customer accounts > "Accounts in online store and checkout" >
-   Edit > choose "Customer accounts" > Save (skip if already chosen).
-2. Sales channels > Headless > the OpenDrone storefront > "Customer Account
-   API settings".
-3. Client type: Edit > "Confidential" > Save.
-4. "Application setup" (Edit each field):
+The storefront is on the Hydrogen channel, whose Customer Account API client
+is public: a Client ID and no secret, PKCE plus an `Origin` header that must
+be listed under JavaScript origins.
+
+1. Settings > Customer accounts: the page shows "Customer accounts" settings
+   and a `https://shopify.com/<shop id>/account` URL when the new customer
+   accounts are on.
+2. Sales channels > Hydrogen > Opendrone Web > Customer Account API.
+3. "Application setup", add to the existing lines and Submit:
 
 | Field | Value |
 |---|---|
-| Callback URI(s) | `https://opendrone.be/account/callback` and `https://opendrone-web-preview.sales-ee0.workers.dev/account/callback` |
-| Javascript origin(s) | none needed (the token call is server side) |
+| Callback URI(s) | `https://opendrone.be/account/callback` |
+| Javascript origin(s) | `https://opendrone.be` |
 | Logout URI | `https://opendrone.be/oauth/logout` |
 
-5. "Credentials": copy the Client ID and the Client secret. From the
-   endpoints list copy the Authorization endpoint. When it reads
-   `https://shopify.com/authentication/<shop id>/oauth/authorize`, the number
-   is `SHOPIFY_CUSTOMER_ACCOUNT_SHOP_ID`; otherwise set
+4. "Customer Account API credentials": the Client ID is
+   `SHOPIFY_CUSTOMER_ACCOUNT_CLIENT_ID`. The number in the Authorization
+   endpoint `https://shopify.com/authentication/<shop id>/oauth/authorize` is
+   `SHOPIFY_CUSTOMER_ACCOUNT_SHOP_ID`; otherwise set
    `SHOPIFY_CUSTOMER_ACCOUNT_ISSUER` to the endpoint without
    `/oauth/authorize`. The Worker reads the rest from
    `<issuer>/.well-known/openid-configuration`.
@@ -562,7 +565,7 @@ previews use the test IdP.
 | `ACCOUNTS_ENABLED` | `[vars]` in both wrangler configs | `"0"`; `"1"` in the flip below |
 | `CHATFPV_OAUTH_REDIRECTS` | `[vars]` | `https://chatfpv.com/auth/callback` (production) |
 | `CHATFPV_POST_LOGOUT_REDIRECTS` | `[vars]` | `https://chatfpv.com/` (production) |
-| `SHOPIFY_CUSTOMER_ACCOUNT_CLIENT_ID`, `SHOPIFY_CUSTOMER_ACCOUNT_CLIENT_SECRET`, `SHOPIFY_CUSTOMER_ACCOUNT_SHOP_ID` (or `SHOPIFY_CUSTOMER_ACCOUNT_ISSUER`) | `npx wrangler secret put <NAME> --config wrangler.production.toml` (Worker `opendrone-web`) | Step 5 above |
+| `SHOPIFY_CUSTOMER_ACCOUNT_CLIENT_ID`, `SHOPIFY_CUSTOMER_ACCOUNT_SHOP_ID` (or `SHOPIFY_CUSTOMER_ACCOUNT_ISSUER`); `SHOPIFY_CUSTOMER_ACCOUNT_CLIENT_SECRET` only for a Headless channel confidential client (the Hydrogen channel client is public and has none) | `npx wrangler secret put <NAME> --config wrangler.production.toml` (Worker `opendrone-web`) | Step 5 above |
 | `ACCOUNT_PAIRWISE_SALT` | secret, `opendrone-web` | `openssl rand -base64 32`; never rotate (every ChatFPV account id derives from it) |
 | `SESSION_ENC_KEY` | secret, `opendrone-web` | `openssl rand -base64 32` |
 | `CHATFPV_OAUTH_CLIENT_SECRET` | secret on `opendrone-web` AND on the ChatFPV Worker `chatfpv` (same value) | `openssl rand -base64 32` |
