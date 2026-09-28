@@ -55,9 +55,9 @@ CHATFPV_WIDGET_ENABLED = "1"
 # ChatFPV handoff (#cfh tickets on product pages); anonymous, needs no accounts.
 HANDOFF_ENABLED = "1"
 # Shared accounts (README "Shared accounts"): sign-in, /oauth/* for
-# chatfpv.com and the widget assertion. Off until the integrate step.
+# chatfpv.com and the widget assertion.
 # ACCOUNTS_TEST_IDP must never appear in this file (a unit test checks).
-ACCOUNTS_ENABLED = "0"
+ACCOUNTS_ENABLED = "1"
 CHATFPV_OAUTH_REDIRECTS = "https://chatfpv.com/auth/callback"
 CHATFPV_POST_LOGOUT_REDIRECTS = "https://chatfpv.com/"
 # Ops alerts (app/lib/ops-alerts.ts): a failed ChatFPV erase or a data request

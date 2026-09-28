@@ -261,11 +261,11 @@ describe('test IdP rule', () => {
     assert.equal(identityProvider(e, new Request('https://opendrone.be/account/login')), null);
   });
 
-  it('wrangler.production.toml never sets ACCOUNTS_TEST_IDP and keeps ACCOUNTS_ENABLED "0"', () => {
+  it('wrangler.production.toml never sets ACCOUNTS_TEST_IDP and turns ACCOUNTS_ENABLED on', () => {
     const toml = readFileSync(new URL('../../../wrangler.production.toml', import.meta.url), 'utf8');
     const active = toml.split('\n').filter((l) => !l.trim().startsWith('#'));
     assert.ok(!active.some((l) => /ACCOUNTS_TEST_IDP/.test(l)));
-    assert.ok(active.some((l) => /^ACCOUNTS_ENABLED\s*=\s*"0"\s*$/.test(l.trim())));
+    assert.ok(active.some((l) => /^ACCOUNTS_ENABLED\s*=\s*"1"\s*$/.test(l.trim())));
   });
 });
 
