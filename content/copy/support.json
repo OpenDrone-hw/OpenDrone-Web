@@ -51,6 +51,15 @@
   "uploading": "Uploading your files. Large files can take a minute.",
   "privacy_note": "Tickets are kept for 24 months after they close. [Privacy policy](/privacy).",
   "ask_privacy_notice": "Your question goes to ChatFPV, Incutec's AI assistant. We remove emails, phone numbers, card numbers, IBANs and similar identifiers before sending it, but not your name or order number, so please leave those out yourself. Conversations that do not become a ticket are deleted after 90 days idle.",
+  "ask_notice_summary": "How your question is used",
+  "ask_starters": [
+    "What do I need to start flying FPV?",
+    "Which OpenDrone stack fits a 5-inch build?",
+    "Is the OpenRX compatible with my radio?",
+    "When do preorders ship?"
+  ],
+  "ask_ticket_prompt": "Didn't find it, or it's about an order, return or warranty?",
+  "ask_ticket_cta": "Talk to the team: open a ticket",
   "err_required": "Required.",
   "err_invalid_email": "Enter an email address like name@example.com.",
   "err_invalid_order": "Order numbers are digits, like #1042.",
@@ -136,6 +145,7 @@
   "find_email": "Email",
   "find_key": "Order number or ticket number",
   "find_key_placeholder": "#1042 or OD-K7M4-Q2XF",
+  "find_key_hint": "The ticket number is in your ticket confirmation email and on the ticket page.",
   "find_submit": "Find",
   "finding": "Looking",
   "find_none": "No ticket matches those details. Check the email and the number, or open a new ticket.",

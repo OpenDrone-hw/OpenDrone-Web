@@ -2,7 +2,7 @@ import {useEffect, useId, useRef, useState, type FormEvent} from 'react';
 import type {AskProductCard, AskResult} from '~/lib/support/chatfpv';
 import {ProductPods, type ProductPodItem} from '~/components/ProductPods';
 import {trackEvent} from '~/lib/growth/plausible';
-import {copyText} from '~/lib/copy';
+import {copy, copyText} from '~/lib/copy';
 import {AnswerMarkdown} from './AnswerMarkdown';
 
 type Answer = Extract<AskResult, {ok: true}>['answer'];
@@ -34,6 +34,22 @@ const REASON_TEXT: Record<Exclude<AskResult, {ok: true}>['error'], string> = {
   invalid: "That question couldn't be sent; try rephrasing it.",
   rate: 'Too many questions for now.',
 };
+
+/** Starter questions that fill the textarea: newcomer-shopping and
+ *  troubleshooting side by side, so the box is not only for problems.
+ *  Through the copy system (`support.ask_starters`) so the team can tune
+ *  them; falls back to this set when the key is missing. */
+const FALLBACK_STARTERS = [
+  'What do I need to start flying FPV?',
+  'Which OpenDrone stack fits a 5-inch build?',
+  'Is the OpenRX compatible with my radio?',
+  'When do preorders ship?',
+];
+
+function askStarters(): string[] {
+  const v = copy('support.ask_starters');
+  return Array.isArray(v) && v.length ? v : FALLBACK_STARTERS;
+}
 
 /**
  * One `text/event-stream` frame (`app/lib/support/chatfpv.ts`
@@ -99,13 +115,20 @@ export async function readAskStream(
 }
 
 /**
- * "Ask ChatFPV (AI)" on /support, above the ticket form (only while
- * CHATFPV_ASK_ENABLED is "1"). The question goes to POST /api/support/ask,
+ * "ChatFPV · AI assistant · Beta" on /support, above the ticket form (only
+ * while CHATFPV_ASK_ENABLED is "1"). One flow, not two competing options:
+ * try the assistant first (starter chips fill the box for a newcomer who
+ * has nothing typed yet), then "Talk to the team: open a ticket" always sits
+ * at the bottom of the card as the one obvious escalation path, whether or
+ * not an answer came back. The question goes to POST /api/support/ask,
  * which asks ChatFPV server side. The answer renders ChatFPV's safe Markdown
- * subset (`AnswerMarkdown`, text nodes only) with its sources and the AI label. "Still need help? Open a ticket" hands the
- * question to the form; an answer ChatFPV hands off or abstains on, or no
- * answer at all, goes to the form straight away, with `onTicket`'s reason
- * shown above it so the swap never looks like a broken page.
+ * subset (`AnswerMarkdown`, text nodes only) with its sources. The data-use
+ * disclosure (`support.ask_privacy_notice`, wording unchanged) sits below
+ * the input in a `<details>` toggle, same pattern as the product-page widget
+ * (`ChatFpvWidget.tsx`), not ahead of the box where it used to dominate the
+ * card. An answer ChatFPV hands off or abstains on, or no answer at all,
+ * goes to the form straight away, with `onTicket`'s reason shown above it so
+ * the swap never looks like a broken page.
  */
 export function AskChatFPV({
   onTicket,
@@ -120,6 +143,13 @@ export function AskChatFPV({
   const [status, setStatus] = useState('');
   const id = useId();
   const abortRef = useRef<AbortController | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const starters = askStarters();
+
+  function pickStarter(starter: string) {
+    setQuestion(starter);
+    textareaRef.current?.focus();
+  }
 
   // A visitor who navigates away or closes the tab mid-stream must not leave
   // the fetch (and the storefront's own ChatFPV call it drives) running.
@@ -191,48 +221,52 @@ export function AskChatFPV({
   return (
     <section className="sp-card sp-ask" aria-labelledby={`${id}-title`}>
       <h2 className="sp-card-title" id={`${id}-title`}>
-        Ask ChatFPV (AI)
+        ChatFPV <span className="sp-ask-kicker">· AI assistant</span>
+        <span className="sp-badge-beta">Beta</span>
       </h2>
       <p className="sp-hint">
-        An instant answer from ChatFPV, an AI assistant for FPV and OpenDrone hardware, with its sources. For orders,
-        returns and warranty, open a ticket.
-      </p>
-      <p className="sp-hint sp-ask-privacy">
-        {copyText('support.ask_privacy_notice') ??
-          "Your question goes to ChatFPV, Incutec's AI assistant. We remove emails, phone numbers, card numbers, IBANs and similar identifiers before sending it, but not your name or order number, so please leave those out yourself. Conversations that do not become a ticket are deleted after 90 days idle."}
+        Ask about FPV builds, compatibility or OpenDrone hardware; it answers with its sources. For orders, returns
+        and warranty, talk to the team below.
       </p>
       <form className="sp-form" onSubmit={(e) => void ask(e)}>
         <label className="sp-field">
           <span className="sp-label">Your question</span>
           <textarea
+            ref={textareaRef}
             name="question"
-            rows={3}
+            rows={4}
             maxLength={1000}
             dir="auto"
-            className="sp-input sp-textarea"
+            className="sp-input sp-textarea sp-ask-textarea"
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             placeholder="Which receiver protocol does the OpenRX use?"
           />
         </label>
+        {!question.trim() ? (
+          <div className="sp-chip-row" role="group" aria-label="Example questions">
+            {starters.map((s) => (
+              <button key={s} type="button" className="sp-chip" disabled={busy} onClick={() => pickStarter(s)}>
+                {s}
+              </button>
+            ))}
+          </div>
+        ) : null}
         <div className="sp-submit-row">
           <button type="submit" className="od-btn od-btn-primary" disabled={busy || question.trim().length < 3}>
             {busy ? `${status || 'Asking'}…` : 'Ask ChatFPV'}
           </button>
-          <a
-            href="/support?ticket=1"
-            className="od-btn od-btn-secondary"
-            onClick={(e) => {
-              e.preventDefault();
-              onTicket(question.trim());
-            }}
-          >
-            Open a ticket instead
-          </a>
         </div>
+        <details className="sp-ask-notice">
+          <summary>{copyText('support.ask_notice_summary') ?? 'How your question is used'}</summary>
+          <p className="sp-hint sp-ask-privacy">
+            {copyText('support.ask_privacy_notice') ??
+              "Your question goes to ChatFPV, Incutec's AI assistant. We remove emails, phone numbers, card numbers, IBANs and similar identifiers before sending it, but not your name or order number, so please leave those out yourself. Conversations that do not become a ticket are deleted after 90 days idle."}
+          </p>
+        </details>
       </form>
       {answer ? (
-        <div className="sp-ask-answer" role="status" aria-live="polite" style={{display: 'grid', gap: 8, marginTop: 16}}>
+        <div className="sp-ask-answer" role="status" aria-live="polite">
           <p className="sp-hint">
             <strong>AI answer by ChatFPV.</strong> It can be wrong: check the sources.
           </p>
@@ -260,18 +294,23 @@ export function AskChatFPV({
               <ProductPods items={answer.products.map(podItem)} layout="row" />
             </div>
           ) : null}
-          <div className="sp-submit-row">
-            <span>Still need help?</span>
-            <button
-              type="button"
-              className={answer.uncertain ? 'od-btn od-btn-primary' : 'od-btn od-btn-secondary'}
-              onClick={openTicket}
-            >
-              Open a ticket
-            </button>
-          </div>
         </div>
       ) : null}
+      <div className="sp-ask-ticket">
+        <p className="sp-hint">
+          {copyText('support.ask_ticket_prompt') ?? "Didn't find it, or it's about an order, return or warranty?"}
+        </p>
+        <a
+          href="/support?ticket=1"
+          className={answer?.uncertain ? 'od-btn od-btn-primary' : 'od-btn od-btn-secondary'}
+          onClick={(e) => {
+            e.preventDefault();
+            openTicket();
+          }}
+        >
+          {copyText('support.ask_ticket_cta') ?? 'Talk to the team: open a ticket'}
+        </a>
+      </div>
     </section>
   );
 }
