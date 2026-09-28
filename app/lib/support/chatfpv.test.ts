@@ -8,6 +8,8 @@ import {
   chatFpvWidgetSrc,
   chatFpvWidgetSrcWithProduct,
   cleanCitations,
+  cleanCitationsWithAliases,
+  remapCitationMarkers,
   createChatFpvClient,
   draftsEnabled,
   dropInternalCitations,
@@ -179,6 +181,36 @@ describe('helpers', () => {
       'junk',
     ]);
     assert.deepEqual(out.map((c) => c.n), [1]);
+  });
+
+  it('drops a repeated citation to the same page, keeping the first occurrence (storefront-launch iteration 5)', () => {
+    const out = cleanCitations([
+      {n: 1, title: 'OpenFC Lite', url: 'https://opendrone.be/products/openfc-lite', source: 's', kind: 'doc'},
+      {n: 2, title: 'Shipping', url: 'https://opendrone.be/shipping', source: 's', kind: 'doc'},
+      // Same page as [1], trailing slash and a different title: still a duplicate.
+      {n: 3, title: 'OpenFC Lite (again)', url: 'https://opendrone.be/products/openfc-lite/', source: 's', kind: 'doc'},
+      // Same path as [1] but with a case-different host and a query string that
+      // picks a different variant: not a duplicate.
+      {n: 4, title: 'OpenFC Lite 3030', url: 'https://OpenDrone.be/products/openfc-lite?variant=3030', source: 's', kind: 'doc'},
+    ]);
+    assert.deepEqual(
+      out.map((c) => [c.n, c.url]),
+      [
+        [1, 'https://opendrone.be/products/openfc-lite'],
+        [2, 'https://opendrone.be/shipping'],
+        [4, 'https://opendrone.be/products/openfc-lite?variant=3030'],
+      ],
+    );
+  });
+
+  it('rewrites an inline marker of a dropped duplicate citation to the kept number', () => {
+    const {citations, alias} = cleanCitationsWithAliases([
+      {n: 1, title: 'A', url: 'https://opendrone.be/a', source: 's', kind: 'doc'},
+      {n: 2, title: 'B', url: 'https://opendrone.be/b', source: 's', kind: 'doc'},
+      {n: 3, title: 'A again', url: 'https://opendrone.be/a#spec', source: 's', kind: 'doc'},
+    ]);
+    assert.deepEqual(citations.map((c) => c.n), [1, 2]);
+    assert.equal(remapCitationMarkers('Fact one [1]. Fact two [2]. Fact three [3]. Literal [12].', alias), 'Fact one [1]. Fact two [2]. Fact three [1]. Literal [12].');
   });
 
   it('read the flags as exactly "1"', () => {

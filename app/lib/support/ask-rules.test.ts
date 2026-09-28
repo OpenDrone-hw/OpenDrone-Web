@@ -169,3 +169,145 @@ describe('matchShippingVatInfo precision probe (storefront-launch iteration 2)',
     }
   });
 });
+
+/**
+ * The full /support Ask box routing pipeline, in the order `handleAsk`
+ * (chatfpv.ts) checks it: a fixed handoff first, then the preorder-timing
+ * rule, then the shipping/VAT rule, then (not modelled here) ChatFPV
+ * itself. Used only to test routing outcomes end to end; it does not build
+ * `AskResult` bodies.
+ */
+type Route = 'handoff' | 'preorder' | 'shipvat' | 'chatfpv';
+function route(message: string): Route {
+  if (matchFixedHandoff(message)) return 'handoff';
+  if (matchPreorderInfo(message)) return 'preorder';
+  if (matchShippingVatInfo(message)) return 'shipvat';
+  return 'chatfpv';
+}
+
+// storefront-launch iteration 3 held-out probe
+// (chatfpv-work/loop/storefront-launch/i3/rule-probe.mts, run against PR
+// #503's merged state, `22f08f3`): 7 of these 18 got a confident-wrong
+// answer from the shipping/VAT rule instead of the outcome below. A
+// question the rule now misses (falls through to ChatFPV) is not wrong, so
+// only 'handoff' and 'shipvat' are asserted exactly; 'chatfpv' here means
+// "must not be handoff or shipvat", checked with `assert.notEqual` so the
+// pinned case still holds even if a future change makes the rule literally
+// unable to run.
+const HELD_OUT_PROBE: Array<{q: string; expect: Route | 'not-handoff-or-shipvat'}> = [
+  {q: 'Is the VTX shipped with US frequency lock?', expect: 'not-handoff-or-shipvat'},
+  {q: 'Do you include VAT on invoices for businesses?', expect: 'not-handoff-or-shipvat'},
+  {q: 'I was charged VAT twice, is that included?', expect: 'handoff'},
+  {q: 'Why was VAT included on my order from Norway?', expect: 'handoff'},
+  {q: 'Do you ship to the U.S.?', expect: 'shipvat'},
+  {q: 'Does the OpenRX ship with US FCC firmware or EU LBT?', expect: 'not-handoff-or-shipvat'},
+  {q: 'My package to the USA was stuck in customs, VAT included?', expect: 'handoff'},
+  {q: 'Can I buy it with VAT excluded as a Swiss customer?', expect: 'not-handoff-or-shipvat'},
+  {q: 'Is VAT included in the OpenESC price?', expect: 'shipvat'},
+  {q: 'Was VAT included on my invoice for order 1234?', expect: 'handoff'},
+  {q: 'Do you deliver to Canada?', expect: 'shipvat'},
+  {q: 'Is the OpenMotor shipped with US or metric screws?', expect: 'not-handoff-or-shipvat'},
+  {q: 'Can companies get VAT-free invoices?', expect: 'not-handoff-or-shipvat'},
+  {q: 'I paid VAT but I am in the UK, can I get it back?', expect: 'handoff'},
+  {q: 'Does shipping to Norway include VAT?', expect: 'shipvat'},
+  {q: 'What frequencies does the OpenRX use in the US?', expect: 'not-handoff-or-shipvat'},
+  {q: 'Delivering to the United States, how long does it take?', expect: 'shipvat'},
+  {q: 'Do the prices include VAT for Belgium?', expect: 'shipvat'},
+];
+
+describe('storefront-launch iteration 3 held-out probe: 0 confident-wrong of 18', () => {
+  it('never answers a product question or an order-specific VAT/customs problem from the rate card', () => {
+    for (const {q, expect} of HELD_OUT_PROBE) {
+      const got = route(q);
+      if (expect === 'not-handoff-or-shipvat') {
+        assert.notEqual(got, 'handoff', q);
+        assert.notEqual(got, 'shipvat', q);
+      } else {
+        assert.equal(got, expect, q);
+      }
+    }
+  });
+
+  it('still catches every order/refund handoff (h01-h08) unchanged', () => {
+    for (const {q} of HANDOFF) assert.equal(route(q), 'handoff', q);
+  });
+});
+
+describe('VAT_EXCLUDE plural fix', () => {
+  it('excludes the plural of invoice, business and company, not only the singular', () => {
+    for (const q of [
+      'Do you include VAT on invoices for businesses?',
+      'Can businesses get invoices with VAT included?',
+      'Do companies get VAT included on their invoices?',
+    ]) {
+      assert.equal(matchShippingVatInfo(q), null, q);
+    }
+  });
+});
+
+describe('US_UNAMBIGUOUS trailing punctuation fix', () => {
+  it('matches "U.S." immediately followed by punctuation, not only end of string', () => {
+    for (const q of ['Do you ship to the U.S.?', 'Ship to the U.S., please.']) {
+      assert.ok(matchShippingVatInfo(q), q);
+    }
+  });
+});
+
+describe('"shipped with" / "comes with" is a product question, never a shipping-destination one', () => {
+  it('never fires the non-EU shipping answer on a product-contents phrasing', () => {
+    for (const q of [
+      'Is the VTX shipped with US frequency lock?',
+      'Does the OpenRX ship with US FCC firmware or EU LBT?',
+      'Is the OpenMotor shipped with US or metric screws?',
+      'Does the ESC come with a US power plug?',
+    ]) {
+      assert.equal(matchShippingVatInfo(q), null, q);
+    }
+  });
+
+  it('still answers a real "do you ship to X" destination question', () => {
+    assert.ok(matchShippingVatInfo('Do you ship to the United States?'));
+  });
+});
+
+/**
+ * Iteration 5 fixes on top of the iteration-4 rule (`isOwnOrderVatOrCustoms`
+ * in ask-rules.ts): iteration 4's own version of this rule (PR #504,
+ * unmerged) used a bare `/\bcharged\b/` and an exact `\bmy order\b` phrase,
+ * which regressed two directions the iteration-4 report flagged as still
+ * open. See `REPORT.md` "Open issues" #2 in
+ * chatfpv-work/loop/storefront-launch/.
+ */
+describe('isOwnOrderVatOrCustoms tense and phrasing fixes (iteration 5)', () => {
+  it('does not ticket a pre-purchase, future-tense VAT question', () => {
+    // "will I be charged" is not "was charged": nothing has happened yet,
+    // so this must not become a ticket.
+    assert.notEqual(route('Will I be charged VAT if I order to Norway?'), 'handoff');
+  });
+
+  it('still tickets a real already-charged VAT complaint', () => {
+    assert.equal(route('I was charged VAT and should not have been, can you check?'), 'handoff');
+  });
+
+  it('tickets an order/invoice reference with a word between "my" and the noun', () => {
+    assert.equal(route('VAT invoice for my company order'), 'handoff');
+    assert.equal(route('Can you check the VAT on my recent invoice?'), 'handoff');
+  });
+
+  it('does not ticket a quantity or a not-yet-placed order', () => {
+    for (const q of [
+      'If I order 2 OpenESC to Germany, is VAT included?',
+      'Will VAT apply to my first order to Norway?',
+      'Do I pay customs on my next package to the UK?',
+      'I want to order 4 motors, are customs fees extra for Switzerland?',
+    ]) {
+      assert.notEqual(route(q), 'handoff', q);
+    }
+  });
+
+  it('tickets an order number in any common form', () => {
+    for (const q of ['Was I charged VAT twice on order #5512?', 'VAT on order number 77 looks wrong', 'Customs held order 10234, VAT?']) {
+      assert.equal(route(q), 'handoff', q);
+    }
+  });
+});
