@@ -225,25 +225,14 @@ export default function PreorderRoute() {
       {unavailable ? (
         <Txt id="preorder.strip_unavailable" as="p" className="po-empty" />
       ) : !rows.length ? (
+        // What's coming lives in the timeline above (dates per lane); this
+        // does not repeat it, only the newsletter/browse follow-up.
         <section className="po-empty-state">
           <Txt id="preorder.tracker_empty" as="p" className="po-empty" />
-          <div className="po-empty-coming">
-            {stackMonth ? (
-              <p className="po-empty-line">
-                <Txt id="preorder.timeline_stack" /> {'· '}
-                {shipWord('ships', stackMonth)}
-              </p>
-            ) : null}
-            <p className="po-empty-line">
-              <Txt id="preorder.timeline_targets" /> {'· '}
-              {shipWord('deadline', ends)}
-              {' · '}
-              {(copyText('preorder.ship_eta_if_funded') ?? 'Ships by {date} if the target is reached').replace('{date}', eta)}
-            </p>
-          </div>
           <div className="po-empty-actions">
             <NewsletterSignup
               variant="wide"
+              titleId="preorder.empty_newsletter_title"
               turnstileSiteKey={rootData?.turnstileSiteKey ?? null}
               className="po-empty-newsletter"
             />
