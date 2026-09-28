@@ -49,7 +49,7 @@ describe('commerce handoff', () => {
 });
 
 describe('customer account routing', () => {
-  it('hides accounts until an exact URL is configured', () => {
+  it('hides accounts until an exact URL or a numeric shop id is configured', () => {
     assert.equal(customerAccountUrl({}), null);
   });
 
@@ -65,5 +65,28 @@ describe('customer account routing', () => {
       () => customerAccountUrl({SHOPIFY_CUSTOMER_ACCOUNT_URL: 'http://account.example.com/'}),
       /must be HTTPS/,
     );
+  });
+
+  it('derives the account URL from a numeric shop id when no URL is configured', () => {
+    assert.equal(
+      customerAccountUrl({SHOPIFY_CUSTOMER_ACCOUNT_SHOP_ID: '12345'}),
+      'https://shopify.com/12345/account',
+    );
+  });
+
+  it('prefers the configured URL over a derived one', () => {
+    assert.equal(
+      customerAccountUrl({SHOPIFY_CUSTOMER_ACCOUNT_URL: 'https://account.example.com/', SHOPIFY_CUSTOMER_ACCOUNT_SHOP_ID: '12345'}),
+      'https://account.example.com/',
+    );
+  });
+
+  it('ignores a non-numeric shop id rather than building a bad URL', () => {
+    assert.equal(customerAccountUrl({SHOPIFY_CUSTOMER_ACCOUNT_SHOP_ID: 'not-a-number'}), null);
+    assert.equal(customerAccountUrl({SHOPIFY_CUSTOMER_ACCOUNT_SHOP_ID: '123abc'}), null);
+  });
+
+  it('ignores blank configuration on either var', () => {
+    assert.equal(customerAccountUrl({SHOPIFY_CUSTOMER_ACCOUNT_URL: '  ', SHOPIFY_CUSTOMER_ACCOUNT_SHOP_ID: '  '}), null);
   });
 });

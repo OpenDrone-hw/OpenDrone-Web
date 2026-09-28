@@ -8628,21 +8628,18 @@ a.what-chain-chip:hover {
   color: var(--color-text);
 }
 
-.account-logout {
-  margin-left: auto;
-}
-
-/* /account ChatFPV history: export and delete (app/lib/accounts/rights.ts). */
+/* /account ChatFPV history: export and delete (app/lib/accounts/rights.ts).
+   Sits inside the collapsed "Settings and data" .details-toggle-body. */
 .account-chatfpv {
   display: grid;
   gap: 0.75rem;
-  margin: 1.5rem 0;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--color-border);
 }
 .account-chatfpv-title {
   margin: 0;
   font-size: 1.05rem;
+  /* .details-toggle-body sets a muted ambient text color for its prose;
+     headings stay full-strength regardless of where this class is used. */
+  color: var(--color-text);
 }
 .account-chatfpv-notice {
   margin: 0;
@@ -8658,6 +8655,14 @@ a.what-chain-chip:hover {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+/* CSS-only "disabled" look before the confirm box is ticked. The submit
+   itself is still guarded by the checkbox's `required` attribute (rights.ts
+   owns that logic); this is a visual cue only, never pointer-events: none,
+   so it stays reachable by keyboard and screen readers. */
+.account-chatfpv-delete:has(input[type='checkbox']:not(:checked)) .od-btn-danger {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .account-form input:focus,
@@ -8738,9 +8743,9 @@ a.what-chain-chip:hover {
   display: grid;
   gap: 1rem;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  /* Size each card to its own content instead of stretching to the tallest in
-     the row: that stretch is what left big empty gaps under the shorter cards. */
-  align-items: start;
+  /* Stretch (the default) so every card in a row matches the tallest one;
+     .account-dashboard-cta's margin-top: auto then pins each card's action
+     to the same bottom edge instead of trailing the shortest card's text. */
 }
 
 .account-dashboard-card {
@@ -8947,6 +8952,129 @@ a.what-chain-chip:hover {
   font-size: 0.9rem;
   line-height: 1.5;
   margin: 0.2rem 0 0;
+}
+
+/* ============================================
+   polish/account: /account header row, the full-width Orders card,
+   the Newsletter/Support grid, the collapsed Settings-and-data section,
+   and the /account/login CTA - shares the generic .details-toggle with it.
+   Reuses .account-dashboard-* above for the card grid.
+   ============================================ */
+
+/* The identity line under the title: the live Shopify email (or a plain
+   "Signed in" fallback) plus sign out as its trailing item, not a button
+   floating alone above the heading. */
+.account-identity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+}
+.account-identity .page-description {
+  margin: 0;
+}
+.account-identity-signout {
+  flex: 0 0 auto;
+}
+
+/* Orders: a full-width card above the Newsletter/Support grid, each order a
+   plain-text row linking straight to its own Shopify order status page. */
+.account-orders-card {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1.25rem 1.35rem;
+  margin-bottom: 1rem;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+}
+.account-orders-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+.account-order-row {
+  display: block;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  text-decoration: none;
+}
+a.account-order-row:hover {
+  color: var(--color-gold-text);
+}
+.account-orders-all {
+  justify-self: start;
+}
+
+.account-login-cta {
+  margin-bottom: 1.25rem;
+}
+.od-btn.account-login-submit {
+  width: 100%;
+  justify-content: center;
+  padding: 1rem 1.5rem;
+  font-size: 13px;
+}
+
+/* Generic collapsed-detail block: /account/login's disclosure and
+   /account's "Settings and data" (ChatFPV history, delete account) both
+   use it, so a real detail stays reachable on the page without dominating
+   it visually. */
+.details-toggle {
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-sm);
+  background: var(--color-bg-card);
+}
+.details-toggle-summary {
+  padding: 0.85rem 1.1rem;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--ls-label);
+  color: var(--color-text);
+  cursor: pointer;
+  list-style: none;
+}
+.details-toggle-summary::-webkit-details-marker {
+  display: none;
+}
+.details-toggle-summary::before {
+  content: '+';
+  display: inline-block;
+  width: 1em;
+  color: var(--color-gold-text);
+}
+.details-toggle[open] .details-toggle-summary::before {
+  content: '\2212';
+}
+.details-toggle-body {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0 1.1rem 1.1rem;
+  color: var(--color-text-muted);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+.details-toggle-body p {
+  margin: 0;
+}
+.details-toggle-body a {
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* account.account-settings: two stacked subsections (ChatFPV history,
+   delete account) inside the shared .details-toggle-body; a hairline
+   separates them instead of two more full card borders. */
+.account-settings-delete {
+  padding-top: 0.85rem;
+  border-top: 1px dashed var(--color-border);
 }
 
 /* ============================================
@@ -11065,12 +11193,15 @@ html.light .editorial-watermark {
   padding: 10px 12px;
 }
 .od-btn-ghost:hover {color: var(--od-ink);}
+/* Visible at rest, not only on hover: a destructive action should read as
+   destructive before the pointer ever reaches it. */
 .od-btn-danger {
   background: transparent;
-  color: var(--od-ink);
-  border-color: var(--od-line-strong);
+  color: var(--od-pcb-copper);
+  border-color: color-mix(in srgb, var(--od-pcb-copper) 55%, var(--od-line-strong));
 }
 .od-btn-danger:hover {
+  background: color-mix(in srgb, var(--od-pcb-copper) 12%, transparent);
   border-color: var(--od-pcb-copper);
   color: var(--od-pcb-copper);
 }
