@@ -50,8 +50,8 @@ SUPPORT_EMAIL_NOTIFY_ENABLED = "1"
 # CHATFPV_KEY is a Worker secret.
 CHATFPV_URL = "https://chatfpv.com"
 CHATFPV_DRAFTS_ENABLED = "1"
-CHATFPV_ASK_ENABLED = "0"
-CHATFPV_WIDGET_ENABLED = "0"
+CHATFPV_ASK_ENABLED = "1"
+CHATFPV_WIDGET_ENABLED = "1"
 # ChatFPV handoff (#cfh tickets on product pages); "1" needs the accounts rollout.
 HANDOFF_ENABLED = "0"
 # Shared accounts (README "Shared accounts"): sign-in, /oauth/* for
