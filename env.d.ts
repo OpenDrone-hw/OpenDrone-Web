@@ -183,6 +183,8 @@ declare global {
     CHATFPV_DRAFTS_ENABLED?: string;
     CHATFPV_ASK_ENABLED?: string;
     CHATFPV_WIDGET_ENABLED?: string;
+    /** "1": ChatFPV handoff tickets (`#cfh`) open the product page widget (app/lib/accounts/handoff.ts). */
+    HANDOFF_ENABLED?: string;
 
     // Newsletter / release-notes auto-dispatch
     // - NEWSLETTER_DISPATCH_SECRET: bearer token for the manual dispatch

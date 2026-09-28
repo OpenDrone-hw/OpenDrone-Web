@@ -1,6 +1,7 @@
 import {useEffect, useRef, useState} from 'react';
 import {trackEvent} from '~/lib/growth/plausible';
 import {copyText} from '~/lib/copy';
+import {takeHandoffTicket, withHandoffTicket} from '~/lib/accounts/handoff';
 
 const PRIVACY_NOTICE_FALLBACK =
   "Your question and the product on this page go straight to ChatFPV, Incutec's AI assistant, exactly as you type it: please do not include your name, email, phone or order number. Conversations that do not become a ticket are deleted after 90 days idle.";
@@ -36,6 +37,14 @@ const NOTICE_SUMMARY_FALLBACK = 'AI assistant. How your question is used.';
  * only phones (iteration 5 audit, `v2/day2/widget/before/report.json`: a
  * fixed 96px top margin undershot the real header at 900px wide, giving a
  * 35px overlap that 1440px and 390px happened not to expose).
+ *
+ * `handoff` (HANDOFF_ENABLED "1", product pages only): a `#cfh=<ticket>` in
+ * the page URL is removed from the address bar and the widget opens with
+ * the ticket in the iframe src fragment, where ChatFPV redeems it
+ * (app/lib/accounts/handoff.ts). That src stays pinned until the panel
+ * closes, so a variant change cannot reload the iframe and redeem twice.
+ * ChatFPV's "Continue on chatfpv.com" opens a new tab from inside the
+ * iframe: the sandbox allows popups that escape it.
  */
 const BOTTOM_OBSTACLES = [
   '.buy-rail.is-pinned.is-mobile:not(.is-suppressed)',
@@ -66,8 +75,10 @@ const MIN_PANEL_HEIGHT_PX = 280;
  *  from a crash). */
 const LOAD_TIMEOUT_MS = 8000;
 
-export function ChatFpvWidget({src}: {src: string | null | undefined}) {
+export function ChatFpvWidget({src, handoff = false}: {src: string | null | undefined; handoff?: boolean}) {
   const [open, setOpen] = useState(false);
+  const [handoffSrc, setHandoffSrc] = useState<string | null>(null);
+  const handoffRead = useRef(false);
   const [loaded, setLoaded] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
@@ -175,10 +186,20 @@ export function ChatFpvWidget({src}: {src: string | null | undefined}) {
   }, [src]);
 
   useEffect(() => {
+    if (!handoff || !src || handoffRead.current) return;
+    handoffRead.current = true;
+    const ticket = takeHandoffTicket(window);
+    if (!ticket) return;
+    setHandoffSrc(withHandoffTicket(src, ticket));
+    setOpen(true);
+  }, [handoff, src]);
+
+  useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setOpen(false);
+        setHandoffSrc(null);
         button.current?.focus();
       }
     };
@@ -259,7 +280,7 @@ export function ChatFpvWidget({src}: {src: string | null | undefined}) {
               </div>
             ) : null}
             <iframe
-              src={src}
+              src={handoffSrc ?? src}
               title="ChatFPV, an AI assistant for FPV and OpenDrone"
               onLoad={() => setLoaded(true)}
               style={{width: '100%', height: '100%', border: 0, display: loaded ? 'block' : 'none'}}
@@ -274,14 +295,15 @@ export function ChatFpvWidget({src}: {src: string | null | undefined}) {
         type="button"
         className="od-btn od-btn-primary"
         aria-expanded={open}
-        onClick={() =>
+        onClick={() => {
+          if (open) setHandoffSrc(null);
           setOpen((v) => {
             if (!v) {
               trackEvent('chatfpv_widget_open', {props: {surface: 'widget'}});
             }
             return !v;
-          })
-        }
+          });
+        }}
       >
         {open ? 'Close ChatFPV' : 'Ask ChatFPV (AI)'}
       </button>

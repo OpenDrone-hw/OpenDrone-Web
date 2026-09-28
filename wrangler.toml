@@ -35,6 +35,9 @@ CHATFPV_URL = "https://chatfpv.sales-ee0.workers.dev"
 CHATFPV_DRAFTS_ENABLED = "1"
 CHATFPV_ASK_ENABLED = "1"
 CHATFPV_WIDGET_ENABLED = "1"
+# ChatFPV handoff: a #cfh=<ticket> on a product page opens the widget on
+# that conversation (app/lib/accounts/handoff.ts). Production keeps it off.
+HANDOFF_ENABLED = "1"
 
 # Support tickets: the ticket index and conversation copy (README "Support").
 # Apply new migrations with `npx wrangler d1 migrations apply SUPPORT_DB

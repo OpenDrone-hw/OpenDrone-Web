@@ -48,10 +48,12 @@ SUPPORT_EMAIL_NOTIFY_ENABLED = "1"
 # ChatFPV (README "Support tickets"): AI ticket drafts in Discord, the
 # /support Ask box and the product/preorder widget. "1" turns each on.
 # CHATFPV_KEY is a Worker secret.
-CHATFPV_URL = "https://chatfpv.sales-ee0.workers.dev"
+CHATFPV_URL = "https://chatfpv.com"
 CHATFPV_DRAFTS_ENABLED = "1"
 CHATFPV_ASK_ENABLED = "0"
 CHATFPV_WIDGET_ENABLED = "0"
+# ChatFPV handoff (#cfh tickets on product pages); "1" needs the accounts rollout.
+HANDOFF_ENABLED = "0"
 
 # Support tickets: the ticket index and conversation copy. A new migration is
 # applied with `npx wrangler d1 migrations apply SUPPORT_DB --remote
