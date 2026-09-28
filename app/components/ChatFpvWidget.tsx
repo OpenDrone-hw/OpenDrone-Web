@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState} from 'react';
+import {useEffect, useId, useRef, useState} from 'react';
 import {useRouteLoaderData} from 'react-router';
 import {trackEvent} from '~/lib/growth/plausible';
 import {copyText} from '~/lib/copy';
@@ -61,7 +61,32 @@ const NOTICE_SUMMARY_FALLBACK = 'AI assistant. How your question is used.';
  * to the iframe with the exact ChatFPV origin as targetOrigin, again one
  * minute before each assertion expires. ChatFPV then owns the conversation
  * by account, and its "Continue on chatfpv.com" is a plain /chat/<id> link.
+ *
+ * Closed, the launcher is a labelled gold pill ("Ask ChatFPV" + a "Beta"
+ * tag) on desktop, and the icon + the same "Beta" tag alone on phones
+ * (`PHONE_MAX_WIDTH_PX`); its accessible name always carries "Beta" so a
+ * screen reader hears the same thing a sighted newcomer reads (launch
+ * polish audit: an unlabelled gold square gave no visitor a reason to
+ * click it, or any warning ChatFPV is new). Open, the panel gets its own
+ * header (title, the same Beta tag, a one-line subtitle, and a close
+ * button) instead of the data-use notice standing in for a header; the
+ * notice keeps its exact wording and its details-toggle for the full text,
+ * now placed under that header instead of floating above the panel as a
+ * separately coloured strip. On a phone the open panel becomes a full
+ * sheet from just under the site header down to the bottom gutter, with
+ * its own header and close, instead of a small floating card that could
+ * land on top of the page's own title text (launch polish audit,
+ * `widget-preorder-m.png`: the panel's close button sat on the FAQ list
+ * because the panel never reached that far down).
  */
+// Matches the existing `.buy-rail.is-mobile` / `@media (max-width: 959px)`
+// "phones and tablets, single product column" breakpoint this file already
+// reserves 64px of horizontal clearance for (the comment above
+// `.chatfpv-widget-on .product-buy-notify` in app.css): a second, narrower
+// breakpoint here would leave that clearance sized for the closed launcher's
+// old fixed 56px width instead of whatever width the pill or compact
+// icon+tag actually is at that point.
+const PHONE_MAX_WIDTH_PX = 959;
 const BOTTOM_OBSTACLES = [
   '.buy-rail.is-pinned.is-mobile:not(.is-suppressed)',
   '.product-form',
@@ -116,10 +141,30 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
    *  hidden and the button carries an unread badge until it is opened. */
   const [unread, setUnread] = useState(false);
   const [dockHeight, setDockHeight] = useState(600);
+  /** Phone-sheet only: top offset (px from the viewport top) so the sheet
+   *  starts just under the header, never over it. Recomputed alongside
+   *  `maxPanelHeight`/`dockHeight` from the same measurement pass. */
+  const [sheetTop, setSheetTop] = useState(96);
+  /** `PHONE_MAX_WIDTH_PX` or narrower: the panel becomes a full sheet
+   *  instead of a small floating card (a handoff `dock` never happens at
+   *  this width - `handoffPlacement` returns null for the one-column phone
+   *  layout - so the two never fight over the panel's position). */
+  const [isPhone, setIsPhone] = useState(false);
   const mounted = open || unread;
   const iframe = useRef<HTMLIFrameElement>(null);
   const root = useRouteLoaderData('root') as {accountSignedIn?: boolean} | undefined;
   const signedIn = Boolean(root?.accountSignedIn);
+  const titleId = useId();
+  const subtitleId = useId();
+
+  useEffect(() => {
+    if (!src || typeof window.matchMedia !== 'function') return;
+    const mq = window.matchMedia(`(max-width: ${PHONE_MAX_WIDTH_PX}px)`);
+    const update = () => setIsPhone(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, [src]);
 
   // Signed-in shoppers: hand the iframe a fresh assertion while it is loaded.
   useEffect(() => {
@@ -214,6 +259,9 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
       setMaxPanelHeight(Math.max(MIN_PANEL_HEIGHT_PX, Math.min(600, Math.round(available))));
       // A docked handoff panel has no button under it: header gap to the bottom gutter.
       setDockHeight(Math.max(MIN_PANEL_HEIGHT_PX, Math.min(600, Math.round(window.innerHeight - Math.max(0, headerBottom) - HEADER_MARGIN_PX - 16))));
+      // Phone sheet: same header clearance, no 600px cap - it fills down to
+      // the bottom gutter instead of stopping at a card-sized height.
+      setSheetTop(Math.round(Math.max(0, headerBottom) + HEADER_MARGIN_PX));
     };
     const schedule = () => {
       if (!frame) frame = requestAnimationFrame(measure);
@@ -264,21 +312,31 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
     }
   }, [handoff, src]);
 
+  /** Shared close path for Escape, the panel header's own close button, and
+   *  the launcher toggling shut: always drops a pinned handoff dock/src and
+   *  returns focus to the launcher. */
+  function closePanel() {
+    setOpen(false);
+    setHandoffSrc(null);
+    setDock(null);
+    button.current?.focus();
+  }
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setOpen(false);
-        setHandoffSrc(null);
-        setDock(null);
-        button.current?.focus();
-      }
+      if (e.key === 'Escape') closePanel();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
 
   if (!src) return null;
+  // Phone sheet only (never with `dock`: `handoffPlacement` already returns
+  // null for the one-column phone layout, so a handoff there goes to
+  // `unread` instead of `dock`). Fills from just under the header down to
+  // the bottom gutter instead of the 600px-capped floating card.
+  const sheet = isPhone && !dock;
   return (
     <div className="chatfpv-widget" style={{position: 'fixed', right: 16, bottom: 16 + lift, zIndex: 61, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8}}>
       {mounted ? (
@@ -286,13 +344,16 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
           ref={panelRef}
           role="dialog"
           aria-modal="true"
-          aria-label="Ask ChatFPV (AI)"
+          aria-labelledby={titleId}
+          aria-describedby={subtitleId}
           tabIndex={-1}
           hidden={!open}
           style={{
             ...(dock
               ? {position: 'fixed', bottom: 16, [dock.side]: 16, width: dock.width, height: dockHeight}
-              : {position: 'relative', width: 'min(400px, calc(100vw - 32px))', height: maxPanelHeight}),
+              : sheet
+                ? {position: 'fixed', top: sheetTop, left: 16, right: 16, bottom: 16, width: 'auto', height: 'auto'}
+                : {position: 'relative', width: 'min(400px, calc(100vw - 32px))', height: maxPanelHeight}),
             display: open ? 'flex' : 'none',
             flexDirection: 'column',
             borderRadius: 12,
@@ -301,6 +362,29 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
             background: '#0b0d10',
           }}
         >
+          {/* Header: title, the same "Beta" tag as the closed launcher, a
+              one-line subtitle, and the panel's own close button - the
+              panel's identity used to be carried entirely by the data-use
+              notice below, which read as an unfinished floating strip
+              rather than a header (launch polish audit). */}
+          <div className="chatfpv-widget-panel-header">
+            <div className="chatfpv-widget-panel-heading-col">
+              <div className="chatfpv-widget-panel-heading">
+                <span className="chatfpv-widget-panel-title" id={titleId}>
+                  ChatFPV
+                </span>
+                <span className="chatfpv-widget-beta-tag" aria-hidden="true">
+                  Beta
+                </span>
+              </div>
+              <p className="chatfpv-widget-panel-subtitle" id={subtitleId}>
+                Shopping and FPV help
+              </p>
+            </div>
+            <button type="button" className="chatfpv-widget-panel-close" aria-label="Close ChatFPV" onClick={closePanel}>
+              <PanelCloseIcon />
+            </button>
+          </div>
           {/* One line, always visible while the panel is open (before the
               first question, and through the loading and timeout states):
               the EU AI Act Art. 50 disclosure belongs at the moment of use,
@@ -308,15 +392,13 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
               (storefront-launch iteration 2 audit: the closed-state notice
               covered the buy rail on phone and floated with no container on
               desktop dark). Closed, the widget shows only the button, same
-              as main. */}
-          <details
-            className="chatfpv-widget-notice"
-            style={{flex: '0 0 auto', background: '#14171c', color: '#e8e8e8', borderBottom: '1px solid rgba(255,255,255,0.08)'}}
-          >
-            <summary style={{padding: '6px 10px', fontSize: 12, lineHeight: 1.4, cursor: 'pointer', listStyle: 'none'}}>
+              as main. Same panel background as the header above it (no
+              separate strip colour) so it reads as one continuous panel. */}
+          <details className="chatfpv-widget-notice" style={{flex: '0 0 auto', color: '#c7c7cc', borderBottom: '1px solid rgba(255,255,255,0.08)'}}>
+            <summary style={{padding: '6px 14px', fontSize: 11, lineHeight: 1.4, cursor: 'pointer', listStyle: 'none', color: '#8b8b91'}}>
               {copyText('chrome.chatfpv_widget_notice_summary') ?? NOTICE_SUMMARY_FALLBACK}
             </summary>
-            <p className="sp-hint" style={{margin: 0, padding: '0 10px 8px', fontSize: 12, lineHeight: 1.4}}>
+            <p className="sp-hint" style={{margin: 0, padding: '0 14px 8px', fontSize: 12, lineHeight: 1.4}}>
               {copyText('chrome.chatfpv_widget_privacy_notice') ?? PRIVACY_NOTICE_FALLBACK}
             </p>
           </details>
@@ -366,26 +448,39 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
       <button
         ref={button}
         type="button"
-        className="chatfpv-widget-toggle"
+        className={`chatfpv-widget-toggle${open ? ' is-open' : ' is-closed'}`}
         aria-expanded={open}
-        aria-label={open ? 'Close ChatFPV' : unread ? 'Ask ChatFPV (AI), 1 unread reply' : 'Ask ChatFPV (AI)'}
-        title={open ? 'Close ChatFPV' : 'Ask ChatFPV (AI)'}
-        style={{position: 'relative', width: 56, height: 56, padding: 0, border: 0, borderRadius: 13, background: 'transparent', cursor: 'pointer', boxShadow: '0 6px 20px rgba(0, 0, 0, 0.35)', lineHeight: 0}}
+        aria-label={open ? 'Close ChatFPV' : closedLabel(unread)}
+        title={open ? 'Close ChatFPV' : closedLabel(unread)}
         onClick={() => {
           if (open) {
-            setHandoffSrc(null);
-            setDock(null);
+            closePanel();
+            return;
           }
           setUnread(false);
-          setOpen((v) => {
-            if (!v) {
-              trackEvent('chatfpv_widget_open', {props: {surface: 'widget'}});
-            }
-            return !v;
-          });
+          setOpen(true);
+          trackEvent('chatfpv_widget_open', {props: {surface: 'widget'}});
         }}
       >
-        {open ? <CloseGlyph /> : <OpenDroneAvatar />}
+        {open ? (
+          <CloseGlyph />
+        ) : (
+          <>
+            <span className="chatfpv-widget-toggle-icon">
+              <OpenDroneAvatar size={40} bare />
+            </span>
+            {/* Hidden below PHONE_MAX_WIDTH_PX (app.css): the icon + the
+                Beta tag alone are the compact phone launcher; the
+                accessible name still carries the full "Ask ChatFPV, Beta"
+                text regardless of what is visible. */}
+            <span className="chatfpv-widget-toggle-label" aria-hidden="true">
+              Ask ChatFPV
+            </span>
+            <span className="chatfpv-widget-beta-tag" aria-hidden="true">
+              Beta
+            </span>
+          </>
+        )}
         {unread && !open ? (
           <span
             className="chatfpv-widget-unread"
@@ -400,15 +495,26 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
   );
 }
 
+/** Closed launcher's accessible name (aria-label and tooltip): always
+ *  carries "Beta" so a screen-reader visitor gets the same warning a
+ *  sighted one reads on the pill, on every viewport width. */
+function closedLabel(unread: boolean): string {
+  return unread ? 'Ask ChatFPV, Beta assistant, 1 unread reply' : 'Ask ChatFPV, Beta assistant';
+}
+
 /**
  * The OpenDrone avatar (OpenDrone-Brand `avatar/opendrone-avatar.svg`, the OD
  * mark on the gold rounded square) as the closed widget button: the
- * helper reads as OpenDrone's own assistant, not a second brand.
+ * helper reads as OpenDrone's own assistant, not a second brand. `bare`
+ * drops the background rect for use on the pill launcher, whose own CSS
+ * background is the gold pill shape (see `.chatfpv-widget-toggle.is-closed`
+ * in app.css); the open state keeps the self-contained square (`size` 56,
+ * `bare` false) via `CloseGlyph` below.
  */
-function OpenDroneAvatar() {
+function OpenDroneAvatar({size = 56, bare = false}: {size?: number; bare?: boolean}) {
   return (
-    <svg width="56" height="56" viewBox="0 0 1024 1024" aria-hidden="true" focusable="false">
-      <rect width="1024" height="1024" rx="230.4" fill="#ffb700" />
+    <svg width={size} height={size} viewBox="0 0 1024 1024" aria-hidden="true" focusable="false">
+      {bare ? null : <rect width="1024" height="1024" rx="230.4" fill="#ffb700" />}
       <g transform="translate(205.8972,184.1815) scale(1.846)">
         <g transform="translate(0,433) scale(0.1,-0.1)" fillRule="evenodd">
           <path
@@ -417,6 +523,16 @@ function OpenDroneAvatar() {
           />
         </g>
       </g>
+    </svg>
+  );
+}
+
+/** Small cross icon for the panel header's own close button (distinct from
+ *  the 56px gold-square `CloseGlyph` the launcher shows once open). */
+function PanelCloseIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+      <path d="M3 3 L13 13 M13 3 L3 13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   );
 }

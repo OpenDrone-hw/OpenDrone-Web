@@ -3782,6 +3782,147 @@ button.reset {
   }
 }
 
+/* === ChatFPV widget chrome: labelled launcher + integrated panel header
+   (launch polish, `ChatFpvWidget.tsx`). The launcher used to be an
+   unlabelled 56px gold square (the OpenDrone mark with no text); a
+   newcomer had no reason to click it and no warning it is an AI beta. The
+   open panel's data-use notice used to double as the only header, reading
+   as a separate floating strip rather than a finished panel. Panel
+   positioning (`lift`, `maxPanelHeight`, `dock`, the phone sheet's
+   `sheetTop`) stays inline in the component - it depends on runtime
+   measurements a stylesheet cannot know. Everything static (shape, type,
+   colour, the 959px "phones and tablets" breakpoint the widget already
+   uses elsewhere in this file) lives here instead. === */
+.chatfpv-widget-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  line-height: 0;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+.chatfpv-widget-toggle.is-open {
+  width: 56px;
+  height: 56px;
+  border-radius: 13px;
+}
+/* Desktop/tablet closed state: a labelled pill, not a bare icon square. */
+.chatfpv-widget-toggle.is-closed {
+  height: 56px;
+  gap: 8px;
+  padding: 0 14px 0 0;
+  border-radius: 28px;
+  background: var(--color-gold);
+}
+.chatfpv-widget-toggle-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 56px;
+  height: 56px;
+}
+.chatfpv-widget-toggle-label {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: var(--ls-label);
+  color: #0d0d10;
+  white-space: nowrap;
+}
+.chatfpv-widget-beta-tag {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 999px;
+  color: #0d0d10;
+  background: rgba(13, 13, 16, 0.16);
+}
+@media (max-width: 959px) {
+  /* Same 56px square footprint the rest of this stylesheet already clears
+     space for (the `product-buy-notify` padding-right above): only a small
+     "Beta" ribbon is added, not a widening pill, so no other clearance
+     rule needs to change alongside it. The full "Ask ChatFPV" text moves
+     to the accessible name (`closedLabel` in ChatFpvWidget.tsx) instead of
+     the visible label. */
+  .chatfpv-widget-toggle.is-closed {
+    width: 56px;
+    padding: 0;
+  }
+  .chatfpv-widget-toggle-label {
+    display: none;
+  }
+  .chatfpv-widget-toggle.is-closed .chatfpv-widget-beta-tag {
+    position: absolute;
+    left: -4px;
+    bottom: -4px;
+    font-size: 9px;
+    padding: 1px 5px;
+    color: var(--color-gold);
+    background: #0d0d10;
+    box-shadow: 0 0 0 2px #0d0d10;
+  }
+}
+
+/* Open panel header: title + the same Beta tag + a one-line subtitle +
+   the panel's own close button, instead of the data-use notice standing
+   in for a header. */
+.chatfpv-widget-panel-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 8px 10px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.chatfpv-widget-panel-heading-col {
+  min-width: 0;
+}
+.chatfpv-widget-panel-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.chatfpv-widget-panel-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: #f2f2f2;
+}
+.chatfpv-widget-panel-subtitle {
+  margin: 2px 0 0;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: #8b8b91;
+}
+.chatfpv-widget-panel-close {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #c7c7cc;
+  cursor: pointer;
+}
+.chatfpv-widget-panel-close:hover,
+.chatfpv-widget-panel-close:focus-visible {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
 /* Idea-stage buy module: the concept pitch + repo CTA that replace the
    price. Same mono/dim idiom as the SKU line. */
 .product-buy-idea-pitch {
