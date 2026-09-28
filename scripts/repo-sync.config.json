@@ -1,5 +1,5 @@
 {
-  "$comment": "Repo -> product spec mapping for scripts/import-specs.mjs. The board repo READMEs are the canonical spec source; this file says which repo feeds which variant of which product JSON. The FIRST variant listed for a product is the base: its README table becomes the shared `specs` array, the other variants become per-tier overrides. `root` is the container holding the board checkouts; OPENDRONE_HARDWARE overrides it so the mirror can be regenerated from any machine.",
+  "$comment": "Repo -> product spec mapping for scripts/import-specs.mjs. The board repo READMEs are the canonical spec source; this file says which repo feeds which variant of which product JSON. The FIRST variant listed for a product is the base: its README table becomes the shared `specs` array, the other variants become per-tier overrides. `root` is the container holding the board checkouts; OPENDRONE_HARDWARE overrides it so the mirror can be regenerated from any machine. `siteOverrides` replace one README spec value (`from`, after typography) with `value` in every variant that carries it, for a hardware figure the storefront must not publish; each entry names its reason in `source`, and the importer fails when an override matches no row.",
   "root": "../hardware",
   "products": [
     {
@@ -48,6 +48,15 @@
           "repo": "OpenRX-Gemini"
         }
       ]
+    }
+  ],
+  "siteOverrides": [
+    {
+      "handle": "openrx",
+      "key": "Telemetry power",
+      "from": "Up to 22 dBm (158 mW)",
+      "value": "Up to 100 mW (20 dBm) e.i.r.p. (EU firmware limit)",
+      "source": "Founder decision for the 6 Oct 2026 launch: the EU firmware build caps 2.4 GHz telemetry at the EN 300 328 limit, 20 dBm e.i.r.p. The README value is the LR1121 hardware maximum."
     }
   ]
 }

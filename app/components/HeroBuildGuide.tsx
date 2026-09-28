@@ -1,12 +1,15 @@
 import {useState} from 'react';
+import {useRouteLoaderData} from 'react-router';
 import {
   ArrowUpRight,
   Check,
   Fan,
   Package,
+  Mail,
   RadioTower,
   ShoppingBag,
 } from 'lucide-react';
+import type {RootLoader} from '~/root';
 import {Link} from '~/components/nav';
 import {AddToCartButton} from '~/components/AddToCartButton';
 import {InfoHint} from '~/components/InfoHint';
@@ -36,7 +39,10 @@ export function HeroBuildGuide({
   );
   const status = useProductStatusResolver();
   const sellable = (handle: string) => isPurchasableStatus(status(handle));
-  const selection = heroBuildSelection(build, selected, sellable);
+  // Global PUBLIC_COMING_SOON gate; fail closed when root data is missing.
+  const comingSoon =
+    useRouteLoaderData<RootLoader>('root')?.comingSoon ?? true;
+  const selection = heroBuildSelection(build, selected, sellable, comingSoon);
   return (
     <section
       className="hero-build-guide"
@@ -131,7 +137,7 @@ export function HeroBuildGuide({
               <span className="hero-build-price">
                 {!available ? (
                   <Txt id="home.build_unavailable" />
-                ) : part.price === null ? (
+                ) : part.price === null || !selection.showPrices ? (
                   ''
                 ) : (
                   formatPrice(
@@ -153,6 +159,14 @@ export function HeroBuildGuide({
         })}
       </ul>
       <div className="hero-build-buy">
+        {selection.notify ? (
+          <Link className="hero-build-add" to="/newsletter" prefetch="intent">
+            <span className="btn-label">
+              <Mail size={16} aria-hidden="true" />
+              <Txt id="home.build_notify" />
+            </span>
+          </Link>
+        ) : (
         <AddToCartButton
           href={selection.href}
           disabled={!selection.available}
@@ -177,6 +191,7 @@ export function HeroBuildGuide({
             </span>
           ) : null}
         </AddToCartButton>
+        )}
       </div>
     </section>
   );

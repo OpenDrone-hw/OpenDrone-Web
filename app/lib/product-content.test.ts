@@ -393,6 +393,22 @@ describe('spec sheet', () => {
   });
 });
 
+describe('EU launch claims', () => {
+  it('states the EU firmware cap, not the hardware maximum, on OpenRX', () => {
+    const c = PRODUCT_CONTENT.openrx;
+    const rows: Array<[string, string | null]> = [
+      ...(c.specs ?? []),
+      ...Object.values(c.variants ?? {}).flatMap((v) => [
+        ...((v.specs ?? []) as Array<[string, string | null]>),
+        ...(v.highlights ?? []),
+      ]),
+    ];
+    const power = rows.filter(([k]) => k === 'Telemetry power').map(([, v]) => v);
+    assert.ok(power.includes('Up to 100 mW (20 dBm) e.i.r.p. (EU firmware limit)'));
+    assert.doesNotMatch(JSON.stringify(c), /22 dBm|158 mW/);
+  });
+});
+
 describe('storefront spec rows and placeholders', () => {
   it('merges specsExtra after the mirrored rows and tier deltas', () => {
     const content = {

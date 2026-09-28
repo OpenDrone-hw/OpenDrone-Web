@@ -69,11 +69,16 @@ export function resolveHeroBuilds(
   }));
 }
 
-/** Never silently omit an unavailable part from a requested build. */
+/**
+ * Never silently omit an unavailable part from a requested build. While the
+ * shop is coming soon (`comingSoon`, the PUBLIC_COMING_SOON gate) no price or
+ * total is shown and the cart action becomes the launch-list link.
+ */
 export function heroBuildSelection(
   build: HeroBuild,
   selected: ReadonlySet<string>,
   sellable: (handle: string) => boolean,
+  comingSoon = false,
 ) {
   const parts = build.parts.filter((part) => selected.has(part.sku));
   const unavailable = parts.some(
@@ -88,7 +93,7 @@ export function heroBuildSelection(
         Number.isFinite(part.price) &&
         part.currency === currency,
     );
-  const total = priced
+  const total = priced && !comingSoon
     ? parts.reduce(
         (sum, part) => sum + Math.round(part.price! * 100) * part.quantity,
         0,
@@ -99,7 +104,9 @@ export function heroBuildSelection(
     parts,
     total,
     currency,
-    available: priced && !unavailable,
+    available: priced && !unavailable && !comingSoon,
+    showPrices: !comingSoon,
+    notify: comingSoon,
     href: cartAddUrl(build.addUrl, lines),
     complete: parts.length === build.parts.length,
   };
