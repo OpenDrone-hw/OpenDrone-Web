@@ -27,6 +27,12 @@
  * and a count multiplier `<digits>x ` becomes `<digits>× ` (4x DShot). Nothing
  * else is rewritten; if the site should show a mark, put the plain-ASCII form
  * of the fact in the README and extend these rules deliberately.
+ *
+ * Site overrides. `siteOverrides` in the config replaces one README value
+ * (`from`, after the typography rules) with `value` in every variant that
+ * carries it, for a hardware figure the storefront must not publish (a
+ * transmit maximum above the EU firmware cap). Each entry names its reason;
+ * an override that matches no row is an error, so a README change surfaces.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -151,6 +157,26 @@ for (const product of cfg.products) {
       throw new Error(`${product.handle}: variant "${v.tier}" not in ${jsonPath}`);
     }
     tables.push({tier: v.tier, rows: parseSpecTable(path.join(repoDir, 'README.md'))});
+  }
+
+  // Site overrides: a README value the storefront must not publish is
+  // replaced in every variant that carries it (config `siteOverrides`).
+  for (const o of cfg.siteOverrides ?? []) {
+    if (o.handle !== product.handle) continue;
+    let hit = false;
+    for (const t of tables) {
+      for (const row of t.rows) {
+        if (row[0] === o.key && row[1] === o.from) {
+          row[1] = o.value;
+          hit = true;
+        }
+      }
+    }
+    if (!hit) {
+      throw new Error(
+        `${product.handle}: site override "${o.key}: ${o.from}" matches no README row`,
+      );
+    }
   }
 
   const base = tables[0].rows;

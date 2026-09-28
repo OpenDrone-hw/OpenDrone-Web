@@ -422,7 +422,7 @@
         ],
         [
           "Telemetry power",
-          "Up to 22 dBm (158 mW)"
+          "Up to 100 mW (20 dBm) e.i.r.p. (EU firmware limit)"
         ],
         [
           "Dimensions",
@@ -444,7 +444,7 @@
         ],
         [
           "Telemetry power",
-          "Up to 22 dBm (158 mW)"
+          "Up to 100 mW (20 dBm) e.i.r.p. (EU firmware limit)"
         ],
         [
           "Dimensions",
@@ -568,7 +568,7 @@
         ],
         [
           "Telemetry power",
-          "Up to 22 dBm (158 mW)"
+          "Up to 100 mW (20 dBm) e.i.r.p. (EU firmware limit)"
         ],
         [
           "Dimensions",
@@ -590,7 +590,7 @@
         ],
         [
           "Telemetry power",
-          "Up to 22 dBm (158 mW)"
+          "Up to 100 mW (20 dBm) e.i.r.p. (EU firmware limit)"
         ],
         [
           "Dimensions",

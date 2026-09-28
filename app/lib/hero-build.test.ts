@@ -126,6 +126,22 @@ describe('hero build shopping guide', () => {
     assert.equal(selection.total, 127.3);
     assert.equal(selection.available, true);
     assert.equal(selection.complete, true);
+    assert.equal(selection.showPrices, true);
+    assert.equal(selection.notify, false);
+  });
+
+  it('shows no price or cart action while the shop is coming soon', () => {
+    const five = resolveHeroBuilds(config, catalog()).find(
+      (build) => build.size === '5',
+    )!;
+    const selection = heroBuildSelection(five, all(five), sellable, true);
+    assert.equal(selection.total, null);
+    assert.equal(selection.showPrices, false);
+    assert.equal(selection.available, false);
+    assert.equal(selection.notify, true);
+    const open = heroBuildSelection(five, all(five), sellable, false);
+    assert.equal(open.total, 127.3);
+    assert.equal(open.notify, false);
   });
 
   it('keeps a missing receiver visible and blocks a complete build instead of substituting another receiver', () => {
