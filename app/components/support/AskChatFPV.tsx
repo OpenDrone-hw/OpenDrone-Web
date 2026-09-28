@@ -3,6 +3,7 @@ import type {AskProductCard, AskResult} from '~/lib/support/chatfpv';
 import {ProductPods, type ProductPodItem} from '~/components/ProductPods';
 import {trackEvent} from '~/lib/growth/plausible';
 import {copyText} from '~/lib/copy';
+import {AnswerMarkdown} from './AnswerMarkdown';
 
 type Answer = Extract<AskResult, {ok: true}>['answer'];
 
@@ -97,8 +98,8 @@ export async function readAskStream(
 /**
  * "Ask ChatFPV (AI)" on /support, above the ticket form (only while
  * CHATFPV_ASK_ENABLED is "1"). The question goes to POST /api/support/ask,
- * which asks ChatFPV server side. The answer is plain text with its
- * sources and the AI label. "Still need help? Open a ticket" hands the
+ * which asks ChatFPV server side. The answer renders ChatFPV's safe Markdown
+ * subset (`AnswerMarkdown`, text nodes only) with its sources and the AI label. "Still need help? Open a ticket" hands the
  * question to the form; an answer ChatFPV hands off or abstains on, or no
  * answer at all, goes to the form straight away, with `onTicket`'s reason
  * shown above it so the swap never looks like a broken page.
@@ -184,8 +185,6 @@ export function AskChatFPV({
     onTicket(question.trim());
   }
 
-  const paragraphs = answer ? answer.text.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean) : [];
-
   return (
     <section className="sp-card sp-ask" aria-labelledby={`${id}-title`}>
       <h2 className="sp-card-title" id={`${id}-title`}>
@@ -239,11 +238,7 @@ export function AskChatFPV({
               ChatFPV isn&apos;t confident about this one. Check the sources below, or open a ticket.
             </p>
           ) : null}
-          {paragraphs.map((p) => (
-            <p key={`${p.length}:${p.slice(0, 40)}`} dir="auto" style={{whiteSpace: 'pre-line'}}>
-              {p}
-            </p>
-          ))}
+          <AnswerMarkdown text={answer.text} citations={answer.citations} />
           {answer.citations.length ? (
             <ol className="sp-links" aria-label="Sources">
               {answer.citations.map((c) => (

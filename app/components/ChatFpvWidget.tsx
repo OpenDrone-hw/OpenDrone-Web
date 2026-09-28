@@ -60,6 +60,8 @@ const BOTTOM_OBSTACLES = [
   '.ship-line',
   '.product-buy-ship',
   '.product-buy-stock',
+  // The notify/newsletter form under a coming-soon product: its consent line sat under the button at 390 px.
+  '.newsletter-signup-form',
 ];
 /**
  * Obstacles whose top edge is in the upper third of the viewport are
