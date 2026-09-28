@@ -160,7 +160,11 @@ export function shopifyIdentityProvider(
       if (typeof claims.exp !== 'number' || claims.exp * 1000 < now() - 60_000) throw new IdpError('id_token expired');
       if (claims.nonce !== p.nonce) throw new IdpError('nonce mismatch');
       const subject = customerGid(claims.sub);
-      if (!subject) throw new IdpError('id_token subject');
+      if (!subject) {
+        // The value never leaves the Worker; its shape (digits 9, letters a) shows what Shopify sends.
+        const shape = typeof claims.sub === 'string' ? claims.sub.slice(0, 60).replace(/[0-9]/g, '9').replace(/[A-Za-z]/g, 'a') : typeof claims.sub;
+        throw new IdpError(`id_token subject shape ${shape}`);
+      }
       return {subject, idToken};
     },
 
