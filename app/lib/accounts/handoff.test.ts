@@ -47,10 +47,10 @@ describe('#cfh fragment', () => {
   });
 
   it('reads the ticket and clears the fragment, keeping path and query', () => {
-    const {win, calls} = fakeWindow(`https://opendrone.be/products/openfc-lite?variant=2020#cfh=${TICKET}`);
+    const {win, calls} = fakeWindow(`https://opendrone.be/products/openfc-lite?Model=30%C3%9730#cfh=${TICKET}`);
     assert.equal(takeHandoffTicket(win), TICKET);
     assert.equal(calls.length, 1);
-    assert.equal(calls[0].url, '/products/openfc-lite?variant=2020');
+    assert.equal(calls[0].url, '/products/openfc-lite?Model=30%C3%9730', "the card's variant selection is kept");
     assert.deepEqual(calls[0].state, {key: 'k'}, 'router history state is kept');
   });
 
