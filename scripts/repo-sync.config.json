@@ -55,7 +55,7 @@
       "handle": "openrx",
       "key": "Telemetry power",
       "from": "Up to 22 dBm (158 mW)",
-      "value": "Up to 100 mW (20 dBm) e.i.r.p. (EU firmware limit)",
+      "value": "20 dBm",
       "source": "Founder decision for the 6 Oct 2026 launch: the EU firmware build caps 2.4 GHz telemetry at the EN 300 328 limit, 20 dBm e.i.r.p. The README value is the LR1121 hardware maximum."
     }
   ]
