@@ -380,12 +380,17 @@ describe('shopify provider', () => {
 
   it('signs in as a public client (Hydrogen channel) without a client secret', async () => {
     let tokenCall: RequestInit | undefined;
+    let discoveryCall: RequestInit | undefined;
     const fetcher = (async (url: string, init?: RequestInit) => {
-      if (url.endsWith('/.well-known/openid-configuration')) return Response.json(discovery);
+      if (url.endsWith('/.well-known/openid-configuration')) {
+        discoveryCall = init;
+        return Response.json(discovery);
+      }
       tokenCall = init;
       return Response.json({id_token: jwt({iss: discovery.issuer, aud: 'cid', exp: Math.floor(Date.now() / 1000) + 600, nonce: 'n', sub: '42'})});
     }) as unknown as typeof fetch;
-    const e: AccountsEnv = {SHOPIFY_CUSTOMER_ACCOUNT_CLIENT_ID: 'cid', SHOPIFY_CUSTOMER_ACCOUNT_SHOP_ID: '123'};
+    // Its own shop id: discovery is cached per issuer across tests.
+    const e: AccountsEnv = {SHOPIFY_CUSTOMER_ACCOUNT_CLIENT_ID: 'cid', SHOPIFY_CUSTOMER_ACCOUNT_SHOP_ID: '124'};
     const idp = shopifyIdentityProvider(e, 'https://opendrone.be', fetcher)!;
     assert.ok(idp);
     const out = await idp.exchangeCode({code: 'c', codeVerifier: 'v', redirectUri: 'https://opendrone.be/account/callback', nonce: 'n'});
@@ -396,6 +401,10 @@ describe('shopify provider', () => {
     const body = new URLSearchParams(String(tokenCall?.body));
     assert.equal(body.get('client_id'), 'cid');
     assert.equal(body.get('code_verifier'), 'v');
+    // Shopify answers 403 to a Worker discovery fetch without these.
+    const dh = new Headers(discoveryCall?.headers);
+    assert.equal(dh.get('Origin'), 'https://opendrone.be');
+    assert.equal(dh.get('User-Agent'), 'opendrone-web');
     assert.equal(shopifyIdentityProvider({SHOPIFY_CUSTOMER_ACCOUNT_SHOP_ID: '123'}, 'https://opendrone.be', fetcher), null);
   });
 
