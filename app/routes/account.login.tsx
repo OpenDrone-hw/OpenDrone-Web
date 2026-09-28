@@ -45,9 +45,9 @@ export default function AccountLoginRoute() {
           </a>
         </section>
 
-        <details className="account-login-disclosure">
-          <summary className="account-login-disclosure-summary">How sign-in and your data work</summary>
-          <div className="account-login-disclosure-body">
+        <details className="details-toggle">
+          <summary className="details-toggle-summary">How sign-in and your data work</summary>
+          <div className="details-toggle-body">
             <p>
               Shopify, which runs our shop, signs you in with a one-time code sent to your email address. If you have no customer account yet,
               signing in creates a Shopify customer account that holds your email address. We add nothing else to it: no newsletter or marketing

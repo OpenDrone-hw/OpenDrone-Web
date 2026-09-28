@@ -8629,7 +8629,7 @@ a.what-chain-chip:hover {
 }
 
 /* /account ChatFPV history: export and delete (app/lib/accounts/rights.ts).
-   Sits inside .account-danger-card, which supplies the section framing. */
+   Sits inside the collapsed "Settings and data" .details-toggle-body. */
 .account-chatfpv {
   display: grid;
   gap: 0.75rem;
@@ -8637,6 +8637,9 @@ a.what-chain-chip:hover {
 .account-chatfpv-title {
   margin: 0;
   font-size: 1.05rem;
+  /* .details-toggle-body sets a muted ambient text color for its prose;
+     headings stay full-strength regardless of where this class is used. */
+  color: var(--color-text);
 }
 .account-chatfpv-notice {
   margin: 0;
@@ -8952,13 +8955,15 @@ a.what-chain-chip:hover {
 }
 
 /* ============================================
-   polish/account: /account header row, danger zone,
-   and /account/login CTA + disclosure toggle.
+   polish/account: /account header row, the full-width Orders card,
+   the Newsletter/Support grid, the collapsed Settings-and-data section,
+   and the /account/login CTA - shares the generic .details-toggle with it.
    Reuses .account-dashboard-* above for the card grid.
    ============================================ */
 
-/* The identity line under the title: "Signed in since ..." plus sign out as
-   its trailing item, not a button floating alone above the heading. */
+/* The identity line under the title: the live Shopify email (or a plain
+   "Signed in" fallback) plus sign out as its trailing item, not a button
+   floating alone above the heading. */
 .account-identity {
   display: flex;
   flex-wrap: wrap;
@@ -8973,28 +8978,36 @@ a.what-chain-chip:hover {
   flex: 0 0 auto;
 }
 
-.account-danger {
-  margin-top: 2.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--color-border);
-}
-.account-danger-title {
-  margin: 0 0 0.85rem;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: var(--ls-label);
-  color: var(--color-text-muted);
-}
-/* Copper accent (same tone as .od-btn-danger) marks this as the
-   destructive-but-deliberate zone without shouting red at every visitor. */
-.account-danger-card {
+/* Orders: a full-width card above the Newsletter/Support grid, each order a
+   plain-text row linking straight to its own Shopify order status page. */
+.account-orders-card {
   display: grid;
+  gap: 0.75rem;
   padding: 1.25rem 1.35rem;
+  margin-bottom: 1rem;
   background: var(--color-bg-card);
-  border: 1px solid color-mix(in srgb, var(--od-pcb-copper) 30%, var(--color-border));
+  border: 1px solid var(--color-border);
   border-radius: var(--r-md);
+}
+.account-orders-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+.account-order-row {
+  display: block;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  text-decoration: none;
+}
+a.account-order-row:hover {
+  color: var(--color-gold-text);
+}
+.account-orders-all {
+  justify-self: start;
 }
 
 .account-login-cta {
@@ -9007,12 +9020,16 @@ a.what-chain-chip:hover {
   font-size: 13px;
 }
 
-.account-login-disclosure {
+/* Generic collapsed-detail block: /account/login's disclosure and
+   /account's "Settings and data" (ChatFPV history, delete account) both
+   use it, so a real detail stays reachable on the page without dominating
+   it visually. */
+.details-toggle {
   border: 1px solid var(--color-border);
   border-radius: var(--r-sm);
   background: var(--color-bg-card);
 }
-.account-login-disclosure-summary {
+.details-toggle-summary {
   padding: 0.85rem 1.1rem;
   font-family: var(--font-mono);
   font-size: 12px;
@@ -9023,19 +9040,19 @@ a.what-chain-chip:hover {
   cursor: pointer;
   list-style: none;
 }
-.account-login-disclosure-summary::-webkit-details-marker {
+.details-toggle-summary::-webkit-details-marker {
   display: none;
 }
-.account-login-disclosure-summary::before {
+.details-toggle-summary::before {
   content: '+';
   display: inline-block;
   width: 1em;
   color: var(--color-gold-text);
 }
-.account-login-disclosure[open] .account-login-disclosure-summary::before {
+.details-toggle[open] .details-toggle-summary::before {
   content: '\2212';
 }
-.account-login-disclosure-body {
+.details-toggle-body {
   display: grid;
   gap: 0.85rem;
   padding: 0 1.1rem 1.1rem;
@@ -9043,13 +9060,21 @@ a.what-chain-chip:hover {
   font-size: 13.5px;
   line-height: 1.6;
 }
-.account-login-disclosure-body p {
+.details-toggle-body p {
   margin: 0;
 }
-.account-login-disclosure-body a {
+.details-toggle-body a {
   color: var(--color-text);
   text-decoration: underline;
   text-underline-offset: 2px;
+}
+
+/* account.account-settings: two stacked subsections (ChatFPV history,
+   delete account) inside the shared .details-toggle-body; a hairline
+   separates them instead of two more full card borders. */
+.account-settings-delete {
+  padding-top: 0.85rem;
+  border-top: 1px dashed var(--color-border);
 }
 
 /* ============================================

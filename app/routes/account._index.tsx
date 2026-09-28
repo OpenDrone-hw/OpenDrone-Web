@@ -1,25 +1,79 @@
 import {data, redirect, useLoaderData, Link} from 'react-router';
 import type {Route} from './+types/account._index';
-import {accountsEnabled} from '~/lib/accounts/config';
+import {accountHeaders, accountsEnabled, redirectTo, sameOrigin} from '~/lib/accounts/config';
 import {legacyAccountResponse} from '~/lib/accounts/legacy';
 import {HISTORY_NOTICES, type HistoryNotice} from '~/lib/accounts/rights';
 import {clearSessionCookie, hasSessionCookie, readSession} from '~/lib/accounts/sessions';
+import {readCustomerAccount, type AccountOrder, type AccountShopifyData} from '~/lib/accounts/customer-shopify';
+import {subscribeWithShopify, unsubscribeWithShopify} from '~/lib/growth/shopify-newsletter';
 import {customerAccountUrl} from '~/lib/shop-links';
 import {supportHeaders} from '~/lib/support/server';
+import {CAMPAIGN} from '~/lib/catalog-client';
 
 /**
- * GET /account with ACCOUNTS_ENABLED "1": the signed-in dashboard. Orders and
- * addresses stay in Shopify customer accounts: customerAccountUrl resolves
- * SHOPIFY_CUSTOMER_ACCOUNT_URL when set, else derives it from the numeric
- * SHOPIFY_CUSTOMER_ACCOUNT_SHOP_ID the sign-in OIDC client already uses
- * (app/lib/shop-links.ts); the card falls back to support only when neither
- * is configured. ChatFPV history export and delete post to
- * /account/chatfpv-history; sign out posts to /account/logout. Signed out, it
- * starts sign-in. Flag off: the legacy Shopify redirect.
+ * GET /account with ACCOUNTS_ENABLED "1": the signed-in dashboard.
+ *
+ * Identity (email), orders and newsletter consent are read LIVE from
+ * Shopify by the session's shopify_gid on every request
+ * (readCustomerAccount, customer-shopify.ts): Shopify owns that record
+ * (migrations/0005_accounts.sql), so nothing here stores email, name or
+ * orders - a failed read just falls back to the plain Shopify account link.
+ * Orders and addresses stay in Shopify customer accounts: customerAccountUrl
+ * resolves SHOPIFY_CUSTOMER_ACCOUNT_URL when set, else derives it from the
+ * numeric SHOPIFY_CUSTOMER_ACCOUNT_SHOP_ID the sign-in OIDC client already
+ * uses (app/lib/shop-links.ts). The newsletter toggle (POST here) reuses
+ * subscribeWithShopify/unsubscribeWithShopify (growth/shopify-newsletter.ts).
+ * ChatFPV history export and delete post to /account/chatfpv-history and
+ * live in the collapsed "Settings and data" section - ChatFPV is not a
+ * primary account feature, so it gets no top-level card. Sign out posts to
+ * /account/logout. Signed out, it starts sign-in. Flag off: the legacy
+ * Shopify redirect.
+ *
+ * In local dev (import.meta.env.DEV, folded to `false` and dropped by the
+ * production build - same rule as app/lib/support/dev-overrides.ts) every
+ * Shopify customer read and every newsletter write is mocked: a local run
+ * never touches the shared store. The mock is keyed off the test IdP's own
+ * customer picker (account/test-idp/authorize.tsx): the first test customer
+ * renders a full mock account, the second an empty one, and typing any
+ * other test GID shows the fallback state.
  */
 export const headers = supportHeaders;
 
 export const meta: Route.MetaFunction = () => [{title: 'Your account | OpenDrone'}, {name: 'robots', content: 'noindex, nofollow'}];
+
+const NEWSLETTER_NOTICES = ['ok', 'unavailable'] as const;
+type NewsletterNotice = (typeof NEWSLETTER_NOTICES)[number];
+
+function devMockAccount(shopifyGid: string): AccountShopifyData | null {
+  if (shopifyGid === 'gid://shopify/Customer/test-1') {
+    return {
+      email: 'jane@example.com',
+      newsletter: 'SUBSCRIBED',
+      orders: [
+        {
+          id: 'mock-order-1',
+          name: '#1042',
+          createdAt: '2026-09-28T09:00:00Z',
+          statusPageUrl: 'https://opendrone-test.myshopify.com/orders/1/authenticate?key=mock',
+          lines: [{sku: 'OPENFC-LITE-2020', name: 'OpenFC Lite', quantity: 1}],
+          preorderLabel: 'Preorder: ships by 14 March 2027 if reached',
+        },
+        {
+          id: 'mock-order-2',
+          name: '#1031',
+          createdAt: '2026-09-14T09:00:00Z',
+          statusPageUrl: 'https://opendrone-test.myshopify.com/orders/2/authenticate?key=mock',
+          lines: [{sku: 'ACC-STRAP-15X200', name: 'Battery strap 15x200', quantity: 2}],
+          preorderLabel: null,
+        },
+      ],
+    };
+  }
+  if (shopifyGid === 'gid://shopify/Customer/test-2') {
+    return {email: 'sam@example.com', newsletter: 'UNSUBSCRIBED', orders: []};
+  }
+  return null;
+}
 
 export async function loader({request, context}: Route.LoaderArgs) {
   const {env} = context;
@@ -33,9 +87,48 @@ export async function loader({request, context}: Route.LoaderArgs) {
   }
   const headers = new Headers({'Cache-Control': 'no-store'});
   if (session.refreshCookie) headers.append('Set-Cookie', session.refreshCookie);
-  const raw = new URL(request.url).searchParams.get('chatfpv');
-  const notice = (HISTORY_NOTICES as readonly string[]).includes(raw ?? '') ? (raw as HistoryNotice) : null;
-  return data({ordersUrl: customerAccountUrl(env), since: new Date(session.createdAt).toISOString().slice(0, 10), notice}, {headers});
+  const url = new URL(request.url);
+  const rawChatfpv = url.searchParams.get('chatfpv');
+  const notice = (HISTORY_NOTICES as readonly string[]).includes(rawChatfpv ?? '') ? (rawChatfpv as HistoryNotice) : null;
+  const rawNewsletter = url.searchParams.get('newsletter');
+  const newsletterNotice = (NEWSLETTER_NOTICES as readonly string[]).includes(rawNewsletter ?? '')
+    ? (rawNewsletter as NewsletterNotice)
+    : null;
+  const ordersUrl = customerAccountUrl(env);
+  const shopify = import.meta.env.DEV ? devMockAccount(session.shopifyGid) : await readCustomerAccount(env, session.shopifyGid, CAMPAIGN);
+  return data(
+    {ordersUrl, since: new Date(session.createdAt).toISOString().slice(0, 10), notice, newsletterNotice, shopify},
+    {headers},
+  );
+}
+
+/** POST /account: the newsletter toggle only (ChatFPV history has its own route). */
+export async function action({request, context}: Route.ActionArgs) {
+  const {env} = context;
+  if (!accountsEnabled(env)) return legacyAccountResponse('', env);
+  if (request.method !== 'POST' || !sameOrigin(request)) {
+    return new Response('Forbidden', {status: 403, headers: accountHeaders()});
+  }
+  const session = await readSession(env.SUPPORT_DB, request);
+  if (!session) return redirectTo('/account/login?return_to=%2Faccount', [], 303);
+  const form = await request.formData();
+  const intent = form.get('intent');
+  if (intent !== 'newsletter-subscribe' && intent !== 'newsletter-unsubscribe') {
+    return new Response('Bad Request', {status: 400, headers: accountHeaders()});
+  }
+  if (import.meta.env.DEV) {
+    // Never write to the shared Shopify store from a local run - see the
+    // loader's devMockAccount and app/lib/support/dev-overrides.ts.
+    return redirectTo('/account?newsletter=ok', [], 303);
+  }
+  const account = await readCustomerAccount(env, session.shopifyGid, CAMPAIGN);
+  if (!account?.email) return redirectTo('/account?newsletter=unavailable', [], 303);
+  const result =
+    intent === 'newsletter-subscribe'
+      ? await subscribeWithShopify(env, account.email)
+      : await unsubscribeWithShopify(env, account.email);
+  const ok = result === 'subscribed' || result === 'already-subscribed' || result === 'unsubscribed';
+  return redirectTo(`/account?newsletter=${ok ? 'ok' : 'unavailable'}`, [], 303);
 }
 
 const NOTICE_TEXT: Record<HistoryNotice, string> = {
@@ -44,15 +137,33 @@ const NOTICE_TEXT: Record<HistoryNotice, string> = {
   confirm: 'Tick the box to confirm the delete.',
 };
 
+const NEWSLETTER_NOTICE_TEXT: Record<NewsletterNotice, string> = {
+  ok: 'Newsletter preference updated.',
+  unavailable: 'Could not update your newsletter preference. Try again later.',
+};
+
+function orderDate(iso: string): string {
+  return new Intl.DateTimeFormat('en-GB', {day: 'numeric', month: 'short'}).format(new Date(iso));
+}
+
+function orderSummary(order: AccountOrder): string {
+  const lines = order.lines.map((l) => `${l.name} ×${l.quantity}`).join(', ') || 'No items';
+  const parts = [order.name, orderDate(order.createdAt), lines];
+  if (order.preorderLabel) parts.push(order.preorderLabel);
+  return parts.join(' · ');
+}
+
 export default function AccountRoute() {
-  const {ordersUrl, since, notice} = useLoaderData<typeof loader>();
+  const {ordersUrl, since, notice, newsletterNotice, shopify} = useLoaderData<typeof loader>();
 
   return (
     <div className="page-shell sp-page">
       <header className="page-header">
         <h1 className="page-title">Your account</h1>
         <div className="account-identity">
-          <p className="page-description">Signed in since {since}. This sign-in also works on chatfpv.com.</p>
+          <p className="page-description">
+            {shopify?.email ? <>{shopify.email} · </> : null}Signed in since {since}.
+          </p>
           <form method="post" action="/account/logout" className="account-identity-signout">
             <button type="submit" className="od-btn od-btn-secondary od-btn-sm">
               Sign out
@@ -61,34 +172,97 @@ export default function AccountRoute() {
         </div>
       </header>
 
-      <div className="account-dashboard-grid">
-        <section className="account-dashboard-card" aria-labelledby="account-orders-title">
-          <p className="account-dashboard-eyebrow-mono">Orders</p>
-          <h2 id="account-orders-title" className="account-dashboard-card-title">
-            Orders and addresses
-          </h2>
-          {ordersUrl ? (
-            <>
-              <p className="account-dashboard-card-lede">Order status, shipping and billing addresses live in your Shopify customer account.</p>
-              <a href={ordersUrl} className="account-dashboard-cta">
-                Orders and addresses
+      <section className="account-orders-card" aria-labelledby="account-orders-title">
+        <p className="account-dashboard-eyebrow-mono">Orders</p>
+        <h2 id="account-orders-title" className="account-dashboard-card-title">
+          Orders
+        </h2>
+        {shopify && shopify.orders.length > 0 ? (
+          <>
+            <ul className="account-orders-list">
+              {shopify.orders.map((order) =>
+                order.statusPageUrl ? (
+                  <li key={order.id}>
+                    <a href={order.statusPageUrl} className="account-order-row">
+                      {orderSummary(order)}
+                    </a>
+                  </li>
+                ) : (
+                  <li key={order.id} className="account-order-row">
+                    {orderSummary(order)}
+                  </li>
+                ),
+              )}
+            </ul>
+            {ordersUrl ? (
+              <a href={ordersUrl} className="account-dashboard-card-link account-orders-all">
+                All orders and addresses ›
               </a>
-            </>
-          ) : (
+            ) : null}
+          </>
+        ) : shopify ? (
+          <>
+            <p className="account-dashboard-card-lede">No orders yet.</p>
+            {ordersUrl ? (
+              <a href={ordersUrl} className="account-dashboard-card-link account-orders-all">
+                All orders and addresses ›
+              </a>
+            ) : null}
+          </>
+        ) : ordersUrl ? (
+          <>
+            <p className="account-dashboard-card-lede">We can&rsquo;t show your recent orders right now.</p>
+            <a href={ordersUrl} className="account-dashboard-cta">
+              Orders and addresses
+            </a>
+          </>
+        ) : (
+          <>
+            <p className="account-dashboard-card-lede">
+              We don&rsquo;t have a link for your orders and addresses right now. Check your order confirmation email, or reach support with your
+              order number.
+            </p>
+            <div className="account-dashboard-card-actions">
+              <Link to="/support?topic=order" className="account-dashboard-cta">
+                Open a support ticket
+              </Link>
+              <Link to="/support/find" className="account-dashboard-card-link">
+                Find an existing ticket
+              </Link>
+            </div>
+          </>
+        )}
+      </section>
+
+      <div className="account-dashboard-grid">
+        <section className="account-dashboard-card" aria-labelledby="account-newsletter-title">
+          <p className="account-dashboard-eyebrow-mono">Newsletter</p>
+          <h2 id="account-newsletter-title" className="account-dashboard-card-title">
+            Newsletter
+          </h2>
+          {shopify ? (
             <>
               <p className="account-dashboard-card-lede">
-                We don&rsquo;t have a link for your orders and addresses right now. Check your order confirmation email, or reach support with
-                your order number.
+                {shopify.newsletter === 'SUBSCRIBED' ? 'Subscribed to Engineering Essentials.' : 'Not subscribed.'}
               </p>
-              <div className="account-dashboard-card-actions">
-                <Link to="/support?topic=order" className="account-dashboard-cta">
-                  Open a support ticket
-                </Link>
-                <Link to="/support/find" className="account-dashboard-card-link">
-                  Find an existing ticket
-                </Link>
-              </div>
+              {newsletterNotice ? (
+                <p className="account-chatfpv-notice" role="status">
+                  {NEWSLETTER_NOTICE_TEXT[newsletterNotice]}
+                </p>
+              ) : null}
+              <form method="post" className="account-dashboard-card-actions">
+                <input
+                  type="hidden"
+                  name="intent"
+                  value={shopify.newsletter === 'SUBSCRIBED' ? 'newsletter-unsubscribe' : 'newsletter-subscribe'}
+                />
+                <button type="submit" className="account-dashboard-cta">
+                  {shopify.newsletter === 'SUBSCRIBED' ? 'Unsubscribe' : 'Subscribe'}
+                </button>
+              </form>
             </>
+          ) : (
+            <p className="account-dashboard-card-lede">Manage this from the newsletter signup in the footer.</p>
           )}
         </section>
 
@@ -107,29 +281,16 @@ export default function AccountRoute() {
             </Link>
           </div>
         </section>
-
-        <section className="account-dashboard-card" aria-labelledby="account-chatfpv-link-title">
-          <p className="account-dashboard-eyebrow-mono">ChatFPV</p>
-          <h2 id="account-chatfpv-link-title" className="account-dashboard-card-title">
-            ChatFPV
-          </h2>
-          <p className="account-dashboard-card-lede">The FPV assistant at chatfpv.com. Same sign-in there, no separate account to create.</p>
-          <a href="https://chatfpv.com" target="_blank" rel="noopener noreferrer" className="account-dashboard-cta">
-            Open chatfpv.com
-          </a>
-        </section>
       </div>
 
-      <section className="account-danger" aria-labelledby="account-danger-title">
-        <h2 id="account-danger-title" className="account-danger-title">
-          Your data
-        </h2>
-        <div className="account-danger-card">
+      <details className="details-toggle account-settings">
+        <summary className="details-toggle-summary">Settings and data</summary>
+        <div className="details-toggle-body">
           <div className="account-chatfpv" aria-labelledby="account-chatfpv-title">
             <h3 id="account-chatfpv-title" className="account-chatfpv-title">
               ChatFPV history
             </h3>
-            <p>Your chatfpv.com conversations made while signed in. Export them as JSON, or delete them for good.</p>
+            <p>Your chatfpv.com conversations made while signed in (same sign-in as here). Export them as JSON, or delete them for good.</p>
             {notice ? (
               <p className="account-chatfpv-notice" role="status">
                 {NOTICE_TEXT[notice]}
@@ -151,8 +312,15 @@ export default function AccountRoute() {
               </button>
             </form>
           </div>
+          <div className="account-settings-delete">
+            <h3 className="account-chatfpv-title">Delete your account</h3>
+            <p>To close your OpenDrone account, open a support ticket and we will process it.</p>
+            <Link to="/support?topic=other" className="account-dashboard-card-link">
+              Contact support ›
+            </Link>
+          </div>
         </div>
-      </section>
+      </details>
     </div>
   );
 }
