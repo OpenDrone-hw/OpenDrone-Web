@@ -24,6 +24,8 @@ import {CAMPAIGN} from '~/lib/catalog-client';
 import {toCards} from '~/lib/catalog';
 import {visitorCountry} from '~/lib/visitor-country';
 import {commerceHandoff, customerAccountUrl} from '~/lib/shop-links';
+import {accountsEnabled} from '~/lib/accounts/config';
+import {hasSessionCookie} from '~/lib/accounts/sessions';
 import resetStyles from '~/styles/reset.css?url';
 import appStyles from '~/styles/app.css?url';
 import siteUiStyles from '~/styles/site-ui.css?url';
@@ -201,7 +203,7 @@ export async function loader(args: Route.LoaderArgs) {
  * Load data necessary for rendering content above the fold. This is the critical data
  * needed to render the page. If it's unavailable, the whole page should 400 or 500 error.
  */
-async function loadCriticalData({context}: Route.LoaderArgs) {
+async function loadCriticalData({context, request}: Route.LoaderArgs) {
   // The catalog is the header's product source and the per-handle
   // availability the status model resolves against. One fetch, cached in
   // the worker for five minutes; a failure degrades to an empty catalog
@@ -213,7 +215,15 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
       catalog,
       context.session.has('shopifyCartId'),
     ),
-    accountUrl: customerAccountUrl(context.env),
+    // ACCOUNTS_ENABLED "1": the header links to the on-site account (or
+    // "Sign in"); a session cookie is enough for the label, /account
+    // checks it. Off: Shopify's customer account URL, unchanged.
+    accountUrl: accountsEnabled(context.env)
+      ? hasSessionCookie(request)
+        ? '/account'
+        : `/account/login?return_to=${encodeURIComponent(new URL(request.url).pathname)}`
+      : customerAccountUrl(context.env),
+    accountSignedIn: accountsEnabled(context.env) && hasSessionCookie(request),
     familyProducts: toCards(catalog),
     availability: Object.fromEntries(
       catalog.products.map((p) => [

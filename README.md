@@ -455,6 +455,107 @@ hour per IP; to reset, stop both, `rm -rf .wrangler/state`, and start them again
 folds to `false`, and `dev-overrides.test.ts` checks a built Worker holds
 no trace of them.
 
+## Shared accounts
+
+opendrone.be signs customers in with Shopify Customer Accounts and is the
+identity provider for chatfpv.com (`app/lib/accounts/`). ChatFPV receives a
+pairwise `sub` only (`acct_` + 32 hex), never the Shopify customer id or email.
+Everything is off unless `ACCOUNTS_ENABLED` is `"1"`; off, `/oauth/*` and
+`/api/account/widget-assertion` answer 404 and `/account/*` keeps the legacy
+redirect to `SHOPIFY_CUSTOMER_ACCOUNT_URL`.
+
+```mermaid
+sequenceDiagram
+  participant B as Browser
+  participant OD as opendrone.be
+  participant SH as Shopify
+  participant CF as chatfpv.com
+  B->>OD: GET /account/login?return_to=/path
+  OD->>B: 302 Shopify authorize (state, nonce, PKCE S256), cookie __Host-od_oauth
+  B->>SH: sign in
+  SH->>B: 302 /account/callback?code&state
+  OD->>SH: token (client secret + code_verifier), keep id_token only
+  OD->>B: cookie __Host-od_sid (30 d sliding), 302 /path
+  B->>OD: GET /oauth/authorize?client_id=chatfpv (from chatfpv.com)
+  OD->>B: 302 chatfpv.com/auth/callback?code&state&iss
+  CF->>OD: POST /oauth/token over the service binding
+  OD-->>CF: {sub, sid, auth_time, iss}
+```
+
+| Route | Purpose |
+|---|---|
+| `GET /account/login?return_to=` | Start sign-in; `return_to` must be a same-origin path |
+| `GET /account/callback` | Finish sign-in, new session id |
+| `POST /account/logout` | Same Origin only; revokes the session, calls ChatFPV `/v1/auth/backchannel-logout {sid}` over the binding, ends the Shopify session |
+| `GET /account` | Orders link (`SHOPIFY_CUSTOMER_ACCOUNT_URL`), sign out |
+| `GET /oauth/authorize` | Codes for client `chatfpv` (60 s, single use; a reused code revokes the session) |
+| `POST /oauth/token` | Service binding only; public host 404 (staging test IdP excepted) |
+| `GET /oauth/logout` | Sign-out from chatfpv.com; `post_logout_redirect_uri` from `CHATFPV_POST_LOGOUT_REDIRECTS`; Shopify's registered logout URI |
+| `GET /api/account/widget-assertion` | 5-minute assertion the widget posts into the ChatFPV iframe; 204 signed out |
+| `GET /account/test-idp/authorize` | Test sign-in form, only with the test IdP rule below |
+
+Test IdP rule: `ACCOUNTS_TEST_IDP="1"` replaces Shopify with the test form
+only when the request host is not `opendrone.be` or `www.opendrone.be`. It
+is never set in `wrangler.production.toml` (a unit test fails if it is).
+
+### Create the Shopify client (founder, Shopify admin)
+
+1. Settings > Customer accounts > "Accounts in online store and checkout" >
+   Edit > choose "Customer accounts" > Save (skip if already chosen).
+2. Sales channels > Headless > the OpenDrone storefront > "Customer Account
+   API settings".
+3. Client type: Edit > "Confidential" > Save.
+4. "Application setup" (Edit each field):
+
+| Field | Value |
+|---|---|
+| Callback URI(s) | `https://opendrone.be/account/callback` and `https://opendrone-web-preview.sales-ee0.workers.dev/account/callback` |
+| Javascript origin(s) | none needed (the token call is server side) |
+| Logout URI | `https://opendrone.be/oauth/logout` |
+
+5. "Credentials": copy the Client ID and the Client secret. From the
+   endpoints list copy the Authorization endpoint. When it reads
+   `https://shopify.com/authentication/<shop id>/oauth/authorize`, the number
+   is `SHOPIFY_CUSTOMER_ACCOUNT_SHOP_ID`; otherwise set
+   `SHOPIFY_CUSTOMER_ACCOUNT_ISSUER` to the endpoint without
+   `/oauth/authorize`. The Worker reads the rest from
+   `<issuer>/.well-known/openid-configuration`.
+
+Shopify accepts only HTTPS callbacks, so local development and version
+previews use the test IdP.
+
+### Variables and secrets
+
+| Name | Where | Value |
+|---|---|---|
+| `ACCOUNTS_ENABLED` | `[vars]` in both wrangler configs | `"0"`; `"1"` in the flip below |
+| `CHATFPV_OAUTH_REDIRECTS` | `[vars]` | `https://chatfpv.com/auth/callback` (production) |
+| `CHATFPV_POST_LOGOUT_REDIRECTS` | `[vars]` | `https://chatfpv.com/` (production) |
+| `SHOPIFY_CUSTOMER_ACCOUNT_CLIENT_ID`, `SHOPIFY_CUSTOMER_ACCOUNT_CLIENT_SECRET`, `SHOPIFY_CUSTOMER_ACCOUNT_SHOP_ID` (or `SHOPIFY_CUSTOMER_ACCOUNT_ISSUER`) | `npx wrangler secret put <NAME> --config wrangler.production.toml` (Worker `opendrone-web`) | Step 5 above |
+| `ACCOUNT_PAIRWISE_SALT` | secret, `opendrone-web` | `openssl rand -base64 32`; never rotate (every ChatFPV account id derives from it) |
+| `SESSION_ENC_KEY` | secret, `opendrone-web` | `openssl rand -base64 32` |
+| `CHATFPV_OAUTH_CLIENT_SECRET` | secret on `opendrone-web` AND on the ChatFPV Worker `chatfpv` (same value) | `openssl rand -base64 32` |
+| `WIDGET_ASSERTION_KEY` | secret on `opendrone-web` AND on `chatfpv` (same value) | `openssl rand -base64 32` |
+| `CHATFPV_KEY` | existing store key secret | unchanged; back-channel logout uses it |
+| `ACCOUNTS_TEST_IDP` | never in a wrangler config; `--var ACCOUNTS_TEST_IDP:1` on staging version uploads only | `1` |
+
+Staging (`opendrone-web-preview`) takes the same secrets with
+`--config wrangler.toml` and its own random values, shared with the ChatFPV
+eval or staging Worker it talks to.
+
+### Flip order
+
+1. Apply `migrations/0005_accounts.sql`:
+   `npx wrangler d1 migrations apply SUPPORT_DB --remote --config wrangler.production.toml`.
+2. Put the storefront secrets above on `opendrone-web`, and the two shared
+   secrets on `chatfpv`.
+3. Merge the storefront PR, then the ChatFPV PR, both with the flag `"0"`.
+4. Storefront: `ACCOUNTS_ENABLED = "1"` in `wrangler.production.toml`
+   (squash-merged PR). Check sign-in and sign-out on opendrone.be.
+5. ChatFPV: its `ACCOUNTS_ENABLED` to `"1"`. Check "Sign in with OpenDrone"
+   on chatfpv.com and silent SSO.
+6. Roll back in reverse: ChatFPV first, then the storefront.
+
 ## The studio
 
 `npm run dev`, open `/studio`: a local mirror of the site where everything
@@ -506,6 +607,7 @@ the client bundle; tokens and the SKU policy never do.
 | Mail | `SHOPIFY_NEWSLETTER_WRITE_ENABLED`, `RESEND_API_KEY`, `SUPPORT_FROM_EMAIL`, `TURNSTILE_*`, `DISCORD_SUPPORT_INVITE`, `PUBLIC_DISCORD_INVITE`, `PUBLIC_COMPANY_*` | Worker secrets or vars |
 | Support tickets | `SUPPORT_DB` (D1 binding), `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID`, `DISCORD_SUPPORT_CHANNEL_ID`, `DISCORD_STAFF_METADATA_CHANNEL_ID`, `SUPPORT_MOD_ROLE_ID`, `SUPPORT_MODERATION_MODE`, `SUPPORT_SESSION_SECRET`, `SUPPORT_CLEANUP_SECRET` | binding in the wrangler config, the rest Worker secrets |
 | Support switches | `SUPPORT_SHOPIFY_WRITE_ENABLED`, `SUPPORT_EMAIL_NOTIFY_ENABLED` | `[vars]` in `wrangler.production.toml` |
+| Shared accounts | `ACCOUNTS_ENABLED`, `CHATFPV_OAUTH_REDIRECTS`, `CHATFPV_POST_LOGOUT_REDIRECTS` (vars); `SHOPIFY_CUSTOMER_ACCOUNT_*`, `ACCOUNT_PAIRWISE_SALT`, `SESSION_ENC_KEY`, `CHATFPV_OAUTH_CLIENT_SECRET`, `WIDGET_ASSERTION_KEY` (secrets); `ACCOUNTS_TEST_IDP` never in production | see [Shared accounts](#shared-accounts) |
 | Roadmap | `GITHUB_STATUS_TOKEN` | Worker secret |
 | Staging only | `STAGING_PASSWORD` | Worker secret |
 

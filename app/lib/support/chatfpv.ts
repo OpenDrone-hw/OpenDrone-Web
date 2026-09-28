@@ -106,7 +106,13 @@ export function chatFpvWidgetSrcWithProduct(src: string | null | undefined, prod
  * X-ChatFPV-Client so ChatFPV rate limits each visitor on its own instead of
  * every visitor behind the storefront's one address.
  */
-export type AskContext = {product?: string; page?: string; clientId?: string};
+export type AskContext = {
+  product?: string;
+  page?: string;
+  clientId?: string;
+  /** Pairwise account sub of a signed-in shopper (app/lib/accounts/), sent as X-ChatFPV-Account next to the store key. */
+  accountSub?: string;
+};
 
 /**
  * A stable, opaque ChatFPV client id for a visitor's IP bucket: SHA-256 of
@@ -512,6 +518,7 @@ export function createChatFpvClient(env: ChatFpvEnv, fetcher?: typeof fetch, opt
         },
       };
       const extra: Record<string, string> = context.clientId && env.CHATFPV_KEY ? {'X-ChatFPV-Client': context.clientId} : {};
+      if (context.accountSub && env.CHATFPV_KEY && /^acct_[0-9a-f]{32}$/.test(context.accountSub)) extra['X-ChatFPV-Account'] = context.accountSub;
       const res = await call('ask', context.page ?? 'ask', '/v1/chat', body, [429], extra);
       if (res?.status === 429) {
         return {rateLimited: true, message: chatFpvErrorMessage(res.data) ?? DEFAULT_RATE_MESSAGE};
@@ -535,6 +542,7 @@ export function createChatFpvClient(env: ChatFpvEnv, fetcher?: typeof fetch, opt
         },
       };
       const extra: Record<string, string> = context.clientId && env.CHATFPV_KEY ? {'X-ChatFPV-Client': context.clientId} : {};
+      if (context.accountSub && env.CHATFPV_KEY && /^acct_[0-9a-f]{32}$/.test(context.accountSub)) extra['X-ChatFPV-Account'] = context.accountSub;
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs);
       try {
@@ -722,7 +730,13 @@ async function shapeAskAnswer(answer: ChatAnswer | ChatFpvRateLimited | null, ca
  * /v1/chat server side (the browser never talks to ChatFPV, so the page
  * CSP needs no connect-src entry). Off unless CHATFPV_ASK_ENABLED is "1".
  */
-export async function handleAsk(request: Request, env: ChatFpvEnv, client?: ChatFpvClient, catalog?: CatalogClient): Promise<Response> {
+export async function handleAsk(
+  request: Request,
+  env: ChatFpvEnv,
+  client?: ChatFpvClient,
+  catalog?: CatalogClient,
+  accountSub?: string | null,
+): Promise<Response> {
   const parsed = await parseAskRequest(request, env);
   if (parsed instanceof Response) return parsed;
   const {message, product, clientId} = parsed;
@@ -734,6 +748,7 @@ export async function handleAsk(request: Request, env: ChatFpvEnv, client?: Chat
     page: 'support',
     ...(product ? {product} : {}),
     ...(clientId ? {clientId} : {}),
+    ...(accountSub ? {accountSub} : {}),
   });
   const result = await shapeAskAnswer(answer, catalog);
   return askJson(result, result.ok ? 200 : result.error === 'rate' ? 429 : 502);
@@ -760,6 +775,7 @@ export async function handleAskStream(
   client?: ChatFpvClient,
   catalog?: CatalogClient,
   waitUntil?: (p: Promise<unknown>) => void,
+  accountSub?: string | null,
 ): Promise<Response> {
   const parsed = await parseAskRequest(request, env);
   if (parsed instanceof Response) return parsed;
@@ -786,7 +802,7 @@ export async function handleAskStream(
     try {
       const answer = await c.askStream(
         message,
-        {page: 'support', ...(product ? {product} : {}), ...(clientId ? {clientId} : {})},
+        {page: 'support', ...(product ? {product} : {}), ...(clientId ? {clientId} : {}), ...(accountSub ? {accountSub} : {})},
         (text) => void send('delta', {text}),
         (text) => void send('status', {text}),
       );

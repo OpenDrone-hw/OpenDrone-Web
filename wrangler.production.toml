@@ -54,6 +54,12 @@ CHATFPV_ASK_ENABLED = "0"
 CHATFPV_WIDGET_ENABLED = "0"
 # ChatFPV handoff (#cfh tickets on product pages); "1" needs the accounts rollout.
 HANDOFF_ENABLED = "0"
+# Shared accounts (README "Shared accounts"): sign-in, /oauth/* for
+# chatfpv.com and the widget assertion. Off until the integrate step.
+# ACCOUNTS_TEST_IDP must never appear in this file (a unit test checks).
+ACCOUNTS_ENABLED = "0"
+CHATFPV_OAUTH_REDIRECTS = "https://chatfpv.com/auth/callback"
+CHATFPV_POST_LOGOUT_REDIRECTS = "https://chatfpv.com/"
 
 # Support tickets: the ticket index and conversation copy. A new migration is
 # applied with `npx wrangler d1 migrations apply SUPPORT_DB --remote
