@@ -238,6 +238,16 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
     };
   }, [src]);
 
+  // Marks the page while the launcher is mounted, so the stylesheet can keep
+  // the text it lifts next to clear of its column (`.chatfpv-widget-on` in
+  // app.css) instead of the button covering it.
+  useEffect(() => {
+    if (!src) return;
+    const html = document.documentElement;
+    html.classList.add('chatfpv-widget-on');
+    return () => html.classList.remove('chatfpv-widget-on');
+  }, [src]);
+
   useEffect(() => {
     if (!handoff || !src || handoffRead.current) return;
     handoffRead.current = true;
@@ -356,10 +366,11 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
       <button
         ref={button}
         type="button"
-        className="od-btn od-btn-primary"
+        className="chatfpv-widget-toggle"
         aria-expanded={open}
-        aria-label={unread && !open ? 'Ask ChatFPV (AI), 1 unread reply' : undefined}
-        style={{position: 'relative'}}
+        aria-label={open ? 'Close ChatFPV' : unread ? 'Ask ChatFPV (AI), 1 unread reply' : 'Ask ChatFPV (AI)'}
+        title={open ? 'Close ChatFPV' : 'Ask ChatFPV (AI)'}
+        style={{position: 'relative', width: 56, height: 56, padding: 0, border: 0, borderRadius: 13, background: 'transparent', cursor: 'pointer', boxShadow: '0 6px 20px rgba(0, 0, 0, 0.35)', lineHeight: 0}}
         onClick={() => {
           if (open) {
             setHandoffSrc(null);
@@ -374,7 +385,7 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
           });
         }}
       >
-        {open ? 'Close ChatFPV' : 'Ask ChatFPV (AI)'}
+        {open ? <CloseGlyph /> : <OpenDroneAvatar />}
         {unread && !open ? (
           <span
             className="chatfpv-widget-unread"
@@ -386,5 +397,36 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
         ) : null}
       </button>
     </div>
+  );
+}
+
+/**
+ * The OpenDrone avatar (OpenDrone-Brand `avatar/opendrone-avatar.svg`, the OD
+ * mark on the gold rounded square) as the closed widget button: the
+ * helper reads as OpenDrone's own assistant, not a second brand.
+ */
+function OpenDroneAvatar() {
+  return (
+    <svg width="56" height="56" viewBox="0 0 1024 1024" aria-hidden="true" focusable="false">
+      <rect width="1024" height="1024" rx="230.4" fill="#ffb700" />
+      <g transform="translate(205.8972,184.1815) scale(1.846)">
+        <g transform="translate(0,433) scale(0.1,-0.1)" fillRule="evenodd">
+          <path
+            fill="#0d0d10"
+            d="M1440 4319 C725 4245 212 3785 57 3079 C14 2882 5 2798 6 2550 C6 2289 20 2162 71 1960 C222 1370 636 955 1203 825 C1392 782 1713 766 1910 791 C2702 889 3214 1441 3300 2289 C3323 2526 3307 2858 3261 3070 C3139 3625 2795 4039 2300 4223 C2059 4312 1733 4349 1440 4319 Z M1345.5675 3665.9078 C1392.1719 3682.7225 1441.3278 3696.1029 1493 3706 C1593 3725 1791 3717 1895 3690 C2307 3584 2555 3195 2577 2625 C2601 1997 2343 1535 1900 1413 C1797 1385 1512 1387 1407 1418 C1386.1046 1424.0547 1365.6237 1430.8575 1345.5675 1438.3887 Z"
+          />
+        </g>
+      </g>
+    </svg>
+  );
+}
+
+/** Open state: the same gold square with a close cross. */
+function CloseGlyph() {
+  return (
+    <svg width="56" height="56" viewBox="0 0 56 56" aria-hidden="true" focusable="false">
+      <rect width="56" height="56" rx="12.6" fill="#ffb700" />
+      <path d="M20 20 L36 36 M36 20 L20 36" stroke="#0d0d10" strokeWidth="3.5" strokeLinecap="round" />
+    </svg>
   );
 }
