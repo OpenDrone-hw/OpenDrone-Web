@@ -83,7 +83,9 @@ async function discover(issuer: string, origin: string, fetcher: typeof fetch, n
 }
 
 /** Shopify's id_token `sub` as a customer GID (a bare numeric id gets the GID prefix). */
+/** `sub` is the numeric customer id (Shopify sends it as a JSON number), or its GID. */
 export function customerGid(sub: unknown): string | null {
+  if (typeof sub === 'number') sub = Number.isSafeInteger(sub) && sub > 0 ? String(sub) : '';
   if (typeof sub !== 'string') return null;
   const gid = /^\d+$/.test(sub) ? `gid://shopify/Customer/${sub}` : sub;
   return CUSTOMER_GID.test(gid) ? gid : null;
@@ -160,11 +162,7 @@ export function shopifyIdentityProvider(
       if (typeof claims.exp !== 'number' || claims.exp * 1000 < now() - 60_000) throw new IdpError('id_token expired');
       if (claims.nonce !== p.nonce) throw new IdpError('nonce mismatch');
       const subject = customerGid(claims.sub);
-      if (!subject) {
-        // The value never leaves the Worker; its shape (digits 9, letters a) shows what Shopify sends.
-        const shape = typeof claims.sub === 'string' ? claims.sub.slice(0, 60).replace(/[0-9]/g, '9').replace(/[A-Za-z]/g, 'a') : typeof claims.sub;
-        throw new IdpError(`id_token subject shape ${shape}`);
-      }
+      if (!subject) throw new IdpError('id_token subject');
       return {subject, idToken};
     },
 
