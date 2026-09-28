@@ -28,6 +28,7 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 | Utilisation du site | Adresse IP, navigateur, pages visitées | Optimisation du site, sécurité |
 | Newsletter | Courriel, pays (déduit de l’adresse IP) | Communication marketing (uniquement avec consentement) |
 | Demandes professionnelles | Nom de l’entreprise et du contact, courriel, numéro de téléphone, adresses de livraison et de facturation, numéro de TVA ou EIN, informations sur le magasin, produits demandés | Réponse et devis pour une demande de vente en gros d’un magasin |
+| Assistant ChatFPV (l’aide sur les pages produits, le champ de question sur /support, les propositions de réponse aux tickets de support) | Le texte que vous saisissez et les réponses de ChatFPV ; sur les pages produits, aussi le produit que vous consultez ; un hachage salé de votre adresse IP (limites d’utilisation) ; votre évaluation d’une réponse et une éventuelle remarque. Pour une proposition de réponse : le texte de la question de votre ticket, sans nom, courriel, numéro de téléphone, données de commande ni pièces jointes | Répondre aux questions sur les produits et le FPV avec un assistant d’IA ; proposer des réponses à notre équipe de support ; améliorer les réponses de ChatFPV |
 
 ### 3. Bases juridiques (Art. 6 RGPD)
 
@@ -37,6 +38,8 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 | Traitement du paiement | Nécessaire à l’exécution du contrat (Art. 6.1.b) |
 | Facturation et comptabilité | Obligation légale (Art. 6.1.c : législation TVA, droit comptable) |
 | Service client | Intérêt légitime (Art. 6.1.f) |
+| Réponses de ChatFPV dans l’aide et le champ de question | Intérêt légitime (Art. 6.1.f) : répondre aux questions sur les produits et le FPV sans qu’un collaborateur soit nécessaire pour chaque message |
+| Questions sans réponse, évaluations et remarques de correction utilisées pour améliorer ChatFPV | Intérêt légitime (Art. 6.1.f) ; vous pouvez vous y opposer à tout moment |
 | Analyse du site web | Intérêt légitime (Art. 6.1.f) ; sans cookies, sans identifiant persistant |
 | Newsletter | Consentement (Art. 6.1.a) |
 | Demandes professionnelles | Mesures précontractuelles prises à la demande du demandeur (Art. 6.1.b) |
@@ -52,6 +55,11 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 | Fichiers journaux du site | 6 mois |
 | Inscription à la newsletter | Jusqu’au désabonnement |
 | Demandes professionnelles sans commande | 2 ans après le dernier contact |
+| Conversations ChatFPV dans l’aide et le champ de question, avec les évaluations | 90 jours après le dernier message de la conversation |
+| Propositions de réponse de ChatFPV pour un ticket de support | 24 mois après le dernier message du ticket ; la réponse du support reste, sans votre texte |
+| Questions sans réponse copiées pour améliorer ChatFPV (sans lien avec l’auteur de la question) | 90 jours après la dernière fois que la question a été posée |
+| Votre texte copié dans une proposition de correction ChatFPV | 24 mois, puis supprimé ; la modification des connaissances reste, sans votre texte |
+| Prompts et réponses chez Google (API Gemini) | 55 jours pour la détection des abus (30 jours pour Google Search grounding), par Google |
 
 ### 5. Destinataires / sous-traitants
 
@@ -66,10 +74,13 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 | Polar Advisory BV (comptable) | Facturation et comptes annuels | Belgique |
 | Resend (Plus Five Five, Inc.) | E-mails envoyés par opendrone.be : confirmations de rétractation, e-mails de bienvenue et de newsletter, demandes des revendeurs, avis de nouvelle réponse à un ticket de support (un lien seulement, sans contenu du message) | Infrastructure en région UE ; entité légale É-U : CCT |
 | Discord Inc. (sous-traitant) | Tickets de support : notre équipe les lit et y répond dans un canal Discord réservé au personnel (votre prénom, courriel, numéro et détails de commande, messages, pièces jointes) | É-U : EU-US Data Privacy Framework (art. 45 RGPD) ; conditions de sous-traitance de Discord : https://support.discord.com/hc/en-us/articles/37891902561687 |
-| Cloudflare, Inc. | Hébergement et diffusion du site (adresse IP, données de requête, pays déduit) ; stockage des tickets de support et de compteurs anti-abus (Cloudflare D1 ; les compteurs contiennent un hachage à clé de l’adresse IP et du courriel, jamais les valeurs, et sont supprimés après deux jours au plus) ; anti-spam Turnstile sur les formulaires de newsletter, de demande professionnelle et de support | É-U : EU-US Data Privacy Framework (art. 45 RGPD) |
+| Cloudflare, Inc. | Hébergement et diffusion du site (adresse IP, données de requête, pays déduit) ; stockage des tickets de support et de compteurs anti-abus (Cloudflare D1 ; les compteurs contiennent un hachage à clé de l’adresse IP et du courriel, jamais les valeurs, et sont supprimés après deux jours au plus) ; anti-spam Turnstile sur les formulaires de newsletter, de demande professionnelle et de support; exécution de ChatFPV sur chatfpv.com, qui répond aussi dans l’aide et le champ de question (Workers, conversations dans D1, base de connaissances dans Vectorize, un modèle d’IA de secours dans Workers AI qui ne s’entraîne pas sur vos contenus) | É-U : EU-US Data Privacy Framework (art. 45 RGPD) ; CCT (art. 46 RGPD) dans l’avenant de traitement des données de Cloudflare pour tout transfert que le Framework ne couvre pas |
+| Google (API Gemini, niveau payant) | Rédaction des réponses et des propositions de réponse de ChatFPV à partir de votre question, de la conversation jusque-là et de textes sources récupérés ; Google Search grounding pour les réponses et pour la recherche sur les questions sans réponse. Au niveau payant, Google n’utilise pas les prompts ni les réponses pour améliorer ses produits ; il les conserve 55 jours uniquement pour détecter les abus (30 jours pour Search grounding) | États-Unis et autres sites de Google : EU-US Data Privacy Framework (art. 45 RGPD) et CCT (art. 46 RGPD) dans les conditions de sous-traitance de Google |
 | Commission européenne (VIES) | Vérification du numéro de TVA indiqué dans une demande professionnelle | UE |
 
 Les données de commande et de client (nom, adresse, e-mail, référence de paiement, historique des commandes) et le consentement à la newsletter sont traités dans Shopify.
+
+**ChatFPV.** ChatFPV est un assistant d’IA pour les questions sur le FPV et les produits OpenDrone, exploité par Incutec BV sur chatfpv.com. Ses réponses sont générées automatiquement et peuvent être fausses : vérifiez les sources qu’il cite. Sur opendrone.be, il apparaît à deux endroits. L’aide dans le coin des pages produits est chatfpv.com chargé dans la page : votre question et le produit que vous consultez sont envoyés à chatfpv.com tels que vous les saisissez, et chatfpv.com conserve un identifiant de conversation aléatoire dans le stockage local de votre navigateur (aucun nom, aucun compte). Le champ de question sur /support envoie votre question via opendrone.be, qui supprime d’abord les adresses e-mail, numéros de téléphone, numéros de carte, IBAN et identifiants similaires, mais pas les noms ni les numéros de commande : ne les indiquez pas. Lorsque notre équipe répond à un ticket de support, ChatFPV peut proposer une réponse à partir de la question du ticket, sans votre nom, courriel, numéro de téléphone, données de commande ni pièces jointes ; un collaborateur décide de ce qui est envoyé. Une question à laquelle ChatFPV n’a pas pu répondre est copiée, sans son auteur et après suppression des adresses e-mail, numéros de téléphone et numéros de commande, dans une liste que notre équipe utilise pour ajouter les connaissances manquantes ; une remarque accompagnant une évaluation peut devenir une proposition de correction. Vous pouvez vous opposer à cet usage via privacy@opendrone.be. La déclaration de confidentialité de ChatFPV, avec les cookies et le stockage de navigateur utilisés par chatfpv.com : https://chatfpv.com/privacy
 
 **Discord.** Le serveur communautaire OpenDrone fonctionne sur Discord. Discord Inc. est un responsable du traitement indépendant pour le serveur communautaire que vous choisissez de rejoindre. Pour les tickets de support, Discord Inc. traite le ticket pour notre compte en tant que sous-traitant (tableau ci-dessus) ; aucun compte Discord n’est nécessaire pour ouvrir un ticket. Politique de confidentialité de Discord : https://discord.com/privacy
 
@@ -100,7 +111,7 @@ Vous avez le droit d’introduire une plainte auprès de l’Autorité belge de 
 | Site web | https://www.autoriteprotectiondonnees.be |
 | Courriel | contact@apd-gba.be |
 
-Vous pouvez également introduire une plainte auprès de l’autorité de contrôle de votre lieu de résidence ou de travail dans l’UE, si vous ne résidez pas en Belgique (Art. 77 RGPD).
+Vous pouvez également introduire une plainte auprès de l’autorité de contrôle de votre lieu de résidence ou de travail dans l’UE, si vous ne résidez pas en Belgique (Art. 77 RGPD). Cela vaut aussi pour les plaintes concernant ChatFPV.
 
 ### 8. Sécurité
 
@@ -111,7 +122,7 @@ Incutec BV prend des mesures techniques et organisationnelles appropriées pour 
 
 ### 9. Décision automatisée
 
-Incutec BV n'effectue aucune décision automatisée ni aucun profilage au sens de l'art. 22 RGPD. Chaque commande est traitée et, si nécessaire, examinée par un collaborateur.
+Incutec BV n'effectue aucune décision automatisée ni aucun profilage au sens de l'art. 22 RGPD. Chaque commande est traitée et, si nécessaire, examinée par un collaborateur. Les réponses de ChatFPV sont générées automatiquement mais ne décident rien à votre sujet, et une réponse à un ticket de support est toujours envoyée par un collaborateur.
 
 **Caractère obligatoire des données.** Le nom, l'adresse, l'e-mail et les données de paiement sont nécessaires pour exécuter une commande ; sans eux, aucun contrat ne peut être conclu. Les données de facturation doivent être conservées légalement. Toutes les autres données (numéro de téléphone, newsletter, données de compte) sont facultatives.
 
