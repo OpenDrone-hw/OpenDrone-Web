@@ -5,7 +5,7 @@ import {priceTierWritesEnabled, syncPriceTiers, targetPrice} from './shopify-pri
 
 const CONFIG = parseCampaignConfig({
   countFrom: '2026-09-21',
-  endsOn: '2026-12-31',
+  endsOn: '2026-12-31', shipsBy: '2027-03-11',
   priceTiers: [{upTo: 100, off: 0.2}, {upTo: 250, off: 0.1}],
   pendingShips: 'ships later',
   skus: {'OPENESC-2020': {batches: [{units: 250}]}, 'OPENRX-LITE': {batches: [{units: 250}]}},
@@ -130,7 +130,7 @@ describe('syncPriceTiers', () => {
 describe('per-SKU price steps', () => {
   const MOTORS = parseCampaignConfig({
     countFrom: '2026-09-21',
-    endsOn: '2026-12-31',
+    endsOn: '2026-12-31', shipsBy: '2027-03-11',
     priceTiers: [{upTo: 100, off: 0.2}, {upTo: 250, off: 0.1}],
     pendingShips: 'ships later',
     skus: {
@@ -167,7 +167,7 @@ describe('per-SKU price steps', () => {
       () =>
         parseCampaignConfig({
           countFrom: '2026-09-21',
-          endsOn: '2026-12-31',
+          endsOn: '2026-12-31', shipsBy: '2027-03-11',
           priceTiers: [{upTo: 100, off: 0.2}],
           pendingShips: 'ships later',
           skus: {X: {batches: [{units: 10}], priceTiers: [{upTo: 250, off: 0.2}, {upTo: 100, off: 0.1}]}},

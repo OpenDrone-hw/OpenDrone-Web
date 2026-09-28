@@ -29,6 +29,15 @@ describe('stepBarView', () => {
     assert.equal(bar.value, bar.max);
   });
 
+  it('stays at a reached target past it: no new target opens', () => {
+    for (const ordered of [500, 850, 5000]) {
+      const bar = stepBarView(campaignState(STACK, ordered, PENDING, TIERS), ENDS);
+      assert.deepEqual([bar.funded, bar.value, bar.max], [true, 250, 250], `${ordered} ordered`);
+    }
+    const run = stepBarView(campaignState([{units: 250}], 1300, PENDING, TIERS), ENDS);
+    assert.deepEqual([run.funded, run.label], [true, '250 / 250']);
+  });
+
   it('drops the ticks once the bar counts a later batch', () => {
     const bar = stepBarView(campaignState(STACK, 260, PENDING, TIERS), ENDS);
     assert.equal(bar.label, '10 / 250');

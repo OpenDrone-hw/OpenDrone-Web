@@ -31,7 +31,7 @@ const ENV = {
 
 const CONFIG = parseCampaignConfig({
   countFrom: '2026-09-21',
-  endsOn: '2026-12-31',
+  endsOn: '2026-12-31', shipsBy: '2027-03-11',
   priceTiers: [{upTo: 100, off: 0.2}, {upTo: 250, off: 0.1}],
   pendingShips: 'ships about 10 weeks after its target is reached',
   skus: {
@@ -141,12 +141,13 @@ describe('preorder fulfilment', () => {
     assert.equal(PREORDER_LINE_ATTRIBUTE, PREORDER_ATTRIBUTE);
   });
 
-  it('maps paid units to batches, repeating the last batch size', () => {
+  it('maps paid units to batches, every unit past a reached last target staying in it', () => {
     const batches = CONFIG.skus['OPENFC-LITE-2020'].batches;
     assert.equal(batchOfUnit(batches, 1).batch, 1);
     assert.equal(batchOfUnit(batches, 250).batch, 1);
     assert.equal(batchOfUnit(batches, 251).batch, 2);
-    assert.equal(batchOfUnit(batches, 751).batch, 4);
+    assert.equal(batchOfUnit(batches, 751).batch, 2);
+    assert.equal(batchOfUnit(batches, 5000).batch, 2);
   });
 
   it('assigns batches in creation order and splits a line over a boundary', () => {
@@ -320,6 +321,21 @@ describe('SKUs that ship with a campaign SKU', () => {
     const [plan] = planPreorderHolds([props], WITH);
     assert.deepEqual(plan.tags, ['preorder', 'batch:OPENFC-LITE-2020:1']);
     assert.match(plan.note, /ACC-PROP-5-HQ-J37 with OPENFC-LITE-2020 batch 1/);
+  });
+
+  it('tags accessory units on hand with the dated batch and the rest with the run', () => {
+    const stocked = parseCampaignConfig({
+      ...CONFIG,
+      shipsWith: {'ACC-ANT-T': {sku: 'OPENFC-LITE-2020', batch: 1, stock: 4, after: 2}},
+    });
+    const first = order({lines: [['ACC-ANT-T', 3]]});
+    const second = order({lines: [['ACC-ANT-T', 3]]});
+    const assigned = assignBatches([first, second], stocked);
+    assert.deepEqual(assigned.get(first.id)?.map((b) => [b.batch, b.units]), [[1, 3]]);
+    assert.deepEqual(assigned.get(second.id)?.map((b) => [b.batch, b.units, b.shipPromise]), [
+      [1, 1, 'ships late October 2026'],
+      [2, 2, CONFIG.pendingShips],
+    ]);
   });
 
   it('puts a follower on the batch its lead next unit falls into', () => {

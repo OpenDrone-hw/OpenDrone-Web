@@ -933,9 +933,9 @@ export function specSheet(
 
 /**
  * A ship promise as one short line for a cart row or a dialog row. A
- * funding-target promise ("ships about 10 weeks after its target is
- * reached: by 11 March 2027 if the target is reached by 31 December 2026,
- * otherwise ...") becomes a label plus "ships by 11 March 2027 if reached";
+ * funding-target promise ("ships by 14 March 2027 if the target is reached
+ * by 22 November 2026, otherwise ...") becomes a label plus "ships by 14
+ * March 2027 if reached";
  * a dated promise ("ships late October 2026") keeps its words.
  */
 export type ShortShipPromise = {kind: 'target' | 'date'; label: string | null; text: string};
