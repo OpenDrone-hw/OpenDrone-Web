@@ -478,28 +478,30 @@ export default function SupportRoute() {
               {t('community_cta')}
             </a>
           </section>
-
-          <section className="sp-card">
-            <h2 className="sp-card-title">{t('topics_title')}</h2>
-            <ul className="sp-links">
-              {HELP_LINKS.map((l) => (
-                <li key={l.key}>
-                  <Link prefetch="intent" to={legalHref(l.to, 'en')}>
-                    {t(l.key)}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section className="sp-card" id="sales">
-            <h2 className="sp-card-title">{t('sales_title')}</h2>
-            <p>
-              <Txt id="support.sales_body" />{' '}
-              <a href={`mailto:${salesEmail}`}>{salesEmail}</a>
-            </p>
-          </section>
         </aside>
+      </div>
+
+      <div className="sp-below-row">
+        <section className="sp-card">
+          <h2 className="sp-card-title">{t('topics_title')}</h2>
+          <ul className="sp-links">
+            {HELP_LINKS.map((l) => (
+              <li key={l.key}>
+                <Link prefetch="intent" to={legalHref(l.to, 'en')}>
+                  {t(l.key)}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="sp-card" id="sales">
+          <h2 className="sp-card-title">{t('sales_title')}</h2>
+          <p>
+            <Txt id="support.sales_body" />{' '}
+            <a href={`mailto:${salesEmail}`}>{salesEmail}</a>
+          </p>
+        </section>
       </div>
     </div>
   );
