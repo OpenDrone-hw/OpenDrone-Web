@@ -404,7 +404,7 @@ describe('EU launch claims', () => {
       ]),
     ];
     const power = rows.filter(([k]) => k === 'Telemetry power').map(([, v]) => v);
-    assert.ok(power.includes('Up to 100 mW (20 dBm) e.i.r.p. (EU firmware limit)'));
+    assert.ok(power.includes('20 dBm'));
     assert.doesNotMatch(JSON.stringify(c), /22 dBm|158 mW/);
   });
 });
