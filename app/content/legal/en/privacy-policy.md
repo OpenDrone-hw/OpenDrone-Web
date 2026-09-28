@@ -56,7 +56,7 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Newsletter subscription | Until unsubscribed |
 | Trade enquiries without an order | 2 years after the last contact |
 | ChatFPV conversations in the helper and the Ask box, with ratings | 90 days after the last message in the conversation |
-| ChatFPV reply suggestions for a support ticket | With the ticket: 24 months after the ticket is closed |
+| ChatFPV reply suggestions for a support ticket | 24 months after the last message in the ticket; the staff reply stays, without your text |
 | Unanswered questions copied to improve ChatFPV (no link to who asked) | 90 days after the question was last asked |
 | Your text copied into a proposed ChatFPV correction | 24 months, then deleted; the knowledge change stays without your text |
 | Prompts and replies at Google (Gemini API) | 55 days for abuse monitoring (30 days for Google Search grounding), by Google |

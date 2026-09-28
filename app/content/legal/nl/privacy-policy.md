@@ -54,7 +54,7 @@ Incutec BV heeft geen Functionaris voor Gegevensbescherming (DPO) aangesteld aan
 | Nieuwsbrief-abonnement | Tot uitschrijving |
 | Handelsaanvragen zonder bestelling | 2 jaar na het laatste contact |
 | ChatFPV-gesprekken in de hulp en het vraagvak, met beoordelingen | 90 dagen na het laatste bericht in het gesprek |
-| Antwoordvoorstellen van ChatFPV voor een supportticket | Samen met het ticket: 24 maanden na afsluiting van het ticket |
+| Antwoordvoorstellen van ChatFPV voor een supportticket | 24 maanden na het laatste bericht in het ticket; het antwoord van support blijft, zonder uw tekst |
 | Onbeantwoorde vragen gekopieerd om ChatFPV te verbeteren (zonder link naar wie de vraag stelde) | 90 dagen nadat de vraag voor het laatst werd gesteld |
 | Uw tekst gekopieerd in een voorgestelde ChatFPV-correctie | 24 maanden, daarna gewist; de kenniswijziging blijft zonder uw tekst |
 | Prompts en antwoorden bij Google (Gemini API) | 55 dagen voor misbruikdetectie (30 dagen voor Google Search grounding), door Google |

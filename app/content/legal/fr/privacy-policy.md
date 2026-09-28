@@ -56,7 +56,7 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 | Inscription à la newsletter | Jusqu’au désabonnement |
 | Demandes professionnelles sans commande | 2 ans après le dernier contact |
 | Conversations ChatFPV dans l’aide et le champ de question, avec les évaluations | 90 jours après le dernier message de la conversation |
-| Propositions de réponse de ChatFPV pour un ticket de support | Avec le ticket : 24 mois après la clôture du ticket |
+| Propositions de réponse de ChatFPV pour un ticket de support | 24 mois après le dernier message du ticket ; la réponse du support reste, sans votre texte |
 | Questions sans réponse copiées pour améliorer ChatFPV (sans lien avec l’auteur de la question) | 90 jours après la dernière fois que la question a été posée |
 | Votre texte copié dans une proposition de correction ChatFPV | 24 mois, puis supprimé ; la modification des connaissances reste, sans votre texte |
 | Prompts et réponses chez Google (API Gemini) | 55 jours pour la détection des abus (30 jours pour Google Search grounding), par Google |
