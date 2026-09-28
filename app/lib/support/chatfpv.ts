@@ -79,6 +79,12 @@ export function chatFpvWidgetSrc(env: ChatFpvEnv, page: string, product?: string
   u.searchParams.set('mode', 'opendrone');
   if (product) u.searchParams.set('product', product);
   u.searchParams.set('page', page);
+  // The storefront chrome now carries its own header (title, Beta tag,
+  // subtitle, close): tells /embed to hide its own title/badge row so the
+  // two don't stack. Query, not the #cfh handoff fragment - chatfpv.com
+  // ignores unknown params until this ships there, so it is safe to send
+  // ahead of that deploy (coordination: ChatFPV builder, 2026-09-28).
+  u.searchParams.set('chrome', 'compact');
   return u.toString();
 }
 
