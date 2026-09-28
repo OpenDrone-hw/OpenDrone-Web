@@ -16695,12 +16695,14 @@ html.light .plugs {
   .sp-file-remove {min-width: 44px;}
   .sp-crumbs a {display: inline-flex; align-items: center; min-height: 44px;}
   .sp-links a {display: inline-flex; align-items: center; min-height: 44px;}
+  .sp-inline-links a {display: inline-flex; align-items: center; min-height: 44px;}
+  .sp-chip {min-height: 44px;}
 }
 
 /* =========================================================
    Support hub polish (segment: support): the Ask ChatFPV
    card, starter chips, the beta badge, the disclosure
-   toggle, and the below-column help/sales row.
+   toggle, and the below-column help/sales band.
    app/routes/support.tsx, app/components/support/AskChatFPV.tsx
    ========================================================= */
 
@@ -16725,8 +16727,26 @@ html.light .plugs {
   color: var(--color-gold);
 }
 .sp-ask-textarea {min-height: 8.5rem;}
-.sp-chip-row {display: flex; flex-wrap: wrap; gap: 0.5rem;}
+/* One row always: short labels fit without wrapping on desktop; on a
+   narrow phone whatever does not fit scrolls sideways instead of wrapping
+   a lone last chip onto its own line. No visible scrollbar chrome. */
+.sp-chip-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+  /* A soft right-edge fade hints there is more to scroll to on a phone,
+     where the row does not fit; on desktop the fade sits over empty
+     space (all four chips already fit) so it has no visible effect. */
+  mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
+}
+.sp-chip-row::-webkit-scrollbar {display: none;}
 .sp-chip {
+  flex: 0 0 auto;
+  white-space: nowrap;
   border: 1px solid var(--color-border);
   border-radius: var(--r-pill);
   background: transparent;
@@ -16740,6 +16760,16 @@ html.light .plugs {
 .sp-chip:hover {border-color: var(--color-border-strong); color: var(--color-text);}
 .sp-chip:focus-visible {outline: 2px solid var(--color-focus); outline-offset: 2px;}
 .sp-chip[disabled] {opacity: 0.5; cursor: default;}
+/* The Ask button starts disabled (no question typed yet). The shared
+   `.od-btn[disabled]` treatment just dims the gold fill, which reads as
+   broken/loading rather than "type something first". Outline it instead,
+   scoped to this card only. */
+.sp-ask .od-btn-primary[disabled] {
+  background: transparent;
+  color: var(--color-text-dim);
+  border-color: var(--color-border-strong);
+  opacity: 1;
+}
 .sp-ask-notice {font-size: 12px; color: var(--color-text-muted);}
 .sp-ask-notice summary {cursor: pointer; color: var(--color-text-muted); list-style: none;}
 .sp-ask-notice summary::-webkit-details-marker {display: none;}
@@ -16766,8 +16796,26 @@ html.light .plugs {
 .sp-ask-ticket .sp-hint {flex: 1 1 14rem; margin: 0;}
 
 /* Help pages / Sales move out of the sticky aside (it was taller than the
-   main card) into a compact row under the main column. */
-.sp-below-row {display: grid; gap: 1rem; margin-top: 2rem;}
-@media (min-width: 640px) {
-  .sp-below-row {grid-template-columns: 1fr 1fr;}
+   main card) into one compact, content-height band under the main column:
+   a single card, Help pages as an inline chip row and Sales as a short
+   line beside it on wide screens (stacked under it on narrow ones), never
+   two cards stretched to match each other's height. */
+.sp-help-sales {
+  margin-top: 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1.1rem 3rem;
 }
+.sp-help-sales-col {flex: 1 1 15rem; display: grid; gap: 0.55rem; justify-items: start;}
+.sp-inline-links {list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem;}
+.sp-inline-links a {
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-pill);
+  padding: 0.35rem 0.7rem;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.sp-inline-links a:hover {border-color: var(--color-border-strong); color: var(--color-text);}

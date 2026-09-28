@@ -39,12 +39,7 @@ const REASON_TEXT: Record<Exclude<AskResult, {ok: true}>['error'], string> = {
  *  troubleshooting side by side, so the box is not only for problems.
  *  Through the copy system (`support.ask_starters`) so the team can tune
  *  them; falls back to this set when the key is missing. */
-const FALLBACK_STARTERS = [
-  'What do I need to start flying FPV?',
-  'Which OpenDrone stack fits a 5-inch build?',
-  'Is the OpenRX compatible with my radio?',
-  'When do preorders ship?',
-];
+const FALLBACK_STARTERS = ['Getting started with FPV?', 'Best 5-inch build stack?', 'Radio compatible with OpenRX?', 'When do preorders ship?'];
 
 function askStarters(): string[] {
   const v = copy('support.ask_starters');

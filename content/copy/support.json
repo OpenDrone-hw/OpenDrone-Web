@@ -4,7 +4,7 @@
   "meta_title": "Support",
   "meta_description": "Open a support ticket for an OpenDrone order, build or warranty question. The team answers on your ticket page.",
   "title": "Support",
-  "lede": "Tell us what is going on. The team answers on your ticket page, and your private link brings you back to it from any device.",
+  "lede": "Ask ChatFPV for an instant answer, or open a ticket: the team answers on your ticket page, and your private link brings you back to it from any device.",
   "languages": "We answer in English, Dutch and French: write in whichever you prefer.",
   "unavailable": "Tickets are not available right now. Try again in a few minutes, or ask the community on Discord.",
   "step_topic": "What is it about?",
@@ -53,9 +53,9 @@
   "ask_privacy_notice": "Your question goes to ChatFPV, Incutec's AI assistant. We remove emails, phone numbers, card numbers, IBANs and similar identifiers before sending it, but not your name or order number, so please leave those out yourself. Conversations that do not become a ticket are deleted after 90 days idle.",
   "ask_notice_summary": "How your question is used",
   "ask_starters": [
-    "What do I need to start flying FPV?",
-    "Which OpenDrone stack fits a 5-inch build?",
-    "Is the OpenRX compatible with my radio?",
+    "Getting started with FPV?",
+    "Best 5-inch build stack?",
+    "Radio compatible with OpenRX?",
     "When do preorders ship?"
   ],
   "ask_ticket_prompt": "Didn't find it, or it's about an order, return or warranty?",

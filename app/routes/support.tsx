@@ -481,10 +481,10 @@ export default function SupportRoute() {
         </aside>
       </div>
 
-      <div className="sp-below-row">
-        <section className="sp-card">
+      <section className="sp-card sp-help-sales">
+        <div className="sp-help-sales-col">
           <h2 className="sp-card-title">{t('topics_title')}</h2>
-          <ul className="sp-links">
+          <ul className="sp-inline-links">
             {HELP_LINKS.map((l) => (
               <li key={l.key}>
                 <Link prefetch="intent" to={legalHref(l.to, 'en')}>
@@ -493,16 +493,16 @@ export default function SupportRoute() {
               </li>
             ))}
           </ul>
-        </section>
+        </div>
 
-        <section className="sp-card" id="sales">
+        <div className="sp-help-sales-col" id="sales">
           <h2 className="sp-card-title">{t('sales_title')}</h2>
           <p>
             <Txt id="support.sales_body" />{' '}
             <a href={`mailto:${salesEmail}`}>{salesEmail}</a>
           </p>
-        </section>
-      </div>
+        </div>
+      </section>
     </div>
   );
 }
