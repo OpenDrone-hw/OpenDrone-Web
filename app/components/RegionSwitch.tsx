@@ -1,5 +1,7 @@
 import {useEffect, useId, useRef, useState} from 'react';
+import type {KeyboardEvent} from 'react';
 import {useFetcher, useRevalidator, useRouteLoaderData} from 'react-router';
+import {useHeaderPopover} from '~/components/header-popover';
 import {copyText} from '~/lib/copy';
 import {CART_COUNTRY_ACTION, CART_UPDATED_EVENT, type CartCountryReply} from '~/lib/cart-client';
 import {currencyForCountry, regionSwitchCountry, type SwitchCurrency} from '~/lib/region-switch';
@@ -9,7 +11,9 @@ import type {loader as rootLoader} from '~/root';
 const CHOICES: readonly SwitchCurrency[] = ['EUR', 'USD'];
 
 /**
- * The EUR | USD pill of the header and the mobile menu. It is a region
+ * The region switch of the header and the mobile menu: a compact "EUR" menu
+ * button in the header (`variant="menu"`), the full EUR | USD segmented pill
+ * in the drawer (default). It is a region
  * switch, not a display toggle: it posts the destination to the same route
  * action as the cart's "Ship to" select (`/api/shopify/cart-country`), which
  * sets the `od_ship_country` cookie, moves the cart to that market and
@@ -22,7 +26,13 @@ const CHOICES: readonly SwitchCurrency[] = ['EUR', 'USD'];
  * written with the same helper, then the loaders read again. Nothing renders while US sales are closed (the root
  * loader carries no US rate) or for a visitor from a blocked country.
  */
-export function RegionSwitch({className}: {className?: string}) {
+export function RegionSwitch({
+  className,
+  variant = 'segmented',
+}: {
+  className?: string;
+  variant?: 'segmented' | 'menu';
+}) {
   const root = useRouteLoaderData<typeof rootLoader>('root');
   const usRate = root && 'usShippingRate' in root ? (root.usShippingRate ?? null) : null;
   const country = root?.visitorCountry ?? null;
@@ -74,6 +84,20 @@ export function RegionSwitch({className}: {className?: string}) {
     void fetcher.submit({country: next}, {method: 'post', action: CART_COUNTRY_ACTION});
   };
 
+  if (variant === 'menu') {
+    return (
+      <RegionMenu
+        className={className}
+        label={label}
+        active={active}
+        busy={busy}
+        failed={failed}
+        failedId={labelId}
+        onChoose={choose}
+      />
+    );
+  }
+
   return (
     <div
       className={`region-switch${className ? ` ${className}` : ''}`}
@@ -93,11 +117,139 @@ export function RegionSwitch({className}: {className?: string}) {
           {choice}
         </button>
       ))}
-      {failed ? (
-        <span id={labelId} className="sr-only" role="alert">
-          {copyText('chrome.region_switch_failed') ?? 'Could not change the region. Try again.'}
-        </span>
+      {failed ? <RegionFailed id={labelId} /> : null}
+    </div>
+  );
+}
+
+function RegionFailed({id}: {id: string}) {
+  return (
+    <span id={id} className="sr-only" role="alert">
+      {copyText('chrome.region_switch_failed') ?? 'Could not change the region. Try again.'}
+    </span>
+  );
+}
+
+/**
+ * The header's low-emphasis form: an outlined "EUR" button that opens a small
+ * menu of the two choices (menuitemradio, the active one checked). Same
+ * `choose` as the segmented pill, so it posts to the same route action.
+ * Keyboard: Enter, Space or ArrowDown opens onto the active item; arrows, Home
+ * and End move; Enter or Space picks; Escape closes and returns focus.
+ */
+function RegionMenu({
+  className,
+  label,
+  active,
+  busy,
+  failed,
+  failedId,
+  onChoose,
+}: {
+  className?: string;
+  label: string;
+  active: SwitchCurrency;
+  busy: boolean;
+  failed: boolean;
+  failedId: string;
+  onChoose: (choice: SwitchCurrency) => void;
+}) {
+  const {open, setOpen, close, rootRef, triggerRef, onBlur} = useHeaderPopover();
+  const menuId = useId();
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const items = () =>
+    Array.from(menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitemradio"]') ?? []);
+
+  // Focus the active item when the menu opens.
+  useEffect(() => {
+    if (!open) return;
+    const list = items();
+    (list.find((el) => el.getAttribute('aria-checked') === 'true') ?? list[0])?.focus();
+  }, [open]);
+
+  const onTriggerKey = (e: KeyboardEvent<HTMLButtonElement>) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      setOpen(true);
+    }
+  };
+
+  const onMenuKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    const list = items();
+    const at = list.indexOf(document.activeElement as HTMLElement);
+    let next = -1;
+    if (e.key === 'ArrowDown') next = (at + 1) % list.length;
+    else if (e.key === 'ArrowUp') next = (at - 1 + list.length) % list.length;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = list.length - 1;
+    else if (e.key === 'Tab') {
+      close();
+      return;
+    }
+    if (next < 0) return;
+    e.preventDefault();
+    list[next]?.focus();
+  };
+
+  return (
+    <div
+      ref={rootRef}
+      onBlur={onBlur}
+      className={`header-popover region-menu${className ? ` ${className}` : ''}`}
+      aria-busy={busy || undefined}
+      data-currency={active}
+      data-open={open ? 'true' : undefined}
+    >
+      <button
+        ref={triggerRef}
+        type="button"
+        className="header-popover-trigger"
+        aria-label={`${label}: ${active}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={open ? menuId : undefined}
+        onClick={() => setOpen(!open)}
+        onKeyDown={onTriggerKey}
+      >
+        {active}
+        <svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+          <path d="M2 3.5 5 6.5 8 3.5" />
+        </svg>
+      </button>
+      {open ? (
+        <div
+          ref={menuRef}
+          id={menuId}
+          role="menu"
+          tabIndex={-1}
+          aria-label={label}
+          className="header-popover-panel"
+          onKeyDown={onMenuKey}
+        >
+          {CHOICES.map((choice) => (
+            <button
+              key={choice}
+              type="button"
+              role="menuitemradio"
+              aria-checked={active === choice}
+              className="header-popover-item"
+              onClick={() => {
+                onChoose(choice);
+                close(true);
+              }}
+            >
+              <span>{choice}</span>
+              {active === choice ? (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                  <path d="m5 12.5 4.5 4.5L19 7.5" />
+                </svg>
+              ) : null}
+            </button>
+          ))}
+        </div>
       ) : null}
+      {failed ? <RegionFailed id={failedId} /> : null}
     </div>
   );
 }
