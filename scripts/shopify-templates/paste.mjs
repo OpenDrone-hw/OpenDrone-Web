@@ -93,7 +93,7 @@ function pageAccess([text, subject]) {
   if (text !== null) {
     if (!input) return {error: 'subject input not found'};
     if (view) view.dispatch({changes: {from: 0, to: view.state.doc.length, insert: text}});
-    else if (area) setNative(area, HTMLTextAreaElement.prototype, text);
+    else if (area) return {error: 'editor is a read-only textarea'};
     else return {error: 'no editor'};
     setNative(input, HTMLInputElement.prototype, subject);
   }
