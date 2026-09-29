@@ -270,6 +270,20 @@ describe('planRelease', () => {
     assert.deepEqual(withRx[0].waitsFor, []);
   });
 
+  it('reads no promise text: a line carrying the mixed-order wording allocates and holds the same', () => {
+    const plain = order({lines: [['OPENFC-LITE-2020', 2], ['OPENRX-LITE', 1]]});
+    const worded = order({lines: [['OPENFC-LITE-2020', 2], ['OPENRX-LITE', 1]]});
+    worded.lineItems.nodes[0].customAttributes = [
+      {key: PREORDER_ATTRIBUTE, value: 'ships with the rest of this order by 14 March 2027, delivered by 31 March 2027'},
+      {key: '_preorder_own', value: 'ships late October 2026, delivered by 30 November 2026'},
+    ];
+    const shape = (o: PreorderOrder) => assignBatches([o], CONFIG).get(o.id)?.map((b) => [b.sku, b.batch, b.units]);
+    assert.deepEqual(shape(worded), shape(plain));
+    const [a, b] = planPreorderHolds([plain, worded], CONFIG);
+    assert.deepEqual([b.tags, b.note, b.batches], [a.tags, a.note, a.batches]);
+    assert.equal(b.tags.includes(PROMISE_MISMATCH_TAG), false);
+  });
+
   it('ignores a batch whose line was refunded', () => {
     const refundedRx = order({
       lines: [['OPENFC-LITE-2020', 1], ['OPENRX-LITE', 0]],

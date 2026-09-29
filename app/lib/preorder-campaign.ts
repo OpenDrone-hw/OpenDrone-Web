@@ -81,6 +81,11 @@ function batchPromise(batch: CampaignBatch, fallback: string, region: Region = '
   return delivery ? `${ships}, delivered by ${delivery}` : ships;
 }
 
+/** The reviewed delivery day of a batch for a region, YYYY-MM-DD, or null. */
+function batchDeliveryDay(batch: CampaignBatch, region: Region): string | null {
+  return (region === 'US' ? batch.deliveryByUS : batch.deliveryBy) ?? null;
+}
+
 /** The delivery date a promise names, short: "30 Nov 2026". Null without one. */
 export function promiseDeliveredBy(promise: string | null | undefined): string | null {
   const m = /delivered by (\d{1,2} [A-Z][a-z]+ \d{4})/.exec(promise ?? '');
@@ -190,6 +195,15 @@ export type CampaignState = {
   /** For a unit waiting on a funding target: the latest planned ship date
    *  if the target is reached by the deadline, "14 March 2027". */
   latestShip?: string | null;
+  /** The ship-by day of a unit waiting on a funding target, YYYY-MM-DD:
+   *  `shipsBy`. Set by `applyCampaign`; null for a batch with its own date. */
+  shipByDay?: string | null;
+  /** The reviewed delivery day of the next unit's batch for the buyer's
+   *  region, YYYY-MM-DD; null when the batch names none. */
+  deliveryByDay?: string | null;
+  /** The batch's own ship text once its supplier order is placed, "ships
+   *  late October 2026"; null for a batch waiting on a funding target. */
+  shipsText?: string | null;
   /** Units left in the paid batch the next unit comes out of; null when the
    *  next unit is not paid stock. A cart line must not ask for more. */
   paidLeft?: number | null;
@@ -422,6 +436,33 @@ export function shipGroupKey(
   return `date:${shipPromise ?? ''}`;
 }
 
+/** The line attribute wording for a line that ships earlier than the rest
+ *  of its order: it ships once, with the latest line, so it carries that
+ *  line's ship-by and delivered-by dates. Null when `latest` names no ship
+ *  date to state. */
+export function mixedShipPromise(
+  latest: Pick<CampaignState, 'shipByDay' | 'deliveryByDay' | 'shipsText'>,
+): string | null {
+  let when: string | null = null;
+  if (latest.shipByDay) {
+    when = `by ${campaignDate(latest.shipByDay)}`;
+  } else if (latest.shipsText) {
+    const rest = latest.shipsText.replace(/^ships\s+/i, '');
+    when = /^(?:(?:early|mid|late)[- ])?[A-Za-z]+ \d{4}$/i.test(rest) ? `in ${rest}` : rest;
+  }
+  if (!when) return null;
+  const delivery = latest.deliveryByDay ? `, delivered by ${campaignDate(latest.deliveryByDay)}` : '';
+  return `ships with the rest of this order ${when}${delivery}`;
+}
+
+/** The day that orders a line's date against the other lines of its cart:
+ *  its delivery day, else its ship-by day. Null when the state has neither. */
+export function shipOrderDay(
+  state: Pick<CampaignState, 'shipByDay' | 'deliveryByDay'> | null | undefined,
+): string | null {
+  return state?.deliveryByDay ?? state?.shipByDay ?? null;
+}
+
 /** Whether a batch ships to `region`: a batch without `regions` serves all. */
 export function servesRegion(batch: Pick<CampaignBatch, 'regions'>, region: Region): boolean {
   return !batch.regions || batch.regions.includes(region);
@@ -562,6 +603,8 @@ export function campaignState(
     targetReached,
     shipPromise: batchPromise(current, pendingShips, region),
     shipsOnTarget: !current.ships?.trim(),
+    deliveryByDay: batchDeliveryDay(current, region),
+    shipsText: current.ships?.trim() || null,
     paidLeft: current.paid ? current.units - fill[index] : null,
     earlyPrice: tier !== null,
     tierUpTo: tier?.upTo ?? null,
@@ -668,6 +711,8 @@ function pinnedBatchState(
     targetReached: !dated && targetOrdered >= entry.units,
     shipPromise: promise,
     shipsOnTarget: !dated,
+    deliveryByDay: batchDeliveryDay(entry, region),
+    shipsText: entry.ships?.trim() || null,
     paidLeft: null,
     earlyPrice: false,
     tierUpTo: null,
@@ -735,6 +780,7 @@ export function applyCampaign(
             ...state,
             deadline: campaignDate(config.endsOn),
             latestShip: state.shipsOnTarget ? latestShipDate(config) : null,
+            shipByDay: state.shipsOnTarget ? latestShipDay(config) : null,
           };
           return {...variant, ship_promise: state.shipPromise, campaign: dated};
         }
@@ -759,6 +805,7 @@ export function applyCampaign(
           ...state,
           deadline: campaignDate(config.endsOn),
           latestShip: state.shipsOnTarget && !state.paidStock ? latestShipDate(config) : null,
+          shipByDay: state.shipsOnTarget && !state.paidStock ? latestShipDay(config) : null,
         };
         return {...variant, ship_promise: state.shipPromise, campaign: dated};
       }),

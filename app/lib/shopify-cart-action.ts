@@ -1,5 +1,5 @@
 import {bySku, type Catalog, type CatalogVariant} from './catalog.ts';
-import {regionOf, shipGroupKey, shipLabelFromPromise, type Region} from './preorder-campaign.ts';
+import {mixedShipPromise, regionOf, shipGroupKey, shipLabelFromPromise, shipOrderDay, type Region} from './preorder-campaign.ts';
 import {isPurchasableStatus, resolveStatus} from './product-content.ts';
 import {requestedLines} from './shopify-cart-input.ts';
 import {destinationForRequest, isIsoCountry, isUsQuote, shipCountryForRequest, shippingQuote, type ShippingQuote} from './shipping-rates.ts';
@@ -7,6 +7,7 @@ import {type RegistrationsFile} from './registrations.ts';
 import {usSalesRate} from './us-sales.ts';
 import {
   PREORDER_ATTRIBUTE,
+  PREORDER_OWN_ATTRIBUTE,
   SHIP_REGION_ATTRIBUTE,
   storefrontRequest,
   type CartLineInput,
@@ -340,12 +341,55 @@ export function variantLink(
 }
 
 /**
+ * The mixed-order promise per cart line, keyed by line id. The whole order
+ * ships once, on the latest date, so every line whose own campaign date is
+ * earlier than the latest line's carries that line's ship-by and delivered-by
+ * dates instead of its own. Empty when the cart's lines ship together, and
+ * for a line without a campaign date (a plain in-stock line, or a preorder
+ * the campaign does not date) since it cannot be ordered against the rest.
+ */
+export function mixedPromises(cart: ShopifyCart, catalog: Catalog): Map<string, string> {
+  const out = new Map<string, string>();
+  if (!hasMixedShipDates(cart, cartLineInfo(cart, catalog))) return out;
+  const dated: Array<{id: string; day: string; campaign: NonNullable<CatalogVariant['campaign']>}> = [];
+  for (const line of cart.lines) {
+    const variant = catalogVariant(catalog, line.merchandiseId);
+    const day = shipOrderDay(variant?.campaign);
+    if (variant?.campaign && day && variant.ship_promise) dated.push({id: line.id, day, campaign: variant.campaign});
+  }
+  if (dated.length < 2) return out;
+  const latest = dated.reduce((a, b) => (b.day > a.day ? b : a));
+  const promise = mixedShipPromise(latest.campaign);
+  if (!promise) return out;
+  for (const {id, day} of dated) if (day < latest.day) out.set(id, promise);
+  return out;
+}
+
+/** A line's attributes carrying the mixed-order promise: `Preorder` states
+ *  it, and a hidden attribute keeps the line's own promise. */
+function withOrderPromise(
+  attributes: NonNullable<CartLineInput['attributes']>,
+  orderPromise: string,
+): NonNullable<CartLineInput['attributes']> {
+  const own = attributes.find((a) => a.key === PREORDER_ATTRIBUTE)?.value ?? '';
+  return [
+    ...attributes.map((a) => (a.key === PREORDER_ATTRIBUTE ? {...a, value: orderPromise} : a)),
+    {key: PREORDER_OWN_ATTRIBUTE, value: own},
+  ];
+}
+
+/**
  * Every cart line against the catalog of the destination's region: the lines
  * whose `Preorder` promise (or hidden region attribute) no longer matches
- * that region, the units per variant, and whether the cart holds a line the
- * shop no longer sells or, for the US, a line that ships to the EU only.
- * Lines in either state are never rewritten. Throws a 409 `Response` for a
- * preorder without a promise.
+ * that region (`refresh`), the units per variant, and whether the cart holds
+ * a line the shop no longer sells or, for the US, a line that ships to the
+ * EU only. Lines in either state are never rewritten. Throws a 409
+ * `Response` for a preorder without a promise.
+ *
+ * `sync` is the separate, silent change: a line's `Preorder` attribute
+ * moves to the mixed-order wording (see `mixedPromises`), or back to its own
+ * promise once the cart no longer needs it. It never asks the buyer to look
+ * again, since the cart page already showed the one-parcel notice.
  */
 export function rederiveLines(
   cart: ShopifyCart,
@@ -354,14 +398,17 @@ export function rederiveLines(
   globalComingSoon: boolean,
 ): {
   refresh: CartLineUpdate[];
+  sync: CartLineUpdate[];
   totals: Map<string, {variant: CatalogVariant; quantity: number}>;
   unavailable: boolean;
   euOnly: boolean;
 } {
   const refresh: CartLineUpdate[] = [];
+  const sync: CartLineUpdate[] = [];
   const totals = new Map<string, {variant: CatalogVariant; quantity: number}>();
   let unavailable = false;
   let euOnly = false;
+  const mixed = mixedPromises(cart, catalog);
   for (const line of cart.lines) {
     const variant = sellableVariant(catalog, line.merchandiseId, globalComingSoon);
     if (!variant) {
@@ -379,9 +426,18 @@ export function rederiveLines(
     const region = attributes.find((a) => a.key === SHIP_REGION_ATTRIBUTE)?.value ?? null;
     if (promise !== line.shipPromise || region !== (line.shipRegion ?? null)) {
       refresh.push({id: line.id, quantity: line.quantity, attributes});
+      continue;
+    }
+    const wanted = mixed.get(line.id) ?? null;
+    if (wanted !== (line.orderPromise ?? null)) {
+      sync.push({
+        id: line.id,
+        quantity: line.quantity,
+        attributes: wanted ? withOrderPromise(attributes, wanted) : attributes,
+      });
     }
   }
-  return {refresh, totals, unavailable, euOnly};
+  return {refresh, sync, totals, unavailable, euOnly};
 }
 
 /** The region a destination country buys for while US sales are open. */
@@ -547,7 +603,7 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
       }
       // Every line's promise and region attribute are derived again for the
       // destination region, whatever the cart was built for.
-      const {refresh, totals, unavailable, euOnly} = rederiveLines(cart, catalog, us, globalComingSoon);
+      const {refresh, sync, totals, unavailable, euOnly} = rederiveLines(cart, catalog, us, globalComingSoon);
       if (unavailable) throw fail('One or more cart items are no longer available.', 409);
       if (us && euOnly) return redirect(`/cart?check=${CART_CHECK.usEuOnly}`);
       // A cart whose buyer country is not the destination (built for
@@ -588,6 +644,15 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
       // before payment, unless the checkout came from that cart page.
       if (form.get(DATES_SEEN_FIELD) !== '1' && hasMixedShipDates(cart, cartLineInfo(cart, catalog))) {
         return redirect(`/cart?check=${CART_CHECK.mixedDates}`);
+      }
+      // The order ships once, on its latest date: a line with an earlier
+      // date of its own says so on the order, and goes back to its own date
+      // when the cart is no longer mixed. Written only here, after the buyer
+      // has seen the one-parcel notice, so the cart page keeps showing each
+      // line's own date.
+      if (sync.length) {
+        if (!dependencies.updateCartLines) throw new Error('shopify: update dependency missing');
+        await dependencies.updateCartLines(existingId, sync);
       }
       return redirect(cart.checkoutUrl);
     }

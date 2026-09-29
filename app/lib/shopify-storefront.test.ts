@@ -126,6 +126,36 @@ describe('Shopify hosted checkout handoff', () => {
     );
   });
 
+  it('reads a mixed-order line as its own promise and keeps the order wording apart', async () => {
+    const id = 'gid://shopify/Cart/test?key=secret';
+    const node = (attributes: Array<{key: string; value: string}>) => ({
+      id: 'gid://shopify/CartLine/1?cart=a',
+      quantity: 1,
+      attributes,
+      cost: {totalAmount: {amount: '1.00', currencyCode: 'EUR'}},
+      merchandise: {
+        id: 'gid://shopify/ProductVariant/1', title: 'Default Title', sku: 'A', image: null,
+        selectedOptions: [], product: {title: 'A', handle: 'a'},
+      },
+    });
+    const read = async (attributes: Array<{key: string; value: string}>) => (await getCart(ENV, id, async () => response({cart: {
+      id,
+      checkoutUrl: 'https://checkout.opendrone.be/checkouts/cn/abc',
+      totalQuantity: 1,
+      cost: {subtotalAmount: {amount: '1.00', currencyCode: 'EUR'}, totalAmount: {amount: '1.00', currencyCode: 'EUR'}},
+      lines: {pageInfo: {hasNextPage: false}, nodes: [node(attributes)]},
+    }})))!.lines[0];
+    const mixed = await read([
+      {key: 'Preorder', value: 'ships with the rest of this order by 14 March 2027'},
+      {key: '_preorder_own', value: 'ships late October 2026'},
+    ]);
+    assert.equal(mixed.shipPromise, 'ships late October 2026');
+    assert.equal(mixed.orderPromise, 'ships with the rest of this order by 14 March 2027');
+    const plain = await read([{key: 'Preorder', value: 'ships late October 2026'}]);
+    assert.equal(plain.shipPromise, 'ships late October 2026');
+    assert.equal('orderPromise' in plain, false);
+  });
+
   it('rejects malformed quantities and merchandise identities in cart responses', async () => {
     const id = 'gid://shopify/Cart/test?key=secret';
     await assert.rejects(
