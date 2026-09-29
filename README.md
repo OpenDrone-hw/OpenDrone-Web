@@ -68,7 +68,8 @@ button.
 | `npm run audit:perf`, `audit:lh`, `audit:mobile` | performance lab, Lighthouse, mobile screenshots |
 | `npm run gen:shopify-templates` | render the Shopify notification emails from `scripts/shopify-templates/` into `out/`, ready to paste into Shopify |
 | `npm run emails:preview` | local gallery of every customer and internal email, per scenario, at desktop and 375 px width; reloads on save (see "Preview emails") |
-| `npm run emails:build` | the same gallery as one self-contained file in the workspace `.review/emails/index.html` (`--out <path>` elsewhere) |
+| `npm run emails:build` | the same gallery as one self-contained file in the workspace `.review/emails/index.html` (`--out <path>` elsewhere), plus one file per mail in `cards/` |
+| `npm run emails:hash` | sha256 of every pasteable `out/*.html` (`-- --json` for the paste list with notification name and subject) |
 | `node --experimental-strip-types scripts/release-batch.mjs --sku <SKU>` | dry run: the held orders of a batch; `--apply` releases their holds (see "Fulfil a batch") |
 | `node --experimental-strip-types scripts/preorder-notify.mjs --kind moved\|missed --sku <SKU> --new-date <text>` | dry run: renders the ship-date or missed-target email per order; `--send` sends through Resend (see "Tell buyers") |
 | `node scripts/launch-blast.mjs <handle>` | dry run of the product mail to the `notify-<handle>` Resend segment; `--create` drafts, `--send` sends |
@@ -851,9 +852,9 @@ Shopify admin.
 
 | Emails | Source | Scenario data |
 |---|---|---|
-| Shopify notifications (6 phase 1 templates) | `scripts/shopify-templates/` | `scripts/emails/fixtures/*.json`, each merged over `_base.json` |
+| Shopify notifications (21 templates with a body: order, shipping, status, payment, account, return, staff new order) | `scripts/shopify-templates/`, built on the one shell `app/lib/email-shell.ts` (`<od-*>` macros in the bodies) | `scripts/emails/fixtures/*.json`, each merged over `_base.json` |
 | Newsletter welcome, withdrawal receipt and shop notice, support reply notice, trade quote request | `app/lib/` builders | inline in `scripts/emails/catalog.mjs` |
-| Preorder buyer update, product launch broadcast | `scripts/preorder-notify.mjs`, `scripts/launch-blast.mjs` | inline in `scripts/emails/catalog.mjs` |
+| Preorder buyer update, launch broadcast ("Preorders are open", EU, US and combined copy; the same copy renders `scripts/emails/shopify-email-launch.md` for the Shopify Email draft) | `scripts/preorder-notify.mjs`, `scripts/launch-blast.mjs` | inline in `scripts/emails/catalog.mjs` |
 
 Nothing is sent: the gallery calls the builders directly, and the withdrawal
 mail gets a fetch stub. Each card shows the subject and preheader; a red
@@ -866,7 +867,7 @@ problems, or when `out/` is behind its sources.
 Shopify has no Admin API or CLI for notification templates: they are edited
 only in Shopify admin (Settings, Notifications, Edit code). The "Paste into
 Shopify" table copies each template's HTML (what `gen:shopify-templates`
-writes to `out/`) and its Liquid subject, and links its admin page.
+writes to `out/`) and its Liquid subject, and links its admin page. After a paste, `npm run emails:hash` prints the sha256 of what the repo holds: copy the "Email body (HTML)" field from Shopify admin into a file and compare `shasum -a 256` with it. Dates in the mails are the `FACTS` in `app/lib/email-shell.ts` and must equal `content/preorders.json`. The notifications without a body (return created, return approved, draft order invoice, order invoice, payment reminder, order payment receipt, customer email change) keep Shopify's default because that default carries a label or link variable the repo cannot verify.
 
 ## Security
 

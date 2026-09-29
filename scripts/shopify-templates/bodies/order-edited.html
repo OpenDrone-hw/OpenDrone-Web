@@ -1,0 +1,9 @@
+<od-head kicker="Order {{ order_name }}">Your order was updated.</od-head>
+<od-p>We made a change to your order {{ order_name }}.{% if custom_message != blank %} A note from us:{% endif %}</od-p>
+{% if custom_message != blank %}
+<od-card>
+  <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #c5c5c5;">{{ custom_message }}</p>
+</od-card>
+{% endif %}
+<od-p small last>Your order status page shows the current items and totals. Any difference in price is charged or refunded to your original payment method.</od-p>
+<od-button href="{{ order_status_url }}">View updated order &rarr;</od-button>

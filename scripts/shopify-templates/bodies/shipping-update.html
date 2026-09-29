@@ -1,0 +1,62 @@
+<od-head kicker="Order {{ name }}">Your tracking was updated.</od-head>
+<od-p last>The carrier details for your order changed. The latest tracking is below.</od-p>
+{% if fulfillment.tracking_numbers.size > 0 %}
+<od-card>
+  {% if fulfillment.tracking_company %}
+  <od-label>Carrier</od-label>
+  <p style="margin: 0 0 16px 0; font-family: Helvetica, Arial, sans-serif; font-size: 15px; color: #c5c5c5;">{{ fulfillment.tracking_company }}</p>
+  {% endif %}
+  <od-label>Tracking</od-label>
+  {% for tracking_number in fulfillment.tracking_numbers %}
+  <p style="margin: 0 0 4px 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; color: #c5c5c5; word-break: break-all;">{{ tracking_number }}</p>
+  {% endfor %}
+</od-card>
+{% endif %}
+{% if fulfillment.tracking_url %}
+<od-button href="{{ fulfillment.tracking_url }}">Track shipment &rarr;</od-button>
+{% else %}
+<od-button href="{{ order_status_url }}">View order status &rarr;</od-button>
+{% endif %}
+            <tr>
+              <td class="od-px" style="padding: 0 32px 8px 32px;">
+                <p style="margin: 0 0 12px 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; color: #a0a0a0;">
+                  In this shipment
+                </p>
+              </td>
+            </tr>
+            {% for line in fulfillment.fulfillment_line_items %}
+            <tr>
+              <td class="od-px" style="padding: 0 32px 8px 32px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top: 1px solid #1a241a;">
+                  <tr>
+                    <td valign="top" style="padding: 14px 0;">
+                      <p style="margin: 0 0 4px 0; font-family: 'Space Grotesk', Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 700; color: #e5e5e5;">
+                        {{ line.line_item.product.title | default: line.line_item.title }}
+                      </p>
+                      {% if line.line_item.variant.title != 'Default Title' %}
+                      <p style="margin: 0 0 4px 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; color: #a0a0a0;">
+                        {{ line.line_item.variant.title }}
+                      </p>
+                      {% endif %}
+                      {% for p in line.line_item.properties %}{% if p.first == 'Preorder' and p.last != blank %}
+                      <p style="margin: 0 0 4px 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; color: #a0a0a0;">
+                        Preorder: {{ p.last }}
+                      </p>
+                      {% endif %}{% endfor %}
+                      <p style="margin: 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; color: #a0a0a0;">
+                        Qty {{ line.quantity }}
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            {% endfor %}
+{% assign eu_countries = 'AT,BE,BG,CY,CZ,DE,DK,EE,ES,FI,FR,GR,HR,HU,IE,IT,LT,LU,LV,MT,NL,PL,PT,RO,SE,SI,SK' | split: ',' %}
+{% if shipping_address and shipping_address.country_code != blank %}{% unless eu_countries contains shipping_address.country_code %}
+{% if shipping_address.country_code == 'US' %}
+<od-p small last><strong style="color: #c5c5c5;">Duties included.</strong> Your price includes import duties, taxes and handling. There is nothing to pay on delivery.</od-p>
+{% else %}
+<od-p small last><strong style="color: #c5c5c5;">Import duties.</strong> No import duties or import taxes were charged with your order. The carrier may ask you to pay import duties, taxes and a handling fee on delivery.</od-p>
+{% endif %}
+{% endunless %}{% endif %}

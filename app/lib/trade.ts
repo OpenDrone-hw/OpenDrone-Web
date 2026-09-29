@@ -648,7 +648,7 @@ export async function sendTradeRequest(
  * Leuven for QC and packing like every other unit.
  */
 export type TradeLeadTime = {
-  /** "late October 2026", or the latest planned date of a funding target. */
+  /** "early November 2026", or the latest planned date of a funding target. */
   date: string;
   /** The funding-target deadline the date depends on; null for a batch
    *  with its own ship date. */

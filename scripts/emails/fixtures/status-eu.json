@@ -1,0 +1,54 @@
+{
+  "_scenario": {
+    "title": "Status mails, Belgium, no message",
+    "description": "Order status, payment, account and return mails with the tracking of one shipped item and no custom message from staff.",
+    "templates": [
+      "order-edited",
+      "order-link",
+      "shipping-update",
+      "out-for-delivery",
+      "delivered",
+      "payment-error",
+      "pending-payment-error",
+      "pending-payment-success",
+      "abandoned-checkout",
+      "customer-account-invite",
+      "customer-account-password-reset",
+      "return-request-received",
+      "return-request-declined"
+    ]
+  },
+  "fulfillment": {
+    "item_count": 1,
+    "tracking_company": "bpost",
+    "tracking_numbers": [
+      "TEST-BE-0000000010"
+    ],
+    "tracking_url": "https://track.bpost.cloud/btr/web/#/search?itemCode=TEST-BE-0000000010&lang=en",
+    "tracking_urls": [
+      "https://track.bpost.cloud/btr/web/#/search?itemCode=TEST-BE-0000000010&lang=en"
+    ],
+    "fulfillment_line_items": [
+      {
+        "line_item": {
+          "title": "OpenFC Lite - 20x20",
+          "variant": {
+            "title": "20x20"
+          },
+          "quantity": 1,
+          "price": 6495,
+          "line_price": 6495,
+          "sku": "OPENFC-LITE-2020",
+          "image": "placeholder:OpenFC",
+          "product": {
+            "title": "OpenFC Lite"
+          },
+          "properties": {
+            "Preorder": "ships early November 2026, delivered by 30 November 2026"
+          }
+        },
+        "quantity": 1
+      }
+    ]
+  }
+}

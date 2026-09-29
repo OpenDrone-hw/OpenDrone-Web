@@ -67,8 +67,8 @@ Two site-specific consequences of one gold, both deliberate:
 ### Email
 
 Email cannot use CSS variables, so the gold is inlined as a literal in
-`app/lib/support/email.ts`, `scripts/launch-blast.mjs` and
-`scripts/newsletter-template.html`. Those are the only places a gold hex may
-appear outside the stylesheet. Buttons are fine,
+`app/lib/email-shell.ts` (every mail is built from it). That file is the only
+place a gold hex may appear outside the stylesheet, apart from the bodies in
+`scripts/shopify-templates/bodies/`. Buttons are fine,
 dark ink on a gold fill. Gold link text in email is 1.75:1 on a white client,
 which is a known cost of one gold rather than an oversight.

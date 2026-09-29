@@ -15,7 +15,9 @@
     "name": "Test Pilot",
     "email": "test.pilot@example.com",
     "confirmation_url": null,
-    "accepts_marketing": false
+    "accepts_marketing": false,
+    "account_activation_url": "https://opendrone.be/account/activate/preview-token",
+    "reset_password_url": "https://opendrone.be/account/reset/preview-token"
   },
   "email": "test.pilot@example.com",
   "name": "#9001",
@@ -42,7 +44,7 @@
         "title": "OpenFC Lite"
       },
       "properties": {
-        "Preorder": "ships late October 2026, delivered by 30 November 2026"
+        "Preorder": "ships early November 2026, delivered by 30 November 2026"
       }
     }
   ],
@@ -117,12 +119,16 @@
             "title": "OpenFC Lite"
           },
           "properties": {
-            "Preorder": "ships late October 2026, delivered by 30 November 2026"
+            "Preorder": "ships early November 2026, delivered by 30 November 2026"
           }
         },
         "quantity": 1
       }
     ]
   },
-  "tax_price": 1248
+  "tax_price": 1248,
+  "custom_message": "",
+  "url": "https://opendrone.be/checkout/preview-cart",
+  "checkout_payment_collection_url": "https://opendrone.be/checkout/preview-pay",
+  "id": 1234567890123
 }

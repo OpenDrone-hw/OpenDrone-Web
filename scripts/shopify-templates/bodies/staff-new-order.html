@@ -1,0 +1,35 @@
+<od-head kicker="New order {{ name }}">{{ customer.name | default: 'Guest' }} ordered {{ total_price | money }}.</od-head>
+{% assign has_preorder = false %}
+{% for line in line_items %}{% for p in line.properties %}{% if p.first == 'Preorder' and p.last != blank %}{% assign has_preorder = true %}{% endif %}{% endfor %}{% endfor %}
+{% if has_preorder %}
+<od-p small>This order contains preorder items. Each line shows the promise the buyer was given.</od-p>
+{% endif %}
+{% for line in line_items %}
+            <tr>
+              <td class="od-px" style="padding: 0 32px 8px 32px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top: 1px solid #1a241a;">
+                  <tr>
+                    <td valign="top" style="padding: 14px 0;">
+                      <p style="margin: 0 0 4px 0; font-family: 'Space Grotesk', Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 700; color: #e5e5e5;">{{ line.product.title | default: line.title }}{% if line.variant.title != 'Default Title' %} &middot; {{ line.variant.title }}{% endif %}</p>
+                      <p style="margin: 0 0 4px 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; color: #a0a0a0;">{{ line.sku }} &middot; Qty {{ line.quantity }} &middot; {{ line.line_price | money }}</p>
+                      {% for p in line.properties %}{% if p.first == 'Preorder' and p.last != blank %}
+                      <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #ffb700;">Preorder: {{ p.last }}</p>
+                      {% endif %}{% endfor %}
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+{% endfor %}
+{% if shipping_address %}
+<od-card>
+  <od-label>Ship to</od-label>
+  <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #c5c5c5;">
+    {{ shipping_address.name }}<br>
+    {{ shipping_address.street }}<br>
+    {{ shipping_address.city }}{% if shipping_address.province_code %}, {{ shipping_address.province_code }}{% endif %} {{ shipping_address.zip }}<br>
+    {{ shipping_address.country }}
+  </p>
+</od-card>
+{% endif %}
+<od-button href="https://admin.shopify.com/store/ktjqug-jw/orders/{{ id }}">Open in Shopify &rarr;</od-button>

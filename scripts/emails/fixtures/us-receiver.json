@@ -1,0 +1,104 @@
+{
+  "_scenario": {
+    "title": "United States, receiver line, FCC conditional sale",
+    "description": "US address with a receiver (RF product): duties included plus the FCC 47 CFR 2.803 conditional-sale line.",
+    "templates": [
+      "order-confirmation",
+      "staff-new-order"
+    ]
+  },
+  "name": "#9011",
+  "order_name": "#9011",
+  "order_number": 9011,
+  "line_items": [
+    {
+      "title": "OpenFC Lite - 20x20",
+      "variant": {
+        "title": "20x20"
+      },
+      "quantity": 1,
+      "price": 8119,
+      "line_price": 8119,
+      "sku": "OPENFC-LITE-2020",
+      "image": "placeholder:OpenFC",
+      "product": {
+        "title": "OpenFC Lite"
+      },
+      "properties": {
+        "Preorder": "ships by the end of March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait; if the target is reached in time, delivered by 30 April 2027"
+      }
+    },
+    {
+      "title": "OpenRX Lite",
+      "variant": {
+        "title": "Default Title"
+      },
+      "quantity": 1,
+      "price": 3699,
+      "line_price": 3699,
+      "sku": "OPENRX-LITE",
+      "image": "placeholder:OpenRX",
+      "product": {
+        "title": "OpenRX Lite"
+      },
+      "properties": {
+        "Preorder": "ships by the end of March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait; if the target is reached in time, delivered by 30 April 2027"
+      }
+    }
+  ],
+  "subtotal_price": 11818,
+  "shipping_price": 995,
+  "total_price": 12813,
+  "shop": {
+    "money_format": "${{amount}}",
+    "money_with_currency_format": "${{amount}} USD"
+  },
+  "customer": {
+    "first_name": "Jane",
+    "last_name": "Doe",
+    "name": "Jane Doe",
+    "email": "jane.doe@example.com"
+  },
+  "email": "jane.doe@example.com",
+  "currency": "USD",
+  "presentment_currency": "USD",
+  "tax_lines": [],
+  "shipping_method": {
+    "title": "US delivery",
+    "price": 995
+  },
+  "shipping_address": {
+    "name": "Jane Doe",
+    "first_name": "Jane",
+    "last_name": "Doe",
+    "company": "Example Hobby LLC",
+    "address1": "123 Example Avenue",
+    "address2": "Unit 4",
+    "street": "123 Example Avenue, Unit 4",
+    "city": "Springfield",
+    "zip": "62701",
+    "province": "Illinois",
+    "province_code": "IL",
+    "country": "United States",
+    "country_code": "US",
+    "phone": null
+  },
+  "billing_address": {
+    "name": "Jane Doe",
+    "first_name": "Jane",
+    "last_name": "Doe",
+    "company": "Example Hobby LLC",
+    "address1": "123 Example Avenue",
+    "address2": "Unit 4",
+    "street": "123 Example Avenue, Unit 4",
+    "city": "Springfield",
+    "zip": "62701",
+    "province": "Illinois",
+    "province_code": "IL",
+    "country": "United States",
+    "country_code": "US",
+    "phone": null
+  },
+  "order_status_url": "https://opendrone.be/account/orders/preview-9004",
+  "tax_price": 0
+}

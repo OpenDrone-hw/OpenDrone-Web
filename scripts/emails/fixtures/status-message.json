@@ -1,0 +1,12 @@
+{
+  "_scenario": {
+    "title": "Staff message, Belgium",
+    "description": "Contact-customer text and an order edit or account invite with a note from staff.",
+    "templates": [
+      "contact-customer",
+      "order-edited",
+      "customer-account-invite"
+    ]
+  },
+  "custom_message": "Your OpenFC Lite ships with the first batch.\nWe swapped the strap for the 20 x 220 mm one, as you asked.\n\nStan"
+}

@@ -3,7 +3,8 @@
     "title": "EU preorder, Belgium",
     "description": "BE address, 21% VAT included, one preorder line with the Preorder property (paid batch).",
     "templates": [
-      "order-confirmation"
+      "order-confirmation",
+      "staff-new-order"
     ]
   }
 }

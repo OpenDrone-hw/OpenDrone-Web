@@ -1,91 +1,43 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="color-scheme: dark;">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="x-apple-disable-message-reformatting" />
-    <meta name="color-scheme" content="dark light" />
-    <meta name="supported-color-schemes" content="dark light" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="supported-color-schemes" content="dark" />
     <title>Order confirmation</title>
+    <style>
+      :root { color-scheme: dark; supported-color-schemes: dark; }
+      a { color: #ffb700; }
+      @media only screen and (max-width: 480px) {
+        .od-outer { padding: 16px 8px !important; }
+        .od-px { padding-left: 20px !important; padding-right: 20px !important; }
+        .od-h1 { font-size: 26px !important; }
+      }
+    </style>
   </head>
   <body
     bgcolor="#0a0a0a"
-    style="
-      margin: 0;
-      padding: 0;
-      background-color: #0a0a0a;
-      color: #e5e5e5;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-    "
+    style="margin: 0; padding: 0; background-color: #0a0a0a; color: #e5e5e5; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; -webkit-text-size-adjust: 100%;"
   >
-    <div
-      style="
-        display: none;
-        max-height: 0;
-        overflow: hidden;
-        font-size: 1px;
-        line-height: 1px;
-        color: #0a0a0a;
-        opacity: 0;
-      "
-    >
-      We've received your order. Details inside.
+    <div style="display: none; max-height: 0; overflow: hidden; font-size: 1px; line-height: 1px; color: #0a0a0a; opacity: 0;">
+      We have your order and your payment. Details and ship dates inside.
     </div>
 
-    <!-- bgcolor attribute alongside the inline style: clients that strip
-         style sheets (or clip long styles) still get the dark canvas, so
-         the white-lettered wordmark never lands on a light background. -->
-    <table
-      role="presentation"
-      width="100%"
-      cellpadding="0"
-      cellspacing="0"
-      border="0"
-      bgcolor="#0a0a0a"
-      style="background-color: #0a0a0a;"
-    >
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0a0a0a" style="background-color: #0a0a0a;">
       <tr>
-        <td align="center" style="padding: 32px 16px;">
-          <table
-            role="presentation"
-            width="600"
-            cellpadding="0"
-            cellspacing="0"
-            border="0"
-            bgcolor="#101210"
-            style="
-              width: 100%;
-              max-width: 600px;
-              background-color: #101210;
-              border: 1px solid #1a241a;
-            "
-          >
-            <!-- HEADER: white band so the black+gold wordmark reads even
-                 in clients that strip our dark backgrounds. -->
+        <td class="od-outer" align="center" style="padding: 32px 16px;">
+          <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#101210" style="width: 100%; max-width: 600px; background-color: #101210; border: 1px solid #1a241a;">
+            <!-- HEADER: white band so the black and gold wordmark reads in every client. -->
             <tr>
-              <td bgcolor="#ffffff" style="padding: 18px 32px; background-color: #ffffff;">
+              <td class="od-px" bgcolor="#ffffff" style="padding: 18px 32px; background-color: #ffffff;">
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                   <tr>
-                    <td>
-                      <img
-                        src="https://cdn.shopify.com/s/files/1/1032/6641/9033/files/opendrone-wordmark-email-blackgold_39eb37d0-777f-4a31-b2f3-eb25965c97d7.png?v=1786703416"
-                        alt="OpenDrone"
-                        width="160"
-                        height="39"
-                        style="display: block; border: 0; outline: none; text-decoration: none; height:39px; width: 160px;"
-                      />
+                    <td style="font-family: 'Space Grotesk', Helvetica, Arial, sans-serif; font-size: 20px; font-weight: 700; color: #0a0a0a;">
+                      <img src="https://cdn.shopify.com/s/files/1/1032/6641/9033/files/opendrone-wordmark-email-blackgold_39eb37d0-777f-4a31-b2f3-eb25965c97d7.png?v=1786703416" alt="OpenDrone" width="160" height="39" style="display: block; border: 0; outline: none; text-decoration: none; height: 39px; width: 160px; font-family: 'Space Grotesk', Helvetica, Arial, sans-serif; font-size: 20px; font-weight: 700; color: #0a0a0a;" />
                     </td>
-                    <td
-                      align="right"
-                      style="
-                        font-family: 'JetBrains Mono', 'Courier New', monospace;
-                        font-size: 12px;
-                        letter-spacing: 0.2em;
-                        text-transform: uppercase;
-                        color: #4a4a4a;
-                      "
-                    >
+                    <td align="right" style="font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: #4a4a4a;">
                       Order received
                     </td>
                   </tr>
@@ -94,74 +46,56 @@
             </tr>
 
             <!-- BODY -->
-                        <tr>
-              <td style="padding: 40px 32px 0 32px;">
+            <tr>
+              <td class="od-px" style="padding: 40px 32px 0 32px;">
                 <p style="margin: 0 0 14px 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; color: #ffb700;">
                   Order {{ name }}
                 </p>
-                <h1 style="margin: 0 0 20px 0; font-family: 'Space Grotesk', Helvetica, Arial, sans-serif; font-size: 32px; line-height: 1.15; font-weight: 700; letter-spacing: -0.01em; color: #e5e5e5;">
+                <h1 class="od-h1" style="margin: 0 0 20px 0; font-family: 'Space Grotesk', Helvetica, Arial, sans-serif; font-size: 32px; line-height: 1.15; font-weight: 700; letter-spacing: -0.01em; color: #e5e5e5;">
                   Thanks{% if customer.first_name %}, {{ customer.first_name }}{% endif %}.
                 </h1>
               </td>
             </tr>
+
             <tr>
-              <td style="padding: 0 32px 28px 32px;">
-                <p style="margin: 0 0 16px 0; font-family: Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.6; color: #c5c5c5;">
-                  We&rsquo;ve received your order and your payment.
-                  You&rsquo;ll get a shipping confirmation with tracking
-                  when it ships.
+              <td class="od-px" style="padding: 0 32px 28px 32px;">
+                <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.6; color: #c5c5c5;">
+                  We&rsquo;ve received your order and your payment. You&rsquo;ll get a shipping confirmation with tracking when it ships.
                 </p>
               </td>
             </tr>
-            {% comment %}
-              Preorder lines carry the ship promise as the line item
-              property "Preorder" (PREORDER_ATTRIBUTE in
-              app/lib/shopify-storefront.ts). The summary below shows only
-              when at least one line has it.
-            {% endcomment %}
-            {% assign has_preorder = false %}
-            {% for line in line_items %}{% for p in line.properties %}{% if p.first == 'Preorder' and p.last != blank %}{% assign has_preorder = true %}{% endif %}{% endfor %}{% endfor %}
-            {% if has_preorder %}
+
+{% comment %}
+  Preorder lines carry the ship promise as the line item property
+  "Preorder" (PREORDER_ATTRIBUTE in app/lib/shopify-storefront.ts). The
+  summary shows only when at least one line has it. The dates come from
+  FACTS in app/lib/email-shell.ts.
+{% endcomment %}
+{% assign has_preorder = false %}
+{% for line in line_items %}{% for p in line.properties %}{% if p.first == 'Preorder' and p.last != blank %}{% assign has_preorder = true %}{% endif %}{% endfor %}{% endfor %}
+{% if has_preorder %}
             <tr>
-              <td style="padding: 0 32px 28px 32px;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #0a0a0a; border: 1px solid #ffb700;">
+              <td class="od-px" style="padding: 0 32px 28px 32px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0a0a0a" style="background-color: #0a0a0a; border: 1px solid #ffb700;">
                   <tr>
                     <td style="padding: 20px 24px;">
-                      <p style="margin: 0 0 10px 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; color: #ffb700;">
-                        Preorder
-                      </p>
-                      <p style="margin: 0 0 8px 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #c5c5c5;">
-                        This order contains preorder items, paid in full today.
-                        Each one shows its ship date below.
-                      </p>
-                      <p style="margin: 0 0 8px 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #c5c5c5;">
-                        An item from a funding target ships by 14 March 2027
-                        if its target is reached by 22 November 2026. If a
-                        target is missed, we email you
-                        and you choose: a full refund for that item within
-                        14 days, or keep your order for the new date in that
-                        email. If you do not reply within 30 days, we refund
-                        that item.
-                      </p>
-                      <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #c5c5c5;">
-                        Your order ships once, in one parcel, when every item
-                        in it is ready. If a target in it is missed, the rest
-                        of the order ships without waiting for that item, and
-                        if nothing else is left to ship we refund the shipping
-                        cost too. How preorders work:
-                        <a href="https://opendrone.be/preorder" style="color: #ffb700;">opendrone.be/preorder</a>
-                      </p>
+                      <p style="margin: 0 0 10px 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; color: #ffb700;">Preorder</p>
+  <p style="margin: 0 0 8px 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #c5c5c5;">This order contains preorder items, paid in full today. Each one shows its ship date below.</p>
+  <p style="margin: 0 0 8px 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #c5c5c5;">The preorder run closes on 15 December 2026. We attempt to ship its items by the end of March 2027, with delivery by 15 April 2027 in the EU and 30 April 2027 in the US. Items marked early November come from the first FC and ESC batch and ship earlier.</p>
+  <p style="margin: 0 0 8px 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #c5c5c5;">If an item&rsquo;s target is not reached by 15 December 2026, we email you and you choose: a full refund for that item within 14 days, or keep your order for the new date in that email. If you do not reply within 30 days, we refund that item.</p>
+  <p style="margin: 0 0 0px 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #c5c5c5;">Your order ships once, in one parcel, when every item in it is ready. If a target in it is missed, the rest of the order ships without waiting for that item, and if nothing else is left to ship we refund the shipping cost too. How preorders work: <a href="https://opendrone.be/preorder" style="color: #ffb700;">opendrone.be/preorder</a></p>
                     </td>
                   </tr>
                 </table>
               </td>
             </tr>
-            {% endif %}
+
+{% endif %}
             <tr>
-              <td style="padding: 0 32px 24px 32px;">
+              <td class="od-px" style="padding: 0 32px 24px 32px;">
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                   <tr>
-                    <td style="background-color: #ffb700; border-radius: 4px;">
+                    <td bgcolor="#ffb700" style="background-color: #ffb700; border-radius: 4px;">
                       <a href="{{ order_status_url }}" style="display: inline-block; padding: 14px 28px; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #0a0a0a; text-decoration: none;">
                         View order status &rarr;
                       </a>
@@ -170,8 +104,9 @@
                 </table>
               </td>
             </tr>
+
             <tr>
-              <td style="padding: 0 32px 8px 32px;">
+              <td class="od-px" style="padding: 0 32px 8px 32px;">
                 <p style="margin: 0 0 12px 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; color: #a0a0a0;">
                   Items
                 </p>
@@ -179,7 +114,7 @@
             </tr>
             {% for line in line_items %}
             <tr>
-              <td style="padding: 0 32px 16px 32px;">
+              <td class="od-px" style="padding: 0 32px 16px 32px;">
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top: 1px solid #1a241a;">
                   <tr>
                     {% if line.image %}
@@ -214,7 +149,7 @@
             </tr>
             {% endfor %}
             <tr>
-              <td style="padding: 0 32px 32px 32px;">
+              <td class="od-px" style="padding: 0 32px 32px 32px;">
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top: 1px solid #1a241a; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px;">
                   <tr>
                     <td style="padding: 10px 0 4px 0; color: #a0a0a0;">Subtotal</td>
@@ -246,66 +181,81 @@
                 </table>
               </td>
             </tr>
-            {% comment %}
-              Import duties are never collected at checkout. Outside the EU
-              the carrier collects any import duties and taxes on delivery.
-            {% endcomment %}
-            {% assign eu_countries = 'AT,BE,BG,CY,CZ,DE,DK,EE,ES,FI,FR,GR,HR,HU,IE,IT,LT,LU,LV,MT,NL,PL,PT,RO,SE,SI,SK' | split: ',' %}
-            {% if shipping_address and shipping_address.country_code != blank %}{% unless eu_countries contains shipping_address.country_code %}
-            <tr>
-              <td style="padding: 0 32px 24px 32px;">
-                <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.6; color: #a0a0a0;">
+{% assign eu_countries = 'AT,BE,BG,CY,CZ,DE,DK,EE,ES,FI,FR,GR,HR,HU,IE,IT,LT,LU,LV,MT,NL,PL,PT,RO,SE,SI,SK' | split: ',' %}
+{% assign has_receiver = false %}
+{% for line in line_items %}{% if line.sku contains 'OPENRX' %}{% assign has_receiver = true %}{% endif %}{% endfor %}
+{% comment %}
+  Duties and delivery notes. US: duties are included in the price. Other
+  non-EU countries: no import duties are collected at checkout, so the
+  carrier may ask for them. The US receiver line is the FCC 47 CFR 2.803
+  conditional-sale disclosure for RF products.
+{% endcomment %}
+{% if shipping_address and shipping_address.country_code != blank %}{% unless eu_countries contains shipping_address.country_code %}
 {% if shipping_address.country_code == 'US' %}
-                  <strong style="color: #c5c5c5;">Duties included.</strong>
-                  Your order ships from our US warehouse. There are no import
-                  duties, taxes or handling fees to pay on delivery.
-                  {% else %}
-                  <strong style="color: #c5c5c5;">Import duties.</strong>
-                  No import duties or import taxes were charged with this
-                  order. Your parcel ships from Belgium to outside the EU, so
-                  the carrier may ask you to pay import duties, taxes and a
-                  handling fee on delivery.
-                  {% endif %}
+            <tr>
+              <td class="od-px" style="padding: 0 32px 16px 32px;">
+                <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #a0a0a0;">
+                  <strong style="color: #c5c5c5;">Duties included.</strong> Your price includes import duties, taxes and handling. There is nothing to pay on delivery.
                 </p>
               </td>
             </tr>
-            {% endunless %}{% endif %}
-            {% if shipping_address %}
+
+{% if has_receiver %}
             <tr>
-              <td style="padding: 0 32px 32px 32px;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #0a0a0a; border: 1px solid #1a241a;">
+              <td class="od-px" style="padding: 0 32px 16px 32px;">
+                <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #a0a0a0;">
+                  <strong style="color: #c5c5c5;">Receiver, US sale.</strong> The receiver is sold conditionally: it may not be delivered in the US until its FCC equipment authorization is granted (47 CFR 2.803). If it is blocked, you get a full refund.
+                </p>
+              </td>
+            </tr>
+
+{% endif %}
+            <tr>
+              <td class="od-px" style="padding: 0 32px 28px 32px;">
+                <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #a0a0a0;">
+                  US delivery also depends on US import clearance. If we cannot deliver an item to you, you get a full refund for it.
+                </p>
+              </td>
+            </tr>
+
+{% else %}
+            <tr>
+              <td class="od-px" style="padding: 0 32px 28px 32px;">
+                <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #a0a0a0;">
+                  <strong style="color: #c5c5c5;">Import duties.</strong> No import duties or import taxes were charged with this order, so the carrier may ask you to pay import duties, taxes and a handling fee on delivery.
+                </p>
+              </td>
+            </tr>
+
+{% endif %}
+{% endunless %}{% endif %}
+{% if shipping_address %}
+            <tr>
+              <td class="od-px" style="padding: 0 32px 28px 32px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0a0a0a" style="background-color: #0a0a0a; border: 1px solid #1a241a;">
                   <tr>
                     <td style="padding: 20px 24px;">
-                      <p style="margin: 0 0 10px 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; color: #a0a0a0;">
-                        Shipping to
-                      </p>
-                      <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #c5c5c5;">
-                        {{ shipping_address.name }}<br>
-                        {{ shipping_address.street }}<br>
-                        {{ shipping_address.city }}{% if shipping_address.province_code %}, {{ shipping_address.province_code }}{% endif %} {{ shipping_address.zip }}<br>
-                        {{ shipping_address.country }}
-                      </p>
+                      <p style="margin: 0 0 10px 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; color: #a0a0a0;">Shipping to</p>
+  <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #c5c5c5;">
+    {{ shipping_address.name }}<br>
+    {{ shipping_address.street }}<br>
+    {{ shipping_address.city }}{% if shipping_address.province_code %}, {{ shipping_address.province_code }}{% endif %} {{ shipping_address.zip }}<br>
+    {{ shipping_address.country }}
+  </p>
                     </td>
                   </tr>
                 </table>
               </td>
             </tr>
-            {% endif %}
 
-            <tr>
-              <td style="padding: 0 32px 32px 32px;">
-{% if shipping_address.country_code == 'US' %}
-<p style="margin: 0 0 16px 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.6; color: #a0a0a0;">
-  <strong style="color: #c5c5c5;">US delivery.</strong>
-  US delivery depends on FCC equipment authorization and US import clearance.
-  If we cannot deliver an item to you, you get a full refund for it.
-</p>
 {% endif %}
+            <tr>
+              <td class="od-px" style="padding: 0 32px 32px 32px;">
 <!-- Legal: contract confirmation on a durable medium (Art. VI.46 WER).
      Withdrawal info + model form + current terms (web, v2.5) must reach
      the consumer with the order confirmation; omitting it extends withdrawal
      to 12 months. -->
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 24px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 8px;">
   <tr>
     <td style="padding: 16px 0 0 0; border-top: 1px solid #1a241a; font-family: Helvetica, Arial, sans-serif; font-size: 12px; line-height: 1.6; color: #a0a0a0;">
       <p style="margin: 0 0 8px 0;">
@@ -326,39 +276,17 @@
               </td>
             </tr>
 
-
             <!-- FOOTER -->
             <tr>
-              <td
-                style="
-                  padding: 24px 32px;
-                  border-top: 1px solid #1a241a;
-                  font-family: Helvetica, Arial, sans-serif;
-                  font-size: 12px;
-                  line-height: 1.6;
-                  color: #a0a0a0;
-                "
-              >
+              <td class="od-px" style="padding: 24px 32px; border-top: 1px solid #1a241a; font-family: Helvetica, Arial, sans-serif; font-size: 12px; line-height: 1.6; color: #a0a0a0;">
                 <p style="margin: 0 0 12px 0;">
-                  OpenDrone &middot; open source drone electronics designed in
-                  Belgium.
+                  OpenDrone &middot; open source drone electronics designed in Belgium.
                 </p>
                 <p style="margin: 0 0 16px 0;">
-                  Incutec BV &middot; Stapelhuisstraat 15, 3000 Leuven, Belgium &middot; KBO 1038.934.039 &middot; BTW BE 1038.934.039
+                  Incutec BV · Stapelhuisstraat 15, 3000 Leuven, Belgium · KBO 1038.934.039 · BTW BE 1038.934.039
                 </p>
-                <p
-                  style="
-                    margin: 0;
-                    font-family: 'JetBrains Mono', 'Courier New', monospace;
-                    font-size: 12px;
-                    letter-spacing: 0.1em;
-                  "
-                >
-                  <a
-                    href="https://opendrone.be"
-                    style="color: #ffb700; text-decoration: none;"
-                    >opendrone.be</a
-                  >
+                <p style="margin: 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; letter-spacing: 0.1em;">
+                  <a href="https://opendrone.be" style="color: #ffb700; text-decoration: none;">opendrone.be</a>
                 </p>
               </td>
             </tr>

@@ -41,6 +41,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 
+import {escapeHtml, head, para, shell} from '../app/lib/email-shell.ts';
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const RESEND_API = 'https://api.resend.com/emails';
 const REPLY_DAYS = 30;
@@ -228,18 +230,54 @@ const COPY = {
  * @param {'moved' | 'missed'} kind
  * @param {{order: string, product: string, qty: number, newDate: string, email: string, locale: string,
  *   reason?: string | null, deadline?: string, replyBy?: string, others?: boolean}} fields
- * @returns {{to: string, subject: string, text: string}}
+ * @returns {{to: string, subject: string, text: string, html: string}}
  */
 export function renderEmail(kind, {order, product, qty, newDate, reason, deadline, replyBy, others, email, locale}) {
   const copy = COPY[locale] ?? COPY.en;
   const body = kind === 'moved'
     ? copy.moved({order, product, qty, newDate, reason})
     : copy.missed({order, product, qty, newDate, deadline, replyBy, others});
+  const subject = kind === 'moved' ? copy.movedSubject(order, product) : copy.missedSubject(order, product);
   return {
     to: email,
-    subject: kind === 'moved' ? copy.movedSubject(order, product) : copy.missedSubject(order, product),
+    subject,
     text: [...body, '', ...SIGNATURE].join('\n'),
+    html: renderHtml({subject, order, kind, locale, lines: body}),
   };
+}
+
+const HEADINGS = {
+  en: {moved: 'New ship date.', missed: 'Your choice.', order: 'Order'},
+  nl: {moved: 'Nieuwe verzenddatum.', missed: 'Uw keuze.', order: 'Bestelling'},
+  fr: {moved: 'Nouvelle date d’envoi.', missed: 'Votre choix.', order: 'Commande'},
+};
+
+// The plain-text lines become paragraphs (blank line = paragraph break). The
+// upper-case answer keywords a buyer replies with (REFUND, WAIT, ...) stay
+// bold so the two options read as options.
+function renderHtml({subject, order, kind, locale, lines}) {
+  const h = HEADINGS[locale] ?? HEADINGS.en;
+  const paragraphs = [];
+  let cur = [];
+  for (const line of [...lines, '']) {
+    if (line === '') {
+      if (cur.length) paragraphs.push(cur.join(' '));
+      cur = [];
+    } else cur.push(line);
+  }
+  const rows = paragraphs.slice(1).map((p) => {
+    const safe = escapeHtml(p)
+      .replace(/^([A-ZÉ]{4,}) ?:/, '<strong style="color: #ffb700;">$1</strong>:')
+      .replace(/(https:\/\/opendrone\.be\/[^\s<]+)/g, '<a href="$1" style="color: #ffb700;">$1</a>');
+    return para(safe, {last: false});
+  });
+  return shell({
+    title: escapeHtml(subject),
+    badge: h.order,
+    preheader: escapeHtml(paragraphs[1] ?? subject).slice(0, 110),
+    lang: locale,
+    body: head(`${h.order} ${escapeHtml(order)}`, escapeHtml(h[kind])) + para(escapeHtml(paragraphs[0] ?? '')) + rows.join(''),
+  });
 }
 
 /** Show an address without printing it in full. */
@@ -278,6 +316,7 @@ async function sendEmail(mail, idempotencyKey) {
       reply_to: process.env.PUBLIC_COMPANY_EMAIL || 'contact@opendrone.be',
       subject: mail.subject,
       text: mail.text,
+      html: mail.html,
     }),
   });
   if (!res.ok) throw new Error(`Resend answered ${res.status}`);

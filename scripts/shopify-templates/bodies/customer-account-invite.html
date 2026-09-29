@@ -1,0 +1,9 @@
+<od-head kicker="Your account">Activate your account.</od-head>
+<od-p>Set up your OpenDrone account for faster checkout and to see your orders and support tickets in one place.</od-p>
+{% if custom_message != blank %}
+<od-card>
+  <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #c5c5c5;">{{ custom_message }}</p>
+</od-card>
+{% endif %}
+<od-p small last>If you did not expect this email, you can ignore it. No account is created until you activate it.</od-p>
+<od-button href="{{ customer.account_activation_url }}">Activate account &rarr;</od-button>

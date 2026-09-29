@@ -1,15 +1,14 @@
 {
-  "_doc": "Maps each body file to its Shopify notification admin name, page-level title/badge/preheader, and the Shopify admin-path segment used in /email_templates/<adminPath>/edit. Body files live in scripts/shopify-templates/bodies/<key>.html. Generated templates land in scripts/shopify-templates/out/<key>.html.",
+  "_doc": "Maps each body file to its Shopify notification admin name, page-level title/badge/preheader, and the Shopify admin-path segment used in /email_templates/<adminPath>/edit. Body files live in scripts/shopify-templates/bodies/<key>.html and use the <od-*> macros of app/lib/email-shell.ts. Generated templates land in scripts/shopify-templates/out/<key>.html. phase 1 = has a body and is pasted; phase 2 = Shopify's default stays live (its default carries a link or label variable we cannot verify: return created, return approved, draft order invoice, order invoice, payment reminder, order payment receipt, customer email change).",
   "templates": [
     {
       "key": "customer-account-welcome",
       "shopifyName": "Customer account welcome",
       "adminPath": "customer_account_welcome",
-      "emailSubject": "Welcome to Engineering Essentials",
-      "title": "Welcome to OpenDrone",
-      "badge": "Subscription confirmed",
-      "preheader": "Thanks for signing up. Monthly product releases and build notes from the bench.",
-      "unsubscribeFooter": true,
+      "emailSubject": "Your OpenDrone account is ready",
+      "title": "Your account is ready",
+      "badge": "Account",
+      "preheader": "Your OpenDrone account is set up. Orders and tracking in one place.",
       "phase": 1
     },
     {
@@ -30,7 +29,7 @@
       "emailSubject": "Order {{ name }} confirmed",
       "title": "Order confirmation",
       "badge": "Order received",
-      "preheader": "We've received your order. Details inside.",
+      "preheader": "We have your order and your payment. Details and ship dates inside.",
       "phase": 1
     },
     {
@@ -71,7 +70,7 @@
       "title": "Finish your order",
       "badge": "Cart waiting",
       "preheader": "Your OpenDrone cart is still here. Pick up where you left off.",
-      "phase": 2
+      "phase": 1
     },
     {
       "key": "customer-account-password-reset",
@@ -81,7 +80,7 @@
       "title": "Reset your password",
       "badge": "Password reset",
       "preheader": "One-click password reset for your OpenDrone account.",
-      "phase": 2
+      "phase": 1
     },
     {
       "key": "customer-account-invite",
@@ -91,7 +90,7 @@
       "title": "Activate your account",
       "badge": "Account invite",
       "preheader": "Activate your OpenDrone account for faster checkout.",
-      "phase": 2
+      "phase": 1
     },
     {
       "key": "return-created",
@@ -111,7 +110,7 @@
       "title": "Return request received",
       "badge": "Return requested",
       "preheader": "We've got your return request. We'll be in touch shortly.",
-      "phase": 2
+      "phase": 1
     },
     {
       "key": "return-request-approved",
@@ -131,7 +130,7 @@
       "title": "Return request declined",
       "badge": "Return declined",
       "preheader": "Update on your recent return request.",
-      "phase": 2
+      "phase": 1
     },
     {
       "key": "payment-error",
@@ -141,27 +140,27 @@
       "title": "Payment couldn't be processed",
       "badge": "Payment failed",
       "preheader": "We couldn't process your payment. Try again to complete your order.",
-      "phase": 2
+      "phase": 1
     },
     {
       "key": "pending-payment-error",
       "shopifyName": "Pending payment error",
       "adminPath": "pending_payment_failure",
-      "emailSubject": "Payment issue",
+      "emailSubject": "Payment issue with order {{ order_name }}",
       "title": "Payment issue",
       "badge": "Payment failed",
       "preheader": "We couldn't process your pending payment.",
-      "phase": 2
+      "phase": 1
     },
     {
       "key": "pending-payment-success",
       "shopifyName": "Pending payment success",
       "adminPath": "pending_payment_success",
-      "emailSubject": "Payment received",
+      "emailSubject": "Payment received for order {{ order_name }}",
       "title": "Payment received",
       "badge": "Payment received",
       "preheader": "Your pending payment has been processed successfully.",
-      "phase": 2
+      "phase": 1
     },
     {
       "key": "draft-order-invoice",
@@ -187,11 +186,11 @@
       "key": "order-edited",
       "shopifyName": "Order edited",
       "adminPath": "order_edited",
-      "emailSubject": "Your order was updated",
+      "emailSubject": "Your order {{ order_name }} was updated",
       "title": "Your order was updated",
       "badge": "Order updated",
       "preheader": "Your OpenDrone order has been edited.",
-      "phase": 2
+      "phase": 1
     },
     {
       "key": "order-link",
@@ -201,7 +200,7 @@
       "title": "Access your order",
       "badge": "Order link",
       "preheader": "Fresh link to view your order status.",
-      "phase": 2
+      "phase": 1
     },
     {
       "key": "shipping-update",
@@ -211,7 +210,7 @@
       "title": "Shipping update",
       "badge": "Tracking updated",
       "preheader": "Updated tracking for your OpenDrone order.",
-      "phase": 2
+      "phase": 1
     },
     {
       "key": "out-for-delivery",
@@ -221,7 +220,7 @@
       "title": "Out for delivery",
       "badge": "Out for delivery",
       "preheader": "Your OpenDrone order is out for delivery today.",
-      "phase": 2
+      "phase": 1
     },
     {
       "key": "delivered",
@@ -231,7 +230,7 @@
       "title": "Delivered",
       "badge": "Delivered",
       "preheader": "Your OpenDrone order has been delivered. Happy flying.",
-      "phase": 2
+      "phase": 1
     },
     {
       "key": "payment-reminder",
@@ -261,7 +260,7 @@
       "title": "From OpenDrone",
       "badge": "Message",
       "preheader": "A message from the OpenDrone team.",
-      "phase": 2
+      "phase": 1
     },
     {
       "key": "customer-email-change",
@@ -272,6 +271,16 @@
       "badge": "Email change",
       "preheader": "Confirm the email change on your OpenDrone account.",
       "phase": 2
+    },
+    {
+      "key": "staff-new-order",
+      "shopifyName": "New order (staff)",
+      "adminPath": "new_order_notification",
+      "emailSubject": "[OpenDrone] Order {{ name }} placed by {{ customer.name | default: 'a guest' }}",
+      "title": "New order",
+      "badge": "Staff",
+      "preheader": "New order with the preorder promise per line.",
+      "phase": 1
     }
   ]
 }

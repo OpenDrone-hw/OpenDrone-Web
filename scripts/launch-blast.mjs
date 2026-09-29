@@ -2,9 +2,15 @@
 // Launch blast: email everyone who asked to be notified about a product.
 //
 // Usage:
-//   node scripts/launch-blast.mjs <product-handle>            dry run (default)
-//   node scripts/launch-blast.mjs <product-handle> --create   sync audience + create DRAFT broadcast
-//   node scripts/launch-blast.mjs <product-handle> --send     sync + create + SEND immediately
+//   node scripts/launch-blast.mjs <product-handle|all>            dry run (default)
+//   node scripts/launch-blast.mjs <product-handle|all> --create   sync audience + create DRAFT broadcast
+//   node scripts/launch-blast.mjs <product-handle|all> --send     sync + create + SEND immediately
+//   --region all|eu|us   which launch copy (default all: EU batch 1, the preorder run and the US terms)
+//   node scripts/launch-blast.mjs --shopify-email-md   rewrite scripts/emails/shopify-email-launch.md
+//
+// The launch copy is "Preorders are open" (launchCopy below). The Shopify
+// Email draft to the notify-* customers is the planned channel; this script
+// is the Resend alternative and never sends without --send.
 //
 // Audience: the Resend segment `notify-<handle>`. The general "Newsletter"
 // signup (app/routes/newsletter._index.tsx) records consent in Shopify and no
@@ -18,7 +24,7 @@
 // the {{{RESEND_UNSUBSCRIBE_URL}}} footer link.
 //
 // Dry run prints recipient counts and writes the rendered
-// email to scripts/out/launch-blast-<handle>.html, no API writes at all.
+// email to scripts/out/launch-blast-<handle>-<region>.html, no API writes at all.
 // --create leaves the broadcast as a DRAFT to review (and send) in the
 // Resend dashboard; --send is the only path that actually emails people.
 //
@@ -30,12 +36,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 
+import {COMPANY_LINE_TEXT, FACTS, button, card, escapeHtml, head, label, para, shell, text as textBlock} from '../app/lib/email-shell.ts';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const SITE_ORIGIN = 'https://opendrone.be';
-const WORDMARK =
-  'https://cdn.shopify.com/s/files/1/1032/6641/9033/files/opendrone-wordmark-email-blackgold_39eb37d0-777f-4a31-b2f3-eb25965c97d7.png?v=1786703416';
-const escapeHtml = (v) => String(v).replace(/[&<>"']/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[c]);
 const RESEND_API = 'https://api.resend.com';
 
 // --- env (no dotenv dep in this repo) --------------------------------------
@@ -67,11 +72,18 @@ const env = {...loadEnv(), ...process.env};
 
 function parseArgs(argv) {
   const args = argv.slice(2);
-  const flags = new Set(args.filter((a) => a.startsWith('--')));
-  const positional = args.filter((a) => !a.startsWith('--'));
+  const regionAt = args.indexOf('--region');
+  const region = regionAt >= 0 ? args[regionAt + 1] : 'all';
+  if (!REGIONS.includes(region)) {
+    console.error(`--region must be one of ${REGIONS.join(', ')}`);
+    process.exit(1);
+  }
+  const rest = regionAt >= 0 ? args.filter((_, i) => i !== regionAt && i !== regionAt + 1) : args;
+  const flags = new Set(rest.filter((a) => a.startsWith('--')));
+  const positional = rest.filter((a) => !a.startsWith('--'));
   if (positional.length !== 1) {
     console.error(
-      'Usage: node scripts/launch-blast.mjs <product-handle> [--create] [--send]',
+      'Usage: node scripts/launch-blast.mjs <product-handle|all> [--region all|eu|us] [--create] [--send]\n       node scripts/launch-blast.mjs --shopify-email-md',
     );
     process.exit(1);
   }
@@ -81,7 +93,7 @@ function parseArgs(argv) {
     process.exit(1);
   }
   const send = flags.has('--send');
-  return {handle, send, create: send || flags.has('--create')};
+  return {handle, region, send, create: send || flags.has('--create')};
 }
 
 // --- Resend client -------------------------------------------------------------
@@ -141,7 +153,14 @@ async function listSegmentContacts(segmentId) {
 }
 
 
-// --- email template ------------------------------------------------------------
+// --- email copy and templates -----------------------------------------------------
+//
+// One copy definition feeds three renderings: the Resend HTML and text mail
+// (renderBlast), the gallery cards, and the Shopify Email draft text
+// (renderShopifyEmailMd, written to scripts/emails/shopify-email-launch.md).
+// Dates come from FACTS in app/lib/email-shell.ts.
+
+const HERO = `${SITE_ORIGIN}/og-image.png`;
 
 const PRODUCT_TITLES = {
   openrx: 'OpenRX',
@@ -158,59 +177,160 @@ function productTitle(handle) {
     .join(' ');
 }
 
-export function renderBlast(handle) {
-  const title = productTitle(handle);
-  const url = `${SITE_ORIGIN}/products/${handle}?utm_source=newsletter&utm_medium=email&utm_campaign=launch-${handle}`;
-  const subject = `${title} is live`;
+export const REGIONS = ['all', 'eu', 'us'];
+
+/** The launch copy for a region: `eu`, `us`, or `all` (both, for a list of unknown region). */
+export function launchCopy(region = 'all') {
+  if (!REGIONS.includes(region)) throw new Error(`region must be one of ${REGIONS.join(', ')}`);
+  const eu = [
+    {
+      kicker: 'First batch, EU only',
+      title: `OpenFC Lite and OpenESC ship ${FACTS.batch1}`,
+      body: `The first production batch of the flight controllers and ESCs ships from Belgium in ${FACTS.batch1} 2026, to EU addresses.`,
+    },
+    {
+      kicker: `Preorder run, closes ${FACTS.close}`,
+      title: 'Receiver, frame, motors, and more FCs and ESCs',
+      body: `Every unit is tested and inspected before it ships and goes straight to you from our fulfilment partner. We attempt to ship by ${FACTS.shipBy}, with delivery by ${FACTS.deliveryEu} in the EU.`,
+    },
+  ];
+  const us = [
+    {
+      kicker: 'United States',
+      title: 'Open for every product',
+      body: `Duties are included in the price, so there is nothing to pay on delivery. US orders ship with the preorder run: we attempt to ship by ${FACTS.shipBy}, with delivery by ${FACTS.deliveryUs}. The first FC and ESC batch is for the EU only.`,
+    },
+    {
+      kicker: 'Receiver, US sale',
+      title: 'Sold conditionally in the US',
+      body: 'The receiver is not delivered in the US until its FCC equipment authorization is granted (47 CFR 2.803). If it is blocked, you get a full refund.',
+    },
+  ];
+  const usRun = {...eu[1], body: 'Every unit is tested and inspected before it ships and goes straight to you from our fulfilment partner.'};
+  const sections = region === 'eu' ? eu : region === 'us' ? [us[0], usRun, us[1]] : [...eu, ...us];
+  return {
+    subject: 'Preorders are open',
+    preheader: region === 'us'
+      ? `OpenDrone preorders are open in the US. Duties included. The run closes ${FACTS.close}.`
+      : `FC and ESC batch 1 ships ${FACTS.batch1} in the EU. The preorder run closes ${FACTS.close}.`,
+    headline: 'Preorders are open.',
+    intro: 'You asked to hear from us when OpenDrone launches. It is live at opendrone.be.',
+    sections,
+    refund: 'You pay in full at checkout. If a preorder target is not reached, we email you and you choose: a full refund for that item, or keep your order for the new date.',
+    cta: 'See the hardware',
+  };
+}
+
+function blastUrl(handle) {
+  const campaign = `launch-${handle}`;
+  const utm = `utm_source=newsletter&utm_medium=email&utm_campaign=${campaign}`;
+  return handle === 'all' ? `${SITE_ORIGIN}/products?${utm}` : `${SITE_ORIGIN}/products/${handle}?${utm}`;
+}
+
+const PLAIN_FOOTER = [
+  'You get this because you signed up for launch updates at opendrone.be.',
+  'Unsubscribe: {{{RESEND_UNSUBSCRIBE_URL}}}',
+  '',
+  COMPANY_LINE_TEXT,
+];
+
+/** The Resend mail. `handle` is a product handle, or `all` for the whole store. */
+export function renderBlast(handle = 'all', region = 'all') {
+  const copy = launchCopy(region);
+  const url = blastUrl(handle);
   const text = [
-    'Hi,',
+    copy.headline,
     '',
-    `You asked to be notified when ${title} launches, it's on sale now:`,
-    url,
+    copy.intro,
     '',
-    'Thanks for waiting.',
+    ...copy.sections.flatMap((sec) => [`${sec.kicker.toUpperCase()}`, sec.title, sec.body, '']),
+    copy.refund,
+    ...(handle === 'all' ? [] : ['', `You asked about ${productTitle(handle)}.`]),
+    '',
+    `${copy.cta}: ${url}`,
+    '',
     'OpenDrone',
     '',
-    'You get this because you signed up for launch updates at opendrone.be.',
-    'Unsubscribe: {{{RESEND_UNSUBSCRIBE_URL}}}',
-    '',
-    'Incutec BV, Stapelhuisstraat 15, 3000 Leuven, Belgium. KBO 1038.934.039. BTW BE 1038.934.039',
+    ...PLAIN_FOOTER,
   ].join('\n');
-  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#0a0a0a;color:#e5e5e5;font-family:Helvetica,Arial,sans-serif;line-height:1.55">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0a">
-    <tr><td align="center" style="padding:32px 16px">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;max-width:560px;background:#101210;border:1px solid #1a241a;border-radius:3px">
-        <tr><td style="background:#ffffff;padding:20px 28px"><img src="${WORDMARK}" alt="OpenDrone" width="160" height="39" style="display:block;border:0;width:160px;height:39px"></td></tr>
-        <tr><td style="padding:28px 28px 0">
-          <p style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:#ffb700;margin:0 0 6px">OpenDrone</p>
-          <h1 style="font-family:Helvetica,Arial,sans-serif;font-size:22px;letter-spacing:-0.01em;margin:0;color:#e5e5e5">It&rsquo;s live.</h1>
-        </td></tr>
-        <tr><td style="padding:18px 28px 28px;color:#e5e5e5;font-size:15px">
-          <p>Hi,</p>
-          <p>You asked to be notified when <strong>${escapeHtml(title)}</strong> launches, it&rsquo;s on sale now.</p>
-          <p style="margin:24px 0 32px">
-            <a href="${url}" style="display:inline-block;background:#ffb700;color:#0a0a0a;text-decoration:none;font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;font-weight:700;padding:12px 18px;border-radius:2px">View product &rarr;</a>
-          </p>
-          <p style="color:#a0a0a0;font-size:13px;line-height:1.6">You get this because you signed up for launch updates at opendrone.be. <a href="{{{RESEND_UNSUBSCRIBE_URL}}}" style="color:#ffb700">Unsubscribe</a>.</p>
-          <p style="color:#a0a0a0;font-size:12px;line-height:1.6;margin:0">Incutec BV, Stapelhuisstraat 15, 3000 Leuven, Belgium. KBO 1038.934.039. BTW BE 1038.934.039</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`;
-  return {subject, text, html};
+  const body =
+    `            <tr><td style="padding: 0;"><img src="${HERO}" alt="OpenDrone flight controller, ESC and receiver boards" width="600" style="display: block; width: 100%; max-width: 600px; height: auto; border: 0;" /></td></tr>\n` +
+    head('OpenDrone launch', escapeHtml(copy.headline)) +
+    para(escapeHtml(copy.intro), {last: true}) +
+    copy.sections
+      .map((sec) =>
+        card(label(escapeHtml(sec.kicker), 'accent') + `<p style="margin: 0 0 8px 0; font-family: 'Space Grotesk', Helvetica, Arial, sans-serif; font-size: 18px; font-weight: 700; color: #e5e5e5;">${escapeHtml(sec.title)}</p>` + textBlock(escapeHtml(sec.body), {last: true}), {accent: sec.kicker.startsWith('First batch')}),
+      )
+      .join('') +
+    para(escapeHtml(copy.refund), {small: true, last: true}) +
+    (handle === 'all' ? '' : para(`You asked about <strong style="color: #e5e5e5;">${escapeHtml(productTitle(handle))}</strong>.`, {small: true, last: true})) +
+    button(url, `${escapeHtml(copy.cta)} &rarr;`);
+  const html = shell({
+    title: escapeHtml(copy.subject),
+    badge: 'Launch',
+    preheader: escapeHtml(copy.preheader),
+    body,
+    footerNote: 'You get this because you signed up for launch updates at opendrone.be. <a href="{{{RESEND_UNSUBSCRIBE_URL}}}" style="color: #ffb700;">Unsubscribe</a>.',
+  });
+  return {subject: copy.subject, text, html};
+}
+
+/**
+ * The Shopify Email version: plain sections, image URLs and one button, to be
+ * pasted into a Shopify Email draft (Marketing, Create campaign, Shopify Email).
+ * Shopify Email has its own footer, unsubscribe link and sender address.
+ */
+export function renderShopifyEmailMd() {
+  const url = blastUrl('all').replace('utm_source=newsletter', 'utm_source=shopify-email');
+  const variant = (region, label) => {
+    const copy = launchCopy(region);
+    return [
+      `## ${label}`,
+      '',
+      `Subject line: ${copy.subject}`,
+      `Preview text: ${copy.preheader}`,
+      '',
+      `Hero image: ${HERO} (alt text: OpenDrone flight controller, ESC and receiver boards)`,
+      '',
+      `# ${copy.headline}`,
+      '',
+      copy.intro,
+      '',
+      ...copy.sections.flatMap((sec) => [`### ${sec.kicker}`, `**${sec.title}**`, '', sec.body, '']),
+      copy.refund,
+      '',
+      `Button: ${copy.cta} -> ${url}`,
+      '',
+    ];
+  };
+  return [
+    '# Shopify Email draft: Preorders are open',
+    '',
+    'Generated by `node scripts/launch-blast.mjs --shopify-email-md` from the copy in `scripts/launch-blast.mjs`. Do not edit by hand.',
+    '',
+    'Create it as a DRAFT in Shopify admin, Marketing, Create campaign, Shopify Email. Do not send. Audience: customers tagged `notify-*` first. Sender: the store address. Paste the sections below into text blocks, add the hero as an image block, and add a button block. Shopify Email adds the footer and unsubscribe link itself.',
+    '',
+    ...variant('all', 'Version for a list of unknown region (default)'),
+    ...variant('eu', 'EU-only version'),
+    ...variant('us', 'US-only version'),
+  ].join('\n');
 }
 
 // --- main ------------------------------------------------------------------------
 
 async function main() {
-  const {handle, create, send} = parseArgs(process.argv);
+  if (process.argv.includes('--shopify-email-md')) {
+    const out = path.join(ROOT, 'scripts/emails/shopify-email-launch.md');
+    fs.writeFileSync(out, `${renderShopifyEmailMd()}\n`);
+    console.log(`wrote ${path.relative(ROOT, out)}`);
+    return;
+  }
+  const {handle, region, create, send} = parseArgs(process.argv);
   if (!env.RESEND_API_KEY) throw new Error('RESEND_API_KEY missing in .env');
 
   const segmentName = `notify-${handle}`;
   const mode = send ? 'SEND' : create ? 'CREATE DRAFT' : 'DRY RUN';
-  console.log(`\n[launch-blast] ${handle}  (segment: ${segmentName}, mode: ${mode})`);
+  console.log(`\n[launch-blast] ${handle}  (segment: ${segmentName}, region copy: ${region}, mode: ${mode})`);
 
   // 1. Resend segment membership.
   const segment = await findSegment(segmentName);
@@ -226,12 +346,12 @@ async function main() {
     `  Resend segment:  ${segment ? `${memberEmails.size} contacts (${unsubscribed} unsubscribed, auto-suppressed)` : 'does not exist yet'}`,
   );
 
-  const {subject, text, html} = renderBlast(handle);
+  const {subject, text, html} = renderBlast(handle, region);
 
   if (!create) {
     const outDir = path.join(__dirname, 'out');
     fs.mkdirSync(outDir, {recursive: true});
-    const outPath = path.join(outDir, `launch-blast-${handle}.html`);
+    const outPath = path.join(outDir, `launch-blast-${handle}-${region}.html`);
     fs.writeFileSync(outPath, html);
     const total = memberEmails.size - unsubscribed;
     console.log(`\n  Subject:    ${subject}`);
@@ -252,7 +372,7 @@ async function main() {
 
   // 3. Create the broadcast (draft unless --send).
   const broadcast = await resend('POST', '/broadcasts', {
-    name: `launch-${handle}`,
+    name: `launch-${handle}-${region}`,
     segment_id: segmentId,
     from: `OpenDrone <${env.RESEND_MARKETING_FROM || 'hello@opendrone.be'}>`,
     subject,
