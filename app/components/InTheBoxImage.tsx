@@ -66,7 +66,11 @@ export function InTheBox({items, image, renderItem}: Props) {
               aria-pressed={pinned === i}
               onPointerEnter={enter(i)}
               onPointerLeave={leave}
-              onFocus={() => setHover(i)}
+              // Keyboard focus previews; a tap's focus must not, or the
+              // second tap could never clear the highlight.
+              onFocus={(e) => {
+                if (e.currentTarget.matches(':focus-visible')) setHover(i);
+              }}
               onBlur={() => setHover(null)}
               onClick={() => toggle(i)}
               onKeyDown={(e) => {
