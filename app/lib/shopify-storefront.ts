@@ -52,6 +52,7 @@ const CART_FIELDS = `#graphql
     id
     checkoutUrl
     totalQuantity
+    buyerIdentity { countryCode }
     cost {
       subtotalAmount { amount currencyCode }
       totalAmount { amount currencyCode }
@@ -165,6 +166,9 @@ export type ShopifyCart = {
   totalQuantity: number;
   subtotal: ShopifyMoney;
   total: ShopifyMoney;
+  /** The cart's `buyerIdentity.countryCode`: the market Shopify prices it
+   *  in and checkout opens in. Absent or null when none was set. */
+  country?: string | null;
   lines: ShopifyCartLine[];
 };
 
@@ -463,6 +467,7 @@ type CartWire = {
   id: string;
   checkoutUrl: string;
   totalQuantity: number;
+  buyerIdentity?: {countryCode?: string | null} | null;
   cost: {subtotalAmount: ShopifyMoney; totalAmount: ShopifyMoney};
   lines: {
     pageInfo: {hasNextPage: boolean};
@@ -531,6 +536,7 @@ function validatedCart(
     totalQuantity: cart.totalQuantity,
     subtotal: cart.cost.subtotalAmount,
     total: cart.cost.totalAmount,
+    ...(cart.buyerIdentity?.countryCode ? {country: cart.buyerIdentity.countryCode.toUpperCase()} : {}),
     lines: cart.lines.nodes.map((line) => {
       // Only a US line carries its region; an EU line keeps today's shape.
       const shipRegion = line.attributes.find(({key}) => key === SHIP_REGION_ATTRIBUTE)?.value;

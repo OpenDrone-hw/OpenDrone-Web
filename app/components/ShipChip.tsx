@@ -2,6 +2,7 @@ import {copyText} from '~/lib/copy';
 import {shipMonth, shortShipPromise} from '~/lib/product-content';
 import {
   campaignDate,
+  datedShipParts,
   latestShipDate,
   parseCampaignConfig,
   promiseDeliveredBy,
@@ -14,7 +15,22 @@ const CAMPAIGN = parseCampaignConfig(preorders);
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /**
- * The ship chip text for a line: "Ships Oct 2026" for a dated batch, "ETA
+ * A dated promise as the one short line every surface shows: "Ships late Oct
+ * 2026 · Delivered by 30 Nov 2026" for "ships late October 2026, delivered
+ * by 30 November 2026" (PDP, /products, cart, dialog). It drops words of the
+ * checkout line text, never the month, its qualifier or the delivery date.
+ * Null when the promise names no month and year.
+ */
+export function datedShipText(promise: string | null | undefined): string | null {
+  const parts = datedShipParts(promise);
+  if (!parts) return null;
+  const ships = shipWord('ships', parts.when);
+  return parts.delivered ? `${ships} · ${shipWord('delivered', parts.delivered)}` : ships;
+}
+
+/**
+ * The ship chip text for a line: "Ships late Oct 2026 · Delivered by 30 Nov
+ * 2026" for a dated batch, "ETA
  * 14 Mar 2027" for a funding target, "Ships by 14 Mar 2027 if the target is reached" with
  * `ifFunded` while the target is not met.
  */
@@ -26,8 +42,7 @@ export function shipChipText(
   if (!short) return null;
   let text = short.text;
   if (short.kind === 'date') {
-    const month = shipMonth(promise);
-    if (month) text = shipWord('ships', month);
+    text = datedShipText(promise) ?? text;
   } else {
     const eta = shortCampaignDate(latestShipDate(CAMPAIGN));
     if (eta) {
@@ -99,7 +114,7 @@ export function ShipChip({
 
 /**
  * The ship words every surface uses, from `content/copy/preorder.json`:
- * `Ships Oct 2026` for a dated batch, `Ships by 14 Mar 2027` for a funding
+ * `Ships late Oct 2026` for a dated batch, `Ships by 14 Mar 2027` for a funding
  * target, `Deadline 22 Nov 2026` for its deadline. Dates come in short.
  */
 export function shipWord(kind: 'ships' | 'eta' | 'deadline' | 'delivered', date: string): string {
@@ -113,8 +128,8 @@ export function shipWord(kind: 'ships' | 'eta' | 'deadline' | 'delivered', date:
 }
 
 /**
- * The ship line under a Pre-order button. A dated batch reads "Ships Oct
- * 2026"; a funding target "Deadline 22 Nov 2026 · Ships by 14 Mar 2027 if
+ * The ship line under a Pre-order button. A dated batch reads "Ships late
+ * Oct 2026 · Delivered by 30 Nov 2026"; a funding target "Deadline 22 Nov 2026 · Ships by 14 Mar 2027 if
  * funded", and "Ships by 14 Mar 2027" once it is funded.
  */
 export function shipLine(
@@ -128,10 +143,7 @@ export function shipLine(
   const delivered = promiseDeliveredBy(full);
   const withDelivery = (text: string) =>
     delivered ? `${text} · ${shipWord('delivered', delivered)}` : text;
-  if (short.kind === 'date') {
-    const month = shipMonth(full);
-    return {kind: 'date', text: withDelivery(month ? shipWord('ships', month) : short.text)};
-  }
+  if (short.kind === 'date') return {kind: 'date', text: datedShipText(full) ?? short.text};
   const eta = shortCampaignDate(campaign?.latestShip ?? latestShipDate(CAMPAIGN)) ?? '';
   if (campaign?.targetReached) return {kind: 'target', text: withDelivery(shipWord('eta', eta))};
   const deadline =

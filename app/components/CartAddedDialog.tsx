@@ -24,7 +24,8 @@ import {beginCartAdd, endCartAdd} from './cart-add-lock';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
 import {DATES_SEEN_FIELD, type CartSummary} from '~/lib/shopify-cart-action';
 import {trackEvent} from '~/lib/growth/plausible';
-import {CART_ADDED_EVENT, postCartAdd, type CartAddedDetail} from '~/lib/cart-client';
+import {CART_ADDED_EVENT, postCartAdd, withCountry, type CartAddedDetail} from '~/lib/cart-client';
+import {ShipToSelect} from './ShipToSelect';
 
 const CART_ACTION = '/api/shopify/cart';
 const BUILDS = parseBuilds(buildsJson);
@@ -146,7 +147,12 @@ export function CartAddedDialog() {
     setBusy(part.sku);
     setFailed(null);
     try {
-      setSummary(await postCartAdd(CART_ACTION, [['sku', part.sku], ['qty', String(part.quantity)]]));
+      setSummary(
+        await postCartAdd(
+          CART_ACTION,
+          withCountry([['sku', part.sku], ['qty', String(part.quantity)]], visitor),
+        ),
+      );
       trackEvent('Recommendation Add', {
         props: {
           product: part.handle,
@@ -283,6 +289,14 @@ export function CartAddedDialog() {
         ) : null}
 
         <div className="cart-added-foot">
+          <ShipToSelect
+            country={visitor}
+            usRate={usRate}
+            className="ship-to cart-added-ship-to"
+            onChanged={(reply) => {
+              if (reply.summary) setSummary(reply.summary);
+            }}
+          />
           {subtotal ? (
             <p className="cart-added-subtotal">
               <span>
@@ -347,6 +361,13 @@ export function CartAddedDialog() {
               }
             >
               <input type="hidden" name="intent" value="checkout" />
+              <p className="cart-added-parcel" data-testid="ship-to-note">
+                {t(
+                  'ship_to_note',
+                  'Shipping to {country}. Changing the country at checkout can change prices and ship dates; choose it here first.',
+                  {country: countryName(visitor ?? '')},
+                )}
+              </p>
               {/* The parcel line above names the date, so checkout may go on. */}
               {parcel ? <input type="hidden" name={DATES_SEEN_FIELD} value="1" /> : null}
               <button type="submit" className="cart-added-checkout">

@@ -22,12 +22,14 @@ import {ShipChip, parcelPromise, shipChipText, soonerMonth} from '~/components/S
 import {buildSeoMeta} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
 import {countryName, shippingQuote} from '~/lib/shipping-rates';
+import {ShipToSelect} from '~/components/ShipToSelect';
 import {paysEuVat} from '~/lib/visitor-country';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
 import type {RootLoader} from '~/root';
 import {
   CartAddError,
   postCart,
+  withCountry,
   storedSplitItems,
   storeSplitItems,
   type SplitItem,
@@ -169,6 +171,7 @@ function SplitReminder({
   onChange: (items: Removed) => void;
 }) {
   const revalidator = useRevalidator();
+  const country = useRouteLoaderData<RootLoader>('root')?.visitorCountry ?? null;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const addable = items.filter((item) => item.sku);
@@ -177,10 +180,16 @@ function SplitReminder({
     setBusy(true);
     setError(null);
     try {
-      await postCart('/api/shopify/cart', [
-        ['intent', 'add'],
-        ['lines', addable.map((item) => `${item.sku}:${item.quantity}`).join(',')],
-      ]);
+      await postCart(
+        '/api/shopify/cart',
+        withCountry(
+          [
+            ['intent', 'add'],
+            ['lines', addable.map((item) => `${item.sku}:${item.quantity}`).join(',')],
+          ],
+          country,
+        ),
+      );
       onChange(items.filter((item) => !item.sku));
       void revalidator.revalidate();
     } catch (caught) {
@@ -279,7 +288,10 @@ function PopulatedCart({
     const max = info[line.id]?.maxQuantity;
     return max != null && line.quantity > max;
   });
-  const blocked = pending || overLimit;
+  // A US destination cannot take a line that ships to the EU only: the
+  // buyer removes it or picks an EU country.
+  const euOnlyForUs = usBuyer && cart.lines.some((line) => info[line.id]?.euOnly);
+  const blocked = pending || overLimit || euOnlyForUs;
   const pendingStyle = pending ? {opacity: 0.5} : undefined;
 
   return (
@@ -298,6 +310,12 @@ function PopulatedCart({
           </ul>
         </div>
         <div className="cart-summary-page" aria-busy={pending || undefined}>
+          <ShipToSelect
+            country={country}
+            usRate={usRate}
+            className="ship-to cart-ship-to"
+            onBusy={(busy) => onPending(busy ? 1 : -1)}
+          />
           <dl className="cart-register">
             <div className="cart-register-row is-total">
               <dt>
@@ -349,6 +367,18 @@ function PopulatedCart({
               }}
             >
               <input type="hidden" name="intent" value="checkout" />
+              <p className="cart-summary-note cart-ship-to-note" data-testid="ship-to-note">
+                {t(
+                  'ship_to_note',
+                  'Shipping to {country}. Changing the country at checkout can change prices and ship dates; choose it here first.',
+                  {country: countryName(country ?? '')},
+                )}
+              </p>
+              {euOnlyForUs ? (
+                <p className="cart-alert" role="alert">
+                  {t('check_us_eu_only', 'An item in your cart ships to EU addresses only. Remove it to check out to the US.')}
+                </p>
+              ) : null}
               {/* This page shows the one-parcel line, so checkout may go on. */}
               {mixed ? <input type="hidden" name={DATES_SEEN_FIELD} value="1" /> : null}
               <button className="cart-checkout-cta" type="submit" disabled={blocked} aria-disabled={blocked || undefined}>

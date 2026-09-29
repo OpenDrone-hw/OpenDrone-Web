@@ -38,6 +38,9 @@ export type CatalogClient = {
   /** The catalog for this request's destination: `get` for every
    *  destination but an open US one. */
   forBuyer: () => Promise<Catalog>;
+  /** The catalog for one region, whatever this request's destination is:
+   *  the cart country switch prices a cart for the country just picked. */
+  forRegion: (region: Region) => Promise<Catalog>;
   /** The region `forBuyer` serves. */
   region: Region;
 };
@@ -69,22 +72,19 @@ async function withCampaign(env: Env, catalog: Catalog, region: Region): Promise
 export function createCatalogClient({env, request}: {env: Env; request?: Request}): CatalogClient {
   const region = buyerRegion(request, env);
   const get = async () => withCampaign(env, await fetchShopifyCatalog(env), 'EU');
-  return {
-    get,
-    region,
-    forBuyer: async () => {
-      if (region !== 'US') return get();
-      const [catalog, market] = await Promise.all([
-        fetchShopifyCatalog(env),
-        fetchShopifyCatalog(env, fetch, 'US').catch((error: unknown) => {
-          console.error(
-            '[catalog] US market prices unavailable, closing US sales',
-            error instanceof Error ? error.message : error,
-          );
-          return null;
-        }),
-      ]);
-      return withMarketPrices(await withCampaign(env, catalog, 'US'), market);
-    },
+  const forRegion = async (target: Region): Promise<Catalog> => {
+    if (target !== 'US') return get();
+    const [catalog, market] = await Promise.all([
+      fetchShopifyCatalog(env),
+      fetchShopifyCatalog(env, fetch, 'US').catch((error: unknown) => {
+        console.error(
+          '[catalog] US market prices unavailable, closing US sales',
+          error instanceof Error ? error.message : error,
+        );
+        return null;
+      }),
+    ]);
+    return withMarketPrices(await withCampaign(env, catalog, 'US'), market);
   };
+  return {get, region, forRegion, forBuyer: () => forRegion(region)};
 }

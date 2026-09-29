@@ -814,12 +814,29 @@ function fundingShort(latestShip: string | null): string {
   return date ? `Ships by ${date} if the target is reached` : 'Funding target';
 }
 
-/** A dated promise, short: "ships late October 2026" gives "Ships Oct
- *  2026". A promise that names no month and year keeps its own words. */
+/** The parts of a dated promise: "ships late October 2026, delivered by 30
+ *  November 2026" gives `{when: 'late Oct 2026', delivered: '30 Nov 2026'}`.
+ *  Null when the promise names no month and year. Every surface builds its
+ *  short ship line from these, so PDP, listings, cart, dialog and checkout
+ *  name the same month, qualifier and delivery date. */
+export function datedShipParts(
+  promise: string | null | undefined,
+): {when: string; delivered: string | null} | null {
+  const text = promise?.trim() ?? '';
+  const match = text.match(/\b(?:(early|mid|late)[- ])?([A-Za-z]+) (\d{4})\b/i);
+  const month = match ? LONG_MONTHS.indexOf(match[2].toLowerCase()) : -1;
+  if (!match || month < 0) return null;
+  const qualifier = match[1] ? `${match[1].toLowerCase()} ` : '';
+  return {when: `${qualifier}${SHORT_MONTHS[month]} ${match[3]}`, delivered: promiseDeliveredBy(text)};
+}
+
+/** A dated promise, short: "Ships late Oct 2026 · Delivered by 30 Nov 2026".
+ *  A promise that names no month and year keeps its own words. */
 function datedShort(promise: string): string {
-  const match = promise.match(/\b([A-Za-z]+) (\d{4})\b/);
-  const month = match ? LONG_MONTHS.indexOf(match[1].toLowerCase()) : -1;
-  return month < 0 ? capitalizeFirst(promise.trim()) : `Ships ${SHORT_MONTHS[month]} ${match![2]}`;
+  const parts = datedShipParts(promise);
+  if (!parts) return capitalizeFirst(promise.trim());
+  const ships = `Ships ${parts.when}`;
+  return parts.delivered ? `${ships} · Delivered by ${parts.delivered}` : ships;
 }
 
 function longSentence(promise: string): string {

@@ -1,8 +1,8 @@
 import {bySku, type Catalog, type CatalogVariant} from './catalog.ts';
-import {shipGroupKey, shipLabelFromPromise} from './preorder-campaign.ts';
+import {regionOf, shipGroupKey, shipLabelFromPromise, type Region} from './preorder-campaign.ts';
 import {isPurchasableStatus, resolveStatus} from './product-content.ts';
 import {requestedLines} from './shopify-cart-input.ts';
-import {buyerCountry, isUsQuote, shipCountryForRequest, shippingQuote, type ShippingQuote} from './shipping-rates.ts';
+import {isUsQuote, shipCountryForRequest, shippingQuote, type ShippingQuote} from './shipping-rates.ts';
 import {type RegistrationsFile} from './registrations.ts';
 import {usSalesRate} from './us-sales.ts';
 import {
@@ -28,7 +28,9 @@ export type ShopifyCartDependencies = {
   /** `cartBuyerIdentityUpdate` with the country code, for a cart whose
    *  market no longer matches the destination (US sales open only). */
   setCountry?: (cartId: string, countryCode: string) => Promise<void>;
-  fetchCatalog: () => Promise<Catalog>;
+  /** The catalog for the destination's region (`US` while it is the open US
+   *  destination, else `EU`): its ship promises and market prices. */
+  fetchCatalog: (region?: Region) => Promise<Catalog>;
   /** A new cart; `countryCode` is the visitor's country when the shop
    *  ships there, so checkout opens in that country's market. */
   createCart: (lines: CartLineInput[], countryCode?: string) => Promise<ShopifyCart>;
@@ -48,6 +50,28 @@ const NO_STORE = {'Cache-Control': 'no-store'};
 
 function fail(message: string, status: number, headers: Record<string, string> = {}): Response {
   return new Response(message, {status, headers: {...NO_STORE, ...headers}});
+}
+
+/** The country field a browser forwards with a cart form: the destination
+ *  its page showed, including a `?country` override the POST cannot see.
+ *  Only a valid ISO country code counts. */
+export function forwardedCountry(form: FormData): string | null {
+  const value = String(form.get(COUNTRY_FIELD) ?? '').trim().toUpperCase();
+  return /^[A-Z]{2}$/.test(value) ? value : null;
+}
+
+/** The cart form field that carries the page's destination country. */
+export const COUNTRY_FIELD = 'country';
+
+/** Add `country` (the destination the page shows) to cart form fields, so
+ *  the server builds the cart for that country and its market, `?country`
+ *  override included. Unchanged without a country or when one is present. */
+export function withCountry(
+  fields: Array<[string, string]>,
+  country: string | null | undefined,
+): Array<[string, string]> {
+  if (!country || fields.some(([name]) => name === 'country')) return fields;
+  return [...fields, ['country', country]];
 }
 
 /** What the add-to-cart dialog and the header count need; no checkout URL. */
@@ -110,7 +134,16 @@ export function cartCountry(
   registrations?: RegistrationsFile,
   usRate: number | null = null,
 ): string | undefined {
-  const quote = shippingQuote(shipCountryForRequest(request), registrations, usRate);
+  return cartCountryFor(shipCountryForRequest(request), registrations, usRate);
+}
+
+/** `cartCountry` for a destination already resolved. */
+export function cartCountryFor(
+  country: string | null,
+  registrations?: RegistrationsFile,
+  usRate: number | null = null,
+): string | undefined {
+  const quote = shippingQuote(country, registrations, usRate);
   return quote?.kind === 'direct' ? quote.country : undefined;
 }
 
@@ -199,7 +232,7 @@ export function checkoutOpen(env: CartEnv): boolean {
  * promise, so checkout and the order confirmation show the delivery time the
  * product page showed. A preorder without a promise is not sold.
  */
-function lineAttributes(variant: CatalogVariant, us = false): CartLineInput['attributes'] {
+export function lineAttributes(variant: CatalogVariant, us = false): CartLineInput['attributes'] {
   if (variant.availability !== 'preorder') return undefined;
   const promise = variant.ship_promise?.trim();
   if (!promise) throw fail('Product is unavailable.', 409);
@@ -212,12 +245,12 @@ function lineAttributes(variant: CatalogVariant, us = false): CartLineInput['att
 
 /** A US destination buys campaign preorders only: in-stock items and
  *  other preorders ship from Belgium to the EU. */
-function usSellable(variant: CatalogVariant): boolean {
+export function usSellable(variant: CatalogVariant): boolean {
   return variant.availability === 'preorder' && Boolean(variant.campaign);
 }
 
 /** The catalog variant behind a cart line, if the shop still sells it. */
-function sellableVariant(
+export function sellableVariant(
   catalog: Catalog,
   merchandiseId: string,
   globalComingSoon: boolean,
@@ -306,6 +339,56 @@ export function variantLink(
   return `/products/${encodeURIComponent(handle)}${query ? `?${query}` : ''}`;
 }
 
+/**
+ * Every cart line against the catalog of the destination's region: the lines
+ * whose `Preorder` promise (or hidden region attribute) no longer matches
+ * that region, the units per variant, and whether the cart holds a line the
+ * shop no longer sells or, for the US, a line that ships to the EU only.
+ * Lines in either state are never rewritten. Throws a 409 `Response` for a
+ * preorder without a promise.
+ */
+export function rederiveLines(
+  cart: ShopifyCart,
+  catalog: Catalog,
+  us: boolean,
+  globalComingSoon: boolean,
+): {
+  refresh: CartLineUpdate[];
+  totals: Map<string, {variant: CatalogVariant; quantity: number}>;
+  unavailable: boolean;
+  euOnly: boolean;
+} {
+  const refresh: CartLineUpdate[] = [];
+  const totals = new Map<string, {variant: CatalogVariant; quantity: number}>();
+  let unavailable = false;
+  let euOnly = false;
+  for (const line of cart.lines) {
+    const variant = sellableVariant(catalog, line.merchandiseId, globalComingSoon);
+    if (!variant) {
+      unavailable = true;
+      continue;
+    }
+    if (us && !usSellable(variant)) {
+      euOnly = true;
+      continue;
+    }
+    const total = totals.get(line.merchandiseId);
+    totals.set(line.merchandiseId, {variant, quantity: (total?.quantity ?? 0) + line.quantity});
+    const attributes = lineAttributes(variant, us) ?? [];
+    const promise = attributes.find((a) => a.key === PREORDER_ATTRIBUTE)?.value ?? null;
+    const region = attributes.find((a) => a.key === SHIP_REGION_ATTRIBUTE)?.value ?? null;
+    if (promise !== line.shipPromise || region !== (line.shipRegion ?? null)) {
+      refresh.push({id: line.id, quantity: line.quantity, attributes});
+    }
+  }
+  return {refresh, totals, unavailable, euOnly};
+}
+
+/** The region a destination country buys for while US sales are open. */
+export function regionForDestination(destination: ShippingQuote | null): Region {
+  return isUsQuote(destination) ? 'US' : 'EU';
+}
+
 /** Where the checkout intent sends the buyer back to the cart, and why. */
 export const CART_CHECK = {
   /** A paid-batch line asks for more units than the batch has left. */
@@ -374,8 +457,15 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
   // /cart page; a plain form post (no JavaScript) still lands on /cart.
   const wantsSummary = form.get('response') === 'summary';
   const usRate = dependencies.usRate !== undefined ? dependencies.usRate : usSalesRate(env);
-  const destination = shippingQuote(shipCountryForRequest(request), dependencies.registrations, usRate);
+  // The country the page showed: the one the browser forwards (it resolves
+  // `?country`, the picked destination and the IP), else the request's own.
+  const destination = shippingQuote(
+    forwardedCountry(form) ?? shipCountryForRequest(request),
+    dependencies.registrations,
+    usRate,
+  );
   const us = isUsQuote(destination);
+  const region = regionForDestination(destination);
 
   try {
     const existingId = dependencies.getCartId?.();
@@ -420,7 +510,7 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
           throw fail('This item is no longer in your cart.', 409);
         }
         if (quantity > target.quantity) {
-          const catalog = await dependencies.fetchCatalog();
+          const catalog = await dependencies.fetchCatalog(region);
           const variant = catalogVariant(catalog, target.merchandiseId);
           if (variant) {
             const others = current.lines
@@ -449,39 +539,36 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
       if (!existingId || !dependencies.getCart) throw fail('Cart is empty.', 409);
       const [cart, catalog] = await Promise.all([
         dependencies.getCart(existingId),
-        dependencies.fetchCatalog(),
+        dependencies.fetchCatalog(region),
       ]);
       if (!cart || !cart.lines.length) {
         dependencies.unsetCartId?.();
         return redirect('/cart');
       }
-      const refresh: CartLineUpdate[] = [];
-      const totals = new Map<string, {variant: CatalogVariant; quantity: number}>();
-      for (const line of cart.lines) {
-        const variant = sellableVariant(catalog, line.merchandiseId, globalComingSoon);
-        if (!variant) throw fail('One or more cart items are no longer available.', 409);
-        if (us && !usSellable(variant)) return redirect(`/cart?check=${CART_CHECK.usEuOnly}`);
-        const total = totals.get(line.merchandiseId);
-        totals.set(line.merchandiseId, {variant, quantity: (total?.quantity ?? 0) + line.quantity});
-        const attributes = lineAttributes(variant, us) ?? [];
-        const promise = attributes.find((a) => a.key === PREORDER_ATTRIBUTE)?.value ?? null;
-        const region = attributes.find((a) => a.key === SHIP_REGION_ATTRIBUTE)?.value ?? null;
-        if (promise !== line.shipPromise || region !== (line.shipRegion ?? null)) {
-          refresh.push({id: line.id, quantity: line.quantity, attributes});
-        }
-      }
-      // US sales open: a cart priced for another market than the destination
-      // (USD for the US, EUR elsewhere) moves to the destination's market
-      // first, and the buyer sees the new prices in the cart before paying.
-      if (usRate != null && dependencies.setCountry) {
+      // Every line's promise and region attribute are derived again for the
+      // destination region, whatever the cart was built for.
+      const {refresh, totals, unavailable, euOnly} = rederiveLines(cart, catalog, us, globalComingSoon);
+      if (unavailable) throw fail('One or more cart items are no longer available.', 409);
+      if (us && euOnly) return redirect(`/cart?check=${CART_CHECK.usEuOnly}`);
+      // A cart whose buyer country is not the destination (built for
+      // another country, or the buyer changed country since) moves to the
+      // destination first. When the market changes (USD for the US, EUR
+      // elsewhere) the buyer sees the new prices and ship dates in the cart
+      // before paying; inside one market the cart is only re-pointed.
+      if (dependencies.setCountry) {
         const usd = cart.subtotal.currencyCode === 'USD';
-        if (usd !== us) {
+        const cartUs = cart.country ? cart.country === 'US' : usd;
+        const countryDiffers = cart.country != null && cart.country !== destination.country;
+        const marketDiffers = usRate != null && (usd !== us || cartUs !== us);
+        if (marketDiffers || countryDiffers) {
           await dependencies.setCountry(existingId, destination.country);
-          if (refresh.length) {
-            if (!dependencies.updateCartLines) throw new Error('shopify: update dependency missing');
-            await dependencies.updateCartLines(existingId, refresh);
+          if (marketDiffers) {
+            if (refresh.length) {
+              if (!dependencies.updateCartLines) throw new Error('shopify: update dependency missing');
+              await dependencies.updateCartLines(existingId, refresh);
+            }
+            return redirect(`/cart?check=${CART_CHECK.market}`);
           }
-          return redirect(`/cart?check=${CART_CHECK.market}`);
         }
       }
       // More units than the paid batch has left: the extra units would carry
@@ -511,12 +598,11 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
     // (`buyerCountry`). An unknown one adds in the shop's default market.
     // Closed, the add refuses no destination, as before: the buyer fixes it
     // in the cart, and checkout asks for an approved destination.
-    if (usRate != null) {
-      const buyer = shippingQuote(buyerCountry(request, usRate), dependencies.registrations, usRate);
-      if (buyer && buyer.kind !== 'direct') throw fail(destinationMessage(buyer.kind, true), 403);
+    if (usRate != null && destination && destination.kind !== 'direct') {
+      throw fail(destinationMessage(destination.kind, true), 403);
     }
     const requested = requestedLines(form);
-    const catalog = await dependencies.fetchCatalog();
+    const catalog = await dependencies.fetchCatalog(region);
     const lines: CartLineInput[] = requested.map(({sku, quantity}) => {
       const match = bySku(catalog, sku);
       const variant = match?.variant.merchandise_id
@@ -554,7 +640,7 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
       dependencies.unsetCartId?.();
     }
     checkPaidBatches(catalog, lines, new Map());
-    const cart = await dependencies.createCart(lines, cartCountry(request, dependencies.registrations, usRate));
+    const cart = await dependencies.createCart(lines, cartCountryFor(destination?.country ?? null, dependencies.registrations, usRate));
     dependencies.setCartId?.(cart.id);
     return wantsSummary
       ? Response.json(cartSummary(cart), {headers: NO_STORE})
@@ -614,6 +700,8 @@ export type CartLineInfo = {
   target: {units: number; ordered: number} | null;
   /** The short ship label for the line; null when it has no promise. */
   shipLabel: string | null;
+  /** The line ships to the EU only: it cannot go to a US destination. */
+  euOnly: boolean;
 };
 
 /**
@@ -648,6 +736,7 @@ export function cartLineInfo(
           ? {units: campaign.target, ordered: campaign.targetOrdered}
           : null,
       shipLabel: shipLabelFromPromise(line.shipPromise, 'short'),
+      euOnly: variant ? !usSellable(variant) : false,
     };
   }
   return out;

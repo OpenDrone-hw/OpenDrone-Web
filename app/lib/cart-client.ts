@@ -5,6 +5,7 @@
  * without a navigation.
  */
 import type {CartSummary} from '~/lib/shopify-cart-action';
+export {withCountry} from '~/lib/shopify-cart-action';
 
 export const CART_ADDED_EVENT = 'opendrone:cart-added';
 export const CART_UPDATED_EVENT = 'opendrone:cart-updated';
@@ -46,6 +47,18 @@ export async function postCart(
   );
   return summary;
 }
+
+/** The route action that switches the destination. */
+export const CART_COUNTRY_ACTION = '/api/shopify/cart-country';
+
+export type CartCountryReply = {
+  country: string;
+  applied: boolean;
+  /** Set when Shopify refused the switch: nothing changed. */
+  error?: string;
+  /** The cart as it reads after the switch, when there is one. */
+  summary?: CartSummary;
+};
 
 /** Add lines in the background; resolves to the new cart summary. */
 export const postCartAdd = postCart;

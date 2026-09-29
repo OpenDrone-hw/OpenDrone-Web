@@ -101,7 +101,7 @@ describe('handleCartCountry', () => {
       logError: (m) => logged.push(m),
     });
     assert.equal(res.status, 502);
-    assert.deepEqual(await res.json(), {country: 'AT', applied: false});
+    assert.deepEqual(await res.json(), {country: 'AT', applied: false, error: 'cart'});
     assert.equal(logged.length, 1);
   });
 });
