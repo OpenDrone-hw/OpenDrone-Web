@@ -1,6 +1,6 @@
 ## Expédition et livraison
 
-Incutec BV vend directement aux consommateurs dans les pays de l’UE qui peuvent être choisis lors du passage en caisse, avec expédition depuis la Belgique, et, pour les précommandes uniquement, aux consommateurs des États-Unis, avec expédition depuis un entrepôt logistique américain (voir la section États-Unis ci-dessous). Choisissez votre pays de livraison sur la page produit. Une destination non ouverte ne permet pas de passer en caisse. Le service de livraison disponible et le coût total sont confirmés avant le paiement.
+Incutec BV vend directement aux consommateurs dans les pays de l’UE qui peuvent être choisis lors du passage en caisse, avec expédition depuis la Belgique ou directement par notre partenaire logistique comme indiqué sur l’offre, et, pour les précommandes uniquement, aux consommateurs des États-Unis, avec expédition par Incutec ou son partenaire logistique (voir la section États-Unis ci-dessous). Choisissez votre pays de livraison sur la page produit. Une destination non ouverte ne permet pas de passer en caisse. Le service de livraison disponible et le coût total sont confirmés avant le paiement.
 
 ### Tarifs d’expédition
 
@@ -29,9 +29,9 @@ Pour les livraisons vers les États-Unis, Incutec BV vend directement aux consom
 - **Droits d’importation :** Inclus dans le prix
 - **Taxe de vente :** Non perçue
 - **Expédition :** Tarif fixe de 9,95 USD par commande
-- **Expédié depuis :** Un entrepôt logistique américain, une fois le lot importé aux États-Unis
-- **Date d’expédition :** Au plus tard le 14 mars 2027, si l’objectif de financement est atteint au plus tard le 22 novembre 2026
-- **Date de livraison :** Au plus tard le 15 avril 2027
+- **Expédié depuis :** Incutec ou son partenaire logistique, testé et inspecté avant l’expédition
+- **Date d’expédition :** Au plus tard le 31 mars 2027, si l’objectif de financement est atteint au plus tard le 15 décembre 2026
+- **Date de livraison :** Au plus tard le 30 avril 2027
 
 La date d’expédition et la date de livraison indiquées sur la page produit et dans votre confirmation de commande sont celles qui s’appliquent à votre commande. La livraison aux États-Unis dépend de l’autorisation d’équipement de la FCC et du dédouanement à l’importation aux États-Unis. Si nous ne pouvons pas vous livrer un article pour ce motif, nous vous remboursons cet article intégralement. Les remboursements, les retards d’expédition et le droit d’annuler pour les livraisons vers les États-Unis suivent l’[article 7ter des conditions](/fr/algemene-voorwaarden#art-7ter).
 

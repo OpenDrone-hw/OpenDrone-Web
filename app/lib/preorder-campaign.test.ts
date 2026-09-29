@@ -29,7 +29,7 @@ import {
 const PENDING =
   'ships about 10 weeks after its target is reached: by 11 March 2027 if the target is reached by 31 December 2026, otherwise you choose a refund or to wait';
 const STACK: CampaignBatch[] = [
-  {units: 250, paid: true, ships: 'ships late October 2026'},
+  {units: 250, paid: true, ships: 'ships early November 2026'},
   {units: 250},
 ];
 const FRAME: CampaignBatch[] = [{units: 250}, {units: 1000}];
@@ -40,7 +40,7 @@ describe('campaignState', () => {
     const s = campaignState(STACK, 260, PENDING, TIERS);
     assert.deepEqual(
       s.batches.map(({batch, status, shipPromise}) => [batch, status, shipPromise]),
-      [[1, 'sold_out', 'ships late October 2026'], [2, 'current', PENDING]],
+      [[1, 'sold_out', 'ships early November 2026'], [2, 'current', PENDING]],
     );
     assert.deepEqual(campaignState(FRAME, 0, PENDING, TIERS).batches.map((b) => b.status), ['current', 'next']);
   });
@@ -51,7 +51,7 @@ describe('campaignState', () => {
     assert.equal(s.paidStock, true);
     assert.equal(s.batchOrdered, 107);
     assert.equal(s.batchUnits, 250);
-    assert.equal(s.shipPromise, 'ships late October 2026');
+    assert.equal(s.shipPromise, 'ships early November 2026');
     assert.equal(s.earlyPrice, true);
     assert.equal(s.target, 250);
     assert.equal(s.targetOrdered, 0);
@@ -182,11 +182,11 @@ describe('parseCampaignConfig', () => {
     // Terms 7bis.2: a target reached by the deadline ships by that date.
     assert.ok(config.pendingShips.includes(campaignDate(config.endsOn)), 'names the deadline');
     assert.ok(config.pendingShips.includes(latestShipDate(config)), 'names the ship-by date');
-    assert.equal(config.endsOn, '2026-11-22');
-    assert.equal(config.shipsBy, '2027-03-14');
+    assert.equal(config.endsOn, '2026-12-15');
+    assert.equal(config.shipsBy, '2027-03-31');
     assert.equal(
       config.pendingShips,
-      'ships by 14 March 2027 if the target is reached by 22 November 2026, otherwise you choose a refund or to wait',
+      'ships by 31 March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait',
     );
     assert.ok(!config.pendingShips.includes('\u2014'), 'no em dash');
   });
@@ -319,8 +319,8 @@ const CONFIG = {countFrom: '2026-09-21', endsOn: '2026-12-31', shipsBy: '2027-03
 
 describe('latest ship date', () => {
   it('is the fixed ship-by date, however early the target is reached', () => {
-    assert.equal(latestShipDay({shipsBy: '2027-03-14'}), '2027-03-14');
-    assert.equal(latestShipDate({shipsBy: '2027-03-14'}), '14 March 2027');
+    assert.equal(latestShipDay({shipsBy: '2027-03-31'}), '2027-03-31');
+    assert.equal(latestShipDate({shipsBy: '2027-03-31'}), '31 March 2027');
     assert.equal(campaignDate('2026-12-31'), '31 December 2026');
   });
 });
@@ -445,7 +445,7 @@ describe('paid batch and ship groups', () => {
     assert.equal(shipGroupKey('OPENRX-LITE', rx.shipPromise, rx), 'target:OPENRX-LITE:1');
     // Without campaign data (in stock, or counts unavailable): the promise text.
     assert.equal(shipGroupKey('ACC-1', null, null), 'date:');
-    assert.equal(shipGroupKey('X', 'ships late October 2026', undefined), 'date:ships late October 2026');
+    assert.equal(shipGroupKey('X', 'ships early November 2026', undefined), 'date:ships early November 2026');
   });
 });
 
@@ -492,7 +492,7 @@ describe('funding deadline (endsOn)', () => {
     const [paid] = applyCampaign(early, STACK_CONFIG, {'OPENFRAME-5': 12}, AFTER).products[0].variants;
     assert.equal(paid.availability, 'preorder');
     assert.equal(paid.campaign?.paidStock, true);
-    assert.equal(paid.ship_promise, 'ships late October 2026');
+    assert.equal(paid.ship_promise, 'ships early November 2026');
     const retail = catalog('preorder');
     retail.products[0].variants[0] = {...retail.products[0].variants[0], price: 99};
     const [spent] = applyCampaign(retail, STACK_CONFIG, {'OPENFRAME-5': 250}, AFTER).products[0].variants;
@@ -508,9 +508,9 @@ describe('funding deadline (endsOn)', () => {
     assert.equal(frame.ship_promise, 'ships March 2027');
   });
 
-  it('reads the deadline from content/preorders.json as 22 November 2026, end of day Brussels', () => {
+  it('reads the deadline from content/preorders.json as 15 December 2026, end of day Brussels', () => {
     const config = parseCampaignConfig(JSON.parse(fs.readFileSync('content/preorders.json', 'utf8')));
-    assert.equal(campaignEndsAt(config.endsOn).toISOString(), '2026-11-22T23:00:00.000Z');
+    assert.equal(campaignEndsAt(config.endsOn).toISOString(), '2026-12-15T23:00:00.000Z');
   });
 });
 
@@ -563,8 +563,8 @@ describe('shipLabel', () => {
 
   it('gives paid stock its batch date in both forms', () => {
     const state = campaignState(STACK, 10, PENDING, TIERS);
-    assert.equal(shipLabel(state, 'short'), 'Ships late Oct 2026');
-    assert.equal(shipLabel(state, 'long'), 'Ships late October 2026.');
+    assert.equal(shipLabel(state, 'short'), 'Ships early Nov 2026');
+    assert.equal(shipLabel(state, 'long'), 'Ships early November 2026.');
     const past = campaignState(STACK, 250, PENDING, TIERS);
     assert.equal(shipLabel(past, 'short'), 'Ships by 11 Mar 2027 if the target is reached');
   });
@@ -572,8 +572,8 @@ describe('shipLabel', () => {
   it('reads the same labels from the promise text alone', () => {
     assert.equal(shipLabelFromPromise(PENDING, 'short'), 'Ships by 11 Mar 2027 if the target is reached');
     assert.equal(shipLabelFromPromise(PENDING, 'long'), LONG);
-    assert.equal(shipLabelFromPromise('ships late October 2026', 'short'), 'Ships late Oct 2026');
-    assert.equal(shipLabelFromPromise('ships late October 2026', 'long'), 'Ships late October 2026.');
+    assert.equal(shipLabelFromPromise('ships early November 2026', 'short'), 'Ships early Nov 2026');
+    assert.equal(shipLabelFromPromise('ships early November 2026', 'long'), 'Ships early November 2026.');
     assert.equal(shipLabelFromPromise(null, 'short'), null);
     assert.equal(shipLabelFromPromise('  ', 'long'), null);
   });
@@ -589,12 +589,12 @@ describe('shipLabel', () => {
   it('writes a short date without the September abbreviation quirk', () => {
     assert.equal(shortCampaignDate('11 March 2027'), '11 Mar 2027');
     assert.equal(shortCampaignDate('1 September 2027'), '1 Sep 2027');
-    assert.equal(shortCampaignDate('late October 2026'), null);
+    assert.equal(shortCampaignDate('early November 2026'), null);
   });
 
   it('puts the long funding sentence in a cart note once, only when a line waits for a target', () => {
-    assert.equal(cartShipNote(['ships late October 2026', PENDING, PENDING]), LONG);
-    assert.equal(cartShipNote(['ships late October 2026', null]), null);
+    assert.equal(cartShipNote(['ships early November 2026', PENDING, PENDING]), LONG);
+    assert.equal(cartShipNote(['ships early November 2026', null]), null);
     assert.equal(cartShipNote([]), null);
   });
 });
@@ -662,12 +662,12 @@ describe('SKUs that ship with a campaign SKU', () => {
   it('pins stock accessories to the dated batch at a flat price, whatever the lead sold', () => {
     const [, strap] = applyCampaign(catalog('preorder'), WITH, {'OPENFC-LITE-2020': 400}, OPEN).products[0].variants;
     assert.equal(strap.availability, 'preorder');
-    assert.equal(strap.ship_promise, 'ships late October 2026');
+    assert.equal(strap.ship_promise, 'ships early November 2026');
     assert.equal(strap.campaign?.earlyPrice, false);
     assert.equal(strap.campaign?.paidStock, false);
     assert.equal(strap.campaign?.shipsOnTarget, false);
     assert.equal(strap.campaign?.price, 2);
-    assert.equal(shipLabel(strap.campaign!, 'short'), 'Ships late Oct 2026');
+    assert.equal(shipLabel(strap.campaign!, 'short'), 'Ships early Nov 2026');
   });
 
   it('pins a no-stock accessory to the lead run: its target, date and cart group', () => {
@@ -696,7 +696,7 @@ describe('SKUs that ship with a campaign SKU', () => {
     const on = (own: number) =>
       applyCampaign(catalog('preorder'), stocked, {'OPENFC-LITE-2020': 30, 'ACC-STRAP-20X220': own}, OPEN).products[0].variants[1];
     const inStock = on(97);
-    assert.equal(inStock.ship_promise, 'ships late October 2026');
+    assert.equal(inStock.ship_promise, 'ships early November 2026');
     assert.equal(inStock.campaign?.paidStock, true);
     assert.equal(inStock.campaign?.paidLeft, 3, 'a cart line is capped at what is left');
     const past = on(100);
@@ -737,13 +737,13 @@ test('a reviewed final delivery promise follows the batch into the catalog and i
   });
   const state = campaignState(config.skus.A.batches, 0, config.pendingShips, []);
   assert.equal(state.shipPromise, 'ships October 2026, delivered by 15 November 2026');
-  const target = parseCampaignConfig({...config, shipsWith: {}, skus: {A: {batches: [{units: 20, deliveryBy: '2027-03-31'}]}}});
+  const target = parseCampaignConfig({...config, shipsWith: {}, skus: {A: {batches: [{units: 20, deliveryBy: '2027-04-15'}]}}});
   // A funding target states its delivery date on the condition of its target.
   const pending = campaignState(target.skus.A.batches, 0, target.pendingShips, []).shipPromise;
-  assert.equal(pending, 'ships once funded; if the target is reached in time, delivered by 31 March 2027');
+  assert.equal(pending, 'ships once funded; if the target is reached in time, delivered by 15 April 2027');
   assert.equal(promiseDeliveredBy(state.shipPromise), '15 Nov 2026');
-  assert.equal(promiseDeliveredBy(pending), '31 Mar 2027');
-  assert.equal(promiseDeliveredBy('ships late October 2026'), null);
+  assert.equal(promiseDeliveredBy(pending), '15 Apr 2027');
+  assert.equal(promiseDeliveredBy('ships early November 2026'), null);
   assert.equal(state.batches[0].shipPromise, state.shipPromise);
   assert.equal(shipsWithState(config, config.shipsWith!.B, 0, 10).shipPromise, state.shipPromise);
   assert.throws(() => parseCampaignConfig({...config, skus: {A: {batches: [{units: 1, deliveryBy: '2027-02-30'}]}}}), /calendar date/);
@@ -751,12 +751,12 @@ test('a reviewed final delivery promise follows the batch into the catalog and i
 
 test('mixedShipPromise names the latest line ship-by and delivery days', () => {
   assert.equal(
-    mixedShipPromise({shipByDay: '2027-03-14', deliveryByDay: '2027-03-31', shipsText: null}),
-    'ships with the rest of this order by 14 March 2027, delivered by 31 March 2027',
+    mixedShipPromise({shipByDay: '2027-03-31', deliveryByDay: '2027-04-15', shipsText: null}),
+    'ships with the rest of this order by 31 March 2027, delivered by 15 April 2027',
   );
   assert.equal(
-    mixedShipPromise({shipByDay: '2027-03-14', deliveryByDay: '2027-04-15', shipsText: null}),
-    'ships with the rest of this order by 14 March 2027, delivered by 15 April 2027',
+    mixedShipPromise({shipByDay: '2027-03-31', deliveryByDay: '2027-04-30', shipsText: null}),
+    'ships with the rest of this order by 31 March 2027, delivered by 30 April 2027',
   );
   assert.equal(
     mixedShipPromise({shipByDay: null, deliveryByDay: '2026-12-20', shipsText: 'ships late November 2026'}),
@@ -766,7 +766,66 @@ test('mixedShipPromise names the latest line ship-by and delivery days', () => {
 });
 
 test('a state carries the delivery day of its region', () => {
-  const batches: CampaignBatch[] = [{units: 5, deliveryBy: '2027-03-31', deliveryByUS: '2027-04-15'}];
-  assert.equal(campaignState(batches, 0, PENDING, [], null, 'EU').deliveryByDay, '2027-03-31');
-  assert.equal(campaignState(batches, 0, PENDING, [], null, 'US').deliveryByDay, '2027-04-15');
+  const batches: CampaignBatch[] = [{units: 5, deliveryBy: '2027-04-15', deliveryByUS: '2027-04-30'}];
+  assert.equal(campaignState(batches, 0, PENDING, [], null, 'EU').deliveryByDay, '2027-04-15');
+  assert.equal(campaignState(batches, 0, PENDING, [], null, 'US').deliveryByDay, '2027-04-30');
+});
+
+describe('committed dates derive from content/preorders.json', () => {
+  const read = (rel: string) => fs.readFileSync(new URL(`../../${rel}`, import.meta.url), 'utf8');
+  const json = (rel: string) => JSON.parse(read(rel)) as {statusNote?: string};
+  const config = parseCampaignConfig(JSON.parse(read('content/preorders.json')));
+  const day = (iso: string, locale: string) => {
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Intl.DateTimeFormat(locale, {day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC'}).format(
+      new Date(Date.UTC(y, m - 1, d)),
+    );
+  };
+  const funded = config.skus['OPENRX-LITE'].batches[0];
+  const early = config.skus['OPENFC-LITE-2020'].batches[0];
+
+  it('has the decided run: close 15 Dec 2026, ship by 31 Mar 2027, EU delivery 15 Apr, US 30 Apr', () => {
+    assert.equal(config.endsOn, '2026-12-15');
+    assert.equal(config.shipsBy, '2027-03-31');
+    assert.equal(funded.deliveryBy, '2027-04-15');
+    assert.equal(funded.deliveryByUS, '2027-04-30');
+    assert.equal(early.deliveryBy, '2026-11-30');
+    assert.deepEqual(early.regions, ['EU']);
+    assert.equal(early.ships, 'ships early November 2026');
+  });
+
+  it('keeps every product note in step with the campaign', () => {
+    const target = `ships by ${latestShipDate(config)} if the target is reached by ${campaignDate(config.endsOn)}`;
+    for (const file of ['openrx', 'openframe', 'openmotor']) {
+      assert.equal(json(`content/products/${file}.json`).statusNote, target, file);
+    }
+    for (const file of ['openfc-lite', 'openesc']) {
+      assert.equal(json(`content/products/${file}.json`).statusNote, early.ships, file);
+    }
+    assert.ok(read('content/copy/timeline.json').includes((early.ships ?? '').replace(/^ships /, 'Ships ')));
+  });
+
+  it('states the same dates in the shipping page and the US terms in en, nl and fr', () => {
+    for (const [lang, locale] of [['en', 'en-GB'], ['nl', 'nl-BE'], ['fr', 'fr-BE']] as const) {
+      for (const file of ['shipping.md', 'algemene-voorwaarden.md']) {
+        const text = read(`app/content/legal/${lang}/${file}`);
+        for (const iso of [config.endsOn, config.shipsBy, funded.deliveryByUS!]) {
+          assert.ok(text.includes(day(iso, locale)), `${lang}/${file} names ${day(iso, locale)}`);
+        }
+      }
+    }
+  });
+
+  it('names no US warehouse and no Belgian QC for preorder-run goods in public copy', () => {
+    const files = [
+      'app/content/legal/en/shipping.md', 'app/content/legal/nl/shipping.md', 'app/content/legal/fr/shipping.md',
+      'app/content/legal/en/algemene-voorwaarden.md', 'app/content/legal/nl/algemene-voorwaarden.md',
+      'app/content/legal/fr/algemene-voorwaarden.md', 'content/copy/production.json', 'content/copy/open-source.json',
+      'content/copy/preorder.json', 'app/lib/support/ask-rules.ts',
+    ];
+    for (const file of files) {
+      const text = read(file);
+      assert.ok(!/US fulfil|Amerikaans fulfilment|entrepôt logistique américain|inspected and flashed in Belgium|inspected, flashed and (packed|shipped)/i.test(text), file);
+    }
+  });
 });

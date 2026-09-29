@@ -17,7 +17,7 @@ const REGISTRATIONS = {BE: {saleApproved: true}, DE: {saleApproved: true}};
 const CHECKOUT = 'https://checkout.opendrone.be/checkouts/cn/ok';
 const FC = 'gid://shopify/ProductVariant/OPENFC-LITE-2020';
 const RX = 'gid://shopify/ProductVariant/OPENRX-LITE';
-const EU_PROMISE = 'ships late October 2026, delivered by 30 November 2026';
+const EU_PROMISE = 'ships early November 2026, delivered by 30 November 2026';
 
 function variant(sku: string, extra: Partial<CatalogVariant> = {}): CatalogVariant {
   return {
@@ -115,8 +115,8 @@ describe('cart country switch', () => {
     const us = (await toUs.json()) as {applied: boolean; summary: {subtotal: {currencyCode: string}; lines: Array<{shipPromise: string}>}};
     assert.equal(us.applied, true);
     assert.equal(us.summary.subtotal.currencyCode, 'USD');
-    assert.match(us.summary.lines[0].shipPromise, /14 March 2027/);
-    assert.match(us.summary.lines[0].shipPromise, /delivered by 15 April 2027/);
+    assert.match(us.summary.lines[0].shipPromise, /31 March 2027/);
+    assert.match(us.summary.lines[0].shipPromise, /delivered by 30 April 2027/);
     assert.equal(fake.state.lines[0].shipRegion, 'US');
     assert.equal(fake.state.country, 'US');
 
@@ -199,14 +199,14 @@ describe('checkout re-derives the promises from the destination', () => {
     assert.equal(res.headers.get('Location'), '/cart?check=market');
     assert.deepEqual(regions, ['US']);
     assert.equal(fake.state.country, 'US');
-    assert.match(fake.state.lines[0].shipPromise ?? '', /delivered by 15 April 2027/);
+    assert.match(fake.state.lines[0].shipPromise ?? '', /delivered by 30 April 2027/);
     assert.equal(fake.state.lines[0].shipRegion, 'US');
   });
 
   it('refreshes a US cart to the EU promise and market before an EU checkout', async () => {
     const fake = shopify('US', [
       cartLine('gid://shopify/CartLine/1', FC, 'OPENFC-LITE-2020', [
-        {key: 'Preorder', value: 'ships by 14 March 2027 if the target is reached by 22 November 2026'},
+        {key: 'Preorder', value: 'ships by 31 March 2027 if the target is reached by 15 December 2026'},
         {key: '_ship_region', value: 'US'},
       ]),
     ]);
@@ -278,7 +278,7 @@ describe('add to cart forwards the resolved country', () => {
     assert.equal(seen.country, 'US');
     assert.equal(seen.region, 'US');
     assert.equal(seen.lines?.[0].attributes?.find((a) => a.key === '_ship_region')?.value, 'US');
-    assert.match(seen.lines?.[0].attributes?.find((a) => a.key === 'Preorder')?.value ?? '', /15 April 2027/);
+    assert.match(seen.lines?.[0].attributes?.find((a) => a.key === 'Preorder')?.value ?? '', /30 April 2027/);
   });
 
   it('lets the forwarded country win over the cookie of the POST', async () => {
@@ -304,9 +304,9 @@ describe('add to cart forwards the resolved country', () => {
 
 describe('one ship line everywhere', () => {
   it('names the month qualifier and delivery date of the BE FC/ESC promise', () => {
-    assert.deepEqual(datedShipParts(EU_PROMISE), {when: 'late Oct 2026', delivered: '30 Nov 2026'});
-    assert.equal(shipLabelFromPromise(EU_PROMISE, 'short'), 'Ships late Oct 2026 · Delivered by 30 Nov 2026');
-    assert.equal(shipLabelFromPromise('ships late October 2026', 'short'), 'Ships late Oct 2026');
+    assert.deepEqual(datedShipParts(EU_PROMISE), {when: 'early Nov 2026', delivered: '30 Nov 2026'});
+    assert.equal(shipLabelFromPromise(EU_PROMISE, 'short'), 'Ships early Nov 2026 · Delivered by 30 Nov 2026');
+    assert.equal(shipLabelFromPromise('ships early November 2026', 'short'), 'Ships early Nov 2026');
     assert.equal(shipLabelFromPromise('ships October 2026, delivered by 15 November 2026', 'short'), 'Ships Oct 2026 · Delivered by 15 Nov 2026');
     assert.equal(datedShipParts('ships once funded'), null);
   });
@@ -362,7 +362,7 @@ describe('blocked visitors, half-applied switches, checkout country', () => {
   it('honours the country a checkout form forwards over the request cookie', async () => {
     const fake = shopify('US', [
       cartLine('gid://shopify/CartLine/1', FC, 'OPENFC-LITE-2020', [
-        {key: 'Preorder', value: 'ships by 14 March 2027 if the target is reached by 22 November 2026, otherwise you choose a refund or to wait; if the target is reached in time, delivered by 15 April 2027'},
+        {key: 'Preorder', value: 'ships by 31 March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait; if the target is reached in time, delivered by 30 April 2027'},
         {key: '_ship_region', value: 'US'},
       ]),
     ]);

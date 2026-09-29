@@ -296,3 +296,21 @@ export function shipCountryForRequest(request: Request): string | null {
 export function buyerCountry(request: Request, usRate: number | null): string | null {
   return usRate != null ? shipCountryForRequest(request) : visitorCountry(request);
 }
+
+/**
+ * The country the cart page quotes: the country the cart itself carries
+ * (`buyerIdentity.countryCode`, the market Shopify prices it in), so the
+ * currency, the Ship to line and the VAT wording always agree. A visitor
+ * in a blocked country stays there, and a cart with no country falls back
+ * to the visitor's country.
+ */
+export function cartQuoteCountry(
+  cartCountry: string | null | undefined,
+  visitorCountry: string | null,
+  usRate: number | null,
+): string | null {
+  const cart = isoCode(cartCountry);
+  if (!cart) return visitorCountry;
+  if (visitorCountry && shippingQuote(visitorCountry, undefined, usRate)?.kind === 'blocked') return visitorCountry;
+  return cart;
+}

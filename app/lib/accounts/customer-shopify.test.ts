@@ -11,13 +11,13 @@ const ENV = {
 
 const CONFIG = parseCampaignConfig({
   countFrom: '2026-09-21',
-  endsOn: '2026-11-22',
-  shipsBy: '2027-03-14',
+  endsOn: '2026-12-15',
+  shipsBy: '2027-03-31',
   priceTiers: [{upTo: 100, off: 0.2}, {upTo: 250, off: 0.1}],
-  pendingShips: 'ships by 14 March 2027 if the target is reached by 22 November 2026, otherwise you choose a refund or to wait',
+  pendingShips: 'ships by 31 March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait',
   skus: {
     'OPENFC-LITE-2020': {
-      batches: [{units: 250, paid: true, ships: 'ships late October 2026', deliveryBy: '2026-11-30'}, {units: 250}],
+      batches: [{units: 250, paid: true, ships: 'ships early November 2026', deliveryBy: '2026-11-30'}, {units: 250}],
     },
     'OPENMOTOR-2306': {
       batches: [{units: 100}],
@@ -137,7 +137,7 @@ describe('readCustomerAccount', () => {
     const result = await readCustomerAccount(ENV, 'gid://shopify/Customer/1', CONFIG, fetcher);
     assert.equal(result!.orders[0].isPreorder, true);
     assert.equal(result!.orders[0].promise?.kind, 'date');
-    assert.equal(result!.orders[0].promise?.text, 'ships late Oct 2026');
+    assert.equal(result!.orders[0].promise?.text, 'ships early Nov 2026');
     assert.equal(result!.orders[0].promise?.delivered, '30 Nov 2026');
   });
 
@@ -148,7 +148,7 @@ describe('readCustomerAccount', () => {
     });
     const result = await readCustomerAccount(ENV, 'gid://shopify/Customer/1', CONFIG, fetcher);
     assert.equal(result?.orders[0].promise?.kind, 'target');
-    assert.equal(result?.orders[0].promise?.text, 'ships by 14 Mar 2027');
+    assert.equal(result?.orders[0].promise?.text, 'ships by 31 Mar 2027');
   });
 
   it('caps at the 5 orders the query itself asked for', async () => {
@@ -192,8 +192,8 @@ describe('orderPromise', () => {
     ]) {
       const promise = orderPromise({tags, lineItems: {nodes}}, CONFIG);
       assert.equal(promise?.kind, 'target');
-      assert.equal(promise?.day, '2027-03-14');
-      assert.equal(promise?.text, 'ships by 14 Mar 2027');
+      assert.equal(promise?.day, '2027-03-31');
+      assert.equal(promise?.text, 'ships by 31 Mar 2027');
     }
   });
 
@@ -206,7 +206,7 @@ describe('orderPromise', () => {
       CONFIG,
     );
     assert.equal(promise?.kind, 'date');
-    assert.equal(promise?.day, '2026-10-31');
+    assert.equal(promise?.day, '2026-11-10');
   });
 
   it('lets a funding target that names an earlier ship day than a dated batch lose to it', () => {
@@ -224,25 +224,25 @@ describe('orderPromise', () => {
 
 describe('batchPromiseOf', () => {
   it('reads a funding target as the campaign ship-by date', () => {
-    assert.deepEqual(batchPromiseOf({units: 100}, {shipsBy: '2027-03-14'}), {
+    assert.deepEqual(batchPromiseOf({units: 100}, {shipsBy: '2027-03-31'}), {
       kind: 'target',
-      day: '2027-03-14',
-      text: 'ships by 14 Mar 2027',
+      day: '2027-03-31',
+      text: 'ships by 31 Mar 2027',
       delivered: null,
     });
   });
 
   it('resolves early, mid and late to sortable days, with delivery from the promise text', () => {
-    const cfg = {shipsBy: '2027-03-14'};
+    const cfg = {shipsBy: '2027-03-31'};
     assert.equal(batchPromiseOf({units: 1, ships: 'ships early February 2027'}, cfg).day, '2027-02-10');
     assert.equal(batchPromiseOf({units: 1, ships: 'ships mid February 2027'}, cfg).day, '2027-02-20');
     assert.equal(batchPromiseOf({units: 1, ships: 'ships February 2028'}, cfg).day, '2028-02-29');
-    const late = batchPromiseOf({units: 1, ships: 'ships late October 2026, delivered by 30 November 2026'}, cfg);
-    assert.equal(late.text, 'ships late Oct 2026');
+    const late = batchPromiseOf({units: 1, ships: 'ships early November 2026, delivered by 30 November 2026'}, cfg);
+    assert.equal(late.text, 'ships early Nov 2026');
     assert.equal(late.delivered, '30 Nov 2026');
   });
 
   it('reads unparseable dated text as the later shipsBy', () => {
-    assert.equal(batchPromiseOf({units: 1, ships: 'ships soon'}, {shipsBy: '2027-03-14'}).kind, 'target');
+    assert.equal(batchPromiseOf({units: 1, ships: 'ships soon'}, {shipsBy: '2027-03-31'}).kind, 'target');
   });
 });

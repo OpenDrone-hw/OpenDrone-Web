@@ -331,15 +331,15 @@ describe('short ship promise', () => {
     });
   });
   it('keeps a dated promise, capitalised', () => {
-    assert.deepEqual(shortShipPromise('ships late October 2026'), {
+    assert.deepEqual(shortShipPromise('ships early November 2026'), {
       kind: 'date',
       label: null,
-      text: 'Ships late October 2026',
+      text: 'Ships early November 2026',
     });
     assert.equal(shortShipPromise(null), null);
   });
   it('shortens a dated promise to month and year', () => {
-    assert.equal(shipMonth('ships late October 2026'), 'Oct 2026');
+    assert.equal(shipMonth('ships early November 2026'), 'Nov 2026');
     assert.equal(shipMonth('ships after its target is reached'), null);
     assert.equal(shipMonth(null), null);
   });

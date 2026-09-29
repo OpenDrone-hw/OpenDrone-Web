@@ -38,7 +38,7 @@ const CONFIG = parseCampaignConfig({
   priceTiers: [{upTo: 100, off: 0.2}, {upTo: 250, off: 0.1}],
   pendingShips: 'ships about 10 weeks after its target is reached',
   skus: {
-    'OPENFC-LITE-2020': {batches: [{units: 250, paid: true, ships: 'ships late October 2026'}, {units: 250}]},
+    'OPENFC-LITE-2020': {batches: [{units: 250, paid: true, ships: 'ships early November 2026'}, {units: 250}]},
     'OPENRX-LITE': {batches: [{units: 250}, {units: 1000}]},
   },
 });
@@ -77,7 +77,7 @@ function order(partial: {
         currentQuantity: qty,
         customAttributes: preorder
           ? [
-              {key: 'Preorder', value: 'ships late October 2026'},
+              {key: 'Preorder', value: 'ships early November 2026'},
               ...(partial.usPromise ? [{key: '_ship_region', value: 'US'}] : []),
             ]
           : [],
@@ -170,7 +170,7 @@ describe('preorder fulfilment', () => {
     // Listed out of order: creation time decides.
     const result = assignBatches([second, refunded, first], CONFIG);
     assert.deepEqual(result.get(first.id), [
-      {sku: 'OPENFC-LITE-2020', batch: 1, units: 248, shipPromise: 'ships late October 2026'},
+      {sku: 'OPENFC-LITE-2020', batch: 1, units: 248, shipPromise: 'ships early November 2026'},
     ]);
     assert.equal(result.has(refunded.id), false);
     assert.deepEqual(
@@ -190,7 +190,7 @@ describe('preorder fulfilment', () => {
     assert.equal(plans[0].orderName, fresh.name);
     assert.deepEqual(plans[0].tags, ['preorder', 'batch:OPENFC-LITE-2020:1']);
     assert.deepEqual(plans[0].hold, [fresh.fulfillmentOrders.nodes[0].id]);
-    assert.match(plans[0].note, /OPENFC-LITE-2020 batch 1 \(ships late October 2026\)/);
+    assert.match(plans[0].note, /OPENFC-LITE-2020 batch 1 \(ships early November 2026\)/);
   });
 
   it('does not hold a fulfillment order twice', () => {
@@ -274,8 +274,8 @@ describe('planRelease', () => {
     const plain = order({lines: [['OPENFC-LITE-2020', 2], ['OPENRX-LITE', 1]]});
     const worded = order({lines: [['OPENFC-LITE-2020', 2], ['OPENRX-LITE', 1]]});
     worded.lineItems.nodes[0].customAttributes = [
-      {key: PREORDER_ATTRIBUTE, value: 'ships with the rest of this order by 14 March 2027, delivered by 31 March 2027'},
-      {key: '_preorder_own', value: 'ships late October 2026, delivered by 30 November 2026'},
+      {key: PREORDER_ATTRIBUTE, value: 'ships with the rest of this order by 31 March 2027, delivered by 15 April 2027'},
+      {key: '_preorder_own', value: 'ships early November 2026, delivered by 30 November 2026'},
     ];
     const shape = (o: PreorderOrder) => assignBatches([o], CONFIG).get(o.id)?.map((b) => [b.sku, b.batch, b.units]);
     assert.deepEqual(shape(worded), shape(plain));
@@ -338,7 +338,7 @@ describe('SKUs that ship with a campaign SKU', () => {
     const late = order({lines: [['OPENFC-LITE-2020', 1], ['ACC-PROP-5-HQ-J37', 1]]});
     const assigned = assignBatches([props, fc, late], WITH);
     assert.deepEqual(assigned.get(props.id), [
-      {sku: 'OPENFC-LITE-2020', batch: 1, units: 3, shipPromise: 'ships late October 2026', item: 'ACC-PROP-5-HQ-J37'},
+      {sku: 'OPENFC-LITE-2020', batch: 1, units: 3, shipPromise: 'ships early November 2026', item: 'ACC-PROP-5-HQ-J37'},
     ]);
     // The props did not use up FC units: unit 251 is the 251st FC.
     assert.deepEqual(assigned.get(late.id)?.map((b) => [b.sku, b.batch, b.item ?? null]), [
@@ -360,7 +360,7 @@ describe('SKUs that ship with a campaign SKU', () => {
     const assigned = assignBatches([first, second], stocked);
     assert.deepEqual(assigned.get(first.id)?.map((b) => [b.batch, b.units]), [[1, 3]]);
     assert.deepEqual(assigned.get(second.id)?.map((b) => [b.batch, b.units, b.shipPromise]), [
-      [1, 1, 'ships late October 2026'],
+      [1, 1, 'ships early November 2026'],
       [2, 2, CONFIG.pendingShips],
     ]);
   });
@@ -390,7 +390,7 @@ describe('US and EU orders in one campaign', () => {
     priceTiers: [{upTo: 100, off: 0.2}],
     pendingShips: 'ships about 10 weeks after its target is reached',
     skus: {
-      'OPENFC-LITE-2020': {batches: [{units: 3, paid: true, ships: 'ships late October 2026', regions: ['EU']}, {units: 250}]},
+      'OPENFC-LITE-2020': {batches: [{units: 3, paid: true, ships: 'ships early November 2026', regions: ['EU']}, {units: 250}]},
     },
     shipsWith: {'ACC-ANT-T': {sku: 'OPENFC-LITE-2020', batch: 1, stock: 1, after: 2}},
   });

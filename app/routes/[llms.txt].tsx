@@ -100,8 +100,7 @@ export async function loader({context, request}: Route.LoaderArgs) {
 > ExpressLRS). Resold parts (motors) are marked as such in the catalog below.
 > OpenDrone is a community-run open hardware project. The shop and the boards
 > are manufactured, sold and supported by Incutec BV, Stapelhuisstraat 15,
-> 3000 Leuven, Belgium (VAT BE 1038.934.039). Prices in EUR, VAT included,
-> ship from Belgium.
+> 3000 Leuven, Belgium (VAT BE 1038.934.039). Prices in EUR, VAT included.
 
 ${
   globalSoon

@@ -9,13 +9,13 @@ only the storefront evidence a release review must inspect.
 | --- | --- |
 | Offer | Correct product identity, seller, safety information and languages, total price and supportable claims |
 | Preorder | Same batch, target deadline and separate final delivery commitment on the offer, cart and durable confirmation |
-| Destination | Explicit approved EU country in configuration; server checkout gate and final Shopify address restriction both exercised |
+| Destination | Explicit approved EU country in configuration (and the US while US sales are open); server checkout gate and final Shopify address restriction both exercised |
 | Payments | Provider-approved business model, supported methods, capture, payout and cancellation/refund rehearsal |
 | Withdrawal | Accessible online submission, confirmation and durable acknowledgement, tested with controlled recipients |
 | Prices and tax | Reviewed price presentation, tax-inclusive totals and accepted destination VAT treatment |
 | Fulfilment | Held preorder, authorised release, accepted label, tracking and reconciliation, including mixed and refunded orders |
 | Privacy and interest | Consent, unsubscribe and failure states; no fabricated retail availability or sales evidence |
-| US enquiries | OpenRX included; country/SKU validation on the server, no consumer checkout or automatic order, and product/import review before order acceptance |
+| US preorders | Consumer preorders for every product, including OpenRX, while `PUBLIC_US_SALES` is `1` and `content/us-sales.json` has a rate. The buy button and cart show the FCC 47 CFR 2.803 conditional-sale notice for OpenRX lines. Batch-1 FC/ESC stock is EU only: the storefront refuses it for a US ship-to and the Worker holds a US order that carries it as `us-review`. Retailer enquiries stay on `/wholesale` |
 
 Evidence is attached to the existing release tasks, not copied into a second
 checklist here. A local build does not establish payment-provider acceptance,

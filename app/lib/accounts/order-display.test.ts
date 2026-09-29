@@ -20,8 +20,8 @@ function order(partial: Partial<AccountOrder> = {}): AccountOrder {
   };
 }
 
-const TARGET = {kind: 'target' as const, day: '2027-03-14', text: 'ships by 14 Mar 2027', delivered: null};
-const DATED = {kind: 'date' as const, day: '2026-10-31', text: 'ships late Oct 2026', delivered: '30 Nov 2026'};
+const TARGET = {kind: 'target' as const, day: '2027-03-31', text: 'ships by 31 Mar 2027', delivered: null};
+const DATED = {kind: 'date' as const, day: '2026-11-10', text: 'ships early Nov 2026', delivered: '30 Nov 2026'};
 
 describe('orderStatus', () => {
   it('is Processing for a plain paid, unfulfilled order', () => {
@@ -35,13 +35,13 @@ describe('orderStatus', () => {
     ];
     const s = orderStatus(order({isPreorder: true, promise: TARGET, lines}));
     assert.equal(s.tone, 'preorder');
-    assert.equal(s.label, 'Preorder · ships by 14 Mar 2027');
+    assert.equal(s.label, 'Preorder · ships by 31 Mar 2027');
     assert.equal(s.note, 'Ships if the funding target is reached. One parcel, sent when every item is ready.');
   });
 
   it('names the delivery date of a dated preorder, and skips the parcel note for one line', () => {
     const s = orderStatus(order({isPreorder: true, promise: DATED}));
-    assert.equal(s.label, 'Preorder · ships late Oct 2026');
+    assert.equal(s.label, 'Preorder · ships early Nov 2026');
     assert.equal(s.note, 'Delivered by 30 Nov 2026.');
   });
 

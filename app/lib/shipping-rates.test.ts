@@ -9,6 +9,7 @@ import {
   SHIP_COUNTRY_CODES,
   UNINHABITED_TERRITORIES,
   countryFromAcceptLanguage,
+  cartQuoteCountry,
   countryName,
   shipCountryCookie,
   shipCountryForRequest,
@@ -198,5 +199,23 @@ describe('default destination', () => {
     // A blocked IP country stays visible so the page can say so.
     assert.equal(shipCountryForRequest(req({'CF-IPCountry': 'RU'})), 'RU');
     assert.equal(shipCountryForRequest(req({})), null);
+  });
+});
+
+describe('cartQuoteCountry', () => {
+  it('quotes the country the cart carries, so a US cart never reads as Belgium', () => {
+    // /cart without ?country=US from a Belgian IP: the cart is a US cart.
+    assert.equal(cartQuoteCountry('US', 'BE', 9.95), 'US');
+    assert.equal(cartQuoteCountry('BE', 'US', 9.95), 'BE');
+  });
+
+  it('falls back to the visitor when the cart has no country', () => {
+    assert.equal(cartQuoteCountry(null, 'BE', 9.95), 'BE');
+    assert.equal(cartQuoteCountry(undefined, null, null), null);
+    assert.equal(cartQuoteCountry('zz-not-a-country', 'DE', null), 'DE');
+  });
+
+  it('keeps a visitor in a blocked country there whatever the cart says', () => {
+    assert.equal(cartQuoteCountry('BE', 'RU', null), 'RU');
   });
 });

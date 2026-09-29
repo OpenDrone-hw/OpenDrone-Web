@@ -5,7 +5,7 @@ import {barPercent, ladderText, stepBarView, stepLayout} from './preorder-meter.
 
 const PENDING =
   'ships about 10 weeks after its target is reached: by 11 March 2027 if the target is reached by 31 December 2026, otherwise you choose a refund or to wait';
-const STACK: CampaignBatch[] = [{units: 250, paid: true, ships: 'ships late October 2026'}, {units: 250}];
+const STACK: CampaignBatch[] = [{units: 250, paid: true, ships: 'ships early November 2026'}, {units: 250}];
 const FRAME: CampaignBatch[] = [{units: 250}, {units: 1000}];
 const TIERS = [{upTo: 100, off: 0.2}, {upTo: 250, off: 0.1}];
 

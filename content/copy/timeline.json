@@ -63,7 +63,7 @@
   "event_release_tags_cut_title": "Release tags cut on the validated boards",
   "event_release_tags_cut_detail": "rev2 on OpenESC 20×20 and both FCs, rev1 on OpenESC 30×30.",
   "event_batch1_paid_title": "Production batch 1 ordered and paid",
-  "event_batch1_paid_detail": "250 of each of the four boards: both [FCs](/products/openfc-lite) and both [ESCs](/products/openesc). Ships late October 2026.",
+  "event_batch1_paid_detail": "250 of each of the four boards: both [FCs](/products/openfc-lite) and both [ESCs](/products/openesc). Ships early November 2026, EU only.",
   "cta_primary": "What ships next →",
   "cta_secondary": "Put yourself on this timeline →",
   "auto_release_title": "{repo} {tag} released",

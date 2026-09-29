@@ -26,6 +26,7 @@ import {DATES_SEEN_FIELD, type CartSummary} from '~/lib/shopify-cart-action';
 import {trackEvent} from '~/lib/growth/plausible';
 import {CART_ADDED_EVENT, postCartAdd, withCountry, type CartAddedDetail} from '~/lib/cart-client';
 import {ShipToSelect} from './ShipToSelect';
+import {fccConditionalSku} from '~/lib/us-sales';
 
 const CART_ACTION = '/api/shopify/cart';
 const BUILDS = parseBuilds(buildsJson);
@@ -222,6 +223,14 @@ export function CartAddedDialog() {
                   </span>
                 ) : null}
                 <ShipChip promise={line.shipPromise} className="cart-added-ship" ifFunded />
+                {usBuyer && fccConditionalSku(line.sku) ? (
+                  <small className="cart-added-line-qty" role="note">
+                    {t(
+                      'us_fcc',
+                      'FCC notice: this device has not been authorized as required by the rules of the Federal Communications Commission (FCC). It is offered as a conditional preorder and will not be delivered to US buyers until authorization is obtained. If it cannot be, you get a full refund.',
+                    )}
+                  </small>
+                ) : null}
                 {usBuyer ? (
                   <small className="cart-added-line-qty" role="note">
                     {t(

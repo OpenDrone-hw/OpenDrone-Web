@@ -449,8 +449,8 @@ describe('tradeLeadTimes', () => {
       JSON.parse(fs.readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8')),
     );
     const lead = tradeLeadTimes(config);
-    const dated = {date: 'late October 2026', targetBy: null};
-    const target = {date: '14 March 2027', targetBy: '22 November 2026'};
+    const dated = {date: 'early November 2026', targetBy: null};
+    const target = {date: '31 March 2027', targetBy: '15 December 2026'};
     assert.deepEqual(lead, {
       fc: dated,
       esc: dated,
@@ -470,7 +470,7 @@ describe('tradeLeadTimes', () => {
       pendingShips: 'x',
       skus: {
         'OPENFRAME-5': {batches: [{units: 250, paid: true, ships: 'ships early February 2027'}]},
-        'OPENFC-LITE-2020': {batches: [{units: 250, paid: true, ships: 'ships late October 2026'}]},
+        'OPENFC-LITE-2020': {batches: [{units: 250, paid: true, ships: 'ships early November 2026'}]},
       },
       shipsWith: {'ACC-STRAP-20X220': {sku: 'OPENFC-LITE-2020', batch: 1}},
     });

@@ -47,12 +47,11 @@ export type CampaignBatch = {
   /** Paid stock: Incutec has already ordered this batch. */
   paid?: boolean;
   /** The ship promise once the supplier order is placed, e.g.
-   *  "ships late October 2026". Required for paid stock. */
+   *  "ships early November 2026". Required for paid stock. */
   ships?: string;
   /** Reviewed final customer delivery date, separate from dispatch. The ship promise names it; null leaves it out. */
   deliveryBy?: string | null;
-  /** The same for a US buyer (air freight to the US warehouse and US
-   *  customs); a US promise names only this one, and leaves the delivery
+  /** The same for a US buyer (shipped direct by the fulfilment partner, duties included); a US promise names only this one, and leaves the delivery
    *  date out without it. */
   deliveryByUS?: string | null;
   /** The regions this batch ships to; absent means every region. Paid
