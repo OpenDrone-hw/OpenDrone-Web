@@ -878,6 +878,8 @@ writes to `out/`) and its Liquid subject, and links its admin page. After a past
 2. `npm run emails:paste` is a dry run: per phase 1 template it prints the live body hash, the repo hash, whether the subject matches and the action needed.
 3. `npm run emails:paste -- --apply` replaces body and subject, saves, reloads and verifies the hash. It stops on the first failure (`--continue` goes on); `--only key,key` limits the templates.
 
+End to end for an agent: edit a body under `scripts/shopify-templates/bodies/`, `npm run gen:shopify-templates`, `npm test`, merge, then `npm run emails:chrome` and `npm run emails:paste -- --apply` (the dry run first). The only human step is the one-time Shopify login in that Chrome; exit code 3 means it is missing.
+
 The store handle is `SHOPIFY_ADMIN_STORE_HANDLE` (default `ktjqug-jw`). Exit codes: 2 no Chrome on 9222, 3 the admin shows a login page.
 
 ## Security
