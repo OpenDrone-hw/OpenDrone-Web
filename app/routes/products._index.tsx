@@ -95,14 +95,18 @@ export async function loader({request, context}: Route.LoaderArgs) {
   // and the URL filters/sorts it client-side, so the page is one
   // shareable browse hub that lists every model on its own card. The
   // search term filters the same cards.
-  const catalog = await context.catalog.get();
+  const catalog = await context.catalog.forBuyer();
   // The one fixed ship date of the campaign, the stack's paid batch, for
   // the "Ships Oct 2026" filter chip.
+  // A US buyer (US sales open) has no paid batch that ships to the US: no
+  // chip, as /preorder drops the stack lane.
   const stackShips =
-    Object.values(CAMPAIGN.skus)
-      .flatMap((entry) => entry.batches)
-      .find((batch) => batch.paid && batch.ships?.trim())
-      ?.ships?.trim() ?? null;
+    context.catalog.region === 'US'
+      ? null
+      : (Object.values(CAMPAIGN.skus)
+          .flatMap((entry) => entry.batches)
+          .find((batch) => batch.paid && batch.ships?.trim())
+          ?.ships?.trim() ?? null);
   return {
     products: toCards(catalog),
     term,

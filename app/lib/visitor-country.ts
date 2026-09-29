@@ -3,15 +3,16 @@
  * shows. Cloudflare sets `CF-IPCountry` on every request to the Worker; a
  * `?country=XX` query overrides it so a page can be checked as seen from
  * another country. Nothing about the order depends on it: Shopify checkout
- * decides tax and shipping from the shipping address.
+ * decides tax and shipping from the shipping address. While US sales are
+ * open the root loader uses `shipCountryForRequest` instead, the same
+ * destination the cart and checkout read.
  *
- * Bundler-free (no imports) so the node:test suites can load it.
+ * Bundler-free (one relative import) so the node:test suites can load it.
  */
 
-const EU = new Set([
-  'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE',
-  'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE',
-]);
+import {EU_COUNTRY_CODES} from './eu-countries.ts';
+
+const EU: ReadonlySet<string> = new Set(EU_COUNTRY_CODES);
 
 export function visitorCountry(request: Request): string | null {
   const override = new URL(request.url).searchParams.get('country')?.trim().toUpperCase();
@@ -24,10 +25,12 @@ export function paysEuVat(country: string | null): boolean {
   return country === null || EU.has(country);
 }
 
-/** Which price note a visitor sees: EU VAT included, or, outside the EU,
- *  that the products are sold through shops there. */
-export type PriceNote = 'vat' | 'shops';
+/** Which price note a visitor sees: EU VAT included, the US note (no
+ *  sales tax, duties included) while US sales are open, or, elsewhere outside
+ *  the EU, that the products are sold through shops there. */
+export type PriceNote = 'vat' | 'us' | 'shops';
 
-export function priceNote(country: string | null): PriceNote {
-  return paysEuVat(country) ? 'vat' : 'shops';
+export function priceNote(country: string | null, usOpen = false): PriceNote {
+  if (paysEuVat(country)) return 'vat';
+  return usOpen && country === 'US' ? 'us' : 'shops';
 }

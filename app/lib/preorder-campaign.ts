@@ -22,6 +22,25 @@
 
 import type {Catalog, CatalogVariant} from './catalog.ts';
 
+/** Where a unit ships: the EU from Belgium, or the US. A shipping country
+ *  of US is `US`, every other one (and none) `EU`. */
+export type Region = 'EU' | 'US';
+
+export const REGIONS: readonly Region[] = ['EU', 'US'];
+
+/** The region of a shipping country (ISO 3166-1 alpha-2). */
+export function regionOf(country: string | null | undefined): Region {
+  return country?.trim().toUpperCase() === 'US' ? 'US' : 'EU';
+}
+
+/** Paid units of one SKU in order, oldest first, as runs of one region:
+ *  what the batch allocation needs, since a batch may serve one region
+ *  only. A plain number is that many EU units. */
+export type UnitRuns = Array<{region: Region; units: number}>;
+
+/** A SKU's paid units: a count (all EU) or its runs by region. */
+export type PaidUnitsOf = number | UnitRuns;
+
 export type CampaignBatch = {
   /** Units in this batch: the supplier order quantity. */
   units: number;
@@ -32,6 +51,14 @@ export type CampaignBatch = {
   ships?: string;
   /** Reviewed final customer delivery date, separate from dispatch. The ship promise names it; null leaves it out. */
   deliveryBy?: string | null;
+  /** The same for a US buyer (air freight to the US warehouse and US
+   *  customs); a US promise names only this one, and leaves the delivery
+   *  date out without it. */
+  deliveryByUS?: string | null;
+  /** The regions this batch ships to; absent means every region. Paid
+   *  stock in Belgium is `["EU"]`: a US unit skips it for the next batch
+   *  that serves the US. A SKU's last funding batch serves every region. */
+  regions?: Region[];
 };
 
 export type PriceTier = {
@@ -44,9 +71,10 @@ export type PriceTier = {
 /** One promise flows to product pages, cart lines and order confirmations.
  *  A batch with a placed supplier order (`ships`) states its delivery date
  *  outright; a funding target states it on the condition of its target. */
-function batchPromise(batch: CampaignBatch, fallback: string): string {
+function batchPromise(batch: CampaignBatch, fallback: string, region: Region = 'EU'): string {
   const ships = batch.ships?.trim();
-  const delivery = batch.deliveryBy ? campaignDate(batch.deliveryBy) : null;
+  const deliveryBy = region === 'US' ? batch.deliveryByUS : batch.deliveryBy;
+  const delivery = deliveryBy ? campaignDate(deliveryBy) : null;
   if (!ships) {
     return delivery ? `${fallback}; if the target is reached in time, delivered by ${delivery}` : fallback;
   }
@@ -181,11 +209,12 @@ export type CampaignState = {
    *  Null without a retail price, or when this is already retail. */
   nextPrice: number | null;
   /** Every configured batch up to the one after the current, in order:
-   *  sold-out batches stay listed. */
+   *  sold-out batches stay listed, and one before the current that does not
+   *  serve the buyer's region is `other_region`. */
   batches: Array<{
     batch: number;
     units: number;
-    status: 'sold_out' | 'current' | 'next';
+    status: 'sold_out' | 'current' | 'next' | 'other_region';
     shipPromise: string;
   }>;
 };
@@ -222,6 +251,20 @@ export function parseCampaignConfig(body: unknown): CampaignConfig {
         throw new Error(`preorders: ${sku} paid batch needs a ship promise`);
       }
       if (batch.deliveryBy != null && !isCalendarDay(batch.deliveryBy)) throw new Error(`preorders: ${sku} deliveryBy must be a calendar date`);
+      if (batch.deliveryByUS != null && !isCalendarDay(batch.deliveryByUS)) throw new Error(`preorders: ${sku} deliveryByUS must be a calendar date`);
+      if (batch.regions !== undefined) {
+        if (
+          !Array.isArray(batch.regions) ||
+          !batch.regions.length ||
+          batch.regions.some((r) => !REGIONS.includes(r))
+        ) {
+          throw new Error(`preorders: ${sku} regions must list ${REGIONS.join(' or ')}`);
+        }
+      }
+    }
+    const last = entry.batches[entry.batches.length - 1];
+    if (!last.paid && last.regions && REGIONS.some((r) => !last.regions!.includes(r))) {
+      throw new Error(`preorders: ${sku} last funding batch must serve every region`);
     }
     if (entry.priceTiers !== undefined) checkTiers(entry.priceTiers, `${sku} priceTiers`);
   }
@@ -379,77 +422,147 @@ export function shipGroupKey(
   return `date:${shipPromise ?? ''}`;
 }
 
+/** Whether a batch ships to `region`: a batch without `regions` serves all. */
+export function servesRegion(batch: Pick<CampaignBatch, 'regions'>, region: Region): boolean {
+  return !batch.regions || batch.regions.includes(region);
+}
+
 /**
- * The batch the next unit falls into after `units` paid units: its 0-based
- * index, the units before it and the batch. The last batch has no end when
- * it is a funding target: its `units` is the target, and every later unit
- * ships with it. Past a last batch of paid stock, one such open funding
- * batch of the same size follows.
+ * The batches units are allocated to, in order. The last one has no end
+ * when it is a funding target: its `units` is the target, and every later
+ * unit ships with it. Past a last batch of paid stock, one such open funding
+ * batch of the same size follows, for every region.
  */
-function batchAt(
-  batches: CampaignBatch[],
-  units: number,
-): {index: number; start: number; current: CampaignBatch} {
-  let start = 0;
-  for (let index = 0; ; index += 1) {
-    const last = index >= batches.length - 1;
-    const current =
-      index < batches.length ? batches[index] : {units: batches[batches.length - 1].units};
-    if ((last && !current.paid) || units < start + current.units) return {index, start, current};
-    start += current.units;
+function openBatches(batches: CampaignBatch[]): CampaignBatch[] {
+  const last = batches[batches.length - 1];
+  return last.paid ? [...batches, {units: last.units}] : batches;
+}
+
+function toRuns(ordered: PaidUnitsOf): UnitRuns {
+  if (Array.isArray(ordered)) return ordered;
+  const units = Math.max(0, Math.floor(Number.isFinite(ordered) ? ordered : 0));
+  return units ? [{region: 'EU', units}] : [];
+}
+
+/** Every paid unit of a SKU, whatever its region: the count the price
+ *  steps and the funding target read. */
+export function totalUnits(ordered: PaidUnitsOf): number {
+  return toRuns(ordered).reduce((sum, run) => sum + Math.max(0, Math.floor(run.units) || 0), 0);
+}
+
+/** The paid units of one region. */
+export function regionUnits(ordered: PaidUnitsOf, region: Region): number {
+  return toRuns(ordered)
+    .filter((run) => run.region === region)
+    .reduce((sum, run) => sum + Math.max(0, Math.floor(run.units) || 0), 0);
+}
+
+/** 0-based index of the batch the next unit for `region` falls into: the
+ *  first batch that serves the region and still has room (the open last
+ *  batch always has room). `fill` is the units already in each batch. */
+function nextIndex(list: CampaignBatch[], fill: number[], region: Region): number {
+  for (let i = 0; i < list.length; i += 1) {
+    if (!servesRegion(list[i], region)) continue;
+    if (i === list.length - 1 || fill[i] < list[i].units) return i;
   }
+  return list.length - 1;
+}
+
+/**
+ * Units per batch after allocating `ordered` in order: each unit takes the
+ * first batch with room that serves its region. The result has one entry
+ * per configured batch, plus the open batch past a last paid one.
+ */
+export function batchFill(batches: CampaignBatch[], ordered: PaidUnitsOf): number[] {
+  const list = openBatches(batches);
+  const fill = list.map(() => 0);
+  for (const run of toRuns(ordered)) {
+    let left = Math.max(0, Math.floor(run.units) || 0);
+    while (left > 0) {
+      const i = nextIndex(list, fill, run.region);
+      const room = i === list.length - 1 ? left : Math.min(left, list[i].units - fill[i]);
+      fill[i] += room;
+      left -= room;
+    }
+  }
+  return fill;
+}
+
+/**
+ * Allocate one unit for `region` into `fill` (from {@link batchFill}, or
+ * all zero) and return its 1-based batch and entry. `fill` is updated.
+ */
+export function allocateUnit(
+  batches: CampaignBatch[],
+  fill: number[],
+  region: Region,
+): {batch: number; entry: CampaignBatch} {
+  const list = openBatches(batches);
+  while (fill.length < list.length) fill.push(0);
+  const index = nextIndex(list, fill, region);
+  fill[index] += 1;
+  return {batch: index + 1, entry: list[index]};
+}
+
+/** The 1-based batch the next unit for `region` falls into after `ordered`,
+ *  without allocating it. */
+export function nextBatch(
+  batches: CampaignBatch[],
+  ordered: PaidUnitsOf,
+  region: Region = 'EU',
+): {batch: number; entry: CampaignBatch} {
+  const list = openBatches(batches);
+  const index = nextIndex(list, batchFill(batches, ordered), region);
+  return {batch: index + 1, entry: list[index]};
 }
 
 /** The 1-based batch that paid unit `unit` (1-based) of a SKU falls into
- *  (see {@link batchAt}). */
+ *  when every earlier unit shipped to the EU. */
 export function batchOfUnit(batches: CampaignBatch[], unit: number): {batch: number; entry: CampaignBatch} {
-  const {index, current} = batchAt(batches, Math.max(0, unit - 1));
-  return {batch: index + 1, entry: current};
+  return nextBatch(batches, Math.max(0, unit - 1), 'EU');
 }
 
 /**
- * The campaign state for one SKU after `ordered` paid units. Once a funding
- * target is reached, later units ship with it (see {@link batchAt}).
+ * The campaign state for one SKU after `ordered` paid units, for the next
+ * unit of a buyer in `region`. Once a funding target is reached, later
+ * units ship with it (see {@link openBatches}). A US unit never falls into
+ * a batch that serves only the EU. The price steps and the funding target
+ * count every region.
  */
 export function campaignState(
   batches: CampaignBatch[],
-  ordered: number,
+  ordered: PaidUnitsOf,
   pendingShips: string,
   priceTiers: PriceTier[],
   retail: number | null = null,
+  region: Region = 'EU',
 ): CampaignState {
-  const units = Math.max(0, Math.floor(Number.isFinite(ordered) ? ordered : 0));
-  const {index, start, current} = batchAt(batches, units);
+  const units = totalUnits(ordered);
+  const list = openBatches(batches);
+  const fill = batchFill(batches, ordered);
+  const index = nextIndex(list, fill, region);
+  const current = list[index];
 
   const tierIndex = priceTiers.findIndex((t) => units < t.upTo);
   const tier = tierIndex < 0 ? null : priceTiers[tierIndex];
 
-  let targetStart = 0;
-  let targetIndex = -1;
-  for (let i = 0; i < batches.length; i += 1) {
-    if (!batches[i].paid) {
-      targetIndex = i;
-      break;
-    }
-    targetStart += batches[i].units;
-  }
+  const targetIndex = batches.findIndex((b) => !b.paid);
   const target = targetIndex >= 0 ? batches[targetIndex].units : null;
-  const targetOrdered =
-    target === null ? 0 : Math.min(target, Math.max(0, units - targetStart));
+  const targetOrdered = target === null ? 0 : Math.min(target, fill[targetIndex]);
   const targetReached = target !== null && targetOrdered >= target;
 
   return {
     ordered: units,
     batch: index + 1,
     batchUnits: current.units,
-    batchOrdered: units - start,
+    batchOrdered: fill[index],
     paidStock: Boolean(current.paid),
     target,
     targetOrdered,
     targetReached,
-    shipPromise: batchPromise(current, pendingShips),
+    shipPromise: batchPromise(current, pendingShips, region),
     shipsOnTarget: !current.ships?.trim(),
-    paidLeft: current.paid ? current.units - (units - start) : null,
+    paidLeft: current.paid ? current.units - fill[index] : null,
     earlyPrice: tier !== null,
     tierUpTo: tier?.upTo ?? null,
     tierLeft: tier ? tier.upTo - units : 0,
@@ -459,8 +572,11 @@ export function campaignState(
     batches: batches.slice(0, index + 2).map((b, i) => ({
       batch: i + 1,
       units: b.units,
-      status: i < index ? 'sold_out' : i === index ? 'current' : 'next',
-      shipPromise: batchPromise(b, pendingShips),
+      status:
+        i < index
+          ? servesRegion(b, region) ? 'sold_out' : 'other_region'
+          : i === index ? 'current' : 'next',
+      shipPromise: batchPromise(b, pendingShips, region),
     })),
   };
 }
@@ -477,17 +593,17 @@ export function campaignState(
 export function shipsWithState(
   config: CampaignConfig,
   rule: ShipsWith,
-  leadOrdered: number,
+  leadOrdered: PaidUnitsOf,
   price: number | null,
-  ordered = 0,
+  ordered: PaidUnitsOf = 0,
+  region: Region = 'EU',
 ): CampaignState {
   const lead = config.skus[rule.sku];
-  const own = Math.max(0, Math.floor(Number.isFinite(ordered) ? ordered : 0));
-  const fromStock = rule.stock !== undefined && own < rule.stock;
-  const batch = rule.stock !== undefined && !fromStock ? rule.after : rule.batch;
+  const own = regionUnits(ordered, 'EU');
+  const {batch, fromStock} = shipsWithBatch(rule, lead.batches, region, own);
   const state = batch
-    ? pinnedBatchState(lead.batches, batch, config.pendingShips, leadOrdered)
-    : campaignState(lead.batches, leadOrdered, config.pendingShips, tiersFor(config, rule.sku));
+    ? pinnedBatchState(lead.batches, batch, config.pendingShips, leadOrdered, region)
+    : campaignState(lead.batches, leadOrdered, config.pendingShips, tiersFor(config, rule.sku), null, region);
   return {
     ...state,
     paidStock: fromStock,
@@ -502,20 +618,45 @@ export function shipsWithState(
   };
 }
 
+/**
+ * The lead batch a unit of a SKU that ships with another takes, before the
+ * lead's own count decides: the pinned `batch`, or with `stock` the pinned
+ * batch while `euUnits` (this SKU's EU paid units) are under the stock and
+ * `after` past it. Stock is on hand in Belgium, so a US unit never takes
+ * it, and a pinned batch that does not serve the region is skipped: a US
+ * unit takes `after` when that serves the US, otherwise the batch the
+ * lead's next US unit falls into (`batch` undefined).
+ */
+export function shipsWithBatch(
+  rule: ShipsWith,
+  leadBatches: CampaignBatch[],
+  region: Region,
+  euUnits: number,
+): {batch: number | undefined; fromStock: boolean} {
+  const serves = (n: number | undefined) =>
+    n !== undefined && Boolean(leadBatches[n - 1]) && servesRegion(leadBatches[n - 1], region);
+  if (region === 'EU') {
+    const fromStock = rule.stock !== undefined && euUnits < rule.stock;
+    const batch = rule.stock !== undefined && !fromStock ? rule.after : rule.batch;
+    return {batch: batch === undefined || serves(batch) ? batch : undefined, fromStock};
+  }
+  if (rule.stock !== undefined) return {batch: serves(rule.after) ? rule.after : undefined, fromStock: false};
+  return {batch: serves(rule.batch) ? rule.batch : undefined, fromStock: false};
+}
+
 /** A lead batch as the state of a SKU pinned to it: its own ship date, or
  *  its funding target counted from the lead's `leadOrdered` paid units. */
 function pinnedBatchState(
   batches: CampaignBatch[],
   batch: number,
   pendingShips: string,
-  leadOrdered: number,
+  leadOrdered: PaidUnitsOf,
+  region: Region = 'EU',
 ): CampaignState {
   const entry = batches[batch - 1];
-  const promise = batchPromise(entry, pendingShips);
+  const promise = batchPromise(entry, pendingShips, region);
   const dated = Boolean(entry.ships?.trim());
-  const start = batches.slice(0, batch - 1).reduce((sum, b) => sum + b.units, 0);
-  const counted = Math.max(0, Math.floor(Number.isFinite(leadOrdered) ? leadOrdered : 0));
-  const targetOrdered = dated ? 0 : Math.min(entry.units, Math.max(0, counted - start));
+  const targetOrdered = dated ? 0 : Math.min(entry.units, batchFill(batches, leadOrdered)[batch - 1] ?? 0);
   return {
     ordered: 0,
     batch,
@@ -554,12 +695,16 @@ function pinnedBatchState(
  * A SKU in `shipsWith` gets its lead's state at its own flat price
  * ({@link shipsWithState}) and closes on the same conditions, except the
  * price-step check: it has no steps.
+ *
+ * `region` is the buyer's: the batch, ship promise and paid-batch cap are
+ * that region's next unit. The price step and its check count every region.
  */
 export function applyCampaign(
   catalog: Catalog,
   config: CampaignConfig,
-  units: Record<string, number> | null,
+  units: Record<string, PaidUnitsOf> | null,
   now: Date = new Date(),
+  region: Region = 'EU',
 ): Catalog {
   const closed = fundingClosed(config, now);
   return {
@@ -581,6 +726,7 @@ export function applyCampaign(
             units[rule.sku] ?? 0,
             variant.price,
             units[variant.sku] ?? 0,
+            region,
           );
           if (closed && state.shipsOnTarget) {
             return {...variant, availability: 'sold_out', ship_promise: null, campaign: null};
@@ -599,6 +745,7 @@ export function applyCampaign(
           config.pendingShips,
           tiersFor(config, variant.sku),
           variant.compare_price,
+          region,
         );
         if (closed && state.shipsOnTarget && !state.paidStock) {
           return {...variant, availability: 'sold_out', ship_promise: null, campaign: null};
@@ -729,4 +876,16 @@ export function cartShipNote(promises: Array<string | null | undefined>): string
     }
   }
   return null;
+}
+
+/**
+ * The batch a ship promise names, as "March 2027": the ship-by month of a
+ * funding-target promise, else the first month and year it names ("ships
+ * late October 2026" gives "October 2026"). Null when it names none.
+ */
+export function promiseBatchMonth(promise: string | null | undefined): string | null {
+  const text = promise?.trim() ?? '';
+  const match = (promiseLatestShip(text) ?? text).match(/\b([A-Za-z]+) (\d{4})\b/);
+  const month = match ? LONG_MONTHS.indexOf(match[1].toLowerCase()) : -1;
+  return month < 0 ? null : `${capitalizeFirst(LONG_MONTHS[month])} ${match![2]}`;
 }

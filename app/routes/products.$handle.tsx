@@ -81,7 +81,7 @@ import {
 import {useProductStatus} from '~/lib/coming-soon';
 import {shipPromiseFor} from '~/lib/preorder';
 import {fetchStatusFlagsFast, statusForHandle} from '~/lib/roadmap-data';
-import {parseCampaignConfig, priceLadder, tiersFor} from '~/lib/preorder-campaign';
+import {parseCampaignConfig, priceLadder, promiseBatchMonth, tiersFor} from '~/lib/preorder-campaign';
 import {stepBarView} from '~/lib/preorder-meter';
 import {paysEuVat} from '~/lib/visitor-country';
 import {notSoldDirect} from '~/lib/shipping-rates';
@@ -244,7 +244,7 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
     context.waitUntil,
   );
 
-  const catalog = await context.catalog.get();
+  const catalog = await context.catalog.forBuyer();
   const entry = byHandle(catalog, handle);
 
   if (!entry) {
@@ -268,7 +268,9 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
   // steps up to. The PDP variant shape drops it for campaign SKUs (no
   // struck-through price, EU art. 6a), so the price ladder reads it here.
   const retailBySku: Record<string, number | null> = Object.fromEntries(
-    entry.variants.map((v) => [v.sku, v.compare_price ?? null]),
+    // A USD variant (US buyer) has no ladder: Shopify rounds each US step
+    // price itself, so steps derived from the USD retail would be wrong.
+    entry.variants.map((v) => [v.sku, v.currency === 'USD' ? null : (v.compare_price ?? null)]),
   );
 
   return {
@@ -335,7 +337,7 @@ function loadDeferredData({context, params}: Route.LoaderArgs) {
   // "You might also like": the other products in the catalog. The catalog
   // is small enough that the whole rest of it IS the honest answer.
   const recommendations = context.catalog
-    .get()
+    .forBuyer()
     .then((catalog) =>
       catalog.products
         .filter((p) => p.handle !== handle)
@@ -1690,16 +1692,45 @@ function ProductPage() {
   // Inside the EU the price includes 21% Belgian VAT. Outside it the same
   // euro price applies with no EU VAT charged on the export, so nothing is
   // printed next to it. Shipping is shown at checkout only.
+  // A US buyer while US sales are open: the USD list price, duties included, no sales tax.
+  const usRate = rootData?.usShippingRate ?? null;
+  const usBuyer = usRate != null && rootData?.visitorCountry === 'US';
   const vatNote = paysEuVat(rootData?.visitorCountry ?? null)
     ? say('product-chrome.buy_vat_note', 'incl. VAT')
-    : null;
+    : usBuyer && buyPrice?.currencyCode === 'USD'
+      ? say('product-chrome.buy_us_price_note', 'Duties included. No sales tax.')
+      : null;
   // Consumers buy direct only in the open EU countries. Elsewhere the buy
   // button is a status line (AddToCartButton): outside the EU "EU consumer
   // orders only" with a link to the trade page, in an EU country not open
   // yet "Orders are not open for <country>"; both with the launch-news
   // signup instead of the ship date. A blocked country gets "Not available
   // in <country>" and the End-Use Policy link, with no signup.
-  const notDirect = notSoldDirect(rootData?.visitorCountry ?? null);
+  const notDirect = notSoldDirect(rootData?.visitorCountry ?? null, usRate);
+  // The US notice: under the ship date for a US buyer, with the batch the
+  // US unit ships in. An in-stock item ships to the EU only.
+  const usBatch = usBuyer && campaign ? promiseBatchMonth(campaign.shipPromise) : null;
+  const usEuOnly = usBuyer && !isBundle && !selectedVariant?.campaign && Boolean(selectedVariant?.availableForSale);
+  const usNotice = usBuyer && buyAvailable ? (
+    <>
+      {usBatch ? (
+        <p className="product-buy-ship">
+          {say('product-chrome.buy_us_ship', 'Ships to the US from the {batch} batch', {batch: usBatch})}
+        </p>
+      ) : null}
+      {usEuOnly ? (
+        <p className="product-buy-ship" role="note">
+          {say('product-chrome.buy_us_eu_only', 'Ships from stock in Belgium to EU addresses only')}
+        </p>
+      ) : null}
+      <p className="product-buy-ship" role="note">
+        {say(
+          'product-chrome.buy_us_notice',
+          'US delivery depends on FCC equipment authorization and US import clearance. If we cannot deliver to you, you get a full refund.',
+        )}
+      </p>
+    </>
+  ) : null;
   // Coming-soon buy module: the price/stock/add-to-cart block becomes a
   // COMING SOON plate + notify-at-launch signup (same newsletter action,
   // tagged with this product's handle). Everything else on the PDP stays.
@@ -1864,6 +1895,7 @@ function ProductPage() {
                 : copyText('product-chrome.buy_stock_out')}
         </p>
       )}
+      {notDirect ? null : usNotice}
       {preorder && !isBundle && !notDirect ? (
         <p className="product-buy-ship">
           <Link prefetch="intent" to="/preorder" className="product-buy-terms-link">

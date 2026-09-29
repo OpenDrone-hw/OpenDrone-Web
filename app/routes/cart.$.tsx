@@ -86,7 +86,7 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
   if (cart?.lines.length) {
     let catalog = null;
     try {
-      catalog = await context.catalog.get();
+      catalog = await context.catalog.forBuyer();
     } catch (error) {
       console.error('[shopify-cart] catalog read failed', error instanceof Error ? error.message : 'unknown error');
     }
@@ -110,6 +110,8 @@ type Removed = SplitItem[];
 function checkNotice(check: string | null): string | null {
   if (check === CART_CHECK.paidBatch) return t('check_paid_batch', 'Not enough left in batch 1. Lower the quantity where shown.');
   if (check === CART_CHECK.shipDate) return t('check_ship_date', 'A ship date changed. Check the dates below.');
+  if (check === CART_CHECK.usEuOnly) return t('check_us_eu_only', 'An item in your cart ships to EU addresses only. Remove it to check out to the US.');
+  if (check === CART_CHECK.market) return t('check_market', "Your cart moved to your delivery country's prices. Check the total below.");
   return null;
 }
 
@@ -142,6 +144,7 @@ export default function CartPage() {
           info={info}
           payments={payments}
           country={rootData?.visitorCountry ?? null}
+          usRate={rootData?.usShippingRate ?? null}
           onSplit={(items) => updateRemoved([...removed.filter((r) => !items.some((i) => i.id === r.id)), ...items])}
         />
       ) : (
@@ -238,15 +241,18 @@ function PopulatedCart({
   info,
   payments,
   country,
+  usRate,
   onSplit,
 }: {
   cart: ShopifyCart;
   info: Record<string, CartLineInfo>;
   payments: string[];
   /** The visitor's country: the VAT wording and whether checkout is
-   *  offered (open EU countries only). Shipping is priced at Shopify checkout from the
-   *  address. */
+   *  offered (open EU countries, and the US while US sales are open).
+   *  Shipping is priced at Shopify checkout from the address. */
   country: string | null;
+  /** The US rate while US sales are open, else null. */
+  usRate: number | null;
   onSplit: (items: Removed) => void;
 }) {
   const revalidator = useRevalidator();
@@ -262,7 +268,9 @@ function PopulatedCart({
   // Checkout is refused for a blocked country, for one sold only through
   // shops (outside the EU) and for an EU country not open yet; the cart
   // says which and links onward.
-  const quoteKind = shippingQuote(country)?.kind;
+  const quoteKind = shippingQuote(country, undefined, usRate)?.kind;
+  // A US buyer: every line carries the US delivery notice.
+  const usBuyer = usRate != null && country === 'US';
   const shipBlocked = quoteKind === 'blocked';
   const throughShops = quoteKind === 'shops';
   const closed = quoteKind === 'closed';
@@ -285,7 +293,7 @@ function PopulatedCart({
           </div>
           <ul className="cart-lines-scroll" aria-label={copyText('cart.sr_line_items') ?? 'Line items'}>
             {sortCartLines(cart.lines).map((line) => (
-              <CartLine key={line.id} line={line} info={info[line.id]} pending={pending} />
+              <CartLine key={line.id} line={line} info={info[line.id]} pending={pending} us={usBuyer} />
             ))}
           </ul>
         </div>
@@ -300,6 +308,13 @@ function PopulatedCart({
               <dd style={pendingStyle}>{formatPrice(cart.subtotal.amount, cart.subtotal.currencyCode)}</dd>
             </div>
           </dl>
+          {usBuyer ? (
+            <p className="cart-summary-note">
+              {cart.subtotal.currencyCode === 'USD'
+                ? t('us_price_note', 'Duties included. No sales tax.')
+                : t('us_reprice', 'This cart was priced for the EU. Checkout moves it to US prices and ship dates first.')}
+            </p>
+          ) : null}
           <p className="cart-summary-note">{t('shipping_at_checkout', 'Shipping calculated at checkout')}</p>
           {mixed ? <MixedNote cart={cart} info={info} onSplit={onSplit} /> : null}
           {shipBlocked ? (
@@ -309,7 +324,9 @@ function PopulatedCart({
             </p>
           ) : throughShops ? (
             <p className="cart-summary-note" role="note">
-              {t('checkout_shops', 'Direct consumer orders are limited to the EU.', {country: countryName(country ?? '')})}{' '}
+              {usRate != null
+                ? t('checkout_shops_us', 'Direct consumer orders are limited to the EU and the United States.')
+                : t('checkout_shops', 'Direct consumer orders are limited to the EU.', {country: countryName(country ?? '')})}{' '}
               <Link to="/wholesale">{t('checkout_shops_trade', 'EU or US retailer enquiries')}</Link>
               {' · '}
               <Link to="/newsletter">{t('checkout_shops_notify', 'Get launch news')}</Link>
@@ -474,7 +491,18 @@ function MixedNote({
   );
 }
 
-function CartLine({line, info, pending}: {line: ShopifyCartLine; info: CartLineInfo | undefined; pending: boolean}) {
+function CartLine({
+  line,
+  info,
+  pending,
+  us = false,
+}: {
+  line: ShopifyCartLine;
+  info: CartLineInfo | undefined;
+  pending: boolean;
+  /** A US buyer: the line carries the US delivery notice. */
+  us?: boolean;
+}) {
   const max = info?.maxQuantity ?? null;
   // A funding-target line reads "Ships by ... if the target is reached" until its target is met.
   const target = info?.target;
@@ -494,6 +522,14 @@ function CartLine({line, info, pending}: {line: ShopifyCartLine; info: CartLineI
             <small className="cart-line-error" role="alert">{t('line_over_batch', 'Only {left} left in batch 1.', {left: max})}</small>
           ) : max !== null && max < MAX_LINE_QUANTITY && line.quantity >= max ? (
             <small>{t('paid_left', '{left} left in batch 1', {left: max})}</small>
+          ) : null}
+          {us ? (
+            <small role="note">
+              {t(
+                'us_notice',
+                'US delivery depends on FCC equipment authorization and US import clearance. If we cannot deliver to you, you get a full refund.',
+              )}
+            </small>
           ) : null}
         </div>
         <div className="cart-sheet-qty">

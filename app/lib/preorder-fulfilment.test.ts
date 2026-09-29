@@ -3,6 +3,9 @@ import {afterEach, describe, it} from 'node:test';
 import {
   PREORDER_HOLD_HANDLE,
   PREORDER_LINE_ATTRIBUTE,
+  PROMISE_MISMATCH_TAG,
+  US_REVIEW_TAG,
+  SHIP_REGION_LINE_ATTRIBUTE,
   assignBatches,
   batchOfUnit,
   holdNote,
@@ -14,7 +17,7 @@ import {
 import {reconcilePreorders} from './preorder-ops.ts';
 import {opsStatus, resetOpsStatus} from './preorder-ops-status.ts';
 import {parseCampaignConfig} from './preorder-campaign.ts';
-import {PREORDER_ATTRIBUTE} from './shopify-storefront.ts';
+import {PREORDER_ATTRIBUTE, SHIP_REGION_ATTRIBUTE} from './shopify-storefront.ts';
 import {resetPaidUnitsMemo} from './shopify-orders.ts';
 
 afterEach(() => {
@@ -49,6 +52,10 @@ function order(partial: {
   holds?: Array<{id: string; handle: string}>;
   test?: boolean;
   cancelled?: boolean;
+  /** Shipping country; omitted: none (EU). */
+  country?: string;
+  /** Lines added for a US destination carry `_ship_region: US`. */
+  usPromise?: boolean;
 }): PreorderOrder {
   seq += 1;
   return {
@@ -61,13 +68,19 @@ function order(partial: {
     tags: partial.tags ?? [],
     email: `buyer${seq}@example.com`,
     customerLocale: 'en',
+    ...(partial.country ? {shippingAddress: {countryCodeV2: partial.country}} : {}),
     lineItems: {
       pageInfo: {hasNextPage: false},
       nodes: partial.lines.map(([sku, qty, preorder = true]) => ({
         sku,
         name: sku,
         currentQuantity: qty,
-        customAttributes: preorder ? [{key: 'Preorder', value: 'ships late October 2026'}] : [],
+        customAttributes: preorder
+          ? [
+              {key: 'Preorder', value: 'ships late October 2026'},
+              ...(partial.usPromise ? [{key: '_ship_region', value: 'US'}] : []),
+            ]
+          : [],
       })),
     },
     fulfillmentOrders: {
@@ -353,5 +366,84 @@ describe('SKUs that ship with a campaign SKU', () => {
     });
     const [plan] = planRelease([mixed], 'OPENRX-LITE', 1, new Set(), WITH.shipsWith);
     assert.deepEqual(plan.waitsFor, ['batch:OPENFC-LITE-2020:1']);
+  });
+});
+
+describe('US and EU orders in one campaign', () => {
+  const REGIONAL = parseCampaignConfig({
+    countFrom: '2026-09-21',
+    endsOn: '2026-12-31', shipsBy: '2027-03-11',
+    priceTiers: [{upTo: 100, off: 0.2}],
+    pendingShips: 'ships about 10 weeks after its target is reached',
+    skus: {
+      'OPENFC-LITE-2020': {batches: [{units: 3, paid: true, ships: 'ships late October 2026', regions: ['EU']}, {units: 250}]},
+    },
+    shipsWith: {'ACC-ANT-T': {sku: 'OPENFC-LITE-2020', batch: 1, stock: 1, after: 2}},
+  });
+
+  it('pins the region attribute key', () => {
+    assert.equal(SHIP_REGION_LINE_ATTRIBUTE, SHIP_REGION_ATTRIBUTE);
+  });
+
+  it('puts US units in the first batch that serves the US and EU units in paid stock first', () => {
+    const us1 = order({lines: [['OPENFC-LITE-2020', 2]], country: 'US', usPromise: true});
+    const eu1 = order({lines: [['OPENFC-LITE-2020', 2]], country: 'BE'});
+    const us2 = order({lines: [['OPENFC-LITE-2020', 1], ['ACC-ANT-T', 1]], country: 'US', usPromise: true});
+    const eu2 = order({lines: [['OPENFC-LITE-2020', 2], ['ACC-ANT-T', 2]], country: 'NL'});
+    const batches = assignBatches([eu2, us2, eu1, us1], REGIONAL);
+    const view = (o: PreorderOrder) => batches.get(o.id)!.map((b) => `${b.item ?? b.sku}:${b.batch}:${b.units}`);
+    assert.deepEqual(view(us1), ['OPENFC-LITE-2020:2:2']);
+    assert.deepEqual(view(eu1), ['OPENFC-LITE-2020:1:2']);
+    // US: no Belgian stock for the accessory, the lead's next US batch.
+    assert.deepEqual(view(us2), ['OPENFC-LITE-2020:2:1', 'ACC-ANT-T:2:1']);
+    // EU: the last paid unit, then batch 2; one antenna from stock, one after.
+    assert.deepEqual(view(eu2), ['OPENFC-LITE-2020:1:1', 'OPENFC-LITE-2020:2:1', 'ACC-ANT-T:1:1', 'ACC-ANT-T:2:1']);
+  });
+
+  it('holds and tags us-review a US order with a line no US batch carries, preorder or not', () => {
+    const inStockOnly = order({lines: [['ACC-CAP-470UF-35V', 2, false]], country: 'US'});
+    const mixed = order({lines: [['OPENFC-LITE-2020', 1], ['ACC-CAP-470UF-35V', 1, false]], country: 'US', usPromise: true});
+    const campaignOnly = order({lines: [['OPENFC-LITE-2020', 1]], country: 'US', usPromise: true});
+    const euInStock = order({lines: [['ACC-CAP-470UF-35V', 1, false]], country: 'BE'});
+    const reviewed = order({lines: [['ACC-CAP-470UF-35V', 1, false]], country: 'US', tags: [US_REVIEW_TAG]});
+    const plans = new Map(
+      planPreorderHolds([inStockOnly, mixed, campaignOnly, euInStock, reviewed], REGIONAL).map((p) => [p.orderId, p]),
+    );
+    const only = plans.get(inStockOnly.id)!;
+    assert.deepEqual(only.tags, [US_REVIEW_TAG]);
+    assert.deepEqual(only.hold, [inStockOnly.fulfillmentOrders.nodes[0].id]);
+    assert.match(only.note, /^US review/);
+    const both = plans.get(mixed.id)!;
+    assert.deepEqual(both.tags, ['preorder', 'batch:OPENFC-LITE-2020:2', US_REVIEW_TAG]);
+    assert.ok(both.note.length <= 255);
+    assert.ok(!plans.get(campaignOnly.id)!.tags.includes(US_REVIEW_TAG));
+    // EU in-stock orders are not preorder orders: no plan, as before.
+    assert.equal(plans.has(euInStock.id), false);
+    // Idempotent: an order already tagged us-review is not planned again.
+    assert.equal(plans.has(reviewed.id), false);
+  });
+
+  it('never releases a us-review order with its batch', () => {
+    const held = order({
+      lines: [['OPENFC-LITE-2020', 1]],
+      country: 'US',
+      tags: ['preorder', 'batch:OPENFC-LITE-2020:2', US_REVIEW_TAG],
+      holds: [{id: 'h1', handle: PREORDER_HOLD_HANDLE}],
+    });
+    const [plan] = planRelease([held], 'OPENFC-LITE-2020', 2, new Set());
+    assert.deepEqual(plan.waitsFor, [US_REVIEW_TAG]);
+  });
+
+  it('tags an order shipping to another region than its promise promise-mismatch', () => {
+    const usPromiseToEu = order({lines: [['OPENFC-LITE-2020', 1]], country: 'DE', usPromise: true});
+    const euPromiseToUs = order({lines: [['OPENFC-LITE-2020', 1]], country: 'US'});
+    const matching = order({lines: [['OPENFC-LITE-2020', 1]], country: 'US', usPromise: true});
+    const plans = new Map(planPreorderHolds([usPromiseToEu, euPromiseToUs, matching], REGIONAL).map((p) => [p.orderId, p.tags]));
+    assert.ok(plans.get(usPromiseToEu.id)!.includes(PROMISE_MISMATCH_TAG));
+    assert.ok(plans.get(euPromiseToUs.id)!.includes(PROMISE_MISMATCH_TAG));
+    assert.ok(!plans.get(matching.id)!.includes(PROMISE_MISMATCH_TAG));
+    // Batches follow the real shipping region: the US-promised order to DE takes paid stock.
+    assert.ok(plans.get(usPromiseToEu.id)!.includes('batch:OPENFC-LITE-2020:1'));
+    assert.ok(plans.get(euPromiseToUs.id)!.includes('batch:OPENFC-LITE-2020:2'));
   });
 });

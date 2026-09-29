@@ -70,7 +70,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
     featured: HomeProduct[];
     heroBuilds: HeroBuild[];
   }> = context.catalog
-    .get()
+    .forBuyer()
     .then((catalog) => {
       const card = (handle: string): HomeProduct | null => {
         const entry = byHandle(catalog, handle);

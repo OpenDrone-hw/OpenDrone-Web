@@ -54,5 +54,11 @@
   "checkout_shops": "Direct consumer orders are limited to the EU.",
   "checkout_shops_trade": "Shops: request a wholesale quote",
   "checkout_shops_notify": "Get launch news",
-  "checkout_closed": "Orders are not open for {country}."
+  "checkout_closed": "Orders are not open for {country}.",
+  "us_price_note": "Duties included. No sales tax.",
+  "us_notice": "US delivery depends on FCC equipment authorization and US import clearance. If we cannot deliver to you, you get a full refund.",
+  "check_us_eu_only": "An item in your cart ships to EU addresses only. Remove it to check out to the US.",
+  "check_market": "Your cart moved to your delivery country's prices. Check the total below.",
+  "checkout_shops_us": "Direct consumer orders are limited to the EU and the United States.",
+  "us_reprice": "This cart was priced for the EU. Checkout moves it to US prices and ship dates first."
 }

@@ -456,7 +456,7 @@ describe('POST /api/support/ask', () => {
         },
       ],
     };
-    const catalog: CatalogClient = {get: async () => catalogFixture};
+    const catalog: Pick<CatalogClient, 'get'> = {get: async () => catalogFixture};
     const withProduct = {
       ...ANSWER,
       citations: [{n: 1, title: 'OpenESC', url: 'https://opendrone.be/products/openesc', source: 'OpenDrone storefront', kind: 'product' as const}],

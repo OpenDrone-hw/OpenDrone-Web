@@ -11,9 +11,11 @@ export const CART_KEY = 'shopifyCartId';
 
 export async function action({request, context}: Route.ActionArgs) {
   return handleShopifyCartAction(request, context.env, {
-    // The campaign-aware catalog: the same ship promise the page showed,
-    // and campaign SKUs closed when paid counts cannot be verified.
-    fetchCatalog: () => context.catalog.get(),
+    // The campaign-aware catalog for this request's destination: the same
+    // ship promise and price the page showed, and campaign SKUs closed when
+    // paid counts cannot be verified.
+    fetchCatalog: () => context.catalog.forBuyer(),
+    setCountry: (id, code) => setCartCountry(context.env, id, code),
     // The visitor's country goes on the cart, so checkout opens in that
     // market (shipping rate, VAT treatment) instead of the primary one.
     createCart: (lines, countryCode) =>

@@ -1,10 +1,13 @@
 import {shippingQuote} from './shipping-rates.ts';
 import {type RegistrationsFile} from './registrations.ts';
+import {usSalesRate} from './us-sales.ts';
 
-type CartCountryEnv = Pick<Env, 'SHOPIFY_CHECKOUT_WRITE_ENABLED' | 'PUBLIC_COMING_SOON'>;
+type CartCountryEnv = Pick<Env, 'SHOPIFY_CHECKOUT_WRITE_ENABLED' | 'PUBLIC_COMING_SOON' | 'PUBLIC_US_SALES'>;
 
 export type CartCountryDependencies = {
   registrations?: RegistrationsFile;
+  /** The open US rate for isolated tests; runtime reads `usSalesRate(env)`. */
+  usRate?: number | null;
   getCartId: () => string | undefined;
   /** `cartBuyerIdentityUpdate` with the country code; throws on a user error. */
   setCountry: (cartId: string, countryCode: string) => Promise<void>;
@@ -23,7 +26,8 @@ function reply(body: Record<string, unknown>, status: number): Response {
  * country's market with its shipping rate, instead of the market of the
  * visitor's IP address. The form body carries `country` (ISO 3166-1 alpha-2).
  *
- * Only an EU country is set: the others are blocked or buy through shops,
+ * Only a country sold direct is set (an approved EU country, and the US
+ * while US sales are open): the others are blocked or buy through shops,
  * and the cart page refuses checkout for them. No cart yet is not an error:
  * the next cart starts from the visitor's country, and checkout still
  * decides from the shipping address.
@@ -56,7 +60,8 @@ export async function handleCartCountry(
   } catch {
     return reply({error: 'invalid body'}, 400);
   }
-  const quote = shippingQuote(/^[A-Z]{2}$/.test(country) ? country : null, dependencies.registrations);
+  const usRate = dependencies.usRate !== undefined ? dependencies.usRate : usSalesRate(env);
+  const quote = shippingQuote(/^[A-Z]{2}$/.test(country) ? country : null, dependencies.registrations, usRate);
   if (!quote) return reply({error: 'unknown country'}, 400);
   // A blocked or shops-only country never goes on the cart; the cart page
   // already refuses checkout for it.

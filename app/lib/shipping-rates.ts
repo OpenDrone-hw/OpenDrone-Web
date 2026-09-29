@@ -1,20 +1,21 @@
 /**
  * Proposed flat customer charges in EUR, including VAT. Shopify's accepted
  * shipping profile must match before launch; checkout charges the final address.
- * Consumer delivery is limited to explicitly approved EU destinations.
- * Outside the EU, only retailer enquiries are offered, without a stock promise.
+ * Consumer delivery is limited to explicitly approved EU destinations, plus
+ * the US while US sales are open (`usSalesRate` in `us-sales.ts`, passed in
+ * as `usRate`). Elsewhere only retailer enquiries are offered, without a
+ * stock promise.
  */
 
+import {EU_COUNTRY_CODES} from './eu-countries.ts';
 import {REGISTRATIONS, euSaleOpen, type RegistrationsFile} from './registrations.ts';
+import {visitorCountry} from './visitor-country.ts';
 
 /** Countries Incutec does not ship to. */
 export const BLOCKED_COUNTRIES: ReadonlySet<string> = new Set(['RU', 'BY', 'IR', 'KP', 'SY', 'CU']);
 
 /** The 27 EU member states: the only destinations sold direct. */
-export const EU_COUNTRIES: ReadonlySet<string> = new Set([
-  'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE',
-  'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE',
-]);
+export const EU_COUNTRIES: ReadonlySet<string> = new Set(EU_COUNTRY_CODES);
 
 export type ShippingZone = {
   id: 'be' | 'near' | 'eu' | 'eu_far' | 'eu_bg';
@@ -38,45 +39,68 @@ export const SHIPPING_ZONES: ShippingZone[] = [
   {id: 'eu_bg', countries: ['BG'], rate: 39.95},
 ];
 
+/** The US zone, sold direct only while US sales are open. Its rate is in
+ *  USD, from `content/us-sales.json`. */
+export const US_ZONE = 'us' as const;
+
 /**
  * What a destination gets: `direct`, a consumer order at the zone's flat
- * rate (EU only); `closed`, an EU country not approved for sale; `shops`, not sold
- * direct, retailer enquiries only; `blocked`, not sold at all
- * (`BLOCKED_COUNTRIES`).
+ * rate (an approved EU country, or the US while `usRate` is set, zone `us`
+ * with its rate in USD); `closed`, an EU country not approved for sale;
+ * `shops`, not sold direct, retailer enquiries only; `blocked`, not sold at
+ * all (`BLOCKED_COUNTRIES`).
  */
 export type ShippingQuote =
   | {country: string; kind: 'blocked'}
   | {country: string; kind: 'shops'}
   | {country: string; kind: 'closed'}
-  | {country: string; kind: 'direct'; zone: ShippingZone['id']; rate: number};
+  | {country: string; kind: 'direct'; zone: ShippingZone['id']; rate: number}
+  | {country: string; kind: 'direct'; zone: typeof US_ZONE; rate: number; currency: 'USD'};
 
 /** The quote for one ISO country code, or null for an unknown country.
- *  `registrations` is for tests; the committed file is the default. */
+ *  `registrations` is for tests; the committed file is the default.
+ *  `usRate` is the US rate while US sales are open (`usSalesRate`), null
+ *  or omitted while they are closed: the US then buys through shops. */
 export function shippingQuote(
   country: string | null,
   registrations: RegistrationsFile = REGISTRATIONS,
+  usRate: number | null = null,
 ): ShippingQuote | null {
   const code = isoCode(country);
   if (!code) return null;
   if (BLOCKED_COUNTRIES.has(code)) return {country: code, kind: 'blocked'};
   const zone = SHIPPING_ZONES.find((z) => z.countries.includes(code));
-  if (!zone) return {country: code, kind: 'shops'};
+  if (!zone) {
+    if (code === 'US' && usRate != null) {
+      return {country: code, kind: 'direct', zone: US_ZONE, rate: usRate, currency: 'USD'};
+    }
+    return {country: code, kind: 'shops'};
+  }
   if (!euSaleOpen(code, registrations)) return {country: code, kind: 'closed'};
   return {country: code, kind: 'direct', zone: zone.id, rate: zone.rate};
 }
 
+/** True for a quote in the US zone: a US consumer order. */
+export function isUsQuote(quote: ShippingQuote | null | undefined): boolean {
+  return quote?.kind === 'direct' && quote.zone === US_ZONE;
+}
+
 /** True for a known country outside the EU that is not blocked: it cannot buy direct. False for the EU, a blocked country and an unknown one
- *  (which the shop treats as its default EU market). */
-export function soldThroughShops(country: string | null): boolean {
-  return shippingQuote(country)?.kind === 'shops';
+ *  (which the shop treats as its default EU market), and for the US while
+ *  US sales are open. */
+export function soldThroughShops(country: string | null, usRate: number | null = null): boolean {
+  return shippingQuote(country, REGISTRATIONS, usRate)?.kind === 'shops';
 }
 
 /** Why a visitor from this country cannot buy direct: `shops` (outside
- *  the EU), `closed` (an EU country not open yet) or `blocked` (not sold
- *  at all, `BLOCKED_COUNTRIES`). Null for a country sold direct and an
- *  unknown one. */
-export function notSoldDirect(country: string | null): 'shops' | 'closed' | 'blocked' | null {
-  const kind = shippingQuote(country)?.kind;
+ *  the EU, and the US while US sales are closed), `closed` (an EU country
+ *  not open yet) or `blocked` (not sold at all, `BLOCKED_COUNTRIES`). Null
+ *  for a country sold direct and an unknown one. */
+export function notSoldDirect(
+  country: string | null,
+  usRate: number | null = null,
+): 'shops' | 'closed' | 'blocked' | null {
+  const kind = shippingQuote(country, REGISTRATIONS, usRate)?.kind;
   return kind === 'shops' || kind === 'closed' || kind === 'blocked' ? kind : null;
 }
 
@@ -136,9 +160,12 @@ export type ShipCountryOption = {code: string; name: string; rate: number | null
  * then a divider, then `rest`, every other listed country by name.
  * Each option carries its flat rate, or null where it buys through shops.
  */
-export function shipCountryPicker(locale = 'en'): {likely: ShipCountryOption[]; rest: ShipCountryOption[]} {
+export function shipCountryPicker(
+  locale = 'en',
+  usRate: number | null = null,
+): {likely: ShipCountryOption[]; rest: ShipCountryOption[]} {
   const withRate = ({code, name}: {code: string; name: string}): ShipCountryOption => {
-    const q = shippingQuote(code);
+    const q = shippingQuote(code, REGISTRATIONS, usRate);
     return {code, name, rate: q?.kind === 'direct' ? q.rate : null};
   };
   const all = shipCountryOptions(locale);
@@ -233,4 +260,15 @@ export function shipCountryForRequest(request: Request): string | null {
   const ip = isoCode(request.headers.get('CF-IPCountry'));
   if (ip) return ip;
   return countryFromAcceptLanguage(request.headers.get('Accept-Language'));
+}
+
+/**
+ * The one country the buy button (root loader) and the server-side add
+ * refusal read. While US sales are open (`usRate` set) it is
+ * `shipCountryForRequest`, the destination the cart and checkout read too.
+ * Closed, it is `visitorCountry` (`?country`, then `CF-IPCountry`), as the
+ * buy button has always read, and the add refuses no destination.
+ */
+export function buyerCountry(request: Request, usRate: number | null): string | null {
+  return usRate != null ? shipCountryForRequest(request) : visitorCountry(request);
 }
