@@ -42,8 +42,6 @@ export type BuildPart = {role: BuildRole; handle: string; sku: string; quantity:
 export type BuildSuggestion = BuildPart & {
   product: ProductCardFragment;
   variant: ProductVariantFragment;
-  /** A part of this role is in the cart, but for the other build size. */
-  replaces: string | null;
 };
 
 type CartLine = {sku: string | null; handle: string; variantTitle?: string};
@@ -100,26 +98,22 @@ function roleOf(config: BuildsConfig, line: CartLine): {role: BuildRole; build: 
 
 /**
  * The parts to suggest for `buildId`, in order: every part whose role the
- * cart does not already fill for this size (a size-neutral role is filled by
+ * cart does not already fill, at either size (a size-neutral role is filled by
  * any matching product), Shopify's ranking first, the build order after. A
- * part whose role the cart fills with the other size stays, carrying the
- * cart's version in `replaces`, so the dialog can say the sizes differ.
+ * second flight controller is never offered to a buyer who has one.
  */
 export function buildSuggestionSpecs(
   config: BuildsConfig,
   buildId: string | null,
   cart: readonly CartLine[] = [],
   preferredHandles: readonly string[] = [],
-): Array<BuildPart & {replaces: string | null}> {
+): BuildPart[] {
   const build = config.builds.find((b) => b.id === buildId);
   if (!build) return [];
   const filled = new Set<string>();
-  const otherSize = new Map<BuildRole, string>();
   for (const line of cart) {
     const r = roleOf(config, line);
-    if (!r) continue;
-    if (r.build === null || r.build === build.id) filled.add(r.role);
-    else otherSize.set(r.role, line.variantTitle || line.sku || '');
+    if (r) filled.add(r.role);
   }
   const rank = new Map(preferredHandles.map((handle, index) => [handle, index]));
   return build.parts
@@ -128,7 +122,6 @@ export function buildSuggestionSpecs(
       part: {
         ...p,
         handle: partHandle(config, p),
-        replaces: otherSize.get(p.role) ?? null,
       },
       index,
     }))
@@ -146,7 +139,7 @@ export function buildSuggestionSpecs(
  */
 export function resolveBuildSuggestions(
   products: readonly ProductCardFragment[],
-  specs: ReadonlyArray<BuildPart & {replaces: string | null}>,
+  specs: ReadonlyArray<BuildPart>,
   sellable: (handle: string, variant: ProductVariantFragment) => boolean,
 ): BuildSuggestion[] {
   return specs.flatMap((spec) => {

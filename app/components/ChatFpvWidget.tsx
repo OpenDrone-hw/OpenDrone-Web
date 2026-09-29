@@ -89,6 +89,13 @@ const NOTICE_SUMMARY_FALLBACK = 'AI assistant. How your question is used.';
 const BOTTOM_OBSTACLES = [
   '.buy-rail.is-pinned.is-mobile:not(.is-suppressed)',
   '.product-form',
+  // Any primary button (Pre-order on /preorder cards, related products, the
+  // notify button): the launcher stacks above it instead of sitting on its
+  // right end. Site audit 2026-09-29, 390 px.
+  '.btn-primary',
+  '.add-to-cart-form',
+  '.po-card-cta',
+  '.product-card-quickadd-btn',
   '.ship-line',
   '.product-buy-ship',
   '.product-buy-stock',

@@ -3808,6 +3808,20 @@ button.reset {
   line-height: 0;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
 }
+/* Phones and tablets: a smaller launcher covers less of the page (site
+   audit 2026-09-29: the 56 px emblem sat on chips, table cells and buttons
+   at 390 px). The emblem is scaled, never restyled. */
+@media (max-width: 959px) {
+  .chatfpv-widget-toggle {
+    width: 44px;
+    height: 44px;
+    border-radius: 11px;
+  }
+  .chatfpv-widget-toggle > svg {
+    width: 44px;
+    height: 44px;
+  }
+}
 /* Phone sheet only, while it is open: the sheet has its own header and
    close, so a second launcher sitting on its corner is redundant clutter.
    Stays in the DOM (not display:none) so it is still there, focusable
@@ -9308,10 +9322,15 @@ a.account-order-row:hover {
   color: var(--color-text-muted);
 }
 
-.legal-body code {
+.legal-body code,
+.cookie-settings-table code {
   font-family: var(--font-mono);
   font-size: 0.85em;
-  background: var(--color-bg-card);
+  /* reset.css sets `code { background: #ddd }`; without an explicit text
+     colour the chip was light text on light grey in dark mode. */
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
   padding: 0.1rem 0.35rem;
   border-radius: var(--r-xs);
 }
@@ -13571,6 +13590,11 @@ html.light .cart-added-suggestion img {
   font-size: 0.85rem;
   color: var(--color-text-muted);
 }
+.cart-added-split {
+  color: var(--color-gold-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .cart-added-foot form {
   margin: 0;
 }
@@ -13712,6 +13736,18 @@ html.light .cart-added-suggestion img {
 /* --------------------------------------------------------------------- */
 /* Splash loader: the manifest and the slow-load escape stack in one      */
 /* column, so the "loading models" line never draws over the checklist.  */
+.hero-load-stack {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 5.5rem);
+  transform: translateX(-50%);
+  z-index: 35;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  pointer-events: none;
+}
 
 /* ============================================
    PDP anchors and cart polish
@@ -14419,15 +14455,16 @@ html:not(.light) .trust-chip-oshwa-mark {
   text-underline-offset: 3px;
 }
 
-/* Mixed ship dates: one line, the split link muted beside it. */
-.cart-mixed-line .cart-split-form {
-  display: inline;
+/* Mixed ship dates: the parcel line, why it waits, then the split link on
+   its own line so it reads as the way to get the earlier items sooner. */
+.cart-mixed-note .cart-mixed-explain {
+  margin-top: var(--sp-1);
 }
-.cart-summary-page .cart-mixed-line .cart-split-link,
-.cart-summary-page .cart-mixed-line .cart-split-link:hover {
-  display: inline;
-  color: var(--color-text-muted);
-  font-size: inherit;
+.cart-mixed-note .cart-split-form {
+  margin: var(--sp-2) 0 0;
+}
+.cart-mixed-note .cart-split-link {
+  line-height: 1.4;
 }
 
 /* Pinned buy bar (main's): the variant chips, price and Pre-order, shown
@@ -14779,10 +14816,7 @@ body:has(.cart-added-overlay) .buy-rail.is-pinned {
   transform: translate(0, 0) scale(1);
 }
 .hero-load-overflow {
-  position: absolute;
-  top: calc(50vh + clamp(2.5rem, 5vw, 4.5rem) * 1.4);
-  left: 50vw;
-  transform: translateX(-50%);
+  position: relative;
   z-index: 35;
   display: flex;
   align-items: center;
@@ -15826,10 +15860,7 @@ html.hero-header-in .homepage-layout .site-header {
   }
 }
 .hero-load-manifest {
-  position: absolute;
-  left: 50%;
-  top: calc(50% + 5.5rem);
-  transform: translateX(-50%);
+  position: relative;
   z-index: 26;
   margin: 0;
   padding: 0;
