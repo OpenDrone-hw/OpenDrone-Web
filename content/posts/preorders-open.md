@@ -8,7 +8,7 @@ published: true
 launch: true
 ---
 
-OpenDrone starts with EU pilots. See [the preorder page](/preorder) for the
+OpenDrone starts with preorder rounds. See [the preorder page](/preorder) for the
 batches, prices, funding conditions and dates. Choose your delivery country on
 the product page to see whether orders are open for your destination.
 
@@ -16,8 +16,8 @@ Preorders are paid in full. Each offer states its dispatch estimate and final
 delivery commitment. You can cancel before delivery; the [preorder terms](/en/algemene-voorwaarden#art-7bis)
 explain refunds, missed funding targets and orders spanning multiple batches.
 
-Outside the EU, consumer checkout is unavailable. Consumers there can
-[register for launch news](/newsletter).
+Preorders ship to the EU and the United States. Elsewhere, consumer checkout
+is unavailable and consumers can [register for launch news](/newsletter).
 
 EU and US retailers interested in stocking OpenDrone can
 [request a bulk quote](/wholesale). We agree the products, import route and

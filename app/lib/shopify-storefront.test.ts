@@ -146,13 +146,13 @@ describe('Shopify hosted checkout handoff', () => {
       lines: {pageInfo: {hasNextPage: false}, nodes: [node(attributes)]},
     }})))!.lines[0];
     const mixed = await read([
-      {key: 'Preorder', value: 'ships with the rest of this order by 14 March 2027'},
-      {key: '_preorder_own', value: 'ships late October 2026'},
+      {key: 'Preorder', value: 'ships with the rest of this order by 31 March 2027'},
+      {key: '_preorder_own', value: 'ships early November 2026'},
     ]);
-    assert.equal(mixed.shipPromise, 'ships late October 2026');
-    assert.equal(mixed.orderPromise, 'ships with the rest of this order by 14 March 2027');
-    const plain = await read([{key: 'Preorder', value: 'ships late October 2026'}]);
-    assert.equal(plain.shipPromise, 'ships late October 2026');
+    assert.equal(mixed.shipPromise, 'ships early November 2026');
+    assert.equal(mixed.orderPromise, 'ships with the rest of this order by 31 March 2027');
+    const plain = await read([{key: 'Preorder', value: 'ships early November 2026'}]);
+    assert.equal(plain.shipPromise, 'ships early November 2026');
     assert.equal('orderPromise' in plain, false);
   });
 

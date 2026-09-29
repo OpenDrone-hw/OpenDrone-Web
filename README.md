@@ -794,7 +794,10 @@ delivery date, not a supplier or carrier date; `null` leaves it out of the
 promise. A batch with `regions` (`["EU"]` for paid stock in Belgium) takes
 only units shipping there: each paid unit takes the first batch with room
 that serves its order's shipping region (US, else EU), so a US unit skips an
-EU-only batch. Price steps and funding targets count every region. A producer
+EU-only batch. Price steps and funding targets count every region. The dates in
+the ship promises, terms and product notes derive from `endsOn`, `shipsBy`,
+`deliveryBy` and `deliveryByUS` in this file; `app/lib/preorder-campaign.test.ts`
+fails when the committed copy and legal text drift from it. A producer
 number alone does not open a destination; `saleApproved` does, after its
 evidence is reviewed. The strategy behind a campaign lives in
 the team's Notion

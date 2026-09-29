@@ -15,16 +15,16 @@ import {notSoldDirect, shippingQuote} from './shipping-rates.ts';
 import {handleShopifyCartAction, US_EU_ONLY_MESSAGE} from './shopify-cart-action.ts';
 import {handleCartCountry} from './shopify-cart-country.ts';
 import {mapShopifyCatalog, type CartLineInput, type ShopifyCart} from './shopify-storefront.ts';
-import {US_SALES, usSalesRate, withMarketPrices} from './us-sales.ts';
+import {US_SALES, fccConditionalSku, usSalesRate, withMarketPrices} from './us-sales.ts';
 import {priceNote} from './visitor-country.ts';
 
 const REAL = parseCampaignConfig(JSON.parse(fs.readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8')));
 const OPEN = new Date('2026-10-01T12:00:00Z');
-const PENDING = 'ships by 14 March 2027 if the target is reached by 22 November 2026, otherwise you choose a refund or to wait';
+const PENDING = 'ships by 31 March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait';
 const TIERS = [{upTo: 100, off: 0.2}, {upTo: 250, off: 0.1}];
 const EU_FIRST: CampaignBatch[] = [
-  {units: 250, paid: true, ships: 'ships late October 2026', regions: ['EU']},
-  {units: 250, deliveryBy: '2027-03-31'},
+  {units: 250, paid: true, ships: 'ships early November 2026', regions: ['EU']},
+  {units: 250, deliveryBy: '2027-04-15'},
 ];
 
 describe('US sales gate', () => {
@@ -55,7 +55,7 @@ describe('US sales gate', () => {
 
 describe('batch regions', () => {
   it('rejects unknown regions and a last funding batch that leaves a region out', () => {
-    const base = {countFrom: '2026-09-25', endsOn: '2026-11-22', shipsBy: '2027-03-14', priceTiers: TIERS, pendingShips: PENDING};
+    const base = {countFrom: '2026-09-25', endsOn: '2026-12-15', shipsBy: '2027-03-31', priceTiers: TIERS, pendingShips: PENDING};
     assert.throws(() => parseCampaignConfig({...base, skus: {A: {batches: [{units: 1, regions: ['UK']}]}}}), /regions/);
     assert.throws(() => parseCampaignConfig({...base, skus: {A: {batches: [{units: 1, regions: ['EU']}]}}}), /every region/);
     assert.ok(parseCampaignConfig({...base, skus: {A: {batches: EU_FIRST}}}));
@@ -71,7 +71,7 @@ describe('batch regions', () => {
     assert.equal(us.batch, 2);
     assert.equal(us.paidStock, false);
     assert.equal(us.paidLeft, null);
-    assert.match(us.shipPromise, /14 March 2027/);
+    assert.match(us.shipPromise, /31 March 2027/);
     assert.equal(promiseBatchMonth(us.shipPromise), 'March 2027');
     assert.deepEqual(us.batches.map((b) => b.status), ['other_region', 'current']);
     // The price step counts every region.
@@ -83,9 +83,9 @@ describe('batch regions', () => {
     assert.equal(eu.batch, 1);
     assert.equal(eu.paidStock, true);
     assert.equal(eu.paidLeft, 220);
-    assert.equal(eu.shipPromise, 'ships late October 2026');
+    assert.equal(eu.shipPromise, 'ships early November 2026');
     assert.equal(eu.ordered, 40);
-    assert.equal(promiseBatchMonth(eu.shipPromise), 'October 2026');
+    assert.equal(promiseBatchMonth(eu.shipPromise), 'November 2026');
   });
 
   it('allocates in order: US units fill batch 2, EU units past batch 1 follow', () => {
@@ -94,6 +94,30 @@ describe('batch regions', () => {
     assert.deepEqual(batchFill([{units: 250, paid: true, ships: 'x'}, {units: 250}], 300), [250, 50]);
     // Funding target counts US units too.
     assert.equal(campaignState(EU_FIRST, [{region: 'US', units: 250}], PENDING, TIERS).targetReached, true);
+  });
+
+  it('never lets a US buyer take batch-1 FC/ESC stock, however empty batch 2 is or full batch 1 is', () => {
+    const eu = ['OPENFC-LITE-2020', 'OPENFC-LITE-3030', 'OPENESC-2020', 'OPENESC-3030'];
+    for (const sku of eu) {
+      const batches = REAL.skus[sku].batches;
+      assert.deepEqual(batches[0].regions, ['EU'], `${sku} batch 1 is EU only`);
+      assert.equal(batches[0].paid, true);
+      assert.equal(batches[0].ships, 'ships early November 2026');
+      for (const ordered of [0, 1, 249, 250, 400]) {
+        const us = campaignState(batches, [{region: 'US', units: ordered}], REAL.pendingShips, [], null, 'US');
+        assert.notEqual(us.batch, 1, `${sku}: a US unit never lands in batch 1 (${ordered} US units ordered)`);
+        assert.equal(us.paidStock, false);
+        assert.ok(!/November 2026/.test(us.shipPromise), 'a US promise never names the early-November batch');
+      }
+      // US units do not use up batch-1 stock.
+      assert.deepEqual(batchFill(batches, [{region: 'US', units: 100}]), [0, 100]);
+      // The last batch of every SKU serves the US, so the US can always buy the run.
+      assert.equal(batches[batches.length - 1].regions, undefined);
+    }
+    // Only the four FC/ESC SKUs carry Belgian batch-1 stock.
+    for (const [sku, entry] of Object.entries(REAL.skus)) {
+      if (!eu.includes(sku)) assert.ok(entry.batches.every((b) => !b.regions), `${sku} has no EU-only batch`);
+    }
   });
 
   it('never gives a US unit Belgian accessory stock or an EU-only pinned batch', () => {
@@ -135,7 +159,7 @@ describe('US market prices', () => {
     const usd = catalogOf([variant({sku: 'OPENESC-2020', price: 53, compare_price: 66.3, currency: 'USD'})], 'USD');
     const eu = applyCampaign(eur, REAL, {'OPENESC-2020': 12}, OPEN, 'EU').products[0].variants[0];
     assert.equal(eu.currency, 'EUR');
-    assert.match(eu.ship_promise ?? '', /October 2026/);
+    assert.match(eu.ship_promise ?? '', /November 2026/);
     const us = withMarketPrices(applyCampaign(eur, REAL, {'OPENESC-2020': 12}, OPEN, 'US'), usd);
     const v = us.products[0].variants[0];
     assert.equal(us.currency, 'USD');
@@ -143,13 +167,13 @@ describe('US market prices', () => {
     assert.equal(v.price, 53);
     assert.equal(v.currency, 'USD');
     assert.equal(v.availability, 'preorder');
-    assert.match(v.ship_promise ?? '', /14 March 2027/);
+    assert.match(v.ship_promise ?? '', /31 March 2027/);
     assert.equal(v.campaign?.batch, 2);
     assert.equal(v.campaign?.paidStock, false);
     // Shopify's US price, and no derived next step.
     assert.equal(v.campaign?.price, 53);
     assert.equal(v.campaign?.nextPrice, null);
-    assert.match(v.ship_promise ?? '', /delivered by 15 April 2027/);
+    assert.match(v.ship_promise ?? '', /delivered by 30 April 2027/);
     assert.match(eu.ship_promise ?? '', /delivered by 30 November 2026/);
   });
 
@@ -231,7 +255,7 @@ describe('US cart with the gate on', () => {
     assert.equal(country, 'US');
     assert.equal(added[0].quantity, 2);
     const attrs = Object.fromEntries((added[0].attributes ?? []).map((a) => [a.key, a.value]));
-    assert.match(attrs.Preorder, /14 March 2027/);
+    assert.match(attrs.Preorder, /31 March 2027/);
     assert.equal(attrs._ship_region, 'US');
   });
 
@@ -271,7 +295,7 @@ describe('US cart with the gate on', () => {
     const line = {
       id: 'gid://shopify/CartLine/1', merchandiseId: 'gid://shopify/ProductVariant/OPENFC-LITE-2020', quantity: 1,
       title: 'OpenFC Lite', variantTitle: '20x20', handle: 'openfc-lite', sku: 'OPENFC-LITE-2020', image: null,
-      selectedOptions: [], shipPromise: 'ships late October 2026, delivered by 30 November 2026', total: {amount: '31.2', currencyCode: 'EUR'},
+      selectedOptions: [], shipPromise: 'ships early November 2026, delivered by 30 November 2026', total: {amount: '31.2', currencyCode: 'EUR'},
     };
     const response = await handleShopifyCartAction(post({intent: 'checkout'}, 'US'), ENV, {
       fetchCatalog: async () => usCatalog(),
@@ -298,5 +322,38 @@ describe('US cart with the gate on', () => {
     );
     assert.deepEqual(await response.json(), {country: 'US', applied: true});
     assert.deepEqual(set, ['US']);
+  });
+});
+
+describe('FCC conditional-sale disclosure', () => {
+  it('applies to the receivers only', () => {
+    for (const sku of ['OPENRX-LITE', 'OPENRX-LITE-UFL', 'OPENRX-MONO', 'OPENRX-GEMINI', 'openrx']) {
+      assert.equal(fccConditionalSku(sku), true, sku);
+    }
+    for (const sku of ['OPENFC-LITE-2020', 'OPENESC-3030', 'OPENFRAME-5', 'ACC-ANT-T', '', null, undefined]) {
+      assert.equal(fccConditionalSku(sku), false, String(sku));
+    }
+  });
+
+  it('carries the 2.803 wording in the product and cart copy, en only, with the refund line', () => {
+    for (const [file, key] of [['product-chrome', 'buy_us_fcc'], ['cart', 'us_fcc']] as const) {
+      const copy = JSON.parse(fs.readFileSync(new URL(`../../content/copy/${file}.json`, import.meta.url), 'utf8')) as Record<string, string>;
+      const text: string = copy[key];
+      assert.match(text, /has not been authorized as required by the rules of the Federal Communications Commission/);
+      assert.match(text, /conditional preorder/);
+      assert.match(text, /not delivered unless authorization is obtained/);
+      assert.match(text, /FCC rules do not address consumer protection, contractual or other provisions under federal or state law/);
+      assert.match(text, /we refund that item in full/);
+      assert.ok(!text.includes('\u2014'));
+    }
+  });
+
+  it('keeps the product and cart FCC notice word-identical and the general US notice on every product', () => {
+    const read = (file: string) => JSON.parse(fs.readFileSync(new URL(`../../content/copy/${file}.json`, import.meta.url), 'utf8')) as Record<string, string>;
+    const chrome = read('product-chrome');
+    const cart = read('cart');
+    assert.equal(chrome.buy_us_fcc, cart.us_fcc);
+    assert.equal(chrome.buy_us_notice, cart.us_notice);
+    assert.match(chrome.buy_us_notice, /FCC equipment authorization and US import clearance/);
   });
 });

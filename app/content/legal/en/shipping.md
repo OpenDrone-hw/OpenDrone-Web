@@ -1,6 +1,6 @@
 ## Shipping and delivery
 
-Incutec BV sells directly to consumers in the EU countries that can be selected at checkout, dispatched from Belgium, and, for preorders only, to consumers in the United States, dispatched from a US fulfilment warehouse (see the section United States below). Select your delivery country on the product page. A destination that is not open cannot proceed to checkout. The available delivery service and total charge are confirmed before payment.
+Incutec BV sells directly to consumers in the EU countries that can be selected at checkout, dispatched from Belgium or by our fulfilment partner, and, for preorders only, to consumers in the United States, dispatched by Incutec or its fulfilment partner (see the section United States below). Select your delivery country on the product page. A destination that is not open cannot proceed to checkout. The available delivery service and total charge are confirmed before payment.
 
 ### Shipping rates
 
@@ -29,9 +29,9 @@ For deliveries to the United States, Incutec BV sells directly to consumers for 
 - **Import duties:** Included in the price
 - **Sales tax:** Not collected
 - **Shipping:** Flat USD 9.95 per order
-- **Ships from:** A US fulfilment warehouse, after the batch has been imported into the United States
-- **Ship date:** By 14 March 2027, if the funding target is reached by 22 November 2026
-- **Delivery date:** By 15 April 2027
+- **Ships from:** Incutec or its fulfilment partner
+- **Ship date:** By 31 March 2027, if the funding target is reached by 15 December 2026
+- **Delivery date:** By 30 April 2027
 
 The ship date and delivery date stated on the product page and in your order confirmation are the ones that apply to your order. Delivery to the United States depends on FCC equipment authorization and US import clearance. If we cannot deliver an item to you for that reason, we refund that item in full. Refunds, shipping delays and the right to cancel for US deliveries follow [Article 7ter of the terms](/en/algemene-voorwaarden#art-7ter).
 

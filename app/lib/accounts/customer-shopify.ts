@@ -28,6 +28,7 @@
 import {adminGraphql, parseBatchTag, type AdminEnv} from '../preorder-fulfilment.ts';
 import {
   campaignDate,
+  configSoldUnder,
   datedShipParts,
   promiseDeliveredBy,
   shortCampaignDate,
@@ -174,7 +175,11 @@ export function batchPromiseOf(batch: CampaignBatch, config: Pick<CampaignConfig
  * that still match a live line (a shipsWith accessory counts through its
  * lead SKU). Null without a preorder tag or a matching live batch tag.
  */
-export function orderPromise(order: Pick<RawOrder, 'tags' | 'lineItems'>, config: CampaignConfig): OrderPromise | null {
+export function orderPromise(
+  order: Pick<RawOrder, 'tags' | 'lineItems'> & {createdAt?: string},
+  campaign: CampaignConfig,
+): OrderPromise | null {
+  const config = configSoldUnder(campaign, order.createdAt);
   if (!order.tags.includes('preorder')) return null;
   const shipsWith = config.shipsWith ?? {};
   const live = new Set(

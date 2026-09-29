@@ -85,6 +85,7 @@ import {fetchStatusFlagsFast, statusForHandle} from '~/lib/roadmap-data';
 import {parseCampaignConfig, priceLadder, promiseBatchMonth, tiersFor} from '~/lib/preorder-campaign';
 import {stepBarView} from '~/lib/preorder-meter';
 import {paysEuVat} from '~/lib/visitor-country';
+import {fccConditionalSku} from '~/lib/us-sales';
 import {notSoldDirect} from '~/lib/shipping-rates';
 import {registrationNumbers} from '~/lib/registrations';
 import preorders from '../../content/preorders.json';
@@ -1719,6 +1720,7 @@ function ProductPage() {
   // US unit ships in. An in-stock item ships to the EU only.
   const usBatch = usBuyer && campaign ? promiseBatchMonth(campaign.shipPromise) : null;
   const usEuOnly = usBuyer && !isBundle && !selectedVariant?.campaign && Boolean(selectedVariant?.availableForSale);
+  const fccConditional = fccConditionalSku(selectedVariant?.sku) || fccConditionalSku(product.handle);
   const usNotice = usBuyer && buyAvailable ? (
     <>
       {usBatch ? (
@@ -1729,6 +1731,14 @@ function ProductPage() {
       {usEuOnly ? (
         <p className="product-buy-ship" role="note">
           {say('product-chrome.buy_us_eu_only', 'Ships from stock in Belgium to EU addresses only')}
+        </p>
+      ) : null}
+      {fccConditional ? (
+        <p className="product-buy-ship product-buy-fcc" role="note">
+          {say(
+            'product-chrome.buy_us_fcc',
+            'FCC notice: this device has not been authorized as required by the rules of the Federal Communications Commission. It is sold to US buyers as a conditional preorder and is not delivered unless authorization is obtained. FCC rules do not address consumer protection, contractual or other provisions under federal or state law. If authorization is not obtained, we refund that item in full.',
+          )}
         </p>
       ) : null}
       <p className="product-buy-ship" role="note">

@@ -44,6 +44,9 @@ PUBLIC_COMING_SOON = "0"
 # to campaign preorders once content/us-sales.json sets the US rate; changing
 # it needs the founder's go.
 PUBLIC_US_SALES = "1"
+# Newsletter welcome sender (src app/lib/growth/welcome-email.ts). opendrone.be is a
+# verified Resend domain; without this the welcome goes from sales@incutec.eu.
+NEWSLETTER_FROM_EMAIL = "hello@opendrone.be"
 # Support tickets (README "Support"). Shopify writes: the `support` tag and
 # the `support.tickets` metafield on the matched customer. Reply emails are
 # on by the founder's go of 2026-09-27.

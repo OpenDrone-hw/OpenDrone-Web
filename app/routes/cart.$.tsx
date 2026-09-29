@@ -21,7 +21,8 @@ import {Txt} from '~/components/Txt';
 import {ShipChip, parcelPromise, shipChipText, soonerMonth} from '~/components/ShipChip';
 import {buildSeoMeta} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
-import {countryName, shippingQuote} from '~/lib/shipping-rates';
+import {fccConditionalSku} from '~/lib/us-sales';
+import {cartQuoteCountry, countryName, shippingQuote} from '~/lib/shipping-rates';
 import {ShipToSelect} from '~/components/ShipToSelect';
 import {paysEuVat} from '~/lib/visitor-country';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
@@ -145,7 +146,7 @@ export default function CartPage() {
           cart={cart}
           info={info}
           payments={payments}
-          country={rootData?.visitorCountry ?? null}
+          country={cartQuoteCountry(cart.country, rootData?.visitorCountry ?? null, rootData?.usShippingRate ?? null)}
           usRate={rootData?.usShippingRate ?? null}
           onSplit={(items) => updateRemoved([...removed.filter((r) => !items.some((i) => i.id === r.id)), ...items])}
         />
@@ -559,6 +560,14 @@ function CartLine({
             <small className="cart-line-error" role="alert">{t('line_over_batch', 'Only {left} left in batch 1.', {left: max})}</small>
           ) : max !== null && max < MAX_LINE_QUANTITY && line.quantity >= max ? (
             <small>{t('paid_left', '{left} left in batch 1', {left: max})}</small>
+          ) : null}
+          {us && fccConditionalSku(line.sku) ? (
+            <small role="note">
+              {t(
+                'us_fcc',
+                'FCC notice: this device has not been authorized as required by the rules of the Federal Communications Commission. It is sold to US buyers as a conditional preorder and is not delivered unless authorization is obtained. FCC rules do not address consumer protection, contractual or other provisions under federal or state law. If authorization is not obtained, we refund that item in full.',
+              )}
+            </small>
           ) : null}
           {us ? (
             <small role="note">

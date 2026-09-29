@@ -25,6 +25,15 @@ function loadUsSales(): UsSalesFile {
 export const US_SALES: UsSalesFile = loadUsSales();
 
 /**
+ * True for a radio-frequency product sold to the US as a conditional preorder
+ * (47 CFR 2.803): the receivers. The buy button and the cart show the FCC
+ * disclosure for these lines to a US buyer.
+ */
+export function fccConditionalSku(sku: string | null | undefined): boolean {
+  return /^OPENRX(-|$)/i.test(sku?.trim() ?? '');
+}
+
+/**
  * The flat US shipping rate in USD when US consumer sales are open, else
  * null: the gate `PUBLIC_US_SALES` is exactly "1" and the committed rate is
  * a finite, non-negative number. Every US decision (quote, cart, catalog,
