@@ -4,7 +4,8 @@ import {accountHeaders, accountsEnabled, redirectTo, sameOrigin} from '~/lib/acc
 import {legacyAccountResponse} from '~/lib/accounts/legacy';
 import {HISTORY_NOTICES, type HistoryNotice} from '~/lib/accounts/rights';
 import {clearSessionCookie, hasSessionCookie, readSession} from '~/lib/accounts/sessions';
-import {readCustomerAccount, type AccountOrder, type AccountShopifyData} from '~/lib/accounts/customer-shopify';
+import {readCustomerAccount, type AccountShopifyData} from '~/lib/accounts/customer-shopify';
+import {formatOrderDate, formatOrderMoney, orderItems, orderStatus} from '~/lib/accounts/order-display';
 import {subscribeWithShopify, unsubscribeWithShopify} from '~/lib/growth/shopify-newsletter';
 import {customerAccountUrl} from '~/lib/shop-links';
 import {supportHeaders} from '~/lib/support/server';
@@ -52,19 +53,54 @@ function devMockAccount(shopifyGid: string): AccountShopifyData | null {
       orders: [
         {
           id: 'mock-order-1',
-          name: '#1042',
-          createdAt: '2026-09-28T09:00:00Z',
+          name: '#1001',
+          createdAt: '2026-09-29T09:00:00Z',
           statusPageUrl: 'https://opendrone-test.myshopify.com/orders/1/authenticate?key=mock',
-          lines: [{sku: 'OPENFC-LITE-2020', name: 'OpenFC Lite', quantity: 1}],
-          preorderLabel: 'Preorder: ships by 14 March 2027 if reached',
+          lines: [
+            {sku: 'OPENFRAME-5', name: 'OpenFrame', variant: '5" Freestyle', quantity: 1},
+            {sku: 'OPENMOTOR-2306', name: 'OpenMotor', variant: '2306', quantity: 4},
+            {sku: 'OPENRX-MONO', name: 'OpenRX', variant: 'Mono', quantity: 1},
+            {sku: 'PROP-HQ-5043', name: 'HQProp 5x4.3x3 V2S propeller set', variant: '5 inch', quantity: 1},
+            {sku: 'OPENESC-3030', name: 'OpenESC', variant: '30×30', quantity: 1},
+            {sku: 'OPENFC-LITE-3030', name: 'OpenFC Lite', variant: '30×30', quantity: 1},
+          ],
+          total: {amount: '612.40', currencyCode: 'EUR'},
+          fulfillmentStatus: 'UNFULFILLED',
+          financialStatus: 'PAID',
+          cancelled: false,
+          isPreorder: true,
+          // The latest of the lines' promises: the early "late October 2026"
+          // line does not decide it, the March funding targets do.
+          promise: {kind: 'target', day: '2027-03-14', text: 'ships by 14 Mar 2027', delivered: null},
         },
         {
           id: 'mock-order-2',
           name: '#1031',
           createdAt: '2026-09-14T09:00:00Z',
           statusPageUrl: 'https://opendrone-test.myshopify.com/orders/2/authenticate?key=mock',
-          lines: [{sku: 'ACC-STRAP-15X200', name: 'Battery strap 15x200', quantity: 2}],
-          preorderLabel: null,
+          lines: [
+            {sku: 'ACC-STRAP-15X200', name: 'Battery strap 15x200', variant: null, quantity: 2},
+            {sku: 'ACC-XT60', name: 'XT60 pigtail', variant: '10 cm', quantity: 1},
+          ],
+          total: {amount: '18.50', currencyCode: 'EUR'},
+          fulfillmentStatus: 'FULFILLED',
+          financialStatus: 'PAID',
+          cancelled: false,
+          isPreorder: false,
+          promise: null,
+        },
+        {
+          id: 'mock-order-3',
+          name: '#1024',
+          createdAt: '2026-09-02T09:00:00Z',
+          statusPageUrl: null,
+          lines: [{sku: 'OPENFC-LITE-2020', name: 'OpenFC Lite', variant: '20×20', quantity: 1}],
+          total: {amount: '89.00', currencyCode: 'EUR'},
+          fulfillmentStatus: 'UNFULFILLED',
+          financialStatus: 'PAID',
+          cancelled: false,
+          isPreorder: true,
+          promise: {kind: 'date', day: '2026-10-31', text: 'ships late Oct 2026', delivered: '30 Nov 2026'},
         },
       ],
     };
@@ -142,23 +178,12 @@ const NEWSLETTER_NOTICE_TEXT: Record<NewsletterNotice, string> = {
   unavailable: 'Could not update your newsletter preference. Try again later.',
 };
 
-function orderDate(iso: string): string {
-  return new Intl.DateTimeFormat('en-GB', {day: 'numeric', month: 'short'}).format(new Date(iso));
-}
-
-function orderSummary(order: AccountOrder): string {
-  const lines = order.lines.map((l) => `${l.name} ×${l.quantity}`).join(', ') || 'No items';
-  const parts = [order.name, orderDate(order.createdAt), lines];
-  if (order.preorderLabel) parts.push(order.preorderLabel);
-  return parts.join(' · ');
-}
-
 export default function AccountRoute() {
   const {ordersUrl, since, notice, newsletterNotice, shopify} = useLoaderData<typeof loader>();
 
   return (
     <div className="page-shell sp-page">
-      <header className="page-header">
+      <header className="page-header account-header">
         <h1 className="page-title">Your account</h1>
         <div className="account-identity">
           <p className="page-description">
@@ -173,26 +198,53 @@ export default function AccountRoute() {
       </header>
 
       <section className="account-orders-card" aria-labelledby="account-orders-title">
-        <p className="account-dashboard-eyebrow-mono">Orders</p>
         <h2 id="account-orders-title" className="account-dashboard-card-title">
           Orders
         </h2>
         {shopify && shopify.orders.length > 0 ? (
           <>
             <ul className="account-orders-list">
-              {shopify.orders.map((order) =>
-                order.statusPageUrl ? (
-                  <li key={order.id}>
-                    <a href={order.statusPageUrl} className="account-order-row">
-                      {orderSummary(order)}
-                    </a>
+              {shopify.orders.map((order) => {
+                const status = orderStatus(order);
+                const {shown, more} = orderItems(order.lines);
+                const total = formatOrderMoney(order.total);
+                return (
+                  <li key={order.id} className="account-order">
+                    <div className="account-order-head">
+                      <p className="account-order-id">
+                        <span className="account-order-number">{order.name}</span>
+                        <span className="account-order-date">{formatOrderDate(order.createdAt)}</span>
+                      </p>
+                      {total ? <span className="account-order-total">{total}</span> : null}
+                    </div>
+                    <span className="account-order-chip" data-tone={status.tone}>
+                      {status.label}
+                    </span>
+                    {shown.length > 0 ? (
+                      <ul className="account-order-items">
+                        {shown.map((item) => (
+                          <li key={`${item.name}|${item.variant ?? ''}`}className="account-order-item">
+                            <span className="account-order-qty">{item.quantity}×</span>
+                            <span>
+                              {item.name}
+                              {item.variant ? <span className="account-order-variant">{item.variant}</span> : null}
+                            </span>
+                          </li>
+                        ))}
+                        {more > 0 ? <li className="account-order-more">+{more} more</li> : null}
+                      </ul>
+                    ) : (
+                      <p className="account-order-note">No items.</p>
+                    )}
+                    {status.note ? <p className="account-order-note">{status.note}</p> : null}
+                    {order.statusPageUrl ? (
+                      <a href={order.statusPageUrl} className="account-dashboard-card-link account-order-view">
+                        View order ›
+                      </a>
+                    ) : null}
                   </li>
-                ) : (
-                  <li key={order.id} className="account-order-row">
-                    {orderSummary(order)}
-                  </li>
-                ),
-              )}
+                );
+              })}
             </ul>
             {ordersUrl ? (
               <a href={ordersUrl} className="account-dashboard-card-link account-orders-all">
