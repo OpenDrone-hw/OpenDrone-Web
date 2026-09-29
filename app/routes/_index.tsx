@@ -53,6 +53,13 @@ type HomeFeaturedResult = {
 
 const BUILDS = parseBuilds(buildsJson);
 
+/**
+ * Phone layout: a narrow window, or a short landscape one (a phone on its
+ * side is 844px wide but only 390px tall, too short for the pinned hero).
+ */
+const MOBILE_HOME_QUERY =
+  '(max-width: 768px), (max-height: 500px) and (orientation: landscape)';
+
 export async function loader({request, context}: Route.LoaderArgs) {
   // UA hint picks the SSR layout so a phone gets the static MobileHome on
   // first paint instead of rendering the desktop 3D tree (and its
@@ -142,7 +149,7 @@ export default function Homepage() {
   const {isMobileHint, featured, heroBuilds} = useLoaderData<typeof loader>();
   const [isMobile, setIsMobile] = useState(isMobileHint);
   useEffect(() => {
-    const mq = window.matchMedia('(max-width: 768px)');
+    const mq = window.matchMedia(MOBILE_HOME_QUERY);
     const update = () => setIsMobile(mq.matches);
     update();
     mq.addEventListener('change', update);
@@ -279,7 +286,7 @@ function DesktopHome({heroBuilds}: {heroBuilds: Promise<HeroBuild[]>}) {
   );
 
   useEffect(() => {
-    const mq = window.matchMedia('(max-width: 768px)');
+    const mq = window.matchMedia(MOBILE_HOME_QUERY);
     const update = () => setIsMobile(mq.matches);
     update();
     mq.addEventListener('change', update);
