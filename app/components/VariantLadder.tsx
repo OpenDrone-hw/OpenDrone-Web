@@ -62,7 +62,10 @@ export function VariantLadder({
     const optionValue = axisOption?.optionValues.find(
       (v) => norm(v.name) === norm(value),
     );
-    const disabled = Boolean(content.comingSoon || (optionValue?.exists && !optionValue.available));
+    // Only an editorial coming-soon tier is unselectable. A sold-out or
+    // closed-checkout tier stays selectable so a visitor can read its specs,
+    // contents and images; the buy button alone reflects availability.
+    const disabled = Boolean(content.comingSoon);
     return {value, content, optionValue, disabled};
   });
   const tabValue = tiers.find((tier) => !tier.disabled && norm(tier.value) === norm(activeValue))?.value
