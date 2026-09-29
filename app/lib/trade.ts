@@ -644,8 +644,7 @@ export async function sendTradeRequest(
  * When each trade group ships, from the preorder campaign: the first batch
  * of the group's lead SKU (for an accessory, the batch it ships with). A batch with a ship date gives that date; a
  * funding target gives the latest planned date and its deadline, as terms
- * 7bis.2 do. Trade goods ship with that batch because they go through
- * Leuven for QC and packing like every other unit.
+ * 7bis.2 do. Trade goods ship with that batch, like every other unit.
  */
 export type TradeLeadTime = {
   /** "early November 2026", or the latest planned date of a funding target. */
