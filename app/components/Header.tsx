@@ -1,9 +1,10 @@
-import {useEffect, useRef, useState} from 'react';
+import {useEffect, useId, useRef, useState} from 'react';
 import {Form, useLocation} from 'react-router';
 import {NavLink} from '~/components/nav';
 import {AnimatePresence} from 'motion/react';
 import {useAside} from '~/components/Aside';
 import {LangToggle} from '~/components/LangToggle';
+import {useHeaderPopover} from '~/components/header-popover';
 import {RegionSwitch} from '~/components/RegionSwitch';
 import {ThemeToggle} from '~/components/ThemeToggle';
 import {SiteWordmark} from '~/components/SiteWordmark';
@@ -195,8 +196,8 @@ export function Header({
           </NavLink>
         )}
 
-        {/* Center: primary nav + gold category links on the same row */}
-        <HeaderMenu viewport="desktop" accountUrl={accountUrl} />
+        {/* Three zones on a grid (logo | product pills | links and utilities),
+            so the column gap is a guaranteed minimum between them. */}
         {/* Category families in segmented bubbles: FC and ESC share one
             (their rows sell the stack), while RX, Motors and Frame are standalone
             families so each gets its own bubble; All Products follows in its
@@ -714,6 +715,81 @@ export function HeaderMenu({
   );
 }
 
+/** Preorders, Wholesale, Contact: the quiet text links, inline on wide
+ *  screens and inside the "More" menu below that. */
+function SecondaryLinks({onNavigate}: {onNavigate?: () => void}) {
+  const cls = ({isActive}: {isActive: boolean}) =>
+    `site-header-link${isActive ? ' is-active' : ''}`;
+  return (
+    <>
+      <NavLink prefetch="intent" to="/preorder" className={cls} onClick={onNavigate}>
+        <Txt id="chrome.nav_preorder" />
+      </NavLink>
+      <NavLink prefetch="intent" to="/wholesale" className={cls} onClick={onNavigate}>
+        <Txt id="chrome.nav_trade" />
+      </NavLink>
+      <NavLink prefetch="intent" to="/support" className={cls} onClick={onNavigate}>
+        <Txt id="chrome.nav_contact" />
+      </NavLink>
+    </>
+  );
+}
+
+/** "More": the secondary links as a disclosure menu where they no longer fit
+ *  inline. Hidden by CSS on wide screens and on phones (the drawer has them). */
+function MoreMenu() {
+  const {open, setOpen, close, rootRef, triggerRef, onBlur} = useHeaderPopover();
+  const panelId = useId();
+  return (
+    <div
+      ref={rootRef}
+      onBlur={onBlur}
+      className="header-popover header-more"
+      data-open={open ? 'true' : undefined}
+    >
+      <button
+        ref={triggerRef}
+        type="button"
+        className="header-popover-trigger"
+        aria-expanded={open}
+        aria-controls={open ? panelId : undefined}
+        onClick={() => setOpen(!open)}
+      >
+        <Txt id="chrome.nav_more" />
+        <svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+          <path d="M2 3.5 5 6.5 8 3.5" />
+        </svg>
+      </button>
+      {open ? (
+        <nav
+          id={panelId}
+          className="header-popover-panel header-more-panel"
+          aria-label={copyText('chrome.nav_more_aria') ?? 'More pages'}
+        >
+          <SecondaryLinks onNavigate={() => close()} />
+        </nav>
+      ) : null}
+    </div>
+  );
+}
+
+function AccountIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21c0-4.2 3.6-7 8-7s8 2.8 8 7" />
+    </svg>
+  );
+}
+
 function HeaderCtas({
   accountUrl,
   cartUrl,
@@ -724,65 +800,38 @@ function HeaderCtas({
   hasCart: boolean;
 }) {
   return (
-    <nav className="flex items-center gap-2 md:gap-5 ml-auto" role="navigation">
-      {/* Hidden in the top bar on phones (it would overflow a 320px row on
-          legal pages); MobileMenuAside renders it inside the drawer instead. */}
-      <LangToggle className="header-lang-toggle" />
-      <NavLink
-        prefetch="intent"
-        to="/preorder"
-        className={({isActive}) =>
-          `font-mono text-[12px] uppercase tracking-[0.15em] transition-colors hidden md:block ${
-            isActive
-              ? 'text-[var(--color-text)]'
-              : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
-          }`
-        }
+    <div className="site-header-actions">
+      {/* Secondary zone: quiet text links, or "More" when they do not fit. */}
+      <nav
+        className="site-header-secondary"
+        aria-label={copyText('chrome.secondary_nav_aria') ?? 'Secondary'}
       >
-        <Txt id="chrome.nav_preorder" />
-      </NavLink>
-      <NavLink
-        prefetch="intent"
-        to="/wholesale"
-        className={({isActive}) =>
-          `font-mono text-[12px] uppercase tracking-[0.15em] transition-colors hidden md:block ${
-            isActive
-              ? 'text-[var(--color-text)]'
-              : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
-          }`
-        }
-      >
-        <Txt id="chrome.nav_trade" />
-      </NavLink>
-      <NavLink
-        prefetch="intent"
-        to="/support"
-        className={({isActive}) =>
-          `font-mono text-[12px] uppercase tracking-[0.15em] transition-colors hidden md:block ${
-            isActive
-              ? 'text-[var(--color-text)]'
-              : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
-          }`
-        }
-      >
-        <Txt id="chrome.nav_contact" />
-      </NavLink>
-      {/* Account, orders and addresses live in Shopify customer accounts:
-          an external link, not an in-app route. The signed-in state is
-          Shopify's to know, so the label is always "Account". */}
-      {accountUrl ? (
-        <a
-          href={accountUrl}
-          className="font-mono text-[12px] uppercase tracking-[0.15em] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors hidden md:block"
-        >
-          <Txt id={accountUrl.startsWith('/account/login') ? 'chrome.nav_signin' : 'chrome.nav_account'} />
-        </a>
-      ) : null}
-      <RegionSwitch className="header-region-switch" />
-      <ThemeToggle className="site-header-icon" />
-      <CartToggle cartUrl={cartUrl} hasCart={hasCart} />
-      <HeaderMenuMobileToggle />
-    </nav>
+        <SecondaryLinks />
+      </nav>
+      <MoreMenu />
+      {/* Utility zone. Hidden in the top bar on phones (it would overflow a
+          320px row on legal pages); MobileMenuAside renders the language and
+          currency controls inside the drawer instead. */}
+      <div className="site-header-utils">
+        <LangToggle className="header-lang-toggle" />
+        <RegionSwitch variant="menu" className="header-region-switch" />
+        <ThemeToggle className="site-header-icon" />
+        {/* Account, orders and addresses live in Shopify customer accounts:
+            an external link, not an in-app route. The signed-in state is
+            Shopify's to know, so the label is always "Account". */}
+        {accountUrl ? (
+          <a
+            href={accountUrl}
+            className="site-header-icon site-header-account"
+            aria-label={copyText('chrome.nav_account') ?? 'Account'}
+          >
+            <AccountIcon />
+          </a>
+        ) : null}
+        <CartToggle cartUrl={cartUrl} hasCart={hasCart} />
+        <HeaderMenuMobileToggle />
+      </div>
+    </div>
   );
 }
 

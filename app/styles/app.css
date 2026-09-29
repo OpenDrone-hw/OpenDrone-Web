@@ -746,7 +746,13 @@ html[data-cart-preview] .site-header {
    transient, so they never sustain the cost. */
 .site-header-main {
   pointer-events: auto;
-  display: flex;
+  /* Three zones: logo | product pills | links + utilities. The middle track
+     never shrinks below its pills, and column-gap is the guaranteed minimum
+     between zones (a margin between flex items collapses to nothing). */
+  display: grid;
+  grid-template-columns: auto minmax(max-content, 1fr) auto;
+  grid-template-areas: 'logo cats actions';
+  column-gap: clamp(1rem, 2vw, 2.25rem);
   align-items: center;
   height: var(--header-height);
   width: 100%;
@@ -766,6 +772,11 @@ html[data-cart-preview] .site-header {
 }
 .homepage-layout .site-main {
   padding-top: 0;
+}
+
+.site-header-main > .site-header-logo,
+.site-header-main > .site-header-incutec-slot {
+  grid-area: logo;
 }
 
 .site-header-logo {
@@ -929,17 +940,6 @@ html.anim-paused .board-sheet.is-active {
   opacity: 0.7;
 }
 
-.region-switch.header-region-switch button {
-  padding: 0.25rem 0.55rem;
-  font-size: 11px;
-}
-
-@media (max-width: 768px) {
-  .region-switch.header-region-switch {
-    display: none;
-  }
-}
-
 .region-switch.mobile-menu-region {
   margin: 0 0 0.75rem;
   align-self: flex-start;
@@ -1051,6 +1051,163 @@ html.anim-paused .board-sheet.is-active {
   }
 }
 
+/* Right zone: quiet text links, then the utility icons. */
+.site-header-actions {
+  grid-area: actions;
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: clamp(1rem, 1.6vw, 1.75rem);
+}
+.site-header-secondary {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.9rem, 1.3vw, 1.4rem);
+}
+.site-header-utils {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.site-header-link {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+  transition: color 0.15s ease;
+}
+.site-header-link:hover,
+.site-header-link.is-active {
+  color: var(--color-text);
+}
+@media (min-width: 769px) {
+  .site-header-utils .site-header-icon {
+    width: 2rem;
+    height: 2rem;
+  }
+  .site-header-utils .site-header-cart-count {
+    top: -0.1rem;
+    right: -0.25rem;
+  }
+}
+
+/* Dropdowns of the right zone: the currency menu and "More". Outlined, quiet
+   triggers; the panel is the pod material, right-aligned under the pill. */
+.header-popover {
+  position: relative;
+  display: inline-flex;
+}
+.header-popover-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 1.75rem;
+  padding: 0 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.header-popover-trigger:hover,
+.header-popover-trigger[aria-expanded='true'] {
+  color: var(--color-text);
+  border-color: color-mix(in srgb, var(--color-text) 35%, var(--color-border));
+}
+.header-popover-trigger:focus-visible,
+.header-popover-item:focus-visible,
+.header-popover-panel .site-header-link:focus-visible {
+  outline: 2px solid var(--color-gold-fill);
+  outline-offset: 2px;
+}
+.header-popover-panel {
+  position: absolute;
+  top: calc(100% + (var(--header-height) - 1.75rem) / 2 + 0.5rem);
+  right: 0;
+  z-index: 5;
+  min-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0.3rem;
+  background: var(--pod-bg-strong);
+  border: 1px solid var(--pod-border);
+  border-radius: var(--r-md);
+  box-shadow: var(--pod-shadow);
+}
+.header-popover-item,
+.header-more-panel .site-header-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.header-popover-item:hover,
+.header-more-panel .site-header-link:hover {
+  background: var(--color-bg-elevated);
+  color: var(--color-text);
+}
+.header-popover-item[aria-checked='true'],
+.header-more-panel .site-header-link.is-active {
+  color: var(--color-text);
+}
+.region-menu[aria-busy='true'] {
+  opacity: 0.7;
+}
+/* A dropdown open under the pill sits above the pinned buy rail (z 60). */
+.site-header:has(.header-popover[data-open]) {
+  z-index: 70;
+}
+
+/* "More" replaces the inline secondary links between the phone breakpoint and
+   the width where the pill has room for them next to the product pills. */
+.header-more {
+  display: none;
+}
+@media (min-width: 769px) and (max-width: 1439px) {
+  .site-header-secondary {
+    display: none;
+  }
+  .header-more {
+    display: inline-flex;
+  }
+}
+/* Legal pages add an NL/FR/EN toggle to the right zone; below 1200px the pill
+   has no room for it next to the product pills. The footer's "Legal texts"
+   line offers the same three languages. */
+@media (min-width: 769px) and (max-width: 1199px) {
+  .lang-toggle.header-lang-toggle {
+    display: none;
+  }
+}
+@media (max-width: 768px) {
+  .site-header-secondary,
+  .region-menu.header-region-switch,
+  .site-header-account {
+    display: none;
+  }
+}
+
 .site-header-logo:hover {
   opacity: 0.85;
 }
@@ -1060,8 +1217,9 @@ html.anim-paused .board-sheet.is-active {
 .site-header-categories {
   display: none;
   align-items: center;
-  gap: clamp(0.7rem, 1.4vw, 1.4rem);
-  margin-left: clamp(1rem, 2vw, 2.5rem);
+  justify-content: center;
+  grid-area: cats;
+  gap: clamp(0.5rem, 0.9vw, 0.9rem);
 }
 
 /* Family chip + its hover-drop Pod. The wrap carries the absolute centering so
