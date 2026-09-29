@@ -10,15 +10,36 @@
 
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
-import {fileURLToPath} from 'node:url';
+import {fileURLToPath, pathToFileURL} from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const BASE_PATH = path.join(__dirname, '_base.html');
-const BODIES_DIR = path.join(__dirname, 'bodies');
-const OUT_DIR = path.join(__dirname, 'out');
-const MAPPINGS_PATH = path.join(__dirname, 'mappings.json');
+export const BASE_PATH = path.join(__dirname, '_base.html');
+export const BODIES_DIR = path.join(__dirname, 'bodies');
+export const OUT_DIR = path.join(__dirname, 'out');
+export const MAPPINGS_PATH = path.join(__dirname, 'mappings.json');
+
+/** The pasteable template: base + body with the mappings.json metadata.
+ * Shared with the email preview (scripts/emails/). */
+export function composeTemplate(baseRaw, body, tpl) {
+  // Footer unsubscribe link for the marketing-flavored templates
+  // (mappings.json `unsubscribeFooter: true`). Notification Liquid has
+  // no unsubscribe variable, so the link goes to the site's manual
+  // form with the address prefilled. Transactional templates get ''.
+  // The storefront is opendrone.be, not Shopify's shop.url, which the
+  // headless redirect theme sends to the home page.
+  const unsubscribe = tpl.unsubscribeFooter
+    ? ' &middot;\n                  <a href="https://opendrone.be/newsletter/unsubscribe?email={{ customer.email | url_encode }}" style="color: #a0a0a0; text-decoration: underline;">unsubscribe</a>'
+    : '';
+
+  return baseRaw
+    .replaceAll('{{BODY_SLOT}}', body)
+    .replaceAll('{{TITLE}}', tpl.title)
+    .replaceAll('{{BADGE}}', tpl.badge)
+    .replaceAll('{{PREHEADER}}', tpl.preheader)
+    .replaceAll('{{UNSUBSCRIBE}}', unsubscribe);
+}
 
 async function main() {
   const [baseRaw, mappingsRaw] = await Promise.all([
@@ -45,22 +66,7 @@ async function main() {
       continue;
     }
 
-    // Footer unsubscribe link for the marketing-flavored templates
-    // (mappings.json `unsubscribeFooter: true`). Notification Liquid has
-    // no unsubscribe variable, so the link goes to the site's manual
-    // form with the address prefilled. Transactional templates get ''.
-    // The storefront is opendrone.be, not Shopify's shop.url, which the
-    // headless redirect theme sends to the home page.
-    const unsubscribe = tpl.unsubscribeFooter
-      ? ' &middot;\n                  <a href="https://opendrone.be/newsletter/unsubscribe?email={{ customer.email | url_encode }}" style="color: #a0a0a0; text-decoration: underline;">unsubscribe</a>'
-      : '';
-
-    let html = baseRaw.replaceAll('{{BODY_SLOT}}', body);
-    html = html
-      .replaceAll('{{TITLE}}', tpl.title)
-      .replaceAll('{{BADGE}}', tpl.badge)
-      .replaceAll('{{PREHEADER}}', tpl.preheader)
-      .replaceAll('{{UNSUBSCRIBE}}', unsubscribe);
+    const html = composeTemplate(baseRaw, body, tpl);
 
     const outPath = path.join(OUT_DIR, `${tpl.key}.html`);
     await fs.writeFile(outPath, html, 'utf8');
@@ -80,7 +86,9 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error('[gen.mjs] failed', err);
-  process.exit(1);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  main().catch((err) => {
+    console.error('[gen.mjs] failed', err);
+    process.exit(1);
+  });
+}

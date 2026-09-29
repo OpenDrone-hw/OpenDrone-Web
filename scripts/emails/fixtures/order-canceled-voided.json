@@ -1,0 +1,10 @@
+{
+  "_scenario": {
+    "title": "Canceled before capture, voided",
+    "description": "financial_status voided: the no-charge branch.",
+    "templates": [
+      "order-canceled"
+    ]
+  },
+  "financial_status": "voided"
+}

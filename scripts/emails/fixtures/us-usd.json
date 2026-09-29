@@ -1,0 +1,120 @@
+{
+  "_scenario": {
+    "title": "United States, USD, no VAT",
+    "description": "US address, presentment currency USD, no tax lines, import duties note.",
+    "templates": [
+      "order-confirmation",
+      "shipping-confirmation"
+    ]
+  },
+  "shop": {
+    "money_format": "${{amount}}",
+    "money_with_currency_format": "${{amount}} USD"
+  },
+  "name": "#9004",
+  "order_name": "#9004",
+  "order_number": 9004,
+  "customer": {
+    "first_name": "Jane",
+    "last_name": "Doe",
+    "name": "Jane Doe",
+    "email": "jane.doe@example.com"
+  },
+  "email": "jane.doe@example.com",
+  "currency": "USD",
+  "presentment_currency": "USD",
+  "line_items": [
+    {
+      "title": "OpenFC Lite",
+      "variant": {
+        "title": "20x20"
+      },
+      "quantity": 1,
+      "price": 7400,
+      "line_price": 7400,
+      "sku": "OPENFC-LITE-2020",
+      "image": "placeholder:OpenFC",
+      "product": {
+        "title": "OpenFC Lite"
+      },
+      "properties": {
+        "Preorder": "ships late October 2026, delivered by 30 November 2026"
+      }
+    }
+  ],
+  "subtotal_price": 7400,
+  "shipping_price": 1900,
+  "total_tax": 0,
+  "total_price": 9300,
+  "tax_lines": [],
+  "shipping_method": {
+    "title": "bpost world",
+    "price": 1900
+  },
+  "shipping_address": {
+    "name": "Jane Doe",
+    "first_name": "Jane",
+    "last_name": "Doe",
+    "company": "Example Hobby LLC",
+    "address1": "123 Example Avenue",
+    "address2": "Unit 4",
+    "street": "123 Example Avenue, Unit 4",
+    "city": "Springfield",
+    "zip": "62701",
+    "province": "Illinois",
+    "province_code": "IL",
+    "country": "United States",
+    "country_code": "US",
+    "phone": null
+  },
+  "billing_address": {
+    "name": "Jane Doe",
+    "first_name": "Jane",
+    "last_name": "Doe",
+    "company": "Example Hobby LLC",
+    "address1": "123 Example Avenue",
+    "address2": "Unit 4",
+    "street": "123 Example Avenue, Unit 4",
+    "city": "Springfield",
+    "zip": "62701",
+    "province": "Illinois",
+    "province_code": "IL",
+    "country": "United States",
+    "country_code": "US",
+    "phone": null
+  },
+  "order_status_url": "https://opendrone.be/account/orders/preview-9004",
+  "fulfillment": {
+    "item_count": 1,
+    "tracking_company": "bpost",
+    "tracking_numbers": [
+      "TEST-US-0000000004"
+    ],
+    "tracking_url": "https://track.bpost.cloud/btr/web/#/search?itemCode=TEST-US-0000000004&lang=en",
+    "tracking_urls": [
+      "https://track.bpost.cloud/btr/web/#/search?itemCode=TEST-US-0000000004&lang=en"
+    ],
+    "fulfillment_line_items": [
+      {
+        "line_item": {
+          "title": "OpenFC Lite",
+          "variant": {
+            "title": "20x20"
+          },
+          "quantity": 1,
+          "price": 7400,
+          "line_price": 7400,
+          "sku": "OPENFC-LITE-2020",
+          "image": "placeholder:OpenFC",
+          "product": {
+            "title": "OpenFC Lite"
+          },
+          "properties": {
+            "Preorder": "ships late October 2026, delivered by 30 November 2026"
+          }
+        },
+        "quantity": 1
+      }
+    ]
+  }
+}

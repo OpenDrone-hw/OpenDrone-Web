@@ -1,0 +1,70 @@
+{
+  "_scenario": {
+    "title": "Partial refund, one line",
+    "description": "One strap of two refunded from the mixed order.",
+    "templates": [
+      "order-refund"
+    ]
+  },
+  "name": "#9002",
+  "order_name": "#9002",
+  "order_number": 9002,
+  "financial_status": "partially_refunded",
+  "line_items": [
+    {
+      "title": "Battery Strap",
+      "variant": {
+        "title": "Default Title"
+      },
+      "quantity": 2,
+      "price": 795,
+      "line_price": 1590,
+      "sku": "ACC-STRAP",
+      "image": "placeholder:Strap",
+      "product": {
+        "title": "Battery Strap"
+      },
+      "properties": {}
+    },
+    {
+      "title": "OpenRX Lite",
+      "variant": {
+        "title": "Default Title"
+      },
+      "quantity": 1,
+      "price": 2995,
+      "line_price": 2995,
+      "sku": "OPENRX-LITE",
+      "image": "placeholder:OpenRX",
+      "product": {
+        "title": "OpenRX Lite"
+      },
+      "properties": {
+        "Preorder": "ships by 14 March 2027 if the target is reached by 22 November 2026, otherwise you choose a refund or to wait; if the target is reached in time, delivered by 31 March 2027"
+      }
+    }
+  ],
+  "amount": 795,
+  "refund_line_items": [
+    {
+      "line_item": {
+        "title": "Battery Strap",
+        "variant": {
+          "title": "Default Title"
+        },
+        "quantity": 2,
+        "price": 795,
+        "line_price": 1590,
+        "sku": "ACC-STRAP",
+        "image": "placeholder:Strap",
+        "product": {
+          "title": "Battery Strap"
+        },
+        "properties": {}
+      },
+      "quantity": 1,
+      "subtotal": 795
+    }
+  ],
+  "order_status_url": "https://opendrone.be/account/orders/preview-9002"
+}

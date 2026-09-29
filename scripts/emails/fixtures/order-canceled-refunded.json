@@ -1,0 +1,11 @@
+{
+  "_scenario": {
+    "title": "Canceled after payment, refunded",
+    "description": "financial_status refunded: the refund branch.",
+    "templates": [
+      "order-canceled"
+    ]
+  },
+  "financial_status": "refunded",
+  "amount": 7190
+}

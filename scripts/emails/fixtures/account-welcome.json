@@ -1,0 +1,12 @@
+{
+  "_scenario": {
+    "title": "Account welcome",
+    "description": "Customer context after sign-up.",
+    "templates": [
+      "customer-account-welcome"
+    ]
+  },
+  "customer": {
+    "accepts_marketing": true
+  }
+}

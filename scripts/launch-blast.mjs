@@ -28,7 +28,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import {fileURLToPath} from 'node:url';
+import {fileURLToPath, pathToFileURL} from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -155,7 +155,7 @@ function productTitle(handle) {
     .join(' ');
 }
 
-function renderBlast(handle) {
+export function renderBlast(handle) {
   const title = productTitle(handle);
   const url = `${SITE_ORIGIN}/products/${handle}?utm_source=newsletter&utm_medium=email&utm_campaign=launch-${handle}`;
   const subject = `${title} is live`;
@@ -262,7 +262,9 @@ async function main() {
   console.log('');
 }
 
-main().catch((err) => {
-  console.error(`\n[launch-blast] failed: ${err?.message ?? err}\n`);
-  process.exit(1);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  main().catch((err) => {
+    console.error(`\n[launch-blast] failed: ${err?.message ?? err}\n`);
+    process.exit(1);
+  });
+}

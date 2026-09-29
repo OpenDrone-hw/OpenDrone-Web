@@ -1,0 +1,87 @@
+{
+  "_scenario": {
+    "title": "Mixed order, Belgium, guest",
+    "description": "In-stock accessory plus a funding-target preorder line; guest checkout without a first name.",
+    "templates": [
+      "order-confirmation"
+    ]
+  },
+  "name": "#9002",
+  "order_name": "#9002",
+  "order_number": 9002,
+  "customer": {
+    "first_name": null,
+    "last_name": null,
+    "name": "",
+    "email": "guest.buyer@example.com"
+  },
+  "email": "guest.buyer@example.com",
+  "line_items": [
+    {
+      "title": "Battery Strap",
+      "variant": {
+        "title": "Default Title"
+      },
+      "quantity": 2,
+      "price": 795,
+      "line_price": 1590,
+      "sku": "ACC-STRAP",
+      "image": "placeholder:Strap",
+      "product": {
+        "title": "Battery Strap"
+      },
+      "properties": {}
+    },
+    {
+      "title": "OpenRX Lite",
+      "variant": {
+        "title": "Default Title"
+      },
+      "quantity": 1,
+      "price": 2995,
+      "line_price": 2995,
+      "sku": "OPENRX-LITE",
+      "image": "placeholder:OpenRX",
+      "product": {
+        "title": "OpenRX Lite"
+      },
+      "properties": {
+        "Preorder": "ships by 14 March 2027 if the target is reached by 22 November 2026, otherwise you choose a refund or to wait; if the target is reached in time, delivered by 31 March 2027"
+      }
+    }
+  ],
+  "subtotal_price": 4585,
+  "total_tax": 916,
+  "total_price": 5280,
+  "tax_lines": [
+    {
+      "title": "BE VAT",
+      "rate": 0.21,
+      "price": 916
+    }
+  ],
+  "order_status_url": "https://opendrone.be/account/orders/preview-9002",
+  "fulfillment": {
+    "item_count": 2,
+    "fulfillment_line_items": [
+      {
+        "line_item": {
+          "title": "Battery Strap",
+          "variant": {
+            "title": "Default Title"
+          },
+          "quantity": 2,
+          "price": 795,
+          "line_price": 1590,
+          "sku": "ACC-STRAP",
+          "image": "placeholder:Strap",
+          "product": {
+            "title": "Battery Strap"
+          },
+          "properties": {}
+        },
+        "quantity": 2
+      }
+    ]
+  }
+}

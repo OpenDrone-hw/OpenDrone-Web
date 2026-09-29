@@ -1,0 +1,12 @@
+{
+  "_scenario": {
+    "title": "Marketing double opt-in",
+    "description": "Customer context with a confirmation link.",
+    "templates": [
+      "customer-marketing-confirmation"
+    ]
+  },
+  "customer": {
+    "confirmation_url": "https://opendrone.be/account/confirm/preview-token"
+  }
+}
