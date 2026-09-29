@@ -818,7 +818,6 @@ function jstCable(p, ctx) {
   const gold = ctx.material('gold', '#e2b24e');
   const cols = p.colors ?? ['#c42a22', '#17181b', '#2f8f4b', '#e2c200', '#ecebe6', '#ecebe6', '#ecebe6', '#ecebe6'];
   const z0 = -run / 2;
-  const z1 = run / 2;
   const parts = [];
   for (const end of [-1, 1]) {
     const zc = end * (run / 2 + hd / 2);
