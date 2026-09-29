@@ -56,7 +56,7 @@ export function buyerRegion(request: Request | undefined, env: Pick<Env, 'PUBLIC
 async function withCampaign(env: Env, catalog: Catalog, region: Region): Promise<Catalog> {
   // A closed store has no campaign preorder variant and never calls the
   // Admin API.
-  if (!needsCampaignCounts(catalog, CAMPAIGN)) return catalog;
+  if (!needsCampaignCounts(catalog, CAMPAIGN, region)) return catalog;
   const units = await paidUnitRuns(env, CAMPAIGN.countFrom, CAMPAIGN_SKUS).catch(
     (error: unknown) => {
       console.error(

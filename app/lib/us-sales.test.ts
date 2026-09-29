@@ -12,7 +12,7 @@ import {
   type CampaignBatch,
 } from './preorder-campaign.ts';
 import {notSoldDirect, shippingQuote} from './shipping-rates.ts';
-import {handleShopifyCartAction, US_EU_ONLY_MESSAGE} from './shopify-cart-action.ts';
+import {handleShopifyCartAction, usSellable} from './shopify-cart-action.ts';
 import {handleCartCountry} from './shopify-cart-country.ts';
 import {mapShopifyCatalog, type CartLineInput, type ShopifyCart} from './shopify-storefront.ts';
 import {US_SALES, fccConditionalSku, usSalesRate, usdBand, usdLadder, usdOf, withMarketPrices} from './us-sales.ts';
@@ -240,6 +240,11 @@ function usCatalog(): Catalog {
       variants: [variant({sku: 'OPENFC-LITE-2020', price: 31.2, compare_price: 39})]},
     {handle: 'openrx', title: 'OpenRX', family: null, description: null, url: '/products/openrx', images: [], rating: null,
       variants: [variant({sku: 'OPENRX-LITE', availability: 'in_stock', ship_promise: null})]},
+    {handle: 'other', title: 'Other', family: null, description: null, url: '/products/other', images: [], rating: null,
+      variants: [
+        variant({sku: 'ACC-NEW-THING', availability: 'in_stock', ship_promise: null, price: 4, compare_price: null}),
+        variant({sku: 'ACC-GONE', availability: 'sold_out', ship_promise: null, price: 4, compare_price: null}),
+      ]},
   ];
   return applyCampaign(eur, REAL, {'OPENFC-LITE-2020': 3}, OPEN, 'US');
 }
@@ -260,14 +265,25 @@ describe('US cart with the gate on', () => {
     assert.equal(attrs._ship_region, 'US');
   });
 
-  it('refuses an in-stock SKU for a US destination with a clear message', async () => {
-    const error = await handleShopifyCartAction(post({sku: 'OPENRX-LITE', qty: '1'}, 'US'), ENV, {
+  it('sells an in-stock SKU to a US destination as a preorder of the March batch', async () => {
+    let added: CartLineInput[] = [];
+    await handleShopifyCartAction(post({sku: 'ACC-NEW-THING', qty: '1'}, 'US'), ENV, {
+      fetchCatalog: async () => usCatalog(),
+      createCart: async (lines) => { added = lines; return emptyCart(); },
+    });
+    const attrs = Object.fromEntries((added[0].attributes ?? []).map((a) => [a.key, a.value]));
+    assert.match(attrs.Preorder, /31 March 2027/);
+    assert.match(attrs.Preorder, /delivered by 30 April 2027/);
+    assert.equal(attrs._ship_region, 'US');
+  });
+
+  it('still refuses what is sold out for a US destination', async () => {
+    const error = await handleShopifyCartAction(post({sku: 'ACC-GONE', qty: '1'}, 'US'), ENV, {
       fetchCatalog: async () => usCatalog(),
       createCart: async () => { throw new Error('must not create'); },
     }).then(() => null, (e: unknown) => e);
     assert.ok(error instanceof Response);
     assert.equal(error.status, 409);
-    assert.equal(await error.text(), US_EU_ONLY_MESSAGE);
   });
 
   it('keeps the US closed when the rate is null, even with the gate on', async () => {
@@ -441,5 +457,59 @@ describe('US price uplift source', () => {
     const eurList = {id: 'e', name: 'EU', currency: 'EUR', parent: {adjustment: {type: 'PERCENTAGE_DECREASE', value: 0}}};
     assert.equal(findUsList([eurList, list]).id, list.id);
     assert.throws(() => findUsList([eurList]), /exactly one/);
+  });
+});
+
+describe('every product is purchasable by a US ship-to', () => {
+  const NOW = OPEN;
+  const skus = [...Object.keys(REAL.skus), ...Object.keys(REAL.shipsWith ?? {}), 'ACC-NOT-LISTED'];
+
+  /** One variant per SKU in the given sale mode, priced in EUR and in USD. */
+  function pair(mode: CatalogVariant['availability']) {
+    const eur = catalogOf(skus.map((sku) => variant({sku, availability: mode, ship_promise: null, price: 10, compare_price: null})));
+    const usd = catalogOf(skus.map((sku) => variant({sku, availability: mode, ship_promise: null, price: 15, compare_price: null, currency: 'USD'})), 'USD');
+    return {eur, usd};
+  }
+
+  for (const mode of ['preorder', 'in_stock'] as const) {
+    it(`sells every ${mode} SKU, campaign or not, to the US with the March promise`, () => {
+      const {eur, usd} = pair(mode);
+      const us = withMarketPrices(applyCampaign(eur, REAL, {}, NOW, 'US'), usd, REAL);
+      for (const v of us.products[0].variants) {
+        assert.equal(v.availability, 'preorder', v.sku);
+        assert.ok(usSellable(v), `${v.sku} must stay purchasable for a US ship-to`);
+        assert.equal(v.currency, 'USD', v.sku);
+        assert.match(v.ship_promise ?? '', /31 March 2027/, v.sku);
+        assert.match(v.ship_promise ?? '', /delivered by 30 April 2027/, v.sku);
+        assert.ok(v.campaign && !v.campaign.paidStock, v.sku);
+      }
+    });
+  }
+
+  it('keeps Belgian stock EU only and leaves the EU catalog unchanged', () => {
+    const {eur} = pair('in_stock');
+    const eu = applyCampaign(eur, REAL, {}, NOW, 'EU');
+    assert.ok(eu.products[0].variants.every((v) => v.availability === 'in_stock' && !usSellable(v)));
+    // Batch 1 FC/ESC paid stock is EU only, and the US still buys them from batch 2.
+    const preorder = pair('preorder');
+    const eu2 = applyCampaign(preorder.eur, REAL, {'OPENESC-3030': 1}, NOW, 'EU').products[0].variants.find((v) => v.sku === 'OPENESC-3030')!;
+    assert.equal(eu2.campaign?.batch, 1);
+    assert.equal(eu2.campaign?.paidStock, true);
+    const us2 = applyCampaign(preorder.eur, REAL, {'OPENESC-3030': 1}, NOW, 'US').products[0].variants.find((v) => v.sku === 'OPENESC-3030')!;
+    assert.equal(us2.campaign?.batch, 2);
+    assert.ok(usSellable(us2));
+  });
+
+  it('keeps a sold-out SKU sold out', () => {
+    const {eur, usd} = pair('sold_out');
+    const us = withMarketPrices(applyCampaign(eur, REAL, {}, NOW, 'US'), usd, REAL);
+    assert.ok(us.products[0].variants.every((v) => v.availability === 'sold_out'));
+  });
+
+  it('commits a usStock rule that serves the US', () => {
+    assert.deepEqual(REAL.usStock, {sku: 'OPENFC-LITE-2020', batch: 2});
+    const base = {countFrom: '2026-09-25', endsOn: '2026-12-15', shipsBy: '2027-03-31', priceTiers: TIERS, pendingShips: PENDING};
+    assert.throws(() => parseCampaignConfig({...base, skus: {A: {batches: EU_FIRST}}, usStock: {sku: 'A', batch: 1}}), /serve the US/);
+    assert.throws(() => parseCampaignConfig({...base, skus: {A: {batches: EU_FIRST}}, usStock: {sku: 'B', batch: 2}}), /usStock/);
   });
 });

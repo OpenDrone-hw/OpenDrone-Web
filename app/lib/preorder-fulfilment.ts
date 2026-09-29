@@ -20,7 +20,9 @@
  * the lead SKU's batch tag: its pinned batch, or the batch the lead's next
  * unit fell into when the order was placed. It adds no units to the lead.
  * One with `stock` counts its own EU units: those past its stock take the
- * `after` batch tag. A US unit never takes stock (`shipsWithBatch`).
+ * `after` batch tag. A US unit never takes stock (`shipsWithBatch`). Any
+ * other SKU on a US line (`_ship_region` US) follows `usStock` the same way,
+ * so an in-stock item bought for the US takes that batch's tag.
  *
  * An order whose shipping region differs from the region a preorder line's
  * promise was computed for (the hidden `_ship_region` line attribute, US;
@@ -53,6 +55,7 @@ import {
   regionOf,
   servesRegion,
   shipsWithBatch,
+  usStockRule,
   type CampaignConfig,
   type Region,
   type ShipsWith,
@@ -331,7 +334,12 @@ export function assignBatches(
     );
     for (const line of order.lineItems.nodes) {
       const sku = line.sku?.trim();
-      const rule = sku ? config.shipsWith?.[sku] : undefined;
+      // A US line the storefront priced for the US (`_ship_region` US) and
+      // the campaign does not list ships with the `usStock` batch. Without
+      // that line attribute it stays unassigned and `us-review` holds it.
+      const rule = sku
+        ? (config.shipsWith?.[sku] ?? (lineRegion(line) === 'US' ? usStockRule(config, sku, region) : null) ?? undefined)
+        : undefined;
       if (sku && rule && config.skus[rule.sku] && line.currentQuantity > 0) {
         const lead = config.skus[rule.sku].batches;
         const add = (batch: number, units: number) => {
@@ -518,12 +526,17 @@ export async function syncPreorderHolds(
 export function orderBatchesFromTags(
   order: PreorderOrder,
   shipsWith: Record<string, ShipsWith> = {},
+  usStock?: ShipsWith,
 ): Array<{sku: string; batch: number}> {
   const live = new Set(
     order.lineItems.nodes
       .filter((l) => l.currentQuantity > 0 && l.sku)
-      .map((l) => l.sku!.trim())
-      .map((sku) => shipsWith[sku]?.sku ?? sku),
+      .flatMap((l) => {
+        const sku = l.sku!.trim();
+        // A US line for a SKU the campaign does not list waits for the
+        // `usStock` lead's batch as well.
+        return [shipsWith[sku]?.sku ?? sku, ...(usStock && lineRegion(l) === 'US' ? [usStock.sku] : [])];
+      }),
   );
   return order.tags
     .map(parseBatchTag)
@@ -550,6 +563,7 @@ export function planRelease(
   batch: number,
   ready: ReadonlySet<string>,
   shipsWith: Record<string, ShipsWith> = {},
+  usStock?: ShipsWith,
 ): ReleasePlan[] {
   const covered = new Set([batchTag(sku, batch), ...ready]);
   const plans: ReleasePlan[] = [];
@@ -564,7 +578,7 @@ export function planRelease(
       .filter((fo) => fo.holdIds.length > 0);
     if (!release.length) continue;
     const waitsFor = [
-      ...orderBatchesFromTags(order, shipsWith)
+      ...orderBatchesFromTags(order, shipsWith, usStock)
         .map((b) => batchTag(b.sku, b.batch))
         .filter((tag) => !covered.has(tag)),
       // A US order under review is released by hand, never by a batch.

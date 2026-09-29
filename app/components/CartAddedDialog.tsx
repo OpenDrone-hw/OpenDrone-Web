@@ -27,6 +27,7 @@ import {trackEvent} from '~/lib/growth/plausible';
 import {CART_ADDED_EVENT, postCartAdd, withCountry, type CartAddedDetail} from '~/lib/cart-client';
 import {ShipToSelect} from './ShipToSelect';
 import {fccConditionalSku} from '~/lib/us-sales';
+import {promiseBatchMonth} from '~/lib/preorder-campaign';
 
 const CART_ACTION = '/api/shopify/cart';
 const BUILDS = parseBuilds(buildsJson);
@@ -233,10 +234,16 @@ export function CartAddedDialog() {
                 ) : null}
                 {usBuyer ? (
                   <small className="cart-added-line-qty" role="note">
-                    {t(
-                      'us_notice',
-                      'US delivery depends on FCC equipment authorization and US import clearance. If we cannot deliver to you, you get a full refund.',
-                    )}
+                    {fccConditionalSku(line.sku) || !promiseBatchMonth(line.shipPromise)
+                      ? t(
+                          'us_notice',
+                          'US delivery depends on FCC equipment authorization and US import clearance. If we cannot deliver to you, you get a full refund.',
+                        )
+                      : t(
+                          'us_notice_short',
+                          'US orders ship from the {batch} batch; if we cannot deliver, you get a full refund.',
+                          {batch: promiseBatchMonth(line.shipPromise) ?? ''},
+                        )}
                   </small>
                 ) : null}
               </div>

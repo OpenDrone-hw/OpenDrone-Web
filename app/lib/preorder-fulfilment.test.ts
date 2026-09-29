@@ -437,6 +437,36 @@ describe('US and EU orders in one campaign', () => {
     assert.equal(plans.has(reviewed.id), false);
   });
 
+  it('gives a US line for an unlisted SKU the usStock batch and no review; without the US line property it stays under review', () => {
+    const withUsStock = parseCampaignConfig({
+      countFrom: '2026-09-21',
+      endsOn: '2026-12-31', shipsBy: '2027-03-11',
+      priceTiers: [{upTo: 100, off: 0.2}],
+      pendingShips: 'ships about 10 weeks after its target is reached',
+      skus: {'OPENFC-LITE-2020': {batches: [{units: 3, paid: true, ships: 'ships early November 2026', regions: ['EU']}, {units: 250}]}},
+      usStock: {sku: 'OPENFC-LITE-2020', batch: 2},
+    });
+    const usItem = order({lines: [['NEW-THING', 2]], country: 'US', usPromise: true});
+    const euCartToUs = order({lines: [['NEW-THING', 1, false]], country: 'US'});
+    const euItem = order({lines: [['NEW-THING', 1, false]], country: 'BE'});
+    const batches = assignBatches([usItem, euCartToUs, euItem], withUsStock);
+    const view = (o: PreorderOrder) => (batches.get(o.id) ?? []).map((b) => `${b.item ?? b.sku}:${b.sku}:${b.batch}:${b.units}`);
+    assert.deepEqual(view(usItem), ['NEW-THING:OPENFC-LITE-2020:2:2']);
+    assert.deepEqual(view(euCartToUs), []);
+    assert.deepEqual(view(euItem), []);
+    const plans = new Map(planPreorderHolds([usItem, euCartToUs, euItem], withUsStock).map((p) => [p.orderId, p]));
+    assert.deepEqual(plans.get(usItem.id)!.tags, ['preorder', 'batch:OPENFC-LITE-2020:2']);
+    assert.deepEqual(plans.get(euCartToUs.id)!.tags, [US_REVIEW_TAG]);
+    assert.equal(plans.has(euItem.id), false);
+    // Released with its batch, like any US preorder.
+    const held = order({
+      lines: [['NEW-THING', 1]], country: 'US', usPromise: true,
+      tags: ['preorder', 'batch:OPENFC-LITE-2020:2'],
+      holds: [{id: 'h1', handle: PREORDER_HOLD_HANDLE}],
+    });
+    assert.deepEqual(planRelease([held], 'OPENFC-LITE-2020', 2, new Set(), {}, withUsStock.usStock)[0].waitsFor, []);
+  });
+
   it('never releases a us-review order with its batch', () => {
     const held = order({
       lines: [['OPENFC-LITE-2020', 1]],

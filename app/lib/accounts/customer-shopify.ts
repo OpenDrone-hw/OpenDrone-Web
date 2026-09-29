@@ -187,10 +187,18 @@ export function orderPromise(
       .filter((l) => l.currentQuantity > 0 && l.sku)
       .map((l) => shipsWith[l.sku!]?.sku ?? l.sku!),
   );
+  // A live line the campaign does not list ships with the `usStock` batch:
+  // that one batch tag stays live for it (a US order).
+  const usStock = config.usStock;
+  const unlisted = order.lineItems.nodes.some(
+    (l) => l.currentQuantity > 0 && l.sku && !config.skus[l.sku] && !shipsWith[l.sku],
+  );
   let latest: OrderPromise | null = null;
   for (const tag of order.tags) {
     const b = parseBatchTag(tag);
-    if (!b || !live.has(b.sku)) continue;
+    if (!b) continue;
+    const viaUsStock = unlisted && usStock && b.sku === usStock.sku && b.batch === usStock.batch;
+    if (!live.has(b.sku) && !viaUsStock) continue;
     const entry = config.skus[b.sku]?.batches[b.batch - 1];
     if (!entry) continue;
     const promise = batchPromiseOf(entry, config);
