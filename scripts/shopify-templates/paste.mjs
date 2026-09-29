@@ -38,10 +38,18 @@ class LoginRequired extends Error {}
 async function openEditor(page, tpl) {
   await page.goto(editUrl(HANDLE, tpl.adminPath), {waitUntil: 'domcontentloaded'});
   const url = () => page.url();
+  // CodeMirror 6 normally; a few templates (abandoned checkout) get a plain textarea.
   const editor = page.waitForFunction(
-    () => document.querySelector('.cm-content')?.cmView?.view,
+    () => {
+      if (document.querySelector('.cm-content')?.cmView?.view) return true;
+      const walk = (root) =>
+        [...root.querySelectorAll('*')].some(
+          (el) => (el.tagName === 'TEXTAREA' && el.value.length > 200) || (el.shadowRoot && walk(el.shadowRoot)),
+        );
+      return walk(document);
+    },
     null,
-    {timeout: EDITOR_TIMEOUT},
+    {timeout: EDITOR_TIMEOUT, polling: 500},
   );
   const login = page
     .waitForURL(/accounts\.shopify\.com|\/login/, {timeout: EDITOR_TIMEOUT})
@@ -58,64 +66,52 @@ async function openEditor(page, tpl) {
   }
 }
 
-async function readLive(page, tpl) {
-  return page.evaluate(
-    (expected) => {
-      // No eval: the admin page CSP forbids it, so the finder is inlined per call.
-      const findSubject = (expected) => {
-        const inputs = [];
-        const walk = (root) => {
-          for (const el of root.querySelectorAll('*')) {
-            if (el.tagName === 'INPUT' && (el.type === 'text' || !el.type)) inputs.push(el);
-            if (el.shadowRoot) walk(el.shadowRoot);
-          }
-        };
-        walk(document);
-        const label = (el) =>
-          [el.getAttribute('aria-label'), el.name, el.id, el.closest('label')?.textContent]
-            .filter(Boolean).join(' ');
-        return inputs.find((el) => /subject/i.test(label(el))) ||
-          inputs.find((el) => el.value === expected) || null;
-      };
-      const body = document.querySelector('.cm-content').cmView.view.state.doc.toString();
-      const input = findSubject(expected);
-      return {body, subject: input ? input.value : null};
-    },
-    tpl.emailSubject,
+// One in-page function for read and write. No eval (the admin CSP forbids it), so
+// everything is inlined here. `text` null = read only.
+function pageAccess([text, subject]) {
+  const inputs = [];
+  const areas = [];
+  const walk = (root) => {
+    for (const el of root.querySelectorAll('*')) {
+      if (el.tagName === 'INPUT' && (el.type === 'text' || !el.type)) inputs.push(el);
+      if (el.tagName === 'TEXTAREA') areas.push(el);
+      if (el.shadowRoot) walk(el.shadowRoot);
+    }
+  };
+  walk(document);
+  // The subject is the first text input that is not the admin search or Sidekick box.
+  const input = inputs.find(
+    (el) => el.name !== 'sidekickMessage' && !/^(search|work with sidekick)/i.test(el.getAttribute('aria-label') || ''),
   );
+  const view = document.querySelector('.cm-content')?.cmView?.view;
+  const area = view ? null : areas.sort((x, y) => y.value.length - x.value.length)[0];
+  const setNative = (el, proto, v) => {
+    Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, v);
+    el.dispatchEvent(new Event('input', {bubbles: true, composed: true}));
+    el.dispatchEvent(new Event('change', {bubbles: true, composed: true}));
+  };
+  if (text !== null) {
+    if (!input) return {error: 'subject input not found'};
+    if (view) view.dispatch({changes: {from: 0, to: view.state.doc.length, insert: text}});
+    else if (area) setNative(area, HTMLTextAreaElement.prototype, text);
+    else return {error: 'no editor'};
+    setNative(input, HTMLInputElement.prototype, subject);
+  }
+  return {
+    body: view ? view.state.doc.toString() : area ? area.value : null,
+    subject: input ? input.value : null,
+  };
+}
+
+async function readLive(page) {
+  const r = await page.evaluate(pageAccess, [null, null]);
+  if (r.body == null) throw new Error('editor body not readable');
+  return r;
 }
 
 async function write(page, tpl, html) {
-  const ok = await page.evaluate(
-    ([expected, text, subject]) => {
-      const findSubject = (expected) => {
-        const inputs = [];
-        const walk = (root) => {
-          for (const el of root.querySelectorAll('*')) {
-            if (el.tagName === 'INPUT' && (el.type === 'text' || !el.type)) inputs.push(el);
-            if (el.shadowRoot) walk(el.shadowRoot);
-          }
-        };
-        walk(document);
-        const label = (el) =>
-          [el.getAttribute('aria-label'), el.name, el.id, el.closest('label')?.textContent]
-            .filter(Boolean).join(' ');
-        return inputs.find((el) => /subject/i.test(label(el))) ||
-          inputs.find((el) => el.value === expected) || null;
-      };
-      const view = document.querySelector('.cm-content').cmView.view;
-      view.dispatch({changes: {from: 0, to: view.state.doc.length, insert: text}});
-      const input = findSubject(expected);
-      if (!input) return false;
-      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
-      setter.call(input, subject);
-      input.dispatchEvent(new Event('input', {bubbles: true, composed: true}));
-      input.dispatchEvent(new Event('change', {bubbles: true, composed: true}));
-      return true;
-    },
-    [tpl.emailSubject, html, tpl.emailSubject],
-  );
-  if (!ok) throw new Error('subject input not found');
+  const r = await page.evaluate(pageAccess, [html, tpl.emailSubject]);
+  if (r.error) throw new Error(r.error);
   const save = page.getByRole('button', {name: /^save$/i}).first();
   await save.waitFor({state: 'visible', timeout: 15_000});
   await save.click();
@@ -124,13 +120,13 @@ async function write(page, tpl, html) {
 
 async function processOne(page, tpl, html, apply) {
   await openEditor(page, tpl);
-  let live = await readLive(page, tpl);
+  let live = await readLive(page);
   let row = planRow(tpl, html, live);
   if (apply && row.action !== 'ok') {
     await write(page, tpl, html);
     await page.reload({waitUntil: 'domcontentloaded'});
     await openEditor(page, tpl);
-    live = await readLive(page, tpl);
+    live = await readLive(page);
     const after = planRow(tpl, html, live);
     if (after.action !== 'ok') {
       throw new Error(`verify failed after save: live ${after.liveHash?.slice(0, 12)} vs repo ${after.repoHash.slice(0, 12)}, subject ${after.subjectMatch ? 'match' : 'differs'}`);
