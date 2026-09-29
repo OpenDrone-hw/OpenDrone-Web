@@ -22,6 +22,8 @@
 //   --review-dir <dir>    where dark/debug variants go (default: $TMPDIR/in-the-box-review)
 //   --no-webp             skip the WebP derivatives
 //   --samples <n>         Cycles samples (default 96, denoised)
+//   --width <px>          render width (default 2400)
+//   --work-dir <dir>      keep the Blender job (scene.glb, tex/, job.json) there for re-renders
 //
 // Spec format: see scripts/in-the-box/specs/*.json. Every unique part of every
 // source must match exactly one group or one exclude pattern, otherwise the
@@ -63,6 +65,8 @@ function parseArgs(argv) {
     else if (a === '--no-webp') opts.webp = false;
     else if (a === '--only') opts.only = argv[++i];
     else if (a === '--samples') opts.samples = Number(argv[++i]);
+    else if (a === '--width') opts.width = Number(argv[++i]);
+    else if (a === '--work-dir') opts.workDir = resolve(argv[++i]);
     else if (a === '--design-dir') opts.designDir = resolve(argv[++i]);
     else if (a === '--probe') {
       while (argv[i + 1] && !argv[i + 1].startsWith('--')) opts.probe.push(resolve(argv[++i]));
@@ -159,6 +163,48 @@ function setContentImage(spec, out) {
   writeFileSync(file, `${JSON.stringify(data, null, 2)}\n`);
 }
 
+// One in-the-box row can cover several layout blocks (a hardware kit is a
+// dozen). Merge a row's boxes while their union stays compact (no more than
+// 1.6x the area they cover), so the image carries one bracket per group, then
+// pad each box a little off the parts. Boxes are percent, top-left origin.
+function mergeBoxes(boxes, width, height) {
+  const area = (b) => b.w * b.h;
+  const union = (a, b) => {
+    const x = Math.min(a.x, b.x);
+    const y = Math.min(a.y, b.y);
+    return {item: a.item, x, y, w: Math.max(a.x + a.w, b.x + b.w) - x, h: Math.max(a.y + a.h, b.y + b.h) - y,
+      covered: (a.covered ?? area(a)) + (b.covered ?? area(b))};
+  };
+  const out = [];
+  for (const item of [...new Set(boxes.map((b) => b.item))]) {
+    let group = boxes.filter((b) => b.item === item).map((b) => ({...b}));
+    for (let merged = true; merged && group.length > 1;) {
+      merged = false;
+      let best = null;
+      for (let i = 0; i < group.length; i++) {
+        for (let j = i + 1; j < group.length; j++) {
+          const u = union(group[i], group[j]);
+          const ratio = area(u) / u.covered;
+          if (ratio <= 1.6 && (!best || ratio < best.ratio)) best = {i, j, u, ratio};
+        }
+      }
+      if (best) {
+        group = group.filter((_, k) => k !== best.i && k !== best.j).concat(best.u);
+        merged = true;
+      }
+    }
+    out.push(...group);
+  }
+  const px = 0.9;
+  const py = (px * width) / height;
+  const r = (v) => Math.round(v * 100) / 100;
+  return out.map((b) => {
+    const x = Math.max(0, b.x - px);
+    const y = Math.max(0, b.y - py);
+    return {item: b.item, x: r(x), y: r(y), w: r(Math.min(100, b.x + b.w + px) - x), h: r(Math.min(100, b.y + b.h + py) - y)};
+  }).sort((a, b) => a.item - b.item || a.y - b.y || a.x - b.x);
+}
+
 function webps(png) {
   for (const w of WEBP_WIDTHS) {
     execFileSync('cwebp', ['-quiet', '-q', '90', '-alpha_q', '100', '-m', '6', '-sharp_yuv', '-resize', String(w), '0',
@@ -206,9 +252,10 @@ try {
       continue;
     }
     // Hand the composition to Blender.
-    const work = mkdtempSync(join(tmpdir(), 'in-the-box-'));
+    const work = opts.workDir ? join(opts.workDir, spec.handle, spec.variant) : mkdtempSync(join(tmpdir(), 'in-the-box-'));
     const texDir = join(work, 'tex');
-    mkdirSync(texDir);
+    rmSync(work, {recursive: true, force: true});
+    mkdirSync(texDir, {recursive: true});
     writeFileSync(join(work, 'scene.glb'), Buffer.from(out.glb, 'base64'));
     for (const [id, src] of Object.entries(out.textures)) {
       if (typeof src === 'string') writeDataUrl(join(texDir, `${id}.png`), src);
@@ -219,7 +266,8 @@ try {
     const jobFile = join(work, 'job.json');
     const boxesOut = join(work, 'boxes.json');
     writeFileSync(jobFile, JSON.stringify({glb: join(work, 'scene.glb'), texDir, out: png, boxesOut, width: 2400,
-      samples: opts.samples ?? 96, ...(spec.render ?? {}), tiltDeg: spec.camera?.tiltDeg ?? 0}));
+      ...(spec.render ?? {}), samples: opts.samples ?? spec.render?.samples ?? 96,
+      ...(opts.width ? {width: opts.width} : {}), tiltDeg: spec.camera?.tiltDeg ?? 0}));
     const r = spawnSync(blender, ['-b', '--factory-startup', '-P', join(here, 'blender_render.py'), '--', jobFile],
       {encoding: 'utf8', maxBuffer: 1 << 26});
     if (r.status !== 0 || !existsSync(boxesOut)) {
@@ -228,8 +276,9 @@ try {
       continue;
     }
     const result = JSON.parse(readFileSync(boxesOut, 'utf8'));
-    rmSync(work, {recursive: true, force: true});
-    Object.assign(out, {width: result.width, height: result.height, boxes: result.boxes});
+    if (!opts.workDir) rmSync(work, {recursive: true, force: true});
+    Object.assign(out, {width: result.width, height: result.height,
+      boxes: mergeBoxes(result.boxes, result.width, result.height)});
     for (const [bg, name] of [['#0d0d10', 'dark'], ['#f7f6f3', 'light']]) {
       execFileSync('magick', [png, '-background', bg, '-flatten', join(opts.reviewDir, `${spec.handle}-${spec.variant}-${name}.png`)]);
     }

@@ -9,22 +9,23 @@
     "public/models/od5/board-OpenRX-Mono.glb"
   ],
   "camera": {
-    "tiltDeg": 0
+    "tiltDeg": 12
   },
   "layout": {
-    "gapMm": 6,
+    "gapMm": 7,
     "sectionGapMm": 8,
-    "aspect": 1.5
+    "aspect": 1.2
   },
   "groups": [
     {
       "label": "ESD bag",
-      "row": 1,
       "procedural": {
         "kind": "esdBag",
         "w": 60,
-        "h": 80
-      }
+        "h": 90
+      },
+      "item": "ESD bag",
+      "row": 1
     },
     {
       "label": "OpenRX Mono board",
@@ -32,7 +33,6 @@
       "combine": "all",
       "count": 1,
       "finish": "original",
-      "row": 1,
       "on": "ESD bag",
       "up": [
         0,
@@ -42,7 +42,9 @@
       "keepYaw": true,
       "recolor": {
         "_PCB$": "#3f4a33"
-      }
+      },
+      "row": 1,
+      "item": "OpenRX board"
     },
     {
       "label": "30 AWG wires",
@@ -57,28 +59,19 @@
           "white"
         ]
       },
-      "row": 2,
-      "lay": "x"
-    },
-    {
-      "label": "Heat-shrink",
-      "procedural": {
-        "kind": "heatShrink",
-        "len": 22,
-        "w": 13
-      },
-      "count": 2,
-      "row": 2
+      "item": "Silicone hook-up",
+      "row": 1
     },
     {
       "label": "Bind and quick-start card",
-      "row": 1,
       "procedural": {
         "kind": "card",
         "w": 85,
         "h": 55,
         "caption": "OpenRX · Bind and quick start"
-      }
+      },
+      "row": 1,
+      "item": "Bind and quick-start card"
     },
     {
       "label": "Dual-band T-dipole",
@@ -89,8 +82,21 @@
         "dualBand": true
       },
       "count": 1,
+      "item": "Dual-band",
       "row": 1,
       "lay": "x"
+    },
+    {
+      "label": "Heat-shrink",
+      "procedural": {
+        "kind": "heatShrink",
+        "len": 22,
+        "w": 13
+      },
+      "count": 2,
+      "item": "Heat-shrink",
+      "below": "Bind and quick-start card",
+      "perRow": 2
     }
   ],
   "exclude": []

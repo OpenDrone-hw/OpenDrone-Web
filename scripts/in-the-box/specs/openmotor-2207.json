@@ -9,12 +9,12 @@
     "public/models/od5/drive.glb"
   ],
   "camera": {
-    "tiltDeg": 0
+    "tiltDeg": 12
   },
   "layout": {
-    "gapMm": 6,
+    "gapMm": 7,
     "sectionGapMm": 8,
-    "aspect": 1.5,
+    "aspect": 1.2,
     "minSpanMm": 34
   },
   "groups": [
@@ -24,13 +24,47 @@
       "combine": true,
       "count": 1,
       "finish": "alu",
-      "row": 1,
       "up": [
         0,
         0,
         1
       ],
-      "keepYaw": true
+      "keepYaw": true,
+      "item": "Motor",
+      "row": 1
+    },
+    {
+      "label": "M3x8 screws",
+      "procedural": {
+        "kind": "screw",
+        "d": 3,
+        "len": 8
+      },
+      "count": 4,
+      "perRow": 4,
+      "item": "Mounting screws, M3 × 8 mm",
+      "row": 1
+    },
+    {
+      "label": "M3x9 screws",
+      "procedural": {
+        "kind": "screw",
+        "d": 3,
+        "len": 9
+      },
+      "count": 4,
+      "perRow": 4,
+      "item": "Mounting screws, M3 × 9 mm",
+      "below": "M3x8 screws"
+    },
+    {
+      "label": "M5 nylock nut",
+      "procedural": {
+        "kind": "nut",
+        "d": 5
+      },
+      "row": 1,
+      "item": "Prop nut"
     }
   ],
   "exclude": [

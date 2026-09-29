@@ -9,12 +9,12 @@
     "public/models/od3/drive.glb"
   ],
   "camera": {
-    "tiltDeg": 0
+    "tiltDeg": 12
   },
   "layout": {
-    "gapMm": 6,
+    "gapMm": 7,
     "sectionGapMm": 8,
-    "aspect": 1.5,
+    "aspect": 1.2,
     "minSpanMm": 34
   },
   "groups": [
@@ -24,13 +24,38 @@
       "combine": true,
       "count": 1,
       "finish": "alu",
-      "row": 1,
       "up": [
         0,
         0,
         1
       ],
-      "keepYaw": true
+      "keepYaw": true,
+      "item": "Motor",
+      "row": 1
+    },
+    {
+      "label": "M2x6 screws",
+      "procedural": {
+        "kind": "screw",
+        "d": 2,
+        "len": 6
+      },
+      "count": 4,
+      "perRow": 4,
+      "item": "Mounting screws, M2 × 6 mm",
+      "row": 1
+    },
+    {
+      "label": "M2x7 screws",
+      "procedural": {
+        "kind": "screw",
+        "d": 2,
+        "len": 7
+      },
+      "count": 4,
+      "perRow": 4,
+      "item": "Mounting screws, M2 × 7 mm",
+      "below": "M2x6 screws"
     }
   ],
   "exclude": [

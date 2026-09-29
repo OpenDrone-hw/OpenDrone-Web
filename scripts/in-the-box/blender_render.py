@@ -54,6 +54,7 @@ try:
     cy.device = 'GPU'
 except Exception:  # noqa: BLE001 - CPU fallback is fine
     cy.device = 'CPU'
+print('IN_THE_BOX_DEVICE', cy.device, [d.name for d in prefs.devices if d.use])
 cy.samples = int(JOB.get('samples', 96))
 cy.use_denoising = True
 cy.denoiser = 'OPENIMAGEDENOISE'
@@ -61,8 +62,11 @@ cy.max_bounces = 8
 cy.glossy_bounces = 4
 cy.transparent_max_bounces = 16
 scene.render.film_transparent = True
-scene.view_settings.view_transform = 'Standard'
-scene.view_settings.look = 'None'
+scene.view_settings.view_transform = JOB.get('view', 'Khronos PBR Neutral')
+try:
+    scene.view_settings.look = JOB.get('look', 'None')
+except TypeError:
+    scene.view_settings.look = 'None'
 scene.view_settings.exposure = float(JOB.get('exposure', 0.0))
 
 # ---- Materials ------------------------------------------------------------
@@ -109,7 +113,13 @@ class Graph:
             sock.default_value = value
 
     def uv(self):
-        return self.n('ShaderNodeTexCoord').outputs['UV']
+        # stage.js canvas textures use three.js flipY (v=0 at the image bottom); the
+        # exported UVs are raw, so flip V back for images loaded from texDir.
+        vm = self.n('ShaderNodeVectorMath', operation='MULTIPLY_ADD')
+        self.link(self.n('ShaderNodeTexCoord').outputs['UV'], vm.inputs[0])
+        vm.inputs[1].default_value = (1.0, -1.0, 1.0)
+        vm.inputs[2].default_value = (0.0, 1.0, 0.0)
+        return vm.outputs[0]
 
     def tex(self, tid, data=True, vector=None, closest=False):
         t = self.n('ShaderNodeTexImage')
@@ -203,11 +213,15 @@ def anodised(ud, brushed=False):
     g = Graph('alu')
     bev = g.bevel(float(ud.get('bevel', 0.0003)))
     edge = g.edge_mask(bev, 2.5)
-    base = rgba(ud.get('color', '#16171a'))
+    # Anodising is a dyed oxide over metal: a dark satin that still shows the
+    # overhead diffuser, not a black mirror. Lift very dark colours.
+    base = tuple(max(c, 0.028) for c in rgba(ud.get('color', '#16171a'))[:3]) + (1.0,)
     # Bead blast: satin body; the cut chamfer catches light brighter.
     g.set('Base Color', g.mix(edge, base, rgba(ud.get('chamfer', '#8a8d93'))))
-    g.set('Metallic', 1.0)
-    g.set('Roughness', g.math('ADD', g.math('MULTIPLY', edge, -0.2), 0.42 if not brushed else 0.3))
+    g.set('Metallic', 0.75)
+    g.set('Coat Weight', 0.2)
+    g.set('Coat Roughness', 0.45)
+    g.set('Roughness', g.math('ADD', g.math('MULTIPLY', edge, -0.25), float(ud.get('roughness', 0.52 if not brushed else 0.34))))
     if brushed:
         g.set('Anisotropic', 0.7)
     g.set('Normal', g.bump(g.noise(9000, 1.0), 0.08, 0.00002, bev))
@@ -252,16 +266,19 @@ def rubber(ud, rough=0.6):
 
 def pad(ud):
     g = Graph('pad')
-    g.set('Base Color', rgba(ud.get('color', '#1c1d20')))
-    g.set('Roughness', 0.72)
-    g.set('Sheen Weight', 0.3)
-    bev = g.bevel(0.0004)
-    micro = g.bump(g.noise(2600, 3.0), 0.35, 0.00004, bev)
     mask = g.tex(ud['tex']['deboss'], True, g.uv()).outputs['Color']
-    blur = g.n('ShaderNodeSeparateColor')
-    g.link(mask, blur.inputs[0])
-    depth = g.math('SUBTRACT', 1.0, blur.outputs[0])
-    g.set('Normal', g.bump(depth, 1.0, float(ud.get('depthMm', 0.35)) / 1000, micro))
+    sep = g.n('ShaderNodeSeparateColor')
+    g.link(mask, sep.inputs[0])
+    letters = g.math('SUBTRACT', 1.0, sep.outputs[0])
+    base = rgba(ud.get('color', '#1c1d20'))
+    # Moulded silicone: matte skin, the debossed wordmark floor is smoother and a
+    # touch darker, which is what makes it readable in a photo.
+    g.set('Base Color', g.mix(letters, base, tuple(c * 0.6 for c in base[:3]) + (1.0,)))
+    g.set('Roughness', g.math('ADD', g.math('MULTIPLY', letters, -0.4), 0.78))
+    g.set('Sheen Weight', 0.3)
+    bev = g.bevel(0.0005)
+    micro = g.bump(g.noise(2600, 3.0), 0.3, 0.00004, bev)
+    g.set('Normal', g.bump(sep.outputs[0], 1.0, float(ud.get('depthMm', 0.35)) / 1000, micro))
     return g.mat
 
 
@@ -306,21 +323,54 @@ def vinyl(ud):
 
 
 def bag(ud):
+    """Metallised static-shielding film: a thin aluminium layer you can half see
+    through. Silver mirror sheen that breaks into crinkle speculars, darker
+    where the dim contents show, opaque black ink for the wordmark."""
     g = Graph('bag')
-    uv = g.uv()
-    col = g.tex(ud['tex']['color'], False, uv)
-    g.set('Base Color', col.outputs['Color'])
-    g.set('Metallic', 0.85)
-    g.set('Roughness', 0.18)
-    if 'alpha' in ud['tex']:
-        a = g.tex(ud['tex']['alpha'], True, uv).outputs['Color']
-        g.set('Alpha', a)
+    t = ud.get('tex', {})
+    uv = g.uv() if t else None
+    silver = g.tex(t['color'], False, uv).outputs['Color'] if 'color' in t else rgba('#b4b8be')
+    ink = g.tex(t['ink'], True, uv).outputs['Color'] if 'ink' in t else None
+    if ink is not None:
+        inkv = g.n('ShaderNodeSeparateColor')
+        g.link(ink, inkv.inputs[0])
+        ink = inkv.outputs[0]
+        g.set('Base Color', g.mix(ink, silver, rgba('#0a0a0b')))
+        g.set('Metallic', g.math('SUBTRACT', 1.0, ink))
+        g.set('Roughness', g.math('ADD', g.math('MULTIPLY', ink, 0.2), float(ud.get('roughness', 0.24))))
     else:
-        g.set('Alpha', float(ud.get('alpha', 0.8)))
-    crinkle = g.math('ADD', g.noise(700, 6.0), g.math('MULTIPLY', g.noise(90, 2.0), 1.5))
-    if 'height' in ud['tex']:
-        crinkle = g.math('ADD', crinkle, g.math('MULTIPLY', g.tex(ud['tex']['height'], True, uv).outputs['Color'], 0.6))
-    g.set('Normal', g.bump(crinkle, 0.6, 0.0004))
+        g.set('Base Color', silver)
+        g.set('Metallic', 1.0)
+        g.set('Roughness', 0.16)
+    if 'alpha' in t:
+        sep = g.n('ShaderNodeSeparateColor')
+        g.link(g.tex(t['alpha'], True, uv).outputs['Color'], sep.inputs[0])
+        g.set('Alpha', sep.outputs[0])
+    else:
+        g.set('Alpha', float(ud.get('alpha', 0.6)))
+    # Crumpled film: sharp creases (Voronoi cell edges, noise-distorted) at two
+    # scales plus soft undulation; the geometry carries the big folds.
+    pos = g.n('ShaderNodeNewGeometry').outputs['Position']
+    creases = None
+    for scale, amp in ((55.0, 1.0), (140.0, 0.35)):
+        vor = g.n('ShaderNodeTexVoronoi', feature='DISTANCE_TO_EDGE')
+        vor.inputs['Scale'].default_value = scale
+        warp = g.n('ShaderNodeTexNoise')
+        warp.inputs['Scale'].default_value = scale * 0.6
+        g.link(pos, warp.inputs['Vector'])
+        vec = g.n('ShaderNodeVectorMath', operation='MULTIPLY_ADD')
+        g.link(warp.outputs['Color'], vec.inputs[0])
+        vec.inputs[1].default_value = (0.004, 0.004, 0.004)
+        g.link(pos, vec.inputs[2])
+        g.link(vec.outputs[0], vor.inputs['Vector'])
+        edge = g.math('POWER', g.math('MINIMUM', g.math('MULTIPLY', vor.outputs['Distance'], 6.0), 1.0), 0.5)
+        term = g.math('MULTIPLY', edge, amp)
+        creases = term if creases is None else g.math('ADD', creases, term)
+    n = g.bump(creases, float(ud.get('crinkle', 0.2)), 0.0001)
+    n = g.bump(g.noise(260, 2.0), 0.08, 0.00004, n)
+    if 'height' in t:
+        n = g.bump(g.tex(t['height'], True, uv).outputs['Color'], 0.8, 0.00005, n)
+    g.set('Normal', n)
     return g.mat
 
 
@@ -366,7 +416,7 @@ BUILD = {
     'carbon': carbon,
     'alu': anodised,
     'alu-brushed': lambda ud: anodised(ud, brushed=True),
-    'steel': lambda ud: metal(ud.get('color') if ud.get('color', '#5a5f67') != '#5a5f67' else '#1d1f23', 0.26, 0.3),
+    'steel': lambda ud: metal(ud.get('color') if ud.get('color', '#5a5f67') != '#5a5f67' else '#2e3136', 0.3, 0.3),
     'zinc': lambda ud: metal(ud.get('color') if ud.get('color', '#aeb4bb') != '#aeb4bb' else '#c3c8cf', 0.2),
     'gold': lambda ud: metal('#e2b24e', 0.18),
     'tpu': tpu,
@@ -397,12 +447,20 @@ def material_for(ud):
     return _cache[key]
 
 
+def to_py(v):
+    if hasattr(v, 'to_dict'):
+        return {k: to_py(x) for k, x in v.to_dict().items()}
+    if hasattr(v, 'to_list'):
+        return [to_py(x) for x in v.to_list()]
+    if isinstance(v, dict):
+        return {k: to_py(x) for k, x in v.items()}
+    if isinstance(v, (list, tuple)):
+        return [to_py(x) for x in v]
+    return v
+
+
 def props(obj):
-    out = {}
-    for k in obj.keys():
-        v = obj[k]
-        out[k] = v.to_dict() if hasattr(v, 'to_dict') else (list(v) if hasattr(v, 'to_list') else v)
-    return out
+    return {k: to_py(obj[k]) for k in obj.keys() if not k.startswith('_')}
 
 
 for o in meshes:
@@ -417,7 +475,11 @@ for o in meshes:
         if faces and i < len(faces):
             u['finish'] = faces[i]
             u['tex'] = (ud.get('faceTex') or [{}] * len(faces))[i]
+            fc = ud.get('faceColors')
+            if fc and i < len(fc):
+                u['color'] = fc[i]
         u.pop('faceFinishes', None)
+        u.pop('faceColors', None)
         u.pop('faceTex', None)
         u.pop('item', None)
         u.pop('block', None)
@@ -478,32 +540,41 @@ world = bpy.data.worlds.new('world')
 world.use_nodes = True
 bg = world.node_tree.nodes['Background']
 bg.inputs['Color'].default_value = rgba('#8a8c90')
-bg.inputs['Strength'].default_value = float(JOB.get('ambient', 0.12))
+bg.inputs['Strength'].default_value = float(JOB.get('ambient', 0.03))
 scene.world = world
 
 
-def area(name, loc, size, power, color='#ffffff', size_y=None):
+def area(name, azim, elev, dist, size, size_y, irradiance, color='#ffffff'):
+    """Area light aimed at the centre from azimuth/elevation (degrees; azimuth 0 = image
+    top, 90 = image right). Power is set from the wanted irradiance at the centre."""
     ld = bpy.data.lights.new(name, 'AREA')
     ld.shape = 'RECTANGLE'
     ld.size = size
-    ld.size_y = size_y if size_y is not None else size
-    ld.energy = power
+    ld.size_y = size_y
+    ld.energy = irradiance * 2 * math.pi * dist ** 2 * float(JOB.get('lightScale', 1.0))
     ld.color = rgba(color)[:3]
     ob = bpy.data.objects.new(name, ld)
     scene.collection.objects.link(ob)
-    ob.location = centre + Vector(loc)
-    d = centre - ob.location
-    ob.rotation_euler = d.to_track_quat('-Z', 'Y').to_euler()
+    az, el = math.radians(azim), math.radians(elev)
+    ob.location = centre + Vector((math.sin(az) * math.cos(el), math.cos(az) * math.cos(el), math.sin(el))) * dist
+    ob.rotation_euler = (centre - ob.location).to_track_quat('-Z', 'Y').to_euler()
     return ob
 
 
 s = span
-k = float(JOB.get('lightScale', 1.0)) * (s / 0.35) ** 2
-area('key', (-0.45 * s, 0.55 * s, 1.1 * s), 1.1 * s, 900 * k, '#fff8ee', 0.8 * s)
-area('fill', (0.8 * s, -0.4 * s, 0.9 * s), 1.4 * s, 260 * k, '#eef3ff')
-area('kick-back', (0.0, 1.2 * s, 0.22 * s), 1.6 * s, 520 * k, '#ffffff', 0.06 * s)
-area('kick-left', (-1.2 * s, 0.0, 0.2 * s), 1.4 * s, 300 * k, '#ffffff', 0.05 * s)
-area('kick-right', (1.2 * s, 0.1 * s, 0.25 * s), 1.4 * s, 220 * k, '#ffffff', 0.05 * s)
+LIGHTS = JOB.get('lights', {})
+# Key: big softbox top-left, high enough to model shapes, low enough that flat
+# faces seen straight down do not mirror it.
+area('key', -35, 42, 1.3 * s, 1.1 * s, 0.7 * s, LIGHTS.get('key', 2.4), '#fff6ea')
+# Overhead diffuser: the only thing flat faces mirror; gives carbon and black
+# anodising a soft sheen instead of a hot spot.
+area('top', 0, 90, 1.8 * s, 2.6 * s, 2.6 * s, LIGHTS.get('top', 0.5), '#f4f6ff')
+# Fill from the lower right, cool.
+area('fill', 150, 35, 1.4 * s, 1.2 * s, 1.0 * s, LIGHTS.get('fill', 0.6), '#e8efff')
+# Low strip kickers: trace machined edges and chamfers.
+area('kick-back', 0, 8, 1.3 * s, 1.8 * s, 0.05 * s, LIGHTS.get('kick', 2.4))
+area('kick-left', -90, 10, 1.3 * s, 1.6 * s, 0.05 * s, LIGHTS.get('kick', 2.4) * 0.7)
+area('kick-right', 95, 12, 1.3 * s, 1.6 * s, 0.05 * s, LIGHTS.get('kick', 2.4) * 0.5)
 
 # ---- Render ----------------------------------------------------------------
 

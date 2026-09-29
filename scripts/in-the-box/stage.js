@@ -381,6 +381,28 @@ async function makeItem(part, group, assets) {
     }
     inner.add(clone);
     inner.quaternion.copy(q);
+    if (group.headTo) {
+      // Point the wider end of a long part (a screw head) to +Z, the image
+      // bottom, which faces the tilted camera; "-z" points it away.
+      const r = pts.map((pt) => pt.clone().applyQuaternion(q));
+      const zs = r.map((pt) => pt.z);
+      const z0 = Math.min(...zs);
+      const z1 = Math.max(...zs);
+      const band = (z1 - z0) * 0.15;
+      const spread = (sel) => {
+        const xs = r.filter(sel).map((pt) => pt.x);
+        return xs.length ? Math.max(...xs) - Math.min(...xs) : 0;
+      };
+      const sPlus = spread((pt) => pt.z > z1 - band);
+      const sMinus = spread((pt) => pt.z < z0 + band);
+      const headAtPlus = sPlus > sMinus;
+      const toPlus = group.headTo !== '-z';
+      if (headAtPlus !== toPlus) inner.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), Math.PI);
+      // On its side a screw rests on the head rim and the thread tip, so the
+      // head end sits raised; that also turns the head a little to the camera.
+      const tilt = Math.atan2((Math.max(sPlus, sMinus) - Math.min(sPlus, sMinus)) / 2, z1 - z0);
+      inner.rotateOnWorldAxis(new THREE.Vector3(1, 0, 0), (toPlus ? -1 : 1) * tilt);
+    }
   }
   if (group.spin) inner.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), (group.spin * Math.PI) / 180);
   inner.updateMatrixWorld(true);
@@ -607,6 +629,7 @@ async function render(job) {
     // Members of one group (L/R boots, both base plates) stay together.
     const block = own.length > 1 ? joinBlocks(own, gap * 0.6) : own[0];
     block.on = g.on;
+    block.below = g.below;
     const row = rowOf(g);
     const blockId = blocks.length;
     block.root.traverse((m) => {
@@ -618,9 +641,31 @@ async function render(job) {
   for (const b of blocks.filter((x) => x.on)) {
     const host = blocks.find((x) => x.label === b.on && !x.on);
     if (!host) throw new Error(`"on" target not found: ${b.on}`);
-    b.root.position.y += host.h;
+    let fit = null;
+    host.root.traverse((o) => {
+      if (o.userData.bagFit) fit = o.userData.bagFit;
+    });
+    if (fit) {
+      // Inside a bag: the front film drapes over the board.
+      const at = fit(b.w * 1000, b.d * 1000, b.h * 1000);
+      b.root.position.y += at.y;
+      b.root.position.z += at.z;
+    } else b.root.position.y += host.h;
     host.root.add(b.root);
   }
+  // A block with "below" stacks under another block in the same row.
+  for (const b of blocks.filter((x) => x.below)) {
+    const host = blocks.find((x) => x.label === b.below && !x.below);
+    if (!host) throw new Error(`"below" target not found: ${b.below}`);
+    const g2 = gap * 0.8;
+    const d = host.d + g2 + b.d;
+    const root = new THREE.Group();
+    host.root.position.z += -d / 2 + host.d / 2;
+    b.root.position.z += d / 2 - b.d / 2;
+    root.add(host.root, b.root);
+    Object.assign(host, {root, d, w: Math.max(host.w, b.w), h: Math.max(host.h, b.h)});
+  }
+  for (let i = blocks.length - 1; i >= 0; i--) if (blocks[i].below) blocks.splice(i, 1);
   for (let i = blocks.length - 1; i >= 0; i--) if (blocks[i].on) blocks.splice(i, 1);
   if (report.unmatched.length) return {report};
 
@@ -647,7 +692,8 @@ async function render(job) {
       ...(ud.tex ? {tex: ud.tex} : {}),
       ...Object.fromEntries(Object.entries(ud).filter(([k]) => !['finish', 'color', 'tex'].includes(k))),
       ...(mats.length > 1 ? {faceFinishes: mats.map((x) => x.userData?.finish || 'plastic'),
-        faceTex: mats.map((x) => x.userData?.tex || {})} : {}),
+        faceTex: mats.map((x) => x.userData?.tex || {}),
+        faceColors: mats.map((x) => x.userData?.color || `#${(x.color || new THREE.Color('#888888')).getHexString()}`)} : {}),
       ...m.userData,
     };
     if (m.userData.finish !== 'original') {

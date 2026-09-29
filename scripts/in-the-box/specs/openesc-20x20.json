@@ -9,22 +9,23 @@
     "public/models/od3/board-OpenESC-20x20-4in1-mini.glb"
   ],
   "camera": {
-    "tiltDeg": 0
+    "tiltDeg": 12
   },
   "layout": {
-    "gapMm": 6,
+    "gapMm": 7,
     "sectionGapMm": 8,
-    "aspect": 1.5
+    "aspect": 1.2
   },
   "groups": [
     {
       "label": "ESD bag",
-      "row": 1,
       "procedural": {
         "kind": "esdBag",
-        "w": 75,
-        "h": 100
-      }
+        "w": 60,
+        "h": 90
+      },
+      "item": "ESD bag",
+      "row": 1
     },
     {
       "label": "OpenESC 20×20 board",
@@ -32,7 +33,6 @@
       "combine": "all",
       "count": 1,
       "finish": "original",
-      "row": 1,
       "on": "ESD bag",
       "up": [
         0,
@@ -43,18 +43,36 @@
       "recolor": {
         "_PCB$": "#3f4a33"
       },
-      "spin": 180
+      "spin": 180,
+      "row": 1,
+      "item": "OpenESC board"
     },
     {
-      "label": "XT30 lead set",
+      "label": "XT30 connector",
       "procedural": {
         "kind": "xtPigtail",
         "type": "xt30",
         "awg": 16,
-        "len": 100
+        "leads": false
       },
-      "row": 2,
-      "lay": "x"
+      "item": "XT30 battery connector",
+      "row": 1,
+      "spin": 180
+    },
+    {
+      "label": "16 AWG power wires",
+      "procedural": {
+        "kind": "wireSet",
+        "awg": 16,
+        "len": 100,
+        "colors": [
+          "red",
+          "black"
+        ],
+        "spacing": 3
+      },
+      "row": 1,
+      "item": "Silicone power wire"
     },
     {
       "label": "Capacitor 470 µF 35 V",
@@ -64,8 +82,19 @@
         "l": 20,
         "label": "470µF 35V"
       },
-      "row": 2,
-      "lay": "x"
+      "item": "Low-ESR",
+      "row": 1
+    },
+    {
+      "label": "Quick-start card",
+      "procedural": {
+        "kind": "card",
+        "w": 85,
+        "h": 55,
+        "caption": "OpenESC · Quick start"
+      },
+      "row": 1,
+      "item": "Quick-start card"
     },
     {
       "label": "Soft-mount grommets M2",
@@ -74,17 +103,9 @@
         "size": "M2"
       },
       "count": 4,
-      "row": 2
-    },
-    {
-      "label": "Quick-start card",
-      "row": 1,
-      "procedural": {
-        "kind": "card",
-        "w": 85,
-        "h": 55,
-        "caption": "OpenESC · Quick start"
-      }
+      "item": "Silicone soft-mount",
+      "below": "Quick-start card",
+      "perRow": 4
     }
   ],
   "exclude": []
