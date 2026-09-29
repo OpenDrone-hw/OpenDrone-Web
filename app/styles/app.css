@@ -5113,6 +5113,9 @@ section.chapter[data-centered] .chapter-body-col {
   .chapter:has(.in-the-box) .provenance-card {
     min-width: 100%;
   }
+  .chapter:has(.in-the-box) .in-the-box-col .provenance-card {
+    min-width: 0;
+  }
   .chapter:has(.in-the-box) .chapter-media {
     position: static;
     align-self: stretch;
@@ -7018,9 +7021,27 @@ section.chapter[data-centered] .chapter-body-col {
   gap: var(--sp-5);
   align-items: start;
 }
+/* The list and the provenance card stack in one column, same width. */
+.in-the-box-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+  min-width: 0;
+}
+.in-the-box-col .in-the-box {
+  margin: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+.in-the-box-col .provenance-card {
+  margin: 0;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
 .in-the-box-figure {
   margin: 0;
-  max-width: 40rem;
+  max-width: 60rem;
 }
 /* A single part (one motor) stays object-sized instead of filling the column. */
 .in-the-box-figure[data-single] {
@@ -7136,8 +7157,10 @@ section.chapter[data-centered] .chapter-body-col {
 }
 .in-the-box-mark-num {
   position: absolute;
-  left: -0.55rem;
-  top: -0.55rem;
+  /* Outside the box, its bottom-right touching the box's top-left corner,
+     so it never covers the content the box frames. */
+  left: -1.2rem;
+  top: -1.2rem;
   display: grid;
   place-items: center;
   width: 1.1rem;
@@ -7195,9 +7218,10 @@ section.chapter[data-centered] .chapter-body-col {
     grid-column: 2;
     grid-row: 1;
     justify-self: center;
+    align-self: center;
     width: 100%;
   }
-  .in-the-box-layout .in-the-box {
+  .in-the-box-layout .in-the-box-col {
     grid-column: 1;
     grid-row: 1;
   }

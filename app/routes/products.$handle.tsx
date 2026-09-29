@@ -2652,6 +2652,7 @@ function ProductPage() {
             <InTheBox
               items={mergedBox}
               image={boxImage}
+              aside={isBoard ? <ProvenanceCard /> : null}
               renderItem={(it, i) => {
                 // Rows past the shared list came from the active variant's
                 // own additions; tag each field with the leaf it renders.
@@ -2717,7 +2718,7 @@ function ProductPage() {
               ))}
             </div>
           ) : null}
-          {isBoard ? <ProvenanceCard /> : null}
+          {isBoard && mergedBox.length === 0 ? <ProvenanceCard /> : null}
         </Chapter>
     ),
     /** The files themselves. */

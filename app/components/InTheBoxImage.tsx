@@ -7,7 +7,7 @@ const WIDTHS = [528, 800, 1024, 1280] as const;
 
 // Beside the list on desktop the figure is at most ~40rem wide; stacked
 // above it on phones it spans the column.
-const SIZES = '(min-width: 64rem) min(40rem, 45vw), 100vw';
+const SIZES = '(min-width: 64rem) min(60rem, 60vw), 100vw';
 
 /** Alt text from the list itself, so it cannot drift from what ships. */
 export function boxAlt(items: BoxItem[]): string {
@@ -19,6 +19,8 @@ type Props = {
   image?: Image;
   /** The row's qty and item spans (the page adds the studio edit tags). */
   renderItem: (item: BoxItem, index: number) => ReactNode;
+  /** Card stacked under the list, in the list's column (the provenance card). */
+  aside?: ReactNode;
 };
 
 /**
@@ -33,7 +35,7 @@ type Props = {
  * it again unpins. The boxes are decoration for sighted readers: the list is
  * the accessible path, and the image's alt text reads the list.
  */
-export function InTheBox({items, image, renderItem}: Props) {
+export function InTheBox({items, image, renderItem, aside}: Props) {
   const boxes = image?.boxes ?? [];
   const numbered = boxes.length > 0;
   // One number marker per row, on that row's largest box.
@@ -106,7 +108,13 @@ export function InTheBox({items, image, renderItem}: Props) {
       })}
     </ul>
   );
-  if (!image) return <div className="in-the-box-plain">{list}</div>;
+  const column = (
+    <div className="in-the-box-col">
+      {list}
+      {aside}
+    </div>
+  );
+  if (!image) return <div className="in-the-box-plain">{column}</div>;
 
   const q = image.v ? `?v=${image.v}` : '';
   const at = (w: number) => assetUrl(`${image.src.replace(/\.png$/, `-w${w}.webp`)}${q}`);
@@ -151,7 +159,7 @@ export function InTheBox({items, image, renderItem}: Props) {
           ) : null}
         </div>
       </figure>
-      {list}
+      {column}
     </div>
   );
 }
