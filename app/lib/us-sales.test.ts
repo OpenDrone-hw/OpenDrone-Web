@@ -1,0 +1,277 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {describe, it} from 'node:test';
+import type {Catalog, CatalogVariant} from './catalog.ts';
+import {
+  applyCampaign,
+  batchFill,
+  campaignState,
+  parseCampaignConfig,
+  promiseBatchMonth,
+  shipsWithState,
+  type CampaignBatch,
+} from './preorder-campaign.ts';
+import {notSoldDirect, shippingQuote} from './shipping-rates.ts';
+import {handleShopifyCartAction, US_EU_ONLY_MESSAGE} from './shopify-cart-action.ts';
+import {handleCartCountry} from './shopify-cart-country.ts';
+import {mapShopifyCatalog, type CartLineInput, type ShopifyCart} from './shopify-storefront.ts';
+import {US_SALES, usSalesRate, withMarketPrices} from './us-sales.ts';
+import {priceNote} from './visitor-country.ts';
+
+const REAL = parseCampaignConfig(JSON.parse(fs.readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8')));
+const OPEN = new Date('2026-10-01T12:00:00Z');
+const PENDING = 'ships by 14 March 2027 if the target is reached by 22 November 2026, otherwise you choose a refund or to wait';
+const TIERS = [{upTo: 100, off: 0.2}, {upTo: 250, off: 0.1}];
+const EU_FIRST: CampaignBatch[] = [
+  {units: 250, paid: true, ships: 'ships late October 2026', regions: ['EU']},
+  {units: 250, deliveryBy: '2027-03-31'},
+];
+
+describe('US sales gate', () => {
+  it('opens only with the gate "1" and a committed rate', () => {
+    assert.equal(US_SALES.rate, 9.95);
+    assert.equal(usSalesRate({PUBLIC_US_SALES: '1'}), 9.95);
+    for (const gate of [undefined, '0', 'true', ' 1']) assert.equal(usSalesRate({PUBLIC_US_SALES: gate}), null);
+  });
+
+  it('stays closed with the gate on while the rate is null (fail closed)', () => {
+    assert.equal(usSalesRate({PUBLIC_US_SALES: '1'}, {rate: null}), null);
+    assert.equal(usSalesRate({PUBLIC_US_SALES: '1'}, {}), null);
+    assert.equal(usSalesRate({PUBLIC_US_SALES: '1'}, {rate: -1}), null);
+  });
+
+  it('quotes the US as its own direct zone only while open', () => {
+    assert.deepEqual(shippingQuote('US'), {country: 'US', kind: 'shops'});
+    assert.deepEqual(shippingQuote('US', undefined, 9.95), {country: 'US', kind: 'direct', zone: 'us', rate: 9.95, currency: 'USD'});
+    assert.equal(notSoldDirect('US'), 'shops');
+    assert.equal(notSoldDirect('US', 9.95), null);
+    // Other non-EU countries stay on the shops either way.
+    assert.deepEqual(shippingQuote('CA', undefined, 9.95), {country: 'CA', kind: 'shops'});
+    assert.equal(priceNote('US'), 'shops');
+    assert.equal(priceNote('US', true), 'us');
+    assert.equal(priceNote('BE', true), 'vat');
+  });
+});
+
+describe('batch regions', () => {
+  it('rejects unknown regions and a last funding batch that leaves a region out', () => {
+    const base = {countFrom: '2026-09-25', endsOn: '2026-11-22', shipsBy: '2027-03-14', priceTiers: TIERS, pendingShips: PENDING};
+    assert.throws(() => parseCampaignConfig({...base, skus: {A: {batches: [{units: 1, regions: ['UK']}]}}}), /regions/);
+    assert.throws(() => parseCampaignConfig({...base, skus: {A: {batches: [{units: 1, regions: ['EU']}]}}}), /every region/);
+    assert.ok(parseCampaignConfig({...base, skus: {A: {batches: EU_FIRST}}}));
+  });
+
+  it('marks the four paid batch-1 entries EU only in the committed file', () => {
+    const euOnly = Object.entries(REAL.skus).filter(([, e]) => e.batches.some((b) => b.regions?.join() === 'EU'));
+    assert.deepEqual(euOnly.map(([sku]) => sku).sort(), ['OPENESC-2020', 'OPENESC-3030', 'OPENFC-LITE-2020', 'OPENFC-LITE-3030']);
+  });
+
+  it('gives a US buyer batch 2 and its March promise while batch 1 still has units', () => {
+    const us = campaignState(EU_FIRST, 40, PENDING, TIERS, 49, 'US');
+    assert.equal(us.batch, 2);
+    assert.equal(us.paidStock, false);
+    assert.equal(us.paidLeft, null);
+    assert.match(us.shipPromise, /14 March 2027/);
+    assert.equal(promiseBatchMonth(us.shipPromise), 'March 2027');
+    assert.deepEqual(us.batches.map((b) => b.status), ['other_region', 'current']);
+    // The price step counts every region.
+    assert.equal(us.tierLeft, 60);
+  });
+
+  it('keeps an EU buyer on paid batch 1', () => {
+    const eu = campaignState(EU_FIRST, [{region: 'EU', units: 30}, {region: 'US', units: 10}], PENDING, TIERS, 49, 'EU');
+    assert.equal(eu.batch, 1);
+    assert.equal(eu.paidStock, true);
+    assert.equal(eu.paidLeft, 220);
+    assert.equal(eu.shipPromise, 'ships late October 2026');
+    assert.equal(eu.ordered, 40);
+    assert.equal(promiseBatchMonth(eu.shipPromise), 'October 2026');
+  });
+
+  it('allocates in order: US units fill batch 2, EU units past batch 1 follow', () => {
+    assert.deepEqual(batchFill(EU_FIRST, [{region: 'US', units: 5}, {region: 'EU', units: 260}, {region: 'US', units: 1}]), [250, 16]);
+    // Without regions the fill is the old global count.
+    assert.deepEqual(batchFill([{units: 250, paid: true, ships: 'x'}, {units: 250}], 300), [250, 50]);
+    // Funding target counts US units too.
+    assert.equal(campaignState(EU_FIRST, [{region: 'US', units: 250}], PENDING, TIERS).targetReached, true);
+  });
+
+  it('never gives a US unit Belgian accessory stock or an EU-only pinned batch', () => {
+    const lead = REAL.skus['OPENFC-LITE-2020'].batches;
+    const stockRule = REAL.shipsWith!['ACC-ANT-T'];
+    const pinned = REAL.shipsWith!['ACC-STRAP-20X220'];
+    const euStock = shipsWithState(REAL, stockRule, 10, 5, 0, 'EU');
+    assert.equal(euStock.batch, 1);
+    assert.equal(euStock.paidStock, true);
+    const usStock = shipsWithState(REAL, stockRule, 10, 5, 0, 'US');
+    assert.equal(usStock.batch, 2);
+    assert.equal(usStock.paidStock, false);
+    const usPinned = shipsWithState(REAL, pinned, 10, 5, 0, 'US');
+    assert.equal(usPinned.batch, 2);
+    assert.equal(usPinned.shipPromise, campaignState(lead, 10, REAL.pendingShips, [], null, 'US').shipPromise);
+  });
+});
+
+function variant(partial: Partial<CatalogVariant> & {sku: string}): CatalogVariant {
+  return {
+    title: partial.sku, model: null, options: {}, price: 39.2, compare_price: 49, currency: 'EUR',
+    availability: 'preorder', ship_promise: null, image: null, url: '/products/x',
+    cart_add_url: '/api/shopify/cart', merchandise_id: `gid://shopify/ProductVariant/${partial.sku}`,
+    ...partial,
+  };
+}
+
+function catalogOf(variants: CatalogVariant[], currency = 'EUR'): Catalog {
+  return {
+    schema: 1, generated_at: '2026-10-01T00:00:00Z', max_age: 0, currency, prices_include_vat: currency === 'EUR',
+    shop_url: 'https://s.myshopify.com', cart_url: 'https://s.myshopify.com', add_url: '/api/shopify/cart', add_method: 'POST',
+    products: [{handle: 'openesc', title: 'OpenESC', family: null, description: null, url: '/products/openesc', images: [], rating: null, variants}],
+  };
+}
+
+describe('US market prices', () => {
+  it('shows a US buyer the USD price and the March promise while batch 1 has units', () => {
+    const eur = catalogOf([variant({sku: 'OPENESC-2020', price: 39.2, compare_price: 49})]);
+    const usd = catalogOf([variant({sku: 'OPENESC-2020', price: 53, compare_price: 66.3, currency: 'USD'})], 'USD');
+    const eu = applyCampaign(eur, REAL, {'OPENESC-2020': 12}, OPEN, 'EU').products[0].variants[0];
+    assert.equal(eu.currency, 'EUR');
+    assert.match(eu.ship_promise ?? '', /October 2026/);
+    const us = withMarketPrices(applyCampaign(eur, REAL, {'OPENESC-2020': 12}, OPEN, 'US'), usd);
+    const v = us.products[0].variants[0];
+    assert.equal(us.currency, 'USD');
+    assert.equal(us.prices_include_vat, false);
+    assert.equal(v.price, 53);
+    assert.equal(v.currency, 'USD');
+    assert.equal(v.availability, 'preorder');
+    assert.match(v.ship_promise ?? '', /14 March 2027/);
+    assert.equal(v.campaign?.batch, 2);
+    assert.equal(v.campaign?.paidStock, false);
+    // Step prices scale with the US/EUR retail ratio.
+    assert.equal(v.campaign?.price, Math.round(39.2 * (66.3 / 49) * 100) / 100);
+  });
+
+  it('closes a variant the US read does not price in USD, and everything without a US read', () => {
+    const eur = catalogOf([variant({sku: 'A'}), variant({sku: 'B'})]);
+    const usd = catalogOf([variant({sku: 'A', price: 50, currency: 'USD'})], 'USD');
+    const [a, b] = withMarketPrices(eur, usd).products[0].variants;
+    assert.equal(a.availability, 'preorder');
+    assert.equal(b.availability, 'sold_out');
+    assert.ok(withMarketPrices(eur, null).products[0].variants.every((x) => x.availability === 'sold_out'));
+  });
+
+  it('accepts USD only on the US market read', () => {
+    const data = {products: {pageInfo: {hasNextPage: false}, nodes: [{
+      handle: 'x', title: 'X', description: '', productType: '', vendor: null, featuredImage: null,
+      images: {nodes: []}, rating: null, ratingCount: null,
+      variants: {pageInfo: {hasNextPage: false}, nodes: [{
+        id: 'gid://shopify/ProductVariant/1', title: 'X', sku: 'X', availableForSale: true, image: null,
+        price: {amount: '53.00', currencyCode: 'USD'}, compareAtPrice: null, selectedOptions: [],
+      }]},
+    }]}};
+    const policy = JSON.stringify({X: {saleMode: 'preorder', shipPromise: null}});
+    assert.throws(() => mapShopifyCatalog(data, 's.myshopify.com', policy, '1'), /not priced in EUR/);
+    const us = mapShopifyCatalog(data, 's.myshopify.com', policy, '1', 'US');
+    assert.equal(us.currency, 'USD');
+    assert.equal(us.products[0].variants[0].price, 53);
+  });
+});
+
+const ENV = {SHOPIFY_CHECKOUT_WRITE_ENABLED: '1', PUBLIC_COMING_SOON: '0', PUBLIC_US_SALES: '1'} as const;
+const CHECKOUT = 'https://checkout.opendrone.be/checkouts/cn/ok';
+
+function post(values: Record<string, string>, country: string): Request {
+  return new Request('https://opendrone.be/api/shopify/cart', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded', Origin: 'https://opendrone.be', 'CF-IPCountry': country},
+    body: new URLSearchParams(values),
+  });
+}
+
+function emptyCart(currencyCode = 'USD'): ShopifyCart {
+  return {id: 'gid://shopify/Cart/a', checkoutUrl: CHECKOUT, totalQuantity: 0,
+    subtotal: {amount: '0', currencyCode}, total: {amount: '0', currencyCode}, lines: []};
+}
+
+/** The OpenFC Lite 20x20 (a campaign preorder, EU batch 1 open) and an
+ *  in-stock item, as the US catalog shows them. */
+function usCatalog(): Catalog {
+  const eur = catalogOf([]);
+  eur.products = [
+    {handle: 'openfc-lite', title: 'OpenFC Lite', family: null, description: null, url: '/products/openfc-lite', images: [], rating: null,
+      variants: [variant({sku: 'OPENFC-LITE-2020', price: 31.2, compare_price: 39})]},
+    {handle: 'openrx', title: 'OpenRX', family: null, description: null, url: '/products/openrx', images: [], rating: null,
+      variants: [variant({sku: 'OPENRX-LITE', availability: 'in_stock', ship_promise: null})]},
+  ];
+  return applyCampaign(eur, REAL, {'OPENFC-LITE-2020': 3}, OPEN, 'US');
+}
+
+describe('US cart with the gate on', () => {
+  it('adds a campaign preorder with the US promise, the hidden region and a US cart', async () => {
+    let added: CartLineInput[] = [];
+    let country: string | undefined;
+    const response = await handleShopifyCartAction(post({sku: 'OPENFC-LITE-2020', qty: '2'}, 'US'), ENV, {
+      fetchCatalog: async () => usCatalog(),
+      createCart: async (lines, code) => { added = lines; country = code; return emptyCart(); },
+    });
+    assert.equal(response.status, 303);
+    assert.equal(country, 'US');
+    assert.equal(added[0].quantity, 2);
+    const attrs = Object.fromEntries((added[0].attributes ?? []).map((a) => [a.key, a.value]));
+    assert.match(attrs.Preorder, /14 March 2027/);
+    assert.equal(attrs._ship_region, 'US');
+  });
+
+  it('refuses an in-stock SKU for a US destination with a clear message', async () => {
+    const error = await handleShopifyCartAction(post({sku: 'OPENRX-LITE', qty: '1'}, 'US'), ENV, {
+      fetchCatalog: async () => usCatalog(),
+      createCart: async () => { throw new Error('must not create'); },
+    }).then(() => null, (e: unknown) => e);
+    assert.ok(error instanceof Response);
+    assert.equal(error.status, 409);
+    assert.equal(await error.text(), US_EU_ONLY_MESSAGE);
+  });
+
+  it('keeps the US closed when the rate is null, even with the gate on', async () => {
+    const error = await handleShopifyCartAction(post({sku: 'OPENFC-LITE-2020', qty: '1'}, 'US'), ENV, {
+      usRate: null,
+      fetchCatalog: async () => usCatalog(),
+      createCart: async () => { throw new Error('must not create'); },
+    }).then(() => null, (e: unknown) => e);
+    assert.ok(error instanceof Response);
+    assert.equal(error.status, 403);
+  });
+
+  it('moves a EUR cart to the US market at checkout and shows the cart again', async () => {
+    const calls: string[] = [];
+    const line = {
+      id: 'gid://shopify/CartLine/1', merchandiseId: 'gid://shopify/ProductVariant/OPENFC-LITE-2020', quantity: 1,
+      title: 'OpenFC Lite', variantTitle: '20x20', handle: 'openfc-lite', sku: 'OPENFC-LITE-2020', image: null,
+      selectedOptions: [], shipPromise: 'ships late October 2026, delivered by 30 November 2026', total: {amount: '31.2', currencyCode: 'EUR'},
+    };
+    const response = await handleShopifyCartAction(post({intent: 'checkout'}, 'US'), ENV, {
+      fetchCatalog: async () => usCatalog(),
+      createCart: async () => { throw new Error('must not create'); },
+      getCartId: () => 'gid://shopify/Cart/a',
+      getCart: async () => ({...emptyCart('EUR'), totalQuantity: 1, lines: [line]}),
+      setCountry: async (_id, code) => { calls.push(`country:${code}`); },
+      updateCartLines: async (_id, lines) => { calls.push(`update:${lines[0].attributes?.map((a) => a.key).join('+')}`); return emptyCart(); },
+    });
+    assert.equal(response.headers.get('Location'), '/cart?check=market');
+    assert.deepEqual(calls, ['country:US', 'update:Preorder+_ship_region']);
+  });
+
+  it('puts the US on the cart from the cart country picker', async () => {
+    const set: string[] = [];
+    const response = await handleCartCountry(
+      new Request('https://opendrone.be/api/shopify/cart-country', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded', Origin: 'https://opendrone.be'},
+        body: new URLSearchParams({country: 'US'}),
+      }),
+      ENV,
+      {getCartId: () => 'c', setCountry: async (_id, code) => { set.push(code); }},
+    );
+    assert.deepEqual(await response.json(), {country: 'US', applied: true});
+    assert.deepEqual(set, ['US']);
+  });
+});

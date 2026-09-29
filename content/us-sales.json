@@ -1,4 +1,4 @@
 {
-  "$comment": "US consumer preorders, read by app/lib/us-sales.ts. The US is sold direct only while the PUBLIC_US_SALES gate is \"1\" in the wrangler config AND rate is a number: the flat US shipping rate in USD that the accepted Shopify US shipping zone charges. null keeps the US closed even with the gate on. Only campaign preorder SKUs sell to the US; in-stock SKUs and paid-stock batches ship from Belgium to the EU only (batch `regions` in preorders.json).",
-  "rate": null
+  "$comment": "US consumer preorders, read by app/lib/us-sales.ts. The US is sold direct only while the PUBLIC_US_SALES gate is \"1\" in the wrangler config AND rate is a number: the flat US shipping rate in USD that the Shopify US shipping zone charges. null keeps the US closed even with the gate on. Only campaign preorder SKUs sell to the US; in-stock SKUs and paid-stock batches ship from Belgium to the EU only (batch `regions` in preorders.json).",
+  "rate": 9.95
 }

@@ -293,7 +293,7 @@ export function CartAddedDialog() {
             </p>
           ) : null}
           {usBuyer ? (
-            <p className="cart-added-parcel">{t('us_price_note', 'No EU VAT. US import duties: see shipping')}</p>
+            <p className="cart-added-parcel">{t('us_price_note', 'Duties included. No sales tax.')}</p>
           ) : null}
           {parcel ? (
             <p className="cart-added-parcel">

@@ -309,7 +309,7 @@ function PopulatedCart({
             </div>
           </dl>
           {usBuyer ? (
-            <p className="cart-summary-note">{t('us_price_note', 'No EU VAT. US import duties: see shipping')}</p>
+            <p className="cart-summary-note">{t('us_price_note', 'Duties included. No sales tax.')}</p>
           ) : null}
           <p className="cart-summary-note">{t('shipping_at_checkout', 'Shipping calculated at checkout')}</p>
           {mixed ? <MixedNote cart={cart} info={info} onSplit={onSplit} /> : null}

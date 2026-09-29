@@ -25,8 +25,8 @@ export function paysEuVat(country: string | null): boolean {
   return country === null || EU.has(country);
 }
 
-/** Which price note a visitor sees: EU VAT included, the US note (no EU
- *  VAT, US import duties) while US sales are open, or, elsewhere outside
+/** Which price note a visitor sees: EU VAT included, the US note (no
+ *  sales tax, duties included) while US sales are open, or, elsewhere outside
  *  the EU, that the products are sold through shops there. */
 export type PriceNote = 'vat' | 'us' | 'shops';
 

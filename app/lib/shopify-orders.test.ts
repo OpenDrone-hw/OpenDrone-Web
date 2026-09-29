@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {afterEach, describe, it} from 'node:test';
-import {fetchPaidUnits, paidUnits, resetPaidUnitsMemo} from './shopify-orders.ts';
+import {PAID_ORDERS_QUERY, fetchPaidUnitRuns, fetchPaidUnits, paidUnits, resetPaidUnitsMemo} from './shopify-orders.ts';
 
 afterEach(resetPaidUnitsMemo);
 
@@ -17,6 +17,7 @@ type Order = {
   displayFinancialStatus: string;
   lines: Array<[string | null, number]>;
   more?: boolean;
+  country?: string;
 };
 
 function page(orders: Order[], next: string | null = null): Response {
@@ -28,6 +29,7 @@ function page(orders: Order[], next: string | null = null): Response {
           test: o.test ?? false,
           cancelledAt: o.cancelledAt ?? null,
           displayFinancialStatus: o.displayFinancialStatus,
+          shippingAddress: o.country ? {countryCodeV2: o.country} : null,
           lineItems: {
             pageInfo: {hasNextPage: o.more ?? false},
             nodes: o.lines.map(([sku, currentQuantity]) => ({sku, currentQuantity})),
@@ -124,5 +126,20 @@ describe('paidUnits', () => {
     await paidUnits(ENV, '2026-09-21', SKUS, fetcher);
     assert.deepEqual(a, b);
     assert.equal(calls, 1);
+  });
+});
+
+describe('fetchPaidUnitRuns', () => {
+  it('keeps each unit\'s shipping region in order, merging neighbours', async () => {
+    assert.match(PAID_ORDERS_QUERY, /shippingAddress \{ countryCodeV2 \}/);
+    const runs = await fetchPaidUnitRuns(ENV, '2026-09-21', SKUS, async () =>
+      page([
+        {displayFinancialStatus: 'PAID', country: 'BE', lines: [['OPENESC-2020', 3]]},
+        {displayFinancialStatus: 'PAID', country: 'NL', lines: [['OPENESC-2020', 1]]},
+        {displayFinancialStatus: 'PAID', country: 'US', lines: [['OPENESC-2020', 2]]},
+        {displayFinancialStatus: 'PAID', lines: [['OPENESC-2020', 1]]},
+      ]),
+    );
+    assert.deepEqual(runs, {'OPENESC-2020': [{region: 'EU', units: 4}, {region: 'US', units: 2}, {region: 'EU', units: 1}]});
   });
 });

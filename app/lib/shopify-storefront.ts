@@ -428,8 +428,8 @@ export function mapShopifyCatalog(
     generated_at: new Date().toISOString(),
     max_age: 300,
     currency: catalogCurrency || expectedCurrency,
-    // US prices carry no EU VAT (Shopify's dynamic tax-inclusive pricing
-    // takes it off the US market price).
+    // The US catalog's USD list price is the price paid: no EU VAT, no
+    // sales tax, duties included.
     prices_include_vat: market !== 'US',
     shop_url: shop,
     cart_url: shop,

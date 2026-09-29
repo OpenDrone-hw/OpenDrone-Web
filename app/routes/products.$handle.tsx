@@ -1690,13 +1690,13 @@ function ProductPage() {
   // Inside the EU the price includes 21% Belgian VAT. Outside it the same
   // euro price applies with no EU VAT charged on the export, so nothing is
   // printed next to it. Shipping is shown at checkout only.
-  // A US buyer while US sales are open: USD, no EU VAT, US import duties.
+  // A US buyer while US sales are open: the USD list price, duties included, no sales tax.
   const usRate = rootData?.usShippingRate ?? null;
   const usBuyer = usRate != null && rootData?.visitorCountry === 'US';
   const vatNote = paysEuVat(rootData?.visitorCountry ?? null)
     ? say('product-chrome.buy_vat_note', 'incl. VAT')
     : usBuyer
-      ? say('product-chrome.buy_us_price_note', 'No EU VAT. US import duties: see shipping')
+      ? say('product-chrome.buy_us_price_note', 'Duties included. No sales tax.')
       : null;
   // Consumers buy direct only in the open EU countries. Elsewhere the buy
   // button is a status line (AddToCartButton): outside the EU "EU consumer

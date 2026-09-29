@@ -727,7 +727,7 @@ page renders as before. Open:
 | Surface | US buyer (destination US) | EU buyer |
 |---|---|---|
 | Destination | `shippingQuote` zone `us`, rate from `us-sales.json` | unchanged |
-| Prices | Shopify's US market price, USD, no EU VAT | EUR incl. VAT |
+| Prices | the US catalog's USD list price: duties included, no sales tax | EUR incl. VAT |
 | Sells | campaign preorder SKUs only; in-stock SKUs refused | everything for sale |
 | Batch | first batch with room whose `regions` include US | first with room whose `regions` include EU |
 | Cart | `buyerIdentity.countryCode` US, hidden `_ship_region: US` line attribute | unchanged |
@@ -738,9 +738,9 @@ cart, the line promise and the checkout gate alike. The hold pass tags an
 order `promise-mismatch` when it ships to another region than a line's promise
 was computed for; follow it up by hand.
 
-Shopify settings the US needs: a US market with USD presentment and dynamic
-tax-inclusive pricing, a US shipping zone and rate equal to `us-sales.json`,
-and HS codes and country of origin on every variant.
+Shopify settings the US needs (the US market, its USD price list and
+`INCLUDES_TAXES_IN_PRICE` exist): a US shipping zone at the `us-sales.json`
+rate, and HS codes and country of origin on every variant.
 
 ## Run a preorder campaign
 
