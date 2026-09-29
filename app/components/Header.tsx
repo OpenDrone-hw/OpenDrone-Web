@@ -4,6 +4,7 @@ import {NavLink} from '~/components/nav';
 import {AnimatePresence} from 'motion/react';
 import {useAside} from '~/components/Aside';
 import {LangToggle} from '~/components/LangToggle';
+import {RegionSwitch} from '~/components/RegionSwitch';
 import {ThemeToggle} from '~/components/ThemeToggle';
 import {SiteWordmark} from '~/components/SiteWordmark';
 import {IncutecWordmark} from '~/components/IncutecWordmark';
@@ -777,6 +778,7 @@ function HeaderCtas({
           <Txt id={accountUrl.startsWith('/account/login') ? 'chrome.nav_signin' : 'chrome.nav_account'} />
         </a>
       ) : null}
+      <RegionSwitch className="header-region-switch" />
       <ThemeToggle className="site-header-icon" />
       <CartToggle cartUrl={cartUrl} hasCart={hasCart} />
       <HeaderMenuMobileToggle />
