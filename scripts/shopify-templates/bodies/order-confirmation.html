@@ -1,81 +1,25 @@
+<od-head kicker="Order {{ name }}">Thanks{% if customer.first_name %}, {{ customer.first_name }}{% endif %}.</od-head>
+<od-p last>We&rsquo;ve received your order and your payment. You&rsquo;ll get a shipping confirmation with tracking when it ships.</od-p>
+{% comment %}
+  Preorder lines carry the ship promise as the line item property
+  "Preorder" (PREORDER_ATTRIBUTE in app/lib/shopify-storefront.ts). The
+  summary shows only when at least one line has it. The dates come from
+  FACTS in app/lib/email-shell.ts.
+{% endcomment %}
+{% assign has_preorder = false %}
+{% for line in line_items %}{% for p in line.properties %}{% if p.first == 'Preorder' and p.last != blank %}{% assign has_preorder = true %}{% endif %}{% endfor %}{% endfor %}
+{% if has_preorder %}
+<od-card accent>
+  <od-label tone="accent">Preorder</od-label>
+  <od-t>This order contains preorder items, paid in full today. Each one shows its ship date below.</od-t>
+  <od-t>The preorder run closes on %%CLOSE%%. We attempt to ship its items by %%SHIPBY%%, with delivery by %%DELIVERY_EU%% in the EU and %%DELIVERY_US%% in the US. Items marked %%BATCH1%% come from the first FC and ESC batch. If your order also holds preorder-run items, they ship together with those items in one parcel; order them separately to get them in %%BATCH1%%.</od-t>
+  <od-t>If an item&rsquo;s target is not reached by %%CLOSE%%, we email you and you choose: a full refund for that item within 14 days, or keep your order for the new date in that email. If you do not reply within 30 days, we refund that item.</od-t>
+  <od-t last>Your order ships once, in one parcel, when every item in it is ready. If a target in it is missed, the rest of the order ships without waiting for that item, and if nothing else is left to ship we refund the shipping cost too. How preorders work: <a href="https://opendrone.be/preorder" style="color: #ffb700;">opendrone.be/preorder</a></od-t>
+</od-card>
+{% endif %}
+<od-button href="{{ order_status_url }}" more>View order status &rarr;</od-button>
             <tr>
-              <td style="padding: 40px 32px 0 32px;">
-                <p style="margin: 0 0 14px 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; color: #ffb700;">
-                  Order {{ name }}
-                </p>
-                <h1 style="margin: 0 0 20px 0; font-family: 'Space Grotesk', Helvetica, Arial, sans-serif; font-size: 32px; line-height: 1.15; font-weight: 700; letter-spacing: -0.01em; color: #e5e5e5;">
-                  Thanks{% if customer.first_name %}, {{ customer.first_name }}{% endif %}.
-                </h1>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding: 0 32px 28px 32px;">
-                <p style="margin: 0 0 16px 0; font-family: Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.6; color: #c5c5c5;">
-                  We&rsquo;ve received your order and your payment.
-                  You&rsquo;ll get a shipping confirmation with tracking
-                  when it ships.
-                </p>
-              </td>
-            </tr>
-            {% comment %}
-              Preorder lines carry the ship promise as the line item
-              property "Preorder" (PREORDER_ATTRIBUTE in
-              app/lib/shopify-storefront.ts). The summary below shows only
-              when at least one line has it.
-            {% endcomment %}
-            {% assign has_preorder = false %}
-            {% for line in line_items %}{% for p in line.properties %}{% if p.first == 'Preorder' and p.last != blank %}{% assign has_preorder = true %}{% endif %}{% endfor %}{% endfor %}
-            {% if has_preorder %}
-            <tr>
-              <td style="padding: 0 32px 28px 32px;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #0a0a0a; border: 1px solid #ffb700;">
-                  <tr>
-                    <td style="padding: 20px 24px;">
-                      <p style="margin: 0 0 10px 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; color: #ffb700;">
-                        Preorder
-                      </p>
-                      <p style="margin: 0 0 8px 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #c5c5c5;">
-                        This order contains preorder items, paid in full today.
-                        Each one shows its ship date below.
-                      </p>
-                      <p style="margin: 0 0 8px 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #c5c5c5;">
-                        An item from a funding target ships by 14 March 2027
-                        if its target is reached by 22 November 2026. If a
-                        target is missed, we email you
-                        and you choose: a full refund for that item within
-                        14 days, or keep your order for the new date in that
-                        email. If you do not reply within 30 days, we refund
-                        that item.
-                      </p>
-                      <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #c5c5c5;">
-                        Your order ships once, in one parcel, when every item
-                        in it is ready. If a target in it is missed, the rest
-                        of the order ships without waiting for that item, and
-                        if nothing else is left to ship we refund the shipping
-                        cost too. How preorders work:
-                        <a href="https://opendrone.be/preorder" style="color: #ffb700;">opendrone.be/preorder</a>
-                      </p>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-            {% endif %}
-            <tr>
-              <td style="padding: 0 32px 24px 32px;">
-                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                  <tr>
-                    <td style="background-color: #ffb700; border-radius: 4px;">
-                      <a href="{{ order_status_url }}" style="display: inline-block; padding: 14px 28px; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #0a0a0a; text-decoration: none;">
-                        View order status &rarr;
-                      </a>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding: 0 32px 8px 32px;">
+              <td class="od-px" style="padding: 0 32px 8px 32px;">
                 <p style="margin: 0 0 12px 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; color: #a0a0a0;">
                   Items
                 </p>
@@ -83,7 +27,7 @@
             </tr>
             {% for line in line_items %}
             <tr>
-              <td style="padding: 0 32px 16px 32px;">
+              <td class="od-px" style="padding: 0 32px 16px 32px;">
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top: 1px solid #1a241a;">
                   <tr>
                     {% if line.image %}
@@ -118,7 +62,7 @@
             </tr>
             {% endfor %}
             <tr>
-              <td style="padding: 0 32px 32px 32px;">
+              <td class="od-px" style="padding: 0 32px 32px 32px;">
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top: 1px solid #1a241a; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px;">
                   <tr>
                     <td style="padding: 10px 0 4px 0; color: #a0a0a0;">Subtotal</td>
@@ -150,66 +94,44 @@
                 </table>
               </td>
             </tr>
-            {% comment %}
-              Import duties are never collected at checkout. Outside the EU
-              the carrier collects any import duties and taxes on delivery.
-            {% endcomment %}
-            {% assign eu_countries = 'AT,BE,BG,CY,CZ,DE,DK,EE,ES,FI,FR,GR,HR,HU,IE,IT,LT,LU,LV,MT,NL,PL,PT,RO,SE,SI,SK' | split: ',' %}
-            {% if shipping_address and shipping_address.country_code != blank %}{% unless eu_countries contains shipping_address.country_code %}
-            <tr>
-              <td style="padding: 0 32px 24px 32px;">
-                <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.6; color: #a0a0a0;">
+{% assign eu_countries = 'AT,BE,BG,CY,CZ,DE,DK,EE,ES,FI,FR,GR,HR,HU,IE,IT,LT,LU,LV,MT,NL,PL,PT,RO,SE,SI,SK' | split: ',' %}
+{% assign has_receiver = false %}
+{% for line in line_items %}{% if line.sku contains 'OPENRX' %}{% assign has_receiver = true %}{% endif %}{% endfor %}
+{% comment %}
+  Duties and delivery notes. US: duties are included in the price. Other
+  non-EU countries: no import duties are collected at checkout, so the
+  carrier may ask for them. The US receiver line is the FCC 47 CFR 2.803
+  conditional-sale disclosure for RF products.
+{% endcomment %}
+{% if shipping_address and shipping_address.country_code != blank %}{% unless eu_countries contains shipping_address.country_code %}
 {% if shipping_address.country_code == 'US' %}
-                  <strong style="color: #c5c5c5;">Duties included.</strong>
-                  Your order ships from our US warehouse. There are no import
-                  duties, taxes or handling fees to pay on delivery.
-                  {% else %}
-                  <strong style="color: #c5c5c5;">Import duties.</strong>
-                  No import duties or import taxes were charged with this
-                  order. Your parcel ships from Belgium to outside the EU, so
-                  the carrier may ask you to pay import duties, taxes and a
-                  handling fee on delivery.
-                  {% endif %}
-                </p>
-              </td>
-            </tr>
-            {% endunless %}{% endif %}
-            {% if shipping_address %}
-            <tr>
-              <td style="padding: 0 32px 32px 32px;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #0a0a0a; border: 1px solid #1a241a;">
-                  <tr>
-                    <td style="padding: 20px 24px;">
-                      <p style="margin: 0 0 10px 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; color: #a0a0a0;">
-                        Shipping to
-                      </p>
-                      <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #c5c5c5;">
-                        {{ shipping_address.name }}<br>
-                        {{ shipping_address.street }}<br>
-                        {{ shipping_address.city }}{% if shipping_address.province_code %}, {{ shipping_address.province_code }}{% endif %} {{ shipping_address.zip }}<br>
-                        {{ shipping_address.country }}
-                      </p>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-            {% endif %}
-
-            <tr>
-              <td style="padding: 0 32px 32px 32px;">
-{% if shipping_address.country_code == 'US' %}
-<p style="margin: 0 0 16px 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.6; color: #a0a0a0;">
-  <strong style="color: #c5c5c5;">US delivery.</strong>
-  US delivery depends on FCC equipment authorization and US import clearance.
-  If we cannot deliver an item to you, you get a full refund for it.
-</p>
+<od-p small><strong style="color: #c5c5c5;">Duties included.</strong> Your price includes import duties, taxes and handling. There is nothing to pay on delivery.</od-p>
+{% if has_receiver %}
+<od-p small><strong style="color: #c5c5c5;">Receiver, US sale.</strong> The receiver is sold on the condition that it will not be delivered in the US until its FCC equipment authorization is granted (47 CFR 2.803). If authorization is not granted, you get a full refund for it.</od-p>
 {% endif %}
+<od-p small last>US delivery also depends on US import clearance. If we cannot deliver an item to you, you get a full refund for it.</od-p>
+{% else %}
+<od-p small last><strong style="color: #c5c5c5;">Import duties.</strong> No import duties or import taxes were charged with this order, so the carrier may ask you to pay import duties, taxes and a handling fee on delivery.</od-p>
+{% endif %}
+{% endunless %}{% endif %}
+{% if shipping_address %}
+<od-card>
+  <od-label>Shipping to</od-label>
+  <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #c5c5c5;">
+    {{ shipping_address.name }}<br>
+    {{ shipping_address.street }}<br>
+    {{ shipping_address.city }}{% if shipping_address.province_code %}, {{ shipping_address.province_code }}{% endif %} {{ shipping_address.zip }}<br>
+    {{ shipping_address.country }}
+  </p>
+</od-card>
+{% endif %}
+            <tr>
+              <td class="od-px" style="padding: 0 32px 32px 32px;">
 <!-- Legal: contract confirmation on a durable medium (Art. VI.46 WER).
      Withdrawal info + model form + current terms (web, v2.5) must reach
      the consumer with the order confirmation; omitting it extends withdrawal
      to 12 months. -->
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 24px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 8px;">
   <tr>
     <td style="padding: 16px 0 0 0; border-top: 1px solid #1a241a; font-family: Helvetica, Arial, sans-serif; font-size: 12px; line-height: 1.6; color: #a0a0a0;">
       <p style="margin: 0 0 8px 0;">

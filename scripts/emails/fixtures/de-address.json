@@ -4,7 +4,8 @@
     "description": "German address, German VAT (19%) included, a discount code, two preorder lines.",
     "templates": [
       "order-confirmation",
-      "shipping-confirmation"
+      "shipping-confirmation",
+      "staff-new-order"
     ]
   },
   "name": "#9003",
@@ -32,7 +33,7 @@
         "title": "OpenFC Lite"
       },
       "properties": {
-        "Preorder": "ships late October 2026, delivered by 30 November 2026"
+        "Preorder": "ships early November 2026, delivered by 30 November 2026"
       }
     },
     {
@@ -49,7 +50,7 @@
         "title": "OpenESC"
       },
       "properties": {
-        "Preorder": "ships late October 2026, delivered by 30 November 2026"
+        "Preorder": "ships early November 2026, delivered by 30 November 2026"
       }
     }
   ],
@@ -127,7 +128,7 @@
             "title": "OpenFC Lite"
           },
           "properties": {
-            "Preorder": "ships late October 2026, delivered by 30 November 2026"
+            "Preorder": "ships early November 2026, delivered by 30 November 2026"
           }
         },
         "quantity": 1
@@ -147,7 +148,7 @@
             "title": "OpenESC"
           },
           "properties": {
-            "Preorder": "ships late October 2026, delivered by 30 November 2026"
+            "Preorder": "ships early November 2026, delivered by 30 November 2026"
           }
         },
         "quantity": 1

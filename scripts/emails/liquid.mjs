@@ -12,7 +12,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {Liquid} from 'liquidjs';
 
-import {BASE_PATH, BODIES_DIR, MAPPINGS_PATH, OUT_DIR, composeTemplate} from '../shopify-templates/gen.mjs';
+import {BODIES_DIR, MAPPINGS_PATH, OUT_DIR, composeTemplate} from '../shopify-templates/gen.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const FIXTURES_DIR = path.join(HERE, 'fixtures');
@@ -65,7 +65,7 @@ export async function loadFixtures() {
 
 /** Phase 1 templates (those with a body) with their sources and paste targets. */
 export async function loadTemplates() {
-  const [baseRaw, mappingsRaw] = await Promise.all([fs.readFile(BASE_PATH, 'utf8'), fs.readFile(MAPPINGS_PATH, 'utf8')]);
+  const mappingsRaw = await fs.readFile(MAPPINGS_PATH, 'utf8');
   const out = [];
   for (const tpl of JSON.parse(mappingsRaw).templates) {
     let body;
@@ -74,7 +74,7 @@ export async function loadTemplates() {
     } catch {
       continue;
     }
-    const html = composeTemplate(baseRaw, body, tpl);
+    const html = composeTemplate(body, tpl);
     let generated = null;
     try {
       generated = await fs.readFile(path.join(OUT_DIR, `${tpl.key}.html`), 'utf8');

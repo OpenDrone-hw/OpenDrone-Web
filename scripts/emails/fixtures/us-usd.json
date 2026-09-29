@@ -1,10 +1,11 @@
 {
   "_scenario": {
     "title": "United States, USD, no VAT, duties included",
-    "description": "US address, presentment currency USD, no tax lines, duties included, US warehouse, March preorder promise.",
+    "description": "US address, presentment currency USD, no tax lines, duties included, route-neutral fulfilment, end of March preorder promise.",
     "templates": [
       "order-confirmation",
-      "shipping-confirmation"
+      "shipping-confirmation",
+      "staff-new-order"
     ]
   },
   "shop": {
@@ -38,7 +39,7 @@
         "title": "OpenFC Lite"
       },
       "properties": {
-        "Preorder": "ships by 14 March 2027 if the target is reached by 22 November 2026"
+        "Preorder": "ships by the end of March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait; if the target is reached in time, delivered by 30 April 2027"
       }
     }
   ],
@@ -109,7 +110,7 @@
             "title": "OpenFC Lite"
           },
           "properties": {
-            "Preorder": "ships by 14 March 2027 if the target is reached by 22 November 2026"
+            "Preorder": "ships by the end of March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait; if the target is reached in time, delivered by 30 April 2027"
           }
         },
         "quantity": 1

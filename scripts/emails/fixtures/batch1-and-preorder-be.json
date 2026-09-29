@@ -1,0 +1,144 @@
+{
+  "_scenario": {
+    "title": "Batch 1 FC and ESC plus preorder-run receiver, Belgium",
+    "description": "EU-only batch 1 lines (early November) with a preorder-run receiver line in one order.",
+    "templates": [
+      "order-confirmation",
+      "staff-new-order",
+      "shipping-confirmation"
+    ]
+  },
+  "name": "#9010",
+  "order_name": "#9010",
+  "order_number": 9010,
+  "line_items": [
+    {
+      "title": "OpenFC Lite - 20x20",
+      "variant": {
+        "title": "20x20"
+      },
+      "quantity": 1,
+      "price": 6495,
+      "line_price": 6495,
+      "sku": "OPENFC-LITE-2020",
+      "image": "placeholder:OpenFC",
+      "product": {
+        "title": "OpenFC Lite"
+      },
+      "properties": {
+        "Preorder": "ships early November 2026, delivered by 30 November 2026"
+      }
+    },
+    {
+      "title": "OpenESC - 20x20",
+      "variant": {
+        "title": "20x20"
+      },
+      "quantity": 1,
+      "price": 7995,
+      "line_price": 7995,
+      "sku": "OPENESC-2020",
+      "image": "placeholder:OpenESC",
+      "product": {
+        "title": "OpenESC"
+      },
+      "properties": {
+        "Preorder": "ships early November 2026, delivered by 30 November 2026"
+      }
+    },
+    {
+      "title": "OpenRX Lite",
+      "variant": {
+        "title": "Default Title"
+      },
+      "quantity": 1,
+      "price": 2995,
+      "line_price": 2995,
+      "sku": "OPENRX-LITE",
+      "image": "placeholder:OpenRX",
+      "product": {
+        "title": "OpenRX Lite"
+      },
+      "properties": {
+        "Preorder": "ships by the end of March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait; if the target is reached in time, delivered by 15 April 2027"
+      }
+    }
+  ],
+  "subtotal_price": 17485,
+  "shipping_price": 695,
+  "total_price": 18180,
+  "tax_price": 3155,
+  "fulfillment": {
+    "item_count": 3,
+    "tracking_company": "bpost",
+    "tracking_numbers": [
+      "TEST-BE-0000000010"
+    ],
+    "tracking_url": "https://track.bpost.cloud/btr/web/#/search?itemCode=TEST-BE-0000000010&lang=en",
+    "tracking_urls": [
+      "https://track.bpost.cloud/btr/web/#/search?itemCode=TEST-BE-0000000010&lang=en"
+    ],
+    "fulfillment_line_items": [
+      {
+        "line_item": {
+          "title": "OpenFC Lite - 20x20",
+          "variant": {
+            "title": "20x20"
+          },
+          "quantity": 1,
+          "price": 6495,
+          "line_price": 6495,
+          "sku": "OPENFC-LITE-2020",
+          "image": "placeholder:OpenFC",
+          "product": {
+            "title": "OpenFC Lite"
+          },
+          "properties": {
+            "Preorder": "ships early November 2026, delivered by 30 November 2026"
+          }
+        },
+        "quantity": 1
+      },
+      {
+        "line_item": {
+          "title": "OpenESC - 20x20",
+          "variant": {
+            "title": "20x20"
+          },
+          "quantity": 1,
+          "price": 7995,
+          "line_price": 7995,
+          "sku": "OPENESC-2020",
+          "image": "placeholder:OpenESC",
+          "product": {
+            "title": "OpenESC"
+          },
+          "properties": {
+            "Preorder": "ships early November 2026, delivered by 30 November 2026"
+          }
+        },
+        "quantity": 1
+      },
+      {
+        "line_item": {
+          "title": "OpenRX Lite",
+          "variant": {
+            "title": "Default Title"
+          },
+          "quantity": 1,
+          "price": 2995,
+          "line_price": 2995,
+          "sku": "OPENRX-LITE",
+          "image": "placeholder:OpenRX",
+          "product": {
+            "title": "OpenRX Lite"
+          },
+          "properties": {
+            "Preorder": "ships by the end of March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait; if the target is reached in time, delivered by 15 April 2027"
+          }
+        },
+        "quantity": 1
+      }
+    ]
+  }
+}

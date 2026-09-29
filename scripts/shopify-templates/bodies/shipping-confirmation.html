@@ -1,72 +1,24 @@
+<od-head kicker="Order {{ name }}">{% if customer.first_name %}{{ customer.first_name }}, y{% else %}Y{% endif %}our order is on the way.</od-head>
+<od-p last>{% if fulfillment.item_count == 1 %}The item from your order has{% else %}Items from your order have{% endif %} shipped. Track the delivery below. Tested and inspected before it left us.</od-p>
+{% if fulfillment.tracking_numbers.size > 0 %}
+<od-card>
+  {% if fulfillment.tracking_company %}
+  <od-label>Carrier</od-label>
+  <p style="margin: 0 0 16px 0; font-family: Helvetica, Arial, sans-serif; font-size: 15px; color: #c5c5c5;">{{ fulfillment.tracking_company }}</p>
+  {% endif %}
+  <od-label>Tracking</od-label>
+  {% for tracking_number in fulfillment.tracking_numbers %}
+  <p style="margin: 0 0 4px 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; color: #c5c5c5; word-break: break-all;">{{ tracking_number }}</p>
+  {% endfor %}
+</od-card>
+{% endif %}
+{% if fulfillment.tracking_url %}
+<od-button href="{{ fulfillment.tracking_url }}">Track shipment &rarr;</od-button>
+{% else %}
+<od-button href="{{ order_status_url }}">View order status &rarr;</od-button>
+{% endif %}
             <tr>
-              <td style="padding: 40px 32px 0 32px;">
-                <p style="margin: 0 0 14px 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; color: #ffb700;">
-                  Order {{ name }}
-                </p>
-                <h1 style="margin: 0 0 20px 0; font-family: 'Space Grotesk', Helvetica, Arial, sans-serif; font-size: 32px; line-height: 1.15; font-weight: 700; letter-spacing: -0.01em; color: #e5e5e5;">
-                  {% if customer.first_name %}{{ customer.first_name }}, y{% else %}Y{% endif %}our order is on the way.
-                </h1>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding: 0 32px 28px 32px;">
-                <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.6; color: #c5c5c5;">
-                  {% if fulfillment.item_count == 1 %}The item from your order has{% else %}Items from your order have{% endif %}
-                  left the workshop. Track the delivery below.
-                </p>
-              </td>
-            </tr>
-            {% if fulfillment.tracking_numbers.size > 0 %}
-            <tr>
-              <td style="padding: 0 32px 24px 32px;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #0a0a0a; border: 1px solid #1a241a;">
-                  <tr>
-                    <td style="padding: 20px 24px;">
-                      {% if fulfillment.tracking_company %}
-                      <p style="margin: 0 0 10px 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; color: #a0a0a0;">
-                        Carrier
-                      </p>
-                      <p style="margin: 0 0 16px 0; font-family: Helvetica, Arial, sans-serif; font-size: 15px; color: #c5c5c5;">
-                        {{ fulfillment.tracking_company }}
-                      </p>
-                      {% endif %}
-                      <p style="margin: 0 0 10px 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; color: #a0a0a0;">
-                        Tracking
-                      </p>
-                      {% for tracking_number in fulfillment.tracking_numbers %}
-                      <p style="margin: 0 0 4px 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; color: #c5c5c5; word-break: break-all;">
-                        {{ tracking_number }}
-                      </p>
-                      {% endfor %}
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-            {% endif %}
-            <tr>
-              <td style="padding: 0 32px 32px 32px;">
-                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                  <tr>
-                    {% if fulfillment.tracking_url %}
-                    <td style="background-color: #ffb700; border-radius: 4px;">
-                      <a href="{{ fulfillment.tracking_url }}" style="display: inline-block; padding: 14px 28px; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #0a0a0a; text-decoration: none;">
-                        Track shipment &rarr;
-                      </a>
-                    </td>
-                    {% else %}
-                    <td style="background-color: #ffb700; border-radius: 4px;">
-                      <a href="{{ order_status_url }}" style="display: inline-block; padding: 14px 28px; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #0a0a0a; text-decoration: none;">
-                        View order status &rarr;
-                      </a>
-                    </td>
-                    {% endif %}
-                  </tr>
-                </table>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding: 0 32px 8px 32px;">
+              <td class="od-px" style="padding: 0 32px 8px 32px;">
                 <p style="margin: 0 0 12px 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; color: #a0a0a0;">
                   In this shipment
                 </p>
@@ -74,7 +26,7 @@
             </tr>
             {% for line in fulfillment.fulfillment_line_items %}
             <tr>
-              <td style="padding: 0 32px 8px 32px;">
+              <td class="od-px" style="padding: 0 32px 8px 32px;">
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top: 1px solid #1a241a;">
                   <tr>
                     <td valign="top" style="padding: 14px 0;">
@@ -100,25 +52,11 @@
               </td>
             </tr>
             {% endfor %}
-            {% assign eu_countries = 'AT,BE,BG,CY,CZ,DE,DK,EE,ES,FI,FR,GR,HR,HU,IE,IT,LT,LU,LV,MT,NL,PL,PT,RO,SE,SI,SK' | split: ',' %}
-            {% if shipping_address and shipping_address.country_code != blank %}{% unless eu_countries contains shipping_address.country_code %}
-            <tr>
-              <td style="padding: 16px 32px 0 32px;">
-                <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.6; color: #a0a0a0;">
+{% assign eu_countries = 'AT,BE,BG,CY,CZ,DE,DK,EE,ES,FI,FR,GR,HR,HU,IE,IT,LT,LU,LV,MT,NL,PL,PT,RO,SE,SI,SK' | split: ',' %}
+{% if shipping_address and shipping_address.country_code != blank %}{% unless eu_countries contains shipping_address.country_code %}
 {% if shipping_address.country_code == 'US' %}
-                  <strong style="color: #c5c5c5;">Duties included.</strong>
-                  Your order ships from our US warehouse. There are no import
-                  duties, taxes or handling fees to pay on delivery.
-                  {% else %}
-                  <strong style="color: #c5c5c5;">Import duties.</strong>
-                  No import duties or import taxes were charged with your
-                  order. The carrier may ask you to pay import duties, taxes
-                  and a handling fee on delivery.
-                  {% endif %}
-                </p>
-              </td>
-            </tr>
-            {% endunless %}{% endif %}
-            <tr>
-              <td style="padding: 24px 32px 32px 32px;"></td>
-            </tr>
+<od-p small last><strong style="color: #c5c5c5;">Duties included.</strong> Your price includes import duties, taxes and handling. There is nothing to pay on delivery.</od-p>
+{% else %}
+<od-p small last><strong style="color: #c5c5c5;">Import duties.</strong> No import duties or import taxes were charged with your order. The carrier may ask you to pay import duties, taxes and a handling fee on delivery.</od-p>
+{% endif %}
+{% endunless %}{% endif %}

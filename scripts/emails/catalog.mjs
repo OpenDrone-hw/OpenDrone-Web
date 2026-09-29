@@ -84,7 +84,7 @@ async function shopifyCards() {
         scenario: fx.meta.title,
         description: fx.meta.description ?? '',
         audience: 'customer',
-        source: [tpl.bodyFile, 'scripts/shopify-templates/_base.html', fx.file],
+        source: [tpl.bodyFile, 'app/lib/email-shell.ts', fx.file],
         subject: subject.output,
         preheader: tpl.preheader,
         preheaderDerived: false,
@@ -245,9 +245,9 @@ function tradeCards() {
 }
 
 function preorderCards() {
-  const endsOn = '2026-11-22';
-  const replyBy = addDays('2026-11-23', 30);
-  const newDates = {en: 'mid November 2026', nl: 'half november 2026', fr: 'mi-novembre 2026'};
+  const endsOn = '2026-12-15';
+  const replyBy = addDays('2026-12-16', 30);
+  const newDates = {en: 'early November 2026', nl: 'begin november 2026', fr: 'début novembre 2026'};
   const missedDates = {en: 'by the end of June 2027', nl: 'tegen eind juni 2027', fr: 'd’ici fin juin 2027'};
   const cards = [];
   const add = (id, scenario, locale, mail) =>
@@ -262,6 +262,7 @@ function preorderCards() {
         locale,
         subject: mail.subject,
         text: mail.text,
+        html: mail.html,
       }),
     );
   for (const locale of ['en', 'nl', 'fr']) {
@@ -319,21 +320,27 @@ function preorderCards() {
 
 function launchBlastCards() {
   const unsub = 'https://unsubscribe.example/preview';
-  return ['openfc-lite', 'openrx'].map((handle) => {
-    const mail = renderBlast(handle);
+  const variants = [
+    ['all', 'all', 'Preorders open, list of unknown region (EU batch 1, preorder run, US terms)'],
+    ['all', 'eu', 'Preorders open, EU version'],
+    ['all', 'us', 'Preorders open, US version (duties included, FCC receiver line)'],
+    ['openfc-lite', 'eu', 'Preorders open, EU version with a product the reader asked about'],
+  ];
+  return variants.map(([handle, region, scenario]) => {
+    const mail = renderBlast(handle, region);
     const fill = (s) => s.replaceAll('{{{RESEND_UNSUBSCRIBE_URL}}}', unsub);
     return resendCard({
-      id: `launch-blast-${handle}`,
+      id: `launch-blast-${handle}-${region}`,
       group: 'Script mails (Resend)',
-      email: 'Product launch broadcast',
-      scenario: `Launch of ${handle}`,
+      email: 'Launch broadcast: preorders open',
+      scenario,
       audience: 'customer',
-      source: ['scripts/launch-blast.mjs'],
+      source: ['scripts/launch-blast.mjs', 'scripts/emails/shopify-email-launch.md'],
       locale: 'en',
       subject: mail.subject,
       text: fill(mail.text),
       html: fill(mail.html),
-      notes: ['Resend fills {{{RESEND_UNSUBSCRIBE_URL}}} per contact at send; shown here with a placeholder link.'],
+      notes: ['Resend fills {{{RESEND_UNSUBSCRIBE_URL}}} per contact at send; shown here with a placeholder link. The Shopify Email draft uses the same copy (shopify-email-launch.md).'],
     });
   });
 }

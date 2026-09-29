@@ -347,6 +347,13 @@ async function build(out) {
   await inlineImages(catalog);
   fs.mkdirSync(path.dirname(out), {recursive: true});
   fs.writeFileSync(out, renderPage({catalog, live: false}));
+  // One file per card next to the gallery, for opening a single mail on its own.
+  const dir = path.join(path.dirname(out), 'cards');
+  fs.mkdirSync(dir, {recursive: true});
+  for (const c of catalog.cards) {
+    if (c.html) fs.writeFileSync(path.join(dir, `${c.id}.html`), c.html);
+    else if (c.text) fs.writeFileSync(path.join(dir, `${c.id}.txt`), `Subject: ${c.subject}\n\n${c.text}\n`);
+  }
   const broken = catalog.cards.filter((c) => c.errors.length).length;
   console.log(`Wrote ${catalog.cards.length} cards to ${out}${broken ? `; ${broken} with problems` : ''}`);
 }

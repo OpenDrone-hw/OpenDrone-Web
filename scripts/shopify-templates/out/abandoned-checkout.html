@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en" style="color-scheme: dark;">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="x-apple-disable-message-reformatting" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="supported-color-schemes" content="dark" />
+    <title>Finish your order</title>
+    <style>
+      :root { color-scheme: dark; supported-color-schemes: dark; }
+      a { color: #ffb700; }
+      @media only screen and (max-width: 480px) {
+        .od-outer { padding: 16px 8px !important; }
+        .od-px { padding-left: 20px !important; padding-right: 20px !important; }
+        .od-h1 { font-size: 26px !important; }
+      }
+    </style>
+  </head>
+  <body
+    bgcolor="#0a0a0a"
+    style="margin: 0; padding: 0; background-color: #0a0a0a; color: #e5e5e5; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; -webkit-text-size-adjust: 100%;"
+  >
+    <div style="display: none; max-height: 0; overflow: hidden; font-size: 1px; line-height: 1px; color: #0a0a0a; opacity: 0;">
+      Your OpenDrone cart is still here. Pick up where you left off.
+    </div>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0a0a0a" style="background-color: #0a0a0a;">
+      <tr>
+        <td class="od-outer" align="center" style="padding: 32px 16px;">
+          <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#101210" style="width: 100%; max-width: 600px; background-color: #101210; border: 1px solid #1a241a;">
+            <!-- HEADER: white band so the black and gold wordmark reads in every client. -->
+            <tr>
+              <td class="od-px" bgcolor="#ffffff" style="padding: 18px 32px; background-color: #ffffff;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td style="font-family: 'Space Grotesk', Helvetica, Arial, sans-serif; font-size: 20px; font-weight: 700; color: #0a0a0a;">
+                      <img src="https://cdn.shopify.com/s/files/1/1032/6641/9033/files/opendrone-wordmark-email-blackgold_39eb37d0-777f-4a31-b2f3-eb25965c97d7.png?v=1786703416" alt="OpenDrone" width="160" height="39" style="display: block; border: 0; outline: none; text-decoration: none; height: 39px; width: 160px; font-family: 'Space Grotesk', Helvetica, Arial, sans-serif; font-size: 20px; font-weight: 700; color: #0a0a0a;" />
+                    </td>
+                    <td align="right" style="font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: #4a4a4a;">
+                      Cart waiting
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- BODY -->
+            <tr>
+              <td class="od-px" style="padding: 40px 32px 0 32px;">
+                <p style="margin: 0 0 14px 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; color: #ffb700;">
+                  Your cart
+                </p>
+                <h1 class="od-h1" style="margin: 0 0 20px 0; font-family: 'Space Grotesk', Helvetica, Arial, sans-serif; font-size: 32px; line-height: 1.15; font-weight: 700; letter-spacing: -0.01em; color: #e5e5e5;">
+                  Your cart is waiting.
+                </h1>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="od-px" style="padding: 0 32px 16px 32px;">
+                <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.6; color: #c5c5c5;">
+                  You left something in your cart. It is still here.
+                </p>
+              </td>
+            </tr>
+
+{% for line in line_items %}
+            <tr>
+              <td class="od-px" style="padding: 0 32px 8px 32px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top: 1px solid #1a241a;">
+                  <tr>
+                    <td valign="top" style="padding: 14px 0; font-family: Helvetica, Arial, sans-serif; font-size: 15px; color: #e5e5e5;">
+                      {{ line.title }}
+                      <span style="font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; color: #a0a0a0;"> &times; {{ line.quantity }}</span>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+{% endfor %}
+            <tr>
+              <td class="od-px" style="padding: 0 32px 28px 32px;">
+                <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #a0a0a0;">
+                  Preorder items are charged in full at checkout and carry their ship date on the product page.
+                </p>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="od-px" style="padding: 0 32px 36px 32px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td bgcolor="#ffb700" style="background-color: #ffb700; border-radius: 4px;">
+                      <a href="{{ url }}" style="display: inline-block; padding: 14px 28px; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #0a0a0a; text-decoration: none;">
+                        Return to your cart &rarr;
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+
+            <!-- FOOTER -->
+            <tr>
+              <td class="od-px" style="padding: 24px 32px; border-top: 1px solid #1a241a; font-family: Helvetica, Arial, sans-serif; font-size: 12px; line-height: 1.6; color: #a0a0a0;">
+                <p style="margin: 0 0 12px 0;">
+                  OpenDrone &middot; open source drone electronics designed in Belgium.
+                </p>
+                <p style="margin: 0 0 16px 0;">
+                  Incutec BV · Stapelhuisstraat 15, 3000 Leuven, Belgium · KBO 1038.934.039 · BTW BE 1038.934.039
+                </p>
+                <p style="margin: 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; letter-spacing: 0.1em;">
+                  <a href="https://opendrone.be" style="color: #ffb700; text-decoration: none;">opendrone.be</a>
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
