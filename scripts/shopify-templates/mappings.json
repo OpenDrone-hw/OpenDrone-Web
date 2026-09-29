@@ -66,6 +66,7 @@
       "key": "abandoned-checkout",
       "shopifyName": "Abandoned checkout",
       "adminPath": "abandoned_checkout_notification",
+      "pasteSkip": "Shopify admin shows the legacy abandoned checkout email read-only (the live one is Marketing Automations)",
       "emailSubject": "Your OpenDrone cart is waiting",
       "title": "Finish your order",
       "badge": "Cart waiting",
