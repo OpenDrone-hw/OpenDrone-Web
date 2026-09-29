@@ -742,7 +742,8 @@ page renders as before. Open:
 |---|---|---|
 | Destination | `shippingQuote` zone `us`, rate from `us-sales.json` | unchanged |
 | Prices | the US catalog's USD list price: duties included, no sales tax. The price step badge and the price steps list show USD too (see "US prices" below) | EUR incl. VAT |
-| Counter | "0 / 250 ordered for the March 2027 batch": the batch a US unit ships in, never read as batch 1 | "1 / 250 ordered" |
+| Counter | "0 / 250 ordered for the March 2027 batch": names the batch it counts | "1 / 250 ordered for batch 1" |
+| Batches | one row per batch (`app/lib/availability.ts`, `app/components/Availability.tsx`): batch 1 "EU only, N left" shown as not available in the US, the March 2027 batch "EU and US" highlighted; other products one March row | batch 1 highlighted, March 2027 batch below |
 | Delivery date | the batch's `deliveryByUS` | the batch's `deliveryBy` |
 | Sells | everything for sale: campaign SKUs from their first US-serving batch, every other SKU (in stock, accessories) as a preorder of `usStock` in `content/preorders.json` (March 2027 batch). Sold out stays sold out | everything for sale |
 | Batch | first batch with room whose `regions` include US | first with room whose `regions` include EU |
@@ -759,6 +760,12 @@ cart, for example: checkout accepts any address in an open market). A US line
 batch tag.
 `release-batch.mjs` never releases a `us-review` order; follow both up by
 hand.
+
+The cart line and the checkout line property `Availability` carry the same
+words as the product page ("Batch 1 · EU only", "March 2027 batch · EU and
+US"; `batchText` in `app/lib/availability.ts`, words from
+`content/copy/preorder.json`). Product pages are English only; the legal terms
+(art. 7bis) are unchanged.
 
 #### US prices
 

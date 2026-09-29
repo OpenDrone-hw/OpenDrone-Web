@@ -134,6 +134,11 @@ export const CART_LINES_REMOVE_MUTATION = `#graphql
  *  and the order confirmation. */
 export const PREORDER_ATTRIBUTE = 'Preorder';
 
+/** The visible line attribute naming the batch and where it ships, in the
+ *  words of the product page and the cart: "Batch 1 · EU only", "March 2027
+ *  batch · EU and US". */
+export const AVAILABILITY_ATTRIBUTE = 'Availability';
+
 /** The hidden line attribute (a leading underscore hides it at checkout)
  *  naming the region a preorder line's promise was computed for. Only US
  *  lines carry it, value `US`; absent means EU. The hold pass tags an order
@@ -166,6 +171,8 @@ export type ShopifyCartLine = {
   /** The region the promise was computed for, from `_ship_region`; null
    *  for an EU line. */
   shipRegion?: string | null;
+  /** The `Availability` attribute: the batch and where it ships. */
+  availability?: string | null;
   total: ShopifyMoney;
 };
 
@@ -551,6 +558,7 @@ function validatedCart(
       const shipRegion = line.attributes.find(({key}) => key === SHIP_REGION_ATTRIBUTE)?.value;
       const preorder = line.attributes.find(({key}) => key === PREORDER_ATTRIBUTE)?.value ?? null;
       const own = line.attributes.find(({key}) => key === PREORDER_OWN_ATTRIBUTE)?.value;
+      const availability = line.attributes.find(({key}) => key === AVAILABILITY_ATTRIBUTE)?.value;
       return {
         id: line.id,
         merchandiseId: line.merchandise.id,
@@ -564,6 +572,7 @@ function validatedCart(
         shipPromise: own && preorder ? own : preorder,
         ...(own && preorder && own !== preorder ? {orderPromise: preorder} : {}),
         ...(shipRegion ? {shipRegion} : {}),
+        ...(availability ? {availability} : {}),
         total: line.cost.totalAmount,
       };
     }),

@@ -17,9 +17,8 @@ export function StepBar({
     current: boolean;
   }>;
   fundedLabel?: string;
-  /** The batch this counter counts toward ("March 2027"), named when the
-   *  buyer's batch is not the first one, so the count never reads as the
-   *  first batch's. */
+  /** The batch this counter counts toward ("batch 1", "the March 2027
+   *  batch"), so the count never reads as another batch's. */
   batch?: string | null;
 }) {
   const pct = barPercent(bar);
@@ -28,7 +27,7 @@ export function StepBar({
     bar.funded && fundedLabel
       ? fundedLabel
       : batch
-        ? `${bar.label} ${(copyText('preorder.ordered_for_batch') ?? 'ordered for the {batch} batch').replace('{batch}', batch)}`
+        ? `${bar.label} ${(copyText('preorder.ordered_for') ?? 'ordered for {batch}').replace('{batch}', batch)}`
         : `${bar.label} ${copyText('preorder.ordered') ?? 'ordered'}`;
   return (
     <div className="step-bar" data-funded={bar.funded ? '' : undefined}>

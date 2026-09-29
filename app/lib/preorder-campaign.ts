@@ -270,6 +270,12 @@ export type CampaignState = {
     units: number;
     status: 'sold_out' | 'current' | 'next' | 'other_region';
     shipPromise: string;
+    /** Paid stock (Incutec already ordered it), not a funding target. */
+    paid: boolean;
+    /** Where the batch ships: EU only for Belgian paid stock. */
+    regions: Region[];
+    /** Units already allocated to the batch. */
+    ordered: number;
   }>;
 };
 
@@ -690,6 +696,9 @@ export function campaignState(
           ? servesRegion(b, region) ? 'sold_out' : 'other_region'
           : i === index ? 'current' : 'next',
       shipPromise: batchPromise(b, pendingShips, region),
+      paid: Boolean(b.paid),
+      regions: b.regions ?? [...REGIONS],
+      ordered: fill[i] ?? 0,
     })),
   };
 }
@@ -790,7 +799,7 @@ function pinnedBatchState(
     tierOff: 0,
     price: null,
     nextPrice: null,
-    batches: [{batch, units: entry.units, status: 'current', shipPromise: promise}],
+    batches: [{batch, units: entry.units, status: 'current', shipPromise: promise, paid: false, regions: entry.regions ?? [...REGIONS], ordered: 0}],
   };
 }
 

@@ -8,6 +8,8 @@ import {shopifyImageUrl} from '~/lib/shopify-image';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {EditorialShell} from '~/components/EditorialShell';
 import {StepBar} from '~/components/PreorderMeter';
+import {preorderWords} from '~/components/Availability';
+import {batchPhrase, currentBatch} from '~/lib/availability';
 import {shipWord} from '~/components/ShipChip';
 import {AddToCartButton} from '~/components/AddToCartButton';
 import {NewsletterSignup} from '~/components/NewsletterSignup';
@@ -31,7 +33,6 @@ import {
   datedShipParts,
   latestShipDay,
   priceLadder,
-  promiseBatchMonth,
   shortCampaignDate,
   tiersFor,
   type CampaignState,
@@ -475,7 +476,7 @@ function Card({row, eta}: {row: Row; eta: string}) {
         {formatPrice(row.price.amount, currency)}
         {row.priceUnit ? <span> {row.priceUnit}</span> : null}
       </p>
-      <StepBar bar={bar} prices={prices} fundedLabel={funded} batch={currency === 'USD' ? promiseBatchMonth(row.shipPromise) : null} />
+      <StepBar bar={bar} prices={prices} fundedLabel={funded} batch={currentBatch(row.campaign) ? batchPhrase(currentBatch(row.campaign)!, preorderWords) : null} />
       <AddToCartButton
         className="po-card-cta"
         href={row.cartAddUrl}

@@ -556,6 +556,9 @@ function CartLine({
         )}
         <div className="cart-sheet-item">
           <Link to={variantLink(line.handle, line.selectedOptions)}><strong>{lineName(line)}</strong></Link>
+          {line.availability ?? info?.batch ? (
+            <small className="cart-line-batch">{line.availability ?? info?.batch}</small>
+          ) : null}
           <ShipChip promise={line.shipPromise} ifFunded={ifFunded} />
           {max !== null && line.quantity > max ? (
             <small className="cart-line-error" role="alert">{t('line_over_batch', 'Only {left} left in batch 1.', {left: max})}</small>
