@@ -35,6 +35,8 @@
     "gen:shopify-templates": "node scripts/shopify-templates/gen.mjs",
     "emails:preview": "node scripts/emails/preview.mjs",
     "emails:build": "node scripts/emails/preview.mjs --build",
+    "emails:chrome": "sh scripts/shopify-templates/chrome.sh",
+    "emails:paste": "node scripts/shopify-templates/paste.mjs",
     "emails:hash": "node --experimental-strip-types scripts/emails/hash.mjs",
     "gen:components": "node scripts/export-board-art.mjs --all --components-only",
     "gen:schematics": "node scripts/export-schematics.mjs --all",

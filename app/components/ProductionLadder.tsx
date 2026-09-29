@@ -73,7 +73,7 @@ export function ProductionLadder() {
                 far the saving is, what it roughly costs. Same goals.json the
                 studio edits, so the ladder updates as the plan does - new
                 goals become new rungs, finished ones stack above as record. */}
-            {r.goal && (r.kind === 'current' || r.kind === 'next') ? (
+            {r.goal && r.goal.target_label && (r.kind === 'current' || r.kind === 'next') ? (
               <>
                 <p className="ladder-body">{r.goal.body}</p>
                 <div className="goal-meter-row ladder-meter-row">
