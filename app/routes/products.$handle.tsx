@@ -1737,18 +1737,16 @@ function ProductPage() {
         <p className="product-buy-ship product-buy-fcc" role="note">
           {say(
             'product-chrome.buy_us_fcc',
-            'FCC notice: this device is subject to FCC rules. It is sold as a conditional preorder and is delivered to US buyers only after it completes FCC equipment authorization. FCC rules do not address consumer protection, contractual or other provisions under federal or state law. If authorization is not obtained, you get a full refund of everything you paid.',
+            'FCC notice: this device has not been authorized as required by the rules of the Federal Communications Commission. It is sold to US buyers as a conditional preorder and is not delivered unless authorization is obtained. FCC rules do not address consumer protection, contractual or other provisions under federal or state law. If authorization is not obtained, we refund that item in full.',
           )}
         </p>
       ) : null}
-      {fccConditional ? null : (
-        <p className="product-buy-ship" role="note">
-          {say(
-            'product-chrome.buy_us_notice',
-            'US delivery depends on US import clearance. If we cannot deliver to you, you get a full refund.',
-          )}
-        </p>
-      )}
+      <p className="product-buy-ship" role="note">
+        {say(
+          'product-chrome.buy_us_notice',
+          'US delivery depends on FCC equipment authorization and US import clearance. If we cannot deliver to you, you get a full refund.',
+        )}
+      </p>
     </>
   ) : null;
   // Coming-soon buy module: the price/stock/add-to-cart block becomes a

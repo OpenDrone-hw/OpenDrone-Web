@@ -339,12 +339,21 @@ describe('FCC conditional-sale disclosure', () => {
     for (const [file, key] of [['product-chrome', 'buy_us_fcc'], ['cart', 'us_fcc']] as const) {
       const copy = JSON.parse(fs.readFileSync(new URL(`../../content/copy/${file}.json`, import.meta.url), 'utf8')) as Record<string, string>;
       const text: string = copy[key];
-      assert.match(text, /is subject to FCC rules/);
+      assert.match(text, /has not been authorized as required by the rules of the Federal Communications Commission/);
       assert.match(text, /conditional preorder/);
-      assert.match(text, /equipment authorization/);
+      assert.match(text, /not delivered unless authorization is obtained/);
       assert.match(text, /FCC rules do not address consumer protection, contractual or other provisions under federal or state law/);
-      assert.match(text, /full refund/);
+      assert.match(text, /we refund that item in full/);
       assert.ok(!text.includes('\u2014'));
     }
+  });
+
+  it('keeps the product and cart FCC notice word-identical and the general US notice on every product', () => {
+    const read = (file: string) => JSON.parse(fs.readFileSync(new URL(`../../content/copy/${file}.json`, import.meta.url), 'utf8')) as Record<string, string>;
+    const chrome = read('product-chrome');
+    const cart = read('cart');
+    assert.equal(chrome.buy_us_fcc, cart.us_fcc);
+    assert.equal(chrome.buy_us_notice, cart.us_notice);
+    assert.match(chrome.buy_us_notice, /FCC equipment authorization and US import clearance/);
   });
 });
