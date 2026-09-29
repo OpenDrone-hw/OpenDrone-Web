@@ -1,9 +1,9 @@
 {
   "handle": "openmotor",
-  "variant": "2207",
+  "variant": "2306",
   "content": {
     "product": "openmotor",
-    "variant": "2207"
+    "variant": "2306"
   },
   "sources": [
     "public/models/od5/drive.glb"
