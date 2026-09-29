@@ -8976,24 +8976,38 @@ a.what-chain-chip:hover {
    ============================================ */
 
 /* The identity line under the title: the live Shopify email (or a plain
-   "Signed in" fallback) plus sign out as its trailing item, not a button
-   floating alone above the heading. */
+   "Signed in" fallback) on the left, Sign out on the right of the same
+   full-width row as the cards below; stacked on a phone. .page-header caps
+   itself at 44rem, which pinned Sign out mid-page, so the account header
+   spans the content width instead. */
+.account-header {
+  max-width: none;
+}
 .account-identity {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.5rem 1.5rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
 }
 .account-identity .page-description {
   margin: 0;
+  overflow-wrap: anywhere;
 }
 .account-identity-signout {
   flex: 0 0 auto;
 }
+@media (min-width: 640px) {
+  .account-identity {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+  }
+}
 
-/* Orders: a full-width card above the Newsletter/Support grid, each order a
-   plain-text row linking straight to its own Shopify order status page. */
+/* Orders: a full-width card above the Newsletter/Support grid. Each order
+   is its own bordered row: number and date, total, a status chip, a compact
+   item list, and one "View order" link that stretches over the whole row. */
 .account-orders-card {
   display: grid;
   gap: 0.75rem;
@@ -9008,17 +9022,125 @@ a.what-chain-chip:hover {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
-.account-order-row {
-  display: block;
+.account-order {
+  position: relative;
+  display: grid;
+  gap: 0.6rem;
+  padding: 1rem 1.1rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+  transition: border-color 200ms ease;
+}
+.account-order:hover,
+.account-order:focus-within {
+  border-color: color-mix(in srgb, var(--color-gold) 50%, transparent);
+}
+.account-order-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+}
+.account-order-id {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.75rem;
+}
+.account-order-number {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--color-text);
-  font-size: 0.9rem;
-  line-height: 1.5;
-  text-decoration: none;
 }
-a.account-order-row:hover {
+.account-order-date {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.account-order-total {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  color: var(--color-text);
+}
+.account-order-chip {
+  justify-self: start;
+  max-width: 100%;
+  padding: 0.2em 0.75em;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+.account-order-chip[data-tone='preorder'] {
   color: var(--color-gold-text);
+  border-color: color-mix(in srgb, var(--color-gold) 45%, transparent);
+  background: var(--color-gold-soft);
+}
+.account-order-chip[data-tone='shipped'] {
+  color: var(--color-green);
+  border-color: color-mix(in srgb, var(--color-green) 45%, transparent);
+  background: color-mix(in srgb, var(--color-green) 10%, transparent);
+}
+.account-order-chip[data-tone='processing'] {
+  color: var(--color-text);
+}
+.account-order-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.15rem;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--color-text);
+}
+.account-order-item {
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr);
+  align-items: baseline;
+  gap: 0.25rem;
+}
+.account-order-qty {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--color-text-muted);
+  align-self: baseline;
+}
+.account-order-variant {
+  margin-left: 0.5rem;
+  color: var(--color-text-muted);
+  font-size: 0.85em;
+}
+.account-order-more {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+.account-order-note {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.account-order-view {
+  justify-self: start;
+}
+.account-order-view::after {
+  content: '';
+  position: absolute;
+  inset: 0;
 }
 .account-orders-all {
   justify-self: start;

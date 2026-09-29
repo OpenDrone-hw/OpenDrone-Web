@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {orderPreorderLabel, readCustomerAccount} from './customer-shopify.ts';
+import {batchPromiseOf, orderPromise, readCustomerAccount} from './customer-shopify.ts';
 import {parseCampaignConfig} from '../preorder-campaign.ts';
 
 const ENV = {
@@ -17,7 +17,10 @@ const CONFIG = parseCampaignConfig({
   pendingShips: 'ships by 14 March 2027 if the target is reached by 22 November 2026, otherwise you choose a refund or to wait',
   skus: {
     'OPENFC-LITE-2020': {
-      batches: [{units: 250, paid: true, ships: 'ships late October 2026'}, {units: 250}],
+      batches: [{units: 250, paid: true, ships: 'ships late October 2026', deliveryBy: '2026-11-30'}, {units: 250}],
+    },
+    'OPENMOTOR-2306': {
+      batches: [{units: 100}],
     },
   },
   shipsWith: {
@@ -43,6 +46,9 @@ function rawOrder(partial: {
   name?: string;
   tags?: string[];
   lines?: Array<[string | null, number]>;
+  fulfillment?: string;
+  financial?: string;
+  cancelledAt?: string | null;
 }) {
   return {
     id: 'gid://shopify/Order/1',
@@ -50,10 +56,15 @@ function rawOrder(partial: {
     createdAt: '2026-09-28T10:00:00Z',
     statusPageUrl: 'https://store.myshopify.com/1234/orders/abc/authenticate',
     tags: partial.tags ?? [],
+    cancelledAt: partial.cancelledAt ?? null,
+    displayFulfillmentStatus: partial.fulfillment ?? 'UNFULFILLED',
+    displayFinancialStatus: partial.financial ?? 'PAID',
+    currentTotalPriceSet: {presentmentMoney: {amount: '612.40', currencyCode: 'EUR'}},
     lineItems: {
       nodes: (partial.lines ?? [['OPENFC-LITE-2020', 1]]).map(([sku, currentQuantity]) => ({
         sku,
-        name: sku ?? 'Item',
+        title: sku ?? 'Item',
+        variantTitle: sku === 'OPENFC-LITE-2020' ? '30×30' : 'Default Title',
         currentQuantity,
       })),
     },
@@ -107,8 +118,15 @@ describe('readCustomerAccount', () => {
     const result = await readCustomerAccount(ENV, 'gid://shopify/Customer/1', CONFIG, fetcher);
     assert.equal(result?.newsletter, null);
     assert.equal(result?.orders.length, 1);
-    assert.deepEqual(result?.orders[0].lines, [{sku: 'OPENFC-LITE-2020', name: 'OPENFC-LITE-2020', quantity: 1}]);
-    assert.equal(result?.orders[0].preorderLabel, null);
+    assert.deepEqual(result?.orders[0].lines, [
+      {sku: 'OPENFC-LITE-2020', name: 'OPENFC-LITE-2020', variant: '30×30', quantity: 1},
+    ]);
+    assert.equal(result?.orders[0].isPreorder, false);
+    assert.equal(result?.orders[0].promise, null);
+    assert.deepEqual(result?.orders[0].total, {amount: '612.40', currencyCode: 'EUR'});
+    assert.equal(result?.orders[0].fulfillmentStatus, 'UNFULFILLED');
+    assert.equal(result?.orders[0].financialStatus, 'PAID');
+    assert.equal(result?.orders[0].cancelled, false);
   });
 
   it('labels a preorder order waiting on a dated batch', async () => {
@@ -117,8 +135,10 @@ describe('readCustomerAccount', () => {
       customer: {id: 'x', email: 'jane@example.com', emailMarketingConsent: null, orders: {nodes: [order]}},
     });
     const result = await readCustomerAccount(ENV, 'gid://shopify/Customer/1', CONFIG, fetcher);
-    assert.match(result!.orders[0].preorderLabel!, /^Preorder: /);
-    assert.match(result!.orders[0].preorderLabel!, /October 2026/);
+    assert.equal(result!.orders[0].isPreorder, true);
+    assert.equal(result!.orders[0].promise?.kind, 'date');
+    assert.equal(result!.orders[0].promise?.text, 'ships late Oct 2026');
+    assert.equal(result!.orders[0].promise?.delivered, '30 Nov 2026');
   });
 
   it('labels a preorder order waiting on a funding target', async () => {
@@ -127,7 +147,8 @@ describe('readCustomerAccount', () => {
       customer: {id: 'x', email: 'jane@example.com', emailMarketingConsent: null, orders: {nodes: [order]}},
     });
     const result = await readCustomerAccount(ENV, 'gid://shopify/Customer/1', CONFIG, fetcher);
-    assert.equal(result?.orders[0].preorderLabel, 'Preorder: ships by 14 March 2027 if reached');
+    assert.equal(result?.orders[0].promise?.kind, 'target');
+    assert.equal(result?.orders[0].promise?.text, 'ships by 14 Mar 2027');
   });
 
   it('caps at the 5 orders the query itself asked for', async () => {
@@ -140,27 +161,88 @@ describe('readCustomerAccount', () => {
   });
 });
 
-describe('orderPreorderLabel', () => {
+describe('orderPromise', () => {
+  const node = (sku: string, currentQuantity = 1) => ({sku, title: sku, variantTitle: null, currentQuantity});
+
   it('is null without a preorder tag', () => {
-    assert.equal(orderPreorderLabel({tags: [], lineItems: {nodes: []}}, CONFIG), null);
+    assert.equal(orderPromise({tags: [], lineItems: {nodes: []}}, CONFIG), null);
   });
 
-  it('falls back to a bare "Preorder" when tagged but no live line matches a batch tag', () => {
-    const label = orderPreorderLabel(
-      {tags: ['preorder', 'batch:OPENFC-LITE-2020:1'], lineItems: {nodes: [{sku: 'OPENFC-LITE-2020', name: 'x', currentQuantity: 0}]}},
+  it('is null when tagged but no live line matches a batch tag', () => {
+    const promise = orderPromise(
+      {tags: ['preorder', 'batch:OPENFC-LITE-2020:1'], lineItems: {nodes: [node('OPENFC-LITE-2020', 0)]}},
       CONFIG,
     );
-    assert.equal(label, 'Preorder');
+    assert.equal(promise, null);
   });
 
   it('follows a shipsWith accessory line to its lead SKU batch tag', () => {
-    const label = orderPreorderLabel(
+    const promise = orderPromise(
+      {tags: ['preorder', 'batch:OPENFC-LITE-2020:1'], lineItems: {nodes: [node('ACC-STRAP-001', 2)]}},
+      CONFIG,
+    );
+    assert.equal(promise?.kind, 'date');
+  });
+
+  it('takes the LATEST promise of a mixed order, whatever the tag order', () => {
+    const nodes = [node('OPENFC-LITE-2020'), node('OPENMOTOR-2306', 4)];
+    for (const tags of [
+      ['preorder', 'batch:OPENFC-LITE-2020:1', 'batch:OPENMOTOR-2306:1'],
+      ['preorder', 'batch:OPENMOTOR-2306:1', 'batch:OPENFC-LITE-2020:1'],
+    ]) {
+      const promise = orderPromise({tags, lineItems: {nodes}}, CONFIG);
+      assert.equal(promise?.kind, 'target');
+      assert.equal(promise?.day, '2027-03-14');
+      assert.equal(promise?.text, 'ships by 14 Mar 2027');
+    }
+  });
+
+  it('ignores the later batch once its line is refunded', () => {
+    const promise = orderPromise(
       {
-        tags: ['preorder', 'batch:OPENFC-LITE-2020:1'],
-        lineItems: {nodes: [{sku: 'ACC-STRAP-001', name: 'Strap', currentQuantity: 2}]},
+        tags: ['preorder', 'batch:OPENFC-LITE-2020:1', 'batch:OPENMOTOR-2306:1'],
+        lineItems: {nodes: [node('OPENFC-LITE-2020'), node('OPENMOTOR-2306', 0)]},
       },
       CONFIG,
     );
-    assert.match(label!, /^Preorder: /);
+    assert.equal(promise?.kind, 'date');
+    assert.equal(promise?.day, '2026-10-31');
+  });
+
+  it('lets a funding target that names an earlier ship day than a dated batch lose to it', () => {
+    const config = {...CONFIG, shipsBy: '2026-09-01'};
+    const promise = orderPromise(
+      {
+        tags: ['preorder', 'batch:OPENFC-LITE-2020:1', 'batch:OPENMOTOR-2306:1'],
+        lineItems: {nodes: [node('OPENFC-LITE-2020'), node('OPENMOTOR-2306')]},
+      },
+      config,
+    );
+    assert.equal(promise?.kind, 'date');
+  });
+});
+
+describe('batchPromiseOf', () => {
+  it('reads a funding target as the campaign ship-by date', () => {
+    assert.deepEqual(batchPromiseOf({units: 100}, {shipsBy: '2027-03-14'}), {
+      kind: 'target',
+      day: '2027-03-14',
+      text: 'ships by 14 Mar 2027',
+      delivered: null,
+    });
+  });
+
+  it('resolves early, mid and late to sortable days, with delivery from the promise text', () => {
+    const cfg = {shipsBy: '2027-03-14'};
+    assert.equal(batchPromiseOf({units: 1, ships: 'ships early February 2027'}, cfg).day, '2027-02-10');
+    assert.equal(batchPromiseOf({units: 1, ships: 'ships mid February 2027'}, cfg).day, '2027-02-20');
+    assert.equal(batchPromiseOf({units: 1, ships: 'ships February 2028'}, cfg).day, '2028-02-29');
+    const late = batchPromiseOf({units: 1, ships: 'ships late October 2026, delivered by 30 November 2026'}, cfg);
+    assert.equal(late.text, 'ships late Oct 2026');
+    assert.equal(late.delivered, '30 Nov 2026');
+  });
+
+  it('reads unparseable dated text as the later shipsBy', () => {
+    assert.equal(batchPromiseOf({units: 1, ships: 'ships soon'}, {shipsBy: '2027-03-14'}).kind, 'target');
   });
 });
