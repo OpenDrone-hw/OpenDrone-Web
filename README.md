@@ -35,6 +35,13 @@ For a Shopify-backed run, set the `SHOPIFY_*` values described in
 unset or `0` unless you are testing checkout. The app fails closed when the
 catalog policy or tax configuration is missing. Node 22 (what CI uses).
 
+Minimum for a full local preview with real catalog data (names only):
+`SESSION_SECRET`, `SHOPIFY_STORE_DOMAIN`, `SHOPIFY_STOREFRONT_TOKEN`,
+`SHOPIFY_STOREFRONT_API_VERSION`, `SHOPIFY_PREVIEW_POLICY_JSON`. Without the
+Shopify values the pages render from `content/`. Variants marked Sold out or
+closed stay selectable on every run: sold-out state only disables the buy
+button.
+
 ## Commands
 
 | Command | Does |
