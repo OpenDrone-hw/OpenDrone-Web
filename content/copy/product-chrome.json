@@ -604,7 +604,7 @@
   "buy_soon_wholesale_link": "Request a wholesale quote",
   "buy_us_price_note": "Duties included. No sales tax.",
   "buy_us_ship": "Ships to the US from the {batch} batch",
-  "buy_us_notice": "US delivery depends on FCC equipment authorization and US import clearance. If we cannot deliver to you, you get a full refund.",
+  "buy_us_notice": "US delivery depends on US import clearance. If we cannot deliver to you, you get a full refund.",
   "buy_us_fcc": "FCC notice: this device is subject to FCC rules. It is sold as a conditional preorder and is delivered to US buyers only after it completes FCC equipment authorization. FCC rules do not address consumer protection, contractual or other provisions under federal or state law. If authorization is not obtained, you get a full refund of everything you paid.",
   "buy_us_eu_only": "Ships from stock in Belgium to EU addresses only",
   "buy_shops_only_us": "EU and US consumer orders only"

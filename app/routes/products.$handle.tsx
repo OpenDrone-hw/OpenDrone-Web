@@ -1741,12 +1741,14 @@ function ProductPage() {
           )}
         </p>
       ) : null}
-      <p className="product-buy-ship" role="note">
-        {say(
-          'product-chrome.buy_us_notice',
-          'US delivery depends on FCC equipment authorization and US import clearance. If we cannot deliver to you, you get a full refund.',
-        )}
-      </p>
+      {fccConditional ? null : (
+        <p className="product-buy-ship" role="note">
+          {say(
+            'product-chrome.buy_us_notice',
+            'US delivery depends on US import clearance. If we cannot deliver to you, you get a full refund.',
+          )}
+        </p>
+      )}
     </>
   ) : null;
   // Coming-soon buy module: the price/stock/add-to-cart block becomes a
