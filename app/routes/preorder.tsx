@@ -54,6 +54,8 @@ export const meta: Route.MetaFunction = () =>
   buildSeoMeta({
     title: copyText('preorder.meta_title') ?? 'Pre-orders',
     description: copyText('preorder.meta_description') ?? '',
+    // Its own 1200x630 card: /preorder is the page shared at launch.
+    image: '/og-preorder.png',
     canonical: `${SITE_ORIGIN}/preorder`,
   });
 
