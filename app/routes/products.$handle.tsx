@@ -24,6 +24,7 @@ import {
   selectVariant,
   selectedOptionsFromRequest,
   formatPrice,
+  thirdPartyBrand,
   toCard,
   toProduct,
 } from '~/lib/catalog';
@@ -2998,6 +2999,7 @@ function ProductPage() {
             }
             sku={shownSku}
             kind={safetyKind(product.handle)}
+            brand={thirdPartyBrand(product.vendor)}
             country={rootData.visitorCountry ?? null}
             registrations={registrationNumbers(rootData.visitorCountry ?? null)}
           />

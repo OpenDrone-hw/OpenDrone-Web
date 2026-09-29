@@ -43,6 +43,7 @@ describe('Shopify Storefront catalog', () => {
               title: 'OpenRX',
               description: 'Receiver',
               productType: 'ELRS Receiver',
+              vendor: 'OpenDrone',
               featuredImage: {url: 'https://cdn.shopify.com/rx.png'},
               images: {nodes: [{url: 'https://cdn.shopify.com/rx.png'}]},
               variants: {
@@ -68,6 +69,7 @@ describe('Shopify Storefront catalog', () => {
     const catalog = await fetchShopifyCatalog(ENV, fetcher);
     const variant = catalog.products[0].variants[0];
 
+    assert.equal(catalog.products[0].vendor, 'OpenDrone');
     assert.equal(variant.sku, 'OPENRX-GEMINI');
     assert.equal(variant.price, 39.99);
     assert.equal(variant.availability, 'preorder');

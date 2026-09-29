@@ -69,6 +69,7 @@ export function GpsrBlock({
   country,
   registrations = [],
   compact = false,
+  brand = null,
 }: {
   company: CompanyIdentity;
   productTitle: string;
@@ -80,6 +81,12 @@ export function GpsrBlock({
   registrations?: RegistrationNumber[];
   /** The containing disclosure already names this information. */
   compact?: boolean;
+  /**
+   * A third-party brand (Shopify vendor) the product is made under. Incutec
+   * is then the EU importer, not the manufacturer. No manufacturer postal
+   * address is on file for these brands, so only the name shows.
+   */
+  brand?: string | null;
 }) {
   const linesFor = (lang: string) => [
     ...warnings(`gpsr_warnings_${lang}`),
@@ -111,7 +118,23 @@ export function GpsrBlock({
       >
         {copyText('product-chrome.gpsr_heading') ?? 'Manufacturer & safety information'}
       </p> : null}
+      {brand ? (
+        <p className="mb-2">
+          <span {...editAttrs('product-chrome.gpsr_manufacturer_label')}>
+            {copyText('product-chrome.gpsr_manufacturer_label') ?? 'Brand and manufacturer'}
+          </span>
+          : {brand}
+        </p>
+      ) : null}
       <p className="mb-2">
+        {brand ? (
+          <>
+            <span {...editAttrs('product-chrome.gpsr_importer_label')}>
+              {copyText('product-chrome.gpsr_importer_label') ?? 'EU importer'}
+            </span>
+            :{' '}
+          </>
+        ) : null}
         {company.name}, {company.address} &middot; {company.email} &middot; KBO/BCE {company.kbo}
       </p>
       {registrations.length ? (

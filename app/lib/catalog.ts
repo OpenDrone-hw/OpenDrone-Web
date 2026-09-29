@@ -53,6 +53,8 @@ export type CatalogProduct = {
   handle: string;
   title: string;
   family: string | null;
+  /** Shopify's vendor: the brand of a third-party accessory. */
+  vendor?: string | null;
   description: string | null;
   url: string;
   images: string[];
@@ -61,6 +63,15 @@ export type CatalogProduct = {
   rating: {average: number; count: number} | null;
   variants: CatalogVariant[];
 };
+
+/** The brand of Incutec's own products; any other vendor is a third party. */
+export const HOUSE_BRAND = 'OpenDrone';
+
+/** A third-party brand (HQProp, Rubycon) that Incutec imports, or null. */
+export function thirdPartyBrand(vendor: string | null | undefined): string | null {
+  const brand = vendor?.trim();
+  return brand && brand.toLowerCase() !== HOUSE_BRAND.toLowerCase() ? brand : null;
+}
 
 export type Catalog = {
   schema: number;
@@ -294,7 +305,7 @@ export function toProduct(
     id: `product:${product.handle}`,
     handle: product.handle,
     title: product.title,
-    vendor: 'OpenDrone',
+    vendor: product.vendor || HOUSE_BRAND,
     productType: familyOf(product),
     description: product.description ?? '',
     descriptionHtml: product.description
