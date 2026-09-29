@@ -223,6 +223,7 @@ export function CartAddedDialog() {
                     {`${line.quantity} × ${formatPrice(Number(line.total.amount) / line.quantity, line.total.currencyCode)}`}
                   </span>
                 ) : null}
+                {line.availability ? <span className="cart-line-batch">{line.availability}</span> : null}
                 <ShipChip promise={line.shipPromise} className="cart-added-ship" ifFunded />
                 {usBuyer && fccConditionalSku(line.sku) ? (
                   <small className="cart-added-line-qty" role="note">

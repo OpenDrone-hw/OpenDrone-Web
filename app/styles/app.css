@@ -13856,6 +13856,73 @@ html.light .editorial-watermark {
 .add-to-cart-form {
   display: contents;
 }
+/* The batch a cart line ships in: the words of the checkout line property. */
+.cart-line-batch {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* Batch availability: one row per batch, the buyer's highlighted, a batch
+   their region cannot get muted and named as such. */
+.avail {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  width: 100%;
+}
+.avail-row {
+  display: grid;
+  gap: 2px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-sm);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  color: var(--color-text-muted);
+}
+.avail-row[aria-current='true'] {
+  border-color: var(--color-gold);
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-gold) 8%, transparent);
+}
+.avail-row[data-state='other_region'],
+.avail-row[data-state='sold_out'] {
+  opacity: 0.62;
+}
+.avail-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+.avail-label {
+  font-weight: 600;
+  color: var(--color-text);
+}
+.avail-scope,
+.avail-note {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.avail-note {
+  color: var(--color-gold-text);
+}
+.avail-row[data-state='other_region'] .avail-note,
+.avail-row[data-state='sold_out'] .avail-note {
+  color: var(--color-text-muted);
+}
+.avail-detail {
+  overflow-wrap: anywhere;
+}
 /* Batch progress with a tick at each price-step boundary. */
 .step-bar {
   display: grid;
@@ -15048,6 +15115,7 @@ html:not(.light) .trust-chip-oshwa-mark {
   z-index: 60;
 }
 .buy-rail.is-pinned .step-bar,
+.buy-rail.is-pinned .avail,
 .buy-rail.is-pinned .product-buy-tag,
 .buy-rail.is-pinned .product-buy-vat,
 .buy-rail.is-pinned .product-buy-unit,

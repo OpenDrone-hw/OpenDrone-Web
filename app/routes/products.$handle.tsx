@@ -94,6 +94,8 @@ import {attributionSource} from '~/lib/growth/attribution';
 import {NewsletterSignup} from '~/components/NewsletterSignup';
 import {ProductGhostTile} from '~/components/ProductGhostTile';
 import {StepBar} from '~/components/PreorderMeter';
+import {Availability, preorderWords} from '~/components/Availability';
+import {batchPhrase, currentBatch} from '~/lib/availability';
 import {ShipLine} from '~/components/ShipChip';
 import {CART_COUNTRY_ACTION} from '~/lib/cart-client';
 import type {
@@ -1682,7 +1684,11 @@ function ProductPage() {
         bar={stepBarState}
         prices={stepPrices}
         fundedLabel={copyText('preorder.funded') ?? 'Target reached'}
-        batch={rootData?.visitorCountry === 'US' && rootData?.usShippingRate != null ? promiseBatchMonth(campaign.shipPromise) : null}
+        batch={
+          currentBatch(campaign)
+            ? batchPhrase(currentBatch(campaign)!, preorderWords)
+            : null
+        }
       />
     ) : null;
   // Units left in the paid batch: one add must not ask for more than the
@@ -1729,11 +1735,13 @@ function ProductPage() {
   // The US notice: under the ship date for a US buyer, with the batch the
   // US unit ships in. An in-stock item ships to the EU only.
   const usBatch = usBuyer && campaign ? promiseBatchMonth(campaign.shipPromise) : null;
+  // The batches of a campaign SKU, one row each, the buyer's highlighted.
+  const showAvailability = Boolean(campaign && tiers.length && stepBarState);
   const usEuOnly = usBuyer && !isBundle && !selectedVariant?.campaign && Boolean(selectedVariant?.availableForSale);
   const fccConditional = fccConditionalSku(selectedVariant?.sku) || fccConditionalSku(product.handle);
   const usNotice = usBuyer && buyAvailable ? (
     <>
-      {usBatch ? (
+      {usBatch && !showAvailability ? (
         <p className="product-buy-ship">
           {say('product-chrome.buy_us_ship', 'Ships to the US from the {batch} batch', {batch: usBatch})}
         </p>
@@ -1908,7 +1916,11 @@ function ProductPage() {
       ) : /* Ship date right under the button (WER VI.43), and for a funding
           target its deadline and the "if funded" condition. */
       preorder && !isBundle ? (
-        <ShipLine campaign={campaign} promise={shipPromise} className="product-buy-stock" />
+        showAvailability && campaign ? (
+          <Availability campaign={campaign} region={usBuyer ? 'US' : 'EU'} />
+        ) : (
+          <ShipLine campaign={campaign} promise={shipPromise} className="product-buy-stock" />
+        )
       ) : (
         <p className={`product-buy-stock${buyAvailable ? '' : ' is-out'}`}>
           {isBundle

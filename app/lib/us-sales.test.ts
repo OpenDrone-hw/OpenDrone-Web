@@ -323,7 +323,7 @@ describe('US cart with the gate on', () => {
       updateCartLines: async (_id, lines) => { calls.push(`update:${lines[0].attributes?.map((a) => a.key).join('+')}`); return emptyCart(); },
     });
     assert.equal(response.headers.get('Location'), '/cart?check=market');
-    assert.deepEqual(calls, ['country:US', 'update:Preorder+_ship_region']);
+    assert.deepEqual(calls, ['country:US', 'update:Preorder+Availability+_ship_region']);
   });
 
   it('puts the US on the cart from the cart country picker', async () => {
