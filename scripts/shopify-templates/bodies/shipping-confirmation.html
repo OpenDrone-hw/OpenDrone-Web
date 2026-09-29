@@ -79,7 +79,7 @@
                   <tr>
                     <td valign="top" style="padding: 14px 0;">
                       <p style="margin: 0 0 4px 0; font-family: 'Space Grotesk', Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 700; color: #e5e5e5;">
-                        {{ line.line_item.title }}
+                        {{ line.line_item.product.title | default: line.line_item.title }}
                       </p>
                       {% if line.line_item.variant.title != 'Default Title' %}
                       <p style="margin: 0 0 4px 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; color: #a0a0a0;">

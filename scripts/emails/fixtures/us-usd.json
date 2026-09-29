@@ -25,7 +25,7 @@
   "presentment_currency": "USD",
   "line_items": [
     {
-      "title": "OpenFC Lite",
+      "title": "OpenFC Lite - 20x20",
       "variant": {
         "title": "20x20"
       },
@@ -44,9 +44,7 @@
   ],
   "subtotal_price": 8119,
   "shipping_price": 995,
-  "total_tax": 0,
   "total_price": 9114,
-  "taxes_included": false,
   "tax_lines": [],
   "shipping_method": {
     "title": "US delivery",
@@ -98,7 +96,7 @@
     "fulfillment_line_items": [
       {
         "line_item": {
-          "title": "OpenFC Lite",
+          "title": "OpenFC Lite - 20x20",
           "variant": {
             "title": "20x20"
           },
@@ -117,5 +115,6 @@
         "quantity": 1
       }
     ]
-  }
+  },
+  "tax_price": 0
 }

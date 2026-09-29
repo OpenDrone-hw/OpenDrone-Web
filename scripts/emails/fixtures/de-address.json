@@ -19,7 +19,7 @@
   "email": "erika.mustermann@example.com",
   "line_items": [
     {
-      "title": "OpenFC Lite",
+      "title": "OpenFC Lite - 20x20",
       "variant": {
         "title": "20x20"
       },
@@ -36,7 +36,7 @@
       }
     },
     {
-      "title": "OpenESC",
+      "title": "OpenESC - 30x30",
       "variant": {
         "title": "30x30"
       },
@@ -56,7 +56,6 @@
   "subtotal_price": 15490,
   "total_discounts": 1000,
   "shipping_price": 1295,
-  "total_tax": 2520,
   "total_price": 15785,
   "tax_lines": [
     {
@@ -115,7 +114,7 @@
     "fulfillment_line_items": [
       {
         "line_item": {
-          "title": "OpenFC Lite",
+          "title": "OpenFC Lite - 20x20",
           "variant": {
             "title": "20x20"
           },
@@ -135,7 +134,7 @@
       },
       {
         "line_item": {
-          "title": "OpenESC",
+          "title": "OpenESC - 30x30",
           "variant": {
             "title": "30x30"
           },
@@ -154,5 +153,6 @@
         "quantity": 1
       }
     ]
-  }
+  },
+  "tax_price": 2520
 }

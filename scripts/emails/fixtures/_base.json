@@ -1,5 +1,5 @@
 {
-  "_note": "Shared Shopify notification context. Every scenario file is deep-merged over this one (objects merge, arrays replace). The base itself is the EU preorder order: Belgian address, 21% VAT included, one preorder line. All people, addresses and numbers are fake. The money formats are an assumption for an EUR shop; check them against Shopify admin, Settings, General, Store currency, when they matter.",
+  "_note": "Shared Shopify notification context. Every scenario file is deep-merged over this one (objects merge, arrays replace). The base itself is the EU preorder order: Belgian address, 21% VAT included, one preorder line. All people, addresses and numbers are fake. The money formats are an assumption for an EUR shop; check them against Shopify admin, Settings, General, Store currency, when they matter. Shopify's own variable names apply: line titles are \"Product - Variant\", the order's tax total is tax_price, and there is no total_tax or taxes_included (order #1001 rendered both as blank).",
   "shop": {
     "name": "OpenDrone",
     "email": "contact@opendrone.be",
@@ -29,7 +29,7 @@
   "order_status_url": "https://opendrone.be/account/orders/preview-9001",
   "line_items": [
     {
-      "title": "OpenFC Lite",
+      "title": "OpenFC Lite - 20x20",
       "variant": {
         "title": "20x20"
       },
@@ -49,9 +49,7 @@
   "subtotal_price": 6495,
   "total_discounts": 0,
   "shipping_price": 695,
-  "total_tax": 1248,
   "total_price": 7190,
-  "taxes_included": true,
   "tax_lines": [
     {
       "title": "BE VAT",
@@ -106,7 +104,7 @@
     "fulfillment_line_items": [
       {
         "line_item": {
-          "title": "OpenFC Lite",
+          "title": "OpenFC Lite - 20x20",
           "variant": {
             "title": "20x20"
           },
@@ -125,5 +123,6 @@
         "quantity": 1
       }
     ]
-  }
+  },
+  "tax_price": 1248
 }
