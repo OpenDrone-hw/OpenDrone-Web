@@ -158,11 +158,17 @@
             <tr>
               <td style="padding: 0 32px 24px 32px;">
                 <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.6; color: #a0a0a0;">
+{% if shipping_address.country_code == 'US' %}
+                  <strong style="color: #c5c5c5;">Duties included.</strong>
+                  Your order ships from our US warehouse. There are no import
+                  duties, taxes or handling fees to pay on delivery.
+                  {% else %}
                   <strong style="color: #c5c5c5;">Import duties.</strong>
                   No import duties or import taxes were charged with this
                   order. Your parcel ships from Belgium to outside the EU, so
                   the carrier may ask you to pay import duties, taxes and a
                   handling fee on delivery.
+                  {% endif %}
                 </p>
               </td>
             </tr>
@@ -191,6 +197,13 @@
 
             <tr>
               <td style="padding: 0 32px 32px 32px;">
+{% if shipping_address.country_code == 'US' %}
+<p style="margin: 0 0 16px 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.6; color: #a0a0a0;">
+  <strong style="color: #c5c5c5;">US delivery.</strong>
+  US delivery depends on FCC equipment authorization and US import clearance.
+  If we cannot deliver an item to you, you get a full refund for it.
+</p>
+{% endif %}
 <!-- Legal: contract confirmation on a durable medium (Art. VI.46 WER).
      Withdrawal info + model form + current terms (web, v2.4) must reach
      the consumer with the order confirmation; omitting it extends withdrawal
@@ -199,7 +212,7 @@
   <tr>
     <td style="padding: 16px 0 0 0; border-top: 1px solid #1a241a; font-family: Helvetica, Arial, sans-serif; font-size: 12px; line-height: 1.6; color: #a0a0a0;">
       <p style="margin: 0 0 8px 0;">
-        <strong style="color: #c5c5c5;">Right of withdrawal / Herroepingsrecht.</strong>
+        <strong style="color: #c5c5c5;">Right of withdrawal{% if shipping_address == blank or shipping_address.country_code == 'BE' or shipping_address.country_code == 'NL' %} / Herroepingsrecht{% endif %}.</strong>
         You may withdraw from this purchase at any time before delivery and within 14 days of receiving it, without giving a reason.
         Use the online form at <a href="https://opendrone.be/herroepingsrecht" style="color: #ffb700;">opendrone.be/herroepingsrecht</a>
         or the model form (<a href="https://opendrone.be/modelformulier-herroeping.pdf" style="color: #ffb700;">PDF</a>).

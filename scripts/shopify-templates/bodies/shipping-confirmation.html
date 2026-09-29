@@ -105,10 +105,16 @@
             <tr>
               <td style="padding: 16px 32px 0 32px;">
                 <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.6; color: #a0a0a0;">
+{% if shipping_address.country_code == 'US' %}
+                  <strong style="color: #c5c5c5;">Duties included.</strong>
+                  Your order ships from our US warehouse. There are no import
+                  duties, taxes or handling fees to pay on delivery.
+                  {% else %}
                   <strong style="color: #c5c5c5;">Import duties.</strong>
                   No import duties or import taxes were charged with your
                   order. The carrier may ask you to pay import duties, taxes
                   and a handling fee on delivery.
+                  {% endif %}
                 </p>
               </td>
             </tr>
