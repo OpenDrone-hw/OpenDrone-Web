@@ -1,0 +1,95 @@
+{
+  "handle": "openfc-lite",
+  "variant": "30x30",
+  "content": {
+    "product": "openfc-lite",
+    "variant": "30×30"
+  },
+  "sources": [
+    "public/models/od5/board-OpenFC-Lite.glb"
+  ],
+  "camera": {
+    "tiltDeg": 0
+  },
+  "layout": {
+    "gapMm": 6,
+    "sectionGapMm": 8,
+    "aspect": 1.5
+  },
+  "groups": [
+    {
+      "label": "ESD bag",
+      "row": 1,
+      "procedural": {
+        "kind": "esdBag",
+        "w": 100,
+        "h": 120
+      }
+    },
+    {
+      "label": "OpenFC Lite 30×30 board",
+      "match": ".",
+      "combine": "all",
+      "count": 1,
+      "finish": "original",
+      "row": 1,
+      "on": "ESD bag",
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "keepYaw": true,
+      "recolor": {
+        "_PCB$": "#3f4a33"
+      },
+      "spin": 180
+    },
+    {
+      "label": "JST-SH 8-pin cable",
+      "procedural": {
+        "kind": "jstCable",
+        "pins": 8,
+        "len": 80
+      },
+      "row": 2,
+      "lay": "x"
+    },
+    {
+      "label": "28 AWG wire set",
+      "procedural": {
+        "kind": "wireSet",
+        "awg": 28,
+        "len": 100,
+        "colors": [
+          "red",
+          "black",
+          "yellow",
+          "white"
+        ]
+      },
+      "row": 2,
+      "lay": "x"
+    },
+    {
+      "label": "Soft-mount grommets M3",
+      "procedural": {
+        "kind": "grommet",
+        "size": "M3"
+      },
+      "count": 4,
+      "row": 2
+    },
+    {
+      "label": "Quick-start card",
+      "row": 1,
+      "procedural": {
+        "kind": "card",
+        "w": 85,
+        "h": 55,
+        "caption": "OpenFC Lite · Quick start"
+      }
+    }
+  ],
+  "exclude": []
+}

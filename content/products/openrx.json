@@ -280,7 +280,13 @@
           "qty": "1×",
           "item": "ESD bag"
         }
-      ]
+      ],
+      "inTheBoxImage": {
+        "src": "/boxes/openrx/lite.png",
+        "width": 2400,
+        "height": 1782,
+        "v": "2dc139f8a27d"
+      }
     },
     "Lite-UFL": {
       "subtitle": "ELRS 2.4GHz · SX1281 · U.FL · CRSF",
@@ -401,6 +407,12 @@
         "src": "/boards/openrx-lite-ufl/board.svg",
         "inspectUrl": "https://kicanvas.org/?github=https://github.com/OpenDrone-hw/OpenRX-Lite-UFL/blob/main/hardware/OpenRX-Lite-UFL.kicad_pcb",
         "schematicUrl": "https://kicanvas.org/?github=https://github.com/OpenDrone-hw/OpenRX-Lite-UFL/blob/main/hardware/OpenRX-Lite-UFL.kicad_sch"
+      },
+      "inTheBoxImage": {
+        "src": "/boxes/openrx/lite-ufl.png",
+        "width": 2400,
+        "height": 1113,
+        "v": "8ec0fdbcc2dc"
       }
     },
     "Mono": {
@@ -547,7 +559,13 @@
       ],
       "placeholders": [
         "Weight"
-      ]
+      ],
+      "inTheBoxImage": {
+        "src": "/boxes/openrx/mono.png",
+        "width": 2400,
+        "height": 1745,
+        "v": "c6d78e90456c"
+      }
     },
     "Gemini": {
       "subtitle": "ELRS Gemini Xrossband · 2x LR1121 · 2x U.FL · CRSF",
@@ -731,7 +749,13 @@
       ],
       "placeholders": [
         "Weight"
-      ]
+      ],
+      "inTheBoxImage": {
+        "src": "/boxes/openrx/gemini.png",
+        "width": 2400,
+        "height": 1294,
+        "v": "ec8f595250eb"
+      }
     }
   },
   "keywords": [

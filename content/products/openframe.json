@@ -198,7 +198,13 @@
         {
           "item": "Aluminium M3 cup washers, anodised"
         }
-      ]
+      ],
+      "inTheBoxImage": {
+        "src": "/boxes/openframe/5in.png",
+        "width": 2400,
+        "height": 1950,
+        "v": "30bdfa2088f2"
+      }
     },
     "3\" Freestyle": {
       "subtitle": "3\" freestyle · 141 mm · 4 mm arms · 25.5 / 20x20",
@@ -314,7 +320,13 @@
           "qty": "2×",
           "item": "Battery straps, 15 × 200 mm"
         }
-      ]
+      ],
+      "inTheBoxImage": {
+        "src": "/boxes/openframe/3in.png",
+        "width": 2400,
+        "height": 1962,
+        "v": "2ae73a5d7e1a"
+      }
     }
   },
   "keywords": [

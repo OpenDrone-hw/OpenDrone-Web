@@ -1,0 +1,40 @@
+{
+  "handle": "openmotor",
+  "variant": "1604",
+  "content": {
+    "product": "openmotor",
+    "variant": "1604"
+  },
+  "sources": [
+    "public/models/od3/drive.glb"
+  ],
+  "camera": {
+    "tiltDeg": 0
+  },
+  "layout": {
+    "gapMm": 6,
+    "sectionGapMm": 8,
+    "aspect": 1.5,
+    "minSpanMm": 34
+  },
+  "groups": [
+    {
+      "label": "Motor",
+      "match": "^Admi781882A2t5ac$",
+      "combine": true,
+      "count": 1,
+      "finish": "alu",
+      "row": 1,
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "keepYaw": true
+    }
+  ],
+  "exclude": [
+    "^C?CW_PROP$",
+    "^softmount m2$"
+  ]
+}

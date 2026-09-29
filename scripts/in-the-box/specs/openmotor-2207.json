@@ -1,0 +1,40 @@
+{
+  "handle": "openmotor",
+  "variant": "2207",
+  "content": {
+    "product": "openmotor",
+    "variant": "2207"
+  },
+  "sources": [
+    "public/models/od5/drive.glb"
+  ],
+  "camera": {
+    "tiltDeg": 0
+  },
+  "layout": {
+    "gapMm": 6,
+    "sectionGapMm": 8,
+    "aspect": 1.5,
+    "minSpanMm": 34
+  },
+  "groups": [
+    {
+      "label": "Motor",
+      "match": "^2306\\.5-2026\\.7\\.14$",
+      "combine": true,
+      "count": 1,
+      "finish": "alu",
+      "row": 1,
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "keepYaw": true
+    }
+  ],
+  "exclude": [
+    "^5in-prop c?cw$",
+    "^softmount m2$"
+  ]
+}

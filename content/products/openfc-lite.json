@@ -656,7 +656,13 @@
             }
           ]
         }
-      ]
+      ],
+      "inTheBoxImage": {
+        "src": "/boxes/openfc-lite/20x20.png",
+        "width": 2400,
+        "height": 1343,
+        "v": "954dc7eb0142"
+      }
     },
     "30×30": {
       "subtitle": "RP2354 · BMI270 · Betaflight · 3-8S · 30x30",
@@ -703,7 +709,13 @@
           "qty": "1×",
           "item": "ESD bag"
         }
-      ]
+      ],
+      "inTheBoxImage": {
+        "src": "/boxes/openfc-lite/30x30.png",
+        "width": 2400,
+        "height": 1514,
+        "v": "f22ace38e686"
+      }
     }
   },
   "keywords": [

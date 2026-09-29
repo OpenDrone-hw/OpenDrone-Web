@@ -44,6 +44,7 @@ import {SchematicViewer} from '~/components/SchematicViewer';
 import type {FrameViewerProps} from '~/components/FrameViewer';
 import {SceneErrorBoundary} from '~/components/SceneErrorBoundary';
 import {ProvenanceCard} from '~/components/ProvenanceCard';
+import {InTheBoxImage} from '~/components/InTheBoxImage';
 import {WatchCard} from '~/components/WatchCard';
 import {OshwaMark} from '~/components/OshwaMark';
 import {ContributorGrid, ContributorGridSkeleton} from '~/components/Contributors';
@@ -1027,6 +1028,8 @@ function ProductPage() {
   const subtitle = activeVariant?.subtitle ?? content.subtitle ?? null;
   const sheet = specSheet(content);
   const mergedBox = [...content.inTheBox, ...(activeVariant?.inTheBox ?? [])];
+  // The tier's own box render wins over the product's.
+  const boxImage = activeVariant?.inTheBoxImage ?? content.inTheBoxImage;
   // Plug drawings: the tier's own list wins over the product's.
   const activePlugs = activeVariant?.plugs ?? content.plugs ?? [];
   const plugsEditBase = activeVariant?.plugs ? `variants.${activeTier}.plugs` : 'plugs';
@@ -2646,34 +2649,37 @@ function ProductPage() {
             />
           ) : null}
           {mergedBox.length > 0 ? (
-            <ul className="in-the-box">
-              {mergedBox.map((it, i) => {
-                // Rows past the shared list came from the active variant's
-                // own additions; tag each field with the leaf it renders.
-                const boxBase =
-                  i < content.inTheBox.length
-                    ? `inTheBox.${i}`
-                    : `variants.${activeTier}.inTheBox.${i - content.inTheBox.length}`;
-                return (
-                  <li key={`${it.qty ?? ''}${it.item}`}>
-                    {it.qty ? (
+            <div className={boxImage ? 'in-the-box-layout' : 'in-the-box-plain'}>
+              {boxImage ? <InTheBoxImage image={boxImage} items={mergedBox} /> : null}
+              <ul className="in-the-box">
+                {mergedBox.map((it, i) => {
+                  // Rows past the shared list came from the active variant's
+                  // own additions; tag each field with the leaf it renders.
+                  const boxBase =
+                    i < content.inTheBox.length
+                      ? `inTheBox.${i}`
+                      : `variants.${activeTier}.inTheBox.${i - content.inTheBox.length}`;
+                  return (
+                    <li key={`${it.qty ?? ''}${it.item}`}>
+                      {it.qty ? (
+                        <span
+                          className="in-the-box-qty"
+                          {...prodEdit(`${boxBase}.qty`)}
+                        >
+                          {it.qty}
+                        </span>
+                      ) : null}
                       <span
-                        className="in-the-box-qty"
-                        {...prodEdit(`${boxBase}.qty`)}
+                        className="in-the-box-item"
+                        {...prodEdit(`${boxBase}.item`)}
                       >
-                        {it.qty}
+                        {it.item}
                       </span>
-                    ) : null}
-                    <span
-                      className="in-the-box-item"
-                      {...prodEdit(`${boxBase}.item`)}
-                    >
-                      {it.item}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           ) : null}
           {content.bundle ? (
             <div className="bundle-components">

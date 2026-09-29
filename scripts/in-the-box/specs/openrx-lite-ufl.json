@@ -1,0 +1,96 @@
+{
+  "handle": "openrx",
+  "variant": "lite-ufl",
+  "content": {
+    "product": "openrx",
+    "variant": "Lite-UFL"
+  },
+  "sources": [
+    "public/models/od3/board-OpenRX-Lite-UFL.glb"
+  ],
+  "camera": {
+    "tiltDeg": 0
+  },
+  "layout": {
+    "gapMm": 6,
+    "sectionGapMm": 8,
+    "aspect": 1.5
+  },
+  "groups": [
+    {
+      "label": "ESD bag",
+      "row": 1,
+      "procedural": {
+        "kind": "esdBag",
+        "w": 60,
+        "h": 80
+      }
+    },
+    {
+      "label": "OpenRX Lite-UFL board",
+      "match": ".",
+      "combine": "all",
+      "count": 1,
+      "finish": "original",
+      "row": 1,
+      "on": "ESD bag",
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "keepYaw": true,
+      "recolor": {
+        "_PCB$": "#3f4a33"
+      }
+    },
+    {
+      "label": "30 AWG wires",
+      "procedural": {
+        "kind": "wireSet",
+        "awg": 30,
+        "len": 80,
+        "colors": [
+          "red",
+          "black",
+          "yellow",
+          "white"
+        ]
+      },
+      "row": 2,
+      "lay": "x"
+    },
+    {
+      "label": "Heat-shrink",
+      "procedural": {
+        "kind": "heatShrink",
+        "len": 22,
+        "w": 13
+      },
+      "count": 2,
+      "row": 2
+    },
+    {
+      "label": "Bind and quick-start card",
+      "row": 1,
+      "procedural": {
+        "kind": "card",
+        "w": 85,
+        "h": 55,
+        "caption": "OpenRX · Bind and quick start"
+      }
+    },
+    {
+      "label": "2.4 GHz T-dipole",
+      "procedural": {
+        "kind": "tDipole",
+        "leg": 29,
+        "lead": 100
+      },
+      "count": 1,
+      "row": 1,
+      "lay": "x"
+    }
+  ],
+  "exclude": []
+}

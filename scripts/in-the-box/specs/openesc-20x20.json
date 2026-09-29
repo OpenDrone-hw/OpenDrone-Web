@@ -1,0 +1,91 @@
+{
+  "handle": "openesc",
+  "variant": "20x20",
+  "content": {
+    "product": "openesc",
+    "variant": "20×20"
+  },
+  "sources": [
+    "public/models/od3/board-OpenESC-20x20-4in1-mini.glb"
+  ],
+  "camera": {
+    "tiltDeg": 0
+  },
+  "layout": {
+    "gapMm": 6,
+    "sectionGapMm": 8,
+    "aspect": 1.5
+  },
+  "groups": [
+    {
+      "label": "ESD bag",
+      "row": 1,
+      "procedural": {
+        "kind": "esdBag",
+        "w": 75,
+        "h": 100
+      }
+    },
+    {
+      "label": "OpenESC 20×20 board",
+      "match": ".",
+      "combine": "all",
+      "count": 1,
+      "finish": "original",
+      "row": 1,
+      "on": "ESD bag",
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "keepYaw": true,
+      "recolor": {
+        "_PCB$": "#3f4a33"
+      },
+      "spin": 180
+    },
+    {
+      "label": "XT30 lead set",
+      "procedural": {
+        "kind": "xtPigtail",
+        "type": "xt30",
+        "awg": 16,
+        "len": 100
+      },
+      "row": 2,
+      "lay": "x"
+    },
+    {
+      "label": "Capacitor 470 µF 35 V",
+      "procedural": {
+        "kind": "capacitor",
+        "d": 10,
+        "l": 20,
+        "label": "470µF 35V"
+      },
+      "row": 2,
+      "lay": "x"
+    },
+    {
+      "label": "Soft-mount grommets M2",
+      "procedural": {
+        "kind": "grommet",
+        "size": "M2"
+      },
+      "count": 4,
+      "row": 2
+    },
+    {
+      "label": "Quick-start card",
+      "row": 1,
+      "procedural": {
+        "kind": "card",
+        "w": 85,
+        "h": 55,
+        "caption": "OpenESC · Quick start"
+      }
+    }
+  ],
+  "exclude": []
+}

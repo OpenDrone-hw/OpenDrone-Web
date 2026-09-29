@@ -113,6 +113,12 @@
       "frameViewer": {
         "src": "/models/od3/drive.glb",
         "kind": "motor"
+      },
+      "inTheBoxImage": {
+        "src": "/boxes/openmotor/1604.png",
+        "width": 2400,
+        "height": 2400,
+        "v": "88eb765716be"
       }
     },
     "2306": {
@@ -193,7 +199,13 @@
       ],
       "placeholders": [
         "KV"
-      ]
+      ],
+      "inTheBoxImage": {
+        "src": "/boxes/openmotor/2207.png",
+        "width": 2400,
+        "height": 2400,
+        "v": "92e75eb5cb48"
+      }
     }
   },
   "keywords": [

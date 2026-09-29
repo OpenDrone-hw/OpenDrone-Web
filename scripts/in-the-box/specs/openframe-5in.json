@@ -1,35 +1,213 @@
 {
   "handle": "openframe",
   "variant": "5in",
-  "sources": ["public/models/od5/frame.glb", "public/models/od5/drive.glb"],
-  "camera": {"tiltDeg": 0},
-  "layout": {"gapMm": 10, "sectionGapMm": 16, "aspect": 1.6},
+  "content": {
+    "product": "openframe",
+    "variant": "5\" Freestyle"
+  },
+  "sources": [
+    "public/models/od5/frame.glb",
+    "public/models/od5/drive.glb"
+  ],
+  "camera": {
+    "tiltDeg": 0
+  },
+  "layout": {
+    "gapMm": 10,
+    "sectionGapMm": 16,
+    "aspect": 1.5
+  },
+  "notes": [
+    "Black-Oxide flat head screws belong to the DJI O4 air unit reference model: excluded.",
+    "Cam-Mount-L/R (TPU) are not in the box list; the camera mount is the CNC aluminium pair (Standoff-L/R).",
+    "VTX-Mount is in the box list but not in the GLB."
+  ],
   "groups": [
-    {"label": "Top plate", "row": 1, "match": "^Top$", "finish": "carbon"},
-    {"label": "Base plates", "row": 1, "match": "^Base-(Top|Bot)$", "finish": "carbon"},
-    {"label": "Arms", "row": 1, "match": "^Arm$", "finish": "carbon"},
-    {"label": "Cross brace", "row": 2, "match": "^Cross$", "finish": "carbon"},
-    {"label": "Standoffs 18 mm", "row": 2, "match": "^18mmx4mm$", "finish": "alu"},
-    {"label": "Side plates", "row": 2, "match": "^Standoff-(L|R)$", "finish": "alu"},
-    {"label": "Arm boots", "row": 2, "match": "^Boot-", "finish": "tpu"},
-    {"label": "Camera mount", "row": 2, "match": "^Cam-Mount-", "finish": "tpu"},
-    {"label": "Antenna mount", "row": 2, "match": "^Airtag/Antenna[- ]mount$", "finish": "tpu"},
-    {"label": "Anti-slip pad", "row": 1, "match": "^anti-slip pad$", "finish": "rubber", "color": "#35383d",
-     "note": "GLB colours are placeholder grey and white; the pad is dark silicone"},
-    {"label": "M3x6 button head", "match": "^Socket button head screw M3x0\\.5 x 6$", "finish": "steel", "section": "hardware", "perRow": 8},
-    {"label": "M3x8 button head", "match": "^Socket button head screw M3x0\\.5 x 8$", "finish": "steel", "section": "hardware", "perRow": 10},
-    {"label": "M3x12 button head", "match": "^Socket button head screw M3x0\\.5 x 12$", "finish": "steel", "section": "hardware", "perRow": 8},
-    {"label": "M3x20 button head", "match": "^Socket button head screw M3x0\\.5 x 20$", "finish": "steel", "section": "hardware", "perRow": 8},
-    {"label": "M3x8 socket cap", "match": "^Hex socket head cap screw M3x0\\.50 x 8$", "finish": "steel", "section": "hardware", "perRow": 8},
-    {"label": "Flat head screw", "match": "^Black-Oxide Alloy Steel Hex Drive Flat Head Screw:1__Body[12]$", "combine": true, "count": 4,
-     "note": "GLB has 4 head bodies (Body1,3,4,5) and 1 shank body (Body2); shown as 4 screws from one head+shank pair. README hardware table says 5.",
-     "finish": "steel", "section": "hardware"},
-    {"label": "M3 locknut", "match": "^Prevailing torque nut M3x0\\.5$", "finish": "steel", "color": "#80868f", "section": "hardware"},
-    {"label": "M3 press nut", "match": "^m3 pressnut$", "finish": "zinc", "section": "hardware", "perRow": 10},
-    {"label": "Soft mount grommet", "match": "^softmount m2$", "finish": "rubber", "section": "hardware"}
+    {
+      "label": "Build card",
+      "procedural": {
+        "kind": "card",
+        "w": 105,
+        "h": 148,
+        "caption": "OpenFrame 5″ · Build card"
+      },
+      "row": 1
+    },
+    {
+      "label": "Top plate",
+      "match": "^Top$",
+      "finish": "carbon",
+      "row": 1
+    },
+    {
+      "label": "Base plates",
+      "match": "^Base-(Top|Bot)$",
+      "finish": "carbon",
+      "row": 1
+    },
+    {
+      "label": "Arms",
+      "match": "^Arm$",
+      "finish": "carbon",
+      "row": 1
+    },
+    {
+      "label": "Cross brace",
+      "match": "^Cross$",
+      "finish": "carbon",
+      "row": 2
+    },
+    {
+      "label": "Standoffs 18 mm",
+      "match": "^18mmx4mm$",
+      "finish": "alu",
+      "color": "#2c2e33",
+      "row": 2,
+      "edges": {
+        "color": "#7a7e87",
+        "opacity": 0.8
+      }
+    },
+    {
+      "label": "Camera mount pair",
+      "match": "^Standoff-(L|R)$",
+      "finish": "alu",
+      "color": "#1b1c1f",
+      "material": {
+        "roughness": 0.55
+      },
+      "row": 2,
+      "edges": {
+        "color": "#7a7e87",
+        "opacity": 0.8
+      }
+    },
+    {
+      "label": "Arm boots",
+      "match": "^Boot-",
+      "finish": "tpu",
+      "color": "#f2ae00",
+      "row": 2
+    },
+    {
+      "label": "Antenna mount",
+      "match": "^Airtag/Antenna[- ]mount$",
+      "finish": "tpu",
+      "color": "#f2ae00",
+      "row": 2
+    },
+    {
+      "label": "Sticker",
+      "procedural": {
+        "kind": "sticker",
+        "w": 80,
+        "h": 22
+      },
+      "row": 2
+    },
+    {
+      "label": "Battery straps",
+      "procedural": {
+        "kind": "strap",
+        "w": 20,
+        "len": 220
+      },
+      "count": 2,
+      "lay": "x",
+      "perRow": 1,
+      "row": 3
+    },
+    {
+      "label": "Anti-slip pad",
+      "match": "^anti-slip pad$",
+      "finish": "rubber",
+      "color": "#35383d",
+      "lay": "x",
+      "decal": {
+        "art": "incutec",
+        "base": "#35383d",
+        "widthFrac": 0.5,
+        "alpha": 0.85
+      },
+      "note": "GLB colours are placeholder grey and white; the pad is dark silicone with the Incutec wordmark",
+      "row": 3
+    },
+    {
+      "label": "M3x6 button head",
+      "match": "^Socket button head screw M3x0\\.5 x 6$",
+      "finish": "steel",
+      "extra": 2,
+      "perRow": 10,
+      "section": "hardware"
+    },
+    {
+      "label": "M3x8 button head",
+      "match": "^Socket button head screw M3x0\\.5 x 8$",
+      "finish": "steel",
+      "extra": 2,
+      "perRow": 12,
+      "section": "hardware"
+    },
+    {
+      "label": "M3x12 button head",
+      "match": "^Socket button head screw M3x0\\.5 x 12$",
+      "finish": "steel",
+      "extra": 2,
+      "perRow": 6,
+      "section": "hardware"
+    },
+    {
+      "label": "M3x20 button head",
+      "match": "^Socket button head screw M3x0\\.5 x 20$",
+      "finish": "steel",
+      "extra": 2,
+      "perRow": 6,
+      "section": "hardware"
+    },
+    {
+      "label": "M3x8 socket cap",
+      "match": "^Hex socket head cap screw M3x0\\.50 x 8$",
+      "finish": "steel",
+      "extra": 2,
+      "perRow": 9,
+      "section": "hardware"
+    },
+    {
+      "label": "M3 locknut",
+      "match": "^Prevailing torque nut M3x0\\.5$",
+      "finish": "steel",
+      "color": "#80868f",
+      "section": "hardware"
+    },
+    {
+      "label": "M3 press nut",
+      "match": "^m3 pressnut$",
+      "finish": "zinc",
+      "perRow": 10,
+      "section": "hardware"
+    },
+    {
+      "label": "M3 cup washers",
+      "procedural": {
+        "kind": "cupWasher",
+        "od": 9,
+        "h": 2.5,
+        "bore": 3.2
+      },
+      "count": 10,
+      "perRow": 10,
+      "section": "hardware"
+    },
+    {
+      "label": "Soft-mount grommets",
+      "match": "^softmount m2$",
+      "finish": "rubber",
+      "section": "hardware"
+    }
   ],
   "exclude": [
-    "^Black-Oxide Alloy Steel Hex Drive Flat Head Screw:1__Body[345]$",
+    "^Black-Oxide Alloy Steel Hex Drive Flat Head Screw",
+    "^Cam-Mount-(L|R)$",
     "^AirTag$",
     "^Dual-Band-UFL-Antenna$",
     "^Rear Housing:1__Body1$",

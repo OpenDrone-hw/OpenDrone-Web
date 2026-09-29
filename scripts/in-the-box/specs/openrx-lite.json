@@ -1,0 +1,75 @@
+{
+  "handle": "openrx",
+  "variant": "lite",
+  "content": {
+    "product": "openrx",
+    "variant": "Lite"
+  },
+  "sources": [],
+  "camera": {
+    "tiltDeg": 0
+  },
+  "layout": {
+    "gapMm": 6,
+    "sectionGapMm": 8,
+    "aspect": 1.5
+  },
+  "groups": [
+    {
+      "label": "ESD bag",
+      "row": 1,
+      "procedural": {
+        "kind": "esdBag",
+        "w": 60,
+        "h": 80
+      }
+    },
+    {
+      "label": "OpenRX Lite board",
+      "procedural": {
+        "kind": "boardCard",
+        "board": "openrx-lite"
+      },
+      "note": "no GLB: board-art card",
+      "row": 1,
+      "on": "ESD bag"
+    },
+    {
+      "label": "30 AWG wires",
+      "procedural": {
+        "kind": "wireSet",
+        "awg": 30,
+        "len": 80,
+        "colors": [
+          "red",
+          "black",
+          "yellow",
+          "white"
+        ]
+      },
+      "row": 2,
+      "lay": "x"
+    },
+    {
+      "label": "Heat-shrink",
+      "procedural": {
+        "kind": "heatShrink",
+        "len": 22,
+        "w": 13
+      },
+      "count": 2,
+      "row": 2
+    },
+    {
+      "label": "Bind and quick-start card",
+      "row": 1,
+      "procedural": {
+        "kind": "card",
+        "w": 85,
+        "h": 55,
+        "caption": "OpenRX · Bind and quick start"
+      }
+    }
+  ],
+  "exclude": []
+}

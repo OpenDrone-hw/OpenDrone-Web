@@ -370,7 +370,13 @@
           "qty": "1×",
           "item": "ESD bag"
         }
-      ]
+      ],
+      "inTheBoxImage": {
+        "src": "/boxes/openesc/20x20.png",
+        "width": 2400,
+        "height": 1537,
+        "v": "143f715a3f78"
+      }
     },
     "30×30": {
       "subtitle": "4in1 · AM32 · 60A · 2-8S · 30x30",
@@ -679,7 +685,13 @@
           "qty": "1×",
           "item": "ESD bag"
         }
-      ]
+      ],
+      "inTheBoxImage": {
+        "src": "/boxes/openesc/30x30.png",
+        "width": 2400,
+        "height": 1744,
+        "v": "9a204e6d7826"
+      }
     }
   },
   "keywords": [
