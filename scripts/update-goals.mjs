@@ -126,9 +126,17 @@ for (const stored of doc.goals ?? []) {
     console.error(`  ${goal.id}: manual, skipped`);
     continue;
   }
-  if (!goal.since || !goal.target_eur) {
-    console.error(`  ${goal.id}: auto but missing since/target_eur, skipped`);
-    continue;
+  const given = inputs[stored.id] ?? {};
+  if (
+    !goal.since ||
+    !Number.isFinite(given.target_eur) ||
+    given.target_eur <= 0 ||
+    !Number.isFinite(given.allocation_pct)
+  ) {
+    console.error(
+      `${goal.id}: auto goal needs since in goals.json and both target_eur and allocation_pct in GOALS_INPUTS. Nothing was written.`,
+    );
+    process.exit(1);
   }
   const gross = await grossSince(goal.since);
   const pct = computeAutoPct(gross, goal);

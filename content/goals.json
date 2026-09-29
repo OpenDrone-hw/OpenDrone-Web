@@ -10,7 +10,7 @@
       "progress_pct": 0,
       "mode": "auto",
       "target_eur": null,
-      "allocation_pct": 100,
+      "allocation_pct": null,
       "since": "2026-08-11"
     },
     {
