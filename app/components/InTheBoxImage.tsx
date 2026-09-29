@@ -1,4 +1,4 @@
-import {useState, type PointerEvent, type ReactNode} from 'react';
+import {useRef, useState, type PointerEvent, type ReactNode} from 'react';
 import type {BoxItem, InTheBoxImage as Image} from '~/lib/product-content';
 import {assetUrl} from '~/lib/asset-url';
 
@@ -12,6 +12,22 @@ const SIZES = '(min-width: 64rem) min(60rem, 60vw), 100vw';
 /** Alt text from the list itself, so it cannot drift from what ships. */
 export function boxAlt(items: BoxItem[]): string {
   return items.map((it) => (it.qty ? `${it.qty} ${it.item}` : it.item)).join(', ');
+}
+
+/**
+ * Stacked on a phone the render sits above the list, so pinning a row far
+ * down the list lights boxes nobody can see. Bring the render back into view
+ * (instantly under reduced motion) when less than half of it is on screen.
+ * Beside the list on wide screens both are visible and nothing moves.
+ */
+function revealFigure(figure: HTMLElement | null) {
+  if (!figure || typeof window === 'undefined') return;
+  if (window.matchMedia('(min-width: 880px)').matches) return;
+  const r = figure.getBoundingClientRect();
+  const visible = Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0);
+  if (visible >= r.height / 2) return;
+  const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  figure.scrollIntoView({behavior: still ? 'auto' : 'smooth', block: 'nearest'});
 }
 
 type Props = {
@@ -55,7 +71,11 @@ export function InTheBox({items, image, renderItem, aside}: Props) {
   const [hover, setHover] = useState<number | null>(null);
   const [pinned, setPinned] = useState<number | null>(null);
   const active = hover ?? pinned;
-  const toggle = (i: number) => setPinned((p) => (p === i ? null : i));
+  const figureRef = useRef<HTMLElement | null>(null);
+  const toggle = (i: number) => {
+    setPinned((p) => (p === i ? null : i));
+    if (pinned !== i) revealFigure(figureRef.current);
+  };
   // Mouse only: a touch "hover" would stick after the tap and fight the pin.
   const enter = (i: number) => (e: PointerEvent) => {
     if (e.pointerType === 'mouse') setHover(i);
@@ -121,6 +141,7 @@ export function InTheBox({items, image, renderItem, aside}: Props) {
   return (
     <div className="in-the-box-layout">
       <figure
+        ref={figureRef}
         className={`in-the-box-figure${active !== null ? ' has-active' : ''}`}
         data-single={items.length === 1 ? '' : undefined}
       >
