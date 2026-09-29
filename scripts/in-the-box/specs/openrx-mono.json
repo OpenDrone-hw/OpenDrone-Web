@@ -6,7 +6,8 @@
     "variant": "Mono"
   },
   "sources": [
-    "public/models/od5/board-OpenRX-Mono.glb"
+    "public/models/od5/board-OpenRX-Mono.glb",
+    "public/models/od5/frame.glb"
   ],
   "camera": {
     "tiltDeg": 12
@@ -30,6 +31,7 @@
     {
       "label": "OpenRX Mono board",
       "match": ".",
+      "source": 0,
       "combine": "all",
       "count": 1,
       "finish": "original",
@@ -74,24 +76,21 @@
       "item": "Bind and quick-start card"
     },
     {
-      "label": "Dual-band T-dipole",
-      "procedural": {
-        "kind": "tDipole",
-        "leg": 75,
-        "lead": 100,
-        "dualBand": true
-      },
+      "label": "Dual-band antenna",
+      "match": "^Dual-Band-UFL-Antenna$",
+      "source": 1,
       "count": 1,
+      "finish": "original",
+      "lay": "x",
       "item": "2.4 GHz + 900 MHz",
-      "row": 1,
-      "lay": "x"
+      "row": 1
     },
     {
       "label": "Heat-shrink",
       "procedural": {
         "kind": "heatShrink",
-        "len": 22,
-        "w": 13
+        "len": 20,
+        "w": 12
       },
       "count": 2,
       "item": "Heat-shrink",
@@ -99,5 +98,10 @@
       "perRow": 2
     }
   ],
-  "exclude": []
+  "exclude": [
+    {
+      "match": "^(?!Dual-Band-UFL-Antenna$)",
+      "source": 1
+    }
+  ]
 }

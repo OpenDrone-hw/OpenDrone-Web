@@ -252,8 +252,15 @@ async function esdBag(p, ctx) {
   const H = col.height;
   g.fillStyle = '#a3a7ad';
   g.fillRect(0, 0, W, H);
-  a.fillStyle = '#c4c4c4';
+  a.fillStyle = '#b4b4b4';
   a.fillRect(0, 0, W, H);
+  // Thinner film over the contents so a small board still reads through it.
+  const cy = (BAG.zip + 1.5 + (h - BAG.bottom - BAG.zip - 1.5) / 2) * P;
+  const rg = a.createRadialGradient(W / 2, cy, 0, W / 2, cy, 24 * P);
+  rg.addColorStop(0, '#5a5a5a');
+  rg.addColorStop(1, '#b4b4b4');
+  a.fillStyle = rg;
+  a.fillRect(BAG.side * P, 0, W - 2 * BAG.side * P, H);
   hh.fillStyle = '#808080';
   hh.fillRect(0, 0, W, H);
   k.fillStyle = '#000';
@@ -304,7 +311,7 @@ async function esdBag(p, ctx) {
   // Black wordmark across the middle of the pocket.
   const ww = w * 0.74 * P;
   const wh = ww * 0.16;
-  const wy = (BAG.zip + (h - BAG.zip - BAG.bottom) * 0.5) * P - wh / 2 + 2 * P;
+  const wy = (BAG.zip + (h - BAG.zip - BAG.bottom) * 0.5) * P - wh / 2 - 13 * P;
   await drawArt(g, ctx.assets.opendrone, (W - ww) / 2, wy, ww, wh, '#0b0b0c');
   await drawArt(a, ctx.assets.opendrone, (W - ww) / 2, wy, ww, wh, '#ffffff');
   await drawArt(k, ctx.assets.opendrone, (W - ww) / 2, wy, ww, wh, '#ffffff');
@@ -325,12 +332,12 @@ async function esdBag(p, ctx) {
   const waves = Array.from({length: 5}, (_, i) => {
     const ang = Math.PI / 2 + (rand() - 0.5) * (i < 3 ? 0.5 : 2.0);
     return {dx: Math.cos(ang), dz: Math.sin(ang), f: (2 * Math.PI) / (18 + rand() * 26), ph: rand() * 6.28,
-      amp: 0.06 + rand() * 0.1};
+      amp: 0.12 + rand() * 0.16};
   });
-  const creases = Array.from({length: 26}, () => {
+  const creases = Array.from({length: 34}, () => {
     const ang = Math.PI / 2 + (rand() - 0.5) * 1.4;
     return {x: px0 + rand() * (px1 - px0), z: pz0 + rand() * (pz1 - pz0), dx: Math.cos(ang), dz: Math.sin(ang),
-      L: 4 + rand() * 14, wdt: 0.5 + rand() * 1.2, amp: (rand() < 0.5 ? -1 : 1) * (0.08 + rand() * 0.16)};
+      L: 4 + rand() * 14, wdt: 0.6 + rand() * 1.6, amp: (rand() < 0.5 ? -1 : 1) * (0.14 + rand() * 0.24)};
   });
   const smooth = (e0, e1, x) => {
     const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0)));
@@ -356,7 +363,7 @@ async function esdBag(p, ctx) {
           const dx = Math.max(0, Math.abs(x) - bw / 2);
           const dz = Math.max(0, Math.abs(z - cz) - bd / 2);
           const dist = Math.hypot(dx, dz);
-          y = Math.max(y, (0.5 + bh) * (1 - smooth(0, 10, dist)));
+          y = Math.max(y, (0.25 + bh) * (1 - smooth(0, 22, dist)) ** 1.5);
         }
         let crinkle = 0;
         for (const wv of waves) crinkle += wv.amp * Math.sin((x * wv.dx + z * wv.dz) * wv.f + wv.ph);
@@ -651,7 +658,7 @@ const WIRE_COLOURS = {red: '#c42a22', black: '#17181b', yellow: '#e2b400', white
   green: '#2f9a4b', orange: '#e0701f'};
 
 // A loose set of hook-up wires, e.g. the 28 AWG four-colour set: each lies
-// in its own gentle curve, the way wire relaxes out of a coil.
+// straight with one slight bow (at most 2 percent of its length).
 function wireSet(p, ctx) {
   const {od, core} = AWG[p.awg ?? 28];
   const len = p.len ?? 100;
@@ -661,13 +668,11 @@ function wireSet(p, ctx) {
   const parts = [];
   colors.forEach((col, i) => {
     const x0 = (i - (colors.length - 1) / 2) * pitch;
-    const amp = 1.2 + rand() * 1.4;
-    const ph = rand() * Math.PI;
-    const f = (Math.PI * (1.1 + rand() * 0.6)) / len;
+    const amp = len * 0.02 * (0.6 + 0.4 * rand());
     const pts = [];
     for (let k = 0; k <= 8; k++) {
       const z = -len / 2 + (len * k) / 8;
-      pts.push([x0 + amp * Math.sin((z + len / 2) * f + ph) - amp * Math.sin(ph), z * 0.985]);
+      pts.push([x0 + amp * Math.sin((Math.PI * k) / 8), z]);
     }
     parts.push(...wire(pts, od, WIRE_COLOURS[col] ?? col, 3, core, false, ctx));
   });
@@ -715,7 +720,7 @@ function xtPigtail(p, ctx) {
     if (p.leads === false) return;
     const x0 = (s * pitch) / 2;
     const x1 = s * (pitch / 2 + 2.5);
-    parts.push(...wire([[x0, 4], [x0 + (x1 - x0) * 0.6, 4 + len * 0.4], [x1, 4 + len]], od, i ? WIRE_COLOURS.red : WIRE_COLOURS.black, 6, core, true, ctx)
+    parts.push(...wire(Array.from({length: 9}, (_, k) => [x0 + (x1 - x0) * (k / 8) + 0.015 * len * Math.sin((Math.PI * k) / 8), 4 + (len * k) / 8]), od, i ? WIRE_COLOURS.red : WIRE_COLOURS.black, 6, core, true, ctx)
       .map((m) => {
         m.position.y += bh / 2 + 0.3 - od / 2;
         return m;
@@ -799,7 +804,7 @@ function capacitor(p, ctx) {
 // JST-SH 1.0 mm 8-pin FC-to-ESC cable, after the shipped cable: two
 // natural-white housings 9.5 x 4.25 x 2.95 mm with side ears at the wire
 // end and contact slots on the mating face, joined by `len` mm (25) of
-// 32 AWG leads laid as a tight flat ribbon in a gentle S. Lead colours in
+// 32 AWG leads laid as a tight, nearly straight flat ribbon with one slight bow. Lead colours in
 // order: red, black, green, yellow, then four white.
 function jstCable(p, ctx) {
   const pins = p.pins ?? 8;
@@ -845,20 +850,20 @@ function jstCable(p, ctx) {
       parts.push(win);
     }
   }
-  // Ribbon centre line: straight out of each housing, a gentle S between.
-  const path = new THREE.CatmullRomCurve3([
-    [0, z0], [0, z0 + 2.5], [-1.0, -run * 0.12], [0.8, run * 0.16], [0, z1 - 2.5], [0, z1],
-  ].map(([x, z]) => new THREE.Vector3(x, 0, z)), false, 'centripetal');
+  // Ribbon centre line: one gentle bow (peak 0.9 mm at mid-span), no S.
+  const bow = (t) => 0.9 * Math.sin(Math.PI * t);
   const N = 90;
   for (let i = 0; i < pins; i++) {
     const pts = [];
     for (let k = 0; k <= N; k++) {
       const t = k / N;
-      const c = path.getPointAt(t);
-      const tan = path.getTangentAt(t);
+      const c = new THREE.Vector3(bow(t), 0, z0 + t * run);
+      const dxdz = (0.9 * Math.PI * Math.cos(Math.PI * t)) / run;
+      const tl = Math.hypot(dxdz, 1);
+      const tan = new THREE.Vector3(dxdz / tl, 0, 1 / tl);
       const fromEnd = Math.min(t, 1 - t) * run;
       // 1.0 mm contact pitch at the housings, closing to a touching ribbon.
-      const pitch = od + 0.02 + (1.0 - od - 0.02) * Math.max(0, 1 - fromEnd / 4);
+      const pitch = od + 0.01 + (0.8 - od - 0.01) * Math.max(0, 1 - fromEnd / 3);
       const o = ((pins - 1) / 2 - i) * pitch;
       const y = od / 2 + (hh * 0.45 - od / 2) * Math.max(0, 1 - fromEnd / 3);
       pts.push(new THREE.Vector3(c.x - tan.z * o, y, c.z + tan.x * o));
@@ -871,71 +876,28 @@ function jstCable(p, ctx) {
   return wrap(...parts);
 }
 
-// Clear heat-shrink sleeve, flattened: `len` x `w` mm. Two film layers
-// with brighter folded edges, the way a flat clear tube reads.
+// Clear heat-shrink sleeve, flattened: `len` x `w` mm. A frosted, translucent
+// flat tube (elliptical section) with brighter folded side edges and rims.
 function heatShrink(p) {
   const len = p.len ?? 20;
-  const w = p.w ?? 13;
-  const film = tagged('clear');
-  const fold = tagged('clear-edge');
-  const parts = [];
-  for (const y of [0.1, 0.45]) {
-    const m = mesh(new THREE.BoxGeometry(w - 0.8, 0.1, len), film);
-    m.position.y = y;
-    parts.push(m);
-  }
+  const w = p.w ?? 12;
+  const t = 1.0;
+  const film = tagged('shrink');
+  const fold = tagged('shrink-edge');
+  const tube = mesh(new THREE.CylinderGeometry(1, 1, len, 40, 1, true), film);
+  tube.rotation.x = Math.PI / 2;
+  tube.scale.set(w / 2, 1, t / 2);
+  tube.position.y = t / 2;
+  const parts = [tube];
   for (const s of [-1, 1]) {
-    const edge = mesh(new THREE.CylinderGeometry(0.3, 0.3, len, 10), fold);
+    const edge = mesh(new THREE.CylinderGeometry(t * 0.32, t * 0.32, len, 12), fold);
     edge.rotation.x = Math.PI / 2;
-    edge.position.set((s * (w - 0.6)) / 2, 0.3, 0);
+    edge.position.set(s * (w / 2 - t * 0.3), t / 2, 0);
     parts.push(edge);
-  }
-  for (const s of [-1, 1]) {
-    const rim = mesh(new THREE.BoxGeometry(w - 0.6, 0.5, 0.25), fold);
-    rim.position.set(0, 0.3, (s * len) / 2);
+    const rim = mesh(new THREE.TorusGeometry(1, 0.05, 6, 48), fold);
+    rim.scale.set(w / 2, t / 2, 1);
+    rim.position.set(0, t / 2, (s * len) / 2);
     parts.push(rim);
-  }
-  return wrap(...parts);
-}
-
-// U.FL T-dipole: 1.13 mm coax lead `lead` mm with the U.FL plug, two
-// shrink-covered legs `leg` mm each side of the T.
-function tDipole(p, ctx) {
-  const lead = p.lead ?? 100;
-  const leg = p.leg ?? 29;
-  // 1.13 mm coax is grey; the legs are black shrink over the radiators.
-  const black = ctx.material('silicone', '#2a2c31');
-  const grey = ctx.material('silicone', '#7b7e84');
-  const parts = [];
-  // The coax relaxes into a loose S, so the hub sits ~0.7 x lead from the plug.
-  const reach = lead * 0.7;
-  const path = new THREE.CatmullRomCurve3([[0, 0], [0, 4], [-lead * 0.13, reach * 0.3], [lead * 0.11, reach * 0.62],
-    [0, reach - 4], [0, reach]].map(([x, z]) => new THREE.Vector3(x, 0.57, z)), false, 'centripetal');
-  parts.push(mesh(new THREE.TubeGeometry(path, 160, 0.57, 12, false), grey));
-  const gold = ctx.material('gold', '#d9a531');
-  const plug = mesh(new THREE.CylinderGeometry(1.0, 1.0, 1.25, 24), gold);
-  plug.position.set(0, 0.63, -0.8);
-  const plugBody = mesh(new THREE.BoxGeometry(2.6, 0.9, 3.2), ctx.material('nylon', '#e7e1d1'));
-  plugBody.position.set(0, 0.45, 0.3);
-  parts.push(plugBody, plug);
-  const hub = mesh(new THREE.BoxGeometry(4.5, 2.0, 6), black);
-  hub.position.set(0, 1.0, reach + 2);
-  parts.push(hub);
-  for (const s of [-1, 1]) {
-    const arm = mesh(new THREE.CylinderGeometry(0.95, 0.95, leg, 14), black);
-    arm.rotation.z = Math.PI / 2;
-    arm.position.set((s * leg) / 2 + s * 2.2, 0.95, reach + 3.5);
-    parts.push(arm);
-    const tipCap = mesh(new THREE.SphereGeometry(0.95, 14, 10), black);
-    tipCap.position.set(s * (leg + 2.2), 0.95, reach + 3.5);
-    parts.push(tipCap);
-    if (p.dualBand) {
-      // Dual band: a trap sleeve partway out each leg.
-      const trap = mesh(new THREE.CylinderGeometry(1.35, 1.35, 7, 16), black);
-      trap.rotation.z = Math.PI / 2;
-      trap.position.set(s * (2.2 + leg * 0.4), 1.35, reach + 3.5);
-      parts.push(trap);
-    }
   }
   return wrap(...parts);
 }
@@ -1047,7 +1009,7 @@ function nut(p, ctx) {
 }
 
 const BUILDERS = {screw, nut, card, sticker, esdBag, strap, cupWasher, grommet, wireSet, xtPigtail, capacitor, jstCable,
-  heatShrink, tDipole, boardCard};
+  heatShrink, boardCard};
 
 export async function buildProcedural(spec, ctx) {
   const b = BUILDERS[spec.kind];

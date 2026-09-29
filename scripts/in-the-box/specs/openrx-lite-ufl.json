@@ -6,7 +6,8 @@
     "variant": "Lite-UFL"
   },
   "sources": [
-    "public/models/od3/board-OpenRX-Lite-UFL.glb"
+    "public/models/od3/board-OpenRX-Lite-UFL.glb",
+    "public/models/od3/frame.glb"
   ],
   "camera": {
     "tiltDeg": 12
@@ -30,6 +31,7 @@
     {
       "label": "OpenRX Lite-UFL board",
       "match": ".",
+      "source": 0,
       "combine": "all",
       "count": 1,
       "finish": "original",
@@ -74,23 +76,21 @@
       "item": "Bind and quick-start card"
     },
     {
-      "label": "2.4 GHz T-dipole",
-      "procedural": {
-        "kind": "tDipole",
-        "leg": 29,
-        "lead": 100
-      },
+      "label": "2.4 GHz antenna",
+      "match": "^2\\.4ghz-ufl$",
+      "source": 1,
       "count": 1,
+      "finish": "original",
+      "lay": "x",
       "item": "2.4 GHz",
-      "row": 1,
-      "lay": "x"
+      "row": 1
     },
     {
       "label": "Heat-shrink",
       "procedural": {
         "kind": "heatShrink",
-        "len": 22,
-        "w": 13
+        "len": 20,
+        "w": 12
       },
       "count": 2,
       "item": "Heat-shrink",
@@ -98,5 +98,10 @@
       "perRow": 2
     }
   ],
-  "exclude": []
+  "exclude": [
+    {
+      "match": "^(?!2\\.4ghz-ufl$)",
+      "source": 1
+    }
+  ]
 }

@@ -67,8 +67,8 @@
       "label": "Heat-shrink",
       "procedural": {
         "kind": "heatShrink",
-        "len": 22,
-        "w": 13
+        "len": 20,
+        "w": 12
       },
       "count": 2,
       "item": "Heat-shrink",

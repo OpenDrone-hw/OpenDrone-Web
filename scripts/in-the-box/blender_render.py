@@ -389,6 +389,15 @@ def clear(edge=False):
     return g.mat
 
 
+def shrink(edge=False):
+    g = Graph('shrink')
+    g.set('Base Color', rgba('#e9eef3' if edge else '#d5dde6'))
+    g.set('Roughness', 0.3 if edge else 0.22)
+    g.set('Coat Weight', 0.6)
+    g.set('Alpha', 0.75 if edge else 0.38)
+    return g.mat
+
+
 def board_image(ud, edge=False):
     g = Graph('image')
     t = g.tex(ud['tex']['color'], False, g.uv())
@@ -436,6 +445,8 @@ BUILD = {
     'bag': bag,
     'clear': lambda ud: clear(False),
     'clear-edge': lambda ud: clear(True),
+    'shrink': lambda ud: shrink(False),
+    'shrink-edge': lambda ud: shrink(True),
     'image': board_image,
     'image-edge': lambda ud: board_image(ud, True),
     'sleeve': sleeve,

@@ -5,7 +5,9 @@
     "product": "openrx",
     "variant": "Gemini"
   },
-  "sources": [],
+  "sources": [
+    "public/models/od5/frame.glb"
+  ],
   "camera": {
     "tiltDeg": 12
   },
@@ -64,24 +66,23 @@
       "item": "Bind and quick-start card"
     },
     {
-      "label": "Dual-band T-dipole",
-      "procedural": {
-        "kind": "tDipole",
-        "leg": 75,
-        "lead": 100,
-        "dualBand": true
-      },
-      "count": 2,
+      "label": "Dual-band antenna",
+      "match": "^Dual-Band-UFL-Antenna$",
+      "source": 0,
+      "finish": "original",
+      "lay": "x",
       "item": "2.4 GHz + 900 MHz",
       "row": 1,
-      "lay": "x"
+      "extra": 1,
+      "perRow": 1,
+      "copyGap": -50
     },
     {
       "label": "Heat-shrink",
       "procedural": {
         "kind": "heatShrink",
-        "len": 22,
-        "w": 13
+        "len": 20,
+        "w": 12
       },
       "count": 2,
       "item": "Heat-shrink",
@@ -89,5 +90,10 @@
       "perRow": 2
     }
   ],
-  "exclude": []
+  "exclude": [
+    {
+      "match": "^(?!Dual-Band-UFL-Antenna$)",
+      "source": 0
+    }
+  ]
 }
