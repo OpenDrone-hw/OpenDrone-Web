@@ -51,6 +51,7 @@
   "shipping_price": 695,
   "total_tax": 1248,
   "total_price": 7190,
+  "taxes_included": true,
   "tax_lines": [
     {
       "title": "BE VAT",

@@ -1,7 +1,7 @@
 {
   "_scenario": {
-    "title": "United States, USD, no VAT",
-    "description": "US address, presentment currency USD, no tax lines, import duties note.",
+    "title": "United States, USD, no VAT, duties included",
+    "description": "US address, presentment currency USD, no tax lines, duties included, US warehouse, March preorder promise.",
     "templates": [
       "order-confirmation",
       "shipping-confirmation"
@@ -30,26 +30,27 @@
         "title": "20x20"
       },
       "quantity": 1,
-      "price": 7400,
-      "line_price": 7400,
+      "price": 8119,
+      "line_price": 8119,
       "sku": "OPENFC-LITE-2020",
       "image": "placeholder:OpenFC",
       "product": {
         "title": "OpenFC Lite"
       },
       "properties": {
-        "Preorder": "ships late October 2026, delivered by 30 November 2026"
+        "Preorder": "ships by 14 March 2027 if the target is reached by 22 November 2026"
       }
     }
   ],
-  "subtotal_price": 7400,
-  "shipping_price": 1900,
+  "subtotal_price": 8119,
+  "shipping_price": 995,
   "total_tax": 0,
-  "total_price": 9300,
+  "total_price": 9114,
+  "taxes_included": false,
   "tax_lines": [],
   "shipping_method": {
-    "title": "bpost world",
-    "price": 1900
+    "title": "US delivery",
+    "price": 995
   },
   "shipping_address": {
     "name": "Jane Doe",
@@ -102,15 +103,15 @@
             "title": "20x20"
           },
           "quantity": 1,
-          "price": 7400,
-          "line_price": 7400,
+          "price": 8119,
+          "line_price": 8119,
           "sku": "OPENFC-LITE-2020",
           "image": "placeholder:OpenFC",
           "product": {
             "title": "OpenFC Lite"
           },
           "properties": {
-            "Preorder": "ships late October 2026, delivered by 30 November 2026"
+            "Preorder": "ships by 14 March 2027 if the target is reached by 22 November 2026"
           }
         },
         "quantity": 1

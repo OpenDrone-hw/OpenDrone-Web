@@ -98,7 +98,7 @@ export function renderWelcomeEmail(opts: {
     '',
     `Unsubscribe: ${opts.unsubscribeUrl}`,
     '',
-    'Incutec BV, Stapelhuisstraat 15, 3000 Leuven, Belgium. VAT BE1038934039',
+    'Incutec BV, Stapelhuisstraat 15, 3000 Leuven, Belgium. KBO 1038.934.039. BTW BE 1038.934.039',
   ].join('\n');
 
   const row = (label: string, value: string) => `
@@ -114,7 +114,7 @@ export function renderWelcomeEmail(opts: {
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;">You're subscribed to Engineering Essentials.</div>
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#0a0a0a;">
     <tr><td align="center" style="padding:32px 16px;">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px;background-color:#101210;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;max-width:600px;background-color:#101210;">
         <tr>
           <td style="background-color:#ffffff;padding:20px 32px;">
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
@@ -172,7 +172,7 @@ ${row('Unsubscribe', 'Link at the bottom of every email')}
         <tr>
           <td style="padding:24px 32px 32px 32px;border-top:1px solid #1f231f;">
             <p style="margin:0 0 10px 0;font-family:Helvetica,Arial,sans-serif;font-size:13px;line-height:1.6;color:#a0a0a0;">Not you, or not interested? <a href="${escapeHtml(opts.unsubscribeUrl)}" style="color:#ffb700;">Unsubscribe with one click</a>.</p>
-            <p style="margin:0;font-family:Helvetica,Arial,sans-serif;font-size:12px;line-height:1.6;color:#4a4a4a;">Incutec BV, Stapelhuisstraat 15, 3000 Leuven, Belgium. VAT BE1038934039 &middot; <a href="${SITE}" style="color:#4a4a4a;">opendrone.be</a></p>
+            <p style="margin:0;font-family:Helvetica,Arial,sans-serif;font-size:12px;line-height:1.6;color:#a0a0a0;">Incutec BV, Stapelhuisstraat 15, 3000 Leuven, Belgium. KBO 1038.934.039. BTW BE 1038.934.039 &middot; <a href="${SITE}" style="color:#a0a0a0;">opendrone.be</a></p>
           </td>
         </tr>
       </table>

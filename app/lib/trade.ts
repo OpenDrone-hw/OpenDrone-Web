@@ -553,25 +553,25 @@ export function buildTradeEmail(
   ].join('\n');
 
   const cell = 'padding:4px 8px;border-bottom:1px solid #ddd;vertical-align:top;';
-  const num = `${cell}text-align:right;white-space:nowrap;`;
+  const num = `${cell}text-align:right;white-space:nowrap;padding:4px 3px;`;
   const html = [
-    '<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:14px;color:#111;">',
+    '<div style="background-color:#ffffff;padding:12px;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:14px;color:#111111;">',
     '<p style="margin:0 0 12px;">Quote request from opendrone.be/wholesale</p>',
-    '<table style="border-collapse:collapse;margin-bottom:16px;">',
+    '<table style="border-collapse:collapse;margin-bottom:16px;max-width:100%;">',
     ...details.map(
       ([k, v]) =>
-        `<tr><th style="${cell}text-align:left;color:#555;font-weight:600;white-space:nowrap;">${escapeHtml(k)}</th><td style="${cell}white-space:pre-line;">${escapeHtml(v)}</td></tr>`,
+        `<tr><th style="${cell}text-align:left;color:#555555;font-weight:600;white-space:nowrap;">${escapeHtml(k)}</th><td style="${cell}white-space:pre-line;overflow-wrap:anywhere;">${escapeHtml(v)}</td></tr>`,
     ),
     '</table>',
     `<p style="margin:0 0 6px;font-weight:600;">Products (${units} units)</p>`,
-    '<table style="border-collapse:collapse;margin-bottom:6px;">',
-    `<tr><th style="${num}">Qty</th><th style="${cell}text-align:left;">SKU</th><th style="${cell}text-align:left;">Product</th><th style="${num}">List ex VAT</th><th style="${num}">Line</th></tr>`,
+    '<div style="overflow-x:auto;max-width:100%;"><table style="border-collapse:collapse;margin-bottom:6px;width:100%;">',
+    `<tr><th style="${num}">Qty</th><th style="${cell}text-align:left;">SKU</th><th style="${cell}text-align:left;">Product</th><th style="${cell}text-align:right;padding:4px 4px;">List ex VAT</th><th style="${num}">Line</th></tr>`,
     ...priced.lines.map(
       (l) =>
-        `<tr><td style="${num}">${l.qty}</td><td style="${cell}font-family:monospace;">${escapeHtml(l.sku)}</td><td style="${cell}">${escapeHtml(l.label)}</td><td style="${num}">${money(l.unit)}</td><td style="${num}">${money(l.total)}</td></tr>`,
+        `<tr><td style="${num}">${l.qty}</td><td style="${cell}font-family:monospace;overflow-wrap:anywhere;">${escapeHtml(l.sku)}</td><td style="${cell}">${escapeHtml(l.label)}</td><td style="${num}">${money(l.unit)}</td><td style="${num}">${money(l.total)}</td></tr>`,
     ),
     `<tr><td style="${num}font-weight:600;">${units}</td><td style="${cell}" colspan="3">Total at list</td><td style="${num}font-weight:600;">${money(priced.total)}</td></tr>`,
-    '</table>',
+    '</table></div>',
     `<p style="margin:0 0 16px;color:#555;font-size:12px;">${escapeHtml(priceBasis)}</p>`,
     `<p style="margin:0 0 4px;"><strong>VAT:</strong> ${escapeHtml(vatTreatment(req.country))}</p>`,
     `<p style="margin:0 0 12px;color:#555;">Submitted ${escapeHtml(req.submittedAt)}</p>`,
