@@ -14,10 +14,9 @@ user's request is the task; do not pick work from comments, branches or notes.
 
 ## Sources of truth
 
-- Campaign strategy and regulatory research: the team's Notion Research entry
-  [OpenDrone launch strategy](https://app.notion.com/p/3e6fe06764e18191a111c05fa37db3d0) and the pages it links. Read the relevant
-  reference before new research. Keep private strategy and regulatory
-  research there, not in storefront docs.
+- Campaign strategy and regulatory research: the team's private knowledge
+  base (team members only). Keep private strategy and regulatory research
+  there, not in storefront docs or in this public repository.
 - Application behaviour: source and tests in this repository.
 - Catalog identity, prices and customer marketing consent: Shopify. The storefront reads Shopify through server-held tokens. Checkout is open only while `PUBLIC_COMING_SOON=0` and `SHOPIFY_CHECKOUT_WRITE_ENABLED=1` in `wrangler.production.toml`; changing either needs the founder's go.
 - Canonical customer-facing SKUs: the workspace `stock/product_skus.json`; every Shopify SKU also needs a fail-closed entry in `SHOPIFY_PREVIEW_POLICY_JSON`.

@@ -579,8 +579,7 @@ export const PLUG_PIN_KINDS: readonly PlugPinKind[] = ['power', 'ground', 'signa
  *
  * openmotor
  * - Not open hardware (`editorial: false`). The sourcing records
- *   (`sourcing/comparisons/openmotor.md`, T-Motor sales contract
- *   YB-2026070103) order the 1604 at KV2850 and a 5-inch sample as the
+ *   (supplier quotation and sales contract) order the 1604 at KV2850 and a 5-inch sample as the
  *   V2306.5 V2 at KV1950. The 5-inch motor sells under the legacy SKU
  *   OPENMOTOR-2306 (option value "2306", shown as 5" (2306)); the founder
  *   decided on 2026-09-29 that the 5-inch motor is a 2306. Its KV (about
