@@ -46,6 +46,7 @@
   "shipping_price": 1900,
   "total_tax": 0,
   "total_price": 9300,
+  "taxes_included": false,
   "tax_lines": [],
   "shipping_method": {
     "title": "bpost world",

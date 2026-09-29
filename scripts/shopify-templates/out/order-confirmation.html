@@ -234,7 +234,7 @@
                   {% endif %}
                   {% if total_tax != 0 %}
                   <tr>
-                    <td style="padding: 4px 0; color: #a0a0a0;">Tax</td>
+                    <td style="padding: 4px 0; color: #a0a0a0;">{% if taxes_included %}Includes VAT{% else %}Tax{% endif %}</td>
                     <td align="right" style="padding: 4px 0; color: #c5c5c5;">{{ total_tax | money }}</td>
                   </tr>
                   {% endif %}
@@ -303,7 +303,7 @@
       <p style="margin: 0;">
         These documents form part of your contract:
         <a href="https://opendrone.be/en/algemene-voorwaarden" style="color: #ffb700;">Terms and conditions</a> &middot;
-        <a href="https://opendrone.be/warranty" style="color: #ffb700;">2-year legal warranty</a> &middot;
+        {% if shipping_address == blank or eu_countries contains shipping_address.country_code %}<a href="https://opendrone.be/warranty" style="color: #ffb700;">2-year legal warranty</a> &middot;{% endif %}
         <a href="https://opendrone.be/end-use" style="color: #ffb700;">End-use policy</a>
       </p>
     </td>
