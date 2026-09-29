@@ -1,5 +1,5 @@
 {
-  "$comment": "Incutec's public financial goals. Edited in the studio's Goals tab. mode 'auto' goals are updated by scripts/update-goals.mjs (weekly community-sync workflow) from the GOALS_URL aggregate endpoint: gross since `since` x allocation_pct / target_eur, floored to 5% steps so the public meter stays approximate. target_eur and allocation_pct are inputs, never displayed. Read by app/lib/goals.ts.",
+  "$comment": "Incutec's public financial goals. Edited in the studio's Goals tab. mode 'auto' goals are updated by scripts/update-goals.mjs (weekly community-sync workflow) from the GOALS_URL aggregate endpoint, with the target and allocation supplied by the GOALS_INPUTS secret (see the script header). The target_eur and allocation_pct stored here are neutral placeholders. Read by app/lib/goals.ts.",
   "goals": [
     {
       "id": "pick-and-place",
@@ -9,8 +9,8 @@
       "target_label": "about €30k",
       "progress_pct": 0,
       "mode": "auto",
-      "target_eur": 30000,
-      "allocation_pct": 40,
+      "target_eur": null,
+      "allocation_pct": 100,
       "since": "2026-08-11"
     },
     {

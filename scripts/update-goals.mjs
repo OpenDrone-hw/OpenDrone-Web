@@ -32,7 +32,11 @@
  * Run:  npm run goals:update           (dry run, prints the result)
  *       npm run goals:update -- --write    (also writes content/goals.json)
  *
- * Env (repo .env or process env): GOALS_URL.
+ * Env (repo .env or process env): GOALS_URL and GOALS_INPUTS. GOALS_INPUTS is a
+ * secret JSON object keyed by goal id, e.g.
+ * {"<goal id>": {"target_eur": <number>, "allocation_pct": <number>}}. The
+ * target and allocation are kept out of the public repo, so content/goals.json
+ * holds neutral placeholders for them and these values override the file.
  *
  * The result is committed content: the community-sync workflow runs this
  * weekly and opens a PR, so the diff is always reviewed before it deploys.
@@ -105,10 +109,19 @@ function computeAutoPct(grossEur, goal) {
   return Math.min(100, Math.floor(raw / AUTO_PCT_STEP) * AUTO_PCT_STEP);
 }
 
+let inputs = {};
+try {
+  inputs = JSON.parse(env.GOALS_INPUTS || '{}');
+} catch {
+  console.error('GOALS_INPUTS is not valid JSON. Nothing was written.');
+  process.exit(1);
+}
+
 const doc = JSON.parse(fs.readFileSync(GOALS_FILE, 'utf8'));
 let changed = false;
 
-for (const goal of doc.goals ?? []) {
+for (const stored of doc.goals ?? []) {
+  const goal = {...stored, ...(inputs[stored.id] ?? {})};
   if (goal.mode !== 'auto') {
     console.error(`  ${goal.id}: manual, skipped`);
     continue;
@@ -121,10 +134,10 @@ for (const goal of doc.goals ?? []) {
   const pct = computeAutoPct(gross, goal);
   if (pct === null) continue;
   console.error(
-    `  ${goal.id}: ${pct}% (was ${goal.progress_pct}%)`,
+    `  ${goal.id}: ${pct}% (was ${stored.progress_pct}%)`,
   );
-  if (pct !== goal.progress_pct) {
-    goal.progress_pct = pct;
+  if (pct !== stored.progress_pct) {
+    stored.progress_pct = pct;
     changed = true;
   }
 }
