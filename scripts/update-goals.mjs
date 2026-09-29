@@ -19,11 +19,10 @@
  * EUR. Nothing else in the document is read, and no per-order detail is
  * requested: the script must never hold order-level data.
  *
- * GOALS_URL is a repository secret consumed by the community-sync workflow
- * (`.github/workflows/community-sync.yml`) and this script reads it the
- * same way from a local `.env`. No endpoint serving the shape above is
- * configured; until one is, leave GOALS_URL unset and the script reports
- * that and writes nothing.
+ * GOALS_URL is read from the process env or a local `.env`. No workflow
+ * runs this script. No endpoint serving the shape above is configured;
+ * until one is, leave GOALS_URL unset and the script reports that and
+ * writes nothing.
  *
  * Mirrors computeAutoPct in app/lib/goals.ts (this script cannot import TS);
  * the unit test in app/lib/goals.test.ts greps this file to keep the formula
@@ -38,8 +37,8 @@
  * target and allocation are kept out of the public repo, so content/goals.json
  * holds neutral placeholders for them and these values override the file.
  *
- * The result is committed content: the community-sync workflow runs this
- * weekly and opens a PR, so the diff is always reviewed before it deploys.
+ * Run locally by a maintainer. The result is committed content: commit the
+ * output through a reviewed PR, so the diff is reviewed before it deploys.
  */
 import fs from 'node:fs';
 import path from 'node:path';

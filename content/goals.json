@@ -1,5 +1,5 @@
 {
-  "$comment": "Incutec's public financial goals. Edited in the studio's Goals tab. mode 'auto' goals are updated by scripts/update-goals.mjs (weekly community-sync workflow) from the GOALS_URL aggregate endpoint, with the target and allocation supplied by the GOALS_INPUTS secret (see the script header). The target_eur and allocation_pct stored here are neutral placeholders. Read by app/lib/goals.ts.",
+  "$comment": "Incutec's public financial goals. Edited in the studio's Goals tab. mode 'auto' goals are updated by scripts/update-goals.mjs, run locally with GOALS_URL and GOALS_INPUTS and committed through a reviewed PR, from the GOALS_URL aggregate endpoint, with the target and allocation supplied by the GOALS_INPUTS secret (see the script header). The target_eur and allocation_pct stored here are neutral placeholders. Read by app/lib/goals.ts.",
   "goals": [
     {
       "id": "pick-and-place",
