@@ -27,6 +27,12 @@
  * absent means EU) also gets `promise-mismatch`, for manual follow-up. No
  * customer mail is sent.
  *
+ * Every paid order shipping to the US with a line that is not assigned to a
+ * batch serving the US (in-stock items and other lines without a campaign
+ * batch included, `Preorder` property or not) is held and tagged
+ * `us-review`: a buyer can type a US address in Shopify checkout for an EU
+ * cart. `planRelease` never releases it; it is followed up by hand.
+ *
  * Idempotent: the `preorder` tag marks an order as done, and a fulfillment
  * order that already carries the `opendrone-preorder` hold is not held
  * again. The hold is written before the tags, so a failed tag write is
@@ -45,6 +51,7 @@ import {
   allocateUnit,
   batchOfUnit,
   regionOf,
+  servesRegion,
   shipsWithBatch,
   type CampaignConfig,
   type Region,
@@ -65,6 +72,9 @@ export const PREORDER_LINE_ATTRIBUTE = 'Preorder';
 export const SHIP_REGION_LINE_ATTRIBUTE = '_ship_region';
 /** Order tag for an order shipping to another region than its promise. */
 export const PROMISE_MISMATCH_TAG = 'promise-mismatch';
+/** Order tag for a US order with a line that no US-serving batch carries
+ *  (an in-stock item, a non-campaign SKU): held for manual follow-up. */
+export const US_REVIEW_TAG = 'us-review';
 /** Order tag that marks an order as held and tagged by this module. */
 export const PREORDER_TAG = 'preorder';
 /** Hold handle: one per app per fulfillment order, so it doubles as the marker. */
@@ -385,29 +395,65 @@ function hasPreorderHold(fo: PreorderOrder['fulfillmentOrders']['nodes'][number]
 }
 
 /**
- * What each paid preorder order still needs. An order already tagged
- * `preorder` is done, including after its hold was released.
+ * True for an order shipping to the US with a live line that no US-serving
+ * batch carries: a line without a campaign batch (an in-stock item, a SKU
+ * outside the campaign) or with a batch that serves the EU only.
+ */
+export function needsUsReview(order: PreorderOrder, orderBatches: LineBatch[], config: CampaignConfig): boolean {
+  if (orderRegion(order) !== 'US') return false;
+  return order.lineItems.nodes.some((line) => {
+    if (!(line.currentQuantity > 0)) return false;
+    const sku = line.sku?.trim();
+    if (!sku) return true;
+    const mine = orderBatches.filter((b) => (b.item ?? b.sku) === sku);
+    if (!mine.length) return true;
+    return mine.some((b) => {
+      const entry = config.skus[b.sku]?.batches[b.batch - 1];
+      return entry ? !servesRegion(entry, 'US') : false;
+    });
+  });
+}
+
+const US_REVIEW_NOTE = 'US review: an item does not ship to the US from any batch. Hold for manual follow-up.';
+
+/**
+ * What each paid order still needs. A preorder order already tagged
+ * `preorder` is done, including after its hold was released. A US order
+ * that needs review (`needsUsReview`) and is not yet tagged `us-review` is
+ * held and tagged, preorder or not.
  */
 export function planPreorderHolds(orders: PreorderOrder[], config: CampaignConfig): HoldPlan[] {
   const batches = assignBatches(orders, config);
   const plans: HoldPlan[] = [];
   for (const order of orders) {
-    if (!isCountedOrder(order) || !isPreorderOrder(order)) continue;
-    if (order.tags.includes(PREORDER_TAG)) continue;
+    if (!isCountedOrder(order)) continue;
     const orderBatches = batches.get(order.id) ?? [];
+    const preorder = isPreorderOrder(order) && !order.tags.includes(PREORDER_TAG);
+    const review = !order.tags.includes(US_REVIEW_TAG) && needsUsReview(order, orderBatches, config);
+    if (!preorder && !review) continue;
     const hold = order.fulfillmentOrders.nodes
       .filter((fo) => HOLDABLE_STATES.has(fo.status) && !hasPreorderHold(fo))
       .map((fo) => fo.id);
+    const note = review
+      ? preorder
+        ? `${US_REVIEW_NOTE} ${holdNote(orderBatches)}`.slice(0, NOTE_LIMIT)
+        : US_REVIEW_NOTE
+      : holdNote(orderBatches);
     plans.push({
       orderId: order.id,
       orderName: order.name,
       tags: [
-        PREORDER_TAG,
-        ...new Set(orderBatches.map((b) => batchTag(b.sku, b.batch))),
-        ...(promiseMismatch(order) ? [PROMISE_MISMATCH_TAG] : []),
+        ...(preorder
+          ? [
+              PREORDER_TAG,
+              ...new Set(orderBatches.map((b) => batchTag(b.sku, b.batch))),
+              ...(promiseMismatch(order) ? [PROMISE_MISMATCH_TAG] : []),
+            ]
+          : []),
+        ...(review ? [US_REVIEW_TAG] : []),
       ],
       hold,
-      note: holdNote(orderBatches),
+      note,
       batches: orderBatches,
     });
   }
@@ -517,9 +563,13 @@ export function planRelease(
       }))
       .filter((fo) => fo.holdIds.length > 0);
     if (!release.length) continue;
-    const waitsFor = orderBatchesFromTags(order, shipsWith)
-      .map((b) => batchTag(b.sku, b.batch))
-      .filter((tag) => !covered.has(tag));
+    const waitsFor = [
+      ...orderBatchesFromTags(order, shipsWith)
+        .map((b) => batchTag(b.sku, b.batch))
+        .filter((tag) => !covered.has(tag)),
+      // A US order under review is released by hand, never by a batch.
+      ...(order.tags.includes(US_REVIEW_TAG) ? [US_REVIEW_TAG] : []),
+    ];
     plans.push({orderId: order.id, orderName: order.name, release, waitsFor});
   }
   return plans;

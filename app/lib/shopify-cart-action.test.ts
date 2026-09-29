@@ -761,20 +761,41 @@ describe('Shopify cart action: buyer country', () => {
     );
     assert.equal(country, 'NL');
     await handleShopifyCartAction(
-      fromCountry({sku: 'OPENRX-LITE', qty: '1'}, null), ENABLED_ENV,
+      fromCountry({sku: 'OPENRX-LITE', qty: '1'}, 'RU'), ENABLED_ENV,
       {fetchCatalog: async () => CATALOG, createCart: async (_lines, code) => { country = code; return cart(); }},
     );
     assert.equal(country, undefined);
   });
 
-  it('refuses an add for a destination that is not sold direct, before any Shopify call', async () => {
+  it('adds for any destination while US sales are closed, as main does', async () => {
+    const adds: Array<[string, Request]> = [
+      ['RU', fromCountry({sku: 'OPENRX-LITE', qty: '1'}, 'RU')],
+      ['BE ip, GB pick', fromCountry({sku: 'OPENRX-LITE', qty: '1'}, 'BE')],
+      ['BE ip, US pick', fromCountry({sku: 'OPENRX-LITE', qty: '1'}, 'BE')],
+      ['Tor, en-US', fromCountry({sku: 'OPENRX-LITE', qty: '1'}, 'T1')],
+    ];
+    adds[1][1].headers.set('Cookie', 'od_ship_country=GB');
+    adds[2][1].headers.set('Cookie', 'od_ship_country=US');
+    adds[3][1].headers.set('Accept-Language', 'en-US,en;q=0.9');
+    for (const [label, req] of adds) {
+      let created = false;
+      const response = await handleShopifyCartAction(req, ENABLED_ENV, {
+        fetchCatalog: async () => CATALOG,
+        createCart: async () => { created = true; return cart(); },
+      });
+      assert.equal(response.status, 303, label);
+      assert.ok(created, label);
+    }
+  });
+
+  it('refuses an add for a destination that is not sold direct while US sales are open', async () => {
     for (const [code, message] of [
       ['RU', /not available/],
-      ['US', /limited to the EU\.$/],
-      ['CH', /limited to the EU\.$/],
+      ['CH', /limited to the EU and the United States\.$/],
     ] as const) {
       let calls = 0;
       const error = await handleShopifyCartAction(fromCountry({sku: 'OPENRX-LITE', qty: '1'}, code), ENABLED_ENV, {
+        usRate: 9.95,
         fetchCatalog: async () => { calls++; return CATALOG; },
         createCart: async () => { calls++; return cart(); },
       }).then(() => null, (e: unknown) => e);

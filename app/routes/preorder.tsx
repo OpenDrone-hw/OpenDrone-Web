@@ -122,7 +122,8 @@ export async function loader({context}: Route.LoaderArgs) {
   const retail = new Map<string, number>();
   for (const product of catalog.products) {
     for (const variant of product.variants) {
-      if (variant.compare_price != null && variant.compare_price > 0) {
+      // A USD variant gets no ladder: Shopify rounds each US step price.
+      if (variant.currency !== 'USD' && variant.compare_price != null && variant.compare_price > 0) {
         retail.set(variant.sku, variant.compare_price);
       }
     }

@@ -268,7 +268,9 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
   // steps up to. The PDP variant shape drops it for campaign SKUs (no
   // struck-through price, EU art. 6a), so the price ladder reads it here.
   const retailBySku: Record<string, number | null> = Object.fromEntries(
-    entry.variants.map((v) => [v.sku, v.compare_price ?? null]),
+    // A USD variant (US buyer) has no ladder: Shopify rounds each US step
+    // price itself, so steps derived from the USD retail would be wrong.
+    entry.variants.map((v) => [v.sku, v.currency === 'USD' ? null : (v.compare_price ?? null)]),
   );
 
   return {

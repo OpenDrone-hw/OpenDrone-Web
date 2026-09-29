@@ -9,6 +9,7 @@
 
 import {EU_COUNTRY_CODES} from './eu-countries.ts';
 import {REGISTRATIONS, euSaleOpen, type RegistrationsFile} from './registrations.ts';
+import {visitorCountry} from './visitor-country.ts';
 
 /** Countries Incutec does not ship to. */
 export const BLOCKED_COUNTRIES: ReadonlySet<string> = new Set(['RU', 'BY', 'IR', 'KP', 'SY', 'CU']);
@@ -259,4 +260,15 @@ export function shipCountryForRequest(request: Request): string | null {
   const ip = isoCode(request.headers.get('CF-IPCountry'));
   if (ip) return ip;
   return countryFromAcceptLanguage(request.headers.get('Accept-Language'));
+}
+
+/**
+ * The one country the buy button (root loader) and the server-side add
+ * refusal read. While US sales are open (`usRate` set) it is
+ * `shipCountryForRequest`, the destination the cart and checkout read too.
+ * Closed, it is `visitorCountry` (`?country`, then `CF-IPCountry`), as the
+ * buy button has always read, and the add refuses no destination.
+ */
+export function buyerCountry(request: Request, usRate: number | null): string | null {
+  return usRate != null ? shipCountryForRequest(request) : visitorCountry(request);
 }

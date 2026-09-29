@@ -51,6 +51,10 @@ export type CampaignBatch = {
   ships?: string;
   /** Reviewed final customer delivery date, separate from dispatch. The ship promise names it; null leaves it out. */
   deliveryBy?: string | null;
+  /** The same for a US buyer (air freight to the US warehouse and US
+   *  customs); a US promise names only this one, and leaves the delivery
+   *  date out without it. */
+  deliveryByUS?: string | null;
   /** The regions this batch ships to; absent means every region. Paid
    *  stock in Belgium is `["EU"]`: a US unit skips it for the next batch
    *  that serves the US. A SKU's last funding batch serves every region. */
@@ -67,9 +71,10 @@ export type PriceTier = {
 /** One promise flows to product pages, cart lines and order confirmations.
  *  A batch with a placed supplier order (`ships`) states its delivery date
  *  outright; a funding target states it on the condition of its target. */
-function batchPromise(batch: CampaignBatch, fallback: string): string {
+function batchPromise(batch: CampaignBatch, fallback: string, region: Region = 'EU'): string {
   const ships = batch.ships?.trim();
-  const delivery = batch.deliveryBy ? campaignDate(batch.deliveryBy) : null;
+  const deliveryBy = region === 'US' ? batch.deliveryByUS : batch.deliveryBy;
+  const delivery = deliveryBy ? campaignDate(deliveryBy) : null;
   if (!ships) {
     return delivery ? `${fallback}; if the target is reached in time, delivered by ${delivery}` : fallback;
   }
@@ -246,6 +251,7 @@ export function parseCampaignConfig(body: unknown): CampaignConfig {
         throw new Error(`preorders: ${sku} paid batch needs a ship promise`);
       }
       if (batch.deliveryBy != null && !isCalendarDay(batch.deliveryBy)) throw new Error(`preorders: ${sku} deliveryBy must be a calendar date`);
+      if (batch.deliveryByUS != null && !isCalendarDay(batch.deliveryByUS)) throw new Error(`preorders: ${sku} deliveryByUS must be a calendar date`);
       if (batch.regions !== undefined) {
         if (
           !Array.isArray(batch.regions) ||
@@ -554,7 +560,7 @@ export function campaignState(
     target,
     targetOrdered,
     targetReached,
-    shipPromise: batchPromise(current, pendingShips),
+    shipPromise: batchPromise(current, pendingShips, region),
     shipsOnTarget: !current.ships?.trim(),
     paidLeft: current.paid ? current.units - fill[index] : null,
     earlyPrice: tier !== null,
@@ -570,7 +576,7 @@ export function campaignState(
         i < index
           ? servesRegion(b, region) ? 'sold_out' : 'other_region'
           : i === index ? 'current' : 'next',
-      shipPromise: batchPromise(b, pendingShips),
+      shipPromise: batchPromise(b, pendingShips, region),
     })),
   };
 }
@@ -596,7 +602,7 @@ export function shipsWithState(
   const own = regionUnits(ordered, 'EU');
   const {batch, fromStock} = shipsWithBatch(rule, lead.batches, region, own);
   const state = batch
-    ? pinnedBatchState(lead.batches, batch, config.pendingShips, leadOrdered)
+    ? pinnedBatchState(lead.batches, batch, config.pendingShips, leadOrdered, region)
     : campaignState(lead.batches, leadOrdered, config.pendingShips, tiersFor(config, rule.sku), null, region);
   return {
     ...state,
@@ -645,9 +651,10 @@ function pinnedBatchState(
   batch: number,
   pendingShips: string,
   leadOrdered: PaidUnitsOf,
+  region: Region = 'EU',
 ): CampaignState {
   const entry = batches[batch - 1];
-  const promise = batchPromise(entry, pendingShips);
+  const promise = batchPromise(entry, pendingShips, region);
   const dated = Boolean(entry.ships?.trim());
   const targetOrdered = dated ? 0 : Math.min(entry.units, batchFill(batches, leadOrdered)[batch - 1] ?? 0);
   return {

@@ -2,7 +2,7 @@ import {bySku, type Catalog, type CatalogVariant} from './catalog.ts';
 import {shipGroupKey, shipLabelFromPromise} from './preorder-campaign.ts';
 import {isPurchasableStatus, resolveStatus} from './product-content.ts';
 import {requestedLines} from './shopify-cart-input.ts';
-import {isUsQuote, shipCountryForRequest, shippingQuote, type ShippingQuote} from './shipping-rates.ts';
+import {buyerCountry, isUsQuote, shipCountryForRequest, shippingQuote, type ShippingQuote} from './shipping-rates.ts';
 import {type RegistrationsFile} from './registrations.ts';
 import {usSalesRate} from './us-sales.ts';
 import {
@@ -506,11 +506,14 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
     }
 
     if (intent !== 'add') throw fail('Invalid cart action.', 400);
-    // A destination that is not sold direct never gets a cart line. An
-    // unknown one adds in the shop's default market, as before; checkout
-    // still asks for an approved destination.
-    if (destination && destination.kind !== 'direct') {
-      throw fail(destinationMessage(destination.kind, usRate != null), 403);
+    // While US sales are open, a destination that is not sold direct never
+    // gets a cart line; the buy button reads the same country
+    // (`buyerCountry`). An unknown one adds in the shop's default market.
+    // Closed, the add refuses no destination, as before: the buyer fixes it
+    // in the cart, and checkout asks for an approved destination.
+    if (usRate != null) {
+      const buyer = shippingQuote(buyerCountry(request, usRate), dependencies.registrations, usRate);
+      if (buyer && buyer.kind !== 'direct') throw fail(destinationMessage(buyer.kind, true), 403);
     }
     const requested = requestedLines(form);
     const catalog = await dependencies.fetchCatalog();

@@ -727,16 +727,21 @@ page renders as before. Open:
 | Surface | US buyer (destination US) | EU buyer |
 |---|---|---|
 | Destination | `shippingQuote` zone `us`, rate from `us-sales.json` | unchanged |
-| Prices | the US catalog's USD list price: duties included, no sales tax | EUR incl. VAT |
+| Prices | the US catalog's USD list price: duties included, no sales tax; no price ladder (Shopify rounds each US step itself) | EUR incl. VAT |
+| Delivery date | the batch's `deliveryByUS` | the batch's `deliveryBy` |
 | Sells | campaign preorder SKUs only; in-stock SKUs refused | everything for sale |
 | Batch | first batch with room whose `regions` include US | first with room whose `regions` include EU |
 | Cart | `buyerIdentity.countryCode` US, hidden `_ship_region: US` line attribute | unchanged |
 
 The destination is `shipCountryForRequest` (`?country`, the
 `od_ship_country` cookie, `CF-IPCountry`, `Accept-Language`) for the page, the
-cart, the line promise and the checkout gate alike. The hold pass tags an
-order `promise-mismatch` when it ships to another region than a line's promise
-was computed for; follow it up by hand.
+cart, the line promise and the checkout gate alike (`buyerCountry`). The hold
+pass tags an order `promise-mismatch` when it ships to another region than a
+line's promise was computed for, and holds and tags `us-review` every order
+shipping to the US with a line no US-serving batch carries (an in-stock item,
+for example: checkout accepts any address in an open market).
+`release-batch.mjs` never releases a `us-review` order; follow both up by
+hand.
 
 Shopify settings the US needs (the US market, its USD price list and
 `INCLUDES_TAXES_IN_PRICE` exist): a US shipping zone at the `us-sales.json`
@@ -746,7 +751,7 @@ rate, and HS codes and country of origin on every variant.
 
 | Source | Owns |
 |---|---|
-| `content/preorders.json` | `countFrom`, `endsOn`, `shipsBy`, `priceTiers`, `pendingShips`, per-SKU `batches` (`units`, `paid`, `ships`, `deliveryBy`, `regions`) and `shipsWith` (`sku`, `batch`, `stock`, `after`) |
+| `content/preorders.json` | `countFrom`, `endsOn`, `shipsBy`, `priceTiers`, `pendingShips`, per-SKU `batches` (`units`, `paid`, `ships`, `deliveryBy`, `deliveryByUS`, `regions`) and `shipsWith` (`sku`, `batch`, `stock`, `after`) |
 | `content/registrations.json` | producer numbers and explicit `saleApproved` per EU destination |
 | `content/us-sales.json` | the US flat shipping rate in USD; `null` keeps the US closed |
 | Shopify | compare-at (retail) price, current price, catalog identity, orders, payments |

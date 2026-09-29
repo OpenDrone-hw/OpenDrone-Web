@@ -44,7 +44,9 @@ export function usSalesRate(
  * with Shopify's US market prices laid over it: each variant's price,
  * compare-at price and currency from `market` (the `@inContext(country: US)`
  * read, USD, no EU VAT). The price-step check already ran on the EUR
- * catalog. A campaign's step prices scale with the variant's US/EUR ratio.
+ * catalog. A campaign's price is Shopify's US price and its next price is
+ * dropped: Shopify rounds every US market price itself, so later USD steps
+ * are not derived here.
  *
  * Fail closed: without a market read, and for a variant the US market does
  * not price in USD or does not sell, the variant is sold out.
@@ -60,7 +62,6 @@ export function withMarketPrices(catalog: Catalog, market: Catalog | null): Cata
     ship_promise: null,
     campaign: null,
   });
-  const cents = (n: number) => Math.round(n * 100) / 100;
   // No US read at all: every variant closed, in the EUR catalog's terms.
   if (!market) {
     return {...catalog, products: catalog.products.map((p) => ({...p, variants: p.variants.map(closed)}))};
@@ -78,18 +79,11 @@ export function withMarketPrices(catalog: Catalog, market: Catalog | null): Cata
         if (us.availability === 'sold_out') {
           return {...closed(variant), price: us.price, compare_price: us.compare_price, currency: 'USD'};
         }
-        const scale =
-          variant.compare_price && us.compare_price
-            ? us.compare_price / variant.compare_price
-            : variant.price > 0
-              ? us.price / variant.price
-              : 1;
+        // Shopify rounds each US market price on its own, so a later step's
+        // USD price cannot be derived here: the next price is left out and
+        // the current one is Shopify's.
         const campaign = variant.campaign
-          ? {
-              ...variant.campaign,
-              price: variant.campaign.price == null ? null : cents(variant.campaign.price * scale),
-              nextPrice: variant.campaign.nextPrice == null ? null : cents(variant.campaign.nextPrice * scale),
-            }
+          ? {...variant.campaign, price: us.price, nextPrice: null}
           : variant.campaign;
         return {
           ...variant,

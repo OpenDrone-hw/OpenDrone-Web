@@ -22,8 +22,7 @@ import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
 import {launchedStatusFlags} from '~/lib/launched-roadmap';
 import {CAMPAIGN} from '~/lib/catalog-client';
 import {toCards} from '~/lib/catalog';
-import {visitorCountry} from '~/lib/visitor-country';
-import {shipCountryForRequest} from '~/lib/shipping-rates';
+import {buyerCountry} from '~/lib/shipping-rates';
 import {usSalesRate} from '~/lib/us-sales';
 import {commerceHandoff, customerAccountUrl} from '~/lib/shop-links';
 import {accountsEnabled} from '~/lib/accounts/config';
@@ -200,7 +199,7 @@ export async function loader(args: Route.LoaderArgs) {
     // button shows. While US sales are open it is the destination the cart
     // and checkout read (`shipCountryForRequest`: ?country, the picked
     // destination, the IP, the browser), so every surface agrees.
-    visitorCountry: usRate != null ? shipCountryForRequest(args.request) : visitorCountry(args.request),
+    visitorCountry: buyerCountry(args.request, usRate),
     // Present only while US sales are open: the flat US rate in USD.
     ...(usRate != null ? {usShippingRate: usRate} : {}),
     // Plausible counts the production site only: staging, previews and

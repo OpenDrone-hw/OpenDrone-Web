@@ -146,8 +146,11 @@ describe('US market prices', () => {
     assert.match(v.ship_promise ?? '', /14 March 2027/);
     assert.equal(v.campaign?.batch, 2);
     assert.equal(v.campaign?.paidStock, false);
-    // Step prices scale with the US/EUR retail ratio.
-    assert.equal(v.campaign?.price, Math.round(39.2 * (66.3 / 49) * 100) / 100);
+    // Shopify's US price, and no derived next step.
+    assert.equal(v.campaign?.price, 53);
+    assert.equal(v.campaign?.nextPrice, null);
+    assert.match(v.ship_promise ?? '', /delivered by 15 April 2027/);
+    assert.match(eu.ship_promise ?? '', /delivered by 30 November 2026/);
   });
 
   it('closes a variant the US read does not price in USD, and everything without a US read', () => {
@@ -243,10 +246,21 @@ describe('US cart with the gate on', () => {
   });
 
   it('keeps the US closed when the rate is null, even with the gate on', async () => {
-    const error = await handleShopifyCartAction(post({sku: 'OPENFC-LITE-2020', qty: '1'}, 'US'), ENV, {
+    // The add behaves as on main: no US cart, no US line, and checkout refuses.
+    let added: CartLineInput[] = [];
+    let country: string | undefined = 'unset';
+    await handleShopifyCartAction(post({sku: 'OPENFC-LITE-2020', qty: '1'}, 'US'), ENV, {
+      usRate: null,
+      fetchCatalog: async () => usCatalog(),
+      createCart: async (lines, code) => { added = lines; country = code; return emptyCart('EUR'); },
+    });
+    assert.equal(country, undefined);
+    assert.ok(!(added[0].attributes ?? []).some((a) => a.key === '_ship_region'));
+    const error = await handleShopifyCartAction(post({intent: 'checkout'}, 'US'), ENV, {
       usRate: null,
       fetchCatalog: async () => usCatalog(),
       createCart: async () => { throw new Error('must not create'); },
+      getCartId: () => 'c',
     }).then(() => null, (e: unknown) => e);
     assert.ok(error instanceof Response);
     assert.equal(error.status, 403);

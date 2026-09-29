@@ -4,6 +4,7 @@ import {
   PREORDER_HOLD_HANDLE,
   PREORDER_LINE_ATTRIBUTE,
   PROMISE_MISMATCH_TAG,
+  US_REVIEW_TAG,
   SHIP_REGION_LINE_ATTRIBUTE,
   assignBatches,
   batchOfUnit,
@@ -397,6 +398,40 @@ describe('US and EU orders in one campaign', () => {
     assert.deepEqual(view(us2), ['OPENFC-LITE-2020:2:1', 'ACC-ANT-T:2:1']);
     // EU: the last paid unit, then batch 2; one antenna from stock, one after.
     assert.deepEqual(view(eu2), ['OPENFC-LITE-2020:1:1', 'OPENFC-LITE-2020:2:1', 'ACC-ANT-T:1:1', 'ACC-ANT-T:2:1']);
+  });
+
+  it('holds and tags us-review a US order with a line no US batch carries, preorder or not', () => {
+    const inStockOnly = order({lines: [['ACC-CAP-470UF-35V', 2, false]], country: 'US'});
+    const mixed = order({lines: [['OPENFC-LITE-2020', 1], ['ACC-CAP-470UF-35V', 1, false]], country: 'US', usPromise: true});
+    const campaignOnly = order({lines: [['OPENFC-LITE-2020', 1]], country: 'US', usPromise: true});
+    const euInStock = order({lines: [['ACC-CAP-470UF-35V', 1, false]], country: 'BE'});
+    const reviewed = order({lines: [['ACC-CAP-470UF-35V', 1, false]], country: 'US', tags: [US_REVIEW_TAG]});
+    const plans = new Map(
+      planPreorderHolds([inStockOnly, mixed, campaignOnly, euInStock, reviewed], REGIONAL).map((p) => [p.orderId, p]),
+    );
+    const only = plans.get(inStockOnly.id)!;
+    assert.deepEqual(only.tags, [US_REVIEW_TAG]);
+    assert.deepEqual(only.hold, [inStockOnly.fulfillmentOrders.nodes[0].id]);
+    assert.match(only.note, /^US review/);
+    const both = plans.get(mixed.id)!;
+    assert.deepEqual(both.tags, ['preorder', 'batch:OPENFC-LITE-2020:2', US_REVIEW_TAG]);
+    assert.ok(both.note.length <= 255);
+    assert.ok(!plans.get(campaignOnly.id)!.tags.includes(US_REVIEW_TAG));
+    // EU in-stock orders are not preorder orders: no plan, as before.
+    assert.equal(plans.has(euInStock.id), false);
+    // Idempotent: an order already tagged us-review is not planned again.
+    assert.equal(plans.has(reviewed.id), false);
+  });
+
+  it('never releases a us-review order with its batch', () => {
+    const held = order({
+      lines: [['OPENFC-LITE-2020', 1]],
+      country: 'US',
+      tags: ['preorder', 'batch:OPENFC-LITE-2020:2', US_REVIEW_TAG],
+      holds: [{id: 'h1', handle: PREORDER_HOLD_HANDLE}],
+    });
+    const [plan] = planRelease([held], 'OPENFC-LITE-2020', 2, new Set());
+    assert.deepEqual(plan.waitsFor, [US_REVIEW_TAG]);
   });
 
   it('tags an order shipping to another region than its promise promise-mismatch', () => {
