@@ -10,8 +10,9 @@ import {
   variantDisplayName,
 } from '~/lib/product-content';
 import {ShipChip, parcelPromise, shipChipText, soonerMonth} from './ShipChip';
+import {LineShipChip, parcelDelay} from './ParcelChip';
 import {paysEuVat} from '~/lib/visitor-country';
-import {countryName, notSoldDirect} from '~/lib/shipping-rates';
+import {countryName, notSoldDirect, shippingQuote} from '~/lib/shipping-rates';
 import {
   buildSuggestionSpecs,
   parseBuilds,
@@ -27,7 +28,7 @@ import {trackEvent} from '~/lib/growth/plausible';
 import {CART_ADDED_EVENT, postCartAdd, withCountry, type CartAddedDetail} from '~/lib/cart-client';
 import {ShipToSelect} from './ShipToSelect';
 import {fccConditionalSku} from '~/lib/us-sales';
-import {promiseBatchMonth} from '~/lib/preorder-campaign';
+import {usCartNotice} from '~/lib/us-cart-notice';
 
 const CART_ACTION = '/api/shopify/cart';
 const BUILDS = parseBuilds(buildsJson);
@@ -117,6 +118,8 @@ export function CartAddedDialog() {
   // Dated lines next to a funding-target line: the buyer can order the dated
   // ones separately to get them sooner (the cart page does the split).
   const sooner = mixed ? soonerMonth(summary.lines.map((l) => l.shipPromise)) : null;
+  // The promise the whole parcel waits for: lines ready sooner say so.
+  const parcelOf = mixed ? parcelPromise(summary.lines.map((l) => l.shipPromise)) : null;
   const subtotal = summary.subtotal ?? null;
   // Same rule as the buy module and the cart: "incl. VAT" only where EU VAT
   // applies.
@@ -129,6 +132,11 @@ export function CartAddedDialog() {
   const notDirect = notSoldDirect(visitor, usRate);
   // A US buyer: every line carries the US delivery notice.
   const usBuyer = usRate != null && visitor === 'US';
+  // The flat rate, shown before Shopify (see the cart).
+  const quote = shippingQuote(visitor, undefined, usRate);
+  const shippingRate =
+    quote?.kind === 'direct' ? formatPrice(quote.rate, quote.zone === 'us' ? 'USD' : 'EUR') : null;
+  const cartPromises = summary.lines.map((l) => l.shipPromise);
 
   // The parts that complete the build, judged on the cart as it was when
   // the drawer opened, so a part added from here stays listed as "Added".
@@ -224,27 +232,13 @@ export function CartAddedDialog() {
                   </span>
                 ) : null}
                 {line.availability ? <span className="cart-line-batch">{line.availability}</span> : null}
-                <ShipChip promise={line.shipPromise} className="cart-added-ship" ifFunded />
+                <LineShipChip promise={line.shipPromise} parcel={parcelOf} className="cart-added-ship" ifFunded />
                 {usBuyer && fccConditionalSku(line.sku) ? (
                   <small className="cart-added-line-qty" role="note">
                     {t(
                       'us_fcc',
                       'FCC notice: this device has not been authorized as required by the rules of the Federal Communications Commission. It is sold to US buyers as a conditional preorder and is not delivered unless authorization is obtained. FCC rules do not address consumer protection, contractual or other provisions under federal or state law. If authorization is not obtained, we refund that item in full.',
                     )}
-                  </small>
-                ) : null}
-                {usBuyer ? (
-                  <small className="cart-added-line-qty" role="note">
-                    {fccConditionalSku(line.sku) || !promiseBatchMonth(line.shipPromise)
-                      ? t(
-                          'us_notice',
-                          'US delivery depends on FCC equipment authorization and US import clearance. If we cannot deliver to you, you get a full refund.',
-                        )
-                      : t(
-                          'us_notice_short',
-                          'US orders ship from the {batch} batch; if we cannot deliver, you get a full refund.',
-                          {batch: promiseBatchMonth(line.shipPromise) ?? ''},
-                        )}
                   </small>
                 ) : null}
               </div>
@@ -264,6 +258,8 @@ export function CartAddedDialog() {
               {suggestions.map((part) => {
                 const image = part.variant.image ?? part.product.featuredImage;
                 const inCart = summary.lines.some((l) => l.sku === part.sku);
+                // A part that ships later than the parcel moves the whole parcel.
+                const delay = inCart ? null : parcelDelay(cartPromises, part.variant.shipPromise);
                 return (
                   <li className="cart-added-suggestion" key={part.sku}>
                     {image ? (
@@ -279,6 +275,11 @@ export function CartAddedDialog() {
                           : part.product.title}
                       </span>
                       <ShipChip promise={part.variant.shipPromise} className="cart-added-ship" />
+                      {delay ? (
+                        <small className="cart-added-delay" role="note">
+                          {t('upsell_delay', 'Adding this delays your whole parcel: it ships {to} instead of {from}.', delay)}
+                        </small>
+                      ) : null}
                     </div>
                     <span className="cart-added-price">
                       {formatPrice(
@@ -326,9 +327,16 @@ export function CartAddedDialog() {
               </span>
             </p>
           ) : null}
+          {shippingRate ? (
+            <p className="cart-added-subtotal">
+              <span>{t('shipping_row', 'Shipping to {country}', {country: countryName(visitor ?? '')})}</span>
+              <span className="cart-added-price">{shippingRate}</span>
+            </p>
+          ) : null}
           {usBuyer && subtotal?.currencyCode === 'USD' ? (
             <p className="cart-added-parcel">{t('us_price_note', 'Duties included. No sales tax.')}</p>
           ) : null}
+          {usBuyer ? <UsDialogNotice lines={summary.lines} /> : null}
           {parcel ? (
             <>
               <p className="cart-added-parcel">
@@ -399,5 +407,20 @@ export function CartAddedDialog() {
         </div>
       </section>
     </div>
+  );
+}
+
+/** The US refund sentence, once for the lines in the drawer. */
+function UsDialogNotice({lines}: {lines: CartSummary['lines']}) {
+  const notice = usCartNotice(lines);
+  return (
+    <p className="cart-added-parcel" role="note">
+      {notice.kind === 'batch'
+        ? t('us_notice_short', 'US orders ship from the {batch} batch; if we cannot deliver, you get a full refund.', {batch: notice.batch})
+        : t(
+            'us_notice',
+            'US delivery depends on FCC equipment authorization and US import clearance. If we cannot deliver to you, you get a full refund.',
+          )}
+    </p>
   );
 }

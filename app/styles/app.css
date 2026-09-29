@@ -14219,6 +14219,13 @@ html.light .cart-added-suggestion img {
 .cart-added-subtotal .cart-added-price {
   font-weight: 600;
 }
+.cart-added-delay {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--color-gold-text);
+}
 .cart-added-parcel {
   margin: 0;
   font-size: 0.85rem;

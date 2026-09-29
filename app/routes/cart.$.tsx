@@ -18,11 +18,12 @@ import {parseBuilds} from '~/lib/build-recommendations';
 import buildsJson from '../../content/builds.json';
 import {lineDisplayName, setSize} from '~/lib/product-content';
 import {Txt} from '~/components/Txt';
-import {ShipChip, parcelPromise, shipChipText, soonerMonth} from '~/components/ShipChip';
+import {parcelPromise, shipChipText, soonerMonth} from '~/components/ShipChip';
+import {LineShipChip} from '~/components/ParcelChip';
 import {buildSeoMeta} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
 import {fccConditionalSku} from '~/lib/us-sales';
-import {promiseBatchMonth} from '~/lib/preorder-campaign';
+import {usCartNotice} from '~/lib/us-cart-notice';
 import {cartQuoteCountry, countryName, shippingQuote} from '~/lib/shipping-rates';
 import {ShipToSelect} from '~/components/ShipToSelect';
 import {paysEuVat} from '~/lib/visitor-country';
@@ -276,10 +277,17 @@ function PopulatedCart({
   // not ship together even when their promise reads the same.
   const groupOf = (line: ShopifyCartLine) => info[line.id]?.group ?? `date:${line.shipPromise ?? ''}`;
   const mixed = new Set(cart.lines.map(groupOf)).size > 1;
+  // The promise the whole parcel waits for: lines ready sooner say so.
+  const parcel = mixed ? parcelPromise(cart.lines.map((l) => l.shipPromise)) : null;
   // Checkout is refused for a blocked country, for one sold only through
   // shops (outside the EU) and for an EU country not open yet; the cart
   // says which and links onward.
-  const quoteKind = shippingQuote(country, undefined, usRate)?.kind;
+  const quote = shippingQuote(country, undefined, usRate);
+  const quoteKind = quote?.kind;
+  // The flat rate the shipping page lists, shown before Shopify: the US in
+  // dollars, the EU in euro (VAT included).
+  const shippingRate =
+    quote?.kind === 'direct' ? formatPrice(quote.rate, quote.zone === 'us' ? 'USD' : 'EUR') : null;
   // A US buyer: every line carries the US delivery notice.
   const usBuyer = usRate != null && country === 'US';
   const shipBlocked = quoteKind === 'blocked';
@@ -307,7 +315,7 @@ function PopulatedCart({
           </div>
           <ul className="cart-lines-scroll" aria-label={copyText('cart.sr_line_items') ?? 'Line items'}>
             {sortCartLines(cart.lines).map((line) => (
-              <CartLine key={line.id} line={line} info={info[line.id]} pending={pending} us={usBuyer} />
+              <CartLine key={line.id} line={line} info={info[line.id]} pending={pending} us={usBuyer} parcel={parcel} />
             ))}
           </ul>
         </div>
@@ -327,6 +335,12 @@ function PopulatedCart({
               </dt>
               <dd style={pendingStyle}>{formatPrice(cart.subtotal.amount, cart.subtotal.currencyCode)}</dd>
             </div>
+            {shippingRate ? (
+              <div className="cart-register-row">
+                <dt>{t('shipping_row', 'Shipping to {country}', {country: countryName(country ?? '')})}</dt>
+                <dd style={pendingStyle}>{shippingRate}</dd>
+              </div>
+            ) : null}
           </dl>
           {usBuyer ? (
             <p className="cart-summary-note">
@@ -335,7 +349,12 @@ function PopulatedCart({
                 : t('us_reprice', 'This cart was priced for the EU. Checkout moves it to US prices and ship dates first.')}
             </p>
           ) : null}
-          <p className="cart-summary-note">{t('shipping_at_checkout', 'Shipping calculated at checkout')}</p>
+          <p className="cart-summary-note">
+            {shippingRate
+              ? t('shipping_flat_note', 'Flat rate. Confirmed at checkout for your address.')
+              : t('shipping_at_checkout', 'Shipping calculated at checkout')}
+          </p>
+          {usBuyer ? <UsCartNotice lines={cart.lines} /> : null}
           {mixed ? <MixedNote cart={cart} info={info} onSplit={onSplit} /> : null}
           {shipBlocked ? (
             <p className="cart-summary-note" role="note">
@@ -432,6 +451,22 @@ function PaymentMarks({methods}: {methods: string[]}) {
         </li>
       ))}
     </ul>
+  );
+}
+
+/** The US refund sentence, once for the whole cart. FCC-gated lines keep
+ *  their own FCC paragraph. */
+function UsCartNotice({lines}: {lines: ShopifyCartLine[]}) {
+  const notice = usCartNotice(lines);
+  return (
+    <p className="cart-summary-note" role="note">
+      {notice.kind === 'batch'
+        ? t('us_notice_short', 'US orders ship from the {batch} batch; if we cannot deliver, you get a full refund.', {batch: notice.batch})
+        : t(
+            'us_notice',
+            'US delivery depends on FCC equipment authorization and US import clearance. If we cannot deliver to you, you get a full refund.',
+          )}
+    </p>
   );
 }
 
@@ -535,12 +570,15 @@ function CartLine({
   info,
   pending,
   us = false,
+  parcel = null,
 }: {
   line: ShopifyCartLine;
   info: CartLineInfo | undefined;
   pending: boolean;
-  /** A US buyer: the line carries the US delivery notice. */
+  /** A US buyer: FCC-gated lines carry the FCC notice. */
   us?: boolean;
+  /** The promise a one-parcel order waits for, or null for a single date. */
+  parcel?: string | null;
 }) {
   const max = info?.maxQuantity ?? null;
   // A funding-target line reads "Ships by ... if the target is reached" until its target is met.
@@ -559,7 +597,7 @@ function CartLine({
           {line.availability ?? info?.batch ? (
             <small className="cart-line-batch">{line.availability ?? info?.batch}</small>
           ) : null}
-          <ShipChip promise={line.shipPromise} ifFunded={ifFunded} />
+          <LineShipChip promise={line.shipPromise} parcel={parcel} ifFunded={ifFunded} />
           {max !== null && line.quantity > max ? (
             <small className="cart-line-error" role="alert">{t('line_over_batch', 'Only {left} left in batch 1.', {left: max})}</small>
           ) : max !== null && max < MAX_LINE_QUANTITY && line.quantity >= max ? (
@@ -571,20 +609,6 @@ function CartLine({
                 'us_fcc',
                 'FCC notice: this device has not been authorized as required by the rules of the Federal Communications Commission. It is sold to US buyers as a conditional preorder and is not delivered unless authorization is obtained. FCC rules do not address consumer protection, contractual or other provisions under federal or state law. If authorization is not obtained, we refund that item in full.',
               )}
-            </small>
-          ) : null}
-          {us ? (
-            <small role="note">
-              {fccConditionalSku(line.sku) || !promiseBatchMonth(line.shipPromise)
-                ? t(
-                    'us_notice',
-                    'US delivery depends on FCC equipment authorization and US import clearance. If we cannot deliver to you, you get a full refund.',
-                  )
-                : t(
-                    'us_notice_short',
-                    'US orders ship from the {batch} batch; if we cannot deliver, you get a full refund.',
-                    {batch: promiseBatchMonth(line.shipPromise) ?? ''},
-                  )}
             </small>
           ) : null}
         </div>
