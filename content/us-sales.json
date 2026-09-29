@@ -1,4 +1,5 @@
 {
-  "$comment": "US consumer preorders, read by app/lib/us-sales.ts. The US is sold direct only while the PUBLIC_US_SALES gate is \"1\" in the wrangler config AND rate is a number: the flat US shipping rate in USD that the Shopify US shipping zone charges. null keeps the US closed even with the gate on. Only campaign preorder SKUs sell to the US; in-stock SKUs and paid-stock batches ship from Belgium to the EU only (batch `regions` in preorders.json).",
-  "rate": 9.95
+  "$comment": "US consumer preorders, read by app/lib/us-sales.ts. The US is sold direct only while the PUBLIC_US_SALES gate is \"1\" in the wrangler config AND rate is a number: the flat US shipping rate in USD that the Shopify US shipping zone charges. null keeps the US closed even with the gate on. Only campaign preorder SKUs sell to the US; in-stock SKUs and paid-stock batches ship from Belgium to the EU only (batch `regions` in preorders.json). priceUpliftPct is the percentage on top of the EUR VAT-inclusive price for a US buyer: Shopify's US price list adds it, converts to USD at its FX rate and rounds to whole dollars. It covers US duties and import handling; no US sales tax is collected. Shopify holds the live value; `npm run us:prices` compares it with this file and, with --apply, writes this file's value to the price list. Changing the number is a pricing decision that needs the founder's go.",
+  "rate": 9.95,
+  "priceUpliftPct": 25
 }

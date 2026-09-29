@@ -46,6 +46,7 @@
     "studio:keys": "node scripts/studio-keys.mjs",
     "sync:contributors": "node scripts/sync-contributors.mjs",
     "sync:timeline": "node scripts/sync-timeline.mjs",
+    "us:prices": "node scripts/us-prices.mjs",
     "goals:update": "node scripts/update-goals.mjs",
     "sync:specs": "node scripts/import-specs.mjs --write",
     "sync:downloads": "node scripts/sync-downloads.mjs --check",

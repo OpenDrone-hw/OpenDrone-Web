@@ -7,6 +7,7 @@ export function StepBar({
   bar,
   prices = [],
   fundedLabel,
+  batch,
 }: {
   bar: StepBarView;
   prices?: Array<{
@@ -16,13 +17,19 @@ export function StepBar({
     current: boolean;
   }>;
   fundedLabel?: string;
+  /** The batch this counter counts toward ("March 2027"), named when the
+   *  buyer's batch is not the first one, so the count never reads as the
+   *  first batch's. */
+  batch?: string | null;
 }) {
   const pct = barPercent(bar);
   const at = (units: number) => `${(units / bar.max) * 100}%`;
   const label =
     bar.funded && fundedLabel
       ? fundedLabel
-      : `${bar.label} ${copyText('preorder.ordered') ?? 'ordered'}`;
+      : batch
+        ? `${bar.label} ${(copyText('preorder.ordered_for_batch') ?? 'ordered for the {batch} batch').replace('{batch}', batch)}`
+        : `${bar.label} ${copyText('preorder.ordered') ?? 'ordered'}`;
   return (
     <div className="step-bar" data-funded={bar.funded ? '' : undefined}>
       <div className="step-bar-summary">
