@@ -1334,3 +1334,255 @@ a.hero-build-add { text-decoration: none; }
 .po-trade-link:hover { color: var(--color-text); }
 .catalog-trade-note { margin-top: 32px; padding-top: 14px; border-top: 1px solid var(--color-border); font-size: 13px; color: var(--color-text-muted); }
 .catalog-trade-note a { color: var(--color-text); text-decoration: underline; text-underline-offset: 3px; }
+
+/* ============================================
+   Phone fit and finish (mobile audit)
+   Loaded after app.css: same-specificity rules here win. Desktop is
+   untouched: every rule sits behind a phone width or a short-height query.
+   ============================================ */
+
+/* Safe areas: the floating header keeps its gutter on a notch phone in
+   landscape. max() equals the gutter everywhere else. */
+.site-header {
+  padding-left: max(var(--rail-gutter), env(safe-area-inset-left));
+  padding-right: max(var(--rail-gutter), env(safe-area-inset-right));
+}
+
+/* Menu drawer: dvh follows the iOS toolbar, the padding clears the home bar. */
+.overlay aside {
+  height: 100vh;
+  height: 100dvh;
+}
+.overlay aside .aside-body {
+  height: calc(100vh - var(--header-height));
+  height: calc(100dvh - var(--header-height));
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+}
+
+/* Scrolling the pinned image into view must clear the fixed header. */
+.in-the-box-figure {
+  scroll-margin-top: calc(var(--header-height) + 20px);
+}
+
+/* Phones in portrait, and phones on their side (844px wide, 390px tall). */
+@media (max-width: 767px), (max-height: 500px) and (orientation: landscape) {
+  /* iOS zooms the page on focus below 16px. Class rules set smaller sizes
+     on individual inputs, so this one wins on purpose. */
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']):not([type='hidden']):not([type='submit']):not([type='button']),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* Buy path: 44px targets. */
+  .product-qty-step {
+    flex: 0 0 44px;
+    width: 44px;
+    min-height: 44px;
+  }
+  .product-qty-value {
+    flex: 0 0 48px;
+    width: 48px;
+    box-sizing: border-box;
+    min-height: 44px;
+    margin: 0;
+    padding: 0;
+    line-height: 1.2;
+  }
+  .product-card-quickadd-btn {
+    min-height: 44px;
+  }
+  /* The pinned bar keeps its 36px look; the hit area grows around it. */
+  .buy-rail.is-pinned .variant-tier,
+  .buy-rail.is-pinned .product-form .btn-primary {
+    position: relative;
+  }
+  .buy-rail.is-pinned .variant-tier::after,
+  .buy-rail.is-pinned .product-form .btn-primary::after {
+    content: '';
+    position: absolute;
+    inset: -4px 0;
+  }
+
+  /* Preorder disclosure and price steps: 14px floor. */
+  .product-buy .ship-line,
+  .product-buy-stock,
+  .product-buy-vat,
+  .product-buy-terms-link,
+  .info-hint-trigger {
+    font-size: 14px;
+  }
+
+  /* Firmware card links: wrap instead of clipping, 44px rows. */
+  .firmware-support-links {
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+  .firmware-support-links a {
+    white-space: nowrap;
+  }
+  .firmware-support-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  /* Small text floors. */
+  .trust-chip,
+  .provenance-label,
+  .provenance-row-label,
+  .plug-meta,
+  .related-card-file,
+  .footer-copyright,
+  .footer-sheet-heading,
+  .footer-detail-label,
+  .footer-tb-label,
+  .footer-ref,
+  .series-rail-num,
+  .editorial-next-label {
+    font-size: 12px;
+  }
+
+  /* Hit areas grown around small controls without moving them. */
+  .spec-sheet-pick,
+  .what-chain-chip,
+  .trust-chip-link,
+  .what-home-link,
+  .firmware-support-donate,
+  .site-header-logo {
+    position: relative;
+  }
+  .spec-sheet-pick::after,
+  .what-chain-chip::after,
+  .trust-chip-link::after,
+  .what-home-link::after {
+    content: '';
+    position: absolute;
+    inset: -8px -4px;
+  }
+  .site-header-logo::after {
+    content: '';
+    position: absolute;
+    inset: -13px -4px;
+  }
+  .product-gallery-deck .board-deck-dot::after {
+    inset: -20px -2px;
+  }
+
+  /* Series sub-nav, feed link and GPSR disclosure: 44px rows. */
+  .series-rail-list a {
+    min-height: 44px;
+    align-items: center;
+  }
+  .rn-archive-head .rn-eyebrow .rn-rss,
+  .gpsr-languages > summary {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* Catalog filter strip: room after the last chip and a fade that says
+     the row scrolls. */
+  .catalog-filter {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .catalog-filter-list {
+    padding-inline-end: 32px;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  }
+}
+
+@media (max-width: 380px) {
+  /* "Build a quad" stays on one line on the narrowest phones. */
+  .home-mobile-cta-btn {
+    white-space: nowrap;
+    letter-spacing: 0.04em;
+    padding-inline: 0.6rem;
+  }
+}
+
+/* Light theme: footer dim text reaches 4.5:1. */
+html.light .footer-sheet-heading {
+  opacity: 1;
+}
+html.light .footer-ref {
+  opacity: 0.92;
+}
+
+/* Landscape phones and other short windows: the fixed header and the pinned
+   buy bar together cover 40 percent of a 390px screen. Compact header, and
+   a one-row buy bar without the variant chips. */
+@media (max-height: 500px) and (orientation: landscape) {
+  :root {
+    --header-height: 44px;
+  }
+  .site-header {
+    padding-top: 4px;
+  }
+  .site-main {
+    padding-top: calc(var(--header-height) + 1rem);
+  }
+  .homepage-layout .site-main {
+    padding-top: 0;
+  }
+  .buy-rail.is-pinned {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.6rem;
+    padding-block: 0.3rem;
+  }
+  .buy-rail.is-pinned:not(.is-ladderonly) .variant-ladder-track {
+    display: none;
+  }
+  .buy-rail.is-pinned .product-form {
+    flex: 0 1 16rem;
+  }
+  .buy-rail.is-pinned .product-buy-price {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .buy-rail.is-pinned .product-form {
+    flex: 0 0 auto;
+    min-width: 11rem;
+  }
+
+  /* Home hero on its side: art left, wordmark, tagline and actions right,
+     so the call to action is on the first screen. */
+  .home-mobile {
+    padding-top: calc(var(--header-height) + 1.25rem);
+    padding-bottom: 2rem;
+    gap: 1.75rem;
+  }
+  .home-mobile-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    align-items: center;
+    align-content: center;
+    column-gap: 2rem;
+    row-gap: 0.75rem;
+    padding-top: 0;
+  }
+  .home-mobile-hero > * {
+    grid-column: 2;
+  }
+  .home-mobile-hero > .home-mobile-stage {
+    grid-column: 1;
+    grid-row: 1 / span 3;
+    height: min(280px, calc(100vh - var(--header-height) - 3rem));
+    margin-bottom: 0;
+  }
+  .home-mobile-board {
+    width: min(210px, 44vh);
+  }
+  .home-mobile-tagline {
+    font-size: 0.95rem;
+    line-height: 1.45;
+  }
+  .home-mobile-cta {
+    margin-top: 0.25rem;
+  }
+}
+
