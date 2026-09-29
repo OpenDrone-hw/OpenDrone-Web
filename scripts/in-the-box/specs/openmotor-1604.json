@@ -1,0 +1,65 @@
+{
+  "handle": "openmotor",
+  "variant": "1604",
+  "content": {
+    "product": "openmotor",
+    "variant": "1604"
+  },
+  "sources": [
+    "public/models/od3/drive.glb"
+  ],
+  "camera": {
+    "tiltDeg": 12
+  },
+  "layout": {
+    "gapMm": 7,
+    "sectionGapMm": 8,
+    "aspect": 1.2,
+    "minSpanMm": 34
+  },
+  "groups": [
+    {
+      "label": "Motor",
+      "match": "^Admi781882A2t5ac$",
+      "combine": true,
+      "count": 1,
+      "finish": "alu",
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "keepYaw": true,
+      "item": "Motor",
+      "row": 1
+    },
+    {
+      "label": "M2x6 screws",
+      "procedural": {
+        "kind": "screw",
+        "d": 2,
+        "len": 6
+      },
+      "count": 4,
+      "perRow": 4,
+      "item": "Mounting screws, M2 × 6 mm",
+      "row": 1
+    },
+    {
+      "label": "M2x7 screws",
+      "procedural": {
+        "kind": "screw",
+        "d": 2,
+        "len": 7
+      },
+      "count": 4,
+      "perRow": 4,
+      "item": "Mounting screws, M2 × 7 mm",
+      "below": "M2x6 screws"
+    }
+  ],
+  "exclude": [
+    "^C?CW_PROP$",
+    "^softmount m2$"
+  ]
+}

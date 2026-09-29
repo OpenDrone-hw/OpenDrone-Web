@@ -280,7 +280,50 @@
           "qty": "1×",
           "item": "ESD bag"
         }
-      ]
+      ],
+      "inTheBoxImage": {
+        "src": "/boxes/openrx/lite.png",
+        "width": 1600,
+        "height": 889,
+        "v": "3931999acdf7",
+        "boxes": [
+          {
+            "item": 0,
+            "x": 16.05,
+            "y": 48.45,
+            "w": 8.09,
+            "h": 14.51
+          },
+          {
+            "item": 1,
+            "x": 39.42,
+            "y": 9.9,
+            "w": 7.51,
+            "h": 80.25
+          },
+          {
+            "item": 2,
+            "x": 64.14,
+            "y": 67.71,
+            "w": 17.87,
+            "h": 22.77
+          },
+          {
+            "item": 3,
+            "x": 48.95,
+            "y": 9.55,
+            "w": 48.25,
+            "h": 56.22
+          },
+          {
+            "item": 4,
+            "x": 2.8,
+            "y": 5.06,
+            "w": 34.59,
+            "h": 89.88
+          }
+        ]
+      }
     },
     "Lite-UFL": {
       "subtitle": "ELRS 2.4GHz · SX1281 · U.FL · CRSF",
@@ -401,6 +444,56 @@
         "src": "/boards/openrx-lite-ufl/board.svg",
         "inspectUrl": "https://kicanvas.org/?github=https://github.com/OpenDrone-hw/OpenRX-Lite-UFL/blob/main/hardware/OpenRX-Lite-UFL.kicad_pcb",
         "schematicUrl": "https://kicanvas.org/?github=https://github.com/OpenDrone-hw/OpenRX-Lite-UFL/blob/main/hardware/OpenRX-Lite-UFL.kicad_sch"
+      },
+      "inTheBoxImage": {
+        "src": "/boxes/openrx/lite-ufl.png",
+        "width": 1600,
+        "height": 709,
+        "v": "88586eb9bc52",
+        "boxes": [
+          {
+            "item": 0,
+            "x": 13.27,
+            "y": 47.78,
+            "w": 5.99,
+            "h": 14.88
+          },
+          {
+            "item": 1,
+            "x": 30.86,
+            "y": 10.99,
+            "w": 6.17,
+            "h": 78.07
+          },
+          {
+            "item": 2,
+            "x": 49.81,
+            "y": 66.54,
+            "w": 14.11,
+            "h": 22.83
+          },
+          {
+            "item": 3,
+            "x": 76.7,
+            "y": 28.52,
+            "w": 20.5,
+            "h": 42.02
+          },
+          {
+            "item": 4,
+            "x": 38.17,
+            "y": 10.66,
+            "w": 37.4,
+            "h": 54.97
+          },
+          {
+            "item": 5,
+            "x": 2.8,
+            "y": 6.34,
+            "w": 26.93,
+            "h": 87.32
+          }
+        ]
       }
     },
     "Mono": {
@@ -454,7 +547,7 @@
       "inTheBox": [
         {
           "qty": "1×",
-          "item": "Dual-band U.FL T-dipole antenna"
+          "item": "2.4 GHz + 900 MHz U.FL T-dipole antenna"
         },
         {
           "qty": "1×",
@@ -547,7 +640,57 @@
       ],
       "placeholders": [
         "Weight"
-      ]
+      ],
+      "inTheBoxImage": {
+        "src": "/boxes/openrx/mono.png",
+        "width": 1600,
+        "height": 690,
+        "v": "0a442dc09221",
+        "boxes": [
+          {
+            "item": 0,
+            "x": 10.63,
+            "y": 45.95,
+            "w": 4.93,
+            "h": 16.85
+          },
+          {
+            "item": 1,
+            "x": 23.79,
+            "y": 19.89,
+            "w": 5.07,
+            "h": 61.04
+          },
+          {
+            "item": 2,
+            "x": 37.96,
+            "y": 62.58,
+            "w": 11.01,
+            "h": 18.59
+          },
+          {
+            "item": 3,
+            "x": 58.07,
+            "y": 6.5,
+            "w": 39.13,
+            "h": 86.99
+          },
+          {
+            "item": 4,
+            "x": 29.25,
+            "y": 19.63,
+            "w": 28.42,
+            "h": 43.3
+          },
+          {
+            "item": 5,
+            "x": 2.8,
+            "y": 16.32,
+            "w": 20.59,
+            "h": 68.15
+          }
+        ]
+      }
     },
     "Gemini": {
       "subtitle": "ELRS Gemini Xrossband · 2x LR1121 · 2x U.FL · CRSF",
@@ -608,7 +751,7 @@
       "inTheBox": [
         {
           "qty": "2×",
-          "item": "Dual-band U.FL T-dipole antenna"
+          "item": "2.4 GHz + 900 MHz U.FL T-dipole antenna"
         },
         {
           "qty": "1×",
@@ -731,7 +874,57 @@
       ],
       "placeholders": [
         "Weight"
-      ]
+      ],
+      "inTheBoxImage": {
+        "src": "/boxes/openrx/gemini.png",
+        "width": 1600,
+        "height": 1016,
+        "v": "220628b41df1",
+        "boxes": [
+          {
+            "item": 0,
+            "x": 9.52,
+            "y": 47.52,
+            "w": 7.17,
+            "h": 11.2
+          },
+          {
+            "item": 1,
+            "x": 23.79,
+            "y": 29.55,
+            "w": 5.07,
+            "h": 41.45
+          },
+          {
+            "item": 2,
+            "x": 37.96,
+            "y": 58.54,
+            "w": 11.01,
+            "h": 12.63
+          },
+          {
+            "item": 3,
+            "x": 58.07,
+            "y": 4.43,
+            "w": 39.13,
+            "h": 91.14
+          },
+          {
+            "item": 4,
+            "x": 29.25,
+            "y": 29.38,
+            "w": 28.42,
+            "h": 29.4
+          },
+          {
+            "item": 5,
+            "x": 2.8,
+            "y": 27.12,
+            "w": 20.59,
+            "h": 46.28
+          }
+        ]
+      }
     }
   },
   "keywords": [

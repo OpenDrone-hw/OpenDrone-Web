@@ -1,0 +1,231 @@
+{
+  "handle": "openframe",
+  "variant": "3in",
+  "content": {
+    "product": "openframe",
+    "variant": "3\" Freestyle"
+  },
+  "sources": [
+    "public/models/od3/frame.glb",
+    "public/models/od3/drive.glb"
+  ],
+  "camera": {
+    "tiltDeg": 12
+  },
+  "layout": {
+    "gapMm": 7,
+    "sectionGapMm": 8,
+    "aspect": 1.2
+  },
+  "notes": [
+    "Black-Oxide flat head screws belong to the DJI O4 air unit reference model: excluded.",
+    "Cam-Mount-L/R (TPU) are not in the box list; the camera mount is the CNC aluminium pair (Standoff-L/R).",
+    "VTX-Mount is in the box list but not in the GLB."
+  ],
+  "groups": [
+    {
+      "label": "Build card",
+      "procedural": {
+        "kind": "card",
+        "w": 105,
+        "h": 148,
+        "caption": "OpenFrame 3″ · Build card",
+        "illustration": "^(Top|Base-Top|Base-Bot|Arm|Cross)$"
+      },
+      "row": 1,
+      "item": "Build card"
+    },
+    {
+      "label": "Top plate",
+      "match": "^Top$",
+      "finish": "carbon",
+      "row": 1,
+      "item": "Carbon plates"
+    },
+    {
+      "label": "Base plates",
+      "match": "^Base-(Top|Bot)$",
+      "finish": "carbon",
+      "row": 1,
+      "item": "Carbon plates"
+    },
+    {
+      "label": "Arms",
+      "match": "^Arm$",
+      "finish": "carbon",
+      "row": 2,
+      "item": "3\" carbon arms",
+      "lay": "x",
+      "perRow": 2
+    },
+    {
+      "label": "Cross brace",
+      "match": "^Cross$",
+      "finish": "carbon",
+      "item": "Carbon cross",
+      "below": "Antenna mount"
+    },
+    {
+      "label": "Standoffs 20 mm",
+      "match": "^20mmx4mm$",
+      "finish": "alu",
+      "color": "#2c2e33",
+      "row": 3,
+      "item": "Hardware kit"
+    },
+    {
+      "label": "Camera mount pair",
+      "match": "^Standoff-(L|R)$",
+      "finish": "alu",
+      "color": "#1b1c1f",
+      "material": {
+        "roughness": 0.55
+      },
+      "row": 3,
+      "item": "CNC aluminium"
+    },
+    {
+      "label": "Arm boots",
+      "match": "^Boot-",
+      "finish": "tpu",
+      "color": "#f2ae00",
+      "item": "TPU parts set",
+      "below": "Camera mount pair",
+      "perRow": 4
+    },
+    {
+      "label": "Antenna mount",
+      "match": "^Airtag/Antenna[- ]mount$",
+      "finish": "tpu",
+      "color": "#f2ae00",
+      "row": 3,
+      "item": "TPU parts set"
+    },
+    {
+      "label": "Sticker",
+      "procedural": {
+        "kind": "sticker",
+        "w": 80,
+        "h": 22
+      },
+      "row": 3,
+      "item": "Sticker"
+    },
+    {
+      "label": "Battery straps",
+      "procedural": {
+        "kind": "strap",
+        "w": 15,
+        "len": 200
+      },
+      "count": 2,
+      "perRow": 1,
+      "row": 4,
+      "item": "Battery straps",
+      "lay": "x"
+    },
+    {
+      "label": "Anti-slip pad",
+      "match": "^anti-slip pad$",
+      "finish": "rubber",
+      "color": "#1d1e21",
+      "decal": {
+        "art": "incutec",
+        "base": "#1d1e21",
+        "widthFrac": 0.5,
+        "alpha": 0.85
+      },
+      "note": "GLB colours are placeholder grey and white; the pad is dark silicone with the Incutec wordmark",
+      "item": "Anti-slip",
+      "lay": "x",
+      "below": "Sticker"
+    },
+    {
+      "label": "M2.5x6 pan head",
+      "match": "^Hexalobular socket pan head screw M2\\.5x0\\.45 x 6$",
+      "finish": "steel",
+      "extra": 2,
+      "perRow": 9,
+      "section": "hardware",
+      "item": "Hardware kit",
+      "headTo": "z"
+    },
+    {
+      "label": "M2.5x10 pan head",
+      "match": "^Hexalobular socket pan head screw M2\\.5x0\\.45 x 10$",
+      "finish": "steel",
+      "extra": 2,
+      "perRow": 6,
+      "section": "hardware",
+      "item": "Hardware kit",
+      "headTo": "z"
+    },
+    {
+      "label": "M2x6 pan head",
+      "match": "^Hexalobular socket pan head screw M2x0\\.40 x 6$",
+      "finish": "steel",
+      "extra": 2,
+      "perRow": 10,
+      "section": "hardware",
+      "item": "Hardware kit",
+      "headTo": "z"
+    },
+    {
+      "label": "M2x20 pan head",
+      "match": "^Hexalobular socket pan head screw M2x0\\.40 x 20$",
+      "finish": "steel",
+      "extra": 2,
+      "perRow": 6,
+      "section": "hardware",
+      "item": "Hardware kit",
+      "headTo": "z"
+    },
+    {
+      "label": "M2x5 countersunk",
+      "match": "^Hex socket countersunk head screw M2x0\\.4 x 5$",
+      "finish": "steel",
+      "extra": 2,
+      "perRow": 6,
+      "section": "hardware",
+      "item": "Hardware kit",
+      "headTo": "z"
+    },
+    {
+      "label": "M2 hex nut",
+      "match": "^Hex nut grade A & B M2x0\\.4$",
+      "finish": "steel",
+      "color": "#80868f",
+      "section": "hardware",
+      "item": "Hardware kit"
+    },
+    {
+      "label": "M2 press nut",
+      "match": "^m2 pressnut$",
+      "finish": "zinc",
+      "section": "hardware",
+      "item": "Hardware kit"
+    },
+    {
+      "label": "M2.5 press nut",
+      "match": "^m2\\.5 pressnut$",
+      "finish": "zinc",
+      "section": "hardware",
+      "item": "Hardware kit"
+    },
+    {
+      "label": "Soft-mount grommets",
+      "match": "^softmount m2$",
+      "finish": "rubber",
+      "section": "hardware",
+      "item": "Hardware kit"
+    }
+  ],
+  "exclude": [
+    "^Black-Oxide Alloy Steel Hex Drive Flat Head Screw",
+    "^Cam-Mount-(L|R)$",
+    "^AirTag$",
+    "^2\\.4ghz-ufl$",
+    "^Admi781882A2t5ac$",
+    "^C?CW_PROP$"
+  ]
+}

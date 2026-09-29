@@ -1,0 +1,99 @@
+{
+  "handle": "openrx",
+  "variant": "gemini",
+  "content": {
+    "product": "openrx",
+    "variant": "Gemini"
+  },
+  "sources": [
+    "public/models/od5/frame.glb"
+  ],
+  "camera": {
+    "tiltDeg": 12
+  },
+  "layout": {
+    "gapMm": 7,
+    "sectionGapMm": 8,
+    "aspect": 1.2
+  },
+  "groups": [
+    {
+      "label": "ESD bag",
+      "procedural": {
+        "kind": "esdBag",
+        "w": 60,
+        "h": 90
+      },
+      "item": "ESD bag",
+      "row": 1
+    },
+    {
+      "label": "OpenRX Gemini board",
+      "procedural": {
+        "kind": "boardCard",
+        "board": "openrx-gemini"
+      },
+      "note": "no GLB: board-art card",
+      "on": "ESD bag",
+      "row": 1,
+      "item": "OpenRX board"
+    },
+    {
+      "label": "30 AWG wires",
+      "procedural": {
+        "kind": "wireSet",
+        "awg": 30,
+        "len": 80,
+        "colors": [
+          "red",
+          "black",
+          "yellow",
+          "white"
+        ]
+      },
+      "item": "Silicone hook-up",
+      "row": 1
+    },
+    {
+      "label": "Bind and quick-start card",
+      "procedural": {
+        "kind": "card",
+        "w": 85,
+        "h": 55,
+        "caption": "OpenRX · Bind and quick start"
+      },
+      "row": 1,
+      "item": "Bind and quick-start card"
+    },
+    {
+      "label": "Dual-band antenna",
+      "match": "^Dual-Band-UFL-Antenna$",
+      "source": 0,
+      "finish": "original",
+      "lay": "x",
+      "item": "2.4 GHz + 900 MHz",
+      "row": 1,
+      "extra": 1,
+      "perRow": 1,
+      "copyGap": -50
+    },
+    {
+      "label": "Heat-shrink",
+      "procedural": {
+        "kind": "heatShrink",
+        "len": 20,
+        "w": 12
+      },
+      "count": 2,
+      "item": "Heat-shrink",
+      "below": "Bind and quick-start card",
+      "perRow": 2
+    }
+  ],
+  "exclude": [
+    {
+      "match": "^(?!Dual-Band-UFL-Antenna$)",
+      "source": 0
+    }
+  ]
+}

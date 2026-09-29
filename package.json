@@ -31,6 +31,7 @@
     "audit:perf": "node scripts/perf-audit.mjs",
     "audit:lh": "node scripts/lh-audit.mjs",
     "gen:board-art": "node scripts/export-board-art.mjs --all",
+    "gen:box-art": "node scripts/in-the-box/render.mjs --all",
     "gen:shopify-templates": "node scripts/shopify-templates/gen.mjs",
     "emails:preview": "node scripts/emails/preview.mjs",
     "emails:build": "node scripts/emails/preview.mjs --build",

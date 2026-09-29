@@ -113,7 +113,46 @@
       "frameViewer": {
         "src": "/models/od3/drive.glb",
         "kind": "motor"
-      }
+      },
+      "inTheBoxImage": {
+        "src": "/boxes/openmotor/1604.png",
+        "width": 1600,
+        "height": 726,
+        "v": "e6c7f4099119",
+        "boxes": [
+          {
+            "item": 0,
+            "x": 2.8,
+            "y": 6.18,
+            "w": 35.89,
+            "h": 79.43
+          },
+          {
+            "item": 1,
+            "x": 48.15,
+            "y": 8.48,
+            "w": 49.05,
+            "h": 33.9
+          },
+          {
+            "item": 2,
+            "x": 48.15,
+            "y": 56.57,
+            "w": 49.05,
+            "h": 37.26
+          }
+        ]
+      },
+      "inTheBox": [
+        {
+          "qty": "4×",
+          "item": "Mounting screws, M2 × 6 mm"
+        },
+        {
+          "qty": "4×",
+          "item": "Mounting screws, M2 × 7 mm"
+        }
+      ]
     },
     "2306": {
       "label": "5\" (2306)",
@@ -193,6 +232,56 @@
       ],
       "placeholders": [
         "KV"
+      ],
+      "inTheBoxImage": {
+        "src": "/boxes/openmotor/2306.png",
+        "width": 1600,
+        "height": 645,
+        "v": "f73e578bb721",
+        "boxes": [
+          {
+            "item": 0,
+            "x": 2.8,
+            "y": 6.98,
+            "w": 32.53,
+            "h": 81.66
+          },
+          {
+            "item": 1,
+            "x": 40.92,
+            "y": 11.88,
+            "w": 39.95,
+            "h": 35.13
+          },
+          {
+            "item": 2,
+            "x": 40.92,
+            "y": 55.44,
+            "w": 39.95,
+            "h": 37.59
+          },
+          {
+            "item": 3,
+            "x": 86.44,
+            "y": 36.85,
+            "w": 10.76,
+            "h": 31.25
+          }
+        ]
+      },
+      "inTheBox": [
+        {
+          "qty": "4×",
+          "item": "Mounting screws, M3 × 8 mm"
+        },
+        {
+          "qty": "4×",
+          "item": "Mounting screws, M3 × 9 mm"
+        },
+        {
+          "qty": "1×",
+          "item": "Prop nut, M5 nylock"
+        }
       ]
     }
   },

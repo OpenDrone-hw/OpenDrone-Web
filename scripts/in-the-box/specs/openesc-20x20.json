@@ -1,0 +1,112 @@
+{
+  "handle": "openesc",
+  "variant": "20x20",
+  "content": {
+    "product": "openesc",
+    "variant": "20×20"
+  },
+  "sources": [
+    "public/models/od3/board-OpenESC-20x20-4in1-mini.glb"
+  ],
+  "camera": {
+    "tiltDeg": 12
+  },
+  "layout": {
+    "gapMm": 7,
+    "sectionGapMm": 8,
+    "aspect": 1.2
+  },
+  "groups": [
+    {
+      "label": "ESD bag",
+      "procedural": {
+        "kind": "esdBag",
+        "w": 60,
+        "h": 90
+      },
+      "item": "ESD bag",
+      "row": 1
+    },
+    {
+      "label": "OpenESC 20×20 board",
+      "match": ".",
+      "combine": "all",
+      "count": 1,
+      "finish": "original",
+      "on": "ESD bag",
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "keepYaw": true,
+      "recolor": {
+        "_PCB$": "#3f4a33"
+      },
+      "spin": 180,
+      "row": 1,
+      "item": "OpenESC board"
+    },
+    {
+      "label": "XT30 connector",
+      "procedural": {
+        "kind": "xtPigtail",
+        "type": "xt30",
+        "awg": 16,
+        "leads": false
+      },
+      "item": "XT30 battery connector",
+      "row": 1,
+      "spin": 180
+    },
+    {
+      "label": "16 AWG power wires",
+      "procedural": {
+        "kind": "wireSet",
+        "awg": 16,
+        "len": 100,
+        "colors": [
+          "red",
+          "black"
+        ],
+        "spacing": 3
+      },
+      "row": 1,
+      "item": "Silicone power wire"
+    },
+    {
+      "label": "Capacitor 470 µF 35 V",
+      "procedural": {
+        "kind": "capacitor",
+        "d": 10,
+        "l": 20,
+        "label": "470µF 35V"
+      },
+      "item": "Low-ESR",
+      "row": 1
+    },
+    {
+      "label": "Quick-start card",
+      "procedural": {
+        "kind": "card",
+        "w": 85,
+        "h": 55,
+        "caption": "OpenESC · Quick start"
+      },
+      "row": 1,
+      "item": "Quick-start card"
+    },
+    {
+      "label": "Soft-mount grommets M2",
+      "procedural": {
+        "kind": "grommet",
+        "size": "M2"
+      },
+      "count": 4,
+      "item": "Silicone soft-mount",
+      "below": "Quick-start card",
+      "perRow": 4
+    }
+  ],
+  "exclude": []
+}

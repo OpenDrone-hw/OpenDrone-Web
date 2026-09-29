@@ -1,0 +1,100 @@
+{
+  "handle": "openfc-lite",
+  "variant": "30x30",
+  "content": {
+    "product": "openfc-lite",
+    "variant": "30×30"
+  },
+  "sources": [
+    "public/models/od5/board-OpenFC-Lite.glb"
+  ],
+  "camera": {
+    "tiltDeg": 12
+  },
+  "layout": {
+    "gapMm": 7,
+    "sectionGapMm": 8,
+    "aspect": 1.2
+  },
+  "groups": [
+    {
+      "label": "ESD bag",
+      "procedural": {
+        "kind": "esdBag",
+        "w": 60,
+        "h": 90
+      },
+      "item": "ESD bag",
+      "row": 1
+    },
+    {
+      "label": "OpenFC Lite 30×30 board",
+      "match": ".",
+      "combine": "all",
+      "count": 1,
+      "finish": "original",
+      "on": "ESD bag",
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "keepYaw": true,
+      "recolor": {
+        "_PCB$": "#3f4a33"
+      },
+      "spin": 180,
+      "row": 1,
+      "item": "OpenFC Lite board"
+    },
+    {
+      "label": "JST-SH 8-pin cable",
+      "procedural": {
+        "kind": "jstCable",
+        "pins": 8,
+        "len": 25
+      },
+      "item": "JST-SH",
+      "row": 1
+    },
+    {
+      "label": "28 AWG wire set",
+      "procedural": {
+        "kind": "wireSet",
+        "awg": 28,
+        "len": 100,
+        "colors": [
+          "red",
+          "black",
+          "yellow",
+          "white"
+        ]
+      },
+      "item": "Silicone hook-up",
+      "row": 1
+    },
+    {
+      "label": "Soft-mount grommets M3",
+      "procedural": {
+        "kind": "grommet",
+        "size": "M3"
+      },
+      "count": 4,
+      "item": "Silicone soft-mount",
+      "below": "Quick-start card",
+      "perRow": 4
+    },
+    {
+      "label": "Quick-start card",
+      "procedural": {
+        "kind": "card",
+        "w": 85,
+        "h": 55,
+        "caption": "OpenFC Lite · Quick start"
+      },
+      "row": 1,
+      "item": "Quick-start card"
+    }
+  ],
+  "exclude": []
+}
