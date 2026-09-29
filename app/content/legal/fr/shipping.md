@@ -22,7 +22,7 @@ Pour les livraisons dans l’UE, les prix et les tarifs d’expédition incluent
 
 ### États-Unis
 
-Pour les livraisons vers les États-Unis, Incutec BV vend directement aux consommateurs, uniquement pour des lots de précommande. Le stock payé dans l’UE et les articles en stock ne sont expédiés que dans l’UE : une adresse de livraison américaine ne permet donc pas de les commander.
+Pour les livraisons vers les États-Unis, Incutec BV vend directement aux consommateurs, uniquement pour des lots de précommande. Le stock payé dans l’UE (lot 1) et les articles en stock ne sont pas expédiés vers des adresses américaines.
 
 - **Vendu :** Lots de précommande uniquement
 - **Devise :** Dollar américain (USD)

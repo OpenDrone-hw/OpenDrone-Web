@@ -436,7 +436,7 @@ function PaymentMarks({methods}: {methods: string[]}) {
 
 /**
  * Lines that ship at different times go in one parcel when the last is
- * ready: "One parcel · Ships by 14 Mar 2027 if funded". When some lines have a
+ * ready: "One parcel · Ships by 31 Mar 2027 if funded". When some lines have a
  * date of their own, a quiet link takes the rest out of this order so they
  * can be ordered separately.
  */

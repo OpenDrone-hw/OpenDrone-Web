@@ -962,10 +962,10 @@ export function specSheet(
 
 /**
  * A ship promise as one short line for a cart row or a dialog row. A
- * funding-target promise ("ships by 14 March 2027 if the target is reached
- * by 22 November 2026, otherwise ...") becomes a label plus "ships by 14
+ * funding-target promise ("ships by 31 March 2027 if the target is reached
+ * by 15 December 2026, otherwise ...") becomes a label plus "ships by 14
  * March 2027 if reached";
- * a dated promise ("ships late October 2026") keeps its words.
+ * a dated promise ("ships early November 2026") keeps its words.
  */
 export type ShortShipPromise = {kind: 'target' | 'date'; label: string | null; text: string};
 
@@ -983,8 +983,8 @@ export function shortShipPromise(promise: string | null | undefined): ShortShipP
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 /**
- * The month and year of a dated ship promise, short: "ships late October
- * 2026" gives "Oct 2026". Null when the promise names no month and year.
+ * The month and year of a dated ship promise, short: "ships early November
+ * 2026" gives "Nov 2026". Null when the promise names no month and year.
  */
 export function shipMonth(promise: string | null | undefined): string | null {
   const m = /\b([A-Z][a-z]+) (\d{4})\b/.exec(promise ?? '');

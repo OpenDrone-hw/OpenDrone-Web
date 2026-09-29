@@ -22,7 +22,7 @@ For deliveries within the EU, prices and shipping rates include VAT. Within the 
 
 ### United States
 
-For deliveries to the United States, Incutec BV sells directly to consumers for preorder batches only. Paid EU stock and items in stock ship to the EU only, so a US delivery address cannot check out for them.
+For deliveries to the United States, Incutec BV sells directly to consumers for preorder batches only. Paid EU stock (batch 1) and items in stock are not shipped to US addresses.
 
 - **Sold:** Preorder batches only
 - **Currency:** US dollars (USD)

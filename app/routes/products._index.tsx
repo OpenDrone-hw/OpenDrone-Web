@@ -98,7 +98,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
   // search term filters the same cards.
   const catalog = await context.catalog.forBuyer();
   // The one fixed ship date of the campaign, the stack's paid batch, for
-  // the "Ships late Oct 2026" filter chip.
+  // the "Ships early Nov 2026" filter chip.
   // A US buyer (US sales open) has no paid batch that ships to the US: no
   // chip, as /preorder drops the stack lane.
   const stackShips =
@@ -352,7 +352,7 @@ function searchTextFor(p: ProductCardFragment, value = ''): string {
 
 export default function ProductsIndex() {
   const {products, stackShips: campaignShips} = useLoaderData<typeof loader>();
-  // A closed shop offers no ship date, so no "Ships late Oct 2026" filter either.
+  // A closed shop offers no ship date, so no "Ships early Nov 2026" filter either.
   const stackShips = useRouteLoaderData<RootLoader>('root')?.shopOpen ? campaignShips : null;
   const [searchParams, setSearchParams] = useSearchParams();
   const [filtersOpen, setFiltersOpen] = useState(false);

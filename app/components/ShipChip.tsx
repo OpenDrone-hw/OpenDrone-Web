@@ -15,8 +15,8 @@ const CAMPAIGN = parseCampaignConfig(preorders);
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /**
- * A dated promise as the one short line every surface shows: "Ships late Oct
- * 2026 · Delivered by 30 Nov 2026" for "ships late October 2026, delivered
+ * A dated promise as the one short line every surface shows: "Ships early Nov
+ * 2026 · Delivered by 30 Nov 2026" for "ships early November 2026, delivered
  * by 30 November 2026" (PDP, /products, cart, dialog). It drops words of the
  * checkout line text, never the month, its qualifier or the delivery date.
  * Null when the promise names no month and year.
@@ -29,9 +29,9 @@ export function datedShipText(promise: string | null | undefined): string | null
 }
 
 /**
- * The ship chip text for a line: "Ships late Oct 2026 · Delivered by 30 Nov
+ * The ship chip text for a line: "Ships early Nov 2026 · Delivered by 30 Nov
  * 2026" for a dated batch, "ETA
- * 14 Mar 2027" for a funding target, "Ships by 14 Mar 2027 if the target is reached" with
+ * 31 Mar 2027" for a funding target, "Ships by 31 Mar 2027 if the target is reached" with
  * `ifFunded` while the target is not met.
  */
 export function shipChipText(
@@ -72,7 +72,7 @@ export function parcelPromise(promises: Array<string | null | undefined>): strin
 }
 
 /**
- * The earliest dated month ("Oct 2026") among lines that ship before a
+ * The earliest dated month ("Nov 2026") among lines that ship before a
  * funding-target line waits, or null when the order has no such pair. That
  * pair is what a buyer can split into two orders to get the dated items
  * sooner; without a target line (or without a dated one) there is nothing
@@ -114,8 +114,8 @@ export function ShipChip({
 
 /**
  * The ship words every surface uses, from `content/copy/preorder.json`:
- * `Ships late Oct 2026` for a dated batch, `Ships by 14 Mar 2027` for a funding
- * target, `Deadline 22 Nov 2026` for its deadline. Dates come in short.
+ * `Ships early Nov 2026` for a dated batch, `Ships by 31 Mar 2027` for a funding
+ * target, `Deadline 15 Dec 2026` for its deadline. Dates come in short.
  */
 export function shipWord(kind: 'ships' | 'eta' | 'deadline' | 'delivered', date: string): string {
   const fallback = {
@@ -128,9 +128,9 @@ export function shipWord(kind: 'ships' | 'eta' | 'deadline' | 'delivered', date:
 }
 
 /**
- * The ship line under a Pre-order button. A dated batch reads "Ships late
- * Oct 2026 · Delivered by 30 Nov 2026"; a funding target "Deadline 22 Nov 2026 · Ships by 14 Mar 2027 if
- * funded", and "Ships by 14 Mar 2027" once it is funded.
+ * The ship line under a Pre-order button. A dated batch reads "Ships early
+ * Nov 2026 · Delivered by 30 Nov 2026"; a funding target "Deadline 15 Dec 2026 · Ships by 31 Mar 2027 if
+ * funded", and "Ships by 31 Mar 2027" once it is funded.
  */
 export function shipLine(
   campaign: CampaignState | null | undefined,

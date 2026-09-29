@@ -23,12 +23,12 @@ The first production batch of the flight controllers and ESCs ships from Belgium
 ### Preorder run, closes 15 December 2026
 **Receiver, frame, motors, and more FCs and ESCs**
 
-Every unit is tested and inspected before it ships and goes straight to you from our fulfilment partner. We attempt to ship by the end of March 2027, with delivery by 15 April 2027 in the EU.
+Every unit is tested and inspected before it ships and goes straight to you from our fulfilment partner. Ships by 31 March 2027 if the target is reached by 15 December 2026, with delivery by 15 April 2027 in the EU.
 
 ### United States
 **Open for every product**
 
-Duties are included in the price, so there is nothing to pay on delivery. US orders ship with the preorder run: we attempt to ship by the end of March 2027, with delivery by 30 April 2027. The first FC and ESC batch is for the EU only.
+Duties are included in the price, so there is nothing to pay on delivery. US orders ship with the preorder run. Ships by 31 March 2027 if the target is reached by 15 December 2026, with delivery by 30 April 2027. The first FC and ESC batch is for the EU only.
 
 ### Receiver, US sale
 **Sold conditionally in the US**
@@ -58,7 +58,7 @@ The first production batch of the flight controllers and ESCs ships from Belgium
 ### Preorder run, closes 15 December 2026
 **Receiver, frame, motors, and more FCs and ESCs**
 
-Every unit is tested and inspected before it ships and goes straight to you from our fulfilment partner. We attempt to ship by the end of March 2027, with delivery by 15 April 2027 in the EU.
+Every unit is tested and inspected before it ships and goes straight to you from our fulfilment partner. Ships by 31 March 2027 if the target is reached by 15 December 2026, with delivery by 15 April 2027 in the EU.
 
 You pay in full at checkout. If a preorder target is not reached, we email you and you choose: a full refund for that item, or keep your order for the new date.
 
@@ -78,7 +78,7 @@ You asked to hear from us when OpenDrone launches. It is live at opendrone.be.
 ### United States
 **Open for every product**
 
-Duties are included in the price, so there is nothing to pay on delivery. US orders ship with the preorder run: we attempt to ship by the end of March 2027, with delivery by 30 April 2027. The first FC and ESC batch is for the EU only.
+Duties are included in the price, so there is nothing to pay on delivery. US orders ship with the preorder run. Ships by 31 March 2027 if the target is reached by 15 December 2026, with delivery by 30 April 2027. The first FC and ESC batch is for the EU only.
 
 ### Preorder run, closes 15 December 2026
 **Receiver, frame, motors, and more FCs and ESCs**

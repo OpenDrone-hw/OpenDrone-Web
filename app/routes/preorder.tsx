@@ -93,7 +93,7 @@ function variantUrl(handle: string, options: SelectedOption[]): string {
 
 const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
 
-/** "ships late October 2026" as a day for the timeline: early 5th, mid
+/** "ships early November 2026" as a day for the timeline: early 5th, mid
  *  15th, late 25th. Null when the promise names no month. */
 function promiseDay(promise: string | null): string | null {
   const m = /\b(early|mid|late)?\s*([A-Za-z]+) (\d{4})\b/i.exec(promise ?? '');
@@ -309,7 +309,7 @@ export default function PreorderRoute() {
         aria-label={copyText('preorder.channels_aria') ?? 'Retailers and launch news'}
       >
         <Link to="/wholesale"><Txt id="preorder.channel_us_cta" /> <span aria-hidden="true">↗</span></Link>
-        <Link to="/newsletter"><Txt id="preorder.channel_interest" /> <span aria-hidden="true">→</span></Link>
+        <Link to="/newsletter"><Txt id={us ? 'preorder.channel_interest_us' : 'preorder.channel_interest'} /> <span aria-hidden="true">→</span></Link>
       </nav>
 
       {updateList.length ? (

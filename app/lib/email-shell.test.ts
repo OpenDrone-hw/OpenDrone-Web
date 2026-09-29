@@ -37,6 +37,9 @@ describe('email shell', () => {
     }
     assert.equal(p.endsOn, FACTS.closeIso, 'content/preorders.json must carry the launch close date (PR #561)');
     assert.equal(p.shipsBy, '2027-03-31');
+    // One promise phrase everywhere: the mails say what the site says.
+    assert.equal(FACTS.shipBy, '31 March 2027');
+    assert.equal(p.pendingShips, `ships by ${FACTS.shipBy} if the target is reached by ${FACTS.close}, otherwise you choose a refund or to wait`);
     const run = p.skus['OPENRX-LITE'].batches[0];
     assert.equal(run.deliveryBy, '2027-04-15');
     assert.equal(run.deliveryByUS, '2027-04-30');
