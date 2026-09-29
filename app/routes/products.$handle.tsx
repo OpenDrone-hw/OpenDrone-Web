@@ -93,6 +93,7 @@ import {NewsletterSignup} from '~/components/NewsletterSignup';
 import {ProductGhostTile} from '~/components/ProductGhostTile';
 import {StepBar} from '~/components/PreorderMeter';
 import {ShipLine} from '~/components/ShipChip';
+import {CART_COUNTRY_ACTION} from '~/lib/cart-client';
 import type {
   ChapterPin,
   DownloadAsset,
@@ -176,8 +177,12 @@ export const meta: Route.MetaFunction = ({data, location}) =>
 export function shouldRevalidate({
   currentUrl,
   nextUrl,
+  formAction,
   defaultShouldRevalidate,
 }: ShouldRevalidateFunctionArgs) {
+  // A destination switch (cart, added-to-cart dialog) changes the market:
+  // the page prices and promises again for the new country.
+  if (formAction === CART_COUNTRY_ACTION) return defaultShouldRevalidate;
   if (currentUrl.pathname === nextUrl.pathname) return false;
   return defaultShouldRevalidate;
 }

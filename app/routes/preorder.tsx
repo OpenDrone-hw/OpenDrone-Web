@@ -28,6 +28,7 @@ import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
 import {CAMPAIGN} from '~/lib/catalog-client';
 import {
   campaignDate,
+  datedShipParts,
   latestShipDay,
   priceLadder,
   shortCampaignDate,
@@ -176,6 +177,7 @@ export async function loader({context}: Route.LoaderArgs) {
   return {
     rows,
     stackMonth: shipMonth(stackShips),
+    stackWhen: datedShipParts(stackShips)?.when ?? null,
     stackDay: promiseDay(stackShips),
     endsDay: CAMPAIGN.endsOn,
     etaDay: latestDay,
@@ -192,7 +194,7 @@ export async function loader({context}: Route.LoaderArgs) {
 
 export default function PreorderRoute() {
   const data = useLoaderData<typeof loader>();
-  const {rows, stackMonth, ends, eta, unavailable} = data;
+  const {rows, stackMonth, stackWhen, ends, eta, unavailable} = data;
   const us = 'us' in data && data.us === true;
   const rootData = useRouteLoaderData('root') as {turnstileSiteKey?: string | null} | undefined;
   const updates = copy('preorder.updates');
@@ -261,7 +263,7 @@ export default function PreorderRoute() {
         <section className="po-group" id="stack">
           <h2 className="po-group-title">
             <Txt id="preorder.stack_title" />
-            {stackMonth ? <span className="po-group-meta">{dot + shipWord('ships', stackMonth)}</span> : null}
+            {stackMonth ? <span className="po-group-meta">{dot + shipWord('ships', stackWhen ?? stackMonth)}</span> : null}
           </h2>
           <Cards rows={stackRows} eta={eta} />
         </section>

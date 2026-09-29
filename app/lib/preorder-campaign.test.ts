@@ -562,7 +562,7 @@ describe('shipLabel', () => {
 
   it('gives paid stock its batch date in both forms', () => {
     const state = campaignState(STACK, 10, PENDING, TIERS);
-    assert.equal(shipLabel(state, 'short'), 'Ships Oct 2026');
+    assert.equal(shipLabel(state, 'short'), 'Ships late Oct 2026');
     assert.equal(shipLabel(state, 'long'), 'Ships late October 2026.');
     const past = campaignState(STACK, 250, PENDING, TIERS);
     assert.equal(shipLabel(past, 'short'), 'Ships by 11 Mar 2027 if the target is reached');
@@ -571,7 +571,7 @@ describe('shipLabel', () => {
   it('reads the same labels from the promise text alone', () => {
     assert.equal(shipLabelFromPromise(PENDING, 'short'), 'Ships by 11 Mar 2027 if the target is reached');
     assert.equal(shipLabelFromPromise(PENDING, 'long'), LONG);
-    assert.equal(shipLabelFromPromise('ships late October 2026', 'short'), 'Ships Oct 2026');
+    assert.equal(shipLabelFromPromise('ships late October 2026', 'short'), 'Ships late Oct 2026');
     assert.equal(shipLabelFromPromise('ships late October 2026', 'long'), 'Ships late October 2026.');
     assert.equal(shipLabelFromPromise(null, 'short'), null);
     assert.equal(shipLabelFromPromise('  ', 'long'), null);
@@ -666,7 +666,7 @@ describe('SKUs that ship with a campaign SKU', () => {
     assert.equal(strap.campaign?.paidStock, false);
     assert.equal(strap.campaign?.shipsOnTarget, false);
     assert.equal(strap.campaign?.price, 2);
-    assert.equal(shipLabel(strap.campaign!, 'short'), 'Ships Oct 2026');
+    assert.equal(shipLabel(strap.campaign!, 'short'), 'Ships late Oct 2026');
   });
 
   it('pins a no-stock accessory to the lead run: its target, date and cart group', () => {

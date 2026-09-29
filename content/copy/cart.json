@@ -63,5 +63,9 @@
   "check_us_eu_only": "An item in your cart ships to EU addresses only. Remove it to check out to the US.",
   "check_market": "Your cart moved to your delivery country's prices. Check the total below.",
   "checkout_shops_us": "Direct consumer orders are limited to the EU and the United States.",
-  "us_reprice": "This cart was priced for the EU. Checkout moves it to US prices and ship dates first."
+  "us_reprice": "This cart was priced for the EU. Checkout moves it to US prices and ship dates first.",
+  "ship_to_label": "Ship to",
+  "ship_to_pick": "Choose a country",
+  "ship_to_failed": "Could not change the country. Try again.",
+  "ship_to_note": "Shipping to {country}. Changing the country at checkout can change prices and ship dates; choose it here first."
 }

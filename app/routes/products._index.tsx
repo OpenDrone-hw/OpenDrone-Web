@@ -10,6 +10,7 @@ import {ProductItem, type ProductQuickAdd} from '~/components/ProductItem';
 import type {MoneyV2, ProductCardFragment} from '~/lib/product-shapes';
 import {toCards} from '~/lib/catalog';
 import {CAMPAIGN} from '~/lib/catalog-client';
+import {datedShipParts} from '~/lib/preorder-campaign';
 import {FAMILIES} from '~/lib/families';
 import {buildOf, parseBuilds} from '~/lib/build-recommendations';
 import buildsJson from '../../content/builds.json';
@@ -97,7 +98,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
   // search term filters the same cards.
   const catalog = await context.catalog.forBuyer();
   // The one fixed ship date of the campaign, the stack's paid batch, for
-  // the "Ships Oct 2026" filter chip.
+  // the "Ships late Oct 2026" filter chip.
   // A US buyer (US sales open) has no paid batch that ships to the US: no
   // chip, as /preorder drops the stack lane.
   const stackShips =
@@ -351,7 +352,7 @@ function searchTextFor(p: ProductCardFragment, value = ''): string {
 
 export default function ProductsIndex() {
   const {products, stackShips: campaignShips} = useLoaderData<typeof loader>();
-  // A closed shop offers no ship date, so no "Ships Oct 2026" filter either.
+  // A closed shop offers no ship date, so no "Ships late Oct 2026" filter either.
   const stackShips = useRouteLoaderData<RootLoader>('root')?.shopOpen ? campaignShips : null;
   const [searchParams, setSearchParams] = useSearchParams();
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -779,8 +780,8 @@ export default function ProductsIndex() {
                   aria-pressed={activeShips === 'paid'}
                   onClick={() => setParam('ships', activeShips === 'paid' ? null : 'paid')}
                 >
-                  {shipMonth(stackShips)
-                    ? shipWord('ships', shipMonth(stackShips) ?? '')
+                  {datedShipParts(stackShips)
+                    ? shipWord('ships', datedShipParts(stackShips)?.when ?? '')
                     : (copyText('collections-all.chip_paid') ?? 'Ships {ships}').replace(
                         '{ships}',
                         stackShips.replace(/^ships\s+/i, ''),

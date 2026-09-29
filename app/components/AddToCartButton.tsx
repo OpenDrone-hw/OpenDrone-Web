@@ -3,7 +3,7 @@ import {useRevalidator, useRouteLoaderData} from 'react-router';
 import {LoaderCircle} from 'lucide-react';
 import {trackEvent} from '~/lib/growth/plausible';
 import {attributionSource} from '~/lib/growth/attribution';
-import {announceCartAdded, CartAddError, postCartAdd, skusFromFields} from '~/lib/cart-client';
+import {announceCartAdded, CartAddError, postCartAdd, skusFromFields, withCountry} from '~/lib/cart-client';
 import {copyText} from '~/lib/copy';
 import {countryName, notSoldDirect} from '~/lib/shipping-rates';
 import type {RootLoader} from '~/root';
@@ -141,7 +141,12 @@ export function AddToCartButton({
         onClick?.();
         setState('adding');
         setMessage(null);
-        const submitted = keyedFields.map(({name, value}) => [name, value] as [string, string]);
+        // The destination this page shows (a `?country` override included)
+        // goes with the add, so the cart is built for that market.
+        const submitted = withCountry(
+          keyedFields.map(({name, value}) => [name, value] as [string, string]),
+          rootData?.visitorCountry ?? null,
+        );
         postCartAdd(action, submitted)
           .then((summary) => {
             endCartAdd();
