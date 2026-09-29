@@ -69,7 +69,7 @@ function devMockAccount(shopifyGid: string): AccountShopifyData | null {
           financialStatus: 'PAID',
           cancelled: false,
           isPreorder: true,
-          // The latest of the lines' promises: the early "late October 2026"
+          // The latest of the lines' promises: the "early November 2026"
           // line does not decide it, the March funding targets do.
           promise: {kind: 'target', day: '2027-03-31', text: 'ships by 31 Mar 2027', delivered: null},
         },

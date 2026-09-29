@@ -5,7 +5,7 @@
       "id": "pick-and-place",
       "status": "current",
       "title": "A pick and place machine",
-      "body": "The first step toward assembling boards in Belgium instead of only inspecting them here.",
+      "body": "The first step toward placing components on our own boards in-house.",
       "target_label": "about €30k",
       "progress_pct": 0,
       "mode": "auto",

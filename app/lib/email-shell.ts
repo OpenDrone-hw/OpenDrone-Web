@@ -48,7 +48,7 @@ export const COLOR = {
 export const FACTS = {
   closeIso: '2026-12-15',
   close: '15 December 2026',
-  shipBy: 'the end of March 2027',
+  shipBy: '31 March 2027',
   deliveryEu: '15 April 2027',
   deliveryUs: '30 April 2027',
   batch1: 'early November',

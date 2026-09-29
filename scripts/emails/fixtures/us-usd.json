@@ -1,7 +1,7 @@
 {
   "_scenario": {
     "title": "United States, USD, no VAT, duties included",
-    "description": "US address, presentment currency USD, no tax lines, duties included, route-neutral fulfilment, end of March preorder promise.",
+    "description": "US address, presentment currency USD, no tax lines, duties included, route-neutral fulfilment, 31 March preorder promise.",
     "templates": [
       "order-confirmation",
       "shipping-confirmation",
@@ -39,7 +39,7 @@
         "title": "OpenFC Lite"
       },
       "properties": {
-        "Preorder": "ships by the end of March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait; if the target is reached in time, delivered by 30 April 2027"
+        "Preorder": "ships by 31 March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait; if the target is reached in time, delivered by 30 April 2027"
       }
     }
   ],
@@ -86,13 +86,13 @@
   "order_status_url": "https://opendrone.be/account/orders/preview-9004",
   "fulfillment": {
     "item_count": 1,
-    "tracking_company": "bpost",
+    "tracking_company": "Carrier",
     "tracking_numbers": [
       "TEST-US-0000000004"
     ],
-    "tracking_url": "https://track.bpost.cloud/btr/web/#/search?itemCode=TEST-US-0000000004&lang=en",
+    "tracking_url": "https://example.com/track/TEST-US-0000000004",
     "tracking_urls": [
-      "https://track.bpost.cloud/btr/web/#/search?itemCode=TEST-US-0000000004&lang=en"
+      "https://example.com/track/TEST-US-0000000004"
     ],
     "fulfillment_line_items": [
       {
@@ -110,7 +110,7 @@
             "title": "OpenFC Lite"
           },
           "properties": {
-            "Preorder": "ships by the end of March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait; if the target is reached in time, delivered by 30 April 2027"
+            "Preorder": "ships by 31 March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait; if the target is reached in time, delivered by 30 April 2027"
           }
         },
         "quantity": 1

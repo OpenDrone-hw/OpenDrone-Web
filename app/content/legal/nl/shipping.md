@@ -22,7 +22,7 @@ Voor leveringen binnen de EU zijn prijzen en verzendtarieven inclusief btw. Binn
 
 ### Verenigde Staten
 
-Voor leveringen naar de Verenigde Staten verkoopt Incutec BV rechtstreeks aan consumenten, uitsluitend voor pre-orderbatches. Betaalde EU-voorraad en artikelen op voorraad worden alleen naar de EU verzonden, dus met een Amerikaans leveradres kunt u daarvoor niet afrekenen.
+Voor leveringen naar de Verenigde Staten verkoopt Incutec BV rechtstreeks aan consumenten, uitsluitend voor pre-orderbatches. Betaalde EU-voorraad (batch 1) en artikelen op voorraad worden niet naar Amerikaanse adressen verzonden.
 
 - **Verkocht:** Alleen pre-orderbatches
 - **Munt:** Amerikaanse dollar (USD)

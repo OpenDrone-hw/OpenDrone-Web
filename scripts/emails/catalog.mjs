@@ -272,7 +272,7 @@ function preorderCards() {
       locale,
       renderPreorderEmail('moved', {
         order: '#9001',
-        product: 'OpenFC Lite Mini, 20x20',
+        product: 'OpenFC Lite - 20x20',
         qty: 1,
         newDate: newDates[locale],
         reason: locale === 'en' ? 'The connector supplier delivered two weeks late.' : null,

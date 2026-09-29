@@ -126,7 +126,7 @@ export type CampaignConfig = {
 export type SoldUnder = {
   before: string;
   shipsBy: string;
-  /** Ship promise of a paid batch, e.g. "ships late October 2026". */
+  /** Ship promise of a paid batch, e.g. "ships early November 2026". */
   paidShips: string;
   /** Funding-target batch delivery days, YYYY-MM-DD. */
   deliveryBy: string;
@@ -222,11 +222,11 @@ export type CampaignState = {
   /** Set for a SKU that ships with another (`CampaignConfig.shipsWith`): the
    *  lead SKU whose batch, target and promise this state mirrors. */
   shipsWith?: string;
-  /** The target deadline as a date, "22 November 2026". Set by
+  /** The target deadline as a date, "15 December 2026". Set by
    *  `applyCampaign`; absent in a bare `campaignState`. */
   deadline?: string;
   /** For a unit waiting on a funding target: the latest planned ship date
-   *  if the target is reached by the deadline, "14 March 2027". */
+   *  if the target is reached by the deadline, "31 March 2027". */
   latestShip?: string | null;
   /** The ship-by day of a unit waiting on a funding target, YYYY-MM-DD:
    *  `shipsBy`. Set by `applyCampaign`; null for a batch with its own date. */
@@ -235,7 +235,7 @@ export type CampaignState = {
    *  region, YYYY-MM-DD; null when the batch names none. */
   deliveryByDay?: string | null;
   /** The batch's own ship text once its supplier order is placed, "ships
-   *  late October 2026"; null for a batch waiting on a funding target. */
+   *  early November 2026"; null for a batch waiting on a funding target. */
   shipsText?: string | null;
   /** Units left in the paid batch the next unit comes out of; null when the
    *  next unit is not paid stock. A cart line must not ask for more. */
@@ -425,7 +425,7 @@ export function latestShipDay(config: Pick<CampaignConfig, 'shipsBy'>): string {
   return config.shipsBy;
 }
 
-/** The ship-by date in words: "14 March 2027". */
+/** The ship-by date in words: "31 March 2027". */
 export function latestShipDate(config: Pick<CampaignConfig, 'shipsBy'>): string {
   return campaignDate(latestShipDay(config));
 }
@@ -464,7 +464,7 @@ export function priceLadder(retail: number, priceTiers: PriceTier[]): LadderStep
  * fixed date (in stock, paid stock, or a batch whose supplier order is
  * placed) groups by that date. A line whose batch ships only once its own
  * funding target is reached groups by SKU and batch: two products with the
- * same "ships by 14 March 2027 if the target is reached" text still wait for two
+ * same "ships by 31 March 2027 if the target is reached" text still wait for two
  * different targets.
  */
 export function shipGroupKey(
@@ -880,7 +880,7 @@ const LONG_MONTHS = [
   'july', 'august', 'september', 'october', 'november', 'december',
 ];
 
-/** "14 March 2027" as "14 Mar 2027"; null for anything else. */
+/** "31 March 2027" as "31 Mar 2027"; null for anything else. */
 export function shortCampaignDate(longDate: string | null | undefined): string | null {
   const match = longDate?.trim().match(/^(\d{1,2}) ([A-Za-z]+) (\d{4})$/);
   if (!match) return null;
@@ -892,7 +892,7 @@ function capitalizeFirst(text: string): string {
   return text ? text[0].toUpperCase() + text.slice(1) : text;
 }
 
-/** The ship-by date a funding-target promise names, "by 14 March 2027 if
+/** The ship-by date a funding-target promise names, "by 31 March 2027 if
  *  the target is reached", or null when it names none. */
 function promiseLatestShip(promise: string): string | null {
   const match = promise.match(/\bby (\d{1,2} [A-Za-z]+ \d{4}) if\b/);
@@ -904,8 +904,8 @@ function fundingShort(latestShip: string | null): string {
   return date ? `Ships by ${date} if the target is reached` : 'Funding target';
 }
 
-/** The parts of a dated promise: "ships late October 2026, delivered by 30
- *  November 2026" gives `{when: 'late Oct 2026', delivered: '30 Nov 2026'}`.
+/** The parts of a dated promise: "ships early November 2026, delivered by 30
+ *  November 2026" gives `{when: 'early Nov 2026', delivered: '30 Nov 2026'}`.
  *  Null when the promise names no month and year. Every surface builds its
  *  short ship line from these, so PDP, listings, cart, dialog and checkout
  *  name the same month, qualifier and delivery date. */
@@ -920,7 +920,7 @@ export function datedShipParts(
   return {when: `${qualifier}${SHORT_MONTHS[month]} ${match[3]}`, delivered: promiseDeliveredBy(text)};
 }
 
-/** A dated promise, short: "Ships late Oct 2026 · Delivered by 30 Nov 2026".
+/** A dated promise, short: "Ships early Nov 2026 · Delivered by 30 Nov 2026".
  *  A promise that names no month and year keeps its own words. */
 function datedShort(promise: string): string {
   const parts = datedShipParts(promise);
@@ -937,9 +937,9 @@ function longSentence(promise: string): string {
 /**
  * The ship text for the next unit of a campaign SKU, in two lengths.
  *
- * short: "Ships by 14 Mar 2027 if the target is reached" for a unit that waits for a funding
- * target, and the batch month for everything else, "Ships Oct 2026". long: the full promise as a sentence, "Ships
- * by 14 March 2027 if the target is reached by 22 November 2026, otherwise
+ * short: "Ships by 31 Mar 2027 if the target is reached" for a unit that waits for a funding
+ * target, and the batch month for everything else, "Ships Nov 2026". long: the full promise as a sentence, "Ships
+ * by 31 March 2027 if the target is reached by 15 December 2026, otherwise
  * you choose a refund or to wait."
  */
 export function shipLabel(
@@ -988,7 +988,7 @@ export function cartShipNote(promises: Array<string | null | undefined>): string
 /**
  * The batch a ship promise names, as "March 2027": the ship-by month of a
  * funding-target promise, else the first month and year it names ("ships
- * late October 2026" gives "October 2026"). Null when it names none.
+ * early November 2026" gives "November 2026"). Null when it names none.
  */
 export function promiseBatchMonth(promise: string | null | undefined): string | null {
   const text = promise?.trim() ?? '';

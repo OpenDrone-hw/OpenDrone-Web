@@ -8,7 +8,7 @@ export type OrderStatusTone = 'preorder' | 'shipped' | 'processing' | 'muted';
 
 export type OrderStatus = {
   tone: OrderStatusTone;
-  /** Chip text: "Preorder · ships by 14 Mar 2027", "Shipped", ... */
+  /** Chip text: "Preorder · ships by 31 Mar 2027", "Shipped", ... */
   label: string;
   /** One secondary line under the items; null when there is nothing to add. */
   note: string | null;
