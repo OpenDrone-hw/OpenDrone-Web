@@ -15,7 +15,8 @@ import {notSoldDirect, shippingQuote} from './shipping-rates.ts';
 import {handleShopifyCartAction, US_EU_ONLY_MESSAGE} from './shopify-cart-action.ts';
 import {handleCartCountry} from './shopify-cart-country.ts';
 import {mapShopifyCatalog, type CartLineInput, type ShopifyCart} from './shopify-storefront.ts';
-import {US_SALES, fccConditionalSku, usSalesRate, withMarketPrices} from './us-sales.ts';
+import {US_SALES, fccConditionalSku, usSalesRate, usdBand, usdLadder, usdOf, withMarketPrices} from './us-sales.ts';
+import {findUsList, nameWithUplift, planUplift, readUpliftPct} from '../../scripts/us-prices.mjs';
 import {priceNote} from './visitor-country.ts';
 
 const REAL = parseCampaignConfig(JSON.parse(fs.readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8')));
@@ -355,5 +356,90 @@ describe('FCC conditional-sale disclosure', () => {
     assert.equal(chrome.buy_us_fcc, cart.us_fcc);
     assert.equal(chrome.buy_us_notice, cart.us_notice);
     assert.match(chrome.buy_us_notice, /FCC equipment authorization and US import clearance/);
+  });
+});
+
+/** Live Shopify pairs (EUR price, US contextual price, both whole dollars,
+ *  read 2026-09-30): eur, usd, compare-at eur, compare-at usd. */
+const LIVE: Array<[number, number, number | null, number | null]> = [
+  [39.2, 57, 49, 71], [47.2, 69, 59, 86], [16.8, 25, 21, 31], [21.6, 32, 27, 40], [28.8, 42, 36, 53],
+  [31.2, 46, 39, 57], [23.2, 34, 29, 42], [15.2, 22, 19, 28], [19.2, 28, 24, 35],
+  [2, 3, null, null], [4.5, 7, null, null], [5.5, 8, null, null], [7.5, 11, null, null], [5, 8, null, null],
+  [1, 2, null, null], [1.5, 3, null, null], [2.9, 5, null, null], [3.9, 6, null, null], [6, 9, null, null], [8, 12, null, null],
+];
+const LIVE_SAMPLES = LIVE.flatMap(([eur, usd, ce, cu]) => [{eur, usd}, ...(ce != null && cu != null ? [{eur: ce, usd: cu}] : [])]);
+
+describe('US price ladder', () => {
+  it('finds the live rounding (up to whole dollars) and a factor band from the live prices', () => {
+    const band = usdBand(LIVE_SAMPLES)!;
+    assert.equal(band.mode, 'ceil');
+    // +25% and Shopify's FX: about 1.445 USD per EUR incl. VAT.
+    assert.ok(band.lo > 1.44 && band.hi < 1.45 && band.lo < band.hi);
+  });
+
+  it('reproduces every live USD price from its EUR price', () => {
+    const band = usdBand(LIVE_SAMPLES)!;
+    for (const {eur, usd} of LIVE_SAMPLES) {
+      const got = usdOf(eur, band);
+      assert.equal(got.price, usd, `${eur} EUR`);
+      assert.equal(got.approx, false, `${eur} EUR`);
+    }
+  });
+
+  it('gives OpenESC 30x30 the live current step, an exact retail step and marks a step it cannot prove', () => {
+    const band = usdBand(LIVE_SAMPLES)!;
+    const ladder = usdLadder(59, TIERS, band, 2, 69);
+    assert.deepEqual(ladder.map((s) => s.from), [1, 101, 251]);
+    // Unit 2 is in step 1: Shopify's live US price, never an estimate.
+    assert.equal(ladder[0].price, 69);
+    assert.equal(ladder[0].approx, false);
+    // Retail (59 EUR) is the live compare-at price: 86 USD.
+    assert.equal(ladder[2].price, 86);
+    assert.equal(ladder[2].approx, false);
+    assert.ok(ladder[1].price > 69 && ladder[1].price < 86);
+    // A band wide enough to straddle a whole dollar labels the step "about".
+    const wide = usdOf(53.1, {lo: 1.3, hi: 1.6, mode: 'ceil'});
+    assert.equal(wide.approx, true);
+  });
+
+  it('shows no ladder when no factor explains the live prices', () => {
+    assert.equal(usdBand([{eur: 10, usd: 15}, {eur: 10, usd: 30}]), null);
+    assert.equal(usdBand([]), null);
+  });
+
+  it('puts the ladder on a US campaign variant and keeps Shopify price as the current step', () => {
+    const eur = catalogOf(LIVE.slice(0, 3).map(([price, , compare], i) =>
+      variant({sku: ['OPENESC-2020', 'OPENESC-3030', 'OPENRX-LITE'][i], price, compare_price: compare})));
+    const usd = catalogOf(LIVE.slice(0, 3).map(([, price, , compare], i) =>
+      variant({sku: ['OPENESC-2020', 'OPENESC-3030', 'OPENRX-LITE'][i], price, compare_price: compare, currency: 'USD'})), 'USD');
+    const camp = applyCampaign(eur, REAL, {'OPENESC-3030': 1}, OPEN, 'US');
+    const us = withMarketPrices(camp, usd, REAL).products[0].variants.find((v) => v.sku === 'OPENESC-3030')!;
+    const ladder = us.campaign!.usLadder!;
+    assert.equal(ladder.length, 3);
+    assert.equal(ladder[0].price, us.price);
+    assert.equal(ladder[0].price, 69);
+    assert.equal(ladder[2].price, 86);
+    // Without the campaign config nothing changes: no ladder.
+    assert.equal(withMarketPrices(camp, usd).products[0].variants[1].campaign?.usLadder, undefined);
+  });
+});
+
+describe('US price uplift source', () => {
+  it('commits the uplift Shopify holds and compares it with the price list', () => {
+    assert.equal(readUpliftPct(new URL('../../content/us-sales.json', import.meta.url).pathname), 25);
+    assert.equal(US_SALES.priceUpliftPct, 25);
+    const list = {
+      id: 'gid://shopify/PriceList/1', name: 'United States USD, duties included (+25%)', currency: 'USD',
+      parent: {adjustment: {type: 'PERCENTAGE_INCREASE', value: 25}},
+    };
+    assert.equal(planUplift(list, 25), null);
+    assert.deepEqual(planUplift(list, 30), {
+      id: list.id, from: 25, to: 30,
+      name: {from: list.name, to: 'United States USD, duties included (+30%)'},
+    });
+    assert.equal(nameWithUplift('US list', 30), 'US list (+30%)');
+    const eurList = {id: 'e', name: 'EU', currency: 'EUR', parent: {adjustment: {type: 'PERCENTAGE_DECREASE', value: 0}}};
+    assert.equal(findUsList([eurList, list]).id, list.id);
+    assert.throws(() => findUsList([eurList]), /exactly one/);
   });
 });

@@ -31,6 +31,7 @@ import {
   datedShipParts,
   latestShipDay,
   priceLadder,
+  promiseBatchMonth,
   shortCampaignDate,
   tiersFor,
   type CampaignState,
@@ -123,7 +124,7 @@ export async function loader({context}: Route.LoaderArgs) {
   const retail = new Map<string, number>();
   for (const product of catalog.products) {
     for (const variant of product.variants) {
-      // A USD variant gets no ladder: Shopify rounds each US step price.
+      // A USD variant's ladder comes ready-made in `campaign.usLadder`.
       if (variant.currency !== 'USD' && variant.compare_price != null && variant.compare_price > 0) {
         retail.set(variant.sku, variant.compare_price);
       }
@@ -164,7 +165,11 @@ export async function loader({context}: Route.LoaderArgs) {
           cartAddUrl: set ? withQuantity(v.cartAddUrl, set) : v.cartAddUrl,
           quantity: set ?? 1,
           campaign: v.campaign,
-          ladder: retail.has(v.sku) ? priceLadder(retail.get(v.sku)!, tiersFor(CAMPAIGN, v.sku)) : [],
+          ladder: v.campaign.usLadder?.length
+            ? v.campaign.usLadder
+            : retail.has(v.sku)
+              ? priceLadder(retail.get(v.sku)!, tiersFor(CAMPAIGN, v.sku))
+              : [],
           stepEnds: tiersFor(CAMPAIGN, v.sku).map((tier) => tier.upTo),
           priceUnit: unit ? unit.replace(/^per\s+/i, '/ ') : null,
           render: imagesAreRenders(card.handle),
@@ -435,9 +440,11 @@ function Card({row, eta}: {row: Row; eta: string}) {
   const cta = copyText('preorder.card_cta') ?? 'Pre-order';
   const currency = row.price.currencyCode;
   const next = row.campaign.ordered + 1;
-  const prices = row.ladder.map((step) => ({
+  const prices = row.ladder.map((step: {from: number; to: number | null; price: number; approx?: boolean}) => ({
     key: step.from,
-    text: formatPrice(step.price, currency),
+    text: step.approx
+      ? (copyText('preorder.price_about') ?? 'about {price}').replace('{price}', formatPrice(step.price, currency))
+      : formatPrice(step.price, currency),
     range: step.to === null ? `${step.from}+` : `${step.from}-${step.to}`,
     current: next >= step.from && (step.to === null || next <= step.to),
   }));
@@ -468,7 +475,7 @@ function Card({row, eta}: {row: Row; eta: string}) {
         {formatPrice(row.price.amount, currency)}
         {row.priceUnit ? <span> {row.priceUnit}</span> : null}
       </p>
-      <StepBar bar={bar} prices={prices} fundedLabel={funded} />
+      <StepBar bar={bar} prices={prices} fundedLabel={funded} batch={currency === 'USD' ? promiseBatchMonth(row.shipPromise) : null} />
       <AddToCartButton
         className="po-card-cta"
         href={row.cartAddUrl}

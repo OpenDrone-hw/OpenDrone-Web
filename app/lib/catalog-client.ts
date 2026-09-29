@@ -84,7 +84,7 @@ export function createCatalogClient({env, request}: {env: Env; request?: Request
         return null;
       }),
     ]);
-    return withMarketPrices(await withCampaign(env, catalog, 'US'), market);
+    return withMarketPrices(await withCampaign(env, catalog, 'US'), market, CAMPAIGN);
   };
   return {get, region, forRegion, forBuyer: () => forRegion(region)};
 }

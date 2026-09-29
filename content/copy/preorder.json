@@ -50,6 +50,8 @@
   "price_steps_help": "The unit price rises as each allocation sells. Your price is confirmed at checkout.",
   "price_now": "Now",
   "ordered": "ordered",
+  "ordered_for_batch": "ordered for the {batch} batch",
+  "price_about": "about {price}",
   "terms_summary": "Pay in full · Incl. VAT",
   "shipping_summary": "EU orders · Tested and inspected before it ships",
   "how_it_works": "How it works",

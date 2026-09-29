@@ -278,8 +278,8 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
   // steps up to. The PDP variant shape drops it for campaign SKUs (no
   // struck-through price, EU art. 6a), so the price ladder reads it here.
   const retailBySku: Record<string, number | null> = Object.fromEntries(
-    // A USD variant (US buyer) has no ladder: Shopify rounds each US step
-    // price itself, so steps derived from the USD retail would be wrong.
+    // A USD variant (US buyer) has no EUR retail here: its ladder comes
+    // ready-made in `campaign.usLadder`.
     entry.variants.map((v) => [v.sku, v.currency === 'USD' ? null : (v.compare_price ?? null)]),
   );
 
@@ -1660,11 +1660,17 @@ function ProductPage() {
   const ladder =
     campaign && tiers.length && retail != null && retail > 0 ? priceLadder(retail, tiers) : null;
   const currency = selectedVariant?.price.currencyCode ?? 'EUR';
-  // Batch progress with its price schedule available on demand.
+  // Batch progress with its price schedule available on demand. A US buyer's
+  // steps are the EUR steps as Shopify's US market prices them
+  // (`withMarketPrices`); a step the live rounding cannot prove reads "about".
   const nextUnit = campaign ? campaign.ordered + 1 : 0;
-  const stepPrices = (ladder ?? []).map((step) => ({
+  const shownLadder: Array<{from: number; to: number | null; price: number; approx?: boolean}> | null =
+    campaign?.usLadder?.length ? campaign.usLadder : ladder;
+  const stepPrices = (shownLadder ?? []).map((step) => ({
     key: step.from,
-    text: formatPrice(step.price, currency),
+    text: step.approx
+      ? say('preorder.price_about', 'about {price}', {price: formatPrice(step.price, currency)})
+      : formatPrice(step.price, currency),
     range: step.to === null ? `${step.from}+` : `${step.from}-${step.to}`,
     current: nextUnit >= step.from && (step.to === null || nextUnit <= step.to),
   }));
@@ -1676,6 +1682,7 @@ function ProductPage() {
         bar={stepBarState}
         prices={stepPrices}
         fundedLabel={copyText('preorder.funded') ?? 'Target reached'}
+        batch={rootData?.visitorCountry === 'US' && rootData?.usShippingRate != null ? promiseBatchMonth(campaign.shipPromise) : null}
       />
     ) : null;
   // Units left in the paid batch: one add must not ask for more than the
@@ -1829,7 +1836,7 @@ function ProductPage() {
             </span>
           ) : null}
           {vatNote ? <span className="product-buy-vat">{vatNote}</span> : null}
-          {campaign?.earlyPrice && ladder ? (
+          {campaign?.earlyPrice && shownLadder ? (
             <span className="product-buy-tag">
               {say('product-chrome.buy_early_bird', 'Price step 1')}
             </span>

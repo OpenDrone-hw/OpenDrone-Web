@@ -741,7 +741,8 @@ page renders as before. Open:
 | Surface | US buyer (destination US) | EU buyer |
 |---|---|---|
 | Destination | `shippingQuote` zone `us`, rate from `us-sales.json` | unchanged |
-| Prices | the US catalog's USD list price: duties included, no sales tax; no price ladder (Shopify rounds each US step itself) | EUR incl. VAT |
+| Prices | the US catalog's USD list price: duties included, no sales tax. The price step badge and the price steps list show USD too (see "US prices" below) | EUR incl. VAT |
+| Counter | "0 / 250 ordered for the March 2027 batch": the batch a US unit ships in, never read as batch 1 | "1 / 250 ordered" |
 | Delivery date | the batch's `deliveryByUS` | the batch's `deliveryBy` |
 | Sells | campaign preorder SKUs only; in-stock SKUs refused | everything for sale |
 | Batch | first batch with room whose `regions` include US | first with room whose `regions` include EU |
@@ -757,6 +758,32 @@ for example: checkout accepts any address in an open market).
 `release-batch.mjs` never releases a `us-review` order; follow both up by
 hand.
 
+#### US prices
+
+A US price is the EUR VAT-inclusive price plus `priceUpliftPct` in
+`content/us-sales.json` (25), converted at Shopify's FX rate and rounded up to
+whole dollars. The uplift covers US duties and import handling; no US sales tax
+is collected. Shopify prices it: the price list "United States USD, duties
+included (+N%)" has a `PERCENTAGE_INCREASE` parent adjustment and no fixed
+prices.
+
+The storefront shows every price step in USD. The step the next unit falls
+into is Shopify's live US price. The other steps are their EUR prices through
+the EUR to USD factor band that the live EUR/USD pairs of the whole catalog
+allow (`usdBand` in `app/lib/us-sales.ts`); a step is shown as "about US$X"
+when that band cannot fix its whole dollars, and no ladder is shown when no
+factor fits the live prices.
+
+To change the US uplift end to end (a pricing decision: the founder's go first):
+
+1. Edit `priceUpliftPct` in `content/us-sales.json`.
+2. `npm run us:prices` (dry run: prints the file value and the Shopify price
+   list, changes nothing), then `npm run us:prices -- --apply` to write the
+   adjustment and the "(+N%)" name suffix, with a read-back. It reads
+   `SHOPIFY_STORE_DOMAIN`, `SHOPIFY_ADMIN_API_TOKEN` (`write_products`) and
+   `SHOPIFY_ADMIN_API_VERSION` from `.env`.
+3. Merge the file change, then `BASE=https://opendrone.be node scripts/smoke.mjs`.
+
 Shopify settings the US needs (the US market, its USD price list and
 `INCLUDES_TAXES_IN_PRICE` exist): a US shipping zone at the `us-sales.json`
 rate, and HS codes and country of origin on every variant.
@@ -767,7 +794,7 @@ rate, and HS codes and country of origin on every variant.
 |---|---|
 | `content/preorders.json` | `countFrom`, `endsOn`, `shipsBy`, `priceTiers`, `pendingShips`, per-SKU `batches` (`units`, `paid`, `ships`, `deliveryBy`, `deliveryByUS`, `regions`) and `shipsWith` (`sku`, `batch`, `stock`, `after`) |
 | `content/registrations.json` | producer numbers and explicit `saleApproved` per EU destination |
-| `content/us-sales.json` | the US flat shipping rate in USD; `null` keeps the US closed |
+| `content/us-sales.json` | the US flat shipping rate in USD (`null` keeps the US closed) and `priceUpliftPct`, the US price uplift (`npm run us:prices`) |
 | Shopify | compare-at (retail) price, current price, catalog identity, orders, payments |
 | `SHOPIFY_PREVIEW_POLICY_JSON` | which SKUs sell as `preorder` |
 | `app/content/legal/{en,nl,fr}/` | customer terms (7bis) |

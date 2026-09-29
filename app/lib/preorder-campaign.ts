@@ -255,6 +255,8 @@ export type CampaignState = {
   /** What a unit costs after this step: the next step's price, or retail.
    *  Null without a retail price, or when this is already retail. */
   nextPrice: number | null;
+  /** US buyers only: the ladder in USD, set by `withMarketPrices`. */
+  usLadder?: UsdLadderStep[];
   /** Every configured batch up to the one after the current, in order:
    *  sold-out batches stay listed, and one before the current that does not
    *  serve the buyer's region is `other_region`. */
@@ -439,6 +441,10 @@ export function tierPrice(retail: number | null, off: number): number | null {
 /** One step of the price ladder: units `from` to `to` (null: no end) of a
  *  SKU cost `price`. Unit numbers count paid units, starting at 1. */
 export type LadderStep = {from: number; to: number | null; price: number};
+
+/** A US ladder step: Shopify's US market prices each step itself, so a step
+ *  is `approx` ("about US$X") when the live rounding cannot prove it. */
+export type UsdLadderStep = LadderStep & {approx: boolean};
 
 /**
  * The whole price ladder for one SKU, as plain steps: with the default tiers
