@@ -2,7 +2,7 @@ import {bySku, type Catalog, type CatalogVariant} from './catalog.ts';
 import {regionOf, shipGroupKey, shipLabelFromPromise, type Region} from './preorder-campaign.ts';
 import {isPurchasableStatus, resolveStatus} from './product-content.ts';
 import {requestedLines} from './shopify-cart-input.ts';
-import {isUsQuote, shipCountryForRequest, shippingQuote, type ShippingQuote} from './shipping-rates.ts';
+import {destinationForRequest, isIsoCountry, isUsQuote, shipCountryForRequest, shippingQuote, type ShippingQuote} from './shipping-rates.ts';
 import {type RegistrationsFile} from './registrations.ts';
 import {usSalesRate} from './us-sales.ts';
 import {
@@ -57,7 +57,7 @@ function fail(message: string, status: number, headers: Record<string, string> =
  *  Only a valid ISO country code counts. */
 export function forwardedCountry(form: FormData): string | null {
   const value = String(form.get(COUNTRY_FIELD) ?? '').trim().toUpperCase();
-  return /^[A-Z]{2}$/.test(value) ? value : null;
+  return isIsoCountry(value) ? value : null;
 }
 
 /** The cart form field that carries the page's destination country. */
@@ -460,7 +460,7 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
   // The country the page showed: the one the browser forwards (it resolves
   // `?country`, the picked destination and the IP), else the request's own.
   const destination = shippingQuote(
-    forwardedCountry(form) ?? shipCountryForRequest(request),
+    destinationForRequest(request, forwardedCountry(form)),
     dependencies.registrations,
     usRate,
   );

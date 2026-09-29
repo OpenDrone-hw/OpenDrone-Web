@@ -311,3 +311,63 @@ describe('one ship line everywhere', () => {
     assert.equal(datedShipParts('ships once funded'), null);
   });
 });
+
+describe('blocked visitors, half-applied switches, checkout country', () => {
+  it('keeps a blocked IP country blocked whatever the cookie, field or query says', async () => {
+    const headers = {
+      'Content-Type': 'application/x-www-form-urlencoded', Origin: 'https://opendrone.be',
+      'CF-IPCountry': 'RU', Cookie: 'od_ship_country=BE',
+    };
+    for (const url of ['https://opendrone.be/api/shopify/cart', 'https://opendrone.be/api/shopify/cart?country=BE']) {
+      for (const intent of ['checkout', 'add']) {
+        const fake = shopify('BE', [euLine()]);
+        const response = await handleShopifyCartAction(
+          new Request(url, {method: 'POST', headers, body: new URLSearchParams({intent, country: 'BE', sku: 'OPENFC-LITE-2020', qty: '1', datesSeen: '1'})}),
+          ENV,
+          {...actionDeps(fake), addCartLines: async () => { throw new Error('must not add'); }, createCart: async () => { throw new Error('must not create'); }},
+        ).then((r) => r, (e: unknown) => e);
+        // Checkout is refused outright; an add is refused only while US sales are open, which they are here.
+        assert.ok(response instanceof Response, `${intent} ${url}`);
+        assert.equal(response.status, 403, `${intent} ${url}`);
+      }
+    }
+    const res = await handleCartCountry(
+      new Request('https://opendrone.be/api/shopify/cart-country', {method: 'POST', headers, body: new URLSearchParams({country: 'BE'})}),
+      ENV, switcher(shopify('BE', [euLine()])),
+    );
+    assert.equal(res.status, 403);
+    assert.equal(res.headers.get('Set-Cookie'), null);
+  });
+
+  it('ignores a forwarded country that is not an ISO code', () => {
+    for (const bad of ['XX', 'ZZ', 'AA', 'usa', '']) {
+      assert.equal(forwardedCountry(new URLSearchParams({country: bad}) as unknown as FormData), null, bad);
+    }
+    assert.equal(forwardedCountry(new URLSearchParams({country: 'us'}) as unknown as FormData), 'US');
+  });
+
+  it('puts the previous country back when the reprice fails after the country was set', async () => {
+    const fake = shopify('BE', [euLine()]);
+    const res = await handleCartCountry(switchRequest('US'), ENV, {
+      ...switcher(fake),
+      updateCartLines: async () => { throw new Error('shopify: cartLinesUpdate failed'); },
+      logError: () => {},
+    });
+    assert.equal(res.status, 502);
+    assert.equal(res.headers.get('Set-Cookie'), null);
+    assert.equal(fake.state.country, 'BE');
+    assert.deepEqual(fake.state.calls, ['country:US', 'country:BE']);
+  });
+
+  it('honours the country a checkout form forwards over the request cookie', async () => {
+    const fake = shopify('US', [
+      cartLine('gid://shopify/CartLine/1', FC, 'OPENFC-LITE-2020', [
+        {key: 'Preorder', value: 'ships by 14 March 2027 if the target is reached by 22 November 2026, otherwise you choose a refund or to wait; if the target is reached in time, delivered by 15 April 2027'},
+        {key: '_ship_region', value: 'US'},
+      ]),
+    ]);
+    const res = await handleShopifyCartAction(checkoutRequest('BE', {country: 'US'}), ENV, actionDeps(fake));
+    assert.equal(res.headers.get('Location'), CHECKOUT);
+    assert.equal(fake.state.country, 'US');
+  });
+});

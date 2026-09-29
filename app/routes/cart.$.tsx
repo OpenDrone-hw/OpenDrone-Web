@@ -367,6 +367,7 @@ function PopulatedCart({
               }}
             >
               <input type="hidden" name="intent" value="checkout" />
+              {country ? <input type="hidden" name="country" value={country} /> : null}
               <p className="cart-summary-note cart-ship-to-note" data-testid="ship-to-note">
                 {t(
                   'ship_to_note',

@@ -244,6 +244,26 @@ export function countryFromAcceptLanguage(header: string | null | undefined): st
   return null;
 }
 
+/** The visitor's IP country when it is in `BLOCKED_COUNTRIES`, else null. */
+export function blockedIpCountry(request: Request): string | null {
+  const ip = isoCode(request.headers.get('CF-IPCountry'));
+  return ip && BLOCKED_COUNTRIES.has(ip) ? ip : null;
+}
+
+/** True for an ISO 3166-1 alpha-2 code. */
+export function isIsoCountry(value: string | null | undefined): boolean {
+  return isoCode(value) !== null;
+}
+
+/**
+ * The destination a cart request resolves to: a blocked IP country always,
+ * else the country the browser forwarded (already validated), else
+ * `shipCountryForRequest`.
+ */
+export function destinationForRequest(request: Request, forwarded: string | null): string | null {
+  return blockedIpCountry(request) ?? forwarded ?? shipCountryForRequest(request);
+}
+
 /**
  * The destination the shop quotes by default for this request, in order:
  * a `?country=XX` query (to check a page as seen from another country), the
@@ -253,6 +273,10 @@ export function countryFromAcceptLanguage(header: string | null | undefined): st
  * browser is returned as is, so the page can say so.
  */
 export function shipCountryForRequest(request: Request): string | null {
+  // A visitor whose IP is in a blocked country stays there: no cookie or
+  // `?country` moves them to a country sold direct.
+  const blocked = blockedIpCountry(request);
+  if (blocked) return blocked;
   const override = isoCode(new URL(request.url).searchParams.get('country'));
   if (override) return override;
   const picked = shipCountryFromCookie(request.headers.get('Cookie'));

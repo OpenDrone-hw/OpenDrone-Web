@@ -361,6 +361,7 @@ export function CartAddedDialog() {
               }
             >
               <input type="hidden" name="intent" value="checkout" />
+              {visitor ? <input type="hidden" name="country" value={visitor} /> : null}
               <p className="cart-added-parcel" data-testid="ship-to-note">
                 {t(
                   'ship_to_note',

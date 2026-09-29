@@ -1,7 +1,7 @@
 import type {Catalog} from './catalog.ts';
 import {type Region} from './preorder-campaign.ts';
 import {type RegistrationsFile} from './registrations.ts';
-import {shipCountryCookie, shippingQuote} from './shipping-rates.ts';
+import {blockedIpCountry, shipCountryCookie, shippingQuote} from './shipping-rates.ts';
 import {
   cartSummary,
   checkoutOpen,
@@ -94,6 +94,8 @@ export async function handleCartCountry(
   } catch {
     return reply({error: 'invalid body'}, 400);
   }
+  // A visitor from a blocked country cannot pick another destination.
+  if (blockedIpCountry(request)) return reply({error: 'blocked'}, 403);
   const usRate = dependencies.usRate !== undefined ? dependencies.usRate : usSalesRate(env);
   const quote = shippingQuote(/^[A-Z]{2}$/.test(country) ? country : null, dependencies.registrations, usRate);
   if (!quote) return reply({error: 'unknown country'}, 400);
@@ -109,14 +111,31 @@ export async function handleCartCountry(
 
   const cartId = dependencies.getCartId();
   if (!cartId) return remember({country: quote.country, applied: false});
+  // The country the cart has now, to put back if the switch half-applies.
+  let previous: string | null = null;
+  try {
+    previous = (await dependencies.getCart?.(cartId))?.country ?? null;
+  } catch {
+    previous = null;
+  }
+  let changed = false;
   try {
     await dependencies.setCountry(cartId, quote.country);
+    changed = true;
     const summary = await repriceCart(cartId, regionForDestination(quote), env, dependencies);
     return remember({country: quote.country, applied: true, ...(summary ? {summary} : {})});
   } catch (error) {
     dependencies.logError?.(
       `cart country ${quote.country} not set: ${error instanceof Error ? error.message : 'unknown error'}`,
     );
+    // Never leave the cart in the new market with the old promises.
+    if (changed && previous && previous !== quote.country) {
+      await dependencies.setCountry(cartId, previous).catch((restoreError: unknown) => {
+        dependencies.logError?.(
+          `cart country ${previous} not restored: ${restoreError instanceof Error ? restoreError.message : 'unknown error'}`,
+        );
+      });
+    }
     return reply({country: quote.country, applied: false, error: 'cart'}, 502);
   }
 }
