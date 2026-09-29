@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import {describe, it} from 'node:test';
 import type {Catalog} from './catalog.ts';
 import {PRODUCT_CONTENT} from './product-content.ts';
-import {campaignState} from './preorder-campaign.ts';
+import {applyCampaign, campaignState, parseCampaignConfig, type CampaignConfig} from './preorder-campaign.ts';
 import {
   handleShopifyCartAction as actualCartAction,
   handleShopifyCartLoader,
   loadSessionCart,
+  mixedPromises,
   cartCountry as actualCartCountry,
   cartLineInfo,
   createCartInCountry,
@@ -925,4 +927,187 @@ describe('destination approval at checkout', () => {
     assert.equal(calls, 3);
   });
 
+});
+
+describe('Shopify cart action: one promise for a mixed order', () => {
+  const REAL = parseCampaignConfig(
+    JSON.parse(fs.readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8')),
+  );
+  const NOW = new Date('2026-10-01T12:00:00Z');
+  const FC = 'gid://shopify/ProductVariant/fc3030';
+  const RX = 'gid://shopify/ProductVariant/rx';
+  const STRAP = 'gid://shopify/ProductVariant/strap';
+  const FC_LINE = 'gid://shopify/CartLine/fc?cart=a';
+  const RX_LINE = 'gid://shopify/CartLine/rx?cart=a';
+  const OWN_EARLY = 'ships late October 2026, delivered by 30 November 2026';
+  const OWN_LATE =
+    'ships by 14 March 2027 if the target is reached by 22 November 2026, otherwise you choose a refund or to wait; if the target is reached in time, delivered by 31 March 2027';
+  const REWRITE = 'ships with the rest of this order by 14 March 2027, delivered by 31 March 2027';
+  const own = (value: string) => [{key: 'Preorder', value}];
+
+  function base(sku: string, handle: string, id: string, preorder: boolean) {
+    return {
+      handle, title: handle, family: null, description: null, url: `/products/${handle}`, images: [], rating: null,
+      variants: [{
+        sku, title: 'Default Title', model: null, options: {}, price: 100, compare_price: 100, currency: 'EUR',
+        availability: preorder ? 'preorder' : 'in_stock',
+        ship_promise: preorder ? 'preview promise' : null, image: null,
+        url: `/products/${handle}`, cart_add_url: '/api/shopify/cart', merchandise_id: id,
+      }],
+    } as Catalog['products'][number];
+  }
+  const RAW: Catalog = {
+    ...CATALOG,
+    products: [
+      base('OPENFC-LITE-3030', 'openfc-lite', FC, true),
+      base('OPENRX-LITE', 'openrx', RX, true),
+      base('ACC-STRAP-20X220', 'openfc-lite', STRAP, false),
+    ],
+  };
+  const EU = applyCampaign(RAW, REAL, {}, NOW, 'EU');
+  const US = applyCampaign(RAW, REAL, {}, NOW, 'US');
+
+  const fcLine = (overrides: Partial<ShopifyCartLine> = {}) =>
+    line({id: FC_LINE, merchandiseId: FC, sku: 'OPENFC-LITE-3030', handle: 'openfc-lite', shipPromise: OWN_EARLY, ...overrides});
+  const rxLine = (overrides: Partial<ShopifyCartLine> = {}) =>
+    line({id: RX_LINE, merchandiseId: RX, sku: 'OPENRX-LITE', handle: 'openrx', shipPromise: OWN_LATE, ...overrides});
+  const strapLine = () =>
+    line({id: 'gid://shopify/CartLine/strap?cart=a', merchandiseId: STRAP, sku: 'ACC-STRAP-20X220', handle: 'openfc-lite', shipPromise: null});
+
+  function run(
+    lines: ShopifyCartLine[],
+    fields: Record<string, string>,
+    opts: {catalog?: Catalog; us?: boolean} = {},
+  ) {
+    const updates: unknown[][] = [];
+    const c = cart(lines, 'cart-a');
+    if (opts.us) c.subtotal = {amount: '0.00', currencyCode: 'USD'};
+    const response = handleShopifyCartAction(
+      request({intent: 'checkout', ...fields}), ENABLED_ENV,
+      {
+        ...(opts.us ? {usRate: 9.95} : {}),
+        fetchCatalog: async () => opts.catalog ?? EU,
+        getCartId: () => 'cart-a',
+        getCart: async () => c,
+        updateCartLines: async (_id, updated) => { updates.push(updated); return c; },
+        ...MUST_NOT,
+      },
+    );
+    return {updates, response};
+  }
+  const location = async (response: Promise<Response>) => (await response).headers.get('Location');
+
+  it('derives the earlier lines and the latest promise from the campaign', () => {
+    const map = mixedPromises(cart([fcLine(), rxLine(), strapLine()]), EU);
+    assert.deepEqual([...map], [[FC_LINE, REWRITE]]);
+    assert.equal(mixedPromises(cart([fcLine()]), EU).size, 0);
+    assert.equal(mixedPromises(cart([rxLine(), rxLine({id: 'gid://shopify/CartLine/rx2?cart=a'})]), EU).size, 0);
+  });
+
+  it('rewrites the earlier line at checkout and hands the cart to checkout', async () => {
+    const {updates, response} = run([fcLine(), rxLine()], {datesSeen: '1'});
+    assert.equal(await location(response), CHECKOUT);
+    assert.deepEqual(updates, [[{
+      id: FC_LINE,
+      quantity: 1,
+      attributes: [{key: 'Preorder', value: REWRITE}, {key: '_preorder_own', value: OWN_EARLY}],
+    }]]);
+  });
+
+  it('shows the mixed notice first and rewrites nothing before the buyer has seen it', async () => {
+    const {updates, response} = run([fcLine(), rxLine()], {});
+    assert.equal(await location(response), '/cart?check=mixed-dates');
+    assert.deepEqual(updates, []);
+  });
+
+  it('does not write or bounce again for a line that already carries the wording', async () => {
+    const {updates, response} = run([fcLine({orderPromise: REWRITE}), rxLine()], {datesSeen: '1'});
+    assert.equal(await location(response), CHECKOUT);
+    assert.deepEqual(updates, []);
+  });
+
+  it('leaves a cart whose lines ship together, and lines without a date, as they are', async () => {
+    for (const lines of [[fcLine()], [strapLine()]]) {
+      const {updates, response} = run(lines, {});
+      assert.equal(await location(response), CHECKOUT);
+      assert.deepEqual(updates, []);
+    }
+    const {updates, response} = run([rxLine(), strapLine()], {datesSeen: '1'});
+    assert.equal(await location(response), CHECKOUT);
+    assert.deepEqual(updates, [], 'the in-stock line gets no Preorder attribute and the target line keeps its own');
+  });
+
+  it('puts the line back to its own promise once the late items are gone', async () => {
+    const {updates, response} = run([fcLine({orderPromise: REWRITE})], {});
+    assert.equal(await location(response), CHECKOUT);
+    assert.deepEqual(updates, [[{id: FC_LINE, quantity: 1, attributes: own(OWN_EARLY)}]]);
+  });
+
+  it('keeps a rewritten line in its own ship group, so the cart still reads and splits as mixed', () => {
+    const c = cart([fcLine({orderPromise: REWRITE}), rxLine()]);
+    const info = cartLineInfo(c, EU);
+    assert.equal(info[FC_LINE].group, `date:${OWN_EARLY}`);
+    assert.equal(info[FC_LINE].shipLabel, 'Ships late Oct 2026 · Delivered by 30 Nov 2026');
+    assert.deepEqual(splitPlan(c, info), {keep: [FC_LINE], later: [RX_LINE]});
+  });
+
+  it('still bounces to the cart when a line promise really changed', async () => {
+    const stale = run([fcLine({shipPromise: 'ships late October 2026'}), rxLine()], {datesSeen: '1'});
+    assert.equal(await location(stale.response), '/cart?check=ship-date');
+    assert.deepEqual(stale.updates, [[{id: FC_LINE, quantity: 1, attributes: own(OWN_EARLY)}]]);
+    // The late line moved: it bounces, and only it is refreshed.
+    const moved = run(
+      [fcLine({orderPromise: REWRITE}), rxLine({shipPromise: 'ships by 1 January 2027 if the target is reached'})],
+      {datesSeen: '1'},
+    );
+    assert.equal(await location(moved.response), '/cart?check=ship-date');
+    assert.deepEqual(moved.updates, [[{id: RX_LINE, quantity: 1, attributes: own(OWN_LATE)}]]);
+  });
+
+  describe('US destination', () => {
+    const usLine = (l: ShopifyCartLine): ShopifyCartLine => ({...l, shipRegion: 'US'});
+
+    it('leaves a US cart alone when every line ships on the US date', async () => {
+      const usPromise = US.products[1].variants[0].ship_promise!;
+      assert.match(usPromise, /delivered by 15 April 2027$/);
+      const lines = [
+        usLine(rxLine({shipPromise: usPromise})),
+        usLine(fcLine({shipPromise: US.products[0].variants[0].ship_promise!})),
+      ];
+      const {updates, response} = run(lines, {datesSeen: '1', country: 'US'}, {catalog: US, us: true});
+      assert.equal(await location(response), CHECKOUT);
+      assert.deepEqual(updates, []);
+    });
+
+    it('states the US delivery date when a US line ships earlier than the rest', async () => {
+      const config: CampaignConfig = {
+        ...REAL,
+        skus: {
+          ...REAL.skus,
+          'OPENFC-LITE-3030': {batches: [
+            {units: 250, paid: true, ships: 'ships late October 2026', deliveryBy: '2026-11-30', deliveryByUS: '2026-12-10'},
+            {units: 250, deliveryBy: '2027-03-31', deliveryByUS: '2027-04-15'},
+          ]},
+        },
+      };
+      const catalog = applyCampaign(RAW, config, {}, NOW, 'US');
+      const early = catalog.products[0].variants[0].ship_promise!;
+      assert.equal(early, 'ships late October 2026, delivered by 10 December 2026');
+      const lines = [
+        usLine(fcLine({shipPromise: early})),
+        usLine(rxLine({shipPromise: catalog.products[1].variants[0].ship_promise!})),
+      ];
+      const {updates, response} = run(lines, {datesSeen: '1', country: 'US'}, {catalog, us: true});
+      assert.equal(await location(response), CHECKOUT);
+      assert.deepEqual(updates, [[{
+        id: FC_LINE,
+        quantity: 1,
+        attributes: [
+          {key: 'Preorder', value: 'ships with the rest of this order by 14 March 2027, delivered by 15 April 2027'},
+          {key: '_ship_region', value: 'US'},
+          {key: '_preorder_own', value: early},
+        ],
+      }]]);
+    });
+  });
 });

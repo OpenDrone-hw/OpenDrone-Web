@@ -1,7 +1,7 @@
 {
   "_scenario": {
     "title": "Mixed order, Belgium, guest",
-    "description": "In-stock accessory plus a funding-target preorder line; guest checkout without a first name.",
+    "description": "In-stock accessory, a funding-target preorder line, and a paid-batch line rewritten to ship with the rest of the order; guest checkout without a first name.",
     "templates": [
       "order-confirmation"
     ]
@@ -48,15 +48,32 @@
       "properties": {
         "Preorder": "ships by 14 March 2027 if the target is reached by 22 November 2026, otherwise you choose a refund or to wait; if the target is reached in time, delivered by 31 March 2027"
       }
+    },
+    {
+      "title": "OpenFC Lite - 30x30",
+      "variant": {
+        "title": "30x30"
+      },
+      "quantity": 1,
+      "price": 6495,
+      "line_price": 6495,
+      "sku": "OPENFC-LITE-3030",
+      "image": "placeholder:OpenFC",
+      "product": {
+        "title": "OpenFC Lite"
+      },
+      "properties": {
+        "Preorder": "ships with the rest of this order by 14 March 2027, delivered by 31 March 2027"
+      }
     }
   ],
-  "subtotal_price": 4585,
-  "total_price": 5280,
+  "subtotal_price": 11080,
+  "total_price": 11775,
   "tax_lines": [
     {
       "title": "BE VAT",
       "rate": 0.21,
-      "price": 916
+      "price": 2044
     }
   ],
   "order_status_url": "https://opendrone.be/account/orders/preview-9002",
@@ -83,5 +100,5 @@
       }
     ]
   },
-  "tax_price": 916
+  "tax_price": 2044
 }

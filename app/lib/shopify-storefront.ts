@@ -140,6 +140,11 @@ export const PREORDER_ATTRIBUTE = 'Preorder';
  *  that ships elsewhere `promise-mismatch`. */
 export const SHIP_REGION_ATTRIBUTE = '_ship_region';
 
+/** The hidden line attribute holding a line's own ship promise while its
+ *  `Preorder` attribute carries the mixed-order wording ("ships with the
+ *  rest of this order by ..."). Absent on every other line. */
+export const PREORDER_OWN_ATTRIBUTE = '_preorder_own';
+
 export type ShopifyMoney = {amount: string; currencyCode: string};
 
 export type ShopifyCartLine = {
@@ -152,8 +157,12 @@ export type ShopifyCartLine = {
   sku: string | null;
   image: {url: string; altText: string | null} | null;
   selectedOptions: Array<{name: string; value: string}>;
-  /** The ship promise on the line, from its `Preorder` attribute. */
+  /** The line's own ship promise: the hidden `_preorder_own` attribute when
+   *  the line carries the mixed-order wording, else its `Preorder` attribute. */
   shipPromise: string | null;
+  /** The `Preorder` attribute as the order will show it, set only when it
+   *  differs from `shipPromise` (the mixed-order wording). */
+  orderPromise?: string | null;
   /** The region the promise was computed for, from `_ship_region`; null
    *  for an EU line. */
   shipRegion?: string | null;
@@ -540,6 +549,8 @@ function validatedCart(
     lines: cart.lines.nodes.map((line) => {
       // Only a US line carries its region; an EU line keeps today's shape.
       const shipRegion = line.attributes.find(({key}) => key === SHIP_REGION_ATTRIBUTE)?.value;
+      const preorder = line.attributes.find(({key}) => key === PREORDER_ATTRIBUTE)?.value ?? null;
+      const own = line.attributes.find(({key}) => key === PREORDER_OWN_ATTRIBUTE)?.value;
       return {
         id: line.id,
         merchandiseId: line.merchandise.id,
@@ -550,8 +561,8 @@ function validatedCart(
         sku: line.merchandise.sku,
         image: line.merchandise.image,
         selectedOptions: line.merchandise.selectedOptions,
-        shipPromise:
-          line.attributes.find(({key}) => key === PREORDER_ATTRIBUTE)?.value ?? null,
+        shipPromise: own && preorder ? own : preorder,
+        ...(own && preorder && own !== preorder ? {orderPromise: preorder} : {}),
         ...(shipRegion ? {shipRegion} : {}),
         total: line.cost.totalAmount,
       };
