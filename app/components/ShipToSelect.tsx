@@ -2,6 +2,7 @@ import {useEffect, useId, useMemo, useRef, useState} from 'react';
 import {useFetcher} from 'react-router';
 import {copyText} from '~/lib/copy';
 import {countryName, shipCountryPicker} from '~/lib/shipping-rates';
+import {groupShipCountries} from '~/lib/ship-to-order';
 import {CART_COUNTRY_ACTION, CART_UPDATED_EVENT, type CartCountryReply} from '~/lib/cart-client';
 
 /**
@@ -11,7 +12,8 @@ import {CART_COUNTRY_ACTION, CART_UPDATED_EVENT, type CartCountryReply} from '~/
  * the cookie, the cart's buyer country and every line's ship promise change
  * together, then the page reads the cart again in the new market.
  *
- * Every country is listed; the ones not sold direct switch the cart page to
+ * The usual destinations and the United States (while it is sold direct)
+ * come first, then the rest of the EU, then everything else. Every country is listed; the ones not sold direct switch the cart page to
  * its retailer enquiry state, which offers no checkout.
  */
 export function ShipToSelect({
@@ -36,6 +38,7 @@ export function ShipToSelect({
   const busy = fetcher.state !== 'idle';
   const [value, setValue] = useState(country ?? '');
   const picker = useMemo(() => shipCountryPicker('en', usRate), [usRate]);
+  const groups = useMemo(() => groupShipCountries(picker), [picker]);
   const failed = fetcher.state === 'idle' && Boolean(fetcher.data?.error);
 
   // Follow the page once nothing of ours is in flight.
@@ -69,6 +72,13 @@ export function ShipToSelect({
   // A destination the picker does not list (a blocked country from the IP)
   // still reads as the current value.
   const listed = country ? [...picker.likely, ...picker.rest].some((o) => o.code === country) : true;
+  const group = (label: string, options: typeof groups.pinned) => (
+    <optgroup label={label}>
+      {options.map((option) => (
+        <option key={option.code} value={option.code}>{option.name}</option>
+      ))}
+    </optgroup>
+  );
   return (
     <div className={className} aria-busy={busy || undefined}>
       <label htmlFor={id} className="ship-to-label">
@@ -83,13 +93,9 @@ export function ShipToSelect({
       >
         {!value ? <option value="">{copyText('cart.ship_to_pick') ?? 'Choose a country'}</option> : null}
         {!listed && country ? <option value={country}>{countryName(country)}</option> : null}
-        {picker.likely.map((option) => (
-          <option key={`l-${option.code}`} value={option.code}>{option.name}</option>
-        ))}
-        <option disabled value="__divider">──────────</option>
-        {picker.rest.map((option) => (
-          <option key={option.code} value={option.code}>{option.name}</option>
-        ))}
+        {group(copyText('cart.ship_to_group_main') ?? 'Most orders', groups.pinned)}
+        {group(copyText('cart.ship_to_group_eu') ?? 'European Union', groups.eu)}
+        {group(copyText('cart.ship_to_group_world') ?? 'Other countries', groups.world)}
       </select>
       {failed ? (
         <small className="cart-line-error" role="alert">
