@@ -12,6 +12,9 @@
  *   still lands in git for review, and the studio can correct it.
  * - `mode: "manual"`: the studio slider is the only writer.
  *
+ * `hidden: true` keeps a goal in the file (and the studio) but out of every
+ * public page, so no figure or meter is rendered for it.
+ *
  * Statuses: `done` goals are kept as a record, `current` is the one being
  * saved for (the cart meter shows the first current goal), `next` is queued.
  */
@@ -38,6 +41,8 @@ export type Goal = {
   allocation_pct: number;
   /** Auto mode: ISO date the goal opened; orders before it do not count. */
   since: string;
+  /** True: not rendered on any public page. */
+  hidden?: boolean;
 };
 
 const STATUSES: ReadonlySet<string> = new Set(['done', 'current', 'next']);
@@ -89,6 +94,7 @@ export function normalizeGoal(raw: unknown): Goal | null {
       typeof g.target_eur === 'number' && g.target_eur > 0 ? g.target_eur : null,
     allocation_pct: Math.min(100, Math.max(0, alloc)),
     since: typeof g.since === 'string' ? g.since : '',
+    ...(g.hidden === true ? {hidden: true} : {}),
   };
 }
 
@@ -98,7 +104,7 @@ export function goals(): Goal[] {
   if (!Array.isArray(list)) return [];
   return list
     .map(normalizeGoal)
-    .filter((g): g is Goal => g !== null);
+    .filter((g): g is Goal => g !== null && !g.hidden);
 }
 
 /** The goal the cart meter points at. First `current` in file order. */

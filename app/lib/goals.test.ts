@@ -21,6 +21,11 @@ describe('normalizeGoal', () => {
     assert.equal(g?.status, 'current');
   });
 
+  it('keeps the hidden flag only when true', () => {
+    assert.equal(normalizeGoal({id: 'x', hidden: true})?.hidden, true);
+    assert.equal(normalizeGoal({id: 'x', hidden: 'yes'})?.hidden, undefined);
+  });
+
   it('clamps progress into 0-100 and rounds', () => {
     assert.equal(normalizeGoal({id: 'x', progress_pct: 140})?.progress_pct, 100);
     assert.equal(normalizeGoal({id: 'x', progress_pct: -5})?.progress_pct, 0);

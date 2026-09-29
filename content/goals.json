@@ -11,14 +11,15 @@
       "mode": "auto",
       "target_eur": null,
       "allocation_pct": null,
-      "since": "2026-08-11"
+      "since": "2026-08-11",
+      "hidden": true
     },
     {
       "id": "carbon-routing",
       "status": "next",
       "title": "Carbon fibre routing",
       "body": "Cutting our own frame plates and arms instead of buying machine time. Mostly a filtration and enclosure problem.",
-      "target_label": "after the pick and place",
+      "target_label": "",
       "progress_pct": 0,
       "mode": "manual",
       "target_eur": null,

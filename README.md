@@ -69,6 +69,7 @@ button.
 | `npm run gen:shopify-templates` | render the Shopify notification emails from `scripts/shopify-templates/` into `out/`, ready to paste into Shopify |
 | `npm run emails:preview` | local gallery of every customer and internal email, per scenario, at desktop and 375 px width; reloads on save (see "Preview emails") |
 | `npm run emails:build` | the same gallery as one self-contained file in the workspace `.review/emails/index.html` (`--out <path>` elsewhere), plus one file per mail in `cards/` |
+| `npm run emails:chrome` / `emails:paste` | start the dedicated Shopify Chrome; dry-run or apply the templates into Shopify admin (see "Paste into Shopify admin") |
 | `npm run emails:hash` | sha256 of every pasteable `out/*.html` (`-- --json` for the paste list with notification name and subject) |
 | `node --experimental-strip-types scripts/release-batch.mjs --sku <SKU>` | dry run: the held orders of a batch; `--apply` releases their holds (see "Fulfil a batch") |
 | `node --experimental-strip-types scripts/preorder-notify.mjs --kind moved\|missed --sku <SKU> --new-date <text>` | dry run: renders the ship-date or missed-target email per order; `--send` sends through Resend (see "Tell buyers") |
@@ -868,6 +869,18 @@ Shopify has no Admin API or CLI for notification templates: they are edited
 only in Shopify admin (Settings, Notifications, Edit code). The "Paste into
 Shopify" table copies each template's HTML (what `gen:shopify-templates`
 writes to `out/`) and its Liquid subject, and links its admin page. After a paste, `npm run emails:hash` prints the sha256 of what the repo holds: copy the "Email body (HTML)" field from Shopify admin into a file and compare `shasum -a 256` with it. Dates in the mails are the `FACTS` in `app/lib/email-shell.ts` and must equal `content/preorders.json`. The notifications without a body (return created, return approved, draft order invoice, order invoice, payment reminder, order payment receipt, customer email change) keep Shopify's default because that default carries a label or link variable the repo cannot verify.
+
+### Paste into Shopify admin
+
+`npm run emails:paste` drives Shopify admin through a Chrome with remote debugging, so nothing is copied by hand. It never logs in, never types credentials, never toggles a notification and never sends mail.
+
+1. `npm run emails:chrome` opens Chrome with profile `~/.incutec/chrome-shopify` on port 9222. Log into Shopify in that window once; leave it open.
+2. `npm run emails:paste` is a dry run: per phase 1 template it prints the live body hash, the repo hash, whether the subject matches and the action needed.
+3. `npm run emails:paste -- --apply` replaces body and subject, saves, reloads and verifies the hash. It stops on the first failure (`--continue` goes on); `--only key,key` limits the templates.
+
+End to end for an agent: edit a body under `scripts/shopify-templates/bodies/`, `npm run gen:shopify-templates`, `npm test`, merge, then `npm run emails:chrome` and `npm run emails:paste -- --apply` (the dry run first). The only human step is the one-time Shopify login in that Chrome; exit code 3 means it is missing.
+
+The store handle is `SHOPIFY_ADMIN_STORE_HANDLE` (default `ktjqug-jw`). Exit codes: 2 no Chrome on 9222, 3 the admin shows a login page.
 
 ## Security
 
