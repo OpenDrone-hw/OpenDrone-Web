@@ -173,7 +173,7 @@ infer status from prose anywhere else.
 
 - [Support tickets](${origin}/support) - open a ticket; the team answers on the ticket page
 - [Find a ticket](${origin}/support/find) - with the email and the order or ticket number
-- [Discord](https://discord.gg/ABajnacUsS) - community help
+- [Discord](https://discord.gg/v3sWmTcx3R) - community help
 - Sales and trade: [trade enquiries](${origin}/wholesale), contact@opendrone.be
 ${
   chatfpvLive
