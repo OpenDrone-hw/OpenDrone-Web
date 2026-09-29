@@ -351,7 +351,7 @@ answer `410`.
 
 ### ChatFPV (AI)
 
-ChatFPV (`CHATFPV_URL`, repository incutec-org/chatfpv) answers FPV and
+ChatFPV (`CHATFPV_URL`, repository OpenDrone-hw/chatfpv) answers FPV and
 OpenDrone questions with sources. Four switches in `[vars]`, each off
 unless `"1"`: `"1"` in `wrangler.toml` (staging); in
 `wrangler.production.toml` `CHATFPV_DRAFTS_ENABLED`, `CHATFPV_ASK_ENABLED`,
@@ -800,9 +800,7 @@ the ship promises, terms and product notes derive from `endsOn`, `shipsBy`,
 fails when the committed copy and legal text drift from it. A producer
 number alone does not open a destination; `saleApproved` does, after its
 evidence is reviewed. The strategy behind a campaign lives in
-the team's Notion
-([OpenDrone launch strategy](https://app.notion.com/p/3e6fe06764e18191a111c05fa37db3d0)),
-not here.
+the team's private knowledge base, not here.
 
 ## Fulfil a batch
 

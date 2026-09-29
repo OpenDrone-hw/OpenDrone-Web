@@ -1,6 +1,6 @@
 # Storefront acceptance
 
-The team's Notion [launch strategy and knowledge index](https://app.notion.com/p/3e6fe06764e18191a111c05fa37db3d0) owns campaign
+The team's private knowledge base owns campaign
 planning and sourced regulatory references. Product conformity
 and signed declarations belong to the compliance repository. This file owns
 only the storefront evidence a release review must inspect.

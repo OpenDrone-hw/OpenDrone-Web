@@ -5,7 +5,7 @@
  * progress figure moves one of two ways, per goal:
  *
  * - `mode: "auto"`: `npm run goals:update` (scripts/update-goals.mjs, run
- *   weekly by the community-sync workflow) sums Shopify order totals since
+ *   locally by a maintainer) sums Shopify order totals since
  *   the goal opened, applies `allocation_pct`, divides by `target_eur` and
  *   ROUNDS TO 5% STEPS. Deliberately coarse: the public meter stays an
  *   approximation and never resolves to an exact revenue figure. The write
