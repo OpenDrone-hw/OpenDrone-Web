@@ -161,6 +161,37 @@ describe('readCustomerAccount', () => {
   });
 });
 
+describe('orderPromise sold-under pin', () => {
+  const pinned = {
+    ...CONFIG,
+    soldUnder: {
+      before: '2026-09-29T22:00:00Z',
+      shipsBy: '2027-03-14',
+      paidShips: 'ships late October 2026',
+      deliveryBy: '2027-03-31',
+      deliveryByUS: '2027-04-15',
+    },
+  };
+  const lines = {nodes: [{sku: 'OPENMOTOR-2306', title: 'm', variantTitle: null, currentQuantity: 1}]};
+  const tags = ['preorder', 'batch:OPENMOTOR-2306:1'];
+
+  it('keeps the old ship date for an order created before the cutoff', () => {
+    const p = orderPromise({tags, lineItems: lines, createdAt: '2026-09-29T12:00:00Z'}, pinned);
+    assert.equal(p?.text, 'ships by 14 Mar 2027');
+  });
+
+  it('keeps the old paid-batch date for an order created before the cutoff', () => {
+    const fc = {nodes: [{sku: 'OPENFC-LITE-2020', title: 'f', variantTitle: null, currentQuantity: 1}]};
+    const p = orderPromise({tags: ['preorder', 'batch:OPENFC-LITE-2020:1'], lineItems: fc, createdAt: '2026-09-29T12:00:00Z'}, pinned);
+    assert.equal(p?.text, 'ships late Oct 2026');
+  });
+
+  it('uses the current dates for an order created after the cutoff', () => {
+    const p = orderPromise({tags, lineItems: lines, createdAt: '2026-09-30T08:00:00Z'}, pinned);
+    assert.equal(p?.text, 'ships by 31 Mar 2027');
+  });
+});
+
 describe('orderPromise', () => {
   const node = (sku: string, currentQuantity = 1) => ({sku, title: sku, variantTitle: null, currentQuantity});
 

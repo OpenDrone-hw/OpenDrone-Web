@@ -116,7 +116,41 @@ export type CampaignConfig = {
    *  batch of the lead, which must carry its own ship date; without it the
    *  SKU follows whatever batch the lead's next unit falls into. */
   shipsWith?: Record<string, ShipsWith>;
+  /** The dates orders were sold under before a date change. An order created
+   *  before `before` (ISO timestamp) keeps these promises on its account page
+   *  instead of the current ones (terms 7bis.3: a moved date is never applied
+   *  silently to an existing order). */
+  soldUnder?: SoldUnder;
 };
+
+export type SoldUnder = {
+  before: string;
+  shipsBy: string;
+  /** Ship promise of a paid batch, e.g. "ships late October 2026". */
+  paidShips: string;
+  /** Funding-target batch delivery days, YYYY-MM-DD. */
+  deliveryBy: string;
+  deliveryByUS: string;
+};
+
+/** The campaign as an order created before `soldUnder.before` was sold: same
+ *  batches, the promised dates of that time. Unchanged for any later order. */
+export function configSoldUnder(config: CampaignConfig, createdAt: string | undefined): CampaignConfig {
+  const old = config.soldUnder;
+  if (!old || !createdAt || !(Date.parse(createdAt) < Date.parse(old.before))) return config;
+  const skus: CampaignConfig['skus'] = {};
+  for (const [sku, entry] of Object.entries(config.skus)) {
+    skus[sku] = {
+      ...entry,
+      batches: entry.batches.map((b) =>
+        b.paid
+          ? {...b, ships: old.paidShips}
+          : {...b, deliveryBy: b.deliveryBy ? old.deliveryBy : b.deliveryBy, deliveryByUS: b.deliveryByUS ? old.deliveryByUS : b.deliveryByUS},
+      ),
+    };
+  }
+  return {...config, shipsBy: old.shipsBy, skus};
+}
 
 export type ShipsWith = {
   /** The campaign SKU this one ships with. */
@@ -280,6 +314,16 @@ export function parseCampaignConfig(body: unknown): CampaignConfig {
       throw new Error(`preorders: ${sku} last funding batch must serve every region`);
     }
     if (entry.priceTiers !== undefined) checkTiers(entry.priceTiers, `${sku} priceTiers`);
+  }
+  if (c.soldUnder !== undefined) {
+    const o = c.soldUnder;
+    if (!o || typeof o.before !== 'string' || Number.isNaN(Date.parse(o.before))) {
+      throw new Error('preorders: soldUnder.before must be an ISO timestamp');
+    }
+    if (!isCalendarDay(o.shipsBy) || !isCalendarDay(o.deliveryBy) || !isCalendarDay(o.deliveryByUS)) {
+      throw new Error('preorders: soldUnder dates must be calendar dates');
+    }
+    if (typeof o.paidShips !== 'string' || !o.paidShips.trim()) throw new Error('preorders: soldUnder.paidShips is required');
   }
   if (c.shipsWith !== undefined) {
     if (!c.shipsWith || typeof c.shipsWith !== 'object' || Array.isArray(c.shipsWith)) {
