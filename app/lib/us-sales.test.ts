@@ -156,7 +156,18 @@ describe('US market prices', () => {
     const [a, b] = withMarketPrices(eur, usd).products[0].variants;
     assert.equal(a.availability, 'preorder');
     assert.equal(b.availability, 'sold_out');
-    assert.ok(withMarketPrices(eur, null).products[0].variants.every((x) => x.availability === 'sold_out'));
+    const none = withMarketPrices(eur, null);
+    assert.ok(none.products[0].variants.every((x) => x.availability === 'sold_out' && x.currency === 'EUR'));
+    assert.equal(none.currency, 'EUR');
+  });
+
+  it('shows a variant the US market does not sell as sold out at its USD price', () => {
+    const eur = catalogOf([variant({sku: 'A'})]);
+    const usd = catalogOf([variant({sku: 'A', price: 53, currency: 'USD', availability: 'sold_out'})], 'USD');
+    const [a] = withMarketPrices(eur, usd).products[0].variants;
+    assert.equal(a.availability, 'sold_out');
+    assert.equal(a.price, 53);
+    assert.equal(a.currency, 'USD');
   });
 
   it('accepts USD only on the US market read', () => {

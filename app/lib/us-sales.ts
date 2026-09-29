@@ -61,6 +61,10 @@ export function withMarketPrices(catalog: Catalog, market: Catalog | null): Cata
     campaign: null,
   });
   const cents = (n: number) => Math.round(n * 100) / 100;
+  // No US read at all: every variant closed, in the EUR catalog's terms.
+  if (!market) {
+    return {...catalog, products: catalog.products.map((p) => ({...p, variants: p.variants.map(closed)}))};
+  }
   return {
     ...catalog,
     currency: 'USD',
@@ -69,7 +73,11 @@ export function withMarketPrices(catalog: Catalog, market: Catalog | null): Cata
       ...product,
       variants: product.variants.map((variant): CatalogVariant => {
         const us = priced.get(variant.sku);
-        if (!us || us.currency !== 'USD' || us.availability === 'sold_out') return closed(variant);
+        if (!us || us.currency !== 'USD') return closed(variant);
+        // Not for sale in the US market: closed, at its US price.
+        if (us.availability === 'sold_out') {
+          return {...closed(variant), price: us.price, compare_price: us.compare_price, currency: 'USD'};
+        }
         const scale =
           variant.compare_price && us.compare_price
             ? us.compare_price / variant.compare_price

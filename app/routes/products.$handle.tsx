@@ -1695,7 +1695,7 @@ function ProductPage() {
   const usBuyer = usRate != null && rootData?.visitorCountry === 'US';
   const vatNote = paysEuVat(rootData?.visitorCountry ?? null)
     ? say('product-chrome.buy_vat_note', 'incl. VAT')
-    : usBuyer
+    : usBuyer && buyPrice?.currencyCode === 'USD'
       ? say('product-chrome.buy_us_price_note', 'Duties included. No sales tax.')
       : null;
   // Consumers buy direct only in the open EU countries. Elsewhere the buy
@@ -1709,7 +1709,7 @@ function ProductPage() {
   // US unit ships in. An in-stock item ships to the EU only.
   const usBatch = usBuyer && campaign ? promiseBatchMonth(campaign.shipPromise) : null;
   const usEuOnly = usBuyer && !isBundle && !selectedVariant?.campaign && Boolean(selectedVariant?.availableForSale);
-  const usNotice = usBuyer ? (
+  const usNotice = usBuyer && buyAvailable ? (
     <>
       {usBatch ? (
         <p className="product-buy-ship">
