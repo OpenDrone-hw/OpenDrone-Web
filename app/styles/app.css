@@ -7164,7 +7164,6 @@ section.chapter[data-centered] .chapter-body-col {
 .in-the-box-figure.has-active .in-the-box-mark.is-active {
   --mark-c: var(--color-gold);
   opacity: 1;
-  z-index: 1;
   border-color: color-mix(in srgb, var(--color-gold) 80%, transparent);
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--color-gold) 25%, transparent),

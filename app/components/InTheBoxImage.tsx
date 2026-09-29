@@ -42,6 +42,14 @@ export function InTheBox({items, image, renderItem}: Props) {
     const k = markerAt.get(b.item);
     if (k === undefined || b.w * b.h > boxes[k].w * boxes[k].h) markerAt.set(b.item, j);
   });
+  // Stack the boxes by area, largest at the back: a big box that encloses a
+  // small one (the ESD bag around the board) must never sit on top of it, or
+  // the small box could not be pointed at.
+  const stack = new Map<number, number>();
+  boxes
+    .map((b, j) => [j, b.w * b.h] as const)
+    .sort((a, b) => b[1] - a[1])
+    .forEach(([j], rank) => stack.set(j, rank + 1));
   const [hover, setHover] = useState<number | null>(null);
   const [pinned, setPinned] = useState<number | null>(null);
   const active = hover ?? pinned;
@@ -131,7 +139,7 @@ export function InTheBox({items, image, renderItem}: Props) {
                   // eslint-disable-next-line react/no-array-index-key
                   key={j}
                   className={`in-the-box-mark${active === b.item ? ' is-active' : ''}`}
-                  style={{left: `${b.x}%`, top: `${b.y}%`, width: `${b.w}%`, height: `${b.h}%`}}
+                  style={{left: `${b.x}%`, top: `${b.y}%`, width: `${b.w}%`, height: `${b.h}%`, zIndex: stack.get(j)}}
                   onPointerEnter={enter(b.item)}
                   onPointerLeave={leave}
                   onClick={() => toggle(b.item)}
