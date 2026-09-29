@@ -1,0 +1,10 @@
+{
+  "_scenario": {
+    "title": "Shipped without tracking",
+    "description": "No tracking number, company or URL: the order status fallback button.",
+    "templates": [
+      "shipping-confirmation"
+    ]
+  },
+  "fulfillment_status": "fulfilled"
+}

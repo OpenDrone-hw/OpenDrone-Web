@@ -60,6 +60,8 @@ catalog policy or tax configuration is missing. Node 22 (what CI uses).
 | `npm run studio:keys` | fails when code uses a copy id missing from `content/copy/` |
 | `npm run audit:perf`, `audit:lh`, `audit:mobile` | performance lab, Lighthouse, mobile screenshots |
 | `npm run gen:shopify-templates` | render the Shopify notification emails from `scripts/shopify-templates/` into `out/`, ready to paste into Shopify |
+| `npm run emails:preview` | local gallery of every customer and internal email, per scenario, at desktop and 375 px width; reloads on save (see "Preview emails") |
+| `npm run emails:build` | the same gallery as one self-contained file in the workspace `.review/emails/index.html` (`--out <path>` elsewhere) |
 | `node --experimental-strip-types scripts/release-batch.mjs --sku <SKU>` | dry run: the held orders of a batch; `--apply` releases their holds (see "Fulfil a batch") |
 | `node --experimental-strip-types scripts/preorder-notify.mjs --kind moved\|missed --sku <SKU> --new-date <text>` | dry run: renders the ship-date or missed-target email per order; `--send` sends through Resend (see "Tell buyers") |
 | `node scripts/launch-blast.mjs <handle>` | dry run of the product mail to the `notify-<handle>` Resend segment; `--create` drafts, `--send` sends |
@@ -788,6 +790,32 @@ rerun skips those orders; `--again` resends). Record each answer with
 `--record "#<order>" --sku <SKU> --choice refund|wait --apply`, which tags the
 order `preorder-refund:<SKU>` or `preorder-wait:<SKU>`. Refunds are made in
 Shopify admin.
+
+## Preview emails
+
+| Command | Does |
+|---|---|
+| `npm run emails:preview` | serves the gallery on `http://localhost:4321` (`-- --port N`); an edit to a body, fixture or builder shows in about a second |
+| `npm run emails:build` | writes the gallery as one HTML file, images inlined, for sharing |
+
+| Emails | Source | Scenario data |
+|---|---|---|
+| Shopify notifications (6 phase 1 templates) | `scripts/shopify-templates/` | `scripts/emails/fixtures/*.json`, each merged over `_base.json` |
+| Newsletter welcome, withdrawal receipt and shop notice, support reply notice, trade quote request | `app/lib/` builders | inline in `scripts/emails/catalog.mjs` |
+| Preorder buyer update, product launch broadcast | `scripts/preorder-notify.mjs`, `scripts/launch-blast.mjs` | inline in `scripts/emails/catalog.mjs` |
+
+Nothing is sent: the gallery calls the builders directly, and the withdrawal
+mail gets a fetch stub. Each card shows the subject and preheader; a red
+banner lists every unknown Liquid variable or filter, a Resend mail with
+`undefined` or `null` in it, and a mobile frame that overflows 375 px.
+`npm test` renders every Shopify template against every fixture with strict
+variables (`app/lib/shopify-templates.test.ts`) and fails on the same
+problems, or when `out/` is behind its sources.
+
+Shopify has no Admin API or CLI for notification templates: they are edited
+only in Shopify admin (Settings, Notifications, Edit code). The "Paste into
+Shopify" table copies each template's HTML (what `gen:shopify-templates`
+writes to `out/`) and its Liquid subject, and links its admin page.
 
 ## Security
 

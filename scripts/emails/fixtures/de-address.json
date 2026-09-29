@@ -1,0 +1,158 @@
+{
+  "_scenario": {
+    "title": "Germany, 19% VAT, discount",
+    "description": "German address, German VAT (19%) included, a discount code, two preorder lines.",
+    "templates": [
+      "order-confirmation",
+      "shipping-confirmation"
+    ]
+  },
+  "name": "#9003",
+  "order_name": "#9003",
+  "order_number": 9003,
+  "customer": {
+    "first_name": "Erika",
+    "last_name": "Mustermann",
+    "name": "Erika Mustermann",
+    "email": "erika.mustermann@example.com"
+  },
+  "email": "erika.mustermann@example.com",
+  "line_items": [
+    {
+      "title": "OpenFC Lite",
+      "variant": {
+        "title": "20x20"
+      },
+      "quantity": 1,
+      "price": 6495,
+      "line_price": 6495,
+      "sku": "OPENFC-LITE-2020",
+      "image": "placeholder:OpenFC",
+      "product": {
+        "title": "OpenFC Lite"
+      },
+      "properties": {
+        "Preorder": "ships late October 2026, delivered by 30 November 2026"
+      }
+    },
+    {
+      "title": "OpenESC",
+      "variant": {
+        "title": "30x30"
+      },
+      "quantity": 1,
+      "price": 8995,
+      "line_price": 8995,
+      "sku": "OPENESC-3030",
+      "image": "placeholder:OpenESC",
+      "product": {
+        "title": "OpenESC"
+      },
+      "properties": {
+        "Preorder": "ships late October 2026, delivered by 30 November 2026"
+      }
+    }
+  ],
+  "subtotal_price": 15490,
+  "total_discounts": 1000,
+  "shipping_price": 1295,
+  "total_tax": 2520,
+  "total_price": 15785,
+  "tax_lines": [
+    {
+      "title": "DE VAT",
+      "rate": 0.19,
+      "price": 2520
+    }
+  ],
+  "shipping_method": {
+    "title": "bpost international",
+    "price": 1295
+  },
+  "shipping_address": {
+    "name": "Erika Mustermann",
+    "first_name": "Erika",
+    "last_name": "Mustermann",
+    "company": null,
+    "address1": "Beispielweg 12",
+    "address2": null,
+    "street": "Beispielweg 12",
+    "city": "Berlin",
+    "zip": "10115",
+    "province": null,
+    "province_code": null,
+    "country": "Germany",
+    "country_code": "DE",
+    "phone": null
+  },
+  "billing_address": {
+    "name": "Erika Mustermann",
+    "first_name": "Erika",
+    "last_name": "Mustermann",
+    "company": null,
+    "address1": "Beispielweg 12",
+    "address2": null,
+    "street": "Beispielweg 12",
+    "city": "Berlin",
+    "zip": "10115",
+    "province": null,
+    "province_code": null,
+    "country": "Germany",
+    "country_code": "DE",
+    "phone": null
+  },
+  "order_status_url": "https://opendrone.be/account/orders/preview-9003",
+  "fulfillment": {
+    "item_count": 2,
+    "tracking_company": "bpost",
+    "tracking_numbers": [
+      "TEST-DE-0000000003"
+    ],
+    "tracking_url": "https://track.bpost.cloud/btr/web/#/search?itemCode=TEST-DE-0000000003&lang=en",
+    "tracking_urls": [
+      "https://track.bpost.cloud/btr/web/#/search?itemCode=TEST-DE-0000000003&lang=en"
+    ],
+    "fulfillment_line_items": [
+      {
+        "line_item": {
+          "title": "OpenFC Lite",
+          "variant": {
+            "title": "20x20"
+          },
+          "quantity": 1,
+          "price": 6495,
+          "line_price": 6495,
+          "sku": "OPENFC-LITE-2020",
+          "image": "placeholder:OpenFC",
+          "product": {
+            "title": "OpenFC Lite"
+          },
+          "properties": {
+            "Preorder": "ships late October 2026, delivered by 30 November 2026"
+          }
+        },
+        "quantity": 1
+      },
+      {
+        "line_item": {
+          "title": "OpenESC",
+          "variant": {
+            "title": "30x30"
+          },
+          "quantity": 1,
+          "price": 8995,
+          "line_price": 8995,
+          "sku": "OPENESC-3030",
+          "image": "placeholder:OpenESC",
+          "product": {
+            "title": "OpenESC"
+          },
+          "properties": {
+            "Preorder": "ships late October 2026, delivered by 30 November 2026"
+          }
+        },
+        "quantity": 1
+      }
+    ]
+  }
+}

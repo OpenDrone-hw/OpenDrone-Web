@@ -1,0 +1,21 @@
+{
+  "_scenario": {
+    "title": "Shipped with tracking, Belgium",
+    "description": "bpost tracking number and URL, one item.",
+    "templates": [
+      "shipping-confirmation"
+    ]
+  },
+  "fulfillment_status": "fulfilled",
+  "fulfillment": {
+    "item_count": 1,
+    "tracking_company": "bpost",
+    "tracking_numbers": [
+      "TEST-BE-0000000001"
+    ],
+    "tracking_url": "https://track.bpost.cloud/btr/web/#/search?itemCode=TEST-BE-0000000001&lang=en",
+    "tracking_urls": [
+      "https://track.bpost.cloud/btr/web/#/search?itemCode=TEST-BE-0000000001&lang=en"
+    ]
+  }
+}

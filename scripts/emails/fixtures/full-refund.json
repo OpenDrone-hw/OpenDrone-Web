@@ -1,0 +1,12 @@
+{
+  "_scenario": {
+    "title": "Full refund, no line items",
+    "description": "An amount-only refund (no refund_line_items), as a manual refund produces.",
+    "templates": [
+      "order-refund"
+    ]
+  },
+  "financial_status": "refunded",
+  "amount": 7190,
+  "refund_line_items": []
+}
