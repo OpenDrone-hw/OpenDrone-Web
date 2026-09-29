@@ -27,6 +27,10 @@ directory = "dist/client"
 [vars]
 SHOPIFY_CHECKOUT_WRITE_ENABLED = "1"
 PUBLIC_COMING_SOON = "0"
+# US consumer preorders (README "Open or close the shop"): "1" opens the US
+# to campaign preorders once content/us-sales.json sets the US rate; changing
+# it needs the founder's go.
+PUBLIC_US_SALES = "0"
 # ChatFPV (README "Support tickets"): AI ticket drafts in Discord, the
 # /support Ask box and the product/preorder widget. "1" turns each on.
 # On for staging; production keeps them off (wrangler.production.toml).

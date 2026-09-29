@@ -129,6 +129,12 @@ declare global {
     // overrides live in content/products/<handle>.json (`status`).
     PUBLIC_COMING_SOON?: string;
 
+    // US consumer preorders gate: exactly '1' opens the US to campaign
+    // preorders, once content/us-sales.json also sets the US shipping rate
+    // (app/lib/us-sales.ts). Anything else keeps the US on retailer
+    // enquiries. Production and staging set it in their wrangler [vars].
+    PUBLIC_US_SALES?: string;
+
     PUBLIC_COMPANY_NAME?: string;
     PUBLIC_COMPANY_ADDRESS?: string;
     PUBLIC_COMPANY_KBO?: string;

@@ -40,6 +40,10 @@ crons = ["*/5 * * * *"]
 # the price-step switch are Worker secrets.
 SHOPIFY_CHECKOUT_WRITE_ENABLED = "1"
 PUBLIC_COMING_SOON = "0"
+# US consumer preorders (README "Open or close the shop"): "1" opens the US
+# to campaign preorders once content/us-sales.json sets the US rate; changing
+# it needs the founder's go.
+PUBLIC_US_SALES = "0"
 # Support tickets (README "Support"). Shopify writes: the `support` tag and
 # the `support.tickets` metafield on the matched customer. Reply emails are
 # on by the founder's go of 2026-09-27.

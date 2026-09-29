@@ -43,6 +43,6 @@ export async function createAppLoadContext(
     session,
     cache,
     waitUntil,
-    catalog: createCatalogClient({env}),
+    catalog: createCatalogClient({env, request}),
   };
 }

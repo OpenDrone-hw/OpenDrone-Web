@@ -13,15 +13,19 @@ import {beginCartAdd, endCartAdd, isCartAddBusy, subscribeCartAdd} from './cart-
  *  direct: outside the EU "EU consumer orders only", in an EU country not
  *  open yet "Orders are not open for Germany", in a blocked country "Not
  *  available in Russia". Null where the button shows. */
-export function notSoldNote(country: string | null): string | null {
-  const reason = notSoldDirect(country);
+export function notSoldNote(country: string | null, usRate: number | null = null): string | null {
+  const reason = notSoldDirect(country, usRate);
   if (reason === 'blocked') {
     return (copyText('product-chrome.buy_blocked') ?? 'Not available in {country}').replace(
       '{country}',
       countryName(country ?? ''),
     );
   }
-  if (reason === 'shops') return copyText('product-chrome.buy_shops_only') ?? 'EU consumer orders only';
+  if (reason === 'shops') {
+    return usRate != null
+      ? (copyText('product-chrome.buy_shops_only_us') ?? 'EU and US consumer orders only')
+      : (copyText('product-chrome.buy_shops_only') ?? 'EU consumer orders only');
+  }
   if (reason === 'closed') {
     return (copyText('product-chrome.buy_closed') ?? 'Orders are not open for {country}').replace(
       '{country}',
@@ -84,7 +88,7 @@ export function AddToCartButton({
   const anyBusy = useSyncExternalStore(subscribeCartAdd, isCartAddBusy, () => false);
   const otherBusy = anyBusy && state !== 'adding';
   const rootData = useRouteLoaderData<RootLoader>('root');
-  const note = notSoldNote(rootData?.visitorCountry ?? null);
+  const note = notSoldNote(rootData?.visitorCountry ?? null, rootData?.usShippingRate ?? null);
   if (note) {
     return (
       <span className="buy-notsold" role="status">

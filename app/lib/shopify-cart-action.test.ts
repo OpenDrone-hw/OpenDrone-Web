@@ -761,10 +761,28 @@ describe('Shopify cart action: buyer country', () => {
     );
     assert.equal(country, 'NL');
     await handleShopifyCartAction(
-      fromCountry({sku: 'OPENRX-LITE', qty: '1'}, 'RU'), ENABLED_ENV,
+      fromCountry({sku: 'OPENRX-LITE', qty: '1'}, null), ENABLED_ENV,
       {fetchCatalog: async () => CATALOG, createCart: async (_lines, code) => { country = code; return cart(); }},
     );
     assert.equal(country, undefined);
+  });
+
+  it('refuses an add for a destination that is not sold direct, before any Shopify call', async () => {
+    for (const [code, message] of [
+      ['RU', /not available/],
+      ['US', /limited to the EU\.$/],
+      ['CH', /limited to the EU\.$/],
+    ] as const) {
+      let calls = 0;
+      const error = await handleShopifyCartAction(fromCountry({sku: 'OPENRX-LITE', qty: '1'}, code), ENABLED_ENV, {
+        fetchCatalog: async () => { calls++; return CATALOG; },
+        createCart: async () => { calls++; return cart(); },
+      }).then(() => null, (e: unknown) => e);
+      assert.ok(error instanceof Response, code);
+      assert.equal(error.status, 403);
+      assert.match(await error.text(), message);
+      assert.equal(calls, 0, code);
+    }
   });
 
   it('sets the country on the new cart and reads it back in that market', async () => {

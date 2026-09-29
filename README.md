@@ -108,7 +108,10 @@ flowchart LR
 into the catalog shape in `app/lib/catalog.ts`. Every Shopify SKU needs an
 entry in `SHOPIFY_PREVIEW_POLICY_JSON` (`saleMode` `in_stock`, `preorder` or
 `sold_out`, plus `shipPromise`); a missing entry, a non-EUR price or missing
-VAT confirmation fails the catalog closed. Shopify `availableForSale` can deny
+VAT confirmation fails the catalog closed. The one exception is the US market
+read (`@inContext(country: US)`), made only for a US buyer while US sales are
+open: it must be USD, and its prices are laid over the EUR catalog
+(`withMarketPrices` in `app/lib/us-sales.ts`). Shopify `availableForSale` can deny
 a SKU but never proves stock. Customer-account links stay hidden unless an
 exact Shopify account URL is configured.
 
@@ -649,7 +652,7 @@ the client bundle; tokens and the SKU policy never do.
 | Group | Variables | Set as |
 |---|---|---|
 | Session | `SESSION_SECRET` | Worker secret |
-| Shop gates | `PUBLIC_COMING_SOON`, `SHOPIFY_CHECKOUT_WRITE_ENABLED` | `[vars]` in the wrangler config |
+| Shop gates | `PUBLIC_COMING_SOON`, `SHOPIFY_CHECKOUT_WRITE_ENABLED`, `PUBLIC_US_SALES` | `[vars]` in the wrangler config |
 | Storefront | `SHOPIFY_STORE_DOMAIN`, `SHOPIFY_STOREFRONT_TOKEN`, `SHOPIFY_STOREFRONT_API_VERSION`, `SHOPIFY_CHECKOUT_DOMAIN`, `SHOPIFY_PRICES_INCLUDE_VAT`, `SHOPIFY_PREVIEW_POLICY_JSON`, `SHOPIFY_CUSTOMER_ACCOUNT_URL` | Worker secrets |
 | Admin | `SHOPIFY_ADMIN_API_TOKEN`, `SHOPIFY_ADMIN_API_VERSION`, `SHOPIFY_PRICE_TIER_WRITE_ENABLED`, `SHOPIFY_WEBHOOK_SECRET` | Worker secrets |
 | Mail | `SHOPIFY_NEWSLETTER_WRITE_ENABLED`, `RESEND_API_KEY`, `SUPPORT_FROM_EMAIL`, `TURNSTILE_*`, `DISCORD_SUPPORT_INVITE`, `PUBLIC_DISCORD_INVITE`, `PUBLIC_COMPANY_*` | Worker secrets or vars |
@@ -691,6 +694,7 @@ Both gates must be open for checkout; closing either one closes it.
 |---|---|---|---|
 | `PUBLIC_COMING_SOON` | `wrangler.production.toml` `[vars]` | `"0"` | anything else: coming-soon pages, no prices |
 | `SHOPIFY_CHECKOUT_WRITE_ENABLED` | `wrangler.production.toml` `[vars]` | `"1"` | anything else: cart POSTs refused, `/cart` redirects |
+| `PUBLIC_US_SALES` | `wrangler.production.toml` `[vars]` | `"1"` and a number in `content/us-sales.json` `rate` | anything else: the US buys through shops, as before |
 | `SHOPIFY_PREVIEW_POLICY_JSON` | Worker secret | `preorder` (campaign SKUs, `shipPromise: null`) or `in_stock` per SKU for sale | `sold_out` with `shipPromise: null` |
 | `SHOPIFY_CHECKOUT_DOMAIN` | Worker secret | the host of Shopify's checkout links | not needed |
 | `SHOPIFY_PRICE_TIER_WRITE_ENABLED` | Worker secret | `"1"` while a campaign steps prices | anything else |
@@ -707,19 +711,44 @@ An open shop also depends on Shopify settings this repository cannot check:
 |---|---|
 | Payments active, automatic capture | a test order is paid, captured and refunded |
 | Admin API token scopes | `read_orders`, `read_all_orders` (campaigns over 60 days), `write_orders`, `write_products`, `write_merchant_managed_fulfillment_orders` |
-| Markets and shipping profiles | only approved EU addresses can check out |
+| Markets and shipping profiles | only approved EU addresses can check out (plus the US once US sales open) |
 | Redirect theme published | the Shopify-hosted storefront forwards to opendrone.be |
 | Online Store password page off | checkout opens for customers, not only staff |
 
 After any change: `BASE=https://opendrone.be node scripts/smoke.mjs` and
 `curl https://opendrone.be/api/status/campaign`.
 
+### US preorders
+
+`PUBLIC_US_SALES="1"` plus the US flat rate (USD) in `content/us-sales.json`
+open the US; with either missing the US stays on retailer enquiries and every
+page renders as before. Open:
+
+| Surface | US buyer (destination US) | EU buyer |
+|---|---|---|
+| Destination | `shippingQuote` zone `us`, rate from `us-sales.json` | unchanged |
+| Prices | Shopify's US market price, USD, no EU VAT | EUR incl. VAT |
+| Sells | campaign preorder SKUs only; in-stock SKUs refused | everything for sale |
+| Batch | first batch with room whose `regions` include US | first with room whose `regions` include EU |
+| Cart | `buyerIdentity.countryCode` US, hidden `_ship_region: US` line attribute | unchanged |
+
+The destination is `shipCountryForRequest` (`?country`, the
+`od_ship_country` cookie, `CF-IPCountry`, `Accept-Language`) for the page, the
+cart, the line promise and the checkout gate alike. The hold pass tags an
+order `promise-mismatch` when it ships to another region than a line's promise
+was computed for; follow it up by hand.
+
+Shopify settings the US needs: a US market with USD presentment and dynamic
+tax-inclusive pricing, a US shipping zone and rate equal to `us-sales.json`,
+and HS codes and country of origin on every variant.
+
 ## Run a preorder campaign
 
 | Source | Owns |
 |---|---|
-| `content/preorders.json` | `countFrom`, `endsOn`, `shipsBy`, `priceTiers`, `pendingShips`, per-SKU `batches` (`units`, `paid`, `ships`, `deliveryBy`) and `shipsWith` (`sku`, `batch`, `stock`, `after`) |
+| `content/preorders.json` | `countFrom`, `endsOn`, `shipsBy`, `priceTiers`, `pendingShips`, per-SKU `batches` (`units`, `paid`, `ships`, `deliveryBy`, `regions`) and `shipsWith` (`sku`, `batch`, `stock`, `after`) |
 | `content/registrations.json` | producer numbers and explicit `saleApproved` per EU destination |
+| `content/us-sales.json` | the US flat shipping rate in USD; `null` keeps the US closed |
 | Shopify | compare-at (retail) price, current price, catalog identity, orders, payments |
 | `SHOPIFY_PREVIEW_POLICY_JSON` | which SKUs sell as `preorder` |
 | `app/content/legal/{en,nl,fr}/` | customer terms (7bis) |
@@ -745,8 +774,12 @@ order, then set that batch's `ships`. An accessory with `stock` sells that
 many units with its dated `batch`, then ships with the lead's `after`
 batch; set `stock` from InvenTree stock on hand. `deliveryBy` is a customer
 delivery date, not a supplier or carrier date; `null` leaves it out of the
-promise. A producer number alone does not open a destination; `saleApproved`
-does, after its evidence is reviewed. The strategy behind a campaign lives in
+promise. A batch with `regions` (`["EU"]` for paid stock in Belgium) takes
+only units shipping there: each paid unit takes the first batch with room
+that serves its order's shipping region (US, else EU), so a US unit skips an
+EU-only batch. Price steps and funding targets count every region. A producer
+number alone does not open a destination; `saleApproved` does, after its
+evidence is reviewed. The strategy behind a campaign lives in
 the team's Notion
 ([OpenDrone launch strategy](https://app.notion.com/p/3e6fe06764e18191a111c05fa37db3d0)),
 not here.

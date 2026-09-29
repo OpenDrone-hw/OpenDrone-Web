@@ -4,8 +4,7 @@ import {devOverride} from './support/dev-overrides.ts';
 const DEFAULT_API_VERSION = '2026-07';
 const CART_PATH = '/api/shopify/cart';
 
-const CATALOG_QUERY = `#graphql
-  query OpenDroneCatalog($first: Int!, $variantsFirst: Int!) {
+const CATALOG_FIELDS = `
     products(first: $first, sortKey: TITLE) {
       pageInfo { hasNextPage }
       nodes {
@@ -36,7 +35,16 @@ const CATALOG_QUERY = `#graphql
         }
       }
     }
-  }
+`;
+
+const CATALOG_QUERY = `#graphql
+  query OpenDroneCatalog($first: Int!, $variantsFirst: Int!) {${CATALOG_FIELDS}  }
+`;
+
+/** The catalog in the US market: Shopify's US prices (USD). Read only for a
+ *  buyer shipping to the US while US sales are open. */
+export const CATALOG_QUERY_US = `#graphql
+  query OpenDroneCatalogUs($first: Int!, $variantsFirst: Int!) @inContext(country: US) {${CATALOG_FIELDS}  }
 `;
 
 const CART_FIELDS = `#graphql
@@ -125,6 +133,12 @@ export const CART_LINES_REMOVE_MUTATION = `#graphql
  *  and the order confirmation. */
 export const PREORDER_ATTRIBUTE = 'Preorder';
 
+/** The hidden line attribute (a leading underscore hides it at checkout)
+ *  naming the region a preorder line's promise was computed for. Only US
+ *  lines carry it, value `US`; absent means EU. The hold pass tags an order
+ *  that ships elsewhere `promise-mismatch`. */
+export const SHIP_REGION_ATTRIBUTE = '_ship_region';
+
 export type ShopifyMoney = {amount: string; currencyCode: string};
 
 export type ShopifyCartLine = {
@@ -139,6 +153,9 @@ export type ShopifyCartLine = {
   selectedOptions: Array<{name: string; value: string}>;
   /** The ship promise on the line, from its `Preorder` attribute. */
   shipPromise: string | null;
+  /** The region the promise was computed for, from `_ship_region`; null
+   *  for an EU line. */
+  shipRegion?: string | null;
   total: ShopifyMoney;
 };
 
@@ -305,7 +322,11 @@ export function mapShopifyCatalog(
   storeDomain: string,
   policyJson: string,
   pricesIncludeVat: string,
+  /** The US market read (`CATALOG_QUERY_US`) is priced in USD; every
+   *  other read must be EUR. */
+  market: 'default' | 'US' = 'default',
 ): Catalog {
+  const expectedCurrency = market === 'US' ? 'USD' : 'EUR';
   if (pricesIncludeVat !== '1') {
     throw new Error('shopify: VAT-inclusive pricing is not explicitly configured');
   }
@@ -348,8 +369,8 @@ export function mapShopifyCatalog(
         variant.selectedOptions.map(({name, value}) => [name, value]),
       );
       const price = finiteMoney(variant.price.amount, `${sku} price`);
-      if (variant.price.currencyCode !== 'EUR') {
-        throw new Error(`shopify: ${sku} is not priced in EUR`);
+      if (variant.price.currencyCode !== expectedCurrency) {
+        throw new Error(`shopify: ${sku} is not priced in ${expectedCurrency}`);
       }
       catalogCurrency ??= variant.price.currencyCode;
       if (variant.price.currencyCode !== catalogCurrency) {
@@ -406,8 +427,10 @@ export function mapShopifyCatalog(
     schema: 1,
     generated_at: new Date().toISOString(),
     max_age: 300,
-    currency: catalogCurrency || 'EUR',
-    prices_include_vat: true,
+    currency: catalogCurrency || expectedCurrency,
+    // US prices carry no EU VAT (Shopify's dynamic tax-inclusive pricing
+    // takes it off the US market price).
+    prices_include_vat: market !== 'US',
     shop_url: shop,
     cart_url: shop,
     add_url: CART_PATH,
@@ -419,10 +442,11 @@ export function mapShopifyCatalog(
 export async function fetchShopifyCatalog(
   env: StorefrontEnv,
   fetcher: typeof fetch = fetch,
+  market: 'default' | 'US' = 'default',
 ): Promise<Catalog> {
   const data = await storefrontRequest<ShopifyCatalogData>(
     env,
-    CATALOG_QUERY,
+    market === 'US' ? CATALOG_QUERY_US : CATALOG_QUERY,
     {first: 100, variantsFirst: 100},
     fetcher,
   );
@@ -431,6 +455,7 @@ export async function fetchShopifyCatalog(
     required(env, 'SHOPIFY_STORE_DOMAIN'),
     required(env, 'SHOPIFY_PREVIEW_POLICY_JSON'),
     required(env, 'SHOPIFY_PRICES_INCLUDE_VAT'),
+    market,
   );
 }
 
@@ -506,20 +531,25 @@ function validatedCart(
     totalQuantity: cart.totalQuantity,
     subtotal: cart.cost.subtotalAmount,
     total: cart.cost.totalAmount,
-    lines: cart.lines.nodes.map((line) => ({
-      id: line.id,
-      merchandiseId: line.merchandise.id,
-      quantity: line.quantity,
-      title: line.merchandise.product.title,
-      variantTitle: line.merchandise.title,
-      handle: line.merchandise.product.handle,
-      sku: line.merchandise.sku,
-      image: line.merchandise.image,
-      selectedOptions: line.merchandise.selectedOptions,
-      shipPromise:
-        line.attributes.find(({key}) => key === PREORDER_ATTRIBUTE)?.value ?? null,
-      total: line.cost.totalAmount,
-    })),
+    lines: cart.lines.nodes.map((line) => {
+      // Only a US line carries its region; an EU line keeps today's shape.
+      const shipRegion = line.attributes.find(({key}) => key === SHIP_REGION_ATTRIBUTE)?.value;
+      return {
+        id: line.id,
+        merchandiseId: line.merchandise.id,
+        quantity: line.quantity,
+        title: line.merchandise.product.title,
+        variantTitle: line.merchandise.title,
+        handle: line.merchandise.product.handle,
+        sku: line.merchandise.sku,
+        image: line.merchandise.image,
+        selectedOptions: line.merchandise.selectedOptions,
+        shipPromise:
+          line.attributes.find(({key}) => key === PREORDER_ATTRIBUTE)?.value ?? null,
+        ...(shipRegion ? {shipRegion} : {}),
+        total: line.cost.totalAmount,
+      };
+    }),
   };
 }
 

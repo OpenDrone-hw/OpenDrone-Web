@@ -95,7 +95,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
   // and the URL filters/sorts it client-side, so the page is one
   // shareable browse hub that lists every model on its own card. The
   // search term filters the same cards.
-  const catalog = await context.catalog.get();
+  const catalog = await context.catalog.forBuyer();
   // The one fixed ship date of the campaign, the stack's paid batch, for
   // the "Ships Oct 2026" filter chip.
   const stackShips =

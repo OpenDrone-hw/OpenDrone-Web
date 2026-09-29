@@ -23,6 +23,8 @@ import {launchedStatusFlags} from '~/lib/launched-roadmap';
 import {CAMPAIGN} from '~/lib/catalog-client';
 import {toCards} from '~/lib/catalog';
 import {visitorCountry} from '~/lib/visitor-country';
+import {shipCountryForRequest} from '~/lib/shipping-rates';
+import {usSalesRate} from '~/lib/us-sales';
 import {commerceHandoff, customerAccountUrl} from '~/lib/shop-links';
 import {accountsEnabled} from '~/lib/accounts/config';
 import {hasSessionCookie} from '~/lib/accounts/sessions';
@@ -155,6 +157,9 @@ export async function loader(args: Route.LoaderArgs) {
   // to the static statuses while the fetch fills the cache for the next
   // request.
   const globalComingSoon = comingSoonFlag(env);
+  // US consumer preorders: the US rate while the gate and the committed
+  // rate both open them, else null (the US buys through shops).
+  const usRate = usSalesRate(env);
   const shopOpen = !globalComingSoon && checkoutOpen(env);
   // An open shop files the boards with a paid first batch under beta, as the
   // launch's topic flip will (app/lib/launched-roadmap.ts).
@@ -191,8 +196,13 @@ export async function loader(args: Route.LoaderArgs) {
     // and listings (display vocabulary; buyability is the map above).
     roadmapStatuses: roadmapStatusMap(statusFlags),
     turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? null,
-    // Display only: picks the buy module's price note (VAT vs duties).
-    visitorCountry: visitorCountry(args.request),
+    // Picks the buy module's price note (VAT vs duties) and whether a buy
+    // button shows. While US sales are open it is the destination the cart
+    // and checkout read (`shipCountryForRequest`: ?country, the picked
+    // destination, the IP, the browser), so every surface agrees.
+    visitorCountry: usRate != null ? shipCountryForRequest(args.request) : visitorCountry(args.request),
+    // Present only while US sales are open: the flat US rate in USD.
+    ...(usRate != null ? {usShippingRate: usRate} : {}),
     // Plausible counts the production site only: staging, previews and
     // local runs would otherwise add review crawls to the shop's numbers.
     analytics: /^(www\.)?opendrone\.be$/i.test(new URL(args.request.url).hostname),
@@ -208,7 +218,7 @@ async function loadCriticalData({context, request}: Route.LoaderArgs) {
   // availability the status model resolves against. One fetch, cached in
   // the worker for five minutes; a failure degrades to an empty catalog
   // rather than a 500.
-  const catalog = await context.catalog.get();
+  const catalog = await context.catalog.forBuyer();
 
   return {
     commerceHandoff: commerceHandoff(

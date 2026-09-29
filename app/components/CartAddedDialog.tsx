@@ -116,9 +116,13 @@ export function CartAddedDialog() {
   // applies.
   const visitor = rootData?.visitorCountry ?? null;
   const vatIncluded = paysEuVat(visitor);
-  // Outside the EU, in an EU country not open yet and in a blocked
-  // country, checkout is not offered, as in the cart.
-  const notDirect = notSoldDirect(visitor);
+  // Outside the EU (and the US while US sales are open), in an EU country
+  // not open yet and in a blocked country, checkout is not offered, as in
+  // the cart.
+  const usRate = rootData?.usShippingRate ?? null;
+  const notDirect = notSoldDirect(visitor, usRate);
+  // A US buyer: every line carries the US delivery notice.
+  const usBuyer = usRate != null && visitor === 'US';
 
   // The parts that complete the build, judged on the cart as it was when
   // the drawer opened, so a part added from here stays listed as "Added".
@@ -209,6 +213,14 @@ export function CartAddedDialog() {
                   </span>
                 ) : null}
                 <ShipChip promise={line.shipPromise} className="cart-added-ship" ifFunded />
+                {usBuyer ? (
+                  <small className="cart-added-line-qty" role="note">
+                    {t(
+                      'us_notice',
+                      'US delivery depends on FCC equipment authorization and US import clearance. If we cannot deliver to you, you get a full refund.',
+                    )}
+                  </small>
+                ) : null}
               </div>
               {line.total ? (
                 <span className="cart-added-price">
@@ -279,6 +291,9 @@ export function CartAddedDialog() {
                 {formatPrice(subtotal.amount, subtotal.currencyCode)}
               </span>
             </p>
+          ) : null}
+          {usBuyer ? (
+            <p className="cart-added-parcel">{t('us_price_note', 'No EU VAT. US import duties: see shipping')}</p>
           ) : null}
           {parcel ? (
             <p className="cart-added-parcel">

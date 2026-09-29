@@ -346,7 +346,7 @@ export function productHandleFromCitation(citation: Citation): string | null {
  * variant. Never throws: a catalog outage just means no cards, not a
  * broken answer.
  */
-export async function productCardsFromCitations(citations: Citation[], catalog: CatalogClient, blocks: ProductBlock[] = []): Promise<AskProductCard[]> {
+export async function productCardsFromCitations(citations: Citation[], catalog: Pick<CatalogClient, 'get'>, blocks: ProductBlock[] = []): Promise<AskProductCard[]> {
   // ChatFPV's own product card comes first and decides the variant and the coming-soon state.
   const fromBlocks = new Map<string, ProductBlock>();
   for (const b of blocks) {
@@ -748,7 +748,7 @@ function fixedAskAnswer(message: string): AskResult | undefined {
 }
 
 /** A ChatFPV `ChatAnswer` shaped into the customer-facing `AskResult`, after a rate-limit/unavailable check. */
-async function shapeAskAnswer(answer: ChatAnswer | ChatFpvRateLimited | null, catalog: CatalogClient | undefined): Promise<AskResult> {
+async function shapeAskAnswer(answer: ChatAnswer | ChatFpvRateLimited | null, catalog: Pick<CatalogClient, 'get'> | undefined): Promise<AskResult> {
   if (answer && 'rateLimited' in answer) return {ok: false, error: 'rate', message: answer.message};
   if (!answer) return {ok: false, error: 'unavailable'};
   const handoff = answer.outcome === 'handoff' || answer.outcome === 'abstain' || Boolean(answer.handoff);
@@ -779,7 +779,7 @@ export async function handleAsk(
   request: Request,
   env: ChatFpvEnv,
   client?: ChatFpvClient,
-  catalog?: CatalogClient,
+  catalog?: Pick<CatalogClient, 'get'>,
   accountSub?: string | null,
 ): Promise<Response> {
   const parsed = await parseAskRequest(request, env);
@@ -818,7 +818,7 @@ export async function handleAskStream(
   request: Request,
   env: ChatFpvEnv,
   client?: ChatFpvClient,
-  catalog?: CatalogClient,
+  catalog?: Pick<CatalogClient, 'get'>,
   waitUntil?: (p: Promise<unknown>) => void,
   accountSub?: string | null,
 ): Promise<Response> {

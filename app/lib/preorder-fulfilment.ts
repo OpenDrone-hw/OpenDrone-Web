@@ -12,13 +12,20 @@
  *   fall into, e.g. `batch:OPENFC-LITE-2020:1`.
  *
  * Batches follow the campaign count (`shopify-orders.ts`): counted orders in
- * creation order, each line's `currentQuantity` taking the next units of its
- * SKU. A line that runs over a batch boundary gets both batch tags. A SKU
+ * creation order, each unit of a line's `currentQuantity` taking the first
+ * batch of its SKU with room that serves the order's region (its shipping
+ * country: US or EU, `regionOf`). A US unit never takes an EU-only batch.
+ * A line that runs over a batch boundary gets both batch tags. A SKU
  * that ships with another (`shipsWith` in `content/preorders.json`) takes
  * the lead SKU's batch tag: its pinned batch, or the batch the lead's next
  * unit fell into when the order was placed. It adds no units to the lead.
- * One with `stock` counts its own units: those past its stock take the
- * `after` batch tag.
+ * One with `stock` counts its own EU units: those past its stock take the
+ * `after` batch tag. A US unit never takes stock (`shipsWithBatch`).
+ *
+ * An order whose shipping region differs from the region a preorder line's
+ * promise was computed for (the hidden `_ship_region` line attribute, US;
+ * absent means EU) also gets `promise-mismatch`, for manual follow-up. No
+ * customer mail is sent.
  *
  * Idempotent: the `preorder` tag marks an order as done, and a fulfillment
  * order that already carries the `opendrone-preorder` hold is not held
@@ -34,7 +41,15 @@
  * (`node --experimental-strip-types`) can load it.
  */
 
-import {batchOfUnit, type CampaignConfig, type ShipsWith} from './preorder-campaign.ts';
+import {
+  allocateUnit,
+  batchOfUnit,
+  regionOf,
+  shipsWithBatch,
+  type CampaignConfig,
+  type Region,
+  type ShipsWith,
+} from './preorder-campaign.ts';
 
 const DEFAULT_ADMIN_API_VERSION = '2026-07';
 const PAGE_SIZE = 100;
@@ -45,6 +60,11 @@ const NOTE_LIMIT = 255;
 
 /** Same key as `PREORDER_ATTRIBUTE` in `shopify-storefront.ts` (a test pins it). */
 export const PREORDER_LINE_ATTRIBUTE = 'Preorder';
+/** Same key as `SHIP_REGION_ATTRIBUTE` in `shopify-storefront.ts` (a test
+ *  pins it): the region a line's promise was computed for, set on US lines. */
+export const SHIP_REGION_LINE_ATTRIBUTE = '_ship_region';
+/** Order tag for an order shipping to another region than its promise. */
+export const PROMISE_MISMATCH_TAG = 'promise-mismatch';
 /** Order tag that marks an order as held and tagged by this module. */
 export const PREORDER_TAG = 'preorder';
 /** Hold handle: one per app per fulfillment order, so it doubles as the marker. */
@@ -69,6 +89,7 @@ export const PREORDER_ORDERS_QUERY = `#graphql
         tags
         email
         customerLocale
+        shippingAddress { countryCodeV2 }
         lineItems(first: 100) {
           pageInfo { hasNextPage }
           nodes { sku name currentQuantity customAttributes { key value } }
@@ -116,6 +137,7 @@ export type PreorderOrder = {
   tags: string[];
   email: string | null;
   customerLocale: string | null;
+  shippingAddress?: {countryCodeV2: string | null} | null;
   lineItems: {
     pageInfo: {hasNextPage: boolean};
     nodes: Array<{
@@ -251,22 +273,52 @@ export function parseBatchTag(tag: string): {sku: string; batch: number} | null 
   return match ? {sku: match[1], batch: Number(match[2])} : null;
 }
 
+/** The region an order ships to, from its shipping address. */
+export function orderRegion(order: Pick<PreorderOrder, 'shippingAddress'>): Region {
+  return regionOf(order.shippingAddress?.countryCodeV2);
+}
+
+/** The region a preorder line's promise was computed for: US when the
+ *  line carries `_ship_region` US, else EU. */
+function lineRegion(line: PreorderOrder['lineItems']['nodes'][number]): Region {
+  const value = line.customAttributes.find((a) => a.key === SHIP_REGION_LINE_ATTRIBUTE)?.value;
+  return regionOf(value);
+}
+
+/** True when a preorder line's promise was computed for another region
+ *  than the order ships to. */
+export function promiseMismatch(order: PreorderOrder): boolean {
+  const region = orderRegion(order);
+  return order.lineItems.nodes.some(
+    (line) =>
+      line.customAttributes.some((a) => a.key === PREORDER_LINE_ATTRIBUTE && Boolean(a.value?.trim())) &&
+      lineRegion(line) !== region,
+  );
+}
+
 /**
  * The campaign batches of every counted order, walking orders oldest first
- * so batch numbers agree with the campaign meter. Keyed by order id.
+ * so batch numbers agree with the campaign meter. Each unit takes the first
+ * batch with room that serves the order's shipping region. Keyed by order id.
  */
 export function assignBatches(
   orders: PreorderOrder[],
   config: CampaignConfig,
 ): Map<string, LineBatch[]> {
-  const cumulative: Record<string, number> = {};
+  /** Units in each batch per campaign SKU, as allocated so far. */
+  const fills: Record<string, number[]> = {};
+  /** EU units of a SKU that ships from limited stock. */
+  const euStock: Record<string, number> = {};
   const result = new Map<string, LineBatch[]>();
   const sorted = [...orders].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   for (const order of sorted) {
     if (!isCountedOrder(order)) continue;
+    const region = orderRegion(order);
     const found: LineBatch[] = [];
     // The lead counts as the storefront showed them when the order was placed.
-    const before = {...cumulative};
+    const before: Record<string, number[]> = Object.fromEntries(
+      Object.entries(fills).map(([sku, fill]) => [sku, [...fill]]),
+    );
     for (const line of order.lineItems.nodes) {
       const sku = line.sku?.trim();
       const rule = sku ? config.shipsWith?.[sku] : undefined;
@@ -279,34 +331,42 @@ export function assignBatches(
           if (existing) existing.units += units;
           else found.push({sku: rule.sku, batch, units, shipPromise: ships, item: sku});
         };
-        if (rule.stock !== undefined && rule.batch && rule.after) {
+        // The batch the lead's next unit for this region fell into.
+        const leadNext = () => nextBatchFromFill(lead, before[rule.sku], region);
+        if (region === 'EU' && rule.stock !== undefined && rule.batch && rule.after) {
           // Units on hand ship with the pinned batch, later ones with `after`.
-          const start = cumulative[sku] ?? 0;
+          const start = euStock[sku] ?? 0;
           const fromStock = Math.max(0, Math.min(line.currentQuantity, rule.stock - start));
           add(rule.batch, fromStock);
           add(rule.after, line.currentQuantity - fromStock);
-          cumulative[sku] = start + line.currentQuantity;
+          euStock[sku] = start + line.currentQuantity;
         } else {
-          add(rule.batch ?? batchOfUnit(lead, (before[rule.sku] ?? 0) + 1).batch, line.currentQuantity);
+          const {batch} = shipsWithBatch(rule, lead, region, euStock[sku] ?? 0);
+          add(batch ?? leadNext(), line.currentQuantity);
         }
         continue;
       }
       const entry = sku ? config.skus[sku] : undefined;
       if (!sku || !entry || !(line.currentQuantity > 0)) continue;
-      const start = cumulative[sku] ?? 0;
-      for (let unit = start + 1; unit <= start + line.currentQuantity; unit += 1) {
-        const {batch, entry: batchEntry} = batchOfUnit(entry.batches, unit);
+      const fill = (fills[sku] ??= []);
+      for (let unit = 0; unit < line.currentQuantity; unit += 1) {
+        const {batch, entry: batchEntry} = allocateUnit(entry.batches, fill, region);
         const existing = found.find((b) => b.sku === sku && b.batch === batch && !b.item);
         if (existing) existing.units += 1;
         else {
           found.push({sku, batch, units: 1, shipPromise: batchEntry.ships?.trim() || config.pendingShips});
         }
       }
-      cumulative[sku] = start + line.currentQuantity;
     }
     result.set(order.id, found);
   }
   return result;
+}
+
+/** The 1-based batch the next unit for `region` takes, given a SKU's
+ *  batch fill so far (none yet: every batch empty). */
+function nextBatchFromFill(batches: CampaignConfig['skus'][string]['batches'], fill: number[] | undefined, region: Region): number {
+  return allocateUnit(batches, [...(fill ?? [])], region).batch;
 }
 
 /** The hold note: which batch the order waits for, in plain words. */
@@ -341,7 +401,11 @@ export function planPreorderHolds(orders: PreorderOrder[], config: CampaignConfi
     plans.push({
       orderId: order.id,
       orderName: order.name,
-      tags: [PREORDER_TAG, ...new Set(orderBatches.map((b) => batchTag(b.sku, b.batch)))],
+      tags: [
+        PREORDER_TAG,
+        ...new Set(orderBatches.map((b) => batchTag(b.sku, b.batch))),
+        ...(promiseMismatch(order) ? [PROMISE_MISMATCH_TAG] : []),
+      ],
       hold,
       note: holdNote(orderBatches),
       batches: orderBatches,

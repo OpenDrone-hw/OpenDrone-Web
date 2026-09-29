@@ -115,7 +115,7 @@ export async function loader({context}: Route.LoaderArgs) {
   const chatfpvWidget = chatFpvWidgetSrc(context.env, 'preorder');
   const globalSoon = comingSoonFlag(context.env);
   const [catalog, statusFlags] = await Promise.all([
-    context.catalog.get(),
+    context.catalog.forBuyer(),
     fetchStatusFlagsFast(context.env.GITHUB_STATUS_TOKEN, undefined, context.waitUntil),
   ]);
   // Shopify's compare-at price is the retail price the steps climb to.
