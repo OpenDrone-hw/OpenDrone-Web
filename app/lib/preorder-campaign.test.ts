@@ -439,7 +439,7 @@ describe('paid batch and ship groups', () => {
     assert.equal(rx.shipPromise, motor.shipPromise);
     assert.notEqual(
       shipGroupKey('OPENRX-LITE', rx.shipPromise, rx),
-      shipGroupKey('OPENMOTOR-2207', motor.shipPromise, motor),
+      shipGroupKey('OPENMOTOR-2306', motor.shipPromise, motor),
     );
     assert.equal(shipGroupKey('OPENRX-LITE', rx.shipPromise, rx), 'target:OPENRX-LITE:1');
     // Without campaign data (in stock, or counts unavailable): the promise text.

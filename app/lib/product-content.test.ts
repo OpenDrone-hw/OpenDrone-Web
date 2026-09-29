@@ -5,6 +5,7 @@ import {
   PRODUCT_CONTENT,
   PRODUCT_CONTENT_FALLBACK,
   hiddenWhileSoldOut,
+  canonicalOptionValue,
   isInternalSku,
   variantDisplayName,
   lineDisplayName,
@@ -291,26 +292,30 @@ describe('hiddenWhileSoldOut', () => {
 });
 
 describe('openmotor 5-inch variant', () => {
-  it('keeps the unconfirmed stator size and KV marked as placeholders', () => {
+  it('names the 2306 stator, keeps the unconfirmed KV a placeholder and hides unevidenced rows', () => {
     const content = PRODUCT_CONTENT.openmotor;
-    const v = content?.variants?.['2207'];
+    const v = content?.variants?.['2306'];
     assert.ok(content && v);
-    assert.equal(isPlaceholderSpec(content, '2207', 'Stator'), true);
-    assert.equal(isPlaceholderSpec(content, '2207', 'KV'), true);
+    assert.equal(isPlaceholderSpec(content, '2306', 'Stator'), false);
+    assert.equal(isPlaceholderSpec(content, '2306', 'KV'), true);
+    for (const key of ['Weight', 'Max current', 'Max power', 'Shaft', 'Mount', 'Rated cells']) {
+      assert.ok(v.specs?.some(([k, val]) => k === key && val === null), key);
+    }
     assert.equal(isPlaceholderSpec(content, '1604', 'KV'), false);
     assert.ok(!v.highlights.some(([k]) => k === 'KV'));
     assert.ok(!JSON.stringify(PRODUCT_CONTENT.openmotor).includes('22 × 7'));
   });
-  it('shows the option value "2207" as 5" and keeps its SKU internal', () => {
-    assert.equal(variantDisplayName('openmotor', '2207'), '5"');
-    assert.equal(isInternalSku('openmotor', '2207'), true);
+  it('shows the option value "2306" as 5" (2306) with its SKU public', () => {
+    assert.equal(variantDisplayName('openmotor', '2306'), '5" (2306)');
+    assert.equal(isInternalSku('openmotor', '2306'), false);
+    assert.equal(canonicalOptionValue('openmotor', '2207'), '2306');
     assert.equal(isInternalSku('openmotor', '1604'), false);
     assert.equal(variantDisplayName('openesc', '30×30'), '30x30');
     assert.equal(variantDisplayName(null, 'Lite'), 'Lite');
   });
 
-  it('never names the 5" motor 2207 in a cart line name', () => {
-    assert.equal(lineDisplayName('openmotor', 'OpenMotor', '2207'), 'OpenMotor 5"');
+  it('names the 5" motor 2306 in a cart line name', () => {
+    assert.equal(lineDisplayName('openmotor', 'OpenMotor', '2306'), 'OpenMotor 5" (2306)');
     assert.equal(lineDisplayName('openesc', 'OpenESC', 'Default Title'), 'OpenESC');
   });
 });
@@ -388,8 +393,9 @@ describe('spec sheet', () => {
       ],
     );
   });
-  it('never shows the internal 2207 name for the 5" motor', () => {
-    assert.doesNotMatch(variantDisplayName('openmotor', '2207'), /2207/);
+  it('never shows the retired 2207 name for the 5" motor', () => {
+    assert.doesNotMatch(variantDisplayName('openmotor', '2306'), /2207/);
+    assert.ok(!JSON.stringify(PRODUCT_CONTENT.openmotor).replace(/"2207"/, '').includes('2207'));
   });
 });
 

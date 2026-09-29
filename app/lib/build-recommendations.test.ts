@@ -40,7 +40,7 @@ describe('buildSuggestionSpecs', () => {
   });
 
   it('suggests props for the size and no antenna: receivers ship with one', () => {
-    const specs = buildSuggestionSpecs(BUILDS, '5-inch', [{sku: 'OPENMOTOR-2207', handle: 'openmotor'}]);
+    const specs = buildSuggestionSpecs(BUILDS, '5-inch', [{sku: 'OPENMOTOR-2306', handle: 'openmotor'}]);
     const props = specs.find((s) => s.role === 'props');
     assert.equal(props?.sku, 'ACC-PROP-5-HQ-5X43X3-V2S');
     assert.equal(props?.handle, 'hqprop-5x4-3x3-v2s-propeller-set-5-inch');
@@ -83,7 +83,7 @@ describe('buildSuggestionSpecs', () => {
       'openframe',
       'hqprop-t3x3x3-propeller-set-3-inch-t-mount',
     ]);
-    assert.ok(ranked.every(({sku}) => !sku.endsWith('3030') && !sku.endsWith('2207')));
+    assert.ok(ranked.every(({sku}) => !sku.endsWith('3030') && !sku.endsWith('2306')));
   });
 
   it('rejects a build that uses an unknown role', () => {

@@ -266,7 +266,7 @@ export type VariantContent = {
    *  selected tier; falls back to the product-level `oshwaUid` when unset. */
   oshwaUid?: string;
   /** True when the Shopify SKU (and option value) names a spec that is not
-   *  final, as OPENMOTOR-2207 does: the PDP then keeps the SKU off the page
+   *  final: the PDP then keeps the SKU off the page
    *  and out of the structured data. The SKU stays the internal ID. */
   internalSku?: boolean;
   /** The mono line under the product name while this version is picked,
@@ -553,9 +553,11 @@ export const PLUG_PIN_KINDS: readonly PlugPinKind[] = ['power', 'ground', 'signa
  *   (`sourcing/comparisons/openmotor.md`, T-Motor sales contract
  *   YB-2026070103) order the 1604 at KV2850 and a 5-inch sample as the
  *   V2306.5 V2 at KV1950. The 5-inch motor sells under the legacy SKU
- *   OPENMOTOR-2207 (option value "2207", shown as 5"); its stator and KV are
- *   placeholders until the founder confirms them. The other motor rows are
- *   T-Motor's published P1604 and V2306.5 V2 figures.
+ *   OPENMOTOR-2306 (option value "2306", shown as 5" (2306)); the founder
+ *   decided on 2026-09-29 that the 5-inch motor is a 2306. Its KV (about
+ *   1950, as quoted) stays a placeholder. The 5-inch weight, current, power,
+ *   shaft, mount and cell rows are hidden until the batch motor's own
+ *   figures are on file; the 1604 rows are T-Motor's published P1604 figures.
  * - `teardown.frameViewer` is the fallback when a tier defines none. Both
  *   tiers override it and it seeds the viewer's preload set, so it points at
  *   a current model (the 5") rather than the stale generic frame.glb.
@@ -653,8 +655,7 @@ export const PRODUCT_CONTENT: Record<string, ProductContent> =
  * The name a buyer sees for one variant (option value) of a product: the
  * variant's content `label` when set, else the value itself. The Shopify
  * option value stays the key for links and the cart; only the shown text
- * changes. OpenMotor's value "2207" is shown as 5" because no 2207 is
- * chosen.
+ * changes. OpenMotor's value "2306" is shown as 5" (2306).
  */
 export function variantDisplayName(handle: string | null | undefined, value: string): string {
   if (!handle) return shopSize(value);
@@ -667,7 +668,7 @@ export function shopSize(name: string): string {
 }
 
 /** A cart line's name as the buyer reads it: the product title plus the
- *  variant's display name, never a raw legacy option value ("2207"). */
+ *  variant's display name, never a bare option value. */
 export function lineDisplayName(handle: string | null | undefined, title: string, variantTitle: string | null | undefined): string {
   return variantTitle && variantTitle !== 'Default Title'
     ? `${title} ${variantDisplayName(handle, variantTitle)}`
@@ -683,7 +684,7 @@ export function setSize(handle: string | null | undefined): number | null {
 
 /**
  * The catalog option value a link means, when it carries an alias
- * (`?Model=5"` for the value `2207`). Case, spaces and inch marks are
+ * (`?Model=5"` or the retired `?Model=2207` for the value `2306`). Case, spaces and inch marks are
  * ignored. Null when the value is already canonical or unknown.
  */
 export function canonicalOptionValue(

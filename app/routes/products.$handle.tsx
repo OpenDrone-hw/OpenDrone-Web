@@ -217,7 +217,7 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
   }
 
   // A link that names a version by its label or another spelling
-  // (?Model=5" for the 2207 value) lands on the catalog value instead of
+  // (?Model=5" or the retired ?Model=2207 for the 2306 value) lands on the catalog value instead of
   // silently falling back to the first version.
   const axis = PRODUCT_CONTENT[handle]?.optionAxis;
   if (axis) {
@@ -938,7 +938,7 @@ function ProductPage() {
   const chatfpvProduct = catalogAxisValue ? `${product.title} ${variantDisplayName(product.handle, catalogAxisValue)}`.trim() : product.title;
   const chatfpvWidgetSrcVariant = useMemo(() => chatFpvWidgetSrcWithProduct(chatfpvWidget, chatfpvProduct), [chatfpvWidget, chatfpvProduct]);
   // The SKU a buyer may see: none when the variant's SKU names a spec that
-  // is not final (OPENMOTOR-2207). It stays the internal ID everywhere else.
+  // is not final. It stays the internal ID everywhere else.
   const shownSku = isInternalSku(product.handle, catalogAxisValue)
     ? null
     : (selectedVariant?.sku ?? null);

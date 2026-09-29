@@ -115,9 +115,9 @@
         "kind": "motor"
       }
     },
-    "2207": {
-      "label": "5\"",
-      "subtitle": "5\" props",
+    "2306": {
+      "label": "5\" (2306)",
+      "subtitle": "2306 · 5\" props",
       "highlights": [
         [
           "Prop size",
@@ -127,23 +127,27 @@
       "specs": [
         [
           "Stator",
-          "2306.5"
+          "2306"
         ],
         [
           "KV",
           "1950"
         ],
         [
+          "Configuration",
+          null
+        ],
+        [
           "Shaft",
-          "4 mm"
+          null
         ],
         [
           "Mount",
-          "16 × 16 mm, M3"
+          null
         ],
         [
           "Weight",
-          "29.4 g"
+          null
         ],
         [
           "Props",
@@ -151,15 +155,15 @@
         ],
         [
           "Rated cells",
-          "4–6S"
+          null
         ],
         [
           "Max current",
-          "37.4 A"
+          null
         ],
         [
           "Max power",
-          "902 W"
+          null
         ]
       ],
       "pins": [
@@ -173,22 +177,21 @@
         },
         {
           "ref": "③",
-          "part": "Base: 16 × 16 mm M3 mount"
+          "part": "Base: carries the mount"
         }
       ],
       "frameViewer": {
         "src": "/models/od5/drive.glb",
         "kind": "motor"
       },
-      "internalSku": true,
       "aliases": [
         "5\"",
         "5",
         "5in",
-        "5-inch"
+        "5-inch",
+        "2207"
       ],
       "placeholders": [
-        "Stator",
         "KV"
       ]
     }

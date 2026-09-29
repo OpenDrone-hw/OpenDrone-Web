@@ -90,7 +90,7 @@ describe('hero build shopping guide', () => {
         ['OPENFC-LITE-3030', 1],
         ['OPENESC-3030', 1],
         ['OPENFRAME-5', 1],
-        ['OPENMOTOR-2207', 4],
+        ['OPENMOTOR-2306', 4],
         ['OPENRX-MONO', 1],
       ],
     );
@@ -119,7 +119,7 @@ describe('hero build shopping guide', () => {
       {sku: 'OPENFC-LITE-3030', quantity: 1},
       {sku: 'OPENESC-3030', quantity: 1},
       {sku: 'OPENFRAME-5', quantity: 1},
-      {sku: 'OPENMOTOR-2207', quantity: 4},
+      {sku: 'OPENMOTOR-2306', quantity: 4},
       {sku: 'OPENRX-MONO', quantity: 1},
       {sku: 'ACC-PROP-5-HQ-5X43X3-V2S', quantity: 1},
     ]);
@@ -174,7 +174,7 @@ describe('hero build shopping guide', () => {
     assert.equal(heroBuildSelection(build, included, allowed).available, false);
     included.delete('OPENFRAME-5');
     assert.equal(heroBuildSelection(build, included, allowed).available, false);
-    included.delete('OPENMOTOR-2207');
+    included.delete('OPENMOTOR-2306');
     const selection = heroBuildSelection(build, included, allowed);
     assert.equal(selection.available, true);
     assert.equal(selection.complete, false);
