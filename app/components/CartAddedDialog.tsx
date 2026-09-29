@@ -9,7 +9,7 @@ import {
   lineDisplayName,
   variantDisplayName,
 } from '~/lib/product-content';
-import {ShipChip, parcelPromise, shipChipText} from './ShipChip';
+import {ShipChip, parcelPromise, shipChipText, soonerMonth} from './ShipChip';
 import {paysEuVat} from '~/lib/visitor-country';
 import {countryName, notSoldDirect} from '~/lib/shipping-rates';
 import {
@@ -111,6 +111,9 @@ export function CartAddedDialog() {
   const parcel = mixed
     ? shipChipText(parcelPromise(summary.lines.map((l) => l.shipPromise)), true)
     : null;
+  // Dated lines next to a funding-target line: the buyer can order the dated
+  // ones separately to get them sooner (the cart page does the split).
+  const sooner = mixed ? soonerMonth(summary.lines.map((l) => l.shipPromise)) : null;
   const subtotal = summary.subtotal ?? null;
   // Same rule as the buy module and the cart: "incl. VAT" only where EU VAT
   // applies.
@@ -296,9 +299,22 @@ export function CartAddedDialog() {
             <p className="cart-added-parcel">{t('us_price_note', 'Duties included. No sales tax.')}</p>
           ) : null}
           {parcel ? (
-            <p className="cart-added-parcel">
-              {`${t('mixed_one_parcel', 'One parcel')} · ${parcel.text}`}
-            </p>
+            <>
+              <p className="cart-added-parcel">
+                {`${t('mixed_one_parcel', 'One parcel')} · ${parcel.text}`}
+              </p>
+              <p className="cart-added-parcel">
+                {t('mixed_explain', 'It ships when every item is ready, on the latest date.')}
+                {sooner ? (
+                  <>
+                    {' '}
+                    <Link to="/cart" className="cart-added-split">
+                      {t('split_dialog_link', 'Want the {month} items sooner? Order them separately in your cart.', {month: sooner})}
+                    </Link>
+                  </>
+                ) : null}
+              </p>
+            </>
           ) : null}
           {/* Checkout is a plain form post: the cart action checks every line
               again and redirects to Shopify checkout, or back to /cart with

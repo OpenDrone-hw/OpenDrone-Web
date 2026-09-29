@@ -56,6 +56,27 @@ export function parcelPromise(promises: Array<string | null | undefined>): strin
   return latest?.promise ?? null;
 }
 
+/**
+ * The earliest dated month ("Oct 2026") among lines that ship before a
+ * funding-target line waits, or null when the order has no such pair. That
+ * pair is what a buyer can split into two orders to get the dated items
+ * sooner; without a target line (or without a dated one) there is nothing
+ * to split off.
+ */
+export function soonerMonth(promises: Array<string | null | undefined>): string | null {
+  if (!promises.some((p) => shortShipPromise(p)?.kind === 'target')) return null;
+  let best: {month: string; at: number} | null = null;
+  for (const promise of promises) {
+    if (shortShipPromise(promise)?.kind !== 'date') continue;
+    const month = shipMonth(promise);
+    if (!month) continue;
+    const [mon, year] = month.split(' ');
+    const at = Number(year) * 12 + MONTHS.indexOf(mon);
+    if (!best || at < best.at) best = {month, at};
+  }
+  return best?.month ?? null;
+}
+
 /** The ship chip on a cart or drawer line (see {@link shipChipText}). */
 export function ShipChip({
   promise,

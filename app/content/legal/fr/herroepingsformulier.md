@@ -10,7 +10,7 @@
 
 À :
 **Incutec BV**
-Stapelhuisstraat 15, 3000 Louvain, Belgique
+Stapelhuisstraat 15, 3000 Leuven, Belgique
 Courriel : contact@opendrone.be
 
 ---
@@ -57,7 +57,7 @@ ____________________
 ## Adresse de retour
 
 Incutec BV
-Stapelhuisstraat 15, 3000 Louvain, Belgique
+Stapelhuisstraat 15, 3000 Leuven, Belgique
 
 ---
 

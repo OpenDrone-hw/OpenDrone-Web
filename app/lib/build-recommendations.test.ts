@@ -55,18 +55,15 @@ describe('buildSuggestionSpecs', () => {
     assert.equal(specs.find((s) => s.role === 'receiver')?.sku, 'OPENRX-MONO');
   });
 
-  it('still suggests the right-size ESC when the cart holds the other size, and says so', () => {
+  it('never suggests a role the cart already fills, whatever its size', () => {
     const cart = [
       {sku: 'OPENESC-2020', handle: 'openesc', variantTitle: '20×20'},
       {sku: 'OPENRX-LITE', handle: 'openrx', variantTitle: 'Lite'},
-      {sku: 'OPENFC-LITE-3030', handle: 'openfc-lite', variantTitle: '30×30'},
+      {sku: 'OPENFC-LITE-2020', handle: 'openfc-lite', variantTitle: '20×20'},
     ];
     const specs = buildSuggestionSpecs(BUILDS, '5-inch', cart);
-    const esc = specs.find((s) => s.role === 'esc');
-    assert.equal(esc?.sku, 'OPENESC-3030');
-    assert.equal(esc?.replaces, '20×20');
-    // Any receiver fills the receiver role; the FC role is filled at this size.
-    assert.equal(specs.some((s) => s.role === 'receiver' || s.role === 'flight-controller'), false);
+    assert.equal(specs.some((s) => ['esc', 'receiver', 'flight-controller'].includes(s.role)), false);
+    assert.ok(specs.some((s) => s.role === 'frame'));
   });
 
   it('lets Shopify rank compatible parts without adding incompatible ones', () => {

@@ -214,9 +214,10 @@ export function mdToHtml(src: string): string {
             `<tr>${r.map((c) => `<td>${inline(c)}</td>`).join('')}</tr>`,
         )
         .join('');
-      out.push(
-        `<table><thead><tr>${headHtml}</tr></thead><tbody>${bodyHtml}</tbody></table>`,
-      );
+      // A key/value table has no header text (`| | |`): an empty header row
+      // renders as a blank band, so leave it out.
+      const thead = header.some((c) => c !== '') ? `<thead><tr>${headHtml}</tr></thead>` : '';
+      out.push(`<table>${thead}<tbody>${bodyHtml}</tbody></table>`);
       continue;
     }
 

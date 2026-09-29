@@ -11,7 +11,7 @@
 | | |
 |---|---|
 | Nom | Incutec BV |
-| Siège social | Stapelhuisstraat 15, 3000 Louvain |
+| Siège social | Stapelhuisstraat 15, 3000 Leuven |
 | Numéro d’entreprise | 1038.934.039 (BCE, RPM Louvain) |
 | Courriel | contact@opendrone.be |
 

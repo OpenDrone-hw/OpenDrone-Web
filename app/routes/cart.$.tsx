@@ -18,7 +18,7 @@ import {parseBuilds} from '~/lib/build-recommendations';
 import buildsJson from '../../content/builds.json';
 import {lineDisplayName, setSize} from '~/lib/product-content';
 import {Txt} from '~/components/Txt';
-import {ShipChip, parcelPromise, shipChipText} from '~/components/ShipChip';
+import {ShipChip, parcelPromise, shipChipText, soonerMonth} from '~/components/ShipChip';
 import {buildSeoMeta} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
 import {countryName, shippingQuote} from '~/lib/shipping-rates';
@@ -422,6 +422,8 @@ function MixedNote({
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const plan = splitPlan(cart, info);
+  // The month of the lines the buyer would get sooner by splitting.
+  const sooner = plan ? soonerMonth(cart.lines.map((l) => l.shipPromise)) : null;
   // The date the parcel ships: that of the line it waits for.
   const parcel = shipChipText(
     parcelPromise(cart.lines.map((l) => l.shipPromise)),
@@ -464,24 +466,28 @@ function MixedNote({
       <div className="cart-summary-note cart-mixed-line">
         {t('mixed_one_parcel', 'One parcel')}
         {parcel ? ` · ${parcel.text}` : null}
-        {plan ? (
-          <>
-            {' · '}
-            <Form
-              method="post"
-              action="/api/shopify/cart"
-              onSubmit={(event) => void split(event)}
-              className="cart-split-form"
-            >
-              <input type="hidden" name="intent" value="remove" />
-              {plan.later.map((id) => <input key={id} type="hidden" name="lineId" value={id} />)}
-              <button type="submit" className="cart-split-link" disabled={busy}>
-                {busy ? t('split_busy', 'Removing…') : t('split_link', 'Split order')}
-              </button>
-            </Form>
-          </>
-        ) : null}
       </div>
+      <p className="cart-summary-note cart-mixed-explain">
+        {t('mixed_explain', 'It ships when every item is ready, on the latest date.')}
+      </p>
+      {plan ? (
+        <Form
+          method="post"
+          action="/api/shopify/cart"
+          onSubmit={(event) => void split(event)}
+          className="cart-split-form"
+        >
+          <input type="hidden" name="intent" value="remove" />
+          {plan.later.map((id) => <input key={id} type="hidden" name="lineId" value={id} />)}
+          <button type="submit" className="cart-split-link" disabled={busy}>
+            {busy
+              ? t('split_busy', 'Removing…')
+              : sooner
+                ? t('split_link', 'Want the {month} items sooner? Order them separately.', {month: sooner})
+                : t('split_link_plain', 'Want the earlier items sooner? Order them separately.')}
+          </button>
+        </Form>
+      ) : null}
       {failed ? (
         <small className="cart-line-error" role="alert">
           {copyText('cart.line_update_failed') ?? 'Could not update. Try again.'}

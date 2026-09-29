@@ -69,4 +69,4 @@ Questions sur notre politique de cookies : privacy@opendrone.be
 
 ---
 
-*Incutec BV : Stapelhuisstraat 15, 3000 Louvain*
+*Incutec BV : Stapelhuisstraat 15, 3000 Leuven*

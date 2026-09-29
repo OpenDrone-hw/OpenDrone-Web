@@ -607,6 +607,7 @@ function DesktopHome({heroBuilds}: {heroBuilds: Promise<HeroBuild[]>}) {
               each piece gets its line: pending is dim, arriving pulses, landed
               ticks off. Part of the splash and leaves with it; on a slow
               network it stays up and names exactly what is still coming. */}
+          <div className="hero-load-stack">
           {!splashSettled && loadPieces.length ? (
             <ul className="hero-load-manifest" role="status" aria-live="polite">
               {loadPieces.map((p) => {
@@ -662,6 +663,7 @@ function DesktopHome({heroBuilds}: {heroBuilds: Promise<HeroBuild[]>}) {
               </Link>
             </div>
           ) : null}
+          </div>
 
           {/* GitHub logo - bare mark (no circle), sitting to the right of the
               settled wordmark in the bottom-left corner, centred on the
