@@ -7037,6 +7037,162 @@ html.light .in-the-box-figure {
   width: 100%;
   height: auto;
 }
+
+/* Numbered rows (when the render carries boxes): the whole row is the hit
+   target, a mono number leads, qty and item keep their columns. Hover, focus
+   and a pinned tap use the teardown pin treatment: gold tint, accent bar. */
+.in-the-box[data-numbered] li {
+  display: block;
+  padding: 0;
+}
+.in-the-box-row-hit {
+  display: grid;
+  grid-template-columns: 1.4rem 3rem 1fr;
+  column-gap: 0.9rem;
+  align-items: center;
+  position: relative;
+  padding: 0.75rem 0.1rem 0.75rem 0.5rem;
+  cursor: pointer;
+  border-radius: var(--r-sm);
+  transition: background 0.12s ease, opacity 0.18s ease;
+}
+.in-the-box[data-numbered] .in-the-box-qty {
+  grid-column: 2;
+  grid-row: 1;
+}
+.in-the-box[data-numbered] .in-the-box-item {
+  grid-column: 3;
+  grid-row: 1;
+}
+.in-the-box-num {
+  grid-column: 1;
+  grid-row: 1;
+  display: inline-grid;
+  place-items: center;
+  width: 1.3rem;
+  height: 1.3rem;
+  border-radius: var(--r-pill);
+  border: 1px solid color-mix(in srgb, var(--color-gold) 45%, transparent);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-gold-text);
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.in-the-box-row-hit::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-gold-fill);
+  transform: scaleY(0);
+  transition: transform 0.14s ease;
+}
+.in-the-box-row.is-active .in-the-box-row-hit {
+  background: color-mix(in srgb, var(--color-gold) 13%, transparent);
+}
+.in-the-box-row.is-active .in-the-box-row-hit::before {
+  transform: scaleY(1);
+}
+.in-the-box-row.is-active .in-the-box-item {
+  color: var(--color-gold-text);
+}
+.in-the-box-row.is-active .in-the-box-num {
+  background: var(--color-gold-fill);
+  color: var(--color-bg);
+}
+.in-the-box-row.is-dimmed .in-the-box-row-hit {
+  opacity: 0.55;
+}
+.in-the-box-row-hit:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: -2px;
+}
+
+/* Boxes over the render, in percent of the image so they scale with it.
+   At rest: faint corner brackets and a number chip. The active row's boxes
+   take the teardown spotlight: gold outline and glow, the region brightened
+   while the rest of the render dims, the other boxes fade back. */
+.in-the-box-stage {
+  position: relative;
+}
+.in-the-box-marks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.in-the-box-mark {
+  --mark-c: color-mix(in srgb, var(--color-text) 38%, transparent);
+  position: absolute;
+  pointer-events: auto;
+  cursor: pointer;
+  border-radius: var(--r-sm);
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--mark-c), var(--mark-c)) top left / 10px 1px no-repeat,
+    linear-gradient(var(--mark-c), var(--mark-c)) top left / 1px 10px no-repeat,
+    linear-gradient(var(--mark-c), var(--mark-c)) top right / 10px 1px no-repeat,
+    linear-gradient(var(--mark-c), var(--mark-c)) top right / 1px 10px no-repeat,
+    linear-gradient(var(--mark-c), var(--mark-c)) bottom left / 10px 1px no-repeat,
+    linear-gradient(var(--mark-c), var(--mark-c)) bottom left / 1px 10px no-repeat,
+    linear-gradient(var(--mark-c), var(--mark-c)) bottom right / 10px 1px no-repeat,
+    linear-gradient(var(--mark-c), var(--mark-c)) bottom right / 1px 10px no-repeat;
+  transition: opacity 0.18s ease, border-color 0.14s ease, box-shadow 0.18s ease;
+}
+.in-the-box-mark-num {
+  position: absolute;
+  left: -0.55rem;
+  top: -0.55rem;
+  display: grid;
+  place-items: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: var(--r-pill);
+  background: var(--color-bg-card);
+  border: 1px solid color-mix(in srgb, var(--color-gold) 45%, transparent);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1;
+  color: var(--color-gold-text);
+  opacity: 0.85;
+  transition: background 0.12s ease, color 0.12s ease, opacity 0.18s ease;
+}
+.in-the-box-image {
+  transition: filter 0.2s ease;
+}
+.in-the-box-figure.has-active .in-the-box-image {
+  filter: brightness(0.62);
+}
+.in-the-box-figure.has-active .in-the-box-mark {
+  opacity: 0.3;
+}
+.in-the-box-figure.has-active .in-the-box-mark.is-active {
+  --mark-c: var(--color-gold);
+  opacity: 1;
+  z-index: 1;
+  border-color: color-mix(in srgb, var(--color-gold) 80%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-gold) 25%, transparent),
+    0 0 22px color-mix(in srgb, var(--color-gold) 38%, transparent);
+  backdrop-filter: brightness(1.6);
+  -webkit-backdrop-filter: brightness(1.6);
+}
+.in-the-box-mark.is-active .in-the-box-mark-num {
+  background: var(--color-gold-fill);
+  color: var(--color-bg);
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .in-the-box-row-hit,
+  .in-the-box-row-hit::before,
+  .in-the-box-num,
+  .in-the-box-mark,
+  .in-the-box-mark-num,
+  .in-the-box-image {
+    transition: none;
+  }
+}
 @media (min-width: 880px) {
   .in-the-box-layout {
     grid-template-columns: fit-content(34rem) minmax(0, 1fr);

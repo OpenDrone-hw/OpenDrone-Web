@@ -73,12 +73,6 @@ export function footprintUv(geo, flipV = false) {
   return geo;
 }
 
-function canvasTexture(canvas) {
-  const t = new THREE.CanvasTexture(canvas);
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = 8;
-  return t;
-}
 
 // ---- Artwork ---------------------------------------------------------------
 
@@ -116,44 +110,125 @@ function sheetCanvas(wMm, hMm) {
   return c;
 }
 
+// A material the Blender stage rebuilds from its finish name; `tex` names
+// textures registered with ctx.tex (colour, height, roughness and masks).
+function tagged(finish, tex = {}, extra = {}) {
+  const m = new THREE.MeshStandardMaterial({color: '#808080'});
+  m.userData = {finish, tex, ...extra};
+  return m;
+}
+
+// Top-down silhouette of CAD parts (the assembled frame) as a line drawing:
+// fill every triangle, then keep only a thin rim (fill minus its erosion).
+function silhouette(objects, size, color, lineW) {
+  const pts = [];
+  const v = new THREE.Vector3();
+  const tris = [];
+  for (const o of objects) {
+    o.updateMatrixWorld(true);
+    o.traverse((m) => {
+      if (!m.isMesh) return;
+      const pos = m.geometry.attributes.position;
+      const idx = m.geometry.index;
+      const at = (i) => v.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld).clone();
+      const n = idx ? idx.count : pos.count;
+      for (let i = 0; i < n; i += 3) {
+        const t = [0, 1, 2].map((k) => at(idx ? idx.getX(i + k) : i + k));
+        tris.push(t);
+        pts.push(...t);
+      }
+    });
+  }
+  const b = new THREE.Box3().setFromPoints(pts);
+  const s = size / Math.max(b.max.x - b.min.x, b.max.y - b.min.y);
+  const c = document.createElement('canvas');
+  c.width = Math.ceil((b.max.x - b.min.x) * s) + 8;
+  c.height = Math.ceil((b.max.y - b.min.y) * s) + 8;
+  const g = c.getContext('2d');
+  g.fillStyle = '#fff';
+  for (const t of tris) {
+    g.beginPath();
+    t.forEach((p, i) => {
+      const x = (p.x - b.min.x) * s + 4;
+      const y = (b.max.y - p.y) * s + 4;
+      if (i) g.lineTo(x, y);
+      else g.moveTo(x, y);
+    });
+    g.closePath();
+    g.fill();
+  }
+  const er = document.createElement('canvas');
+  er.width = c.width;
+  er.height = c.height;
+  const e = er.getContext('2d');
+  e.drawImage(c, 0, 0);
+  e.globalCompositeOperation = 'destination-in';
+  for (let a = 0; a < 16; a++) {
+    e.drawImage(c, Math.cos((a * Math.PI) / 8) * lineW, Math.sin((a * Math.PI) / 8) * lineW);
+  }
+  g.globalCompositeOperation = 'destination-out';
+  g.drawImage(er, 0, 0);
+  g.globalCompositeOperation = 'source-in';
+  g.fillStyle = color;
+  g.fillRect(0, 0, c.width, c.height);
+  return c;
+}
+
 // ---- Builders --------------------------------------------------------------
 
-// Printed card: `w` x `h` mm, 0.4 mm board, 3 mm corners. Dark card, gold
-// OpenDrone wordmark, one small caption line.
+// Printed card, `w` x `h` mm on 0.35 mm board, 3 mm corners: matte black
+// stock, gold-foil wordmark, a white line drawing of the frame from its CAD
+// silhouette (when `illustration` names the parts) and one caption line.
 async function card(p, ctx) {
   const w = p.w ?? 85;
   const h = p.h ?? 55;
   const c = sheetCanvas(w, h);
   const g = c.getContext('2d');
-  g.fillStyle = '#1a1a1e';
+  g.fillStyle = '#17171a';
   g.fillRect(0, 0, c.width, c.height);
-  const markW = c.width * 0.62;
-  await drawArt(g, ctx.assets.opendrone, (c.width - markW) / 2, c.height * 0.3, markW, c.height * 0.22, '#ffb700');
+  const foil = sheetCanvas(w, h);
+  const f = foil.getContext('2d');
+  f.fillStyle = '#000';
+  f.fillRect(0, 0, foil.width, foil.height);
+  const markW = c.width * 0.56;
+  const markY = p.illustration ? c.height * 0.1 : c.height * 0.3;
+  await drawArt(g, ctx.assets.opendrone, (c.width - markW) / 2, markY, markW, c.height * 0.12, '#ffb700');
+  await drawArt(f, ctx.assets.opendrone, (c.width - markW) / 2, markY, markW, c.height * 0.12, '#fff');
+  if (p.illustration) {
+    const re = new RegExp(p.illustration, 'i');
+    const objs = ctx.parts.filter((pt) => re.test(pt.name)).flatMap((pt) => pt.objects);
+    const art = silhouette(objs, c.width * 0.7, 'rgba(236,236,232,0.85)', 1.6 * (PX_PER_MM / 16) * 2);
+    const sc = Math.min((c.width * 0.72) / art.width, (c.height * 0.56) / art.height);
+    g.drawImage(art, (c.width - art.width * sc) / 2, c.height * 0.27, art.width * sc, art.height * sc);
+  }
   if (p.caption) {
     g.fillStyle = 'rgba(229,229,229,0.72)';
-    g.font = `500 ${Math.round(Math.min(c.height * 0.055, c.width * 0.05))}px Helvetica, Arial, sans-serif`;
+    g.font = `500 ${Math.round(Math.min(c.height * 0.034, c.width * 0.045))}px Helvetica, Arial, sans-serif`;
     g.textAlign = 'center';
-    g.fillText(p.caption, c.width / 2, c.height * 0.7);
+    g.fillText(p.caption, c.width / 2, p.illustration ? c.height * 0.9 : c.height * 0.7);
   }
-  const geo = footprintUv(new THREE.ExtrudeGeometry(roundedRect(w, h, 3), {depth: 0.4, bevelEnabled: false})
-    .rotateX(Math.PI / 2).translate(0, 0.4, 0));
-  const mat = new THREE.MeshStandardMaterial({map: canvasTexture(c), roughness: 0.62, metalness: 0});
-  return wrap(mesh(geo, mat));
+  const geo = footprintUv(new THREE.ExtrudeGeometry(roundedRect(w, h, 3), {depth: 0.35, bevelEnabled: false})
+    .rotateX(Math.PI / 2).translate(0, 0.35, 0));
+  return wrap(mesh(geo, tagged('paper', {color: ctx.tex('card', c), foil: ctx.tex('card-foil', foil)})));
 }
 
-// Die-cut vinyl sticker: gold wordmark on a black rounded rectangle.
+// Die-cut vinyl sticker: gold wordmark on black with a thin white border.
 async function sticker(p, ctx) {
-  const w = p.w ?? 80;
-  const h = p.h ?? 22;
+  const w = (p.w ?? 80) + 3;
+  const h = (p.h ?? 22) + 3;
   const c = sheetCanvas(w, h);
   const g = c.getContext('2d');
-  g.fillStyle = '#121214';
+  g.fillStyle = '#f2f2ef';
   g.fillRect(0, 0, c.width, c.height);
-  await drawArt(g, ctx.assets.opendrone, c.width * 0.08, c.height * 0.2, c.width * 0.84, c.height * 0.6, '#ffb700');
-  const geo = footprintUv(new THREE.ExtrudeGeometry(roundedRect(w, h, h * 0.22), {depth: 0.25, bevelEnabled: false})
-    .rotateX(Math.PI / 2).translate(0, 0.25, 0));
-  const mat = new THREE.MeshPhysicalMaterial({map: canvasTexture(c), roughness: 0.3, clearcoat: 0.6, clearcoatRoughness: 0.2});
-  return wrap(mesh(geo, mat));
+  const in1 = 1.5 * PX_PER_MM;
+  g.fillStyle = '#111113';
+  g.beginPath();
+  g.roundRect(in1, in1, c.width - 2 * in1, c.height - 2 * in1, (h - 3) * 0.22 * PX_PER_MM);
+  g.fill();
+  await drawArt(g, ctx.assets.opendrone, c.width * 0.1, c.height * 0.22, c.width * 0.8, c.height * 0.56, '#ffb700');
+  const geo = footprintUv(new THREE.ExtrudeGeometry(roundedRect(w, h, h * 0.25), {depth: 0.2, bevelEnabled: false})
+    .rotateX(Math.PI / 2).translate(0, 0.2, 0));
+  return wrap(mesh(geo, tagged('vinyl', {color: ctx.tex('sticker', c)})));
 }
 
 // Static-shielding bag: metallised film, faintly pink, zip strip, printed
@@ -163,84 +238,195 @@ async function esdBag(p, ctx) {
   const h = p.h ?? 100;
   const c = sheetCanvas(w, h);
   const g = c.getContext('2d');
-  const grad = g.createLinearGradient(0, 0, c.width, c.height);
-  grad.addColorStop(0, '#c9bcc2');
-  grad.addColorStop(0.5, '#ddd2d6');
-  grad.addColorStop(1, '#bfb3b9');
-  g.fillStyle = grad;
+  g.fillStyle = '#cfc3c8';
   g.fillRect(0, 0, c.width, c.height);
-  // Heat seal border and zip strip.
   g.strokeStyle = 'rgba(120,108,114,0.55)';
   g.lineWidth = 2.2 * PX_PER_MM;
   g.strokeRect(0, 0, c.width, c.height);
   g.fillStyle = 'rgba(120,108,114,0.45)';
   g.fillRect(0, 9 * PX_PER_MM, c.width, 0.7 * PX_PER_MM);
   g.fillRect(0, 11 * PX_PER_MM, c.width, 0.7 * PX_PER_MM);
-  // ESD caution triangle.
   const s = Math.min(w, h) * 0.11 * PX_PER_MM;
   const cy = c.height * 0.8;
-  const cxT = c.width * 0.18;
+  const cx = c.width * 0.18;
   g.beginPath();
-  g.moveTo(cxT, cy - s * 0.55);
-  g.lineTo(cxT + s * 0.6, cy + s * 0.5);
-  g.lineTo(cxT - s * 0.6, cy + s * 0.5);
+  g.moveTo(cx, cy - s * 0.55);
+  g.lineTo(cx + s * 0.6, cy + s * 0.5);
+  g.lineTo(cx - s * 0.6, cy + s * 0.5);
   g.closePath();
   g.fillStyle = '#e8b400';
   g.fill();
   g.lineWidth = s * 0.07;
   g.strokeStyle = '#1a1a1e';
   g.stroke();
-  g.beginPath();
-  g.moveTo(cxT - s * 0.18, cy + s * 0.3);
-  g.lineTo(cxT + s * 0.06, cy - s * 0.18);
-  g.lineTo(cxT + s * 0.18, cy + s * 0.3);
-  g.stroke();
   await drawArt(g, ctx.assets.opendrone, c.width * 0.34, c.height * 0.775, c.width * 0.5, c.height * 0.05, '#85787f');
   const geo = footprintUv(new THREE.ExtrudeGeometry(roundedRect(w, h, 1), {depth: 0.25, bevelEnabled: false})
     .rotateX(Math.PI / 2).translate(0, 0.25, 0));
-  const mat = new THREE.MeshPhysicalMaterial({
-    map: canvasTexture(c),
-    metalness: 0.55,
-    roughness: 0.38,
-    transparent: true,
-    opacity: 0.86,
-    clearcoat: 0.4,
-  });
-  return wrap(mesh(geo, mat));
+  return wrap(mesh(geo, tagged('bag', {color: ctx.tex(`bag-${w}x${h}`, c)})));
 }
 
-// Hook-and-loop battery strap with a black anodised cam buckle. Webbing
-// `w` x `len` mm, 1.5 mm thick; buckle (w + 5) x 13 x 2.6 mm.
-function strap(p, ctx) {
+// Battery strap: woven nylon webbing `w` x `len` mm, 1.4 mm thick, with a
+// woven gold OpenDrone repeat on the outer face, a zigzag silicone grip
+// bead on the inner face, box-X stitching at the buckle end, a sealed tip
+// and a black anodised cam buckle ((w + 6) x 14 x 2.2 mm). `side` picks
+// the face that lies up; the free end curls up off the table.
+let strapN = 0;
+async function strap(p, ctx) {
   const w = p.w ?? 20;
   const len = p.len ?? 220;
-  const c = document.createElement('canvas');
-  c.width = 64;
-  c.height = 64;
-  const g = c.getContext('2d');
-  g.fillStyle = '#18191c';
-  g.fillRect(0, 0, 64, 64);
-  for (let i = 0; i < 64; i += 4) {
-    g.fillStyle = i % 8 ? '#202226' : '#141518';
-    g.fillRect(0, i, 64, 2);
+  const t = 1.4;
+  const inner = (p.side ?? (strapN % 2 ? 'inner' : 'outer')) === 'inner';
+  const id = `strap-${w}x${len}-${strapN++}`;
+  const PX = 10;
+  const cw = Math.round(w * PX);
+  const ch = Math.round(len * PX);
+  const mk = () => {
+    const c = document.createElement('canvas');
+    c.width = cw;
+    c.height = ch;
+    return c;
+  };
+  const col = mk();
+  const hgt = mk();
+  const rgh = mk();
+  const g = col.getContext('2d');
+  const hh = hgt.getContext('2d');
+  const r = rgh.getContext('2d');
+  g.fillStyle = '#131417';
+  g.fillRect(0, 0, cw, ch);
+  hh.fillStyle = '#808080';
+  hh.fillRect(0, 0, cw, ch);
+  r.fillStyle = '#c8c8c8';
+  r.fillRect(0, 0, cw, ch);
+  // Fine twill weave: 0.5 mm ribs on a diagonal, in height and a touch in tone.
+  for (let y = 0; y < ch; y += 2) {
+    for (let x = 0; x < cw; x += 2) {
+      const on = ((x + y) >> 1) % 3 === 0;
+      hh.fillStyle = on ? '#9a9a9a' : '#707070';
+      hh.fillRect(x, y, 2, 2);
+      if (on) {
+        g.fillStyle = 'rgba(255,255,255,0.035)';
+        g.fillRect(x, y, 2, 2);
+      }
+    }
   }
-  const tex = canvasTexture(c);
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  const webGeo = new THREE.ExtrudeGeometry(roundedRect(w, len, w * 0.45), {depth: 1.5, bevelEnabled: false})
-    .rotateX(Math.PI / 2).translate(0, 1.5, 0);
-  footprintUv(webGeo);
-  tex.repeat.set(1, len / 1.2 / 16);
-  const web = mesh(webGeo, new THREE.MeshStandardMaterial({map: tex, roughness: 0.85}));
-  // Silicone grip line down the middle of the non-hook half.
-  const grip = mesh(new THREE.BoxGeometry(w * 0.35, 0.5, len * 0.42), new THREE.MeshStandardMaterial({color: '#2c2e33', roughness: 0.45}));
-  grip.position.set(0, 1.75, len * 0.18);
-  const outer = roundedRect(w + 5, 13, 2.5);
-  const slot = roundedRect(w + 0.8, 3.4, 1.2);
-  const hole = new THREE.Path(slot.getPoints().map((pt) => new THREE.Vector2(pt.x, pt.y - 2.2)));
-  outer.holes.push(hole);
-  const buckle = plate(outer, 2.6, ctx.material('alu', '#1b1c1f', {roughness: 0.5}));
-  buckle.position.set(0, 0.8, -len / 2 + 3);
-  return wrap(web, grip, buckle);
+  // Selvedge ribs along both edges.
+  for (const x of [0, cw - 6]) {
+    hh.fillStyle = '#b0b0b0';
+    hh.fillRect(x, 0, 6, ch);
+  }
+  if (!inner) {
+    // Woven wordmark repeat, running along the strap.
+    const step = 55 * PX;
+    for (let y = 30 * PX; y < ch - 30 * PX; y += step) {
+      for (const [ctx2, colr] of [[g, 'rgba(236,172,0,0.92)'], [hh, '#a8a8a8']]) {
+        ctx2.save();
+        ctx2.translate(cw / 2, y);
+        ctx2.rotate(-Math.PI / 2);
+        await drawArt(ctx2, ctx.assets.opendrone, -22 * PX, -w * 0.28 * PX, 44 * PX, w * 0.56 * PX, colr);
+        ctx2.restore();
+      }
+    }
+  } else {
+    // Zigzag silicone grip bead down the middle, glossier and raised.
+    const gw = w * 0.5 * PX;
+    const x0 = (cw - gw) / 2;
+    for (const [ctx2, style] of [[g, '#2a2c30'], [hh, '#e0e0e0'], [r, '#4a4a4a']]) {
+      ctx2.strokeStyle = style;
+      ctx2.lineWidth = 1.1 * PX;
+      ctx2.lineJoin = 'round';
+      ctx2.beginPath();
+      for (let y = 26 * PX, i = 0; y < ch - 24 * PX; y += 3 * PX, i++) {
+        const x = i % 2 ? x0 + gw : x0;
+        if (i) ctx2.lineTo(x, y);
+        else ctx2.moveTo(x, y);
+      }
+      ctx2.stroke();
+    }
+  }
+  // Box-X stitching at the buckle end, a stitched line near the tip.
+  const stitch = (x1, y1, x2, y2) => {
+    const n = Math.hypot(x2 - x1, y2 - y1) / (1.6 * PX);
+    for (let i = 0; i < n; i++) {
+      const a = i / n;
+      const b = (i + 0.6) / n;
+      for (const [ctx2, style] of [[g, '#4a4c52'], [hh, '#c0c0c0']]) {
+        ctx2.strokeStyle = style;
+        ctx2.lineWidth = 0.45 * PX;
+        ctx2.beginPath();
+        ctx2.moveTo(x1 + (x2 - x1) * a, y1 + (y2 - y1) * a);
+        ctx2.lineTo(x1 + (x2 - x1) * b, y1 + (y2 - y1) * b);
+        ctx2.stroke();
+      }
+    }
+  };
+  const bx0 = 2 * PX;
+  const bx1 = cw - 2 * PX;
+  const by0 = 9 * PX;
+  const by1 = 22 * PX;
+  stitch(bx0, by0, bx1, by0);
+  stitch(bx1, by0, bx1, by1);
+  stitch(bx1, by1, bx0, by1);
+  stitch(bx0, by1, bx0, by0);
+  stitch(bx0, by0, bx1, by1);
+  stitch(bx1, by0, bx0, by1);
+  stitch(bx0, ch - 8 * PX, bx1, ch - 8 * PX);
+  // Webbing geometry: a ribbon along Z with a rounded, sealed tip; the last
+  // 30 mm lift off the table in a gentle curl.
+  const N = 220;
+  const pos = [];
+  const uv = [];
+  const idx = [];
+  const lift = (z) => {
+    const k = Math.max(0, (z - (len - 32)) / 32);
+    return 5 * k * k;
+  };
+  const halfW = (z) => {
+    const tip = len - z;
+    return tip < w / 2 ? Math.sqrt(Math.max(0, (w / 2) ** 2 - (w / 2 - tip) ** 2)) : w / 2;
+  };
+  for (let i = 0; i <= N; i++) {
+    const z = (len * i) / N;
+    const hw = Math.max(0.3, halfW(z));
+    const y = lift(z);
+    for (const [yy, face] of [[y + t, 0], [y, 1]]) {
+      for (const sx of [-1, 1]) {
+        pos.push(sx * hw, yy, z - len / 2);
+        uv.push((sx * hw) / w + 0.5, 1 - z / len);
+      }
+    }
+  }
+  const row = 4;
+  for (let i = 0; i < N; i++) {
+    const a = i * row;
+    const b = (i + 1) * row;
+    idx.push(a, b, a + 1, a + 1, b, b + 1); // top
+    idx.push(a + 2, a + 3, b + 2, a + 3, b + 3, b + 2); // bottom
+    idx.push(a, a + 2, b, a + 2, b + 2, b); // side -x
+    idx.push(a + 1, b + 1, a + 3, a + 3, b + 1, b + 3); // side +x
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geo.setIndex(idx);
+  // Top face gets this side's weave; the other faces the plain weave.
+  geo.addGroup(0, N * 6, 0);
+  geo.addGroup(N * 6, N * 18, 1);
+  geo.computeVertexNormals();
+  const texs = {color: ctx.tex(`${id}-c`, col), height: ctx.tex(`${id}-h`, hgt), rough: ctx.tex(`${id}-r`, rgh)};
+  const web = mesh(geo, [tagged('webbing', texs), tagged('webbing', {height: texs.height})]);
+  if (inner) web.rotation.z = 0;
+  // Cam buckle over the stitched end.
+  const outer = roundedRect(w + 6, 14, 3);
+  const slot = roundedRect(w + 1, 3.6, 1.4);
+  outer.holes.push(new THREE.Path(slot.getPoints().map((pt) => new THREE.Vector2(pt.x, pt.y - 2.4))));
+  const bucGeo = new THREE.ExtrudeGeometry(outer, {depth: 2.2, bevelEnabled: true, bevelThickness: 0.35,
+    bevelSize: 0.35, bevelSegments: 3, curveSegments: 24});
+  bucGeo.rotateX(Math.PI / 2);
+  bucGeo.translate(0, 2.2 + 0.35, 0);
+  const buckle = mesh(bucGeo, tagged('alu-brushed', {}, {color: '#16171a'}));
+  buckle.position.set(0, t, -len / 2 + 7);
+  return wrap(web, buckle);
 }
 
 // M3 aluminium cup washer: 9 mm OD, 2.5 mm tall, 3.2 mm bore, conical cup.
@@ -412,11 +598,8 @@ function capacitor(p, ctx) {
   g.textAlign = 'center';
   g.fillText(p.label ?? '470µF 35V', 0, 14);
   g.restore();
-  const tex = canvasTexture(c);
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.offset.x = p.labelTurn ?? 0.25;
   const sleeve = mesh(new THREE.CylinderGeometry(d / 2, d / 2, l, 48, 1, true),
-    new THREE.MeshPhysicalMaterial({map: tex, roughness: 0.32, clearcoat: 0.5}));
+    tagged('sleeve', {color: ctx.tex(`cap-${p.label}`, c)}, {offset: p.labelTurn ?? 0.25}));
   const cap = mesh(new THREE.CircleGeometry(d / 2 - 0.4, 40), ctx.material('zinc', '#b8bcc2'));
   cap.rotation.x = -Math.PI / 2;
   cap.position.y = l / 2;
@@ -472,10 +655,8 @@ function jstCable(p, ctx) {
 function heatShrink(p) {
   const len = p.len ?? 20;
   const w = p.w ?? 13;
-  const film = new THREE.MeshPhysicalMaterial({color: '#eef2f6', roughness: 0.15, clearcoat: 1, transparent: true,
-    opacity: 0.13, metalness: 0, depthWrite: false});
-  const fold = new THREE.MeshPhysicalMaterial({color: '#f4f7fa', roughness: 0.2, clearcoat: 1, transparent: true,
-    opacity: 0.75, metalness: 0});
+  const film = tagged('clear');
+  const fold = tagged('clear-edge');
   const parts = [];
   for (const y of [0.1, 0.45]) {
     const m = mesh(new THREE.BoxGeometry(w - 0.8, 0.1, len), film);
@@ -538,24 +719,18 @@ function tDipole(p, ctx) {
 }
 
 // A board as a flat card at true size, textured with its rendered board
-// art (the front face export of scripts/export-board-art.mjs).
-async function boardCard(p) {
-  const tex = await new THREE.TextureLoader().loadAsync(p.src);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 8;
+// art (the front face export of scripts/export-board-art.mjs); the face
+// PNG's alpha cuts the outline, stacked layers give the PCB edge.
+async function boardCard(p, ctx) {
   const geo = new THREE.PlaneGeometry(p.imageW, p.imageH);
   geo.rotateX(-Math.PI / 2);
-  const mat = new THREE.MeshStandardMaterial({map: tex, alphaTest: 0.5, roughness: 0.55, metalness: 0.05,
-    side: THREE.DoubleSide});
+  const tex = {color: ctx.tex(`board-${p.board}`, {url: p.src})};
   const layers = [];
-  const top = mesh(geo, mat);
+  const top = mesh(geo, tagged('image', tex));
   top.position.y = p.thick ?? 1.0;
   layers.push(top);
-  // The PCB edge: the same outline stacked below the face, in solder mask.
-  const edge = new THREE.MeshStandardMaterial({map: tex, alphaTest: 0.5, color: '#2a2f2c', roughness: 0.6,
-    side: THREE.DoubleSide});
   for (let i = 0; i < 4; i++) {
-    const m = mesh(geo, edge);
+    const m = mesh(geo, tagged('image-edge', tex));
     m.position.y = ((p.thick ?? 1.0) * i) / 4;
     layers.push(m);
   }

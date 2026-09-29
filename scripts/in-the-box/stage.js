@@ -1,11 +1,14 @@
-// Headless three.js stage for the "in the box" flat-lay renders. Loaded by
+// Layout stage for the "in the box" flat-lay renders. Loaded by
 // scripts/in-the-box/render.mjs in Playwright Chromium; exposes
-// window.inTheBox.{probe, render}. Units inside the stage are the GLB's
+// window.inTheBox.{probe, layout}. It lays the parts out with three.js and
+// exports the composition as a GLB whose mesh extras name each surface's
+// finish and textures; scripts/in-the-box/blender_render.py lights and
+// renders it in Cycles. Units inside the stage are the GLB's
 // (metres); every GLB part keeps its real size, so relative scale is true.
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
-import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
+import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
 import {buildProcedural, drawArt} from './procedural.js';
 
 const cleanName = (n) =>
@@ -239,6 +242,7 @@ export function finishMaterial(finish, src, override, extra = {}) {
       m = new THREE.MeshStandardMaterial({color: base, roughness: 0.5, metalness: 0.1});
   }
   Object.assign(m, extra);
+  m.userData = {finish, color: `#${m.color.getHexString()}`};
   return m;
 }
 
@@ -253,55 +257,41 @@ function applyFinish(obj, finish, override, extra) {
   });
 }
 
-// Carbon 2x2 twill, ~2 mm tows. Warp and weft differ mainly in gloss (the
-// way real twill catches light), a little in tone; each tow is shaded
-// across its width. Projected top-down onto the flattened part.
-let weave = null;
-function weaveTextures() {
-  if (weave) return weave;
+// Textures handed to Blender by name: canvases (or a public URL) drawn
+// here, written to PNG files by render.mjs.
+let TEX = new Map();
+function tex(id, src) {
+  TEX.set(id, src);
+  return id;
+}
+
+// Carbon 2x2 twill, 3K tows ~1.8 mm wide, as one data image: R is the tow
+// crown (height), G the warp mask (the anisotropy turns 90 degrees between
+// warp and weft), B the hairline gap between tows.
+function twill() {
+  if (TEX.has('twill')) return 'twill';
   const n = 8;
-  const px = 24;
-  const col = document.createElement('canvas');
-  col.width = col.height = n * px;
-  const rough = document.createElement('canvas');
-  rough.width = rough.height = n * px;
-  const c = col.getContext('2d');
-  const r = rough.getContext('2d');
+  const px = 32;
+  const c = document.createElement('canvas');
+  c.width = c.height = n * px;
+  const g = c.getContext('2d');
   for (let i = 0; i < n; i++) {
     for (let j = 0; j < n; j++) {
       // Warp tow i is on top at weft row j for two rows, then under for two,
       // stepping one tow per row: the diagonal of a 2x2 twill.
       const warp = (((j - i) % 4) + 4) % 4 < 2;
       for (let k = 0; k < px; k++) {
-        const t = Math.sin((Math.PI * (k + 0.5)) / px);
-        const l = Math.round((warp ? 30 : 26) + 4 * t);
-        const ro = Math.round((warp ? 80 : 125) - 25 * t);
-        c.fillStyle = `rgb(${l},${l + 1},${l + 3})`;
-        r.fillStyle = `rgb(${ro},${ro},${ro})`;
-        if (warp) {
-          c.fillRect(i * px + k, j * px, 1, px);
-          r.fillRect(i * px + k, j * px, 1, px);
-        } else {
-          c.fillRect(i * px, j * px + k, px, 1);
-          r.fillRect(i * px, j * px + k, px, 1);
-        }
+        const crown = Math.round(255 * Math.sin((Math.PI * (k + 0.5)) / px));
+        const gapB = k < 1 || k >= px - 1 ? 255 : 0;
+        g.fillStyle = `rgb(${crown},${warp ? 255 : 0},${gapB})`;
+        if (warp) g.fillRect(i * px + k, j * px, 1, px);
+        else g.fillRect(i * px, j * px + k, px, 1);
       }
-      // Hairline gap between tows.
-      c.fillStyle = 'rgba(8,8,10,0.55)';
-      c.fillRect(i * px, j * px, 1, px);
-      c.fillRect(i * px, j * px, px, 1);
     }
   }
-  const mk = (cv, srgb) => {
-    const t = new THREE.CanvasTexture(cv);
-    t.wrapS = t.wrapT = THREE.RepeatWrapping;
-    t.anisotropy = 16;
-    if (srgb) t.colorSpace = THREE.SRGBColorSpace;
-    return t;
-  };
-  weave = {map: mk(col, true), roughnessMap: mk(rough, false), periodM: n * 0.002};
-  return weave;
+  return tex('twill', c);
 }
+const TWILL_PERIOD_M = 8 * 0.0018;
 
 // Top-down UVs in the flattened frame: world-periodic (carbon weave) or
 // normalised to the item's footprint (printed decals).
@@ -324,65 +314,37 @@ function projectUv(holder, fn) {
   });
 }
 
-function carbonize(holder) {
-  const {map, roughnessMap, periodM} = weaveTextures();
-  projectUv(holder, (v) => [v.x / periodM, v.z / periodM]);
-  const edges = [];
+function setTex(holder, finish, texs, extra = {}) {
   holder.traverse((m) => {
     if (!m.isMesh) return;
     for (const mat of Array.isArray(m.material) ? m.material : [m.material]) {
-      mat.map = map;
-      mat.roughnessMap = roughnessMap;
-      mat.color.set('#ffffff');
-      mat.needsUpdate = true;
+      mat.userData = {...mat.userData, finish, tex: texs, ...extra};
     }
-    edges.push(m);
   });
-  outline(edges);
 }
 
-// Machined edges read lighter than a black face: outline the hard edges so
-// black carbon and black anodised parts keep their shape on a dark page.
-function outline(meshes, color = '#6b6f78', opacity = 0.7) {
-  for (const m of meshes) {
-    const line = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry, 30),
-      new THREE.LineBasicMaterial({color, transparent: true, opacity}));
-    line.matrixAutoUpdate = false;
-    line.matrix.copy(m.matrix);
-    m.parent.add(line);
-  }
+function carbonize(holder) {
+  projectUv(holder, (v) => [v.x / TWILL_PERIOD_M, v.z / TWILL_PERIOD_M]);
+  setTex(holder, 'carbon', {twill: twill()});
 }
 
-// Printed artwork on a part's top face (the anti-slip pad's wordmark).
-async function applyDecal(holder, decal, assets, size) {
+// Debossed artwork on a part's top face (the anti-slip pad's wordmark): a
+// white-on-black mask, UV-normalised to the footprint, read as depth.
+async function applyDecal(holder, decal, assets, size, key) {
   holder.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(holder, true);
-  const wMm = size.x * 1000;
-  const dMm = size.z * 1000;
   const c = document.createElement('canvas');
-  c.width = Math.round(wMm * 16);
-  c.height = Math.round(dMm * 16);
+  c.width = Math.round(size.x * 1000 * 24);
+  c.height = Math.round(size.z * 1000 * 24);
   const g = c.getContext('2d');
-  g.fillStyle = decal.base || '#35383d';
+  g.fillStyle = '#000';
   g.fillRect(0, 0, c.width, c.height);
   const art = assets[decal.art];
   if (!art) throw new Error(`decal artwork missing: ${decal.art}`);
   const fw = decal.widthFrac ?? 0.55;
-  g.globalAlpha = decal.alpha ?? 0.9;
-  await drawArt(g, art, c.width * (1 - fw) / 2, c.height * 0.2, c.width * fw, c.height * 0.6, decal.color);
-  g.globalAlpha = 1;
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 8;
+  await drawArt(g, art, (c.width * (1 - fw)) / 2, c.height * 0.2, c.width * fw, c.height * 0.6, '#ffffff');
   projectUv(holder, (v) => [(v.x - box.min.x) / (box.max.x - box.min.x), 1 - (v.z - box.min.z) / (box.max.z - box.min.z)]);
-  holder.traverse((m) => {
-    if (!m.isMesh) return;
-    for (const mat of Array.isArray(m.material) ? m.material : [m.material]) {
-      mat.map = tex;
-      mat.color.set('#ffffff');
-      mat.needsUpdate = true;
-    }
-  });
+  setTex(holder, 'pad', {deboss: tex(`deboss-${key}`, c)}, {color: decal.base || '#1c1d20', depthMm: decal.depthMm ?? 0.35});
 }
 
 // ---- Items -----------------------------------------------------------------
@@ -428,12 +390,8 @@ async function makeItem(part, group, assets) {
   holder.add(inner);
   const size = box.getSize(new THREE.Vector3());
   if (group.finish === 'carbon') carbonize(holder);
-  else if (group.edges) {
-    const ms = [];
-    holder.traverse((m) => m.isMesh && ms.push(m));
-    outline(ms, group.edges.color, group.edges.opacity);
-  }
-  if (group.decal) await applyDecal(holder, group.decal, assets, size);
+  if (group.decal) await applyDecal(holder, group.decal, assets, size, group.label.replace(/\W+/g, '-'));
+  if (group.finish === 'alu' && group.alu) setTex(holder, 'alu', {}, {...group.alu});
   return {holder, w: size.x, d: size.z, h: size.y};
 }
 
@@ -563,40 +521,6 @@ function shelf(blocks, W, gapOf, rowW) {
 
 // ---- Scene + render ----------------------------------------------------------
 
-function buildRenderer(wPx, hPx) {
-  const canvas = document.createElement('canvas');
-  const renderer = new THREE.WebGLRenderer({canvas, antialias: true, alpha: true, preserveDrawingBuffer: true});
-  renderer.setPixelRatio(1);
-  renderer.setSize(wPx, hPx, false);
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.NeutralToneMapping;
-  renderer.toneMappingExposure = 1.0;
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.setClearColor(0x000000, 0);
-  return renderer;
-}
-
-function downsample(src, width, height, labels) {
-  const out = document.createElement('canvas');
-  out.width = width;
-  out.height = height;
-  const ctx = out.getContext('2d');
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(src, 0, 0, width, height);
-  if (labels) {
-    ctx.font = '600 22px ui-sans-serif, system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    for (const l of labels) {
-      ctx.fillStyle = 'rgba(255,255,255,0.85)';
-      ctx.fillText(l.text, l.x * width, l.y * height + 6);
-    }
-  }
-  return out.toDataURL('image/png');
-}
-
 // A selector is a name regex, optionally narrowed to GLB mesh indices and a
 // source index; used by groups and excludes alike.
 function selector(sel) {
@@ -635,7 +559,16 @@ function combineParts(parts, mode) {
 async function render(job) {
   const parts = await loadAll(job.sources);
   const assets = job.assets || {};
-  const matCtx = {assets, material: (finish, color, extra) => finishMaterial(finish, null, color, extra)};
+  TEX = new Map();
+  const matCtx = {assets, parts, tex, material: (finish, color, extra) => finishMaterial(finish, null, color, extra)};
+  // A group's "item" names its in-the-box row (text prefix); the row index
+  // travels with every mesh so Blender can box each block in the image.
+  const rowOf = (g) => {
+    if (g.item === undefined) return undefined;
+    const i = (job.boxList || []).findIndex((t) => t.toLowerCase().startsWith(String(g.item).toLowerCase()));
+    if (i < 0) throw new Error(`group ${g.label}: no in-the-box row starts with "${g.item}"`);
+    return i;
+  };
   const groups = job.groups.map((g) => ({...g, test: g.procedural ? () => false : selector(g)}));
   const excludes = (job.exclude || []).map(selector);
   const report = {included: [], excluded: [], unmatched: []};
@@ -674,6 +607,11 @@ async function render(job) {
     // Members of one group (L/R boots, both base plates) stay together.
     const block = own.length > 1 ? joinBlocks(own, gap * 0.6) : own[0];
     block.on = g.on;
+    const row = rowOf(g);
+    const blockId = blocks.length;
+    block.root.traverse((m) => {
+      if (m.isMesh) m.userData = {...m.userData, ...(row !== undefined ? {item: row} : {}), block: blockId};
+    });
     blocks.push(block);
   }
   // A block with "on" lies centred on top of another (a board on its bag).
@@ -691,118 +629,41 @@ async function render(job) {
     sectionGap: (job.layout?.sectionGapMm ?? 14) / 1000,
     aspect: job.layout?.aspect ?? 1.6,
   });
-  const scene = new THREE.Scene();
   const content = new THREE.Group();
   for (const p of L.placed) {
     p.b.root.position.set(p.x, 0, p.z - L.D / 2);
     content.add(p.b.root);
   }
-  scene.add(content);
   content.updateMatrixWorld(true);
 
-  // Lighting: soft room environment for reflections, one shadowing key.
-  const renderer0 = buildRenderer(16, 16);
-  const pmrem = new THREE.PMREMGenerator(renderer0);
-  const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-  const span = Math.max(L.W, L.D);
-  const key = new THREE.DirectionalLight(0xffffff, job.light?.key ?? 3.0);
-  key.position.set(-0.35 * span, 1.6 * span, -0.9 * span);
-  key.castShadow = true;
-  key.shadow.mapSize.set(4096, 4096);
-  key.shadow.radius = 6;
-  key.shadow.bias = -0.0002;
-  key.shadow.normalBias = 0.0004;
-  const sc = key.shadow.camera;
-  sc.left = -span;
-  sc.right = span;
-  sc.top = span;
-  sc.bottom = -span;
-  sc.near = 0.01;
-  sc.far = span * 5;
-  scene.add(key);
-  scene.add(key.target);
-  const fill = new THREE.DirectionalLight(0xdfe8ff, job.light?.fill ?? 0.6);
-  fill.position.set(0.8 * span, 0.9 * span, 0.7 * span);
-  scene.add(fill);
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x222222, 0.35));
-
-  const shadowMat = new THREE.ShadowMaterial({opacity: 0.22});
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(span * 6, span * 6), shadowMat);
-  ground.rotation.x = -Math.PI / 2;
-  ground.position.y = -0.00002;
-  ground.receiveShadow = true;
-  scene.add(ground);
-
-  // Camera: orthographic, straight down or tilted toward the viewer.
-  const tilt = ((job.camera?.tiltDeg ?? 0) * Math.PI) / 180;
-  const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.001, span * 20);
-  const dist = span * 4;
-  cam.position.set(0, Math.cos(tilt) * dist, Math.sin(tilt) * dist);
-  cam.up.set(0, 0, -1);
-  if (tilt > 0) cam.up.set(0, 1, 0);
-  cam.lookAt(0, 0, 0);
-  cam.updateMatrixWorld(true);
-  // Fit to the projected bounds of every item.
-  const inv = cam.matrixWorldInverse;
-  let x0 = Infinity;
-  let x1 = -Infinity;
-  let y0 = Infinity;
-  let y1 = -Infinity;
-  const v = new THREE.Vector3();
+  // Every mesh carries its finish, textures, list row and block for Blender.
   content.traverse((m) => {
     if (!m.isMesh) return;
-    const pos = m.geometry.attributes.position;
-    for (let i = 0; i < pos.count; i++) {
-      v.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld).applyMatrix4(inv);
-      x0 = Math.min(x0, v.x);
-      x1 = Math.max(x1, v.x);
-      y0 = Math.min(y0, v.y);
-      y1 = Math.max(y1, v.y);
+    const mats = Array.isArray(m.material) ? m.material : [m.material];
+    const ud = mats[0].userData || {};
+    m.userData = {
+      finish: ud.finish || 'plastic',
+      color: ud.color || `#${(mats[0].color || new THREE.Color('#888888')).getHexString()}`,
+      ...(ud.tex ? {tex: ud.tex} : {}),
+      ...Object.fromEntries(Object.entries(ud).filter(([k]) => !['finish', 'color', 'tex'].includes(k))),
+      ...(mats.length > 1 ? {faceFinishes: mats.map((x) => x.userData?.finish || 'plastic'),
+        faceTex: mats.map((x) => x.userData?.tex || {})} : {}),
+      ...m.userData,
+    };
+    if (m.userData.finish !== 'original') {
+      for (const x of mats) {
+        x.map = null;
+        x.roughnessMap = null;
+      }
     }
   });
-  // A lone small item (one motor) is framed in at least minSpanMm so it
-  // reads as an object on a table, not a macro close-up.
-  const minSpan = (job.layout?.minSpanMm ?? 0) / 1000;
-  for (const [lo, hi] of [['x0', 'x1'], ['y0', 'y1']]) {
-    const b = {x0, x1, y0, y1};
-    const grow = Math.max(0, minSpan - (b[hi] - b[lo])) / 2;
-    if (lo === 'x0') {
-      x0 -= grow;
-      x1 += grow;
-    } else {
-      y0 -= grow;
-      y1 += grow;
-    }
-  }
-  const margin = (job.layout?.marginFrac ?? 0.05) * Math.max(x1 - x0, y1 - y0);
-  cam.left = x0 - margin;
-  cam.right = x1 + margin;
-  cam.top = y1 + margin;
-  cam.bottom = y0 - margin;
-  cam.updateProjectionMatrix();
-
-  const width = job.width || 2400;
-  const height = Math.round((width * (cam.top - cam.bottom)) / (cam.right - cam.left));
-  const ss = job.supersample || 2;
-  const renderer = buildRenderer(width * ss, height * ss);
-  scene.environment = envTex;
-  scene.environmentIntensity = job.light?.env ?? 1.0;
-
-  const labels = L.placed.map((p) => {
-    const c = new THREE.Vector3(p.x, 0, p.z - L.D / 2 + p.b.d / 2).project(cam);
-    return {text: `${p.b.count > 1 ? `×${p.b.count} ` : ''}${p.b.label}`, x: (c.x + 1) / 2, y: (1 - c.y) / 2};
-  });
-
-  const out = {report, width, height, rows: L.rows, layoutMm: [L.W * 1000, L.D * 1000],
-    pxPerMm: width / ((cam.right - cam.left) * 1000)};
-  renderer.render(scene, cam);
-  out.transparent = downsample(renderer.domElement, width, height, null);
-  scene.background = new THREE.Color(job.darkBackground || '#0d0f12');
-  shadowMat.opacity = 0.5;
-  renderer.render(scene, cam);
-  out.dark = downsample(renderer.domElement, width, height, null);
-  out.debug = downsample(renderer.domElement, width, height, labels);
-  return out;
+  const glb = await new GLTFExporter().parseAsync(content, {binary: true});
+  const bytes = new Uint8Array(glb);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  const textures = {};
+  for (const [id, src] of TEX) textures[id] = src instanceof HTMLCanvasElement ? src.toDataURL('image/png') : src;
+  return {report, rows: L.rows, layoutMm: [L.W * 1000, L.D * 1000], glb: btoa(bin), textures};
 }
 
 async function probe(sources) {
@@ -816,5 +677,5 @@ async function probe(sources) {
   });
 }
 
-window.inTheBox = {render, probe};
+window.inTheBox = {layout: render, probe};
 window.inTheBoxReady = true;

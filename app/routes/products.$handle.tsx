@@ -44,7 +44,7 @@ import {SchematicViewer} from '~/components/SchematicViewer';
 import type {FrameViewerProps} from '~/components/FrameViewer';
 import {SceneErrorBoundary} from '~/components/SceneErrorBoundary';
 import {ProvenanceCard} from '~/components/ProvenanceCard';
-import {InTheBoxImage} from '~/components/InTheBoxImage';
+import {InTheBox} from '~/components/InTheBoxImage';
 import {WatchCard} from '~/components/WatchCard';
 import {OshwaMark} from '~/components/OshwaMark';
 import {ContributorGrid, ContributorGridSkeleton} from '~/components/Contributors';
@@ -2649,37 +2649,36 @@ function ProductPage() {
             />
           ) : null}
           {mergedBox.length > 0 ? (
-            <div className={boxImage ? 'in-the-box-layout' : 'in-the-box-plain'}>
-              {boxImage ? <InTheBoxImage image={boxImage} items={mergedBox} /> : null}
-              <ul className="in-the-box">
-                {mergedBox.map((it, i) => {
-                  // Rows past the shared list came from the active variant's
-                  // own additions; tag each field with the leaf it renders.
-                  const boxBase =
-                    i < content.inTheBox.length
-                      ? `inTheBox.${i}`
-                      : `variants.${activeTier}.inTheBox.${i - content.inTheBox.length}`;
-                  return (
-                    <li key={`${it.qty ?? ''}${it.item}`}>
-                      {it.qty ? (
-                        <span
-                          className="in-the-box-qty"
-                          {...prodEdit(`${boxBase}.qty`)}
-                        >
-                          {it.qty}
-                        </span>
-                      ) : null}
+            <InTheBox
+              items={mergedBox}
+              image={boxImage}
+              renderItem={(it, i) => {
+                // Rows past the shared list came from the active variant's
+                // own additions; tag each field with the leaf it renders.
+                const boxBase =
+                  i < content.inTheBox.length
+                    ? `inTheBox.${i}`
+                    : `variants.${activeTier}.inTheBox.${i - content.inTheBox.length}`;
+                return (
+                  <>
+                    {it.qty ? (
                       <span
-                        className="in-the-box-item"
-                        {...prodEdit(`${boxBase}.item`)}
+                        className="in-the-box-qty"
+                        {...prodEdit(`${boxBase}.qty`)}
                       >
-                        {it.item}
+                        {it.qty}
                       </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
+                    ) : null}
+                    <span
+                      className="in-the-box-item"
+                      {...prodEdit(`${boxBase}.item`)}
+                    >
+                      {it.item}
+                    </span>
+                  </>
+                );
+              }}
+            />
           ) : null}
           {content.bundle ? (
             <div className="bundle-components">

@@ -1,9 +1,12 @@
 #!/usr/bin/env node
-// "What's in the box" flat-lay renderer. Lays the frame-kit parts of one or
-// more GLBs out as a knolling shot in headless Chromium (three.js, WebGL) and
-// writes public/boxes/<handle>/<variant>.png (transparent, 2400 px) plus
-// -w528/-w800/-w1024/-w1280 WebPs. A dark and a labelled debug variant go to
-// the review directory. Needs cwebp on PATH (brew install webp).
+// "What's in the box" flat-lay renderer. stage.js (headless Chromium,
+// three.js) lays the parts of one or more GLBs out as a knolling shot and
+// exports the composition; blender_render.py renders it in Blender Cycles.
+// Writes public/boxes/<handle>/<variant>.png (transparent, 2400 px) plus
+// -w528/-w800/-w1024/-w1280 WebPs, sets the product's inTheBoxImage (size,
+// hash, per-row boxes for the page's annotations) and puts dark and light
+// review composites in the review directory. Needs Blender (BLENDER or on
+// PATH, or /Applications/Blender.app), cwebp and ImageMagick.
 //
 //   node scripts/in-the-box/render.mjs --all
 //   node scripts/in-the-box/render.mjs --spec scripts/in-the-box/specs/openframe-3in.json
@@ -18,15 +21,16 @@
 //   --probe <glb...>      list unique parts (name, count, size) and exit
 //   --review-dir <dir>    where dark/debug variants go (default: $TMPDIR/in-the-box-review)
 //   --no-webp             skip the WebP derivatives
+//   --samples <n>         Cycles samples (default 96, denoised)
 //
 // Spec format: see scripts/in-the-box/specs/*.json. Every unique part of every
 // source must match exactly one group or one exclude pattern, otherwise the
 // run fails and lists the unmatched parts.
 import {chromium} from 'playwright';
 import {createServer} from 'node:http';
-import {execFileSync} from 'node:child_process';
+import {execFileSync, spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
-import {existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync} from 'node:fs';
+import {copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {dirname, extname, join, relative, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -38,7 +42,7 @@ const WEBP_WIDTHS = [528, 800, 1024, 1280];
 function usage(code) {
   const text = readFileSync(fileURLToPath(import.meta.url), 'utf8')
     .split('\n')
-    .slice(1, 24)
+    .slice(1, 27)
     .map((l) => l.replace(/^\/\/ ?/, ''))
     .join('\n');
   console.log(text);
@@ -58,6 +62,7 @@ function parseArgs(argv) {
     else if (a === '--review-dir') opts.reviewDir = resolve(argv[++i]);
     else if (a === '--no-webp') opts.webp = false;
     else if (a === '--only') opts.only = argv[++i];
+    else if (a === '--samples') opts.samples = Number(argv[++i]);
     else if (a === '--design-dir') opts.designDir = resolve(argv[++i]);
     else if (a === '--probe') {
       while (argv[i + 1] && !argv[i + 1].startsWith('--')) opts.probe.push(resolve(argv[++i]));
@@ -118,6 +123,26 @@ function writeDataUrl(file, dataUrl) {
   writeFileSync(file, Buffer.from(dataUrl.split(',')[1], 'base64'));
 }
 
+function findBlender() {
+  const candidates = [process.env.BLENDER, '/opt/homebrew/bin/blender',
+    '/Applications/Blender.app/Contents/MacOS/Blender', 'blender'].filter(Boolean);
+  for (const c of candidates) {
+    const r = spawnSync(c, ['--version'], {encoding: 'utf8'});
+    if (r.status === 0 && /Blender/.test(r.stdout)) return c;
+  }
+  console.error('Blender not found. Install Blender 4.2 or newer (brew install --cask blender) or set BLENDER=<path>.');
+  process.exit(2);
+}
+
+// The merged in-the-box list the page shows for this variant: groups name
+// their row by text, stage.js resolves it to the index the page numbers.
+function boxList(spec) {
+  if (!spec.content) return [];
+  const data = JSON.parse(readFileSync(join(root, 'content', 'products', `${spec.content.product}.json`), 'utf8'));
+  const v = spec.content.variant ? data.variants?.[spec.content.variant] : null;
+  return [...(data.inTheBox ?? []), ...(v?.inTheBox ?? [])].map((it) => it.item);
+}
+
 // Points the product (or variant) content at the image and records its
 // pixel size, so the page reserves the right box. Alt text, when set by
 // hand, is kept; otherwise the page builds it from the in-the-box list.
@@ -130,7 +155,7 @@ function setContentImage(spec, out) {
   const png = join(root, 'public', 'boxes', spec.handle, `${spec.variant}.png`);
   const v = createHash('sha256').update(readFileSync(png)).digest('hex').slice(0, 12);
   target.inTheBoxImage = {src: `/boxes/${spec.handle}/${spec.variant}.png`, ...(prev.alt ? {alt: prev.alt} : {}),
-    width: out.width, height: out.height, v};
+    width: out.width, height: out.height, v, ...(out.boxes?.length ? {boxes: out.boxes} : {})};
   writeFileSync(file, `${JSON.stringify(data, null, 2)}\n`);
 }
 
@@ -143,6 +168,7 @@ function webps(png) {
 
 const opts = parseArgs(process.argv.slice(2));
 const assets = loadAssets(opts.designDir);
+const blender = opts.specs.length ? findBlender() : null;
 const server = await serve();
 const base = `http://127.0.0.1:${server.address().port}`;
 const browser = await chromium.launch({args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist']});
@@ -168,9 +194,10 @@ try {
       g.procedural?.kind === 'boardCard' ? {...g, procedural: {...g.procedural, ...boardArt(g.procedural.board, base)}} : g);
     const needs = JSON.stringify(spec).includes('"incutec"');
     if (needs && !assets.incutec) throw new Error(`Incutec wordmark not found under ${opts.designDir}; pass --design-dir`);
-    const job = {...spec, groups, assets, sources: (spec.sources || []).map((s) => url(base, resolve(root, s)))};
+    const job = {...spec, groups, assets, boxList: boxList(spec),
+      sources: (spec.sources || []).map((s) => url(base, resolve(root, s)))};
     const t0 = Date.now();
-    const out = await page.evaluate((j) => window.inTheBox.render(j), job);
+    const out = await page.evaluate((j) => window.inTheBox.layout(j), job);
     const tag = `${spec.handle}/${spec.variant}`;
     if (out.report.unmatched.length) {
       console.error(`${tag}: parts matched by no group or exclude:`);
@@ -178,14 +205,39 @@ try {
       failed = true;
       continue;
     }
+    // Hand the composition to Blender.
+    const work = mkdtempSync(join(tmpdir(), 'in-the-box-'));
+    const texDir = join(work, 'tex');
+    mkdirSync(texDir);
+    writeFileSync(join(work, 'scene.glb'), Buffer.from(out.glb, 'base64'));
+    for (const [id, src] of Object.entries(out.textures)) {
+      if (typeof src === 'string') writeDataUrl(join(texDir, `${id}.png`), src);
+      else copyFileSync(join(root, new URL(src.url).pathname.replace(/^\//, '')), join(texDir, `${id}.png`));
+    }
     const png = join(root, 'public', 'boxes', spec.handle, `${spec.variant}.png`);
-    writeDataUrl(png, out.transparent);
-    writeDataUrl(join(opts.reviewDir, `${spec.handle}-${spec.variant}-dark.png`), out.dark);
-    writeDataUrl(join(opts.reviewDir, `${spec.handle}-${spec.variant}-debug.png`), out.debug);
+    mkdirSync(dirname(png), {recursive: true});
+    const jobFile = join(work, 'job.json');
+    const boxesOut = join(work, 'boxes.json');
+    writeFileSync(jobFile, JSON.stringify({glb: join(work, 'scene.glb'), texDir, out: png, boxesOut, width: 2400,
+      samples: opts.samples ?? 96, ...(spec.render ?? {}), tiltDeg: spec.camera?.tiltDeg ?? 0}));
+    const r = spawnSync(blender, ['-b', '--factory-startup', '-P', join(here, 'blender_render.py'), '--', jobFile],
+      {encoding: 'utf8', maxBuffer: 1 << 26});
+    if (r.status !== 0 || !existsSync(boxesOut)) {
+      console.error(`${tag}: Blender failed\n${(r.stdout + r.stderr).split('\n').filter((l) => /Error|Traceback|File "/.test(l)).slice(-15).join('\n')}`);
+      failed = true;
+      continue;
+    }
+    const result = JSON.parse(readFileSync(boxesOut, 'utf8'));
+    rmSync(work, {recursive: true, force: true});
+    Object.assign(out, {width: result.width, height: result.height, boxes: result.boxes});
+    for (const [bg, name] of [['#0d0d10', 'dark'], ['#f7f6f3', 'light']]) {
+      execFileSync('magick', [png, '-background', bg, '-flatten', join(opts.reviewDir, `${spec.handle}-${spec.variant}-${name}.png`)]);
+    }
     if (opts.webp) webps(png);
     if (spec.content) setContentImage(spec, out);
-    console.log(`${tag}: ${out.width}x${out.height} px, ${out.pxPerMm.toFixed(2)} px/mm, ${out.rows} rows, layout ` +
-      `${out.layoutMm.map((v) => v.toFixed(0)).join(' x ')} mm, ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+    console.log(`${tag}: ${out.width}x${out.height} px, ${(out.width / out.layoutMm[0]).toFixed(2)} px/mm, ` +
+      `${out.rows} rows, layout ${out.layoutMm.map((v) => v.toFixed(0)).join(' x ')} mm, ` +
+      `Blender ${result.seconds} s, total ${((Date.now() - t0) / 1000).toFixed(1)} s, ${out.boxes.length} boxes`);
     for (const p of out.report.included) {
       console.log(`  + ${String(p.count).padStart(2)}x ${p.name}${p.shown !== p.count ? ` (shown ${p.shown})` : ''}  [${p.group}]`);
     }

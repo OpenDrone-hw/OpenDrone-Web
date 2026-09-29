@@ -66,7 +66,22 @@ export type BoxItem = {qty?: string; item: string};
  * the page reads the box list out as the alt text. A variant's image
  * replaces the product's.
  */
-export type InTheBoxImage = {src: string; alt?: string; width: number; height: number; v?: string};
+export type InTheBoxImage = {
+  src: string;
+  alt?: string;
+  width: number;
+  height: number;
+  v?: string;
+  /** Where each list row's items sit in the image, projected from the render
+   *  camera by the generator. `item` is the 0-based index into the merged
+   *  list (the product's `inTheBox` then the tier's); x/y/w/h are percent of
+   *  the image width/height from its top-left corner. A row can have several
+   *  boxes (spare parts in two places) or none. */
+  boxes?: InTheBoxRegion[];
+};
+
+/** One highlight region of an {@link InTheBoxImage}. */
+export type InTheBoxRegion = {item: number; x: number; y: number; w: number; h: number};
 
 /**
  * The beginner chapter ("What does this do?"), rendered first on the PDP.
