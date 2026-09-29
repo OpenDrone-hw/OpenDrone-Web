@@ -947,6 +947,32 @@ html.anim-paused .board-sheet.is-active {
   opacity: 0.7;
 }
 
+.region-switch-caption {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.7rem;
+  border-right: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+}
+
+.region-menu-choice {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+}
+
+.region-menu-choice small {
+  color: var(--color-text-muted);
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+}
+
 .region-switch.mobile-menu-region {
   margin: 0 0 0.75rem;
   align-self: flex-start;

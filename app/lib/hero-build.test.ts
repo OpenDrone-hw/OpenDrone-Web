@@ -194,3 +194,27 @@ describe('hero build shopping guide', () => {
     assert.equal(selection.total, null);
   });
 });
+
+describe('hero build ship mix', () => {
+  const dated = 'ships early November 2026, delivered by 30 November 2026';
+  const target = 'ships by 31 March 2027 if the target is reached by 15 December 2026';
+  const withPromises = (map: (role: string) => string | null): HeroBuild => {
+    const build = resolveHeroBuilds(config, catalog())[0];
+    return {...build, parts: build.parts.map((part) => ({...part, shipPromise: map(part.role)}))};
+  };
+  it('flags a build that mixes a dated batch with funding targets', () => {
+    const build = withPromises((role) => (role === 'flight-controller' || role === 'esc' ? dated : target));
+    assert.equal(heroBuildSelection(build, all(build), sellable).shipMix, 'mixed');
+  });
+  it('names a build that only waits for targets, or only ships on a date', () => {
+    const targets = withPromises(() => target);
+    assert.equal(heroBuildSelection(targets, all(targets), sellable).shipMix, 'target');
+    const dates = withPromises(() => dated);
+    assert.equal(heroBuildSelection(dates, all(dates), sellable).shipMix, 'date');
+  });
+  it('judges only the ticked parts', () => {
+    const build = withPromises((role) => (role === 'flight-controller' ? dated : target));
+    const withoutFc = new Set(build.parts.filter((part) => part.role !== 'flight-controller').map((part) => part.sku));
+    assert.equal(heroBuildSelection(build, withoutFc, sellable).shipMix, 'target');
+  });
+});

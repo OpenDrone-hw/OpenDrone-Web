@@ -24,6 +24,43 @@ import {
   type HeroBuild,
 } from '~/lib/hero-build';
 import {shopifyImageUrl} from '~/lib/shopify-image';
+import {
+  latestShipDate,
+  parseCampaignConfig,
+  promiseBatchMonth,
+  shortCampaignDate,
+} from '~/lib/preorder-campaign';
+import {parcelPromise, shipChipText} from '~/components/ShipChip';
+import preorders from '../../content/preorders.json';
+
+const CAMPAIGN = parseCampaignConfig(preorders);
+
+/**
+ * The line under the build's button: when the parcel ships. A build with a
+ * funding-target part waits for that target, so the whole parcel goes with
+ * its batch (a dated Nov part included); a build of dated parts states its
+ * date. Null when nothing selected has a ship promise.
+ */
+function buildShipNote(
+  mix: 'mixed' | 'target' | 'date' | 'none',
+  promises: Array<string | null>,
+): string | null {
+  if (mix === 'none') return null;
+  const promise = parcelPromise(promises);
+  if (mix === 'date') return shipChipText(promise)?.text ?? null;
+  const date = shortCampaignDate(latestShipDate(CAMPAIGN));
+  if (!date) return null;
+  if (mix === 'target') {
+    return (copyText('home.build_ship_target') ?? 'Ships by {date} if the targets are reached.').replace('{date}', date);
+  }
+  const batch = promiseBatchMonth(promise) ?? '';
+  return (
+    copyText('home.build_ship_mixed') ??
+    'One parcel: the whole build ships with the {batch} batch, by {date} if the targets are reached.'
+  )
+    .replace('{batch}', batch)
+    .replace('{date}', date);
+}
 
 export function HeroBuildGuide({
   build,
@@ -43,6 +80,9 @@ export function HeroBuildGuide({
   const comingSoon =
     useRouteLoaderData<RootLoader>('root')?.comingSoon ?? true;
   const selection = heroBuildSelection(build, selected, sellable, comingSoon);
+  const shipNote = selection.available
+    ? buildShipNote(selection.shipMix, selection.parts.map((part) => part.shipPromise))
+    : null;
   return (
     <section
       className="hero-build-guide"
@@ -192,6 +232,7 @@ export function HeroBuildGuide({
           ) : null}
         </AddToCartButton>
         )}
+        {shipNote && !selection.notify ? <p className="hero-build-ship">{shipNote}</p> : null}
       </div>
     </section>
   );

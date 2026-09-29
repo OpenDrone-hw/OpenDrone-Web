@@ -1293,6 +1293,7 @@ html.light .product-silhouette[data-board] .product-silhouette-art { opacity: 0.
 .hero-build-detail:hover, .hero-build-inspect:hover { color: var(--color-gold-text); }
 .hero-build-part.is-excluded .hero-build-inspect, .hero-build-part.is-excluded .hero-build-price { opacity: 0.4; }
 .hero-build-buy { padding: 10px 12px 12px; border-top: 1px solid var(--color-border); }
+.hero-build-ship { margin: 8px 0 0; font-size: 12px; line-height: 1.4; color: var(--color-text-muted); text-align: center; text-wrap: balance; }
 .hero-build-add { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 44px; padding: 10px 13px; border: 0; border-radius: 10px; background: var(--color-gold-fill); color: var(--color-on-accent); font-size: 13px; font-weight: 600; cursor: pointer; }
 a.hero-build-add { text-decoration: none; }
 .hero-build-add .btn-label { display: flex; align-items: center; gap: 7px; width: 100%; }
