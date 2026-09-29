@@ -59,5 +59,6 @@
   "us_notice": "US delivery depends on FCC equipment authorization and US import clearance. If we cannot deliver to you, you get a full refund.",
   "check_us_eu_only": "An item in your cart ships to EU addresses only. Remove it to check out to the US.",
   "check_market": "Your cart moved to your delivery country's prices. Check the total below.",
-  "checkout_shops_us": "Direct consumer orders are limited to the EU and the United States."
+  "checkout_shops_us": "Direct consumer orders are limited to the EU and the United States.",
+  "us_reprice": "This cart was priced for the EU. Checkout moves it to US prices and ship dates first."
 }

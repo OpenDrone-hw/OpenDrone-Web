@@ -127,12 +127,16 @@ export async function loader({context}: Route.LoaderArgs) {
       }
     }
   }
+  // A US buyer (US sales open): no paid batch ships to the US, so every
+  // part waits for its funding target and the page drops the stack lane.
+  const us = context.catalog.region === 'US';
   // The stack's paid batch carries the one fixed ship date on this page.
-  const stackShips =
-    Object.values(CAMPAIGN.skus)
-      .flatMap((entry) => entry.batches)
-      .find((batch) => batch.paid && batch.ships?.trim())
-      ?.ships?.trim() ?? null;
+  const stackShips = us
+    ? null
+    : (Object.values(CAMPAIGN.skus)
+        .flatMap((entry) => entry.batches)
+        .find((batch) => batch.paid && batch.ships?.trim())
+        ?.ships?.trim() ?? null);
 
   const rows: Row[] = toCards(catalog).flatMap((card) =>
     card.variants.nodes.flatMap((v): Row[] => {
@@ -180,12 +184,15 @@ export async function loader({context}: Route.LoaderArgs) {
     today: new Date().toISOString().slice(0, 10),
     unavailable: catalog.campaign_counts === 'unavailable',
     chatfpvWidget,
+    // Present only for a US buyer: the US copy on this page.
+    ...(us ? {us: true as const} : {}),
   };
 }
 
 export default function PreorderRoute() {
   const data = useLoaderData<typeof loader>();
   const {rows, stackMonth, ends, eta, unavailable} = data;
+  const us = 'us' in data && data.us === true;
   const rootData = useRouteLoaderData('root') as {turnstileSiteKey?: string | null} | undefined;
   const updates = copy('preorder.updates');
   // Entries are "YYYY-MM-DD · text", newest first, never edited: a
@@ -213,10 +220,16 @@ export default function PreorderRoute() {
       </header>
       <Timeline data={data} />
       <div className="po-order-notes">
-        <span><CreditCard size={16} aria-hidden="true" /><Txt id="preorder.terms_summary" /></span>
-        <InfoHint label={copyText('preorder.shipping_summary') ?? 'EU orders'}>
-          <Txt id="preorder.channel_eu_text" as="p" />
-        </InfoHint>
+        <span><CreditCard size={16} aria-hidden="true" /><Txt id={us ? 'preorder.terms_summary_us' : 'preorder.terms_summary'} /></span>
+        {us ? (
+          <InfoHint label={copyText('preorder.shipping_summary_us') ?? 'US orders'}>
+            <Txt id="preorder.channel_us_text" as="p" />
+          </InfoHint>
+        ) : (
+          <InfoHint label={copyText('preorder.shipping_summary') ?? 'EU orders'}>
+            <Txt id="preorder.channel_eu_text" as="p" />
+          </InfoHint>
+        )}
         <Link to="/wholesale" className="po-trade-link">
           <Store size={16} aria-hidden="true" /><Txt id="preorder.channel_trade" /> <span aria-hidden="true">→</span>
         </Link>
@@ -271,16 +284,21 @@ export default function PreorderRoute() {
 
       <section className="po-faq" id="questions">
         <Txt id="preorder.faq_title" as="h2" className="po-group-title" />
-        {FAQ.map((key) =>
-          copyText(`preorder.faq_q_${key}`) ? (
+        {FAQ.map((key) => {
+          // A US buyer reads the US answer to "Outside the EU?".
+          const [q, a] =
+            us && key === 'shops'
+              ? ['preorder.faq_q_shops_us', 'preorder.faq_a_shops_us']
+              : [`preorder.faq_q_${key}`, `preorder.faq_a_${key}`];
+          return copyText(q) ? (
             <details className="po-faq-item" key={key}>
               <summary>
-                <Txt id={`preorder.faq_q_${key}`} />
+                <Txt id={q} />
               </summary>
-              <Txt id={`preorder.faq_a_${key}`} as="p" />
+              <Txt id={a} as="p" />
             </details>
-          ) : null,
-        )}
+          ) : null;
+        })}
       </section>
 
       <nav
@@ -336,7 +354,9 @@ function Timeline({data}: {data: ReturnType<typeof useLoaderData<typeof loader>>
       : null,
     {
       key: 'targets',
-      label: copyText('preorder.timeline_targets') ?? 'RX · Frames · Motors',
+      label: stackDay
+        ? (copyText('preorder.timeline_targets') ?? 'RX · Frames · Motors')
+        : (copyText('preorder.timeline_targets_us') ?? 'Every product'),
       events: [
         {day: endsDay, date: ends, what: copyText('preorder.timeline_deadline') ?? 'Deadline', kind: 'deadline'},
         {day: etaDay, date: eta, what: copyText('preorder.timeline_eta') ?? 'Ships if the target is reached', kind: 'eta'},

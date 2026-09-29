@@ -292,7 +292,7 @@ export function CartAddedDialog() {
               </span>
             </p>
           ) : null}
-          {usBuyer ? (
+          {usBuyer && subtotal?.currencyCode === 'USD' ? (
             <p className="cart-added-parcel">{t('us_price_note', 'Duties included. No sales tax.')}</p>
           ) : null}
           {parcel ? (
