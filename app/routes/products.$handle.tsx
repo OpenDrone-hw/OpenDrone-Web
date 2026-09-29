@@ -183,6 +183,9 @@ export function shouldRevalidate({
   // A destination switch (cart, added-to-cart dialog) changes the market:
   // the page prices and promises again for the new country.
   if (formAction === CART_COUNTRY_ACTION) return defaultShouldRevalidate;
+  // An explicit revalidation of the same URL (the header region switch while
+  // the shop is closed) reads the loader again for the new market.
+  if (currentUrl.href === nextUrl.href) return defaultShouldRevalidate;
   if (currentUrl.pathname === nextUrl.pathname) return false;
   return defaultShouldRevalidate;
 }

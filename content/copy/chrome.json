@@ -42,6 +42,8 @@
   "heading_legal": "Legal",
   "footer_legal_languages": "Legal texts:",
   "lang_toggle_aria": "Language",
+  "region_switch_aria": "Currency and shipping region",
+  "region_switch_failed": "Could not change the region. Try again.",
   "theme_to_light": "Switch to light mode",
   "theme_to_dark": "Switch to dark mode",
   "nav_all_products": "All products",
