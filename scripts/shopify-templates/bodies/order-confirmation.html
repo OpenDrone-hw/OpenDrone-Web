@@ -93,7 +93,7 @@
                     {% endif %}
                     <td valign="top" style="padding: 16px 0;">
                       <p style="margin: 0 0 4px 0; font-family: 'Space Grotesk', Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 700; color: #e5e5e5;">
-                        {{ line.title }}
+                        {{ line.product.title | default: line.title }}
                       </p>
                       {% if line.variant.title != 'Default Title' %}
                       <p style="margin: 0 0 4px 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; color: #a0a0a0;">
@@ -136,10 +136,11 @@
                     <td align="right" style="padding: 4px 0; color: #c5c5c5;">{{ shipping_price | money }}</td>
                   </tr>
                   {% endif %}
-                  {% if total_tax != 0 %}
+                  {% assign vat_total = tax_price | default: 0 %}
+                  {% if vat_total > 0 %}
                   <tr>
-                    <td style="padding: 4px 0; color: #a0a0a0;">{% if taxes_included %}Includes VAT{% else %}Tax{% endif %}</td>
-                    <td align="right" style="padding: 4px 0; color: #c5c5c5;">{{ total_tax | money }}</td>
+                    <td style="padding: 4px 0; color: #a0a0a0;">Includes VAT</td>
+                    <td align="right" style="padding: 4px 0; color: #c5c5c5;">{{ vat_total | money }}</td>
                   </tr>
                   {% endif %}
                   <tr>
