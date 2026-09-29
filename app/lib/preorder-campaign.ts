@@ -116,6 +116,11 @@ export type CampaignConfig = {
    *  batch of the lead, which must carry its own ship date; without it the
    *  SKU follows whatever batch the lead's next unit falls into. */
   shipsWith?: Record<string, ShipsWith>;
+  /** How a US buyer gets any other SKU the shop sells (in stock, or a
+   *  preorder outside the campaign): it ships with a US-serving batch of a
+   *  campaign SKU (`batch`, no `stock`), so a US order is never refused for
+   *  a SKU the campaign does not list. Belgian stock stays EU only. */
+  usStock?: ShipsWith;
   /** The dates orders were sold under before a date change. An order created
    *  before `before` (ISO timestamp) keeps these promises on its account page
    *  instead of the current ones (terms 7bis.3: a moved date is never applied
@@ -355,7 +360,23 @@ export function parseCampaignConfig(body: unknown): CampaignConfig {
       }
     }
   }
+  if (c.usStock !== undefined) {
+    const rule = c.usStock;
+    const lead = rule && typeof rule.sku === 'string' ? c.skus[rule.sku] : undefined;
+    const pinned = rule && Number.isSafeInteger(rule.batch) ? lead?.batches[rule.batch! - 1] : undefined;
+    if (!lead || !pinned || rule.stock !== undefined || rule.after !== undefined) {
+      throw new Error('preorders: usStock needs a campaign SKU and an existing batch, without stock or after');
+    }
+    if (!servesRegion(pinned, 'US')) throw new Error('preorders: usStock batch must serve the US');
+  }
   return c as CampaignConfig;
+}
+
+/** The rule a US buyer's unit of `sku` follows when the campaign does not
+ *  list it: `usStock`. Null for a listed SKU and for an EU buyer. */
+export function usStockRule(config: CampaignConfig, sku: string, region: Region): ShipsWith | null {
+  if (region !== 'US' || !config.usStock || config.skus[sku] || config.shipsWith?.[sku]) return null;
+  return config.usStock;
 }
 
 function isCalendarDay(value: unknown): value is string {
@@ -808,8 +829,13 @@ export function applyCampaign(
       ...product,
       variants: product.variants.map((variant): CatalogVariant => {
         const entry = config.skus[variant.sku];
-        const rule = config.shipsWith?.[variant.sku];
-        if ((!entry && !rule) || variant.availability !== 'preorder') return variant;
+        // A US buyer's unit of any other SKU ships with a US-serving batch:
+        // an in-stock item becomes a preorder for that batch. Belgian stock
+        // stays EU only. Sold out stays sold out.
+        const usRule = usStockRule(config, variant.sku, region);
+        const usIn = region === 'US' && variant.availability === 'in_stock' && Boolean(entry || config.shipsWith?.[variant.sku] || usRule);
+        const rule = config.shipsWith?.[variant.sku] ?? usRule ?? undefined;
+        if ((!entry && !rule) || (variant.availability !== 'preorder' && !usIn)) return variant;
         if (!units) {
           return {...variant, availability: 'sold_out', ship_promise: null, campaign: null};
         }
@@ -831,7 +857,7 @@ export function applyCampaign(
             latestShip: state.shipsOnTarget ? latestShipDate(config) : null,
             shipByDay: state.shipsOnTarget ? latestShipDay(config) : null,
           };
-          return {...variant, ship_promise: state.shipPromise, campaign: dated};
+          return {...variant, availability: 'preorder', ship_promise: state.shipPromise, campaign: dated};
         }
         if (!entry) return variant;
         const state = campaignState(
@@ -856,19 +882,23 @@ export function applyCampaign(
           latestShip: state.shipsOnTarget && !state.paidStock ? latestShipDate(config) : null,
           shipByDay: state.shipsOnTarget && !state.paidStock ? latestShipDay(config) : null,
         };
-        return {...variant, ship_promise: state.shipPromise, campaign: dated};
+        return {...variant, availability: 'preorder', ship_promise: state.shipPromise, campaign: dated};
       }),
     })),
   };
 }
 
 /** Whether any catalog variant is a campaign preorder, i.e. needs counts. */
-export function needsCampaignCounts(catalog: Catalog, config: CampaignConfig): boolean {
+export function needsCampaignCounts(catalog: Catalog, config: CampaignConfig, region: Region = 'EU'): boolean {
   return catalog.products.some((product) =>
     product.variants.some(
       (variant) =>
-        variant.availability === 'preorder' &&
-        Boolean(config.skus[variant.sku] || config.shipsWith?.[variant.sku]),
+        (variant.availability === 'preorder' &&
+          Boolean(config.skus[variant.sku] || config.shipsWith?.[variant.sku])) ||
+        // A US buyer's in-stock items ship with a campaign batch.
+        (region === 'US' &&
+          variant.availability === 'in_stock' &&
+          Boolean(config.skus[variant.sku] || config.shipsWith?.[variant.sku] || usStockRule(config, variant.sku, region))),
     ),
   );
 }

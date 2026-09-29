@@ -141,11 +141,12 @@ describe('cart country switch', () => {
     assert.deepEqual(fake.state.calls, ['country:BE']);
   });
 
-  it('leaves an EU-only line alone when the destination becomes the US', async () => {
+  it('puts an in-stock line on the March batch promise when the destination becomes the US', async () => {
     const rx = cartLine('gid://shopify/CartLine/2', RX, 'OPENRX-LITE', []);
     const fake = shopify('BE', [euLine(), rx]);
     await handleCartCountry(switchRequest('US'), ENV, switcher(fake));
-    assert.equal(fake.state.lines[1].shipPromise, null);
+    assert.match(fake.state.lines[1].shipPromise ?? '', /31 March 2027/);
+    assert.equal(fake.state.lines[1].shipRegion, 'US');
     assert.equal(fake.state.lines[0].shipRegion, 'US');
   });
 
@@ -238,11 +239,13 @@ describe('checkout re-derives the promises from the destination', () => {
     assert.deepEqual(fake.state.calls, []);
   });
 
-  it('sends a US cart with an EU-only line back to the cart', async () => {
+  it('re-derives a US cart line for an in-stock item to the March promise before checkout', async () => {
     const rx = cartLine('gid://shopify/CartLine/2', RX, 'OPENRX-LITE', []);
     const fake = shopify('US', [rx]);
     const res = await handleShopifyCartAction(checkoutRequest('US'), ENV, actionDeps(fake));
-    assert.equal(res.headers.get('Location'), '/cart?check=us-eu-only');
+    assert.notEqual(res.headers.get('Location'), '/cart?check=us-eu-only');
+    assert.match(fake.state.lines[0].shipPromise ?? '', /31 March 2027/);
+    assert.equal(fake.state.lines[0].shipRegion, 'US');
   });
 });
 

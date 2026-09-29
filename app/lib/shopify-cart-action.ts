@@ -244,8 +244,10 @@ export function lineAttributes(variant: CatalogVariant, us = false): CartLineInp
     : [{key: PREORDER_ATTRIBUTE, value: promise}];
 }
 
-/** A US destination buys campaign preorders only: in-stock items and
- *  other preorders ship from Belgium to the EU. */
+/** A US destination buys a preorder with a campaign state: the catalog for
+ *  a US buyer (`applyCampaign`, region US) gives every product that state,
+ *  in-stock items included (`usStock`). What stays refused is Belgian stock
+ *  a campaign could not place, and anything sold out. */
 export function usSellable(variant: CatalogVariant): boolean {
   return variant.availability === 'preorder' && Boolean(variant.campaign);
 }

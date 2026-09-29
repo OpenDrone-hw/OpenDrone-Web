@@ -1752,10 +1752,16 @@ function ProductPage() {
         </p>
       ) : null}
       <p className="product-buy-ship" role="note">
-        {say(
-          'product-chrome.buy_us_notice',
-          'US delivery depends on FCC equipment authorization and US import clearance. If we cannot deliver to you, you get a full refund.',
-        )}
+        {fccConditional || !usBatch
+          ? say(
+              'product-chrome.buy_us_notice',
+              'US delivery depends on FCC equipment authorization and US import clearance. If we cannot deliver to you, you get a full refund.',
+            )
+          : say(
+              'product-chrome.buy_us_notice_short',
+              'US orders ship from the {batch} batch; if we cannot deliver, you get a full refund.',
+              {batch: usBatch},
+            )}
       </p>
     </>
   ) : null;

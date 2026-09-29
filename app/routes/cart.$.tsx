@@ -22,6 +22,7 @@ import {ShipChip, parcelPromise, shipChipText, soonerMonth} from '~/components/S
 import {buildSeoMeta} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
 import {fccConditionalSku} from '~/lib/us-sales';
+import {promiseBatchMonth} from '~/lib/preorder-campaign';
 import {cartQuoteCountry, countryName, shippingQuote} from '~/lib/shipping-rates';
 import {ShipToSelect} from '~/components/ShipToSelect';
 import {paysEuVat} from '~/lib/visitor-country';
@@ -571,10 +572,16 @@ function CartLine({
           ) : null}
           {us ? (
             <small role="note">
-              {t(
-                'us_notice',
-                'US delivery depends on FCC equipment authorization and US import clearance. If we cannot deliver to you, you get a full refund.',
-              )}
+              {fccConditionalSku(line.sku) || !promiseBatchMonth(line.shipPromise)
+                ? t(
+                    'us_notice',
+                    'US delivery depends on FCC equipment authorization and US import clearance. If we cannot deliver to you, you get a full refund.',
+                  )
+                : t(
+                    'us_notice_short',
+                    'US orders ship from the {batch} batch; if we cannot deliver, you get a full refund.',
+                    {batch: promiseBatchMonth(line.shipPromise) ?? ''},
+                  )}
             </small>
           ) : null}
         </div>

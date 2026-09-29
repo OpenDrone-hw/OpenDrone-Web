@@ -744,7 +744,7 @@ page renders as before. Open:
 | Prices | the US catalog's USD list price: duties included, no sales tax. The price step badge and the price steps list show USD too (see "US prices" below) | EUR incl. VAT |
 | Counter | "0 / 250 ordered for the March 2027 batch": the batch a US unit ships in, never read as batch 1 | "1 / 250 ordered" |
 | Delivery date | the batch's `deliveryByUS` | the batch's `deliveryBy` |
-| Sells | campaign preorder SKUs only; in-stock SKUs refused | everything for sale |
+| Sells | everything for sale: campaign SKUs from their first US-serving batch, every other SKU (in stock, accessories) as a preorder of `usStock` in `content/preorders.json` (March 2027 batch). Sold out stays sold out | everything for sale |
 | Batch | first batch with room whose `regions` include US | first with room whose `regions` include EU |
 | Cart | `buyerIdentity.countryCode` US, hidden `_ship_region: US` line attribute | unchanged |
 
@@ -753,8 +753,10 @@ The destination is `shipCountryForRequest` (`?country`, the
 cart, the line promise and the checkout gate alike (`buyerCountry`). The hold
 pass tags an order `promise-mismatch` when it ships to another region than a
 line's promise was computed for, and holds and tags `us-review` every order
-shipping to the US with a line no US-serving batch carries (an in-stock item,
-for example: checkout accepts any address in an open market).
+shipping to the US with a line no US-serving batch carries (a line from an EU
+cart, for example: checkout accepts any address in an open market). A US line
+(`_ship_region` US) for a SKU the campaign does not list takes the `usStock`
+batch tag.
 `release-batch.mjs` never releases a `us-review` order; follow both up by
 hand.
 
