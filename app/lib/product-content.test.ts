@@ -407,6 +407,14 @@ describe('EU launch claims', () => {
     assert.ok(power.includes('20 dBm'));
     assert.doesNotMatch(JSON.stringify(c), /22 dBm|158 mW/);
   });
+
+  it('does not claim updates over Wi-Fi on OpenRX', () => {
+    const c = PRODUCT_CONTENT.openrx;
+    const rows = [...(c.specs ?? []), ...Object.values(c.variants ?? {}).flatMap((v) => v.specs ?? [])];
+    const flashing = rows.filter(([k]) => k === 'Flashing').map(([, v]) => v);
+    assert.deepEqual([...new Set(flashing)], ['Betaflight passthrough or UART']);
+    assert.doesNotMatch(c.whatIsThis?.intro ?? '', /Wi-?Fi/i);
+  });
 });
 
 describe('storefront spec rows and placeholders', () => {

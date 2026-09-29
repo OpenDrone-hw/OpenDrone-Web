@@ -10,7 +10,7 @@
     "lead": "It picks up the commands from your radio and passes them to the flight controller. All four versions work with a radio that has 2.4 GHz ExpressLRS. Not sure which to pick? Take Lite for a 3-inch build or Lite-UFL for a 5-inch. Take Mono or Gemini only if the radio also has a sub-GHz ExpressLRS module."
   },
   "whatIsThis": {
-    "intro": "A receiver picks up the commands from your radio and passes them to the flight controller. OpenRX runs ExpressLRS, which uses LoRa, so it keeps a solid link even on the busy 2.4 GHz band. It connects to the flight controller with CRSF over one UART, runs on 5 V, and updates over Wi-Fi or Betaflight passthrough. There are four versions, from the Lite with a ceramic antenna to the Gemini with two radios.",
+    "intro": "A receiver picks up the commands from your radio and passes them to the flight controller. OpenRX runs ExpressLRS, which uses LoRa, so it keeps a solid link even on the busy 2.4 GHz band. It connects to the flight controller with CRSF over one UART, runs on 5 V, and updates over Betaflight passthrough or UART. There are four versions, from the Lite with a ceramic antenna to the Gemini with two radios.",
     "needs": [
       "A radio with an ExpressLRS transmitter, internal or module, on 2.4 GHz",
       "DJI remotes and motion controllers do not use ExpressLRS and cannot control this receiver. You need a radio with ExpressLRS built in, or a radio with a module bay and an ExpressLRS module.",
@@ -158,7 +158,7 @@
     ],
     [
       "Flashing",
-      "Betaflight passthrough or Wi-Fi"
+      "Betaflight passthrough or UART"
     ],
     [
       "Dimensions",
