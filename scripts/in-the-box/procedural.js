@@ -398,17 +398,16 @@ async function esdBag(p, ctx) {
   return out;
 }
 
-// Battery strap: woven nylon webbing `w` x `len` mm, 1.4 mm thick, with a
-// woven gold OpenDrone repeat on the outer face, a zigzag silicone grip
-// bead on the inner face, box-X stitching at the buckle end, a sealed tip
-// and a black anodised cam buckle ((w + 6) x 14 x 2.2 mm). `side` picks
-// the face that lies up; the free end curls up off the table.
+// Battery strap, after the shipped strap: `w` x `len` mm charcoal woven
+// webbing with a dense rubberised cross-weave grip on the face, a chromed
+// rectangular wire loop at the buckle end (webbing folded through it) and a
+// black hook-and-loop patch over the rounded tip carrying one wordmark along
+// the strap: "Open" white, "Drone" gold. Lies flat.
 let strapN = 0;
 async function strap(p, ctx) {
   const w = p.w ?? 20;
   const len = p.len ?? 220;
-  const t = 1.4;
-  const inner = p.side === 'inner';
+  const t = 1.3;
   const id = `strap-${w}x${len}-${strapN++}`;
   const PX = 10;
   const cw = Math.round(w * PX);
@@ -425,113 +424,95 @@ async function strap(p, ctx) {
   const g = col.getContext('2d');
   const hh = hgt.getContext('2d');
   const r = rgh.getContext('2d');
-  g.fillStyle = '#131417';
+  g.fillStyle = '#25282e';
   g.fillRect(0, 0, cw, ch);
-  hh.fillStyle = '#808080';
+  hh.fillStyle = '#585858';
   hh.fillRect(0, 0, cw, ch);
-  r.fillStyle = '#c8c8c8';
+  r.fillStyle = '#c0c0c0';
   r.fillRect(0, 0, cw, ch);
-  // Fine twill weave: 0.5 mm ribs on a diagonal, in height and a touch in tone.
-  for (let y = 0; y < ch; y += 2) {
-    for (let x = 0; x < cw; x += 2) {
-      const on = ((x + y) >> 1) % 3 === 0;
-      hh.fillStyle = on ? '#9a9a9a' : '#707070';
-      hh.fillRect(x, y, 2, 2);
-      if (on) {
-        g.fillStyle = 'rgba(255,255,255,0.035)';
-        g.fillRect(x, y, 2, 2);
-      }
+  // Rubberised grip: a dense waffle grid of small raised rubber nubs
+  // (1.3 mm across the strap, 0.9 mm along it), lighter than the woven
+  // ground between them, soft and slightly fuzzy.
+  const px = 1.3 * PX;
+  const py = 0.9 * PX;
+  for (let y = 0; y < ch; y += py) {
+    for (let x = 0; x < cw; x += px) {
+      const jx = (Math.random() - 0.5) * 1.2;
+      const jy = (Math.random() - 0.5) * 1.2;
+      const tone = 0.85 + Math.random() * 0.3;
+      g.fillStyle = `rgb(${Math.round(72 * tone)},${Math.round(77 * tone)},${Math.round(86 * tone)})`;
+      g.fillRect(x + 2 + jx, y + 1.5 + jy, px - 4, py - 3);
+      hh.fillStyle = '#d4d4d4';
+      hh.fillRect(x + 2 + jx, y + 1.5 + jy, px - 4, py - 3);
+      r.fillStyle = '#a0a0a0';
+      r.fillRect(x + 2 + jx, y + 1.5 + jy, px - 4, py - 3);
     }
   }
-  // Selvedge ribs along both edges.
-  for (const x of [0, cw - 6]) {
-    hh.fillStyle = '#b0b0b0';
-    hh.fillRect(x, 0, 6, ch);
+  // Selvedges: a slightly darker, tighter edge band.
+  for (const x of [0, cw - 0.9 * PX]) {
+    g.fillStyle = '#23262c';
+    g.fillRect(x, 0, 0.9 * PX, ch);
+    hh.fillStyle = '#909090';
+    hh.fillRect(x, 0, 0.9 * PX, ch);
+    r.fillStyle = '#d0d0d0';
+    r.fillRect(x, 0, 0.9 * PX, ch);
   }
-  if (!inner) {
-    // Woven wordmark repeat, running along the strap.
-    const step = 48 * PX;
-    for (let y = 36 * PX; y < ch - 36 * PX; y += step) {
-      for (const [ctx2, colr] of [[g, 'rgba(214,160,20,0.78)'], [hh, '#a0a0a0']]) {
-        ctx2.save();
-        ctx2.translate(cw / 2, y);
-        ctx2.rotate(-Math.PI / 2);
-        await drawArt(ctx2, ctx.assets.opendrone, -16 * PX, -w * 0.2 * PX, 32 * PX, w * 0.4 * PX, colr);
-        ctx2.restore();
-      }
-    }
-  } else {
-    // Zigzag silicone grip bead down the middle, glossier and raised.
-    const gw = w * 0.5 * PX;
-    const x0 = (cw - gw) / 2;
-    for (const [ctx2, style] of [[g, '#2a2c30'], [hh, '#e0e0e0'], [r, '#4a4a4a']]) {
-      ctx2.strokeStyle = style;
-      ctx2.lineWidth = 1.1 * PX;
-      ctx2.lineJoin = 'round';
-      ctx2.beginPath();
-      for (let y = 26 * PX, i = 0; y < ch - 24 * PX; y += 3 * PX, i++) {
-        const x = i % 2 ? x0 + gw : x0;
-        if (i) ctx2.lineTo(x, y);
-        else ctx2.moveTo(x, y);
-      }
-      ctx2.stroke();
-    }
+  // Smooth black fabric patch over the rounded tip, 1.9 strap widths long
+  // (canvas row 0 is the tip end).
+  const patch = Math.min(1.9 * w, len * 0.3) * PX;
+  g.fillStyle = '#0e0f12';
+  g.fillRect(0, 0, cw, patch);
+  hh.fillStyle = '#808080';
+  hh.fillRect(0, 0, cw, patch);
+  r.fillStyle = '#9c9c9c';
+  r.fillRect(0, 0, cw, patch);
+  // Sewn border of the patch.
+  for (const [x1, y1, x2, y2] of [[0.7, patch - 0.9 * PX, w - 0.7, patch - 0.9 * PX]]) {
+    g.strokeStyle = '#2a2c31';
+    g.lineWidth = 0.35 * PX;
+    g.setLineDash([1.4 * PX, 0.6 * PX]);
+    g.beginPath();
+    g.moveTo(x1 * PX, y1);
+    g.lineTo(x2 * PX, y2);
+    g.stroke();
+    g.setLineDash([]);
   }
-  // Box-X stitching at the buckle end, a stitched line near the tip.
-  const stitch = (x1, y1, x2, y2) => {
-    const n = Math.hypot(x2 - x1, y2 - y1) / (1.6 * PX);
-    for (let i = 0; i < n; i++) {
-      const a = i / n;
-      const b = (i + 0.6) / n;
-      for (const [ctx2, style] of [[g, '#4a4c52'], [hh, '#c0c0c0']]) {
-        ctx2.strokeStyle = style;
-        ctx2.lineWidth = 0.45 * PX;
-        ctx2.beginPath();
-        ctx2.moveTo(x1 + (x2 - x1) * a, y1 + (y2 - y1) * a);
-        ctx2.lineTo(x1 + (x2 - x1) * b, y1 + (y2 - y1) * b);
-        ctx2.stroke();
-      }
-    }
-  };
-  // Canvas row 0 is the tip end (see the UVs below); the buckle end is at ch.
-  const bx0 = 2 * PX;
-  const bx1 = cw - 2 * PX;
-  const by0 = ch - 22 * PX;
-  const by1 = ch - 9 * PX;
-  stitch(bx0, by0, bx1, by0);
-  stitch(bx1, by0, bx1, by1);
-  stitch(bx1, by1, bx0, by1);
-  stitch(bx0, by1, bx0, by0);
-  stitch(bx0, by0, bx1, by1);
-  stitch(bx1, by0, bx0, by1);
-  stitch(bx0, 8 * PX, bx1, 8 * PX);
-  // Webbing geometry: a ribbon along Z with a rounded, sealed tip; the last
-  // 30 mm lift off the table in a gentle curl.
-  const N = 220;
+  // One wordmark, rotated 90 degrees clockwise so it reads down the strap
+  // from the buckle towards the tip: white "Open", brand gold "Drone".
+  const tw = patch * 0.93;
+  const th = Math.min(cw * 0.7, tw * 0.34);
+  const split = 0.445;
+  for (const [x0, x1, colr] of [[0, split, '#f4f2ec'], [split, 1, '#ffb700']]) {
+    g.save();
+    g.translate(cw / 2, patch / 2);
+    g.rotate(-Math.PI / 2);
+    g.beginPath();
+    g.rect(-tw / 2 + tw * x0, -th, tw * (x1 - x0), th * 2);
+    g.clip();
+    await drawArt(g, ctx.assets.opendrone, -tw / 2, -th / 2, tw, th, colr);
+    g.restore();
+  }
+  const N = 200;
   const pos = [];
   const uv = [];
   const idx = [];
-  const lift = (z) => {
-    const k = Math.max(0, (z - (len - 32)) / 32);
-    return 5 * k * k;
-  };
   const halfW = (z) => {
     const tip = len - z;
     return tip < w / 2 ? Math.sqrt(Math.max(0, (w / 2) ** 2 - (w / 2 - tip) ** 2)) : w / 2;
   };
+  // A slight natural sideways sweep, no lift.
+  const sway = (z) => 0.8 * Math.sin((z / len) * Math.PI);
   for (let i = 0; i <= N; i++) {
     const z = (len * i) / N;
     const hw = Math.max(0.3, halfW(z));
-    const y = lift(z);
-    for (const [yy] of [[y + t], [y]]) {
+    for (const yy of [t, 0]) {
       for (const sx of [-1, 1]) {
-        pos.push(sx * hw, yy, z - len / 2);
+        pos.push(sx * hw + sway(z), yy, z - len / 2);
         uv.push(0.5 - (sx * hw) / w, z / len);
       }
     }
   }
   const row = 4;
-  // Top face first (material group 0), then bottom and sides (group 1).
   for (let i = 0; i < N; i++) {
     const a = i * row;
     const b = (i + 1) * row;
@@ -540,32 +521,53 @@ async function strap(p, ctx) {
   for (let i = 0; i < N; i++) {
     const a = i * row;
     const b = (i + 1) * row;
-    idx.push(a + 2, a + 3, b + 2, a + 3, b + 3, b + 2); // bottom
-    idx.push(a, a + 2, b, a + 2, b + 2, b); // side -x
-    idx.push(a + 1, b + 1, a + 3, a + 3, b + 1, b + 3); // side +x
+    idx.push(a + 2, a + 3, b + 2, a + 3, b + 3, b + 2);
+    idx.push(a, a + 2, b, a + 2, b + 2, b);
+    idx.push(a + 1, b + 1, a + 3, a + 3, b + 1, b + 3);
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   geo.setIndex(idx);
-  // Top face gets this side's weave; the other faces the plain weave.
   geo.addGroup(0, N * 6, 0);
   geo.addGroup(N * 6, N * 18, 1);
   geo.computeVertexNormals();
   const texs = {color: ctx.tex(`${id}-c`, col), height: ctx.tex(`${id}-h`, hgt), rough: ctx.tex(`${id}-r`, rgh)};
   const web = mesh(geo, [tagged('webbing', texs), tagged('webbing', {height: texs.height})]);
-  if (inner) web.rotation.z = 0;
-  // Cam buckle over the stitched end.
-  const outer = roundedRect(w + 6, 14, 3);
-  const slot = roundedRect(w + 1, 3.6, 1.4);
-  outer.holes.push(new THREE.Path(slot.getPoints().map((pt) => new THREE.Vector2(pt.x, pt.y - 2.4))));
-  const bucGeo = new THREE.ExtrudeGeometry(outer, {depth: 2.2, bevelEnabled: true, bevelThickness: 0.35,
-    bevelSize: 0.35, bevelSegments: 3, curveSegments: 24});
-  bucGeo.rotateX(Math.PI / 2);
-  bucGeo.translate(0, 2.2 + 0.35, 0);
-  const buckle = mesh(bucGeo, tagged('alu-brushed', {}, {color: '#16171a'}));
-  buckle.position.set(0, t, -len / 2 + 7);
-  return wrap(web, buckle);
+  // Polished silver rectangular wire loop, wider than the strap, at the
+  // buckle end: the webbing is folded back through it (pale underside inside
+  // the opening) and sewn, so the ring lies flat at the very end.
+  const wire = 0.75;
+  const ow = w * 1.25;
+  const od2 = w * 0.8;
+  const hx = ow / 2 - wire;
+  const hz = od2 / 2 - wire;
+  const rc = 2.2;
+  const ringPath = new THREE.CurvePath();
+  const P = (x, z) => new THREE.Vector3(x, 0, z);
+  const cor = [[hx, -hz], [hx, hz], [-hx, hz], [-hx, -hz]];
+  for (let i = 0; i < 4; i++) {
+    const [x0, z0] = cor[i];
+    const [x1, z1] = cor[(i + 1) % 4];
+    const [x2, z2] = cor[(i + 2) % 4];
+    const d1 = new THREE.Vector3(x1 - x0, 0, z1 - z0).normalize();
+    const d2 = new THREE.Vector3(x2 - x1, 0, z2 - z1).normalize();
+    const pA = P(x0, z0).addScaledVector(d1, i ? rc : rc);
+    const pB = P(x1, z1).addScaledVector(d1, -rc);
+    const pC = P(x1, z1).addScaledVector(d2, rc);
+    ringPath.add(new THREE.LineCurve3(pA, pB));
+    ringPath.add(new THREE.QuadraticBezierCurve3(pB, P(x1, z1), pC));
+  }
+  const ringPts = ringPath.getSpacedPoints(200);
+  const ringGeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(ringPts, true), 260, wire, 14, true);
+  const ring = mesh(ringGeo, tagged('chrome', {}, {color: '#eceef1'}));
+  const zRing = -len / 2 - hz + 2.2 * wire;
+  ring.position.set(0, wire, zRing);
+  // Folded-back webbing end inside the ring: pale, thin, lying on the table.
+  const flapLen = 2 * hz + 0.5;
+  const flap = mesh(new THREE.BoxGeometry(w - 0.6, 0.8, flapLen), tagged('webbing', {}, {color: '#b3b0a8'}));
+  flap.position.set(0, 0.4, zRing - hz + flapLen / 2 - 0.2);
+  return wrap(web, ring, flap);
 }
 
 // M3 aluminium cup washer: 9 mm OD, 2.5 mm tall, 3.2 mm bore, conical cup.
@@ -794,71 +796,76 @@ function capacitor(p, ctx) {
   return wrap(body, ...leads);
 }
 
-// JST-SH 1.0 mm 8-pin cable: eight 30 AWG wires, housing at both ends
-// (9.9 x 2.95 x 4.25 mm, natural nylon).
+// JST-SH 1.0 mm 8-pin FC-to-ESC cable, after the shipped cable: two
+// natural-white housings 9.5 x 4.25 x 2.95 mm with side ears at the wire
+// end and contact slots on the mating face, joined by `len` mm (25) of
+// 32 AWG leads laid as a tight flat ribbon in a gentle S. Lead colours in
+// order: red, black, green, yellow, then four white.
 function jstCable(p, ctx) {
-  // JST-SH 1.0 mm pitch cable: housing (pins + 2) x 4.25 x 2.95 mm, 32 AWG
-  // (0.62 mm) leads that leave the housings as a flat ribbon and relax into
-  // a loose S on the table.
   const pins = p.pins ?? 8;
-  const len = p.len ?? 80;
-  const hw = pins * 1.0 + 2;
+  const run = p.len ?? 25;
+  const hw = p.housingW ?? 9.5;
   const hd = 4.25;
   const hh = 2.95;
-  const od = 0.62;
-  const nylon = ctx.material('nylon', '#ece6d8');
-  const dark = ctx.material('plastic', '#3b3a36');
+  const od = 0.66;
+  const nylon = ctx.material('nylon', '#f1eee6');
+  const dark = ctx.material('plastic', '#4a4740');
   const gold = ctx.material('gold', '#e2b24e');
-  const cols = p.colors ?? ['#17181b', '#c42a22', '#e2b400', '#2a64c8', '#2f9a4b', '#e6e6e2', '#7a4fc0', '#e0701f'];
-  const bend = p.bend ?? 7;
-  const path = new THREE.CatmullRomCurve3([
-    [0, -len / 2 + hd], [0, -len / 2 + hd + 5], [-bend, -len / 5], [bend * 0.8, len / 5], [0, len / 2 - hd - 5],
-    [0, len / 2 - hd],
-  ].map(([x, z]) => new THREE.Vector3(x, 0, z)), false, 'centripetal');
+  const cols = p.colors ?? ['#c42a22', '#17181b', '#2f8f4b', '#e2c200', '#ecebe6', '#ecebe6', '#ecebe6', '#ecebe6'];
+  const z0 = -run / 2;
+  const z1 = run / 2;
   const parts = [];
   for (const end of [-1, 1]) {
-    const shape = roundedRect(hw, hd, 0.35);
-    const geo = new THREE.ExtrudeGeometry(shape, {depth: hh - 0.3, bevelEnabled: true, bevelThickness: 0.15,
-      bevelSize: 0.15, bevelSegments: 2, curveSegments: 6});
+    const zc = end * (run / 2 + hd / 2);
+    const geo = new THREE.ExtrudeGeometry(roundedRect(hw, hd, 0.3), {depth: hh - 0.24, bevelEnabled: true,
+      bevelThickness: 0.12, bevelSize: 0.12, bevelSegments: 2, curveSegments: 6});
     geo.rotateX(Math.PI / 2);
-    geo.translate(0, hh - 0.15, 0);
+    geo.translate(0, hh - 0.12, 0);
     const body = mesh(geo, nylon);
-    const zc = end * (len / 2 - hd / 2);
-    body.position.set(0, 0, zc);
+    body.position.z = zc;
     parts.push(body);
-    // Contact windows along the top with the gold lances inside.
+    // Side ears at the wire end.
+    for (const sx of [-1, 1]) {
+      const ear = mesh(new THREE.BoxGeometry(0.6, hh * 0.55, 1.1), nylon);
+      ear.position.set(sx * (hw / 2 + 0.25), hh * 0.275, zc - end * (hd / 2 - 0.55));
+      parts.push(ear);
+    }
+    // Mating face (the outer end): one slot per contact, gold inside.
+    const face = zc + end * (hd / 2 + 0.01);
     for (let i = 0; i < pins; i++) {
       const x = (i - (pins - 1) / 2) * 1.0;
-      const win = mesh(new THREE.BoxGeometry(0.62, 0.05, 1.7), dark);
-      win.position.set(x, hh + 0.01, zc + end * 0.6);
-      const lance = mesh(new THREE.BoxGeometry(0.3, 0.06, 1.1), gold);
-      lance.position.set(x, hh + 0.03, zc + end * 0.6);
-      parts.push(win, lance);
+      const slot = mesh(new THREE.BoxGeometry(0.62, 1.3, 0.06), dark);
+      slot.position.set(x, hh * 0.52, face);
+      const pin = mesh(new THREE.BoxGeometry(0.26, 0.5, 0.07), gold);
+      pin.position.set(x, hh * 0.45, face + end * 0.005);
+      parts.push(slot, pin);
+      // Lance windows on the top face.
+      const win = mesh(new THREE.BoxGeometry(0.5, 0.04, 1.2), dark);
+      win.position.set(x, hh + 0.01, zc + end * 0.7);
+      parts.push(win);
     }
-    // Locking ramp across the mating end.
-    const ramp = mesh(new THREE.BoxGeometry(hw - 1.2, 0.35, 0.7), nylon);
-    ramp.position.set(0, hh + 0.12, zc + end * (hd / 2 - 0.5));
-    parts.push(ramp);
   }
-  const N = 120;
+  // Ribbon centre line: straight out of each housing, a gentle S between.
+  const path = new THREE.CatmullRomCurve3([
+    [0, z0], [0, z0 + 2.5], [-1.0, -run * 0.12], [0.8, run * 0.16], [0, z1 - 2.5], [0, z1],
+  ].map(([x, z]) => new THREE.Vector3(x, 0, z)), false, 'centripetal');
+  const N = 90;
   for (let i = 0; i < pins; i++) {
     const pts = [];
     for (let k = 0; k <= N; k++) {
       const t = k / N;
       const c = path.getPointAt(t);
       const tan = path.getTangentAt(t);
-      const nx = -tan.z;
-      const nz = tan.x;
-      const endness = Math.min(t, 1 - t) * len;
-      const spacing = 1.0 - 0.2 * Math.min(1, endness / 12);
-      const o = (i - (pins - 1) / 2) * spacing;
-      const y = od / 2 + (1.1 - od / 2) * Math.max(0, 1 - endness / 5);
-      pts.push(new THREE.Vector3(c.x + nx * o, y, c.z + nz * o));
+      const fromEnd = Math.min(t, 1 - t) * run;
+      // 1.0 mm contact pitch at the housings, closing to a touching ribbon.
+      const pitch = od + 0.02 + (1.0 - od - 0.02) * Math.max(0, 1 - fromEnd / 4);
+      const o = ((pins - 1) / 2 - i) * pitch;
+      const y = od / 2 + (hh * 0.45 - od / 2) * Math.max(0, 1 - fromEnd / 3);
+      pts.push(new THREE.Vector3(c.x - tan.z * o, y, c.z + tan.x * o));
     }
-    // Run the ends into the housings.
-    pts.unshift(new THREE.Vector3(pts[0].x, 1.1, pts[0].z - 1.2));
-    pts.push(new THREE.Vector3(pts[pts.length - 1].x, 1.1, pts[pts.length - 1].z + 1.2));
-    parts.push(mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 200, od / 2, 10, false),
+    pts.unshift(new THREE.Vector3(pts[0].x, pts[0].y, pts[0].z - 1.5));
+    pts.push(new THREE.Vector3(pts[pts.length - 1].x, pts[pts.length - 1].y, pts[pts.length - 1].z + 1.5));
+    parts.push(mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 160, od / 2, 10, false),
       ctx.material('silicone', cols[i % cols.length])));
   }
   return wrap(...parts);

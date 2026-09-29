@@ -1,0 +1,15 @@
+{
+  "openfc-lite/20x20": "0a4c4c31a34a61f4",
+  "teststrap/a": "e8365d09702f0ae0",
+  "openframe/5in": "29e32a5ec0ea5d69",
+  "openframe/3in": "22bd8d361a9f29f7",
+  "openfc-lite/30x30": "cb4686602baaa2d5",
+  "openesc/20x20": "79424128847d4d94",
+  "openesc/30x30": "3123183c45d65662",
+  "openrx/mono": "be38b3e73ede3084",
+  "openrx/gemini": "131dc73e17fc4246",
+  "openrx/lite-ufl": "ab5d7c27d441e25d",
+  "openrx/lite": "e815b1656b49e8ff",
+  "openmotor/1604": "81708372c4dc76e9",
+  "openmotor/2207": "67988cbed2eeb45c"
+}

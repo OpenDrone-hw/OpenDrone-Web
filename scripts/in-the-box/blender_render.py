@@ -58,9 +58,14 @@ print('IN_THE_BOX_DEVICE', cy.device, [d.name for d in prefs.devices if d.use])
 cy.samples = int(JOB.get('samples', 96))
 cy.use_denoising = True
 cy.denoiser = 'OPENIMAGEDENOISE'
-cy.max_bounces = 8
-cy.glossy_bounces = 4
+cy.use_adaptive_sampling = True
+cy.adaptive_threshold = 0.02
+cy.max_bounces = 4
+cy.diffuse_bounces = 2
+cy.glossy_bounces = 2
+cy.transmission_bounces = 4
 cy.transparent_max_bounces = 16
+scene.render.use_persistent_data = True
 scene.render.film_transparent = True
 scene.view_settings.view_transform = JOB.get('view', 'Khronos PBR Neutral')
 try:
@@ -289,7 +294,7 @@ def webbing(ud):
     if 'color' in t:
         g.set('Base Color', g.tex(t['color'], False, uv).outputs['Color'])
     else:
-        g.set('Base Color', rgba('#131417'))
+        g.set('Base Color', rgba(ud.get('color', '#25282e')))
     if 'rough' in t:
         g.set('Roughness', g.math('MULTIPLY', g.tex(t['rough'], True, uv).outputs['Color'], 0.95))
     else:
@@ -297,7 +302,7 @@ def webbing(ud):
     g.set('Sheen Weight', 0.45)
     g.set('Sheen Roughness', 0.4)
     if 'height' in t:
-        g.set('Normal', g.bump(g.tex(t['height'], True, uv).outputs['Color'], 0.9, 0.00025))
+        g.set('Normal', g.bump(g.tex(t['height'], True, uv).outputs['Color'], 1.0, 0.0004))
     return g.mat
 
 
@@ -419,6 +424,7 @@ BUILD = {
     'steel': lambda ud: metal(ud.get('color') if ud.get('color', '#5a5f67') != '#5a5f67' else '#2e3136', 0.3, 0.3),
     'zinc': lambda ud: metal(ud.get('color') if ud.get('color', '#aeb4bb') != '#aeb4bb' else '#c3c8cf', 0.2),
     'gold': lambda ud: metal('#e2b24e', 0.18),
+    'chrome': lambda ud: metal(ud.get('color', '#eceef1'), 0.06),
     'tpu': tpu,
     'rubber': rubber,
     'silicone': lambda ud: rubber(ud, 0.38),
@@ -583,6 +589,23 @@ scene.render.image_settings.color_mode = 'RGBA'
 scene.render.image_settings.color_depth = '8'
 scene.render.filepath = JOB['out']
 bpy.ops.render.render(write_still=True)
+
+# The shadow catcher under big soft lights leaves a faint haze over the whole
+# frame, which reads as a grey panel on the page. Shadow-only pixels are pure
+# black with partial alpha: drop the haze, keep the contact shadows.
+import numpy as np  # noqa: E402 - Blender bundles numpy
+
+_img = bpy.data.images.load(JOB['out'], check_existing=False)
+_px = np.empty(len(_img.pixels), dtype=np.float32)
+_img.pixels.foreach_get(_px)
+_px = _px.reshape(-1, 4)
+_floor = float(JOB.get('shadowFloor', 0.3))
+_shadow = (_px[:, 3] < 0.999) & (_px[:, :3].max(axis=1) < 0.012)
+_px[_shadow, 3] = np.clip((_px[_shadow, 3] - _floor) / (1 - _floor), 0, 1) ** 1.4 * 0.8
+_img.pixels.foreach_set(_px.ravel())
+_img.filepath_raw = JOB['out']
+_img.file_format = 'PNG'
+_img.save()
 
 # ---- Per-block boxes in image space ------------------------------------------
 

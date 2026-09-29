@@ -7021,16 +7021,10 @@ section.chapter[data-centered] .chapter-body-col {
 .in-the-box-figure {
   margin: 0;
   max-width: 40rem;
-  /* Dark theme: a faint pool of light under the flat lay, so black carbon,
-     anodised parts and their shadows separate from the page. */
-  background: radial-gradient(ellipse 62% 58% at 50% 50%, rgb(255 255 255 / 0.07), transparent 74%);
 }
 /* A single part (one motor) stays object-sized instead of filling the column. */
 .in-the-box-figure[data-single] {
   max-width: 24rem;
-}
-html.light .in-the-box-figure {
-  background: none;
 }
 .in-the-box-image {
   display: block;

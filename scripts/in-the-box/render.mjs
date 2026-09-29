@@ -2,7 +2,7 @@
 // "What's in the box" flat-lay renderer. stage.js (headless Chromium,
 // three.js) lays the parts of one or more GLBs out as a knolling shot and
 // exports the composition; blender_render.py renders it in Blender Cycles.
-// Writes public/boxes/<handle>/<variant>.png (transparent, 2400 px) plus
+// Writes public/boxes/<handle>/<variant>.png (transparent, 1600 px) plus
 // -w528/-w800/-w1024/-w1280 WebPs, sets the product's inTheBoxImage (size,
 // hash, per-row boxes for the page's annotations) and puts dark and light
 // review composites in the review directory. Needs Blender (BLENDER or on
@@ -13,7 +13,7 @@
 //   node scripts/in-the-box/render.mjs --probe public/models/od3/frame.glb
 //
 // Options:
-//   --only <handle[/variant]>  with --all: render only matching specs
+//   --only <handle[/variant]>  with --all: render only that handle or handle/variant
 //   --design-dir <dir>    Incutec design repo (wordmark source); default
 //                         $INCUTEC_DESIGN_DIR, else ../../design
 //   --all                 render every spec in scripts/in-the-box/specs/
@@ -21,8 +21,9 @@
 //   --probe <glb...>      list unique parts (name, count, size) and exit
 //   --review-dir <dir>    where dark/debug variants go (default: $TMPDIR/in-the-box-review)
 //   --no-webp             skip the WebP derivatives
-//   --samples <n>         Cycles samples (default 96, denoised)
-//   --width <px>          render width (default 2400)
+//   --samples <n>         Cycles samples (default 32, adaptive, denoised)
+//   --width <px>          render width (default 1600)
+//   --force               render even when the inputs hash is unchanged
 //   --work-dir <dir>      keep the Blender job (scene.glb, tex/, job.json) there for re-renders
 //
 // Spec format: see scripts/in-the-box/specs/*.json. Every unique part of every
@@ -66,6 +67,7 @@ function parseArgs(argv) {
     else if (a === '--only') opts.only = argv[++i];
     else if (a === '--samples') opts.samples = Number(argv[++i]);
     else if (a === '--width') opts.width = Number(argv[++i]);
+    else if (a === '--force') opts.force = true;
     else if (a === '--work-dir') opts.workDir = resolve(argv[++i]);
     else if (a === '--design-dir') opts.designDir = resolve(argv[++i]);
     else if (a === '--probe') {
@@ -78,7 +80,7 @@ function parseArgs(argv) {
   if (opts.only) {
     opts.specs = opts.specs.filter((f) => {
       const s = JSON.parse(readFileSync(f, 'utf8'));
-      return `${s.handle}/${s.variant}`.startsWith(opts.only);
+      return opts.only === s.handle || opts.only === `${s.handle}/${s.variant}`;
     });
   }
   if (!opts.specs.length && !opts.probe.length) usage(2);
@@ -165,7 +167,7 @@ function setContentImage(spec, out) {
 
 // One in-the-box row can cover several layout blocks (a hardware kit is a
 // dozen). Merge a row's boxes while their union stays compact (no more than
-// 1.6x the area they cover), so the image carries one bracket per group, then
+// 1.6x the area they cover) and always down to two boxes at most, then
 // pad each box a little off the parts. Boxes are percent, top-left origin.
 function mergeBoxes(boxes, width, height) {
   const area = (b) => b.w * b.h;
@@ -185,7 +187,8 @@ function mergeBoxes(boxes, width, height) {
         for (let j = i + 1; j < group.length; j++) {
           const u = union(group[i], group[j]);
           const ratio = area(u) / u.covered;
-          if (ratio <= 1.6 && (!best || ratio < best.ratio)) best = {i, j, u, ratio};
+          // Beyond two boxes a row merges anyway, most compact pair first.
+          if ((ratio <= 1.6 || group.length > 2) && (!best || ratio < best.ratio)) best = {i, j, u, ratio};
         }
       }
       if (best) {
@@ -234,8 +237,27 @@ try {
     }
   }
 
+  const hashFile = join(here, 'inputs.json');
+  const hashes = existsSync(hashFile) ? JSON.parse(readFileSync(hashFile, 'utf8')) : {};
   for (const specFile of opts.specs) {
     const spec = JSON.parse(readFileSync(specFile, 'utf8'));
+    // Skip an image whose inputs (spec, renderer, source models, box list,
+    // render settings) are unchanged since it was last written.
+    const h = createHash('sha256');
+    for (const f of ['render.mjs', 'stage.js', 'stage.html', 'procedural.js', 'blender_render.py']) h.update(readFileSync(join(here, f)));
+    h.update(readFileSync(specFile));
+    for (const src of spec.sources || []) h.update(readFileSync(resolve(root, src)));
+    for (const g of spec.groups) {
+      const art = g.procedural?.kind === 'boardCard' && join(root, 'public', 'boards', g.procedural.board, 'front.png');
+      if (art && existsSync(art)) h.update(readFileSync(art));
+    }
+    h.update(JSON.stringify([boxList(spec), opts.samples, opts.width, assets.opendrone, assets.incutec]));
+    const inputHash = h.digest('hex').slice(0, 16);
+    const key = `${spec.handle}/${spec.variant}`;
+    if (!opts.force && hashes[key] === inputHash && existsSync(join(root, 'public', 'boxes', spec.handle, `${spec.variant}.png`))) {
+      console.log(`${key}: inputs unchanged, skipped (--force renders anyway)`);
+      continue;
+    }
     const groups = spec.groups.map((g) =>
       g.procedural?.kind === 'boardCard' ? {...g, procedural: {...g.procedural, ...boardArt(g.procedural.board, base)}} : g);
     const needs = JSON.stringify(spec).includes('"incutec"');
@@ -265,11 +287,15 @@ try {
     mkdirSync(dirname(png), {recursive: true});
     const jobFile = join(work, 'job.json');
     const boxesOut = join(work, 'boxes.json');
-    writeFileSync(jobFile, JSON.stringify({glb: join(work, 'scene.glb'), texDir, out: png, boxesOut, width: 2400,
-      ...(spec.render ?? {}), samples: opts.samples ?? spec.render?.samples ?? 96,
+    writeFileSync(jobFile, JSON.stringify({glb: join(work, 'scene.glb'), texDir, out: png, boxesOut, width: 1600,
+      ...(spec.render ?? {}), samples: opts.samples ?? spec.render?.samples ?? 32,
       ...(opts.width ? {width: opts.width} : {}), tiltDeg: spec.camera?.tiltDeg ?? 0}));
-    const r = spawnSync(blender, ['-b', '--factory-startup', '-P', join(here, 'blender_render.py'), '--', jobFile],
-      {encoding: 'utf8', maxBuffer: 1 << 26});
+    // Background QoS (efficiency cores) and low priority: renders run one at
+    // a time and must not bog down the machine.
+    const bargs = ['-b', '--factory-startup', '-P', join(here, 'blender_render.py'), '--', jobFile];
+    const r = process.platform === 'darwin'
+      ? spawnSync('taskpolicy', ['-b', 'nice', '-n', '15', blender, ...bargs], {encoding: 'utf8', maxBuffer: 1 << 26})
+      : spawnSync('nice', ['-n', '15', blender, ...bargs], {encoding: 'utf8', maxBuffer: 1 << 26});
     if (r.status !== 0 || !existsSync(boxesOut)) {
       console.error(`${tag}: Blender failed\n${(r.stdout + r.stderr).split('\n').filter((l) => /Error|Traceback|File "/.test(l)).slice(-15).join('\n')}`);
       failed = true;
@@ -279,11 +305,14 @@ try {
     if (!opts.workDir) rmSync(work, {recursive: true, force: true});
     Object.assign(out, {width: result.width, height: result.height,
       boxes: mergeBoxes(result.boxes, result.width, result.height)});
+    mkdirSync(opts.reviewDir, {recursive: true});
     for (const [bg, name] of [['#0d0d10', 'dark'], ['#f7f6f3', 'light']]) {
       execFileSync('magick', [png, '-background', bg, '-flatten', join(opts.reviewDir, `${spec.handle}-${spec.variant}-${name}.png`)]);
     }
     if (opts.webp) webps(png);
     if (spec.content) setContentImage(spec, out);
+    hashes[key] = inputHash;
+    writeFileSync(hashFile, `${JSON.stringify(hashes, null, 2)}\n`);
     console.log(`${tag}: ${out.width}x${out.height} px, ${(out.width / out.layoutMm[0]).toFixed(2)} px/mm, ` +
       `${out.rows} rows, layout ${out.layoutMm.map((v) => v.toFixed(0)).join(' x ')} mm, ` +
       `Blender ${result.seconds} s, total ${((Date.now() - t0) / 1000).toFixed(1)} s, ${out.boxes.length} boxes`);

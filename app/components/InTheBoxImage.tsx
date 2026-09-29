@@ -36,6 +36,12 @@ type Props = {
 export function InTheBox({items, image, renderItem}: Props) {
   const boxes = image?.boxes ?? [];
   const numbered = boxes.length > 0;
+  // One number marker per row, on that row's largest box.
+  const markerAt = new Map<number, number>();
+  boxes.forEach((b, j) => {
+    const k = markerAt.get(b.item);
+    if (k === undefined || b.w * b.h > boxes[k].w * boxes[k].h) markerAt.set(b.item, j);
+  });
   const [hover, setHover] = useState<number | null>(null);
   const [pinned, setPinned] = useState<number | null>(null);
   const active = hover ?? pinned;
@@ -130,7 +136,7 @@ export function InTheBox({items, image, renderItem}: Props) {
                   onPointerLeave={leave}
                   onClick={() => toggle(b.item)}
                 >
-                  <span className="in-the-box-mark-num">{b.item + 1}</span>
+                  {markerAt.get(b.item) === j ? <span className="in-the-box-mark-num">{b.item + 1}</span> : null}
                 </span>
               ))}
             </div>

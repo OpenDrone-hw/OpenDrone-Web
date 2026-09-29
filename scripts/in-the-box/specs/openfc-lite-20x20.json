@@ -52,7 +52,7 @@
       "procedural": {
         "kind": "jstCable",
         "pins": 8,
-        "len": 80
+        "len": 25
       },
       "row": 1,
       "item": "JST-SH"
