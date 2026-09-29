@@ -137,12 +137,12 @@ export async function loader({context}: Route.LoaderArgs) {
   // part waits for its funding target and the page drops the stack lane.
   const us = context.catalog.region === 'US';
   // The stack's paid batch carries the one fixed ship date on this page.
-  const stackShips = us
-    ? null
-    : (Object.values(CAMPAIGN.skus)
-        .flatMap((entry) => entry.batches)
-        .find((batch) => batch.paid && batch.ships?.trim())
-        ?.ships?.trim() ?? null);
+  const paidShips =
+    Object.values(CAMPAIGN.skus)
+      .flatMap((entry) => entry.batches)
+      .find((batch) => batch.paid && batch.ships?.trim())
+      ?.ships?.trim() ?? null;
+  const stackShips = us ? null : paidShips;
 
   const rows: Row[] = toCards(catalog).flatMap((card) =>
     card.variants.nodes.flatMap((v): Row[] => {
@@ -197,12 +197,24 @@ export async function loader({context}: Route.LoaderArgs) {
     chatfpvWidget,
     // Present only for a US buyer: the US copy on this page.
     ...(us ? {us: true as const} : {}),
+    // Its FC and ESC batch 1 is EU stock: the month it ships and the batch
+    // the US buyer gets instead.
+    usBatchNote:
+      us && paidShips
+        ? {
+            first: shipMonth(paidShips),
+            batch: new Intl.DateTimeFormat('en-US', {month: 'long', year: 'numeric', timeZone: 'UTC'}).format(
+              new Date(`${latestDay}T00:00:00Z`),
+            ),
+          }
+        : null,
   };
 }
 
 export default function PreorderRoute() {
   const data = useLoaderData<typeof loader>();
   const {rows, stackMonth, stackWhen, ends, eta, unavailable} = data;
+  const usBatchNote = 'usBatchNote' in data ? data.usBatchNote : null;
   const us = 'us' in data && data.us === true;
   const rootData = useRouteLoaderData('root') as {turnstileSiteKey?: string | null} | undefined;
   const updates = copy('preorder.updates');
@@ -289,6 +301,16 @@ export default function PreorderRoute() {
               {(copyText('preorder.targets_line') ?? '').replace('{month}', stackMonth)}
             </p>
           ) : null}
+          {usBatchNote?.first ? (
+            <p className="po-group-line">
+              {(
+                copyText('preorder.us_batch_note') ??
+                'FC and ESC batch 1 ({month}) is EU only. US orders ship from the {batch} batch.'
+              )
+                .replace('{month}', usBatchNote.first)
+                .replace('{batch}', usBatchNote.batch)}
+            </p>
+          ) : null}
           <Cards rows={targetRows} eta={eta} />
         </section>
       ) : null}
@@ -296,11 +318,7 @@ export default function PreorderRoute() {
       <section className="po-faq" id="questions">
         <Txt id="preorder.faq_title" as="h2" className="po-group-title" />
         {FAQ.map((key) => {
-          // A US buyer reads the US answer to "Outside the EU?".
-          const [q, a] =
-            us && key === 'shops'
-              ? ['preorder.faq_q_shops_us', 'preorder.faq_a_shops_us']
-              : [`preorder.faq_q_${key}`, `preorder.faq_a_${key}`];
+          const [q, a] = [`preorder.faq_q_${key}`, `preorder.faq_a_${key}`];
           return copyText(q) ? (
             <details className="po-faq-item" key={key}>
               <summary>
@@ -317,7 +335,7 @@ export default function PreorderRoute() {
         aria-label={copyText('preorder.channels_aria') ?? 'Retailers and launch news'}
       >
         <Link to="/wholesale"><Txt id="preorder.channel_us_cta" /> <span aria-hidden="true">↗</span></Link>
-        <Link to="/newsletter"><Txt id={us ? 'preorder.channel_interest_us' : 'preorder.channel_interest'} /> <span aria-hidden="true">→</span></Link>
+        <Link to="/newsletter"><Txt id="preorder.channel_interest" /> <span aria-hidden="true">→</span></Link>
       </nav>
 
       {updateList.length ? (

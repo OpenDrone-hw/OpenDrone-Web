@@ -4,7 +4,7 @@ import {
   type BuildsConfig,
   type BuildRole,
 } from './build-recommendations.ts';
-import {lineDisplayName} from './product-content.ts';
+import {lineDisplayName, shortShipPromise} from './product-content.ts';
 
 export const BUILD_ROLES: Record<BuildRole, {label: string; beat: string}> = {
   frame: {label: 'Frame', beat: 'frame'},
@@ -27,6 +27,8 @@ export type HeroBuildPart = {
   price: number | null;
   currency: string;
   available: boolean;
+  /** The variant's ship promise, for the line under the build's button. */
+  shipPromise: string | null;
 };
 
 export type HeroBuild = {
@@ -64,6 +66,7 @@ export function resolveHeroBuilds(
         price: variant?.price ?? null,
         currency: variant?.currency || catalog.currency,
         available: Boolean(variant && variant.availability !== 'sold_out'),
+        shipPromise: variant?.ship_promise ?? null,
       };
     }),
   }));
@@ -99,6 +102,7 @@ export function heroBuildSelection(
         0,
       ) / 100
     : null;
+  const kinds = new Set(parts.map((part) => shortShipPromise(part.shipPromise)?.kind));
   const lines: CartLine[] = parts.map(({sku, quantity}) => ({sku, quantity}));
   return {
     parts,
@@ -109,5 +113,10 @@ export function heroBuildSelection(
     notify: comingSoon,
     href: cartAddUrl(build.addUrl, lines),
     complete: parts.length === build.parts.length,
+    shipMix: (kinds.has('target') ? (kinds.has('date') ? 'mixed' : 'target') : kinds.has('date') ? 'date' : 'none') as
+      | 'mixed'
+      | 'target'
+      | 'date'
+      | 'none',
   };
 }

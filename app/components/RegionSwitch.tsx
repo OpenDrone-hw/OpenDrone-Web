@@ -10,9 +10,22 @@ import type {loader as rootLoader} from '~/root';
 
 const CHOICES: readonly SwitchCurrency[] = ['EUR', 'USD'];
 
+/** What a choice reads as: the region it ships to and its currency. */
+function choiceLabel(choice: SwitchCurrency): string {
+  return choice === 'USD'
+    ? (copyText('chrome.region_switch_us') ?? 'US · USD')
+    : (copyText('chrome.region_switch_eu') ?? 'EU · EUR');
+}
+
+function choiceNote(choice: SwitchCurrency): string {
+  return choice === 'USD'
+    ? (copyText('chrome.region_switch_us_note') ?? 'Ships to the United States, prices in dollars')
+    : (copyText('chrome.region_switch_eu_note') ?? 'Ships to the EU, prices in euro');
+}
+
 /**
- * The region switch of the header and the mobile menu: a compact "EUR" menu
- * button in the header (`variant="menu"`), the full EUR | USD segmented pill
+ * The region switch of the header and the mobile menu: a compact "EU · EUR" menu
+ * button in the header (`variant="menu"`), the full "EU · EUR | US · USD" segmented pill
  * in the drawer (default). It is a region
  * switch, not a display toggle: it posts the destination to the same route
  * action as the cart's "Ship to" select (`/api/shopify/cart-country`), which
@@ -67,7 +80,7 @@ export function RegionSwitch({
     typeof pending === 'string' ? pending : revalidator.state !== 'idle' && picked ? picked : country,
     usRate,
   );
-  const label = copyText('chrome.region_switch_aria') ?? 'Currency and shipping region';
+  const label = copyText('chrome.region_switch_aria') ?? 'Ship to and currency';
 
   const choose = (choice: SwitchCurrency) => {
     if (busy || choice === active) return;
@@ -106,15 +119,19 @@ export function RegionSwitch({
       aria-busy={busy || undefined}
       data-currency={active}
     >
+      <span className="region-switch-caption" aria-hidden="true">
+        {copyText('chrome.region_switch_caption') ?? 'Ship to'}
+      </span>
       {CHOICES.map((choice) => (
         <button
           key={choice}
           type="button"
+          title={choiceNote(choice)}
           aria-pressed={active === choice}
           data-active={active === choice ? 'true' : undefined}
           onClick={() => choose(choice)}
         >
-          {choice}
+          {choiceLabel(choice)}
         </button>
       ))}
       {failed ? <RegionFailed id={labelId} /> : null}
@@ -205,14 +222,14 @@ function RegionMenu({
         ref={triggerRef}
         type="button"
         className="header-popover-trigger"
-        aria-label={`${label}: ${active}`}
+        aria-label={`${label}: ${choiceLabel(active)}`}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
         onClick={() => setOpen(!open)}
         onKeyDown={onTriggerKey}
       >
-        {active}
+        {choiceLabel(active)}
         <svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
           <path d="M2 3.5 5 6.5 8 3.5" />
         </svg>
@@ -239,7 +256,10 @@ function RegionMenu({
                 close(true);
               }}
             >
-              <span>{choice}</span>
+              <span className="region-menu-choice">
+                <span>{choiceLabel(choice)}</span>
+                <small>{choiceNote(choice)}</small>
+              </span>
               {active === choice ? (
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
                   <path d="m5 12.5 4.5 4.5L19 7.5" />

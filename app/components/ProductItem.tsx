@@ -337,6 +337,7 @@ export function ProductItem({
           <ShipChip
             promise={campaign.shipPromise}
             className="product-card-ship"
+            ifFunded={!campaign.targetReached}
           />
         ) : null}
         {'productType' in product && product.productType ? (
