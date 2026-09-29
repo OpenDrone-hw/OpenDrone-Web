@@ -29,7 +29,7 @@ Incutec BV ne vend, ne fournit ni ne distribue sciemment des biens destinés à 
 ## 4. Mise en œuvre opérationnelle
 
 ### 4.1 Restrictions géographiques
-La boutique en ligne livre uniquement à des adresses situées dans les États membres de l'UE. Elle ne livre pas vers la Russie, le Bélarus ni aucune destination soumise à des mesures restrictives de l'UE ou de l'ONU.
+La boutique en ligne livre uniquement à des adresses situées dans les États membres de l'UE et, pour les précommandes, aux États-Unis. Elle ne livre pas vers la Russie, le Bélarus ni aucune destination soumise à des mesures restrictives de l'UE ou de l'ONU.
 
 ### 4.2 Non-réexportation
 Toute commande est soumise à la clause de non-réexportation vers la Russie et le Bélarus exigée par l'article 12g du Règlement (UE) 833/2014 et l'article 8g du Règlement (CE) 765/2006 (Conditions Générales, article 18.2).

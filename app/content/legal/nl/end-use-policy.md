@@ -29,7 +29,7 @@ Incutec BV verkoopt, levert of distribueert niet bewust goederen voor gebruik in
 ## 4. Operationele uitvoering
 
 ### 4.1 Geografische beperkingen
-De webshop levert alleen aan adressen in EU-lidstaten. Hij levert niet aan Rusland, Belarus of bestemmingen onder beperkende maatregelen van de EU of de VN.
+De webshop levert alleen aan adressen in EU-lidstaten en, voor pre-orders, in de Verenigde Staten. Hij levert niet aan Rusland, Belarus of bestemmingen onder beperkende maatregelen van de EU of de VN.
 
 ### 4.2 Niet-wederuitvoer
 Elke bestelling valt onder de clausule van niet-wederuitvoer naar Rusland en Belarus vereist door artikel 12g van Verordening (EU) 833/2014 en artikel 8g van Verordening (EG) 765/2006 (Algemene Voorwaarden, Artikel 18.2).

@@ -24,7 +24,7 @@
 
 ### Artikel 3: Aanbod en prijzen
 
-3.1. Alle prijzen op de website zijn in euro, inclusief BTW, exclusief verzendkosten (tenzij anders aangegeven).
+3.1. Alle prijzen op de website zijn in euro, inclusief BTW, exclusief verzendkosten (tenzij anders aangegeven). Bij leveringen naar de Verenigde Staten zijn de prijzen in Amerikaanse dollar, zoals bepaald in Artikel 7ter.
 
 3.2. Een aanbod geldt zolang de voorraad strekt. Kennelijke vergissingen of fouten in het aanbod binden Incutec BV niet.
 
@@ -72,7 +72,7 @@
 
 7.3. Het risico van beschadiging en/of vermissing van producten berust tot het moment van bezorging aan de consument bij Incutec BV.
 
-7.4. Levering aan consumenten is beperkt tot goedgekeurde EU-bestemmingen. De beschikbare bezorgdienst en de volledige bezorgkosten worden vóór de betaling getoond.
+7.4. Levering aan consumenten is beperkt tot goedgekeurde EU-bestemmingen en, uitsluitend voor pre-orders, de Verenigde Staten (Artikel 7ter). De beschikbare bezorgdienst en de volledige bezorgkosten worden vóór de betaling getoond.
 
 ### Artikel 7bis: Voorverkoop
 
@@ -90,11 +90,25 @@
 
 7bis.6. Een betaling voor een pre-order is de betaling van de koopprijs van het bestelde product. Zij is geen investering, draagt geen interest en verleent geen aandeel of ander recht in Incutec BV.
 
-7bis.7. Binnen de Europese Unie zijn op een bestelling geen invoerrechten of invoerbelastingen verschuldigd.
+7bis.7. Binnen de Europese Unie zijn op een bestelling geen invoerrechten of invoerbelastingen verschuldigd. Bij leveringen naar de Verenigde Staten zijn invoerrechten in de prijs inbegrepen (Artikel 7ter.6).
 
 7bis.8. De prijs van een pre-orderproduct stijgt in stappen naarmate betaalde eenheden worden geteld. De prijs die bij het afrekenen wordt getoond, is de prijs van de bestelling; latere stappen wijzigen die niet.
 
 7bis.9. Het geleverde product stemt overeen met de kenmerken en specificaties die op de productpagina vermeld stonden bij de bestelling. Een wezenlijke wijziging daarvan wordt vóór verzending per e-mail meegedeeld; de consument kan dan de overeenkomst voor dat artikel kosteloos ontbinden, met terugbetaling binnen 14 dagen.
+
+### Artikel 7ter: Consumenten met een leveradres in de Verenigde Staten
+
+7ter.1. **Toepassingsgebied.** Dit artikel geldt voor consumenten met een leveradres in de Verenigde Staten van Amerika. Alle andere artikelen van deze voorwaarden zijn ook op hen van toepassing. Wijkt dit artikel af van een ander artikel, dan gaat dit artikel voor bij die bestellingen. Belgisch recht is van toepassing op de overeenkomst zoals bepaald in Artikel 14.1, zonder afbreuk te doen aan dwingende consumentenbescherming van de plaats waar de consument woont waarvan bij overeenkomst niet kan worden afgeweken.
+
+7ter.2. **Wat wordt verkocht en tegen welke prijs.** Voor leveringen naar de Verenigde Staten verkoopt Incutec BV uitsluitend pre-orderproducten. De prijzen zijn in Amerikaanse dollar. De verzending bedraagt een vast bedrag van USD 9,95 per bestelling. De artikelen worden verzonden vanuit een Amerikaans fulfilmentmagazijn nadat de batch in de Verenigde Staten is ingevoerd. De verzenddatum en de uiterste leverdatum op de productpagina en in de orderbevestiging gelden voor de bestelling. Voor de batch waarvan het financieringsdoel uiterlijk 22 november 2026 wordt bereikt, worden de artikelen uiterlijk 14 maart 2027 verzonden en uiterlijk 15 april 2027 geleverd.
+
+7ter.3. **Terugbetalingen.** Incutec BV biedt consumenten in de Verenigde Staten hetzelfde herroepingsrecht als consumenten in de Europese Unie. De consument kan zonder opgave van reden van de overeenkomst afzien vóór de levering, of binnen 14 kalenderdagen na ontvangst van het product, en ontvangt het betaalde bedrag volledig terug. Artikel 5 en Artikel 7bis.4 zijn van toepassing op de uitoefening van dat recht, de terugzending van het product en de terugbetaling, in Amerikaanse dollar en via het oorspronkelijke betaalmiddel.
+
+7ter.4. **Verzenddata en vertraging (16 CFR Part 435).** Incutec BV verzendt uiterlijk op de datum die bij de bestelling van de consument is vermeld. Kan Incutec BV niet uiterlijk op die datum verzenden, dan verwittigt zij de consument vóór die datum, vermeldt een nieuwe datum en biedt de keuze om met de vertraging in te stemmen of de bestelling te annuleren met volledige terugbetaling. Incutec BV betaalt een geannuleerde bestelling terug binnen 7 werkdagen na de annulering of, bij betaling met een krediet- of debetkaart, binnen één factureringscyclus. Loopt de vertraging op tot meer dan 30 dagen na de vermelde datum en heeft de consument er niet mee ingestemd, dan wordt de bestelling automatisch geannuleerd en op dezelfde wijze terugbetaald.
+
+7ter.5. **FCC-apparatuurgoedkeuring en invoerclearance.** De producten zijn radiofrequentieapparatuur die onder de regels van de Federal Communications Commission (FCC) valt. Levering in de Verenigde Staten hangt af van de FCC-apparatuurgoedkeuring en de Amerikaanse invoerclearance. Kunnen wij een artikel om die reden niet bij u leveren, dan betalen wij dat artikel volledig terug. De bestelling is daarom afhankelijk van die goedkeuring (47 CFR 2.803(c)(2)). De FCC-regels beheersen deze overeenkomst of de consumentenbescherming niet; de rechten van de consument zijn die uit deze voorwaarden en uit het toepasselijke recht.
+
+7ter.6. **Invoerrechten en verkoopbelasting.** De prijzen omvatten invoerrechten, en de consument is bij levering geen recht, douanemakelaarskost of invoerbelasting verschuldigd. Incutec BV int op deze bestellingen geen verkoopbelasting, tenzij de wet dit vereist. Is dat het geval, dan wordt de belasting vóór de betaling getoond.
 
 ### Artikel 8: Betaling
 
@@ -208,4 +222,4 @@
 
 ---
 
-*Versie: 2.4, laatst bijgewerkt 2026-09-25*
+*Versie: 2.5, laatst bijgewerkt 2026-09-29*

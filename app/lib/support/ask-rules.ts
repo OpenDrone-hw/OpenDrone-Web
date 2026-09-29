@@ -231,7 +231,7 @@ export function matchShippingVatInfo(message: string): FixedInfo | null {
   if (!vat && !nonEuShipping) return null;
   const text = vat
     ? 'Every price and shipping rate shown already includes VAT. Within the EU there are no customs formalities and no import duties after checkout.'
-    : "Direct checkout only covers the EU countries offered at checkout, shipped from Belgium; VAT is included and there are no customs charges. Outside the EU, Incutec does not offer direct consumer checkout: retailers can request a bulk quote, and consumers can sign up for launch news for other countries.";
+    : "Direct checkout covers the EU countries offered at checkout, shipped from Belgium, with VAT included and no customs charges. For deliveries to the United States, preorder batches only are sold direct, in US dollars with import duties included and no sales tax collected, shipped from a US fulfilment warehouse. Elsewhere, Incutec does not offer direct consumer checkout: retailers can request a bulk quote, and consumers can sign up for launch news for other countries.";
   return {
     text,
     citations: [{n: 1, title: 'Shipping and delivery', url: '/shipping', source: 'OpenDrone storefront', kind: 'doc'}],

@@ -1,10 +1,10 @@
 ## Verzending en levering
 
-Incutec BV verkoopt rechtstreeks aan consumenten in de EU-landen die aan de checkout kunnen worden gekozen, met verzending vanuit België. Kies uw leverland op de productpagina. Voor een land dat niet open is, kunt u niet afrekenen. De beschikbare bezorgdienst en de totale kosten worden vóór de betaling bevestigd.
+Incutec BV verkoopt rechtstreeks aan consumenten in de EU-landen die aan de checkout kunnen worden gekozen, met verzending vanuit België, en, alleen voor pre-orders, aan consumenten in de Verenigde Staten, met verzending vanuit een Amerikaans fulfilmentmagazijn (zie het onderdeel Verenigde Staten hieronder). Kies uw leverland op de productpagina. Voor een land dat niet open is, kunt u niet afrekenen. De beschikbare bezorgdienst en de totale kosten worden vóór de betaling bevestigd.
 
 ### Verzendtarieven
 
-Eén vast tarief per bestelling, in euro, btw inbegrepen:
+Voor leveringen binnen de EU geldt één vast tarief per bestelling, in euro, btw inbegrepen. Leveringen naar de Verenigde Staten hebben een eigen tarief: zie het onderdeel Verenigde Staten hieronder.
 
 | Bestemming | Tarief |
 |---|---|
@@ -18,17 +18,32 @@ Incutec BV verzendt niet naar Rusland, Belarus, Iran, Noord-Korea, Syrië en Cub
 
 ### Btw en douane
 
-Prijzen en verzendtarieven zijn inclusief btw. Binnen de Europese Unie zijn er geen douaneformaliteiten, en na de checkout zijn geen invoerrechten of invoerbelastingen verschuldigd.
+Voor leveringen binnen de EU zijn prijzen en verzendtarieven inclusief btw. Binnen de Europese Unie zijn er geen douaneformaliteiten, en na de checkout zijn geen invoerrechten of invoerbelastingen verschuldigd. Voor leveringen naar de Verenigde Staten zijn invoerrechten in de prijs inbegrepen en wordt geen verkoopbelasting geïnd: zie het onderdeel Verenigde Staten hieronder.
 
-### Buiten de Europese Unie
+### Verenigde Staten
 
-Incutec BV biedt geen rechtstreekse consumentencheckout buiten de EU. Winkels in de EU en de VS kunnen [een offerte aanvragen](/wholesale). Producttoelating, invoer en levering moeten worden overeengekomen voordat een bestelling wordt aanvaard. Consumenten kunnen [lanceringsnieuws ontvangen](/newsletter). Beschikbaarheid bij buitenlandse winkels wordt niet beloofd.
+Voor leveringen naar de Verenigde Staten verkoopt Incutec BV rechtstreeks aan consumenten, uitsluitend voor pre-orderbatches. Betaalde EU-voorraad en artikelen op voorraad worden alleen naar de EU verzonden, dus met een Amerikaans leveradres kunt u daarvoor niet afrekenen.
+
+- **Verkocht:** Alleen pre-orderbatches
+- **Munt:** Amerikaanse dollar (USD)
+- **Invoerrechten:** Inbegrepen in de prijs
+- **Verkoopbelasting:** Wordt niet geïnd
+- **Verzending:** Vast tarief van USD 9,95 per bestelling
+- **Verzonden vanuit:** Een Amerikaans fulfilmentmagazijn, nadat de batch in de Verenigde Staten is ingevoerd
+- **Verzenddatum:** Uiterlijk 14 maart 2027, als het financieringsdoel uiterlijk 22 november 2026 wordt bereikt
+- **Leverdatum:** Uiterlijk 15 april 2027
+
+De verzenddatum en leverdatum op de productpagina en in uw orderbevestiging zijn die welke voor uw bestelling gelden. Levering in de Verenigde Staten hangt af van de FCC-apparatuurgoedkeuring en de Amerikaanse invoerclearance. Kunnen wij een artikel om die reden niet bij u leveren, dan betalen wij dat artikel volledig terug. Terugbetalingen, vertraagde verzending en het recht om te annuleren bij leveringen naar de Verenigde Staten volgen [Artikel 7ter van de voorwaarden](/nl/algemene-voorwaarden#art-7ter).
+
+### Buiten de Europese Unie en de Verenigde Staten
+
+Incutec BV biedt geen rechtstreekse consumentencheckout buiten de EU en de Verenigde Staten. Winkels in de EU en de VS kunnen [een offerte aanvragen](/wholesale). Producttoelating, invoer en levering moeten worden overeengekomen voordat een bestelling wordt aanvaard. Consumenten kunnen [lanceringsnieuws ontvangen](/newsletter). Beschikbaarheid bij buitenlandse winkels wordt niet beloofd.
 
 ### Pre-orders
 
 Pre-orders worden volledig betaald. Het productaanbod en de orderbevestiging vermelden de batch, financieringsvoorwaarden, geplande verzending en een afzonderlijke uiterste leverdatum. De campagnedata staan op [/preorder](/preorder). Verzending is geen levering.
 
-Annulering, niet-behaalde doelen, gewijzigde leverdata, terugbetalingen en bestellingen met meerdere batches volgen [Artikel 7bis van de voorwaarden](/nl/algemene-voorwaarden#art-7bis). U kunt vóór de levering herroepen en behoudt de wettelijke herroepingsrechten na ontvangst. Gebruik het [online herroepingsformulier](/nl/herroepingsrecht#withdraw).
+Annulering, niet-behaalde doelen, gewijzigde leverdata, terugbetalingen en bestellingen met meerdere batches volgen [Artikel 7bis van de voorwaarden](/nl/algemene-voorwaarden#art-7bis). U kunt vóór de levering herroepen en behoudt de wettelijke herroepingsrechten na ontvangst. Gebruik het [online herroepingsformulier](/nl/herroepingsrecht#withdraw). Voor leveringen naar de Verenigde Staten geldt daarnaast Artikel 7ter.
 
 ### Leveringstermijn voor artikelen op voorraad
 
