@@ -33,7 +33,7 @@ Duties are included in the price, so there is nothing to pay on delivery. US ord
 ### Receiver, US sale
 **Sold conditionally in the US**
 
-The receiver is not delivered in the US until its FCC equipment authorization is granted (47 CFR 2.803). If it is blocked, you get a full refund.
+The receiver is sold on the condition that it will not be delivered in the US until its FCC equipment authorization is granted (47 CFR 2.803). If authorization is not granted, you get a full refund for it.
 
 You pay in full at checkout. If a preorder target is not reached, we email you and you choose: a full refund for that item, or keep your order for the new date.
 
@@ -88,7 +88,7 @@ Every unit is tested and inspected before it ships and goes straight to you from
 ### Receiver, US sale
 **Sold conditionally in the US**
 
-The receiver is not delivered in the US until its FCC equipment authorization is granted (47 CFR 2.803). If it is blocked, you get a full refund.
+The receiver is sold on the condition that it will not be delivered in the US until its FCC equipment authorization is granted (47 CFR 2.803). If authorization is not granted, you get a full refund for it.
 
 You pay in full at checkout. If a preorder target is not reached, we email you and you choose: a full refund for that item, or keep your order for the new date.
 

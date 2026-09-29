@@ -203,7 +203,7 @@ export function launchCopy(region = 'all') {
     {
       kicker: 'Receiver, US sale',
       title: 'Sold conditionally in the US',
-      body: 'The receiver is not delivered in the US until its FCC equipment authorization is granted (47 CFR 2.803). If it is blocked, you get a full refund.',
+      body: 'The receiver is sold on the condition that it will not be delivered in the US until its FCC equipment authorization is granted (47 CFR 2.803). If authorization is not granted, you get a full refund for it.',
     },
   ];
   const usRun = {...eu[1], body: 'Every unit is tested and inspected before it ships and goes straight to you from our fulfilment partner.'};

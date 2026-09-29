@@ -42,8 +42,7 @@ export const COLOR = {
 /**
  * Campaign facts that mail prose repeats. They must equal content/preorders.json
  * (endsOn, shipsBy, deliveryBy, deliveryByUS of the preorder-run SKUs and the
- * paid batch's `ships` wording); app/lib/email-shell.test.ts checks that once
- * preorders.json carries the 2026-12-15 close. Bodies and builders write the
+ * paid batch's `ships` wording); app/lib/email-shell.test.ts fails when they differ. Bodies and builders write the
  * tokens (%%CLOSE%% and so on) and applyFacts fills them.
  */
 export const FACTS = {

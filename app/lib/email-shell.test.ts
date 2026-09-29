@@ -28,13 +28,14 @@ describe('email shell', () => {
     assert.match(html, />\s*pre\s*</);
   });
 
-  it('keeps FACTS equal to content/preorders.json once it carries the launch dates', () => {
+  it('keeps FACTS equal to content/preorders.json', () => {
     const p: any = JSON.parse(readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8'));
-    if (p.endsOn !== FACTS.closeIso) return; // preorders.json not yet on the 2026-12-15 close
+    assert.equal(p.endsOn, FACTS.closeIso, 'content/preorders.json must carry the launch close date (PR #561)');
     assert.equal(p.shipsBy, '2027-03-31');
     const run = p.skus['OPENRX-LITE'].batches[0];
     assert.equal(run.deliveryBy, '2027-04-15');
     assert.equal(run.deliveryByUS, '2027-04-30');
+    assert.match(p.skus['OPENFC-LITE-2020'].batches[0].ships, new RegExp(FACTS.batch1));
   });
 });
 
