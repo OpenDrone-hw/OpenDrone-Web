@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-28T11:42:52.600Z",
+  "updatedAt": "2026-09-29T11:23:14.608Z",
   "repos": {
     "OpenESC-20x20": {
       "createdAt": "2026-03-09",
@@ -146,6 +146,13 @@
       "createdAt": "2026-09-27",
       "status": null,
       "statusSince": "2026-09-28",
+      "archived": false,
+      "releases": 0
+    },
+    "chatfpv": {
+      "createdAt": "2026-09-26",
+      "status": null,
+      "statusSince": "2026-09-29",
       "archived": false,
       "releases": 0
     }
@@ -615,6 +622,15 @@
       "url": "https://github.com/OpenDrone-hw/OpenRX-Mono",
       "archived": false,
       "observed": "2026-09-02"
+    },
+    {
+      "id": "repo:chatfpv",
+      "kind": "repo",
+      "repo": "chatfpv",
+      "date": "2026-09-26",
+      "url": "https://github.com/OpenDrone-hw/chatfpv",
+      "archived": false,
+      "observed": "2026-09-29"
     },
     {
       "id": "status:OpenESC-20x20:beta:2026-09-26",
