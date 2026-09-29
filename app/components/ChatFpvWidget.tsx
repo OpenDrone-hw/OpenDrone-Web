@@ -105,6 +105,10 @@ const BOTTOM_OBSTACLES = [
   // the form, and `.newsletter-signup-form` alone only clears the form
   // itself, landing the button on that heading instead of the whole card.
   '.po-empty-newsletter',
+  // The preorder meter and its "Price steps" hint: at 390 px the launcher sat
+  // on the hint's trigger (site audit 2026-09-30, F1).
+  '.step-bar',
+  '.info-hint',
 ];
 /**
  * Obstacles whose top edge is in the upper third of the viewport are
@@ -246,8 +250,17 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
   // directly and effects run after that render commits), so keyboard and
   // screen-reader users land on the conversation, then back on a real
   // focusable launcher, instead of wherever focus happened to be.
+  // Skipped until `open` changes: on page load `open` is already false, and
+  // focusing the launcher then would put the first Tab past the header and
+  // the whole page (site audit 2026-09-30, F1). Only a real open/close
+  // change moves focus.
+  const lastOpen = useRef(open);
   useEffect(() => {
-    const id = window.setTimeout(() => (open ? panelRef.current : button.current)?.focus(), 0);
+    if (lastOpen.current === open) return;
+    const id = window.setTimeout(() => {
+      lastOpen.current = open;
+      (open ? panelRef.current : button.current)?.focus();
+    }, 0);
     return () => window.clearTimeout(id);
   }, [open]);
 

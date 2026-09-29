@@ -46,12 +46,12 @@ export function SiteWordmark({className}: {className?: string}) {
             } as React.CSSProperties;
             return (
               <g key={letter.index}>
-                <path d={letter.d} fill="var(--color-gold-fill)" />
+                <path d={letter.d} fill="var(--color-wordmark-gold)" />
                 <path
                   className="site-wordmark-sheen"
                   style={goldStyle}
                   d={letter.d}
-                  fill="color-mix(in srgb, var(--color-gold-fill) 55%, white)"
+                  fill="var(--color-wordmark-sheen)"
                 />
               </g>
             );

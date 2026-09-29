@@ -109,6 +109,11 @@
      dark ink on top. Same gold as text now, so these are plain aliases. */
   --color-gold-fill: var(--color-gold);
   --color-gold-fill-hover: var(--color-gold-hover);
+  /* The "Drone" half of the OpenDrone wordmark and its ambient sheen.
+     html.light swaps in a deeper gold: the brand gold is 1.6:1 on the
+     cream background and the logo half vanished. */
+  --color-wordmark-gold: var(--color-gold-fill);
+  --color-wordmark-sheen: color-mix(in srgb, var(--color-gold-fill) 55%, white);
 
   /* Brand / PCB green. --color-green is the emerald brand green: a
      physical product color (#147A31, used on the motors). Rendered
@@ -254,6 +259,8 @@ html.light {
   --color-focus: var(--color-text);
   --color-gold-text: #7a5700;
   --color-gold-text-hover: #5c4200;
+  --color-wordmark-gold: #9a6a00; /* 4.2:1 on the cream background */
+  --color-wordmark-sheen: #b98200;
   /* Emerald PCB/brand green, AA 5.4:1 on white. --color-green-deep and
      --color-stock (= var(--color-green)) inherit from @theme and re-theme
      through this value automatically. */
@@ -494,7 +501,7 @@ html {
   fill: var(--color-text);
 }
 .hw-fills .hw-fill--drone {
-  fill: var(--color-gold);
+  fill: var(--color-wordmark-gold);
 }
 
 @media (prefers-reduced-motion: reduce) {

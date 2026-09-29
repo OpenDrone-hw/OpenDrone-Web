@@ -234,8 +234,6 @@ function FamilyNav({
   const products = familyProducts ?? null;
   const [open, setOpen] = useState<string | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  // True for the tick after Escape restores focus to a chip (see onFocus).
-  const escFocus = useRef(false);
   const location = useLocation();
   // Global coming-soon flag; per-product overrides resolve in isComingSoon()
   // below so unlaunched SKUs list without price or buy cell.
@@ -448,24 +446,31 @@ function FamilyNav({
         onMouseEnter={() => openFamily(cat.label)}
         onMouseLeave={scheduleClose}
         onFocus={() => {
-          // Swallow the focus event caused by Escape's own focus restore -
-          // otherwise the menu instantly reopens.
-          if (escFocus.current) return;
-          openFamily(cat.label);
+          // Keyboard focus does not open the pod: it would put every SKU row
+          // and Add button of all six families (about 30 stops) in the Tab
+          // order ahead of the page. ArrowDown on the chip opens it (see
+          // onKeyDown); once open, focus moving inside keeps it open.
+          if (open === cat.label) clearTimeout(closeTimer.current);
         }}
         onBlur={scheduleClose}
         onKeyDown={(e) => {
+          if (
+            e.key === 'ArrowDown' &&
+            open !== cat.label &&
+            items.length > 0 &&
+            (e.target as Element).closest('a') === e.currentTarget.querySelector('a')
+          ) {
+            e.preventDefault();
+            openFamily(cat.label);
+            return;
+          }
           // Escape closes the pod and hands focus back to the chip, so a
           // keyboard user isn't stranded in a closed popup.
           if (e.key === 'Escape' && open === cat.label) {
             e.stopPropagation();
             clearTimeout(closeTimer.current);
             setOpen(null);
-            escFocus.current = true;
             e.currentTarget.querySelector('a')?.focus();
-            setTimeout(() => {
-              escFocus.current = false;
-            }, 0);
           }
         }}
       >
