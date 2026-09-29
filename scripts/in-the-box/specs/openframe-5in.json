@@ -1,0 +1,40 @@
+{
+  "handle": "openframe",
+  "variant": "5in",
+  "sources": ["public/models/od5/frame.glb", "public/models/od5/drive.glb"],
+  "camera": {"tiltDeg": 0},
+  "layout": {"gapMm": 10, "sectionGapMm": 16, "aspect": 1.6},
+  "groups": [
+    {"label": "Top plate", "row": 1, "match": "^Top$", "finish": "carbon"},
+    {"label": "Base plates", "row": 1, "match": "^Base-(Top|Bot)$", "finish": "carbon"},
+    {"label": "Arms", "row": 1, "match": "^Arm$", "finish": "carbon"},
+    {"label": "Cross brace", "row": 2, "match": "^Cross$", "finish": "carbon"},
+    {"label": "Standoffs 18 mm", "row": 2, "match": "^18mmx4mm$", "finish": "alu"},
+    {"label": "Side plates", "row": 2, "match": "^Standoff-(L|R)$", "finish": "alu"},
+    {"label": "Arm boots", "row": 2, "match": "^Boot-", "finish": "tpu"},
+    {"label": "Camera mount", "row": 2, "match": "^Cam-Mount-", "finish": "tpu"},
+    {"label": "Antenna mount", "row": 2, "match": "^Airtag/Antenna[- ]mount$", "finish": "tpu"},
+    {"label": "Anti-slip pad", "row": 1, "match": "^anti-slip pad$", "finish": "rubber", "color": "#35383d",
+     "note": "GLB colours are placeholder grey and white; the pad is dark silicone"},
+    {"label": "M3x6 button head", "match": "^Socket button head screw M3x0\\.5 x 6$", "finish": "steel", "section": "hardware", "perRow": 8},
+    {"label": "M3x8 button head", "match": "^Socket button head screw M3x0\\.5 x 8$", "finish": "steel", "section": "hardware", "perRow": 10},
+    {"label": "M3x12 button head", "match": "^Socket button head screw M3x0\\.5 x 12$", "finish": "steel", "section": "hardware", "perRow": 8},
+    {"label": "M3x20 button head", "match": "^Socket button head screw M3x0\\.5 x 20$", "finish": "steel", "section": "hardware", "perRow": 8},
+    {"label": "M3x8 socket cap", "match": "^Hex socket head cap screw M3x0\\.50 x 8$", "finish": "steel", "section": "hardware", "perRow": 8},
+    {"label": "Flat head screw", "match": "^Black-Oxide Alloy Steel Hex Drive Flat Head Screw:1__Body[12]$", "combine": true, "count": 4,
+     "note": "GLB has 4 head bodies (Body1,3,4,5) and 1 shank body (Body2); shown as 4 screws from one head+shank pair. README hardware table says 5.",
+     "finish": "steel", "section": "hardware"},
+    {"label": "M3 locknut", "match": "^Prevailing torque nut M3x0\\.5$", "finish": "steel", "color": "#80868f", "section": "hardware"},
+    {"label": "M3 press nut", "match": "^m3 pressnut$", "finish": "zinc", "section": "hardware", "perRow": 10},
+    {"label": "Soft mount grommet", "match": "^softmount m2$", "finish": "rubber", "section": "hardware"}
+  ],
+  "exclude": [
+    "^Black-Oxide Alloy Steel Hex Drive Flat Head Screw:1__Body[345]$",
+    "^AirTag$",
+    "^Dual-Band-UFL-Antenna$",
+    "^Rear Housing:1__Body1$",
+    "^Prevailing torque nut M5x0\\.80$",
+    "^2306\\.5-2026\\.7\\.14$",
+    "^5in-prop c?cw$"
+  ]
+}
