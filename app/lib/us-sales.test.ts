@@ -339,8 +339,10 @@ describe('FCC conditional-sale disclosure', () => {
     for (const [file, key] of [['product-chrome', 'buy_us_fcc'], ['cart', 'us_fcc']] as const) {
       const copy = JSON.parse(fs.readFileSync(new URL(`../../content/copy/${file}.json`, import.meta.url), 'utf8')) as Record<string, string>;
       const text: string = copy[key];
-      assert.match(text, /has not been authorized as required by the rules of the Federal Communications Commission/);
+      assert.match(text, /is subject to FCC rules/);
       assert.match(text, /conditional preorder/);
+      assert.match(text, /equipment authorization/);
+      assert.match(text, /FCC rules do not address consumer protection, contractual or other provisions under federal or state law/);
       assert.match(text, /full refund/);
       assert.ok(!text.includes('\u2014'));
     }

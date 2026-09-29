@@ -1,6 +1,6 @@
 ## Shipping and delivery
 
-Incutec BV sells directly to consumers in the EU countries that can be selected at checkout, dispatched from Belgium or directly by our fulfilment partner as stated on the offer, and, for preorders only, to consumers in the United States, dispatched by Incutec or its fulfilment partner (see the section United States below). Select your delivery country on the product page. A destination that is not open cannot proceed to checkout. The available delivery service and total charge are confirmed before payment.
+Incutec BV sells directly to consumers in the EU countries that can be selected at checkout, dispatched from Belgium or by our fulfilment partner, and, for preorders only, to consumers in the United States, dispatched by Incutec or its fulfilment partner (see the section United States below). Select your delivery country on the product page. A destination that is not open cannot proceed to checkout. The available delivery service and total charge are confirmed before payment.
 
 ### Shipping rates
 
@@ -29,7 +29,7 @@ For deliveries to the United States, Incutec BV sells directly to consumers for 
 - **Import duties:** Included in the price
 - **Sales tax:** Not collected
 - **Shipping:** Flat USD 9.95 per order
-- **Ships from:** Incutec or its fulfilment partner, tested and inspected before it ships
+- **Ships from:** Incutec or its fulfilment partner
 - **Ship date:** By 31 March 2027, if the funding target is reached by 15 December 2026
 - **Delivery date:** By 30 April 2027
 

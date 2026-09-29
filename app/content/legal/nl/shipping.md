@@ -1,6 +1,6 @@
 ## Verzending en levering
 
-Incutec BV verkoopt rechtstreeks aan consumenten in de EU-landen die aan de checkout kunnen worden gekozen, met verzending vanuit België of rechtstreeks door onze fulfilmentpartner zoals op het aanbod vermeld, en, alleen voor pre-orders, aan consumenten in de Verenigde Staten, met verzending door Incutec of zijn fulfilmentpartner (zie het onderdeel Verenigde Staten hieronder). Kies uw leverland op de productpagina. Voor een land dat niet open is, kunt u niet afrekenen. De beschikbare bezorgdienst en de totale kosten worden vóór de betaling bevestigd.
+Incutec BV verkoopt rechtstreeks aan consumenten in de EU-landen die aan de checkout kunnen worden gekozen, met verzending vanuit België of door onze fulfilmentpartner, en, alleen voor pre-orders, aan consumenten in de Verenigde Staten, met verzending door Incutec of zijn fulfilmentpartner (zie het onderdeel Verenigde Staten hieronder). Kies uw leverland op de productpagina. Voor een land dat niet open is, kunt u niet afrekenen. De beschikbare bezorgdienst en de totale kosten worden vóór de betaling bevestigd.
 
 ### Verzendtarieven
 
@@ -29,7 +29,7 @@ Voor leveringen naar de Verenigde Staten verkoopt Incutec BV rechtstreeks aan co
 - **Invoerrechten:** Inbegrepen in de prijs
 - **Verkoopbelasting:** Wordt niet geïnd
 - **Verzending:** Vast tarief van USD 9,95 per bestelling
-- **Verzonden vanuit:** Incutec of zijn fulfilmentpartner, getest en geïnspecteerd voordat het wordt verzonden
+- **Verzonden vanuit:** Incutec of zijn fulfilmentpartner
 - **Verzenddatum:** Uiterlijk 31 maart 2027, als het financieringsdoel uiterlijk 15 december 2026 wordt bereikt
 - **Leverdatum:** Uiterlijk 30 april 2027
 

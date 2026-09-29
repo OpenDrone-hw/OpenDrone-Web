@@ -1737,7 +1737,7 @@ function ProductPage() {
         <p className="product-buy-ship product-buy-fcc" role="note">
           {say(
             'product-chrome.buy_us_fcc',
-            'FCC notice: this device has not been authorized as required by the rules of the Federal Communications Commission (FCC). It is offered as a conditional preorder and will not be delivered to US buyers until authorization is obtained. If it cannot be, you get a full refund.',
+            'FCC notice: this device is subject to FCC rules. It is sold as a conditional preorder and is delivered to US buyers only after it completes FCC equipment authorization. FCC rules do not address consumer protection, contractual or other provisions under federal or state law. If authorization is not obtained, you get a full refund of everything you paid.',
           )}
         </p>
       ) : null}
