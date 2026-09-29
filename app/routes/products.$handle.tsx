@@ -1741,11 +1741,6 @@ function ProductPage() {
   const fccConditional = fccConditionalSku(selectedVariant?.sku) || fccConditionalSku(product.handle);
   const usNotice = usBuyer && buyAvailable ? (
     <>
-      {usBatch && !showAvailability ? (
-        <p className="product-buy-ship">
-          {say('product-chrome.buy_us_ship', 'Ships to the US from the {batch} batch', {batch: usBatch})}
-        </p>
-      ) : null}
       {usEuOnly ? (
         <p className="product-buy-ship" role="note">
           {say('product-chrome.buy_us_eu_only', 'Ships from stock in Belgium to EU addresses only')}
@@ -1760,16 +1755,20 @@ function ProductPage() {
         </p>
       ) : null}
       <p className="product-buy-ship" role="note">
-        {fccConditional || !usBatch
+        {fccConditional
           ? say(
-              'product-chrome.buy_us_notice',
-              'US delivery depends on FCC equipment authorization and US import clearance. If we cannot deliver to you, you get a full refund.',
+              'product-chrome.buy_us_notice_fcc',
+              'US delivery also depends on US import clearance; the same full refund applies.',
             )
-          : say(
-              'product-chrome.buy_us_notice_short',
-              'US orders ship from the {batch} batch; if we cannot deliver, you get a full refund.',
-              {batch: usBatch},
-            )}
+          : !usBatch
+            ? say(
+                'product-chrome.buy_us_notice',
+                'US delivery depends on FCC equipment authorization and US import clearance. If we cannot deliver to you, you get a full refund.',
+              )
+            : say(
+                'product-chrome.buy_us_notice_short',
+                'If we cannot deliver to you, you get a full refund.',
+              )}
       </p>
     </>
   ) : null;

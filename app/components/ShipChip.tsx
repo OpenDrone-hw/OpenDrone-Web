@@ -5,6 +5,7 @@ import {
   datedShipParts,
   latestShipDate,
   parseCampaignConfig,
+  promiseBatchMonth,
   promiseDeliveredBy,
   shortCampaignDate,
   type CampaignState,
@@ -145,14 +146,36 @@ export function shipLine(
     delivered ? `${text} · ${shipWord('delivered', delivered)}` : text;
   if (short.kind === 'date') return {kind: 'date', text: datedShipText(full) ?? short.text};
   const eta = shortCampaignDate(campaign?.latestShip ?? latestShipDate(CAMPAIGN)) ?? '';
-  if (campaign?.targetReached) return {kind: 'target', text: withDelivery(shipWord('eta', eta))};
+  // An accessory waits for another product's batch: name it, so "the target"
+  // is not left without an owner.
+  const lead = leadProduct(campaign?.shipsWith);
+  const month = lead ? promiseBatchMonth(full) : null;
+  const withLead = (text: string) => {
+    if (!lead) return text;
+    const head = month
+      ? (copyText('preorder.ships_with_batch') ?? 'Ships with the {lead} {month} batch').replace('{month}', month)
+      : (copyText('preorder.ships_with') ?? 'Ships with the {lead} batch');
+    return `${head.replace('{lead}', lead)} · ${text}`;
+  };
+  if (campaign?.targetReached) return {kind: 'target', text: withLead(withDelivery(shipWord('eta', eta)))};
   const deadline =
     shortCampaignDate(campaign?.deadline ?? campaignDate(CAMPAIGN.endsOn)) ?? CAMPAIGN.endsOn;
-  const ifFunded = (copyText('preorder.ship_eta_if_funded') ?? 'Ships by {date} if the target is reached').replace(
-    '{date}',
-    eta,
-  );
-  return {kind: 'target', text: withDelivery(`${shipWord('deadline', deadline)} · ${ifFunded}`)};
+  const ifFunded = (
+    copyText(lead ? 'preorder.ship_eta_if_lead_funded' : 'preorder.ship_eta_if_funded') ??
+    (lead ? 'Ships by {date} if that target is reached' : 'Ships by {date} if the target is reached')
+  ).replace('{date}', eta);
+  return {kind: 'target', text: withLead(withDelivery(`${shipWord('deadline', deadline)} · ${ifFunded}`))};
+}
+
+/**
+ * The product a shipsWith SKU waits for ("OpenFC Lite"), from its lead SKU.
+ * Null without a lead.
+ */
+export function leadProduct(sku: string | null | undefined): string | null {
+  if (!sku) return null;
+  if (sku.startsWith('OPENFC')) return copyText('preorder.lead_openfc') ?? 'OpenFC Lite';
+  if (sku.startsWith('OPENFRAME')) return copyText('preorder.lead_openframe') ?? 'OpenFrame';
+  return null;
 }
 
 export function ShipLine({
