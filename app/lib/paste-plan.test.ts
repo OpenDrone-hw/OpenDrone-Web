@@ -48,6 +48,7 @@ describe('paste plan', () => {
   it('plans the action from body and subject', () => {
     const live = {body: '<p>x</p>', subject: tpl.emailSubject};
     assert.equal(lib.planRow(tpl, '<p>x</p>', live).action, 'ok');
+    assert.equal(lib.planRow(tpl, '<p>x</p>', {...live, subject: 'Order {{name}} confirmed'}).action, 'ok');
     assert.equal(lib.planRow(tpl, '<p>y</p>', live).action, 'set body');
     assert.equal(lib.planRow(tpl, '<p>x</p>', {...live, subject: 'Old'}).action, 'set subject');
     assert.equal(lib.planRow(tpl, '<p>y</p>', {...live, subject: null}).action, 'set body+subject');

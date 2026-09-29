@@ -16,7 +16,7 @@ export function editUrl(handle, adminPath) {
 /** Phase 1 mappings (the ones with a body and a subject), optionally filtered by key. */
 export function selectTemplates(mappings, only) {
   const wanted = only ? new Set(only) : null;
-  const all = mappings.templates.filter((t) => t.phase === 1 && t.adminPath);
+  const all = mappings.templates.filter((t) => t.phase === 1 && t.adminPath && !t.pasteSkip);
   if (wanted) {
     const known = new Set(all.map((t) => t.key));
     const unknown = [...wanted].filter((k) => !known.has(k));
@@ -41,12 +41,17 @@ export function parseArgs(argv) {
   return opts;
 }
 
+/** Shopify stores `{{ name }}` as `{{name}}`; compare without the padding. */
+export function normalizeSubject(s) {
+  return s.replace(/\{\{\s*/g, '{{').replace(/\s*\}\}/g, '}}').trim();
+}
+
 /** What one template needs. live = {body, subject} read from admin (subject may be null). */
 export function planRow(tpl, repoBody, live) {
   const repoHash = sha256(repoBody);
   const liveHash = live ? sha256(live.body) : null;
   const bodyMatch = liveHash === repoHash;
-  const subjectMatch = live?.subject != null && live.subject === tpl.emailSubject;
+  const subjectMatch = live?.subject != null && normalizeSubject(live.subject) === normalizeSubject(tpl.emailSubject);
   return {
     key: tpl.key,
     liveHash,
