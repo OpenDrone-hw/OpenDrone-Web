@@ -26,7 +26,7 @@
 
 ### Article 3 : Offre et prix
 
-3.1. Tous les prix sur le site web sont exprimés en euros, TVA comprise, hors frais de livraison (sauf mention contraire).
+3.1. Tous les prix sur le site web sont exprimés en euros, TVA comprise, hors frais de livraison (sauf mention contraire). Pour les livraisons vers les États-Unis, les prix sont exprimés en dollars américains, comme prévu à l’article 7ter.
 
 3.2. Une offre est valable dans la limite des stocks disponibles. Les erreurs manifestes ou les fautes dans l’offre ne lient pas Incutec BV.
 
@@ -74,7 +74,7 @@
 
 7.3. Le risque de dommage et/ou de perte des produits incombe à Incutec BV jusqu’au moment de la livraison au consommateur.
 
-7.4. La livraison aux consommateurs est limitée aux destinations approuvées de l’UE. Le service de livraison disponible et les frais complets sont indiqués avant le paiement.
+7.4. La livraison aux consommateurs est limitée aux destinations approuvées de l’UE et, pour les précommandes uniquement, aux États-Unis (article 7ter). Le service de livraison disponible et les frais complets sont indiqués avant le paiement.
 
 ### Article 7bis : Précommandes
 
@@ -92,11 +92,25 @@
 
 7bis.6. Un paiement de précommande est le paiement du prix d’achat du produit commandé. Il ne constitue pas un investissement, ne porte aucun intérêt et ne confère aucune participation ni aucun autre droit dans Incutec BV.
 
-7bis.7. Dans l’Union européenne, aucun droit ni aucune taxe d’importation n’est dû sur une commande.
+7bis.7. Dans l’Union européenne, aucun droit ni aucune taxe d’importation n’est dû sur une commande. Pour les livraisons vers les États-Unis, les droits d’importation sont inclus dans le prix (article 7ter.6).
 
 7bis.8. Le prix d’un produit en précommande augmente par paliers à mesure que les unités payées sont comptabilisées. Le prix affiché lors du paiement est le prix de la commande ; les paliers ultérieurs ne le modifient pas.
 
 7bis.9. Le produit livré correspond aux caractéristiques et spécifications figurant sur la page produit au moment de la commande. Toute modification substantielle de celles-ci est communiquée par e-mail avant l’expédition ; le consommateur peut alors résoudre sans frais le contrat pour cet article, avec remboursement dans les 14 jours.
+
+### Article 7ter : Consommateurs ayant une adresse de livraison aux États-Unis
+
+7ter.1. **Champ d’application.** Le présent article s’applique aux consommateurs dont l’adresse de livraison se situe aux États-Unis d’Amérique. Tous les autres articles des présentes conditions leur sont également applicables. Lorsque le présent article diffère d’un autre article, le présent article prévaut pour ces commandes. Le droit belge régit le contrat comme prévu à l’article 14.1, sans préjudice de toute protection impérative du consommateur du lieu où il réside à laquelle il ne peut être dérogé par contrat.
+
+7ter.2. **Ce qui est vendu et à quel prix.** Pour les livraisons vers les États-Unis, Incutec BV ne vend que des produits en précommande. Les prix sont exprimés en dollars américains. L’expédition est un forfait de 9,95 USD par commande. Les articles sont expédiés depuis un entrepôt logistique américain une fois le lot importé aux États-Unis. La date d’expédition et la date limite de livraison indiquées sur la page produit et dans la confirmation de commande s’appliquent à la commande. Pour le lot dont l’objectif de financement est atteint au plus tard le 22 novembre 2026, les articles sont expédiés au plus tard le 14 mars 2027 et livrés au plus tard le 15 avril 2027.
+
+7ter.3. **Remboursements.** Incutec BV offre aux consommateurs des États-Unis le même droit de rétractation qu’aux consommateurs de l’Union européenne. Le consommateur peut se rétracter du contrat sans donner de motif avant la livraison, ou dans les 14 jours calendaires suivant la réception du produit, et reçoit le remboursement intégral du prix payé. L’article 5 et l’article 7bis.4 s’appliquent à l’exercice de ce droit, au retour du produit et au remboursement, en dollars américains et selon le moyen de paiement d’origine.
+
+7ter.4. **Dates d’expédition et retards (16 CFR Part 435).** Incutec BV expédie au plus tard à la date indiquée lors de la commande du consommateur. Si Incutec BV ne peut pas expédier à cette date, elle en informe le consommateur avant cette date, indique une nouvelle date et lui offre le choix d’accepter le retard ou d’annuler la commande avec remboursement intégral. Incutec BV rembourse une commande annulée dans les 7 jours ouvrables suivant l’annulation ou, pour un paiement par carte de crédit ou de débit, dans un cycle de facturation. Si le retard dépasse 30 jours après la date indiquée et que le consommateur n’y a pas consenti, la commande est annulée automatiquement et remboursée de la même manière.
+
+7ter.5. **Autorisation d’équipement de la FCC et dédouanement à l’importation.** Certains produits, tels que les contrôleurs de vol et les récepteurs, sont des équipements soumis aux règles de la Federal Communications Commission (FCC). La livraison de ces produits aux États-Unis dépend de l’autorisation d’équipement de la FCC et du dédouanement à l’importation aux États-Unis. Si nous ne pouvons pas vous livrer un article pour ce motif, nous vous remboursons cet article intégralement. La commande est donc subordonnée à cette autorisation (47 CFR 2.803(c)(2)). Les règles de la FCC ne régissent ni le présent contrat ni la protection des consommateurs ; les droits du consommateur sont ceux prévus par les présentes conditions et par le droit applicable.
+
+7ter.6. **Droits d’importation et taxe de vente.** Les prix incluent les droits d’importation, et le consommateur ne doit à la livraison ni droit, ni frais de courtage en douane, ni taxe d’importation. Incutec BV ne perçoit pas de taxe de vente sur ces commandes, sauf si la loi l’exige. Dans ce cas, la taxe est indiquée avant le paiement.
 
 ### Article 8 : Paiement
 
@@ -210,4 +224,4 @@
 
 ---
 
-*Version : 2.4, dernière mise à jour 2026-09-25*
+*Version : 2.5, dernière mise à jour 2026-09-29*

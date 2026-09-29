@@ -1,6 +1,6 @@
 ---
 title: EU preorder rounds
-summary: OpenDrone starts with EU consumer orders and welcomes bulk enquiries from EU and US retailers.
+summary: OpenDrone starts with EU and US consumer orders (preorders only for the US) and welcomes bulk enquiries from EU and US retailers.
 date: 2026-09-23
 tags: [milestone]
 author: OpenDrone

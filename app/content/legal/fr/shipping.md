@@ -1,10 +1,10 @@
 ## Expédition et livraison
 
-Incutec BV vend directement aux consommateurs dans les pays de l’UE qui peuvent être choisis lors du passage en caisse, avec expédition depuis la Belgique. Choisissez votre pays de livraison sur la page produit. Une destination non ouverte ne permet pas de passer en caisse. Le service de livraison disponible et le coût total sont confirmés avant le paiement.
+Incutec BV vend directement aux consommateurs dans les pays de l’UE qui peuvent être choisis lors du passage en caisse, avec expédition depuis la Belgique, et, pour les précommandes uniquement, aux consommateurs des États-Unis, avec expédition depuis un entrepôt logistique américain (voir la section États-Unis ci-dessous). Choisissez votre pays de livraison sur la page produit. Une destination non ouverte ne permet pas de passer en caisse. Le service de livraison disponible et le coût total sont confirmés avant le paiement.
 
 ### Tarifs d’expédition
 
-Un tarif fixe par commande, en euros, TVA comprise :
+Pour les livraisons dans l’UE, un tarif fixe par commande, en euros, TVA comprise. Les livraisons vers les États-Unis ont leur propre tarif : voir la section États-Unis ci-dessous.
 
 | Destination | Tarif |
 |---|---|
@@ -18,17 +18,32 @@ Incutec BV n’expédie pas vers la Russie, le Bélarus, l’Iran, la Corée du 
 
 ### TVA et douane
 
-Les prix et les tarifs d’expédition incluent la TVA. Dans l’Union européenne, il n’y a pas de formalités douanières, et aucun droit ni aucune taxe d’importation n’est dû après le passage en caisse.
+Pour les livraisons dans l’UE, les prix et les tarifs d’expédition incluent la TVA. Dans l’Union européenne, il n’y a pas de formalités douanières, et aucun droit ni aucune taxe d’importation n’est dû après le passage en caisse. Pour les livraisons vers les États-Unis, les prix incluent les droits d’importation et aucune taxe de vente n’est perçue : voir la section États-Unis ci-dessous.
 
-### Hors de l’Union européenne
+### États-Unis
 
-Incutec BV ne propose pas de commande directe aux consommateurs hors de l’UE. Les revendeurs de l’UE et des États-Unis peuvent [demander un devis](/wholesale). L’admissibilité des produits, l’importation et la livraison doivent être convenues avant l’acceptation d’une commande. Les consommateurs peuvent [recevoir les nouvelles du lancement](/newsletter). Aucune disponibilité auprès de revendeurs étrangers n’est promise.
+Pour les livraisons vers les États-Unis, Incutec BV vend directement aux consommateurs, uniquement pour des lots de précommande. Le stock payé dans l’UE et les articles en stock ne sont expédiés que dans l’UE : une adresse de livraison américaine ne permet donc pas de les commander.
+
+- **Vendu :** Lots de précommande uniquement
+- **Devise :** Dollar américain (USD)
+- **Droits d’importation :** Inclus dans le prix
+- **Taxe de vente :** Non perçue
+- **Expédition :** Tarif fixe de 9,95 USD par commande
+- **Expédié depuis :** Un entrepôt logistique américain, une fois le lot importé aux États-Unis
+- **Date d’expédition :** Au plus tard le 14 mars 2027, si l’objectif de financement est atteint au plus tard le 22 novembre 2026
+- **Date de livraison :** Au plus tard le 15 avril 2027
+
+La date d’expédition et la date de livraison indiquées sur la page produit et dans votre confirmation de commande sont celles qui s’appliquent à votre commande. La livraison aux États-Unis dépend de l’autorisation d’équipement de la FCC et du dédouanement à l’importation aux États-Unis. Si nous ne pouvons pas vous livrer un article pour ce motif, nous vous remboursons cet article intégralement. Les remboursements, les retards d’expédition et le droit d’annuler pour les livraisons vers les États-Unis suivent l’[article 7ter des conditions](/fr/algemene-voorwaarden#art-7ter).
+
+### Hors de l’Union européenne et des États-Unis
+
+Incutec BV ne propose pas de commande directe aux consommateurs hors de l’UE et des États-Unis. Les revendeurs de l’UE et des États-Unis peuvent [demander un devis](/wholesale). L’admissibilité des produits, l’importation et la livraison doivent être convenues avant l’acceptation d’une commande. Les consommateurs peuvent [recevoir les nouvelles du lancement](/newsletter). Aucune disponibilité auprès de revendeurs étrangers n’est promise.
 
 ### Précommandes
 
 Les précommandes sont payées intégralement. L’offre et la confirmation précisent le lot, les conditions de financement, l’expédition prévue et une date limite de livraison distincte. Les dates de campagne figurent sur [/preorder](/preorder). L’expédition n’est pas la livraison.
 
-L’annulation, les objectifs non atteints, les modifications des dates de livraison, les remboursements et les commandes de plusieurs lots suivent [l’Article 7bis des conditions](/fr/algemene-voorwaarden#art-7bis). Vous pouvez vous rétracter avant la livraison et conservez les droits légaux de rétractation après réception. Utilisez le [formulaire en ligne](/fr/herroepingsrecht#withdraw).
+L’annulation, les objectifs non atteints, les modifications des dates de livraison, les remboursements et les commandes de plusieurs lots suivent [l’Article 7bis des conditions](/fr/algemene-voorwaarden#art-7bis). Vous pouvez vous rétracter avant la livraison et conservez les droits légaux de rétractation après réception. Utilisez le [formulaire en ligne](/fr/herroepingsrecht#withdraw). Pour les livraisons vers les États-Unis, l’article 7ter s’applique en outre.
 
 ### Délai de livraison des articles en stock
 

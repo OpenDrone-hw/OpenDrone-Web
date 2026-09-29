@@ -26,7 +26,7 @@
 
 ### Article 3: Offer and prices
 
-3.1. All prices on the website are in euro, inclusive of VAT, exclusive of shipping costs (unless stated otherwise).
+3.1. All prices on the website are in euro, inclusive of VAT, exclusive of shipping costs (unless stated otherwise). For deliveries to the United States, prices are in US dollars, as set out in Article 7ter.
 
 3.2. An offer is valid while stocks last. Manifest errors or mistakes in the offer do not bind Incutec BV.
 
@@ -74,7 +74,7 @@
 
 7.3. The risk of damage and/or loss of products lies with Incutec BV until the moment of delivery to the consumer.
 
-7.4. Consumer delivery is limited to approved EU destinations. The available carrier service and full delivery charge are shown before payment.
+7.4. Consumer delivery is limited to approved EU destinations and, for preorders only, the United States (Article 7ter). The available carrier service and full delivery charge are shown before payment.
 
 ### Article 7bis: Pre-orders
 
@@ -92,11 +92,25 @@
 
 7bis.6. A pre-order payment is payment of the purchase price of the product ordered. It is not an investment, carries no interest and confers no share or other right in Incutec BV.
 
-7bis.7. Within the European Union no import duties or import taxes are due on an order.
+7bis.7. Within the European Union no import duties or import taxes are due on an order. For deliveries to the United States, import duties are included in the price (Article 7ter.6).
 
 7bis.8. The price of a pre-order product rises in steps as paid units are counted. The price shown at checkout is the price of the order; later steps do not change it.
 
 7bis.9. The delivered product matches the characteristics and specifications on the product page when the order was placed. Any material change is emailed before dispatch; the consumer may then terminate the contract for that item free of charge, with a refund within 14 days.
+
+### Article 7ter: Consumers with a delivery address in the United States
+
+7ter.1. **Scope.** This article applies to consumers whose delivery address is in the United States of America. All other articles of these terms apply to them too. Where this article differs from another article, this article prevails for those orders. Belgian law governs the contract as set out in Article 14.1, without prejudice to any mandatory consumer protection of the place where the consumer lives that cannot be waived by contract.
+
+7ter.2. **What is sold and at what price.** For deliveries to the United States, Incutec BV sells preorder products only. Prices are in US dollars. Shipping is a flat USD 9.95 per order. Items ship from a US fulfilment warehouse after the batch has been imported into the United States. The ship date and the final delivery date stated on the product page and in the order confirmation apply to the order. For the batch in which the funding target is reached by 22 November 2026, the items ship by 14 March 2027 and are delivered by 15 April 2027.
+
+7ter.3. **Refunds.** Incutec BV offers consumers in the United States the same right of withdrawal as consumers in the European Union. The consumer may withdraw from the contract without giving any reason before delivery, or within 14 calendar days after receiving the product, and receives a full refund of the price paid. Article 5 and Article 7bis.4 apply to the exercise of that right, the return of the product and the refund, in US dollars and to the original means of payment.
+
+7ter.4. **Shipping dates and delays (16 CFR Part 435).** Incutec BV ships by the date stated when the consumer orders. If Incutec BV cannot ship by that date, it notifies the consumer before that date, states a new date, and offers the choice to consent to the delay or to cancel the order for a full refund. Incutec BV refunds a cancelled order within 7 working days after the cancellation or, for a payment by credit or debit card, within one billing cycle. If the delay goes beyond 30 days after the stated date and the consumer has not consented to it, the order is cancelled automatically and refunded in the same way.
+
+7ter.5. **FCC equipment authorization and import clearance.** Some products, such as flight controllers and receivers, are equipment subject to the rules of the Federal Communications Commission (FCC). Delivery of those products to the United States depends on FCC equipment authorization and US import clearance. If we cannot deliver an item to you for that reason, we refund that item in full. The order is therefore conditional on that authorization (47 CFR 2.803(c)(2)). FCC rules do not govern this contract or consumer protection; the consumer's rights are those in these terms and in applicable law.
+
+7ter.6. **Import duties and sales tax.** Prices include import duties, and the consumer owes no duty, customs brokerage fee or import tax on delivery. Incutec BV does not collect sales tax on these orders unless the law requires it. If it does, the tax is shown before payment.
 
 ### Article 8: Payment
 
@@ -210,4 +224,4 @@
 
 ---
 
-*Version: 2.4, last updated 2026-09-25*
+*Version: 2.5, last updated 2026-09-29*
