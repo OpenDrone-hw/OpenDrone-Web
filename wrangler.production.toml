@@ -38,8 +38,8 @@ crons = ["*/5 * * * *"]
 # newsletter signup, cart and checkout writes refused. Open: "1" and "0".
 # The Shopify domains and tokens, the per-SKU policy, the webhook secret and
 # the price-step switch are Worker secrets.
-SHOPIFY_CHECKOUT_WRITE_ENABLED = "0"
-PUBLIC_COMING_SOON = "1"
+SHOPIFY_CHECKOUT_WRITE_ENABLED = "1"
+PUBLIC_COMING_SOON = "0"
 # Support tickets (README "Support"). Shopify writes: the `support` tag and
 # the `support.tickets` metafield on the matched customer. Reply emails are
 # on by the founder's go of 2026-09-27.
