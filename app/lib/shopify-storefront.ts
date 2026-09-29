@@ -13,6 +13,7 @@ const CATALOG_QUERY = `#graphql
         title
         description
         productType
+        vendor
         featuredImage { url altText }
         images(first: 20) { nodes { url altText } }
         # Shopify's standard review metafields. Judge.me writes them once a
@@ -269,6 +270,7 @@ type ShopifyCatalogData = {
       title: string;
       description: string;
       productType: string;
+      vendor: string | null;
       featuredImage: {url: string; altText: string | null} | null;
       images: {nodes: Array<{url: string; altText: string | null}>};
       rating: {value: string} | null;
@@ -390,6 +392,7 @@ export function mapShopifyCatalog(
       handle: product.handle,
       title: product.title,
       family: product.productType || null,
+      vendor: product.vendor?.trim() || null,
       description: product.description || null,
       url: `/products/${product.handle}`,
       images: product.images.nodes.map(({url}) => url),

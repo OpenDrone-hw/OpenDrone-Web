@@ -11,6 +11,7 @@ import {
   parseCatalog,
   selectVariant,
   toCard,
+  thirdPartyBrand,
   toCards,
   toProduct,
   type Catalog,
@@ -145,6 +146,12 @@ describe('toProduct', () => {
       (v) => v.sku === 'OPENRX-GEMINI',
     )!;
     assert.ok(gemini.image?.url.endsWith('openrx-1.png'));
+  });
+
+  it('keeps the house brand without a Shopify vendor and the vendor otherwise', () => {
+    assert.equal(product.vendor, 'OpenDrone');
+    const openrx = byHandle(FIXTURE, 'openrx')!;
+    assert.equal(toProduct(FIXTURE, {...openrx, vendor: 'HQProp'}).vendor, 'HQProp');
   });
 
   it('computes the price range across variants', () => {
@@ -304,5 +311,16 @@ describe('campaign pricing', () => {
     )!;
     assert.equal(plain.compareAtPrice?.amount, '49.99');
     assert.equal(plain.priceAfter, null);
+  });
+});
+
+describe('thirdPartyBrand', () => {
+  it('names a third-party vendor and never the house brand', () => {
+    assert.equal(thirdPartyBrand('HQProp'), 'HQProp');
+    assert.equal(thirdPartyBrand(' Rubycon '), 'Rubycon');
+    assert.equal(thirdPartyBrand('OpenDrone'), null);
+    assert.equal(thirdPartyBrand('opendrone'), null);
+    assert.equal(thirdPartyBrand(''), null);
+    assert.equal(thirdPartyBrand(null), null);
   });
 });

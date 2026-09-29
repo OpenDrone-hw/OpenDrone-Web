@@ -158,6 +158,8 @@
   "render_chip": "Render",
   "gpsr_heading": "Manufacturer & safety information",
   "gpsr_product_label": "Product type",
+  "gpsr_manufacturer_label": "Brand and manufacturer",
+  "gpsr_importer_label": "EU importer",
   "gpsr_aria": "Manufacturer and safety information",
   "gpsr_reg_weee": "WEEE reg. no.",
   "gpsr_reg_packaging": "Packaging reg. no.",
