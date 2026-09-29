@@ -316,7 +316,7 @@
     {
       "id": "motor",
       "title": "OpenMotor",
-      "note": "2207",
+      "note": "2306",
       "select": {
         "cluster": "^2306",
         "withProp": true

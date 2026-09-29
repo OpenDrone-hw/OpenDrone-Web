@@ -17,7 +17,7 @@
     "OPENFRAME-3": {"batches": [{"units": 250, "deliveryBy": "2027-03-31", "deliveryByUS": "2027-04-15"}]},
     "OPENFRAME-5": {"batches": [{"units": 250, "deliveryBy": "2027-03-31", "deliveryByUS": "2027-04-15"}]},
     "OPENMOTOR-1604": {"batches": [{"units": 1000, "deliveryBy": "2027-03-31", "deliveryByUS": "2027-04-15"}], "priceTiers": [{"upTo": 250, "off": 0.2}, {"upTo": 1000, "off": 0.1}]},
-    "OPENMOTOR-2207": {"batches": [{"units": 1000, "deliveryBy": "2027-03-31", "deliveryByUS": "2027-04-15"}], "priceTiers": [{"upTo": 250, "off": 0.2}, {"upTo": 1000, "off": 0.1}]}
+    "OPENMOTOR-2306": {"batches": [{"units": 1000, "deliveryBy": "2027-03-31", "deliveryByUS": "2027-04-15"}], "priceTiers": [{"upTo": 250, "off": 0.2}, {"upTo": 1000, "off": 0.1}]}
   },
   "shipsWith": {
     "ACC-ANT-T": {"sku": "OPENFC-LITE-2020", "batch": 1, "stock": 100, "after": 2},

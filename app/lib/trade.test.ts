@@ -158,7 +158,7 @@ describe('validateTradeRequest', () => {
     for (const sku of [
       'OPENFC-LITE-2020', 'OPENFC-LITE-3030', 'OPENESC-2020', 'OPENESC-3030',
       'OPENRX-LITE', 'OPENRX-LITE-UFL', 'OPENRX-MONO', 'OPENRX-GEMINI',
-      'OPENMOTOR-1604', 'OPENMOTOR-2207', 'OPENFRAME-3', 'OPENFRAME-5',
+      'OPENMOTOR-1604', 'OPENMOTOR-2306', 'OPENFRAME-3', 'OPENFRAME-5',
       'ACC-FRM-PAD', 'ACC-STRAP-15X200', 'ACC-PROP-5-HQ-J37', 'ACC-PROP-3-GF-3020',
     ]) {
       assert.equal(isTradeSku(sku), true, sku);

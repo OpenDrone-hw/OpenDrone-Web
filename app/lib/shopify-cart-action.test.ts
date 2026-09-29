@@ -639,18 +639,18 @@ describe('cart line info and split plan', () => {
       products: [
         base.products[1],
         funding('OPENRX-LITE', 'gid://shopify/ProductVariant/rx', [{units: 250}, {units: 1000}], 200),
-        funding('OPENMOTOR-2207', 'gid://shopify/ProductVariant/motor', [{units: 1000}, {units: 4000}], 12),
+        funding('OPENMOTOR-2306', 'gid://shopify/ProductVariant/motor', [{units: 1000}, {units: 4000}], 12),
       ],
     };
   }
   const rxLine = line({id: 'gid://shopify/CartLine/rx', merchandiseId: 'gid://shopify/ProductVariant/rx', sku: 'OPENRX-LITE', shipPromise: PENDING});
-  const motorLine = line({id: 'gid://shopify/CartLine/motor', merchandiseId: 'gid://shopify/ProductVariant/motor', sku: 'OPENMOTOR-2207', shipPromise: PENDING, quantity: 4});
+  const motorLine = line({id: 'gid://shopify/CartLine/motor', merchandiseId: 'gid://shopify/ProductVariant/motor', sku: 'OPENMOTOR-2306', shipPromise: PENDING, quantity: 4});
 
   it('groups two funding targets apart even with the same promise text, and offers no split', () => {
     const c = cart([rxLine, motorLine]);
     const info = cartLineInfo(c, mixedCatalog());
     assert.equal(info[rxLine.id].group, 'target:OPENRX-LITE:1');
-    assert.equal(info[motorLine.id].group, 'target:OPENMOTOR-2207:1');
+    assert.equal(info[motorLine.id].group, 'target:OPENMOTOR-2306:1');
     assert.deepEqual(info[motorLine.id].target, {units: 1000, ordered: 12});
     // Neither has a date: a second order ships nothing sooner, so no split.
     assert.equal(splitPlan(c, info), null);
