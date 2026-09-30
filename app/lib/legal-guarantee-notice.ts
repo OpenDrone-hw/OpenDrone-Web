@@ -7,14 +7,7 @@ import type {Locale} from './i18n';
 // https://commission.europa.eu/document/download/29acbfc0-a26e-4c21-85af-8bc2b167103e_en?filename=Harmonised%20notice%20in%2024%20languages%20colour%20and%20black%20and%20white_0.zip
 export const LEGAL_GUARANTEE_NOTICE = {
   en: {
-    reminder: 'Your legal guarantee rights',
     title: 'EU legal guarantee',
-    close: 'Close',
-    language: 'Notice language',
-    fit: 'Fit to screen',
-    readable: 'Readable size',
-    scroll: 'Scroll horizontally to read the full notice.',
-    viewer: 'Full legal guarantee notice. Scroll horizontally on smaller screens.',
     image: 'Official EU legal guarantee notice',
     more: 'More about your legal guarantee rights on Your Europe',
     textVersion: 'Text version',
@@ -33,14 +26,7 @@ export const LEGAL_GUARANTEE_NOTICE = {
     ],
   },
   nl: {
-    reminder: 'Uw wettelijke garantierechten',
     title: 'Wettelijke garantie in de EU',
-    close: 'Sluiten',
-    language: 'Taal van de kennisgeving',
-    fit: 'Aanpassen aan scherm',
-    readable: 'Leesbaar formaat',
-    scroll: 'Scrol horizontaal om de volledige kennisgeving te lezen.',
-    viewer: 'Volledige kennisgeving over de wettelijke garantie. Scrol horizontaal op kleinere schermen.',
     image: 'Officiële EU-kennisgeving over de wettelijke garantie',
     more: 'Meer over uw wettelijke garantierechten op Your Europe',
     textVersion: 'Tekstversie',
@@ -59,14 +45,7 @@ export const LEGAL_GUARANTEE_NOTICE = {
     ],
   },
   fr: {
-    reminder: 'Vos droits à la garantie légale',
     title: 'Garantie légale dans l’UE',
-    close: 'Fermer',
-    language: 'Langue de la notice',
-    fit: 'Adapter à l’écran',
-    readable: 'Format lisible',
-    scroll: 'Faites défiler horizontalement pour lire la notice complète.',
-    viewer: 'Notice complète sur la garantie légale. Faites défiler horizontalement sur les petits écrans.',
     image: 'Notice officielle de l’UE sur la garantie légale',
     more: 'En savoir plus sur vos droits à la garantie légale sur Your Europe',
     textVersion: 'Version texte',
@@ -85,14 +64,7 @@ export const LEGAL_GUARANTEE_NOTICE = {
     ],
   },
 } satisfies Record<Locale, {
-  reminder: string;
   title: string;
-  close: string;
-  language: string;
-  fit: string;
-  readable: string;
-  scroll: string;
-  viewer: string;
   image: string;
   more: string;
   textVersion: string;
