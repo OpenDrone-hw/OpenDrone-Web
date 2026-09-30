@@ -40,6 +40,11 @@ export type RoadmapItem = {
    * status. Replace with `link` the day the repo goes public.
    */
   repo?: string;
+  /**
+   * Repo outside the OpenDrone-hw org. Its status is set here, not read from
+   * a `status-*` topic, and check:status does not require one.
+   */
+  external?: boolean;
   /** Board render for the kanban card, from public/boards/. */
   image?: string;
   /** Optional visual variants for one repository and one status identity. */
@@ -115,10 +120,9 @@ export const ROADMAP: RoadmapItem[] = [
     // Sold as a preorder, so never below alpha (founder rule, 2026-09-30).
     status: 'alpha',
     productPath: '/products/openframe',
-    // OpenDrone-hw/OpenFrame carries status-in-progress but is a private repo,
-    // so it has no public link and its topic cannot be fetched. Add the link
-    // the day the repo goes public; until then the static value IS the status.
-    repo: 'OpenFrame',
+    // OpenFrame-3F is public and carries status-alpha. OpenFrame-5F is still
+    // private (history audit pending), so the entry links the 3F repo only.
+    link: 'https://github.com/OpenDrone-hw/OpenFrame-3F',
   },
   {
     id: 'motors',
@@ -157,6 +161,21 @@ export const ROADMAP: RoadmapItem[] = [
     added: '2026-08-11',
     status: 'planned',
     link: 'https://github.com/OpenDrone-hw/Charger',
+  },
+  {
+    id: 'opengps',
+    added: '2026-09-30',
+    status: 'planned',
+    link: 'https://github.com/OpenDrone-hw/OpenGPS',
+  },
+  {
+    id: 'openled',
+    added: '2026-09-30',
+    status: 'planned',
+    // Lives in a contributor's account, not the org: the status is curated
+    // here because the repo carries no status-* topic.
+    external: true,
+    link: 'https://github.com/BinaryHippie/OpenLED',
   },
 ];
 

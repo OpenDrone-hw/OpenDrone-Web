@@ -29,6 +29,7 @@ const headers = {
   ...(token ? {Authorization: `Bearer ${token}`} : {}),
 };
 
+// External entries (repos outside the org) carry a curated status and no topic.
 const linked = ROADMAP.filter((r) => r.link);
 const failures = [];
 const rows = [];
@@ -54,7 +55,7 @@ await Promise.all(
           (data.names ?? [])
             .find((t) => t.startsWith('status-'))
             ?.slice('status-'.length) ?? null;
-        if (!live || !STATUS_ORDER.includes(live)) {
+        if (!r.external && (!live || !STATUS_ORDER.includes(live))) {
           failures.push(
             `${r.id}: ${name} carries no recognised status-* topic (${
               (data.names ?? []).join(', ') || 'none'
