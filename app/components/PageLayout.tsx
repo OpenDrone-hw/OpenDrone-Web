@@ -10,6 +10,7 @@ import {RouteProgress} from '~/components/RouteProgress';
 import {Txt} from '~/components/Txt';
 import {CartAddedDialog} from '~/components/CartAddedDialog';
 import {ChatFpvMenuEntry} from '~/components/ChatFpvEntry';
+import {LegalGuaranteeNotice} from '~/components/LegalGuaranteeNotice';
 import type {CommerceHandoff} from '~/lib/shop-links';
 
 interface PageLayoutProps {
@@ -54,6 +55,7 @@ export function PageLayout({
             shopOpen={shopOpen}
           />
           <main id="main-content" className="site-main">
+            <LegalGuaranteeNotice isHomepage={isHomepage} />
             {children}
           </main>
           {/* The home scene is one pinned viewport; the footer sits under it,

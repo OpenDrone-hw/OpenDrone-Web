@@ -83,7 +83,7 @@ async function shopifyCards() {
         email: tpl.shopifyName,
         scenario: fx.meta.title,
         description: fx.meta.description ?? '',
-        audience: 'customer',
+        audience: tpl.key === 'staff-new-order' ? 'internal' : 'customer',
         source: [tpl.bodyFile, 'app/lib/email-shell.ts', fx.file],
         subject: subject.output,
         preheader: tpl.preheader,

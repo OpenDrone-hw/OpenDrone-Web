@@ -27,6 +27,7 @@ const ROOT = path.resolve(HERE, '../..');
 const CATALOG = path.join(HERE, 'catalog.mjs');
 
 const WATCH = [
+  {dir: 'content', recursive: false, files: ['preorders.json']},
   {dir: 'scripts/shopify-templates', recursive: true},
   {dir: 'scripts/emails', recursive: true},
   {dir: 'app/lib', recursive: true},
@@ -121,7 +122,7 @@ function renderCard(card) {
       </div>`
     : '';
   const textPart = card.html && card.text ? `<details><summary>Plain-text part</summary><pre class="textpart">${esc(card.text)}</pre></details>` : '';
-  return `<article class="card${card.errors.length ? ' has-errors' : ''}" id="${esc(card.id)}">
+  return `<article class="card${card.errors.length ? ' has-errors' : ''}" id="${esc(card.id)}" data-group="${esc(card.group)}" data-audience="${esc(card.audience)}" data-search="${esc(`${card.email} ${card.scenario} ${card.subject}`.toLowerCase())}">
     <header>
       <h3>${esc(card.email)} <span class="scenario">${esc(card.scenario)}</span></h3>
       <div class="tags"><span class="tag ${card.audience}">${esc(card.audience)}</span>${card.locale ? `<span class="tag">${esc(card.locale)}</span>` : ''}${card.html ? '<span class="tag">html</span>' : '<span class="tag">plain text</span>'}</div>
@@ -131,8 +132,8 @@ function renderCard(card) {
     <dl class="meta">
       <dt>Subject</dt><dd class="subject">${esc(card.subject) || '<em>none</em>'}</dd>
       <dt>Preheader</dt><dd>${esc(card.preheader) || '<em>none</em>'}${card.preheaderDerived ? ' <span class="muted">(no preheader: inbox shows the opening text)</span>' : ''}</dd>
-      <dt>Source</dt><dd class="muted">${card.source.map((s) => `<code>${esc(s)}</code>`).join(' ')}</dd>
     </dl>
+    <details><summary>Agent reference</summary><p class="muted">${card.source.map((s) => `<code>${esc(s)}</code>`).join(' ')}</p></details>
     ${notes}${copy}
     ${frames}
     ${textPart}
@@ -152,9 +153,9 @@ function renderPasteTable(targets) {
       </tr>`,
     )
     .join('');
-  return `<section class="paste-table"><h2>Paste into Shopify</h2>
-    <p class="muted">Shopify has no API for notification templates: paste the HTML into the Email body (HTML) and the subject into Email subject, then Save. The copied HTML is what <code>npm run gen:shopify-templates</code> writes to <code>out/</code>.</p>
-    <table><thead><tr><th>Template</th><th>Subject (Liquid)</th><th>Preview</th><th>Copy</th><th>Admin</th></tr></thead><tbody>${rows}</tbody></table></section>`;
+  return `<details class="paste-table"><summary>Shopify notification templates: copy or open in admin</summary>
+    <p class="muted">Ask an agent to install reviewed changes. You can also copy the template and subject into Shopify's notification editor and save. These templates are separate from the launch campaign in Shopify Email.</p>
+    <div class="table-scroll"><table><thead><tr><th>Template</th><th>Subject</th><th>Preview</th><th>Copy</th><th>Admin</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
 }
 
 function jsonScript(id, value) {
@@ -240,6 +241,13 @@ h2{margin:36px 0 12px;font-size:18px}
 .paste{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px}
 button{background:var(--gold);color:#0a0a0a;border:0;padding:6px 12px;font:700 12px/1.2 ui-monospace,Menlo,monospace;cursor:pointer}
 button.done{background:var(--green)}
+[hidden]{display:none!important}
+.filters{display:flex;flex-wrap:wrap;gap:12px;margin:20px 0;align-items:end}
+.filters label{display:flex;flex-direction:column;gap:4px;color:var(--muted)}
+.filters input,.filters select{background:var(--panel);color:var(--text);border:1px solid var(--line);padding:8px;font:inherit;max-width:100%}
+.filters input{width:300px}
+.table-scroll{overflow-x:auto}
+.review-flow{max-width:760px}
 .frames{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}
 figure{margin:0;max-width:100%}
 figcaption{font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em}
@@ -261,8 +269,15 @@ summary{cursor:pointer;color:var(--muted)}
 <nav><strong>OpenDrone emails</strong><ul style="margin-top:12px">${nav}</ul></nav>
 <main>
 <h1>OpenDrone emails</h1>
-<p class="muted">${cards.length} cards${catalog ? `, rendered ${esc(catalog.generatedAt)}` : ''}${live ? ', reloads when a source changes' : ', static snapshot from <code>npm run emails:build</code>'}. Fixtures: <code>scripts/emails/fixtures/</code>. All names and addresses are fake.</p>
+<p class="muted">${cards.length} email previews${catalog ? `, generated ${esc(catalog.generatedAt)}` : ''}${live ? '. Refreshes as your agent makes changes' : ''}. All names and addresses are examples.</p>
+<p class="review-flow">Pick an email and review its desktop and phone previews. Tell your agent the email name, scenario and requested changes here or in Notion. The agent updates the previews and installs approved notification templates in Shopify. Review and send the launch campaign in Shopify Email.</p>
 ${fatal}${summary}
+<div class="filters">
+<label>Find an email<input id="email-search" type="search" placeholder="Order, refund, US receiver…"></label>
+<label>Channel<select id="email-group"><option value="">All channels</option>${groups.map((g) => `<option value="${esc(g)}">${esc(g)}</option>`).join('')}</select></label>
+<label>Audience<select id="email-audience"><option value="">Everyone</option><option value="customer">Customer</option><option value="internal">Team</option></select></label>
+<span id="email-count" role="status" aria-live="polite">${cards.length} previews</span>
+</div>
 ${renderPasteTable(catalog?.pasteTargets)}
 ${body}
 </main>
@@ -270,6 +285,22 @@ ${body}
 ${jsonScript('paste-data', payload)}
 <script>
 const paste = JSON.parse(document.getElementById('paste-data').textContent);
+const search = document.getElementById('email-search');
+const group = document.getElementById('email-group');
+const audience = document.getElementById('email-audience');
+function filterEmails() {
+  let visible = 0;
+  for (const card of document.querySelectorAll('.card')) {
+    card.hidden = !(card.dataset.search.includes(search.value.trim().toLowerCase()) && (!group.value || card.dataset.group === group.value) && (!audience.value || card.dataset.audience === audience.value));
+    if (!card.hidden) visible++;
+  }
+  for (const section of document.querySelectorAll('main > section')) section.hidden = !section.querySelector('.card:not([hidden])');
+  document.getElementById('email-count').textContent = visible + ' previews';
+}
+search.addEventListener('input', filterEmails);
+group.addEventListener('change', filterEmails);
+audience.addEventListener('change', filterEmails);
+document.querySelector('nav').addEventListener('click', (e) => { if (e.target.closest('a')) { search.value = ''; group.value = ''; audience.value = ''; filterEmails(); } });
 for (const a of document.querySelectorAll('a[data-admin]')) a.href = paste[a.dataset.admin]?.adminUrl ?? '#';
 async function copyText(text) {
   try { await navigator.clipboard.writeText(text); return true; } catch {}

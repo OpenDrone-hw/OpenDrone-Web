@@ -26,19 +26,20 @@ evidence).
 git clone https://github.com/OpenDrone-hw/OpenDrone-Web.git
 cd OpenDrone-Web
 npm install
-cp .env.example .env       # SESSION_SECRET is the only required value
+cp .env.example .env       # configure the session and catalog values below
 npm run dev                # http://localhost:3000
 ```
 
-For a Shopify-backed run, set the `SHOPIFY_*` values described in
+Set the required `SHOPIFY_*` values described in
 `.env.example`. Keep `PUBLIC_COMING_SOON=1` and `SHOPIFY_CHECKOUT_WRITE_ENABLED`
 unset or `0` unless you are testing checkout. The app fails closed when the
 catalog policy or tax configuration is missing. Node 22 (what CI uses).
 
 Minimum for a full local preview with real catalog data (names only):
 `SESSION_SECRET`, `SHOPIFY_STORE_DOMAIN`, `SHOPIFY_STOREFRONT_TOKEN`,
-`SHOPIFY_STOREFRONT_API_VERSION`, `SHOPIFY_PREVIEW_POLICY_JSON`. Without the
-Shopify values the pages render from `content/`. Variants marked Sold out or
+`SHOPIFY_STOREFRONT_API_VERSION`, `SHOPIFY_PREVIEW_POLICY_JSON`,
+`SHOPIFY_PRICES_INCLUDE_VAT`. The root loader requires the Shopify catalog;
+missing catalog settings render an error page. Variants marked Sold out or
 closed stay selectable on every run: sold-out state only disables the buy
 button.
 
@@ -903,7 +904,7 @@ problems, or when `out/` is behind its sources.
 Shopify has no Admin API or CLI for notification templates: they are edited
 only in Shopify admin (Settings, Notifications, Edit code). The "Paste into
 Shopify" table copies each template's HTML (what `gen:shopify-templates`
-writes to `out/`) and its Liquid subject, and links its admin page. After a paste, `npm run emails:hash` prints the sha256 of what the repo holds: copy the "Email body (HTML)" field from Shopify admin into a file and compare `shasum -a 256` with it. Dates in the mails are the `FACTS` in `app/lib/email-shell.ts` and must equal `content/preorders.json`. The notifications without a body (return created, return approved, draft order invoice, order invoice, payment reminder, order payment receipt, customer email change) keep Shopify's default because that default carries a label or link variable the repo cannot verify.
+writes to `out/`) and its Liquid subject, and links its admin page. After a paste, `npm run emails:hash` prints the sha256 of what the repo holds: copy the "Email body (HTML)" field from Shopify admin into a file and compare `shasum -a 256` with it. Email dates are read from `content/preorders.json` by `app/lib/email-shell.ts`; the gallery watches that file too. Search the gallery by email or scenario, then filter by channel or audience. Human change requests belong in the Notion Customer emails page or an agent session at the workspace root. The notifications without a body (return created, return approved, draft order invoice, order invoice, payment reminder, order payment receipt, customer email change) keep Shopify's default because that default carries a label or link variable the repo cannot verify.
 
 ### Paste into Shopify admin
 

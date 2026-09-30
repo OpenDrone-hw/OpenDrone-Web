@@ -48,6 +48,37 @@ describe('Shopify notification templates', async () => {
     assert.equal(renderLiquid('{{ 123456 | money }}', eur.context).output, '€1.234,56');
     assert.equal(renderLiquid('{{ 123456 | money_with_currency }}', usd.context).output, '$1,234.56 USD');
   });
+
+  it('keeps usable contract and withdrawal documents in the confirmation itself', () => {
+    const tpl = templates.find((t) => t.key === 'order-confirmation')!;
+    for (const id of ['eu-preorder-be', 'us-usd']) {
+      const fx = fixtures.find((f) => f.id === id)!;
+      const {output, errors} = renderLiquid(tpl.html, fx.context);
+      assert.deepEqual(errors, []);
+      assert.match(output, /Your contract documents/);
+      assert.match(output, /MODEL WITHDRAWAL FORM/);
+      assert.match(output, /I\/We \((?:\*|&#42;)\) hereby give notice/);
+      assert.match(output, /\((?:\*|&#42;)\) Delete as appropriate\./);
+      assert.match(output, /Signature of consumer\(s\)/);
+      assert.ok(output.includes('&#95;'.repeat(20)) || output.includes('_'.repeat(20)), 'model form retains writing blanks');
+      assert.match(output, /Legal guarantee of conformity/);
+      assert.match(output, /Article 19: Language/);
+      assert.ok(Buffer.byteLength(output, 'utf8') < 102_000, `${id}: confirmation risks clipping`);
+    }
+  });
+
+  it('includes EU notice information inline without adding its EU heading to US orders', () => {
+    const tpl = templates.find((t) => t.key === 'order-confirmation')!;
+    const eu = fixtures.find((f) => f.id === 'eu-preorder-be')!;
+    const us = fixtures.find((f) => f.id === 'us-usd')!;
+    const euHtml = renderLiquid(tpl.html, eu.context).output;
+    const usHtml = renderLiquid(tpl.html, us.context).output;
+    assert.match(euHtml, /EU legal guarantee/);
+    assert.match(euHtml, /Minimum two-year legal guarantee protection for goods sold in the European Union/);
+    assert.match(euHtml, /free repair or free replacement/);
+    assert.doesNotMatch(usHtml, /EU legal guarantee/);
+    assert.match(usHtml, /Prices include import duties/);
+  });
 });
 
 describe('email preview catalog', () => {

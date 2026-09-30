@@ -40,18 +40,43 @@ export const COLOR = {
 } as const;
 
 /**
- * Campaign facts that mail prose repeats. They must equal content/preorders.json
- * (endsOn, shipsBy of the preorder-run SKUs and the
- * paid batch's `ships` wording); app/lib/email-shell.test.ts fails when they differ. Bodies and builders write the
- * tokens (%%CLOSE%% and so on) and applyFacts fills them.
+ * Campaign dates come from the same file as the storefront. Bodies and
+ * builders write tokens (%%CLOSE%% and so on) and applyFacts fills them.
  */
+type EmailCampaign = {
+  endsOn: string;
+  shipsBy: string;
+  skus: Record<string, {batches: Array<{paid?: boolean; ships?: string}>}>;
+};
+
+function loadEmailCampaign(): EmailCampaign {
+  if (import.meta.env) {
+    const files = import.meta.glob<{default: EmailCampaign}>('/content/preorders.json', {eager: true});
+    const file = Object.values(files)[0]?.default;
+    if (file) return file;
+  }
+  const fs = (
+    globalThis as {process?: {getBuiltinModule?: (id: string) => unknown}}
+  ).process?.getBuiltinModule?.('node:fs') as {readFileSync: (url: URL, encoding: string) => string} | undefined;
+  if (!fs) throw new Error('email-shell: campaign dates unavailable');
+  return JSON.parse(fs.readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8')) as EmailCampaign;
+}
+
+const campaign = loadEmailCampaign();
+const dateLabel = (iso: string, month: 'long' | 'short') => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) throw new Error('email-shell: invalid campaign date');
+  return new Intl.DateTimeFormat('en-GB', {day: 'numeric', month, year: 'numeric', timeZone: 'UTC'}).format(new Date(`${iso}T00:00:00Z`));
+};
+const paidShip = Object.values(campaign.skus).flatMap((sku) => sku.batches).find((batch) => batch.paid && batch.ships)?.ships;
+if (!paidShip) throw new Error('email-shell: paid batch ship promise unavailable');
+
 export const FACTS = {
-  closeIso: '2026-12-15',
-  close: '15 December 2026',
-  closeShort: '15 Dec 2026',
-  shipBy: '31 March 2027',
-  shipByShort: '31 Mar 2027',
-  batch1: 'early November',
+  closeIso: campaign.endsOn,
+  close: dateLabel(campaign.endsOn, 'long'),
+  closeShort: dateLabel(campaign.endsOn, 'short'),
+  shipBy: dateLabel(campaign.shipsBy, 'long'),
+  shipByShort: dateLabel(campaign.shipsBy, 'short'),
+  batch1: paidShip.replace(/^ships\s+/, '').replace(/\s+\d{4}$/, ''),
 } as const;
 
 const FACT_TOKENS: Record<string, string> = {

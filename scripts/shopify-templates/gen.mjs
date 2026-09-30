@@ -13,6 +13,7 @@ import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 
 import {applyFacts, expandMacros, shell} from '../../app/lib/email-shell.ts';
+import {renderEmailContract} from '../../app/lib/email-contract.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,6 +25,9 @@ export const MAPPINGS_PATH = path.join(__dirname, 'mappings.json');
 /** The pasteable template: shell + body with the mappings.json metadata.
  * Shared with the email preview (scripts/emails/). */
 export function composeTemplate(body, tpl) {
+  const contractBody = body.includes('%%CONTRACT_PACKET%%')
+    ? body.replaceAll('%%CONTRACT_PACKET%%', renderEmailContract())
+    : body;
   // Footer unsubscribe link for the marketing-flavored templates
   // (mappings.json `unsubscribeFooter: true`). Notification Liquid has
   // no unsubscribe variable, so the link goes to the site's manual
@@ -37,13 +41,18 @@ export function composeTemplate(body, tpl) {
     title: tpl.title,
     badge: tpl.badge,
     preheader: tpl.preheader,
-    body: expandMacros(body),
+    body: expandMacros(contractBody),
     footerLinks,
   }));
 }
 
 async function main() {
   const mappings = JSON.parse(await fs.readFile(MAPPINGS_PATH, 'utf8'));
+  const only = process.argv.indexOf('--only');
+  const selectedKey = only === -1 ? null : process.argv[only + 1];
+  if (only !== -1 && !mappings.templates.some((tpl) => tpl.key === selectedKey)) {
+    throw new Error('--only requires a known template key');
+  }
 
   await fs.mkdir(OUT_DIR, {recursive: true});
 
@@ -52,6 +61,7 @@ async function main() {
   let deferred = 0;
 
   for (const tpl of mappings.templates) {
+    if (selectedKey && tpl.key !== selectedKey) continue;
     const bodyPath = path.join(BODIES_DIR, `${tpl.key}.html`);
     let body;
     try {
