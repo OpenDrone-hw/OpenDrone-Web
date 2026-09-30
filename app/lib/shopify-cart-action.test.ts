@@ -485,7 +485,7 @@ describe('Shopify cart action: paid batch limit', () => {
       request({sku: 'OPENFC-LITE-2020', qty: '10'}), ENABLED_ENV,
       {fetchCatalog: async () => paidCatalog(240), createCart: async (lines) => { created = lines; return cart(); }},
     );
-    assert.deepEqual(created, [{merchandiseId: PAID_ID, quantity: 10, attributes: [{key: 'Preorder', value: PAID_PROMISE}, {key: 'Availability', value: 'Batch 1 · EU and US'}]}]);
+    assert.deepEqual(created, [{merchandiseId: PAID_ID, quantity: 10, attributes: [{key: 'Preorder', value: PAID_PROMISE}, {key: 'Availability', value: 'Batch 1 · EU and US · ships early Nov 2026'}]}]);
   });
 
   it('refuses a quantity update past the units left, but never blocks lowering it', async () => {
@@ -875,7 +875,7 @@ describe('Shopify cart action: a line across a price step', () => {
       {fetchCatalog: async () => catalog, createCart: async (lines) => { created = lines; return cart(); }},
     );
     assert.equal(response.status, 303);
-    assert.deepEqual(created, [{merchandiseId: PAID_ID, quantity: 10, attributes: [{key: 'Preorder', value: PAID_PROMISE}, {key: 'Availability', value: 'Batch 1 · EU and US'}]}]);
+    assert.deepEqual(created, [{merchandiseId: PAID_ID, quantity: 10, attributes: [{key: 'Preorder', value: PAID_PROMISE}, {key: 'Availability', value: 'Batch 1 · EU and US · ships early Nov 2026'}]}]);
   });
 
   it('lets checkout through when the step moved on but the paid batch still covers the line', async () => {
@@ -943,7 +943,7 @@ describe('Shopify cart action: one promise for a mixed order', () => {
   const OWN_LATE =
     'ships by 31 March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait; if the target is reached in time, delivered by 15 April 2027';
   const REWRITE = 'ships with the rest of this order by 31 March 2027, delivered by 15 April 2027';
-  const own = (value: string) => [{key: 'Preorder', value}, {key: 'Availability', value: 'Batch 1 · EU only'}];
+  const own = (value: string) => [{key: 'Preorder', value}, {key: 'Availability', value: 'Batch 1 · EU only · ships early Nov 2026'}];
 
   function base(sku: string, handle: string, id: string, preorder: boolean) {
     return {
@@ -1010,7 +1010,7 @@ describe('Shopify cart action: one promise for a mixed order', () => {
     assert.deepEqual(updates, [[{
       id: FC_LINE,
       quantity: 1,
-      attributes: [{key: 'Preorder', value: REWRITE}, {key: 'Availability', value: 'Batch 1 · EU only'}, {key: '_preorder_own', value: OWN_EARLY}],
+      attributes: [{key: 'Preorder', value: REWRITE}, {key: 'Availability', value: 'Batch 1 · EU only · ships early Nov 2026'}, {key: '_preorder_own', value: OWN_EARLY}],
     }]]);
   });
 
@@ -1104,7 +1104,7 @@ describe('Shopify cart action: one promise for a mixed order', () => {
         quantity: 1,
         attributes: [
           {key: 'Preorder', value: 'ships with the rest of this order by 31 March 2027, delivered by 30 April 2027'},
-          {key: 'Availability', value: 'Batch 1 · EU and US'},
+          {key: 'Availability', value: 'Batch 1 · EU and US · ships early Nov 2026'},
           {key: '_ship_region', value: 'US'},
           {key: '_preorder_own', value: early},
         ],

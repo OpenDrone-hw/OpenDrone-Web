@@ -287,6 +287,22 @@ export function shipCountryForRequest(request: Request): string | null {
 }
 
 /**
+ * The cookie an explicit `?country=XX` link sets, so the choice survives the
+ * next page the way the region switch does: a visitor who lands via
+ * `?country=US` browses, adds and checks out in the United States, not in
+ * their IP country. Null without the parameter, for a code the picker does
+ * not list, for a blocked IP country (no link moves it), and when the cookie
+ * already holds that country.
+ */
+export function queryCountryCookie(request: Request): string | null {
+  if (blockedIpCountry(request)) return null;
+  const url = new URL(request.url);
+  const code = isoCode(url.searchParams.get('country'));
+  if (!code || shipCountryFromCookie(request.headers.get('Cookie')) === code) return null;
+  return shipCountryCookie(code, url.protocol === 'https:');
+}
+
+/**
  * The one country the buy button (root loader) and the server-side add
  * refusal read. While US sales are open (`usRate` set) it is
  * `shipCountryForRequest`, the destination the cart and checkout read too.

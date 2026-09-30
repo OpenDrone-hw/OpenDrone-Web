@@ -726,8 +726,24 @@ export function shipsWithState(
   const state = batch
     ? pinnedBatchState(lead.batches, batch, config.pendingShips, leadOrdered, region)
     : campaignState(lead.batches, leadOrdered, config.pendingShips, tiersFor(config, rule.sku), null, region);
+  // A US buyer's accessory that the lead's EU-only batch would carry for an EU
+  // buyer stays listed, muted, like the lead's own EU-only batch.
+  const pinned = rule.batch === undefined ? undefined : lead.batches[rule.batch - 1];
+  const skipped: CampaignState['batches'] =
+    pinned && !state.batches.some((b) => b.batch === rule.batch) && !servesRegion(pinned, region)
+      ? [{
+          batch: rule.batch!,
+          units: pinned.units,
+          status: 'other_region',
+          shipPromise: batchPromise(pinned, config.pendingShips, region),
+          paid: Boolean(pinned.paid),
+          regions: pinned.regions ?? [...REGIONS],
+          ordered: 0,
+        }]
+      : [];
   return {
     ...state,
+    batches: [...skipped, ...state.batches],
     paidStock: fromStock,
     paidLeft: fromStock ? rule.stock! - own : null,
     shipsWith: rule.sku,
@@ -799,7 +815,7 @@ function pinnedBatchState(
     tierOff: 0,
     price: null,
     nextPrice: null,
-    batches: [{batch, units: entry.units, status: 'current', shipPromise: promise, paid: false, regions: entry.regions ?? [...REGIONS], ordered: 0}],
+    batches: [{batch, units: entry.units, status: 'current', shipPromise: promise, paid: Boolean(entry.paid), regions: entry.regions ?? [...REGIONS], ordered: 0}],
   };
 }
 

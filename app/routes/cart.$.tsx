@@ -315,7 +315,7 @@ function PopulatedCart({
           </div>
           <ul className="cart-lines-scroll" aria-label={copyText('cart.sr_line_items') ?? 'Line items'}>
             {sortCartLines(cart.lines).map((line) => (
-              <CartLine key={line.id} line={line} info={info[line.id]} pending={pending} us={usBuyer} parcel={parcel} />
+              <CartLine key={line.id} line={line} info={info[line.id]} pending={pending} parcel={parcel} />
             ))}
           </ul>
         </div>
@@ -355,6 +355,7 @@ function PopulatedCart({
               : t('shipping_at_checkout', 'Shipping calculated at checkout')}
           </p>
           {usBuyer ? <UsCartNotice lines={cart.lines} /> : null}
+          {usBuyer ? <UsFccNotice lines={cart.lines} /> : null}
           {mixed ? <MixedNote cart={cart} info={info} onSplit={onSplit} /> : null}
           {shipBlocked ? (
             <p className="cart-summary-note" role="note">
@@ -470,6 +471,21 @@ function UsCartNotice({lines}: {lines: ShopifyCartLine[]}) {
   );
 }
 
+/** The FCC paragraph, once for the whole cart, naming the lines it covers. */
+function UsFccNotice({lines}: {lines: ShopifyCartLine[]}) {
+  const names = lines.filter((l) => fccConditionalSku(l.sku)).map(lineName);
+  if (!names.length) return null;
+  return (
+    <p className="cart-summary-note" role="note">
+      {t(
+        'us_fcc',
+        'FCC notice: this device has not been authorized as required by the rules of the Federal Communications Commission. It is sold to US buyers as a conditional preorder and is not delivered unless authorization is obtained. FCC rules do not address consumer protection, contractual or other provisions under federal or state law. If authorization is not obtained, we refund that item in full.',
+      )}{' '}
+      {t('us_fcc_applies', 'Applies to: {names}.', {names: [...new Set(names)].join(', ')})}
+    </p>
+  );
+}
+
 /**
  * Lines that ship at different times go in one parcel when the last is
  * ready: "One parcel · Ships by 31 Mar 2027 if funded". When some lines have a
@@ -492,6 +508,10 @@ function MixedNote({
   const plan = splitPlan(cart, info);
   // The month of the lines the buyer would get sooner by splitting.
   const sooner = plan ? soonerMonth(cart.lines.map((l) => l.shipPromise)) : null;
+  // Every line already names the same date (several targets, one date): the
+  // explanation about items that are ready sooner does not apply.
+  const sameDate =
+    new Set(cart.lines.map((l) => shipChipText(l.shipPromise)?.text ?? l.shipPromise ?? '')).size <= 1;
   // The date the parcel ships: that of the line it waits for.
   const parcel = shipChipText(
     parcelPromise(cart.lines.map((l) => l.shipPromise)),
@@ -536,7 +556,9 @@ function MixedNote({
         {parcel ? ` · ${parcel.text}` : null}
       </div>
       <p className="cart-summary-note cart-mixed-explain">
-        {t('mixed_explain', 'It ships when every item is ready, on the latest date.')}
+        {sameDate
+          ? t('mixed_explain_same', 'The whole parcel ships together, once every target is reached.')
+          : t('mixed_explain', 'It ships when every item is ready, on the latest date.')}
       </p>
       {plan ? (
         <Form
@@ -569,14 +591,11 @@ function CartLine({
   line,
   info,
   pending,
-  us = false,
   parcel = null,
 }: {
   line: ShopifyCartLine;
   info: CartLineInfo | undefined;
   pending: boolean;
-  /** A US buyer: FCC-gated lines carry the FCC notice. */
-  us?: boolean;
   /** The promise a one-parcel order waits for, or null for a single date. */
   parcel?: string | null;
 }) {
@@ -602,14 +621,6 @@ function CartLine({
             <small className="cart-line-error" role="alert">{t('line_over_batch', 'Only {left} left in batch 1.', {left: max})}</small>
           ) : max !== null && max < MAX_LINE_QUANTITY && line.quantity >= max ? (
             <small>{t('paid_left', '{left} left in batch 1', {left: max})}</small>
-          ) : null}
-          {us && fccConditionalSku(line.sku) ? (
-            <small role="note">
-              {t(
-                'us_fcc',
-                'FCC notice: this device has not been authorized as required by the rules of the Federal Communications Commission. It is sold to US buyers as a conditional preorder and is not delivered unless authorization is obtained. FCC rules do not address consumer protection, contractual or other provisions under federal or state law. If authorization is not obtained, we refund that item in full.',
-              )}
-            </small>
           ) : null}
         </div>
         <div className="cart-sheet-qty">

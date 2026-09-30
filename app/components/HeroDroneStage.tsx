@@ -244,7 +244,9 @@ export function HeroDroneStage({
         </div>
       ) : null}
 
-      {/* Every beat's copy in the DOM, always. Without this most of the text
+      {/* Every beat's copy in the DOM, always. While the scene runs this list is
+          visually hidden and the copy panel above carries the visible link, so
+          the list's links stay out of the Tab order. Without this most of the text
           exists only in JS state: invisible to crawlers, to screen readers, and
           to anyone whose device never loads the scene. */}
       <ul className="hp-fallback">
@@ -262,7 +264,7 @@ export function HeroDroneStage({
               {e.caption ? <p>{e.caption}</p> : null}
               {e.hint ? <p>{e.hint}</p> : null}
               {e.href ? (
-                <Link to={e.href}>
+                <Link to={e.href} tabIndex={use3D ? -1 : undefined}>
                   <BeatLinkLabel href={e.href} />
                 </Link>
               ) : null}

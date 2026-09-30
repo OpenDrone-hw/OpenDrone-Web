@@ -8,8 +8,8 @@ function t(key: string, fallback: string, vars: Record<string, string>): string 
 
 /** When a promise ships as a phrase: "by 31 Mar 2027" for a funding-target
  *  ETA, "in early Dec 2026" for a dated batch. Null when it names neither. */
-export function whenPhrase(promise: string | null | undefined): string | null {
-  const chip = shipChipText(promise, false);
+export function whenPhrase(promise: string | null | undefined, ifFunded = false): string | null {
+  const chip = shipChipText(promise, ifFunded);
   if (!chip) return null;
   if (chip.kind === 'target') return chip.text.replace(/^Ships\s+/, '');
   const when = datedShipParts(promise)?.when;
@@ -35,7 +35,7 @@ export function parcelDelay(
   const next = parcelPromise([...cartPromises, candidate]);
   if (!next || next === now) return null;
   const from = readyWhen(now);
-  const to = whenPhrase(next);
+  const to = whenPhrase(next, true);
   return from && to ? {from, to} : null;
 }
 

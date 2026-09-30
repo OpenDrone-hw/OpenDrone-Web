@@ -274,10 +274,10 @@ export function CartAddedDialog() {
                           ? `${part.product.title} ${variantDisplayName(part.product.handle, part.variant.title)}`
                           : part.product.title}
                       </span>
-                      <ShipChip promise={part.variant.shipPromise} className="cart-added-ship" />
+                      <ShipChip promise={part.variant.shipPromise} className="cart-added-ship" ifFunded />
                       {delay ? (
                         <small className="cart-added-delay" role="note">
-                          {t('upsell_delay', 'Adding this delays your whole parcel: it ships {to} instead of {from}.', delay)}
+                          {t('upsell_delay', 'Adding this delays your whole parcel: instead of {from} it ships {to}.', delay)}
                         </small>
                       ) : null}
                     </div>

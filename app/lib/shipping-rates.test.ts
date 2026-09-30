@@ -18,6 +18,7 @@ import {
   shipCountryPicker,
   shippingQuote,
   notSoldDirect,
+  queryCountryCookie,
   soldThroughShops,
 } from './shipping-rates.ts';
 
@@ -217,5 +218,36 @@ describe('cartQuoteCountry', () => {
 
   it('keeps a visitor in a blocked country there whatever the cart says', () => {
     assert.equal(cartQuoteCountry('BE', 'RU', null), 'RU');
+  });
+});
+
+describe('queryCountryCookie (an explicit ?country link is remembered)', () => {
+  const req = (url: string, headers: Record<string, string> = {}) => new Request(url, {headers});
+
+  it('keeps ?country=US the way the region switch does', () => {
+    const cookie = queryCountryCookie(req('https://opendrone.be/?country=US', {'CF-IPCountry': 'BE'}));
+    assert.equal(cookie, shipCountryCookie('US'));
+    // The next page, with no parameter, quotes the United States.
+    const next = req('https://opendrone.be/products/openfc-lite', {'CF-IPCountry': 'BE', Cookie: cookie!.split(';')[0]});
+    assert.equal(shipCountryForRequest(next), 'US');
+  });
+
+  it('keeps an EU country and reads it case-insensitively', () => {
+    assert.equal(queryCountryCookie(req('https://opendrone.be/?country=de')), shipCountryCookie('DE'));
+  });
+
+  it('sets nothing without the parameter, for a bogus code, or when the cookie already holds it', () => {
+    assert.equal(queryCountryCookie(req('https://opendrone.be/')), null);
+    assert.equal(queryCountryCookie(req('https://opendrone.be/?country=ZZ')), null);
+    assert.equal(queryCountryCookie(req('https://opendrone.be/?country=US', {Cookie: 'od_ship_country=US'})), null);
+  });
+
+  it('never moves a visitor whose IP is in a blocked country', () => {
+    const blocked = [...BLOCKED_COUNTRIES][0];
+    assert.equal(queryCountryCookie(req('https://opendrone.be/?country=US', {'CF-IPCountry': blocked})), null);
+  });
+
+  it('omits Secure on plain http (local dev)', () => {
+    assert.doesNotMatch(queryCountryCookie(req('http://localhost:5173/?country=US'))!, /Secure/);
   });
 });

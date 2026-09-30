@@ -124,6 +124,7 @@ export function HeroSizeSlider({
       <motion.div
         className={`hero-size-slider__thumb${busy ? ' is-busy' : ''}`}
         aria-hidden="true"
+        tabIndex={-1}
         style={{x}}
         drag="x"
         dragConstraints={trackRef}
