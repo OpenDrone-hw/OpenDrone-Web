@@ -31,10 +31,6 @@
   "added_subtotal": "Subtotal (incl. VAT)",
   "check_paid_batch": "Not enough left in batch 1. Lower the quantity where shown.",
   "check_ship_date": "A ship date changed. Check the dates below.",
-  "mixed_one_parcel": "One parcel",
-  "mixed_explain": "The whole parcel ships together, with the latest item. Items that are ready sooner wait for it.",
-  "mixed_explain_same": "The whole parcel ships together, once every target is reached.",
-  "line_held_plain": "Ships with this order {parcel}",
   "upsell_delay": "Adding this delays your whole parcel: instead of {from} it ships {to}.",
   "split_link": "Want the {month} items sooner? Order them separately.",
   "split_link_plain": "Want the earlier items sooner? Order them separately.",
@@ -54,7 +50,6 @@
   "register_subtotal_vat": "Subtotal (incl. VAT)",
   "shipping_at_checkout": "Shipping calculated at checkout",
   "shipping_row": "Shipping to {country}",
-  "shipping_flat_note": "Flat rate. Confirmed at checkout for your address.",
   "build_title": "Complete the build",
   "build_add": "Add",
   "build_added": "Added",
@@ -63,11 +58,7 @@
   "checkout_shops_trade": "Shops: request a wholesale quote",
   "checkout_shops_notify": "Get launch news",
   "checkout_closed": "Orders are not open for {country}.",
-  "us_price_note": "Duties included. No sales tax.",
-  "us_notice": "US delivery depends on FCC equipment authorization and US import clearance. If we cannot deliver to you, you get a full refund.",
-  "us_notice_short": "US orders ship from the {batch} batch; if we cannot deliver, you get a full refund.",
-  "us_fcc_applies": "Applies to: {names}.",
-  "us_fcc": "FCC notice: this device has not been authorized as required by the rules of the Federal Communications Commission. It is sold to US buyers as a conditional preorder and is not delivered unless authorization is obtained. FCC rules do not address consumer protection, contractual or other provisions under federal or state law. If authorization is not obtained, we refund that item in full.",
+  "us_price_note": "Duties included",
   "check_us_eu_only": "An item in your cart ships to EU addresses only. Remove it to check out to the US.",
   "check_market": "Your cart moved to your delivery country's prices. Check the total below.",
   "checkout_shops_us": "Direct consumer orders are limited to the EU and the United States.",
@@ -78,5 +69,5 @@
   "ship_to_group_eu": "European Union",
   "ship_to_group_world": "Other countries",
   "ship_to_failed": "Could not change the country. Try again.",
-  "ship_to_note": "Shipping to {country}. Changing the country at checkout can change prices and ship dates; choose it here first."
+  "fcc_line": "Not yet FCC authorized. Refund if not authorized."
 }

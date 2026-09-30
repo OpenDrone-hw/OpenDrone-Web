@@ -12,8 +12,6 @@ import {useVariantUrl} from '~/lib/variants';
 import {useProductStatus, useRoadmapStatus} from '~/lib/coming-soon';
 import {PRODUCT_CONTENT, imagesAreRenders, isPurchasableStatus} from '~/lib/product-content';
 import {AddToCartButton} from './AddToCartButton';
-import {batchText} from '~/lib/availability';
-import {preorderWords} from './Availability';
 import {ShipChip} from './ShipChip';
 import {copyText} from '~/lib/copy';
 import {tileFamilyLabel} from '~/lib/families';
@@ -336,14 +334,11 @@ export function ProductItem({
           {showPrice ? priceLabel(price.amount, price.currencyCode, fromPrice) : null}
         </div>
         {campaign && !soldOut ? (
-          <>
-            <small className="cart-line-batch product-card-batch">{batchText(campaign, preorderWords)}</small>
-            <ShipChip
-              promise={campaign.shipPromise}
-              className="product-card-ship"
-              ifFunded={!campaign.targetReached}
-            />
-          </>
+          <ShipChip
+            promise={campaign.shipPromise}
+            className="product-card-ship"
+            ifFunded={!campaign.targetReached}
+          />
         ) : null}
         {'productType' in product && product.productType ? (
           <p className="product-card-meta">{tileFamilyLabel(product.productType)}</p>

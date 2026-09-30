@@ -9,9 +9,7 @@ import {
   lineDisplayName,
   variantDisplayName,
 } from '~/lib/product-content';
-import {batchText} from '~/lib/availability';
-import {preorderWords} from './Availability';
-import {parcelPromise, shipChipText, soonerMonth} from './ShipChip';
+import {parcelPromise, soonerMonth} from './ShipChip';
 import {LineShipChip, heldBy, parcelDelay} from './ParcelChip';
 import {paysEuVat} from '~/lib/visitor-country';
 import {countryName, notSoldDirect, shippingQuote} from '~/lib/shipping-rates';
@@ -30,7 +28,6 @@ import {trackEvent} from '~/lib/growth/plausible';
 import {CART_ADDED_EVENT, postCartAdd, withCountry, type CartAddedDetail} from '~/lib/cart-client';
 import {ShipToSelect} from './ShipToSelect';
 import {fccConditionalSku} from '~/lib/us-sales';
-import {usCartNotice} from '~/lib/us-cart-notice';
 
 const CART_ACTION = '/api/shopify/cart';
 const BUILDS = parseBuilds(buildsJson);
@@ -112,11 +109,8 @@ export function CartAddedDialog() {
   // The lines added this time.
   const added = summary.lines.filter((l) => l.sku && detail.skus.includes(l.sku));
   // One parcel per order: when the cart's lines ship at different times,
-  // the drawer names the parcel's date above Checkout, as the cart does.
+  // every line shows the parcel's date, as the cart does.
   const mixed = new Set(summary.lines.map((l) => l.shipPromise ?? '')).size > 1;
-  const parcel = mixed
-    ? shipChipText(parcelPromise(summary.lines.map((l) => l.shipPromise)), true)
-    : null;
   // Dated lines next to a funding-target line: the buyer can order the dated
   // ones separately to get them sooner (the cart page does the split).
   const sooner = mixed ? soonerMonth(summary.lines.map((l) => l.shipPromise)) : null;
@@ -233,14 +227,12 @@ export function CartAddedDialog() {
                     {`${line.quantity} × ${formatPrice(Number(line.total.amount) / line.quantity, line.total.currencyCode)}`}
                   </span>
                 ) : null}
-                {line.availability ? <span className="cart-line-batch">{line.availability}</span> : null}
-                <LineShipChip promise={line.shipPromise} parcel={parcelOf} className="cart-added-ship" ifFunded />
+                <LineShipChip promise={line.shipPromise} parcel={parcelOf} className="cart-added-ship" />
                 {usBuyer && fccConditionalSku(line.sku) ? (
                   <small className="cart-added-line-qty" role="note">
-                    {t(
-                      'us_fcc',
-                      'FCC notice: this device has not been authorized as required by the rules of the Federal Communications Commission. It is sold to US buyers as a conditional preorder and is not delivered unless authorization is obtained. FCC rules do not address consumer protection, contractual or other provisions under federal or state law. If authorization is not obtained, we refund that item in full.',
-                    )}
+                    <Link to={`/products/${line.handle}#fcc-notice`}>
+                      {t('fcc_line', 'Not yet FCC authorized. Refund if not authorized.')}
+                    </Link>
                   </small>
                 ) : null}
               </div>
@@ -276,16 +268,12 @@ export function CartAddedDialog() {
                           ? `${part.product.title} ${variantDisplayName(part.product.handle, part.variant.title)}`
                           : part.product.title}
                       </span>
-                      {part.variant.campaign ? (
-                        <span className="cart-line-batch">{batchText(part.variant.campaign, preorderWords)}</span>
-                      ) : null}
                       {/* What this part would actually do in this cart: an
                           earlier one ships with the parcel, on its date. */}
                       <LineShipChip
                         promise={part.variant.shipPromise}
                         parcel={inCart ? null : heldBy(cartPromises, part.variant.shipPromise)}
                         className="cart-added-ship"
-                        ifFunded
                       />
                       {delay ? (
                         <small className="cart-added-delay" role="note">
@@ -346,26 +334,14 @@ export function CartAddedDialog() {
             </p>
           ) : null}
           {usBuyer && subtotal?.currencyCode === 'USD' ? (
-            <p className="cart-added-parcel">{t('us_price_note', 'Duties included. No sales tax.')}</p>
+            <p className="cart-added-parcel">{t('us_price_note', 'Duties included')}</p>
           ) : null}
-          {usBuyer ? <UsDialogNotice lines={summary.lines} /> : null}
-          {parcel ? (
-            <>
-              <p className="cart-added-parcel">
-                {`${t('mixed_one_parcel', 'One parcel')} · ${parcel.text}`}
-              </p>
-              <p className="cart-added-parcel">
-                {t('mixed_explain', 'It ships when every item is ready, on the latest date.')}
-                {sooner ? (
-                  <>
-                    {' '}
-                    <Link to="/cart" className="cart-added-split">
-                      {t('split_dialog_link', 'Want the {month} items sooner? Order them separately in your cart.', {month: sooner})}
-                    </Link>
-                  </>
-                ) : null}
-              </p>
-            </>
+          {sooner ? (
+            <p className="cart-added-parcel">
+              <Link to="/cart" className="cart-added-split">
+                {t('split_dialog_link', 'Want the {month} items sooner? Order them separately in your cart.', {month: sooner})}
+              </Link>
+            </p>
           ) : null}
           {/* Checkout is a plain form post: the cart action checks every line
               again and redirects to Shopify checkout, or back to /cart with
@@ -399,15 +375,8 @@ export function CartAddedDialog() {
             >
               <input type="hidden" name="intent" value="checkout" />
               {visitor ? <input type="hidden" name="country" value={visitor} /> : null}
-              <p className="cart-added-parcel" data-testid="ship-to-note">
-                {t(
-                  'ship_to_note',
-                  'Shipping to {country}. Changing the country at checkout can change prices and ship dates; choose it here first.',
-                  {country: countryName(visitor ?? '')},
-                )}
-              </p>
-              {/* The parcel line above names the date, so checkout may go on. */}
-              {parcel ? <input type="hidden" name={DATES_SEEN_FIELD} value="1" /> : null}
+              {/* Every line names its date, so checkout may go on. */}
+              {mixed ? <input type="hidden" name={DATES_SEEN_FIELD} value="1" /> : null}
               <button type="submit" className="cart-added-checkout">
                 {copyText('cart.checkout_cta') ?? 'Checkout'}
               </button>
@@ -419,20 +388,5 @@ export function CartAddedDialog() {
         </div>
       </section>
     </div>
-  );
-}
-
-/** The US refund sentence, once for the lines in the drawer. */
-function UsDialogNotice({lines}: {lines: CartSummary['lines']}) {
-  const notice = usCartNotice(lines);
-  return (
-    <p className="cart-added-parcel" role="note">
-      {notice.kind === 'batch'
-        ? t('us_notice_short', 'US orders ship from the {batch} batch; if we cannot deliver, you get a full refund.', {batch: notice.batch})
-        : t(
-            'us_notice',
-            'US delivery depends on FCC equipment authorization and US import clearance. If we cannot deliver to you, you get a full refund.',
-          )}
-    </p>
   );
 }

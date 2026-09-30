@@ -28,7 +28,7 @@ describe('orderStatus', () => {
     assert.deepEqual(orderStatus(order()), {tone: 'processing', label: 'Processing', note: null});
   });
 
-  it('shows the latest promise for a preorder, with the target condition and one-parcel note', () => {
+  it('shows the latest promise for a preorder, with no extra note', () => {
     const lines = [
       {sku: 'A', name: 'OpenFrame', variant: null, quantity: 1},
       {sku: 'B', name: 'OpenMotor', variant: '2306', quantity: 4},
@@ -36,10 +36,10 @@ describe('orderStatus', () => {
     const s = orderStatus(order({isPreorder: true, promise: TARGET, lines}));
     assert.equal(s.tone, 'preorder');
     assert.equal(s.label, 'Preorder · ships by 31 Mar 2027');
-    assert.equal(s.note, 'Ships if the funding target is reached. One parcel, sent when every item is ready.');
+    assert.equal(s.note, null);
   });
 
-  it('names no delivery date for a dated preorder, and skips the parcel note for one line', () => {
+  it('names no delivery date for a dated preorder, ', () => {
     const s = orderStatus(order({isPreorder: true, promise: DATED}));
     assert.equal(s.label, 'Preorder · ships early Nov 2026');
     assert.equal(s.note, null);

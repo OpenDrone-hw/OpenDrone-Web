@@ -13967,16 +13967,6 @@ html.light .editorial-watermark {
 .add-to-cart-form {
   display: contents;
 }
-/* The batch a cart line ships in: the words of the checkout line property. */
-.cart-line-batch {
-  display: block;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-
 /* Batch availability: one row per batch, the buyer's highlighted, a batch
    their region cannot get muted and named as such. */
 .avail {
@@ -15202,11 +15192,8 @@ html:not(.light) .trust-chip-oshwa-mark {
   text-underline-offset: 3px;
 }
 
-/* Mixed ship dates: the parcel line, why it waits, then the split link on
-   its own line so it reads as the way to get the earlier items sooner. */
-.cart-mixed-note .cart-mixed-explain {
-  margin-top: var(--sp-1);
-}
+/* Mixed ship dates: the split link on its own line, the way to get the
+   earlier items sooner. */
 .cart-mixed-note .cart-split-form {
   margin: var(--sp-2) 0 0;
 }
@@ -17769,4 +17756,16 @@ html.light .plugs {
 .cart-ship-to-note {
   margin-top: 0.4rem;
   margin-bottom: var(--sp-3);
+}
+
+/* The FCC line of a receiver in a US cart: one short line linking to the notice. */
+.cart-line-fcc {
+  display: block;
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+}
+.cart-line-fcc a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }

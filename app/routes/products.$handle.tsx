@@ -1724,7 +1724,7 @@ function ProductPage() {
   const vatNote = paysEuVat(rootData?.visitorCountry ?? null)
     ? say('product-chrome.buy_vat_note', 'incl. VAT')
     : usBuyer && buyPrice?.currencyCode === 'USD'
-      ? say('product-chrome.buy_us_price_note', 'Duties included. No sales tax.')
+      ? say('product-chrome.buy_us_price_note', 'Duties included')
       : null;
   // Consumers buy direct only in the open EU countries. Elsewhere the buy
   // button is a status line (AddToCartButton): outside the EU "EU consumer
@@ -1753,7 +1753,7 @@ function ProductPage() {
         </p>
       ) : null}
       {fccConditional ? (
-        <p className="product-buy-ship product-buy-fcc" role="note">
+        <p id="fcc-notice" className="product-buy-ship product-buy-fcc" role="note">
           {say(
             'product-chrome.buy_us_fcc',
             'FCC notice: this device has not been authorized as required by the rules of the Federal Communications Commission. It is sold to US buyers as a conditional preorder and is not delivered unless authorization is obtained. FCC rules do not address consumer protection, contractual or other provisions under federal or state law. If authorization is not obtained, we refund that item in full.',
