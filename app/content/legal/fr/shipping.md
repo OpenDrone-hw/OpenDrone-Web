@@ -31,9 +31,8 @@ Pour les livraisons vers les États-Unis, Incutec BV vend directement aux consom
 - **Expédition :** Tarif fixe de 9,95 USD par commande
 - **Expédié depuis :** Incutec ou son partenaire logistique
 - **Date d’expédition :** Au plus tard le 31 mars 2027, si l’objectif de financement est atteint au plus tard le 15 décembre 2026
-- **Date de livraison :** Au plus tard le 30 avril 2027
 
-La date d’expédition et la date de livraison indiquées sur la page produit et dans votre confirmation de commande sont celles qui s’appliquent à votre commande. La livraison aux États-Unis dépend de l’autorisation d’équipement de la FCC et du dédouanement à l’importation aux États-Unis. Si nous ne pouvons pas vous livrer un article pour ce motif, nous vous remboursons cet article intégralement. Les remboursements, les retards d’expédition et le droit d’annuler pour les livraisons vers les États-Unis suivent l’[article 7ter des conditions](/fr/algemene-voorwaarden#art-7ter).
+La date d’expédition indiquée sur la page produit et dans votre confirmation de commande est celle qui s’applique à votre commande. La livraison aux États-Unis dépend de l’autorisation d’équipement de la FCC et du dédouanement à l’importation aux États-Unis. Si nous ne pouvons pas vous livrer un article pour ce motif, nous vous remboursons cet article intégralement. Les remboursements, les retards d’expédition et le droit d’annuler pour les livraisons vers les États-Unis suivent l’[article 7ter des conditions](/fr/algemene-voorwaarden#art-7ter).
 
 ### Hors de l’Union européenne et des États-Unis
 
@@ -41,9 +40,9 @@ Incutec BV ne propose pas de commande directe aux consommateurs hors de l’UE e
 
 ### Précommandes
 
-Les précommandes sont payées intégralement. L’offre et la confirmation précisent le lot, les conditions de financement, l’expédition prévue et une date limite de livraison distincte. Les dates de campagne figurent sur [/preorder](/preorder). L’expédition n’est pas la livraison.
+Les précommandes sont payées intégralement. L’offre et la confirmation précisent le lot, les conditions de financement, l’expédition prévue. Les dates de campagne figurent sur [/preorder](/preorder). L’expédition n’est pas la livraison.
 
-L’annulation, les objectifs non atteints, les modifications des dates de livraison, les remboursements et les commandes de plusieurs lots suivent [l’Article 7bis des conditions](/fr/algemene-voorwaarden#art-7bis). Vous pouvez vous rétracter avant la livraison et conservez les droits légaux de rétractation après réception. Utilisez le [formulaire en ligne](/fr/herroepingsrecht#withdraw). Pour les livraisons vers les États-Unis, l’article 7ter s’applique en outre.
+L’annulation, les objectifs non atteints, les modifications des dates d’expédition, les remboursements et les commandes de plusieurs lots suivent [l’Article 7bis des conditions](/fr/algemene-voorwaarden#art-7bis). Vous pouvez vous rétracter avant la livraison et conservez les droits légaux de rétractation après réception. Utilisez le [formulaire en ligne](/fr/herroepingsrecht#withdraw). Pour les livraisons vers les États-Unis, l’article 7ter s’applique en outre.
 
 ### Délai de livraison des articles en stock
 

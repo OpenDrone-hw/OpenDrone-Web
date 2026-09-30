@@ -33,7 +33,7 @@
         "title": "OpenFC Lite"
       },
       "properties": {
-        "Preorder": "ships early November 2026, delivered by 30 November 2026"
+        "Preorder": "ships early November 2026"
       }
     },
     {
@@ -50,7 +50,7 @@
         "title": "OpenESC"
       },
       "properties": {
-        "Preorder": "ships early November 2026, delivered by 30 November 2026"
+        "Preorder": "ships early November 2026"
       }
     }
   ],
@@ -128,7 +128,7 @@
             "title": "OpenFC Lite"
           },
           "properties": {
-            "Preorder": "ships early November 2026, delivered by 30 November 2026"
+            "Preorder": "ships early November 2026"
           }
         },
         "quantity": 1
@@ -148,7 +148,7 @@
             "title": "OpenESC"
           },
           "properties": {
-            "Preorder": "ships early November 2026, delivered by 30 November 2026"
+            "Preorder": "ships early November 2026"
           }
         },
         "quantity": 1

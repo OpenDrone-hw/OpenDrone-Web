@@ -191,14 +191,14 @@ export function launchCopy(region = 'all') {
     {
       kicker: `Preorder run, closes ${FACTS.close}`,
       title: 'Receiver, frame, motors, and more FCs and ESCs',
-      body: `Every unit is tested and inspected before it ships and goes straight to you from our fulfilment partner. Ships by ${FACTS.shipBy} if the target is reached by ${FACTS.close}, with delivery by ${FACTS.deliveryEu} in the EU.`,
+      body: `Every unit is tested and inspected before it ships and goes straight to you from our fulfilment partner. Ships by ${FACTS.shipBy} if the target is reached by ${FACTS.close}.`,
     },
   ];
   const us = [
     {
       kicker: 'United States',
       title: 'Open for every product',
-      body: `Duties are included in the price, so there is nothing to pay on delivery. US orders ship with the preorder run. Ships by ${FACTS.shipBy} if the target is reached by ${FACTS.close}, with delivery by ${FACTS.deliveryUs}. The first FC and ESC batch is for the EU only.`,
+      body: `Duties are included in the price, so there is nothing to pay on delivery. US orders ship with the preorder run. Ships by ${FACTS.shipBy} if the target is reached by ${FACTS.close}. The first FC and ESC batch is for the EU only.`,
     },
     {
       kicker: 'Receiver, US sale',

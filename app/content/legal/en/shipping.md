@@ -31,9 +31,8 @@ For deliveries to the United States, Incutec BV sells directly to consumers for 
 - **Shipping:** Flat USD 9.95 per order
 - **Ships from:** Incutec or its fulfilment partner
 - **Ship date:** By 31 March 2027, if the funding target is reached by 15 December 2026
-- **Delivery date:** By 30 April 2027
 
-The ship date and delivery date stated on the product page and in your order confirmation are the ones that apply to your order. Delivery to the United States depends on FCC equipment authorization and US import clearance. If we cannot deliver an item to you for that reason, we refund that item in full. Refunds, shipping delays and the right to cancel for US deliveries follow [Article 7ter of the terms](/en/algemene-voorwaarden#art-7ter).
+The ship date stated on the product page and in your order confirmation is the one that applies to your order. Delivery to the United States depends on FCC equipment authorization and US import clearance. If we cannot deliver an item to you for that reason, we refund that item in full. Refunds, shipping delays and the right to cancel for US deliveries follow [Article 7ter of the terms](/en/algemene-voorwaarden#art-7ter).
 
 ### Outside the European Union and the United States
 
@@ -41,9 +40,9 @@ Incutec BV does not offer direct consumer checkout outside the EU and the United
 
 ### Pre-orders
 
-Preorders are paid in full. The product offer and order confirmation identify the batch, funding conditions, planned dispatch and a separate final delivery date. The campaign dates are shown on [/preorder](/preorder). Dispatch is not delivery.
+Preorders are paid in full. The product offer and order confirmation identify the batch, funding conditions, planned dispatch. The campaign dates are shown on [/preorder](/preorder). Dispatch is not delivery.
 
-Cancellation, missed targets, changes to delivery dates, refunds and mixed-batch orders follow [Article 7bis of the terms](/en/algemene-voorwaarden#art-7bis). You may withdraw before delivery and retain the statutory withdrawal rights after receipt. Use the [online withdrawal form](/en/herroepingsrecht#withdraw). For deliveries to the United States, Article 7ter applies in addition.
+Cancellation, missed targets, changes to ship dates, refunds and mixed-batch orders follow [Article 7bis of the terms](/en/algemene-voorwaarden#art-7bis). You may withdraw before delivery and retain the statutory withdrawal rights after receipt. Use the [online withdrawal form](/en/herroepingsrecht#withdraw). For deliveries to the United States, Article 7ter applies in addition.
 
 ### Delivery time for items in stock
 

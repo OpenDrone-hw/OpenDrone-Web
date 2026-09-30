@@ -40,9 +40,6 @@ describe('email shell', () => {
     // One promise phrase everywhere: the mails say what the site says.
     assert.equal(FACTS.shipBy, '31 March 2027');
     assert.equal(p.pendingShips, `ships by ${FACTS.shipBy} if the target is reached by ${FACTS.close}, otherwise you choose a refund or to wait`);
-    const run = p.skus['OPENRX-LITE'].batches[0];
-    assert.equal(run.deliveryBy, '2027-04-15');
-    assert.equal(run.deliveryByUS, '2027-04-30');
     assert.match(p.skus['OPENFC-LITE-2020'].batches[0].ships, new RegExp(FACTS.batch1));
   });
 });
