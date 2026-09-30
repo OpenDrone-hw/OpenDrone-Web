@@ -112,8 +112,8 @@ export const ROADMAP: RoadmapItem[] = [
   {
     id: 'openframe',
     added: '2026-08-11',
-    // Samples ordered, nothing under test yet (2026-08-15).
-    status: 'in-progress',
+    // Sold as a preorder, so never below alpha (founder rule, 2026-09-30).
+    status: 'alpha',
     productPath: '/products/openframe',
     // OpenDrone-hw/OpenFrame carries status-in-progress but is a private repo,
     // so it has no public link and its topic cannot be fetched. Add the link
@@ -123,8 +123,9 @@ export const ROADMAP: RoadmapItem[] = [
   {
     id: 'motors',
     added: '2026-08-11',
-    // Samples ordered from the supplier, nothing under test yet.
-    status: 'in-progress',
+    // Sold as a preorder, so never below alpha (founder rule, 2026-09-30).
+    // OEM motor: no OpenDrone repository exists, so no link.
+    status: 'alpha',
     productPath: '/products/openmotor',
   },
   {
@@ -142,8 +143,14 @@ export const ROADMAP: RoadmapItem[] = [
   {
     id: 'openaio',
     added: '2026-08-11',
-    status: 'planned',
+    status: 'in-progress',
     link: 'https://github.com/OpenDrone-hw/OpenAIO',
+  },
+  {
+    id: 'openaio_whoop',
+    added: '2026-09-30',
+    status: 'planned',
+    link: 'https://github.com/OpenDrone-hw/OpenAIO-Whoop',
   },
   {
     id: 'charger',

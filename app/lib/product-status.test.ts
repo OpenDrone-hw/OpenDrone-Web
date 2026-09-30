@@ -218,19 +218,16 @@ describe('isPurchasableStatus', () => {
 });
 
 describe('concept gate', () => {
-  it('an explicit purchasable status lifts the gate, the chip keeps its word', () => {
-    // The frame is in-progress on the static roadmap but takes pre-orders.
-    assert.equal(statusForHandle('openframe'), 'in-progress');
+  it('a sold product is never a concept: the frame is alpha on the roadmap', () => {
+    // Founder rule: everything the shop sells is at least alpha.
+    assert.equal(statusForHandle('openframe'), 'alpha');
+    assert.equal(statusForHandle('openmotor'), 'alpha');
     assert.equal(hasExplicitPurchasableStatus('openframe'), true);
     assert.equal(isConceptProduct('openframe'), false);
-    assert.equal(isConceptFor('openframe', 'in-progress'), false);
-    // The roadmap word is untouched: it is display vocabulary for the chip.
-    assert.equal(statusForHandle('openframe'), 'in-progress');
-    // Without the explicit status the roadmap word gates it again.
+    assert.equal(isConceptFor('openframe', 'alpha'), false);
+    // Even without the explicit status the alpha roadmap word does not gate it.
     withoutExplicitStatus('openframe', () => {
-      assert.equal(hasExplicitPurchasableStatus('openframe'), false);
-      assert.equal(isConceptProduct('openframe'), true);
-      assert.equal(isConceptFor('openframe', 'in-progress'), true);
+      assert.equal(isConceptProduct('openframe'), false);
     });
   });
 
