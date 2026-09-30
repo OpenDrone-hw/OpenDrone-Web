@@ -40,7 +40,7 @@ Incutec BV does not offer direct consumer checkout outside the EU and the United
 
 ### Pre-orders
 
-Preorders are paid in full. The product offer and order confirmation identify the batch, funding conditions, planned dispatch. The campaign dates are shown on [/preorder](/preorder). Dispatch is not delivery.
+Preorders are paid in full. The product offer and order confirmation identify the batch, the funding conditions and the ship-by date. The campaign dates are shown on [/preorder](/preorder). Dispatch is not delivery.
 
 Cancellation, missed targets, changes to ship dates, refunds and mixed-batch orders follow [Article 7bis of the terms](/en/algemene-voorwaarden#art-7bis). You may withdraw before delivery and retain the statutory withdrawal rights after receipt. Use the [online withdrawal form](/en/herroepingsrecht#withdraw). For deliveries to the United States, Article 7ter applies in addition.
 

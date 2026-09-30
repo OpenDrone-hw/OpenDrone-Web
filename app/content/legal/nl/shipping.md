@@ -40,7 +40,7 @@ Incutec BV biedt geen rechtstreekse consumentencheckout buiten de EU en de Veren
 
 ### Pre-orders
 
-Pre-orders worden volledig betaald. Het productaanbod en de orderbevestiging vermelden de batch, financieringsvoorwaarden, geplande verzending. De campagnedata staan op [/preorder](/preorder). Verzending is geen levering.
+Pre-orders worden volledig betaald. Het productaanbod en de orderbevestiging vermelden de batch, de financieringsvoorwaarden en de uiterste verzenddatum. De campagnedata staan op [/preorder](/preorder). Verzending is geen levering.
 
 Annulering, niet-behaalde doelen, gewijzigde verzenddata, terugbetalingen en bestellingen met meerdere batches volgen [Artikel 7bis van de voorwaarden](/nl/algemene-voorwaarden#art-7bis). U kunt vóór de levering herroepen en behoudt de wettelijke herroepingsrechten na ontvangst. Gebruik het [online herroepingsformulier](/nl/herroepingsrecht#withdraw). Voor leveringen naar de Verenigde Staten geldt daarnaast Artikel 7ter.
 
