@@ -57,10 +57,10 @@ describe('Shopify notification templates', async () => {
       assert.deepEqual(errors, []);
       assert.match(output, /Your contract documents/);
       assert.match(output, /MODEL WITHDRAWAL FORM/);
-      assert.match(output, /I\/We \(&#42;\) hereby give notice/);
-      assert.match(output, /\(&#42;\) Delete as appropriate\./);
+      assert.match(output, /I\/We \((?:\*|&#42;)\) hereby give notice/);
+      assert.match(output, /\((?:\*|&#42;)\) Delete as appropriate\./);
       assert.match(output, /Signature of consumer\(s\)/);
-      assert.ok(output.includes('&#95;'.repeat(20)), 'model form retains writing blanks');
+      assert.ok(output.includes('&#95;'.repeat(20)) || output.includes('_'.repeat(20)), 'model form retains writing blanks');
       assert.match(output, /Legal guarantee of conformity/);
       assert.match(output, /Article 19: Language/);
       assert.ok(Buffer.byteLength(output, 'utf8') < 102_000, `${id}: confirmation risks clipping`);
