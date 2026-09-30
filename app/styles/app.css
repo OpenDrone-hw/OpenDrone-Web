@@ -203,7 +203,8 @@
   --pod-shadow: 0 10px 34px -16px rgba(0, 0, 0, 0.55);
   --pod-pad: clamp(var(--sp-3), 1.5vw, var(--sp-5));
 
-  --header-height: 50px;
+  --header-control-height: 1.5rem;
+  --header-height: calc(var(--header-control-height) + 18px);
   --aside-width: 400px;
 
   --rail-gutter: 1.25rem;
@@ -757,13 +758,13 @@ html[data-cart-preview] .site-header {
   display: grid;
   grid-template-columns: max-content max-content max-content;
   grid-template-areas: 'logo cats actions';
-  column-gap: clamp(1rem, 2vw, 2.25rem);
+  column-gap: clamp(0.75rem, 1.5vw, 1.5rem);
   align-items: center;
   height: auto;
   width: fit-content;
   max-width: 100%;
   margin: 0 auto;
-  padding: 5px 1.25rem;
+  padding: 8px 1.25rem;
   background: var(--pod-bg-strong);
   border: 1px solid var(--pod-border);
   border-radius: var(--r-pill);
@@ -771,9 +772,6 @@ html[data-cart-preview] .site-header {
 }
 
 @media (max-width: 1023px) {
-  :root {
-    --header-height: 42px;
-  }
   .site-header-main {
     grid-template-columns: max-content max-content;
     grid-template-areas: 'logo actions';
@@ -1130,9 +1128,22 @@ html.anim-paused .board-sheet.is-active {
   color: var(--color-text);
 }
 @media (min-width: 769px) {
+  .site-header-wordmark,
+  .site-header-incutec {
+    height: var(--header-control-height);
+  }
+  .site-header-main .header-popover-trigger {
+    height: var(--header-control-height);
+    line-height: 1;
+  }
   .site-header-utils .site-header-icon {
     width: 2rem;
-    height: 2rem;
+    height: var(--header-control-height);
+    padding: 0;
+  }
+  .site-header-utils .site-header-icon > svg {
+    width: var(--header-control-height);
+    height: var(--header-control-height);
   }
   .site-header-utils .site-header-cart-count {
     top: -0.1rem;
@@ -1631,13 +1642,18 @@ html:not(.light) .site-header-categories .site-header-cat-group a:not(:hover):no
   display: inline-flex;
   align-items: center;
   gap: 0.2rem;
-  padding: 0.25rem;
+  height: var(--header-control-height);
+  padding: 0 0.25rem;
   border-radius: var(--r-pill);
   background: var(--color-bg-elevated);
   border: 1px solid var(--color-border);
 }
-.site-header-categories .site-header-cat-group a {
-  padding: 0.36em 0.82em;
+.site-header-categories .site-header-cat-group > .header-cat > a {
+  display: flex;
+  align-items: center;
+  height: calc(var(--header-control-height) - 2px);
+  padding: 0 0.82em;
+  line-height: 1;
   border-radius: var(--r-pill);
 }
 .site-header-categories .site-header-cat-group a:hover {
@@ -1664,7 +1680,11 @@ html:not(.light) .site-header-categories .site-header-cat-group a:not(:hover):no
    just another family. Gold-tinted fill + outline + label, kept legible
    (gold-on-tint) rather than a solid gold fill that would wash the text out. */
 .site-header-categories .site-header-cat-all {
-  padding: 0.42em 0.95em;
+  display: inline-flex;
+  align-items: center;
+  height: var(--header-control-height);
+  padding: 0 0.95em;
+  line-height: 1;
   border-radius: var(--r-pill);
   background: var(--color-gold-soft);
   border: 1px solid color-mix(in srgb, var(--color-gold) 50%, transparent);
