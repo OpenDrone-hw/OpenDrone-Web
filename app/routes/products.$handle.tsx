@@ -1,5 +1,6 @@
 import {BOARD_ART_VERSION} from '~/data/board-art-version';
 import {ChatFpvWidget} from '~/components/ChatFpvWidget';
+import {ChatFpvInlineLink} from '~/components/ChatFpvEntry';
 import {chatFpvWidgetSrc, chatFpvWidgetSrcWithProduct} from '~/lib/support/chatfpv';
 import {handoffEnabled} from '~/lib/accounts/handoff';
 import {Fragment, Suspense, useEffect, useMemo, useRef, useState} from 'react';
@@ -1841,6 +1842,7 @@ function ProductPage() {
           {copyText('product-chrome.buy_idea_repo_cta')}
         </a>
       ) : null}
+      <ChatFpvInlineLink />
     </div>
   ) : (
     <div className="product-buy" data-buy-module>
@@ -1966,6 +1968,7 @@ function ProductPage() {
           className="product-buy-notify"
         />
       ) : null}
+      <ChatFpvInlineLink />
     </div>
   );
 

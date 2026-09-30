@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {describe, it} from 'node:test';
-import {closedLabel, panelTransformOrigin, toggleHiddenBySheet} from './chatfpv-widget-ui.ts';
+import {CHATFPV_OPEN_EVENT, NO_LAUNCHER_MAX_WIDTH_PX, closedLabel, panelTransformOrigin, toggleHiddenBySheet} from './chatfpv-widget-ui.ts';
 
 describe('closedLabel', () => {
   it('always carries "beta", with or without an unread reply', () => {
@@ -42,5 +42,33 @@ describe('launcher layering and placement (app.css)', () => {
   it('is fixed to the bottom-right corner with the safe-area inset', () => {
     assert.match(rule('.chatfpv-widget'), /position:\s*fixed;/);
     assert.match(rule('.chatfpv-widget'), /env\(safe-area-inset-bottom\)/);
+  });
+});
+
+describe('no floating launcher on phones (audit round 3 A4)', () => {
+  const css = readFileSync(new URL('../styles/app.css', import.meta.url), 'utf8');
+  const widget = readFileSync(new URL('./ChatFpvWidget.tsx', import.meta.url), 'utf8');
+  const entry = readFileSync(new URL('./ChatFpvEntry.tsx', import.meta.url), 'utf8');
+  const layout = readFileSync(new URL('./PageLayout.tsx', import.meta.url), 'utf8');
+  const product = readFileSync(new URL('../routes/products.$handle.tsx', import.meta.url), 'utf8');
+
+  it('hides the launcher below 768px and only there', () => {
+    assert.equal(NO_LAUNCHER_MAX_WIDTH_PX, 767);
+    assert.match(css, /@media \(max-width: 767px\) \{\s*\.chatfpv-widget-toggle \{\s*display: none;/);
+  });
+
+  it('opens the same panel from the menu entry and the inline link through one event', () => {
+    assert.equal(CHATFPV_OPEN_EVENT, 'chatfpv:open');
+    assert.match(widget, /addEventListener\(CHATFPV_OPEN_EVENT/);
+    assert.match(entry, /requestChatFpvOpen/);
+    assert.match(entry, />\s*Ask ChatFPV\s*</);
+    assert.match(entry, /Questions\?/);
+    assert.match(layout, /<ChatFpvMenuEntry \/>/);
+    assert.equal((product.match(/<ChatFpvInlineLink \/>/g) ?? []).length, 2);
+  });
+
+  it('shows the entries only where a widget is mounted', () => {
+    assert.match(css, /\.chatfpv-entry \{\s*display: none;/);
+    assert.match(css, /\.chatfpv-widget-on \.chatfpv-entry-menu \{\s*display: inline-flex/);
   });
 });

@@ -4,7 +4,7 @@ import {trackEvent} from '~/lib/growth/plausible';
 import {copyText} from '~/lib/copy';
 import {handoffPlacement, takeHandoffTicket, withHandoffTicket, type HandoffPlacement} from '~/lib/accounts/handoff';
 import {fetchWidgetAssertion, postAssertion, refreshDelayMs} from '~/lib/accounts/widget-client';
-import {PANEL_ANIM_MS, PHONE_MAX_WIDTH_PX, closedLabel, panelTransformOrigin, toggleHiddenBySheet} from './chatfpv-widget-ui';
+import {CHATFPV_OPEN_EVENT, PANEL_ANIM_MS, PHONE_MAX_WIDTH_PX, closedLabel, panelTransformOrigin, toggleHiddenBySheet} from './chatfpv-widget-ui';
 
 const PRIVACY_NOTICE_FALLBACK =
   "Your question and the product on this page go straight to ChatFPV, Incutec's AI assistant, exactly as you type it: please do not include your name, email, phone or order number. Conversations that do not become a ticket are deleted after 90 days idle.";
@@ -20,7 +20,13 @@ const NOTICE_SUMMARY_FALLBACK = 'AI assistant. How your question is used.';
  * renders nothing. The page CSP allows the ChatFPV origin in frame-src only
  * while the flag is on (app/lib/csp.ts `chatFpvFrameSrc`).
  *
- * Placement is fixed and predictable: the bottom-right corner, inset by the
+ * Below 768px there is no floating launcher at all (audit round 3, A4: every
+ * placement landed on a buy control on some phone). The same panel opens from
+ * the "Ask ChatFPV" entry in the mobile menu and the inline "Questions? Ask
+ * ChatFPV" link under the buy box (`ChatFpvEntry.tsx`), both dispatching
+ * `CHATFPV_OPEN_EVENT`; closing returns focus to whichever opened it.
+ *
+ * From 768px up, placement is fixed and predictable: the bottom-right corner, inset by the
  * device safe area (`.chatfpv-widget` in app.css). It never dodges page
  * content. The one exception is the phone product page's sticky buy bar
  * (`BOTTOM_BAR`, portaled to <body>): while it is showing, the launcher sits
@@ -153,6 +159,9 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
     return () => cancelAnimationFrame(id);
   }, [open]);
   const iframe = useRef<HTMLIFrameElement>(null);
+  /** Element that opened the panel through the menu entry or inline link;
+   *  focus returns there on close (the launcher is display:none on phones). */
+  const openerRef = useRef<HTMLElement | null>(null);
   const root = useRouteLoaderData('root') as {accountSignedIn?: boolean} | undefined;
   const signedIn = Boolean(root?.accountSignedIn);
 
@@ -228,7 +237,14 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
     if (lastOpen.current === open) return;
     const id = window.setTimeout(() => {
       lastOpen.current = open;
-      (open ? panelRef.current : button.current)?.focus();
+      if (open) {
+        panelRef.current?.focus();
+      } else {
+        const opener = openerRef.current;
+        openerRef.current = null;
+        const target = opener && opener.isConnected && opener.getClientRects().length > 0 ? opener : button.current;
+        target?.focus();
+      }
     }, 0);
     return () => window.clearTimeout(id);
   }, [open]);
@@ -295,6 +311,29 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
     html.classList.add('chatfpv-widget-on');
     return () => html.classList.remove('chatfpv-widget-on');
   }, [src]);
+
+  // The mobile menu entry and the inline link under the buy box open the
+  // same panel the launcher does.
+  useEffect(() => {
+    if (!src) return;
+    const onOpen = (e: Event) => {
+      const trigger = (e as CustomEvent<{trigger?: HTMLElement | null}>).detail?.trigger ?? null;
+      openerRef.current = trigger;
+      setUnread(false);
+      setOpen(true);
+      trackEvent('chatfpv_widget_open', {props: {surface: 'link'}});
+    };
+    window.addEventListener(CHATFPV_OPEN_EVENT, onOpen);
+    return () => window.removeEventListener(CHATFPV_OPEN_EVENT, onOpen);
+  }, [src]);
+
+  // Without a launcher (phones) the unread handoff badge lives on the menu
+  // entry and the inline link, through this class.
+  useEffect(() => {
+    const html = document.documentElement;
+    html.classList.toggle('chatfpv-widget-unread', unread && !open);
+    return () => html.classList.remove('chatfpv-widget-unread');
+  }, [unread, open]);
 
   useEffect(() => {
     if (!handoff || !src || handoffRead.current) return;
