@@ -203,8 +203,8 @@
   --pod-shadow: 0 10px 34px -16px rgba(0, 0, 0, 0.55);
   --pod-pad: clamp(var(--sp-3), 1.5vw, var(--sp-5));
 
-  --header-control-height: 1.5rem;
-  --header-height: calc(var(--header-control-height) + 18px);
+  --header-control-height: 1.75rem;
+  --header-height: calc(var(--header-control-height) + 22px);
   --aside-width: 400px;
 
   --rail-gutter: 1.25rem;
@@ -758,13 +758,13 @@ html[data-cart-preview] .site-header {
   display: grid;
   grid-template-columns: max-content max-content max-content;
   grid-template-areas: 'logo cats actions';
-  column-gap: clamp(0.75rem, 1.5vw, 1.5rem);
+  column-gap: clamp(1rem, 2vw, 2.25rem);
   align-items: center;
   height: auto;
   width: fit-content;
   max-width: 100%;
   margin: 0 auto;
-  padding: 8px 1.25rem;
+  padding: 10px 1.25rem;
   background: var(--pod-bg-strong);
   border: 1px solid var(--pod-border);
   border-radius: var(--r-pill);
@@ -1341,6 +1341,15 @@ html.anim-paused .board-sheet.is-active {
   justify-content: center;
   grid-area: cats;
   gap: clamp(0.5rem, 0.9vw, 0.9rem);
+}
+
+@media (min-width: 1024px) and (max-width: 1100px) {
+  .site-header-main {
+    column-gap: 0.65rem;
+  }
+  .site-header-categories {
+    gap: 0.5rem;
+  }
 }
 
 /* Family chip + its hover-drop Pod. The wrap carries the absolute centering so
