@@ -138,7 +138,6 @@ describe('readCustomerAccount', () => {
     assert.equal(result!.orders[0].isPreorder, true);
     assert.equal(result!.orders[0].promise?.kind, 'date');
     assert.equal(result!.orders[0].promise?.text, 'ships early Nov 2026');
-    assert.equal(result!.orders[0].promise?.delivered, '30 Nov 2026');
   });
 
   it('labels a preorder order waiting on a funding target', async () => {
@@ -259,18 +258,16 @@ describe('batchPromiseOf', () => {
       kind: 'target',
       day: '2027-03-31',
       text: 'ships by 31 Mar 2027',
-      delivered: null,
     });
   });
 
-  it('resolves early, mid and late to sortable days, with delivery from the promise text', () => {
+  it('resolves early, mid and late to sortable days, without a delivery date', () => {
     const cfg = {shipsBy: '2027-03-31'};
     assert.equal(batchPromiseOf({units: 1, ships: 'ships early February 2027'}, cfg).day, '2027-02-10');
     assert.equal(batchPromiseOf({units: 1, ships: 'ships mid February 2027'}, cfg).day, '2027-02-20');
     assert.equal(batchPromiseOf({units: 1, ships: 'ships February 2028'}, cfg).day, '2028-02-29');
-    const late = batchPromiseOf({units: 1, ships: 'ships early November 2026, delivered by 30 November 2026'}, cfg);
+    const late = batchPromiseOf({units: 1, ships: 'ships early November 2026'}, cfg);
     assert.equal(late.text, 'ships early Nov 2026');
-    assert.equal(late.delivered, '30 Nov 2026');
   });
 
   it('reads unparseable dated text as the later shipsBy', () => {

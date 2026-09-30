@@ -1856,11 +1856,6 @@ function ProductPage() {
             </span>
           ) : null}
           {vatNote ? <span className="product-buy-vat">{vatNote}</span> : null}
-          {campaign?.earlyPrice && shownLadder ? (
-            <span className="product-buy-tag">
-              {say('product-chrome.buy_early_bird', 'Price step 1')}
-            </span>
-          ) : null}
         </span>
         {isBundle ? (
           (() => {

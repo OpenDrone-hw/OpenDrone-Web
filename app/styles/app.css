@@ -15165,16 +15165,6 @@ html:not(.light) .trust-chip-oshwa-mark {
 .product-hero-copy .product-buy-price .product-price {
   font-size: 2rem;
 }
-.product-buy-tag {
-  align-self: center;
-  padding: 2px 8px;
-  border: 1px solid var(--color-border-strong);
-  border-radius: 999px;
-  background: transparent;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  color: var(--color-text-muted);
-}
 .product-hero-copy .product-form .product-qty-step,
 .product-hero-copy .product-form .add-to-cart-form > button {
   min-height: 48px;
@@ -15239,7 +15229,6 @@ html:not(.light) .trust-chip-oshwa-mark {
 }
 .buy-rail.is-pinned .step-bar,
 .buy-rail.is-pinned .avail,
-.buy-rail.is-pinned .product-buy-tag,
 .buy-rail.is-pinned .product-buy-vat,
 .buy-rail.is-pinned .product-buy-unit,
 .buy-rail.is-pinned .product-buy-sku,

@@ -196,7 +196,7 @@ describe('hero build shopping guide', () => {
 });
 
 describe('hero build ship mix', () => {
-  const dated = 'ships early November 2026, delivered by 30 November 2026';
+  const dated = 'ships early November 2026';
   const target = 'ships by 31 March 2027 if the target is reached by 15 December 2026';
   const withPromises = (map: (role: string) => string | null): HeroBuild => {
     const build = resolveHeroBuilds(config, catalog())[0];

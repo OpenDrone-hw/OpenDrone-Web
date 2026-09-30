@@ -39,10 +39,10 @@ describe('orderStatus', () => {
     assert.equal(s.note, 'Ships if the funding target is reached. One parcel, sent when every item is ready.');
   });
 
-  it('names the delivery date of a dated preorder, and skips the parcel note for one line', () => {
+  it('names no delivery date for a dated preorder, and skips the parcel note for one line', () => {
     const s = orderStatus(order({isPreorder: true, promise: DATED}));
     assert.equal(s.label, 'Preorder · ships early Nov 2026');
-    assert.equal(s.note, 'Delivered by 30 Nov 2026.');
+    assert.equal(s.note, null);
   });
 
   it('is a bare Preorder when no batch promise is known', () => {

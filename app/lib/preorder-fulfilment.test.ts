@@ -274,8 +274,8 @@ describe('planRelease', () => {
     const plain = order({lines: [['OPENFC-LITE-2020', 2], ['OPENRX-LITE', 1]]});
     const worded = order({lines: [['OPENFC-LITE-2020', 2], ['OPENRX-LITE', 1]]});
     worded.lineItems.nodes[0].customAttributes = [
-      {key: PREORDER_ATTRIBUTE, value: 'ships with the rest of this order by 31 March 2027, delivered by 15 April 2027'},
-      {key: '_preorder_own', value: 'ships early November 2026, delivered by 30 November 2026'},
+      {key: PREORDER_ATTRIBUTE, value: 'ships with the rest of this order by 31 March 2027'},
+      {key: '_preorder_own', value: 'ships early November 2026'},
     ];
     const shape = (o: PreorderOrder) => assignBatches([o], CONFIG).get(o.id)?.map((b) => [b.sku, b.batch, b.units]);
     assert.deepEqual(shape(worded), shape(plain));

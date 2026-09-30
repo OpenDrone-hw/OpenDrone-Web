@@ -10,7 +10,6 @@
 import {
   datedShipParts,
   promiseBatchMonth,
-  promiseDeliveredBy,
   shortCampaignDate,
   type CampaignState,
 } from './preorder-campaign.ts';
@@ -106,29 +105,24 @@ export function batchText(
 }
 
 function detailOf(b: Batch, dates: TargetDates, reached: boolean, words: Words, lead: string | null): string {
-  const delivered = promiseDeliveredBy(b.shipPromise);
-  const withDelivery = (text: string) =>
-    delivered ? `${text} · ${words('ship_delivered', 'Delivered by {date}', {date: delivered})}` : text;
   const waits = /\bif the target is reached\b/.test(b.shipPromise);
   if (!waits) {
     const parts = datedShipParts(b.shipPromise);
-    return withDelivery(parts ? words('ship_ships', 'Ships {date}', {date: parts.when}) : b.shipPromise);
+    return parts ? words('ship_ships', 'Ships {date}', {date: parts.when}) : b.shipPromise;
   }
   const eta = words('ship_eta', 'Ships by {date}', {date: dates.eta});
-  if (reached) return withDelivery(eta);
-  return withDelivery(
-    `${words('ship_deadline', 'Deadline {date}', {date: dates.deadline})} · ${
-      lead
-        ? words('ship_eta_if_lead_funded', 'Ships by {date} if that target is reached', {date: dates.eta})
-        : words('ship_eta_if_funded', 'Ships by {date} if the target is reached', {date: dates.eta})
-    }`,
-  );
+  if (reached) return eta;
+  return `${words('ship_deadline', 'Deadline {date}', {date: dates.deadline})} · ${
+    lead
+      ? words('ship_eta_if_lead_funded', 'Ships by {date} if that target is reached', {date: dates.eta})
+      : words('ship_eta_if_funded', 'Ships by {date} if the target is reached', {date: dates.eta})
+  }`;
 }
 
 /**
- * The rows of the availability block: every batch up to the buyer's, with the
- * next one after it. A batch the buyer's region cannot get stays listed and
- * says so. Empty without a campaign state.
+ * The rows of the availability block, in batch order: every batch up to the
+ * buyer's, with the next one after it. A batch the buyer's region cannot get
+ * stays listed and says so. Empty without a campaign state.
  */
 export function availabilityRows(
   campaign: Pick<CampaignState, 'batches' | 'targetReached' | 'batch'> & Partial<Pick<CampaignState, 'shipsWith' | 'paidLeft'>>,
@@ -156,8 +150,9 @@ export function availabilityRows(
       note,
     };
   });
-  // The batch the buyer gets comes first; one their region cannot get follows.
-  return [...rows.filter((r) => r.state !== 'other_region'), ...rows.filter((r) => r.state === 'other_region')];
+  // Chronological in every region: batch 1 first. The buyer's batch is the
+  // highlighted one; a batch their region cannot get stays in place and says so.
+  return rows;
 }
 
 /** The short dates a funding-target row names, from the campaign's long ones. */

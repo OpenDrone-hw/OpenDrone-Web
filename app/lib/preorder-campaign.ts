@@ -68,27 +68,15 @@ export type PriceTier = {
 };
 
 /** One promise flows to product pages, cart lines and order confirmations.
- *  A batch with a placed supplier order (`ships`) states its delivery date
- *  outright; a funding target states it on the condition of its target. */
-function batchPromise(batch: CampaignBatch, fallback: string, region: Region = 'EU'): string {
-  const ships = batch.ships?.trim();
-  const deliveryBy = region === 'US' ? batch.deliveryByUS : batch.deliveryBy;
-  const delivery = deliveryBy ? campaignDate(deliveryBy) : null;
-  if (!ships) {
-    return delivery ? `${fallback}; if the target is reached in time, delivered by ${delivery}` : fallback;
-  }
-  return delivery ? `${ships}, delivered by ${delivery}` : ships;
+ *  It states the ship date only, never a delivery date. */
+function batchPromise(batch: CampaignBatch, fallback: string): string {
+  return batch.ships?.trim() || fallback;
 }
 
-/** The reviewed delivery day of a batch for a region, YYYY-MM-DD, or null. */
+/** The reviewed delivery day of a batch for a region, YYYY-MM-DD, or null.
+ *  Never shown to a buyer: it only orders the lines of one cart. */
 function batchDeliveryDay(batch: CampaignBatch, region: Region): string | null {
   return (region === 'US' ? batch.deliveryByUS : batch.deliveryBy) ?? null;
-}
-
-/** The delivery date a promise names, short: "30 Nov 2026". Null without one. */
-export function promiseDeliveredBy(promise: string | null | undefined): string | null {
-  const m = /delivered by (\d{1,2} [A-Z][a-z]+ \d{4})/.exec(promise ?? '');
-  return m ? shortCampaignDate(m[1]) : null;
 }
 
 export type CampaignConfig = {
@@ -514,10 +502,10 @@ export function shipGroupKey(
 
 /** The line attribute wording for a line that ships earlier than the rest
  *  of its order: it ships once, with the latest line, so it carries that
- *  line's ship-by and delivered-by dates. Null when `latest` names no ship
+ *  line's ship-by date. Null when `latest` names no ship
  *  date to state. */
 export function mixedShipPromise(
-  latest: Pick<CampaignState, 'shipByDay' | 'deliveryByDay' | 'shipsText'>,
+  latest: Pick<CampaignState, 'shipByDay' | 'shipsText'>,
 ): string | null {
   let when: string | null = null;
   if (latest.shipByDay) {
@@ -527,8 +515,7 @@ export function mixedShipPromise(
     when = /^(?:(?:early|mid|late)[- ])?[A-Za-z]+ \d{4}$/i.test(rest) ? `in ${rest}` : rest;
   }
   if (!when) return null;
-  const delivery = latest.deliveryByDay ? `, delivered by ${campaignDate(latest.deliveryByDay)}` : '';
-  return `ships with the rest of this order ${when}${delivery}`;
+  return `ships with the rest of this order ${when}`;
 }
 
 /** The day that orders a line's date against the other lines of its cart:
@@ -677,7 +664,7 @@ export function campaignState(
     target,
     targetOrdered,
     targetReached,
-    shipPromise: batchPromise(current, pendingShips, region),
+    shipPromise: batchPromise(current, pendingShips),
     shipsOnTarget: !current.ships?.trim(),
     deliveryByDay: batchDeliveryDay(current, region),
     shipsText: current.ships?.trim() || null,
@@ -695,7 +682,7 @@ export function campaignState(
         i < index
           ? servesRegion(b, region) ? 'sold_out' : 'other_region'
           : i === index ? 'current' : 'next',
-      shipPromise: batchPromise(b, pendingShips, region),
+      shipPromise: batchPromise(b, pendingShips),
       paid: Boolean(b.paid),
       regions: b.regions ?? [...REGIONS],
       ordered: fill[i] ?? 0,
@@ -735,15 +722,31 @@ export function shipsWithState(
           batch: rule.batch!,
           units: pinned.units,
           status: 'other_region',
-          shipPromise: batchPromise(pinned, config.pendingShips, region),
+          shipPromise: batchPromise(pinned, config.pendingShips),
           paid: Boolean(pinned.paid),
           regions: pinned.regions ?? [...REGIONS],
           ordered: 0,
         }]
       : [];
+  // An accessory that sells stock now and ships with the `after` batch past
+  // it lists that batch next, as the lead does, so the rows match the US buy
+  // box (where `after` is the buyer's own batch).
+  const afterBatch = rule.stock !== undefined && rule.after !== undefined ? lead.batches[rule.after - 1] : undefined;
+  const upcoming: CampaignState['batches'] =
+    afterBatch && rule.after !== undefined && !state.batches.some((b) => b.batch === rule.after) && servesRegion(afterBatch, region)
+      ? [{
+          batch: rule.after,
+          units: afterBatch.units,
+          status: 'next',
+          shipPromise: batchPromise(afterBatch, config.pendingShips),
+          paid: Boolean(afterBatch.paid),
+          regions: afterBatch.regions ?? [...REGIONS],
+          ordered: 0,
+        }]
+      : [];
   return {
     ...state,
-    batches: [...skipped, ...state.batches],
+    batches: [...skipped, ...state.batches, ...upcoming],
     paidStock: fromStock,
     paidLeft: fromStock ? rule.stock! - own : null,
     shipsWith: rule.sku,
@@ -792,7 +795,7 @@ function pinnedBatchState(
   region: Region = 'EU',
 ): CampaignState {
   const entry = batches[batch - 1];
-  const promise = batchPromise(entry, pendingShips, region);
+  const promise = batchPromise(entry, pendingShips);
   const dated = Boolean(entry.ships?.trim());
   const targetOrdered = dated ? 0 : Math.min(entry.units, batchFill(batches, leadOrdered)[batch - 1] ?? 0);
   return {
@@ -965,29 +968,28 @@ function fundingShort(latestShip: string | null): string {
   return date ? `Ships by ${date} if the target is reached` : 'Funding target';
 }
 
-/** The parts of a dated promise: "ships early November 2026, delivered by 30
- *  November 2026" gives `{when: 'early Nov 2026', delivered: '30 Nov 2026'}`.
+/** The parts of a dated promise: "ships early November 2026" gives
+ *  `{when: 'early Nov 2026'}`.
  *  Null when the promise names no month and year. Every surface builds its
  *  short ship line from these, so PDP, listings, cart, dialog and checkout
- *  name the same month, qualifier and delivery date. */
+ *  name the same month and qualifier. */
 export function datedShipParts(
   promise: string | null | undefined,
-): {when: string; delivered: string | null} | null {
+): {when: string} | null {
   const text = promise?.trim() ?? '';
   const match = text.match(/\b(?:(early|mid|late)[- ])?([A-Za-z]+) (\d{4})\b/i);
   const month = match ? LONG_MONTHS.indexOf(match[2].toLowerCase()) : -1;
   if (!match || month < 0) return null;
   const qualifier = match[1] ? `${match[1].toLowerCase()} ` : '';
-  return {when: `${qualifier}${SHORT_MONTHS[month]} ${match[3]}`, delivered: promiseDeliveredBy(text)};
+  return {when: `${qualifier}${SHORT_MONTHS[month]} ${match[3]}`};
 }
 
-/** A dated promise, short: "Ships early Nov 2026 · Delivered by 30 Nov 2026".
+/** A dated promise, short: "Ships early Nov 2026".
  *  A promise that names no month and year keeps its own words. */
 function datedShort(promise: string): string {
   const parts = datedShipParts(promise);
   if (!parts) return capitalizeFirst(promise.trim());
-  const ships = `Ships ${parts.when}`;
-  return parts.delivered ? `${ships} · Delivered by ${parts.delivered}` : ships;
+  return `Ships ${parts.when}`;
 }
 
 function longSentence(promise: string): string {

@@ -17,6 +17,14 @@ describe('stepBarView', () => {
     assert.deepEqual(bar, {value: 37, max: 250, ticks: [100], funded: false, label: '37 / 250'});
   });
 
+  it('ticks the EU and US bars of the same SKU identically', () => {
+    const eu = stepBarView(campaignState(STACK, 1, PENDING, TIERS, null, 'EU'), ENDS);
+    const us = stepBarView(campaignState([{units: 250, paid: true, ships: 'ships early November 2026', regions: ['EU']}, {units: 250}], 1, PENDING, TIERS, null, 'US'), ENDS);
+    assert.deepEqual(eu.ticks, [100]);
+    assert.deepEqual(us.ticks, eu.ticks);
+    assert.equal(us.max, eu.max);
+  });
+
   it('shows an empty target as 0 of its size, both step ends inside a 1000 target', () => {
     const bar = stepBarView(campaignState([{units: 1000}, {units: 4000}], 0, PENDING, TIERS), ENDS);
     assert.equal(bar.label, '0 / 1000');
