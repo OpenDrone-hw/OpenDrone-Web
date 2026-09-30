@@ -1101,19 +1101,21 @@ describe('international cart destination handoffs', () => {
   const international = applyCampaign(CATALOG, config, {}, new Date('2026-10-01'), 'INT');
 
   it('adds an international preorder with the exact destination and INT promise metadata', async () => {
-    let chosen = '';
-    await handleShopifyCartAction(request({sku:'OPENRX-LITE', country:'CA'}), ENABLED_ENV, {
-      fetchCatalog: async (region,country) => { assert.equal(region,'INT'); assert.equal(country,'CA'); return international; },
-      createCart: async (lines,country) => {
-        chosen = country!;
-        assert.equal(lines[0].attributes?.find(a=>a.key==='_ship_region')?.value,'INT');
-        assert.equal(lines[0].attributes?.find(a=>a.key==='Delivery by')?.value,'30 April 2027');
-        assert.match(lines[0].attributes?.find(a=>a.key==='Preorder')?.value??'',/31 March 2027/);
-        assert.doesNotMatch(lines[0].attributes?.find(a=>a.key==='Preorder')?.value??'',/15 April|30 April/);
-        return cart();
-      },
-    });
-    assert.equal(chosen,'CA');
+    for (const destination of ['CA', 'XK']) {
+      let chosen = '';
+      await handleShopifyCartAction(request({sku:'OPENRX-LITE', country:destination}), ENABLED_ENV, {
+        fetchCatalog: async (region,country) => { assert.equal(region,'INT'); assert.equal(country,destination); return international; },
+        createCart: async (lines,country) => {
+          chosen = country!;
+          assert.equal(lines[0].attributes?.find(a=>a.key==='_ship_region')?.value,'INT');
+          assert.equal(lines[0].attributes?.find(a=>a.key==='Delivery by')?.value,'30 April 2027');
+          assert.match(lines[0].attributes?.find(a=>a.key==='Preorder')?.value??'',/31 March 2027/);
+          assert.doesNotMatch(lines[0].attributes?.find(a=>a.key==='Preorder')?.value??'',/15 April|30 April/);
+          return cart();
+        },
+      });
+      assert.equal(chosen,destination);
+    }
   });
 
   it('refreshes an EU cart and shows international prices and March dates before native checkout', async () => {

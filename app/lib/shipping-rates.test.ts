@@ -69,7 +69,7 @@ describe('shippingQuote', () => {
   });
 
   it('accepts permitted international destinations with an unknown checkout shipping charge', () => {
-    for (const c of ['GB', 'CH', 'NO', 'IS', 'LI', 'CA', 'AU', 'JP']) {
+    for (const c of ['GB', 'CH', 'NO', 'IS', 'LI', 'CA', 'AU', 'JP', 'XK']) {
       assert.deepEqual(shippingQuote(c), {country: c, kind: 'direct', zone: 'international', rate: null});
       assert.equal(soldThroughShops(c), false, c);
       assert.equal(notSoldDirect(c), null, c);
@@ -127,7 +127,7 @@ describe('shipCountryOptions', () => {
       const q = shippingQuote(code);
       assert.ok(q && q.kind !== 'blocked', code);
     }
-    for (const c of ['BE', 'US', 'GB', 'BG', 'JP']) assert.ok(codes.includes(c), c);
+    for (const c of ['BE', 'US', 'GB', 'BG', 'JP', 'XK']) assert.ok(codes.includes(c), c);
   });
 
   it('sorts by country name', () => {
@@ -203,6 +203,15 @@ describe('default destination', () => {
     // A blocked IP country stays visible so the page can say so.
     assert.equal(shipCountryForRequest(req({'CF-IPCountry': 'RU'})), 'RU');
     assert.equal(shipCountryForRequest(req({})), null);
+  });
+
+  it('keeps Shopify Kosovo as the destination through query, cookie and IP handoffs', () => {
+    const picked = shipCountryCookie('xk')!;
+    assert.equal(shipCountryForRequest(req({'CF-IPCountry': 'BE'}, '?country=xk')), 'XK');
+    assert.equal(shipCountryFromCookie(picked), 'XK');
+    assert.equal(shipCountryForRequest(req({Cookie: picked, 'CF-IPCountry': 'BE'})), 'XK');
+    assert.equal(shipCountryForRequest(req({'CF-IPCountry': 'XK'})), 'XK');
+    assert.equal(shipCountryPicker().rest.find((option) => option.code === 'XK')?.name, 'Kosovo');
   });
 });
 

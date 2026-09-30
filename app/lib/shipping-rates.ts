@@ -55,7 +55,7 @@ export type ShippingQuote =
   | {country: string; kind: 'direct'; zone: typeof US_ZONE; rate: number; currency: 'USD'}
   | {country: string; kind: 'direct'; zone: 'international'; rate: null};
 
-/** The quote for one ISO country code, or null for an unknown country.
+/** The quote for one supported destination, or null for an unknown country.
  *  `registrations` is for tests; the committed file is the default.
  *  `usRate` is the US rate while US sales are open (`usSalesRate`), null
  *  or omitted while they are closed: the US then buys through shops. */
@@ -109,15 +109,15 @@ export function notSoldDirect(
   return kind === 'shops' || kind === 'closed' || kind === 'blocked' ? kind : null;
 }
 
-/** Every ISO 3166-1 country code. */
-const ISO_COUNTRIES = (
+/** ISO 3166-1 country codes plus Shopify's XK destination for Kosovo. */
+const DESTINATION_COUNTRIES = (
   'AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ ' +
   'CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR ' +
   'GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP ' +
   'KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT ' +
   'MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW ' +
   'SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG ' +
-  'UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW'
+  'UM US UY UZ VA VC VE VG VI VN VU WF WS XK YE YT ZA ZM ZW'
 ).split(' ');
 
 /** Territories with no postal addresses to ship to: Antarctica, Bouvet
@@ -128,10 +128,10 @@ export const UNINHABITED_TERRITORIES: ReadonlySet<string> = new Set([
   'AQ', 'BV', 'HM', 'GS', 'TF', 'UM', 'IO',
 ]);
 
-/** Every country the destination picker lists: all of ISO 3166-1 minus
+/** Every country the destination picker lists: supported destinations minus
  *  `BLOCKED_COUNTRIES` and `UNINHABITED_TERRITORIES`. Checkout availability
  *  is decided separately by `shippingQuote`. */
-export const SHIP_COUNTRY_CODES: readonly string[] = ISO_COUNTRIES.filter(
+export const SHIP_COUNTRY_CODES: readonly string[] = DESTINATION_COUNTRIES.filter(
   (code) => !BLOCKED_COUNTRIES.has(code) && !UNINHABITED_TERRITORIES.has(code),
 );
 
@@ -195,12 +195,12 @@ export function countryName(code: string, locale = 'en'): string {
  *  checkout charges the rate for the address the buyer enters there. */
 export const SHIP_COUNTRY_COOKIE = 'od_ship_country';
 
-const ISO_SET: ReadonlySet<string> = new Set(ISO_COUNTRIES);
+const DESTINATION_SET: ReadonlySet<string> = new Set(DESTINATION_COUNTRIES);
 
-/** An ISO 3166-1 alpha-2 code, upper-cased, or null. */
+/** A supported two-letter destination code, upper-cased, or null. */
 function isoCode(value: string | null | undefined): string | null {
   const code = value?.trim().toUpperCase();
-  return code && ISO_SET.has(code) ? code : null;
+  return code && DESTINATION_SET.has(code) ? code : null;
 }
 
 /** The `document.cookie` / `Set-Cookie` string that keeps a picked
@@ -255,7 +255,7 @@ export function blockedIpCountry(request: Request): string | null {
   return ip && BLOCKED_COUNTRIES.has(ip) ? ip : null;
 }
 
-/** True for an ISO 3166-1 alpha-2 code. */
+/** True for a supported two-letter destination code, including Shopify's XK. */
 export function isIsoCountry(value: string | null | undefined): boolean {
   return isoCode(value) !== null;
 }
