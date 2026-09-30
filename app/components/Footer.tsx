@@ -7,7 +7,6 @@ import {
 import {NewsletterSignup} from '~/components/NewsletterSignup';
 import {Txt} from '~/components/Txt';
 import {SiteWordmark} from '~/components/SiteWordmark';
-import {ThemeToggle} from '~/components/ThemeToggle';
 import {
   LegalLanguages,
   legalHref,
@@ -479,7 +478,6 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
                 <DrawingView />
                 <div className="footer-foot-meta">
                   <LegalLanguages className="footer-small text-[var(--color-text-muted)]" />
-                  <ThemeToggle showLabel className="footer-theme-toggle" />
                   <p className="footer-copyright">
                     &copy; {new Date().getFullYear()} {company.name}
                   </p>

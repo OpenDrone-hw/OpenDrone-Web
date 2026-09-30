@@ -725,6 +725,11 @@ a:hover {
   padding: clamp(0.5rem, 1.6vh, 0.85rem) var(--rail-gutter) 0;
   pointer-events: none;
 }
+/* While a family dropdown is open, lift the whole header above the pinned
+   buy rail (z 60): otherwise the pod and its buy strip slide underneath. */
+.site-header:has(.header-cat-pod) {
+  z-index: 70;
+}
 /* While the cart drawer is open as a hover PREVIEW (html attr set by
    CartBadge), lift the header above the drawer overlay (z 40) + panel (z 50)
    so the cart icon stays hoverable and: critically: clickable: hovering
@@ -748,13 +753,12 @@ html[data-cart-preview] .site-header {
    transient, so they never sustain the cost. */
 .site-header-main {
   pointer-events: auto;
-  /* Three zones: logo | nav | actions. The outer tracks are equal, so the nav
-     sits in the exact middle whatever the actions weigh, and column-gap is the
-     guaranteed minimum between zones. */
-  position: relative;
+  /* Three zones: logo | product pills | links + utilities. The middle track
+     never shrinks below its pills, and column-gap is the guaranteed minimum
+     between zones (a margin between flex items collapses to nothing). */
   display: grid;
-  grid-template-columns: minmax(auto, 1fr) auto minmax(auto, 1fr);
-  grid-template-areas: 'logo nav actions';
+  grid-template-columns: auto minmax(max-content, 1fr) auto;
+  grid-template-areas: 'logo cats actions';
   column-gap: clamp(1rem, 2vw, 2.25rem);
   align-items: center;
   height: var(--header-height);
@@ -788,14 +792,13 @@ html[data-cart-preview] .site-header {
 .site-header-main > .site-header-logo,
 .site-header-main > .site-header-incutec-slot {
   grid-area: logo;
-  justify-self: start;
 }
 
 .site-header-logo {
   display: inline-flex;
   align-items: center;
   /* Fixed slot width = the wider (OpenDrone) wordmark, so swapping it for the
-     narrower Incutec mark on the hero never shifts the nav. */
+     narrower Incutec mark on the hero never shifts the nav chips. */
   min-width: 6.5rem;
   transition: opacity 0.15s ease;
   line-height: 0;
@@ -906,68 +909,9 @@ html.anim-paused .board-sheet.is-active {
 .theme-toggle:hover {
   color: var(--color-text);
 }
-.theme-toggle:focus-visible {
-  outline: 2px solid var(--color-gold-fill);
-  outline-offset: 3px;
-  border-radius: var(--r-xs);
-}
 
-/* Theme switch with its action printed beside the icon: drawer and footer. */
-.mobile-menu-theme,
-.footer-theme-toggle {
-  gap: 0.6rem;
-  font-family: var(--font-sans);
-  font-size: var(--fs-sm);
-  font-weight: 500;
-}
-.mobile-menu-theme {
-  min-height: 44px;
-  align-self: flex-start;
-}
-.footer-theme-toggle {
-  margin-top: 4px;
-  min-height: 32px;
-}
-
-/* Drawer links: the bar's type style at a phone-sized tap target. */
-.site-mobile-link {
-  display: flex;
-  align-items: center;
-  min-height: 44px;
-  color: var(--color-text-muted);
-  font-family: var(--font-sans);
-  font-size: var(--fs-md);
-  font-weight: 500;
-  transition: color 0.15s ease;
-}
-.site-mobile-link:hover,
-.site-mobile-link[aria-current='page'] {
-  color: var(--color-text);
-}
-.site-mobile-link[aria-current='page'] {
-  text-decoration: underline;
-  text-decoration-color: var(--color-gold-fill);
-  text-decoration-thickness: 2px;
-  text-underline-offset: 6px;
-}
-.site-mobile-link:focus-visible {
-  outline: 2px solid var(--color-gold-fill);
-  outline-offset: -2px;
-  border-radius: var(--r-xs);
-}
-/* Region, theme and legal language, under the links. */
-.mobile-menu-settings {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.5rem;
-  margin-top: 1rem;
-  padding: 1rem 0.25rem 0;
-  border-top: 1px solid var(--color-border);
-}
-
-/* Region switch (EU | US): the lang-toggle pill, one side pressed. The
-   drawer carries this full-size copy; the header has the compact menu. */
+/* Region switch (EUR | USD): the lang-toggle pill, one side pressed. Sits in
+   the header on desktop; on phones the drawer carries the full-size copy. */
 .region-switch {
   display: inline-flex;
   border: 1px solid var(--color-border);
@@ -1038,7 +982,7 @@ html.anim-paused .board-sheet.is-active {
 }
 
 .region-switch.mobile-menu-region {
-  margin: 0;
+  margin: 0 0 0.75rem;
   align-self: flex-start;
   /* The drawer body is a shrinking flex column: never squash the pill. */
   flex-shrink: 0;
@@ -1107,8 +1051,8 @@ html.anim-paused .board-sheet.is-active {
   }
 }
 
-/* Header icon controls (account, cart, menu). Desktop keeps the compact
-   icon footprint; at 959px and narrower each gets a 44x44 minimum hit area (Apple HIG /
+/* Header icon controls (theme, search, cart, menu). Desktop keeps the compact
+   icon footprint; on phones each gets a 44x44 minimum hit area (Apple HIG /
    WCAG 2.5.5) without enlarging the glyph itself. Negative inline margin
    cancels the extra width so the tighter mobile CTA gap still reads evenly. */
 .site-header-icon {
@@ -1129,7 +1073,7 @@ html.anim-paused .board-sheet.is-active {
   }
 }
 
-@media (max-width: 959px) {
+@media (max-width: 768px) {
   .site-header-icon {
     min-width: 44px;
     min-height: 44px;
@@ -1137,136 +1081,56 @@ html.anim-paused .board-sheet.is-active {
   }
 }
 
-/* The hamburger is the only nav at 959px and narrower (the bar's nav and the
-   Shop panel are hidden there). It must NOT show on desktop: but the
+/* The hamburger is the only nav on mobile (the center menu, family chips and
+   text links are all hidden ≤768px). It must NOT show on desktop: but the
    Tailwind `md:hidden` utility loses the cascade to `.site-header-icon`'s
    `display: inline-flex`, so hide it explicitly here (this rule wins by source
    order over .site-header-icon). */
-@media (min-width: 960px) {
+@media (min-width: 769px) {
   .site-header-menu-toggle {
     display: none;
   }
 }
 
-/* Right zone: region, account, cart. */
+/* Right zone: quiet text links, then the utility icons. */
 .site-header-actions {
   grid-area: actions;
   justify-self: end;
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: clamp(1rem, 1.6vw, 1.75rem);
 }
-@media (min-width: 960px) {
-  .site-header-actions .site-header-icon {
+.site-header-utils {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.site-header-link {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+  transition: color 0.15s ease;
+}
+.site-header-link:hover,
+.site-header-link.is-active {
+  color: var(--color-text);
+}
+@media (min-width: 769px) {
+  .site-header-utils .site-header-icon {
     width: 2rem;
     height: 2rem;
   }
-  .site-header-actions .site-header-cart-count {
+  .site-header-utils .site-header-cart-count {
     top: -0.1rem;
     right: -0.25rem;
   }
 }
 
-/* Centre: one plain-text nav, in the exact middle of the pill. Every item
-   shares one type style; the current page is underlined by a pseudo-element,
-   so nothing moves between pages. Hidden at 959px and narrower (the drawer). */
-.site-header-nav {
-  display: none;
-  grid-area: nav;
-  justify-self: center;
-  min-width: 0;
-}
-.site-header-nav > ul {
-  display: flex;
-  align-items: center;
-  gap: clamp(1.1rem, 2.2vw, 2.25rem);
-  height: var(--header-height);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.site-header-nav > ul > li {
-  display: flex;
-  align-items: center;
-  height: 100%;
-}
-@media (min-width: 960px) {
-  .site-header-nav {
-    display: block;
-  }
-}
-.site-header-link {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.35rem 0;
-  border: 0;
-  background: none;
-  font-family: var(--font-sans);
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  letter-spacing: 0.005em;
-  line-height: 1.2;
-  white-space: nowrap;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  transition: color 0.15s ease;
-}
-.site-header-link::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 2px;
-  border-radius: var(--r-2xs);
-  background: var(--color-gold-fill);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.18s ease;
-}
-.site-header-link:hover,
-.site-header-link[aria-expanded='true'],
-.site-header-link.is-active {
-  color: var(--color-text);
-}
-.site-header-link.is-active::after {
-  transform: scaleX(1);
-}
-.site-header-link svg {
-  flex: none;
-  transition: transform 0.15s ease;
-}
-.site-header-link[aria-expanded='true'] svg {
-  transform: rotate(180deg);
-}
-.site-header-link:focus-visible,
-.header-shop-panel a:focus-visible {
-  outline: 2px solid var(--color-gold-fill);
-  outline-offset: 3px;
-  border-radius: var(--r-xs);
-}
-@media (prefers-reduced-motion: reduce) {
-  .site-header-link::after,
-  .site-header-link svg {
-    transition: none;
-  }
-}
-/* Tablet (960 to 1199px): Newsletter leaves the bar for the Shop panel. */
-@media (min-width: 960px) and (max-width: 1199px) {
-  .header-nav-collapse {
-    display: none !important;
-  }
-}
-@media (min-width: 1200px) {
-  .header-shop-collapsed {
-    display: none;
-  }
-}
-
-/* Dropdown popovers: the region menu (right) and the Shop panel (centre).
-   The panel is the pod material, hung under the pill. */
+/* Dropdowns of the right zone: the currency menu and "More". Outlined, quiet
+   triggers; the panel is the pod material, right-aligned under the pill. */
 .header-popover {
   position: relative;
   display: inline-flex;
@@ -1275,32 +1139,34 @@ html.anim-paused .board-sheet.is-active {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  height: 2rem;
-  padding: 0 0.6rem;
-  border: 0;
+  height: 1.75rem;
+  padding: 0 0.65rem;
+  border: 1px solid var(--color-border);
   border-radius: var(--r-pill);
   background: transparent;
   color: var(--color-text-muted);
-  font-family: var(--font-sans);
-  font-size: var(--fs-sm);
-  font-weight: 500;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   white-space: nowrap;
   cursor: pointer;
-  transition: color 0.15s ease, background-color 0.15s ease;
+  transition: color 0.15s ease, border-color 0.15s ease;
 }
 .header-popover-trigger:hover,
 .header-popover-trigger[aria-expanded='true'] {
   color: var(--color-text);
-  background: var(--color-bg-elevated);
+  border-color: color-mix(in srgb, var(--color-text) 35%, var(--color-border));
 }
 .header-popover-trigger:focus-visible,
-.header-popover-item:focus-visible {
+.header-popover-item:focus-visible,
+.header-popover-panel .site-header-link:focus-visible {
   outline: 2px solid var(--color-gold-fill);
   outline-offset: 2px;
 }
 .header-popover-panel {
   position: absolute;
-  top: calc(100% + (var(--header-height) - 2rem) / 2 + 0.5rem);
+  top: calc(100% + (var(--header-height) - 1.75rem) / 2 + 0.5rem);
   right: 0;
   z-index: 5;
   min-width: 100%;
@@ -1313,7 +1179,8 @@ html.anim-paused .board-sheet.is-active {
   border-radius: var(--r-md);
   box-shadow: var(--pod-shadow);
 }
-.header-popover-item {
+.header-popover-item,
+.header-more-panel .site-header-link {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1323,18 +1190,21 @@ html.anim-paused .board-sheet.is-active {
   border-radius: var(--r-sm);
   background: transparent;
   color: var(--color-text-muted);
-  font-family: var(--font-sans);
-  font-size: var(--fs-sm);
-  font-weight: 500;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   text-align: left;
   white-space: nowrap;
   cursor: pointer;
 }
-.header-popover-item:hover {
+.header-popover-item:hover,
+.header-more-panel .site-header-link:hover {
   background: var(--color-bg-elevated);
   color: var(--color-text);
 }
-.header-popover-item[aria-checked='true'] {
+.header-popover-item[aria-checked='true'],
+.header-more-panel .site-header-link.is-active {
   color: var(--color-text);
 }
 .region-menu[aria-busy='true'] {
@@ -1345,141 +1215,44 @@ html.anim-paused .board-sheet.is-active {
   z-index: 70;
 }
 
-/* Shop: the trigger fills the pill's height (so hover never drops between it
-   and the panel) and the panel hangs from the pill, centred under it. */
-.header-shop {
-  position: static;
-  height: 100%;
-  align-items: center;
+/* The menu button holds the text links on desktop; phones use the drawer. */
+.header-more {
+  display: none;
 }
-.header-shop-panel {
-  position: absolute;
-  top: calc(100% + 0.5rem);
-  left: 50%;
-  z-index: 5;
-  width: min(42rem, calc(100vw - 2 * var(--rail-gutter)));
-  padding: 0.75rem;
-  /* Opaque: the page under the panel must not show through its rows. */
-  background: linear-gradient(var(--pod-bg-strong), var(--pod-bg-strong)), var(--color-bg);
-  border: 1px solid var(--pod-border);
-  border-radius: var(--r-lg);
-  box-shadow: var(--pod-shadow);
-  transform: translateX(-50%);
-  animation: header-shop-in 0.14s ease-out;
-}
-/* Hover bridge over the gap between the pill and the panel. */
-.header-shop-panel::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: -0.75rem;
-  height: 0.75rem;
-}
-@keyframes header-shop-in {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -4px);
+@media (min-width: 769px) {
+  .header-more {
+    display: inline-flex;
+    align-items: center;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .header-shop-panel {
-    animation: none;
-  }
-}
-.header-shop-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 11rem;
-  gap: 0.75rem;
-}
-.header-shop-grid ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.header-shop-families {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 2px 0.5rem;
-  align-content: start;
-}
-.header-shop-family {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.4rem 0.5rem;
-  border-radius: var(--r-md);
-  color: var(--color-text);
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  transition: background-color 0.15s ease;
-}
-.header-shop-family:hover,
-.header-shop-family:focus-visible {
-  background: var(--color-bg-elevated);
-}
-.header-shop-thumb {
-  flex: none;
-  display: block;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--r-sm);
-  background: var(--color-bg-elevated);
-  overflow: hidden;
-}
-.header-shop-thumb img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-.header-shop-family-text {
-  display: grid;
-  gap: 1px;
-  min-width: 0;
-}
-.header-shop-family-text small {
+.header-more-trigger {
+  border: 0;
+  background: transparent;
   color: var(--color-text-muted);
-  font-size: var(--fs-xs);
-  font-weight: 400;
-  line-height: 1.3;
+  cursor: pointer;
 }
-.header-shop-extras {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding-left: 0.75rem !important;
-  border-left: 1px solid var(--color-border);
-}
-.header-shop-extras a {
-  display: block;
-  padding: 0.5rem 0.6rem;
-  border-radius: var(--r-md);
-  color: var(--color-text-muted);
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  transition: background-color 0.15s ease, color 0.15s ease;
-}
-.header-shop-extras a:hover,
-.header-shop-extras a:focus-visible {
-  background: var(--color-bg-elevated);
+.header-more-trigger:hover,
+.header-more-trigger[aria-expanded='true'] {
   color: var(--color-text);
 }
-.header-shop-family[aria-current='page'],
-.header-shop-extras a[aria-current='page'] {
-  background: var(--color-gold-soft);
-  color: var(--color-text);
+.header-more-trigger:focus-visible {
+  outline: 2px solid var(--color-gold-fill);
+  outline-offset: 2px;
+  border-radius: var(--r-pill);
 }
-
-/* Phone and small tablet (959px and narrower): logo, cart, menu button. The
-   region switch and account link move into the drawer. */
-@media (max-width: 959px) {
-  .site-header-main {
-    grid-template-columns: auto minmax(0, 1fr);
-    grid-template-areas: 'logo actions';
+.header-more-panel {
+  top: calc(100% + (var(--header-height) - 2rem) / 2 + 0.5rem);
+  min-width: 11rem;
+}
+/* Legal pages add an NL/FR/EN toggle to the right zone; below 1200px the pill
+   has no room for it next to the product pills. The footer's "Legal texts"
+   line offers the same three languages. */
+@media (min-width: 769px) and (max-width: 1199px) {
+  .lang-toggle.header-lang-toggle {
+    display: none;
   }
-  .region-menu.header-region-switch,
+}
+@media (max-width: 768px) {
   .site-header-account {
     display: none;
   }
@@ -1489,6 +1262,71 @@ html.anim-paused .board-sheet.is-active {
   opacity: 0.85;
 }
 
+/* Phones: the region pill stays in the bar, tightened so logo, pill, theme,
+   cart and menu fit a 360px row. */
+@media (max-width: 768px) {
+  .site-header-actions {
+    gap: 0.25rem;
+    min-width: 0;
+  }
+  .site-header-utils {
+    gap: 0;
+  }
+  .site-header-wordmark {
+    height: 1.1rem;
+  }
+  .site-header-main {
+    padding-inline: 1rem;
+  }
+  .site-header-logo {
+    min-width: 0;
+  }
+  .site-header-incutec {
+    height: 1.25rem;
+  }
+  .site-header-logo--incutec {
+    padding-left: 0;
+  }
+  .site-header-actions .header-region-switch.header-popover-trigger,
+  .site-header-actions .region-menu .header-popover-trigger {
+    padding: 0 0.5rem;
+    gap: 0.3rem;
+    letter-spacing: 0.04em;
+  }
+}
+
+/* Gold category links: inline next to the primary nav. Show
+   on tablet+ with reduced gap; full spacing on wider desktop. */
+.site-header-categories {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  grid-area: cats;
+  gap: clamp(0.5rem, 0.9vw, 0.9rem);
+}
+
+/* Family chip + its hover-drop Pod. The wrap carries the absolute centering so
+   the Pod itself is free to run the popOpen transform. */
+.header-cat {
+  position: relative;
+  display: inline-flex;
+}
+.header-cat-pod-wrap {
+  position: absolute;
+  top: calc(100% + 0.6rem);
+  /* Left-anchored to the chip (not centered): a hovered row's action bar
+     unfolds rightward into the header's free space instead of pushing the
+     pod past the viewport's left edge. */
+  left: 0;
+  z-index: 40;
+}
+.header-cat-pod {
+  width: max-content;
+  /* Wide enough for a row and its icon column; clamped so it can never
+     run off screen. */
+  max-width: min(48rem, calc(100vw - 3rem));
+  padding: var(--sp-2);
+}
 /* Buyable dropdown row = one band: PDP link + always-on buy cell. No hover
    chrome: the only hover effects are color; nothing appears, moves, or
    resizes. The wash paints the whole band on hover/focus. */
@@ -1665,11 +1503,174 @@ html.anim-paused .board-sheet.is-active {
   opacity: 1;
   transform: translate(0, -50%);
 }
+/* The chip rules (.site-header-categories a / .site-header-cat-group a) also
+   match the pod's product links: they bled gold colour, UPPERCASE tracking and
+   a 0.7 opacity onto the whole dropdown row, which washed the text out (worst in
+   light mode). Reset the row to full contrast, pin a concentric radius, then
+   style each line explicitly: the SKU title gold, family + price neutral. */
+.site-header-categories .header-cat-pod .product-pod {
+  border-radius: var(--r-lg);
+  opacity: 1;
+  padding: var(--sp-2);
+  text-transform: none;
+  letter-spacing: normal;
+}
+html.light .header-cat-pod {
+  background: var(--pod-bg-strong);
+}
+/* Bigger, clearer product imagery in the header dropdowns (50% up from the
+   3rem shared default; the hero showcase keeps its own sizing). */
+.site-header-categories .header-cat-pod .product-pod-media {
+  width: 4.5rem;
+  height: 4.5rem;
+}
+.site-header-categories .header-cat-pod .product-pod-title {
+  color: var(--color-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.95rem;
+}
+.site-header-categories .header-cat-pod .product-pod-price {
+  font-size: var(--fs-md);
+}
+.site-header-categories .header-cat-pod .product-pod-subtitle {
+  color: var(--color-text-muted);
+}
+.site-header-categories .header-cat-pod .product-pod-price {
+  color: var(--color-text);
+}
+/* Invisible hover bridge so moving from chip to Pod doesn't cross a dead gap. */
+.header-cat-pod-wrap::before {
+  content: '';
+  position: absolute;
+  top: -0.6rem;
+  left: 0;
+  right: 0;
+  height: 0.6rem;
+}
+
+.site-header-categories a {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-gold-text);
+  font-weight: 500;
+  position: relative;
+  padding-bottom: 4px;
+  white-space: nowrap;
+  transition: opacity 0.15s ease, color 0.15s ease, font-weight 0.15s ease;
+}
+
+/* Dark keeps the quiet 0.7 resting state; on the light header the deep
+   gold at reduced opacity drops below readable contrast. */
+html:not(.light) .site-header-categories a:not(:hover):not(.active):not([aria-current='page']) {
+  opacity: 0.7;
+}
+html:not(.light) .site-header-categories .site-header-cat-group a:not(:hover):not(.active):not([aria-current='page']) {
+  opacity: 0.72;
+}
+
+.site-header-categories a:hover {
+  opacity: 1;
+  color: var(--color-gold-text-hover);
+}
+
+.site-header-categories a.active,
+.site-header-categories a[aria-current="page"] {
+  opacity: 1;
+  color: var(--color-gold-text-hover);
+  font-weight: 600;
+}
+
+.site-header-categories a.active::after,
+.site-header-categories a[aria-current="page"]::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -6px;
+  height: 2px;
+  background: var(--color-gold-fill);
+  border-radius: 1px;
+}
+
+/* Category families live in segmented bubbles, not a plain row: FC/ESC/Stack in
+   one (a Stack is just an FC + ESC), RX/Frame in another, and All Products in
+   its own accented bubble as the route into the full catalogue. No dividers -
+   the bubbles do the grouping. Items carry fixed padding so the active state
+   only swaps colour; the bubbles never resize as you navigate. */
+.site-header-categories .site-header-cat-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.25rem;
+  border-radius: var(--r-pill);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+}
+.site-header-categories .site-header-cat-group a {
+  padding: 0.36em 0.82em;
+  border-radius: var(--r-pill);
+}
+.site-header-categories .site-header-cat-group a:hover {
+  opacity: 1;
+  color: var(--color-gold-text-hover);
+}
+/* Active = high-contrast label (white in dark, black in light) and a gold
+   rim on the group's own pill. No inner chip: a pill inside a pill read as
+   a nested button. */
+.site-header-categories .site-header-cat-group a.active,
+.site-header-categories .site-header-cat-group a[aria-current='page'] {
+  color: var(--color-text);
+  opacity: 1;
+  font-weight: 600;
+}
+.site-header-categories .site-header-cat-group:has(a.active, a[aria-current='page']) {
+  border-color: color-mix(in srgb, var(--color-gold) 55%, var(--color-border));
+}
+.site-header-categories .site-header-cat-group a.active::after,
+.site-header-categories .site-header-cat-group a[aria-current='page']::after {
+  display: none;
+}
+/* All Products: an accented bubble so it reads as the catalogue entry, not
+   just another family. Gold-tinted fill + outline + label, kept legible
+   (gold-on-tint) rather than a solid gold fill that would wash the text out. */
+.site-header-categories .site-header-cat-all {
+  padding: 0.42em 0.95em;
+  border-radius: var(--r-pill);
+  background: var(--color-gold-soft);
+  border: 1px solid color-mix(in srgb, var(--color-gold) 50%, transparent);
+  color: var(--color-gold-text);
+  opacity: 1;
+}
+.site-header-categories .site-header-cat-all:hover {
+  background: color-mix(in srgb, var(--color-gold) 20%, transparent);
+  border-color: var(--color-gold);
+  color: var(--color-gold-text-hover);
+}
+.site-header-categories .site-header-cat-all.active,
+.site-header-categories .site-header-cat-all[aria-current='page'] {
+  background: color-mix(in srgb, var(--color-gold) 24%, transparent);
+  border-color: var(--color-gold);
+  color: var(--color-gold-text-hover);
+  font-weight: 600;
+}
+.site-header-categories .site-header-cat-all::after {
+  display: none !important;
+}
+
 /* On the homepage the header floats over the hero scene, in place from
    the first frame. */
 .homepage-layout .site-header {
   position: fixed;
   width: 100%;
+}
+
+@media (min-width: 900px) {
+  .site-header-categories {
+    display: flex;
+  }
 }
 
 /* The static phone homepage keeps the header in the page flow. */
@@ -9988,8 +9989,26 @@ a.what-chain-chip:hover {
   color: var(--color-on-accent);
 }
 
-/* Drawer copy of the lang toggle: full-size taps. */
+/* Compact variant used in the site header */
+.lang-toggle.header-lang-toggle button,
+.lang-toggle.header-lang-toggle a {
+  padding: 0.25rem 0.55rem;
+  font-size: 11px;
+  letter-spacing: var(--ls-label);
+}
+
+/* The top-bar lang toggle would overflow a 320px header row on legal pages,
+   so hide it on phones: MobileMenuAside renders the full-size toggle inside
+   the slide-out drawer instead. */
+@media (max-width: 768px) {
+  .lang-toggle.header-lang-toggle {
+    display: none;
+  }
+}
+
+/* Drawer copy of the lang toggle: full-size taps, spaced below the nav links. */
 .lang-toggle.mobile-menu-lang {
+  margin-top: 0.5rem;
   align-self: flex-start;
 }
 
