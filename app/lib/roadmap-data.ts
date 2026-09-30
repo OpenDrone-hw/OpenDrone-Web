@@ -120,9 +120,16 @@ export const ROADMAP: RoadmapItem[] = [
     // Sold as a preorder, so never below alpha (founder rule, 2026-09-30).
     status: 'alpha',
     productPath: '/products/openframe',
-    // OpenFrame-3F is public and carries status-alpha. OpenFrame-5F is still
-    // private (history audit pending), so the entry links the 3F repo only.
+    // The 3 inch frame. One card per repository, as for the boards.
     link: 'https://github.com/OpenDrone-hw/OpenFrame-3F',
+  },
+  {
+    id: 'openframe_5',
+    added: '2026-09-30',
+    // Sold as a preorder, so never below alpha (founder rule, 2026-09-30).
+    status: 'alpha',
+    productPath: '/products/openframe',
+    link: 'https://github.com/OpenDrone-hw/OpenFrame-5F',
   },
   {
     id: 'motors',

@@ -26,7 +26,7 @@
   "firmware": {
     "project": "-"
   },
-  "repoUrl": "https://github.com/OpenDrone-hw/OpenFrame-3F",
+  "repoUrl": "https://github.com/OpenDrone-hw/OpenFrame-5F",
   "teardown": {
     "pins": [
       {
@@ -297,7 +297,8 @@
             "h": 6.14
           }
         ]
-      }
+      },
+      "repoUrl": "https://github.com/OpenDrone-hw/OpenFrame-5F"
     },
     "3\" Freestyle": {
       "subtitle": "3\" freestyle · 141 mm · 4 mm arms · 25.5 / 20x20",
@@ -504,7 +505,8 @@
             "h": 11.42
           }
         ]
-      }
+      },
+      "repoUrl": "https://github.com/OpenDrone-hw/OpenFrame-3F"
     }
   },
   "keywords": [

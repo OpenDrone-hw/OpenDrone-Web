@@ -605,10 +605,8 @@ export const PLUG_PIN_KINDS: readonly PlugPinKind[] = ['power', 'ground', 'signa
  * - Frame content is a planned-product fallback. It does not claim a public
  *   CAD source. Material and thicknesses follow the OpenFrame repo's
  *   docs/DESIGN.md; the weights are placeholders.
- * - `repoUrl` is empty while OpenFrame-5F and OpenFrame-3F are private
- *   repositories: an empty repoUrl drops the Open Source chip, the licence
- *   card and the contributor wall on the PDP. Set it the day a repo is
- *   public.
+ * - OpenFrame-3F and OpenFrame-5F are public. Each size carries its own
+ *   variant `repoUrl`; the product-level `repoUrl` is the 5 inch repository.
  *
  * openmotor
  * - Not open hardware (`editorial: false`). The sourcing records
