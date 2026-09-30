@@ -128,9 +128,10 @@ export const ROADMAP: RoadmapItem[] = [
     id: 'motors',
     added: '2026-08-11',
     // Sold as a preorder, so never below alpha (founder rule, 2026-09-30).
-    // OEM motor: no OpenDrone repository exists, so no link.
+    // OEM motor: the repository holds bench results and incoming QC, not a design.
     status: 'alpha',
     productPath: '/products/openmotor',
+    link: 'https://github.com/OpenDrone-hw/OpenMotor',
   },
   {
     id: 'openvtx',
