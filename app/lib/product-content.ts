@@ -320,9 +320,6 @@ export type VariantContent = {
   /** Other spellings of this option value a link may carry (the visible
    *  label `5"`, `5in`). The PDP redirects them to the catalog value. */
   aliases?: string[];
-  /** One short line over the gallery when this tier shows another tier's
-   *  image, e.g. "Render of the 5-inch frame". */
-  imageNote?: string;
   /** Per-tier plugs. They replace the product's `plugs` while this tier
    *  is picked. */
   plugs?: Plug[];

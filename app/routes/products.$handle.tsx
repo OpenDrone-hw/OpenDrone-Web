@@ -1766,9 +1766,7 @@ function ProductPage() {
   // signup instead of the ship date. A blocked country gets "Not available
   // in <country>" and the End-Use Policy link, with no signup.
   const notDirect = notSoldDirect(rootData?.visitorCountry ?? null, usRate);
-  // The US notice: under the ship date for a US buyer, with the batch the
-  // US unit ships in. An in-stock item ships to the EU only.
-  const usBatch = usBuyer && campaign ? promiseBatchMonth(campaign.shipPromise) : null;
+  // The US notice under the ship date: the EU-only stock line and, for a receiver, the FCC notice.
   // The batches of a campaign SKU, one row each, the buyer's highlighted.
   // An accessory that ships with the paid November stock, or that a US buyer
   // gets from a later batch, shows the same rows and names (batch 1, EU only).
@@ -1793,22 +1791,6 @@ function ProductPage() {
           )}
         </p>
       ) : null}
-      <p className="product-buy-ship" role="note">
-        {fccConditional
-          ? say(
-              'product-chrome.buy_us_notice_fcc',
-              'US delivery also depends on US import clearance; the same full refund applies.',
-            )
-          : !usBatch
-            ? say(
-                'product-chrome.buy_us_notice',
-                'US delivery depends on FCC equipment authorization and US import clearance. If we cannot deliver to you, you get a full refund.',
-              )
-            : say(
-                'product-chrome.buy_us_notice_short',
-                'If we cannot deliver to you, you get a full refund.',
-              )}
-      </p>
     </>
   ) : null;
   // Coming-soon buy module: the price/stock/add-to-cart block becomes a
@@ -2988,9 +2970,6 @@ function ProductPage() {
           >
             {galleryImages.length && imagesAreRenders(product.handle) ? (
               <span className="render-chip">{say('product-chrome.render_chip', 'Render')}</span>
-            ) : null}
-            {activeVariant?.imageNote && galleryImages.length ? (
-              <span className="product-image-note">{activeVariant.imageNote}</span>
             ) : null}
             <ProductGallery
               images={galleryImages}

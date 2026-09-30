@@ -372,7 +372,7 @@ describe('FCC conditional-sale disclosure', () => {
     assert.equal(cart.fcc_line, 'Not yet FCC authorized. Refund if not authorized.');
     assert.equal(cart.us_fcc, undefined);
     assert.equal(cart.us_notice, undefined);
-    assert.match(chrome.buy_us_notice, /FCC equipment authorization and US import clearance/);
+    assert.equal(chrome.buy_us_notice, undefined);
   });
 });
 
