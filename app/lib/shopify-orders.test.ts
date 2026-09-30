@@ -137,9 +137,11 @@ describe('fetchPaidUnitRuns', () => {
         {displayFinancialStatus: 'PAID', country: 'BE', lines: [['OPENESC-2020', 3]]},
         {displayFinancialStatus: 'PAID', country: 'NL', lines: [['OPENESC-2020', 1]]},
         {displayFinancialStatus: 'PAID', country: 'US', lines: [['OPENESC-2020', 2]]},
+        {displayFinancialStatus: 'PAID', country: 'CA', lines: [['OPENESC-2020', 3]]},
+        {displayFinancialStatus: 'PAID', country: 'AU', lines: [['OPENESC-2020', 1]]},
         {displayFinancialStatus: 'PAID', lines: [['OPENESC-2020', 1]]},
       ]),
     );
-    assert.deepEqual(runs, {'OPENESC-2020': [{region: 'EU', units: 4}, {region: 'US', units: 2}, {region: 'EU', units: 1}]});
+    assert.deepEqual(runs, {'OPENESC-2020': [{region: 'EU', units: 4}, {region: 'US', units: 2}, {region:'INT', units:4}, {region: 'EU', units: 1}]});
   });
 });

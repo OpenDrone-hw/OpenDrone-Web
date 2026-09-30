@@ -5,16 +5,17 @@
  */
 
 import {REGISTRATIONS, type RegistrationsFile} from './registrations.ts';
-import {EU_COUNTRIES, shippingQuote} from './shipping-rates.ts';
+import {EU_COUNTRIES, isInternationalQuote, shippingQuote} from './shipping-rates.ts';
 
 export type SwitchCurrency = 'EUR' | 'USD';
 
 /** The EU country EUR falls back to: the home market. */
 export const EUR_FALLBACK_COUNTRY = 'BE';
 
-/** The market a destination is priced in: USD for the US while US sales are
- *  open (`usRate` set), else EUR. */
-export function currencyForCountry(country: string | null, usRate: number | null): SwitchCurrency {
+/** Which existing shortcut is active. An international destination uses
+ *  Shopify's country currency, so neither the EU nor US shortcut is active. */
+export function currencyForCountry(country: string | null, usRate: number | null): SwitchCurrency | null {
+  if (isInternationalQuote(shippingQuote(country, undefined, usRate))) return null;
   return usRate != null && country?.trim().toUpperCase() === 'US' ? 'USD' : 'EUR';
 }
 

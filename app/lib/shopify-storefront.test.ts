@@ -257,3 +257,27 @@ describe('productRating', () => {
     assert.equal(productRating('{"value":"0"}', '5'), null);
   });
 });
+
+
+describe('selected-country catalog prices', () => {
+  it('uses a CountryCode variable and preserves Shopify CAD prices without local conversion', async () => {
+    let sent:{query:string;variables:Record<string,unknown>}|null = null;
+    const fetcher:typeof fetch=async(_input,init)=>{
+      sent=JSON.parse(String(init?.body)) as {query:string;variables:Record<string,unknown>};
+      return response({products:{pageInfo:{hasNextPage:false},nodes:[{
+        handle:'openrx',title:'OpenRX',description:'',productType:'',featuredImage:null,images:{nodes:[]},
+        variants:{pageInfo:{hasNextPage:false},nodes:[{
+          id:'gid://shopify/ProductVariant/1',title:'Gemini',sku:'OPENRX-GEMINI',availableForSale:true,image:null,
+          price:{amount:'61.42',currencyCode:'CAD'},compareAtPrice:{amount:'70.18',currencyCode:'CAD'},selectedOptions:[],
+        }]},
+      }]}});
+    };
+    const result=await fetchShopifyCatalog(ENV,fetcher,'CA');
+    assert.match(sent!.query, /@inContext\(country: \$country\)/);
+    assert.equal(sent!.variables.country,'CA');
+    assert.equal(result.currency,'CAD');
+    assert.equal(result.products[0].variants[0].price,61.42);
+    assert.equal(result.products[0].variants[0].compare_price,70.18);
+    assert.equal(result.prices_include_vat,false);
+  });
+});

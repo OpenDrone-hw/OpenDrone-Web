@@ -14,7 +14,7 @@
  * Batches follow the campaign count (`shopify-orders.ts`): counted orders in
  * creation order, each unit of a line's `currentQuantity` taking the first
  * batch of its SKU with room that serves the order's region (its shipping
- * country: US or EU, `regionOf`). A US unit never takes an EU-only batch.
+ * country: EU, US or INT, `regionOf`). A non-EU unit never takes an EU-only batch.
  * A line that runs over a batch boundary gets both batch tags. A SKU
  * that ships with another (`shipsWith` in `content/preorders.json`) takes
  * the lead SKU's batch tag: its pinned batch, or the batch the lead's next
@@ -52,6 +52,7 @@
 import {
   allocateUnit,
   batchOfUnit,
+  REGIONS,
   regionOf,
   servesRegion,
   shipsWithBatch,
@@ -78,6 +79,9 @@ export const PROMISE_MISMATCH_TAG = 'promise-mismatch';
 /** Order tag for a US order with a line that no US-serving batch carries
  *  (an in-stock item, a non-campaign SKU): held for manual follow-up. */
 export const US_REVIEW_TAG = 'us-review';
+export const INT_REVIEW_TAG = 'international-review';
+/** UK gross payments require accountant review while the VAT number is pending. */
+export const UK_VAT_REVIEW_TAG = 'uk-vat-review';
 /** Order tag that marks an order as held and tagged by this module. */
 export const PREORDER_TAG = 'preorder';
 /** Hold handle: one per app per fulfillment order, so it doubles as the marker. */
@@ -291,11 +295,10 @@ export function orderRegion(order: Pick<PreorderOrder, 'shippingAddress'>): Regi
   return regionOf(order.shippingAddress?.countryCodeV2);
 }
 
-/** The region a preorder line's promise was computed for: US when the
- *  line carries `_ship_region` US, else EU. */
+/** The region recorded by the preorder line, with EU as the historical default. */
 function lineRegion(line: PreorderOrder['lineItems']['nodes'][number]): Region {
   const value = line.customAttributes.find((a) => a.key === SHIP_REGION_LINE_ATTRIBUTE)?.value;
-  return regionOf(value);
+  return REGIONS.includes(value as Region) ? value as Region : 'EU';
 }
 
 /** True when a preorder line's promise was computed for another region
@@ -334,11 +337,11 @@ export function assignBatches(
     );
     for (const line of order.lineItems.nodes) {
       const sku = line.sku?.trim();
-      // A US line the storefront priced for the US (`_ship_region` US) and
+      // A non-EU line with a recorded destination (`_ship_region` US or INT) that
       // the campaign does not list ships with the `usStock` batch. Without
-      // that line attribute it stays unassigned and `us-review` holds it.
+      // that line attribute an unlisted SKU stays unassigned and under review.
       const rule = sku
-        ? (config.shipsWith?.[sku] ?? (lineRegion(line) === 'US' ? usStockRule(config, sku, region) : null) ?? undefined)
+        ? (config.shipsWith?.[sku] ?? (lineRegion(line) !== 'EU' ? usStockRule(config, sku, region) : null) ?? undefined)
         : undefined;
       if (sku && rule && config.skus[rule.sku] && line.currentQuantity > 0) {
         const lead = config.skus[rule.sku].batches;
@@ -409,15 +412,23 @@ function hasPreorderHold(fo: PreorderOrder['fulfillmentOrders']['nodes'][number]
  */
 export function needsUsReview(order: PreorderOrder, orderBatches: LineBatch[], config: CampaignConfig): boolean {
   if (orderRegion(order) !== 'US') return false;
+  return needsDestinationReview(order, orderBatches, config);
+}
+
+/** Non-EU orders with missing, mismatched or incompatible promises stay held. */
+export function needsDestinationReview(order: PreorderOrder, orderBatches: LineBatch[], config: CampaignConfig): boolean {
+  const region = orderRegion(order);
+  if (region === 'EU') return false;
   return order.lineItems.nodes.some((line) => {
     if (!(line.currentQuantity > 0)) return false;
+    if (!line.customAttributes.some(a => a.key === PREORDER_LINE_ATTRIBUTE && Boolean(a.value?.trim())) || lineRegion(line) !== region) return true;
     const sku = line.sku?.trim();
     if (!sku) return true;
     const mine = orderBatches.filter((b) => (b.item ?? b.sku) === sku);
     if (!mine.length) return true;
     return mine.some((b) => {
       const entry = config.skus[b.sku]?.batches[b.batch - 1];
-      return entry ? !servesRegion(entry, 'US') : false;
+      return entry ? !servesRegion(entry, region) : false;
     });
   });
 }
@@ -437,16 +448,25 @@ export function planPreorderHolds(orders: PreorderOrder[], config: CampaignConfi
     if (!isCountedOrder(order)) continue;
     const orderBatches = batches.get(order.id) ?? [];
     const preorder = isPreorderOrder(order) && !order.tags.includes(PREORDER_TAG);
-    const review = !order.tags.includes(US_REVIEW_TAG) && needsUsReview(order, orderBatches, config);
-    if (!preorder && !review) continue;
+    const reviewTag = orderRegion(order) === 'INT' ? INT_REVIEW_TAG : US_REVIEW_TAG;
+    const review = !order.tags.includes(reviewTag) && needsDestinationReview(order, orderBatches, config);
+    const mismatch = promiseMismatch(order) && !order.tags.includes(PROMISE_MISMATCH_TAG);
+    const ukVatReview = order.shippingAddress?.countryCodeV2 === 'GB' && !order.tags.includes(UK_VAT_REVIEW_TAG);
+    if (!preorder && !review && !mismatch && !ukVatReview) continue;
     const hold = order.fulfillmentOrders.nodes
       .filter((fo) => HOLDABLE_STATES.has(fo.status) && !hasPreorderHold(fo))
       .map((fo) => fo.id);
-    const note = review
+    const reviewNote = reviewTag === INT_REVIEW_TAG
+      ? 'International review: an item does not ship to this destination from any batch. Hold for manual follow-up.'
+      : US_REVIEW_NOTE;
+    const allocationNote = review
       ? preorder
-        ? `${US_REVIEW_NOTE} ${holdNote(orderBatches)}`.slice(0, NOTE_LIMIT)
-        : US_REVIEW_NOTE
+        ? `${reviewNote} ${holdNote(orderBatches)}`.slice(0, NOTE_LIMIT)
+        : reviewNote
       : holdNote(orderBatches);
+    const note = ukVatReview
+      ? `UK VAT review: preserve the gross payment, currency and payment date for accountant review. ${allocationNote}`.slice(0, NOTE_LIMIT)
+      : allocationNote;
     plans.push({
       orderId: order.id,
       orderName: order.name,
@@ -455,10 +475,11 @@ export function planPreorderHolds(orders: PreorderOrder[], config: CampaignConfi
           ? [
               PREORDER_TAG,
               ...new Set(orderBatches.map((b) => batchTag(b.sku, b.batch))),
-              ...(promiseMismatch(order) ? [PROMISE_MISMATCH_TAG] : []),
             ]
           : []),
-        ...(review ? [US_REVIEW_TAG] : []),
+        ...(review ? [reviewTag] : []),
+        ...(mismatch ? [PROMISE_MISMATCH_TAG] : []),
+        ...(ukVatReview ? [UK_VAT_REVIEW_TAG] : []),
       ],
       hold,
       note,
@@ -535,7 +556,7 @@ export function orderBatchesFromTags(
         const sku = l.sku!.trim();
         // A US line for a SKU the campaign does not list waits for the
         // `usStock` lead's batch as well.
-        return [shipsWith[sku]?.sku ?? sku, ...(usStock && lineRegion(l) === 'US' ? [usStock.sku] : [])];
+        return [shipsWith[sku]?.sku ?? sku, ...(usStock && lineRegion(l) !== 'EU' ? [usStock.sku] : [])];
       }),
   );
   return order.tags
@@ -583,6 +604,9 @@ export function planRelease(
         .filter((tag) => !covered.has(tag)),
       // A US order under review is released by hand, never by a batch.
       ...(order.tags.includes(US_REVIEW_TAG) ? [US_REVIEW_TAG] : []),
+      ...(order.tags.includes(INT_REVIEW_TAG) ? [INT_REVIEW_TAG] : []),
+      ...(order.tags.includes(PROMISE_MISMATCH_TAG) ? [PROMISE_MISMATCH_TAG] : []),
+      ...(order.tags.includes(UK_VAT_REVIEW_TAG) ? [UK_VAT_REVIEW_TAG] : []),
     ];
     plans.push({orderId: order.id, orderName: order.name, release, waitsFor});
   }

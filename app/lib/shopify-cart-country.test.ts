@@ -49,7 +49,7 @@ describe('handleCartCountry', () => {
 
   it('never puts a country sold through shops, or a closed one, on the cart', async () => {
     const d = deps();
-    for (const c of ['US', 'GB', 'CH', 'NO', 'DE']) {
+    for (const c of ['US', 'AQ', 'DE']) {
       const res = await handleCartCountry(post(c), OPEN, d);
       assert.equal(res.status, 200);
       assert.deepEqual(await res.json(), {country: c, applied: false});

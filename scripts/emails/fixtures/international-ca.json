@@ -1,0 +1,47 @@
+{
+  "_scenario": {
+    "title": "International preorder, Canada",
+    "description": "Fictional international order; March funding batch, arrival 30 April, recipient import charges.",
+    "templates": [
+      "order-confirmation",
+      "staff-new-order"
+    ]
+  },
+  "shop": {
+    "money_format": "CA${{amount}}",
+    "money_with_currency_format": "CA${{amount}} CAD"
+  },
+  "currency": "CAD",
+  "presentment_currency": "CAD",
+  "tax_price": 0,
+  "tax_lines": [],
+  "subtotal_price": 8119,
+  "shipping_price": 3500,
+  "total_price": 11619,
+  "shipping_address": {
+    "country": "Canada",
+    "country_code": "CA",
+    "province_code": null
+  },
+  "line_items": [
+    {
+      "title": "OpenFC Lite - 20x20",
+      "variant": {
+        "title": "20x20"
+      },
+      "quantity": 1,
+      "price": 8119,
+      "line_price": 8119,
+      "sku": "OPENFC-LITE-2020",
+      "image": "placeholder:OpenFC",
+      "product": {
+        "title": "OpenFC Lite"
+      },
+      "properties": {
+        "Preorder": "ships by 31 March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait",
+        "_ship_region": "INT",
+        "Delivery by": "30 April 2027"
+      }
+    }
+  ]
+}

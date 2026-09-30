@@ -41,6 +41,11 @@ describe('regionSwitchCountry', () => {
 });
 
 describe('currencyForCountry', () => {
+  it('does not label an international destination as either the EU or US shortcut', () => {
+    for (const country of ['GB', 'CH', 'NO', 'CA', 'AU']) {
+      assert.equal(currencyForCountry(country, US_RATE), null, country);
+    }
+  });
   it('reads USD only for the US while US sales are open', () => {
     assert.equal(currencyForCountry('US', US_RATE), 'USD');
     assert.equal(currencyForCountry('us', US_RATE), 'USD');

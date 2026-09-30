@@ -14,7 +14,7 @@
  * AUTHORIZED and never counts.
  *
  * Each unit also carries its region, from the order's shipping country
- * (`regionOf`: US or EU), in order: `paidUnitRuns` returns those runs, for
+ * (`regionOf`: EU, US or INT), in order: `paidUnitRuns` returns those runs, for
  * batches that serve one region only. `paidUnits` sums them per SKU.
  *
  * The Admin token needs `read_orders`, and `read_all_orders` once a campaign

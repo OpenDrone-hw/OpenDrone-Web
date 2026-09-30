@@ -5,7 +5,7 @@ import {
   type BatchRow,
   type Words,
 } from '~/lib/availability';
-import {campaignDate, latestShipDate, parseCampaignConfig, type CampaignState} from '~/lib/preorder-campaign';
+import {campaignDate, latestShipDate, parseCampaignConfig, type CampaignState, type Region} from '~/lib/preorder-campaign';
 import {leadProduct} from '~/components/ShipChip';
 import preorders from '../../content/preorders.json';
 
@@ -30,7 +30,7 @@ export function Availability({
   className = '',
 }: {
   campaign: CampaignState;
-  region: 'EU' | 'US';
+  region: Region;
   className?: string;
 }) {
   const dates = targetDates(

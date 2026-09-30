@@ -5,10 +5,9 @@
  *
  * `get` is the catalog as an EU buyer sees it (EUR, EU batches): the
  * sitemap and surfaces without a purchase hand-off. `forBuyer` is the
- * catalog for this request's destination (`shipCountryForRequest`): the
- * same as `get`, except for a US destination while US sales are open
- * (`usSalesRate`), where the campaign is applied for the US region and
- * Shopify's US market prices (USD) are laid over it (`withMarketPrices`).
+ * catalog for this request's destination, with its allocation region and
+ * Shopify country-context prices. EU uses the base EUR catalog, US keeps
+ * its USD price ladder, and INT copies the selected country's live prices.
  *
  * The pure half, including every type and mapper, is `app/lib/catalog.ts`;
  * the Storefront API adapter is `app/lib/shopify-storefront.ts`.
@@ -24,7 +23,8 @@ import {
   type Region,
 } from './preorder-campaign.ts';
 import {paidUnitRuns} from './shopify-orders.ts';
-import {isUsQuote, shipCountryForRequest, shippingQuote} from './shipping-rates.ts';
+import {isInternationalQuote, isUsQuote, shipCountryForRequest, shippingQuote} from './shipping-rates.ts';
+import {withInternationalPrices} from './international-prices.ts';
 import {usSalesRate, withMarketPrices} from './us-sales.ts';
 import preorders from '../../content/preorders.json';
 
@@ -36,21 +36,20 @@ export type CatalogClient = {
    *  sees it. */
   get: () => Promise<Catalog>;
   /** The catalog for this request's destination: `get` for every
-   *  destination but an open US one. */
+   *  EU destination. Non-EU destinations use their own allocation and prices. */
   forBuyer: () => Promise<Catalog>;
   /** The catalog for one region, whatever this request's destination is:
    *  the cart country switch prices a cart for the country just picked. */
-  forRegion: (region: Region) => Promise<Catalog>;
+  forRegion: (region: Region, country?: string) => Promise<Catalog>;
   /** The region `forBuyer` serves. */
   region: Region;
 };
 
-/** The region a request buys for: US when its destination is the US and US
- *  sales are open, else EU. */
+/** The allocation region for a destination with consumer checkout. */
 export function buyerRegion(request: Request | undefined, env: Pick<Env, 'PUBLIC_US_SALES'>): Region {
   if (!request) return 'EU';
   const quote = shippingQuote(shipCountryForRequest(request), undefined, usSalesRate(env));
-  return isUsQuote(quote) ? 'US' : 'EU';
+  return isUsQuote(quote) ? 'US' : isInternationalQuote(quote) ? 'INT' : 'EU';
 }
 
 async function withCampaign(env: Env, catalog: Catalog, region: Region): Promise<Catalog> {
@@ -71,20 +70,23 @@ async function withCampaign(env: Env, catalog: Catalog, region: Region): Promise
 
 export function createCatalogClient({env, request}: {env: Env; request?: Request}): CatalogClient {
   const region = buyerRegion(request, env);
+  const country = request ? shipCountryForRequest(request) ?? undefined : undefined;
   const get = async () => withCampaign(env, await fetchShopifyCatalog(env), 'EU');
-  const forRegion = async (target: Region): Promise<Catalog> => {
-    if (target !== 'US') return get();
+  const forRegion = async (target: Region, destination = country): Promise<Catalog> => {
+    if (target === 'EU') return get();
+    if (target === 'INT' && !destination) throw new Error('catalog: international destination missing');
     const [catalog, market] = await Promise.all([
       fetchShopifyCatalog(env),
-      fetchShopifyCatalog(env, fetch, 'US').catch((error: unknown) => {
+      fetchShopifyCatalog(env, fetch, target === 'US' ? 'US' : destination!).catch((error: unknown) => {
         console.error(
-          '[catalog] US market prices unavailable, closing US sales',
+          '[catalog] destination market prices unavailable, closing destination sales',
           error instanceof Error ? error.message : error,
         );
         return null;
       }),
     ]);
-    return withMarketPrices(await withCampaign(env, catalog, 'US'), market, CAMPAIGN);
+    const campaign = await withCampaign(env, catalog, target);
+    return target === 'US' ? withMarketPrices(campaign, market, CAMPAIGN) : withInternationalPrices(campaign, market);
   };
   return {get, region, forRegion, forBuyer: () => forRegion(region)};
 }

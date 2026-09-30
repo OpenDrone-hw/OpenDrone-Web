@@ -9,6 +9,7 @@ import {
   cartLineInfo,
   checkoutOpen,
   loadSessionCart,
+  latestDeliveryBy,
   splitPlan,
   variantLink,
   type CartLineInfo,
@@ -114,7 +115,7 @@ type Removed = SplitItem[];
 function checkNotice(check: string | null): string | null {
   if (check === CART_CHECK.paidBatch) return t('check_paid_batch', 'Not enough left in batch 1. Lower the quantity where shown.');
   if (check === CART_CHECK.shipDate) return t('check_ship_date', 'A ship date changed. Check the dates below.');
-  if (check === CART_CHECK.usEuOnly) return t('check_us_eu_only', 'An item in your cart ships to EU addresses only. Remove it to check out to the US.');
+  if (check === CART_CHECK.usEuOnly) return t('check_us_eu_only', 'An item in your cart ships to EU addresses only. Remove it or choose an EU delivery country.');
   if (check === CART_CHECK.market) return t('check_market', "Your cart moved to your delivery country's prices. Check the total below.");
   return null;
 }
@@ -259,7 +260,7 @@ function PopulatedCart({
   info: Record<string, CartLineInfo>;
   payments: string[];
   /** The visitor's country: the VAT wording and whether checkout is
-   *  offered (open EU countries, and the US while US sales are open).
+   *  offered for an available destination.
    *  Shipping is priced at Shopify checkout from the address. */
   country: string | null;
   /** The US rate while US sales are open, else null. */
@@ -278,17 +279,19 @@ function PopulatedCart({
   const mixed = new Set(cart.lines.map(groupOf)).size > 1;
   // The promise the whole parcel waits for: lines ready sooner say so.
   const parcel = mixed ? parcelPromise(cart.lines.map((l) => l.shipPromise)) : null;
+  const parcelDeliveryBy = mixed ? latestDeliveryBy(cart.lines) : null;
   // Checkout is refused for a blocked country, for one sold only through
-  // shops (outside the EU) and for an EU country not open yet; the cart
+  // shops and for an EU country not open yet; the cart
   // says which and links onward.
   const quote = shippingQuote(country, undefined, usRate);
   const quoteKind = quote?.kind;
   // The flat rate the shipping page lists, shown before Shopify: the US in
   // dollars, the EU in euro (VAT included).
   const shippingRate =
-    quote?.kind === 'direct' ? formatPrice(quote.rate, quote.zone === 'us' ? 'USD' : 'EUR') : null;
+    quote?.kind === 'direct' && quote.rate !== null ? formatPrice(quote.rate, quote.zone === 'us' ? 'USD' : 'EUR') : null;
   // A US buyer: every line carries the US delivery notice.
   const usBuyer = usRate != null && country === 'US';
+  const international = quote?.kind === 'direct' && quote.zone === 'international';
   const shipBlocked = quoteKind === 'blocked';
   const throughShops = quoteKind === 'shops';
   const closed = quoteKind === 'closed';
@@ -297,9 +300,9 @@ function PopulatedCart({
     const max = info[line.id]?.maxQuantity;
     return max != null && line.quantity > max;
   });
-  // A US destination cannot take a line that ships to the EU only: the
+  // A non-EU destination cannot take a line that ships to the EU only: the
   // buyer removes it or picks an EU country.
-  const euOnlyForUs = usBuyer && cart.lines.some((line) => info[line.id]?.euOnly);
+  const euOnlyForUs = (usBuyer || international) && cart.lines.some((line) => info[line.id]?.euOnly);
   const blocked = pending || overLimit || euOnlyForUs;
   const pendingStyle = pending ? {opacity: 0.5} : undefined;
 
@@ -314,7 +317,7 @@ function PopulatedCart({
           </div>
           <ul className="cart-lines-scroll" aria-label={copyText('cart.sr_line_items') ?? 'Line items'}>
             {sortCartLines(cart.lines).map((line) => (
-              <CartLine key={line.id} line={line} info={info[line.id]} pending={pending} parcel={parcel} usBuyer={usBuyer} />
+              <CartLine key={line.id} line={line} info={info[line.id]} pending={pending} parcel={parcel} deliveryBy={parcelDeliveryBy ?? line.deliveryBy} usBuyer={usBuyer} />
             ))}
           </ul>
         </div>
@@ -351,6 +354,7 @@ function PopulatedCart({
           {shippingRate ? null : (
             <p className="cart-summary-note">{t('shipping_at_checkout', 'Shipping calculated at checkout')}</p>
           )}
+          {international ? <p className="cart-summary-note">{t('international_note', 'Shipping and applicable sale taxes are confirmed at checkout. Import duties, import taxes and customs handling charges may be payable on delivery.')}</p> : null}
           {mixed ? <MixedNote cart={cart} info={info} onSplit={onSplit} /> : null}
           {shipBlocked ? (
             <p className="cart-summary-note" role="note">
@@ -360,8 +364,8 @@ function PopulatedCart({
           ) : throughShops ? (
             <p className="cart-summary-note" role="note">
               {usRate != null
-                ? t('checkout_shops_us', 'Direct consumer orders are limited to the EU and the United States.')
-                : t('checkout_shops', 'Direct consumer orders are limited to the EU.', {country: countryName(country ?? '')})}{' '}
+                ? t('checkout_shops_us', 'Consumer checkout is not available for this destination.')
+                : t('checkout_shops', 'Consumer checkout is not available for this destination.', {country: countryName(country ?? '')})}{' '}
               <Link to="/wholesale">{t('checkout_shops_trade', 'EU or US retailer enquiries')}</Link>
               {' · '}
               <Link to="/newsletter">{t('checkout_shops_notify', 'Get launch news')}</Link>
@@ -387,7 +391,7 @@ function PopulatedCart({
               {country ? <input type="hidden" name="country" value={country} /> : null}
               {euOnlyForUs ? (
                 <p className="cart-alert" role="alert">
-                  {t('check_us_eu_only', 'An item in your cart ships to EU addresses only. Remove it to check out to the US.')}
+                  {t('check_non_eu_only', 'An item in your cart ships to EU addresses only. Remove it or choose an EU delivery country.')}
                 </p>
               ) : null}
               {/* This page shows the one-parcel line, so checkout may go on. */}
@@ -527,6 +531,7 @@ function CartLine({
   info,
   pending,
   parcel = null,
+  deliveryBy = null,
   usBuyer = false,
 }: {
   line: ShopifyCartLine;
@@ -534,6 +539,7 @@ function CartLine({
   pending: boolean;
   /** The promise a one-parcel order waits for, or null for a single date. */
   parcel?: string | null;
+  deliveryBy?: string | null;
   /** A US buyer: a receiver line links to the FCC notice. */
   usBuyer?: boolean;
 }) {
@@ -549,6 +555,7 @@ function CartLine({
         <div className="cart-sheet-item">
           <Link to={variantLink(line.handle, line.selectedOptions)}><strong>{lineName(line)}</strong></Link>
           <LineShipChip promise={line.shipPromise} parcel={parcel} />
+          {deliveryBy ? <small>{t('delivery_by', 'Delivery by {date}', {date: deliveryBy})}</small> : null}
           {usBuyer && fccConditionalSku(line.sku) ? (
             <small className="cart-line-fcc">
               <Link to={`/products/${line.handle}#fcc-notice`}>{t('fcc_line', 'Not yet FCC authorized. Refund if not authorized.')}</Link>

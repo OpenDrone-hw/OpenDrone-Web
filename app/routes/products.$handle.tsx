@@ -91,7 +91,7 @@ import {parseCampaignConfig, priceLadder, promiseBatchMonth, tiersFor} from '~/l
 import {stepBarView} from '~/lib/preorder-meter';
 import {paysEuVat} from '~/lib/visitor-country';
 import {fccConditionalSku} from '~/lib/us-sales';
-import {notSoldDirect} from '~/lib/shipping-rates';
+import {isInternationalQuote, notSoldDirect, shippingQuote} from '~/lib/shipping-rates';
 import {registrationNumbers} from '~/lib/registrations';
 import preorders from '../../content/preorders.json';
 import {trackEvent} from '~/lib/growth/plausible';
@@ -287,7 +287,7 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
   const retailBySku: Record<string, number | null> = Object.fromEntries(
     // A USD variant (US buyer) has no EUR retail here: its ladder comes
     // ready-made in `campaign.usLadder`.
-    entry.variants.map((v) => [v.sku, v.currency === 'USD' ? null : (v.compare_price ?? null)]),
+    entry.variants.map((v) => [v.sku, v.currency === 'USD' || v.campaign?.internationalPrice ? null : (v.compare_price ?? null)]),
   );
 
   return {
@@ -1782,14 +1782,16 @@ function ProductPage() {
   // A US buyer while US sales are open: the USD list price, duties included, no sales tax.
   const usRate = rootData?.usShippingRate ?? null;
   const usBuyer = usRate != null && rootData?.visitorCountry === 'US';
+  const internationalBuyer = isInternationalQuote(shippingQuote(rootData?.visitorCountry ?? null, undefined, usRate));
   const vatNote = paysEuVat(rootData?.visitorCountry ?? null)
     ? say('product-chrome.buy_vat_note', 'incl. VAT')
     : usBuyer && buyPrice?.currencyCode === 'USD'
       ? say('product-chrome.buy_us_price_note', 'Duties included')
-      : null;
-  // Consumers buy direct only in the open EU countries. Elsewhere the buy
-  // button is a status line (AddToCartButton): outside the EU "EU consumer
-  // orders only" with a link to the trade page, in an EU country not open
+      : internationalBuyer
+        ? say('product-chrome.buy_international_price_note', 'Shipping and applicable sale taxes confirmed at checkout. Import charges may be payable on delivery.')
+        : null;
+  // The destination gate decides whether the buy button is available.
+  // Blocked destinations and an EU country not open
   // yet "Orders are not open for <country>"; both with the launch-news
   // signup instead of the ship date. A blocked country gets "Not available
   // in <country>" and the End-Use Policy link, with no signup.
@@ -1961,7 +1963,7 @@ function ProductPage() {
           target its deadline and the "if funded" condition. */
       preorder && !isBundle ? (
         showAvailability && campaign ? (
-          <Availability campaign={campaign} region={usBuyer ? 'US' : 'EU'} />
+          <Availability campaign={campaign} region={usBuyer ? 'US' : internationalBuyer ? 'INT' : 'EU'} />
         ) : (
           <ShipLine campaign={campaign} promise={shipPromise} className="product-buy-stock" />
         )

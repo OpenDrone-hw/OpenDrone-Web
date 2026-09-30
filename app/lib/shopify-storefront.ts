@@ -47,6 +47,11 @@ export const CATALOG_QUERY_US = `#graphql
   query OpenDroneCatalogUs($first: Int!, $variantsFirst: Int!) @inContext(country: US) {${CATALOG_FIELDS}  }
 `;
 
+/** Country-context prices and currency come from Shopify, without local conversion. */
+export const CATALOG_QUERY_COUNTRY = `#graphql
+  query OpenDroneCatalogCountry($first: Int!, $variantsFirst: Int!, $country: CountryCode!) @inContext(country: $country) {${CATALOG_FIELDS}  }
+`;
+
 const CART_FIELDS = `#graphql
   fragment OpenDroneCartFields on Cart {
     id
@@ -133,6 +138,10 @@ export const CART_LINES_REMOVE_MUTATION = `#graphql
 /** The line attribute that carries the ship promise onto the checkout line
  *  and the order confirmation. */
 export const PREORDER_ATTRIBUTE = 'Preorder';
+/** The separately agreed customer arrival deadline, visible at checkout. */
+export const DELIVERY_BY_ATTRIBUTE = 'Delivery by';
+/** The line's own deadline while its visible deadline follows a combined order. */
+export const DELIVERY_BY_OWN_ATTRIBUTE = '_delivery_by_own';
 
 /** The visible line attribute naming the batch and where it ships, in the
  *  words of the product page and the cart: "Batch 1 · EU only", "March 2027
@@ -140,8 +149,8 @@ export const PREORDER_ATTRIBUTE = 'Preorder';
 export const AVAILABILITY_ATTRIBUTE = 'Availability';
 
 /** The hidden line attribute (a leading underscore hides it at checkout)
- *  naming the region a preorder line's promise was computed for. Only US
- *  lines carry it, value `US`; absent means EU. The hold pass tags an order
+ *  naming the region a preorder line's promise was computed for. Non-EU
+ *  lines carry `US` or `INT`; absent means EU. The hold pass tags an order
  *  that ships elsewhere `promise-mismatch`. */
 export const SHIP_REGION_ATTRIBUTE = '_ship_region';
 
@@ -165,6 +174,8 @@ export type ShopifyCartLine = {
   /** The line's own ship promise: the hidden `_preorder_own` attribute when
    *  the line carries the mixed-order wording, else its `Preorder` attribute. */
   shipPromise: string | null;
+  deliveryBy?: string | null;
+  orderDeliveryBy?: string | null;
   /** The `Preorder` attribute as the order will show it, set only when it
    *  differs from `shipPromise` (the mixed-order wording). */
   orderPromise?: string | null;
@@ -342,11 +353,11 @@ export function mapShopifyCatalog(
   storeDomain: string,
   policyJson: string,
   pricesIncludeVat: string,
-  /** The US market read (`CATALOG_QUERY_US`) is priced in USD; every
-   *  other read must be EUR. */
-  market: 'default' | 'US' = 'default',
+  /** The default catalog must be EUR and the US catalog USD. Other country
+   *  contexts use one consistent currency returned by Shopify. */
+  market: string = 'default',
 ): Catalog {
-  const expectedCurrency = market === 'US' ? 'USD' : 'EUR';
+  const expectedCurrency = market === 'US' ? 'USD' : market === 'default' ? 'EUR' : null;
   if (pricesIncludeVat !== '1') {
     throw new Error('shopify: VAT-inclusive pricing is not explicitly configured');
   }
@@ -389,7 +400,7 @@ export function mapShopifyCatalog(
         variant.selectedOptions.map(({name, value}) => [name, value]),
       );
       const price = finiteMoney(variant.price.amount, `${sku} price`);
-      if (variant.price.currencyCode !== expectedCurrency) {
+      if ((expectedCurrency && variant.price.currencyCode !== expectedCurrency) || !/^[A-Z]{3}$/.test(variant.price.currencyCode)) {
         throw new Error(`shopify: ${sku} is not priced in ${expectedCurrency}`);
       }
       catalogCurrency ??= variant.price.currencyCode;
@@ -447,10 +458,10 @@ export function mapShopifyCatalog(
     schema: 1,
     generated_at: new Date().toISOString(),
     max_age: 300,
-    currency: catalogCurrency || expectedCurrency,
+    currency: catalogCurrency || expectedCurrency || 'EUR',
     // The US catalog's USD list price is the price paid: no EU VAT, no
     // sales tax, duties included.
-    prices_include_vat: market !== 'US',
+    prices_include_vat: market === 'default',
     shop_url: shop,
     cart_url: shop,
     add_url: CART_PATH,
@@ -462,12 +473,13 @@ export function mapShopifyCatalog(
 export async function fetchShopifyCatalog(
   env: StorefrontEnv,
   fetcher: typeof fetch = fetch,
-  market: 'default' | 'US' = 'default',
+  market: string = 'default',
 ): Promise<Catalog> {
+  if (market !== 'default' && !/^[A-Z]{2}$/.test(market)) throw new Error('shopify: invalid market country');
   const data = await storefrontRequest<ShopifyCatalogData>(
     env,
-    market === 'US' ? CATALOG_QUERY_US : CATALOG_QUERY,
-    {first: 100, variantsFirst: 100},
+    market === 'US' ? CATALOG_QUERY_US : market === 'default' ? CATALOG_QUERY : CATALOG_QUERY_COUNTRY,
+    {first: 100, variantsFirst: 100, ...(market !== 'default' && market !== 'US' ? {country: market} : {})},
     fetcher,
   );
   return mapShopifyCatalog(
@@ -554,11 +566,13 @@ function validatedCart(
     total: cart.cost.totalAmount,
     ...(cart.buyerIdentity?.countryCode ? {country: cart.buyerIdentity.countryCode.toUpperCase()} : {}),
     lines: cart.lines.nodes.map((line) => {
-      // Only a US line carries its region; an EU line keeps today's shape.
+      // Non-EU lines record their region; absence remains the EU default.
       const shipRegion = line.attributes.find(({key}) => key === SHIP_REGION_ATTRIBUTE)?.value;
       const preorder = line.attributes.find(({key}) => key === PREORDER_ATTRIBUTE)?.value ?? null;
       const own = line.attributes.find(({key}) => key === PREORDER_OWN_ATTRIBUTE)?.value;
       const availability = line.attributes.find(({key}) => key === AVAILABILITY_ATTRIBUTE)?.value;
+      const deliveryBy = line.attributes.find(({key}) => key === DELIVERY_BY_ATTRIBUTE)?.value;
+      const ownDeliveryBy = line.attributes.find(({key}) => key === DELIVERY_BY_OWN_ATTRIBUTE)?.value;
       return {
         id: line.id,
         merchandiseId: line.merchandise.id,
@@ -570,6 +584,8 @@ function validatedCart(
         image: line.merchandise.image,
         selectedOptions: line.merchandise.selectedOptions,
         shipPromise: own && preorder ? own : preorder,
+        ...(deliveryBy ? {deliveryBy: ownDeliveryBy || deliveryBy} : {}),
+        ...(ownDeliveryBy && deliveryBy && ownDeliveryBy !== deliveryBy ? {orderDeliveryBy: deliveryBy} : {}),
         ...(own && preorder && own !== preorder ? {orderPromise: preorder} : {}),
         ...(shipRegion ? {shipRegion} : {}),
         ...(availability ? {availability} : {}),

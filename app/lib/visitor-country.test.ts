@@ -32,6 +32,6 @@ describe('priceNote', () => {
     assert.equal(priceNote('NL'), 'vat');
     assert.equal(priceNote(null), 'vat');
     assert.equal(priceNote('US'), 'shops');
-    assert.equal(priceNote('GB'), 'shops');
+    assert.equal(priceNote('GB'), 'international');
   });
 });

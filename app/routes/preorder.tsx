@@ -128,7 +128,7 @@ export async function loader({context}: Route.LoaderArgs) {
   for (const product of catalog.products) {
     for (const variant of product.variants) {
       // A USD variant's ladder comes ready-made in `campaign.usLadder`.
-      if (variant.currency !== 'USD' && variant.compare_price != null && variant.compare_price > 0) {
+      if (!variant.campaign?.internationalPrice && variant.currency !== 'USD' && variant.compare_price != null && variant.compare_price > 0) {
         retail.set(variant.sku, variant.compare_price);
       }
     }
@@ -136,13 +136,14 @@ export async function loader({context}: Route.LoaderArgs) {
   // A US buyer (US sales open): no paid batch ships to the US, so every
   // part waits for its funding target and the page drops the stack lane.
   const us = context.catalog.region === 'US';
+  const international = context.catalog.region === 'INT';
   // The stack's paid batch carries the one fixed ship date on this page.
   const paidShips =
     Object.values(CAMPAIGN.skus)
       .flatMap((entry) => entry.batches)
       .find((batch) => batch.paid && batch.ships?.trim())
       ?.ships?.trim() ?? null;
-  const stackShips = us ? null : paidShips;
+  const stackShips = us || international ? null : paidShips;
 
   const rows: Row[] = toCards(catalog).flatMap((card) =>
     card.variants.nodes.flatMap((v): Row[] => {
@@ -197,10 +198,11 @@ export async function loader({context}: Route.LoaderArgs) {
     chatfpvWidget,
     // Present only for a US buyer: the US copy on this page.
     ...(us ? {us: true as const} : {}),
+    international,
     // Its FC and ESC batch 1 is EU stock: the month it ships and the batch
     // the US buyer gets instead.
     usBatchNote:
-      us && paidShips
+      (us || international) && paidShips
         ? {
             first: shipMonth(paidShips),
             batch: new Intl.DateTimeFormat('en-US', {month: 'long', year: 'numeric', timeZone: 'UTC'}).format(
@@ -216,6 +218,7 @@ export default function PreorderRoute() {
   const {rows, stackMonth, stackWhen, ends, eta, unavailable} = data;
   const usBatchNote = 'usBatchNote' in data ? data.usBatchNote : null;
   const us = 'us' in data && data.us === true;
+  const international = data.international;
   const rootData = useRouteLoaderData('root') as {turnstileSiteKey?: string | null} | undefined;
   const updates = copy('preorder.updates');
   // Entries are "YYYY-MM-DD · text", newest first, never edited: a
@@ -243,10 +246,14 @@ export default function PreorderRoute() {
       </header>
       <Timeline data={data} />
       <div className="po-order-notes">
-        <span><CreditCard size={16} aria-hidden="true" /><Txt id={us ? 'preorder.terms_summary_us' : 'preorder.terms_summary'} /></span>
+        <span><CreditCard size={16} aria-hidden="true" /><Txt id={international ? 'preorder.terms_summary_international' : us ? 'preorder.terms_summary_us' : 'preorder.terms_summary'} /></span>
         {us ? (
           <InfoHint label={copyText('preorder.shipping_summary_us') ?? 'US orders'}>
             <Txt id="preorder.channel_us_text" as="p" />
+          </InfoHint>
+        ) : international ? (
+          <InfoHint label={copyText('preorder.shipping_summary_international') ?? 'International orders'}>
+            <Txt id="preorder.channel_international_text" as="p" />
           </InfoHint>
         ) : (
           <InfoHint label={copyText('preorder.shipping_summary') ?? 'EU orders'}>
@@ -304,7 +311,7 @@ export default function PreorderRoute() {
           {usBatchNote?.first ? (
             <p className="po-group-line">
               {(
-                copyText('preorder.us_batch_note') ??
+                copyText(international ? 'preorder.international_batch_note' : 'preorder.us_batch_note') ??
                 'FC and ESC batch 1 ({month}) is EU only. US orders ship from the {batch} batch.'
               )
                 .replace('{month}', usBatchNote.first)

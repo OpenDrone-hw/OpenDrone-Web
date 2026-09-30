@@ -54,7 +54,7 @@ const cases = [
   // An open shop renders the cart; a closed one sends it to /products.
   {path: '/cart', expectStatus: 200, expectEither: [{url: '/cart', body: 'Cart'}, {url: '/products', body: 'Products'}]},
   {path: '/preorder', expectStatus: 200, expectInBody: ['Pre-order']},
-  {path: '/wholesale', expectStatus: 200, expectInBody: ['Trade']},
+  {path: '/wholesale', expectStatus: 200, expectInBody: ['Wholesale']},
   // Old collections URLs, cart subpaths and search land on /products.
   {path: '/cart/c/old', expectStatus: 200, expectRedirect: '/products'},
   {path: '/collections/all', expectStatus: 200, expectRedirect: '/products'},

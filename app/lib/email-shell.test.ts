@@ -40,7 +40,7 @@ describe('email shell', () => {
     assert.equal(FACTS.closeShort, '15 Dec 2026');
   });
 
-  it('keeps the preview fixtures on the campaign promises: ship dates only, never delivery dates', () => {
+  it('keeps preview ship and arrival dates on the reviewed campaign promises', () => {
     const p: any = JSON.parse(readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8'));
     const allowed = new Set([
       p.skus['OPENFC-LITE-2020'].batches[0].ships,
@@ -50,8 +50,12 @@ describe('email shell', () => {
     const dir = new URL('../../scripts/emails/fixtures/', import.meta.url);
     for (const f of readdirSync(dir)) {
       const text = readFileSync(new URL(f, dir), 'utf8');
-      assert.ok(!/deliver(ed|y) (by|date)/i.test(text.replace(/"title": "[^"]*"/g, '')), `${f}: no delivery-date promise`);
       for (const m of text.matchAll(/"Preorder": "([^"]*)"/g)) assert.ok(allowed.has(m[1]), `${f}: unknown Preorder promise "${m[1]}"`);
+      for (const m of text.matchAll(/"Delivery by": "([^"]*)"/g)) {
+        const arrivals = Object.values(p.skus).flatMap((sku: any) => sku.batches).flatMap((batch: any) => [batch.deliveryBy, batch.deliveryByUS, batch.deliveryByINT]).filter(Boolean);
+        const labels = arrivals.map((iso: string) => new Intl.DateTimeFormat('en-GB', {day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC'}).format(new Date(`${iso}T00:00:00Z`)));
+        assert.ok(labels.includes(m[1]), `${f}: unknown arrival deadline`);
+      }
     }
   });
 });

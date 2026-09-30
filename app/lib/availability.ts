@@ -12,6 +12,7 @@ import {
   promiseBatchMonth,
   shortCampaignDate,
   type CampaignState,
+  type Region,
 } from './preorder-campaign.ts';
 
 export type Words = (key: string, fallback: string, vars?: Record<string, string | number>) => string;
@@ -39,6 +40,7 @@ export type TargetDates = {deadline: string; eta: string};
 function scopeOf(regions: Batch['regions'], words: Words): string {
   if (regions.length === 1 && regions[0] === 'EU') return words('scope_eu', 'EU only');
   if (regions.length === 1 && regions[0] === 'US') return words('scope_us', 'US only');
+  if (regions.includes('INT')) return words('scope_international', 'International preorders');
   return words('scope_both', 'EU and US');
 }
 
@@ -127,13 +129,15 @@ function detailOf(b: Batch, dates: TargetDates, reached: boolean, words: Words, 
 export function availabilityRows(
   campaign: Pick<CampaignState, 'batches' | 'targetReached' | 'batch'> & Partial<Pick<CampaignState, 'shipsWith' | 'paidLeft'>>,
   dates: TargetDates,
-  region: 'EU' | 'US',
+  region: Region,
   words: Words,
 ): BatchRow[] {
   const rows = campaign.batches.map((b) => {
     let note: string | null = null;
     if (b.status === 'other_region') {
-      note = words('not_in_region', 'Not available in the {region}', {region: region === 'US' ? 'US' : 'EU'});
+      note = region === 'INT'
+        ? words('not_in_international', 'EU stock only')
+        : words('not_in_region', 'Not available in the {region}', {region: region === 'US' ? 'US' : 'EU'});
     } else if (b.status === 'sold_out') {
       note = words('batch_sold_out', 'Sold out');
     } else if (b.paid) {

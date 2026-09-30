@@ -739,9 +739,10 @@ describe('Shopify cart action: buyer country', () => {
     assert.equal(cartCountry(fromCountry({}, null)), undefined);
     assert.equal(cartCountry(fromCountry({}, 'XX')), undefined);
     assert.equal(cartCountry(fromCountry({}, 'T1')), undefined);
-    for (const other of ['RU', 'BY', 'IR', 'KP', 'SY', 'CU', 'US', 'GB', 'CH', 'NO', 'JP']) {
+    for (const other of ['RU', 'BY', 'IR', 'KP', 'SY', 'CU', 'US', 'AQ']) {
       assert.equal(cartCountry(fromCountry({}, other)), undefined, other);
     }
+    for (const other of ['GB', 'CH', 'NO', 'JP']) assert.equal(cartCountry(fromCountry({}, other)), other);
   });
 
   it('prefers the destination the buyer picked, then the browser region', () => {
@@ -762,47 +763,21 @@ describe('Shopify cart action: buyer country', () => {
       {fetchCatalog: async () => CATALOG, createCart: async (_lines, code) => { country = code; return cart(); }},
     );
     assert.equal(country, 'NL');
-    await handleShopifyCartAction(
+    const blocked = await thrownResponse(handleShopifyCartAction(
       fromCountry({sku: 'OPENRX-LITE', qty: '1'}, 'RU'), ENABLED_ENV,
-      {fetchCatalog: async () => CATALOG, createCart: async (_lines, code) => { country = code; return cart(); }},
-    );
-    assert.equal(country, undefined);
+      {fetchCatalog: async () => CATALOG, ...MUST_NOT},
+    ));
+    assert.equal(blocked.status, 403);
   });
 
-  it('adds for any destination while US sales are closed, as main does', async () => {
-    const adds: Array<[string, Request]> = [
-      ['RU', fromCountry({sku: 'OPENRX-LITE', qty: '1'}, 'RU')],
-      ['BE ip, GB pick', fromCountry({sku: 'OPENRX-LITE', qty: '1'}, 'BE')],
-      ['BE ip, US pick', fromCountry({sku: 'OPENRX-LITE', qty: '1'}, 'BE')],
-      ['Tor, en-US', fromCountry({sku: 'OPENRX-LITE', qty: '1'}, 'T1')],
-    ];
-    adds[1][1].headers.set('Cookie', 'od_ship_country=GB');
-    adds[2][1].headers.set('Cookie', 'od_ship_country=US');
-    adds[3][1].headers.set('Accept-Language', 'en-US,en;q=0.9');
-    for (const [label, req] of adds) {
-      let created = false;
-      const response = await handleShopifyCartAction(req, ENABLED_ENV, {
-        fetchCatalog: async () => CATALOG,
-        createCart: async () => { created = true; return cart(); },
-      });
-      assert.equal(response.status, 303, label);
-      assert.ok(created, label);
-    }
-  });
-
-  it('refuses an add for a destination that is not sold direct while US sales are open', async () => {
-    for (const [code, message] of [
-      ['RU', /not available/],
-      ['CH', /limited to the EU and the United States\.$/],
-    ] as const) {
+  it('refuses blocked, uninhabited and unavailable destinations before reading products', async () => {
+    for (const [code, message] of [['RU', /not available/], ['AQ', /not available/], ['US', /not available/]] as const) {
       let calls = 0;
-      const error = await handleShopifyCartAction(fromCountry({sku: 'OPENRX-LITE', qty: '1'}, code), ENABLED_ENV, {
-        usRate: 9.95,
+      const error = await thrownResponse(handleShopifyCartAction(fromCountry({sku: 'OPENRX-LITE', qty: '1'}, code), ENABLED_ENV, {
         fetchCatalog: async () => { calls++; return CATALOG; },
         createCart: async () => { calls++; return cart(); },
-      }).then(() => null, (e: unknown) => e);
-      assert.ok(error instanceof Response, code);
-      assert.equal(error.status, 403);
+      }));
+      assert.equal(error.status, 403, code);
       assert.match(await error.text(), message);
       assert.equal(calls, 0, code);
     }
@@ -943,7 +918,7 @@ describe('Shopify cart action: one promise for a mixed order', () => {
   const OWN_LATE =
     'ships by 31 March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait';
   const REWRITE = 'ships with the rest of this order by 31 March 2027';
-  const own = (value: string) => [{key: 'Preorder', value}];
+  const own = (value: string) => [{key: 'Preorder', value}, {key:'Delivery by',value:'30 November 2026'}];
 
   function base(sku: string, handle: string, id: string, preorder: boolean) {
     return {
@@ -968,9 +943,9 @@ describe('Shopify cart action: one promise for a mixed order', () => {
   const US = applyCampaign(RAW, REAL, {}, NOW, 'US');
 
   const fcLine = (overrides: Partial<ShopifyCartLine> = {}) =>
-    line({id: FC_LINE, merchandiseId: FC, sku: 'OPENFC-LITE-3030', handle: 'openfc-lite', shipPromise: OWN_EARLY, ...overrides});
+    line({id: FC_LINE, merchandiseId: FC, sku: 'OPENFC-LITE-3030', handle: 'openfc-lite', shipPromise: OWN_EARLY, deliveryBy:'30 November 2026', ...(overrides.orderPromise ? {orderDeliveryBy:'15 April 2027'} : {}), ...overrides});
   const rxLine = (overrides: Partial<ShopifyCartLine> = {}) =>
-    line({id: RX_LINE, merchandiseId: RX, sku: 'OPENRX-LITE', handle: 'openrx', shipPromise: OWN_LATE, ...overrides});
+    line({id: RX_LINE, merchandiseId: RX, sku: 'OPENRX-LITE', handle: 'openrx', shipPromise: OWN_LATE, deliveryBy:'15 April 2027', ...overrides});
   const strapLine = () =>
     line({id: 'gid://shopify/CartLine/strap?cart=a', merchandiseId: STRAP, sku: 'ACC-STRAP-20X220', handle: 'openfc-lite', shipPromise: null});
 
@@ -1010,7 +985,7 @@ describe('Shopify cart action: one promise for a mixed order', () => {
     assert.deepEqual(updates, [[{
       id: FC_LINE,
       quantity: 1,
-      attributes: [{key: 'Preorder', value: REWRITE}, {key: '_preorder_own', value: OWN_EARLY}],
+      attributes: [{key: 'Preorder', value: REWRITE}, {key:'Delivery by',value:'15 April 2027'}, {key:'_delivery_by_own',value:'30 November 2026'}, {key: '_preorder_own', value: OWN_EARLY}],
     }]]);
   });
 
@@ -1067,11 +1042,11 @@ describe('Shopify cart action: one promise for a mixed order', () => {
       {datesSeen: '1'},
     );
     assert.equal(await location(moved.response), '/cart?check=ship-date');
-    assert.deepEqual(moved.updates, [[{id: RX_LINE, quantity: 1, attributes: [{key: 'Preorder', value: OWN_LATE}]}]]);
+    assert.deepEqual(moved.updates, [[{id: RX_LINE, quantity: 1, attributes: [{key: 'Preorder', value: OWN_LATE}, {key:'Delivery by',value:'15 April 2027'}]}]]);
   });
 
   describe('US destination', () => {
-    const usLine = (l: ShopifyCartLine): ShopifyCartLine => ({...l, shipRegion: 'US'});
+    const usLine = (l: ShopifyCartLine): ShopifyCartLine => ({...l, shipRegion: 'US', deliveryBy:'30 April 2027'});
 
     it('leaves a US cart alone when every line ships on the US date', async () => {
       const usPromise = US.products[1].variants[0].ship_promise!;
@@ -1085,7 +1060,7 @@ describe('Shopify cart action: one promise for a mixed order', () => {
       assert.deepEqual(updates, []);
     });
 
-    it('names no delivery date for a US line that ships earlier than the rest', async () => {
+    it('keeps dispatch and the combined US arrival deadline in separate properties', async () => {
       const config: CampaignConfig = {
         ...REAL,
         skus: {
@@ -1100,7 +1075,7 @@ describe('Shopify cart action: one promise for a mixed order', () => {
       const early = catalog.products[0].variants[0].ship_promise!;
       assert.equal(early, 'ships early November 2026');
       const lines = [
-        usLine(fcLine({shipPromise: early})),
+        {...usLine(fcLine({shipPromise: early})),deliveryBy:'10 December 2026'},
         usLine(rxLine({shipPromise: catalog.products[1].variants[0].ship_promise!})),
       ];
       const {updates, response} = run(lines, {datesSeen: '1', country: 'US'}, {catalog, us: true});
@@ -1111,9 +1086,70 @@ describe('Shopify cart action: one promise for a mixed order', () => {
         attributes: [
           {key: 'Preorder', value: 'ships with the rest of this order by 31 March 2027'},
           {key: '_ship_region', value: 'US'},
+          {key:'Delivery by',value:'30 April 2027'},
+          {key:'_delivery_by_own',value:'10 December 2026'},
           {key: '_preorder_own', value: early},
         ],
       }]]);
     });
+  });
+});
+
+
+describe('international cart destination handoffs', () => {
+  const config = parseCampaignConfig(JSON.parse(fs.readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8')));
+  const international = applyCampaign(CATALOG, config, {}, new Date('2026-10-01'), 'INT');
+
+  it('adds an international preorder with the exact destination and INT promise metadata', async () => {
+    let chosen = '';
+    await handleShopifyCartAction(request({sku:'OPENRX-LITE', country:'CA'}), ENABLED_ENV, {
+      fetchCatalog: async (region,country) => { assert.equal(region,'INT'); assert.equal(country,'CA'); return international; },
+      createCart: async (lines,country) => {
+        chosen = country!;
+        assert.equal(lines[0].attributes?.find(a=>a.key==='_ship_region')?.value,'INT');
+        assert.equal(lines[0].attributes?.find(a=>a.key==='Delivery by')?.value,'30 April 2027');
+        assert.match(lines[0].attributes?.find(a=>a.key==='Preorder')?.value??'',/31 March 2027/);
+        assert.doesNotMatch(lines[0].attributes?.find(a=>a.key==='Preorder')?.value??'',/15 April|30 April/);
+        return cart();
+      },
+    });
+    assert.equal(chosen,'CA');
+  });
+
+  it('refreshes an EU cart and shows international prices and March dates before native checkout', async () => {
+    const previous = {...cart([line({shipPromise:'ships early November 2026'})]), country:'BE'};
+    const updates: unknown[] = [];
+    const destinations: string[] = [];
+    const result = await handleShopifyCartAction(request({intent:'checkout',country:'AU'}), ENABLED_ENV, {
+      getCartId:()=>previous.id, getCart:async()=>previous,
+      fetchCatalog:async(region,country)=>{assert.equal(region,'INT');assert.equal(country,'AU');return international;},
+      setCountry:async(_id,country)=>{destinations.push(country);},
+      updateCartLines:async(_id,lines)=>{updates.push(...lines);return previous;}, ...MUST_NOT,
+    });
+    assert.equal(result.headers.get('Location'),'/cart?check=market');
+    assert.deepEqual(destinations,['AU']);
+    assert.equal((updates[0] as {attributes:Array<{key:string;value:string}>}).attributes.find(a=>a.key==='_ship_region')?.value,'INT');
+  });
+
+  it('shows another international country market even when both currencies are EUR', async () => {
+    const promise = international.products[0].variants[0].ship_promise;
+    const previous = {...cart([line({shipPromise:promise,shipRegion:'INT',deliveryBy:'30 April 2027'})]), country:'CH'};
+    const destinations: string[] = [];
+    const result = await handleShopifyCartAction(request({intent:'checkout',country:'NO'}), ENABLED_ENV, {
+      getCartId:()=>previous.id,getCart:async()=>previous,
+      fetchCatalog:async(region,country)=>{assert.equal(region,'INT');assert.equal(country,'NO');return international;},
+      setCountry:async(_id,country)=>{destinations.push(country);}, ...MUST_NOT,
+    });
+    assert.equal(result.headers.get('Location'),'/cart?check=market');
+    assert.deepEqual(destinations,['NO']);
+  });
+
+  it('allows native checkout once the international country and promise have been reviewed', async () => {
+    const promise = international.products[0].variants[0].ship_promise;
+    const reviewed = {...cart([line({shipPromise:promise,shipRegion:'INT',deliveryBy:'30 April 2027'})]),country:'CA'};
+    const result = await handleShopifyCartAction(request({intent:'checkout',country:'CA'}), ENABLED_ENV, {
+      getCartId:()=>reviewed.id,getCart:async()=>reviewed,fetchCatalog:async()=>international,...MUST_NOT,
+    });
+    assert.equal(result.headers.get('Location'),CHECKOUT);
   });
 });

@@ -80,6 +80,7 @@ export function RegionSwitch({
     typeof pending === 'string' ? pending : revalidator.state !== 'idle' && picked ? picked : country,
     usRate,
   );
+  const activeLabel = active ? choiceLabel(active) : `${country} · ${root?.catalogCurrency ?? ''}`;
   const label = copyText('chrome.region_switch_aria') ?? 'Ship to and currency';
 
   const choose = (choice: SwitchCurrency) => {
@@ -103,6 +104,7 @@ export function RegionSwitch({
         className={className}
         label={label}
         active={active}
+        activeLabel={activeLabel}
         busy={busy}
         failed={failed}
         failedId={labelId}
@@ -120,7 +122,7 @@ export function RegionSwitch({
       data-currency={active}
     >
       <span className="region-switch-caption" aria-hidden="true">
-        {copyText('chrome.region_switch_caption') ?? 'Ship to'}
+        {active == null ? activeLabel : (copyText('chrome.region_switch_caption') ?? 'Ship to')}
       </span>
       {CHOICES.map((choice) => (
         <button
@@ -158,6 +160,7 @@ function RegionMenu({
   className,
   label,
   active,
+  activeLabel,
   busy,
   failed,
   failedId,
@@ -165,7 +168,8 @@ function RegionMenu({
 }: {
   className?: string;
   label: string;
-  active: SwitchCurrency;
+  active: SwitchCurrency | null;
+  activeLabel: string;
   busy: boolean;
   failed: boolean;
   failedId: string;
@@ -222,14 +226,14 @@ function RegionMenu({
         ref={triggerRef}
         type="button"
         className="header-popover-trigger"
-        aria-label={`${label}: ${choiceLabel(active)}`}
+        aria-label={`${label}: ${activeLabel}`}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
         onClick={() => setOpen(!open)}
         onKeyDown={onTriggerKey}
       >
-        {choiceLabel(active)}
+        {activeLabel}
         <svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
           <path d="M2 3.5 5 6.5 8 3.5" />
         </svg>
