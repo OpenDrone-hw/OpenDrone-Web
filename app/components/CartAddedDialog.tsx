@@ -3,6 +3,7 @@ import {shopifyImageUrl} from '~/lib/shopify-image';
 import {Link, useLocation, useRevalidator, useRouteLoaderData} from 'react-router';
 import type {RootLoader} from '~/root';
 import {copyText} from '~/lib/copy';
+import {Txt} from '~/components/Txt';
 import {formatPrice} from '~/lib/catalog';
 import {
   isPurchasableStatus,
@@ -385,6 +386,7 @@ export function CartAddedDialog() {
           <Link className="cart-added-viewcart" to="/cart" prefetch="intent">
             {t('added_view', 'View cart ({count})', {count: String(summary.totalQuantity)})}
           </Link>
+          <Txt id="cart.note_terms" as="p" className="cart-added-parcel" />
         </div>
       </section>
     </div>

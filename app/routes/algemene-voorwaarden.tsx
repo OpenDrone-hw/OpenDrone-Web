@@ -1,6 +1,7 @@
 import {useLoaderData} from 'react-router';
 import type {Route} from './+types/algemene-voorwaarden';
 import {LegalPage} from '~/components/LegalPage';
+import {LegalGuaranteeNotice} from '~/components/LegalGuaranteeNotice';
 import {alternateLocaleTags, legalLabels, resolveLegalLoader, seoLocaleTag} from '~/lib/i18n';
 import {buildSeoMeta} from '~/lib/seo';
 
@@ -34,6 +35,7 @@ export default function AlgemeneVoorwaardenRoute() {
       title={labels.title}
       html={html}
       locale={locale}
+      summary={<LegalGuaranteeNotice locale={locale} />}
     />
   );
 }
