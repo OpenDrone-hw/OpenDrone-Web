@@ -1242,6 +1242,8 @@ html.anim-paused .board-sheet.is-active {
 }
 .header-more-panel {
   top: calc(100% + (var(--header-height) - 2rem) / 2 + 0.5rem);
+  /* Opaque: the page under the menu must not show through. */
+  background: linear-gradient(var(--pod-bg-strong), var(--pod-bg-strong)), var(--color-bg);
   min-width: 11rem;
 }
 /* Legal pages add an NL/FR/EN toggle to the right zone; below 1200px the pill
