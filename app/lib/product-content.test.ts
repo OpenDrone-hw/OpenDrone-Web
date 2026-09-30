@@ -346,11 +346,26 @@ describe('openmotor 4S and 6S windings', () => {
     assert.deepEqual(specSheet(content), specSheet(content, undefined));
     assert.deepEqual(columnSpecs(content, '1604').find(([k]) => k === 'KV'), ['KV', '2850']);
   });
-  it('names a two-axis variant title with the first axis label', () => {
-    assert.equal(variantDisplayName('openmotor', '2306 / 4S'), '5" (2306) 4S');
-    assert.equal(variantDisplayName('openmotor', '1604 / 6S'), '3" (1604) 6S');
-    assert.equal(lineDisplayName('openmotor', 'OpenMotor', '1604 / 4S'), 'OpenMotor 3" (1604) 4S');
+  it('names a two-axis variant title with its combined short name', () => {
+    assert.equal(variantDisplayName('openmotor', '2306 / 4S'), '5" 4S (2306, 2550KV)');
+    assert.equal(variantDisplayName('openmotor', '1604 / 6S'), '3" 6S (1604, 2850KV)');
+    assert.equal(lineDisplayName('openmotor', 'OpenMotor', '1604 / 4S'), 'OpenMotor 3" 4S (1604, 3800KV)');
     assert.equal(variantDisplayName('openmotor', 'Unknown / 4S'), 'Unknown / 4S');
+  });
+  it('flattens the two axes into four cards whose labels match the cart names', () => {
+    assert.equal(content.flatPicker, true);
+    const labels: string[] = [];
+    for (const [size, v] of Object.entries(content.variants ?? {})) {
+      for (const cells of content.secondOrder ?? []) {
+        const b = v.bySecond?.[cells];
+        assert.ok(b?.label && b?.name, `${size} ${cells}`);
+        // Card "3" 6S · 2850KV" and cart name "3" 6S (1604, 2850KV)" agree.
+        const [head, kv] = b.label.split(' · ');
+        assert.equal(b.name, `${head} (${size}, ${kv})`);
+        labels.push(b.label);
+      }
+    }
+    assert.deepEqual(labels, ['3" 6S · 2850KV', '3" 4S · 3800KV', '5" 6S · 1950KV', '5" 4S · 2550KV']);
   });
   it('gives every winding of every size a subtitle', () => {
     for (const [size, v] of Object.entries(content.variants ?? {})) {

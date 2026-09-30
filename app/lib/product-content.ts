@@ -225,6 +225,13 @@ export type BundleComponent = {
 /** What one value of a second option axis changes inside a tier: the KV of a
  *  1604 wound for 4S versus 6S. Same row rules as the tier's own `specs`. */
 export type SecondAxisContent = {
+  /** Card label in a flattened picker ({@link ProductContent.flatPicker}):
+   *  the whole choice on one line, `3" 6S · 2850KV`. The text before the
+   *  first " · " doubles as the compact label on the pinned buy bar. */
+  label?: string;
+  /** Short cart and offer name of the combination, `3" 6S (1604, 2850KV)`.
+   *  Replaces the tier label plus value in {@link variantDisplayName}. */
+  name?: string;
   /** Replaces the tier's subtitle. */
   subtitle?: string;
   /** Replaces the tier's highlights. */
@@ -432,6 +439,11 @@ export type ProductContent = {
   secondAxis?: string;
   /** Display order of the second axis values, left to right. */
   secondOrder?: string[];
+  /** Offer the two option axes as ONE row of cards, one per tier and second
+   *  value (tier order, then `secondOrder`), instead of the ladder plus a
+   *  second picker. Needs `optionAxis`, `secondAxis` and a `label` on every
+   *  `bySecond` entry. UI only: the catalog options stay as they are. */
+  flatPicker?: boolean;
   variants?: Record<string, VariantContent>;
   /** OSHWA certification UID for a single-board product (no per-tier split).
    *  Lines whose tiers each carry their own UID set it on the variant instead. */
@@ -714,6 +726,8 @@ export function variantDisplayName(handle: string | null | undefined, value: str
   // Shopify joins a two-axis variant's values: "1604 / 6S". The first axis
   // keeps its label, the rest follows as written.
   const [first, ...rest] = value.split(' / ');
+  const combined = rest.length ? variants?.[first]?.bySecond?.[rest.join(' / ')]?.name : undefined;
+  if (combined) return shopSize(combined);
   const label = rest.length ? variants?.[first]?.label : undefined;
   return shopSize(label ? [label, ...rest].join(' ') : value);
 }

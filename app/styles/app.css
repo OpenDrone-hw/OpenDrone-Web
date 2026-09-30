@@ -17785,3 +17785,19 @@ html.light .plugs {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+/* Flattened picker (two option axes as one row of cards): the whole label
+   stays on one line; phones tighten the card so name and price both fit. */
+.variant-ladder--flat .variant-tier-name {
+  white-space: nowrap;
+}
+@media (max-width: 420px) {
+  .product-hero-copy .variant-ladder--flat .variant-tier {
+    padding: 0 var(--sp-2);
+    gap: var(--sp-1);
+  }
+  .variant-ladder--flat:not(.is-compact) .variant-tier-name,
+  .product-hero-copy .variant-ladder--flat .variant-tier-price {
+    font-size: 0.78rem;
+  }
+}

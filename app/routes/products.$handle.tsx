@@ -39,6 +39,7 @@ import {ProductForm} from '~/components/ProductForm';
 import {RelatedProducts} from '~/components/RelatedProducts';
 import {FirmwareSupport} from '~/components/FirmwareSupport';
 import {OptionChips} from '~/components/OptionChips';
+import {FlatVariantPicker, flatChoices} from '~/components/FlatVariantPicker';
 import {VariantLadder} from '~/components/VariantLadder';
 import {PlugDiagrams} from '~/components/PlugDiagrams';
 import {BoardArt} from '~/components/BoardArt';
@@ -832,6 +833,16 @@ function ProductPage() {
   const selectedVariant = useMemo(() => {
     const params = new URLSearchParams(searchKey);
     const wanted = [...params].map(([name, value]) => ({name, value}));
+    // A flattened picker (two option axes as one row of cards) opens on its
+    // first card, whichever variant the catalog lists first.
+    const flat = pageContent(product.handle);
+    if (flat.flatPicker && flat.optionAxis && flat.secondAxis) {
+      const optionNames = [flat.optionAxis, flat.secondAxis].map((n) => n.trim().toLowerCase());
+      if (!wanted.some((o) => o.value && optionNames.includes(o.name.trim().toLowerCase()))) {
+        const first = flatChoices(flat, product.variants.nodes)[0]?.variant;
+        if (first) return first;
+      }
+    }
     return (
       selectVariant(product.variants.nodes, wanted) ??
       product.selectedOrFirstAvailableVariant
@@ -1625,7 +1636,24 @@ function ProductPage() {
     }
     setActiveTier(value);
   };
-  const railLadder =
+  // A product that opts into `flatPicker` offers its two option axes as one
+  // row of cards; the ladder and the second picker step aside.
+  const flatCards = flatChoices(content, product.variants.nodes);
+  const flatPicker = flatCards.length > 1 && content.optionAxis && content.secondAxis;
+  const flatEl = (compact: boolean) =>
+    flatPicker ? (
+      <FlatVariantPicker
+        axis={content.optionAxis!}
+        secondAxis={content.secondAxis!}
+        choices={flatCards}
+        selectedVariant={selectedVariant}
+        onSelectTier={selectTier}
+        product={product.handle}
+        showPrices={!soon}
+        compact={compact}
+      />
+    ) : null;
+  const railLadder = flatPicker ? flatEl(false) :
     hasLadder && content.optionAxis && content.variants ? (
       <VariantLadder
         axis={content.optionAxis}
@@ -1651,7 +1679,7 @@ function ProductPage() {
     }
   };
   // The pinned bar's chips: names only, its buy module carries the price.
-  const railLadderPinned =
+  const railLadderPinned = flatPicker ? flatEl(true) :
     hasLadder && content.optionAxis && content.variants ? (
       <VariantLadder
         axis={content.optionAxis}
@@ -2999,7 +3027,7 @@ function ProductPage() {
           ) : null}
           <div className="buy-rail">
             {railLadder}
-            {secondOption && !soon ? (
+            {secondOption && !soon && !flatPicker ? (
               <ProductForm
                 optionsOnly
                 productOptions={productOptions}
@@ -3079,7 +3107,7 @@ function ProductPage() {
                   }`}
                   style={railBox && !railMobile ? {right: railBox.right} : undefined}
                 >
-                  {secondOption && !soon ? (
+                  {secondOption && !soon && !flatPicker ? (
                     <div className="buy-rail-chips">
                       {railLadderPinned}
                       <OptionChips
