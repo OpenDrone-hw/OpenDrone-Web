@@ -21,7 +21,7 @@
 // is loaded by the node:test suite without Vite, so the `~` alias and
 // extensionless resolution are not available.
 import {signUnsubscribeToken} from './unsubscribe-token.ts';
-import {SITE, button, card, escapeHtml, head, keyValues, label, para, shell} from '../email-shell.ts';
+import {SITE, button, escapeHtml, head, para, shell} from '../email-shell.ts';
 
 const RESEND_API = 'https://api.resend.com/emails';
 
@@ -70,16 +70,7 @@ export function renderWelcomeEmail(opts: {
   const text = [
     "You're in.",
     '',
-    "Thanks for subscribing. You'll get an email from us when there's actually",
-    'something to ship: new hardware, firmware releases, field notes from the bench.',
-    '',
-    'Expect roughly one email a month. No marketing fluff, no sponsored junk.',
-    'Unsubscribe any time: the link is at the bottom of every email, this one included.',
-    '',
-    'What to expect',
-    '  Cadence      Monthly, give or take',
-    '  Content      Product releases, build notes, bench updates',
-    '  Unsubscribe  Link at the bottom of every email',
+    "About one email a month, only when there's something to ship: new hardware, firmware releases, bench notes.",
     ...(product
       ? ['', `You also asked for the launch email for ${product}. You'll get that one first.`]
       : []),
@@ -94,26 +85,12 @@ export function renderWelcomeEmail(opts: {
   const body =
     head('Engineering Essentials', 'You&rsquo;re in.') +
     para(
-      'Thanks for subscribing. You&rsquo;ll get an email from us when there&rsquo;s actually something to ship: new hardware, firmware releases, field notes from the bench.',
-    ) +
-    para(
-      'Expect roughly one email a month. No marketing fluff, no sponsored junk. Unsubscribe any time: the link is at the bottom of every email, this one included.',
+      'About one email a month, only when there&rsquo;s something to ship: new hardware, firmware releases, bench notes.' +
+        (product
+          ? ` You also asked for the launch email for <strong style="color: #e5e5e5;">${escapeHtml(product)}</strong>. You&rsquo;ll get that one first.`
+          : ''),
       {last: true},
     ) +
-    card(
-      label('What to expect') +
-        keyValues([
-          ['Cadence', 'Monthly, give or take'],
-          ['Content', 'Product releases, build notes, bench updates'],
-          ['Unsubscribe', 'Link at the bottom of every email'],
-        ]),
-    ) +
-    (product
-      ? para(
-          `You also asked for the launch email for <strong style="color: #e5e5e5;">${escapeHtml(product)}</strong>. You&rsquo;ll get that one first.`,
-          {last: true},
-        )
-      : '') +
     button(`${SITE}/products`, 'Browse the hardware &rarr;');
 
   const html = shell({

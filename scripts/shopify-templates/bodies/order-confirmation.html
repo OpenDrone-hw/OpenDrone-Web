@@ -1,59 +1,48 @@
 <od-head kicker="Order {{ name }}">Thanks{% if customer.first_name %}, {{ customer.first_name }}{% endif %}.</od-head>
-<od-p last>We&rsquo;ve received your order and your payment. You&rsquo;ll get a shipping confirmation with tracking when it ships.</od-p>
+<od-p last>Payment received. Tracking follows when it ships.</od-p>
 {% comment %}
   Preorder lines carry the ship promise as the line item property
-  "Preorder" (PREORDER_ATTRIBUTE in app/lib/shopify-storefront.ts). The
-  summary shows only when at least one line has it. The dates come from
-  FACTS in app/lib/email-shell.ts.
+  "Preorder" (PREORDER_ATTRIBUTE in app/lib/shopify-storefront.ts). The box
+  shows only when at least one line has it; the target sentence only when a
+  line waits for a funding target. Dates come from FACTS in
+  app/lib/email-shell.ts. The full rules live on /preorder and in the terms.
 {% endcomment %}
 {% assign has_preorder = false %}
-{% for line in line_items %}{% for p in line.properties %}{% if p.first == 'Preorder' and p.last != blank %}{% assign has_preorder = true %}{% endif %}{% endfor %}{% endfor %}
+{% assign has_target = false %}
+{% for line in line_items %}{% for p in line.properties %}{% if p.first == 'Preorder' and p.last != blank %}{% assign has_preorder = true %}{% if p.last contains 'target' or p.last contains 'with the rest' %}{% assign has_target = true %}{% endif %}{% endif %}{% endfor %}{% endfor %}
 {% if has_preorder %}
 <od-card accent>
-  <od-label tone="accent">Preorder</od-label>
-  <od-t>This order contains preorder items, paid in full today. Each one shows its ship date below.</od-t>
-  <od-t>The preorder run closes on %%CLOSE%%. Preorder-run items ship by %%SHIPBY%% if their target is reached by %%CLOSE%%. Items marked %%BATCH1%% come from the first FC and ESC batch. If your order also holds preorder-run items, they ship together with those items in one parcel; order them separately to get them in %%BATCH1%%.</od-t>
-  <od-t>If an item&rsquo;s target is not reached by %%CLOSE%%, we email you and you choose: a full refund for that item within 14 days, or keep your order for the new date in that email. If you do not reply within 30 days, we refund that item.</od-t>
-  <od-t last>Your order ships once, in one parcel, when every item in it is ready. If a target in it is missed, the rest of the order ships without waiting for that item, and if nothing else is left to ship we refund the shipping cost too. How preorders work: <a href="https://opendrone.be/preorder" style="color: #ffb700;">opendrone.be/preorder</a></od-t>
+  <od-t last><strong style="color: #ffb700;">Preorder, paid in full.</strong> {% if has_target %}Ships by %%SHIPBY_S%% if the target is reached by %%CLOSE_S%%; if not, you choose a full refund or the new date.{% else %}Each item shows its ship date.{% endif %} <a href="https://opendrone.be/preorder" style="color: #ffb700;">How preorders work</a></od-t>
 </od-card>
 {% endif %}
 <od-button href="{{ order_status_url }}" more>View order status &rarr;</od-button>
-            <tr>
-              <td class="od-px" style="padding: 0 32px 8px 32px;">
-                <p style="margin: 0 0 12px 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; color: #a0a0a0;">
-                  Items
-                </p>
-              </td>
-            </tr>
             {% for line in line_items %}
             <tr>
-              <td class="od-px" style="padding: 0 32px 16px 32px;">
+              <td class="od-px" style="padding: 0 32px 0 32px;">
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top: 1px solid #1a241a;">
                   <tr>
                     {% if line.image %}
-                    <td valign="top" width="72" style="padding: 16px 12px 16px 0;">
-                      <img src="{{ line | img_url: 'small' }}" alt="{{ line.title | escape }}" width="60" style="display:block; width:60px; height:auto; border:1px solid #1a241a;" />
+                    <td valign="top" width="56" style="padding: 12px 12px 12px 0;">
+                      <img src="{{ line | img_url: 'small' }}" alt="{{ line.title | escape }}" width="44" style="display:block; width:44px; height:auto; border:1px solid #1a241a;" />
                     </td>
                     {% endif %}
-                    <td valign="top" style="padding: 16px 0;">
-                      <p style="margin: 0 0 4px 0; font-family: 'Space Grotesk', Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 700; color: #e5e5e5;">
-                        {{ line.product.title | default: line.title }}
+                    <td valign="top" style="padding: 12px 0;">
+                      <p style="margin: 0 0 2px 0; font-family: 'Space Grotesk', Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 700; color: #e5e5e5;">
+                        {{ line.product.title | default: line.title }}{% if line.variant.title != 'Default Title' %} <span style="font-weight: 400; color: #a0a0a0;">&middot; {{ line.variant.title }}</span>{% endif %}
                       </p>
-                      {% if line.variant.title != 'Default Title' %}
-                      <p style="margin: 0 0 4px 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; color: #a0a0a0;">
-                        {{ line.variant.title }}
-                      </p>
-                      {% endif %}
                       {% for p in line.properties %}{% if p.first == 'Preorder' and p.last != blank %}
-                      <p style="margin: 0 0 4px 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; color: #ffb700;">
-                        Preorder: {{ p.last }}
+                      {% assign note = p.last | split: ' if the target' | first %}
+                      {% if note contains 'with the rest' %}{% assign note = note | split: ' by ' | last | prepend: 'ships by ' %}{% endif %}
+                      {% assign note = note | replace: 'March', 'Mar' | replace: 'December', 'Dec' %}
+                      <p style="margin: 0 0 2px 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; color: #ffb700;">
+                        {{ note | slice: 0 | upcase }}{{ note | slice: 1, 100 }}
                       </p>
                       {% endif %}{% endfor %}
                       <p style="margin: 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; color: #a0a0a0;">
                         Qty {{ line.quantity }}
                       </p>
                     </td>
-                    <td valign="top" align="right" style="padding: 16px 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 14px; color: #e5e5e5; white-space: nowrap;">
+                    <td valign="top" align="right" style="padding: 12px 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 14px; color: #e5e5e5; white-space: nowrap;">
                       {{ line.line_price | money }}
                     </td>
                   </tr>
@@ -62,34 +51,34 @@
             </tr>
             {% endfor %}
             <tr>
-              <td class="od-px" style="padding: 0 32px 32px 32px;">
+              <td class="od-px" style="padding: 0 32px 20px 32px;">
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top: 1px solid #1a241a; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px;">
                   <tr>
-                    <td style="padding: 10px 0 4px 0; color: #a0a0a0;">Subtotal</td>
-                    <td align="right" style="padding: 10px 0 4px 0; color: #c5c5c5;">{{ subtotal_price | money }}</td>
+                    <td style="padding: 8px 0 2px 0; color: #a0a0a0;">Subtotal</td>
+                    <td align="right" style="padding: 8px 0 2px 0; color: #c5c5c5;">{{ subtotal_price | money }}</td>
                   </tr>
                   {% if total_discounts != 0 %}
                   <tr>
-                    <td style="padding: 4px 0; color: #a0a0a0;">Discount</td>
-                    <td align="right" style="padding: 4px 0; color: #c5c5c5;">&minus;{{ total_discounts | money }}</td>
+                    <td style="padding: 2px 0; color: #a0a0a0;">Discount</td>
+                    <td align="right" style="padding: 2px 0; color: #c5c5c5;">&minus;{{ total_discounts | money }}</td>
                   </tr>
                   {% endif %}
                   {% if shipping_price != 0 %}
                   <tr>
-                    <td style="padding: 4px 0; color: #a0a0a0;">Shipping</td>
-                    <td align="right" style="padding: 4px 0; color: #c5c5c5;">{{ shipping_price | money }}</td>
+                    <td style="padding: 2px 0; color: #a0a0a0;">Shipping</td>
+                    <td align="right" style="padding: 2px 0; color: #c5c5c5;">{{ shipping_price | money }}</td>
                   </tr>
                   {% endif %}
                   {% assign vat_total = tax_price | default: 0 %}
                   {% if vat_total > 0 %}
                   <tr>
-                    <td style="padding: 4px 0; color: #a0a0a0;">Includes VAT</td>
-                    <td align="right" style="padding: 4px 0; color: #c5c5c5;">{{ vat_total | money }}</td>
+                    <td style="padding: 2px 0; color: #a0a0a0;">Includes VAT</td>
+                    <td align="right" style="padding: 2px 0; color: #c5c5c5;">{{ vat_total | money }}</td>
                   </tr>
                   {% endif %}
                   <tr>
-                    <td style="padding: 10px 0 0 0; border-top: 1px solid #1a241a; color: #e5e5e5; font-size: 14px; font-weight: 700;">Total</td>
-                    <td align="right" style="padding: 10px 0 0 0; border-top: 1px solid #1a241a; color: #ffb700; font-size: 14px; font-weight: 700;">{{ total_price | money }}</td>
+                    <td style="padding: 8px 0 0 0; border-top: 1px solid #1a241a; color: #e5e5e5; font-size: 14px; font-weight: 700;">Total</td>
+                    <td align="right" style="padding: 8px 0 0 0; border-top: 1px solid #1a241a; color: #ffb700; font-size: 14px; font-weight: 700;">{{ total_price | money }}</td>
                   </tr>
                 </table>
               </td>
@@ -105,45 +94,36 @@
 {% endcomment %}
 {% if shipping_address and shipping_address.country_code != blank %}{% unless eu_countries contains shipping_address.country_code %}
 {% if shipping_address.country_code == 'US' %}
-<od-p small><strong style="color: #c5c5c5;">Duties included.</strong> Your price includes import duties, taxes and handling. There is nothing to pay on delivery.</od-p>
+<od-p small><strong style="color: #c5c5c5;">Duties included.</strong> Import duties, taxes and handling are in the price. Nothing to pay on delivery.</od-p>
 {% if has_receiver %}
-<od-p small><strong style="color: #c5c5c5;">Receiver, US sale.</strong> The receiver is sold on the condition that it will not be delivered in the US until its FCC equipment authorization is granted (47 CFR 2.803). If authorization is not granted, you get a full refund for it.</od-p>
+<od-p small><strong style="color: #c5c5c5;">Receiver, US sale.</strong> Sold on the condition that it is not delivered in the US until its FCC equipment authorization is granted (47 CFR 2.803). If it is not granted, you get a full refund for it.</od-p>
 {% endif %}
-<od-p small last>US delivery also depends on US import clearance. If we cannot deliver an item to you, you get a full refund for it.</od-p>
+<od-p small>US delivery also depends on import clearance. If we cannot deliver an item, you get a full refund for it.</od-p>
 {% else %}
-<od-p small last><strong style="color: #c5c5c5;">Import duties.</strong> No import duties or import taxes were charged with this order, so the carrier may ask you to pay import duties, taxes and a handling fee on delivery.</od-p>
+<od-p small last><strong style="color: #c5c5c5;">Import duties.</strong> No import duties or taxes were charged, so the carrier may ask you to pay them, plus a handling fee, on delivery.</od-p>
 {% endif %}
 {% endunless %}{% endif %}
 {% if shipping_address %}
-<od-card>
-  <od-label>Shipping to</od-label>
-  <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #c5c5c5;">
-    {{ shipping_address.name }}<br>
-    {{ shipping_address.street }}<br>
-    {{ shipping_address.city }}{% if shipping_address.province_code %}, {{ shipping_address.province_code }}{% endif %} {{ shipping_address.zip }}<br>
-    {{ shipping_address.country }}
-  </p>
-</od-card>
+<od-p small><strong style="color: #c5c5c5;">Ships to</strong> {{ shipping_address.name }}, {{ shipping_address.street }}, {{ shipping_address.zip }} {{ shipping_address.city }}{% if shipping_address.province_code %}, {{ shipping_address.province_code }}{% endif %}, {{ shipping_address.country }}</od-p>
 {% endif %}
             <tr>
-              <td class="od-px" style="padding: 0 32px 32px 32px;">
+              <td class="od-px" style="padding: 0 32px 20px 32px;">
 <!-- Legal: contract confirmation on a durable medium (Art. VI.46 WER).
      Withdrawal info + model form + current terms (web, v2.5) must reach
      the consumer with the order confirmation; omitting it extends withdrawal
      to 12 months. -->
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 8px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
   <tr>
-    <td style="padding: 16px 0 0 0; border-top: 1px solid #1a241a; font-family: Helvetica, Arial, sans-serif; font-size: 12px; line-height: 1.6; color: #a0a0a0;">
-      <p style="margin: 0 0 8px 0;">
+    <td style="padding: 12px 0 0 0; border-top: 1px solid #1a241a; font-family: Helvetica, Arial, sans-serif; font-size: 12px; line-height: 1.5; color: #a0a0a0;">
+      <p style="margin: 0 0 6px 0;">
         <strong style="color: #c5c5c5;">Right of withdrawal{% if shipping_address == blank or shipping_address.country_code == 'BE' or shipping_address.country_code == 'NL' %} / Herroepingsrecht{% endif %}.</strong>
-        You may withdraw from this purchase at any time before delivery and within 14 days of receiving it, without giving a reason.
-        Use the online form at <a href="https://opendrone.be/herroepingsrecht" style="color: #ffb700;">opendrone.be/herroepingsrecht</a>
-        or the model form (<a href="https://opendrone.be/modelformulier-herroeping.pdf" style="color: #ffb700;">PDF</a>).
+        You may withdraw at any time before delivery and within 14 days of receiving it, without giving a reason.
       </p>
       <p style="margin: 0;">
-        These documents form part of your contract:
-        <a href="https://opendrone.be/en/algemene-voorwaarden" style="color: #ffb700;">Terms and conditions</a> &middot;
-        {% if shipping_address == blank or eu_countries contains shipping_address.country_code %}<a href="https://opendrone.be/warranty" style="color: #ffb700;">2-year legal warranty</a> &middot;{% endif %}
+        <a href="https://opendrone.be/herroepingsrecht" style="color: #ffb700;">Withdrawal form</a> &middot;
+        <a href="https://opendrone.be/modelformulier-herroeping.pdf" style="color: #ffb700;">Model form (PDF)</a> &middot;
+        <a href="https://opendrone.be/en/algemene-voorwaarden" style="color: #ffb700;">Terms</a> &middot;
+        {% if shipping_address == blank or eu_countries contains shipping_address.country_code %}<a href="https://opendrone.be/warranty" style="color: #ffb700;">2-year warranty</a> &middot;{% endif %}
         <a href="https://opendrone.be/end-use" style="color: #ffb700;">End-use policy</a>
       </p>
     </td>

@@ -48,13 +48,17 @@ export const COLOR = {
 export const FACTS = {
   closeIso: '2026-12-15',
   close: '15 December 2026',
+  closeShort: '15 Dec 2026',
   shipBy: '31 March 2027',
+  shipByShort: '31 Mar 2027',
   batch1: 'early November',
 } as const;
 
 const FACT_TOKENS: Record<string, string> = {
   '%%CLOSE%%': FACTS.close,
   '%%SHIPBY%%': FACTS.shipBy,
+  '%%CLOSE_S%%': FACTS.closeShort,
+  '%%SHIPBY_S%%': FACTS.shipByShort,
   '%%BATCH1%%': FACTS.batch1,
 };
 
@@ -80,11 +84,11 @@ const toneColor = (tone: Tone | undefined, fallback: Tone): string => COLOR[tone
 /** Kicker line plus the big heading. */
 export function head(kicker: string, title: string): string {
   return `            <tr>
-              <td class="od-px" style="padding: 40px 32px 0 32px;">
-                <p style="margin: 0 0 14px 0; font-family: ${MONO}; font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; color: ${COLOR.accent};">
+              <td class="od-px" style="padding: 28px 32px 0 32px;">
+                <p style="margin: 0 0 10px 0; font-family: ${MONO}; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: ${COLOR.accent};">
                   ${kicker}
                 </p>
-                <h1 class="od-h1" style="margin: 0 0 20px 0; font-family: ${HEAD}; font-size: 32px; line-height: 1.15; font-weight: 700; letter-spacing: -0.01em; color: ${COLOR.text};">
+                <h1 class="od-h1" style="margin: 0 0 14px 0; font-family: ${HEAD}; font-size: 32px; line-height: 1.15; font-weight: 700; letter-spacing: -0.01em; color: ${COLOR.text};">
                   ${title}
                 </h1>
               </td>
@@ -96,8 +100,8 @@ export function head(kicker: string, title: string): string {
 export function para(html: string, opts: {tone?: Tone; small?: boolean; last?: boolean} = {}): string {
   const size = opts.small ? 14 : 16;
   return `            <tr>
-              <td class="od-px" style="padding: 0 32px ${opts.last ? 28 : 16}px 32px;">
-                <p style="margin: 0; font-family: ${BODY}; font-size: ${size}px; line-height: 1.6; color: ${toneColor(opts.tone, opts.small ? 'muted' : 'body')};">
+              <td class="od-px" style="padding: 0 32px ${opts.last ? 20 : 12}px 32px;">
+                <p style="margin: 0; font-family: ${BODY}; font-size: ${size}px; line-height: 1.5; color: ${toneColor(opts.tone, opts.small ? 'muted' : 'body')};">
                   ${html}
                 </p>
               </td>
@@ -107,21 +111,21 @@ export function para(html: string, opts: {tone?: Tone; small?: boolean; last?: b
 
 /** A paragraph inside a card or note. */
 export function text(html: string, opts: {tone?: Tone; small?: boolean; last?: boolean} = {}): string {
-  return `<p style="margin: 0 0 ${opts.last ? 0 : 8}px 0; font-family: ${BODY}; font-size: ${opts.small ? 13 : 14}px; line-height: 1.6; color: ${toneColor(opts.tone, 'body')};">${html}</p>`;
+  return `<p style="margin: 0 0 ${opts.last ? 0 : 6}px 0; font-family: ${BODY}; font-size: ${opts.small ? 13 : 14}px; line-height: 1.5; color: ${toneColor(opts.tone, 'body')};">${html}</p>`;
 }
 
 /** Small mono caps label. */
 export function label(html: string, tone: Tone = 'muted'): string {
-  return `<p style="margin: 0 0 10px 0; font-family: ${MONO}; font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; color: ${toneColor(tone, 'muted')};">${html}</p>`;
+  return `<p style="margin: 0 0 6px 0; font-family: ${MONO}; font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; color: ${toneColor(tone, 'muted')};">${html}</p>`;
 }
 
 /** Bordered box. `accent` gives the gold border used for preorder promises. */
 export function card(inner: string, opts: {accent?: boolean} = {}): string {
   return `            <tr>
-              <td class="od-px" style="padding: 0 32px 28px 32px;">
+              <td class="od-px" style="padding: 0 32px 20px 32px;">
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${COLOR.canvas}" style="background-color: ${COLOR.canvas}; border: 1px solid ${opts.accent ? COLOR.accent : COLOR.line};">
                   <tr>
-                    <td style="padding: 20px 24px;">
+                    <td style="padding: 14px 18px;">
                       ${inner}
                     </td>
                   </tr>
@@ -134,11 +138,11 @@ export function card(inner: string, opts: {accent?: boolean} = {}): string {
 /** Gold call-to-action button. */
 export function button(href: string, labelHtml: string, opts: {last?: boolean} = {}): string {
   return `            <tr>
-              <td class="od-px" style="padding: 0 32px ${opts.last === false ? 24 : 36}px 32px;">
+              <td class="od-px" style="padding: 0 32px ${opts.last === false ? 16 : 28}px 32px;">
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                   <tr>
                     <td bgcolor="${COLOR.accent}" style="background-color: ${COLOR.accent}; border-radius: 4px;">
-                      <a href="${href}" style="display: inline-block; padding: 14px 28px; font-family: ${MONO}; font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: ${COLOR.canvas}; text-decoration: none;">
+                      <a href="${href}" style="display: inline-block; padding: 12px 24px; font-family: ${MONO}; font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: ${COLOR.canvas}; text-decoration: none;">
                         ${labelHtml}
                       </a>
                     </td>
@@ -201,9 +205,9 @@ export function shell(o: ShellOptions): string {
       :root { color-scheme: dark; supported-color-schemes: dark; }
       a { color: ${COLOR.accent}; }
       @media only screen and (max-width: 480px) {
-        .od-outer { padding: 16px 8px !important; }
+        .od-outer { padding: 8px 8px !important; }
         .od-px { padding-left: 20px !important; padding-right: 20px !important; }
-        .od-h1 { font-size: 26px !important; }
+        .od-h1 { font-size: 24px !important; }
       }
     </style>
   </head>
@@ -239,16 +243,13 @@ export function shell(o: ShellOptions): string {
 ${o.body}
             <!-- FOOTER -->
             <tr>
-              <td class="od-px" style="padding: 24px 32px; border-top: 1px solid ${COLOR.line}; font-family: ${BODY}; font-size: 12px; line-height: 1.6; color: ${COLOR.muted};">${
+              <td class="od-px" style="padding: 18px 32px; border-top: 1px solid ${COLOR.line}; font-family: ${BODY}; font-size: 12px; line-height: 1.5; color: ${COLOR.muted};">${
                 o.footerNote
                   ? `
-                <p style="margin: 0 0 12px 0;">${o.footerNote}</p>`
+                <p style="margin: 0 0 10px 0;">${o.footerNote}</p>`
                   : ''
               }
-                <p style="margin: 0 0 12px 0;">
-                  OpenDrone &middot; open source drone electronics designed in Belgium.
-                </p>
-                <p style="margin: 0 0 16px 0;">
+                <p style="margin: 0 0 10px 0;">
                   ${COMPANY_LINE.replaceAll('&', '&amp;')}
                 </p>
                 <p style="margin: 0; font-family: ${MONO}; font-size: 12px; letter-spacing: 0.1em;">

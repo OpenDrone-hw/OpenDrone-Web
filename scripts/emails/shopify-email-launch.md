@@ -13,29 +13,29 @@ Hero image: https://opendrone.be/og-image.png (alt text: OpenDrone flight contro
 
 # Preorders are open.
 
-You asked to hear from us when OpenDrone launches. It is live at opendrone.be.
+You asked to hear when OpenDrone launches. It is live at opendrone.be.
 
 ### First batch, EU only
 **OpenFC Lite and OpenESC ship early November**
 
-The first production batch of the flight controllers and ESCs ships from Belgium in early November 2026, to EU addresses.
+Early November 2026, from Belgium to EU addresses.
 
 ### Preorder run, closes 15 December 2026
 **Receiver, frame, motors, and more FCs and ESCs**
 
-Every unit is tested and inspected before it ships and goes straight to you from our fulfilment partner. Ships by 31 March 2027 if the target is reached by 15 December 2026.
+Ships by 31 March 2027 if the target is reached by 15 December 2026.
 
 ### United States
 **Open for every product**
 
-Duties are included in the price, so there is nothing to pay on delivery. US orders ship with the preorder run. Ships by 31 March 2027 if the target is reached by 15 December 2026. The first FC and ESC batch is for the EU only.
+Duties included, nothing to pay on delivery. Ships with the preorder run.
 
 ### Receiver, US sale
 **Sold conditionally in the US**
 
-The receiver is sold on the condition that it will not be delivered in the US until its FCC equipment authorization is granted (47 CFR 2.803). If authorization is not granted, you get a full refund for it.
+Not delivered in the US until its FCC equipment authorization is granted (47 CFR 2.803). If it is not granted, you get a full refund for it.
 
-You pay in full at checkout. If a preorder target is not reached, we email you and you choose: a full refund for that item, or keep your order for the new date.
+Paid in full at checkout. If a target is missed, you choose a full refund or the new date.
 
 Button: See the hardware -> https://opendrone.be/products?utm_source=shopify-email&utm_medium=email&utm_campaign=launch-all
 
@@ -48,19 +48,19 @@ Hero image: https://opendrone.be/og-image.png (alt text: OpenDrone flight contro
 
 # Preorders are open.
 
-You asked to hear from us when OpenDrone launches. It is live at opendrone.be.
+You asked to hear when OpenDrone launches. It is live at opendrone.be.
 
 ### First batch, EU only
 **OpenFC Lite and OpenESC ship early November**
 
-The first production batch of the flight controllers and ESCs ships from Belgium in early November 2026, to EU addresses.
+Early November 2026, from Belgium to EU addresses.
 
 ### Preorder run, closes 15 December 2026
 **Receiver, frame, motors, and more FCs and ESCs**
 
-Every unit is tested and inspected before it ships and goes straight to you from our fulfilment partner. Ships by 31 March 2027 if the target is reached by 15 December 2026.
+Ships by 31 March 2027 if the target is reached by 15 December 2026.
 
-You pay in full at checkout. If a preorder target is not reached, we email you and you choose: a full refund for that item, or keep your order for the new date.
+Paid in full at checkout. If a target is missed, you choose a full refund or the new date.
 
 Button: See the hardware -> https://opendrone.be/products?utm_source=shopify-email&utm_medium=email&utm_campaign=launch-all
 
@@ -73,24 +73,19 @@ Hero image: https://opendrone.be/og-image.png (alt text: OpenDrone flight contro
 
 # Preorders are open.
 
-You asked to hear from us when OpenDrone launches. It is live at opendrone.be.
+You asked to hear when OpenDrone launches. It is live at opendrone.be.
 
 ### United States
 **Open for every product**
 
-Duties are included in the price, so there is nothing to pay on delivery. US orders ship with the preorder run. Ships by 31 March 2027 if the target is reached by 15 December 2026. The first FC and ESC batch is for the EU only.
-
-### Preorder run, closes 15 December 2026
-**Receiver, frame, motors, and more FCs and ESCs**
-
-Every unit is tested and inspected before it ships and goes straight to you from our fulfilment partner.
+Duties included, nothing to pay on delivery. Ships with the preorder run. Ships by 31 March 2027 if the target is reached by 15 December 2026.
 
 ### Receiver, US sale
 **Sold conditionally in the US**
 
-The receiver is sold on the condition that it will not be delivered in the US until its FCC equipment authorization is granted (47 CFR 2.803). If authorization is not granted, you get a full refund for it.
+Not delivered in the US until its FCC equipment authorization is granted (47 CFR 2.803). If it is not granted, you get a full refund for it.
 
-You pay in full at checkout. If a preorder target is not reached, we email you and you choose: a full refund for that item, or keep your order for the new date.
+Paid in full at checkout. If a target is missed, you choose a full refund or the new date.
 
 Button: See the hardware -> https://opendrone.be/products?utm_source=shopify-email&utm_medium=email&utm_campaign=launch-all
 
