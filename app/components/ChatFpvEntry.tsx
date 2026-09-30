@@ -2,7 +2,7 @@ import {useAside} from '~/components/Aside';
 import {requestChatFpvOpen} from './chatfpv-widget-ui';
 
 /**
- * Phone entry points to the ChatFPV panel (no floating launcher below 768px,
+ * Phone entry points to the ChatFPV panel (no floating launcher at 959px and narrower,
  * audit round 3 A4). Both render nothing visible unless a `ChatFpvWidget` is
  * mounted on the page (`html.chatfpv-widget-on`, set by the widget), so pages
  * without the widget show no dead link. Styles: `.chatfpv-entry` in app.css.
@@ -28,7 +28,7 @@ export function ChatFpvMenuEntry() {
   );
 }
 
-/** Small "Questions? Ask ChatFPV" link under the buy box; phones only. */
+/** Small "Questions? Ask ChatFPV" link under the buy box; 959px and narrower only. */
 export function ChatFpvInlineLink() {
   return (
     <p className="chatfpv-entry chatfpv-entry-inline">
