@@ -15,7 +15,6 @@ import {loadFixtures, loadTemplates, renderLiquid} from './liquid.mjs';
 import {renderWelcomeEmail} from '../../app/lib/growth/welcome-email.ts';
 import {sendWithdrawalNotice} from '../../app/lib/withdrawal-email.ts';
 import {replyMail} from '../../app/lib/support/notify.ts';
-import {buildTradeEmail, tradeCountry} from '../../app/lib/trade.ts';
 import {renderEmail as renderPreorderEmail, formatDate, addDays} from '../preorder-notify.mjs';
 import {renderBlast} from '../launch-blast.mjs';
 
@@ -194,55 +193,6 @@ function supportCards() {
   ];
 }
 
-function tradeCards() {
-  const base = {
-    company: 'Example Hobby BV',
-    contactName: 'Test Pilot',
-    email: 'buyer@example.com',
-    phone: '+32 470 00 00 00',
-    website: 'https://shop.example.com',
-    shopType: 'both',
-    shipTo: 'Voorbeeldstraat 1\n3000 Leuven\nBelgium',
-    billTo: null,
-    volume: '1k-5k',
-    deliveryBy: '2026-12-01',
-    source: 'community',
-    note: 'Interested in stocking the FC and ESC stack.',
-    submittedAt: SUBMITTED,
-    lines: [
-      {sku: 'OPENFC-LITE-2020', label: 'OpenFC Lite Mini, 20x20', qty: 20},
-      {sku: 'OPENESC-2020', label: 'OpenESC 20x20', qty: 20},
-      {sku: 'ACC-STRAP-20X220', label: 'Battery strap, 20 x 220 mm', qty: 50},
-    ],
-  };
-  const prices = {currency: 'EUR', includesVat: true, bySku: {'OPENFC-LITE-2020': 64.95, 'OPENESC-2020': 79.95, 'ACC-STRAP-20X220': 7.95}};
-  const be = {...base, country: tradeCountry('BE'), taxId: 'BE0000000097', vies: {status: 'valid', name: 'EXAMPLE HOBBY BV', address: 'Voorbeeldstraat 1\n3000 Leuven'}};
-  const us = {
-    ...base,
-    company: 'Example Hobby LLC',
-    country: tradeCountry('US'),
-    taxId: '00-0000000',
-    shipTo: '123 Example Avenue\nSpringfield, IL 62701\nUnited States',
-    volume: null,
-    deliveryBy: null,
-    source: null,
-    note: '',
-    website: '',
-    shopType: 'physical',
-  };
-  const card = (id, scenario, req, p) =>
-    resendCard({
-      id,
-      group: 'Worker mails (Resend)',
-      email: 'Trade quote request to the shop',
-      scenario,
-      audience: 'internal',
-      source: ['app/lib/trade.ts'],
-      locale: 'en',
-      ...buildTradeEmail(req, p),
-    });
-  return [card('trade-be', 'Belgian shop, VIES valid, list prices', be, prices), card('trade-us', 'US shop, no prices, optional fields empty', us, null)];
-}
 
 function preorderCards() {
   const endsOn = '2026-12-15';
@@ -354,7 +304,6 @@ export async function buildCatalog() {
     ['Newsletter welcome', welcomeCards],
     ['Withdrawal', withdrawalCards],
     ['Support reply notice', supportCards],
-    ['Trade quote request', tradeCards],
     ['Preorder buyer update', preorderCards],
     ['Product launch broadcast', launchBlastCards],
   ];

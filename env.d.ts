@@ -69,6 +69,7 @@ declare global {
     // Checkout mutation gate. The catalog stays read-only unless this is
     // exactly '1'. Production and staging set it in their wrangler [vars].
     SHOPIFY_CHECKOUT_WRITE_ENABLED?: string;
+    SHOPIFY_TRADE_WRITE_ENABLED?: string;
     SHOPIFY_STORE_DOMAIN?: string;
     SHOPIFY_STOREFRONT_TOKEN?: string;
     SHOPIFY_STOREFRONT_API_VERSION?: string;
