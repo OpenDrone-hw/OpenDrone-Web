@@ -48,3 +48,19 @@ export function toggleHiddenBySheet(sheet: boolean, open: boolean): boolean {
 export function panelTransformOrigin(dockSide: 'left' | 'right' | null): string {
   return dockSide === 'left' ? 'bottom left' : 'bottom right';
 }
+
+/** Below this width there is no floating launcher at all (audit round 3, A4):
+ *  the panel is opened from the mobile menu entry and the inline link under
+ *  the buy box instead. Mirrored by the `max-width: 767px` rule on
+ *  `.chatfpv-widget-toggle` in app.css. */
+export const NO_LAUNCHER_MAX_WIDTH_PX = 767;
+
+/** Window event the menu entry and the inline link dispatch; the mounted
+ *  widget opens its panel. `detail.trigger` is the element to focus again
+ *  when the panel closes. */
+export const CHATFPV_OPEN_EVENT = 'chatfpv:open';
+
+export function requestChatFpvOpen(trigger?: HTMLElement | null): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(CHATFPV_OPEN_EVENT, {detail: {trigger: trigger ?? null}}));
+}

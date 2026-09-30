@@ -9,6 +9,7 @@ import {RegionSwitch} from '~/components/RegionSwitch';
 import {RouteProgress} from '~/components/RouteProgress';
 import {Txt} from '~/components/Txt';
 import {CartAddedDialog} from '~/components/CartAddedDialog';
+import {ChatFpvMenuEntry} from '~/components/ChatFpvEntry';
 import type {CommerceHandoff} from '~/lib/shop-links';
 
 interface PageLayoutProps {
@@ -80,6 +81,7 @@ function MobileMenuAside({accountUrl}: {accountUrl: string | null}) {
           top bar there to keep the header row inside a 320px viewport.
           LangToggle self-hides on non-legal routes. */}
       <LangToggle className="mobile-menu-lang" />
+      <ChatFpvMenuEntry />
     </Aside>
   );
 }

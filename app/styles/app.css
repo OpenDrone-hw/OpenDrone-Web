@@ -4030,7 +4030,7 @@ button.reset {
 /* Phones and tablets (single product column): the ChatFPV launcher (56 px,
    16 px from the right edge) lifts to sit just above the notify form, level
    with the eyebrow, title and lede. Keep that text out of its column. */
-@media (max-width: 959px) {
+@media (min-width: 768px) and (max-width: 959px) {
   .chatfpv-widget-on .product-buy-notify > div:first-child {
     padding-right: 64px;
   }
@@ -4097,6 +4097,85 @@ button.reset {
     width: 44px;
     height: 44px;
   }
+}
+/* Below 768 px there is no floating launcher (audit round 3, A4): the panel
+   opens from `.chatfpv-entry` (mobile menu row, inline link under the buy
+   box). The container stays for the panel. */
+@media (max-width: 767px) {
+  .chatfpv-widget-toggle {
+    display: none;
+  }
+}
+/* Phone entry points (`ChatFpvEntry.tsx`): only where a widget is mounted. */
+.chatfpv-entry {
+  display: none;
+}
+.chatfpv-entry-menu {
+  align-items: center;
+  gap: 0.5rem;
+  align-self: flex-start;
+  min-height: 44px;
+  margin-top: 0.5rem;
+  padding: 0.5rem 1.1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+.chatfpv-entry-tag {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 999px;
+  color: var(--color-gold);
+  background: #0d0d10;
+}
+.chatfpv-widget-on .chatfpv-entry-menu {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.chatfpv-entry-inline {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+.chatfpv-entry-inline button {
+  display: inline-block;
+  min-height: 44px;
+  padding: 0 0.25rem;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+@media (max-width: 767px) {
+  .chatfpv-widget-on .chatfpv-entry-inline {
+    display: block;
+  }
+}
+.chatfpv-widget-unread .chatfpv-entry-menu::after,
+.chatfpv-widget-unread .chatfpv-entry-inline button::after {
+  content: '1';
+  margin-left: 0.4rem;
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #e5484d;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  display: inline-block;
+  text-decoration: none;
 }
 /* Phone sheet only, while it is open: the sheet has its own header and
    close, so a second launcher sitting on its corner is redundant clutter.
