@@ -9,8 +9,10 @@ import {
   lineDisplayName,
   variantDisplayName,
 } from '~/lib/product-content';
-import {ShipChip, parcelPromise, shipChipText, soonerMonth} from './ShipChip';
-import {LineShipChip, parcelDelay} from './ParcelChip';
+import {batchText} from '~/lib/availability';
+import {preorderWords} from './Availability';
+import {parcelPromise, shipChipText, soonerMonth} from './ShipChip';
+import {LineShipChip, heldBy, parcelDelay} from './ParcelChip';
 import {paysEuVat} from '~/lib/visitor-country';
 import {countryName, notSoldDirect, shippingQuote} from '~/lib/shipping-rates';
 import {
@@ -274,7 +276,17 @@ export function CartAddedDialog() {
                           ? `${part.product.title} ${variantDisplayName(part.product.handle, part.variant.title)}`
                           : part.product.title}
                       </span>
-                      <ShipChip promise={part.variant.shipPromise} className="cart-added-ship" ifFunded />
+                      {part.variant.campaign ? (
+                        <span className="cart-line-batch">{batchText(part.variant.campaign, preorderWords)}</span>
+                      ) : null}
+                      {/* What this part would actually do in this cart: an
+                          earlier one ships with the parcel, on its date. */}
+                      <LineShipChip
+                        promise={part.variant.shipPromise}
+                        parcel={inCart ? null : heldBy(cartPromises, part.variant.shipPromise)}
+                        className="cart-added-ship"
+                        ifFunded
+                      />
                       {delay ? (
                         <small className="cart-added-delay" role="note">
                           {t('upsell_delay', 'Adding this delays your whole parcel: instead of {from} it ships {to}.', delay)}

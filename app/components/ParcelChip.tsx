@@ -40,33 +40,50 @@ export function parcelDelay(
 }
 
 /**
+ * The promise of the parcel that would hold a candidate line back, or null
+ * when the candidate sets the parcel's date itself (or the cart is empty).
+ * A part offered next to a cart that ships later says it ships with that
+ * order, on the order's date, not on its own.
+ */
+export function heldBy(
+  cartPromises: Array<string | null | undefined>,
+  candidate: string | null | undefined,
+): string | null {
+  if (!candidate) return null;
+  const next = parcelPromise([...cartPromises, candidate]);
+  return next && next !== candidate ? next : null;
+}
+
+/**
  * The ship chip of a cart or drawer line. In a one-parcel order a line that
- * is ready before the parcel does not promise its own date: it says when it
- * is ready and that it ships with the rest, on the parcel's date.
+ * is ready before the parcel does not promise its own date: it says that it
+ * ships with the rest, on the parcel's date, and nothing else. The batch name
+ * above it carries no date, so the line shows one date.
  */
 export function LineShipChip({
   promise,
   parcel,
   className,
   ifFunded,
+  parcelIfFunded = ifFunded,
 }: {
   promise: string | null | undefined;
   /** The promise the one-parcel order waits for, or null for a single date. */
   parcel: string | null;
   className?: string;
   ifFunded?: boolean;
+  /** Whether the parcel's funding target is still open ("if the target is
+   *  reached"); defaults to `ifFunded`. */
+  parcelIfFunded?: boolean;
 }) {
   if (!parcel || !promise || promise === parcel) {
     return <ShipChip promise={promise} className={className} ifFunded={ifFunded} />;
   }
-  const to = whenPhrase(parcel);
-  const ready = readyWhen(promise);
+  const to = whenPhrase(parcel, parcelIfFunded);
   if (!to) return <ShipChip promise={promise} className={className} ifFunded={ifFunded} />;
   return (
     <small className={`ship-chip ${className ?? 'cart-line-preorder'}`} data-kind="held">
-      {ready
-        ? t('line_held', 'Ready {ready} · ships with this order {parcel}', {ready, parcel: to})
-        : t('line_held_plain', 'Ships with this order {parcel}', {parcel: to})}
+      {t('line_held_plain', 'Ships with this order {parcel}', {parcel: to})}
     </small>
   );
 }

@@ -772,6 +772,14 @@ html[data-cart-preview] .site-header {
   box-shadow: var(--pod-shadow);
 }
 
+/* On the homepage the pinned hero scrolls away under the pill (the build panel
+   is the tallest thing in it). The pill's 94% surface let its product rows and
+   thumbnails show through the utilities, so the surface sits on the page
+   background: same colour over the dark hero, nothing behind it. */
+.homepage-layout .site-header-main {
+  background: linear-gradient(var(--pod-bg-strong), var(--pod-bg-strong)), var(--color-bg);
+}
+
 /* Content clears the floating pill on every non-home route (the pill is out of
    flow). The homepage hero owns the top and the pill floats over it. */
 .site-main {

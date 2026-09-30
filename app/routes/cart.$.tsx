@@ -279,6 +279,12 @@ function PopulatedCart({
   const mixed = new Set(cart.lines.map(groupOf)).size > 1;
   // The promise the whole parcel waits for: lines ready sooner say so.
   const parcel = mixed ? parcelPromise(cart.lines.map((l) => l.shipPromise)) : null;
+  // The parcel waits for a target that is still open: its ship date is "if
+  // the target is reached".
+  const parcelOpen = cart.lines.some((l) => {
+    const target = info[l.id]?.target;
+    return target ? target.ordered < target.units : false;
+  });
   // Checkout is refused for a blocked country, for one sold only through
   // shops (outside the EU) and for an EU country not open yet; the cart
   // says which and links onward.
@@ -315,7 +321,7 @@ function PopulatedCart({
           </div>
           <ul className="cart-lines-scroll" aria-label={copyText('cart.sr_line_items') ?? 'Line items'}>
             {sortCartLines(cart.lines).map((line) => (
-              <CartLine key={line.id} line={line} info={info[line.id]} pending={pending} parcel={parcel} />
+              <CartLine key={line.id} line={line} info={info[line.id]} pending={pending} parcel={parcel} parcelOpen={parcelOpen} />
             ))}
           </ul>
         </div>
@@ -592,12 +598,15 @@ function CartLine({
   info,
   pending,
   parcel = null,
+  parcelOpen = true,
 }: {
   line: ShopifyCartLine;
   info: CartLineInfo | undefined;
   pending: boolean;
   /** The promise a one-parcel order waits for, or null for a single date. */
   parcel?: string | null;
+  /** Whether that parcel's funding target is still open. */
+  parcelOpen?: boolean;
 }) {
   const max = info?.maxQuantity ?? null;
   // A funding-target line reads "Ships by ... if the target is reached" until its target is met.
@@ -613,10 +622,10 @@ function CartLine({
         )}
         <div className="cart-sheet-item">
           <Link to={variantLink(line.handle, line.selectedOptions)}><strong>{lineName(line)}</strong></Link>
-          {line.availability ?? info?.batch ? (
-            <small className="cart-line-batch">{line.availability ?? info?.batch}</small>
+          {info?.batch ?? line.availability ? (
+            <small className="cart-line-batch">{info?.batch ?? line.availability}</small>
           ) : null}
-          <LineShipChip promise={line.shipPromise} parcel={parcel} ifFunded={ifFunded} />
+          <LineShipChip promise={line.shipPromise} parcel={parcel} ifFunded={ifFunded} parcelIfFunded={parcelOpen} />
           {max !== null && line.quantity > max ? (
             <small className="cart-line-error" role="alert">{t('line_over_batch', 'Only {left} left in batch 1.', {left: max})}</small>
           ) : max !== null && max < MAX_LINE_QUANTITY && line.quantity >= max ? (

@@ -707,6 +707,7 @@ function DesktopHome({heroBuilds}: {heroBuilds: Promise<HeroBuild[]>}) {
             Stays visible through the scroll so the toggle is always reachable. */}
           <div
             className="absolute left-1/2 -translate-x-1/2 z-20 pointer-events-auto"
+            inert={!splashSettled}
             style={{
               // Keep the size switch below the header, including repeat visits.
               top: !splashSettled ? '-3rem' : 'calc(var(--header-height) + 1.5rem)',
