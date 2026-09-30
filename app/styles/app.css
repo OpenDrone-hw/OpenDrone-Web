@@ -4054,6 +4054,23 @@ button.reset {
    stylesheet cannot know. Everything static (shape, type, colour, the
    roll-out transition, the 959px "phones and tablets" breakpoint the
    widget already uses elsewhere in this file) lives here instead. === */
+.chatfpv-widget {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: calc(16px + env(safe-area-inset-bottom) + var(--chatfpv-lift, 0px));
+  /* Layer ladder: page content <= 35, header 30..70, drawer overlay 40 and
+     panel 50, add-to-cart dialog 90. Closed, the launcher sits under the
+     mobile menu and dialogs but over page content; open, it goes above the
+     pinned buy rail (60) so the panel is never covered. */
+  z-index: 39;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+.chatfpv-widget.is-open {
+  z-index: 61;
+}
 .chatfpv-widget-toggle {
   position: relative;
   display: inline-flex;

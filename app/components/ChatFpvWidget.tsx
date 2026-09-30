@@ -20,14 +20,16 @@ const NOTICE_SUMMARY_FALLBACK = 'AI assistant. How your question is used.';
  * renders nothing. The page CSP allows the ChatFPV origin in frame-src only
  * while the flag is on (app/lib/csp.ts `chatFpvFrameSrc`).
  *
- * On phones the product page pins its buy rail to the bottom edge
- * (`.buy-rail.is-pinned.is-mobile`, portaled to <body>); the widget also
- * clears the in-flow buy button (`.product-form`) and the ship-promise line
- * (`.ship-line` / `.product-buy-ship` / `.product-buy-stock`) before any
- * scroll, and the pinned rail once scrolled that far (storefront-launch
- * iteration 3/4 audit: a narrower obstacle list left the closed button
- * sitting on top of the Pre-order button and the price-step/progress bar on
- * `/products/openesc` and `/products/openrx`). Closed, the widget is only
+ * Placement is fixed and predictable: the bottom-right corner, inset by the
+ * device safe area (`.chatfpv-widget` in app.css). It never dodges page
+ * content. The one exception is the phone product page's sticky buy bar
+ * (`BOTTOM_BAR`, portaled to <body>): while it is showing, the launcher sits
+ * above it (`lift`). Layering: closed, the launcher is below the mobile
+ * menu, the cart drawer and dialogs (z 39 against .overlay 40, header 30..70,
+ * cart-added 90); open, it is above the pinned rail (z 61) so the panel is
+ * never covered. Both values live in app.css.
+ *
+ * Closed, the widget is only
  * the button: the data-use disclosure lives inside the open panel, as a
  * one-line strip above the iframe with a details toggle for the full text,
  * so it is never floating over the page or the buy rail before the visitor
@@ -86,40 +88,7 @@ const NOTICE_SUMMARY_FALLBACK = 'AI assistant. How your question is used.';
  * the header close button still return focus to a real, visible launcher
  * (`app/components/chatfpv-widget-ui.test.ts`).
  */
-const BOTTOM_OBSTACLES = [
-  '.buy-rail.is-pinned.is-mobile:not(.is-suppressed)',
-  '.product-form',
-  // Any primary button (Pre-order on /preorder cards, related products, the
-  // notify button): the launcher stacks above it instead of sitting on its
-  // right end. Site audit 2026-09-29, 390 px.
-  '.btn-primary',
-  '.add-to-cart-form',
-  '.po-card-cta',
-  '.product-card-quickadd-btn',
-  '.ship-line',
-  '.product-buy-ship',
-  '.product-buy-stock',
-  // The notify/newsletter form under a coming-soon product: its consent line sat under the button at 390 px.
-  '.newsletter-signup-form',
-  // The /preorder empty-state's own newsletter card: its heading sits above
-  // the form, and `.newsletter-signup-form` alone only clears the form
-  // itself, landing the button on that heading instead of the whole card.
-  '.po-empty-newsletter',
-  // The preorder meter and its "Price steps" hint: at 390 px the launcher sat
-  // on the hint's trigger (site audit 2026-09-30, F1).
-  '.step-bar',
-  '.info-hint',
-];
-/**
- * Obstacles whose top edge is in the upper third of the viewport are
- * ignored, so a buy form scrolled up the page never pushes the button
- * toward the header. Below that line the button is stacked above every
- * obstacle it overlaps (see `measure`): a single "lift above the lowest
- * obstacle" left it on the Pre-order button on `/products/openesc` at
- * 390px wide, and a vertical-only check lifted it mid-page on desktop,
- * where the buy column sits beside it.
- */
-const OBSTACLE_ZONE_FRACTION = 2 / 3;
+const BOTTOM_BAR = '.buy-rail.is-pinned.is-mobile:not(.is-suppressed)';
 const HEADER = '.site-header-main';
 /** The product page column a handed-off panel must leave uncovered. */
 const PRODUCT_COLUMN = '.product-hero-copy, [data-buy-module]';
@@ -269,38 +238,10 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
     let frame = 0;
     const measure = () => {
       frame = 0;
-      // Stack the button above every buy-area element it would otherwise
-      // sit on: start at the viewport bottom, and whenever an obstacle under
-      // the button's column overlaps the button's box, move the box above
-      // that obstacle and check again (clearing the ship line can land the
-      // button on the Pre-order button right above it). An obstacle beside
-      // the button (the desktop buy column) or above it never lifts it.
-      const rects: DOMRect[] = [];
-      for (const selector of BOTTOM_OBSTACLES) {
-        for (const el of document.querySelectorAll<HTMLElement>(selector)) {
-          const rect = el.getBoundingClientRect();
-          if (rect.bottom <= 0 || rect.top >= window.innerHeight) continue; // off-screen
-          if (rect.top < window.innerHeight * (1 - OBSTACLE_ZONE_FRACTION)) continue; // above the lower two-thirds
-          rects.push(rect);
-        }
-      }
-      const col = button.current?.getBoundingClientRect();
-      const colLeft = col ? col.left : window.innerWidth - 16 - 160;
-      const colRight = col ? col.right : window.innerWidth - 16;
-      const buttonHeight = col?.height ?? 44;
+      // Sit above the sticky buy bar while it is showing; otherwise no lift.
       let edge = window.innerHeight;
-      for (let moved = true; moved; ) {
-        moved = false;
-        const boxBottom = edge - 16;
-        const boxTop = boxBottom - buttonHeight;
-        for (const rect of rects) {
-          if (rect.right <= colLeft || rect.left >= colRight) continue;
-          if (rect.top < boxBottom && rect.bottom > boxTop && rect.top < edge) {
-            edge = rect.top;
-            moved = true;
-          }
-        }
-      }
+      const bar = document.querySelector<HTMLElement>(BOTTOM_BAR)?.getBoundingClientRect();
+      if (bar && bar.bottom > 0 && bar.top < window.innerHeight) edge = bar.top;
       const nextLift = Math.max(0, Math.round(window.innerHeight - edge));
       setLift(nextLift);
       const header = document.querySelector<HTMLElement>(HEADER);
@@ -397,7 +338,7 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
   const sheet = isPhone && !dock;
   const sheetHidesLauncher = toggleHiddenBySheet(sheet, open);
   return (
-    <div className="chatfpv-widget" style={{position: 'fixed', right: 16, bottom: 16 + lift, zIndex: 61, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8}}>
+    <div className={`chatfpv-widget${open ? ' is-open' : ''}`} style={{['--chatfpv-lift' as string]: `${lift}px`}}>
       {panelInDom ? (
         <div
           ref={panelRef}
