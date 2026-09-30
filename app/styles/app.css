@@ -15021,20 +15021,6 @@ html:not(.light) .trust-chip-oshwa-mark {
   border-radius: var(--r-lg);
   background: #ece9e3;
 }
-.product-image-note {
-  position: absolute;
-  left: 0.6rem;
-  bottom: 0.6rem;
-  z-index: 3;
-  max-width: calc(100% - 1.2rem);
-  padding: 4px 10px;
-  border-radius: var(--r-pill);
-  background: rgba(16, 16, 20, 0.86);
-  color: #fff;
-  font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 600;
-}
 /* Touch targets: 44 px steppers and remove button. */
 .cart-line-quantity--sheet .cart-sheet-stepper button,
 .cart-line-quantity--sheet .cart-sheet-stepper form:last-child button {
