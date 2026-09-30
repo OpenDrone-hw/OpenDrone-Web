@@ -57,5 +57,6 @@ function generalDisallowRules({sitemapUrl}: {sitemapUrl?: string}) {
 Disallow: /api/
 Disallow: /support
 Disallow: /support/
+Disallow: /hero-preview
 ${sitemapUrl ? `Sitemap: ${sitemapUrl}` : ''}`;
 }

@@ -161,7 +161,7 @@ export function Header({
           <span className="site-header-incutec-slot">
             <NavLink
               prefetch="intent"
-              to="/incutec"
+              to="/open-source"
               className="site-header-logo site-header-logo--incutec"
               aria-label={
                 copyText('chrome.incutec_logo_aria') ??
@@ -174,7 +174,7 @@ export function Header({
             </NavLink>
             <NavLink
               prefetch="intent"
-              to="/incutec"
+              to="/open-source"
               className="incutec-hint"
               tabIndex={-1}
               aria-hidden="true"
@@ -720,7 +720,7 @@ export function HeaderMenu({
   );
 }
 
-/** Preorders, Wholesale, Contact: the quiet text links, inline on wide
+/** Preorders, Wholesale, Newsletter, Contact: the quiet text links, inline on wide
  *  screens and inside the "More" menu below that. */
 function SecondaryLinks({onNavigate}: {onNavigate?: () => void}) {
   const cls = ({isActive}: {isActive: boolean}) =>
@@ -732,6 +732,9 @@ function SecondaryLinks({onNavigate}: {onNavigate?: () => void}) {
       </NavLink>
       <NavLink prefetch="intent" to="/wholesale" className={cls} onClick={onNavigate}>
         <Txt id="chrome.nav_trade" />
+      </NavLink>
+      <NavLink prefetch="intent" to="/newsletter" className={cls} onClick={onNavigate}>
+        <Txt id="chrome.nav_newsletter" />
       </NavLink>
       <NavLink prefetch="intent" to="/support" className={cls} onClick={onNavigate}>
         <Txt id="chrome.nav_contact" />

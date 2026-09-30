@@ -25,6 +25,7 @@ import {copyText} from '~/lib/copy';
 //
 // The signup FORM lives in the site footer (present on every page), so this
 // page intentionally has no in-body form - it would just duplicate the footer.
+// The header below links to it (#newsletter-signup) so it is one click away.
 //
 // Abuse controls on the action: honeypot + Cloudflare Turnstile + per-IP and
 // per-email rate limits. Turnstile is soft - if TURNSTILE_SITE_KEY is unset
@@ -80,6 +81,9 @@ export default function NewsletterPage() {
         <div>
           <p className="rn-eyebrow">
             <Txt id="newsletter.eyebrow" />
+            <a href="#newsletter-signup" className="rn-rss">
+              <Txt id="newsletter.subscribe_jump" />
+            </a>
             <a href="/newsletter.rss" className="rn-rss" rel="alternate">
               <Txt id="newsletter.rss_label" />
             </a>
