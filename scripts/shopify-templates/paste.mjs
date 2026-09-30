@@ -32,6 +32,7 @@ import {
 const CDP_URL = process.env.CDP_URL || 'http://127.0.0.1:9222';
 const HANDLE = process.env.SHOPIFY_ADMIN_STORE_HANDLE || DEFAULT_STORE_HANDLE;
 const EDITOR_TIMEOUT = 45_000;
+const SAVE_READBACK_DELAYS = [0, 1_000, 2_000, 3_000];
 
 class LoginRequired extends Error {}
 
@@ -124,10 +125,16 @@ async function processOne(page, tpl, html, apply) {
   let row = planRow(tpl, html, live);
   if (apply && row.action !== 'ok') {
     await write(page, tpl, html);
-    await page.reload({waitUntil: 'domcontentloaded'});
-    await openEditor(page, tpl);
-    live = await readLive(page);
-    const after = planRow(tpl, html, live);
+    // Save once; Shopify can return the previous template on the first reload.
+    let after = row;
+    for (const delay of SAVE_READBACK_DELAYS) {
+      if (delay) await page.waitForTimeout(delay);
+      await page.reload({waitUntil: 'domcontentloaded'});
+      await openEditor(page, tpl);
+      live = await readLive(page);
+      after = planRow(tpl, html, live);
+      if (after.action === 'ok') break;
+    }
     if (after.action !== 'ok') {
       throw new Error(`verify failed after save: live ${after.liveHash?.slice(0, 12)} vs repo ${after.repoHash.slice(0, 12)}, subject ${after.subjectMatch ? 'match' : 'differs'}`);
     }
