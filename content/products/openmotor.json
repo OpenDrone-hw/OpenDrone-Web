@@ -92,8 +92,8 @@
   "optionAxis": "Model",
   "secondAxis": "Cells",
   "secondOrder": [
-    "4S",
-    "6S"
+    "6S",
+    "4S"
   ],
   "variants": {
     "1604": {

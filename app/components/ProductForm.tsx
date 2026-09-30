@@ -15,6 +15,7 @@ export function ProductForm({
   selectedVariant,
   hideOptionNames,
   optionOrder,
+  optionsOnly,
   optionHints,
   buyUrl,
   buyDisabled,
@@ -33,6 +34,9 @@ export function ProductForm({
   /** Display order of an option's values, by option name (case-insensitive).
    *  Values it does not list keep the catalog order, after the listed ones. */
   optionOrder?: Record<string, string[]>;
+  /** Render only the option pills, no quantity or buy button: a second axis
+   *  shown under the size cards instead of in the buy module. */
+  optionsOnly?: boolean;
   /** A short note under an option value's name ("3800 KV"), by option name
    *  then value (case-insensitive). */
   optionHints?: Record<string, Record<string, string>>;
@@ -182,6 +186,8 @@ export function ProductForm({
           </div>
         );
       })}
+      {optionsOnly ? null : (
+      <>
       {onQuantityChange && !isBundle ? (
         <div className="product-qty" role="group" aria-label={copyText('product-chrome.buy_qty_aria') ?? 'Quantity'}>
           <button
@@ -239,6 +245,8 @@ export function ProductForm({
           {maxQuantityNote}
         </p>
       ) : null}
+      </>
+      )}
     </div>
   );
 }

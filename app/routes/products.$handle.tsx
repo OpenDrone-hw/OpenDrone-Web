@@ -1915,9 +1915,7 @@ function ProductPage() {
       <ProductForm
         productOptions={productOptions}
         selectedVariant={selectedVariant}
-        hideOptionNames={content.optionAxis ? [content.optionAxis] : undefined}
-        optionOrder={content.secondAxis && content.secondOrder ? {[content.secondAxis]: content.secondOrder} : undefined}
-        optionHints={secondHints}
+        hideOptionNames={[content.optionAxis, content.secondAxis].filter((n): n is string => Boolean(n))}
         buyUrl={isBundle ? (bundleBuyUrl ?? '') : undefined}
         buyDisabled={isBundle ? !bundleAvailable : undefined}
         buyCtaLabel={
@@ -3022,6 +3020,16 @@ function ProductPage() {
           ) : null}
           <div className="buy-rail">
             {railLadder}
+            {secondOption && !soon ? (
+              <ProductForm
+                optionsOnly
+                productOptions={productOptions}
+                selectedVariant={selectedVariant}
+                hideOptionNames={content.optionAxis ? [content.optionAxis] : undefined}
+                optionOrder={content.secondAxis && content.secondOrder ? {[content.secondAxis]: content.secondOrder} : undefined}
+                optionHints={secondHints}
+              />
+            ) : null}
             {railBuyModule}
             <div ref={setRailSentinel} className="buy-rail-sentinel" aria-hidden="true" />
           </div>

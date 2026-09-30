@@ -324,10 +324,10 @@ describe('openmotor 4S and 6S windings', () => {
   const content = PRODUCT_CONTENT.openmotor;
   const cell = (sheet: ReturnType<typeof specSheet>, key: string) =>
     sheet.rows.find((r) => r.key === key)?.values;
-  it('shows a Cells axis after the Model ladder, 4S before 6S', () => {
+  it('shows a Cells axis after the Model ladder, 6S before 4S', () => {
     assert.equal(content.optionAxis, 'Model');
     assert.equal(content.secondAxis, 'Cells');
-    assert.deepEqual(content.secondOrder, ['4S', '6S']);
+    assert.deepEqual(content.secondOrder, ['6S', '4S']);
   });
   it('carries the quoted KV per size and winding', () => {
     assert.deepEqual(cell(specSheet(content, '6S'), 'KV'), ['2850', '1950 (est.)']);
