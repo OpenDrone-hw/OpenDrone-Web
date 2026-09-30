@@ -53,7 +53,7 @@ describe('no floating launcher on phones (audit round 3 A4)', () => {
   const product = readFileSync(new URL('../routes/products.$handle.tsx', import.meta.url), 'utf8');
 
   it('hides the launcher at 959px and narrower, where the layout is one column', () => {
-    assert.equal(PHONE_MAX_WIDTH_PX, 767);
+    assert.equal(PHONE_MAX_WIDTH_PX, 959);
     assert.match(css, /@media \(max-width: 959px\) \{\s*\.chatfpv-widget-toggle \{\s*display: none;/);
   });
 
