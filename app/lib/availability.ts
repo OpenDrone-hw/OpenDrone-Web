@@ -65,12 +65,17 @@ export function currentBatch(campaign: Pick<CampaignState, 'batches' | 'batch'>)
 }
 
 /**
- * "Batch 1 · EU only" or "March 2027 batch · EU and US": the one wording of
- * the cart line and the checkout line property.
+ * The one name of a batch, on the cart line, the drawer and the checkout line
+ * property: "Batch 1 · EU only · ships early Nov 2026" for the paid November
+ * stock (FC, ESC and the accessories that ship with it), "March 2027 batch ·
+ * EU and US" for a funding target, whose name already carries its month.
  */
 export function batchText(campaign: Pick<CampaignState, 'batches' | 'batch'>, words: Words): string | null {
   const b = currentBatch(campaign);
-  return b ? `${batchLabel(b, words)} · ${scopeOf(b.regions, words)}` : null;
+  if (!b) return null;
+  const name = `${batchLabel(b, words)} · ${scopeOf(b.regions, words)}`;
+  const when = b.paid ? datedShipParts(b.shipPromise)?.when : null;
+  return when ? `${name} · ${words('batch_ships', 'ships {when}', {when})}` : name;
 }
 
 function detailOf(b: Batch, dates: TargetDates, reached: boolean, words: Words): string {
@@ -95,19 +100,21 @@ function detailOf(b: Batch, dates: TargetDates, reached: boolean, words: Words):
  * says so. Empty without a campaign state.
  */
 export function availabilityRows(
-  campaign: Pick<CampaignState, 'batches' | 'targetReached' | 'batch'>,
+  campaign: Pick<CampaignState, 'batches' | 'targetReached' | 'batch'> & Partial<Pick<CampaignState, 'shipsWith' | 'paidLeft'>>,
   dates: TargetDates,
   region: 'EU' | 'US',
   words: Words,
 ): BatchRow[] {
-  return campaign.batches.map((b) => {
+  const rows = campaign.batches.map((b) => {
     let note: string | null = null;
     if (b.status === 'other_region') {
       note = words('not_in_region', 'Not available in the {region}', {region: region === 'US' ? 'US' : 'EU'});
     } else if (b.status === 'sold_out') {
       note = words('batch_sold_out', 'Sold out');
     } else if (b.paid) {
-      note = words('batch_left', '{count} left', {count: Math.max(0, b.units - b.ordered)});
+      // An accessory that ships with paid stock counts its own units, not the lead's.
+      const left = campaign.shipsWith ? campaign.paidLeft : b.units - b.ordered;
+      if (left != null) note = words('batch_left', '{count} left', {count: Math.max(0, left)});
     }
     return {
       batch: b.batch,
@@ -118,6 +125,8 @@ export function availabilityRows(
       note,
     };
   });
+  // The batch the buyer gets comes first; one their region cannot get follows.
+  return [...rows.filter((r) => r.state !== 'other_region'), ...rows.filter((r) => r.state === 'other_region')];
 }
 
 /** The short dates a funding-target row names, from the campaign's long ones. */

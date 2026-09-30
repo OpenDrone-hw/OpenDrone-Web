@@ -7,6 +7,7 @@ import {purgeExpired} from '~/lib/accounts/sessions';
 import {createAppLoadContext} from '~/lib/context';
 import {NO_FRAMING_HEADERS, NO_FRAMING_PATH} from '~/lib/csp';
 import {parseCampaignConfig} from '~/lib/preorder-campaign';
+import {queryCountryCookie} from '~/lib/shipping-rates';
 import {reconcilePreorders} from '~/lib/preorder-ops';
 import {priceTierWritesEnabled} from '~/lib/shopify-price-tier';
 import {supportDeps, supportReady} from '~/lib/support/server';
@@ -119,6 +120,17 @@ async function handleFetch(
 
     if (context.session.isPending) {
       response.headers.append('Set-Cookie', await context.session.commit());
+    }
+
+    // An explicit ?country=XX link is remembered like the region switch.
+    const picked = queryCountryCookie(request);
+    if (picked) {
+      try {
+        response.headers.append('Set-Cookie', picked);
+      } catch {
+        response = new Response(response.body, response);
+        response.headers.append('Set-Cookie', picked);
+      }
     }
 
     // Sign-in and OAuth responses are never framed, documents or not.

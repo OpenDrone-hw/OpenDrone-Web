@@ -14712,7 +14712,7 @@ button[data-waiting] {
 .cart-added .ship-chip,
 html.light .cart-sheet-item .ship-chip {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.4rem;
   margin-top: 0.2rem;
   font-family: var(--font-mono);
@@ -14727,6 +14727,8 @@ html.light .cart-sheet-item .ship-chip {
   flex: none;
   width: 7px;
   height: 7px;
+  /* On the first line of the text when it wraps, not centred on all of it. */
+  margin-top: calc((1.4em - 7px) / 2);
 }
 .ship-chip-label {
   color: var(--color-gold-text);
@@ -15119,9 +15121,10 @@ html:not(.light) .trust-chip-oshwa-mark {
 /* Ship line right under the button. */
 .ship-line {
   display: inline-flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.5rem;
   margin: 0;
+  line-height: 1.4;
   font-family: var(--font-mono);
   font-size: var(--fs-sm);
   color: var(--color-text);
@@ -15130,6 +15133,8 @@ html:not(.light) .trust-chip-oshwa-mark {
   content: none;
 }
 .ship-line-dot {
+  flex: none;
+  margin-top: calc((1.4em - 8px) / 2);
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -15627,10 +15632,13 @@ body:has(.cart-added-overlay) .buy-rail.is-pinned {
      class glides it up from there. */
   transform: translateY(150%);
   opacity: 0;
+  /* Not focusable while it is parked out of sight. */
+  visibility: hidden;
   transition: color 0.2s ease;
   pointer-events: none;
 }
 .hero-github.is-visible {
+  visibility: visible;
   opacity: 1;
   pointer-events: auto;
   animation: island-splash-bottom 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -15666,6 +15674,7 @@ body:has(.cart-added-overlay) .buy-rail.is-pinned {
     animation: none;
     transform: none;
     opacity: 1;
+    visibility: visible;
   }
 }
 

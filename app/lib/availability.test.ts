@@ -9,7 +9,7 @@ import {
   currentBatch,
   targetDates,
 } from './availability.ts';
-import {campaignState, parseCampaignConfig, tiersFor} from './preorder-campaign.ts';
+import {campaignState, parseCampaignConfig, shipsWithState, tiersFor} from './preorder-campaign.ts';
 import {serverPreorderWords as words} from './preorder-words.ts';
 import {lineAttributes} from './shopify-cart-action.ts';
 import type {CatalogVariant} from './catalog.ts';
@@ -38,11 +38,12 @@ describe('availability block', () => {
 
   it('shows a US buyer batch 1 as not available to the US and the March batch selected', () => {
     const rows = availabilityRows(state('OPENESC-3030', 1, 'US'), DATES, 'US', words);
+    // The batch the buyer gets first, the one their region cannot get after it.
     assert.deepEqual(rows.map((r) => [r.label, r.state, r.note]), [
-      ['Batch 1', 'other_region', 'Not available in the US'],
       ['March 2027 batch', 'current', null],
+      ['Batch 1', 'other_region', 'Not available in the US'],
     ]);
-    assert.match(rows[1].detail, /Delivered by 30 Apr 2027/);
+    assert.match(rows[0].detail, /Delivered by 30 Apr 2027/);
   });
 
   it('marks a sold-out batch 1 and moves an EU buyer to the March batch', () => {
@@ -67,7 +68,7 @@ describe('availability block', () => {
   });
 
   it('uses one wording for the cart line and the checkout line property', () => {
-    assert.equal(batchText(state('OPENESC-3030', 1, 'EU'), words), 'Batch 1 · EU only');
+    assert.equal(batchText(state('OPENESC-3030', 1, 'EU'), words), 'Batch 1 · EU only · ships early Nov 2026');
     assert.equal(batchText(state('OPENESC-3030', 1, 'US'), words), 'March 2027 batch · EU and US');
     const variant = (campaign: ReturnType<typeof state>): CatalogVariant => ({
       sku: 'OPENESC-3030', title: 'x', model: null, options: {}, price: 47.2, compare_price: 59, currency: 'EUR',
@@ -76,9 +77,55 @@ describe('availability block', () => {
     });
     const attrs = (v: CatalogVariant, us: boolean) =>
       Object.fromEntries((lineAttributes(v, us) ?? []).map((a) => [a.key, a.value]));
-    assert.equal(attrs(variant(state('OPENESC-3030', 1, 'EU')), false).Availability, 'Batch 1 · EU only');
+    assert.equal(attrs(variant(state('OPENESC-3030', 1, 'EU')), false).Availability, 'Batch 1 · EU only · ships early Nov 2026');
     const us = attrs(variant(state('OPENESC-3030', 1, 'US')), true);
     assert.equal(us.Availability, 'March 2027 batch · EU and US');
     assert.equal(us._ship_region, 'US');
+  });
+});
+
+/** The state of an accessory that ships with the FC (`shipsWith`), for a buyer. */
+function accessory(sku: string, region: 'EU' | 'US', own = 0) {
+  return shipsWithState(REAL, REAL.shipsWith![sku], 1, 6.9, own, region);
+}
+
+describe('one name for the November batch (G1)', () => {
+  const NAME = 'Batch 1 · EU only · ships early Nov 2026';
+
+  it('names the FC/ESC batch and the accessories that ship with it the same', () => {
+    assert.equal(batchText(state('OPENESC-3030', 1, 'EU'), words), NAME);
+    for (const sku of ['ACC-STRAP-20X220', 'ACC-CAP-470UF-35V', 'ACC-CAP-470UF-50V', 'ACC-ANT-T', 'ACC-ANT-DUAL-T']) {
+      assert.equal(batchText(accessory(sku, 'EU'), words), NAME, sku);
+      assert.equal(batchLabel(currentBatch(accessory(sku, 'EU'))!, words), 'Batch 1', sku);
+    }
+  });
+
+  it('never calls the November batch "November 2026 batch"', () => {
+    for (const sku of Object.keys(REAL.shipsWith!)) {
+      for (const region of ['EU', 'US'] as const) {
+        const text = batchText(accessory(sku, region), words);
+        assert.doesNotMatch(text ?? '', /November 2026 batch/, `${sku} ${region}`);
+      }
+    }
+  });
+
+  it('gives the accessory the same rows and "EU only" as the FC, with the March batch first for a US buyer', () => {
+    const eu = availabilityRows(accessory('ACC-STRAP-20X220', 'EU'), DATES, 'EU', words);
+    assert.deepEqual(eu.map((r) => [r.label, r.scope, r.state]), [['Batch 1', 'EU only', 'current']]);
+    assert.equal(eu[0].detail, 'Ships early Nov 2026 · Delivered by 30 Nov 2026');
+    for (const sku of ['ACC-STRAP-20X220', 'ACC-ANT-T', 'ACC-CAP-470UF-35V']) {
+      const us = availabilityRows(accessory(sku, 'US'), DATES, 'US', words);
+      assert.deepEqual(us.map((r) => [r.label, r.state, r.note]), [
+        ['March 2027 batch', 'current', null],
+        ['Batch 1', 'other_region', 'Not available in the US'],
+      ], sku);
+      assert.equal(batchText(accessory(sku, 'US'), words), 'March 2027 batch · EU and US', sku);
+    }
+  });
+
+  it('counts an accessory\'s own stock, not the FC\'s units, in "left"', () => {
+    const rows = availabilityRows(accessory('ACC-ANT-T', 'EU', 10), DATES, 'EU', words);
+    assert.equal(rows[0].note, '90 left');
+    assert.equal(availabilityRows(accessory('ACC-STRAP-20X220', 'EU'), DATES, 'EU', words)[0].note, null);
   });
 });

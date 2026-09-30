@@ -1736,7 +1736,12 @@ function ProductPage() {
   // US unit ships in. An in-stock item ships to the EU only.
   const usBatch = usBuyer && campaign ? promiseBatchMonth(campaign.shipPromise) : null;
   // The batches of a campaign SKU, one row each, the buyer's highlighted.
-  const showAvailability = Boolean(campaign && tiers.length && stepBarState);
+  // An accessory that ships with the paid November stock, or that a US buyer
+  // gets from a later batch, shows the same rows and names (batch 1, EU only).
+  const accessoryBatches = Boolean(
+    campaign?.shipsWith && campaign.batches.some((b) => b.paid || b.status === 'other_region'),
+  );
+  const showAvailability = Boolean(campaign && ((tiers.length && stepBarState) || accessoryBatches));
   const usEuOnly = usBuyer && !isBundle && !selectedVariant?.campaign && Boolean(selectedVariant?.availableForSale);
   const fccConditional = fccConditionalSku(selectedVariant?.sku) || fccConditionalSku(product.handle);
   const usNotice = usBuyer && buyAvailable ? (

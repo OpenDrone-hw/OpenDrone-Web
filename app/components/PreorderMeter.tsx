@@ -26,7 +26,12 @@ export function StepBar({
   const label =
     bar.funded && fundedLabel
       ? fundedLabel
-      : batch
+      : batch && bar.value === 0
+        ? // No orders yet: name the goal, not a count of zero.
+          (copyText('preorder.ordered_none') ?? '{max} units in {batch}, none ordered yet')
+            .replace('{max}', String(bar.max))
+            .replace('{batch}', batch)
+        : batch
         ? `${bar.label} ${(copyText('preorder.ordered_for') ?? 'ordered for {batch}').replace('{batch}', batch)}`
         : `${bar.label} ${copyText('preorder.ordered') ?? 'ordered'}`;
   return (

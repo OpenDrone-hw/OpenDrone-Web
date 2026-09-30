@@ -189,10 +189,22 @@ export function ShipLine({
 }) {
   const line = shipLine(campaign, promise);
   if (!line) return null;
-  return (
+  // An accessory whose date is another product's funding target says so, so a
+  // buyer of props does not wonder why a flight controller sets the date.
+  const lead = line.kind === 'target' && !campaign?.targetReached ? leadProduct(campaign?.shipsWith) : null;
+  const shipLineEl = (
     <p className={`ship-line ${className}`.trim()} data-kind={line.kind}>
       {line.kind === 'date' ? <span className="ship-line-dot" aria-hidden="true" /> : null}
       {line.text}
     </p>
+  );
+  if (!lead) return shipLineEl;
+  return (
+    <>
+      {shipLineEl}
+      <p className="product-buy-ship">
+        {(copyText('preorder.ships_with_wait') ?? 'This item ships when the {lead} target is reached.').replace('{lead}', lead)}
+      </p>
+    </>
   );
 }
