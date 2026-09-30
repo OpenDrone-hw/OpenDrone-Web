@@ -6,6 +6,7 @@ import {Footer} from '~/components/Footer';
 import {Header, HeaderMenu, type HeaderFamilyProduct} from '~/components/Header';
 import {LangToggle} from '~/components/LangToggle';
 import {RegionSwitch} from '~/components/RegionSwitch';
+import {ThemeToggle} from '~/components/ThemeToggle';
 import {RouteProgress} from '~/components/RouteProgress';
 import {Txt} from '~/components/Txt';
 import {CartAddedDialog} from '~/components/CartAddedDialog';
@@ -72,15 +73,15 @@ export function PageLayout({
 function MobileMenuAside({accountUrl}: {accountUrl: string | null}) {
   return (
     <Aside type="mobile" heading={<Txt id="chrome.aside_menu_heading" />}>
-      {/* Region switch: hidden from the phone top bar (a 320px row), rendered
-          here at full tap size, first so it never scrolls out of the drawer.
-          Nothing while US sales are closed. */}
-      <RegionSwitch className="mobile-menu-region" />
-      <HeaderMenu viewport="mobile" accountUrl={accountUrl} />
-      {/* Language switch lives in the drawer on phones - it's hidden from the
-          top bar there to keep the header row inside a 320px viewport.
+      <HeaderMenu accountUrl={accountUrl} />
+      {/* Settings the phone bar leaves out: region and currency (nothing
+          while US sales are closed), the theme, and the legal-page language.
           LangToggle self-hides on non-legal routes. */}
-      <LangToggle className="mobile-menu-lang" />
+      <div className="mobile-menu-settings">
+        <RegionSwitch className="mobile-menu-region" />
+        <ThemeToggle showLabel className="mobile-menu-theme" />
+        <LangToggle className="mobile-menu-lang" />
+      </div>
       <ChatFpvMenuEntry />
     </Aside>
   );
