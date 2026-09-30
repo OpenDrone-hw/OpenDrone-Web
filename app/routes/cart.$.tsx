@@ -398,7 +398,7 @@ function PopulatedCart({
             </Form>
           )}
           <PaymentMarks methods={payments} />
-          <Txt id="cart.note_terms" as="p" className="cart-summary-note cart-terms" />
+          <Txt id="cart.note_terms" as="p" className="cart-summary-note cart-terms [&_a]:underline [&_a]:underline-offset-4" />
         </div>
       </section>
     </PendingContext.Provider>

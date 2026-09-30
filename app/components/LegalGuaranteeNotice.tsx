@@ -19,7 +19,7 @@ export function LegalGuaranteeNotice({locale}: {locale: Locale}) {
           className="h-auto w-full"
         />
       </a>
-      <details className="my-4 text-base">
+      <details open className="my-4 text-base">
         <summary className="cursor-pointer underline underline-offset-4">
           {notice.textVersion}
         </summary>

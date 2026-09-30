@@ -386,7 +386,7 @@ export function CartAddedDialog() {
           <Link className="cart-added-viewcart" to="/cart" prefetch="intent">
             {t('added_view', 'View cart ({count})', {count: String(summary.totalQuantity)})}
           </Link>
-          <Txt id="cart.note_terms" as="p" className="cart-added-parcel" />
+          <Txt id="cart.note_terms" as="p" className="cart-added-parcel [&_a]:underline [&_a]:underline-offset-4" />
         </div>
       </section>
     </div>
