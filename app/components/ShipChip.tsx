@@ -6,7 +6,6 @@ import {
   latestShipDate,
   parseCampaignConfig,
   promiseBatchMonth,
-  promiseDeliveredBy,
   shortCampaignDate,
   type CampaignState,
 } from '~/lib/preorder-campaign';
@@ -17,22 +16,19 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 
 /**
  * A dated promise as the one short line every surface shows: "Ships early Nov
- * 2026 · Delivered by 30 Nov 2026" for "ships early November 2026, delivered
- * by 30 November 2026" (PDP, /products, cart, dialog). It drops words of the
- * checkout line text, never the month, its qualifier or the delivery date.
+ * 2026" for "ships early November 2026" (PDP, /products, cart, dialog). It
+ * drops words of the checkout line text, never the month or its qualifier.
  * Null when the promise names no month and year.
  */
 export function datedShipText(promise: string | null | undefined): string | null {
   const parts = datedShipParts(promise);
   if (!parts) return null;
-  const ships = shipWord('ships', parts.when);
-  return parts.delivered ? `${ships} · ${shipWord('delivered', parts.delivered)}` : ships;
+  return shipWord('ships', parts.when);
 }
 
 /**
- * The ship chip text for a line: "Ships early Nov 2026 · Delivered by 30 Nov
- * 2026" for a dated batch, "ETA
- * 31 Mar 2027" for a funding target, "Ships by 31 Mar 2027 if the target is reached" with
+ * The ship chip text for a line: "Ships early Nov 2026" for a dated batch,
+ * "Ships by 31 Mar 2027" for a funding target, "Ships by 31 Mar 2027 if the target is reached" with
  * `ifFunded` while the target is not met.
  */
 export function shipChipText(
@@ -118,19 +114,18 @@ export function ShipChip({
  * `Ships early Nov 2026` for a dated batch, `Ships by 31 Mar 2027` for a funding
  * target, `Deadline 15 Dec 2026` for its deadline. Dates come in short.
  */
-export function shipWord(kind: 'ships' | 'eta' | 'deadline' | 'delivered', date: string): string {
+export function shipWord(kind: 'ships' | 'eta' | 'deadline', date: string): string {
   const fallback = {
     ships: 'Ships {date}',
     eta: 'Ships by {date}',
     deadline: 'Deadline {date}',
-    delivered: 'Delivered by {date}',
   }[kind];
   return (copyText(`preorder.ship_${kind}`) ?? fallback).replace('{date}', date);
 }
 
 /**
  * The ship line under a Pre-order button. A dated batch reads "Ships early
- * Nov 2026 · Delivered by 30 Nov 2026"; a funding target "Deadline 15 Dec 2026 · Ships by 31 Mar 2027 if
+ * Nov 2026"; a funding target "Deadline 15 Dec 2026 · Ships by 31 Mar 2027 if
  * funded", and "Ships by 31 Mar 2027" once it is funded.
  */
 export function shipLine(
@@ -140,10 +135,6 @@ export function shipLine(
   const full = campaign?.shipPromise ?? promise;
   const short = shortShipPromise(full);
   if (!short) return null;
-  // The delivery date is shown before payment, next to the ship date.
-  const delivered = promiseDeliveredBy(full);
-  const withDelivery = (text: string) =>
-    delivered ? `${text} · ${shipWord('delivered', delivered)}` : text;
   if (short.kind === 'date') return {kind: 'date', text: datedShipText(full) ?? short.text};
   const eta = shortCampaignDate(campaign?.latestShip ?? latestShipDate(CAMPAIGN)) ?? '';
   // An accessory waits for another product's batch: name it, so "the target"
@@ -157,14 +148,14 @@ export function shipLine(
       : (copyText('preorder.ships_with') ?? 'Ships with the {lead} batch');
     return `${head.replace('{lead}', lead)} · ${text}`;
   };
-  if (campaign?.targetReached) return {kind: 'target', text: withLead(withDelivery(shipWord('eta', eta)))};
+  if (campaign?.targetReached) return {kind: 'target', text: withLead(shipWord('eta', eta))};
   const deadline =
     shortCampaignDate(campaign?.deadline ?? campaignDate(CAMPAIGN.endsOn)) ?? CAMPAIGN.endsOn;
   const ifFunded = (
     copyText(lead ? 'preorder.ship_eta_if_lead_funded' : 'preorder.ship_eta_if_funded') ??
     (lead ? 'Ships by {date} if that target is reached' : 'Ships by {date} if the target is reached')
   ).replace('{date}', eta);
-  return {kind: 'target', text: withLead(withDelivery(`${shipWord('deadline', deadline)} · ${ifFunded}`))};
+  return {kind: 'target', text: withLead(`${shipWord('deadline', deadline)} · ${ifFunded}`)};
 }
 
 /**

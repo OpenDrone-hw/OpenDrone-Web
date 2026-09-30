@@ -30,7 +30,6 @@ import {
   campaignDate,
   configSoldUnder,
   datedShipParts,
-  promiseDeliveredBy,
   shortCampaignDate,
   type CampaignBatch,
   type CampaignConfig,
@@ -57,8 +56,6 @@ export type OrderPromise = {
   day: string;
   /** "ships by 31 Mar 2027" or "ships early Nov 2026". */
   text: string;
-  /** "30 Nov 2026" when the batch names a delivery date. */
-  delivered: string | null;
 };
 
 export type AccountOrder = {
@@ -152,7 +149,7 @@ function pad(n: number): string {
  */
 export function batchPromiseOf(batch: CampaignBatch, config: Pick<CampaignConfig, 'shipsBy'>): OrderPromise {
   const targetText = `ships by ${shortCampaignDate(campaignDate(config.shipsBy)) ?? config.shipsBy}`;
-  const target: OrderPromise = {kind: 'target', day: config.shipsBy, text: targetText, delivered: null};
+  const target: OrderPromise = {kind: 'target', day: config.shipsBy, text: targetText};
   const ships = batch.ships?.trim();
   if (!ships) return target;
   const parts = datedShipParts(ships);
@@ -164,9 +161,7 @@ export function batchPromiseOf(batch: CampaignBatch, config: Pick<CampaignConfig
   const qualifier = match[1]?.toLowerCase();
   const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
   const dayOfMonth = qualifier === 'early' ? 10 : qualifier === 'mid' ? 20 : lastDay;
-  const delivered =
-    promiseDeliveredBy(ships) ?? (batch.deliveryBy ? shortCampaignDate(campaignDate(batch.deliveryBy)) : null);
-  return {kind: 'date', day: `${year}-${pad(month)}-${pad(dayOfMonth)}`, text: `ships ${parts.when}`, delivered};
+  return {kind: 'date', day: `${year}-${pad(month)}-${pad(dayOfMonth)}`, text: `ships ${parts.when}`};
 }
 
 /**

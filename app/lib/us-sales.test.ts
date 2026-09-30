@@ -174,8 +174,8 @@ describe('US market prices', () => {
     // Shopify's US price, and no derived next step.
     assert.equal(v.campaign?.price, 53);
     assert.equal(v.campaign?.nextPrice, null);
-    assert.match(v.ship_promise ?? '', /delivered by 30 April 2027/);
-    assert.match(eu.ship_promise ?? '', /delivered by 30 November 2026/);
+    assert.doesNotMatch(v.ship_promise ?? '', /delivered/i);
+    assert.doesNotMatch(eu.ship_promise ?? '', /delivered/i);
   });
 
   it('closes a variant the US read does not price in USD, and everything without a US read', () => {
@@ -273,7 +273,7 @@ describe('US cart with the gate on', () => {
     });
     const attrs = Object.fromEntries((added[0].attributes ?? []).map((a) => [a.key, a.value]));
     assert.match(attrs.Preorder, /31 March 2027/);
-    assert.match(attrs.Preorder, /delivered by 30 April 2027/);
+    assert.doesNotMatch(attrs.Preorder, /delivered/i);
     assert.equal(attrs._ship_region, 'US');
   });
 
@@ -312,7 +312,7 @@ describe('US cart with the gate on', () => {
     const line = {
       id: 'gid://shopify/CartLine/1', merchandiseId: 'gid://shopify/ProductVariant/OPENFC-LITE-2020', quantity: 1,
       title: 'OpenFC Lite', variantTitle: '20x20', handle: 'openfc-lite', sku: 'OPENFC-LITE-2020', image: null,
-      selectedOptions: [], shipPromise: 'ships early November 2026, delivered by 30 November 2026', total: {amount: '31.2', currencyCode: 'EUR'},
+      selectedOptions: [], shipPromise: 'ships early November 2026', total: {amount: '31.2', currencyCode: 'EUR'},
     };
     const response = await handleShopifyCartAction(post({intent: 'checkout'}, 'US'), ENV, {
       fetchCatalog: async () => usCatalog(),
@@ -480,7 +480,7 @@ describe('every product is purchasable by a US ship-to', () => {
         assert.ok(usSellable(v), `${v.sku} must stay purchasable for a US ship-to`);
         assert.equal(v.currency, 'USD', v.sku);
         assert.match(v.ship_promise ?? '', /31 March 2027/, v.sku);
-        assert.match(v.ship_promise ?? '', /delivered by 30 April 2027/, v.sku);
+        assert.doesNotMatch(v.ship_promise ?? '', /delivered/i);
         assert.ok(v.campaign && !v.campaign.paidStock, v.sku);
       }
     });

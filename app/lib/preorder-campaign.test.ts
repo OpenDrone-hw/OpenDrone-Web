@@ -14,7 +14,6 @@ import {
   mixedShipPromise,
   needsCampaignCounts,
   parseCampaignConfig,
-  promiseDeliveredBy,
   priceLadder,
   cartShipNote,
   shipGroupKey,
@@ -729,43 +728,35 @@ describe('SKUs that ship with a campaign SKU', () => {
   });
 });
 
-test('a reviewed final delivery promise follows the batch into the catalog and its accessories', () => {
+test('a ship promise names the ship date only, never a delivery date, and follows the batch into the catalog and its accessories', () => {
   const config = parseCampaignConfig({
     countFrom: '2026-09-21', endsOn: '2026-12-31', shipsBy: '2027-03-11', pendingShips: 'ships once funded', priceTiers: [],
     skus: {A: {batches: [{units: 20, paid: true, ships: 'ships October 2026', deliveryBy: '2026-11-15'}]}},
     shipsWith: {B: {sku: 'A', batch: 1}},
   });
   const state = campaignState(config.skus.A.batches, 0, config.pendingShips, []);
-  assert.equal(state.shipPromise, 'ships October 2026, delivered by 15 November 2026');
+  assert.equal(state.shipPromise, 'ships October 2026');
   const target = parseCampaignConfig({...config, shipsWith: {}, skus: {A: {batches: [{units: 20, deliveryBy: '2027-04-15'}]}}});
-  // A funding target states its delivery date on the condition of its target.
   const pending = campaignState(target.skus.A.batches, 0, target.pendingShips, []).shipPromise;
-  assert.equal(pending, 'ships once funded; if the target is reached in time, delivered by 15 April 2027');
-  assert.equal(promiseDeliveredBy(state.shipPromise), '15 Nov 2026');
-  assert.equal(promiseDeliveredBy(pending), '15 Apr 2027');
-  assert.equal(promiseDeliveredBy('ships early November 2026'), null);
+  assert.equal(pending, 'ships once funded');
   assert.equal(state.batches[0].shipPromise, state.shipPromise);
   assert.equal(shipsWithState(config, config.shipsWith!.B, 0, 10).shipPromise, state.shipPromise);
   assert.throws(() => parseCampaignConfig({...config, skus: {A: {batches: [{units: 1, deliveryBy: '2027-02-30'}]}}}), /calendar date/);
 });
 
-test('mixedShipPromise names the latest line ship-by and delivery days', () => {
+test('mixedShipPromise names the latest line ship-by date only', () => {
   assert.equal(
-    mixedShipPromise({shipByDay: '2027-03-31', deliveryByDay: '2027-04-15', shipsText: null}),
-    'ships with the rest of this order by 31 March 2027, delivered by 15 April 2027',
+    mixedShipPromise({shipByDay: '2027-03-31', shipsText: null}),
+    'ships with the rest of this order by 31 March 2027',
   );
   assert.equal(
-    mixedShipPromise({shipByDay: '2027-03-31', deliveryByDay: '2027-04-30', shipsText: null}),
-    'ships with the rest of this order by 31 March 2027, delivered by 30 April 2027',
+    mixedShipPromise({shipByDay: null, shipsText: 'ships late November 2026'}),
+    'ships with the rest of this order in late November 2026',
   );
-  assert.equal(
-    mixedShipPromise({shipByDay: null, deliveryByDay: '2026-12-20', shipsText: 'ships late November 2026'}),
-    'ships with the rest of this order in late November 2026, delivered by 20 December 2026',
-  );
-  assert.equal(mixedShipPromise({shipByDay: null, deliveryByDay: '2026-12-20', shipsText: null}), null);
+  assert.equal(mixedShipPromise({shipByDay: null, shipsText: null}), null);
 });
 
-test('a state carries the delivery day of its region', () => {
+test('a state carries the delivery day of its region for ordering lines, never for display', () => {
   const batches: CampaignBatch[] = [{units: 5, deliveryBy: '2027-04-15', deliveryByUS: '2027-04-30'}];
   assert.equal(campaignState(batches, 0, PENDING, [], null, 'EU').deliveryByDay, '2027-04-15');
   assert.equal(campaignState(batches, 0, PENDING, [], null, 'US').deliveryByDay, '2027-04-30');

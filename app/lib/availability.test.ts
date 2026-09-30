@@ -29,21 +29,21 @@ describe('availability block', () => {
       ['Batch 1', 'EU only', 'current', '249 left'],
       ['March 2027 batch', 'EU and US', 'next', null],
     ]);
-    assert.equal(rows[0].detail, 'Ships early Nov 2026 · Delivered by 30 Nov 2026');
+    assert.equal(rows[0].detail, 'Ships early Nov 2026');
     assert.equal(
       rows[1].detail,
-      'Deadline 15 Dec 2026 · Ships by 31 Mar 2027 if the target is reached · Delivered by 15 Apr 2027',
+      'Deadline 15 Dec 2026 · Ships by 31 Mar 2027 if the target is reached',
     );
   });
 
   it('shows a US buyer batch 1 as not available to the US and the March batch selected', () => {
     const rows = availabilityRows(state('OPENESC-3030', 1, 'US'), DATES, 'US', words);
-    // The batch the buyer gets first, the one their region cannot get after it.
+    // Chronological in every region; the buyer's batch is the current one.
     assert.deepEqual(rows.map((r) => [r.label, r.state, r.note]), [
-      ['March 2027 batch', 'current', null],
       ['Batch 1', 'other_region', 'Not available in the US'],
+      ['March 2027 batch', 'current', null],
     ]);
-    assert.match(rows[0].detail, /Delivered by 30 Apr 2027/);
+    assert.doesNotMatch(rows[1].detail, /deliver/i);
   });
 
   it('marks a sold-out batch 1 and moves an EU buyer to the March batch', () => {
@@ -109,18 +109,18 @@ describe('one name for the November batch (G1)', () => {
     }
   });
 
-  it('gives the accessory the same rows and "EU only" as the FC, with the March batch first for a US buyer', () => {
+  it('gives the accessory the same rows and "EU only" as the FC, with Batch 1 first, then the March batch, for a US buyer', () => {
     const eu = availabilityRows(accessory('ACC-STRAP-20X220', 'EU'), DATES, 'EU', words);
     assert.deepEqual(eu.map((r) => [r.label, r.scope, r.state]), [['Batch 1', 'EU only', 'current']]);
-    assert.equal(eu[0].detail, 'Ships early Nov 2026 · Delivered by 30 Nov 2026');
+    assert.equal(eu[0].detail, 'Ships early Nov 2026');
     for (const sku of ['ACC-STRAP-20X220', 'ACC-ANT-T', 'ACC-CAP-470UF-35V']) {
       const us = availabilityRows(accessory(sku, 'US'), DATES, 'US', words);
       // G7: the accessory has no target of its own, so it names the lead's.
       assert.deepEqual(us.map((r) => [r.label, r.state, r.note]), [
-        ['Ships with the OpenFC Lite March 2027 batch', 'current', null],
         ['Batch 1', 'other_region', 'Not available in the US'],
+        ['Ships with the OpenFC Lite March 2027 batch', 'current', null],
       ], sku);
-      assert.match(us[0].detail, /Ships by 31 Mar 2027 if that target is reached/, sku);
+      assert.match(us[1].detail, /Ships by 31 Mar 2027 if that target is reached/, sku);
       assert.equal(batchText(accessory(sku, 'US'), words), 'Ships with the OpenFC Lite March 2027 batch · EU and US', sku);
     }
   });

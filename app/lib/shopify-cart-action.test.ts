@@ -939,10 +939,10 @@ describe('Shopify cart action: one promise for a mixed order', () => {
   const STRAP = 'gid://shopify/ProductVariant/strap';
   const FC_LINE = 'gid://shopify/CartLine/fc?cart=a';
   const RX_LINE = 'gid://shopify/CartLine/rx?cart=a';
-  const OWN_EARLY = 'ships early November 2026, delivered by 30 November 2026';
+  const OWN_EARLY = 'ships early November 2026';
   const OWN_LATE =
-    'ships by 31 March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait; if the target is reached in time, delivered by 15 April 2027';
-  const REWRITE = 'ships with the rest of this order by 31 March 2027, delivered by 15 April 2027';
+    'ships by 31 March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait';
+  const REWRITE = 'ships with the rest of this order by 31 March 2027';
   const own = (value: string) => [{key: 'Preorder', value}, {key: 'Availability', value: 'Batch 1 · EU only'}];
 
   function base(sku: string, handle: string, id: string, preorder: boolean) {
@@ -1047,12 +1047,12 @@ describe('Shopify cart action: one promise for a mixed order', () => {
     const c = cart([fcLine({orderPromise: REWRITE}), rxLine()]);
     const info = cartLineInfo(c, EU);
     assert.equal(info[FC_LINE].group, `date:${OWN_EARLY}`);
-    assert.equal(info[FC_LINE].shipLabel, 'Ships early Nov 2026 · Delivered by 30 Nov 2026');
+    assert.equal(info[FC_LINE].shipLabel, 'Ships early Nov 2026');
     assert.deepEqual(splitPlan(c, info), {keep: [FC_LINE], later: [RX_LINE]});
   });
 
   it('still bounces to the cart when a line promise really changed', async () => {
-    const stale = run([fcLine({shipPromise: 'ships early November 2026'}), rxLine()], {datesSeen: '1'});
+    const stale = run([fcLine({shipPromise: 'ships late October 2026'}), rxLine()], {datesSeen: '1'});
     assert.equal(await location(stale.response), '/cart?check=ship-date');
     assert.deepEqual(stale.updates, [[{id: FC_LINE, quantity: 1, attributes: own(OWN_EARLY)}]]);
     // The late line moved: it bounces, and only it is refreshed.
@@ -1069,7 +1069,7 @@ describe('Shopify cart action: one promise for a mixed order', () => {
 
     it('leaves a US cart alone when every line ships on the US date', async () => {
       const usPromise = US.products[1].variants[0].ship_promise!;
-      assert.match(usPromise, /delivered by 30 April 2027$/);
+      assert.doesNotMatch(usPromise, /delivered/i);
       const lines = [
         usLine(rxLine({shipPromise: usPromise})),
         usLine(fcLine({shipPromise: US.products[0].variants[0].ship_promise!})),
@@ -1079,7 +1079,7 @@ describe('Shopify cart action: one promise for a mixed order', () => {
       assert.deepEqual(updates, []);
     });
 
-    it('states the US delivery date when a US line ships earlier than the rest', async () => {
+    it('names no delivery date for a US line that ships earlier than the rest', async () => {
       const config: CampaignConfig = {
         ...REAL,
         skus: {
@@ -1092,7 +1092,7 @@ describe('Shopify cart action: one promise for a mixed order', () => {
       };
       const catalog = applyCampaign(RAW, config, {}, NOW, 'US');
       const early = catalog.products[0].variants[0].ship_promise!;
-      assert.equal(early, 'ships early November 2026, delivered by 10 December 2026');
+      assert.equal(early, 'ships early November 2026');
       const lines = [
         usLine(fcLine({shipPromise: early})),
         usLine(rxLine({shipPromise: catalog.products[1].variants[0].ship_promise!})),
@@ -1103,7 +1103,7 @@ describe('Shopify cart action: one promise for a mixed order', () => {
         id: FC_LINE,
         quantity: 1,
         attributes: [
-          {key: 'Preorder', value: 'ships with the rest of this order by 31 March 2027, delivered by 30 April 2027'},
+          {key: 'Preorder', value: 'ships with the rest of this order by 31 March 2027'},
           {key: 'Availability', value: 'Batch 1 · EU and US'},
           {key: '_ship_region', value: 'US'},
           {key: '_preorder_own', value: early},

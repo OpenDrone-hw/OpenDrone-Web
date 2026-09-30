@@ -71,7 +71,7 @@ function devMockAccount(shopifyGid: string): AccountShopifyData | null {
           isPreorder: true,
           // The latest of the lines' promises: the "early November 2026"
           // line does not decide it, the March funding targets do.
-          promise: {kind: 'target', day: '2027-03-31', text: 'ships by 31 Mar 2027', delivered: null},
+          promise: {kind: 'target', day: '2027-03-31', text: 'ships by 31 Mar 2027'},
         },
         {
           id: 'mock-order-2',
@@ -100,7 +100,7 @@ function devMockAccount(shopifyGid: string): AccountShopifyData | null {
           financialStatus: 'PAID',
           cancelled: false,
           isPreorder: true,
-          promise: {kind: 'date', day: '2026-11-05', text: 'ships early Nov 2026', delivered: '30 Nov 2026'},
+          promise: {kind: 'date', day: '2026-11-05', text: 'ships early Nov 2026'},
         },
       ],
     };

@@ -142,7 +142,7 @@ placed once that many units are ordered. Only SKUs the policy sells as
 | Piece | Where | Does |
 |---|---|---|
 | Paid counts | `app/lib/shopify-orders.ts` | counts paid Shopify orders per SKU since `countFrom`, cached one minute per isolate; if unreadable, campaign SKUs close |
-| Batch and promise | `app/lib/preorder-campaign.ts` | derives the batch, the meter and the ship promise (with `deliveryBy` when set) |
+| Batch and promise | `app/lib/preorder-campaign.ts` | derives the batch, the meter and the ship promise (ship date only, never a delivery date) |
 | Cart line | `app/lib/shopify-cart-action.ts` | every preorder line carries its promise as a `Preorder` attribute, so checkout and the confirmation state it |
 | Price steps | `app/lib/shopify-price-tier.ts` | `priceTiers` steps the price off the compare-at (retail) price as paid units come in; written to Shopify only when `SHOPIFY_PRICE_TIER_WRITE_ENABLED=1`; a SKU Shopify prices under its step closes |
 | Holds and tags | `app/lib/preorder-fulfilment.ts` | holds each open fulfillment order (handle `opendrone-preorder`) and tags the order `preorder` and `batch:<SKU>:<N>`; a tagged order is never held again |
@@ -741,10 +741,10 @@ page renders as before. Open:
 | Surface | US buyer (destination US) | EU buyer |
 |---|---|---|
 | Destination | `shippingQuote` zone `us`, rate from `us-sales.json` | unchanged |
-| Prices | the US catalog's USD list price: duties included, no sales tax. The price step badge and the price steps list show USD too (see "US prices" below) | EUR incl. VAT |
-| Counter | "0 / 250 ordered for the March 2027 batch": names the batch it counts | "1 / 250 ordered for batch 1" |
-| Batches | one row per batch (`app/lib/availability.ts`, `app/components/Availability.tsx`): batch 1 "EU only, N left" shown as not available in the US, the March 2027 batch "EU and US" highlighted; other products one March row | batch 1 highlighted, March 2027 batch below |
-| Delivery date | the batch's `deliveryByUS` | the batch's `deliveryBy` |
+| Prices | the US catalog's USD list price: duties included, no sales tax. The price steps list shows USD too (see "US prices" below) | EUR incl. VAT |
+| Counter | "0 / 250 ordered for the March 2027 batch": same sentence and bar as the EU, counting the highlighted batch | "1 / 250 ordered for batch 1" |
+| Batches | one row per batch in batch order in both regions (`app/lib/availability.ts`, `app/components/Availability.tsx`): batch 1 "EU only" first, the March 2027 batch "EU and US" second; the buyer's batch is highlighted (US: March 2027, with batch 1 tagged "Not available in the US"; EU: batch 1 while units remain); other products one March row | batch 1 highlighted, March 2027 batch below |
+| Refund line | "If we cannot deliver to you, you get a full refund." (terms 7ter.5, US only) | none |
 | Sells | everything for sale: campaign SKUs from their first US-serving batch, every other SKU (in stock, accessories) as a preorder of `usStock` in `content/preorders.json` (March 2027 batch). Sold out stays sold out | everything for sale |
 | Batch | first batch with room whose `regions` include US | first with room whose `regions` include EU |
 | Cart | `buyerIdentity.countryCode` US, hidden `_ship_region: US` line attribute | unchanged |
@@ -810,8 +810,7 @@ rate, and HS codes and country of origin on every variant.
 
 1. Edit `content/preorders.json` (by hand or the studio Data tab): set
    `countFrom` to the first day whose paid orders count, the batches with
-   `units`, `paid` and `ships` for ordered stock, `deliveryBy` as the
-   reviewed customer delivery date, `endsOn`, `shipsBy` and `pendingShips`
+   `units`, `paid` and `ships` for ordered stock, `endsOn`, `shipsBy` and `pendingShips`
    for funding targets, and `priceTiers`. `npm test` checks that
    `pendingShips` names `endsOn` and `shipsBy`.
 2. In Shopify, set each campaign SKU's compare-at price to retail and its
@@ -827,9 +826,9 @@ target: once its `units` are ordered, every later unit ships with it, with
 no new target and no cap. A reached funding target: place the supplier
 order, then set that batch's `ships`. An accessory with `stock` sells that
 many units with its dated `batch`, then ships with the lead's `after`
-batch; set `stock` from InvenTree stock on hand. `deliveryBy` is a customer
-delivery date, not a supplier or carrier date; `null` leaves it out of the
-promise. A batch with `regions` (`["EU"]` for paid stock in Belgium) takes
+batch; set `stock` from InvenTree stock on hand. The storefront states ship dates only: no surface shows a delivery date, and
+`deliveryBy` and `deliveryByUS` only order the lines of a mixed cart and feed
+the email facts. A batch with `regions` (`["EU"]` for paid stock in Belgium) takes
 only units shipping there: each paid unit takes the first batch with room
 that serves its order's shipping region (US, else EU), so a US unit skips an
 EU-only batch. Price steps and funding targets count every region. The dates in

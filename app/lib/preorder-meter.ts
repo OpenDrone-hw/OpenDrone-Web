@@ -20,8 +20,8 @@ function fill(template: string, vars: Record<string, string | number>): string {
 /**
  * The step bar of one SKU: units sold against the current batch (paid
  * stock) or funding target, "37 / 250", with a tick at each price-step end
- * that falls inside the bar. Ticks only while the bar counts from unit 1:
- * a later batch starts past the price steps.
+ * that falls inside the bar. A batch that starts after sold-out batches
+ * starts past the earlier price steps.
  */
 export type StepBarView = {value: number; max: number; ticks: number[]; funded: boolean; label: string};
 
@@ -29,7 +29,10 @@ export function stepBarView(state: CampaignState, stepEnds: number[]): StepBarVi
   const funded = !state.paidStock && state.targetReached;
   const max = state.paidStock ? state.batchUnits : (state.target ?? state.batchUnits);
   const counted = state.paidStock ? state.batchOrdered : state.targetOrdered;
-  const offset = Math.max(0, state.ordered - counted);
+  // Steps are shifted only by batches already sold out, so the bar reads the
+  // same in every region: another region's units in a batch this buyer cannot
+  // get never move its ticks.
+  const offset = state.batches.filter((b) => b.status === 'sold_out').reduce((sum, b) => sum + b.units, 0);
   const value = funded ? max : Math.min(max, Math.max(0, counted));
   return {
     value,
