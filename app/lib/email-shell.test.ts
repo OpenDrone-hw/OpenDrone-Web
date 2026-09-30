@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readdirSync, readFileSync} from 'node:fs';
 import {describe, it} from 'node:test';
 
 import {FACTS, applyFacts, expandMacros, shell} from './email-shell.ts';
@@ -41,6 +41,23 @@ describe('email shell', () => {
     assert.equal(FACTS.shipBy, '31 March 2027');
     assert.equal(p.pendingShips, `ships by ${FACTS.shipBy} if the target is reached by ${FACTS.close}, otherwise you choose a refund or to wait`);
     assert.match(p.skus['OPENFC-LITE-2020'].batches[0].ships, new RegExp(FACTS.batch1));
+    assert.equal(FACTS.shipByShort, '31 Mar 2027');
+    assert.equal(FACTS.closeShort, '15 Dec 2026');
+  });
+
+  it('keeps the preview fixtures on the campaign promises: ship dates only, never delivery dates', () => {
+    const p: any = JSON.parse(readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8'));
+    const allowed = new Set([
+      p.skus['OPENFC-LITE-2020'].batches[0].ships,
+      p.pendingShips,
+      `ships with the rest of this order by ${FACTS.shipBy}`,
+    ]);
+    const dir = new URL('../../scripts/emails/fixtures/', import.meta.url);
+    for (const f of readdirSync(dir)) {
+      const text = readFileSync(new URL(f, dir), 'utf8');
+      assert.ok(!/deliver(ed|y) (by|date)/i.test(text.replace(/"title": "[^"]*"/g, '')), `${f}: no delivery-date promise`);
+      for (const m of text.matchAll(/"Preorder": "([^"]*)"/g)) assert.ok(allowed.has(m[1]), `${f}: unknown Preorder promise "${m[1]}"`);
+    }
   });
 });
 

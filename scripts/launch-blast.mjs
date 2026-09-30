@@ -182,41 +182,39 @@ export const REGIONS = ['all', 'eu', 'us'];
 /** The launch copy for a region: `eu`, `us`, or `all` (both, for a list of unknown region). */
 export function launchCopy(region = 'all') {
   if (!REGIONS.includes(region)) throw new Error(`region must be one of ${REGIONS.join(', ')}`);
+  const promise = `Ships by ${FACTS.shipBy} if the target is reached by ${FACTS.close}.`;
   const eu = [
     {
       kicker: 'First batch, EU only',
       title: `OpenFC Lite and OpenESC ship ${FACTS.batch1}`,
-      body: `The first production batch of the flight controllers and ESCs ships from Belgium in ${FACTS.batch1} 2026, to EU addresses.`,
+      body: `${FACTS.batch1[0].toUpperCase()}${FACTS.batch1.slice(1)} 2026, from Belgium to EU addresses.`,
     },
     {
       kicker: `Preorder run, closes ${FACTS.close}`,
       title: 'Receiver, frame, motors, and more FCs and ESCs',
-      body: `Every unit is tested and inspected before it ships and goes straight to you from our fulfilment partner. Ships by ${FACTS.shipBy} if the target is reached by ${FACTS.close}.`,
+      body: promise,
     },
   ];
-  const us = [
-    {
-      kicker: 'United States',
-      title: 'Open for every product',
-      body: `Duties are included in the price, so there is nothing to pay on delivery. US orders ship with the preorder run. Ships by ${FACTS.shipBy} if the target is reached by ${FACTS.close}. The first FC and ESC batch is for the EU only.`,
-    },
-    {
-      kicker: 'Receiver, US sale',
-      title: 'Sold conditionally in the US',
-      body: 'The receiver is sold on the condition that it will not be delivered in the US until its FCC equipment authorization is granted (47 CFR 2.803). If authorization is not granted, you get a full refund for it.',
-    },
-  ];
-  const usRun = {...eu[1], body: 'Every unit is tested and inspected before it ships and goes straight to you from our fulfilment partner.'};
-  const sections = region === 'eu' ? eu : region === 'us' ? [us[0], usRun, us[1]] : [...eu, ...us];
+  const usOpen = {
+    kicker: 'United States',
+    title: 'Open for every product',
+    body: `Duties included, nothing to pay on delivery. Ships with the preorder run.${region === 'us' ? ` ${promise}` : ''}`,
+  };
+  const usReceiver = {
+    kicker: 'Receiver, US sale',
+    title: 'Sold conditionally in the US',
+    body: 'Not delivered in the US until its FCC equipment authorization is granted (47 CFR 2.803). If it is not granted, you get a full refund for it.',
+  };
+  const sections = region === 'eu' ? eu : region === 'us' ? [usOpen, usReceiver] : [...eu, usOpen, usReceiver];
   return {
     subject: 'Preorders are open',
     preheader: region === 'us'
       ? `OpenDrone preorders are open in the US. Duties included. The run closes ${FACTS.close}.`
       : `FC and ESC batch 1 ships ${FACTS.batch1} in the EU. The preorder run closes ${FACTS.close}.`,
     headline: 'Preorders are open.',
-    intro: 'You asked to hear from us when OpenDrone launches. It is live at opendrone.be.',
+    intro: 'You asked to hear when OpenDrone launches. It is live at opendrone.be.',
     sections,
-    refund: 'You pay in full at checkout. If a preorder target is not reached, we email you and you choose: a full refund for that item, or keep your order for the new date.',
+    refund: 'Paid in full at checkout. If a target is missed, you choose a full refund or the new date.',
     cta: 'See the hardware',
   };
 }

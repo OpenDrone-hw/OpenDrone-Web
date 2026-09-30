@@ -11,9 +11,9 @@
       :root { color-scheme: dark; supported-color-schemes: dark; }
       a { color: #ffb700; }
       @media only screen and (max-width: 480px) {
-        .od-outer { padding: 16px 8px !important; }
+        .od-outer { padding: 8px 8px !important; }
         .od-px { padding-left: 20px !important; padding-right: 20px !important; }
-        .od-h1 { font-size: 26px !important; }
+        .od-h1 { font-size: 24px !important; }
       }
     </style>
   </head>
@@ -47,19 +47,19 @@
 
             <!-- BODY -->
             <tr>
-              <td class="od-px" style="padding: 40px 32px 0 32px;">
-                <p style="margin: 0 0 14px 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; color: #ffb700;">
+              <td class="od-px" style="padding: 28px 32px 0 32px;">
+                <p style="margin: 0 0 10px 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: #ffb700;">
                   Order {{ order_name }}
                 </p>
-                <h1 class="od-h1" style="margin: 0 0 20px 0; font-family: 'Space Grotesk', Helvetica, Arial, sans-serif; font-size: 32px; line-height: 1.15; font-weight: 700; letter-spacing: -0.01em; color: #e5e5e5;">
+                <h1 class="od-h1" style="margin: 0 0 14px 0; font-family: 'Space Grotesk', Helvetica, Arial, sans-serif; font-size: 32px; line-height: 1.15; font-weight: 700; letter-spacing: -0.01em; color: #e5e5e5;">
                   Your order was updated.
                 </h1>
               </td>
             </tr>
 
             <tr>
-              <td class="od-px" style="padding: 0 32px 16px 32px;">
-                <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.6; color: #c5c5c5;">
+              <td class="od-px" style="padding: 0 32px 12px 32px;">
+                <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.5; color: #c5c5c5;">
                   We made a change to your order {{ order_name }}.{% if custom_message != blank %} A note from us:{% endif %}
                 </p>
               </td>
@@ -67,10 +67,10 @@
 
 {% if custom_message != blank %}
             <tr>
-              <td class="od-px" style="padding: 0 32px 28px 32px;">
+              <td class="od-px" style="padding: 0 32px 20px 32px;">
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0a0a0a" style="background-color: #0a0a0a; border: 1px solid #1a241a;">
                   <tr>
-                    <td style="padding: 20px 24px;">
+                    <td style="padding: 14px 18px;">
                       <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #c5c5c5;">{{ custom_message }}</p>
                     </td>
                   </tr>
@@ -80,19 +80,19 @@
 
 {% endif %}
             <tr>
-              <td class="od-px" style="padding: 0 32px 28px 32px;">
-                <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #a0a0a0;">
+              <td class="od-px" style="padding: 0 32px 20px 32px;">
+                <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #a0a0a0;">
                   Your order status page shows the current items and totals. If the total went down, the difference is refunded to your original payment method. If it went up, we send you a payment link for the difference.
                 </p>
               </td>
             </tr>
 
             <tr>
-              <td class="od-px" style="padding: 0 32px 36px 32px;">
+              <td class="od-px" style="padding: 0 32px 28px 32px;">
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                   <tr>
                     <td bgcolor="#ffb700" style="background-color: #ffb700; border-radius: 4px;">
-                      <a href="{{ order_status_url }}" style="display: inline-block; padding: 14px 28px; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #0a0a0a; text-decoration: none;">
+                      <a href="{{ order_status_url }}" style="display: inline-block; padding: 12px 24px; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #0a0a0a; text-decoration: none;">
                         View updated order &rarr;
                       </a>
                     </td>
@@ -104,11 +104,8 @@
 
             <!-- FOOTER -->
             <tr>
-              <td class="od-px" style="padding: 24px 32px; border-top: 1px solid #1a241a; font-family: Helvetica, Arial, sans-serif; font-size: 12px; line-height: 1.6; color: #a0a0a0;">
-                <p style="margin: 0 0 12px 0;">
-                  OpenDrone &middot; open source drone electronics designed in Belgium.
-                </p>
-                <p style="margin: 0 0 16px 0;">
+              <td class="od-px" style="padding: 18px 32px; border-top: 1px solid #1a241a; font-family: Helvetica, Arial, sans-serif; font-size: 12px; line-height: 1.5; color: #a0a0a0;">
+                <p style="margin: 0 0 10px 0;">
                   Incutec BV · Stapelhuisstraat 15, 3000 Leuven, Belgium · KBO 1038.934.039 · BTW BE 1038.934.039
                 </p>
                 <p style="margin: 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; letter-spacing: 0.1em;">
