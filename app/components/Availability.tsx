@@ -6,6 +6,7 @@ import {
   type Words,
 } from '~/lib/availability';
 import {campaignDate, latestShipDate, parseCampaignConfig, type CampaignState} from '~/lib/preorder-campaign';
+import {leadProduct} from '~/components/ShipChip';
 import preorders from '../../content/preorders.json';
 
 const CAMPAIGN = parseCampaignConfig(preorders);
@@ -38,12 +39,24 @@ export function Availability({
   );
   const rows = availabilityRows(campaign, dates, region, preorderWords);
   if (!rows.length) return null;
+  // An accessory whose batch is another product's funding target says so, as
+  // its ship line does, so a buyer of a capacitor does not wonder what "the
+  // target" is.
+  const current = campaign.batches.find((b) => b.batch === campaign.batch);
+  const lead = current && !current.paid && !campaign.targetReached ? leadProduct(campaign.shipsWith) : null;
   return (
-    <ul className={`avail ${className}`.trim()} data-batches={rows.length}>
-      {rows.map((row) => (
-        <AvailabilityRow key={row.batch} row={row} />
-      ))}
-    </ul>
+    <>
+      <ul className={`avail ${className}`.trim()} data-batches={rows.length}>
+        {rows.map((row) => (
+          <AvailabilityRow key={row.batch} row={row} />
+        ))}
+      </ul>
+      {lead ? (
+        <p className="product-buy-ship">
+          {(copyText('preorder.ships_with_wait') ?? 'This item ships when the {lead} target is reached.').replace('{lead}', lead)}
+        </p>
+      ) : null}
+    </>
   );
 }
 

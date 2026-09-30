@@ -443,7 +443,10 @@ export function rederiveLines(
       continue;
     }
     const wanted = mixed.get(line.id) ?? null;
-    if (wanted !== (line.orderPromise ?? null)) {
+    // A line added before the batch name lost its date (or its lead product)
+    // carries the old `Availability` words: rewrite them silently.
+    const batch = attributes.find((a) => a.key === AVAILABILITY_ATTRIBUTE)?.value ?? null;
+    if (wanted !== (line.orderPromise ?? null) || (line.availability != null && batch !== line.availability)) {
       sync.push({
         id: line.id,
         quantity: line.quantity,

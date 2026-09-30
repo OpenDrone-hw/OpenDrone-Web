@@ -34,7 +34,6 @@
   "mixed_one_parcel": "One parcel",
   "mixed_explain": "The whole parcel ships together, with the latest item. Items that are ready sooner wait for it.",
   "mixed_explain_same": "The whole parcel ships together, once every target is reached.",
-  "line_held": "Ready {ready} · ships with this order {parcel}",
   "line_held_plain": "Ships with this order {parcel}",
   "upsell_delay": "Adding this delays your whole parcel: instead of {from} it ships {to}.",
   "split_link": "Want the {month} items sooner? Order them separately.",
