@@ -10,7 +10,7 @@
     "line1": "",
     "line2Italic": "",
     "line3": "",
-    "lead": "Brushless motors for OpenFrame 3\" and 5\". Sold per motor, 4 per quad. OEM motors, not open hardware."
+    "lead": "Brushless motors for OpenFrame 3\" and 5\", each wound for 4S or 6S. Sold per motor, 4 per quad. OEM motors, not open hardware."
   },
   "firmware": {
     "project": "-"
@@ -90,6 +90,11 @@
     ]
   ],
   "optionAxis": "Model",
+  "secondAxis": "Cells",
+  "secondOrder": [
+    "4S",
+    "6S"
+  ],
   "variants": {
     "1604": {
       "label": "3\" (1604)",
@@ -152,7 +157,63 @@
           "qty": "4×",
           "item": "Mounting screws, M2 × 7 mm"
         }
-      ]
+      ],
+      "bySecond": {
+        "6S": {
+          "subtitle": "1604 · 2850KV · 6S · 3\" props",
+          "highlights": [
+            [
+              "KV",
+              "2850 KV"
+            ],
+            [
+              "Prop size",
+              "3\""
+            ]
+          ],
+          "specs": [
+            [
+              "KV",
+              "2850"
+            ],
+            [
+              "Rated cells",
+              "6S"
+            ]
+          ]
+        },
+        "4S": {
+          "subtitle": "1604 · 3800KV · 4S · 3\" props",
+          "highlights": [
+            [
+              "KV",
+              "3800 KV"
+            ],
+            [
+              "Prop size",
+              "3\""
+            ]
+          ],
+          "specs": [
+            [
+              "KV",
+              "3800"
+            ],
+            [
+              "Rated cells",
+              "4S"
+            ],
+            [
+              "Max current",
+              null
+            ],
+            [
+              "Max power",
+              null
+            ]
+          ]
+        }
+      }
     },
     "2306": {
       "label": "5\" (2306)",
@@ -282,12 +343,48 @@
           "qty": "1×",
           "item": "Prop nut, M5 nylock"
         }
-      ]
+      ],
+      "bySecond": {
+        "6S": {
+          "subtitle": "2306 · 1950KV · 6S · 5\" props",
+          "specs": [
+            [
+              "KV",
+              "1950"
+            ],
+            [
+              "Rated cells",
+              "6S"
+            ]
+          ],
+          "placeholders": [
+            "KV"
+          ]
+        },
+        "4S": {
+          "subtitle": "2306 · 2550KV · 4S · 5\" props",
+          "specs": [
+            [
+              "KV",
+              "2550"
+            ],
+            [
+              "Rated cells",
+              "4S"
+            ]
+          ],
+          "placeholders": [
+            "KV"
+          ]
+        }
+      }
     }
   },
   "keywords": [
     "motor",
-    "brushless"
+    "brushless",
+    "4s",
+    "6s"
   ],
   "setOf": 4,
   "placeholders": [

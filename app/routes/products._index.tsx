@@ -412,7 +412,9 @@ export default function ProductsIndex() {
             onSale: sv?.campaign ? false : sv?.compareAtPrice
               ? num(sv.compareAtPrice) > num(price)
               : productOnSale(p),
-            quickAdd: sv
+            // A second option axis (the motor's 4S or 6S winding) is the
+            // buyer's choice on the product page, never a silent default.
+            quickAdd: sv && !content?.secondAxis
               ? {
                   href: sv.cartAddUrl,
                   available: Boolean(sv.availableForSale),

@@ -320,6 +320,47 @@ describe('openmotor 5-inch variant', () => {
   });
 });
 
+describe('openmotor 4S and 6S windings', () => {
+  const content = PRODUCT_CONTENT.openmotor;
+  const cell = (sheet: ReturnType<typeof specSheet>, key: string) =>
+    sheet.rows.find((r) => r.key === key)?.values;
+  it('shows a Cells axis after the Model ladder, 4S before 6S', () => {
+    assert.equal(content.optionAxis, 'Model');
+    assert.equal(content.secondAxis, 'Cells');
+    assert.deepEqual(content.secondOrder, ['4S', '6S']);
+  });
+  it('carries the quoted KV per size and winding', () => {
+    assert.deepEqual(cell(specSheet(content, '6S'), 'KV'), ['2850', '1950 (est.)']);
+    assert.deepEqual(cell(specSheet(content, '4S'), 'KV'), ['3800', '2550 (est.)']);
+    assert.deepEqual(cell(specSheet(content, '4S'), 'Rated cells'), ['4S', '4S']);
+    assert.deepEqual(cell(specSheet(content, '6S'), 'Rated cells'), ['6S', '6S']);
+  });
+  it('keeps the 6S ratings on 6S only and everything else shared', () => {
+    assert.deepEqual(cell(specSheet(content, '6S'), 'Max current'), ['15.8A', null]);
+    assert.equal(cell(specSheet(content, '4S'), 'Max current'), undefined);
+    assert.equal(cell(specSheet(content, '4S'), 'Max power'), undefined);
+    assert.deepEqual(cell(specSheet(content, '4S'), 'Stator'), ['1604', '2306']);
+    assert.deepEqual(cell(specSheet(content, '4S'), 'Weight'), ['11.6 g', null]);
+  });
+  it('is unchanged without a second axis value', () => {
+    assert.deepEqual(specSheet(content), specSheet(content, undefined));
+    assert.deepEqual(columnSpecs(content, '1604').find(([k]) => k === 'KV'), ['KV', '2850']);
+  });
+  it('names a two-axis variant title with the first axis label', () => {
+    assert.equal(variantDisplayName('openmotor', '2306 / 4S'), '5" (2306) 4S');
+    assert.equal(variantDisplayName('openmotor', '1604 / 6S'), '3" (1604) 6S');
+    assert.equal(lineDisplayName('openmotor', 'OpenMotor', '1604 / 4S'), 'OpenMotor 3" (1604) 4S');
+    assert.equal(variantDisplayName('openmotor', 'Unknown / 4S'), 'Unknown / 4S');
+  });
+  it('gives every winding of every size a subtitle', () => {
+    for (const [size, v] of Object.entries(content.variants ?? {})) {
+      for (const cells of content.secondOrder ?? []) {
+        assert.match(v.bySecond?.[cells]?.subtitle ?? '', new RegExp(`^${size} · \\d+KV · ${cells} ·`), `${size} ${cells}`);
+      }
+    }
+  });
+});
+
 describe('short ship promise', () => {
   const target =
     'ships about 10 weeks after its target is reached: by 11 March 2027 if the target is reached by 31 December 2026, otherwise you choose a refund or to wait';

@@ -222,6 +222,19 @@ export type BundleComponent = {
  * Until those catalog variants exist the ladder still renders for preview
  * and the cart falls back to the single default variant.
  */
+/** What one value of a second option axis changes inside a tier: the KV of a
+ *  1604 wound for 4S versus 6S. Same row rules as the tier's own `specs`. */
+export type SecondAxisContent = {
+  /** Replaces the tier's subtitle. */
+  subtitle?: string;
+  /** Replaces the tier's highlights. */
+  highlights?: Array<[string, string]>;
+  /** Spec deltas, merged after the tier's own `specs` and `specsExtra`. */
+  specs?: Array<[string, string | null]>;
+  /** Spec keys whose value at this level is a placeholder. */
+  placeholders?: string[];
+};
+
 export type VariantContent = {
   /** Display name on the ladder card. Defaults to the variant key (which is
    *  what the catalog matches against); set this when the shown name should differ
@@ -251,6 +264,10 @@ export type VariantContent = {
   /** Spec keys whose value at this tier's level (`specs` or `specsExtra`)
    *  is a placeholder awaiting the final value. Never rendered. */
   placeholders?: string[];
+  /** Overrides per value of the product's second option axis
+   *  ({@link ProductContent.secondAxis}), keyed by that value ("4S"). Applied
+   *  on top of this tier's own layers. */
+  bySecond?: Record<string, SecondAxisContent>;
   /** Box lines specific to this tier, appended to the shared inTheBox. */
   inTheBox?: BoxItem[];
   /** This tier's in-the-box render; replaces the product's. */
@@ -411,6 +428,13 @@ export type ProductContent = {
    *  (standardised to "Model"); `variants` is keyed by the option VALUE. See
    *  {@link VariantContent}. */
   optionAxis?: string;
+  /** A second catalog option NAME ("Cells") on top of `optionAxis`. The
+   *  ladder still owns the first axis; the buy module's option pills offer
+   *  this one, in the order of `secondOrder`. Each tier's `bySecond` carries
+   *  what a value changes. */
+  secondAxis?: string;
+  /** Display order of the second axis values, left to right. */
+  secondOrder?: string[];
   variants?: Record<string, VariantContent>;
   /** OSHWA certification UID for a single-board product (no per-tier split).
    *  Lines whose tiers each carry their own UID set it on the variant instead. */
@@ -687,7 +711,14 @@ export const PRODUCT_CONTENT: Record<string, ProductContent> =
  */
 export function variantDisplayName(handle: string | null | undefined, value: string): string {
   if (!handle) return shopSize(value);
-  return shopSize(PRODUCT_CONTENT[handle]?.variants?.[value]?.label ?? value);
+  const variants = PRODUCT_CONTENT[handle]?.variants;
+  const direct = variants?.[value]?.label;
+  if (direct) return shopSize(direct);
+  // Shopify joins a two-axis variant's values: "1604 / 6S". The first axis
+  // keeps its label, the rest follows as written.
+  const [first, ...rest] = value.split(' / ');
+  const label = rest.length ? variants?.[first]?.label : undefined;
+  return shopSize(label ? [label, ...rest].join(' ') : value);
 }
 
 /** A size as FPV shops write it: "20x20", not "20×20". */
@@ -851,10 +882,12 @@ export type SpecSheetRow = {
 
 type SpecLayer = {rows?: Array<[string, string | null]>; path: string};
 
-/** The four spec layers of one column, lowest first. */
+/** The spec layers of one column, lowest first. `second` is the selected
+ *  value of the second option axis, when the product has one. */
 function specLayers(
   content: Pick<ProductContent, 'specs' | 'specsExtra' | 'variants'>,
   column: string,
+  second?: string,
 ): SpecLayer[] {
   const variant = column ? content.variants?.[column] : undefined;
   return [
@@ -862,6 +895,10 @@ function specLayers(
     {rows: variant?.specs, path: `variants.${column}.specs`},
     {rows: content.specsExtra, path: 'specsExtra'},
     {rows: variant?.specsExtra, path: `variants.${column}.specsExtra`},
+    {
+      rows: second ? variant?.bySecond?.[second]?.specs : undefined,
+      path: `variants.${column}.bySecond.${second}.specs`,
+    },
   ];
 }
 
@@ -869,8 +906,9 @@ function specLayers(
 export function columnSpecs(
   content: Pick<ProductContent, 'specs' | 'specsExtra' | 'variants'>,
   column: string,
+  second?: string,
 ): Array<[string, string]> {
-  return specLayers(content, column).reduce(
+  return specLayers(content, column, second).reduce(
     (table, layer) => mergeSpecs(table, layer.rows),
     [] as Array<[string, string]>,
   );
@@ -881,8 +919,9 @@ function specPath(
   content: Pick<ProductContent, 'specs' | 'specsExtra' | 'variants'>,
   column: string,
   key: string,
+  second?: string,
 ): string | null {
-  for (const layer of specLayers(content, column).reverse()) {
+  for (const layer of specLayers(content, column, second).reverse()) {
     const i = layer.rows?.findIndex(([k, v]) => k === key && v !== null) ?? -1;
     if (i >= 0) return `${layer.path}.${i}`;
   }
@@ -898,9 +937,15 @@ export function isPlaceholderSpec(
   content: Pick<ProductContent, 'specs' | 'specsExtra' | 'variants' | 'placeholders'>,
   column: string,
   key: string,
+  second?: string,
 ): boolean {
-  const path = specPath(content, column, key);
+  const path = specPath(content, column, key, second);
   if (!path) return false;
+  if (path.includes('.bySecond.')) {
+    return second
+      ? (content.variants?.[column]?.bySecond?.[second]?.placeholders?.includes(key) ?? false)
+      : false;
+  }
   if (path.startsWith('variants.')) {
     return content.variants?.[column]?.placeholders?.includes(key) ?? false;
   }
@@ -914,13 +959,14 @@ export function isPlaceholderSpec(
  */
 export function specSheet(
   content: Pick<ProductContent, 'specs' | 'specsExtra' | 'inTheBox' | 'variants' | 'install' | 'placeholders'>,
+  second?: string,
 ): {columns: string[]; rows: SpecSheetRow[]} {
   const keys = Object.keys(content.variants ?? {});
   const columns = keys.length > 1 ? keys : [keys[0] ?? ''];
   const tables = columns.map((k) => {
     const variant = k ? content.variants?.[k] : undefined;
     const box = [...content.inTheBox, ...(variant?.inTheBox ?? [])];
-    const table = new Map(columnSpecs(content, k));
+    const table = new Map(columnSpecs(content, k, second));
     if (content.install) table.set('Install', content.install);
     return {table, box};
   });
@@ -944,10 +990,10 @@ export function specSheet(
         value === null
           ? null
           : terseSpecValue(label, value, tables[i].box) +
-            (isPlaceholderSpec(content, columns[i], key) ? ' (est.)' : ''),
+            (isPlaceholderSpec(content, columns[i], key, second) ? ' (est.)' : ''),
       );
       const paths = raw.map((value, i) =>
-        value === null ? null : specPath(content, columns[i], key),
+        value === null ? null : specPath(content, columns[i], key, second),
       );
       return {key, label, values, raw, paths};
     })

@@ -38,6 +38,7 @@ import {ProductSilhouette} from '~/components/ProductSilhouette';
 import {ProductForm} from '~/components/ProductForm';
 import {RelatedProducts} from '~/components/RelatedProducts';
 import {FirmwareSupport} from '~/components/FirmwareSupport';
+import {OptionChips} from '~/components/OptionChips';
 import {VariantLadder} from '~/components/VariantLadder';
 import {PlugDiagrams} from '~/components/PlugDiagrams';
 import {BoardArt} from '~/components/BoardArt';
@@ -73,6 +74,8 @@ import {
   WHAT_IS_THIS_ID,
   pageContent,
   specSheet,
+  columnSpecs,
+  isPlaceholderSpec,
   isConceptFor,
   isInternalSku,
   imagesAreRenders,
@@ -1032,8 +1035,38 @@ function ProductPage() {
   // own UID, so the chip links to the directory page for the active variant.
   const activeOshwaUid = activeVariant?.oshwaUid ?? content.oshwaUid;
   // The spec-sheet line under the name follows the selected version.
-  const subtitle = activeVariant?.subtitle ?? content.subtitle ?? null;
-  const sheet = specSheet(content);
+  // A second option axis (OpenMotor's Cells) narrows the tier further: its
+  // selected value's rows and subtitle win over the tier's.
+  const secondName = content.secondAxis?.trim().toLowerCase();
+  const secondValue = secondName
+    ? selectedVariant?.selectedOptions?.find((o) => o.name.trim().toLowerCase() === secondName)?.value
+    : undefined;
+  const secondKey = secondValue
+    ? Object.values(content.variants ?? {})
+        .flatMap((v) => Object.keys(v.bySecond ?? {}))
+        .find((k) => k.trim().toLowerCase() === secondValue.trim().toLowerCase())
+    : undefined;
+  const activeSecond = secondKey ? activeVariant?.bySecond?.[secondKey] : undefined;
+  const subtitle = activeSecond?.subtitle ?? activeVariant?.subtitle ?? content.subtitle ?? null;
+  const sheet = specSheet(content, secondKey);
+  const secondOption = secondName
+    ? productOptions.find((o) => o.name.trim().toLowerCase() === secondName)
+    : undefined;
+  // Under each second-axis pill: what that value changes for the selected
+  // tier, its KV ("est." while the value is a placeholder).
+  const secondHints =
+    content.secondAxis && activeVariant?.bySecond
+      ? {
+          [content.secondAxis]: Object.fromEntries(
+            Object.keys(activeVariant.bySecond).flatMap((k) => {
+              const kv = columnSpecs(content, activeTier, k).find(([name]) => name === 'KV')?.[1];
+              return kv
+                ? [[k, `${kv} KV${isPlaceholderSpec(content, activeTier, 'KV', k) ? ' est.' : ''}`]]
+                : [];
+            }),
+          ),
+        }
+      : undefined;
   const mergedBox = [...content.inTheBox, ...(activeVariant?.inTheBox ?? [])];
   // The tier's own box render wins over the product's.
   const boxImage = activeVariant?.inTheBoxImage ?? content.inTheBoxImage;
@@ -1883,6 +1916,8 @@ function ProductPage() {
         productOptions={productOptions}
         selectedVariant={selectedVariant}
         hideOptionNames={content.optionAxis ? [content.optionAxis] : undefined}
+        optionOrder={content.secondAxis && content.secondOrder ? {[content.secondAxis]: content.secondOrder} : undefined}
+        optionHints={secondHints}
         buyUrl={isBundle ? (bundleBuyUrl ?? '') : undefined}
         buyDisabled={isBundle ? !bundleAvailable : undefined}
         buyCtaLabel={
@@ -2974,7 +3009,13 @@ function ProductPage() {
           {subtitle ? (
             <p
               className="product-hero-sub"
-              {...prodEdit(activeVariant?.subtitle ? `variants.${activeTier}.subtitle` : 'subtitle')}
+              {...prodEdit(
+                activeSecond?.subtitle
+                  ? `variants.${activeTier}.bySecond.${secondKey}.subtitle`
+                  : activeVariant?.subtitle
+                    ? `variants.${activeTier}.subtitle`
+                    : 'subtitle',
+              )}
             >
               {subtitle}
             </p>
@@ -3051,7 +3092,18 @@ function ProductPage() {
                   }`}
                   style={railBox && !railMobile ? {right: railBox.right} : undefined}
                 >
-                  {railLadderPinned}
+                  {secondOption && !soon ? (
+                    <div className="buy-rail-chips">
+                      {railLadderPinned}
+                      <OptionChips
+                        option={secondOption}
+                        order={content.secondOrder}
+                        product={product.handle}
+                      />
+                    </div>
+                  ) : (
+                    railLadderPinned
+                  )}
                   {soon ? null : railBuyModule}
                 </div>,
                 document.body,

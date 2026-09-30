@@ -14,6 +14,8 @@ export function ProductForm({
   productOptions,
   selectedVariant,
   hideOptionNames,
+  optionOrder,
+  optionHints,
   buyUrl,
   buyDisabled,
   buyCtaLabel,
@@ -28,6 +30,12 @@ export function ProductForm({
    *  owns the line's primary axis), so the pill grid skips them and
    *  renders only the buy button for that axis. */
   hideOptionNames?: string[];
+  /** Display order of an option's values, by option name (case-insensitive).
+   *  Values it does not list keep the catalog order, after the listed ones. */
+  optionOrder?: Record<string, string[]>;
+  /** A short note under an option value's name ("3800 KV"), by option name
+   *  then value (case-insensitive). */
+  optionHints?: Record<string, Record<string, string>>;
   /** Hand-off link override. Bundle products render from their own page
    *  but hand off the *component* SKUs as separate lines, so the caller
    *  builds the multi-line link. Unset, the selected variant's own
@@ -92,7 +100,23 @@ export function ProductForm({
         if (hidden.has(option.name.trim().toLowerCase())) return null;
         // A later axis offers only what the earlier choice has (the battery
         // pad comes in one size that fits both frames).
-        const values = option.optionValues.filter((v) => v.exists);
+        const order = Object.entries(optionOrder ?? {})
+          .find(([name]) => name.trim().toLowerCase() === option.name.trim().toLowerCase())?.[1]
+          ?.map((v) => v.trim().toLowerCase());
+        const rank = (name: string) => {
+          const i = order?.indexOf(name.trim().toLowerCase()) ?? -1;
+          return i < 0 ? order?.length ?? 0 : i;
+        };
+        const hints = Object.entries(optionHints ?? {}).find(
+          ([name]) => name.trim().toLowerCase() === option.name.trim().toLowerCase(),
+        )?.[1];
+        const hintOf = (value: string) =>
+          Object.entries(hints ?? {}).find(
+            ([k]) => k.trim().toLowerCase() === value.trim().toLowerCase(),
+          )?.[1];
+        const values = option.optionValues
+          .filter((v) => v.exists)
+          .sort((a, b) => rank(a.name) - rank(b.name));
         if (!values.length) return null;
 
         return (
@@ -112,18 +136,19 @@ export function ProductForm({
                 // SEO: render as a button with a scripted navigation so
                 // bots do not index these as duplicated links.
                 const pending = pendingOption === option.name + name;
+                const hint = hintOf(name);
                 return (
                   <button
                     type="button"
                     className={`product-options-item${
                       exists && !selected ? ' link' : ''
-                    }${pending ? ' is-pending' : ''}`}
+                    }${hint ? ' has-hint' : ''}${pending ? ' is-pending' : ''}`}
                     key={option.name + name}
                     style={{
                       opacity: available ? 1 : 0.3,
                     }}
                     disabled={!exists}
-                    aria-label={name}
+                    aria-label={hint ? `${name}, ${hint}` : name}
                     aria-pressed={selected}
                     aria-busy={pending || undefined}
                     onClick={() => {
@@ -148,6 +173,7 @@ export function ProductForm({
                     }}
                   >
                     {name}
+                    {hint ? <span className="product-options-hint">{hint}</span> : null}
                   </button>
                 );
               })}
