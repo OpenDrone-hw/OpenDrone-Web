@@ -26,7 +26,7 @@
 
 ### Article 3: Offer and prices
 
-3.1. All prices on the website are in euro, inclusive of VAT, exclusive of shipping costs (unless stated otherwise). For deliveries to the United States, prices are in US dollars, as set out in Article 7ter.
+3.1. Prices are shown in the currency for the selected delivery destination. The final product price, applicable taxes and shipping charge are disclosed before payment. EU prices include VAT. Article 7ter applies to deliveries to the United States; Article 7quater applies to other destinations outside the EU.
 
 3.2. An offer is valid while stocks last. Manifest errors or mistakes in the offer do not bind Incutec BV.
 
@@ -74,13 +74,13 @@
 
 7.3. The risk of damage and/or loss of products lies with Incutec BV until the moment of delivery to the consumer.
 
-7.4. Consumer delivery is limited to approved EU destinations and, for preorders only, the United States (Article 7ter). The available carrier service and full delivery charge are shown before payment.
+7.4. Consumer delivery is available to the destinations offered at checkout. Deliveries outside the EU are for preorder batches only, under Article 7ter for the United States and Article 7quater for other destinations. Paid EU stock (Batch 1) is delivered within the EU only. The available delivery service and full delivery charge are shown before payment.
 
 ### Article 7bis: Pre-orders
 
 7bis.1. Some products are sold as pre-orders. They are disclosed as such, with their ship date, on the product page, at checkout and on the order confirmation. The consumer pays the full price and the shipping costs shown at checkout when the order is placed.
 
-7bis.2. Pre-order products are produced in batches. The offer before payment and the order confirmation state the batch, any funding target and deadline, the ship-by date and the delivery deadline for the order. For the March 2027 batch, provided the funding target is reached by its deadline, items ship by 31 March 2027 and are delivered by 15 April 2027 in the EU or 30 April 2027 in the United States. Paid Batch 1 orders ship on the date stated in the offer and are delivered in the EU by 30 November 2026. Delivery means receipt of the goods by the consumer. The consumer and Incutec BV agree that the delivery deadline disclosed before payment and in the order confirmation is the delivery period under Art. VI.43 WER, instead of the 30-day default in Article 7.1. For a combined order under Article 7bis.5, the latest batch's delivery deadline applies only if it was disclosed and agreed as the order's delivery deadline before payment. The target and deadline stated at checkout do not change for that order. This clarification does not extend any previously agreed ship-by or delivery deadline or limit the cancellation rights of consumers who have already ordered.
+7bis.2. Pre-order products are produced in batches. The offer before payment and the order confirmation state the batch, any funding target and deadline, the ship-by date and the delivery deadline for the order. For the March 2027 batch, provided the funding target is reached by its deadline, items ship by 31 March 2027 and are delivered by 15 April 2027 in the EU or 30 April 2027 in the United States. For other destinations outside the EU and the United States, that funded batch ships by 31 March 2027 and is delivered by 30 April 2027 (Article 7quater). Paid Batch 1 orders ship on the date stated in the offer and are delivered in the EU by 30 November 2026. Delivery means receipt of the goods by the consumer. The consumer and Incutec BV agree that the delivery deadline disclosed before payment and in the order confirmation is the delivery period under Art. VI.43 WER, instead of the 30-day default in Article 7.1. For a combined order under Article 7bis.5, the latest batch's delivery deadline applies only if it was disclosed and agreed as the order's delivery deadline before payment. The target and deadline stated at checkout do not change for that order. This clarification does not extend any previously agreed ship-by or delivery deadline or limit the cancellation rights of consumers who have already ordered.
 
 7bis.3. If a ship date moves, Incutec BV informs the consumer by email and states the new date. This is without prejudice to the consumer's rights under Art. VI.43 §2 WER. A moved ship date does not extend the ship-by date that applies to the order, except where the consumer keeps the order for a new ship date under Article 7bis.3bis. If Incutec BV has not shipped the item by that ship-by date, the consumer may terminate the contract for that item immediately, with a full refund within 14 days.
 
@@ -111,6 +111,18 @@
 7ter.5. **FCC equipment authorization and import clearance.** Some products, such as flight controllers and receivers, are equipment subject to the rules of the Federal Communications Commission (FCC). Delivery of those products to the United States depends on FCC equipment authorization and US import clearance. If we cannot deliver an item to you for that reason, we refund that item in full. The order is therefore conditional on that authorization (47 CFR 2.803(c)(2)). FCC rules do not govern this contract or consumer protection; the consumer's rights are those in these terms and in applicable law.
 
 7ter.6. **Import duties and sales tax.** Prices include import duties, and the consumer owes no duty, customs brokerage fee or import tax on delivery. Incutec BV does not collect sales tax on these orders unless the law requires it. If it does, the tax is shown before payment.
+
+### Article 7quater: Consumers with a delivery address outside the EU and the United States
+
+7quater.1. **Scope.** This article applies to consumers with a delivery address outside the EU and the United States in a destination offered at checkout. The other articles of these terms also apply. Mandatory consumer protections in the place where the consumer lives remain applicable and cannot be waived by these terms.
+
+7quater.2. **Preorder batch and delivery.** Only preorder batches are offered for these destinations. Paid EU stock (Batch 1) is not allocated to them. The product offer before payment and the order confirmation identify the batch, funding conditions, ship-by date and delivery deadline for the order. If the funding target for the March 2027 batch is reached by its stated deadline, the goods ship by 31 March 2027 and are delivered by 30 April 2027. Article 7bis applies to missed targets, delays, withdrawal, refunds and combined orders. These dates do not extend a deadline already agreed for an earlier order.
+
+7quater.3. **Prices and taxes collected at sale.** Prices use the currency for the selected delivery destination. The final price, shipping charge and taxes collected by Incutec BV are disclosed before payment. Where VAT, GST or another sales tax must be accounted for at the time of sale or payment, Incutec BV accounts for it as required by law. It is included in the checkout total and itemised where the law requires. An order confirmation is not a VAT invoice unless it meets the applicable legal requirements.
+
+7quater.4. **Import charges.** Unless expressly collected before payment, import duties, import VAT or GST, customs-clearance charges and carrier administration fees are payable by the recipient and are not included in the product price or shipping charge. Their amount depends on the destination's rules, the consignment and the carrier. A tax already collected for the same liability must not be charged twice. If the carrier charges an amount already collected at checkout, contact Incutec BV with the assessment so that the duplicate charge can be corrected or refunded. The EU and US import-charge promises in Articles 7bis.7 and 7ter.6 remain unchanged.
+
+7quater.5. **Lawful delivery and refunds.** Offering products, accepting orders and delivery require compliance with the applicable product and import rules. A preorder does not replace a required authorization or state that a radio product already holds every required authorization. If Incutec BV cannot lawfully deliver an item, it cancels that item and refunds all amounts paid for it within 14 days. If the whole order is cancelled, all payments, including the shipping charge, are refunded. Any mandatory rule giving the consumer greater protection remains applicable.
 
 ### Article 8: Payment
 
@@ -188,7 +200,7 @@
 
 ### Article 15: Amendments
 
-15.1. The version of these terms supplied and accepted before payment governs the order. Incutec BV may publish a new version for new orders from the effective date stated in that version. A later version does not change the terms, prices, ship-by dates or delivery deadlines already agreed for an existing order. Mandatory consumer rights apply from their statutory effective dates and are not postponed by publication of a new version. Version 2.6 applies to new orders from its publication on 30 September 2026; earlier orders retain their accepted terms and all mandatory rights. The delivery and refund clarifications in Articles 7bis.2, 7bis.7 and 7ter.4 do not withdraw any earlier promise or reduce a consumer's rights.
+15.1. The version of these terms supplied and accepted before payment governs the order. Incutec BV may publish a new version for new orders from the effective date stated in that version. A later version does not change the terms, prices, ship-by dates or delivery deadlines already agreed for an existing order. Mandatory consumer rights apply from their statutory effective dates and are not postponed by publication of a new version. Version 2.7 applies to new orders from its publication on 30 September 2026; earlier orders retain their accepted terms and all mandatory rights. The delivery and refund clarifications in Articles 7bis.2, 7bis.7 and 7ter.4 do not withdraw any earlier promise or reduce a consumer's rights.
 
 ### Article 16: Professional customers (B2B)
 
@@ -224,4 +236,4 @@
 
 ---
 
-*Version: 2.6, published 2026-09-30; applies to new orders from publication. Earlier orders retain their accepted terms.*
+*Version: 2.7, published 2026-09-30; applies to new orders from publication. Earlier orders retain their accepted terms.*

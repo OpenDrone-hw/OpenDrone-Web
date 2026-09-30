@@ -118,11 +118,10 @@ flowchart LR
 into the catalog shape in `app/lib/catalog.ts`. Every Shopify SKU needs an
 entry in `SHOPIFY_PREVIEW_POLICY_JSON` (`saleMode` `in_stock`, `preorder` or
 `sold_out`, plus `shipPromise`); a missing entry, a non-EUR price or missing
-VAT confirmation fails the catalog closed. The one exception is the US market
-read (`@inContext(country: US)`), made only for a US buyer while US sales are
-open: it must be USD, and its prices are laid over the EUR catalog
-(`withMarketPrices` in `app/lib/us-sales.ts`). Shopify `availableForSale` can deny
-a SKU but never proves stock. Customer-account links stay hidden unless an
+VAT confirmation fails the catalog closed. Country-context reads use
+Shopify's destination prices and currency after this base check. The US keeps its USD ladder; other international destinations
+copy live country prices without inferring later price steps. Missing prices
+close the affected destination variants. Customer-account links stay hidden unless an
 exact Shopify account URL is configured.
 
 **Checkout.** Checkout is open only when `SHOPIFY_CHECKOUT_WRITE_ENABLED=1` and
@@ -160,11 +159,12 @@ selling-plan preorders.
 **Cart country.** A new cart gets the visitor's country (`CF-IPCountry`) as
 its Shopify buyer country. `POST /api/shopify/cart-country` (form field
 `country`, same-origin, open only when checkout is) sets another country on
-the session cart. Consumers buy direct only in an EU country marked
-`saleApproved` in `content/registrations.json`
-(`app/lib/shipping-rates.ts`); other EU countries show as not open, non-EU
-visitors see "EU consumer orders only" with links to `/wholesale` and the
-newsletter, and blocked countries get no checkout. The final address is
+the session cart. EU consumer destinations retain the `saleApproved` rule in
+`content/registrations.json`. The US retains its sales gate and flat USD rate.
+Other valid countries outside the blocked and uninhabited sets accept
+international preorders, with shipping charges confirmed at Shopify checkout.
+The destination cookie, buyer country and campaign promises move together.
+The final address is
 restricted by Shopify's markets and shipping profiles, not by this gate.
 
 **Product lines.** OpenESC 20x20 / 30x30 and the four OpenRX variants are one
@@ -732,7 +732,7 @@ An open shop also depends on Shopify settings this repository cannot check:
 |---|---|
 | Payments active, automatic capture | a test order is paid, captured and refunded |
 | Admin API token scopes | `read_orders`, `read_all_orders` (campaigns over 60 days), `write_orders`, `write_products`, `write_merchant_managed_fulfillment_orders` |
-| Markets and shipping profiles | only approved EU addresses can check out (plus the US once US sales open) |
+| Markets and shipping profiles | delivery countries need active markets and accepted shipping rates |
 | Redirect theme published | the Shopify-hosted storefront forwards to opendrone.be |
 | Online Store password page off | checkout opens for customers, not only staff |
 
@@ -804,11 +804,26 @@ Shopify settings the US needs (the US market, its USD price list and
 `INCLUDES_TAXES_IN_PRICE` exist): a US shipping zone at the `us-sales.json`
 rate, and HS codes and country of origin on every variant.
 
+### International preorders
+
+Other permitted destinations use allocation region `INT`. EU-only paid stock
+stays in the EU; international products and accessories use the March batch,
+including the existing `usStock` rule for otherwise unlisted accessories.
+The selected country supplies Shopify's catalog prices, cart market and currency.
+A null shipping preview means the charge is confirmed at checkout, never free.
+Import charges outside the EU and US are not included by the storefront promise.
+`deliveryByINT` is a separate arrival deadline and never falls back to EU dates.
+
+An address changed inside native checkout is checked again against the actual
+paid order. Missing or incompatible region promises stay held with
+`international-review` and/or `promise-mismatch`; batch release cannot clear
+those tags automatically. An earlier accepted promise is not silently extended.
+
 ## Run a preorder campaign
 
 | Source | Owns |
 |---|---|
-| `content/preorders.json` | `countFrom`, `endsOn`, `shipsBy`, `priceTiers`, `pendingShips`, per-SKU `batches` (`units`, `paid`, `ships`, `deliveryBy`, `deliveryByUS`, `regions`) and `shipsWith` (`sku`, `batch`, `stock`, `after`) |
+| `content/preorders.json` | `countFrom`, `endsOn`, `shipsBy`, `priceTiers`, `pendingShips`, per-SKU `batches` (`units`, `paid`, `ships`, `deliveryBy`, `deliveryByUS`, `deliveryByINT`, `regions`) and `shipsWith` (`sku`, `batch`, `stock`, `after`) |
 | `content/registrations.json` | producer numbers and explicit `saleApproved` per EU destination |
 | `content/us-sales.json` | the US flat shipping rate in USD (`null` keeps the US closed) and `priceUpliftPct`, the US price uplift (`npm run us:prices`) |
 | Shopify | compare-at (retail) price, current price, catalog identity, orders, payments |
@@ -833,14 +848,14 @@ target: once its `units` are ordered, every later unit ships with it, with
 no new target and no cap. A reached funding target: place the supplier
 order, then set that batch's `ships`. An accessory with `stock` sells that
 many units with its dated `batch`, then ships with the lead's `after`
-batch; set `stock` from InvenTree stock on hand. The storefront states ship dates only: no surface shows a delivery date, and
-`deliveryBy` and `deliveryByUS` only order the lines of a mixed cart and feed
-the email facts. A batch with `regions` (`["EU"]` for paid stock in Belgium) takes
+batch; set `stock` from InvenTree stock on hand. The storefront keeps dispatch promises separate from arrival deadlines.
+`deliveryBy`, `deliveryByUS` and `deliveryByINT` supply the visible `Delivery by`
+checkout property, cart and confirmation, and order the lines of a combined cart. A batch with `regions` (`["EU"]` for paid stock in Belgium) takes
 only units shipping there: each paid unit takes the first batch with room
-that serves its order's shipping region (US, else EU), so a US unit skips an
+that serves its order's shipping region (EU, US or INT), so a non-EU unit skips an
 EU-only batch. Price steps and funding targets count every region. The dates in
 the ship promises, terms and product notes derive from `endsOn`, `shipsBy`,
-`deliveryBy` and `deliveryByUS` in this file; `app/lib/preorder-campaign.test.ts`
+`deliveryBy`, `deliveryByUS` and `deliveryByINT` in this file; `app/lib/preorder-campaign.test.ts`
 fails when the committed copy and legal text drift from it. A producer
 number alone does not open a destination; `saleApproved` does, after its
 evidence is reviewed. The strategy behind a campaign lives in

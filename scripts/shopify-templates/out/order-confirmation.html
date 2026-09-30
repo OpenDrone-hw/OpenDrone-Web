@@ -65,6 +65,15 @@
               </td>
             </tr>
 
+{% assign eu_countries = 'AT,BE,BG,CY,CZ,DE,DK,EE,ES,FI,FR,GR,HR,HU,IE,IT,LT,LU,LV,MT,NL,PL,PT,RO,SE,SI,SK' | split: ',' %}
+{% assign delivery_region = 'INT' %}
+{% if shipping_address == blank or eu_countries contains shipping_address.country_code %}{% assign delivery_region = 'EU' %}{% elsif shipping_address.country_code == 'US' %}{% assign delivery_region = 'US' %}{% endif %}
+{% assign destination_needs_review = false %}
+{% for line in line_items %}
+{% assign recorded_region = 'EU' %}{% assign recorded_preorder = false %}
+{% for p in line.properties %}{% if p.first == '_ship_region' and p.last != blank %}{% assign recorded_region = p.last %}{% elsif p.first == 'Preorder' and p.last != blank %}{% assign recorded_preorder = true %}{% endif %}{% endfor %}
+{% if recorded_preorder and recorded_region != delivery_region %}{% assign destination_needs_review = true %}{% endif %}
+{% endfor %}
 {% comment %}
   Preorder lines carry the ship promise as the line item property
   "Preorder" (PREORDER_ATTRIBUTE in app/lib/shopify-storefront.ts). The box
@@ -82,6 +91,20 @@
                   <tr>
                     <td style="padding: 14px 18px;">
                       <p style="margin: 0 0 0px 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #c5c5c5;"><strong style="color: #ffb700;">Preorder, paid in full.</strong> {% if has_target %}Ships by 31 Mar 2027 if the target is reached by 15 Dec 2026; if not, you choose a full refund or the new date.{% else %}Each item shows its ship date.{% endif %} <a href="https://opendrone.be/preorder" style="color: #ffb700;">How preorders work</a></p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+{% endif %}
+{% if destination_needs_review %}
+            <tr>
+              <td class="od-px" style="padding: 0 32px 20px 32px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0a0a0a" style="background-color: #0a0a0a; border: 1px solid #ffb700;">
+                  <tr>
+                    <td style="padding: 14px 18px;">
+                      <p style="margin: 0 0 0px 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #c5c5c5;"><strong style="color: #ffb700;">Delivery address review.</strong> Your delivery country changed after these item dates were recorded. The November batch ships only to the EU. We will contact you to confirm a delivery arrangement or offer a full refund. Your recorded dates below remain part of your order; this email does not extend them.</p>
                     </td>
                   </tr>
                 </table>
@@ -118,12 +141,14 @@
                         {{ line.product.title | default: line.title | escape }}{% if line.variant.title != 'Default Title' %} <span style="font-weight: 400; color: #a0a0a0;">&middot; {{ line.variant.title | escape }}</span>{% endif %}
                       </p>
                       {% for p in line.properties %}{% if p.first == 'Preorder' and p.last != blank %}
-                      {% assign note = p.last | split: ' if the target' | first %}
-                      {% if note contains 'with the rest' %}{% assign note = note | split: ' by ' | last | prepend: 'ships by ' %}{% endif %}
+                      {% assign note = p.last %}
                       {% assign note = note | replace: 'March', 'Mar' | replace: 'December', 'Dec' %}
                       <p style="margin: 0 0 2px 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; color: #ffb700;">
-                        {{ note | slice: 0 | upcase | escape }}{{ note | slice: 1, 100 | escape }}
+                        {{ note | slice: 0 | upcase | escape }}{{ note | slice: 1, 1000 | escape }}
                       </p>
+                      {% endif %}{% endfor %}
+                      {% for p in line.properties %}{% if p.first == 'Delivery by' and p.last != blank %}
+                      <p style="margin: 0 0 2px 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; color: #ffb700;">Delivery by {{ p.last | escape }}</p>
                       {% endif %}{% endfor %}
                       <p style="margin: 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; color: #a0a0a0;">
                         Qty {{ line.quantity }}
@@ -157,9 +182,9 @@
                   </tr>
                   {% endif %}
                   {% assign vat_total = tax_price | default: 0 %}
-                  {% if vat_total > 0 %}
+                  {% if vat_total > 0 and shipping_address.country_code != 'GB' %}
                   <tr>
-                    <td style="padding: 2px 0; color: #a0a0a0;">Includes VAT</td>
+                    <td style="padding: 2px 0; color: #a0a0a0;">{% if eu_countries contains shipping_address.country_code %}Includes VAT{% else %}Tax recorded at checkout{% endif %}</td>
                     <td align="right" style="padding: 2px 0; color: #c5c5c5;">{{ vat_total | money }}</td>
                   </tr>
                   {% endif %}
@@ -170,13 +195,12 @@
                 </table>
               </td>
             </tr>
-{% assign eu_countries = 'AT,BE,BG,CY,CZ,DE,DK,EE,ES,FI,FR,GR,HR,HU,IE,IT,LT,LU,LV,MT,NL,PL,PT,RO,SE,SI,SK' | split: ',' %}
 {% assign has_receiver = false %}
 {% for line in line_items %}{% if line.sku contains 'OPENRX' %}{% assign has_receiver = true %}{% endif %}{% endfor %}
 {% comment %}
   Duties and delivery notes. US: duties are included in the price. Other
-  non-EU countries: no import duties are collected at checkout, so the
-  carrier may ask for them. The US receiver line is the FCC 47 CFR 2.803
+  non-EU countries: the recipient pays import charges unless prepaid.
+  Sale VAT/GST is separate from border charges. The US receiver line is the FCC 47 CFR 2.803
   conditional-sale disclosure for RF products.
 {% endcomment %}
 {% if shipping_address and shipping_address.country_code != blank %}{% unless eu_countries contains shipping_address.country_code %}
@@ -211,7 +235,7 @@
             <tr>
               <td class="od-px" style="padding: 0 32px 20px 32px;">
                 <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #a0a0a0;">
-                  <strong style="color: #c5c5c5;">Import duties.</strong> No import duties or taxes were charged, so the carrier may ask you to pay them, plus a handling fee, on delivery.
+                  <strong style="color: #c5c5c5;">Import charges.</strong> You pay import duties, import VAT/GST and carrier clearance fees on arrival unless they were explicitly collected before payment. Tax in your order total does not mean all import charges are prepaid. You will not be asked to pay the same charge twice.
                 </p>
               </td>
             </tr>
@@ -294,7 +318,7 @@
 <p style="margin: 0 0 10px;">2.1. These terms apply to every offer made by Incutec BV and to every distance contract concluded between Incutec BV and the consumer/customer.</p>
 <p style="margin: 0 0 10px;">2.2. Before the distance contract is concluded, the text of these general terms and conditions is made available to the consumer in a manner that allows the consumer to store it on a durable medium.</p>
 <h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 3: Offer and prices</h3>
-<p style="margin: 0 0 10px;">3.1. All prices on the website are in euro, inclusive of VAT, exclusive of shipping costs (unless stated otherwise). For deliveries to the United States, prices are in US dollars, as set out in Article 7ter.</p>
+<p style="margin: 0 0 10px;">3.1. Prices are shown in the currency for the selected delivery destination. The final product price, applicable taxes and shipping charge are disclosed before payment. EU prices include VAT. Article 7ter applies to deliveries to the United States; Article 7quater applies to other destinations outside the EU.</p>
 <p style="margin: 0 0 10px;">3.2. An offer is valid while stocks last. Manifest errors or mistakes in the offer do not bind Incutec BV.</p>
 <p style="margin: 0 0 10px;">3.3. Incutec BV reserves the right to change prices. Orders in progress are not affected by price changes.</p>
 <h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 4: Contract</h3>
@@ -321,10 +345,10 @@
 <p style="margin: 0 0 10px;">7.1. Incutec BV delivers orders within the delivery time stated on the website. Final delivery deadline: <strong>30 days</strong> after the order, unless otherwise agreed.</p>
 <p style="margin: 0 0 10px;">7.2. If delivery is delayed, the consumer is informed as soon as possible.</p>
 <p style="margin: 0 0 10px;">7.3. The risk of damage and/or loss of products lies with Incutec BV until the moment of delivery to the consumer.</p>
-<p style="margin: 0 0 10px;">7.4. Consumer delivery is limited to approved EU destinations and, for preorders only, the United States (Article 7ter). The available carrier service and full delivery charge are shown before payment.</p>
+<p style="margin: 0 0 10px;">7.4. Consumer delivery is available to the destinations offered at checkout. Deliveries outside the EU are for preorder batches only, under Article 7ter for the United States and Article 7quater for other destinations. Paid EU stock (Batch 1) is delivered within the EU only. The available delivery service and full delivery charge are shown before payment.</p>
 <h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 7bis: Pre-orders</h3>
 <p style="margin: 0 0 10px;">7bis.1. Some products are sold as pre-orders. They are disclosed as such, with their ship date, on the product page, at checkout and on the order confirmation. The consumer pays the full price and the shipping costs shown at checkout when the order is placed.</p>
-<p style="margin: 0 0 10px;">7bis.2. Pre-order products are produced in batches. The offer before payment and the order confirmation state the batch, any funding target and deadline, the ship-by date and the delivery deadline for the order. For the March 2027 batch, provided the funding target is reached by its deadline, items ship by 31 March 2027 and are delivered by 15 April 2027 in the EU or 30 April 2027 in the United States. Paid Batch 1 orders ship on the date stated in the offer and are delivered in the EU by 30 November 2026. Delivery means receipt of the goods by the consumer. The consumer and Incutec BV agree that the delivery deadline disclosed before payment and in the order confirmation is the delivery period under Art. VI.43 WER, instead of the 30-day default in Article 7.1. For a combined order under Article 7bis.5, the latest batch&#39;s delivery deadline applies only if it was disclosed and agreed as the order&#39;s delivery deadline before payment. The target and deadline stated at checkout do not change for that order. This clarification does not extend any previously agreed ship-by or delivery deadline or limit the cancellation rights of consumers who have already ordered.</p>
+<p style="margin: 0 0 10px;">7bis.2. Pre-order products are produced in batches. The offer before payment and the order confirmation state the batch, any funding target and deadline, the ship-by date and the delivery deadline for the order. For the March 2027 batch, provided the funding target is reached by its deadline, items ship by 31 March 2027 and are delivered by 15 April 2027 in the EU or 30 April 2027 in the United States. For other destinations outside the EU and the United States, that funded batch ships by 31 March 2027 and is delivered by 30 April 2027 (Article 7quater). Paid Batch 1 orders ship on the date stated in the offer and are delivered in the EU by 30 November 2026. Delivery means receipt of the goods by the consumer. The consumer and Incutec BV agree that the delivery deadline disclosed before payment and in the order confirmation is the delivery period under Art. VI.43 WER, instead of the 30-day default in Article 7.1. For a combined order under Article 7bis.5, the latest batch&#39;s delivery deadline applies only if it was disclosed and agreed as the order&#39;s delivery deadline before payment. The target and deadline stated at checkout do not change for that order. This clarification does not extend any previously agreed ship-by or delivery deadline or limit the cancellation rights of consumers who have already ordered.</p>
 <p style="margin: 0 0 10px;">7bis.3. If a ship date moves, Incutec BV informs the consumer by email and states the new date. This is without prejudice to the consumer&#39;s rights under Art. VI.43 §2 WER. A moved ship date does not extend the ship-by date that applies to the order, except where the consumer keeps the order for a new ship date under Article 7bis.3bis. If Incutec BV has not shipped the item by that ship-by date, the consumer may terminate the contract for that item immediately, with a full refund within 14 days.</p>
 <p style="margin: 0 0 10px;">7bis.3bis. If a funding target is not reached by its deadline, Incutec BV informs every consumer who ordered that product by email. The consumer then chooses either to terminate the contract for that item, with a refund of all amounts paid for it within 14 days, or to keep the order for the new ship date stated in that email. If the consumer does not reply within 30 days of that email, the contract for that item is terminated and Incutec BV refunds all amounts paid for it within 14 days of the end of that period. A consumer who keeps the order may still withdraw at any time until delivery under Article 7bis.4, with a refund of all payments. If the refund leaves no item in the order still to ship, the shipping costs paid for the order are refunded as well.</p>
 <p style="margin: 0 0 10px;">7bis.4. The right of withdrawal under Article 5 applies to pre-orders. The consumer may also exercise it before delivery, through the online form at opendrone.be/herroepingsrecht or as set out in Article 5.4. If the consumer withdraws before delivery, Incutec BV refunds all payments within 14 days of receiving the withdrawal.</p>
@@ -340,6 +364,12 @@
 <p style="margin: 0 0 10px;">7ter.4. <strong>Shipping dates and delays (16 CFR Part 435).</strong> Incutec BV ships by the date stated when the consumer orders. If Incutec BV cannot ship by that date, it notifies the consumer as soon as it becomes aware of the delay and no later than that date, states a revised shipping date, and offers the choice to consent to the delay or to cancel the order for a full refund. If no definite revised shipping date can reasonably be given, the notice explains the reason for the delay and the continuing right to cancel before shipment. Incutec BV issues the required refund within 7 working days after the consumer&#39;s right to that refund arises. For credit or debit card payments, it sends refund instructions to the payment provider and confirms the refund amount and the date of those instructions to the consumer within that period. If the delay goes beyond 30 days after the stated date and the consumer has not consented to it, the unshipped order is cancelled automatically and refunded in the same way. If Incutec BV cannot meet a previously agreed revised shipping date, it sends a renewed delay notice as soon as it becomes aware of that and no later than that date. Without the consumer&#39;s express consent to a further delay by that date, the unshipped order is cancelled and refunded in the same way.</p>
 <p style="margin: 0 0 10px;">7ter.5. <strong>FCC equipment authorization and import clearance.</strong> Some products, such as flight controllers and receivers, are equipment subject to the rules of the Federal Communications Commission (FCC). Delivery of those products to the United States depends on FCC equipment authorization and US import clearance. If we cannot deliver an item to you for that reason, we refund that item in full. The order is therefore conditional on that authorization (47 CFR 2.803(c)(2)). FCC rules do not govern this contract or consumer protection; the consumer&#39;s rights are those in these terms and in applicable law.</p>
 <p style="margin: 0 0 10px;">7ter.6. <strong>Import duties and sales tax.</strong> Prices include import duties, and the consumer owes no duty, customs brokerage fee or import tax on delivery. Incutec BV does not collect sales tax on these orders unless the law requires it. If it does, the tax is shown before payment.</p>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 7quater: Consumers with a delivery address outside the EU and the United States</h3>
+<p style="margin: 0 0 10px;">7quater.1. <strong>Scope.</strong> This article applies to consumers with a delivery address outside the EU and the United States in a destination offered at checkout. The other articles of these terms also apply. Mandatory consumer protections in the place where the consumer lives remain applicable and cannot be waived by these terms.</p>
+<p style="margin: 0 0 10px;">7quater.2. <strong>Preorder batch and delivery.</strong> Only preorder batches are offered for these destinations. Paid EU stock (Batch 1) is not allocated to them. The product offer before payment and the order confirmation identify the batch, funding conditions, ship-by date and delivery deadline for the order. If the funding target for the March 2027 batch is reached by its stated deadline, the goods ship by 31 March 2027 and are delivered by 30 April 2027. Article 7bis applies to missed targets, delays, withdrawal, refunds and combined orders. These dates do not extend a deadline already agreed for an earlier order.</p>
+<p style="margin: 0 0 10px;">7quater.3. <strong>Prices and taxes collected at sale.</strong> Prices use the currency for the selected delivery destination. The final price, shipping charge and taxes collected by Incutec BV are disclosed before payment. Where VAT, GST or another sales tax must be accounted for at the time of sale or payment, Incutec BV accounts for it as required by law. It is included in the checkout total and itemised where the law requires. An order confirmation is not a VAT invoice unless it meets the applicable legal requirements.</p>
+<p style="margin: 0 0 10px;">7quater.4. <strong>Import charges.</strong> Unless expressly collected before payment, import duties, import VAT or GST, customs-clearance charges and carrier administration fees are payable by the recipient and are not included in the product price or shipping charge. Their amount depends on the destination&#39;s rules, the consignment and the carrier. A tax already collected for the same liability must not be charged twice. If the carrier charges an amount already collected at checkout, contact Incutec BV with the assessment so that the duplicate charge can be corrected or refunded. The EU and US import-charge promises in Articles 7bis.7 and 7ter.6 remain unchanged.</p>
+<p style="margin: 0 0 10px;">7quater.5. <strong>Lawful delivery and refunds.</strong> Offering products, accepting orders and delivery require compliance with the applicable product and import rules. A preorder does not replace a required authorization or state that a radio product already holds every required authorization. If Incutec BV cannot lawfully deliver an item, it cancels that item and refunds all amounts paid for it within 14 days. If the whole order is cancelled, all payments, including the shipping charge, are refunded. Any mandatory rule giving the consumer greater protection remains applicable.</p>
 <h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 8: Payment</h3>
 <p style="margin: 0 0 10px;">8.1. Payment is made by one of the payment methods shown at checkout before the order is placed. Payment is due in full when the order is placed.</p>
 <p style="margin: 0 0 10px;">8.2. The consumer has the duty to notify Incutec BV without delay of any inaccuracies in the payment details provided.</p>
@@ -382,7 +412,7 @@
 <p style="margin: 0 0 10px;">14.2. The consumer may file a complaint with the Consumer Mediation Service / <em>Consumentenombudsdienst</em> (<a href="https://consumentenombudsdienst.be" style="color: #ffb700; text-decoration: underline; overflow-wrap: anywhere;">https://consumentenombudsdienst.be</a>).</p>
 <p style="margin: 0 0 10px;">14.3. In disputes with consumers, the court of the consumer&#39;s place of residence has jurisdiction (Art. 17–18 of Regulation (EU) 1215/2012, Brussels I bis; Art. 624 of the Belgian Judicial Code). In disputes with businesses, the Leuven Enterprise Court has jurisdiction.</p>
 <h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 15: Amendments</h3>
-<p style="margin: 0 0 10px;">15.1. The version of these terms supplied and accepted before payment governs the order. Incutec BV may publish a new version for new orders from the effective date stated in that version. A later version does not change the terms, prices, ship-by dates or delivery deadlines already agreed for an existing order. Mandatory consumer rights apply from their statutory effective dates and are not postponed by publication of a new version. Version 2.6 applies to new orders from its publication on 30 September 2026; earlier orders retain their accepted terms and all mandatory rights. The delivery and refund clarifications in Articles 7bis.2, 7bis.7 and 7ter.4 do not withdraw any earlier promise or reduce a consumer&#39;s rights.</p>
+<p style="margin: 0 0 10px;">15.1. The version of these terms supplied and accepted before payment governs the order. Incutec BV may publish a new version for new orders from the effective date stated in that version. A later version does not change the terms, prices, ship-by dates or delivery deadlines already agreed for an existing order. Mandatory consumer rights apply from their statutory effective dates and are not postponed by publication of a new version. Version 2.7 applies to new orders from its publication on 30 September 2026; earlier orders retain their accepted terms and all mandatory rights. The delivery and refund clarifications in Articles 7bis.2, 7bis.7 and 7ter.4 do not withdraw any earlier promise or reduce a consumer&#39;s rights.</p>
 <h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 16: Professional customers (B2B)</h3>
 <p style="margin: 0 0 10px;">16.1. For transactions with businesses (professional customers acting within the scope of their professional activity), Articles 5, 6, 9 and 13 of these terms do not apply. In that case the provisions of the Civil Code apply. A customer who provides a company number or VAT number when ordering is deemed to act as a business.</p>
 <p style="margin: 0 0 10px;">16.2. For B2B transactions the Leuven Enterprise Court has exclusive jurisdiction.</p>
@@ -400,7 +430,7 @@
 <h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 20: Severability</h3>
 <p style="margin: 0 0 10px;">20.1. If any provision of these terms proves wholly or partly void or unenforceable, the remaining provisions remain in full force. Between businesses, the void provision is replaced by a valid provision that approximates the original intent as closely as possible.</p>
 <hr style="border: 0; border-top: 1px solid #1a241a; margin: 16px 0;" />
-<p style="margin: 0 0 10px;"><em>Version: 2.6, published 2026-09-30; applies to new orders from publication. Earlier orders retain their accepted terms.</em></p>
+<p style="margin: 0 0 10px;"><em>Version: 2.7, published 2026-09-30; applies to new orders from publication. Earlier orders retain their accepted terms.</em></p>
 
 <h1 style="margin: 20px 0 8px; font-size: 18px; line-height: 1.4; color: #e5e5e5;">Model Withdrawal Form</h1>
 <hr style="border: 0; border-top: 1px solid #1a241a; margin: 16px 0;" />

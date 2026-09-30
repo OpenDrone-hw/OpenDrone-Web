@@ -46,8 +46,7 @@ describe('US sales gate', () => {
     assert.deepEqual(shippingQuote('US', undefined, 9.95), {country: 'US', kind: 'direct', zone: 'us', rate: 9.95, currency: 'USD'});
     assert.equal(notSoldDirect('US'), 'shops');
     assert.equal(notSoldDirect('US', 9.95), null);
-    // Other non-EU countries stay on the shops either way.
-    assert.deepEqual(shippingQuote('CA', undefined, 9.95), {country: 'CA', kind: 'shops'});
+    assert.deepEqual(shippingQuote('CA', undefined, 9.95), {country: 'CA', kind: 'direct', zone:'international', rate:null});
     assert.equal(priceNote('US'), 'shops');
     assert.equal(priceNote('US', true), 'us');
     assert.equal(priceNote('BE', true), 'vat');
@@ -287,16 +286,15 @@ describe('US cart with the gate on', () => {
   });
 
   it('keeps the US closed when the rate is null, even with the gate on', async () => {
-    // The add behaves as on main: no US cart, no US line, and checkout refuses.
-    let added: CartLineInput[] = [];
-    let country: string | undefined = 'unset';
-    await handleShopifyCartAction(post({sku: 'OPENFC-LITE-2020', qty: '1'}, 'US'), ENV, {
+    let created = false;
+    const addError = await handleShopifyCartAction(post({sku: 'OPENFC-LITE-2020', qty: '1'}, 'US'), ENV, {
       usRate: null,
       fetchCatalog: async () => usCatalog(),
-      createCart: async (lines, code) => { added = lines; country = code; return emptyCart('EUR'); },
-    });
-    assert.equal(country, undefined);
-    assert.ok(!(added[0].attributes ?? []).some((a) => a.key === '_ship_region'));
+      createCart: async () => { created = true; return emptyCart('EUR'); },
+    }).then(() => null, (e:unknown) => e);
+    assert.ok(addError instanceof Response);
+    assert.equal(addError.status,403);
+    assert.equal(created,false);
     const error = await handleShopifyCartAction(post({intent: 'checkout'}, 'US'), ENV, {
       usRate: null,
       fetchCatalog: async () => usCatalog(),
@@ -323,7 +321,7 @@ describe('US cart with the gate on', () => {
       updateCartLines: async (_id, lines) => { calls.push(`update:${lines[0].attributes?.map((a) => a.key).join('+')}`); return emptyCart(); },
     });
     assert.equal(response.headers.get('Location'), '/cart?check=market');
-    assert.deepEqual(calls, ['country:US', 'update:Preorder+_ship_region']);
+    assert.deepEqual(calls, ['country:US', 'update:Preorder+Delivery by+_ship_region']);
   });
 
   it('puts the US on the cart from the cart country picker', async () => {

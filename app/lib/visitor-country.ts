@@ -11,6 +11,7 @@
  */
 
 import {EU_COUNTRY_CODES} from './eu-countries.ts';
+import {isInternationalQuote, shippingQuote} from './shipping-rates.ts';
 
 const EU: ReadonlySet<string> = new Set(EU_COUNTRY_CODES);
 
@@ -26,11 +27,11 @@ export function paysEuVat(country: string | null): boolean {
 }
 
 /** Which price note a visitor sees: EU VAT included, the US note (no
- *  sales tax, duties included) while US sales are open, or, elsewhere outside
- *  the EU, that the products are sold through shops there. */
-export type PriceNote = 'vat' | 'us' | 'shops';
+ *  sales tax, duties included) while US sales are open, or the international checkout note for other permitted destinations. */
+export type PriceNote = 'vat' | 'us' | 'international' | 'shops';
 
 export function priceNote(country: string | null, usOpen = false): PriceNote {
   if (paysEuVat(country)) return 'vat';
-  return usOpen && country === 'US' ? 'us' : 'shops';
+  if (usOpen && country === 'US') return 'us';
+  return isInternationalQuote(shippingQuote(country)) ? 'international' : 'shops';
 }

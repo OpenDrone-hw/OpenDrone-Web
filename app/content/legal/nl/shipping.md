@@ -1,6 +1,6 @@
 ## Verzending en levering
 
-Incutec BV verkoopt rechtstreeks aan consumenten in de EU-landen die aan de checkout kunnen worden gekozen, met verzending vanuit België of door onze fulfilmentpartner, en, alleen voor pre-orders, aan consumenten in de Verenigde Staten, met verzending door Incutec of zijn fulfilmentpartner (zie het onderdeel Verenigde Staten hieronder). Kies uw leverland op de productpagina. Voor een land dat niet open is, kunt u niet afrekenen. De beschikbare bezorgdienst en de totale kosten worden vóór de betaling bevestigd.
+Incutec BV verkoopt rechtstreeks aan consumenten in de leverbestemmingen die aan de checkout worden aangeboden. Kies uw leverland op de productpagina. EU-bestellingen worden verzonden vanuit België of door onze fulfilmentpartner. Leveringen buiten de EU zijn uitsluitend voor pre-orderbatches, verzonden door Incutec of zijn fulfilmentpartner. Betaalde EU-voorraad (batch 1) blijft uitsluitend voor de EU. De beschikbare bezorgdienst, belastingen die bij verkoop worden geïnd en totale kosten worden vóór de betaling bevestigd.
 
 ### Verzendtarieven
 
@@ -18,7 +18,7 @@ Incutec BV verzendt niet naar Rusland, Belarus, Iran, Noord-Korea, Syrië en Cub
 
 ### Btw en douane
 
-Voor leveringen binnen de EU zijn prijzen en verzendtarieven inclusief btw. Binnen de Europese Unie zijn er geen douaneformaliteiten, en na de checkout zijn geen invoerrechten of invoerbelastingen verschuldigd. Voor leveringen naar de Verenigde Staten zijn invoerrechten in de prijs inbegrepen en wordt geen verkoopbelasting geïnd: zie het onderdeel Verenigde Staten hieronder.
+Voor leveringen binnen de EU zijn prijzen en verzendtarieven inclusief btw. Goederen die rechtstreeks van buiten de EU worden verzonden, kunnen inklaring vereisen. Incutec BV regelt de toepasselijke invoerrechten, invoer-btw en douanemakelaarskosten binnen de overeengekomen prijs; de consument is bij levering geen bijkomende invoerkosten verschuldigd. Voor leveringen naar de Verenigde Staten zijn invoerkosten inbegrepen volgens Artikel 7ter.6 en wordt verkoopbelasting geïnd waar de wet dit vereist. Voor andere bestemmingen legt het onderdeel hieronder uit welke belastingen bij verkoop worden geïnd en welke invoerkosten de ontvanger betaalt.
 
 ### Verenigde Staten
 
@@ -27,7 +27,7 @@ Voor leveringen naar de Verenigde Staten verkoopt Incutec BV rechtstreeks aan co
 - **Verkocht:** Alleen pre-orderbatches
 - **Munt:** Amerikaanse dollar (USD)
 - **Invoerrechten:** Inbegrepen in de prijs
-- **Verkoopbelasting:** Wordt niet geïnd
+- **Verkoopbelasting:** Geïnd waar de wet dit vereist en meegedeeld vóór de betaling
 - **Verzending:** Vast tarief van USD 9,95 per bestelling
 - **Verzonden vanuit:** Incutec of zijn fulfilmentpartner
 - **Verzenddatum:** Uiterlijk 31 maart 2027, als het financieringsdoel uiterlijk 15 december 2026 wordt bereikt
@@ -36,13 +36,19 @@ De verzenddatum op de productpagina en in uw orderbevestiging is die welke voor 
 
 ### Buiten de Europese Unie en de Verenigde Staten
 
-Incutec BV biedt geen rechtstreekse consumentencheckout buiten de EU en de Verenigde Staten. Winkels in de EU en de VS kunnen [een offerte aanvragen](/wholesale). Producttoelating, invoer en levering moeten worden overeengekomen voordat een bestelling wordt aanvaard. Consumenten kunnen [lanceringsnieuws ontvangen](/newsletter). Beschikbaarheid bij buitenlandse winkels wordt niet beloofd.
+Consumenten kunnen pre-orders afrekenen voor de bestemmingen die aan de checkout worden aangeboden. Betaalde EU-voorraad (batch 1) wordt niet naar deze bestemmingen verzonden. Prijzen worden getoond in de munt voor de gekozen bestemming; de bezorgdienst, verzendkosten en door Incutec BV geïnde belastingen worden vóór de betaling meegedeeld. Vereiste btw, GST of andere verkoopbelasting wordt bij verkoop of betaling verantwoord zoals de wet vereist en is inbegrepen in het checkouttotaal.
+
+Tenzij ze uitdrukkelijk vóór de betaling worden geïnd, betaalt de ontvanger invoerrechten, invoer-btw of GST, inklaringskosten en administratiekosten van de vervoerder. Die kosten komen boven op de productprijs en verzendkosten en hangen af van de bestemming, zending en vervoerder. Dezelfde belastingverplichting mag niet dubbel worden betaald; neem bij een dubbele aanslag contact op met Incutec BV voor correctie of terugbetaling.
+
+Voor de gefinancierde batch van maart 2027 worden goederen uiterlijk 31 maart 2027 verzonden en uiterlijk 30 april 2027 geleverd, als het financieringsdoel uiterlijk op de deadline wordt bereikt. Het aanbod vóór de betaling en uw orderbevestiging leggen de batch en termijnen voor uw bestelling vast. Levering vereist naleving van de toepasselijke product- en invoerregels. Kan Incutec BV een artikel niet rechtmatig leveren, dan betaalt zij alle daarvoor betaalde bedragen terug; wordt de volledige bestelling geannuleerd, dan worden ook de verzendkosten terugbetaald. Dwingende lokale consumentenbescherming blijft van toepassing. Zie [Artikel 7quater van de voorwaarden](/nl/algemene-voorwaarden#art-7quater).
+
+Winkels kunnen [een offerte aanvragen](/wholesale). Beschikbaarheid bij buitenlandse winkels wordt niet beloofd.
 
 ### Pre-orders
 
 Pre-orders worden volledig betaald. Het productaanbod en de orderbevestiging vermelden de batch, de financieringsvoorwaarden en de uiterste verzenddatum. De campagnedata staan op [/preorder](/preorder). Verzending is geen levering.
 
-Annulering, niet-behaalde doelen, gewijzigde verzenddata, terugbetalingen en bestellingen met meerdere batches volgen [Artikel 7bis van de voorwaarden](/nl/algemene-voorwaarden#art-7bis). U kunt vóór de levering herroepen en behoudt de wettelijke herroepingsrechten na ontvangst. Gebruik het [online herroepingsformulier](/nl/herroepingsrecht#withdraw). Voor leveringen naar de Verenigde Staten geldt daarnaast Artikel 7ter.
+Annulering, niet-behaalde doelen, gewijzigde verzenddata, terugbetalingen en bestellingen met meerdere batches volgen [Artikel 7bis van de voorwaarden](/nl/algemene-voorwaarden#art-7bis). U kunt vóór de levering herroepen en behoudt de wettelijke herroepingsrechten na ontvangst. Gebruik het [online herroepingsformulier](/nl/herroepingsrecht#withdraw). Voor leveringen naar de Verenigde Staten geldt daarnaast Artikel 7ter. Voor andere bestemmingen buiten de EU geldt daarnaast Artikel 7quater.
 
 ### Leveringstermijn voor artikelen op voorraad
 

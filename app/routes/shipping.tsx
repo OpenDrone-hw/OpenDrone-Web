@@ -8,8 +8,8 @@ import type {Locale} from '~/lib/i18n';
 
 type Glance = {title: string; rows: Array<[string, string]>};
 
-/** Three rows above the shipping terms: when each kind of product ships
- *  and that outside the EU it goes through shops. The rates are the table
+/** Three rows above the shipping terms: destination availability and
+ *  where a buyer finds each product's timing. The rates are the table
  *  below; the terms stay the text that applies. Words in
  *  content/copy/legal-labels.json. */
 function ShippingGlance({locale}: {locale: Locale}) {

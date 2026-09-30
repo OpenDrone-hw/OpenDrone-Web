@@ -24,7 +24,7 @@ import {
 import buildsJson from '../../content/builds.json';
 import {beginCartAdd, endCartAdd} from './cart-add-lock';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
-import {DATES_SEEN_FIELD, type CartSummary} from '~/lib/shopify-cart-action';
+import {DATES_SEEN_FIELD, latestDeliveryBy, type CartSummary} from '~/lib/shopify-cart-action';
 import {trackEvent} from '~/lib/growth/plausible';
 import {CART_ADDED_EVENT, postCartAdd, withCountry, type CartAddedDetail} from '~/lib/cart-client';
 import {ShipToSelect} from './ShipToSelect';
@@ -117,14 +117,13 @@ export function CartAddedDialog() {
   const sooner = mixed ? soonerMonth(summary.lines.map((l) => l.shipPromise)) : null;
   // The promise the whole parcel waits for: lines ready sooner say so.
   const parcelOf = mixed ? parcelPromise(summary.lines.map((l) => l.shipPromise)) : null;
+  const parcelDeliveryBy = mixed ? latestDeliveryBy(summary.lines) : null;
   const subtotal = summary.subtotal ?? null;
   // Same rule as the buy module and the cart: "incl. VAT" only where EU VAT
   // applies.
   const visitor = rootData?.visitorCountry ?? null;
   const vatIncluded = paysEuVat(visitor);
-  // Outside the EU (and the US while US sales are open), in an EU country
-  // not open yet and in a blocked country, checkout is not offered, as in
-  // the cart.
+  // The same destination availability gate as the product and cart.
   const usRate = rootData?.usShippingRate ?? null;
   const notDirect = notSoldDirect(visitor, usRate);
   // A US buyer: every line carries the US delivery notice.
@@ -132,7 +131,7 @@ export function CartAddedDialog() {
   // The flat rate, shown before Shopify (see the cart).
   const quote = shippingQuote(visitor, undefined, usRate);
   const shippingRate =
-    quote?.kind === 'direct' ? formatPrice(quote.rate, quote.zone === 'us' ? 'USD' : 'EUR') : null;
+    quote?.kind === 'direct' && quote.rate !== null ? formatPrice(quote.rate, quote.zone === 'us' ? 'USD' : 'EUR') : null;
   const cartPromises = summary.lines.map((l) => l.shipPromise);
 
   // The parts that complete the build, judged on the cart as it was when
@@ -229,6 +228,9 @@ export function CartAddedDialog() {
                   </span>
                 ) : null}
                 <LineShipChip promise={line.shipPromise} parcel={parcelOf} className="cart-added-ship" />
+                {parcelDeliveryBy || line.deliveryBy ? (
+                  <small className="cart-added-line-qty">{t('delivery_by', 'Delivery by {date}', {date: parcelDeliveryBy ?? line.deliveryBy!})}</small>
+                ) : null}
                 {usBuyer && fccConditionalSku(line.sku) ? (
                   <small className="cart-added-line-qty" role="note">
                     <Link to={`/products/${line.handle}#fcc-notice`}>
@@ -337,6 +339,9 @@ export function CartAddedDialog() {
           {usBuyer && subtotal?.currencyCode === 'USD' ? (
             <p className="cart-added-parcel">{t('us_price_note', 'Duties included')}</p>
           ) : null}
+          {quote?.kind === 'direct' && quote.zone === 'international' ? (
+            <p className="cart-added-parcel">{t('international_note', 'Shipping and applicable sale taxes are confirmed at checkout. Import duties, import taxes and customs handling charges may be payable on delivery.')}</p>
+          ) : null}
           {sooner ? (
             <p className="cart-added-parcel">
               <Link to="/cart" className="cart-added-split">
@@ -354,7 +359,7 @@ export function CartAddedDialog() {
             </p>
           ) : notDirect === 'shops' ? (
             <p className="cart-added-parcel" role="note">
-              {t('checkout_shops', 'Direct consumer orders are limited to the EU.', {country: countryName(visitor ?? '')})}{' '}
+              {t('checkout_shops', 'Consumer checkout is not available for this destination.', {country: countryName(visitor ?? '')})}{' '}
               <Link to="/wholesale">{t('checkout_shops_trade', 'EU or US retailer enquiries')}</Link>
               {' · '}
               <Link to="/newsletter">{t('checkout_shops_notify', 'Get launch news')}</Link>

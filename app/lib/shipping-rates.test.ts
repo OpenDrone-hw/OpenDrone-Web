@@ -42,7 +42,7 @@ describe('shippingQuote', () => {
     assert.deepEqual(shippingQuote('BG', ALL_OPEN), {country: 'BG', kind: 'direct', zone: 'eu_bg', rate: 39.95});
   });
 
-  it('sells direct to exactly the EU27, each in one zone', () => {
+  it('retains the flat rate zones for exactly the EU27', () => {
     const all = SHIPPING_ZONES.flatMap((z) => z.countries);
     assert.equal(new Set(all).size, all.length);
     assert.deepEqual([...all].sort(), [...EU_COUNTRIES].sort());
@@ -68,12 +68,14 @@ describe('shippingQuote', () => {
     for (const c of EU_COUNTRIES) assert.equal(notSoldDirect(c), null, c);
   });
 
-  it('sends every other country that is not blocked to the shops', () => {
-    for (const c of ['US', 'GB', 'CH', 'NO', 'IS', 'LI', 'CA', 'AU', 'JP']) {
-      assert.deepEqual(shippingQuote(c), {country: c, kind: 'shops'});
-      assert.equal(soldThroughShops(c), true, c);
+  it('accepts permitted international destinations with an unknown checkout shipping charge', () => {
+    for (const c of ['GB', 'CH', 'NO', 'IS', 'LI', 'CA', 'AU', 'JP']) {
+      assert.deepEqual(shippingQuote(c), {country: c, kind: 'direct', zone: 'international', rate: null});
+      assert.equal(soldThroughShops(c), false, c);
+      assert.equal(notSoldDirect(c), null, c);
     }
-    assert.equal(soldThroughShops('DE'), false);
+    assert.deepEqual(shippingQuote('US'), {country: 'US', kind: 'shops'});
+    for (const code of UNINHABITED_TERRITORIES) assert.equal(shippingQuote(code)?.kind, 'shops');
     assert.equal(soldThroughShops('RU'), false);
     assert.equal(soldThroughShops(null), false);
   });
@@ -159,7 +161,8 @@ describe('shipCountryPicker', () => {
     for (const c of BLOCKED_COUNTRIES) assert.ok(!codes.includes(c), c);
     // A rate where sold direct, null for shops-only and closed countries.
     for (const o of [...likely, ...rest]) {
-      assert.equal(o.rate !== null && o.rate > 0, shippingQuote(o.code)?.kind === 'direct', o.code);
+      const quote = shippingQuote(o.code);
+      assert.equal(o.rate, quote?.kind === 'direct' ? quote.rate : null, o.code);
     }
   });
 });

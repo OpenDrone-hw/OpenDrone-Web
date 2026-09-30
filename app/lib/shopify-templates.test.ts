@@ -79,6 +79,38 @@ describe('Shopify notification templates', async () => {
     assert.doesNotMatch(usHtml, /EU legal guarantee/);
     assert.match(usHtml, /Prices include import duties/);
   });
+
+  it('separates international import charges from sale taxes and retains the delivery promise', () => {
+    const tpl = templates.find((t) => t.key === 'order-confirmation')!;
+    for (const id of ['international-ca', 'international-nz-gst', 'uk-gross-receipt']) {
+      const fx = fixtures.find((f) => f.id === id)!;
+      const {output, errors} = renderLiquid(tpl.html, fx.context);
+      assert.deepEqual(errors, []);
+      assert.match(output, /Delivery by 30 April 2027/);
+      assert.match(output, /You pay import duties, import VAT\/GST and carrier clearance fees/);
+      assert.doesNotMatch(output, /No import duties or taxes were charged/);
+      assert.doesNotMatch(output, /Delivery address review/);
+      assert.ok(Buffer.byteLength(output, 'utf8') < 102_000);
+    }
+    const nz = fixtures.find((f) => f.id === 'international-nz-gst')!;
+    assert.match(renderLiquid(tpl.html, nz.context).output, /Tax recorded at checkout/);
+    const uk = fixtures.find((f) => f.id === 'uk-gross-receipt')!;
+    const withPendingVat = {...uk.context, tax_price: 1937};
+    const receipt = renderLiquid(tpl.html, withPendingVat).output;
+    assert.doesNotMatch(receipt, /Includes VAT|Tax recorded at checkout/);
+    assert.match(receipt, /Payment received/);
+  });
+
+  it('flags a changed native checkout country without replacing an agreed date', () => {
+    const tpl = templates.find((t) => t.key === 'order-confirmation')!;
+    const fx = fixtures.find((f) => f.id === 'international-promise-mismatch')!;
+    const {output, errors} = renderLiquid(tpl.html, fx.context);
+    assert.deepEqual(errors, []);
+    assert.match(output, /Delivery address review/);
+    assert.match(output, /this email does not extend them/);
+    assert.match(output, /Ships early November 2026/);
+    assert.match(output, /Delivery by 30 November 2026/);
+  });
 });
 
 describe('email preview catalog', () => {

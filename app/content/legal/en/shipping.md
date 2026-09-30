@@ -1,6 +1,6 @@
 ## Shipping and delivery
 
-Incutec BV sells directly to consumers in the EU countries that can be selected at checkout, dispatched from Belgium or by our fulfilment partner, and, for preorders only, to consumers in the United States, dispatched by Incutec or its fulfilment partner (see the section United States below). Select your delivery country on the product page. A destination that is not open cannot proceed to checkout. The available delivery service and total charge are confirmed before payment.
+Incutec BV sells directly to consumers in the delivery destinations offered at checkout. Select your delivery country on the product page. EU orders are dispatched from Belgium or by our fulfilment partner. Deliveries outside the EU are for preorder batches only, dispatched by Incutec or its fulfilment partner. Paid EU stock (Batch 1) remains EU only. The available delivery service, taxes collected at sale and total charge are confirmed before payment.
 
 ### Shipping rates
 
@@ -18,7 +18,7 @@ Incutec BV does not ship to Russia, Belarus, Iran, North Korea, Syria or Cuba, o
 
 ### VAT and customs
 
-For deliveries within the EU, prices and shipping rates include VAT. Within the European Union there are no customs formalities, and no import duties or import taxes are due after checkout. For deliveries to the United States, prices include import duties and no sales tax is collected: see the section United States below.
+For deliveries within the EU, prices and shipping rates include VAT. Goods sent directly from outside the EU can require customs clearance. Incutec BV arranges any applicable import duty, import VAT and customs brokerage charges within the agreed price; the consumer owes no additional import charge on delivery. For deliveries to the United States, import charges are included under Article 7ter.6, and sales tax is collected where required by law. For other destinations, the section below explains taxes collected at sale and recipient-paid import charges.
 
 ### United States
 
@@ -27,7 +27,7 @@ For deliveries to the United States, Incutec BV sells directly to consumers for 
 - **Sold:** Preorder batches only
 - **Currency:** US dollars (USD)
 - **Import duties:** Included in the price
-- **Sales tax:** Not collected
+- **Sales tax:** Collected where required by law and disclosed before payment
 - **Shipping:** Flat USD 9.95 per order
 - **Ships from:** Incutec or its fulfilment partner
 - **Ship date:** By 31 March 2027, if the funding target is reached by 15 December 2026
@@ -36,13 +36,19 @@ The ship date stated on the product page and in your order confirmation is the o
 
 ### Outside the European Union and the United States
 
-Incutec BV does not offer direct consumer checkout outside the EU and the United States. EU and US retailers can [request a bulk quote](/wholesale). Product eligibility, importing and delivery must be agreed before an order is accepted. Consumers can [sign up for launch news](/newsletter). No overseas retailer availability is promised.
+Consumer preorder checkout is available for the destinations offered at checkout. Paid EU stock (Batch 1) is not shipped to these destinations. Prices are shown in the selected destination's currency; the shipping service, shipping charge and taxes collected by Incutec BV are disclosed before payment. Required VAT, GST or other sales tax is accounted for at sale or payment as the law requires and is included in the checkout total.
+
+Unless expressly collected before payment, the recipient pays import duties, import VAT or GST, customs-clearance charges and carrier administration fees. These charges are additional to the product price and shipping charge and depend on the destination, consignment and carrier. The same tax liability must not be paid twice; contact Incutec BV with any duplicate assessment for correction or refund.
+
+For the funded March 2027 batch, goods ship by 31 March 2027 and are delivered by 30 April 2027 if the funding target is reached by its deadline. The offer before payment and your order confirmation record the batch and the deadlines for your order. Delivery requires compliance with applicable product and import rules. If Incutec BV cannot lawfully deliver an item, it refunds all amounts paid for it; if the whole order is cancelled, the shipping charge is refunded too. Mandatory local consumer protections remain applicable. See [Article 7quater of the terms](/en/algemene-voorwaarden#art-7quater).
+
+Retailers can [request a bulk quote](/wholesale). No overseas retailer availability is promised.
 
 ### Pre-orders
 
 Preorders are paid in full. The product offer and order confirmation identify the batch, the funding conditions and the ship-by date. The campaign dates are shown on [/preorder](/preorder). Dispatch is not delivery.
 
-Cancellation, missed targets, changes to ship dates, refunds and mixed-batch orders follow [Article 7bis of the terms](/en/algemene-voorwaarden#art-7bis). You may withdraw before delivery and retain the statutory withdrawal rights after receipt. Use the [online withdrawal form](/en/herroepingsrecht#withdraw). For deliveries to the United States, Article 7ter applies in addition.
+Cancellation, missed targets, changes to ship dates, refunds and mixed-batch orders follow [Article 7bis of the terms](/en/algemene-voorwaarden#art-7bis). You may withdraw before delivery and retain the statutory withdrawal rights after receipt. Use the [online withdrawal form](/en/herroepingsrecht#withdraw). For deliveries to the United States, Article 7ter applies in addition. For other destinations outside the EU, Article 7quater applies in addition.
 
 ### Delivery time for items in stock
 

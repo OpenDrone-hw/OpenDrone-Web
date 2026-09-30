@@ -1,6 +1,6 @@
 ## Expédition et livraison
 
-Incutec BV vend directement aux consommateurs dans les pays de l’UE qui peuvent être choisis lors du passage en caisse, avec expédition depuis la Belgique ou par notre partenaire logistique, et, pour les précommandes uniquement, aux consommateurs des États-Unis, avec expédition par Incutec ou son partenaire logistique (voir la section États-Unis ci-dessous). Choisissez votre pays de livraison sur la page produit. Une destination non ouverte ne permet pas de passer en caisse. Le service de livraison disponible et le coût total sont confirmés avant le paiement.
+Incutec BV vend directement aux consommateurs dans les destinations de livraison proposées lors du passage en caisse. Choisissez votre pays de livraison sur la page produit. Les commandes dans l’UE sont expédiées depuis la Belgique ou par notre partenaire logistique. Les livraisons hors de l’UE concernent uniquement les lots de précommande, expédiés par Incutec ou son partenaire logistique. Le stock payé dans l’UE (lot 1) reste réservé à l’UE. Le service de livraison disponible, les taxes perçues à la vente et le coût total sont confirmés avant le paiement.
 
 ### Tarifs d’expédition
 
@@ -18,7 +18,7 @@ Incutec BV n’expédie pas vers la Russie, le Bélarus, l’Iran, la Corée du 
 
 ### TVA et douane
 
-Pour les livraisons dans l’UE, les prix et les tarifs d’expédition incluent la TVA. Dans l’Union européenne, il n’y a pas de formalités douanières, et aucun droit ni aucune taxe d’importation n’est dû après le passage en caisse. Pour les livraisons vers les États-Unis, les prix incluent les droits d’importation et aucune taxe de vente n’est perçue : voir la section États-Unis ci-dessous.
+Pour les livraisons dans l’UE, les prix et les tarifs d’expédition incluent la TVA. Les biens expédiés directement depuis un pays hors de l’UE peuvent nécessiter un dédouanement. Incutec BV prend en charge les droits d’importation, la TVA à l’importation et les frais de courtage en douane applicables dans le prix convenu ; le consommateur ne doit aucun frais d’importation supplémentaire à la livraison. Pour les livraisons vers les États-Unis, les frais d’importation sont inclus selon l’article 7ter.6 et la taxe de vente est perçue lorsque la loi l’exige. Pour les autres destinations, la section ci-dessous explique les taxes perçues à la vente et les frais d’importation à la charge du destinataire.
 
 ### États-Unis
 
@@ -27,7 +27,7 @@ Pour les livraisons vers les États-Unis, Incutec BV vend directement aux consom
 - **Vendu :** Lots de précommande uniquement
 - **Devise :** Dollar américain (USD)
 - **Droits d’importation :** Inclus dans le prix
-- **Taxe de vente :** Non perçue
+- **Taxe de vente :** Perçue lorsque la loi l’exige et communiquée avant le paiement
 - **Expédition :** Tarif fixe de 9,95 USD par commande
 - **Expédié depuis :** Incutec ou son partenaire logistique
 - **Date d’expédition :** Au plus tard le 31 mars 2027, si l’objectif de financement est atteint au plus tard le 15 décembre 2026
@@ -36,13 +36,19 @@ La date d’expédition indiquée sur la page produit et dans votre confirmation
 
 ### Hors de l’Union européenne et des États-Unis
 
-Incutec BV ne propose pas de commande directe aux consommateurs hors de l’UE et des États-Unis. Les revendeurs de l’UE et des États-Unis peuvent [demander un devis](/wholesale). L’admissibilité des produits, l’importation et la livraison doivent être convenues avant l’acceptation d’une commande. Les consommateurs peuvent [recevoir les nouvelles du lancement](/newsletter). Aucune disponibilité auprès de revendeurs étrangers n’est promise.
+Les consommateurs peuvent passer des précommandes pour les destinations proposées lors du passage en caisse. Le stock payé dans l’UE (lot 1) n’est pas expédié vers ces destinations. Les prix sont affichés dans la devise de la destination sélectionnée ; le service, les frais de livraison et les taxes perçues par Incutec BV sont communiqués avant le paiement. La TVA, la GST ou toute autre taxe de vente requise est comptabilisée au moment de la vente ou du paiement conformément à la loi et incluse dans le total à payer.
+
+Sauf s’ils sont expressément perçus avant le paiement, le destinataire paie les droits d’importation, la TVA ou GST à l’importation, les frais de dédouanement et les frais administratifs du transporteur. Ces frais s’ajoutent au prix du produit et aux frais de livraison et dépendent de la destination, de l’envoi et du transporteur. La même obligation fiscale ne doit pas être payée deux fois ; contactez Incutec BV avec tout avis de double taxation pour correction ou remboursement.
+
+Pour le lot financé de mars 2027, les biens sont expédiés au plus tard le 31 mars 2027 et livrés au plus tard le 30 avril 2027 si l’objectif de financement est atteint à son échéance. L’offre avant le paiement et votre confirmation de commande fixent le lot et les délais applicables à votre commande. La livraison exige le respect des règles applicables aux produits et à l’importation. Si Incutec BV ne peut pas livrer légalement un article, elle rembourse tous les montants payés pour cet article ; si toute la commande est annulée, les frais de livraison sont également remboursés. Les protections impératives locales des consommateurs demeurent applicables. Voir [l’article 7quater des conditions](/fr/algemene-voorwaarden#art-7quater).
+
+Les revendeurs peuvent [demander un devis](/wholesale). Aucune disponibilité auprès de revendeurs étrangers n’est promise.
 
 ### Précommandes
 
 Les précommandes sont payées intégralement. L’offre et la confirmation précisent le lot, les conditions de financement et la date limite d’expédition. Les dates de campagne figurent sur [/preorder](/preorder). L’expédition n’est pas la livraison.
 
-L’annulation, les objectifs non atteints, les modifications des dates d’expédition, les remboursements et les commandes de plusieurs lots suivent [l’Article 7bis des conditions](/fr/algemene-voorwaarden#art-7bis). Vous pouvez vous rétracter avant la livraison et conservez les droits légaux de rétractation après réception. Utilisez le [formulaire en ligne](/fr/herroepingsrecht#withdraw). Pour les livraisons vers les États-Unis, l’article 7ter s’applique en outre.
+L’annulation, les objectifs non atteints, les modifications des dates d’expédition, les remboursements et les commandes de plusieurs lots suivent [l’Article 7bis des conditions](/fr/algemene-voorwaarden#art-7bis). Vous pouvez vous rétracter avant la livraison et conservez les droits légaux de rétractation après réception. Utilisez le [formulaire en ligne](/fr/herroepingsrecht#withdraw). Pour les livraisons vers les États-Unis, l’article 7ter s’applique en outre. Pour les autres destinations hors de l’UE, l’article 7quater s’applique en outre.
 
 ### Délai de livraison des articles en stock
 

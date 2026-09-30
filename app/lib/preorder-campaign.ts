@@ -21,16 +21,19 @@
  */
 
 import type {Catalog, CatalogVariant} from './catalog.ts';
+import {EU_COUNTRY_CODES} from './eu-countries.ts';
 
-/** Where a unit ships: the EU from Belgium, or the US. A shipping country
- *  of US is `US`, every other one (and none) `EU`. */
-export type Region = 'EU' | 'US';
+/** Allocation regions: EU member states, the US, or other international
+ *  destinations. Missing country information retains the historical EU default. */
+export type Region = 'EU' | 'US' | 'INT';
 
-export const REGIONS: readonly Region[] = ['EU', 'US'];
+export const REGIONS: readonly Region[] = ['EU', 'US', 'INT'];
 
 /** The region of a shipping country (ISO 3166-1 alpha-2). */
 export function regionOf(country: string | null | undefined): Region {
-  return country?.trim().toUpperCase() === 'US' ? 'US' : 'EU';
+  const code = country?.trim().toUpperCase();
+  if (code === 'US') return 'US';
+  return code && /^[A-Z]{2}$/.test(code) && !EU_COUNTRY_CODES.includes(code) ? 'INT' : 'EU';
 }
 
 /** Paid units of one SKU in order, oldest first, as runs of one region:
@@ -54,9 +57,11 @@ export type CampaignBatch = {
   /** The same for a US buyer (shipped direct by the fulfilment partner, duties included); a US promise names only this one, and leaves the delivery
    *  date out without it. */
   deliveryByUS?: string | null;
+  /** A separately agreed international arrival deadline; never inherits EU or US dates. */
+  deliveryByINT?: string | null;
   /** The regions this batch ships to; absent means every region. Paid
-   *  stock in Belgium is `["EU"]`: a US unit skips it for the next batch
-   *  that serves the US. A SKU's last funding batch serves every region. */
+   *  stock in Belgium is `["EU"]`: a non-EU unit skips it for the next batch
+   *  that serves the destination. A SKU's last funding batch serves every region. */
   regions?: Region[];
 };
 
@@ -73,10 +78,10 @@ function batchPromise(batch: CampaignBatch, fallback: string): string {
   return batch.ships?.trim() || fallback;
 }
 
-/** The reviewed delivery day of a batch for a region, YYYY-MM-DD, or null.
- *  Never shown to a buyer: it only orders the lines of one cart. */
+/** The agreed arrival deadline for a region, YYYY-MM-DD, or null. Used for
+ *  visible checkout metadata and ordering the lines of a combined cart. */
 function batchDeliveryDay(batch: CampaignBatch, region: Region): string | null {
-  return (region === 'US' ? batch.deliveryByUS : batch.deliveryBy) ?? null;
+  return (region === 'US' ? batch.deliveryByUS : region === 'INT' ? batch.deliveryByINT : batch.deliveryBy) ?? null;
 }
 
 export type CampaignConfig = {
@@ -104,9 +109,9 @@ export type CampaignConfig = {
    *  batch of the lead, which must carry its own ship date; without it the
    *  SKU follows whatever batch the lead's next unit falls into. */
   shipsWith?: Record<string, ShipsWith>;
-  /** How a US buyer gets any other SKU the shop sells (in stock, or a
-   *  preorder outside the campaign): it ships with a US-serving batch of a
-   *  campaign SKU (`batch`, no `stock`), so a US order is never refused for
+  /** How a non-EU buyer gets any other SKU the shop sells (in stock, or a
+   *  preorder outside the campaign): it ships with a non-EU-serving batch of a
+   *  campaign SKU (`batch`, no `stock`), so a non-EU order is never refused for
    *  a SKU the campaign does not list. Belgian stock stays EU only. */
   usStock?: ShipsWith;
   /** The dates orders were sold under before a date change. An order created
@@ -250,6 +255,8 @@ export type CampaignState = {
   nextPrice: number | null;
   /** US buyers only: the ladder in USD, set by `withMarketPrices`. */
   usLadder?: UsdLadderStep[];
+  /** Only the current international price is verified; no future local price ladder is inferred. */
+  internationalPrice?: boolean;
   /** Every configured batch up to the one after the current, in order:
    *  sold-out batches stay listed, and one before the current that does not
    *  serve the buyer's region is `other_region`. */
@@ -300,6 +307,7 @@ export function parseCampaignConfig(body: unknown): CampaignConfig {
       }
       if (batch.deliveryBy != null && !isCalendarDay(batch.deliveryBy)) throw new Error(`preorders: ${sku} deliveryBy must be a calendar date`);
       if (batch.deliveryByUS != null && !isCalendarDay(batch.deliveryByUS)) throw new Error(`preorders: ${sku} deliveryByUS must be a calendar date`);
+      if (batch.deliveryByINT != null && !isCalendarDay(batch.deliveryByINT)) throw new Error(`preorders: ${sku} deliveryByINT must be a calendar date`);
       if (batch.regions !== undefined) {
         if (
           !Array.isArray(batch.regions) ||
@@ -366,10 +374,10 @@ export function parseCampaignConfig(body: unknown): CampaignConfig {
   return c as CampaignConfig;
 }
 
-/** The rule a US buyer's unit of `sku` follows when the campaign does not
- *  list it: `usStock`. Null for a listed SKU and for an EU buyer. */
+/** The shared non-EU accessory rule, stored under the existing `usStock` key.
+ *  Null for a listed SKU and for an EU buyer. */
 export function usStockRule(config: CampaignConfig, sku: string, region: Region): ShipsWith | null {
-  if (region !== 'US' || !config.usStock || config.skus[sku] || config.shipsWith?.[sku]) return null;
+  if (region === 'EU' || !config.usStock || config.skus[sku] || config.shipsWith?.[sku]) return null;
   return config.usStock;
 }
 
@@ -861,7 +869,7 @@ export function applyCampaign(
         // an in-stock item becomes a preorder for that batch. Belgian stock
         // stays EU only. Sold out stays sold out.
         const usRule = usStockRule(config, variant.sku, region);
-        const usIn = region === 'US' && variant.availability === 'in_stock' && Boolean(entry || config.shipsWith?.[variant.sku] || usRule);
+        const usIn = region !== 'EU' && variant.availability === 'in_stock' && Boolean(entry || config.shipsWith?.[variant.sku] || usRule);
         const rule = config.shipsWith?.[variant.sku] ?? usRule ?? undefined;
         if ((!entry && !rule) || (variant.availability !== 'preorder' && !usIn)) return variant;
         if (!units) {
@@ -923,8 +931,8 @@ export function needsCampaignCounts(catalog: Catalog, config: CampaignConfig, re
       (variant) =>
         (variant.availability === 'preorder' &&
           Boolean(config.skus[variant.sku] || config.shipsWith?.[variant.sku])) ||
-        // A US buyer's in-stock items ship with a campaign batch.
-        (region === 'US' &&
+        // A non-EU buyer's in-stock items ship with a campaign batch.
+        (region !== 'EU' &&
           variant.availability === 'in_stock' &&
           Boolean(config.skus[variant.sku] || config.shipsWith?.[variant.sku] || usStockRule(config, variant.sku, region))),
     ),

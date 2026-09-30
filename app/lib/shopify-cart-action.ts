@@ -1,12 +1,14 @@
 import {bySku, type Catalog, type CatalogVariant} from './catalog.ts';
-import {mixedShipPromise, regionOf, shipGroupKey, shipLabelFromPromise, shipOrderDay, type Region} from './preorder-campaign.ts';
+import {campaignDate, mixedShipPromise, regionOf, shipGroupKey, shipLabelFromPromise, shipOrderDay, type Region} from './preorder-campaign.ts';
 import {isPurchasableStatus, resolveStatus} from './product-content.ts';
 import {requestedLines} from './shopify-cart-input.ts';
-import {destinationForRequest, isIsoCountry, isUsQuote, shipCountryForRequest, shippingQuote, type ShippingQuote} from './shipping-rates.ts';
+import {destinationForRequest, isInternationalQuote, isIsoCountry, isUsQuote, shipCountryForRequest, shippingQuote, type ShippingQuote} from './shipping-rates.ts';
 import {type RegistrationsFile} from './registrations.ts';
 import {usSalesRate} from './us-sales.ts';
 import {
   PREORDER_ATTRIBUTE,
+  DELIVERY_BY_ATTRIBUTE,
+  DELIVERY_BY_OWN_ATTRIBUTE,
   PREORDER_OWN_ATTRIBUTE,
   SHIP_REGION_ATTRIBUTE,
   storefrontRequest,
@@ -31,8 +33,8 @@ export type ShopifyCartDependencies = {
    *  market no longer matches the destination (US sales open only). */
   setCountry?: (cartId: string, countryCode: string) => Promise<void>;
   /** The catalog for the destination's region (`US` while it is the open US
-   *  destination, else `EU`): its ship promises and market prices. */
-  fetchCatalog: (region?: Region) => Promise<Catalog>;
+   *  destination, `INT` for another permitted non-EU destination): its ship promises and market prices. */
+  fetchCatalog: (region?: Region, country?: string) => Promise<Catalog>;
   /** A new cart; `countryCode` is the visitor's country when the shop
    *  ships there, so checkout opens in that country's market. */
   createCart: (lines: CartLineInput[], countryCode?: string) => Promise<ShopifyCart>;
@@ -89,6 +91,7 @@ export type CartSummary = {
     quantity: number;
     image: {url: string; altText: string | null} | null;
     shipPromise: string | null;
+    deliveryBy?: string | null;
     /** "Batch 1 · EU only": the line's `Availability` property. */
     availability?: string | null;
     /** The short ship label for the line (`shipLabel` 'short'). */
@@ -110,11 +113,24 @@ export function cartSummary(cart: ShopifyCart): CartSummary {
       quantity: line.quantity,
       image: line.image,
       shipPromise: line.shipPromise,
+      deliveryBy: line.deliveryBy ?? null,
       availability: line.availability ?? null,
       shipLabel: shipLabelFromPromise(line.shipPromise, 'short'),
       total: {amount: line.total.amount, currencyCode: line.total.currencyCode},
     })),
   };
+}
+
+/** The latest of the recorded English calendar deadlines, parsed in UTC. */
+export function latestDeliveryBy(lines: readonly {deliveryBy?: string | null}[]): string | null {
+  let latest: {date: string; time: number} | null = null;
+  for (const line of lines) {
+    const date = line.deliveryBy;
+    if (!date || !/^\d{1,2} [A-Za-z]+ \d{4}$/.test(date)) continue;
+    const time = Date.parse(`${date} 00:00:00 GMT`);
+    if (Number.isFinite(time) && (!latest || time > latest.time)) latest = {date,time};
+  }
+  return latest?.date ?? null;
 }
 
 /** What a buyer reads when an add would take one item past 50 units. */
@@ -157,12 +173,10 @@ export const US_EU_ONLY_MESSAGE =
   'This item ships from our stock in Belgium to EU addresses only, so it cannot be delivered to the United States. Preorder items ship to the US.';
 
 /** What a buyer reads when the destination is not sold direct. */
-export function destinationMessage(kind: ShippingQuote['kind'], usOpen: boolean): string {
+export function destinationMessage(kind: ShippingQuote['kind'], _usOpen: boolean): string {
   if (kind === 'blocked') return 'This product is not available in your country.';
   if (kind === 'closed') return 'Orders are not open for your country yet.';
-  return usOpen
-    ? 'Direct consumer orders are limited to the EU and the United States.'
-    : 'Direct consumer orders are limited to the EU.';
+  return 'Consumer checkout is not available for this destination.';
 }
 
 export const CART_BUYER_IDENTITY_MUTATION = `#graphql
@@ -237,15 +251,18 @@ export function checkoutOpen(env: CartEnv): boolean {
  * promise, so checkout and the order confirmation show the delivery time the
  * product page showed. A preorder without a promise is not sold.
  */
-export function lineAttributes(variant: CatalogVariant, us = false): CartLineInput['attributes'] {
+export function lineAttributes(variant: CatalogVariant, destination: Region | boolean = 'EU'): CartLineInput['attributes'] {
   if (variant.availability !== 'preorder') return undefined;
   const promise = variant.ship_promise?.trim();
   if (!promise) throw fail('Product is unavailable.', 409);
-  // A US line records that its promise is the US one (hidden at checkout),
+  // A non-EU line records its allocation region (hidden at checkout),
   // so the hold pass can flag an order shipped to another region.
+  const region = typeof destination === 'boolean' ? destination ? 'US' : 'EU' : destination;
+  const deliveryDay = variant.campaign?.deliveryByDay;
   return [
     {key: PREORDER_ATTRIBUTE, value: promise},
-    ...(us ? [{key: SHIP_REGION_ATTRIBUTE, value: 'US'}] : []),
+    ...(deliveryDay ? [{key: DELIVERY_BY_ATTRIBUTE, value: campaignDate(deliveryDay)}] : []),
+    ...(region !== 'EU' ? [{key: SHIP_REGION_ATTRIBUTE, value: region}] : []),
   ];
 }
 
@@ -355,15 +372,20 @@ export function variantLink(
  * for a line without a campaign date (a plain in-stock line, or a preorder
  * the campaign does not date) since it cannot be ordered against the rest.
  */
-export function mixedPromises(cart: ShopifyCart, catalog: Catalog): Map<string, string> {
-  const out = new Map<string, string>();
-  if (!hasMixedShipDates(cart, cartLineInfo(cart, catalog))) return out;
+function datedCartLines(cart: ShopifyCart, catalog: Catalog) {
   const dated: Array<{id: string; day: string; campaign: NonNullable<CatalogVariant['campaign']>}> = [];
   for (const line of cart.lines) {
     const variant = catalogVariant(catalog, line.merchandiseId);
     const day = shipOrderDay(variant?.campaign);
     if (variant?.campaign && day && variant.ship_promise) dated.push({id: line.id, day, campaign: variant.campaign});
   }
+  return dated;
+}
+
+export function mixedPromises(cart: ShopifyCart, catalog: Catalog): Map<string, string> {
+  const out = new Map<string, string>();
+  if (!hasMixedShipDates(cart, cartLineInfo(cart, catalog))) return out;
+  const dated = datedCartLines(cart, catalog);
   if (dated.length < 2) return out;
   const latest = dated.reduce((a, b) => (b.day > a.day ? b : a));
   const promise = mixedShipPromise(latest.campaign);
@@ -377,10 +399,14 @@ export function mixedPromises(cart: ShopifyCart, catalog: Catalog): Map<string, 
 function withOrderPromise(
   attributes: NonNullable<CartLineInput['attributes']>,
   orderPromise: string,
+  orderDeliveryBy: string | null,
 ): NonNullable<CartLineInput['attributes']> {
   const own = attributes.find((a) => a.key === PREORDER_ATTRIBUTE)?.value ?? '';
+  const ownDeliveryBy = attributes.find((a) => a.key === DELIVERY_BY_ATTRIBUTE)?.value;
   return [
-    ...attributes.map((a) => (a.key === PREORDER_ATTRIBUTE ? {...a, value: orderPromise} : a)),
+    ...attributes.filter(a => !orderDeliveryBy || a.key !== DELIVERY_BY_ATTRIBUTE).map((a) => (a.key === PREORDER_ATTRIBUTE ? {...a, value: orderPromise} : a)),
+    ...(orderDeliveryBy ? [{key: DELIVERY_BY_ATTRIBUTE, value: orderDeliveryBy}] : []),
+    ...(ownDeliveryBy ? [{key: DELIVERY_BY_OWN_ATTRIBUTE, value: ownDeliveryBy}] : []),
     {key: PREORDER_OWN_ATTRIBUTE, value: own},
   ];
 }
@@ -401,7 +427,7 @@ function withOrderPromise(
 export function rederiveLines(
   cart: ShopifyCart,
   catalog: Catalog,
-  us: boolean,
+  destination: Region | boolean,
   globalComingSoon: boolean,
 ): {
   refresh: CartLineUpdate[];
@@ -411,47 +437,53 @@ export function rederiveLines(
   euOnly: boolean;
 } {
   const refresh: CartLineUpdate[] = [];
+  const region = typeof destination === 'boolean' ? destination ? 'US' : 'EU' : destination;
   const sync: CartLineUpdate[] = [];
   const totals = new Map<string, {variant: CatalogVariant; quantity: number}>();
   let unavailable = false;
   let euOnly = false;
   const mixed = mixedPromises(cart, catalog);
+  const dated = mixed.size ? datedCartLines(cart, catalog) : [];
+  const latest = dated.length ? dated.reduce((a,b)=>b.day > a.day ? b : a) : null;
+  const orderDeliveryBy = latest?.campaign.deliveryByDay ? campaignDate(latest.campaign.deliveryByDay) : null;
   for (const line of cart.lines) {
     const variant = sellableVariant(catalog, line.merchandiseId, globalComingSoon);
     if (!variant) {
       unavailable = true;
       continue;
     }
-    if (us && !usSellable(variant)) {
+    if (region !== 'EU' && !usSellable(variant)) {
       euOnly = true;
       continue;
     }
     const total = totals.get(line.merchandiseId);
     totals.set(line.merchandiseId, {variant, quantity: (total?.quantity ?? 0) + line.quantity});
-    const attributes = lineAttributes(variant, us) ?? [];
+    const attributes = lineAttributes(variant, region) ?? [];
     const promise = attributes.find((a) => a.key === PREORDER_ATTRIBUTE)?.value ?? null;
-    const region = attributes.find((a) => a.key === SHIP_REGION_ATTRIBUTE)?.value ?? null;
-    if (promise !== line.shipPromise || region !== (line.shipRegion ?? null)) {
+    const attributeRegion = attributes.find((a) => a.key === SHIP_REGION_ATTRIBUTE)?.value ?? null;
+    const deliveryBy = attributes.find((a) => a.key === DELIVERY_BY_ATTRIBUTE)?.value ?? null;
+    if (promise !== line.shipPromise || attributeRegion !== (line.shipRegion ?? null) || deliveryBy !== (line.deliveryBy ?? null)) {
       refresh.push({id: line.id, quantity: line.quantity, attributes});
       continue;
     }
     const wanted = mixed.get(line.id) ?? null;
     // A line added while checkout still showed a batch name carries the old
     // `Availability` property: drop it silently.
-    if (wanted !== (line.orderPromise ?? null) || line.availability != null) {
+    const wantedDeliveryBy = wanted && orderDeliveryBy !== deliveryBy ? orderDeliveryBy : null;
+    if (wanted !== (line.orderPromise ?? null) || wantedDeliveryBy !== (line.orderDeliveryBy ?? null) || line.availability != null) {
       sync.push({
         id: line.id,
         quantity: line.quantity,
-        attributes: wanted ? withOrderPromise(attributes, wanted) : attributes,
+        attributes: wanted ? withOrderPromise(attributes, wanted, orderDeliveryBy) : attributes,
       });
     }
   }
   return {refresh, sync, totals, unavailable, euOnly};
 }
 
-/** The region a destination country buys for while US sales are open. */
+/** The allocation region of a consumer destination. */
 export function regionForDestination(destination: ShippingQuote | null): Region {
-  return isUsQuote(destination) ? 'US' : 'EU';
+  return isUsQuote(destination) ? 'US' : isInternationalQuote(destination) ? 'INT' : 'EU';
 }
 
 /** Where the checkout intent sends the buyer back to the cart, and why. */
@@ -575,7 +607,7 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
           throw fail('This item is no longer in your cart.', 409);
         }
         if (quantity > target.quantity) {
-          const catalog = await dependencies.fetchCatalog(region);
+          const catalog = await dependencies.fetchCatalog(region, destination?.country);
           const variant = catalogVariant(catalog, target.merchandiseId);
           if (variant) {
             const others = current.lines
@@ -595,16 +627,14 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
     if (intent === 'checkout') {
       if (!destination || destination.kind !== 'direct') {
         throw fail(
-          usRate != null
-            ? 'Choose an approved EU or US delivery country before checkout.'
-            : 'Choose an approved EU delivery country before checkout.',
+          'Choose an available delivery country before checkout.',
           403,
         );
       }
       if (!existingId || !dependencies.getCart) throw fail('Cart is empty.', 409);
       const [cart, catalog] = await Promise.all([
         dependencies.getCart(existingId),
-        dependencies.fetchCatalog(region),
+        dependencies.fetchCatalog(region, destination.country),
       ]);
       if (!cart || !cart.lines.length) {
         dependencies.unsetCartId?.();
@@ -612,19 +642,20 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
       }
       // Every line's promise and region attribute are derived again for the
       // destination region, whatever the cart was built for.
-      const {refresh, sync, totals, unavailable, euOnly} = rederiveLines(cart, catalog, us, globalComingSoon);
+      const {refresh, sync, totals, unavailable, euOnly} = rederiveLines(cart, catalog, region, globalComingSoon);
       if (unavailable) throw fail('One or more cart items are no longer available.', 409);
-      if (us && euOnly) return redirect(`/cart?check=${CART_CHECK.usEuOnly}`);
+      if (region !== 'EU' && euOnly) return redirect(`/cart?check=${CART_CHECK.usEuOnly}`);
       // A cart whose buyer country is not the destination (built for
       // another country, or the buyer changed country since) moves to the
-      // destination first. When the market changes (USD for the US, EUR
-      // elsewhere) the buyer sees the new prices and ship dates in the cart
-      // before paying; inside one market the cart is only re-pointed.
+      // destination first. A move involving a non-EU country shows its
+      // prices and ship dates in the cart before payment, even when both
+      // countries use the same currency.
       if (dependencies.setCountry) {
         const usd = cart.subtotal.currencyCode === 'USD';
         const cartUs = cart.country ? cart.country === 'US' : usd;
-        const countryDiffers = cart.country != null && cart.country !== destination.country;
-        const marketDiffers = usRate != null && (usd !== us || cartUs !== us);
+        const countryDiffers = (cart.country != null || region === 'INT') && cart.country !== destination.country;
+        const marketDiffers = (usRate != null && (usd !== us || cartUs !== us)) ||
+          (countryDiffers && (region !== 'EU' || regionOf(cart.country) !== 'EU'));
         if (marketDiffers || countryDiffers) {
           await dependencies.setCountry(existingId, destination.country);
           if (marketDiffers) {
@@ -667,24 +698,21 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
     }
 
     if (intent !== 'add') throw fail('Invalid cart action.', 400);
-    // While US sales are open, a destination that is not sold direct never
-    // gets a cart line; the buy button reads the same country
-    // (`buyerCountry`). An unknown one adds in the shop's default market.
-    // Closed, the add refuses no destination, as before: the buyer fixes it
-    // in the cart, and checkout asks for an approved destination.
-    if (usRate != null && destination && destination.kind !== 'direct') {
+    // Add and checkout use the same destination gate. An unknown country
+    // adds in the default market; checkout requires an available destination.
+    if (destination && destination.kind !== 'direct') {
       throw fail(destinationMessage(destination.kind, true), 403);
     }
     const requested = requestedLines(form);
-    const catalog = await dependencies.fetchCatalog(region);
+    const catalog = await dependencies.fetchCatalog(region, destination?.country);
     const lines: CartLineInput[] = requested.map(({sku, quantity}) => {
       const match = bySku(catalog, sku);
       const variant = match?.variant.merchandise_id
         ? sellableVariant(catalog, match.variant.merchandise_id, globalComingSoon)
         : null;
       if (!variant?.merchandise_id) throw fail('Product is unavailable.', 409);
-      if (us && !usSellable(variant)) throw fail(US_EU_ONLY_MESSAGE, 409);
-      const attributes = lineAttributes(variant, us);
+      if (region !== 'EU' && !usSellable(variant)) throw fail(region === 'US' ? US_EU_ONLY_MESSAGE : 'This item ships from stock in Belgium to EU addresses only. International orders use the preorder batch.', 409);
+      const attributes = lineAttributes(variant, region);
       return attributes
         ? {merchandiseId: variant.merchandise_id, quantity, attributes}
         : {merchandiseId: variant.merchandise_id, quantity};
@@ -692,8 +720,22 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
 
     if (existingId) {
       if (!dependencies.getCart || !dependencies.addCartLines) throw new Error('shopify: cart session dependencies missing');
-      const existing = await dependencies.getCart(existingId);
+      let existing = await dependencies.getCart(existingId);
       if (existing) {
+        // A product link can change the destination before another item is
+        // added. Reprice the session cart and refresh its earlier promises,
+        // so the drawer shows the selected country's totals and batch.
+        if (destination?.kind === 'direct' && dependencies.setCountry &&
+          existing.country !== destination.country && (existing.country != null || region === 'INT')) {
+          await dependencies.setCountry(existingId, destination.country);
+          const {refresh} = rederiveLines(existing, catalog, region, globalComingSoon);
+          if (refresh.length) {
+            if (!dependencies.updateCartLines) throw new Error('shopify: update dependency missing');
+            await dependencies.updateCartLines(existingId, refresh);
+          }
+          existing = await dependencies.getCart(existingId);
+          if (!existing) throw new Error('shopify: cart unavailable after destination change');
+        }
         const quantities = new Map<string, number>();
         for (const line of existing.lines) {
           quantities.set(line.merchandiseId, (quantities.get(line.merchandiseId) ?? 0) + line.quantity);

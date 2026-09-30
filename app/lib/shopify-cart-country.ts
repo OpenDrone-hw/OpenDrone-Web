@@ -25,7 +25,7 @@ export type CartCountryDependencies = {
    *  country); null when Shopify no longer has it. */
   getCart?: (cartId: string) => Promise<ShopifyCart | null>;
   /** The campaign-aware catalog for a region: its ship promises. */
-  fetchCatalog?: (region: Region) => Promise<Catalog>;
+  fetchCatalog?: (region: Region, country?: string) => Promise<Catalog>;
   updateCartLines?: (cartId: string, lines: CartLineUpdate[]) => Promise<ShopifyCart>;
   logError?: (message: string) => void;
 };
@@ -122,7 +122,7 @@ export async function handleCartCountry(
   try {
     await dependencies.setCountry(cartId, quote.country);
     changed = true;
-    const summary = await repriceCart(cartId, regionForDestination(quote), env, dependencies);
+    const summary = await repriceCart(cartId, regionForDestination(quote), env, dependencies, quote.country);
     return remember({country: quote.country, applied: true, ...(summary ? {summary} : {})});
   } catch (error) {
     dependencies.logError?.(
@@ -147,13 +147,14 @@ async function repriceCart(
   region: Region,
   env: CartCountryEnv,
   dependencies: CartCountryDependencies,
+  country?: string,
 ): Promise<CartSummary | null> {
   if (!dependencies.getCart) return null;
   let cart = await dependencies.getCart(cartId);
   if (!cart) return null;
   if (dependencies.fetchCatalog && dependencies.updateCartLines && cart.lines.length) {
-    const catalog = await dependencies.fetchCatalog(region);
-    const {refresh} = rederiveLines(cart, catalog, region === 'US', env.PUBLIC_COMING_SOON !== '0');
+    const catalog = await dependencies.fetchCatalog(region, country);
+    const {refresh} = rederiveLines(cart, catalog, region, env.PUBLIC_COMING_SOON !== '0');
     if (refresh.length) cart = await dependencies.updateCartLines(cartId, refresh);
   }
   return cartSummary(cart);

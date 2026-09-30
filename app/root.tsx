@@ -196,8 +196,8 @@ export async function loader(args: Route.LoaderArgs) {
     roadmapStatuses: roadmapStatusMap(statusFlags),
     turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? null,
     // Picks the buy module's price note (VAT vs duties) and whether a buy
-    // button shows. While US sales are open it is the destination the cart
-    // and checkout read (`shipCountryForRequest`: ?country, the picked
+    // button shows. It is the destination the cart and checkout read
+    // (`shipCountryForRequest`: ?country, the picked
     // destination, the IP, the browser), so every surface agrees.
     visitorCountry: buyerCountry(args.request, usRate),
     // Present only while US sales are open: the flat US rate in USD.
@@ -234,6 +234,7 @@ async function loadCriticalData({context, request}: Route.LoaderArgs) {
       : customerAccountUrl(context.env),
     accountSignedIn: accountsEnabled(context.env) && hasSessionCookie(request),
     familyProducts: toCards(catalog),
+    catalogCurrency: catalog.currency,
     availability: Object.fromEntries(
       catalog.products.map((p) => [
         p.handle,

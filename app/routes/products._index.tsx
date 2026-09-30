@@ -99,10 +99,10 @@ export async function loader({request, context}: Route.LoaderArgs) {
   const catalog = await context.catalog.forBuyer();
   // The one fixed ship date of the campaign, the stack's paid batch, for
   // the "Ships early Nov 2026" filter chip.
-  // A US buyer (US sales open) has no paid batch that ships to the US: no
+  // A non-EU buyer has no paid stock batch: no
   // chip, as /preorder drops the stack lane.
   const stackShips =
-    context.catalog.region === 'US'
+    context.catalog.region !== 'EU'
       ? null
       : (Object.values(CAMPAIGN.skus)
           .flatMap((entry) => entry.batches)
