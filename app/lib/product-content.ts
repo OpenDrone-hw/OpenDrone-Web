@@ -609,14 +609,13 @@ export const PLUG_PIN_KINDS: readonly PlugPinKind[] = ['power', 'ground', 'signa
  *   variant `repoUrl`; the product-level `repoUrl` is the 5 inch repository.
  *
  * openmotor
- * - Not open hardware (`editorial: false`). The sourcing records
- *   (supplier quotation and sales contract) order the 1604 at KV2850 and a 5-inch sample as a
- *   2306.5-class motor at KV1950. The 5-inch motor sells under the legacy SKU
+ * - Not open hardware (`editorial: false`). The motors are the 1604 at KV2850
+ *   and a 5-inch sample as a 2306.5-class motor at KV1950. The 5-inch motor sells under the legacy SKU
  *   OPENMOTOR-2306 (option value "2306", shown as 5" (2306)); the founder
  *   decided on 2026-09-29 that the 5-inch motor is a 2306. Its KV (about
- *   1950, as quoted) stays a placeholder. The 5-inch weight, current, power,
+ *   1950) stays a placeholder. The 5-inch weight, current, power,
  *   shaft, mount and cell rows are hidden until the batch motor's own
- *   figures are on file; the 1604 rows are the supplier's published figures.
+ *   figures are on file; the 1604 rows are the maker's published figures.
  * - `teardown.frameViewer` is the fallback when a tier defines none. Both
  *   tiers override it and it seeds the viewer's preload set, so it points at
  *   a current model (the 5") rather than the stale generic frame.glb.
