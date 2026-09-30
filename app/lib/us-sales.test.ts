@@ -323,7 +323,7 @@ describe('US cart with the gate on', () => {
       updateCartLines: async (_id, lines) => { calls.push(`update:${lines[0].attributes?.map((a) => a.key).join('+')}`); return emptyCart(); },
     });
     assert.equal(response.headers.get('Location'), '/cart?check=market');
-    assert.deepEqual(calls, ['country:US', 'update:Preorder+Availability+_ship_region']);
+    assert.deepEqual(calls, ['country:US', 'update:Preorder+_ship_region']);
   });
 
   it('puts the US on the cart from the cart country picker', async () => {
@@ -352,8 +352,8 @@ describe('FCC conditional-sale disclosure', () => {
     }
   });
 
-  it('carries the 2.803 wording in the product and cart copy, en only, with the refund line', () => {
-    for (const [file, key] of [['product-chrome', 'buy_us_fcc'], ['cart', 'us_fcc']] as const) {
+  it('carries the 2.803 wording in the product copy, en only, with the refund line', () => {
+    for (const [file, key] of [['product-chrome', 'buy_us_fcc']] as const) {
       const copy = JSON.parse(fs.readFileSync(new URL(`../../content/copy/${file}.json`, import.meta.url), 'utf8')) as Record<string, string>;
       const text: string = copy[key];
       assert.match(text, /has not been authorized as required by the rules of the Federal Communications Commission/);
@@ -365,12 +365,13 @@ describe('FCC conditional-sale disclosure', () => {
     }
   });
 
-  it('keeps the product and cart FCC notice word-identical and the general US notice on every product', () => {
+  it('keeps the full FCC notice on the product page and a short linked line in the cart', () => {
     const read = (file: string) => JSON.parse(fs.readFileSync(new URL(`../../content/copy/${file}.json`, import.meta.url), 'utf8')) as Record<string, string>;
     const chrome = read('product-chrome');
     const cart = read('cart');
-    assert.equal(chrome.buy_us_fcc, cart.us_fcc);
-    assert.equal(chrome.buy_us_notice, cart.us_notice);
+    assert.equal(cart.fcc_line, 'Not yet FCC authorized. Refund if not authorized.');
+    assert.equal(cart.us_fcc, undefined);
+    assert.equal(cart.us_notice, undefined);
     assert.match(chrome.buy_us_notice, /FCC equipment authorization and US import clearance/);
   });
 });

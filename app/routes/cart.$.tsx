@@ -18,12 +18,11 @@ import {parseBuilds} from '~/lib/build-recommendations';
 import buildsJson from '../../content/builds.json';
 import {lineDisplayName, setSize} from '~/lib/product-content';
 import {Txt} from '~/components/Txt';
-import {parcelPromise, shipChipText, soonerMonth} from '~/components/ShipChip';
+import {parcelPromise, soonerMonth} from '~/components/ShipChip';
 import {LineShipChip} from '~/components/ParcelChip';
 import {buildSeoMeta} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
 import {fccConditionalSku} from '~/lib/us-sales';
-import {usCartNotice} from '~/lib/us-cart-notice';
 import {cartQuoteCountry, countryName, shippingQuote} from '~/lib/shipping-rates';
 import {ShipToSelect} from '~/components/ShipToSelect';
 import {paysEuVat} from '~/lib/visitor-country';
@@ -279,12 +278,6 @@ function PopulatedCart({
   const mixed = new Set(cart.lines.map(groupOf)).size > 1;
   // The promise the whole parcel waits for: lines ready sooner say so.
   const parcel = mixed ? parcelPromise(cart.lines.map((l) => l.shipPromise)) : null;
-  // The parcel waits for a target that is still open: its ship date is "if
-  // the target is reached".
-  const parcelOpen = cart.lines.some((l) => {
-    const target = info[l.id]?.target;
-    return target ? target.ordered < target.units : false;
-  });
   // Checkout is refused for a blocked country, for one sold only through
   // shops (outside the EU) and for an EU country not open yet; the cart
   // says which and links onward.
@@ -321,7 +314,7 @@ function PopulatedCart({
           </div>
           <ul className="cart-lines-scroll" aria-label={copyText('cart.sr_line_items') ?? 'Line items'}>
             {sortCartLines(cart.lines).map((line) => (
-              <CartLine key={line.id} line={line} info={info[line.id]} pending={pending} parcel={parcel} parcelOpen={parcelOpen} />
+              <CartLine key={line.id} line={line} info={info[line.id]} pending={pending} parcel={parcel} usBuyer={usBuyer} />
             ))}
           </ul>
         </div>
@@ -351,17 +344,13 @@ function PopulatedCart({
           {usBuyer ? (
             <p className="cart-summary-note">
               {cart.subtotal.currencyCode === 'USD'
-                ? t('us_price_note', 'Duties included. No sales tax.')
+                ? t('us_price_note', 'Duties included')
                 : t('us_reprice', 'This cart was priced for the EU. Checkout moves it to US prices and ship dates first.')}
             </p>
           ) : null}
-          <p className="cart-summary-note">
-            {shippingRate
-              ? t('shipping_flat_note', 'Flat rate. Confirmed at checkout for your address.')
-              : t('shipping_at_checkout', 'Shipping calculated at checkout')}
-          </p>
-          {usBuyer ? <UsCartNotice lines={cart.lines} /> : null}
-          {usBuyer ? <UsFccNotice lines={cart.lines} /> : null}
+          {shippingRate ? null : (
+            <p className="cart-summary-note">{t('shipping_at_checkout', 'Shipping calculated at checkout')}</p>
+          )}
           {mixed ? <MixedNote cart={cart} info={info} onSplit={onSplit} /> : null}
           {shipBlocked ? (
             <p className="cart-summary-note" role="note">
@@ -396,13 +385,6 @@ function PopulatedCart({
             >
               <input type="hidden" name="intent" value="checkout" />
               {country ? <input type="hidden" name="country" value={country} /> : null}
-              <p className="cart-summary-note cart-ship-to-note" data-testid="ship-to-note">
-                {t(
-                  'ship_to_note',
-                  'Shipping to {country}. Changing the country at checkout can change prices and ship dates; choose it here first.',
-                  {country: countryName(country ?? '')},
-                )}
-              </p>
               {euOnlyForUs ? (
                 <p className="cart-alert" role="alert">
                   {t('check_us_eu_only', 'An item in your cart ships to EU addresses only. Remove it to check out to the US.')}
@@ -461,37 +443,6 @@ function PaymentMarks({methods}: {methods: string[]}) {
   );
 }
 
-/** The US refund sentence, once for the whole cart. FCC-gated lines keep
- *  their own FCC paragraph. */
-function UsCartNotice({lines}: {lines: ShopifyCartLine[]}) {
-  const notice = usCartNotice(lines);
-  return (
-    <p className="cart-summary-note" role="note">
-      {notice.kind === 'batch'
-        ? t('us_notice_short', 'US orders ship from the {batch} batch; if we cannot deliver, you get a full refund.', {batch: notice.batch})
-        : t(
-            'us_notice',
-            'US delivery depends on FCC equipment authorization and US import clearance. If we cannot deliver to you, you get a full refund.',
-          )}
-    </p>
-  );
-}
-
-/** The FCC paragraph, once for the whole cart, naming the lines it covers. */
-function UsFccNotice({lines}: {lines: ShopifyCartLine[]}) {
-  const names = lines.filter((l) => fccConditionalSku(l.sku)).map(lineName);
-  if (!names.length) return null;
-  return (
-    <p className="cart-summary-note" role="note">
-      {t(
-        'us_fcc',
-        'FCC notice: this device has not been authorized as required by the rules of the Federal Communications Commission. It is sold to US buyers as a conditional preorder and is not delivered unless authorization is obtained. FCC rules do not address consumer protection, contractual or other provisions under federal or state law. If authorization is not obtained, we refund that item in full.',
-      )}{' '}
-      {t('us_fcc_applies', 'Applies to: {names}.', {names: [...new Set(names)].join(', ')})}
-    </p>
-  );
-}
-
 /**
  * Lines that ship at different times go in one parcel when the last is
  * ready: "One parcel · Ships by 31 Mar 2027 if funded". When some lines have a
@@ -514,19 +465,6 @@ function MixedNote({
   const plan = splitPlan(cart, info);
   // The month of the lines the buyer would get sooner by splitting.
   const sooner = plan ? soonerMonth(cart.lines.map((l) => l.shipPromise)) : null;
-  // Every line already names the same date (several targets, one date): the
-  // explanation about items that are ready sooner does not apply.
-  const sameDate =
-    new Set(cart.lines.map((l) => shipChipText(l.shipPromise)?.text ?? l.shipPromise ?? '')).size <= 1;
-  // The date the parcel ships: that of the line it waits for.
-  const parcel = shipChipText(
-    parcelPromise(cart.lines.map((l) => l.shipPromise)),
-    cart.lines.some((l) => {
-      const target = info[l.id]?.target;
-      return target ? target.ordered < target.units : false;
-    }),
-  );
-
   const split = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!plan || busy) return;
@@ -557,15 +495,6 @@ function MixedNote({
 
   return (
     <div className="cart-mixed-note" role="note">
-      <div className="cart-summary-note cart-mixed-line">
-        {t('mixed_one_parcel', 'One parcel')}
-        {parcel ? ` · ${parcel.text}` : null}
-      </div>
-      <p className="cart-summary-note cart-mixed-explain">
-        {sameDate
-          ? t('mixed_explain_same', 'The whole parcel ships together, once every target is reached.')
-          : t('mixed_explain', 'It ships when every item is ready, on the latest date.')}
-      </p>
       {plan ? (
         <Form
           method="post"
@@ -598,20 +527,17 @@ function CartLine({
   info,
   pending,
   parcel = null,
-  parcelOpen = true,
+  usBuyer = false,
 }: {
   line: ShopifyCartLine;
   info: CartLineInfo | undefined;
   pending: boolean;
   /** The promise a one-parcel order waits for, or null for a single date. */
   parcel?: string | null;
-  /** Whether that parcel's funding target is still open. */
-  parcelOpen?: boolean;
+  /** A US buyer: a receiver line links to the FCC notice. */
+  usBuyer?: boolean;
 }) {
   const max = info?.maxQuantity ?? null;
-  // A funding-target line reads "Ships by ... if the target is reached" until its target is met.
-  const target = info?.target;
-  const ifFunded = !target || target.ordered < target.units;
   return (
     <li className="cart-line cart-line--sheet">
       <div className="cart-sheet-row">
@@ -622,10 +548,12 @@ function CartLine({
         )}
         <div className="cart-sheet-item">
           <Link to={variantLink(line.handle, line.selectedOptions)}><strong>{lineName(line)}</strong></Link>
-          {info?.batch ?? line.availability ? (
-            <small className="cart-line-batch">{info?.batch ?? line.availability}</small>
+          <LineShipChip promise={line.shipPromise} parcel={parcel} />
+          {usBuyer && fccConditionalSku(line.sku) ? (
+            <small className="cart-line-fcc">
+              <Link to={`/products/${line.handle}#fcc-notice`}>{t('fcc_line', 'Not yet FCC authorized. Refund if not authorized.')}</Link>
+            </small>
           ) : null}
-          <LineShipChip promise={line.shipPromise} parcel={parcel} ifFunded={ifFunded} parcelIfFunded={parcelOpen} />
           {max !== null && line.quantity > max ? (
             <small className="cart-line-error" role="alert">{t('line_over_batch', 'Only {left} left in batch 1.', {left: max})}</small>
           ) : max !== null && max < MAX_LINE_QUANTITY && line.quantity >= max ? (

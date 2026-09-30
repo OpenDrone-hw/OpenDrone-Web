@@ -67,7 +67,7 @@ describe('availability block', () => {
     assert.equal(batchLabel(us, words), 'March 2027 batch');
   });
 
-  it('uses one wording for the cart line and the checkout line property', () => {
+  it('names the batch on the product page and leaves it off the checkout line properties', () => {
     assert.equal(batchText(state('OPENESC-3030', 1, 'EU'), words), 'Batch 1 · EU only');
     assert.equal(batchText(state('OPENESC-3030', 1, 'US'), words), 'March 2027 batch · EU and US');
     const variant = (campaign: ReturnType<typeof state>): CatalogVariant => ({
@@ -77,9 +77,9 @@ describe('availability block', () => {
     });
     const attrs = (v: CatalogVariant, us: boolean) =>
       Object.fromEntries((lineAttributes(v, us) ?? []).map((a) => [a.key, a.value]));
-    assert.equal(attrs(variant(state('OPENESC-3030', 1, 'EU')), false).Availability, 'Batch 1 · EU only');
+    assert.equal(attrs(variant(state('OPENESC-3030', 1, 'EU')), false).Availability, undefined);
     const us = attrs(variant(state('OPENESC-3030', 1, 'US')), true);
-    assert.equal(us.Availability, 'March 2027 batch · EU and US');
+    assert.equal(us.Availability, undefined);
     assert.equal(us._ship_region, 'US');
   });
 });
@@ -174,7 +174,7 @@ describe('a batch name never carries a date (G6, G8)', () => {
     }
   });
 
-  it('keeps the November items on "Batch 1 · EU only" in the checkout properties of a mixed EU cart, one date per line', () => {
+  it('gives each line of a mixed EU cart its own date in the checkout properties and no batch name', () => {
     const variant = (sku: string, campaign: ReturnType<typeof state>): CatalogVariant => ({
       sku, title: 'x', model: null, options: {}, price: 47.2, compare_price: 59, currency: 'EUR',
       availability: 'preorder', ship_promise: campaign.shipPromise, campaign, image: null, url: '/products/x',
@@ -183,10 +183,9 @@ describe('a batch name never carries a date (G6, G8)', () => {
     const attrs = (v: CatalogVariant) => Object.fromEntries((lineAttributes(v, false) ?? []).map((a) => [a.key, a.value]));
     const nov = attrs(variant('OPENESC-3030', state('OPENESC-3030', 1, 'EU')));
     const march = attrs(variant('OPENRX-LITE', state('OPENRX-LITE', 1, 'EU')));
-    assert.equal(nov.Availability, 'Batch 1 · EU only');
-    assert.equal(march.Availability, 'March 2027 batch · EU and US');
-    // The date lives in `Preorder` only: nothing in `Availability` repeats or contradicts it.
+    // The date lives in `Preorder` only.
+    assert.equal(nov.Availability, undefined);
+    assert.equal(march.Availability, undefined);
     assert.match(nov.Preorder, /early November 2026/);
-    assert.doesNotMatch(nov.Availability, /Nov|2026|ships/i);
   });
 });

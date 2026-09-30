@@ -33,8 +33,6 @@ export function orderStatus(order: AccountOrder): OrderStatus {
     const p = order.promise;
     const label = p ? `Preorder · ${p.text}` : 'Preorder';
     const notes: string[] = [];
-    if (p?.kind === 'target') notes.push('Ships if the funding target is reached.');
-    if (order.lines.length > 1) notes.push('One parcel, sent when every item is ready.');
     if (partlyRefunded) notes.push(partlyRefunded);
     return {tone: 'preorder', label, note: notes.join(' ') || null};
   }

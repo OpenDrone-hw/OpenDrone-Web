@@ -55,35 +55,19 @@ export function heldBy(
 }
 
 /**
- * The ship chip of a cart or drawer line. In a one-parcel order a line that
- * is ready before the parcel does not promise its own date: it says that it
- * ships with the rest, on the parcel's date, and nothing else. The batch name
- * above it carries no date, so the line shows one date.
+ * The ship chip of a cart or drawer line: one short date. In a one-parcel
+ * order a line that is ready before the parcel shows the parcel's date, the
+ * one it ships on.
  */
 export function LineShipChip({
   promise,
   parcel,
   className,
-  ifFunded,
-  parcelIfFunded = ifFunded,
 }: {
   promise: string | null | undefined;
   /** The promise the one-parcel order waits for, or null for a single date. */
   parcel: string | null;
   className?: string;
-  ifFunded?: boolean;
-  /** Whether the parcel's funding target is still open ("if the target is
-   *  reached"); defaults to `ifFunded`. */
-  parcelIfFunded?: boolean;
 }) {
-  if (!parcel || !promise || promise === parcel) {
-    return <ShipChip promise={promise} className={className} ifFunded={ifFunded} />;
-  }
-  const to = whenPhrase(parcel, parcelIfFunded);
-  if (!to) return <ShipChip promise={promise} className={className} ifFunded={ifFunded} />;
-  return (
-    <small className={`ship-chip ${className ?? 'cart-line-preorder'}`} data-kind="held">
-      {t('line_held_plain', 'Ships with this order {parcel}', {parcel: to})}
-    </small>
-  );
+  return <ShipChip promise={parcel && promise ? parcel : promise} className={className} />;
 }

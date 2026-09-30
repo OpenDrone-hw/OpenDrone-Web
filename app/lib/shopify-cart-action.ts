@@ -5,10 +5,7 @@ import {requestedLines} from './shopify-cart-input.ts';
 import {destinationForRequest, isIsoCountry, isUsQuote, shipCountryForRequest, shippingQuote, type ShippingQuote} from './shipping-rates.ts';
 import {type RegistrationsFile} from './registrations.ts';
 import {usSalesRate} from './us-sales.ts';
-import {batchText} from './availability.ts';
-import {serverPreorderWords} from './preorder-words.ts';
 import {
-  AVAILABILITY_ATTRIBUTE,
   PREORDER_ATTRIBUTE,
   PREORDER_OWN_ATTRIBUTE,
   SHIP_REGION_ATTRIBUTE,
@@ -246,12 +243,8 @@ export function lineAttributes(variant: CatalogVariant, us = false): CartLineInp
   if (!promise) throw fail('Product is unavailable.', 409);
   // A US line records that its promise is the US one (hidden at checkout),
   // so the hold pass can flag an order shipped to another region.
-  // The batch and where it ships, in the words of the product page and the
-  // cart: "Batch 1 · EU only", "March 2027 batch · EU and US".
-  const batch = variant.campaign ? batchText(variant.campaign, serverPreorderWords) : null;
   return [
     {key: PREORDER_ATTRIBUTE, value: promise},
-    ...(batch ? [{key: AVAILABILITY_ATTRIBUTE, value: batch}] : []),
     ...(us ? [{key: SHIP_REGION_ATTRIBUTE, value: 'US'}] : []),
   ];
 }
@@ -443,10 +436,9 @@ export function rederiveLines(
       continue;
     }
     const wanted = mixed.get(line.id) ?? null;
-    // A line added before the batch name lost its date (or its lead product)
-    // carries the old `Availability` words: rewrite them silently.
-    const batch = attributes.find((a) => a.key === AVAILABILITY_ATTRIBUTE)?.value ?? null;
-    if (wanted !== (line.orderPromise ?? null) || (line.availability != null && batch !== line.availability)) {
+    // A line added while checkout still showed a batch name carries the old
+    // `Availability` property: drop it silently.
+    if (wanted !== (line.orderPromise ?? null) || line.availability != null) {
       sync.push({
         id: line.id,
         quantity: line.quantity,
@@ -784,10 +776,6 @@ export type CartLineInfo = {
   shipLabel: string | null;
   /** The line ships to the EU only: it cannot go to a US destination. */
   euOnly: boolean;
-  /** "Batch 1 · EU only" or "March 2027 batch · EU and US": the same words as
-   *  the product page and the checkout line property. Null when the line's
-   *  promise is no longer the campaign's current one. */
-  batch: string | null;
 };
 
 /**
@@ -823,10 +811,6 @@ export function cartLineInfo(
           : null,
       shipLabel: shipLabelFromPromise(line.shipPromise, 'short'),
       euOnly: variant ? !usSellable(variant) : false,
-      batch:
-        campaign && line.shipPromise === campaign.shipPromise
-          ? batchText(campaign, serverPreorderWords)
-          : null,
     };
   }
   return out;

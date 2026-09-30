@@ -280,7 +280,9 @@ function TicketForm({onTryChatFpv}: {onTryChatFpv?: () => void}) {
                 className="sp-visually-hidden"
               />
               <span className="sp-topic-title">{t(`topic_${key}_title`)}</span>
-              <span className="sp-topic-hint">{t(`topic_${key}_hint`)}</span>
+              {copyText(`support.topic_${key}_hint`) ? (
+                <span className="sp-topic-hint">{t(`topic_${key}_hint`)}</span>
+              ) : null}
             </label>
           ))}
         </div>
@@ -483,13 +485,11 @@ export default function SupportRoute() {
         <Link to="/support/find" className="sp-tile">
           <Search size={18} className="sp-tile-icon" aria-hidden="true" />
           <span className="sp-tile-title">{t('find_cta')}</span>
-          <span className="sp-tile-line">{t('find_body')}</span>
         </Link>
 
         <a href={discordInvite} target="_blank" rel="noopener noreferrer" className="sp-tile">
           <MessageCircle size={18} className="sp-tile-icon" aria-hidden="true" />
           <span className="sp-tile-title">{t('community_title')}</span>
-          <span className="sp-tile-line">{t('community_body')}</span>
         </a>
 
         {ask ? (
@@ -499,7 +499,6 @@ export default function SupportRoute() {
               <span className="sp-tile-title">
                 {t('tile_ask_title')} <span className="sp-badge-beta">Beta</span>
               </span>
-              <span className="sp-tile-line">{t('tile_ask_line')}</span>
             </summary>
             <div className="sp-tile-ask-panel">
               <AskChatFPV product={initialProduct ?? undefined} onEscalate={escalateToTicket} />

@@ -70,7 +70,7 @@
   "shipping_summary": "Tested and inspected before it ships",
   "how_it_works": "How it works",
   "channel_trade": "Shops order wholesale",
-  "terms_summary_us": "Pay in full · Duties included · No sales tax",
+  "terms_summary_us": "Pay in full · Duties included",
   "shipping_summary_us": "US orders · Full refund if we cannot deliver",
   "channel_us_text": "US delivery depends on FCC equipment authorization and US import clearance. If we cannot deliver to you, you get a full refund. US orders ship from the batch after the EU-only paid stock.",
   "us_batch_note": "FC and ESC batch 1 ({month}) is EU stock only. US orders ship from the {batch} batch.",

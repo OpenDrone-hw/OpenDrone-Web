@@ -27,7 +27,6 @@ import {shopifyImageUrl} from '~/lib/shopify-image';
 import {
   latestShipDate,
   parseCampaignConfig,
-  promiseBatchMonth,
   shortCampaignDate,
 } from '~/lib/preorder-campaign';
 import {parcelPromise, shipChipText} from '~/components/ShipChip';
@@ -36,10 +35,10 @@ import preorders from '../../content/preorders.json';
 const CAMPAIGN = parseCampaignConfig(preorders);
 
 /**
- * The line under the build's button: when the parcel ships. A build with a
- * funding-target part waits for that target, so the whole parcel goes with
- * its batch (a dated Nov part included); a build of dated parts states its
- * date. Null when nothing selected has a ship promise.
+ * The line under the build's button: when the parcel ships, one date. A
+ * build with a funding-target part waits for that target, so the whole
+ * parcel goes with it (a dated Nov part included); a build of dated parts
+ * states its date. Null when nothing selected has a ship promise.
  */
 function buildShipNote(
   mix: 'mixed' | 'target' | 'date' | 'none',
@@ -50,16 +49,7 @@ function buildShipNote(
   if (mix === 'date') return shipChipText(promise)?.text ?? null;
   const date = shortCampaignDate(latestShipDate(CAMPAIGN));
   if (!date) return null;
-  if (mix === 'target') {
-    return (copyText('home.build_ship_target') ?? 'Ships by {date} if the targets are reached.').replace('{date}', date);
-  }
-  const batch = promiseBatchMonth(promise) ?? '';
-  return (
-    copyText('home.build_ship_mixed') ??
-    'One parcel: the whole build ships with the {batch} batch, by {date} if the targets are reached.'
-  )
-    .replace('{batch}', batch)
-    .replace('{date}', date);
+  return (copyText('home.build_ship_target') ?? 'Ships by {date}').replace('{date}', date);
 }
 
 export function HeroBuildGuide({
