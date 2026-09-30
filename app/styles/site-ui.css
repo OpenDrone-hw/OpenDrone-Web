@@ -261,6 +261,13 @@
   font-size: var(--fs-sm);
   line-height: 1.3;
 }
+/* The last event sits at the right end of the track: right-align its label so the dot stays on its date and the text never passes the viewport. */
+@media (min-width: 42.01em) {
+  .po-event:last-child {
+    justify-items: end;
+    transform: translateX(calc(-100% + 0.5rem));
+  }
+}
 .po-event strong {
   margin-top: var(--sp-1);
   font-weight: 600;
@@ -343,7 +350,10 @@
     position: static;
     display: flex;
     align-items: center;
-    gap: var(--sp-2);
+    flex-wrap: wrap;
+    gap: var(--sp-1) var(--sp-2);
+    max-width: 100%;
+    white-space: normal;
     transform: none;
   }
   .po-event strong {
