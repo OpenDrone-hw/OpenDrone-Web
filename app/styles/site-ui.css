@@ -3,6 +3,38 @@
    app.css (root.tsx), so a rule here refines the matching app.css rule.
    Colours, type and spacing come from the tokens in app.css only. */
 
+/* Wholesale controls override the legacy unlayered form reset. */
+.wholesale-page :where(input, select, textarea) {
+  margin: 8px 0 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--r-xs);
+  padding: 10px 12px;
+  font-size: 16px;
+}
+.wholesale-page :where(input, select, textarea):focus {
+  border-color: var(--color-text);
+}
+.wholesale-page :where(input, select, textarea)[aria-invalid='true'] {
+  border-color: var(--od-pcb-copper);
+}
+.wholesale-page .wholesale-lead {
+  margin: 12px 0 0;
+  font-size: 16px;
+  line-height: 1.6;
+}
+.wholesale-page .wholesale-privacy {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.wholesale-page .wholesale-contact {
+  margin: 32px 0 0;
+  border-top: 1px solid var(--color-border);
+  padding-top: 20px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 /* ============================================
    /products header: title, search
    ============================================ */
@@ -1528,7 +1560,7 @@ html.light .footer-ref {
    a one-row buy bar without the variant chips. */
 @media (max-height: 500px) and (orientation: landscape) {
   :root {
-    --header-height: 44px;
+    --header-height: 50px;
   }
   .site-header {
     padding-top: 4px;
@@ -1596,4 +1628,3 @@ html.light .footer-ref {
     margin-top: 0.25rem;
   }
 }
-

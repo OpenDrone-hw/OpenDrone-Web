@@ -211,24 +211,30 @@ repos and `status-*` flips across the public OpenDrone-hw repositories.
 
 **Support.** See "Support tickets" below.
 
-**Trade.** `/wholesale` takes quote requests from shops in the EU27 and the
-United States for the whole range, outside the Shopify cart, without creating
-an order or promising import eligibility. Terms are settled in an accepted
-written quote. One request carries what a quote needs: company legal name,
-contact, email, phone, website (optional for a physical-only store), how the
-shop sells, country, VAT number (format-checked per EU country) or EIN,
-shipping address, billing address when it differs, SKU lines, and optionally a
-wanted delivery date, expected monthly reorders, how the shop heard of
-OpenDrone and a note. A honeypot, a per-IP limit and Turnstile guard it. An EU
-VAT number is looked up in VIES (the answer goes in the email, never blocks).
-The form emails `PUBLIC_COMPANY_EMAIL` through Resend (`RESEND_API_KEY`,
-`SUPPORT_FROM_EMAIL`) with reply-to the shop: the details, a table of SKUs,
-quantities and catalog list prices excluding VAT with a total, and the VAT
-treatment. Without a key it reports the request as not sent. The shop gets no
-email; the page shows what was sent. Entry points: header, mobile menu,
-footer, coming-soon product pages, `/preorder`, `/products` and the non-EU
-cart notes. SKUs, checks, VIES lookup, validation and email are in
-`app/lib/trade.ts`.
+**Trade.** `/wholesale` accepts short retailer applications from the EU27 and
+United States. The server saves company name, contact details, country,
+optional website and message in Shopify Companies. Each company starts with
+one location and no buyer contacts or ordering permissions. Applicant contact
+details remain unverified in the company note until staff review them. No
+customer is created or modified, no mail is sent, and no pricing, tax exemption,
+order or delivery commitment is made by an application.
+
+Review applications in [Shopify Companies](https://admin.shopify.com/store/ktjqug-jw/companies).
+Check the shop and contact, then add the verified buyer through the company's
+native customer controls. Collect billing/shipping addresses, VAT/EIN and
+shipment evidence when preparing the quote. Use a Shopify draft order attached
+to the company and location for an accepted wholesale order. Set ordering
+permissions only after reviewing the buyer, product eligibility, pricing and
+delivery route. Public consumer checkout retains its existing behavior.
+
+The write switch is `SHOPIFY_TRADE_WRITE_ENABLED=1`, with the existing Admin
+token (`write_customers` or `write_companies`, plus the matching read scope).
+A repeat application checks its Shopify external ID before creating anything;
+it never overwrites a reviewed company. Missing configuration, a Shopify error
+or an unconfirmed save reports failure. Same-origin checks, Turnstile and rate
+limits protect submissions. Local development refuses shared-store writes.
+The page is in `app/routes/wholesale.tsx`; validation and Companies integration
+are in `app/lib/trade.ts`.
 
 **Reviews.** The PDP's rating line and reviews chapter read Shopify's standard
 `reviews.rating` and `reviews.rating_count` product metafields, maintained by
@@ -890,7 +896,7 @@ Shopify admin.
 | Emails | Source | Scenario data |
 |---|---|---|
 | Shopify notifications (21 templates with a body: order, shipping, status, payment, account, return, staff new order) | `scripts/shopify-templates/`, built on the one shell `app/lib/email-shell.ts` (`<od-*>` macros in the bodies) | `scripts/emails/fixtures/*.json`, each merged over `_base.json` |
-| Newsletter welcome, withdrawal receipt and shop notice, support reply notice, trade quote request | `app/lib/` builders | inline in `scripts/emails/catalog.mjs` |
+| Newsletter welcome, withdrawal receipt and shop notice, support reply notice | `app/lib/` builders | inline in `scripts/emails/catalog.mjs` |
 | Preorder buyer update, launch broadcast ("Preorders are open", EU, US and combined copy; the same copy renders `scripts/emails/shopify-email-launch.md` for the Shopify Email draft) | `scripts/preorder-notify.mjs`, `scripts/launch-blast.mjs` | inline in `scripts/emails/catalog.mjs` |
 
 Nothing is sent: the gallery calls the builders directly, and the withdrawal

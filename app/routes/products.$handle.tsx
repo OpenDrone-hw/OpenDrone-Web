@@ -2231,12 +2231,8 @@ function ProductPage() {
         label="Open for learning"
         title={title}
         titleId="product-chrome.ch_open_source_title"
-        // The schematic viewer moved into the teardown chapter (2026-08-12,
-        // maintainer: both viewers live under one repo-scope outline). wideMedia
-        // keeps the 4-across card-row layout; noMedia stops the empty media
-        // slot from rendering the placeholder glyph.
-        wideMedia={!!schematicHandle}
-        noMedia={!!schematicHandle}
+        wideMedia
+        noMedia
       >
         <div className="open-source-cards">
           {content.bundle ? (
