@@ -2793,6 +2793,19 @@ button.reset {
   color: var(--color-text);
 }
 
+/* An option value with a note under its name (the motor's KV per cell count). */
+.product-options-item.has-hint {
+  flex-direction: column;
+  gap: 0.125rem;
+  padding-block: 0.5rem;
+  min-width: 5.5rem;
+}
+.product-options-hint {
+  font-size: 0.6875rem;
+  color: var(--color-text-muted);
+  letter-spacing: 0.02em;
+}
+
 /* The only value an axis has for the chosen earlier option: a label, not a
    choice. */
 .product-options-item--fixed,
@@ -15386,6 +15399,23 @@ body:has(.cart-added-overlay) .buy-rail.is-pinned {
     gap: 12px;
     padding: 4px;
   }
+}
+
+/* The pinned bar's model chips and second-axis chips share one line. */
+.buy-rail.is-pinned .buy-rail-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.buy-rail.is-pinned .buy-rail-chips .variant-ladder-track {
+  overflow: visible;
+}
+.buy-rail.is-pinned .buy-rail-chips > .variant-ladder + .variant-ladder {
+  padding-left: 6px;
+  border-left: 1px solid var(--color-border);
 }
 
 @keyframes buy-rail-drop {

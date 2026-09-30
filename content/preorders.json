@@ -18,7 +18,9 @@
     "OPENFRAME-3": {"batches": [{"units": 250, "deliveryBy": "2027-04-15", "deliveryByUS": "2027-04-30"}]},
     "OPENFRAME-5": {"batches": [{"units": 250, "deliveryBy": "2027-04-15", "deliveryByUS": "2027-04-30"}]},
     "OPENMOTOR-1604": {"batches": [{"units": 1000, "deliveryBy": "2027-04-15", "deliveryByUS": "2027-04-30"}], "priceTiers": [{"upTo": 250, "off": 0.2}, {"upTo": 1000, "off": 0.1}]},
-    "OPENMOTOR-2306": {"batches": [{"units": 1000, "deliveryBy": "2027-04-15", "deliveryByUS": "2027-04-30"}], "priceTiers": [{"upTo": 250, "off": 0.2}, {"upTo": 1000, "off": 0.1}]}
+    "OPENMOTOR-1604-4S": {"batches": [{"units": 1000, "deliveryBy": "2027-04-15", "deliveryByUS": "2027-04-30"}], "priceTiers": [{"upTo": 250, "off": 0.2}, {"upTo": 1000, "off": 0.1}]},
+    "OPENMOTOR-2306": {"batches": [{"units": 1000, "deliveryBy": "2027-04-15", "deliveryByUS": "2027-04-30"}], "priceTiers": [{"upTo": 250, "off": 0.2}, {"upTo": 1000, "off": 0.1}]},
+    "OPENMOTOR-2306-4S": {"batches": [{"units": 1000, "deliveryBy": "2027-04-15", "deliveryByUS": "2027-04-30"}], "priceTiers": [{"upTo": 250, "off": 0.2}, {"upTo": 1000, "off": 0.1}]}
   },
   "usStock": {"sku": "OPENFC-LITE-2020", "batch": 2},
   "shipsWith": {
