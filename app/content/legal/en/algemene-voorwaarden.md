@@ -80,7 +80,7 @@
 
 7bis.1. Some products are sold as pre-orders. They are disclosed as such, with their ship date, on the product page, at checkout and on the order confirmation. The consumer pays the full price and the shipping costs shown at checkout when the order is placed.
 
-7bis.2. Pre-order products are produced in batches. The offer and order confirmation state the batch, any funding target and deadline, and the ship-by date for that batch. For pre-orders, the binding date is the ship-by date shown on the product page and at checkout for the batch of the order: for the March 2027 batch 31 March 2027, provided the funding target is reached by its deadline, and for Batch 1 the date shown. The consumer and Incutec BV agree that this ship-by date is the delivery period for the order under Art. VI.43 WER. The 30-day default delivery period in Article 7.1 does not apply to pre-orders; the ship-by date governs. The target and deadline stated at checkout do not change for that order.
+7bis.2. Pre-order products are produced in batches. The offer before payment and the order confirmation state the batch, any funding target and deadline, the ship-by date and the delivery deadline for the order. For the March 2027 batch, provided the funding target is reached by its deadline, items ship by 31 March 2027 and are delivered by 15 April 2027 in the EU or 30 April 2027 in the United States. Paid Batch 1 orders ship on the date stated in the offer and are delivered in the EU by 30 November 2026. Delivery means receipt of the goods by the consumer. The consumer and Incutec BV agree that the delivery deadline disclosed before payment and in the order confirmation is the delivery period under Art. VI.43 WER, instead of the 30-day default in Article 7.1. For a combined order under Article 7bis.5, the latest batch's delivery deadline applies only if it was disclosed and agreed as the order's delivery deadline before payment. The target and deadline stated at checkout do not change for that order. This clarification does not extend any previously agreed ship-by or delivery deadline or limit the cancellation rights of consumers who have already ordered.
 
 7bis.3. If a ship date moves, Incutec BV informs the consumer by email and states the new date. This is without prejudice to the consumer's rights under Art. VI.43 §2 WER. A moved ship date does not extend the ship-by date that applies to the order, except where the consumer keeps the order for a new ship date under Article 7bis.3bis. If Incutec BV has not shipped the item by that ship-by date, the consumer may terminate the contract for that item immediately, with a full refund within 14 days.
 
@@ -92,7 +92,7 @@
 
 7bis.6. A pre-order payment is payment of the purchase price of the product ordered. It is not an investment, carries no interest and confers no share or other right in Incutec BV.
 
-7bis.7. Within the European Union no import duties or import taxes are due on an order. For deliveries to the United States, import duties are included in the price (Article 7ter.6).
+7bis.7. For EU deliveries, the consumer owes no additional import duty, import VAT or customs brokerage charge on delivery. Incutec BV arranges those charges where applicable within the agreed price. For deliveries to the United States, import duties remain included in the price (Article 7ter.6).
 
 7bis.8. The price of a pre-order product rises in steps as paid units are counted. The price shown at checkout is the price of the order; later steps do not change it.
 
@@ -106,7 +106,7 @@
 
 7ter.3. **Refunds.** Incutec BV offers consumers in the United States the same right of withdrawal as consumers in the European Union. The consumer may withdraw from the contract without giving any reason before delivery, or within 14 calendar days after receiving the product, and receives a full refund of the price paid. Article 5 and Article 7bis.4 apply to the exercise of that right, the return of the product and the refund, in US dollars and to the original means of payment.
 
-7ter.4. **Shipping dates and delays (16 CFR Part 435).** Incutec BV ships by the date stated when the consumer orders. If Incutec BV cannot ship by that date, it notifies the consumer before that date, states a new date, and offers the choice to consent to the delay or to cancel the order for a full refund. Incutec BV refunds a cancelled order within 7 working days after the cancellation or, for a payment by credit or debit card, within one billing cycle. If the delay goes beyond 30 days after the stated date and the consumer has not consented to it, the order is cancelled automatically and refunded in the same way.
+7ter.4. **Shipping dates and delays (16 CFR Part 435).** Incutec BV ships by the date stated when the consumer orders. If Incutec BV cannot ship by that date, it notifies the consumer as soon as it becomes aware of the delay and no later than that date, states a revised shipping date, and offers the choice to consent to the delay or to cancel the order for a full refund. If no definite revised shipping date can reasonably be given, the notice explains the reason for the delay and the continuing right to cancel before shipment. Incutec BV issues the required refund within 7 working days after the consumer's right to that refund arises. For credit or debit card payments, it sends refund instructions to the payment provider and confirms the refund amount and the date of those instructions to the consumer within that period. If the delay goes beyond 30 days after the stated date and the consumer has not consented to it, the unshipped order is cancelled automatically and refunded in the same way. If Incutec BV cannot meet a previously agreed revised shipping date, it sends a renewed delay notice as soon as it becomes aware of that and no later than that date. Without the consumer's express consent to a further delay by that date, the unshipped order is cancelled and refunded in the same way.
 
 7ter.5. **FCC equipment authorization and import clearance.** Some products, such as flight controllers and receivers, are equipment subject to the rules of the Federal Communications Commission (FCC). Delivery of those products to the United States depends on FCC equipment authorization and US import clearance. If we cannot deliver an item to you for that reason, we refund that item in full. The order is therefore conditional on that authorization (47 CFR 2.803(c)(2)). FCC rules do not govern this contract or consumer protection; the consumer's rights are those in these terms and in applicable law.
 
@@ -188,7 +188,7 @@
 
 ### Article 15: Amendments
 
-15.1. Incutec BV reserves the right to amend these terms. Amended terms take effect 30 days after publication on the website. Contracts already in progress remain subject to the previous terms.
+15.1. The version of these terms supplied and accepted before payment governs the order. Incutec BV may publish a new version for new orders from the effective date stated in that version. A later version does not change the terms, prices, ship-by dates or delivery deadlines already agreed for an existing order. Mandatory consumer rights apply from their statutory effective dates and are not postponed by publication of a new version. Version 2.6 applies to new orders from its publication on 30 September 2026; earlier orders retain their accepted terms and all mandatory rights. The delivery and refund clarifications in Articles 7bis.2, 7bis.7 and 7ter.4 do not withdraw any earlier promise or reduce a consumer's rights.
 
 ### Article 16: Professional customers (B2B)
 
@@ -224,4 +224,4 @@
 
 ---
 
-*Version: 2.5, last updated 2026-09-30*
+*Version: 2.6, published 2026-09-30; applies to new orders from publication. Earlier orders retain their accepted terms.*

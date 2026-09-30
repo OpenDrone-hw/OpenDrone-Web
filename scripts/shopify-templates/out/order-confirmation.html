@@ -49,10 +49,10 @@
             <tr>
               <td class="od-px" style="padding: 28px 32px 0 32px;">
                 <p style="margin: 0 0 10px 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: #ffb700;">
-                  Order {{ name }}
+                  Order {{ name | escape }}
                 </p>
                 <h1 class="od-h1" style="margin: 0 0 14px 0; font-family: 'Space Grotesk', Helvetica, Arial, sans-serif; font-size: 32px; line-height: 1.15; font-weight: 700; letter-spacing: -0.01em; color: #e5e5e5;">
-                  Thanks{% if customer.first_name %}, {{ customer.first_name }}{% endif %}.
+                  Thanks{% if customer.first_name %}, {{ customer.first_name | escape }}{% endif %}.
                 </h1>
               </td>
             </tr>
@@ -115,14 +115,14 @@
                     {% endif %}
                     <td valign="top" style="padding: 12px 0;">
                       <p style="margin: 0 0 2px 0; font-family: 'Space Grotesk', Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 700; color: #e5e5e5;">
-                        {{ line.product.title | default: line.title }}{% if line.variant.title != 'Default Title' %} <span style="font-weight: 400; color: #a0a0a0;">&middot; {{ line.variant.title }}</span>{% endif %}
+                        {{ line.product.title | default: line.title | escape }}{% if line.variant.title != 'Default Title' %} <span style="font-weight: 400; color: #a0a0a0;">&middot; {{ line.variant.title | escape }}</span>{% endif %}
                       </p>
                       {% for p in line.properties %}{% if p.first == 'Preorder' and p.last != blank %}
                       {% assign note = p.last | split: ' if the target' | first %}
                       {% if note contains 'with the rest' %}{% assign note = note | split: ' by ' | last | prepend: 'ships by ' %}{% endif %}
                       {% assign note = note | replace: 'March', 'Mar' | replace: 'December', 'Dec' %}
                       <p style="margin: 0 0 2px 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; color: #ffb700;">
-                        {{ note | slice: 0 | upcase }}{{ note | slice: 1, 100 }}
+                        {{ note | slice: 0 | upcase | escape }}{{ note | slice: 1, 100 | escape }}
                       </p>
                       {% endif %}{% endfor %}
                       <p style="margin: 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; color: #a0a0a0;">
@@ -222,37 +222,292 @@
             <tr>
               <td class="od-px" style="padding: 0 32px 12px 32px;">
                 <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #a0a0a0;">
-                  <strong style="color: #c5c5c5;">Ships to</strong> {{ shipping_address.name }}, {{ shipping_address.street }}, {{ shipping_address.zip }} {{ shipping_address.city }}{% if shipping_address.province_code %}, {{ shipping_address.province_code }}{% endif %}, {{ shipping_address.country }}
+                  <strong style="color: #c5c5c5;">Ships to</strong> {{ shipping_address.name | escape }}, {{ shipping_address.street | escape }}, {{ shipping_address.zip | escape }} {{ shipping_address.city | escape }}{% if shipping_address.province_code %}, {{ shipping_address.province_code | escape }}{% endif %}, {{ shipping_address.country | escape }}
                 </p>
               </td>
             </tr>
 
 {% endif %}
-            <tr>
-              <td class="od-px" style="padding: 0 32px 20px 32px;">
-<!-- Legal: contract confirmation on a durable medium (Art. VI.46 WER).
-     Withdrawal info + model form + current terms (web, v2.5) must reach
-     the consumer with the order confirmation; omitting it extends withdrawal
-     to 12 months. -->
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-  <tr>
-    <td style="padding: 12px 0 0 0; border-top: 1px solid #1a241a; font-family: Helvetica, Arial, sans-serif; font-size: 12px; line-height: 1.5; color: #a0a0a0;">
-      <p style="margin: 0 0 6px 0;">
-        <strong style="color: #c5c5c5;">Right of withdrawal{% if shipping_address == blank or shipping_address.country_code == 'BE' or shipping_address.country_code == 'NL' %} / Herroepingsrecht{% endif %}.</strong>
-        You may withdraw at any time before delivery and within 14 days of receiving it, without giving a reason.
-      </p>
-      <p style="margin: 0;">
-        <a href="https://opendrone.be/herroepingsrecht" style="color: #ffb700;">Withdrawal form</a> &middot;
-        <a href="https://opendrone.be/modelformulier-herroeping.pdf" style="color: #ffb700;">Model form (PDF)</a> &middot;
-        <a href="https://opendrone.be/en/algemene-voorwaarden" style="color: #ffb700;">Terms</a> &middot;
-        {% if shipping_address == blank or eu_countries contains shipping_address.country_code %}<a href="https://opendrone.be/warranty" style="color: #ffb700;">2-year warranty</a> &middot;{% endif %}
-        <a href="https://opendrone.be/end-use" style="color: #ffb700;">End-use policy</a>
-      </p>
-    </td>
-  </tr>
-</table>
-              </td>
-            </tr>
+<tr>
+  <td class="od-px" style="padding: 0 32px 24px;">
+    <div style="border-top: 1px solid #1a241a; padding-top: 16px; font-family: Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #c5c5c5; word-wrap: break-word; overflow-wrap: anywhere;">
+      <h2 style="margin: 0 0 8px; font-size: 18px; color: #e5e5e5;">Your contract documents</h2>
+      <p style="margin: 0 0 16px;">Keep this email with your order details. The terms, withdrawal instructions and model form, warranty information and end-use policy are included below.</p>
+      {% if shipping_address == blank or eu_countries contains shipping_address.country_code %}
+      <h3 style="margin: 16px 0 8px; font-size: 14px; color: #e5e5e5;">EU legal guarantee</h3>
+      <a href="https://opendrone.be/legal-guarantee/notice-en.svg" style="color: #ffb700;">
+        <img src="https://opendrone.be/legal-guarantee/notice-en.svg" alt="Official EU legal guarantee notice" width="536" style="display: block; width: 100%; max-width: 536px; height: auto; border: 0; margin: 0 0 12px;" />
+      </a>
+      <p style="margin: 0 0 10px;">Minimum two-year legal guarantee protection for goods sold in the European Union.</p>
+<p style="margin: 0 0 10px;">Consumers can claim their rights under the legal guarantee of conformity, for example if goods: do not match the description; do not function as intended.</p>
+<p style="margin: 0 0 10px;">Sellers are liable for any lack of conformity which existed when the goods were delivered, and which becomes apparent within the legal guarantee period. Sellers in such a situation are required to offer: free repair or free replacement; in some cases, a price reduction or full reimbursement.</p>
+<p style="margin: 0 0 10px;">Some countries have a longer legal guarantee period. For second-hand goods, a shorter period may apply, but not less than one year.</p>
+<p style="margin: 0 0 10px;">For more information on your rights in a specific country, scan the QR code below or ask the seller.</p>
+<p style="margin: 0 0 10px;">What to do if you receive non-conforming goods:</p>
+<p style="margin: 0 0 10px;">1. Contact the seller as soon as possible to report the issue;</p>
+<p style="margin: 0 0 10px;">2. Provide proof of purchase, such as a receipt, invoice, or bank statement.</p>
+<p style="margin: 0 0 10px;">Sellers and producers may also offer commercial guarantees, which apply independently from the legal guarantee. For example, you may see this GARAN label representing a commercial guarantee of durability offered by the producer at no additional cost and covering the entire good.</p>
+      <p style="margin: 0 0 16px;"><a href="https://europa.eu/youreurope/guarantees" style="color: #ffb700; text-decoration: underline;">More about your legal guarantee rights on Your Europe</a></p>
+      {% endif %}
+      <h1 style="margin: 20px 0 8px; font-size: 18px; line-height: 1.4; color: #e5e5e5;">Terms and Conditions: Incutec BV</h1>
+<hr style="border: 0; border-top: 1px solid #1a241a; margin: 16px 0;" />
+<p style="margin: 0 0 10px;"><em>The Dutch version prevails in case of conflict, except toward consumers, for whom the reading most favourable to them applies (Art. 19 of the Terms).</em></p>
+<h2 style="margin: 20px 0 8px; font-size: 18px; line-height: 1.4; color: #e5e5e5;">GENERAL TERMS OF SALE: INCUTEC BV</h2>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 1: Identity of the seller</h3>
+<table width="100%" cellpadding="0" cellspacing="0" style="width: 100%; table-layout: fixed; border-collapse: collapse; margin: 0 0 12px;">
+<thead>
+<tr>
+<th style="text-align: left; vertical-align: top; padding: 4px; overflow-wrap: anywhere;"></th>
+<th style="text-align: left; vertical-align: top; padding: 4px; overflow-wrap: anywhere;"></th>
+</tr>
+</thead>
+<tbody><tr>
+<td style="text-align: left; vertical-align: top; padding: 4px; overflow-wrap: anywhere;">Name</td>
+<td style="text-align: left; vertical-align: top; padding: 4px; overflow-wrap: anywhere;">Incutec BV</td>
+</tr>
+<tr>
+<td style="text-align: left; vertical-align: top; padding: 4px; overflow-wrap: anywhere;">Registered office</td>
+<td style="text-align: left; vertical-align: top; padding: 4px; overflow-wrap: anywhere;">Stapelhuisstraat 15, 3000 Leuven</td>
+</tr>
+<tr>
+<td style="text-align: left; vertical-align: top; padding: 4px; overflow-wrap: anywhere;">Company number</td>
+<td style="text-align: left; vertical-align: top; padding: 4px; overflow-wrap: anywhere;">1038.934.039 (KBO, RPR Leuven)</td>
+</tr>
+<tr>
+<td style="text-align: left; vertical-align: top; padding: 4px; overflow-wrap: anywhere;">VAT number</td>
+<td style="text-align: left; vertical-align: top; padding: 4px; overflow-wrap: anywhere;">BE 1038.934.039</td>
+</tr>
+<tr>
+<td style="text-align: left; vertical-align: top; padding: 4px; overflow-wrap: anywhere;">Email</td>
+<td style="text-align: left; vertical-align: top; padding: 4px; overflow-wrap: anywhere;"><a href="mailto:contact@opendrone.be" style="color: #ffb700; text-decoration: underline; overflow-wrap: anywhere;">contact@opendrone.be</a></td>
+</tr>
+<tr>
+<td style="text-align: left; vertical-align: top; padding: 4px; overflow-wrap: anywhere;">Website</td>
+<td style="text-align: left; vertical-align: top; padding: 4px; overflow-wrap: anywhere;">opendrone.be (webshop) · incutec.eu</td>
+</tr>
+<tr>
+<td style="text-align: left; vertical-align: top; padding: 4px; overflow-wrap: anywhere;">IBAN</td>
+<td style="text-align: left; vertical-align: top; padding: 4px; overflow-wrap: anywhere;">BE94 7310 7599 3714 (KBC)</td>
+</tr>
+</tbody></table>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 2: Scope</h3>
+<p style="margin: 0 0 10px;">2.1. These terms apply to every offer made by Incutec BV and to every distance contract concluded between Incutec BV and the consumer/customer.</p>
+<p style="margin: 0 0 10px;">2.2. Before the distance contract is concluded, the text of these general terms and conditions is made available to the consumer in a manner that allows the consumer to store it on a durable medium.</p>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 3: Offer and prices</h3>
+<p style="margin: 0 0 10px;">3.1. All prices on the website are in euro, inclusive of VAT, exclusive of shipping costs (unless stated otherwise). For deliveries to the United States, prices are in US dollars, as set out in Article 7ter.</p>
+<p style="margin: 0 0 10px;">3.2. An offer is valid while stocks last. Manifest errors or mistakes in the offer do not bind Incutec BV.</p>
+<p style="margin: 0 0 10px;">3.3. Incutec BV reserves the right to change prices. Orders in progress are not affected by price changes.</p>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 4: Contract</h3>
+<p style="margin: 0 0 10px;">4.1. The contract is concluded at the moment the consumer accepts the offer and complies with the conditions set out therein.</p>
+<p style="margin: 0 0 10px;">4.2. Incutec BV confirms receipt of the acceptance of the offer electronically without delay. As long as receipt has not been confirmed, the consumer may rescind the contract.</p>
+<p style="margin: 0 0 10px;">4.3. The final button at checkout states unambiguously that placing the order involves an obligation to pay, in accordance with Art. VI.46 §2 of the Belgian Code of Economic Law (WER).</p>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 5: Right of withdrawal</h3>
+<p style="margin: 0 0 10px;"><strong>Art. VI.47 WER: 14 calendar days cooling-off period for consumers</strong></p>
+<p style="margin: 0 0 10px;">5.1. The consumer may rescind a contract for the purchase of a product during a cooling-off period of <strong>14 calendar days</strong> without giving any reason (right of withdrawal).</p>
+<p style="margin: 0 0 10px;">5.2. The cooling-off period starts on the day after the consumer, or a third party designated in advance by the consumer that is not the carrier, has received the product. If one order is delivered in several parcels, the period starts on the day after the consumer receives the last item.</p>
+<p style="margin: 0 0 10px;">5.3. During the cooling-off period the consumer shall handle the product and its packaging with care. The consumer shall only unpack or use the product to the extent necessary to establish its nature, characteristics and functioning.</p>
+<p style="margin: 0 0 10px;">5.4. The consumer exercises the right of withdrawal by completing the model withdrawal form (annex), via the online form at opendrone.be/herroepingsrecht, or by making any other unambiguous statement to Incutec BV. The consumer returns the product within 14 days of the withdrawal statement.</p>
+<p style="margin: 0 0 10px;">5.5. The costs of returning the product are borne by the consumer.</p>
+<p style="margin: 0 0 10px;">5.6. Incutec BV refunds all payments, including standard delivery costs, no later than 14 days after receiving the withdrawal. It may withhold the refund until it has received the product back or the consumer has shown that it was sent back, whichever is earlier.</p>
+<p style="margin: 0 0 10px;">5.7. Reimbursement is made using the same means of payment as the original transaction, unless the consumer expressly agrees to a different means of payment.</p>
+<p style="margin: 0 0 10px;">5.8. <strong>Diminished value.</strong> The consumer is liable for any diminished value of the product resulting from handling beyond what is necessary to establish its nature, characteristics and functioning (Art. VI.51 §2 WER). For electronics components this specifically means: soldering to the product, mounting it in a system, connecting battery power or motors and flight use go beyond that assessment; connecting via USB to check that it works does not. The diminished value is substantiated by Incutec BV, assessed on the actual residual value and deducted from the refund; only where the product has no residual value left can it amount to the full purchase price. The right of withdrawal itself is not lost.</p>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 6: Exclusion of the right of withdrawal</h3>
+<p style="margin: 0 0 10px;">6.1. The right of withdrawal does not apply to:</p>
+<ul style="margin: 0 0 10px; padding-left: 20px;">
+<li style="margin: 0 0 4px;">Products which after delivery are inseparably mixed with other products by their nature</li>
+<li style="margin: 0 0 4px;">Products made to the consumer&#39;s specifications or clearly intended for a specific person</li>
+</ul>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 7: Delivery</h3>
+<p style="margin: 0 0 10px;">7.1. Incutec BV delivers orders within the delivery time stated on the website. Final delivery deadline: <strong>30 days</strong> after the order, unless otherwise agreed.</p>
+<p style="margin: 0 0 10px;">7.2. If delivery is delayed, the consumer is informed as soon as possible.</p>
+<p style="margin: 0 0 10px;">7.3. The risk of damage and/or loss of products lies with Incutec BV until the moment of delivery to the consumer.</p>
+<p style="margin: 0 0 10px;">7.4. Consumer delivery is limited to approved EU destinations and, for preorders only, the United States (Article 7ter). The available carrier service and full delivery charge are shown before payment.</p>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 7bis: Pre-orders</h3>
+<p style="margin: 0 0 10px;">7bis.1. Some products are sold as pre-orders. They are disclosed as such, with their ship date, on the product page, at checkout and on the order confirmation. The consumer pays the full price and the shipping costs shown at checkout when the order is placed.</p>
+<p style="margin: 0 0 10px;">7bis.2. Pre-order products are produced in batches. The offer before payment and the order confirmation state the batch, any funding target and deadline, the ship-by date and the delivery deadline for the order. For the March 2027 batch, provided the funding target is reached by its deadline, items ship by 31 March 2027 and are delivered by 15 April 2027 in the EU or 30 April 2027 in the United States. Paid Batch 1 orders ship on the date stated in the offer and are delivered in the EU by 30 November 2026. Delivery means receipt of the goods by the consumer. The consumer and Incutec BV agree that the delivery deadline disclosed before payment and in the order confirmation is the delivery period under Art. VI.43 WER, instead of the 30-day default in Article 7.1. For a combined order under Article 7bis.5, the latest batch&#39;s delivery deadline applies only if it was disclosed and agreed as the order&#39;s delivery deadline before payment. The target and deadline stated at checkout do not change for that order. This clarification does not extend any previously agreed ship-by or delivery deadline or limit the cancellation rights of consumers who have already ordered.</p>
+<p style="margin: 0 0 10px;">7bis.3. If a ship date moves, Incutec BV informs the consumer by email and states the new date. This is without prejudice to the consumer&#39;s rights under Art. VI.43 §2 WER. A moved ship date does not extend the ship-by date that applies to the order, except where the consumer keeps the order for a new ship date under Article 7bis.3bis. If Incutec BV has not shipped the item by that ship-by date, the consumer may terminate the contract for that item immediately, with a full refund within 14 days.</p>
+<p style="margin: 0 0 10px;">7bis.3bis. If a funding target is not reached by its deadline, Incutec BV informs every consumer who ordered that product by email. The consumer then chooses either to terminate the contract for that item, with a refund of all amounts paid for it within 14 days, or to keep the order for the new ship date stated in that email. If the consumer does not reply within 30 days of that email, the contract for that item is terminated and Incutec BV refunds all amounts paid for it within 14 days of the end of that period. A consumer who keeps the order may still withdraw at any time until delivery under Article 7bis.4, with a refund of all payments. If the refund leaves no item in the order still to ship, the shipping costs paid for the order are refunded as well.</p>
+<p style="margin: 0 0 10px;">7bis.4. The right of withdrawal under Article 5 applies to pre-orders. The consumer may also exercise it before delivery, through the online form at opendrone.be/herroepingsrecht or as set out in Article 5.4. If the consumer withdraws before delivery, Incutec BV refunds all payments within 14 days of receiving the withdrawal.</p>
+<p style="margin: 0 0 10px;">7bis.5. An order that combines items with different ship dates ships as one parcel, once every item is available (one delivery per order). If a funding target for an item in the order is not reached by its deadline, the rest of the order ships as soon as it is available, whichever the consumer chooses under Article 7bis.3bis. If the consumer keeps the order for that item, it ships separately at its new ship date at no extra shipping cost.</p>
+<p style="margin: 0 0 10px;">7bis.6. A pre-order payment is payment of the purchase price of the product ordered. It is not an investment, carries no interest and confers no share or other right in Incutec BV.</p>
+<p style="margin: 0 0 10px;">7bis.7. For EU deliveries, the consumer owes no additional import duty, import VAT or customs brokerage charge on delivery. Incutec BV arranges those charges where applicable within the agreed price. For deliveries to the United States, import duties remain included in the price (Article 7ter.6).</p>
+<p style="margin: 0 0 10px;">7bis.8. The price of a pre-order product rises in steps as paid units are counted. The price shown at checkout is the price of the order; later steps do not change it.</p>
+<p style="margin: 0 0 10px;">7bis.9. The delivered product matches the characteristics and specifications on the product page when the order was placed. Any material change is emailed before dispatch; the consumer may then terminate the contract for that item free of charge, with a refund within 14 days.</p>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 7ter: Consumers with a delivery address in the United States</h3>
+<p style="margin: 0 0 10px;">7ter.1. <strong>Scope.</strong> This article applies to consumers whose delivery address is in the United States of America. All other articles of these terms apply to them too. Where this article differs from another article, this article prevails for those orders. Belgian law governs the contract as set out in Article 14.1, without prejudice to any mandatory consumer protection of the place where the consumer lives that cannot be waived by contract.</p>
+<p style="margin: 0 0 10px;">7ter.2. <strong>What is sold and at what price.</strong> For deliveries to the United States, Incutec BV sells preorder products only. Prices are in US dollars. Shipping is a flat USD 9.95 per order. Items ship from Incutec or its fulfilment partner. The ship date stated on the product page and in the order confirmation applies to the order. For the batch in which the funding target is reached by 15 December 2026, the items ship by 31 March 2027.</p>
+<p style="margin: 0 0 10px;">7ter.3. <strong>Refunds.</strong> Incutec BV offers consumers in the United States the same right of withdrawal as consumers in the European Union. The consumer may withdraw from the contract without giving any reason before delivery, or within 14 calendar days after receiving the product, and receives a full refund of the price paid. Article 5 and Article 7bis.4 apply to the exercise of that right, the return of the product and the refund, in US dollars and to the original means of payment.</p>
+<p style="margin: 0 0 10px;">7ter.4. <strong>Shipping dates and delays (16 CFR Part 435).</strong> Incutec BV ships by the date stated when the consumer orders. If Incutec BV cannot ship by that date, it notifies the consumer as soon as it becomes aware of the delay and no later than that date, states a revised shipping date, and offers the choice to consent to the delay or to cancel the order for a full refund. If no definite revised shipping date can reasonably be given, the notice explains the reason for the delay and the continuing right to cancel before shipment. Incutec BV issues the required refund within 7 working days after the consumer&#39;s right to that refund arises. For credit or debit card payments, it sends refund instructions to the payment provider and confirms the refund amount and the date of those instructions to the consumer within that period. If the delay goes beyond 30 days after the stated date and the consumer has not consented to it, the unshipped order is cancelled automatically and refunded in the same way. If Incutec BV cannot meet a previously agreed revised shipping date, it sends a renewed delay notice as soon as it becomes aware of that and no later than that date. Without the consumer&#39;s express consent to a further delay by that date, the unshipped order is cancelled and refunded in the same way.</p>
+<p style="margin: 0 0 10px;">7ter.5. <strong>FCC equipment authorization and import clearance.</strong> Some products, such as flight controllers and receivers, are equipment subject to the rules of the Federal Communications Commission (FCC). Delivery of those products to the United States depends on FCC equipment authorization and US import clearance. If we cannot deliver an item to you for that reason, we refund that item in full. The order is therefore conditional on that authorization (47 CFR 2.803(c)(2)). FCC rules do not govern this contract or consumer protection; the consumer&#39;s rights are those in these terms and in applicable law.</p>
+<p style="margin: 0 0 10px;">7ter.6. <strong>Import duties and sales tax.</strong> Prices include import duties, and the consumer owes no duty, customs brokerage fee or import tax on delivery. Incutec BV does not collect sales tax on these orders unless the law requires it. If it does, the tax is shown before payment.</p>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 8: Payment</h3>
+<p style="margin: 0 0 10px;">8.1. Payment is made by one of the payment methods shown at checkout before the order is placed. Payment is due in full when the order is placed.</p>
+<p style="margin: 0 0 10px;">8.2. The consumer has the duty to notify Incutec BV without delay of any inaccuracies in the payment details provided.</p>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 9: Warranty</h3>
+<p style="margin: 0 0 10px;">9.1. Incutec BV warrants that its products conform to the contract, the specifications stated in the offer, and reasonable requirements of soundness.</p>
+<p style="margin: 0 0 10px;">9.2. <strong>Legal warranty:</strong> 2 years in accordance with Directive (EU) 2019/771 (transposed into Belgian law by the Act of 20 March 2022). Where a lack of conformity becomes apparent within <strong>2 years</strong> of delivery, the defect is presumed to have existed at the time of delivery (reversal of the burden of proof). Belgium applies the full 2-year reversal of the burden of proof, not the EU minimum of 1 year.</p>
+<p style="margin: 0 0 10px;">9.2bis. <strong>Goods with digital elements:</strong> Incutec BV&#39;s products contain firmware (digital elements) which is necessary for their functioning, within the meaning of Directive (EU) 2019/771 Art. 2(5b). Incutec BV ensures that the consumer is informed of available firmware updates necessary to maintain the product&#39;s conformity during the 2-year warranty period. Firmware updates are made available through the Open Source projects on which the products are based (Betaflight, AM32, ExpressLRS). Incutec BV maintains the hardware-specific support (board target definitions) needed to install these updates.</p>
+<p style="margin: 0 0 10px;">9.2ter. <strong>Hierarchy of remedies:</strong> In the event of a lack of conformity the consumer has the right to request, at their choice, repair or replacement of the product. The consumer may request a price reduction or termination of the contract where repair or replacement is impossible or disproportionate, where Incutec BV has not carried out or has refused the repair or replacement, or has not done so free of charge, within a reasonable time or without significant inconvenience, where the defect reappears despite an attempted remedy, or where the defect is so serious that an immediate price reduction or termination is justified (Art. 1649quinquies old Civil Code; Directive (EU) 2019/771 Art. 13(4)).</p>
+<p style="margin: 0 0 10px;">9.3. The legal warranty does not cover a defect caused by:</p>
+<ul style="margin: 0 0 10px; padding-left: 20px;">
+<li style="margin: 0 0 4px;">Improper use or installation (deviation from the user manual), to the extent the defect was caused by it</li>
+<li style="margin: 0 0 4px;">Normal wear and tear</li>
+<li style="margin: 0 0 4px;">Modifications or reprogramming by the consumer, to the extent the defect was caused by them. Modifying Open Source firmware or hardware does not void the warranty for defects unrelated to the modification (see the warranty page)</li>
+<li style="margin: 0 0 4px;">External causes (water damage, lightning, voltage or current outside specifications), to the extent the defect was caused by them</li>
+</ul>
+<p style="margin: 0 0 10px;">9.4. <strong>Inspection on a warranty claim.</strong> On a claim, Incutec BV examines the returned product and shares its findings with the consumer (photos and measurements where relevant). Traces of causes outside conformity, such as soldering damage to pads or connectors, reversed or excessive supply voltage, mechanical damage or water damage, can serve as proof to the contrary that the defect did not exist at delivery, or show that the legal presumption is incompatible with the nature of the defect (Art. 1649quater §4 old Civil Code). Return shipping, repair and replacement under the legal warranty are free of charge for the consumer. Before desoldering a product for a claim, the consumer is asked to send photos of it as mounted, so the cause can be assessed. This article does not limit the legal warranty; it describes how claims are assessed.</p>
+<p style="margin: 0 0 10px;">9.5. <strong>No commercial guarantee.</strong> Incutec BV offers no commercial guarantee on top of the legal conformity warranty. Any reference to &quot;warranty&quot; on the website or in product documentation refers to the legal warranty of Art. 9.2.</p>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 10: Liability</h3>
+<p style="margin: 0 0 10px;">10.1. Except for intent or gross negligence of Incutec BV or its agents, and except for non-performance of an essential obligation other than through force majeure, Incutec BV&#39;s liability for indirect or consequential damage is limited to the invoice amount of the order in question, without prejudice to the legal warranty (Art. 9) and product liability. This limitation does not affect the consumer&#39;s rights under the legal warranty or any other mandatory legal provision.</p>
+<p style="margin: 0 0 10px;">10.2. The limitation in Art. 10.1 does not affect the manufacturer&#39;s statutory product liability (Act of 25 February 1991; after transposition, Directive (EU) 2024/2853) nor the consumer&#39;s rights under the legal warranty (Directive (EU) 2019/771). Liability for death or personal injury cannot be excluded or limited (Art. VI.83, 25° WER).</p>
+<p style="margin: 0 0 10px;">10.3. Incutec BV is not liable for damage arising from the use of the product in breach of the user manual or outside the specifications.</p>
+<p style="margin: 0 0 10px;">10.4. Incutec BV&#39;s products are components intended to be integrated into systems assembled by the customer. Incutec BV is not liable for the customer&#39;s end product.</p>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 10bis: Self-builds, drones and user responsibility</h3>
+<p style="margin: 0 0 10px;">10bis.1. <strong>Self-built drones.</strong> Incutec BV&#39;s products are individual components and are not an unmanned aircraft system (UAS) within the meaning of Regulation (EU) 2019/945; they carry no class label (C0-C6). The products are sold individually and not as a ready-to-assemble kit for a complete aircraft. Anyone who assembles individually purchased components into a drone for their own use builds a &quot;privately built UAS&quot; within the meaning of Regulation (EU) 2019/947 Art. 2(16) and is themselves the builder and operator of that aircraft. All obligations arising from this, including operator registration, compliance with the category and subcategory rules (for self-builds: subcategory A1 only below 250 g, otherwise A3 or the specific category), airworthiness of the assembled aircraft and legally required insurance, rest on the customer, not on Incutec BV.</p>
+<p style="margin: 0 0 10px;">10bis.2. <strong>Radio configuration.</strong> Products with a radio transmitter are delivered with firmware whose adjustable transmission parameters stay within EU limits; as delivered, the product complies with the applicable regulations. Changing the regulatory domain, exceeding the EU transmit-power limits, or using EU settings outside the EU is a modification by the user (Art. 9.3); the customer is responsible for compliance with the regulations of the country where the product is used.</p>
+<p style="margin: 0 0 10px;">10bis.3. <strong>No safety-critical use.</strong> The products are designed for unmanned recreational and professional multirotors and model aviation. They are not designed, tested or approved for manned aviation, medical applications, nuclear installations, military applications, or any other application in which the failure of a component could reasonably lead to personal injury or significant damage. Such use is expressly outside the intended use.</p>
+<p style="margin: 0 0 10px;">10bis.4. <strong>Open Source firmware.</strong> The products run Open Source firmware (including AM32, Betaflight, ExpressLRS). Reflashing or modifying firmware by the customer is technically possible and anticipated by the open nature of the products; the behaviour and regulatory conformity of the product with modified firmware are the customer&#39;s responsibility (see also Art. 9.3 and the warranty page). The software licences (GPL, MIT) concern the firmware as software and do not affect the consumer&#39;s statutory rights in respect of the purchased product.</p>
+<p style="margin: 0 0 10px;">10bis.5. <strong>Not a toy.</strong> The products are not toys and are not intended for persons under 14 years of age. Assembly and use by minors only under adult supervision. LiPo batteries, spinning propellers and soldering carry real risks; the safety information supplied with the product must be read before use.</p>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 11: Intellectual property</h3>
+<p style="margin: 0 0 10px;">11.1. Incutec BV&#39;s published hardware designs are licensed under CERN-OHL-S-2.0 (see product page). The firmware is licensed under MIT or GPL (see product page).</p>
+<p style="margin: 0 0 10px;">11.2. The &quot;Incutec&quot; brand, the logo and product brand names are owned by Incutec BV. The use of Open Source licences does not grant any right to use Incutec BV&#39;s brand names.</p>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 12: Personal data</h3>
+<p style="margin: 0 0 10px;">12.1. Incutec BV processes personal data in accordance with the General Data Protection Regulation (GDPR). See the Privacy Policy at opendrone.be/privacy.</p>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 13: Complaints</h3>
+<p style="margin: 0 0 10px;">13.1. The consumer notifies Incutec BV within two months of discovering a lack of conformity (Art. 1649quater §2 old Civil Code). The legal warranty runs for 2 years from delivery.</p>
+<p style="margin: 0 0 10px;">13.2. Incutec BV acknowledges receipt of a complaint within 5 business days and responds substantively within <strong>14 days</strong>.</p>
+<p style="margin: 0 0 10px;">13.3. If the consumer considers that a product constitutes a safety risk, this can be reported to <a href="mailto:contact@opendrone.be" style="color: #ffb700; text-decoration: underline; overflow-wrap: anywhere;">contact@opendrone.be</a>. Incutec BV investigates every safety report and takes corrective measures where necessary.</p>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 14: Disputes</h3>
+<p style="margin: 0 0 10px;">14.1. Belgian law applies to contracts between Incutec BV and the consumer, without prejudice to the mandatory provisions of the law of the country of the consumer&#39;s habitual residence (Art. 6(2) Regulation (EC) No 593/2008, Rome I).</p>
+<p style="margin: 0 0 10px;">14.2. The consumer may file a complaint with the Consumer Mediation Service / <em>Consumentenombudsdienst</em> (<a href="https://consumentenombudsdienst.be" style="color: #ffb700; text-decoration: underline; overflow-wrap: anywhere;">https://consumentenombudsdienst.be</a>).</p>
+<p style="margin: 0 0 10px;">14.3. In disputes with consumers, the court of the consumer&#39;s place of residence has jurisdiction (Art. 17–18 of Regulation (EU) 1215/2012, Brussels I bis; Art. 624 of the Belgian Judicial Code). In disputes with businesses, the Leuven Enterprise Court has jurisdiction.</p>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 15: Amendments</h3>
+<p style="margin: 0 0 10px;">15.1. The version of these terms supplied and accepted before payment governs the order. Incutec BV may publish a new version for new orders from the effective date stated in that version. A later version does not change the terms, prices, ship-by dates or delivery deadlines already agreed for an existing order. Mandatory consumer rights apply from their statutory effective dates and are not postponed by publication of a new version. Version 2.6 applies to new orders from its publication on 30 September 2026; earlier orders retain their accepted terms and all mandatory rights. The delivery and refund clarifications in Articles 7bis.2, 7bis.7 and 7ter.4 do not withdraw any earlier promise or reduce a consumer&#39;s rights.</p>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 16: Professional customers (B2B)</h3>
+<p style="margin: 0 0 10px;">16.1. For transactions with businesses (professional customers acting within the scope of their professional activity), Articles 5, 6, 9 and 13 of these terms do not apply. In that case the provisions of the Civil Code apply. A customer who provides a company number or VAT number when ordering is deemed to act as a business.</p>
+<p style="margin: 0 0 10px;">16.2. For B2B transactions the Leuven Enterprise Court has exclusive jurisdiction.</p>
+<p style="margin: 0 0 10px;">16.3. Invoices to professional customers are issued through the legally required structured electronic invoicing channels where Belgian law so requires. In other cases, Incutec BV may use any other legally permitted invoice form.</p>
+<p style="margin: 0 0 10px;">16.4. <strong>B2B liability.</strong> Except for intent or gross negligence of Incutec BV, and except for damage from injury to life or physical integrity, Incutec BV&#39;s liability toward professional customers is limited per event and in aggregate to the invoice amount of the order concerned, and liability for indirect and consequential damage, including loss of profit, loss of production and damage to other equipment, is excluded. Visible defects and non-conforming delivery must be reported in writing within 8 days of delivery on pain of forfeiture; hidden defects within 14 days of discovery and no later than 12 months after delivery (Art. 1648 old Civil Code). Repair or replacement is at Incutec BV&#39;s option.</p>
+<p style="margin: 0 0 10px;">16.5. <strong>B2B evidence.</strong> Between Incutec BV and professional customers, electronic records (order data, log files, production and test records) serve as evidence, subject to proof to the contrary.</p>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 17: Force majeure</h3>
+<p style="margin: 0 0 10px;">17.1. Incutec BV is not liable for delay or non-performance caused by circumstances beyond its reasonable control, including but not limited to: factory disruptions, shortages of raw materials or components, governmental measures, import or export restrictions, natural disasters, epidemics or pandemics.</p>
+<p style="margin: 0 0 10px;">17.2. In the event of force majeure, Incutec BV notifies the customer as soon as possible and offers, at the customer&#39;s choice, an alternative delivery date or full reimbursement.</p>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 18: Acceptable End-Use</h3>
+<p style="margin: 0 0 10px;">18.1. By placing an order, the customer accepts the Incutec End-Use Policy published at /end-use, and warrants that the goods will not be used for any of the excluded end-uses set out in §3 of that policy. Breach of this warranty constitutes a material breach of contract and entitles Incutec BV to cancel the order, refuse delivery, and pursue any remedy available under Belgian law and applicable EU regulations. On cancellation or refusal of delivery, Incutec BV refunds a consumer all payments within 14 days.</p>
+<p style="margin: 0 0 10px;">18.2. <strong>No re-export to Russia or Belarus.</strong> The customer undertakes not to sell, export or re-export the goods, directly or indirectly, to the Russian Federation or Belarus, or for use there (Art. 12g Regulation (EU) 833/2014; Art. 8g Regulation (EC) 765/2006). This undertaking constitutes an essential element of the contract. The customer shall inform Incutec BV immediately of any breach; on breach, Incutec BV may terminate the contract and claim damages. Incutec BV refuses delivery where there are indications of circumvention of this provision.</p>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 19: Language</h3>
+<p style="margin: 0 0 10px;">19.1. In the event of a conflict between the language versions of these terms, the Dutch text prevails, except toward consumers, for whom the reading most favourable to them applies (Art. VI.37 §2 WER).</p>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">Article 20: Severability</h3>
+<p style="margin: 0 0 10px;">20.1. If any provision of these terms proves wholly or partly void or unenforceable, the remaining provisions remain in full force. Between businesses, the void provision is replaced by a valid provision that approximates the original intent as closely as possible.</p>
+<hr style="border: 0; border-top: 1px solid #1a241a; margin: 16px 0;" />
+<p style="margin: 0 0 10px;"><em>Version: 2.6, published 2026-09-30; applies to new orders from publication. Earlier orders retain their accepted terms.</em></p>
+
+<h1 style="margin: 20px 0 8px; font-size: 18px; line-height: 1.4; color: #e5e5e5;">Model Withdrawal Form</h1>
+<hr style="border: 0; border-top: 1px solid #1a241a; margin: 16px 0;" />
+<p style="margin: 0 0 10px;"><em>The Dutch version prevails in case of conflict, except toward consumers, for whom the reading most favourable to them applies (Art. 19 of the Terms).</em></p>
+<h2 style="margin: 20px 0 8px; font-size: 18px; line-height: 1.4; color: #e5e5e5;">MODEL WITHDRAWAL FORM</h2>
+<p style="margin: 0 0 10px;"><em>(Complete and return this form only if you wish to withdraw from the contract)</em></p>
+<p style="margin: 0 0 10px;">To:<br><strong>Incutec BV</strong><br>Stapelhuisstraat 15, 3000 Leuven, Belgium<br>Email: <a href="mailto:contact@opendrone.be" style="color: #ffb700; text-decoration: underline; overflow-wrap: anywhere;">contact@opendrone.be</a></p>
+<hr style="border: 0; border-top: 1px solid #1a241a; margin: 16px 0;" />
+<p style="margin: 0 0 10px;">I/We (&#42;) hereby give notice that I/we (&#42;) withdraw from my/our (&#42;) contract of sale of the following goods (&#42;) / for the provision of the following service (&#42;):</p>
+<p style="margin: 0 0 10px;"><strong>Ordered on (&#42;):</strong> &#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;</p>
+<p style="margin: 0 0 10px;"><strong>Received on (&#42;):</strong> &#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;</p>
+<p style="margin: 0 0 10px;"><strong>Order number:</strong> &#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;</p>
+<p style="margin: 0 0 10px;"><strong>Product(s):</strong> &#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;</p>
+<p style="margin: 0 0 10px;"><strong>Name of consumer(s):</strong> &#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;</p>
+<p style="margin: 0 0 10px;"><strong>Address of consumer(s):</strong> &#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;</p>
+<p style="margin: 0 0 10px;"><strong>Date:</strong> &#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;</p>
+<p style="margin: 0 0 10px;"><strong>Signature of consumer(s):</strong><br><em>(only if this form is notified on paper)</em></p>
+<p style="margin: 0 0 10px;">&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;&#95;</p>
+<p style="margin: 0 0 10px;">(&#42;) Delete as appropriate.</p>
+<hr style="border: 0; border-top: 1px solid #1a241a; margin: 16px 0;" />
+<h2 style="margin: 20px 0 8px; font-size: 18px; line-height: 1.4; color: #e5e5e5;">Instructions for the consumer</h2>
+<ol style="margin: 0 0 10px; padding-left: 20px;">
+<li style="margin: 0 0 4px;">You have <strong>14 calendar days</strong> to withdraw starting from the day after you receive the product. If one order arrives in several parcels, the period starts on the day after you receive the last item.</li>
+<li style="margin: 0 0 4px;">You can complete this form and return it by email to <a href="mailto:contact@opendrone.be" style="color: #ffb700; text-decoration: underline; overflow-wrap: anywhere;">contact@opendrone.be</a> or by post to the address above.</li>
+<li style="margin: 0 0 4px;">You may also declare, in any other unambiguous manner, that you wish to withdraw from the contract.</li>
+<li style="margin: 0 0 4px;">After withdrawal, you have <strong>14 days</strong> to return the product.</li>
+<li style="margin: 0 0 4px;"><strong>Return costs</strong> are borne by you.</li>
+<li style="margin: 0 0 4px;">Incutec BV refunds all payments, including standard delivery costs, no later than <strong>14 days</strong> after receiving your withdrawal. It may withhold the refund until it has received the product back or you have shown that it was sent back, whichever is earlier.</li>
+<li style="margin: 0 0 4px;">Reimbursement is made using the same means of payment as your original purchase.</li>
+<li style="margin: 0 0 4px;">You may unpack and test the product as you would in a shop; only the diminished value from handling beyond that is deducted. For electronics components, soldering, mounting, connecting battery power or motors and flight use go beyond that assessment; checking via USB does not (see Terms and Conditions Art. 5.8).</li>
+<li style="margin: 0 0 4px;"><strong>Pre-order not delivered yet?</strong> You can withdraw from the order at any time until delivery, without giving a reason. Leave &quot;Received on&quot; empty. We refund all your payments within <strong>14 days</strong> of receiving your withdrawal (Terms and Conditions Art. 7bis.4).</li>
+</ol>
+<hr style="border: 0; border-top: 1px solid #1a241a; margin: 16px 0;" />
+<h2 style="margin: 20px 0 8px; font-size: 18px; line-height: 1.4; color: #e5e5e5;">Return address</h2>
+<p style="margin: 0 0 10px;">Incutec BV<br>Stapelhuisstraat 15, 3000 Leuven, Belgium</p>
+<hr style="border: 0; border-top: 1px solid #1a241a; margin: 16px 0;" />
+<p style="margin: 0 0 10px;"><em>This form is drawn up in accordance with Annex I, Part B, of Directive 2011/83/EU.</em></p>
+
+<h2 style="margin: 20px 0 8px; font-size: 18px; line-height: 1.4; color: #e5e5e5;">Legal guarantee of conformity</h2>
+<p style="margin: 0 0 10px;">All products sold to consumers by Incutec BV benefit from a statutory guarantee of <strong>2 years</strong> based on conformity with the contract (Art. 1649bis–1649octies of the old Civil Code, as inserted by the Act of 20 March 2022 transposing Directive (EU) 2019/771). During the entire 2-year period, any defect that becomes apparent is presumed to have existed at delivery (full Belgian reversal of the burden of proof). Incutec BV offers no commercial guarantee on top of this statutory guarantee.</p>
+<p style="margin: 0 0 10px;">The Dutch version prevails in case of conflict, except toward consumers, for whom the reading most favourable to them applies (Art. 19 of the Terms).</p>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">What is covered</h3>
+<ul style="margin: 0 0 10px; padding-left: 20px;">
+<li style="margin: 0 0 4px;">Manufacturing defects and faults that occur during normal use of the product and that become apparent within 2 years of delivery.</li>
+<li style="margin: 0 0 4px;">Non-conformity with the description, specifications or intended use as stated by Incutec BV at the time of purchase.</li>
+<li style="margin: 0 0 4px;">A defect that manifests in flight (e.g. a component failing) remains covered; damage to other parts is governed by <a href="https://opendrone.be/en/algemene-voorwaarden#art-10" style="color: #ffb700; text-decoration: underline; overflow-wrap: anywhere;">Article 10 of the Terms and Conditions</a>.</li>
+<li style="margin: 0 0 4px;">For products assembled by the consumer: incorrect assembly that results from incomplete or incorrect assembly instructions (Directive (EU) 2019/771, Art. 8).</li>
+</ul>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">What is not covered</h3>
+<ul style="margin: 0 0 10px; padding-left: 20px;">
+<li style="margin: 0 0 4px;">Crash damage where the crash was not caused by a defect of the product (e.g. pilot error or collision), as well as misuse or overload.</li>
+<li style="margin: 0 0 4px;">Wear and tear of parts with a natural lifetime (e.g. connectors after repeated use).</li>
+<li style="margin: 0 0 4px;">Damage demonstrably caused by user modifications to firmware or hardware; defects with no causal link to such modifications remain covered. Flashing Betaflight, AM32, ExpressLRS or other firmware is normal use of these products and does not by itself affect the guarantee.</li>
+</ul>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">How to make a warranty claim</h3>
+<p style="margin: 0 0 10px;">Open a warranty ticket at <a href="https://opendrone.be/support?topic=warranty" style="color: #ffb700; text-decoration: underline; overflow-wrap: anywhere;">opendrone.be/support</a> with your order number, a description of the defect and photos or a video of the issue. We acknowledge within 5 business days and coordinate return for inspection, repair or replacement where needed. Return shipping, repair and replacement under the statutory guarantee are free of charge for you.</p>
+<p style="margin: 0 0 10px;">This page does not replace your rights as a consumer. See also <a href="https://opendrone.be/en/algemene-voorwaarden#art-9" style="color: #ffb700; text-decoration: underline; overflow-wrap: anywhere;">Article 9 of our General Terms and Conditions</a>.</p>
+
+<h1 style="margin: 20px 0 8px; font-size: 18px; line-height: 1.4; color: #e5e5e5;">End-Use Policy</h1>
+<p style="margin: 0 0 10px;"><strong>Issuer:</strong> Incutec BV<br><strong>Effective:</strong> 8 June 2026 (date of incorporation of Incutec BV)<br><strong>Review:</strong> Annual; or upon material change to product scope, regulatory environment, or distribution channels.</p>
+<h2 style="margin: 20px 0 8px; font-size: 18px; line-height: 1.4; color: #e5e5e5;">1. Scope</h2>
+<p style="margin: 0 0 10px;">This policy governs the sale, supply, and distribution of all goods designed, manufactured, or resold by Incutec BV, including but not limited to the OpenDrone product line.</p>
+<h2 style="margin: 20px 0 8px; font-size: 18px; line-height: 1.4; color: #e5e5e5;">2. Permitted End-Use</h2>
+<p style="margin: 0 0 10px;">Incutec BV designs and supplies civilian hobby and commercial electronics. Goods are intended for use in:</p>
+<ul style="margin: 0 0 10px; padding-left: 20px;">
+<li style="margin: 0 0 4px;">consumer hobby and recreational applications;</li>
+<li style="margin: 0 0 4px;">educational, research, and maker contexts;</li>
+<li style="margin: 0 0 4px;">non-defence commercial applications, including industrial control, robotics, and prototyping.</li>
+</ul>
+<h2 style="margin: 20px 0 8px; font-size: 18px; line-height: 1.4; color: #e5e5e5;">3. Excluded End-Use</h2>
+<p style="margin: 0 0 10px;">Incutec BV does not knowingly sell, supply, or distribute goods for use in:</p>
+<ol style="margin: 0 0 10px; padding-left: 20px;">
+<li style="margin: 0 0 4px;">armed conflict zones in which civilian unmanned aerial vehicle components are demonstrably used in kinetic, loitering, or intelligence-surveillance-reconnaissance roles;</li>
+<li style="margin: 0 0 4px;">weaponized unmanned aerial systems, including those carrying lethal or sub-lethal payloads;</li>
+<li style="margin: 0 0 4px;">military procurement programmes, defence ministries, defence prime contractors, or their direct subcontractors where the contract end-use is military;</li>
+<li style="margin: 0 0 4px;">paramilitary, mercenary, or private military company end-users;</li>
+<li style="margin: 0 0 4px;">any end-use that contravenes EU Regulation 2021/821 (dual-use), EU Regulation 833/2014 (Russia restrictive measures), EU Regulation 765/2006 (Belarus restrictive measures), or any successor instruments.</li>
+</ol>
+<h2 style="margin: 20px 0 8px; font-size: 18px; line-height: 1.4; color: #e5e5e5;">4. Operational Implementation</h2>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">4.1 Geographic restrictions</h3>
+<p style="margin: 0 0 10px;">The webshop delivers only to addresses in EU member states and, for preorders, in the United States. It does not deliver to Russia, Belarus or any destination under EU or UN restrictive measures.</p>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">4.2 No re-export</h3>
+<p style="margin: 0 0 10px;">Every order is subject to the no-re-export clause for Russia and Belarus required by Article 12g of EU Regulation 833/2014 and Article 8g of Regulation (EC) 765/2006 (General Terms and Conditions, Article 18.2).</p>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">4.3 Acceptable end-use clause</h3>
+<p style="margin: 0 0 10px;">Order placement on the Incutec webshop constitutes acceptance of the Acceptable End-Use clause set out in the General Terms and Conditions (<a href="https://opendrone.be/en/algemene-voorwaarden#art-18" style="color: #ffb700; text-decoration: underline; overflow-wrap: anywhere;">/en/algemene-voorwaarden</a>, Article 18).</p>
+<h3 style="margin: 20px 0 8px; font-size: 14px; line-height: 1.4; color: #e5e5e5;">4.4 Downstream resale</h3>
+<p style="margin: 0 0 10px;">This policy applies to direct sales by Incutec BV. Resale by commercial customers established in the European Union is governed by the contractual no-re-export clause referenced in §4.2 and is not subject to additional audit obligations imposed by Incutec.</p>
+<h2 style="margin: 20px 0 8px; font-size: 18px; line-height: 1.4; color: #e5e5e5;">5. Limitations</h2>
+<p style="margin: 0 0 10px;">This policy:</p>
+<ul style="margin: 0 0 10px; padding-left: 20px;">
+<li style="margin: 0 0 4px;">does not classify any party to a conflict;</li>
+<li style="margin: 0 0 4px;">does not restrict purchases by individuals who are employed by defence-related entities and who purchase goods in a private capacity for non-military use;</li>
+<li style="margin: 0 0 4px;">does not constitute a representation that goods supplied by Incutec BV will not, through means outside the control of Incutec BV, reach restricted end-uses;</li>
+<li style="margin: 0 0 4px;">does not preclude employees, contractors, or shareholders of Incutec BV from supporting humanitarian or civil-society causes in their personal capacity.</li>
+</ul>
+<h2 style="margin: 20px 0 8px; font-size: 18px; line-height: 1.4; color: #e5e5e5;">6. References</h2>
+<ul style="margin: 0 0 10px; padding-left: 20px;">
+<li style="margin: 0 0 4px;">EU Regulation 2021/821 (dual-use): <a href="https://eur-lex.europa.eu/eli/reg/2021/821/oj/eng" style="color: #ffb700; text-decoration: underline; overflow-wrap: anywhere;">https://eur-lex.europa.eu/eli/reg/2021/821/oj/eng</a></li>
+<li style="margin: 0 0 4px;">EU Regulation 833/2014 (Russia): <a href="https://eur-lex.europa.eu/eli/reg/2014/833/oj" style="color: #ffb700; text-decoration: underline; overflow-wrap: anywhere;">https://eur-lex.europa.eu/eli/reg/2014/833/oj</a></li>
+<li style="margin: 0 0 4px;">EU Regulation 765/2006 (Belarus): <a href="https://eur-lex.europa.eu/eli/reg/2006/765/oj" style="color: #ffb700; text-decoration: underline; overflow-wrap: anywhere;">https://eur-lex.europa.eu/eli/reg/2006/765/oj</a></li>
+</ul>
+<hr style="border: 0; border-top: 1px solid #1a241a; margin: 16px 0;" />
+<p style="margin: 0 0 10px;"><strong>Signed for Incutec BV:</strong><br>Stan Coene, Director</p>
+
+    </div>
+  </td>
+</tr>
 
             <!-- FOOTER -->
             <tr>

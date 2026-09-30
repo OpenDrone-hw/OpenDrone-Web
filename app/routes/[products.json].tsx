@@ -8,6 +8,7 @@ import {
 import {comingSoonFlag, preorderNote} from '~/lib/coming-soon';
 import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
 import {toCards} from '~/lib/catalog';
+import {shipCountryForRequest} from '~/lib/shipping-rates';
 
 /**
  * /products.json - machine-readable catalog feed for agents and tooling.
@@ -19,6 +20,12 @@ import {toCards} from '~/lib/catalog';
 
 export async function loader({context, request}: Route.LoaderArgs) {
   const origin = new URL(request.url).origin;
+  const country = shipCountryForRequest(request);
+  const forCountry = (href: string) => {
+    const url = new URL(href, origin);
+    if (country) url.searchParams.set('country', country);
+    return url.toString();
+  };
   const globalSoon = comingSoonFlag(context.env);
   const [statusFlags, catalog] = await Promise.all([
     fetchStatusFlagsFast(
@@ -26,7 +33,7 @@ export async function loader({context, request}: Route.LoaderArgs) {
       undefined,
       context.waitUntil,
     ),
-    context.catalog.get(),
+    context.catalog.forBuyer(),
   ]);
 
   const products = toCards(catalog)
@@ -48,7 +55,7 @@ export async function loader({context, request}: Route.LoaderArgs) {
         title: p.title,
         description: PRODUCT_CONTENT[p.handle]?.hero?.lead || null,
         product_type: p.productType || null,
-        url: `${origin}/products/${p.handle}`,
+        url: forCountry(`/products/${p.handle}`),
         image: p.featuredImage?.url
           ? new URL(p.featuredImage.url, origin).toString()
           : null,
@@ -83,7 +90,7 @@ export async function loader({context, request}: Route.LoaderArgs) {
           currency: locked ? null : v.price.currencyCode,
           // The hand-off: POST the query string of cart_add_url as form
           // fields to its path; the cart action refuses GET.
-          ...(locked ? null : {cart_add_url: v.cartAddUrl, cart_add_method: 'POST'}),
+          ...(locked ? null : {cart_add_url: forCountry(v.cartAddUrl), cart_add_method: 'POST'}),
         })),
       };
     });
@@ -101,14 +108,9 @@ export async function loader({context, request}: Route.LoaderArgs) {
       status: 200,
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
-        // While the coming-soon flag is ON, keep the feed on a short leash
-        // (5 min) so flipping PUBLIC_COMING_SOON on launch day doesn't leave
-        // agents reading a stale "coming soon" catalog for a full hour.
-        // Unlocked shop → the catalog is stable, cache the full hour.
-        // 600, not 3600: roadmap topics gate SALES with a 10-minute worker
-        // cache, and a response cached longer than that would keep serving a
-        // price after a topic downgrade (see docs/product-status.md).
-        'Cache-Control': globalSoon ? 'max-age=300' : 'max-age=600',
+        // The country can come from a cookie or the visitor's IP. A shared
+        // response must never show another buyer's currency or batch.
+        'Cache-Control': 'private, no-store',
       },
     },
   );

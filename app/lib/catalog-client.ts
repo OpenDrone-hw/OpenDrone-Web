@@ -3,8 +3,8 @@
  * into the shapes in `app/lib/catalog.ts`, with the preorder campaign
  * (`content/preorders.json`) applied from paid Shopify orders.
  *
- * `get` is the catalog as an EU buyer sees it (EUR, EU batches): the feeds,
- * the sitemap and every surface that is not a purchase. `forBuyer` is the
+ * `get` is the catalog as an EU buyer sees it (EUR, EU batches): the
+ * sitemap and surfaces without a purchase hand-off. `forBuyer` is the
  * catalog for this request's destination (`shipCountryForRequest`): the
  * same as `get`, except for a US destination while US sales are open
  * (`usSalesRate`), where the campaign is applied for the US region and
