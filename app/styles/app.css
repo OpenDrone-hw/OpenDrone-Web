@@ -4027,20 +4027,6 @@ button.reset {
   gap: var(--sp-2);
 }
 
-/* Phones and tablets (single product column): the ChatFPV launcher (56 px,
-   16 px from the right edge) lifts to sit just above the notify form, level
-   with the eyebrow, title and lede. Keep that text out of its column. */
-@media (min-width: 768px) and (max-width: 959px) {
-  .chatfpv-widget-on .product-buy-notify > div:first-child {
-    padding-right: 64px;
-  }
-  /* At the end of the page the launcher rests on the footer frame's last
-     row: end the page 80 px (button + margins) higher. */
-  .chatfpv-widget-on footer {
-    padding-bottom: 80px;
-  }
-}
-
 /* === ChatFPV widget chrome: the emblem launcher + a Beta tag + a panel
    that rolls out of it (launch polish, `ChatFpvWidget.tsx`,
    `chatfpv-widget-ui.ts`). The launcher stays the OpenDrone emblem exactly
@@ -4084,24 +4070,12 @@ button.reset {
   line-height: 0;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
 }
-/* Phones and tablets: a smaller launcher covers less of the page (site
-   audit 2026-09-29: the 56 px emblem sat on chips, table cells and buttons
-   at 390 px). The emblem is scaled, never restyled. */
+/* Phones and single-column tablets (959 px and narrower, the widget's
+   existing "phones and tablets" breakpoint) have no floating launcher (audit
+   round 3, A4): at 768 px it still sat on the variant options at first
+   paint. The panel opens from `.chatfpv-entry` (mobile menu row, inline link
+   under the buy box). The container stays for the panel. */
 @media (max-width: 959px) {
-  .chatfpv-widget-toggle {
-    width: 44px;
-    height: 44px;
-    border-radius: 11px;
-  }
-  .chatfpv-widget-toggle > svg {
-    width: 44px;
-    height: 44px;
-  }
-}
-/* Below 768 px there is no floating launcher (audit round 3, A4): the panel
-   opens from `.chatfpv-entry` (mobile menu row, inline link under the buy
-   box). The container stays for the panel. */
-@media (max-width: 767px) {
   .chatfpv-widget-toggle {
     display: none;
   }
@@ -4156,7 +4130,7 @@ button.reset {
   text-underline-offset: 3px;
   cursor: pointer;
 }
-@media (max-width: 767px) {
+@media (max-width: 959px) {
   .chatfpv-widget-on .chatfpv-entry-inline {
     display: block;
   }

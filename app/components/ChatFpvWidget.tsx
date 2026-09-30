@@ -20,13 +20,14 @@ const NOTICE_SUMMARY_FALLBACK = 'AI assistant. How your question is used.';
  * renders nothing. The page CSP allows the ChatFPV origin in frame-src only
  * while the flag is on (app/lib/csp.ts `chatFpvFrameSrc`).
  *
- * Below 768px there is no floating launcher at all (audit round 3, A4: every
- * placement landed on a buy control on some phone). The same panel opens from
+ * At 959px and narrower (phones and the one-column tablet layout) there is no
+ * floating launcher at all (audit round 3, A4: every placement landed on a
+ * buy control on some phone, and at 768 on the variant options). The same panel opens from
  * the "Ask ChatFPV" entry in the mobile menu and the inline "Questions? Ask
  * ChatFPV" link under the buy box (`ChatFpvEntry.tsx`), both dispatching
  * `CHATFPV_OPEN_EVENT`; closing returns focus to whichever opened it.
  *
- * From 768px up, placement is fixed and predictable: the bottom-right corner, inset by the
+ * From 960px up, placement is fixed and predictable: the bottom-right corner, inset by the
  * device safe area (`.chatfpv-widget` in app.css). It never dodges page
  * content. The one exception is the phone product page's sticky buy bar
  * (`BOTTOM_BAR`, portaled to <body>): while it is showing, the launcher sits

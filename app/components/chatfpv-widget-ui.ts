@@ -10,6 +10,9 @@
  *  stylesheet already uses elsewhere: the phone sheet and the compact
  *  launcher switch at the same width the rest of the page's layout does. */
 export const PHONE_MAX_WIDTH_PX = 959;
+// At this width and narrower there is no floating launcher (audit round 3,
+// A4): the panel opens from the mobile menu entry and the inline link under
+// the buy box. Mirrored by the 959px rule on `.chatfpv-widget-toggle`.
 
 /** How long the panel's roll-out/roll-back CSS transition runs
  *  (`.chatfpv-widget-panel` in app.css) - the panel stays mounted this long
@@ -48,12 +51,6 @@ export function toggleHiddenBySheet(sheet: boolean, open: boolean): boolean {
 export function panelTransformOrigin(dockSide: 'left' | 'right' | null): string {
   return dockSide === 'left' ? 'bottom left' : 'bottom right';
 }
-
-/** Below this width there is no floating launcher at all (audit round 3, A4):
- *  the panel is opened from the mobile menu entry and the inline link under
- *  the buy box instead. Mirrored by the `max-width: 767px` rule on
- *  `.chatfpv-widget-toggle` in app.css. */
-export const NO_LAUNCHER_MAX_WIDTH_PX = 767;
 
 /** Window event the menu entry and the inline link dispatch; the mounted
  *  widget opens its panel. `detail.trigger` is the element to focus again

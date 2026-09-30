@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {describe, it} from 'node:test';
-import {CHATFPV_OPEN_EVENT, NO_LAUNCHER_MAX_WIDTH_PX, closedLabel, panelTransformOrigin, toggleHiddenBySheet} from './chatfpv-widget-ui.ts';
+import {CHATFPV_OPEN_EVENT, PHONE_MAX_WIDTH_PX, closedLabel, panelTransformOrigin, toggleHiddenBySheet} from './chatfpv-widget-ui.ts';
 
 describe('closedLabel', () => {
   it('always carries "beta", with or without an unread reply', () => {
@@ -52,9 +52,9 @@ describe('no floating launcher on phones (audit round 3 A4)', () => {
   const layout = readFileSync(new URL('./PageLayout.tsx', import.meta.url), 'utf8');
   const product = readFileSync(new URL('../routes/products.$handle.tsx', import.meta.url), 'utf8');
 
-  it('hides the launcher below 768px and only there', () => {
-    assert.equal(NO_LAUNCHER_MAX_WIDTH_PX, 767);
-    assert.match(css, /@media \(max-width: 767px\) \{\s*\.chatfpv-widget-toggle \{\s*display: none;/);
+  it('hides the launcher at 959px and narrower, where the layout is one column', () => {
+    assert.equal(PHONE_MAX_WIDTH_PX, 959);
+    assert.match(css, /@media \(max-width: 959px\) \{\s*\.chatfpv-widget-toggle \{\s*display: none;/);
   });
 
   it('opens the same panel from the menu entry and the inline link through one event', () => {
