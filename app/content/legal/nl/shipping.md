@@ -31,9 +31,8 @@ Voor leveringen naar de Verenigde Staten verkoopt Incutec BV rechtstreeks aan co
 - **Verzending:** Vast tarief van USD 9,95 per bestelling
 - **Verzonden vanuit:** Incutec of zijn fulfilmentpartner
 - **Verzenddatum:** Uiterlijk 31 maart 2027, als het financieringsdoel uiterlijk 15 december 2026 wordt bereikt
-- **Leverdatum:** Uiterlijk 30 april 2027
 
-De verzenddatum en leverdatum op de productpagina en in uw orderbevestiging zijn die welke voor uw bestelling gelden. Levering in de Verenigde Staten hangt af van de FCC-apparatuurgoedkeuring en de Amerikaanse invoerclearance. Kunnen wij een artikel om die reden niet bij u leveren, dan betalen wij dat artikel volledig terug. Terugbetalingen, vertraagde verzending en het recht om te annuleren bij leveringen naar de Verenigde Staten volgen [Artikel 7ter van de voorwaarden](/nl/algemene-voorwaarden#art-7ter).
+De verzenddatum op de productpagina en in uw orderbevestiging is die welke voor uw bestelling geldt. Levering in de Verenigde Staten hangt af van de FCC-apparatuurgoedkeuring en de Amerikaanse invoerclearance. Kunnen wij een artikel om die reden niet bij u leveren, dan betalen wij dat artikel volledig terug. Terugbetalingen, vertraagde verzending en het recht om te annuleren bij leveringen naar de Verenigde Staten volgen [Artikel 7ter van de voorwaarden](/nl/algemene-voorwaarden#art-7ter).
 
 ### Buiten de Europese Unie en de Verenigde Staten
 
@@ -41,9 +40,9 @@ Incutec BV biedt geen rechtstreekse consumentencheckout buiten de EU en de Veren
 
 ### Pre-orders
 
-Pre-orders worden volledig betaald. Het productaanbod en de orderbevestiging vermelden de batch, financieringsvoorwaarden, geplande verzending en een afzonderlijke uiterste leverdatum. De campagnedata staan op [/preorder](/preorder). Verzending is geen levering.
+Pre-orders worden volledig betaald. Het productaanbod en de orderbevestiging vermelden de batch, de financieringsvoorwaarden en de uiterste verzenddatum. De campagnedata staan op [/preorder](/preorder). Verzending is geen levering.
 
-Annulering, niet-behaalde doelen, gewijzigde leverdata, terugbetalingen en bestellingen met meerdere batches volgen [Artikel 7bis van de voorwaarden](/nl/algemene-voorwaarden#art-7bis). U kunt vóór de levering herroepen en behoudt de wettelijke herroepingsrechten na ontvangst. Gebruik het [online herroepingsformulier](/nl/herroepingsrecht#withdraw). Voor leveringen naar de Verenigde Staten geldt daarnaast Artikel 7ter.
+Annulering, niet-behaalde doelen, gewijzigde verzenddata, terugbetalingen en bestellingen met meerdere batches volgen [Artikel 7bis van de voorwaarden](/nl/algemene-voorwaarden#art-7bis). U kunt vóór de levering herroepen en behoudt de wettelijke herroepingsrechten na ontvangst. Gebruik het [online herroepingsformulier](/nl/herroepingsrecht#withdraw). Voor leveringen naar de Verenigde Staten geldt daarnaast Artikel 7ter.
 
 ### Leveringstermijn voor artikelen op voorraad
 

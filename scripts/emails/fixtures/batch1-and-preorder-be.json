@@ -26,7 +26,7 @@
         "title": "OpenFC Lite"
       },
       "properties": {
-        "Preorder": "ships early November 2026, delivered by 30 November 2026"
+        "Preorder": "ships early November 2026"
       }
     },
     {
@@ -43,7 +43,7 @@
         "title": "OpenESC"
       },
       "properties": {
-        "Preorder": "ships early November 2026, delivered by 30 November 2026"
+        "Preorder": "ships early November 2026"
       }
     },
     {
@@ -60,7 +60,7 @@
         "title": "OpenRX Lite"
       },
       "properties": {
-        "Preorder": "ships by 31 March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait; if the target is reached in time, delivered by 15 April 2027"
+        "Preorder": "ships by 31 March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait"
       }
     }
   ],
@@ -94,7 +94,7 @@
             "title": "OpenFC Lite"
           },
           "properties": {
-            "Preorder": "ships early November 2026, delivered by 30 November 2026"
+            "Preorder": "ships early November 2026"
           }
         },
         "quantity": 1
@@ -114,7 +114,7 @@
             "title": "OpenESC"
           },
           "properties": {
-            "Preorder": "ships early November 2026, delivered by 30 November 2026"
+            "Preorder": "ships early November 2026"
           }
         },
         "quantity": 1
@@ -134,7 +134,7 @@
             "title": "OpenRX Lite"
           },
           "properties": {
-            "Preorder": "ships by 31 March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait; if the target is reached in time, delivered by 15 April 2027"
+            "Preorder": "ships by 31 March 2027 if the target is reached by 15 December 2026, otherwise you choose a refund or to wait"
           }
         },
         "quantity": 1

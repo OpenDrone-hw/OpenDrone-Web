@@ -775,7 +775,7 @@ describe('committed dates derive from content/preorders.json', () => {
   const funded = config.skus['OPENRX-LITE'].batches[0];
   const early = config.skus['OPENFC-LITE-2020'].batches[0];
 
-  it('has the decided run: close 15 Dec 2026, ship by 31 Mar 2027, EU delivery 15 Apr, US 30 Apr', () => {
+  it('has the decided run: close 15 Dec 2026, ship by 31 Mar 2027', () => {
     assert.equal(config.endsOn, '2026-12-15');
     assert.equal(config.shipsBy, '2027-03-31');
     assert.equal(funded.deliveryBy, '2027-04-15');
@@ -800,7 +800,7 @@ describe('committed dates derive from content/preorders.json', () => {
     for (const [lang, locale] of [['en', 'en-GB'], ['nl', 'nl-BE'], ['fr', 'fr-BE']] as const) {
       for (const file of ['shipping.md', 'algemene-voorwaarden.md']) {
         const text = read(`app/content/legal/${lang}/${file}`);
-        for (const iso of [config.endsOn, config.shipsBy, funded.deliveryByUS!]) {
+        for (const iso of [config.endsOn, config.shipsBy]) {
           assert.ok(text.includes(day(iso, locale)), `${lang}/${file} names ${day(iso, locale)}`);
         }
       }
