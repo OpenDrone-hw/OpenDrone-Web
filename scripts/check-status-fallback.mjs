@@ -78,6 +78,34 @@ await Promise.all(
   }),
 );
 
+// Org drift: a public org repo that carries a status-* topic is a board and
+// must appear on the roadmap. Family hubs (topic family-hub, e.g. OpenRX) are
+// covered by their board repos. Archived repos must not be linked.
+try {
+  const res = await fetch(
+    'https://api.github.com/orgs/OpenDrone-hw/repos?type=public&per_page=100',
+    {headers, signal: AbortSignal.timeout(8000)},
+  );
+  if (res.ok) {
+    const repos = await res.json();
+    const linkedNames = new Set(linked.map((r) => r.link.split('/').pop()));
+    for (const repo of repos) {
+      const topics = repo.topics ?? [];
+      const isBoard = topics.some((t) => t.startsWith('status-'));
+      if (repo.archived && linkedNames.has(repo.name)) {
+        failures.push(`${repo.name} is archived but linked from the roadmap`);
+      }
+      if (isBoard && !repo.archived && !topics.includes('family-hub') && !linkedNames.has(repo.name)) {
+        failures.push(`${repo.name} has a status-* topic but is not on the roadmap`);
+      }
+    }
+  } else {
+    console.warn(`org listing skipped (HTTP ${res.status})`);
+  }
+} catch (err) {
+  console.warn(`org listing skipped: ${err.message}`);
+}
+
 rows.sort((a, b) => a.id.localeCompare(b.id));
 for (const row of rows) {
   const state =

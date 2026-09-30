@@ -22,7 +22,10 @@ in `content/copy/roadmap.json`.
 
 These display values do not establish stock, price approval or permission to
 accept orders. A page carrying several boards uses its furthest-along board
-for the roadmap fallback.
+for the roadmap fallback. Anything the shop sells is at least `alpha`, never
+`planned` or `in-progress`. `npm run check:status` also fails when a public org
+repo with a `status-*` topic (except `family-hub` hubs) is missing from the
+roadmap, or when a linked repo is archived.
 
 ## Display resolution
 
