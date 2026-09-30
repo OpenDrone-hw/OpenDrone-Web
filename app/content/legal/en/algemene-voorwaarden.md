@@ -80,9 +80,9 @@
 
 7bis.1. Some products are sold as pre-orders. They are disclosed as such, with their ship date, on the product page, at checkout and on the order confirmation. The consumer pays the full price and the shipping costs shown at checkout when the order is placed.
 
-7bis.2. Pre-order products are produced in batches. The offer and order confirmation state the batch, any funding target and deadline, planned dispatch and the separately agreed final delivery date. Dispatch is not delivery. The delivery period disclosed before payment applies under Art. VI.43 WER; if no different delivery period is expressly agreed, the 30-day default in Article 7.1 applies. The target and deadline stated at checkout do not change for that order.
+7bis.2. Pre-order products are produced in batches. The offer and order confirmation state the batch, any funding target and deadline, and the ship-by date for that batch. For pre-orders, the binding date is the ship-by date shown on the product page and at checkout for the batch of the order: for the March 2027 batch 31 March 2027, provided the funding target is reached by its deadline, and for Batch 1 the date shown. The consumer and Incutec BV agree that this ship-by date is the delivery period for the order under Art. VI.43 WER. The 30-day default delivery period in Article 7.1 does not apply to pre-orders; the ship-by date governs. The target and deadline stated at checkout do not change for that order.
 
-7bis.3. If a ship date moves, Incutec BV informs the consumer by email and states the new date. This is without prejudice to the consumer's rights under Art. VI.43 §2 WER. A moved ship date does not extend the agreed final delivery date. If that date is missed, the consumer may terminate the contract for that item immediately, with a refund within 14 days.
+7bis.3. If a ship date moves, Incutec BV informs the consumer by email and states the new date. This is without prejudice to the consumer's rights under Art. VI.43 §2 WER. A moved ship date does not extend the ship-by date that applies to the order, except where the consumer keeps the order for a new ship date under Article 7bis.3bis. If Incutec BV has not shipped the item by that ship-by date, the consumer may terminate the contract for that item immediately, with a full refund within 14 days.
 
 7bis.3bis. If a funding target is not reached by its deadline, Incutec BV informs every consumer who ordered that product by email. The consumer then chooses either to terminate the contract for that item, with a refund of all amounts paid for it within 14 days, or to keep the order for the new ship date stated in that email. If the consumer does not reply within 30 days of that email, the contract for that item is terminated and Incutec BV refunds all amounts paid for it within 14 days of the end of that period. A consumer who keeps the order may still withdraw at any time until delivery under Article 7bis.4, with a refund of all payments. If the refund leaves no item in the order still to ship, the shipping costs paid for the order are refunded as well.
 
@@ -224,4 +224,4 @@
 
 ---
 
-*Version: 2.5, last updated 2026-09-29*
+*Version: 2.5, last updated 2026-09-30*
