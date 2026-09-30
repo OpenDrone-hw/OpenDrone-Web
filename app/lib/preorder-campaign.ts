@@ -728,9 +728,25 @@ export function shipsWithState(
           ordered: 0,
         }]
       : [];
+  // An accessory that sells stock now and ships with the `after` batch past
+  // it lists that batch next, as the lead does, so the rows match the US buy
+  // box (where `after` is the buyer's own batch).
+  const afterBatch = rule.stock !== undefined && rule.after !== undefined ? lead.batches[rule.after - 1] : undefined;
+  const upcoming: CampaignState['batches'] =
+    afterBatch && rule.after !== undefined && !state.batches.some((b) => b.batch === rule.after) && servesRegion(afterBatch, region)
+      ? [{
+          batch: rule.after,
+          units: afterBatch.units,
+          status: 'next',
+          shipPromise: batchPromise(afterBatch, config.pendingShips),
+          paid: Boolean(afterBatch.paid),
+          regions: afterBatch.regions ?? [...REGIONS],
+          ordered: 0,
+        }]
+      : [];
   return {
     ...state,
-    batches: [...skipped, ...state.batches],
+    batches: [...skipped, ...state.batches, ...upcoming],
     paidStock: fromStock,
     paidLeft: fromStock ? rule.stock! - own : null,
     shipsWith: rule.sku,

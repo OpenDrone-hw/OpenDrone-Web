@@ -109,6 +109,16 @@ describe('one name for the November batch (G1)', () => {
     }
   });
 
+  it('lists the March batch after Batch 1 for an EU buyer of stocked accessories, as for a US buyer', () => {
+    for (const sku of ['ACC-ANT-T', 'ACC-CAP-470UF-35V']) {
+      const eu = availabilityRows(accessory(sku, 'EU'), DATES, 'EU', words);
+      assert.deepEqual(eu.map((r) => [r.label, r.state]), [
+        ['Batch 1', 'current'],
+        ['Ships with the OpenFC Lite March 2027 batch', 'next'],
+      ], sku);
+    }
+  });
+
   it('gives the accessory the same rows and "EU only" as the FC, with Batch 1 first, then the March batch, for a US buyer', () => {
     const eu = availabilityRows(accessory('ACC-STRAP-20X220', 'EU'), DATES, 'EU', words);
     assert.deepEqual(eu.map((r) => [r.label, r.scope, r.state]), [['Batch 1', 'EU only', 'current']]);
