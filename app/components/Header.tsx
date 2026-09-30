@@ -1,36 +1,43 @@
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import {useEffect, useId, useRef, useState} from 'react';
 import type {KeyboardEvent} from 'react';
 import {Form, useLocation} from 'react-router';
-import {Link, NavLink} from '~/components/nav';
+import {NavLink} from '~/components/nav';
+import {AnimatePresence} from 'motion/react';
 import {useAside} from '~/components/Aside';
+import {LangToggle} from '~/components/LangToggle';
 import {useHeaderPopover} from '~/components/header-popover';
 import {RegionSwitch} from '~/components/RegionSwitch';
+import {ThemeToggle} from '~/components/ThemeToggle';
 import {SiteWordmark} from '~/components/SiteWordmark';
 import {IncutecWordmark} from '~/components/IncutecWordmark';
+import {Pod} from '~/components/Pod';
+import {HEADER_MENU_LINKS} from '~/lib/header-menu';
+import {
+  ProductPods,
+  type ProductPodItem,
+  type PodCompanionOption,
+} from '~/components/ProductPods';
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
 import {CART_UPDATED_EVENT} from '~/lib/cart-client';
 import {INCUTEC_HINT_SEEN_KEY} from '~/lib/incutec-hint';
-import {useRoadmapStatusResolver} from '~/lib/coming-soon';
-import {isConceptFor} from '~/lib/product-content';
 import {
-  BAR_LINKS,
-  SHOP_EXTRAS,
-  SHOP_FAMILIES,
-  isShopPath,
-  type NavLinkItem,
-  type ShopFamily,
-} from '~/lib/header-nav';
-import {shopifyImageUrl} from '~/lib/shopify-image';
-import type {CommerceHandoff} from '~/lib/shop-links';
-import type {ProductCardFragment} from '~/lib/product-shapes';
+  useProductStatusResolver,
+  useRoadmapStatusResolver,
+} from '~/lib/coming-soon';
+import {
+  isComingSoon,
+  isConceptFor,
+  isPurchasableStatus,
+  PRODUCT_CONTENT,
+} from '~/lib/product-content';
+import {FAMILIES} from '~/lib/families';
+import {stackDiscountedPrice} from '~/lib/stack-discount';
+import {buyUrl, type CommerceHandoff} from '~/lib/shop-links';
+import type {
+  ProductCardFragment,
+  ProductVariantFragment,
+} from '~/lib/product-shapes';
 
 /** Retire the hero "Who's incutec?" hint: persist the dismissal and pull the
  *  class so it can't flash on a same-session SPA return to the homepage. */
@@ -44,24 +51,91 @@ function dismissIncutecHint() {
 }
 
 /** A product as the header reads it: a catalog card. */
+export type HeaderFamilyVariant = ProductVariantFragment;
 export type HeaderFamilyProduct = ProductCardFragment;
 
 interface HeaderProps {
   commerceHandoff: CommerceHandoff;
   accountUrl: string | null;
-  /** The catalog cards; the Shop panel takes one thumbnail per family. */
   familyProducts?: HeaderFamilyProduct[];
   /** Checkout is open: the cart icon links to /cart and shows the count. */
   shopOpen?: boolean;
 }
 
-// The header's own words live in `content/copy/chrome.json` and are rendered
-// through <Txt> or copyText. Product data is never copy. The structure (which
-// families and links exist, in what order) is app/lib/header-nav.ts.
+type Viewport = 'desktop' | 'mobile';
 
-/** Rendered family label ("Flight Controllers"), editable in the studio. */
-function familyLabel(f: ShopFamily): string {
-  return copyText(`chrome.family_${f.slug}_long`) ?? f.label;
+// The header's own words live in `content/copy/chrome.json` and are rendered
+// through <Txt> or copyText. The family labels below also double as dropdown
+// state keys, so the code keeps `short`/`long` as the key and fallback and
+// only the rendered label reads the copy store (`chrome.family_<slug>_short`,
+// `_long`). Product data is never copy.
+//
+// The family chips. Accessories get no dedicated link: they live (with
+// everything else) on the All Products page, reachable via the CTA on the
+// right and filterable by family there. Each chip links to its family's
+// representative PDP and, on hover, drops a Pod listing every SKU in it.
+// The vocabulary itself is app/lib/families.ts, shared with the listing.
+const CATEGORY_LINKS = FAMILIES.map((f) => ({
+  label: f.short,
+  to: f.to,
+  type: f.type,
+}));
+
+/** Fuller family names for the mobile drawer (the desktop FamilyNav chips
+ *  use the terse FC/ESC/… labels; the drawer has room to spell them out). */
+const MOBILE_FAMILY_LABEL: Record<string, string> = Object.fromEntries(
+  FAMILIES.map((f) => [f.type, f.long]),
+);
+
+/** Stack companions per family: each pod row offers "+X" buttons for these
+ *  partner products, size-matched by the Model option. N-to-N ready: every
+ *  entry in a family's list becomes its own button in the buy cell (they
+ *  stack vertically), so a second compatible ESC - or an OpenFC Pro on the
+ *  ESC side - is one more `{handle, short}` here. Keep `short` unique per
+ *  list ("ESC 30×30", "FC PRO") once a family has two partners, since it's
+ *  the visible label. Only the pairing lives here; the discount claim (the
+ *  automatic BXGY's percent and which ONE board of the pair it is off,
+ *  today the OpenESC, never both) derives per row from that product's
+ *  `stack` config in product-content.ts, which is only set while Shopify
+ *  carries the matching discount, so an unconfigured shop claims nothing. */
+const STACK_COMPANIONS: Record<string, Array<{handle: string; short: string}>> = {
+  'Flight Controller': [{handle: 'openesc', short: 'ESC'}],
+  '4-in-1 ESC': [{handle: 'openfc-lite', short: 'FC'}],
+};
+
+/** Copy slug of a family: the suffix of its listing copy id
+ *  (`collections-all.category_esc` -> `esc`). */
+function familySlug(type: string): string | undefined {
+  return FAMILIES.find((f) => f.type === type)?.copyId.split('.category_')[1];
+}
+
+/** Rendered chip label ("FC", "ESC") for a family, editable in the studio. */
+function familyShort(type: string, fallback: string): string {
+  const slug = familySlug(type);
+  return (slug ? copyText(`chrome.family_${slug}_short`) : undefined) ?? fallback;
+}
+
+/** Rendered drawer label ("Flight Controllers") for a family. */
+function familyLong(type: string, fallback: string): string {
+  const slug = familySlug(type);
+  return (slug ? copyText(`chrome.family_${slug}_long`) : undefined) ?? fallback;
+}
+
+/** Rendered "+X" label of a stack companion button. */
+function companionShort(handle: string, fallback: string): string {
+  return copyText(`chrome.stack_companion_${handle}_short`) ?? fallback;
+}
+
+
+/** Families bought in sets: a row also offers "×N" (a quad takes four
+ *  motors), one click for N units. */
+const SET_OF: Record<string, number> = {Motors: 4};
+
+function selfShortFor(type: string): string {
+  const label = CATEGORY_LINKS.find((c) => c.type === type)?.label;
+  return label
+    ? familyShort(type, label)
+    : (copyText('chrome.family_fallback_short') ?? 'board');
 }
 
 export function Header({
@@ -74,7 +148,7 @@ export function Header({
   // lives bottom-left in the 3D scene, so the bar instead credits the parent
   // company - the Incutec mark linking to incutec.eu (OpenDrone is an Incutec
   // product brand). On every other route the slot is the OpenDrone wordmark
-  // home link. The slot is a fixed width so the nav never shifts between
+  // home link. The slot is a fixed width so the nav chips never shift between
   // routes; view-transition-name animates the swap across navigations.
   const {pathname} = useLocation();
   const isHero = pathname === '/';
@@ -124,12 +198,16 @@ export function Header({
           </NavLink>
         )}
 
-        {/* Centre: one plain-text nav. Three zones on a grid (logo | nav |
-            actions) with the nav in the exact middle. Hidden at 959px and
-            narrower, where the drawer carries it. */}
-        <PrimaryNav familyProducts={familyProducts} />
+        {/* Three zones on a grid (logo | product pills | links and utilities),
+            so the column gap is a guaranteed minimum between them. */}
+        {/* Category families in segmented bubbles: FC and ESC share one
+            (their rows sell the stack), while RX, Motors and Frame are standalone
+            families so each gets its own bubble; All Products follows in its
+            own accented bubble as the route into the full catalogue. No
+            dividers - the bubbles do the grouping. */}
+        <FamilyNav familyProducts={familyProducts} commerceHandoff={commerceHandoff} />
 
-        {/* Right: region, account, cart (and the menu button on phones) */}
+        {/* Right: actions */}
         <HeaderCtas
           accountUrl={accountUrl}
           cartUrl={shopOpen ? '/cart' : commerceHandoff.cartUrl}
@@ -140,96 +218,554 @@ export function Header({
   );
 }
 
-const linkClass = ({isActive}: {isActive: boolean}) =>
-  `site-header-link${isActive ? ' is-active' : ''}`;
+/**
+ * The gold family chips (FC/ESC/Stack/RX/Motors/Frame) - segmented bubbles that, on
+ * hover/focus, drop a Pod listing every SKU of that productType (thumbnail +
+ * title + price). The chip itself still links to the family's PDP. Deferred
+ * product data is resolved once on first hover so the chips render instantly.
+ * Desktop-only (the nav is hidden below 900px). Same Pod material + popOpen
+ * motion as the hero showcase.
+ */
+function FamilyNav({
+  familyProducts,
+  commerceHandoff,
+}: {
+  familyProducts?: HeaderFamilyProduct[];
+  commerceHandoff: CommerceHandoff;
+}) {
+  const products = familyProducts ?? null;
+  const [open, setOpen] = useState<string | null>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const location = useLocation();
+  // Global coming-soon flag; per-product overrides resolve in isComingSoon()
+  // below so unlaunched SKUs list without price or buy cell.
+  const productStatus = useProductStatusResolver();
+  const roadmapStatus = useRoadmapStatusResolver();
 
-/** Shop, Preorders, Newsletter, Support: one type style, the current page
- *  underlined. The underline is a pseudo-element, so no item ever moves. */
-function PrimaryNav({familyProducts}: {familyProducts?: HeaderFamilyProduct[]}) {
+  // Close the hover dropdown on any navigation - otherwise clicking a SKU drops
+  // you on the page with the menu still stuck open (mouseleave never fires when
+  // the pointer is over the navigating link).
+  useEffect(() => {
+    clearTimeout(closeTimer.current);
+    setOpen(null);
+  }, [location.pathname, location.search]);
+
+  function openFamily(label: string) {
+    clearTimeout(closeTimer.current);
+    setOpen(label);
+  }
+  function scheduleClose() {
+    clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => setOpen(null), 140);
+  }
+
+  // Backstop for the hover dropdown: onMouseLeave/onBlur are not reliable - a
+  // fast pointer move, a scroll, or the pod re-rendering under the cursor can
+  // swallow the leave event, leaving the menu stuck open (no longer hovered).
+  // While something is open, watch the pointer and scroll globally: any pointer
+  // that isn't over a `.header-cat` (the chip OR its pod, which lives inside it)
+  // schedules the close; scrolling closes immediately.
+  useEffect(() => {
+    if (!open) return;
+    const onPointer = (e: PointerEvent) => {
+      const t = e.target as Element | null;
+      if (!t?.closest?.('.header-cat')) scheduleClose();
+    };
+    const onScroll = () => {
+      clearTimeout(closeTimer.current);
+      setOpen(null);
+    };
+    document.addEventListener('pointermove', onPointer);
+    window.addEventListener('scroll', onScroll, {passive: true});
+    return () => {
+      document.removeEventListener('pointermove', onPointer);
+      window.removeEventListener('scroll', onScroll);
+    };
+  }, [open]);
+
+  // "also add an X" cascade for an FC/ESC row: each companion product's
+  // variant at the same Model size, with both cart lines prebuilt.
+  function companionsFor(
+    type: string,
+    v: HeaderFamilyVariant,
+    rowProduct: {title: string; handle: string},
+  ): PodCompanionOption[] | undefined {
+    const cfg = STACK_COMPANIONS[type];
+    if (!cfg) return undefined;
+    const size = v.selectedOptions?.find(
+      (o) => o.name.trim().toLowerCase() === 'model',
+    )?.value;
+    if (!size) return undefined;
+    // The discount claim derives from the row product's StackConfig: the
+    // pct is off the discountedHandle board ONLY, never the pair. Both
+    // fields absent or partial -> no pct, no badge, full prices.
+    const stack = PRODUCT_CONTENT[rowProduct.handle]?.stack;
+    const pct =
+      stack?.discountPct && stack.discountedHandle
+        ? stack.discountPct
+        : undefined;
+    const options = cfg.flatMap(({handle: h, short: shortCode}) => {
+      const short = companionShort(h, shortCode);
+      // Unlaunched partners can't cascade into a stack add.
+      if (!isPurchasableStatus(productStatus(h))) return [];
+      const partner = (products ?? []).find((p) => p.handle === h);
+      const pv = partner?.variants.nodes.find((pvv) =>
+        pvv.selectedOptions.some(
+          (o) =>
+            o.name.trim().toLowerCase() === 'model' &&
+            o.value.trim().toLowerCase() === size.trim().toLowerCase(),
+        ),
+      );
+      if (!partner || !pv) return [];
+      // Partner discounted (FC row adding the ESC): show the ESC's derived
+      // checkout price, full price alongside for the tooltip. Self
+      // discounted (ESC row adding the FC): the FC price stays full and
+      // the badge names the ESC instead.
+      const partnerDiscounted = Boolean(pct) && stack?.discountedHandle === h;
+      const selfDiscounted =
+        Boolean(pct) && stack?.discountedHandle === rowProduct.handle;
+      return [
+        {
+          key: h,
+          title: `${partner.title} · ${size}`,
+          short,
+          price:
+            pv.price && partnerDiscounted && pct
+              ? stackDiscountedPrice(pv.price, pct)
+              : (pv.price ?? null),
+          fullPrice: partnerDiscounted ? (pv.price ?? null) : null,
+          pct,
+          discountedShort: partnerDiscounted
+            ? short
+            : selfDiscounted
+              ? selfShortFor(type)
+              : undefined,
+          available: Boolean(pv.availableForSale && v.availableForSale),
+          imageUrl: pv.image?.url ?? partner.featuredImage?.url ?? null,
+          // Both SKUs on one hand-off link.
+          href: buyUrl(commerceHandoff, [
+            {sku: v.sku ?? '', quantity: 1},
+            {sku: pv.sku ?? '', quantity: 1},
+          ]),
+        },
+      ];
+    });
+    return options.length ? options : undefined;
+  }
+
+  function setFor(type: string, sku: string | null | undefined) {
+    const quantity = SET_OF[type];
+    if (!quantity || !sku) return undefined;
+    return {quantity, href: buyUrl(commerceHandoff, [{sku, quantity}])};
+  }
+
+  function itemsFor(type: string): ProductPodItem[] {
+    return (products ?? [])
+      .filter((p) => (p.productType || '') === type)
+      // Planned / in-progress products have no settled tiers, images or
+      // names to preview: the chip itself links to their concept plate and
+      // the pod stays closed (docs/product-status.md).
+      .filter((p) => !isConceptFor(p.handle, roadmapStatus(p.handle)))
+      .flatMap((p) => {
+        // Coming-soon products list (the dropdown is navigation) but carry
+        // no price and no buy cell - the PDP hosts the notify signup.
+        const soon = !isPurchasableStatus(productStatus(p.handle));
+        // Real, distinguishable variants (drop the single "Default Title").
+        const variants = (p.variants.nodes ?? []).filter(
+          (v) => v.title && v.title !== 'Default Title',
+        );
+        // Single-variant product → one row for the product itself.
+        if (variants.length <= 1) {
+          const only = p.variants.nodes[0];
+          return [
+            {
+              key: p.handle,
+              to: `/products/${p.handle}`,
+              title: p.title,
+              subtitle: p.productType ?? undefined,
+              imageUrl: p.featuredImage?.url ?? null,
+              imageAlt: p.featuredImage?.altText ?? null,
+              price: soon ? null : (p.priceRange.minVariantPrice ?? null),
+              soon,
+              buy: soon
+                ? undefined
+                : only
+                ? {
+                    href: only.cartAddUrl,
+                    product: p.handle,
+                    available: Boolean(only.availableForSale),
+                    selfShort: selfShortFor(type),
+                    set: setFor(type, only.sku),
+                  }
+                : undefined,
+            },
+          ];
+        }
+        // Multi-variant → a row per SKU, deep-linking the variant on the PDP.
+        return variants.map((v) => {
+          const params = new URLSearchParams();
+          v.selectedOptions.forEach((o) => params.set(o.name, o.value));
+          const qs = params.toString();
+          return {
+            key: v.sku ?? v.id,
+            to: `/products/${p.handle}${qs ? `?${qs}` : ''}`,
+            // SKU/variant name is the headline (gold); the family line is the
+            // dim context beneath it.
+            title: v.title,
+            subtitle: p.title,
+            imageUrl: v.image?.url ?? p.featuredImage?.url ?? null,
+            imageAlt: v.image?.altText ?? p.featuredImage?.altText ?? null,
+            price: soon ? null : (v.price ?? p.priceRange.minVariantPrice ?? null),
+            soon,
+            buy: soon
+              ? undefined
+              : {
+                  href: v.cartAddUrl,
+                  product: p.handle,
+                  available: Boolean(v.availableForSale),
+                  selfShort: selfShortFor(type),
+                  set: setFor(type, v.sku),
+                  companions: companionsFor(type, v, {
+                    title: p.title,
+                    handle: p.handle,
+                  }),
+                },
+          };
+        });
+      });
+  }
+
+  function chip(cat: (typeof CATEGORY_LINKS)[number]) {
+    const items = itemsFor(cat.type);
+    return (
+      // The wrapper itself isn't interactive - the chip link and pod rows
+      // inside are. onKeyDown here is a container-level Escape listener so
+      // Escape works from anywhere within the open pod.
+      // eslint-disable-next-line jsx-a11y/no-static-element-interactions
+      <div
+        className="header-cat"
+        key={cat.label}
+        onMouseEnter={() => openFamily(cat.label)}
+        onMouseLeave={scheduleClose}
+        onFocus={() => {
+          // Keyboard focus does not open the pod: it would put every SKU row
+          // and Add button of all six families (about 30 stops) in the Tab
+          // order ahead of the page. ArrowDown on the chip opens it (see
+          // onKeyDown); once open, focus moving inside keeps it open.
+          if (open === cat.label) clearTimeout(closeTimer.current);
+        }}
+        onBlur={scheduleClose}
+        onKeyDown={(e) => {
+          if (
+            e.key === 'ArrowDown' &&
+            open !== cat.label &&
+            items.length > 0 &&
+            (e.target as Element).closest('a') === e.currentTarget.querySelector('a')
+          ) {
+            e.preventDefault();
+            openFamily(cat.label);
+            return;
+          }
+          // Escape closes the pod and hands focus back to the chip, so a
+          // keyboard user isn't stranded in a closed popup.
+          if (e.key === 'Escape' && open === cat.label) {
+            e.stopPropagation();
+            clearTimeout(closeTimer.current);
+            setOpen(null);
+            e.currentTarget.querySelector('a')?.focus();
+          }
+        }}
+      >
+        <NavLink
+          prefetch="intent"
+          to={cat.to}
+          aria-expanded={open === cat.label}
+        >
+          {familyShort(cat.type, cat.label)}
+        </NavLink>
+        <div className="header-cat-pod-wrap">
+          <AnimatePresence>
+            {/* role=group, not menu: the pod is a list of links/buttons in
+                natural tab order, not an arrow-key ARIA menu widget. */}
+            {open === cat.label && items.length > 0 ? (
+              <Pod
+                animate
+                origin="top center"
+                className="header-cat-pod"
+                role="group"
+                ariaLabel={(
+                  copyText('chrome.family_pod_aria') ?? '{family} products'
+                ).replace('{family}', familyShort(cat.type, cat.label))}
+              >
+                <ProductPods
+                  items={items}
+                  layout="row"
+                  onAdd={() => setOpen(null)}
+                />
+              </Pod>
+            ) : null}
+          </AnimatePresence>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <nav
-      className="site-header-nav"
-      aria-label={copyText('chrome.nav_primary_aria') ?? 'Main'}
+      className="site-header-categories"
+      aria-label={copyText('chrome.categories_aria') ?? 'Product categories'}
     >
-      <ul>
-        <li className="header-shop-item">
-          <ShopMenu familyProducts={familyProducts} />
-        </li>
-        {BAR_LINKS.map((l) => (
-          <li key={l.to} className={l.collapses ? 'header-nav-collapse' : undefined}>
-            <NavLink prefetch="intent" to={l.to} className={linkClass}>
-              <Txt id={l.copy} />
-            </NavLink>
-          </li>
-        ))}
-      </ul>
+      {/* FC and ESC share one bubble (a stack is bought from their rows);
+          RX, Motors and Frame are standalone families with their own bubbles. */}
+      <span className="site-header-cat-group">
+        {CATEGORY_LINKS.slice(0, 2).map(chip)}
+      </span>
+      {CATEGORY_LINKS.slice(2).map((cat) => (
+        <span className="site-header-cat-group" key={cat.label}>
+          {chip(cat)}
+        </span>
+      ))}
+      <NavLink
+        prefetch="intent"
+        to="/products"
+        className="site-header-cat-all"
+      >
+        <Txt id="chrome.nav_all_products" />
+      </NavLink>
     </nav>
   );
 }
 
+export function HeaderMenu({
+  viewport,
+  accountUrl,
+}: {
+  viewport: Viewport;
+  accountUrl: string | null;
+}) {
+  const {close} = useAside();
+  const isMobile = viewport === 'mobile';
+
+  return (
+    <nav
+      className={
+        isMobile
+          ? 'site-mobile-nav flex flex-col gap-1 px-1'
+          : 'hidden md:flex items-center gap-8 ml-10'
+      }
+      role="navigation"
+    >
+      {/* Mobile drawer only: surface Search + the product families + Home up
+          top. The desktop header carries these in its own bar / FamilyNav,
+          which is hidden on phones - without this the drawer was four links in
+          a sea of empty panel and the whole product taxonomy vanished. */}
+      {isMobile && (
+        <>
+          {/* The listing filters the catalog client-side, so this is a
+              plain GET form onto it rather than a search API call. */}
+          <Form
+            action="/products"
+            method="get"
+            className="site-mobile-nav-search"
+            onSubmit={() => close()}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              type="search"
+              name="q"
+              placeholder={
+                copyText('chrome.search_placeholder') ?? 'Search products'
+              }
+              aria-label={
+                copyText('chrome.search_placeholder') ?? 'Search products'
+              }
+              enterKeyHint="search"
+            />
+          </Form>
+          <Txt
+            id="chrome.heading_shop"
+            as="p"
+            className="site-mobile-nav-label"
+          />
+          {CATEGORY_LINKS.map((c) => (
+            <NavLink
+              key={c.to}
+              onClick={close}
+              prefetch="intent"
+              to={c.to}
+              className="text-sm font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+            >
+              {familyLong(c.type, MOBILE_FAMILY_LABEL[c.type] ?? c.label)}
+            </NavLink>
+          ))}
+          <NavLink
+            onClick={close}
+            prefetch="intent"
+            to="/products"
+            className="text-sm font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+          >
+            <Txt id="chrome.nav_all_products_mobile" />
+          </NavLink>
+          <Txt
+            id="chrome.heading_more"
+            as="p"
+            className="site-mobile-nav-label"
+          />
+          <NavLink
+            end
+            onClick={close}
+            prefetch="intent"
+            to="/"
+            className="text-sm font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+          >
+            <Txt id="chrome.nav_home" />
+          </NavLink>
+        </>
+      )}
+      {HEADER_MENU.items.map((item) => {
+        if (!item.url) return null;
+        const url = item.url;
+        // Desktop already exposes these destinations in its category bar,
+        // action links or footer. The mobile drawer keeps the full menu.
+        if (
+          !isMobile &&
+          (url === '/preorder' ||
+            url === '/wholesale' ||
+            url === '/products' ||
+            url === '/support' ||
+            url === '/newsletter' ||
+            url === 'https://github.com/OpenDrone-hw')
+        )
+          return null;
+        const className = isMobile
+          ? 'text-sm font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors'
+          : 'font-mono text-[12px] uppercase tracking-[0.15em] transition-colors text-[var(--color-text-muted)] hover:text-[var(--color-text)]';
+
+        if (!url.startsWith('/')) {
+          return (
+            <a
+              className={className}
+              href={url}
+              key={item.id}
+              onClick={close}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              {menuTitle(item)}
+            </a>
+          );
+        }
+
+        return (
+          <NavLink
+            end
+            key={item.id}
+            onClick={close}
+            prefetch="intent"
+            to={url}
+            className={({isActive}) =>
+              `${isMobile ? 'text-sm tracking-wider' : 'text-[12px] tracking-[0.15em]'} font-mono uppercase transition-colors ${
+                isActive
+                  ? 'text-[var(--color-text)]'
+                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+              }`
+            }
+          >
+            {menuTitle(item)}
+          </NavLink>
+        );
+      })}
+      {/* Mobile aside only: a Newsletter link in the slide-out menu. On
+          desktop Newsletter lives in the right-side CTA group (left of
+          Catalog), so it's omitted here to avoid duplicating it. Skipped if
+          HEADER_MENU already links to /newsletter. */}
+      {isMobile &&
+      !HEADER_MENU.items.some((it) => it.url?.includes('/newsletter')) ? (
+        <NavLink
+          end
+          onClick={close}
+          prefetch="intent"
+          to="/newsletter"
+          className={({isActive}) =>
+            `${isMobile ? 'text-sm tracking-wider' : 'text-[12px] tracking-[0.15em]'} font-mono uppercase transition-colors ${
+              isActive
+                ? 'text-[var(--color-text)]'
+                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+            }`
+          }
+        >
+          <Txt id="chrome.nav_newsletter" />
+        </NavLink>
+      ) : null}
+      {isMobile && accountUrl ? (
+        <>
+          <Txt
+            id="chrome.heading_account"
+            as="p"
+            className="site-mobile-nav-label"
+          />
+          {/* Accounts live in Shopify customer accounts, so this leaves
+              the site rather than routing inside it. */}
+          <a
+            onClick={close}
+            href={accountUrl}
+            className="text-sm font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+          >
+            <Txt id="chrome.nav_account_signin" />
+          </a>
+        </>
+      ) : null}
+    </nav>
+  );
+}
+
+/** Preorders, Wholesale, Newsletter, Contact: the links of the menu button. */
+function SecondaryLinks({onNavigate}: {onNavigate?: () => void}) {
+  const cls = ({isActive}: {isActive: boolean}) =>
+    `site-header-link${isActive ? ' is-active' : ''}`;
+  return (
+    <>
+      {HEADER_MENU_LINKS.map((l) => (
+        <NavLink key={l.to} prefetch="intent" to={l.to} className={cls} onClick={onNavigate}>
+          <Txt id={l.copy} />
+        </NavLink>
+      ))}
+    </>
+  );
+}
+
 /**
- * "Shop": a disclosure with a panel of the product families (thumbnail and
- * name), the whole catalogue and Wholesale. Opens on mouse hover and on click
- * (a click pins it; a second click closes). Keyboard: Tab to the button,
- * Enter or Space opens, ArrowDown moves onto the first link, arrows, Home and
- * End move between links, Tab walks them in order, Escape closes and returns
- * to the button. Focus leaving the panel, a press outside or a navigation
- * closes it too (useHeaderPopover). Touch has no hover, so a tap opens it.
+ * The menu button at the right of the desktop bar: a hamburger that opens a
+ * small dropdown of the text links. Enter or Space opens it, ArrowDown opens
+ * it and lands on the first link, arrows, Home and End move between links,
+ * Tab walks them, Escape closes and returns focus to the button. Hidden on
+ * phones, where the drawer carries the same links.
  */
-function ShopMenu({familyProducts}: {familyProducts?: HeaderFamilyProduct[]}) {
-  const {pathname, search} = useLocation();
+function MoreMenu() {
   const {open, setOpen, close, rootRef, triggerRef, onBlur} = useHeaderPopover();
   const panelId = useId();
-  const panelRef = useRef<HTMLDivElement>(null);
-  const hoverTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const pinned = useRef(false);
+  const panelRef = useRef<HTMLElement>(null);
   const pendingFocus = useRef(false);
-  const roadmapStatus = useRoadmapStatusResolver();
+  const links = () =>
+    Array.from(panelRef.current?.querySelectorAll<HTMLElement>('a[href]') ?? []);
 
-  useEffect(() => {
-    if (!open) pinned.current = false;
-  }, [open]);
-  useEffect(() => () => clearTimeout(hoverTimer.current), []);
-
-  // One thumbnail per family: the first shown product of that family. Planned
-  // products have no settled image yet (docs/product-status.md).
-  const thumbs = useMemo(() => {
-    const out = new Map<string, string>();
-    for (const p of familyProducts ?? []) {
-      const type = p.productType || '';
-      const url = p.featuredImage?.url;
-      if (!url || out.has(type)) continue;
-      if (isConceptFor(p.handle, roadmapStatus(p.handle))) continue;
-      out.set(type, url);
-    }
-    return out;
-  }, [familyProducts, roadmapStatus]);
-
-  const links = useCallback(
-    () =>
-      Array.from(panelRef.current?.querySelectorAll<HTMLElement>('a[href]') ?? []).filter(
-        (el) => el.offsetParent !== null,
-      ),
-    [],
-  );
-
-  // ArrowDown from the button opens the panel and lands on its first link.
   useEffect(() => {
     if (open && pendingFocus.current) {
       pendingFocus.current = false;
       links()[0]?.focus();
     }
-  }, [open, links]);
+  }, [open]);
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    const onTrigger = e.target === triggerRef.current;
-    if (onTrigger) {
+    if (e.target === triggerRef.current) {
       if (e.key !== 'ArrowDown') return;
       e.preventDefault();
       if (open) links()[0]?.focus();
       else {
         pendingFocus.current = true;
-        pinned.current = true;
         setOpen(true);
       }
       return;
@@ -238,8 +774,8 @@ function ShopMenu({familyProducts}: {familyProducts?: HeaderFamilyProduct[]}) {
     const at = list.indexOf(document.activeElement as HTMLElement);
     if (at < 0) return;
     let next = -2;
-    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') next = (at + 1) % list.length;
-    else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') next = at - 1;
+    if (e.key === 'ArrowDown') next = (at + 1) % list.length;
+    else if (e.key === 'ArrowUp') next = at - 1;
     else if (e.key === 'Home') next = 0;
     else if (e.key === 'End') next = list.length - 1;
     if (next === -2) return;
@@ -248,202 +784,42 @@ function ShopMenu({familyProducts}: {familyProducts?: HeaderFamilyProduct[]}) {
     else list[next]?.focus();
   };
 
-  const activeType = pathname === '/products' ? new URLSearchParams(search).get('type') : null;
-  const current = isShopPath(pathname);
-  const shopLabel = copyText('chrome.nav_shop') ?? 'Shop';
-
-  const closeNow = () => close();
-  const familyCurrent = (f: ShopFamily) => activeType === f.type;
-  const extraCurrent = (l: NavLinkItem) =>
-    l.to === '/products'
-      ? pathname === '/products' && !activeType
-      : pathname === l.to;
-
   return (
-    // The wrapper is not interactive: its trigger and links are. The handlers
-    // give hover intent and arrow-key movement across the whole widget.
+    // The wrapper is not interactive: its trigger and links are.
     // eslint-disable-next-line jsx-a11y/no-static-element-interactions
     <div
       ref={rootRef}
       onBlur={onBlur}
       onKeyDown={onKeyDown}
-      className="header-popover header-shop"
+      className="header-popover header-more"
       data-open={open ? 'true' : undefined}
-      onPointerEnter={(e) => {
-        if (e.pointerType !== 'mouse') return;
-        clearTimeout(hoverTimer.current);
-        setOpen(true);
-      }}
-      onPointerLeave={(e) => {
-        if (e.pointerType !== 'mouse' || pinned.current) return;
-        clearTimeout(hoverTimer.current);
-        hoverTimer.current = setTimeout(() => setOpen(false), 160);
-      }}
     >
       <button
         ref={triggerRef}
         type="button"
-        className={`site-header-link header-shop-trigger${current ? ' is-active' : ''}`}
+        className="site-header-icon header-more-trigger"
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
-        aria-current={current ? 'page' : undefined}
-        onClick={() => {
-          if (!open) {
-            pinned.current = true;
-            setOpen(true);
-          } else if (!pinned.current) {
-            pinned.current = true;
-          } else {
-            pinned.current = false;
-            setOpen(false);
-          }
-        }}
+        aria-label={copyText('chrome.menu_toggle_aria') ?? 'Menu'}
+        onClick={() => setOpen(!open)}
       >
-        {shopLabel}
-        <svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
-          <path d="M2 3.5 5 6.5 8 3.5" />
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <line x1="4" y1="7" x2="20" y2="7" />
+          <line x1="4" y1="12" x2="20" y2="12" />
+          <line x1="4" y1="17" x2="20" y2="17" />
         </svg>
       </button>
       {open ? (
-        <div id={panelId} ref={panelRef} className="header-shop-panel">
-          <nav aria-label={shopLabel} className="header-shop-grid">
-            <ul className="header-shop-families">
-              {SHOP_FAMILIES.map((f) => {
-                const thumb = thumbs.get(f.type);
-                return (
-                  <li key={f.type}>
-                    <Link
-                      prefetch="intent"
-                      to={f.to}
-                      className="header-shop-family"
-                      aria-current={familyCurrent(f) ? 'page' : undefined}
-                      onClick={closeNow}
-                    >
-                      <span className="header-shop-thumb" aria-hidden="true">
-                        {thumb ? (
-                          <img
-                            src={shopifyImageUrl(thumb, 160)}
-                            width={40}
-                            height={40}
-                            alt=""
-                            loading="lazy"
-                            decoding="async"
-                          />
-                        ) : null}
-                      </span>
-                      <span className="header-shop-family-text">
-                        <span>{familyLabel(f)}</span>
-                        {f.noteCopy ? (
-                          <small>
-                            <Txt id={f.noteCopy} />
-                          </small>
-                        ) : null}
-                      </span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-            <ul className="header-shop-extras">
-              {SHOP_EXTRAS.map((l) => (
-                <li key={l.to}>
-                  <Link
-                    prefetch="intent"
-                    to={l.to}
-                    aria-current={extraCurrent(l) ? 'page' : undefined}
-                    onClick={closeNow}
-                  >
-                    <Txt id={l.copy} />
-                  </Link>
-                </li>
-              ))}
-              {/* Tablet widths: Newsletter folds in here from the bar. */}
-              {BAR_LINKS.filter((l) => l.collapses).map((l) => (
-                <li key={l.to} className="header-shop-collapsed">
-                  <Link
-                    prefetch="intent"
-                    to={l.to}
-                    aria-current={pathname === l.to ? 'page' : undefined}
-                    onClick={closeNow}
-                  >
-                    <Txt id={l.copy} />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        </div>
+        <nav
+          id={panelId}
+          ref={panelRef}
+          className="header-popover-panel header-more-panel"
+          aria-label={copyText('chrome.nav_more_aria') ?? 'More pages'}
+        >
+          <SecondaryLinks onNavigate={() => close()} />
+        </nav>
       ) : null}
     </div>
-  );
-}
-
-/**
- * The phone drawer. Every destination of the bar and of the Shop panel, then
- * the account link; PageLayout adds region, theme and language below.
- */
-export function HeaderMenu({accountUrl}: {accountUrl: string | null}) {
-  const {close} = useAside();
-  const { pathname, search } = useLocation();
-  const activeType = pathname === '/products' ? new URLSearchParams(search).get('type') : null;
-  const item = (to: string, label: React.ReactNode, current: boolean) => (
-    <Link
-      key={to}
-      onClick={close}
-      prefetch="intent"
-      to={to}
-      className="site-mobile-link"
-      aria-current={current ? 'page' : undefined}
-    >
-      {label}
-    </Link>
-  );
-
-  return (
-    <nav className="site-mobile-nav flex flex-col gap-1 px-1" aria-label={copyText('chrome.nav_primary_aria') ?? 'Main'}>
-      {/* The listing filters the catalog client-side, so this is a plain GET
-          form onto it rather than a search API call. */}
-      <Form
-        action="/products"
-        method="get"
-        className="site-mobile-nav-search"
-        onSubmit={() => close()}
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-          <circle cx="11" cy="11" r="7" />
-          <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </svg>
-        <input
-          type="search"
-          name="q"
-          placeholder={copyText('chrome.search_placeholder') ?? 'Search products'}
-          aria-label={copyText('chrome.search_placeholder') ?? 'Search products'}
-          enterKeyHint="search"
-        />
-      </Form>
-      <Txt id="chrome.heading_shop" as="p" className="site-mobile-nav-label" />
-      {SHOP_FAMILIES.map((f) => item(f.to, familyLabel(f), activeType === f.type))}
-      {item(
-        '/products',
-        <Txt id="chrome.nav_all_products" />,
-        pathname === '/products' && !activeType,
-      )}
-      <Txt id="chrome.heading_more" as="p" className="site-mobile-nav-label" />
-      {BAR_LINKS.map((l) => item(l.to, <Txt id={l.copy} />, pathname === l.to))}
-      {SHOP_EXTRAS.filter((l) => l.to !== '/products').map((l) =>
-        item(l.to, <Txt id={l.copy} />, pathname === l.to),
-      )}
-      {accountUrl ? (
-        <>
-          <Txt id="chrome.heading_account" as="p" className="site-mobile-nav-label" />
-          {/* Accounts live in Shopify customer accounts, so this leaves the
-              site rather than routing inside it. */}
-          <a onClick={close} href={accountUrl} className="site-mobile-link">
-            <Txt id="chrome.nav_account_signin" />
-          </a>
-        </>
-      ) : null}
-    </nav>
   );
 }
 
@@ -475,23 +851,29 @@ function HeaderCtas({
 }) {
   return (
     <div className="site-header-actions">
-      {/* Hidden in the bar at 959px and narrower: the drawer carries the
-          region switch and the account link there. */}
-      <RegionSwitch variant="menu" className="header-region-switch" />
-      {/* Account, orders and addresses live in Shopify customer accounts:
-          an external link, not an in-app route. The signed-in state is
-          Shopify's to know, so the label is always "Account". */}
-      {accountUrl ? (
-        <a
-          href={accountUrl}
-          className="site-header-icon site-header-account"
-          aria-label={copyText('chrome.nav_account') ?? 'Account'}
-        >
-          <AccountIcon />
-        </a>
-      ) : null}
-      <CartToggle cartUrl={cartUrl} hasCart={hasCart} />
-      <HeaderMenuMobileToggle />
+      {/* Utility zone. Hidden in the top bar on phones (it would overflow a
+          320px row on legal pages); MobileMenuAside renders the language and
+          currency controls inside the drawer instead. */}
+      <div className="site-header-utils">
+        <LangToggle className="header-lang-toggle" />
+        <RegionSwitch variant="menu" className="header-region-switch" />
+        <ThemeToggle className="site-header-icon" />
+        {/* Account, orders and addresses live in Shopify customer accounts:
+            an external link, not an in-app route. The signed-in state is
+            Shopify's to know, so the label is always "Account". */}
+        {accountUrl ? (
+          <a
+            href={accountUrl}
+            className="site-header-icon site-header-account"
+            aria-label={copyText('chrome.nav_account') ?? 'Account'}
+          >
+            <AccountIcon />
+          </a>
+        ) : null}
+        <CartToggle cartUrl={cartUrl} hasCart={hasCart} />
+        <MoreMenu />
+        <HeaderMenuMobileToggle />
+      </div>
     </div>
   );
 }
@@ -588,3 +970,29 @@ function CartIcon() {
     </svg>
   );
 }
+
+/**
+ * The site menu. It used to be edited in the Shopify admin and read
+ * through the Storefront API; it is these few links. The id and url are
+ * structure; the rendered title reads `chrome.menu_<id>` and falls back to
+ * `title` here.
+ */
+function menuTitle(item: {id: string; title: string}): string {
+  return copyText(`chrome.${item.id.replace(/-/g, '_')}`) ?? item.title;
+}
+
+const HEADER_MENU = {
+  items: [
+    {id: 'menu-products', title: 'Catalog', url: '/products'},
+    {id: 'menu-preorder', title: 'Preorders', url: '/preorder'},
+    {id: 'menu-wholesale', title: 'Wholesale', url: '/wholesale'},
+    {id: 'menu-newsletter', title: 'Newsletter', url: '/newsletter'},
+    // Mobile drawer only: desktop shows Support as the Contact link.
+    {id: 'menu-support', title: 'Support', url: '/support'},
+    {
+      id: 'menu-open-source',
+      title: 'Open Source',
+      url: 'https://github.com/OpenDrone-hw',
+    },
+  ],
+};

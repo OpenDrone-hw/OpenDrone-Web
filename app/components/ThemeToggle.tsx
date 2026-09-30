@@ -30,14 +30,7 @@ const SUN = (
  * The OS `prefers-color-scheme` is not consulted, here or in the head script:
  * dark is the default for everyone, light is an explicit choice.
  */
-export function ThemeToggle({
-  className,
-  showLabel = false,
-}: {
-  className?: string;
-  /** Print the action beside the icon (drawer, footer). */
-  showLabel?: boolean;
-}) {
+export function ThemeToggle({className}: {className?: string}) {
   const [theme, setTheme] = useState<Theme>('dark');
   const [mounted, setMounted] = useState(false);
 
@@ -111,11 +104,6 @@ export function ThemeToggle({
           {showMoon ? MOON : SUN}
         </motion.span>
       </AnimatePresence>
-      {showLabel ? (
-        <span className="theme-toggle-label" suppressHydrationWarning>
-          {switchLabel}
-        </span>
-      ) : null}
     </motion.button>
   );
 }
