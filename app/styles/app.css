@@ -12218,7 +12218,8 @@ html.light .editorial-watermark {
   color: var(--od-ink-dim);
   margin: 0 0 10px;
   display: flex;
-  gap: 14px;
+  flex-wrap: wrap;
+  gap: 6px 14px;
   align-items: center;
 }
 .rn-archive-head .rn-eyebrow .rn-rss {

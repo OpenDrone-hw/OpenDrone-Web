@@ -1,8 +1,10 @@
 import type {Route} from './+types/[sitemap.xml]';
+import {archivePosts, shopIsOpen} from '~/lib/posts';
 
 /**
  * One sitemap for the whole site: the static routes plus a
- * `/products/<handle>` line per catalog product.
+ * `/products/<handle>` line per catalog product and a `/newsletter/<handle>`
+ * line per published newsletter post.
  *
  * It used to be a Hydrogen sitemap index over Shopify-hosted resources
  * with paginated child sitemaps. The site is a few dozen URLs, and a
@@ -50,9 +52,14 @@ export async function loader({request, context}: Route.LoaderArgs) {
     (p) => `/products/${p.handle}`,
   );
 
+  const postPaths = archivePosts(shopIsOpen(context.env)).map(
+    (p) => `/newsletter/${p.handle}`,
+  );
+
   const paths = [
     ...STATIC_PATHS,
     ...productPaths,
+    ...postPaths,
     ...LOCALES.flatMap((l) => LEGAL_SLUGS.map((s) => `/${l}/${s}`)),
   ];
 
