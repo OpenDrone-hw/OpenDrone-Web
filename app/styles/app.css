@@ -207,7 +207,7 @@
      currency pill, square icon hit-boxes), one glyph size for every utility
      icon, the logo height, the gap between neighbouring pills and the gap
      between neighbouring icons. */
-  --header-control-height: 2rem;
+  --header-control-height: 2.3333rem;
   --header-logo-height: 1.75rem;
   --header-icon-size: 1.5rem;
   --header-pill-gap: clamp(0.5rem, 0.9vw, 0.9rem);
