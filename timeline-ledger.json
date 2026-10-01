@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-30T11:11:00.800Z",
+  "updatedAt": "2026-10-01T11:38:11.330Z",
   "repos": {
     "OpenESC-20x20": {
       "createdAt": "2026-03-09",
@@ -153,6 +153,34 @@
       "createdAt": "2026-09-26",
       "status": null,
       "statusSince": "2026-09-29",
+      "archived": false,
+      "releases": 0
+    },
+    "OpenFrame-3F": {
+      "createdAt": "2026-09-19",
+      "status": "alpha",
+      "statusSince": "2026-10-01",
+      "archived": false,
+      "releases": 0
+    },
+    "OpenGPS": {
+      "createdAt": "2026-09-19",
+      "status": "planned",
+      "statusSince": "2026-10-01",
+      "archived": false,
+      "releases": 0
+    },
+    "OpenMotor": {
+      "createdAt": "2026-09-30",
+      "status": "alpha",
+      "statusSince": "2026-10-01",
+      "archived": false,
+      "releases": 0
+    },
+    "OpenFrame-5F": {
+      "createdAt": "2026-09-30",
+      "status": "alpha",
+      "statusSince": "2026-10-01",
       "archived": false,
       "releases": 0
     }
@@ -624,6 +652,24 @@
       "observed": "2026-09-02"
     },
     {
+      "id": "repo:OpenFrame-3F",
+      "kind": "repo",
+      "repo": "OpenFrame-3F",
+      "date": "2026-09-19",
+      "url": "https://github.com/OpenDrone-hw/OpenFrame-3F",
+      "archived": false,
+      "observed": "2026-10-01"
+    },
+    {
+      "id": "repo:OpenGPS",
+      "kind": "repo",
+      "repo": "OpenGPS",
+      "date": "2026-09-19",
+      "url": "https://github.com/OpenDrone-hw/OpenGPS",
+      "archived": false,
+      "observed": "2026-10-01"
+    },
+    {
       "id": "repo:chatfpv",
       "kind": "repo",
       "repo": "chatfpv",
@@ -680,6 +726,24 @@
       "url": "https://github.com/OpenDrone-hw/discord",
       "archived": false,
       "observed": "2026-09-28"
+    },
+    {
+      "id": "repo:OpenFrame-5F",
+      "kind": "repo",
+      "repo": "OpenFrame-5F",
+      "date": "2026-09-30",
+      "url": "https://github.com/OpenDrone-hw/OpenFrame-5F",
+      "archived": false,
+      "observed": "2026-10-01"
+    },
+    {
+      "id": "repo:OpenMotor",
+      "kind": "repo",
+      "repo": "OpenMotor",
+      "date": "2026-09-30",
+      "url": "https://github.com/OpenDrone-hw/OpenMotor",
+      "archived": false,
+      "observed": "2026-10-01"
     }
   ]
 }
