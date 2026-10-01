@@ -99,20 +99,14 @@
                 </table>
               </td>
             </tr>
-{% assign has_receiver = false %}
-{% for line in line_items %}{% if line.sku contains 'OPENRX' %}{% assign has_receiver = true %}{% endif %}{% endfor %}
 {% comment %}
   Duties and delivery notes. US: duties are included in the price. Other
   non-EU countries: the recipient pays import charges unless prepaid.
-  Sale VAT/GST is separate from border charges. The US receiver line is the FCC 47 CFR 2.803
-  conditional-sale disclosure for RF products.
+  Sale VAT/GST is separate from border charges.
 {% endcomment %}
 {% if shipping_address and shipping_address.country_code != blank %}{% unless eu_countries contains shipping_address.country_code %}
 {% if shipping_address.country_code == 'US' %}
 <od-p small><strong style="color: #c5c5c5;">Duties included.</strong> Import duties, taxes and handling are in the price. Nothing to pay on delivery.</od-p>
-{% if has_receiver %}
-<od-p small><strong style="color: #c5c5c5;">Receiver, US sale.</strong> Sold on the condition that it is not delivered in the US until its FCC equipment authorization is granted (47 CFR 2.803). If it is not granted, you get a full refund for it.</od-p>
-{% endif %}
 <od-p small>US delivery also depends on import clearance. If we cannot deliver an item, you get a full refund for it.</od-p>
 {% else %}
 <od-p small last><strong style="color: #c5c5c5;">Import charges.</strong> You pay import duties, import VAT/GST and carrier clearance fees on arrival unless they were explicitly collected before payment. Tax in your order total does not mean all import charges are prepaid. You will not be asked to pay the same charge twice.</od-p>

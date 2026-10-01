@@ -28,7 +28,6 @@ import {DATES_SEEN_FIELD, latestDeliveryBy, type CartSummary} from '~/lib/shopif
 import {trackEvent} from '~/lib/growth/plausible';
 import {CART_ADDED_EVENT, postCartAdd, withCountry, type CartAddedDetail} from '~/lib/cart-client';
 import {ShipToSelect} from './ShipToSelect';
-import {fccConditionalSku} from '~/lib/us-sales';
 
 const CART_ACTION = '/api/shopify/cart';
 const BUILDS = parseBuilds(buildsJson);
@@ -230,13 +229,6 @@ export function CartAddedDialog() {
                 <LineShipChip promise={line.shipPromise} parcel={parcelOf} className="cart-added-ship" />
                 {parcelDeliveryBy || line.deliveryBy ? (
                   <small className="cart-added-line-qty">{t('delivery_by', 'Delivery by {date}', {date: parcelDeliveryBy ?? line.deliveryBy!})}</small>
-                ) : null}
-                {usBuyer && fccConditionalSku(line.sku) ? (
-                  <small className="cart-added-line-qty" role="note">
-                    <Link to={`/products/${line.handle}#fcc-notice`}>
-                      {t('fcc_line', 'Not yet FCC authorized. Refund if not authorized.')}
-                    </Link>
-                  </small>
                 ) : null}
               </div>
               {line.total ? (

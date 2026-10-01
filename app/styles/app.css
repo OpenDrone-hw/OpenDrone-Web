@@ -17873,18 +17873,6 @@ html.light .plugs {
   margin-bottom: var(--sp-3);
 }
 
-/* The FCC line of a receiver in a US cart: one short line linking to the notice. */
-.cart-line-fcc {
-  display: block;
-  font-size: var(--fs-xs);
-  color: var(--color-text-muted);
-}
-.cart-line-fcc a {
-  color: inherit;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
 /* Flattened picker (two option axes as one row of cards): the whole label
    stays on one line; phones tighten the card so name and price both fit. */
 .variant-ladder--flat .variant-tier-name {

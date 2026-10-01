@@ -195,13 +195,10 @@
                 </table>
               </td>
             </tr>
-{% assign has_receiver = false %}
-{% for line in line_items %}{% if line.sku contains 'OPENRX' %}{% assign has_receiver = true %}{% endif %}{% endfor %}
 {% comment %}
   Duties and delivery notes. US: duties are included in the price. Other
   non-EU countries: the recipient pays import charges unless prepaid.
-  Sale VAT/GST is separate from border charges. The US receiver line is the FCC 47 CFR 2.803
-  conditional-sale disclosure for RF products.
+  Sale VAT/GST is separate from border charges.
 {% endcomment %}
 {% if shipping_address and shipping_address.country_code != blank %}{% unless eu_countries contains shipping_address.country_code %}
 {% if shipping_address.country_code == 'US' %}
@@ -213,16 +210,6 @@
               </td>
             </tr>
 
-{% if has_receiver %}
-            <tr>
-              <td class="od-px" style="padding: 0 32px 12px 32px;">
-                <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #a0a0a0;">
-                  <strong style="color: #c5c5c5;">Receiver, US sale.</strong> Sold on the condition that it is not delivered in the US until its FCC equipment authorization is granted (47 CFR 2.803). If it is not granted, you get a full refund for it.
-                </p>
-              </td>
-            </tr>
-
-{% endif %}
             <tr>
               <td class="od-px" style="padding: 0 32px 12px 32px;">
                 <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #a0a0a0;">

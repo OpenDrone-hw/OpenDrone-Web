@@ -31,23 +31,6 @@ function loadUsSales(): UsSalesFile {
 export const US_SALES: UsSalesFile = loadUsSales();
 
 /**
- * True for a product sold to the US as a conditional preorder before its FCC
- * authorization (47 CFR 2.803): the receivers, and the flight controllers and
- * ESCs (digital devices, `fccPart15bSku`). The buy button and the cart show
- * the FCC disclosure for these lines to a US buyer.
- */
-export function fccConditionalSku(sku: string | null | undefined): boolean {
-  return /^(OPENRX|OPENFC|OPENESC)(-|$)/i.test(sku?.trim() ?? '');
-}
-
-/** True for a digital device (unintentional radiator, 47 CFR Part 15
- *  Subpart B): the flight controllers and ESCs. Their buy button shows the
- *  Part 15B wording of the FCC disclosure. */
-export function fccPart15bSku(sku: string | null | undefined): boolean {
-  return /^(OPENFC|OPENESC)(-|$)/i.test(sku?.trim() ?? '');
-}
-
-/**
  * The flat US shipping rate in USD when US consumer sales are open, else
  * null: the gate `PUBLIC_US_SALES` is exactly "1" and the committed rate is
  * a finite, non-negative number. Every US decision (quote, cart, catalog,
