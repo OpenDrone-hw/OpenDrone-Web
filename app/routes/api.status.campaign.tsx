@@ -1,5 +1,7 @@
 import type {Route} from './+types/api.status.campaign';
 import {CAMPAIGN} from '~/lib/catalog-client';
+import {fetchPreorderOrders, holdHealth, type OverfullBatch} from '~/lib/preorder-fulfilment';
+import {preorderHoldsEnabled} from '~/lib/preorder-ops';
 import {opsStatus} from '~/lib/preorder-ops-status';
 import {paidUnits} from '~/lib/shopify-orders';
 import {priceTierWritesEnabled, syncPriceTiers} from '~/lib/shopify-price-tier';
@@ -14,16 +16,35 @@ import {priceTierWritesEnabled, syncPriceTiers} from '~/lib/shopify-price-tier';
  * - `paidCounts`: whether the Admin API answered, read now.
  * - `priceSync`: whether the Worker writes steps, and the SKUs whose Shopify
  *   price is not yet at its step (a dry run, read now).
+ * - `holds`: read now, the paid orders the hold planner
+ *   (`planPreorderHolds`) says need a fulfillment hold they do not have
+ *   (`unheld`), and the batches whose `batch:SKU:N` tags carry more units
+ *   than the batch has (`overfull`). `error` when the orders could not be
+ *   read; `unheld` is then null. `holdsOk` is false on any of the three.
  * - `lastRuns`: the last webhook or scheduled run of each job seen by this
  *   Worker isolate, with its time and error. Best effort: another isolate
  *   may have run later.
  *
  * No secrets, no order or customer data: the counts are the ones the
- * product pages show. Never cached. Answers 200 when every SKU is open and
- * 503 otherwise, so a plain HTTP check can alert on it.
+ * product pages show, and holds report counts and batch names only. Never
+ * cached by the browser; the hold check is reused for a minute per isolate. Answers 200 when every SKU is open and `holdsOk`, and 503
+ * otherwise, so a plain HTTP check can alert on it.
  */
 
 const NO_STORE = {'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex'};
+
+/** The hold check reads every campaign order from the Admin API, which the
+ *  webhook and the cron also draw on. A public endpoint must not spend that
+ *  budget per request, so each isolate reuses its last answer for a minute. */
+const HOLDS_FRESH_MS = 60_000;
+let holdsMemo: {at: number; unheld: number; overfull: OverfullBatch[]} | null = null;
+
+async function readHoldHealth(env: Parameters<typeof fetchPreorderOrders>[0]) {
+  if (holdsMemo && Date.now() - holdsMemo.at < HOLDS_FRESH_MS) return holdsMemo;
+  const health = holdHealth(await fetchPreorderOrders(env, CAMPAIGN.countFrom), CAMPAIGN);
+  holdsMemo = {at: Date.now(), ...health};
+  return holdsMemo;
+}
 
 function message(error: unknown): string {
   return (error instanceof Error ? error.message : String(error)).replace(/\s+/g, ' ').slice(0, 200);
@@ -69,6 +90,16 @@ export async function loader({context}: Route.LoaderArgs) {
     }
   }
 
+  let unheld: number | null = null;
+  let overfull: OverfullBatch[] = [];
+  let holdsError: string | null = null;
+  try {
+    ({unheld, overfull} = await readHoldHealth(env));
+  } catch (error) {
+    holdsError = message(error);
+  }
+  const holdsOk = holdsError === null && unheld === 0 && overfull.length === 0;
+
   const skuStatus = Object.fromEntries(
     skus.map((sku) => {
       const word = availability.get(sku) ?? null;
@@ -92,8 +123,10 @@ export async function loader({context}: Route.LoaderArgs) {
       skus: skuStatus,
       paidCounts: {ok: countsError === null, error: countsError},
       priceSync: {writesEnabled, pending, error: priceError},
+      holdsOk,
+      holds: {enabled: preorderHoldsEnabled(env), unheld, overfull, error: holdsError},
       lastRuns: opsStatus(),
     },
-    {status: allOpen ? 200 : 503, headers: NO_STORE},
+    {status: allOpen && holdsOk ? 200 : 503, headers: NO_STORE},
   );
 }

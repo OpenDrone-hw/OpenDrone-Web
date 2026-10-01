@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import {afterEach, describe, it} from 'node:test';
 import {
+  BATCH_LINE_ATTRIBUTE,
   PREORDER_HOLD_HANDLE,
   PREORDER_LINE_ATTRIBUTE,
+  PREORDER_OWN_LINE_ATTRIBUTE,
   PROMISE_MISMATCH_TAG,
   US_REVIEW_TAG,
   INT_REVIEW_TAG,
@@ -10,7 +12,10 @@ import {
   SHIP_REGION_LINE_ATTRIBUTE,
   assignBatches,
   batchOfUnit,
+  batchPromiseMismatch,
+  holdHealth,
   holdNote,
+  overfullBatches,
   planPreorderHolds,
   planRelease,
   syncPreorderHolds,
@@ -19,7 +24,7 @@ import {
 import {reconcilePreorders} from './preorder-ops.ts';
 import {opsStatus, resetOpsStatus} from './preorder-ops-status.ts';
 import {parseCampaignConfig} from './preorder-campaign.ts';
-import {PREORDER_ATTRIBUTE, SHIP_REGION_ATTRIBUTE} from './shopify-storefront.ts';
+import {BATCH_ATTRIBUTE, PREORDER_ATTRIBUTE, PREORDER_OWN_ATTRIBUTE, SHIP_REGION_ATTRIBUTE} from './shopify-storefront.ts';
 import {resetPaidUnitsMemo} from './shopify-orders.ts';
 
 afterEach(() => {
@@ -59,6 +64,10 @@ function order(partial: {
   /** Lines added for a US destination carry `_ship_region: US`. */
   usPromise?: boolean;
   intPromise?: boolean;
+  /** The `Preorder` text; the default names no configured batch. */
+  promise?: string;
+  /** The hidden `_batch` attribute, `SKU:N`. */
+  batch?: string;
 }): PreorderOrder {
   seq += 1;
   return {
@@ -80,7 +89,8 @@ function order(partial: {
         currentQuantity: qty,
         customAttributes: preorder
           ? [
-              {key: 'Preorder', value: 'ships early November 2026'},
+              {key: 'Preorder', value: partial.promise ?? 'preorder promise'},
+              ...(partial.batch ? [{key: '_batch', value: partial.batch}] : []),
               ...(partial.usPromise ? [{key: '_ship_region', value: 'US'}] : []),
               ...(partial.intPromise ? [{key: '_ship_region', value: 'INT'}] : []),
             ]
@@ -299,7 +309,138 @@ describe('planRelease', () => {
   });
 });
 
+describe('orders without a Preorder attribute', () => {
+  it('holds and tags a paid order with a live campaign SKU line and no promise (admin, draft or edited)', () => {
+    const admin = order({lines: [['OPENFC-LITE-2020', 1, false]]});
+    const accessory = order({lines: [['ACC-PROP-5-HQ-J37', 1, false]]});
+    const other = order({lines: [['ACC-STRAP', 1, false]]});
+    const removed = order({lines: [['OPENFC-LITE-2020', 0, false]]});
+    const withAccessory = parseCampaignConfig({...CONFIG, shipsWith: {'ACC-PROP-5-HQ-J37': {sku: 'OPENFC-LITE-2020', batch: 1}}});
+    const plans = new Map(planPreorderHolds([admin, accessory, other, removed], withAccessory).map((p) => [p.orderId, p]));
+    assert.deepEqual(plans.get(admin.id)?.tags, ['preorder', 'batch:OPENFC-LITE-2020:1']);
+    assert.deepEqual(plans.get(admin.id)?.hold, [admin.fulfillmentOrders.nodes[0].id]);
+    assert.deepEqual(plans.get(accessory.id)?.tags, ['preorder', 'batch:OPENFC-LITE-2020:1']);
+    assert.equal(plans.has(other.id), false);
+    assert.equal(plans.has(removed.id), false);
+  });
+});
+
+describe('batch promise mismatch', () => {
+  const SMALL = parseCampaignConfig({
+    ...CONFIG,
+    skus: {'OPENFC-LITE-2020': {batches: [{units: 2, paid: true, ships: 'ships early November 2026'}, {units: 250}]}},
+  });
+
+  it('pins the hidden attribute keys to the cart', () => {
+    assert.equal(BATCH_LINE_ATTRIBUTE, BATCH_ATTRIBUTE);
+    assert.equal(PREORDER_OWN_LINE_ATTRIBUTE, PREORDER_OWN_ATTRIBUTE);
+  });
+
+  it('tags promise-mismatch when the paid batch filled before the order: _batch says 1, allocation says 2', () => {
+    const first = order({lines: [['OPENFC-LITE-2020', 2]], promise: 'ships early November 2026', batch: 'OPENFC-LITE-2020:1'});
+    const late = order({lines: [['OPENFC-LITE-2020', 1]], promise: 'ships early November 2026', batch: 'OPENFC-LITE-2020:1'});
+    const plans = new Map(planPreorderHolds([first, late], SMALL).map((p) => [p.orderId, p.tags]));
+    assert.deepEqual(plans.get(first.id), ['preorder', 'batch:OPENFC-LITE-2020:1']);
+    assert.deepEqual(plans.get(late.id), ['preorder', 'batch:OPENFC-LITE-2020:2', PROMISE_MISMATCH_TAG]);
+  });
+
+  it('falls back to the promise text without _batch, and never flags text that names no batch', () => {
+    const first = order({lines: [['OPENFC-LITE-2020', 2]], promise: 'ships early November 2026'});
+    const paidText = order({lines: [['OPENFC-LITE-2020', 1]], promise: 'ships early November 2026'});
+    const fundingText = order({lines: [['OPENFC-LITE-2020', 1]], promise: SMALL.pendingShips});
+    const unknown = order({lines: [['OPENFC-LITE-2020', 1]], promise: 'ships soon'});
+    const all = [first, paidText, fundingText, unknown];
+    const batches = assignBatches(all, SMALL);
+    const flag = (o: PreorderOrder) => batchPromiseMismatch(o, batches.get(o.id) ?? [], SMALL);
+    assert.deepEqual(all.map(flag), [false, true, false, false]);
+  });
+
+  it('reads the line own promise under the mixed-order wording', () => {
+    const first = order({lines: [['OPENFC-LITE-2020', 2]]});
+    const mixed = order({lines: [['OPENFC-LITE-2020', 1]]});
+    mixed.lineItems.nodes[0].customAttributes = [
+      {key: PREORDER_ATTRIBUTE, value: 'ships with the rest of this order by 31 March 2027'},
+      {key: PREORDER_OWN_ATTRIBUTE, value: 'ships early November 2026'},
+    ];
+    const batches = assignBatches([first, mixed], SMALL);
+    assert.equal(batchPromiseMismatch(mixed, batches.get(mixed.id)!, SMALL), true);
+  });
+
+  it('compares an order sold before a date change with the promise of that time', () => {
+    const dated = parseCampaignConfig({
+      ...SMALL,
+      soldUnder: {before: '2026-09-22T12:00:00Z', shipsBy: '2027-03-01', paidShips: 'ships late October 2026', deliveryBy: '2027-03-15', deliveryByUS: '2027-03-31'},
+    });
+    const old = order({lines: [['OPENFC-LITE-2020', 1]], promise: 'ships late October 2026'});
+    const batches = assignBatches([old], dated);
+    assert.equal(batchPromiseMismatch(old, batches.get(old.id)!, dated), false);
+  });
+
+  it('checks the batch promise only when the batch tags are written', () => {
+    const first = order({lines: [['OPENFC-LITE-2020', 2]]});
+    const done = order({lines: [['OPENFC-LITE-2020', 1]], batch: 'OPENFC-LITE-2020:1', tags: ['preorder', 'batch:OPENFC-LITE-2020:1']});
+    assert.equal(planPreorderHolds([first, done], SMALL).some((p) => p.orderId === done.id), false);
+  });
+
+  it('reports a batch whose tags carry more units than it has', () => {
+    const a = order({lines: [['OPENFC-LITE-2020', 2]], tags: ['preorder', 'batch:OPENFC-LITE-2020:1']});
+    const b = order({lines: [['OPENFC-LITE-2020', 1]], tags: ['preorder', 'batch:OPENFC-LITE-2020:1']});
+    const c = order({lines: [['OPENFC-LITE-2020', 300]], tags: ['preorder', 'batch:OPENFC-LITE-2020:2']});
+    assert.deepEqual(overfullBatches([a, b, c], SMALL), [{sku: 'OPENFC-LITE-2020', batch: 1, units: 2, tagged: 3}]);
+    assert.deepEqual(overfullBatches([a], SMALL), []);
+  });
+
+  it('counts the orders the planner would hold that carry no hold', () => {
+    const fresh = order({lines: [['OPENRX-LITE', 1]]});
+    const heldUntagged = order({
+      lines: [['OPENRX-LITE', 1]], foStatus: 'ON_HOLD',
+      holds: [{id: 'gid://shopify/FulfillmentHold/9', handle: PREORDER_HOLD_HANDLE}],
+    });
+    const done = order({lines: [['OPENRX-LITE', 1]], tags: ['preorder', 'batch:OPENRX-LITE:1']});
+    assert.deepEqual(holdHealth([fresh, heldUntagged, done], CONFIG), {unheld: 1, overfull: []});
+  });
+});
+
 describe('reconcilePreorders', () => {
+  it('holds with the price-step switch off and reads no paid count or price', async () => {
+    const fresh = order({lines: [['OPENRX-LITE', 1]]});
+    const {fetcher, calls} = adminDouble([fresh]);
+    const result = await reconcilePreorders({...ENV, SHOPIFY_PRICE_TIER_WRITE_ENABLED: '0'}, CONFIG, fetcher);
+    assert.deepEqual(result.held, [fresh.name]);
+    assert.equal(result.priceError, null);
+    assert.deepEqual(calls.map((c) => c.op), ['OpenDronePreorderOrders', 'OpenDronePreorderHold', 'OpenDronePreorderTags']);
+  });
+
+  it('still holds when the paid counts fail, and records the failure', async () => {
+    const fresh = order({lines: [['OPENRX-LITE', 1]]});
+    const {fetcher: base} = adminDouble([fresh]);
+    const fetcher = (async (url: string, init?: RequestInit) =>
+      String(init?.body).includes('OpenDronePaidPreorders') ? new Response('down', {status: 502}) : base(url, init)) as typeof fetch;
+    const result = await reconcilePreorders(ENV, CONFIG, fetcher);
+    assert.match(result.priceError ?? '', /502/);
+    assert.deepEqual(result.held, [fresh.name]);
+    assert.equal(opsStatus().paidCounts?.last.ok, false);
+    assert.equal(opsStatus().holdSync?.last.ok, true);
+  });
+
+  it('still holds when the price write fails', async () => {
+    const fresh = order({lines: [['OPENRX-LITE', 1]]});
+    const {fetcher: base} = adminDouble([fresh], {variants: [{sku: 'OPENRX-LITE', price: '39.00', compareAtPrice: '39.00'}]});
+    const fetcher = (async (url: string, init?: RequestInit) =>
+      String(init?.body).includes('OpenDronePreorderPrices') ? new Response('nope', {status: 500}) : base(url, init)) as typeof fetch;
+    const result = await reconcilePreorders(ENV, CONFIG, fetcher);
+    assert.ok(result.priceError);
+    assert.equal(opsStatus().priceSync?.last.ok, false);
+    assert.deepEqual(result.held, [fresh.name]);
+  });
+
+  it('writes no hold on staging, which shares the production store', async () => {
+    const {fetcher, calls} = adminDouble([order({lines: [['OPENRX-LITE', 1]]})]);
+    const result = await reconcilePreorders({...ENV, SHOPIFY_PRICE_TIER_WRITE_ENABLED: '0', STAGING_PASSWORD: 'x'}, CONFIG, fetcher);
+    assert.deepEqual(result.held, []);
+    assert.deepEqual(calls, []);
+  });
+
   it('syncs prices, then holds untagged paid preorder orders, and records both', async () => {
     const fresh = order({lines: [['OPENRX-LITE', 1]]});
     const {fetcher, calls} = adminDouble([fresh], {

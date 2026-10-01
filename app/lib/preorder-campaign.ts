@@ -861,6 +861,7 @@ export function applyCampaign(
   return {
     ...catalog,
     campaign_counts: units ? 'verified' : 'unavailable',
+    campaign_skus: campaignSkus(config),
     products: catalog.products.map((product) => ({
       ...product,
       variants: product.variants.map((variant): CatalogVariant => {
@@ -922,6 +923,11 @@ export function applyCampaign(
       }),
     })),
   };
+}
+
+/** Every SKU the campaign lists: `skus` and `shipsWith`. */
+export function campaignSkus(config: Pick<CampaignConfig, 'skus' | 'shipsWith'>): string[] {
+  return [...new Set([...Object.keys(config.skus), ...Object.keys(config.shipsWith ?? {})])];
 }
 
 /** Whether any catalog variant is a campaign preorder, i.e. needs counts. */

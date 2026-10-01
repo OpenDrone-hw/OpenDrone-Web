@@ -23,7 +23,15 @@ function fill(template: string, vars: Record<string, string | number>): string {
  * that falls inside the bar. A batch that starts after sold-out batches
  * starts past the earlier price steps.
  */
-export type StepBarView = {value: number; max: number; ticks: number[]; funded: boolean; label: string};
+export type StepBarView = {
+  value: number;
+  max: number;
+  ticks: number[];
+  funded: boolean;
+  label: string;
+  /** `paid`: a paid batch, `max` is its cap; `target`: a funding target. */
+  kind: 'paid' | 'target';
+};
 
 export function stepBarView(state: CampaignState, stepEnds: number[]): StepBarView {
   const funded = !state.paidStock && state.targetReached;
@@ -40,7 +48,32 @@ export function stepBarView(state: CampaignState, stepEnds: number[]): StepBarVi
     ticks: stepEnds.map((end) => end - offset).filter((end) => end > 0 && end < max),
     funded,
     label: `${value} / ${max}`,
+    kind: state.paidStock ? 'paid' : 'target',
   };
+}
+
+/**
+ * What a step bar's count means in words: a paid batch is a cap, "213 of
+ * 250 left in batch 1"; a funding target is a goal, "37 / 250 target for
+ * the March 2027 batch". `text` looks up the `preorder` copy.
+ */
+export function stepBarLabel(bar: StepBarView, batch: string | null = null, text: Lookup = () => undefined): string {
+  const vars = {value: bar.value, max: bar.max, left: Math.max(0, bar.max - bar.value), batch: batch ?? ''};
+  if (bar.kind === 'paid') {
+    return fill(batch ? (text('meter_paid_left_in') ?? '{left} of {max} left in {batch}') : (text('meter_paid_left') ?? '{left} of {max} left'), vars);
+  }
+  return fill(batch ? (text('meter_target_for') ?? '{value} / {max} target for {batch}') : (text('meter_target') ?? '{value} / {max} target'), vars);
+}
+
+/**
+ * The price steps a buyer of this state can still reach: a paid batch caps
+ * what one buyer gets at its last unit, so a step that starts past it (251+
+ * over a 250-unit paid batch) is not shown. Every step for a funding target.
+ */
+export function reachableSteps<T extends {from: number}>(state: CampaignState, steps: T[]): T[] {
+  if (!state.paidStock || state.shipsWith) return steps;
+  const last = state.batches.filter((b) => b.batch <= state.batch).reduce((sum, b) => sum + b.units, 0);
+  return steps.filter((step) => step.from <= last);
 }
 
 /**

@@ -85,6 +85,9 @@ export type Catalog = {
   add_method?: 'POST';
   /** Set by `applyCampaign`: whether the paid preorder counts were read. */
   campaign_counts?: 'verified' | 'unavailable';
+  /** Every SKU `content/preorders.json` lists (`skus` and `shipsWith`),
+   *  open or closed: none ever shows Shopify's compare-at price. */
+  campaign_skus?: string[];
   products: CatalogProduct[];
 };
 
@@ -219,9 +222,12 @@ function mapVariant(
     // A campaign SKU never shows a struck-through price: it was never sold
     // at the higher one, so a "was" price would be a misleading reduction
     // (EU Price Indication Directive, art. 6a). Shopify's compare-at price
-    // is its price after the funding target instead: `priceAfter`.
+    // is its price after the funding target instead: `priceAfter`. That
+    // holds for a closed campaign SKU too (no campaign state, counts
+    // unreadable or past `endsOn`): it keeps Shopify's retail compare-at.
     compareAtPrice:
-      !variant.campaign && variant.compare_price != null && variant.compare_price > variant.price
+      !variant.campaign && !catalog.campaign_skus?.includes(variant.sku) &&
+      variant.compare_price != null && variant.compare_price > variant.price
         ? money(variant.compare_price, variant.currency || catalog.currency)
         : null,
     // The price after the current step: the next step's price, or retail.

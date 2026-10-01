@@ -1,4 +1,4 @@
-import {barPercent, type StepBarView} from '~/lib/preorder-meter';
+import {barPercent, stepBarLabel, type StepBarView} from '~/lib/preorder-meter';
 import {InfoHint} from './InfoHint';
 import {copyText} from '~/lib/copy';
 
@@ -23,12 +23,12 @@ export function StepBar({
 }) {
   const pct = barPercent(bar);
   const at = (units: number) => `${(units / bar.max) * 100}%`;
+  // A paid batch's count is a cap ("213 of 250 left"), a funding target's a
+  // goal ("37 / 250 target").
   const label =
     bar.funded && fundedLabel
       ? fundedLabel
-      : batch
-        ? `${bar.label} ${(copyText('preorder.ordered_for') ?? 'ordered for {batch}').replace('{batch}', batch)}`
-        : `${bar.label} ${copyText('preorder.ordered') ?? 'ordered'}`;
+      : stepBarLabel(bar, batch ?? null, (key) => copyText(`preorder.${key}`));
   return (
     <div className="step-bar" data-funded={bar.funded ? '' : undefined}>
       <div className="step-bar-summary">

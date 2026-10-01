@@ -10,7 +10,7 @@ import {ProductItem, type ProductQuickAdd} from '~/components/ProductItem';
 import type {MoneyV2, ProductCardFragment} from '~/lib/product-shapes';
 import {toCards} from '~/lib/catalog';
 import {CAMPAIGN} from '~/lib/catalog-client';
-import {datedShipParts} from '~/lib/preorder-campaign';
+import {campaignSkus, datedShipParts} from '~/lib/preorder-campaign';
 import {FAMILIES} from '~/lib/families';
 import {buildOf, parseBuilds} from '~/lib/build-recommendations';
 import buildsJson from '../../content/builds.json';
@@ -166,9 +166,12 @@ function datedOf(campaign: {paidStock: boolean; shipsOnTarget?: boolean; shipsWi
 
 const num = (m?: MoneyV2 | null) => (m ? parseFloat(m.amount) || 0 : 0);
 
-/** Campaign compare prices are planned future steps, not previous sale prices. */
-const productOnSale = (p: CatalogProduct) =>
-  p.variants.nodes.some((v) => !v.campaign && num(v.compareAtPrice) > num(v.price));
+/** Campaign compare prices are planned future steps, not previous sale
+ *  prices, for every SKU `content/preorders.json` lists, open or closed. */
+const CAMPAIGN_SKUS = new Set(campaignSkus(CAMPAIGN));
+const saleVariant = (v: CatalogProduct['variants']['nodes'][number]) =>
+  !v.campaign && !(v.sku && CAMPAIGN_SKUS.has(v.sku)) && num(v.compareAtPrice) > num(v.price);
+const productOnSale = (p: CatalogProduct) => p.variants.nodes.some(saleVariant);
 
 /** The Shopify variant carrying a given option value (e.g. Model = "Gemini"),
  *  so a tier card shows its real price/sale even though the tiers themselves
@@ -409,9 +412,7 @@ export default function ProductsIndex() {
             to: `/products/${p.handle}?${encodeURIComponent(axis)}=${encodeURIComponent(value)}`,
             price,
             image: sv?.image ?? p.featuredImage,
-            onSale: sv?.campaign ? false : sv?.compareAtPrice
-              ? num(sv.compareAtPrice) > num(price)
-              : productOnSale(p),
+            onSale: sv ? saleVariant(sv) : productOnSale(p),
             // A second option axis (the motor's 4S or 6S winding) is the
             // buyer's choice on the product page, never a silent default.
             quickAdd: sv && !content?.secondAxis

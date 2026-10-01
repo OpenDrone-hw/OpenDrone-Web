@@ -31,6 +31,8 @@
   "added_subtotal": "Subtotal (incl. VAT)",
   "check_paid_batch": "Not enough left in batch 1. Lower the quantity where shown.",
   "check_ship_date": "A ship date changed. Check the dates below.",
+  "check_price": "A price changed. Check the total below.",
+  "check_price_and_date": "A price and a ship date changed. Check the dates and the total below.",
   "upsell_delay": "Adding this delays your whole parcel: instead of {from} it ships {to}.",
   "split_link": "Want the {month} items sooner? Order them separately.",
   "split_link_plain": "Want the earlier items sooner? Order them separately.",

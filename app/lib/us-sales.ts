@@ -31,12 +31,20 @@ function loadUsSales(): UsSalesFile {
 export const US_SALES: UsSalesFile = loadUsSales();
 
 /**
- * True for a radio-frequency product sold to the US as a conditional preorder
- * (47 CFR 2.803): the receivers. The buy button and the cart show the FCC
- * disclosure for these lines to a US buyer.
+ * True for a product sold to the US as a conditional preorder before its FCC
+ * authorization (47 CFR 2.803): the receivers, and the flight controllers and
+ * ESCs (digital devices, `fccPart15bSku`). The buy button and the cart show
+ * the FCC disclosure for these lines to a US buyer.
  */
 export function fccConditionalSku(sku: string | null | undefined): boolean {
-  return /^OPENRX(-|$)/i.test(sku?.trim() ?? '');
+  return /^(OPENRX|OPENFC|OPENESC)(-|$)/i.test(sku?.trim() ?? '');
+}
+
+/** True for a digital device (unintentional radiator, 47 CFR Part 15
+ *  Subpart B): the flight controllers and ESCs. Their buy button shows the
+ *  Part 15B wording of the FCC disclosure. */
+export function fccPart15bSku(sku: string | null | undefined): boolean {
+  return /^(OPENFC|OPENESC)(-|$)/i.test(sku?.trim() ?? '');
 }
 
 /**

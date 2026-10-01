@@ -9,7 +9,7 @@ import {
   renderEmail,
   selectRecipients,
 } from '../../scripts/preorder-notify.mjs';
-import {parseArgs as parseReleaseArgs, describePlans} from '../../scripts/release-batch.mjs';
+import {parseArgs as parseReleaseArgs, describeOverfull, describePlans} from '../../scripts/release-batch.mjs';
 import {isCountedOrder} from './preorder-fulfilment.ts';
 
 const SKUS = ['OPENFC-LITE-2020', 'OPENRX-LITE'];
@@ -105,9 +105,20 @@ describe('release-batch', () => {
       batch: 1,
       with: ['batch:OPENRX-LITE:1', 'batch:OPENFC-LITE-2020:2'],
       apply: false,
+      help: false,
     });
     assert.throws(() => parseReleaseArgs([], SKUS), /--sku is required/);
+    assert.equal(parseReleaseArgs(['--help'], SKUS).help, true);
+    assert.equal(parseReleaseArgs(['--apply', '--help'], SKUS).help, true);
+    assert.throws(() => parseReleaseArgs(['--sku', 'OPENFC-LITE-2020', '--force'], SKUS), /unknown argument/);
     assert.throws(() => parseReleaseArgs(['--sku', 'OPENFC-LITE-2020', '--with', 'bad'], SKUS), /SKU:N/);
+  });
+
+  it('warns about a batch tagged past its size', () => {
+    assert.deepEqual(describeOverfull([{sku: 'OPENFC-LITE-2020', batch: 1, units: 250, tagged: 252}]), [
+      'Warning: OPENFC-LITE-2020 batch 1 has 250 units but its tags carry 252. Settle the extra orders by hand before releasing it.',
+    ]);
+    assert.deepEqual(describeOverfull([]), []);
   });
 
   it('says which orders ship and which wait', () => {

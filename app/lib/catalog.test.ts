@@ -16,6 +16,7 @@ import {
   toProduct,
   type Catalog,
 } from './catalog.ts';
+import {applyCampaign, campaignSkus, parseCampaignConfig} from './preorder-campaign.ts';
 
 // Run with:
 //   node --experimental-strip-types --test app/lib/catalog.test.ts
@@ -311,6 +312,43 @@ describe('campaign pricing', () => {
     )!;
     assert.equal(plain.compareAtPrice?.amount, '49.99');
     assert.equal(plain.priceAfter, null);
+  });
+});
+
+describe('closed campaign SKUs', () => {
+  const config = parseCampaignConfig({
+    countFrom: '2026-09-21', endsOn: '2026-12-15', shipsBy: '2027-03-31',
+    priceTiers: [{upTo: 100, off: 0.2}],
+    pendingShips: 'ships by 31 March 2027 if the target is reached by 15 December 2026',
+    skus: {'OPENRX-GEMINI': {batches: [{units: 250}]}},
+    shipsWith: {'OPENRX-LITE': {sku: 'OPENRX-GEMINI'}},
+  });
+  const gemini = (catalog: Catalog) =>
+    toProduct(catalog, byHandle(catalog, 'openrx')!).variants.nodes.filter((v) => v.sku === 'OPENRX-GEMINI' || v.sku === 'OPENRX-LITE');
+  const preorder: Catalog = {
+    ...FIXTURE,
+    products: FIXTURE.products.map((p) => ({...p, variants: p.variants.map((v) => ({...v, availability: 'preorder' as const}))})),
+  };
+
+  it('shows no compare-at price for a listed SKU closed by unreadable counts or by endsOn', () => {
+    for (const closed of [
+      applyCampaign(preorder, config, null),
+      applyCampaign(preorder, config, {}, new Date('2026-12-16T12:00:00Z')),
+    ]) {
+      const variants = gemini(closed);
+      assert.ok(variants.length > 0);
+      for (const v of variants) {
+        assert.equal(v.campaign, null);
+        assert.equal(v.compareAtPrice, null);
+      }
+    }
+  });
+
+  it('shows no compare-at price for a listed SKU applyCampaign left untouched', () => {
+    const untouched = {...FIXTURE, campaign_skus: campaignSkus(config)};
+    assert.ok(gemini(untouched).every((v) => v.compareAtPrice === null));
+    // An unlisted SKU keeps a real compare-at price.
+    assert.equal(gemini(FIXTURE).find((v) => v.sku === 'OPENRX-GEMINI')?.compareAtPrice?.amount, '49.99');
   });
 });
 

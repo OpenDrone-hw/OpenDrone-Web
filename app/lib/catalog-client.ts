@@ -17,6 +17,7 @@ import type {Catalog} from './catalog.ts';
 import {fetchShopifyCatalog} from './shopify-storefront.ts';
 import {
   applyCampaign,
+  campaignSkus,
   needsCampaignCounts,
   countedSkus,
   parseCampaignConfig,
@@ -54,8 +55,8 @@ export function buyerRegion(request: Request | undefined, env: Pick<Env, 'PUBLIC
 
 async function withCampaign(env: Env, catalog: Catalog, region: Region): Promise<Catalog> {
   // A closed store has no campaign preorder variant and never calls the
-  // Admin API.
-  if (!needsCampaignCounts(catalog, CAMPAIGN, region)) return catalog;
+  // Admin API. Its campaign SKUs still never show a compare-at price.
+  if (!needsCampaignCounts(catalog, CAMPAIGN, region)) return {...catalog, campaign_skus: campaignSkus(CAMPAIGN)};
   const units = await paidUnitRuns(env, CAMPAIGN.countFrom, CAMPAIGN_SKUS).catch(
     (error: unknown) => {
       console.error(

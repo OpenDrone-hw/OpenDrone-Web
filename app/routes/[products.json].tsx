@@ -12,10 +12,10 @@ import {shipCountryForRequest} from '~/lib/shipping-rates';
 
 /**
  * /products.json - machine-readable catalog feed for agents and tooling.
- * Adds what no stock feed has: the buy hand-off per variant (the same
- * `/api/shopify/cart` form the buy buttons POST, action URL plus its
- * form fields as the query string, with `cart_add_method: "POST"`), the
- * CERN-OHL-S license, and the design-source repo.
+ * Adds what no stock feed has: the CERN-OHL-S license and the design-source
+ * repo. It carries no cart hand-off: the cart action refuses a POST that
+ * is not from this site's own pages (403), and orders go through the
+ * product page in the buyer's browser (`/llms.txt`, "How to order").
  */
 
 export async function loader({context, request}: Route.LoaderArgs) {
@@ -88,9 +88,6 @@ export async function loader({context, request}: Route.LoaderArgs) {
           available: locked ? false : v.availableForSale,
           price: locked ? null : v.price.amount,
           currency: locked ? null : v.price.currencyCode,
-          // The hand-off: POST the query string of cart_add_url as form
-          // fields to its path; the cart action refuses GET.
-          ...(locked ? null : {cart_add_url: forCountry(v.cartAddUrl), cart_add_method: 'POST'}),
         })),
       };
     });

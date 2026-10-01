@@ -88,9 +88,9 @@ import {useProductStatus} from '~/lib/coming-soon';
 import {shipPromiseFor} from '~/lib/preorder';
 import {fetchStatusFlagsFast, statusForHandle} from '~/lib/roadmap-data';
 import {parseCampaignConfig, priceLadder, promiseBatchMonth, tiersFor} from '~/lib/preorder-campaign';
-import {stepBarView} from '~/lib/preorder-meter';
+import {reachableSteps, stepBarView} from '~/lib/preorder-meter';
 import {paysEuVat} from '~/lib/visitor-country';
-import {fccConditionalSku} from '~/lib/us-sales';
+import {fccConditionalSku, fccPart15bSku} from '~/lib/us-sales';
 import {isInternationalQuote, notSoldDirect, shippingQuote} from '~/lib/shipping-rates';
 import {registrationNumbers} from '~/lib/registrations';
 import preorders from '../../content/preorders.json';
@@ -1730,7 +1730,8 @@ function ProductPage() {
   const nextUnit = campaign ? campaign.ordered + 1 : 0;
   const shownLadder: Array<{from: number; to: number | null; price: number; approx?: boolean}> | null =
     campaign?.usLadder?.length ? campaign.usLadder : ladder;
-  const stepPrices = (shownLadder ?? []).map((step) => ({
+  // A paid batch's cap ends the steps this buyer can reach.
+  const stepPrices = (campaign ? reachableSteps(campaign, shownLadder ?? []) : []).map((step) => ({
     key: step.from,
     text: step.approx
       ? say('preorder.price_about', 'about {price}', {price: formatPrice(step.price, currency)})
@@ -1806,6 +1807,7 @@ function ProductPage() {
   const showAvailability = Boolean(campaign && ((tiers.length && stepBarState) || accessoryBatches));
   const usEuOnly = usBuyer && !isBundle && !selectedVariant?.campaign && Boolean(selectedVariant?.availableForSale);
   const fccConditional = fccConditionalSku(selectedVariant?.sku) || fccConditionalSku(product.handle);
+  const fccPart15b = fccPart15bSku(selectedVariant?.sku) || fccPart15bSku(product.handle);
   const usNotice = usBuyer && buyAvailable ? (
     <>
       {usEuOnly ? (
@@ -1815,7 +1817,10 @@ function ProductPage() {
       ) : null}
       {fccConditional ? (
         <p id="fcc-notice" className="product-buy-ship product-buy-fcc" role="note">
-          {say(
+          {fccPart15b ? say(
+            'product-chrome.buy_us_fcc_part15b',
+            'FCC notice: this device has not been authorized as required by the rules of the Federal Communications Commission. It is a digital device (unintentional radiator, 47 CFR Part 15, Subpart B), sold to US buyers as a conditional preorder and not delivered until the applicable authorization requirements are met. FCC rules do not address consumer protection, contractual or other provisions under federal or state law. If those requirements are not met, we refund that item in full.',
+          ) : say(
             'product-chrome.buy_us_fcc',
             'FCC notice: this device has not been authorized as required by the rules of the Federal Communications Commission. It is sold to US buyers as a conditional preorder and is not delivered unless authorization is obtained. FCC rules do not address consumer protection, contractual or other provisions under federal or state law. If authorization is not obtained, we refund that item in full.',
           )}

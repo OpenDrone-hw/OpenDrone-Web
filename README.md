@@ -147,7 +147,7 @@ placed once that many units are ordered. Only SKUs the policy sells as
 | Price steps | `app/lib/shopify-price-tier.ts` | `priceTiers` steps the price off the compare-at (retail) price as paid units come in; written to Shopify only when `SHOPIFY_PRICE_TIER_WRITE_ENABLED=1`; a SKU Shopify prices under its step closes |
 | Holds and tags | `app/lib/preorder-fulfilment.ts` | holds each open fulfillment order (handle `opendrone-preorder`) and tags the order `preorder` and `batch:<SKU>:<N>`; a tagged order is never held again |
 | Accessories | `shipsWith` in `content/preorders.json` | spares ride a campaign SKU at a flat price, pinned to a dated batch or following the lead's next unit; they do not count toward the lead |
-| Health | `/api/status/campaign` | per campaign SKU: open or closed, paid counts, pending price steps, last job runs; `503` when a campaign SKU is closed |
+| Health | `/api/status/campaign` | per campaign SKU: open or closed, paid counts, pending price steps, hold health (unheld paid orders, overfull batches; reused for a minute per isolate), last job runs; `503` when a campaign SKU is closed or `holdsOk` is false |
 
 Price steps and holds run from the `orders/paid` webhook
 (`/api/shopify/orders-paid`, HMAC-verified with `SHOPIFY_WEBHOOK_SECRET`,
@@ -860,6 +860,20 @@ fails when the committed copy and legal text drift from it. A producer
 number alone does not open a destination; `saleApproved` does, after its
 evidence is reviewed. The strategy behind a campaign lives in
 the team's private knowledge base, not here.
+
+**Close the run at `endsOn`.** The storefront stops selling a funding-target
+unit after `endsOn`, but Shopify does not: an old checkout link or an
+abandoned-checkout recovery mail can still complete an order. After the end
+of `endsOn` (Europe/Brussels):
+
+1. `node --experimental-strip-types scripts/close-preorder-run.mjs` lists the
+   SKUs whose next EU unit waits for a funding target, with each variant's
+   Shopify inventory policy, and the SKUs that keep selling paid stock or a
+   dated batch. It names any variant that DENY cannot stop (inventory not
+   tracked, or stock on hand).
+2. With the founder's go, run it again with `--apply`: it sets those
+   variants' inventory policy to DENY. It refuses `--apply` before `endsOn`
+   has ended and writes nothing else.
 
 ## Fulfil a batch
 
