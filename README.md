@@ -861,6 +861,20 @@ number alone does not open a destination; `saleApproved` does, after its
 evidence is reviewed. The strategy behind a campaign lives in
 the team's private knowledge base, not here.
 
+**Close the run at `endsOn`.** The storefront stops selling a funding-target
+unit after `endsOn`, but Shopify does not: an old checkout link or an
+abandoned-checkout recovery mail can still complete an order. After the end
+of `endsOn` (Europe/Brussels):
+
+1. `node --experimental-strip-types scripts/close-preorder-run.mjs` lists the
+   SKUs whose next EU unit waits for a funding target, with each variant's
+   Shopify inventory policy, and the SKUs that keep selling paid stock or a
+   dated batch. It names any variant that DENY cannot stop (inventory not
+   tracked, or stock on hand).
+2. With the founder's go, run it again with `--apply`: it sets those
+   variants' inventory policy to DENY. It refuses `--apply` before `endsOn`
+   has ended and writes nothing else.
+
 ## Fulfil a batch
 
 Paid preorder orders stay on hold until their batch is released. Verify in
