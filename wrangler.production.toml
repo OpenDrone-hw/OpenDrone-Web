@@ -23,9 +23,9 @@ routes = [
 [assets]
 directory = "dist/client"
 
-# Every five minutes, server.ts `scheduled` reconciles the preorder price
-# steps (only while SHOPIFY_PRICE_TIER_WRITE_ENABLED is "1"), in case Shopify
-# never delivered an orders/paid webhook, and runs the support ticket jobs
+# Every five minutes, server.ts `scheduled` reconciles the preorder holds
+# (always) and price steps (only while SHOPIFY_PRICE_TIER_WRITE_ENABLED is
+# "1"), in case Shopify never delivered an orders/paid webhook, and runs the support ticket jobs
 # (only once SUPPORT_DB and the Discord secrets exist).
 [triggers]
 crons = ["*/5 * * * *"]
