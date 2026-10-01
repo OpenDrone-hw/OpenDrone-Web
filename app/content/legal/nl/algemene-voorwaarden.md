@@ -13,6 +13,7 @@
 | Ondernemingsnummer | 1038.934.039 (KBO, RPR Leuven) |
 | BTW-nummer | BE 1038.934.039 |
 | E-mail | contact@opendrone.be |
+| Telefoon | +32 491 97 83 61 |
 | Website | opendrone.be (webshop) · incutec.eu |
 | IBAN | BE94 7310 7599 3714 (KBC) |
 
@@ -198,7 +199,7 @@
 
 ### Artikel 15: Wijzigingen
 
-15.1. De versie van deze voorwaarden die vóór betaling is verstrekt en aanvaard, geldt voor de bestelling. Incutec BV kan een nieuwe versie publiceren voor nieuwe bestellingen vanaf de ingangsdatum die in die versie staat. Een latere versie verandert de voorwaarden, prijzen, uiterste verzenddata of levertermijnen die voor een bestaande bestelling zijn overeengekomen niet. Dwingende consumentenrechten gelden vanaf hun wettelijke ingangsdatum en worden niet uitgesteld door de publicatie van een nieuwe versie. Versie 2.7 geldt voor nieuwe bestellingen vanaf de publicatie ervan op 30 september 2026; eerdere bestellingen behouden de aanvaarde voorwaarden en alle dwingende rechten. De verduidelijkingen over levering en terugbetaling in de artikelen 7bis.2, 7bis.7 en 7ter.4 trekken geen eerdere belofte in en beperken de rechten van de consument niet.
+15.1. De versie van deze voorwaarden die vóór betaling is verstrekt en aanvaard, geldt voor de bestelling. Incutec BV kan een nieuwe versie publiceren voor nieuwe bestellingen vanaf de ingangsdatum die in die versie staat. Een latere versie verandert de voorwaarden, prijzen, uiterste verzenddata of levertermijnen die voor een bestaande bestelling zijn overeengekomen niet. Dwingende consumentenrechten gelden vanaf hun wettelijke ingangsdatum en worden niet uitgesteld door de publicatie van een nieuwe versie. Versie 2.8 geldt voor nieuwe bestellingen vanaf de publicatie ervan op 1 oktober 2026; eerdere bestellingen behouden de aanvaarde voorwaarden en alle dwingende rechten. De verduidelijkingen over levering en terugbetaling in de artikelen 7bis.2, 7bis.7 en 7ter.4 trekken geen eerdere belofte in en beperken de rechten van de consument niet.
 
 ### Artikel 16: Professionele klanten (B2B)
 
@@ -222,7 +223,7 @@
 
 18.1. Door een bestelling te plaatsen, aanvaardt de klant het Incutec End-Use beleid gepubliceerd op /end-use, en garandeert hij dat de goederen niet zullen worden gebruikt voor enig uitgesloten eindgebruik zoals beschreven in §3 van dat beleid. Schending van deze garantie vormt een wezenlijke contractbreuk en geeft Incutec BV het recht de bestelling te annuleren, de levering te weigeren, en elk rechtsmiddel uit te oefenen dat beschikbaar is onder Belgisch recht en de toepasselijke EU-verordeningen. Bij annulering of weigering van levering betaalt Incutec BV aan een consument alle betalingen terug binnen 14 dagen.
 
-18.2. **Geen wederuitvoer naar Rusland of Belarus.** De klant verbindt zich ertoe de goederen niet direct of indirect te verkopen, uit te voeren of weder uit te voeren naar de Russische Federatie of Belarus, of voor gebruik aldaar (Art. 12g Verordening (EU) 833/2014; Art. 8g Verordening (EG) 765/2006). Deze verbintenis geldt als een essentieel element van de overeenkomst. De klant stelt Incutec BV onmiddellijk in kennis van elke schending; bij schending kan Incutec BV de overeenkomst ontbinden en schadevergoeding vorderen. Incutec BV weigert levering wanneer er aanwijzingen zijn van omzeiling van deze bepaling.
+18.2. **Geen wederuitvoer naar Rusland of Belarus.** De klant verbindt zich ertoe goederen die op grond van deze overeenkomst worden geleverd, met inbegrip van goederen die onder artikel 12g van Verordening (EU) 833/2014 vallen, zoals gemeenschappelijke goederen met hoge prioriteit, niet direct of indirect te verkopen, uit te voeren of weder uit te voeren naar de Russische Federatie of Belarus, of voor gebruik in de Russische Federatie of Belarus (Art. 12g Verordening (EU) 833/2014; Art. 8g Verordening (EG) 765/2006). Deze verbintenis geldt als een essentieel element van de overeenkomst en de schending ervan vormt een wezenlijke contractbreuk. Bij schending kan Incutec BV de overeenkomst ontbinden en schadevergoeding vorderen. Wanneer er gronden zijn om omzeiling van deze bepaling te vermoeden, weigert Incutec BV de levering en kan zij de bestelling annuleren; zij betaalt dan alle betalingen voor die bestelling terug binnen 14 dagen. De klant stelt Incutec BV onmiddellijk in kennis van elke schending en van elke activiteit van derden, met inbegrip van mogelijke wederverkopers, die het doel van deze bepaling zou kunnen verijdelen.
 
 ### Artikel 19: Taal
 
@@ -234,4 +235,4 @@
 
 ---
 
-*Versie: 2.7, gepubliceerd op 2026-09-30; geldt voor nieuwe bestellingen vanaf publicatie. Eerdere bestellingen behouden de aanvaarde voorwaarden.*
+*Versie: 2.8, gepubliceerd op 2026-10-01; geldt voor nieuwe bestellingen vanaf publicatie. Eerdere bestellingen behouden de aanvaarde voorwaarden.*

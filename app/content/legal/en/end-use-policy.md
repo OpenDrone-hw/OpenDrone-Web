@@ -29,7 +29,7 @@ Incutec BV does not knowingly sell, supply, or distribute goods for use in:
 ## 4. Operational Implementation
 
 ### 4.1 Geographic restrictions
-The webshop delivers only to addresses in EU member states and, for preorders, in the United States. It does not deliver to Russia, Belarus or any destination under EU or UN restrictive measures.
+The webshop delivers to addresses in EU member states and, for preorders, in the other destinations offered at checkout. It does not deliver to Russia, Belarus or any destination under EU or UN restrictive measures.
 
 ### 4.2 No re-export
 Every order is subject to the no-re-export clause for Russia and Belarus required by Article 12g of EU Regulation 833/2014 and Article 8g of Regulation (EC) 765/2006 (General Terms and Conditions, Article 18.2).

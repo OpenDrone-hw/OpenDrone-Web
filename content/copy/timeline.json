@@ -41,7 +41,7 @@
   "event_site_redesign_detail": "The current look of opendrone.be goes live.",
   "event_library_first_commit_title": "Shared KiCad library: first commit",
   "event_frame_first_commit_title": "[OpenFrame](/products/openframe): first commit",
-  "event_frame_first_commit_detail": "3\" and 5\" CNC carbon frames, CAD from Onshape. Repo not public yet.",
+  "event_frame_first_commit_detail": "3\" and 5\" CNC carbon frames, CAD from Onshape. The OpenFrame-3F and OpenFrame-5F repositories are public on GitHub.",
   "event_esc_bench_validation_title": "ESC bench validation opens",
   "event_esc_bench_validation_detail": "Test records logged in OpenDrone-Testing; publication pending.",
   "event_rx_rf_baselines_title": "[OpenRX](/products/openrx) RF bring-up baselines recorded",

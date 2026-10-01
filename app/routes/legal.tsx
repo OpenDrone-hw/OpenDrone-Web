@@ -213,7 +213,7 @@ export default function LegalIndex() {
 
       <section className="legal-identity" style={{marginBottom: '2.5rem'}}>
         <h2 className="section-heading">{t.seller}</h2>
-        <CompanyFooterBlock company={company} />
+        <CompanyFooterBlock company={company} locale={locale} />
       </section>
 
       <section>

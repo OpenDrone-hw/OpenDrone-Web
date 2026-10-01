@@ -20,6 +20,7 @@ This site (opendrone.be) sets the cookies below of its own. Checkout runs on Sho
 |--------|---------|-----------|
 | `session` (opendrone.be) | Keeps the reference to your Shopify cart once you add a product to your cart | Session |
 | `opendrone_lang` (opendrone.be) | Remembers the language you choose for the legal pages | 1 year |
+| `od_ship_country` (opendrone.be) | Remembers the delivery country you pick in the region switch, in the cart's "Ship to" field or through a link with a country, so that prices, shipping, ship dates and availability are shown for that country; set only when you pick a country (strictly necessary for the service you request) | 1 year |
 | `od_support` (opendrone.be) | Remembers which support tickets this browser may open; set only when you open or find a ticket | 180 days |
 | `__Host-od_sid` (opendrone.be) | Keeps you signed in to your OpenDrone account, also for signing in to chatfpv.com; set only when you sign in (strictly necessary) | 30 days after your last visit, or until you sign out |
 | `__Host-od_oauth` (opendrone.be) | Protects a sign-in in progress against forgery; set when you click Sign in (strictly necessary) | 10 minutes |

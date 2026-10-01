@@ -18,6 +18,7 @@ Deze site (opendrone.be) plaatst zelf de cookies hieronder. Het afrekenen verloo
 |--------|------|--------------|
 | `session` (opendrone.be) | Bewaart, zodra u een product in uw winkelmandje legt, de verwijzing naar uw Shopify-winkelmandje | Sessie |
 | `opendrone_lang` (opendrone.be) | Onthoudt de taal die u kiest voor de juridische pagina's | 1 jaar |
+| `od_ship_country` (opendrone.be) | Onthoudt het leverland dat u kiest in de regiokeuze, in het veld "Ship to" van het winkelmandje of via een link met een land, zodat prijzen, verzending, verzenddata en beschikbaarheid voor dat land worden getoond; enkel geplaatst wanneer u een land kiest (strikt noodzakelijk voor de dienst die u vraagt) | 1 jaar |
 | `od_support` (opendrone.be) | Onthoudt welke supporttickets deze browser mag openen; enkel geplaatst wanneer u een ticket opent of terugvindt | 180 dagen |
 | `__Host-od_sid` (opendrone.be) | Houdt u aangemeld bij uw OpenDrone-account, ook voor aanmelding op chatfpv.com; enkel geplaatst wanneer u zich aanmeldt (strikt noodzakelijk) | 30 dagen na uw laatste bezoek, of tot u zich afmeldt |
 | `__Host-od_oauth` (opendrone.be) | Beschermt een lopende aanmelding tegen vervalsing; geplaatst wanneer u op Aanmelden klikt (strikt noodzakelijk) | 10 minuten |

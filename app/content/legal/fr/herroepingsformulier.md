@@ -12,6 +12,7 @@
 **Incutec BV**
 Stapelhuisstraat 15, 3000 Leuven, Belgique
 Courriel : contact@opendrone.be
+Téléphone : +32 491 97 83 61
 
 ---
 

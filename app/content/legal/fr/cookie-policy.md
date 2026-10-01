@@ -20,6 +20,7 @@ Ce site (opendrone.be) place lui-même les cookies ci-dessous. Le paiement se d�
 |--------|---------|-----------|
 | `session` (opendrone.be) | Conserve, dès que vous ajoutez un produit à votre panier, la référence de votre panier Shopify | Session |
 | `opendrone_lang` (opendrone.be) | Mémorise la langue que vous choisissez pour les pages juridiques | 1 an |
+| `od_ship_country` (opendrone.be) | Mémorise le pays de livraison que vous choisissez dans le sélecteur de région, dans le champ « Ship to » du panier ou via un lien comportant un pays, afin que les prix, l’expédition, les dates d’expédition et la disponibilité soient affichés pour ce pays ; placé uniquement lorsque vous choisissez un pays (strictement nécessaire au service que vous demandez) | 1 an |
 | `od_support` (opendrone.be) | Retient les tickets de support que ce navigateur peut ouvrir ; placé uniquement lorsque vous ouvrez ou retrouvez un ticket | 180 jours |
 | `__Host-od_sid` (opendrone.be) | Vous garde connecté à votre compte OpenDrone, aussi pour la connexion à chatfpv.com ; placé uniquement lorsque vous vous connectez (strictement nécessaire) | 30 jours après votre dernière visite, ou jusqu’à votre déconnexion |
 | `__Host-od_oauth` (opendrone.be) | Protège une connexion en cours contre la falsification ; placé lorsque vous cliquez sur Se connecter (strictement nécessaire) | 10 minutes |
