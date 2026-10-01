@@ -15,6 +15,7 @@
 | Numéro d’entreprise | 1038.934.039 (BCE, RPM Louvain) |
 | Numéro de TVA | BE 1038.934.039 |
 | Courriel | contact@opendrone.be |
+| Téléphone | +32 491 97 83 61 |
 | Site web | opendrone.be (boutique) · incutec.eu |
 | IBAN | BE94 7310 7599 3714 (KBC) |
 
@@ -200,7 +201,7 @@
 
 ### Article 15 : Modifications
 
-15.1. La version des présentes conditions fournie et acceptée avant le paiement régit la commande. Incutec BV peut publier une nouvelle version pour les nouvelles commandes à compter de la date d'entrée en vigueur indiquée dans cette version. Une version ultérieure ne modifie pas les conditions, les prix, les dates limites d'expédition ou de livraison déjà convenus pour une commande existante. Les droits impératifs des consommateurs s'appliquent dès leur date légale d'entrée en vigueur et ne sont pas reportés par la publication d'une nouvelle version. La version 2.7 s'applique aux nouvelles commandes dès sa publication le 30 septembre 2026 ; les commandes antérieures conservent les conditions acceptées et tous les droits impératifs. Les précisions concernant la livraison et le remboursement aux Articles 7bis.2, 7bis.7 et 7ter.4 ne retirent aucune promesse antérieure et ne réduisent pas les droits du consommateur.
+15.1. La version des présentes conditions fournie et acceptée avant le paiement régit la commande. Incutec BV peut publier une nouvelle version pour les nouvelles commandes à compter de la date d'entrée en vigueur indiquée dans cette version. Une version ultérieure ne modifie pas les conditions, les prix, les dates limites d'expédition ou de livraison déjà convenus pour une commande existante. Les droits impératifs des consommateurs s'appliquent dès leur date légale d'entrée en vigueur et ne sont pas reportés par la publication d'une nouvelle version. La version 2.8 s'applique aux nouvelles commandes dès sa publication le 1er octobre 2026 ; les commandes antérieures conservent les conditions acceptées et tous les droits impératifs. Les précisions concernant la livraison et le remboursement aux Articles 7bis.2, 7bis.7 et 7ter.4 ne retirent aucune promesse antérieure et ne réduisent pas les droits du consommateur.
 
 ### Article 16 : Clients professionnels (B2B)
 
@@ -224,7 +225,7 @@
 
 18.1. En passant une commande, le client accepte la Politique d’usage final d’Incutec publiée sur /end-use et garantit que les biens ne seront pas utilisés pour l’un des usages finaux exclus énoncés au §3 de cette politique. La violation de cette garantie constitue un manquement essentiel au contrat et autorise Incutec BV à annuler la commande, refuser la livraison et exercer tout recours disponible en vertu du droit belge et des règlements de l’UE applicables. En cas d’annulation ou de refus de livraison, Incutec BV rembourse à un consommateur tous les paiements dans les 14 jours.
 
-18.2. **Pas de réexportation vers la Russie ou le Bélarus.** Le client s’engage à ne pas vendre, exporter ou réexporter les biens, directement ou indirectement, vers la Fédération de Russie ou le Bélarus, ou en vue d’une utilisation dans ces pays (art. 12g du Règlement (UE) 833/2014 ; art. 8g du Règlement (CE) 765/2006). Cet engagement constitue un élément essentiel du contrat. Le client informe immédiatement Incutec BV de toute violation ; en cas de violation, Incutec BV peut résoudre le contrat et réclamer des dommages et intérêts. Incutec BV refuse la livraison en cas d’indices de contournement de cette disposition.
+18.2. **Pas de réexportation vers la Russie ou le Bélarus.** Le client s’engage à ne pas vendre, exporter ou réexporter, directement ou indirectement, vers la Fédération de Russie ou le Bélarus, ou en vue d’une utilisation dans ces pays, les biens fournis en vertu du présent contrat, y compris les biens relevant de l’article 12g du Règlement (UE) 833/2014, tels que les biens communs de haute priorité (art. 12g du Règlement (UE) 833/2014 ; art. 8g du Règlement (CE) 765/2006). Cet engagement constitue un élément essentiel du contrat et sa violation constitue un manquement essentiel au contrat. En cas de violation, Incutec BV peut résoudre le contrat et réclamer des dommages et intérêts. Lorsqu’il existe des motifs de soupçonner un contournement de cette disposition, Incutec BV refuse la livraison et peut annuler la commande ; elle rembourse alors tous les paiements effectués pour cette commande dans les 14 jours. Le client informe immédiatement Incutec BV de toute violation ainsi que de toute activité de tiers, y compris d’éventuels revendeurs, susceptible de faire échec à l’objectif de cette disposition.
 
 ### Article 19 : Langue
 
@@ -236,4 +237,4 @@
 
 ---
 
-*Version : 2.7, publiée le 2026-09-30 ; s'applique aux nouvelles commandes dès la publication. Les commandes antérieures conservent les conditions acceptées.*
+*Version : 2.8, publiée le 2026-10-01 ; s'applique aux nouvelles commandes dès la publication. Les commandes antérieures conservent les conditions acceptées.*

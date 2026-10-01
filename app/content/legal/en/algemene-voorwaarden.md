@@ -15,6 +15,7 @@
 | Company number | 1038.934.039 (KBO, RPR Leuven) |
 | VAT number | BE 1038.934.039 |
 | Email | contact@opendrone.be |
+| Telephone | +32 491 97 83 61 |
 | Website | opendrone.be (webshop) · incutec.eu |
 | IBAN | BE94 7310 7599 3714 (KBC) |
 
@@ -200,7 +201,7 @@
 
 ### Article 15: Amendments
 
-15.1. The version of these terms supplied and accepted before payment governs the order. Incutec BV may publish a new version for new orders from the effective date stated in that version. A later version does not change the terms, prices, ship-by dates or delivery deadlines already agreed for an existing order. Mandatory consumer rights apply from their statutory effective dates and are not postponed by publication of a new version. Version 2.7 applies to new orders from its publication on 30 September 2026; earlier orders retain their accepted terms and all mandatory rights. The delivery and refund clarifications in Articles 7bis.2, 7bis.7 and 7ter.4 do not withdraw any earlier promise or reduce a consumer's rights.
+15.1. The version of these terms supplied and accepted before payment governs the order. Incutec BV may publish a new version for new orders from the effective date stated in that version. A later version does not change the terms, prices, ship-by dates or delivery deadlines already agreed for an existing order. Mandatory consumer rights apply from their statutory effective dates and are not postponed by publication of a new version. Version 2.8 applies to new orders from its publication on 1 October 2026; earlier orders retain their accepted terms and all mandatory rights. The delivery and refund clarifications in Articles 7bis.2, 7bis.7 and 7ter.4 do not withdraw any earlier promise or reduce a consumer's rights.
 
 ### Article 16: Professional customers (B2B)
 
@@ -224,7 +225,7 @@
 
 18.1. By placing an order, the customer accepts the Incutec End-Use Policy published at /end-use, and warrants that the goods will not be used for any of the excluded end-uses set out in §3 of that policy. Breach of this warranty constitutes a material breach of contract and entitles Incutec BV to cancel the order, refuse delivery, and pursue any remedy available under Belgian law and applicable EU regulations. On cancellation or refusal of delivery, Incutec BV refunds a consumer all payments within 14 days.
 
-18.2. **No re-export to Russia or Belarus.** The customer undertakes not to sell, export or re-export the goods, directly or indirectly, to the Russian Federation or Belarus, or for use there (Art. 12g Regulation (EU) 833/2014; Art. 8g Regulation (EC) 765/2006). This undertaking constitutes an essential element of the contract. The customer shall inform Incutec BV immediately of any breach; on breach, Incutec BV may terminate the contract and claim damages. Incutec BV refuses delivery where there are indications of circumvention of this provision.
+18.2. **No re-export to Russia or Belarus.** The customer undertakes not to sell, export or re-export, directly or indirectly, to the Russian Federation or Belarus, or for use in the Russian Federation or Belarus, any goods supplied under this contract, including goods that fall under Article 12g of Regulation (EU) 833/2014, such as common high priority items (Art. 12g Regulation (EU) 833/2014; Art. 8g Regulation (EC) 765/2006). This undertaking constitutes an essential element of the contract, and its breach is an essential breach of contract. On breach, Incutec BV may terminate the contract and claim damages. Where there are grounds to suspect circumvention of this provision, Incutec BV refuses delivery and may cancel the order; it then refunds all payments for that order within 14 days. The customer shall inform Incutec BV immediately of any breach and of any activity by third parties, including possible resellers, that could frustrate the purpose of this provision.
 
 ### Article 19: Language
 
@@ -236,4 +237,4 @@
 
 ---
 
-*Version: 2.7, published 2026-09-30; applies to new orders from publication. Earlier orders retain their accepted terms.*
+*Version: 2.8, published 2026-10-01; applies to new orders from publication. Earlier orders retain their accepted terms.*

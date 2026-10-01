@@ -803,8 +803,18 @@ describe('committed dates derive from content/preorders.json', () => {
         for (const iso of [config.endsOn, config.shipsBy]) {
           assert.ok(text.includes(day(iso, locale)), `${lang}/${file} names ${day(iso, locale)}`);
         }
+        // The delivery deadlines of Batch 1 (EU) and the funded March batch
+        // (EU, then US and other destinations), as preorders.json records them.
+        for (const iso of [early.deliveryBy, funded.deliveryBy, funded.deliveryByUS, funded.deliveryByINT]) {
+          assert.ok(iso, 'delivery date set in preorders.json');
+          assert.ok(text.includes(day(iso, locale)), `${lang}/${file} names delivery date ${day(iso, locale)}`);
+        }
       }
     }
+    assert.deepEqual(
+      [early.deliveryBy, funded.deliveryBy, funded.deliveryByUS, funded.deliveryByINT],
+      ['2026-11-30', '2027-04-15', '2027-04-30', '2027-04-30'],
+    );
   });
 
   it('names no US warehouse and no Belgian QC for preorder-run goods in public copy', () => {

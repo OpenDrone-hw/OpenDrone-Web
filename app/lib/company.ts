@@ -28,7 +28,7 @@ const DEFAULTS: CompanyIdentity = {
   kbo: '1038.934.039',
   vat: 'BE 1038.934.039',
   email: 'contact@opendrone.be',
-  tel: '[pending]',
+  tel: '+32 491 97 83 61',
 };
 
 type MaybeEnv = Record<string, string | undefined> | undefined;

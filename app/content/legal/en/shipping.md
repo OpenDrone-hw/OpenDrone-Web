@@ -22,7 +22,7 @@ For deliveries within the EU, prices and shipping rates include VAT. Goods sent 
 
 ### United States
 
-For deliveries to the United States, Incutec BV sells directly to consumers for preorder batches only. Paid EU stock (batch 1) and items in stock are not shipped to US addresses.
+For deliveries to the United States, Incutec BV sells directly to consumers for preorder batches only. Paid EU stock (batch 1) and stock held in Belgium are not shipped to US addresses; an in-stock item in a US order ships with the preorder batch.
 
 - **Sold:** Preorder batches only
 - **Currency:** US dollars (USD)
@@ -36,7 +36,7 @@ The ship date stated on the product page and in your order confirmation is the o
 
 ### Outside the European Union and the United States
 
-Consumer preorder checkout is available for the destinations offered at checkout. Paid EU stock (Batch 1) is not shipped to these destinations. Prices are shown in the selected destination's currency; the shipping service, shipping charge and taxes collected by Incutec BV are disclosed before payment. Required VAT, GST or other sales tax is accounted for at sale or payment as the law requires and is included in the checkout total.
+Consumer preorder checkout is available for the destinations offered at checkout. Paid EU stock (Batch 1) is not shipped to these destinations; an in-stock item offered for these destinations ships with the preorder batch. Prices are shown in the selected destination's currency; the shipping service, shipping charge and taxes collected by Incutec BV are disclosed before payment. Required VAT, GST or other sales tax is accounted for at sale or payment as the law requires and is included in the checkout total.
 
 Unless expressly collected before payment, the recipient pays import duties, import VAT or GST, customs-clearance charges and carrier administration fees. These charges are additional to the product price and shipping charge and depend on the destination, consignment and carrier. The same tax liability must not be paid twice; contact Incutec BV with any duplicate assessment for correction or refund.
 
@@ -46,13 +46,13 @@ Retailers can [request a bulk quote](/wholesale). No overseas retailer availabil
 
 ### Pre-orders
 
-Preorders are paid in full. The product offer and order confirmation identify the batch, the funding conditions and the ship-by date. The campaign dates are shown on [/preorder](/preorder). Dispatch is not delivery.
+Preorders are paid in full. The product offer and order confirmation identify the batch, the funding conditions and the ship-by date. The campaign dates are shown on [/preorder](/preorder). Dispatch is not delivery: delivery means receipt of the goods by you. Paid Batch 1 orders are delivered in the EU by 30 November 2026. If the funding target for the March 2027 batch is reached by its deadline, that batch is delivered by 15 April 2027 in the EU and by 30 April 2027 in the United States and other destinations outside the EU. The delivery deadline stated before payment and in your order confirmation applies to your order (Article 7bis.2 of the terms).
 
 Cancellation, missed targets, changes to ship dates, refunds and mixed-batch orders follow [Article 7bis of the terms](/en/algemene-voorwaarden#art-7bis). You may withdraw before delivery and retain the statutory withdrawal rights after receipt. Use the [online withdrawal form](/en/herroepingsrecht#withdraw). For deliveries to the United States, Article 7ter applies in addition. For other destinations outside the EU, Article 7quater applies in addition.
 
 ### Delivery time for items in stock
 
-Items in stock are normally shipped within 2 business days of payment receipt. The final delivery deadline is 30 calendar days after the order, unless explicitly agreed otherwise (Art. VI.43 of the Belgian Code of Economic Law, Art. 7 of our General Terms and Conditions). If Incutec BV fails to deliver within the 30-day deadline, the consumer may set a reasonable additional period. If Incutec BV still fails to deliver within that additional period, the consumer may terminate the contract free of charge (Art. VI.43 §2 WER). If Incutec BV refuses to deliver, or the delivery deadline was essential, the consumer may terminate the contract immediately.
+Items in stock are normally shipped within 2 business days of payment receipt, with two exceptions. If the order also contains a preorder item, the whole order ships together once the last item is ready (one delivery per order, Art. 7bis.5 of our General Terms and Conditions), unless you order the in-stock items separately: the cart offers that split. If the order ships outside the EU, the in-stock item ships with the preorder batch, because stock held in Belgium ships to EU addresses only. The final delivery deadline is 30 calendar days after the order, unless explicitly agreed otherwise (Art. VI.43 of the Belgian Code of Economic Law, Art. 7 of our General Terms and Conditions). For an order that ships with a preorder batch, the delivery deadline stated before payment and in the order confirmation applies (Art. 7bis.2 of our General Terms and Conditions). If Incutec BV fails to deliver within the 30-day deadline, the consumer may set a reasonable additional period. If Incutec BV still fails to deliver within that additional period, the consumer may terminate the contract free of charge (Art. VI.43 §2 WER). If Incutec BV refuses to deliver, or the delivery deadline was essential, the consumer may terminate the contract immediately.
 
 ### Risk during shipping
 

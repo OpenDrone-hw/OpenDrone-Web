@@ -494,7 +494,7 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
                   {company.address}
                 </TitleCell>
                 <TitleCell label="chrome.footer_tb_kbo" span={3}>
-                  <span className="tabular-nums">{company.kbo}</span>
+                  <span className="tabular-nums">{company.kbo}</span> RPR Leuven
                 </TitleCell>
                 <TitleCell label="chrome.footer_tb_vat" span={3}>
                   <span className="tabular-nums">{company.vat}</span>

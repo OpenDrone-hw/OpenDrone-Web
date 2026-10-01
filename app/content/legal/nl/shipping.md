@@ -22,7 +22,7 @@ Voor leveringen binnen de EU zijn prijzen en verzendtarieven inclusief btw. Goed
 
 ### Verenigde Staten
 
-Voor leveringen naar de Verenigde Staten verkoopt Incutec BV rechtstreeks aan consumenten, uitsluitend voor pre-orderbatches. Betaalde EU-voorraad (batch 1) en artikelen op voorraad worden niet naar Amerikaanse adressen verzonden.
+Voor leveringen naar de Verenigde Staten verkoopt Incutec BV rechtstreeks aan consumenten, uitsluitend voor pre-orderbatches. Betaalde EU-voorraad (batch 1) en voorraad in België worden niet naar Amerikaanse adressen verzonden; een artikel op voorraad in een Amerikaanse bestelling wordt met de pre-orderbatch verzonden.
 
 - **Verkocht:** Alleen pre-orderbatches
 - **Munt:** Amerikaanse dollar (USD)
@@ -36,7 +36,7 @@ De verzenddatum op de productpagina en in uw orderbevestiging is die welke voor 
 
 ### Buiten de Europese Unie en de Verenigde Staten
 
-Consumenten kunnen pre-orders afrekenen voor de bestemmingen die aan de checkout worden aangeboden. Betaalde EU-voorraad (batch 1) wordt niet naar deze bestemmingen verzonden. Prijzen worden getoond in de munt voor de gekozen bestemming; de bezorgdienst, verzendkosten en door Incutec BV geïnde belastingen worden vóór de betaling meegedeeld. Vereiste btw, GST of andere verkoopbelasting wordt bij verkoop of betaling verantwoord zoals de wet vereist en is inbegrepen in het checkouttotaal.
+Consumenten kunnen pre-orders afrekenen voor de bestemmingen die aan de checkout worden aangeboden. Betaalde EU-voorraad (batch 1) wordt niet naar deze bestemmingen verzonden; een artikel op voorraad dat voor deze bestemmingen wordt aangeboden, wordt met de pre-orderbatch verzonden. Prijzen worden getoond in de munt voor de gekozen bestemming; de bezorgdienst, verzendkosten en door Incutec BV geïnde belastingen worden vóór de betaling meegedeeld. Vereiste btw, GST of andere verkoopbelasting wordt bij verkoop of betaling verantwoord zoals de wet vereist en is inbegrepen in het checkouttotaal.
 
 Tenzij ze uitdrukkelijk vóór de betaling worden geïnd, betaalt de ontvanger invoerrechten, invoer-btw of GST, inklaringskosten en administratiekosten van de vervoerder. Die kosten komen boven op de productprijs en verzendkosten en hangen af van de bestemming, zending en vervoerder. Dezelfde belastingverplichting mag niet dubbel worden betaald; neem bij een dubbele aanslag contact op met Incutec BV voor correctie of terugbetaling.
 
@@ -46,13 +46,13 @@ Winkels kunnen [een offerte aanvragen](/wholesale). Beschikbaarheid bij buitenla
 
 ### Pre-orders
 
-Pre-orders worden volledig betaald. Het productaanbod en de orderbevestiging vermelden de batch, de financieringsvoorwaarden en de uiterste verzenddatum. De campagnedata staan op [/preorder](/preorder). Verzending is geen levering.
+Pre-orders worden volledig betaald. Het productaanbod en de orderbevestiging vermelden de batch, de financieringsvoorwaarden en de uiterste verzenddatum. De campagnedata staan op [/preorder](/preorder). Verzending is geen levering: levering betekent ontvangst van de goederen door u. Bestellingen uit de betaalde batch 1 worden uiterlijk 30 november 2026 in de EU geleverd. Wordt het financieringsdoel voor de batch van maart 2027 uiterlijk op de deadline bereikt, dan wordt die batch uiterlijk 15 april 2027 in de EU en uiterlijk 30 april 2027 in de Verenigde Staten en andere bestemmingen buiten de EU geleverd. De uiterste leverdatum die vóór de betaling en in uw orderbevestiging is vermeld, geldt voor uw bestelling (Artikel 7bis.2 van de voorwaarden).
 
 Annulering, niet-behaalde doelen, gewijzigde verzenddata, terugbetalingen en bestellingen met meerdere batches volgen [Artikel 7bis van de voorwaarden](/nl/algemene-voorwaarden#art-7bis). U kunt vóór de levering herroepen en behoudt de wettelijke herroepingsrechten na ontvangst. Gebruik het [online herroepingsformulier](/nl/herroepingsrecht#withdraw). Voor leveringen naar de Verenigde Staten geldt daarnaast Artikel 7ter. Voor andere bestemmingen buiten de EU geldt daarnaast Artikel 7quater.
 
 ### Leveringstermijn voor artikelen op voorraad
 
-Artikelen op voorraad worden in principe verzonden binnen 2 werkdagen na ontvangst van de betaling. De uiterste leveringstermijn bedraagt 30 kalenderdagen na bestelling, tenzij expliciet anders overeengekomen (Art. VI.43 WER, Art. 7 Algemene Voorwaarden). Indien Incutec BV de uiterste leveringstermijn van 30 dagen niet haalt, kan de consument een redelijke aanvullende termijn voorstellen. Wordt ook deze niet gehaald, dan kan de consument de overeenkomst kosteloos ontbinden (Art. VI.43 §2 WER). Weigert Incutec BV te leveren, of was de leveringstermijn essentieel, dan kan de consument de overeenkomst onmiddellijk ontbinden.
+Artikelen op voorraad worden in principe verzonden binnen 2 werkdagen na ontvangst van de betaling, met twee uitzonderingen. Bevat de bestelling ook een pre-orderartikel, dan wordt de volledige bestelling samen verzonden zodra het laatste artikel klaar is (één levering per bestelling, Art. 7bis.5 Algemene Voorwaarden), tenzij u de artikelen op voorraad afzonderlijk bestelt: het winkelmandje biedt die splitsing aan. Wordt de bestelling buiten de EU verzonden, dan wordt het artikel op voorraad met de pre-orderbatch verzonden, omdat de voorraad in België uitsluitend naar adressen in de EU wordt verzonden. De uiterste leveringstermijn bedraagt 30 kalenderdagen na bestelling, tenzij expliciet anders overeengekomen (Art. VI.43 WER, Art. 7 Algemene Voorwaarden). Voor een bestelling die met een pre-orderbatch wordt verzonden, geldt de uiterste leverdatum die vóór de betaling en in de orderbevestiging is vermeld (Art. 7bis.2 Algemene Voorwaarden). Indien Incutec BV de uiterste leveringstermijn van 30 dagen niet haalt, kan de consument een redelijke aanvullende termijn voorstellen. Wordt ook deze niet gehaald, dan kan de consument de overeenkomst kosteloos ontbinden (Art. VI.43 §2 WER). Weigert Incutec BV te leveren, of was de leveringstermijn essentieel, dan kan de consument de overeenkomst onmiddellijk ontbinden.
 
 ### Risico bij verzending
 

@@ -74,6 +74,12 @@ const KNOWN: CookieEntry[] = [
     fr: 'M\u00e9morise votre pr\u00e9f\u00e9rence linguistique pour les pages l\u00e9gales.',
   },
   {
+    name: 'od_ship_country',
+    en: 'Remembers the delivery country you picked, so prices, shipping and availability are shown for it. Set only when you pick a country; 1 year. Strictly necessary.',
+    nl: 'Onthoudt het leverland dat u koos, zodat prijzen, verzending en beschikbaarheid ervoor worden getoond. Enkel geplaatst wanneer u een land kiest; 1 jaar. Strikt noodzakelijk.',
+    fr: 'M\u00e9morise le pays de livraison que vous avez choisi, afin d\u2019afficher les prix, l\u2019exp\u00e9dition et la disponibilit\u00e9 pour ce pays. Plac\u00e9 uniquement lorsque vous choisissez un pays ; 1 an. Strictement n\u00e9cessaire.',
+  },
+  {
     name: 'od_support',
     en: 'Remembers which support tickets this browser may open. Set only when you open or find a ticket.',
     nl: 'Onthoudt welke supporttickets deze browser mag openen. Enkel geplaatst wanneer u een ticket opent of terugvindt.',
