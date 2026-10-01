@@ -203,7 +203,15 @@
   --pod-shadow: 0 10px 34px -16px rgba(0, 0, 0, 0.55);
   --pod-pad: clamp(var(--sp-3), 1.5vw, var(--sp-5));
 
-  --header-control-height: 1.75rem;
+  /* Desktop header sizes: one height for every control (product pills,
+     currency pill, square icon hit-boxes), one glyph size for every utility
+     icon, the logo height, the gap between neighbouring pills and the gap
+     between neighbouring icons. */
+  --header-control-height: 2rem;
+  --header-logo-height: 1.75rem;
+  --header-icon-size: 1.5rem;
+  --header-pill-gap: clamp(0.5rem, 0.9vw, 0.9rem);
+  --header-icon-gap: 0.3rem;
   --header-height: calc(var(--header-control-height) + 22px);
   --aside-width: 400px;
 
@@ -1112,7 +1120,7 @@ html.anim-paused .board-sheet.is-active {
 .site-header-utils {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: var(--header-icon-gap);
 }
 .site-header-link {
   font-family: var(--font-mono);
@@ -1130,20 +1138,34 @@ html.anim-paused .board-sheet.is-active {
 @media (min-width: 769px) {
   .site-header-wordmark,
   .site-header-incutec {
-    height: var(--header-control-height);
+    height: var(--header-logo-height);
   }
   .site-header-main .header-popover-trigger {
     height: var(--header-control-height);
     line-height: 1;
   }
+  .site-header-main .lang-toggle.header-lang-toggle {
+    height: var(--header-control-height);
+  }
+  .site-header-main .lang-toggle.header-lang-toggle a,
+  .site-header-main .lang-toggle.header-lang-toggle button {
+    display: inline-flex;
+    align-items: center;
+    padding-block: 0;
+  }
+  /* The pill zone (currency, language) ends one pill gap before the icons. */
+  .site-header-utils > .header-region-switch,
+  .site-header-utils > .header-lang-toggle {
+    margin-inline-end: calc(var(--header-pill-gap) - var(--header-icon-gap));
+  }
   .site-header-utils .site-header-icon {
-    width: 2rem;
+    width: var(--header-control-height);
     height: var(--header-control-height);
     padding: 0;
   }
-  .site-header-utils .site-header-icon > svg {
-    width: var(--header-control-height);
-    height: var(--header-control-height);
+  .site-header-utils .site-header-icon svg {
+    width: var(--header-icon-size);
+    height: var(--header-icon-size);
   }
   .site-header-utils .site-header-cart-count {
     top: -0.1rem;
@@ -1188,7 +1210,7 @@ html.anim-paused .board-sheet.is-active {
 }
 .header-popover-panel {
   position: absolute;
-  top: calc(100% + (var(--header-height) - 1.75rem) / 2 + 0.5rem);
+  top: calc(100% + (var(--header-height) - var(--header-control-height)) / 2 + 0.5rem);
   right: 0;
   z-index: 5;
   min-width: 100%;
@@ -1263,7 +1285,7 @@ html.anim-paused .board-sheet.is-active {
   border-radius: var(--r-pill);
 }
 .header-more-panel {
-  top: calc(100% + (var(--header-height) - 2rem) / 2 + 0.5rem);
+  top: calc(100% + (var(--header-height) - var(--header-control-height)) / 2 + 0.5rem);
   /* Opaque: the page under the menu must not show through. */
   background: linear-gradient(var(--pod-bg-strong), var(--pod-bg-strong)), var(--color-bg);
   min-width: 11rem;
@@ -1340,15 +1362,15 @@ html.anim-paused .board-sheet.is-active {
   align-items: center;
   justify-content: center;
   grid-area: cats;
-  gap: clamp(0.5rem, 0.9vw, 0.9rem);
+  gap: var(--header-pill-gap);
 }
 
 @media (min-width: 1024px) and (max-width: 1100px) {
   .site-header-main {
     column-gap: 0.65rem;
   }
-  .site-header-categories {
-    gap: 0.5rem;
+  :root {
+    --header-pill-gap: 0.5rem;
   }
 }
 
