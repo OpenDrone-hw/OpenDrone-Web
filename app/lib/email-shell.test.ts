@@ -71,7 +71,7 @@ describe('launch mail', () => {
     }
     assert.match(renderBlast('all', 'eu').text, /EU addresses/);
     assert.ok(!/first production batch/.test(renderBlast('all', 'us').text));
-    assert.match(renderBlast('all', 'us').text, /47 CFR 2\.803/);
+    assert.ok(!/FCC|2\.803/.test(renderBlast('all', 'us').text));
     assert.equal(launchCopy('eu').sections.length, 2);
   });
 

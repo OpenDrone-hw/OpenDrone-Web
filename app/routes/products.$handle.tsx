@@ -90,7 +90,6 @@ import {fetchStatusFlagsFast, statusForHandle} from '~/lib/roadmap-data';
 import {parseCampaignConfig, priceLadder, promiseBatchMonth, tiersFor} from '~/lib/preorder-campaign';
 import {reachableSteps, stepBarView} from '~/lib/preorder-meter';
 import {paysEuVat} from '~/lib/visitor-country';
-import {fccConditionalSku, fccPart15bSku} from '~/lib/us-sales';
 import {isInternationalQuote, notSoldDirect, shippingQuote} from '~/lib/shipping-rates';
 import {registrationNumbers} from '~/lib/registrations';
 import preorders from '../../content/preorders.json';
@@ -1774,7 +1773,7 @@ function ProductPage() {
   // paid batch when fewer remain.
   const maxQuantityNote =
     maxQuantity < MAX_LINE_QUANTITY
-      ? say('product-chrome.buy_qty_max_batch', '{count} left in this batch', {count: maxQuantity})
+      ? say('product-chrome.buy_qty_max_batch', '{count} left', {count: maxQuantity})
       : say('product-chrome.buy_qty_max', 'Max {count} per order', {count: maxQuantity});
 
   // Inside the EU the price includes 21% Belgian VAT. Outside it the same
@@ -1797,7 +1796,7 @@ function ProductPage() {
   // signup instead of the ship date. A blocked country gets "Not available
   // in <country>" and the End-Use Policy link, with no signup.
   const notDirect = notSoldDirect(rootData?.visitorCountry ?? null, usRate);
-  // The US notice under the ship date: the EU-only stock line and, for a receiver, the FCC notice.
+  // The US notice under the ship date: the EU-only stock line.
   // The batches of a campaign SKU, one row each, the buyer's highlighted.
   // An accessory that ships with the paid November stock, or that a US buyer
   // gets from a later batch, shows the same rows and names (batch 1, EU only).
@@ -1806,24 +1805,16 @@ function ProductPage() {
   );
   const showAvailability = Boolean(campaign && ((tiers.length && stepBarState) || accessoryBatches));
   const usEuOnly = usBuyer && !isBundle && !selectedVariant?.campaign && Boolean(selectedVariant?.availableForSale);
-  const fccConditional = fccConditionalSku(selectedVariant?.sku) || fccConditionalSku(product.handle);
-  const fccPart15b = fccPart15bSku(selectedVariant?.sku) || fccPart15bSku(product.handle);
+  // A unit that waits for a funding target: what happens if it is missed.
+  const waitsForTarget = Boolean(campaign && !campaign.targetReached && currentBatch(campaign) && !currentBatch(campaign)!.paid);
+  const targetMissed = waitsForTarget
+    ? say('preorder.target_missed', 'Target not reached? You choose a refund or to keep waiting.')
+    : null;
   const usNotice = usBuyer && buyAvailable ? (
     <>
       {usEuOnly ? (
         <p className="product-buy-ship" role="note">
           {say('product-chrome.buy_us_eu_only', 'Ships from stock in Belgium to EU addresses only')}
-        </p>
-      ) : null}
-      {fccConditional ? (
-        <p id="fcc-notice" className="product-buy-ship product-buy-fcc" role="note">
-          {fccPart15b ? say(
-            'product-chrome.buy_us_fcc_part15b',
-            'FCC notice: this device has not been authorized as required by the rules of the Federal Communications Commission. It is a digital device (unintentional radiator, 47 CFR Part 15, Subpart B), sold to US buyers as a conditional preorder and not delivered until the applicable authorization requirements are met. FCC rules do not address consumer protection, contractual or other provisions under federal or state law. If those requirements are not met, we refund that item in full.',
-          ) : say(
-            'product-chrome.buy_us_fcc',
-            'FCC notice: this device has not been authorized as required by the rules of the Federal Communications Commission. It is sold to US buyers as a conditional preorder and is not delivered unless authorization is obtained. FCC rules do not address consumer protection, contractual or other provisions under federal or state law. If authorization is not obtained, we refund that item in full.',
-          )}
         </p>
       ) : null}
     </>
@@ -1995,6 +1986,7 @@ function ProductPage() {
       {notDirect ? null : usNotice}
       {preorder && !isBundle && !notDirect ? (
         <p className="product-buy-ship">
+          {targetMissed ? <>{targetMissed}{' '}</> : null}
           <Link prefetch="intent" to="/preorder" className="product-buy-terms-link">
             {say('product-chrome.buy_terms_link', 'Pre-order terms')}
           </Link>

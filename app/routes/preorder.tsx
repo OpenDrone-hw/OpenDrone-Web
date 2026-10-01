@@ -303,6 +303,7 @@ export default function PreorderRoute() {
             <span className="po-group-meta">{dot + shipWord('deadline', ends)}</span>
             <span className="po-group-meta">{dot + (copyText('preorder.ship_eta_if_funded') ?? 'Ships by {date} if the target is reached').replace('{date}', eta)}</span>
           </h2>
+          <Txt id="preorder.target_missed" as="p" className="po-group-line" />
           {stackMonth ? (
             <p className="po-group-line">
               {(copyText('preorder.targets_line') ?? '').replace('{month}', stackMonth)}

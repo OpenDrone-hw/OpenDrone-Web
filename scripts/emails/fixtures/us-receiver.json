@@ -1,7 +1,7 @@
 {
   "_scenario": {
-    "title": "United States, receiver line, FCC conditional sale",
-    "description": "US address with a receiver (RF product): duties included plus the FCC 47 CFR 2.803 conditional-sale line.",
+    "title": "United States, receiver line",
+    "description": "US address with a receiver: duties included and the import clearance line.",
     "templates": [
       "order-confirmation",
       "staff-new-order"

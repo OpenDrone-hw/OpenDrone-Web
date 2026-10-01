@@ -27,7 +27,7 @@ import {LineShipChip} from '~/components/ParcelChip';
 import {buildSeoMeta} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
 import {cartQuoteCountry, countryName, shipCountryForRequest, shippingQuote} from '~/lib/shipping-rates';
-import {fccConditionalSku, usSalesRate} from '~/lib/us-sales';
+import {usSalesRate} from '~/lib/us-sales';
 import {ShipToSelect} from '~/components/ShipToSelect';
 import {paysEuVat} from '~/lib/visitor-country';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
@@ -129,7 +129,7 @@ type Removed = SplitItem[];
 
 /** The one-line notice for a checkout the server sent back to the cart. */
 function checkNotice(check: string | null): string | null {
-  if (check === CART_CHECK.paidBatch) return t('check_paid_batch', 'Not enough left in batch 1. Lower the quantity where shown.');
+  if (check === CART_CHECK.paidBatch) return t('check_paid_batch', 'Not enough left. Lower the quantity where shown.');
   if (check === CART_CHECK.shipDate) return t('check_ship_date', 'A ship date changed. Check the dates below.');
   if (check === CART_CHECK.price) return t('check_price', 'A price changed. Check the total below.');
   if (check === CART_CHECK.priceAndDate) return t('check_price_and_date', 'A price and a ship date changed. Check the dates and the total below.');
@@ -335,7 +335,7 @@ function PopulatedCart({
           </div>
           <ul className="cart-lines-scroll" aria-label={copyText('cart.sr_line_items') ?? 'Line items'}>
             {sortCartLines(cart.lines).map((line) => (
-              <CartLine key={line.id} line={line} info={info[line.id]} pending={pending} parcel={parcel} deliveryBy={parcelDeliveryBy ?? line.deliveryBy} usBuyer={usBuyer} />
+              <CartLine key={line.id} line={line} info={info[line.id]} pending={pending} parcel={parcel} deliveryBy={parcelDeliveryBy ?? line.deliveryBy} />
             ))}
           </ul>
         </div>
@@ -517,6 +517,7 @@ function MixedNote({
 
   return (
     <div className="cart-mixed-note" role="note">
+      <p className="cart-summary-note">{t('parcel_note', 'Your order ships in one parcel, when its last item is ready.')}</p>
       {plan ? (
         <Form
           method="post"
@@ -550,7 +551,6 @@ function CartLine({
   pending,
   parcel = null,
   deliveryBy = null,
-  usBuyer = false,
 }: {
   line: ShopifyCartLine;
   info: CartLineInfo | undefined;
@@ -558,8 +558,6 @@ function CartLine({
   /** The promise a one-parcel order waits for, or null for a single date. */
   parcel?: string | null;
   deliveryBy?: string | null;
-  /** A US buyer: a receiver line links to the FCC notice. */
-  usBuyer?: boolean;
 }) {
   const max = info?.maxQuantity ?? null;
   return (
@@ -574,15 +572,10 @@ function CartLine({
           <Link to={variantLink(line.handle, line.selectedOptions)}><strong>{lineName(line)}</strong></Link>
           <LineShipChip promise={line.shipPromise} parcel={parcel} />
           {deliveryBy ? <small>{t('delivery_by', 'Delivery by {date}', {date: deliveryBy})}</small> : null}
-          {usBuyer && fccConditionalSku(line.sku) ? (
-            <small className="cart-line-fcc">
-              <Link to={`/products/${line.handle}#fcc-notice`}>{t('fcc_line', 'Not yet FCC authorized. Refund if not authorized.')}</Link>
-            </small>
-          ) : null}
           {max !== null && line.quantity > max ? (
-            <small className="cart-line-error" role="alert">{t('line_over_batch', 'Only {left} left in batch 1.', {left: max})}</small>
+            <small className="cart-line-error" role="alert">{t('line_over_batch', 'Only {left} left. Lower the quantity.', {left: max})}</small>
           ) : max !== null && max < MAX_LINE_QUANTITY && line.quantity >= max ? (
-            <small>{t('paid_left', '{left} left in batch 1', {left: max})}</small>
+            <small>{t('paid_left', '{left} left', {left: max})}</small>
           ) : null}
         </div>
         <div className="cart-sheet-qty">

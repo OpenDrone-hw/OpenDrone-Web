@@ -15,7 +15,7 @@ import {notSoldDirect, shippingQuote} from './shipping-rates.ts';
 import {handleShopifyCartAction, usSellable} from './shopify-cart-action.ts';
 import {handleCartCountry} from './shopify-cart-country.ts';
 import {mapShopifyCatalog, type CartLineInput, type ShopifyCart} from './shopify-storefront.ts';
-import {US_SALES, fccConditionalSku, fccPart15bSku, usSalesRate, usdBand, usdLadder, usdOf, withMarketPrices} from './us-sales.ts';
+import {US_SALES, usSalesRate, usdBand, usdLadder, usdOf, withMarketPrices} from './us-sales.ts';
 import {findUsList, nameWithUplift, planUplift, readUpliftPct} from '../../scripts/us-prices.mjs';
 import {priceNote} from './visitor-country.ts';
 
@@ -340,50 +340,12 @@ describe('US cart with the gate on', () => {
   });
 });
 
-describe('FCC conditional-sale disclosure', () => {
-  it('applies to the receivers, flight controllers and ESCs', () => {
-    for (const sku of ['OPENRX-LITE', 'OPENRX-LITE-UFL', 'OPENRX-MONO', 'OPENRX-GEMINI', 'openrx', 'OPENFC-LITE-2020', 'OPENESC-3030', 'openfc-lite']) {
-      assert.equal(fccConditionalSku(sku), true, sku);
+describe('buyer copy', () => {
+  it('carries no regulatory notice on the product page, cart or preorder page', () => {
+    for (const file of ['product-chrome', 'cart', 'preorder']) {
+      const text = fs.readFileSync(new URL(`../../content/copy/${file}.json`, import.meta.url), 'utf8');
+      assert.doesNotMatch(text, /\bFCC\b|47 CFR|equipment authori[sz]ation/, file);
     }
-    for (const sku of ['OPENFRAME-5', 'OPENMOTOR-2306', 'ACC-ANT-T', 'OPENFCX', '', null, undefined]) {
-      assert.equal(fccConditionalSku(sku), false, String(sku));
-    }
-  });
-
-  it('gives the flight controllers and ESCs the Part 15B wording, not the receivers', () => {
-    for (const sku of ['OPENFC-LITE-2020', 'OPENFC-LITE-3030', 'OPENESC-2020', 'OPENESC-3030', 'openfc-lite', 'openesc']) {
-      assert.equal(fccPart15bSku(sku), true, sku);
-    }
-    for (const sku of ['OPENRX-LITE', 'openrx', 'OPENFRAME-5', 'OPENESCX', '', null, undefined]) {
-      assert.equal(fccPart15bSku(sku), false, String(sku));
-    }
-    const copy = JSON.parse(fs.readFileSync(new URL('../../content/copy/product-chrome.json', import.meta.url), 'utf8')) as Record<string, string>;
-    assert.match(copy.buy_us_fcc_part15b, /47 CFR Part 15, Subpart B/);
-    assert.match(copy.buy_us_fcc_part15b, /we refund that item in full/);
-    assert.ok(!copy.buy_us_fcc_part15b.includes('\u2014'));
-  });
-
-  it('carries the 2.803 wording in the product copy, en only, with the refund line', () => {
-    for (const [file, key] of [['product-chrome', 'buy_us_fcc']] as const) {
-      const copy = JSON.parse(fs.readFileSync(new URL(`../../content/copy/${file}.json`, import.meta.url), 'utf8')) as Record<string, string>;
-      const text: string = copy[key];
-      assert.match(text, /has not been authorized as required by the rules of the Federal Communications Commission/);
-      assert.match(text, /conditional preorder/);
-      assert.match(text, /not delivered unless authorization is obtained/);
-      assert.match(text, /FCC rules do not address consumer protection, contractual or other provisions under federal or state law/);
-      assert.match(text, /we refund that item in full/);
-      assert.ok(!text.includes('\u2014'));
-    }
-  });
-
-  it('keeps the full FCC notice on the product page and a short linked line in the cart', () => {
-    const read = (file: string) => JSON.parse(fs.readFileSync(new URL(`../../content/copy/${file}.json`, import.meta.url), 'utf8')) as Record<string, string>;
-    const chrome = read('product-chrome');
-    const cart = read('cart');
-    assert.equal(cart.fcc_line, 'Not yet FCC authorized. Refund if not authorized.');
-    assert.equal(cart.us_fcc, undefined);
-    assert.equal(cart.us_notice, undefined);
-    assert.equal(chrome.buy_us_notice, undefined);
   });
 });
 

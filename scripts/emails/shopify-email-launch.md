@@ -30,11 +30,6 @@ Ships by 31 March 2027 if the target is reached by 15 December 2026.
 
 Duties included, nothing to pay on delivery. Ships with the preorder run.
 
-### Receiver, US sale
-**Sold conditionally in the US**
-
-Not delivered in the US until its FCC equipment authorization is granted (47 CFR 2.803). If it is not granted, you get a full refund for it.
-
 Paid in full at checkout. If a target is missed, you choose a full refund or the new date.
 
 Button: See the hardware -> https://opendrone.be/products?utm_source=shopify-email&utm_medium=email&utm_campaign=launch-all
@@ -79,11 +74,6 @@ You asked to hear when OpenDrone launches. It is live at opendrone.be.
 **Open for every product**
 
 Duties included, nothing to pay on delivery. Ships with the preorder run. Ships by 31 March 2027 if the target is reached by 15 December 2026.
-
-### Receiver, US sale
-**Sold conditionally in the US**
-
-Not delivered in the US until its FCC equipment authorization is granted (47 CFR 2.803). If it is not granted, you get a full refund for it.
 
 Paid in full at checkout. If a target is missed, you choose a full refund or the new date.
 
