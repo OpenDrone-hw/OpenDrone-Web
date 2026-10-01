@@ -8,7 +8,7 @@ import {createAppLoadContext} from '~/lib/context';
 import {NO_FRAMING_HEADERS, NO_FRAMING_PATH} from '~/lib/csp';
 import {parseCampaignConfig} from '~/lib/preorder-campaign';
 import {queryCountryCookie} from '~/lib/shipping-rates';
-import {reconcilePreorders} from '~/lib/preorder-ops';
+import {preorderHoldsEnabled, reconcilePreorders} from '~/lib/preorder-ops';
 import {priceTierWritesEnabled} from '~/lib/shopify-price-tier';
 import {supportDeps, supportReady} from '~/lib/support/server';
 import {runScheduled} from '~/lib/support/tickets';
@@ -162,9 +162,10 @@ export default {
    * Every five minutes (wrangler `[triggers] crons`, production only):
    *
    * - Reconcile the preorder price steps and holds. The orders/paid webhook
-   *   does this the moment an order is paid; this catches a delivery Shopify
-   *   never made and any paid preorder order not yet held and tagged. Off
-   *   unless SHOPIFY_PRICE_TIER_WRITE_ENABLED is '1'.
+   *   does this the moment an order is paid; this is its retry, and catches
+   *   a delivery Shopify never made and any paid preorder order not yet held
+   *   and tagged. Price steps only while SHOPIFY_PRICE_TIER_WRITE_ENABLED is
+   *   '1'; holds always, except on staging (app/lib/preorder-ops.ts).
    * - Support tickets (app/lib/support/tickets.ts runScheduled): read open
    *   threads, send reply notices when enabled, auto-close silent answered
    *   tickets and delete tickets closed more than 24 months ago. Off until
@@ -175,7 +176,7 @@ export default {
    *   compliance webhooks are live (SHOPIFY_WEBHOOK_SECRET set).
    */
   async scheduled(_event: unknown, env: Env, executionContext: ExecutionContext): Promise<void> {
-    if (priceTierWritesEnabled(env)) {
+    if (priceTierWritesEnabled(env) || preorderHoldsEnabled(env)) {
       executionContext.waitUntil(
         (async () => {
           try {
@@ -184,11 +185,14 @@ export default {
             if (result.changed.length) {
               console.log('preorder price steps written', JSON.stringify(result.changed));
             }
+            if (result.priceError) {
+              console.error('preorder price step reconcile failed', result.priceError);
+            }
             if (result.held.length) {
               console.log('preorder orders held', JSON.stringify(result.held));
             }
           } catch (error) {
-            console.error('preorder price step reconcile failed', error);
+            console.error('preorder reconcile failed', error);
           }
         })(),
       );

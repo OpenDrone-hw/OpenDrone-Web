@@ -1016,10 +1016,11 @@ export function specSheet(
 
 /**
  * A ship promise as one short line for a cart row or a dialog row. A
- * funding-target promise ("ships by 31 March 2027 if the target is reached
- * by 15 December 2026, otherwise ...") becomes a label plus "ships by 14
- * March 2027 if reached";
- * a dated promise ("ships early November 2026") keeps its words.
+ * funding-target promise (`pendingShips` in `content/preorders.json`,
+ * "ships by <shipsBy> if the target is reached by <endsOn>, otherwise ...")
+ * becomes a label plus "ships by <shipsBy> if reached", both dates taken
+ * from the promise itself; a dated promise ("ships early November 2026")
+ * keeps its words.
  */
 export type ShortShipPromise = {kind: 'target' | 'date'; label: string | null; text: string};
 

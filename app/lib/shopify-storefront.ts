@@ -154,6 +154,11 @@ export const AVAILABILITY_ATTRIBUTE = 'Availability';
  *  that ships elsewhere `promise-mismatch`. */
 export const SHIP_REGION_ATTRIBUTE = '_ship_region';
 
+/** The hidden line attribute naming the batch a preorder line's promise was
+ *  computed for, `SKU:N` (the lead SKU for an item that ships with one).
+ *  The hold pass tags an order allocated another batch `promise-mismatch`. */
+export const BATCH_ATTRIBUTE = '_batch';
+
 /** The hidden line attribute holding a line's own ship promise while its
  *  `Preorder` attribute carries the mixed-order wording ("ships with the
  *  rest of this order by ..."). Absent on every other line. */

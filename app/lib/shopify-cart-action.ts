@@ -6,6 +6,7 @@ import {destinationForRequest, isInternationalQuote, isIsoCountry, isUsQuote, sh
 import {type RegistrationsFile} from './registrations.ts';
 import {usSalesRate} from './us-sales.ts';
 import {
+  BATCH_ATTRIBUTE,
   PREORDER_ATTRIBUTE,
   DELIVERY_BY_ATTRIBUTE,
   DELIVERY_BY_OWN_ATTRIBUTE,
@@ -259,10 +260,14 @@ export function lineAttributes(variant: CatalogVariant, destination: Region | bo
   // so the hold pass can flag an order shipped to another region.
   const region = typeof destination === 'boolean' ? destination ? 'US' : 'EU' : destination;
   const deliveryDay = variant.campaign?.deliveryByDay;
+  // The batch the promise belongs to (hidden at checkout), so the hold pass
+  // can flag a line paid at a batch boundary and allocated the next batch.
+  const batch = variant.campaign ? `${variant.campaign.shipsWith ?? variant.sku}:${variant.campaign.batch}` : null;
   return [
     {key: PREORDER_ATTRIBUTE, value: promise},
     ...(deliveryDay ? [{key: DELIVERY_BY_ATTRIBUTE, value: campaignDate(deliveryDay)}] : []),
     ...(region !== 'EU' ? [{key: SHIP_REGION_ATTRIBUTE, value: region}] : []),
+    ...(batch ? [{key: BATCH_ATTRIBUTE, value: batch}] : []),
   ];
 }
 

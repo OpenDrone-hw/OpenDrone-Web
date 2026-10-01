@@ -10,13 +10,15 @@
 //   --with SKU:N     another batch that is also ready, or settled (its item
 //                    refunded or the buyer chose to wait); repeat or comma-separate
 //   --apply          release the holds; without it this is a dry run
+//   --help           print this help; reads and writes nothing
 //
 // A paid preorder order is held by the Worker (app/lib/preorder-fulfilment.ts)
 // and tagged `batch:SKU:N` for every batch its units fall into. An order ships
 // as one parcel (terms 7bis.5), so this releases an order only when every
 // batch it carries is the requested one or named with --with. The dry run
 // lists every held order of the batch: the ones that ship now and the ones
-// that still wait, with what they wait for.
+// that still wait, with what they wait for, and warns about any batch whose
+// `batch:SKU:N` tags carry more units than the batch has.
 //
 // After --apply, the released orders are open for fulfilment: import them in
 // the bpost plugin and print the labels (README "Fulfil a batch").
@@ -37,9 +39,10 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // ---------------------------------------------------------------------------
 
 export function parseArgs(argv, campaignSkus) {
-  const opts = {sku: null, batch: 1, with: [], apply: false};
+  const opts = {sku: null, batch: 1, with: [], apply: false, help: false};
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
+    if (arg === '--help' || arg === '-h') return {...opts, help: true};
     if (arg === '--apply') opts.apply = true;
     else if (arg === '--dry-run') opts.apply = false;
     else if (arg === '--sku') opts.sku = String(argv[(i += 1)] ?? '').trim();
@@ -61,6 +64,13 @@ export function parseArgs(argv, campaignSkus) {
     throw new Error(`${opts.sku} is not a campaign SKU (${campaignSkus.join(', ')})`);
   }
   return opts;
+}
+
+/** Warnings for batches tagged past their size (`overfullBatches`). */
+export function describeOverfull(overfull) {
+  return overfull.map(
+    (b) => `Warning: ${b.sku} batch ${b.batch} has ${b.units} units but its tags carry ${b.tagged}. Settle the extra orders by hand before releasing it.`,
+  );
 }
 
 /** The dry-run report, one line per order. */
@@ -91,11 +101,22 @@ async function loadLib() {
   }
 }
 
+function usage() {
+  const text = fs.readFileSync(fileURLToPath(import.meta.url), 'utf8');
+  const lines = text.split('\n').slice(1);
+  const end = lines.findIndex((l) => !l.startsWith('//'));
+  return lines.slice(0, end).map((l) => l.replace(/^\/\/ ?/, '')).join('\n');
+}
+
 async function main() {
-  const file = path.join(ROOT, '.env');
-  if (fs.existsSync(file)) process.loadEnvFile(file);
   const preorders = JSON.parse(fs.readFileSync(path.join(ROOT, 'content/preorders.json'), 'utf8'));
   const opts = parseArgs(process.argv.slice(2), Object.keys(preorders.skus ?? {}));
+  if (opts.help) {
+    console.log(usage());
+    return;
+  }
+  const file = path.join(ROOT, '.env');
+  if (fs.existsSync(file)) process.loadEnvFile(file);
   const lib = await loadLib();
   const env = {
     SHOPIFY_STORE_DOMAIN: process.env.SHOPIFY_STORE_DOMAIN,
@@ -113,6 +134,7 @@ async function main() {
         .join(', ')}). The Worker reconcile does that every five minutes; check /api/status/campaign.`,
     );
   }
+  for (const line of describeOverfull(lib.overfullBatches(orders, preorders))) console.log(line);
   const plans = lib.planRelease(orders, opts.sku, opts.batch, new Set(opts.with), preorders.shipsWith ?? {}, preorders.usStock);
   for (const line of describePlans(plans, opts)) console.log(line);
 

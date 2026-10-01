@@ -3,7 +3,9 @@
  *
  * A paid order with any line carrying the `Preorder` line attribute (the
  * ship promise the cart wrote, `PREORDER_ATTRIBUTE` in
- * `shopify-storefront.ts`) gets:
+ * `shopify-storefront.ts`), or with a live line of a SKU listed in
+ * `content/preorders.json` (`skus` or `shipsWith`, so an admin, draft or
+ * edited order that takes a batch slot is held too), gets:
  *
  * - a fulfillment hold (reason OTHER, handle `opendrone-preorder`) on each
  *   open fulfillment order, with a note naming the batch and its promise, so
@@ -26,7 +28,10 @@
  *
  * An order whose shipping region differs from the region a preorder line's
  * promise was computed for (the hidden `_ship_region` line attribute, US;
- * absent means EU) also gets `promise-mismatch`, for manual follow-up. No
+ * absent means EU) also gets `promise-mismatch`, for manual follow-up. So
+ * does an order tagged now whose line was promised another batch than the
+ * one it is allocated (`batchPromiseMismatch`): a buyer who paid at the
+ * paid-batch boundary while the last units went to someone else. No
  * customer mail is sent.
  *
  * Every paid order shipping to the US with a line that is not assigned to a
@@ -52,6 +57,7 @@
 import {
   allocateUnit,
   batchOfUnit,
+  configSoldUnder,
   REGIONS,
   regionOf,
   servesRegion,
@@ -74,7 +80,14 @@ export const PREORDER_LINE_ATTRIBUTE = 'Preorder';
 /** Same key as `SHIP_REGION_ATTRIBUTE` in `shopify-storefront.ts` (a test
  *  pins it): the region a line's promise was computed for, set on US lines. */
 export const SHIP_REGION_LINE_ATTRIBUTE = '_ship_region';
-/** Order tag for an order shipping to another region than its promise. */
+/** Same key as `BATCH_ATTRIBUTE` in `shopify-storefront.ts` (a test pins
+ *  it): `SKU:N`, the lead SKU and batch a line's promise was computed for. */
+export const BATCH_LINE_ATTRIBUTE = '_batch';
+/** Same key as `PREORDER_OWN_ATTRIBUTE` in `shopify-storefront.ts` (a test
+ *  pins it): a line's own promise while `Preorder` carries the mixed wording. */
+export const PREORDER_OWN_LINE_ATTRIBUTE = '_preorder_own';
+/** Order tag for an order shipping to another region than its promise, or
+ *  allocated another batch than its line promised. */
 export const PROMISE_MISMATCH_TAG = 'promise-mismatch';
 /** Order tag for a US order with a line that no US-serving batch carries
  *  (an in-stock item, a non-campaign SKU): held for manual follow-up. */
@@ -272,10 +285,27 @@ export function isCountedOrder(order: Pick<PreorderOrder, 'test' | 'cancelledAt'
   return !order.test && !order.cancelledAt && COUNTED_STATES.has(order.displayFinancialStatus);
 }
 
-export function isPreorderOrder(order: PreorderOrder): boolean {
-  return order.lineItems.nodes.some((line) =>
-    line.customAttributes.some((a) => a.key === PREORDER_LINE_ATTRIBUTE && Boolean(a.value?.trim())),
-  );
+type OrderLine = PreorderOrder['lineItems']['nodes'][number];
+
+function lineAttribute(line: OrderLine, key: string): string | null {
+  return line.customAttributes.find((a) => a.key === key)?.value?.trim() || null;
+}
+
+function hasPromise(line: OrderLine): boolean {
+  return lineAttribute(line, PREORDER_LINE_ATTRIBUTE) !== null;
+}
+
+/** A live line of a SKU `content/preorders.json` lists (`skus` or `shipsWith`). */
+function isCampaignLine(line: OrderLine, config: Pick<CampaignConfig, 'skus' | 'shipsWith'>): boolean {
+  const sku = line.sku?.trim();
+  return Boolean(sku) && line.currentQuantity > 0 && Boolean(config.skus[sku!] || config.shipsWith?.[sku!]);
+}
+
+/** An order with a preorder promise on any line or, given `config`, a live
+ *  line of a campaign SKU: an admin, draft or edited order carries no
+ *  `Preorder` attribute but takes a batch slot all the same. */
+export function isPreorderOrder(order: PreorderOrder, config?: Pick<CampaignConfig, 'skus' | 'shipsWith'>): boolean {
+  return order.lineItems.nodes.some((line) => hasPromise(line) || (config ? isCampaignLine(line, config) : false));
 }
 
 export {batchOfUnit};
@@ -305,11 +335,80 @@ function lineRegion(line: PreorderOrder['lineItems']['nodes'][number]): Region {
  *  than the order ships to. */
 export function promiseMismatch(order: PreorderOrder): boolean {
   const region = orderRegion(order);
-  return order.lineItems.nodes.some(
-    (line) =>
-      line.customAttributes.some((a) => a.key === PREORDER_LINE_ATTRIBUTE && Boolean(a.value?.trim())) &&
-      lineRegion(line) !== region,
-  );
+  return order.lineItems.nodes.some((line) => hasPromise(line) && lineRegion(line) !== region);
+}
+
+/** Parse a `_batch` line attribute, `SKU:N`, or null. */
+export function parseBatchAttribute(value: string | null | undefined): {sku: string; batch: number} | null {
+  return value ? parseBatchTag(`batch:${value.trim()}`) : null;
+}
+
+/**
+ * True when a live preorder line was promised another batch than the one
+ * its units are allocated (`orderBatches`, from `assignBatches`). The
+ * promised batch is the `_batch` line attribute the cart writes. A line
+ * without it (added before the attribute existed) is compared by its own
+ * promise text against each batch's promise, as the order was sold
+ * (`configSoldUnder`): a mismatch only when the text names another batch of
+ * the lead SKU, never when it names none.
+ */
+export function batchPromiseMismatch(order: PreorderOrder, orderBatches: LineBatch[], config: CampaignConfig): boolean {
+  const sold = configSoldUnder(config, order.createdAt);
+  const textOf = (sku: string, batch: number) => sold.skus[sku]?.batches[batch - 1]?.ships?.trim() || sold.pendingShips;
+  return order.lineItems.nodes.some((line) => {
+    if (!(line.currentQuantity > 0) || !hasPromise(line)) return false;
+    const sku = line.sku?.trim();
+    if (!sku) return false;
+    const mine = orderBatches.filter((b) => (b.item ?? b.sku) === sku);
+    if (!mine.length) return false;
+    const promised = parseBatchAttribute(lineAttribute(line, BATCH_LINE_ATTRIBUTE));
+    if (promised) return mine.some((b) => b.sku !== promised.sku || b.batch !== promised.batch);
+    const own = lineAttribute(line, PREORDER_OWN_LINE_ATTRIBUTE) ?? lineAttribute(line, PREORDER_LINE_ATTRIBUTE);
+    if (mine.every((b) => textOf(b.sku, b.batch) === own)) return false;
+    return mine.some((b) => (sold.skus[b.sku]?.batches ?? []).some((_, i) => textOf(b.sku, i + 1) === own));
+  });
+}
+
+/** A batch holding more units, by the order tags, than it has. */
+export type OverfullBatch = {sku: string; batch: number; units: number; tagged: number};
+
+/**
+ * Batches with a fixed size (every batch but an open-ended last funding
+ * target) whose `batch:SKU:N` tags carry more units than the batch has.
+ * Tags are written once, so a late-indexed or edited order can leave them
+ * out of step with `assignBatches`. An order's units of the SKU count
+ * toward a tagged batch by the allocation when it agrees, else all of them
+ * (the tag is all that is known). Accessory units never count: they add
+ * nothing to the lead.
+ */
+export function overfullBatches(orders: PreorderOrder[], config: CampaignConfig): OverfullBatch[] {
+  const allocated = assignBatches(orders, config);
+  const tagged = new Map<string, number>();
+  for (const order of orders) {
+    if (!isCountedOrder(order)) continue;
+    const mine = allocated.get(order.id) ?? [];
+    for (const tag of new Set(order.tags)) {
+      const parsed = parseBatchTag(tag);
+      if (!parsed || !config.skus[parsed.sku]) continue;
+      const agreed = mine.find((b) => b.sku === parsed.sku && b.batch === parsed.batch && !b.item);
+      const units = agreed
+        ? agreed.units
+        : order.lineItems.nodes
+            .filter((l) => l.sku?.trim() === parsed.sku && l.currentQuantity > 0)
+            .reduce((sum, l) => sum + l.currentQuantity, 0);
+      tagged.set(tag, (tagged.get(tag) ?? 0) + units);
+    }
+  }
+  const out: OverfullBatch[] = [];
+  for (const [sku, entry] of Object.entries(config.skus)) {
+    const last = entry.batches.length - 1;
+    entry.batches.forEach((b, i) => {
+      if (i === last && !b.paid) return;
+      const units = tagged.get(batchTag(sku, i + 1)) ?? 0;
+      if (units > b.units) out.push({sku, batch: i + 1, units: b.units, tagged: units});
+    });
+  }
+  return out;
 }
 
 /**
@@ -436,8 +535,9 @@ export function needsDestinationReview(order: PreorderOrder, orderBatches: LineB
 const US_REVIEW_NOTE = 'US review: an item does not ship to the US from any batch. Hold for manual follow-up.';
 
 /**
- * What each paid order still needs. A preorder order already tagged
- * `preorder` is done, including after its hold was released. A US order
+ * What each paid order still needs. A preorder order (`isPreorderOrder`,
+ * which counts any live campaign SKU line) already tagged `preorder` is
+ * done, including after its hold was released. A US order
  * that needs review (`needsUsReview`) and is not yet tagged `us-review` is
  * held and tagged, preorder or not.
  */
@@ -447,10 +547,14 @@ export function planPreorderHolds(orders: PreorderOrder[], config: CampaignConfi
   for (const order of orders) {
     if (!isCountedOrder(order)) continue;
     const orderBatches = batches.get(order.id) ?? [];
-    const preorder = isPreorderOrder(order) && !order.tags.includes(PREORDER_TAG);
+    const preorder = isPreorderOrder(order, config) && !order.tags.includes(PREORDER_TAG);
     const reviewTag = orderRegion(order) === 'INT' ? INT_REVIEW_TAG : US_REVIEW_TAG;
     const review = !order.tags.includes(reviewTag) && needsDestinationReview(order, orderBatches, config);
-    const mismatch = promiseMismatch(order) && !order.tags.includes(PROMISE_MISMATCH_TAG);
+    // The batch promise is checked when the batch tags are written: later
+    // drift between tags and allocation is `overfullBatches`.
+    const mismatch =
+      (promiseMismatch(order) || (preorder && batchPromiseMismatch(order, orderBatches, config))) &&
+      !order.tags.includes(PROMISE_MISMATCH_TAG);
     const ukVatReview = order.shippingAddress?.countryCodeV2 === 'GB' && !order.tags.includes(UK_VAT_REVIEW_TAG);
     if (!preorder && !review && !mismatch && !ukVatReview) continue;
     const hold = order.fulfillmentOrders.nodes
@@ -487,6 +591,15 @@ export function planPreorderHolds(orders: PreorderOrder[], config: CampaignConfi
     });
   }
   return plans;
+}
+
+/** Hold health for `/api/status/campaign`: the paid orders the planner
+ *  says need a fulfillment hold they do not have, and the overfull batches. */
+export function holdHealth(orders: PreorderOrder[], config: CampaignConfig): {unheld: number; overfull: OverfullBatch[]} {
+  return {
+    unheld: planPreorderHolds(orders, config).filter((plan) => plan.hold.length > 0).length,
+    overfull: overfullBatches(orders, config),
+  };
 }
 
 type UserErrors = Array<{field?: string[] | null; message: string}>;
