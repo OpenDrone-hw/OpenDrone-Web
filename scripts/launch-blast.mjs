@@ -200,12 +200,7 @@ export function launchCopy(region = 'all') {
     title: 'Open for every product',
     body: `Duties included, nothing to pay on delivery. Ships with the preorder run.${region === 'us' ? ` ${promise}` : ''}`,
   };
-  const usReceiver = {
-    kicker: 'Receiver, US sale',
-    title: 'Sold conditionally in the US',
-    body: 'Not delivered in the US until its FCC equipment authorization is granted (47 CFR 2.803). If it is not granted, you get a full refund for it.',
-  };
-  const sections = region === 'eu' ? eu : region === 'us' ? [usOpen, usReceiver] : [...eu, usOpen, usReceiver];
+  const sections = region === 'eu' ? eu : region === 'us' ? [usOpen] : [...eu, usOpen];
   return {
     subject: 'Preorders are open',
     preheader: region === 'us'

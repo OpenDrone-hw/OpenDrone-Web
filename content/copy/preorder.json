@@ -80,7 +80,7 @@
   "channel_us_text": "US delivery also depends on US import clearance. If we cannot deliver to you, you get a full refund.",
   "us_batch_note": "The {month} FC and ESC stock ships to EU addresses only. US orders ship with the {batch} batch.",
   "timeline_targets_us": "Every product",
-  "scope_international": "All countries",
+  "scope_international": "EU, US and more",
   "not_in_international": "Not available in your country",
   "terms_summary_international": "Pay in full · Price rises as units sell, yours is fixed at checkout",
   "shipping_summary_international": "International orders",
