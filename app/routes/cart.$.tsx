@@ -2,7 +2,7 @@ import {createContext, useCallback, useContext, useEffect, useRef, useState} fro
 import {Form, Link, redirect, useLoaderData, useRevalidator, useRouteLoaderData} from 'react-router';
 import {shopifyImageUrl} from '~/lib/shopify-image';
 import type {Route} from './+types/cart.$';
-import {fetchPaymentMethods, getCart, type ShopifyCart, type ShopifyCartLine} from '~/lib/shopify-storefront';
+import {fetchPaymentMethods, getCart, updateCartLines, type ShopifyCart, type ShopifyCartLine} from '~/lib/shopify-storefront';
 import {
   CART_CHECK,
   DATES_SEEN_FIELD,
@@ -10,6 +10,9 @@ import {
   checkoutOpen,
   loadSessionCart,
   latestDeliveryBy,
+  replanCart,
+  replanCheck,
+  setCartCountry,
   splitPlan,
   variantLink,
   type CartLineInfo,
@@ -24,7 +27,8 @@ import {LineShipChip} from '~/components/ParcelChip';
 import {buildSeoMeta} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
 import {fccConditionalSku} from '~/lib/us-sales';
-import {cartQuoteCountry, countryName, shippingQuote} from '~/lib/shipping-rates';
+import {cartQuoteCountry, countryName, shipCountryForRequest, shippingQuote} from '~/lib/shipping-rates';
+import {usSalesRate} from '~/lib/us-sales';
 import {ShipToSelect} from '~/components/ShipToSelect';
 import {paysEuVat} from '~/lib/visitor-country';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
@@ -79,25 +83,38 @@ export const meta: Route.MetaFunction = () =>
 
 export async function loader({context, params, request}: Route.LoaderArgs) {
   if (!checkoutOpen(context.env) || params['*']) throw redirect('/products', 301);
-  const cart = await loadSessionCart(context.env, {
+  let cart = await loadSessionCart(context.env, {
     getCartId: () => context.session.get(CART_KEY) as string | undefined,
     unsetCartId: () => context.session.unset(CART_KEY),
     getCart: (id) => getCart(context.env, id),
     logError: (message) => console.error('[shopify-cart] cart read failed', message),
   });
-  // The campaign-aware catalog says which lines wait for which target and
+  // The destination the header shows is the cart's too: the cart moves to
+  // it and every line is planned again for its region (`replanCart`), so
+  // the page shows what checkout will charge and promise. The
+  // campaign-aware catalog also says which lines wait for which target and
   // how many paid-batch units are left. The cart still renders without it.
   let info: Record<string, CartLineInfo> = {};
+  let replanned: string | null = null;
+  const country = shipCountryForRequest(request);
   if (cart?.lines.length) {
     let catalog = null;
     try {
-      catalog = await context.catalog.forBuyer();
+      const plan = await replanCart(cart, shippingQuote(country, undefined, usSalesRate(context.env)), context.env, {
+        fetchCatalog: (region, destination) => context.catalog.forRegion(region, destination),
+        setCountry: (id, code) => setCartCountry(context.env, id, code),
+        getCart: (id) => getCart(context.env, id),
+        updateCartLines: (id, lines) => updateCartLines(context.env, id, lines),
+      });
+      cart = plan.cart;
+      catalog = plan.catalog;
+      replanned = replanCheck(plan.change);
     } catch (error) {
-      console.error('[shopify-cart] catalog read failed', error instanceof Error ? error.message : 'unknown error');
+      console.error('[shopify-cart] cart replan failed', error instanceof Error ? error.message : 'unknown error');
     }
     info = cartLineInfo(cart, catalog);
   }
-  const check = new URL(request.url).searchParams.get('check');
+  const check = new URL(request.url).searchParams.get('check') ?? replanned;
   let payments: string[] = [];
   if (cart?.lines.length) {
     try {
@@ -106,7 +123,7 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
       console.error('[shopify-cart] payment settings read failed', error instanceof Error ? error.message : 'unknown error');
     }
   }
-  return {cart, info, check, payments};
+  return {cart, info, check, payments, country};
 }
 
 type Removed = SplitItem[];
@@ -115,13 +132,15 @@ type Removed = SplitItem[];
 function checkNotice(check: string | null): string | null {
   if (check === CART_CHECK.paidBatch) return t('check_paid_batch', 'Not enough left in batch 1. Lower the quantity where shown.');
   if (check === CART_CHECK.shipDate) return t('check_ship_date', 'A ship date changed. Check the dates below.');
+  if (check === CART_CHECK.price) return t('check_price', 'A price changed. Check the total below.');
+  if (check === CART_CHECK.priceAndDate) return t('check_price_and_date', 'A price and a ship date changed. Check the dates and the total below.');
   if (check === CART_CHECK.usEuOnly) return t('check_us_eu_only', 'An item in your cart ships to EU addresses only. Remove it or choose an EU delivery country.');
   if (check === CART_CHECK.market) return t('check_market', "Your cart moved to your delivery country's prices. Check the total below.");
   return null;
 }
 
 export default function CartPage() {
-  const {cart, info, check, payments} = useLoaderData<typeof loader>();
+  const {cart, info, check, payments, country} = useLoaderData<typeof loader>();
   const rootData = useRouteLoaderData<RootLoader>('root');
   // Lines moved out for a second order: kept in this browser so the list
   // survives a reload and the trip through checkout.
@@ -148,7 +167,7 @@ export default function CartPage() {
           cart={cart}
           info={info}
           payments={payments}
-          country={cartQuoteCountry(cart.country, rootData?.visitorCountry ?? null, rootData?.usShippingRate ?? null)}
+          country={cartQuoteCountry(country ?? cart.country, rootData?.visitorCountry ?? null, rootData?.usShippingRate ?? null)}
           usRate={rootData?.usShippingRate ?? null}
           onSplit={(items) => updateRemoved([...removed.filter((r) => !items.some((i) => i.id === r.id)), ...items])}
         />

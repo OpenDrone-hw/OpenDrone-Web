@@ -189,6 +189,8 @@ export type ShopifyCartLine = {
   shipRegion?: string | null;
   /** The `Availability` attribute: the batch and where it ships. */
   availability?: string | null;
+  /** The hidden `_batch` attribute, `SKU:N`. */
+  batch?: string | null;
   total: ShopifyMoney;
 };
 
@@ -578,6 +580,7 @@ function validatedCart(
       const availability = line.attributes.find(({key}) => key === AVAILABILITY_ATTRIBUTE)?.value;
       const deliveryBy = line.attributes.find(({key}) => key === DELIVERY_BY_ATTRIBUTE)?.value;
       const ownDeliveryBy = line.attributes.find(({key}) => key === DELIVERY_BY_OWN_ATTRIBUTE)?.value;
+      const batch = line.attributes.find(({key}) => key === BATCH_ATTRIBUTE)?.value;
       return {
         id: line.id,
         merchandiseId: line.merchandise.id,
@@ -594,6 +597,7 @@ function validatedCart(
         ...(own && preorder && own !== preorder ? {orderPromise: preorder} : {}),
         ...(shipRegion ? {shipRegion} : {}),
         ...(availability ? {availability} : {}),
+        ...(batch ? {batch} : {}),
         total: line.cost.totalAmount,
       };
     }),

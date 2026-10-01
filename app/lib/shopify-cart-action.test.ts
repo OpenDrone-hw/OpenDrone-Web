@@ -16,11 +16,14 @@ import {
   paidBatchLeft,
   paidBatchMessage,
   lineLimitMessage,
+  replanCart,
+  replanCheck,
   splitPlan,
   variantLink,
   type ShopifyCartDependencies,
 } from './shopify-cart-action.ts';
 import type {ShopifyCart, ShopifyCartLine} from './shopify-storefront.ts';
+import {shippingQuote} from './shipping-rates.ts';
 
 const APPROVED = Object.fromEntries(['BE', 'BG', 'SE', 'NL', 'AT'].map((c) => [c, {saleApproved: true}]));
 const handleShopifyCartAction: typeof actualCartAction = (request, env, deps) =>
@@ -1047,6 +1050,48 @@ describe('Shopify cart action: one promise for a mixed order', () => {
 
   describe('US destination', () => {
     const usLine = (l: ShopifyCartLine): ShopifyCartLine => ({...l, shipRegion: 'US', deliveryBy:'30 April 2027'});
+
+    it('replans a cart built for the US once the header moves to Belgium: country, promise, date and batch', async () => {
+      const usCart = {...cart([usLine(fcLine({shipPromise: OWN_LATE, deliveryBy: '30 April 2027', batch: 'OPENFC-LITE-3030:2'}))], 'cart-a'), country: 'US'};
+      const moved = {...usCart, country: 'BE', subtotal: {amount: '41.00', currencyCode: 'EUR'}};
+      const countries: string[] = [];
+      const updates: unknown[] = [];
+      const plan = await replanCart(usCart, shippingQuote('BE', undefined, 9.95), ENABLED_ENV, {
+        fetchCatalog: async (region) => { assert.equal(region, 'EU'); return EU; },
+        setCountry: async (_id, code) => { countries.push(code); },
+        getCart: async () => moved,
+        updateCartLines: async (_id, lines) => { updates.push(...lines); return moved; },
+      });
+      assert.deepEqual(countries, ['BE']);
+      assert.deepEqual(updates, [{id: FC_LINE, quantity: 1, attributes: own(OWN_EARLY)}]);
+      assert.equal(plan.change, 'both');
+      assert.equal(replanCheck(plan.change), 'price-and-date');
+    });
+
+    it('leaves a cart alone when its country and lines already match the header', async () => {
+      const euCart = {...cart([fcLine({batch: 'OPENFC-LITE-3030:1'})], 'cart-a'), country: 'BE'};
+      const plan = await replanCart(euCart, shippingQuote('BE', undefined, 9.95), ENABLED_ENV, {
+        fetchCatalog: async () => EU,
+        setCountry: async () => { throw new Error('must not move'); },
+        getCart: async () => euCart,
+        updateCartLines: async () => { throw new Error('must not write'); },
+      });
+      assert.equal(plan.change, null);
+      assert.equal(replanCheck(plan.change), null);
+    });
+
+    it('puts a cart without a buyer country on the header country, so checkout preselects it', async () => {
+      const bare = cart([fcLine({batch: 'OPENFC-LITE-3030:1'})], 'cart-a');
+      const countries: string[] = [];
+      const plan = await replanCart(bare, shippingQuote('BE', undefined, 9.95), ENABLED_ENV, {
+        fetchCatalog: async () => EU,
+        setCountry: async (_id, code) => { countries.push(code); },
+        getCart: async () => ({...bare, country: 'BE'}),
+        updateCartLines: async () => { throw new Error('must not write'); },
+      });
+      assert.deepEqual(countries, ['BE']);
+      assert.equal(plan.change, null);
+    });
 
     it('leaves a US cart alone when every line ships on the US date', async () => {
       const usPromise = US.products[1].variants[0].ship_promise!;

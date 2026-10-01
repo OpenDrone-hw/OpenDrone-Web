@@ -467,15 +467,18 @@ export function rederiveLines(
     const promise = attributes.find((a) => a.key === PREORDER_ATTRIBUTE)?.value ?? null;
     const attributeRegion = attributes.find((a) => a.key === SHIP_REGION_ATTRIBUTE)?.value ?? null;
     const deliveryBy = attributes.find((a) => a.key === DELIVERY_BY_ATTRIBUTE)?.value ?? null;
+    const batch = attributes.find((a) => a.key === BATCH_ATTRIBUTE)?.value ?? null;
     if (promise !== line.shipPromise || attributeRegion !== (line.shipRegion ?? null) || deliveryBy !== (line.deliveryBy ?? null)) {
       refresh.push({id: line.id, quantity: line.quantity, attributes});
       continue;
     }
     const wanted = mixed.get(line.id) ?? null;
     // A line added while checkout still showed a batch name carries the old
-    // `Availability` property: drop it silently.
+    // `Availability` property: drop it silently. So is a hidden `_batch`
+    // that names another batch under the same promise (a line without one
+    // keeps none: the hold pass then reads its promise text).
     const wantedDeliveryBy = wanted && orderDeliveryBy !== deliveryBy ? orderDeliveryBy : null;
-    if (wanted !== (line.orderPromise ?? null) || wantedDeliveryBy !== (line.orderDeliveryBy ?? null) || line.availability != null) {
+    if (wanted !== (line.orderPromise ?? null) || wantedDeliveryBy !== (line.orderDeliveryBy ?? null) || line.availability != null || (line.batch != null && batch !== line.batch)) {
       sync.push({
         id: line.id,
         quantity: line.quantity,
@@ -497,6 +500,10 @@ export const CART_CHECK = {
   paidBatch: 'paid-batch',
   /** A preorder line's ship date changed since it was added. */
   shipDate: 'ship-date',
+  /** The cart's prices changed (another market or a new price step). */
+  price: 'price',
+  /** Both the prices and a ship date changed. */
+  priceAndDate: 'price-and-date',
   /** Lines ship on different dates and the buyer has not seen the cart's
    *  notice (one parcel, the whole order waits for the last item). */
   mixedDates: 'mixed-dates',
@@ -658,7 +665,9 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
       if (dependencies.setCountry) {
         const usd = cart.subtotal.currencyCode === 'USD';
         const cartUs = cart.country ? cart.country === 'US' : usd;
-        const countryDiffers = (cart.country != null || region === 'INT') && cart.country !== destination.country;
+        // A cart with no buyer country gets the destination too, so Shopify
+        // checkout opens with the ship-to country the buyer picked.
+        const countryDiffers = cart.country !== destination.country;
         const marketDiffers = (usRate != null && (usd !== us || cartUs !== us)) ||
           (countryDiffers && (region !== 'EU' || regionOf(cart.country) !== 'EU'));
         if (marketDiffers || countryDiffers) {
@@ -793,6 +802,61 @@ export async function loadSessionCart(
     dependencies.logError?.(error instanceof Error ? error.message : 'unknown error');
     throw fail('Cart temporarily unavailable.', 503, {'Retry-After': '60'});
   }
+}
+
+/** What a cart replan changed: the price (another market or a new price),
+ *  a line's ship date, both, or nothing. */
+export type CartReplanChange = 'price' | 'date' | 'both' | null;
+
+/** The cart notice for a replan or a checkout bounce, as a `CART_CHECK` value. */
+export function replanCheck(change: CartReplanChange): string | null {
+  return change === 'both' ? CART_CHECK.priceAndDate : change === 'price' ? CART_CHECK.price : change === 'date' ? CART_CHECK.shipDate : null;
+}
+
+function cartPrices(cart: ShopifyCart): string {
+  return JSON.stringify([cart.subtotal, ...cart.lines.map((l) => [l.id, l.total])]);
+}
+
+/**
+ * Put the session cart on the destination the header and the pages quote
+ * (`od_ship_country`, else the visitor's country) and plan every line again
+ * for that region, so the cart page, its checkout form and the header are
+ * one state: the buyer country Shopify prices the cart in, and each line's
+ * `Preorder`, `Delivery by`, hidden region and `_batch` attributes
+ * (`rederiveLines`). Run by the cart page loader, so a cart built for
+ * another destination, or priced before a price step, is shown as checkout
+ * will charge it. A destination not sold direct leaves the cart alone.
+ */
+export async function replanCart(
+  cart: ShopifyCart,
+  destination: ShippingQuote | null,
+  env: CartEnv,
+  dependencies: {
+    fetchCatalog: (region: Region, country?: string) => Promise<Catalog>;
+    setCountry?: (cartId: string, countryCode: string) => Promise<void>;
+    getCart?: (cartId: string) => Promise<ShopifyCart | null>;
+    updateCartLines?: (cartId: string, lines: CartLineUpdate[]) => Promise<ShopifyCart>;
+  },
+): Promise<{cart: ShopifyCart; catalog: Catalog; change: CartReplanChange}> {
+  const region = regionForDestination(destination);
+  if (!destination || destination.kind !== 'direct' || !cart.lines.length) {
+    return {cart, catalog: await dependencies.fetchCatalog(region, destination?.country), change: null};
+  }
+  const before = cartPrices(cart);
+  let current = cart;
+  const moves = cart.country !== destination.country;
+  if (moves && dependencies.setCountry && dependencies.getCart) {
+    await dependencies.setCountry(cart.id, destination.country);
+    current = (await dependencies.getCart(cart.id)) ?? current;
+  }
+  const catalog = await dependencies.fetchCatalog(region, destination.country);
+  const {refresh} = rederiveLines(current, catalog, region, env.PUBLIC_COMING_SOON !== '0');
+  if (refresh.length && dependencies.updateCartLines) {
+    current = await dependencies.updateCartLines(cart.id, refresh);
+  }
+  const price = cartPrices(current) !== before;
+  const date = refresh.length > 0 && Boolean(dependencies.updateCartLines);
+  return {cart: current, catalog, change: price && date ? 'both' : price ? 'price' : date ? 'date' : null};
 }
 
 /**
