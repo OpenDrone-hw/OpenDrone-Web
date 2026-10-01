@@ -38,7 +38,7 @@ import {
   type CampaignState,
   type LadderStep,
 } from '~/lib/preorder-campaign';
-import {stepBarView} from '~/lib/preorder-meter';
+import {reachableSteps, stepBarView} from '~/lib/preorder-meter';
 import type {MoneyV2, ProductImage, SelectedOption} from '~/lib/product-shapes';
 
 /**
@@ -468,7 +468,8 @@ function Card({row, eta}: {row: Row; eta: string}) {
   const cta = copyText('preorder.card_cta') ?? 'Pre-order';
   const currency = row.price.currencyCode;
   const next = row.campaign.ordered + 1;
-  const prices = row.ladder.map((step: {from: number; to: number | null; price: number; approx?: boolean}) => ({
+  // A paid batch's cap ends the steps this buyer can reach.
+  const prices = reachableSteps(row.campaign, row.ladder).map((step: {from: number; to: number | null; price: number; approx?: boolean}) => ({
     key: step.from,
     text: step.approx
       ? (copyText('preorder.price_about') ?? 'about {price}').replace('{price}', formatPrice(step.price, currency))

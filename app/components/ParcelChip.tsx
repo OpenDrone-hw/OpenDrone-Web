@@ -57,7 +57,8 @@ export function heldBy(
 /**
  * The ship chip of a cart or drawer line: one short date. In a one-parcel
  * order a line that is ready before the parcel shows the parcel's date, the
- * one it ships on.
+ * one it ships on. A funding-target date carries its condition, as checkout
+ * does: "Ships by 31 Mar 2027 if the target is reached".
  */
 export function LineShipChip({
   promise,
@@ -69,5 +70,5 @@ export function LineShipChip({
   parcel: string | null;
   className?: string;
 }) {
-  return <ShipChip promise={parcel && promise ? parcel : promise} className={className} />;
+  return <ShipChip promise={parcel && promise ? parcel : promise} className={className} ifFunded />;
 }

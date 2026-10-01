@@ -88,7 +88,7 @@ import {useProductStatus} from '~/lib/coming-soon';
 import {shipPromiseFor} from '~/lib/preorder';
 import {fetchStatusFlagsFast, statusForHandle} from '~/lib/roadmap-data';
 import {parseCampaignConfig, priceLadder, promiseBatchMonth, tiersFor} from '~/lib/preorder-campaign';
-import {stepBarView} from '~/lib/preorder-meter';
+import {reachableSteps, stepBarView} from '~/lib/preorder-meter';
 import {paysEuVat} from '~/lib/visitor-country';
 import {fccConditionalSku} from '~/lib/us-sales';
 import {isInternationalQuote, notSoldDirect, shippingQuote} from '~/lib/shipping-rates';
@@ -1730,7 +1730,8 @@ function ProductPage() {
   const nextUnit = campaign ? campaign.ordered + 1 : 0;
   const shownLadder: Array<{from: number; to: number | null; price: number; approx?: boolean}> | null =
     campaign?.usLadder?.length ? campaign.usLadder : ladder;
-  const stepPrices = (shownLadder ?? []).map((step) => ({
+  // A paid batch's cap ends the steps this buyer can reach.
+  const stepPrices = (campaign ? reachableSteps(campaign, shownLadder ?? []) : []).map((step) => ({
     key: step.from,
     text: step.approx
       ? say('preorder.price_about', 'about {price}', {price: formatPrice(step.price, currency)})
