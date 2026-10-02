@@ -42,6 +42,63 @@ export function parseInviteCounts(body: unknown): DiscordCounts | null {
 
 export const COUNTS_TTL_MS = 60 * 60 * 1000;
 export const MISS_TTL_MS = 5 * 60 * 1000;
+/** How old a stored count may be when Discord refuses a fresh one. */
+export const STALE_MAX_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Discord answers part of Cloudflare's shared egress with HTTP 429, so one
+ * isolate may get the counts while its neighbour does not. The last good
+ * answer is therefore also kept in the PoP's Cache API under this key:
+ * fresh for an hour (no Discord call at all), and served stale for up to a
+ * day when Discord refuses. Only then are the numbers hidden.
+ */
+export const COUNTS_CACHE_KEY = 'https://opendrone.be/__cache/discord-invite-counts';
+
+/** The slice of the Workers Cache API this module uses. */
+export type CountsCache = {
+  match(key: string): Promise<Response | undefined>;
+  put(key: string, res: Response): Promise<void>;
+};
+
+type Stored = DiscordCounts & {at: number};
+
+function defaultCache(): CountsCache | null {
+  const c = (globalThis as {caches?: {default?: CountsCache}}).caches;
+  return c?.default ?? null;
+}
+
+async function readStored(cache: CountsCache | null): Promise<Stored | null> {
+  if (!cache) return null;
+  try {
+    const res = await cache.match(COUNTS_CACHE_KEY);
+    if (!res) return null;
+    const body = (await res.json()) as Partial<Stored>;
+    const counts = parseInviteCounts({
+      approximate_member_count: body.members,
+      approximate_presence_count: body.online,
+    });
+    return counts && typeof body.at === 'number' ? {...counts, at: body.at} : null;
+  } catch {
+    return null;
+  }
+}
+
+async function writeStored(cache: CountsCache | null, stored: Stored): Promise<void> {
+  if (!cache) return;
+  try {
+    await cache.put(
+      COUNTS_CACHE_KEY,
+      new Response(JSON.stringify(stored), {
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': `public, max-age=${STALE_MAX_MS / 1000}`,
+        },
+      }),
+    );
+  } catch {
+    // A cache write failure only costs a refetch later.
+  }
+}
 
 let memo: {at: number; ttl: number; counts: DiscordCounts | null} | null = null;
 let inflight: Promise<DiscordCounts | null> | null = null;
@@ -58,17 +115,31 @@ export async function fetchDiscordCounts({
   fetchImpl = fetch,
   now = Date.now,
   inviteUrl = DISCORD_INVITE_URL,
-}: {fetchImpl?: FetchLike; now?: () => number; inviteUrl?: string} = {}): Promise<
-  DiscordCounts | null
-> {
+  cache = defaultCache(),
+}: {
+  fetchImpl?: FetchLike;
+  now?: () => number;
+  inviteUrl?: string;
+  cache?: CountsCache | null;
+} = {}): Promise<DiscordCounts | null> {
   if (memo && now() - memo.at < memo.ttl) return memo.counts;
   if (inflight) return inflight;
   const api = inviteApiUrl(inviteUrl);
   if (!api) return null;
   inflight = (async () => {
+    const stored = await readStored(cache);
+    const age = stored ? now() - stored.at : Infinity;
+    if (stored && age < COUNTS_TTL_MS) {
+      const counts = {members: stored.members, online: stored.online};
+      memo = {at: now(), ttl: COUNTS_TTL_MS - age, counts};
+      return counts;
+    }
     try {
       const res = await fetchImpl(api, {
-        headers: {Accept: 'application/json', 'User-Agent': 'opendrone-web'},
+        headers: {
+          Accept: 'application/json',
+          'User-Agent': 'DiscordBot (https://opendrone.be, 1)',
+        },
         signal: AbortSignal.timeout(3000),
         // Cloudflare edge cache: an hour for a success, never for an error.
         ...({
@@ -79,11 +150,16 @@ export async function fetchDiscordCounts({
       const counts = parseInviteCounts(await res.json());
       if (!counts) throw new Error('no counts in the invite response');
       memo = {at: now(), ttl: COUNTS_TTL_MS, counts};
+      await writeStored(cache, {...counts, at: now()});
       return counts;
     } catch (err) {
-      console.warn('[discord] invite counts unavailable', err);
-      memo = {at: now(), ttl: MISS_TTL_MS, counts: null};
-      return null;
+      const stale =
+        stored && age < STALE_MAX_MS
+          ? {members: stored.members, online: stored.online}
+          : null;
+      console.warn('[discord] invite counts unavailable', stale ? '(serving stored)' : '', err);
+      memo = {at: now(), ttl: MISS_TTL_MS, counts: stale};
+      return stale;
     } finally {
       inflight = null;
     }

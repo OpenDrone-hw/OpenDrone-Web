@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {
   COUNTS_TTL_MS,
   MISS_TTL_MS,
+  STALE_MAX_MS,
+  type CountsCache,
   fetchDiscordCounts,
   inviteApiUrl,
   inviteCode,
@@ -75,33 +77,33 @@ describe('fetchDiscordCounts', () => {
       return jsonResponse({approximate_member_count: 515, approximate_presence_count: 101});
     };
     const now = () => clock;
-    assert.deepEqual(await fetchDiscordCounts({fetchImpl, now, inviteUrl: INVITE}), {
+    assert.deepEqual(await fetchDiscordCounts({fetchImpl, now, inviteUrl: INVITE, cache: null}), {
       members: 515,
       online: 101,
     });
     clock += COUNTS_TTL_MS - 1;
-    await fetchDiscordCounts({fetchImpl, now, inviteUrl: INVITE});
+    await fetchDiscordCounts({fetchImpl, now, inviteUrl: INVITE, cache: null});
     assert.equal(calls, 1);
     clock += 2;
-    await fetchDiscordCounts({fetchImpl, now, inviteUrl: INVITE});
+    await fetchDiscordCounts({fetchImpl, now, inviteUrl: INVITE, cache: null});
     assert.equal(calls, 2);
   });
 
   it('returns null on an HTTP error, so the page hides the numbers', async () => {
     const fetchImpl = async () => jsonResponse({message: 'rate limited'}, 429);
-    assert.equal(await fetchDiscordCounts({fetchImpl, inviteUrl: INVITE}), null);
+    assert.equal(await fetchDiscordCounts({fetchImpl, inviteUrl: INVITE, cache: null}), null);
   });
 
   it('returns null when the request throws', async () => {
     const fetchImpl = async (): Promise<Response> => {
       throw new Error('network down');
     };
-    assert.equal(await fetchDiscordCounts({fetchImpl, inviteUrl: INVITE}), null);
+    assert.equal(await fetchDiscordCounts({fetchImpl, inviteUrl: INVITE, cache: null}), null);
   });
 
   it('returns null on a body without counts', async () => {
     const fetchImpl = async () => jsonResponse({code: 'v3sWmTcx3R'});
-    assert.equal(await fetchDiscordCounts({fetchImpl, inviteUrl: INVITE}), null);
+    assert.equal(await fetchDiscordCounts({fetchImpl, inviteUrl: INVITE, cache: null}), null);
   });
 
   it('remembers a miss for five minutes, then tries again', async () => {
@@ -115,13 +117,13 @@ describe('fetchDiscordCounts', () => {
         : jsonResponse({approximate_member_count: 520, approximate_presence_count: 90});
     };
     const now = () => clock;
-    assert.equal(await fetchDiscordCounts({fetchImpl, now, inviteUrl: INVITE}), null);
+    assert.equal(await fetchDiscordCounts({fetchImpl, now, inviteUrl: INVITE, cache: null}), null);
     fail = false;
     clock += MISS_TTL_MS - 1;
-    assert.equal(await fetchDiscordCounts({fetchImpl, now, inviteUrl: INVITE}), null);
+    assert.equal(await fetchDiscordCounts({fetchImpl, now, inviteUrl: INVITE, cache: null}), null);
     assert.equal(calls, 1);
     clock += 2;
-    assert.deepEqual(await fetchDiscordCounts({fetchImpl, now, inviteUrl: INVITE}), {
+    assert.deepEqual(await fetchDiscordCounts({fetchImpl, now, inviteUrl: INVITE, cache: null}), {
       members: 520,
       online: 90,
     });
@@ -134,9 +136,66 @@ describe('fetchDiscordCounts', () => {
       return jsonResponse({approximate_member_count: 515, approximate_presence_count: 101});
     };
     await Promise.all([
-      fetchDiscordCounts({fetchImpl, inviteUrl: INVITE}),
-      fetchDiscordCounts({fetchImpl, inviteUrl: INVITE}),
+      fetchDiscordCounts({fetchImpl, inviteUrl: INVITE, cache: null}),
+      fetchDiscordCounts({fetchImpl, inviteUrl: INVITE, cache: null}),
     ]);
     assert.equal(calls, 1);
   });
+
+  it('serves the stored counts while fresh, without calling Discord', async () => {
+    const cache = memoryCache();
+    let clock = 10_000;
+    const now = () => clock;
+    const ok = async () =>
+      jsonResponse({approximate_member_count: 515, approximate_presence_count: 101});
+    await fetchDiscordCounts({fetchImpl: ok, now, inviteUrl: INVITE, cache});
+    resetDiscordCountsCache();
+    let calls = 0;
+    const counting = async () => {
+      calls++;
+      return ok();
+    };
+    clock += COUNTS_TTL_MS - 10;
+    assert.deepEqual(await fetchDiscordCounts({fetchImpl: counting, now, inviteUrl: INVITE, cache}), {
+      members: 515,
+      online: 101,
+    });
+    assert.equal(calls, 0);
+  });
+
+  it('serves stored counts up to a day old when Discord rate-limits', async () => {
+    const cache = memoryCache();
+    let clock = 0;
+    const now = () => clock;
+    await fetchDiscordCounts({
+      fetchImpl: async () =>
+        jsonResponse({approximate_member_count: 515, approximate_presence_count: 101}),
+      now,
+      inviteUrl: INVITE,
+      cache,
+    });
+    const limited = async () => jsonResponse({message: 'You are being rate limited.'}, 429);
+    resetDiscordCountsCache();
+    clock = STALE_MAX_MS - 1;
+    assert.deepEqual(await fetchDiscordCounts({fetchImpl: limited, now, inviteUrl: INVITE, cache}), {
+      members: 515,
+      online: 101,
+    });
+    resetDiscordCountsCache();
+    clock = STALE_MAX_MS + 1;
+    assert.equal(await fetchDiscordCounts({fetchImpl: limited, now, inviteUrl: INVITE, cache}), null);
+  });
 });
+
+function memoryCache(): CountsCache {
+  const store = new Map<string, string>();
+  return {
+    async match(key) {
+      const v = store.get(key);
+      return v === undefined ? undefined : new Response(v);
+    },
+    async put(key, res) {
+      store.set(key, await res.text());
+    },
+  };
+}
