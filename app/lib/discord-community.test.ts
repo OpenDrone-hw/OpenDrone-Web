@@ -4,6 +4,7 @@ import {
   COUNTS_TTL_MS,
   MISS_TTL_MS,
   STALE_MAX_MS,
+  COUNTS_CACHE_KEY,
   type CountsCache,
   fetchDiscordCounts,
   inviteApiUrl,
@@ -184,6 +185,25 @@ describe('fetchDiscordCounts', () => {
     resetDiscordCountsCache();
     clock = STALE_MAX_MS + 1;
     assert.equal(await fetchDiscordCounts({fetchImpl: limited, now, inviteUrl: INVITE, cache}), null);
+  });
+
+  it('picks up counts another isolate stored during a remembered miss', async () => {
+    const cache = memoryCache();
+    let calls = 0;
+    const limited = async () => {
+      calls++;
+      return jsonResponse({}, 429);
+    };
+    assert.equal(await fetchDiscordCounts({fetchImpl: limited, inviteUrl: INVITE, cache}), null);
+    await cache.put(
+      COUNTS_CACHE_KEY,
+      new Response(JSON.stringify({members: 515, online: 101, at: Date.now()})),
+    );
+    assert.deepEqual(await fetchDiscordCounts({fetchImpl: limited, inviteUrl: INVITE, cache}), {
+      members: 515,
+      online: 101,
+    });
+    assert.equal(calls, 1);
   });
 });
 

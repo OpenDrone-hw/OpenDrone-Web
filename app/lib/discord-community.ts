@@ -122,7 +122,7 @@ export async function fetchDiscordCounts({
   inviteUrl?: string;
   cache?: CountsCache | null;
 } = {}): Promise<DiscordCounts | null> {
-  if (memo && now() - memo.at < memo.ttl) return memo.counts;
+  if (memo && memo.counts && now() - memo.at < memo.ttl) return memo.counts;
   if (inflight) return inflight;
   const api = inviteApiUrl(inviteUrl);
   if (!api) return null;
@@ -133,6 +133,13 @@ export async function fetchDiscordCounts({
       const counts = {members: stored.members, online: stored.online};
       memo = {at: now(), ttl: COUNTS_TTL_MS - age, counts};
       return counts;
+    }
+    // A recent miss: another isolate may have stored counts since (checked
+    // above), but this one does not ask Discord again until the miss expires.
+    if (memo && now() - memo.at < memo.ttl) {
+      return stored && age < STALE_MAX_MS
+        ? {members: stored.members, online: stored.online}
+        : null;
     }
     try {
       const res = await fetchImpl(api, {
@@ -160,9 +167,9 @@ export async function fetchDiscordCounts({
       console.warn('[discord] invite counts unavailable', stale ? '(serving stored)' : '', err);
       memo = {at: now(), ttl: MISS_TTL_MS, counts: stale};
       return stale;
-    } finally {
-      inflight = null;
     }
-  })();
+  })().finally(() => {
+    inflight = null;
+  });
   return inflight;
 }
