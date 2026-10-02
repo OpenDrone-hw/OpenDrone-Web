@@ -3,7 +3,7 @@ import {data, Form, Link, useActionData, useLoaderData, useNavigation, useRouteL
 import {Check, ArrowUpRight, ChevronDown} from 'lucide-react';
 import type {Route} from './+types/wholesale';
 import type {RootLoader} from '~/root';
-import {buildSeoMeta} from '~/lib/seo';
+import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
 import {getCompanyIdentity} from '~/lib/company';
 import {checkRateLimit, clientIp} from '~/lib/rate-limit';
@@ -13,7 +13,7 @@ import {sameOrigin} from '~/lib/accounts/config';
 import {TRADE_COUNTRIES, submitTradeApplication, tradeConfigured, validateTradeApplication, type TradeField} from '~/lib/trade';
 
 const t = (key: string) => copyText(`wholesale.${key}`) ?? '';
-export const meta: Route.MetaFunction = () => buildSeoMeta({title: t('meta_title'), description: t('meta_description')});
+export const meta: Route.MetaFunction = () => buildSeoMeta({title: t('meta_title'), description: t('meta_description'), canonical: `${SITE_ORIGIN}/wholesale`});
 
 // Form results contain personal details; never let an edge cache retain them.
 export const headers: Route.HeadersFunction = () => ({'Cache-Control': 'private, no-store'});

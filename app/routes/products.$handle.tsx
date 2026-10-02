@@ -83,6 +83,7 @@ import {
   isPurchasableStatus,
   variantDisplayName,
   canonicalOptionValue,
+  ACCESSORY_SPECS,
 } from '~/lib/product-content';
 import {useProductStatus} from '~/lib/coming-soon';
 import {shipPromiseFor} from '~/lib/preorder';
@@ -154,6 +155,8 @@ function pageDescription(
   if (content && content.editorial !== false && !hasPublicRepo(handle)) {
     return content.whatIsThis?.intro || content.hero.lead || undefined;
   }
+  const own = handle ? ACCESSORY_SPECS[handle]?.metaDescription : undefined;
+  if (own && (shopify?.trim().length ?? 0) < 70) return own;
   return shopify || undefined;
 }
 

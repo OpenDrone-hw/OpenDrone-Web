@@ -1,5 +1,5 @@
 import {execSync} from 'node:child_process';
-import {defineConfig} from 'vite';
+import {defineConfig, type Plugin} from 'vite';
 import {cloudflare} from '@cloudflare/vite-plugin';
 import {reactRouter} from '@react-router/dev/vite';
 import tsconfigPaths from 'vite-tsconfig-paths';
@@ -8,6 +8,22 @@ import {
   heroStudioExcludePlugin,
   studioPlugin,
 } from './studio/vite-plugin-studio';
+import {isContentJson, stripContent} from './app/lib/content-strip';
+
+// `$comment` notes and `hidden: true` entries in content/*.json are for
+// editors only: a build drops them before Vite's JSON plugin turns the file
+// into a module, so they never reach a client or Worker bundle.
+function contentStripPlugin(): Plugin {
+  return {
+    name: 'opendrone:content-strip',
+    apply: 'build',
+    enforce: 'pre',
+    transform(code, id) {
+      if (!isContentJson(id)) return null;
+      return {code: JSON.stringify(stripContent(JSON.parse(code))), map: null};
+    },
+  };
+}
 
 // The footer's drawing title block names the build: the commit it was built
 // from and the build date. No git (a source tarball) leaves the revision
@@ -41,6 +57,7 @@ export default defineConfig({
     // Strips the hero tuning tool out of the production client build; it sits
     // in publicDir, so Vite would otherwise serve it at a public URL.
     heroStudioExcludePlugin(),
+    contentStripPlugin(),
     tailwindcss(),
     // Runs server.ts in workerd in dev and builds it as the Worker entry
     // (dist/server/index.js). wrangler.toml supplies the compatibility date

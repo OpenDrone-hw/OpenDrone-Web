@@ -347,6 +347,13 @@ describe('buyer copy', () => {
       assert.doesNotMatch(text, /\bFCC\b|47 CFR|equipment authori[sz]ation/, file);
     }
   });
+
+  it('keeps the shipping page free of FCC notices and in-stock dispatch promises', () => {
+    for (const lang of ['en', 'nl', 'fr']) {
+      const text = fs.readFileSync(new URL(`../content/legal/${lang}/shipping.md`, import.meta.url), 'utf8');
+      assert.doesNotMatch(text, /\bFCC\b|2 business days|2 werkdagen|2 jours ouvrables/, lang);
+    }
+  });
 });
 
 /** Live Shopify pairs (EUR price, US contextual price, both whole dollars,

@@ -1241,6 +1241,9 @@ export type AccessorySpecs = {
   specs: Array<[string, string]>;
   /** Spec keys whose value is a placeholder. Never rendered. */
   placeholders?: string[];
+  /** The page's meta description when Shopify's text is under 70
+   *  characters, too short for a search result. */
+  metaDescription?: string;
 };
 
 type AccessoryFile = {default: Record<string, AccessorySpecs>};

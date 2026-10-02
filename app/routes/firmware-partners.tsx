@@ -1,6 +1,6 @@
 import type {Route} from './+types/firmware-partners';
 import {Link} from 'react-router';
-import {buildSeoMeta} from '~/lib/seo';
+import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {EditorialShell} from '~/components/EditorialShell';
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
@@ -15,6 +15,7 @@ export const meta: Route.MetaFunction = () =>
   buildSeoMeta({
     title: copyText('firmware-partners.meta_title') ?? 'Firmware partners',
     description: copyText('firmware-partners.meta_description') ?? '',
+    canonical: `${SITE_ORIGIN}/firmware-partners`,
   });
 
 export async function loader(_args: Route.LoaderArgs) {

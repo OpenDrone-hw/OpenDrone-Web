@@ -24,7 +24,8 @@ function loadUsSales(): UsSalesFile {
   const fs = (
     globalThis as {process?: {getBuiltinModule?: (id: string) => unknown}}
   ).process?.getBuiltinModule?.('node:fs') as {readFileSync: (url: URL, encoding: string) => string} | undefined;
-  return fs ? (JSON.parse(fs.readFileSync(new URL('../../content/us-sales.json', import.meta.url), 'utf8')) as UsSalesFile) : {};
+  // A joined path, so Vite does not emit the raw file as a public asset.
+  return fs ? (JSON.parse(fs.readFileSync(new URL(['..', '..', 'content', 'us-sales.json'].join('/'), import.meta.url), 'utf8')) as UsSalesFile) : {};
 }
 
 /** The US sales settings as committed. */

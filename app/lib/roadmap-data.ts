@@ -60,28 +60,28 @@ export type RoadmapItem = {
 export const ROADMAP: RoadmapItem[] = [
   {
     id: 'openfc_lite_30',
-    status: 'alpha',
+    status: 'beta',
     productPath: '/products/openfc-lite',
     link: 'https://github.com/OpenDrone-hw/OpenFC-Lite',
     image: '/boards/openfc-lite/front.png',
   },
   {
     id: 'openfc_lite_mini_20',
-    status: 'alpha',
+    status: 'beta',
     productPath: '/products/openfc-lite',
     link: 'https://github.com/OpenDrone-hw/OpenFC-Lite-Mini',
     image: '/boards/openfc-lite-mini/front.png',
   },
   {
     id: 'openesc_20',
-    status: 'alpha',
+    status: 'beta',
     productPath: '/products/openesc',
     link: 'https://github.com/OpenDrone-hw/OpenESC-20x20',
     image: '/boards/openesc/front.png',
   },
   {
     id: 'openesc_30',
-    status: 'alpha',
+    status: 'beta',
     productPath: '/products/openesc',
     link: 'https://github.com/OpenDrone-hw/OpenESC-30x30',
     image: '/boards/openesc-30x30/front.png',

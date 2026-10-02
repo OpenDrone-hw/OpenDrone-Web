@@ -37,12 +37,12 @@ describe('resolveStatus', () => {
   });
 
   it('the roadmap decides for roadmap products, whatever the global flag', () => {
-    // Static roadmap: every board is alpha today -> waitlist, no price,
+    // Static roadmap: the OpenRX boards are alpha -> waitlist, no price,
     // on a locked AND an open shop alike.
-    withoutExplicitStatus('openesc', () => {
+    withoutExplicitStatus('openrx', () => {
       for (const flag of [true, false]) {
-        assert.equal(resolveStatus('openesc', flag), 'development');
-        assert.equal(isComingSoon('openesc', flag), true);
+        assert.equal(resolveStatus('openrx', flag), 'development');
+        assert.equal(isComingSoon('openrx', flag), true);
       }
     });
   });
@@ -256,12 +256,12 @@ describe('isComingSoon', () => {
     };
     try {
       assert.equal(isComingSoon('__test-idea', false), true);
-      // openesc is on the roadmap (alpha today) so, without its explicit
+      // openrx is on the roadmap (alpha) so, without its explicit
       // status, the open-shop flag does not unlock it; an off-roadmap
       // accessory follows the flag.
-      withoutExplicitStatus('openesc', () => {
-        assert.equal(isComingSoon('openesc', true), true);
-        assert.equal(isComingSoon('openesc', false), true);
+      withoutExplicitStatus('openrx', () => {
+        assert.equal(isComingSoon('openrx', true), true);
+        assert.equal(isComingSoon('openrx', false), true);
       });
       assert.equal(isComingSoon('battery-strap', false), false);
     } finally {

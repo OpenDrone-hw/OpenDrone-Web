@@ -17,6 +17,12 @@ function stripHtml(value?: string | null) {
 
   return value
     .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;|&rsquo;/g, '\u2019')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -27,10 +33,24 @@ function absolutize(value?: string | null) {
   return value.startsWith('/') ? `${SITE_ORIGIN}${value}` : value;
 }
 
+/**
+ * Fit a description into `maxLength`: end on the last sentence or clause
+ * that fits (from 70 characters on, the useful minimum), else on a word
+ * boundary with an ellipsis, never inside a word.
+ */
 function truncate(value: string, maxLength = 160) {
   if (value.length <= maxLength) return value;
 
-  return `${value.slice(0, maxLength - 3).trimEnd()}...`;
+  const head = value.slice(0, maxLength);
+  const clause = Math.max(
+    head.lastIndexOf('. '),
+    head.lastIndexOf(', '),
+    head.lastIndexOf('; '),
+    head.lastIndexOf(': '),
+  );
+  if (clause >= 70) return `${head.slice(0, clause).trimEnd()}.`;
+  const word = value.slice(0, maxLength - 2).lastIndexOf(' ');
+  return `${value.slice(0, word > 70 ? word : maxLength - 3).trimEnd()}...`;
 }
 
 export function buildPageTitle(title?: string | null) {

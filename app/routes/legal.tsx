@@ -2,7 +2,7 @@ import {Link, redirect, useLoaderData} from 'react-router';
 import type {Route} from './+types/legal';
 import {getCompanyIdentity} from '~/lib/company';
 import {CompanyFooterBlock} from '~/components/CompanyFooterBlock';
-import {buildSeoMeta} from '~/lib/seo';
+import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {
   alternateLocaleTags,
   getLocaleFromRequest,
@@ -38,6 +38,7 @@ export const meta: Route.MetaFunction = ({data}) => {
     description: m.description,
     locale: seoLocaleTag(locale),
     alternateLocales: alternateLocaleTags(locale),
+    canonical: `${SITE_ORIGIN}/${locale}/legal`,
   });
 };
 
