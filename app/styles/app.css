@@ -268,8 +268,6 @@ html.light {
   --color-focus: var(--color-text);
   --color-gold-text: #7a5700;
   --color-gold-text-hover: #5c4200;
-  --color-wordmark-gold: #9a6a00; /* 4.2:1 on the cream background */
-  --color-wordmark-sheen: #b98200;
   /* Emerald PCB/brand green, AA 5.4:1 on white. --color-green-deep and
      --color-stock (= var(--color-green)) inherit from @theme and re-theme
      through this value automatically. */
