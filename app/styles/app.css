@@ -17920,3 +17920,167 @@ html.light .plugs {
     font-size: 0.78rem;
   }
 }
+
+/* =========================================================
+   Discord community (segment: community): the homepage section
+   under the hero (desktop) or at the end of the phone layout,
+   the compact row under a product's specs, and the header icon.
+   Words: home.community_*, product-chrome.discord_row*.
+   app/components/Discord.tsx
+   ========================================================= */
+.home-community {
+  width: var(--rail-width);
+  margin: 0 auto;
+  padding-block: clamp(3rem, 7vw, 6rem);
+  border-top: 1px solid var(--color-border);
+}
+.home-mobile .home-community {
+  width: 100%;
+  padding-block: 2rem 0;
+}
+.home-community-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: clamp(2rem, 5vw, 5rem);
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .home-community-inner {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.75rem;
+  }
+}
+.home-community-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+}
+.home-community-head .section-label {
+  margin: 0;
+}
+.home-community-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 2.6vw, 2.5rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  font-weight: 700;
+  margin: 0;
+  max-width: 18ch;
+  text-wrap: balance;
+}
+.home-community-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.25rem;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+.home-community-counts > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.home-community-counts strong {
+  color: var(--color-text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.home-community-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #23a55a;
+}
+.home-community-cta {
+  margin-top: 0.5rem;
+}
+.home-community-reasons {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--color-border);
+}
+.home-community-reasons > li {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  gap: 0.75rem;
+  padding: 1.1rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.home-community-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--color-gold-text);
+  padding-top: 0.2rem;
+}
+.home-community-reasons h3 {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  margin: 0 0 0.35rem;
+}
+.home-community-reasons p {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+  margin: 0;
+  max-width: 60ch;
+}
+
+/* Product page: one quiet line closing the Specs chapter, outside the buy box. */
+.pdp-discord-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.6rem;
+  margin: 2rem auto 0;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+  max-width: 48rem;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+.pdp-discord-mark {
+  color: var(--color-text-muted);
+  flex: none;
+}
+.pdp-discord-link {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--color-gold) 60%, transparent);
+  text-underline-offset: 3px;
+}
+.pdp-discord-link:hover {
+  color: var(--color-gold-text);
+}
+
+/* Header: the Discord icon sits with the utility icons on desktop; phones
+   carry it in the drawer (the 360px top bar has no room). */
+.site-header-icon.site-header-discord {
+  color: var(--color-text-muted);
+}
+.site-header-icon.site-header-discord:hover {
+  color: var(--color-text);
+}
+@media (max-width: 768px) {
+  .site-header-discord {
+    display: none !important;
+  }
+}
+.site-mobile-nav-discord {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}

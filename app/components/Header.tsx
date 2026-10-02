@@ -18,6 +18,7 @@ import {
   type PodCompanionOption,
 } from '~/components/ProductPods';
 import {Txt} from '~/components/Txt';
+import {DiscordLink, DiscordMark} from '~/components/Discord';
 import {copyText} from '~/lib/copy';
 import {CART_UPDATED_EVENT} from '~/lib/cart-client';
 import {INCUTEC_HINT_SEEN_KEY} from '~/lib/incutec-hint';
@@ -678,6 +679,16 @@ export function HeaderMenu({
           </NavLink>
         );
       })}
+      {isMobile ? (
+        <DiscordLink
+          placement="mobile-menu"
+          onClick={close}
+          className="site-mobile-nav-discord text-sm font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+        >
+          <DiscordMark size={16} />
+          <Txt id="chrome.nav_discord" />
+        </DiscordLink>
+      ) : null}
       {/* Mobile aside only: a Newsletter link in the slide-out menu. On
           desktop Newsletter lives in the right-side CTA group (left of
           Catalog), so it's omitted here to avoid duplicating it. Skipped if
@@ -858,6 +869,15 @@ function HeaderCtas({
         <LangToggle className="header-lang-toggle" />
         <RegionSwitch variant="menu" className="header-region-switch" />
         <ThemeToggle className="site-header-icon" />
+        {/* The community: desktop only here, the phone drawer lists it. */}
+        <DiscordLink
+          placement="header"
+          className="site-header-icon site-header-discord"
+          aria-label={copyText('chrome.nav_discord') ?? 'Discord'}
+          title={copyText('chrome.nav_discord') ?? 'Discord'}
+        >
+          <DiscordMark />
+        </DiscordLink>
         {/* Account, orders and addresses live in Shopify customer accounts:
             an external link, not an in-app route. The signed-in state is
             Shopify's to know, so the label is always "Account". */}

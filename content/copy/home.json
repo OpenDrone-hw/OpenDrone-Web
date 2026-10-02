@@ -52,5 +52,16 @@
   "m_ledger_source_format_value": "KiCad 10 · STEP · BOM",
   "m_ledger_designed_in_label": "Designed in",
   "m_ledger_designed_in_value": "Belgium",
-  "m_browse": "Browse the full catalog"
+  "m_browse": "Browse the full catalog",
+  "community_label": "Community",
+  "community_title": "Built in the open, with the community",
+  "community_members": "members",
+  "community_online": "online now",
+  "community_cta": "Join the Discord",
+  "community_engineers_title": "Talk to the engineers",
+  "community_engineers_body": "Post in #help with your product and firmware version. The people who designed the boards answer there.",
+  "community_builds_title": "Follow the boards being built",
+  "community_builds_body": "Every hardware pull request gets its own thread, and the git feed posts each merge and release.",
+  "community_test_title": "Help test",
+  "community_test_body": "Report what you find on new firmware and early boards, and propose the next change in #proposals."
 }
