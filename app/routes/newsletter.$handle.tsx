@@ -2,7 +2,7 @@ import {shopifyImageUrl, shopifySrcSet} from '~/lib/shopify-image';
 import {Link, useLoaderData} from 'react-router';
 import type {Route} from './+types/newsletter.$handle';
 import {buildSeoMeta} from '~/lib/seo';
-import {archivePosts, postByHandle, postHtml, shopIsOpen} from '~/lib/posts';
+import {archiveOf, fetchPosts} from '~/lib/posts';
 import {VersionChip, pickVersionTag} from '~/components/release-notes/VersionChip';
 import {PrevNextNav} from '~/components/release-notes/PrevNextNav';
 import {FILTER_TAGS, type FilterTag} from '~/components/release-notes/TagFilter';
@@ -30,12 +30,12 @@ function pickFilterTag(tags: readonly string[]): FilterTag | null {
   return null;
 }
 
-export function loader({params, context}: Route.LoaderArgs) {
-  const shopOpen = shopIsOpen(context.env);
+export async function loader({params, context}: Route.LoaderArgs) {
   const articleHandle = params.handle;
   if (!articleHandle) throw new Response('Not found', {status: 404});
 
-  const post = postByHandle(articleHandle, shopOpen);
+  const posts = await fetchPosts(context.env);
+  const post = posts.find((p) => p.handle === articleHandle);
   if (!post) throw new Response(null, {status: 404});
 
   const article = {
@@ -45,18 +45,10 @@ export function loader({params, context}: Route.LoaderArgs) {
     excerpt: post.excerpt,
     tags: post.tags,
     image: post.image,
-    contentHtml: postHtml(post),
+    contentHtml: post.contentHtml,
   };
-  // Once the shop is open a superseded post names the post that replaced it.
-  const successor =
-    shopOpen && post.supersededBy
-      ? postByHandle(post.supersededBy, shopOpen)
-      : null;
-  const supersededBy = successor
-    ? {handle: successor.handle, title: successor.title}
-    : null;
 
-  const siblings = archivePosts(shopOpen).map((p) => ({
+  const siblings = archiveOf(posts).map((p) => ({
     handle: p.handle,
     title: p.title,
     publishedAt: p.publishedAt,
@@ -68,11 +60,11 @@ export function loader({params, context}: Route.LoaderArgs) {
   const previous =
     idx >= 0 && idx + 1 < siblings.length ? siblings[idx + 1] : null;
 
-  return {article, previous, next, supersededBy};
+  return {article, previous, next};
 }
 
 export default function NewsletterPost() {
-  const {article, previous, next, supersededBy} = useLoaderData<typeof loader>();
+  const {article, previous, next} = useLoaderData<typeof loader>();
   const {title, image, contentHtml, publishedAt, tags, excerpt} = article;
   const date = (() => {
     try {
@@ -110,16 +102,6 @@ export default function NewsletterPost() {
             </>
           ) : null}
         </div>
-
-        {supersededBy ? (
-          <p className="rn-post-deck" role="note">
-            <Txt id="newsletter.post_superseded" fallback="This post is out of date. The newer post is" />{' '}
-            <Link prefetch="viewport" to={`/newsletter/${supersededBy.handle}`}>
-              {supersededBy.title}
-            </Link>
-            .
-          </p>
-        ) : null}
 
         <h1 className="rn-post-title">{title}</h1>
         {excerpt ? <p className="rn-post-deck">{excerpt}</p> : null}

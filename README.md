@@ -241,13 +241,24 @@ are in `app/lib/trade.ts`.
 the installed review app (Judge.me). No third-party script runs on the page. A
 product without those metafields renders no trace of the feature.
 
-**Newsletter.** Posts are Markdown in `content/posts/` (`published: true`
-publishes at `/newsletter/<slug>` and in `/newsletter.rss`). The footer signup
-records single-opt-in consent in Shopify and adds the `newsletter` tag plus
-`notify-<handle>` for product interest, and `country-<CODE>` for a visitor from
-a country sold only through shops. `/newsletter/unsubscribe` sets Shopify
-consent to `UNSUBSCRIBED`. `SHOPIFY_NEWSLETTER_WRITE_ENABLED` gates consent
-writes independently of checkout.
+**Newsletter.** Posts are written in Shopify admin (Content, Blog posts, blog
+`News`). A visible post shows at `/newsletter/<handle>`, in `/newsletter.rss`
+and in the sitemap; a hidden one does not exist on the site; the tag
+`no-archive` keeps a visible post off the list, feed and sitemap. The site reads
+the blog through the Storefront API (`app/lib/posts.ts`), so a change shows
+without a deploy. The footer signup records single-opt-in consent in Shopify
+and adds the `newsletter` tag plus `notify-<handle>` for product interest, and
+`country-<CODE>` for a visitor from a country sold only through shops.
+`/newsletter/unsubscribe` sets Shopify consent to `UNSUBSCRIBED`.
+`SHOPIFY_NEWSLETTER_WRITE_ENABLED` gates consent writes independently of
+checkout.
+
+**Send a post to the subscribers.** Shopify admin, Messaging (Shopify Email),
+Create campaign: the post image, two or three lines, and a button to
+`https://opendrone.be/newsletter/<handle>`; audience "Email subscribers".
+Shopify owns the list, the unsubscribe link and the sending; sending is a
+human action. Resend sends only the site's own mail (welcome, preorder
+notices, support).
 
 **Legal.** The legal documents in `app/content/legal/{en,nl,fr}/` serve at
 `/{en,nl,fr}/<slug>`; the bare `/<slug>` redirects to the visitor's cached
@@ -640,7 +651,7 @@ step; `git diff` is the changelog.
 | Chapters | product page sections: order, titles, on or off | `content/chapters.json` (created on first save) |
 | Design | design tokens | `content/theme.json` |
 | Media | browse images and where each is used | read-only, `public/` |
-| Docs | legal pages in en, nl, fr; newsletter posts (new post from the template); learn articles | `app/content/legal/**`, `content/posts/*.md`, `app/content/learn/*.md` |
+| Docs | legal pages in en, nl, fr; learn articles | `app/content/legal/**`, `app/content/learn/*.md` |
 | Data | batches, targets, price steps, dates, builds, accessories, team, registrations, as validated JSON | `content/*.json` |
 | Hero | the 3D scene: lighting, timeline, camera, materials | `public/models/<design>/studio.json` |
 | Goals | goal meters and vote tallies | `content/goals.json`, `content/votes.json` |
