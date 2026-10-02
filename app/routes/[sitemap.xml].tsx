@@ -1,5 +1,5 @@
 import type {Route} from './+types/[sitemap.xml]';
-import {archivePosts, shopIsOpen} from '~/lib/posts';
+import {archivePosts} from '~/lib/posts';
 
 /**
  * One sitemap for the whole site: the static routes plus a
@@ -52,7 +52,7 @@ export async function loader({request, context}: Route.LoaderArgs) {
     (p) => `/products/${p.handle}`,
   );
 
-  const postPaths = archivePosts(shopIsOpen(context.env)).map(
+  const postPaths = (await archivePosts(context.env)).map(
     (p) => `/newsletter/${p.handle}`,
   );
 

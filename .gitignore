@@ -48,7 +48,6 @@ scripts/out/
 *\ 2
 
 # Local cache for scripts/publish-post.mjs (Shopify Files CDN URLs)
-scripts/.post-uploads.json
 
 # mobile audit screenshots (local only)
 .mobile-audit/

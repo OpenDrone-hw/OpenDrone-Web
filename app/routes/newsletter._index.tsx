@@ -6,7 +6,7 @@ import {verifyTurnstile} from '~/lib/turnstile';
 import {subscribeWithShopify} from '~/lib/growth/shopify-newsletter';
 import {visitorCountry} from '~/lib/visitor-country';
 import {sendWelcomeEmail} from '~/lib/growth/welcome-email';
-import {archivePosts, shopIsOpen} from '~/lib/posts';
+import {archivePosts} from '~/lib/posts';
 import {
   ReleaseRow,
   type ReleaseRowArticle,
@@ -14,8 +14,8 @@ import {
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
 
-// Newsletter - the single hub. It's all newsletter: posts authored as
-// Markdown in content/posts/ show up here as the archive, at /newsletter
+// Newsletter - the single hub. It's all newsletter: posts written in the
+// Shopify blog `news` show up here as the archive, at /newsletter
 // (posts at /newsletter/<handle>). Old /blog, /releases, and /blogs URLs
 // redirect in.
 //
@@ -50,8 +50,8 @@ export const meta: Route.MetaFunction = () => {
   ];
 };
 
-export function loader({context}: Route.LoaderArgs) {
-  const visible: ReleaseRowArticle[] = archivePosts(shopIsOpen(context.env)).map((p) => ({
+export async function loader({context}: Route.LoaderArgs) {
+  const visible: ReleaseRowArticle[] = (await archivePosts(context.env)).map((p) => ({
     id: p.handle,
     handle: p.handle,
     title: p.title,

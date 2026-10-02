@@ -61,7 +61,7 @@ const LOOPBACK = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
 const HERO_SETTINGS = /^public\/models\/[A-Za-z0-9_-]+\/studio\.json$/;
 
 /**
- * Markdown documents: the legal pages, the newsletter posts and the learn
+ * Markdown documents: the legal pages and the learn
  * articles.
  *
  * Same exact-shape reasoning as the hero settings: fixed directory prefixes,
@@ -71,7 +71,6 @@ const HERO_SETTINGS = /^public\/models\/[A-Za-z0-9_-]+\/studio\.json$/;
 const DOC_PATTERNS = [
   /^app\/content\/legal\/(en|nl|fr)\/[A-Za-z0-9_-]+\.md$/,
   /^app\/content\/learn\/[A-Za-z0-9_-]+\.md$/,
-  /^content\/posts\/[A-Za-z0-9_-]+\.md$/,
 ];
 const isDoc = (rel: string) => DOC_PATTERNS.some((re) => re.test(rel));
 
@@ -442,7 +441,7 @@ async function handle(
       return send(res, 200, {ok: true, file});
     }
 
-    /** Every Markdown document, grouped: legal per locale, posts, learn. */
+    /** Every Markdown document, grouped: legal per locale, learn. */
     if (route === '/docs' && req.method === 'GET') {
       const out: Array<{file: string; group: string; name: string}> = [];
       const add = async (dir: string, group: string) => {
@@ -455,7 +454,6 @@ async function handle(
       for (const locale of ['en', 'nl', 'fr']) {
         await add(`app/content/legal/${locale}`, `Legal ${locale.toUpperCase()}`);
       }
-      await add('content/posts', 'Newsletter');
       await add('app/content/learn', 'Learn');
       return send(res, 200, {ok: true, docs: out});
     }
