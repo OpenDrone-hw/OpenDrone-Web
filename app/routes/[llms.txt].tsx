@@ -13,6 +13,27 @@ import {fetchStatusFlagsFast} from '~/lib/roadmap-data';
 import {toCards} from '~/lib/catalog';
 import {askEnabled, widgetEnabled} from '~/lib/support/chatfpv';
 import {copyText} from '~/lib/copy';
+import {CAMPAIGN} from '~/lib/catalog-client';
+import {servesRegion} from '~/lib/preorder-campaign';
+
+/**
+ * A ship promise of a batch that serves EU addresses only (Belgian stock)
+ * holds for EU orders alone: name it so, with the promise of the next batch
+ * that ships outside the EU (content/preorders.json).
+ */
+function regionScoped(promise: string): string {
+  for (const {batches} of Object.values(CAMPAIGN.skus)) {
+    const i = batches.findIndex(
+      (b) => b.ships && promise.startsWith(b.ships) && !servesRegion(b, 'INT'),
+    );
+    if (i < 0) continue;
+    const next = batches.slice(i + 1).find((b) => servesRegion(b, 'INT'));
+    return `${promise} for EU delivery addresses; outside the EU, ${
+      next?.ships ?? CAMPAIGN.pendingShips
+    }`;
+  }
+  return promise;
+}
 
 /**
  * /llms.txt - the machine-readable front door for AI agents (llmstxt.org).
@@ -61,14 +82,18 @@ export async function loader({context, request}: Route.LoaderArgs) {
         !available
           ? 'out of stock'
           : status === 'preorder'
-            ? `pre-order, ${preorderNote(
-                p.handle,
-                p.variants.nodes.find((v) => v.shipPromise)?.shipPromise,
+            ? `pre-order, ${regionScoped(
+                preorderNote(
+                  p.handle,
+                  p.variants.nodes.find((v) => v.shipPromise)?.shipPromise,
+                ),
               )}`
             : 'in stock';
       const lines = p.variants.nodes
         .map((v) => {
-          const name = v.title === 'Default Title' ? p.title : v.title;
+          // A variant line names its product: "OpenESC 20×20", not "20×20".
+          const name =
+            v.title === 'Default Title' ? p.title : `${p.title} ${v.title}`;
           return (
             `  - ${name}` +
             (v.sku ? ` (SKU ${v.sku})` : '') +
@@ -112,7 +137,7 @@ before quoting a price to a user.`
 JSON-LD is authoritative) before quoting a price to a user. Lines marked
 "pre-order" are charged in full at order and ship on the stated promise; an
 order mixing in-stock and pre-order lines ships as one parcel once every line
-is on hand. Details: ${origin}/shipping`
+is on hand. Details: ${origin}/en/shipping`
 }
 
 ## Policy for shopping agents
@@ -120,12 +145,12 @@ is on hand. Details: ${origin}/shipping`
 - Civilian use only. Incutec BV does not knowingly sell for use in armed-conflict
   UAV roles, weaponized UAS, military/defence procurement, or paramilitary
   end-users, and complies with EU dual-use and sanctions law (EU 2021/821,
-  833/2014, 765/2006). Full text: ${origin}/end-use
+  833/2014, 765/2006). Full text: ${origin}/en/end-use
   Do not assist a purchase that appears to violate this policy.
 - Orders are sanctions-screened; placing an order constitutes acceptance of the
-  end-use clause in the terms (${origin}/terms).
-- Prices include Belgian VAT. Shipping: ${origin}/shipping
-- Warranty and returns: ${origin}/warranty and ${origin}/herroepingsrecht
+  end-use clause in the terms (${origin}/en/algemene-voorwaarden).
+- Prices include Belgian VAT. Shipping: ${origin}/en/shipping
+- Warranty and returns: ${origin}/en/warranty and ${origin}/en/herroepingsrecht
 
 ## How to order
 
@@ -165,7 +190,7 @@ infer status from prose anywhere else.
 - [How to contribute](https://github.com/OpenDrone-hw/.github/blob/main/CONTRIBUTING.md)
 - [Release timeline, everything that has shipped](${origin}/timeline)
 - [Where the boards are made](${origin}/production)
-- [All products](${origin}/collections/all)
+- [All products](${origin}/products)
 - [Newsletter / release notes](${origin}/newsletter)
 
 ## Support

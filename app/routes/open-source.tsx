@@ -1,6 +1,6 @@
 import type {Route} from './+types/open-source';
 import {Link} from 'react-router';
-import {buildSeoMeta} from '~/lib/seo';
+import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {EditorialShell} from '~/components/EditorialShell';
 import {TeamStrip} from '~/components/TeamStrip';
 import {Txt} from '~/components/Txt';
@@ -28,6 +28,7 @@ export const meta: Route.MetaFunction = () =>
   buildSeoMeta({
     title: copyText('open-source.meta_title') ?? 'Open Source',
     description: copyText('open-source.meta_description') ?? '',
+    canonical: `${SITE_ORIGIN}/open-source`,
   });
 
 export async function loader(_args: Route.LoaderArgs) {

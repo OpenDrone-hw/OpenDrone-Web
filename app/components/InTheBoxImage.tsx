@@ -148,9 +148,11 @@ export function InTheBox({items, image, renderItem, aside}: Props) {
         <div className="in-the-box-stage">
           <picture>
             <source type="image/webp" srcSet={WIDTHS.map((w) => `${at(w)} ${w}w`).join(', ')} sizes={SIZES} />
+            {/* The fallback is the largest WebP too: the 1 to 3.5 MB master
+                PNG stays a render source, never a download. */}
             <img
               className="in-the-box-image"
-              src={assetUrl(`${image.src}${q}`)}
+              src={at(WIDTHS[WIDTHS.length - 1])}
               alt={image.alt ?? boxAlt(items)}
               width={image.width}
               height={image.height}

@@ -1,7 +1,7 @@
 import type {Route} from './+types/roadmap';
 import {Fragment} from 'react';
 import {Link} from 'react-router';
-import {buildSeoMeta} from '~/lib/seo';
+import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {EditorialShell, SeriesRail} from '~/components/EditorialShell';
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
@@ -47,6 +47,7 @@ export const meta: Route.MetaFunction = () =>
       copyText('roadmap.meta_title') ??
       'Roadmap · What we build and how to help',
     description: copyText('roadmap.meta_description') ?? '',
+    canonical: `${SITE_ORIGIN}/roadmap`,
   });
 
 // The status-* topic fetch (canonical status carrier) lives in

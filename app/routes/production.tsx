@@ -1,6 +1,6 @@
 import type {Route} from './+types/production';
 import {Link} from 'react-router';
-import {buildSeoMeta} from '~/lib/seo';
+import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {EditorialShell} from '~/components/EditorialShell';
 import {ProductionLadder} from '~/components/ProductionLadder';
 import {Txt} from '~/components/Txt';
@@ -15,6 +15,7 @@ export const meta: Route.MetaFunction = () =>
   buildSeoMeta({
     title: copyText('production.meta_title') ?? 'Production',
     description: copyText('production.meta_description') ?? '',
+    canonical: `${SITE_ORIGIN}/production`,
   });
 
 export async function loader(_args: Route.LoaderArgs) {

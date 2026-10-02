@@ -32,7 +32,7 @@ For deliveries to the United States, Incutec BV sells directly to consumers for 
 - **Ships from:** Incutec or its fulfilment partner
 - **Ship date:** By 31 March 2027, if the funding target is reached by 15 December 2026
 
-The ship date stated on the product page and in your order confirmation is the one that applies to your order. Delivery to the United States depends on FCC equipment authorization and US import clearance. If we cannot deliver an item to you for that reason, we refund that item in full. Refunds, shipping delays and the right to cancel for US deliveries follow [Article 7ter of the terms](/en/algemene-voorwaarden#art-7ter).
+The ship date stated on the product page and in your order confirmation is the one that applies to your order. Refunds, shipping delays and the right to cancel for US deliveries follow [Article 7ter of the terms](/en/algemene-voorwaarden#art-7ter).
 
 ### Outside the European Union and the United States
 
@@ -52,7 +52,7 @@ Cancellation, missed targets, changes to ship dates, refunds and mixed-batch ord
 
 ### Delivery time for items in stock
 
-Items in stock are normally shipped within 2 business days of payment receipt, with two exceptions. If the order also contains a preorder item, the whole order ships together once the last item is ready (one delivery per order, Art. 7bis.5 of our General Terms and Conditions), unless you order the in-stock items separately: the cart offers that split. If the order ships outside the EU, the in-stock item ships with the preorder batch, because stock held in Belgium ships to EU addresses only. The final delivery deadline is 30 calendar days after the order, unless explicitly agreed otherwise (Art. VI.43 of the Belgian Code of Economic Law, Art. 7 of our General Terms and Conditions). For an order that ships with a preorder batch, the delivery deadline stated before payment and in the order confirmation applies (Art. 7bis.2 of our General Terms and Conditions). If Incutec BV fails to deliver within the 30-day deadline, the consumer may set a reasonable additional period. If Incutec BV still fails to deliver within that additional period, the consumer may terminate the contract free of charge (Art. VI.43 §2 WER). If Incutec BV refuses to deliver, or the delivery deadline was essential, the consumer may terminate the contract immediately.
+Two rules apply to items in stock. If the order also contains a preorder item, the whole order ships together once the last item is ready (one delivery per order, Art. 7bis.5 of our General Terms and Conditions), unless you order the in-stock items separately: the cart offers that split. If the order ships outside the EU, the in-stock item ships with the preorder batch, because stock held in Belgium ships to EU addresses only. The final delivery deadline is 30 calendar days after the order, unless explicitly agreed otherwise (Art. VI.43 of the Belgian Code of Economic Law, Art. 7 of our General Terms and Conditions). For an order that ships with a preorder batch, the delivery deadline stated before payment and in the order confirmation applies (Art. 7bis.2 of our General Terms and Conditions). If Incutec BV fails to deliver within the 30-day deadline, the consumer may set a reasonable additional period. If Incutec BV still fails to deliver within that additional period, the consumer may terminate the contract free of charge (Art. VI.43 §2 WER). If Incutec BV refuses to deliver, or the delivery deadline was essential, the consumer may terminate the contract immediately.
 
 ### Risk during shipping
 

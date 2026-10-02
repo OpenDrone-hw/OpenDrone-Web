@@ -1,7 +1,7 @@
 import {shopifyImageUrl, shopifySrcSet} from '~/lib/shopify-image';
 import {Link, useLoaderData} from 'react-router';
 import type {Route} from './+types/newsletter.$handle';
-import {buildSeoMeta} from '~/lib/seo';
+import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {archiveOf, fetchPosts} from '~/lib/posts';
 import {VersionChip, pickVersionTag} from '~/components/release-notes/VersionChip';
 import {PrevNextNav} from '~/components/release-notes/PrevNextNav';
@@ -9,15 +9,23 @@ import {FILTER_TAGS, type FilterTag} from '~/components/release-notes/TagFilter'
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
 
-export const meta: Route.MetaFunction = ({data}) =>
+export const meta: Route.MetaFunction = ({data, params}) =>
   buildSeoMeta({
     title:
       data?.article?.title ||
       copyText('newsletter.post_meta_title_fallback') ||
       'Post',
-    description: data?.article?.excerpt || undefined,
+    // A short or missing excerpt leaves too little for search results:
+    // the post's own opening text stands in.
+    description:
+      (data?.article?.excerpt?.trim().length ?? 0) >= 70
+        ? data?.article?.excerpt
+        : data?.article?.contentHtml || data?.article?.excerpt || undefined,
     image: data?.article?.image?.url,
     type: 'article',
+    canonical: params.handle
+      ? `${SITE_ORIGIN}/newsletter/${params.handle}`
+      : undefined,
   });
 
 function pickFilterTag(tags: readonly string[]): FilterTag | null {

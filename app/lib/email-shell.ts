@@ -59,7 +59,8 @@ function loadEmailCampaign(): EmailCampaign {
     globalThis as {process?: {getBuiltinModule?: (id: string) => unknown}}
   ).process?.getBuiltinModule?.('node:fs') as {readFileSync: (url: URL, encoding: string) => string} | undefined;
   if (!fs) throw new Error('email-shell: campaign dates unavailable');
-  return JSON.parse(fs.readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8')) as EmailCampaign;
+  // A joined path, so Vite does not emit the raw file as a public asset.
+  return JSON.parse(fs.readFileSync(new URL(['..', '..', 'content', 'preorders.json'].join('/'), import.meta.url), 'utf8')) as EmailCampaign;
 }
 
 const campaign = loadEmailCampaign();

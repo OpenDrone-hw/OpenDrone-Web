@@ -1,6 +1,6 @@
 import {data, useLoaderData} from 'react-router';
 import type {Route} from './+types/newsletter._index';
-import {buildSeoMeta} from '~/lib/seo';
+import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {checkRateLimit, clientIp} from '~/lib/rate-limit';
 import {verifyTurnstile} from '~/lib/turnstile';
 import {subscribeWithShopify} from '~/lib/growth/shopify-newsletter';
@@ -37,6 +37,7 @@ export const meta: Route.MetaFunction = () => {
     description:
       copyText('newsletter.meta_description') ??
       'Engineering Essentials: engineering notes, hardware releases, and write-ups from OpenDrone. Subscribe to get each post by email.',
+    canonical: `${SITE_ORIGIN}/newsletter`,
   });
   return [
     ...base,

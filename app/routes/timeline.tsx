@@ -6,7 +6,7 @@ import {
   tagForRepo,
   type LedgerEvent,
 } from '~/lib/timeline-ledger';
-import {buildSeoMeta} from '~/lib/seo';
+import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {EditorialShell} from '~/components/EditorialShell';
 import {Txt} from '~/components/Txt';
 import {CONTRIBUTING_URL} from '~/lib/company';
@@ -23,6 +23,7 @@ export const meta: Route.MetaFunction = () =>
   buildSeoMeta({
     title: copyText('timeline.meta_title') ?? 'Timeline',
     description: copyText('timeline.meta_description') ?? '',
+    canonical: `${SITE_ORIGIN}/timeline`,
   });
 
 /**
