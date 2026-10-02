@@ -32,6 +32,7 @@ import {
 import {buyUrl, commerceHandoff} from '~/lib/shop-links';
 import {Txt} from '~/components/Txt';
 import {ConceptPlate} from '~/components/ConceptPlate';
+import {ProductDiscordRow} from '~/components/Discord';
 import {ProductPrice} from '~/components/ProductPrice';
 import {ProductGallery} from '~/components/ProductGallery';
 import {ProductSilhouette} from '~/components/ProductSilhouette';
@@ -2704,6 +2705,10 @@ function ProductPage() {
               edit={prodEdit}
               title={say('product-chrome.connectors_title', 'Plugs and pin order')}
             />
+          ) : null}
+          {/* Questions go to the community, well away from the buy box. */}
+          {PRODUCT_CONTENT[product.handle] ? (
+            <ProductDiscordRow product={product.title} />
           ) : null}
         </Chapter>
       );

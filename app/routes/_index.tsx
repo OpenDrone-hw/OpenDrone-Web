@@ -25,6 +25,8 @@ import {MobileHome} from '~/components/MobileHome';
 import {SceneErrorBoundary} from '~/components/SceneErrorBoundary';
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
+import {CommunitySection} from '~/components/Discord';
+import {fetchDiscordCounts, type DiscordCounts} from '~/lib/discord-community';
 
 /**
  * The homepage's words live in `content/copy/home.json`, shared with
@@ -112,7 +114,11 @@ export async function loader({request, context}: Route.LoaderArgs) {
     ? await home.then((h) => h.featured)
     : home.then((h) => h.featured);
 
-  return {isMobileHint, featured, heroBuilds};
+  // Live Discord size for the community section: streamed, never awaited,
+  // cached an hour, null (numbers hidden) when Discord does not answer.
+  const discord = fetchDiscordCounts();
+
+  return {isMobileHint, featured, heroBuilds, discord};
 }
 
 // Hero scroll budget - the 3D scene + phased UI stays pinned for this many
@@ -146,7 +152,8 @@ let splashHasPlayedThisSession = false;
  * hooks never mount on a phone.
  */
 export default function Homepage() {
-  const {isMobileHint, featured, heroBuilds} = useLoaderData<typeof loader>();
+  const {isMobileHint, featured, heroBuilds, discord} =
+    useLoaderData<typeof loader>();
   const [isMobile, setIsMobile] = useState(isMobileHint);
   useEffect(() => {
     const mq = window.matchMedia(MOBILE_HOME_QUERY);
@@ -156,11 +163,20 @@ export default function Homepage() {
     return () => mq.removeEventListener('change', update);
   }, []);
 
-  if (isMobile) return <MobileHome featured={featured} heroBuilds={heroBuilds} />;
-  return <DesktopHome heroBuilds={heroBuilds} />;
+  if (isMobile)
+    return (
+      <MobileHome featured={featured} heroBuilds={heroBuilds} discord={discord} />
+    );
+  return <DesktopHome heroBuilds={heroBuilds} discord={discord} />;
 }
 
-function DesktopHome({heroBuilds}: {heroBuilds: Promise<HeroBuild[]>}) {
+function DesktopHome({
+  heroBuilds,
+  discord,
+}: {
+  heroBuilds: Promise<HeroBuild[]>;
+  discord: Promise<DiscordCounts | null>;
+}) {
   const scrollRef = useRef(0);
   const rafId = useRef(0);
   const heroVarRef = useRef<HTMLDivElement | null>(null);
@@ -773,6 +789,7 @@ function DesktopHome({heroBuilds}: {heroBuilds: Promise<HeroBuild[]>}) {
           </div>
         </div>
       </div>
+      <CommunitySection counts={discord} />
     </div>
   );
 }

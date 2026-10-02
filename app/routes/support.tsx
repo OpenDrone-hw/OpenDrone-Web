@@ -1,12 +1,13 @@
 import {useEffect, useRef, useState, type FormEvent} from 'react';
 import {data, Form, Link, redirect, useActionData, useLoaderData, useNavigate, useRouteLoaderData} from 'react-router';
-import {Search, MessageCircle, Sparkles} from 'lucide-react';
+import {Search, Sparkles} from 'lucide-react';
 import type {Route} from './+types/support';
 import {buildSeoMeta} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
 import {DISCORD_INVITE_URL, getCompanyIdentity} from '~/lib/company';
 import {legalHref} from '~/components/LangToggle';
 import {Txt} from '~/components/Txt';
+import {DiscordLink, DiscordMark} from '~/components/Discord';
 import {
   FilePicker,
   fill,
@@ -487,10 +488,12 @@ export default function SupportRoute() {
           <span className="sp-tile-title">{t('find_cta')}</span>
         </Link>
 
-        <a href={discordInvite} target="_blank" rel="noopener noreferrer" className="sp-tile">
-          <MessageCircle size={18} className="sp-tile-icon" aria-hidden="true" />
+        {/* Community help, not order support: orders go through the ticket above. */}
+        <DiscordLink placement="support" href={discordInvite} className="sp-tile">
+          <DiscordMark size={18} className="sp-tile-icon" />
           <span className="sp-tile-title">{t('community_title')}</span>
-        </a>
+          <span className="sp-tile-line">{t('community_line')}</span>
+        </DiscordLink>
 
         {ask ? (
           <details className="sp-tile sp-tile-ask" open={Boolean(initialProduct)}>

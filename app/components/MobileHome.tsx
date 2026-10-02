@@ -14,6 +14,8 @@ import {assetUrl} from '~/lib/asset-url';
 import {HeroBuildGuide} from '~/components/HeroBuildGuide';
 import type {HeroBuild} from '~/lib/hero-build';
 import {HERO_AIRFRAMES, DEFAULT_HERO_SIZE, airframeLabel} from '~/lib/hero-airframes';
+import {CommunitySection} from '~/components/Discord';
+import type {DiscordCounts} from '~/lib/discord-community';
 
 // Downscaled WebP thumbnails written by scripts/export-board-art.mjs next to
 // front.png. The stage slot is at most 264 CSS px, so 528 (2x) and 800 (3x)
@@ -66,9 +68,11 @@ const HOME_LEDGER: Array<{key: string; value?: string; countUp?: boolean}> = [
 export function MobileHome({
   featured,
   heroBuilds,
+  discord,
 }: {
   featured: CollectionItemFragment[] | Promise<CollectionItemFragment[]>;
   heroBuilds: Promise<HeroBuild[]>;
+  discord: Promise<DiscordCounts | null>;
 }) {
   const reduce = useReducedMotion();
   const [buildSize, setBuildSize] = useState(DEFAULT_HERO_SIZE);
@@ -262,6 +266,8 @@ export function MobileHome({
           <polyline points="12 5 19 12 12 19" />
         </svg>
       </Link>
+
+      <CommunitySection counts={discord} />
     </div>
   );
 }

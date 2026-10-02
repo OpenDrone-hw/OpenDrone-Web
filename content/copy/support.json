@@ -79,7 +79,7 @@
   "err_unavailable": "Tickets are not available right now. Try again in a few minutes, or ask the community on Discord.",
   "yours_title": "Your tickets",
   "find_cta": "Find my ticket",
-  "community_title": "Community",
+  "community_title": "Community on Discord",
   "topics_title": "Help",
   "topic_preorder": "Preorders",
   "topic_shipping": "Shipping",
@@ -155,5 +155,6 @@
   "resume_unavailable_body": "Try the link again in a few minutes.",
   "error_title": "Something went wrong",
   "error_body": "The page could not load or your message could not be sent, for example because the connection dropped. Nothing was sent. What you typed is kept in this tab; attached files need to be added again.",
-  "error_retry": "Try again"
+  "error_retry": "Try again",
+  "community_line": "Builds, setup, firmware. Orders: open a ticket."
 }
