@@ -26,7 +26,7 @@ import {parcelPromise, soonerMonth} from '~/components/ShipChip';
 import {LineShipChip} from '~/components/ParcelChip';
 import {buildSeoMeta} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
-import {cartQuoteCountry, countryName, shipCountryForRequest, shippingQuote} from '~/lib/shipping-rates';
+import {cartQuoteCountry, countryName, offersPickup, shipCountryForRequest, shippingQuote} from '~/lib/shipping-rates';
 import {usSalesRate} from '~/lib/us-sales';
 import {ShipToSelect} from '~/components/ShipToSelect';
 import {paysEuVat} from '~/lib/visitor-country';
@@ -368,6 +368,9 @@ function PopulatedCart({
                 ? t('us_price_note', 'Duties included')
                 : t('us_reprice', 'This cart was priced for the EU. Checkout moves it to US prices and ship dates first.')}
             </p>
+          ) : null}
+          {shippingRate && offersPickup(country) ? (
+            <p className="cart-summary-note">{t('pickup_note', 'Or pick up free at our Leuven office: choose Pickup at checkout.')}</p>
           ) : null}
           {shippingRate ? null : (
             <p className="cart-summary-note">{t('shipping_at_checkout', 'Shipping calculated at checkout')}</p>

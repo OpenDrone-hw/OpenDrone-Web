@@ -14,6 +14,10 @@ Pour les livraisons dans l’UE, un tarif fixe par commande, en euros, TVA compr
 | Chypre, Estonie, Malte | 16,95 € |
 | Bulgarie | 39,95 € |
 
+### Retrait gratuit à Louvain
+
+Les commandes pour la Belgique peuvent être retirées gratuitement à notre bureau, Stapelhuisstraat 15, 3000 Louvain. Choisissez Retrait lors du paiement au lieu d’un tarif d’expédition. Nous vous envoyons un e-mail lorsque votre commande est prête à être retirée ; prenez ensuite rendez-vous via le [Support](/support) et munissez-vous de votre numéro de commande. La date d’expédition indiquée pour votre commande est la date à laquelle elle est prête à être retirée.
+
 Incutec BV n’expédie pas vers la Russie, le Bélarus, l’Iran, la Corée du Nord, la Syrie et Cuba, ni vers d’autres destinations soumises à des mesures restrictives : voir notre [politique d’usage final](/end-use).
 
 ### TVA et douane
