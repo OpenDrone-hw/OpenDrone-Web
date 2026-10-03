@@ -1,20 +1,20 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-02T11:07:19.456Z",
+  "updatedAt": "2026-10-03T10:25:42.718Z",
   "repos": {
     "OpenESC-20x20": {
       "createdAt": "2026-03-09",
       "status": "beta",
       "statusSince": "2026-09-26",
       "archived": false,
-      "releases": 3
+      "releases": 4
     },
     "OpenESC-30x30": {
       "createdAt": "2026-03-14",
       "status": "beta",
       "statusSince": "2026-09-26",
       "archived": false,
-      "releases": 3
+      "releases": 4
     },
     "OpenDrone-Web": {
       "createdAt": "2026-03-21",
@@ -28,7 +28,7 @@
       "status": "alpha",
       "statusSince": "2026-08-15",
       "archived": false,
-      "releases": 2
+      "releases": 3
     },
     "OpenFC-Lite-Mini": {
       "createdAt": "2026-03-26",
@@ -119,28 +119,28 @@
       "status": "alpha",
       "statusSince": "2026-09-02",
       "archived": false,
-      "releases": 2
+      "releases": 3
     },
     "OpenRX-Mono": {
       "createdAt": "2026-09-01",
       "status": "alpha",
       "statusSince": "2026-09-02",
       "archived": false,
-      "releases": 2
+      "releases": 3
     },
     "OpenRX-Lite": {
       "createdAt": "2026-09-01",
       "status": "alpha",
       "statusSince": "2026-09-02",
       "archived": false,
-      "releases": 2
+      "releases": 3
     },
     "OpenRX-Lite-UFL": {
       "createdAt": "2026-09-01",
       "status": "alpha",
       "statusSince": "2026-09-02",
       "archived": false,
-      "releases": 2
+      "releases": 3
     },
     "discord": {
       "createdAt": "2026-09-27",
@@ -744,6 +744,83 @@
       "url": "https://github.com/OpenDrone-hw/OpenMotor",
       "archived": false,
       "observed": "2026-10-01"
+    },
+    {
+      "id": "release:OpenESC-20x20:rev3.3.1",
+      "kind": "release",
+      "repo": "OpenESC-20x20",
+      "date": "2026-10-02",
+      "tag": "rev3.3.1",
+      "name": "OpenESC-20x20 Rev 3.3.1",
+      "prerelease": false,
+      "url": "https://github.com/OpenDrone-hw/OpenESC-20x20/releases/tag/rev3.3.1",
+      "observed": "2026-10-03"
+    },
+    {
+      "id": "release:OpenESC-30x30:rev3.3.1",
+      "kind": "release",
+      "repo": "OpenESC-30x30",
+      "date": "2026-10-02",
+      "tag": "rev3.3.1",
+      "name": "OpenESC-30x30 Rev 3.3.1",
+      "prerelease": false,
+      "url": "https://github.com/OpenDrone-hw/OpenESC-30x30/releases/tag/rev3.3.1",
+      "observed": "2026-10-03"
+    },
+    {
+      "id": "release:OpenRX-Gemini:rev2.2",
+      "kind": "release",
+      "repo": "OpenRX-Gemini",
+      "date": "2026-10-02",
+      "tag": "rev2.2",
+      "name": "OpenRX Gemini Rev 2.2",
+      "prerelease": false,
+      "url": "https://github.com/OpenDrone-hw/OpenRX-Gemini/releases/tag/rev2.2",
+      "observed": "2026-10-03"
+    },
+    {
+      "id": "release:OpenRX-Lite-UFL:rev2.2",
+      "kind": "release",
+      "repo": "OpenRX-Lite-UFL",
+      "date": "2026-10-02",
+      "tag": "rev2.2",
+      "name": "OpenRX Lite UFL Rev 2.2",
+      "prerelease": false,
+      "url": "https://github.com/OpenDrone-hw/OpenRX-Lite-UFL/releases/tag/rev2.2",
+      "observed": "2026-10-03"
+    },
+    {
+      "id": "release:OpenRX-Lite:rev2.2",
+      "kind": "release",
+      "repo": "OpenRX-Lite",
+      "date": "2026-10-02",
+      "tag": "rev2.2",
+      "name": "OpenRX Lite Rev 2.2",
+      "prerelease": false,
+      "url": "https://github.com/OpenDrone-hw/OpenRX-Lite/releases/tag/rev2.2",
+      "observed": "2026-10-03"
+    },
+    {
+      "id": "release:OpenRX-Mono:rev2.2",
+      "kind": "release",
+      "repo": "OpenRX-Mono",
+      "date": "2026-10-02",
+      "tag": "rev2.2",
+      "name": "OpenRX Mono Rev 2.2",
+      "prerelease": false,
+      "url": "https://github.com/OpenDrone-hw/OpenRX-Mono/releases/tag/rev2.2",
+      "observed": "2026-10-03"
+    },
+    {
+      "id": "release:OpenRX:rev2.2",
+      "kind": "release",
+      "repo": "OpenRX",
+      "date": "2026-10-02",
+      "tag": "rev2.2",
+      "name": "OpenRX Panel Rev 2.2",
+      "prerelease": false,
+      "url": "https://github.com/OpenDrone-hw/OpenRX/releases/tag/rev2.2",
+      "observed": "2026-10-03"
     }
   ]
 }
