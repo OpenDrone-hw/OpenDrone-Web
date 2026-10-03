@@ -130,7 +130,7 @@ describe('fetchDiscordCounts', () => {
     });
   });
 
-  it('shares one request between concurrent callers', async () => {
+  it('never shares an in-flight request between callers', async () => {
     let calls = 0;
     const fetchImpl = async () => {
       calls++;
@@ -140,7 +140,7 @@ describe('fetchDiscordCounts', () => {
       fetchDiscordCounts({fetchImpl, inviteUrl: INVITE, cache: null}),
       fetchDiscordCounts({fetchImpl, inviteUrl: INVITE, cache: null}),
     ]);
-    assert.equal(calls, 1);
+    assert.equal(calls, 2);
   });
 
   it('serves the stored counts while fresh, without calling Discord', async () => {

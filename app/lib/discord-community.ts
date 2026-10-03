@@ -101,12 +101,12 @@ async function writeStored(cache: CountsCache | null, stored: Stored): Promise<v
 }
 
 let memo: {at: number; ttl: number; counts: DiscordCounts | null} | null = null;
-let inflight: Promise<DiscordCounts | null> | null = null;
+// No in-flight promise is shared across requests: in Workers, a request
+// that ends first leaves every later one awaiting its promise forever.
 
 /** Tests only: forget the per-isolate memory. */
 export function resetDiscordCountsCache(): void {
   memo = null;
-  inflight = null;
 }
 
 type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
@@ -123,10 +123,9 @@ export async function fetchDiscordCounts({
   cache?: CountsCache | null;
 } = {}): Promise<DiscordCounts | null> {
   if (memo && memo.counts && now() - memo.at < memo.ttl) return memo.counts;
-  if (inflight) return inflight;
   const api = inviteApiUrl(inviteUrl);
   if (!api) return null;
-  inflight = (async () => {
+  return (async () => {
     const stored = await readStored(cache);
     const age = stored ? now() - stored.at : Infinity;
     if (stored && age < COUNTS_TTL_MS) {
@@ -153,7 +152,10 @@ export async function fetchDiscordCounts({
           cf: {cacheTtlByStatus: {'200-299': 3600, '400-599': 0}},
         } as RequestInit),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        await res.body?.cancel();
+        throw new Error(`HTTP ${res.status}`);
+      }
       const counts = parseInviteCounts(await res.json());
       if (!counts) throw new Error('no counts in the invite response');
       memo = {at: now(), ttl: COUNTS_TTL_MS, counts};
@@ -168,8 +170,5 @@ export async function fetchDiscordCounts({
       memo = {at: now(), ttl: MISS_TTL_MS, counts: stale};
       return stale;
     }
-  })().finally(() => {
-    inflight = null;
-  });
-  return inflight;
+  })();
 }

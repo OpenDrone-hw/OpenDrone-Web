@@ -113,7 +113,7 @@ describe('fetchPaidUnits', () => {
 });
 
 describe('paidUnits', () => {
-  it('shares one fetch between concurrent callers and reuses it for a minute', async () => {
+  it('never shares an in-flight fetch between callers, and reuses a result for a minute', async () => {
     let calls = 0;
     const fetcher = async () => {
       calls += 1;
@@ -125,7 +125,7 @@ describe('paidUnits', () => {
     ]);
     await paidUnits(ENV, '2026-09-21', SKUS, fetcher);
     assert.deepEqual(a, b);
-    assert.equal(calls, 1);
+    assert.equal(calls, 2);
   });
 });
 

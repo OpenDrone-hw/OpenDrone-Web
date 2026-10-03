@@ -21,7 +21,9 @@
  * runs longer than 60 days: without it Shopify only returns the last 60
  * days of orders and the counts would fall.
  *
- * One fetch per isolate per minute, shared by concurrent requests. Any
+ * One result per isolate per minute. Concurrent misses each fetch: a
+ * Workers promise must never be shared across requests, or a request that
+ * ends first leaves every later one waiting on it forever. Any
  * failure throws; the caller closes campaign SKUs rather than guessing.
  */
 
@@ -73,7 +75,6 @@ type OrdersPage = {
 };
 
 const memo = new Map<string, {units: Record<string, UnitRuns>; fetchedAt: number}>();
-const inflight = new Map<string, Promise<Record<string, UnitRuns>>>();
 
 function adminEndpoint(env: OrdersEnv): {url: string; token: string} {
   const domain = env.SHOPIFY_STORE_DOMAIN?.trim().toLowerCase()
@@ -139,7 +140,10 @@ export async function fetchPaidUnitRuns(
       redirect: 'manual',
       signal: AbortSignal.timeout(5000),
     });
-    if (!response.ok) throw new Error(`shopify orders: Admin API returned ${response.status}`);
+    if (!response.ok) {
+      await response.body?.cancel();
+      throw new Error(`shopify orders: Admin API returned ${response.status}`);
+    }
     const result = (await response.json()) as {data?: OrdersPage; errors?: unknown[]};
     if (result.errors?.length || !result.data) {
       throw new Error('shopify orders: Admin API rejected the query');
@@ -191,20 +195,13 @@ export function paidUnitRuns(
   const key = `${env.SHOPIFY_STORE_DOMAIN ?? ''}|${countFrom}|${[...skus].sort().join(',')}`;
   const cached = memo.get(key);
   if (cached && Date.now() - cached.fetchedAt < FRESH_MS) return Promise.resolve(cached.units);
-  const running = inflight.get(key);
-  if (running) return running;
-  const request = fetchPaidUnitRuns(env, countFrom, skus, fetcher)
-    .then((units) => {
-      memo.set(key, {units, fetchedAt: Date.now()});
-      return units;
-    })
-    .finally(() => inflight.delete(key));
-  inflight.set(key, request);
-  return request;
+  return fetchPaidUnitRuns(env, countFrom, skus, fetcher).then((units) => {
+    memo.set(key, {units, fetchedAt: Date.now()});
+    return units;
+  });
 }
 
 /** Test seam: drop the per-isolate memory. */
 export function resetPaidUnitsMemo(): void {
   memo.clear();
-  inflight.clear();
 }
