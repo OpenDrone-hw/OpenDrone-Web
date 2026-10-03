@@ -48,6 +48,7 @@ export function BuildBundle({
   );
   return (
     <div className="build-bundle">
+      <p className="build-bundle-eyebrow">{t('bundle_eyebrow', 'Not in your cart')}</p>
       <p className="build-bundle-title">
         {label
           ? t('bundle_title_sized', 'Complete your {build} build', {build: label})
@@ -67,7 +68,10 @@ export function BuildBundle({
               ) : (
                 <span className="cart-line-noimage" aria-hidden="true" />
               )}
-              <span>{part.quantity > 1 ? `${part.quantity}x ${name}` : name}</span>
+              <span className="build-bundle-name">{part.quantity > 1 ? `${part.quantity}x ${name}` : name}</span>
+              <span className="build-bundle-price">
+                {formatPrice(Number(part.variant.price.amount) * part.quantity, part.variant.price.currencyCode)}
+              </span>
             </li>
           );
         })}
@@ -88,7 +92,7 @@ export function BuildBundle({
           ) : failed ? (
             t('build_retry', 'Try again')
           ) : (
-            t('bundle_add', 'Add all')
+            t('bundle_add', 'Add all {count}', {count: String(parts.length)})
           )}
         </button>
       </div>
