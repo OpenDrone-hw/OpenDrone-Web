@@ -14506,6 +14506,17 @@ html.light .cart-added-suggestion img {
   padding-top: var(--sp-4);
   border-top: 1px solid var(--color-border);
 }
+/* A short screen (a phone): Subtotal and Checkout come straight after the
+   added line, the suggestions after them, so checking out never means
+   scrolling past every suggestion first. */
+@media (max-height: 760px) {
+  .cart-added-foot {
+    order: 1;
+  }
+  .cart-added-build {
+    order: 2;
+  }
+}
 .cart-added-subtotal {
   display: flex;
   justify-content: space-between;
@@ -18201,4 +18212,32 @@ summary,
     white-space: nowrap;
     flex-shrink: 0;
   }
+}
+
+/* Card quick-add pills are sized for one short word: while adding, the
+   "Adding..." text keeps the pill's width but is transparent (screen
+   readers still read it) and the spinner turns centred on top. A busy or
+   failed pill stays visible when the pointer
+   leaves instead of fading out mid-add or hiding its error. */
+.product-card-quickadd-btn[aria-busy="true"] .cart-action-label {
+  position: relative;
+  max-width: none;
+  color: transparent;
+}
+.product-card-quickadd-btn[aria-busy="true"] .cart-action-spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  color: var(--color-on-accent);
+}
+.product-card-quickadd .product-card-quickadd-btn:is([aria-busy="true"], [data-state="error"]),
+.related-card-quickadd .product-card-quickadd-btn:is([aria-busy="true"], [data-state="error"]) {
+  opacity: 1;
+  transform: none;
+}
+.product-card-quickadd-btn[data-state="error"] .cart-action-label {
+  white-space: normal;
 }

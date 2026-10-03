@@ -16,6 +16,9 @@ export type CartAddedDetail = {
   skus: string[];
   /** Handle of the product the add came from, for recommendations. */
   handle: string | null;
+  /** The button a keyboard user pressed: focus returns to it when the
+   *  dialog closes. Null for a pointer add. */
+  returnFocus?: HTMLElement | null;
 };
 
 export class CartAddError extends Error {

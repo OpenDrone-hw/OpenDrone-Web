@@ -1,3 +1,4 @@
+import {LoaderCircle} from 'lucide-react';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {shopifyImageUrl} from '~/lib/shopify-image';
 import {Link, useLocation, useRevalidator, useRouteLoaderData} from 'react-router';
@@ -64,7 +65,8 @@ export function CartAddedDialog() {
   useEffect(() => {
     const open = (event: Event) => {
       const next = (event as CustomEvent<CartAddedDetail>).detail;
-      returnFocus.current = document.activeElement as HTMLElement | null;
+      const active = document.activeElement as HTMLElement | null;
+      returnFocus.current = next.returnFocus ?? (active && active !== document.body ? active : null);
       setDetail(next);
       setSummary(next.summary);
       setFailed(null);
@@ -100,6 +102,22 @@ export function CartAddedDialog() {
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [detail, close]);
+
+  // The page behind stays put while the drawer is open. The lock goes on
+  // <html>: its overflow-x clip keeps a body lock from reaching the viewport.
+  const open = detail !== null;
+  useEffect(() => {
+    if (!open) return;
+    const root = document.documentElement;
+    const prevRoot = root.style.overflow;
+    const prevBody = document.body.style.overflow;
+    root.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    return () => {
+      root.style.overflow = prevRoot;
+      document.body.style.overflow = prevBody;
+    };
+  }, [open]);
 
   // A navigation (View cart, a product link) closes the drawer.
   useEffect(() => setDetail(null), [pathname]);
@@ -286,9 +304,15 @@ export function CartAddedDialog() {
                       type="button"
                       className="cart-added-add"
                       disabled={inCart || busy !== null}
+                      aria-busy={busy === part.sku || undefined}
                       onClick={() => void addPart(part)}
                     >
-                      {inCart
+                      {busy === part.sku ? (
+                        <span className="cart-action-label">
+                          <LoaderCircle className="cart-action-spinner" size={14} aria-hidden="true" />
+                          <span className="sr-only">{t('add_busy', 'Adding…')}</span>
+                        </span>
+                      ) : inCart
                         ? t('build_added', 'Added')
                         : failed === part.sku
                           ? t('build_retry', 'Try again')
