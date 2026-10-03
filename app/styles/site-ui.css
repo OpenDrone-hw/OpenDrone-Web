@@ -1034,7 +1034,9 @@ html.light .po-card-cta {
 }
 .footer-tb-value a { text-decoration: underline; text-underline-offset: 2px; }
 .footer-tb-value a:hover { color: var(--ink); }
-.footer-tb-wordmark { display: block; height: 20px; width: auto; margin-top: 2px; }
+/* 20 px tall where the cell allows; a narrow cell (tablet) scales it down
+   instead of letting it run under the next cell. */
+.footer-tb-wordmark { display: block; width: min(100%, 106px); height: auto; aspect-ratio: 2472 / 467.64; margin-top: 2px; }
 
 @media (max-width: 1023px) {
   .footer-top { grid-template-columns: minmax(0, 1fr); gap: 20px; }

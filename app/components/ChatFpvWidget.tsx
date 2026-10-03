@@ -209,11 +209,18 @@ export function ChatFpvWidget({src, handoff = false}: {src: string | null | unde
   // roll-back animation can play, then drop the pinned handoff dock/src -
   // deferred here rather than in `closePanel` so a docked panel does not
   // jump to the default layout mid-shrink.
+  // A panel that was never open has nothing to roll back: without this
+  // guard the first render mounted it for PANEL_ANIM_MS on every page load,
+  // a visible flash and a layout shift.
+  const wasMounted = useRef(false);
   useEffect(() => {
     if (mounted) {
+      wasMounted.current = true;
       setClosing(false);
       return;
     }
+    if (!wasMounted.current) return;
+    wasMounted.current = false;
     setClosing(true);
     const t = window.setTimeout(() => {
       setClosing(false);

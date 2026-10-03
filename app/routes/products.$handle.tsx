@@ -474,7 +474,31 @@ function ClientFrameViewer(props: FrameViewerProps) {
   const [Viewer, setViewer] = useState<React.ComponentType<FrameViewerProps> | null>(
     null,
   );
+  // The drawing sits far down the page: fetch three.js and the models only
+  // once its slot comes within 300 px of the viewport (on a phone
+  // they were half the page's bytes, loaded for buyers who never scroll).
+  const probe = useRef<HTMLSpanElement>(null);
+  const [near, setNear] = useState(false);
   useEffect(() => {
+    const slot = probe.current?.parentElement;
+    if (!slot || typeof IntersectionObserver === 'undefined') {
+      setNear(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setNear(true);
+          io.disconnect();
+        }
+      },
+      {rootMargin: '300px 0px'},
+    );
+    io.observe(slot);
+    return () => io.disconnect();
+  }, []);
+  useEffect(() => {
+    if (!near) return;
     let alive = true;
     void import('~/components/FrameViewer').then((m) => {
       if (alive) setViewer(() => m.FrameViewer);
@@ -482,8 +506,8 @@ function ClientFrameViewer(props: FrameViewerProps) {
     return () => {
       alive = false;
     };
-  }, []);
-  if (!Viewer) return null;
+  }, [near]);
+  if (!Viewer) return <span ref={probe} hidden />;
   return <Viewer {...props} />;
 }
 

@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {FocusEvent} from 'react';
 import {useLocation} from 'react-router';
 
@@ -40,6 +40,22 @@ export function useHeaderPopover() {
       document.removeEventListener('keydown', onKey);
     };
   }, [open, close]);
+
+  // The panel hangs from the trigger's right edge; on a narrow phone that
+  // can push it past the left edge of the screen. Shift it back inside,
+  // with a 12 px margin, before it paints.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const panel = rootRef.current?.querySelector<HTMLElement>('.header-popover-panel');
+    if (!panel) return;
+    panel.style.translate = '';
+    const margin = 12;
+    const rect = panel.getBoundingClientRect();
+    const vw = document.documentElement.clientWidth;
+    const shift =
+      rect.left < margin ? margin - rect.left : rect.right > vw - margin ? vw - margin - rect.right : 0;
+    if (shift) panel.style.translate = `${Math.round(shift)}px 0`;
+  }, [open]);
 
   const onBlur = useCallback((e: FocusEvent<HTMLElement>) => {
     const next = e.relatedTarget as Node | null;

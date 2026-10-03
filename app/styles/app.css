@@ -4587,9 +4587,15 @@ button.reset {
 
 .variant-tier-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--sp-2);
+  gap: 2px var(--sp-2);
+}
+/* A long name on a narrow card wraps the price to its own line instead of
+   pushing it past the card's border. */
+.variant-tier-name {
+  min-width: 0;
 }
 
 .variant-tier-name {
