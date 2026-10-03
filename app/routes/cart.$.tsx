@@ -32,6 +32,7 @@ import {Txt} from '~/components/Txt';
 import {ShipChip, parcelPromise, soonerMonth} from '~/components/ShipChip';
 import {LineShipChip, heldBy, parcelDelay} from '~/components/ParcelChip';
 import {trackEvent} from '~/lib/growth/plausible';
+import {BuildBundle, bundleFields} from '~/components/BuildBundle';
 import {buildSeoMeta} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
 import {cartQuoteCountry, countryName, offersPickup, shipCountryForRequest, shippingQuote} from '~/lib/shipping-rates';
@@ -376,17 +377,34 @@ function CartSuggestions({cart, group}: {cart: ShopifyCart; group: 'build' | 'ex
       </div>
     );
   }
-  // The rest of the quad: one closed line the buyer opens if they want it,
-  // never a wall of full-price parts.
+  // The rest of the quad: one card, one button for every part.
+  const addAll = async () => {
+    if (busy) return;
+    setBusy('bundle');
+    setFailed(null);
+    try {
+      await postCart('/api/shopify/cart', withCountry(bundleFields(build), visitor));
+      trackEvent('Recommendation Add', {
+        props: {product: build.map((p) => p.handle).join(','), source_product: 'cart', role: 'bundle', strategy: 'compatibility'},
+      });
+      void revalidator.revalidate();
+    } catch {
+      setFailed('bundle');
+    } finally {
+      setBusy(null);
+    }
+  };
   return (
-    <details className="cart-suggest cart-build-more">
-      <summary>
-        {buildLabel
-          ? t('build_more_sized', 'Completing a {build} build? {count} parts', {build: buildLabel, count: build.length})
-          : t('build_more', 'Completing a build? {count} parts', {count: build.length})}
-      </summary>
-      <ul className="cart-added-suggestions">{build.map(row)}</ul>
-    </details>
+    <div className="cart-suggest">
+      <BuildBundle
+        parts={build}
+        label={buildLabel}
+        cartPromises={promises}
+        busy={busy === 'bundle' || revalidator.state !== 'idle'}
+        failed={failed === 'bundle'}
+        onAdd={() => void addAll()}
+      />
+    </div>
   );
 }
 

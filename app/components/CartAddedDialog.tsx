@@ -24,6 +24,7 @@ import {
 } from '~/lib/build-recommendations';
 import buildsJson from '../../content/builds.json';
 import {beginCartAdd, endCartAdd} from './cart-add-lock';
+import {BuildBundle, bundleFields} from './BuildBundle';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
 import {DATES_SEEN_FIELD, latestDeliveryBy, type CartSummary} from '~/lib/shopify-cart-action';
 import {trackEvent} from '~/lib/growth/plausible';
@@ -189,6 +190,31 @@ export function CartAddedDialog() {
     }
   };
 
+  // Parts already in the cart (added from here, say) leave the bundle.
+  const bundle = suggestions.filter((p) => !summary.lines.some((l) => l.sku === p.sku));
+  const addBundle = async () => {
+    if (!bundle.length || !beginCartAdd()) return;
+    setBusy('bundle');
+    setFailed(null);
+    try {
+      setSummary(await postCartAdd(CART_ACTION, withCountry(bundleFields(bundle), visitor)));
+      trackEvent('Recommendation Add', {
+        props: {
+          product: bundle.map((p) => p.handle).join(','),
+          source_product: detail.handle ?? 'unknown',
+          role: 'bundle',
+          strategy: 'compatibility',
+        },
+      });
+      void revalidator.revalidate();
+    } catch {
+      setFailed('bundle');
+    } finally {
+      endCartAdd();
+      setBusy(null);
+    }
+  };
+
   return (
     <div className="cart-added-overlay" role="presentation">
       <button
@@ -255,16 +281,9 @@ export function CartAddedDialog() {
             // The cheap add-ons first: one tap, and they never fall below
             // a long build list.
             ['extras', t('extras_title', 'Add-ons'), extras],
-            ['build', t('build_title', 'Complete the build'), suggestions],
           ] as const
         ).map(([group, title, parts]) => parts.length ? (
-          <Group key={group} closed={group === 'build'} title={
-            group === 'build'
-              ? buildLabel
-                ? t('build_more_sized', 'Completing a {build} build? {count} parts', {build: buildLabel, count: String(parts.length)})
-                : t('build_more', 'Completing a build? {count} parts', {count: String(parts.length)})
-              : title
-          }>
+          <Group key={group} title={title}>
             <ul className="cart-added-suggestions">
               {parts.map((part) => {
                 const image = part.variant.image ?? part.product.featuredImage;
@@ -322,6 +341,15 @@ export function CartAddedDialog() {
             </ul>
           </Group>
         ) : null)}
+        {/* The rest of the quad: one card, one button for every part. */}
+        <BuildBundle
+          parts={bundle}
+          label={buildLabel}
+          cartPromises={cartPromises}
+          busy={busy === 'bundle'}
+          failed={failed === 'bundle'}
+          onAdd={() => void addBundle()}
+        />
 
         <div className="cart-added-foot">
           <ShipToSelect
@@ -425,17 +453,8 @@ export function CartAddedDialog() {
   );
 }
 
-/** One suggestion group: the add-ons open under their title, the rest of
- *  the build as a closed line the buyer opens if they want it. */
-function Group({title, closed, children}: {title: string; closed: boolean; children: React.ReactNode}) {
-  if (closed) {
-    return (
-      <details className="cart-added-build cart-build-more">
-        <summary>{title}</summary>
-        {children}
-      </details>
-    );
-  }
+/** One open suggestion group under its title (the add-ons). */
+function Group({title, children}: {title: string; children: React.ReactNode}) {
   return (
     <div className="cart-added-build cart-added-addons">
       <p className="cart-added-build-title">{title}</p>

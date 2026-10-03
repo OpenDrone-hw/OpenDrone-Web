@@ -14467,39 +14467,79 @@ html.light .cart-added-line img {
   gap: var(--sp-3);
 }
 
-/* "Completing a build?": one quiet line, closed; the parts show on tap. */
-.cart-build-more {
-  display: block;
-  border-top: 1px solid var(--color-border);
-  border-bottom: 1px solid var(--color-border);
+/* "Complete your 3-inch build": the missing parts in a row, their total
+   and one button that adds them all. */
+.build-bundle {
+  display: grid;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md, 10px);
+  background: var(--color-bg-card);
 }
-.cart-build-more > summary {
+.build-bundle-title {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--color-text);
+}
+.build-bundle-parts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: var(--sp-2) var(--sp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.build-bundle-parts li {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+}
+.build-bundle-parts img,
+.build-bundle-parts .cart-line-noimage {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-sm);
+  object-fit: cover;
+  background: #ece9e3;
+}
+.build-bundle-foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-3);
-  min-height: 48px;
-  cursor: pointer;
-  list-style: none;
-  font-size: var(--fs-sm);
-  color: var(--color-text-muted);
+  flex-wrap: wrap;
 }
-.cart-build-more > summary::-webkit-details-marker {
-  display: none;
-}
-.cart-build-more > summary::after {
-  content: '+';
+.build-bundle-total {
   font-family: var(--font-mono);
-  color: var(--color-text-muted);
-}
-.cart-build-more[open] > summary::after {
-  content: '\2212';
-}
-.cart-build-more > summary:hover {
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
   color: var(--color-text);
 }
-.cart-build-more .cart-added-suggestion:first-child {
-  border-top: 1px solid var(--color-border);
+.build-bundle-add {
+  min-height: 40px;
+  padding: 0 1.1rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--color-text);
+  font-weight: 600;
+  cursor: pointer;
+}
+.build-bundle-add:hover:not(:disabled) {
+  border-color: var(--color-gold);
+}
+.build-bundle-add:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.build-bundle-note {
+  color: var(--color-text-muted);
 }
 /* The add-ons card above Checkout: a gold-edged box so the cheap
    one-tap items read as part of the order, not as an advert. */
@@ -14520,9 +14560,6 @@ html.light .cart-added-line img {
    their rows carry no date; the closed build line needs no second rule. */
 .cart-added-addons .ship-chip.cart-added-ship {
   display: none;
-}
-.cart-added .cart-build-more {
-  border-bottom: none;
 }
 a.cart-added-suggestion-name:hover {
   text-decoration: underline;
