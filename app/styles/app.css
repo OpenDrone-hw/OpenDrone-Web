@@ -14392,6 +14392,203 @@ html.light .cart-added-line img {
   display: grid;
   gap: var(--sp-2);
 }
+/* The cart page: the same rows under the line sheet. */
+.cart-suggest {
+  display: grid;
+  gap: var(--sp-5);
+  margin-top: var(--sp-6);
+}
+/* "Your parcel": the one ship date and delivery date of the order, next to
+   Checkout. Closed it is one line; open it lists each item's date and the
+   funding-target rule. */
+.cart-parcel {
+  margin: var(--sp-2) 0;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--fs-sm);
+}
+.cart-parcel > summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3) 0;
+  cursor: pointer;
+  list-style: none;
+}
+.cart-parcel > summary::-webkit-details-marker {
+  display: none;
+}
+.cart-parcel > summary::after {
+  content: '+';
+  font-family: var(--font-mono);
+  color: var(--color-text-muted);
+}
+.cart-parcel[open] > summary::after {
+  content: '\2212';
+}
+.cart-parcel-label {
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.cart-parcel-when {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  justify-items: end;
+  text-align: right;
+}
+.cart-parcel-when small {
+  color: var(--color-text-muted);
+}
+.cart-parcel-body {
+  display: grid;
+  gap: var(--sp-2);
+  padding-bottom: var(--sp-3);
+  color: var(--color-text-muted);
+}
+.cart-parcel-body p {
+  margin: 0;
+}
+.cart-parcel-body a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.cart-parcel-items {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cart-parcel-items li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+/* "Complete your 3-inch build": the missing parts as a list with their
+   prices, their total and one button that adds them all. A dashed,
+   neutral card under a "Not in your cart" label, so it never reads as
+   part of the order above it. */
+.build-bundle {
+  display: grid;
+  gap: var(--sp-3);
+  margin-top: var(--sp-6);
+  padding: var(--sp-4) var(--sp-5);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--r-md, 10px);
+  background: var(--color-bg-elevated);
+}
+.cart-suggest .build-bundle {
+  margin-top: 0;
+}
+.build-bundle-eyebrow {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.build-bundle-title {
+  margin: -0.4rem 0 0;
+  font-size: var(--fs-base);
+  font-weight: 600;
+  color: var(--color-text);
+}
+.build-bundle-parts {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.build-bundle-parts li {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) 0;
+  border-top: 1px solid var(--color-border);
+  font-size: var(--fs-sm);
+}
+.build-bundle-parts img,
+.build-bundle-parts .cart-line-noimage {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-sm);
+  object-fit: cover;
+  background: #ece9e3;
+}
+.build-bundle-name {
+  min-width: 0;
+  color: var(--color-text);
+}
+.build-bundle-price {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.build-bundle-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--color-border);
+}
+.build-bundle-total {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+.build-bundle-add {
+  min-height: 40px;
+  padding: 0 1.2rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--color-text);
+  font-weight: 600;
+  cursor: pointer;
+}
+.build-bundle-add:hover:not(:disabled) {
+  border-color: var(--color-text-muted);
+}
+.build-bundle-add:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.build-bundle-note {
+  color: var(--color-text-muted);
+}
+/* The add-ons card above Checkout: a gold-edged box so the cheap
+   one-tap items read as part of the order, not as an advert. */
+.cart-addons {
+  margin: var(--sp-2) 0 var(--sp-4);
+  padding: var(--sp-3) var(--sp-4) var(--sp-1);
+  border: 1px solid color-mix(in srgb, var(--color-gold) 45%, var(--color-border));
+  border-radius: var(--r-md, 10px);
+  background: color-mix(in srgb, var(--color-gold) 6%, var(--color-bg-card));
+}
+.cart-addons .cart-added-suggestion:first-child {
+  border-top: none;
+}
+.cart-addons .cart-added-ship {
+  display: none;
+}
+/* Drawer add-ons never move the parcel date (they are filtered on it), so
+   their rows carry no date; the closed build line needs no second rule. */
+.cart-added-addons .ship-chip.cart-added-ship {
+  display: none;
+}
+a.cart-added-suggestion-name:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
 .cart-added-build-title {
   margin: 0;
   font-size: var(--fs-sm);
@@ -14660,6 +14857,15 @@ html.light .cart-added-suggestion img {
   .cart.page-shell .cart-summary-page {
     position: sticky;
     top: calc(var(--header-height) + 2.5rem);
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+  /* "Complete the build" follows the summary in the markup, so a phone
+     reaches Checkout first; here it sits under the lines. */
+  .cart.page-shell .cart-main > .cart-suggest {
+    grid-column: 1;
+    grid-row: 2;
+    margin-top: 0;
   }
   .cart.page-shell .cart-summary-page .cart-checkout-cta {
     max-width: none;

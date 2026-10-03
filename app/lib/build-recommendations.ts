@@ -27,7 +27,19 @@ export type BuildsConfig = {
      *  prop set is its own product). */
     parts: Array<{role: BuildRole; sku: string; quantity: number; handle?: string}>;
   }>;
+  /** Spares and accessories, offered once the cart holds a `with` SKU. */
+  extras?: Array<{
+    sku: string;
+    handle: string;
+    quantity: number;
+    with: string[];
+    /** One per quad: the quantity follows the largest cart line among these
+     *  SKUs (four flight controllers, four straps), capped at MAX_PER_QUAD. */
+    perQuad?: string[];
+  }>;
 };
+
+const MAX_PER_QUAD = 10;
 
 /** The product handle of a build part: its own, else its role's. */
 export function partHandle(
@@ -37,14 +49,14 @@ export function partHandle(
   return part.handle ?? config.roles[part.role].handle ?? '';
 }
 
-export type BuildPart = {role: BuildRole; handle: string; sku: string; quantity: number};
+export type BuildPart = {role: BuildRole | 'extra'; handle: string; sku: string; quantity: number};
 
 export type BuildSuggestion = BuildPart & {
   product: ProductCardFragment;
   variant: ProductVariantFragment;
 };
 
-type CartLine = {sku: string | null; handle: string; variantTitle?: string};
+type CartLine = {sku: string | null; handle: string; variantTitle?: string; quantity?: number};
 
 /** Accept `content/builds.json`, or throw on anything malformed. */
 export function parseBuilds(body: unknown): BuildsConfig {
@@ -59,6 +71,18 @@ export function parseBuilds(body: unknown): BuildsConfig {
       if (!Number.isSafeInteger(part.quantity) || part.quantity < 1) {
         throw new Error(`builds: ${build.id} ${part.sku} needs a positive quantity`);
       }
+    }
+  }
+  for (const extra of c.extras ?? []) {
+    if (!extra.sku || !extra.handle) throw new Error('builds: every extra needs a sku and a handle');
+    if (!Number.isSafeInteger(extra.quantity) || extra.quantity < 1) {
+      throw new Error(`builds: extra ${extra.sku} needs a positive quantity`);
+    }
+    if (!Array.isArray(extra.with) || extra.with.length === 0) {
+      throw new Error(`builds: extra ${extra.sku} needs at least one "with" SKU`);
+    }
+    if (extra.perQuad && !extra.perQuad.every((s) => extra.with.includes(s))) {
+      throw new Error(`builds: extra ${extra.sku} counts quads by a SKU outside "with"`);
     }
   }
   return c as BuildsConfig;
@@ -131,6 +155,30 @@ export function buildSuggestionSpecs(
           (rank.get(b.part.handle) ?? Number.MAX_SAFE_INTEGER) || a.index - b.index,
     )
     .map(({part}) => part);
+}
+
+/**
+ * The spares and accessories to offer: every extra whose `with` SKUs meet
+ * the cart, leaving out what the cart holds and what `exclude` already
+ * offers (the build parts), in list order. The caller caps the list after
+ * resolving it, so an extra that cannot be sold leaves room for the next.
+ */
+export function extraSuggestionSpecs(
+  config: BuildsConfig,
+  cart: readonly CartLine[] = [],
+  exclude: readonly string[] = [],
+): BuildPart[] {
+  const skus = new Set(cart.map((line) => line.sku).filter(Boolean));
+  const skip = new Set(exclude);
+  return (config.extras ?? [])
+    .filter((e) => !skus.has(e.sku) && !skip.has(e.sku) && e.with.some((s) => skus.has(s)))
+    .map(({sku, handle, quantity, perQuad}) => {
+      const quads = Math.max(
+        0,
+        ...cart.filter((line) => line.sku && perQuad?.includes(line.sku)).map((line) => line.quantity ?? 1),
+      );
+      return {role: 'extra' as const, sku, handle, quantity: Math.min(Math.max(quantity, quads), MAX_PER_QUAD)};
+    });
 }
 
 /**

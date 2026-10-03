@@ -81,16 +81,24 @@
   line waits for a funding target. Dates come from FACTS in
   app/lib/email-shell.ts. The full rules live on /preorder and in the terms.
 {% endcomment %}
+{% comment %}
+  The order ships as one parcel. When every line carries the same promise
+  (and the same delivery date) it is said once in the box and the lines
+  carry none; lines whose dates differ keep their own, in grey.
+{% endcomment %}
 {% assign has_preorder = false %}
 {% assign has_target = false %}
-{% for line in line_items %}{% for p in line.properties %}{% if p.first == 'Preorder' and p.last != blank %}{% assign has_preorder = true %}{% if p.last contains 'target' or p.last contains 'with the rest' %}{% assign has_target = true %}{% endif %}{% endif %}{% endfor %}{% endfor %}
+{% assign first_promise = '' %}{% assign promises_differ = false %}
+{% assign first_delivery = '' %}{% assign deliveries_differ = false %}
+{% for line in line_items %}{% for p in line.properties %}{% if p.first == 'Preorder' and p.last != blank %}{% assign has_preorder = true %}{% if p.last contains 'target' or p.last contains 'with the rest' %}{% assign has_target = true %}{% endif %}{% if first_promise == '' %}{% assign first_promise = p.last %}{% elsif p.last != first_promise %}{% assign promises_differ = true %}{% endif %}{% elsif p.first == 'Delivery by' and p.last != blank %}{% if first_delivery == '' %}{% assign first_delivery = p.last %}{% elsif p.last != first_delivery %}{% assign deliveries_differ = true %}{% endif %}{% endif %}{% endfor %}{% endfor %}
 {% if has_preorder %}
+{% assign one_promise = first_promise | replace: 'March', 'Mar' | replace: 'December', 'Dec' %}
             <tr>
               <td class="od-px" style="padding: 0 32px 20px 32px;">
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0a0a0a" style="background-color: #0a0a0a; border: 1px solid #ffb700;">
                   <tr>
                     <td style="padding: 14px 18px;">
-                      <p style="margin: 0 0 0px 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #c5c5c5;"><strong style="color: #ffb700;">Preorder, paid in full.</strong> {% if has_target %}Ships by 31 Mar 2027 if the target is reached by 15 Dec 2026; if not, you choose a full refund or the new date.{% else %}Each item shows its ship date.{% endif %} <a href="https://opendrone.be/preorder" style="color: #ffb700;">How preorders work</a></p>
+                      <p style="margin: 0 0 0px 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #c5c5c5;"><strong style="color: #ffb700;">Preorder, paid in full.</strong> {% if promises_differ == false %}{{ one_promise | slice: 0 | upcase | escape }}{{ one_promise | slice: 1, 1000 | escape }}.{% if first_delivery != '' and deliveries_differ == false %} Delivery by {{ first_delivery | escape }}.{% endif %}{% elsif has_target %}Your order ships as one parcel, by 31 Mar 2027 if the target is reached by 15 Dec 2026; if not, you choose a full refund or the new date.{% else %}Your order ships as one parcel; each item shows its date.{% endif %} <a href="https://opendrone.be/preorder" style="color: #ffb700;">How preorders work</a></p>
                     </td>
                   </tr>
                 </table>
@@ -140,16 +148,16 @@
                       <p style="margin: 0 0 2px 0; font-family: 'Space Grotesk', Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 700; color: #e5e5e5;">
                         {{ line.product.title | default: line.title | escape }}{% if line.variant.title != 'Default Title' %} <span style="font-weight: 400; color: #a0a0a0;">&middot; {{ line.variant.title | escape }}</span>{% endif %}
                       </p>
-                      {% for p in line.properties %}{% if p.first == 'Preorder' and p.last != blank %}
+                      {% if promises_differ %}{% for p in line.properties %}{% if p.first == 'Preorder' and p.last != blank %}
                       {% assign note = p.last %}
                       {% assign note = note | replace: 'March', 'Mar' | replace: 'December', 'Dec' %}
-                      <p style="margin: 0 0 2px 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; color: #ffb700;">
+                      <p style="margin: 0 0 2px 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; color: #a0a0a0;">
                         {{ note | slice: 0 | upcase | escape }}{{ note | slice: 1, 1000 | escape }}
                       </p>
-                      {% endif %}{% endfor %}
-                      {% for p in line.properties %}{% if p.first == 'Delivery by' and p.last != blank %}
-                      <p style="margin: 0 0 2px 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; color: #ffb700;">Delivery by {{ p.last | escape }}</p>
-                      {% endif %}{% endfor %}
+                      {% endif %}{% endfor %}{% endif %}
+                      {% if deliveries_differ %}{% for p in line.properties %}{% if p.first == 'Delivery by' and p.last != blank %}
+                      <p style="margin: 0 0 2px 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; color: #a0a0a0;">Delivery by {{ p.last | escape }}</p>
+                      {% endif %}{% endfor %}{% endif %}
                       <p style="margin: 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; color: #a0a0a0;">
                         Qty {{ line.quantity }}
                       </p>
