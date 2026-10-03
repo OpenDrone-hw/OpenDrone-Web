@@ -14516,6 +14516,14 @@ html.light .cart-added-line img {
 .cart-addons .cart-added-ship {
   display: none;
 }
+/* Drawer add-ons never move the parcel date (they are filtered on it), so
+   their rows carry no date; the closed build line needs no second rule. */
+.cart-added-addons .cart-added-ship {
+  display: none;
+}
+.cart-added .cart-build-more {
+  border-bottom: none;
+}
 a.cart-added-suggestion-name:hover {
   text-decoration: underline;
   text-underline-offset: 4px;

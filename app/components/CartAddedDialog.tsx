@@ -437,7 +437,7 @@ function Group({title, closed, children}: {title: string; closed: boolean; child
     );
   }
   return (
-    <div className="cart-added-build">
+    <div className="cart-added-build cart-added-addons">
       <p className="cart-added-build-title">{title}</p>
       {children}
     </div>
