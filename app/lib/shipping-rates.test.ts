@@ -18,6 +18,7 @@ import {
   shipCountryPicker,
   shippingQuote,
   notSoldDirect,
+  offersPickup,
   queryCountryCookie,
   soldThroughShops,
 } from './shipping-rates.ts';
@@ -261,5 +262,15 @@ describe('queryCountryCookie (an explicit ?country link is remembered)', () => {
 
   it('omits Secure on plain http (local dev)', () => {
     assert.doesNotMatch(queryCountryCookie(req('http://localhost:5173/?country=US'))!, /Secure/);
+  });
+});
+
+describe('offersPickup', () => {
+  it('offers Leuven pickup to Belgium only', () => {
+    assert.equal(offersPickup('BE'), true);
+    assert.equal(offersPickup('be'), true);
+    assert.equal(offersPickup('NL'), false);
+    assert.equal(offersPickup('US'), false);
+    assert.equal(offersPickup(null), false);
   });
 });

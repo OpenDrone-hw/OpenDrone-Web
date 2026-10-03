@@ -14,6 +14,10 @@ For deliveries within the EU, one flat rate per order, in euro, VAT included. De
 | Cyprus, Estonia, Malta | €16.95 |
 | Bulgaria | €39.95 |
 
+### Free pickup in Leuven
+
+Orders for Belgium can be collected free of charge at our office, Stapelhuisstraat 15, 3000 Leuven. Choose Pickup at checkout instead of a shipping rate. We email you when your order is ready for pickup; then book a pickup time through [Support](/support) and bring your order number. The ship date stated for your order is the date it is ready for pickup.
+
 Incutec BV does not ship to Russia, Belarus, Iran, North Korea, Syria or Cuba, or to other destinations under restrictive measures: see our [end-use policy](/end-use).
 
 ### VAT and customs

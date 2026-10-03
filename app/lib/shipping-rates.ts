@@ -109,6 +109,15 @@ export function notSoldDirect(
   return kind === 'shops' || kind === 'closed' || kind === 'blocked' ? kind : null;
 }
 
+/** Destinations the cart offers free pickup at the Leuven office to.
+ *  Shopify local pickup on the Leuven location supplies the checkout option. */
+export const PICKUP_COUNTRIES: ReadonlySet<string> = new Set(['BE']);
+
+/** True when the cart mentions free pickup for this destination. */
+export function offersPickup(country: string | null): boolean {
+  return PICKUP_COUNTRIES.has(country?.trim().toUpperCase() ?? '');
+}
+
 /** ISO 3166-1 country codes plus Shopify's XK destination for Kosovo. */
 const DESTINATION_COUNTRIES = (
   'AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ ' +

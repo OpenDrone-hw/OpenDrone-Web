@@ -744,6 +744,7 @@ An open shop also depends on Shopify settings this repository cannot check:
 | Payments active, automatic capture | a test order is paid, captured and refunded |
 | Admin API token scopes | `read_orders`, `read_all_orders` (campaigns over 60 days), `write_orders`, `write_products`, `write_merchant_managed_fulfillment_orders` |
 | Markets and shipping profiles | delivery countries need active markets and accepted shipping rates |
+| Local pickup on the "OpenDrone Leuven" location | free pickup is offered at checkout; the cart mentions it for Belgium (`PICKUP_COUNTRIES` in `app/lib/shipping-rates.ts`) and `/shipping` describes it. A pickup order has no shipping address and counts as region EU |
 | Redirect theme published | the Shopify-hosted storefront forwards to opendrone.be |
 | Online Store password page off | checkout opens for customers, not only staff |
 

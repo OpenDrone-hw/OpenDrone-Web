@@ -13,7 +13,7 @@ import {
 import {parcelPromise, soonerMonth} from './ShipChip';
 import {LineShipChip, heldBy, parcelDelay} from './ParcelChip';
 import {paysEuVat} from '~/lib/visitor-country';
-import {countryName, notSoldDirect, shippingQuote} from '~/lib/shipping-rates';
+import {countryName, notSoldDirect, offersPickup, shippingQuote} from '~/lib/shipping-rates';
 import {
   buildSuggestionSpecs,
   parseBuilds,
@@ -327,6 +327,9 @@ export function CartAddedDialog() {
               <span>{t('shipping_row', 'Shipping to {country}', {country: countryName(visitor ?? '')})}</span>
               <span className="cart-added-price">{shippingRate}</span>
             </p>
+          ) : null}
+          {shippingRate && offersPickup(visitor) ? (
+            <p className="cart-added-parcel">{t('pickup_note', 'Or pick up free at our Leuven office: choose Pickup at checkout.')}</p>
           ) : null}
           {usBuyer && subtotal?.currencyCode === 'USD' ? (
             <p className="cart-added-parcel">{t('us_price_note', 'Duties included')}</p>

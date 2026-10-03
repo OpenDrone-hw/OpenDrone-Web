@@ -14,6 +14,10 @@ Voor leveringen binnen de EU geldt één vast tarief per bestelling, in euro, bt
 | Cyprus, Estland, Malta | € 16,95 |
 | Bulgarije | € 39,95 |
 
+### Gratis afhalen in Leuven
+
+Bestellingen voor België kunnen gratis worden afgehaald op ons kantoor, Stapelhuisstraat 15, 3000 Leuven. Kies Afhalen bij het afrekenen in plaats van een verzendtarief. We mailen je wanneer je bestelling klaarligt om af te halen; maak daarna een afspraak via [Support](/support) en breng je bestelnummer mee. De verzenddatum die voor je bestelling geldt, is de datum waarop ze klaarligt om af te halen.
+
 Incutec BV verzendt niet naar Rusland, Belarus, Iran, Noord-Korea, Syrië en Cuba, noch naar andere bestemmingen waarvoor beperkende maatregelen gelden: zie ons [end-use beleid](/end-use).
 
 ### Btw en douane
