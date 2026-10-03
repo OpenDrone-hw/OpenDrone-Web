@@ -196,11 +196,21 @@ export function AddToCartButton({
         data-state={compactFailed ? 'error' : state}
         title={compactFailed ? message ?? undefined : undefined}
       >
-        <span className="btn-label cart-action-label" aria-live="polite" aria-atomic="true">
-          {state === 'adding' ? <LoaderCircle className="cart-action-spinner" size={16} aria-hidden="true" /> : null}
-          {state === 'adding'
-            ? (copyText('cart.add_busy') ?? 'Adding…')
-            : compactFailed
+        {/* While adding, the button keeps its own label as an invisible
+            placeholder, so it never changes size, and the spinner turns
+            centred over it; "Adding…" is read out, not shown. */}
+        <span
+          className={`btn-label cart-action-label${state === 'adding' ? ' is-busy' : ''}`}
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          {state === 'adding' ? (
+            <>
+              <span className="cart-action-ghost" aria-hidden="true">{children}</span>
+              <LoaderCircle className="cart-action-spinner" size={16} aria-hidden="true" />
+              <span className="sr-only">{copyText('cart.add_busy') ?? 'Adding…'}</span>
+            </>
+          ) : compactFailed
               ? (copyText('cart.add_error_compact') ?? 'Couldn’t add · Retry')
               : state === 'error'
                 ? (copyText('cart.add_retry') ?? 'Try again')
