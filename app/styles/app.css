@@ -14469,16 +14469,16 @@ html.light .cart-added-line img {
 
 /* "Complete your 3-inch build": the missing parts as a list with their
    prices, their total and one button that adds them all. A dashed,
-   gold-tinted card under a "Not in your cart" label, so it never reads as
+   neutral card under a "Not in your cart" label, so it never reads as
    part of the order above it. */
 .build-bundle {
   display: grid;
   gap: var(--sp-3);
   margin-top: var(--sp-6);
   padding: var(--sp-4) var(--sp-5);
-  border: 1px dashed color-mix(in srgb, var(--color-gold) 55%, var(--color-border));
+  border: 1px dashed var(--color-border-strong);
   border-radius: var(--r-md, 10px);
-  background: color-mix(in srgb, var(--color-gold) 5%, var(--color-bg));
+  background: var(--color-bg-elevated);
 }
 .cart-suggest .build-bundle {
   margin-top: 0;
@@ -14489,7 +14489,7 @@ html.light .cart-added-line img {
   font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--color-gold-text);
+  color: var(--color-text-muted);
 }
 .build-bundle-title {
   margin: -0.4rem 0 0;
@@ -14548,7 +14548,7 @@ html.light .cart-added-line img {
 .build-bundle-add {
   min-height: 40px;
   padding: 0 1.2rem;
-  border: 1px solid var(--color-gold);
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--r-pill);
   background: transparent;
   color: var(--color-text);
@@ -14556,7 +14556,7 @@ html.light .cart-added-line img {
   cursor: pointer;
 }
 .build-bundle-add:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--color-gold) 14%, transparent);
+  border-color: var(--color-text-muted);
 }
 .build-bundle-add:disabled {
   opacity: 0.6;
