@@ -145,6 +145,7 @@ export function ProductItem({
       <div className="product-card-quickadd">
           <AddToCartButton
             className="product-card-quickadd-btn"
+            compactError
             href={quickAdd.href}
             product={product.handle}
             disabled={!quickAdd.available}

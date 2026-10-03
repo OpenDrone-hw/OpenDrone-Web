@@ -32,7 +32,7 @@ export function ChatFpvMenuEntry() {
 export function ChatFpvInlineLink() {
   return (
     <p className="chatfpv-entry chatfpv-entry-inline">
-      Questions?{' '}
+      <span className="chatfpv-entry-lead">Questions? </span>
       <button type="button" onClick={(e) => requestChatFpvOpen(e.currentTarget)}>
         Ask ChatFPV
       </button>

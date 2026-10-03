@@ -1382,6 +1382,14 @@ html.anim-paused .board-sheet.is-active {
   :root {
     --header-pill-gap: 0.5rem;
   }
+  /* The five pills plus the icons ran ~40 px past the pill at 1024: the
+     category labels tighten so the menu button stays inside. */
+  .site-header-categories a {
+    letter-spacing: 0.08em;
+  }
+  .site-header-categories .site-header-cat-group > .header-cat > a {
+    padding: 0 0.6em;
+  }
 }
 
 /* Family chip + its hover-drop Pod. The wrap carries the absolute centering so
@@ -3241,6 +3249,12 @@ button.reset {
   grid-area: title;
   white-space: nowrap;
 }
+/* "Results for ..." carries the visitor's query, of any length: it wraps
+   instead of widening the page. */
+.collection-header .page-title.is-results {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 
 .collection-header .collection-sort {
   grid-area: sort;
@@ -3523,6 +3537,17 @@ button.reset {
 }
 .catalog-term {
   color: var(--color-text);
+  /* A long query is cut with an ellipsis, so the count and Clear stay on
+     screen instead of pushing the page sideways. */
+  display: inline-block;
+  max-width: min(24ch, 40vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+.catalog-toolbar .catalog-count {
+  min-width: 0;
 }
 .catalog-term-clear {
   appearance: none;
@@ -4587,9 +4612,15 @@ button.reset {
 
 .variant-tier-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--sp-2);
+  gap: 2px var(--sp-2);
+}
+/* A long name on a narrow card wraps the price to its own line instead of
+   pushing it past the card's border. */
+.variant-tier-name {
+  min-width: 0;
 }
 
 .variant-tier-name {
@@ -5170,6 +5201,20 @@ html.light .firmware-logo--tile {
 .spec-sheet--multi td,
 .spec-sheet--multi thead th {
   color: var(--color-text-muted);
+}
+/* The smallest phones: a narrower label column and tighter cells keep a
+   two-variant table inside 320 px instead of scrolling the page. */
+@media (max-width: 380px) {
+  .spec-sheet th,
+  .spec-sheet td {
+    padding-right: 10px;
+  }
+  .spec-sheet tbody th {
+    width: 6.5rem;
+  }
+  .spec-sheet td {
+    overflow-wrap: anywhere;
+  }
 }
 .spec-sheet--multi .is-active,
 .spec-sheet--multi thead th.is-active {
@@ -6793,6 +6838,11 @@ section.chapter[data-centered] .chapter-body-col {
   border-color: color-mix(in srgb, var(--color-gold) 55%, transparent);
   color: var(--color-gold-text);
   outline: none;
+}
+/* The active chip already wears the hover look: focus needs its own ring. */
+.teardown-io-chip:focus-visible {
+  outline: 2px solid var(--color-focus, var(--color-gold));
+  outline-offset: 2px;
 }
 .teardown-pin-hoverable:hover .teardown-pin-part,
 .teardown-pin-hoverable:focus-visible .teardown-pin-part {
@@ -8591,6 +8641,8 @@ a.what-chain-chip:hover {
 }
 .signal-lost-title {
   margin: 0;
+  font-weight: 400;
+  line-height: inherit;
   font-family: var(--font-mono);
   font-size: clamp(0.8rem, 3vw, 1rem);
   letter-spacing: 0.5em;
@@ -12355,7 +12407,8 @@ html.light .editorial-watermark {
 .rn-archive-head .rn-eyebrow .rn-rss {
   display: inline-flex;
   gap: 6px;
-  color: var(--od-pcb-gold-2);
+  /* Gold as text: the token that deepens in light theme (1.4:1 before). */
+  color: var(--color-gold-text);
   text-decoration: none;
 }
 .rn-archive-head h1 {
@@ -12584,7 +12637,7 @@ html.light .editorial-watermark {
   border: 1.5px solid var(--od-pcb-gold);
   border-radius: var(--r-xs);
   background: var(--rn-gold-tint);
-  color: var(--od-pcb-gold-2);
+  color: var(--color-gold-text);
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.08em;
@@ -14649,6 +14702,17 @@ html.light .cart-added-suggestion img {
   gap: var(--sp-3);
   padding-top: var(--sp-4);
   border-top: 1px solid var(--color-border);
+}
+/* A short screen (a phone): Subtotal and Checkout come straight after the
+   added line, the suggestions after them, so checking out never means
+   scrolling past every suggestion first. */
+@media (max-height: 760px) {
+  .cart-added-foot {
+    order: 1;
+  }
+  .cart-added-build {
+    order: 2;
+  }
 }
 .cart-added-subtotal {
   display: flex;
@@ -18020,7 +18084,7 @@ html.light .plugs {
   font-size: 10px;
   letter-spacing: 0.08em;
   vertical-align: middle;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   text-transform: uppercase;
 }
 
@@ -18289,4 +18353,95 @@ html.light .plugs {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+/* --- Add-to-cart busy state ------------------------------------------- */
+/* Every add button: the label stays in place but invisible, so the button
+   keeps its size, and the spinner turns centred on top of it. Nothing can
+   grow past the button, whatever its width. */
+.cart-action-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  max-width: 100%;
+}
+.cart-action-label.is-busy {
+  position: relative;
+}
+.cart-action-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: inherit;
+  visibility: hidden;
+}
+.cart-action-label.is-busy .cart-action-spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin: -8px 0 0 -8px;
+}
+.cart-action-spinner {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  animation: cart-action-spin 0.8s linear infinite;
+}
+@keyframes cart-action-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cart-action-spinner {
+    animation-duration: 2.4s;
+  }
+}
+
+/* Anything the browser scrolls into view for focus (Tab, or an invalid
+   field on submit) clears the floating header above and the phone's
+   sticky buy bar below. */
+a[href],
+button,
+input,
+select,
+textarea,
+summary,
+[tabindex]:not([tabindex='-1']) {
+  scroll-margin-top: calc(var(--header-height) + 1.5rem);
+  scroll-margin-bottom: 6rem;
+}
+
+/* Reduced motion: the loading pulses stop. Later blocks above re-declare
+   these animations, so this sits last. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse,
+  .latest-commit-skeleton-line,
+  .board-art-skeleton-label {
+    animation: none !important;
+  }
+}
+
+/* The pinned buy bar on the smallest phones: the price, the button and the
+   ChatFPV link share 320 px, so the link drops its lead-in and the button
+   label stays on one line inside the button. */
+@media (max-width: 400px) {
+  .is-pinned .chatfpv-entry-lead {
+    display: none;
+  }
+  .buy-rail.is-pinned .product-form .btn-primary {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+}
+
+/* A busy or failed card pill stays visible when the pointer leaves,
+   instead of fading out mid-add or hiding its error. */
+.product-card-quickadd .product-card-quickadd-btn:is([aria-busy="true"], [data-state="error"]),
+.related-card-quickadd .product-card-quickadd-btn:is([aria-busy="true"], [data-state="error"]) {
+  opacity: 1;
+  transform: none;
+}
+.product-card-quickadd-btn[data-state="error"] .cart-action-label {
+  white-space: normal;
 }

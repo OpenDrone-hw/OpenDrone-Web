@@ -9,3 +9,12 @@
 
 /models/*.json
   Cache-Control: no-cache
+
+/schematics/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400
+
+/logos/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/boxes/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800

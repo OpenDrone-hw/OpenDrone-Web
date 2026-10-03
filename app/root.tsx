@@ -137,10 +137,14 @@ export function links() {
 }
 
 export async function loader(args: Route.LoaderArgs) {
-  // Await the critical data required to render initial state of the page
-  const criticalData = await loadCriticalData(args);
-
   const {env} = args.context;
+  // The catalog and the live roadmap flags are independent: fetch them
+  // together instead of one after the other (up to 400 ms saved on a cold
+  // status cache).
+  const [criticalData, liveFlags] = await Promise.all([
+    loadCriticalData(args),
+    fetchStatusFlagsFast(env.GITHUB_STATUS_TOKEN, 400, args.context.waitUntil),
+  ]);
 
   const company = getCompanyIdentity(env as unknown as Record<string, string | undefined>);
 
@@ -162,15 +166,7 @@ export async function loader(args: Route.LoaderArgs) {
   const shopOpen = !globalComingSoon && checkoutOpen(env);
   // An open shop files the boards with a paid first batch under beta, as the
   // launch's topic flip will (app/lib/launched-roadmap.ts).
-  const statusFlags = launchedStatusFlags(
-    await fetchStatusFlagsFast(
-      env.GITHUB_STATUS_TOKEN,
-      400,
-      args.context.waitUntil,
-    ),
-    shopOpen,
-    CAMPAIGN,
-  );
+  const statusFlags = launchedStatusFlags(liveFlags, shopOpen, CAMPAIGN);
 
   return {
     ...criticalData,
@@ -214,9 +210,9 @@ export async function loader(args: Route.LoaderArgs) {
  */
 async function loadCriticalData({context, request}: Route.LoaderArgs) {
   // The catalog is the header's product source and the per-handle
-  // availability the status model resolves against. One fetch, cached in
-  // the worker for five minutes; a failure degrades to an empty catalog
-  // rather than a 500.
+  // availability the status model resolves against. Shopify is read at most
+  // once a minute per isolate (app/lib/catalog-memo.ts); the cart reads fresh;
+  // a failure degrades to an empty catalog rather than a 500.
   const catalog = await context.catalog.forBuyer();
 
   return {

@@ -292,7 +292,7 @@ export default function PreorderRoute() {
             <Txt id="preorder.stack_title" />
             {stackMonth ? <span className="po-group-meta">{dot + shipWord('ships', stackWhen ?? stackMonth)}</span> : null}
           </h2>
-          <Cards rows={stackRows} eta={eta} />
+          <Cards rows={stackRows} eta={eta} first />
         </section>
       ) : null}
 
@@ -454,17 +454,19 @@ function Timeline({data}: {data: ReturnType<typeof useLoaderData<typeof loader>>
   );
 }
 
-function Cards({rows, eta}: {rows: Row[]; eta: string}) {
+/** `first`: the section at the top of the page, whose first images are on
+ *  screen at load and load at once, the first one with high priority. */
+function Cards({rows, eta, first = false}: {rows: Row[]; eta: string; first?: boolean}) {
   return (
     <ul className="po-cards">
-      {rows.map((row) => (
-        <Card key={row.sku} row={row} eta={eta} />
+      {rows.map((row, i) => (
+        <Card key={row.sku} row={row} eta={eta} eager={first && i < 4} lead={first && i === 0} />
       ))}
     </ul>
   );
 }
 
-function Card({row, eta}: {row: Row; eta: string}) {
+function Card({row, eta, eager = false, lead = false}: {row: Row; eta: string; eager?: boolean; lead?: boolean}) {
   const name = row.variant ? `${row.product} ${row.variant}` : row.product;
   const cta = copyText('preorder.card_cta') ?? 'Pre-order';
   const currency = row.price.currencyCode;
@@ -493,7 +495,14 @@ function Card({row, eta}: {row: Row; eta: string}) {
           <span className="render-chip">{copyText('product-chrome.render_chip') ?? 'Render'}</span>
         ) : null}
         {row.image ? (
-          <img src={shopifyImageUrl(row.image.url, 480)} alt="" loading="lazy" width={240} height={240} />
+          <img
+            src={shopifyImageUrl(row.image.url, 480)}
+            alt=""
+            loading={eager ? 'eager' : 'lazy'}
+            fetchPriority={lead ? 'high' : undefined}
+            width={240}
+            height={240}
+          />
         ) : null}
       </Link>
       <h3 className="po-card-title">

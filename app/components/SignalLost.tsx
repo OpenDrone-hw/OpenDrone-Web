@@ -76,7 +76,7 @@ export function SignalLost() {
           >
             {status}
           </p>
-          <p className="signal-lost-title" {...editAttrs('not-found.title')}>
+          <h1 className="signal-lost-title" {...editAttrs('not-found.title')}>
             {/* Decode-in on the failsafe banner - corrupted-link flavor for
                 the OSD scene, and the one deliberate scramble easter egg the
                 design brief allows. */}
@@ -85,7 +85,7 @@ export function SignalLost() {
               duration={900}
               delay={200}
             />
-          </p>
+          </h1>
           <p className="signal-lost-sub">
             <Txt id="not-found.sub_prefix" /> <code>{path}</code>
           </p>

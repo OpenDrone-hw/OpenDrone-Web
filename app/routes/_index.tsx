@@ -632,7 +632,7 @@ function DesktopHome({
               network it stays up and names exactly what is still coming. */}
           <div className="hero-load-stack">
           {!splashSettled && loadPieces.length ? (
-            <ul className="hero-load-manifest" role="status" aria-live="polite">
+            <ul className="hero-load-manifest" aria-live="polite">
               {loadPieces.map((p) => {
                 const state = loadDone.has(p.id)
                   ? 'done'

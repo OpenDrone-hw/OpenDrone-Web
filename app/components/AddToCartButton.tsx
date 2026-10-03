@@ -123,6 +123,11 @@ export function AddToCartButton({
     return {name, value, key: `${signature}:${occurrence}`};
   });
 
+  // Compact buttons (card quick-adds) never put a message line under
+  // themselves: any failure, a refused quantity included, reads in the
+  // button and the reason is its tooltip.
+  const compactFailed = compactError && (state === 'error' || Boolean(message));
+
   return (
     <form
       action={action}
@@ -136,8 +141,11 @@ export function AddToCartButton({
           ...(revenue && Number.isFinite(revenue.amount) ? {revenue} : {}),
         });
         // Drop focus after the click so :focus-within doesn't pin
-        // hover-revealed quick-add UI open once the pointer leaves.
-        e.currentTarget.querySelector('button')?.blur();
+        // hover-revealed quick-add UI open once the pointer leaves. A
+        // keyboard press is remembered so the dialog can hand focus back.
+        const button = e.currentTarget.querySelector('button');
+        const returnFocus = button?.matches(':focus-visible') ? button : null;
+        button?.blur();
         onClick?.();
         setState('adding');
         setMessage(null);
@@ -151,7 +159,7 @@ export function AddToCartButton({
           .then((summary) => {
             endCartAdd();
             setState('idle');
-            announceCartAdded({summary, skus: skusFromFields(submitted), handle: product ?? null});
+            announceCartAdded({summary, skus: skusFromFields(submitted), handle: product ?? null, returnFocus});
             // The first add creates the session cart: refresh the header's
             // cart link.
             void revalidator.revalidate();
@@ -185,20 +193,31 @@ export function AddToCartButton({
         aria-busy={state === 'adding'}
         aria-disabled={otherBusy || undefined}
         data-waiting={otherBusy ? '' : undefined}
-        title={compactError && state === 'error' ? message ?? undefined : undefined}
+        data-state={compactFailed ? 'error' : state}
+        title={compactFailed ? message ?? undefined : undefined}
       >
-        <span className="btn-label cart-action-label" aria-live="polite" aria-atomic="true">
-          {state === 'adding' ? <LoaderCircle className="cart-action-spinner" size={16} aria-hidden="true" /> : null}
-          {state === 'adding'
-            ? (copyText('cart.add_busy') ?? 'Adding…')
-            : state === 'error'
-              ? compactError
-                ? (copyText('cart.add_error_compact') ?? 'Couldn’t add · Retry')
-                : (copyText('cart.add_retry') ?? 'Try again')
-              : children}
+        {/* While adding, the button keeps its own label as an invisible
+            placeholder, so it never changes size, and the spinner turns
+            centred over it; "Adding…" is read out, not shown. */}
+        <span
+          className={`btn-label cart-action-label${state === 'adding' ? ' is-busy' : ''}`}
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          {state === 'adding' ? (
+            <>
+              <span className="cart-action-ghost" aria-hidden="true">{children}</span>
+              <LoaderCircle className="cart-action-spinner" size={16} aria-hidden="true" />
+              <span className="sr-only">{copyText('cart.add_busy') ?? 'Adding…'}</span>
+            </>
+          ) : compactFailed
+              ? (copyText('cart.add_error_compact') ?? 'Couldn’t add · Retry')
+              : state === 'error'
+                ? (copyText('cart.add_retry') ?? 'Try again')
+                : children}
         </span>
       </button>
-      {message && (!compactError || state !== 'error') ? (
+      {message && !compactError ? (
         // The form is display: contents, so this sits in the buy row as its
         // own full-width item.
         <small className="cart-line-error" role="alert" style={{flex: '1 1 100%', width: '100%'}}>

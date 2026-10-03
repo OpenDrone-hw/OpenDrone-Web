@@ -211,6 +211,7 @@ function RelatedCard({product}: {product: RelatedProduct}) {
         <div className="related-card-quickadd">
           <AddToCartButton
             className="product-card-quickadd-btn"
+            compactError
             href={only.cartAddUrl}
             product={product.handle}
             disabled={!only.availableForSale}

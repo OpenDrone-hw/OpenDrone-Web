@@ -16,10 +16,12 @@ export function WatchCard({
   // Accepted for call-site compatibility; not rendered (no caption).
   channel?: string;
 }) {
-  // maxres is the sharp 16:9 frame but only exists for HD uploads; fall back to
+  // sddefault (640x480, about 50 KB) covers the card, about 340 px wide, at
+  // 2x; its letterbox bars fall outside the 16:9 crop. maxres was 160 KB for
+  // the same card. sddefault only exists for larger uploads; fall back to
   // hqdefault (always present) if it 404s.
-  const maxres = `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`;
-  const [poster, setPoster] = useState(maxres);
+  const sdPoster = `https://i.ytimg.com/vi/${videoId}/sddefault.jpg`;
+  const [poster, setPoster] = useState(sdPoster);
 
   // The PDP reuses one WatchCard instance across product navigation (same route,
   // same tree position), so `videoId` can change without a remount. useState's
@@ -28,7 +30,7 @@ export function WatchCard({
   const [prevId, setPrevId] = useState(videoId);
   if (videoId !== prevId) {
     setPrevId(videoId);
-    setPoster(maxres);
+    setPoster(sdPoster);
   }
 
   return (

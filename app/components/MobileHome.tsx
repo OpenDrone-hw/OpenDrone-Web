@@ -283,11 +283,13 @@ function FeaturedGrid({items: all}: {items: CollectionItemFragment[]}) {
     <section className="home-mobile-featured">
       <Txt id="home.m_featured_label" as="p" className="section-label" />
       <div className="home-mobile-grid">
-        {items.map((product, i) => (
+        {items.map((product) => (
           <ProductItem
             key={product.id}
             product={product}
-            loading={i === 0 ? 'eager' : 'lazy'}
+            // Below the fold on a phone: an eager image here was preloaded
+            // at high priority and held back the first paint.
+            loading="lazy"
           />
         ))}
       </div>

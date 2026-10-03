@@ -82,6 +82,27 @@ export function ProductGallery({
     return set;
   }, [images, index, warmNeighbours]);
 
+  // Arrow keys step the photos while focus is anywhere in the gallery
+  // (the handlers are refreshed every render below).
+  const mainRef = useRef<HTMLDivElement>(null);
+  const stepRef = useRef({prev: () => {}, next: () => {}});
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el || images.length < 2) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.altKey || e.metaKey || e.ctrlKey) return;
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        stepRef.current.next();
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        stepRef.current.prev();
+      }
+    };
+    el.addEventListener('keydown', onKey);
+    return () => el.removeEventListener('keydown', onKey);
+  }, [images.length]);
+
   if (images.length === 0) {
     return (
       <div className="product-gallery-empty">
@@ -106,6 +127,7 @@ export function ProductGallery({
 
   const prev = () => setIndex(index === 0 ? images.length - 1 : index - 1);
   const next = () => setIndex(index === images.length - 1 ? 0 : index + 1);
+  stepRef.current = {prev, next};
   // Touch swipe: flick the main image ←/→ to step photos. Same threshold +
   // direction-ratio gate as the board explorer (BoardArt). Horizontal-only -
   // we never preventDefault, so a vertical drag still scrolls the page; only a
@@ -133,6 +155,7 @@ export function ProductGallery({
         className="product-gallery-main"
         role="group"
         aria-label={copyText('product-chrome.gallery_aria')}
+        tabIndex={images.length > 1 ? 0 : undefined}
         onTouchStart={(e) => {
           armNeighbours();
           onTouchStart(e);
@@ -140,6 +163,7 @@ export function ProductGallery({
         onTouchEnd={onTouchEnd}
         onPointerEnter={armNeighbours}
         onFocus={armNeighbours}
+        ref={mainRef}
       >
         {images.map((img, i) => {
           const key = img.id ?? img.url;

@@ -1442,6 +1442,9 @@ export function BoardArt({
           }}
           aria-label={(copyText('product-chrome.board_show_layer') ?? 'Show {layer} layer').replace('{layer}', s.label)}
           aria-pressed={i === shownIndex}
+          // Only the layer on screen takes focus; the faded ones are
+          // reached through the layer rail, not tabbed onto invisibly.
+          tabIndex={i === shownIndex ? undefined : -1}
           onClick={() => selectLayer(i)}
           dangerouslySetInnerHTML={{__html: s.html}}
         />
