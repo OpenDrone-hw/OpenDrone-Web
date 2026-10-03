@@ -16,6 +16,7 @@ import {paysEuVat} from '~/lib/visitor-country';
 import {countryName, notSoldDirect, offersPickup, shippingQuote} from '~/lib/shipping-rates';
 import {
   buildSuggestionSpecs,
+  extraSuggestionSpecs,
   parseBuilds,
   resolveBuild,
   resolveBuildSuggestions,
@@ -146,6 +147,12 @@ export function CartAddedDialog() {
     ),
     (handle) => isPurchasableStatus(statuses[handle]),
   );
+  // Spares and accessories for what the cart holds, after the build parts.
+  const extras = resolveBuildSuggestions(
+    rootData?.familyProducts ?? [],
+    extraSuggestionSpecs(BUILDS, openedWith, suggestions.map((s) => s.sku)),
+    (handle) => isPurchasableStatus(statuses[handle]),
+  ).slice(0, 3);
 
   const addPart = async (part: BuildSuggestion) => {
     if (!beginCartAdd()) return;
@@ -163,7 +170,7 @@ export function CartAddedDialog() {
           product: part.handle,
           source_product: detail.handle ?? 'unknown',
           role: part.role,
-          strategy: 'compatibility',
+          strategy: part.role === 'extra' ? 'accessory' : 'compatibility',
         },
       });
       void revalidator.revalidate();
@@ -240,11 +247,16 @@ export function CartAddedDialog() {
           ))}
         </ul>
 
-        {suggestions.length ? (
-          <div className="cart-added-build">
-            <p className="cart-added-build-title">{t('build_title', 'Complete the build')}</p>
+        {(
+          [
+            ['build', t('build_title', 'Complete the build'), suggestions],
+            ['extras', t('extras_title', 'Spares and extras'), extras],
+          ] as const
+        ).map(([group, title, parts]) => parts.length ? (
+          <div className="cart-added-build" key={group}>
+            <p className="cart-added-build-title">{title}</p>
             <ul className="cart-added-suggestions">
-              {suggestions.map((part) => {
+              {parts.map((part) => {
                 const image = part.variant.image ?? part.product.featuredImage;
                 const inCart = summary.lines.some((l) => l.sku === part.sku);
                 // A part that ships later than the parcel moves the whole parcel.
@@ -299,7 +311,7 @@ export function CartAddedDialog() {
               })}
             </ul>
           </div>
-        ) : null}
+        ) : null)}
 
         <div className="cart-added-foot">
           <ShipToSelect

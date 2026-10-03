@@ -14392,6 +14392,18 @@ html.light .cart-added-line img {
   display: grid;
   gap: var(--sp-2);
 }
+/* The cart page: the same rows under the line sheet. */
+.cart-suggest {
+  display: grid;
+  gap: var(--sp-5);
+  margin-top: var(--sp-6);
+  padding-top: var(--sp-5);
+  border-top: 1px solid var(--color-border);
+}
+a.cart-added-suggestion-name:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
 .cart-added-build-title {
   margin: 0;
   font-size: var(--fs-sm);

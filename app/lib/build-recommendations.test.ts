@@ -4,6 +4,7 @@ import {describe, it} from 'node:test';
 import {
   buildOf,
   buildSuggestionSpecs,
+  extraSuggestionSpecs,
   parseBuilds,
   resolveBuild,
   resolveBuildSuggestions,
@@ -102,5 +103,25 @@ describe('resolveBuildSuggestions', () => {
     const specs = buildSuggestionSpecs(BUILDS, '3-inch', [{sku: 'OPENFC-LITE-2020', handle: 'openfc-lite'}]);
     const out = resolveBuildSuggestions(products, specs, (handle) => handle !== 'openmotor');
     assert.deepEqual(out.map(({sku}) => sku), ['OPENESC-2020']);
+  });
+});
+
+describe('extraSuggestionSpecs', () => {
+  const skus = (cart: string[], exclude: string[] = []) =>
+    extraSuggestionSpecs(BUILDS, cart.map((sku) => ({sku, handle: ''})), exclude).map((e) => e.sku);
+
+  it('offers the spares of the size in the cart only', () => {
+    assert.deepEqual(skus(['OPENFRAME-3']), ['ACC-STRAP-15X200', 'ACC-PROP-3-HQ-T3X2X3-DUR', 'ACC-FRM-ARM-3']);
+    assert.deepEqual(skus(['OPENESC-3030']), ['ACC-STRAP-20X220']);
+  });
+
+  it('offers the spare antenna that matches the receiver', () => {
+    assert.deepEqual(skus(['OPENRX-LITE-UFL']), ['ACC-ANT-T']);
+    assert.deepEqual(skus(['OPENRX-GEMINI']), ['ACC-ANT-DUAL-T']);
+    assert.deepEqual(skus(['OPENRX-LITE']), []);
+  });
+
+  it('leaves out what the cart holds and what the build parts already offer', () => {
+    assert.deepEqual(skus(['OPENFRAME-5', 'ACC-STRAP-20X220'], ['ACC-PROP-5-GF-51466']), ['ACC-FRM-ARM-5']);
   });
 });

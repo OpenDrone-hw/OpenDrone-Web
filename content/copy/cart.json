@@ -56,6 +56,7 @@
   "shipping_row": "Shipping to {country}",
   "pickup_note": "Or pick up free at our Leuven office: choose Pickup at checkout.",
   "build_title": "Complete the build",
+  "extras_title": "Spares and extras",
   "build_add": "Add",
   "build_added": "Added",
   "build_retry": "Try again",

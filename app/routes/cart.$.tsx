@@ -18,12 +18,20 @@ import {
   type CartLineInfo,
 } from '~/lib/shopify-cart-action';
 import {formatPrice} from '~/lib/catalog';
-import {parseBuilds} from '~/lib/build-recommendations';
+import {
+  buildSuggestionSpecs,
+  extraSuggestionSpecs,
+  parseBuilds,
+  resolveBuild,
+  resolveBuildSuggestions,
+  type BuildSuggestion,
+} from '~/lib/build-recommendations';
 import buildsJson from '../../content/builds.json';
-import {lineDisplayName, setSize} from '~/lib/product-content';
+import {isPurchasableStatus, lineDisplayName, setSize, variantDisplayName} from '~/lib/product-content';
 import {Txt} from '~/components/Txt';
 import {parcelPromise, soonerMonth} from '~/components/ShipChip';
-import {LineShipChip} from '~/components/ParcelChip';
+import {LineShipChip, heldBy, parcelDelay} from '~/components/ParcelChip';
+import {trackEvent} from '~/lib/growth/plausible';
 import {buildSeoMeta} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
 import {cartQuoteCountry, countryName, offersPickup, shipCountryForRequest, shippingQuote} from '~/lib/shipping-rates';
@@ -249,6 +257,119 @@ function SplitReminder({
   );
 }
 
+/**
+ * The parts that finish the build and the spares that go with it, as the
+ * add-to-cart drawer offers them, each with an Add button. Hidden when
+ * nothing applies.
+ */
+function CartSuggestions({cart}: {cart: ShopifyCart}) {
+  const rootData = useRouteLoaderData<RootLoader>('root');
+  const revalidator = useRevalidator();
+  const [busy, setBusy] = useState<string | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
+  const visitor = rootData?.visitorCountry ?? null;
+  const products = rootData?.familyProducts ?? [];
+  const statuses = rootData?.productStatuses ?? {};
+  const sellable = (handle: string) => isPurchasableStatus(statuses[handle]);
+  const skus = cart.lines.map((l) => l.sku);
+  const build = resolveBuildSuggestions(
+    products,
+    buildSuggestionSpecs(BUILDS, resolveBuild(BUILDS, null, skus), cart.lines),
+    sellable,
+  );
+  const extras = resolveBuildSuggestions(
+    products,
+    extraSuggestionSpecs(BUILDS, cart.lines, build.map((s) => s.sku)),
+    sellable,
+  ).slice(0, 3);
+  if (!build.length && !extras.length) return null;
+  const promises = cart.lines.map((l) => l.shipPromise);
+
+  const add = async (part: BuildSuggestion) => {
+    if (busy) return;
+    setBusy(part.sku);
+    setFailed(null);
+    try {
+      await postCart('/api/shopify/cart', withCountry([['sku', part.sku], ['qty', String(part.quantity)]], visitor));
+      trackEvent('Recommendation Add', {
+        props: {
+          product: part.handle,
+          source_product: 'cart',
+          role: part.role,
+          strategy: part.role === 'extra' ? 'accessory' : 'compatibility',
+        },
+      });
+      void revalidator.revalidate();
+    } catch {
+      setFailed(part.sku);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <div className="cart-suggest">
+      {(
+        [
+          ['build', t('build_title', 'Complete the build'), build],
+          ['extras', t('extras_title', 'Spares and extras'), extras],
+        ] as const
+      ).map(([group, title, parts]) =>
+        parts.length ? (
+          <div className="cart-added-build" key={group}>
+            <p className="cart-added-build-title">{title}</p>
+            <ul className="cart-added-suggestions">
+              {parts.map((part) => {
+                const image = part.variant.image ?? part.product.featuredImage;
+                // A part that ships later than the parcel moves the whole parcel.
+                const delay = parcelDelay(promises, part.variant.shipPromise);
+                return (
+                  <li className="cart-added-suggestion" key={part.sku}>
+                    {image ? (
+                      <img src={shopifyImageUrl(image.url, 96)} alt="" width={48} height={48} loading="lazy" />
+                    ) : (
+                      <span className="cart-line-noimage" aria-hidden="true" />
+                    )}
+                    <div>
+                      <Link className="cart-added-suggestion-name" to={`/products/${part.product.handle}`} prefetch="intent">
+                        {part.quantity > 1 ? `${part.quantity}x ` : ''}
+                        {part.variant.title !== 'Default Title'
+                          ? `${part.product.title} ${variantDisplayName(part.product.handle, part.variant.title)}`
+                          : part.product.title}
+                      </Link>
+                      <LineShipChip
+                        promise={part.variant.shipPromise}
+                        parcel={heldBy(promises, part.variant.shipPromise)}
+                        className="cart-added-ship"
+                      />
+                      {delay ? (
+                        <small className="cart-added-delay" role="note">
+                          {t('upsell_delay', 'Adding this delays your whole parcel: instead of {from} it ships {to}.', delay)}
+                        </small>
+                      ) : null}
+                    </div>
+                    <span className="cart-added-price">
+                      {formatPrice(Number(part.variant.price.amount) * part.quantity, part.variant.price.currencyCode)}
+                    </span>
+                    <button
+                      type="button"
+                      className="cart-added-add"
+                      disabled={busy !== null || revalidator.state !== 'idle'}
+                      onClick={() => void add(part)}
+                    >
+                      {failed === part.sku ? t('build_retry', 'Try again') : t('build_add', 'Add')}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : null,
+      )}
+    </div>
+  );
+}
+
 function EmptyCart() {
   return (
     <section className="cart-empty">
@@ -338,6 +459,7 @@ function PopulatedCart({
               <CartLine key={line.id} line={line} info={info[line.id]} pending={pending} parcel={parcel} deliveryBy={parcelDeliveryBy ?? line.deliveryBy} />
             ))}
           </ul>
+          <CartSuggestions cart={cart} />
         </div>
         <div className="cart-summary-page" aria-busy={pending || undefined}>
           <ShipToSelect

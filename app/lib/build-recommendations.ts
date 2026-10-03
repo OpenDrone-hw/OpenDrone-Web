@@ -27,6 +27,8 @@ export type BuildsConfig = {
      *  prop set is its own product). */
     parts: Array<{role: BuildRole; sku: string; quantity: number; handle?: string}>;
   }>;
+  /** Spares and accessories, offered once the cart holds a `with` SKU. */
+  extras?: Array<{sku: string; handle: string; quantity: number; with: string[]}>;
 };
 
 /** The product handle of a build part: its own, else its role's. */
@@ -37,7 +39,7 @@ export function partHandle(
   return part.handle ?? config.roles[part.role].handle ?? '';
 }
 
-export type BuildPart = {role: BuildRole; handle: string; sku: string; quantity: number};
+export type BuildPart = {role: BuildRole | 'extra'; handle: string; sku: string; quantity: number};
 
 export type BuildSuggestion = BuildPart & {
   product: ProductCardFragment;
@@ -59,6 +61,15 @@ export function parseBuilds(body: unknown): BuildsConfig {
       if (!Number.isSafeInteger(part.quantity) || part.quantity < 1) {
         throw new Error(`builds: ${build.id} ${part.sku} needs a positive quantity`);
       }
+    }
+  }
+  for (const extra of c.extras ?? []) {
+    if (!extra.sku || !extra.handle) throw new Error('builds: every extra needs a sku and a handle');
+    if (!Number.isSafeInteger(extra.quantity) || extra.quantity < 1) {
+      throw new Error(`builds: extra ${extra.sku} needs a positive quantity`);
+    }
+    if (!Array.isArray(extra.with) || extra.with.length === 0) {
+      throw new Error(`builds: extra ${extra.sku} needs at least one "with" SKU`);
     }
   }
   return c as BuildsConfig;
@@ -131,6 +142,24 @@ export function buildSuggestionSpecs(
           (rank.get(b.part.handle) ?? Number.MAX_SAFE_INTEGER) || a.index - b.index,
     )
     .map(({part}) => part);
+}
+
+/**
+ * The spares and accessories to offer: every extra whose `with` SKUs meet
+ * the cart, leaving out what the cart holds and what `exclude` already
+ * offers (the build parts), in list order. The caller caps the list after
+ * resolving it, so an extra that cannot be sold leaves room for the next.
+ */
+export function extraSuggestionSpecs(
+  config: BuildsConfig,
+  cart: readonly CartLine[] = [],
+  exclude: readonly string[] = [],
+): BuildPart[] {
+  const skus = new Set(cart.map((line) => line.sku).filter(Boolean));
+  const skip = new Set(exclude);
+  return (config.extras ?? [])
+    .filter((e) => !skus.has(e.sku) && !skip.has(e.sku) && e.with.some((s) => skus.has(s)))
+    .map(({sku, handle, quantity}) => ({role: 'extra' as const, sku, handle, quantity}));
 }
 
 /**
