@@ -104,7 +104,7 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
     let catalog = null;
     try {
       const plan = await replanCart(cart, shippingQuote(country, undefined, usSalesRate(context.env)), context.env, {
-        fetchCatalog: (region, destination) => context.catalog.forRegion(region, destination),
+        fetchCatalog: (region, destination) => context.catalog.fresh.forRegion(region, destination),
         setCountry: (id, code) => setCartCountry(context.env, id, code),
         getCart: (id) => getCart(context.env, id),
         updateCartLines: (id, lines) => updateCartLines(context.env, id, lines),

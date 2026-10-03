@@ -12,7 +12,7 @@ export function action({request, context}: Route.ActionArgs) {
     setCountry: (id, code) => setCartCountry(context.env, id, code),
     getCart: (id) => getCart(context.env, id),
     // The region just picked, not the one this request's cookie still names.
-    fetchCatalog: (region, country) => context.catalog.forRegion(region, country),
+    fetchCatalog: (region, country) => context.catalog.fresh.forRegion(region, country),
     updateCartLines: (id, lines) => updateCartLines(context.env, id, lines),
     logError: (message) => console.error('[shopify-cart-country]', message),
   });

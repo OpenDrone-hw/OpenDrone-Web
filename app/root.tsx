@@ -210,7 +210,8 @@ export async function loader(args: Route.LoaderArgs) {
  */
 async function loadCriticalData({context, request}: Route.LoaderArgs) {
   // The catalog is the header's product source and the per-handle
-  // availability the status model resolves against. One fetch per request;
+  // availability the status model resolves against. Shopify is read at most
+  // once a minute per isolate (app/lib/catalog-memo.ts); the cart reads fresh;
   // a failure degrades to an empty catalog rather than a 500.
   const catalog = await context.catalog.forBuyer();
 

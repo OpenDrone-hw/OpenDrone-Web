@@ -15,6 +15,7 @@
 
 import type {Catalog} from './catalog.ts';
 import {fetchShopifyCatalog} from './shopify-storefront.ts';
+import {memoCatalog} from './catalog-memo.ts';
 import {
   applyCampaign,
   campaignSkus,
@@ -32,7 +33,7 @@ import preorders from '../../content/preorders.json';
 export const CAMPAIGN = parseCampaignConfig(preorders);
 const CAMPAIGN_SKUS = countedSkus(CAMPAIGN);
 
-export type CatalogClient = {
+export type CatalogReader = {
   /** The catalog, read from the Shopify Storefront API, as an EU buyer
    *  sees it. */
   get: () => Promise<Catalog>;
@@ -45,6 +46,11 @@ export type CatalogClient = {
   /** The region `forBuyer` serves. */
   region: Region;
 };
+
+/** Page reads go through a short per-isolate cache of the Shopify catalog;
+ *  `fresh` reads Shopify every time, for the cart and checkout paths, which
+ *  must judge prices and batches on the live catalog. */
+export type CatalogClient = CatalogReader & {fresh: CatalogReader};
 
 /** The allocation region for a destination with consumer checkout. */
 export function buyerRegion(request: Request | undefined, env: Pick<Env, 'PUBLIC_US_SALES'>): Region {
@@ -69,16 +75,33 @@ async function withCampaign(env: Env, catalog: Catalog, region: Region): Promise
   return applyCampaign(catalog, CAMPAIGN, units, new Date(), region);
 }
 
+
 export function createCatalogClient({env, request}: {env: Env; request?: Request}): CatalogClient {
+  const cached = catalogReader(env, request, (market = 'default') =>
+    memoCatalog(market, () =>
+      market === 'default' ? fetchShopifyCatalog(env) : fetchShopifyCatalog(env, fetch, market),
+    ),
+  );
+  const fresh = catalogReader(env, request, (market) =>
+    market === 'default' ? fetchShopifyCatalog(env) : fetchShopifyCatalog(env, fetch, market),
+  );
+  return {...cached, fresh};
+}
+
+function catalogReader(
+  env: Env,
+  request: Request | undefined,
+  load: (market?: string) => Promise<Catalog>,
+): CatalogReader {
   const region = buyerRegion(request, env);
   const country = request ? shipCountryForRequest(request) ?? undefined : undefined;
-  const get = async () => withCampaign(env, await fetchShopifyCatalog(env), 'EU');
+  const get = async () => withCampaign(env, await load('default'), 'EU');
   const forRegion = async (target: Region, destination = country): Promise<Catalog> => {
     if (target === 'EU') return get();
     if (target === 'INT' && !destination) throw new Error('catalog: international destination missing');
     const [catalog, market] = await Promise.all([
-      fetchShopifyCatalog(env),
-      fetchShopifyCatalog(env, fetch, target === 'US' ? 'US' : destination!).catch((error: unknown) => {
+      load('default'),
+      load(target === 'US' ? 'US' : destination!).catch((error: unknown) => {
         console.error(
           '[catalog] destination market prices unavailable, closing destination sales',
           error instanceof Error ? error.message : error,
