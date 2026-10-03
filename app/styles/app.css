@@ -3241,6 +3241,12 @@ button.reset {
   grid-area: title;
   white-space: nowrap;
 }
+/* "Results for ..." carries the visitor's query, of any length: it wraps
+   instead of widening the page. */
+.collection-header .page-title.is-results {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 
 .collection-header .collection-sort {
   grid-area: sort;
@@ -3523,6 +3529,17 @@ button.reset {
 }
 .catalog-term {
   color: var(--color-text);
+  /* A long query is cut with an ellipsis, so the count and Clear stay on
+     screen instead of pushing the page sideways. */
+  display: inline-block;
+  max-width: min(24ch, 40vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+.catalog-toolbar .catalog-count {
+  min-width: 0;
 }
 .catalog-term-clear {
   appearance: none;
@@ -6800,6 +6817,11 @@ section.chapter[data-centered] .chapter-body-col {
   color: var(--color-gold-text);
   outline: none;
 }
+/* The active chip already wears the hover look: focus needs its own ring. */
+.teardown-io-chip:focus-visible {
+  outline: 2px solid var(--color-focus, var(--color-gold));
+  outline-offset: 2px;
+}
 .teardown-pin-hoverable:hover .teardown-pin-part,
 .teardown-pin-hoverable:focus-visible .teardown-pin-part {
   color: var(--color-gold-text);
@@ -8597,6 +8619,8 @@ a.what-chain-chip:hover {
 }
 .signal-lost-title {
   margin: 0;
+  font-weight: 400;
+  line-height: inherit;
   font-family: var(--font-mono);
   font-size: clamp(0.8rem, 3vw, 1rem);
   letter-spacing: 0.5em;
@@ -12361,7 +12385,8 @@ html.light .editorial-watermark {
 .rn-archive-head .rn-eyebrow .rn-rss {
   display: inline-flex;
   gap: 6px;
-  color: var(--od-pcb-gold-2);
+  /* Gold as text: the token that deepens in light theme (1.4:1 before). */
+  color: var(--color-gold-text);
   text-decoration: none;
 }
 .rn-archive-head h1 {
@@ -12590,7 +12615,7 @@ html.light .editorial-watermark {
   border: 1.5px solid var(--od-pcb-gold);
   border-radius: var(--r-xs);
   background: var(--rn-gold-tint);
-  color: var(--od-pcb-gold-2);
+  color: var(--color-gold-text);
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.08em;
@@ -17820,7 +17845,7 @@ html.light .plugs {
   font-size: 10px;
   letter-spacing: 0.08em;
   vertical-align: middle;
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   text-transform: uppercase;
 }
 
@@ -18116,5 +18141,29 @@ html.light .plugs {
 @media (prefers-reduced-motion: reduce) {
   .cart-action-spinner {
     animation-duration: 2.4s;
+  }
+}
+
+/* Anything the browser scrolls into view for focus (Tab, or an invalid
+   field on submit) clears the floating header above and the phone's
+   sticky buy bar below. */
+a[href],
+button,
+input,
+select,
+textarea,
+summary,
+[tabindex]:not([tabindex='-1']) {
+  scroll-margin-top: calc(var(--header-height) + 1.5rem);
+  scroll-margin-bottom: 6rem;
+}
+
+/* Reduced motion: the loading pulses stop. Later blocks above re-declare
+   these animations, so this sits last. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse,
+  .latest-commit-skeleton-line,
+  .board-art-skeleton-label {
+    animation: none !important;
   }
 }

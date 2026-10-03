@@ -1057,6 +1057,9 @@ html.light .po-card-cta {
   .footer-tb-cell:is([data-cell='title'], [data-cell='company'], [data-cell='address'], [data-cell='email_label'], [data-cell='licence']) { grid-column: span 12; }
   .footer-tb-cell:is([data-cell='kbo'], [data-cell='vat']) { grid-column: span 6; }
   .footer-tb-cell:is([data-cell='rev'], [data-cell='sheet'], [data-cell='date']) { grid-column: span 4; }
+  /* The withdrawal link stands outside the folded Legal group on a phone;
+     inside the open group it would show twice. */
+  .footer-legal-nav a[href$='herroepingsrecht#withdraw'] { display: none; }
 }
 
 /* Shopping: one decision at a time, supporting detail on demand. */

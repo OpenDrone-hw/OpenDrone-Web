@@ -581,7 +581,7 @@ export default function ProductsIndex() {
       <header className="page-header collection-header">
         <Txt id="collections-all.eyebrow" as="p" className="page-eyebrow max-sm:hidden" />
         {term ? (
-          <h1 className="page-title" {...editAttrs('collections-all.results_title')}>
+          <h1 className="page-title is-results" {...editAttrs('collections-all.results_title')}>
             {withTerm('collections-all.results_title', 'Results for "{term}"', term)}
           </h1>
         ) : (
@@ -706,7 +706,7 @@ export default function ProductsIndex() {
                   <>
                     {' '}
                     <Txt id="collections-all.count_for_term" as="span" />{' '}
-                    <q className="catalog-term">{term}</q>{' '}
+                    <q className="catalog-term" title={term}>{term}</q>{' '}
                     <button
                       type="button"
                       className="catalog-term-clear"
@@ -724,7 +724,10 @@ export default function ProductsIndex() {
                 >
                   {copyText('collections-all.sort_label') ?? 'Sort'}
                 </span>
+                {/* The visible label hides on a phone: name the select
+                    itself so it is never announced unlabelled. */}
                 <select
+                  aria-label={copyText('collections-all.sort_label') ?? 'Sort'}
                   value={sort}
                   onChange={(e) =>
                     setParam('sort', e.target.value === 'featured' ? null : e.target.value)
