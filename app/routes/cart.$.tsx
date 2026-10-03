@@ -29,7 +29,7 @@ import {
 import buildsJson from '../../content/builds.json';
 import {isPurchasableStatus, lineDisplayName, setSize, variantDisplayName} from '~/lib/product-content';
 import {Txt} from '~/components/Txt';
-import {parcelPromise, soonerMonth} from '~/components/ShipChip';
+import {ShipChip, parcelPromise, soonerMonth} from '~/components/ShipChip';
 import {LineShipChip, heldBy, parcelDelay} from '~/components/ParcelChip';
 import {trackEvent} from '~/lib/growth/plausible';
 import {buildSeoMeta} from '~/lib/seo';
@@ -51,6 +51,10 @@ import {
 
 const CART_KEY = 'shopifyCartId';
 const BUILDS = parseBuilds(buildsJson);
+
+/** Props and extras are accessories, offered as add-ons; the rest of a
+ *  build is offered apart. */
+const isAccessory = (part: {role: string}) => part.role === 'props' || part.role === 'extra';
 const MAX_LINE_QUANTITY = 50;
 
 /** A copy string with `{name}` placeholders filled, or the fallback. */
@@ -272,19 +276,26 @@ function CartSuggestions({cart, group}: {cart: ShopifyCart; group: 'build' | 'ex
   const statuses = rootData?.productStatuses ?? {};
   const sellable = (handle: string) => isPurchasableStatus(statuses[handle]);
   const skus = cart.lines.map((l) => l.sku);
-  const build = resolveBuildSuggestions(
+  const buildId = resolveBuild(BUILDS, null, skus);
+  const buildLabel = BUILDS.builds.find((b) => b.id === buildId)?.label ?? null;
+  const parts = resolveBuildSuggestions(
     products,
-    buildSuggestionSpecs(BUILDS, resolveBuild(BUILDS, null, skus), cart.lines),
+    buildSuggestionSpecs(BUILDS, buildId, cart.lines),
     sellable,
   );
+  // Props are an accessory, not a build part: they join the add-ons.
+  const build = parts.filter((p) => !isAccessory(p));
   const promises = cart.lines.map((l) => l.shipPromise);
   // A cheap add-on never holds the parcel back: one that ships later than
   // the cart is left out.
-  const extras = resolveBuildSuggestions(
-    products,
-    extraSuggestionSpecs(BUILDS, cart.lines, build.map((s) => s.sku)),
-    sellable,
-  )
+  const extras = [
+    ...parts.filter(isAccessory),
+    ...resolveBuildSuggestions(
+      products,
+      extraSuggestionSpecs(BUILDS, cart.lines, parts.map((s) => s.sku)),
+      sellable,
+    ),
+  ]
     .filter((part) => !parcelDelay(promises, part.variant.shipPromise))
     .slice(0, 3);
   if (!(group === 'build' ? build : extras).length) return null;
@@ -311,67 +322,112 @@ function CartSuggestions({cart, group}: {cart: ShopifyCart; group: 'build' | 'ex
     }
   };
 
+  const row = (part: BuildSuggestion) => {
+    const image = part.variant.image ?? part.product.featuredImage;
+    // A part that ships later than the parcel moves the whole parcel.
+    const delay = parcelDelay(promises, part.variant.shipPromise);
+    return (
+      <li className="cart-added-suggestion" key={part.sku}>
+        {image ? (
+          <img src={shopifyImageUrl(image.url, 96)} alt="" width={48} height={48} loading="lazy" />
+        ) : (
+          <span className="cart-line-noimage" aria-hidden="true" />
+        )}
+        <div>
+          <Link className="cart-added-suggestion-name" to={`/products/${part.product.handle}`} prefetch="intent">
+            {part.quantity > 1 ? `${part.quantity}x ` : ''}
+            {part.variant.title !== 'Default Title'
+              ? `${part.product.title} ${variantDisplayName(part.product.handle, part.variant.title)}`
+              : part.product.title}
+          </Link>
+          <LineShipChip
+            promise={part.variant.shipPromise}
+            parcel={heldBy(promises, part.variant.shipPromise)}
+            className="cart-added-ship"
+          />
+          {delay ? (
+            <small className="cart-added-delay" role="note">
+              {/* The chip above names the later date. */}
+              {t('upsell_delay_short', 'Holds your whole parcel until then (now {from}).', delay)}
+            </small>
+          ) : null}
+        </div>
+        <span className="cart-added-price">
+          {formatPrice(Number(part.variant.price.amount) * part.quantity, part.variant.price.currencyCode)}
+        </span>
+        <button
+          type="button"
+          className="cart-added-add"
+          disabled={busy !== null || revalidator.state !== 'idle'}
+          onClick={() => void add(part)}
+        >
+          {failed === part.sku ? t('build_retry', 'Try again') : t('build_add', 'Add')}
+        </button>
+      </li>
+    );
+  };
+
+  // The add-ons: a small card next to Checkout, open.
+  if (group === 'extras') {
+    return (
+      <div className="cart-addons">
+        <p className="cart-added-build-title">{t('extras_title', 'Add-ons')}</p>
+        <ul className="cart-added-suggestions">{extras.map(row)}</ul>
+      </div>
+    );
+  }
+  // The rest of the quad: one closed line the buyer opens if they want it,
+  // never a wall of full-price parts.
   return (
-    <div className={group === 'build' ? 'cart-suggest' : 'cart-addons'}>
-      {(
-        [
-          ['build', t('build_title', 'Complete the build'), build],
-          ['extras', t('extras_title', 'Add-ons'), extras],
-        ] as const
-      ).filter(([key]) => key === group).map(([group, title, parts]) =>
-        parts.length ? (
-          <div className="cart-added-build" key={group}>
-            <p className="cart-added-build-title">{title}</p>
-            <ul className="cart-added-suggestions">
-              {parts.map((part) => {
-                const image = part.variant.image ?? part.product.featuredImage;
-                // A part that ships later than the parcel moves the whole parcel.
-                const delay = parcelDelay(promises, part.variant.shipPromise);
-                return (
-                  <li className="cart-added-suggestion" key={part.sku}>
-                    {image ? (
-                      <img src={shopifyImageUrl(image.url, 96)} alt="" width={48} height={48} loading="lazy" />
-                    ) : (
-                      <span className="cart-line-noimage" aria-hidden="true" />
-                    )}
-                    <div>
-                      <Link className="cart-added-suggestion-name" to={`/products/${part.product.handle}`} prefetch="intent">
-                        {part.quantity > 1 ? `${part.quantity}x ` : ''}
-                        {part.variant.title !== 'Default Title'
-                          ? `${part.product.title} ${variantDisplayName(part.product.handle, part.variant.title)}`
-                          : part.product.title}
-                      </Link>
-                      <LineShipChip
-                        promise={part.variant.shipPromise}
-                        parcel={heldBy(promises, part.variant.shipPromise)}
-                        className="cart-added-ship"
-                      />
-                      {delay ? (
-                        <small className="cart-added-delay" role="note">
-                          {/* The chip above names the later date. */}
-                          {t('upsell_delay_short', 'Holds your whole parcel until then (now {from}).', delay)}
-                        </small>
-                      ) : null}
-                    </div>
-                    <span className="cart-added-price">
-                      {formatPrice(Number(part.variant.price.amount) * part.quantity, part.variant.price.currencyCode)}
-                    </span>
-                    <button
-                      type="button"
-                      className="cart-added-add"
-                      disabled={busy !== null || revalidator.state !== 'idle'}
-                      onClick={() => void add(part)}
-                    >
-                      {failed === part.sku ? t('build_retry', 'Try again') : t('build_add', 'Add')}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ) : null,
-      )}
-    </div>
+    <details className="cart-suggest cart-build-more">
+      <summary>
+        {buildLabel
+          ? t('build_more_sized', 'Completing a {build} build? {count} parts', {build: buildLabel, count: build.length})
+          : t('build_more', 'Completing a build? {count} parts', {count: build.length})}
+      </summary>
+      <ul className="cart-added-suggestions">{build.map(row)}</ul>
+    </details>
+  );
+}
+
+/**
+ * When the parcel ships and arrives, once, next to Checkout. An order ships
+ * as one parcel when its last item is ready, so the lines carry no date of
+ * their own. Opened, it lists each item's own date (when they differ) and
+ * the funding-target rule.
+ */
+function ParcelPanel({lines}: {lines: ShopifyCartLine[]}) {
+  const promises = lines.map((l) => l.shipPromise);
+  const promise = parcelPromise(promises) ?? promises.find(Boolean) ?? null;
+  const deliveryBy = latestDeliveryBy(lines);
+  if (!promise && !deliveryBy) return null;
+  const mixed = new Set(promises.map((p) => p ?? '')).size > 1;
+  return (
+    <details className="cart-parcel">
+      <summary>
+        <span className="cart-parcel-label">{t('parcel_label', 'Your parcel')}</span>
+        <span className="cart-parcel-when">
+          <ShipChip promise={promise} ifFunded />
+          {deliveryBy ? <small>{t('delivery_by', 'Delivery by {date}', {date: deliveryBy})}</small> : null}
+        </span>
+      </summary>
+      <div className="cart-parcel-body">
+        {mixed ? (
+          <ul className="cart-parcel-items">
+            {lines.map((line) => (
+              <li key={line.id}>
+                <span>{lineName(line)}</span>
+                <ShipChip promise={line.shipPromise} ifFunded />
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <p>
+          {t('parcel_rule', 'Preorders ship when their funding target is reached. If a target is missed, you choose a refund or to keep waiting.')}{' '}
+          <Link prefetch="intent" to="/preorder">{copyText('product-chrome.buy_terms_link') ?? 'Pre-order terms'}</Link>
+        </p>
+      </div>
+    </details>
   );
 }
 
@@ -421,9 +477,6 @@ function PopulatedCart({
   // not ship together even when their promise reads the same.
   const groupOf = (line: ShopifyCartLine) => info[line.id]?.group ?? `date:${line.shipPromise ?? ''}`;
   const mixed = new Set(cart.lines.map(groupOf)).size > 1;
-  // The promise the whole parcel waits for: lines ready sooner say so.
-  const parcel = mixed ? parcelPromise(cart.lines.map((l) => l.shipPromise)) : null;
-  const parcelDeliveryBy = mixed ? latestDeliveryBy(cart.lines) : null;
   // Checkout is refused for a blocked country, for one sold only through
   // shops and for an EU country not open yet; the cart
   // says which and links onward.
@@ -461,7 +514,7 @@ function PopulatedCart({
           </div>
           <ul className="cart-lines-scroll" aria-label={copyText('cart.sr_line_items') ?? 'Line items'}>
             {sortCartLines(cart.lines).map((line) => (
-              <CartLine key={line.id} line={line} info={info[line.id]} pending={pending} parcel={parcel} deliveryBy={parcelDeliveryBy ?? line.deliveryBy} />
+              <CartLine key={line.id} line={line} info={info[line.id]} pending={pending} />
             ))}
           </ul>
         </div>
@@ -502,6 +555,8 @@ function PopulatedCart({
             <p className="cart-summary-note">{t('shipping_at_checkout', 'Shipping calculated at checkout')}</p>
           )}
           {international ? <p className="cart-summary-note">{t('international_note', 'Shipping and applicable sale taxes are confirmed at checkout. Import duties, import taxes and customs handling charges may be payable on delivery.')}</p> : null}
+          {/* One parcel, one date: said once here, not under every line. */}
+          <ParcelPanel lines={cart.lines} />
           {mixed ? <MixedNote cart={cart} info={info} onSplit={onSplit} /> : null}
           {/* The cheap add-ons sit next to Checkout, where the buyer decides. */}
           {shipBlocked || throughShops || closed ? null : <CartSuggestions cart={cart} group="extras" />}
@@ -681,15 +736,10 @@ function CartLine({
   line,
   info,
   pending,
-  parcel = null,
-  deliveryBy = null,
 }: {
   line: ShopifyCartLine;
   info: CartLineInfo | undefined;
   pending: boolean;
-  /** The promise a one-parcel order waits for, or null for a single date. */
-  parcel?: string | null;
-  deliveryBy?: string | null;
 }) {
   const max = info?.maxQuantity ?? null;
   return (
@@ -702,8 +752,6 @@ function CartLine({
         )}
         <div className="cart-sheet-item">
           <Link to={variantLink(line.handle, line.selectedOptions)}><strong>{lineName(line)}</strong></Link>
-          <LineShipChip promise={line.shipPromise} parcel={parcel} />
-          {deliveryBy ? <small>{t('delivery_by', 'Delivery by {date}', {date: deliveryBy})}</small> : null}
           {max !== null && line.quantity > max ? (
             <small className="cart-line-error" role="alert">{t('line_over_batch', 'Only {left} left. Lower the quantity.', {left: max})}</small>
           ) : max !== null && max < MAX_LINE_QUANTITY && line.quantity >= max ? (

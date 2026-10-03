@@ -10,7 +10,7 @@ import {
   lineDisplayName,
   variantDisplayName,
 } from '~/lib/product-content';
-import {parcelPromise, soonerMonth} from './ShipChip';
+import {ShipChip, parcelPromise, soonerMonth} from './ShipChip';
 import {LineShipChip, heldBy, parcelDelay} from './ParcelChip';
 import {paysEuVat} from '~/lib/visitor-country';
 import {countryName, notSoldDirect, offersPickup, shippingQuote} from '~/lib/shipping-rates';
@@ -115,9 +115,6 @@ export function CartAddedDialog() {
   // Dated lines next to a funding-target line: the buyer can order the dated
   // ones separately to get them sooner (the cart page does the split).
   const sooner = mixed ? soonerMonth(summary.lines.map((l) => l.shipPromise)) : null;
-  // The promise the whole parcel waits for: lines ready sooner say so.
-  const parcelOf = mixed ? parcelPromise(summary.lines.map((l) => l.shipPromise)) : null;
-  const parcelDeliveryBy = mixed ? latestDeliveryBy(summary.lines) : null;
   const subtotal = summary.subtotal ?? null;
   // Same rule as the buy module and the cart: "incl. VAT" only where EU VAT
   // applies.
@@ -133,28 +130,34 @@ export function CartAddedDialog() {
   const shippingRate =
     quote?.kind === 'direct' && quote.rate !== null ? formatPrice(quote.rate, quote.zone === 'us' ? 'USD' : 'EUR') : null;
   const cartPromises = summary.lines.map((l) => l.shipPromise);
+  const orderPromise = parcelPromise(cartPromises) ?? cartPromises.find(Boolean) ?? null;
+  const orderDeliveryBy = latestDeliveryBy(summary.lines);
 
   // The parts that complete the build, judged on the cart as it was when
   // the drawer opened, so a part added from here stays listed as "Added".
   const openedWith = detail.summary.lines;
   const statuses = rootData?.productStatuses ?? {};
-  const suggestions = resolveBuildSuggestions(
+  const buildId = resolveBuild(BUILDS, detail.skus[0], openedWith.map((l) => l.sku));
+  const buildLabel = BUILDS.builds.find((b) => b.id === buildId)?.label ?? null;
+  const parts = resolveBuildSuggestions(
     rootData?.familyProducts ?? [],
-    buildSuggestionSpecs(
-      BUILDS,
-      resolveBuild(BUILDS, detail.skus[0], openedWith.map((l) => l.sku)),
-      openedWith,
-    ),
+    buildSuggestionSpecs(BUILDS, buildId, openedWith),
     (handle) => isPurchasableStatus(statuses[handle]),
   );
-  // Cheap add-ons for what the cart holds. One that ships later than the
-  // cart is left out: it would hold the whole parcel back.
+  // The rest of the quad, offered closed; props count as an add-on.
+  const suggestions = parts.filter((p) => p.role !== 'props');
+  // Cheap add-ons for what the cart holds, the build's props first. One
+  // that ships later than the cart is left out: it would hold the whole
+  // parcel back.
   const openedPromises = openedWith.map((l) => l.shipPromise);
-  const extras = resolveBuildSuggestions(
-    rootData?.familyProducts ?? [],
-    extraSuggestionSpecs(BUILDS, openedWith, suggestions.map((s) => s.sku)),
-    (handle) => isPurchasableStatus(statuses[handle]),
-  )
+  const extras = [
+    ...parts.filter((p) => p.role === 'props'),
+    ...resolveBuildSuggestions(
+      rootData?.familyProducts ?? [],
+      extraSuggestionSpecs(BUILDS, openedWith, parts.map((s) => s.sku)),
+      (handle) => isPurchasableStatus(statuses[handle]),
+    ),
+  ]
     .filter((part) => !parcelDelay(openedPromises, part.variant.shipPromise))
     .slice(0, 3);
 
@@ -237,10 +240,6 @@ export function CartAddedDialog() {
                     {`${line.quantity} × ${formatPrice(Number(line.total.amount) / line.quantity, line.total.currencyCode)}`}
                   </span>
                 ) : null}
-                <LineShipChip promise={line.shipPromise} parcel={parcelOf} className="cart-added-ship" />
-                {parcelDeliveryBy || line.deliveryBy ? (
-                  <small className="cart-added-line-qty">{t('delivery_by', 'Delivery by {date}', {date: parcelDeliveryBy ?? line.deliveryBy!})}</small>
-                ) : null}
               </div>
               {line.total ? (
                 <span className="cart-added-price">
@@ -259,8 +258,13 @@ export function CartAddedDialog() {
             ['build', t('build_title', 'Complete the build'), suggestions],
           ] as const
         ).map(([group, title, parts]) => parts.length ? (
-          <div className="cart-added-build" key={group}>
-            <p className="cart-added-build-title">{title}</p>
+          <Group key={group} closed={group === 'build'} title={
+            group === 'build'
+              ? buildLabel
+                ? t('build_more_sized', 'Completing a {build} build? {count} parts', {build: buildLabel, count: String(parts.length)})
+                : t('build_more', 'Completing a build? {count} parts', {count: String(parts.length)})
+              : title
+          }>
             <ul className="cart-added-suggestions">
               {parts.map((part) => {
                 const image = part.variant.image ?? part.product.featuredImage;
@@ -316,7 +320,7 @@ export function CartAddedDialog() {
                 );
               })}
             </ul>
-          </div>
+          </Group>
         ) : null)}
 
         <div className="cart-added-foot">
@@ -345,6 +349,16 @@ export function CartAddedDialog() {
               <span>{t('shipping_row', 'Shipping to {country}', {country: countryName(visitor ?? '')})}</span>
               <span className="cart-added-price">{shippingRate}</span>
             </p>
+          ) : null}
+          {/* The order's one ship and delivery date, said once. */}
+          {orderPromise || orderDeliveryBy ? (
+            <div className="cart-added-subtotal cart-added-when">
+              <span>{t('parcel_label', 'Your parcel')}</span>
+              <span className="cart-parcel-when">
+                <ShipChip promise={orderPromise} ifFunded />
+                {orderDeliveryBy ? <small>{t('delivery_by', 'Delivery by {date}', {date: orderDeliveryBy})}</small> : null}
+              </span>
+            </div>
           ) : null}
           {shippingRate && offersPickup(visitor) ? (
             <p className="cart-added-parcel">{t('pickup_note', 'Or pick up free at our Leuven office: choose Pickup at checkout.')}</p>
@@ -407,6 +421,25 @@ export function CartAddedDialog() {
           <Txt id="cart.note_terms" as="p" className="cart-added-parcel [&_a]:underline! [&_a]:underline-offset-4" />
         </div>
       </section>
+    </div>
+  );
+}
+
+/** One suggestion group: the add-ons open under their title, the rest of
+ *  the build as a closed line the buyer opens if they want it. */
+function Group({title, closed, children}: {title: string; closed: boolean; children: React.ReactNode}) {
+  if (closed) {
+    return (
+      <details className="cart-added-build cart-build-more">
+        <summary>{title}</summary>
+        {children}
+      </details>
+    );
+  }
+  return (
+    <div className="cart-added-build">
+      <p className="cart-added-build-title">{title}</p>
+      {children}
     </div>
   );
 }

@@ -14398,6 +14398,109 @@ html.light .cart-added-line img {
   gap: var(--sp-5);
   margin-top: var(--sp-6);
 }
+/* "Your parcel": the one ship date and delivery date of the order, next to
+   Checkout. Closed it is one line; open it lists each item's date and the
+   funding-target rule. */
+.cart-parcel {
+  margin: var(--sp-2) 0;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--fs-sm);
+}
+.cart-parcel > summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3) 0;
+  cursor: pointer;
+  list-style: none;
+}
+.cart-parcel > summary::-webkit-details-marker {
+  display: none;
+}
+.cart-parcel > summary::after {
+  content: '+';
+  font-family: var(--font-mono);
+  color: var(--color-text-muted);
+}
+.cart-parcel[open] > summary::after {
+  content: '\2212';
+}
+.cart-parcel-label {
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.cart-parcel-when {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  justify-items: end;
+  text-align: right;
+}
+.cart-parcel-when small {
+  color: var(--color-text-muted);
+}
+.cart-parcel-body {
+  display: grid;
+  gap: var(--sp-2);
+  padding-bottom: var(--sp-3);
+  color: var(--color-text-muted);
+}
+.cart-parcel-body p {
+  margin: 0;
+}
+.cart-parcel-body a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.cart-parcel-items {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cart-parcel-items li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+/* "Completing a build?": one quiet line, closed; the parts show on tap. */
+.cart-build-more {
+  display: block;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+.cart-build-more > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  min-height: 48px;
+  cursor: pointer;
+  list-style: none;
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+}
+.cart-build-more > summary::-webkit-details-marker {
+  display: none;
+}
+.cart-build-more > summary::after {
+  content: '+';
+  font-family: var(--font-mono);
+  color: var(--color-text-muted);
+}
+.cart-build-more[open] > summary::after {
+  content: '\2212';
+}
+.cart-build-more > summary:hover {
+  color: var(--color-text);
+}
+.cart-build-more .cart-added-suggestion:first-child {
+  border-top: 1px solid var(--color-border);
+}
 /* The add-ons card above Checkout: a gold-edged box so the cheap
    one-tap items read as part of the order, not as an advert. */
 .cart-addons {
