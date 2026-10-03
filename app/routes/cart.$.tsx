@@ -262,7 +262,7 @@ function SplitReminder({
  * add-to-cart drawer offers them, each with an Add button. Hidden when
  * nothing applies.
  */
-function CartSuggestions({cart}: {cart: ShopifyCart}) {
+function CartSuggestions({cart, group}: {cart: ShopifyCart; group: 'build' | 'extras'}) {
   const rootData = useRouteLoaderData<RootLoader>('root');
   const revalidator = useRevalidator();
   const [busy, setBusy] = useState<string | null>(null);
@@ -277,13 +277,17 @@ function CartSuggestions({cart}: {cart: ShopifyCart}) {
     buildSuggestionSpecs(BUILDS, resolveBuild(BUILDS, null, skus), cart.lines),
     sellable,
   );
+  const promises = cart.lines.map((l) => l.shipPromise);
+  // A cheap add-on never holds the parcel back: one that ships later than
+  // the cart is left out.
   const extras = resolveBuildSuggestions(
     products,
     extraSuggestionSpecs(BUILDS, cart.lines, build.map((s) => s.sku)),
     sellable,
-  ).slice(0, 3);
-  if (!build.length && !extras.length) return null;
-  const promises = cart.lines.map((l) => l.shipPromise);
+  )
+    .filter((part) => !parcelDelay(promises, part.variant.shipPromise))
+    .slice(0, 3);
+  if (!(group === 'build' ? build : extras).length) return null;
 
   const add = async (part: BuildSuggestion) => {
     if (busy) return;
@@ -308,13 +312,13 @@ function CartSuggestions({cart}: {cart: ShopifyCart}) {
   };
 
   return (
-    <div className="cart-suggest">
+    <div className={group === 'build' ? 'cart-suggest' : 'cart-addons'}>
       {(
         [
           ['build', t('build_title', 'Complete the build'), build],
-          ['extras', t('extras_title', 'Spares and extras'), extras],
+          ['extras', t('extras_title', 'Add-ons'), extras],
         ] as const
-      ).map(([group, title, parts]) =>
+      ).filter(([key]) => key === group).map(([group, title, parts]) =>
         parts.length ? (
           <div className="cart-added-build" key={group}>
             <p className="cart-added-build-title">{title}</p>
@@ -344,7 +348,8 @@ function CartSuggestions({cart}: {cart: ShopifyCart}) {
                       />
                       {delay ? (
                         <small className="cart-added-delay" role="note">
-                          {t('upsell_delay', 'Adding this delays your whole parcel: instead of {from} it ships {to}.', delay)}
+                          {/* The chip above names the later date. */}
+                          {t('upsell_delay_short', 'Holds your whole parcel until then (now {from}).', delay)}
                         </small>
                       ) : null}
                     </div>
@@ -459,7 +464,6 @@ function PopulatedCart({
               <CartLine key={line.id} line={line} info={info[line.id]} pending={pending} parcel={parcel} deliveryBy={parcelDeliveryBy ?? line.deliveryBy} />
             ))}
           </ul>
-          <CartSuggestions cart={cart} />
         </div>
         <div className="cart-summary-page" aria-busy={pending || undefined}>
           <ShipToSelect
@@ -499,6 +503,8 @@ function PopulatedCart({
           )}
           {international ? <p className="cart-summary-note">{t('international_note', 'Shipping and applicable sale taxes are confirmed at checkout. Import duties, import taxes and customs handling charges may be payable on delivery.')}</p> : null}
           {mixed ? <MixedNote cart={cart} info={info} onSplit={onSplit} /> : null}
+          {/* The cheap add-ons sit next to Checkout, where the buyer decides. */}
+          {shipBlocked || throughShops || closed ? null : <CartSuggestions cart={cart} group="extras" />}
           {shipBlocked ? (
             <p className="cart-summary-note" role="note">
               {t('checkout_blocked', 'Not available in {country}.', {country: countryName(country ?? '')})}{' '}
@@ -547,6 +553,7 @@ function PopulatedCart({
           <PaymentMarks methods={payments} />
           <Txt id="cart.note_terms" as="p" className="cart-summary-note cart-terms [&_a]:underline! [&_a]:underline-offset-4" />
         </div>
+        <CartSuggestions cart={cart} group="build" />
       </section>
     </PendingContext.Provider>
   );

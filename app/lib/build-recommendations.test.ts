@@ -116,9 +116,20 @@ describe('extraSuggestionSpecs', () => {
   });
 
   it('offers the spare antenna that matches the receiver', () => {
-    assert.deepEqual(skus(['OPENRX-LITE-UFL']), ['ACC-ANT-T']);
-    assert.deepEqual(skus(['OPENRX-GEMINI']), ['ACC-ANT-DUAL-T']);
-    assert.deepEqual(skus(['OPENRX-LITE']), []);
+    assert.deepEqual(skus(['OPENRX-LITE-UFL']), ['ACC-STRAP-20X220', 'ACC-ANT-T']);
+    assert.deepEqual(skus(['OPENRX-GEMINI']), ['ACC-STRAP-20X220', 'ACC-ANT-DUAL-T']);
+    assert.deepEqual(skus(['OPENRX-LITE']), ['ACC-STRAP-15X200']);
+  });
+
+  it('offers one strap per quad, never one per motor', () => {
+    const strap = (cart: Array<[string, number]>) =>
+      extraSuggestionSpecs(BUILDS, cart.map(([sku, quantity]) => ({sku, handle: '', quantity}))).find((e) =>
+        e.sku.startsWith('ACC-STRAP'),
+      )?.quantity;
+    assert.equal(strap([['OPENFC-LITE-2020', 4]]), 4);
+    assert.equal(strap([['OPENMOTOR-1604', 4]]), 1);
+    assert.equal(strap([['OPENFRAME-5', 2], ['OPENMOTOR-2306', 8]]), 2);
+    assert.equal(strap([['OPENFC-LITE-3030', 50]]), 10);
   });
 
   it('leaves out what the cart holds and what the build parts already offer', () => {

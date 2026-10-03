@@ -28,8 +28,18 @@ export type BuildsConfig = {
     parts: Array<{role: BuildRole; sku: string; quantity: number; handle?: string}>;
   }>;
   /** Spares and accessories, offered once the cart holds a `with` SKU. */
-  extras?: Array<{sku: string; handle: string; quantity: number; with: string[]}>;
+  extras?: Array<{
+    sku: string;
+    handle: string;
+    quantity: number;
+    with: string[];
+    /** One per quad: the quantity follows the largest cart line among these
+     *  SKUs (four flight controllers, four straps), capped at MAX_PER_QUAD. */
+    perQuad?: string[];
+  }>;
 };
+
+const MAX_PER_QUAD = 10;
 
 /** The product handle of a build part: its own, else its role's. */
 export function partHandle(
@@ -46,7 +56,7 @@ export type BuildSuggestion = BuildPart & {
   variant: ProductVariantFragment;
 };
 
-type CartLine = {sku: string | null; handle: string; variantTitle?: string};
+type CartLine = {sku: string | null; handle: string; variantTitle?: string; quantity?: number};
 
 /** Accept `content/builds.json`, or throw on anything malformed. */
 export function parseBuilds(body: unknown): BuildsConfig {
@@ -70,6 +80,9 @@ export function parseBuilds(body: unknown): BuildsConfig {
     }
     if (!Array.isArray(extra.with) || extra.with.length === 0) {
       throw new Error(`builds: extra ${extra.sku} needs at least one "with" SKU`);
+    }
+    if (extra.perQuad && !extra.perQuad.every((s) => extra.with.includes(s))) {
+      throw new Error(`builds: extra ${extra.sku} counts quads by a SKU outside "with"`);
     }
   }
   return c as BuildsConfig;
@@ -159,7 +172,13 @@ export function extraSuggestionSpecs(
   const skip = new Set(exclude);
   return (config.extras ?? [])
     .filter((e) => !skus.has(e.sku) && !skip.has(e.sku) && e.with.some((s) => skus.has(s)))
-    .map(({sku, handle, quantity}) => ({role: 'extra' as const, sku, handle, quantity}));
+    .map(({sku, handle, quantity, perQuad}) => {
+      const quads = Math.max(
+        0,
+        ...cart.filter((line) => line.sku && perQuad?.includes(line.sku)).map((line) => line.quantity ?? 1),
+      );
+      return {role: 'extra' as const, sku, handle, quantity: Math.min(Math.max(quantity, quads), MAX_PER_QUAD)};
+    });
 }
 
 /**

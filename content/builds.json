@@ -1,5 +1,5 @@
 {
-  "$comment": "Build compatibility for the add-to-cart dialog's 'complete your build' (app/lib/build-recommendations.ts). A SKU listed in a build belongs to that size; the parts of a build are what is suggested around it, with the quantity one quad needs. A role marked sizeNeutral (receivers) is filled by any product with that handle, whatever its variant. Shopify's recommendations may reorder parts, never add one that is not listed here. A part may name its own product handle (each prop set is its own product). Receivers ship with their antenna, so builds list no separate antenna; a spare antenna stays buyable on its own. `extras` are the spares the cart offers after the build: each shows once the cart holds one of its `with` SKUs and not the extra itself, in list order.",
+  "$comment": "Build compatibility for the add-to-cart dialog's 'complete your build' (app/lib/build-recommendations.ts). A SKU listed in a build belongs to that size; the parts of a build are what is suggested around it, with the quantity one quad needs. A role marked sizeNeutral (receivers) is filled by any product with that handle, whatever its variant. Shopify's recommendations may reorder parts, never add one that is not listed here. A part may name its own product handle (each prop set is its own product). Receivers ship with their antenna, so builds list no separate antenna; a spare antenna stays buyable on its own. `extras` are the spares the cart offers after the build: each shows once the cart holds one of its `with` SKUs and not the extra itself, in list order. An extra with `perQuad` is offered once per quad: its quantity follows the largest cart line among those SKUs.",
   "roles": {
     "flight-controller": {
       "handle": "openfc-lite"
@@ -104,13 +104,15 @@
       "sku": "ACC-STRAP-15X200",
       "handle": "battery-strap-15-x-200-mm-woven-logo",
       "quantity": 1,
-      "with": ["OPENFRAME-3", "OPENFC-LITE-2020", "OPENESC-2020", "OPENMOTOR-1604", "OPENMOTOR-1604-4S"]
+      "with": ["OPENFRAME-3", "OPENFC-LITE-2020", "OPENESC-2020", "OPENMOTOR-1604", "OPENMOTOR-1604-4S", "OPENRX-LITE"],
+      "perQuad": ["OPENFRAME-3", "OPENFC-LITE-2020", "OPENESC-2020", "OPENRX-LITE"]
     },
     {
       "sku": "ACC-STRAP-20X220",
       "handle": "battery-strap",
       "quantity": 1,
-      "with": ["OPENFRAME-5", "OPENFC-LITE-3030", "OPENESC-3030", "OPENMOTOR-2306", "OPENMOTOR-2306-4S"]
+      "with": ["OPENFRAME-5", "OPENFC-LITE-3030", "OPENESC-3030", "OPENMOTOR-2306", "OPENMOTOR-2306-4S", "OPENRX-LITE-UFL", "OPENRX-MONO", "OPENRX-GEMINI"],
+      "perQuad": ["OPENFRAME-5", "OPENFC-LITE-3030", "OPENESC-3030", "OPENRX-LITE-UFL", "OPENRX-MONO", "OPENRX-GEMINI"]
     },
     {
       "sku": "ACC-PROP-3-HQ-T3X2X3-DUR",

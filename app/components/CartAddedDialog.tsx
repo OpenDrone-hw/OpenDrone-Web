@@ -147,12 +147,16 @@ export function CartAddedDialog() {
     ),
     (handle) => isPurchasableStatus(statuses[handle]),
   );
-  // Spares and accessories for what the cart holds, after the build parts.
+  // Cheap add-ons for what the cart holds. One that ships later than the
+  // cart is left out: it would hold the whole parcel back.
+  const openedPromises = openedWith.map((l) => l.shipPromise);
   const extras = resolveBuildSuggestions(
     rootData?.familyProducts ?? [],
     extraSuggestionSpecs(BUILDS, openedWith, suggestions.map((s) => s.sku)),
     (handle) => isPurchasableStatus(statuses[handle]),
-  ).slice(0, 3);
+  )
+    .filter((part) => !parcelDelay(openedPromises, part.variant.shipPromise))
+    .slice(0, 3);
 
   const addPart = async (part: BuildSuggestion) => {
     if (!beginCartAdd()) return;
@@ -249,8 +253,10 @@ export function CartAddedDialog() {
 
         {(
           [
+            // The cheap add-ons first: one tap, and they never fall below
+            // a long build list.
+            ['extras', t('extras_title', 'Add-ons'), extras],
             ['build', t('build_title', 'Complete the build'), suggestions],
-            ['extras', t('extras_title', 'Spares and extras'), extras],
           ] as const
         ).map(([group, title, parts]) => parts.length ? (
           <div className="cart-added-build" key={group}>
