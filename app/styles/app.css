@@ -18084,3 +18084,31 @@ html.light .plugs {
   align-items: center;
   gap: 0.5rem;
 }
+
+/* --- Add-to-cart busy state ------------------------------------------- */
+/* The spinner and "Adding..." sit on one centred line inside the button,
+   whatever the button size, and the icon turns. */
+.cart-action-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  max-width: 100%;
+  white-space: nowrap;
+}
+.cart-action-spinner {
+  flex: none;
+  width: 1em;
+  height: 1em;
+  animation: cart-action-spin 0.8s linear infinite;
+}
+@keyframes cart-action-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cart-action-spinner {
+    animation-duration: 2.4s;
+  }
+}
