@@ -1382,6 +1382,14 @@ html.anim-paused .board-sheet.is-active {
   :root {
     --header-pill-gap: 0.5rem;
   }
+  /* The five pills plus the icons ran ~40 px past the pill at 1024: the
+     category labels tighten so the menu button stays inside. */
+  .site-header-categories a {
+    letter-spacing: 0.08em;
+  }
+  .site-header-categories .site-header-cat-group > .header-cat > a {
+    padding: 0 0.6em;
+  }
 }
 
 /* Family chip + its hover-drop Pod. The wrap carries the absolute centering so
@@ -5193,6 +5201,20 @@ html.light .firmware-logo--tile {
 .spec-sheet--multi td,
 .spec-sheet--multi thead th {
   color: var(--color-text-muted);
+}
+/* The smallest phones: a narrower label column and tighter cells keep a
+   two-variant table inside 320 px instead of scrolling the page. */
+@media (max-width: 380px) {
+  .spec-sheet th,
+  .spec-sheet td {
+    padding-right: 10px;
+  }
+  .spec-sheet tbody th {
+    width: 6.5rem;
+  }
+  .spec-sheet td {
+    overflow-wrap: anywhere;
+  }
 }
 .spec-sheet--multi .is-active,
 .spec-sheet--multi thead th.is-active {
@@ -18165,5 +18187,18 @@ summary,
   .latest-commit-skeleton-line,
   .board-art-skeleton-label {
     animation: none !important;
+  }
+}
+
+/* The pinned buy bar on the smallest phones: the price, the button and the
+   ChatFPV link share 320 px, so the link drops its lead-in and the button
+   label stays on one line inside the button. */
+@media (max-width: 400px) {
+  .is-pinned .chatfpv-entry-lead {
+    display: none;
+  }
+  .buy-rail.is-pinned .product-form .btn-primary {
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 }

@@ -1041,10 +1041,12 @@ html.light .po-card-cta {
 @media (max-width: 1023px) {
   .footer-top { grid-template-columns: minmax(0, 1fr); gap: 20px; }
   .footer-parts-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
-@media (max-width: 767px) {
+  /* Below desktop the title block takes the full row: beside the drawing
+     it was squeezed to ~360 px and broke the KBO, VAT and date mid-value. */
   .footer-foot { flex-direction: column-reverse; align-items: stretch; }
   .footer-tb { width: auto; margin-left: calc(-1 * var(--sheet-pad)); }
+}
+@media (max-width: 767px) {
   .footer-foot-left { padding-bottom: 4px; }
   .footer-view { display: none; }
 }

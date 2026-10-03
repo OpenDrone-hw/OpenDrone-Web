@@ -73,12 +73,18 @@ export function Aside({
   // Scroll-lock the document body while a modal Aside is open so background
   // content can't be scrolled behind the overlay. Paired with the focus
   // trap below so keyboard users can't tab outside the dialog.
+  // The lock goes on <html> too: html sets `overflow-x: clip`, so a body
+  // overflow never propagates to the viewport and the page kept scrolling.
   useEffect(() => {
     if (!modal) return;
-    const prev = document.body.style.overflow;
+    const root = document.documentElement;
+    const prevBody = document.body.style.overflow;
+    const prevRoot = root.style.overflow;
     document.body.style.overflow = 'hidden';
+    root.style.overflow = 'hidden';
     return () => {
-      document.body.style.overflow = prev;
+      document.body.style.overflow = prevBody;
+      root.style.overflow = prevRoot;
     };
   }, [modal]);
 

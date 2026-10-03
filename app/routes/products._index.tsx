@@ -779,6 +779,10 @@ export default function ProductsIndex() {
                   {(copyText('collections-all.chip_stack') ?? '{size} stack').replace('{size}', size)}
                 </button>
               ))}
+              {/* Its own group: without a label it read as a third stack mount. */}
+              {stackShips ? (
+                <span className="catalog-chip-label"><Txt id="collections-all.shipping_filter" /></span>
+              ) : null}
               {stackShips ? (
                 <button
                   type="button"
