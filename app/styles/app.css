@@ -14518,7 +14518,7 @@ html.light .cart-added-line img {
 }
 /* Drawer add-ons never move the parcel date (they are filtered on it), so
    their rows carry no date; the closed build line needs no second rule. */
-.cart-added-addons .cart-added-ship {
+.cart-added-addons .ship-chip.cart-added-ship {
   display: none;
 }
 .cart-added .cart-build-more {
