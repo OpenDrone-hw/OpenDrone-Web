@@ -904,6 +904,14 @@ batch arrives:
 2. Run it again with `--apply`. It releases the preorder hold on each order
    that ships now. Nothing else changes.
 3. In the bpost plugin, import the released orders and print the labels.
+4. Pickup orders are not labelled. A buyer who chose "OpenDrone Leuven" at
+   checkout gets Shopify's ready-for-pickup mail once the order is marked
+   ready in Shopify admin. A shipping order the buyer asked to collect
+   instead carries the `pickup-leuven` tag and an order note: Shopify cannot
+   switch it to pickup, so the script keeps it held ("waits for
+   pickup-leuven"). Refund its shipping line in Shopify admin, hand it over
+   with the buyer's pickup order, then release the hold and mark it
+   fulfilled there without notifying the buyer.
 
 The script reads the Shopify Admin credentials from `.env` and never prints
 them. An order with an item whose target was missed is released once that

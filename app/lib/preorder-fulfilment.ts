@@ -96,6 +96,10 @@ export const US_REVIEW_TAG = 'us-review';
 export const INT_REVIEW_TAG = 'international-review';
 /** UK gross payments require accountant review while the VAT number is pending. */
 export const UK_VAT_REVIEW_TAG = 'uk-vat-review';
+/** Order tag for a shipping order the buyer collects at the Leuven pickup
+ *  location instead: Shopify cannot switch it to pickup, so it stays held
+ *  and is handed over with the buyer's pickup order. */
+export const PICKUP_TAG = 'pickup-leuven';
 /** Order tag that marks an order as held and tagged by this module. */
 export const PREORDER_TAG = 'preorder';
 /** Hold handle: one per app per fulfillment order, so it doubles as the marker. */
@@ -722,6 +726,8 @@ export function planRelease(
       ...(order.tags.includes(INT_REVIEW_TAG) ? [INT_REVIEW_TAG] : []),
       ...(order.tags.includes(PROMISE_MISMATCH_TAG) ? [PROMISE_MISMATCH_TAG] : []),
       ...(order.tags.includes(UK_VAT_REVIEW_TAG) ? [UK_VAT_REVIEW_TAG] : []),
+      // A pickup order released here would reach the bpost plugin.
+      ...(order.tags.includes(PICKUP_TAG) ? [PICKUP_TAG] : []),
     ];
     plans.push({orderId: order.id, orderName: order.name, release, waitsFor});
   }
