@@ -1,12 +1,15 @@
 import type {Route} from './+types/$';
 import {redirect} from 'react-router';
 import {langCookieHeader, localeFromPathname, stripLocale} from '~/lib/i18n';
+import {shortLinkTarget} from '~/lib/short-links';
 
 // No meta here: the thrown 404 bubbles to root's ErrorBoundary, and route
 // meta below the rendering boundary is discarded - the 404 title comes
 // from root.tsx's error-aware meta instead.
 export async function loader({request}: Route.LoaderArgs) {
   const url = new URL(request.url);
+  const short = shortLinkTarget(url.pathname, url.search);
+  if (short) throw redirect(short, 301);
   // The shop is in English; only the legal texts exist in Dutch and French
   // (their /nl/... and /fr/... routes are registered in app/routes.ts and
   // never reach this catch-all). A bare /nl or /fr opens the legal overview
