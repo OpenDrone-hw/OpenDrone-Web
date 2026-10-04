@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {byRef, bySource, formatGroups, groupRows, orderRow, parseArgs} from '../../../scripts/attribution-report.mjs';
+import {byCountry, byRef, bySource, formatGroups, groupRows, jsonReport, orderRow, ordersSearch, parseArgs} from '../../../scripts/attribution-report.mjs';
 
 type Group = {key: string; orders: number; revenue: number; units: Record<string, number>};
 
@@ -24,7 +24,28 @@ describe('attribution report', () => {
     assert.throws(() => parseArgs(['--since', '2026-13-45x']), /YYYY-MM-DD/);
     assert.throws(() => parseArgs(['--since', '2026-09-25', '--apply']), /unknown argument: --apply/);
     assert.equal(parseArgs(['--help']).help, true);
-    assert.deepEqual(parseArgs(['--since=2026-09-25', '--orders']), {since: '2026-09-25', orders: true, help: false});
+    assert.deepEqual(parseArgs(['--since=2026-09-25', '--orders']), {since: '2026-09-25', until: null, orders: true, json: false, help: false});
+    assert.deepEqual(parseArgs(['--since', '2026-09-28', '--until=2026-10-04', '--json']), {since: '2026-09-28', until: '2026-10-04', orders: false, json: true, help: false});
+    assert.throws(() => parseArgs(['--since', '2026-10-04', '--until', '2026-10-01']), /before --since/);
+  });
+
+  it('searches an inclusive date range', () => {
+    assert.equal(ordersSearch('2026-09-25', null), 'created_at:>=2026-09-25');
+    assert.equal(ordersSearch('2026-09-28', '2026-09-30'), 'created_at:>=2026-09-28 created_at:<2026-10-01');
+  });
+
+  it('reports JSON with country groups and without order names', () => {
+    const rows = [
+      orderRow(node({shippingAddress: {countryCodeV2: 'DE'}})),
+      orderRow(node({shippingAddress: null})),
+    ];
+    const report = jsonReport(rows, {since: '2026-09-28', until: '2026-10-04', seen: 3, currency: 'EUR'});
+    assert.equal(report.orders, 2);
+    assert.equal(report.revenue, 241);
+    assert.equal(report.attributed, 2);
+    assert.deepEqual((report.byCountry as Group[]).map((g) => g.key).sort(), ['(none)', 'DE']);
+    assert.equal(byCountry(rows[0]), 'DE');
+    assert.ok(report.rows.every((r: Record<string, unknown>) => !('name' in r)));
   });
 
   it('counts paid, live, non-test orders only, with current units', () => {

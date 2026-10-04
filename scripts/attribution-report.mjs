@@ -4,10 +4,15 @@
 //
 //   node --experimental-strip-types scripts/attribution-report.mjs --since 2026-09-25
 //   node --experimental-strip-types scripts/attribution-report.mjs --since 2026-09-25 --orders
+//   node --experimental-strip-types scripts/attribution-report.mjs --since 2026-09-28 --until 2026-10-04 --json
 //
 // Options:
 //   --since YYYY-MM-DD  first order day to include (required)
+//   --until YYYY-MM-DD  last order day to include (default: no end)
 //   --orders            also list every counted order with its attribution
+//   --json              print the totals, the groups (by ref, by utm_source,
+//                       by shipping country) and the counted orders as JSON,
+//                       without order names; for scheduled reviews
 //   --help              print this help; reads and writes nothing
 //
 // An order counts when it is not a test, not cancelled, and its financial
@@ -20,7 +25,8 @@
 // cart attributes at the visitor's first add to cart in a browser session
 // (README, "Analytics and attribution"). An order without them shows as
 // `(none)` / `(direct)`: a direct visit, a visit without JavaScript, or a
-// cart filled in another browser session.
+// cart filled in another browser session. Country is the order's shipping
+// country code, `(none)` without a shipping address.
 //
 // Reads SHOPIFY_STORE_DOMAIN, SHOPIFY_ADMIN_API_TOKEN and
 // SHOPIFY_ADMIN_API_VERSION from the environment or .env. The token needs
@@ -43,6 +49,7 @@ export const ORDERS_QUERY = `#graphql
         cancelledAt
         displayFinancialStatus
         customAttributes { key value }
+        shippingAddress { countryCodeV2 }
         currentTotalPriceSet { shopMoney { amount currencyCode } }
         lineItems(first: 250) {
           pageInfo { hasNextPage }
@@ -62,20 +69,23 @@ const MAX_PAGES = 100;
 // ---------------------------------------------------------------------------
 
 export function parseArgs(argv) {
-  const opts = {since: null, orders: false, help: false};
+  const opts = {since: null, until: null, orders: false, json: false, help: false};
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--help' || arg === '-h') return {...opts, help: true};
     if (arg === '--orders') opts.orders = true;
-    else if (arg === '--since' || arg.startsWith('--since=')) {
-      const value = arg === '--since' ? argv[++i] : arg.slice('--since='.length);
+    else if (arg === '--json') opts.json = true;
+    else if (/^--(since|until)(=|$)/.test(arg)) {
+      const name = arg.slice(2).split('=')[0];
+      const value = arg.includes('=') ? arg.slice(arg.indexOf('=') + 1) : argv[++i];
       if (!/^\d{4}-\d{2}-\d{2}$/.test(value ?? '') || Number.isNaN(Date.parse(`${value}T00:00:00Z`))) {
-        throw new Error('--since needs a date as YYYY-MM-DD');
+        throw new Error(`--${name} needs a date as YYYY-MM-DD`);
       }
-      opts.since = value;
+      opts[name] = value;
     } else throw new Error(`unknown argument: ${arg}`);
   }
   if (!opts.help && !opts.since) throw new Error('--since YYYY-MM-DD is required');
+  if (opts.until && opts.until < opts.since) throw new Error('--until is before --since');
   return opts;
 }
 
@@ -101,6 +111,7 @@ export function orderRow(node) {
     medium: attr('_utm_medium'),
     campaign: attr('_utm_campaign'),
     landing: attr('_landing'),
+    country: node.shippingAddress?.countryCodeV2 || null,
     units,
     revenue: Number(money?.amount ?? 0),
     currency: money?.currencyCode ?? '',
@@ -123,6 +134,32 @@ export function groupRows(rows, keyOf) {
 
 export const byRef = (row) => row.ref ?? '(none)';
 export const bySource = (row) => row.source ?? (row.ref ? `(ref only)` : '(direct)');
+export const byCountry = (row) => row.country ?? '(none)';
+
+/** The `created_at` search for the date range; `until` is the last day included. */
+export function ordersSearch(since, until) {
+  if (!until) return `created_at:>=${since}`;
+  const next = new Date(Date.parse(`${until}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+  return `created_at:>=${since} created_at:<${next}`;
+}
+
+/** The machine-readable report: totals, groups and counted orders without names. */
+export function jsonReport(rows, {since, until, seen, currency}) {
+  const revenue = rows.reduce((n, r) => n + r.revenue, 0);
+  return {
+    since,
+    until,
+    currency,
+    read: seen,
+    orders: rows.length,
+    revenue: Math.round(revenue * 100) / 100,
+    attributed: rows.filter((r) => r.ref || r.source || r.medium || r.campaign).length,
+    byRef: groupRows(rows, byRef),
+    bySource: groupRows(rows, bySource),
+    byCountry: groupRows(rows, byCountry),
+    rows: rows.map((row) => Object.fromEntries(Object.entries(row).filter(([key]) => key !== 'name'))),
+  };
+}
 
 /** A plain-text table for one grouping. */
 export function formatGroups(title, groups, currency) {
@@ -174,7 +211,7 @@ async function main() {
   let after = null;
   for (let page = 0; ; page += 1) {
     if (page >= MAX_PAGES) throw new Error(`more than ${MAX_PAGES * PAGE_SIZE} orders; narrow --since`);
-    const data = await fulfilment.adminGraphql(env, ORDERS_QUERY, {first: PAGE_SIZE, after, query: `created_at:>=${opts.since}`});
+    const data = await fulfilment.adminGraphql(env, ORDERS_QUERY, {first: PAGE_SIZE, after, query: ordersSearch(opts.since, opts.until)});
     for (const node of data.orders.nodes) {
       seen += 1;
       const row = orderRow(node);
@@ -186,8 +223,13 @@ async function main() {
   const currencies = [...new Set(rows.map((r) => r.currency).filter(Boolean))];
   if (currencies.length > 1) throw new Error(`orders use more than one shop currency: ${currencies.join(', ')}`);
   const currency = currencies[0] ?? '';
+  if (opts.json) {
+    console.log(JSON.stringify(jsonReport(rows, {since: opts.since, until: opts.until, seen, currency}), null, 2));
+    return;
+  }
   const total = rows.reduce((n, r) => n + r.revenue, 0);
-  console.log(`READ ONLY. Orders created on or after ${opts.since}: ${seen} read, ${rows.length} paid and counted, revenue ${total.toFixed(2)} ${currency}.`);
+  const range = opts.until ? `from ${opts.since} to ${opts.until}` : `on or after ${opts.since}`;
+  console.log(`READ ONLY. Orders created ${range}: ${seen} read, ${rows.length} paid and counted, revenue ${total.toFixed(2)} ${currency}.`);
   const attributed = rows.filter((r) => r.ref || r.source || r.medium || r.campaign).length;
   console.log(`${attributed} of ${rows.length} counted orders carry attribution.\n`);
   console.log(formatGroups('By creator ref (_ref):', groupRows(rows, byRef), currency));
