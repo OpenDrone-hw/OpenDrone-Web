@@ -97,7 +97,7 @@ import {isInternationalQuote, notSoldDirect, shippingQuote} from '~/lib/shipping
 import {registrationNumbers} from '~/lib/registrations';
 import preorders from '../../content/preorders.json';
 import {trackEvent} from '~/lib/growth/plausible';
-import {attributionSource} from '~/lib/growth/attribution';
+import {attributionProps} from '~/lib/growth/attribution';
 import {NewsletterSignup} from '~/components/NewsletterSignup';
 import {ProductGhostTile} from '~/components/ProductGhostTile';
 import {StepBar} from '~/components/PreorderMeter';
@@ -847,7 +847,7 @@ function ProductPage() {
     if (pdpViewTracked.current === product.handle) return;
     pdpViewTracked.current = product.handle;
     trackEvent('PDP View', {
-      props: {product: product.handle, source: attributionSource()},
+      props: {product: product.handle, ...attributionProps()},
     });
   }, [product.handle]);
 
@@ -1657,7 +1657,7 @@ function ProductPage() {
         props: {
           product: product.handle,
           variant: value,
-          source: attributionSource(),
+          ...attributionProps(),
         },
       });
     }

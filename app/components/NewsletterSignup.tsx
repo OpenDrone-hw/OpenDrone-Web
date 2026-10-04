@@ -3,7 +3,7 @@ import {useFetcher} from 'react-router';
 import {Check} from 'lucide-react';
 import {useTurnstile} from '~/lib/use-turnstile';
 import {trackEvent} from '~/lib/growth/plausible';
-import {attributionSource} from '~/lib/growth/attribution';
+import {attributionProps, attributionSource} from '~/lib/growth/attribution';
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
 
@@ -100,7 +100,7 @@ export function NewsletterSignup({
     trackEvent('Notify Signup', {
       props: {
         product: notifyHandle ?? 'newsletter',
-        source: attributionSource(),
+        ...attributionProps(),
       },
     });
   }, [isSuccess, notifyHandle]);

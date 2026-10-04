@@ -5,6 +5,7 @@
  * without a navigation.
  */
 import type {CartSummary} from '~/lib/shopify-cart-action';
+import {attributionFields, markAttributionSent, wasAttributionSent} from '~/lib/growth/attribution';
 export {withCountry} from '~/lib/shopify-cart-action';
 
 export const CART_ADDED_EVENT = 'opendrone:cart-added';
@@ -28,13 +29,18 @@ export class CartAddError extends Error {
 }
 
 /** Post any cart form (add, update, remove) in the background; resolves to
- *  the new cart summary and updates the header count. */
+ *  the new cart summary and updates the header count. The session's first
+ *  add also carries the first-touch attribution, which the cart action
+ *  writes as cart attributes (they reach the order). */
 export async function postCart(
   action: string,
   fields: Array<[string, string]>,
 ): Promise<CartSummary> {
   const body = new URLSearchParams(fields);
   body.set('response', 'summary');
+  const intent = body.get('intent') ?? 'add';
+  const attribution = intent === 'add' && !wasAttributionSent() ? attributionFields() : [];
+  for (const [name, value] of attribution) body.set(name, value);
   const response = await fetch(action, {
     method: 'POST',
     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -45,6 +51,7 @@ export async function postCart(
     throw new CartAddError((await response.text()) || 'Could not add to cart.', response.status);
   }
   const summary = (await response.json()) as CartSummary;
+  if (attribution.length) markAttributionSent();
   window.dispatchEvent(
     new CustomEvent(CART_UPDATED_EVENT, {detail: {totalQuantity: summary.totalQuantity}}),
   );

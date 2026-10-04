@@ -90,6 +90,11 @@ declare global {
     // secret of the app that registers the webhook (OpenDrone Infra).
     // Without it the webhook route refuses every request. A Worker secret.
     SHOPIFY_WEBHOOK_SECRET?: string;
+    // 1 sends a Plausible `Purchase` event (revenue, source, ref) from the
+    // orders/paid webhook, forwarding the buyer's browser IP and
+    // User-Agent from the order (app/lib/growth/plausible-server.ts).
+    // Anything else sends nothing.
+    PLAUSIBLE_PURCHASE_EVENTS_ENABLED?: string;
     // Staging gate: when set, the Worker asks for HTTP basic auth as
     // "opendrone" with this password before serving anything. Production
     // leaves it unset.

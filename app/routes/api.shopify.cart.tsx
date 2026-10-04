@@ -1,4 +1,4 @@
-import {addCartLines, createCart, getCart, removeCartLines, updateCartLines} from '~/lib/shopify-storefront';
+import {addCartLines, createCart, getCart, removeCartLines, updateCartAttributes, updateCartLines} from '~/lib/shopify-storefront';
 import {
   createCartInCountry,
   handleShopifyCartAction,
@@ -32,6 +32,7 @@ export async function action({request, context}: Route.ActionArgs) {
     addCartLines: (id, lines) => addCartLines(context.env, id, lines),
     updateCartLines: (id, lines) => updateCartLines(context.env, id, lines),
     removeCartLines: (id, lineIds) => removeCartLines(context.env, id, lineIds),
+    setAttributes: (id, attributes) => updateCartAttributes(context.env, id, attributes),
     logError: (message) => console.error('[shopify-cart] cart operation failed', message),
   });
 }

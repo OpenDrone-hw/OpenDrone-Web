@@ -5,7 +5,7 @@ import {Link} from 'react-router';
 import {ShoppingCart} from 'lucide-react';
 import {AddToCartButton} from './AddToCartButton';
 import {trackEvent} from '~/lib/growth/plausible';
-import {attributionSource} from '~/lib/growth/attribution';
+import {attributionProps} from '~/lib/growth/attribution';
 import {copyFill, copyText} from '~/lib/copy';
 
 /** A stack companion for a pod row: one candidate partner board,
@@ -234,7 +234,7 @@ export function ProductPods({
                         product: it.buy?.product ?? 'unknown',
                         partner: o.key,
                         surface: 'pod',
-                        source: attributionSource(),
+                        ...attributionProps(),
                       },
                     });
                     onAdd?.();

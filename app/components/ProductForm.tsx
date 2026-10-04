@@ -4,7 +4,7 @@ import {AddToCartButton} from './AddToCartButton';
 import {useComingSoon, useProductStatus} from '~/lib/coming-soon';
 import {copyText} from '~/lib/copy';
 import {trackEvent} from '~/lib/growth/plausible';
-import {attributionSource} from '~/lib/growth/attribution';
+import {attributionProps} from '~/lib/growth/attribution';
 import type {
   MappedProductOptions,
   ProductVariantFragment,
@@ -166,7 +166,7 @@ export function ProductForm({
                             product:
                               selectedVariant?.product?.handle ?? 'unknown',
                             variant: name,
-                            source: attributionSource(),
+                            ...attributionProps(),
                           },
                         });
                         void navigate(`?${variantUriQuery}`, {

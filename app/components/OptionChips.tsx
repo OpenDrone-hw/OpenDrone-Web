@@ -2,7 +2,7 @@ import {useLocation, useNavigate, useNavigation} from 'react-router';
 import {useEffect, useState} from 'react';
 import type {MappedProductOptions} from '~/lib/product-shapes';
 import {trackEvent} from '~/lib/growth/plausible';
-import {attributionSource} from '~/lib/growth/attribution';
+import {attributionProps} from '~/lib/growth/attribution';
 
 /**
  * One option axis as compact chips, for the pinned buy bar: names only, no
@@ -56,7 +56,7 @@ export function OptionChips({
               if (value.selected) return;
               setPending(value.name);
               trackEvent('Variant Select', {
-                props: {product, variant: value.name, source: attributionSource()},
+                props: {product, variant: value.name, ...attributionProps()},
               });
               void navigate(`?${value.variantUriQuery}`, {replace: true, preventScrollReset: true});
             }}

@@ -5,6 +5,7 @@ import {requestedLines} from './shopify-cart-input.ts';
 import {destinationForRequest, isInternationalQuote, isIsoCountry, isUsQuote, shipCountryForRequest, shippingQuote, type ShippingQuote} from './shipping-rates.ts';
 import {type RegistrationsFile} from './registrations.ts';
 import {usSalesRate} from './us-sales.ts';
+import {cartAttributesFromForm} from './growth/attribution.ts';
 import {
   BATCH_ATTRIBUTE,
   PREORDER_ATTRIBUTE,
@@ -46,6 +47,8 @@ export type ShopifyCartDependencies = {
   addCartLines?: (id: string, lines: CartLineInput[]) => Promise<ShopifyCart>;
   updateCartLines?: (id: string, lines: CartLineUpdate[]) => Promise<ShopifyCart>;
   removeCartLines?: (id: string, lineIds: string[]) => Promise<ShopifyCart>;
+  /** `cartAttributesUpdate`: the first-touch attribution an add carries. */
+  setAttributes?: (cartId: string, attributes: Array<{key: string; value: string}>) => Promise<void>;
   logError?: (message: string) => void;
 };
 
@@ -762,6 +765,7 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
         }
         checkPaidBatches(catalog, lines, quantities);
         const updated = await dependencies.addCartLines(existingId, lines);
+        await recordAttribution(form, updated.id, dependencies);
         return wantsSummary
           ? Response.json(cartSummary(updated), {headers: NO_STORE})
           : redirect('/cart');
@@ -772,6 +776,7 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
     checkPaidBatches(catalog, lines, new Map());
     const cart = await dependencies.createCart(lines, cartCountryFor(destination?.country ?? null, dependencies.registrations, usRate));
     dependencies.setCartId?.(cart.id);
+    await recordAttribution(form, cart.id, dependencies);
     return wantsSummary
       ? Response.json(cartSummary(cart), {headers: NO_STORE})
       : redirect('/cart');
@@ -779,6 +784,22 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
     if (error instanceof Response) throw error;
     dependencies.logError?.(error instanceof Error ? error.message : 'unknown error');
     throw fail('Checkout temporarily unavailable.', 503, {'Retry-After': '60'});
+  }
+}
+
+/**
+ * Write the first-touch attribution an add carries (`attr_*` fields, see
+ * app/lib/growth/attribution.ts) as cart attributes, so the order names
+ * its source. Best effort: a failure is logged and the add still
+ * succeeds.
+ */
+async function recordAttribution(form: FormData, cartId: string, dependencies: ShopifyCartDependencies): Promise<void> {
+  const attributes = cartAttributesFromForm(form);
+  if (!attributes.length || !dependencies.setAttributes) return;
+  try {
+    await dependencies.setAttributes(cartId, attributes);
+  } catch (error) {
+    dependencies.logError?.(`attribution not recorded: ${error instanceof Error ? error.message : 'unknown error'}`);
   }
 }
 
