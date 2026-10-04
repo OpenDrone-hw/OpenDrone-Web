@@ -1,10 +1,11 @@
 import type {Route} from './+types/visit';
-import {useEffect, useRef, useState} from 'react';
+import {useEffect, useRef, useState, type CSSProperties} from 'react';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {EditorialShell} from '~/components/EditorialShell';
 import {Txt} from '~/components/Txt';
 import {copy, copyText, editAttrs} from '~/lib/copy';
 import {getCompanyIdentity} from '~/lib/company';
+import {VISIT_MAP} from '~/lib/visit-map.generated';
 
 /**
  * The makerspace page: where Incutec works, the 3D walkthrough of the lab,
@@ -12,9 +13,10 @@ import {getCompanyIdentity} from '~/lib/company';
  * this file holds structure.
  *
  * The walkthrough is a static site under `public/lab-visit/` (its source and
- * tests are kept outside this repository). The frame loads its small shell
- * lazily and downloads the 35 MB scan only after the visitor presses start
- * inside it, so the page itself stays light.
+ * tests are kept outside this repository), launched over the whole window.
+ * Behind the page, instead of the brand watermark, is a map of the Vaartkom
+ * (`scripts/gen-visit-map.py`, OpenStreetMap data) with the lab under the
+ * open hours card.
  */
 export const meta: Route.MetaFunction = () =>
   buildSeoMeta({
@@ -35,6 +37,9 @@ const LAB_VISIT_SRC = '/lab-visit/index.html?launch=1&theme=dark';
 const MAP_URL =
   'https://www.openstreetmap.org/search?query=Stapelhuisstraat%2015%2C%203000%20Leuven';
 const AGENDA_URL = 'https://maakleerplek.be/nl/agenda';
+const OSM_COPYRIGHT_URL = 'https://www.openstreetmap.org/copyright';
+/** Gap between the bottom of the hours card and the lab pin, in px. */
+const PIN_GAP = 88;
 
 /** Photo files in `public/makerspace/`, in the order of `visit.gallery_captions`. */
 const PHOTOS = [
@@ -74,6 +79,80 @@ function HoursTable() {
 }
 
 /**
+ * The map tile and its pin. The map is drawn at one pixel per metre and
+ * placed so the lab lands on `--pin-x` / `--pin-y`, which the caller sets:
+ * the centre of the in-card map on phones, a point under the sticky card on
+ * wide screens.
+ */
+function MapCanvas() {
+  return (
+    <>
+      <div
+        className="visit-map-canvas"
+        style={
+          {
+            '--map-w': `${VISIT_MAP.width}px`,
+            '--map-h': `${VISIT_MAP.height}px`,
+            '--lab-x': `${VISIT_MAP.labX}px`,
+            '--lab-y': `${VISIT_MAP.labY}px`,
+          } as CSSProperties
+        }
+      />
+      <div className="visit-map-pin">
+        <span className="visit-map-pin-label">HighTechLab</span>
+      </div>
+    </>
+  );
+}
+
+/**
+ * The page background on wide screens. The pin follows the sticky hours card
+ * (it scrolls a little before it sticks), measured once per frame at most.
+ */
+function VisitMapBackdrop() {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let frame = 0;
+    const place = () => {
+      frame = 0;
+      const card = document.querySelector('.visit-card--aside');
+      const r = card?.getBoundingClientRect();
+      const visible = r && r.width > 0;
+      const x = visible ? r.left + r.width / 2 : window.innerWidth * 0.72;
+      const y = visible
+        ? Math.min(r.bottom + PIN_GAP, window.innerHeight - 48)
+        : window.innerHeight * 0.62;
+      el.style.setProperty('--pin-x', `${Math.round(x)}px`);
+      el.style.setProperty('--pin-y', `${Math.round(y)}px`);
+      el.style.setProperty(
+        '--leader',
+        `${Math.max(0, Math.round(y - (visible ? r.bottom : y)))}px`,
+      );
+    };
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(place);
+    };
+    place();
+    window.addEventListener('scroll', schedule, {passive: true});
+    window.addEventListener('resize', schedule);
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', schedule);
+      window.removeEventListener('resize', schedule);
+    };
+  }, []);
+
+  return (
+    <div ref={ref} className="visit-map" aria-hidden="true">
+      <MapCanvas />
+    </div>
+  );
+}
+
+/**
  * Rendered twice: as the sticky side card on wide screens, and right after
  * the intro on narrow ones, where the shell would otherwise stack the aside
  * below the whole article. CSS shows exactly one of the two.
@@ -96,6 +175,11 @@ function HoursCard({
       </h2>
       <HoursTable />
       <Txt id="visit.hours_note" as="p" className="visit-card-note" />
+      {placement === 'inline' ? (
+        <div className="visit-card-map" aria-hidden="true">
+          <MapCanvas />
+        </div>
+      ) : null}
       <address className="visit-address">
         <strong>Maakleerplek, HighTechLab</strong>
         <br />
@@ -109,6 +193,11 @@ function HoursCard({
       >
         <Txt id="visit.where_map" />
       </a>
+      <p className="visit-map-credit">
+        <a href={OSM_COPYRIGHT_URL} target="_blank" rel="noopener noreferrer">
+          <Txt id="visit.map_attribution" />
+        </a>
+      </p>
     </section>
   );
 }
@@ -225,6 +314,7 @@ export default function VisitRoute({loaderData}: Route.ComponentProps) {
   return (
     <EditorialShell
       slug="visit"
+      backdrop={<VisitMapBackdrop />}
       aside={<HoursCard address={loaderData.address} placement="aside" />}
     >
       <header className="editorial-hero">

@@ -11300,6 +11300,139 @@ html.light .editorial-watermark {
   }
 }
 
+/* Map of the Vaartkom behind /visit (scripts/gen-visit-map.py). The canvas
+   is the SVG at one pixel per metre, offset so the lab sits on --pin-x /
+   --pin-y. Only the active theme's file is requested: it is a background
+   image, and the wide-screen layer is display:none below 1120px. */
+.visit-map {
+  display: none;
+}
+
+@media (min-width: 1120px) {
+  .visit-map {
+    display: block;
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    --pin-x: 72vw;
+    --pin-y: 62vh;
+    /* Full strength around the lab, receding under the text column. */
+    mask-image: radial-gradient(
+      circle at var(--pin-x) var(--pin-y),
+      rgb(0 0 0 / 1) 0,
+      rgb(0 0 0 / 0.85) 22rem,
+      rgb(0 0 0 / 0.3) 60rem
+    );
+  }
+}
+
+.visit-map-canvas {
+  position: absolute;
+  left: calc(var(--pin-x) - var(--lab-x));
+  top: calc(var(--pin-y) - var(--lab-y));
+  width: var(--map-w);
+  height: var(--map-h);
+  background: url('/makerspace/map-dark.svg') 0 0 / 100% 100% no-repeat;
+}
+
+html.light .visit-map-canvas {
+  background-image: url('/makerspace/map-light.svg');
+}
+
+.visit-map-pin {
+  position: absolute;
+  left: var(--pin-x);
+  top: var(--pin-y);
+  width: 0;
+  height: 0;
+}
+
+/* The dot, with one slow pulse ring. */
+.visit-map-pin::before,
+.visit-map-pin::after {
+  content: '';
+  position: absolute;
+  left: -7px;
+  top: -7px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--color-gold-fill);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-bg) 70%, transparent);
+}
+
+.visit-map-pin::after {
+  background: transparent;
+  box-shadow: 0 0 0 2px var(--color-gold);
+  animation: visit-pin-pulse 2.4s ease-out infinite;
+}
+
+@keyframes visit-pin-pulse {
+  from {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(3.2);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .visit-map-pin::after {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+.visit-map-pin-label {
+  position: absolute;
+  left: 14px;
+  top: -10px;
+  white-space: nowrap;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--color-bg) 82%, transparent);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-gold-text);
+}
+
+/* Wide screens: a hairline from the card down to the pin. */
+.visit-map .visit-map-pin-label::before {
+  content: '';
+  position: absolute;
+  left: -14px;
+  bottom: calc(100% - 10px);
+  height: calc(var(--leader, 0px) - 10px);
+  border-left: 1px dashed color-mix(in srgb, var(--color-gold) 55%, transparent);
+}
+
+/* Phones and tablets: the map inside the hours card, centred on the lab. */
+.visit-card-map {
+  position: relative;
+  overflow: hidden;
+  height: 200px;
+  margin: 0 0 1rem;
+  border-radius: var(--r-sm);
+  border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  background: var(--color-bg);
+  --pin-x: 50%;
+  --pin-y: 50%;
+}
+
+.visit-map-credit {
+  margin: 0.6rem 0 0;
+  font-size: 0.7rem;
+}
+
+.visit-map-credit a {
+  color: var(--color-text-muted);
+}
+
 /* ── Capability ladder (production page aside) ────────────────────────── */
 .ladder {
   margin: 0;

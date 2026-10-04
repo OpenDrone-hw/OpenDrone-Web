@@ -35,6 +35,7 @@ const seenSlugs = new Set<string>();
 export function EditorialShell({
   slug,
   aside,
+  backdrop,
   pageClassName,
   children,
   rail = true,
@@ -44,6 +45,8 @@ export function EditorialShell({
   slug: string;
   /** The page's visual column. Omit and the shell runs two-column. */
   aside?: ReactNode;
+  /** Replaces the brand watermark behind the page (the /visit map). */
+  backdrop?: ReactNode;
   /** Extra class on the prose column, e.g. timeline-page. */
   pageClassName?: string;
   children: ReactNode;
@@ -103,7 +106,8 @@ export function EditorialShell({
         entering.forEach((el, i) => {
           el.style.setProperty('--rv-d', `${Math.min(i, 4) * 40}ms`);
           el.classList.add('is-revealed');
-          if (el.classList.contains('section-art')) el.classList.add('is-drawn');
+          if (el.classList.contains('section-art'))
+            el.classList.add('is-drawn');
           io.unobserve(el);
         });
       },
@@ -154,8 +158,10 @@ export function EditorialShell({
       className={`editorial-shell${aside ? '' : ' is-narrow'}${reveal ? '' : ' cascade-armed'}`}
       ref={shellRef}
     >
-      <BrandWatermark />
-      <div className={`editorial-page${pageClassName ? ` ${pageClassName}` : ''}`}>
+      {backdrop ?? <BrandWatermark />}
+      <div
+        className={`editorial-page${pageClassName ? ` ${pageClassName}` : ''}`}
+      >
         {children}
         <EditorialNext slug={slug} />
       </div>
