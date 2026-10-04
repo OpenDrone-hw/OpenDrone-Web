@@ -102,10 +102,17 @@ export type CartSummary = {
     shipLabel: string | null;
     /** Line total, VAT included. */
     total?: {amount: string; currencyCode: string};
+    /** The line's ship group (`CartLineInfo.group`), set when the summary
+     *  was built with the campaign-aware catalog. Checkout groups the same
+     *  way, so the drawer and checkout agree on a mixed order. */
+    shipGroup?: string;
   }>;
 };
 
-export function cartSummary(cart: ShopifyCart): CartSummary {
+/** The summary the drawer and the header read. With the catalog, every
+ *  line carries the ship group checkout uses (see `hasMixedShipGroups`). */
+export function cartSummary(cart: ShopifyCart, catalog: Catalog | null = null): CartSummary {
+  const info = catalog ? cartLineInfo(cart, catalog) : null;
   return {
     totalQuantity: cart.totalQuantity,
     subtotal: {amount: cart.subtotal.amount, currencyCode: cart.subtotal.currencyCode},
@@ -121,6 +128,7 @@ export function cartSummary(cart: ShopifyCart): CartSummary {
       availability: line.availability ?? null,
       shipLabel: shipLabelFromPromise(line.shipPromise, 'short'),
       total: {amount: line.total.amount, currencyCode: line.total.currencyCode},
+      ...(info?.[line.id] ? {shipGroup: info[line.id].group} : {}),
     })),
   };
 }
@@ -521,9 +529,25 @@ export const CART_CHECK = {
  *  mixed-dates notice. Checkout from anywhere else goes to /cart first. */
 export const DATES_SEEN_FIELD = 'datesSeen';
 
+/** A line's ship group: the campaign-aware group when known, else its
+ *  promise text. */
+export function lineShipGroup(line: {shipPromise: string | null; shipGroup?: string | null}): string {
+  return line.shipGroup ?? `date:${line.shipPromise ?? ''}`;
+}
+
+/**
+ * True when the lines do not all ship together. The one rule for a mixed
+ * order: checkout, the cart page and the added-to-cart drawer all use it.
+ * Two lines waiting for different funding targets are mixed even when their
+ * promise text reads the same.
+ */
+export function hasMixedShipGroups(lines: ReadonlyArray<{shipPromise: string | null; shipGroup?: string | null}>): boolean {
+  return new Set(lines.map(lineShipGroup)).size > 1;
+}
+
 /** True when the cart's lines do not all ship together. */
 export function hasMixedShipDates(cart: ShopifyCart, info: Record<string, CartLineInfo>): boolean {
-  return new Set(cart.lines.map((l) => info[l.id]?.group ?? `date:${l.shipPromise ?? ''}`)).size > 1;
+  return hasMixedShipGroups(cart.lines.map((l) => ({shipPromise: l.shipPromise, shipGroup: info[l.id]?.group})));
 }
 
 /**
@@ -767,7 +791,7 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
         const updated = await dependencies.addCartLines(existingId, lines);
         await recordAttribution(form, updated.id, dependencies);
         return wantsSummary
-          ? Response.json(cartSummary(updated), {headers: NO_STORE})
+          ? Response.json(cartSummary(updated, catalog), {headers: NO_STORE})
           : redirect('/cart');
       }
       // The session pointed at a cart Shopify no longer has: start a new one.
@@ -778,7 +802,7 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
     dependencies.setCartId?.(cart.id);
     await recordAttribution(form, cart.id, dependencies);
     return wantsSummary
-      ? Response.json(cartSummary(cart), {headers: NO_STORE})
+      ? Response.json(cartSummary(cart, catalog), {headers: NO_STORE})
       : redirect('/cart');
   } catch (error) {
     if (error instanceof Response) throw error;
