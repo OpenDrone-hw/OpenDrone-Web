@@ -39,7 +39,7 @@ const MAP_URL =
 const AGENDA_URL = 'https://maakleerplek.be/nl/agenda';
 const OSM_COPYRIGHT_URL = 'https://www.openstreetmap.org/copyright';
 /** Gap between the bottom of the hours card and the lab pin, in px. */
-const PIN_GAP = 88;
+const PIN_GAP = 72;
 
 /** Photo files in `public/makerspace/`, in the order of `visit.gallery_captions`. */
 const PHOTOS = [
@@ -98,16 +98,17 @@ function MapCanvas() {
           } as CSSProperties
         }
       />
-      <div className="visit-map-pin">
-        <span className="visit-map-pin-label">HighTechLab</span>
-      </div>
+      <div className="visit-map-pin" />
     </>
   );
 }
 
 /**
- * The page background on wide screens. The pin follows the sticky hours card
- * (it scrolls a little before it sticks), measured once per frame at most.
+ * The page background on wide screens. Nothing here runs on scroll: the hours
+ * card sticks at exactly the height it starts at, so it never moves while the
+ * reader scrolls, and the map is a static fixed layer the browser composites
+ * once. The card's sticky offset and the pin under it are measured on load
+ * and on resize only.
  */
 function VisitMapBackdrop() {
   const ref = useRef<HTMLDivElement>(null);
@@ -118,30 +119,39 @@ function VisitMapBackdrop() {
     let frame = 0;
     const place = () => {
       frame = 0;
-      const card = document.querySelector('.visit-card--aside');
-      const r = card?.getBoundingClientRect();
-      const visible = r && r.width > 0;
-      const x = visible ? r.left + r.width / 2 : window.innerWidth * 0.72;
-      const y = visible
-        ? Math.min(r.bottom + PIN_GAP, window.innerHeight - 48)
-        : window.innerHeight * 0.62;
-      el.style.setProperty('--pin-x', `${Math.round(x)}px`);
-      el.style.setProperty('--pin-y', `${Math.round(y)}px`);
-      el.style.setProperty(
-        '--leader',
-        `${Math.max(0, Math.round(y - (visible ? r.bottom : y)))}px`,
+      const aside = document.querySelector<HTMLElement>('.editorial-aside');
+      const card = document.querySelector<HTMLElement>('.visit-card--aside');
+      if (!aside || !card || card.offsetParent === null) {
+        el.style.removeProperty('--pin-x');
+        el.style.removeProperty('--pin-y');
+        return;
+      }
+      // Where the card sits with the page at the top, in document terms.
+      aside.style.position = 'static';
+      const naturalTop = aside.getBoundingClientRect().top + window.scrollY;
+      aside.style.position = '';
+      aside.style.top = `${Math.round(naturalTop)}px`;
+      const r = card.getBoundingClientRect();
+      const y = Math.min(
+        naturalTop + r.height + PIN_GAP,
+        window.innerHeight - 48,
       );
+      el.style.setProperty('--pin-x', `${Math.round(r.left + r.width / 2)}px`);
+      el.style.setProperty('--pin-y', `${Math.round(y)}px`);
     };
     const schedule = () => {
       if (!frame) frame = requestAnimationFrame(place);
     };
     place();
-    window.addEventListener('scroll', schedule, {passive: true});
     window.addEventListener('resize', schedule);
+    // Fonts and the copy can change the card's height after first paint.
+    const observer = new ResizeObserver(schedule);
+    const card = document.querySelector('.visit-card--aside');
+    if (card) observer.observe(card);
     return () => {
       if (frame) cancelAnimationFrame(frame);
-      window.removeEventListener('scroll', schedule);
       window.removeEventListener('resize', schedule);
+      observer.disconnect();
     };
   }, []);
 
