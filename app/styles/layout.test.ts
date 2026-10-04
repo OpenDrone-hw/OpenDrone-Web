@@ -49,3 +49,13 @@ describe('legal tables', () => {
     );
   });
 });
+
+describe('mobile homepage build card', () => {
+  it('lets a vertical swipe on the parts list scroll the page', () => {
+    const UI = readFileSync(new URL('./site-ui.css', import.meta.url), 'utf8');
+    const mobile = UI.match(/@media \(max-width: 768px\) \{[^@]*?\.home-mobile-build \.hero-build-parts \{([^}]*)\}/);
+    assert.ok(mobile, 'phone rule for .home-mobile-build .hero-build-parts is missing');
+    assert.match(mobile[1], /overflow:\s*visible/, 'the phone parts list must not be a scroll container');
+    assert.match(mobile[1], /overscroll-behavior:\s*auto/, 'contain blocks scroll chaining on Chrome Android');
+  });
+});
