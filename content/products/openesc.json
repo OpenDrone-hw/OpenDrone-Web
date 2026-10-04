@@ -319,7 +319,7 @@
   "optionAxis": "Model",
   "variants": {
     "20×20": {
-      "subtitle": "4in1 · AM32 · 40A · 2-6S · 20x20",
+      "subtitle": "4in1, AM32, 40A, 2-6S, 20x20",
       "oshwaUid": "BE000028",
       "highlights": [
         [
@@ -430,7 +430,7 @@
       }
     },
     "30×30": {
-      "subtitle": "4in1 · AM32 · 60A · 2-8S · 30x30",
+      "subtitle": "4in1, AM32, 60A, 2-8S, 30x30",
       "oshwaUid": "BE000029",
       "repoUrl": "https://github.com/OpenDrone-hw/OpenESC-30x30",
       "highlights": [

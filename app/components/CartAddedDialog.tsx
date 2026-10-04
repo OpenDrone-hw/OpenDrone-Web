@@ -6,6 +6,7 @@ import type {RootLoader} from '~/root';
 import {copyText} from '~/lib/copy';
 import {Txt} from '~/components/Txt';
 import {formatPrice} from '~/lib/catalog';
+import {EarlyBirdNote, useAnyEarlySku} from '~/components/EarlyPriceCue';
 import {
   isPurchasableStatus,
   lineDisplayName,
@@ -123,6 +124,7 @@ export function CartAddedDialog() {
 
   // A navigation (View cart, a product link) closes the drawer.
   useEffect(() => setDetail(null), [pathname]);
+  const anyEarly = useAnyEarlySku(summary?.lines.map((l) => l.sku) ?? []);
 
   if (!detail || !summary) return null;
 
@@ -251,9 +253,6 @@ export function CartAddedDialog() {
       >
         <header className="cart-added-head">
           <h2 id="cart-added-title">
-            <span className="cart-added-check" aria-hidden="true">
-              ✓
-            </span>{' '}
             {t('added_title', 'Added to cart')}
           </h2>
           <button
@@ -396,6 +395,7 @@ export function CartAddedDialog() {
               </span>
             </p>
           ) : null}
+          {subtotal ? <EarlyBirdNote show={anyEarly} className="cart-added-parcel" /> : null}
           {shippingRate ? (
             <p className="cart-added-subtotal">
               <span>{t('shipping_row', 'Shipping to {country}', {country: countryName(visitor ?? '')})}</span>
@@ -440,7 +440,7 @@ export function CartAddedDialog() {
             <p className="cart-added-parcel" role="note">
               {t('checkout_shops', 'Consumer checkout is not available for this destination.', {country: countryName(visitor ?? '')})}{' '}
               <Link to="/wholesale">{t('checkout_shops_trade', 'EU or US retailer enquiries')}</Link>
-              {' · '}
+              {', '}
               <Link to="/newsletter">{t('checkout_shops_notify', 'Get launch news')}</Link>
             </p>
           ) : notDirect === 'closed' ? (

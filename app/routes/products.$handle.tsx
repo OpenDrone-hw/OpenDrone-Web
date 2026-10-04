@@ -34,6 +34,7 @@ import {Txt} from '~/components/Txt';
 import {ConceptPlate} from '~/components/ConceptPlate';
 import {ProductDiscordRow} from '~/components/Discord';
 import {ProductPrice} from '~/components/ProductPrice';
+import {EarlyBirdLine, RetailPrice} from '~/components/EarlyPriceCue';
 import {ProductGallery} from '~/components/ProductGallery';
 import {ProductSilhouette} from '~/components/ProductSilhouette';
 import {ProductForm} from '~/components/ProductForm';
@@ -1557,12 +1558,11 @@ function ProductPage() {
         <span className="teardown-pin-part" {...pinEdit('part')}>
           {pin.part}
         </span>
-        <span
-          className="teardown-pin-cost"
-          {...(pin.cost ? pinEdit('cost') : {})}
-        >
-          {pin.cost ?? '×1'}
-        </span>
+        {pin.cost && pin.cost !== '×1' ? (
+          <span className="teardown-pin-cost" {...pinEdit('cost')}>
+            {pin.cost}
+          </span>
+        ) : null}
       </li>
     );
   };
@@ -1744,6 +1744,8 @@ function ProductPage() {
   // Preorder campaign of the selected variant: the price ladder, the ship
   // terms and the quantity cap all read it.
   const campaign = !isBundle && preorder ? (selectedVariant?.campaign ?? null) : null;
+  // An early bird preorder price names the retail price it rises to.
+  const earlyPrice = campaign ? (selectedVariant?.earlyPrice ?? null) : null;
   const retail = selectedVariant?.sku ? (retailBySku[selectedVariant.sku] ?? null) : null;
   const tiers = tiersFor(CAMPAIGN_CONFIG, selectedVariant?.sku ?? '');
   // A flat-price SKU (an accessory shipping with a campaign SKU) has no
@@ -1925,7 +1927,9 @@ function ProductPage() {
             </span>
           ) : null}
           {vatNote ? <span className="product-buy-vat">{vatNote}</span> : null}
+          <RetailPrice retail={earlyPrice?.retail} />
         </span>
+        <EarlyBirdLine early={earlyPrice} />
         {isBundle ? (
           (() => {
             // Name the actual pair for the tier (20×20 ships the Mini).
@@ -1987,7 +1991,7 @@ function ProductPage() {
           target its deadline and the "if funded" condition. */
       preorder && !isBundle ? (
         showAvailability && campaign ? (
-          <Availability campaign={campaign} region={usBuyer ? 'US' : internationalBuyer ? 'INT' : 'EU'} />
+          <Availability campaign={campaign} region={usBuyer ? 'US' : internationalBuyer ? 'INT' : 'EU'} countShown={Boolean(stepBar)} />
         ) : (
           <ShipLine campaign={campaign} promise={shipPromise} className="product-buy-stock" />
         )
@@ -2004,7 +2008,7 @@ function ProductPage() {
               : shipPromise
                 ? (
                     <>
-                      {copyText('product-chrome.buy_stock_out') ?? ''} ·{' '}
+                      {copyText('product-chrome.buy_stock_out') ?? ''}.{' '}
                       <span {...prodEdit('statusNote')}>{shipPromise}</span>
                     </>
                   )
@@ -2383,7 +2387,7 @@ function ProductPage() {
             >
               <OshwaMark
                 uid={activeOshwaUid}
-                title={`${copyText('product-chrome.oshwa_mark_title') ?? ''} · ${activeOshwaUid}`}
+                title={`${copyText('product-chrome.oshwa_mark_title') ?? ''} ${activeOshwaUid}`}
                 className="open-source-card-oshwa-mark"
               />
               <Txt
@@ -2629,6 +2633,11 @@ function ProductPage() {
           noMedia
           centered
         >
+          {content.specsNote ? (
+            <p className="specs-note" {...prodEdit('specsNote')}>
+              {content.specsNote}
+            </p>
+          ) : null}
           <div
             className={`product-specs${frameViewer ? ' product-specs--drawing' : ''}`}
             ref={specsRef}
@@ -2772,7 +2781,7 @@ function ProductPage() {
                     : `variants.${activeTier}.inTheBox.${i - content.inTheBox.length}`;
                 return (
                   <>
-                    {it.qty ? (
+                    {it.qty && it.qty !== '1×' ? (
                       <span
                         className="in-the-box-qty"
                         {...prodEdit(`${boxBase}.qty`)}
@@ -3076,7 +3085,7 @@ function ProductPage() {
                 <Link
                   to="/open-source"
                   prefetch="viewport"
-                  className="trust-chip trust-chip-green trust-chip-link"
+                  className="trust-chip trust-chip-link"
                 >
                   {say('product-chrome.trust_chip_open_source', 'Open Source')}
                 </Link>
@@ -3089,7 +3098,7 @@ function ProductPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="trust-chip trust-chip-oshwa trust-chip-link"
-                  title={`${copyText('product-chrome.oshwa_mark_title') ?? ''} · ${activeOshwaUid}`}
+                  title={`${copyText('product-chrome.oshwa_mark_title') ?? ''} ${activeOshwaUid}`}
                 >
                   <img
                     src="/logos/oshwa.svg"
@@ -3099,27 +3108,6 @@ function ProductPage() {
                   />
                   {say('product-chrome.trust_chip_oshwa', 'OSHWA certified')}
                 </a>
-              </li>
-            ) : null}
-            {content.bundle ? (
-              <li>
-                <Link
-                  to="/firmware-partners"
-                  prefetch="viewport"
-                  className="trust-chip trust-chip-gold trust-chip-link"
-                >
-                  {content.bundle.components.map((c) => c.firmware).join(' + ')}
-                </Link>
-              </li>
-            ) : content.firmware.project && content.firmware.project !== '-' ? (
-              <li>
-                <Link
-                  to="/firmware-partners"
-                  prefetch="viewport"
-                  className="trust-chip trust-chip-gold trust-chip-link"
-                >
-                  {content.firmware.project}
-                </Link>
               </li>
             ) : null}
           </ul>

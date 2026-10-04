@@ -16,6 +16,7 @@ import type {
   CartLine,
   CatalogAvailability,
   MappedProductOptions,
+  EarlyPrice,
   MoneyV2,
   ProductCardFragment,
   ProductFragment,
@@ -208,6 +209,30 @@ function variantId(sku: string): string {
   return `variant:${sku}`;
 }
 
+/** The retail price an early bird price rises to, in the buyer's currency:
+ *  Shopify's compare-at price for EUR, the USD ladder's last step for a US
+ *  buyer, none for an international price (no verified local retail). */
+/** Whether a variant sells at an early bird preorder price. */
+export function isEarlyPrice(variant: Pick<CatalogVariant, 'campaign'> | null | undefined): boolean {
+  const c = variant?.campaign;
+  return Boolean(c?.earlyPrice && c.tierLeft > 0);
+}
+
+function earlyPriceOf(variant: CatalogVariant, fallbackCurrency: string): EarlyPrice | null {
+  const c = variant.campaign;
+  if (!c || !isEarlyPrice(variant)) return null;
+  if (c.internationalPrice) return {retail: null};
+  if (c.usLadder?.length) {
+    const top = c.usLadder.find((step) => step.to === null);
+    return {retail: top && !top.approx && top.price > variant.price ? money(top.price, 'USD') : null};
+  }
+  const retail =
+    variant.compare_price != null && variant.compare_price > variant.price
+      ? money(variant.compare_price, variant.currency || fallbackCurrency)
+      : null;
+  return {retail};
+}
+
 function mapVariant(
   catalog: Catalog,
   product: CatalogProduct,
@@ -235,6 +260,7 @@ function mapVariant(
       variant.campaign?.nextPrice != null && variant.campaign.nextPrice > variant.price
         ? money(variant.campaign.nextPrice, variant.currency || catalog.currency)
         : null,
+    earlyPrice: earlyPriceOf(variant, catalog.currency),
     image:
       image(variant.image, variant.image_alt || variant.title) ??
       image(product.images[0] ?? null, product.title),

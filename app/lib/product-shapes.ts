@@ -27,6 +27,10 @@ export type ProductImage = {
 /** The per-variant availability word: the SKU's sale policy, denied by Shopify's availableForSale. */
 export type CatalogAvailability = 'in_stock' | 'preorder' | 'sold_out';
 
+/** A preorder price step, shown as the price now plus the retail price
+ *  later, never as a struck-through "was" price (Directive 98/6/EC art. 6a). */
+export type EarlyPrice = {retail: MoneyV2 | null};
+
 export type ProductVariantFragment = {
   id: string;
   sku: string | null;
@@ -45,6 +49,10 @@ export type ProductVariantFragment = {
   campaign: CampaignState | null;
   /** A campaign SKU's price once its preorder price ends, else null. */
   priceAfter: MoneyV2 | null;
+  /** While a campaign SKU sells at an early bird preorder price: the retail
+   *  price it rises to (null when the buyer's market has no verified retail
+   *  price). Null at retail. */
+  earlyPrice: EarlyPrice | null;
   availability: CatalogAvailability;
   /** The variant's page on the shop, for the review list link. */
   shopUrl: string | null;

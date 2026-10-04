@@ -98,16 +98,10 @@ export default function NewsletterPost() {
         <div className="rn-post-meta">
           <time dateTime={publishedAt}>{date}</time>
           {version ? (
-            <>
-              <span className="rn-dot">·</span>
-              <VersionChip version={version} />
-            </>
+            <VersionChip version={version} />
           ) : null}
           {tag ? (
-            <>
-              <span className="rn-dot">·</span>
-              <span className={`rn-tag is-${tag}`}>{tag}</span>
-            </>
+            <span className={`rn-tag is-${tag}`}>{tag}</span>
           ) : null}
         </div>
 

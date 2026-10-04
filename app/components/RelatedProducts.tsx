@@ -11,6 +11,7 @@ import {
 } from '~/lib/coming-soon';
 import {copyText} from '~/lib/copy';
 import {Txt} from '~/components/Txt';
+import {EarlyBirdNote, anyEarlyPrice, RetailPrice, retailFor} from '~/components/EarlyPriceCue';
 import {PRODUCT_CONTENT, hiddenWhileSoldOut, isConceptFor} from '~/lib/product-content';
 
 /** The related strip renders catalog cards, same as every listing. */
@@ -52,11 +53,11 @@ function specLineOf(p: RelatedProduct): string | null {
   // The base table describes one variant; with several (3" and 5" frames)
   // its first rows would contradict the "from" price, so name the variants.
   const variantNames = Object.entries(c.variants ?? {}).map(([k, v]) => v.label ?? k);
-  if (parts.length === 0 && variantNames.length > 1) return variantNames.join(' · ');
+  if (parts.length === 0 && variantNames.length > 1) return variantNames.join(', ');
   if (parts.length === 0) {
     for (const [, v] of rows.slice(0, 2)) parts.push(clause(v));
   }
-  return parts.slice(0, 2).join(' · ') || null;
+  return parts.slice(0, 2).join(', ') || null;
 }
 
 /** The common start of several chip names, "RP2354A" + "RP2354B" →
@@ -70,13 +71,6 @@ function sharedStem(names: string[]): string {
   }
   stem = stem.replace(/[\s,·-]+$/, '');
   return stem.length >= 3 ? stem : '';
-}
-
-/** Mono eyebrow in catalog-number language: "FILE 02 · FLIGHT CONTROLLER". */
-function fileLineOf(p: RelatedProduct): string | null {
-  const c = PRODUCT_CONTENT[p.handle];
-  if (c && c.fileNumber !== '-') return `File ${c.fileNumber} · ${c.family}`;
-  return p.productType ?? null;
 }
 
 export function RelatedProducts({
@@ -107,12 +101,16 @@ export function RelatedProducts({
               .sort((a, b) => Number(b.open) - Number(a.open) || a.i - b.i)
               .map(({p}) => p);
             if (listed.length === 0) return null;
+            const shown = listed.slice(0, 4);
             return (
-              <div className="related-grid">
-                {listed.slice(0, 4).map((product) => (
-                  <RelatedCard key={product.id} product={product} />
-                ))}
-              </div>
+              <>
+                <div className="related-grid">
+                  {shown.map((product) => (
+                    <RelatedCard key={product.id} product={product} />
+                  ))}
+                </div>
+                <EarlyBirdNote show={anyEarlyPrice(shown)} className="related-early-note" />
+              </>
             );
           }}
         </Await>
@@ -131,7 +129,6 @@ function RelatedCard({product}: {product: RelatedProduct}) {
   const priced = parseFloat(min.amount) > 0;
   const fromPrice = priced && parseFloat(max.amount) > parseFloat(min.amount);
   const specLine = specLineOf(product);
-  const fileLine = fileLineOf(product);
 
   // Quick-add only when the product has exactly ONE variant - a multi-model
   // line (FC/ESC/RX) must send the buyer to the PDP to pick a mount/model -
@@ -181,7 +178,6 @@ function RelatedCard({product}: {product: RelatedProduct}) {
           )}
         </div>
         <div className="related-card-body">
-          {fileLine ? <p className="related-card-file">{fileLine}</p> : null}
           <h3 className="related-card-title">{product.title}</h3>
           {specLine ? <p className="related-card-spec">{specLine}</p> : null}
           {/* Price is gated on coming-soon exactly like ProductItem's
@@ -197,6 +193,7 @@ function RelatedCard({product}: {product: RelatedProduct}) {
                   </span>
                 ) : null}
                 <span>{formatPrice(min.amount, min.currencyCode)}</span>
+                <RetailPrice retail={retailFor(product.variants.nodes, min)} />
                 {priceUnit ? (
                   <span className="related-card-unit">{priceUnit}</span>
                 ) : null}

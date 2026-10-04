@@ -1,4 +1,4 @@
-import {bySku, cartAddUrl, type Catalog, type CartLine} from './catalog.ts';
+import {bySku, cartAddUrl, isEarlyPrice, type Catalog, type CartLine} from './catalog.ts';
 import {
   partHandle,
   type BuildsConfig,
@@ -29,6 +29,8 @@ export type HeroBuildPart = {
   available: boolean;
   /** The variant's ship promise, for the line under the build's button. */
   shipPromise: string | null;
+  /** The price is an early bird preorder price. */
+  early?: boolean;
 };
 
 export type HeroBuild = {
@@ -67,6 +69,7 @@ export function resolveHeroBuilds(
         currency: variant?.currency || catalog.currency,
         available: Boolean(variant && variant.availability !== 'sold_out'),
         shipPromise: variant?.ship_promise ?? null,
+        early: isEarlyPrice(variant),
       };
     }),
   }));

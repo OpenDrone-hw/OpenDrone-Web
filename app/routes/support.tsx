@@ -515,7 +515,7 @@ export default function SupportRoute() {
           <span className="sp-quickline-label">{t('topics_title')}:</span>{' '}
           {HELP_LINKS.map((l, i) => (
             <span key={l.key}>
-              {i > 0 ? ' · ' : ''}
+              {i > 0 ? ', ' : ''}
               <Link prefetch="intent" to={legalHref(l.to, 'en')}>
                 {t(l.key)}
               </Link>
@@ -524,7 +524,7 @@ export default function SupportRoute() {
         </p>
         <p className="sp-quickline">
           <span className="sp-quickline-label">{t('sales_title')}:</span>{' '}
-          <Link to="/wholesale">{t('sales_trade_link')}</Link> · <a href={`mailto:${salesEmail}`}>{salesEmail}</a>
+          <Link to="/wholesale">{t('sales_trade_link')}</Link>, <a href={`mailto:${salesEmail}`}>{salesEmail}</a>
         </p>
       </div>
     </div>

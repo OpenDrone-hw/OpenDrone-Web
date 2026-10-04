@@ -1637,10 +1637,10 @@ html.light .header-cat-pod {
 }
 
 .site-header-categories a {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--fs-sm);
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--color-gold-text);
   font-weight: 500;
   position: relative;
@@ -3832,9 +3832,6 @@ button.reset {
   color: var(--color-text-muted);
   overflow-wrap: anywhere;
 }
-.product-buy-unit {
-  color: var(--color-text);
-}
 
 /* Buy module detail lines: shipping to the visitor's country, the duties
    note outside the EU, and the preorder terms. Small, muted, wrapping. */
@@ -3964,6 +3961,40 @@ button.reset {
   background: var(--color-gold-fill);
 }
 
+/* Early bird preorder prices (EarlyPriceCue.tsx): one number per price,
+   one plain line to say what it is. */
+.early-line {
+  flex: 1 0 100%;
+  margin: 0.4rem 0 0;
+  font-size: var(--fs-sm, 0.875rem);
+  color: var(--color-gold-text);
+  font-variant-numeric: tabular-nums;
+}
+.specs-note {
+  max-width: 40rem;
+  margin: 0 auto var(--sp-5);
+  text-align: center;
+  font-size: var(--fs-sm, 0.875rem);
+  color: var(--color-text-muted);
+}
+.product-buy-amount .retail-price {
+  font-size: 1rem;
+}
+.retail-price {
+  margin-left: 0.5em;
+  font-family: var(--font-sans);
+  font-size: 0.8em;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.early-note {
+  margin: 0;
+  font-size: var(--fs-sm, 0.875rem);
+  color: var(--color-text-muted);
+}
+
 .product-buy-price .product-price {
   font-family: var(--font-display);
   font-weight: 600;
@@ -3984,7 +4015,8 @@ button.reset {
 }
 
 /* Art. VI.45 WER price microcopy: "incl. VAT · excl. shipping". */
-.product-buy-vat {
+.product-buy-vat,
+.product-buy-unit {
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   letter-spacing: 0.04em;
@@ -4586,10 +4618,6 @@ button.reset {
 .variant-tier.is-selected .variant-tier-name {
   font-weight: 700;
 }
-.variant-tier-check {
-  display: inline-flex;
-  color: var(--color-gold-text);
-}
 
 .variant-tier.is-soldout {
   opacity: 0.7;
@@ -5048,6 +5076,9 @@ html.light .firmware-logo--tile {
 }
 
 .latest-commit-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1em;
   margin: 0;
   font-family: var(--font-mono);
   font-size: 12px;
@@ -5401,15 +5432,6 @@ section.chapter[data-centered] .chapter-body-col {
   border-top: 1px solid var(--color-border);
 }
 
-.related-card-file {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-dim);
-  margin: 0;
-}
-
 .related-card-title {
   font-family: var(--font-display);
   font-weight: 600;
@@ -5440,8 +5462,9 @@ section.chapter[data-centered] .chapter-body-col {
   gap: 0.35rem;
   margin: auto 0 0;
   padding-top: 0.4rem;
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--fs-base);
   font-variant-numeric: tabular-nums;
   color: var(--color-text);
 }
@@ -7503,7 +7526,7 @@ section.chapter[data-centered] .chapter-body-col {
    bubble around every line. */
 .in-the-box li {
   display: grid;
-  grid-template-columns: 3rem 1fr;
+  grid-template-columns: auto 1fr;
   grid-template-rows: auto auto;
   column-gap: 0.9rem;
   row-gap: 0.15rem;
@@ -7592,7 +7615,7 @@ section.chapter[data-centered] .chapter-body-col {
 }
 .in-the-box-row-hit {
   display: grid;
-  grid-template-columns: 1.4rem 3rem 1fr;
+  grid-template-columns: 1.4rem auto 1fr;
   column-gap: 0.9rem;
   align-items: center;
   position: relative;
@@ -7781,39 +7804,31 @@ section.chapter[data-centered] .chapter-body-col {
 }
 
 .what-chain-chip {
-  padding: 0.3rem 0.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-pill);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: var(--fs-sm);
   color: var(--color-text-muted);
   text-decoration: none;
-  transition: color 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+  transition: color 0.15s ease;
 }
 
-/* A chip that links to a product reads as a button; the one stage with no
-   product (the radio) stays a dim, dashed label. */
+/* A stage we sell links its product page; the radio is plain text. */
 a.what-chain-chip {
   color: var(--color-text);
-  border-color: var(--color-border-strong);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+  text-underline-offset: 3px;
 }
 .what-chain-chip.is-plain {
-  border-style: dashed;
-  color: var(--color-text-dim);
+  color: var(--color-text-muted);
   cursor: default;
 }
 
 a.what-chain-chip:hover {
   color: var(--color-gold-text);
-  border-color: color-mix(in srgb, var(--color-gold) 55%, transparent);
 }
 
 .what-chain-chip.is-active {
-  background: var(--color-gold-fill);
-  border-color: var(--color-gold-fill);
-  color: var(--color-on-accent);
+  color: var(--color-gold-text);
   font-weight: 600;
 }
 
@@ -12713,12 +12728,6 @@ html.light .editorial-watermark {
   border: 1.5px dashed var(--od-line-strong);
   border-radius: var(--r-sm);
 }
-.rn-empty .rn-empty-icon {
-  font-family: var(--font-mono);
-  font-size: 28px;
-  color: var(--od-pcb-gold-2);
-  margin-bottom: 14px;
-}
 .rn-empty h3 {
   font-family: var(--font-display);
   font-weight: 600;
@@ -12767,9 +12776,6 @@ html.light .editorial-watermark {
   font-size: 12px;
   color: var(--od-ink-dim);
   margin-bottom: 14px;
-}
-.rn-post-meta .rn-dot {
-  color: var(--od-ink-faint);
 }
 .rn-post-title {
   font-family: var(--font-display);
@@ -14206,13 +14212,7 @@ html.light .editorial-watermark {
 }
 .avail-scope,
 .avail-note {
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-}
-.avail-note {
-  color: var(--color-gold-text);
+  color: var(--color-text-muted);
 }
 .avail-row[data-state='other_region'] .avail-note,
 .avail-row[data-state='sold_out'] .avail-note {
@@ -14376,9 +14376,6 @@ html.light .cart-sheet-item .cart-line-preorder {
   letter-spacing: 0;
   text-transform: none;
   color: var(--color-text);
-}
-.cart-added-check {
-  color: var(--color-stock);
 }
 .cart-added-close {
   width: 2.5rem;
@@ -15188,13 +15185,6 @@ html.light .cart-sheet-item .ship-chip {
   text-transform: none;
   color: var(--color-text);
 }
-.ship-chip .ship-line-dot {
-  flex: none;
-  width: 7px;
-  height: 7px;
-  /* On the first line of the text when it wraps, not centred on all of it. */
-  margin-top: calc((1.4em - 7px) / 2);
-}
 .ship-chip-label {
   color: var(--color-gold-text);
   font-weight: 500;
@@ -15573,14 +15563,6 @@ html:not(.light) .trust-chip-oshwa-mark {
 .product-hero-copy .ship-line.product-buy-stock::before {
   content: none;
 }
-.ship-line-dot {
-  flex: none;
-  margin-top: calc((1.4em - 8px) / 2);
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--color-stock);
-}
 .product-hero-copy .product-buy-ship {
   font-family: var(--font-sans);
   font-size: var(--fs-sm);
@@ -15617,6 +15599,7 @@ html:not(.light) .trust-chip-oshwa-mark {
 .buy-rail.is-pinned .step-bar,
 .buy-rail.is-pinned .avail,
 .buy-rail.is-pinned .product-buy-vat,
+.buy-rail.is-pinned .early-line,
 .buy-rail.is-pinned .product-buy-unit,
 .buy-rail.is-pinned .product-buy-sku,
 .buy-rail.is-pinned .product-buy-stock,
@@ -15757,10 +15740,6 @@ body:has(.cart-added-overlay) .buy-rail.is-pinned {
 .buy-rail.is-pinned .variant-tier .variant-tier-name {
   font-size: 13px;
   line-height: 1;
-}
-.buy-rail.is-pinned .variant-tier .variant-tier-check svg {
-  width: 12px;
-  height: 12px;
 }
 .buy-rail.is-pinned .variant-tier .variant-tier-glow {
   inset: 0;
@@ -16879,20 +16858,29 @@ html.hero-header-in .homepage-layout .site-header {
 }
 .hp-dot {
   position: absolute;
-  top: -4px;
-  margin-left: -5px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--color-bg);
-  border: 1px solid color-mix(in srgb, var(--color-text-dim) 50%, transparent);
-  transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+  top: -6px;
+  margin-left: -7px;
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 0;
+  background: none;
 }
-.hp-dot.done { background: color-mix(in srgb, var(--color-accent) 45%, transparent); }
-.hp-dot.on {
+/* A tick on the rail per part, not a dot. */
+.hp-dot::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 2px;
+  width: 2px;
+  height: 10px;
+  background: color-mix(in srgb, var(--color-text-dim) 60%, transparent);
+  transition: background 0.25s ease, transform 0.25s ease;
+}
+.hp-dot.done::after { background: color-mix(in srgb, var(--color-accent) 45%, transparent); }
+.hp-dot.on::after {
   background: var(--color-accent);
-  border-color: var(--color-accent);
-  transform: scale(1.4);
+  transform: scaleY(1.4);
 }
 .hp-copy {
   position: absolute;
@@ -18259,12 +18247,6 @@ html.light .plugs {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-.home-community-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #23a55a;
-}
 .home-community-cta {
   margin-top: 0.5rem;
 }
@@ -18275,25 +18257,12 @@ html.light .plugs {
   border-top: 1px solid var(--color-border);
 }
 .home-community-reasons > li {
-  display: grid;
-  grid-template-columns: 2.5rem minmax(0, 1fr);
-  gap: 0.75rem;
   padding: 1.1rem 0;
   border-bottom: 1px solid var(--color-border);
 }
-.home-community-num {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  color: var(--color-gold-text);
-  padding-top: 0.2rem;
-}
 .home-community-reasons h3 {
-  font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 1rem;
   font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
   color: var(--color-text);
   margin: 0 0 0.35rem;
 }
@@ -18444,4 +18413,34 @@ summary,
 }
 .product-card-quickadd-btn[data-state="error"] .cart-action-label {
   white-space: normal;
+}
+
+/* Product hero trust line: plain text links, no pills. */
+.product-hero-copy .trust-chips {
+  align-items: center;
+  gap: 4px var(--sp-4);
+}
+.product-hero-copy .trust-chips > li {
+  display: flex;
+}
+.product-hero-copy .trust-chip,
+.product-hero-copy .trust-chip-link:hover {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  font-weight: 400;
+  line-height: 1.4;
+}
+.product-hero-copy .trust-chip-link {
+  color: var(--color-text-muted);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+  text-underline-offset: 3px;
+}
+.product-hero-copy .trust-chip-link:hover {
+  color: var(--color-text);
 }

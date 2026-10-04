@@ -106,7 +106,7 @@ function PlugCard({plug, base, edit}: {plug: Plug; base: string; edit: EditFn}) 
   const n = plug.pins?.length ?? 0;
   const meta =
     plug.kind === 'jst-sh'
-      ? copyFill('product-chrome.plugs_jst_sh', 'JST-SH · {n}-pin', {n})
+      ? copyFill('product-chrome.plugs_jst_sh', 'JST-SH {n}-pin', {n})
       : (copyText('product-chrome.plugs_rails') ?? 'Regulated outputs');
   return (
     <li className={`plug-card plug-card--${plug.kind}`}>

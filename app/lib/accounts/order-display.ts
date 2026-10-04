@@ -8,7 +8,7 @@ export type OrderStatusTone = 'preorder' | 'shipped' | 'processing' | 'muted';
 
 export type OrderStatus = {
   tone: OrderStatusTone;
-  /** Chip text: "Preorder · ships by 31 Mar 2027", "Shipped", ... */
+  /** Chip text: "Preorder, ships by 31 Mar 2027", "Shipped", ... */
   label: string;
   /** One secondary line under the items; null when there is nothing to add. */
   note: string | null;
@@ -31,7 +31,7 @@ export function orderStatus(order: AccountOrder): OrderStatus {
 
   if (order.isPreorder) {
     const p = order.promise;
-    const label = p ? `Preorder · ${p.text}` : 'Preorder';
+    const label = p ? `Preorder, ${p.text}` : 'Preorder';
     const notes: string[] = [];
     if (partlyRefunded) notes.push(partlyRefunded);
     return {tone: 'preorder', label, note: notes.join(' ') || null};

@@ -285,7 +285,7 @@
     {
       "id": "fc",
       "title": "OpenFC Lite",
-      "note": "RP2354 \u00b7 BMI270 \u00b7 Betaflight",
+      "note": "RP2354, BMI270, Betaflight",
       "hint": "RX in, ESC out.",
       "href": "/products/openfc-lite",
       "select": {
@@ -296,7 +296,7 @@
     {
       "id": "esc",
       "title": "OpenESC",
-      "note": "4in1 \u00b7 AM32 \u00b7 40A",
+      "note": "4in1, AM32, 40A",
       "hint": "Battery in, four motors out.",
       "href": "/products/openesc",
       "select": {
@@ -329,7 +329,7 @@
     {
       "id": "frame",
       "title": "OpenFrame",
-      "note": "3\" \u00b7 T700 carbon",
+      "note": "3\", T700 carbon",
       "select": {
         "complement": true,
         "plus": "videoModule"

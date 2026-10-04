@@ -135,19 +135,18 @@ export function GpsrBlock({
             :{' '}
           </>
         ) : null}
-        {company.name}, {company.address} &middot; {company.email} &middot; KBO/BCE {company.kbo}
+        {company.name}, {company.address}, {company.email}, KBO/BCE {company.kbo}
       </p>
       {registrations.length ? (
         <p className="mb-2">
-          {registrations.map((r) => `${registrationLabel(r.kind)} ${r.value}`).join(' · ')}
+          {registrations.map((r) => `${registrationLabel(r.kind)} ${r.value}`).join(', ')}
         </p>
       ) : null}
       <p className="mb-4">
         {copyText('product-chrome.gpsr_product_label') ?? 'Product type'}: {productTitle}
         {sku ? (
           <>
-            {' '}
-            &middot; {copyText('product-chrome.buy_sku_prefix') ?? 'SKU'} {sku}
+            , {copyText('product-chrome.buy_sku_prefix') ?? 'SKU'} {sku}
           </>
         ) : null}
       </p>

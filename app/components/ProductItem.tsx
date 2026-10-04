@@ -1,4 +1,5 @@
 import {useCallback} from 'react';
+import {RetailPrice, retailFor} from '~/components/EarlyPriceCue';
 import {Link} from 'react-router';
 import {SmoothImage} from './SmoothImage';
 import {ProductGhostTile} from './ProductGhostTile';
@@ -14,7 +15,6 @@ import {PRODUCT_CONTENT, imagesAreRenders, isPurchasableStatus} from '~/lib/prod
 import {AddToCartButton} from './AddToCartButton';
 import {ShipChip} from './ShipChip';
 import {copyText} from '~/lib/copy';
-import {tileFamilyLabel} from '~/lib/families';
 
 /** Hover quick-add for catalog cards: the card's own hand-off link, so
  *  ordering never requires opening the PDP. */
@@ -125,6 +125,7 @@ export function ProductItem({
       ) : null}
       {formatPrice(amount, currencyCode)}
       {priceUnit ? <span className="product-card-price-unit"> {priceUnit}</span> : null}
+      <RetailPrice retail={retailFor(product.variants.nodes, {amount})} />
     </span>
   );
 
@@ -197,7 +198,6 @@ export function ProductItem({
       data-status={roadmapStatus}
       title={copyText(`roadmap.status_${roadmapStatus}_legend`)}
     >
-      <span className="kanban-dot" aria-hidden="true" />
       {copyText(`roadmap.status_${roadmapStatus}_label`)}
     </span>
   ) : comingSoon || launchPending ? (
@@ -291,9 +291,6 @@ export function ProductItem({
                   )
                 : null}
             </div>
-            {'productType' in product && product.productType ? (
-              <p className="product-card-meta">{tileFamilyLabel(product.productType)}</p>
-            ) : null}
           </Link>
           {lead ? <p className="product-feature-lead">{lead}</p> : null}
           {modelStrip}
@@ -340,9 +337,6 @@ export function ProductItem({
             className="product-card-ship"
             ifFunded={!campaign.targetReached}
           />
-        ) : null}
-        {'productType' in product && product.productType ? (
-          <p className="product-card-meta">{tileFamilyLabel(product.productType)}</p>
         ) : null}
       </div>
     </>

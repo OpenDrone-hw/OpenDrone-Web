@@ -121,9 +121,6 @@ export default function NewsletterPage() {
         </div>
       ) : (
         <div className="rn-empty">
-          <div className="rn-empty-icon" aria-hidden>
-            ·
-          </div>
           <Txt id="newsletter.empty_title" as="h3" />
           <Txt id="newsletter.empty_body" as="p" />
         </div>

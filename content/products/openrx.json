@@ -41,14 +41,14 @@
     "pins": [
       {
         "ref": "①",
-        "part": "SX1281 · 2.4 GHz LoRa radio",
+        "part": "SX1281 - 2.4 GHz LoRa radio",
         "refs": [
           "U3"
         ]
       },
       {
         "ref": "②",
-        "part": "ESP32-C3 · Wi-Fi MCU",
+        "part": "ESP32-C3 - Wi-Fi MCU",
         "refs": [
           "U1"
         ]
@@ -83,21 +83,21 @@
       },
       {
         "ref": "⑦",
-        "part": "TLV75533 · 3.3 V LDO",
+        "part": "TLV75533 - 3.3 V LDO",
         "refs": [
           "U2"
         ]
       },
       {
         "ref": "⑨",
-        "part": "WS2812B · RGB status LED",
+        "part": "WS2812B - RGB status LED",
         "refs": [
           "D1"
         ]
       },
       {
         "ref": "⑧",
-        "part": "Solder pad I/O · CRSF UART",
+        "part": "Solder pad I/O - CRSF UART",
         "refs": [
           "TP1",
           "TP2",
@@ -172,7 +172,7 @@
   "optionAxis": "Model",
   "variants": {
     "Lite": {
-      "subtitle": "ELRS 2.4GHz · SX1281 · ceramic antenna · CRSF",
+      "subtitle": "ELRS 2.4GHz, SX1281, ceramic antenna, CRSF",
       "repoUrl": "https://github.com/OpenDrone-hw/OpenRX-Lite",
       "oshwaUid": "BE000030",
       "highlights": [
@@ -200,14 +200,14 @@
       "pins": [
         {
           "ref": "①",
-          "part": "SX1281 · 2.4 GHz LoRa radio",
+          "part": "SX1281 - 2.4 GHz LoRa radio",
           "refs": [
             "U3"
           ]
         },
         {
           "ref": "②",
-          "part": "ESP32-C3 · MCU",
+          "part": "ESP32-C3 - MCU",
           "refs": [
             "U1"
           ]
@@ -242,14 +242,14 @@
         },
         {
           "ref": "⑦",
-          "part": "TLV75533 · 3.3 V LDO",
+          "part": "TLV75533 - 3.3 V LDO",
           "refs": [
             "U2"
           ]
         },
         {
           "ref": "⑨",
-          "part": "WS2812B · RGB status LED",
+          "part": "WS2812B - RGB status LED",
           "refs": [
             "D1"
           ]
@@ -326,7 +326,7 @@
       }
     },
     "Lite-UFL": {
-      "subtitle": "ELRS 2.4GHz · SX1281 · U.FL · CRSF",
+      "subtitle": "ELRS 2.4GHz, SX1281, U.FL, CRSF",
       "repoUrl": "https://github.com/OpenDrone-hw/OpenRX-Lite-UFL",
       "oshwaUid": "BE000031",
       "highlights": [
@@ -374,14 +374,14 @@
       "pins": [
         {
           "ref": "①",
-          "part": "SX1281 · 2.4 GHz LoRa radio",
+          "part": "SX1281 - 2.4 GHz LoRa radio",
           "refs": [
             "U3"
           ]
         },
         {
           "ref": "②",
-          "part": "ESP32-C3 · MCU",
+          "part": "ESP32-C3 - MCU",
           "refs": [
             "U1"
           ]
@@ -416,14 +416,14 @@
         },
         {
           "ref": "⑦",
-          "part": "TLV75533 · 3.3 V LDO",
+          "part": "TLV75533 - 3.3 V LDO",
           "refs": [
             "U2"
           ]
         },
         {
           "ref": "⑨",
-          "part": "WS2812B · RGB status LED",
+          "part": "WS2812B - RGB status LED",
           "refs": [
             "D1"
           ]
@@ -497,7 +497,7 @@
       }
     },
     "Mono": {
-      "subtitle": "ELRS 2.4GHz + sub-GHz · LR1121 · U.FL · CRSF",
+      "subtitle": "ELRS 2.4GHz + sub-GHz, LR1121, U.FL, CRSF",
       "repoUrl": "https://github.com/OpenDrone-hw/OpenRX-Mono",
       "oshwaUid": "BE000032",
       "highlights": [
@@ -561,28 +561,28 @@
       "pins": [
         {
           "ref": "①",
-          "part": "LR1121 · dual-band LoRa radio",
+          "part": "LR1121 - dual-band LoRa radio",
           "refs": [
             "U3"
           ]
         },
         {
           "ref": "②",
-          "part": "ESP32-C3 · MCU",
+          "part": "ESP32-C3 - MCU",
           "refs": [
             "U1"
           ]
         },
         {
           "ref": "③",
-          "part": "RFX2401C · PA / LNA front-end",
+          "part": "RFX2401C - PA / LNA front-end",
           "refs": [
             "U4"
           ]
         },
         {
           "ref": "④",
-          "part": "SKY13373 · RF switch",
+          "part": "SKY13373 - RF switch",
           "refs": [
             "U5"
           ]
@@ -610,7 +610,7 @@
         },
         {
           "ref": "⑨",
-          "part": "WS2812B · RGB status LED",
+          "part": "WS2812B - RGB status LED",
           "refs": [
             "D1"
           ]
@@ -693,7 +693,7 @@
       }
     },
     "Gemini": {
-      "subtitle": "ELRS Gemini Xrossband · 2x LR1121 · 2x U.FL · CRSF",
+      "subtitle": "ELRS Gemini Xrossband, 2x LR1121, 2x U.FL, CRSF",
       "repoUrl": "https://github.com/OpenDrone-hw/OpenRX-Gemini",
       "oshwaUid": "BE000033",
       "highlights": [
@@ -765,7 +765,7 @@
       "pins": [
         {
           "ref": "①",
-          "part": "LR1121 · dual-band LoRa radio",
+          "part": "LR1121 - dual-band LoRa radio",
           "cost": "×2",
           "refs": [
             "U3",
@@ -774,14 +774,14 @@
         },
         {
           "ref": "②",
-          "part": "ESP32-C3 · MCU",
+          "part": "ESP32-C3 - MCU",
           "refs": [
             "U1"
           ]
         },
         {
           "ref": "③",
-          "part": "RFX2401C · PA / LNA front-end",
+          "part": "RFX2401C - PA / LNA front-end",
           "cost": "×2",
           "refs": [
             "U4",
@@ -790,7 +790,7 @@
         },
         {
           "ref": "④",
-          "part": "SKY13373 · RF switch",
+          "part": "SKY13373 - RF switch",
           "cost": "×2",
           "refs": [
             "U5",
@@ -822,14 +822,14 @@
         },
         {
           "ref": "⑨",
-          "part": "WS2812B · RGB status LED",
+          "part": "WS2812B - RGB status LED",
           "refs": [
             "D1"
           ]
         },
         {
           "ref": "⑩",
-          "part": "TS2306A · boot button",
+          "part": "TS2306A - boot button",
           "refs": [
             "U9"
           ]

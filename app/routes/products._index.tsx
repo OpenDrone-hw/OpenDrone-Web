@@ -7,6 +7,7 @@ import type {ReactNode} from 'react';
 import {Form, Link, useLoaderData, useRouteLoaderData, useSearchParams} from 'react-router';
 import type {RootLoader} from '~/root';
 import {ProductItem, type ProductQuickAdd} from '~/components/ProductItem';
+import {EarlyBirdNote, anyEarlyPrice} from '~/components/EarlyPriceCue';
 import type {MoneyV2, ProductCardFragment} from '~/lib/product-shapes';
 import {toCards} from '~/lib/catalog';
 import {CAMPAIGN} from '~/lib/catalog-client';
@@ -747,6 +748,9 @@ export default function ProductsIndex() {
                 </select>
               </label>
             </div>
+            {shown.length > 0 ? (
+              <EarlyBirdNote show={anyEarlyPrice(shown.map((card) => card.product))} className="catalog-early-note" />
+            ) : null}
 
             <div
               className="catalog-chips"

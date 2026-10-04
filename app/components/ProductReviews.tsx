@@ -55,10 +55,10 @@ export function ReviewAggregateLine({
     <a className="product-buy-reviews" href="#reviews">
       <ReviewStars rating={aggregate.value} />
       <span className="product-buy-reviews-count">
-        {aggregate.value.toFixed(1)} · {aggregate.count}{' '}
+        {aggregate.value.toFixed(1)} ({aggregate.count}{' '}
         {aggregate.count === 1
           ? (copyText('product-chrome.reviews_word_one') ?? 'review')
-          : (copyText('product-chrome.reviews_word_many') ?? 'reviews')}
+          : (copyText('product-chrome.reviews_word_many') ?? 'reviews')})
       </span>
     </a>
   );

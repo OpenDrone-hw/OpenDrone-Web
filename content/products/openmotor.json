@@ -89,6 +89,7 @@
       "1 motor"
     ]
   ],
+  "specsNote": "We are still choosing the final motor manufacturer, so these specifications may change. Every buyer gets an email before shipping.",
   "optionAxis": "Model",
   "secondAxis": "Cells",
   "secondOrder": [
@@ -99,7 +100,7 @@
   "variants": {
     "1604": {
       "label": "3\" (1604)",
-      "subtitle": "1604 · 2850KV · 3\" props",
+      "subtitle": "1604, 2850KV, 3\" props",
       "highlights": [
         [
           "KV",
@@ -163,7 +164,7 @@
         "6S": {
           "label": "3\" 6S · 2850KV",
           "name": "3\" 6S (1604, 2850KV)",
-          "subtitle": "1604 · 2850KV · 6S · 3\" props",
+          "subtitle": "1604, 2850KV, 6S, 3\" props",
           "highlights": [
             [
               "KV",
@@ -188,7 +189,7 @@
         "4S": {
           "label": "3\" 4S · 3800KV",
           "name": "3\" 4S (1604, 3800KV)",
-          "subtitle": "1604 · 3800KV · 4S · 3\" props",
+          "subtitle": "1604, 3800KV, 4S, 3\" props",
           "highlights": [
             [
               "KV",
@@ -222,7 +223,7 @@
     },
     "2306": {
       "label": "5\" (2306)",
-      "subtitle": "2306 · 5\" props",
+      "subtitle": "2306, 5\" props",
       "highlights": [
         [
           "Prop size",
@@ -353,7 +354,7 @@
         "6S": {
           "label": "5\" 6S · 1950KV",
           "name": "5\" 6S (2306, 1950KV)",
-          "subtitle": "2306 · 1950KV · 6S · 5\" props",
+          "subtitle": "2306, 1950KV, 6S, 5\" props",
           "specs": [
             [
               "KV",
@@ -371,7 +372,7 @@
         "4S": {
           "label": "5\" 4S · 2550KV",
           "name": "5\" 4S (2306, 2550KV)",
-          "subtitle": "2306 · 2550KV · 4S · 5\" props",
+          "subtitle": "2306, 2550KV, 4S, 5\" props",
           "specs": [
             [
               "KV",

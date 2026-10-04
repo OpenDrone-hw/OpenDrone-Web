@@ -133,7 +133,7 @@ function VotesSection({roadmap}: {roadmap: RoadmapItem[]}) {
           ))}
           <p className="vote-foot">
             {tally.ballots} <Txt id="roadmap.votes_ballots_label" />
-            {' · '}
+            {'. '}
             <Txt id="roadmap.votes_method" />
           </p>
           {graduated.length ? (
@@ -143,9 +143,9 @@ function VotesSection({roadmap}: {roadmap: RoadmapItem[]}) {
                 {graduated.map((r) => (
                   <li key={r.id}>
                     <Txt id={`roadmap.item_${r.id}_name`} />
-                    {' · '}
+                    {', '}
                     <Txt id={`roadmap.status_${r.status}_label`} />
-                    {' · '}
+                    {', '}
                     {tally.mentions[r.id]}{' '}
                     <Txt id="roadmap.votes_count_label" />
                   </li>

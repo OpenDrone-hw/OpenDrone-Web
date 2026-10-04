@@ -166,7 +166,7 @@
   "optionAxis": "Model",
   "variants": {
     "5\" Freestyle": {
-      "subtitle": "5\" freestyle · 226 mm · 6 mm arms · 30x30 / 20x20",
+      "subtitle": "5\" freestyle, 226 mm, 6 mm arms, 30x30 / 20x20",
       "highlights": [
         [
           "Wheelbase",
@@ -301,7 +301,7 @@
       "repoUrl": "https://github.com/OpenDrone-hw/OpenFrame-5F"
     },
     "3\" Freestyle": {
-      "subtitle": "3\" freestyle · 141 mm · 4 mm arms · 25.5 / 20x20",
+      "subtitle": "3\" freestyle, 141 mm, 4 mm arms, 25.5 / 20x20",
       "highlights": [
         [
           "Wheelbase",
