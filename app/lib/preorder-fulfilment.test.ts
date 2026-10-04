@@ -390,6 +390,22 @@ describe('batch promise mismatch', () => {
     assert.deepEqual(overfullBatches([a], SMALL), []);
   });
 
+  it('tags and checks a paid batch by its sellable units, not its reserved ones', () => {
+    const reserved = parseCampaignConfig({
+      ...CONFIG,
+      skus: {'OPENFC-LITE-2020': {batches: [{units: 3, reserved: 1, paid: true, ships: 'ships early November 2026'}, {units: 250}]}},
+    });
+    const a = order({lines: [['OPENFC-LITE-2020', 1]]});
+    const b = order({lines: [['OPENFC-LITE-2020', 2]]});
+    const batches = assignBatches([a, b], reserved);
+    assert.deepEqual(batches.get(a.id)!.map((x) => [x.batch, x.units]), [[1, 1]]);
+    assert.deepEqual(batches.get(b.id)!.map((x) => [x.batch, x.units]), [[1, 1], [2, 1]]);
+    const t1 = order({lines: [['OPENFC-LITE-2020', 2]], tags: ['preorder', 'batch:OPENFC-LITE-2020:1']});
+    const t2 = order({lines: [['OPENFC-LITE-2020', 1]], tags: ['preorder', 'batch:OPENFC-LITE-2020:1']});
+    assert.deepEqual(overfullBatches([t1], reserved), []);
+    assert.deepEqual(overfullBatches([t1, t2], reserved), [{sku: 'OPENFC-LITE-2020', batch: 1, units: 2, tagged: 3}]);
+  });
+
   it('counts the orders the planner would hold that carry no hold', () => {
     const fresh = order({lines: [['OPENRX-LITE', 1]]});
     const heldUntagged = order({

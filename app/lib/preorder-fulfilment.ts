@@ -60,6 +60,7 @@ import {
   configSoldUnder,
   REGIONS,
   regionOf,
+  sellableUnits,
   servesRegion,
   shipsWithBatch,
   usStockRule,
@@ -374,7 +375,8 @@ export type OverfullBatch = {sku: string; batch: number; units: number; tagged: 
 
 /**
  * Batches with a fixed size (every batch but an open-ended last funding
- * target) whose `batch:SKU:N` tags carry more units than the batch has.
+ * target) whose `batch:SKU:N` tags carry more units than the batch sells
+ * (`sellableUnits`: reserved units are not for sale).
  * Tags are written once, so a late-indexed or edited order can leave them
  * out of step with `assignBatches`. An order's units of the SKU count
  * toward a tagged batch by the allocation when it agrees, else all of them
@@ -405,7 +407,7 @@ export function overfullBatches(orders: PreorderOrder[], config: CampaignConfig)
     entry.batches.forEach((b, i) => {
       if (i === last && !b.paid) return;
       const units = tagged.get(batchTag(sku, i + 1)) ?? 0;
-      if (units > b.units) out.push({sku, batch: i + 1, units: b.units, tagged: units});
+      if (units > sellableUnits(b)) out.push({sku, batch: i + 1, units: sellableUnits(b), tagged: units});
     });
   }
   return out;
