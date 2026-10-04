@@ -1,4 +1,4 @@
-import {useState, useSyncExternalStore} from 'react';
+import {createContext, useContext, useState, useSyncExternalStore} from 'react';
 import {useRevalidator, useRouteLoaderData} from 'react-router';
 import {LoaderCircle} from 'lucide-react';
 import {trackEvent} from '~/lib/growth/plausible';
@@ -8,6 +8,17 @@ import {copyText} from '~/lib/copy';
 import {countryName, notSoldDirect} from '~/lib/shipping-rates';
 import type {RootLoader} from '~/root';
 import {beginCartAdd, endCartAdd, isCartAddBusy, subscribeCartAdd} from './cart-add-lock';
+import {addToCartEventProps, resolvePlacement, type CartPlacement} from '~/lib/cart-placement';
+
+export type {CartPlacement} from '~/lib/cart-placement';
+
+/**
+ * The surface every buy button inside it reports as its `placement`, for a
+ * component that renders buttons it does not own the props of (the build
+ * card, the product form in the buy box and in the sticky bar).
+ */
+const PlacementContext = createContext<CartPlacement | null>(null);
+export const CartPlacementProvider = PlacementContext.Provider;
 
 /** What shows in place of a buy button for a visitor who cannot buy
  *  direct: outside the EU "EU consumer orders only", in an EU country not
@@ -59,6 +70,7 @@ export function AddToCartButton({
   ariaLabel,
   dataTip,
   compactError = false,
+  placement,
 }: {
   children: React.ReactNode;
   disabled?: boolean;
@@ -77,6 +89,9 @@ export function AddToCartButton({
   dataTip?: string;
   /** Show a retryable failure in the button, without an extra message row. */
   compactError?: boolean;
+  /** The surface this button sits on, sent with the `Add to Cart` event.
+   *  Unset, the surrounding `CartPlacementProvider` decides. */
+  placement?: CartPlacement;
 }) {
   const [state, setState] = useState<'idle' | 'adding' | 'error'>('idle');
   // Why the last add failed, in the buyer's words: the per-order limit
@@ -88,6 +103,7 @@ export function AddToCartButton({
   const anyBusy = useSyncExternalStore(subscribeCartAdd, isCartAddBusy, () => false);
   const otherBusy = anyBusy && state !== 'adding';
   const rootData = useRouteLoaderData<RootLoader>('root');
+  const surrounding = useContext(PlacementContext);
   const note = notSoldNote(rootData?.visitorCountry ?? null, rootData?.usShippingRate ?? null);
   if (note) {
     return (
@@ -138,8 +154,11 @@ export function AddToCartButton({
         if (state === 'adding' || !beginCartAdd()) return;
         trackEvent('Add to Cart', {
           props: {
-            product: product ?? 'unknown',
-            sku: skusFromFields(fields).join('+') || 'unknown',
+            ...addToCartEventProps({
+              product,
+              skus: skusFromFields(fields),
+              placement: resolvePlacement(placement, surrounding, product),
+            }),
             ...attributionProps(),
           },
           ...(revenue && Number.isFinite(revenue.amount) ? {revenue} : {}),

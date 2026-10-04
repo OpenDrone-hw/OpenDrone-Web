@@ -177,6 +177,7 @@ export function ProductPods({
               aria-label={copyFill('product-chrome.pod_buy_aria', 'Buy {title}', {title: it.title})}
             >
               <AddToCartButton
+                placement="catalog"
                 className="pod-buy-add"
                 href={it.buy.href}
                 product={it.buy.product}
@@ -193,6 +194,7 @@ export function ProductPods({
               </AddToCartButton>
               {it.buy.set ? (
                 <AddToCartButton
+                  placement="catalog"
                   className="pod-buy-stack pod-buy-set"
                   href={it.buy.set.href}
                   product={it.buy.product}
@@ -223,6 +225,7 @@ export function ProductPods({
               {(it.buy.companions ?? []).map((o) => (
                 <AddToCartButton
                   key={o.key}
+                  placement="catalog"
                   className="pod-buy-stack"
                   href={o.href}
                   product={it.buy?.product}
