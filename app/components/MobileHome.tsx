@@ -154,28 +154,7 @@ export function MobileHome({
           className="home-mobile-tagline home-mobile-rise"
         />
 
-        {/* Primary: the build card right below (kits are most of the cart
-            value). Secondary: every part. GitHub moved to the open-hardware
-            ledger as a text link. */}
         <div {...rise(3)} className="home-mobile-cta home-mobile-rise">
-          <Link
-            to="#build-guide"
-            className="home-mobile-cta-btn home-mobile-cta-primary"
-          >
-            <Txt id="home.build_mobile" />
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              aria-hidden="true"
-            >
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <polyline points="5 12 12 19 19 12" />
-            </svg>
-          </Link>
           <Link
             prefetch="intent"
             to="/products"
@@ -189,7 +168,6 @@ export function MobileHome({
       <section
         className="home-mobile-build"
         id="build-guide"
-        aria-label={copyText('home.m_build_aria') ?? 'Build a quad'}
       >
         <div
           className="hero-build-sizes"

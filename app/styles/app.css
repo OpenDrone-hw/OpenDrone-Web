@@ -1756,44 +1756,6 @@ html:not(.light) .site-header-categories .site-header-cat-group a:not(:hover):no
   display: none !important;
 }
 
-/* "Build a quad": the one filled pill in the bar, on every page and width,
-   to the homepage build card. */
-.site-header-build {
-  display: inline-flex;
-  align-items: center;
-  height: var(--header-control-height);
-  padding: 0 1em;
-  border-radius: var(--r-pill);
-  background: var(--color-gold-fill);
-  color: var(--color-on-accent);
-  font-family: var(--font-sans);
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-  transition: background 0.15s ease;
-}
-.site-header-build:hover {
-  background: var(--color-gold-fill-hover);
-}
-.site-header-build:focus-visible {
-  outline: 2px solid var(--color-focus);
-  outline-offset: 2px;
-}
-@media (max-width: 768px) {
-  .site-header-build {
-    height: 2rem;
-    padding: 0 0.8em;
-    font-size: 12px;
-  }
-}
-@media (max-width: 359px) {
-  .site-header-build {
-    padding: 0 0.6em;
-    font-size: 11px;
-  }
-}
-
 /* On the homepage the header floats over the hero scene, in place from
    the first frame. */
 .homepage-layout .site-header {
@@ -16565,11 +16527,13 @@ html.hero-header-in .homepage-layout .site-header {
   gap: 2.5rem;
 }
 
+/* Centred on the board art above it. */
 .home-mobile-hero {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.75rem;
+  text-align: center;
 }
 /* The build card follows the hero closer than the other bands, so it starts
    on the first screen of a 390 x 664 phone viewport. */
@@ -16664,19 +16628,19 @@ html.hero-header-in .homepage-layout .site-header {
 }
 .home-mobile-cta {
   display: flex;
-  align-items: stretch;
-  gap: 0.6rem;
+  justify-content: center;
   margin-top: 0.25rem;
   width: 100%;
 }
 .home-mobile-cta-btn {
-  flex: 1 1 0;
+  flex: 0 1 auto;
+  min-width: 12rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   min-height: 48px;
-  padding: 0 1rem;
+  padding: 0 2rem;
   border-radius: var(--r-pill);
   font-family: var(--font-mono);
   font-size: 0.9rem;
@@ -16688,16 +16652,6 @@ html.hero-header-in .homepage-layout .site-header {
 }
 .home-mobile-cta-btn:active {
   transform: translateY(1px);
-}
-.home-mobile-cta-primary {
-  flex-grow: 1.4;
-  background: var(--color-gold-fill);
-  color: var(--color-on-accent);
-  border: 1px solid var(--color-gold-fill);
-  box-shadow: 0 8px 22px color-mix(in srgb, var(--color-gold-fill) 28%, transparent);
-}
-.home-mobile-cta-primary:hover {
-  background: var(--color-gold-fill-hover);
 }
 .home-mobile-cta-secondary {
   background: var(--color-bg-card);

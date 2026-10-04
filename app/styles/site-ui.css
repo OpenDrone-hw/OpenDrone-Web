@@ -1557,15 +1557,6 @@ a.hero-build-add { text-decoration: none; }
   }
 }
 
-@media (max-width: 380px) {
-  /* "Build a quad" stays on one line on the narrowest phones. */
-  .home-mobile-cta-btn {
-    white-space: nowrap;
-    letter-spacing: 0.04em;
-    padding-inline: 0.6rem;
-  }
-}
-
 /* Light theme: footer dim text reaches 4.5:1. */
 html.light .footer-sheet-heading {
   opacity: 1;
@@ -1622,6 +1613,8 @@ html.light .footer-ref {
     display: grid;
     grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
     align-items: center;
+    justify-items: start;
+    text-align: start;
     align-content: center;
     column-gap: 2rem;
     row-gap: 0.75rem;
@@ -1645,6 +1638,7 @@ html.light .footer-ref {
   }
   .home-mobile-cta {
     margin-top: 0.25rem;
+    justify-content: flex-start;
   }
 }
 

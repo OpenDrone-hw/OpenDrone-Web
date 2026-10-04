@@ -868,12 +868,6 @@ function HeaderCtas({
 }) {
   return (
     <div className="site-header-actions">
-      {/* The build card on the homepage (`#build-guide`, MobileHome; the
-          desktop hero shows it in the first screen): every page, phone
-          included, not only inside the menu. */}
-      <Link prefetch="intent" to="/#build-guide" className="site-header-build">
-        <Txt id="chrome.nav_build" />
-      </Link>
       {/* Utility zone. Hidden in the top bar on phones (it would overflow a
           320px row on legal pages); MobileMenuAside renders the language and
           currency controls inside the drawer instead. */}
