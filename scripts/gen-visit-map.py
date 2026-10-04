@@ -23,8 +23,13 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / 'public' / 'makerspace'
 OUT_TS = ROOT / 'app' / 'lib' / 'visit-map.generated.ts'
 
-# Maakleerplek, Stapelhuisstraat 15, Leuven (Nominatim, OSM node 11502927335).
-LAB = (50.8865757, 4.7052501)
+# The HighTechLab inside the Maakleerplek site, as marked on the map by the
+# founder (2026-10-04). Nominatim's address point for Stapelhuisstraat 15 sits
+# on a different, smaller building 44 m east of it.
+LAB = (50.886576, 4.704624)
+# The Maakleerplek site, as marked by the founder: the old mill (Maalderij Van
+# Orshoven, Stapelhuisstraat 13) and the two buildings south of it.
+SITE_WAYS = {315785032, 562686794, 510790352}
 # Map extent around the lab: about 3.9 km x 2.7 km.
 SOUTH, WEST, NORTH, EAST = 50.8746, 4.6772, 50.8986, 4.7333
 # Buildings further than this from the lab are left out to keep the file small.
@@ -141,7 +146,7 @@ def render(elements, palette):
     c = PALETTES[palette]
     green, water_fill, water_lines, buildings, rail = [], [], [], [], []
     roads = {}
-    lab_d = ''
+    site = []
 
     for el in elements:
         tags = el.get('tags', {})
@@ -156,8 +161,8 @@ def render(elements, palette):
         if len(pts) < 2:
             continue
         if 'building' in tags:
-            if pts[0] == pts[-1] and inside(pts[:-1], LAB):
-                lab_d = path_d(pts, True)
+            if el['id'] in SITE_WAYS:
+                site.append(path_d(pts, True))
             elif dist_m(pts[0], LAB) <= BUILDING_RADIUS_M:
                 buildings.append(path_d(pts, True))
         elif tags.get('natural') == 'water':
@@ -174,8 +179,8 @@ def render(elements, palette):
             cls, w = ROAD_WIDTH[tags['highway']]
             roads.setdefault((cls, w), []).append(path_d(pts))
 
-    if not lab_d:
-        sys.exit('no building polygon contains the lab position')
+    if len(site) != len(SITE_WAYS):
+        sys.exit(f'expected {len(SITE_WAYS)} site buildings, found {len(site)}')
 
     def joined(ds):
         return ''.join(d for d in ds if d)
@@ -200,8 +205,9 @@ def render(elements, palette):
         )
     parts.append(f'<path fill="none" stroke="{c["rail"]}" stroke-width="3" '
                  f'stroke-dasharray="12 8" d="{joined(rail)}"/>')
-    parts.append(f'<path fill="{c["lab"]}" fill-opacity="0.9" stroke="{c["lab"]}" '
-                 f'stroke-width="3" stroke-linejoin="round" d="{lab_d}"/>')
+    parts.append(f'<path fill="{c["lab"]}" fill-opacity="0.22" stroke="{c["lab"]}" '
+                 f'stroke-opacity="0.8" stroke-width="2.5" stroke-linejoin="round" '
+                 f'd="{joined(site)}"/>')
     parts.append('</svg>\n')
     return ''.join(parts)
 

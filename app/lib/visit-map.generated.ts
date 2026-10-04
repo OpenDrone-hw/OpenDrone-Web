@@ -3,6 +3,6 @@
 export const VISIT_MAP = {
   width: 3940,
   height: 2654,
-  labX: 1970,
+  labX: 1926,
   labY: 1330,
 } as const;
