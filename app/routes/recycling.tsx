@@ -52,7 +52,7 @@ export default function RecyclingRoute() {
               <div key={row.country} className="contents">
                 <dt className="text-[var(--color-text-muted)]">{row.name}</dt>
                 <dd className="font-mono text-[var(--color-text)]">
-                  {row.numbers.map((n) => `${kinds[n.kind]} ${n.value}`).join(' · ')}
+                  {row.numbers.map((n) => `${kinds[n.kind]} ${n.value}`).join(', ')}
                 </dd>
               </div>
             ))}

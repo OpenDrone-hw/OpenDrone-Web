@@ -144,8 +144,8 @@ export const DELIVERY_BY_ATTRIBUTE = 'Delivery by';
 export const DELIVERY_BY_OWN_ATTRIBUTE = '_delivery_by_own';
 
 /** The visible line attribute naming the batch and where it ships, in the
- *  words of the product page and the cart: "Batch 1 · EU only", "March 2027
- *  batch · EU and US". */
+ *  words of the product page and the cart: "Batch 1, EU only", "March 2027
+ *  batch, EU and US". */
 export const AVAILABILITY_ATTRIBUTE = 'Availability';
 
 /** The hidden line attribute (a leading underscore hides it at checkout)

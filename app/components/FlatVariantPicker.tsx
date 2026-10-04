@@ -1,7 +1,6 @@
 import {useLocation, useNavigate, useNavigation} from 'react-router';
 import {useEffect, useId, useState} from 'react';
 import {motion, useReducedMotion} from 'motion/react';
-import {Check} from 'lucide-react';
 import type {ProductVariantFragment} from '~/lib/product-shapes';
 import type {ProductContent} from '~/lib/product-content';
 import {copyText} from '~/lib/copy';
@@ -156,13 +155,9 @@ export function FlatVariantPicker({
                 />
               ) : null}
               <span className="variant-tier-head">
-                <span className="variant-tier-name">{compact ? label.split(' · ')[0] : label}</span>
+                <span className="variant-tier-name">{compact ? label.split(' · ')[0] : label.replaceAll(' · ', ', ')}</span>
                 {!compact && soldOut ? (
                   <span className="variant-tier-flag">{copyText('product-chrome.ladder_flag_sold_out')}</span>
-                ) : !compact && selected ? (
-                  <span className="variant-tier-check" aria-hidden="true">
-                    <Check size={13} strokeWidth={3} />
-                  </span>
                 ) : null}
               </span>
               {price ? <span className="variant-tier-price">{price}</span> : null}

@@ -36,9 +36,7 @@ export function LatestCommitCard({commit}: {commit: LatestCommit}) {
       <p className="latest-commit-message">{commit.message}</p>
       <p className="latest-commit-meta">
         <span className="latest-commit-sha">{commit.shortSha}</span>
-        <span aria-hidden="true"> · </span>
         <span>{commit.author}</span>
-        <span aria-hidden="true"> · </span>
         <span>{relativeTime(commit.date)}</span>
       </p>
     </a>

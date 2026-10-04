@@ -26,7 +26,7 @@ export function OshwaMark({
       viewBox="40 50 470 355"
       className={className}
       role="img"
-      aria-label={title ?? copyFill('product-chrome.oshwa_mark_aria', 'OSHWA certified · {uid}', {uid})}
+      aria-label={title ?? copyFill('product-chrome.oshwa_mark_aria', 'OSHWA certified, {uid}', {uid})}
       xmlns="http://www.w3.org/2000/svg"
       style={{
         fillRule: 'evenodd',

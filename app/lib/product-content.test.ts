@@ -370,7 +370,7 @@ describe('openmotor 4S and 6S windings', () => {
   it('gives every winding of every size a subtitle', () => {
     for (const [size, v] of Object.entries(content.variants ?? {})) {
       for (const cells of content.secondOrder ?? []) {
-        assert.match(v.bySecond?.[cells]?.subtitle ?? '', new RegExp(`^${size} · \\d+KV · ${cells} ·`), `${size} ${cells}`);
+        assert.match(v.bySecond?.[cells]?.subtitle ?? '', new RegExp(`^${size}, \\d+KV, ${cells},`), `${size} ${cells}`);
       }
     }
   });

@@ -92,8 +92,8 @@ export function currentBatch(campaign: Pick<CampaignState, 'batches' | 'batch'>)
 
 /**
  * The one name of a batch, on the cart line, the drawer and the checkout line
- * property: "Batch 1 · EU only" for the paid November stock (FC, ESC and the
- * accessories that ship with it), "March 2027 batch · EU and US" for a funding
+ * property: "Batch 1, EU only" for the paid November stock (FC, ESC and the
+ * accessories that ship with it), "March 2027 batch, EU and US" for a funding
  * target, whose name already carries its month. Never a date: the ship line
  * and the `Preorder` property carry it, once.
  */
@@ -103,7 +103,7 @@ export function batchText(
 ): string | null {
   const b = currentBatch(campaign);
   if (!b) return null;
-  return `${batchLabel(b, words, campaign.shipsWith)} · ${scopeOf(b.regions, words)}`;
+  return `${batchLabel(b, words, campaign.shipsWith)}, ${scopeOf(b.regions, words)}`;
 }
 
 function detailOf(b: Batch, dates: TargetDates, reached: boolean, words: Words, lead: string | null): string {
@@ -114,7 +114,7 @@ function detailOf(b: Batch, dates: TargetDates, reached: boolean, words: Words, 
   }
   const eta = words('ship_eta', 'Ships by {date}', {date: dates.eta});
   if (reached) return eta;
-  return `${words('ship_deadline', 'Deadline {date}', {date: dates.deadline})} · ${
+  return `${words('ship_deadline', 'Deadline {date}', {date: dates.deadline})}. ${
     lead
       ? words('ship_eta_if_lead_funded', 'Ships by {date} if that target is reached', {date: dates.eta})
       : words('ship_eta_if_funded', 'Ships by {date} if the target is reached', {date: dates.eta})

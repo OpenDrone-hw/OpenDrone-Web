@@ -12,7 +12,7 @@ import {copyFill, copyText} from '~/lib/copy';
  *  the pair in the cart. */
 export type PodCompanionOption = {
   key: string;
-  /** Full name for tooltips/aria, e.g. "OpenESC · 20×20". */
+  /** Full name for tooltips/aria, e.g. "OpenESC 20×20". */
   title: string;
   /** Chip label, e.g. "ESC" (renders as "+ESC"). */
   short: string;
@@ -44,6 +44,8 @@ export type ProductPodItem = {
   imageUrl?: string | null;
   imageAlt?: string | null;
   price?: {amount: string; currencyCode: string} | null;
+  /** The price is an early bird preorder price. */
+  early?: boolean;
   /** Coming-soon product: a small SOON tag takes the price slot. Hosts also
    *  omit `buy` for these rows - there is nothing to add yet. */
   soon?: boolean;
@@ -181,7 +183,7 @@ export function ProductPods({
                   title: it.title,
                   self,
                 })}
-                dataTip={it.buy.available ? `${self} · ${fmt(it.price)}` : outOfStock}
+                dataTip={it.buy.available ? `${self}, ${fmt(it.price)}` : outOfStock}
               >
                 <ShoppingCart size={18} strokeWidth={2.25} aria-hidden="true" />
               </AddToCartButton>
@@ -199,7 +201,7 @@ export function ProductPods({
                   )}
                   dataTip={
                     it.buy.available
-                      ? `${it.buy.set.quantity} × ${self} · ${fmt(
+                      ? `${it.buy.set.quantity} × ${self}, ${fmt(
                           it.price
                             ? {
                                 amount: (parseFloat(it.price.amount) * it.buy.set.quantity).toFixed(2),
@@ -255,7 +257,7 @@ export function ProductPods({
                         o.fullPrice && o.pct && o.discountedShort
                         ? copyFill(
                             'product-chrome.pod_stack_tip_full',
-                            '{self} + {partner} stack · +{full} → {price} ({board} −{pct}% in the cart)',
+                            '{self} + {partner} stack, +{full} → {price} ({board} −{pct}% in the cart)',
                             {
                               self,
                               partner: o.short,
@@ -268,7 +270,7 @@ export function ProductPods({
                         : o.pct && o.discountedShort
                           ? copyFill(
                               'product-chrome.pod_stack_tip_discount',
-                              '{self} + {partner} stack · +{price} · {board} −{pct}% in the cart',
+                              '{self} + {partner} stack, +{price}, {board} −{pct}% in the cart',
                               {
                                 self,
                                 partner: o.short,
@@ -279,7 +281,7 @@ export function ProductPods({
                             )
                           : copyFill(
                               'product-chrome.pod_stack_tip',
-                              '{self} + {partner} stack · +{price}',
+                              '{self} + {partner} stack, +{price}',
                               {self, partner: o.short, price: fmt(o.price)},
                             )
                       : outOfStock

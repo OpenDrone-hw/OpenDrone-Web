@@ -19,19 +19,22 @@ export const preorderWords: Words = (key, fallback, vars = {}) =>
 
 /**
  * Which batches a buyer can choose between and which one is theirs: one row
- * per batch, "Batch 1 · Ships early Nov 2026 · EU only · 249 left" and "March
- * 2027 batch · EU and US · Deadline 15 Dec 2026 · Ships by 31 Mar 2027 if the
- * target is reached". The buyer's batch is highlighted; one their region cannot
+ * per batch, "Batch 1, EU only, Ships early Nov 2026" and "March 2027 batch,
+ * EU and US, Deadline 15 Dec 2026. Ships by 31 Mar 2027 if the target is
+ * reached". The buyer's batch is highlighted; one their region cannot
  * get stays listed and says so. A SKU with a single batch gets a single row.
  */
 export function Availability({
   campaign,
   region,
   className = '',
+  countShown = false,
 }: {
   campaign: CampaignState;
   region: Region;
   className?: string;
+  /** The page already shows the units left (the step bar): no second count. */
+  countShown?: boolean;
 }) {
   const dates = targetDates(
     campaign.deadline ?? campaignDate(CAMPAIGN.endsOn),
@@ -48,7 +51,7 @@ export function Availability({
     <>
       <ul className={`avail ${className}`.trim()} data-batches={rows.length}>
         {rows.map((row) => (
-          <AvailabilityRow key={row.batch} row={row} />
+          <AvailabilityRow key={row.batch} row={countShown && row.state === 'current' ? {...row, note: null} : row} />
         ))}
       </ul>
       {lead ? (

@@ -4,6 +4,7 @@ import {motion, useReducedMotion, type MotionProps} from 'motion/react';
 import type {ProductCardFragment as CollectionItemFragment} from '~/lib/product-shapes';
 import {HeroWordmark} from '~/components/HeroWordmark';
 import {ProductItem} from '~/components/ProductItem';
+import {EarlyBirdNote, anyEarlyPrice} from '~/components/EarlyPriceCue';
 import {AnimatedNumber} from '~/components/AnimatedNumber';
 import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
@@ -282,6 +283,7 @@ function FeaturedGrid({items: all}: {items: CollectionItemFragment[]}) {
   return (
     <section className="home-mobile-featured">
       <Txt id="home.m_featured_label" as="p" className="section-label" />
+      <EarlyBirdNote show={anyEarlyPrice(items)} className="home-mobile-early-note" />
       <div className="home-mobile-grid">
         {items.map((product) => (
           <ProductItem

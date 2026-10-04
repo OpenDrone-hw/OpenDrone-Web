@@ -35,13 +35,13 @@ describe('orderStatus', () => {
     ];
     const s = orderStatus(order({isPreorder: true, promise: TARGET, lines}));
     assert.equal(s.tone, 'preorder');
-    assert.equal(s.label, 'Preorder · ships by 31 Mar 2027');
+    assert.equal(s.label, 'Preorder, ships by 31 Mar 2027');
     assert.equal(s.note, null);
   });
 
   it('names no delivery date for a dated preorder, ', () => {
     const s = orderStatus(order({isPreorder: true, promise: DATED}));
-    assert.equal(s.label, 'Preorder · ships early Nov 2026');
+    assert.equal(s.label, 'Preorder, ships early Nov 2026');
     assert.equal(s.note, null);
   });
 

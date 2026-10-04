@@ -321,7 +321,7 @@ export type VariantContent = {
    *  and out of the structured data. The SKU stays the internal ID. */
   internalSku?: boolean;
   /** The mono line under the product name while this version is picked,
-   *  spec-sheet style: "RP2354 · BMI270 · Betaflight · 3-6S · 20x20".
+   *  spec-sheet style: "RP2354, BMI270, Betaflight, 3-6S, 20x20".
    *  Published facts only; unset prints nothing. */
   subtitle?: string;
   /** Other spellings of this option value a link may carry (the visible
@@ -420,6 +420,8 @@ export type ProductContent = {
    *  tier's `specs`) with {@link mergeSpecs} rules. Rows the board README does
    *  not carry live here, so `npm run sync:specs` leaves them alone. */
   specsExtra?: Array<[string, string | null]>;
+  /** One line above the spec table when the specs are not final yet. */
+  specsNote?: string;
   /** Spec keys whose product-level value (`specs` or `specsExtra`) is a
    *  placeholder awaiting the final value. Never rendered; listed by
    *  `npm run specs:placeholders`. */

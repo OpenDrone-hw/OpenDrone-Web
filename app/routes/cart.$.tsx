@@ -18,6 +18,7 @@ import {
   type CartLineInfo,
 } from '~/lib/shopify-cart-action';
 import {formatPrice} from '~/lib/catalog';
+import {EarlyBirdNote, useAnyEarlySku} from '~/components/EarlyPriceCue';
 import {
   buildSuggestionSpecs,
   extraSuggestionSpecs,
@@ -493,6 +494,7 @@ function PopulatedCart({
   const [inFlight, setInFlight] = useState(0);
   const onPending = useCallback((delta: number) => setInFlight((n) => Math.max(0, n + delta)), []);
   const pending = inFlight > 0 || revalidator.state !== 'idle';
+  const anyEarly = useAnyEarlySku(cart.lines.map((line) => line.sku));
 
   // One parcel per order: when lines ship at different times, the early
   // ones wait for the last. Lines waiting for different funding targets do
@@ -563,6 +565,7 @@ function PopulatedCart({
               </div>
             ) : null}
           </dl>
+          <EarlyBirdNote show={anyEarly} className="cart-summary-note" />
           {usBuyer ? (
             <p className="cart-summary-note">
               {cart.subtotal.currencyCode === 'USD'
@@ -593,7 +596,7 @@ function PopulatedCart({
                 ? t('checkout_shops_us', 'Consumer checkout is not available for this destination.')
                 : t('checkout_shops', 'Consumer checkout is not available for this destination.', {country: countryName(country ?? '')})}{' '}
               <Link to="/wholesale">{t('checkout_shops_trade', 'EU or US retailer enquiries')}</Link>
-              {' · '}
+              {', '}
               <Link to="/newsletter">{t('checkout_shops_notify', 'Get launch news')}</Link>
             </p>
           ) : closed ? (
@@ -676,7 +679,7 @@ function PaymentMarks({methods}: {methods: string[]}) {
 
 /**
  * Lines that ship at different times go in one parcel when the last is
- * ready: "One parcel · Ships by 31 Mar 2027 if funded". When some lines have a
+ * ready: "One parcel, Ships by 31 Mar 2027 if funded". When some lines have a
  * date of their own, a quiet link takes the rest out of this order so they
  * can be ordered separately.
  */

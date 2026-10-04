@@ -103,7 +103,6 @@ export function ShipChip({
   if (!chip) return null;
   return (
     <small className={`ship-chip ${className}`} data-kind={chip.kind}>
-      {chip.kind === 'date' ? <span className="ship-line-dot" aria-hidden="true" /> : null}
       {chip.text}
     </small>
   );
@@ -125,7 +124,7 @@ export function shipWord(kind: 'ships' | 'eta' | 'deadline', date: string): stri
 
 /**
  * The ship line under a Pre-order button. A dated batch reads "Ships early
- * Nov 2026"; a funding target "Deadline 15 Dec 2026 · Ships by 31 Mar 2027 if
+ * Nov 2026"; a funding target "Deadline 15 Dec 2026. Ships by 31 Mar 2027 if
  * funded", and "Ships by 31 Mar 2027" once it is funded.
  */
 export function shipLine(
@@ -146,7 +145,7 @@ export function shipLine(
     const head = month
       ? (copyText('preorder.ships_with_batch') ?? 'Ships with the {lead} {month} batch').replace('{month}', month)
       : (copyText('preorder.ships_with') ?? 'Ships with the {lead} batch');
-    return `${head.replace('{lead}', lead)} · ${text}`;
+    return `${head.replace('{lead}', lead)}. ${text}`;
   };
   if (campaign?.targetReached) return {kind: 'target', text: withLead(shipWord('eta', eta))};
   const deadline =
@@ -155,7 +154,7 @@ export function shipLine(
     copyText(lead ? 'preorder.ship_eta_if_lead_funded' : 'preorder.ship_eta_if_funded') ??
     (lead ? 'Ships by {date} if that target is reached' : 'Ships by {date} if the target is reached')
   ).replace('{date}', eta);
-  return {kind: 'target', text: withLead(`${shipWord('deadline', deadline)} · ${ifFunded}`)};
+  return {kind: 'target', text: withLead(`${shipWord('deadline', deadline)}. ${ifFunded}`)};
 }
 
 /**
@@ -185,7 +184,6 @@ export function ShipLine({
   const lead = line.kind === 'target' && !campaign?.targetReached ? leadProduct(campaign?.shipsWith) : null;
   const shipLineEl = (
     <p className={`ship-line ${className}`.trim()} data-kind={line.kind}>
-      {line.kind === 'date' ? <span className="ship-line-dot" aria-hidden="true" /> : null}
       {line.text}
     </p>
   );

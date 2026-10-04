@@ -44,8 +44,8 @@
   "lang_toggle_aria": "Language",
   "region_switch_aria": "Ship to and currency",
   "region_switch_caption": "Ship to",
-  "region_switch_eu": "EU · EUR",
-  "region_switch_us": "US · USD",
+  "region_switch_eu": "EU / EUR",
+  "region_switch_us": "US / USD",
   "region_switch_eu_note": "Ships to the EU, prices in euro",
   "region_switch_us_note": "Ships to the United States, prices in dollars",
   "region_switch_failed": "Could not change the region. Try again.",
@@ -107,6 +107,6 @@
   "footer_tb_rev": "Rev",
   "footer_tb_sheet": "Sheet",
   "footer_tb_date": "Date",
-  "footer_detail_newsletter": "Detail A: newsletter",
+  "footer_detail_newsletter": "Newsletter",
   "menu_wholesale": "Wholesale"
 }

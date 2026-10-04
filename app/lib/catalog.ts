@@ -212,9 +212,15 @@ function variantId(sku: string): string {
 /** The retail price an early bird price rises to, in the buyer's currency:
  *  Shopify's compare-at price for EUR, the USD ladder's last step for a US
  *  buyer, none for an international price (no verified local retail). */
+/** Whether a variant sells at an early bird preorder price. */
+export function isEarlyPrice(variant: Pick<CatalogVariant, 'campaign'> | null | undefined): boolean {
+  const c = variant?.campaign;
+  return Boolean(c?.earlyPrice && c.tierLeft > 0);
+}
+
 function earlyPriceOf(variant: CatalogVariant, fallbackCurrency: string): EarlyPrice | null {
   const c = variant.campaign;
-  if (!c?.earlyPrice || c.tierLeft <= 0) return null;
+  if (!c || !isEarlyPrice(variant)) return null;
   if (c.internationalPrice) return {retail: null};
   if (c.usLadder?.length) {
     const top = c.usLadder.find((step) => step.to === null);

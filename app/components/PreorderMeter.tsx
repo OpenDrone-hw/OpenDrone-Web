@@ -35,7 +35,6 @@ export function StepBar({
         <span className="step-bar-label">{label}</span>
         {prices.length > 1 ? (
           <InfoHint label={copyText('preorder.price_steps') ?? 'Price steps'}>
-            <p>{copyText('preorder.price_steps_help')}</p>
             <ol className="step-price-list">
               {prices.map((price) => (
                 <li

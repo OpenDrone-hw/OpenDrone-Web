@@ -301,7 +301,7 @@
   "optionAxis": "Model",
   "variants": {
     "20×20": {
-      "subtitle": "RP2354 · BMI270 · Betaflight · 3-6S · 20x20",
+      "subtitle": "RP2354, BMI270, Betaflight, 3-6S, 20x20",
       "oshwaUid": "BE000027",
       "repoUrl": "https://github.com/OpenDrone-hw/OpenFC-Lite-Mini",
       "highlights": [
@@ -709,7 +709,7 @@
       }
     },
     "30×30": {
-      "subtitle": "RP2354 · BMI270 · Betaflight · 3-8S · 30x30",
+      "subtitle": "RP2354, BMI270, Betaflight, 3-8S, 30x30",
       "oshwaUid": "BE000026",
       "highlights": [
         [

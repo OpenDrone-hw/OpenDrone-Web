@@ -2,7 +2,6 @@ import {useState} from 'react';
 import {useRouteLoaderData} from 'react-router';
 import {
   ArrowUpRight,
-  Check,
   Fan,
   Package,
   Mail,
@@ -13,6 +12,7 @@ import type {RootLoader} from '~/root';
 import {Link} from '~/components/nav';
 import {AddToCartButton} from '~/components/AddToCartButton';
 import {InfoHint} from '~/components/InfoHint';
+import {EarlyBirdNote} from '~/components/EarlyPriceCue';
 import {Txt} from '~/components/Txt';
 import {copyFill, copyText} from '~/lib/copy';
 import {useProductStatusResolver} from '~/lib/coming-soon';
@@ -142,9 +142,7 @@ export function HeroBuildGuide({
                     })
                   }
                 />
-                <span aria-hidden="true">
-                  <Check size={12} />
-                </span>
+                <span aria-hidden="true" />
               </label>
               {onInspect ? (
                 <button
@@ -223,6 +221,10 @@ export function HeroBuildGuide({
         </AddToCartButton>
         )}
         {shipNote && !selection.notify ? <p className="hero-build-ship">{shipNote}</p> : null}
+        <EarlyBirdNote
+          show={!selection.notify && selection.showPrices && build.parts.some((part) => part.early && selected.has(part.sku))}
+          className="hero-build-ship"
+        />
       </div>
     </section>
   );

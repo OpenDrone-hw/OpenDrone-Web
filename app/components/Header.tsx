@@ -18,6 +18,7 @@ import {
   type PodCompanionOption,
 } from '~/components/ProductPods';
 import {Txt} from '~/components/Txt';
+import {EarlyBirdNote} from '~/components/EarlyPriceCue';
 import {DiscordLink, DiscordMark} from '~/components/Discord';
 import {copyText} from '~/lib/copy';
 import {CART_UPDATED_EVENT} from '~/lib/cart-client';
@@ -328,7 +329,7 @@ function FamilyNav({
       return [
         {
           key: h,
-          title: `${partner.title} · ${size}`,
+          title: `${partner.title} ${size}`,
           short,
           price:
             pv.price && partnerDiscounted && pct
@@ -387,6 +388,7 @@ function FamilyNav({
               imageUrl: p.featuredImage?.url ?? null,
               imageAlt: p.featuredImage?.altText ?? null,
               price: soon ? null : (p.priceRange.minVariantPrice ?? null),
+              early: !soon && p.variants.nodes.some((v) => v.earlyPrice != null),
               soon,
               buy: soon
                 ? undefined
@@ -417,6 +419,7 @@ function FamilyNav({
             imageUrl: v.image?.url ?? p.featuredImage?.url ?? null,
             imageAlt: v.image?.altText ?? p.featuredImage?.altText ?? null,
             price: soon ? null : (v.price ?? p.priceRange.minVariantPrice ?? null),
+            early: !soon && v.earlyPrice != null,
             soon,
             buy: soon
               ? undefined
@@ -503,6 +506,7 @@ function FamilyNav({
                   layout="row"
                   onAdd={() => setOpen(null)}
                 />
+                <EarlyBirdNote show={items.some((it) => it.early)} className="header-pod-early-note" />
               </Pod>
             ) : null}
           </AnimatePresence>
@@ -597,7 +601,7 @@ export function HeaderMenu({
               onClick={close}
               prefetch="intent"
               to={c.to}
-              className="text-sm font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+              className="text-base text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
             >
               {familyLong(c.type, MOBILE_FAMILY_LABEL[c.type] ?? c.label)}
             </NavLink>
@@ -606,7 +610,7 @@ export function HeaderMenu({
             onClick={close}
             prefetch="intent"
             to="/products"
-            className="text-sm font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+            className="text-base text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
           >
             <Txt id="chrome.nav_all_products_mobile" />
           </NavLink>
@@ -620,7 +624,7 @@ export function HeaderMenu({
             onClick={close}
             prefetch="intent"
             to="/"
-            className="text-sm font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+            className="text-base text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
           >
             <Txt id="chrome.nav_home" />
           </NavLink>
@@ -642,8 +646,8 @@ export function HeaderMenu({
         )
           return null;
         const className = isMobile
-          ? 'text-sm font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors'
-          : 'font-mono text-[12px] uppercase tracking-[0.15em] transition-colors text-[var(--color-text-muted)] hover:text-[var(--color-text)]';
+          ? 'text-base text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors'
+          : 'text-[13px] transition-colors text-[var(--color-text-muted)] hover:text-[var(--color-text)]';
 
         if (!url.startsWith('/')) {
           return (
@@ -668,7 +672,7 @@ export function HeaderMenu({
             prefetch="intent"
             to={url}
             className={({isActive}) =>
-              `${isMobile ? 'text-sm tracking-wider' : 'text-[12px] tracking-[0.15em]'} font-mono uppercase transition-colors ${
+              `${isMobile ? 'text-base' : 'text-[13px]'} transition-colors ${
                 isActive
                   ? 'text-[var(--color-text)]'
                   : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
@@ -683,7 +687,7 @@ export function HeaderMenu({
         <DiscordLink
           placement="mobile-menu"
           onClick={close}
-          className="site-mobile-nav-discord text-sm font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+          className="site-mobile-nav-discord text-base text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
         >
           <DiscordMark size={16} />
           <Txt id="chrome.nav_discord" />
@@ -701,7 +705,7 @@ export function HeaderMenu({
           prefetch="intent"
           to="/newsletter"
           className={({isActive}) =>
-            `${isMobile ? 'text-sm tracking-wider' : 'text-[12px] tracking-[0.15em]'} font-mono uppercase transition-colors ${
+            `${isMobile ? 'text-base' : 'text-[13px]'} transition-colors ${
               isActive
                 ? 'text-[var(--color-text)]'
                 : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
@@ -723,7 +727,7 @@ export function HeaderMenu({
           <a
             onClick={close}
             href={accountUrl}
-            className="text-sm font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+            className="text-base text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
           >
             <Txt id="chrome.nav_account_signin" />
           </a>

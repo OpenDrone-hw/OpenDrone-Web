@@ -1,7 +1,6 @@
 import {useLocation, useNavigate, useNavigation} from 'react-router';
 import {useEffect, useId, useState} from 'react';
 import {motion, useReducedMotion} from 'motion/react';
-import {Check} from 'lucide-react';
 import type {MappedProductOptions} from '~/lib/product-shapes';
 import {shopSize, type VariantContent} from '~/lib/product-content';
 import {copyText} from '~/lib/copy';
@@ -154,10 +153,6 @@ export function VariantLadder({
                 ) : soldOut ? (
                   <span className="variant-tier-flag">
                     {copyText('product-chrome.ladder_flag_sold_out')}
-                  </span>
-                ) : selected ? (
-                  <span className="variant-tier-check" aria-hidden="true">
-                    <Check size={13} strokeWidth={3} />
                   </span>
                 ) : null}
               </span>

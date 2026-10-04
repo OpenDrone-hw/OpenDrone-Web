@@ -13,8 +13,8 @@ const CHOICES: readonly SwitchCurrency[] = ['EUR', 'USD'];
 /** What a choice reads as: the region it ships to and its currency. */
 function choiceLabel(choice: SwitchCurrency): string {
   return choice === 'USD'
-    ? (copyText('chrome.region_switch_us') ?? 'US · USD')
-    : (copyText('chrome.region_switch_eu') ?? 'EU · EUR');
+    ? (copyText('chrome.region_switch_us') ?? 'US / USD')
+    : (copyText('chrome.region_switch_eu') ?? 'EU / EUR');
 }
 
 function choiceNote(choice: SwitchCurrency): string {
@@ -24,8 +24,8 @@ function choiceNote(choice: SwitchCurrency): string {
 }
 
 /**
- * The region switch of the header and the mobile menu: a compact "EU · EUR" menu
- * button in the header (`variant="menu"`), the full "EU · EUR | US · USD" segmented pill
+ * The region switch of the header and the mobile menu: a compact "EU / EUR" menu
+ * button in the header (`variant="menu"`), the full "EU / EUR | US / USD" segmented pill
  * in the drawer (default). It is a region
  * switch, not a display toggle: it posts the destination to the same route
  * action as the cart's "Ship to" select (`/api/shopify/cart-country`), which
@@ -80,7 +80,7 @@ export function RegionSwitch({
     typeof pending === 'string' ? pending : revalidator.state !== 'idle' && picked ? picked : country,
     usRate,
   );
-  const activeLabel = active ? choiceLabel(active) : `${country} · ${root?.catalogCurrency ?? ''}`;
+  const activeLabel = active ? choiceLabel(active) : `${country} / ${root?.catalogCurrency ?? ''}`;
   const label = copyText('chrome.region_switch_aria') ?? 'Ship to and currency';
 
   const choose = (choice: SwitchCurrency) => {

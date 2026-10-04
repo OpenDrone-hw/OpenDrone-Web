@@ -211,7 +211,7 @@ export function AddToCartButton({
               <span className="sr-only">{copyText('cart.add_busy') ?? 'Adding…'}</span>
             </>
           ) : compactFailed
-              ? (copyText('cart.add_error_compact') ?? 'Couldn’t add · Retry')
+              ? (copyText('cart.add_error_compact') ?? 'Couldn’t add. Retry')
               : state === 'error'
                 ? (copyText('cart.add_retry') ?? 'Try again')
                 : children}

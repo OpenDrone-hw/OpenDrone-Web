@@ -87,7 +87,6 @@ function CommunityCounts({counts}: {counts: DiscordCounts | null}) {
         {copyText('home.community_members') ?? 'members'}
       </span>
       <span>
-        <span className="home-community-dot" aria-hidden="true" />
         <strong>{fmt.format(counts.online)}</strong>{' '}
         {copyText('home.community_online') ?? 'online now'}
       </span>
@@ -133,19 +132,14 @@ export function CommunitySection({
             {copyText('home.community_cta') ?? 'Join the Discord'}
           </DiscordLink>
         </div>
-        <ol className="home-community-reasons">
-          {REASONS.map((key, i) => (
+        <ul className="home-community-reasons">
+          {REASONS.map((key) => (
             <li key={key}>
-              <span className="home-community-num" aria-hidden="true">
-                {String(i + 1).padStart(2, '0')}
-              </span>
-              <div>
-                <Txt id={`home.community_${key}_title`} as="h3" />
-                <Txt id={`home.community_${key}_body`} as="p" />
-              </div>
+              <Txt id={`home.community_${key}_title`} as="h3" />
+              <Txt id={`home.community_${key}_body`} as="p" />
             </li>
           ))}
-        </ol>
+        </ul>
       </div>
     </section>
   );

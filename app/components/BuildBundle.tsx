@@ -78,7 +78,7 @@ export function BuildBundle({
       </ul>
       <div className="build-bundle-foot">
         <span className="build-bundle-total">
-          {t('bundle_total', '{count} parts · {price}', {
+          {t('bundle_total', '{count} parts, {price}', {
             count: String(parts.length),
             price: formatPrice(total, currency),
           })}

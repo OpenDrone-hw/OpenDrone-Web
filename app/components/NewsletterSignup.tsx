@@ -202,7 +202,7 @@ export function NewsletterSignup({
                 : 'newsletter.signup_eyebrow'
             }
             as="p"
-            className={`font-mono text-[12px] uppercase tracking-[0.2em] mb-0.5 ${isFooter ? 'text-[var(--color-text-muted)]' : 'gold-tag text-[var(--color-gold-text)]'}`}
+            className={`mb-0.5 ${isFooter ? 'text-[13px] text-[var(--color-text-muted)]' : 'font-mono text-[12px] uppercase tracking-[0.2em] gold-tag text-[var(--color-gold-text)]'}`}
           />
         )}
         {/* The heading keeps its DOM id in code: `aria-labelledby` on the
