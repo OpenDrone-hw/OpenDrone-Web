@@ -22,6 +22,7 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Category | Data | Purpose |
 |----------|------|---------|
 | Order data | Name, address, email, telephone number | Processing and delivery of orders |
+| Order attribution | Campaign source (utm parameters), creator code and first page visited, stored with your order in Shopify | Knowing which channels and creators lead to orders |
 | Payment data | Payment method, transaction ID | Payment processing (via payment provider) |
 | Account data | Email (sign-in with a one-time code via Shopify) | Customer account on the webshop |
 | Shared OpenDrone account (opendrone.be and chatfpv.com) | On opendrone.be: your Shopify customer id, when the account was created and last signed in, session start and expiry, the encrypted Shopify sign-in confirmation. On chatfpv.com: a pairwise account id only, and the ChatFPV conversations you have while signed in | One sign-in for opendrone.be and chatfpv.com; keeping your ChatFPV history |
@@ -41,7 +42,8 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Customer service | Legitimate interest (Art. 6.1.f) |
 | ChatFPV answers in the helper and the Ask box | Legitimate interest (Art. 6.1.f): answering product and FPV questions without a staff member for every message |
 | Unanswered questions, ratings and correction notes used to improve ChatFPV | Legitimate interest (Art. 6.1.f); you can object at any time |
-| Website analytics | Legitimate interest (Art. 6.1.f); cookieless, no persistent identifier |
+| Website analytics | Legitimate interest (Art. 6.1.f): improving the website and measuring which channels and creators lead to orders; cookieless, no persistent identifier |
+| Order attribution and purchase statistics | Legitimate interest (Art. 6.1.f); you can object at any time via privacy@opendrone.be |
 | Newsletter | Consent (Art. 6.1.a) |
 | Trade enquiries | Steps taken at the request of the enquirer before entering into a contract (Art. 6.1.b) |
 | Fraud / abuse prevention | Legitimate interest (Art. 6.1.f) |
@@ -52,6 +54,7 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Data | Retention period |
 |------|-----------------|
 | Order and invoice data | 10 years from 1 January after the close of the financial year (Art. III.86 WER; Art. 60 §4 VAT Code) |
+| Order attribution on the order | Kept with the order data |
 | Customer account | Until deleted at your request, at the latest 3 years after your last sign-in or order |
 | Customer service communication (support tickets on the site, in Discord and the ticket reference on your Shopify customer record) | 24 months after the ticket is closed, then deleted automatically. A ticket we answered closes after 30 days without a reply from you, any other ticket after 90 days without activity |
 | Website log files | 6 months |
@@ -79,7 +82,7 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Customs brokers, and carriers acting as customs agent | Customs clearance of deliveries to the United States with import duties included in the price (Article 7ter.6 of the terms) | United States: see "Shipping data" below |
 | Judge.me | Review requests after delivery and publication of reviews: name, email, ordered products, review text | Judge.me's privacy policy: https://judge.me/privacy |
 | Google Workspace (Google Ireland Ltd.) | Company mailboxes, staff email and sign-in | Ireland (EU); Google's standard contractual clauses cover any transfer outside the EEA |
-| Plausible Analytics | Cookieless website analytics | Plausible Insights OÜ, Estonia (EU); hosting in Germany |
+| Plausible Analytics | Cookieless website statistics on opendrone.be, and one purchase event per order from the order confirmation page on checkout.opendrone.be (order value, currency, campaign source, creator code); IP address and browser are used only to compute a daily changing visitor code and are not stored; only aggregated statistics are kept. Data processing agreement: https://plausible.io/dpa | Plausible Insights OÜ, Estonia (EU); hosting in Germany |
 | Polar Advisory BV (accountant) | Invoicing and annual accounts | Belgium |
 | Resend (Plus Five Five, Inc.) | Mail sent by opendrone.be: withdrawal confirmations, welcome and newsletter mail, trade requests, notices of a new reply on a support ticket (link only, no message content) | EU region infrastructure; US legal entity: SCCs |
 | Discord Inc. (processor) | Support tickets: our team reads and answers them in a staff-only Discord channel (your first name, email, order number and order details, messages, attachments) | US: EU-US Data Privacy Framework (Art. 45 GDPR); Discord's processor terms: https://support.discord.com/hc/en-us/articles/37891902561687 |

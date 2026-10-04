@@ -44,7 +44,7 @@ Outre les cookies, opendrone.be conserve quelques données dans le stockage de v
 
 #### Statistiques du site web
 
-Nous utilisons **Plausible Analytics** sur opendrone.be (hébergé dans l’UE). Plausible ne place aucun cookie et ne conserve aucune adresse IP ; nous traitons ces statistiques agrégées sur la base de notre intérêt légitime (art. 6.1.f RGPD) afin d’améliorer le site web.
+Nous utilisons **Plausible Analytics** (Plausible Insights OÜ, Estonie ; hébergé dans l’UE) sur opendrone.be et sur la page de confirmation de commande de checkout.opendrone.be. Sur cette page, votre navigateur envoie à Plausible un événement d’achat par commande avec le montant de la commande, la devise et la source de campagne de votre visite, y compris le code créateur si vous êtes arrivé par un lien de créateur, sous une adresse de page fixe qui ne contient aucun détail de commande. Plausible ne place aucun cookie, ne stocke rien dans votre navigateur et ne conserve aucune adresse IP : il utilise votre adresse IP et votre navigateur uniquement pour calculer un code visiteur qui change chaque jour, et ne conserve que des statistiques agrégées. Nous traitons ces statistiques sur la base de notre intérêt légitime (art. 6.1.f RGPD) afin d’améliorer le site web et de mesurer quels canaux et quels créateurs conduisent à des commandes.
 
 #### Cookies marketing
 

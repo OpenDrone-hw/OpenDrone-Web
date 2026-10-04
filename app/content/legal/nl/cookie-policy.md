@@ -42,7 +42,7 @@ Naast cookies bewaart opendrone.be enkele gegevens in de opslag van uw browser (
 
 #### Websitestatistieken
 
-Wij gebruiken **Plausible Analytics** op opendrone.be (EU-gehost). Plausible plaatst geen cookies en bewaart geen IP-adres; wij verwerken deze geaggregeerde statistieken op grond van ons gerechtvaardigd belang (art. 6.1.f AVG) om de website te verbeteren.
+Wij gebruiken **Plausible Analytics** (Plausible Insights OÜ, Estland; gehost in de EU) op opendrone.be en op de bevestigingspagina van de bestelling op checkout.opendrone.be. Op die pagina stuurt uw browser Plausible één aankoopgebeurtenis per bestelling met de orderwaarde, de valuta en de campagnebron van uw bezoek, inclusief de creatorcode als u via een creatorlink kwam, onder een vast paginaadres dat geen bestelgegevens bevat. Plausible plaatst geen cookies, slaat niets op in uw browser en bewaart geen IP-adres: het gebruikt uw IP-adres en browser enkel om een bezoekerscode te berekenen die elke dag verandert, en bewaart alleen geaggregeerde statistieken. Wij verwerken deze statistieken op grond van ons gerechtvaardigd belang (art. 6.1.f AVG) om de website te verbeteren en te meten welke kanalen en creators tot bestellingen leiden.
 
 #### Marketingcookies
 

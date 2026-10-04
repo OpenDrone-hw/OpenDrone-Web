@@ -22,6 +22,7 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 | Catégorie | Données | Finalité |
 |----------|------|---------|
 | Données de commande | Nom, adresse, courriel, numéro de téléphone | Traitement et livraison des commandes |
+| Attribution des commandes | Source de campagne (paramètres utm), code créateur et première page visitée, enregistrés avec votre commande dans Shopify | Savoir quels canaux et quels créateurs conduisent à des commandes |
 | Données de paiement | Moyen de paiement, ID de transaction | Traitement du paiement (via prestataire de paiement) |
 | Données de compte | Courriel (connexion par code à usage unique via Shopify) | Compte client sur la boutique en ligne |
 | Compte OpenDrone partagé (opendrone.be et chatfpv.com) | Sur opendrone.be : votre identifiant client Shopify, la date de création du compte et de la dernière connexion, le début et la fin de la session, la confirmation de connexion Shopify chiffrée. Sur chatfpv.com : uniquement un identifiant de compte par paire et les conversations ChatFPV que vous menez en étant connecté | Une seule connexion pour opendrone.be et chatfpv.com ; conservation de votre historique ChatFPV |
@@ -41,7 +42,8 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 | Service client | Intérêt légitime (Art. 6.1.f) |
 | Réponses de ChatFPV dans l’aide et le champ de question | Intérêt légitime (Art. 6.1.f) : répondre aux questions sur les produits et le FPV sans qu’un collaborateur soit nécessaire pour chaque message |
 | Questions sans réponse, évaluations et remarques de correction utilisées pour améliorer ChatFPV | Intérêt légitime (Art. 6.1.f) ; vous pouvez vous y opposer à tout moment |
-| Analyse du site web | Intérêt légitime (Art. 6.1.f) ; sans cookies, sans identifiant persistant |
+| Analyse du site web | Intérêt légitime (Art. 6.1.f) : améliorer le site web et mesurer quels canaux et quels créateurs conduisent à des commandes ; sans cookies, sans identifiant persistant |
+| Attribution des commandes et statistiques d’achat | Intérêt légitime (Art. 6.1.f) ; vous pouvez vous y opposer à tout moment via privacy@opendrone.be |
 | Newsletter | Consentement (Art. 6.1.a) |
 | Demandes professionnelles | Mesures précontractuelles prises à la demande du demandeur (Art. 6.1.b) |
 | Prévention de la fraude / des abus | Intérêt légitime (Art. 6.1.f) |
@@ -52,6 +54,7 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 | Données | Durée de conservation |
 |------|-----------------|
 | Données de commande et factures | 10 ans à compter du 1er janvier suivant la clôture de l’exercice (art. III.86 CDE ; art. 60 §4 Code TVA) |
+| Attribution sur la commande | Conservée avec les données de commande |
 | Compte client | Jusqu’à sa suppression à votre demande, au plus tard 3 ans après votre dernière connexion ou commande |
 | Communication de service client (tickets de support sur le site, dans Discord et la référence du ticket sur votre fiche client Shopify) | 24 mois après la clôture du ticket, puis suppression automatique. Un ticket auquel nous avons répondu est clôturé après 30 jours sans réponse de votre part, tout autre ticket après 90 jours sans activité |
 | Fichiers journaux du site | 6 mois |
@@ -79,7 +82,7 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 | Commissionnaires en douane, et transporteurs agissant comme représentant en douane | Dédouanement des livraisons vers les États-Unis dont les droits d’importation sont inclus dans le prix (article 7ter.6 des conditions) | États-Unis : voir « Données d’expédition » ci-dessous |
 | Judge.me | Demandes d’avis après livraison et publication des avis : nom, e-mail, produits commandés, texte de l’avis | politique de confidentialité de Judge.me : https://judge.me/privacy |
 | Google Workspace (Google Ireland Ltd.) | Boîtes mail de l’entreprise, messagerie et connexion du personnel | Irlande (UE) ; les clauses contractuelles types de Google couvrent tout transfert hors EEE |
-| Plausible Analytics | Analyse de site sans cookies | Plausible Insights OÜ, Estonie (UE) ; hébergement en Allemagne |
+| Plausible Analytics | Statistiques de site sans cookies sur opendrone.be, et un événement d’achat par commande depuis la page de confirmation de commande de checkout.opendrone.be (montant de la commande, devise, source de campagne, code créateur) ; l’adresse IP et le navigateur servent uniquement à calculer un code visiteur qui change chaque jour et ne sont pas conservés ; seules des statistiques agrégées sont conservées. Contrat de sous-traitance : https://plausible.io/dpa | Plausible Insights OÜ, Estonie (UE) ; hébergement en Allemagne |
 | Polar Advisory BV (comptable) | Facturation et comptes annuels | Belgique |
 | Resend (Plus Five Five, Inc.) | E-mails envoyés par opendrone.be : confirmations de rétractation, e-mails de bienvenue et de newsletter, demandes des revendeurs, avis de nouvelle réponse à un ticket de support (un lien seulement, sans contenu du message) | Infrastructure en région UE ; entité légale É-U : CCT |
 | Discord Inc. (sous-traitant) | Tickets de support : notre équipe les lit et y répond dans un canal Discord réservé au personnel (votre prénom, courriel, numéro et détails de commande, messages, pièces jointes) | É-U : EU-US Data Privacy Framework (art. 45 RGPD) ; conditions de sous-traitance de Discord : https://support.discord.com/hc/en-us/articles/37891902561687 |
