@@ -692,6 +692,7 @@ the client bundle; tokens and the SKU policy never do.
 | Support switches | `SUPPORT_SHOPIFY_WRITE_ENABLED`, `SUPPORT_EMAIL_NOTIFY_ENABLED` | `[vars]` in `wrangler.production.toml` |
 | Shared accounts | `ACCOUNTS_ENABLED`, `CHATFPV_OAUTH_REDIRECTS`, `CHATFPV_POST_LOGOUT_REDIRECTS` (vars); `SHOPIFY_CUSTOMER_ACCOUNT_*`, `ACCOUNT_PAIRWISE_SALT`, `SESSION_ENC_KEY`, `CHATFPV_OAUTH_CLIENT_SECRET`, `WIDGET_ASSERTION_KEY` (secrets); `ACCOUNTS_TEST_IDP` never in production | see [Shared accounts](#shared-accounts) |
 | Roadmap | `GITHUB_STATUS_TOKEN` | Worker secret |
+| Analytics | `PLAUSIBLE_PURCHASE_EVENTS_ENABLED` (off unless `1`) | `[vars]` in `wrangler.production.toml` |
 | Staging only | `STAGING_PASSWORD` | Worker secret |
 
 ## Hosting and deploy
@@ -965,6 +966,45 @@ writes to `out/`) and its Liquid subject, and links its admin page. After a past
 End to end for an agent: edit a body under `scripts/shopify-templates/bodies/`, `npm run gen:shopify-templates`, `npm test`, merge, then `npm run emails:chrome` and `npm run emails:paste -- --apply` (the dry run first). The only human step is the one-time Shopify login in that Chrome; exit code 3 means it is missing.
 
 The store handle is `SHOPIFY_ADMIN_STORE_HANDLE` (default `ktjqug-jw`). Exit codes: 2 no Chrome on 9222, 3 the admin shows a login page.
+
+## Analytics and attribution
+
+Plausible (cookieless, loaded only on opendrone.be) counts page views and
+funnel events; the order itself carries its source. Details:
+[docs/growth-architecture.md](docs/growth-architecture.md).
+
+```mermaid
+flowchart LR
+  L["Link: ?ref=slug or utm_*"] --> S["sessionStorage od-attribution (first touch)"]
+  S --> E["Plausible events: source, ref props"]
+  S -->|first add to cart| C["Cart attributes _ref _utm_* _landing"]
+  C --> O["Shopify order note attributes"]
+  O --> R["scripts/attribution-report.mjs"]
+  O -->|orders/paid webhook| P["Plausible Purchase + revenue"]
+```
+
+| Link | Use |
+| --- | --- |
+| `https://opendrone.be/?ref=<slug>` | Creator link. Slug: lowercase letters, digits, `-`, `_`, at most 32 characters, one per creator (`alice-fpv`). Any page works: `/products/openfc?ref=alice-fpv` |
+| `?utm_source=&utm_medium=&utm_campaign=` | Channel links, canonical values in the growth doc |
+
+The slug reaches the order only when the visitor adds to cart with
+JavaScript in the same browser session (tab) as the link visit; the
+cookie policy keeps it session-only. Plausible shows the slug as a source
+for visits whatever happens next.
+
+Sales per creator and channel, read only:
+
+```bash
+node --experimental-strip-types scripts/attribution-report.mjs --since 2026-09-25 [--orders]
+```
+
+It reads `SHOPIFY_STORE_DOMAIN`, `SHOPIFY_ADMIN_API_TOKEN` (read_orders) and
+`SHOPIFY_ADMIN_API_VERSION`, and prints paid orders, units per SKU and
+revenue by `_ref` and by `_utm_source`. The Plausible `Purchase` event is
+sent only while the Worker variable `PLAUSIBLE_PURCHASE_EVENTS_ENABLED` is
+`1`; it forwards the buyer's browser IP and User-Agent from the order,
+without which Plausible drops server events.
 
 ## Security
 

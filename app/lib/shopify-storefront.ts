@@ -135,6 +135,18 @@ export const CART_LINES_REMOVE_MUTATION = `#graphql
   }
 `;
 
+/** Cart-level attributes: Shopify copies them onto the order as note
+ *  attributes. Only the first-touch attribution uses them. */
+export const CART_ATTRIBUTES_UPDATE_MUTATION = `#graphql
+  mutation OpenDroneCartAttributesUpdate($cartId: ID!, $attributes: [AttributeInput!]!) {
+    cartAttributesUpdate(cartId: $cartId, attributes: $attributes) {
+      cart { id }
+      userErrors { field message }
+      warnings { message }
+    }
+  }
+`;
+
 /** The line attribute that carries the ship promise onto the checkout line
  *  and the order confirmation. */
 export const PREORDER_ATTRIBUTE = 'Preorder';
@@ -667,6 +679,22 @@ export async function removeCartLines(
     env, CART_LINES_REMOVE_MUTATION, {cartId, lineIds}, fetcher,
   );
   return payloadCart(env, data.cartLinesRemove, 'cartLinesRemove', cartId);
+}
+
+/** Replace the cart's cart-level attributes (not its line attributes). */
+export async function updateCartAttributes(
+  env: StorefrontEnv,
+  cartId: string,
+  attributes: Array<{key: string; value: string}>,
+  fetcher: typeof fetch = fetch,
+): Promise<void> {
+  const data = await storefrontRequest<{
+    cartAttributesUpdate: {cart: {id: string} | null; userErrors: Array<{message: string}>; warnings: Array<{message: string}>};
+  }>(env, CART_ATTRIBUTES_UPDATE_MUTATION, {cartId, attributes}, fetcher);
+  const payload = data.cartAttributesUpdate;
+  if (payload.userErrors.length || !payload.cart || payload.cart.id !== cartId) {
+    throw new Error('shopify: cartAttributesUpdate failed');
+  }
 }
 
 const PAYMENT_SETTINGS_QUERY = `#graphql

@@ -2,7 +2,7 @@ import {useState, useSyncExternalStore} from 'react';
 import {useRevalidator, useRouteLoaderData} from 'react-router';
 import {LoaderCircle} from 'lucide-react';
 import {trackEvent} from '~/lib/growth/plausible';
-import {attributionSource} from '~/lib/growth/attribution';
+import {attributionProps} from '~/lib/growth/attribution';
 import {announceCartAdded, CartAddError, postCartAdd, skusFromFields, withCountry} from '~/lib/cart-client';
 import {copyText} from '~/lib/copy';
 import {countryName, notSoldDirect} from '~/lib/shipping-rates';
@@ -137,7 +137,11 @@ export function AddToCartButton({
         e.preventDefault();
         if (state === 'adding' || !beginCartAdd()) return;
         trackEvent('Add to Cart', {
-          props: {product: product ?? 'unknown', source: attributionSource()},
+          props: {
+            product: product ?? 'unknown',
+            sku: skusFromFields(fields).join('+') || 'unknown',
+            ...attributionProps(),
+          },
           ...(revenue && Number.isFinite(revenue.amount) ? {revenue} : {}),
         });
         // Drop focus after the click so :focus-within doesn't pin

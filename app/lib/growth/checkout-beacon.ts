@@ -15,13 +15,13 @@
  * visibility lives in Plausible via the event below.
  */
 import {trackEvent} from '~/lib/growth/plausible';
-import {attributionSource} from '~/lib/growth/attribution';
+import {attributionProps} from '~/lib/growth/attribution';
 
 export function trackCheckoutClick(
   revenue?: {currency: string; amount: number} | null,
 ): void {
   trackEvent('Checkout Click', {
-    props: {source: attributionSource()},
+    props: attributionProps(),
     ...(revenue && Number.isFinite(revenue.amount) ? {revenue} : {}),
   });
 }

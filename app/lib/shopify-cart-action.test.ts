@@ -234,6 +234,33 @@ describe('Shopify cart action: add', () => {
     ]);
   });
 
+  it('writes the first-touch attribution an add carries as cart attributes, best effort', async () => {
+    let written: unknown;
+    const response = await handleShopifyCartAction(
+      request({sku: 'OPENRX-LITE', qty: '1', attr_ref: 'alice', attr_landing: '/', attr_medium: '<bad>'}), ENABLED_ENV, {
+        fetchCatalog: async () => CATALOG,
+        createCart: async () => cart(),
+        setAttributes: async (id, attributes) => { written = {id, attributes}; },
+      },
+    );
+    assert.equal(response.status, 303);
+    assert.deepEqual(written, {id: 'gid://shopify/Cart/a?key=secret', attributes: [{key: '_ref', value: 'alice'}, {key: '_landing', value: '/'}]});
+    const logged: string[] = [];
+    const failed = await handleShopifyCartAction(
+      request({sku: 'OPENRX-LITE', qty: '1', attr_ref: 'alice'}), ENABLED_ENV, {
+        fetchCatalog: async () => CATALOG,
+        getCartId: () => 'cart-a',
+        getCart: async () => cart([], 'cart-a'),
+        addCartLines: async () => cart([], 'cart-a'),
+        setAttributes: async () => { throw new Error('upstream'); },
+        logError: (message) => logged.push(message),
+        ...MUST_NOT,
+      },
+    );
+    assert.equal(failed.status, 303);
+    assert.match(logged.join(), /attribution not recorded/);
+  });
+
   it('enforces the cumulative per-SKU quantity limit', async () => {
     const response = await thrownResponse(handleShopifyCartAction(
       request({sku: 'OPENRX-LITE', qty: '2'}), ENABLED_ENV, {

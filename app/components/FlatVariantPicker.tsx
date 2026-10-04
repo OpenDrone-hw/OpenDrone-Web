@@ -6,7 +6,7 @@ import type {ProductContent} from '~/lib/product-content';
 import {copyText} from '~/lib/copy';
 import {formatPrice} from '~/lib/catalog';
 import {trackEvent} from '~/lib/growth/plausible';
-import {attributionSource} from '~/lib/growth/attribution';
+import {attributionProps} from '~/lib/growth/attribution';
 
 const norm = (s: string) => s.trim().toLowerCase();
 
@@ -136,7 +136,7 @@ export function FlatVariantPicker({
               onClick={() => {
                 if (selected) return;
                 trackEvent('Variant Select', {
-                  props: {product, variant: `${tier} / ${second}`, source: attributionSource()},
+                  props: {product, variant: `${tier} / ${second}`, ...attributionProps()},
                 });
                 onSelectTier(tier);
                 setPending(key);
