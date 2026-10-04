@@ -4,7 +4,7 @@ import {formatPrice} from '~/lib/catalog';
 import {Link} from 'react-router';
 import {ShoppingCart} from 'lucide-react';
 import {AddToCartButton} from './AddToCartButton';
-import {trackEvent} from '~/lib/growth/plausible';
+import {plausibleRevenue, trackEvent} from '~/lib/growth/plausible';
 import {attributionProps} from '~/lib/growth/attribution';
 import {copyFill, copyText} from '~/lib/copy';
 
@@ -180,6 +180,7 @@ export function ProductPods({
                 className="pod-buy-add"
                 href={it.buy.href}
                 product={it.buy.product}
+                revenue={plausibleRevenue(it.price)}
                 disabled={!it.buy.available}
                 onClick={onAdd}
                 ariaLabel={copyFill('product-chrome.pod_add_aria', 'Add {title} {self} to cart', {
@@ -195,6 +196,7 @@ export function ProductPods({
                   className="pod-buy-stack pod-buy-set"
                   href={it.buy.set.href}
                   product={it.buy.product}
+                  revenue={plausibleRevenue(it.price, it.buy.set.quantity)}
                   disabled={!it.buy.available}
                   onClick={onAdd}
                   ariaLabel={copyFill(

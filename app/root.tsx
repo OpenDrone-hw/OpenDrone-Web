@@ -41,6 +41,7 @@ import {THEME_COLORS, THEME_INIT_SCRIPT} from '~/lib/theme';
 import {themeOverrideCss} from '~/lib/theme-overrides';
 import {installViewTransitionGuard} from '~/lib/view-transition';
 import {captureAttribution} from '~/lib/growth/attribution';
+import {PLAUSIBLE_SCRIPT_SRC, PLAUSIBLE_SNIPPET, initPlausible, trackEvent} from '~/lib/growth/plausible';
 
 export type RootLoader = typeof loader;
 
@@ -266,8 +267,11 @@ export function Layout({children}: {children?: React.ReactNode}) {
   // landing URL in sessionStorage (session-scoped by design - see
   // app/lib/growth/attribution.ts for the ePrivacy rationale). Runs once
   // on hydration; later client-side navigations can't be a first touch.
+  // Plausible inits after the capture, so every event of the page load,
+  // the first pageview included, carries the first-touch props.
   useEffect(() => {
     captureAttribution();
+    initPlausible();
   }, []);
 
   return (
@@ -350,26 +354,30 @@ export function Layout({children}: {children?: React.ReactNode}) {
         ) : null}
         <Meta />
         <Links />
-        {/* Plausible - cookieless analytics, no consent required.
-            Combined legacy-script variant: `tagged-events` enables custom
-            events with props, `revenue` attaches monetary values to them
-            (verified served 2026-07-06; extensions compose as
-            script.<ext1>.<ext2>.js). Manual events go through the
-            trackEvent() helper in app/lib/growth/plausible.ts, which
-            installs the window.plausible queue stub so events fired before
-            this deferred script loads are replayed on init.
+        {/* Plausible - cookieless analytics, no consent required. The
+            inline stub (PLAUSIBLE_SNIPPET) queues events until the site
+            script loads; initPlausible() runs after hydration, so the first
+            pageview carries the session's source and ref props. Optional
+            measurements are toggled in the Plausible dashboard, which bakes
+            them into the site script. Rendered only when the request host
+            is opendrone.be (root loader `analytics`).
             suppressHydrationWarning: nonce is per-request and only meaningful
             server-side; the client-side value is empty, which React would
-            otherwise flag as a hydration mismatch. Rendered only when the
-            request host is opendrone.be (root loader `analytics`). */}
+            otherwise flag as a hydration mismatch. */}
         {data?.analytics ? (
-          <script
-            defer
-            data-domain="opendrone.be"
-            src="https://plausible.io/js/script.tagged-events.revenue.js"
-            nonce={nonce}
-            suppressHydrationWarning
-          />
+          <>
+            <script
+              nonce={nonce}
+              suppressHydrationWarning
+              dangerouslySetInnerHTML={{__html: PLAUSIBLE_SNIPPET}}
+            />
+            <script
+              async
+              src={PLAUSIBLE_SCRIPT_SRC}
+              nonce={nonce}
+              suppressHydrationWarning
+            />
+          </>
         ) : null}
         {orgJsonLd ? (
           <script
@@ -432,6 +440,11 @@ export function ErrorBoundary() {
   }
 
   const isNotFound = errorStatus === 404;
+  const {pathname} = useLocation();
+  // Plausible's 404 goal: the site script does not detect error pages.
+  useEffect(() => {
+    if (isNotFound) trackEvent('404');
+  }, [isNotFound, pathname]);
 
   // 404 gets the easter egg: an FPV "lost signal / failsafe" screen, inside
   // the site header and footer so nav, cart and search stay.

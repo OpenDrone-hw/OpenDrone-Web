@@ -4,6 +4,7 @@ import type {ProductCardFragment} from '~/lib/product-shapes';
 import {formatPrice} from '~/lib/catalog';
 import {SmoothImage} from '~/components/SmoothImage';
 import {AddToCartButton} from '~/components/AddToCartButton';
+import {plausibleRevenue} from '~/lib/growth/plausible';
 import {
   useComingSoon,
   useProductStatus,
@@ -211,6 +212,7 @@ function RelatedCard({product}: {product: RelatedProduct}) {
             compactError
             href={only.cartAddUrl}
             product={product.handle}
+            revenue={plausibleRevenue(only.price)}
             disabled={!only.availableForSale}
           >
             {!only.availableForSale

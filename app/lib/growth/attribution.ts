@@ -56,12 +56,18 @@ export function refSlug(value: string | null | undefined): string | undefined {
 
 /**
  * Capture first-touch UTM/ref params from the current URL into
- * sessionStorage. Call once on hydration (root.tsx). Idempotent; never
+ * sessionStorage. Runs once per page load, on the landing URL: from
+ * root.tsx on hydration, or earlier from `attributionProps`. Never
  * throws (sessionStorage can be unavailable in hardened privacy modes -
  * attribution is best-effort, the sale still works).
  */
+let captured = false;
+
 export function captureAttribution(): void {
   if (typeof window === 'undefined') return;
+  // Only the landing URL counts: later client-side navigations reuse it.
+  if (captured) return;
+  captured = true;
   try {
     if (window.sessionStorage.getItem(STORAGE_KEY)) return; // first touch wins
     const params = new URLSearchParams(window.location.search);
@@ -132,10 +138,13 @@ export function attributionSource(): string {
 }
 
 /**
- * Bounded props for every funnel event: the folded `source`, plus the
- * creator `ref` slug when the visit came from a creator link.
+ * Bounded props for every Plausible event, pageviews included: the folded
+ * `source`, plus the creator `ref` slug when the visit came from a
+ * creator link. Captures first: a child route's effect (PDP View) runs
+ * before root's capture effect on the landing page.
  */
 export function attributionProps(): {source: string; ref?: string} {
+  captureAttribution();
   const record = getAttribution();
   const source = foldSource(record?.source);
   return record?.ref ? {source, ref: record.ref} : {source};

@@ -13,6 +13,7 @@ import {useVariantUrl} from '~/lib/variants';
 import {useProductStatus, useRoadmapStatus} from '~/lib/coming-soon';
 import {PRODUCT_CONTENT, imagesAreRenders, isPurchasableStatus} from '~/lib/product-content';
 import {AddToCartButton} from './AddToCartButton';
+import {plausibleRevenue} from '~/lib/growth/plausible';
 import {ShipChip} from './ShipChip';
 import {copyText} from '~/lib/copy';
 
@@ -149,6 +150,7 @@ export function ProductItem({
             compactError
             href={quickAdd.href}
             product={product.handle}
+            revenue={plausibleRevenue(product.variants.nodes.find((v) => v.cartAddUrl === quickAdd.href)?.price)}
             disabled={!quickAdd.available}
           >
             {!quickAdd.available

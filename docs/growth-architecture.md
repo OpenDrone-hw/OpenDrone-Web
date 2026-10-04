@@ -24,7 +24,12 @@ this repository keeps no subscriber or order data.
 
 ## Modules and routes
 
-- `app/lib/growth/plausible.ts`: `trackEvent`, the client funnel events below.
+- `app/lib/growth/plausible.ts`: the site script (`pa-<id>.js`, loaded
+  by `app/root.tsx` on opendrone.be only, after the inline queue stub),
+  `initPlausible` (called after `captureAttribution` on hydration; sets the
+  session's `source` and `ref` as custom properties on every event,
+  pageviews included), `trackEvent` and `plausibleRevenue` (amount rounded
+  to cents; a missing or zero amount is dropped, never sent as 0).
 - `app/lib/growth/attribution.ts`: first-touch capture in `sessionStorage`;
   `ref=<slug>` is kept as `ref` and is the `source` fallback when no
   `utm_source` is given. `postCart` (`app/lib/cart-client.ts`) sends the
@@ -69,6 +74,14 @@ as revenue), `Notify Signup` (product). `Add to Cart` fires when a line is
 added; `Checkout Click` fires from the checkout button in the added-to-cart
 dialog or on `/cart`, as the visitor leaves for Shopify checkout. The cart
 view is the `/cart` page view.
+
+Pageviews and the dashboard-controlled events carry the same `source`
+and `ref` props (Plausible `customProperties`). `404` fires from the root
+error boundary on a not-found page. Outbound link, file download and form
+submission tracking are toggles in the Plausible site settings, baked into
+the site script; the code passes no option for them, because an init
+option would override the dashboard. Every card and pod quick-add carries
+its line value as `Add to Cart` revenue.
 
 Server: `Purchase` (order total as revenue; props source, ref, campaign,
 country, skus) from the orders/paid webhook.
