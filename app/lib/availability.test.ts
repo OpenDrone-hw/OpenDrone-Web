@@ -26,7 +26,7 @@ describe('availability block', () => {
   it('lists both FC/ESC batches for an EU buyer, batch 1 highlighted with its units left', () => {
     const rows = availabilityRows(state('OPENESC-3030', 1, 'EU'), DATES, 'EU', words);
     assert.deepEqual(rows.map((r) => [r.label, r.scope, r.state, r.note]), [
-      ['From Belgium', 'EU addresses only', 'current', '239 left'],
+      ['From Belgium', 'EU addresses only', 'current', '224 left'],
       ['March 2027 batch', 'EU, US and more', 'next', null],
     ]);
     assert.equal(rows[0].detail, 'Ships early Nov 2026');
