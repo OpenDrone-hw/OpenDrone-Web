@@ -1,0 +1,131 @@
+/* Checkout bars: the added-to-cart drawer's pinned foot and the phone
+   cart's fixed bar. Subtotal and the parcel's ship date on the left,
+   Checkout on the right, always in reach. */
+
+.cart-bar-sum {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.cart-bar-total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 0.4rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+.cart-bar-total small {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+.cart-bar-sum .cart-bar-ship {
+  font-size: 0.75rem;
+  line-height: 1.3;
+  color: var(--color-text-muted);
+}
+.cart-bar-checkout {
+  flex: 0 0 auto;
+  min-width: 9rem;
+  min-height: 48px;
+  padding: 0 1.25rem;
+  border: 0;
+  border-radius: var(--r-md);
+  background: var(--color-gold-fill);
+  color: var(--color-on-accent);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cart-bar-checkout:hover:not(:disabled),
+.cart-bar-checkout:focus-visible {
+  background: var(--color-gold-fill-hover);
+}
+.cart-bar-checkout:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Drawer: the last child of the scrolling drawer, stuck to its bottom edge
+   and bled to its sides. `order` keeps it last when a short screen moves
+   the foot above the suggestions. */
+.cart-added .cart-added-bar {
+  order: 3;
+  position: sticky;
+  /* The drawer's padding-bottom: sticky stops at the content edge. */
+  bottom: -1.5rem;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  align-self: stretch;
+  width: calc(100% + 3rem);
+  max-width: none;
+  margin: auto -1.5rem -1.5rem;
+  padding: 0.75rem 1.5rem calc(0.75rem + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-border-strong);
+  background: var(--color-bg-card);
+}
+.cart-added .cart-added-bar .cart-bar-checkout {
+  width: auto;
+}
+.cart-added-from {
+  max-width: 60%;
+  text-align: right;
+  font-size: 0.85rem;
+  color: var(--color-text);
+}
+@media (max-width: 560px) {
+  .cart-added .cart-added-bar {
+    bottom: -1.25rem;
+    width: calc(100% + 2.5rem);
+    margin: auto -1.25rem -1.25rem;
+    padding: 0.75rem 1.25rem calc(0.75rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* Cart page: the international "from" figure wraps under its label. */
+.cart-register-row dd.cart-register-from {
+  max-width: 60%;
+  text-align: right;
+  white-space: normal;
+  font-size: 0.85rem;
+}
+
+/* Cart page, phone and tablet: fixed to the bottom of the screen while the
+   summary's own Checkout is out of view. Wide screens keep the summary
+   pinned beside the lines and never show it. */
+.cart-bar {
+  display: none;
+}
+@media (max-width: 1023px) {
+  .cart-bar {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--color-border-strong);
+    background: var(--color-bg-card);
+    transition: transform 0.2s ease;
+  }
+  .cart-bar.is-hidden {
+    transform: translateY(110%);
+  }
+  .cart.page-shell:has(.cart-bar) {
+    padding-bottom: 6.5rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cart-bar {
+    transition: none;
+  }
+}

@@ -37,7 +37,9 @@ import {trackEvent} from '~/lib/growth/plausible';
 import {BuildBundle, bundleFields} from '~/components/BuildBundle';
 import {buildSeoMeta} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
-import {cartQuoteCountry, countryName, offersPickup, shipCountryForRequest, shippingQuote} from '~/lib/shipping-rates';
+import {cartQuoteCountry, countryName, isInternationalQuote, offersPickup, shipCountryForRequest, shippingQuote} from '~/lib/shipping-rates';
+import {internationalShippingFrom} from '~/lib/international-shipping';
+import '../styles/cart-checkout-bar.css';
 import {usSalesRate} from '~/lib/us-sales';
 import {ShipToSelect} from '~/components/ShipToSelect';
 import {paysEuVat} from '~/lib/visitor-country';
@@ -141,7 +143,14 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
       console.error('[shopify-cart] payment settings read failed', error instanceof Error ? error.message : 'unknown error');
     }
   }
-  return {cart, info, check, payments, country};
+  // International shipping is priced by Shopify from weight-based rates:
+  // the same rate read from Shopify, for this cart, or null to keep
+  // "calculated at checkout" (`international-shipping.ts`).
+  const quote = shippingQuote(country, undefined, usSalesRate(context.env));
+  const shippingFrom = cart?.lines.length && quote && isInternationalQuote(quote)
+    ? {country: quote.country, price: await internationalShippingFrom(context.env, quote.country, cart)}
+    : null;
+  return {cart, info, check, payments, country, shippingFrom};
 }
 
 type Removed = SplitItem[];
@@ -166,7 +175,7 @@ function checkNotice(check: string | null): string | null {
 }
 
 export default function CartPage() {
-  const {cart, info, check, payments, country} = useLoaderData<typeof loader>();
+  const {cart, info, check, payments, country, shippingFrom} = useLoaderData<typeof loader>();
   const rootData = useRouteLoaderData<RootLoader>('root');
   // Lines moved out for a second order: kept in this browser so the list
   // survives a reload and the trip through checkout.
@@ -195,6 +204,7 @@ export default function CartPage() {
           payments={payments}
           country={cartQuoteCountry(country ?? cart.country, rootData?.visitorCountry ?? null, rootData?.usShippingRate ?? null)}
           usRate={rootData?.usShippingRate ?? null}
+          shippingFrom={shippingFrom}
           onSplit={(items) => updateRemoved([...removed.filter((r) => !items.some((i) => i.id === r.id)), ...items])}
         />
       ) : (
@@ -490,6 +500,7 @@ function PopulatedCart({
   payments,
   country,
   usRate,
+  shippingFrom,
   onSplit,
 }: {
   cart: ShopifyCart;
@@ -501,6 +512,8 @@ function PopulatedCart({
   country: string | null;
   /** The US rate while US sales are open, else null. */
   usRate: number | null;
+  /** The international charge Shopify checkout starts from, per country. */
+  shippingFrom: {country: string; price: {amount: string; currencyCode: string} | null} | null;
   onSplit: (items: Removed) => void;
 }) {
   const revalidator = useRevalidator();
@@ -525,6 +538,7 @@ function PopulatedCart({
   // A US buyer: every line carries the US delivery notice.
   const usBuyer = usRate != null && country === 'US';
   const international = quote?.kind === 'direct' && quote.zone === 'international';
+  const internationalFrom = international && shippingFrom?.country === quote.country ? shippingFrom.price : null;
   const shipBlocked = quoteKind === 'blocked';
   const throughShops = quoteKind === 'shops';
   const closed = quoteKind === 'closed';
@@ -537,6 +551,7 @@ function PopulatedCart({
   // buyer removes it or picks an EU country.
   const euOnlyForUs = (usBuyer || international) && cart.lines.some((line) => info[line.id]?.euOnly);
   const blocked = pending || overLimit || euOnlyForUs;
+  const checkoutRef = useRef<HTMLButtonElement>(null);
   const pendingStyle = pending ? {opacity: 0.5} : undefined;
 
   return (
@@ -575,6 +590,13 @@ function PopulatedCart({
                 <dt>{t('shipping_row', 'Shipping to {country}', {country: countryName(country ?? '')})}</dt>
                 <dd style={pendingStyle}>{shippingRate}</dd>
               </div>
+            ) : internationalFrom ? (
+              <div className="cart-register-row">
+                <dt>{t('shipping_row', 'Shipping to {country}', {country: countryName(country ?? '')})}</dt>
+                <dd style={pendingStyle} className="cart-register-from">
+                  {t('shipping_from', 'from {price}, confirmed at checkout', {price: formatPrice(internationalFrom.amount, internationalFrom.currencyCode)})}
+                </dd>
+              </div>
             ) : null}
           </dl>
           <EarlyBirdNote show={anyEarly} className="cart-summary-note" />
@@ -588,7 +610,7 @@ function PopulatedCart({
           {shippingRate && offersPickup(country) ? (
             <p className="cart-summary-note">{t('pickup_note', 'Or pick up free at our Leuven office: choose Pickup at checkout.')}</p>
           ) : null}
-          {shippingRate ? null : (
+          {shippingRate || internationalFrom ? null : (
             <p className="cart-summary-note">{t('shipping_at_checkout', 'Shipping calculated at checkout')}</p>
           )}
           {international ? <p className="cart-summary-note">{t('international_note', 'Shipping and applicable sale taxes are confirmed at checkout. Import duties, import taxes and customs handling charges may be payable on delivery.')}</p> : null}
@@ -618,6 +640,7 @@ function PopulatedCart({
             </p>
           ) : (
             <Form
+              id={CHECKOUT_FORM_ID}
               method="post"
               action="/api/shopify/cart"
               onSubmit={(event) => {
@@ -637,7 +660,7 @@ function PopulatedCart({
               ) : null}
               {/* This page shows the one-parcel line, so checkout may go on. */}
               {mixed ? <input type="hidden" name={DATES_SEEN_FIELD} value="1" /> : null}
-              <button className="cart-checkout-cta" type="submit" disabled={blocked} aria-disabled={blocked || undefined}>
+              <button ref={checkoutRef} className="cart-checkout-cta" type="submit" disabled={blocked} aria-disabled={blocked || undefined}>
                 {pending ? t('checkout_updating', 'Updating cart…') : <Txt id="cart.checkout_cta" />}
               </button>
             </Form>
@@ -647,7 +670,65 @@ function PopulatedCart({
         </div>
         <CartSuggestions cart={cart} group="build" />
       </section>
+      {shipBlocked || throughShops || closed ? null : (
+        <CheckoutBar
+          target={checkoutRef}
+          subtotal={formatPrice(cart.subtotal.amount, cart.subtotal.currencyCode)}
+          vatIncluded={vatIncluded}
+          promise={parcelPromise(cart.lines.map((l) => l.shipPromise))}
+          blocked={blocked}
+          pending={pending}
+        />
+      )}
     </PendingContext.Provider>
+  );
+}
+
+const CHECKOUT_FORM_ID = 'cart-checkout';
+
+/**
+ * The phone's checkout bar: subtotal, the parcel's ship date and Checkout,
+ * fixed to the bottom of the screen while the summary's own Checkout is out
+ * of view. Its button submits the summary form, so the same checks and
+ * fields apply. Wide screens keep the summary in view and hide it (CSS).
+ */
+function CheckoutBar({
+  target,
+  subtotal,
+  vatIncluded,
+  promise,
+  blocked,
+  pending,
+}: {
+  target: React.RefObject<HTMLButtonElement | null>;
+  subtotal: string;
+  vatIncluded: boolean;
+  promise: string | null;
+  blocked: boolean;
+  pending: boolean;
+}) {
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => {
+    const el = target.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    // Hidden only while the summary's Checkout is wholly on screen.
+    const observer = new IntersectionObserver(([entry]) => setHidden(entry.intersectionRatio > 0.99), {threshold: [0, 1]});
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [target]);
+  return (
+    <div className={`cart-bar${hidden ? ' is-hidden' : ''}`} inert={hidden || undefined}>
+      <div className="cart-bar-sum">
+        <span className="cart-bar-total">
+          {subtotal}
+          <small>{vatIncluded ? t('register_subtotal_vat', 'Subtotal (incl. VAT)') : t('register_subtotal', 'Subtotal')}</small>
+        </span>
+        <ShipChip promise={promise} ifFunded className="cart-bar-ship" />
+      </div>
+      <button className="cart-bar-checkout" type="submit" form={CHECKOUT_FORM_ID} disabled={blocked} aria-disabled={blocked || undefined}>
+        {pending ? t('checkout_updating', 'Updating cart…') : <Txt id="cart.checkout_cta" />}
+      </button>
+    </div>
   );
 }
 
