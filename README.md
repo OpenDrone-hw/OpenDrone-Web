@@ -970,13 +970,16 @@ The store handle is `SHOPIFY_ADMIN_STORE_HANDLE` (default `ktjqug-jw`). Exit cod
 ## Analytics and attribution
 
 Plausible (cookieless, loaded only on opendrone.be) counts page views and
-funnel events; the order itself carries its source. Details:
+funnel events; the order itself carries its source. Every page view and
+event carries the session's `source` and `ref` props, so any report can be
+filtered by creator. Outbound link, file download and form submission
+tracking are switched in the Plausible site settings, not in code. Details:
 [docs/growth-architecture.md](docs/growth-architecture.md).
 
 ```mermaid
 flowchart LR
   L["Link: ?ref=slug or utm_*"] --> S["sessionStorage od-attribution (first touch)"]
-  S --> E["Plausible events: source, ref props"]
+  S --> E["Plausible page views and events: source, ref props"]
   S -->|first add to cart| C["Cart attributes _ref _utm_* _landing"]
   C --> O["Shopify order note attributes"]
   O --> R["scripts/attribution-report.mjs"]

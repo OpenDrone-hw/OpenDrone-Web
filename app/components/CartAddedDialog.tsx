@@ -452,11 +452,7 @@ export function CartAddedDialog() {
             <form
               method="post"
               action={CART_ACTION}
-              onSubmit={() =>
-                trackCheckoutClick(
-                  subtotal ? {currency: subtotal.currencyCode, amount: Number(subtotal.amount)} : null,
-                )
-              }
+              onSubmit={() => trackCheckoutClick(subtotal)}
             >
               <input type="hidden" name="intent" value="checkout" />
               {visitor ? <input type="hidden" name="country" value={visitor} /> : null}

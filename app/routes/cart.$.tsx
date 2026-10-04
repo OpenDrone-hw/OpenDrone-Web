@@ -613,7 +613,7 @@ function PopulatedCart({
                   event.preventDefault();
                   return;
                 }
-                trackCheckoutClick({currency: cart.subtotal.currencyCode, amount: Number(cart.subtotal.amount)});
+                trackCheckoutClick(cart.subtotal);
               }}
             >
               <input type="hidden" name="intent" value="checkout" />
