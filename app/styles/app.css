@@ -16521,7 +16521,7 @@ html.hero-header-in .homepage-layout .site-header {
 .home-mobile {
   width: var(--rail-width);
   margin: 0 auto;
-  padding-block: 1.5rem 3rem;
+  padding-block: 0.75rem 3rem;
   display: flex;
   flex-direction: column;
   gap: 2.5rem;
@@ -16531,14 +16531,32 @@ html.hero-header-in .homepage-layout .site-header {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 1.25rem;
-  padding-top: 0.5rem;
+  gap: 0.75rem;
+}
+/* The build card follows the hero closer than the other bands, so it starts
+   on the first screen of a 390 x 664 phone viewport. */
+.home-mobile-hero + .home-mobile-build {
+  margin-top: -1rem;
+}
+/* Entrance: transform only, so the hero is visible in the server HTML and
+   before hydration; the stagger comes from --rise-i on each block. */
+.home-mobile-rise {
+  animation: home-mobile-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--rise-i, 0) * 90ms);
+}
+@keyframes home-mobile-rise {
+  from { transform: translateY(10px); }
+  to { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-mobile-rise {
+    animation: none;
+  }
 }
 .home-mobile-stage {
   position: relative;
   align-self: stretch;
-  height: clamp(210px, 56vw, 300px);
-  margin-bottom: 0.25rem;
+  height: clamp(104px, 30vw, 150px);
   display: grid;
   place-items: center;
 }
@@ -16556,10 +16574,10 @@ html.hero-header-in .homepage-layout .site-header {
 }
 .home-mobile-board {
   display: block;
-  width: clamp(178px, 54vw, 264px);
+  width: clamp(104px, 30vw, 150px);
   height: auto;
   border-radius: var(--r-md);
-  filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.45));
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.45));
 }
 .home-mobile-board-float {
   position: absolute;
@@ -16595,14 +16613,14 @@ html.hero-header-in .homepage-layout .site-header {
 }
 
 .home-mobile-wordmark .hero-wordmark-svg {
-  height: clamp(2.75rem, 13vw, 4rem);
+  height: clamp(2.25rem, 10.5vw, 3.25rem);
 }
 
 .home-mobile-tagline {
   margin: 0;
   font-family: var(--font-sans);
-  font-size: 1rem;
-  line-height: 1.55;
+  font-size: 0.95rem;
+  line-height: 1.5;
   color: var(--color-text-muted);
   max-width: 44ch;
 }
@@ -16610,7 +16628,7 @@ html.hero-header-in .homepage-layout .site-header {
   display: flex;
   align-items: stretch;
   gap: 0.6rem;
-  margin-top: 0.5rem;
+  margin-top: 0.25rem;
   width: 100%;
 }
 .home-mobile-cta-btn {
@@ -16619,7 +16637,7 @@ html.hero-header-in .homepage-layout .site-header {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  min-height: 52px;
+  min-height: 48px;
   padding: 0 1rem;
   border-radius: var(--r-pill);
   font-family: var(--font-mono);
@@ -16633,21 +16651,22 @@ html.hero-header-in .homepage-layout .site-header {
 .home-mobile-cta-btn:active {
   transform: translateY(1px);
 }
-.home-mobile-cta-shop {
+.home-mobile-cta-primary {
+  flex-grow: 1.4;
   background: var(--color-gold-fill);
   color: var(--color-on-accent);
   border: 1px solid var(--color-gold-fill);
   box-shadow: 0 8px 22px color-mix(in srgb, var(--color-gold-fill) 28%, transparent);
 }
-.home-mobile-cta-shop:hover {
+.home-mobile-cta-primary:hover {
   background: var(--color-gold-fill-hover);
 }
-.home-mobile-cta-github {
+.home-mobile-cta-secondary {
   background: var(--color-bg-card);
   color: var(--color-text);
   border: 1px solid var(--color-border-strong);
 }
-.home-mobile-cta-github:hover {
+.home-mobile-cta-secondary:hover {
   border-color: var(--color-gold);
   color: var(--color-gold);
 }
@@ -16682,6 +16701,21 @@ html.hero-header-in .homepage-layout .site-header {
 .home-mobile-ledger .spec-table dd {
   font-family: var(--font-mono);
   font-size: 0.85rem;
+}
+
+.home-mobile-ledger-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  align-self: flex-start;
+  min-height: 44px;
+  color: var(--color-text);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--color-gold) 55%, transparent);
+  text-underline-offset: 0.25em;
+}
+.home-mobile-ledger-link:hover {
+  color: var(--color-gold);
 }
 
 .home-mobile-browse {
