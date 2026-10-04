@@ -3967,11 +3967,8 @@ button.reset {
   flex: 1 0 100%;
   margin: 0.4rem 0 0;
   font-size: var(--fs-sm, 0.875rem);
-  color: var(--color-text-muted);
-  font-variant-numeric: tabular-nums;
-}
-.early-line-lead {
   color: var(--color-gold-text);
+  font-variant-numeric: tabular-nums;
 }
 .specs-note {
   max-width: 40rem;
@@ -3979,6 +3976,18 @@ button.reset {
   text-align: center;
   font-size: var(--fs-sm, 0.875rem);
   color: var(--color-text-muted);
+}
+.product-buy-amount .retail-price {
+  font-size: 1rem;
+}
+.retail-price {
+  margin-left: 0.5em;
+  font-family: var(--font-sans);
+  font-size: 0.8em;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--color-text-muted);
+  white-space: nowrap;
 }
 .early-note {
   margin: 0;

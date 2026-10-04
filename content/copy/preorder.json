@@ -87,5 +87,5 @@
   "international_batch_note": "The {month} FC and ESC stock ships to EU addresses only. Orders to your country ship with the {batch} batch.",
   "early_note": "Early bird preorder prices.",
   "early_price": "Early bird price.",
-  "early_retail": "Retail {price}."
+  "early_retail_short": "Retail {price}"
 }

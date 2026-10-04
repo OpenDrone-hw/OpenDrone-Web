@@ -46,18 +46,31 @@ export function useAnyEarlySku(skus: Array<string | null | undefined>): boolean 
   return skus.some((sku) => sku != null && early.has(sku));
 }
 
+/** The retail price an early bird price rises to, set small and muted right
+ *  after the price it belongs to. Not struck through. */
+export function RetailPrice({retail}: {retail: {amount: string; currencyCode: string} | null | undefined}) {
+  if (!retail) return null;
+  return (
+    <span className="retail-price">
+      {text('early_retail_short', 'Retail {price}').replace('{price}', formatPrice(retail.amount, retail.currencyCode))}
+    </span>
+  );
+}
+
+/** The retail price behind the early bird variant selling at `price`. */
+export function retailFor(
+  variants: Array<{price: {amount: string}; earlyPrice?: EarlyPrice | null}>,
+  price: {amount: string} | null | undefined,
+) {
+  if (!price) return null;
+  return (
+    variants.find((v) => v.earlyPrice?.retail && Number(v.price.amount) === Number(price.amount))?.earlyPrice
+      ?.retail ?? null
+  );
+}
+
 /** The product page line under an early bird price. */
 export function EarlyBirdLine({early}: {early: EarlyPrice | null | undefined}) {
   if (!early) return null;
-  return (
-    <p className="early-line">
-      <span className="early-line-lead">{text('early_price', 'Early bird price.')}</span>
-      {early.retail
-        ? ` ${text('early_retail', 'Retail {price}.').replace(
-            '{price}',
-            formatPrice(early.retail.amount, early.retail.currencyCode),
-          )}`
-        : null}
-    </p>
-  );
+  return <p className="early-line">{text('early_price', 'Early bird price.')}</p>;
 }

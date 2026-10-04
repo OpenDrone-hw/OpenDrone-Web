@@ -7,7 +7,7 @@ import {shopifyImageUrl} from '~/lib/shopify-image';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {EditorialShell} from '~/components/EditorialShell';
 import {StepBar} from '~/components/PreorderMeter';
-import {EarlyBirdNote} from '~/components/EarlyPriceCue';
+import {EarlyBirdNote, RetailPrice} from '~/components/EarlyPriceCue';
 import {preorderWords} from '~/components/Availability';
 import {batchPhrase, currentBatch} from '~/lib/availability';
 import {shipWord} from '~/components/ShipChip';
@@ -79,6 +79,8 @@ type Row = {
   render: boolean;
   /** The price is an early bird preorder price. */
   early: boolean;
+  /** The retail price it rises to, when the market has one. */
+  retail: {amount: string; currencyCode: string} | null;
 };
 
 const FAQ = ['pay', 'cancel', 'missed', 'eta', 'shops', 'risks'];
@@ -161,6 +163,7 @@ export async function loader({context}: Route.LoaderArgs) {
           priceUnit: unit ? unit.replace(/^per\s+/i, '/ ') : null,
           render: imagesAreRenders(card.handle),
           early: v.earlyPrice != null,
+          retail: v.earlyPrice?.retail ?? null,
         },
       ];
     }),
@@ -488,6 +491,7 @@ function Card({row, eta, eager = false, lead = false}: {row: Row; eta: string; e
       <p className="po-card-price">
         {formatPrice(row.price.amount, currency)}
         {row.priceUnit ? <span> {row.priceUnit}</span> : null}
+        <RetailPrice retail={row.retail} />
       </p>
       <StepBar bar={bar} fundedLabel={funded} batch={currentBatch(row.campaign) ? batchPhrase(currentBatch(row.campaign)!, preorderWords) : null} />
       <AddToCartButton

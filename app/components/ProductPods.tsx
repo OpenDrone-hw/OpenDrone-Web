@@ -1,4 +1,5 @@
 import {shopifyImageUrl} from '~/lib/shopify-image';
+import {RetailPrice} from '~/components/EarlyPriceCue';
 import {formatPrice} from '~/lib/catalog';
 import {Link} from 'react-router';
 import {ShoppingCart} from 'lucide-react';
@@ -46,6 +47,8 @@ export type ProductPodItem = {
   price?: {amount: string; currencyCode: string} | null;
   /** The price is an early bird preorder price. */
   early?: boolean;
+  /** The retail price an early bird price rises to. */
+  retail?: {amount: string; currencyCode: string} | null;
   /** Coming-soon product: a small SOON tag takes the price slot. Hosts also
    *  omit `buy` for these rows - there is nothing to add yet. */
   soon?: boolean;
@@ -136,7 +139,7 @@ export function ProductPods({
               {/* A buyable row shows its price once, under the name; the
                   buttons beside it carry no text. */}
               {it.buy && it.price ? (
-                <span className="product-pod-price">{fmt(it.price)}</span>
+                <span className="product-pod-price">{fmt(it.price)} <RetailPrice retail={it.retail} /></span>
               ) : null}
             </span>
             {it.soon ? (
@@ -144,7 +147,7 @@ export function ProductPods({
                 {copyText('product-chrome.pod_soon') ?? 'Soon'}
               </span>
             ) : it.price && !it.buy ? (
-              <span className="product-pod-price">{fmt(it.price)}</span>
+              <span className="product-pod-price">{fmt(it.price)} <RetailPrice retail={it.retail} /></span>
             ) : null}
           </Link>
         );

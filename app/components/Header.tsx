@@ -18,7 +18,7 @@ import {
   type PodCompanionOption,
 } from '~/components/ProductPods';
 import {Txt} from '~/components/Txt';
-import {EarlyBirdNote} from '~/components/EarlyPriceCue';
+import {EarlyBirdNote, retailFor} from '~/components/EarlyPriceCue';
 import {DiscordLink, DiscordMark} from '~/components/Discord';
 import {copyText} from '~/lib/copy';
 import {CART_UPDATED_EVENT} from '~/lib/cart-client';
@@ -389,6 +389,7 @@ function FamilyNav({
               imageAlt: p.featuredImage?.altText ?? null,
               price: soon ? null : (p.priceRange.minVariantPrice ?? null),
               early: !soon && p.variants.nodes.some((v) => v.earlyPrice != null),
+              retail: soon ? null : retailFor(p.variants.nodes, p.priceRange.minVariantPrice),
               soon,
               buy: soon
                 ? undefined
@@ -420,6 +421,7 @@ function FamilyNav({
             imageAlt: v.image?.altText ?? p.featuredImage?.altText ?? null,
             price: soon ? null : (v.price ?? p.priceRange.minVariantPrice ?? null),
             early: !soon && v.earlyPrice != null,
+            retail: soon ? null : (v.earlyPrice?.retail ?? null),
             soon,
             buy: soon
               ? undefined

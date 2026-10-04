@@ -34,7 +34,7 @@ import {Txt} from '~/components/Txt';
 import {ConceptPlate} from '~/components/ConceptPlate';
 import {ProductDiscordRow} from '~/components/Discord';
 import {ProductPrice} from '~/components/ProductPrice';
-import {EarlyBirdLine} from '~/components/EarlyPriceCue';
+import {EarlyBirdLine, RetailPrice} from '~/components/EarlyPriceCue';
 import {ProductGallery} from '~/components/ProductGallery';
 import {ProductSilhouette} from '~/components/ProductSilhouette';
 import {ProductForm} from '~/components/ProductForm';
@@ -1927,6 +1927,7 @@ function ProductPage() {
             </span>
           ) : null}
           {vatNote ? <span className="product-buy-vat">{vatNote}</span> : null}
+          <RetailPrice retail={earlyPrice?.retail} />
         </span>
         <EarlyBirdLine early={earlyPrice} />
         {isBundle ? (

@@ -1,4 +1,5 @@
 import {useCallback} from 'react';
+import {RetailPrice, retailFor} from '~/components/EarlyPriceCue';
 import {Link} from 'react-router';
 import {SmoothImage} from './SmoothImage';
 import {ProductGhostTile} from './ProductGhostTile';
@@ -124,6 +125,7 @@ export function ProductItem({
       ) : null}
       {formatPrice(amount, currencyCode)}
       {priceUnit ? <span className="product-card-price-unit"> {priceUnit}</span> : null}
+      <RetailPrice retail={retailFor(product.variants.nodes, {amount})} />
     </span>
   );
 

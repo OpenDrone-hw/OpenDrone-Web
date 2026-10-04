@@ -11,7 +11,7 @@ import {
 } from '~/lib/coming-soon';
 import {copyText} from '~/lib/copy';
 import {Txt} from '~/components/Txt';
-import {EarlyBirdNote, anyEarlyPrice} from '~/components/EarlyPriceCue';
+import {EarlyBirdNote, anyEarlyPrice, RetailPrice, retailFor} from '~/components/EarlyPriceCue';
 import {PRODUCT_CONTENT, hiddenWhileSoldOut, isConceptFor} from '~/lib/product-content';
 
 /** The related strip renders catalog cards, same as every listing. */
@@ -193,6 +193,7 @@ function RelatedCard({product}: {product: RelatedProduct}) {
                   </span>
                 ) : null}
                 <span>{formatPrice(min.amount, min.currencyCode)}</span>
+                <RetailPrice retail={retailFor(product.variants.nodes, min)} />
                 {priceUnit ? (
                   <span className="related-card-unit">{priceUnit}</span>
                 ) : null}
