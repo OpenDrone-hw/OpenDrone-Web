@@ -496,6 +496,7 @@ function Card({row, eta, eager = false, lead = false}: {row: Row; eta: string; e
       <StepBar bar={bar} fundedLabel={funded} batch={currentBatch(row.campaign) ? batchPhrase(currentBatch(row.campaign)!, preorderWords) : null} />
       <AddToCartButton
         className="po-card-cta"
+        placement="catalog"
         href={row.cartAddUrl}
         product={row.handle}
         revenue={{currency, amount: (Number(row.price.amount) || 0) * row.quantity}}

@@ -154,7 +154,7 @@
   "pod_stack_tip_full": "{self} + {partner} stack, +{full} → {price} ({board} −{pct}% in the cart)",
   "card_price_from": "from",
   "related_aria": "Related products",
-  "related_heading": "Related hardware",
+  "related_heading": "Goes with it",
   "render_chip": "Render",
   "gpsr_heading": "Manufacturer & safety information",
   "gpsr_product_label": "Product type",
@@ -606,5 +606,8 @@
   "buy_shops_only_us": "Consumer checkout unavailable for this destination",
   "buy_international_price_note": "Shipping and any sales tax confirmed at checkout. You may pay import charges on delivery.",
   "discord_row": "Questions about the {product}?",
-  "discord_row_cta": "Ask in the Discord"
+  "discord_row_cta": "Ask in the Discord",
+  "related_add_quantity": "{cta} {quantity}",
+  "buy_cta_line_total": "{cta} {quantity}, {price}",
+  "build_block_label": "Build with this"
 }

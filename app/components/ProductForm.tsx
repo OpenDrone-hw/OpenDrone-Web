@@ -2,7 +2,8 @@ import {useLocation, useNavigate, useNavigation} from 'react-router';
 import {useEffect, useState} from 'react';
 import {AddToCartButton} from './AddToCartButton';
 import {useComingSoon, useProductStatus} from '~/lib/coming-soon';
-import {copyText} from '~/lib/copy';
+import {copyFill, copyText} from '~/lib/copy';
+import {formatPrice} from '~/lib/catalog';
 import {trackEvent} from '~/lib/growth/plausible';
 import {attributionProps} from '~/lib/growth/attribution';
 import type {
@@ -24,6 +25,7 @@ export function ProductForm({
   maxQuantity = 50,
   maxQuantityNote,
   onQuantityChange,
+  showLineTotal = false,
 }: {
   productOptions: MappedProductOptions[];
   selectedVariant: ProductVariantFragment | null;
@@ -57,6 +59,9 @@ export function ProductForm({
    *  clamped number is explained ("Max 50 per order"). */
   maxQuantityNote?: string;
   onQuantityChange?: (next: number) => void;
+  /** Name the quantity and the line total on the button once more than one
+   *  unit is asked for ("Pre-order 4, €68.40"): products sold in sets. */
+  showLineTotal?: boolean;
 }) {
   const navigate = useNavigate();
   // Variant switches are server navigations; on a slow connection the pill
@@ -95,6 +100,14 @@ export function ProductForm({
     !href ||
     (isBundle ? Boolean(buyDisabled) : !selectedVariant?.availableForSale);
   const amount = Number.parseFloat(selectedVariant?.price?.amount ?? '');
+  const lineTotalLabel =
+    showLineTotal && !isBundle && qty > 1 && Number.isFinite(amount) && selectedVariant?.price?.currencyCode
+      ? copyFill('product-chrome.buy_cta_line_total', '{cta} {quantity}, {price}', {
+          cta: ctaLabelAvailable,
+          quantity: qty,
+          price: formatPrice((Math.round(amount * 100) * qty) / 100, selectedVariant.price.currencyCode),
+        })
+      : null;
   return (
     <div className="product-form">
       {productOptions.map((option) => {
@@ -237,7 +250,7 @@ export function ProductForm({
         {isBundle
           ? (buyCtaLabel ?? copyText('product-chrome.buy_cta_add') ?? 'Add to cart')
           : selectedVariant?.availableForSale
-            ? ctaLabelAvailable
+            ? (lineTotalLabel ?? ctaLabelAvailable)
             : ctaLabelSoldOut}
       </AddToCartButton>
       {onQuantityChange && !isBundle && maxQuantityNote && qty >= maxQuantity ? (

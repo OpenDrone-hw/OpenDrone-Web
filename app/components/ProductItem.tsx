@@ -148,6 +148,7 @@ export function ProductItem({
           <AddToCartButton
             className="product-card-quickadd-btn"
             compactError
+            placement="catalog"
             href={quickAdd.href}
             product={product.handle}
             revenue={plausibleRevenue(product.variants.nodes.find((v) => v.cartAddUrl === quickAdd.href)?.price)}
