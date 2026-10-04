@@ -9,6 +9,7 @@ import {
   US_REVIEW_TAG,
   INT_REVIEW_TAG,
   UK_VAT_REVIEW_TAG,
+  PICKUP_TAG,
   SHIP_REGION_LINE_ATTRIBUTE,
   assignBatches,
   batchOfUnit,
@@ -637,6 +638,17 @@ describe('US and EU orders in one campaign', () => {
     });
     const [plan] = planRelease([held], 'OPENFC-LITE-2020', 2, new Set());
     assert.deepEqual(plan.waitsFor, [US_REVIEW_TAG]);
+  });
+
+  it('never releases a pickup-leuven order with its batch', () => {
+    const held = order({
+      lines: [['OPENFC-LITE-2020', 1]],
+      country: 'BE',
+      tags: ['preorder', 'batch:OPENFC-LITE-2020:1', PICKUP_TAG],
+      holds: [{id: 'h1', handle: PREORDER_HOLD_HANDLE}],
+    });
+    const [plan] = planRelease([held], 'OPENFC-LITE-2020', 1, new Set());
+    assert.deepEqual(plan.waitsFor, [PICKUP_TAG]);
   });
 
   it('tags an order shipping to another region than its promise promise-mismatch', () => {
