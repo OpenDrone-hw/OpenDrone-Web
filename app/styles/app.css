@@ -11016,30 +11016,157 @@ html.light .editorial-watermark {
 }
 
 /* ── Visit page (/visit): walkthrough frame, hours card, photo grid ────── */
-/* The frame recipe from the walkthrough's README: 16:9, but never shorter
-   than 560px, so a phone still has room for the machine cards. */
-.visit-scan {
-  display: block;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  min-height: min(560px, 85svh);
-  margin: 1rem 0 0.6rem;
+/* Launch card: a still from the scan with the call to enter. The game
+   never runs inside the article; it opens over the whole window. */
+.visit-launch {
+  position: relative;
+  overflow: hidden;
+  margin: 0 0 0.6rem;
   border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
   border-radius: var(--r-md);
-  background: var(--color-bg-elevated);
+  background: #000;
+  /* Fixed height on phones: a 16:9 box with a minimum height would widen
+     itself past the viewport. */
+  height: 380px;
 }
 
-/* Safari on iPhone: the walkthrough asks the page to enlarge the frame. */
-.visit-scan--max {
+@media (min-width: 640px) {
+  .visit-launch {
+    height: auto;
+    aspect-ratio: 16 / 9;
+  }
+}
+
+.visit-launch-poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.visit-launch-body {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: clamp(1rem, 4vw, 1.75rem);
+  background: linear-gradient(
+    to top,
+    rgb(0 0 0 / 0.85) 0%,
+    rgb(0 0 0 / 0.55) 45%,
+    rgb(0 0 0 / 0) 75%
+  );
+  color: #f4f1ea;
+}
+
+.visit-launch-kicker {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-gold);
+}
+
+.visit-launch-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.35rem, 3vw, 1.9rem);
+  line-height: 1.1;
+  color: #fff;
+}
+
+.visit-launch-text {
+  margin: 0 0 0.5rem;
+  max-width: 44ch;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: rgb(244 241 234 / 0.85);
+}
+
+.visit-launch-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.75rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-gold-fill);
+  color: var(--color-on-accent);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.visit-launch-button::before {
+  content: '';
+  width: 0;
+  height: 0;
+  border-left: 9px solid currentColor;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+}
+
+.visit-launch-button:hover {
+  background: var(--color-gold-fill-hover);
+  transform: translateY(-1px);
+}
+
+.visit-launch-meta {
+  margin: 0;
+  font-size: 0.8rem;
+  color: rgb(244 241 234 / 0.7);
+}
+
+/* The game itself: the whole window, above the site header. */
+.visit-game {
+  display: none;
+}
+
+.visit-game.is-open {
+  display: block;
   position: fixed;
   inset: 0;
-  width: 100vw;
-  height: 100svh;
-  min-height: 0;
-  margin: 0;
+  z-index: 2000;
+  background: #000;
+}
+
+.visit-game-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
   border: 0;
-  border-radius: 0;
-  z-index: 1000;
+}
+
+/* Last-resort exit if the game fails to load and cannot post `exit`. */
+.visit-game-close {
+  position: absolute;
+  top: max(0.75rem, env(safe-area-inset-top));
+  right: max(0.75rem, env(safe-area-inset-right));
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid rgb(255 255 255 / 0.25);
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.45);
+  color: #fff;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+.visit-game-close:hover,
+.visit-game-close:focus-visible {
+  opacity: 1;
 }
 
 .visit-scan-meta {

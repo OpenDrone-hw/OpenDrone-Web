@@ -5,13 +5,16 @@
   "meta_description": "OpenDrone is prototyped in the HighTechLab at Maakleerplek, a public makerspace in Leuven, Belgium. Walk through the lab in 3D, then come and see it during open lab hours.",
   "eyebrow": "Visit",
   "title": "Come see the lab.",
-  "lead": "Incutec works from a room inside Maakleerplek, a public makerspace in Leuven. We prototype in its HighTechLab, on the same printers, CNC and laser cutter any member can use. The lab is open to everyone during open lab hours.",
-  "scan_title": "Walk through the lab",
+  "lead": "Incutec works from a room inside Maakleerplek, a public makerspace in Leuven. We prototype in its HighTechLab, on the same machines any member can use. The lab is open to everyone during open lab hours, so come by.",
+  "scan_kicker": "3D walkthrough",
+  "scan_title": "Walk through the HighTechLab",
   "scan_body": [
-    "A 3D scan of the HighTechLab, made from one walk through the room with a phone. Walk up to a machine to find out what it is. The scan is a 35 MB download and starts when you press the button."
+    "A scan of the real room. Walk around, find the machines and see what each one is for."
   ],
-  "scan_note": "Early version. Parts of one wall and the ceiling were not scanned, and the game has only been tested on desktop Chrome so far.",
-  "scan_fullscreen": "Open full screen ↗",
+  "scan_cta": "Enter the lab",
+  "scan_meta": "35 MB download. Keyboard and mouse, or touch.",
+  "scan_close": "Leave the lab",
+  "scan_note": "Early version, made from one walk through the room with a phone. Parts of one wall and the ceiling were not scanned.",
   "scan_title_attr": "3D walkthrough of the HighTechLab at Maakleerplek",
   "s1_title": "Maakleerplek and us",
   "s1_body": [
@@ -38,18 +41,18 @@
   "where_title": "Getting there",
   "where_body": [
     "Buses 2, 6 and 30 stop close by at Vaartkom. The building has a lift on every floor.",
-    "Coming for OpenDrone? Ask anyone in the HighTechLab for us, or tell us on Discord when you plan to come so one of us is there."
+    "Come by during open lab hours and ask for the OpenDrone team."
   ],
   "where_map": "Open in OpenStreetMap ↗",
   "gallery_title": "The HighTechLab",
   "gallery_captions": [
-    "3D printers by the window",
-    "Enclosed printer cabinet",
-    "Laser cutter",
-    "Drill press and vices",
-    "Storage wall",
-    "Electronics desk"
+    "Laser cutting",
+    "CNC",
+    "Tools",
+    "Consumables",
+    "Electronics",
+    "3D printing"
   ],
-  "cta_primary": "Plan a visit on Discord →",
+  "cta_primary": "Directions ↗",
   "cta_secondary": "Maakleerplek agenda ↗"
 }

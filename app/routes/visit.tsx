@@ -4,7 +4,7 @@ import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {EditorialShell} from '~/components/EditorialShell';
 import {Txt} from '~/components/Txt';
 import {copy, copyText, editAttrs} from '~/lib/copy';
-import {DISCORD_INVITE_URL, getCompanyIdentity} from '~/lib/company';
+import {getCompanyIdentity} from '~/lib/company';
 
 /**
  * The makerspace page: where Incutec works, the 3D walkthrough of the lab,
@@ -31,19 +31,19 @@ export async function loader({context}: Route.LoaderArgs) {
   };
 }
 
-const LAB_VISIT_SRC = '/lab-visit/index.html?embed=1&theme=dark';
+const LAB_VISIT_SRC = '/lab-visit/index.html?launch=1&theme=dark';
 const MAP_URL =
   'https://www.openstreetmap.org/search?query=Stapelhuisstraat%2015%2C%203000%20Leuven';
 const AGENDA_URL = 'https://maakleerplek.be/nl/agenda';
 
 /** Photo files in `public/makerspace/`, in the order of `visit.gallery_captions`. */
 const PHOTOS = [
-  'printers',
-  'printer-cabinet',
   'laser-cutter',
+  'cnc',
   'workbench',
   'storage',
-  'electronics-desk',
+  'electronics',
+  'printers',
 ];
 
 function stringList(id: string): string[] {
@@ -113,40 +113,110 @@ function HoursCard({
   );
 }
 
-function LabVisitFrame() {
+/**
+ * The walkthrough is a game, so it does not live in the article: the card
+ * shows a still from the scan, and "Enter the lab" opens the game over the
+ * whole window (browser full screen where the Fullscreen API exists, a fixed
+ * overlay everywhere else, which is what iPhone Safari gets). Nothing is
+ * downloaded until that click. The game posts `exit` from its pause menu and
+ * `complete` from its end screen; both close the overlay, and `complete`
+ * lands the visitor on the open hours.
+ */
+function LabLauncher() {
+  const overlayRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLIFrameElement>(null);
-  const [maximised, setMaximised] = useState(false);
+  const [open, setOpen] = useState(false);
 
-  // Safari on iPhone has no Fullscreen API inside a frame, so the walkthrough
-  // asks the page to enlarge it instead. On completion it offers the visit
-  // details, which live further down this page.
+  function launch() {
+    setOpen(true);
+    // Must run inside the click: browsers only grant full screen to a gesture.
+    const el = overlayRef.current;
+    if (el?.requestFullscreen) el.requestFullscreen().catch(() => {});
+  }
+
+  function close(showHours = false) {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    setOpen(false);
+    if (showHours) {
+      const cards = document.querySelectorAll<HTMLElement>('.visit-card');
+      Array.from(cards)
+        .find((card) => card.offsetParent !== null)
+        ?.scrollIntoView({behavior: 'smooth', block: 'start'});
+    }
+  }
+
   useEffect(() => {
+    if (!open) return;
     function onMessage(e: MessageEvent) {
       if (e.source !== frameRef.current?.contentWindow) return;
       const data = e.data as {source?: string; type?: string} | null;
       if (!data || data.source !== 'lab-visit') return;
-      if (data.type === 'fullscreen-request') setMaximised((m) => !m);
-      if (data.type === 'complete') {
-        setMaximised(false);
-        const cards = document.querySelectorAll<HTMLElement>('.visit-card');
-        Array.from(cards)
-          .find((card) => card.offsetParent !== null)
-          ?.scrollIntoView({behavior: 'smooth', block: 'start'});
-      }
+      if (data.type === 'exit') close();
+      if (data.type === 'complete') close(true);
     }
     window.addEventListener('message', onMessage);
-    return () => window.removeEventListener('message', onMessage);
-  }, []);
+    // The page behind the game must not scroll under touch input.
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    frameRef.current?.focus();
+    return () => {
+      window.removeEventListener('message', onMessage);
+      document.body.style.overflow = previous;
+    };
+  }, [open]);
 
   return (
-    <iframe
-      ref={frameRef}
-      className={maximised ? 'visit-scan visit-scan--max' : 'visit-scan'}
-      src={LAB_VISIT_SRC}
-      title={copyText('visit.scan_title_attr') ?? 'Lab walkthrough'}
-      allow="fullscreen"
-      loading="lazy"
-    />
+    <>
+      <div className="visit-launch">
+        <img
+          className="visit-launch-poster"
+          src="/makerspace/scan-poster.webp"
+          alt=""
+          width={1600}
+          height={900}
+        />
+        <div className="visit-launch-body">
+          <Txt id="visit.scan_kicker" as="p" className="visit-launch-kicker" />
+          <Txt id="visit.scan_title" as="h2" className="visit-launch-title" />
+          <Txt id="visit.scan_body" as="p" className="visit-launch-text" />
+          <button
+            type="button"
+            className="visit-launch-button"
+            onClick={launch}
+          >
+            <Txt id="visit.scan_cta" />
+          </button>
+          <Txt id="visit.scan_meta" as="p" className="visit-launch-meta" />
+        </div>
+      </div>
+      <Txt id="visit.scan_note" as="p" className="visit-scan-meta" />
+
+      <div
+        ref={overlayRef}
+        className={open ? 'visit-game is-open' : 'visit-game'}
+        aria-hidden={!open}
+      >
+        {open ? (
+          <>
+            <iframe
+              ref={frameRef}
+              className="visit-game-frame"
+              src={LAB_VISIT_SRC}
+              title={copyText('visit.scan_title_attr') ?? 'Lab walkthrough'}
+              allow="fullscreen"
+            />
+            <button
+              type="button"
+              className="visit-game-close"
+              onClick={() => close()}
+              aria-label={copyText('visit.scan_close') ?? 'Leave the lab'}
+            >
+              ×
+            </button>
+          </>
+        ) : null}
+      </div>
+    </>
   );
 }
 
@@ -163,23 +233,9 @@ export default function VisitRoute({loaderData}: Route.ComponentProps) {
         <Txt id="visit.lead" as="p" className="editorial-lead" />
       </header>
 
-      <HoursCard address={loaderData.address} placement="inline" />
+      <LabLauncher />
 
-      <section className="editorial-section">
-        <Txt
-          id="visit.scan_title"
-          as="h2"
-          className="editorial-section-title"
-        />
-        <Txt id="visit.scan_body" as="p" />
-        <LabVisitFrame />
-        <p className="visit-scan-meta">
-          <Txt id="visit.scan_note" />{' '}
-          <a href="/lab-visit/index.html" target="_blank" rel="noopener">
-            <Txt id="visit.scan_fullscreen" />
-          </a>
-        </p>
-      </section>
+      <HoursCard address={loaderData.address} placement="inline" />
 
       <section className="editorial-section">
         <Txt id="visit.s1_title" as="h2" className="editorial-section-title" />
@@ -234,7 +290,7 @@ export default function VisitRoute({loaderData}: Route.ComponentProps) {
 
       <section className="editorial-cta">
         <a
-          href={DISCORD_INVITE_URL}
+          href={MAP_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="editorial-cta-primary"
