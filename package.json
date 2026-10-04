@@ -44,6 +44,7 @@
     "studio:products": "node --experimental-strip-types scripts/migrate-product-content.mjs",
     "studio:coverage": "node scripts/studio-coverage.mjs",
     "studio:keys": "node scripts/studio-keys.mjs",
+    "sync:lab-visit": "node scripts/sync-lab-visit.mjs",
     "sync:contributors": "node scripts/sync-contributors.mjs",
     "sync:timeline": "node scripts/sync-timeline.mjs",
     "us:prices": "node scripts/us-prices.mjs",
