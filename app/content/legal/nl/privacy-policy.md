@@ -20,6 +20,7 @@ Incutec BV heeft geen Functionaris voor Gegevensbescherming (DPO) aangesteld aan
 | Categorie | Gegevens | Doel |
 |-----------|---------|------|
 | Bestelgegevens | Naam, adres, e-mail, telefoonnummer | Verwerking en levering van bestellingen |
+| Orderattributie | Campagnebron (utm-parameters), creatorcode en eerste bezochte pagina, bewaard bij uw bestelling in Shopify | Weten welke kanalen en creators tot bestellingen leiden |
 | Betalingsgegevens | Betalingsmethode, transactie-ID | Betalingsverwerking (via betaalprovider) |
 | Accountgegevens | E-mail (aanmelding met een eenmalige code via Shopify) | Klantaccount op webshop |
 | Gedeeld OpenDrone-account (opendrone.be en chatfpv.com) | Op opendrone.be: uw Shopify-klant-id, wanneer het account werd aangemaakt en voor het laatst werd aangemeld, begin en einde van de sessie, de versleutelde aanmeldbevestiging van Shopify. Op chatfpv.com: enkel een paarsgewijze account-id en de ChatFPV-gesprekken die u voert terwijl u aangemeld bent | Eén aanmelding voor opendrone.be en chatfpv.com; uw ChatFPV-geschiedenis bewaren |
@@ -39,7 +40,8 @@ Incutec BV heeft geen Functionaris voor Gegevensbescherming (DPO) aangesteld aan
 | Klantenservice | Gerechtvaardigd belang (Art. 6.1.f) |
 | Antwoorden van ChatFPV in de hulp en het vraagvak | Gerechtvaardigd belang (Art. 6.1.f): product- en FPV-vragen beantwoorden zonder dat voor elk bericht een medewerker nodig is |
 | Onbeantwoorde vragen, beoordelingen en correctie-opmerkingen gebruikt om ChatFPV te verbeteren | Gerechtvaardigd belang (Art. 6.1.f); u kunt op elk moment bezwaar maken |
-| Website-analyse | Gerechtvaardigd belang (Art. 6.1.f); cookieloos, geen persistente identifier |
+| Website-analyse | Gerechtvaardigd belang (Art. 6.1.f): de website verbeteren en meten welke kanalen en creators tot bestellingen leiden; cookieloos, geen persistente identifier |
+| Orderattributie en aankoopstatistieken | Gerechtvaardigd belang (Art. 6.1.f); u kunt op elk moment bezwaar maken via privacy@opendrone.be |
 | Nieuwsbrief | Toestemming (Art. 6.1.a) |
 | Handelsaanvragen | Precontractuele maatregelen op verzoek van de aanvrager (Art. 6.1.b) |
 | Fraude-/misbruikpreventie | Gerechtvaardigd belang (Art. 6.1.f) |
@@ -50,6 +52,7 @@ Incutec BV heeft geen Functionaris voor Gegevensbescherming (DPO) aangesteld aan
 | Gegevens | Bewaartermijn |
 |---------|--------------|
 | Bestel- en factuurgegevens | 10 jaar vanaf 1 januari na afsluiting van het boekjaar (art. III.86 WER; art. 60 §4 WBTW) |
+| Orderattributie bij de bestelling | Bewaard samen met de bestelgegevens |
 | Klantaccount | Tot verwijdering op uw verzoek, uiterlijk 3 jaar na uw laatste aanmelding of bestelling |
 | Communicatie (klantenservice: supporttickets op de website, in Discord en de ticketverwijzing op uw klantrecord in Shopify) | 24 maanden na afsluiting van het ticket, daarna automatisch gewist. Een ticket dat wij beantwoordden, wordt afgesloten na 30 dagen zonder reactie van u, elk ander ticket na 90 dagen zonder activiteit |
 | Website-logbestanden | 6 maanden |
@@ -77,7 +80,7 @@ Incutec BV heeft geen Functionaris voor Gegevensbescherming (DPO) aangesteld aan
 | Douane-expediteurs, en vervoerders die als douanevertegenwoordiger optreden | Inklaring van leveringen naar de Verenigde Staten waarbij de invoerrechten in de prijs zijn inbegrepen (artikel 7ter.6 van de voorwaarden) | Verenigde Staten: zie "Verzendgegevens" hieronder |
 | Judge.me | Reviewverzoeken na levering en publicatie van reviews: naam, e-mail, bestelde producten, reviewtekst | privacybeleid van Judge.me: https://judge.me/privacy |
 | Google Workspace (Google Ireland Ltd.) | Bedrijfsmailboxen, medewerker-e-mail en aanmelding | Ierland (EU); de standaardcontractuele clausules van Google dekken elke doorgifte buiten de EER |
-| Plausible Analytics | Cookieloze websitestatistieken op opendrone.be en op de checkoutpagina's op checkout.opendrone.be, met één aankoopgebeurtenis (orderwaarde, valuta, herkomst van het bezoek; geen IP-adres bewaard, geaggregeerd, gerechtvaardigd belang) | Plausible Insights OÜ, Estland (EU); hosting in Duitsland |
+| Plausible Analytics | Cookieloze websitestatistieken op opendrone.be, en één aankoopgebeurtenis per bestelling vanaf de bevestigingspagina van de bestelling op checkout.opendrone.be (orderwaarde, valuta, campagnebron, creatorcode); IP-adres en browser worden enkel gebruikt om een dagelijks wisselende bezoekerscode te berekenen en worden niet bewaard; enkel geaggregeerde statistieken worden bewaard. Verwerkersovereenkomst: https://plausible.io/dpa | Plausible Insights OÜ, Estland (EU); hosting in Duitsland |
 | Polar Advisory BV (boekhouder) | Facturatie en jaarrekening | België |
 | Resend (Plus Five Five, Inc.) | E-mail verzonden door opendrone.be: herroepingsbevestigingen, welkomst- en nieuwsbriefmails, handelsaanvragen, meldingen van een nieuw antwoord op een supportticket (enkel een link, geen berichtinhoud) | EU-regio infrastructuur; VS-rechtspersoon: SCC's |
 | Discord Inc. (verwerker) | Supporttickets: ons team leest en beantwoordt ze in een Discord-kanaal dat enkel voor medewerkers toegankelijk is (uw voornaam, e-mail, ordernummer en ordergegevens, berichten, bijlagen) | VS: EU-VS Data Privacy Framework (art. 45 AVG); verwerkersvoorwaarden van Discord: https://support.discord.com/hc/en-us/articles/37891902561687 |

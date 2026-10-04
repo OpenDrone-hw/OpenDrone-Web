@@ -44,7 +44,7 @@ Besides cookies, opendrone.be keeps a few items in your browser's storage (local
 
 #### Website statistics
 
-We use **Plausible Analytics** on opendrone.be and on the checkout pages on checkout.opendrone.be (EU-hosted). On the order confirmation page we send one purchase event with the order value, the currency and the source of the visit. Plausible sets no cookies and keeps no IP address; we process these aggregated statistics on the basis of our legitimate interest (Art. 6.1.f GDPR) to improve the website.
+We use **Plausible Analytics** (Plausible Insights OÜ, Estonia; hosted in the EU) on opendrone.be and on the order confirmation page on checkout.opendrone.be. On that page your browser sends Plausible one purchase event per order with the order value, the currency and the campaign source of your visit, including the creator code if you came through a creator link, under a fixed page address that contains no order details. Plausible sets no cookies, stores nothing in your browser and keeps no IP address: it uses your IP address and browser only to compute a visitor code that changes every day, and keeps only aggregated statistics. We process these statistics on the basis of our legitimate interest (Art. 6.1.f GDPR) to improve the website and to measure which channels and creators lead to orders.
 
 #### Marketing cookies
 
