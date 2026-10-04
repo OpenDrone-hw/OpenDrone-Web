@@ -79,7 +79,7 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Customs brokers, and carriers acting as customs agent | Customs clearance of deliveries to the United States with import duties included in the price (Article 7ter.6 of the terms) | United States: see "Shipping data" below |
 | Judge.me | Review requests after delivery and publication of reviews: name, email, ordered products, review text | Judge.me's privacy policy: https://judge.me/privacy |
 | Google Workspace (Google Ireland Ltd.) | Company mailboxes, staff email and sign-in | Ireland (EU); Google's standard contractual clauses cover any transfer outside the EEA |
-| Plausible Analytics | Cookieless website analytics | Plausible Insights OÜ, Estonia (EU); hosting in Germany |
+| Plausible Analytics | Cookieless website analytics on opendrone.be and on the checkout pages on checkout.opendrone.be, including one purchase event (order value, currency, source of the visit; no IP address kept, aggregated, legitimate interest) | Plausible Insights OÜ, Estonia (EU); hosting in Germany |
 | Polar Advisory BV (accountant) | Invoicing and annual accounts | Belgium |
 | Resend (Plus Five Five, Inc.) | Mail sent by opendrone.be: withdrawal confirmations, welcome and newsletter mail, trade requests, notices of a new reply on a support ticket (link only, no message content) | EU region infrastructure; US legal entity: SCCs |
 | Discord Inc. (processor) | Support tickets: our team reads and answers them in a staff-only Discord channel (your first name, email, order number and order details, messages, attachments) | US: EU-US Data Privacy Framework (Art. 45 GDPR); Discord's processor terms: https://support.discord.com/hc/en-us/articles/37891902561687 |
