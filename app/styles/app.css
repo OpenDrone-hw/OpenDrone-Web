@@ -3964,115 +3964,22 @@ button.reset {
   background: var(--color-gold-fill);
 }
 
-/* Preorder step price, drawn as a staircase up to retail (EarlyPriceCue).
-   No strike-through and no percentage: retail is a later price, not a
-   former one. */
-.early-steps {
+/* Early bird preorder prices (EarlyPriceCue.tsx): one number per price,
+   one plain line to say what it is. */
+.early-line {
   flex: 1 0 100%;
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
-  align-items: end;
-  margin-top: 0.85rem;
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
-.early-step {
-  display: grid;
-  grid-template-rows: auto auto auto;
-  align-content: end;
-  min-width: 0;
-}
-.early-step-head {
-  min-height: 1rem;
-  padding-left: 0.5rem;
-  font-size: 0.62rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  white-space: nowrap;
-}
-/* Riser on the left, tread on top: the columns join into one stair. The
-   tread height climbs with --rise (1/n, 2/n, 1). */
-.early-step-tread {
-  display: flex;
-  align-items: flex-start;
-  height: calc(0.5rem + var(--rise) * 1.6rem);
-  padding: 0.3rem 0.5rem 0;
-  border-top: 1.5px solid var(--color-border-strong, var(--color-text-muted));
-  border-left: 1.5px solid var(--color-border-strong, var(--color-text-muted));
-  background: repeating-linear-gradient(
-    -45deg,
-    transparent 0 5px,
-    color-mix(in srgb, var(--color-text-muted) 12%, transparent) 5px 6px
-  );
-}
-.early-step:first-child .early-step-tread {
-  border-left-color: transparent;
-}
-.early-step-price {
-  padding: 0.35rem 0 0 0.5rem;
-  font-size: 0.74rem;
-  color: var(--color-text-muted);
-  white-space: nowrap;
-}
-.early-step[data-state='current'] .early-step-head {
-  color: var(--color-gold-text);
-}
-.early-step[data-state='current'] .early-step-tread {
-  border-top-color: var(--color-gold-fill);
-  border-top-width: 2.5px;
-  background: linear-gradient(var(--color-gold-soft), transparent);
-}
-.early-step[data-state='current'] .early-step-price {
-  color: var(--color-text);
-}
-.early-step[data-state='gone'] .early-step-price {
-  opacity: 0.5;
-}
-.early-step-left {
-  font-size: 0.66rem;
-  letter-spacing: 0.04em;
-  color: var(--color-gold-text);
-  white-space: nowrap;
-}
-
-.stair-glyph {
-  flex: none;
-  overflow: visible;
-}
-.stair-glyph path {
-  fill: none;
-  stroke: var(--color-text-muted);
-  stroke-width: 1.2;
-}
-.stair-glyph .stair-glyph-lit {
-  stroke: var(--color-gold-fill);
-  stroke-width: 2.2;
-}
-.early-cue {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.15rem 0.6rem;
-  margin-top: 0.35rem;
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.02em;
+  margin: 0.4rem 0 0;
+  font-size: var(--fs-sm, 0.875rem);
   color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
 }
-.early-cue-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
+.early-line-lead {
   color: var(--color-gold-text);
 }
-.early-cue-retail {
-  white-space: nowrap;
-}
-.buy-rail.is-pinned .early-steps {
-  display: none;
+.early-note {
+  margin: 0;
+  font-size: var(--fs-sm, 0.875rem);
+  color: var(--color-text-muted);
 }
 
 .product-buy-price .product-price {

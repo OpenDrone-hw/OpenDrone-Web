@@ -29,7 +29,6 @@ import {
 import buildsJson from '../../content/builds.json';
 import {isPurchasableStatus, lineDisplayName, setSize, variantDisplayName} from '~/lib/product-content';
 import {Txt} from '~/components/Txt';
-import {EarlyPriceTag} from '~/components/EarlyPriceCue';
 import {ShipChip, parcelPromise, soonerMonth} from '~/components/ShipChip';
 import {LineShipChip, heldBy, parcelDelay} from '~/components/ParcelChip';
 import {trackEvent} from '~/lib/growth/plausible';
@@ -775,7 +774,6 @@ function CartLine({
         )}
         <div className="cart-sheet-item">
           <Link to={variantLink(line.handle, line.selectedOptions)}><strong>{lineName(line)}</strong></Link>
-          {info?.earlyPrice ? <EarlyPriceTag /> : null}
           {max !== null && line.quantity > max ? (
             <small className="cart-line-error" role="alert">{t('line_over_batch', 'Only {left} left. Lower the quantity.', {left: max})}</small>
           ) : max !== null && max < MAX_LINE_QUANTITY && line.quantity >= max ? (

@@ -253,9 +253,6 @@ export type CampaignState = {
   /** What a unit costs after this step: the next step's price, or retail.
    *  Null without a retail price, or when this is already retail. */
   nextPrice: number | null;
-  /** The whole EUR price ladder from retail and the steps; absent without a
-   *  retail price, for a flat-price SKU, and in a non-EUR market. */
-  ladder?: LadderStep[];
   /** US buyers only: the ladder in USD, set by `withMarketPrices`. */
   usLadder?: UsdLadderStep[];
   /** Only the current international price is verified; no future local price ladder is inferred. */
@@ -686,7 +683,6 @@ export function campaignState(
     tierOff: tier?.off ?? 0,
     price: tierPrice(retail, tier?.off ?? 0),
     nextPrice: tier ? tierPrice(retail, priceTiers[tierIndex + 1]?.off ?? 0) : null,
-    ...(retail != null && Number.isFinite(retail) && priceTiers.length ? {ladder: priceLadder(retail, priceTiers)} : {}),
     batches: batches.slice(0, index + 2).map((b, i) => ({
       batch: i + 1,
       units: b.units,
