@@ -35,6 +35,12 @@ export const EDITORIAL_SERIES: EditorialEntry[] = [
     minutes: 3,
   },
   {
+    slug: 'visit',
+    title: 'Visit us',
+    hook: 'The makerspace we work from, in 3D and in person.',
+    minutes: 2,
+  },
+  {
     slug: 'roadmap',
     title: 'Roadmap',
     hook: 'Every product\'s status, the community vote, and where the money goes.',

@@ -11015,6 +11015,164 @@ html.light .editorial-watermark {
   margin-top: 0.35rem;
 }
 
+/* ── Visit page (/visit): walkthrough frame, hours card, photo grid ────── */
+/* The frame recipe from the walkthrough's README: 16:9, but never shorter
+   than 560px, so a phone still has room for the machine cards. */
+.visit-scan {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: min(560px, 85svh);
+  margin: 1rem 0 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  border-radius: var(--r-md);
+  background: var(--color-bg-elevated);
+}
+
+/* Safari on iPhone: the walkthrough asks the page to enlarge the frame. */
+.visit-scan--max {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100svh;
+  min-height: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  z-index: 1000;
+}
+
+.visit-scan-meta {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.visit-card {
+  padding: 1.25rem 1.25rem 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  border-radius: var(--r-md);
+  background: var(--color-bg-card);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--color-text) 72%, var(--color-text-muted));
+}
+
+/* One hours card per width: inline under the intro below the shell's
+   two-column breakpoint (1120px), the sticky side card above it. */
+.visit-card--aside {
+  display: none;
+}
+
+.visit-card--inline {
+  margin-top: 2rem;
+}
+
+@media (min-width: 1120px) {
+  .visit-card--aside {
+    display: block;
+  }
+
+  .visit-card--inline {
+    display: none;
+  }
+}
+
+.visit-hours {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 0.9rem;
+}
+
+.visit-hours th,
+.visit-hours td {
+  padding: 0.45rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  text-align: left;
+  vertical-align: top;
+}
+
+.visit-hours tr:last-child th,
+.visit-hours tr:last-child td {
+  border-bottom: none;
+}
+
+.visit-hours th {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.visit-hours-what {
+  display: block;
+  font-weight: 400;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.visit-hours .visit-hours-time {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: nowrap;
+  text-align: right;
+  color: var(--color-gold-text);
+}
+
+.visit-card-note {
+  margin: 0 0 1rem;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.visit-address {
+  font-style: normal;
+  margin: 0 0 0.6rem;
+}
+
+.visit-address strong {
+  color: var(--color-text);
+}
+
+.visit-card-link {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-gold-text);
+}
+
+.visit-gallery {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.visit-gallery figure {
+  margin: 0;
+}
+
+.visit-gallery img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--r-sm, 6px);
+}
+
+.visit-gallery figcaption {
+  margin-top: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 480px) {
+  .visit-gallery {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* ── Capability ladder (production page aside) ────────────────────────── */
 .ladder {
   margin: 0;
