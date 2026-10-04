@@ -999,12 +999,14 @@ for visits whatever happens next.
 Sales per creator and channel, read only:
 
 ```bash
-node --experimental-strip-types scripts/attribution-report.mjs --since 2026-09-25 [--orders]
+node --experimental-strip-types scripts/attribution-report.mjs --since 2026-09-25 [--until YYYY-MM-DD] [--orders | --json]
 ```
 
 It reads `SHOPIFY_STORE_DOMAIN`, `SHOPIFY_ADMIN_API_TOKEN` (read_orders) and
 `SHOPIFY_ADMIN_API_VERSION`, and prints paid orders, units per SKU and
-revenue by `_ref` and by `_utm_source`. The Plausible `Purchase` event is
+revenue by `_ref` and by `_utm_source`. `--json` adds the shipping
+country groups and the counted orders without names; the weekly marketing
+review in the operations repository reads it. The Plausible `Purchase` event is
 sent only while the Worker variable `PLAUSIBLE_PURCHASE_EVENTS_ENABLED` is
 `1`; it forwards the buyer's browser IP and User-Agent from the order,
 without which Plausible drops server events.
