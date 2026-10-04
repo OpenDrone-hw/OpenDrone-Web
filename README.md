@@ -835,7 +835,7 @@ those tags automatically. An earlier accepted promise is not silently extended.
 
 | Source | Owns |
 |---|---|
-| `content/preorders.json` | `countFrom`, `endsOn`, `shipsBy`, `priceTiers`, `pendingShips`, per-SKU `batches` (`units`, `paid`, `ships`, `deliveryBy`, `deliveryByUS`, `deliveryByINT`, `regions`) and `shipsWith` (`sku`, `batch`, `stock`, `after`) |
+| `content/preorders.json` | `countFrom`, `endsOn`, `shipsBy`, `priceTiers`, `pendingShips`, per-SKU `batches` (`units`, `reserved`, `paid`, `ships`, `deliveryBy`, `deliveryByUS`, `deliveryByINT`, `regions`) and `shipsWith` (`sku`, `batch`, `stock`, `after`) |
 | `content/registrations.json` | producer numbers and explicit `saleApproved` per EU destination |
 | `content/us-sales.json` | the US flat shipping rate in USD (`null` keeps the US closed) and `priceUpliftPct`, the US price uplift (`npm run us:prices`) |
 | Shopify | compare-at (retail) price, current price, catalog identity, orders, payments |
@@ -844,7 +844,8 @@ those tags automatically. An earlier accepted promise is not silently extended.
 
 1. Edit `content/preorders.json` (by hand or the studio Data tab): set
    `countFrom` to the first day whose paid orders count, the batches with
-   `units`, `paid` and `ships` for ordered stock, `endsOn`, `shipsBy` and `pendingShips`
+   `units`, `paid` and `ships` for ordered stock (plus `reserved` for units
+   of it held back from sale), `endsOn`, `shipsBy` and `pendingShips`
    for funding targets, and `priceTiers`. `npm test` checks that
    `pendingShips` names `endsOn` and `shipsBy`.
 2. In Shopify, set each campaign SKU's compare-at price to retail and its

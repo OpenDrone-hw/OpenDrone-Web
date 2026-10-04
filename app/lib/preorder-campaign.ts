@@ -47,6 +47,10 @@ export type PaidUnitsOf = number | UnitRuns;
 export type CampaignBatch = {
   /** Units in this batch: the supplier order quantity. */
   units: number;
+  /** Paid stock only: units of `units` held back from sale (review units).
+   *  Customers can buy `units - reserved` ({@link sellableUnits}); reserved
+   *  units are not orders, so price steps and funding targets never count them. */
+  reserved?: number;
   /** Paid stock: Incutec has already ordered this batch. */
   paid?: boolean;
   /** The ship promise once the supplier order is placed, e.g.
@@ -305,6 +309,12 @@ export function parseCampaignConfig(body: unknown): CampaignConfig {
       if (batch.paid && !batch.ships?.trim()) {
         throw new Error(`preorders: ${sku} paid batch needs a ship promise`);
       }
+      if (batch.reserved !== undefined) {
+        if (!batch.paid) throw new Error(`preorders: ${sku} reserved units need a paid batch`);
+        if (!Number.isSafeInteger(batch.reserved) || batch.reserved < 0 || batch.reserved >= batch.units) {
+          throw new Error(`preorders: ${sku} reserved must be a whole number from 0 to below units`);
+        }
+      }
       if (batch.deliveryBy != null && !isCalendarDay(batch.deliveryBy)) throw new Error(`preorders: ${sku} deliveryBy must be a calendar date`);
       if (batch.deliveryByUS != null && !isCalendarDay(batch.deliveryByUS)) throw new Error(`preorders: ${sku} deliveryByUS must be a calendar date`);
       if (batch.deliveryByINT != null && !isCalendarDay(batch.deliveryByINT)) throw new Error(`preorders: ${sku} deliveryByINT must be a calendar date`);
@@ -539,6 +549,13 @@ export function servesRegion(batch: Pick<CampaignBatch, 'regions'>, region: Regi
   return !batch.regions || batch.regions.includes(region);
 }
 
+/** The units customers can buy from a batch: its supplier quantity less
+ *  any `reserved` units held back from sale. Every batch cap, batch count
+ *  and batch tag uses this, never `units` alone. */
+export function sellableUnits(batch: Pick<CampaignBatch, 'units' | 'reserved'>): number {
+  return batch.units - (batch.reserved ?? 0);
+}
+
 /**
  * The batches units are allocated to, in order. The last one has no end
  * when it is a funding target: its `units` is the target, and every later
@@ -575,7 +592,7 @@ export function regionUnits(ordered: PaidUnitsOf, region: Region): number {
 function nextIndex(list: CampaignBatch[], fill: number[], region: Region): number {
   for (let i = 0; i < list.length; i += 1) {
     if (!servesRegion(list[i], region)) continue;
-    if (i === list.length - 1 || fill[i] < list[i].units) return i;
+    if (i === list.length - 1 || fill[i] < sellableUnits(list[i])) return i;
   }
   return list.length - 1;
 }
@@ -592,7 +609,7 @@ export function batchFill(batches: CampaignBatch[], ordered: PaidUnitsOf): numbe
     let left = Math.max(0, Math.floor(run.units) || 0);
     while (left > 0) {
       const i = nextIndex(list, fill, run.region);
-      const room = i === list.length - 1 ? left : Math.min(left, list[i].units - fill[i]);
+      const room = i === list.length - 1 ? left : Math.min(left, sellableUnits(list[i]) - fill[i]);
       fill[i] += room;
       left -= room;
     }
@@ -666,7 +683,7 @@ export function campaignState(
   return {
     ordered: units,
     batch: index + 1,
-    batchUnits: current.units,
+    batchUnits: sellableUnits(current),
     batchOrdered: fill[index],
     paidStock: Boolean(current.paid),
     target,
@@ -676,7 +693,7 @@ export function campaignState(
     shipsOnTarget: !current.ships?.trim(),
     deliveryByDay: batchDeliveryDay(current, region),
     shipsText: current.ships?.trim() || null,
-    paidLeft: current.paid ? current.units - fill[index] : null,
+    paidLeft: current.paid ? sellableUnits(current) - fill[index] : null,
     earlyPrice: tier !== null,
     tierUpTo: tier?.upTo ?? null,
     tierLeft: tier ? tier.upTo - units : 0,
@@ -685,7 +702,7 @@ export function campaignState(
     nextPrice: tier ? tierPrice(retail, priceTiers[tierIndex + 1]?.off ?? 0) : null,
     batches: batches.slice(0, index + 2).map((b, i) => ({
       batch: i + 1,
-      units: b.units,
+      units: sellableUnits(b),
       status:
         i < index
           ? servesRegion(b, region) ? 'sold_out' : 'other_region'
@@ -728,7 +745,7 @@ export function shipsWithState(
     pinned && !state.batches.some((b) => b.batch === rule.batch) && !servesRegion(pinned, region)
       ? [{
           batch: rule.batch!,
-          units: pinned.units,
+          units: sellableUnits(pinned),
           status: 'other_region',
           shipPromise: batchPromise(pinned, config.pendingShips),
           paid: Boolean(pinned.paid),
@@ -744,7 +761,7 @@ export function shipsWithState(
     afterBatch && rule.after !== undefined && !state.batches.some((b) => b.batch === rule.after) && servesRegion(afterBatch, region)
       ? [{
           batch: rule.after,
-          units: afterBatch.units,
+          units: sellableUnits(afterBatch),
           status: 'next',
           shipPromise: batchPromise(afterBatch, config.pendingShips),
           paid: Boolean(afterBatch.paid),
@@ -809,7 +826,7 @@ function pinnedBatchState(
   return {
     ordered: 0,
     batch,
-    batchUnits: entry.units,
+    batchUnits: sellableUnits(entry),
     batchOrdered: 0,
     paidStock: false,
     target: dated ? null : entry.units,
@@ -826,7 +843,7 @@ function pinnedBatchState(
     tierOff: 0,
     price: null,
     nextPrice: null,
-    batches: [{batch, units: entry.units, status: 'current', shipPromise: promise, paid: Boolean(entry.paid), regions: entry.regions ?? [...REGIONS], ordered: 0}],
+    batches: [{batch, units: sellableUnits(entry), status: 'current', shipPromise: promise, paid: Boolean(entry.paid), regions: entry.regions ?? [...REGIONS], ordered: 0}],
   };
 }
 

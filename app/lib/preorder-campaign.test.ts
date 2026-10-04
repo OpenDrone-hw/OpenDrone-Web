@@ -3,7 +3,9 @@ import fs from 'node:fs';
 import {describe, it, test} from 'node:test';
 import type {Catalog} from './catalog.ts';
 import {
+  allocateUnit,
   applyCampaign,
+  batchFill,
   campaignDate,
   campaignEndsAt,
   campaignState,
@@ -16,6 +18,7 @@ import {
   parseCampaignConfig,
   priceLadder,
   cartShipNote,
+  sellableUnits,
   shipGroupKey,
   shipsWithState,
   shipLabel,
@@ -828,5 +831,90 @@ describe('committed dates derive from content/preorders.json', () => {
       const text = read(file);
       assert.ok(!/US fulfil|Amerikaans fulfilment|entrepôt logistique américain|inspected and flashed in Belgium|inspected, flashed and (packed|shipped)/i.test(text), file);
     }
+  });
+});
+
+describe('reserved units on a paid batch', () => {
+  const RESERVED: CampaignBatch[] = [
+    {units: 250, reserved: 10, paid: true, ships: 'ships early November 2026', regions: ['EU']},
+    {units: 250},
+  ];
+
+  it('keeps the purchase order quantity and reserves 10 review units of each FC and ESC batch 1', () => {
+    const config = parseCampaignConfig(
+      JSON.parse(fs.readFileSync(new URL('../../content/preorders.json', import.meta.url), 'utf8')),
+    );
+    for (const sku of ['OPENFC-LITE-2020', 'OPENFC-LITE-3030', 'OPENESC-2020', 'OPENESC-3030']) {
+      const [paid, funding] = config.skus[sku].batches;
+      assert.equal(paid.paid, true, sku);
+      assert.equal(paid.units, 250, sku);
+      assert.equal(paid.reserved, 10, sku);
+      assert.equal(sellableUnits(paid), 240, sku);
+      assert.equal(funding.reserved, undefined, sku);
+      assert.equal(sellableUnits(funding), 250, sku);
+    }
+    for (const [sku, entry] of Object.entries(config.skus)) {
+      if (sku.startsWith('OPENFC-LITE-') || sku.startsWith('OPENESC-')) continue;
+      assert.ok(entry.batches.every((b) => b.reserved === undefined), sku);
+    }
+  });
+
+  it('caps the paid batch at its sellable units', () => {
+    const fresh = campaignState(RESERVED, 0, PENDING, TIERS);
+    assert.equal(fresh.batchUnits, 240);
+    assert.equal(fresh.paidLeft, 240);
+    assert.equal(fresh.batches[0].units, 240);
+    assert.equal(fresh.batches[1].units, 250);
+    const last = campaignState(RESERVED, 239, PENDING, TIERS);
+    assert.equal(last.paidStock, true);
+    assert.equal(last.paidLeft, 1);
+    assert.equal(last.shipPromise, 'ships early November 2026');
+  });
+
+  it('moves the 241st paid unit to the funding target, which counts only customer units', () => {
+    const next = campaignState(RESERVED, 240, PENDING, TIERS);
+    assert.equal(next.batch, 2);
+    assert.equal(next.paidStock, false);
+    assert.equal(next.shipPromise, PENDING);
+    assert.equal(next.target, 250);
+    assert.equal(next.targetOrdered, 0);
+    assert.deepEqual(next.batches.map(({batch, units, status, ordered}) => [batch, units, status, ordered]), [
+      [1, 240, 'sold_out', 240],
+      [2, 250, 'current', 0],
+    ]);
+    assert.equal(campaignState(RESERVED, 245, PENDING, TIERS).targetOrdered, 5);
+  });
+
+  it('steps the price by paid customer units only, as without a reserve', () => {
+    for (const ordered of [0, 99, 100, 239, 240, 249, 250]) {
+      const withReserve = campaignState(RESERVED, ordered, PENDING, TIERS, 39);
+      const without = campaignState(STACK, ordered, PENDING, TIERS, 39);
+      assert.equal(withReserve.tierOff, without.tierOff, `unit ${ordered + 1}`);
+      assert.equal(withReserve.tierLeft, without.tierLeft, `unit ${ordered + 1}`);
+      assert.equal(withReserve.price, without.price, `unit ${ordered + 1}`);
+    }
+  });
+
+  it('allocates 240 EU units to the paid batch and sends non-EU units past it', () => {
+    assert.deepEqual(batchFill(RESERVED, 250), [240, 10]);
+    assert.deepEqual(batchFill(RESERVED, [{region: 'US', units: 3}, {region: 'EU', units: 240}]), [240, 3]);
+    const fill = [239, 0];
+    assert.equal(allocateUnit(RESERVED, fill, 'EU').batch, 1);
+    assert.equal(allocateUnit(RESERVED, fill, 'EU').batch, 2);
+    assert.deepEqual(fill, [240, 1]);
+  });
+
+  it('rejects a reserve on a funding target, at or above the batch, or not whole', () => {
+    const base = {countFrom: '2026-09-21', endsOn: '2026-12-31', shipsBy: '2027-03-11', priceTiers: TIERS, pendingShips: PENDING};
+    const paid = {units: 250, paid: true, ships: 'ships early November 2026'};
+    assert.throws(() => parseCampaignConfig({...base, skus: {A: {batches: [{units: 250, reserved: 10}]}}}), /reserved units need a paid batch/);
+    for (const reserved of [-1, 250, 2.5]) {
+      assert.throws(
+        () => parseCampaignConfig({...base, skus: {A: {batches: [{...paid, reserved}, {units: 250}]}}}),
+        /reserved must be a whole number/,
+        String(reserved),
+      );
+    }
+    assert.doesNotThrow(() => parseCampaignConfig({...base, skus: {A: {batches: [{...paid, reserved: 0}, {units: 250}]}}}));
   });
 });
