@@ -6,6 +6,7 @@ import {destinationForRequest, isInternationalQuote, isIsoCountry, isUsQuote, sh
 import {type RegistrationsFile} from './registrations.ts';
 import {usSalesRate} from './us-sales.ts';
 import {cartAttributesFromForm} from './growth/attribution.ts';
+import {internationalShippingFrom} from './international-shipping.ts';
 import {
   BATCH_ATTRIBUTE,
   PREORDER_ATTRIBUTE,
@@ -25,7 +26,7 @@ export {PREORDER_ATTRIBUTE};
 type CartEnv = Pick<
   Env,
   'SHOPIFY_CHECKOUT_WRITE_ENABLED' | 'PUBLIC_COMING_SOON' | 'PUBLIC_US_SALES'
->;
+> & Partial<Pick<Env, 'SHOPIFY_STORE_DOMAIN' | 'SHOPIFY_ADMIN_API_TOKEN' | 'SHOPIFY_ADMIN_API_VERSION'>>;
 export type ShopifyCartDependencies = {
   /** An explicit destination fixture for isolated tests; runtime uses committed approvals. */
   registrations?: RegistrationsFile;
@@ -87,6 +88,10 @@ export type CartSummary = {
   totalQuantity: number;
   /** Subtotal of every line, VAT included; absent on an empty summary. */
   subtotal?: {amount: string; currencyCode: string};
+  /** International destination only: the shipping charge Shopify checkout
+   *  starts from for this cart, computed from Shopify's own rates
+   *  (`international-shipping.ts`). Absent when it could not be computed. */
+  shippingFrom?: {country: string; amount: string; currencyCode: string};
   lines: Array<{
     sku: string | null;
     handle: string;
@@ -131,6 +136,19 @@ export function cartSummary(cart: ShopifyCart, catalog: Catalog | null = null): 
       ...(info?.[line.id] ? {shipGroup: info[line.id].group} : {}),
     })),
   };
+}
+
+/** The summary with the international charge Shopify checkout starts from,
+ *  for an international destination whose rate this cart can be priced at. */
+async function withShippingFrom(
+  summary: CartSummary,
+  cart: ShopifyCart,
+  destination: ShippingQuote | null,
+  env: CartEnv,
+): Promise<CartSummary> {
+  if (!destination || !isInternationalQuote(destination)) return summary;
+  const from = await internationalShippingFrom(env, destination.country, cart);
+  return from ? {...summary, shippingFrom: {country: destination.country, ...from}} : summary;
 }
 
 /** The latest of the recorded English calendar deadlines, parsed in UTC. */
@@ -791,7 +809,7 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
         const updated = await dependencies.addCartLines(existingId, lines);
         await recordAttribution(form, updated.id, dependencies);
         return wantsSummary
-          ? Response.json(cartSummary(updated, catalog), {headers: NO_STORE})
+          ? Response.json(await withShippingFrom(cartSummary(updated, catalog), updated, destination, env), {headers: NO_STORE})
           : redirect('/cart');
       }
       // The session pointed at a cart Shopify no longer has: start a new one.
@@ -802,7 +820,7 @@ export async function handleShopifyCartAction(request: Request, env: CartEnv, de
     dependencies.setCartId?.(cart.id);
     await recordAttribution(form, cart.id, dependencies);
     return wantsSummary
-      ? Response.json(cartSummary(cart, catalog), {headers: NO_STORE})
+      ? Response.json(await withShippingFrom(cartSummary(cart, catalog), cart, destination, env), {headers: NO_STORE})
       : redirect('/cart');
   } catch (error) {
     if (error instanceof Response) throw error;

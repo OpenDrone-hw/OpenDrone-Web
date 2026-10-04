@@ -743,7 +743,7 @@ An open shop also depends on Shopify settings this repository cannot check:
 | Shopify setting | Holds when |
 |---|---|
 | Payments active, automatic capture | a test order is paid, captured and refunded |
-| Admin API token scopes | `read_orders`, `read_all_orders` (campaigns over 60 days), `write_orders`, `write_products`, `write_merchant_managed_fulfillment_orders` |
+| Admin API token scopes | `read_orders`, `read_all_orders` (campaigns over 60 days), `write_orders`, `write_products`, `write_merchant_managed_fulfillment_orders`, `read_shipping` (international shipping figure) |
 | Markets and shipping profiles | delivery countries need active markets and accepted shipping rates |
 | Local pickup on the "OpenDrone Leuven" location | free pickup is offered at checkout; the cart mentions it for Belgium (`PICKUP_COUNTRIES` in `app/lib/shipping-rates.ts`) and `/shipping` describes it. A pickup order has no shipping address and counts as region EU |
 | Redirect theme published | the Shopify-hosted storefront forwards to opendrone.be |
@@ -824,6 +824,14 @@ stays in the EU; international products and accessories use the March batch,
 including the existing `usStock` rule for otherwise unlisted accessories.
 The selected country supplies Shopify's catalog prices, cart market and currency.
 A null shipping preview means the charge is confirmed at checkout, never free.
+Before checkout, the cart and the added-to-cart drawer show "from X, confirmed
+at checkout": the cheapest active rate of the destination's Shopify shipping
+zone whose weight range holds the cart's product weight
+(`app/lib/international-shipping.ts`, read from the Admin API and reused five
+minutes per isolate). It falls back to "Shipping calculated at checkout" when
+the figure could differ from checkout: more than one delivery profile, a
+carrier or price-conditioned rate, a variant without a weight, a currency
+other than the rate's, or a failed read.
 Import charges outside the EU and US are not included by the storefront promise.
 `deliveryByINT` is a separate arrival deadline and never falls back to EU dates.
 

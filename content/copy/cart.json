@@ -54,6 +54,7 @@
   "delivery_by": "Delivery by {date}",
   "shipping_at_checkout": "Shipping calculated at checkout",
   "shipping_row": "Shipping to {country}",
+  "shipping_from": "from {price}, confirmed at checkout",
   "pickup_note": "Or pick up free at our Leuven office: choose Pickup at checkout.",
   "build_title": "Complete the build",
   "upsell_delay_short": "Holds your whole parcel until then (now {from}).",
