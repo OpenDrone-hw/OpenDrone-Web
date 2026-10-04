@@ -103,7 +103,11 @@ export async function loader({request, context}: Route.LoaderArgs) {
     })
     .catch(() => ({featured: [], heroBuilds: []}));
 
-  const heroBuilds = home.then((h) => h.heroBuilds);
+  // The build card sits on a phone's first screen, so a phone gets it
+  // resolved in the shell (same awaited query as `featured` below).
+  const heroBuilds = isMobileHint
+    ? await home.then((h) => h.heroBuilds)
+    : home.then((h) => h.heroBuilds);
   // On a phone the featured cards are the first thing under the hero and the
   // section's arrival used to shift everything below it (CLS 0.22) and delay
   // the LCP image until the deferred chunk streamed in. The query is
@@ -174,7 +178,7 @@ function DesktopHome({
   heroBuilds,
   discord,
 }: {
-  heroBuilds: Promise<HeroBuild[]>;
+  heroBuilds: HeroBuild[] | Promise<HeroBuild[]>;
   discord: Promise<DiscordCounts | null>;
 }) {
   const scrollRef = useRef(0);

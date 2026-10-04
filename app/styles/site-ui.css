@@ -1377,6 +1377,13 @@ a.hero-build-add { text-decoration: none; }
   .hero-build-inspect { gap: 7px; }
   .hero-build-name strong { white-space: normal; }
   .hero-build-detail { width: 28px; min-height: 44px; }
+  /* Phone build card: every row control is at least 44 x 44 px. */
+  .home-mobile-build .hero-build-parts { padding: 0 2px; }
+  .home-mobile-build .hero-build-part { grid-template-columns: 44px minmax(0, 1fr) auto 44px; gap: 4px; padding: 2px 0; }
+  .home-mobile-build .hero-build-check { width: 44px; height: 44px; }
+  .home-mobile-build .hero-build-inspect { align-self: stretch; min-height: 44px; }
+  .home-mobile-build .hero-build-detail { width: 44px; min-height: 44px; }
+  .home-mobile-build .hero-build-sizes button { min-height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .hero-build-guide { animation: none; }
