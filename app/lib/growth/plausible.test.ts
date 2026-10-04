@@ -50,19 +50,21 @@ describe('Plausible client', () => {
     assert.equal(queue().length, 1);
   });
 
-  it('sends the cart subtotal as Checkout Click revenue', () => {
-    trackCheckoutClick({amount: '58.40', currencyCode: 'EUR'});
+  it('sends the cart subtotal as Checkout Click revenue, with the entry point', () => {
+    trackCheckoutClick({amount: '58.40', currencyCode: 'EUR'}, 'dialog');
+    trackCheckoutClick({amount: '58.40', currencyCode: 'EUR'}, 'cart');
     assert.deepEqual(queue(), [
-      ['Checkout Click', {props: {source: 'other', ref: 'alice-fpv'}, revenue: {currency: 'EUR', amount: 58.4}}],
+      ['Checkout Click', {props: {source: 'other', ref: 'alice-fpv', entry: 'dialog'}, revenue: {currency: 'EUR', amount: 58.4}}],
+      ['Checkout Click', {props: {source: 'other', ref: 'alice-fpv', entry: 'cart'}, revenue: {currency: 'EUR', amount: 58.4}}],
     ]);
   });
 
   it('sends Checkout Click without revenue when the subtotal is missing or zero', () => {
-    trackCheckoutClick({amount: '0.0', currencyCode: 'EUR'});
-    trackCheckoutClick(null);
+    trackCheckoutClick({amount: '0.0', currencyCode: 'EUR'}, 'cart');
+    trackCheckoutClick(null, 'dialog');
     assert.deepEqual(
       queue().map(([, opts]) => opts),
-      [{props: {source: 'other', ref: 'alice-fpv'}}, {props: {source: 'other', ref: 'alice-fpv'}}],
+      [{props: {source: 'other', ref: 'alice-fpv', entry: 'cart'}}, {props: {source: 'other', ref: 'alice-fpv', entry: 'dialog'}}],
     );
   });
 

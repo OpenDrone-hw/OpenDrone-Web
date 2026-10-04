@@ -28,7 +28,7 @@ import buildsJson from '../../content/builds.json';
 import {beginCartAdd, endCartAdd} from './cart-add-lock';
 import {BuildBundle, bundleFields} from './BuildBundle';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
-import {DATES_SEEN_FIELD, latestDeliveryBy, type CartSummary} from '~/lib/shopify-cart-action';
+import {DATES_SEEN_FIELD, hasMixedShipGroups, latestDeliveryBy, type CartSummary} from '~/lib/shopify-cart-action';
 import {trackEvent} from '~/lib/growth/plausible';
 import {CART_ADDED_EVENT, postCartAdd, withCountry, type CartAddedDetail} from '~/lib/cart-client';
 import {ShipToSelect} from './ShipToSelect';
@@ -131,8 +131,10 @@ export function CartAddedDialog() {
   // The lines added this time.
   const added = summary.lines.filter((l) => l.sku && detail.skus.includes(l.sku));
   // One parcel per order: when the cart's lines ship at different times,
-  // every line shows the parcel's date, as the cart does.
-  const mixed = new Set(summary.lines.map((l) => l.shipPromise ?? '')).size > 1;
+  // the drawer says so, as the cart does. Checkout's own rule: lines waiting
+  // for different funding targets are mixed even when their dates read the
+  // same, so checkout never sends the buyer back to the cart unannounced.
+  const mixed = hasMixedShipGroups(summary.lines);
   // Dated lines next to a funding-target line: the buyer can order the dated
   // ones separately to get them sooner (the cart page does the split).
   const sooner = mixed ? soonerMonth(summary.lines.map((l) => l.shipPromise)) : null;
@@ -421,6 +423,9 @@ export function CartAddedDialog() {
           {quote?.kind === 'direct' && quote.zone === 'international' ? (
             <p className="cart-added-parcel">{t('international_note', 'Shipping and applicable sale taxes are confirmed at checkout. Import duties, import taxes and customs handling charges may be payable on delivery.')}</p>
           ) : null}
+          {mixed ? (
+            <p className="cart-added-parcel" role="note">{t('parcel_note', 'Your order ships in one parcel, when its last item is ready.')}</p>
+          ) : null}
           {sooner ? (
             <p className="cart-added-parcel">
               <Link to="/cart" className="cart-added-split">
@@ -452,11 +457,11 @@ export function CartAddedDialog() {
             <form
               method="post"
               action={CART_ACTION}
-              onSubmit={() => trackCheckoutClick(subtotal)}
+              onSubmit={() => trackCheckoutClick(subtotal, 'dialog')}
             >
               <input type="hidden" name="intent" value="checkout" />
               {visitor ? <input type="hidden" name="country" value={visitor} /> : null}
-              {/* Every line names its date, so checkout may go on. */}
+              {/* The drawer shows the one-parcel line, so checkout may go on. */}
               {mixed ? <input type="hidden" name={DATES_SEEN_FIELD} value="1" /> : null}
               <button type="submit" className="cart-added-checkout">
                 {copyText('cart.checkout_cta') ?? 'Checkout'}

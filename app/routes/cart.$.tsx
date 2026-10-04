@@ -8,6 +8,7 @@ import {
   DATES_SEEN_FIELD,
   cartLineInfo,
   checkoutOpen,
+  hasMixedShipDates,
   loadSessionCart,
   latestDeliveryBy,
   replanCart,
@@ -28,7 +29,7 @@ import {
   type BuildSuggestion,
 } from '~/lib/build-recommendations';
 import buildsJson from '../../content/builds.json';
-import {isPurchasableStatus, lineDisplayName, setSize, variantDisplayName} from '~/lib/product-content';
+import {isPurchasableStatus, lineDisplayName, setSize, shortShipPromise, variantDisplayName} from '~/lib/product-content';
 import {Txt} from '~/components/Txt';
 import {ShipChip, parcelPromise, soonerMonth} from '~/components/ShipChip';
 import {LineShipChip, heldBy, parcelDelay} from '~/components/ParcelChip';
@@ -145,15 +146,23 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
 
 type Removed = SplitItem[];
 
+type CartCheck = (typeof CART_CHECK)[keyof typeof CART_CHECK];
+
+/** The notice per reason the server sent a checkout back to the cart. Every
+ *  reason has one: a checkout never lands here without a word. */
+const CHECK_NOTICES: Record<CartCheck, () => string> = {
+  [CART_CHECK.paidBatch]: () => t('check_paid_batch', 'Not enough left. Lower the quantity where shown.'),
+  [CART_CHECK.shipDate]: () => t('check_ship_date', 'A ship date changed. Check the dates below.'),
+  [CART_CHECK.price]: () => t('check_price', 'A price changed. Check the total below.'),
+  [CART_CHECK.priceAndDate]: () => t('check_price_and_date', 'A price and a ship date changed. Check the dates and the total below.'),
+  [CART_CHECK.mixedDates]: () => t('parcel_note', 'Your order ships in one parcel, when its last item is ready.'),
+  [CART_CHECK.usEuOnly]: () => t('check_us_eu_only', 'An item in your cart ships to EU addresses only. Remove it or choose an EU delivery country.'),
+  [CART_CHECK.market]: () => t('check_market', "Your cart moved to your delivery country's prices. Check the total below."),
+};
+
 /** The one-line notice for a checkout the server sent back to the cart. */
 function checkNotice(check: string | null): string | null {
-  if (check === CART_CHECK.paidBatch) return t('check_paid_batch', 'Not enough left. Lower the quantity where shown.');
-  if (check === CART_CHECK.shipDate) return t('check_ship_date', 'A ship date changed. Check the dates below.');
-  if (check === CART_CHECK.price) return t('check_price', 'A price changed. Check the total below.');
-  if (check === CART_CHECK.priceAndDate) return t('check_price_and_date', 'A price and a ship date changed. Check the dates and the total below.');
-  if (check === CART_CHECK.usEuOnly) return t('check_us_eu_only', 'An item in your cart ships to EU addresses only. Remove it or choose an EU delivery country.');
-  if (check === CART_CHECK.market) return t('check_market', "Your cart moved to your delivery country's prices. Check the total below.");
-  return null;
+  return check && Object.hasOwn(CHECK_NOTICES, check) ? CHECK_NOTICES[check as CartCheck]() : null;
 }
 
 export default function CartPage() {
@@ -446,7 +455,11 @@ function ParcelPanel({lines}: {lines: ShopifyCartLine[]}) {
           </ul>
         ) : null}
         <p>
-          {t('parcel_rule', 'Preorders ship when their funding target is reached. If a target is missed, you choose a refund or to keep waiting.')}{' '}
+          {/* A funding-target parcel states its own promise (`pendingShips`:
+              the ship-by date, the target deadline, refund or wait). */}
+          {shortShipPromise(promise)?.kind === 'target' && promise
+            ? `${promise.charAt(0).toUpperCase()}${promise.slice(1)}.`
+            : t('parcel_rule', 'Preorders ship when their funding target is reached. If a target is missed, you choose a refund or to keep waiting.')}{' '}
           <Link prefetch="intent" to="/preorder">{copyText('product-chrome.buy_terms_link') ?? 'Pre-order terms'}</Link>
         </p>
       </div>
@@ -499,8 +512,7 @@ function PopulatedCart({
   // One parcel per order: when lines ship at different times, the early
   // ones wait for the last. Lines waiting for different funding targets do
   // not ship together even when their promise reads the same.
-  const groupOf = (line: ShopifyCartLine) => info[line.id]?.group ?? `date:${line.shipPromise ?? ''}`;
-  const mixed = new Set(cart.lines.map(groupOf)).size > 1;
+  const mixed = hasMixedShipDates(cart, info);
   // Checkout is refused for a blocked country, for one sold only through
   // shops and for an EU country not open yet; the cart
   // says which and links onward.
@@ -613,7 +625,7 @@ function PopulatedCart({
                   event.preventDefault();
                   return;
                 }
-                trackCheckoutClick(cart.subtotal);
+                trackCheckoutClick(cart.subtotal, 'cart');
               }}
             >
               <input type="hidden" name="intent" value="checkout" />

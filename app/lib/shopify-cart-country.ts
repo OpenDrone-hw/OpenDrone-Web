@@ -152,10 +152,11 @@ async function repriceCart(
   if (!dependencies.getCart) return null;
   let cart = await dependencies.getCart(cartId);
   if (!cart) return null;
+  let catalog: Catalog | null = null;
   if (dependencies.fetchCatalog && dependencies.updateCartLines && cart.lines.length) {
-    const catalog = await dependencies.fetchCatalog(region, country);
+    catalog = await dependencies.fetchCatalog(region, country);
     const {refresh} = rederiveLines(cart, catalog, region, env.PUBLIC_COMING_SOON !== '0');
     if (refresh.length) cart = await dependencies.updateCartLines(cartId, refresh);
   }
-  return cartSummary(cart);
+  return cartSummary(cart, catalog);
 }
