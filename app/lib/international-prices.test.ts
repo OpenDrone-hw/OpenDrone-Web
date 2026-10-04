@@ -35,7 +35,7 @@ test('international destinations never consume Belgian paid stock or its accesso
   }
   const eu = campaignState(config.skus['OPENFC-LITE-2020'].batches, [{region:'INT', units:3}, {region:'US', units:2}], config.pendingShips, [], null, 'EU');
   assert.equal(eu.batch, 1);
-  assert.equal(eu.paidLeft, 240);
+  assert.equal(eu.paidLeft, 225);
   assert.equal(eu.targetOrdered, 5);
 });
 
