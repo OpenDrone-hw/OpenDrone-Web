@@ -16,6 +16,7 @@ import type {
   CartLine,
   CatalogAvailability,
   MappedProductOptions,
+  EarlyPrice,
   MoneyV2,
   ProductCardFragment,
   ProductFragment,
@@ -208,6 +209,27 @@ function variantId(sku: string): string {
   return `variant:${sku}`;
 }
 
+/** The retail price a preorder step steps up to, in the buyer's currency:
+ *  Shopify's compare-at price for EUR, the USD ladder's last step for a US
+ *  buyer, none for an international price (no verified local retail). */
+function earlyPriceOf(variant: CatalogVariant, fallbackCurrency: string): EarlyPrice | null {
+  const c = variant.campaign;
+  if (!c?.earlyPrice || c.tierLeft <= 0) return null;
+  const currency = c.usLadder?.length ? 'USD' : variant.currency || fallbackCurrency;
+  const ladder = c.internationalPrice ? [] : (c.usLadder ?? c.ladder ?? []);
+  const steps = ladder.map((step) => ({
+    price: money(step.price, currency),
+    current: step.to === c.tierUpTo,
+    approx: 'approx' in step && Boolean(step.approx),
+  }));
+  const last = ladder.at(-1);
+  const retail =
+    last && last.to === null && !steps.at(-1)?.approx && last.price > variant.price
+      ? money(last.price, currency)
+      : null;
+  return {retail, left: c.tierLeft, steps: steps.some((step) => step.current) ? steps : []};
+}
+
 function mapVariant(
   catalog: Catalog,
   product: CatalogProduct,
@@ -235,6 +257,7 @@ function mapVariant(
       variant.campaign?.nextPrice != null && variant.campaign.nextPrice > variant.price
         ? money(variant.campaign.nextPrice, variant.currency || catalog.currency)
         : null,
+    earlyPrice: earlyPriceOf(variant, catalog.currency),
     image:
       image(variant.image, variant.image_alt || variant.title) ??
       image(product.images[0] ?? null, product.title),

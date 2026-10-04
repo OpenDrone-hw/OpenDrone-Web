@@ -180,7 +180,7 @@ export function withMarketPrices(
             ? usdLadder(variant.compare_price, tiers, band, variant.campaign.ordered + 1, us.price)
             : undefined;
         const campaign = variant.campaign
-          ? {...variant.campaign, price: us.price, nextPrice: null, ...(usLadder ? {usLadder} : {})}
+          ? {...variant.campaign, price: us.price, nextPrice: null, ladder: undefined, ...(usLadder ? {usLadder} : {})}
           : variant.campaign;
         return {
           ...variant,

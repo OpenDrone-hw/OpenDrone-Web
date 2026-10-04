@@ -1,4 +1,5 @@
 import {Suspense, useCallback} from 'react';
+import {EarlyPriceCue} from '~/components/EarlyPriceCue';
 import {Await, Link} from 'react-router';
 import type {ProductCardFragment} from '~/lib/product-shapes';
 import {formatPrice} from '~/lib/catalog';
@@ -130,6 +131,10 @@ function RelatedCard({product}: {product: RelatedProduct}) {
   const max = product.priceRange.maxVariantPrice;
   const priced = parseFloat(min.amount) > 0;
   const fromPrice = priced && parseFloat(max.amount) > parseFloat(min.amount);
+  const earlyPrice =
+    product.variants.nodes.find(
+      (v) => v.earlyPrice && Number(v.price.amount) === Number(min.amount),
+    )?.earlyPrice ?? null;
   const specLine = specLineOf(product);
   const fileLine = fileLineOf(product);
 
@@ -205,6 +210,7 @@ function RelatedCard({product}: {product: RelatedProduct}) {
               <span>&nbsp;</span>
             )}
           </p>
+          {priced && !comingSoon ? <EarlyPriceCue early={earlyPrice} /> : null}
         </div>
       </Link>
       {only ? (

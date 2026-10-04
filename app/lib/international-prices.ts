@@ -22,7 +22,7 @@ export function withInternationalPrices(catalog: Catalog, market: Catalog | null
         if (price.availability === 'sold_out') return {...closed(variant), ...values};
         return {
           ...variant, ...values,
-          ...(variant.campaign ? {campaign: {...variant.campaign, price: price.price, nextPrice: null, usLadder: undefined, internationalPrice: true}} : {}),
+          ...(variant.campaign ? {campaign: {...variant.campaign, price: price.price, nextPrice: null, ladder: undefined, usLadder: undefined, internationalPrice: true}} : {}),
         };
       }),
     })),

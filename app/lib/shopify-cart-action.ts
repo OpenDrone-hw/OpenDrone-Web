@@ -887,6 +887,8 @@ export type CartLineInfo = {
   shipLabel: string | null;
   /** The line ships to the EU only: it cannot go to a US destination. */
   euOnly: boolean;
+  /** The line sells at a preorder price step, under retail. */
+  earlyPrice: boolean;
 };
 
 /**
@@ -922,6 +924,7 @@ export function cartLineInfo(
           : null,
       shipLabel: shipLabelFromPromise(line.shipPromise, 'short'),
       euOnly: variant ? !usSellable(variant) : false,
+      earlyPrice: Boolean(campaign?.earlyPrice && campaign.tierLeft > 0),
     };
   }
   return out;

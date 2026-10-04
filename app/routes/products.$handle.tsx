@@ -34,6 +34,7 @@ import {Txt} from '~/components/Txt';
 import {ConceptPlate} from '~/components/ConceptPlate';
 import {ProductDiscordRow} from '~/components/Discord';
 import {ProductPrice} from '~/components/ProductPrice';
+import {EarlyPriceSteps} from '~/components/EarlyPriceCue';
 import {ProductGallery} from '~/components/ProductGallery';
 import {ProductSilhouette} from '~/components/ProductSilhouette';
 import {ProductForm} from '~/components/ProductForm';
@@ -1744,6 +1745,8 @@ function ProductPage() {
   // Preorder campaign of the selected variant: the price ladder, the ship
   // terms and the quantity cap all read it.
   const campaign = !isBundle && preorder ? (selectedVariant?.campaign ?? null) : null;
+  // The preorder step price, drawn as the staircase up to retail.
+  const earlyPrice = campaign ? (selectedVariant?.earlyPrice ?? null) : null;
   const retail = selectedVariant?.sku ? (retailBySku[selectedVariant.sku] ?? null) : null;
   const tiers = tiersFor(CAMPAIGN_CONFIG, selectedVariant?.sku ?? '');
   // A flat-price SKU (an accessory shipping with a campaign SKU) has no
@@ -1926,6 +1929,7 @@ function ProductPage() {
           ) : null}
           {vatNote ? <span className="product-buy-vat">{vatNote}</span> : null}
         </span>
+        <EarlyPriceSteps early={earlyPrice} />
         {isBundle ? (
           (() => {
             // Name the actual pair for the tier (20×20 ships the Mini).

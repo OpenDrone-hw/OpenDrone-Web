@@ -1,4 +1,5 @@
 import {useCallback} from 'react';
+import {EarlyPriceCue} from '~/components/EarlyPriceCue';
 import {Link} from 'react-router';
 import {SmoothImage} from './SmoothImage';
 import {ProductGhostTile} from './ProductGhostTile';
@@ -106,6 +107,11 @@ export function ProductItem({
   const displayTitle = title ?? product.title;
   const price = priceOverride ?? product.priceRange.minVariantPrice;
   const image = imageOverride ?? product.featuredImage;
+  // The preorder step behind the shown price: the variant that sells at it.
+  const earlyPrice =
+    product.variants.nodes.find(
+      (v) => v.earlyPrice && Number(v.price.amount) === Number(price.amount),
+    )?.earlyPrice ?? null;
   const hasModels = Boolean(models && models.length > 0);
   // "from" when the card shows the cheapest of several prices: a product
   // card without a per-variant price override whose variants differ.
@@ -291,6 +297,7 @@ export function ProductItem({
                   )
                 : null}
             </div>
+            {showPrice ? <EarlyPriceCue early={earlyPrice} /> : null}
             {'productType' in product && product.productType ? (
               <p className="product-card-meta">{tileFamilyLabel(product.productType)}</p>
             ) : null}
@@ -334,6 +341,7 @@ export function ProductItem({
           <h2 className="product-card-title">{displayTitle}</h2>
           {showPrice ? priceLabel(price.amount, price.currencyCode, fromPrice) : null}
         </div>
+        {showPrice ? <EarlyPriceCue early={earlyPrice} /> : null}
         {campaign && !soldOut ? (
           <ShipChip
             promise={campaign.shipPromise}

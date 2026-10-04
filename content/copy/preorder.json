@@ -85,5 +85,11 @@
   "terms_summary_international": "Pay in full · Price rises as units sell, yours is fixed at checkout",
   "shipping_summary_international": "International orders",
   "channel_international_text": "Orders to your country ship with the preorder batch if its target is reached. Shipping and any sales tax are confirmed at checkout. You may pay import duties, taxes and customs fees on delivery.",
-  "international_batch_note": "The {month} FC and ESC stock ships to EU addresses only. Orders to your country ship with the {batch} batch."
+  "international_batch_note": "The {month} FC and ESC stock ships to EU addresses only. Orders to your country ship with the {batch} batch.",
+  "early_label": "Early bird",
+  "early_price": "Early bird price",
+  "early_left": "{count} left",
+  "early_retail": "Retail",
+  "early_retail_price": "{price} at retail",
+  "early_steps_label": "Price steps: {steps}. You are on the {price} step, {count} left."
 }
