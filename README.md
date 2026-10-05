@@ -514,6 +514,12 @@ flowchart LR
   X --> O
 ```
 
+**What leaves for ChatFPV.** Before this change only product and other tickets
+were sent. Now the redacted text of every ticket, including order and
+warranty tickets, goes to ChatFPV (name, email and order references removed,
+the scrubber applied), and for a verified order its facts as below. The
+privacy policy must say so before this ships.
+
 **Order-aware drafts.** When the ticket's order was verified at creation (its
 email equals the ticket email) and Shopify still says so when the draft is
 requested, the request carries `order`: name, date, payment and fulfillment

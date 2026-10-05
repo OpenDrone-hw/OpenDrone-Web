@@ -1,7 +1,7 @@
 /**
  * The ChatFPV service contract, vendored from incutec-org/chatfpv
  * `worker/src/contract.ts` at commit (branch chatfpv/order-drafts, PR 191; re-pin to the merge commit)
- * ae7ac62c34f4ede013c95a56cb7994ff2e806556. Only the shapes the storefront
+ * 819703c8d656b86c3e749fe51462b60245b19ef6. Only the shapes the storefront
  * uses, unchanged. A shape change there is a breaking change here: update
  * this file and the commit above together.
  */
