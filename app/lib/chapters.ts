@@ -42,6 +42,7 @@ export const CHAPTER_TYPES = [
   'firmware',
   'contributors',
   'reviews',
+  'build',
   'prose',
 ] as const;
 
@@ -96,6 +97,9 @@ export const DEFAULT_CHAPTERS: ChapterEntry[] = [
   {id: 'firmware', type: 'firmware'},
   {id: 'contributors', type: 'contributors'},
   {id: 'reviews', type: 'reviews'},
+  // Last: the whole quad this part goes into, and what a first build
+  // still needs that we do not sell.
+  {id: 'build', type: 'build'},
 ];
 
 /**

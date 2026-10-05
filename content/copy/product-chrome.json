@@ -609,5 +609,13 @@
   "discord_row_cta": "Ask in the Discord",
   "related_add_quantity": "{cta} {quantity}",
   "buy_cta_line_total": "{cta} {quantity}, {price}",
-  "build_block_label": "Build with this"
+  "build_block_label": "Build with this",
+  "ch_build_title": "What you need to fly",
+  "build_intro": "This part is one piece of a quad. The card lists every part of the build we sell, added to the cart in one go.",
+  "build_bring_label": "You also bring",
+  "build_bring_radio": "A radio with ExpressLRS 2.4 GHz, built in or as a module",
+  "build_bring_video": "A camera, a video transmitter and goggles to see from the quad",
+  "build_bring_power": "LiPo batteries for the build's cell count and a balance charger",
+  "build_bring_tools": "A soldering iron: motors and the battery lead solder to the ESC pads",
+  "build_bring_setup": "A computer with Betaflight to set up the flight controller"
 }
