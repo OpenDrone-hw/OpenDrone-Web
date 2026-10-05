@@ -384,7 +384,7 @@ the ticket link through the existing "new reply" notice when staff answer
 flowchart LR
   C[Customer mail] -->|contact@ hello@ aliases, groups| G[(one Gmail mailbox)]
   W[Worker cron, every 5 min] -->|gmail.readonly, service account with delegation| G
-  W -->|drop: own domain, no-reply, auto-reply, bounce, newsletter, deny list, failed DMARC| X[ignored, counted]
+  W -->|drop: own domain, no-reply, auto-reply, bounce, newsletter, deny list, not authenticated| X[ignored, counted]
   W -->|new text only: quotes and signature removed| T[ticket, source mail]
   W -->|ticket reference in subject, or Gmail thread of the same sender| R[reply on that ticket]
   T --> D[(Discord thread, ChatFPV draft)]
@@ -401,15 +401,23 @@ flowchart LR
 
 **What becomes a ticket.** A message addressed to one of
 `SUPPORT_MAIL_ADDRESSES` (default `contact@opendrone.be`,
-`hello@opendrone.be`), from a sender whose DMARC (else DKIM or SPF) passed at
-receipt. Dropped, with the reason counted in the job log: labels spam,
+`hello@opendrone.be`), that authenticated as its From domain. Only the topmost
+`Authentication-Results` header counts, and only with the authserv-id
+`mx.google.com` (Gmail prepends its own on receipt, so a header the sender
+planted sits below it); ARC results are ignored and a missing header drops the
+mail. A DMARC fail always wins, otherwise a DMARC pass, or a DKIM pass whose
+`header.d`/`header.i`, or an SPF pass whose `smtp.mailfrom`, is aligned with the
+From domain. Dropped, with the reason counted in the job log: labels spam,
 trash, draft, sent; own domains (`opendrone.be`, `incutec.eu`, plus
 `SUPPORT_MAIL_OWN_DOMAINS`); `SUPPORT_MAIL_DENY`; `noreply`, `mailer-daemon`
 and similar local parts; `Auto-Submitted`, `Precedence: bulk`, auto-reply
 headers and subjects, bounces, `List-Id` and `List-Unsubscribe`; Gmail's
 promotions, social and forums categories. `SUPPORT_MAIL_ALLOW` lifts the
 automation checks for a sender, never the deny list or authentication. A
-mail relayed by a Google group is read as its `X-Original-Sender`. Allow and
+mail relayed by a Google group is read as its `X-Original-Sender` only when
+its From is one of the addresses in `SUPPORT_MAIL_GROUPS` (none by default) and
+DMARC passed for that group address; any other own-domain From is dropped, its
+`X-Original-Sender` ignored. Allow and
 deny lists name outside senders, so they are Worker secrets, not repository
 values.
 
@@ -419,21 +427,27 @@ text (`#1042`, "order 1042") goes through the same Shopify check as the form:
 only an order that belongs to the sender's email links the customer, anything
 else shows as **email not verified**. The first message is `Subject: ...`,
 then the new text, then a note for attachments, which are not imported (open
-the original in the mailbox). A text the scrubber blocks is replaced by a
+the original in the mailbox). A text part is read up to 200 KB (the rest is
+cut before decoding), a part over 2 MB is skipped, HTML up to 50,000 characters. A text the scrubber blocks is replaced by a
 notice instead of dropping the mail. The thread gets a note that the source
 is mail. At most 5 tickets and 15 replies per pass, 8 mails per sender per day.
 
 **Follow-ups.** The ticket reference in the subject (the reply notice carries
 it) or the Gmail thread of an earlier mail of that ticket, and only from the
 ticket's own email address. A closed ticket reopens; a locked ticket, or a
-different sender, opens a new ticket.
+different sender, opens a new ticket. Any other refusal of a reply is recorded
+as ignored with its reason.
 
 **Idempotency.** A message is claimed in D1 by the hash of its Message-ID
 before any work, decided messages are not fetched again, a failure retries up
 to 3 passes and then stays `failed`. The mailbox is never modified, so there
-is no label to lose. A Worker killed between creating a ticket and recording
-it opens that ticket twice on the retry. Rows without a ticket are pruned
-after 30 days, rows of a ticket go with it.
+is no label to lose. The ticket reference is written to the row as soon as the
+ticket exists; a Worker killed before that is caught on the retry, which first
+looks for a ticket of the same sender opened since the mail arrived with the same
+first text (the same for a reply) and links it instead of opening another. Other
+Gmail copies of a decided message are remembered and not fetched again. A sender's
+count (8 a day) is charged only for a mail that became a ticket or reply. Rows
+without a ticket are pruned after 30 days, rows of a ticket go with it.
 
 **Set up (founder).** The key is a separate service account with only the
 Gmail scope, not the workspace-admin one with Directory scopes.
@@ -446,8 +460,8 @@ Gmail scope, not the workspace-admin one with Directory scopes.
 3. `wrangler secret put SUPPORT_MAIL_SA_JSON --config wrangler.production.toml < key.json`,
    then delete `key.json`. `wrangler secret put SUPPORT_MAIL_MAILBOX ...` with
    the mailbox that receives the customer aliases. Optional secrets:
-   `SUPPORT_MAIL_ADDRESSES`, `SUPPORT_MAIL_DENY`, `SUPPORT_MAIL_ALLOW`,
-   `SUPPORT_MAIL_OWN_DOMAINS`, and the var `SUPPORT_MAIL_WINDOW_DAYS` (1 to 14, default 2).
+   `SUPPORT_MAIL_ADDRESSES`, `SUPPORT_MAIL_GROUPS` (relay group addresses), `SUPPORT_MAIL_DENY`,
+   `SUPPORT_MAIL_ALLOW`, `SUPPORT_MAIL_OWN_DOMAINS`, and the var `SUPPORT_MAIL_WINDOW_DAYS` (1 to 14, default 2).
 4. Apply the migration before the first run: `npx wrangler d1 migrations apply
    SUPPORT_DB --remote --config wrangler.production.toml`.
 5. Set the gate to `"dry"` in `wrangler.production.toml` (a merge deploys it), read the
@@ -778,7 +792,7 @@ the client bundle; tokens and the SKU policy never do.
 | Mail | `SHOPIFY_NEWSLETTER_WRITE_ENABLED`, `RESEND_API_KEY`, `SUPPORT_FROM_EMAIL`, `TURNSTILE_*`, `DISCORD_SUPPORT_INVITE`, `PUBLIC_DISCORD_INVITE`, `PUBLIC_COMPANY_*` | Worker secrets or vars |
 | Support tickets | `SUPPORT_DB` (D1 binding), `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID`, `DISCORD_SUPPORT_CHANNEL_ID`, `DISCORD_STAFF_METADATA_CHANNEL_ID`, `SUPPORT_MOD_ROLE_ID`, `SUPPORT_MODERATION_MODE`, `SUPPORT_SESSION_SECRET`, `SUPPORT_CLEANUP_SECRET` | binding in the wrangler config, the rest Worker secrets |
 | Support switches | `SUPPORT_SHOPIFY_WRITE_ENABLED`, `SUPPORT_EMAIL_NOTIFY_ENABLED`, `SUPPORT_MAIL_INTAKE_ENABLED` | `[vars]` in `wrangler.production.toml` |
-| Support mail intake | `SUPPORT_MAIL_SA_JSON`, `SUPPORT_MAIL_MAILBOX`, `SUPPORT_MAIL_ADDRESSES`, `SUPPORT_MAIL_OWN_DOMAINS`, `SUPPORT_MAIL_ALLOW`, `SUPPORT_MAIL_DENY`, `SUPPORT_MAIL_WINDOW_DAYS` | Worker secrets (README "Mail") |
+| Support mail intake | `SUPPORT_MAIL_SA_JSON`, `SUPPORT_MAIL_MAILBOX`, `SUPPORT_MAIL_ADDRESSES`, `SUPPORT_MAIL_GROUPS`, `SUPPORT_MAIL_OWN_DOMAINS`, `SUPPORT_MAIL_ALLOW`, `SUPPORT_MAIL_DENY`, `SUPPORT_MAIL_WINDOW_DAYS` | Worker secrets (README "Mail") |
 | Shared accounts | `ACCOUNTS_ENABLED`, `CHATFPV_OAUTH_REDIRECTS`, `CHATFPV_POST_LOGOUT_REDIRECTS` (vars); `SHOPIFY_CUSTOMER_ACCOUNT_*`, `ACCOUNT_PAIRWISE_SALT`, `SESSION_ENC_KEY`, `CHATFPV_OAUTH_CLIENT_SECRET`, `WIDGET_ASSERTION_KEY` (secrets); `ACCOUNTS_TEST_IDP` never in production | see [Shared accounts](#shared-accounts) |
 | Roadmap | `GITHUB_STATUS_TOKEN` | Worker secret |
 | Analytics | `PLAUSIBLE_PURCHASE_EVENTS_ENABLED` (off unless `1`) | `[vars]` in `wrangler.production.toml` |

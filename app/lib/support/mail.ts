@@ -46,6 +46,8 @@ export type MailEnv = GmailEnv & {
   SUPPORT_MAIL_INTAKE_ENABLED?: string;
   /** Comma separated customer addresses to read; default contact@ and hello@opendrone.be. */
   SUPPORT_MAIL_ADDRESSES?: string;
+  /** Google group addresses that relay customer mail (From the group, person in X-Original-Sender); none by default. */
+  SUPPORT_MAIL_GROUPS?: string;
   /** Extra own domains, besides opendrone.be and incutec.eu. */
   SUPPORT_MAIL_OWN_DOMAINS?: string;
   /** Senders (address, @domain, domain) to take even when they look automated. */
@@ -74,6 +76,7 @@ export function mailConfig(env: MailEnv): MailConfig {
   const addresses = listConfig(env.SUPPORT_MAIL_ADDRESSES);
   return {
     addresses: addresses.length ? addresses : DEFAULT_ADDRESSES,
+    groups: listConfig(env.SUPPORT_MAIL_GROUPS),
     ownDomains: [...DEFAULT_OWN_DOMAINS, ...listConfig(env.SUPPORT_MAIL_OWN_DOMAINS)],
     allow: listConfig(env.SUPPORT_MAIL_ALLOW),
     deny: listConfig(env.SUPPORT_MAIL_DENY),
@@ -114,7 +117,16 @@ type MailRow = {message_hash: string; gmail_id: string; gmail_thread_id: string;
 export function createMailStore(db: D1Database) {
   return {
     async byGmailId(gmailId: string): Promise<MailRow | null> {
-      return db.prepare('SELECT * FROM support_mail_messages WHERE gmail_id = ? LIMIT 1').bind(gmailId).first<MailRow>();
+      const own = await db.prepare('SELECT * FROM support_mail_messages WHERE gmail_id = ? LIMIT 1').bind(gmailId).first<MailRow>();
+      if (own) return own;
+      return db
+        .prepare('SELECT m.* FROM support_mail_copies c JOIN support_mail_messages m ON m.message_hash = c.message_hash WHERE c.gmail_id = ?')
+        .bind(gmailId)
+        .first<MailRow>();
+    },
+    /** Remember another Gmail id of a message that is already decided. */
+    async recordCopy(gmailId: string, hash: string, now: number): Promise<void> {
+      await db.prepare('INSERT OR REPLACE INTO support_mail_copies (gmail_id, message_hash, updated_at) VALUES (?, ?, ?)').bind(gmailId, hash, now).run();
     },
     async byHash(hash: string): Promise<MailRow | null> {
       return db.prepare('SELECT * FROM support_mail_messages WHERE message_hash = ?').bind(hash).first<MailRow>();
@@ -169,6 +181,7 @@ export function createMailStore(db: D1Database) {
     },
     async prune(before: number): Promise<void> {
       await db.prepare('DELETE FROM support_mail_messages WHERE ref IS NULL AND updated_at < ?').bind(before).run();
+      await db.prepare('DELETE FROM support_mail_copies WHERE updated_at < ?').bind(before).run();
     },
   };
 }
@@ -265,9 +278,14 @@ export async function runMailIntake(ctx: MailDeps): Promise<MailReport> {
     const messageId = headerOf(m, 'message-id');
     const hash = await sha256Hex(messageId || `gmail:${m.id}`);
     const existing = await store.byHash(hash);
+    let retry = false;
     if (existing) {
       // Another Gmail copy of a message already handled, or a retry.
-      if (!(await store.reclaim(hash, now))) continue;
+      if (!(await store.reclaim(hash, now))) {
+        if (existing.gmail_id !== m.id) await store.recordCopy(m.id, hash, now);
+        continue;
+      }
+      retry = true;
     } else if (!(await store.claim(hash, m, now))) {
       continue;
     }
@@ -286,8 +304,10 @@ export async function runMailIntake(ctx: MailDeps): Promise<MailReport> {
     }
 
     try {
+      // A leaky bucket per sender (8 mails a day), read before and charged
+      // only after the mail became a ticket or reply.
       const senderKey = `mailsender:${await sha256Hex(verdict.sender.email)}`;
-      if ((await deps.store.hit(senderKey, DAY, now)) > SENDER_PER_DAY) {
+      if ((await deps.store.bucket(senderKey, 0, SENDER_PER_DAY / DAY, now)) >= SENDER_PER_DAY) {
         await store.finish(hash, 'ignored', now, {reason: 'sender_limit'});
         ignore('sender_limit');
         continue;
@@ -295,7 +315,13 @@ export async function runMailIntake(ctx: MailDeps): Promise<MailReport> {
 
       const subject = cleanSubject(headerOf(m, 'subject'));
       const body = bodyText(m);
-      const outcome = await handleCustomerMail(ctx, store, {m, hash, subject, body, sender: verdict.sender});
+      const outcome = await handleCustomerMail(ctx, store, {m, hash, subject, body, sender: verdict.sender, retry});
+      if (outcome.kind === 'ignored') {
+        await store.finish(hash, 'ignored', now, {reason: outcome.reason});
+        ignore(outcome.reason);
+        continue;
+      }
+      await deps.store.bucket(senderKey, 1, SENDER_PER_DAY / DAY, now);
       report[outcome.kind === 'ticket' ? 'tickets' : 'replies'].push(outcome.ref);
     } catch (err) {
       report.errors++;
@@ -308,13 +334,15 @@ export async function runMailIntake(ctx: MailDeps): Promise<MailReport> {
   return report;
 }
 
+const flat = (text: string) => text.replace(/\s+/g, ' ').trim();
+
 async function handleCustomerMail(
   ctx: MailDeps,
   store: MailStore,
-  mail: {m: MailMessage; hash: string; subject: string; body: string; sender: {email: string; name: string}},
-): Promise<{kind: 'ticket' | 'reply'; ref: string}> {
+  mail: {m: MailMessage; hash: string; subject: string; body: string; sender: {email: string; name: string}; retry: boolean},
+): Promise<{kind: 'ticket' | 'reply'; ref: string} | {kind: 'ignored'; reason: string}> {
   const {deps} = ctx;
-  const {m, hash, subject, body, sender} = mail;
+  const {m, hash, subject, body, sender, retry} = mail;
   const now = (deps.now ?? Date.now)();
 
   // A follow-up: the reference in the subject, else the Gmail thread of an
@@ -324,18 +352,40 @@ async function handleCustomerMail(
   const ticket = ref ? await deps.store.getTicket(ref) : null;
   if (ticket && ticket.email === sender.email && !ticket.locked) {
     const text = composeReplyText(body, m.attachmentCount);
+    // A retry after a crash: the reply may already be in the ticket.
+    if (retry) {
+      const sent = scrubForDiscord(text).content;
+      const already = (await deps.store.messages(ticket.ref)).some((x) => x.role === 'customer' && x.createdAt >= m.receivedAt && (x.body === sent || x.body === WITHHELD));
+      if (already) {
+        await store.finish(hash, 'reply', now, {ref: ticket.ref});
+        return {kind: 'reply', ref: ticket.ref};
+      }
+    }
     let result = await addCustomerReply(deps, ticket, text);
     if (!result.ok && result.error === 'filtered') result = await addCustomerReply(deps, ticket, WITHHELD);
     if (result.ok) {
       await store.finish(hash, 'reply', now, {ref: ticket.ref});
       return {kind: 'reply', ref: ticket.ref};
     }
-    // 'locked' falls through to a new ticket: the customer is not dropped.
+    // Only a lock falls through to a new ticket, so the customer is not
+    // dropped. Any other refusal is recorded and counted.
+    if (result.error !== 'locked') return {kind: 'ignored', reason: `reply_${result.error}`};
   }
 
   const text = composeTicketText(subject, body, m.attachmentCount);
   const scrubbed = scrubForDiscord(text);
   const message = scrubbed.blocked ? composeTicketText(subject, WITHHELD, m.attachmentCount) : scrubbed.content;
+  // A retry after a crash: the ticket may exist already (created, not yet
+  // recorded). Same sender, opened since the mail arrived, same first text.
+  if (retry) {
+    const orphan = (await deps.store.ticketsByEmail(sender.email, 5)).find(
+      (t) => t.createdAt >= m.receivedAt && flat(message).startsWith(t.preview.replace(/…$/, '')),
+    );
+    if (orphan) {
+      await store.finish(hash, 'ticket', now, {ref: orphan.ref});
+      return {kind: 'ticket', ref: orphan.ref};
+    }
+  }
   const input: NewTicketInput = {
     topic: guessTopic(subject, body),
     name: displayName(sender),

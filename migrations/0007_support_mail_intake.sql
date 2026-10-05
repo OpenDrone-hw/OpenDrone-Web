@@ -20,6 +20,16 @@ CREATE TABLE support_mail_messages (
   updated_at INTEGER NOT NULL
 );
 
+-- Other Gmail copies of an already handled message (the same Message-ID
+-- under another Gmail id), so they are not fetched again. Pruned with the rest.
+CREATE TABLE support_mail_copies (
+  gmail_id TEXT PRIMARY KEY,
+  message_hash TEXT NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
+CREATE INDEX support_mail_copies_updated ON support_mail_copies (updated_at);
+
 CREATE INDEX support_mail_messages_gmail_id ON support_mail_messages (gmail_id);
 CREATE INDEX support_mail_messages_thread ON support_mail_messages (gmail_thread_id, ref);
 CREATE INDEX support_mail_messages_ref ON support_mail_messages (ref);

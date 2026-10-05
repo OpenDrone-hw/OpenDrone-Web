@@ -26,6 +26,8 @@ export type MailConfig = {
   addresses: string[];
   /** Domains whose mail is never a customer (own domains). */
   ownDomains: string[];
+  /** Google group addresses that relay customer mail; only their X-Original-Sender is honoured. */
+  groups: string[];
   /** Senders (address, @domain or domain) taken even when a heuristic would drop them. */
   allow: string[];
   /** Senders (address, @domain or domain) always dropped: suppliers, newsletters, noisy tools. */
@@ -93,13 +95,14 @@ const matchesAny = (email: string, entries: string[]) => entries.some((e) => mat
 // --------------------------------------------------------------------------
 
 /**
- * The customer. A mail relayed by a Google group arrives From the group
- * ("Jan via Support"); the person is then in X-Original-Sender. A mail
- * from a own domain without that header is staff or our own mail.
+ * The customer. A mail relayed by one of the configured Google groups
+ * (`cfg.groups`) arrives From the group ("Jan via Support"); the person is
+ * then in X-Original-Sender. Any other own-domain From is staff or our own
+ * mail, and its X-Original-Sender is never read.
  */
 export function senderOf(m: MailMessage, cfg: MailConfig): Address | null {
   const from = parseAddress(headerOf(m, 'from'));
-  if (from && matchesAny(from.email, cfg.ownDomains)) {
+  if (from && cfg.groups.includes(from.email)) {
     const original = parseAddress(headerOf(m, 'x-original-sender')) ?? null;
     if (original && !matchesAny(original.email, cfg.ownDomains)) {
       return {email: original.email, name: from.name.replace(/\s+via\s+.*$/i, '').trim()};
@@ -110,7 +113,7 @@ export function senderOf(m: MailMessage, cfg: MailConfig): Address | null {
 
 /** Was the mail addressed to one of the customer addresses (To, Cc, or the delivery headers)? */
 export function addressedTo(m: MailMessage, cfg: MailConfig): boolean {
-  const seen = ['to', 'cc', 'delivered-to', 'x-original-to', 'x-forwarded-to', 'x-forwarded-for', 'envelope-to']
+  const seen = ['to', 'cc', 'delivered-to', 'x-original-to', 'x-forwarded-to', 'envelope-to']
     .flatMap((h) => m.headers[h] ?? [])
     .flatMap((v) => allAddresses(v));
   return seen.some((a) => cfg.addresses.includes(a));
@@ -118,16 +121,45 @@ export function addressedTo(m: MailMessage, cfg: MailConfig): boolean {
 
 const ROBOT_LOCAL = /^(no[-_.]?reply|do[-_.]?not[-_.]?reply|mailer[-_.]?daemon|postmaster|bounces?|notifications?|notify|alerts?|auto(mated)?|system|robot|news(letter)?|marketing|mailer|daemon)([-_.+].*)?$/i;
 
+const TRUSTED_AUTHSERV = 'mx.google.com';
+
+/** Is `a` the same organisation as `b` (relaxed alignment: equal, or one a subdomain of the other)? */
+function aligned(a: string, b: string): boolean {
+  const x = a.toLowerCase().replace(/^.*@/, '').replace(/[>\s;]/g, '');
+  const y = b.toLowerCase();
+  return Boolean(x) && (x === y || x.endsWith(`.${y}`) || y.endsWith(`.${x}`));
+}
+
 /**
- * The authentication result Gmail recorded when it received the mail:
- * DMARC pass, or (without a DMARC result) DKIM or SPF pass. A mail that
- * fails this is not trusted to name its sender.
+ * Did the mail authenticate as its From domain, according to Gmail?
+ *
+ * Only the topmost Authentication-Results header counts, and only when its
+ * authserv-id is mx.google.com: Gmail prepends its own result on receipt, so
+ * any header a sender planted sits below it. ARC results are ignored. No such
+ * header fails closed. A DMARC fail always wins; otherwise a DMARC pass, or a
+ * DKIM pass whose header.d, or an SPF pass whose smtp.mailfrom, is aligned
+ * with the From domain.
  */
-export function authenticated(m: MailMessage): boolean {
-  const results = [...(m.headers['authentication-results'] ?? []), ...(m.headers['arc-authentication-results'] ?? [])].join(' ').toLowerCase();
-  if (/\bdmarc=pass\b/.test(results)) return true;
+export function authenticated(m: MailMessage, fromDomain: string): boolean {
+  const top = (m.headers['authentication-results'] ?? [])[0]?.toLowerCase();
+  if (!top) return false;
+  const [authserv, ...rest] = top.split(';');
+  if (authserv!.trim().split(/\s+/)[0] !== TRUSTED_AUTHSERV) return false;
+  const results = rest.join(';');
   if (/\bdmarc=(fail|softfail|temperror|permerror)\b/.test(results)) return false;
-  return /\b(dkim|spf)=pass\b/.test(results);
+  if (/\bdmarc=pass\b/.test(results)) return true;
+  const domain = fromDomain.toLowerCase();
+  for (const r of rest) {
+    if (/\bdkim=pass\b/.test(r)) {
+      const d = r.match(/header\.(?:d|i)=([^\s;]+)/)?.[1];
+      if (d && aligned(d, domain)) return true;
+    }
+    if (/\bspf=pass\b/.test(r)) {
+      const f = r.match(/smtp\.mailfrom=([^\s;]+)/)?.[1];
+      if (f && aligned(f, domain)) return true;
+    }
+  }
+  return false;
 }
 
 export type Verdict = {ok: true; sender: Address} | {ok: false; reason: string};
@@ -144,7 +176,7 @@ export function classify(m: MailMessage, cfg: MailConfig): Verdict {
   if (matchesAny(sender.email, cfg.ownDomains)) return {ok: false, reason: 'own_domain'};
   if (matchesAny(sender.email, cfg.deny)) return {ok: false, reason: 'denied'};
   if (!addressedTo(m, cfg)) return {ok: false, reason: 'not_addressed'};
-  if (!authenticated(m)) return {ok: false, reason: 'unauthenticated'};
+  if (!authenticated(m, domainOf(parseAddress(headerOf(m, 'from'))?.email ?? sender.email))) return {ok: false, reason: 'unauthenticated'};
   if (matchesAny(sender.email, cfg.allow)) return {ok: true, sender};
 
   const local = sender.email.slice(0, sender.email.indexOf('@'));
@@ -172,21 +204,64 @@ export function classify(m: MailMessage, cfg: MailConfig): Verdict {
 
 const ENTITIES: Record<string, string> = {amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' '};
 
-/** Readable text from an HTML-only mail: quoted replies dropped, tags stripped, basic entities decoded. */
+const MAX_HTML_CHARS = 50_000;
+const SKIP_TAGS = new Set(['script', 'style', 'head']);
+const BREAK_TAGS = new Set(['br', 'p', 'div', 'li', 'tr', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
+
+/**
+ * Readable text from an HTML-only mail: at most the first 50,000 characters,
+ * one linear scan (no backtracking patterns), quoted replies (blockquote,
+ * Gmail's quote div) dropped, tags stripped, basic entities decoded. An
+ * unclosed tag ends the text.
+ */
 export function htmlToText(html: string): string {
-  return html
-    .replace(/<(script|style|head)[\s\S]*?<\/\1>/gi, '')
-    .replace(/<blockquote[\s\S]*?<\/blockquote>/gi, '')
-    .replace(/<div class="gmail_quote"[\s\S]*$/i, '')
-    .replace(/<br\s*\/?>|<\/(p|div|li|tr|h\d)>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&(#\d+|#x[0-9a-f]+|[a-z]+);/gi, (all, e: string) => {
-      if (e[0] === '#') {
-        const code = e[1]?.toLowerCase() === 'x' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
-        return Number.isFinite(code) && code > 0 && code < 0x110000 ? String.fromCodePoint(code) : ' ';
-      }
-      return ENTITIES[e.toLowerCase()] ?? all;
-    });
+  const src = html.slice(0, MAX_HTML_CHARS);
+  const lower = src.toLowerCase();
+  let out = '';
+  let quote = 0;
+  let skip: string | null = null;
+  let i = 0;
+  while (i < src.length) {
+    const lt = src.indexOf('<', i);
+    if (lt < 0) {
+      if (!quote && !skip) out += src.slice(i);
+      break;
+    }
+    if (!quote && !skip) out += src.slice(i, lt);
+    const next = src[lt + 1] ?? '';
+    if (!/[a-zA-Z/!]/.test(next)) {
+      if (!quote && !skip) out += '<';
+      i = lt + 1;
+      continue;
+    }
+    const gt = src.indexOf('>', lt + 1);
+    if (gt < 0) break;
+    const tag = lower.slice(lt + 1, gt);
+    const closing = tag.startsWith('/');
+    const name = tag.slice(closing ? 1 : 0).match(/^[a-z0-9]*/)![0];
+    i = gt + 1;
+    if (skip) {
+      if (closing && name === skip) skip = null;
+      continue;
+    }
+    if (!closing && SKIP_TAGS.has(name) && !tag.endsWith('/')) {
+      skip = name;
+      continue;
+    }
+    if (!closing && name === 'div' && tag.includes('gmail_quote')) break;
+    if (name === 'blockquote') {
+      quote = closing ? Math.max(0, quote - 1) : quote + 1;
+      continue;
+    }
+    if (!quote && BREAK_TAGS.has(name) && (name === 'br' || closing)) out += '\n';
+  }
+  return out.replace(/&(#\d{1,7}|#x[0-9a-f]{1,6}|[a-z]{2,6});/gi, (all, e: string) => {
+    if (e[0] === '#') {
+      const code = e[1]?.toLowerCase() === 'x' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
+      return Number.isFinite(code) && code > 0 && code < 0x110000 ? String.fromCodePoint(code) : ' ';
+    }
+    return ENTITIES[e.toLowerCase()] ?? all;
+  });
 }
 
 const ATTRIBUTION = [

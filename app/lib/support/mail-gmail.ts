@@ -15,6 +15,10 @@ import type {MailMessage} from './mail-parse.ts';
 export const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
 const GMAIL_API = 'https://gmail.googleapis.com/gmail/v1/users/me';
 const MAX_BODY_BYTES = 200_000;
+/** Base64 characters that decode to MAX_BODY_BYTES (a multiple of 4). */
+const MAX_BODY_CHARS = Math.ceil((MAX_BODY_BYTES * 4) / 3 / 4) * 4;
+/** A text part larger than this is not decoded at all. */
+const MAX_PART_BYTES = 2_000_000;
 
 export type GmailEnv = {
   SUPPORT_MAIL_SA_JSON?: string;
@@ -140,8 +144,9 @@ function charsetOf(part: Part): string {
 
 function decodePart(part: Part): string {
   const data = part.body?.data;
-  if (!data) return '';
-  const bytes = decodeBase64Url(data).slice(0, MAX_BODY_BYTES);
+  if (!data || (part.body?.size ?? 0) > MAX_PART_BYTES) return '';
+  // Cut the base64 before decoding: a huge part never becomes a huge array.
+  const bytes = decodeBase64Url(data.slice(0, MAX_BODY_CHARS)).slice(0, MAX_BODY_BYTES);
   try {
     return new TextDecoder(charsetOf(part), {fatal: false}).decode(bytes);
   } catch {
