@@ -66,6 +66,7 @@ button.
 | `npm run sync:contributors` | refresh `content/contributors.json` from GitHub |
 | `npm run studio:coverage` | which files still have copy baked into code |
 | `npm run studio:keys` | fails when code uses a copy id missing from `content/copy/` |
+| `npm run sync:lab-visit -- <game dir>` | copy the lab walkthrough's runtime files into `public/lab-visit/` (`-- --check <game dir>` diffs only) |
 | `npm run audit:perf`, `audit:lh`, `audit:mobile` | performance lab, Lighthouse, mobile screenshots |
 | `npm run gen:shopify-templates` | render the Shopify notification emails from `scripts/shopify-templates/` into `out/`, ready to paste into Shopify |
 | `npm run emails:preview` | local gallery of every customer and internal email, per scenario, at desktop and 375 px width; reloads on save (see "Preview emails") |
@@ -92,7 +93,7 @@ app/
   studio/                  the studio's editor panels
   styles/app.css           the single CSS file (Tailwind v4)
 content/                   editable copy, product chapters, preorders, posts, theme tokens, goals, votes
-public/                    models (GLB), board art, schematics, logos
+public/                    models (GLB), board art, schematics, logos, lab-visit/ (the /visit walkthrough)
 scripts/                   board art export, hero build, sync, audit and order scripts
 server.ts                  Worker entry: fetch, and the five-minute scheduled jobs
 migrations/                D1 schema of the support ticket store

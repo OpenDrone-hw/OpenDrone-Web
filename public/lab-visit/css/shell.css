@@ -1,0 +1,314 @@
+/* Shell styles (owner: shell). Tokens on :root are shared by every module; only sh- classes and the
+   shell-owned ids (#app #c #hud #gate #loading #intro #error #fade) are styled here.
+   Layers: canvas 0, stick 2, hud 10, interaction 15 to 30, gate/loading/intro/error 50, fade 60. */
+
+:root {
+  --sh-bg: #ecebe7;
+  --sh-panel: rgba(255, 255, 255, 0.94);
+  --sh-panel-border: rgba(0, 0, 0, 0.12);
+  --sh-text: #1d1d1f;
+  --sh-muted: #5f5f5b;
+  --sh-accent: #ff7a2f;
+  --sh-accent-text: #1a1008;
+  --sh-radius: 10px;
+  --sh-font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --sh-scrim: rgba(30, 30, 32, 0.55);
+  --sh-panel-solid: #ffffff;
+  --sh-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+
+/* ?theme=dark (default with ?launch=1): the dark host page. Set on <html data-theme> by main.js before anything shows */
+:root[data-theme="dark"] {
+  --sh-bg: #0d0d10;
+  --sh-panel: rgba(18, 18, 22, 0.92);
+  --sh-panel-solid: #141418;
+  --sh-panel-border: rgba(255, 255, 255, 0.12);
+  --sh-text: #ecebe6;
+  --sh-muted: #9c9a93;
+  --sh-accent: #d9a441;
+  --sh-accent-text: #15100a;
+  --sh-scrim: rgba(6, 6, 8, 0.72);
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--sh-bg);
+  color: var(--sh-text);
+  font: 15px/1.4 var(--sh-font);
+  -webkit-text-size-adjust: 100%;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #1e1e20;
+  /* phones: no pinch or double-tap zoom, no pull-to-refresh, no text selection or long-press callout in the game;
+     panels that scroll allow vertical panning (css/interaction.css, css/game.css) */
+  touch-action: none;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+html, body { overscroll-behavior: none; }
+#gate, #loading, #intro, #error { touch-action: pan-y; }
+:root[data-theme="dark"] #app { background: #0d0d10; }
+
+#c {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  outline: none;
+}
+
+[hidden] { display: none !important; }
+
+.sh-visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.sh-btn,
+#gate-start,
+#intro-start,
+#error-retry {
+  font: 600 15px/1 var(--sh-font);
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: var(--sh-radius);
+  border: 1px solid var(--sh-panel-border);
+  background: var(--sh-panel);
+  color: var(--sh-text);
+  cursor: pointer;
+}
+#gate-start,
+#intro-start,
+#error-retry {
+  background: var(--sh-accent);
+  color: var(--sh-accent-text);
+  border-color: transparent;
+  min-height: 48px;
+  padding: 0 24px;
+}
+.sh-btn:hover { border-color: var(--sh-accent); }
+.sh-btn-icon { min-width: 44px; padding: 0; display: inline-grid; place-items: center; }
+.sh-btn:focus-visible,
+#gate-start:focus-visible,
+#intro-start:focus-visible,
+#error-retry:focus-visible,
+#c:focus-visible {
+  outline: 3px solid var(--sh-accent);
+  outline-offset: 2px;
+}
+
+/* HUD: discovered counter and the machines button, top edge */
+#hud {
+  position: absolute;
+  z-index: 10;
+  top: calc(16px + env(safe-area-inset-top, 0px));
+  left: calc(16px + env(safe-area-inset-left, 0px));
+  right: calc(16px + env(safe-area-inset-right, 0px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  pointer-events: none;
+}
+#hud > * { pointer-events: auto; }
+#hud {
+  align-items: flex-start;
+}
+#hud-buttons {
+  display: flex;
+  gap: 8px;
+  flex: none;
+}
+
+/* Full-screen overlays */
+#gate,
+#loading,
+#intro,
+#error {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-right, 0px))
+    calc(16px + env(safe-area-inset-bottom, 0px)) calc(16px + env(safe-area-inset-left, 0px));
+  text-align: center;
+  /* a short frame (a small iframe) scrolls the overlay instead of clipping its top and its button */
+  overflow-y: auto;
+  justify-content: safe center;
+}
+#gate-heading,
+#loading-title {
+  margin: 0;
+  font: 700 clamp(28px, 6vw, 44px)/1.05 var(--sh-font);
+  letter-spacing: -0.01em;
+}
+#gate-body {
+  margin: 0 0 6px;
+  max-width: 440px;
+  color: var(--sh-muted);
+}
+#gate-controls {
+  margin: 0;
+  max-width: 420px;
+  color: var(--sh-muted);
+  font-size: 13px;
+}
+
+#gate,
+#loading,
+#error {
+  background: var(--sh-bg);
+  color: var(--sh-text);
+}
+/* a faint engineering grid behind the start screens */
+#gate,
+#loading {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--sh-text) 5%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--sh-text) 5%, transparent) 1px, transparent 1px);
+  background-size: 32px 32px;
+  background-position: center;
+}
+
+#gate-size,
+#loading-text {
+  color: var(--sh-muted);
+  font: 13px/1.4 var(--sh-mono, var(--sh-font));
+  font-variant-numeric: tabular-nums;
+}
+#loading-tip {
+  margin: 10px 0 0;
+  max-width: 420px;
+  min-height: 2.8em;
+  color: var(--sh-muted);
+  font-size: 14px;
+}
+
+/* the bar is a fixed track; main.js sets --sh-progress */
+#loading-bar {
+  width: min(320px, 72vw);
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(var(--sh-accent), var(--sh-accent)) no-repeat left / var(--sh-progress, 0%) 100%,
+    var(--sh-panel-border);
+  transition: background-size 0.2s linear;
+}
+
+/* briefing */
+#intro {
+  background: var(--sh-scrim);
+}
+#intro-panel {
+  width: min(520px, 100%);
+  text-align: left;
+  background: var(--sh-panel-solid);
+  color: var(--sh-text);
+  border: 1px solid var(--sh-panel-border);
+  border-radius: var(--sh-radius);
+  padding: 24px 24px 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+}
+#intro-kicker {
+  margin: 0;
+  color: var(--sh-accent);
+  font: 600 12px/1.2 var(--sh-mono, var(--sh-font));
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+#intro-heading {
+  margin: 6px 0 8px;
+  font-size: 30px;
+  line-height: 1.1;
+}
+#intro-body {
+  margin: 0 0 14px;
+}
+#intro-objectives {
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+  counter-reset: obj;
+  border-top: 1px solid var(--sh-panel-border);
+}
+#intro-objectives li {
+  counter-increment: obj;
+  display: flex;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--sh-panel-border);
+}
+#intro-objectives li::before {
+  content: counter(obj, decimal-leading-zero);
+  color: var(--sh-accent);
+  font: 600 13px/1.5 var(--sh-mono, var(--sh-font));
+}
+#intro-controls {
+  margin: 0 0 18px;
+  color: var(--sh-muted);
+  font-size: 14px;
+}
+#intro-start {
+  width: 100%;
+}
+
+/* short frames (a landscape phone, a 320 x 568 phone, a 16:9 iframe): tighter overlays, so Start shows without
+   scrolling; below 480 px the controls table is left out (the controls strip shows it in the lab) */
+@media (max-height: 600px) {
+  #gate, #loading, #intro, #error { gap: 8px; padding-top: 8px; padding-bottom: 8px; }
+  #intro-panel { padding: 14px 16px; }
+  #intro-heading { font-size: 22px; margin: 2px 0 4px; }
+  #intro-body, #intro-controls { font-size: 13px; margin-bottom: 8px; }
+  #intro-objectives { margin-bottom: 8px; }
+  #intro-objectives li { padding: 4px 0; }
+  #gate-start, #intro-start, #error-retry { min-height: 44px; }
+}
+@media (max-height: 480px) {
+  #intro-controls { display: none; }
+}
+
+#error-text {
+  max-width: 420px;
+  margin: 0;
+}
+
+#fade {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition-property: opacity;
+  transition-timing-function: ease;
+}
+#fade.sh-fade-on { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  #loading-bar { transition: none; }
+}

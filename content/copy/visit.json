@@ -1,0 +1,59 @@
+{
+  "$route": "/visit",
+  "$title": "Visit",
+  "meta_title": "Visit us: the OpenDrone workshop at Maakleerplek, Leuven",
+  "meta_description": "OpenDrone is prototyped in the HighTechLab at Maakleerplek, a public makerspace in Leuven, Belgium. Walk through the lab in 3D, then come and see it during open lab hours.",
+  "eyebrow": "Visit",
+  "title": "Come see the lab.",
+  "lead": "Incutec works from a room inside Maakleerplek, a public makerspace in Leuven. We prototype in its HighTechLab, on the same machines any member can use. The lab is open to everyone during open lab hours, so come by.",
+  "scan_kicker": "3D walkthrough",
+  "scan_title": "Walk through the HighTechLab",
+  "scan_body": [
+    "A scan of the real room. Walk around, find the machines and see what each one is for."
+  ],
+  "scan_cta": "Enter the lab",
+  "scan_meta": "35 MB download. Keyboard and mouse, or touch.",
+  "scan_close": "Leave the lab",
+  "scan_note": "Early version, made from one walk through the room with a phone. Parts of one wall and the ceiling were not scanned.",
+  "scan_title_attr": "3D walkthrough of the HighTechLab at Maakleerplek",
+  "s1_title": "Maakleerplek and us",
+  "s1_body": [
+    "[Maakleerplek](https://maakleerplek.be) is a non-profit public workshop in the Vaartkom in Leuven, with a textile lab, a print lab, a tool library, a canteen and the HighTechLab. Incutec's founding meeting was held there, in the loft, in April 2026.",
+    "We have used the HighTechLab's 3D printers, CNC and laser cutter for OpenDrone prototypes since 2025. Since June 2026 Incutec also has its own room in the building, under a written agreement with Maakleerplek vzw. Our founder volunteers in the HighTechLab, and we took part in Maakleerfest 2026."
+  ],
+  "s2_title": "Why a makerspace",
+  "s2_body": [
+    "Open hardware is more than published files. Someone has to be able to pick up the design and make it, with tools they can actually get to. Working in a public lab keeps us honest about that: if we can prototype it here, so can you.",
+    "It also means you can walk in and ask. Bring a board, a broken frame or a question: the Incutec team works in the same building as the lab. For how the company and the community split the work, read [Open Source](/open-source)."
+  ],
+  "hours_title": "Open hours",
+  "hours_rows": [
+    "Thursday|18:00-22:00|Open lab",
+    "Saturday|14:00-18:00|Open lab",
+    "Wednesday|13:00-17:00|YoungMakerLab",
+    "Sunday|10:00-13:00|YoungMakerLab"
+  ],
+  "hours_note": "Hours are set by Maakleerplek and can change for holidays and events. Check [their agenda](https://maakleerplek.be/nl/agenda) for workshops and closures.",
+  "youngmakerlab_title": "YoungMakerLab",
+  "youngmakerlab_body": [
+    "YoungMakerLab is the HighTechLab's programme for young makers, with sessions on Wednesday afternoons and Sunday mornings. See [Maakleerplek](https://maakleerplek.be/nl/meedoen) for how to join."
+  ],
+  "where_title": "Getting there",
+  "where_body": [
+    "Buses 2, 6 and 30 stop close by at Vaartkom. The building has a lift on every floor.",
+    "Come by during open lab hours and ask for the OpenDrone team."
+  ],
+  "where_map": "Open in OpenStreetMap ↗",
+  "map_attribution": "Map data © OpenStreetMap contributors",
+  "gallery_title": "The HighTechLab",
+  "gallery_captions": [
+    "Laser cutting",
+    "CNC",
+    "Tools",
+    "Consumables",
+    "Electronics",
+    "3D printing"
+  ],
+  "cta_primary": "Directions ↗",
+  "cta_secondary": "Maakleerplek agenda ↗"
+}

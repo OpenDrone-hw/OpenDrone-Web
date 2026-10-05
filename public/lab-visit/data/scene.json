@@ -1,0 +1,77 @@
+{
+ "boxMin": [
+  -2.806,
+  -0.583,
+  -1.501
+ ],
+ "boxMax": [
+  2.02,
+  0.905,
+  1.807
+ ],
+ "floorY": -0.35,
+ "cutY": 0.4,
+ "wall": 0.3,
+ "stops": [
+  {
+   "id": "printing",
+   "label": "3D printing",
+   "items": [
+    "Bambu H2D",
+    "Bambu P1S",
+    "A1 mini printer fleet",
+    "Prusa MK3",
+    "Filament"
+   ]
+  },
+  {
+   "id": "electronics",
+   "label": "Electronics",
+   "items": [
+    "Microscope",
+    "Power supplies, oscilloscope and hot-air tools",
+    "Electronics and components"
+   ]
+  },
+  {
+   "id": "fabrication",
+   "label": "CNC & plotter",
+   "items": [
+    "Makera Air CNC",
+    "Pen plotter"
+   ]
+  },
+  {
+   "id": "tools",
+   "label": "Tools & vinyl",
+   "items": [
+    "Vinyl cutter",
+    "Vinyl press",
+    "Hand tools"
+   ]
+  },
+  {
+   "id": "laser",
+   "label": "Laser & wood",
+   "items": [
+    "Laser cutter",
+    "Wood stock"
+   ]
+  },
+  {
+   "id": "storage",
+   "label": "Parts & supplies",
+   "items": [
+    "Bolts, nuts and fasteners"
+   ]
+  },
+  {
+   "id": "room",
+   "label": "The room",
+   "items": [
+    "Television",
+    "Christmas tree"
+   ]
+  }
+ ]
+}

@@ -62,6 +62,7 @@ const COMPANY_LINKS: Array<{to: string; copy: string}> = [
   {to: '/roadmap', copy: 'nav_roadmap'},
   {to: '/timeline', copy: 'nav_timeline'},
   {to: '/production', copy: 'nav_production'},
+  {to: '/visit', copy: 'nav_visit'},
 ];
 
 // The imprint heads the Legal column; shipping, returns and warranty sit in

@@ -22,6 +22,7 @@ const STATIC_PATHS = [
   '/preorder',
   '/open-source',
   '/production',
+  '/visit',
   '/roadmap',
   '/timeline',
   '/firmware-partners',

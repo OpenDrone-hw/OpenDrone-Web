@@ -1,0 +1,2152 @@
+{
+  "version": 1,
+  "frame": "WORLD",
+  "unitMeters": 3.4,
+  "floorY": -0.35,
+  "eyeHeight": 0.46,
+  "spawn": {
+    "pos": [
+      0.585,
+      1.21
+    ],
+    "yawDeg": 16,
+    "pitchDeg": -5,
+    "door": {
+      "opening": {
+        "x0": 0.555,
+        "x1": 0.805,
+        "z": 1.505,
+        "height": 0.59
+      },
+      "frames": [
+        "f10598",
+        "f13043",
+        "f14483"
+      ],
+      "note": "The lab entrance: the white door with the exit sign on the 3D printer side, between the filament wall and the large TV. Opening measured on the scan (lintel and exit sign splats, door plane z 1.47 to 1.52) and checked by projecting it into the video frames listed in frames with the camera poses of work/cams_norm.npz. Seen from inside the handle is on the east side, so the hinges are on the west side; the door opens outward into the corridor. In launch mode the drawn door fills the view while the scan loads and opens onto the scanned room (js/entrance.js)"
+    }
+  },
+  "areas": [
+    {
+      "id": "printing",
+      "label": {
+        "en": "3D printing",
+        "nl": null
+      }
+    },
+    {
+      "id": "electronics",
+      "label": {
+        "en": "Electronics",
+        "nl": null
+      }
+    },
+    {
+      "id": "fabrication",
+      "label": {
+        "en": "CNC & plotter",
+        "nl": null
+      }
+    },
+    {
+      "id": "tools",
+      "label": {
+        "en": "Tools & vinyl",
+        "nl": null
+      }
+    },
+    {
+      "id": "laser",
+      "label": {
+        "en": "Laser & wood",
+        "nl": null
+      }
+    },
+    {
+      "id": "storage",
+      "label": {
+        "en": "Parts & supplies",
+        "nl": null
+      }
+    },
+    {
+      "id": "room",
+      "label": {
+        "en": "The room",
+        "nl": null
+      }
+    }
+  ],
+  "items": [
+    {
+      "id": "laser-cutter",
+      "enabled": true,
+      "kind": "machine",
+      "area": "laser",
+      "title": {
+        "en": "Laser cutter",
+        "nl": null
+      },
+      "anchor": [
+        -1.8672954554345726,
+        -0.052500597740734144,
+        0.3378646037442665
+      ],
+      "interactRadius": 0.45,
+      "highlightRadius": 0.14,
+      "approach": {
+        "pos": [
+          -1.647,
+          0.075
+        ],
+        "yawDeg": 140,
+        "pitchDeg": -25.3
+      },
+      "identity": {
+        "status": "generic",
+        "note": "Fine labels, vents and window interiors remain inferred in the AI-repaired view."
+      },
+      "summary": {
+        "text": {
+          "en": null,
+          "nl": null
+        },
+        "source": null
+      },
+      "facts": [
+        {
+          "label": {
+            "en": "How it works",
+            "nl": null
+          },
+          "text": {
+            "en": "The focused laser beam makes the material melt, burn or vaporize away, or a jet of gas blows it away, leaving a clean cut edge.",
+            "nl": null
+          },
+          "source": {
+            "url": "https://en.wikipedia.org/wiki/Laser_cutting",
+            "title": "Laser cutting, Wikipedia",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Materials (if this is a CO2 laser)",
+            "nl": null
+          },
+          "text": {
+            "en": "Industrial CO2 lasers cut many materials, including plastic, wood, engineered wood, wax, fabrics and paper. The laser type of this machine is not confirmed.",
+            "nl": null
+          },
+          "source": {
+            "url": "https://en.wikipedia.org/wiki/Laser_cutting",
+            "title": "Laser cutting, Wikipedia",
+            "accessed": "2026-10-02"
+          }
+        }
+      ],
+      "links": [],
+      "lab": {
+        "whoCanUse": {
+          "en": null,
+          "nl": null
+        },
+        "inductionRequired": {
+          "en": null,
+          "nl": null
+        },
+        "booking": {
+          "en": null,
+          "nl": null
+        },
+        "whoToAsk": {
+          "en": null,
+          "nl": null
+        },
+        "safetyNotes": {
+          "en": null,
+          "nl": null
+        },
+        "costAndMaterials": {
+          "en": null,
+          "nl": null
+        },
+        "openingHours": {
+          "en": null,
+          "nl": null
+        }
+      },
+      "image": null
+    },
+    {
+      "id": "bambu-h2d",
+      "enabled": true,
+      "kind": "machine",
+      "area": "printing",
+      "title": {
+        "en": "Bambu H2D",
+        "nl": null
+      },
+      "anchor": [
+        0.66,
+        0.02,
+        0.56
+      ],
+      "anchorMeasured": {
+        "method": "Annotation position lay on the clothes-hanger rack 0.12 u above the floor. Re-measured on 2026-10-02 on the white enclosed printer body: splat cluster x 0.62 to 0.78, y -0.07 to 0.14, z 0.51 to 0.67, checked in a game screenshot from (0.3, 0.25).",
+        "annotationPosition": [
+          0.540491162945006,
+          -0.2313484084145163,
+          0.7041520189486717
+        ]
+      },
+      "interactRadius": 0.45,
+      "highlightRadius": 0.14,
+      "approach": {
+        "pos": [
+          0.425,
+          0.288
+        ],
+        "yawDeg": -139.2,
+        "pitchDeg": -14
+      },
+      "identity": {
+        "status": "user-supplied",
+        "note": null
+      },
+      "summary": {
+        "text": {
+          "en": "An all-in-one desktop manufacturing unit from Bambu Lab with two hardened steel nozzles: one nozzle can print support material while the other prints the part.",
+          "nl": null
+        },
+        "source": {
+          "url": "https://3dprintingindustry.com/news/bambu-labs-new-h2d-3d-printer-technical-specifications-and-pricing-237763/",
+          "title": "Bambu Lab's new H2D 3D printer: technical specifications and pricing, 3D Printing Industry",
+          "accessed": "2026-10-02"
+        }
+      },
+      "facts": [
+        {
+          "label": {
+            "en": "Build volume",
+            "nl": null
+          },
+          "text": {
+            "en": "325 x 320 x 325 mm when printing with one nozzle, 300 x 320 x 325 mm when both nozzles print, 350 x 320 x 325 mm total for the two nozzles",
+            "nl": null
+          },
+          "source": {
+            "url": "https://3dprintingindustry.com/news/bambu-labs-new-h2d-3d-printer-technical-specifications-and-pricing-237763/",
+            "title": "Bambu Lab's new H2D 3D printer: technical specifications and pricing, 3D Printing Industry",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Nozzles",
+            "nl": null
+          },
+          "text": {
+            "en": "Two hardened-steel nozzles, up to 350 °C",
+            "nl": null
+          },
+          "source": {
+            "url": "https://3dprintingindustry.com/news/bambu-labs-new-h2d-3d-printer-technical-specifications-and-pricing-237763/",
+            "title": "Bambu Lab's new H2D 3D printer: technical specifications and pricing, 3D Printing Industry",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Materials",
+            "nl": null
+          },
+          "text": {
+            "en": "PLA, PETG, TPU, PVA, ABS, ASA, PC, PA, PET and carbon or glass fibre reinforced variants",
+            "nl": null
+          },
+          "source": {
+            "url": "https://3dprintingindustry.com/news/bambu-labs-new-h2d-3d-printer-technical-specifications-and-pricing-237763/",
+            "title": "Bambu Lab's new H2D 3D printer: technical specifications and pricing, 3D Printing Industry",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Optional modules",
+            "nl": null
+          },
+          "text": {
+            "en": "10 W or 40 W laser module, and a blade cutting module with pen holder, offered as options",
+            "nl": null
+          },
+          "source": {
+            "url": "https://www.matterhackers.com/store/l/bambu-lab-h2d-3d-printer",
+            "title": "Bambu Lab H2D 3D Printer, MatterHackers",
+            "accessed": "2026-10-02"
+          }
+        }
+      ],
+      "links": [],
+      "lab": {
+        "whoCanUse": {
+          "en": null,
+          "nl": null
+        },
+        "inductionRequired": {
+          "en": null,
+          "nl": null
+        },
+        "booking": {
+          "en": null,
+          "nl": null
+        },
+        "whoToAsk": {
+          "en": null,
+          "nl": null
+        },
+        "safetyNotes": {
+          "en": null,
+          "nl": null
+        },
+        "costAndMaterials": {
+          "en": null,
+          "nl": null
+        },
+        "openingHours": {
+          "en": null,
+          "nl": null
+        }
+      },
+      "image": null
+    },
+    {
+      "id": "bambu-p1s",
+      "enabled": true,
+      "kind": "machine",
+      "area": "printing",
+      "title": {
+        "en": "Bambu P1S",
+        "nl": null
+      },
+      "anchor": [
+        0.627,
+        -0.012,
+        0.802
+      ],
+      "anchorMeasured": {
+        "method": "Annotation position lay on the top of the clothes-hanger rack between the two printers. Re-measured on 2026-10-02 as the median of the splats of the black enclosed printer (x 0.57 to 0.70, z 0.73 to 0.86), checked in a game screenshot from (0.3, 0.25).",
+        "annotationPosition": [
+          0.5888661547339672,
+          -0.06404275163835624,
+          0.6024796739981302
+        ]
+      },
+      "interactRadius": 0.45,
+      "highlightRadius": 0.14,
+      "approach": {
+        "pos": [
+          0.343,
+          0.581
+        ],
+        "yawDeg": -128,
+        "pitchDeg": -18.7
+      },
+      "identity": {
+        "status": "user-supplied",
+        "note": "P1S model name supplied by user; model badge not independently read."
+      },
+      "summary": {
+        "text": {
+          "en": "An enclosed, fast desktop 3D printer from Bambu Lab.",
+          "nl": null
+        },
+        "source": {
+          "url": "https://www.3djake.com/bambu-lab/p1s",
+          "title": "Bambu Lab P1S, 3DJake",
+          "accessed": "2026-10-02"
+        }
+      },
+      "facts": [
+        {
+          "label": {
+            "en": "Build volume",
+            "nl": null
+          },
+          "text": {
+            "en": "256 x 256 x 256 mm",
+            "nl": null
+          },
+          "source": {
+            "url": "https://www.3djake.com/bambu-lab/p1s",
+            "title": "Bambu Lab P1S, 3DJake",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Enclosure",
+            "nl": null
+          },
+          "text": {
+            "en": "Fully closed print chamber (the open-frame sibling is the P1P)",
+            "nl": null
+          },
+          "source": {
+            "url": "https://www.3djake.com/bambu-lab/p1s",
+            "title": "Bambu Lab P1S, 3DJake",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Temperatures",
+            "nl": null
+          },
+          "text": {
+            "en": "Hotend up to 300 °C, bed up to 100 °C",
+            "nl": null
+          },
+          "source": {
+            "url": "https://www.3djake.com/bambu-lab/p1s",
+            "title": "Bambu Lab P1S, 3DJake",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Materials",
+            "nl": null
+          },
+          "text": {
+            "en": "PLA, PETG, TPU, PVA, PET, ABS, ASA, PA, PC",
+            "nl": null
+          },
+          "source": {
+            "url": "https://www.3djake.com/bambu-lab/p1s",
+            "title": "Bambu Lab P1S, 3DJake",
+            "accessed": "2026-10-02"
+          }
+        }
+      ],
+      "links": [],
+      "lab": {
+        "whoCanUse": {
+          "en": null,
+          "nl": null
+        },
+        "inductionRequired": {
+          "en": null,
+          "nl": null
+        },
+        "booking": {
+          "en": null,
+          "nl": null
+        },
+        "whoToAsk": {
+          "en": null,
+          "nl": null
+        },
+        "safetyNotes": {
+          "en": null,
+          "nl": null
+        },
+        "costAndMaterials": {
+          "en": null,
+          "nl": null
+        },
+        "openingHours": {
+          "en": null,
+          "nl": null
+        }
+      },
+      "image": null
+    },
+    {
+      "id": "a1-mini-fleet",
+      "enabled": true,
+      "kind": "machine",
+      "area": "printing",
+      "title": {
+        "en": "A1 mini printer fleet",
+        "nl": null
+      },
+      "anchor": [
+        1.12,
+        -0.085,
+        1.185
+      ],
+      "anchorMeasured": {
+        "method": "Annotation position lay on bare table between a small single-column printer and the Prusa MK3. Re-measured on 2026-10-02 on the nearer of the two small single-column printers (splats x 1.08 to 1.16, z 1.14 to 1.21), checked in a game screenshot from (0.85, 0.9).",
+        "annotationPosition": [
+          1.0833904539149652,
+          -0.06866561490988236,
+          1.2218218650067956
+        ]
+      },
+      "interactRadius": 0.45,
+      "highlightRadius": 0.091,
+      "approach": {
+        "pos": [
+          0.926,
+          0.882
+        ],
+        "yawDeg": -147.5,
+        "pitchDeg": -28.4
+      },
+      "identity": {
+        "status": "user-supplied",
+        "note": "Model and count come from the user (four units). The scan shows small single-column printers with orange printed parts and separate orange display units, which look like Prusa MINI printers rather than Bambu Lab A1 mini. Lab staff to confirm the model and the number of units before any model facts are added."
+      },
+      "summary": {
+        "text": {
+          "en": null,
+          "nl": null
+        },
+        "source": null
+      },
+      "facts": [],
+      "links": [],
+      "lab": {
+        "whoCanUse": {
+          "en": null,
+          "nl": null
+        },
+        "inductionRequired": {
+          "en": null,
+          "nl": null
+        },
+        "booking": {
+          "en": null,
+          "nl": null
+        },
+        "whoToAsk": {
+          "en": null,
+          "nl": null
+        },
+        "safetyNotes": {
+          "en": null,
+          "nl": null
+        },
+        "costAndMaterials": {
+          "en": null,
+          "nl": null
+        },
+        "openingHours": {
+          "en": null,
+          "nl": null
+        }
+      },
+      "image": null
+    },
+    {
+      "id": "prusa",
+      "enabled": true,
+      "kind": "machine",
+      "area": "printing",
+      "title": {
+        "en": "Prusa MK3",
+        "nl": null
+      },
+      "anchor": [
+        1.0113166325958873,
+        -0.07512042349906159,
+        1.2200338762251681
+      ],
+      "interactRadius": 0.45,
+      "highlightRadius": 0.091,
+      "approach": {
+        "pos": [
+          1.002,
+          0.86
+        ],
+        "yawDeg": -178.5,
+        "pitchDeg": -27.2
+      },
+      "identity": {
+        "status": "user-supplied",
+        "note": "Two similar open-frame printers are visible. Exact MK3 assignment to the front unit needs user confirmation."
+      },
+      "summary": {
+        "text": {
+          "en": "A printer from the Original Prusa i3 MK3 family (exact variant to be confirmed by staff), an open-frame desktop 3D printer from Prusa Research. The design is open source and part of the RepRap project.",
+          "nl": null
+        },
+        "source": {
+          "url": "https://en.wikipedia.org/wiki/Prusa_i3",
+          "title": "Prusa i3, Wikipedia",
+          "accessed": "2026-10-02"
+        }
+      },
+      "facts": [
+        {
+          "label": {
+            "en": "Build volume",
+            "nl": null
+          },
+          "text": {
+            "en": "250 x 210 x 210 mm",
+            "nl": null
+          },
+          "source": {
+            "url": "https://www.facilities.robotics.umd.edu/ral/equipment/manuf/prusa-i3-mk3.html",
+            "title": "Prusa i3 MK3, University of Maryland robotics facilities",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Temperatures",
+            "nl": null
+          },
+          "text": {
+            "en": "Nozzle up to 300 °C, heated bed up to 120 °C",
+            "nl": null
+          },
+          "source": {
+            "url": "https://www.facilities.robotics.umd.edu/ral/equipment/manuf/prusa-i3-mk3.html",
+            "title": "Prusa i3 MK3, University of Maryland robotics facilities",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Materials",
+            "nl": null
+          },
+          "text": {
+            "en": "Common: PLA, ABS, TPU, PETG, ASA. Less common: HIPS, PC, TPE",
+            "nl": null
+          },
+          "source": {
+            "url": "https://www.facilities.robotics.umd.edu/ral/equipment/manuf/prusa-i3-mk3.html",
+            "title": "Prusa i3 MK3, University of Maryland robotics facilities",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Notable features",
+            "nl": null
+          },
+          "text": {
+            "en": "Magnetic heatbed with removable PEI-coated steel sheets, filament detection, power outage recovery, Bondtech dual drive-gear extruder",
+            "nl": null
+          },
+          "source": {
+            "url": "https://en.wikipedia.org/wiki/Prusa_i3",
+            "title": "Prusa i3, Wikipedia",
+            "accessed": "2026-10-02"
+          }
+        }
+      ],
+      "links": [],
+      "lab": {
+        "whoCanUse": {
+          "en": null,
+          "nl": null
+        },
+        "inductionRequired": {
+          "en": null,
+          "nl": null
+        },
+        "booking": {
+          "en": null,
+          "nl": null
+        },
+        "whoToAsk": {
+          "en": null,
+          "nl": null
+        },
+        "safetyNotes": {
+          "en": null,
+          "nl": null
+        },
+        "costAndMaterials": {
+          "en": null,
+          "nl": null
+        },
+        "openingHours": {
+          "en": null,
+          "nl": null
+        }
+      },
+      "image": null
+    },
+    {
+      "id": "filament",
+      "enabled": true,
+      "kind": "supplies",
+      "area": "printing",
+      "title": {
+        "en": "Filament",
+        "nl": null
+      },
+      "anchor": [
+        1.2027045612595944,
+        0.04656134145929471,
+        1.2939032296603674
+      ],
+      "interactRadius": 0.45,
+      "highlightRadius": 0.109,
+      "approach": {
+        "pos": [
+          1.143,
+          0.974
+        ],
+        "yawDeg": -169.4,
+        "pitchDeg": -11
+      },
+      "approachOverride": {
+        "pos": [
+          1.143,
+          0.974
+        ],
+        "reason": "With the bearing rule the a1-mini-fleet printers sit between the visitor and the filament wall and take focus (tests/e2e.mjs, 2026-10-02). From this walkable point, facing the filament anchor, filament scores 0.17 better than a1-mini-fleet."
+      },
+      "identity": {
+        "status": "generic",
+        "note": null
+      },
+      "summary": {
+        "text": {
+          "en": "Spools of plastic filament, the raw material for 3D printers. The printer melts the filament in a heated nozzle and lays it down layer by layer to build the part.",
+          "nl": null
+        },
+        "source": {
+          "url": "https://en.wikipedia.org/wiki/Fused_filament_fabrication",
+          "title": "Fused filament fabrication, Wikipedia",
+          "accessed": "2026-10-02"
+        }
+      },
+      "facts": [
+        {
+          "label": {
+            "en": "What it is",
+            "nl": null
+          },
+          "text": {
+            "en": "Filament is fed from a spool through a heated extruder head and deposited layer by layer",
+            "nl": null
+          },
+          "source": {
+            "url": "https://en.wikipedia.org/wiki/Fused_filament_fabrication",
+            "title": "Fused filament fabrication, Wikipedia",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Common materials",
+            "nl": null
+          },
+          "text": {
+            "en": "Thermoplastics such as PLA, ABS, PETG, PET, HIPS, TPU and nylon",
+            "nl": null
+          },
+          "source": {
+            "url": "https://en.wikipedia.org/wiki/Fused_filament_fabrication",
+            "title": "Fused filament fabrication, Wikipedia",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "PLA, the usual starting material",
+            "nl": null
+          },
+          "text": {
+            "en": "Plant-based polyester, low warping and good detail, but softens and deforms above about 60 °C",
+            "nl": null
+          },
+          "source": {
+            "url": "https://help.prusa3d.com/article/pla_2062",
+            "title": "PLA, Prusa Knowledge Base",
+            "accessed": "2026-10-02"
+          }
+        }
+      ],
+      "links": [],
+      "lab": {
+        "whoCanUse": {
+          "en": null,
+          "nl": null
+        },
+        "inductionRequired": {
+          "en": null,
+          "nl": null
+        },
+        "booking": {
+          "en": null,
+          "nl": null
+        },
+        "whoToAsk": {
+          "en": null,
+          "nl": null
+        },
+        "safetyNotes": {
+          "en": null,
+          "nl": null
+        },
+        "costAndMaterials": {
+          "en": null,
+          "nl": null
+        },
+        "openingHours": {
+          "en": null,
+          "nl": null
+        }
+      },
+      "image": null
+    },
+    {
+      "id": "microscope",
+      "enabled": true,
+      "kind": "machine",
+      "area": "electronics",
+      "title": {
+        "en": "Microscope",
+        "nl": null
+      },
+      "anchor": [
+        0.8683486370749285,
+        0.003991775584725924,
+        -0.9197111451971783
+      ],
+      "interactRadius": 0.45,
+      "highlightRadius": 0.14,
+      "approach": {
+        "pos": [
+          0.627,
+          -0.653
+        ],
+        "yawDeg": -42.1,
+        "pitchDeg": -16.4
+      },
+      "identity": {
+        "status": "generic",
+        "note": null
+      },
+      "summary": {
+        "text": {
+          "en": null,
+          "nl": null
+        },
+        "source": null
+      },
+      "facts": [
+        {
+          "label": {
+            "en": "What it is",
+            "nl": null
+          },
+          "text": {
+            "en": "A stereo microscope is an optical microscope for low-magnification observation, typically using light reflected from the surface of the object rather than transmitted through it.",
+            "nl": null
+          },
+          "source": {
+            "url": "https://en.wikipedia.org/wiki/Stereo_microscope",
+            "title": "Stereo microscope, Wikipedia",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Why it looks 3D",
+            "nl": null
+          },
+          "text": {
+            "en": "Two separate optical paths give each eye a slightly different viewing angle, which produces a three-dimensional view of the object.",
+            "nl": null
+          },
+          "source": {
+            "url": "https://en.wikipedia.org/wiki/Stereo_microscope",
+            "title": "Stereo microscope, Wikipedia",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Room to work",
+            "nl": null
+          },
+          "text": {
+            "en": "Optimal working distances range from roughly 150 to 400 mm, which leaves space between the lens and the object.",
+            "nl": null
+          },
+          "source": {
+            "url": "https://en.wikipedia.org/wiki/Stereo_microscope",
+            "title": "Stereo microscope, Wikipedia",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Typical uses",
+            "nl": null
+          },
+          "text": {
+            "en": "Stereo microscopes are widely used in manufacturing for manufacture, inspection and quality control, including circuit board manufacture or inspection. Zoom models change magnification continuously across a set range.",
+            "nl": null
+          },
+          "source": {
+            "url": "https://en.wikipedia.org/wiki/Stereo_microscope",
+            "title": "Stereo microscope, Wikipedia",
+            "accessed": "2026-10-02"
+          }
+        }
+      ],
+      "links": [],
+      "lab": {
+        "whoCanUse": {
+          "en": null,
+          "nl": null
+        },
+        "inductionRequired": {
+          "en": null,
+          "nl": null
+        },
+        "booking": {
+          "en": null,
+          "nl": null
+        },
+        "whoToAsk": {
+          "en": null,
+          "nl": null
+        },
+        "safetyNotes": {
+          "en": null,
+          "nl": null
+        },
+        "costAndMaterials": {
+          "en": null,
+          "nl": null
+        },
+        "openingHours": {
+          "en": null,
+          "nl": null
+        }
+      },
+      "image": null
+    },
+    {
+      "id": "bench-instruments",
+      "enabled": true,
+      "kind": "machine",
+      "area": "electronics",
+      "title": {
+        "en": "Power supplies, oscilloscope and hot-air tools",
+        "nl": null
+      },
+      "anchor": [
+        0.31425646499855675,
+        0.0561570900200052,
+        -1.0109692520258642
+      ],
+      "interactRadius": 0.55,
+      "highlightRadius": 0.14,
+      "approach": {
+        "pos": [
+          0.574,
+          -0.901
+        ],
+        "yawDeg": 67.1,
+        "pitchDeg": -10.8
+      },
+      "identity": {
+        "status": "generic",
+        "note": null
+      },
+      "summary": {
+        "text": {
+          "en": null,
+          "nl": null
+        },
+        "source": null
+      },
+      "facts": [
+        {
+          "label": {
+            "en": "Bench power supply",
+            "nl": null
+          },
+          "text": {
+            "en": "In constant voltage mode the supply delivers the same voltage regardless of the attached load; the current you set is a maximum (current limit), not the current that flows.",
+            "nl": null
+          },
+          "source": {
+            "url": "https://www.rohde-schwarz.com/us/products/test-and-measurement/essentials-test-equipment/dc-power-supplies/understanding-constant-voltage-current_256008.html",
+            "title": "Understanding constant voltage and constant current, Rohde & Schwarz",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Oscilloscope",
+            "nl": null
+          },
+          "text": {
+            "en": "An oscilloscope graphs an electrical signal as it varies over time; analog scopes draw the input with an electron beam, digital scopes sample it.",
+            "nl": null
+          },
+          "source": {
+            "url": "https://learn.sparkfun.com/tutorials/how-to-use-an-oscilloscope/all",
+            "title": "How to Use an Oscilloscope, SparkFun Learn",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Hot-air rework",
+            "nl": null
+          },
+          "text": {
+            "en": "A hot-air station heats quickly and evenly to reflow solder so a component can be attached to or removed from a circuit board; the air is delivered through a hose, which makes it possible to rework surface-mount parts.",
+            "nl": null
+          },
+          "source": {
+            "url": "https://www.jbctools.com/hot-air-stations.html",
+            "title": "Hot air stations, JBC",
+            "accessed": "2026-10-02"
+          }
+        }
+      ],
+      "links": [],
+      "lab": {
+        "whoCanUse": {
+          "en": null,
+          "nl": null
+        },
+        "inductionRequired": {
+          "en": null,
+          "nl": null
+        },
+        "booking": {
+          "en": null,
+          "nl": null
+        },
+        "whoToAsk": {
+          "en": null,
+          "nl": null
+        },
+        "safetyNotes": {
+          "en": null,
+          "nl": null
+        },
+        "costAndMaterials": {
+          "en": null,
+          "nl": null
+        },
+        "openingHours": {
+          "en": null,
+          "nl": null
+        }
+      },
+      "image": null
+    },
+    {
+      "id": "electronics-supplies",
+      "enabled": true,
+      "kind": "supplies",
+      "area": "electronics",
+      "title": {
+        "en": "Electronics and components",
+        "nl": null
+      },
+      "anchor": [
+        1.0221389912494407,
+        0.0377571630523132,
+        -0.4808602626907145
+      ],
+      "interactRadius": 0.45,
+      "highlightRadius": 0.14,
+      "approach": {
+        "pos": [
+          0.662,
+          -0.474
+        ],
+        "yawDeg": -88.8,
+        "pitchDeg": -11.3
+      },
+      "identity": {
+        "status": "generic",
+        "note": null
+      },
+      "summary": {
+        "text": {
+          "en": null,
+          "nl": null
+        },
+        "source": null
+      },
+      "facts": [
+        {
+          "label": {
+            "en": "Multimeter",
+            "nl": null
+          },
+          "text": {
+            "en": "A multimeter is a measuring instrument that can measure several electrical properties; a typical one measures voltage, resistance and current.",
+            "nl": null
+          },
+          "source": {
+            "url": "https://en.wikipedia.org/wiki/Multimeter",
+            "title": "Multimeter, Wikipedia",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Soldering iron",
+            "nl": null
+          },
+          "text": {
+            "en": "A soldering iron supplies heat to melt solder so it can flow into the joint between two workpieces.",
+            "nl": null
+          },
+          "source": {
+            "url": "https://en.wikipedia.org/wiki/Soldering_iron",
+            "title": "Soldering iron, Wikipedia",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Soldering station",
+            "nl": null
+          },
+          "text": {
+            "en": "A soldering station has temperature control that the user can adjust, and it is most commonly used for soldering electronic components.",
+            "nl": null
+          },
+          "source": {
+            "url": "https://en.wikipedia.org/wiki/Soldering_iron",
+            "title": "Soldering iron, Wikipedia",
+            "accessed": "2026-10-02"
+          }
+        }
+      ],
+      "links": [],
+      "lab": {
+        "whoCanUse": {
+          "en": null,
+          "nl": null
+        },
+        "inductionRequired": {
+          "en": null,
+          "nl": null
+        },
+        "booking": {
+          "en": null,
+          "nl": null
+        },
+        "whoToAsk": {
+          "en": null,
+          "nl": null
+        },
+        "safetyNotes": {
+          "en": null,
+          "nl": null
+        },
+        "costAndMaterials": {
+          "en": null,
+          "nl": null
+        },
+        "openingHours": {
+          "en": null,
+          "nl": null
+        }
+      },
+      "image": null
+    },
+    {
+      "id": "pen-plotter",
+      "enabled": true,
+      "kind": "machine",
+      "area": "fabrication",
+      "title": {
+        "en": "Pen plotter",
+        "nl": null
+      },
+      "anchor": [
+        0.3961704172006727,
+        -0.04414716524258583,
+        -0.02837464722959417
+      ],
+      "interactRadius": 0.45,
+      "highlightRadius": 0.14,
+      "approach": {
+        "pos": [
+          0.307,
+          0.191
+        ],
+        "yawDeg": -22.2,
+        "pitchDeg": -33.1
+      },
+      "identity": {
+        "status": "generic",
+        "note": null
+      },
+      "summary": {
+        "text": {
+          "en": "A pen plotter draws vector artwork by moving a real pen across paper, producing continuous lines rather than printed dots.",
+          "nl": null
+        },
+        "source": {
+          "url": "https://en.wikipedia.org/wiki/Plotter",
+          "title": "Plotter, Wikipedia",
+          "accessed": "2026-10-02"
+        }
+      },
+      "facts": [
+        {
+          "label": {
+            "en": "What it is",
+            "nl": null
+          },
+          "text": {
+            "en": "A machine that produces vector graphics drawings by drawing lines on paper with a pen",
+            "nl": null
+          },
+          "source": {
+            "url": "https://en.wikipedia.org/wiki/Plotter",
+            "title": "Plotter, Wikipedia",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "How it draws",
+            "nl": null
+          },
+          "text": {
+            "en": "Moves a pen or other instrument across the surface of the paper",
+            "nl": null
+          },
+          "source": {
+            "url": "https://en.wikipedia.org/wiki/Plotter",
+            "title": "Plotter, Wikipedia",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Vector, not raster",
+            "nl": null
+          },
+          "text": {
+            "en": "Draws continuous lines, unlike inkjet and laser printers that build images from a fine matrix of dots",
+            "nl": null
+          },
+          "source": {
+            "url": "https://en.wikipedia.org/wiki/Plotter",
+            "title": "Plotter, Wikipedia",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Speed trade-off",
+            "nl": null
+          },
+          "text": {
+            "en": "Can draw complex line art including text, but slowly because of the mechanical movement of the pen",
+            "nl": null
+          },
+          "source": {
+            "url": "https://en.wikipedia.org/wiki/Plotter",
+            "title": "Plotter, Wikipedia",
+            "accessed": "2026-10-02"
+          }
+        }
+      ],
+      "links": [],
+      "lab": {
+        "whoCanUse": {
+          "en": null,
+          "nl": null
+        },
+        "inductionRequired": {
+          "en": null,
+          "nl": null
+        },
+        "booking": {
+          "en": null,
+          "nl": null
+        },
+        "whoToAsk": {
+          "en": null,
+          "nl": null
+        },
+        "safetyNotes": {
+          "en": null,
+          "nl": null
+        },
+        "costAndMaterials": {
+          "en": null,
+          "nl": null
+        },
+        "openingHours": {
+          "en": null,
+          "nl": null
+        }
+      },
+      "image": null
+    },
+    {
+      "id": "makera-cnc",
+      "enabled": true,
+      "kind": "machine",
+      "area": "fabrication",
+      "title": {
+        "en": "Makera Carvera Air",
+        "nl": null
+      },
+      "anchor": [
+        0.06424045267006402,
+        -0.07488783050663583,
+        -0.7854582404783629
+      ],
+      "interactRadius": 0.45,
+      "highlightRadius": 0.14,
+      "approach": {
+        "pos": [
+          -0.009,
+          -0.433
+        ],
+        "yawDeg": -11.7,
+        "pitchDeg": -27.2
+      },
+      "identity": {
+        "status": "user-supplied",
+        "note": "Model name supplied by the user as \"Makera Air CNC\"; Makera sells it as the Carvera Air. Model badge not read from the scan."
+      },
+      "summary": {
+        "text": {
+          "en": "A desktop CNC milling and engraving machine with an enclosed design: a large transparent front door swings up to reveal the work area.",
+          "nl": null
+        },
+        "source": {
+          "url": "https://the-gadgeteer.com/2025/10/07/makera-carvera-air-desktop-cnc-machine-review-full-cnc-power-in-compact-form/",
+          "title": "Makera Carvera Air desktop CNC machine review, The Gadgeteer",
+          "accessed": "2026-10-02"
+        }
+      },
+      "facts": [
+        {
+          "label": {
+            "en": "Work area (3-axis)",
+            "nl": null
+          },
+          "text": {
+            "en": "300 x 200 x 130 mm",
+            "nl": null
+          },
+          "source": {
+            "url": "https://www.makera.com/blogs/article/carvera-carvera-air-which-desktop-cnc-is-right-for-you",
+            "title": "Carvera or Carvera Air: which desktop CNC is right for you, Makera",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Spindle",
+            "nl": null
+          },
+          "text": {
+            "en": "200 W, 0 to 13,000 RPM, closed-loop control",
+            "nl": null
+          },
+          "source": {
+            "url": "https://www.makera.com/blogs/article/carvera-carvera-air-which-desktop-cnc-is-right-for-you",
+            "title": "Carvera or Carvera Air: which desktop CNC is right for you, Makera",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Tool changing",
+            "nl": null
+          },
+          "text": {
+            "en": "Lever-based quick tool changer, not fully automated; bits are swapped without wrenches",
+            "nl": null
+          },
+          "source": {
+            "url": "https://www.makera.com/blogs/article/carvera-carvera-air-which-desktop-cnc-is-right-for-you",
+            "title": "Carvera or Carvera Air: which desktop CNC is right for you, Makera",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Materials",
+            "nl": null
+          },
+          "text": {
+            "en": "Woods (hardwood, softwood, MDF, plywood), plastics (foam, PVC, ABS, acrylic, PC, HDPE), non-ferrous metals (aluminium, brass, copper), composites (carbon fiber, FR4)",
+            "nl": null
+          },
+          "source": {
+            "url": "https://the-gadgeteer.com/2025/10/07/makera-carvera-air-desktop-cnc-machine-review-full-cnc-power-in-compact-form/",
+            "title": "Makera Carvera Air desktop CNC machine review, The Gadgeteer",
+            "accessed": "2026-10-02"
+          }
+        }
+      ],
+      "links": [],
+      "lab": {
+        "whoCanUse": {
+          "en": null,
+          "nl": null
+        },
+        "inductionRequired": {
+          "en": null,
+          "nl": null
+        },
+        "booking": {
+          "en": null,
+          "nl": null
+        },
+        "whoToAsk": {
+          "en": null,
+          "nl": null
+        },
+        "safetyNotes": {
+          "en": null,
+          "nl": null
+        },
+        "costAndMaterials": {
+          "en": null,
+          "nl": null
+        },
+        "openingHours": {
+          "en": null,
+          "nl": null
+        }
+      },
+      "image": null
+    },
+    {
+      "id": "christmas-tree",
+      "enabled": false,
+      "kind": "room-feature",
+      "area": "room",
+      "title": {
+        "en": "Christmas tree",
+        "nl": null
+      },
+      "anchor": [
+        -1.1539507001250582,
+        0.20105413205279962,
+        -0.3609312007682141
+      ],
+      "interactRadius": 0.45,
+      "highlightRadius": 0.14,
+      "approach": {
+        "pos": [
+          -0.824,
+          -0.217
+        ],
+        "yawDeg": 66.4,
+        "pitchDeg": 10
+      },
+      "identity": {
+        "status": "generic",
+        "note": null
+      },
+      "summary": {
+        "text": {
+          "en": null,
+          "nl": null
+        },
+        "source": null
+      },
+      "facts": [
+        {
+          "label": {
+            "en": "If it has electric lights",
+            "nl": null
+          },
+          "text": {
+            "en": "Electrical Safety First advises checking that lights are not damaged or broken and have no loose wires before use, and switching them off and unplugging them before going to bed or going out. Whether this tree has lights was not verified.",
+            "nl": null
+          },
+          "source": {
+            "url": "https://www.electricalsafetyfirst.org.uk/safety-advice/products-and-appliances/lighting/christmas-lights/",
+            "title": "Christmas lights, Electrical Safety First",
+            "accessed": "2026-10-02"
+          }
+        }
+      ],
+      "links": [],
+      "lab": {
+        "whoCanUse": {
+          "en": null,
+          "nl": null
+        },
+        "inductionRequired": {
+          "en": null,
+          "nl": null
+        },
+        "booking": {
+          "en": null,
+          "nl": null
+        },
+        "whoToAsk": {
+          "en": null,
+          "nl": null
+        },
+        "safetyNotes": {
+          "en": null,
+          "nl": null
+        },
+        "costAndMaterials": {
+          "en": null,
+          "nl": null
+        },
+        "openingHours": {
+          "en": null,
+          "nl": null
+        }
+      },
+      "image": null
+    },
+    {
+      "id": "television",
+      "enabled": false,
+      "kind": "room-feature",
+      "area": "room",
+      "title": {
+        "en": "Television",
+        "nl": null
+      },
+      "anchor": [
+        0.035467011920681975,
+        0.11793694436192596,
+        0.9781153545883807
+      ],
+      "interactRadius": 0.45,
+      "highlightRadius": 0.14,
+      "approach": {
+        "pos": [
+          0.099,
+          0.624
+        ],
+        "yawDeg": 169.8,
+        "pitchDeg": 1.3
+      },
+      "identity": {
+        "status": "generic",
+        "note": null
+      },
+      "summary": {
+        "text": {
+          "en": null,
+          "nl": null
+        },
+        "source": null
+      },
+      "facts": [],
+      "links": [],
+      "lab": {
+        "whoCanUse": {
+          "en": null,
+          "nl": null
+        },
+        "inductionRequired": {
+          "en": null,
+          "nl": null
+        },
+        "booking": {
+          "en": null,
+          "nl": null
+        },
+        "whoToAsk": {
+          "en": null,
+          "nl": null
+        },
+        "safetyNotes": {
+          "en": null,
+          "nl": null
+        },
+        "costAndMaterials": {
+          "en": null,
+          "nl": null
+        },
+        "openingHours": {
+          "en": null,
+          "nl": null
+        }
+      },
+      "image": null
+    },
+    {
+      "id": "vinyl-cutter",
+      "enabled": true,
+      "kind": "machine",
+      "area": "tools",
+      "title": {
+        "en": "Vinyl cutter",
+        "nl": null
+      },
+      "anchor": [
+        -0.918339135865062,
+        -0.05014978372353464,
+        -0.578447701496976
+      ],
+      "interactRadius": 0.45,
+      "highlightRadius": 0.14,
+      "approach": {
+        "pos": [
+          -0.69,
+          -0.447
+        ],
+        "yawDeg": 60,
+        "pitchDeg": -31.3
+      },
+      "identity": {
+        "status": "generic",
+        "note": null
+      },
+      "summary": {
+        "text": {
+          "en": "A computer-controlled cutter that moves a small blade along a design drawn on a computer, cutting shapes out of a roll or sheet of vinyl. Typical uses are decals, lettering for signs and iron-on designs for clothing.",
+          "nl": null
+        },
+        "source": {
+          "url": "https://en.wikipedia.org/wiki/Vinyl_cutter",
+          "title": "Vinyl cutter, Wikipedia",
+          "accessed": "2026-10-02"
+        }
+      },
+      "facts": [
+        {
+          "label": {
+            "en": "How it cuts",
+            "nl": null
+          },
+          "text": {
+            "en": "A vector design is sent from a computer, and the computer moves a small knife over vinyl fed from a roll.",
+            "nl": null
+          },
+          "source": {
+            "url": "https://en.wikipedia.org/wiki/Vinyl_cutter",
+            "title": "Vinyl cutter, Wikipedia",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Weeding",
+            "nl": null
+          },
+          "text": {
+            "en": "After cutting, the unwanted pieces are removed from the backing (weeding), leaving only the design.",
+            "nl": null
+          },
+          "source": {
+            "url": "https://en.wikipedia.org/wiki/Vinyl_cutter",
+            "title": "Vinyl cutter, Wikipedia",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Solid colours only",
+            "nl": null
+          },
+          "text": {
+            "en": "It cuts shapes from solid-colour material, so photographs and colour gradients cannot be reproduced with a cutter alone.",
+            "nl": null
+          },
+          "source": {
+            "url": "https://en.wikipedia.org/wiki/Vinyl_cutter",
+            "title": "Vinyl cutter, Wikipedia",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Iron-on designs are mirrored",
+            "nl": null
+          },
+          "text": {
+            "en": "For clothing, the design is cut as a mirror image in heat transfer vinyl, weeded, then applied with a heat press or an iron.",
+            "nl": null
+          },
+          "source": {
+            "url": "https://en.wikipedia.org/wiki/Vinyl_cutter",
+            "title": "Vinyl cutter, Wikipedia",
+            "accessed": "2026-10-02"
+          }
+        }
+      ],
+      "links": [],
+      "lab": {
+        "whoCanUse": {
+          "en": null,
+          "nl": null
+        },
+        "inductionRequired": {
+          "en": null,
+          "nl": null
+        },
+        "booking": {
+          "en": null,
+          "nl": null
+        },
+        "whoToAsk": {
+          "en": null,
+          "nl": null
+        },
+        "safetyNotes": {
+          "en": null,
+          "nl": null
+        },
+        "costAndMaterials": {
+          "en": null,
+          "nl": null
+        },
+        "openingHours": {
+          "en": null,
+          "nl": null
+        }
+      },
+      "image": null
+    },
+    {
+      "id": "vinyl-press",
+      "enabled": true,
+      "kind": "machine",
+      "area": "tools",
+      "title": {
+        "en": "Vinyl press",
+        "nl": null
+      },
+      "anchor": [
+        -0.6289803176483671,
+        -0.08744219746406784,
+        -0.7552091182462295
+      ],
+      "interactRadius": 0.45,
+      "highlightRadius": 0.14,
+      "approach": {
+        "pos": [
+          -0.451,
+          -0.517
+        ],
+        "yawDeg": 36.8,
+        "pitchDeg": -33.6
+      },
+      "identity": {
+        "status": "generic",
+        "note": null
+      },
+      "summary": {
+        "text": {
+          "en": "A heat press: a machine that presses a hot plate onto an item for a set time, using heat and pressure to bond a design onto it. Its typical use is pressing cut iron-on vinyl onto T-shirts, bags and other fabric.",
+          "nl": null
+        },
+        "source": {
+          "url": "https://en.wikipedia.org/wiki/Heat_press",
+          "title": "Heat press, Wikipedia",
+          "accessed": "2026-10-02"
+        }
+      },
+      "facts": [
+        {
+          "label": {
+            "en": "What it does",
+            "nl": null
+          },
+          "text": {
+            "en": "Imprints a design onto an item such as a T-shirt by applying heat and pressure for a preset time.",
+            "nl": null
+          },
+          "source": {
+            "url": "https://en.wikipedia.org/wiki/Heat_press",
+            "title": "Heat press, Wikipedia",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Common uses",
+            "nl": null
+          },
+          "text": {
+            "en": "Applying heat transfer vinyl and sublimation transfers to fabric; specially designed presses can also decorate mugs, plates and caps.",
+            "nl": null
+          },
+          "source": {
+            "url": "https://en.wikipedia.org/wiki/Heat_press",
+            "title": "Heat press, Wikipedia",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Press styles",
+            "nl": null
+          },
+          "text": {
+            "en": "Common designs are clamshell (top plate opens like a shell), swing-away (top plate swings aside) and draw (bottom plate pulls out like a drawer).",
+            "nl": null
+          },
+          "source": {
+            "url": "https://en.wikipedia.org/wiki/Heat_press",
+            "title": "Heat press, Wikipedia",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Example vinyl",
+            "nl": null
+          },
+          "text": {
+            "en": "Siser EasyWeed heat transfer vinyl is made for cotton, polyester and blends; its clear carrier sheet is peeled away after pressing.",
+            "nl": null
+          },
+          "source": {
+            "url": "https://www.siser.com/news/the-basics-and-benefits-of-siser-easyweed-heat-transfer-vinyl/",
+            "title": "The basics and benefits of Siser EasyWeed heat transfer vinyl, Siser",
+            "accessed": "2026-10-02"
+          }
+        }
+      ],
+      "links": [],
+      "lab": {
+        "whoCanUse": {
+          "en": null,
+          "nl": null
+        },
+        "inductionRequired": {
+          "en": null,
+          "nl": null
+        },
+        "booking": {
+          "en": null,
+          "nl": null
+        },
+        "whoToAsk": {
+          "en": null,
+          "nl": null
+        },
+        "safetyNotes": {
+          "en": null,
+          "nl": null
+        },
+        "costAndMaterials": {
+          "en": null,
+          "nl": null
+        },
+        "openingHours": {
+          "en": null,
+          "nl": null
+        }
+      },
+      "image": null
+    },
+    {
+      "id": "wood-stock",
+      "enabled": true,
+      "kind": "supplies",
+      "area": "laser",
+      "title": {
+        "en": "Wood stock",
+        "nl": null
+      },
+      "anchor": [
+        -1.7667184187300813,
+        -0.10800811555630928,
+        0.930786087005054
+      ],
+      "interactRadius": 0.45,
+      "highlightRadius": 0.14,
+      "approach": {
+        "pos": [
+          -1.486,
+          1.156
+        ],
+        "yawDeg": 51.4,
+        "pitchDeg": -31.2
+      },
+      "identity": {
+        "status": "generic",
+        "note": null
+      },
+      "summary": {
+        "text": {
+          "en": null,
+          "nl": null
+        },
+        "source": null
+      },
+      "facts": [
+        {
+          "label": {
+            "en": "Plywood",
+            "nl": null
+          },
+          "text": {
+            "en": "Plywood is made from thin layers (plies) of wood veneer stacked and glued together, with each layer's grain usually perpendicular to its neighbours (cross-graining).",
+            "nl": null
+          },
+          "source": {
+            "url": "https://en.wikipedia.org/wiki/Plywood",
+            "title": "Plywood, Wikipedia",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "MDF",
+            "nl": null
+          },
+          "text": {
+            "en": "Medium-density fibreboard is an engineered wood made by breaking hardwood or softwood residuals down into wood fibre, combining it with wax and a resin binder, and forming it into panels under high temperature and pressure.",
+            "nl": null
+          },
+          "source": {
+            "url": "https://en.wikipedia.org/wiki/Medium-density_fibreboard",
+            "title": "Medium-density fibreboard, Wikipedia",
+            "accessed": "2026-10-02"
+          }
+        }
+      ],
+      "links": [],
+      "lab": {
+        "whoCanUse": {
+          "en": null,
+          "nl": null
+        },
+        "inductionRequired": {
+          "en": null,
+          "nl": null
+        },
+        "booking": {
+          "en": null,
+          "nl": null
+        },
+        "whoToAsk": {
+          "en": null,
+          "nl": null
+        },
+        "safetyNotes": {
+          "en": null,
+          "nl": null
+        },
+        "costAndMaterials": {
+          "en": null,
+          "nl": null
+        },
+        "openingHours": {
+          "en": null,
+          "nl": null
+        }
+      },
+      "image": null
+    },
+    {
+      "id": "hand-tools",
+      "enabled": true,
+      "kind": "supplies",
+      "area": "tools",
+      "title": {
+        "en": "Hand tools",
+        "nl": null
+      },
+      "anchor": [
+        -1.151430215413207,
+        0.09648066508514429,
+        -0.6522578495075709
+      ],
+      "interactRadius": 0.45,
+      "highlightRadius": 0.14,
+      "approach": {
+        "pos": [
+          -1.128,
+          -0.433
+        ],
+        "yawDeg": 6.2,
+        "pitchDeg": -3.5
+      },
+      "identity": {
+        "status": "generic",
+        "note": null
+      },
+      "summary": {
+        "text": {
+          "en": null,
+          "nl": null
+        },
+        "source": null
+      },
+      "facts": [],
+      "links": [],
+      "lab": {
+        "whoCanUse": {
+          "en": null,
+          "nl": null
+        },
+        "inductionRequired": {
+          "en": null,
+          "nl": null
+        },
+        "booking": {
+          "en": null,
+          "nl": null
+        },
+        "whoToAsk": {
+          "en": null,
+          "nl": null
+        },
+        "safetyNotes": {
+          "en": null,
+          "nl": null
+        },
+        "costAndMaterials": {
+          "en": null,
+          "nl": null
+        },
+        "openingHours": {
+          "en": null,
+          "nl": null
+        }
+      },
+      "image": null
+    },
+    {
+      "id": "fasteners",
+      "enabled": true,
+      "kind": "supplies",
+      "area": "storage",
+      "title": {
+        "en": "Bolts, nuts and fasteners",
+        "nl": null
+      },
+      "anchor": [
+        -1.0197759935332906,
+        -0.011565941518718214,
+        0.0501942983762543
+      ],
+      "interactRadius": 0.45,
+      "highlightRadius": 0.14,
+      "approach": {
+        "pos": [
+          -0.777,
+          -0.024
+        ],
+        "yawDeg": 106.9,
+        "pitchDeg": -25.6
+      },
+      "identity": {
+        "status": "generic",
+        "note": null
+      },
+      "summary": {
+        "text": {
+          "en": null,
+          "nl": null
+        },
+        "source": null
+      },
+      "facts": [
+        {
+          "label": {
+            "en": "Metric thread naming",
+            "nl": null
+          },
+          "text": {
+            "en": "A metric screw is named by the letter M followed by its nominal diameter in mm, for example M8 is an 8 mm thread. The pitch can be added after it, as in M8x1.25.",
+            "nl": null
+          },
+          "source": {
+            "url": "https://en.wikipedia.org/wiki/ISO_metric_screw_thread",
+            "title": "ISO metric screw thread, Wikipedia",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Coarse pitch is the default",
+            "nl": null
+          },
+          "text": {
+            "en": "When the pitch is the normal coarse pitch listed in ISO 261 or ISO 262, it can be left out of the name, so a plain M8 means the standard coarse thread.",
+            "nl": null
+          },
+          "source": {
+            "url": "https://en.wikipedia.org/wiki/ISO_metric_screw_thread",
+            "title": "ISO metric screw thread, Wikipedia",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Threads in 3D prints",
+            "nl": null
+          },
+          "text": {
+            "en": "Heat-set inserts are stock parts that add threads to a thermoplastic part. The insert is heated with a soldering iron (ideally a non-tapered installation tip) and pushed into an undersized hole; the softened plastic re-solidifies around the insert's knurled feature and holds it in place.",
+            "nl": null
+          },
+          "source": {
+            "url": "https://hackaday.com/2019/02/28/threading-3d-printed-parts-how-to-use-heat-set-inserts/",
+            "title": "Threading 3D printed parts: how to use heat-set inserts, Hackaday",
+            "accessed": "2026-10-02"
+          }
+        },
+        {
+          "label": {
+            "en": "Typical insert and hole size",
+            "nl": null
+          },
+          "text": {
+            "en": "A standard M3 heat-set insert is typically 5.0 mm wide and 4.0 mm tall; a printed hole of about 4.6 to 4.8 mm works well for it.",
+            "nl": null
+          },
+          "source": {
+            "url": "https://www.cre8tivdesign.com/blog/threaded-inserts-3d-prints-the-complete-guide",
+            "title": "Threaded inserts for 3D prints: the complete guide, cre8tivdesign",
+            "accessed": "2026-10-02"
+          }
+        }
+      ],
+      "links": [],
+      "lab": {
+        "whoCanUse": {
+          "en": null,
+          "nl": null
+        },
+        "inductionRequired": {
+          "en": null,
+          "nl": null
+        },
+        "booking": {
+          "en": null,
+          "nl": null
+        },
+        "whoToAsk": {
+          "en": null,
+          "nl": null
+        },
+        "safetyNotes": {
+          "en": null,
+          "nl": null
+        },
+        "costAndMaterials": {
+          "en": null,
+          "nl": null
+        },
+        "openingHours": {
+          "en": null,
+          "nl": null
+        }
+      },
+      "image": null
+    }
+  ]
+}
