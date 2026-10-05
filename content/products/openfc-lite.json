@@ -232,6 +232,7 @@
     }
   ],
   "downloads": [],
+  "specsNote": "* Also runs on 2S; the 10 V VTX output then follows the battery voltage instead of holding 10 V.",
   "specs": [
     [
       "Firmware",
@@ -271,7 +272,7 @@
     ],
     [
       "Input",
-      "3–8S LiPo (9.0–33.6 V)"
+      "3–8S* LiPo (9.0–33.6 V)"
     ],
     [
       "BEC",
@@ -325,7 +326,7 @@
         ],
         [
           "Input",
-          "3–6S LiPo (9.0–25.2 V)"
+          "3–6S* LiPo (9.0–25.2 V)"
         ],
         [
           "BEC",
