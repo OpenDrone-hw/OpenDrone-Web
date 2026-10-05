@@ -49,6 +49,11 @@ ACCOUNTS_ENABLED = "0"
 CHATFPV_OAUTH_REDIRECTS = "https://chatfpv.sales-ee0.workers.dev/auth/callback"
 CHATFPV_POST_LOGOUT_REDIRECTS = "https://chatfpv.sales-ee0.workers.dev/"
 
+# Customer mail intake (README "Support tickets", "Mail"): Gmail poll that turns
+# mail to the customer addresses into tickets. "0" off, "dry" reports counts
+# only, "1" on. Needs the founder's go; the Gmail credentials are Worker secrets.
+SUPPORT_MAIL_INTAKE_ENABLED = "0"
+
 # Support tickets: the ticket index and conversation copy (README "Support").
 # Apply new migrations with `npx wrangler d1 migrations apply SUPPORT_DB
 # --remote --config wrangler.toml`. Local dev uses a local copy of

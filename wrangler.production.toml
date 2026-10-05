@@ -54,6 +54,10 @@ NEWSLETTER_FROM_EMAIL = "hello@opendrone.be"
 # on by the founder's go of 2026-09-27.
 SUPPORT_SHOPIFY_WRITE_ENABLED = "1"
 SUPPORT_EMAIL_NOTIFY_ENABLED = "1"
+# Customer mail intake (README "Support tickets", "Mail"): Gmail poll that turns
+# mail to the customer addresses into tickets. "0" off, "dry" reports counts
+# only, "1" on. Needs the founder's go; the Gmail credentials are Worker secrets.
+SUPPORT_MAIL_INTAKE_ENABLED = "0"
 # ChatFPV (README "Support tickets"): AI ticket drafts in Discord, the
 # /support Ask box and the product/preorder widget. "1" turns each on.
 # CHATFPV_KEY is a Worker secret.

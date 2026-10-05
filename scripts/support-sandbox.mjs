@@ -20,6 +20,8 @@
  *       edit   OD-XXXX-XXXX [id] "text"   edit the last (or given) staff message
  *       delete OD-XXXX-XXXX [id]     delete the last (or given) staff message
  *       state  [OD-XXXX-XXXX]        threads, metadata posts and Shopify writes as JSON
+ *       mail   <from> "Subject | body"   put a customer mail in the fake mailbox (to contact@opendrone.be)
+ *       poll                         run the cron pass once on the dev server (mail intake, then the ticket jobs)
  *     SUPPORT_SANDBOX_PORT selects the sandbox (default 5196).
  *
  * The fake Shopify knows one customer, jan@example.com, with order #1042
@@ -51,10 +53,24 @@ function arg(name, fallback) {
 if (process.argv[2] === 'staff') {
   const [command, ref, ...rest] = process.argv.slice(3);
   const port = process.env.SUPPORT_SANDBOX_PORT || '5196';
-  const commands = ['reply', 'note', 'waiting', 'close', 'open', 'lock', 'approve', 'edit', 'delete', 'state'];
-  if (!commands.includes(command) || (command !== 'state' && !ref)) {
+  const commands = ['reply', 'note', 'waiting', 'close', 'open', 'lock', 'approve', 'edit', 'delete', 'state', 'mail', 'poll'];
+  if (!commands.includes(command) || (command !== 'state' && command !== 'poll' && !ref)) {
     console.error(`usage: npm run support:staff -- <${commands.join('|')}> <ticket-ref> [text]`);
     process.exit(2);
+  }
+  if (command === 'poll') {
+    // The dev server has no cron: POST the same pass the Worker runs every five minutes.
+    const devPort = process.env.SUPPORT_DEV_PORT || '5195';
+    const polled = await fetch(`http://localhost:${devPort}/api/support/cleanup?jobs=1`, {
+      method: 'POST',
+      headers: {Authorization: 'Bearer sandbox-cleanup-secret', Origin: `http://localhost:${devPort}`},
+    }).catch(() => null);
+    if (!polled) {
+      console.error(`no dev server on port ${devPort}: start it, or set SUPPORT_DEV_PORT`);
+      process.exit(1);
+    }
+    process.stdout.write(`${JSON.stringify(await polled.json(), null, 2)}\n`);
+    process.exit(polled.ok ? 0 : 1);
   }
   const res = await fetch(`http://localhost:${port}/control/${command}`, {
     method: command === 'state' ? 'GET' : 'POST',
@@ -84,6 +100,7 @@ const threads = new Map();
 const channelPosts = [];
 const files = new Map();
 const shopifyWrites = [];
+const mails = [];
 
 function addMessage(thread, content, author, attachments = []) {
   thread.archived = false;
@@ -237,10 +254,48 @@ function shopify(res, body) {
   return send(res, 400, {errors: [{message: 'sandbox: unknown query'}]});
 }
 
+// Fake Gmail: the mailbox behind SUPPORT_DEV_GMAIL_API. Messages are added by
+// `support:staff -- mail`, and look like what Gmail returns for format=full.
+const b64 = (text) => Buffer.from(text).toString('base64url');
+function gmail(res, url) {
+  const parts = url.pathname.split('/').filter(Boolean).slice(1);
+  if (parts[0] !== 'messages') return send(res, 404, {error: 'sandbox: no gmail route'});
+  if (!parts[1]) {
+    const messages = [...mails].reverse().map((m) => ({id: m.id, threadId: m.threadId}));
+    return send(res, 200, messages.length ? {messages} : {});
+  }
+  const m = mails.find((x) => x.id === parts[1]);
+  if (!m) return send(res, 404, {error: {code: 404}});
+  return send(res, 200, {
+    id: m.id,
+    threadId: m.threadId,
+    labelIds: ['INBOX', 'UNREAD'],
+    internalDate: String(m.at),
+    payload: {
+      mimeType: 'text/plain',
+      headers: [
+        {name: 'From', value: m.from},
+        {name: 'To', value: 'contact@opendrone.be'},
+        {name: 'Subject', value: m.subject},
+        {name: 'Message-ID', value: `<${m.id}@sandbox.invalid>`},
+        {name: 'Authentication-Results', value: 'mx.google.com; dkim=pass; spf=pass; dmarc=pass'},
+      ],
+      body: {size: m.body.length, data: b64(m.body)},
+    },
+  });
+}
+
 const STAFF_TEXT = {note: (t) => `// ${t || 'internal note'}`, waiting: () => '!waiting', close: () => '!close', open: () => '!open'};
 
 function control(req, res, url, body) {
   const command = url.pathname.split('/')[2];
+  if (command === 'mail') {
+    const {ref: from, text} = JSON.parse(body || '{}');
+    const [subject, ...rest] = String(text || '').split(' | ');
+    const id = `mail${mails.length + 1}`;
+    mails.push({id, threadId: `thread${mails.length + 1}`, from, subject: subject || '(no subject)', body: rest.join(' | ') || subject, at: Date.now()});
+    return send(res, 200, {ok: true, id, note: 'now run: npm run support:staff -- poll'});
+  }
   if (command === 'state') {
     return send(res, 200, {
       threads: [...threads.values()].map((t) => ({
@@ -328,6 +383,9 @@ const ENV_LINES = [
   `SUPPORT_DEV_STOREFRONT_URL=http://localhost:${PORT}/storefront`,
   'SUPPORT_SHOPIFY_WRITE_ENABLED=1',
   'SUPPORT_EMAIL_NOTIFY_ENABLED=0',
+  // Mail intake against the fake mailbox; no Gmail credentials exist or are used.
+  `SUPPORT_DEV_GMAIL_API=http://localhost:${PORT}/gmail`,
+  'SUPPORT_MAIL_INTAKE_ENABLED=1',
   // Cloudflare's always-pass test site key; the dev-only skip covers the missing secret.
   'TURNSTILE_SITE_KEY=1x00000000000000000000AA',
   'SUPPORT_TURNSTILE_DEV_SKIP=1',
@@ -356,6 +414,7 @@ http
     try {
       if (url.pathname.startsWith('/discord/')) return await discord(req, res, url, body);
       if (url.pathname === '/shopify') return shopify(res, body);
+      if (url.pathname.startsWith('/gmail/')) return gmail(res, url);
       // Storefront API: an empty catalogue (no products, so no preorder counts either).
       if (url.pathname === '/storefront') return send(res, 200, {data: {products: {pageInfo: {hasNextPage: false}, nodes: []}}});
       if (url.pathname.startsWith('/control/')) return control(req, res, url, body);
@@ -377,6 +436,7 @@ http
         `dev server:      VITE_CACHE_DIR=.vite-cache npm run dev -- --port ${DEV_PORT} --strictPort`,
         `open:            http://localhost:${DEV_PORT}/support   (customer jan@example.com, order #1042)`,
         `act as staff:    SUPPORT_SANDBOX_PORT=${PORT} npm run support:staff -- reply OD-XXXX-XXXX "Hello"`,
+        `fake mail:       SUPPORT_SANDBOX_PORT=${PORT} npm run support:staff -- mail jan@example.com "Order #1042 | When does it ship?"  then  SUPPORT_DEV_PORT=${DEV_PORT} npm run support:staff -- poll`,
       ].join('\n'),
     );
   });

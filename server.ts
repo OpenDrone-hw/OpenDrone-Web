@@ -10,6 +10,7 @@ import {parseCampaignConfig} from '~/lib/preorder-campaign';
 import {queryCountryCookie} from '~/lib/shipping-rates';
 import {preorderHoldsEnabled, reconcilePreorders} from '~/lib/preorder-ops';
 import {priceTierWritesEnabled} from '~/lib/shopify-price-tier';
+import {mailIntakeReady, runMailIntake} from '~/lib/support/mail';
 import {supportDeps, supportReady} from '~/lib/support/server';
 import {runScheduled} from '~/lib/support/tickets';
 import preordersJson from './content/preorders.json';
@@ -166,6 +167,8 @@ export default {
    *   a delivery Shopify never made and any paid preorder order not yet held
    *   and tagged. Price steps only while SHOPIFY_PRICE_TIER_WRITE_ENABLED is
    *   '1'; holds always, except on staging (app/lib/preorder-ops.ts).
+   * - Support mail (app/lib/support/mail.ts, SUPPORT_MAIL_INTAKE_ENABLED):
+   *   customer mail from Gmail becomes tickets or ticket replies.
    * - Support tickets (app/lib/support/tickets.ts runScheduled): read open
    *   threads, send reply notices when enabled, auto-close silent answered
    *   tickets and delete tickets closed more than 24 months ago. Off until
@@ -214,6 +217,18 @@ export default {
     if (supportReady(env)) {
       executionContext.waitUntil(
         (async () => {
+          // Customer mail first, so a new ticket is synced in the same pass.
+          // Off unless SUPPORT_MAIL_INTAKE_ENABLED is "1" or "dry".
+          if (mailIntakeReady(env)) {
+            try {
+              const report = await runMailIntake({deps: supportDeps(env, SUPPORT_ORIGIN), db: env.SUPPORT_DB!});
+              if (report.tickets.length || report.replies.length || report.errors || report.mode === 'dry') {
+                console.warn('support mail', JSON.stringify(report));
+              }
+            } catch (error) {
+              console.error('support mail failed', error instanceof Error ? error.message : 'error');
+            }
+          }
           try {
             const report = await runScheduled(supportDeps(env, SUPPORT_ORIGIN));
             if (report.notified || report.autoClosed.length || report.deleted.length) {

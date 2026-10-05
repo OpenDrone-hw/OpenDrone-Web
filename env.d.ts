@@ -177,6 +177,21 @@ declare global {
     // Admin calls at a local stub for end-to-end runs.
     SUPPORT_DEV_DISCORD_API?: string;
     SUPPORT_DEV_SHOPIFY_ADMIN_URL?: string;
+    SUPPORT_DEV_GMAIL_API?: string;
+
+    // Customer mail intake (app/lib/support/mail.ts, README "Support tickets",
+    // "Mail"). SUPPORT_MAIL_INTAKE_ENABLED is a [var]: "1" on, "dry" report
+    // only, anything else off. SUPPORT_MAIL_SA_JSON (the service account key
+    // file) and SUPPORT_MAIL_MAILBOX are Worker secrets; the allow and deny
+    // lists may name suppliers, so they are secrets too, never in the repo.
+    SUPPORT_MAIL_INTAKE_ENABLED?: string;
+    SUPPORT_MAIL_SA_JSON?: string;
+    SUPPORT_MAIL_MAILBOX?: string;
+    SUPPORT_MAIL_ADDRESSES?: string;
+    SUPPORT_MAIL_OWN_DOMAINS?: string;
+    SUPPORT_MAIL_ALLOW?: string;
+    SUPPORT_MAIL_DENY?: string;
+    SUPPORT_MAIL_WINDOW_DAYS?: string;
 
     // Cloudflare Turnstile for the newsletter signup and support forms.
     TURNSTILE_SITE_KEY?: string;
