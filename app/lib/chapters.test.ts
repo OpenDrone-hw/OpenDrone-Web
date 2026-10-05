@@ -50,6 +50,7 @@ describe('DEFAULT_CHAPTERS', () => {
         'firmware',
         'contributors',
         'reviews',
+        'build',
       ],
     );
   });
@@ -60,7 +61,7 @@ describe('resolveChapters numbering', () => {
     const out = resolveChapters(null, all);
     assert.deepEqual(
       out.map((c) => c.number),
-      ['01', '02', '03', '04', '05', '06', '07', '08', '09'],
+      ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10'],
     );
   });
 
@@ -71,7 +72,7 @@ describe('resolveChapters numbering', () => {
     const out = resolveChapters(null, skipTeardown);
     assert.deepEqual(
       out.map((c) => c.number),
-      ['01', '02', '03', '04', '05', '06', '07', '08'],
+      ['01', '02', '03', '04', '05', '06', '07', '08', '09'],
     );
     assert.ok(!out.some((c) => c.type === 'teardown'));
   });

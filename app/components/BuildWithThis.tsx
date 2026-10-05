@@ -1,15 +1,14 @@
 import {useEffect, useState} from 'react';
 import {HeroBuildGuide} from '~/components/HeroBuildGuide';
 import {CartPlacementProvider} from '~/components/AddToCartButton';
-import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
 import {airframeLabel} from '~/lib/hero-airframes';
 import type {HeroBuild} from '~/lib/hero-build';
 
 /**
- * "Build with this" under a product page's buy box: the homepage build card
- * (`HeroBuildGuide`, same parts, prices, ship line and one add for the whole
- * build) for the build this part belongs to. A part that fits more than one
+ * The build card in a product page's "What you need to fly" chapter: the
+ * homepage build card (`HeroBuildGuide`, same parts, prices, ship line and
+ * one add for the whole build) for the build this part belongs to. A part that fits more than one
  * build opens on the selected variant's build and offers the others as a
  * toggle; changing the variant moves the card with it.
  */
@@ -31,9 +30,8 @@ export function BuildWithThis({
       className="pdp-build"
       aria-label={copyText('product-chrome.build_block_label') ?? 'Build with this'}
     >
-      <div className="pdp-build-head">
-        <Txt id="product-chrome.build_block_label" as="p" className="pdp-build-label" />
-        {builds.length > 1 ? (
+      {builds.length > 1 ? (
+        <div className="pdp-build-head">
           <div
             className="hero-build-sizes pdp-build-sizes"
             role="group"
@@ -50,8 +48,8 @@ export function BuildWithThis({
               </button>
             ))}
           </div>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
       <CartPlacementProvider value="build_block">
         <HeroBuildGuide key={build.id} build={build} />
       </CartPlacementProvider>

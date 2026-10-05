@@ -1756,6 +1756,14 @@ html:not(.light) .site-header-categories .site-header-cat-group a:not(:hover):no
   display: none !important;
 }
 
+/* Family chips and All products in capitals, so Motors and Frame read like
+   FC, ESC and RX. The pods' product rows keep their own case. */
+.site-header-categories .site-header-cat-group > .header-cat > a,
+.site-header-categories .site-header-cat-all {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 /* On the homepage the header floats over the hero scene, in place from
    the first frame. */
 .homepage-layout .site-header {
@@ -18471,26 +18479,56 @@ summary,
   color: var(--color-text);
 }
 
-/* "Build with this" under a product page's buy box: the homepage build
-   card (HeroBuildGuide) with a label and, for a part that fits more than
-   one build, the size toggle. */
-.pdp-build {
-  margin-top: 1.25rem;
+/* The product page's "What you need to fly" chapter: the homepage build
+   card (HeroBuildGuide) with, for a part that fits more than one build, the
+   size toggle; beside it on desktop, the gear we do not sell. */
+.build-chapter {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sp-6);
+  align-items: start;
 }
-.pdp-build-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.6rem;
+@media (min-width: 880px) {
+  .build-chapter {
+    grid-template-columns: minmax(0, 34rem) minmax(0, 1fr);
+    gap: var(--sp-7);
+  }
 }
-.pdp-build-label {
-  margin: 0;
+.build-chapter-bring-label {
+  margin: 0 0 0.75rem;
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--color-gold-text);
+}
+.build-chapter-bring ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.6rem;
+  max-width: 36rem;
+}
+.build-chapter-bring li {
+  position: relative;
+  padding-left: 1.1rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+.build-chapter-bring li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-gold-fill);
+}
+.pdp-build-head {
+  display: flex;
+  margin-bottom: 0.6rem;
 }
 .pdp-build .pdp-build-sizes {
   margin-bottom: 0;

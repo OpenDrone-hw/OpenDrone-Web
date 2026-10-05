@@ -36,6 +36,7 @@ const LABELS: Record<ChapterType, string> = {
   firmware: 'Firmware',
   contributors: 'Contributors',
   reviews: 'Reviews',
+  build: 'What you need to fly',
   prose: 'Free text',
 };
 
@@ -52,6 +53,7 @@ const CAVEATS: Partial<Record<ChapterType, string>> = {
   reviews: 'Appears only once the catalog carries published ratings for a product.',
   teardown: 'Needs board art or a frame viewer for this product.',
   firmware: 'Hidden on bundles and on products not yet for sale.',
+  build: 'Only on parts listed in content/builds.json, and not while the product is coming soon.',
 };
 
 async function api<T>(path: string, body?: unknown): Promise<T> {

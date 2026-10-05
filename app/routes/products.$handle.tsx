@@ -2112,6 +2112,9 @@ function ProductPage() {
       // least one rating, so a zero-review store shows no trace of it.
       case 'reviews':
         return Boolean(reviewAggregate);
+      // Parts that belong to a build in content/builds.json, once buyable.
+      case 'build':
+        return builds.length > 0 && !soon;
       // A free-text chapter exists once it has words. Keyed by the chapter's
       // id, so several of them on one page stay distinct.
       case 'prose':
@@ -2273,6 +2276,41 @@ function ProductPage() {
         </Chapter>
       );
     },
+    /**
+     * The whole quad this part goes into: the build card (one add for every
+     * part we sell, size toggle when the part fits more than one build) and
+     * the gear a first build still needs that we do not sell.
+     */
+    build: (n, title) => (
+      <Chapter
+        id="build"
+        number={n}
+        label="What you need to fly"
+        title={title}
+        titleId="product-chrome.ch_build_title"
+        noMedia
+        wide={
+          <div className="build-chapter">
+            <BuildWithThis
+              builds={builds}
+              selectedBuild={buildForProduct(BUILDS, product.handle, selectedVariant?.sku)}
+            />
+            <div className="build-chapter-bring">
+              <Txt id="product-chrome.build_bring_label" as="p" className="build-chapter-bring-label" />
+              <ul>
+                {(['radio', 'video', 'power', 'tools', 'setup'] as const).map((k) => (
+                  <li key={k}>
+                    <Txt id={`product-chrome.build_bring_${k}`} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        }
+      >
+        <Txt id="product-chrome.build_intro" as="p" className="chapter-body" />
+      </Chapter>
+    ),
     /** What the board is published as: repos, license, latest commit. */
     openSource: (n, title) => (
       <Chapter
@@ -3096,12 +3134,6 @@ function ProductPage() {
             <div ref={setRailSentinel} className="buy-rail-sentinel" aria-hidden="true" />
           </div>
           </CartPlacementProvider>
-          {builds.length && !soon ? (
-            <BuildWithThis
-              builds={builds}
-              selectedBuild={buildForProduct(BUILDS, product.handle, selectedVariant?.sku)}
-            />
-          ) : null}
           <ul
             className="trust-chips"
             aria-label={copyText('product-chrome.trust_chips_aria')}
