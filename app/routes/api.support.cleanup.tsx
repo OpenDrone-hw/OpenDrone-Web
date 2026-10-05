@@ -24,7 +24,7 @@ export async function action({request, context}: Route.ActionArgs) {
   const url = new URL(request.url);
   const deps = supportDeps(env, originOf(request));
   if (url.searchParams.get('jobs') === '1') {
-    // The same order as the cron: customer mail first (when its gate is open), then the ticket jobs.
+    // The same order as the cron: customer mail drafts first (when its gate is open), then the ticket jobs.
     const mail = mailIntakeReady(env) ? await runMailIntake({deps, db: env.SUPPORT_DB!}) : undefined;
     return json({ok: true, ...(await runScheduled(deps)), ...(mail ? {mail} : {})});
   }

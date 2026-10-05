@@ -1,29 +1,30 @@
 /**
- * Customer mail into the ticket queue (README "Support tickets", "Mail").
+ * Customer mail answered by email (README "Mail").
  *
  * Every cron pass (server.ts `scheduled`, behind SUPPORT_MAIL_INTAKE_ENABLED)
  * asks Gmail for the last few days of mail sent to the customer addresses,
- * drops everything that is not a customer (mail-parse.ts `classify`), and
- * turns the rest into tickets exactly like the web form does: a Discord
- * thread with the staff card, the ChatFPV draft, the Shopify match only
- * through an order number Shopify confirms for the sender. A follow-up mail
- * (the ticket reference in the subject, or the Gmail thread of an earlier
- * mail of the same sender) is copied into that ticket as a customer reply.
- *
- * Nothing is mailed by this module. The customer gets the ticket link
- * through the existing "new reply" notice when staff answer.
+ * drops everything that is not a customer (mail-parse.ts `classify`), and for
+ * each remaining mail asks ChatFPV for a reply draft (public audience only,
+ * no order data, Shopify is never called) and saves it as a Gmail DRAFT reply
+ * in the same Gmail thread of SUPPORT_MAIL_MAILBOX. A person opens Gmail,
+ * edits and sends. This module never sends mail: the Gmail client has no
+ * send function. A sender the mail system did not authenticate still gets a
+ * draft, whose first line asks the person to check before sending.
+ * One message in the staff Discord channel counts what the pass left in Gmail.
  *
  * Modes (SUPPORT_MAIL_INTAKE_ENABLED): anything but "1" or "dry" is off;
- * "dry" fetches and classifies and only reports counts, writing nothing.
+ * "dry" fetches and classifies and only reports counts, writing nothing and
+ * asking Gmail for the read-only scope.
  *
  * Idempotency: a row per message in support_mail_messages, keyed by the
  * SHA-256 of the Message-ID header, claimed before the work starts. A
  * failure marks the row "retry" (3 attempts). The one remaining window is a
- * Worker killed between creating a ticket and recording it, which would
- * open that ticket twice on the retry.
+ * Worker killed between creating a draft and recording it, which would leave
+ * two drafts of that mail after the retry.
  */
-import {cleanText, escapeDiscord} from './discord.ts';
+import {redactTicketText} from './ai-drafts.ts';
 import {createGmailClient, gmailConfigured, type GmailClient, type GmailEnv} from './mail-gmail.ts';
+import {draftRaw} from './mail-draft.ts';
 import {
   DEFAULT_OWN_DOMAINS,
   bodyText,
@@ -34,12 +35,10 @@ import {
   headerOf,
   listConfig,
   orderNumberIn,
-  refInSubject,
   type MailConfig,
   type MailMessage,
 } from './mail-parse.ts';
-import {scrubForDiscord} from './scrubber.ts';
-import {LIMITS, addCustomerReply, createTicket, type Deps, type NewTicketInput} from './tickets.ts';
+import type {Deps} from './tickets.ts';
 
 export type MailEnv = GmailEnv & {
   /** "1" on, "dry" report only, anything else off. */
@@ -94,8 +93,7 @@ export function gmailQuery(cfg: MailConfig, days: number): string {
 const DAY = 24 * 60 * 60 * 1000;
 const MAX_FETCH = 40;
 const MAX_LIST = 150;
-const MAX_TICKETS = 5;
-const MAX_REPLIES = 15;
+const MAX_DRAFTS = 5;
 const MAX_ATTEMPTS = 3;
 const CLAIM_STALE_MS = 10 * 60 * 1000;
 const SENDER_PER_DAY = 8;
@@ -109,7 +107,7 @@ async function sha256Hex(text: string): Promise<string> {
 // Store
 // --------------------------------------------------------------------------
 
-type MailRow = {message_hash: string; gmail_id: string; gmail_thread_id: string; ref: string | null; outcome: string; reason: string | null; attempts: number; updated_at: number};
+type MailRow = {message_hash: string; gmail_id: string; gmail_thread_id: string; gmail_draft_id: string | null; outcome: string; reason: string | null; attempts: number; updated_at: number};
 
 export function createMailStore(db: D1Database) {
   return {
@@ -150,17 +148,20 @@ export function createMailStore(db: D1Database) {
         .run();
       return Number(r.meta?.changes ?? 0) > 0;
     },
-    async finish(hash: string, outcome: 'ticket' | 'reply' | 'ignored', now: number, extra: {ref?: string; reason?: string} = {}): Promise<void> {
+    async finish(hash: string, outcome: 'drafted' | 'ignored', now: number, extra: {draftId?: string; reason?: string} = {}): Promise<void> {
       await db
-        .prepare('UPDATE support_mail_messages SET outcome = ?, ref = ?, reason = ?, updated_at = ? WHERE message_hash = ?')
-        .bind(outcome, extra.ref ?? null, extra.reason ?? null, now, hash)
+        .prepare('UPDATE support_mail_messages SET outcome = ?, gmail_draft_id = ?, reason = ?, updated_at = ? WHERE message_hash = ?')
+        .bind(outcome, extra.draftId ?? null, extra.reason ?? null, now, hash)
         .run();
     },
-    async fail(hash: string, now: number): Promise<void> {
+    /** Count a failed attempt; the new outcome, 'retry' or (after the last attempt) 'failed'. */
+    async fail(hash: string, now: number): Promise<'retry' | 'failed'> {
       await db
         .prepare(`UPDATE support_mail_messages SET outcome = CASE WHEN attempts >= ? THEN 'failed' ELSE 'retry' END, updated_at = ? WHERE message_hash = ?`)
         .bind(MAX_ATTEMPTS, now, hash)
         .run();
+      const row = await db.prepare('SELECT outcome FROM support_mail_messages WHERE message_hash = ?').bind(hash).first<{outcome: string}>();
+      return row?.outcome === 'failed' ? 'failed' : 'retry';
     },
     /** Give a claim back unworked: the next pass takes it, without costing an attempt. */
     async release(hash: string, now: number): Promise<void> {
@@ -169,21 +170,15 @@ export function createMailStore(db: D1Database) {
         .bind(now, hash)
         .run();
     },
-    async refForThread(threadId: string): Promise<string | null> {
-      const row = await db
-        .prepare('SELECT ref FROM support_mail_messages WHERE gmail_thread_id = ? AND ref IS NOT NULL ORDER BY received_at DESC LIMIT 1')
-        .bind(threadId)
-        .first<{ref: string}>();
-      return row?.ref ?? null;
-    },
     async prune(before: number): Promise<void> {
-      await db.prepare('DELETE FROM support_mail_messages WHERE ref IS NULL AND updated_at < ?').bind(before).run();
+      await db.prepare('DELETE FROM support_mail_messages WHERE updated_at < ?').bind(before).run();
       await db.prepare('DELETE FROM support_mail_copies WHERE updated_at < ?').bind(before).run();
     },
   };
 }
 
 export type MailStore = ReturnType<typeof createMailStore>;
+
 
 // --------------------------------------------------------------------------
 // The pass
@@ -193,8 +188,15 @@ export type MailReport = {
   mode: MailMode;
   listed: number;
   fetched: number;
-  tickets: string[];
-  replies: string[];
+  /** Mails that passed every filter (dry mode: the mails it would have drafted). */
+  eligible: number;
+  /** Gmail drafts created in this pass, and how many of them are for a sender the mail system did not authenticate. */
+  drafted: number;
+  unverified: number;
+  /** Mails whose attempt this pass produced no draft (ChatFPV gave none, or Gmail refused); they retry. */
+  noDraft: number;
+  /** Mails that used their last attempt this pass: no draft, no more retries. */
+  gaveUp: number;
   ignored: Record<string, number>;
   deferred: number;
   errors: number;
@@ -207,49 +209,48 @@ export type MailDeps = {
   gmail?: GmailClient;
 };
 
-const TRUNCATED = '\n[mail truncated]';
-const WITHHELD = '(The text of this mail was withheld by the privacy filter. Open the original in the shared mailbox.)';
-
-/** The ticket text of a new mail: subject line, the new text, a note about attachments. */
-export function composeTicketText(subject: string, body: string, attachments: number): string {
-  const parts = [subject ? `Subject: ${subject}` : '', body || '(no text)', attachments ? `(${attachments} attachment${attachments === 1 ? '' : 's'} in the mail, not imported)` : ''].filter(Boolean);
-  const text = parts.join('\n\n');
-  return text.length > LIMITS.message ? `${text.slice(0, LIMITS.message - TRUNCATED.length)}${TRUNCATED}` : text;
+/** The text ChatFPV sees: subject and new text without the sender's name, address or any order reference. */
+function draftQuestion(subject: string, body: string, sender: {email: string; name: string}): string {
+  const text = [subject ? `Subject: ${subject}` : '', body || '(no text)'].filter(Boolean).join('\n\n');
+  return redactTicketText(text, {name: displayName(sender), email: sender.email, orderNumber: orderNumberIn(subject, body)});
 }
 
-/** Deps whose Shopify calls cannot happen: no store configuration, and a fetcher that refuses (which also covers the dev sandbox). */
-function withoutShopify(deps: Deps): Deps {
-  return {
-    ...deps,
-    env: {...deps.env, SHOPIFY_ADMIN_API_TOKEN: undefined, SHOPIFY_STORE_DOMAIN: undefined},
-    fetcher: (async () => {
-      throw new Error('shopify is not used for unauthenticated mail');
-    }) as unknown as typeof fetch,
-  };
+/** The reply draft text: the ChatFPV draft and any source it did not already list. */
+function replyText(res: {draft: string | null; citations: Array<{n: number; title: string; url: string}>}): string | null {
+  const body = res.draft?.trim();
+  if (!body) return null;
+  const extra = res.citations.filter((c) => !body.includes(c.url)).map((c) => `[${c.n}] ${c.title}: ${c.url}`);
+  return extra.length ? `${body}\n\nSources:\n${extra.join('\n')}` : body;
 }
 
-export const UNVERIFIED_NOTE = '**Sender not authenticated, verify before sharing order details.** The From address could not be confirmed by the mail system: it is not matched to Shopify, no order was checked, and a reply from this sender never joins an existing ticket.';
-
-function sourceNote(subject: string, attachments: number, verified: boolean): string {
-  const dropped = attachments ? `; ${attachments} attachment${attachments === 1 ? '' : 's'} not imported` : '';
-  return [
-    ...(verified ? [] : [UNVERIFIED_NOTE]),
-    `*Source: mail. Subject: ${escapeDiscord(cleanText(subject).slice(0, 150)) || '(none)'}.`,
-    `Quoted history and signature were removed${dropped}.`,
-    'Reply here as for any ticket: the customer gets the usual "new reply" notice with the ticket link; nothing is mailed automatically.*',
-  ].join(' ');
+/** The staff channel line after a pass: counts only, no customer names, addresses, subjects or text. */
+export function headsUp(r: Pick<MailReport, 'drafted' | 'unverified' | 'gaveUp'>): string | null {
+  if (!r.drafted && !r.gaveUp) return null;
+  const parts: string[] = [];
+  if (r.drafted) {
+    const n = `${r.drafted} draft ${r.drafted === 1 ? 'reply' : 'replies'}`;
+    parts.push(`${n} waiting in Gmail${r.unverified ? ` (${r.unverified} sender not authenticated)` : ''}`);
+  }
+  if (r.gaveUp) parts.push(`${r.gaveUp} ${r.gaveUp === 1 ? 'mail' : 'mails'} without a draft`);
+  return `Mail: ${parts.join(', ')}.`;
 }
 
 export async function runMailIntake(ctx: MailDeps): Promise<MailReport> {
   const {deps, db} = ctx;
   const env = deps.env as typeof deps.env & MailEnv;
   const mode = mailIntakeMode(env);
-  const report: MailReport = {mode, listed: 0, fetched: 0, tickets: [], replies: [], ignored: {}, deferred: 0, errors: 0};
+  const report: MailReport = {mode, listed: 0, fetched: 0, eligible: 0, drafted: 0, unverified: 0, noDraft: 0, gaveUp: 0, ignored: {}, deferred: 0, errors: 0};
   if (mode === 'off' || !gmailConfigured(env)) return report;
+  const chatfpv = deps.chatfpv?.client;
+  if (mode === 'on' && !chatfpv) {
+    // Without ChatFPV there is nothing to draft: leave the mail alone (no claim, no attempt used).
+    console.warn('[support] mail drafts need CHATFPV_DRAFTS_ENABLED "1" with CHATFPV_URL and CHATFPV_KEY; nothing was read');
+    return report;
+  }
 
   const now = (deps.now ?? Date.now)();
   const cfg = mailConfig(env);
-  const gmail = ctx.gmail ?? createGmailClient(env, deps.fetcher ?? fetch, deps.now ?? Date.now);
+  const gmail = ctx.gmail ?? createGmailClient(env, deps.fetcher ?? fetch, deps.now ?? Date.now, {compose: mode === 'on'});
   const store = createMailStore(db);
   const ignore = (reason: string) => {
     report.ignored[reason] = (report.ignored[reason] ?? 0) + 1;
@@ -259,7 +260,7 @@ export async function runMailIntake(ctx: MailDeps): Promise<MailReport> {
   report.listed = listed.length;
 
   // Skip what is already decided without fetching it. Oldest first, so a
-  // backlog becomes tickets in the order it arrived.
+  // backlog is drafted in the order it arrived.
   const todo: typeof listed = [];
   for (const item of listed) {
     const row = mode === 'on' ? await store.byGmailId(item.id) : null;
@@ -281,7 +282,7 @@ export async function runMailIntake(ctx: MailDeps): Promise<MailReport> {
     const verdict = classify(m, cfg);
 
     if (mode === 'dry') {
-      if (verdict.ok) report.tickets.push('(dry)');
+      if (verdict.ok) report.eligible++;
       else ignore(verdict.reason);
       continue;
     }
@@ -289,14 +290,12 @@ export async function runMailIntake(ctx: MailDeps): Promise<MailReport> {
     const messageId = headerOf(m, 'message-id');
     const hash = await sha256Hex(messageId || `gmail:${m.id}`);
     const existing = await store.byHash(hash);
-    let retry = false;
     if (existing) {
       // Another Gmail copy of a message already handled, or a retry.
       if (!(await store.reclaim(hash, now))) {
         if (existing.gmail_id !== m.id) await store.recordCopy(m.id, hash, now);
         continue;
       }
-      retry = true;
     } else if (!(await store.claim(hash, m, now))) {
       continue;
     }
@@ -306,17 +305,24 @@ export async function runMailIntake(ctx: MailDeps): Promise<MailReport> {
       ignore(verdict.reason);
       continue;
     }
+    report.eligible++;
 
-    if (report.tickets.length >= MAX_TICKETS || report.replies.length >= MAX_REPLIES) {
+    if (report.drafted >= MAX_DRAFTS) {
       // Over this pass' budget: give the claim back, the next pass takes it.
       await store.release(hash, now);
       report.deferred++;
       continue;
     }
 
+    const failed = async () => {
+      const outcome = await store.fail(hash, now).catch(() => 'retry' as const);
+      if (outcome === 'failed') report.gaveUp++;
+      else report.noDraft++;
+    };
+
     try {
       // A leaky bucket per sender (8 mails a day), read before and charged
-      // only after the mail became a ticket or reply.
+      // only after the mail got its draft.
       const senderKey = `mailsender:${await sha256Hex(verdict.sender.email)}`;
       if ((await deps.store.bucket(senderKey, 0, SENDER_PER_DAY / DAY, now)) >= SENDER_PER_DAY) {
         await store.finish(hash, 'ignored', now, {reason: 'sender_limit'});
@@ -326,102 +332,54 @@ export async function runMailIntake(ctx: MailDeps): Promise<MailReport> {
 
       const subject = cleanSubject(headerOf(m, 'subject'));
       const body = bodyText(m);
-      const outcome = await handleCustomerMail(ctx, store, {m, hash, subject, body, sender: verdict.sender, verified: verdict.verified, retry});
-      if (outcome.kind === 'ignored') {
-        await store.finish(hash, 'ignored', now, {reason: outcome.reason});
-        ignore(outcome.reason);
+      // No order data goes to ChatFPV and Shopify is not called on this path.
+      const res = await chatfpv!.draft({
+        ticketRef: `mail-${hash.slice(0, 16)}`,
+        topic: guessTopic(subject, body),
+        conversation: [{role: 'customer', text: draftQuestion(subject, body, verdict.sender)}],
+      });
+      const reply = res ? replyText(res) : null;
+      if (!reply) {
+        // ChatFPV unavailable or no draft: nothing is created in Gmail.
+        await failed();
         continue;
       }
+      const raw = draftRaw({mail: m, reply, original: body, verified: verdict.verified});
+      if (!raw) {
+        await store.finish(hash, 'ignored', now, {reason: 'no_reply_address'});
+        ignore('no_reply_address');
+        continue;
+      }
+      const draftId = await gmail.createDraft(m.threadId, raw);
+      await store.finish(hash, 'drafted', now, {draftId});
       await deps.store.bucket(senderKey, 1, SENDER_PER_DAY / DAY, now);
-      report[outcome.kind === 'ticket' ? 'tickets' : 'replies'].push(outcome.ref);
+      report.drafted++;
+      if (!verdict.verified) report.unverified++;
     } catch (err) {
       report.errors++;
-      await store.fail(hash, now).catch(() => {});
-      console.warn('[support] mail intake failed', err instanceof Error ? err.message : 'error');
+      await failed();
+      console.warn('[support] mail draft failed', err instanceof Error ? err.message : 'error');
     }
   }
 
   await store.prune(now - 30 * DAY).catch(() => {});
+  await announce(deps, report);
   return report;
 }
 
-const flat = (text: string) => text.replace(/\s+/g, ' ').trim();
-
-async function handleCustomerMail(
-  ctx: MailDeps,
-  store: MailStore,
-  mail: {m: MailMessage; hash: string; subject: string; body: string; sender: {email: string; name: string}; verified: boolean; retry: boolean},
-): Promise<{kind: 'ticket' | 'reply'; ref: string} | {kind: 'ignored'; reason: string}> {
-  const {deps} = ctx;
-  const {m, hash, subject, body, sender, verified, retry} = mail;
-  const now = (deps.now ?? Date.now)();
-
-  // A follow-up: the reference in the subject, else the Gmail thread of an
-  // earlier mail that became or joined a ticket. Only the ticket's own
-  // sender continues it, and only while the team has not locked it.
-  // A sender that did not authenticate never joins a ticket: anyone could
-  // forge the address of a customer and the reference.
-  const ref = verified ? (refInSubject(subject) ?? (await store.refForThread(m.threadId))) : null;
-  const ticket = ref ? await deps.store.getTicket(ref) : null;
-  if (ticket && ticket.email === sender.email && !ticket.locked) {
-    const text = composeReplyText(body, m.attachmentCount);
-    // A retry after a crash: the reply may already be in the ticket.
-    if (retry) {
-      const sent = scrubForDiscord(text).content;
-      const already = (await deps.store.messages(ticket.ref)).some((x) => x.role === 'customer' && x.createdAt >= m.receivedAt && (x.body === sent || x.body === WITHHELD));
-      if (already) {
-        await store.finish(hash, 'reply', now, {ref: ticket.ref});
-        return {kind: 'reply', ref: ticket.ref};
-      }
-    }
-    let result = await addCustomerReply(deps, ticket, text);
-    if (!result.ok && result.error === 'filtered') result = await addCustomerReply(deps, ticket, WITHHELD);
-    if (result.ok) {
-      await store.finish(hash, 'reply', now, {ref: ticket.ref});
-      return {kind: 'reply', ref: ticket.ref};
-    }
-    // Only a lock falls through to a new ticket, so the customer is not
-    // dropped. Any other refusal is recorded and counted.
-    if (result.error !== 'locked') return {kind: 'ignored', reason: `reply_${result.error}`};
+/** One staff channel message when the pass left drafts or gave up on a mail. Never throws. */
+async function announce(deps: Deps, report: MailReport): Promise<void> {
+  const line = headsUp(report);
+  const channel = deps.env.DISCORD_STAFF_METADATA_CHANNEL_ID;
+  if (!line) return;
+  if (!channel) {
+    console.warn('[support] mail heads-up not posted: DISCORD_STAFF_METADATA_CHANNEL_ID is not set');
+    return;
   }
-
-  const text = composeTicketText(subject, body, m.attachmentCount);
-  const scrubbed = scrubForDiscord(text);
-  const message = scrubbed.blocked ? composeTicketText(subject, WITHHELD, m.attachmentCount) : scrubbed.content;
-  // A retry after a crash: the ticket may exist already (created, not yet
-  // recorded). Same sender, opened since the mail arrived, same first text.
-  if (retry) {
-    const orphan = (await deps.store.ticketsByEmail(sender.email, 5)).find(
-      (t) => t.createdAt >= m.receivedAt && flat(message).startsWith(t.preview.replace(/…$/, '')),
-    );
-    if (orphan) {
-      await store.finish(hash, 'ticket', now, {ref: orphan.ref});
-      return {kind: 'ticket', ref: orphan.ref};
-    }
-  }
-  const input: NewTicketInput = {
-    topic: guessTopic(subject, body),
-    name: displayName(sender),
-    email: sender.email,
-    // Shopify confirms it for this email or it is shown as unverified.
-    orderNumber: orderNumberIn(subject, body),
-    product: null,
-    firmware: null,
-    message,
-  };
-  // An unauthenticated sender is never matched to Shopify: no order number is
-  // passed, and the Shopify configuration is withheld so not even a read happens.
-  const created = await createTicket(verified ? deps : withoutShopify(deps), verified ? input : {...input, orderNumber: null});
-  await store.finish(hash, 'ticket', now, {ref: created.ref});
   try {
-    await deps.discord.post(created.threadId, sourceNote(subject, m.attachmentCount, verified));
-  } catch {
-    // The note is a convenience; the ticket stands without it.
+    // postToChannel sends allowed_mentions {parse: []}.
+    await deps.discord.postToChannel(channel, line);
+  } catch (err) {
+    console.warn('[support] mail heads-up failed', err instanceof Error ? err.message : 'error');
   }
-  return {kind: 'ticket', ref: created.ref};
-}
-
-function composeReplyText(body: string, attachments: number): string {
-  const text = [body || '(no text)', attachments ? `(${attachments} attachment${attachments === 1 ? '' : 's'} in the mail, not imported)` : ''].filter(Boolean).join('\n\n');
-  return text.length > LIMITS.message ? `${text.slice(0, LIMITS.message - TRUNCATED.length)}${TRUNCATED}` : text;
 }

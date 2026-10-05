@@ -4,7 +4,6 @@
  * signatures, a topic guess, an order number, a ticket reference.
  * mail.ts runs these over what mail-gmail.ts fetched.
  */
-import {parseTicketRef} from './tokens.ts';
 import {normalizeOrderNumber} from './shopify.ts';
 import type {TicketTopic} from './form.ts';
 
@@ -359,16 +358,8 @@ export function cleanSubject(subject: string): string {
 }
 
 // --------------------------------------------------------------------------
-// Ticket hints
+// Topic and order hints
 // --------------------------------------------------------------------------
-
-const REF_IN_TEXT = /\bOD-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}\b/i;
-
-/** A ticket reference written in the subject (our reply notice carries one). */
-export function refInSubject(subject: string): string | null {
-  const m = subject.match(REF_IN_TEXT);
-  return m ? parseTicketRef(m[0]) : null;
-}
 
 const ORDER_PATTERNS = [/#\s?(\d{4,10})\b/, /\b(?:order|bestelling|commande|bestellung|preorder|pre-order)\s*(?:number|nr\.?|no\.?|numero|nummer|n°)?\s*:?\s*#?\s*(\d{4,10})\b/i];
 

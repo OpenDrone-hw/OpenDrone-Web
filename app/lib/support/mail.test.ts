@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {beforeEach, describe, it} from 'node:test';
-import {_resetGmailToken, createGmailClient, signAssertion, toMailMessage, type GmailClient} from './mail-gmail.ts';
+import {_resetGmailToken, createGmailClient, gmailScopes, signAssertion, toMailMessage, type GmailClient} from './mail-gmail.ts';
 import {
   authenticated,
   classify,
@@ -8,17 +8,17 @@ import {
   guessTopic,
   orderNumberIn,
   parseAddress,
-  refInSubject,
   stripQuoted,
   bodyText,
   type MailConfig,
   type MailMessage,
 } from './mail-parse.ts';
 import {_resetModCache} from './moderation.ts';
-import {composeTicketText, gmailQuery, mailConfig, mailIntakeMode, mailIntakeReady, runMailIntake, type MailEnv} from './mail.ts';
+import {gmailQuery, headsUp, mailConfig, mailIntakeMode, mailIntakeReady, runMailIntake, type MailEnv} from './mail.ts';
+import {UNVERIFIED_LINE, draftMessage, encodeWords, replySubject} from './mail-draft.ts';
 import {createStore} from './store.ts';
-import {addCustomerReply, closeTicket, createTicket, type Deps, type SupportEnv} from './tickets.ts';
-import {fakeChatFpv, fakeDiscord, fakeShopify, testD1, type ShopifyScript} from './testing.ts';
+import type {Deps, SupportEnv} from './tickets.ts';
+import {fakeChatFpv, fakeDiscord, testD1} from './testing.ts';
 import {createDraftStore} from './ai-drafts.ts';
 
 const probe = await testD1();
@@ -224,10 +224,8 @@ describe('text', () => {
     assert.equal(bodyText(m), 'Hello there\nIs it in stock?');
   });
 
-  it('cleans subjects and finds references, order numbers and topics', () => {
+  it('cleans subjects and finds order numbers and topics', () => {
     assert.equal(cleanSubject('Re: Fwd: RE: Hello'), 'Hello');
-    assert.equal(refInSubject('Re: New reply on your OpenDrone ticket OD-K7M4-Q2XF'), 'OD-K7M4-Q2XF');
-    assert.equal(refInSubject('ticket od k7m4q2xf'), null);
     assert.equal(orderNumberIn('Question about order #1042'), '#1042');
     assert.equal(orderNumberIn('hi', 'my order number 20871 has not arrived'), '#20871');
     assert.equal(orderNumberIn('Bestelling 20871 is niet aangekomen'), '#20871');
@@ -236,13 +234,6 @@ describe('text', () => {
     assert.equal(guessTopic('Where is my order', 'tracking please'), 'order');
     assert.equal(guessTopic('Broken arm', 'frame arrived broken, order #1042'), 'warranty');
     assert.equal(guessTopic('Hi', 'nice project'), 'other');
-  });
-
-  it('caps a new ticket text at the form limit', () => {
-    const long = composeTicketText('Hello', 'x'.repeat(9000), 2);
-    assert.ok(long.length <= 4000);
-    assert.match(long, /\[mail truncated\]$/);
-    assert.match(composeTicketText('Hello', 'body', 1), /1 attachment in the mail, not imported/);
   });
 });
 
@@ -280,7 +271,7 @@ describe('gmail client', () => {
     assert.equal(huge.text, '');
   });
 
-  it('signs a verifiable RS256 assertion and asks for the read-only scope as the mailbox', async () => {
+  it('signs a verifiable RS256 assertion and asks for the read-only scope as the mailbox, and compose only when drafting', async () => {
     const pair = await crypto.subtle.generateKey({name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256'}, true, ['sign', 'verify']);
     const der = Buffer.from(await crypto.subtle.exportKey('pkcs8', pair.privateKey)).toString('base64');
     const pem = `-----BEGIN PRIVATE KEY-----\n${der.match(/.{1,64}/g)!.join('\n')}\n-----END PRIVATE KEY-----\n`;
@@ -291,6 +282,8 @@ describe('gmail client', () => {
     assert.equal(claims.sub, 'box@incutec.eu');
     assert.equal(claims.iss, key.client_email);
     assert.equal(claims.scope, 'https://www.googleapis.com/auth/gmail.readonly');
+    const both = JSON.parse(Buffer.from((await signAssertion(key, 'box@incutec.eu', 1_800_000_000, gmailScopes(true))).split('.')[1]!, 'base64url').toString()) as {scope: string};
+    assert.equal(both.scope, 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.compose');
     assert.equal(claims.aud, 'https://oauth2.googleapis.com/token');
     assert.equal((JSON.parse(Buffer.from(h, 'base64url').toString()) as {alg: string}).alg, 'RS256');
     assert.equal(await crypto.subtle.verify('RSASSA-PKCS1-v1_5', pair.publicKey, Buffer.from(s, 'base64url'), new TextEncoder().encode(`${h}.${c}`)), true);
@@ -330,12 +323,12 @@ describe('gmail client', () => {
 const ENV: SupportEnv & MailEnv = {
   DISCORD_BOT_TOKEN: 'bot',
   DISCORD_SUPPORT_CHANNEL_ID: '42',
+  DISCORD_STAFF_METADATA_CHANNEL_ID: '77',
   DISCORD_GUILD_ID: '7',
   SUPPORT_MODERATION_MODE: 'off',
   SUPPORT_SESSION_SECRET: 'test-secret',
   SHOPIFY_STORE_DOMAIN: 'opendrone-test.myshopify.com',
   SHOPIFY_ADMIN_API_TOKEN: 'shpat_test',
-  SUPPORT_SHOPIFY_WRITE_ENABLED: '1',
   SUPPORT_MAIL_INTAKE_ENABLED: '1',
   SUPPORT_MAIL_SA_JSON: '{}',
   SUPPORT_MAIL_MAILBOX: 'box@incutec.eu',
@@ -344,26 +337,14 @@ const ENV: SupportEnv & MailEnv = {
 
 const UNAUTH = 'mx.google.com; dkim=none; spf=none';
 
-const JAN_ORDER = {
-  name: '#1042',
-  email: 'jan@example.com',
-  customer: {id: 'gid://shopify/Customer/1'},
-  createdAt: '2026-08-02T10:00:00Z',
-  displayFinancialStatus: 'PAID',
-  displayFulfillmentStatus: 'UNFULFILLED',
-  tags: ['preorder', 'batch:OD-FC-F4:2'],
-  lineItems: {nodes: [{sku: 'OD-FC-F4', title: 'OpenFC F4', quantity: 1}]},
-};
-const SCRIPT: ShopifyScript = {
-  customers: [{id: 'gid://shopify/Customer/1', email: 'jan@example.com', numberOfOrders: 1, orders: [JAN_ORDER]}],
-  orders: [JAN_ORDER],
-};
-
 let clock = Date.parse('2026-09-01T09:00:00Z');
 
-/** A Gmail that lists `inbox` newest first and records every call. */
-function fakeGmail(inbox: MailMessage[]) {
+type Created = {threadId: string; raw: string};
+
+/** A Gmail that lists `inbox` newest first, records every call and keeps the drafts it was asked for. */
+function fakeGmail(inbox: MailMessage[], opts: {failDraft?: () => boolean} = {}) {
   const calls = {list: 0, get: [] as string[], queries: [] as string[]};
+  const drafts: Created[] = [];
   const client: GmailClient = {
     async list(query) {
       calls.list++;
@@ -376,28 +357,50 @@ function fakeGmail(inbox: MailMessage[]) {
       if (!m) throw new Error('gmail get 404');
       return m;
     },
+    async createDraft(threadId, raw) {
+      if (opts.failDraft?.()) throw new Error('gmail /drafts 500');
+      drafts.push({threadId, raw});
+      return `draft${drafts.length}`;
+    },
   };
-  return {client, calls, inbox};
+  return {client, calls, inbox, drafts};
 }
 
-async function setup(opts: {env?: Partial<SupportEnv & MailEnv>; withChatFpv?: boolean} = {}) {
+/** The decoded RFC 2822 message of a created draft: headers (unfolded) and the plain text body. */
+function decode(d: Created): {headers: Record<string, string>; body: string} {
+  const msg = Buffer.from(d.raw, 'base64url').toString('utf8');
+  const [head, ...rest] = msg.split('\r\n\r\n');
+  const headers: Record<string, string> = {};
+  for (const line of head!.replace(/\r\n[ \t]+/g, ' ').split('\r\n')) {
+    const i = line.indexOf(':');
+    headers[line.slice(0, i).toLowerCase()] = line.slice(i + 1).trim();
+  }
+  assert.equal(headers['content-transfer-encoding'], 'base64');
+  return {headers, body: Buffer.from(rest.join('\r\n\r\n').replace(/\r\n/g, ''), 'base64').toString('utf8').replace(/\r\n/g, '\n')};
+}
+
+async function setup(opts: {env?: Partial<SupportEnv & MailEnv>; withChatFpv?: boolean | Parameters<typeof fakeChatFpv>[0]} = {}) {
   const db = (await testD1())!;
   const discord = fakeDiscord({now: () => clock});
-  const shopify = fakeShopify(SCRIPT);
-  const chatfpv = fakeChatFpv();
+  const chatfpv = fakeChatFpv(typeof opts.withChatFpv === 'object' ? opts.withChatFpv : {});
+  const urls: string[] = [];
   const deps: Deps = {
     env: {...ENV, ...opts.env},
     store: createStore(db),
     discord: discord.client,
-    fetcher: shopify.fetcher,
+    // Any outbound call from the pass itself (Shopify, mail) is recorded and refused.
+    fetcher: (async (url: string) => {
+      urls.push(String(url));
+      throw new Error('no network in tests');
+    }) as unknown as typeof fetch,
     now: () => clock,
     origin: 'https://opendrone.test',
-    chatfpv: opts.withChatFpv ? {client: chatfpv.client, drafts: createDraftStore(db)} : undefined,
+    chatfpv: opts.withChatFpv === false ? undefined : {client: chatfpv.client, drafts: createDraftStore(db)},
   };
-  return {deps, db, discord, shopify, chatfpv};
+  return {deps, db, discord, chatfpv, urls};
 }
 
-const threadsOf = (discord: ReturnType<typeof fakeDiscord>) => [...discord.threads.values()];
+const posts = (discord: ReturnType<typeof fakeDiscord>) => discord.channelPosts.map((p) => p.content);
 
 beforeEach(() => {
   clock = Date.parse('2026-09-01T09:00:00Z');
@@ -427,7 +430,59 @@ describe('configuration', () => {
   });
 });
 
-describe('mail intake', {skip}, () => {
+describe('draft message', () => {
+  it('encodes non-ASCII words within 75 characters and never doubles Re:', () => {
+    assert.equal(replySubject('Hello'), 'Re: Hello');
+    assert.equal(replySubject('RE: Hello'), 'RE: Hello');
+    assert.equal(replySubject('re:Hello'), 're:Hello');
+    assert.equal(encodeWords('Plain subject'), 'Plain subject');
+    const subject = 'Vraag over mijn bestelling: één motor werkt niet meer, kan iemand helpen? 日本語のテスト';
+    const encoded = encodeWords(subject);
+    for (const word of encoded.split('\r\n ')) assert.ok(word.length <= 75 && /^=\?UTF-8\?B\?[A-Za-z0-9+/=]+\?=$/.test(word), word);
+    const back = encoded
+      .split('\r\n ')
+      .map((w) => Buffer.from(w.slice(10, -2), 'base64').toString('utf8'))
+      .join('');
+    assert.equal(back, subject);
+  });
+
+  it('builds a threaded plain text reply: To, Subject, In-Reply-To, References, quoted original', () => {
+    const m = mail({headers: {from: 'Zoë Müller <zoe@example.com>', subject: 'Vraag: één motor', references: '<a@x> <b@x>', date: 'Tue, 1 Sep 2026 08:50:00 +0000'}});
+    const msg = draftMessage({mail: m, reply: 'Hello Zoë,\nLine two.', original: 'Eerste regel\n\nTweede regel', verified: true})!;
+    assert.ok(msg.includes('\r\n\r\n') && !/[^\r]\n/.test(msg.split('\r\n\r\n')[0]!));
+    const d = decode({threadId: 't', raw: Buffer.from(msg).toString('base64url')});
+    assert.match(d.headers.to!, /^=\?UTF-8\?B\?.+\?= <zoe@example\.com>$/);
+    assert.equal(d.headers['in-reply-to'], m.headers['message-id']![0]);
+    assert.equal(d.headers.references, `<a@x> <b@x> ${m.headers['message-id']![0]}`);
+    assert.match(d.headers['content-type']!, /text\/plain; charset=UTF-8/);
+    assert.equal(
+      d.body,
+      'Hello Zoë,\nLine two.\n\nOn Tue, 1 Sep 2026 08:50:00 +0000, Zoë Müller <zoe@example.com> wrote:\n> Eerste regel\n>\n> Tweede regel',
+    );
+  });
+
+  it('caps the quote at 4000 characters and keeps the draft first', () => {
+    const body = draftMessage({mail: mail(), reply: 'Answer.', original: 'x'.repeat(9000), verified: true})!;
+    const text = decode({threadId: 't', raw: Buffer.from(body).toString('base64url')}).body;
+    assert.ok(text.startsWith('Answer.\n\nOn '));
+    assert.ok(text.length < 4300, String(text.length));
+  });
+
+  it('puts the check line first for an unauthenticated sender', () => {
+    const msg = draftMessage({mail: mail(), reply: 'Answer.', original: 'Hi', verified: false})!;
+    const text = decode({threadId: 't', raw: Buffer.from(msg).toString('base64url')}).body;
+    assert.ok(text.startsWith(`${UNVERIFIED_LINE}\n\nAnswer.`));
+    assert.equal(UNVERIFIED_LINE, '[CHECK BEFORE SENDING: sender not authenticated by the mail system. Delete this line.]');
+  });
+
+  it('cannot be header-injected through the subject or sender name', () => {
+    const m = mail({headers: {subject: 'Hi\r\nBcc: attacker@evil.example', from: '"Eve\r\nBcc: x@y.z" <eve@example.com>'}});
+    const msg = draftMessage({mail: m, reply: 'a', original: 'b', verified: true})!;
+    assert.ok(!/^Bcc:/im.test(msg));
+  });
+});
+
+describe('mail drafts', {skip}, () => {
   it('does nothing while off or without credentials', async () => {
     const {deps, db} = await setup({env: {SUPPORT_MAIL_INTAKE_ENABLED: '0'}});
     const gmail = fakeGmail([mail()]);
@@ -440,124 +495,136 @@ describe('mail intake', {skip}, () => {
     assert.equal(gmail.calls.list, 0);
   });
 
-  it('opens a ticket from a mail: thread, topic, order match through Shopify, ChatFPV draft', async () => {
-    const {deps, db, discord, shopify, chatfpv} = await setup({withChatFpv: true});
-    const gmail = fakeGmail([
-      mail({
-        headers: {subject: 'Re: ESC firmware order #1042'},
-        text: 'How do I flash AM32 on the ESC from my order?\n\nJan\n\nOn Sun, 30 Aug 2026 at 12:00, OpenDrone wrote:\n> old text',
-        attachments: 1,
-      }),
-    ]);
+  it('leaves the mail alone while ChatFPV drafts are not configured', async () => {
+    const {deps, db} = await setup({withChatFpv: false});
+    const gmail = fakeGmail([mail()]);
     const report = await runMailIntake({deps, db, gmail: gmail.client});
-    assert.equal(report.tickets.length, 1);
-    const ref = report.tickets[0]!;
-    const ticket = (await deps.store.getTicket(ref))!;
-    assert.equal(ticket.email, 'jan@example.com');
-    assert.equal(ticket.name, 'Jan Peeters');
-    assert.equal(ticket.topic, 'product');
-    assert.equal(ticket.orderNumber, '#1042');
-    assert.equal(ticket.orderVerified, true);
-    assert.equal(ticket.customerMatch, 'matched');
-    const messages = await deps.store.messages(ref);
-    assert.match(messages[0]!.body, /^Subject: ESC firmware order #1042\n\nHow do I flash AM32/);
-    assert.doesNotMatch(messages[0]!.body, /old text|wrote:/);
-    assert.match(messages[0]!.body, /1 attachment in the mail, not imported/);
-    const thread = threadsOf(discord)[0]!;
-    assert.match(thread.name, new RegExp(ref));
-    assert.ok(thread.messages.some((m) => /Source: mail\. Subject: ESC firmware order #1042/.test(m.content.replace(/\\(.)/g, '$1'))), 'source note in the thread');
-    assert.ok(shopify.writes.some((w) => w.op === 'tagsAdd'), 'Shopify customer tagged only after the order matched');
-    assert.equal(chatfpv.drafts.length, 1, 'a product ticket requests its draft like a web ticket');
-    const row = await db.prepare('SELECT outcome, ref, gmail_thread_id FROM support_mail_messages').first<{outcome: string; ref: string; gmail_thread_id: string}>();
-    assert.equal(row?.outcome, 'ticket');
-    assert.equal(row?.ref, ref);
+    assert.equal(gmail.calls.list, 0);
+    assert.equal(report.drafted, 0);
+    assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM support_mail_messages').first<{n: number}>())!.n, 0);
   });
 
-  it('leaves a sender without a confirmed order unverified', async () => {
-    const {deps, db, shopify} = await setup();
-    const gmail = fakeGmail([mail({headers: {from: 'Eve <eve@example.com>', subject: 'Order #1042'}, text: 'Where is my order #1042? Please tell me.'})]);
+  it('drafts a threaded reply from the ChatFPV draft and tells the staff channel, with no order data to ChatFPV and no Shopify', async () => {
+    const {deps, db, discord, chatfpv, urls} = await setup();
+    const m = mail({
+      threadId: 'thr-1',
+      headers: {subject: 'Re: ESC firmware order #1042'},
+      text: 'How do I flash AM32 on the ESC from my order 1042? Jan Peeters, jan@example.com\n\nJan\n\nOn Sun, 30 Aug 2026 at 12:00, OpenDrone wrote:\n> old text',
+    });
+    const gmail = fakeGmail([m]);
     const report = await runMailIntake({deps, db, gmail: gmail.client});
-    const ticket = (await deps.store.getTicket(report.tickets[0]!))!;
-    assert.equal(ticket.orderVerified, false);
-    assert.equal(ticket.customerId, null);
-    assert.equal(shopify.writes.length, 0);
+    assert.equal(report.drafted, 1);
+    assert.equal(report.unverified, 0);
+    assert.equal(gmail.drafts.length, 1);
+    assert.equal(gmail.drafts[0]!.threadId, 'thr-1');
+    const d = decode(gmail.drafts[0]!);
+    assert.equal(d.headers.to, '"Jan Peeters" <jan@example.com>');
+    assert.equal(d.headers.subject, 'Re: ESC firmware order #1042');
+    assert.equal(d.headers['in-reply-to'], m.headers['message-id']![0]);
+    assert.ok(d.body.startsWith('Flash the latest firmware with the configurator'));
+    assert.match(d.body, /\n> How do I flash AM32/);
+    assert.doesNotMatch(d.body, /old text/);
+    assert.doesNotMatch(d.body, /CHECK BEFORE SENDING/);
+
+    assert.equal(chatfpv.drafts.length, 1);
+    const asked = JSON.stringify(chatfpv.drafts[0]);
+    assert.doesNotMatch(asked, /jan@example\.com|Jan Peeters|#1042|1042/);
+    assert.match(asked, /AM32/);
+    assert.equal(chatfpv.drafts[0]!.topic, 'product');
+    assert.deepEqual(urls, [], 'no Shopify or other outbound call');
+
+    const row = await db.prepare('SELECT outcome, gmail_draft_id, gmail_thread_id FROM support_mail_messages').first<{outcome: string; gmail_draft_id: string; gmail_thread_id: string}>();
+    assert.deepEqual({...row}, {outcome: 'drafted', gmail_draft_id: 'draft1', gmail_thread_id: 'thr-1'});
+    assert.deepEqual(discord.channelPosts.map((p) => [p.channel, p.content]), [['77', 'Mail: 1 draft reply waiting in Gmail.']]);
+    assert.equal(discord.threads.size, 0, 'no ticket, no thread');
   });
 
-  it('is idempotent: a second pass neither fetches nor duplicates', async () => {
+  it('still drafts for an unauthenticated sender, flagged on the first line, and counts it in the heads-up', async () => {
     const {deps, db, discord} = await setup();
+    const gmail = fakeGmail([mail({headers: {'authentication-results': UNAUTH}}), mail()]);
+    const report = await runMailIntake({deps, db, gmail: gmail.client});
+    assert.equal(report.drafted, 2);
+    assert.equal(report.unverified, 1);
+    const flagged = gmail.drafts.map((d) => decode(d).body).filter((b) => b.startsWith(UNVERIFIED_LINE));
+    assert.equal(flagged.length, 1);
+    assert.deepEqual(posts(discord), ['Mail: 2 draft replies waiting in Gmail (1 sender not authenticated).']);
+  });
+
+  it('creates no draft when ChatFPV is unavailable or refuses, retries, then gives up and says so once', async () => {
+    const {deps, db, discord} = await setup({withChatFpv: {draft: () => null}});
+    const gmail = fakeGmail([mail({text: 'A question ChatFPV cannot answer right now.'})]);
+    const reports = [];
+    for (let i = 0; i < 4; i++) {
+      clock += 60_000;
+      reports.push(await runMailIntake({deps, db, gmail: gmail.client}));
+    }
+    assert.deepEqual(reports.map((r) => [r.noDraft, r.gaveUp]), [[1, 0], [1, 0], [0, 1], [0, 0]]);
+    assert.equal(gmail.drafts.length, 0);
+    const row = await db.prepare('SELECT outcome, attempts, gmail_draft_id FROM support_mail_messages').first<{outcome: string; attempts: number; gmail_draft_id: string | null}>();
+    assert.deepEqual({...row}, {outcome: 'failed', attempts: 3, gmail_draft_id: null});
+    assert.deepEqual(posts(discord), ['Mail: 1 mail without a draft.']);
+    const charged = await db.prepare(`SELECT COUNT(*) AS n FROM support_find_misses WHERE key LIKE 'mailsender:%'`).first<{n: number}>();
+    assert.equal(charged?.n, 0, 'a mail without a draft does not count against the sender');
+  });
+
+  it('a Gmail failure is retried and then drafted once', async () => {
+    const {deps, db, discord} = await setup();
+    let fail = true;
+    const gmail = fakeGmail([mail()], {failDraft: () => fail});
+    const first = await runMailIntake({deps, db, gmail: gmail.client});
+    assert.equal(first.errors, 1);
+    assert.equal(first.noDraft, 1);
+    assert.equal(posts(discord).length, 0, 'a retrying mail is not announced');
+    fail = false;
+    clock += 60_000;
+    const second = await runMailIntake({deps, db, gmail: gmail.client});
+    assert.equal(second.drafted, 1);
+    assert.equal(gmail.drafts.length, 1);
+    clock += 60_000;
+    assert.equal((await runMailIntake({deps, db, gmail: gmail.client})).drafted, 0);
+    assert.equal(gmail.drafts.length, 1);
+  });
+
+  it('a follow-up in the same Gmail thread gets a fresh draft for the newest message', async () => {
+    const {deps, db} = await setup();
+    const inbox = fakeGmail([mail({threadId: 'thr-f', text: 'My GPS does not get a fix, what can I try?'})]);
+    await runMailIntake({deps, db, gmail: inbox.client});
+    clock += 3600_000;
+    const second = mail({threadId: 'thr-f', headers: {subject: 'Re: Question'}, text: 'Update: it works outside.\n\n> quoted'});
+    inbox.inbox.push(second);
+    const report = await runMailIntake({deps, db, gmail: inbox.client});
+    assert.equal(report.drafted, 1);
+    assert.equal(inbox.drafts.length, 2);
+    assert.equal(inbox.drafts[1]!.threadId, 'thr-f');
+    assert.equal(decode(inbox.drafts[1]!).headers['in-reply-to'], second.headers['message-id']![0]);
+    assert.match(decode(inbox.drafts[1]!).body, /\n> Update: it works outside\./);
+  });
+
+  it('is idempotent: a second pass neither fetches nor drafts again', async () => {
+    const {deps, db} = await setup();
     const gmail = fakeGmail([mail()]);
     await runMailIntake({deps, db, gmail: gmail.client});
     const fetched = gmail.calls.get.length;
     const again = await runMailIntake({deps, db, gmail: gmail.client});
-    assert.equal(again.tickets.length, 0);
+    assert.equal(again.drafted, 0);
     assert.equal(gmail.calls.get.length, fetched, 'decided messages are skipped before fetching');
-    assert.equal(threadsOf(discord).length, 1);
+    assert.equal(gmail.drafts.length, 1);
   });
 
   it('dedupes the same Message-ID arriving under another Gmail id', async () => {
-    const {deps, db, discord} = await setup();
+    const {deps, db} = await setup();
     const a = mail({headers: {'message-id': '<same@example.com>'}});
     const b = mail({headers: {'message-id': '<same@example.com>'}});
     const gmail = fakeGmail([a, b]);
     const report = await runMailIntake({deps, db, gmail: gmail.client});
-    assert.equal(report.tickets.length, 1);
-    assert.equal(threadsOf(discord).length, 1);
+    assert.equal(report.drafted, 1);
+    assert.equal(gmail.drafts.length, 1);
     const fetched = gmail.calls.get.length;
     await runMailIntake({deps, db, gmail: gmail.client});
     assert.equal(gmail.calls.get.length, fetched, 'the other Gmail copy is remembered and not fetched again');
   });
 
-  it('threads a follow-up by the Gmail thread and by the reference in the subject, for the same sender only', async () => {
-    const {deps, db, discord} = await setup();
-    const first = mail({threadId: 'thr-1', text: 'My GPS does not get a fix, what can I try?'});
-    const inbox = fakeGmail([first]);
-    const ref = (await runMailIntake({deps, db, gmail: inbox.client})).tickets[0]!;
-
-    clock += 3600_000;
-    inbox.inbox.push(mail({threadId: 'thr-1', headers: {subject: 'Re: Question'}, text: 'Update: it works outside.\n\n> quoted'}));
-    const byThread = await runMailIntake({deps, db, gmail: inbox.client});
-    assert.deepEqual(byThread.replies, [ref]);
-    assert.equal(byThread.tickets.length, 0);
-
-    clock += 3600_000;
-    inbox.inbox.push(mail({threadId: 'other-thread', headers: {subject: `Re: New reply on your OpenDrone ticket ${ref}`}, text: 'One more question about the antenna.'}));
-    const bySubject = await runMailIntake({deps, db, gmail: inbox.client});
-    assert.deepEqual(bySubject.replies, [ref]);
-
-    const bodies = (await deps.store.messages(ref)).filter((m) => m.role === 'customer').map((m) => m.body);
-    assert.equal(bodies.length, 3);
-    assert.equal(bodies[1], 'Update: it works outside.');
-    assert.equal(threadsOf(discord).length, 1);
-
-    // Someone else quoting the reference opens their own ticket instead of joining this one.
-    clock += 3600_000;
-    inbox.inbox.push(mail({headers: {from: 'Eve <eve@example.com>', subject: `Re: ticket ${ref}`}, text: 'I am not the ticket owner at all.'}));
-    const stranger = await runMailIntake({deps, db, gmail: inbox.client});
-    assert.equal(stranger.replies.length, 0);
-    assert.equal(stranger.tickets.length, 1);
-    assert.equal((await deps.store.messages(ref)).filter((m) => m.role === 'customer').length, 3);
-  });
-
-  it('reopens a closed ticket on a reply and opens a new one when the thread is locked', async () => {
-    const {deps, db, discord} = await setup();
-    const inbox = fakeGmail([mail({threadId: 'thr-2', text: 'First question about the box contents please.'})]);
-    const ref = (await runMailIntake({deps, db, gmail: inbox.client})).tickets[0]!;
-    await closeTicket(deps, (await deps.store.getTicket(ref))!, 'you');
-    clock += 3600_000;
-    inbox.inbox.push(mail({threadId: 'thr-2', text: 'Still not solved, sorry.'}));
-    assert.deepEqual((await runMailIntake({deps, db, gmail: inbox.client})).replies, [ref]);
-    assert.equal((await deps.store.getTicket(ref))!.status, 'open');
-
-    await deps.store.updateTicket(ref, {locked: true});
-    clock += 3600_000;
-    inbox.inbox.push(mail({threadId: 'thr-2', text: 'Writing again after you locked it.'}));
-    const report = await runMailIntake({deps, db, gmail: inbox.client});
-    assert.equal(report.replies.length, 0);
-    assert.equal(report.tickets.length, 1);
-    assert.equal(threadsOf(discord).length, 2);
-  });
-
-  it('records dropped mail and counts the reasons without creating anything', async () => {
+  it('records dropped mail and counts the reasons without drafting or announcing anything', async () => {
     const {deps, db, discord} = await setup();
     const gmail = fakeGmail([
       mail({headers: {from: 'noreply@shop.example'}}),
@@ -567,186 +634,159 @@ describe('mail intake', {skip}, () => {
       mail({headers: {to: 'other@else.example'}}),
     ]);
     const report = await runMailIntake({deps, db, gmail: gmail.client});
-    assert.equal(report.tickets.length, 0);
+    assert.equal(report.drafted, 0);
     assert.deepEqual(report.ignored, {no_reply_sender: 1, denied: 1, own_domain: 1, newsletter: 1, not_addressed: 1});
-    assert.equal(threadsOf(discord).length, 0);
+    assert.equal(gmail.drafts.length, 0);
+    assert.equal(posts(discord).length, 0);
     const second = await runMailIntake({deps, db, gmail: gmail.client});
     assert.equal(second.fetched, 0);
   });
 
-  it('rate-limits one sender per day', async () => {
+  it('rate-limits one sender per day and drafts at most 5 per pass', async () => {
     const {deps, db} = await setup();
     const inbox = fakeGmail(Array.from({length: 12}, (_, i) => mail({text: `Question number ${i} about the flight controller.`})));
     const first = await runMailIntake({deps, db, gmail: inbox.client});
-    assert.equal(first.tickets.length, 5, 'a pass opens at most 5 tickets');
+    assert.equal(first.drafted, 5, 'a pass drafts at most 5 mails');
     assert.equal(first.deferred, 7, 'the rest wait for the next pass');
     let ignoredLimit = 0;
-    let total = first.tickets.length;
+    let total = first.drafted;
     for (let i = 0; i < 4; i++) {
       const r = await runMailIntake({deps, db, gmail: inbox.client});
-      total += r.tickets.length;
+      total += r.drafted;
       ignoredLimit += r.ignored.sender_limit ?? 0;
     }
     assert.equal(total, 8);
     assert.equal(ignoredLimit, 4);
   });
 
-  it('withholds the text of a mail the scrubber blocks, but still opens the ticket', async () => {
-    const {deps, db} = await setup();
-    const lots = Array.from({length: 14}, () => '4242 4242 4242 4242').join(' ');
-    const report = await runMailIntake({deps, db, gmail: fakeGmail([mail({text: `Please forward this to everybody: ${lots}`})]).client});
-    assert.equal(report.tickets.length, 1);
-    const body = (await deps.store.messages(report.tickets[0]!))[0]!.body;
-    assert.match(body, /withheld by the privacy filter/);
-    assert.doesNotMatch(body, /4242/);
-  });
-
-  it('retries a failed message up to three times, then gives up', async () => {
-    const {deps, db, discord} = await setup();
-    const failing = {...deps, discord: {...deps.discord, createThread: async () => {
-      throw new Error('discord createThread 500');
-    }}} as Deps;
-    const gmail = fakeGmail([mail({text: 'A question that cannot be filed right now.'})]);
-    for (let i = 0; i < 3; i++) {
-      clock += 60_000;
-      const r = await runMailIntake({deps: failing, db, gmail: gmail.client});
-      assert.equal(r.errors, 1);
-      assert.equal(r.tickets.length, 0);
-    }
-    const row = await db.prepare('SELECT outcome, attempts FROM support_mail_messages').first<{outcome: string; attempts: number}>();
-    assert.deepEqual({...row}, {outcome: 'failed', attempts: 3});
-    const charged = await db.prepare(`SELECT COUNT(*) AS n FROM support_find_misses WHERE key LIKE 'mailsender:%'`).first<{n: number}>();
-    assert.equal(charged?.n, 0, 'a failed mail does not count against the sender');
-    clock += 60_000;
-    assert.equal((await runMailIntake({deps, db, gmail: gmail.client})).fetched, 0, 'a failed message is not tried again');
-    assert.equal(threadsOf(discord).length, 0);
-
-    // A transient failure that recovers does produce the ticket, once.
-    const gmail2 = fakeGmail([mail({text: 'A question that fails once and then works.'})]);
-    clock += 60_000;
-    await runMailIntake({deps: failing, db, gmail: gmail2.client});
-    clock += 60_000;
-    const ok = await runMailIntake({deps, db, gmail: gmail2.client});
-    assert.equal(ok.tickets.length, 1);
-    assert.equal(threadsOf(discord).length, 1);
-  });
-
-  it('a retry finds the ticket a crashed pass already created instead of opening a second one', async () => {
-    const {deps, db, discord} = await setup();
-    const m = mail({threadId: 'thr-crash', text: 'The ticket exists but its row was never recorded.'});
-    const text = composeTicketText('Question about order #1042', 'The ticket exists but its row was never recorded.', 0);
-    clock += 60_000;
-    const created = await createTicket(deps, {topic: 'order', name: 'Jan Peeters', email: 'jan@example.com', orderNumber: '#1042', product: null, firmware: null, message: text});
-    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(m.headers['message-id']![0]!));
-    const hash = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
-    await db.prepare(`INSERT INTO support_mail_messages (message_hash, gmail_id, gmail_thread_id, outcome, attempts, received_at, updated_at) VALUES (?, ?, ?, 'claimed', 1, ?, ?)`).bind(hash, m.id, m.threadId, m.receivedAt, clock).run();
-    clock += 11 * 60_000;
-    const report = await runMailIntake({deps, db, gmail: fakeGmail([m]).client});
-    assert.deepEqual(report.tickets, [created.ref]);
-    assert.equal(threadsOf(discord).length, 1);
-    const row = await db.prepare('SELECT outcome, ref FROM support_mail_messages').first<{outcome: string; ref: string}>();
-    assert.deepEqual({...row}, {outcome: 'ticket', ref: created.ref});
-  });
-
-  it('opens a flagged, Shopify-free ticket for an unauthenticated sender and never joins an existing ticket', async () => {
-    const {deps, db, discord, shopify} = await setup();
-    // A real ticket for jan, verified.
-    const inbox = fakeGmail([mail({threadId: 'thr-u', text: 'My GPS never gets a fix, what can I try?'})]);
-    const ref = (await runMailIntake({deps, db, gmail: inbox.client})).tickets[0]!;
-    const writesBefore = shopify.writes.length;
-    const urls: string[] = [];
-    const inner = deps.fetcher!;
-    deps.fetcher = (async (url: string, init: RequestInit) => {
-      urls.push(String(url));
-      return inner(url, init);
-    }) as unknown as typeof fetch;
-
-    // A forged mail: same address, same thread, the ticket reference, an order number, no authentication.
-    clock += 3600_000;
-    inbox.inbox.push(mail({threadId: 'thr-u', headers: {subject: `Re: ticket ${ref} order #1042`, 'authentication-results': UNAUTH}, text: 'Please send my order #1042 to a new address.'}));
-    const report = await runMailIntake({deps, db, gmail: inbox.client});
-    assert.equal(report.replies.length, 0, 'never joins an existing ticket');
-    assert.equal(report.tickets.length, 1);
-    const fresh = (await deps.store.getTicket(report.tickets[0]!))!;
-    assert.notEqual(fresh.ref, ref);
-    assert.equal(fresh.orderNumber, null);
-    assert.equal(fresh.orderVerified, false);
-    assert.equal(fresh.customerId, null);
-    assert.equal(fresh.customerMatch, 'unchecked');
-    assert.equal((await deps.store.messages(ref)).filter((x) => x.role === 'customer').length, 1);
-    assert.equal(urls.length, 0, 'no Shopify call, not even a read');
-    assert.equal(shopify.writes.length, writesBefore);
-    const thread = threadsOf(discord).find((t) => t.name.includes(fresh.ref))!;
-    const plain = thread.messages.map((x) => x.content.replace(/\\(.)/g, '$1')).join('\n');
-    assert.match(plain, /Sender not authenticated, verify before sharing order details/);
-    assert.match(plain, /Shopify not checked/);
-  });
-
-  it('ignores a spoof but keeps a delegated-DKIM sender and a group-relayed external mail as unverified tickets', async () => {
-    const {deps, db} = await setup();
-    const gmail = fakeGmail([
-      mail({headers: {from: 'Spoof <ceo@victim.example>', 'authentication-results': 'mx.google.com; dmarc=fail (p=REJECT sp=REJECT dis=NONE) header.from=victim.example'}}),
-      mail({headers: {from: 'Shop <hello@customer-shop.example>', 'authentication-results': 'mx.google.com; dkim=pass header.i=@customer-shop-example.20230601.gappssmtp.com; spf=pass smtp.mailfrom=bounce@gappssmtp.com'}, text: 'Do you ship the ESC to Sweden?'}),
-      mail({headers: {from: 'Eva <eva@outside.example>', to: 'support@incutec.eu', 'x-google-group-id': '1', 'list-id': '<support.incutec.eu>', precedence: 'list', 'authentication-results': 'mx.google.com; dmarc=fail (p=REJECT sp=REJECT dis=NONE) header.from=outside.example'}, text: 'My drone arrived without a motor.'}),
-    ]);
-    const report = await runMailIntake({deps: {...deps, env: {...deps.env, SUPPORT_MAIL_ADDRESSES: 'contact@opendrone.be, support@incutec.eu'} as typeof deps.env}, db, gmail: gmail.client});
-    assert.equal(report.tickets.length, 2);
-    assert.deepEqual(report.ignored, {spoofed: 1});
-  });
-
-  it('dry mode classifies and reports but writes nothing and sends nothing', async () => {
-    const {deps, db, discord, shopify} = await setup({env: {SUPPORT_MAIL_INTAKE_ENABLED: 'dry'}});
+  it('dry mode classifies and reports but writes and drafts nothing', async () => {
+    const {deps, db, discord, chatfpv} = await setup({env: {SUPPORT_MAIL_INTAKE_ENABLED: 'dry'}});
     const gmail = fakeGmail([mail(), mail({headers: {from: 'noreply@shop.example'}})]);
     const report = await runMailIntake({deps, db, gmail: gmail.client});
     assert.equal(report.mode, 'dry');
     assert.equal(report.fetched, 2);
-    assert.equal(report.tickets.length, 1);
+    assert.equal(report.eligible, 1);
+    assert.equal(report.drafted, 0);
     assert.deepEqual(report.ignored, {no_reply_sender: 1});
-    assert.equal(threadsOf(discord).length, 0);
-    assert.equal(shopify.writes.length, 0);
+    assert.equal(gmail.drafts.length, 0);
+    assert.equal(chatfpv.drafts.length, 0);
+    assert.equal(posts(discord).length, 0);
     const rows = await db.prepare('SELECT COUNT(*) AS n FROM support_mail_messages').first<{n: number}>();
     assert.equal(rows?.n, 0);
   });
 
-  it('prunes undecided rows after 30 days and removes a ticket\'s rows with the ticket', async () => {
+  it('prunes rows after 30 days', async () => {
     const {deps, db} = await setup();
     const inbox = fakeGmail([mail({headers: {from: 'noreply@shop.example'}}), mail({threadId: 'thr-9'})]);
-    const ref = (await runMailIntake({deps, db, gmail: inbox.client})).tickets[0]!;
+    await runMailIntake({deps, db, gmail: inbox.client});
     const count = async () => (await db.prepare('SELECT COUNT(*) AS n FROM support_mail_messages').first<{n: number}>())!.n;
     assert.equal(await count(), 2);
     clock += 31 * 24 * 3600_000;
     await runMailIntake({deps, db, gmail: fakeGmail([]).client});
-    assert.equal(await count(), 1, 'the ignored row is pruned, the ticket row stays');
-    await deps.store.deleteTicket(ref);
-    assert.equal(await count(), 0, 'the trigger removes the rows of a deleted ticket');
+    assert.equal(await count(), 0);
   });
 
   it('stores no address, subject or body', async () => {
     const {deps, db} = await setup();
     await runMailIntake({deps, db, gmail: fakeGmail([mail({text: 'My secret question about the drone please.'})]).client});
     const dump = JSON.stringify(await db.prepare('SELECT * FROM support_mail_messages').all());
-    assert.doesNotMatch(dump, /jan@example\.com|secret question|Question about order/);
+    assert.doesNotMatch(dump, /jan@example\.com|secret question|Question about order|Jan Peeters/);
   });
 
-  it('never sends mail: the only outbound calls are Shopify GraphQL', async () => {
-    const {deps, db} = await setup({env: {SUPPORT_EMAIL_NOTIFY_ENABLED: '1', RESEND_API_KEY: 're_test'}});
-    const urls: string[] = [];
-    const inner = deps.fetcher!;
-    deps.fetcher = (async (url: string, init: RequestInit) => {
-      urls.push(String(url));
-      return inner(url, init);
-    }) as unknown as typeof fetch;
-    await runMailIntake({deps, db, gmail: fakeGmail([mail()]).client});
-    assert.ok(urls.length > 0);
-    assert.ok(urls.every((u) => u.includes('myshopify.com')), urls.join(','));
-    assert.ok(!urls.some((u) => u.includes('resend')));
+  it('the heads-up carries counts only and never mentions anyone', () => {
+    assert.equal(headsUp({drafted: 0, unverified: 0, gaveUp: 0}), null);
+    assert.equal(headsUp({drafted: 2, unverified: 1, gaveUp: 1}), 'Mail: 2 draft replies waiting in Gmail (1 sender not authenticated), 1 mail without a draft.');
+    assert.equal(headsUp({drafted: 0, unverified: 0, gaveUp: 3}), 'Mail: 3 mails without a draft.');
   });
 
-  it('a customer reply via mail uses the same reply path as the site', async () => {
+  it('the heads-up goes to the staff channel without mentions, and a Discord failure does not fail the pass', async () => {
     const {deps, db} = await setup();
-    const ref = (await runMailIntake({deps, db, gmail: fakeGmail([mail({threadId: 'thr-5'})]).client})).tickets[0]!;
-    const ticket = (await deps.store.getTicket(ref))!;
-    const direct = await addCustomerReply(deps, ticket, 'Direct from the site.');
-    assert.equal(direct.ok, true);
+    const sent: Array<[string, string]> = [];
+    deps.discord = {...deps.discord, postToChannel: async (c: string, t: string) => {
+      sent.push([c, t]);
+      throw new Error('discord postChannel 500');
+    }} as Deps['discord'];
+    const report = await runMailIntake({deps, db, gmail: fakeGmail([mail()]).client});
+    assert.equal(report.drafted, 1);
+    assert.deepEqual(sent, [['77', 'Mail: 1 draft reply waiting in Gmail.']]);
+  });
+});
+
+describe('no send', {skip}, () => {
+  it('the Gmail client has list, get and createDraft only', () => {
+    const client = createGmailClient({SUPPORT_MAIL_SA_JSON: '{}', SUPPORT_MAIL_MAILBOX: 'box@incutec.eu'}, (async () => new Response('{}')) as unknown as typeof fetch, Date.now, {compose: true});
+    assert.deepEqual(Object.keys(client).sort(), ['createDraft', 'get', 'list']);
+  });
+
+  it('a whole pass over the real client calls only the token endpoint, GET reads and POST .../drafts', async () => {
+    _resetGmailToken();
+    const pair = await crypto.subtle.generateKey({name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256'}, true, ['sign', 'verify']);
+    const der = Buffer.from(await crypto.subtle.exportKey('pkcs8', pair.privateKey)).toString('base64');
+    const pem = `-----BEGIN PRIVATE KEY-----\n${der.match(/.{1,64}/g)!.join('\n')}\n-----END PRIVATE KEY-----\n`;
+    const key = JSON.stringify({client_email: 'sa@proj.iam.gserviceaccount.com', private_key: pem});
+    const {deps, db} = await setup({env: {SUPPORT_MAIL_SA_JSON: key}});
+    const m = mail({threadId: 'thr-net'});
+    const calls: Array<{method: string; url: string; scope?: string; body?: string}> = [];
+    deps.fetcher = (async (url: string, init?: RequestInit) => {
+      const u = String(url);
+      const method = init?.method ?? 'GET';
+      if (u.startsWith('https://oauth2.googleapis.com/token')) {
+        const assertion = new URLSearchParams(String(init?.body)).get('assertion')!;
+        const claims = JSON.parse(Buffer.from(assertion.split('.')[1]!, 'base64url').toString()) as {scope: string};
+        calls.push({method, url: u, scope: claims.scope});
+        return Response.json({access_token: 'tok', expires_in: 3600});
+      }
+      calls.push({method, url: u, body: init?.body as string | undefined});
+      if (method === 'POST') return Response.json({id: 'draft-net'});
+      if (u.includes('/messages?')) return Response.json({messages: [{id: m.id, threadId: m.threadId}]});
+      return Response.json({
+        id: m.id,
+        threadId: m.threadId,
+        internalDate: String(m.receivedAt),
+        payload: {mimeType: 'text/plain', headers: Object.entries(m.headers).map(([name, v]) => ({name, value: v[0]})), body: {data: Buffer.from(m.text!).toString('base64url')}},
+      });
+    }) as unknown as typeof fetch;
+
+    const report = await runMailIntake({deps, db});
+    assert.equal(report.drafted, 1);
+    for (const c of calls) {
+      assert.doesNotMatch(c.url, /\/send|messages\/send|drafts\/send/, c.url);
+      if (c.method === 'GET') assert.match(c.url, /^https:\/\/gmail\.googleapis\.com\/gmail\/v1\/users\/box%40incutec\.eu\/messages/);
+    }
+    const writes = calls.filter((c) => c.method !== 'GET' && !c.url.startsWith('https://oauth2.googleapis.com/token'));
+    assert.equal(writes.length, 1, 'the only write');
+    assert.equal(writes[0]!.method, 'POST');
+    assert.equal(writes[0]!.url, 'https://gmail.googleapis.com/gmail/v1/users/box%40incutec.eu/drafts');
+    const payload = JSON.parse(writes[0]!.body!) as {message: {threadId: string; raw: string}};
+    assert.equal(payload.message.threadId, 'thr-net');
+    assert.ok(payload.message.raw.length > 0);
+    const token = calls.find((c) => c.scope);
+    assert.equal(token?.scope, 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.compose');
+  });
+
+  it('dry mode asks only for the read-only scope and never writes', async () => {
+    _resetGmailToken();
+    const pair = await crypto.subtle.generateKey({name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256'}, true, ['sign', 'verify']);
+    const der = Buffer.from(await crypto.subtle.exportKey('pkcs8', pair.privateKey)).toString('base64');
+    const key = JSON.stringify({client_email: 'sa@p.iam', private_key: `-----BEGIN PRIVATE KEY-----\n${der}\n-----END PRIVATE KEY-----`});
+    const {deps, db} = await setup({env: {SUPPORT_MAIL_SA_JSON: key, SUPPORT_MAIL_INTAKE_ENABLED: 'dry'}});
+    const seen: Array<{method: string; scope?: string}> = [];
+    deps.fetcher = (async (url: string, init?: RequestInit) => {
+      if (String(url).startsWith('https://oauth2.googleapis.com/token')) {
+        const assertion = new URLSearchParams(String(init?.body)).get('assertion')!;
+        seen.push({method: 'POST', scope: (JSON.parse(Buffer.from(assertion.split('.')[1]!, 'base64url').toString()) as {scope: string}).scope});
+        return Response.json({access_token: 'tok', expires_in: 3600});
+      }
+      seen.push({method: init?.method ?? 'GET'});
+      return Response.json({});
+    }) as unknown as typeof fetch;
+    await runMailIntake({deps, db});
+    assert.deepEqual(seen.filter((s) => s.scope).map((s) => s.scope), ['https://www.googleapis.com/auth/gmail.readonly']);
+    assert.deepEqual(seen.filter((s) => !s.scope).map((s) => s.method), ['GET']);
+  });
+
+  it('a read-only client refuses to draft', async () => {
+    const client = createGmailClient({SUPPORT_MAIL_SA_JSON: '{}', SUPPORT_MAIL_MAILBOX: 'box@incutec.eu'}, (async () => new Response('{}')) as unknown as typeof fetch);
+    await assert.rejects(() => client.createDraft('t', 'raw'), /compose scope/);
   });
 });

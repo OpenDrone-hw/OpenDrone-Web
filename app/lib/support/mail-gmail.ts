@@ -1,19 +1,25 @@
 /**
- * Gmail API client for the mail intake, read-only, no dependencies.
+ * Gmail API client for the mail intake, no dependencies.
  *
  * Auth is a Google service account with domain-wide delegation, impersonating
- * one mailbox (SUPPORT_MAIL_MAILBOX) with the single scope gmail.readonly.
+ * one mailbox (SUPPORT_MAIL_MAILBOX). Scopes: gmail.readonly in dry mode;
+ * gmail.readonly plus gmail.compose when drafts are created (mode "1").
  * The service account key is the Worker secret SUPPORT_MAIL_SA_JSON (the
  * downloaded key file, unchanged). The Worker signs the JWT itself with
  * WebCrypto (RS256) and exchanges it for an access token held in memory for
- * its lifetime. Nothing is ever written to the mailbox: processed messages
- * are tracked in D1 (migrations/0007), not by a Gmail label.
+ * its lifetime.
+ *
+ * The client has three functions: list, get, createDraft. The only write is
+ * POST users/{mailbox}/drafts. There is no send function and no code path
+ * to messages/send or drafts/send: a human sends from Gmail. Processed
+ * messages are tracked in D1 (migrations/0007, 0008), not by a Gmail label.
  */
 import {devOverride} from './dev-overrides.ts';
 import type {MailMessage} from './mail-parse.ts';
 
-export const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
-const GMAIL_API = 'https://gmail.googleapis.com/gmail/v1/users/me';
+export const GMAIL_READONLY_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
+export const GMAIL_COMPOSE_SCOPE = 'https://www.googleapis.com/auth/gmail.compose';
+const GMAIL_API = 'https://gmail.googleapis.com/gmail/v1/users';
 const MAX_BODY_BYTES = 200_000;
 /** Base64 characters that decode to MAX_BODY_BYTES (a multiple of 4). */
 const MAX_BODY_CHARS = Math.ceil((MAX_BODY_BYTES * 4) / 3 / 4) * 4;
@@ -33,7 +39,12 @@ export type GmailClient = {
   /** Newest first; follows page tokens until `max` ids. */
   list(query: string, max: number): Promise<GmailListItem[]>;
   get(id: string): Promise<MailMessage>;
+  /** Save a reply draft in the thread; the id of the Gmail draft. Needs the compose scope. */
+  createDraft(threadId: string, raw: string): Promise<string>;
 };
+
+/** The scopes a pass asks for: compose only when it creates drafts. */
+export const gmailScopes = (compose: boolean): string => (compose ? `${GMAIL_READONLY_SCOPE} ${GMAIL_COMPOSE_SCOPE}` : GMAIL_READONLY_SCOPE);
 
 function sandboxBase(env: GmailEnv): string | null {
   return typeof import.meta.env !== 'undefined' && import.meta.env.DEV ? devOverride(env.SUPPORT_DEV_GMAIL_API) : null;
@@ -73,13 +84,13 @@ function pemToDer(pem: string): ArrayBuffer {
 }
 
 /** The signed JWT assertion for the token endpoint (exported for tests). */
-export async function signAssertion(key: ServiceAccountKey, subject: string, nowSec: number): Promise<string> {
+export async function signAssertion(key: ServiceAccountKey, subject: string, nowSec: number, scope: string = GMAIL_READONLY_SCOPE): Promise<string> {
   const header = b64url(JSON.stringify({alg: 'RS256', typ: 'JWT'}));
   const claims = b64url(
     JSON.stringify({
       iss: key.client_email,
       sub: subject,
-      scope: GMAIL_SCOPE,
+      scope,
       aud: key.token_uri ?? 'https://oauth2.googleapis.com/token',
       iat: nowSec,
       exp: nowSec + 3000,
@@ -91,17 +102,17 @@ export async function signAssertion(key: ServiceAccountKey, subject: string, now
   return `${signing}.${b64url(sig)}`;
 }
 
-let cachedToken: {value: string; expires: number; subject: string} | null = null;
+let cachedToken: {value: string; expires: number; subject: string; scope: string} | null = null;
 export function _resetGmailToken() {
   cachedToken = null;
 }
 
-async function accessToken(env: GmailEnv, fetcher: typeof fetch, now: number): Promise<string> {
+async function accessToken(env: GmailEnv, fetcher: typeof fetch, now: number, scope: string): Promise<string> {
   if (sandboxBase(env)) return 'sandbox';
   const subject = env.SUPPORT_MAIL_MAILBOX!;
-  if (cachedToken && cachedToken.subject === subject && cachedToken.expires > now + 60_000) return cachedToken.value;
+  if (cachedToken && cachedToken.subject === subject && cachedToken.scope === scope && cachedToken.expires > now + 60_000) return cachedToken.value;
   const key = parseKey(env.SUPPORT_MAIL_SA_JSON);
-  const assertion = await signAssertion(key, subject, Math.floor(now / 1000));
+  const assertion = await signAssertion(key, subject, Math.floor(now / 1000), scope);
   const res = await fetcher(key.token_uri ?? 'https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -112,7 +123,7 @@ async function accessToken(env: GmailEnv, fetcher: typeof fetch, now: number): P
   if (!res.ok) throw new Error(`gmail token ${res.status} ${(await res.text().catch(() => '')).slice(0, 200)}`);
   const json = (await res.json()) as {access_token?: string; expires_in?: number};
   if (!json.access_token) throw new Error('gmail token response without access_token');
-  cachedToken = {value: json.access_token, expires: now + (json.expires_in ?? 3000) * 1000, subject};
+  cachedToken = {value: json.access_token, expires: now + (json.expires_in ?? 3000) * 1000, subject, scope};
   return json.access_token;
 }
 
@@ -185,12 +196,24 @@ export function toMailMessage(api: ApiMessage): MailMessage {
 // Client
 // --------------------------------------------------------------------------
 
-export function createGmailClient(env: GmailEnv, fetcher: typeof fetch = fetch, now: () => number = Date.now): GmailClient {
-  const base = sandboxBase(env) ?? GMAIL_API;
+export function createGmailClient(
+  env: GmailEnv,
+  fetcher: typeof fetch = fetch,
+  now: () => number = Date.now,
+  opts: {compose?: boolean} = {},
+): GmailClient {
+  const compose = opts.compose === true;
+  const scope = gmailScopes(compose);
+  const base = sandboxBase(env) ?? `${GMAIL_API}/${encodeURIComponent(env.SUPPORT_MAIL_MAILBOX ?? 'me')}`;
 
-  async function call<T>(path: string): Promise<T> {
-    const token = await accessToken(env, fetcher, now());
-    const res = await fetcher(`${base}${path}`, {headers: {Authorization: `Bearer ${token}`}, signal: AbortSignal.timeout(10_000)});
+  async function call<T>(path: string, post?: unknown): Promise<T> {
+    const token = await accessToken(env, fetcher, now(), scope);
+    const res = await fetcher(`${base}${path}`, {
+      method: post === undefined ? 'GET' : 'POST',
+      headers: {Authorization: `Bearer ${token}`, ...(post === undefined ? {} : {'Content-Type': 'application/json'})},
+      ...(post === undefined ? {} : {body: JSON.stringify(post)}),
+      signal: AbortSignal.timeout(10_000),
+    });
     if (!res.ok) throw new Error(`gmail ${path.split('?')[0]} ${res.status}`);
     return (await res.json()) as T;
   }
@@ -211,6 +234,12 @@ export function createGmailClient(env: GmailEnv, fetcher: typeof fetch = fetch, 
     },
     async get(id) {
       return toMailMessage(await call<ApiMessage>(`/messages/${encodeURIComponent(id)}?format=full`));
+    },
+    async createDraft(threadId, raw) {
+      if (!compose) throw new Error('gmail client created without the compose scope');
+      const json = await call<{id?: string}>('/drafts', {message: {threadId, raw}});
+      if (!json.id) throw new Error('gmail draft response without id');
+      return json.id;
     },
   };
 }

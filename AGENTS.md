@@ -26,10 +26,13 @@ user's request is the task; do not pick work from comments, branches or notes.
   `OPENDRONE_HARDWARE`).
 - Roadmap display and checkout gates: `docs/product-status.md`. Board
   `status-*` topics do not override server-side purchase authorization.
-- Support: conversations live in Discord threads, ticket state in D1
-  (`SUPPORT_DB`), the customer in Shopify. Email is for sales only; do not
-  add a support email address to pages or chrome. Turning on
-  `SUPPORT_EMAIL_NOTIFY_ENABLED` needs the founder's go.
+- Support: conversations with site and Discord customers live in Discord
+  threads, ticket state in D1 (`SUPPORT_DB`), the customer in Shopify. A
+  customer who emails is answered by email, from a Gmail draft the Worker
+  prepares (README "Mail"); a person sends it and the Worker never sends mail.
+  Do not add a support email address to pages or chrome. Turning on
+  `SUPPORT_EMAIL_NOTIFY_ENABLED` or `SUPPORT_MAIL_INTAKE_ENABLED` needs the
+  founder's go.
 - Legal text: `app/content/legal/`, reviewed before publication; this
   repository is its authoring source.
 - Branch and work status: Git itself.
