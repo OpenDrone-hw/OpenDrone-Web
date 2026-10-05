@@ -19,9 +19,9 @@
  *       approve OD-XXXX-XXXX [id]    a moderator ✅ on the last (or given) staff message
  *       edit   OD-XXXX-XXXX [id] "text"   edit the last (or given) staff message
  *       delete OD-XXXX-XXXX [id]     delete the last (or given) staff message
- *       state  [OD-XXXX-XXXX]        threads, metadata posts and Shopify writes as JSON
+ *       state  [OD-XXXX-XXXX]        threads, metadata posts, Gmail drafts and Shopify writes as JSON
  *       mail   <from> "Subject | body"   put a customer mail in the fake mailbox (to contact@opendrone.be)
- *       poll                         run the cron pass once on the dev server (mail intake, then the ticket jobs)
+ *       poll                         run the cron pass once on the dev server (mail drafts, then the ticket jobs)
  *     SUPPORT_SANDBOX_PORT selects the sandbox (default 5196).
  *
  * The fake Shopify knows one customer, jan@example.com, with order #1042
@@ -256,9 +256,18 @@ function shopify(res, body) {
 
 // Fake Gmail: the mailbox behind SUPPORT_DEV_GMAIL_API. Messages are added by
 // `support:staff -- mail`, and look like what Gmail returns for format=full.
+// POST /drafts keeps the reply drafts the Worker creates (shown by `state`);
+// there is no send route.
 const b64 = (text) => Buffer.from(text).toString('base64url');
-function gmail(res, url) {
+const gmailDrafts = [];
+function gmail(req, res, url, body) {
   const parts = url.pathname.split('/').filter(Boolean).slice(1);
+  if (parts[0] === 'drafts' && req.method === 'POST') {
+    const {message} = JSON.parse(body.toString() || '{}');
+    const id = `draft${gmailDrafts.length + 1}`;
+    gmailDrafts.push({id, threadId: message?.threadId, message: Buffer.from(String(message?.raw || ''), 'base64url').toString('utf8')});
+    return send(res, 200, {id});
+  }
   if (parts[0] !== 'messages') return send(res, 404, {error: 'sandbox: no gmail route'});
   if (!parts[1]) {
     const messages = [...mails].reverse().map((m) => ({id: m.id, threadId: m.threadId}));
@@ -314,6 +323,7 @@ function control(req, res, url, body) {
         })),
       })),
       metadataPosts: channelPosts,
+      gmailDrafts,
       shopifyWrites,
     });
   }
@@ -414,7 +424,7 @@ http
     try {
       if (url.pathname.startsWith('/discord/')) return await discord(req, res, url, body);
       if (url.pathname === '/shopify') return shopify(res, body);
-      if (url.pathname.startsWith('/gmail/')) return gmail(res, url);
+      if (url.pathname.startsWith('/gmail/')) return gmail(req, res, url, body);
       // Storefront API: an empty catalogue (no products, so no preorder counts either).
       if (url.pathname === '/storefront') return send(res, 200, {data: {products: {pageInfo: {hasNextPage: false}, nodes: []}}});
       if (url.pathname.startsWith('/control/')) return control(req, res, url, body);

@@ -179,8 +179,7 @@ declare global {
     SUPPORT_DEV_SHOPIFY_ADMIN_URL?: string;
     SUPPORT_DEV_GMAIL_API?: string;
 
-    // Customer mail intake (app/lib/support/mail.ts, README "Support tickets",
-    // "Mail"). SUPPORT_MAIL_INTAKE_ENABLED is a [var]: "1" on, "dry" report
+    // Customer mail drafts (app/lib/support/mail.ts, README "Mail"). SUPPORT_MAIL_INTAKE_ENABLED is a [var]: "1" on, "dry" report
     // only, anything else off. SUPPORT_MAIL_SA_JSON (the service account key
     // file) and SUPPORT_MAIL_MAILBOX are Worker secrets; the allow and deny
     // lists may name suppliers, so they are secrets too, never in the repo.
