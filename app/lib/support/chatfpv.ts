@@ -410,6 +410,13 @@ function parseDraft(raw: unknown): DraftResponse | null {
     citations,
     confidence: confidenceOf(r.confidence),
     note: typeof r.note === 'string' ? r.note.replace(/\s+/g, ' ').trim().slice(0, 300) : '',
+    ...(typeof r.staffNote === 'string' && r.staffNote.trim() ? {staffNote: r.staffNote.trim().slice(0, 1500)} : {}),
+    ...(r.needsHumanAction === true
+      ? {
+          needsHumanAction: true,
+          humanActionReason: typeof r.humanActionReason === 'string' ? r.humanActionReason.replace(/\s+/g, ' ').trim().slice(0, 200) : '',
+        }
+      : {}),
   };
 }
 
@@ -537,6 +544,7 @@ export function createChatFpvClient(env: ChatFpvEnv, fetcher?: typeof fetch, opt
         ...(req.product ? {product: scrubOutbound(req.product.slice(0, 80)) ?? undefined} : {}),
         ...(req.firmware ? {firmware: scrubOutbound(req.firmware.slice(0, 60)) ?? undefined} : {}),
         conversation,
+        ...(req.order ? {order: req.order} : {}),
       };
       return parseDraft((await call('draft', req.ticketRef, '/v1/draft', body))?.data);
     },
