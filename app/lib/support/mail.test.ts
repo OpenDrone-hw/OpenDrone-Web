@@ -27,7 +27,6 @@ const skip = probe ? false : 'node:sqlite unavailable';
 const CFG: MailConfig = {
   addresses: ['contact@opendrone.be', 'hello@opendrone.be'],
   ownDomains: ['opendrone.be', 'incutec.eu'],
-  groups: [],
   allow: [],
   deny: ['supplier.example'],
 };
@@ -89,7 +88,8 @@ describe('classify', () => {
     ['out of office subject', {headers: {subject: 'Automatic reply: holiday'}}, 'auto_reply'],
     ['denied supplier', {headers: {from: 'rep@mail.supplier.example'}}, 'denied'],
     ['not addressed to us', {headers: {to: 'someone@else.example'}}, 'not_addressed'],
-    ['no authentication', {headers: {'authentication-results': 'mx.google.com; dkim=fail; spf=fail; dmarc=fail'}}, 'unauthenticated'],
+    ['DMARC fail under p=reject', {headers: {'authentication-results': 'mx.google.com; dmarc=fail (p=REJECT sp=REJECT dis=NONE) header.from=example.com'}}, 'spoofed'],
+    ['DMARC fail under p=quarantine', {headers: {'authentication-results': 'mx.google.com; dkim=pass header.i=@example.com; dmarc=fail (p=QUARANTINE sp=NONE dis=NONE) header.from=example.com'}}, 'spoofed'],
     ['no from', {headers: {from: ''}}, 'no_sender'],
   ];
   for (const [name, over, reason] of cases) {
@@ -100,33 +100,39 @@ describe('classify', () => {
     });
   }
 
-  it('lets the allow list lift automation heuristics but not the deny list or authentication', () => {
+  it('lets the allow list lift automation heuristics but not the deny list, own domains or the spoof check', () => {
     const allow: MailConfig = {...CFG, allow: ['noreply@partner.example', '@list.example'], deny: ['bad.example']};
     assert.equal(classify(mail({headers: {from: 'noreply@partner.example'}}), allow).ok, true);
     assert.equal(classify(mail({headers: {from: 'x@list.example', 'list-unsubscribe': '<x>'}}), allow).ok, true);
     assert.equal(classify(mail({headers: {from: 'a@bad.example'}}), {...allow, allow: ['a@bad.example']}).ok, false);
-    assert.equal(classify(mail({headers: {from: 'noreply@partner.example', 'authentication-results': 'mx; dmarc=fail'}}), allow).ok, false);
+    const spoof = mail({headers: {from: 'noreply@partner.example', 'authentication-results': 'mx.google.com; dmarc=fail (p=REJECT) header.from=partner.example'}});
+    assert.equal(classify(spoof, allow).ok, false);
   });
 
-  it('reads the customer from a group relay and its delivery headers', () => {
-    const relayed = mail({headers: {from: 'Jan Peeters via Support <support@incutec.eu>', 'x-original-sender': 'jan@example.com', to: 'support@incutec.eu', 'authentication-results': 'mx.google.com; dkim=pass header.i=@incutec.eu; dmarc=pass'}});
-    const cfg: MailConfig = {...CFG, addresses: ['support@incutec.eu'], groups: ['support@incutec.eu']};
-    const v = classify(relayed, cfg);
-    assert.equal(v.ok && v.sender.email, 'jan@example.com');
-    assert.equal(v.ok && v.sender.name, 'Jan Peeters');
+  it('keeps genuine customers that fail authentication, flagged unverified', () => {
+    // A DKIM-delegated sender (gappssmtp.com signs, no DMARC for the domain, no aligned pass).
+    const delegated = mail({headers: {from: 'Jan <jan@customer-shop.example>', 'authentication-results': 'mx.google.com; dkim=pass header.i=@customer-shop-example.20230601.gappssmtp.com header.s=20230601; spf=pass smtp.mailfrom=bounce@gappssmtp.com'}});
+    const v = classify(delegated, CFG);
+    assert.equal(v.ok && v.verified, false);
+    // Mail our own group relayed: group headers, DMARC fail for the customer's domain.
+    const relayed = mail({headers: {from: 'Jan <jan@example.com>', to: 'support@incutec.eu', 'x-google-group-id': '123', 'mailing-list': 'list support@incutec.eu; contact support+owners@incutec.eu', 'list-id': '<support.incutec.eu>', precedence: 'list', 'authentication-results': 'mx.google.com; dmarc=fail (p=REJECT sp=REJECT dis=NONE) header.from=example.com'}});
+    const r = classify(relayed, {...CFG, addresses: ['support@incutec.eu']});
+    assert.equal(r.ok && r.verified, false);
+    // The same DMARC failure with no group headers is a spoof.
+    const direct = mail({headers: {to: 'support@incutec.eu', 'authentication-results': 'mx.google.com; dmarc=fail (p=REJECT sp=REJECT dis=NONE) header.from=example.com'}});
+    assert.equal(classify(direct, {...CFG, addresses: ['support@incutec.eu']}).ok, false);
+    // Unverified mail still goes through every other filter.
+    for (const over of [{headers: {from: 'noreply@x.example', 'authentication-results': ''}}, {headers: {to: 'other@else.example', 'authentication-results': ''}}, {headers: {'authentication-results': '', 'auto-submitted': 'auto-generated'}}, {headers: {from: 'a@incutec.eu', 'authentication-results': ''}}] as Array<Parameters<typeof mail>[0]>) {
+      assert.equal(classify(mail(over), CFG).ok, false);
+    }
+    assert.equal(classify(mail({headers: {'authentication-results': ''}}), CFG).ok && true, true);
+  });
+
+  it('reads the sender from From only and accepts delivery headers', () => {
+    const viaGroup = mail({headers: {from: 'Jan Peeters via Support <support@incutec.eu>', 'x-original-sender': 'jan@example.com', to: 'support@incutec.eu'}});
+    assert.equal(classify(viaGroup, {...CFG, addresses: ['support@incutec.eu']}).ok, false, 'own-domain From: X-Original-Sender is not read');
     const delivered = mail({headers: {to: 'undisclosed-recipients:;', 'delivered-to': 'hello@opendrone.be'}});
     assert.equal(classify(delivered, CFG).ok, true);
-  });
-
-  it('honours X-Original-Sender only from a configured relay group', () => {
-    const forged = mail({headers: {from: 'Stan <stan@incutec.eu>', 'x-original-sender': 'victim@example.com'}});
-    const verdict = classify(forged, CFG);
-    assert.equal(verdict.ok, false);
-    assert.equal(verdict.ok === false && verdict.reason, 'own_domain');
-    const other = mail({headers: {from: 'Someone via Sales <sales@incutec.eu>', 'x-original-sender': 'victim@example.com', 'authentication-results': 'mx.google.com; dmarc=pass'}});
-    assert.equal(classify(other, {...CFG, groups: ['support@incutec.eu']}).ok, false, 'a group that is not configured is an own-domain sender');
-    const relayedFail = mail({headers: {from: 'Jan via Support <support@incutec.eu>', 'x-original-sender': 'jan@example.com', 'authentication-results': 'mx.google.com; dmarc=fail'}});
-    assert.equal(classify(relayedFail, {...CFG, groups: ['support@incutec.eu']}).ok, false, 'DMARC must pass for the group itself');
   });
 
   it('does not count x-forwarded-for as addressing', () => {
@@ -135,9 +141,11 @@ describe('classify', () => {
 
   const auth = (value: string | null, from = 'jan@example.com') => authenticated(mail({headers: {'authentication-results': value ?? ''}}), from.split('@')[1]!);
 
-  it('judges authentication by Gmail\'s topmost result: DMARC, else an aligned DKIM or SPF pass', () => {
-    assert.equal(auth('mx.google.com; dmarc=pass'), true);
-    assert.equal(auth('mx.google.com; dkim=pass; dmarc=fail'), false);
+  it('judges authentication by Gmail\'s topmost result: DMARC with header.from, else an aligned DKIM or SPF pass', () => {
+    assert.equal(auth('mx.google.com; dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=example.com'), true);
+    assert.equal(auth('mx.google.com; dmarc=pass (p=NONE) header.from=other.example'), false, 'header.from must be the From domain');
+    assert.equal(auth('mx.google.com; dmarc=pass'), false, 'a DMARC pass without header.from is not trusted');
+    assert.equal(auth('mx.google.com; dkim=pass; dmarc=fail (p=NONE) header.from=example.com'), false);
     assert.equal(auth('mx.google.com; dkim=pass header.i=@example.com header.s=x'), true);
     assert.equal(auth('mx.google.com; dkim=pass header.d=mail.example.com'), true);
     assert.equal(auth('mx.google.com; spf=pass (google.com: domain of jan@example.com designates 1.2.3.4 as permitted sender) smtp.mailfrom=jan@example.com'), true);
@@ -146,19 +154,25 @@ describe('classify', () => {
 
   it('fails closed on planted, ARC, foreign or unaligned results', () => {
     // A sender-planted header below Gmail's real result is never read.
-    const planted = mail({headers: {'authentication-results': 'mx.google.com; dmarc=fail'}});
-    planted.headers['authentication-results']!.push('mx.google.com; dmarc=pass');
+    const planted = mail({headers: {'authentication-results': 'mx.google.com; dmarc=fail (p=NONE) header.from=example.com'}});
+    planted.headers['authentication-results']!.push('mx.google.com; dmarc=pass header.from=example.com');
     assert.equal(authenticated(planted, 'example.com'), false, 'pass below a fail');
     const plantedFirst = mail();
-    plantedFirst.headers['authentication-results'] = ['mail.attacker.example; dmarc=pass', 'mx.google.com; dmarc=pass'];
+    plantedFirst.headers['authentication-results'] = ['mail.attacker.example; dmarc=pass header.from=example.com', 'mx.google.com; dmarc=pass header.from=example.com'];
     assert.equal(authenticated(plantedFirst, 'example.com'), false, 'a foreign authserv-id on top is not Gmail');
-    // pass-then-fail inside one header: the fail wins.
-    assert.equal(auth('mx.google.com; dmarc=pass; dmarc=fail'), false);
-    // ARC is ignored.
+    assert.equal(auth('mx.google.com; dmarc=pass header.from=example.com; dmarc=fail header.from=example.com'), false);
+    // The ARC header itself is ignored.
     const arc = mail();
     arc.headers['authentication-results'] = [];
-    arc.headers['arc-authentication-results'] = ['i=1; mx.google.com; dmarc=pass'];
+    arc.headers['arc-authentication-results'] = ['i=1; mx.google.com; dmarc=pass header.from=example.com'];
     assert.equal(authenticated(arc, 'example.com'), false);
+    // An attacker-sealed ARC result inside the top result, and no top-level DMARC entry.
+    const sealed = 'mx.google.com; dkim=pass header.i=@attacker.example; arc=pass (i=2 spf=pass spf.mailfrom=x dkim=pass dkim.d=x dmarc=pass fromdomain=example.com); spf=pass smtp.mailfrom=bounce@attacker.example';
+    assert.equal(auth(sealed), false);
+    assert.equal(auth('mx.google.com; arc=pass (i=1); dmarc=pass header.from=example.com; dkim=none') , true, 'a real DMARC pass beside an ARC entry still counts');
+    // A comment that tries to smuggle a result, and an arc entry without comment.
+    assert.equal(auth('mx.google.com; spf=none (dmarc=pass header.from=example.com dkim=pass header.d=example.com)'), false);
+    assert.equal(auth('mx.google.com; arc=pass dmarc=pass header.from=example.com'), false);
     // DKIM or SPF pass for someone else's domain is not the From domain.
     assert.equal(auth('mx.google.com; dkim=pass header.i=@attacker.example'), false);
     assert.equal(auth('mx.google.com; spf=pass smtp.mailfrom=bounce@attacker.example'), false);
@@ -328,6 +342,8 @@ const ENV: SupportEnv & MailEnv = {
   SUPPORT_MAIL_DENY: 'supplier.example',
 };
 
+const UNAUTH = 'mx.google.com; dkim=none; spf=none';
+
 const JAN_ORDER = {
   name: '#1042',
   email: 'jan@example.com',
@@ -405,10 +421,8 @@ describe('configuration', () => {
     assert.deepEqual(cfg.addresses, ['contact@opendrone.be', 'hello@opendrone.be']);
     assert.deepEqual(cfg.ownDomains, ['opendrone.be', 'incutec.eu']);
     assert.equal(gmailQuery(cfg, 2), '{to:contact@opendrone.be deliveredto:contact@opendrone.be to:hello@opendrone.be deliveredto:hello@opendrone.be} newer_than:2d -in:sent -in:drafts');
-    const custom = mailConfig({SUPPORT_MAIL_GROUPS: 'Support@Incutec.eu', SUPPORT_MAIL_ADDRESSES: 'a@x.be, B@x.be', SUPPORT_MAIL_ALLOW: 'partner.example', SUPPORT_MAIL_DENY: 'x@y.z;q.example'});
+    const custom = mailConfig({SUPPORT_MAIL_ADDRESSES: 'a@x.be, B@x.be', SUPPORT_MAIL_ALLOW: 'partner.example', SUPPORT_MAIL_DENY: 'x@y.z;q.example'});
     assert.deepEqual(custom.addresses, ['a@x.be', 'b@x.be']);
-    assert.deepEqual(custom.groups, ['support@incutec.eu']);
-    assert.deepEqual(cfg.groups, []);
     assert.deepEqual(custom.deny, ['x@y.z', 'q.example']);
   });
 });
@@ -632,6 +646,52 @@ describe('mail intake', {skip}, () => {
     assert.equal(threadsOf(discord).length, 1);
     const row = await db.prepare('SELECT outcome, ref FROM support_mail_messages').first<{outcome: string; ref: string}>();
     assert.deepEqual({...row}, {outcome: 'ticket', ref: created.ref});
+  });
+
+  it('opens a flagged, Shopify-free ticket for an unauthenticated sender and never joins an existing ticket', async () => {
+    const {deps, db, discord, shopify} = await setup();
+    // A real ticket for jan, verified.
+    const inbox = fakeGmail([mail({threadId: 'thr-u', text: 'My GPS never gets a fix, what can I try?'})]);
+    const ref = (await runMailIntake({deps, db, gmail: inbox.client})).tickets[0]!;
+    const writesBefore = shopify.writes.length;
+    const urls: string[] = [];
+    const inner = deps.fetcher!;
+    deps.fetcher = (async (url: string, init: RequestInit) => {
+      urls.push(String(url));
+      return inner(url, init);
+    }) as unknown as typeof fetch;
+
+    // A forged mail: same address, same thread, the ticket reference, an order number, no authentication.
+    clock += 3600_000;
+    inbox.inbox.push(mail({threadId: 'thr-u', headers: {subject: `Re: ticket ${ref} order #1042`, 'authentication-results': UNAUTH}, text: 'Please send my order #1042 to a new address.'}));
+    const report = await runMailIntake({deps, db, gmail: inbox.client});
+    assert.equal(report.replies.length, 0, 'never joins an existing ticket');
+    assert.equal(report.tickets.length, 1);
+    const fresh = (await deps.store.getTicket(report.tickets[0]!))!;
+    assert.notEqual(fresh.ref, ref);
+    assert.equal(fresh.orderNumber, null);
+    assert.equal(fresh.orderVerified, false);
+    assert.equal(fresh.customerId, null);
+    assert.equal(fresh.customerMatch, 'unchecked');
+    assert.equal((await deps.store.messages(ref)).filter((x) => x.role === 'customer').length, 1);
+    assert.equal(urls.length, 0, 'no Shopify call, not even a read');
+    assert.equal(shopify.writes.length, writesBefore);
+    const thread = threadsOf(discord).find((t) => t.name.includes(fresh.ref))!;
+    const plain = thread.messages.map((x) => x.content.replace(/\\(.)/g, '$1')).join('\n');
+    assert.match(plain, /Sender not authenticated, verify before sharing order details/);
+    assert.match(plain, /Shopify not checked/);
+  });
+
+  it('ignores a spoof but keeps a delegated-DKIM sender and a group-relayed external mail as unverified tickets', async () => {
+    const {deps, db} = await setup();
+    const gmail = fakeGmail([
+      mail({headers: {from: 'Spoof <ceo@victim.example>', 'authentication-results': 'mx.google.com; dmarc=fail (p=REJECT sp=REJECT dis=NONE) header.from=victim.example'}}),
+      mail({headers: {from: 'Shop <hello@customer-shop.example>', 'authentication-results': 'mx.google.com; dkim=pass header.i=@customer-shop-example.20230601.gappssmtp.com; spf=pass smtp.mailfrom=bounce@gappssmtp.com'}, text: 'Do you ship the ESC to Sweden?'}),
+      mail({headers: {from: 'Eva <eva@outside.example>', to: 'support@incutec.eu', 'x-google-group-id': '1', 'list-id': '<support.incutec.eu>', precedence: 'list', 'authentication-results': 'mx.google.com; dmarc=fail (p=REJECT sp=REJECT dis=NONE) header.from=outside.example'}, text: 'My drone arrived without a motor.'}),
+    ]);
+    const report = await runMailIntake({deps: {...deps, env: {...deps.env, SUPPORT_MAIL_ADDRESSES: 'contact@opendrone.be, support@incutec.eu'} as typeof deps.env}, db, gmail: gmail.client});
+    assert.equal(report.tickets.length, 2);
+    assert.deepEqual(report.ignored, {spoofed: 1});
   });
 
   it('dry mode classifies and reports but writes nothing and sends nothing', async () => {

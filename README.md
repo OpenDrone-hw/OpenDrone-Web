@@ -382,9 +382,9 @@ the ticket link through the existing "new reply" notice when staff answer
 
 ```mermaid
 flowchart LR
-  C[Customer mail] -->|contact@ hello@ aliases, groups| G[(one Gmail mailbox)]
+  C[Customer mail] -->|contact@ hello@ aliases| G[(one Gmail mailbox)]
   W[Worker cron, every 5 min] -->|gmail.readonly, service account with delegation| G
-  W -->|drop: own domain, no-reply, auto-reply, bounce, newsletter, deny list, not authenticated| X[ignored, counted]
+  W -->|drop: own domain, no-reply, auto-reply, bounce, newsletter, deny list, spoofed| X[ignored, counted]
   W -->|new text only: quotes and signature removed| T[ticket, source mail]
   W -->|ticket reference in subject, or Gmail thread of the same sender| R[reply on that ticket]
   T --> D[(Discord thread, ChatFPV draft)]
@@ -401,25 +401,35 @@ flowchart LR
 
 **What becomes a ticket.** A message addressed to one of
 `SUPPORT_MAIL_ADDRESSES` (default `contact@opendrone.be`,
-`hello@opendrone.be`), that authenticated as its From domain. Only the topmost
-`Authentication-Results` header counts, and only with the authserv-id
-`mx.google.com` (Gmail prepends its own on receipt, so a header the sender
-planted sits below it); ARC results are ignored and a missing header drops the
-mail. A DMARC fail always wins, otherwise a DMARC pass, or a DKIM pass whose
-`header.d`/`header.i`, or an SPF pass whose `smtp.mailfrom`, is aligned with the
-From domain. Dropped, with the reason counted in the job log: labels spam,
-trash, draft, sent; own domains (`opendrone.be`, `incutec.eu`, plus
-`SUPPORT_MAIL_OWN_DOMAINS`); `SUPPORT_MAIL_DENY`; `noreply`, `mailer-daemon`
-and similar local parts; `Auto-Submitted`, `Precedence: bulk`, auto-reply
-headers and subjects, bounces, `List-Id` and `List-Unsubscribe`; Gmail's
-promotions, social and forums categories. `SUPPORT_MAIL_ALLOW` lifts the
-automation checks for a sender, never the deny list or authentication. A
-mail relayed by a Google group is read as its `X-Original-Sender` only when
-its From is one of the addresses in `SUPPORT_MAIL_GROUPS` (none by default) and
-DMARC passed for that group address; any other own-domain From is dropped, its
-`X-Original-Sender` ignored. Allow and
-deny lists name outside senders, so they are Worker secrets, not repository
-values.
+`hello@opendrone.be`) that no filter drops. The sender is the From header;
+a Google group here does not rewrite From, so there is no other source.
+Dropped, with the reason counted in the job log:
+
+- labels spam, trash, draft, sent;
+- own domains (`opendrone.be`, `incutec.eu`, plus `SUPPORT_MAIL_OWN_DOMAINS`) and `SUPPORT_MAIL_DENY`;
+- `noreply`, `mailer-daemon` and similar local parts, `Auto-Submitted`, auto-reply headers and subjects, bounces;
+- `Precedence: bulk` or `list`, `List-Id`, `List-Unsubscribe`, except on mail our own group relayed (it carries the group's `X-Google-Group-Id`, or a `Mailing-list` or `List-Id` naming an own domain);
+- Gmail's promotions, social and forums categories;
+- a spoof: DMARC failed and the sender's domain publishes `p=reject` or `p=quarantine`, unless our own group relayed it (a relayed external mail is expected to fail DMARC).
+
+`SUPPORT_MAIL_ALLOW` lifts the automation checks for a sender, never the deny
+list, own domains or the spoof check. Allow and deny lists name outside senders,
+so they are Worker secrets, not repository values.
+
+**Authentication.** Gmail's verdict on the From domain, read like this:
+
+1. Only the topmost `Authentication-Results` header counts, and only with the authserv-id `mx.google.com` (Gmail prepends its own on receipt, so a header the sender planted sits below it). No such header means not authenticated. The `ARC-Authentication-Results` header is never read.
+2. Inside it, every parenthesised comment is removed and every `arc=` entry dropped before anything is matched, because an ARC chain the sender sealed can carry `dmarc=pass` text.
+3. A DMARC fail wins. A DMARC pass counts only with `header.from` aligned with the From domain. When there is no DMARC entry (Gmail omits it for a domain without DMARC), a DKIM pass whose `header.d` or `header.i` is aligned with the From domain, or an SPF pass whose `smtp.mailfrom` is aligned, counts. Alignment is equal domains or one a subdomain of the other.
+
+**Sender not authenticated.** A mail that passes every other filter but not
+authentication (a DKIM-delegated `gappssmtp.com` sender without DMARC, an
+external mail relayed through support@) is still a customer and is never
+dropped silently. It becomes a ticket flagged sender-unverified:
+
+- it never joins an existing ticket, whatever reference or Gmail thread it carries;
+- no order number is passed on and Shopify is not called at all, not even a read: the ticket shows "email not verified, Shopify not checked";
+- the Discord thread gets a note: "Sender not authenticated, verify before sharing order details."
 
 **The ticket.** Name from the From header, topic by keywords (warranty, then
 product, then order, else other), an order number written in the subject or
@@ -432,7 +442,7 @@ cut before decoding), a part over 2 MB is skipped, HTML up to 50,000 characters.
 notice instead of dropping the mail. The thread gets a note that the source
 is mail. At most 5 tickets and 15 replies per pass, 8 mails per sender per day.
 
-**Follow-ups.** The ticket reference in the subject (the reply notice carries
+**Follow-ups.** Only from an authenticated sender: the ticket reference in the subject (the reply notice carries
 it) or the Gmail thread of an earlier mail of that ticket, and only from the
 ticket's own email address. A closed ticket reopens; a locked ticket, or a
 different sender, opens a new ticket. Any other refusal of a reply is recorded
@@ -460,7 +470,7 @@ Gmail scope, not the workspace-admin one with Directory scopes.
 3. `wrangler secret put SUPPORT_MAIL_SA_JSON --config wrangler.production.toml < key.json`,
    then delete `key.json`. `wrangler secret put SUPPORT_MAIL_MAILBOX ...` with
    the mailbox that receives the customer aliases. Optional secrets:
-   `SUPPORT_MAIL_ADDRESSES`, `SUPPORT_MAIL_GROUPS` (relay group addresses), `SUPPORT_MAIL_DENY`,
+   `SUPPORT_MAIL_ADDRESSES`, `SUPPORT_MAIL_DENY`,
    `SUPPORT_MAIL_ALLOW`, `SUPPORT_MAIL_OWN_DOMAINS`, and the var `SUPPORT_MAIL_WINDOW_DAYS` (1 to 14, default 2).
 4. Apply the migration before the first run: `npx wrangler d1 migrations apply
    SUPPORT_DB --remote --config wrangler.production.toml`.
@@ -792,7 +802,7 @@ the client bundle; tokens and the SKU policy never do.
 | Mail | `SHOPIFY_NEWSLETTER_WRITE_ENABLED`, `RESEND_API_KEY`, `SUPPORT_FROM_EMAIL`, `TURNSTILE_*`, `DISCORD_SUPPORT_INVITE`, `PUBLIC_DISCORD_INVITE`, `PUBLIC_COMPANY_*` | Worker secrets or vars |
 | Support tickets | `SUPPORT_DB` (D1 binding), `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID`, `DISCORD_SUPPORT_CHANNEL_ID`, `DISCORD_STAFF_METADATA_CHANNEL_ID`, `SUPPORT_MOD_ROLE_ID`, `SUPPORT_MODERATION_MODE`, `SUPPORT_SESSION_SECRET`, `SUPPORT_CLEANUP_SECRET` | binding in the wrangler config, the rest Worker secrets |
 | Support switches | `SUPPORT_SHOPIFY_WRITE_ENABLED`, `SUPPORT_EMAIL_NOTIFY_ENABLED`, `SUPPORT_MAIL_INTAKE_ENABLED` | `[vars]` in `wrangler.production.toml` |
-| Support mail intake | `SUPPORT_MAIL_SA_JSON`, `SUPPORT_MAIL_MAILBOX`, `SUPPORT_MAIL_ADDRESSES`, `SUPPORT_MAIL_GROUPS`, `SUPPORT_MAIL_OWN_DOMAINS`, `SUPPORT_MAIL_ALLOW`, `SUPPORT_MAIL_DENY`, `SUPPORT_MAIL_WINDOW_DAYS` | Worker secrets (README "Mail") |
+| Support mail intake | `SUPPORT_MAIL_SA_JSON`, `SUPPORT_MAIL_MAILBOX`, `SUPPORT_MAIL_ADDRESSES`, `SUPPORT_MAIL_OWN_DOMAINS`, `SUPPORT_MAIL_ALLOW`, `SUPPORT_MAIL_DENY`, `SUPPORT_MAIL_WINDOW_DAYS` | Worker secrets (README "Mail") |
 | Shared accounts | `ACCOUNTS_ENABLED`, `CHATFPV_OAUTH_REDIRECTS`, `CHATFPV_POST_LOGOUT_REDIRECTS` (vars); `SHOPIFY_CUSTOMER_ACCOUNT_*`, `ACCOUNT_PAIRWISE_SALT`, `SESSION_ENC_KEY`, `CHATFPV_OAUTH_CLIENT_SECRET`, `WIDGET_ASSERTION_KEY` (secrets); `ACCOUNTS_TEST_IDP` never in production | see [Shared accounts](#shared-accounts) |
 | Roadmap | `GITHUB_STATUS_TOKEN` | Worker secret |
 | Analytics | `PLAUSIBLE_PURCHASE_EVENTS_ENABLED` (off unless `1`) | `[vars]` in `wrangler.production.toml` |

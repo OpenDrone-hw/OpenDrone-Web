@@ -26,8 +26,6 @@ export type MailConfig = {
   addresses: string[];
   /** Domains whose mail is never a customer (own domains). */
   ownDomains: string[];
-  /** Google group addresses that relay customer mail; only their X-Original-Sender is honoured. */
-  groups: string[];
   /** Senders (address, @domain or domain) taken even when a heuristic would drop them. */
   allow: string[];
   /** Senders (address, @domain or domain) always dropped: suppliers, newsletters, noisy tools. */
@@ -94,21 +92,9 @@ const matchesAny = (email: string, entries: string[]) => entries.some((e) => mat
 // Who wrote, and is it a customer
 // --------------------------------------------------------------------------
 
-/**
- * The customer. A mail relayed by one of the configured Google groups
- * (`cfg.groups`) arrives From the group ("Jan via Support"); the person is
- * then in X-Original-Sender. Any other own-domain From is staff or our own
- * mail, and its X-Original-Sender is never read.
- */
-export function senderOf(m: MailMessage, cfg: MailConfig): Address | null {
-  const from = parseAddress(headerOf(m, 'from'));
-  if (from && cfg.groups.includes(from.email)) {
-    const original = parseAddress(headerOf(m, 'x-original-sender')) ?? null;
-    if (original && !matchesAny(original.email, cfg.ownDomains)) {
-      return {email: original.email, name: from.name.replace(/\s+via\s+.*$/i, '').trim()};
-    }
-  }
-  return from;
+/** The sender: the From header. A Google group here does not rewrite From, so there is no other source. */
+export function senderOf(m: MailMessage): Address | null {
+  return parseAddress(headerOf(m, 'from'));
 }
 
 /** Was the mail addressed to one of the customer addresses (To, Cc, or the delivery headers)? */
@@ -130,39 +116,82 @@ function aligned(a: string, b: string): boolean {
   return Boolean(x) && (x === y || x.endsWith(`.${y}`) || y.endsWith(`.${x}`));
 }
 
+/** The text with every parenthesised comment removed, nesting respected. */
+function stripComments(text: string): string {
+  let depth = 0;
+  let out = '';
+  for (const ch of text) {
+    if (ch === '(') depth++;
+    else if (ch === ')') depth = Math.max(0, depth - 1);
+    else if (depth === 0) out += ch;
+  }
+  return out;
+}
+
+export type AuthResult = {
+  /** pass: authenticated as the From domain. fail: a DMARC fail. none: no usable result. */
+  status: 'pass' | 'fail' | 'none';
+  /** DMARC failed and the sender's domain publishes p=reject or p=quarantine: a spoof. */
+  spoof: boolean;
+};
+
 /**
- * Did the mail authenticate as its From domain, according to Gmail?
+ * What Gmail concluded about the From domain.
  *
  * Only the topmost Authentication-Results header counts, and only when its
  * authserv-id is mx.google.com: Gmail prepends its own result on receipt, so
- * any header a sender planted sits below it. ARC results are ignored. No such
- * header fails closed. A DMARC fail always wins; otherwise a DMARC pass, or a
- * DKIM pass whose header.d, or an SPF pass whose smtp.mailfrom, is aligned
- * with the From domain.
+ * a header the sender planted sits below it. Before matching, every
+ * parenthesised comment is removed and every `arc=` entry dropped: an ARC
+ * chain the sender sealed can carry `dmarc=pass` text in its comment.
+ * Then a DMARC fail wins; a DMARC pass counts only with `header.from`
+ * aligned with the From domain; without a DMARC entry (Gmail omits it for a
+ * domain without DMARC) a DKIM pass whose `header.d`/`header.i`, or an SPF
+ * pass whose `smtp.mailfrom`, is aligned with the From domain counts.
  */
-export function authenticated(m: MailMessage, fromDomain: string): boolean {
-  const top = (m.headers['authentication-results'] ?? [])[0]?.toLowerCase();
-  if (!top) return false;
-  const [authserv, ...rest] = top.split(';');
-  if (authserv!.trim().split(/\s+/)[0] !== TRUSTED_AUTHSERV) return false;
-  const results = rest.join(';');
-  if (/\bdmarc=(fail|softfail|temperror|permerror)\b/.test(results)) return false;
-  if (/\bdmarc=pass\b/.test(results)) return true;
+export function authResult(m: MailMessage, fromDomain: string): AuthResult {
+  const none: AuthResult = {status: 'none', spoof: false};
+  const raw = (m.headers['authentication-results'] ?? [])[0]?.toLowerCase();
+  if (!raw) return none;
+  const [authserv, ...rest] = stripComments(raw).split(';');
+  if (authserv!.trim().split(/\s+/)[0] !== TRUSTED_AUTHSERV) return none;
+  const entries = rest.map((r) => r.trim()).filter((r) => r && !/^arc=/.test(r));
   const domain = fromDomain.toLowerCase();
-  for (const r of rest) {
-    if (/\bdkim=pass\b/.test(r)) {
-      const d = r.match(/header\.(?:d|i)=([^\s;]+)/)?.[1];
-      if (d && aligned(d, domain)) return true;
-    }
-    if (/\bspf=pass\b/.test(r)) {
-      const f = r.match(/smtp\.mailfrom=([^\s;]+)/)?.[1];
-      if (f && aligned(f, domain)) return true;
-    }
+
+  const dmarc = entries.filter((r) => /^dmarc=/.test(r));
+  if (dmarc.some((r) => /^dmarc=(fail|softfail|temperror|permerror)\b/.test(r))) {
+    // The policy sits in the comment: `dmarc=fail (p=REJECT sp=REJECT dis=NONE) header.from=x`.
+    const policy = raw.match(/dmarc=fail\s*\(([^)]*)\)/)?.[1] ?? '';
+    return {status: 'fail', spoof: /\bp=(reject|quarantine)\b/.test(policy)};
   }
-  return false;
+  if (dmarc.some((r) => /^dmarc=pass\b/.test(r) && aligned(r.match(/header\.from=([^\s;]+)/)?.[1] ?? '', domain))) {
+    return {status: 'pass', spoof: false};
+  }
+  for (const r of entries) {
+    if (/^dkim=pass\b/.test(r) && aligned(r.match(/header\.(?:d|i)=([^\s;]+)/)?.[1] ?? '', domain)) return {status: 'pass', spoof: false};
+    if (/^spf=pass\b/.test(r) && aligned(r.match(/smtp\.mailfrom=([^\s;]+)/)?.[1] ?? '', domain)) return {status: 'pass', spoof: false};
+  }
+  return none;
 }
 
-export type Verdict = {ok: true; sender: Address} | {ok: false; reason: string};
+export const authenticated = (m: MailMessage, fromDomain: string): boolean => authResult(m, fromDomain).status === 'pass';
+
+/**
+ * Mail that Google Groups relayed from one of our group addresses
+ * (support@, sales@, info@): it carries the group's own headers. Such a mail
+ * is not a newsletter, and its customer-domain DMARC result is expected to fail.
+ */
+export function relayedByOurGroup(m: MailMessage, cfg: MailConfig): boolean {
+  if (m.headers['x-google-group-id']) return true;
+  const lists = [...(m.headers['mailing-list'] ?? []), ...(m.headers['list-id'] ?? [])].join(' ').toLowerCase();
+  return cfg.ownDomains.some((d) => lists.includes(d));
+}
+
+/**
+ * `verified` is false when the sender did not authenticate as its From
+ * domain. Such a mail is still a customer, but it only ever opens a ticket
+ * flagged sender-unverified (mail.ts).
+ */
+export type Verdict = {ok: true; sender: Address; verified: boolean} | {ok: false; reason: string};
 
 /**
  * Customer or not. Reasons are stable strings: they are counted in the job
@@ -171,21 +200,27 @@ export type Verdict = {ok: true; sender: Address} | {ok: false; reason: string};
  */
 export function classify(m: MailMessage, cfg: MailConfig): Verdict {
   if (m.labelIds.some((l) => l === 'SPAM' || l === 'TRASH' || l === 'DRAFT' || l === 'SENT')) return {ok: false, reason: 'label'};
-  const sender = senderOf(m, cfg);
+  const sender = senderOf(m);
   if (!sender) return {ok: false, reason: 'no_sender'};
   if (matchesAny(sender.email, cfg.ownDomains)) return {ok: false, reason: 'own_domain'};
   if (matchesAny(sender.email, cfg.deny)) return {ok: false, reason: 'denied'};
   if (!addressedTo(m, cfg)) return {ok: false, reason: 'not_addressed'};
-  if (!authenticated(m, domainOf(parseAddress(headerOf(m, 'from'))?.email ?? sender.email))) return {ok: false, reason: 'unauthenticated'};
-  if (matchesAny(sender.email, cfg.allow)) return {ok: true, sender};
+
+  const relayed = relayedByOurGroup(m, cfg);
+  const auth = authResult(m, domainOf(sender.email));
+  // A DMARC fail under p=reject or p=quarantine from the sender's own domain
+  // is a spoof. Mail our own group relayed is expected to fail it: it goes on.
+  if (auth.spoof && !relayed) return {ok: false, reason: 'spoofed'};
+  const ok: Verdict = {ok: true, sender, verified: auth.status === 'pass'};
+  if (matchesAny(sender.email, cfg.allow)) return ok;
 
   const local = sender.email.slice(0, sender.email.indexOf('@'));
   if (ROBOT_LOCAL.test(local)) return {ok: false, reason: 'no_reply_sender'};
-  const auto = headerOf(m, 'auto-submitted').toLowerCase();
-  if (auto && auto !== 'no') return {ok: false, reason: 'auto_submitted'};
-  if (/\b(bulk|list|junk|auto_reply)\b/i.test(headerOf(m, 'precedence'))) return {ok: false, reason: 'bulk'};
+  const autoSubmitted = headerOf(m, 'auto-submitted').toLowerCase();
+  if (autoSubmitted && autoSubmitted !== 'no') return {ok: false, reason: 'auto_submitted'};
+  if (!relayed && /\b(bulk|list|junk|auto_reply)\b/i.test(headerOf(m, 'precedence'))) return {ok: false, reason: 'bulk'};
   if (m.headers['x-autoreply'] || m.headers['x-autorespond'] || m.headers['x-auto-response-suppress']) return {ok: false, reason: 'auto_reply'};
-  if (m.headers['list-id'] || m.headers['list-unsubscribe']) return {ok: false, reason: 'newsletter'};
+  if (!relayed && (m.headers['list-id'] || m.headers['list-unsubscribe'])) return {ok: false, reason: 'newsletter'};
   if (/multipart\/report|delivery-status/i.test(headerOf(m, 'content-type'))) return {ok: false, reason: 'bounce'};
   if (/^<\s*>$/.test(headerOf(m, 'return-path'))) return {ok: false, reason: 'bounce'};
   if (m.labelIds.some((l) => l === 'CATEGORY_PROMOTIONS' || l === 'CATEGORY_SOCIAL' || l === 'CATEGORY_FORUMS')) {
@@ -195,7 +230,7 @@ export function classify(m: MailMessage, cfg: MailConfig): Verdict {
   if (/^(automatic reply|auto(matic)?[-\s]?reply|out of office|afwezig|abwesen|absence du bureau|undeliverable|delivery status notification|mail delivery failed|returned mail)/i.test(subject)) {
     return {ok: false, reason: 'auto_reply'};
   }
-  return {ok: true, sender};
+  return ok;
 }
 
 // --------------------------------------------------------------------------

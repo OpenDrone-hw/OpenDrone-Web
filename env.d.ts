@@ -189,7 +189,6 @@ declare global {
     SUPPORT_MAIL_MAILBOX?: string;
     SUPPORT_MAIL_ADDRESSES?: string;
     SUPPORT_MAIL_OWN_DOMAINS?: string;
-    SUPPORT_MAIL_GROUPS?: string;
     SUPPORT_MAIL_ALLOW?: string;
     SUPPORT_MAIL_DENY?: string;
     SUPPORT_MAIL_WINDOW_DAYS?: string;

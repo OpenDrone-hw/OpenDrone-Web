@@ -46,8 +46,6 @@ export type MailEnv = GmailEnv & {
   SUPPORT_MAIL_INTAKE_ENABLED?: string;
   /** Comma separated customer addresses to read; default contact@ and hello@opendrone.be. */
   SUPPORT_MAIL_ADDRESSES?: string;
-  /** Google group addresses that relay customer mail (From the group, person in X-Original-Sender); none by default. */
-  SUPPORT_MAIL_GROUPS?: string;
   /** Extra own domains, besides opendrone.be and incutec.eu. */
   SUPPORT_MAIL_OWN_DOMAINS?: string;
   /** Senders (address, @domain, domain) to take even when they look automated. */
@@ -76,7 +74,6 @@ export function mailConfig(env: MailEnv): MailConfig {
   const addresses = listConfig(env.SUPPORT_MAIL_ADDRESSES);
   return {
     addresses: addresses.length ? addresses : DEFAULT_ADDRESSES,
-    groups: listConfig(env.SUPPORT_MAIL_GROUPS),
     ownDomains: [...DEFAULT_OWN_DOMAINS, ...listConfig(env.SUPPORT_MAIL_OWN_DOMAINS)],
     allow: listConfig(env.SUPPORT_MAIL_ALLOW),
     deny: listConfig(env.SUPPORT_MAIL_DENY),
@@ -220,9 +217,23 @@ export function composeTicketText(subject: string, body: string, attachments: nu
   return text.length > LIMITS.message ? `${text.slice(0, LIMITS.message - TRUNCATED.length)}${TRUNCATED}` : text;
 }
 
-function sourceNote(subject: string, attachments: number): string {
+/** Deps whose Shopify calls cannot happen: no store configuration, and a fetcher that refuses (which also covers the dev sandbox). */
+function withoutShopify(deps: Deps): Deps {
+  return {
+    ...deps,
+    env: {...deps.env, SHOPIFY_ADMIN_API_TOKEN: undefined, SHOPIFY_STORE_DOMAIN: undefined},
+    fetcher: (async () => {
+      throw new Error('shopify is not used for unauthenticated mail');
+    }) as unknown as typeof fetch,
+  };
+}
+
+export const UNVERIFIED_NOTE = '**Sender not authenticated, verify before sharing order details.** The From address could not be confirmed by the mail system: it is not matched to Shopify, no order was checked, and a reply from this sender never joins an existing ticket.';
+
+function sourceNote(subject: string, attachments: number, verified: boolean): string {
   const dropped = attachments ? `; ${attachments} attachment${attachments === 1 ? '' : 's'} not imported` : '';
   return [
+    ...(verified ? [] : [UNVERIFIED_NOTE]),
     `*Source: mail. Subject: ${escapeDiscord(cleanText(subject).slice(0, 150)) || '(none)'}.`,
     `Quoted history and signature were removed${dropped}.`,
     'Reply here as for any ticket: the customer gets the usual "new reply" notice with the ticket link; nothing is mailed automatically.*',
@@ -315,7 +326,7 @@ export async function runMailIntake(ctx: MailDeps): Promise<MailReport> {
 
       const subject = cleanSubject(headerOf(m, 'subject'));
       const body = bodyText(m);
-      const outcome = await handleCustomerMail(ctx, store, {m, hash, subject, body, sender: verdict.sender, retry});
+      const outcome = await handleCustomerMail(ctx, store, {m, hash, subject, body, sender: verdict.sender, verified: verdict.verified, retry});
       if (outcome.kind === 'ignored') {
         await store.finish(hash, 'ignored', now, {reason: outcome.reason});
         ignore(outcome.reason);
@@ -339,16 +350,18 @@ const flat = (text: string) => text.replace(/\s+/g, ' ').trim();
 async function handleCustomerMail(
   ctx: MailDeps,
   store: MailStore,
-  mail: {m: MailMessage; hash: string; subject: string; body: string; sender: {email: string; name: string}; retry: boolean},
+  mail: {m: MailMessage; hash: string; subject: string; body: string; sender: {email: string; name: string}; verified: boolean; retry: boolean},
 ): Promise<{kind: 'ticket' | 'reply'; ref: string} | {kind: 'ignored'; reason: string}> {
   const {deps} = ctx;
-  const {m, hash, subject, body, sender, retry} = mail;
+  const {m, hash, subject, body, sender, verified, retry} = mail;
   const now = (deps.now ?? Date.now)();
 
   // A follow-up: the reference in the subject, else the Gmail thread of an
   // earlier mail that became or joined a ticket. Only the ticket's own
   // sender continues it, and only while the team has not locked it.
-  const ref = refInSubject(subject) ?? (await store.refForThread(m.threadId));
+  // A sender that did not authenticate never joins a ticket: anyone could
+  // forge the address of a customer and the reference.
+  const ref = verified ? (refInSubject(subject) ?? (await store.refForThread(m.threadId))) : null;
   const ticket = ref ? await deps.store.getTicket(ref) : null;
   if (ticket && ticket.email === sender.email && !ticket.locked) {
     const text = composeReplyText(body, m.attachmentCount);
@@ -396,10 +409,12 @@ async function handleCustomerMail(
     firmware: null,
     message,
   };
-  const created = await createTicket(deps, input);
+  // An unauthenticated sender is never matched to Shopify: no order number is
+  // passed, and the Shopify configuration is withheld so not even a read happens.
+  const created = await createTicket(verified ? deps : withoutShopify(deps), verified ? input : {...input, orderNumber: null});
   await store.finish(hash, 'ticket', now, {ref: created.ref});
   try {
-    await deps.discord.post(created.threadId, sourceNote(subject, m.attachmentCount));
+    await deps.discord.post(created.threadId, sourceNote(subject, m.attachmentCount, verified));
   } catch {
     // The note is a convenience; the ticket stands without it.
   }
