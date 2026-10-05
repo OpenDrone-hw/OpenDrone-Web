@@ -8,6 +8,10 @@ import {headerOf, parseAddress, type MailMessage} from './mail-parse.ts';
 
 export const UNVERIFIED_LINE = '[CHECK BEFORE SENDING: sender not authenticated by the mail system. Delete this line.]';
 export const MAX_QUOTE_CHARS = 4000;
+/** Header caps: every header line stays far below the 998 character RFC 5322 limit. */
+const MAX_SUBJECT_CHARS = 200;
+const MAX_NAME_CHARS = 80;
+const MAX_REFERENCES = 10;
 
 const NL = '\r\n';
 
@@ -60,22 +64,29 @@ export function encodeWords(value: string): string {
 
 /** "Re: " plus the subject, once. */
 export function replySubject(subject: string): string {
-  const s = oneLine(subject);
+  const s = Array.from(oneLine(subject)).slice(0, MAX_SUBJECT_CHARS).join('').trim();
   if (!s) return 'Re:';
   return /^re\s*:/i.test(s) ? s : `Re: ${s}`;
 }
 
-/** `Name <address>`, the name quoted or encoded; the bare address without a name. */
+/**
+ * One plain address: printable, no space, quote, bracket, comma, semicolon,
+ * colon or backslash, so a header the sender wrote can never add a second
+ * recipient or a group (`<x,y@evil>`, `<g:y@evil;>`) to the To line.
+ */
+const SAFE_ADDRESS = /^[^\s@<>()[\]\\,;:"\x00-\x1f\x7f]{1,64}@[^\s@<>()[\]\\,;:"\x00-\x1f\x7f]+\.[^\s@<>()[\]\\,;:"\x00-\x1f\x7f]+$/;
+
+/** `Name <address>`, the name quoted or encoded; the bare address without a name. Null for an unsafe address. */
 function mailbox(header: string): string | null {
   const a = parseAddress(header);
-  if (!a) return null;
-  const name = oneLine(a.name.replace(/[<>"\\]/g, ''));
+  if (!a || !SAFE_ADDRESS.test(a.email)) return null;
+  const name = Array.from(oneLine(a.name.replace(/[<>"\\]/g, ''))).slice(0, MAX_NAME_CHARS).join('').trim();
   if (!name) return a.email;
   return isAscii(name) ? `"${name}" <${a.email}>` : `${encodeWords(name)} <${a.email}>`;
 }
 
-/** Message-IDs of a References or In-Reply-To header, single line. */
-const ids = (v: string): string => oneLine(v);
+/** The `<id>` tokens of a Message-ID or References header; anything else in the header is dropped. */
+const ids = (v: string): string[] => oneLine(v).match(/<[\x21-\x3b\x3d\x3f-\x7e]{1,250}>/g) ?? [];
 
 /** "> " in front of every line, at most `max` characters of the original. */
 export function quoteOriginal(text: string, max = MAX_QUOTE_CHARS): string {
@@ -115,14 +126,16 @@ export function draftMessage(input: DraftInput): string | null {
   const m = input.mail;
   const to = mailbox(headerOf(m, 'from'));
   if (!to) return null;
-  const messageId = ids(headerOf(m, 'message-id'));
-  const references = ids(headerOf(m, 'references'));
+  const messageId = ids(headerOf(m, 'message-id'))[0] ?? '';
+  // The first reference (the thread root) and the most recent ones, then the mail itself, one per folded line.
+  const refs = ids(headerOf(m, 'references')).filter((r) => r !== messageId);
+  const references = refs.length > MAX_REFERENCES ? [refs[0]!, ...refs.slice(-(MAX_REFERENCES - 1))] : refs;
   const body = draftBody(input).replace(/\n/g, NL);
   const wrapped = (toBase64(new TextEncoder().encode(body)).match(/.{1,76}/g) ?? ['']).join(NL);
   const headers = [
     `To: ${to}`,
     `Subject: ${encodeWords(replySubject(headerOf(m, 'subject')))}`,
-    ...(messageId ? [`In-Reply-To: ${messageId}`, `References: ${[references, messageId].filter(Boolean).join(' ')}`] : []),
+    ...(messageId ? [`In-Reply-To: ${messageId}`, `References: ${[...references, messageId].join(`${NL} `)}`] : []),
     'MIME-Version: 1.0',
     'Content-Type: text/plain; charset=UTF-8',
     'Content-Transfer-Encoding: base64',

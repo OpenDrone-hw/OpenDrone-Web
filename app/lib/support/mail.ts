@@ -362,8 +362,11 @@ export async function runMailIntake(ctx: MailDeps): Promise<MailReport> {
     }
   }
 
-  await store.prune(now - 30 * DAY).catch(() => {});
-  await announce(deps, report);
+  if (mode === 'on') {
+    // Dry mode writes nothing, not even the prune.
+    await store.prune(now - 30 * DAY).catch(() => {});
+    await announce(deps, report);
+  }
   return report;
 }
 

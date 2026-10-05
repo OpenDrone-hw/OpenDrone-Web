@@ -52,10 +52,41 @@ const ADDRESS_RE = /<([^<>\s]+@[^<>\s]+)>|([^\s<>"',;()]+@[^\s<>"',;()]+)/;
 
 export type Address = {email: string; name: string};
 
+/**
+ * The header with every quoted string and parenthesised comment blanked to
+ * spaces, same length: an address written inside a display name
+ * (`"x@evil" <real@x>`) or a comment (`real@x (x@evil)`) is never the address.
+ */
+function maskPhrases(header: string): string {
+  let out = '';
+  let quoted = false;
+  let depth = 0;
+  for (let i = 0; i < header.length; i++) {
+    const ch = header[i]!;
+    if ((quoted || depth) && ch === '\\') {
+      out += i + 1 < header.length ? '  ' : ' ';
+      i++;
+    } else if (quoted) {
+      if (ch === '"') quoted = false;
+      out += ' ';
+    } else if (ch === '"' && !depth) {
+      quoted = true;
+      out += ' ';
+    } else if (ch === '(') {
+      depth++;
+      out += ' ';
+    } else if (ch === ')' && depth) {
+      depth--;
+      out += ' ';
+    } else out += depth ? ' ' : ch;
+  }
+  return out;
+}
+
 /** The first address of a From-like header: `Jan Peeters <jan@x.be>`, `"Peeters, Jan" <...>`, `jan@x.be`. */
 export function parseAddress(header: string | undefined): Address | null {
   if (!header) return null;
-  const m = header.match(ADDRESS_RE);
+  const m = maskPhrases(header).match(ADDRESS_RE);
   if (!m) return null;
   const email = (m[1] ?? m[2] ?? '').toLowerCase().replace(/^mailto:/, '');
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || email.length > 254) return null;

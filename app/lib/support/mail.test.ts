@@ -480,6 +480,37 @@ describe('draft message', () => {
     const msg = draftMessage({mail: m, reply: 'a', original: 'b', verified: true})!;
     assert.ok(!/^Bcc:/im.test(msg));
   });
+
+  it('addresses only the real sender: never an address from a display name, comment, list or group', () => {
+    const to = (from: string) => {
+      const msg = draftMessage({mail: mail({headers: {from}}), reply: 'a', original: 'b', verified: true});
+      return msg === null ? null : msg.split('\r\n').find((l) => l.startsWith('To: '));
+    };
+    assert.equal(to('"attacker@evil.example" <jan@example.com>'), 'To: "attacker@evil.example" <jan@example.com>');
+    assert.equal(to('jan@example.com (attacker@evil.example)'), 'To: jan@example.com');
+    assert.equal(to('<x,attacker@evil.example>'), null);
+    assert.equal(to('<group:attacker@evil.example;>'), null);
+    assert.deepEqual(parseAddress('"a@evil.example" <jan@example.com>'), {email: 'jan@example.com', name: 'a@evil.example'});
+  });
+
+  it('keeps every header line short and only real Message-IDs in the threading headers', () => {
+    const m = mail({
+      headers: {
+        subject: 'x'.repeat(5000),
+        from: `${'N'.repeat(500)} <jan@example.com>`,
+        'message-id': 'junk Bcc: attacker@evil.example <id@example.com>',
+        references: Array.from({length: 500}, (_, i) => `<r${i}@example.com>`).join(' '),
+      },
+    });
+    const msg = draftMessage({mail: m, reply: 'a', original: 'b', verified: true})!;
+    const head = msg.slice(0, msg.indexOf('\r\n\r\n')).split('\r\n');
+    assert.ok(head.every((l) => l.length < 400), String(Math.max(...head.map((l) => l.length))));
+    assert.ok(head.includes('In-Reply-To: <id@example.com>'));
+    assert.ok(!msg.includes('attacker@evil.example'));
+    assert.ok(head.includes('References: <r0@example.com>'));
+    assert.ok(head.includes(' <r499@example.com>'));
+    assert.equal(head.filter((l) => /^ <r\d+@example\.com>$/.test(l)).length, 9);
+  });
 });
 
 describe('mail drafts', {skip}, () => {
@@ -661,6 +692,10 @@ describe('mail drafts', {skip}, () => {
 
   it('dry mode classifies and reports but writes and drafts nothing', async () => {
     const {deps, db, discord, chatfpv} = await setup({env: {SUPPORT_MAIL_INTAKE_ENABLED: 'dry'}});
+    // A row older than the 30-day prune: dry mode must not delete it either.
+    await db
+      .prepare(`INSERT INTO support_mail_messages (message_hash, gmail_id, gmail_thread_id, outcome, attempts, received_at, updated_at) VALUES ('old', 'g-old', 't-old', 'ignored', 1, 0, 0)`)
+      .run();
     const gmail = fakeGmail([mail(), mail({headers: {from: 'noreply@shop.example'}})]);
     const report = await runMailIntake({deps, db, gmail: gmail.client});
     assert.equal(report.mode, 'dry');
@@ -671,8 +706,10 @@ describe('mail drafts', {skip}, () => {
     assert.equal(gmail.drafts.length, 0);
     assert.equal(chatfpv.drafts.length, 0);
     assert.equal(posts(discord).length, 0);
-    const rows = await db.prepare('SELECT COUNT(*) AS n FROM support_mail_messages').first<{n: number}>();
+    const rows = await db.prepare(`SELECT COUNT(*) AS n FROM support_mail_messages WHERE message_hash != 'old'`).first<{n: number}>();
     assert.equal(rows?.n, 0);
+    const old = await db.prepare(`SELECT COUNT(*) AS n FROM support_mail_messages WHERE message_hash = 'old'`).first<{n: number}>();
+    assert.equal(old?.n, 1, 'dry mode does not prune');
   });
 
   it('prunes rows after 30 days', async () => {
