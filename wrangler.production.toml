@@ -57,7 +57,7 @@ SUPPORT_EMAIL_NOTIFY_ENABLED = "1"
 # Customer mail (README "Mail"): Gmail poll that saves a ChatFPV reply as a
 # Gmail draft for each customer mail; a person sends it. "0" off, "dry" reports
 # counts only, "1" on. Needs the founder's go; the Gmail credentials are Worker secrets.
-SUPPORT_MAIL_INTAKE_ENABLED = "0"
+SUPPORT_MAIL_INTAKE_ENABLED = "dry"
 # ChatFPV (README "Support tickets"): AI ticket drafts in Discord, the
 # /support Ask box and the product/preorder widget. "1" turns each on.
 # CHATFPV_KEY is a Worker secret.
