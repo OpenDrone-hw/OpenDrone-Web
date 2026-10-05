@@ -1,0 +1,193 @@
+{
+ "version": 1,
+ "frame": "WORLD",
+ "image": "data/minimap.png",
+ "channels": {
+  "r": "walkable",
+  "g": "furniture",
+  "b": "tall",
+  "a": "interior"
+ },
+ "width": 768,
+ "height": 586,
+ "pxPerUnit": 200.0,
+ "unitMeters": 3.4,
+ "angleDeg": -13.75,
+ "worldToMap": [
+  194.268414,
+  -47.537178,
+  466.0,
+  47.537178,
+  194.268414,
+  240.0
+ ],
+ "_worldToMapNote": "px = m[0]*x + m[1]*z + m[2], py = m[3]*x + m[4]*z + m[5] (WORLD x, z in scene units)",
+ "fog": {
+  "cell": 0.04,
+  "w": 96,
+  "h": 74,
+  "pxPerCell": 8,
+  "occluders": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAQAAAAAAAACAAwDAAQAAAAAAAHDgh4D/AAYAAACAYT/4w8F/AB8AAAAAPwAOgvH/AH8AAAAAHAAC+Pv/AUMAAAAAHgAB/PP/gWMAAADgA8AB5PP/g2MAAABgAMAB4MH/g2MAAAAAAAAA4AD/A2EAAAAAAAAAAADwA+AAAAAAAAAAAADwAeAAAAAAAAAAAADwAeAAAAAAAAAAAADwAeAAAAAAAAAAAADwAeAAAAAAAAAAAADwAcAAAAAAAAAAAADwAfwAAAAAAAAAAADwAfwAAAAAAAAAAADwAUAAAAAAAAMAAADwAUAAAAAAAAMAAADwAQAAAAAA4AMAAAAAAAAAAAAA8AMAAAAAAAAAAAAA8AMAAAAAAEAAAAAA8AcAAAAAAMAAAAAA8AcAAAAAAMAAAAAA8AcAAAAAAMAAAAAA8AcAAAAAAMAAAAAA4AcAAAAAAOYAAAAA8AcAAAAAAH4AAAAA8AcAAAAAADAAAAAA8AcAAAAAACAAAAAA8AcAAAAAACAAAAAA8AcAAAAAAAAAAAAA8AcAAAAAAAAAAAAA8AcAAAAAAAAAAAAA8AcAAAAAAAAAAAAA8AcAAAAAAAAAAAAA+AcAAAAAAAAAAAAA4AcAAAAAAAAAAAAA4AcAAAAIAAAAAAAA4AcAAAAIAEAACAAA4AEAAAAIAPwACAAAYAAAAADwA3gACAAAAAAAAADwA3gACAAAAAAAAADwA3gACAAAAAAAAADwAXgACAAAAAAAAAAgAHgACAAAAAAAAAAAAP4BCAAAAAAA+AAAAPAACAAAAAAA/wEAAAAAAAAAAAAA3AMAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAADAIAAAAAAAAAAAAAHAYAAAAAAAAAAAAA/z8AAAAAAAAAAAAA/z8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+ },
+ "items": [
+  {
+   "id": "laser-cutter",
+   "map": [
+    87.18,
+    216.87
+   ],
+   "onFurniture": true
+  },
+  {
+   "id": "bambu-h2d",
+   "map": [
+    567.6,
+    380.16
+   ],
+   "onFurniture": true
+  },
+  {
+   "id": "bambu-p1s",
+   "map": [
+    549.68,
+    425.61
+   ],
+   "onFurniture": true
+  },
+  {
+   "id": "a1-mini-fleet",
+   "map": [
+    627.25,
+    523.45
+   ],
+   "onFurniture": true
+  },
+  {
+   "id": "prusa",
+   "map": [
+    604.47,
+    525.09
+   ],
+   "onFurniture": true
+  },
+  {
+   "id": "filament",
+   "map": [
+    638.14,
+    548.54
+   ],
+   "onFurniture": true
+  },
+  {
+   "id": "microscope",
+   "map": [
+    678.41,
+    102.61
+   ],
+   "onFurniture": true
+  },
+  {
+   "id": "bench-instruments",
+   "map": [
+    575.11,
+    58.54
+   ],
+   "onFurniture": true
+  },
+  {
+   "id": "electronics-supplies",
+   "map": [
+    687.43,
+    195.17
+   ],
+   "onFurniture": true
+  },
+  {
+   "id": "pen-plotter",
+   "map": [
+    544.31,
+    253.32
+   ],
+   "onFurniture": true
+  },
+  {
+   "id": "makera-cnc",
+   "map": [
+    515.82,
+    90.46
+   ],
+   "onFurniture": true
+  },
+  {
+   "id": "christmas-tree",
+   "map": [
+    258.98,
+    115.03
+   ],
+   "onFurniture": true
+  },
+  {
+   "id": "television",
+   "map": [
+    426.39,
+    431.7
+   ],
+   "onFurniture": true
+  },
+  {
+   "id": "vinyl-cutter",
+   "map": [
+    315.09,
+    83.97
+   ],
+   "onFurniture": true
+  },
+  {
+   "id": "vinyl-press",
+   "map": [
+    379.71,
+    63.39
+   ],
+   "onFurniture": true
+  },
+  {
+   "id": "wood-stock",
+   "map": [
+    78.54,
+    336.84
+   ],
+   "onFurniture": true
+  },
+  {
+   "id": "hand-tools",
+   "map": [
+    273.32,
+    58.55
+   ],
+   "onFurniture": true
+  },
+  {
+   "id": "fasteners",
+   "map": [
+    265.5,
+    201.27
+   ],
+   "onFurniture": true
+  }
+ ],
+ "source": {
+  "generator": "tools/bake_minimap.py (splat density in the room frame, data/nav.json walkable cells)",
+  "scanSha256": "891b856705451aea95ea7b4c4198d5e2ad125933b9b27948c49e2a4c19a40ed5",
+  "navScanSha256": "891b856705451aea95ea7b4c4198d5e2ad125933b9b27948c49e2a4c19a40ed5",
+  "opacity": 0.5,
+  "k": 2,
+  "bandM": [
+   0.3,
+   1.8
+  ],
+  "tallBins": 3,
+  "polygons": [
+   "white-table"
+  ]
+ }
+}

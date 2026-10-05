@@ -1,0 +1,78 @@
+/* Controller styles (SPEC.md 3.4). Only ct- classes. Tokens come from css/shell.css. */
+
+.ct-look {
+  touch-action: none;
+  cursor: grab;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.ct-look.ct-dragging {
+  cursor: grabbing;
+}
+
+/* #stick-zone: left 40% of the screen, bottom half, touch devices only */
+.ct-zone {
+  display: none;
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 40%;
+  height: 50%;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  z-index: 2;
+}
+.ct-zone.ct-on {
+  display: block;
+}
+
+/* resting position: bottom left, inside the 16 px gutter and safe area */
+.ct-stick {
+  position: absolute;
+  left: calc(16px + env(safe-area-inset-left, 0px) + 64px);
+  top: calc(100% - 16px - env(safe-area-inset-bottom, 0px) - 64px);
+  width: 112px;
+  height: 112px;
+  margin: -56px 0 0 -56px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  background: rgba(0, 0, 0, 0.18);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
+  opacity: 0.6;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+.ct-stick.ct-active {
+  opacity: 1;
+  transition: none;
+}
+.ct-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 48px;
+  height: 48px;
+  margin: -24px 0 0 -24px;
+  border-radius: 50%;
+  background: var(--sh-accent, #ff7a2f);
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ct-stick {
+    transition: none;
+  }
+}
+
+/* the info panel never stops walking: on narrow screens the stick zone sits above its bottom sheet. The modal
+   screens hide the stick */
+@media (max-width: 700px) {
+  #app:has(#card:not([hidden])) .ct-zone { bottom: var(--it-sheet-h, 0px); height: calc(50% - var(--it-sheet-h, 0px) / 2); }
+}
+#app:has(#menu:not([hidden])) .ct-stick,
+#app:has(#pause:not([hidden])) .ct-stick,
+#app:has(#complete:not([hidden])) .ct-stick,
+#app:has(#intro:not([hidden])) .ct-stick { visibility: hidden; }

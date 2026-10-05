@@ -1,0 +1,28 @@
+{
+ "colors": {
+  "floor": [
+   0.737,
+   0.647,
+   0.561
+  ],
+  "wall": [
+   0.773,
+   0.718,
+   0.667
+  ],
+  "ceiling": [
+   0.882,
+   0.851,
+   0.839
+  ]
+ },
+ "samples": {
+  "floor": 417967,
+  "wall": 327860,
+  "ceiling": 85695
+ },
+ "source": {
+  "generator": "tools/backdrop_colors.mjs",
+  "scanSha256": "891b856705451aea95ea7b4c4198d5e2ad125933b9b27948c49e2a4c19a40ed5"
+ }
+}

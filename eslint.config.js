@@ -34,6 +34,8 @@ export default [
       '**/*.generated.d.ts',
       '**/.react-router/',
       '**/packages/hydrogen/dist/',
+      // the lab walkthrough: copied in by scripts/sync-lab-visit.mjs, linted in its own repo
+      'public/lab-visit/',
     ],
   },
   ...fixupConfigRules(

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Lab visit</title>
+  <link rel="stylesheet" href="css/shell.css"><link rel="stylesheet" href="css/controller.css"><link rel="stylesheet" href="css/interaction.css"><link rel="stylesheet" href="css/game.css"><link rel="stylesheet" href="css/entrance.css"><link rel="stylesheet" href="css/minimap.css">
+  <script type="importmap">{"imports":{"playcanvas":"./vendor/playcanvas.mjs"}}</script>
+</head>
+<body>
+  <div id="app">
+    <canvas id="c" tabindex="0" aria-label=""></canvas>
+    <div id="corridor" hidden></div>
+    <div id="stick-zone"></div>
+    <div id="hud" hidden><div id="objective"></div><div id="hud-buttons"><button id="hint-button" class="sh-btn"></button><button id="help-button" class="sh-btn sh-btn-icon"></button><button id="pause-button" class="sh-btn sh-btn-icon"></button></div></div>
+    <div id="hint-ring" hidden></div>
+    <div id="marker" hidden></div>
+    <div id="lock-hint" hidden></div>
+    <div id="hint" hidden></div>
+    <div id="toast" hidden></div>
+    <section id="help" hidden></section>
+    <section id="card" hidden></section>
+    <section id="menu" hidden></section>
+    <section id="pause" hidden></section>
+    <div id="minimap" hidden></div><section id="map" hidden></section>
+    <div id="announcer" aria-live="polite" class="sh-visually-hidden"></div>
+    <div id="gate" hidden><h1 id="gate-heading"></h1><p id="gate-body"></p><button id="gate-start"></button><span id="gate-size"></span><p id="gate-controls"></p></div>
+    <div id="loading" hidden><p id="loading-title"></p><div id="loading-bar"></div><span id="loading-text"></span><p id="loading-tip"></p></div>
+    <div id="intro" hidden><div id="intro-panel"><p id="intro-kicker"></p><h1 id="intro-heading"></h1><p id="intro-body"></p><ol id="intro-objectives"></ol><div id="intro-controls"></div><button id="intro-start"></button></div></div>
+    <section id="complete" hidden></section>
+    <div id="error" hidden><p id="error-text"></p><button id="error-retry"></button></div>
+    <div id="fade" hidden></div>
+  </div>
+  <noscript>This page needs JavaScript.</noscript>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

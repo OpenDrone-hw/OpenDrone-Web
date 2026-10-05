@@ -1,0 +1,136 @@
+{
+  "version": 1,
+  "frame": "WORLD",
+  "_note": "Hand-authored furniture data for the walk grid (tools/bake_nav.py) and the fallback grid (js/collision.js). Positions are WORLD x, z in scene units, read from top-down renders of index.sog made by tools/bake_nav.py --render.",
+  "polygons": [
+    {
+      "id": "white-table",
+      "label": "Large white table in the middle of the room",
+      "reason": "Uniform white top, reconstructed with few large splats, so the splat density only shows its rim",
+      "points": [
+        [
+          -0.61,
+          0.01
+        ],
+        [
+          -0.04,
+          -0.12
+        ],
+        [
+          0.06,
+          0.46
+        ],
+        [
+          -0.48,
+          0.58
+        ]
+      ]
+    }
+  ],
+  "checkPoints": [
+    {
+      "id": "cnc-desk",
+      "p": [
+        -0.136,
+        -0.731
+      ],
+      "what": "desk beside the keyboard next to the Makera CNC (review finding)"
+    },
+    {
+      "id": "tv-table",
+      "p": [
+        -0.016,
+        0.909
+      ],
+      "what": "table under the television (review finding)"
+    },
+    {
+      "id": "white-table-edge",
+      "p": [
+        0.004,
+        0.409
+      ],
+      "what": "right edge of the large white table (review finding)"
+    },
+    {
+      "id": "plotter-table-edge",
+      "p": [
+        0.604,
+        -0.031
+      ],
+      "what": "white pen plotter table (review finding)"
+    },
+    {
+      "id": "white-table-centre",
+      "p": [
+        -0.28,
+        0.23
+      ],
+      "what": "centre of the large white table"
+    },
+    {
+      "id": "plotter-table-centre",
+      "p": [
+        0.36,
+        -0.13
+      ],
+      "what": "centre of the pen plotter table"
+    },
+    {
+      "id": "fasteners-table",
+      "p": [
+        -1.0,
+        0.45
+      ],
+      "what": "long table with the fastener drawers"
+    },
+    {
+      "id": "printer-bench",
+      "p": [
+        0.66,
+        0.78
+      ],
+      "what": "bench under the Bambu printers"
+    },
+    {
+      "id": "electronics-bench",
+      "p": [
+        0.86,
+        -0.5
+      ],
+      "what": "electronics bench, right of the aisle"
+    },
+    {
+      "id": "instruments-bench",
+      "p": [
+        0.33,
+        -0.65
+      ],
+      "what": "bench with the power supplies and oscilloscope"
+    },
+    {
+      "id": "back-wall-bench",
+      "p": [
+        -1.2,
+        -0.55
+      ],
+      "what": "bench along the back wall with the hand tools"
+    },
+    {
+      "id": "prusa-bench",
+      "p": [
+        1.1,
+        1.22
+      ],
+      "what": "bench with the small printers and the Prusa"
+    },
+    {
+      "id": "laser-cutter",
+      "p": [
+        -1.95,
+        0.5
+      ],
+      "what": "laser cutter body"
+    }
+  ]
+}

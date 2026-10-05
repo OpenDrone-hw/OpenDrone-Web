@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "_note": "Objectives in order (js/objectives.js). A step is done when `need` of its `items` are discovered; \"all\" means every enabled item. Steps that are already done are skipped. Texts are the i18n keys objective.<id>.",
+  "steps": [
+    { "id": "printers", "items": ["bambu-h2d", "bambu-p1s", "a1-mini-fleet", "prusa"], "need": 1 },
+    { "id": "laser", "items": ["laser-cutter"], "need": 1 },
+    { "id": "electronics", "items": ["microscope", "bench-instruments", "electronics-supplies"], "need": 1 },
+    { "id": "rest", "items": "all", "need": "all" }
+  ]
+}

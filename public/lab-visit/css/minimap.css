@@ -1,0 +1,265 @@
+/* Minimap styles (js/minimap.js). Only mm- classes and the ids #minimap and #map. Tokens come from css/shell.css :root,
+   so ?theme=dark recolours everything here. Layers: HUD 11 (over the #hud row, under the hint 18 and toast 22), full
+   map 40 (with the pause menu). js/minimap.js sets the HUD's left, top, width and height (see its placement note). */
+
+.mm-hud {
+  position: absolute;
+  z-index: 11;
+  left: 16px;
+  top: 16px;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  pointer-events: auto;
+}
+.mm-hud-btn {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 1px solid var(--sh-panel-border);
+  border-radius: 50%;
+  background: var(--sh-panel-solid, var(--sh-panel));
+  cursor: pointer;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+.mm-hud-btn:focus-visible { outline: 3px solid var(--sh-accent); outline-offset: 2px; }
+.mm-canvas { display: block; width: 100%; height: 100%; }
+.mm-badge {
+  position: absolute;
+  right: 2%;
+  bottom: 2%;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--sh-panel-border);
+  background: var(--sh-panel-solid, var(--sh-panel));
+  color: var(--sh-muted);
+  font: 600 11px/1.3 var(--sh-mono, var(--sh-font));
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
+/* touch: the map button is the minimap itself, labelled with an accent "Map" pill */
+.mm-badge-touch {
+  right: 50%;
+  bottom: 4px;
+  transform: translateX(50%);
+  padding: 3px 10px;
+  border-color: transparent;
+  background: var(--sh-accent);
+  color: var(--sh-accent-text);
+  font: 700 12px/1.2 var(--sh-font);
+  letter-spacing: 0;
+}
+/* safe-area probe: js/minimap.js reads these paddings to keep the minimap off the notch and the home indicator */
+.mm-safe {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  visibility: hidden;
+  pointer-events: none;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+
+/* the toast, the hint and the controls strip stack below a minimap at the top: js/gameui.js layoutTop counts #minimap
+   as a HUD block */
+
+/* ---------- full map ---------- */
+.mm-full {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-right, 0px))
+    calc(16px + env(safe-area-inset-bottom, 0px)) calc(16px + env(safe-area-inset-left, 0px));
+  background: var(--sh-scrim);
+}
+.mm-full[hidden] { display: none; }
+.mm-panel {
+  display: flex;
+  flex-direction: column;
+  width: min(1280px, 100%);
+  min-height: 0;
+  background: var(--sh-panel-solid, var(--sh-panel));
+  color: var(--sh-text);
+  border: 1px solid var(--sh-panel-border);
+  border-radius: var(--sh-radius);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+.mm-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 10px;
+  border-bottom: 1px solid var(--sh-panel-border);
+}
+.mm-head-text { min-width: 0; }
+.mm-kicker {
+  margin: 0;
+  color: var(--sh-accent);
+  font: 600 12px/1.2 var(--sh-mono, var(--sh-font));
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.mm-title { margin: 4px 0 2px; font-size: 22px; line-height: 1.15; }
+.mm-explored { margin: 0; color: var(--sh-muted); font: 600 12px/1.3 var(--sh-mono, var(--sh-font)); }
+.mm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: var(--sh-radius);
+  border: 1px solid var(--sh-panel-border);
+  background: transparent;
+  color: var(--sh-text);
+  font: 600 14px/1.1 var(--sh-font);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.mm-btn:hover { border-color: var(--sh-accent); }
+.mm-btn:focus-visible, .mm-tab:focus-visible { outline: 3px solid var(--sh-accent); outline-offset: 2px; }
+.mm-btn-accent { background: var(--sh-accent); color: var(--sh-accent-text); border-color: transparent; }
+.mm-close { flex: none; }
+.mm-tabs { display: none; }
+.mm-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.mm-pane { min-height: 0; min-width: 0; }
+.mm-pane-map { display: flex; flex-direction: column; padding: 10px 12px 12px; }
+.mm-stage { position: relative; flex: 1 1 auto; min-height: 0; }
+.mm-full-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; -webkit-user-select: none; user-select: none; }
+.mm-zoom {
+  position: absolute;
+  z-index: 3;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mm-zbtn {
+  min-width: 40px;
+  height: 40px;
+  padding: 0 8px;
+  border-radius: var(--sh-radius);
+  border: 1px solid var(--sh-panel-border);
+  background: var(--sh-panel-solid, var(--sh-panel));
+  color: var(--sh-text);
+  font: 700 18px/1 var(--sh-font);
+  cursor: pointer;
+}
+#mm-zoom-fit { font-size: 12px; font-weight: 600; }
+.mm-zbtn:focus-visible { outline: 3px solid var(--sh-accent); outline-offset: 2px; }
+@media (pointer: coarse) {
+  .mm-zbtn { min-width: 44px; height: 44px; }
+  .mm-row .mm-btn, .mm-pop .mm-btn { min-height: 44px; }
+  .mm-row-title { font-size: 15px; }
+  .mm-legend { font-size: 12px; }
+}
+.mm-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--sh-muted);
+  font-size: 12px;
+}
+.mm-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.mm-sw { display: inline-block; width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--sh-panel-border); }
+.mm-sw-you { background: var(--sh-text); clip-path: polygon(50% 0, 100% 100%, 50% 75%, 0 100%); border: 0; }
+.mm-sw-found { background: var(--sh-accent); border-radius: 50%; }
+.mm-sw-unknown { border-radius: 50%; border: 1.5px solid var(--sh-muted); }
+.mm-sw-target { border-radius: 50%; border: 2px solid var(--sh-accent); background: transparent; }
+.mm-sw-walk { background: #3c3c44; }
+.mm-sw-furn { background: #706d66; }
+.mm-sw-tall { background: #97928a; }
+.mm-sw-fog { background: repeating-linear-gradient(135deg, #101014 0 3px, #1c1c22 3px 5px); }
+:root:not([data-theme="dark"]) .mm-sw-walk { background: #faf9f6; }
+:root:not([data-theme="dark"]) .mm-sw-furn { background: #b6b1a7; }
+:root:not([data-theme="dark"]) .mm-sw-tall { background: #8a857b; }
+:root:not([data-theme="dark"]) .mm-sw-fog { background: repeating-linear-gradient(135deg, #dddcd6 0 3px, #cbcac3 3px 5px); }
+
+.mm-pane-list {
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--sh-panel-border);
+  overflow-y: auto;
+  padding: 12px 14px 16px;
+}
+.mm-list-title { margin: 0 0 6px; font-size: 13px; color: var(--sh-accent); font-family: var(--sh-mono, var(--sh-font)); letter-spacing: 0.08em; text-transform: uppercase; }
+.mm-group-title { margin: 12px 0 4px; color: var(--sh-muted); font-size: 12px; font-weight: 600; }
+.mm-rows { margin: 0; padding: 0; list-style: none; }
+.mm-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--sh-panel-border); }
+.mm-row-title { flex: 1 1 auto; min-width: 0; font-size: 14px; }
+.mm-row .mm-btn { min-height: 34px; padding: 0 10px; font-size: 13px; }
+.mm-dot {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid var(--sh-muted);
+  color: var(--sh-muted);
+  font: 700 10px/1 var(--sh-font);
+}
+.mm-found .mm-dot { background: var(--sh-accent); border-color: var(--sh-accent); }
+.mm-selected { background: color-mix(in srgb, var(--sh-accent) 12%, transparent); }
+
+.mm-pop {
+  position: absolute;
+  z-index: 2;
+  transform: translate(-50%, calc(-100% - 16px));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 12px;
+  border-radius: var(--sh-radius);
+  background: var(--sh-panel-solid, var(--sh-panel));
+  border: 1px solid var(--sh-accent);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+}
+.mm-pop.mm-pop-below { transform: translate(-50%, 16px); }
+.mm-pop-title { font-weight: 600; }
+
+@media (max-width: 700px) {
+  .mm-full { padding: calc(8px + env(safe-area-inset-top, 0px)) calc(8px + env(safe-area-inset-right, 0px))
+    calc(8px + env(safe-area-inset-bottom, 0px)) calc(8px + env(safe-area-inset-left, 0px)); }
+  .mm-head { padding: 12px 12px 8px; }
+  .mm-title { font-size: 19px; }
+  .mm-tabs { display: flex; gap: 6px; padding: 8px 12px 0; }
+  .mm-tab {
+    flex: 1 1 0;
+    min-height: 40px;
+    border: 1px solid var(--sh-panel-border);
+    border-radius: var(--sh-radius);
+    background: transparent;
+    color: var(--sh-muted);
+    font: 600 14px/1 var(--sh-font);
+  }
+  .mm-tab[aria-selected="true"] { color: var(--sh-accent-text); background: var(--sh-accent); border-color: transparent; }
+  .mm-body { grid-template-columns: minmax(0, 1fr); }
+  .mm-panel[data-tab="map"] .mm-pane-list, .mm-panel[data-tab="list"] .mm-pane-map { display: none; }
+  .mm-pane-list { border-left: 0; }
+  .mm-legend { font-size: 12px; gap: 3px 10px; }
+}
+/* short landscape screens: the legend gives way to the map */
+@media (max-height: 460px) {
+  .mm-legend { display: none; }
+  .mm-head { padding-top: 8px; padding-bottom: 6px; }
+  .mm-kicker { display: none; }
+}

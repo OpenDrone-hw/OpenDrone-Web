@@ -8,14 +8,15 @@
 // The walkthrough is a static site (index.html plus the files it loads) whose
 // source, tests and bake tools live outside this repository. Only the files a
 // browser needs are copied; tests, tools, docs and the bundled index.sog are
-// not. The scan is the unbundled form (scan/meta.json plus WebP files), so no
-// file exceeds the Workers static asset limit of 25 MiB, which this checks.
+// not. The scan is the unbundled form (scan/ and the detail layer scan-detail/,
+// each a meta.json plus WebP files), so no file exceeds the Workers static
+// asset limit of 25 MiB, which this checks.
 
 import {createHash} from 'node:crypto';
 import {cpSync, existsSync, lstatSync, readdirSync, readFileSync, rmSync, statSync, unlinkSync} from 'node:fs';
 import {join, relative, resolve} from 'node:path';
 
-const RUNTIME = ['index.html', 'config.json', 'css', 'data', 'i18n', 'js', 'vendor', 'scan'];
+const RUNTIME = ['index.html', 'config.json', 'css', 'data', 'i18n', 'js', 'vendor', 'scan', 'scan-detail'];
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
 const DEST = resolve(import.meta.dirname, '..', 'public', 'lab-visit');
 
