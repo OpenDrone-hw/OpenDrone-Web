@@ -28,10 +28,11 @@ import buildsJson from '../../content/builds.json';
 import {beginCartAdd, endCartAdd} from './cart-add-lock';
 import {BuildBundle, bundleFields} from './BuildBundle';
 import {trackCheckoutClick} from '~/lib/growth/checkout-beacon';
-import {DATES_SEEN_FIELD, latestDeliveryBy, type CartSummary} from '~/lib/shopify-cart-action';
+import {DATES_SEEN_FIELD, hasMixedShipGroups, latestDeliveryBy, type CartSummary} from '~/lib/shopify-cart-action';
 import {trackEvent} from '~/lib/growth/plausible';
 import {CART_ADDED_EVENT, postCartAdd, withCountry, type CartAddedDetail} from '~/lib/cart-client';
 import {ShipToSelect} from './ShipToSelect';
+import '../styles/cart-checkout-bar.css';
 
 const CART_ACTION = '/api/shopify/cart';
 const BUILDS = parseBuilds(buildsJson);
@@ -131,8 +132,10 @@ export function CartAddedDialog() {
   // The lines added this time.
   const added = summary.lines.filter((l) => l.sku && detail.skus.includes(l.sku));
   // One parcel per order: when the cart's lines ship at different times,
-  // every line shows the parcel's date, as the cart does.
-  const mixed = new Set(summary.lines.map((l) => l.shipPromise ?? '')).size > 1;
+  // the drawer says so, as the cart does. Checkout's own rule: lines waiting
+  // for different funding targets are mixed even when their dates read the
+  // same, so checkout never sends the buyer back to the cart unannounced.
+  const mixed = hasMixedShipGroups(summary.lines);
   // Dated lines next to a funding-target line: the buyer can order the dated
   // ones separately to get them sooner (the cart page does the split).
   const sooner = mixed ? soonerMonth(summary.lines.map((l) => l.shipPromise)) : null;
@@ -150,6 +153,12 @@ export function CartAddedDialog() {
   const quote = shippingQuote(visitor, undefined, usRate);
   const shippingRate =
     quote?.kind === 'direct' && quote.rate !== null ? formatPrice(quote.rate, quote.zone === 'us' ? 'USD' : 'EUR') : null;
+  // International: the rate Shopify checkout starts from, when the add could
+  // compute it for this cart (`international-shipping.ts`).
+  const internationalFrom =
+    quote?.kind === 'direct' && quote.zone === 'international' && summary.shippingFrom?.country === quote.country
+      ? summary.shippingFrom
+      : null;
   const cartPromises = summary.lines.map((l) => l.shipPromise);
   const orderPromise = parcelPromise(cartPromises) ?? cartPromises.find(Boolean) ?? null;
   const orderDeliveryBy = latestDeliveryBy(summary.lines);
@@ -383,7 +392,7 @@ export function CartAddedDialog() {
               if (reply.summary) setSummary(reply.summary);
             }}
           />
-          {subtotal ? (
+          {subtotal && notDirect ? (
             <p className="cart-added-subtotal">
               <span>
                 {vatIncluded
@@ -400,6 +409,13 @@ export function CartAddedDialog() {
             <p className="cart-added-subtotal">
               <span>{t('shipping_row', 'Shipping to {country}', {country: countryName(visitor ?? '')})}</span>
               <span className="cart-added-price">{shippingRate}</span>
+            </p>
+          ) : internationalFrom ? (
+            <p className="cart-added-subtotal">
+              <span>{t('shipping_row', 'Shipping to {country}', {country: countryName(visitor ?? '')})}</span>
+              <span className="cart-added-from">
+                {t('shipping_from', 'from {price}, confirmed at checkout', {price: formatPrice(internationalFrom.amount, internationalFrom.currencyCode)})}
+              </span>
             </p>
           ) : null}
           {/* The order's one ship and delivery date, said once. */}
@@ -421,6 +437,9 @@ export function CartAddedDialog() {
           {quote?.kind === 'direct' && quote.zone === 'international' ? (
             <p className="cart-added-parcel">{t('international_note', 'Shipping and applicable sale taxes are confirmed at checkout. Import duties, import taxes and customs handling charges may be payable on delivery.')}</p>
           ) : null}
+          {mixed ? (
+            <p className="cart-added-parcel" role="note">{t('parcel_note', 'Your order ships in one parcel, when its last item is ready.')}</p>
+          ) : null}
           {sooner ? (
             <p className="cart-added-parcel">
               <Link to="/cart" className="cart-added-split">
@@ -428,7 +447,8 @@ export function CartAddedDialog() {
               </Link>
             </p>
           ) : null}
-          {/* Checkout is a plain form post: the cart action checks every line
+          {/* No consumer checkout here: say why. Otherwise Checkout is the
+              bar below, a plain form post: the cart action checks every line
               again and redirects to Shopify checkout, or back to /cart with
               a notice. */}
           {notDirect === 'blocked' ? (
@@ -448,26 +468,39 @@ export function CartAddedDialog() {
               {t('checkout_closed', 'Orders are not open for {country}.', {country: countryName(visitor ?? '')})}{' '}
               <Link to="/newsletter">{t('checkout_shops_notify', 'Get launch news')}</Link>
             </p>
-          ) : (
-            <form
-              method="post"
-              action={CART_ACTION}
-              onSubmit={() => trackCheckoutClick(subtotal)}
-            >
-              <input type="hidden" name="intent" value="checkout" />
-              {visitor ? <input type="hidden" name="country" value={visitor} /> : null}
-              {/* Every line names its date, so checkout may go on. */}
-              {mixed ? <input type="hidden" name={DATES_SEEN_FIELD} value="1" /> : null}
-              <button type="submit" className="cart-added-checkout">
-                {copyText('cart.checkout_cta') ?? 'Checkout'}
-              </button>
-            </form>
-          )}
+          ) : null}
           <Link className="cart-added-viewcart" to="/cart" prefetch="intent">
             {t('added_view', 'View cart ({count})', {count: String(summary.totalQuantity)})}
           </Link>
           <Txt id="cart.note_terms" as="p" className="cart-added-parcel [&_a]:underline! [&_a]:underline-offset-4" />
         </div>
+        {/* Subtotal, the parcel's date and Checkout stay pinned to the
+            bottom of the drawer, however long the suggestions above run. */}
+        {notDirect ? null : (
+          <form
+            className="cart-added-bar"
+            method="post"
+            action={CART_ACTION}
+            onSubmit={() => trackCheckoutClick(subtotal, 'dialog')}
+          >
+            <input type="hidden" name="intent" value="checkout" />
+            {visitor ? <input type="hidden" name="country" value={visitor} /> : null}
+            {/* The drawer shows the one-parcel line, so checkout may go on. */}
+            {mixed ? <input type="hidden" name={DATES_SEEN_FIELD} value="1" /> : null}
+            <div className="cart-bar-sum">
+              {subtotal ? (
+                <span className="cart-bar-total">
+                  {formatPrice(subtotal.amount, subtotal.currencyCode)}
+                  <small>{vatIncluded ? t('added_subtotal', 'Subtotal (incl. VAT)') : t('added_subtotal_plain', 'Subtotal')}</small>
+                </span>
+              ) : null}
+              <ShipChip promise={orderPromise} ifFunded className="cart-bar-ship" />
+            </div>
+            <button type="submit" className="cart-added-checkout cart-bar-checkout">
+              {copyText('cart.checkout_cta') ?? 'Checkout'}
+            </button>
+          </form>
+        )}
       </section>
     </div>
   );

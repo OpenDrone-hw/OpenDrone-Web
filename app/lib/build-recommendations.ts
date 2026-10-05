@@ -36,6 +36,9 @@ export type BuildsConfig = {
     /** One per quad: the quantity follows the largest cart line among these
      *  SKUs (four flight controllers, four straps), capped at MAX_PER_QUAD. */
     perQuad?: string[];
+    /** The build role this extra fills on a product page's related parts
+     *  (`app/lib/related-parts.ts`): a receiver page offers its antenna. */
+    role?: BuildRole;
   }>;
 };
 
@@ -83,6 +86,9 @@ export function parseBuilds(body: unknown): BuildsConfig {
     }
     if (extra.perQuad && !extra.perQuad.every((s) => extra.with.includes(s))) {
       throw new Error(`builds: extra ${extra.sku} counts quads by a SKU outside "with"`);
+    }
+    if (extra.role !== undefined && !c.roles[extra.role]) {
+      throw new Error(`builds: extra ${extra.sku} names unknown role ${extra.role}`);
     }
   }
   return c as BuildsConfig;

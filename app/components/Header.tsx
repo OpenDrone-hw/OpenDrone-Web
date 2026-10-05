@@ -1,7 +1,7 @@
 import {useEffect, useId, useRef, useState} from 'react';
 import type {KeyboardEvent} from 'react';
 import {Form, useLocation} from 'react-router';
-import {NavLink} from '~/components/nav';
+import {Link, NavLink} from '~/components/nav';
 import {AnimatePresence} from 'motion/react';
 import {useAside} from '~/components/Aside';
 import {LangToggle} from '~/components/LangToggle';

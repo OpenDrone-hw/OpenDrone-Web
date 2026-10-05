@@ -1,6 +1,5 @@
-import {Suspense, useState} from 'react';
+import {Suspense, useState, type CSSProperties} from 'react';
 import {Await, Link} from 'react-router';
-import {motion, useReducedMotion, type MotionProps} from 'motion/react';
 import type {ProductCardFragment as CollectionItemFragment} from '~/lib/product-shapes';
 import {HeroWordmark} from '~/components/HeroWordmark';
 import {ProductItem} from '~/components/ProductItem';
@@ -26,8 +25,9 @@ const boardThumb = (handle: string, w: 528 | 800) =>
   assetUrl(
     `/boards/${handle}/front-w${w}.webp${BOARD_ART_VERSION ? `?v=${BOARD_ART_VERSION}` : ''}`,
   );
-// Mirrors .home-mobile-board: width clamp(178px, 54vw, 264px).
-const BOARD_THUMB_SIZES = '(min-width: 489px) 264px, 54vw';
+// Mirrors .home-mobile-board: width clamp(104px, 30vw, 150px).
+const BOARD_THUMB_SIZES = '(min-width: 500px) 150px, 30vw';
+const GITHUB_ORG = 'https://github.com/OpenDrone-hw';
 
 
 /* Below-fold "index" band - the open-hardware ledger in the PDP's
@@ -65,6 +65,11 @@ const HOME_LEDGER: Array<{key: string; value?: string; countUp?: boolean}> = [
  * renders under a gold glow (the desktop hero's product showcase, distilled),
  * and a Dynamic-Island Shop pill - then a clear path to the flagship line and
  * the full catalogue. No 3D, no scroll tricks: fast, legible, touch-first.
+ *
+ * Kit-first: the board art stage is kept short so the build card (size
+ * toggle, priced parts, ship date, total) starts on the first screen of a
+ * 390 x 664 phone viewport. The hero renders visible in the server HTML; its
+ * entrance is a CSS transform-only rise (`.home-mobile-rise`), never opacity.
  */
 export function MobileHome({
   featured,
@@ -72,26 +77,22 @@ export function MobileHome({
   discord,
 }: {
   featured: CollectionItemFragment[] | Promise<CollectionItemFragment[]>;
-  heroBuilds: Promise<HeroBuild[]>;
+  heroBuilds: HeroBuild[] | Promise<HeroBuild[]>;
   discord: Promise<DiscordCounts | null>;
 }) {
-  const reduce = useReducedMotion();
   const [buildSize, setBuildSize] = useState(DEFAULT_HERO_SIZE);
-
-  // Staggered entrance: each block rises + fades a beat after the last. Skipped
-  // wholesale under prefers-reduced-motion (rendered static, no transform).
-  const rise = (i: number): MotionProps =>
-    reduce
-      ? {}
-      : {
-          initial: {opacity: 0, y: 18},
-          animate: {opacity: 1, y: 0},
-          transition: {
-            duration: 0.55,
-            delay: i * 0.09,
-            ease: [0.22, 1, 0.36, 1],
-          },
-        };
+  // Staggered CSS entrance (transform only, so the hero is visible before JS).
+  const rise = (i: number) => ({style: {'--rise-i': i} as CSSProperties});
+  const buildCard = (builds: HeroBuild[]) => {
+    const build = builds.find((item) => item.size === buildSize);
+    return build ? (
+      <HeroBuildGuide key={build.id} build={build} />
+    ) : (
+      <Link to="/products">
+        <Txt id="home.build_browse" fallback="Browse parts" />
+      </Link>
+    );
+  };
 
   return (
     <div className="home-mobile">
@@ -99,7 +100,11 @@ export function MobileHome({
         {/* Floating board "stack" - the two flagship boards (FC over ESC),
             offset like a mounted stack, on a gold-glow island. The desktop
             hero's rotatable 3D trio, distilled to a still that loads instantly. */}
-        <motion.div className="home-mobile-stage" {...rise(0)} aria-hidden="true">
+        <div
+          {...rise(0)}
+          className="home-mobile-stage home-mobile-rise"
+          aria-hidden="true"
+        >
           <span className="home-mobile-glow" />
           {/* Float animation lives on the wrapper, drop-shadow on the img:
               animating transform on the filtered element itself forces weak
@@ -132,63 +137,37 @@ export function MobileHome({
               decoding="async"
             />
           </span>
-        </motion.div>
+        </div>
 
-        <motion.h1
-          className="home-mobile-wordmark"
-          aria-label="OpenDrone"
+        <h1
           {...rise(1)}
+          className="home-mobile-wordmark home-mobile-rise"
+          aria-label="OpenDrone"
         >
           <HeroWordmark progress={1} className="is-filled" />
-        </motion.h1>
+        </h1>
 
         <Txt
           id="home.m_tagline"
-          as={motion.p}
-          className="home-mobile-tagline"
+          as="p"
           {...rise(2)}
+          className="home-mobile-tagline home-mobile-rise"
         />
 
-        {/* Two full-width actions side by side - Shop (gold) + GitHub (ghost).
-            Each is its own pill spanning half the row, not nested in one pod. */}
-        <motion.div className="home-mobile-cta" {...rise(3)}>
+        <div {...rise(3)} className="home-mobile-cta home-mobile-rise">
           <Link
             prefetch="intent"
-            to="#build-guide"
-            className="home-mobile-cta-btn home-mobile-cta-shop"
+            to="/products"
+            className="home-mobile-cta-btn home-mobile-cta-secondary"
           >
-            <Txt id="home.build_mobile" />
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-            >
-              <line x1="5" y1="12" x2="19" y2="12" />
-              <polyline points="12 5 19 12 12 19" />
-            </svg>
+            <Txt id="home.m_shop_parts" />
           </Link>
-          <a
-            href="https://github.com/OpenDrone-hw"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="home-mobile-cta-btn home-mobile-cta-github"
-            aria-label={copyText('home.m_github_aria') ?? 'View source on GitHub'}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
-            </svg>
-            <Txt id="home.m_github" />
-          </a>
-        </motion.div>
+        </div>
       </section>
 
       <section
         className="home-mobile-build"
         id="build-guide"
-        aria-label={copyText('home.m_build_aria') ?? 'Build a quad'}
       >
         <div
           className="hero-build-sizes"
@@ -197,14 +176,15 @@ export function MobileHome({
         >
           {HERO_AIRFRAMES.map(frame => <button key={frame.key} type="button" aria-pressed={frame.key === buildSize} onClick={() => setBuildSize(frame.key)}>{airframeLabel(frame.key)}</button>)}
         </div>
-        <Suspense fallback={<Txt id="home.build_loading" as="p" fallback="Loading build…" />}>
-          <Await resolve={heroBuilds}>
-            {builds => {
-              const build = builds.find(item => item.size === buildSize);
-              return build ? <HeroBuildGuide key={build.id} build={build} /> : <Link to="/products"><Txt id="home.build_browse" fallback="Browse parts" /></Link>;
-            }}
-          </Await>
-        </Suspense>
+        {/* Resolved in the loader for a phone UA so the priced parts are in
+            the server HTML; a promise (desktop-first resize) still streams. */}
+        {Array.isArray(heroBuilds) ? (
+          buildCard(heroBuilds)
+        ) : (
+          <Suspense fallback={<Txt id="home.build_loading" as="p" fallback="Loading build…" />}>
+            <Await resolve={heroBuilds}>{buildCard}</Await>
+          </Suspense>
+        )}
       </section>
 
       {/* The loader resolves `featured` for a mobile UA, so the cards render
@@ -247,11 +227,31 @@ export function MobileHome({
             </div>
           ))}
         </dl>
+        <a
+          href={GITHUB_ORG}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="home-mobile-ledger-link"
+        >
+          <Txt id="home.m_ledger_github" />
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            aria-hidden="true"
+          >
+            <line x1="7" y1="17" x2="17" y2="7" />
+            <polyline points="8 7 17 7 17 16" />
+          </svg>
+        </a>
       </section>
 
       <Link
         prefetch="intent"
-        to="/collections/all"
+        to="/products"
         className="home-mobile-browse"
       >
         <Txt id="home.m_browse" />

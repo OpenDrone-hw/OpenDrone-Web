@@ -1,6 +1,8 @@
 import {Suspense, useCallback} from 'react';
 import {Await, Link} from 'react-router';
-import type {ProductCardFragment} from '~/lib/product-shapes';
+import type {ProductCardFragment, ProductVariantFragment} from '~/lib/product-shapes';
+import {relatedParts, type RelatedPart} from '~/lib/related-parts';
+import type {BuildsConfig} from '~/lib/build-recommendations';
 import {formatPrice} from '~/lib/catalog';
 import {SmoothImage} from '~/components/SmoothImage';
 import {AddToCartButton} from '~/components/AddToCartButton';
@@ -10,10 +12,10 @@ import {
   useProductStatus,
   useRoadmapStatusResolver,
 } from '~/lib/coming-soon';
-import {copyText} from '~/lib/copy';
+import {copyFill, copyText} from '~/lib/copy';
 import {Txt} from '~/components/Txt';
 import {EarlyBirdNote, anyEarlyPrice, RetailPrice, retailFor} from '~/components/EarlyPriceCue';
-import {PRODUCT_CONTENT, hiddenWhileSoldOut, isConceptFor} from '~/lib/product-content';
+import {PRODUCT_CONTENT, hiddenWhileSoldOut, isConceptFor, variantDisplayName} from '~/lib/product-content';
 
 /** The related strip renders catalog cards, same as every listing. */
 export type RelatedProduct = ProductCardFragment;
@@ -27,7 +29,7 @@ const clause = (s: string) => s.split(/[,(]/)[0].trim();
  * board has them, else the first spec rows, else the product family.
  * Derived, never invented - every cell already ships on the PDP.
  */
-function specLineOf(p: RelatedProduct): string | null {
+function specLineOf(p: RelatedProduct, oneVariant = false): string | null {
   const c = PRODUCT_CONTENT[p.handle];
   // No editorial file → the eyebrow already shows the productType; a second
   // identical line under the title would just stutter.
@@ -54,7 +56,8 @@ function specLineOf(p: RelatedProduct): string | null {
   // The base table describes one variant; with several (3" and 5" frames)
   // its first rows would contradict the "from" price, so name the variants.
   const variantNames = Object.entries(c.variants ?? {}).map(([k, v]) => v.label ?? k);
-  if (parts.length === 0 && variantNames.length > 1) return variantNames.join(', ');
+  // A card for one variant already names it in its title.
+  if (parts.length === 0 && variantNames.length > 1) return oneVariant ? null : variantNames.join(', ');
   if (parts.length === 0) {
     for (const [, v] of rows.slice(0, 2)) parts.push(clause(v));
   }
@@ -74,10 +77,48 @@ function sharedStem(names: string[]): string {
   return stem.length >= 3 ? stem : '';
 }
 
+/** A card to show: the product, the exact variant when the part's size is
+ *  known (the 20x20 ESC on the 20x20 FC page), and how many one quad takes. */
+type RelatedPick = {product: RelatedProduct; variant: ProductVariantFragment | null; quantity: number};
+
+/** The hand-off link with its `qty` field set, as the buy box builds it. */
+function withQuantity(href: string, qty: number): string {
+  if (!href || qty === 1) return href;
+  const [path, query = ''] = href.split('?');
+  const params = new URLSearchParams(query);
+  if (!params.has('sku')) return href;
+  params.set('qty', String(qty));
+  return `${path}?${params.toString()}`;
+}
+
+/** The related parts resolved against the catalog cards, in order. A part
+ *  whose variant the catalog does not carry is left out. */
+function resolvePicks(cards: readonly RelatedProduct[], parts: readonly RelatedPart[]): RelatedPick[] {
+  return parts.flatMap((part): RelatedPick[] => {
+    const product = cards.find((p) => p.handle === part.handle);
+    if (!product) return [];
+    if (!part.sku) return [{product, variant: null, quantity: part.quantity}];
+    const variant = product.variants.nodes.find((v) => v.sku === part.sku);
+    return variant ? [{product, variant, quantity: part.quantity}] : [];
+  });
+}
+
+/**
+ * "Goes with it": the parts that complete this one (the ESC of the FC's
+ * mount, a frame's four motors and its stack), then accessories, from
+ * `relatedParts` (app/lib/related-parts.ts).
+ */
 export function RelatedProducts({
   recommendations,
+  builds,
+  page,
 }: {
+  /** Every other catalog product as a card, in catalog order. */
   recommendations: Promise<RelatedProduct[] | null>;
+  /** `content/builds.json`, parsed. */
+  builds: BuildsConfig;
+  /** The product page and its selected variant. */
+  page: {handle: string; sku: string | null | undefined};
 }) {
   const roadmapStatus = useRoadmapStatusResolver();
   return (
@@ -85,32 +126,50 @@ export function RelatedProducts({
       className="related-products"
       aria-label={copyText('product-chrome.related_aria') ?? 'Related products'}
     >
-      <Txt id="product-chrome.related_heading" as="h2" className="section-heading" fallback="Related hardware" />
+      <Txt id="product-chrome.related_heading" as="h2" className="section-heading" fallback="Goes with it" />
       <Suspense fallback={<RelatedSkeleton />}>
         <Await resolve={recommendations} errorElement={null}>
           {(items) => {
             // Concept products (planned / in-progress) never list.
             // Resold parts that cannot be bought yet are left out, and
             // what can be bought now comes before what is sold out.
-            const listed = (items ?? [])
+            const cards = items ?? [];
+            const parts = relatedParts(builds, page, cards.map((p) => p.handle));
+            const listed = resolvePicks(cards, parts)
               .filter(
-                (p) =>
+                ({product: p}) =>
                   !isConceptFor(p.handle, roadmapStatus(p.handle)) &&
                   !hiddenWhileSoldOut(p),
               )
-              .map((p, i) => ({p, i, open: p.variants.nodes.some((v) => v.availableForSale)}))
+              .map((pick, i) => ({
+                pick,
+                i,
+                open: pick.variant
+                  ? pick.variant.availableForSale
+                  : pick.product.variants.nodes.some((v) => v.availableForSale),
+              }))
               .sort((a, b) => Number(b.open) - Number(a.open) || a.i - b.i)
-              .map(({p}) => p);
+              .map(({pick}) => pick);
             if (listed.length === 0) return null;
             const shown = listed.slice(0, 4);
             return (
               <>
                 <div className="related-grid">
-                  {shown.map((product) => (
-                    <RelatedCard key={product.id} product={product} />
+                  {shown.map((pick) => (
+                    <RelatedCard
+                      key={`${pick.product.id}:${pick.variant?.id ?? ''}`}
+                      product={pick.product}
+                      variant={pick.variant}
+                      quantity={pick.quantity}
+                    />
                   ))}
                 </div>
-                <EarlyBirdNote show={anyEarlyPrice(shown)} className="related-early-note" />
+                <EarlyBirdNote
+                  show={shown.some((pick) =>
+                    pick.variant ? Boolean(pick.variant.earlyPrice) : anyEarlyPrice([pick.product]),
+                  )}
+                  className="related-early-note"
+                />
               </>
             );
           }}
@@ -120,7 +179,16 @@ export function RelatedProducts({
   );
 }
 
-function RelatedCard({product}: {product: RelatedProduct}) {
+function RelatedCard({
+  product,
+  variant,
+  quantity,
+}: {
+  product: RelatedProduct;
+  /** The exact variant to show and add; null shows the product's range. */
+  variant: ProductVariantFragment | null;
+  quantity: number;
+}) {
   const comingSoon = useComingSoon(product.handle);
   const status = useProductStatus(product.handle);
   const priceUnit = PRODUCT_CONTENT[product.handle]?.priceUnit;
@@ -129,15 +197,27 @@ function RelatedCard({product}: {product: RelatedProduct}) {
   const max = product.priceRange.maxVariantPrice;
   const priced = parseFloat(min.amount) > 0;
   const fromPrice = priced && parseFloat(max.amount) > parseFloat(min.amount);
-  const specLine = specLineOf(product);
+  const multi = product.variants.nodes.length > 1;
+  const specLine = specLineOf(product, Boolean(variant && multi));
+  const title =
+    variant && multi && variant.title !== 'Default Title'
+      ? `${product.title} ${variantDisplayName(product.handle, variant.title)}`
+      : product.title;
+  const options = variant && multi
+    ? new URLSearchParams(variant.selectedOptions.map((o) => [o.name, o.value])).toString()
+    : '';
 
-  // Quick-add only when the product has exactly ONE variant - a multi-model
-  // line (FC/ESC/RX) must send the buyer to the PDP to pick a mount/model -
-  // and never while the product is still gated coming-soon.
-  const only =
-    !comingSoon && product.variants.nodes.length === 1
-      ? product.variants.nodes[0]
-      : null;
+  // Quick-add for a known variant (the part of this build) or a product
+  // with exactly ONE variant - any other multi-model line (FC/ESC/RX) sends
+  // the buyer to the PDP to pick a mount/model - and never while the
+  // product is still gated coming-soon.
+  const only = comingSoon
+    ? null
+    : (variant ?? (product.variants.nodes.length === 1 ? product.variants.nodes[0] : null));
+  const ctaLabel =
+    status === 'preorder'
+      ? (copyText('product-chrome.buy_cta_preorder') ?? 'Pre-order')
+      : (copyText('product-chrome.card_add_to_cart') ?? 'Add to cart');
 
   // Spotlight hover - a gold radial that follows the pointer (CSS vars read
   // by .related-card::after). Mouse-only, mirroring .product-card: touch
@@ -160,7 +240,7 @@ function RelatedCard({product}: {product: RelatedProduct}) {
         className="related-card-link"
         prefetch="intent"
         viewTransition
-        to={`/products/${product.handle}`}
+        to={`/products/${product.handle}${options ? `?${options}` : ''}`}
       >
         <div className={`related-card-media${image ? '' : ' is-empty'}`}>
           {image ? (
@@ -179,14 +259,23 @@ function RelatedCard({product}: {product: RelatedProduct}) {
           )}
         </div>
         <div className="related-card-body">
-          <h3 className="related-card-title">{product.title}</h3>
+          <h3 className="related-card-title">{title}</h3>
           {specLine ? <p className="related-card-spec">{specLine}</p> : null}
           {/* Price is gated on coming-soon exactly like ProductItem's
               showPrice - useComingSoon() is fail-closed (defaults locked
               when root data is missing), so a locked shop never leaks a
               number here. */}
           <p className="related-card-price">
-            {priced && !comingSoon ? (
+            {variant && !comingSoon ? (
+              <>
+                {quantity > 1 ? <span className="related-card-from">{quantity} ×</span> : null}
+                <span>{formatPrice(variant.price.amount, variant.price.currencyCode)}</span>
+                <RetailPrice retail={variant.earlyPrice?.retail} />
+                {priceUnit && quantity === 1 ? (
+                  <span className="related-card-unit">{priceUnit}</span>
+                ) : null}
+              </>
+            ) : priced && !comingSoon ? (
               <>
                 {fromPrice ? (
                   <span className="related-card-from">
@@ -210,16 +299,17 @@ function RelatedCard({product}: {product: RelatedProduct}) {
           <AddToCartButton
             className="product-card-quickadd-btn"
             compactError
-            href={only.cartAddUrl}
+            href={withQuantity(only.cartAddUrl, quantity)}
             product={product.handle}
-            revenue={plausibleRevenue(only.price)}
+            placement="related"
+            revenue={plausibleRevenue(only.price, quantity)}
             disabled={!only.availableForSale}
           >
             {!only.availableForSale
               ? (copyText('product-chrome.buy_stock_out') ?? 'Sold out')
-              : status === 'preorder'
-                ? (copyText('product-chrome.buy_cta_preorder') ?? 'Pre-order')
-                : (copyText('product-chrome.card_add_to_cart') ?? 'Add to cart')}
+              : quantity > 1
+                ? copyFill('product-chrome.related_add_quantity', '{cta} {quantity}', {cta: ctaLabel, quantity})
+                : ctaLabel}
           </AddToCartButton>
         </div>
       ) : null}

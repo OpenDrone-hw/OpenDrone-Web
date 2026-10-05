@@ -39,6 +39,12 @@ import {ProductGallery} from '~/components/ProductGallery';
 import {ProductSilhouette} from '~/components/ProductSilhouette';
 import {ProductForm} from '~/components/ProductForm';
 import {RelatedProducts} from '~/components/RelatedProducts';
+import {BuildWithThis} from '~/components/BuildWithThis';
+import {CartPlacementProvider} from '~/components/AddToCartButton';
+import {parseBuilds} from '~/lib/build-recommendations';
+import {resolveHeroBuilds} from '~/lib/hero-build';
+import {buildForProduct} from '~/lib/related-parts';
+import buildsJson from '../../content/builds.json';
 import {FirmwareSupport} from '~/components/FirmwareSupport';
 import {OptionChips} from '~/components/OptionChips';
 import {FlatVariantPicker, flatChoices} from '~/components/FlatVariantPicker';
@@ -113,6 +119,9 @@ import type {
 
 /** The campaign (content/preorders.json): each SKU's price steps. */
 const CAMPAIGN_CONFIG = parseCampaignConfig(preorders);
+/** The builds (content/builds.json): the "Build with this" card and the
+ *  related parts read them. */
+const BUILDS = parseBuilds(buildsJson);
 
 /** Fill `{name}` slots in a copy template. */
 function fill(template: string, vars: Record<string, string | number>): string {
@@ -294,9 +303,16 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
     entry.variants.map((v) => [v.sku, v.currency === 'USD' || v.campaign?.internationalPrice ? null : (v.compare_price ?? null)]),
   );
 
+  // The builds this product is part of, priced from the same catalog read
+  // as the homepage build card.
+  const builds = resolveHeroBuilds(BUILDS, catalog).filter((build) =>
+    build.parts.some((part) => part.handle === handle),
+  );
+
   return {
     product,
     bundleProducts,
+    builds,
     retailBySku,
     commerceHandoff: commerceHandoff(catalog),
     // The roadmap status this page's boards carry (beta, alpha, ...): a
@@ -355,14 +371,14 @@ function loadDeferredData({context, params}: Route.LoaderArgs) {
     .then((list) => (list.length ? list : recorded))
     .catch(() => recorded);
 
-  // "You might also like": the other products in the catalog. The catalog
-  // is small enough that the whole rest of it IS the honest answer.
+  // "Goes with it": every other product in the catalog, in catalog order.
+  // The page picks the parts that complete this one for the selected
+  // variant (`relatedParts`), then accessories, then the rest.
   const recommendations = context.catalog
     .forBuyer()
     .then((catalog) =>
       catalog.products
         .filter((p) => p.handle !== handle)
-        .slice(0, 4)
         .map((p) => toCard(catalog, p)),
     )
     .catch(() => null);
@@ -739,6 +755,7 @@ function ProductPage() {
   const {
     product,
     bundleProducts,
+    builds,
     retailBySku,
     recommendations,
     contributors,
@@ -1965,6 +1982,7 @@ function ProductPage() {
         maxQuantity={maxQuantity}
         maxQuantityNote={maxQuantityNote}
         onQuantityChange={isBundle || notDirect ? undefined : setQuantity}
+        showLineTotal={Boolean(setOf)}
       />
       {notDirect === 'blocked' ? (
         <p className="product-buy-ship">
@@ -2094,6 +2112,9 @@ function ProductPage() {
       // least one rating, so a zero-review store shows no trace of it.
       case 'reviews':
         return Boolean(reviewAggregate);
+      // Parts that belong to a build in content/builds.json, once buyable.
+      case 'build':
+        return builds.length > 0 && !soon;
       // A free-text chapter exists once it has words. Keyed by the chapter's
       // id, so several of them on one page stay distinct.
       case 'prose':
@@ -2255,6 +2276,41 @@ function ProductPage() {
         </Chapter>
       );
     },
+    /**
+     * The whole quad this part goes into: the build card (one add for every
+     * part we sell, size toggle when the part fits more than one build) and
+     * the gear a first build still needs that we do not sell.
+     */
+    build: (n, title) => (
+      <Chapter
+        id="build"
+        number={n}
+        label="What you need to fly"
+        title={title}
+        titleId="product-chrome.ch_build_title"
+        noMedia
+        wide={
+          <div className="build-chapter">
+            <BuildWithThis
+              builds={builds}
+              selectedBuild={buildForProduct(BUILDS, product.handle, selectedVariant?.sku)}
+            />
+            <div className="build-chapter-bring">
+              <Txt id="product-chrome.build_bring_label" as="p" className="build-chapter-bring-label" />
+              <ul>
+                {(['radio', 'video', 'power', 'tools', 'setup'] as const).map((k) => (
+                  <li key={k}>
+                    <Txt id={`product-chrome.build_bring_${k}`} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        }
+      >
+        <Txt id="product-chrome.build_intro" as="p" className="chapter-body" />
+      </Chapter>
+    ),
     /** What the board is published as: repos, license, latest commit. */
     openSource: (n, title) => (
       <Chapter
@@ -3061,6 +3117,7 @@ function ProductPage() {
               {subtitle}
             </p>
           ) : null}
+          <CartPlacementProvider value="buy_box">
           <div className="buy-rail">
             {railLadder}
             {secondOption && !soon && !flatPicker ? (
@@ -3076,6 +3133,7 @@ function ProductPage() {
             {railBuyModule}
             <div ref={setRailSentinel} className="buy-rail-sentinel" aria-hidden="true" />
           </div>
+          </CartPlacementProvider>
           <ul
             className="trust-chips"
             aria-label={copyText('product-chrome.trust_chips_aria')}
@@ -3116,6 +3174,7 @@ function ProductPage() {
               the hero's stacking context. Coming soon: the chips alone. */}
           {railPinned && !footerInView && typeof document !== 'undefined'
             ? createPortal(
+                <CartPlacementProvider value="sticky_bar">
                 <div
                   className={`buy-rail is-pinned${railMobile ? ' is-mobile' : ''}${soon ? ' is-ladderonly' : ''}${
                     asideType !== 'closed' ? ' is-suppressed' : ''
@@ -3135,7 +3194,8 @@ function ProductPage() {
                     railLadderPinned
                   )}
                   {soon ? null : railBuyModule}
-                </div>,
+                </div>
+                </CartPlacementProvider>,
                 document.body,
               )
             : null}
@@ -3149,7 +3209,11 @@ function ProductPage() {
         </Fragment>
       ))}
 
-      <RelatedProducts recommendations={recommendations} />
+      <RelatedProducts
+        recommendations={recommendations}
+        builds={BUILDS}
+        page={{handle: product.handle, sku: selectedVariant?.sku}}
+      />
 
       {rootData?.company ? (
         <details className="product-safety" id="product-safety">
