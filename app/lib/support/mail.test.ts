@@ -15,7 +15,7 @@ import {
 } from './mail-parse.ts';
 import {_resetModCache} from './moderation.ts';
 import {gmailQuery, headsUp, mailConfig, mailIntakeMode, mailIntakeReady, runMailIntake, type MailEnv} from './mail.ts';
-import {UNVERIFIED_LINE, draftMessage, encodeWords, replySubject} from './mail-draft.ts';
+import {UNVERIFIED_LINE, draftMessage, encodeWords, noteLine, replySubject} from './mail-draft.ts';
 import {createStore} from './store.ts';
 import type {Deps, SupportEnv} from './tickets.ts';
 import {fakeChatFpv, fakeDiscord, testD1} from './testing.ts';
@@ -475,6 +475,34 @@ describe('draft message', () => {
     assert.equal(UNVERIFIED_LINE, '[CHECK BEFORE SENDING: sender not authenticated by the mail system. Delete this line.]');
   });
 
+  const bodyOf = (input: Parameters<typeof draftMessage>[0]) => decode({threadId: 't', raw: Buffer.from(draftMessage(input)!).toString('base64url')}).body;
+
+  it('puts ChatFPV\'s note first as a one line check line', () => {
+    const text = bodyOf({mail: mail(), reply: 'Answer.', original: 'Hi', verified: true, note: 'partial draft: verify every value.'});
+    assert.ok(text.startsWith('[CHECK BEFORE SENDING: partial draft: verify every value. Delete this line.]\n\nAnswer.'));
+  });
+
+  it('adds no check line without a note, or for a blank one', () => {
+    for (const note of [undefined, null, '', ' \r\n\t ']) {
+      const text = bodyOf({mail: mail(), reply: 'Answer.', original: 'Hi', verified: true, note});
+      assert.ok(text.startsWith('Answer.\n\nOn '), String(note));
+      assert.doesNotMatch(text, /CHECK BEFORE SENDING/);
+    }
+  });
+
+  it('puts the unauthenticated line and the note on two consecutive lines, both before the draft', () => {
+    const text = bodyOf({mail: mail(), reply: 'Answer.', original: 'Hi', verified: false, note: 'relies on staff-only sources'});
+    assert.ok(text.startsWith(`${UNVERIFIED_LINE}\n[CHECK BEFORE SENDING: relies on staff-only sources. Delete this line.]\n\nAnswer.`));
+  });
+
+  it('reduces the note to one line of at most 300 characters', () => {
+    const line = noteLine(`verify\r\nevery\u0000value [x]\u2028${'a'.repeat(400)}`)!;
+    assert.ok(Array.from(line).every((c) => c.charCodeAt(0) >= 32 && c.charCodeAt(0) !== 127));
+    assert.equal(line.startsWith('[CHECK BEFORE SENDING: verify every value x'), true);
+    assert.equal(line.length, '[CHECK BEFORE SENDING: '.length + 300 + '. Delete this line.]'.length);
+    assert.equal(noteLine('  '), null);
+  });
+
   it('cannot be header-injected through the subject or sender name', () => {
     const m = mail({headers: {subject: 'Hi\r\nBcc: attacker@evil.example', from: '"Eve\r\nBcc: x@y.z" <eve@example.com>'}});
     const msg = draftMessage({mail: m, reply: 'a', original: 'b', verified: true})!;
@@ -552,10 +580,10 @@ describe('mail drafts', {skip}, () => {
     assert.equal(d.headers.to, '"Jan Peeters" <jan@example.com>');
     assert.equal(d.headers.subject, 'Re: ESC firmware order #1042');
     assert.equal(d.headers['in-reply-to'], m.headers['message-id']![0]);
-    assert.ok(d.body.startsWith('Flash the latest firmware with the configurator'));
+    assert.ok(d.body.startsWith('[CHECK BEFORE SENDING: grounded in the OpenDrone docs. Delete this line.]\n\nFlash the latest firmware with the configurator'));
     assert.match(d.body, /\n> How do I flash AM32/);
     assert.doesNotMatch(d.body, /old text/);
-    assert.doesNotMatch(d.body, /CHECK BEFORE SENDING/);
+    assert.doesNotMatch(d.body, new RegExp(UNVERIFIED_LINE.replace(/[[\]]/g, '\\$&')));
 
     assert.equal(chatfpv.drafts.length, 1);
     const asked = JSON.stringify(chatfpv.drafts[0]);
@@ -579,6 +607,27 @@ describe('mail drafts', {skip}, () => {
     const flagged = gmail.drafts.map((d) => decode(d).body).filter((b) => b.startsWith(UNVERIFIED_LINE));
     assert.equal(flagged.length, 1);
     assert.deepEqual(posts(discord), ['Mail: 2 draft replies waiting in Gmail (1 sender not authenticated).']);
+  });
+
+  it('shows the ChatFPV note on the first line, merged with the unauthenticated line, and none when there is no note', async () => {
+    const mk = (note: string) => ({
+      draft: (_req: unknown, n: number) => ({draftId: `dr_${n}`, draft: 'Answer.', citations: [], confidence: 0.5, note}),
+    });
+    const withNote = await setup({withChatFpv: mk('verify every value')});
+    const g1 = fakeGmail([mail({headers: {'authentication-results': UNAUTH}}), mail()]);
+    await runMailIntake({deps: withNote.deps, db: withNote.db, gmail: g1.client});
+    const bodies = g1.drafts.map((d) => decode(d).body).sort();
+    assert.deepEqual(
+      bodies.map((b) => b.split('\n\n')[0]),
+      [
+        '[CHECK BEFORE SENDING: verify every value. Delete this line.]',
+        `${UNVERIFIED_LINE}\n[CHECK BEFORE SENDING: verify every value. Delete this line.]`,
+      ].sort(),
+    );
+    const none = await setup({withChatFpv: mk('')});
+    const g2 = fakeGmail([mail()]);
+    await runMailIntake({deps: none.deps, db: none.db, gmail: g2.client});
+    assert.ok(decode(g2.drafts[0]!).body.startsWith('Answer.\n\nOn '));
   });
 
   it('creates no draft when ChatFPV is unavailable or refuses, retries, then gives up and says so once', async () => {

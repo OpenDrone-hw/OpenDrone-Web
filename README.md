@@ -433,10 +433,15 @@ the mail system. Delete this line.]`, so a person has to touch the draft
 before it can go out, and the heads-up counts it.
 
 **The draft.** ChatFPV sees the subject and the new text of the mail (quotes
-and signature removed) as a public question: the sender's name, address and
-any order reference are replaced first, the scrubber runs as for every
-ChatFPV call, and no order data is passed. Shopify is not called on this
-path. The body is ChatFPV's text, a blank line, then `On <date>, <from>
+and signature removed): the sender's name, address and any order reference
+are replaced first, the scrubber runs as for every ChatFPV call, and no order
+data is passed. ChatFPV `/v1/draft` grounds its answer on public and internal
+knowledge and removes citations to internal sources; a human reviews every
+draft before sending. Shopify is not called on this path. When ChatFPV
+returns a note for staff (for example "verify every value", "partial draft"),
+it becomes a first line `[CHECK BEFORE SENDING: <note, one line, at most 300
+characters>. Delete this line.]`, after the unauthenticated-sender line when
+both apply. The body is ChatFPV's text, a blank line, then `On <date>, <from>
 wrote:` and the new text quoted with `> `. Attachments are not imported (open
 the original in the mailbox). A text part is read up to 200 KB (the rest is
 cut before decoding), a part over 2 MB is skipped, HTML up to 50,000

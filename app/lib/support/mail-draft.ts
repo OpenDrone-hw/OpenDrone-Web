@@ -8,6 +8,7 @@ import {headerOf, parseAddress, type MailMessage} from './mail-parse.ts';
 
 export const UNVERIFIED_LINE = '[CHECK BEFORE SENDING: sender not authenticated by the mail system. Delete this line.]';
 export const MAX_QUOTE_CHARS = 4000;
+export const MAX_NOTE_CHARS = 300;
 /** Header caps: every header line stays far below the 998 character RFC 5322 limit. */
 const MAX_SUBJECT_CHARS = 200;
 const MAX_NAME_CHARS = 80;
@@ -32,6 +33,20 @@ const oneLine = (v: string): string =>
     .join('')
     .replace(/\s+/g, ' ')
     .trim();
+
+/**
+ * The check line for ChatFPV's staff note: one line (no CR, LF or control
+ * characters), at most MAX_NOTE_CHARS, no closing bracket that could end the
+ * line early. Null when the note is empty.
+ */
+export function noteLine(note: string | null | undefined): string | null {
+  const n = Array.from(oneLine(note ?? '').replace(/[\[\]]/g, ''))
+    .slice(0, MAX_NOTE_CHARS)
+    .join('')
+    .replace(/[\s.]+$/, '')
+    .trim();
+  return n ? `[CHECK BEFORE SENDING: ${n}. Delete this line.]` : null;
+}
 
 const isAscii = (v: string): boolean => /^[\x20-\x7e]*$/.test(v);
 
@@ -74,6 +89,7 @@ export function replySubject(subject: string): string {
  * colon or backslash, so a header the sender wrote can never add a second
  * recipient or a group (`<x,y@evil>`, `<g:y@evil;>`) to the To line.
  */
+// eslint-disable-next-line no-control-regex -- control characters are exactly what this rejects
 const SAFE_ADDRESS = /^[^\s@<>()[\]\\,;:"\x00-\x1f\x7f]{1,64}@[^\s@<>()[\]\\,;:"\x00-\x1f\x7f]+\.[^\s@<>()[\]\\,;:"\x00-\x1f\x7f]+$/;
 
 /** `Name <address>`, the name quoted or encoded; the bare address without a name. Null for an unsafe address. */
@@ -106,14 +122,20 @@ export type DraftInput = {
   /** The new text of the customer's mail, for the quote. */
   original: string;
   verified: boolean;
+  /** ChatFPV's note for staff (why this draft, caveats); shown as a check line when not empty. */
+  note?: string | null;
 };
 
-/** The reply body: a flag line when the sender is not authenticated, the draft, the quoted original. */
-export function draftBody({mail, reply, original, verified}: DraftInput): string {
+/**
+ * The reply body: check lines (sender not authenticated, then ChatFPV's note,
+ * each only when it applies), the draft, the quoted original.
+ */
+export function draftBody({mail, reply, original, verified, note}: DraftInput): string {
   const from = oneLine(headerOf(mail, 'from')) || 'the sender';
   const date = oneLine(headerOf(mail, 'date')) || (mail.receivedAt ? new Date(mail.receivedAt).toUTCString() : 'an earlier date');
+  const checks = [...(verified ? [] : [UNVERIFIED_LINE]), ...(noteLine(note) ? [noteLine(note)!] : [])];
   return [
-    ...(verified ? [] : [UNVERIFIED_LINE, '']),
+    ...(checks.length ? [...checks, ''] : []),
     reply.replace(/\r\n?/g, '\n').trim(),
     '',
     `On ${date}, ${from} wrote:`,

@@ -4,12 +4,15 @@
  * Every cron pass (server.ts `scheduled`, behind SUPPORT_MAIL_INTAKE_ENABLED)
  * asks Gmail for the last few days of mail sent to the customer addresses,
  * drops everything that is not a customer (mail-parse.ts `classify`), and for
- * each remaining mail asks ChatFPV for a reply draft (public audience only,
- * no order data, Shopify is never called) and saves it as a Gmail DRAFT reply
+ * each remaining mail asks ChatFPV for a reply draft (/v1/draft grounds on
+ * public and internal knowledge and removes citations to internal sources; no
+ * order data is sent, Shopify is never called) and saves it as a Gmail DRAFT reply
  * in the same Gmail thread of SUPPORT_MAIL_MAILBOX. A person opens Gmail,
- * edits and sends. This module never sends mail: the Gmail client has no
- * send function. A sender the mail system did not authenticate still gets a
- * draft, whose first line asks the person to check before sending.
+ * edits and sends; a human reviews every draft before it goes out. This
+ * module never sends mail: the Gmail client has no send function. A sender
+ * the mail system did not authenticate still gets a draft, whose first line
+ * asks the person to check before sending, and ChatFPV's note for staff
+ * (e.g. verify every value, partial draft) becomes a check line as well.
  * One message in the staff Discord channel counts what the pass left in Gmail.
  *
  * Modes (SUPPORT_MAIL_INTAKE_ENABLED): anything but "1" or "dry" is off;
@@ -344,7 +347,7 @@ export async function runMailIntake(ctx: MailDeps): Promise<MailReport> {
         await failed();
         continue;
       }
-      const raw = draftRaw({mail: m, reply, original: body, verified: verdict.verified});
+      const raw = draftRaw({mail: m, reply, original: body, verified: verdict.verified, note: res?.note});
       if (!raw) {
         await store.finish(hash, 'ignored', now, {reason: 'no_reply_address'});
         ignore('no_reply_address');
