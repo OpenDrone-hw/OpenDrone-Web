@@ -41,7 +41,7 @@ describe('sandbox overrides', () => {
     assert.ok(files.length > 0 && readdirSync(serverDir).length > 0);
     for (const f of files) {
       const code = readFileSync(f, 'utf8');
-      assert.doesNotMatch(code, /SUPPORT_DEV_DISCORD_API|SUPPORT_DEV_SHOPIFY_ADMIN_URL|SUPPORT_DEV_STOREFRONT_URL/, f);
+      assert.doesNotMatch(code, /SUPPORT_DEV_DISCORD_API|SUPPORT_DEV_SHOPIFY_ADMIN_URL|SUPPORT_DEV_STOREFRONT_URL|SUPPORT_DEV_GMAIL_API/, f);
     }
   });
 });
