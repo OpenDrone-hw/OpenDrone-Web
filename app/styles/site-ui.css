@@ -1241,7 +1241,7 @@ html.light .po-card-cta {
   user-select: none;
 }
 .product-silhouette-stage { height: 100%; display: flex; align-items: center; justify-content: center; }
-.product-silhouette-art { display: block; flex: none; width: min(132.6vw, 129.2svh, 1428px); height: auto; aspect-ratio: 1; color: var(--color-gold-text); opacity: 0.03; }
+.product-silhouette-art { position: relative; display: block; flex: none; width: min(132.6vw, 129.2svh, 1428px); height: auto; aspect-ratio: 1; color: var(--color-gold-text); opacity: 0.03; }
 @media (max-width: 767px) {
   .product-silhouette-art { width: min(149.6vw, 119svh); opacity: 0.02; }
 }
@@ -1314,6 +1314,12 @@ html.light .product-silhouette[data-board] .product-silhouette-art { opacity: 0.
   html.light .product-silhouette[data-board] .product-silhouette-art { opacity: 0.08; }
   .product-silhouette[data-board] .product-silhouette-art { -webkit-mask-image: none; mask-image: none; }
 }
+/* The board backdrop is one static, unmasked <img>. The 0.7 opacity is the
+   average of the old base (0.25) plus two complementary light bands (0.45),
+   so the overall look is unchanged while the surface composites once instead
+   of repainting per scroll frame. `object-fit: contain` reproduces the SVG
+   <image> letterboxing inside the square. */
+.product-silhouette-img { display: block; width: 100%; height: 100%; object-fit: contain; opacity: 0.7; }
 @media (prefers-reduced-motion: reduce) {
   .product-silhouette-light { opacity: 0.45 !important; }
 }
