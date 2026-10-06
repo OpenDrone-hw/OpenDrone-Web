@@ -227,6 +227,13 @@ declare global {
     ACCOUNTS_TEST_IDP?: string;
     /** "1": the owners map shows the aggregate fixture and never reads orders (app/lib/owner-map-data.ts). Never set in a deployed config; a test checks. */
     OWNER_MAP_FIXTURE?: string;
+    /** "1" turns on the opt-in pilot map ("Find pilots near you" on /owners): Discord link, pins, /account card. Needs ACCOUNTS_ENABLED and SUPPORT_DB. Off in wrangler.production.toml until the founder's go (app/lib/pilot-map-data.ts). */
+    PILOT_MAP_ENABLED?: string;
+    /** Discord OAuth2 application for the pilot map, scope identify only. Worker secrets; unset, "Link Discord" is unavailable (the dev server uses a fake). */
+    DISCORD_OAUTH_CLIENT_ID?: string;
+    DISCORD_OAUTH_CLIENT_SECRET?: string;
+    /** Callback registered at Discord; default `<origin>/owners/discord/callback`. */
+    DISCORD_OAUTH_REDIRECT?: string;
     /** "1" (wrangler.production.toml only): ops alerts to DISCORD_STAFF_METADATA_CHANNEL_ID, once per UTC day per key (app/lib/ops-alerts.ts). */
     OPS_ALERTS_ENABLED?: string;
     /** Space-separated Shopify Customer Account API scope override; default `openid email` (shopify-idp.ts). */

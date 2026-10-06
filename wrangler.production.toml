@@ -73,6 +73,9 @@ HANDOFF_ENABLED = "1"
 ACCOUNTS_ENABLED = "1"
 CHATFPV_OAUTH_REDIRECTS = "https://chatfpv.com/auth/callback"
 CHATFPV_POST_LOGOUT_REDIRECTS = "https://chatfpv.com/"
+# Opt-in pilot map on /owners (README "Owners map"): Discord link, pins, /account card.
+# "1" needs the founder's go; DISCORD_OAUTH_CLIENT_ID and _SECRET are Worker secrets.
+PILOT_MAP_ENABLED = "0"
 # Ops alerts (app/lib/ops-alerts.ts): a failed ChatFPV erase or a data request
 # waiting on the founder posts to DISCORD_STAFF_METADATA_CHANNEL_ID once per
 # UTC day. Production only: wrangler.toml never sets it.

@@ -1899,3 +1899,232 @@ html.light .footer-ref {
     background: transparent;
   }
 }
+
+/* ============================================
+   /owners pilot map: "Find pilots near you" (app/components/PilotMap.tsx)
+   ============================================ */
+.pilot-section {
+  display: grid;
+  gap: var(--sp-4);
+  max-width: none;
+}
+.pilot-section .editorial-section-title {
+  margin: 0;
+}
+.pilot-lead {
+  max-width: 40rem;
+  margin: 0;
+}
+.pilot-count {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.pilot-layout {
+  display: grid;
+  gap: var(--sp-5);
+  align-items: start;
+}
+.pilot-side,
+.pilot-main {
+  display: grid;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+@media (min-width: 960px) {
+  .pilot-layout {
+    grid-template-columns: minmax(18rem, 22rem) minmax(0, 1fr);
+    gap: var(--sp-6);
+  }
+  .pilot-main .pilot-subtitle {
+    margin-top: 0;
+  }
+}
+.pilot-card {
+  display: grid;
+  gap: var(--sp-3);
+  justify-items: start;
+  max-width: 40rem;
+  padding: var(--sp-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+  background: var(--color-bg-card);
+}
+.pilot-card[data-state='on'] {
+  border-color: var(--color-gold);
+}
+.pilot-card p {
+  margin: 0;
+}
+.pilot-card-title,
+.pilot-subtitle {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  font-weight: 500;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.pilot-subtitle {
+  margin-top: var(--sp-3);
+}
+.pilot-muted {
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+}
+.pilot-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.pilot-check {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--sp-3);
+  align-items: start;
+  cursor: pointer;
+}
+.pilot-check input {
+  margin-top: 0.3rem;
+  accent-color: var(--color-gold);
+}
+.pilot-draft {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--color-text);
+}
+.pilot-notice,
+.pilot-error {
+  margin: 0;
+  padding: var(--sp-3) var(--sp-4);
+  max-width: 40rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+  font-size: var(--fs-sm);
+}
+.pilot-notice[data-tone='ok'] {
+  border-color: var(--color-gold);
+}
+.pilot-error {
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+
+.pilot-world .owner-map-frame {
+  position: relative;
+}
+.pilot-world-svg {
+  cursor: grab;
+  user-select: none;
+}
+.pilot-world-svg[data-placing='1'] {
+  cursor: crosshair;
+}
+.pilot-country {
+  cursor: inherit;
+}
+.pilot-marker {
+  cursor: pointer;
+}
+.pilot-marker circle {
+  fill: var(--color-gold);
+  stroke: var(--color-bg);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+.pilot-marker text {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  text-anchor: middle;
+  fill: var(--color-bg);
+  pointer-events: none;
+}
+.pilot-marker.is-own circle {
+  stroke: var(--color-text);
+}
+.pilot-marker.is-active circle {
+  stroke: var(--color-text);
+  stroke-width: 3;
+}
+.pilot-draft-marker circle {
+  fill: color-mix(in srgb, var(--color-gold) 24%, transparent);
+  stroke: var(--color-text);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+.pilot-draft-marker .pilot-draft-dot {
+  fill: var(--color-text);
+  stroke: none;
+}
+.pilot-zoom {
+  position: absolute;
+  top: var(--sp-3);
+  right: var(--sp-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+.pilot-zoom .od-btn-icon {
+  background: var(--color-bg);
+}
+.pilot-caption {
+  display: grid;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+}
+.pilot-caption p {
+  margin: 0;
+}
+.pilot-selected-title {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--color-text);
+}
+.pilot-names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-4);
+  margin: var(--sp-1) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.pilot-names a {
+  color: var(--color-text);
+  text-decoration: underline;
+  text-decoration-color: var(--color-gold);
+  text-underline-offset: 0.2em;
+}
+.pilot-you {
+  margin-left: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+}
+.pilot-list summary {
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.pilot-list ul {
+  margin: var(--sp-2) 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--color-border);
+}
+.pilot-list li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.pilot-list-area {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+}

@@ -653,6 +653,34 @@ Discord user id (privacy policy, section 2).
 
 Local development: `OWNER_MAP_FIXTURE=1` in `.env` shows fixture counts through the same suppression and never reads orders. On the dev server the fixture is also used when the Admin token is missing. A deployed build without a snapshot shows the empty state, never invented numbers; a unit test keeps `OWNER_MAP_FIXTURE` out of both wrangler files. The migration is applied like the others (`npx wrangler d1 migrations apply SUPPORT_DB --remote --config wrangler.production.toml`) before the deploy.
 
+### Pilot map ("Find pilots near you")
+
+Optional second part of `/owners`, off unless `PILOT_MAP_ENABLED` is `"1"` (and `ACCOUNTS_ENABLED`, `SUPPORT_DB`). Off in both wrangler files; turning it on in production needs the founder's go. Rules in `app/lib/pilot-map.ts`, storage and Discord in `app/lib/pilot-map-data.ts`, request glue in `app/lib/pilot-map-server.ts`, UI in `app/components/PilotMap.tsx`; all tested.
+
+| Who | Sees |
+|---|---|
+| Signed out | The number of pilots and a sign-in link |
+| Signed in, no paid not cancelled order | The number and a note |
+| Owner (paid or partly refunded, not cancelled order, read live from Shopify, cached 1 h in a signed cookie) | Cells of about 10 km with counts, Discord usernames with a `discord.com/users/<id>` link |
+
+| Route | Purpose |
+|---|---|
+| `GET /owners/discord` | Owner starts the Discord link: authorize URL with scope `identify`, state and PKCE S256, cookie `__Host-od_pm_oauth` (10 min) |
+| `GET /owners/discord/callback` | Checks state and customer, reads Discord id and name, revokes the token, sets cookie `__Host-od_pm_link` (1 h). Nothing is written to D1 yet |
+| `GET /api/pilot-map` | `{total}`, plus `cells` only for a qualifying owner (decided from the session on the server) |
+| `POST /api/pilot-map` | Same Origin. `intent=place` needs owner, link (or an existing pin), both consent boxes and `version=PILOT_CONSENT_VERSION`; `intent=withdraw` deletes the row |
+
+| Data | Rule |
+|---|---|
+| Table `pilot_map_pins` (migration 0010) | Customer GID, Discord id and name, cell id and centre, consent time and version. Never the clicked point |
+| Grid | Rows of 0.09 degrees latitude; columns per row tile 360 degrees at about 10 km (`snapToCell`), deterministic, no random offset |
+| Deleted by | Withdraw button, `customers/redact` and `customers/delete` (`redactCustomer`), the 3-year idle account purge, and the scheduled job 24 months after the consent |
+| Consent wording | `owners.pilot_consent_box` and `owners.pilot_age_box` in `content/copy/owners.json`; change the wording and bump `PILOT_CONSENT_VERSION` in the same commit |
+
+Environment: `DISCORD_OAUTH_CLIENT_ID` and `DISCORD_OAUTH_CLIENT_SECRET` are Worker secrets; the Discord application needs the redirect `https://opendrone.be/owners/discord/callback` (`DISCORD_OAUTH_REDIRECT` overrides). Apply migration 0010 before enabling.
+
+Local development: with `ACCOUNTS_ENABLED=1`, `ACCOUNTS_TEST_IDP=1`, `PILOT_MAP_ENABLED=1` and `npm run db:migrate:local`, sign in through the test IdP (`/account/login`); the first test customer counts as an owner (Shopify is never asked) and "Link Discord" opens a fake Discord screen (`app/lib/pilot-map-dev.ts`, imported only behind `import.meta.env.DEV`; a test scans a build for it). The privacy policy rows are drafts, not reviewed.
+
 ## Shared accounts
 
 opendrone.be signs customers in with Shopify Customer Accounts and is the

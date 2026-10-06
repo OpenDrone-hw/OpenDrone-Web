@@ -26,8 +26,8 @@ import {BUCKET_COUNT, bucketLabel, type Snapshot} from '~/lib/owner-map';
  * unpublished, which is not the same as zero owners.
  */
 
-const WIDTH = 960;
-const HEIGHT = 500;
+export const WIDTH = 960;
+export const HEIGHT = 500;
 const ANTARCTICA = '010';
 
 type Shape = {
@@ -39,12 +39,12 @@ type Shape = {
   d: string;
 };
 
-type Geo = {countries: Topology; states: Topology};
+export type Geo = {countries: Topology; states: Topology};
 
 type CountryProps = {name: string};
 
 /** Fetch both boundary files once per page view. */
-function useGeo(): {geo: Geo | null; failed: boolean} {
+export function useGeo(): {geo: Geo | null; failed: boolean} {
   const [state, setState] = useState<{geo: Geo | null; failed: boolean}>({geo: null, failed: false});
   useEffect(() => {
     let live = true;
@@ -61,11 +61,11 @@ function useGeo(): {geo: Geo | null; failed: boolean} {
   return state;
 }
 
-/** Project every shape to an SVG path. The United States is drawn by state when it is published. */
-function buildShapes(geo: Geo, drawStates: boolean): Shape[] {
-  const countryFeatures = (
-    feature(geo.countries, geo.countries.objects.countries as GeometryCollection<CountryProps>)
-  ).features.filter((f) => f.id !== ANTARCTICA);
+/** Countries without Antarctica, and the projection that fits them to the map box. Shared with the pilot map. */
+export function worldProjection(geo: Geo) {
+  const countryFeatures = feature(geo.countries, geo.countries.objects.countries as GeometryCollection<CountryProps>).features.filter(
+    (f) => f.id !== ANTARCTICA,
+  );
   const projection = geoNaturalEarth1().fitExtent(
     [
       [4, 4],
@@ -73,6 +73,12 @@ function buildShapes(geo: Geo, drawStates: boolean): Shape[] {
     ],
     {type: 'FeatureCollection', features: countryFeatures},
   );
+  return {countryFeatures, projection};
+}
+
+/** Project every shape to an SVG path. The United States is drawn by state when it is published. */
+function buildShapes(geo: Geo, drawStates: boolean): Shape[] {
+  const {countryFeatures, projection} = worldProjection(geo);
   const path = geoPath(projection);
   const shapes: Shape[] = [];
 

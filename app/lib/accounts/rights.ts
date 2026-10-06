@@ -60,7 +60,7 @@ export const chatFpvExport = (env: RightsEnv, sub: string, fetcher?: typeof fetc
 
 /**
  * Remove every opendrone.be account row of one Shopify customer (account,
- * sessions, OAuth codes) and erase its ChatFPV history. ChatFPV is called
+ * sessions, OAuth codes, pilot map pin) and erase its ChatFPV history. ChatFPV is called
  * when a local account existed, or always with `alwaysChatFpv` (a queued
  * retry or a founder request, where the local rows may already be gone).
  * `chatfpv` is null when ChatFPV was not called.
@@ -76,6 +76,8 @@ export async function redactCustomer(
   const db = env.SUPPORT_DB;
   let accounts = 0;
   if (db) {
+    // The opt-in pilot map pin (README "Owners map") goes whether or not an account row exists.
+    await db.prepare('DELETE FROM pilot_map_pins WHERE shopify_gid = ?').bind(gid).run();
     const row = await db.prepare('SELECT id FROM od_accounts WHERE shopify_gid = ?').bind(gid).first<{id: string}>();
     if (row) {
       await db.batch([

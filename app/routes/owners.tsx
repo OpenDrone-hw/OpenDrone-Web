@@ -1,17 +1,25 @@
+import {data} from 'react-router';
 import type {Route} from './+types/owners';
 import {EditorialShell} from '~/components/EditorialShell';
 import {OwnerMap} from '~/components/OwnerMap';
+import {PilotMap, pilotNotice} from '~/components/PilotMap';
 import {Txt} from '~/components/Txt';
 import {copyFill, copyText, editAttrs} from '~/lib/copy';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {countryName, STATE_NAME} from '~/lib/owner-map-geo';
 import {loadOwnerMap, ownerMapFixture} from '~/lib/owner-map-data';
+import {pilotPanel} from '~/lib/pilot-map-server';
 import {OTHER_COUNTRIES, OTHER_US_STATES, bucketLabel, type Snapshot} from '~/lib/owner-map';
 
 /**
  * The public owners map: owners per country and US state, as published
  * buckets only (app/lib/owner-map.ts holds the suppression rules, README
  * "Owners map" the whole feature). Words live in `content/copy/owners.json`.
+ *
+ * The page also carries the opt-in pilot map (app/components/PilotMap.tsx)
+ * while PILOT_MAP_ENABLED is "1". What a viewer may see of it is decided in
+ * the loader from the session; with the flag on, the response is per viewer
+ * and never cached.
  */
 export const meta: Route.MetaFunction = () =>
   buildSeoMeta({
@@ -20,9 +28,23 @@ export const meta: Route.MetaFunction = () =>
     canonical: `${SITE_ORIGIN}/owners`,
   });
 
-export async function loader({context}: Route.LoaderArgs) {
+export async function loader({request, context}: Route.LoaderArgs) {
   const env = context.env as unknown as Parameters<typeof loadOwnerMap>[0];
-  return {snapshot: await loadOwnerMap(env), fixture: ownerMapFixture(env)};
+  const {panel, cookies} = await pilotPanel(context.env, request);
+  const notice = pilotNotice(new URL(request.url).searchParams.get('pilot'));
+  const body = {snapshot: await loadOwnerMap(env), fixture: ownerMapFixture(env), pilot: panel, notice: panel.enabled ? notice : null};
+  if (!panel.enabled) return body;
+  const headers = new Headers({'Cache-Control': 'private, no-store'});
+  for (const c of cookies) headers.append('Set-Cookie', c);
+  return data(body, {headers});
+}
+
+export function headers({loaderHeaders}: Route.HeadersArgs) {
+  const out = new Headers();
+  for (const name of ['Cache-Control', 'Set-Cookie']) {
+    for (const v of name === 'Set-Cookie' ? loaderHeaders.getSetCookie() : [loaderHeaders.get(name)]) if (v) out.append(name, v);
+  }
+  return out;
 }
 
 type Row = {id: string; name: string; bucket: number};
@@ -65,7 +87,7 @@ function monthOf(ms: number): string {
 }
 
 export default function OwnersRoute({loaderData}: Route.ComponentProps) {
-  const {snapshot, fixture} = loaderData;
+  const {snapshot, fixture, pilot, notice} = loaderData;
   const hasRegions = snapshot !== null && Object.keys(snapshot.regions).length > 0;
 
   const countries = snapshot
@@ -140,9 +162,7 @@ export default function OwnersRoute({loaderData}: Route.ComponentProps) {
         <Txt id="owners.how_body" as="p" />
       </section>
 
-      {/* PART 2 (pilot map, "Find pilots near you"): mounts here, after the
-          aggregate map and its explanation. Gated by PILOT_MAP_ENABLED. */}
-      <div id="pilots" data-owners-slot="pilot-map" />
+      {pilot.enabled ? <PilotMap panel={pilot} notice={notice} /> : null}
     </EditorialShell>
   );
 }
