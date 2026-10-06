@@ -40,6 +40,15 @@ function server(answer: (path: string, body: Record<string, unknown>) => Respons
 const DRAFT = {draftId: 'dr_1', draft: 'Use 4.5.1 [1].', citations: [{n: 1, title: 'Docs', url: 'https://docs.test/a', source: 'Docs', kind: 'doc'}], confidence: 0.7, note: 'ok'};
 
 describe('createChatFpvClient', () => {
+  it('marks every call synthetic only when CHATFPV_SYNTHETIC is "1"', async () => {
+    const marked = server(() => Response.json(DRAFT));
+    await createChatFpvClient({...ENV, CHATFPV_SYNTHETIC: '1'}, marked.fetcher).draft({ticketRef: 'OD-AAAA-BBBB', topic: 'product', conversation: [{role: 'customer', text: 'hi'}]});
+    assert.equal(marked.calls[0]!.headers.get('X-ChatFPV-Synthetic'), '1');
+    const plain = server(() => Response.json(DRAFT));
+    await createChatFpvClient(ENV, plain.fetcher).draft({ticketRef: 'OD-AAAA-BBBB', topic: 'product', conversation: [{role: 'customer', text: 'hi'}]});
+    assert.equal(plain.calls[0]!.headers.get('X-ChatFPV-Synthetic'), null);
+  });
+
   it('posts drafts with the store key and scrubs every conversation text', async () => {
     const s = server(() => Response.json(DRAFT));
     const c = createChatFpvClient(ENV, s.fetcher);

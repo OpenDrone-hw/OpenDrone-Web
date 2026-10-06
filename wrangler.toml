@@ -33,12 +33,15 @@ PUBLIC_COMING_SOON = "0"
 PUBLIC_US_SALES = "0"
 # ChatFPV (README "Support tickets"): AI ticket drafts in Discord, the
 # /support Ask box and the product/preorder widget. "1" turns each on.
-# On for staging; production keeps them off (wrangler.production.toml).
 # CHATFPV_KEY is a Worker secret.
 CHATFPV_URL = "https://chatfpv.sales-ee0.workers.dev"
 CHATFPV_DRAFTS_ENABLED = "1"
 CHATFPV_ASK_ENABLED = "1"
 CHATFPV_WIDGET_ENABLED = "1"
+# Preview traffic is test traffic: every server call to ChatFPV carries
+# X-ChatFPV-Synthetic: 1 so it never counts as customer usage. Production
+# leaves it unset.
+CHATFPV_SYNTHETIC = "1"
 # ChatFPV handoff: a #cfh=<ticket> on a product page opens the widget on
 # that conversation (app/lib/accounts/handoff.ts). Production keeps it off.
 HANDOFF_ENABLED = "1"
