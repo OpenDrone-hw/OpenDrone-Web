@@ -212,9 +212,10 @@ repos and `status-*` flips across the public OpenDrone-hw repositories.
 
 **Support.** See "Support tickets" below.
 
-**Trade.** `/wholesale` accepts short retailer applications from the EU27 and
-United States. The server mails each application (company, contact, country,
-optional website and message) through Resend from `SUPPORT_FROM_EMAIL` to the
+**Trade.** `/wholesale` accepts short retailer and distributor applications
+from any country (ISO 3166-1 plus Kosovo); staff decide per application. The
+server mails each application (company, contact, country, optional website and
+message) through Resend from `SUPPORT_FROM_EMAIL` to the
 company inbox (`PUBLIC_COMPANY_EMAIL`), with reply-to set to the applicant.
 Shopify Companies is not used: B2B is not available on the store's Shopify
 plan. No customer or company record is created, nothing is mailed to the

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {validateTradeApplication, submitTradeApplication, type TradeApplication} from './trade.ts';
+import {TRADE_COUNTRIES, validateTradeApplication, submitTradeApplication, type TradeApplication} from './trade.ts';
 
 const ENV = {TRADE_MAIL_ENABLED: '1', RESEND_API_KEY: 'test-key'};
 const fields = {company: 'Test shop', contactName: 'Test Buyer', email: 'buyer@example.com', country: 'BE', site: 'shop.example', note: 'Interested in frames.'};
@@ -8,11 +8,21 @@ function form(values = fields) { const f = new FormData(); for (const [key, valu
 function application(): TradeApplication { const result = validateTradeApplication(form()); if (!result.ok) throw new Error('Invalid fixture'); return result.application; }
 
 describe('wholesale application validation', () => {
+  it('accepts any country, including outside the EU and United States', () => {
+    for (const country of ['GB', 'CH', 'PH', 'CA', 'XK', 'ph']) assert.equal(validateTradeApplication(form({...fields, country})).ok, true, country);
+  });
+  it('lists every country once, named and sorted', () => {
+    assert.equal(new Set(TRADE_COUNTRIES.map((c) => c.code)).size, TRADE_COUNTRIES.length);
+    assert.ok(TRADE_COUNTRIES.length >= 249);
+    assert.equal(TRADE_COUNTRIES.find((c) => c.code === 'CH')?.name, 'Switzerland');
+    const names = TRADE_COUNTRIES.map((c) => c.name);
+    assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b, 'en')));
+  });
   it('accepts a physical shop without a website and without order or tax details', () => {
     assert.equal(validateTradeApplication(form({...fields, site: '', note: ''})).ok, true);
   });
   it('rejects unsupported destinations and malformed or overlong fields', () => {
-    for (const [key, value] of [['country', 'GB'], ['company', 'x'], ['company', 'shop\nother'], ['contactName', ''], ['email', 'wrong'], ['note', 'x'.repeat(2001)], ['site', 'javascript:alert(1)'], ['site', 'https://user:password@shop.example']]) {
+    for (const [key, value] of [['country', 'ZZ'], ['country', ''], ['company', 'x'], ['company', 'shop\nother'], ['contactName', ''], ['email', 'wrong'], ['note', 'x'.repeat(2001)], ['site', 'javascript:alert(1)'], ['site', 'https://user:password@shop.example']]) {
       assert.equal(validateTradeApplication(form({...fields, [key]: value})).ok, false, key);
     }
   });
