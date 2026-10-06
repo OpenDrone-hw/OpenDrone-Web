@@ -75,14 +75,14 @@ describe('suppress: United States', () => {
     assert.deepEqual(s.regions, {US: 1, 'US-CA': 0, 'US-TX': 0, [OTHER_US_STATES]: 0});
   });
 
-  it('pools a US pool under 5 into the global other, which stays hidden under 5', () => {
+  it('keeps a US pool under 5 inside the US total only', () => {
     const s = suppress(raw({US: 14}, {CA: 10, NY: 2, WA: 2}), NOW);
     assert.deepEqual(s.regions, {US: 1, 'US-CA': 1});
   });
 
-  it('publishes the global other once pooled US states and countries reach 5', () => {
-    const s = suppress(raw({US: 14, FR: 2}, {CA: 10, NY: 2, WA: 2}), NOW);
-    assert.deepEqual(s.regions, {US: 1, 'US-CA': 1, [OTHER_COUNTRIES]: 0});
+  it('never adds US owners to Other countries', () => {
+    const s = suppress(raw({US: 14, FR: 2, IT: 2}, {CA: 10, NY: 2, WA: 2}), NOW);
+    assert.deepEqual(s.regions, {US: 1, 'US-CA': 1});
   });
 
   it('publishes no state when the United States itself is under 5', () => {

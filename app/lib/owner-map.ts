@@ -105,9 +105,10 @@ export function suppress(raw: RawCounts, generatedAt: number): Snapshot {
       if (index >= 0) regions[`US-${code}`] = index;
       else pool += Math.floor(count);
     }
+    // A pool under 5 stays inside the published US total only: adding it to
+    // "Other countries" would count those owners twice.
     const poolIndex = bucketIndex(pool);
     if (poolIndex >= 0) regions[OTHER_US_STATES] = poolIndex;
-    else otherCountries += pool;
   }
 
   const otherIndex = bucketIndex(otherCountries);
