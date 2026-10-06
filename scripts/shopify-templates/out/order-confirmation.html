@@ -106,6 +106,26 @@
             </tr>
 
 {% endif %}
+{% if has_preorder %}
+{% comment %}
+  Early Bird (app/lib/early-bird.ts): the key of the order status URL proves
+  the order on opendrone.be/early-bird, which checks it and the order in
+  Shopify before the Discord step. No secret is in this template.
+{% endcomment %}
+{% assign status_key = order_status_url | split: 'key=' | last %}
+            <tr>
+              <td class="od-px" style="padding: 0 32px 20px 32px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0a0a0a" style="background-color: #0a0a0a; border: 1px solid #1a241a;">
+                  <tr>
+                    <td style="padding: 14px 18px;">
+                      <p style="margin: 0 0 0px 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #c5c5c5;"><strong style="color: #e5e5e5;">Early Bird on Discord.</strong> Your preorder unlocks the Early Bird role and the private #early-birds channel on the OpenDrone Discord, for one Discord account. <a href="https://opendrone.be/early-bird?order={{ id }}&amp;key={{ status_key | url_encode }}" style="color: #ffb700;">Claim on Discord</a></p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+{% endif %}
 {% if destination_needs_review %}
             <tr>
               <td class="od-px" style="padding: 0 32px 20px 32px;">

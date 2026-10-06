@@ -247,6 +247,9 @@ export default function PreorderRoute() {
             <Txt id="preorder.channel_eu_text" as="p" />
           </InfoHint>
         )}
+        <Link to="/early-bird" className="po-trade-link">
+          <Txt id="preorder.early_bird_discord" /> <span aria-hidden="true">→</span>
+        </Link>
         <Link to="/wholesale" className="po-trade-link">
           <Txt id="preorder.channel_trade" /> <span aria-hidden="true">→</span>
         </Link>
