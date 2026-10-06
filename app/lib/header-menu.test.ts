@@ -12,7 +12,7 @@ describe('header menu button', () => {
   it('lists every destination the bar used to show as text', () => {
     assert.deepEqual(
       HEADER_MENU_LINKS.map((l) => l.to),
-      ['/preorder', '/wholesale', '/newsletter', '/support'],
+      ['/preorder', '/wholesale', '/newsletter', '/owners', '/support'],
     );
   });
 
