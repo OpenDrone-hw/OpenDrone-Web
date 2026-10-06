@@ -53,7 +53,6 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Fraud / abuse prevention | Legitimate interest (Art. 6.1.f) |
 | Shared OpenDrone account and ChatFPV history | Necessary for performance of a contract (Art. 6.1.b) |
 | Owners map (aggregate) | Legitimate interest (Art. 6.1.f): showing the community's reach. A country or US state is published only with at least 5 owners, as a range, so no individual can be identified |
-| Pilot map (optional, signed-in owners) | Your Discord user id and username (read once through Discord sign-in with the identify scope; Discord's access token is revoked at once), the centre of a grid cell of about 10 km (the point you click is snapped on our server and never stored or logged), your Shopify customer id as the key for deletion, the time and version of your consent | Letting owners find each other. Other signed-in owners with a paid order see your Discord username and the 10 km area; everyone else sees only how many pilots are listed |
 | Pilot map | Consent (Art. 6.1.a): an unticked box with the wording you see, plus your confirmation that you are 16 or older. You can withdraw on the pilot map at any time, which deletes the entry at once |
 
 ### 4. Retention periods
