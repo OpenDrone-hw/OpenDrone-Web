@@ -94,11 +94,18 @@ export function parseBuilds(body: unknown): BuildsConfig {
   return c as BuildsConfig;
 }
 
+/** A SKU fills a build part when it is the part's SKU or a sibling variant
+ *  of it: `OPENMOTOR-1604` and `OPENMOTOR-1604-4S` are the same 3" motor. */
+function fillsPart(sku: string | null | undefined, partSku: string): boolean {
+  if (!sku) return false;
+  return sku === partSku || sku.startsWith(`${partSku}-`) || partSku.startsWith(`${sku}-`);
+}
+
 /** The build a SKU belongs to, or null for a part in no build (a receiver
  *  variant that no build names, say). */
 export function buildOf(config: BuildsConfig, sku: string | null | undefined): string | null {
   if (!sku) return null;
-  return config.builds.find((b) => b.parts.some((p) => p.sku === sku && !config.roles[p.role].sizeNeutral))?.id ?? null;
+  return config.builds.find((b) => b.parts.some((p) => fillsPart(sku, p.sku) && !config.roles[p.role].sizeNeutral))?.id ?? null;
 }
 
 /**
@@ -117,7 +124,7 @@ export function resolveBuild(
 /** The role a cart line plays, from its SKU (sized parts) or handle (size-neutral roles). */
 function roleOf(config: BuildsConfig, line: CartLine): {role: BuildRole; build: string | null} | null {
   for (const build of config.builds) {
-    const part = build.parts.find((p) => p.sku === line.sku);
+    const part = build.parts.find((p) => fillsPart(line.sku, p.sku));
     if (part) return {role: part.role, build: config.roles[part.role].sizeNeutral ? null : build.id};
   }
   for (const [role, def] of Object.entries(config.roles) as Array<[BuildRole, BuildsConfig['roles'][BuildRole]]>) {

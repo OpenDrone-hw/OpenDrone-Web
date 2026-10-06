@@ -50,7 +50,7 @@ describe('related parts', () => {
   it('offers the frame four motors and the stack of its size', () => {
     const frame = relatedParts(BUILDS, {handle: 'openframe', sku: 'OPENFRAME-3'}, CATALOG);
     assert.deepEqual(frame.slice(0, 3), [
-      {handle: 'openmotor', sku: 'OPENMOTOR-1604', quantity: 4},
+      {handle: 'openmotor', sku: 'OPENMOTOR-1604-4S', quantity: 4},
       {handle: 'openfc-lite', sku: 'OPENFC-LITE-2020', quantity: 1},
       {handle: 'openesc', sku: 'OPENESC-2020', quantity: 1},
     ]);

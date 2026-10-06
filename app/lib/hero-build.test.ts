@@ -80,7 +80,7 @@ describe('hero build shopping guide', () => {
         ['OPENFC-LITE-2020', 1],
         ['OPENESC-2020', 1],
         ['OPENFRAME-3', 1],
-        ['OPENMOTOR-1604', 4],
+        ['OPENMOTOR-1604-4S', 4],
         ['OPENRX-LITE-UFL', 1],
       ],
     );
