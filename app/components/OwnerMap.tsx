@@ -14,7 +14,7 @@ import {BUCKET_COUNT, bucketLabel, type Snapshot} from '~/lib/owner-map';
 
 /**
  * The owners choropleth (README "Owners map"): countries from
- * `public/geo/countries-110m.json` (Natural Earth, public domain, through
+ * `public/geo/countries-110m.json` (or `countries-50m.json` for the pilot map; Natural Earth, public domain, through
  * world-atlas), the United States drawn by state from
  * `public/geo/states-10m.json` (US Census, through us-atlas). Both are static
  * files on this origin, so the map makes no third-party request and the CSP
@@ -79,21 +79,25 @@ export type Geo = {countries: Topology; states: Topology};
 
 type CountryProps = {name: string};
 
-/** Fetch both boundary files once per page view. */
-export function useGeo(): {geo: Geo | null; failed: boolean} {
+/**
+ * Fetch both boundary files once per page view. `fine` loads the 1:50m
+ * countries (about 240 kB gzipped) for the zoomable pilot map, which only
+ * signed-in owners get; everything else uses 1:110m.
+ */
+export function useGeo(fine = false): {geo: Geo | null; failed: boolean} {
   const [state, setState] = useState<{geo: Geo | null; failed: boolean}>({geo: null, failed: false});
   useEffect(() => {
     let live = true;
     const load = (file: string): Promise<Topology> =>
       fetch(`/geo/${file}`).then((r) => (r.ok ? (r.json() as Promise<Topology>) : Promise.reject(new Error(file))));
-    Promise.all([load('countries-110m.json'), load('states-10m.json')]).then(
+    Promise.all([load(fine ? 'countries-50m.json' : 'countries-110m.json'), load('states-10m.json')]).then(
       ([countries, states]) => live && setState({geo: {countries, states}, failed: false}),
       () => live && setState({geo: null, failed: true}),
     );
     return () => {
       live = false;
     };
-  }, []);
+  }, [fine]);
   return state;
 }
 

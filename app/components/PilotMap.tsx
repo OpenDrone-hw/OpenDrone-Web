@@ -157,7 +157,7 @@ type Draft = {lat: number; lon: number};
 
 function OwnerPanel({panel}: {panel: OpenPanel}) {
   const revalidator = useRevalidator();
-  const {geo, failed} = useGeo();
+  const {geo, failed} = useGeo(true);
   const {own, linkedName} = panel;
   const cells = panel.view.cells ?? [];
   const [moving, setMoving] = useState(false);
@@ -421,11 +421,6 @@ function OwnerPanel({panel}: {panel: OpenPanel}) {
   );
 }
 
-/** Made-up spots for the signed-out preview only: blurred, so they promise a map without showing a place. */
-const PREVIEW_DOTS: [number, number, number][] = [
-  [8.5, 50.1, 9], [4.9, 52.3, 7], [2.3, 48.9, 8], [-0.1, 51.5, 7], [16.4, 48.2, 6],
-  [24.9, 60.2, 6], [21, 52.2, 6], [11.6, 48.1, 8], [4.4, 50.8, 6], [-3.7, 40.4, 5],
-];
 
 type View = {k: number; x: number; y: number};
 const WHOLE: View = {k: 1, x: 0, y: 0};
@@ -645,12 +640,6 @@ function PilotWorld({
                 />
               ))}
             </g>
-            {preview
-              ? PREVIEW_DOTS.map(([lon, lat, r], i) => {
-                  const at = place(lat, lon);
-                  return at ? <circle key={i} className="pilot-preview-dot" cx={at[0]} cy={at[1]} r={r} /> : null;
-                })
-              : null}
             {ownPath ? <path d={ownPath} className="pilot-cell-square is-own" pointerEvents="none" /> : null}
             {cells.map((c) => {
               const at = place(c.lat, c.lon);

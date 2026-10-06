@@ -2064,11 +2064,6 @@ html.light .owner-map {
 html.light .pilot-world .owner-map-region.pilot-country {
   fill: color-mix(in srgb, var(--color-text) 10%, var(--color-bg-card));
 }
-.pilot-preview-dot {
-  fill: var(--color-gold);
-  filter: blur(3px);
-  opacity: 0.8;
-}
 .pilot-world-svg {
   cursor: grab;
   user-select: none;
