@@ -213,29 +213,26 @@ repos and `status-*` flips across the public OpenDrone-hw repositories.
 **Support.** See "Support tickets" below.
 
 **Trade.** `/wholesale` accepts short retailer applications from the EU27 and
-United States. The server saves company name, contact details, country,
-optional website and message in Shopify Companies. Each company starts with
-one location and no buyer contacts or ordering permissions. Applicant contact
-details remain unverified in the company note until staff review them. No
-customer is created or modified, no mail is sent, and no pricing, tax exemption,
-order or delivery commitment is made by an application.
+United States. The server mails each application (company, contact, country,
+optional website and message) through Resend from `SUPPORT_FROM_EMAIL` to the
+company inbox (`PUBLIC_COMPANY_EMAIL`), with reply-to set to the applicant.
+Shopify Companies is not used: B2B is not available on the store's Shopify
+plan. No customer or company record is created, nothing is mailed to the
+applicant, and no pricing, tax exemption, order or delivery commitment is made
+by an application.
 
-Review applications in [Shopify Companies](https://admin.shopify.com/store/ktjqug-jw/companies).
-Check the shop and contact, then add the verified buyer through the company's
-native customer controls. Collect billing/shipping addresses, VAT/EIN and
-shipment evidence when preparing the quote. Use a Shopify draft order attached
-to the company and location for an accepted wholesale order. Set ordering
-permissions only after reviewing the buyer, product eligibility, pricing and
-delivery route. Public consumer checkout retains its existing behavior.
+Answer an application by replying to the mail. Check the shop and contact,
+collect billing/shipping addresses, VAT/EIN and shipment evidence when
+preparing the quote, and use a Shopify draft order for an accepted wholesale
+order. Public consumer checkout retains its existing behavior.
 
-The write switch is `SHOPIFY_TRADE_WRITE_ENABLED=1`, with the existing Admin
-token (`write_customers` or `write_companies`, plus the matching read scope).
-A repeat application checks its Shopify external ID before creating anything;
-it never overwrites a reviewed company. Missing configuration, a Shopify error
-or an unconfirmed save reports failure. Same-origin checks, Turnstile and rate
-limits protect submissions. Local development refuses shared-store writes.
-The page is in `app/routes/wholesale.tsx`; validation and Companies integration
-are in `app/lib/trade.ts`.
+The switch is `TRADE_MAIL_ENABLED=1` with `RESEND_API_KEY` set; without both
+the page shows the contact address instead of the form. A repeat application
+within 24 hours reuses its Resend idempotency key and is not mailed twice. A
+Resend error or timeout reports failure to the applicant. Same-origin checks,
+Turnstile and rate limits protect submissions. Local development never sends.
+The page is in `app/routes/wholesale.tsx`; validation and the mail are in
+`app/lib/trade.ts`.
 
 **Reviews.** The PDP's rating line and reviews chapter read Shopify's standard
 `reviews.rating` and `reviews.rating_count` product metafields, maintained by

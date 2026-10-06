@@ -37,7 +37,7 @@ export async function action({request, context}: Route.ActionArgs) {
   if (!valid.ok) return data<TradeResult>({ok: false, errors: valid.errors}, {status: 400});
   const human = await verifyTurnstile(context.env, String(form.get('cf-turnstile-response') ?? ''), ip);
   if (!human.ok) return data<TradeResult>({ok: false, failure: 'turnstile_failed'}, {status: 400});
-  // Local development never writes to the shared Shopify store.
+  // Local development never mails the company inbox.
   if (import.meta.env.DEV) return data<TradeResult>({ok: false, failure: 'not_configured'}, {status: 503});
   const result = await submitTradeApplication(context.env, valid.application);
   if (!result.ok) return data<TradeResult>({ok: false, failure: result.reason}, {status: 503});

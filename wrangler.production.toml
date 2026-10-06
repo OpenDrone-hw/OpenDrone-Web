@@ -44,8 +44,8 @@ PUBLIC_COMING_SOON = "0"
 # to campaign preorders once content/us-sales.json sets the US rate; changing
 # it needs the founder's go.
 PUBLIC_US_SALES = "1"
-# Wholesale applications: company records only, pending staff review.
-SHOPIFY_TRADE_WRITE_ENABLED = "1"
+# Wholesale applications: mailed to the company inbox, reply-to the applicant.
+TRADE_MAIL_ENABLED = "1"
 # Newsletter welcome sender (src app/lib/growth/welcome-email.ts). opendrone.be is a
 # verified Resend domain; without this the welcome goes from sales@incutec.eu.
 NEWSLETTER_FROM_EMAIL = "hello@opendrone.be"
