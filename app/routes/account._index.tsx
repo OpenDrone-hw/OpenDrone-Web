@@ -318,6 +318,19 @@ export default function AccountRoute() {
           )}
         </section>
 
+        <section className="account-dashboard-card" aria-labelledby="account-discord-title">
+          <p className="account-dashboard-eyebrow-mono">Discord</p>
+          <h2 id="account-discord-title" className="account-dashboard-card-title">
+            Early Bird role
+          </h2>
+          <p className="account-dashboard-card-lede">A paid preorder unlocks the Early Bird role and #early-birds on the OpenDrone Discord.</p>
+          <div className="account-dashboard-card-actions">
+            <Link to="/early-bird" className="account-dashboard-cta">
+              Claim on Discord
+            </Link>
+          </div>
+        </section>
+
         <section className="account-dashboard-card" aria-labelledby="account-support-title">
           <p className="account-dashboard-eyebrow-mono">Support</p>
           <h2 id="account-support-title" className="account-dashboard-card-title">

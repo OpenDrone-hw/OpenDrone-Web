@@ -218,6 +218,12 @@ declare global {
     // ACCOUNTS_TEST_IDP is never set in production; it is honoured only on
     // hosts other than opendrone.be and www.opendrone.be.
     ACCOUNTS_ENABLED?: string;
+    // Early Bird Discord role (app/lib/early-bird.ts): the HMAC key shared with
+    // the Discord bot Worker, which verifies the claim tokens signed with it.
+    // A Worker secret; unset, claims answer "not open yet".
+    EARLY_BIRD_CLAIM_KEY?: string;
+    // The bot's claim route; default https://opendrone-discord-bot.sales-ee0.workers.dev/early-bird.
+    EARLY_BIRD_CLAIM_URL?: string;
     ACCOUNTS_TEST_IDP?: string;
     /** "1" (wrangler.production.toml only): ops alerts to DISCORD_STAFF_METADATA_CHANNEL_ID, once per UTC day per key (app/lib/ops-alerts.ts). */
     OPS_ALERTS_ENABLED?: string;

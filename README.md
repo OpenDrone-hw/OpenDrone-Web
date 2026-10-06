@@ -616,6 +616,29 @@ hour per IP; to reset, stop both, `rm -rf .wrangler/state`, and start them again
 folds to `false`, and `dev-overrides.test.ts` checks a built Worker holds
 no trace of them.
 
+## Early Bird
+
+A paid preorder placed before the run closes (`endsOn` in
+`content/preorders.json`, end of day in Brussels) unlocks the `Early Bird`
+role and the private `#early-birds` channel on the OpenDrone Discord, for one
+Discord account per order. `app/lib/early-bird.ts` decides and proves;
+the Discord bot Worker (OpenDrone-hw/discord, `bot/README.md` "Early Bird")
+runs the Discord authorization, records the claim and gives the role.
+
+| Way in | Proof | Route |
+|---|---|---|
+| `/account` card, or `/early-bird` signed in | the order belongs to the session's Shopify customer | `POST /early-bird` with `order=<GID>` (same Origin) |
+| "Claim on Discord" in the order confirmation mail (preorder orders only) | `key` equals the `key` of the order's Shopify status page URL | `GET /early-bird?order=<id>&key=<key>` |
+
+Qualifies: `PAID` or `PARTIALLY_REFUNDED`, not cancelled, tagged `preorder`
+(or a line with the `Preorder` attribute before the tag job runs), created
+before the close. A qualifying request is answered with a 303 to
+`EARLY_BIRD_CLAIM_URL` (default the bot Worker's `/early-bird`) carrying a
+10-minute HMAC token signed with `EARLY_BIRD_CLAIM_KEY`, a Worker secret
+equal to the bot's secret of that name. Without it claims show "not open
+yet". This Worker stores nothing; the bot keeps order id, order name and
+Discord user id (privacy policy, section 2).
+
 ## Shared accounts
 
 opendrone.be signs customers in with Shopify Customer Accounts and is the

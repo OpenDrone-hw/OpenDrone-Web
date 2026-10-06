@@ -30,6 +30,7 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Website usage | IP address, browser, pages visited | Website optimisation, security |
 | Newsletter | Email, country (derived from IP address) | Marketing communication (only with consent) |
 | Trade enquiries | Company and contact name, email, telephone number, shipping and billing address, VAT or EIN number, shop details, requested products | Answering and quoting a shop's wholesale request |
+| Discord Early Bird role (only when you claim it) | Your order number and Shopify order id, your Discord user id | Giving the buyer of a preorder the Early Bird role and the #early-birds channel on the OpenDrone Discord server, one Discord account per order |
 | ChatFPV assistant (the helper on product pages, the Ask box on /support, reply suggestions for support tickets) | The text you type and ChatFPV's replies; on product pages also the product you are viewing; a salted hash of your IP address (rate limits); your rating of an answer and any note. For a reply suggestion: the question text of your ticket without name, email, telephone number, order data or attachments | Answering product and FPV questions with an AI assistant; suggesting replies to our support staff; improving ChatFPV's answers |
 
 ### 3. Legal bases (Art. 6 GDPR)
@@ -46,6 +47,7 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Order attribution and purchase statistics | Legitimate interest (Art. 6.1.f); you can object at any time via privacy@opendrone.be |
 | Newsletter | Consent (Art. 6.1.a) |
 | Trade enquiries | Steps taken at the request of the enquirer before entering into a contract (Art. 6.1.b) |
+| Discord Early Bird role | Consent (Art. 6.1.a): you start the claim and choose the Discord account |
 | Fraud / abuse prevention | Legitimate interest (Art. 6.1.f) |
 | Shared OpenDrone account and ChatFPV history | Necessary for performance of a contract (Art. 6.1.b) |
 
@@ -64,6 +66,7 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Shared OpenDrone account (the opendrone.be account record and the ChatFPV account id) | 3 years after your last sign-in; earlier when your customer account is deleted |
 | Newsletter subscription | Until unsubscribed |
 | Trade enquiries without an order | 2 years after the last contact |
+| Early Bird claim (order id and number with the Discord user id) | Until you ask us to delete it via privacy@opendrone.be; the role on your Discord account can be removed at the same time |
 | ChatFPV conversations in the helper and the Ask box, with ratings | 90 days after the last message in the conversation |
 | ChatFPV reply suggestions for a support ticket | 24 months after the last message in the ticket; the staff reply stays, without your text |
 | Unanswered questions copied to improve ChatFPV (no link to who asked) | 90 days after the question was last asked |
@@ -96,7 +99,7 @@ Order and customer data (name, address, email, payment reference, order history)
 
 **ChatFPV.** ChatFPV is an AI assistant for FPV and OpenDrone product questions, run by Incutec BV at chatfpv.com. Its replies are machine-generated and can be wrong: check the sources it cites. On opendrone.be it appears in two places. The helper in the corner of product pages is chatfpv.com loaded inside the page: your question and the product you are viewing go to chatfpv.com exactly as you type them, and chatfpv.com keeps a random conversation id in your browser's local storage (no name, no account). The Ask box on /support sends your question through opendrone.be, which first removes email addresses, phone numbers, card numbers, IBANs and similar identifiers, but not names or order numbers: leave those out. When our staff answer a support ticket, ChatFPV can suggest a reply from the ticket's question, without your name, email, telephone number, order data or attachments; a staff member decides what is sent. A question ChatFPV could not answer is copied, without who asked it and after email addresses, phone numbers and order numbers are removed, into a list our staff use to add missing knowledge; a rating note can become a proposed correction. You can object to this use via privacy@opendrone.be. ChatFPV's own privacy notice, with the cookies and browser storage chatfpv.com uses: https://chatfpv.com/privacy
 
-**Discord.** The OpenDrone community server runs on Discord. Discord Inc. is an independent controller for the community server you choose to join. For support tickets, Discord Inc. processes the ticket on our behalf as a processor (table above); you do not need a Discord account to open a ticket. Discord's privacy policy: https://discord.com/privacy
+**Discord.** The OpenDrone community server runs on Discord. Discord Inc. is an independent controller for the community server you choose to join. For support tickets, Discord Inc. processes the ticket on our behalf as a processor (table above); you do not need a Discord account to open a ticket. Discord's privacy policy: https://discord.com/privacy If you claim the Early Bird role, you authorise our Discord application on discord.com; we record which Discord user id claimed which order (Cloudflare D1), and our bot gives that account the role and adds it to the server if it is not a member yet. No name, email, address or order content goes to Discord.
 
 **Shared sign-in with chatfpv.com.** chatfpv.com, the ChatFPV FPV assistant, is also run by Incutec BV. When you sign in to chatfpv.com with your OpenDrone account, opendrone.be confirms your sign-in to chatfpv.com with a separate account id that only chatfpv.com receives. chatfpv.com receives no name, email address or Shopify customer id. Shopify access tokens are discarded right after sign-in; opendrone.be keeps only the Shopify sign-in confirmation (ID token), encrypted, to end your Shopify session when you sign out. When chatfpv.com checks whether you are already signed in (silent sign-in), opendrone.be sets no cookie and stores nothing for a visitor who is not signed in.
 
