@@ -1,7 +1,8 @@
-/** Wholesale applications live in Shopify Companies. No ordering access is
- * granted by this module. Buyer contacts, quotes and approval stay in admin. */
-import {adminEndpoint, adminGraphql, type AdminEnv} from './preorder-fulfilment.ts';
+/** Wholesale applications are mailed to the company inbox through Resend.
+ * Shopify Companies (B2B) is not available on the store's plan. No ordering
+ * access, pricing or customer record is created by this module. */
 import {sha256Hex} from './accounts/crypto.ts';
+import {getCompanyIdentity} from './company.ts';
 
 /** Countries eligible for retailer enquiries: the EU27 and United States. `vatPrefix` is the VIES
  *  prefix (EL for Greece), null outside the EU. */
@@ -69,79 +70,69 @@ export function validateTradeApplication(form: Pick<FormData, 'get'>): TradeVali
   return {ok: true, application: {company, contactName, email, country, website, note}};
 }
 
-export type TradeEnv = AdminEnv & {SHOPIFY_TRADE_WRITE_ENABLED?: string};
+export type TradeEnv = {
+  TRADE_MAIL_ENABLED?: string;
+  RESEND_API_KEY?: string;
+  SUPPORT_FROM_EMAIL?: string;
+  PUBLIC_COMPANY_EMAIL?: string;
+};
 export function tradeConfigured(env: TradeEnv): boolean {
-  if (env.SHOPIFY_TRADE_WRITE_ENABLED !== '1') return false;
-  try { adminEndpoint(env); return true; } catch { return false; }
+  return env.TRADE_MAIL_ENABLED === '1' && Boolean(env.RESEND_API_KEY);
 }
 
-export const FIND_APPLICATION = `#graphql
-  query WholesaleApplication($query: String!) {
-    companies(first: 2, query: $query) {
-      nodes { id externalId }
-      pageInfo { hasNextPage endCursor }
-    }
-  }
-`;
-export const CREATE_APPLICATION = `#graphql
-  mutation WholesaleApply($input: CompanyCreateInput!) {
-    companyCreate(input: $input) {
-      company { id externalId }
-      userErrors { field code message }
-    }
-  }
-`;
-
-type CompanyRef = {id: string; externalId: string | null};
 export type ApplicationResult = {ok: true} | {ok: false; reason: 'not_configured' | 'unavailable'};
 
-/** A retry checks Shopify first. The application key is not a buyer identity.
- * No contact or role is created from an unverified public email address. */
+export function applicationMail(application: TradeApplication): {subject: string; text: string} {
+  return {
+    subject: `Wholesale application: ${application.company} (${application.country.code})`,
+    text: [
+      'Wholesale application from https://opendrone.be/wholesale',
+      'Contact details are applicant-supplied and unverified. Reply to answer the applicant.',
+      '',
+      `Company: ${application.company}`,
+      `Contact: ${application.contactName}`,
+      `Email: ${application.email}`,
+      `Country: ${application.country.name} (${application.country.code})`,
+      application.website ? `Shop website: ${application.website}` : '',
+      application.note ? `\nMessage:\n${application.note}` : '',
+    ].filter(Boolean).join('\n'),
+  };
+}
+
+/** Mails one application to the company inbox, reply-to the applicant. The
+ * idempotency key makes a retry of the same application within 24 hours a
+ * no-op at Resend, so an unknown result can be retried by the applicant. */
 export async function submitTradeApplication(
   env: TradeEnv,
   application: TradeApplication,
   fetcher: typeof fetch = fetch,
 ): Promise<ApplicationResult> {
   if (!tradeConfigured(env)) return {ok: false, reason: 'not_configured'};
-  const externalId = `wholesale-${await sha256Hex(JSON.stringify([
+  const key = `wholesale-${await sha256Hex(JSON.stringify([
     application.email, application.company.toLowerCase().replace(/\s+/g, ' '), application.country.code,
   ]))}`;
-  const find = async () => {
-    const data = await adminGraphql<{companies: {nodes: CompanyRef[]; pageInfo: {hasNextPage: boolean}}}>(
-      env, FIND_APPLICATION, {query: `external_id:"${externalId}"`}, fetcher,
-    );
-    // Search can be broader than requested; match the identity ourselves.
-    return data.companies.nodes.find((company) => company.externalId === externalId);
-  };
+  const mail = applicationMail(application);
   try {
-    if (await find()) return {ok: true};
-    const note = [
-      'Wholesale application from https://opendrone.be/wholesale',
-      'Pending review. Contact details are applicant-supplied and unverified.',
-      `Contact: ${application.contactName}`,
-      `Email: ${application.email}`,
-      `Country: ${application.country.name} (${application.country.code})`,
-      application.website ? `Shop website: ${application.website}` : '',
-      application.note ? `Message:\n${application.note}` : '',
-    ].filter(Boolean).join('\n');
-    const result = await adminGraphql<{companyCreate: {
-      company: CompanyRef | null;
-      userErrors: Array<{code: string; message: string}>;
-    }}>(env, CREATE_APPLICATION, {input: {
-      company: {name: application.company, externalId, note},
-      companyLocation: {name: application.country.name},
-    }}, fetcher);
-    if (result.companyCreate.userErrors.length || !result.companyCreate.company) {
-      // A simultaneous request may already have created this identity.
-      if (await find()) return {ok: true};
-      return {ok: false, reason: 'unavailable'};
-    }
-    if (result.companyCreate.company.externalId !== externalId) return {ok: false, reason: 'unavailable'};
-    return {ok: true};
+    const res = await fetcher('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+        'Idempotency-Key': key,
+      },
+      body: JSON.stringify({
+        from: `OpenDrone wholesale <${env.SUPPORT_FROM_EMAIL || 'support@opendrone.be'}>`,
+        to: [getCompanyIdentity(env as Record<string, string | undefined>).email],
+        reply_to: application.email,
+        subject: mail.subject,
+        text: mail.text,
+      }),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) console.warn('[wholesale] application mail not sent', res.status);
+    return res.ok ? {ok: true} : {ok: false, reason: 'unavailable'};
   } catch {
-    // A timeout can happen after a successful mutation. Only confirm a saved
-    // company; never repeat a mutation with an unknown result.
-    try { if (await find()) return {ok: true}; } catch { /* no confirmed record */ }
+    console.warn('[wholesale] application mail failed');
     return {ok: false, reason: 'unavailable'};
   }
 }
