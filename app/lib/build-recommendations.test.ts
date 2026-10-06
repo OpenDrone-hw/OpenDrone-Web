@@ -20,6 +20,8 @@ describe('build of a SKU', () => {
     assert.equal(buildOf(BUILDS, 'OPENFC-LITE-2020'), '3-inch');
     assert.equal(buildOf(BUILDS, 'OPENFRAME-5'), '5-inch');
     assert.equal(buildOf(BUILDS, 'OPENMOTOR-1604'), '3-inch');
+    assert.equal(buildOf(BUILDS, 'OPENMOTOR-1604-4S'), '3-inch');
+    assert.equal(buildOf(BUILDS, 'OPENMOTOR-2306-4S'), '5-inch');
     assert.equal(buildOf(BUILDS, 'OPENRX-GEMINI'), null);
     assert.equal(buildOf(BUILDS, 'OPENRX-MONO'), null);
   });
@@ -32,11 +34,16 @@ describe('build of a SKU', () => {
 });
 
 describe('buildSuggestionSpecs', () => {
+  it('treats a sibling motor variant as filling the motor role', () => {
+    const specs = buildSuggestionSpecs(BUILDS, '3-inch', [{sku: 'OPENMOTOR-1604', handle: 'openmotor', quantity: 4}]);
+    assert.ok(!specs.some((p) => p.role === 'motors'));
+  });
+
   it('suggests four matching motors and a size-appropriate receiver', () => {
     const specs = buildSuggestionSpecs(BUILDS, '3-inch', [{sku: 'OPENFC-LITE-2020', handle: 'openfc-lite'}]);
     assert.deepEqual(
       specs.map(({sku, quantity}) => [sku, quantity]),
-      [['OPENESC-2020', 1], ['OPENFRAME-3', 1], ['OPENMOTOR-1604', 4], ['OPENRX-LITE-UFL', 1], ['ACC-PROP-3-HQ-T3X3X3', 1]],
+      [['OPENESC-2020', 1], ['OPENFRAME-3', 1], ['OPENMOTOR-1604-4S', 4], ['OPENRX-LITE-UFL', 1], ['ACC-PROP-3-HQ-T3X3X3', 1]],
     );
   });
 
