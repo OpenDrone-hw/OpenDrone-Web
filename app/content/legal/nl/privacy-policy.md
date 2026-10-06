@@ -30,6 +30,7 @@ Incutec BV heeft geen Functionaris voor Gegevensbescherming (DPO) aangesteld aan
 | Handelsaanvragen | Bedrijfs- en contactnaam, e-mail, telefoonnummer, verzend- en factuuradres, btw- of EIN-nummer, winkelgegevens, gevraagde producten | Beantwoorden en offreren van een groothandelsaanvraag van een winkel |
 | Discord Early Bird-rol (enkel wanneer u ze opeist) | Uw bestelnummer en Shopify-bestel-id, uw Discord-gebruikers-id | De koper van een voorbestelling de Early Bird-rol en het kanaal #early-birds op de OpenDrone-Discordserver geven, één Discord-account per bestelling |
 | ChatFPV-assistent (de hulp op productpagina's, het vraagvak op /support, antwoordvoorstellen voor supporttickets) | De tekst die u typt en de antwoorden van ChatFPV; op productpagina's ook het product dat u bekijkt; een gezouten hash van uw IP-adres (gebruikslimieten); uw beoordeling van een antwoord en een eventuele opmerking. Voor een antwoordvoorstel: de vraagtekst van uw ticket zonder naam, e-mail, telefoonnummer, bestelgegevens of bijlagen | Product- en FPV-vragen beantwoorden met een AI-assistent; antwoorden voorstellen aan onze supportmedewerkers; de antwoorden van ChatFPV verbeteren |
+| Eigenarenkaart (geaggregeerd, zonder aanmelding) | Land en, voor de Verenigde Staten, staat van het verzendadres van betaalde bestellingen met fysieke goederen, per klant eenmaal geteld in het geheugen tijdens een verversing. Alleen de resulterende bereiken per regio worden bewaard, nooit bestellingen, adressen of tellingen per klant | Tonen waar OpenDrone-eigenaars zijn, als kaart met bereiken |
 
 ### 3. Rechtsgronden (Art. 6 AVG)
 
@@ -48,6 +49,7 @@ Incutec BV heeft geen Functionaris voor Gegevensbescherming (DPO) aangesteld aan
 | Discord Early Bird-rol | Toestemming (Art. 6.1.a): u start de aanvraag en kiest het Discord-account |
 | Fraude-/misbruikpreventie | Gerechtvaardigd belang (Art. 6.1.f) |
 | Gedeeld OpenDrone-account en ChatFPV-geschiedenis | Noodzakelijk voor de uitvoering van een overeenkomst (Art. 6.1.b) |
+| Eigenarenkaart (geaggregeerd) | Gerechtvaardigd belang (Art. 6.1.f): de reikwijdte van de community tonen. Een land of Amerikaanse staat wordt alleen gepubliceerd bij minstens 5 eigenaars, als bereik, zodat niemand identificeerbaar is |
 
 ### 4. Bewaartermijnen
 
@@ -70,6 +72,7 @@ Incutec BV heeft geen Functionaris voor Gegevensbescherming (DPO) aangesteld aan
 | Onbeantwoorde vragen gekopieerd om ChatFPV te verbeteren (zonder link naar wie de vraag stelde) | 90 dagen nadat de vraag voor het laatst werd gesteld |
 | Uw tekst gekopieerd in een voorgestelde ChatFPV-correctie | 24 maanden, daarna gewist; de kenniswijziging blijft zonder uw tekst |
 | Prompts en antwoorden bij Google (Gemini API) | 55 dagen voor misbruikdetectie (30 dagen voor Google Search grounding), door Google |
+| Eigenarenkaart (gepubliceerde bereiken per regio, geen persoonsgegevens) | Uiterlijk om de 30 dagen vervangen door de volgende verversing |
 
 ### 5. Ontvangers / verwerkers
 

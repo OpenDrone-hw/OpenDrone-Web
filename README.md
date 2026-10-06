@@ -639,6 +639,20 @@ equal to the bot's secret of that name. Without it claims show "not open
 yet". This Worker stores nothing; the bot keeps order id, order name and
 Discord user id (privacy policy, section 2).
 
+## Owners map
+
+`/owners` shows where owners are, as published ranges only. Rules live in `app/lib/owner-map.ts` (tested), the Worker side in `app/lib/owner-map-data.ts`, the page in `app/routes/owners.tsx` and `app/components/OwnerMap.tsx`, words in `content/copy/owners.json`.
+
+| Step | What happens |
+|---|---|
+| Count | A distinct Shopify customer with a paid or partly refunded, not cancelled, non-test order with a physical line, counted once by the shipping country of their latest order; US customers also by state |
+| Schedule | The Worker's five-minute cron reads one D1 row set and recomputes only when the snapshot is missing or 30 days old (needs `SUPPORT_DB` and the Admin token). A failed run waits 6 hours |
+| Suppress | A country or US state needs 5 owners. Small US states pool into "Other US states", small countries into "Other countries"; a pool shows only at 5 or more |
+| Store | Table `owner_map_snapshot` (migration 0009) keeps buckets (5-9, 10-24, 25-49, 50-99, 100-249, 250-499, 500+), the total rounded down to 10 and the country count. Orders and addresses are never stored |
+| Draw | d3-geo and topojson-client draw SVG from `public/geo/countries-110m.json` (world-atlas, Natural Earth, public domain) and `states-10m.json` (us-atlas, US Census). Both files are ISC-packaged copies from `node_modules`; no tiles, no third-party request, CSP unchanged |
+
+Local development: `OWNER_MAP_FIXTURE=1` in `.env` shows fixture counts through the same suppression and never reads orders. On the dev server the fixture is also used when the Admin token is missing. A deployed build without a snapshot shows the empty state, never invented numbers; a unit test keeps `OWNER_MAP_FIXTURE` out of both wrangler files. The migration is applied like the others (`npx wrangler d1 migrations apply SUPPORT_DB --remote --config wrangler.production.toml`) before the deploy.
+
 ## Shared accounts
 
 opendrone.be signs customers in with Shopify Customer Accounts and is the

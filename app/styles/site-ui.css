@@ -1648,3 +1648,254 @@ html.light .footer-ref {
 .home-mobile-early-note { margin-top: -8px; font-size: 13px; }
 .related-early-note { margin-top: 12px; font-size: 13px; }
 .header-pod-early-note { padding: var(--sp-1) var(--sp-2) var(--sp-2); font-size: 12px; }
+
+/* ============================================
+   /owners: the owners map (app/routes/owners.tsx, app/components/OwnerMap.tsx)
+   ============================================ */
+
+/* Wider than the reading column, like /preorder: a world map needs the room.
+   The watermark stays off, it would sit behind the map. */
+.editorial-shell:has(> .editorial-page.owners-page) {
+  grid-template-columns: minmax(0, 1120px);
+  justify-content: center;
+}
+.editorial-shell:has(> .editorial-page.owners-page) > .editorial-watermark {
+  display: none;
+}
+.editorial-page.owners-page {
+  max-width: 1120px;
+  min-width: 0;
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sp-6);
+}
+.owners-page .editorial-hero,
+.owners-page .editorial-section {
+  margin: 0;
+}
+.owners-page .editorial-lead {
+  max-width: 40rem;
+}
+.owners-page .editorial-section-title {
+  margin: 0 0 var(--sp-4);
+}
+
+/* Headline numbers: two tiles, mono labels like the rest of the site. */
+.owners-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin: 0;
+}
+.owners-stats > div {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--sp-1);
+  min-width: 10rem;
+  padding: var(--sp-4) var(--sp-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+  background: var(--color-bg-card);
+}
+.owners-stats dt {
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.owners-stats dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.owner-map {
+  /* Seven buckets: gold mixed into the theme's own surface, so the ramp
+     reads in light and dark without a second palette. */
+  --owner-neutral: color-mix(in srgb, var(--color-text) 11%, var(--color-bg-card));
+  --owner-b0: color-mix(in srgb, var(--color-gold) 34%, var(--owner-neutral));
+  --owner-b1: color-mix(in srgb, var(--color-gold) 46%, var(--owner-neutral));
+  --owner-b2: color-mix(in srgb, var(--color-gold) 58%, var(--owner-neutral));
+  --owner-b3: color-mix(in srgb, var(--color-gold) 70%, var(--owner-neutral));
+  --owner-b4: color-mix(in srgb, var(--color-gold) 82%, var(--owner-neutral));
+  --owner-b5: color-mix(in srgb, var(--color-gold) 92%, var(--owner-neutral));
+  --owner-b6: var(--color-gold);
+  margin: 0;
+}
+.owner-map-frame {
+  position: relative;
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-lg);
+  background: var(--color-bg-card);
+  overflow: hidden;
+}
+.owner-map-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 960 / 500;
+  touch-action: manipulation;
+}
+.owner-map-status {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 960 / 500;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+}
+.owner-map-region {
+  fill: var(--owner-neutral);
+  stroke: var(--color-bg-card);
+  stroke-width: 0.6;
+  stroke-linejoin: round;
+}
+.owner-map-svg .owner-map-region {
+  cursor: pointer;
+  transition: fill 120ms;
+}
+.owner-map-region[data-b='0'] { fill: var(--owner-b0); }
+.owner-map-region[data-b='1'] { fill: var(--owner-b1); }
+.owner-map-region[data-b='2'] { fill: var(--owner-b2); }
+.owner-map-region[data-b='3'] { fill: var(--owner-b3); }
+.owner-map-region[data-b='4'] { fill: var(--owner-b4); }
+.owner-map-region[data-b='5'] { fill: var(--owner-b5); }
+.owner-map-region[data-b='6'] { fill: var(--owner-b6); }
+/* Legend swatches are HTML boxes, not SVG paths: same ramp, as background. */
+.owner-map-swatch { background: var(--owner-neutral); }
+.owner-map-swatch[data-b='0'] { background: var(--owner-b0); }
+.owner-map-swatch[data-b='1'] { background: var(--owner-b1); }
+.owner-map-swatch[data-b='2'] { background: var(--owner-b2); }
+.owner-map-swatch[data-b='3'] { background: var(--owner-b3); }
+.owner-map-swatch[data-b='4'] { background: var(--owner-b4); }
+.owner-map-swatch[data-b='5'] { background: var(--owner-b5); }
+.owner-map-swatch[data-b='6'] { background: var(--owner-b6); }
+.owner-map-region.is-active {
+  stroke: var(--color-text);
+  stroke-width: 1.4;
+  paint-order: stroke;
+}
+.owner-map-readout {
+  position: absolute;
+  left: var(--sp-3);
+  bottom: var(--sp-3);
+  max-width: calc(100% - 2 * var(--sp-3));
+  margin: 0;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-bg);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--color-text);
+  pointer-events: none;
+}
+.owner-map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-4);
+  margin-top: var(--sp-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+}
+.owner-map-legend-title {
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+}
+.owner-map-legend ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.owner-map-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.owner-map-swatch {
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 3px;
+  stroke: none;
+  border: 1px solid var(--color-border);
+}
+.owners-meta {
+  margin: var(--sp-3) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+}
+.owners-empty {
+  margin: 0;
+  max-width: 40rem;
+  color: var(--color-text-muted);
+}
+
+/* The text twin of the map: every published region, readable without it. */
+.owners-lists {
+  margin-top: var(--sp-6);
+}
+.owners-lists-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: var(--sp-5) var(--sp-6);
+  align-items: start;
+}
+.owners-list-title {
+  margin: 0 0 var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  font-weight: 500;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.owners-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--color-border);
+}
+.owners-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--fs-base);
+}
+.owners-list-range {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.owners-how {
+  max-width: 40rem;
+}
+
+/* On a phone the readout would cover a third of the map: it sits under it. */
+@media (max-width: 640px) {
+  .owner-map-readout {
+    position: static;
+    max-width: none;
+    border: 0;
+    border-top: 1px solid var(--color-border);
+    border-radius: 0;
+    background: transparent;
+  }
+}

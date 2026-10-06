@@ -18920,3 +18920,15 @@ summary,
 .pdp-build .hero-build-guide {
   animation: none;
 }
+
+.home-community-owners {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.home-community-owners:hover {
+  color: var(--color-text);
+}

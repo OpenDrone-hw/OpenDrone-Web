@@ -32,6 +32,7 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Trade enquiries | Company and contact name, email, telephone number, shipping and billing address, VAT or EIN number, shop details, requested products | Answering and quoting a shop's wholesale request |
 | Discord Early Bird role (only when you claim it) | Your order number and Shopify order id, your Discord user id | Giving the buyer of a preorder the Early Bird role and the #early-birds channel on the OpenDrone Discord server, one Discord account per order |
 | ChatFPV assistant (the helper on product pages, the Ask box on /support, reply suggestions for support tickets) | The text you type and ChatFPV's replies; on product pages also the product you are viewing; a salted hash of your IP address (rate limits); your rating of an answer and any note. For a reply suggestion: the question text of your ticket without name, email, telephone number, order data or attachments | Answering product and FPV questions with an AI assistant; suggesting replies to our support staff; improving ChatFPV's answers |
+| Owners map (aggregate, no sign-in) | Country and, for the United States, state of the shipping address of paid orders with physical goods, counted once per customer in memory during a refresh. Only the resulting ranges per region are stored, never orders, addresses or counts per customer | Showing where OpenDrone owners are, as a map with ranges |
 
 ### 3. Legal bases (Art. 6 GDPR)
 
@@ -50,6 +51,7 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Discord Early Bird role | Consent (Art. 6.1.a): you start the claim and choose the Discord account |
 | Fraud / abuse prevention | Legitimate interest (Art. 6.1.f) |
 | Shared OpenDrone account and ChatFPV history | Necessary for performance of a contract (Art. 6.1.b) |
+| Owners map (aggregate) | Legitimate interest (Art. 6.1.f): showing the community's reach. A country or US state is published only with at least 5 owners, as a range, so no individual can be identified |
 
 ### 4. Retention periods
 
@@ -72,6 +74,7 @@ Incutec BV has not appointed a Data Protection Officer (DPO) because this is not
 | Unanswered questions copied to improve ChatFPV (no link to who asked) | 90 days after the question was last asked |
 | Your text copied into a proposed ChatFPV correction | 24 months, then deleted; the knowledge change stays without your text |
 | Prompts and replies at Google (Gemini API) | 55 days for abuse monitoring (30 days for Google Search grounding), by Google |
+| Owners map (published ranges per region, no personal data) | Replaced at the latest every 30 days by the next refresh |
 
 ### 5. Recipients / processors
 

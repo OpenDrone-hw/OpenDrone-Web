@@ -6,6 +6,7 @@ import {tokenEndpointReachable} from '~/lib/accounts/oauth';
 import {purgeExpired} from '~/lib/accounts/sessions';
 import {createAppLoadContext} from '~/lib/context';
 import {NO_FRAMING_HEADERS, NO_FRAMING_PATH} from '~/lib/csp';
+import {refreshOwnerMap} from '~/lib/owner-map-data';
 import {parseCampaignConfig} from '~/lib/preorder-campaign';
 import {queryCountryCookie} from '~/lib/shipping-rates';
 import {preorderHoldsEnabled, reconcilePreorders} from '~/lib/preorder-ops';
@@ -178,6 +179,9 @@ export default {
    *   and accounts 3 years without sign-in, work the data subject request
    *   queue (compliance.ts). Runs while ACCOUNTS_ENABLED is "1" or the
    *   compliance webhooks are live (SHOPIFY_WEBHOOK_SECRET set).
+   * - Owners map (app/lib/owner-map-data.ts): recompute the published
+   *   aggregate snapshot when it is missing or 30 days old. One D1 read per
+   *   run otherwise; needs SUPPORT_DB and the Shopify Admin token.
    */
   async scheduled(_event: unknown, env: Env, executionContext: ExecutionContext): Promise<void> {
     if (priceTierWritesEnabled(env) || preorderHoldsEnabled(env)) {
@@ -213,6 +217,16 @@ export default {
             console.error('rights queue failed', error instanceof Error ? error.message : 'error');
           }
         })(),
+      );
+    }
+    if (env.SUPPORT_DB) {
+      executionContext.waitUntil(
+        refreshOwnerMap(env).then(
+          (result) => {
+            if (result === 'written') console.log('owner map refreshed');
+          },
+          (error) => console.error('owner map refresh failed', error instanceof Error ? error.message : 'error'),
+        ),
       );
     }
     if (supportReady(env)) {

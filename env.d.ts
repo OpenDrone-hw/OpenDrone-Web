@@ -225,6 +225,8 @@ declare global {
     // The bot's claim route; default https://opendrone-discord-bot.sales-ee0.workers.dev/early-bird.
     EARLY_BIRD_CLAIM_URL?: string;
     ACCOUNTS_TEST_IDP?: string;
+    /** "1": the owners map shows the aggregate fixture and never reads orders (app/lib/owner-map-data.ts). Never set in a deployed config; a test checks. */
+    OWNER_MAP_FIXTURE?: string;
     /** "1" (wrangler.production.toml only): ops alerts to DISCORD_STAFF_METADATA_CHANNEL_ID, once per UTC day per key (app/lib/ops-alerts.ts). */
     OPS_ALERTS_ENABLED?: string;
     /** Space-separated Shopify Customer Account API scope override; default `openid email` (shopify-idp.ts). */
