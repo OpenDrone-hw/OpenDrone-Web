@@ -1,10 +1,8 @@
 import {data} from 'react-router';
 import type {Route} from './+types/owners';
-import {EditorialShell} from '~/components/EditorialShell';
-import {OwnerMap} from '~/components/OwnerMap';
-import {PilotMap, pilotNotice} from '~/components/PilotMap';
-import {Txt} from '~/components/Txt';
-import {copyFill, copyText, editAttrs} from '~/lib/copy';
+import {OwnersMap} from '~/components/OwnersMap';
+import {pilotNotice} from '~/components/OwnersPilot';
+import {copyText} from '~/lib/copy';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {countryName, STATE_NAME} from '~/lib/owner-map-geo';
 import {loadOwnerMap, ownerMapFixture} from '~/lib/owner-map-data';
@@ -16,8 +14,9 @@ import {OTHER_COUNTRIES, OTHER_US_STATES, bucketLabel, type Snapshot} from '~/li
  * buckets only (app/lib/owner-map.ts holds the suppression rules, README
  * "Owners map" the whole feature). Words live in `content/copy/owners.json`.
  *
- * The page also carries the opt-in pilot map (app/components/PilotMap.tsx)
- * while PILOT_MAP_ENABLED is "1". What a viewer may see of it is decided in
+ * The page is one map (app/components/OwnersMap.tsx) under one card; the
+ * opt-in pilot map (app/components/OwnersPilot.tsx) lives in that card and on
+ * that map while PILOT_MAP_ENABLED is "1". What a viewer may see of it is decided in
  * the loader from the session; with the flag on, the response is per viewer
  * and never cached.
  */
@@ -64,17 +63,12 @@ function rowsOf(snapshot: Snapshot, pick: (region: string) => string | null, poo
 function RegionList({id, title, rows}: {id: string; title: string; rows: Row[]}) {
   if (!rows.length) return null;
   return (
-    <section aria-labelledby={id} className="owners-list">
-      <h3 id={id} className="owners-list-title">
-        {title}
-      </h3>
+    <section aria-labelledby={id}>
+      <h2 id={id}>{title}</h2>
       <ul>
         {rows.map((row) => (
           <li key={row.id}>
-            <span>{row.name}</span>
-            <span className="owners-list-range">
-              {bucketLabel(row.bucket)} {copyText('owners.list_range') ?? 'owners'}
-            </span>
+            {row.name}: {bucketLabel(row.bucket)} {copyText('owners.list_range') ?? 'owners'}
           </li>
         ))}
       </ul>
@@ -82,13 +76,8 @@ function RegionList({id, title, rows}: {id: string; title: string; rows: Row[]})
   );
 }
 
-function monthOf(ms: number): string {
-  return new Date(ms).toLocaleDateString('en', {month: 'long', year: 'numeric', timeZone: 'UTC'});
-}
-
 export default function OwnersRoute({loaderData}: Route.ComponentProps) {
   const {snapshot, fixture, pilot, notice} = loaderData;
-  const hasRegions = snapshot !== null && Object.keys(snapshot.regions).length > 0;
 
   const countries = snapshot
     ? rowsOf(
@@ -108,61 +97,11 @@ export default function OwnersRoute({loaderData}: Route.ComponentProps) {
     : [];
 
   return (
-    <EditorialShell slug="owners" rail={false} reveal={false} pageClassName="owners-page">
-      <header className="editorial-hero">
-        <Txt id="owners.eyebrow" as="p" className="editorial-eyebrow" />
-        <Txt id="owners.title" as="h1" className="editorial-title" />
-        <Txt id="owners.lead" as="p" className="editorial-lead" />
-      </header>
-
-      {snapshot && snapshot.total !== null ? (
-        <dl className="owners-stats">
-          <div>
-            <dt>{copyText('owners.stat_owners_label') ?? 'owners'}</dt>
-            <dd {...editAttrs('owners.stat_owners')}>
-              {copyFill('owners.stat_owners', '{n}+', {n: snapshot.total.toLocaleString('en')})}
-            </dd>
-          </div>
-          <div>
-            <dt>{copyText('owners.stat_countries_label') ?? 'countries'}</dt>
-            <dd {...editAttrs('owners.stat_countries')}>
-              {copyFill('owners.stat_countries', '{n}', {n: snapshot.countries.toLocaleString('en')})}
-            </dd>
-          </div>
-        </dl>
-      ) : null}
-
-      {snapshot && hasRegions ? (
-        <section className="owners-map-section" aria-labelledby="owners-map-title">
-          <h2 id="owners-map-title" className="editorial-section-title">
-            <Txt id="owners.map_title" />
-          </h2>
-          <OwnerMap snapshot={snapshot} />
-          <p className="owners-meta">
-            {fixture
-              ? copyText('owners.fixture_note')
-              : copyFill('owners.updated', 'Updated {month}.', {month: monthOf(snapshot.generatedAt)})}
-          </p>
-          <div className="owners-lists">
-            <h2 className="editorial-section-title">
-              <Txt id="owners.list_title" />
-            </h2>
-            <div className="owners-lists-grid">
-              <RegionList id="owners-list-countries" title={copyText('owners.list_countries') ?? 'Countries'} rows={countries} />
-              <RegionList id="owners-list-states" title={copyText('owners.list_states') ?? 'United States by state'} rows={states} />
-            </div>
-          </div>
-        </section>
-      ) : (
-        <Txt id="owners.empty" as="p" className="owners-empty" />
-      )}
-
-      {pilot.enabled ? <PilotMap panel={pilot} notice={notice} /> : null}
-
-      <section className="editorial-section owners-how">
-        <Txt id="owners.how_title" as="h2" className="editorial-section-title" />
-        <Txt id="owners.how_body" as="p" />
-      </section>
-    </EditorialShell>
+    <OwnersMap snapshot={snapshot} fixture={fixture} panel={pilot.enabled ? pilot : null} notice={notice}>
+      <div className="sr-only">
+        <RegionList id="owners-list-countries" title={copyText('owners.list_countries') ?? 'Countries'} rows={countries} />
+        <RegionList id="owners-list-states" title={copyText('owners.list_states') ?? 'United States by state'} rows={states} />
+      </div>
+    </OwnersMap>
   );
 }

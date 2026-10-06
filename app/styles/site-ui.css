@@ -1650,111 +1650,40 @@ html.light .footer-ref {
 .header-pod-early-note { padding: var(--sp-1) var(--sp-2) var(--sp-2); font-size: 12px; }
 
 /* ============================================
-   /owners: the owners map (app/routes/owners.tsx, app/components/OwnerMap.tsx)
+   /owners: one map and one card (app/components/OwnersMap.tsx)
+   The card is .visit-card from /visit; the map palette is the --map-*
+   tokens in app.css, shared with the /visit map.
    ============================================ */
 
-/* Wider than the reading column, like /preorder: a world map needs the room.
-   The watermark stays off, it would sit behind the map. */
-.editorial-shell:has(> .editorial-page.owners-page) {
-  grid-template-columns: minmax(0, 1120px);
-  justify-content: center;
+/* The map is the page: edge to edge under the header. A strip of page stays
+   below it so a touch or a wheel always has somewhere to scroll to the footer. */
+.site-main:has(.owners-map) {
+  padding-top: var(--header-height);
 }
-.editorial-shell:has(> .editorial-page.owners-page) > .editorial-watermark {
-  display: none;
-}
-.editorial-page.owners-page {
-  max-width: 1120px;
-  min-width: 0;
-  width: 100%;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 3rem;
-}
-.owners-page .editorial-hero,
-.owners-page .editorial-section {
-  margin: 0;
-}
-.owners-page .editorial-lead {
-  max-width: 40rem;
-}
-.owners-page .editorial-section-title {
-  margin: 0 0 var(--sp-4);
-}
-
-/* Headline numbers: two tiles, mono labels like the rest of the site. */
-.owners-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-3);
-  margin: 0;
-}
-.owners-stats > div {
-  display: flex;
-  flex-direction: column-reverse;
-  gap: var(--sp-1);
-  min-width: 10rem;
-  padding: var(--sp-4) var(--sp-5);
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-md);
-  background: var(--color-bg-card);
-}
-.owners-stats dt {
-  font-family: var(--font-mono);
-  font-size: var(--fs-label);
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-.owners-stats dd {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: var(--fs-2xl);
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-text);
-}
-
-.owner-map {
-  /* Seven buckets as one amber ramp with a clear lightness step each.
-     Dark: neutral land, then brighter toward the brand gold. Light: neutral
-     land, then deeper toward brown, because the gold itself is only 1.6:1 on
-     the light surface. The lowest step stays at least 1.3:1 off the land. */
-  --owner-neutral: color-mix(in srgb, var(--color-text) 11%, var(--color-bg-card));
-  --owner-b0: oklch(0.40 0.08 75);
-  --owner-b1: oklch(0.52 0.11 76);
-  --owner-b2: oklch(0.64 0.13 78);
-  --owner-b3: oklch(0.72 0.15 80);
-  --owner-b4: oklch(0.78 0.16 82);
-  --owner-b5: oklch(0.84 0.15 85);
-  --owner-b6: var(--color-gold);
-  margin: 0;
-}
-html.light .owner-map {
-  --owner-neutral: color-mix(in srgb, var(--color-text) 9%, var(--color-bg-card));
-  --owner-b0: oklch(0.82 0.12 90);
-  --owner-b1: oklch(0.75 0.14 85);
-  --owner-b2: oklch(0.68 0.15 78);
-  --owner-b3: oklch(0.60 0.15 70);
-  --owner-b4: oklch(0.52 0.13 62);
-  --owner-b5: oklch(0.44 0.11 55);
-  --owner-b6: oklch(0.36 0.09 50);
-}
-.owner-map-frame {
+.owners-map {
   position: relative;
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-lg);
-  background: var(--color-bg-card);
+  height: calc(100dvh - var(--header-height) - 3rem);
+  min-height: 30rem;
   overflow: hidden;
+  background: var(--map-water);
 }
-.owner-map-svg {
+.owners-stage {
+  position: absolute;
+  inset: 0;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.owners-stage[data-placing='1'] {
+  cursor: crosshair;
+}
+.owners-svg {
   display: block;
-  width: 100%;
-  height: auto;
-  touch-action: manipulation;
 }
-.owner-map-status {
+.owners-status {
+  position: absolute;
+  inset: 0;
   display: grid;
   place-items: center;
   margin: 0;
@@ -1762,328 +1691,54 @@ html.light .owner-map {
   font-size: var(--fs-sm);
   color: var(--color-text-muted);
 }
-.owner-map-region {
-  fill: var(--owner-neutral);
-  stroke: var(--color-bg-card);
-  stroke-width: 0.6;
+
+/* Land: plain where unpublished. Published regions are the lab-building look
+   from /visit: gold outline, translucent gold fill, stronger per range. */
+.owners-land {
+  fill: var(--map-land);
+  stroke: var(--map-line-strong);
+  stroke-width: 0.7px;
   stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
 }
-.owner-map-svg .owner-map-region {
+.owners-land[data-b] {
+  fill: var(--color-gold-fill);
+  stroke: var(--color-gold-fill);
+  stroke-opacity: 0.8;
+  stroke-width: 1.2px;
+}
+.owners-land[data-b='0'] { fill-opacity: 0.16; }
+.owners-land[data-b='1'] { fill-opacity: 0.24; }
+.owners-land[data-b='2'] { fill-opacity: 0.32; }
+.owners-land[data-b='3'] { fill-opacity: 0.42; }
+.owners-land[data-b='4'] { fill-opacity: 0.52; }
+.owners-land[data-b='5'] { fill-opacity: 0.63; }
+.owners-land[data-b='6'] { fill-opacity: 0.75; }
+.owners-land.is-active {
+  stroke: var(--color-text);
+  stroke-opacity: 0.7;
+  stroke-width: 1.5px;
+}
+.owners-land.is-active:not([data-b]) {
+  fill: var(--map-line);
+}
+
+/* Pilot dots: the .visit-map-pin dot, with its ring. */
+.owners-pin {
   cursor: pointer;
-  transition: fill 120ms;
 }
-.owner-map-region[data-b='0'] { fill: var(--owner-b0); }
-.owner-map-region[data-b='1'] { fill: var(--owner-b1); }
-.owner-map-region[data-b='2'] { fill: var(--owner-b2); }
-.owner-map-region[data-b='3'] { fill: var(--owner-b3); }
-.owner-map-region[data-b='4'] { fill: var(--owner-b4); }
-.owner-map-region[data-b='5'] { fill: var(--owner-b5); }
-.owner-map-region[data-b='6'] { fill: var(--owner-b6); }
-/* Legend swatches are HTML boxes, not SVG paths: same ramp, as background. */
-.owner-map-swatch { background: var(--owner-neutral); }
-.owner-map-swatch[data-b='0'] { background: var(--owner-b0); }
-.owner-map-swatch[data-b='1'] { background: var(--owner-b1); }
-.owner-map-swatch[data-b='2'] { background: var(--owner-b2); }
-.owner-map-swatch[data-b='3'] { background: var(--owner-b3); }
-.owner-map-swatch[data-b='4'] { background: var(--owner-b4); }
-.owner-map-swatch[data-b='5'] { background: var(--owner-b5); }
-.owner-map-swatch[data-b='6'] { background: var(--owner-b6); }
-.owner-map-region.is-active {
+.owners-pin-halo {
+  fill: color-mix(in srgb, var(--color-bg) 70%, transparent);
+}
+.owners-pin-dot {
+  fill: var(--color-gold-fill);
+}
+.owners-pin.is-own .owners-pin-dot,
+.owners-pin.is-active .owners-pin-dot {
   stroke: var(--color-text);
   stroke-width: 2px;
-  vector-effect: non-scaling-stroke;
 }
-.owner-map-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-1);
-  margin-bottom: var(--sp-3);
-}
-.owner-map-tab {
-  padding: 0.3rem 0.8rem;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: transparent;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  cursor: pointer;
-}
-.owner-map-tab[aria-pressed='true'] {
-  border-color: var(--color-gold);
-  color: var(--color-text);
-}
-.owner-map-readout {
-  position: absolute;
-  left: var(--sp-3);
-  bottom: var(--sp-3);
-  max-width: calc(100% - 2 * var(--sp-3));
-  margin: 0;
-  padding: 0.35rem 0.7rem;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-bg);
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  color: var(--color-text);
-  pointer-events: none;
-}
-.owner-map-legend {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--sp-2) var(--sp-4);
-  margin-top: var(--sp-3);
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  color: var(--color-text-muted);
-}
-.owner-map-legend-title {
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-}
-.owner-map-legend ul {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-1) var(--sp-3);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.owner-map-legend li {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-.owner-map-swatch {
-  width: 0.9rem;
-  height: 0.9rem;
-  border-radius: 3px;
-  stroke: none;
-  border: 1px solid var(--color-border);
-}
-.owners-meta {
-  margin: var(--sp-3) 0 0;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  color: var(--color-text-muted);
-}
-.owners-empty {
-  margin: 0;
-  max-width: 40rem;
-  color: var(--color-text-muted);
-}
-
-/* The text twin of the map: every published region, readable without it. */
-.owners-lists {
-  margin-top: var(--sp-6);
-}
-.owners-lists-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
-  gap: var(--sp-5) var(--sp-6);
-  align-items: start;
-}
-.owners-list-title {
-  margin: 0 0 var(--sp-2);
-  font-family: var(--font-mono);
-  font-size: var(--fs-label);
-  font-weight: 500;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-.owners-list ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  border-top: 1px solid var(--color-border);
-}
-.owners-list li {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--sp-3);
-  padding: 0.5rem 0;
-  border-bottom: 1px solid var(--color-border);
-  font-size: var(--fs-base);
-}
-.owners-list-range {
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  font-variant-numeric: tabular-nums;
-  color: var(--color-text-muted);
-  white-space: nowrap;
-}
-.owners-how {
-  max-width: 40rem;
-}
-
-/* On a phone the readout would cover a third of the map: it sits under it. */
-@media (max-width: 640px) {
-  .owner-map-readout {
-    position: static;
-    max-width: none;
-    border: 0;
-    border-top: 1px solid var(--color-border);
-    border-radius: 0;
-    background: transparent;
-  }
-}
-
-/* ============================================
-   /owners pilot map: "Find pilots near you" (app/components/PilotMap.tsx)
-   ============================================ */
-.pilot-section {
-  display: grid;
-  gap: var(--sp-4);
-  max-width: none;
-  padding-top: 0;
-}
-.pilot-section .editorial-section-title {
-  margin: 0;
-}
-.pilot-lead {
-  max-width: 40rem;
-  margin: 0;
-}
-.pilot-count {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-.pilot-layout {
-  display: grid;
-  gap: var(--sp-5);
-  align-items: start;
-}
-.pilot-side,
-.pilot-main {
-  display: grid;
-  gap: var(--sp-4);
-  min-width: 0;
-}
-@media (min-width: 960px) {
-  .pilot-layout {
-    grid-template-columns: 20rem minmax(0, 1fr);
-    gap: var(--sp-6);
-  }
-  .pilot-main .pilot-subtitle {
-    margin-top: 0;
-  }
-}
-.pilot-card {
-  display: grid;
-  gap: var(--sp-3);
-  justify-items: start;
-  max-width: 40rem;
-  padding: var(--sp-5);
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-md);
-  background: var(--color-bg-card);
-}
-.pilot-card[data-state='on'] {
-  border-color: var(--color-gold);
-}
-.pilot-card p {
-  margin: 0;
-}
-.pilot-card-title,
-.pilot-subtitle {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: var(--fs-label);
-  font-weight: 500;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-.pilot-subtitle {
-  margin-top: var(--sp-3);
-}
-.pilot-muted {
-  font-size: var(--fs-sm);
-  color: var(--color-text-muted);
-}
-.pilot-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-2);
-}
-.pilot-check {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: var(--sp-3);
-  align-items: start;
-  cursor: pointer;
-}
-.pilot-check input {
-  margin-top: 0.3rem;
-  accent-color: var(--color-gold);
-}
-.pilot-draft {
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  color: var(--color-text);
-}
-.pilot-notice,
-.pilot-error {
-  margin: 0;
-  padding: var(--sp-3) var(--sp-4);
-  max-width: 40rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-md);
-  font-size: var(--fs-sm);
-}
-.pilot-notice[data-tone='ok'] {
-  border-color: var(--color-gold);
-}
-.pilot-error {
-  border-color: var(--color-error);
-  color: var(--color-error);
-}
-
-.pilot-world .owner-map-frame {
-  position: relative;
-}
-.pilot-world .owner-map-region {
-  stroke: color-mix(in srgb, var(--color-text) 35%, var(--color-bg-card));
-  stroke-width: 0.8px;
-  vector-effect: non-scaling-stroke;
-}
-.pilot-world .owner-map-frame {
-  background: color-mix(in srgb, var(--color-text) 3%, var(--color-bg-card));
-}
-.pilot-world .owner-map-region.pilot-country {
-  fill: color-mix(in srgb, var(--color-text) 21%, var(--color-bg-card));
-}
-html.light .pilot-world .owner-map-region.pilot-country {
-  fill: color-mix(in srgb, var(--color-text) 10%, var(--color-bg-card));
-}
-.pilot-world-svg {
-  cursor: grab;
-  user-select: none;
-}
-.pilot-world-svg[data-placing='1'] {
-  cursor: crosshair;
-}
-.pilot-country {
-  cursor: inherit;
-}
-.pilot-marker {
-  cursor: pointer;
-}
-.pilot-marker circle {
-  fill: var(--color-gold);
-  stroke: var(--color-bg);
-  stroke-width: 2;
-  vector-effect: non-scaling-stroke;
-}
-.pilot-marker text {
+.owners-pin text {
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
@@ -2091,71 +1746,29 @@ html.light .pilot-world .owner-map-region.pilot-country {
   fill: var(--color-bg);
   pointer-events: none;
 }
-.pilot-marker.is-own circle {
+/* The real ~10 km cell, like the lab building: gold outline, translucent fill. */
+.owners-cell {
+  fill: var(--color-gold-fill);
+  fill-opacity: 0.3;
   stroke: var(--color-text);
+  stroke-opacity: 0.85;
+  stroke-width: 1.5px;
+  stroke-linejoin: round;
 }
-.pilot-marker.is-active circle {
-  stroke: var(--color-text);
-  stroke-width: 3;
+.owners-cell.is-own {
+  fill-opacity: 0.14;
 }
-.pilot-draft-marker .pilot-draft-ring {
+.owners-draft-ring {
   fill: none;
   stroke: var(--color-text);
   stroke-width: 1.5;
   stroke-dasharray: 4 3;
 }
-/* The real ~10 km cell: a translucent square that grows with the zoom. */
-.pilot-cell-square {
-  fill: color-mix(in srgb, var(--color-gold) 38%, transparent);
-  stroke: var(--color-text);
-  stroke-width: 1.5px;
-  vector-effect: non-scaling-stroke;
-}
-.pilot-cell-square.is-own {
-  fill: color-mix(in srgb, var(--color-gold) 24%, transparent);
-  stroke-width: 1px;
-}
-.pilot-world .owner-map-svg {
-  min-height: 360px;
-}
-@media (min-width: 960px) {
-  .pilot-world .owner-map-svg {
-    min-height: 480px;
-  }
-}
-.pilot-facts {
-  padding: var(--sp-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--r-md);
-  font-size: var(--fs-sm);
-}
-.pilot-facts-title {
-  margin: 0 0 var(--sp-2);
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  font-weight: 500;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-.pilot-facts ul {
-  display: grid;
-  gap: var(--sp-1);
-  margin: 0;
-  padding-left: 1.1rem;
-}
-.pilot-preview {
-  min-width: 0;
-  opacity: 0.55;
-  filter: grayscale(1);
-  pointer-events: none;
-  user-select: none;
-}
-.pilot-draft-marker .pilot-draft-dot {
+.owners-draft-dot {
   fill: var(--color-text);
-  stroke: none;
 }
-.pilot-zoom {
+
+.owners-zoom {
   position: absolute;
   top: var(--sp-3);
   right: var(--sp-3);
@@ -2163,62 +1776,204 @@ html.light .pilot-world .owner-map-region.pilot-country {
   flex-direction: column;
   gap: var(--sp-1);
 }
-.pilot-zoom .od-btn-icon {
-  background: var(--color-bg);
+.owners-zoom .od-btn-icon {
+  background: var(--color-bg-card);
 }
-.pilot-caption {
-  display: grid;
-  gap: var(--sp-2);
-  margin-top: var(--sp-3);
+
+/* The card: .visit-card, floated over the map. A bottom sheet on phones. */
+.owners-card {
+  position: absolute;
+  top: var(--sp-4);
+  left: var(--sp-4);
+  width: min(22rem, calc(100% - 2 * var(--sp-4)));
+  max-height: calc(100% - 2 * var(--sp-4));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  cursor: default;
 }
-.pilot-caption p {
-  margin: 0;
+.owners-card > :last-child {
+  margin-bottom: 0;
 }
-.pilot-selected-title {
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
+.owners-card-title {
+  margin: 0.35rem 0 0.5rem;
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
   color: var(--color-text);
 }
-.pilot-names {
+.owners-lead {
+  margin: 0 0 0.9rem;
+}
+.owners-readout {
+  margin: 0 0 0.9rem;
+  padding: 0.55rem 0;
+  border-block: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-gold-text);
+  min-height: 2.6rem;
+}
+.owners-pilot {
+  margin: 0 0 0.9rem;
+  display: grid;
+  gap: 0.5rem;
+  justify-items: start;
+}
+.owners-pilot > *,
+.owners-pilot form > * {
+  margin: 0;
+}
+.owners-pilot form {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: start;
+}
+.owners-pilot-count,
+.owners-pilot-title {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text);
+}
+.owners-muted,
+.owners-draft {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+.owners-draft {
+  color: var(--color-text);
+}
+.owners-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--sp-1) var(--sp-4);
-  margin: var(--sp-1) 0 0;
+  gap: var(--sp-2);
+}
+.owners-check {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: flex-start;
+  font-size: 0.8rem;
+}
+.owners-check input {
+  margin-top: 0.2rem;
+  accent-color: var(--color-gold-fill);
+}
+.owners-facts {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+.owners-facts summary,
+.owners-how summary {
+  cursor: pointer;
+}
+.owners-facts ul {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.25rem;
+}
+.owners-note,
+.owners-error {
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-sm);
+  font-size: 0.8rem;
+}
+.owners-note[data-tone='ok'] {
+  border-color: var(--color-gold-fill);
+}
+.owners-error {
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+.owners-how {
+  margin: 0 0 0.6rem;
+}
+.owners-how .visit-card-note {
+  margin: 0.5rem 0 0;
+}
+.owners-dev {
+  color: var(--color-gold-text);
+}
+
+/* The popover for a pilot dot: a small .visit-card. */
+.owners-pop {
+  position: absolute;
+  width: max-content;
+  max-width: 15rem;
+  padding: 0.7rem 1.9rem 0.7rem 0.85rem;
+  cursor: default;
+}
+.owners-pop-title {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text);
+}
+.owners-pop-close {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.4rem;
+  border: 0;
+  background: none;
+  font-size: 1.2rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.owners-names {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0.4rem 0 0;
   padding: 0;
   list-style: none;
 }
-.pilot-names a {
+.owners-names a {
   color: var(--color-text);
   text-decoration: underline;
-  text-decoration-color: var(--color-gold);
+  text-decoration-color: var(--color-gold-fill);
   text-underline-offset: 0.2em;
 }
-.pilot-you {
+.owners-you {
   margin-left: 0.4rem;
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   color: var(--color-text-muted);
 }
-.pilot-list summary {
-  cursor: pointer;
-  font-family: var(--font-mono);
-  font-size: var(--fs-label);
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-.pilot-list ul {
-  margin: var(--sp-2) 0 0;
-  padding: 0;
-  list-style: none;
-  border-top: 1px solid var(--color-border);
-}
-.pilot-list li {
-  padding: 0.5rem 0;
-  border-bottom: 1px solid var(--color-border);
-}
-.pilot-list-area {
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  color: var(--color-text-muted);
+
+@media (max-width: 640px) {
+  .owners-map {
+    height: calc(100dvh - var(--header-height) - 2.5rem);
+  }
+  .owners-card {
+    top: auto;
+    left: var(--sp-2);
+    right: var(--sp-2);
+    bottom: var(--sp-2);
+    width: auto;
+    max-height: 56%;
+    padding: 1rem;
+  }
+  .owners-card-title {
+    font-size: 1.15rem;
+    margin-bottom: 0.3rem;
+  }
+  .owners-lead {
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+  }
+  /* Placing a pin on a phone: only the form, so the map above stays tappable. */
+  .owners-card[data-placing] .owners-lead,
+  .owners-card[data-placing] .owners-readout,
+  .owners-card[data-placing] .owners-card-title {
+    display: none;
+  }
+  .owners-readout {
+    margin-bottom: 0.6rem;
+    padding: 0.4rem 0;
+    min-height: 0;
+  }
 }

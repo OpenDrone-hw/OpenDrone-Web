@@ -641,7 +641,9 @@ Discord user id (privacy policy, section 2).
 
 ## Owners map
 
-`/owners` shows where owners are, as published ranges only. Rules live in `app/lib/owner-map.ts` (tested), the Worker side in `app/lib/owner-map-data.ts`, the page in `app/routes/owners.tsx` and `app/components/OwnerMap.tsx`, words in `content/copy/owners.json`.
+`/owners` shows where owners are, as published ranges only. Rules live in `app/lib/owner-map.ts` (tested), the Worker side in `app/lib/owner-map-data.ts`, the page in `app/routes/owners.tsx`, the map in `app/components/OwnersMap.tsx` (geometry helpers in `app/lib/owner-map-draw.ts`), words in `content/copy/owners.json`.
+
+The page is one full-width map under the site header with one `.visit-card` over it (a bottom sheet on phones), styled like `/visit` (shared `--map-*` colour tokens in `app/styles/app.css`). Drag pans, the wheel, pinch and the buttons zoom; the default framing is Europe and the US is a pan away. Countries and US states with a published range are filled in gold, stronger per range; hovering or tapping a region names its range in the card. A screen-reader list carries the same figures as text.
 
 | Step | What happens |
 |---|---|
@@ -649,19 +651,19 @@ Discord user id (privacy policy, section 2).
 | Schedule | The Worker's five-minute cron reads one D1 row set and recomputes only when the snapshot is missing or 30 days old (needs `SUPPORT_DB` and the Admin token). A failed run waits 6 hours |
 | Suppress | A country or US state needs 5 owners. Small US states pool into "Other US states", small countries into "Other countries"; a pool shows only at 5 or more |
 | Store | Table `owner_map_snapshot` (migration 0009) keeps buckets (5-9, 10-24, 25-49, 50-99, 100-249, 250-499, 500+), the total rounded down to 10 and the country count. Orders and addresses are never stored |
-| Draw | d3-geo and topojson-client draw SVG from `public/geo/countries-110m.json` (`countries-50m.json` for the signed-in pilot map; world-atlas, Natural Earth, public domain) and `states-10m.json` (us-atlas, US Census). All are ISC-packaged copies from `node_modules`; no tiles, no third-party request, CSP unchanged |
+| Draw | d3-geo and topojson-client draw SVG from `public/geo/countries-50m.json` (world-atlas, Natural Earth, public domain) and `states-10m.json` (us-atlas, US Census). All are ISC-packaged copies from `node_modules`; no tiles, no third-party request, CSP unchanged |
 
 Local development: `OWNER_MAP_FIXTURE=1` in `.env` shows fixture counts through the same suppression and never reads orders. On the dev server the fixture is also used when the Admin token is missing. A deployed build without a snapshot shows the empty state, never invented numbers; a unit test keeps `OWNER_MAP_FIXTURE` out of both wrangler files. The migration is applied like the others (`npx wrangler d1 migrations apply SUPPORT_DB --remote --config wrangler.production.toml`) before the deploy.
 
 ### Pilot map ("Find pilots near you")
 
-Optional second part of `/owners`, off unless `PILOT_MAP_ENABLED` is `"1"` (and `ACCOUNTS_ENABLED`, `SUPPORT_DB`). Off in both wrangler files; turning it on in production needs the founder's go. Rules in `app/lib/pilot-map.ts`, storage and Discord in `app/lib/pilot-map-data.ts`, request glue in `app/lib/pilot-map-server.ts`, UI in `app/components/PilotMap.tsx`; all tested.
+Optional part of the `/owners` card and map, off unless `PILOT_MAP_ENABLED` is `"1"` (and `ACCOUNTS_ENABLED`, `SUPPORT_DB`). Off in both wrangler files; turning it on in production needs the founder's go. Rules in `app/lib/pilot-map.ts`, storage and Discord in `app/lib/pilot-map-data.ts`, request glue in `app/lib/pilot-map-server.ts`, UI in `app/components/OwnersPilot.tsx` (the card block) and `app/components/OwnersMap.tsx` (the dots); all tested.
 
 | Who | Sees |
 |---|---|
-| Signed out | The number of pilots and a sign-in link |
+| Signed out | The number of pilots and a sign-in link in the card, no dots |
 | Signed in, no paid not cancelled order | The number and a note |
-| Owner (paid or partly refunded, not cancelled order, read live from Shopify, cached 1 h in a signed cookie) | Cells of about 10 km with counts, Discord usernames with a `discord.com/users/<id>` link |
+| Owner (paid or partly refunded, not cancelled order, read live from Shopify, cached 1 h in a signed cookie) | Gold dots on the map for cells of about 10 km (a count when more than one); a tap on a dot opens a popover with Discord usernames and a `discord.com/users/<id>` link. Linking, placing (tap the map, two consent boxes), moving and withdrawing are in the card |
 
 | Route | Purpose |
 |---|---|
