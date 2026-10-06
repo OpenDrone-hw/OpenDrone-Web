@@ -37,6 +37,8 @@ export type ChatFpvEnv = {
   CHATFPV_ASK_ENABLED?: string;
   /** "1": the ChatFPV iframe widget on product and preorder pages. */
   CHATFPV_WIDGET_ENABLED?: string;
+  /** "1" on previews: every call carries X-ChatFPV-Synthetic, so ChatFPV stores it as test traffic, not customer demand. */
+  CHATFPV_SYNTHETIC?: string;
 };
 
 export const CHATFPV_TIMEOUT_MS = 20_000;
@@ -59,6 +61,8 @@ export function draftsEnabled(env: ChatFpvEnv): boolean {
   return true;
 }
 export const askEnabled = (env: ChatFpvEnv) => on(env.CHATFPV_ASK_ENABLED) && Boolean(env.CHATFPV_URL);
+/** The test-traffic mark for ChatFPV (README "Synthetic traffic" in ChatFPV), sent only when CHATFPV_SYNTHETIC is "1". */
+export const syntheticHeader = (env: ChatFpvEnv): Record<string, string> => (on(env.CHATFPV_SYNTHETIC) ? {'X-ChatFPV-Synthetic': '1'} : {});
 export const widgetEnabled = (env: ChatFpvEnv) => on(env.CHATFPV_WIDGET_ENABLED) && Boolean(chatFpvOrigin(env));
 
 /** The https origin of CHATFPV_URL, or null. */
@@ -503,6 +507,7 @@ export function createChatFpvClient(env: ChatFpvEnv, fetcher?: typeof fetch, opt
           'Content-Type': 'application/json',
           Accept: 'application/json',
           ...(env.CHATFPV_KEY ? {'X-ChatFPV-Key': env.CHATFPV_KEY} : {}),
+          ...syntheticHeader(env),
           ...extra,
         },
         body: JSON.stringify(body),
@@ -597,6 +602,7 @@ export function createChatFpvClient(env: ChatFpvEnv, fetcher?: typeof fetch, opt
             'Content-Type': 'application/json',
             Accept: 'text/event-stream',
             ...(env.CHATFPV_KEY ? {'X-ChatFPV-Key': env.CHATFPV_KEY} : {}),
+          ...syntheticHeader(env),
             ...extra,
           },
           body: JSON.stringify(body),
