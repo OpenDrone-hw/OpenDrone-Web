@@ -142,7 +142,7 @@ export function placeAt(geo: Geo, lat: number, lon: number): string | null {
 }
 
 /** Tabs that switch the framing. */
-export function RegionTabs({value, onChange}: {value: MapRegion; onChange: (r: MapRegion) => void}) {
+export function RegionTabs({value, onChange}: {value: MapRegion | null; onChange: (r: MapRegion) => void}) {
   return (
     <div className="owner-map-tabs" role="group" aria-label={copyText('owners.region_label') ?? 'Map view'}>
       {MAP_REGIONS.map((r) => (
