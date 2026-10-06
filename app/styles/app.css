@@ -11308,6 +11308,23 @@ html.light .editorial-watermark {
   }
 }
 
+/* Map palette, from scripts/gen-visit-map.py: the /visit map and the /owners
+   map draw from the same land, water and line colours. */
+:root {
+  --map-land: #121813;
+  --map-water: #0f1c24;
+  --map-water-line: #16303d;
+  --map-line: #26262c;
+  --map-line-strong: #32323a;
+}
+html.light {
+  --map-land: #e6e3dc;
+  --map-water: #d6e4ec;
+  --map-water-line: #bcd3df;
+  --map-line: #dcd8cf;
+  --map-line-strong: #cdc8bd;
+}
+
 /* Map of the Vaartkom behind /visit (scripts/gen-visit-map.py). The canvas
    is the SVG at one pixel per metre, offset so the lab sits on --pin-x /
    --pin-y. Only the active theme's file is requested: it is a background
@@ -11344,7 +11361,7 @@ html.light .editorial-watermark {
   top: calc(var(--pin-y) - var(--lab-y));
   width: var(--map-w);
   height: var(--map-h);
-  background: url('/makerspace/map-dark.svg') 0 0 / 100% 100% no-repeat;
+  background: var(--map-land) url('/makerspace/map-dark.svg') 0 0 / 100% 100% no-repeat;
 }
 
 html.light .visit-map-canvas {
@@ -18919,4 +18936,16 @@ summary,
 }
 .pdp-build .hero-build-guide {
   animation: none;
+}
+
+.home-community-owners {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.home-community-owners:hover {
+  color: var(--color-text);
 }

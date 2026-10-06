@@ -1,5 +1,5 @@
 import {Suspense, type ReactNode} from 'react';
-import {Await} from 'react-router';
+import {Await, Link} from 'react-router';
 import {DISCORD_INVITE_URL} from '~/lib/company';
 import {copyFill, copyText, editAttrs} from '~/lib/copy';
 import type {DiscordCounts} from '~/lib/discord-community';
@@ -131,6 +131,9 @@ export function CommunitySection({
             <DiscordMark size={16} />
             {copyText('home.community_cta') ?? 'Join the Discord'}
           </DiscordLink>
+          <Link to="/owners" prefetch="intent" className="home-community-owners">
+            <Txt id="home.community_owners_link" fallback="See where owners are" /> <span aria-hidden="true">→</span>
+          </Link>
         </div>
         <ul className="home-community-reasons">
           {REASONS.map((key) => (

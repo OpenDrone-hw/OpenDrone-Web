@@ -23,6 +23,7 @@ const STATIC_PATHS = [
   '/open-source',
   '/production',
   '/visit',
+  '/owners',
   '/roadmap',
   '/timeline',
   '/firmware-partners',

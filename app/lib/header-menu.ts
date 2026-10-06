@@ -7,5 +7,6 @@ export const HEADER_MENU_LINKS: ReadonlyArray<{to: string; copy: string}> = [
   {to: '/preorder', copy: 'chrome.nav_preorder'},
   {to: '/wholesale', copy: 'chrome.nav_trade'},
   {to: '/newsletter', copy: 'chrome.nav_newsletter'},
+  {to: '/owners', copy: 'chrome.nav_owners'},
   {to: '/support', copy: 'chrome.nav_contact'},
 ];

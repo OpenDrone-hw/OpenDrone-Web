@@ -1648,3 +1648,319 @@ html.light .footer-ref {
 .home-mobile-early-note { margin-top: -8px; font-size: 13px; }
 .related-early-note { margin-top: 12px; font-size: 13px; }
 .header-pod-early-note { padding: var(--sp-1) var(--sp-2) var(--sp-2); font-size: 12px; }
+
+/* ============================================
+   /owners: one map and one card (app/components/OwnersMap.tsx)
+   The card is .visit-card from /visit; the map palette is the --map-*
+   tokens in app.css, shared with the /visit map.
+   ============================================ */
+
+/* The map is the page: edge to edge under the header. A strip of page stays
+   below it so a touch or a wheel always has somewhere to scroll to the footer. */
+.site-main:has(.owners-map) {
+  padding-top: 0;
+}
+.owners-map {
+  position: relative;
+  height: 100dvh;
+  min-height: 30rem;
+  overflow: hidden;
+  background: var(--map-water);
+}
+.owners-stage {
+  position: absolute;
+  inset: 0;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.owners-stage[data-placing='1'] {
+  cursor: crosshair;
+}
+.owners-svg {
+  display: block;
+}
+.owners-status {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+}
+
+/* Land: plain where unpublished. Published regions are the lab-building look
+   from /visit: gold outline, translucent gold fill, stronger per range. */
+.owners-land {
+  fill: var(--map-land);
+  stroke: var(--map-line-strong);
+  stroke-width: 0.7px;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.owners-land[data-b] {
+  fill: var(--color-gold-fill);
+  stroke: var(--color-gold-fill);
+  stroke-opacity: 0.8;
+  stroke-width: 0.9px;
+}
+.owners-land[data-b='0'] { fill-opacity: 0.1; stroke-opacity: 0.55; }
+.owners-land[data-b='1'] { fill-opacity: 0.18; }
+.owners-land[data-b='2'] { fill-opacity: 0.26; }
+.owners-land[data-b='3'] { fill-opacity: 0.35; }
+.owners-land[data-b='4'] { fill-opacity: 0.45; }
+.owners-land[data-b='5'] { fill-opacity: 0.56; }
+.owners-land[data-b='6'] { fill-opacity: 0.67; }
+.owners-land[data-b='7'] { fill-opacity: 0.78; }
+.owners-land.is-active {
+  stroke: var(--color-text);
+  stroke-opacity: 0.7;
+  stroke-width: 1.5px;
+}
+.owners-land.is-active:not([data-b]) {
+  fill: var(--map-line);
+}
+
+/* Pilot dots: the .visit-map-pin dot, with its ring. */
+.owners-pin {
+  cursor: pointer;
+}
+.owners-pin-halo {
+  fill: color-mix(in srgb, var(--color-bg) 70%, transparent);
+}
+.owners-pin-dot {
+  fill: var(--color-gold-fill);
+}
+.owners-pin.is-own .owners-pin-dot,
+.owners-pin.is-active .owners-pin-dot {
+  stroke: var(--color-text);
+  stroke-width: 2px;
+}
+.owners-pin text {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  text-anchor: middle;
+  fill: var(--color-bg);
+  pointer-events: none;
+}
+/* The real ~10 km cell, like the lab building: gold outline, translucent fill. */
+.owners-cell {
+  fill: var(--color-gold-fill);
+  fill-opacity: 0.3;
+  stroke: var(--color-text);
+  stroke-opacity: 0.85;
+  stroke-width: 1.5px;
+  stroke-linejoin: round;
+}
+.owners-cell.is-own {
+  fill-opacity: 0.14;
+}
+.owners-draft-ring {
+  fill: none;
+  stroke: var(--color-text);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+.owners-draft-dot {
+  fill: var(--color-text);
+}
+
+.owners-zoom {
+  position: absolute;
+  top: calc(var(--header-height) + var(--sp-3));
+  right: var(--sp-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+.owners-zoom .od-btn-icon {
+  background: var(--color-bg-card);
+}
+
+/* The card: .visit-card, floated over the map. A bottom sheet on phones. */
+.owners-card {
+  position: absolute;
+  top: calc(var(--header-height) + var(--sp-4));
+  left: var(--sp-4);
+  width: min(22rem, calc(100% - 2 * var(--sp-4)));
+  max-height: calc(100% - var(--header-height) - 2 * var(--sp-4));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  cursor: default;
+}
+@media (min-width: 1280px) {
+  .owners-card {
+    top: auto;
+    bottom: var(--sp-4);
+  }
+}
+.owners-card > :last-child {
+  margin-bottom: 0;
+}
+.owners-figures {
+  margin-top: 0.4rem;
+}
+.owners-figures + .visit-card-note {
+  margin-bottom: 1rem;
+}
+.owners-pilot {
+  margin: 0 0 0.9rem;
+  display: grid;
+  gap: 0.5rem;
+  justify-items: start;
+}
+.owners-pilot > *,
+.owners-pilot form > * {
+  margin: 0;
+}
+.owners-pilot form {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: start;
+}
+.owners-pilot-title {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text);
+}
+.owners-muted,
+.owners-draft {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+.owners-draft {
+  color: var(--color-text);
+}
+.owners-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.owners-check {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: flex-start;
+  font-size: 0.8rem;
+}
+.owners-check input {
+  margin-top: 0.2rem;
+  accent-color: var(--color-gold-fill);
+}
+.owners-facts {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+.owners-facts summary {
+  cursor: pointer;
+}
+.owners-facts ul {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.25rem;
+}
+.owners-note,
+.owners-error {
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-sm);
+  font-size: 0.8rem;
+}
+.owners-note[data-tone='ok'] {
+  border-color: var(--color-gold-fill);
+}
+.owners-error {
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+
+/* The popover for a pilot dot: a small .visit-card. */
+.owners-pop {
+  position: absolute;
+  width: max-content;
+  max-width: 15rem;
+  padding: 0.7rem 1.9rem 0.7rem 0.85rem;
+  cursor: default;
+}
+.owners-pop-title {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text);
+}
+.owners-pop-close {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.4rem;
+  border: 0;
+  background: none;
+  font-size: 1.2rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.owners-names {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.owners-names a {
+  color: var(--color-text);
+  text-decoration: underline;
+  text-decoration-color: var(--color-gold-fill);
+  text-underline-offset: 0.2em;
+}
+.owners-you {
+  margin-left: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 640px) {
+  .owners-map {
+    height: 100dvh;
+  }
+  .owners-zoom {
+    top: calc(var(--header-height) + var(--sp-2));
+  }
+  .owners-card {
+    top: auto;
+    left: var(--sp-2);
+    right: var(--sp-2);
+    bottom: var(--sp-2);
+    width: auto;
+    top: auto;
+    max-height: 46%;
+    padding: 1rem 1rem 1.25rem;
+    scroll-padding-bottom: 1.25rem;
+  }
+  /* Placing a pin on a phone: only the form, so the map above stays tappable;
+     the actions stay in view at the bottom of the sheet. */
+  .owners-card[data-placing] {
+    max-height: 58%;
+  }
+  .owners-card[data-placing] .owners-figures,
+  .owners-card[data-placing] .owners-figures + .visit-card-note,
+  .owners-card[data-placing] .visit-map-credit,
+  .owners-card[data-placing] .owners-facts,
+  .owners-card[data-placing] .owners-muted {
+    display: none;
+  }
+  .owners-card[data-placing] .owners-actions {
+    position: sticky;
+    bottom: -1.25rem;
+    margin-bottom: -1.25rem;
+    padding: 0.5rem 0 1.25rem;
+    width: 100%;
+    background: var(--color-bg-card);
+  }
+}

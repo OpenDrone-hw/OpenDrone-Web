@@ -639,6 +639,50 @@ equal to the bot's secret of that name. Without it claims show "not open
 yet". This Worker stores nothing; the bot keeps order id, order name and
 Discord user id (privacy policy, section 2).
 
+## Owners map
+
+`/owners` shows where owners are, as published ranges only. Rules live in `app/lib/owner-map.ts` (tested), the Worker side in `app/lib/owner-map-data.ts`, the page in `app/routes/owners.tsx`, the map in `app/components/OwnersMap.tsx` (geometry helpers in `app/lib/owner-map-draw.ts`), words in `content/copy/owners.json`.
+
+The page is one full-width map under the site header with one `.visit-card` over it (a bottom sheet on phones), styled like `/visit` (shared `--map-*` colour tokens in `app/styles/app.css`). Drag pans, the wheel, pinch and the buttons zoom; the default framing is the whole world. Countries and US states with a published range are filled in gold, stronger per range; hovering or tapping a region shows its range in the card's figures table. A screen-reader list carries the same figures as text.
+
+| Step | What happens |
+|---|---|
+| Count | A distinct Shopify customer with a paid or partly refunded, not cancelled, non-test order with a physical line, counted once by the shipping country of their latest order; US customers also by state |
+| Schedule | The Worker's five-minute cron reads one D1 row set and recomputes only when the snapshot is missing or 30 days old (needs `SUPPORT_DB` and the Admin token). A failed run waits 6 hours |
+| Suppress | Every country and US state with an owner is published, only as a range; US states only where the United States is published |
+| Store | Table `owner_map_snapshot` (migration 0009) keeps buckets (1-4, 5-9, 10-24, 25-49, 50-99, 100-249, 250-499, 500+), the total rounded down to 10 and the country count. Orders and addresses are never stored |
+| Draw | d3-geo and topojson-client draw SVG from `public/geo/countries-50m.json` (world-atlas, Natural Earth, public domain) and `states-10m.json` (us-atlas, US Census). All are ISC-packaged copies from `node_modules`; no tiles, no third-party request, CSP unchanged |
+
+Local development: `OWNER_MAP_FIXTURE=1` in `.env` shows fixture counts through the same suppression and never reads orders. On the dev server the fixture is also used when the Admin token is missing. A deployed build without a snapshot shows the empty state, never invented numbers; a unit test keeps `OWNER_MAP_FIXTURE` out of both wrangler files. The migration is applied like the others (`npx wrangler d1 migrations apply SUPPORT_DB --remote --config wrangler.production.toml`) before the deploy.
+
+### Pilot map ("Find pilots near you")
+
+Optional part of the `/owners` card and map, off unless `PILOT_MAP_ENABLED` is `"1"` (and `ACCOUNTS_ENABLED`, `SUPPORT_DB`). Off in both wrangler files; turning it on in production needs the founder's go. Rules in `app/lib/pilot-map.ts`, storage and Discord in `app/lib/pilot-map-data.ts`, request glue in `app/lib/pilot-map-server.ts`, UI in `app/components/OwnersPilot.tsx` (the card block) and `app/components/OwnersMap.tsx` (the dots); all tested.
+
+| Who | Sees |
+|---|---|
+| Signed out | The number of pilots and a sign-in link in the card, no dots |
+| Signed in, no paid not cancelled order | The number and a note |
+| Owner (paid or partly refunded, not cancelled order, read live from Shopify, cached 1 h in a signed cookie) | Gold dots on the map for cells of about 10 km (a count when more than one); a tap on a dot opens a popover with Discord usernames and a `discord.com/users/<id>` link. Linking, placing (tap the map, two consent boxes), moving and withdrawing are in the card |
+
+| Route | Purpose |
+|---|---|
+| `GET /owners/discord` | Owner starts the Discord link: authorize URL with scope `identify`, state and PKCE S256, cookie `__Host-od_pm_oauth` (10 min) |
+| `GET /owners/discord/callback` | Checks state and customer, reads Discord id and name, revokes the token, sets cookie `__Host-od_pm_link` (1 h). Nothing is written to D1 yet |
+| `GET /api/pilot-map` | `{total}`, plus `cells` only for a qualifying owner (decided from the session on the server) |
+| `POST /api/pilot-map` | Same Origin. `intent=place` needs owner, link (or an existing pin), both consent boxes and `version=PILOT_CONSENT_VERSION`; `intent=withdraw` deletes the row |
+
+| Data | Rule |
+|---|---|
+| Table `pilot_map_pins` (migration 0010) | Customer GID, Discord id and name, cell id and centre, consent time and version. Never the clicked point |
+| Grid | Rows of 0.09 degrees latitude; columns per row tile 360 degrees at about 10 km (`snapToCell`), deterministic, no random offset |
+| Deleted by | Withdraw button, `customers/redact` and `customers/delete` (`redactCustomer`), the 3-year idle account purge, and the scheduled job 24 months after the consent |
+| Consent wording | `owners.pilot_consent_box` and `owners.pilot_age_box` in `content/copy/owners.json`; change the wording and bump `PILOT_CONSENT_VERSION` in the same commit |
+
+Environment: `DISCORD_OAUTH_CLIENT_ID` and `DISCORD_OAUTH_CLIENT_SECRET` are Worker secrets; the Discord application needs the redirect `https://opendrone.be/owners/discord/callback` (`DISCORD_OAUTH_REDIRECT` overrides). Apply migration 0010 before enabling.
+
+Local development: with `ACCOUNTS_ENABLED=1`, `ACCOUNTS_TEST_IDP=1`, `PILOT_MAP_ENABLED=1` and `npm run db:migrate:local`, sign in through the test IdP (`/account/login`); the first test customer counts as an owner (Shopify is never asked) and "Link Discord" opens a fake Discord screen (`app/lib/pilot-map-dev.ts`, imported only behind `import.meta.env.DEV`; a test scans a build for it). The privacy policy rows are drafts, not reviewed.
+
 ## Shared accounts
 
 opendrone.be signs customers in with Shopify Customer Accounts and is the

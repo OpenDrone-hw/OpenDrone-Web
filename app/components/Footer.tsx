@@ -413,6 +413,9 @@ export function Footer({company, turnstileSiteKey}: FooterProps) {
                     <FooterNavLink to="/newsletter" refNo={nextRef()}>
                       <Txt id="chrome.nav_newsletter" />
                     </FooterNavLink>
+                    <FooterNavLink to="/owners" refNo={nextRef()}>
+                      <Txt id="chrome.nav_owners" />
+                    </FooterNavLink>
                     {SOCIAL_LINKS.map((link) => (
                       <a
                         key={link.href}

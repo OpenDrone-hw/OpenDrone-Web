@@ -28,7 +28,7 @@ import {campaignEndsAt} from './preorder-campaign.ts';
 export const CLAIM_TTL_SECONDS = 600;
 /** The bot Worker's claim route; EARLY_BIRD_CLAIM_URL overrides it (staging). */
 export const DEFAULT_CLAIM_URL = 'https://opendrone-discord-bot.sales-ee0.workers.dev/early-bird';
-const PAID = new Set(['PAID', 'PARTIALLY_REFUNDED']);
+export const PAID_STATUSES = new Set(['PAID', 'PARTIALLY_REFUNDED']);
 
 export type EarlyBirdEnv = AdminEnv & {EARLY_BIRD_CLAIM_KEY?: string; EARLY_BIRD_CLAIM_URL?: string};
 
@@ -67,7 +67,7 @@ const CUSTOMER_ORDERS_QUERY = `#graphql
 /** Why an order does not qualify, or null when it does. */
 export function ineligibility(order: EarlyBirdOrder, endsOn: string): Ineligible | null {
   if (order.cancelledAt) return 'cancelled';
-  if (!PAID.has(order.displayFinancialStatus ?? '')) return 'not-paid';
+  if (!PAID_STATUSES.has(order.displayFinancialStatus ?? '')) return 'not-paid';
   const preorder =
     order.tags.includes('preorder') ||
     order.lineItems.nodes.some((line) => line.customAttributes.some((a) => a.key === 'Preorder' && a.value));

@@ -32,6 +32,8 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 | Demandes professionnelles | Nom de l’entreprise et du contact, courriel, numéro de téléphone, adresses de livraison et de facturation, numéro de TVA ou EIN, informations sur le magasin, produits demandés | Réponse et devis pour une demande de vente en gros d’un magasin |
 | Rôle Discord Early Bird (uniquement si vous le réclamez) | Votre numéro de commande et l’identifiant de commande Shopify, votre identifiant d’utilisateur Discord | Donner à l’acheteur d’une précommande le rôle Early Bird et le salon #early-birds sur le serveur Discord OpenDrone, un compte Discord par commande |
 | Assistant ChatFPV (l’aide sur les pages produits, le champ de question sur /support, les propositions de réponse aux tickets de support) | Le texte que vous saisissez et les réponses de ChatFPV ; sur les pages produits, aussi le produit que vous consultez ; un hachage salé de votre adresse IP (limites d’utilisation) ; votre évaluation d’une réponse et une éventuelle remarque. Pour une proposition de réponse : le texte de la question de votre ticket, sans nom, courriel, numéro de téléphone, données de commande ni pièces jointes | Répondre aux questions sur les produits et le FPV avec un assistant d’IA ; proposer des réponses à notre équipe de support ; améliorer les réponses de ChatFPV |
+| Carte des propriétaires (agrégée, sans connexion) | Pays et, pour les États-Unis, État de l'adresse de livraison des commandes payées contenant des biens physiques, compté une fois par client en mémoire pendant une actualisation. Seules les fourchettes obtenues par région sont conservées, jamais les commandes, adresses ou décomptes par client | Montrer où se trouvent les propriétaires OpenDrone, sous forme de carte avec fourchettes |
+| Carte des pilotes (facultative, propriétaires connectés) | Votre identifiant et nom d'utilisateur Discord (lus une fois via la connexion Discord avec la portée identify ; le jeton d'accès Discord est révoqué aussitôt), le centre d'une cellule de grille d'environ 10 km (le point cliqué est arrondi sur notre serveur et jamais conservé ni journalisé), votre identifiant client Shopify comme clé de suppression, la date et la version de votre consentement | Permettre aux propriétaires de se trouver. Les autres propriétaires connectés ayant une commande payée voient votre nom d'utilisateur Discord et la zone de 10 km ; tous les autres voient seulement le nombre de pilotes listés |
 
 ### 3. Bases juridiques (Art. 6 RGPD)
 
@@ -50,6 +52,8 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 | Rôle Discord Early Bird | Consentement (Art. 6.1.a) : vous lancez la demande et choisissez le compte Discord |
 | Prévention de la fraude / des abus | Intérêt légitime (Art. 6.1.f) |
 | Compte OpenDrone partagé et historique ChatFPV | Nécessaire à l’exécution d’un contrat (Art. 6.1.b) |
+| Carte des propriétaires (agrégée) | Intérêt légitime (Art. 6.1.f) : montrer l'étendue de la communauté. Un pays ou un État américain est publié sous forme de fourchette (1-4, 5-9 et au-delà), jamais comme nombre exact, de sorte qu'aucune personne n'est identifiable |
+| Carte des pilotes | Consentement (Art. 6.1.a) : une case non cochée avec le texte affiché, plus votre confirmation d'avoir 16 ans ou plus. Vous pouvez retirer votre consentement à tout moment sur la carte des pilotes, ce qui supprime l'entrée aussitôt |
 
 ### 4. Durées de conservation
 
@@ -72,6 +76,8 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 | Questions sans réponse copiées pour améliorer ChatFPV (sans lien avec l’auteur de la question) | 90 jours après la dernière fois que la question a été posée |
 | Votre texte copié dans une proposition de correction ChatFPV | 24 mois, puis supprimé ; la modification des connaissances reste, sans votre texte |
 | Prompts et réponses chez Google (API Gemini) | 55 jours pour la détection des abus (30 jours pour Google Search grounding), par Google |
+| Carte des propriétaires (fourchettes publiées par région, sans données personnelles) | Remplacées au plus tard tous les 30 jours par l'actualisation suivante |
+| Entrée sur la carte des pilotes | Jusqu'au retrait, ou 24 mois après votre consentement sauf nouvelle confirmation, ou à l'effacement de vos données client ou à la suppression du compte après 3 ans sans connexion |
 
 ### 5. Destinataires / sous-traitants
 

@@ -30,6 +30,8 @@ Incutec BV heeft geen Functionaris voor Gegevensbescherming (DPO) aangesteld aan
 | Handelsaanvragen | Bedrijfs- en contactnaam, e-mail, telefoonnummer, verzend- en factuuradres, btw- of EIN-nummer, winkelgegevens, gevraagde producten | Beantwoorden en offreren van een groothandelsaanvraag van een winkel |
 | Discord Early Bird-rol (enkel wanneer u ze opeist) | Uw bestelnummer en Shopify-bestel-id, uw Discord-gebruikers-id | De koper van een voorbestelling de Early Bird-rol en het kanaal #early-birds op de OpenDrone-Discordserver geven, één Discord-account per bestelling |
 | ChatFPV-assistent (de hulp op productpagina's, het vraagvak op /support, antwoordvoorstellen voor supporttickets) | De tekst die u typt en de antwoorden van ChatFPV; op productpagina's ook het product dat u bekijkt; een gezouten hash van uw IP-adres (gebruikslimieten); uw beoordeling van een antwoord en een eventuele opmerking. Voor een antwoordvoorstel: de vraagtekst van uw ticket zonder naam, e-mail, telefoonnummer, bestelgegevens of bijlagen | Product- en FPV-vragen beantwoorden met een AI-assistent; antwoorden voorstellen aan onze supportmedewerkers; de antwoorden van ChatFPV verbeteren |
+| Eigenarenkaart (geaggregeerd, zonder aanmelding) | Land en, voor de Verenigde Staten, staat van het verzendadres van betaalde bestellingen met fysieke goederen, per klant eenmaal geteld in het geheugen tijdens een verversing. Alleen de resulterende bereiken per regio worden bewaard, nooit bestellingen, adressen of tellingen per klant | Tonen waar OpenDrone-eigenaars zijn, als kaart met bereiken |
+| Pilotenkaart (optioneel, aangemelde eigenaars) | Je Discord-gebruikers-id en gebruikersnaam (eenmalig gelezen via Discord-aanmelding met de scope identify; de toegangstoken van Discord wordt meteen ingetrokken), het midden van een rastercel van ongeveer 10 km (het punt dat je aanklikt wordt op onze server afgerond en nooit opgeslagen of gelogd), je Shopify-klant-id als sleutel voor verwijdering, tijdstip en versie van je toestemming | Eigenaars elkaar laten vinden. Andere aangemelde eigenaars met een betaalde bestelling zien je Discord-gebruikersnaam en het gebied van 10 km; iedereen anders ziet alleen hoeveel piloten vermeld staan |
 
 ### 3. Rechtsgronden (Art. 6 AVG)
 
@@ -48,6 +50,8 @@ Incutec BV heeft geen Functionaris voor Gegevensbescherming (DPO) aangesteld aan
 | Discord Early Bird-rol | Toestemming (Art. 6.1.a): u start de aanvraag en kiest het Discord-account |
 | Fraude-/misbruikpreventie | Gerechtvaardigd belang (Art. 6.1.f) |
 | Gedeeld OpenDrone-account en ChatFPV-geschiedenis | Noodzakelijk voor de uitvoering van een overeenkomst (Art. 6.1.b) |
+| Eigenarenkaart (geaggregeerd) | Gerechtvaardigd belang (Art. 6.1.f): de reikwijdte van de community tonen. Een land of Amerikaanse staat wordt gepubliceerd als bereik (1-4, 5-9 en hoger), nooit als exact aantal, zodat niemand identificeerbaar is |
+| Pilotenkaart | Toestemming (Art. 6.1.a): een niet-aangevinkt vakje met de tekst die je ziet, plus je bevestiging dat je 16 of ouder bent. Je kunt op de pilotenkaart op elk moment intrekken, waarna het item meteen wordt verwijderd |
 
 ### 4. Bewaartermijnen
 
@@ -70,6 +74,8 @@ Incutec BV heeft geen Functionaris voor Gegevensbescherming (DPO) aangesteld aan
 | Onbeantwoorde vragen gekopieerd om ChatFPV te verbeteren (zonder link naar wie de vraag stelde) | 90 dagen nadat de vraag voor het laatst werd gesteld |
 | Uw tekst gekopieerd in een voorgestelde ChatFPV-correctie | 24 maanden, daarna gewist; de kenniswijziging blijft zonder uw tekst |
 | Prompts en antwoorden bij Google (Gemini API) | 55 dagen voor misbruikdetectie (30 dagen voor Google Search grounding), door Google |
+| Eigenarenkaart (gepubliceerde bereiken per regio, geen persoonsgegevens) | Uiterlijk om de 30 dagen vervangen door de volgende verversing |
+| Item op de pilotenkaart | Tot je intrekt, of 24 maanden na je toestemming tenzij je opnieuw bevestigt, of wanneer je klantgegevens worden gewist of je account na 3 jaar zonder aanmelding wordt verwijderd |
 
 ### 5. Ontvangers / verwerkers
 

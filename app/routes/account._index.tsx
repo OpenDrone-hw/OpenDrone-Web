@@ -8,6 +8,7 @@ import {readCustomerAccount, type AccountShopifyData} from '~/lib/accounts/custo
 import {formatOrderDate, formatOrderMoney, orderItems, orderStatus} from '~/lib/accounts/order-display';
 import {subscribeWithShopify, unsubscribeWithShopify} from '~/lib/growth/shopify-newsletter';
 import {customerAccountUrl} from '~/lib/shop-links';
+import {pilotMapEnabled, readOwnPin} from '~/lib/pilot-map-data';
 import {supportHeaders} from '~/lib/support/server';
 import {CAMPAIGN} from '~/lib/catalog-client';
 
@@ -132,8 +133,10 @@ export async function loader({request, context}: Route.LoaderArgs) {
     : null;
   const ordersUrl = customerAccountUrl(env);
   const shopify = import.meta.env.DEV ? devMockAccount(session.shopifyGid) : await readCustomerAccount(env, session.shopifyGid, CAMPAIGN);
+  // The "Pilot map" card: shown while PILOT_MAP_ENABLED is on, says whether this customer is listed (README "Owners map").
+  const pilot = pilotMapEnabled(env) ? {listed: Boolean(await readOwnPin(env.SUPPORT_DB!, session.shopifyGid))} : null;
   return data(
-    {ordersUrl, since: new Date(session.createdAt).toISOString().slice(0, 10), notice, newsletterNotice, shopify},
+    {ordersUrl, since: new Date(session.createdAt).toISOString().slice(0, 10), notice, newsletterNotice, shopify, pilot},
     {headers},
   );
 }
@@ -179,7 +182,7 @@ const NEWSLETTER_NOTICE_TEXT: Record<NewsletterNotice, string> = {
 };
 
 export default function AccountRoute() {
-  const {ordersUrl, since, notice, newsletterNotice, shopify} = useLoaderData<typeof loader>();
+  const {ordersUrl, since, notice, newsletterNotice, shopify, pilot} = useLoaderData<typeof loader>();
 
   return (
     <div className="page-shell sp-page">
@@ -330,6 +333,25 @@ export default function AccountRoute() {
             </Link>
           </div>
         </section>
+
+        {pilot ? (
+          <section className="account-dashboard-card" aria-labelledby="account-pilot-title">
+            <p className="account-dashboard-eyebrow-mono">Community</p>
+            <h2 id="account-pilot-title" className="account-dashboard-card-title">
+              Pilot map
+            </h2>
+            <p className="account-dashboard-card-lede">
+              {pilot.listed
+                ? 'You are on the pilot map. Other signed-in owners see your Discord username and an area of about 10 km. You can move or withdraw there.'
+                : 'Find pilots near you. Optional: you choose whether to appear, and only signed-in owners can see the map.'}
+            </p>
+            <div className="account-dashboard-card-actions">
+              <Link to="/owners#pilots" className="account-dashboard-cta">
+                {pilot.listed ? 'Manage my entry' : 'Open the pilot map'}
+              </Link>
+            </div>
+          </section>
+        ) : null}
 
         <section className="account-dashboard-card" aria-labelledby="account-support-title">
           <p className="account-dashboard-eyebrow-mono">Support</p>

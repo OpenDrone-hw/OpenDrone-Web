@@ -1013,6 +1013,7 @@ const HEADER_MENU = {
     {id: 'menu-preorder', title: 'Preorders', url: '/preorder'},
     {id: 'menu-wholesale', title: 'Wholesale', url: '/wholesale'},
     {id: 'menu-newsletter', title: 'Newsletter', url: '/newsletter'},
+    {id: 'menu-owners', title: 'Owners map', url: '/owners'},
     // Mobile drawer only: desktop shows Support as the Contact link.
     {id: 'menu-support', title: 'Support', url: '/support'},
     {

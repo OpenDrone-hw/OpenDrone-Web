@@ -121,6 +121,10 @@ export async function purgeExpired(db: D1Database, now = Date.now()): Promise<vo
   await db.batch([
     db.prepare('DELETE FROM oauth_codes WHERE expires_at < ?').bind(now - 60_000),
     db.prepare('DELETE FROM od_sessions WHERE expires_at < ? OR revoked_at < ?').bind(now, now - SLIDE_AFTER_MS),
+    // The pilot map pin goes with the account it belongs to (README "Owners map").
+    db
+      .prepare(`DELETE FROM pilot_map_pins WHERE shopify_gid IN (SELECT shopify_gid FROM od_accounts WHERE id IN (${IDLE_ACCOUNTS}))`)
+      .bind(cutoff, now),
     db.prepare(`DELETE FROM oauth_codes WHERE account_id IN (${IDLE_ACCOUNTS})`).bind(cutoff, now),
     db.prepare(`DELETE FROM od_sessions WHERE account_id IN (${IDLE_ACCOUNTS})`).bind(cutoff, now),
     db.prepare(`DELETE FROM od_accounts WHERE id IN (${IDLE_ACCOUNTS})`).bind(cutoff, now),
