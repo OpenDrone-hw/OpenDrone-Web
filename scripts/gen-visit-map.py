@@ -23,11 +23,11 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / 'public' / 'makerspace'
 OUT_TS = ROOT / 'app' / 'lib' / 'visit-map.generated.ts'
 
-# The HighTechLab inside the Maakleerplek site, as marked on the map by the
+# The High Tech Lab inside the maakleerplek site, as marked on the map by the
 # founder (2026-10-04). Nominatim's address point for Stapelhuisstraat 15 sits
 # on a different, smaller building 44 m east of it.
 LAB = (50.886576, 4.704624)
-# The Maakleerplek site, as marked by the founder: the old mill (Maalderij Van
+# The maakleerplek site, as marked by the founder: the old mill (Maalderij Van
 # Orshoven, Stapelhuisstraat 13) and the two buildings south of it.
 SITE_WAYS = {315785032, 562686794, 510790352}
 # Map extent around the lab: about 3.9 km x 2.7 km.
