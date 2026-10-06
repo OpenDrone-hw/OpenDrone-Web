@@ -1783,7 +1783,7 @@ html.light .footer-ref {
 /* The card: .visit-card, floated over the map. A bottom sheet on phones. */
 .owners-card {
   position: absolute;
-  top: var(--sp-4);
+  top: calc(var(--sp-4) + 1rem);
   left: var(--sp-4);
   width: min(22rem, calc(100% - 2 * var(--sp-4)));
   max-height: calc(100% - 2 * var(--sp-4));
@@ -1791,6 +1791,9 @@ html.light .footer-ref {
   overscroll-behavior: contain;
   touch-action: pan-y;
   cursor: default;
+}
+.owners-card .visit-launch-kicker {
+  color: var(--color-gold-text);
 }
 .owners-card > :last-child {
   margin-bottom: 0;
@@ -1954,8 +1957,10 @@ html.light .footer-ref {
     right: var(--sp-2);
     bottom: var(--sp-2);
     width: auto;
-    max-height: 56%;
-    padding: 1rem;
+    top: auto;
+    max-height: 50%;
+    padding: 1rem 1rem 1.25rem;
+    scroll-padding-bottom: 1.25rem;
   }
   .owners-card-title {
     font-size: 1.15rem;

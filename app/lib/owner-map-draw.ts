@@ -59,12 +59,19 @@ export function drawWorld(geo: Geo, drawStates: boolean, frame: [number, number,
   const projection = projectionFor(frame);
   const path = geoPath(projection);
   const shapes: Shape[] = [];
+  const used = new Set<string>();
   const all = countryFeatures(geo);
   for (const f of all) {
     const code = codeOf(f);
     if (code === 'US' && drawStates) continue;
     const d = path(f);
-    if (d) shapes.push({key: code ?? `name:${f.properties.name}`, region: code, name: code ? countryName(code) : f.properties.name, d});
+    if (!d) continue;
+    // Two features can share a code (outlying islands): keep both drawn, keep keys unique.
+    const base = code ?? `name:${f.properties.name}`;
+    let key = base;
+    for (let n = 2; used.has(key); n++) key = `${base}#${n}`;
+    used.add(key);
+    shapes.push({key, region: code, name: code ? countryName(code) : f.properties.name, d});
   }
   if (drawStates) {
     const states = feature(geo.states, geo.states.objects.states as GeometryCollection<Props>).features;
