@@ -508,6 +508,7 @@ Worker on the same account (error 1042), so the public URL fails from here.
 | `CHATFPV_DRAFTS_ENABLED` | AI drafts in ticket threads (also needs `CHATFPV_KEY`) |
 | `CHATFPV_ASK_ENABLED` | "Ask ChatFPV (AI)" box above the `/support` form; `POST /api/support/ask` |
 | `CHATFPV_WIDGET_ENABLED` | "Ask ChatFPV (AI)" button on product pages and `/preorder`, opening `CHATFPV_URL/embed` in an iframe; the ChatFPV origin is added to the CSP `frame-src` |
+| `CHATFPV_SYNTHETIC` | `"1"` in `wrangler.toml` (previews) only: every server call to ChatFPV carries `X-ChatFPV-Synthetic: 1`, so preview traffic is stored as test traffic, not customer usage |
 | `HANDOFF_ENABLED` | A product page URL ending in `#cfh=<ticket>` (a ChatFPV product link) loses the fragment from the address bar and opens the widget with `CHATFPV_URL/embed?...#cfh=<ticket>`, where ChatFPV redeems the ticket and shows that conversation; needs `CHATFPV_WIDGET_ENABLED` |
 
 ```mermaid
