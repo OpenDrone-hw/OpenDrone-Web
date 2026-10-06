@@ -4,6 +4,7 @@ import {
   LAT_STEP,
   MAX_LAT,
   PILOT_CONSENT_VERSION,
+  cellHalfSpan,
   cleanDiscordId,
   cleanDiscordName,
   consentGiven,
@@ -173,5 +174,15 @@ describe('qualifiesAsOwner', () => {
     assert.equal(qualifiesAsOwner([{cancelledAt: null, displayFinancialStatus: 'REFUNDED'}], paid), false);
     assert.equal(qualifiesAsOwner([], paid), false);
     assert.equal(qualifiesAsOwner(null, paid), false);
+  });
+});
+
+describe('cellHalfSpan', () => {
+  it('spans about 10 km: 0.09 degrees of latitude, wider in longitude away from the equator', () => {
+    const eq = snapToCell(0.01, 0.01)!;
+    const north = snapToCell(60, 10)!;
+    assert.equal(cellHalfSpan(eq).lat, LAT_STEP / 2);
+    assert.ok(Math.abs(cellHalfSpan(eq).lon - LAT_STEP / 2) < 0.002);
+    assert.ok(cellHalfSpan(north).lon > cellHalfSpan(eq).lon * 1.8);
   });
 });

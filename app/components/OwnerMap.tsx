@@ -1,5 +1,5 @@
 import {useEffect, useMemo, useState, type PointerEvent} from 'react';
-import {geoNaturalEarth1, geoPath} from 'd3-geo';
+import {geoContains, geoNaturalEarth1, geoPath} from 'd3-geo';
 import {feature} from 'topojson-client';
 import type {GeometryCollection, Topology} from 'topojson-specification';
 import {copyFill, copyText} from '~/lib/copy';
@@ -27,8 +27,44 @@ import {BUCKET_COUNT, bucketLabel, type Snapshot} from '~/lib/owner-map';
  */
 
 export const WIDTH = 960;
-export const HEIGHT = 500;
 const ANTARCTICA = '010';
+
+/** The framings the map offers. Most owners are in Europe and the US, so the world view is one tab, not the default. */
+export type MapRegion = 'both' | 'europe' | 'us' | 'world';
+export const MAP_REGIONS: readonly MapRegion[] = ['both', 'europe', 'us', 'world'];
+export type MapSize = {w: number; h: number};
+
+/** lon min, lat min, lon max, lat max */
+const BOXES: Record<Exclude<MapRegion, 'world'>, [number, number, number, number]> = {
+  both: [-128, 24, 42, 71],
+  europe: [-11, 34, 35, 71],
+  us: [-126, 24, -66, 50],
+};
+
+/** True on a phone-width viewport. False until mounted, which is before the map geometry arrives. */
+export function useNarrow(): boolean {
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const q = window.matchMedia('(max-width: 640px)');
+    const sync = () => setNarrow(q.matches);
+    sync();
+    q.addEventListener('change', sync);
+    return () => q.removeEventListener('change', sync);
+  }, []);
+  return narrow;
+}
+
+/** Box of the SVG: taller on a phone so countries stay readable; the pilot map is taller than the public one. */
+export const mapSize = (narrow: boolean, tall: boolean): MapSize => ({
+  w: WIDTH,
+  h: narrow ? (tall ? 1040 : 720) : tall ? 600 : 500,
+});
+
+/** Framing state: null until the viewer picks one, then the default for the viewport applies. */
+export function useMapRegion(narrow: boolean) {
+  const [picked, setPicked] = useState<MapRegion | null>(null);
+  return [picked ?? "europe", setPicked] as const;
+}
 
 type Shape = {
   /** Stable key: country code, `US-CA`, or a name for a shape without a code. */
@@ -61,24 +97,72 @@ export function useGeo(): {geo: Geo | null; failed: boolean} {
   return state;
 }
 
-/** Countries without Antarctica, and the projection that fits them to the map box. Shared with the pilot map. */
-export function worldProjection(geo: Geo) {
+/** Points along the edge of a lon/lat box, so the fit follows the box and not just its corners. */
+function boxPoints([x0, y0, x1, y1]: [number, number, number, number]): [number, number][] {
+  const pts: [number, number][] = [];
+  for (let x = x0; x <= x1; x += 3) pts.push([x, y0], [x, y1]);
+  for (let y = y0; y <= y1; y += 3) pts.push([x0, y], [x1, y]);
+  return pts;
+}
+
+/** Countries without Antarctica, and the projection that fits the chosen framing to the map box. Shared with the pilot map. */
+export function worldProjection(geo: Geo, size: MapSize, region: MapRegion) {
   const countryFeatures = feature(geo.countries, geo.countries.objects.countries as GeometryCollection<CountryProps>).features.filter(
     (f) => f.id !== ANTARCTICA,
   );
+  const target =
+    region === 'world'
+      ? ({type: 'FeatureCollection', features: countryFeatures} as const)
+      : ({type: 'MultiPoint', coordinates: boxPoints(BOXES[region])} as const);
   const projection = geoNaturalEarth1().fitExtent(
     [
       [4, 4],
-      [WIDTH - 4, HEIGHT - 4],
+      [size.w - 4, size.h - 4],
     ],
-    {type: 'FeatureCollection', features: countryFeatures},
+    target,
   );
   return {countryFeatures, projection};
 }
 
+/** "Texas, United States" or "Germany" for a point, from the boundaries already loaded; null over open sea. */
+export function placeAt(geo: Geo, lat: number, lon: number): string | null {
+  const point: [number, number] = [lon, lat];
+  const countries = feature(geo.countries, geo.countries.objects.countries as GeometryCollection<CountryProps>).features;
+  const hit = countries.find((f) => f.id !== ANTARCTICA && geoContains(f, point));
+  if (!hit) return null;
+  const code = (hit.id !== undefined ? COUNTRY_BY_NUMERIC[String(hit.id)] : undefined) ?? COUNTRY_BY_NAME[hit.properties.name] ?? null;
+  const country = code ? countryName(code) : hit.properties.name;
+  if (code === 'US') {
+    const states = feature(geo.states, geo.states.objects.states as GeometryCollection<CountryProps>).features;
+    const st = states.find((f) => geoContains(f, point));
+    const name = st ? STATE_NAME[STATE_BY_FIPS[String(st.id)] ?? ''] : undefined;
+    if (name) return `${name}, ${country}`;
+  }
+  return country;
+}
+
+/** Tabs that switch the framing. */
+export function RegionTabs({value, onChange}: {value: MapRegion; onChange: (r: MapRegion) => void}) {
+  return (
+    <div className="owner-map-tabs" role="group" aria-label={copyText('owners.region_label') ?? 'Map view'}>
+      {MAP_REGIONS.map((r) => (
+        <button
+          key={r}
+          type="button"
+          className="owner-map-tab"
+          aria-pressed={value === r}
+          onClick={() => onChange(r)}
+        >
+          {copyText(`owners.region_${r}`) ?? r}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /** Project every shape to an SVG path. The United States is drawn by state when it is published. */
-function buildShapes(geo: Geo, drawStates: boolean): Shape[] {
-  const {countryFeatures, projection} = worldProjection(geo);
+function buildShapes(geo: Geo, drawStates: boolean, size: MapSize, region: MapRegion): Shape[] {
+  const {countryFeatures, projection} = worldProjection(geo, size, region);
   const path = geoPath(projection);
   const shapes: Shape[] = [];
 
@@ -113,7 +197,13 @@ function readoutFor(shape: Shape, snapshot: Snapshot): string {
 export function OwnerMap({snapshot}: {snapshot: Snapshot}) {
   const {geo, failed} = useGeo();
   const drawStates = snapshot.regions.US !== undefined;
-  const shapes = useMemo(() => (geo ? buildShapes(geo, drawStates) : []), [geo, drawStates]);
+  const narrow = useNarrow();
+  const [region, setRegion] = useMapRegion(narrow);
+  const size = mapSize(narrow, false);
+  const shapes = useMemo(
+    () => (geo ? buildShapes(geo, drawStates, size, region) : []),
+    [geo, drawStates, size.w, size.h, region],
+  );
   const [active, setActive] = useState<string | null>(null);
 
   const byKey = useMemo(() => new Map(shapes.map((s) => [s.key, s])), [shapes]);
@@ -126,18 +216,20 @@ export function OwnerMap({snapshot}: {snapshot: Snapshot}) {
 
   return (
     <figure className="owner-map">
+      <RegionTabs value={region} onChange={setRegion} />
       <div className="owner-map-frame">
         {shapes.length ? (
           <svg
             className="owner-map-svg"
-            viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+            viewBox={`0 0 ${size.w} ${size.h}`}
+            style={{aspectRatio: `${size.w} / ${size.h}`}}
             role="img"
             aria-label={copyText('owners.map_aria') ?? 'Map of OpenDrone owners by region'}
             onPointerOver={pick}
             onClick={pick}
             onPointerLeave={(e) => e.pointerType === 'mouse' && setActive(null)}
           >
-            {shapes.map((s) => {
+            {[...shapes.filter((s) => s.key !== active), ...shapes.filter((s) => s.key === active)].map((s) => {
               const bucket = s.region === null ? undefined : snapshot.regions[s.region];
               return (
                 <path
@@ -151,7 +243,7 @@ export function OwnerMap({snapshot}: {snapshot: Snapshot}) {
             })}
           </svg>
         ) : (
-          <p className="owner-map-status">
+          <p className="owner-map-status" style={{aspectRatio: `${size.w} / ${size.h}`}}>
             {failed
               ? (copyText('owners.map_failed') ?? 'The map could not be loaded.')
               : (copyText('owners.map_loading') ?? 'Loading the map')}

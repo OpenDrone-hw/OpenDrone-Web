@@ -8,11 +8,24 @@ import {
 } from 'react';
 import {Link, useRevalidator} from 'react-router';
 import {geoPath} from 'd3-geo';
-import {HEIGHT, WIDTH, useGeo, worldProjection} from '~/components/OwnerMap';
+import {
+  RegionTabs,
+  WIDTH,
+  mapSize,
+  placeAt,
+  useGeo,
+  useMapRegion,
+  useNarrow,
+  worldProjection,
+  type Geo,
+  type MapRegion,
+  type MapSize,
+} from '~/components/OwnerMap';
 import {Txt} from '~/components/Txt';
 import {copyFill, copyText} from '~/lib/copy';
 import {
   PILOT_CONSENT_VERSION,
+  cellHalfSpan,
   discordProfileUrl,
   snapToCell,
   type PilotCell,
@@ -51,7 +64,16 @@ type Notice = (typeof NOTICES)[number];
 export const pilotNotice = (raw: string | null): Notice | null =>
   (NOTICES as readonly string[]).includes(raw ?? '') ? (raw as Notice) : null;
 
+/** Coordinates only for a tooltip: the visible text names the area instead. */
 const coord = (n: number) => n.toFixed(3);
+const coordTitle = (lat: number, lon: number) => `${coord(lat)}, ${coord(lon)}`;
+
+/** "About 10 km area in Texas, United States", or without the place over open sea. */
+function areaText(place: string | null): string {
+  return place
+    ? copyFill('owners.pilot_cell', 'About 10 km area in {place}', {place})
+    : (copyText('owners.pilot_cell_open') ?? 'About 10 km area');
+}
 
 function countText(n: number): string {
   if (n === 0)
@@ -95,18 +117,24 @@ export function PilotMap({
       <p className="pilot-count">{countText(panel.view.total)}</p>
 
       {!panel.signedIn ? (
-        <div className="pilot-card">
-          <p>{copyText('owners.pilot_signin_note')}</p>
-          <Link
-            to="/account/login?return_to=%2Fowners%23pilots"
-            className="od-btn od-btn-primary"
-          >
-            {copyText('owners.pilot_signin_cta') ?? 'Sign in'}
-          </Link>
+        <div className="pilot-layout">
+          <div className="pilot-card">
+            <p>{copyText('owners.pilot_signin_note')}</p>
+            <Link
+              to="/account/login?return_to=%2Fowners%23pilots"
+              className="od-btn od-btn-primary"
+            >
+              {copyText('owners.pilot_signin_cta') ?? 'Sign in'}
+            </Link>
+          </div>
+          <PilotPreview />
         </div>
       ) : !panel.owner ? (
-        <div className="pilot-card">
-          <p>{copyText('owners.pilot_not_owner')}</p>
+        <div className="pilot-layout">
+          <div className="pilot-card">
+            <p>{copyText('owners.pilot_not_owner')}</p>
+          </div>
+          <PilotPreview />
         </div>
       ) : (
         <OwnerPanel panel={panel} />
@@ -115,10 +143,21 @@ export function PilotMap({
   );
 }
 
+/** A greyed, inert map beside the sign-in card: shows what the signed-in owners see, without any pins. */
+function PilotPreview() {
+  const {geo, failed} = useGeo();
+  return (
+    <div className="pilot-preview" aria-hidden="true" inert>
+      <PilotWorld geo={geo} failed={failed} cells={[]} own={null} draft={null} canPlace={false} preview onPick={() => {}} />
+    </div>
+  );
+}
+
 type Draft = {lat: number; lon: number};
 
 function OwnerPanel({panel}: {panel: OpenPanel}) {
   const revalidator = useRevalidator();
+  const {geo, failed} = useGeo();
   const {own, linkedName} = panel;
   const cells = panel.view.cells ?? [];
   const [moving, setMoving] = useState(false);
@@ -131,6 +170,8 @@ function OwnerPanel({panel}: {panel: OpenPanel}) {
 
   const signingUp = !own ? Boolean(linkedName) : moving;
   const cell = draft ? snapToCell(draft.lat, draft.lon) : null;
+  const draftPlace = geo && cell ? placeAt(geo, cell.lat, cell.lon) : null;
+  const ownPlace = geo && own ? placeAt(geo, own.cellLat, own.cellLon) : null;
 
   async function send(body: FormData): Promise<{ok: boolean; error?: string}> {
     setBusy(true);
@@ -220,8 +261,7 @@ function OwnerPanel({panel}: {panel: OpenPanel}) {
             <p>
               {copyFill('owners.pilot_own_body', 'Shown as {name}.', {
                 name: own.discordName,
-                lat: coord(own.cellLat),
-                lon: coord(own.cellLon),
+                place: ownPlace ?? (copyText('owners.pilot_place_unknown') ?? 'your chosen spot'),
                 date: new Date(own.consentAt).toLocaleDateString('en', {
                   day: 'numeric',
                   month: 'long',
@@ -292,15 +332,25 @@ function OwnerPanel({panel}: {panel: OpenPanel}) {
                 {copyText('owners.pilot_locate')}
               </button>
             </div>
-            <p className="pilot-draft" aria-live="polite">
+            <p
+              className="pilot-draft"
+              aria-live="polite"
+              title={cell ? coordTitle(cell.lat, cell.lon) : undefined}
+            >
               {cell
-                ? copyFill(
-                    'owners.pilot_draft',
-                    'Chosen: about 10 km around {lat}, {lon}.',
-                    {lat: coord(cell.lat), lon: coord(cell.lon)},
-                  )
+                ? draftPlace
+                  ? copyFill('owners.pilot_draft', 'Chosen: about 10 km area in {place}.', {place: draftPlace})
+                  : copyText('owners.pilot_draft_open')
                 : copyText('owners.pilot_draft_none')}
             </p>
+            <div className="pilot-facts">
+              <h4 className="pilot-facts-title">{copyText('owners.pilot_facts_title')}</h4>
+              <ul>
+                <Txt id="owners.pilot_fact_shown" as="li" />
+                <Txt id="owners.pilot_fact_to" as="li" />
+                <Txt id="owners.pilot_fact_withdraw" as="li" />
+              </ul>
+            </div>
             <label className="pilot-check">
               <input
                 type="checkbox"
@@ -317,11 +367,6 @@ function OwnerPanel({panel}: {panel: OpenPanel}) {
               />
               <span>{copyText('owners.pilot_age_box')}</span>
             </label>
-            <Txt
-              id="owners.pilot_consent_more"
-              as="p"
-              className="pilot-muted"
-            />
             {errorText ? (
               <p className="pilot-error" role="alert">
                 {errorText}
@@ -351,19 +396,26 @@ function OwnerPanel({panel}: {panel: OpenPanel}) {
                 </button>
               ) : null}
             </div>
+            {!busy && (!draft || !consent || !age16) ? (
+              <p className="pilot-muted" aria-live="polite">
+                {copyText('owners.pilot_submit_hint')}
+              </p>
+            ) : null}
           </form>
         )}
       </div>
       <div className="pilot-main">
         <h3 className="pilot-subtitle">{copyText('owners.pilot_map_title')}</h3>
         <PilotWorld
+          geo={geo}
+          failed={failed}
           cells={cells}
           own={own}
           draft={signingUp ? draft : null}
           canPlace={signingUp}
           onPick={(lat, lon) => (setDraft({lat, lon}), setError(null))}
         />
-        <PilotList cells={cells} own={own} />
+        <PilotList cells={cells} own={own} geo={geo} />
       </div>
     </div>
   );
@@ -371,30 +423,40 @@ function OwnerPanel({panel}: {panel: OpenPanel}) {
 
 type View = {k: number; x: number; y: number};
 const WHOLE: View = {k: 1, x: 0, y: 0};
+/** A pick zooms in at least this far, so the ~10 km square is big enough to see. */
+const PICK_ZOOM = 25;
 
-const clampView = (v: View): View => ({
+const clampView = (v: View, size: MapSize): View => ({
   k: v.k,
-  x: Math.min(0, Math.max(WIDTH * (1 - v.k), v.x)),
-  y: Math.min(0, Math.max(HEIGHT * (1 - v.k), v.y)),
+  x: Math.min(0, Math.max(size.w * (1 - v.k), v.x)),
+  y: Math.min(0, Math.max(size.h * (1 - v.k), v.y)),
 });
 
 function PilotWorld({
+  geo,
+  failed,
   cells,
   own,
   draft,
   canPlace,
+  preview = false,
   onPick,
 }: {
+  geo: Geo | null;
+  failed: boolean;
   cells: PilotCell[];
   own: OwnPin | null;
   draft: Draft | null;
   canPlace: boolean;
+  preview?: boolean;
   onPick: (lat: number, lon: number) => void;
 }) {
-  const {geo, failed} = useGeo();
+  const narrow = useNarrow();
+  const [region, setRegion] = useMapRegion(narrow);
+  const size = mapSize(narrow, true);
   const world = useMemo(() => {
     if (!geo) return null;
-    const {countryFeatures, projection} = worldProjection(geo);
+    const {countryFeatures, projection} = worldProjection(geo, size, region);
     const path = geoPath(projection);
     return {
       projection,
@@ -403,7 +465,7 @@ function PilotWorld({
         d: path(f) ?? '',
       })),
     };
-  }, [geo]);
+  }, [geo, size.w, size.h, region]);
   const [view, setView] = useState<View>(WHOLE);
   const [active, setActive] = useState<string | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -416,15 +478,23 @@ function PilotWorld({
     cell: string | null;
   } | null>(null);
 
-  const zoomAt = (factor: number, px = WIDTH / 2, py = HEIGHT / 2) =>
+  const zoomAt = (factor: number, px = size.w / 2, py = size.h / 2) =>
     setView((v) => {
       const k = Math.min(MAX_ZOOM, Math.max(1, v.k * factor));
-      return clampView({
-        k,
-        x: px - ((px - v.x) * k) / v.k,
-        y: py - ((py - v.y) * k) / v.k,
-      });
+      return clampView(
+        {
+          k,
+          x: px - ((px - v.x) * k) / v.k,
+          y: py - ((py - v.y) * k) / v.k,
+        },
+        size,
+      );
     });
+
+  function pickRegion(next: MapRegion) {
+    setRegion(next);
+    setView(WHOLE);
+  }
 
   // Pinch on a trackpad (and ctrl or cmd with the wheel) zooms at the cursor; a plain wheel still scrolls the page.
   // A native listener, because React's wheel handler is passive and could not stop the page zoom.
@@ -437,8 +507,8 @@ function PilotWorld({
       const rect = svg.getBoundingClientRect();
       zoomAt(
         Math.exp(-event.deltaY * 0.01),
-        ((event.clientX - rect.left) * WIDTH) / rect.width,
-        ((event.clientY - rect.top) * HEIGHT) / rect.height,
+        ((event.clientX - rect.left) * size.w) / rect.width,
+        ((event.clientY - rect.top) * size.h) / rect.height,
       );
     };
     svg.addEventListener('wheel', onWheel, {passive: false});
@@ -448,8 +518,8 @@ function PilotWorld({
   function toSvg(event: {clientX: number; clientY: number}): [number, number] {
     const rect = svgRef.current!.getBoundingClientRect();
     return [
-      ((event.clientX - rect.left) * WIDTH) / rect.width,
-      ((event.clientY - rect.top) * HEIGHT) / rect.height,
+      ((event.clientX - rect.left) * size.w) / rect.width,
+      ((event.clientY - rect.top) * size.h) / rect.height,
     ];
   }
 
@@ -476,7 +546,7 @@ function PilotWorld({
     if (!d.moved && Math.hypot(sx - d.sx, sy - d.sy) < 4) return;
     d.moved = true;
     setView((v) =>
-      clampView({k: v.k, x: d.vx + sx - d.sx, y: d.vy + sy - d.sy}),
+      clampView({k: v.k, x: d.vx + sx - d.sx, y: d.vy + sy - d.sy}, size),
     );
   }
 
@@ -500,29 +570,60 @@ function PilotWorld({
     return p ? [p[0] * view.k + view.x, p[1] * view.k + view.y] : null;
   };
 
+  /** The real ~10 km cell as a screen path, so the owner can see what area they are choosing. */
+  const cellPath = (c: {id: string; lat: number; lon: number}): string | null => {
+    const h = cellHalfSpan(c);
+    const corners = [
+      place(c.lat - h.lat, c.lon - h.lon),
+      place(c.lat - h.lat, c.lon + h.lon),
+      place(c.lat + h.lat, c.lon + h.lon),
+      place(c.lat + h.lat, c.lon - h.lon),
+    ];
+    if (corners.some((p) => p === null)) return null;
+    return `M${corners.map((p) => `${p![0].toFixed(1)} ${p![1].toFixed(1)}`).join('L')}Z`;
+  };
+
   const chosen = cells.find((c) => c.id === active) ?? null;
   const draftCell = draft ? snapToCell(draft.lat, draft.lon) : null;
   const draftAt = draftCell ? place(draftCell.lat, draftCell.lon) : null;
-  // Half a cell (0.045 degrees of latitude) in screen units, so the ring shows the real area at any zoom.
-  const halfCell = (() => {
-    if (!world || !draftCell) return 0;
-    const a = world.projection([draftCell.lon, draftCell.lat]);
-    const b = world.projection([draftCell.lon, draftCell.lat + 0.045]);
-    return a && b ? Math.hypot(a[0] - b[0], a[1] - b[1]) * view.k : 0;
-  })();
+  const draftPath = draftCell ? cellPath(draftCell) : null;
+  const ownCell = own ? snapToCell(own.cellLat, own.cellLon) : null;
+  const ownPath = ownCell ? cellPath(ownCell) : null;
+
+  // After a pick, zoom to the chosen spot so its square is big enough to check.
+  const draftId = draftCell?.id;
+  useEffect(() => {
+    if (!world || !draftCell) return;
+    const p = world.projection([draftCell.lon, draftCell.lat]);
+    if (!p) return;
+    setView((v) =>
+      v.k >= PICK_ZOOM
+        ? v
+        : clampView(
+            {k: PICK_ZOOM, x: size.w / 2 - p[0] * PICK_ZOOM, y: size.h / 2 - p[1] * PICK_ZOOM},
+            size,
+          ),
+    );
+  }, [draftId, world]);
+
+  const chosenPlace = geo && chosen ? placeAt(geo, chosen.lat, chosen.lon) : null;
 
   return (
     <figure className="owner-map pilot-world">
+      {preview ? null : <RegionTabs value={region} onChange={pickRegion} />}
       <div className="owner-map-frame">
         {world ? (
           <svg
             ref={svgRef}
             className="owner-map-svg pilot-world-svg"
-            viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+            viewBox={`0 0 ${size.w} ${size.h}`}
             role="img"
             aria-label={copyText('owners.pilot_map_aria') ?? 'Map of pilots'}
             data-placing={canPlace ? '1' : undefined}
-            style={{touchAction: view.k > 1 ? 'none' : 'manipulation'}}
+            style={{
+              aspectRatio: `${size.w} / ${size.h}`,
+              touchAction: view.k > 1 ? 'none' : 'manipulation',
+            }}
             onPointerDown={down}
             onPointerMove={move}
             onPointerUp={up}
@@ -538,6 +639,7 @@ function PilotWorld({
                 />
               ))}
             </g>
+            {ownPath ? <path d={ownPath} className="pilot-cell-square is-own" pointerEvents="none" /> : null}
             {cells.map((c) => {
               const at = place(c.lat, c.lon);
               if (!at) return null;
@@ -556,71 +658,76 @@ function PilotWorld({
               );
             })}
             {draftAt ? (
-              <g
-                className="pilot-draft-marker"
-                transform={`translate(${draftAt[0]} ${draftAt[1]})`}
-                pointerEvents="none"
-              >
-                <circle r={Math.max(6, halfCell)} />
-                <circle r="2.5" className="pilot-draft-dot" />
+              <g className="pilot-draft-marker" pointerEvents="none">
+                {draftPath ? <path d={draftPath} className="pilot-cell-square" /> : null}
+                <g transform={`translate(${draftAt[0]} ${draftAt[1]})`}>
+                  <circle r="14" className="pilot-draft-ring" />
+                  <circle r="2.5" className="pilot-draft-dot" />
+                </g>
               </g>
             ) : null}
           </svg>
         ) : (
-          <p className="owner-map-status">
+          <p
+            className="owner-map-status"
+            style={{aspectRatio: `${size.w} / ${size.h}`}}
+          >
             {failed
               ? copyText('owners.map_failed')
               : copyText('owners.map_loading')}
           </p>
         )}
-        <div className="pilot-zoom" role="group" aria-label="Zoom">
-          <button
-            type="button"
-            className="od-btn-icon"
-            onClick={() => zoomAt(2)}
-            aria-label={copyText('owners.pilot_zoom_in') ?? 'Zoom in'}
-          >
-            +
-          </button>
-          <button
-            type="button"
-            className="od-btn-icon"
-            onClick={() => zoomAt(0.5)}
-            aria-label={copyText('owners.pilot_zoom_out') ?? 'Zoom out'}
-          >
-            -
-          </button>
-          <button
-            type="button"
-            className="od-btn-icon"
-            onClick={() => setView(WHOLE)}
-            aria-label={copyText('owners.pilot_zoom_reset') ?? 'Whole world'}
-          >
-            &#8962;
-          </button>
-        </div>
-      </div>
-      <figcaption className="pilot-caption">
-        {chosen ? (
-          <div className="pilot-selected" aria-live="polite">
-            <p className="pilot-selected-title">
-              {copyFill(
-                'owners.pilot_cell',
-                'About 10 km around {lat}, {lon}',
-                {lat: coord(chosen.lat), lon: coord(chosen.lon)},
-              )}
-            </p>
-            <PilotNames cell={chosen} own={own} />
+        {preview ? null : (
+          <div className="pilot-zoom" role="group" aria-label="Zoom">
+            <button
+              type="button"
+              className="od-btn-icon"
+              onClick={() => zoomAt(2)}
+              aria-label={copyText('owners.pilot_zoom_in') ?? 'Zoom in'}
+            >
+              +
+            </button>
+            <button
+              type="button"
+              className="od-btn-icon"
+              onClick={() => zoomAt(0.5)}
+              aria-label={copyText('owners.pilot_zoom_out') ?? 'Zoom out'}
+            >
+              -
+            </button>
+            <button
+              type="button"
+              className="od-btn-icon"
+              onClick={() => setView(WHOLE)}
+              aria-label={copyText('owners.pilot_zoom_reset') ?? 'Reset view'}
+            >
+              &#8962;
+            </button>
           </div>
-        ) : (
-          <p className="pilot-muted">
-            {cells.length
-              ? copyText('owners.pilot_selected_none')
-              : copyText('owners.pilot_empty_owner')}
-          </p>
         )}
-        <p className="pilot-muted">{copyText('owners.pilot_map_hint')}</p>
-      </figcaption>
+      </div>
+      {preview ? null : (
+        <figcaption className="pilot-caption">
+          {chosen ? (
+            <div className="pilot-selected" aria-live="polite">
+              <p
+                className="pilot-selected-title"
+                title={coordTitle(chosen.lat, chosen.lon)}
+              >
+                {areaText(chosenPlace)}
+              </p>
+              <PilotNames cell={chosen} own={own} />
+            </div>
+          ) : (
+            <p className="pilot-muted">
+              {cells.length
+                ? copyText('owners.pilot_selected_none')
+                : copyText('owners.pilot_empty_owner')}
+            </p>
+          )}
+          <p className="pilot-muted">{copyText('owners.pilot_map_hint')}</p>
+        </figcaption>
+      )}
     </figure>
   );
 }
@@ -654,7 +761,15 @@ function PilotNames({cell, own}: {cell: PilotCell; own: OwnPin | null}) {
 }
 
 /** The text twin of the map: every area and who is in it, readable without it. */
-function PilotList({cells, own}: {cells: PilotCell[]; own: OwnPin | null}) {
+function PilotList({
+  cells,
+  own,
+  geo,
+}: {
+  cells: PilotCell[];
+  own: OwnPin | null;
+  geo: Geo | null;
+}) {
   if (!cells.length) return null;
   return (
     <details className="pilot-list">
@@ -662,12 +777,11 @@ function PilotList({cells, own}: {cells: PilotCell[]; own: OwnPin | null}) {
       <ul>
         {cells.map((c) => (
           <li key={c.id}>
-            <span className="pilot-list-area">
-              {copyFill(
-                'owners.pilot_cell',
-                'About 10 km around {lat}, {lon}',
-                {lat: coord(c.lat), lon: coord(c.lon)},
-              )}
+            <span
+              className="pilot-list-area"
+              title={coordTitle(c.lat, c.lon)}
+            >
+              {areaText(geo ? placeAt(geo, c.lat, c.lon) : null)}
             </span>
             <PilotNames cell={c} own={own} />
           </li>

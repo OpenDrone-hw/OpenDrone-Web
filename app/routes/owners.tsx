@@ -157,12 +157,12 @@ export default function OwnersRoute({loaderData}: Route.ComponentProps) {
         <Txt id="owners.empty" as="p" className="owners-empty" />
       )}
 
+      {pilot.enabled ? <PilotMap panel={pilot} notice={notice} /> : null}
+
       <section className="editorial-section owners-how">
         <Txt id="owners.how_title" as="h2" className="editorial-section-title" />
         <Txt id="owners.how_body" as="p" />
       </section>
-
-      {pilot.enabled ? <PilotMap panel={pilot} notice={notice} /> : null}
     </EditorialShell>
   );
 }

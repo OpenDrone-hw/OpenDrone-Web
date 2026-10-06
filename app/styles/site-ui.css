@@ -1668,7 +1668,7 @@ html.light .footer-ref {
   width: 100%;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--sp-6);
+  gap: 3rem;
 }
 .owners-page .editorial-hero,
 .owners-page .editorial-section {
@@ -1717,17 +1717,29 @@ html.light .footer-ref {
 }
 
 .owner-map {
-  /* Seven buckets: gold mixed into the theme's own surface, so the ramp
-     reads in light and dark without a second palette. */
+  /* Seven buckets as one amber ramp with a clear lightness step each.
+     Dark: neutral land, then brighter toward the brand gold. Light: neutral
+     land, then deeper toward brown, because the gold itself is only 1.6:1 on
+     the light surface. The lowest step stays at least 1.3:1 off the land. */
   --owner-neutral: color-mix(in srgb, var(--color-text) 11%, var(--color-bg-card));
-  --owner-b0: color-mix(in srgb, var(--color-gold) 34%, var(--owner-neutral));
-  --owner-b1: color-mix(in srgb, var(--color-gold) 46%, var(--owner-neutral));
-  --owner-b2: color-mix(in srgb, var(--color-gold) 58%, var(--owner-neutral));
-  --owner-b3: color-mix(in srgb, var(--color-gold) 70%, var(--owner-neutral));
-  --owner-b4: color-mix(in srgb, var(--color-gold) 82%, var(--owner-neutral));
-  --owner-b5: color-mix(in srgb, var(--color-gold) 92%, var(--owner-neutral));
+  --owner-b0: oklch(0.43 0.07 75);
+  --owner-b1: oklch(0.50 0.09 75);
+  --owner-b2: oklch(0.57 0.11 77);
+  --owner-b3: oklch(0.64 0.13 78);
+  --owner-b4: oklch(0.71 0.15 80);
+  --owner-b5: oklch(0.77 0.16 82);
   --owner-b6: var(--color-gold);
   margin: 0;
+}
+html.light .owner-map {
+  --owner-neutral: color-mix(in srgb, var(--color-text) 9%, var(--color-bg-card));
+  --owner-b0: oklch(0.82 0.12 90);
+  --owner-b1: oklch(0.75 0.14 85);
+  --owner-b2: oklch(0.68 0.15 78);
+  --owner-b3: oklch(0.60 0.15 70);
+  --owner-b4: oklch(0.52 0.13 62);
+  --owner-b5: oklch(0.44 0.11 55);
+  --owner-b6: oklch(0.36 0.09 50);
 }
 .owner-map-frame {
   position: relative;
@@ -1740,13 +1752,11 @@ html.light .footer-ref {
   display: block;
   width: 100%;
   height: auto;
-  aspect-ratio: 960 / 500;
   touch-action: manipulation;
 }
 .owner-map-status {
   display: grid;
   place-items: center;
-  aspect-ratio: 960 / 500;
   margin: 0;
   font-family: var(--font-mono);
   font-size: var(--fs-sm);
@@ -1780,8 +1790,30 @@ html.light .footer-ref {
 .owner-map-swatch[data-b='6'] { background: var(--owner-b6); }
 .owner-map-region.is-active {
   stroke: var(--color-text);
-  stroke-width: 1.4;
-  paint-order: stroke;
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+}
+.owner-map-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  margin-bottom: var(--sp-3);
+}
+.owner-map-tab {
+  padding: 0.3rem 0.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.owner-map-tab[aria-pressed='true'] {
+  border-color: var(--color-gold);
+  color: var(--color-text);
 }
 .owner-map-readout {
   position: absolute;
@@ -1936,7 +1968,7 @@ html.light .footer-ref {
 }
 @media (min-width: 960px) {
   .pilot-layout {
-    grid-template-columns: minmax(18rem, 22rem) minmax(0, 1fr);
+    grid-template-columns: 20rem minmax(0, 1fr);
     gap: var(--sp-6);
   }
   .pilot-main .pilot-subtitle {
@@ -2051,11 +2083,58 @@ html.light .footer-ref {
   stroke: var(--color-text);
   stroke-width: 3;
 }
-.pilot-draft-marker circle {
-  fill: color-mix(in srgb, var(--color-gold) 24%, transparent);
+.pilot-draft-marker .pilot-draft-ring {
+  fill: none;
   stroke: var(--color-text);
   stroke-width: 1.5;
   stroke-dasharray: 4 3;
+}
+/* The real ~10 km cell: a translucent square that grows with the zoom. */
+.pilot-cell-square {
+  fill: color-mix(in srgb, var(--color-gold) 38%, transparent);
+  stroke: var(--color-text);
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+}
+.pilot-cell-square.is-own {
+  fill: color-mix(in srgb, var(--color-gold) 24%, transparent);
+  stroke-width: 1px;
+}
+.pilot-world .owner-map-svg {
+  min-height: 360px;
+}
+@media (min-width: 960px) {
+  .pilot-world .owner-map-svg {
+    min-height: 480px;
+  }
+}
+.pilot-facts {
+  padding: var(--sp-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+  font-size: var(--fs-sm);
+}
+.pilot-facts-title {
+  margin: 0 0 var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.pilot-facts ul {
+  display: grid;
+  gap: var(--sp-1);
+  margin: 0;
+  padding-left: 1.1rem;
+}
+.pilot-preview {
+  min-width: 0;
+  opacity: 0.55;
+  filter: grayscale(1);
+  pointer-events: none;
+  user-select: none;
 }
 .pilot-draft-marker .pilot-draft-dot {
   fill: var(--color-text);

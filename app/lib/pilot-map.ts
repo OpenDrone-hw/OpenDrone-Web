@@ -66,6 +66,12 @@ export function snapToCell(lat: unknown, lon: unknown): Cell | null {
   return cellOf(row, col);
 }
 
+/** Half the side of a cell in degrees, so a map can draw the area a stored centre stands for. */
+export function cellHalfSpan(cell: Cell): {lat: number; lon: number} {
+  const row = Number(cell.id.split(':')[0]);
+  return {lat: LAT_STEP / 2, lon: 180 / columnsInRow(row)};
+}
+
 /** The cell for a stored id, or null when the id is malformed or outside the grid. */
 export function parseCellId(id: unknown): Cell | null {
   const m = typeof id === 'string' ? /^(-?\d{1,4}):(\d{1,5})$/.exec(id) : null;
