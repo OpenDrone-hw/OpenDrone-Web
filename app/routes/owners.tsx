@@ -7,7 +7,7 @@ import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {countryName, STATE_NAME} from '~/lib/owner-map-geo';
 import {loadOwnerMap, ownerMapFixture} from '~/lib/owner-map-data';
 import {pilotPanel} from '~/lib/pilot-map-server';
-import {OTHER_COUNTRIES, OTHER_US_STATES, bucketLabel, type Snapshot} from '~/lib/owner-map';
+import {bucketLabel, type Snapshot} from '~/lib/owner-map';
 
 /**
  * The public owners map: owners per country and US state, as published
@@ -48,16 +48,15 @@ export function headers({loaderHeaders}: Route.HeadersArgs) {
 
 type Row = {id: string; name: string; bucket: number};
 
-/** Published regions as list rows: biggest bucket first, then by name; the pools last. */
-function rowsOf(snapshot: Snapshot, pick: (region: string) => string | null, pool: string, poolName: string): Row[] {
+/** Published regions as list rows: biggest bucket first, then by name. */
+function rowsOf(snapshot: Snapshot, pick: (region: string) => string | null): Row[] {
   const rows: Row[] = [];
   for (const [region, bucket] of Object.entries(snapshot.regions)) {
     const name = pick(region);
     if (name) rows.push({id: region, name, bucket});
   }
   rows.sort((a, b) => b.bucket - a.bucket || a.name.localeCompare(b.name, 'en'));
-  const pooled = snapshot.regions[pool];
-  return pooled === undefined ? rows : [...rows, {id: pool, name: poolName, bucket: pooled}];
+  return rows;
 }
 
 function RegionList({id, title, rows}: {id: string; title: string; rows: Row[]}) {
@@ -80,20 +79,10 @@ export default function OwnersRoute({loaderData}: Route.ComponentProps) {
   const {snapshot, fixture, pilot, notice} = loaderData;
 
   const countries = snapshot
-    ? rowsOf(
-        snapshot,
-        (r) => (/^[A-Z]{2}$/.test(r) ? countryName(r) : null),
-        OTHER_COUNTRIES,
-        copyText('owners.other_countries') ?? 'Other countries',
-      )
+    ? rowsOf(snapshot, (r) => (/^[A-Z]{2}$/.test(r) ? countryName(r) : null))
     : [];
   const states = snapshot
-    ? rowsOf(
-        snapshot,
-        (r) => (r.startsWith('US-') && STATE_NAME[r.slice(3)] ? STATE_NAME[r.slice(3)]! : null),
-        OTHER_US_STATES,
-        copyText('owners.other_us_states') ?? 'Other US states',
-      )
+    ? rowsOf(snapshot, (r) => (r.startsWith('US-') && STATE_NAME[r.slice(3)] ? STATE_NAME[r.slice(3)]! : null))
     : [];
 
   return (

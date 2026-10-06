@@ -50,7 +50,7 @@ Incutec BV heeft geen Functionaris voor Gegevensbescherming (DPO) aangesteld aan
 | Discord Early Bird-rol | Toestemming (Art. 6.1.a): u start de aanvraag en kiest het Discord-account |
 | Fraude-/misbruikpreventie | Gerechtvaardigd belang (Art. 6.1.f) |
 | Gedeeld OpenDrone-account en ChatFPV-geschiedenis | Noodzakelijk voor de uitvoering van een overeenkomst (Art. 6.1.b) |
-| Eigenarenkaart (geaggregeerd) | Gerechtvaardigd belang (Art. 6.1.f): de reikwijdte van de community tonen. Een land of Amerikaanse staat wordt alleen gepubliceerd bij minstens 5 eigenaars, als bereik, zodat niemand identificeerbaar is |
+| Eigenarenkaart (geaggregeerd) | Gerechtvaardigd belang (Art. 6.1.f): de reikwijdte van de community tonen. Een land of Amerikaanse staat wordt gepubliceerd als bereik (1-4, 5-9 en hoger), nooit als exact aantal, zodat niemand identificeerbaar is |
 | Pilotenkaart | Toestemming (Art. 6.1.a): een niet-aangevinkt vakje met de tekst die je ziet, plus je bevestiging dat je 16 of ouder bent. Je kunt op de pilotenkaart op elk moment intrekken, waarna het item meteen wordt verwijderd |
 
 ### 4. Bewaartermijnen

@@ -1658,11 +1658,11 @@ html.light .footer-ref {
 /* The map is the page: edge to edge under the header. A strip of page stays
    below it so a touch or a wheel always has somewhere to scroll to the footer. */
 .site-main:has(.owners-map) {
-  padding-top: var(--header-height);
+  padding-top: 0;
 }
 .owners-map {
   position: relative;
-  height: calc(100dvh - var(--header-height) - 3rem);
+  height: 100dvh;
   min-height: 30rem;
   overflow: hidden;
   background: var(--map-water);
@@ -1705,15 +1705,16 @@ html.light .footer-ref {
   fill: var(--color-gold-fill);
   stroke: var(--color-gold-fill);
   stroke-opacity: 0.8;
-  stroke-width: 1.2px;
+  stroke-width: 0.9px;
 }
-.owners-land[data-b='0'] { fill-opacity: 0.16; }
-.owners-land[data-b='1'] { fill-opacity: 0.24; }
-.owners-land[data-b='2'] { fill-opacity: 0.32; }
-.owners-land[data-b='3'] { fill-opacity: 0.42; }
-.owners-land[data-b='4'] { fill-opacity: 0.52; }
-.owners-land[data-b='5'] { fill-opacity: 0.63; }
-.owners-land[data-b='6'] { fill-opacity: 0.75; }
+.owners-land[data-b='0'] { fill-opacity: 0.1; stroke-opacity: 0.55; }
+.owners-land[data-b='1'] { fill-opacity: 0.18; }
+.owners-land[data-b='2'] { fill-opacity: 0.26; }
+.owners-land[data-b='3'] { fill-opacity: 0.35; }
+.owners-land[data-b='4'] { fill-opacity: 0.45; }
+.owners-land[data-b='5'] { fill-opacity: 0.56; }
+.owners-land[data-b='6'] { fill-opacity: 0.67; }
+.owners-land[data-b='7'] { fill-opacity: 0.78; }
 .owners-land.is-active {
   stroke: var(--color-text);
   stroke-opacity: 0.7;
@@ -1770,7 +1771,7 @@ html.light .footer-ref {
 
 .owners-zoom {
   position: absolute;
-  top: var(--sp-3);
+  top: calc(var(--header-height) + var(--sp-3));
   right: var(--sp-3);
   display: flex;
   flex-direction: column;
@@ -1783,41 +1784,29 @@ html.light .footer-ref {
 /* The card: .visit-card, floated over the map. A bottom sheet on phones. */
 .owners-card {
   position: absolute;
-  top: calc(var(--sp-4) + 1rem);
+  top: calc(var(--header-height) + var(--sp-4));
   left: var(--sp-4);
   width: min(22rem, calc(100% - 2 * var(--sp-4)));
-  max-height: calc(100% - 2 * var(--sp-4));
+  max-height: calc(100% - var(--header-height) - 2 * var(--sp-4));
   overflow-y: auto;
   overscroll-behavior: contain;
   touch-action: pan-y;
   cursor: default;
 }
-.owners-card .visit-launch-kicker {
-  color: var(--color-gold-text);
+@media (min-width: 1280px) {
+  .owners-card {
+    top: auto;
+    bottom: var(--sp-4);
+  }
 }
 .owners-card > :last-child {
   margin-bottom: 0;
 }
-.owners-card-title {
-  margin: 0.35rem 0 0.5rem;
-  font-family: var(--font-display);
-  font-size: var(--fs-xl);
-  font-weight: 700;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-  color: var(--color-text);
+.owners-figures {
+  margin-top: 0.4rem;
 }
-.owners-lead {
-  margin: 0 0 0.9rem;
-}
-.owners-readout {
-  margin: 0 0 0.9rem;
-  padding: 0.55rem 0;
-  border-block: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--color-gold-text);
-  min-height: 2.6rem;
+.owners-figures + .visit-card-note {
+  margin-bottom: 1rem;
 }
 .owners-pilot {
   margin: 0 0 0.9rem;
@@ -1834,7 +1823,6 @@ html.light .footer-ref {
   gap: 0.5rem;
   justify-items: start;
 }
-.owners-pilot-count,
 .owners-pilot-title {
   font-family: var(--font-mono);
   font-size: 12px;
@@ -1867,8 +1855,7 @@ html.light .footer-ref {
   font-size: 0.8rem;
   color: var(--color-text-muted);
 }
-.owners-facts summary,
-.owners-how summary {
+.owners-facts summary {
   cursor: pointer;
 }
 .owners-facts ul {
@@ -1891,15 +1878,6 @@ html.light .footer-ref {
 .owners-error {
   border-color: var(--color-error);
   color: var(--color-error);
-}
-.owners-how {
-  margin: 0 0 0.6rem;
-}
-.owners-how .visit-card-note {
-  margin: 0.5rem 0 0;
-}
-.owners-dev {
-  color: var(--color-gold-text);
 }
 
 /* The popover for a pilot dot: a small .visit-card. */
@@ -1949,7 +1927,10 @@ html.light .footer-ref {
 
 @media (max-width: 640px) {
   .owners-map {
-    height: calc(100dvh - var(--header-height) - 2.5rem);
+    height: 100dvh;
+  }
+  .owners-zoom {
+    top: calc(var(--header-height) + var(--sp-2));
   }
   .owners-card {
     top: auto;
@@ -1958,27 +1939,28 @@ html.light .footer-ref {
     bottom: var(--sp-2);
     width: auto;
     top: auto;
-    max-height: 50%;
+    max-height: 46%;
     padding: 1rem 1rem 1.25rem;
     scroll-padding-bottom: 1.25rem;
   }
-  .owners-card-title {
-    font-size: 1.15rem;
-    margin-bottom: 0.3rem;
+  /* Placing a pin on a phone: only the form, so the map above stays tappable;
+     the actions stay in view at the bottom of the sheet. */
+  .owners-card[data-placing] {
+    max-height: 58%;
   }
-  .owners-lead {
-    margin-bottom: 0.5rem;
-    font-size: 0.85rem;
-  }
-  /* Placing a pin on a phone: only the form, so the map above stays tappable. */
-  .owners-card[data-placing] .owners-lead,
-  .owners-card[data-placing] .owners-readout,
-  .owners-card[data-placing] .owners-card-title {
+  .owners-card[data-placing] .owners-figures,
+  .owners-card[data-placing] .owners-figures + .visit-card-note,
+  .owners-card[data-placing] .visit-map-credit,
+  .owners-card[data-placing] .owners-facts,
+  .owners-card[data-placing] .owners-muted {
     display: none;
   }
-  .owners-readout {
-    margin-bottom: 0.6rem;
-    padding: 0.4rem 0;
-    min-height: 0;
+  .owners-card[data-placing] .owners-actions {
+    position: sticky;
+    bottom: -1.25rem;
+    margin-bottom: -1.25rem;
+    padding: 0.5rem 0 1.25rem;
+    width: 100%;
+    background: var(--color-bg-card);
   }
 }

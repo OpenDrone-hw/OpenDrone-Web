@@ -52,7 +52,7 @@ Incutec BV n’a pas désigné de Délégué à la Protection des Données (DPD)
 | Rôle Discord Early Bird | Consentement (Art. 6.1.a) : vous lancez la demande et choisissez le compte Discord |
 | Prévention de la fraude / des abus | Intérêt légitime (Art. 6.1.f) |
 | Compte OpenDrone partagé et historique ChatFPV | Nécessaire à l’exécution d’un contrat (Art. 6.1.b) |
-| Carte des propriétaires (agrégée) | Intérêt légitime (Art. 6.1.f) : montrer l'étendue de la communauté. Un pays ou un État américain n'est publié qu'à partir de 5 propriétaires, sous forme de fourchette, de sorte qu'aucune personne n'est identifiable |
+| Carte des propriétaires (agrégée) | Intérêt légitime (Art. 6.1.f) : montrer l'étendue de la communauté. Un pays ou un État américain est publié sous forme de fourchette (1-4, 5-9 et au-delà), jamais comme nombre exact, de sorte qu'aucune personne n'est identifiable |
 | Carte des pilotes | Consentement (Art. 6.1.a) : une case non cochée avec le texte affiché, plus votre confirmation d'avoir 16 ans ou plus. Vous pouvez retirer votre consentement à tout moment sur la carte des pilotes, ce qui supprime l'entrée aussitôt |
 
 ### 4. Durées de conservation

@@ -65,7 +65,7 @@ describe('ownerMapFixture', () => {
 describe('loadOwnerMap', () => {
   it('serves the fixture, suppressed, when the flag is set', async () => {
     const snapshot = await loadOwnerMap({OWNER_MAP_FIXTURE: '1'}, NOW);
-    assert.ok(snapshot && snapshot.regions.DE === 3);
+    assert.ok(snapshot && snapshot.regions.DE === 4);
   });
 
   it('is null without a database, and never invents numbers', async () => {
@@ -82,7 +82,7 @@ describe('refreshOwnerMap', () => {
     const env: OwnerMapEnv = {...credentials, SUPPORT_DB: db};
     assert.equal(await refreshOwnerMap(env, NOW, shopify(nodes).fetcher), 'written');
     const snapshot = await loadOwnerMap(env, NOW);
-    assert.deepEqual(snapshot?.regions, {BE: 0});
+    assert.deepEqual(snapshot?.regions, {BE: 1});
     assert.equal(snapshot?.generatedAt, NOW);
     assert.ok(rows().every((r) => r.region.startsWith('_') || /^[A-Z]{2}(-[A-Z]+)?$/.test(r.region)));
     assert.ok(!JSON.stringify(rows()).includes('c1'));

@@ -41,11 +41,6 @@ export function areaText(place: string | null): string {
     : (copyText('owners.pilot_cell_open') ?? 'About 10 km area');
 }
 
-function countText(n: number): string {
-  if (n === 0) return copyText('owners.pilot_count_none') ?? 'Nobody is on the pilot map yet.';
-  if (n === 1) return copyText('owners.pilot_count_one') ?? '1 pilot is on the map.';
-  return copyFill('owners.pilot_count', '{n} pilots are on the map.', {n});
-}
 
 export function PilotNames({cell, own}: {cell: PilotCell; own: OwnPin | null}) {
   const isOwn = (name: string) =>
@@ -168,8 +163,6 @@ export function PilotBlock({
 
   return (
     <div className="owners-pilot">
-      <p className="owners-pilot-count">{countText(panel.view.total)}</p>
-
       {notice && !(notice === 'linked' && own) ? (
         <p className="owners-note" role="status" data-tone={notice === 'linked' ? 'ok' : 'warn'}>
           {copyText(`owners.pilot_notice_${notice.replace('-', '_')}`)}
@@ -183,7 +176,7 @@ export function PilotBlock({
 
       {!panel.signedIn ? (
         <Link to="/account/login?return_to=%2Fowners" className="visit-card-link">
-          {copyText('owners.pilot_signin_cta') ?? 'Sign in to see pilots near you'}
+          {copyText('owners.pilot_signin_cta') ?? 'Sign in to find pilots near you'} ↗
         </Link>
       ) : !panel.owner ? (
         <p className="owners-muted">{copyText('owners.pilot_not_owner')}</p>

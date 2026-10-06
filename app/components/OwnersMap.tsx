@@ -37,9 +37,12 @@ import type {Topology} from 'topojson-specification';
  */
 
 const MAX_K = 120;
+/** From this width the world spans the window and the card floats over the South Pacific. */
+const WIDE = 1280;
+/** Room left of the world for the card on narrower desktop windows. */
+const CARD_SPACE = 400;
 /** A pick zooms in about to country level: borders stay visible and the ~10 km square still reads. */
 const PICK_ZOOM = 7;
-const CARD_W = 400;
 const NARROW = 640;
 
 type View = {k: number; x: number; y: number};
@@ -94,12 +97,10 @@ const Land = memo(function Land({shapes, snapshot}: {shapes: Shape[]; snapshot: 
   );
 });
 
-function readoutFor(shape: Shape, snapshot: Snapshot | null): string {
+/** "50-99" for a region with owners, "-" for one without. */
+function rangeFor(shape: Shape, snapshot: Snapshot | null): string {
   const bucket = shape.region === null || !snapshot ? undefined : snapshot.regions[shape.region];
-  if (bucket !== undefined) {
-    return copyFill('owners.readout_owners', '{name}: {range} owners', {name: shape.name, range: bucketLabel(bucket)});
-  }
-  return copyFill('owners.readout_unpublished', '{name}: not published, fewer than 5 owners', {name: shape.name});
+  return bucket === undefined ? '-' : bucketLabel(bucket);
 }
 
 export function OwnersMap({
@@ -123,12 +124,14 @@ export function OwnersMap({
   const drawStates = snapshot?.regions.US !== undefined;
   const narrow = size !== null && size.w <= NARROW;
 
-  // Europe sits in the part of the window the card does not cover.
+  // The world fills the window wherever the card leaves it room.
   const frame = useMemo<[number, number, number, number] | null>(() => {
     if (!size) return null;
-    const left = !narrow && size.w >= 900 ? CARD_W : 12;
+    // Wide windows: the card sits bottom left, over the empty South Pacific.
+    // Narrower ones keep the world beside it.
+    const left = narrow || size.w >= WIDE ? 12 : CARD_SPACE;
     const bottom = narrow ? Math.round(size.h * 0.46) : 12;
-    return [left, 16, size.w - 64, size.h - bottom - 8];
+    return [left, 72, size.w - 64, size.h - bottom - 8];
   }, [size, narrow]);
 
   const drawn = useMemo(() => (geo && frame ? drawWorld(geo, drawStates, frame) : null), [geo, frame, drawStates]);
@@ -141,6 +144,12 @@ export function OwnersMap({
   const [selected, setSelected] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [placing, setPlacing] = useState(false);
+  const card = useRef<HTMLDivElement>(null);
+  const ownKey = panel?.own ? `${panel.own.cellLat},${panel.own.cellLon}` : '';
+  // A new card state starts at its top, never scrolled into the middle.
+  useEffect(() => {
+    card.current?.scrollTo({top: 0});
+  }, [placing, ownKey, panel?.signedIn, panel?.linkedName]);
   const onPlacing = useCallback((p: boolean) => setPlacing(p), []);
 
   const cells: PilotCell[] = panel?.view.cells ?? [];
@@ -418,30 +427,43 @@ export function OwnersMap({
         </button>
       </div>
 
-      <div className="visit-card owners-card owners-ui" data-placing={placing ? '1' : undefined}>
-        <Txt id="owners.eyebrow" as="p" className="visit-launch-kicker" />
-        <h1 id="owners-title" className="owners-card-title">
+      <div ref={card} className="visit-card owners-card owners-ui" data-placing={placing ? '1' : undefined}>
+        <h1 id="owners-title" className="editorial-section-title">
           <Txt id="owners.title" />
         </h1>
-        <Txt id="owners.lead" as="p" className="owners-lead" />
-
-        {hasRegions ? (
-          <p className="owners-readout" aria-hidden="true">
-            {current ? readoutFor(current, snapshot) : (copyText('owners.hint') ?? 'Hover or tap a region.')}
-          </p>
-        ) : (
-          <Txt id="owners.empty" as="p" className="owners-readout" />
-        )}
+        <table className="visit-hours owners-figures">
+          <tbody>
+            <tr aria-live="polite">
+              <th scope="row">
+                {current ? current.name : (copyText('owners.row_world') ?? 'Worldwide')}
+                <span className="visit-hours-what">{copyText('owners.row_owners') ?? 'Owners'}</span>
+              </th>
+              <td className="visit-hours-time">{current ? rangeFor(current, snapshot) : (snapshot?.total ? `${snapshot.total}+` : '-')}</td>
+            </tr>
+            {!current && snapshot?.countries ? (
+              <tr>
+                <th scope="row">{copyText('owners.row_countries') ?? 'Countries'}</th>
+                <td className="visit-hours-time">{snapshot.countries}</td>
+              </tr>
+            ) : null}
+            {!current && panel ? (
+              <tr>
+                <th scope="row">
+                  {copyText('owners.row_pilots') ?? 'Pilots'}
+                  <span className="visit-hours-what">{copyText('owners.row_pilots_what') ?? 'On the pilot map'}</span>
+                </th>
+                <td className="visit-hours-time">{panel.view.total}</td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+        <Txt id={hasRegions ? 'owners.note' : 'owners.empty'} as="p" className="visit-card-note" />
 
         {panel ? <PilotBlock panel={panel} notice={notice} geo={geo} draft={draft} onDraft={setDraft} onPlacing={onPlacing} /> : null}
 
-        <details className="owners-how">
-          <summary className="visit-card-link">{copyText('owners.how_title') ?? 'How the numbers work'}</summary>
-          <Txt id="owners.how_body" as="p" className="visit-card-note" />
-        </details>
         <p className="visit-map-credit">
           {copyText('owners.credit')}
-          {fixture && import.meta.env.DEV ? <span className="owners-dev"> {copyText('owners.fixture_note')}</span> : null}
+          {fixture && import.meta.env.DEV ? ` · ${copyText('owners.fixture_note') ?? 'Sample numbers.'}` : null}
         </p>
       </div>
       {children}

@@ -8,20 +8,18 @@
  *
  * | Rule | Value |
  * |---|---|
- * | A region (country, or US state) is published only at | 5 or more owners |
- * | US states under 5 | pooled into "Other US states", published only at 5 or more |
- * | Countries under 5, and a US pool still under 5 | pooled into "Other countries", published only at 5 or more |
- * | Published values | buckets, never exact counts |
+ * | A region (country, or US state) is published at | 1 or more owners |
+ * | Published values | buckets (1-4, 5-9, ...), never exact counts |
+ * | US states | only where the United States itself is published |
  * | Headline | total rounded down to 10, hidden under 10, plus the country count |
  *
- * Region ids in a snapshot: `DE` (country), `US-CA` (US state), `US-OTHER`
- * (small US states), `OTHER` (small countries). Kept free of worker APIs and
- * path aliases so node:test can load it directly.
+ * A region is one coarse attribute (country or state), so a bucket of 1-4
+ * singles nobody out; buckets and the 30-day refresh keep month-to-month
+ * differences from showing a single new order. Region ids in a snapshot: `DE`
+ * (country), `US-CA` (US state). Kept free of worker APIs and path aliases so
+ * node:test can load it directly.
  */
 import {STATE_NAME} from './owner-map-geo.ts';
-
-/** Fewest owners a region needs before anything about it is published. */
-export const MIN_REGION = 5;
 
 /** A snapshot older than this is recomputed by the scheduled job. */
 export const SNAPSHOT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
@@ -29,8 +27,8 @@ export const SNAPSHOT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 /** After a failed or empty refresh the job waits this long before asking Shopify again. */
 export const REFRESH_RETRY_MS = 6 * 60 * 60 * 1000;
 
-const BUCKET_LOWER = [5, 10, 25, 50, 100, 250, 500] as const;
-const BUCKET_LABELS = ['5-9', '10-24', '25-49', '50-99', '100-249', '250-499', '500+'] as const;
+const BUCKET_LOWER = [1, 5, 10, 25, 50, 100, 250, 500] as const;
+const BUCKET_LABELS = ['1-4', '5-9', '10-24', '25-49', '50-99', '100-249', '250-499', '500+'] as const;
 
 /** Number of buckets; a bucket index runs 0 to BUCKET_COUNT - 1. */
 export const BUCKET_COUNT = BUCKET_LABELS.length;
@@ -39,9 +37,6 @@ export const BUCKET_COUNT = BUCKET_LABELS.length;
 export const META_TOTAL = '_total';
 export const META_COUNTRIES = '_countries';
 export const META_ATTEMPT = '_attempt';
-
-export const OTHER_COUNTRIES = 'OTHER';
-export const OTHER_US_STATES = 'US-OTHER';
 
 export type RawCounts = {
   /** Owners per ISO 3166-1 alpha-2 country code, the United States included. */
@@ -61,7 +56,7 @@ export type Snapshot = {
   regions: Record<string, number>;
 };
 
-/** Bucket index for a count, or -1 when the count is too small to publish. */
+/** Bucket index for a count, or -1 for no owners. */
 export function bucketIndex(count: number): number {
   let index = -1;
   for (let i = 0; i < BUCKET_LOWER.length; i += 1) {
@@ -89,30 +84,15 @@ export function suppress(raw: RawCounts, generatedAt: number): Snapshot {
     if (isCode(code) && Number.isFinite(count) && count > 0) countries[code] = Math.floor(count);
   }
 
-  let otherCountries = 0;
-  for (const [code, count] of Object.entries(countries)) {
-    const index = bucketIndex(count);
-    if (index >= 0) regions[code] = index;
-    else otherCountries += count;
-  }
+  for (const [code, count] of Object.entries(countries)) regions[code] = bucketIndex(count);
 
   // State detail exists only where the United States itself is published.
   if (regions.US !== undefined) {
-    let pool = 0;
     for (const [code, count] of Object.entries(raw.usStates)) {
-      if (!Number.isFinite(count) || count <= 0) continue;
-      const index = STATE_NAME[code] ? bucketIndex(Math.floor(count)) : -1;
-      if (index >= 0) regions[`US-${code}`] = index;
-      else pool += Math.floor(count);
+      if (!STATE_NAME[code] || !Number.isFinite(count) || count < 1) continue;
+      regions[`US-${code}`] = bucketIndex(Math.floor(count));
     }
-    // A pool under 5 stays inside the published US total only: adding it to
-    // "Other countries" would count those owners twice.
-    const poolIndex = bucketIndex(pool);
-    if (poolIndex >= 0) regions[OTHER_US_STATES] = poolIndex;
   }
-
-  const otherIndex = bucketIndex(otherCountries);
-  if (otherIndex >= 0) regions[OTHER_COUNTRIES] = otherIndex;
 
   const sum = Object.values(countries).reduce((a, b) => a + b, 0);
   const rounded = roundDownTo10(sum);

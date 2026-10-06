@@ -4,8 +4,6 @@ import {describe, it} from 'node:test';
 import {
   BUCKET_COUNT,
   META_ATTEMPT,
-  OTHER_COUNTRIES,
-  OTHER_US_STATES,
   SNAPSHOT_MAX_AGE_MS,
   bucketIndex,
   bucketLabel,
@@ -26,15 +24,15 @@ const NOW = 1_800_000_000_000;
 const raw = (countries: Record<string, number>, usStates: Record<string, number> = {}): RawCounts => ({countries, usStates});
 
 describe('buckets', () => {
-  it('maps counts to the seven published ranges', () => {
+  it('maps counts to the eight published ranges', () => {
     const cases: Array<[number, number]> = [
-      [0, -1], [1, -1], [4, -1], [5, 0], [9, 0], [10, 1], [24, 1], [25, 2], [49, 2],
-      [50, 3], [99, 3], [100, 4], [249, 4], [250, 5], [499, 5], [500, 6], [12000, 6],
+      [0, -1], [1, 0], [4, 0], [5, 1], [9, 1], [10, 2], [24, 2], [25, 3], [49, 3],
+      [50, 4], [99, 4], [100, 5], [249, 5], [250, 6], [499, 6], [500, 7], [12000, 7],
     ];
     for (const [count, index] of cases) assert.equal(bucketIndex(count), index, String(count));
     assert.deepEqual(
       Array.from({length: BUCKET_COUNT}, (_, i) => bucketLabel(i)),
-      ['5-9', '10-24', '25-49', '50-99', '100-249', '250-499', '500+'],
+      ['1-4', '5-9', '10-24', '25-49', '50-99', '100-249', '250-499', '500+'],
     );
   });
 
@@ -46,53 +44,38 @@ describe('buckets', () => {
 });
 
 describe('suppress: countries', () => {
-  it('publishes a country at exactly 5 and pools 4', () => {
-    const s = suppress(raw({DE: 5, FR: 4, ES: 4}), NOW);
-    assert.deepEqual(s.regions, {DE: 0, [OTHER_COUNTRIES]: 0});
-  });
-
-  it('does not publish the other-countries pool under 5', () => {
-    const s = suppress(raw({DE: 20, FR: 2, ES: 2}), NOW);
-    assert.deepEqual(s.regions, {DE: 1});
+  it('publishes every country with an owner, small ones as 1-4', () => {
+    const s = suppress(raw({DE: 5, FR: 4, ES: 1}), NOW);
+    assert.deepEqual(s.regions, {DE: 1, FR: 0, ES: 0});
   });
 
   it('never exposes an exact count, only a bucket index', () => {
-    const s = suppress(raw({DE: 78, NL: 28}), NOW);
-    assert.deepEqual(s.regions, {DE: 3, NL: 2});
+    const s = suppress(raw({DE: 78, NL: 28, MX: 1}), NOW);
+    assert.deepEqual(s.regions, {DE: 4, NL: 3, MX: 0});
     assert.ok(!JSON.stringify(s).includes('78'));
   });
 
   it('ignores malformed codes and non-positive counts', () => {
     const s = suppress(raw({DEU: 50, de: 50, XX: 0, '': 9, BE: -3, NL: 7}), NOW);
-    assert.deepEqual(s.regions, {NL: 0});
+    assert.deepEqual(s.regions, {NL: 1});
     assert.equal(s.countries, 1);
   });
 });
 
 describe('suppress: United States', () => {
-  it('publishes states at 5 and pools the rest', () => {
-    const s = suppress(raw({US: 20}, {CA: 8, TX: 5, NY: 4, WA: 3}), NOW);
-    assert.deepEqual(s.regions, {US: 1, 'US-CA': 0, 'US-TX': 0, [OTHER_US_STATES]: 0});
+  it('publishes every state with an owner', () => {
+    const s = suppress(raw({US: 20}, {CA: 8, TX: 5, NY: 4, WY: 1}), NOW);
+    assert.deepEqual(s.regions, {US: 2, 'US-CA': 1, 'US-TX': 1, 'US-NY': 0, 'US-WY': 0});
   });
 
-  it('keeps a US pool under 5 inside the US total only', () => {
-    const s = suppress(raw({US: 14}, {CA: 10, NY: 2, WA: 2}), NOW);
-    assert.deepEqual(s.regions, {US: 1, 'US-CA': 1});
+  it('drops unknown state codes and non-positive counts', () => {
+    const s = suppress(raw({US: 12}, {CA: 6, ZZ: 6, TX: 0}), NOW);
+    assert.deepEqual(s.regions, {US: 2, 'US-CA': 1});
   });
 
-  it('never adds US owners to Other countries', () => {
-    const s = suppress(raw({US: 14, FR: 2, IT: 2}, {CA: 10, NY: 2, WA: 2}), NOW);
-    assert.deepEqual(s.regions, {US: 1, 'US-CA': 1});
-  });
-
-  it('publishes no state when the United States itself is under 5', () => {
-    const s = suppress(raw({US: 4, FR: 6}, {CA: 4}), NOW);
-    assert.deepEqual(s.regions, {FR: 0});
-  });
-
-  it('treats an unknown state code as pooled', () => {
-    const s = suppress(raw({US: 12}, {CA: 6, ZZ: 6}), NOW);
-    assert.deepEqual(s.regions, {US: 1, 'US-CA': 0, [OTHER_US_STATES]: 0});
+  it('publishes no state without the United States', () => {
+    const s = suppress(raw({FR: 6}, {CA: 4}), NOW);
+    assert.deepEqual(s.regions, {FR: 1});
   });
 });
 
@@ -120,12 +103,10 @@ describe('fixture', () => {
     for (const code of ['DE', 'NL', 'BE', 'FR', 'GB', 'AT', 'FI', 'PL', 'LT', 'US']) {
       assert.ok(s.regions[code] !== undefined, code);
     }
-    assert.equal(s.regions.DE, 3);
-    assert.equal(s.regions.NL, 2);
+    assert.equal(s.regions.DE, 4);
+    assert.equal(s.regions.NL, 3);
     assert.ok(s.regions['US-CA'] !== undefined && s.regions['US-FL'] !== undefined);
-    assert.equal(s.regions['US-NY'], undefined);
-    assert.ok(s.regions[OTHER_US_STATES] !== undefined);
-    assert.ok(s.regions[OTHER_COUNTRIES] !== undefined);
+    assert.ok(Object.values(s.regions).includes(0), 'small regions are published as 1-4');
     assert.ok(s.total !== null && s.total >= 100);
   });
 });
