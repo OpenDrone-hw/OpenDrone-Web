@@ -191,7 +191,7 @@ function HoursCard({
         </div>
       ) : null}
       <address className="visit-address">
-        <strong>Maakleerplek, HighTechLab</strong>
+        <strong>maakleerplek, High Tech Lab</strong>
         <br />
         {address}
       </address>

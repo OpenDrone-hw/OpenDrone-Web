@@ -117,6 +117,7 @@
 .en-sign span {
   font: 600 4.1em/1 var(--sh-font, system-ui, sans-serif);
   letter-spacing: 0.04em;
+  white-space: nowrap;
   color: #6d7277;
   text-shadow: 0 0.02em 0 rgba(255, 255, 255, 0.85), 0 -0.02em 0 rgba(0, 0, 0, 0.35);
 }

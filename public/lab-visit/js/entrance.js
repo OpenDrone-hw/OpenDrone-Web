@@ -2,7 +2,7 @@
 // "opening the door shouldn't be an action done by the user and the door should fill the whole frame"; 2026-10-05:
 // "immersive, like the first scene of a game"). The closed entrance door is a DOM overlay (#corridor, CSS and inline
 // SVG, crisp at any DPR) that covers the view edge to edge at any aspect ratio: a white interior door seen up close,
-// with a casing, recessed panels, a lever handle on an escutcheon and a HighTechLab sign plate. The loading progress
+// with a casing, recessed panels, a lever handle on an escutcheon and a High Tech Lab sign plate. The loading progress
 // is warm light leaking through the gaps around and under the leaf, growing with the progress, plus a short label.
 // Idle life: the light flickers faintly and the view breathes very slowly (both off with reduced motion).
 // When the scan is in, the door opens by itself: the lever turns, the leaf swings away on its hinge, the scene fades
@@ -73,7 +73,7 @@ export function createEntrance({
 <div class="en-casing"></div>
 <div class="en-open"><div class="en-light"></div><div class="en-leaf">
 <div class="en-panel en-panel-a"></div><div class="en-panel en-panel-b"></div>
-<div class="en-sign"><span>HighTechLab</span></div>${HANDLE_SVG}<div class="en-sheen"></div>
+<div class="en-sign"><span>High Tech Lab</span></div>${HANDLE_SVG}<div class="en-sheen"></div>
 </div></div>
 <div class="en-glow"></div><div class="en-spill"></div>
 </div><div class="en-vignette"></div>`;
