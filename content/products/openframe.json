@@ -11,7 +11,7 @@
     "lead": ""
   },
   "whatIsThis": {
-    "intro": "A freestyle frame in T700 carbon, in two sizes: 3-inch (141 mm wheelbase) and 5-inch (226 mm). The stack mounts in the middle, the motors at the arm tips, and the camera in an aluminium mount at the front. A stiff frame vibrates less, which gives the flight controller a cleaner gyro signal. The 20 × 20 OpenFC Lite and OpenESC fit both sizes. The 30 × 30 versions fit the 5-inch frame only.",
+    "intro": "A freestyle frame in T700 carbon, in two sizes: 3-inch (141 mm wheelbase) and 5-inch (226 mm). The stack mounts in the middle, the motors at the arm tips, and the camera in an aluminium mount at the front. TPU inserts slide into that mount and hold the camera; one insert for each common camera size is in the box. The 3-inch and 5-inch frames use the same insert size, so a camera and its insert move between them. A stiff frame vibrates less, which gives the flight controller a cleaner gyro signal. The 20 × 20 OpenFC Lite and OpenESC fit both sizes. The 30 × 30 versions fit the 5-inch frame only.",
     "needs": [
       "A flight controller and ESC stack bolted in the middle",
       "Four motors and props at the arm tips",
@@ -70,7 +70,7 @@
       },
       {
         "ref": "⑩",
-        "part": "TPU arm boots, VTX mount and antenna mount: printed by Incutec, included",
+        "part": "TPU camera inserts for every camera size, arm boots, VTX mount and antenna mount: printed by Incutec, included",
         "cost": "set"
       }
     ],
@@ -93,7 +93,7 @@
     },
     {
       "qty": "1×",
-      "item": "TPU parts set: arm boots, VTX mount, antenna mount (printed by Incutec)"
+      "item": "TPU parts set: camera inserts for every camera size, arm boots, VTX mount, antenna mount (printed by Incutec)"
     },
     {
       "qty": "1×",
@@ -147,8 +147,8 @@
       "20 mm max"
     ],
     [
-      "Cam mounts",
-      "Analog, DJI, Walksnail, HDZero"
+      "Cam inserts (TPU)",
+      "Analog, DJI, Walksnail, HDZero, all included"
     ],
     [
       "Material",
@@ -388,7 +388,7 @@
         },
         {
           "ref": "⑩",
-          "part": "TPU arm boots, VTX mount and antenna mount: printed by Incutec, included",
+          "part": "TPU camera inserts for every camera size, arm boots, VTX mount and antenna mount: printed by Incutec, included",
           "cost": "set"
         }
       ],
