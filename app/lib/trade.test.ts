@@ -3,13 +3,24 @@ import {describe, it} from 'node:test';
 import {TRADE_COUNTRIES, validateTradeApplication, submitTradeApplication, type TradeApplication} from './trade.ts';
 
 const ENV = {TRADE_MAIL_ENABLED: '1', RESEND_API_KEY: 'test-key'};
-const fields = {company: 'Test shop', contactName: 'Test Buyer', email: 'buyer@example.com', country: 'BE', site: 'shop.example', note: 'Interested in frames.'};
+const fields: Record<string, string> = {company: 'Test shop', contactName: 'Test Buyer', email: 'buyer@example.com', country: 'BE', site: 'shop.example', note: 'Interested in frames.', shopType: 'online', taxId: 'be 0123.456.789', rhythm: 'monthly', 'qty_openfc-lite': '20', qty_openesc: '10', qty_openrx: '', qty_openmotor: '0'};
 function form(values = fields) { const f = new FormData(); for (const [key, value] of Object.entries(values)) f.set(key, value); return f; }
 function application(): TradeApplication { const result = validateTradeApplication(form()); if (!result.ok) throw new Error('Invalid fixture'); return result.application; }
 
 describe('wholesale application validation', () => {
   it('accepts any country, including outside the EU and United States', () => {
     for (const country of ['GB', 'CH', 'PH', 'CA', 'XK', 'ph']) assert.equal(validateTradeApplication(form({...fields, country})).ok, true, country);
+  });
+  it('needs a quantity above zero for at least one product', () => {
+    const none = validateTradeApplication(form({...fields, 'qty_openfc-lite': '', qty_openesc: '0'}));
+    assert.equal(none.ok, false);
+    assert.ok(!none.ok && none.errors.quantities);
+  });
+  it('keeps only products with a quantity, in catalogue order', () => {
+    const result = validateTradeApplication(form());
+    assert.ok(result.ok);
+    assert.deepEqual(result.application.quantities, [{name: 'OpenFC Lite', qty: 20}, {name: 'OpenESC', qty: 10}]);
+    assert.equal(result.application.taxId, 'BE 0123.456.789');
   });
   it('lists every country once, named and sorted', () => {
     assert.equal(new Set(TRADE_COUNTRIES.map((c) => c.code)).size, TRADE_COUNTRIES.length);
@@ -19,10 +30,10 @@ describe('wholesale application validation', () => {
     assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b, 'en')));
   });
   it('accepts a physical shop without a website and without order or tax details', () => {
-    assert.equal(validateTradeApplication(form({...fields, site: '', note: ''})).ok, true);
+    assert.equal(validateTradeApplication(form({...fields, site: '', note: '', taxId: '', rhythm: ''})).ok, true);
   });
   it('rejects unsupported destinations and malformed or overlong fields', () => {
-    for (const [key, value] of [['country', 'ZZ'], ['country', ''], ['company', 'x'], ['company', 'shop\nother'], ['contactName', ''], ['email', 'wrong'], ['note', 'x'.repeat(2001)], ['site', 'javascript:alert(1)'], ['site', 'https://user:password@shop.example']]) {
+    for (const [key, value] of [['shopType', ''], ['shopType', 'warehouse'], ['rhythm', 'daily'], ['taxId', '<script>'], ['qty_openesc', '-1'], ['qty_openesc', '2.5'], ['qty_openesc', '100001'], ['country', 'ZZ'], ['country', ''], ['company', 'x'], ['company', 'shop\nother'], ['contactName', ''], ['email', 'wrong'], ['note', 'x'.repeat(2001)], ['site', 'javascript:alert(1)'], ['site', 'https://user:password@shop.example']]) {
       assert.equal(validateTradeApplication(form({...fields, [key]: value})).ok, false, key);
     }
   });
@@ -52,8 +63,8 @@ describe('wholesale application mail', () => {
     assert.equal(url, 'https://api.resend.com/emails');
     assert.deepEqual(body.to, ['contact@opendrone.be']);
     assert.equal(body.reply_to, 'buyer@example.com');
-    assert.equal(body.subject, 'Wholesale application: Test shop (BE)');
-    for (const part of ['Test Buyer', 'buyer@example.com', 'Belgium (BE)', 'https://shop.example/', 'Interested in frames.']) assert.match(body.text, new RegExp(part.replace(/[.()]/g, '\\$&')));
+    assert.equal(body.subject, 'Wholesale application: Test shop (BE, 30 units)');
+    for (const part of ['Test Buyer', 'buyer@example.com', 'Belgium (BE)', 'https://shop.example/', 'Interested in frames.', 'Business: Online shop', 'VAT / tax ID: BE 0123.456.789', 'OpenFC Lite: 20', 'OpenESC: 10', 'Order rhythm: Monthly']) assert.match(body.text, new RegExp(part.replace(/[.()]/g, '\\$&')));
   });
   it('uses one idempotency key for a repeated application', async () => {
     const {calls, api} = recorder();
