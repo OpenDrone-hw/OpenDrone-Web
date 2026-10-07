@@ -10,7 +10,7 @@ import {checkRateLimit, clientIp} from '~/lib/rate-limit';
 import {verifyTurnstile} from '~/lib/turnstile';
 import {useTurnstile} from '~/lib/use-turnstile';
 import {sameOrigin} from '~/lib/accounts/config';
-import {TRADE_COUNTRIES, submitTradeApplication, tradeConfigured, validateTradeApplication, type TradeField} from '~/lib/trade';
+import {ORDER_RHYTHMS, SHOP_TYPES, TRADE_COUNTRIES, TRADE_PRODUCTS, submitTradeApplication, tradeConfigured, validateTradeApplication, type TradeField} from '~/lib/trade';
 
 const t = (key: string) => copyText(`wholesale.${key}`) ?? '';
 export const meta: Route.MetaFunction = () => buildSeoMeta({title: t('meta_title'), description: t('meta_description'), canonical: `${SITE_ORIGIN}/wholesale`});
@@ -111,6 +111,38 @@ function ApplicationForm() {
           <FieldError id="site-error" message={errors.website} />
         </label>
       </div>
+      <div className="grid gap-5 sm:grid-cols-2">
+        <label className={label}>{t('shop_type')}
+          <select name="shopType" required defaultValue="" className={field} aria-invalid={!!errors.shopType} aria-describedby={errors.shopType ? 'shop-type-error' : undefined}>
+            <option value="" disabled>{t('shop_type_choose')}</option>
+            {SHOP_TYPES.map(type => <option key={type} value={type}>{t(`shop_type_${type}`)}</option>)}
+          </select>
+          <FieldError id="shop-type-error" message={errors.shopType} />
+        </label>
+        <label className={label}>{t('tax_id')} <span className="text-[11px] opacity-70">{t('optional')}</span>
+          <input name="taxId" maxLength={30} autoComplete="off" placeholder={t('tax_id_placeholder')} className={field} aria-invalid={!!errors.taxId} aria-describedby={errors.taxId ? 'tax-id-error' : undefined} />
+          <FieldError id="tax-id-error" message={errors.taxId} />
+        </label>
+      </div>
+      <div role="group" aria-labelledby="quantities-label" aria-describedby={errors.quantities ? 'quantities-error' : 'quantities-hint'} className="min-w-0">
+        <span id="quantities-label" className={label}>{t('quantities')}</span>
+        <span id="quantities-hint" className="mt-1 block font-sans text-[12px] text-[var(--color-text-muted)]">{t('quantities_hint')}</span>
+        <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {TRADE_PRODUCTS.map(product => (
+            <label key={product.key} className={label}>{product.name}
+              <input name={`qty_${product.key}`} type="number" min={0} max={100000} step={1} inputMode="numeric" placeholder="0" className={field} aria-invalid={!!errors.quantities} />
+            </label>
+          ))}
+        </div>
+        <FieldError id="quantities-error" message={errors.quantities} />
+      </div>
+      <label className={label}>{t('rhythm')} <span className="text-[11px] opacity-70">{t('optional')}</span>
+        <select name="rhythm" defaultValue="" className={field} aria-invalid={!!errors.rhythm} aria-describedby={errors.rhythm ? 'rhythm-error' : undefined}>
+          <option value="">{t('rhythm_choose')}</option>
+          {ORDER_RHYTHMS.map(rhythm => <option key={rhythm} value={rhythm}>{t(`rhythm_${rhythm}`)}</option>)}
+        </select>
+        <FieldError id="rhythm-error" message={errors.rhythm} />
+      </label>
       <details open={!!errors.note} className="group">
         <summary className="flex w-fit cursor-pointer list-none items-center gap-2 text-[13px] text-[var(--color-text-muted)] [&::-webkit-details-marker]:hidden">{t('note_toggle')} <ChevronDown size={14} className="group-open:rotate-180" aria-hidden="true" /></summary>
         <label className={`${label} mt-3`}>{t('note')}

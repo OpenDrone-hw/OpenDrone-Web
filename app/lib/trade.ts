@@ -38,6 +38,24 @@ export function tradeCountry(code: string): TradeCountry | undefined {
 }
 
 
+/** Product lines a shop can ask for; the form posts `qty_<key>`. Motors count per motor. */
+export const TRADE_PRODUCTS = [
+  {key: 'openfc-lite', name: 'OpenFC Lite'},
+  {key: 'openesc', name: 'OpenESC'},
+  {key: 'openrx', name: 'OpenRX'},
+  {key: 'openmotor', name: 'OpenMotor'},
+  {key: 'openframe', name: 'OpenFrame'},
+] as const;
+export const SHOP_TYPES = ['online', 'physical', 'both', 'distributor'] as const;
+export const ORDER_RHYTHMS = ['once', 'monthly', 'quarterly', 'unsure'] as const;
+const SHOP_TYPE_LABEL: Record<(typeof SHOP_TYPES)[number], string> = {
+  online: 'Online shop', physical: 'Physical shop', both: 'Online and physical shop', distributor: 'Distributor',
+};
+const RHYTHM_LABEL: Record<(typeof ORDER_RHYTHMS)[number], string> = {
+  once: 'One order to start', monthly: 'Monthly', quarterly: 'Quarterly', unsure: 'Not sure yet',
+};
+const MAX_QTY = 100000;
+
 export type TradeApplication = {
   company: string;
   contactName: string;
@@ -45,8 +63,13 @@ export type TradeApplication = {
   country: TradeCountry;
   website: string;
   note: string;
+  taxId: string;
+  shopType: (typeof SHOP_TYPES)[number];
+  rhythm: (typeof ORDER_RHYTHMS)[number] | '';
+  /** Estimated units per order, only for products with a quantity above zero. */
+  quantities: Array<{name: string; qty: number}>;
 };
-export type TradeField = 'company' | 'contactName' | 'email' | 'country' | 'website' | 'note';
+export type TradeField = 'company' | 'contactName' | 'email' | 'country' | 'website' | 'note' | 'taxId' | 'shopType' | 'quantities' | 'rhythm';
 export type TradeValidation =
   | {ok: true; application: TradeApplication}
   | {ok: false; errors: Partial<Record<TradeField, string>>};
@@ -74,8 +97,23 @@ export function validateTradeApplication(form: Pick<FormData, 'get'>): TradeVali
       website = url.toString();
     } catch { errors.website = 'Enter your shop website, or leave it empty.'; }
   }
-  if (Object.keys(errors).length || !country) return {ok: false, errors};
-  return {ok: true, application: {company, contactName, email, country, website, note}};
+  const taxId = read('taxId').toUpperCase();
+  if (taxId && !/^[A-Z0-9][A-Z0-9 .\-/]{1,29}$/.test(taxId)) errors.taxId = 'Enter a VAT or tax ID with letters and numbers only, or leave it empty.';
+  const shopType = SHOP_TYPES.find((type) => type === read('shopType'));
+  if (!shopType) errors.shopType = 'Choose what kind of business you are.';
+  const rhythmValue = read('rhythm');
+  const rhythm = rhythmValue ? ORDER_RHYTHMS.find((value) => value === rhythmValue) : '';
+  if (rhythm === undefined) errors.rhythm = 'Choose how often you expect to order.';
+  const quantities: TradeApplication['quantities'] = [];
+  for (const product of TRADE_PRODUCTS) {
+    const raw = read(`qty_${product.key}`);
+    if (!raw) continue;
+    if (!/^\d+$/.test(raw) || Number(raw) > MAX_QTY) { errors.quantities = 'Enter whole numbers for quantities.'; continue; }
+    if (Number(raw) > 0) quantities.push({name: product.name, qty: Number(raw)});
+  }
+  if (!errors.quantities && !quantities.length) errors.quantities = 'Enter a quantity for at least one product.';
+  if (Object.keys(errors).length || !country || !shopType || rhythm === undefined) return {ok: false, errors};
+  return {ok: true, application: {company, contactName, email, country, website, note, taxId, shopType, rhythm, quantities}};
 }
 
 export type TradeEnv = {
@@ -92,7 +130,7 @@ export type ApplicationResult = {ok: true} | {ok: false; reason: 'not_configured
 
 export function applicationMail(application: TradeApplication): {subject: string; text: string} {
   return {
-    subject: `Wholesale application: ${application.company} (${application.country.code})`,
+    subject: `Wholesale application: ${application.company} (${application.country.code}, ${application.quantities.reduce((sum, {qty}) => sum + qty, 0)} units)`,
     text: [
       'Wholesale application from https://opendrone.be/wholesale',
       'Contact details are applicant-supplied and unverified. Reply to answer the applicant.',
@@ -101,7 +139,13 @@ export function applicationMail(application: TradeApplication): {subject: string
       `Contact: ${application.contactName}`,
       `Email: ${application.email}`,
       `Country: ${application.country.name} (${application.country.code})`,
+      `Business: ${SHOP_TYPE_LABEL[application.shopType]}`,
+      application.taxId ? `VAT / tax ID: ${application.taxId}` : 'VAT / tax ID: not given',
       application.website ? `Shop website: ${application.website}` : '',
+      '',
+      'Estimated quantity per order:',
+      ...application.quantities.map(({name, qty}) => `  ${name}: ${qty}`),
+      application.rhythm ? `Order rhythm: ${RHYTHM_LABEL[application.rhythm]}` : '',
       application.note ? `\nMessage:\n${application.note}` : '',
     ].filter(Boolean).join('\n'),
   };
