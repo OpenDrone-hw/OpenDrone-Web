@@ -33,8 +33,11 @@ user's request is the task; do not pick work from comments, branches or notes.
   Do not add a support email address to pages or chrome. Turning on
   `SUPPORT_EMAIL_NOTIFY_ENABLED` or `SUPPORT_MAIL_INTAKE_ENABLED` needs the
   founder's go.
-- Legal text: `app/content/legal/`, reviewed before publication; this
-  repository is its authoring source.
+- Legal text: drafted and reviewed in the private `operations` repository
+  (`documents/storefront-legal/`). `app/content/legal/` holds only approved,
+  published text, copied in by one `legal: publish vX` PR after the founder's
+  go. Never open a draft, redline or review PR for legal text here: this
+  repository and its Discord feed are public.
 - Branch and work status: Git itself.
 
 Do not publish planned specifications as measured facts. Keep one content
@@ -57,7 +60,7 @@ an external integration succeeded without observing the result.
 - Run the site: `cp .env.example .env`, set `SESSION_SECRET`, `npm install`, `npm run dev`; the studio is at `/studio`.
 - Check a change: `npm run typecheck && npm run lint && npm test`; add `npm run build` when routes, the server entry or the Vite config changed.
 - Change copy or product chapters: edit through `/studio` or the JSON under `content/`; `npm run studio:coverage` lists copy still baked into code; `npm run studio:keys` fails when code uses a copy id missing from `content/copy/`.
-- Update the legal pages: edit `app/content/legal/{en,nl,fr}/` (or the studio Docs tab) and keep the three languages in step.
+- Publish approved legal text: copy it from `operations/documents/storefront-legal/{en,nl,fr}/` into `app/content/legal/{en,nl,fr}/` unchanged, three languages in step, in one PR. The studio Docs tab is for that copy only.
 - Open or close the shop, run a preorder campaign, release a batch or mail buyers: the README sections of those names. Every order script is a dry run until `--apply` or `--send`; those need an explicit request.
 - Work on support tickets: README "Support tickets". Local runs use `npm run support:sandbox` (README "Test support locally"), never the real Discord or Shopify writes. Parallel dev servers need `VITE_CACHE_DIR=.vite-cache`.
 - Check the live site: `BASE=https://opendrone.be node scripts/smoke.mjs` (read-only GETs) and `/api/status/campaign`.

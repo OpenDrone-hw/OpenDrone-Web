@@ -262,8 +262,9 @@ notices, support).
 
 **Legal.** The legal documents in `app/content/legal/{en,nl,fr}/` serve at
 `/{en,nl,fr}/<slug>`; the bare `/<slug>` redirects to the visitor's cached
-locale, and `LangToggle` appears only on legal paths. This repository is the
-authoring source for them. The site UI is English-only. `/recycling` adds the
+locale, and `LangToggle` appears only on legal paths. They are drafted and
+reviewed in the private `operations` repository; this repository receives only
+the approved text, in one publish PR. The site UI is English-only. `/recycling` adds the
 producer (EPR) registration numbers per EU country from
 `content/registrations.json`; a number still `null` is not shown.
 
