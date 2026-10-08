@@ -57,7 +57,7 @@
 
 5.6. Incutec BV refunds all payments, including standard delivery costs, no later than 14 days after receiving the withdrawal. It may withhold the refund until it has received the product back or the consumer has shown that it was sent back, whichever is earlier.
 
-5.7. Reimbursement is made using the same means of payment as the original transaction, unless the consumer expressly agrees to a different means of payment.
+5.7. Reimbursement is made using the same means of payment as the original transaction, unless the consumer expressly agrees to a different means of payment. If a refund to the original means of payment is no longer possible, Incutec BV refunds by bank transfer to an account the consumer indicates, within the deadline that applies to that refund and at no cost to the consumer (Art. VI.50 §1 WER). This article applies to every refund under these terms.
 
 5.8. **Diminished value.** The consumer is liable for any diminished value of the product resulting from handling beyond what is necessary to establish its nature, characteristics and functioning (Art. VI.51 §2 WER). For electronics components this specifically means: soldering to the product, mounting it in a system, connecting battery power or motors and flight use go beyond that assessment; connecting via USB to check that it works does not. The diminished value is substantiated by Incutec BV, assessed on the actual residual value and deducted from the refund; only where the product has no residual value left can it amount to the full purchase price. The right of withdrawal itself is not lost.
 
@@ -75,11 +75,11 @@
 
 7.3. The risk of damage and/or loss of products lies with Incutec BV until the moment of delivery to the consumer.
 
-7.4. Consumer delivery is available to the destinations offered at checkout. Deliveries outside the EU are for preorder batches only, under Article 7ter for the United States and Article 7quater for other destinations. Paid EU stock (Batch 1) is delivered within the EU only. The available delivery service and full delivery charge are shown before payment.
+7.4. Incutec BV delivers only to the destinations offered at checkout. Deliveries outside the EU are for preorder batches only, under Article 7ter for the United States and Article 7quater for other destinations. Paid EU stock (Batch 1) is delivered within the EU only. The available delivery service and full delivery charge are shown before payment.
 
 ### Article 7bis: Pre-orders
 
-7bis.1. Some products are sold as pre-orders. They are disclosed as such, with their ship date, on the product page, at checkout and on the order confirmation. The consumer pays the full price and the shipping costs shown at checkout when the order is placed.
+7bis.1. Some products are sold as pre-orders. They are disclosed as such, with their ship date, on the product page, at checkout and on the order confirmation. The consumer pays the full price and the shipping costs shown at checkout when the order is placed, subject to Article 8.3 for consumers residing in the Netherlands.
 
 7bis.2. Pre-order products are produced in batches. The offer before payment and the order confirmation state the batch, any funding target and deadline, the ship-by date and the delivery deadline for the order. For the March 2027 batch, provided the funding target is reached by its deadline, items ship by 31 March 2027 and are delivered by 15 April 2027 in the EU or 30 April 2027 in the United States. For other destinations outside the EU and the United States, that funded batch ships by 31 March 2027 and is delivered by 30 April 2027 (Article 7quater). Paid Batch 1 orders ship on the date stated in the offer and are delivered in the EU by 30 November 2026. Delivery means receipt of the goods by the consumer. The consumer and Incutec BV agree that the delivery deadline disclosed before payment and in the order confirmation is the delivery period under Art. VI.43 WER, instead of the 30-day default in Article 7.1. For a combined order under Article 7bis.5, the latest batch's delivery deadline applies only if it was disclosed and agreed as the order's delivery deadline before payment. The target and deadline stated at checkout do not change for that order. This clarification does not extend any previously agreed ship-by or delivery deadline or limit the cancellation rights of consumers who have already ordered.
 
@@ -127,9 +127,11 @@
 
 ### Article 8: Payment
 
-8.1. Payment is made by one of the payment methods shown at checkout before the order is placed. Payment is due in full when the order is placed.
+8.1. Payment is made by one of the payment methods shown at checkout before the order is placed. Payment is due in full when the order is placed, subject to Article 8.3.
 
 8.2. The consumer has the duty to notify Incutec BV without delay of any inaccuracies in the payment details provided.
+
+8.3. **Consumers residing in the Netherlands.** A consumer whose habitual residence is in the Netherlands is not obliged to pay more than 50% of the purchase price before delivery (Art. 7:26(2) and 7:6(2) Dutch Civil Code; Art. 6(2) Regulation (EC) No 593/2008, Rome I). That consumer may choose to pay a deposit of 50% of the purchase price when ordering, with the balance due before dispatch. A consumer who has paid more than 50% of the purchase price of an existing order may, until dispatch, request a refund of the amount paid above 50%; the balance is then due before dispatch.
 
 ### Article 9: Warranty
 
@@ -201,7 +203,7 @@
 
 ### Article 15: Amendments
 
-15.1. The version of these terms supplied and accepted before payment governs the order. Incutec BV may publish a new version for new orders from the effective date stated in that version. A later version does not change the terms, prices, ship-by dates or delivery deadlines already agreed for an existing order. Mandatory consumer rights apply from their statutory effective dates and are not postponed by publication of a new version. Version 2.8 applies to new orders from its publication on 1 October 2026; earlier orders retain their accepted terms and all mandatory rights. The delivery and refund clarifications in Articles 7bis.2, 7bis.7 and 7ter.4 do not withdraw any earlier promise or reduce a consumer's rights.
+15.1. The version of these terms supplied and accepted before payment governs the order. Incutec BV may publish a new version for new orders from the effective date stated in that version. A later version does not change the terms, prices, ship-by dates or delivery deadlines already agreed for an existing order. Mandatory consumer rights apply from their statutory effective dates and are not postponed by publication of a new version. Version 2.9 applies to new orders from its publication on [publication date]; earlier orders retain their accepted terms and all mandatory rights. A consumer residing in the Netherlands may also make the refund request under Article 8.3 for an order placed before that publication. The delivery and refund clarifications in Articles 7bis.2, 7bis.7 and 7ter.4 do not withdraw any earlier promise or reduce a consumer's rights.
 
 ### Article 16: Professional customers (B2B)
 
@@ -225,6 +227,8 @@
 
 18.1. By placing an order, the customer accepts the Incutec End-Use Policy published at /end-use, and warrants that the goods will not be used for any of the excluded end-uses set out in §3 of that policy. Breach of this warranty constitutes a material breach of contract and entitles Incutec BV to cancel the order, refuse delivery, and pursue any remedy available under Belgian law and applicable EU regulations. On cancellation or refusal of delivery, Incutec BV refunds a consumer all payments within 14 days.
 
+18.1bis. **General-purpose components.** OpenDrone is a brand of Incutec BV. Incutec BV sells general-purpose electronic and mechanical components that can be used in many applications. The customer chooses the final application and is responsible for it and for complying with the rules that apply to it (End-Use Policy, §2). This does not limit Incutec BV's statutory liability for defects or the consumer's statutory rights (Articles 9 and 10).
+
 18.2. **No re-export to Russia or Belarus.** The customer undertakes not to sell, export or re-export, directly or indirectly, to the Russian Federation or Belarus, or for use in the Russian Federation or Belarus, any goods supplied under this contract, including goods that fall under Article 12g of Regulation (EU) 833/2014, such as common high priority items (Art. 12g Regulation (EU) 833/2014; Art. 8g Regulation (EC) 765/2006). This undertaking constitutes an essential element of the contract, and its breach is an essential breach of contract. On breach, Incutec BV may terminate the contract and claim damages. Where there are grounds to suspect circumvention of this provision, Incutec BV refuses delivery and may cancel the order; it then refunds all payments for that order within 14 days. The customer shall inform Incutec BV immediately of any breach and of any activity by third parties, including possible resellers, that could frustrate the purpose of this provision.
 
 ### Article 19: Language
@@ -237,4 +241,4 @@
 
 ---
 
-*Version: 2.8, published 2026-10-01; applies to new orders from publication. Earlier orders retain their accepted terms.*
+*Version: 2.9, published [publication date]; applies to new orders from publication. Earlier orders retain their accepted terms.*

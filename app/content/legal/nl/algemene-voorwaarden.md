@@ -55,7 +55,7 @@
 
 5.6. Incutec BV betaalt alle betalingen, inclusief de standaard leveringskosten, terug uiterlijk 14 dagen nadat zij de herroeping heeft ontvangen. Zij mag wachten tot zij het product heeft terugontvangen of de consument heeft aangetoond dat hij het heeft teruggezonden, naargelang welk tijdstip eerst valt.
 
-5.7. Terugbetaling geschiedt via hetzelfde betaalmiddel als bij de oorspronkelijke transactie, tenzij de consument uitdrukkelijk met een ander betaalmiddel instemt.
+5.7. Terugbetaling geschiedt via hetzelfde betaalmiddel als bij de oorspronkelijke transactie, tenzij de consument uitdrukkelijk met een ander betaalmiddel instemt. Is terugbetaling via het oorspronkelijke betaalmiddel niet meer mogelijk, dan betaalt Incutec BV terug per overschrijving op een rekening die de consument opgeeft, binnen de termijn die voor die terugbetaling geldt en zonder kosten voor de consument (Art. VI.50 §1 WER). Dit artikel geldt voor elke terugbetaling onder deze voorwaarden.
 
 5.8. **Waardevermindering.** De consument is aansprakelijk voor de waardevermindering van het product die het gevolg is van gebruik dat verder gaat dan nodig om de aard, de kenmerken en de werking ervan vast te stellen (Art. VI.51 §2 WER). Voor elektronicacomponenten geldt in het bijzonder: solderen aan het product, montage in een systeem, het aansluiten van batterijvoeding of motoren en vlieggebruik gaan verder dan die beoordeling; het aansluiten via USB om de werking te controleren niet. De waardevermindering wordt door Incutec BV gemotiveerd en op basis van de werkelijke restwaarde begroot en op de terugbetaling ingehouden; enkel wanneer het product geen restwaarde meer heeft, kan zij het volledige aankoopbedrag bedragen. Het herroepingsrecht zelf vervalt hierdoor niet.
 
@@ -73,11 +73,11 @@
 
 7.3. Het risico van beschadiging en/of vermissing van producten berust tot het moment van bezorging aan de consument bij Incutec BV.
 
-7.4. Levering aan consumenten is beschikbaar voor de bestemmingen die aan de checkout worden aangeboden. Leveringen buiten de EU zijn uitsluitend voor pre-orderbatches, onder Artikel 7ter voor de Verenigde Staten en Artikel 7quater voor andere bestemmingen. Betaalde EU-voorraad (batch 1) wordt uitsluitend binnen de EU geleverd. De beschikbare bezorgdienst en de volledige bezorgkosten worden vóór de betaling getoond.
+7.4. Incutec BV levert uitsluitend aan de bestemmingen die aan de checkout worden aangeboden. Leveringen buiten de EU zijn uitsluitend voor pre-orderbatches, onder Artikel 7ter voor de Verenigde Staten en Artikel 7quater voor andere bestemmingen. Betaalde EU-voorraad (batch 1) wordt uitsluitend binnen de EU geleverd. De beschikbare bezorgdienst en de volledige bezorgkosten worden vóór de betaling getoond.
 
 ### Artikel 7bis: Voorverkoop
 
-7bis.1. Sommige producten worden verkocht als voorverkoop (pre-order). Zij worden als dusdanig vermeld, met hun verzenddatum, op de productpagina, aan de checkout en op de orderbevestiging. De consument betaalt de volledige prijs en de verzendkosten die aan de checkout worden getoond bij het plaatsen van de bestelling.
+7bis.1. Sommige producten worden verkocht als voorverkoop (pre-order). Zij worden als dusdanig vermeld, met hun verzenddatum, op de productpagina, aan de checkout en op de orderbevestiging. De consument betaalt de volledige prijs en de verzendkosten die aan de checkout worden getoond bij het plaatsen van de bestelling, onder voorbehoud van Artikel 8.3 voor consumenten die in Nederland wonen.
 
 7bis.2. Pre-orderproducten worden in batches geproduceerd. Het aanbod vóór de betaling en de orderbevestiging vermelden de batch, het eventuele financieringsdoel en de deadline, de uiterste verzenddatum en de uiterste leverdatum voor de bestelling. Voor de batch van maart 2027 worden de artikelen uiterlijk 31 maart 2027 verzonden en uiterlijk 15 april 2027 in de EU of 30 april 2027 in de Verenigde Staten geleverd, mits het financieringsdoel uiterlijk op de deadline wordt bereikt. Voor andere bestemmingen buiten de EU en de Verenigde Staten wordt die gefinancierde batch uiterlijk 31 maart 2027 verzonden en uiterlijk 30 april 2027 geleverd (Artikel 7quater). Bestellingen uit de betaalde batch 1 worden verzonden op de datum die in het aanbod staat en uiterlijk 30 november 2026 in de EU geleverd. Levering betekent ontvangst van de goederen door de consument. De consument en Incutec BV komen overeen dat de uiterste leverdatum die vóór de betaling en in de orderbevestiging is vermeld, de leveringstermijn is in de zin van Art. VI.43 WER, in plaats van de standaardtermijn van 30 dagen uit Artikel 7.1. Bij een gecombineerde bestelling onder Artikel 7bis.5 geldt de uiterste leverdatum van de laatste batch alleen als die vóór de betaling als uiterste leverdatum van de bestelling is meegedeeld en overeengekomen. Het doel en de deadline die aan de checkout vermeld staan, wijzigen niet voor die bestelling. Deze verduidelijking verlengt geen eerder overeengekomen uiterste verzend- of leverdatum en beperkt niet de annuleringsrechten van consumenten die al besteld hebben.
 
@@ -125,9 +125,11 @@
 
 ### Artikel 8: Betaling
 
-8.1. Betaling geschiedt via een van de betaalmethoden die aan de checkout worden getoond voordat de bestelling geplaatst wordt. De volledige betaling is verschuldigd bij het plaatsen van de bestelling.
+8.1. Betaling geschiedt via een van de betaalmethoden die aan de checkout worden getoond voordat de bestelling geplaatst wordt. De volledige betaling is verschuldigd bij het plaatsen van de bestelling, onder voorbehoud van Artikel 8.3.
 
 8.2. De consument heeft de plicht om onjuistheden in verstrekte betaalgegevens onverwijld aan Incutec BV te melden.
+
+8.3. **Consumenten die in Nederland wonen.** Een consument met gewone verblijfplaats in Nederland is niet verplicht om vóór de levering meer dan 50% van de koopprijs te betalen (art. 7:26 lid 2 en 7:6 lid 2 Nederlands Burgerlijk Wetboek; art. 6 lid 2 Verordening (EG) nr. 593/2008, Rome I). Die consument kan ervoor kiezen bij de bestelling een voorschot van 50% van de koopprijs te betalen, met betaling van het saldo vóór de verzending. Een consument die voor een bestaande bestelling meer dan 50% van de koopprijs heeft betaald, kan tot de verzending de terugbetaling vragen van het bedrag dat boven 50% is betaald; het saldo is dan verschuldigd vóór de verzending.
 
 ### Artikel 9: Garantie
 
@@ -199,7 +201,7 @@
 
 ### Artikel 15: Wijzigingen
 
-15.1. De versie van deze voorwaarden die vóór betaling is verstrekt en aanvaard, geldt voor de bestelling. Incutec BV kan een nieuwe versie publiceren voor nieuwe bestellingen vanaf de ingangsdatum die in die versie staat. Een latere versie verandert de voorwaarden, prijzen, uiterste verzenddata of levertermijnen die voor een bestaande bestelling zijn overeengekomen niet. Dwingende consumentenrechten gelden vanaf hun wettelijke ingangsdatum en worden niet uitgesteld door de publicatie van een nieuwe versie. Versie 2.8 geldt voor nieuwe bestellingen vanaf de publicatie ervan op 1 oktober 2026; eerdere bestellingen behouden de aanvaarde voorwaarden en alle dwingende rechten. De verduidelijkingen over levering en terugbetaling in de artikelen 7bis.2, 7bis.7 en 7ter.4 trekken geen eerdere belofte in en beperken de rechten van de consument niet.
+15.1. De versie van deze voorwaarden die vóór betaling is verstrekt en aanvaard, geldt voor de bestelling. Incutec BV kan een nieuwe versie publiceren voor nieuwe bestellingen vanaf de ingangsdatum die in die versie staat. Een latere versie verandert de voorwaarden, prijzen, uiterste verzenddata of levertermijnen die voor een bestaande bestelling zijn overeengekomen niet. Dwingende consumentenrechten gelden vanaf hun wettelijke ingangsdatum en worden niet uitgesteld door de publicatie van een nieuwe versie. Versie 2.9 geldt voor nieuwe bestellingen vanaf de publicatie ervan op [publicatiedatum]; eerdere bestellingen behouden de aanvaarde voorwaarden en alle dwingende rechten. Een consument die in Nederland woont, kan het verzoek tot terugbetaling onder Artikel 8.3 ook doen voor een bestelling die vóór die publicatie is geplaatst. De verduidelijkingen over levering en terugbetaling in de artikelen 7bis.2, 7bis.7 en 7ter.4 trekken geen eerdere belofte in en beperken de rechten van de consument niet.
 
 ### Artikel 16: Professionele klanten (B2B)
 
@@ -223,6 +225,8 @@
 
 18.1. Door een bestelling te plaatsen, aanvaardt de klant het Incutec End-Use beleid gepubliceerd op /end-use, en garandeert hij dat de goederen niet zullen worden gebruikt voor enig uitgesloten eindgebruik zoals beschreven in §3 van dat beleid. Schending van deze garantie vormt een wezenlijke contractbreuk en geeft Incutec BV het recht de bestelling te annuleren, de levering te weigeren, en elk rechtsmiddel uit te oefenen dat beschikbaar is onder Belgisch recht en de toepasselijke EU-verordeningen. Bij annulering of weigering van levering betaalt Incutec BV aan een consument alle betalingen terug binnen 14 dagen.
 
+18.1bis. **Componenten voor algemeen gebruik.** OpenDrone is een merk van Incutec BV. Incutec BV verkoopt elektronische en mechanische componenten voor algemeen gebruik, die in veel toepassingen kunnen worden gebruikt. De klant kiest de uiteindelijke toepassing en is verantwoordelijk voor die toepassing en voor de naleving van de regels die erop van toepassing zijn (Eindgebruiksbeleid, §2). Dit beperkt de wettelijke aansprakelijkheid van Incutec BV voor gebreken en de wettelijke rechten van de consument niet (artikelen 9 en 10).
+
 18.2. **Geen wederuitvoer naar Rusland of Belarus.** De klant verbindt zich ertoe goederen die op grond van deze overeenkomst worden geleverd, met inbegrip van goederen die onder artikel 12g van Verordening (EU) 833/2014 vallen, zoals gemeenschappelijke goederen met hoge prioriteit, niet direct of indirect te verkopen, uit te voeren of weder uit te voeren naar de Russische Federatie of Belarus, of voor gebruik in de Russische Federatie of Belarus (Art. 12g Verordening (EU) 833/2014; Art. 8g Verordening (EG) 765/2006). Deze verbintenis geldt als een essentieel element van de overeenkomst en de schending ervan vormt een wezenlijke contractbreuk. Bij schending kan Incutec BV de overeenkomst ontbinden en schadevergoeding vorderen. Wanneer er gronden zijn om omzeiling van deze bepaling te vermoeden, weigert Incutec BV de levering en kan zij de bestelling annuleren; zij betaalt dan alle betalingen voor die bestelling terug binnen 14 dagen. De klant stelt Incutec BV onmiddellijk in kennis van elke schending en van elke activiteit van derden, met inbegrip van mogelijke wederverkopers, die het doel van deze bepaling zou kunnen verijdelen.
 
 ### Artikel 19: Taal
@@ -235,4 +239,4 @@
 
 ---
 
-*Versie: 2.8, gepubliceerd op 2026-10-01; geldt voor nieuwe bestellingen vanaf publicatie. Eerdere bestellingen behouden de aanvaarde voorwaarden.*
+*Versie: 2.9, gepubliceerd op [publicatiedatum]; geldt voor nieuwe bestellingen vanaf publicatie. Eerdere bestellingen behouden de aanvaarde voorwaarden.*

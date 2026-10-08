@@ -2,6 +2,7 @@
 
 **Issuer:** Incutec BV
 **Effective:** 8 June 2026 (date of incorporation of Incutec BV)
+**Revised:** [publication date], with version 2.9 of the General Terms and Conditions
 **Review:** Annual; or upon material change to product scope, regulatory environment, or distribution channels.
 
 ## 1. Scope
@@ -10,7 +11,11 @@ This policy governs the sale, supply, and distribution of all goods designed, ma
 
 ## 2. Permitted End-Use
 
-Incutec BV designs and supplies civilian hobby and commercial electronics. Goods are intended for use in:
+Incutec BV sells general-purpose electronic and mechanical components, including flight controllers, electronic speed controllers (ESCs), receivers, motors, frames and accessories. OpenDrone is a brand of Incutec BV. These components can be used in many applications, for example robotics, RC vehicles, education and prototyping. The buyer chooses the final application, is responsible for it and is responsible for complying with the rules that apply to it.
+
+This does not limit Incutec BV's statutory liability for defects or product liability, or the statutory rights of consumers, which cannot be excluded or limited by contract (Art. VI.83, 13°, 14°, 25° and 30° Belgian Code of Economic Law; Art. 15 Directive (EU) 2024/2853).
+
+Subject to §3, goods are intended for use in:
 
 - consumer hobby and recreational applications;
 - educational, research, and maker contexts;

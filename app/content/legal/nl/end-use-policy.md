@@ -2,6 +2,7 @@
 
 **Uitgever:** Incutec BV
 **Van kracht:** 8 juni 2026 (oprichtingsdatum van Incutec BV)
+**Herzien:** [publicatiedatum], met versie 2.9 van de Algemene Voorwaarden
 **Herziening:** Jaarlijks, of bij een wezenlijke wijziging van het productaanbod, het regelgevend kader of de distributiekanalen.
 
 ## 1. Toepassingsgebied
@@ -10,7 +11,11 @@ Dit beleid regelt de verkoop, levering en distributie van alle goederen die door
 
 ## 2. Toegestaan eindgebruik
 
-Incutec BV ontwerpt en levert civiele hobby- en commerciële elektronica. De goederen zijn bestemd voor gebruik in:
+Incutec BV verkoopt elektronische en mechanische componenten voor algemeen gebruik, waaronder vluchtcontrollers, elektronische snelheidsregelaars (ESC's), ontvangers, motoren, frames en accessoires. OpenDrone is een merk van Incutec BV. Deze componenten kunnen in veel toepassingen worden gebruikt, bijvoorbeeld robotica, RC-voertuigen, onderwijs en prototyping. De koper kiest de uiteindelijke toepassing, is daarvoor verantwoordelijk en is verantwoordelijk voor de naleving van de regels die erop van toepassing zijn.
+
+Dit beperkt de wettelijke aansprakelijkheid van Incutec BV voor gebreken of voor producten met een gebrek, of de wettelijke rechten van consumenten, niet; die kunnen contractueel niet worden uitgesloten of beperkt (art. VI.83, 13°, 14°, 25° en 30° Wetboek van economisch recht; art. 15 Richtlijn (EU) 2024/2853).
+
+Onder voorbehoud van §3 zijn de goederen bestemd voor gebruik in:
 
 - hobby- en recreatieve consumententoepassingen;
 - educatieve, onderzoeks- en makercontexten;

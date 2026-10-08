@@ -57,7 +57,7 @@
 
 5.6. Incutec BV rembourse tous les paiements, y compris les frais de livraison standard, au plus tard 14 jours après avoir reçu la rétractation. Elle peut différer le remboursement jusqu’à ce qu’elle ait récupéré le produit ou jusqu’à ce que le consommateur ait fourni la preuve de son renvoi, la date retenue étant celle du premier de ces faits.
 
-5.7. Le remboursement est effectué selon le même moyen de paiement que la transaction initiale, sauf si le consommateur accepte expressément un moyen de paiement différent.
+5.7. Le remboursement est effectué selon le même moyen de paiement que la transaction initiale, sauf si le consommateur accepte expressément un moyen de paiement différent. Si le remboursement sur le moyen de paiement initial n’est plus possible, Incutec BV rembourse par virement bancaire sur un compte indiqué par le consommateur, dans le délai applicable à ce remboursement et sans frais pour le consommateur (art. VI.50 §1 CDE). Le présent article s’applique à tout remboursement prévu par les présentes conditions.
 
 5.8. **Dépréciation.** Le consommateur est responsable de la dépréciation du produit résultant de manipulations allant au-delà de ce qui est nécessaire pour établir sa nature, ses caractéristiques et son fonctionnement (art. VI.51 §2 CDE). Pour des composants électroniques, cela signifie en particulier : souder sur le produit, le monter dans un système, raccorder une batterie ou des moteurs et l'utiliser en vol vont au-delà de cette évaluation ; le raccorder par USB pour vérifier son fonctionnement, non. La dépréciation est motivée par Incutec BV, évaluée sur la valeur résiduelle réelle et déduite du remboursement ; ce n'est que lorsque le produit n'a plus aucune valeur résiduelle qu'elle peut atteindre le prix d'achat intégral. Le droit de rétractation lui-même n'est pas perdu.
 
@@ -75,11 +75,11 @@
 
 7.3. Le risque de dommage et/ou de perte des produits incombe à Incutec BV jusqu’au moment de la livraison au consommateur.
 
-7.4. La livraison aux consommateurs est disponible pour les destinations proposées lors du passage en caisse. Les livraisons hors de l’UE concernent uniquement les lots de précommande, au titre de l’article 7ter pour les États-Unis et de l’article 7quater pour les autres destinations. Le stock payé dans l’UE (lot 1) est livré uniquement dans l’UE. Le service de livraison disponible et les frais complets sont indiqués avant le paiement.
+7.4. Incutec BV livre uniquement vers les destinations proposées lors du passage en caisse. Les livraisons hors de l’UE concernent uniquement les lots de précommande, au titre de l’article 7ter pour les États-Unis et de l’article 7quater pour les autres destinations. Le stock payé dans l’UE (lot 1) est livré uniquement dans l’UE. Le service de livraison disponible et les frais complets sont indiqués avant le paiement.
 
 ### Article 7bis : Précommandes
 
-7bis.1. Certains produits sont vendus en précommande. Ils sont indiqués comme tels, avec leur date d’expédition, sur la page produit, lors du passage en caisse et sur la confirmation de commande. Le consommateur paie le prix intégral et les frais d’expédition affichés lors du passage en caisse au moment de la commande.
+7bis.1. Certains produits sont vendus en précommande. Ils sont indiqués comme tels, avec leur date d’expédition, sur la page produit, lors du passage en caisse et sur la confirmation de commande. Le consommateur paie le prix intégral et les frais d’expédition affichés lors du passage en caisse au moment de la commande, sous réserve de l’article 8.3 pour les consommateurs résidant aux Pays-Bas.
 
 7bis.2. Les produits en précommande sont fabriqués par lots. L’offre avant le paiement et la confirmation de commande indiquent le lot, l’éventuel objectif de financement et son échéance, la date limite d’expédition et la date limite de livraison de la commande. Pour le lot de mars 2027, à condition que l’objectif de financement soit atteint à son échéance, les articles sont expédiés au plus tard le 31 mars 2027 et livrés au plus tard le 15 avril 2027 dans l’UE ou le 30 avril 2027 aux États-Unis. Pour les autres destinations hors de l’UE et des États-Unis, ce lot financé est expédié au plus tard le 31 mars 2027 et livré au plus tard le 30 avril 2027 (article 7quater). Les commandes du lot 1 déjà payé sont expédiées à la date indiquée dans l’offre et livrées dans l’UE au plus tard le 30 novembre 2026. La livraison signifie la réception des biens par le consommateur. Le consommateur et Incutec BV conviennent que la date limite de livraison indiquée avant le paiement et dans la confirmation de commande constitue le délai de livraison au sens de l’Art. VI.43 CDE, au lieu du délai par défaut de 30 jours prévu à l’article 7.1. Pour une commande combinée au titre de l’article 7bis.5, la date limite de livraison du dernier lot ne s’applique que si elle a été communiquée et convenue avant le paiement comme date limite de livraison de la commande. L’objectif et l’échéance indiqués lors du passage en caisse ne changent pas pour cette commande. Cette clarification ne reporte aucune date limite d’expédition ou de livraison déjà convenue et ne limite pas les droits d’annulation des consommateurs ayant déjà passé commande.
 
@@ -127,9 +127,11 @@
 
 ### Article 8 : Paiement
 
-8.1. Le paiement s’effectue par l’un des moyens de paiement affichés lors du passage en caisse avant que la commande soit passée. Le paiement est dû intégralement au moment de la commande.
+8.1. Le paiement s’effectue par l’un des moyens de paiement affichés lors du passage en caisse avant que la commande soit passée. Le paiement est dû intégralement au moment de la commande, sous réserve de l’article 8.3.
 
 8.2. Le consommateur a l’obligation de signaler sans délai à Incutec BV toute inexactitude dans les données de paiement fournies.
+
+8.3. **Consommateurs résidant aux Pays-Bas.** Un consommateur ayant sa résidence habituelle aux Pays-Bas n’est pas tenu de payer plus de 50 % du prix d’achat avant la livraison (art. 7:26, al. 2, et 7:6, al. 2, du Code civil néerlandais ; art. 6, par. 2, du Règlement (CE) n° 593/2008, Rome I). Ce consommateur peut choisir de payer un acompte de 50 % du prix d’achat lors de la commande, le solde étant dû avant l’expédition. Un consommateur qui a payé plus de 50 % du prix d’achat d’une commande existante peut, jusqu’à l’expédition, demander le remboursement du montant payé au-delà de 50 % ; le solde est alors dû avant l’expédition.
 
 ### Article 9 : Garantie
 
@@ -201,7 +203,7 @@
 
 ### Article 15 : Modifications
 
-15.1. La version des présentes conditions fournie et acceptée avant le paiement régit la commande. Incutec BV peut publier une nouvelle version pour les nouvelles commandes à compter de la date d'entrée en vigueur indiquée dans cette version. Une version ultérieure ne modifie pas les conditions, les prix, les dates limites d'expédition ou de livraison déjà convenus pour une commande existante. Les droits impératifs des consommateurs s'appliquent dès leur date légale d'entrée en vigueur et ne sont pas reportés par la publication d'une nouvelle version. La version 2.8 s'applique aux nouvelles commandes dès sa publication le 1er octobre 2026 ; les commandes antérieures conservent les conditions acceptées et tous les droits impératifs. Les précisions concernant la livraison et le remboursement aux Articles 7bis.2, 7bis.7 et 7ter.4 ne retirent aucune promesse antérieure et ne réduisent pas les droits du consommateur.
+15.1. La version des présentes conditions fournie et acceptée avant le paiement régit la commande. Incutec BV peut publier une nouvelle version pour les nouvelles commandes à compter de la date d'entrée en vigueur indiquée dans cette version. Une version ultérieure ne modifie pas les conditions, les prix, les dates limites d'expédition ou de livraison déjà convenus pour une commande existante. Les droits impératifs des consommateurs s'appliquent dès leur date légale d'entrée en vigueur et ne sont pas reportés par la publication d'une nouvelle version. La version 2.9 s'applique aux nouvelles commandes dès sa publication le [date de publication] ; les commandes antérieures conservent les conditions acceptées et tous les droits impératifs. Un consommateur résidant aux Pays-Bas peut également présenter la demande de remboursement prévue à l’article 8.3 pour une commande passée avant cette publication. Les précisions concernant la livraison et le remboursement aux Articles 7bis.2, 7bis.7 et 7ter.4 ne retirent aucune promesse antérieure et ne réduisent pas les droits du consommateur.
 
 ### Article 16 : Clients professionnels (B2B)
 
@@ -225,6 +227,8 @@
 
 18.1. En passant une commande, le client accepte la Politique d’usage final d’Incutec publiée sur /end-use et garantit que les biens ne seront pas utilisés pour l’un des usages finaux exclus énoncés au §3 de cette politique. La violation de cette garantie constitue un manquement essentiel au contrat et autorise Incutec BV à annuler la commande, refuser la livraison et exercer tout recours disponible en vertu du droit belge et des règlements de l’UE applicables. En cas d’annulation ou de refus de livraison, Incutec BV rembourse à un consommateur tous les paiements dans les 14 jours.
 
+18.1bis. **Composants à usage général.** OpenDrone est une marque d’Incutec BV. Incutec BV vend des composants électroniques et mécaniques à usage général, utilisables dans de nombreuses applications. Le client choisit l’application finale et en est responsable, ainsi que du respect des règles qui s’y appliquent (Politique d’usage final, §2). Ceci ne limite ni la responsabilité légale d’Incutec BV pour les défauts ni les droits légaux du consommateur (articles 9 et 10).
+
 18.2. **Pas de réexportation vers la Russie ou le Bélarus.** Le client s’engage à ne pas vendre, exporter ou réexporter, directement ou indirectement, vers la Fédération de Russie ou le Bélarus, ou en vue d’une utilisation dans ces pays, les biens fournis en vertu du présent contrat, y compris les biens relevant de l’article 12g du Règlement (UE) 833/2014, tels que les biens communs de haute priorité (art. 12g du Règlement (UE) 833/2014 ; art. 8g du Règlement (CE) 765/2006). Cet engagement constitue un élément essentiel du contrat et sa violation constitue un manquement essentiel au contrat. En cas de violation, Incutec BV peut résoudre le contrat et réclamer des dommages et intérêts. Lorsqu’il existe des motifs de soupçonner un contournement de cette disposition, Incutec BV refuse la livraison et peut annuler la commande ; elle rembourse alors tous les paiements effectués pour cette commande dans les 14 jours. Le client informe immédiatement Incutec BV de toute violation ainsi que de toute activité de tiers, y compris d’éventuels revendeurs, susceptible de faire échec à l’objectif de cette disposition.
 
 ### Article 19 : Langue
@@ -237,4 +241,4 @@
 
 ---
 
-*Version : 2.8, publiée le 2026-10-01 ; s'applique aux nouvelles commandes dès la publication. Les commandes antérieures conservent les conditions acceptées.*
+*Version : 2.9, publiée le [date de publication] ; s'applique aux nouvelles commandes dès la publication. Les commandes antérieures conservent les conditions acceptées.*

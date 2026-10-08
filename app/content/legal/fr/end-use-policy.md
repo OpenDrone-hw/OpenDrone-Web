@@ -2,6 +2,7 @@
 
 **Émetteur :** Incutec BV
 **En vigueur :** 8 juin 2026 (date de constitution d'Incutec BV)
+**Révisée :** [date de publication], avec la version 2.9 des Conditions générales
 **Révision :** Annuelle, ou lors d'un changement important du portefeuille de produits, de l'environnement réglementaire ou des canaux de distribution.
 
 ## 1. Champ d'application
@@ -10,7 +11,11 @@ La présente politique régit la vente, la fourniture et la distribution de tous
 
 ## 2. Usage final autorisé
 
-Incutec BV conçoit et fournit de l'électronique civile de loisir et commerciale. Les biens sont destinés à être utilisés dans :
+Incutec BV vend des composants électroniques et mécaniques à usage général, notamment des contrôleurs de vol, des contrôleurs électroniques de vitesse (ESC), des récepteurs, des moteurs, des châssis et des accessoires. OpenDrone est une marque d'Incutec BV. Ces composants peuvent être utilisés dans de nombreuses applications, par exemple la robotique, les véhicules radiocommandés, l'enseignement et le prototypage. L'acheteur choisit l'application finale, en est responsable et est responsable du respect des règles qui s'y appliquent.
+
+Ceci ne limite ni la responsabilité légale d'Incutec BV pour les défauts ou du fait des produits défectueux, ni les droits légaux des consommateurs, qui ne peuvent être exclus ou limités par contrat (art. VI.83, 13°, 14°, 25° et 30°, du Code de droit économique ; art. 15 de la Directive (UE) 2024/2853).
+
+Sous réserve du §3, les biens sont destinés à être utilisés dans :
 
 - des applications de loisir et récréatives grand public ;
 - des contextes éducatifs, de recherche et de type maker ;
