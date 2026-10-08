@@ -121,9 +121,9 @@ describe('hero build shopping guide', () => {
       {sku: 'OPENFRAME-5', quantity: 1},
       {sku: 'OPENMOTOR-2306', quantity: 4},
       {sku: 'OPENRX-MONO', quantity: 1},
-      {sku: 'ACC-PROP-5-HQ-5X43X3-V2S', quantity: 1},
+      {sku: 'ACC-PROP-5-HQ-5X43X3-V2S', quantity: 4},
     ]);
-    assert.equal(selection.total, 127.3);
+    assert.equal(selection.total, 157.6);
     assert.equal(selection.available, true);
     assert.equal(selection.complete, true);
     assert.equal(selection.showPrices, true);
@@ -140,7 +140,7 @@ describe('hero build shopping guide', () => {
     assert.equal(selection.available, false);
     assert.equal(selection.notify, true);
     const open = heroBuildSelection(five, all(five), sellable, false);
-    assert.equal(open.total, 127.3);
+    assert.equal(open.total, 157.6);
     assert.equal(open.notify, false);
   });
 
@@ -178,7 +178,7 @@ describe('hero build shopping guide', () => {
     const selection = heroBuildSelection(build, included, allowed);
     assert.equal(selection.available, true);
     assert.equal(selection.complete, false);
-    assert.equal(selection.total, 40.4);
+    assert.equal(selection.total, 70.7);
     assert.doesNotMatch(selection.href, /OPENFRAME|OPENMOTOR/);
   });
 

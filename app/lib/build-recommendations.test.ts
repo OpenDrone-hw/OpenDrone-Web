@@ -43,7 +43,7 @@ describe('buildSuggestionSpecs', () => {
     const specs = buildSuggestionSpecs(BUILDS, '3-inch', [{sku: 'OPENFC-LITE-2020', handle: 'openfc-lite'}]);
     assert.deepEqual(
       specs.map(({sku, quantity}) => [sku, quantity]),
-      [['OPENESC-2020', 1], ['OPENFRAME-3', 1], ['OPENMOTOR-1604-4S', 4], ['OPENRX-LITE-UFL', 1], ['ACC-PROP-3-HQ-T3X3X3', 1]],
+      [['OPENESC-2020', 1], ['OPENFRAME-3', 1], ['OPENMOTOR-1604-4S', 4], ['OPENRX-LITE-UFL', 1], ['ACC-PROP-3-HQ-T3X3X3', 4]],
     );
   });
 
@@ -52,6 +52,7 @@ describe('buildSuggestionSpecs', () => {
     const props = specs.find((s) => s.role === 'props');
     assert.equal(props?.sku, 'ACC-PROP-5-HQ-5X43X3-V2S');
     assert.equal(props?.handle, 'hqprop-5x4-3x3-v2s-propeller-set-5-inch');
+    assert.equal(props?.quantity, 4);
     assert.equal(specs.some((s) => s.role === 'antenna'), false);
     const three = buildSuggestionSpecs(BUILDS, '3-inch', [{sku: 'OPENFRAME-3', handle: 'openframe'}]);
     assert.equal(three.some((s) => s.role === 'antenna'), false);
