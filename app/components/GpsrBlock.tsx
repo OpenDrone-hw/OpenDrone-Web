@@ -1,6 +1,7 @@
 import type {CompanyIdentity} from '~/lib/company';
 import {copy, copyText, editAttrs} from '~/lib/copy';
 import {warningLanguages} from '~/lib/gpsr-languages';
+import {safetyWarnings, type SafetyFamily} from '~/lib/product-safety';
 import type {RegistrationNumber} from '~/lib/registrations';
 
 /**
@@ -9,10 +10,12 @@ import type {RegistrationNumber} from '~/lib/registrations';
  * the safety warnings, available with the product's supporting information.
  * The email is plain text here on purpose: Art. 19 requires an electronic
  * address on the offer itself, so the site-wide no-mailto rule does not apply
- * to product pages. Strings live in content/copy/product-chrome.json under
- * the gpsr_* keys. English and the visitor country's languages
- * (`warningLanguages`) show; every other EU language sits in a folded
- * disclosure on the same page.
+ * to product pages. Labels and the product framing line live in
+ * content/copy/product-chrome.json under the gpsr_* keys; the safety
+ * warnings come only from content/product-safety.json and render only once
+ * that file is approved (`safetyWarnings`). English and the visitor
+ * country's languages (`warningLanguages`) show; every other EU language
+ * sits in a folded disclosure on the same page.
  */
 
 function warnings(key: string): string[] {
@@ -45,27 +48,11 @@ function registrationLabel(kind: RegistrationNumber['kind']): string {
   return copyText('product-chrome.gpsr_reg_idu') ?? REGISTRATION_LABELS[kind];
 }
 
-/** Which extra warnings a product carries, on top of the shared ones. */
-export type SafetyKind = 'electronics' | 'frame' | 'motor' | 'accessory';
-
-const SAFETY_KIND: Record<string, SafetyKind> = {
-  'openfc-lite': 'electronics',
-  openesc: 'electronics',
-  openrx: 'electronics',
-  openframe: 'frame',
-  'openframe-spares': 'frame',
-  openmotor: 'motor',
-};
-
-export function safetyKind(handle: string): SafetyKind {
-  return SAFETY_KIND[handle] ?? 'accessory';
-}
-
 export function GpsrBlock({
   company,
   productTitle,
   sku,
-  kind,
+  family,
   country,
   registrations = [],
   compact = false,
@@ -74,7 +61,8 @@ export function GpsrBlock({
   company: CompanyIdentity;
   productTitle: string;
   sku?: string | null;
-  kind: SafetyKind;
+  /** The safety-leaflet family; null for accessories. */
+  family: SafetyFamily | null;
   /** The visitor's country: which warning languages show unfolded. */
   country: string | null;
   /** Incutec's registration numbers for the visitor's country, when set. */
@@ -90,7 +78,7 @@ export function GpsrBlock({
 }) {
   const linesFor = (lang: string) => [
     ...warnings(`gpsr_warnings_${lang}`),
-    ...warnings(`gpsr_warnings_${kind}_${lang}`),
+    ...safetyWarnings(family, lang),
   ];
   const {shown, folded} = warningLanguages(country);
   const list = (lang: string, labelled: boolean) => {
@@ -109,14 +97,14 @@ export function GpsrBlock({
   const others = folded.filter((lang) => linesFor(lang).length);
   return (
     <section
-      aria-label={copyText('product-chrome.gpsr_aria') ?? 'Manufacturer and safety information'}
+      aria-label={copyText('product-chrome.gpsr_aria') ?? 'Product safety'}
       className={`${compact ? 'pb-6' : 'mt-6 border-t border-[var(--color-border)] pt-5'} text-[14px] leading-relaxed text-[var(--color-text)]`}
     >
       {!compact ? <p
         className="mb-3 font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--color-text-muted)]"
         {...editAttrs('product-chrome.gpsr_heading')}
       >
-        {copyText('product-chrome.gpsr_heading') ?? 'Manufacturer & safety information'}
+        {copyText('product-chrome.gpsr_heading') ?? 'Product safety'}
       </p> : null}
       {brand ? (
         <p className="mb-2">

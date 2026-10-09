@@ -77,7 +77,8 @@ import {
   toReviewAggregate,
 } from '~/components/ProductReviews';
 import {useNoHover, useIsMobile} from '~/lib/use-media-query';
-import {GpsrBlock, safetyKind} from '~/components/GpsrBlock';
+import {GpsrBlock} from '~/components/GpsrBlock';
+import {safetyFamily} from '~/lib/product-safety';
 import {
   PRODUCT_CONTENT,
   WHAT_IS_THIS_ID,
@@ -3227,7 +3228,7 @@ function ProductPage() {
                 : product.title
             }
             sku={shownSku}
-            kind={safetyKind(product.handle)}
+            family={safetyFamily(product.handle)}
             brand={thirdPartyBrand(product.vendor)}
             country={rootData.visitorCountry ?? null}
             registrations={registrationNumbers(rootData.visitorCountry ?? null)}

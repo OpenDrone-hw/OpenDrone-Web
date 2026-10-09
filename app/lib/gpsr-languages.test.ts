@@ -32,12 +32,16 @@ describe('warningLanguages', () => {
     }
   });
 
-  it('covers the EU27, with warnings in every language it names', () => {
+  it('covers the EU27, with the framing line in every language it names', () => {
     assert.deepEqual(Object.keys(COUNTRY_LANGUAGES).sort(), [...EU_COUNTRIES].sort());
     for (const lang of WARNING_LANGUAGES) {
-      for (const key of [`gpsr_warnings_${lang}`, ...['electronics', 'frame', 'motor'].map((k) => `gpsr_warnings_${k}_${lang}`)]) {
-        assert.ok(Array.isArray(COPY[key]) && (COPY[key] as unknown[]).length > 0, key);
-      }
+      const key = `gpsr_warnings_${lang}`;
+      assert.ok(Array.isArray(COPY[key]) && (COPY[key] as unknown[]).length > 0, key);
     }
+  });
+
+  it('keeps product safety warnings out of the copy file', () => {
+    const stray = Object.keys(COPY).filter((k) => /^gpsr_warnings_[a-z]+_[a-z]+$/.test(k));
+    assert.deepEqual(stray, []);
   });
 });
