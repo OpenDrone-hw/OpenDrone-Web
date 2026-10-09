@@ -1,5 +1,5 @@
 {
-  "$comment": "Product safety warnings for the product-page safety block (GPSR (EU) 2023/988 Art. 19). Only approved statements from the Incutec safety leaflet (document DOC-SAFETY-OPENDRONE) are copied in here, unchanged, per product family and language. Warnings render only while approved is true and documentVersion names the approved leaflet version; with approved false the block shows manufacturer, address, email and product identifier only.",
+  "$comment": "Product safety warnings for the product-page safety block (GPSR (EU) 2023/988 Art. 19). Only approved statements from the Incutec safety leaflet (document DOC-SAFETY-OPENDRONE) are copied in here, unchanged, per product family and language. While approved is false the block keeps the existing gpsr_warnings_<kind>_<lang> copy lines; once approved is true and documentVersion names the approved leaflet version, the block shows these statements instead.",
   "approved": false,
   "documentId": "DOC-SAFETY-OPENDRONE",
   "documentVersion": null,

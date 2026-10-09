@@ -25,6 +25,22 @@ const FAMILY_BY_HANDLE: Record<string, SafetyFamily> = {
   openmotor: 'motor',
 };
 
+/** Which legacy warning set (`gpsr_warnings_<kind>_<lang>` in product-chrome
+ *  copy) a product carries while the leaflet is unapproved. */
+export type LegacySafetyKind = 'electronics' | 'frame' | 'motor' | 'accessory';
+
+const LEGACY_KIND: Record<SafetyFamily, LegacySafetyKind> = {
+  fc: 'electronics',
+  esc: 'electronics',
+  rx: 'electronics',
+  frame: 'frame',
+  motor: 'motor',
+};
+
+export function legacySafetyKind(family: SafetyFamily | null): LegacySafetyKind {
+  return family ? LEGACY_KIND[family] : 'accessory';
+}
+
 /** The leaflet family a product handle belongs to; null for accessories. */
 export function safetyFamily(handle: string): SafetyFamily | null {
   return FAMILY_BY_HANDLE[handle] ?? null;

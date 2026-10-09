@@ -40,8 +40,12 @@ describe('warningLanguages', () => {
     }
   });
 
-  it('keeps product safety warnings out of the copy file', () => {
-    const stray = Object.keys(COPY).filter((k) => /^gpsr_warnings_[a-z]+_[a-z]+$/.test(k));
-    assert.deepEqual(stray, []);
+  it('keeps the legacy per-kind warnings until the leaflet is approved', () => {
+    for (const lang of WARNING_LANGUAGES) {
+      for (const k of ['electronics', 'frame', 'motor']) {
+        const key = `gpsr_warnings_${k}_${lang}`;
+        assert.ok(Array.isArray(COPY[key]) && (COPY[key] as unknown[]).length > 0, key);
+      }
+    }
   });
 });

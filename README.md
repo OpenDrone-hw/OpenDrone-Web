@@ -270,9 +270,10 @@ producer (EPR) registration numbers per EU country from
 product page ends in a "Product safety" block (`app/components/GpsrBlock.tsx`):
 manufacturer, postal and electronic address, product type and SKU, and the
 framing line `gpsr_warnings_<lang>` from `content/copy/product-chrome.json`.
-Safety warnings come only from `content/product-safety.json`, copied unchanged
-from the approved safety leaflet; they render only while `approved` is `true`
-and `documentVersion` is set.
+Until `content/product-safety.json` is approved, the block shows the existing
+`gpsr_warnings_<kind>_<lang>` lines; once `approved` is `true` and
+`documentVersion` is set, it shows only the statements in that file, copied
+unchanged from the approved safety leaflet.
 
 **Other routes.**
 

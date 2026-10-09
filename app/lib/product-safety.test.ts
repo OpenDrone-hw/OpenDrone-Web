@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {PRODUCT_SAFETY, safetyFamily, safetyWarnings, safetyWarningsApproved} from './product-safety.ts';
+import {PRODUCT_SAFETY, legacySafetyKind, safetyFamily, safetyWarnings, safetyWarningsApproved} from './product-safety.ts';
 
 const approved = {
   approved: true,
@@ -42,5 +42,14 @@ describe('product safety warnings', () => {
     assert.equal(safetyFamily('openframe-spares'), 'frame');
     assert.equal(safetyFamily('openmotor'), 'motor');
     assert.equal(safetyFamily('props'), null);
+  });
+
+  it('maps families to the legacy warning sets', () => {
+    assert.equal(legacySafetyKind('fc'), 'electronics');
+    assert.equal(legacySafetyKind('esc'), 'electronics');
+    assert.equal(legacySafetyKind('rx'), 'electronics');
+    assert.equal(legacySafetyKind('frame'), 'frame');
+    assert.equal(legacySafetyKind('motor'), 'motor');
+    assert.equal(legacySafetyKind(null), 'accessory');
   });
 });

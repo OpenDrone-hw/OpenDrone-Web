@@ -1,7 +1,7 @@
 import type {CompanyIdentity} from '~/lib/company';
 import {copy, copyText, editAttrs} from '~/lib/copy';
 import {warningLanguages} from '~/lib/gpsr-languages';
-import {safetyWarnings, type SafetyFamily} from '~/lib/product-safety';
+import {legacySafetyKind, safetyWarnings, safetyWarningsApproved, type SafetyFamily} from '~/lib/product-safety';
 import type {RegistrationNumber} from '~/lib/registrations';
 
 /**
@@ -12,8 +12,9 @@ import type {RegistrationNumber} from '~/lib/registrations';
  * address on the offer itself, so the site-wide no-mailto rule does not apply
  * to product pages. Labels and the product framing line live in
  * content/copy/product-chrome.json under the gpsr_* keys; the safety
- * warnings come only from content/product-safety.json and render only once
- * that file is approved (`safetyWarnings`). English and the visitor
+ * warnings come from content/product-safety.json once that file is approved
+ * (`safetyWarnings`); until then the existing gpsr_warnings_<kind>_<lang>
+ * lines keep showing, unchanged. English and the visitor
  * country's languages (`warningLanguages`) show; every other EU language
  * sits in a folded disclosure on the same page.
  */
@@ -78,7 +79,9 @@ export function GpsrBlock({
 }) {
   const linesFor = (lang: string) => [
     ...warnings(`gpsr_warnings_${lang}`),
-    ...safetyWarnings(family, lang),
+    ...(safetyWarningsApproved()
+      ? safetyWarnings(family, lang)
+      : warnings(`gpsr_warnings_${legacySafetyKind(family)}_${lang}`)),
   ];
   const {shown, folded} = warningLanguages(country);
   const list = (lang: string, labelled: boolean) => {
