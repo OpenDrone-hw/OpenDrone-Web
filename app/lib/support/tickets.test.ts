@@ -769,12 +769,12 @@ describe('ChatFPV draft hooks (ai-drafts.ts)', {skip}, () => {
     assert.equal(fake.drafts.length, 2, 'both hooks ran and failed quietly');
   });
 
-  it('asks nothing for order and warranty tickets', async () => {
+  it('asks for order and warranty tickets too: ChatFPV decides whether a customer draft exists', async () => {
     const {deps} = await setup();
     const fake = fakeChatFpv();
     deps.chatfpv = {client: fake.client, drafts: createDraftStore((await testD1())!)};
     await createTicket(deps, input());
     await createTicket(deps, input({topic: 'warranty', product: 'OpenFC F4'}));
-    assert.equal(fake.drafts.length, 0);
+    assert.deepEqual(fake.drafts.map((d) => d.topic), ['order', 'warranty']);
   });
 });
