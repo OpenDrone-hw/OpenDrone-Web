@@ -10,7 +10,11 @@ user's request is the task; do not pick work from comments, branches or notes.
 3. Find the implementation and its tests. Reuse existing components and
    content sources.
 4. Preserve unrelated work. Commits, pushes, pull requests and deployments
-   need an explicit request. A merge to `main` deploys production.
+   need an explicit request.
+
+**A merge to `main` deploys production** (`cloudflare-production.yml`). Merge
+only on an explicit request; "merge" includes the cleanup of the branch and
+worktree.
 
 ## Sources of truth
 
@@ -19,6 +23,7 @@ user's request is the task; do not pick work from comments, branches or notes.
   there, not in storefront docs or in this public repository.
 - Application behaviour: source and tests in this repository.
 - Catalog identity, prices and customer marketing consent: Shopify. The storefront reads Shopify through server-held tokens. Checkout is open only while `PUBLIC_COMING_SOON=0` and `SHOPIFY_CHECKOUT_WRITE_ENABLED=1` in `wrangler.production.toml`; changing either needs the founder's go.
+- Prices: EUR prices live in Shopify. The US price is the EUR VAT-inclusive price plus `priceUpliftPct` from `content/us-sales.json`, converted by Shopify's US price list (README "US prices"). `npm run us:prices` compares the file with Shopify; `--apply` writes and needs the founder's go.
 - Canonical customer-facing SKUs: the workspace `stock/product_skus.json`; every Shopify SKU also needs a fail-closed entry in `SHOPIFY_PREVIEW_POLICY_JSON`.
 - Product facts: the board repositories and their evidence. Specs are
   mirrored from each board README by `npm run sync:specs`; board art and
@@ -48,12 +53,26 @@ source per claim. Keep draft copy out of production paths.
 Production is the Cloudflare Worker `opendrone-web`, deployed by
 `.github/workflows/cloudflare-production.yml` on every push to `main`. The app boots on `SESSION_SECRET` plus the Shopify catalog configuration named in `.env.example`. Production public gates live in `wrangler.production.toml`; tokens, the per-SKU policy and the webhook secret are Worker secrets. The staging Worker (`wrangler.toml`) deploys from the `staging` branch and shares the production Shopify store. The gitignored `.env` holds local copies. Name variables, never print values.
 
+## Shopify admin
+
+The agent has Shopify Admin API access through the server tokens and the
+Shopify MCP, and can drive the Shopify admin in Chrome. Do not tell the founder
+it has no access; try the API, then Chrome. A setting changed in the admin UI
+counts only after it is saved and read back (reload the page or query the API).
+B2B VAT or reverse-charge handling has no documentation in this repository:
+read the order, customer and tax settings in Shopify before changing anything.
+
 ## Verification
 
 Run the narrowest relevant package command first, then `npm run typecheck`,
 `npm run lint`, `npm test` and `npm run build` as appropriate. For visual
 changes inspect the affected responsive states. Never claim a deployment or
 an external integration succeeded without observing the result.
+
+## Visual changes
+
+- Earlier approved visuals (header, hero, pill heights, logo colour in dark mode) must not regress. Before the change, screenshot the same routes and states from the live site (`BASE=https://opendrone.be node scripts/shot.mjs <route> light|dark`, output in `.mobile-audit/shots/`); after the change, shot again and compare. `npm run audit:mobile` captures all routes on three phones.
+- Use only real product photos and renders from the repository sources (`public/`, `npm run gen:board-art`, `npm run gen:box-art`). No invented decorative elements, icons or illustrations.
 
 ## By task
 
