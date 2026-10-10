@@ -17,6 +17,8 @@ export type FigSeries = {
   pack?: string;
   kind: SeriesKind;
   axis?: 'y2';
+  /** The series the figure emphasises; the others are drawn in grey. */
+  primary?: boolean;
   /** `null` is a missing reading and is never interpolated. */
   x: Array<number | null>;
   y: Array<number | null>;
@@ -83,6 +85,8 @@ export type FigFit = {
 export type RunInfo = {
   date: string;
   setup: string[];
+  /** The setup as name and value rows, from the view's publish block. */
+  table?: Array<[string, string]>;
   chip: string;
   /** The run in a few words, for the page lede. */
   setupShort?: string;

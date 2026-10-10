@@ -2079,12 +2079,10 @@ function ProductPage() {
    * and the catalog's rating.
    */
   // Measured bench data for this product. A tiered figure shows only on its
-  // own tier; an untiered one always shows.
+  // own tier (the OpenMotor-2306 data is never shown on the 1604); an untiered one always shows.
   const activeTierKey = normalizeTier(activeTier);
   const testingFigure =
-    testingCards.find(
-      (c) => !c.summary.tier || !activeTierKey || normalizeTier(c.summary.tier) === activeTierKey,
-    ) ?? null;
+    testingCards.find((c) => !c.summary.tier || normalizeTier(c.summary.tier) === activeTierKey) ?? null;
   const present = (type: ChapterType, entry: ChapterEntry): boolean => {
     switch (type) {
       // Only when the product's JSON carries the beginner copy: accessories

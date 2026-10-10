@@ -1,7 +1,7 @@
 {
   "id": "openrx-lq-vs-distance",
   "title": "Link quality against distance",
-  "finding": "From 2.9 to 5.3 km the Gemini's link quality is higher than the Mono's in all 25 bins, by a median of 15 points.",
+  "finding": "Gemini above Mono in all 25 bins from 2.9 to 5.3 km, median 15 points.",
   "product": "openrx",
   "tier": null,
   "runId": "rx-13-2026-07-11",

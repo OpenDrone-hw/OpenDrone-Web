@@ -62,8 +62,8 @@ export function sourceLine(runId: string, date: string | undefined, cite: string
   const logs = (cite ?? '').split('; ').filter(Boolean);
   const times = logs.map((l) => /\d{8}T(\d{2})(\d{2})\d{2}Z/.exec(l)).map((m) => (m ? `${m[1]}:${m[2]}` : null));
   void date;
-  if (times.length && times.every(Boolean)) return `${id}, ${[...new Set(times)].join(', ')} UTC`;
-  if (logs.length) return `${id}, ${logs.length} ${logs.length === 1 ? 'log' : 'logs'}`;
+  if (times.length && times.every(Boolean)) return `${id} (${[...new Set(times)].sort().join(', ')} UTC)`;
+  if (logs.length) return `${id} (${logs.length} ${logs.length === 1 ? 'log' : 'logs'})`;
   return id;
 }
 

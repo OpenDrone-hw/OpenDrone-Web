@@ -65,7 +65,6 @@ export function ProductSection({
           </span>
         ) : null}
       </p>
-      <h3>Setup</h3>
       {runIds.map((rid, ri) => {
         const run = index.runs[rid];
         if (!run) return null;
@@ -76,37 +75,59 @@ export function ProductSection({
         const lim = limits(rid);
         const showPhoto = photo && index.runs[rid]?.photo === photo;
         return (
-          <div key={rid} className="tr-runblock" data-photo={showPhoto ? '1' : undefined}>
-            <div className="tr-runtext">
+          <div key={rid}>
             {runIds.length > 1 ? (
               <p className="tr-runline">
                 Run {rid.replace(/-\d{4}-\d{2}-\d{2}$/, '')}, {run.date}
               </p>
             ) : null}
-            <ul className="tr-setup" aria-label={`Setup of run ${rid}`}>
-              {lines.map((l) => (
-                <li key={l}>{l}</li>
-              ))}
-            </ul>
+            <div className="tr-runblock" data-photo={showPhoto ? '1' : undefined}>
+              <div className="tr-runtext">
+                <h3 className="tr-label">Setup</h3>
+                {run.table?.length ? (
+                  <table className="tr-kv" aria-label={`Setup of run ${rid}`}>
+                    <tbody>
+                      {run.table.map(([k, v]) => (
+                        <tr key={k}>
+                          <th scope="row">{k}</th>
+                          <td>{v}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <ul className="tr-lim" aria-label={`Setup of run ${rid}`}>
+                    {lines.map((l) => (
+                      <li key={l}>{l}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              {showPhoto ? (
+                <figure className="tr-photo">
+                  <img src={photo.src} width={photo.size[0]} height={photo.size[1]} alt={photo.alt} loading="lazy" decoding="async" />
+                  <figcaption>
+                    <b>Photo {photoNo ?? 1}.</b> {photo.caption}
+                  </figcaption>
+                </figure>
+              ) : null}
+            </div>
             {lim.length || gaps.length ? (
-              <p className="tr-limits">
-                <b>Limits.</b> {lim.join(' ')}
-                {gaps.length ? ` Not measured: ${gaps.join(', ')}.` : ''}
-              </p>
+              <>
+                <h3 className="tr-label">Limits</h3>
+                <ul className="tr-lim">
+                  {lim.map((l) => (
+                    <li key={l}>{l}</li>
+                  ))}
+                  {gaps.length ? <li>Not measured: {gaps.join(', ')}.</li> : null}
+                </ul>
+              </>
             ) : null}
             {reduction ? (
-              <p className="tr-limits">
-                <b>Reduction.</b> {reduction}
-              </p>
-            ) : null}
-            </div>
-            {showPhoto ? (
-              <figure className="tr-photo">
-          <img src={photo.src} width={photo.size[0]} height={photo.size[1]} alt={photo.alt} loading="lazy" decoding="async" />
-          <figcaption>
-            <b>Photo {photoNo ?? 1}.</b> {photo.caption}
-          </figcaption>
-        </figure>
+              <>
+                <h3 className="tr-label">Reduction</h3>
+                <p className="tr-red">{reduction}</p>
+              </>
             ) : null}
           </div>
         );

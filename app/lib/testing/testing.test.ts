@@ -29,8 +29,9 @@ describe('published figures', () => {
     assert.match(c, /1726 g/);
     assert.match(c, /one 6S pack/);
     assert.doesNotMatch(c, /reversed/);
-    const setup = index.runs[index.figures['openmotor-thrust-vs-rpm']!.runId]!.setup.join(' ');
+    const setup = (index.runs[index.figures['openmotor-thrust-vs-rpm']!.runId]!.table ?? []).flat().join(' ');
     assert.match(setup, /207\.4 counts\/g/);
+    assert.equal(index.figures['openmotor-thrust-vs-rpm']!.tier, '2306', 'the 2306 data is not shown on the 1604');
   });
 
   it('the thrust figure has one frame per rotor speed reading and holds are markers joined by a thin line', () => {
@@ -179,7 +180,7 @@ describe('the OpenMotor section', () => {
     for (const id of Object.keys(index.figures).filter((i) => i.startsWith('openmotor-'))) {
       assert.ok(!fig(id).series.some((s) => /16:35/.test(s.label)), id);
     }
-    assert.match(index.runs[index.figures['openmotor-thrust-vs-rpm']!.runId]!.setup.join(' '), /16:35 UTC is not plotted/);
+    assert.match((index.runs[index.figures['openmotor-thrust-vs-rpm']!.runId]!.table ?? []).flat().join(' '), /16:35 UTC capture/);
   });
   it('states that full-throttle thrust depends on the pack, flagged', () => {
     const c = fig('openmotor-hold-thrust').caveats.find((x) => /sagged to 19\.3 V/.test(typeof x === 'string' ? x : x.text));
@@ -187,14 +188,15 @@ describe('the OpenMotor section', () => {
   });
   it('uses 31283 rpm and a quadratic fit in the findings', () => {
     assert.match(index.figures['openmotor-hold-rpm']!.finding, /31283 rpm/);
-    assert.match(index.figures['openmotor-thrust-vs-rpm']!.finding, /quadratic fit gives 1\.68 g per krpm squared/);
+    assert.match(index.figures['openmotor-thrust-vs-rpm']!.finding, /1652 g at 31283 rpm/);
+    assert.equal(fig('openmotor-thrust-vs-rpm').fit!.k, 1.68);
   });
 });
 
 describe('the log', () => {
-  it('names the operator pulling the pack as the cause', () => {
+  it('records the run that stopped at 80 percent', () => {
     const e = index.log.find((l) => l.id === 'motor-thrust-map-bus-loss')!;
-    assert.match(e.saw, /unplugged the pack/);
+    assert.match(e.saw, /stopped at 80 percent/);
   });
 });
 

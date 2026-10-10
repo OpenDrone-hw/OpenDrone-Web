@@ -1,7 +1,7 @@
 {
   "id": "openrx-rssi-vs-distance",
   "title": "RSSI against distance",
-  "finding": "From 2.9 to 5.3 km the Gemini reports lower RSSI than the Mono in 24 of 25 bins, by a median of 4 dB.",
+  "finding": "Gemini below Mono in 24 of 25 bins from 2.9 to 5.3 km, median 4 dB.",
   "product": "openrx",
   "tier": null,
   "runId": "rx-13-2026-07-11",

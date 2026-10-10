@@ -5,8 +5,8 @@
       "id": "motor-thrust-clean-run",
       "date": "2026-10-10",
       "product": "openmotor",
-      "tested": "Thrust map, one 6S pack, ten holds.",
-      "saw": "1652 g at 31283 rpm at 100 percent; ESC temperature live. The 16:35 UTC capture is not used: zero drift up to 27 g.",
+      "tested": "OpenMotor-2306 thrust map, one 6S pack, ten holds.",
+      "saw": "1652 g at 31283 rpm, 100 percent; ESC temperature live. The 16:35 UTC capture is not used.",
       "changed": "ESC temperature stays live after a pack swap.",
       "figureId": "openmotor-thrust-vs-rpm",
       "status": "publish"
@@ -15,8 +15,8 @@
       "id": "motor-thrust-map-bus-loss",
       "date": "2026-10-10",
       "product": "openmotor",
-      "tested": "Thrust map on the new stand, ten holds.",
-      "saw": "13:25 UTC: 1496 g at 100 percent. 13:16 UTC: the operator unplugged the pack at 80 percent because of the noise.",
+      "tested": "OpenMotor-2306 thrust map on the new stand, ten holds.",
+      "saw": "13:25 UTC: 1496 g at 100 percent. 13:16 UTC: stopped at 80 percent.",
       "changed": "Bench controller aborts when bus voltage disappears.",
       "figureId": "openmotor-hold-thrust",
       "status": "publish"

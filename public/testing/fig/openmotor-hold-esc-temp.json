@@ -1,21 +1,21 @@
 {
   "id": "openmotor-hold-esc-temp",
   "title": "ESC temperature per throttle hold",
-  "finding": "Hottest of four die sensors, only channel 1 driven: 43 C at 10 percent throttle, 53 C at 100 percent.",
+  "finding": "43 C at 10 percent throttle, 53 C at 100 percent, hottest of four die sensors.",
   "product": "openmotor",
-  "tier": null,
+  "tier": "2306",
   "runId": "drv-04-2026-10-10",
   "domain": "THM",
   "chip": "One OpenMotor-2306, one 6S pack, cell calibrated to 1726 g",
   "caveats": [
     {
-      "text": "The die reading is the maximum of four sensors, and only channel 1 is driven; at idle the four read up to 11 C apart, so it is a sensor reading, not a hot spot."
+      "text": "Only channel 1 is driven and at idle the four sensors read up to 11 C apart, so this is a sensor reading, not a hot spot."
     },
     {
-      "text": "The temperature was read live through the whole run, 38 to 53 C."
+      "text": "Read live through the run, 38 to 53 C."
     }
   ],
-  "reduction": "Logged frames; frames in throttle or speed transients are excluded. Hold markers: median of the last 2 s of each throttle hold; the band is the 25th to 75th percentile. Holds with no pack voltage reading are dropped.",
+  "reduction": "Logged frames, without throttle or speed transients. Hold markers are the median of the last 2 s of each throttle hold, the band the 25th to 75th percentile; holds with no pack voltage reading are dropped.",
   "cite": "Logs/drv-04-openmotor-2306-2026-10-10-20261010T164844Z#L1312-L9833",
   "axes": {
     "x": {

@@ -92,8 +92,7 @@ export function buildGeometry(fig: Fig, opt: GeomOptions): Geometry {
   const theme: Theme = opt.theme ?? 'light';
   const dom = figureDomains(fig, {hidden: opt.hidden, xWindow: opt.xWindow});
   const hasY2 = Boolean(dom.y2);
-  const nLines = Math.min(1, (fig.marks ?? []).filter((q) => q.kind === 'line').length);
-  const top = (opt.titles === false ? 12 : 26) + nLines * MARK_ROW;
+  const top = opt.titles === false ? 12 : 26;
   const gl = opt.narrow ? GUTTER_L_NARROW : GUTTER_L;
   const m = {l: gl, r: (hasY2 ? gl : 16) + directPad(fig, Boolean(opt.narrow)), t: top, b: 38};
   const plot = {x0: m.l, y0: m.t, x1: w - m.r, y1: h - m.b};
@@ -306,7 +305,7 @@ export type Frame = {
  */
 export function markLines(fig: Fig): Array<{no: number; text: string}> {
   const ml = (fig.marks ?? []).filter((m) => m.kind === 'line').sort((a, b) => a.x - b.x);
-  return ml.length > 1 ? ml.map((m, i) => ({no: i + 1, text: m.text})) : [];
+  return ml.map((m, i) => ({no: i + 1, text: m.text}));
 }
 
 /** The fit as a short legend entry: `1.71 g/krpm²`. */
@@ -433,10 +432,9 @@ export function layoutNotes(
     return note;
   });
 
-  // Vertical mark lines: one row of the strip above the plot each.
+  // Marks on the x axis: a short tick and its number, the wording is in the caption.
   const lines: Geometry['lines'] = [];
-  // The leftmost line takes the lowest row, so no line passes through another's label.
   const ml = (fig.marks ?? []).filter((m) => m.kind === 'line' && inWin(m.x)).sort((a, b) => a.x - b.x);
-  ml.forEach((m, i) => lines.push({x: f.px(m.x), row: ml.length > 1 ? 0 : 0, text: ml.length > 1 ? String(i + 1) : m.text}));
+  ml.forEach((m, i) => lines.push({x: f.px(m.x), row: 0, text: String(i + 1)}));
   return {notes, lines, rings, centres};
 }

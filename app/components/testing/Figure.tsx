@@ -178,16 +178,16 @@ export function Figure({
   const items = [
     summary.finding,
     ...(fig.fit
-      ? [`The fit is y = k x squared through the origin, over ${fig.fit.n} holds from ${fig.fit.fromThrottle} percent throttle up; the largest miss is ${fig.fit.maxMiss} ${unitLabel(fig.axes.y.unit)}.`]
+      ? [`Quadratic fit through the origin over ${fig.fit.n} holds from ${fig.fit.fromThrottle} percent throttle: ${fig.fit.k} ${fig.fit.unit}, largest miss ${fig.fit.maxMiss} ${unitLabel(fig.axes.y.unit)}.`]
       : []),
     ...notes,
   ];
   const marks = markLines(fig);
-  const caption = `${summary.title}.${fig.fit ? ' Dashed line: quadratic fit.' : ''}${marks.length ? ` Dashed lines: ${marks.map((m) => `${m.no}, ${m.text[0]!.toLowerCase()}${m.text.slice(1)}`).join('; ')}.` : ''}`;
+  const caption = `${summary.title}.${fig.fit ? ' Dashed line: quadratic fit.' : ''}${marks.map((m) => ` Mark ${m.no}: ${m.text}.`).join('')}`;
 
   return (
     <figure className="tr-fig" id={id} ref={root} data-ready={full && Panel ? '1' : '0'} aria-labelledby={`${id}-cap`}>
-      <div className="tr-plot" ref={plotEl} style={{minHeight: height + 70}}>
+      <div className="tr-plot" ref={plotEl} style={{minHeight: height + 46}}>
         {full && Panel ? (
           <Panel
             fig={full}
@@ -216,19 +216,15 @@ export function Figure({
       <figcaption id={`${id}-cap`}>
         <b>Figure {no}.</b> {caption}
       </figcaption>
-      <p className="tr-prov">
-        <span>Source: {sourceLine(summary.runId, run?.date, fig.cite)}</span>
-        <span>View {id}</span>
-        <span>
-          Data:{' '}
-          <button type="button" className="tr-link" disabled={!full} onClick={() => void download()}>
-            SVG
-          </button>
-          ,{' '}
-          <button type="button" className="tr-link" disabled={!full} onClick={csv}>
-            CSV
-          </button>
-        </span>
+      <p className="tr-prov" data-view={id}>
+        Source: {sourceLine(summary.runId, run?.date, fig.cite)}.{' '}
+        <button type="button" className="tr-link" disabled={!full} onClick={() => void download()} title={`${id}.svg`}>
+          SVG
+        </button>
+        ,{' '}
+        <button type="button" className="tr-link" disabled={!full} onClick={csv} title={`${id}.csv`}>
+          CSV
+        </button>
       </p>
       <ol className="tr-findings">
         {items.map((t, i) => (

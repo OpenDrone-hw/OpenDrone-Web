@@ -1,7 +1,7 @@
 {
   "id": "openesc-die-temp-ramp",
   "title": "Die temperature in a ramp",
-  "finding": "The die reading rose from 23 C to 156 C as the clamp current climbed to 39.8 A, and peaked at 161 C.",
+  "finding": "23 C to 156 C as clamp current rose to 39.8 A; peak 161 C.",
   "product": "openesc",
   "tier": "20x20",
   "runId": "esc-18-2026-08-21",
@@ -12,15 +12,7 @@
       "text": "The die sensor is the controller's own, not a measurement of the output transistors."
     },
     {
-      "text": "The die reading stays at 156 C once telemetry is lost; the plot ends where that starts.",
-      "flag": true
-    },
-    {
       "text": "Single channel, one unit, run to destruction with no thermal guard.",
-      "run": true
-    },
-    {
-      "text": "Why the speed and current fell at about 100.1 s is not established by this capture.",
       "run": true
     },
     {
@@ -28,7 +20,7 @@
       "run": true
     }
   ],
-  "reduction": "Logged frames; frames in throttle or speed transients are excluded. Shown from 8 s to the loss of bus voltage telemetry.",
+  "reduction": "Logged frames, without throttle or speed transients. Shown from 8 s to the loss of bus voltage telemetry.",
   "cite": "Logs/esc-18-20x20-20260821T181141Z#L2-L32170",
   "axes": {
     "x": {

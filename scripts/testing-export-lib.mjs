@@ -104,7 +104,7 @@ function visibleText(P, labels) {
   const extra = [P.card_caveat, P.setup_short, P.tile?.label, P.tile?.note, P.tile?.detail, P.photo?.alt, P.photo?.caption];
   const notes = Object.values(P.axes || {}).map((a) => a.note);
   const shorts = Object.values(P.series || {}).map((s) => s.short);
-  return [P.title, P.finding, P.setup_chip, ...(P.setup || []), ...(P.caveats || []), ...(P.marks || []).map((m) => m.text || ''), ...extra, ...notes, ...shorts, ...labels]
+  return [P.title, P.finding, P.setup_chip, ...(P.setup || []), ...(P.setup_table || []).flat(), ...(P.caveats || []), ...(P.marks || []).map((m) => m.text || ''), ...extra, ...notes, ...shorts, ...labels]
     .filter((t) => typeof t === 'string')
     .join('\n');
 }
@@ -126,6 +126,7 @@ export function validatePublish(view, cfg) {
   if (!String(P.finding || '').trim()) bad('finding is empty');
   else if (words(P.finding) > 25) bad(`finding is ${words(P.finding)} words, limit 25`);
   if (!Array.isArray(P.setup) || !P.setup.some((x) => String(x).trim())) bad('setup is empty');
+  if (P.setup_table !== undefined && !(Array.isArray(P.setup_table) && P.setup_table.length && P.setup_table.every((r) => Array.isArray(r) && r.length === 2 && r.every((x) => typeof x === 'string' && x.trim())))) bad('setup_table is a list of [name, value] text pairs');
   if (!String(P.setup_chip || '').trim()) bad('setup_chip is empty');
   if (!Array.isArray(P.caveats) || !P.caveats.length) bad('caveats are empty');
   if (!Number.isFinite(P.order)) bad('order must be a number');
@@ -664,9 +665,9 @@ export function buildFigure(view, resp, benches, cfg) {
   else if (view.reduce === 'sweep') reduction.push('Sweep bins of mechanical speed; up and down legs averaged in each bin.');
   else if (display.share) reduction.push(`Share of logged samples with the flag set, in ${display.share.bin} ${axes.x.unit} bins of at least ${display.share.minCount} samples.`);
   else if (display.window) reduction.push(`Logged values from ${display.window[0]} s to ${display.window[1]} s.`);
-  else reduction.push(view.reduce === 'frames' ? 'Logged frames; frames in throttle or speed transients are excluded.' : 'Logged values, unreduced.');
-  if (kindOfApi === 'frames' && holds) reduction.push('Frames that share one rotor speed reading are reduced to their median, because rotor speed telemetry updates slower than the load cell.');
-  if (holds) reduction.push(`Hold markers: median of the last ${holds.seconds} s of each throttle hold; the band is the 25th to 75th percentile. Holds with no pack voltage reading are dropped.`);
+  else reduction.push(view.reduce === 'frames' ? 'Logged frames, without throttle or speed transients.' : 'Logged values, unreduced.');
+  if (kindOfApi === 'frames' && holds) reduction.push('Frames that share one rotor speed reading are reduced to their median, as that telemetry updates slower than the load cell.');
+  if (holds) reduction.push(`Hold markers are the median of the last ${holds.seconds} s of each throttle hold, the band the 25th to 75th percentile; holds with no pack voltage reading are dropped.`);
   if (display.from !== undefined || display.cutWhen) reduction.push(`Shown from ${display.from ?? 0} s${cutX !== null ? ' to the loss of bus voltage telemetry' : ''}.`);
   if (out.some((s) => s.kind !== 'hold' && s.x.length > cfg.maxPoints * 0.98)) reduction.push(`Over ${cfg.maxPoints} points are thinned to the minimum and maximum of each x bucket.`);
 
@@ -694,6 +695,11 @@ export function buildFigure(view, resp, benches, cfg) {
     }
     marks.push({kind: m.kind, x, ...(m.kind === 'point' ? {series: target.id, y} : {}), text: m.text});
   }
+  // Chronological or otherwise authored order of the legend and the drawing; the series the page emphasises.
+  const baseId = (id) => id.replace(/\.hold$/, '');
+  const orderOf = (e) => P.series?.[baseId(e.id)]?.order ?? 1e6;
+  for (const e of out) if (P.series?.[baseId(e.id)]?.primary) e.primary = true;
+  out.sort((a, b) => orderOf(a) - orderOf(b));
   const fig = {
     id: view.id,
     title: P.title,
@@ -717,12 +723,13 @@ export function buildFigure(view, resp, benches, cfg) {
   const hits = [];
   scan(fig, view.id, hits, cfg);
   scan(P.setup, `${view.id}.setup`, hits, cfg);
+  scan(P.setup_table, `${view.id}.setup_table`, hits, cfg);
   for (const h of hits) errors.push(`banned: ${h}`);
 
   return {
     fig: errors.length ? null : fig,
     errors,
-    run: {id: P.run, date: recorded[0] || null, setup: P.setup, chip: P.setup_chip, setupShort: P.setup_short, photo: P.photo},
+    run: {id: P.run, date: recorded[0] || null, setup: P.setup, chip: P.setup_chip, setupShort: P.setup_short, photo: P.photo, table: P.setup_table},
     meta: {
       status: P.status,
       order: P.order,
@@ -767,7 +774,7 @@ export function buildIndex(built, logItems, cfg, builtAt) {
   for (const b of built) {
     const r = b.run;
     const prev = runs[r.id];
-    const extra = {...(r.setupShort ? {setupShort: r.setupShort} : {}), ...(r.photo ? {photo: r.photo} : {})};
+    const extra = {...(r.setupShort ? {setupShort: r.setupShort} : {}), ...(r.photo ? {photo: r.photo} : {}), ...(r.table ? {table: r.table} : {})};
     if (!prev) runs[r.id] = {date: r.date, setup: r.setup, chip: r.chip, ...extra};
     else {
       for (const k of Object.keys(extra)) {

@@ -611,13 +611,13 @@ describe('public/testing', () => {
     assert.match(f.chip, /One OpenMotor-2306/);
     assert.match(f.chip, /one 6S pack/);
     assert.doesNotMatch(f.chip, /reversed/, 'the capture does not record it, so the chip does not state it');
-    const setup = index.runs[f.runId].setup.join(' ');
+    const setup = (index.runs[f.runId].table as string[][]).flat().join(' ');
     assert.match(setup, /1726 g reference mass/);
     assert.match(setup, /207\.4 counts\/g/);
-    assert.match(setup, /one 6S pack reading 23\.9 V at rest/);
-    assert.match(setup, /drawn in the thrust and pack voltage figures only/);
-    assert.match(setup, /reversed so the propeller pulls \(operator-stated, not recorded in the capture\)/);
-    assert.match(setup, /capture at 16:35 UTC is not plotted/);
+    assert.match(setup, /One 6S, 23\.9 V at rest/);
+    assert.match(setup, /in the thrust and pack voltage figures only/);
+    assert.match(setup, /reversed so the propeller pulls \(operator-stated, not in the capture\)/);
+    assert.match(setup, /16:35 UTC capture/);
   });
   it('draws the thrust figure from one frame per rpm reading and its holds as markers with a band', () => {
     const f = figs.get('openmotor-thrust-vs-rpm');

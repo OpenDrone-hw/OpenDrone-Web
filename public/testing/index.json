@@ -39,22 +39,49 @@
     "esc-18-2026-08-21": {
       "date": "2026-08-21",
       "setup": ["1 OpenESC-20x20, channel 4 driven alone", "Throttle ramp from 0 to full over 120 s, thermal limit disabled", "Fan cooling, fresh pack", "Reference: DC clamp meter on the battery lead"],
-      "chip": "OpenESC-20x20, channel 4, no thermal guard"
+      "chip": "OpenESC-20x20, channel 4, no thermal guard",
+      "table": [
+        ["Unit", "OpenESC-20x20, channel 4 driven alone"],
+        ["Ramp", "Throttle 0 to full over 120 s, thermal limit disabled"],
+        ["Cooling", "Fan, fresh pack"],
+        ["Reference", "DC clamp meter on the battery lead"]
+      ]
     },
     "esc-04-2026-08-21": {
       "date": "2026-08-21",
       "setup": ["1 OpenESC-20x20, 1 motor driven from the bench controller", "ESC trace: bench controller ADC reading of the current-sense output, gain 50 A/V", "Reference: DC clamp meter on the battery lead", "Six throttle holds of 8 to 20 s, 15 to 100 percent"],
-      "chip": "OpenESC-20x20, 1 motor, clamp reference"
+      "chip": "OpenESC-20x20, 1 motor, clamp reference",
+      "table": [
+        ["Unit", "OpenESC-20x20, one motor driven from the bench controller"],
+        ["ESC trace", "Bench controller ADC reading of the current-sense output, gain 50 A/V"],
+        ["Reference", "DC clamp meter on the battery lead"],
+        ["Holds", "Six, 8 to 20 s each, 15 to 100 percent throttle"]
+      ]
     },
     "field-2026-08-09": {
       "date": "2026-08-09",
       "setup": ["OpenFC-Lite (RP2350B) blackbox logs from three airframes, 2026-08-09", "ESC die temperature as reported over telemetry", "Hottest retained flight of each airframe; the 8 inch on both 6S and 8S"],
-      "chip": "OpenFC-Lite flight logs, 2026-08-09, hottest flights"
+      "chip": "OpenFC-Lite flight logs, 2026-08-09, hottest flights",
+      "table": [
+        ["Source", "OpenFC-Lite (RP2350B) blackbox logs from three airframes, 2026-08-09"],
+        ["Signal", "ESC die temperature as reported over telemetry"],
+        ["Selection", "Hottest retained flight of each airframe; the 8 inch on both 6S and 8S"]
+      ]
     },
     "drv-04-2026-10-10": {
       "date": "2026-10-10",
-      "setup": ["1 OpenMotor-2306 on a 10 kg load cell, ESC reversed so the propeller pulls (operator-stated, not recorded in the capture)", "Main run at 16:48 UTC: ten throttle holds of about 4 s, 10 to 100 percent, on one 6S pack reading 23.9 V at rest", "Two earlier runs, pack A at 13:16 UTC (unplugged by the operator at 80 percent because of the noise) and pack B at 13:25 UTC, are drawn in the thrust and pack voltage figures only, to compare packs", "Load cell calibrated against a 1726 g reference mass (207.4 counts/g, about 0.7 percent); zero drift 2 g before and 0.5 g after the run", "Rotor speed is ESC eRPM divided by the 7 pole pairs stored in the capture", "Pack voltage is the flight controller battery divider; the other electrical readings of the capture are uncalibrated and not shown", "A capture at 16:35 UTC is not plotted: its zero drifted by up to 27 g and its ESC temperature was frozen by a pack swap", "Run state: draft, not validated; no scope or clamp record."],
+      "setup": ["Run state: draft, not validated; no scope or clamp record."],
       "chip": "One OpenMotor-2306, one 6S pack, cell calibrated to 1726 g",
+      "table": [
+        ["Unit", "OpenMotor-2306, ESC reversed so the propeller pulls (operator-stated, not in the capture)"],
+        ["Load cell", "10 kg"],
+        ["Calibration", "1726 g reference mass, 207.4 counts/g, about 0.7 percent"],
+        ["Zero drift", "2 g before, 0.5 g after the 16:48 UTC run"],
+        ["Pack", "One 6S, 23.9 V at rest; voltage from the flight controller battery divider"],
+        ["Runs", "16:48 UTC, ten holds of about 4 s from 10 to 100 percent, in every figure; 13:25 and 13:16 UTC, other packs, in the thrust and pack voltage figures only"],
+        ["Rotor speed", "ESC eRPM over 7 pole pairs, the capture default; the real pole count is not recorded"],
+        ["Excluded", "16:35 UTC capture: zero drift up to 27 g, ESC temperature frozen by a pack swap"]
+      ],
       "setupShort": "OpenMotor-2306 on one 6S pack",
       "photo": {
         "src": "/testing/photo/drv-04-2026-10-10.webp",
@@ -66,13 +93,18 @@
     "rx-13-2026-07-11": {
       "date": "2026-07-11",
       "setup": ["One 5.3 km ride out along a road, about 75 minutes", "OpenRX-Gemini, OpenRX-Mono and OpenRX-Lite logged on the same carry", "Distance is measured from the start of the GPS track, not from the transmitter"],
-      "chip": "Gemini, Mono and Lite on one carry, 5.3 km ride"
+      "chip": "Gemini, Mono and Lite on one carry, 5.3 km ride",
+      "table": [
+        ["Ride", "5.3 km out along a road, about 75 minutes"],
+        ["Receivers", "OpenRX-Gemini, OpenRX-Mono and OpenRX-Lite logged on the same carry"],
+        ["Distance", "From the start of the GPS track, not from the transmitter"]
+      ]
     }
   },
   "figures": {
     "openesc-die-temp-ramp": {
       "title": "Die temperature in a ramp",
-      "finding": "The die reading rose from 23 C to 156 C as the clamp current climbed to 39.8 A, and peaked at 161 C.",
+      "finding": "23 C to 156 C as clamp current rose to 39.8 A; peak 161 C.",
       "product": "openesc",
       "tier": "20x20",
       "featured": false,
@@ -80,12 +112,12 @@
       "domain": "THM",
       "runId": "esc-18-2026-08-21",
       "chip": "OpenESC-20x20, channel 4, no thermal guard",
-      "caveats": 5,
-      "flagged": 1
+      "caveats": 3,
+      "flagged": 0
     },
     "openesc-shunt-vs-clamp": {
       "title": "Current sense against clamp",
-      "finding": "At 80 percent throttle the sense reading was 11.6 A against 32.4 A on the clamp; at 100 percent, 64.7 A against 55.7 A.",
+      "finding": "80 percent throttle: 11.6 A sense against 32.4 A clamp. 100 percent: 64.7 A against 55.7 A.",
       "product": "openesc",
       "tier": "20x20",
       "featured": true,
@@ -98,7 +130,7 @@
     },
     "openfc-lite-flight-die-temp": {
       "title": "ESC die temperature in flight",
-      "finding": "8 inch on 8S reached 116 C; the other three peaked between 52.6 and 87.4 C.",
+      "finding": "116 C for the 8 inch on 8S; 52.6 to 87.4 C for the other three.",
       "product": "openfc-lite",
       "tier": null,
       "featured": true,
@@ -111,9 +143,9 @@
     },
     "openmotor-hold-esc-temp": {
       "title": "ESC temperature per throttle hold",
-      "finding": "Hottest of four die sensors, only channel 1 driven: 43 C at 10 percent throttle, 53 C at 100 percent.",
+      "finding": "43 C at 10 percent throttle, 53 C at 100 percent, hottest of four die sensors.",
       "product": "openmotor",
-      "tier": null,
+      "tier": "2306",
       "featured": false,
       "order": 50,
       "domain": "THM",
@@ -129,9 +161,9 @@
     },
     "openmotor-hold-pack-voltage": {
       "title": "Pack voltage per throttle hold",
-      "finding": "The 16:48 UTC pack reads 23.9 V at 10 percent throttle and 21.6 V at 100 percent; the 13:25 UTC pack sagged to 19.3 V.",
+      "finding": "23.9 V at 10 percent throttle, 21.6 V at 100 percent (16:48 UTC); 19.3 V at 100 percent (13:25 UTC).",
       "product": "openmotor",
-      "tier": null,
+      "tier": "2306",
       "featured": false,
       "order": 40,
       "domain": "PWR",
@@ -148,16 +180,16 @@
     },
     "openmotor-hold-rpm": {
       "title": "Rotor speed per throttle hold",
-      "finding": "Rotor speed rises from 4881 rpm at 10 percent throttle to 31283 rpm at 100 percent, in the 16:48 UTC run.",
+      "finding": "4881 rpm at 10 percent throttle, 31283 rpm at 100 percent (16:48 UTC).",
       "product": "openmotor",
-      "tier": null,
+      "tier": "2306",
       "featured": false,
       "order": 20,
       "domain": "THR",
       "runId": "drv-04-2026-10-10",
       "chip": "One OpenMotor-2306, one 6S pack, cell calibrated to 1726 g",
       "caveats": 1,
-      "flagged": 1,
+      "flagged": 0,
       "duplicateOf": "openmotor-thrust-vs-rpm",
       "tile": {
         "order": 20,
@@ -167,15 +199,15 @@
     },
     "openmotor-hold-thrust": {
       "title": "Thrust per throttle hold",
-      "finding": "Thrust is 34 g at 10 percent throttle and 1652 g at 100 percent, in the 16:48 UTC run.",
+      "finding": "34 g at 10 percent throttle, 1652 g at 100 percent (16:48 UTC).",
       "product": "openmotor",
-      "tier": null,
+      "tier": "2306",
       "featured": false,
       "order": 30,
       "domain": "THR",
       "runId": "drv-04-2026-10-10",
       "chip": "One OpenMotor-2306, one 6S pack, cell calibrated to 1726 g",
-      "caveats": 1,
+      "caveats": 2,
       "flagged": 1,
       "tile": {
         "order": 10,
@@ -185,16 +217,16 @@
     },
     "openmotor-thrust-vs-rpm": {
       "title": "Thrust against rotor speed",
-      "finding": "From 40 percent throttle up, a quadratic fit gives 1.68 g per krpm squared.",
+      "finding": "1652 g at 31283 rpm, 100 percent throttle.",
       "product": "openmotor",
-      "tier": null,
+      "tier": "2306",
       "featured": true,
       "order": 10,
       "domain": "THR",
       "runId": "drv-04-2026-10-10",
       "chip": "One OpenMotor-2306, one 6S pack, cell calibrated to 1726 g",
-      "caveats": 3,
-      "flagged": 1
+      "caveats": 2,
+      "flagged": 0
     },
     "openrx-antenna-use": {
       "title": "Antenna 2 use against distance",
@@ -211,7 +243,7 @@
     },
     "openrx-lq-vs-distance": {
       "title": "Link quality against distance",
-      "finding": "From 2.9 to 5.3 km the Gemini's link quality is higher than the Mono's in all 25 bins, by a median of 15 points.",
+      "finding": "Gemini above Mono in all 25 bins from 2.9 to 5.3 km, median 15 points.",
       "product": "openrx",
       "tier": null,
       "featured": false,
@@ -237,7 +269,7 @@
     },
     "openrx-rssi-vs-distance": {
       "title": "RSSI against distance",
-      "finding": "From 2.9 to 5.3 km the Gemini reports lower RSSI than the Mono in 24 of 25 bins, by a median of 4 dB.",
+      "finding": "Gemini below Mono in 24 of 25 bins from 2.9 to 5.3 km, median 4 dB.",
       "product": "openrx",
       "tier": null,
       "featured": true,
@@ -254,8 +286,8 @@
       "id": "motor-thrust-clean-run",
       "date": "2026-10-10",
       "product": "openmotor",
-      "tested": "Thrust map, one 6S pack, ten holds.",
-      "saw": "1652 g at 31283 rpm at 100 percent; ESC temperature live. The 16:35 UTC capture is not used: zero drift up to 27 g.",
+      "tested": "OpenMotor-2306 thrust map, one 6S pack, ten holds.",
+      "saw": "1652 g at 31283 rpm, 100 percent; ESC temperature live. The 16:35 UTC capture is not used.",
       "changed": "ESC temperature stays live after a pack swap.",
       "figureId": "openmotor-thrust-vs-rpm"
     },
@@ -263,8 +295,8 @@
       "id": "motor-thrust-map-bus-loss",
       "date": "2026-10-10",
       "product": "openmotor",
-      "tested": "Thrust map on the new stand, ten holds.",
-      "saw": "13:25 UTC: 1496 g at 100 percent. 13:16 UTC: the operator unplugged the pack at 80 percent because of the noise.",
+      "tested": "OpenMotor-2306 thrust map on the new stand, ten holds.",
+      "saw": "13:25 UTC: 1496 g at 100 percent. 13:16 UTC: stopped at 80 percent.",
       "changed": "Bench controller aborts when bus voltage disappears.",
       "figureId": "openmotor-hold-thrust"
     },

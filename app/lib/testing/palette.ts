@@ -77,7 +77,13 @@ const N_ID = 5;
 /** Dash pattern per variant, in CSS px. */
 export const DASHES: Array<number[]> = [[], [7, 4], [2, 3], [9, 3, 2, 3], [4, 3]];
 export type MarkerShape = 'circle' | 'square' | 'diamond' | 'triangle';
-export const MARKERS: MarkerShape[] = ['circle', 'square', 'diamond', 'triangle', 'circle'];
+/** One marker shape for every series: runs are told apart by colour, dash and a hollow or filled marker, not by shape. */
+export const MARKERS: MarkerShape[] = ['circle', 'circle', 'circle', 'circle', 'circle'];
+/** The emphasised series of a figure with several runs, and the grey of the rest. */
+export const EMPHASIS: Record<Theme, {primary: string; rest: string}> = {
+  light: {primary: '#0F4C5C', rest: '#5B6166'},
+  dark: {primary: '#4DD0C4', rest: '#B7BDBD'},
+};
 
 /** The one chart spec: line weight and hold-marker size in css px, shared by canvas, SVG and download. */
 export const LINE_PX = 1.25;
@@ -149,6 +155,8 @@ export type SeriesStyle = {
   variant: number;
   dash: number[];
   marker: MarkerShape;
+  /** Drawn as an open circle: the earliest of the grey runs. */
+  hollow: boolean;
   /** Line width in px. Dense frames are thinner and dimmer than traces. */
   width: number;
   opacity: number;
@@ -160,7 +168,7 @@ export type SeriesStyle = {
  * pack share colour and dash.
  */
 export function assignStyles(
-  series: Array<{id: string; quantity: string; pack?: string; kind: string; axis?: string}>,
+  series: Array<{id: string; quantity: string; pack?: string; kind: string; axis?: string; primary?: boolean}>,
   theme: Theme,
 ): Record<string, SeriesStyle> {
   const seen: Record<string, string[]> = {};
@@ -177,6 +185,10 @@ export function assignStyles(
   const dual = series.some((s) => s.axis === 'y2');
   const order: string[] = [];
   const out: Record<string, SeriesStyle> = {};
+  // One run is emphasised in dark teal and the others are grey; the earliest grey run is dashed with open markers.
+  const emphasised = !dual && series.some((s) => s.primary);
+  const rest: string[] = [];
+  if (emphasised) for (const s of series) if (!s.primary && !rest.includes(`${s.quantity}/${s.pack ?? s.id}`)) rest.push(`${s.quantity}/${s.pack ?? s.id}`);
   series.forEach((s, i) => {
     const frames = s.kind === 'frames';
     let variant = variants[i]!;
@@ -188,6 +200,22 @@ export function assignStyles(
       identity = true;
     }
     const v = variant % N_ID;
+    if (emphasised) {
+      const grey = rest.indexOf(`${s.quantity}/${s.pack ?? s.id}`);
+      const first = s.primary ? false : grey % 2 === 0;
+      const hex = EMPHASIS[theme][s.primary ? 'primary' : 'rest'];
+      out[s.id] = {
+        color: hex,
+        colorCss: `light-dark(${EMPHASIS.light[s.primary ? 'primary' : 'rest']}, ${EMPHASIS.dark[s.primary ? 'primary' : 'rest']})`,
+        variant: s.primary ? 0 : 1 + (grey % 2),
+        dash: first ? [5, 3] : [],
+        marker: 'circle',
+        hollow: first,
+        width: frames ? 1 : s.kind === 'hold' ? HOLD_LINE_PX : LINE_PX,
+        opacity: frames ? (theme === 'dark' ? 0.7 : 0.6) : 1,
+      };
+      return;
+    }
     const color = identity ? IDENTITY[theme][v]! : seriesColor(s.quantity, variant, theme);
     out[s.id] = {
       color,
@@ -197,6 +225,7 @@ export function assignStyles(
       variant: v,
       dash: dual ? [] : DASHES[v]!,
       marker: MARKERS[v]!,
+      hollow: false,
       width: frames ? 1 : s.kind === 'hold' ? HOLD_LINE_PX : LINE_PX,
       // Raw frames are quiet but seen: the dot stays at 3:1 or more on both surfaces.
       opacity: frames ? (theme === 'dark' ? 0.7 : 0.6) : 1,

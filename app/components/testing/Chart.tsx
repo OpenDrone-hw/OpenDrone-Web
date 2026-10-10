@@ -2,7 +2,7 @@ import {useEffect, useRef} from 'react';
 import uPlot from 'uplot';
 import 'uplot/dist/uPlot.min.css';
 import {assignStyles, CANVAS, INK, MUTED, SURFACE, type Theme} from '~/lib/testing/palette';
-import {connectsHolds, GUTTER_L, GUTTER_L_NARROW, layoutNotes, MARK_ROW, MARKER_R, markerPath, TICK_PX} from '~/lib/testing/geometry';
+import {connectsHolds, GUTTER_L, GUTTER_L_NARROW, layoutNotes, MARKER_R, markerPath, TICK_PX} from '~/lib/testing/geometry';
 import {directPad, plainLabel} from '~/lib/testing/labels';
 import {axisTitle} from '~/lib/testing/layout';
 import {
@@ -123,7 +123,6 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
     };
     const narrow = el.clientWidth < 520;
     const gutter = narrow ? GUTTER_L_NARROW : GUTTER_L;
-    const nLines = Math.min(1, (fig.marks ?? []).filter((q) => q.kind === 'line').length);
     const rightPad = directPad(fig, narrow);
 
     const series: uPlot.Series[] = [
@@ -227,7 +226,7 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
         });
         ctx.restore();
       }
-      // Hold markers with their interquartile whisker, a surface ring around each.
+      // Hold markers with their interquartile whisker; an open marker is a grey run.
       fig.series.forEach((s) => {
         if (s.kind !== 'hold' || hiddenNow.has(s.id)) return;
         const st = styles[s.id]!;
@@ -257,12 +256,12 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
             ctx.stroke();
           }
           const path = new Path2D(markerPath(st.marker, cx, cy, MARKER_R * pr));
-          ctx.fillStyle = st.color;
-          ctx.strokeStyle = SURFACE[theme];
-          ctx.lineWidth = 1 * pr;
+          ctx.fillStyle = st.hollow ? SURFACE[theme] : st.color;
+          ctx.strokeStyle = st.color;
+          ctx.lineWidth = 1.25 * pr;
           ctx.lineJoin = 'round';
-          ctx.stroke(path);
           ctx.fill(path);
+          ctx.stroke(path);
         }
       });
       // The fitted law, over the data in full ink so it can be told from it, clipped to the plot rectangle.
@@ -297,27 +296,21 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
       });
       ctx.restore();
 
-      // Vertical mark lines with their label in the strip above the plot.
-      ctx.font = `${12 * pr}px ${font}`;
+      // Numbered marks: a short tick up from the x axis and its number; the wording is in the caption.
+      ctx.font = `500 ${12 * pr}px ${font}`;
       ctx.textBaseline = 'alphabetic';
+      ctx.textAlign = 'center';
       laid.lines.forEach((l) => {
-        const text = l.text;
-        const w = ctx.measureText(text).width / pr;
-        const fits = l.x - 5 - w >= plotBox.x0;
-        const y = 13 + l.row * MARK_ROW;
         ctx.save();
-        ctx.strokeStyle = MUTED[theme];
-        ctx.lineWidth = pr;
-        ctx.setLineDash([3 * pr, 3 * pr]);
+        ctx.strokeStyle = INK[theme];
+        ctx.lineWidth = 1.25 * pr;
         ctx.beginPath();
-        ctx.moveTo(l.x * pr, (y + 4) * pr);
-        ctx.lineTo(l.x * pr, plotBox.y1 * pr);
+        ctx.moveTo(l.x * pr, plotBox.y1 * pr);
+        ctx.lineTo(l.x * pr, (plotBox.y1 - 8) * pr);
         ctx.stroke();
         ctx.restore();
         ctx.fillStyle = INK[theme];
-        const tag = text.length <= 2;
-        ctx.textAlign = tag ? 'center' : fits ? 'right' : 'left';
-        ctx.fillText(text, (tag ? l.x : fits ? l.x - 5 : l.x + 5) * pr, y * pr);
+        ctx.fillText(l.text, l.x * pr, (plotBox.y1 - 12) * pr);
       });
       ctx.textAlign = 'left';
       // Written notes: end value, fit, marks, direct labels.
@@ -363,7 +356,7 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
     const opts: uPlot.Options = {
       width: Math.max(200, el.clientWidth),
       height,
-      padding: [12 + nLines * MARK_ROW, (hasY2 ? 4 : 16) + rightPad, 0, 0],
+      padding: [12, (hasY2 ? 4 : 16) + rightPad, 0, 0],
       legend: {show: false},
       cursor: {
         ...(syncKey ? {sync: {key: syncKey, scales: ['x', null] as [string, null], setSeries: false}} : {}),

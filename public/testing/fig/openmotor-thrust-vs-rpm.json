@@ -1,19 +1,15 @@
 {
   "id": "openmotor-thrust-vs-rpm",
   "title": "Thrust against rotor speed",
-  "finding": "From 40 percent throttle up, a quadratic fit gives 1.68 g per krpm squared.",
+  "finding": "1652 g at 31283 rpm, 100 percent throttle.",
   "product": "openmotor",
-  "tier": null,
+  "tier": "2306",
   "runId": "drv-04-2026-10-10",
   "domain": "THR",
   "chip": "One OpenMotor-2306, one 6S pack, cell calibrated to 1726 g",
   "caveats": [
     {
-      "text": "Rotor speed assumes 7 pole pairs, the default stored in the capture; the motor's real pole count is not recorded.",
-      "flag": true
-    },
-    {
-      "text": "One capture, not repeated. Propeller, ESC model and cooling are not recorded.",
+      "text": "One capture, not repeated; propeller, ESC model and cooling are not recorded.",
       "run": true
     },
     {
@@ -21,7 +17,7 @@
       "run": true
     }
   ],
-  "reduction": "Logged frames; frames in throttle or speed transients are excluded. Frames that share one rotor speed reading are reduced to their median, because rotor speed telemetry updates slower than the load cell. Hold markers: median of the last 2 s of each throttle hold; the band is the 25th to 75th percentile. Holds with no pack voltage reading are dropped.",
+  "reduction": "Logged frames, without throttle or speed transients. Frames that share one rotor speed reading are reduced to their median, as that telemetry updates slower than the load cell. Hold markers are the median of the last 2 s of each throttle hold, the band the 25th to 75th percentile; holds with no pack voltage reading are dropped.",
   "cite": "Logs/drv-04-openmotor-2306-2026-10-10-20261010T164844Z#L2-L11028",
   "axes": {
     "x": {

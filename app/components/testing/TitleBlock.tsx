@@ -55,7 +55,7 @@ export function TitleBlock({index, numbers}: {index: TestingIndex; numbers: Numb
               <span className="tr-cn">A</span> Engineering log
             </a>
             <i aria-hidden="true" />
-            <span className="tr-cr">{index.log.length} steps</span>
+            <span className="tr-cr">{index.log.length} entries</span>
           </li>
         ) : null}
       </ol>

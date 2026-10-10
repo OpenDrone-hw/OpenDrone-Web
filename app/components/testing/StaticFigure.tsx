@@ -1,5 +1,5 @@
 import {useId} from 'react';
-import {buildGeometry, CHAR_PX, MARK_ROW, MARKER_R, markerPath, TICK_PX} from '~/lib/testing/geometry';
+import {buildGeometry, MARKER_R, markerPath, TICK_PX} from '~/lib/testing/geometry';
 import {defaultHidden} from '~/lib/testing/labels';
 import {axisTitle} from '~/lib/testing/layout';
 import {CANVAS, INK, MUTED, SURFACE, type Theme} from '~/lib/testing/palette';
@@ -114,29 +114,22 @@ export function StaticFigure({
             <path
               key={`d${i}`}
               d={markerPath(s.style.marker, x, y, s.kind === 'hold' ? MARKER_R : 2.5)}
-              fill={s.kind === 'hold' ? colorOf(s) : surface}
-              stroke={s.kind === 'hold' ? surface : colorOf(s)}
-              strokeWidth={1}
+              fill={s.kind === 'hold' && !s.style.hollow ? colorOf(s) : surface}
+              stroke={colorOf(s)}
+              strokeWidth={s.kind === 'hold' && !s.style.hollow ? 0 : 1.25}
             />
           ))}
         </g>
       ))}
       {g.fit ? <path d={g.fit} clipPath={`url(#${clip}-plot)`} fill="none" stroke={ink} strokeWidth={1.75} strokeDasharray="7 4" /> : null}
-      {g.lines.map((l, li) => {
-        const text = l.text;
-        const tag = text.length <= 2;
-        const w = text.length * CHAR_PX + 10;
-        const fits = l.x - 5 - w >= g.plot.x0;
-        const y = 13 + l.row * MARK_ROW + (titles ? 14 : 0);
-        return (
-          <g key={`ml${li}`}>
-            <line x1={l.x} x2={l.x} y1={y + 4} y2={g.plot.y1} stroke={muted} strokeWidth={1} strokeDasharray="3 3" />
-            <text x={tag ? l.x : fits ? l.x - 5 : l.x + 5} y={y} textAnchor={tag ? 'middle' : fits ? 'end' : 'start'} fontSize={12} fill={ink}>
-              {text}
-            </text>
-          </g>
-        );
-      })}
+      {g.lines.map((l, li) => (
+        <g key={`ml${li}`}>
+          <line x1={l.x} x2={l.x} y1={g.plot.y1} y2={g.plot.y1 - 8} stroke={ink} strokeWidth={1.25} />
+          <text x={l.x} y={g.plot.y1 - 12} textAnchor="middle" fontSize={12} fontWeight={500} fill={ink}>
+            {l.text}
+          </text>
+        </g>
+      ))}
       {g.rings.map(([x, y, c], i) => (
         <circle key={`r${i}`} cx={x} cy={y} r={MARKER_R + 4} fill="none" stroke={colorOfId(c)} strokeWidth={1.5} />
       ))}

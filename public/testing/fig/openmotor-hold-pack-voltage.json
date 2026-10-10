@@ -1,19 +1,19 @@
 {
   "id": "openmotor-hold-pack-voltage",
   "title": "Pack voltage per throttle hold",
-  "finding": "The 16:48 UTC pack reads 23.9 V at 10 percent throttle and 21.6 V at 100 percent; the 13:25 UTC pack sagged to 19.3 V.",
+  "finding": "23.9 V at 10 percent throttle, 21.6 V at 100 percent (16:48 UTC); 19.3 V at 100 percent (13:25 UTC).",
   "product": "openmotor",
-  "tier": null,
+  "tier": "2306",
   "runId": "drv-04-2026-10-10",
   "domain": "PWR",
   "chip": "One OpenMotor-2306, one 6S pack, cell calibrated to 1726 g",
   "caveats": [
     {
-      "text": "The packs are not recorded; the earlier runs used other 6S packs, and the voltage is not checked against a meter.",
+      "text": "The packs are not recorded and the voltage is not checked against a meter.",
       "run": true
     }
   ],
-  "reduction": "Logged frames; frames in throttle or speed transients are excluded. Hold markers: median of the last 2 s of each throttle hold; the band is the 25th to 75th percentile. Holds with no pack voltage reading are dropped.",
+  "reduction": "Logged frames, without throttle or speed transients. Hold markers are the median of the last 2 s of each throttle hold, the band the 25th to 75th percentile; holds with no pack voltage reading are dropped.",
   "cite": "Logs/drv-04-openmotor-2306-2026-10-10-20261010T164844Z#L1312-L9833; Logs/drv-04-thrust-2026-10-10-20261010T132503Z#L1291-L9813; Logs/drv-04-openmotor-2306-2026-10-10-20261010T131644Z#L1513-L7322",
   "axes": {
     "x": {
@@ -29,16 +29,16 @@
   },
   "series": [
     {
-      "id": "s1.v_bus.hold",
-      "label": "Clean run, 16:48 UTC, hold median, last 2 s",
-      "short": "Clean run, 16:48",
+      "id": "s3.v_bus.hold",
+      "label": "Pack A, 13:16 run, ends at 70 percent, hold median, last 2 s",
+      "short": "Pack A, 13:16",
       "quantity": "voltage",
-      "pack": "16:48",
+      "pack": "13:16",
       "kind": "hold",
-      "x": [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
-      "y": [23.912, 23.882, 23.787, 23.632, 23.405, 23.123, 22.811, 22.447, 22.062, 21.594],
-      "lo": [23.911, 23.881, 23.782, 23.624, 23.393, 23.111, 22.797, 22.434, 22.046, 21.581],
-      "hi": [23.913, 23.883, 23.792, 23.642, 23.419, 23.139, 22.826, 22.465, 22.077, 21.614]
+      "x": [10, 20, 30, 40, 50, 60, 70],
+      "y": [24.64, 24.568, 24.405, 24.174, 23.833, 23.425, 22.954],
+      "lo": [24.639, 24.566, 24.398, 24.163, 23.817, 23.406, 22.936],
+      "hi": [24.641, 24.57, 24.411, 24.185, 23.848, 23.443, 22.976]
     },
     {
       "id": "s2.v_bus.hold",
@@ -53,16 +53,17 @@
       "hi": [24.385, 24.177, 23.716, 23.146, 22.477, 21.799, 21.109, 20.411, 19.845, 19.291]
     },
     {
-      "id": "s3.v_bus.hold",
-      "label": "Pack A, 13:16 run, ends at 70 percent, hold median, last 2 s",
-      "short": "Pack A, 13:16",
+      "id": "s1.v_bus.hold",
+      "label": "Clean run, 16:48 UTC, hold median, last 2 s",
+      "short": "Clean run, 16:48",
       "quantity": "voltage",
-      "pack": "13:16",
+      "pack": "16:48",
       "kind": "hold",
-      "x": [10, 20, 30, 40, 50, 60, 70],
-      "y": [24.64, 24.568, 24.405, 24.174, 23.833, 23.425, 22.954],
-      "lo": [24.639, 24.566, 24.398, 24.163, 23.817, 23.406, 22.936],
-      "hi": [24.641, 24.57, 24.411, 24.185, 23.848, 23.443, 22.976]
+      "x": [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+      "y": [23.912, 23.882, 23.787, 23.632, 23.405, 23.123, 22.811, 22.447, 22.062, 21.594],
+      "lo": [23.911, 23.881, 23.782, 23.624, 23.393, 23.111, 22.797, 22.434, 22.046, 21.581],
+      "hi": [23.913, 23.883, 23.792, 23.642, 23.419, 23.139, 22.826, 22.465, 22.077, 21.614],
+      "primary": true
     }
   ],
   "holds": [
@@ -260,7 +261,7 @@
     {
       "kind": "line",
       "x": 80,
-      "text": "Pack A unplugged"
+      "text": "Pack A unplugged at 80 percent"
     }
   ]
 }

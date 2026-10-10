@@ -1,7 +1,7 @@
 {
   "id": "openfc-lite-flight-die-temp",
   "title": "ESC die temperature in flight",
-  "finding": "8 inch on 8S reached 116 C; the other three peaked between 52.6 and 87.4 C.",
+  "finding": "116 C for the 8 inch on 8S; 52.6 to 87.4 C for the other three.",
   "product": "openfc-lite",
   "tier": null,
   "runId": "field-2026-08-09",
@@ -9,18 +9,18 @@
   "chip": "OpenFC-Lite flight logs, 2026-08-09, hottest flights",
   "caveats": [
     {
-      "text": "The die sensor is the ESC's own; the ESC model and cooling are not recorded in the log."
+      "text": "The die sensor is the ESC's own; ESC model and cooling are not in the log."
     },
     {
       "text": "Flight length, load and ambient temperature differ between the airframes, so the curves are not a like-for-like comparison.",
       "flag": true
     },
     {
-      "text": "This is a flight log from one day, not a flight controller bench measurement. No FC bench capture exists.",
+      "text": "A flight log from one day, not a flight controller bench measurement; no FC bench capture exists.",
       "run": true
     },
     {
-      "text": "The flights are the hottest of the retained logs, not a sample of typical flights; the retained logs are a selection of 103.",
+      "text": "The flights are the hottest of the retained logs, not typical flights; the retained logs are a selection of 103.",
       "run": true
     }
   ],
