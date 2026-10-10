@@ -1932,7 +1932,7 @@
       "kind": "line",
       "featured": true,
       "order": 1,
-      "blurb": "Thrust stand sweep from 10 to 100 percent throttle in ten holds, with the motor not recorded.",
+      "blurb": "OpenMotor-2306 on the thrust stand, 10 to 100 percent throttle in ten holds.",
       "x": {
         "label": "Rotor speed (7 pole pairs assumed)",
         "unit": "rpm",
@@ -2036,10 +2036,10 @@
         "simulated": false,
         "reduction": "Median of the last 2 s of each throttle hold; the band is the 25th to 75th percentile over the same window. Holds with no pack voltage reading are dropped."
       },
-      "finding": "From 40 percent throttle up, thrust is about 1.7 g per krpm squared (1.67 to 1.74 in the 13:25 UTC run), taking the stored 7 pole pairs as correct. That run, with no motor recorded, reaches 1496 g at 100 percent throttle and 29350 rpm. At the same speed the 13:16 UTC run reads 2 to 3 percent less thrust, with a pack voltage up to 1.9 V higher.",
+      "finding": "From 40 percent throttle up, thrust is about 1.7 g per krpm squared (1.67 to 1.74 in the 13:25 UTC run), taking the stored 7 pole pairs as correct. That run reaches 1496 g at 100 percent throttle and 29350 rpm. At the same speed the 13:16 UTC run reads 2 to 3 percent less thrust, with a pack voltage up to 1.9 V higher.",
       "caveats": [
         "One capture per run; the 13:25 UTC run was not repeated.",
-        "Motor, propeller, ESC and pack are not recorded for the 13:25 UTC run.",
+        "Both runs: the same OpenMotor-2306, each on a different 6S pack; propeller and ESC model are not recorded.",
         "The clamp meter was not recorded.",
         "Load-cell calibration: one 1726 g reference mass, about 0.7 percent uncertainty from creep during the 40 s calibration recording.",
         "The 13:16 UTC run ends at 70 percent: the pack was pulled during the 80 percent step, so its later holds are dropped. The 13:25 UTC run was recorded after the bench controller was changed to abort in that case."
@@ -2117,7 +2117,7 @@
       "finding": "Rotor speed rises from about 5000 rpm at 10 percent to 29350 rpm at 100 percent in the 13:25 UTC run, taking 7 pole pairs as correct.",
       "caveats": [
         "One capture per run.",
-        "Motor, propeller, ESC and pack are not recorded for the 13:25 UTC run."
+        "Both runs: the same OpenMotor-2306, each on a different 6S pack; propeller and ESC model are not recorded."
       ],
       "status": "publish"
     },
@@ -2341,7 +2341,7 @@
       },
       "finding": "The hottest die reading rises from 44 C at 10 percent to 72 C at 100 percent in the 13:25 UTC run; the 13:16 UTC run stays between 42 and 48 C up to 70 percent.",
       "caveats": [
-        "The 13:25 UTC run was hotter at the same throttle; motor, propeller, cooling and packs are not recorded.",
+        "The 13:25 UTC run was hotter at the same throttle; same motor, different 6S packs; propeller and cooling are not recorded.",
         "The die sensor is the controller's own, not a measurement of the output transistors."
       ],
       "status": "publish"
