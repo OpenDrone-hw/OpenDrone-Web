@@ -21,4 +21,3 @@ Evidence is attached to the existing release tasks, not copied into a second
 checklist here. A local build does not establish payment-provider acceptance,
 carrier service or product conformity. Configuration and commands are in the
 [README](../README.md#run-a-preorder-campaign).
-The [superseded brief](archive/2026-09-23-store-compliance.md) is historical.
