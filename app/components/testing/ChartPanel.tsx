@@ -20,19 +20,15 @@ export default function ChartPanel({
   height,
   initialRange,
   onRange,
-  hint = false,
 }: {
   fig: Fig;
   theme: Theme;
   height: number;
   initialRange?: Domain | null;
   onRange?: (r: RangeState) => void;
-  /** Show how to read values inside the plot until the first touch of it. */
-  hint?: boolean;
 }) {
   const [hidden, setHidden] = useState<Set<string>>(() => defaultHidden(fig));
   const [readout, setReadout] = useState<ReadoutState>(null);
-  const [touched, setTouched] = useState(false);
   const [range, setRange] = useState<RangeState | null>(null);
   const [said, setSaid] = useState('');
   const api = useRef<ChartApi | null>(null);
@@ -46,7 +42,6 @@ export default function ChartPanel({
   );
   const handleReadout = useCallback(
     (r: ReadoutState) => {
-      if (r) setTouched(true);
       setReadout(r);
     },
     [],
@@ -64,12 +59,6 @@ export default function ChartPanel({
       <UnitLine fig={fig} theme={theme} />
       <div className="tw-plotwrap" data-y2={fig.axes.y2 ? '1' : undefined}>
         <Readout fig={fig} readout={readout} />
-        {hint && !touched ? (
-          <p className="tw-hint" aria-hidden="true">
-            <span className="tw-hint-fine">Hover for values, drag to zoom, arrow keys step through points.</span>
-            <span className="tw-hint-coarse">Touch for values, pinch to zoom.</span>
-          </p>
-        ) : null}
         <Chart
           fig={fig}
           theme={theme}

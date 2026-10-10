@@ -1,6 +1,6 @@
 import {assignStyles, type Theme} from '~/lib/testing/palette';
 import {connectsHolds, markerPath} from '~/lib/testing/geometry';
-import {defaultHidden, directLabelled, frameIdsOf, isDual, plainLabel} from '~/lib/testing/labels';
+import {defaultHidden, frameIdsOf, plainLabel} from '~/lib/testing/labels';
 import type {Fig} from '~/lib/testing/types';
 
 export {defaultHidden, plainLabel};
@@ -31,7 +31,6 @@ export function Legend({
   const styles = assignStyles(fig.series, theme);
   const groups = new Map<string, {key: string; label: string; ids: string[]; lead: S}>();
   const frameIds = frameIdsOf(fig);
-  const named = directLabelled(fig) || isDual(fig);
   for (const s of fig.series) {
     if (frameIds.includes(s.id)) continue;
     const key = keyOf(s);
@@ -41,8 +40,10 @@ export function Legend({
       if (s.kind === 'hold') g.lead = s;
     } else groups.set(key, {key, label: s.label, ids: [s.id], lead: s});
   }
-  const list = named ? [] : [...groups.values()];
-  if (!list.length && !frameIds.length && !fig.fit) return null;
+  const list = [...groups.values()];
+  // Only what is drawn is listed: raw frames that start hidden have no entry.
+  const framesShown = frameIds.some((i) => !hidden.has(i));
+  if (!list.length && !framesShown && !fig.fit) return null;
   const allIds = fig.series.map((s) => s.id);
   const isOff = (ids: string[]) => ids.every((i) => hidden.has(i));
   const toggle = (ids: string[]) => {
@@ -102,7 +103,7 @@ export function Legend({
           </span>
         </li>
       ) : null}
-      {frameIds.length ? (
+      {framesShown ? (
         <li>
           <button
             type="button"

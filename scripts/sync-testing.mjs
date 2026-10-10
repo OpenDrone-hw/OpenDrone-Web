@@ -211,7 +211,7 @@ const PHOTO_MAX_WIDTH = 1600;
 
 /**
  * A run's photo from the capture tree: orientation applied, the listed boxes
- * blurred in source pixels, resized to at most 1600 px wide, written as webp
+ * blurred in source pixels, cropped to the listed box, resized to at most 1600 px wide, written as webp
  * without metadata. The source must lie inside the data tree and outside its
  * private folder.
  */
@@ -231,6 +231,12 @@ async function buildPhoto(runId, spec) {
     overlays.push({input: await sharp(base).extract({left, top, width, height}).blur(14).toBuffer(), left, top});
   }
   if (overlays.length) base = await sharp(base).composite(overlays).toBuffer();
+  if (spec.crop) {
+    const [x, y, cw, ch] = spec.crop.map(Math.round);
+    const left = Math.min(x, w0 - 2);
+    const top = Math.min(y, h0 - 2);
+    base = await sharp(base).extract({left, top, width: Math.min(cw, w0 - left), height: Math.min(ch, h0 - top)}).toBuffer();
+  }
   const buf = await sharp(base).resize({width: PHOTO_MAX_WIDTH, withoutEnlargement: true}).webp({quality: 82}).toBuffer();
   const {width, height} = await sharp(buf).metadata();
   return {name: `photo/${runId}.webp`, buf, meta: {src: `/testing/photo/${runId}.webp`, size: [width, height], alt: spec.alt, caption: spec.caption}};

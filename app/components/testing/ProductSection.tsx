@@ -1,5 +1,5 @@
 import type {Fig, TestingIndex} from '~/lib/testing/types';
-import type {Numbered} from '~/lib/testing/layout';
+import {runReduction, type Numbered} from '~/lib/testing/layout';
 import {caveatRunWide, caveatText} from '~/lib/testing/types';
 import {Figure} from './Figure';
 import {runState} from './TitleBlock';
@@ -39,7 +39,8 @@ export function ProductSection({
       for (const c of previews[n.id]?.caveats ?? []) if (caveatRunWide(c) && !out.includes(caveatText(c))) out.push(caveatText(c));
     }
     return out;
-  };  const photo = runIds.map((r) => index.runs[r]?.photo).find(Boolean);
+  };
+  const photo = runIds.map((r) => index.runs[r]?.photo).find(Boolean);
   // The newest step of the log that changed something and has no figure of its own to say so under.
   const loose = index.log.find((e) => e.product === product.handle && e.changed && !e.figureId);
   return (
@@ -58,32 +59,25 @@ export function ProductSection({
             <b>Status</b> {state}
           </span>
         ) : null}
-        {cov?.gaps?.length ? (
-          <span>
-            <b>Not measured</b> {cov.gaps.map((g) => g.toLowerCase()).join(', ')}
-          </span>
-        ) : null}
         {loose ? (
           <span>
             <b>Last change</b> {loose.date}, <a href={`#log-${loose.id}`}>see the log</a>
           </span>
         ) : null}
       </p>
-      {photo ? (
-        <figure className="tr-photo">
-          <img src={photo.src} width={photo.size[0]} height={photo.size[1]} alt={photo.alt} loading="lazy" decoding="async" />
-          <figcaption>
-            <b>Photo {photoNo ?? 1}.</b> {photo.caption}
-          </figcaption>
-        </figure>
-      ) : null}
       <h3>Setup</h3>
-      {runIds.map((rid) => {
+      {runIds.map((rid, ri) => {
         const run = index.runs[rid];
         if (!run) return null;
         const lines = run.setup.filter((l) => !/^Run state:/.test(l));
+        const mineOfRun = mine.filter((n) => index.figures[n.id]!.runId === rid);
+        const reduction = runReduction(mineOfRun.map((n) => ({no: n.no, reduction: previews[n.id]?.reduction})));
+        const gaps = ri === runIds.length - 1 ? (cov?.gaps ?? []).map((g) => g.toLowerCase()) : [];
+        const lim = limits(rid);
+        const showPhoto = photo && index.runs[rid]?.photo === photo;
         return (
-          <div key={rid}>
+          <div key={rid} className="tr-runblock" data-photo={showPhoto ? '1' : undefined}>
+            <div className="tr-runtext">
             {runIds.length > 1 ? (
               <p className="tr-runline">
                 Run {rid.replace(/-\d{4}-\d{2}-\d{2}$/, '')}, {run.date}
@@ -94,10 +88,25 @@ export function ProductSection({
                 <li key={l}>{l}</li>
               ))}
             </ul>
-            {limits(rid).length ? (
+            {lim.length || gaps.length ? (
               <p className="tr-limits">
-                <b>Limits.</b> {limits(rid).join(' ')}
+                <b>Limits.</b> {lim.join(' ')}
+                {gaps.length ? ` Not measured: ${gaps.join(', ')}.` : ''}
               </p>
+            ) : null}
+            {reduction ? (
+              <p className="tr-limits">
+                <b>Reduction.</b> {reduction}
+              </p>
+            ) : null}
+            </div>
+            {showPhoto ? (
+              <figure className="tr-photo">
+          <img src={photo.src} width={photo.size[0]} height={photo.size[1]} alt={photo.alt} loading="lazy" decoding="async" />
+          <figcaption>
+            <b>Photo {photoNo ?? 1}.</b> {photo.caption}
+          </figcaption>
+        </figure>
             ) : null}
           </div>
         );
@@ -110,7 +119,6 @@ export function ProductSection({
           summary={index.figures[n.id]!}
           run={index.runs[index.figures[n.id]!.runId]}
           preview={previews[n.id]!}
-          hint={n.no === 1}
         />
       ))}
     </section>

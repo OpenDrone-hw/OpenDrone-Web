@@ -61,8 +61,26 @@ export function sourceLine(runId: string, date: string | undefined, cite: string
   const id = runId.replace(/-\d{4}-\d{2}-\d{2}$/, '');
   const logs = (cite ?? '').split('; ').filter(Boolean);
   const times = logs.map((l) => /\d{8}T(\d{2})(\d{2})\d{2}Z/.exec(l)).map((m) => (m ? `${m[1]}:${m[2]}` : null));
-  const parts = [id, date ?? ''].filter(Boolean);
-  if (times.length && times.every(Boolean)) return `${parts.join(', ')}, ${[...new Set(times)].join(', ')} UTC`;
-  if (logs.length) return `${parts.join(', ')}, ${logs.length} ${logs.length === 1 ? 'log' : 'logs'}`;
-  return parts.join(', ');
+  void date;
+  if (times.length && times.every(Boolean)) return `${id}, ${[...new Set(times)].join(', ')} UTC`;
+  if (logs.length) return `${id}, ${logs.length} ${logs.length === 1 ? 'log' : 'logs'}`;
+  return id;
+}
+
+/**
+ * The reduction of a run, stated once: every sentence of its figures' reductions in order of first
+ * appearance. A sentence that only one figure of a run with several figures has names that figure.
+ */
+export function runReduction(figs: Array<{no: number; reduction?: string}>): string {
+  const seen = new Map<string, number[]>();
+  for (const f of figs) {
+    for (const s of (f.reduction ?? '').split(/(?<=\.)\s+/).filter(Boolean)) {
+      const hit = seen.get(s);
+      if (hit) hit.push(f.no);
+      else seen.set(s, [f.no]);
+    }
+  }
+  return [...seen.entries()]
+    .map(([s, nos]) => (figs.length > 1 && nos.length === 1 ? `${s.replace(/\.$/, '')} (Figure ${nos[0]}).` : s))
+    .join(' ');
 }

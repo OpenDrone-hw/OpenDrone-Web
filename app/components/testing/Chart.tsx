@@ -123,7 +123,7 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
     };
     const narrow = el.clientWidth < 520;
     const gutter = narrow ? GUTTER_L_NARROW : GUTTER_L;
-    const nLines = Math.min(2, (fig.marks ?? []).filter((q) => q.kind === 'line').length);
+    const nLines = Math.min(1, (fig.marks ?? []).filter((q) => q.kind === 'line').length);
     const rightPad = directPad(fig, narrow);
 
     const series: uPlot.Series[] = [
@@ -196,28 +196,6 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
       const m = (MARKER_R + 3) * pr;
       ctx.rect(u.bbox.left - m, u.bbox.top - m, u.bbox.width + 2 * m, u.bbox.height + 2 * m);
       ctx.clip();
-      // The fitted law, under the markers, clipped to the plot rectangle.
-      if (fig.fit) {
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(u.bbox.left, u.bbox.top, u.bbox.width, u.bbox.height);
-        ctx.clip();
-        const {k, x0, x1} = fig.fit;
-        ctx.strokeStyle = hexA(INK[theme], 0.6);
-        ctx.lineWidth = 1.25 * pr;
-        ctx.setLineDash([5 * pr, 4 * pr]);
-        ctx.beginPath();
-        for (let i = 0; i <= 40; i++) {
-          const xv = x0 + ((x1 - x0) * i) / 40;
-          const px = u.valToPos(xv, 'x', true);
-          const py = u.valToPos(k * (xv / 1000) ** 2, 'y', true);
-          if (i) ctx.lineTo(px, py);
-          else ctx.moveTo(px, py);
-        }
-        ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.restore();
-      }
       // Hold markers are joined by a thin line unless the fitted law draws the trend.
       if (connectsHolds(fig)) {
         ctx.save();
@@ -287,6 +265,28 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
           ctx.fill(path);
         }
       });
+      // The fitted law, over the data in full ink so it can be told from it, clipped to the plot rectangle.
+      if (fig.fit) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(u.bbox.left, u.bbox.top, u.bbox.width, u.bbox.height);
+        ctx.clip();
+        const {k, x0, x1} = fig.fit;
+        ctx.strokeStyle = INK[theme];
+        ctx.lineWidth = 1.75 * pr;
+        ctx.setLineDash([7 * pr, 4 * pr]);
+        ctx.beginPath();
+        for (let i = 0; i <= 40; i++) {
+          const xv = x0 + ((x1 - x0) * i) / 40;
+          const px = u.valToPos(xv, 'x', true);
+          const py = u.valToPos(k * (xv / 1000) ** 2, 'y', true);
+          if (i) ctx.lineTo(px, py);
+          else ctx.moveTo(px, py);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
       // Rings on marked points.
       laid.rings.forEach(([x, y, id]) => {
         ctx.strokeStyle = styles[id]?.color ?? INK[theme];
@@ -315,8 +315,9 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
         ctx.stroke();
         ctx.restore();
         ctx.fillStyle = INK[theme];
-        ctx.textAlign = fits ? 'right' : 'left';
-        ctx.fillText(text, (fits ? l.x - 5 : l.x + 5) * pr, y * pr);
+        const tag = text.length <= 2;
+        ctx.textAlign = tag ? 'center' : fits ? 'right' : 'left';
+        ctx.fillText(text, (tag ? l.x : fits ? l.x - 5 : l.x + 5) * pr, y * pr);
       });
       ctx.textAlign = 'left';
       // Written notes: end value, fit, marks, direct labels.
@@ -584,6 +585,7 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
       tabIndex={0}
       role="application"
       aria-label={`${fig.title}. Left and right arrows read values, plus and minus zoom, Escape resets.`}
+      title="Hover for values, drag to zoom"
       data-canvas-bg={CANVAS[theme]}
     />
   );

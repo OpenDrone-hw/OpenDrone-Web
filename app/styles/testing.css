@@ -145,34 +145,20 @@
   margin: 0 0 3px;
 }
 
-/* Title block: a small table of keys and values; section header line ------- */
-.testing-workspace .tr-meta {
-  margin: 8px 0 14px;
-  font-size: 9pt;
-  line-height: 1.6;
-}
-.testing-workspace .tr-meta div {
-  display: grid;
-  grid-template-columns: 76px 1fr;
-}
-.testing-workspace .tr-meta dt {
-  font-weight: 500;
-  color: var(--ink);
-}
-.testing-workspace .tr-meta dd {
-  margin: 0;
-  color: var(--grey);
-}
+/* Title block: one inline row of metadata, as in the exports; section header line. */
+.testing-workspace .tr-meta,
 .testing-workspace .tr-head {
-  margin: 4px 0 12px;
+  margin: 6px 0 12px;
   font-size: 9pt;
   line-height: 1.6;
   color: var(--grey);
 }
+.testing-workspace .tr-meta span,
 .testing-workspace .tr-head span {
   display: inline-block;
   margin-right: 14px;
 }
+.testing-workspace .tr-meta b,
 .testing-workspace .tr-head b {
   font-weight: 500;
   color: var(--ink);
@@ -224,17 +210,25 @@
   color: var(--teal);
 }
 
-/* Photo: the full column, a hairline border, cropped to 3:2 -------------- */
+/* A run block: setup, limits and reduction in text, the run's photo beside them. */
+.testing-workspace .tr-runblock {
+  display: block;
+}
+.testing-workspace .tr-runblock[data-photo='1'] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 38%);
+  gap: 0 24px;
+  align-items: start;
+}
 .testing-workspace .tr-photo {
-  margin: 8px 0 12px;
+  margin: 6px 0 12px;
 }
 .testing-workspace .tr-photo img {
   display: block;
   width: 100%;
   height: auto;
-  aspect-ratio: 3 / 2;
+  max-height: 420px;
   object-fit: cover;
-  object-position: 50% 62%;
   border: 1px solid var(--hair);
 }
 .testing-workspace .tr-photo figcaption {
@@ -244,12 +238,17 @@
 }
 .testing-workspace .tr-photo figcaption b {
   font-weight: 500;
+  color: var(--teal);
 }
 
 /* Figure --------------------------------------------------------------- */
 .testing-workspace .tr-fig {
-  margin: 26px 0 0;
+  margin: 34px 0 0;
+  padding-top: 12px;
+  border-top: 0.4pt solid var(--cell);
   scroll-margin-top: 16px;
+  break-inside: avoid;
+  page-break-inside: avoid;
 }
 .testing-workspace .tr-plot {
   min-width: 0;
@@ -264,7 +263,7 @@
 }
 /* Caption, one short source line, then the findings, numbered and hung. */
 .testing-workspace .tr-fig figcaption {
-  margin: 6px 0 2px;
+  margin: 16px 0 2px;
   font-size: 9.5pt;
   color: var(--ink);
 }
@@ -281,16 +280,6 @@
   font-size: 8.5pt;
   line-height: 1.5;
   color: var(--grey);
-}
-.testing-workspace .tr-get {
-  display: inline-flex;
-  gap: 10px;
-}
-.testing-workspace .tr-id {
-  margin-left: auto;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  overflow-wrap: anywhere;
 }
 .testing-workspace .tr-findings {
   list-style: none;
@@ -315,15 +304,6 @@
   text-decoration: none;
   font-variant-numeric: tabular-nums;
 }
-.testing-workspace .tr-logs {
-  font-size: 8.5pt;
-}
-.testing-workspace .tr-logs span {
-  display: block;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  overflow-wrap: anywhere;
-}
 .testing-workspace .tr-contents a {
   text-decoration: none;
 }
@@ -331,65 +311,58 @@
   padding: 0;
   font: inherit;
   font-weight: 500;
-  color: var(--link);
+  color: var(--teal);
+  text-decoration: underline;
+  text-decoration-color: rgba(15, 76, 92, 0.3);
+  text-underline-offset: 2px;
   background: none;
   border: 0;
   cursor: pointer;
+}
+.testing-workspace .tr-link:disabled {
+  color: var(--grey);
+  text-decoration: none;
+  cursor: default;
 }
 .testing-workspace .tr-error {
   margin: 12px 0;
   color: #a15c00;
 }
-.testing-workspace .tr-values {
-  margin: 0 0 6px;
-  font-size: 9.5pt;
-  color: var(--grey);
-}
-.testing-workspace .tr-values summary {
-  cursor: pointer;
-  font-size: 8.5pt;
-}
-
-/* Tables: small type, a grey header row, hairline row rules, no stripes. ---- */
+/* Log table: set in the body size, no fill, a rule under the header, a spanning row per date. */
 .testing-workspace table {
   width: 100%;
-  margin: 6px 0 12px;
+  margin: 8px 0 12px;
   border-collapse: collapse;
-  font-size: 9pt;
+  font-size: 9.5pt;
   line-height: 1.45;
   color: var(--ink);
-  border: 1px solid var(--cell);
+  table-layout: fixed;
 }
 .testing-workspace th,
 .testing-workspace td {
-  padding: 4px 7px;
+  padding: 3px 10px 3px 0;
   border: 0;
-  border-top: 1px solid var(--hair);
   text-align: left;
   vertical-align: top;
 }
-.testing-workspace th {
-  background: var(--fill-head);
+.testing-workspace thead th {
   font-weight: 500;
-  border-top: 0;
+  border-bottom: 0.6pt solid var(--teal);
 }
-.testing-workspace .tr-log {
-  table-layout: fixed;
+.testing-workspace .tr-day th {
+  padding-top: 12px;
+  font-weight: 500;
+  color: var(--teal);
+  border-bottom: 0.4pt solid var(--cell);
 }
-.testing-workspace .tr-log td:first-child {
-  font-size: 9pt;
-}
-.testing-workspace .tr-log td:first-child time {
-  display: block;
-  white-space: nowrap;
+.testing-workspace .tr-log td {
+  border-bottom: 0.4pt solid var(--hair);
 }
 .testing-workspace .tr-logsub {
-  display: block;
-  font-size: 8.5pt;
-  color: var(--grey);
+  font-weight: 500;
 }
 .testing-workspace .tr-log tr:target {
-  outline: 2px solid var(--fill-head);
+  background: var(--fill-code);
 }
 
 /* Chart internals -------------------------------------------------------- */
@@ -455,30 +428,12 @@
   width: 2px;
   height: 11px;
 }
-.testing-workspace .tw-plotwrap .tw-hint {
-  position: absolute;
-  z-index: 1;
-  top: 6px;
-  left: 62px;
-  right: 16px;
-  margin: 0;
-  width: fit-content;
-  padding: 0 4px;
-  background: #fff;
-  font-size: 12px;
-  color: var(--grey);
-  pointer-events: none;
-}
-.testing-workspace .tw-hint-coarse {
-  display: none;
-}
-/* The y axis title: once, above the plot. On two axes each sits over its own axis. */
 .testing-workspace .tw-unitline {
   margin: 0 0 2px;
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 400;
   color: var(--ink);
 }
@@ -489,7 +444,8 @@
   justify-content: space-between;
   align-items: baseline;
   gap: 2px 16px;
-  margin-top: 4px;
+  margin-top: 8px;
+  min-height: 22px;
 }
 .testing-workspace .tw-legend {
   list-style: none;
@@ -508,7 +464,7 @@
   gap: 6px;
   padding: 0;
   font: inherit;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--ink);
   background: none;
   border: 0;
@@ -546,12 +502,6 @@
   .testing-workspace .tr-link {
     min-height: 40px;
   }
-  .testing-workspace .tw-hint-fine {
-    display: none;
-  }
-  .testing-workspace .tw-hint-coarse {
-    display: inline;
-  }
 }
 
 /* Phones: the log table becomes one block per row. */
@@ -562,9 +512,8 @@
   .testing-workspace .tr-strip img {
     height: 30px;
   }
-  .testing-workspace .tr-log thead {
-    position: absolute;
-    left: -9999px;
+  .testing-workspace .tr-runblock[data-photo='1'] {
+    display: block;
   }
   .testing-workspace .tr-log,
   .testing-workspace .tr-log tbody,
@@ -572,35 +521,25 @@
   .testing-workspace .tr-log td {
     display: block;
   }
-  .testing-workspace .tr-log tr {
-    margin: 0 0 10px;
-    border: 0.4pt solid var(--cell);
+  .testing-workspace .tr-log thead {
+    position: absolute;
+    left: -9999px;
   }
   .testing-workspace .tr-log td {
     border: 0;
+    padding: 0 0 2px;
   }
-  .testing-workspace .tr-log td:nth-child(2)::before,
-  .testing-workspace .tr-log td:nth-child(3)::before,
-  .testing-workspace .tr-log td:nth-child(4)::before {
-    display: block;
-    font-weight: 500;
-    font-size: 9pt;
-    color: var(--grey);
+  .testing-workspace .tr-log tr[id] {
+    padding: 6px 0;
+    border-bottom: 0.4pt solid var(--hair);
   }
-  .testing-workspace .tr-log td:nth-child(2)::before {
-    content: 'Tested';
-  }
-  .testing-workspace .tr-log td:nth-child(3)::before {
-    content: 'Saw';
-  }
-  .testing-workspace .tr-log td:nth-child(4)::before {
-    content: 'Changed';
+  .testing-workspace .tr-log td:nth-child(3):empty {
+    display: none;
   }
 }
 
 @media print {
-  .testing-workspace .tr-actions,
-  .testing-workspace .tw-hint {
+  .testing-workspace .tr-actions {
     display: none;
   }
   .testing-workspace .tr-fig {

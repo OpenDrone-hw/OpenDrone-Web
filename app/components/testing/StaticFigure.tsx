@@ -1,6 +1,6 @@
 import {useId} from 'react';
 import {buildGeometry, CHAR_PX, MARK_ROW, MARKER_R, markerPath, TICK_PX} from '~/lib/testing/geometry';
-import {defaultHidden, isDual} from '~/lib/testing/labels';
+import {defaultHidden} from '~/lib/testing/labels';
 import {axisTitle} from '~/lib/testing/layout';
 import {CANVAS, INK, MUTED, SURFACE, type Theme} from '~/lib/testing/palette';
 import type {Fig} from '~/lib/testing/types';
@@ -95,7 +95,6 @@ export function StaticFigure({
       <clipPath id={`${clip}-plot`}>
         <rect x={g.plot.x0} y={g.plot.y0} width={g.plot.x1 - g.plot.x0} height={g.plot.y1 - g.plot.y0} />
       </clipPath>
-      {g.fit ? <path d={g.fit} clipPath={`url(#${clip}-plot)`} fill="none" stroke={ink} strokeOpacity={0.75} strokeWidth={1.5} /> : null}
       {g.series.map((s) => (
         <g key={s.id} fill="none" stroke={colorOf(s)}>
           {s.d ? (
@@ -122,15 +121,17 @@ export function StaticFigure({
           ))}
         </g>
       ))}
-      {g.lines.map((l) => {
+      {g.fit ? <path d={g.fit} clipPath={`url(#${clip}-plot)`} fill="none" stroke={ink} strokeWidth={1.75} strokeDasharray="7 4" /> : null}
+      {g.lines.map((l, li) => {
         const text = l.text;
+        const tag = text.length <= 2;
         const w = text.length * CHAR_PX + 10;
         const fits = l.x - 5 - w >= g.plot.x0;
         const y = 13 + l.row * MARK_ROW + (titles ? 14 : 0);
         return (
-          <g key={`ml${l.row}`}>
+          <g key={`ml${li}`}>
             <line x1={l.x} x2={l.x} y1={y + 4} y2={g.plot.y1} stroke={muted} strokeWidth={1} strokeDasharray="3 3" />
-            <text x={fits ? l.x - 5 : l.x + 5} y={y} textAnchor={fits ? 'end' : 'start'} fontSize={12} fill={ink}>
+            <text x={tag ? l.x : fits ? l.x - 5 : l.x + 5} y={y} textAnchor={tag ? 'middle' : fits ? 'end' : 'start'} fontSize={12} fill={ink}>
               {text}
             </text>
           </g>
@@ -155,11 +156,11 @@ export function StaticFigure({
       ))}
       {titles ? (
         <g fontSize={12} fontWeight={500}>
-          <text x={4} y={14} textAnchor="start" fill={isDual(fig) ? colorOfId(g.axisSeries.y) : muted}>
+          <text x={4} y={14} textAnchor="start" fill={muted}>
             {lab('y')}
           </text>
           {y2 ? (
-            <text x={width - 4} y={14} textAnchor="end" fill={colorOfId(g.axisSeries.y2)}>
+            <text x={width - 4} y={14} textAnchor="end" fill={muted}>
               {lab('y2')}
             </text>
           ) : null}

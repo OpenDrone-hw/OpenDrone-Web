@@ -24,7 +24,7 @@
       "run": true
     },
     {
-      "text": "The clamp reads about -0.85 A with no current flowing; the offset is not removed.",
+      "text": "In this capture the clamp reads about -0.85 A with no current flowing; the offset is not removed.",
       "run": true
     }
   ],

@@ -13,10 +13,6 @@
     },
     {
       "text": "The temperature was read live through the whole run, 38 to 53 C."
-    },
-    {
-      "text": "Propeller, ESC model and cooling are not recorded.",
-      "run": true
     }
   ],
   "reduction": "Logged frames; frames in throttle or speed transients are excluded. Hold markers: median of the last 2 s of each throttle hold; the band is the 25th to 75th percentile. Holds with no pack voltage reading are dropped.",

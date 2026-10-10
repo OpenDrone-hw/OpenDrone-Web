@@ -9,7 +9,7 @@
   "chip": "OpenESC-20x20, 1 motor, clamp reference",
   "caveats": [
     {
-      "text": "The clamp zero offset (-0.43 A) is not removed, so the 15 percent point is not reliable."
+      "text": "The clamp zero offset in this capture, about -0.4 A, is not removed, so the 15 percent point is not reliable."
     },
     {
       "text": "The clamp is reference grade below 40 A; the 100 percent point is above that.",

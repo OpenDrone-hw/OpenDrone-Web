@@ -1,12 +1,17 @@
 import {useCallback, useEffect, useRef, useState, type ComponentType} from 'react';
-import {figureCsv, tableRows} from '~/lib/testing/export';
-import {fmtValue, unitLabel} from '~/lib/testing/scale';
+import {figureCsv} from '~/lib/testing/export';
+import {unitLabel} from '~/lib/testing/scale';
 import type {Domain} from '~/lib/testing/scale';
+import {markLines} from '~/lib/testing/geometry';
+import {defaultHidden} from '~/lib/testing/labels';
 import {caveatFlagged, caveatRunWide, caveatText, type Fig, type FigSummary, type RunInfo} from '~/lib/testing/types';
 import {sourceLine} from '~/lib/testing/layout';
+import {Legend} from './Legend';
 import {UnitLine} from './UnitLine';
 import {StaticFigure} from './StaticFigure';
 import {useWorkspaceTheme} from './WorkspaceShell';
+
+const noop = () => {};
 
 type PanelProps = React.ComponentProps<typeof import('./ChartPanel').default>;
 
@@ -58,7 +63,6 @@ export function Figure({
   summary,
   run,
   preview,
-  hint = false,
 }: {
   id: string;
   /** Figure number in the document; the findings under it are numbered from it. */
@@ -67,8 +71,6 @@ export function Figure({
   run: RunInfo | undefined;
   /** Thinned figure for the server-rendered SVG. */
   preview: Fig;
-  /** The first plot of the page says how to read values, inside the plot, until it is touched. */
-  hint?: boolean;
 }) {
   const theme = useWorkspaceTheme();
   const root = useRef<HTMLElement>(null);
@@ -167,18 +169,21 @@ export function Figure({
 
   const fig = full ?? preview;
   const startRange = typeof window === 'undefined' ? null : readUrlRange(id);
-  const fit = fig.fit
-    ? `Dashed line: quadratic fit, ${fmtValue(fig.fit.k)} ${fig.fit.unit} from ${fig.fit.fromThrottle} percent throttle up, ${fig.fit.n} holds, largest miss ${fig.fit.maxMiss} ${unitLabel(fig.axes.y.unit)}.`
-    : null;
   // The measurement first, then the notes of this figure, a flagged one before the rest. A note about
   // the whole run is stated once under the run's setup, not under each figure.
   const notes = fig.caveats
     .filter((c) => !caveatRunWide(c))
     .sort((a, b) => Number(caveatFlagged(b)) - Number(caveatFlagged(a)))
     .map(caveatText);
-  const items = [summary.finding, ...notes];
-  const logs = fig.cite ? fig.cite.replace(/#L\d+-L\d+/g, '').split('; ') : [];
-  const rows = tableRows(fig);
+  const items = [
+    summary.finding,
+    ...(fig.fit
+      ? [`The fit is y = k x squared through the origin, over ${fig.fit.n} holds from ${fig.fit.fromThrottle} percent throttle up; the largest miss is ${fig.fit.maxMiss} ${unitLabel(fig.axes.y.unit)}.`]
+      : []),
+    ...notes,
+  ];
+  const marks = markLines(fig);
+  const caption = `${summary.title}.${fig.fit ? ' Dashed line: quadratic fit.' : ''}${marks.length ? ` Dashed lines: ${marks.map((m) => `${m.no}, ${m.text[0]!.toLowerCase()}${m.text.slice(1)}`).join('; ')}.` : ''}`;
 
   return (
     <figure className="tr-fig" id={id} ref={root} data-ready={full && Panel ? '1' : '0'} aria-labelledby={`${id}-cap`}>
@@ -190,7 +195,6 @@ export function Figure({
             height={height}
             initialRange={startRange}
             onRange={(r) => writeUrlRange(id, r)}
-            hint={hint}
           />
         ) : error ? (
           <p className="tr-error" role="alert">
@@ -203,25 +207,28 @@ export function Figure({
           <>
             <UnitLine fig={fig} theme={theme} />
             <StaticFigure fig={fig} width={820} height={height} className="tr-static" titles={false} />
+            <div className="tr-keyrow">
+              <Legend fig={fig} theme={theme} hidden={defaultHidden(fig)} onChange={noop} />
+            </div>
           </>
         )}
       </div>
       <figcaption id={`${id}-cap`}>
-        <b>Figure {no}.</b> {summary.title}.{fit ? ` ${fit}` : ''}
+        <b>Figure {no}.</b> {caption}
       </figcaption>
       <p className="tr-prov">
         <span>Source: {sourceLine(summary.runId, run?.date, fig.cite)}</span>
-        {full ? (
-          <span className="tr-get">
-            <button type="button" className="tr-link" onClick={() => void download()}>
-              SVG
-            </button>
-            <button type="button" className="tr-link" onClick={csv}>
-              CSV
-            </button>
-          </span>
-        ) : null}
-        <span className="tr-id">{id}</span>
+        <span>View {id}</span>
+        <span>
+          Data:{' '}
+          <button type="button" className="tr-link" disabled={!full} onClick={() => void download()}>
+            SVG
+          </button>
+          ,{' '}
+          <button type="button" className="tr-link" disabled={!full} onClick={csv}>
+            CSV
+          </button>
+        </span>
       </p>
       <ol className="tr-findings">
         {items.map((t, i) => (
@@ -233,43 +240,6 @@ export function Figure({
           </li>
         ))}
       </ol>
-      <details className="tr-values">
-        <summary>{rows ? `Reduction and values of Figure ${no}` : `Reduction of Figure ${no}`}</summary>
-        {fig.reduction ? <p>{fig.reduction}</p> : null}
-        {logs.length ? (
-          <p className="tr-logs">
-            Logs: {logs.map((l, i) => (
-              <span key={i}>{l}</span>
-            ))}
-          </p>
-        ) : null}
-        {rows ? (
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">Series</th>
-                <th scope="col">
-                  {fig.axes.x.label} ({unitLabel(fig.axes.x.unit)})
-                </th>
-                <th scope="col">
-                  {fig.axes.y.label} ({unitLabel(fig.axes.y.unit)})
-                </th>
-                <th scope="col">25th to 75th</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r, i) => (
-                <tr key={i}>
-                  <td>{r.series.replace(/, hold median.*$/, '')}</td>
-                  <td>{r.x}</td>
-                  <td>{r.y}</td>
-                  <td>{r.band}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : null}
-      </details>
     </figure>
   );
 }

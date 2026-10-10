@@ -11,18 +11,6 @@
     {
       "text": "The 13:25 UTC run read 1496 g at 100 percent on a pack that sagged to 19.3 V, so thrust at full throttle depends on the pack.",
       "flag": true
-    },
-    {
-      "text": "One capture; the run was not repeated.",
-      "run": true
-    },
-    {
-      "text": "No clamp meter was recorded.",
-      "run": true
-    },
-    {
-      "text": "No independent weight check of the load cell is recorded.",
-      "run": true
     }
   ],
   "cardCaveat": "At full throttle the 13:25 UTC pack sagged to 19.3 V and the motor gave 1496 g.",

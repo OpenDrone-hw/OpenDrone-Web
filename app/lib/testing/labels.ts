@@ -10,17 +10,10 @@ export function plainLabel(label: string, short?: string): string {
 }
 
 /**
- * Two to four line traces on one axis are named at their right ends, in the
- * colour of the line, in place of a legend.
+ * Series are named by the legend under the plot, as in the exported reports, never at the line ends.
  */
-export function directLabelled(fig: Fig): boolean {
-  const traces = fig.series.filter((s) => s.kind === 'trace');
-  return (
-    traces.length >= 2 &&
-    traces.length <= 4 &&
-    traces.length === fig.series.length &&
-    !fig.series.some((s) => s.axis === 'y2')
-  );
+export function directLabelled(_fig: Fig): boolean {
+  return false;
 }
 
 /** A two-axis figure names each axis in the colour of its line, above the plot. */

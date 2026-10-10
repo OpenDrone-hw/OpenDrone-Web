@@ -9,10 +9,8 @@
   "chip": "One OpenMotor-2306, one 6S pack, cell calibrated to 1726 g",
   "caveats": [
     {
-      "text": "The packs are not recorded; the earlier runs used other 6S packs."
-    },
-    {
-      "text": "Voltage is the flight controller's battery divider, not checked against a meter."
+      "text": "The packs are not recorded; the earlier runs used other 6S packs, and the voltage is not checked against a meter.",
+      "run": true
     }
   ],
   "reduction": "Logged frames; frames in throttle or speed transients are excluded. Hold markers: median of the last 2 s of each throttle hold; the band is the 25th to 75th percentile. Holds with no pack voltage reading are dropped.",

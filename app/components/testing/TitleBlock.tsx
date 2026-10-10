@@ -10,9 +10,8 @@ export function runState(setup: string[]): string | null {
 }
 
 /**
- * The title block of the report: title, a small table of scope, runs, status and
- * export date, one sentence on what the document is, and its contents with the
- * figures each section holds. The values are read from the index, not typed here.
+ * The title block of the report: the title, one inline row of scope, runs and status,
+ * and the contents with the figures each section holds. The values are read from the index, not typed here.
  */
 export function TitleBlock({index, numbers}: {index: TestingIndex; numbers: Numbered[]}) {
   const runs = Object.entries(index.runs);
@@ -22,7 +21,6 @@ export function TitleBlock({index, numbers}: {index: TestingIndex; numbers: Numb
     ['Scope', index.products.map((p) => p.name).join(', ')],
     ['Runs', `${runs.length}, ${dates[0]} to ${dates[dates.length - 1]}`],
     ['Status', states.length === 1 ? states[0]! : 'per section'],
-    ['Exported', index.built],
   ];
   const range = (handle: string) => {
     const mine = numbers.filter((n) => index.products.find((p) => p.handle === handle)?.figures.includes(n.id));
@@ -33,16 +31,14 @@ export function TitleBlock({index, numbers}: {index: TestingIndex; numbers: Numb
   };
   return (
     <section aria-labelledby="tr-title">
-      <h1 id="tr-title">Test results</h1>
-      <dl className="tr-meta">
+      <h1 id="tr-title">OpenDrone test report, exported {index.built}</h1>
+      <p className="tr-meta">
         {meta.map(([k, v]) => (
-          <div key={k}>
-            <dt>{k}</dt>
-            <dd>{v}</dd>
-          </div>
+          <span key={k}>
+            <b>{k}</b> {v}
+          </span>
         ))}
-      </dl>
-      <p>Bench and field measurements of OpenDrone boards, one unit and one capture per run unless a section says otherwise.</p>
+      </p>
       <ol className="tr-contents" aria-label="Contents">
         {index.products.map((p, i) => (
           <li key={p.handle}>

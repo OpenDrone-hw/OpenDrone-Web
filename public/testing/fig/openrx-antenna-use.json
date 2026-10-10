@@ -12,10 +12,7 @@
       "text": "Samples are not evenly spread over distance: bins hold 9 to 871 samples, and bins with fewer than 8 are dropped."
     },
     {
-      "text": "Antenna placement and orientation are not recorded."
-    },
-    {
-      "text": "One unit of each, one ride.",
+      "text": "Antenna placement and orientation are not recorded.",
       "run": true
     }
   ],

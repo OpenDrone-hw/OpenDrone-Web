@@ -41,7 +41,6 @@
           "Current sense against a clamp"
         ],
         "gaps": [
-          "Current sense after the rev3.2 input network",
           "Continuous current rating"
         ]
       }

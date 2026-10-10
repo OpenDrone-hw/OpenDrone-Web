@@ -92,7 +92,7 @@ export function buildGeometry(fig: Fig, opt: GeomOptions): Geometry {
   const theme: Theme = opt.theme ?? 'light';
   const dom = figureDomains(fig, {hidden: opt.hidden, xWindow: opt.xWindow});
   const hasY2 = Boolean(dom.y2);
-  const nLines = Math.min(2, (fig.marks ?? []).filter((q) => q.kind === 'line').length);
+  const nLines = Math.min(1, (fig.marks ?? []).filter((q) => q.kind === 'line').length);
   const top = (opt.titles === false ? 12 : 26) + nLines * MARK_ROW;
   const gl = opt.narrow ? GUTTER_L_NARROW : GUTTER_L;
   const m = {l: gl, r: (hasY2 ? gl : 16) + directPad(fig, Boolean(opt.narrow)), t: top, b: 38};
@@ -300,6 +300,15 @@ export type Frame = {
   rightPad?: number;
 };
 
+/**
+ * Vertical mark lines of a figure, left to right. With two or more they are numbered on the plot and their
+ * text is written under the figure, so no two labels crowd each other.
+ */
+export function markLines(fig: Fig): Array<{no: number; text: string}> {
+  const ml = (fig.marks ?? []).filter((m) => m.kind === 'line').sort((a, b) => a.x - b.x);
+  return ml.length > 1 ? ml.map((m, i) => ({no: i + 1, text: m.text})) : [];
+}
+
 /** The fit as a short legend entry: `1.71 g/krpm²`. */
 export const fitShort = (k: number, unit: string) => `${k} ${unit.replace(/ per /, '/').replace(/ squared$/, '²')}`;
 
@@ -377,26 +386,6 @@ export function layoutNotes(
     items.push({text: wrap(m.text, f.narrow ? 118 : 160, f.measure), x, y, sid: s.id, dir: 'far', ring: true});
   }
 
-  // The last value of the hold series that reaches furthest. Not on a phone.
-  if (!f.narrow) {
-    let lead: {s: FigSeries; i: number} | null = null;
-    for (const s of shown) {
-      if (s.kind !== 'hold') continue;
-      const i = lastOf(s);
-      if (i >= 0 && (!lead || s.x[i]! > lead.s.x[lead.i]! + 1e-9)) lead = {s, i};
-    }
-    if (lead) {
-      const {s, i} = lead;
-      items.push({
-        text: [`${fmtEnd(s.y[i]!)} ${unitOf(s)}`.trim()],
-        x: f.px(s.x[i]!),
-        y: f.py(s.y[i]!, s.axis === 'y2' ? 'y2' : 'y'),
-        sid: s.id,
-        dir: 'ul',
-      });
-    }
-  }
-
   // Direct labels: a name at the right end of each line, in its colour.
   if (directLabelled(fig)) {
     for (const s of shown) {
@@ -448,6 +437,6 @@ export function layoutNotes(
   const lines: Geometry['lines'] = [];
   // The leftmost line takes the lowest row, so no line passes through another's label.
   const ml = (fig.marks ?? []).filter((m) => m.kind === 'line' && inWin(m.x)).sort((a, b) => a.x - b.x);
-  ml.forEach((m, i) => lines.push({x: f.px(m.x), row: Math.min(2, ml.length) - 1 - i, text: m.text}));
+  ml.forEach((m, i) => lines.push({x: f.px(m.x), row: ml.length > 1 ? 0 : 0, text: ml.length > 1 ? String(i + 1) : m.text}));
   return {notes, lines, rings, centres};
 }

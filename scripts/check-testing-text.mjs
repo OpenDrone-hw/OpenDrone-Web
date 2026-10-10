@@ -21,7 +21,7 @@ import {chromium} from 'playwright';
 
 const url = process.argv[2] ?? 'http://localhost:5199/testing';
 // A report: every note of every figure and the whole log are on the page.
-const BUDGET = 3000;
+const BUDGET = 2200;
 
 async function launch() {
   try {

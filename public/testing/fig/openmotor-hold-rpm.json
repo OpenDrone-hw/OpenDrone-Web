@@ -11,14 +11,6 @@
     {
       "text": "Rotor speed assumes 7 pole pairs, the default stored in the capture.",
       "flag": true
-    },
-    {
-      "text": "One capture; the run was not repeated.",
-      "run": true
-    },
-    {
-      "text": "Propeller, ESC model and cooling are not recorded.",
-      "run": true
     }
   ],
   "reduction": "Logged frames; frames in throttle or speed transients are excluded. Hold markers: median of the last 2 s of each throttle hold; the band is the 25th to 75th percentile. Holds with no pack voltage reading are dropped.",
