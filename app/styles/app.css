@@ -18957,7 +18957,6 @@ summary,
   --tf-grid: color-mix(in srgb, var(--color-text) 14%, transparent);
   --tf-surface: transparent;
   color-scheme: dark;
-  max-width: 44rem;
   padding-top: 14px;
   border-top: 1px solid var(--color-border);
 }

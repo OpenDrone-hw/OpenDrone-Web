@@ -16,7 +16,7 @@
         "done": ["Die temperature ramp", "Current sense against a clamp"],
         "gaps": ["Continuous current rating"]
       },
-      "figures": ["openesc-shunt-vs-clamp", "openesc-die-temp-ramp"]
+      "figures": ["openesc-30-four-motors", "openesc-shunt-vs-clamp", "openesc-die-temp-ramp"]
     },
     {
       "handle": "openfc-lite",
@@ -36,6 +36,17 @@
     }
   ],
   "runs": {
+    "rig-01-2026-08-30": {
+      "date": "2026-08-30",
+      "setup": ["1 OpenESC-30x30 driving 4 motors on a 13 inch load rig", "Throttle 10 to 100 percent over 10 s, then back over 10 s", "Reference: DC clamp meter on the battery lead, range 100 A"],
+      "chip": "OpenESC-30x30, 4 motors, 13 inch rig, clamp reference",
+      "table": [
+        ["Unit", "OpenESC-30x30 driving 4 motors"],
+        ["Load", "13 inch rig"],
+        ["Ramp", "Throttle 10 to 100 percent over 10 s, then back over 10 s"],
+        ["Reference", "DC clamp meter on the battery lead, range 100 A"]
+      ]
+    },
     "esc-18-2026-08-21": {
       "date": "2026-08-21",
       "setup": ["1 OpenESC-20x20, channel 4 driven alone", "Throttle ramp from 0 to full over 120 s, thermal limit disabled", "Fan cooling, fresh pack", "Reference: DC clamp meter on the battery lead"],
@@ -99,6 +110,19 @@
     }
   },
   "figures": {
+    "openesc-30-four-motors": {
+      "title": "Four motors in a ramp",
+      "finding": "All four motors hold 7545 to 7572 rpm at full throttle on 13 inch props; the clamp reads 89.3 A at 64 percent.",
+      "product": "openesc",
+      "tier": "30x30",
+      "featured": true,
+      "order": 5,
+      "domain": "PWR",
+      "runId": "rig-01-2026-08-30",
+      "chip": "OpenESC-30x30, 4 motors, 13 inch rig, clamp reference",
+      "caveats": 4,
+      "flagged": 0
+    },
     "openesc-die-temp-ramp": {
       "title": "Die temperature in a ramp",
       "finding": "Die temperature climbs from 23 C to 156 C as clamp current rises to 39.8 A; telemetry peaks at 161 C.",

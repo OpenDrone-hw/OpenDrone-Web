@@ -28,5 +28,5 @@
 /makerspace/*
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
-/testing/explorer/chunks/*
+/testing-explorer/chunks/*
   Cache-Control: public, max-age=31536000, immutable

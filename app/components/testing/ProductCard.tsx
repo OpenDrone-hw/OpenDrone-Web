@@ -4,28 +4,23 @@ import {assignStyles} from '~/lib/testing/palette';
 import {StaticFigure} from './StaticFigure';
 
 /**
- * The product-page entry, set like a figure of the test report: a small plot
- * as a static SVG with axis titles and units, its caption line, the finding,
- * and a link that opens the same view in the explorer. No script. A second, narrower
- * drawing is swapped in below 560 px so tick labels stay legible.
+ * The product-page entry: the plot full width as a static SVG, its key, and
+ * one line with the finding and a link that opens the view in the explorer.
+ * No script. A narrower drawing is swapped in below 560 px so tick labels
+ * stay legible.
  */
 export function ProductCard({card}: {card: CardData}) {
-  const {id, summary, date, fig, state} = card;
+  const {id, summary, fig} = card;
   return (
-    <aside className="testing-card" aria-label="Measured on the bench">
+    <aside className="testing-card" aria-label={summary.title}>
       <figure>
-        <StaticFigure fig={fig} width={640} height={300} compact className="testing-card-svg testing-card-svg-wide" />
+        <StaticFigure fig={fig} width={1200} height={380} compact className="testing-card-svg testing-card-svg-wide" />
         <StaticFigure fig={fig} width={340} height={270} compact className="testing-card-svg testing-card-svg-narrow" />
         <CardKey fig={fig} />
-        <figcaption>
-          {summary.title}. {summary.chip}. Bench test <time dateTime={date}>{date}</time>
-          {state ? `, ${state.split(/[;.]/)[0]!.trim().toLowerCase()}` : ''}.
-        </figcaption>
       </figure>
-      <p className="testing-card-finding">{summary.finding}</p>
-      <a className="testing-card-link" href={`/testing#/analyse/${id}`}>
-        Explore this graph and its recordings
-      </a>
+      <p className="testing-card-finding">
+        {summary.finding} <a className="testing-card-link" href={`/testing#/analyse/${id}`}>Explore the recordings</a>
+      </p>
     </aside>
   );
 }
