@@ -53,12 +53,6 @@ export const EDITORIAL_SERIES: EditorialEntry[] = [
     minutes: 2,
   },
   {
-    slug: 'testing',
-    title: 'Testing',
-    hook: 'What we measured on the bench and in the field, and what we changed.',
-    minutes: 5,
-  },
-  {
     slug: 'firmware-partners',
     title: 'Firmware partners',
     hook: 'The projects our boards run on, and how to support them.',

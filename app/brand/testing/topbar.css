@@ -1,0 +1,232 @@
+/* Vendored from the Incutec design repository by scripts/sync-testing-brand.mjs.
+ * Every selector is scoped under .testing-workspace. Do not edit by hand. */
+
+.testing-workspace .incutec-topbar {
+  --topbar-height: 56px;
+  --topbar-bar: 2px;
+  --topbar-inset: 1rem;
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  height: var(--topbar-height);
+  padding-inline: var(--topbar-inset);
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--border);
+}
+
+.testing-workspace .incutec-topbar__brand {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.testing-workspace .incutec-topbar__wordmark {
+  height: 22px;
+  width: auto;
+}
+
+.testing-workspace .incutec-topbar__wordmark--dark { display: none; }
+
+@media (prefers-color-scheme: dark) {
+  .testing-workspace:not([data-theme="light"]) .incutec-topbar__wordmark--light { display: none; }
+  .testing-workspace:not([data-theme="light"]) .incutec-topbar__wordmark--dark { display: block; }
+}
+.testing-workspace[data-theme="dark"] .incutec-topbar__wordmark--light { display: none; }
+.testing-workspace[data-theme="dark"] .incutec-topbar__wordmark--dark { display: block; }
+
+.testing-workspace .incutec-topbar__line {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: var(--topbar-bar);
+  background: var(--accent);
+  pointer-events: none;
+  transition: left 200ms ease, background-color 200ms ease;
+}
+.testing-workspace .incutec-topbar[data-tone] .incutec-topbar__line {
+  background: var(--topbar-tone, var(--accent));
+}
+
+.testing-workspace .incutec-topbar__nav {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.testing-workspace .incutec-topbar__nav::-webkit-scrollbar { display: none; }
+
+.testing-workspace .incutec-topbar:has(.incutec-topbar__page) .incutec-topbar__nav { flex: 0 1 auto; }
+
+.testing-workspace .incutec-topbar__nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+  height: 36px;
+  padding-inline: 0.75rem;
+  border-radius: var(--radius);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.testing-workspace .incutec-topbar__nav a:hover {
+  color: var(--text);
+  background: var(--bg-elev-2);
+}
+
+.testing-workspace .incutec-topbar__nav a[aria-current="page"] {
+  color: var(--text);
+  background: var(--accent-soft);
+}
+
+.testing-workspace .incutec-topbar__nav a svg { flex: 0 0 auto; }
+
+.testing-workspace .incutec-topbar__page {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.testing-workspace .incutec-topbar__action {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.testing-workspace .incutec-topbar__end {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 0 0 auto;
+  margin-left: auto;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.testing-workspace .incutec-topbar:has(.incutec-topbar__page) .incutec-topbar__end { margin-left: 0; }
+
+@media (max-width: 640px) {
+  .testing-workspace .incutec-topbar { gap: 0.75rem; --topbar-inset: 0.75rem; }
+  .testing-workspace .incutec-topbar__nav a span { display: none; }
+}
+
+.testing-workspace .incutec-topbar[data-variant="plain"] {
+  height: auto;
+  min-height: var(--topbar-height);
+}
+
+.testing-workspace .incutec-topbar[data-variant="stroke"] {
+  --topbar-height: 48px;
+  --topbar-bar: 7px;
+  --topbar-inset: 16px;
+  
+  --topbar-scale: calc(var(--topbar-bar) / (var(--wordmark-stroke-bottom) - var(--wordmark-stroke-top)));
+  --topbar-mark-width: calc(var(--wordmark-width) * var(--topbar-scale));
+  --topbar-mark-height: calc(var(--wordmark-height) * var(--topbar-scale));
+  
+  --topbar-line-start: calc(var(--topbar-inset) + var(--wordmark-stroke-run) * var(--topbar-scale));
+  --topbar-line-off: calc(var(--topbar-inset) + (var(--wordmark-stroke-end) + var(--wordmark-dot-gap)) * var(--topbar-scale));
+  --topbar-line-left: calc(var(--topbar-line-start) - 1px);
+  padding-top: var(--topbar-bar);
+  padding-right: var(--topbar-inset);
+  padding-left: var(--topbar-inset);
+}
+
+.testing-workspace .incutec-topbar[data-variant="stroke"] .incutec-topbar__brand {
+  position: relative;
+  display: block;
+  align-self: stretch;
+  flex: 0 0 auto;
+  width: var(--topbar-mark-width);
+  height: 100%;
+  text-decoration: none;
+}
+
+.testing-workspace .incutec-topbar[data-variant="stroke"] .incutec-topbar__wordmark {
+  display: block;
+  position: absolute;
+  left: 0;
+  top: calc(-1 * (var(--topbar-bar) + var(--wordmark-stroke-top) * var(--topbar-scale)));
+  width: var(--topbar-mark-width);
+  height: auto;
+  max-width: none;
+  clip-path: polygon(
+    0 0,
+    calc(var(--wordmark-stroke-run) * var(--topbar-scale)) 0,
+    calc(var(--wordmark-stroke-run) * var(--topbar-scale)) calc(var(--wordmark-stroke-bottom) * var(--topbar-scale)),
+    100% calc(var(--wordmark-stroke-bottom) * var(--topbar-scale)),
+    100% 100%,
+    0 100%);
+}
+.testing-workspace .incutec-topbar[data-variant="stroke"] .incutec-topbar__wordmark--dark { display: none; }
+
+.testing-workspace .incutec-topbar[data-variant="stroke"] .incutec-topbar__line {
+  inset: 0 0 auto auto;
+  left: var(--topbar-line-left);
+  right: 0;
+}
+
+.testing-workspace .incutec-topbar[data-variant="stroke"][data-tone] { --topbar-line-left: var(--topbar-line-off); }
+.testing-workspace .incutec-topbar[data-variant="stroke"][data-tone] .incutec-topbar__wordmark { clip-path: none; }
+
+.testing-workspace .incutec-topbar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.6) 50%, transparent 100%);
+  background-size: 200px 100%;
+  background-repeat: no-repeat;
+  background-position: -200px 0;
+  mask-image: linear-gradient(#000, #000);
+  mask-size: 100% var(--topbar-bar);
+  mask-position: 0 0;
+  mask-repeat: no-repeat;
+  opacity: 0;
+  transition: opacity 120ms linear;
+}
+.testing-workspace .incutec-topbar[data-variant="stroke"]::after {
+  mask-image: var(--wordmark-stroke-mask), linear-gradient(#000, #000);
+  mask-size: var(--topbar-mark-width) var(--topbar-mark-height),
+             calc(100% - var(--topbar-line-left)) var(--topbar-bar);
+  mask-position: var(--topbar-inset) calc(-1 * var(--wordmark-stroke-top) * var(--topbar-scale)),
+                 var(--topbar-line-left) 0;
+}
+.testing-workspace .incutec-topbar[data-busy="1"]::after {
+  opacity: 1;
+  animation: incutec-topbar-sweep 900ms linear infinite alternate;
+}
+
+@keyframes incutec-topbar-sweep {
+  from {
+    background-position: -200px 0;
+    animation-timing-function: linear;
+  }
+  45% {
+    background-position: calc(var(--topbar-inset) + var(--topbar-mark-width, 200px) - 100px) 0;
+    animation-timing-function: cubic-bezier(0.4, 0.1, 1, 1);
+  }
+  to {
+    background-position: calc(100% + 200px) 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .testing-workspace .incutec-topbar[data-busy="1"]::after {
+    animation: none;
+    background: rgba(255, 255, 255, 0.3);
+  }
+}

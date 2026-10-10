@@ -51,6 +51,8 @@
     "goals:update": "node scripts/update-goals.mjs",
     "sync:specs": "node scripts/import-specs.mjs --write",
     "sync:testing": "node scripts/sync-testing.mjs --write",
+    "check:testing-text": "node scripts/check-testing-text.mjs",
+    "sync:testing:brand": "node scripts/sync-testing-brand.mjs",
     "sync:testing:check": "node scripts/sync-testing.mjs --check",
     "sync:downloads": "node scripts/sync-downloads.mjs --check",
     "sync:specs:check": "node scripts/import-specs.mjs --check",
@@ -72,7 +74,8 @@
     "react-router": "7.18.4",
     "tailwindcss": "^4.3.3",
     "three": "^0.185.1",
-    "topojson-client": "^3.1.0"
+    "topojson-client": "^3.1.0",
+    "uplot": "1.6.32"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.63.1",

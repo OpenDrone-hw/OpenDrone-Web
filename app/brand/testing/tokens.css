@@ -1,0 +1,93 @@
+/* Vendored from the Incutec design repository by scripts/sync-testing-brand.mjs.
+ * Every selector is scoped under .testing-workspace. Do not edit by hand. */
+
+
+.testing-workspace {
+  --color-accent-default: #00B2A9;
+  --color-accent-hover: #00827B;
+  --color-accent-soft: rgba(0, 178, 169, 0.1);
+  --color-background-canvas: #FBFBFA;
+  --color-background-surface: #FFFFFF;
+  --color-background-surface-subtle: #F3F3F1;
+  --color-border-default: rgba(0, 0, 0, 0.1);
+  --color-border-strong: rgba(0, 0, 0, 0.18);
+  --color-brand-accent: #00B2A9;
+  --color-brand-accent-alt: #2A9D8F;
+  --color-brand-accent-hover-dark: #1EC8BF;
+  --color-brand-accent-hover-light: #00827B;
+  --color-brand-accent-soft-dark: rgba(0, 178, 169, 0.12);
+  --color-brand-accent-soft-light: rgba(0, 178, 169, 0.1);
+  --color-brand-teal-deep: #0F4C5C;
+  --color-brand-wordmark-ink: #191919;
+  --color-dark-border: rgba(255, 255, 255, 0.08);
+  --color-dark-border-strong: rgba(255, 255, 255, 0.16);
+  --color-dark-canvas: #0A0A0A;
+  --color-dark-surface: #131313;
+  --color-dark-surface-subtle: #1A1A1A;
+  --color-dark-text: #F5F5F5;
+  --color-dark-text-muted: #9AA0A0;
+  --color-focus-ring: #00827B;
+  --color-light-border: rgba(0, 0, 0, 0.1);
+  --color-light-border-strong: rgba(0, 0, 0, 0.18);
+  --color-light-canvas: #FBFBFA;
+  --color-light-surface: #FFFFFF;
+  --color-light-surface-subtle: #F3F3F1;
+  --color-light-text: #14171A;
+  --color-light-text-muted: #5B6166;
+  --color-neutral-ink: #0A0A0A;
+  --color-text-muted: #5B6166;
+  --color-text-on-accent: #0A0A0A;
+  --color-text-primary: #14171A;
+  --dimension-layout-content-max: 1100px;
+  --dimension-radius-default: 10px;
+  --font-family-mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --font-family-sans: Poppins, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-tracking-body: 0em;
+  --font-tracking-display: -0.02em;
+  --font-tracking-heading: -0.01em;
+  --font-weight-body: 300;
+  --font-weight-display: 600;
+  --font-weight-heading: 500;
+  --layout-padding-container: clamp(1.25rem, 4vw, 2rem);
+  --layout-padding-section: clamp(2.5rem, 4vw, 4rem);
+  --wordmark-dot-gap: 7.74;
+  --wordmark-height: 112;
+  --wordmark-stroke-bottom: 23.54;
+  --wordmark-stroke-end: 441.89;
+  --wordmark-stroke-mask: url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%2226%20194%20448%20112%22%3E%3Cpath%20d=%22M41.15,199.98c5.14,0,9.17,4.17,9.17,9.17,0,5.28-4.03,9.31-9.17,9.31s-9.17-4.03-9.17-9.31c0-5,4.03-9.17,9.17-9.17Z%22/%3E%3Cpath%20d=%22M467.89,200.88v16.66h-189.29c-4.13,0-7.48,3.34-7.48,7.48v45.67c0,12.08-9.02,29.31-31.94,29.31s-31.97-17.23-31.97-29.31v-45.7c0-4.12-3.34-7.46-7.47-7.46H58.06v-16.66h141.67c13.32,0,24.15,10.82,24.15,24.15v45.27c0,9.71,7.21,14.29,15.29,14.29s15.28-4.58,15.28-14.29c0-15.09,0-30.18-.02-45.27,0-13.32,10.82-24.15,24.15-24.15h189.31Z%22/%3E%3C/svg%3E");
+  --wordmark-stroke-run: 252.6;
+  --wordmark-stroke-start: 32.06;
+  --wordmark-stroke-top: 6.88;
+  --wordmark-width: 448;
+  --bg: var(--color-background-canvas);
+  --bg-elev: var(--color-background-surface);
+  --bg-elev-2: var(--color-background-surface-subtle);
+  --text: var(--color-text-primary);
+  --text-muted: var(--color-text-muted);
+  --accent: var(--color-accent-default);
+  --accent-hover: var(--color-accent-hover);
+  --accent-soft: var(--color-accent-soft);
+  --border: var(--color-border-default);
+  --border-strong: var(--color-border-strong);
+  --on-accent: var(--color-text-on-accent);
+  --focus-ring: var(--color-focus-ring);
+  --font-sans: var(--font-family-sans);
+  --font-mono: var(--font-family-mono);
+  --maxw: var(--dimension-layout-content-max);
+  --radius: var(--dimension-radius-default);
+  --pad-section: var(--layout-padding-section);
+  --pad-container: var(--layout-padding-container);
+}
+
+.testing-workspace[data-theme="dark"] {
+  --color-accent-hover: #1EC8BF;
+  --color-accent-soft: rgba(0, 178, 169, 0.12);
+  --color-background-canvas: #0A0A0A;
+  --color-background-surface: #131313;
+  --color-background-surface-subtle: #1A1A1A;
+  --color-border-default: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.16);
+  --color-focus-ring: #00B2A9;
+  --color-text-muted: #9AA0A0;
+  --color-text-primary: #F5F5F5;
+}

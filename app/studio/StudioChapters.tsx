@@ -54,7 +54,7 @@ const CAVEATS: Partial<Record<ChapterType, string>> = {
   reviews: 'Appears only once the catalog carries published ratings for a product.',
   teardown: 'Needs board art or a frame viewer for this product.',
   firmware: 'Hidden on bundles and on products not yet for sale.',
-  testing: 'Only on products with published bench data in content/testing.',
+  testing: 'Only on products with a featured figure in public/testing/index.json.',
   build: 'Only on parts listed in content/builds.json, and not while the product is coming soon.',
 };
 

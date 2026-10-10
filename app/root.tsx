@@ -414,6 +414,12 @@ export default function App() {
     return <Outlet />;
   }
 
+  // The testing workspace is an Incutec tool on its own page, not an OpenDrone
+  // chapter: no storefront header, footer, cart or chat widget around it.
+  if (pathname === '/testing' || pathname.startsWith('/testing/')) {
+    return <Outlet />;
+  }
+
   if (!data) {
     return <Outlet />;
   }

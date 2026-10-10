@@ -1,19 +1,16 @@
 import type {Route} from './+types/testing';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
-import {EditorialShell} from '~/components/EditorialShell';
-import {Txt} from '~/components/Txt';
 import {copyText} from '~/lib/copy';
-import {getFigures, getTimeline} from '~/lib/testing-content';
-import {TestingFigure} from '~/components/testing/TestingFigure';
-import {TestingGroup} from '~/components/testing/TestingGroup';
-import {TestingLog} from '~/components/testing/TestingLog';
+import {getIndex, getPreviews} from '~/lib/testing/data.server';
+import {WorkspaceShell} from '~/components/testing/WorkspaceShell';
+import {ProductSection} from '~/components/testing/ProductSection';
+import {LogRow} from '~/components/testing/LogRow';
 
 /**
- * Measured data from the bench and the field. The numbers and their prose live
- * in `content/testing/*.json` (written by `npm run sync:testing`); the page's
- * own words live in `content/copy/testing.json`. Items marked needs-review are
- * not in `content/testing/` at all: the exporter keeps them in a git-ignored
- * file, and the loader still drops any that appear.
+ * The Incutec testing workspace. It is a page of its own: `root.tsx` renders it
+ * without the storefront header, footer or chapter strip. Data comes from
+ * `public/testing/` (written by `npm run sync:testing` from the bench app's
+ * published views); each figure's full series is fetched when it scrolls near.
  */
 export const meta: Route.MetaFunction = () =>
   buildSeoMeta({
@@ -23,61 +20,27 @@ export const meta: Route.MetaFunction = () =>
   });
 
 export async function loader(_args: Route.LoaderArgs) {
-  return {};
+  return {index: getIndex(), previews: getPreviews(240)};
 }
 
-const PRODUCTS: Array<{handle: string; key: string}> = [
-  {handle: 'openesc', key: 'openesc'},
-  {handle: 'openmotor', key: 'openmotor'},
-  {handle: 'openrx', key: 'openrx'},
-  {handle: 'openfc-lite', key: 'openfc_lite'},
-  {handle: 'openframe', key: 'openframe'},
-];
-
-export default function TestingRoute() {
+export default function TestingRoute({loaderData}: Route.ComponentProps) {
+  const {index, previews} = loaderData;
+  const names = Object.fromEntries(index.products.map((p) => [p.handle, p.name]));
   return (
-    <EditorialShell slug="testing" pageClassName="testing-page">
-      <header className="editorial-hero">
-        <Txt id="testing.hero_title" as="h1" className="editorial-title" />
-        <Txt id="testing.hero_body" as="p" className="editorial-lead" />
-      </header>
-
-      {PRODUCTS.map(({handle, key}) => {
-        const figures = getFigures(handle);
-        const solo = figures.filter((f) => !f.group).slice(0, 3);
-        const groups = [...new Set(figures.filter((f) => f.group).map((f) => f.group!))];
-        const log = getTimeline(handle);
-        return (
-          <section className="editorial-section testing-section" id={handle} key={handle}>
-            <Txt id={`testing.section_${key}`} as="h2" className="editorial-section-title" />
-            {figures.length === 0 ? (
-              <Txt id={`testing.empty_${key}`} as="p" />
-            ) : (
-              <>
-                <Txt id={`testing.tested_${key}`} as="p" className="testing-tested" />
-                {solo.map((f) => (
-                  <TestingFigure key={f.id} figure={f} />
-                ))}
-                {groups.map((g) => (
-                  <TestingGroup key={g} figures={figures.filter((f) => f.group === g)} />
-                ))}
-                {handle === 'openfc-lite' ? (
-                  <Txt id="testing.empty_fc_bench" as="p" className="testing-note" />
-                ) : null}
-                {handle === 'openmotor' ? (
-                  <Txt id="testing.note_uncalibrated" as="p" className="testing-note" />
-                ) : null}
-              </>
-            )}
-            {log.length > 0 ? (
-              <>
-                <Txt id="testing.log_title" as="h3" className="testing-log-title" />
-                <TestingLog items={log} />
-              </>
-            ) : null}
-          </section>
-        );
-      })}
-    </EditorialShell>
+    <WorkspaceShell index={index}>
+      {index.products.map((p) => (
+        <ProductSection key={p.handle} product={p} index={index} previews={previews} />
+      ))}
+      {index.log.length ? (
+        <section className="tw-product tw-log" id="log">
+          <h2>Engineering log</h2>
+          <div className="tw-log-list">
+            {index.log.map((e) => (
+              <LogRow key={e.id} entry={e} productName={names[e.product] ?? e.product} />
+            ))}
+          </div>
+        </section>
+      ) : null}
+    </WorkspaceShell>
   );
 }
