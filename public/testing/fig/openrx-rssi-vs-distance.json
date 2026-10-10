@@ -9,9 +9,6 @@
   "chip": "Gemini, Mono and Lite on one carry, 5.3 km ride",
   "caveats": [
     {
-      "text": "One unit of each, one ride."
-    },
-    {
       "text": "Antenna placement on the carry may explain the RSSI gap.",
       "flag": true
     },
@@ -19,13 +16,20 @@
       "text": "RSSI is the value each receiver reports after its own antenna selection."
     },
     {
-      "text": "The receiver columns in the log are numbered, not named; which is which comes from the operators' notes."
+      "text": "One unit of each, one ride.",
+      "run": true
     },
     {
-      "text": "Transmitter settings and receiver firmware are not recorded."
+      "text": "The receiver columns in the log are numbered, not named; which is which comes from the operators' notes.",
+      "run": true
     },
     {
-      "text": "No transmitter position or terrain is recorded, so range is not line-of-sight range."
+      "text": "Transmitter settings and receiver firmware are not recorded.",
+      "run": true
+    },
+    {
+      "text": "No transmitter position or terrain is recorded, so range is not line-of-sight range.",
+      "run": true
     }
   ],
   "reduction": "Median in 100 m bins; the band is the 25th to 75th percentile.",

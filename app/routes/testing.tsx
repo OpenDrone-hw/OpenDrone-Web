@@ -2,7 +2,7 @@ import type {Route} from './+types/testing';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
 import {getIndex, getPreviews} from '~/lib/testing/data.server';
-import {numberFigures} from '~/lib/testing/layout';
+import {numberFigures, photoNumbers} from '~/lib/testing/layout';
 import {WorkspaceShell} from '~/components/testing/WorkspaceShell';
 import {ProductSection} from '~/components/testing/ProductSection';
 import {LogSection} from '~/components/testing/LogSection';
@@ -29,11 +29,12 @@ export async function loader(_args: Route.LoaderArgs) {
 export default function TestingRoute({loaderData}: Route.ComponentProps) {
   const {index, previews} = loaderData;
   const numbers = numberFigures(index, (id) => Boolean(previews[id]));
+  const photos = photoNumbers(index);
   return (
     <WorkspaceShell>
-      <TitleBlock index={index} />
+      <TitleBlock index={index} numbers={numbers} />
       {index.products.map((p, i) => (
-        <ProductSection key={p.handle} product={p} section={i + 1} index={index} previews={previews} numbers={numbers} />
+        <ProductSection key={p.handle} product={p} section={i + 1} index={index} previews={previews} numbers={numbers} photoNo={photos[p.handle]} />
       ))}
       {index.log.length ? <LogSection index={index} numbers={numbers} /> : null}
     </WorkspaceShell>

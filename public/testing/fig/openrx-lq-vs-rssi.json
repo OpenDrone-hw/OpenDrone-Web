@@ -9,13 +9,15 @@
   "chip": "Gemini, Mono and Lite on one carry, 5.3 km ride",
   "caveats": [
     {
-      "text": "One unit, one ride."
-    },
-    {
       "text": "That this column is the Lite follows the operators' hand markers; the log does not name its receivers."
     },
     {
-      "text": "Transmitter settings and receiver firmware are not recorded."
+      "text": "One unit of each, one ride.",
+      "run": true
+    },
+    {
+      "text": "Transmitter settings and receiver firmware are not recorded.",
+      "run": true
     }
   ],
   "reduction": "Logged values from 200 s to 320 s.",

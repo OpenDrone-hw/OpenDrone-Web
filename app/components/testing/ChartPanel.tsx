@@ -11,7 +11,7 @@ import {UnitLine} from './UnitLine';
 
 /**
  * Canvas chart with its cursor readout inside the plot and one row under it:
- * the legend on the left, the actions on the right. Loaded after hydration,
+ * the legend on the left, the zoom reset on the right. Loaded after hydration,
  * with uPlot, by Figure.
  */
 export default function ChartPanel({
@@ -20,8 +20,6 @@ export default function ChartPanel({
   height,
   initialRange,
   onRange,
-  onDownload,
-  onCsv,
   hint = false,
 }: {
   fig: Fig;
@@ -29,8 +27,6 @@ export default function ChartPanel({
   height: number;
   initialRange?: Domain | null;
   onRange?: (r: RangeState) => void;
-  onDownload?: () => void;
-  onCsv?: () => void;
   /** Show how to read values inside the plot until the first touch of it. */
   hint?: boolean;
 }) {
@@ -101,16 +97,6 @@ export default function ChartPanel({
                 Reset zoom
               </button>
             </>
-          ) : null}
-          {onDownload ? (
-            <button type="button" className="tr-link" onClick={onDownload}>
-              SVG
-            </button>
-          ) : null}
-          {onCsv ? (
-            <button type="button" className="tr-link" onClick={onCsv}>
-              CSV
-            </button>
           ) : null}
         </p>
       </div>

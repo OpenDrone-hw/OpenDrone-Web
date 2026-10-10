@@ -1,8 +1,8 @@
 /*
  * The testing page, set like the reports the Incutec testing app exports: one
  * 860 px column, light only, Poppins 400 for text, 500 for labels and small
- * headings, 600 for headings, teal headings, thin grey rules, one chip (code).
- * No cards, tiles, pills, shadows or dark mode. Everything is scoped to
+ * headings, 600 for headings, teal headings and links, thin grey rules.
+ * No cards, tiles, pills, chips, shadows or dark mode. Everything is scoped to
  * .testing-workspace; the Incutec tokens come from the vendored
  * app/brand/testing/tokens.css. Chart internals keep the tw- prefix, report
  * layout uses tr-.
@@ -41,9 +41,11 @@
   outline-offset: 2px;
 }
 .testing-workspace a {
-  color: var(--link);
+  color: var(--teal);
   font-weight: 500;
-  text-decoration: none;
+  text-decoration: underline;
+  text-decoration-color: rgba(15, 76, 92, 0.3);
+  text-underline-offset: 2px;
 }
 .testing-workspace section {
   padding: 0;
@@ -51,10 +53,6 @@
 .testing-workspace code {
   font-family: var(--font-mono);
   font-size: 12px;
-  padding: 0 4px;
-  border-radius: 2px;
-  background: var(--fill-code);
-  overflow-wrap: anywhere;
 }
 .testing-workspace .tw-sr {
   position: absolute;
@@ -81,6 +79,7 @@
   padding-top: 24px;
 }
 .testing-workspace .tr-strip a {
+  text-decoration: none;
   display: block;
   flex: none;
 }
@@ -146,9 +145,26 @@
   margin: 0 0 3px;
 }
 
-/* Header line: bold key, grey value, run inline ----------------------- */
+/* Title block: a small table of keys and values; section header line ------- */
+.testing-workspace .tr-meta {
+  margin: 8px 0 14px;
+  font-size: 9pt;
+  line-height: 1.6;
+}
+.testing-workspace .tr-meta div {
+  display: grid;
+  grid-template-columns: 76px 1fr;
+}
+.testing-workspace .tr-meta dt {
+  font-weight: 500;
+  color: var(--ink);
+}
+.testing-workspace .tr-meta dd {
+  margin: 0;
+  color: var(--grey);
+}
 .testing-workspace .tr-head {
-  margin: 6px 0 12px;
+  margin: 4px 0 12px;
   font-size: 9pt;
   line-height: 1.6;
   color: var(--grey);
@@ -161,20 +177,34 @@
   font-weight: 500;
   color: var(--ink);
 }
-.testing-workspace .tr-head code {
-  font-size: 11px;
-}
+/* Contents: numbered entries, a dotted leader, the figures each section holds. */
 .testing-workspace .tr-contents {
   list-style: none;
+  margin: 0 0 6px;
   padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px 20px;
+  font-size: 10pt;
 }
-.testing-workspace .tr-contents span {
+.testing-workspace .tr-contents li {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0 0 2px;
+}
+.testing-workspace .tr-contents i {
+  flex: 1;
+  min-width: 12px;
+  border-bottom: 1px dotted var(--cell);
+  transform: translateY(-3px);
+}
+.testing-workspace .tr-contents .tr-cn {
+  display: inline-block;
+  min-width: 1.2em;
   color: var(--teal);
   font-weight: 500;
-  margin-right: 2px;
+}
+.testing-workspace .tr-contents .tr-cr {
+  color: var(--grey);
+  font-size: 9pt;
 }
 .testing-workspace .tr-runline {
   margin: 6px 0 2px;
@@ -185,23 +215,35 @@
   list-style: disc;
   font-size: 9.5pt;
 }
+.testing-workspace .tr-limits {
+  margin: 0 0 9px;
+  font-size: 9.5pt;
+}
+.testing-workspace .tr-limits b {
+  font-weight: 500;
+  color: var(--teal);
+}
 
-/* Photo: a raster image has a hairline border and is at most 520 px high ---- */
+/* Photo: the full column, a hairline border, cropped to 3:2 -------------- */
 .testing-workspace .tr-photo {
   margin: 8px 0 12px;
 }
 .testing-workspace .tr-photo img {
   display: block;
-  max-width: 100%;
-  max-height: 520px;
-  width: auto;
+  width: 100%;
   height: auto;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  object-position: 50% 62%;
   border: 1px solid var(--hair);
 }
 .testing-workspace .tr-photo figcaption {
   margin-top: 5px;
-  font-size: 9pt;
-  color: var(--grey);
+  font-size: 9.5pt;
+  color: var(--ink);
+}
+.testing-workspace .tr-photo figcaption b {
+  font-weight: 500;
 }
 
 /* Figure --------------------------------------------------------------- */
@@ -220,49 +262,70 @@
 .testing-workspace .tr-panel {
   min-width: 0;
 }
-.testing-workspace .tr-prov {
-  margin: 4px 0 5px;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--grey);
-}
-.testing-workspace .tr-prov code {
-  font-size: 11px;
-  background: none;
-  padding: 0;
-}
+/* Caption, one short source line, then the findings, numbered and hung. */
 .testing-workspace .tr-fig figcaption {
-  margin: 0 0 8px;
-  font-size: 9pt;
-  color: var(--grey);
+  margin: 6px 0 2px;
+  font-size: 9.5pt;
+  color: var(--ink);
 }
 .testing-workspace .tr-fig figcaption b {
   font-weight: 500;
-  color: var(--ink);
+  color: var(--teal);
 }
-.testing-workspace .tr-view {
-  margin: 0 0 4px;
+.testing-workspace .tr-prov {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 14px;
+  margin: 0 0 8px;
   font-size: 8.5pt;
+  line-height: 1.5;
   color: var(--grey);
 }
-.testing-workspace .tr-view b {
-  margin-left: 6px;
-  font-weight: 500;
+.testing-workspace .tr-get {
+  display: inline-flex;
+  gap: 10px;
+}
+.testing-workspace .tr-id {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  overflow-wrap: anywhere;
 }
 .testing-workspace .tr-findings {
-  list-style: disc;
-  margin-bottom: 6px;
+  list-style: none;
+  margin: 0 0 6px;
+  padding: 0;
+  font-size: 9.5pt;
 }
 .testing-workspace .tr-findings li {
+  position: relative;
+  margin: 0 0 3px;
+  padding-left: 34px;
   scroll-margin-top: 16px;
 }
 .testing-workspace .tr-findings li:target {
   background: var(--fill-code);
 }
 .testing-workspace .tr-n {
+  position: absolute;
+  left: 0;
   color: var(--teal);
   font-weight: 500;
-  border-bottom: 1px dotted var(--teal);
+  text-decoration: none;
+  font-variant-numeric: tabular-nums;
+}
+.testing-workspace .tr-logs {
+  font-size: 8.5pt;
+}
+.testing-workspace .tr-logs span {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  overflow-wrap: anywhere;
+}
+.testing-workspace .tr-contents a {
+  text-decoration: none;
 }
 .testing-workspace .tr-link {
   padding: 0;
@@ -287,39 +350,46 @@
   font-size: 8.5pt;
 }
 
-/* Tables ---------------------------------------------------------------- */
+/* Tables: small type, a grey header row, hairline row rules, no stripes. ---- */
 .testing-workspace table {
   width: 100%;
   margin: 6px 0 12px;
   border-collapse: collapse;
-  font-size: 9.5pt;
+  font-size: 9pt;
   line-height: 1.45;
   color: var(--ink);
+  border: 1px solid var(--cell);
 }
 .testing-workspace th,
 .testing-workspace td {
-  padding: 5px 7px;
-  border: 0.4pt solid var(--cell);
+  padding: 4px 7px;
+  border: 0;
+  border-top: 1px solid var(--hair);
   text-align: left;
   vertical-align: top;
 }
 .testing-workspace th {
   background: var(--fill-head);
   font-weight: 500;
+  border-top: 0;
 }
-.testing-workspace tbody tr:nth-child(even) {
-  background: var(--fill-row);
+.testing-workspace .tr-log {
+  table-layout: fixed;
 }
 .testing-workspace .tr-log td:first-child {
-  white-space: nowrap;
   font-size: 9pt;
+}
+.testing-workspace .tr-log td:first-child time {
+  display: block;
+  white-space: nowrap;
+}
+.testing-workspace .tr-logsub {
+  display: block;
+  font-size: 8.5pt;
   color: var(--grey);
 }
 .testing-workspace .tr-log tr:target {
   outline: 2px solid var(--fill-head);
-}
-.testing-workspace .tr-log th:first-child {
-  width: 1%;
 }
 
 /* Chart internals -------------------------------------------------------- */
@@ -419,7 +489,7 @@
   justify-content: space-between;
   align-items: baseline;
   gap: 2px 16px;
-  margin-top: 6px;
+  margin-top: 4px;
 }
 .testing-workspace .tw-legend {
   list-style: none;

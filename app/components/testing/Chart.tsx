@@ -281,7 +281,7 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
           const path = new Path2D(markerPath(st.marker, cx, cy, MARKER_R * pr));
           ctx.fillStyle = st.color;
           ctx.strokeStyle = SURFACE[theme];
-          ctx.lineWidth = 2 * pr;
+          ctx.lineWidth = 1 * pr;
           ctx.lineJoin = 'round';
           ctx.stroke(path);
           ctx.fill(path);
@@ -383,8 +383,8 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
       },
       axes: [
         showXLabels
-          ? ({...axisBase, scale: 'x', size: 30, label: axisTitle(fig, 'x'), labelSize: 20, splits: xSplits, gap: 3} as uPlot.Axis)
-          : ({...axisBase, scale: 'x', size: 6, splits: xSplits, values: (_u: uPlot, sp: number[]) => sp.map(() => ''), gap: 0} as uPlot.Axis),
+          ? ({...axisBase, scale: 'x', size: 30, label: axisTitle(fig, 'x'), labelSize: 20, splits: xSplits, gap: 3, grid: {show: false}} as uPlot.Axis)
+          : ({...axisBase, scale: 'x', size: 6, splits: xSplits, values: (_u: uPlot, sp: number[]) => sp.map(() => ''), gap: 0, grid: {show: false}} as uPlot.Axis),
         {
           ...axisBase,
           scale: 'y',

@@ -33,31 +33,31 @@ export type Quantity = (typeof QUANTITIES)[number];
 const SHADES: Record<Quantity, Record<Theme, [string, string, string]>> = {
   current: {
     light: ['#0F4C5C', '#5B6166', '#1E7F74'],
-    dark: ['#5FD08A', '#46B876', '#8FDDAC'],
+    dark: ['#4DD0C4', '#9AA0A0', '#8FD8CF'],
   },
   voltage: {
     light: ['#0F4C5C', '#5B6166', '#1E7F74'],
-    dark: ['#FF8A80', '#F26B60', '#FFB0A8'],
+    dark: ['#4DD0C4', '#9AA0A0', '#8FD8CF'],
   },
   temperature: {
     light: ['#0F4C5C', '#5B6166', '#1E7F74'],
-    dark: ['#F5B84F', '#E0A238', '#FFD08A'],
+    dark: ['#4DD0C4', '#9AA0A0', '#8FD8CF'],
   },
   rpm: {
     light: ['#0F4C5C', '#5B6166', '#1E7F74'],
-    dark: ['#7DB2FF', '#5E9BF2', '#A8CCFF'],
+    dark: ['#4DD0C4', '#9AA0A0', '#8FD8CF'],
   },
   command: {
     light: ['#0F4C5C', '#5B6166', '#1E7F74'],
-    dark: ['#BCA4FF', '#A688F2', '#D3C4FF'],
+    dark: ['#4DD0C4', '#9AA0A0', '#8FD8CF'],
   },
   aux: {
     light: ['#0F4C5C', '#5B6166', '#1E7F74'],
-    dark: ['#B7BDBD', '#9AA0A0', '#CFD3D3'],
+    dark: ['#4DD0C4', '#9AA0A0', '#8FD8CF'],
   },
   thrust: {
     light: ['#0F4C5C', '#5B6166', '#1E7F74'],
-    dark: ['#FF86C4', '#F264AF', '#FFB0D8'],
+    dark: ['#4DD0C4', '#9AA0A0', '#8FD8CF'],
   },
 };
 
@@ -70,7 +70,7 @@ const SHADES: Record<Quantity, Record<Theme, [string, string, string]>> = {
  */
 export const IDENTITY: Record<Theme, string[]> = {
   light: ['#0F4C5C', '#5B6166', '#1E7F74', '#14171A', '#8A5A00'],
-  dark: ['#7DB2FF', '#FFA24D', '#BCA4FF', '#5FD08A', '#FF86C4'],
+  dark: ['#4DD0C4', '#B7BDBD', '#8FD8CF', '#F5F5F5', '#D9A441'],
 };
 const N_ID = 5;
 
@@ -80,7 +80,7 @@ export type MarkerShape = 'circle' | 'square' | 'diamond' | 'triangle';
 export const MARKERS: MarkerShape[] = ['circle', 'square', 'diamond', 'triangle', 'circle'];
 
 /** The one chart spec: line weight and hold-marker size in css px, shared by canvas, SVG and download. */
-export const LINE_PX = 1.5;
+export const LINE_PX = 1.25;
 export const HOLD_LINE_PX = 1.25;
 
 export function isQuantity(q: string): q is Quantity {

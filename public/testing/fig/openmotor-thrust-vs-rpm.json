@@ -16,13 +16,24 @@
       "text": "The fit is thrust = k x rpm squared, through the origin, fitted to the hold medians of the 16:48 UTC run from 40 percent throttle up."
     },
     {
-      "text": "One capture; the run was not repeated."
+      "text": "One capture; the run was not repeated.",
+      "run": true
     },
     {
-      "text": "Propeller and ESC model are not recorded, and no clamp meter was recorded."
+      "text": "Propeller, ESC model and cooling are not recorded.",
+      "run": true
     },
     {
-      "text": "Load cell calibration: one 1726 g reference mass, about 0.7 percent from creep during the 40 s recording."
+      "text": "No clamp meter was recorded.",
+      "run": true
+    },
+    {
+      "text": "No independent weight check of the load cell is recorded.",
+      "run": true
+    },
+    {
+      "text": "Load cell calibration: one 1726 g reference mass, about 0.7 percent from creep during the 40 s recording.",
+      "run": true
     }
   ],
   "reduction": "Logged frames; frames in throttle or speed transients are excluded. Frames that share one rotor speed reading are reduced to their median, because rotor speed telemetry updates slower than the load cell. Hold markers: median of the last 2 s of each throttle hold; the band is the 25th to 75th percentile. Holds with no pack voltage reading are dropped.",

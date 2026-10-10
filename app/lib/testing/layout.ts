@@ -40,3 +40,29 @@ export function figureLabel(numbers: Numbered[], index: TestingIndex, id: string
   const n = numbers.find((q) => q.id === anchorFor(index, id));
   return n ? `Figure ${n.no}` : null;
 }
+
+/** The run photos of the page in document order: the photo of the first run of a section that has one. */
+export function photoNumbers(index: TestingIndex): Record<string, number> {
+  const out: Record<string, number> = {};
+  let n = 0;
+  for (const p of index.products) {
+    const run = [...new Set(p.figures.map((f) => index.figures[f]?.runId))].find((r) => r && index.runs[r]?.photo);
+    if (run) out[p.handle] = ++n;
+  }
+  return out;
+}
+
+/**
+ * The short source line of a figure: the run id, its date and the capture times of its logs,
+ * or the number of logs when they carry no time.
+ * The full paths stay in the figure's values fold.
+ */
+export function sourceLine(runId: string, date: string | undefined, cite: string | undefined): string {
+  const id = runId.replace(/-\d{4}-\d{2}-\d{2}$/, '');
+  const logs = (cite ?? '').split('; ').filter(Boolean);
+  const times = logs.map((l) => /\d{8}T(\d{2})(\d{2})\d{2}Z/.exec(l)).map((m) => (m ? `${m[1]}:${m[2]}` : null));
+  const parts = [id, date ?? ''].filter(Boolean);
+  if (times.length && times.every(Boolean)) return `${parts.join(', ')}, ${[...new Set(times)].join(', ')} UTC`;
+  if (logs.length) return `${parts.join(', ')}, ${logs.length} ${logs.length === 1 ? 'log' : 'logs'}`;
+  return parts.join(', ');
+}

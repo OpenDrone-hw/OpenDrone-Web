@@ -53,7 +53,8 @@
  *               holds:[{run,throttle,t0,t1,n}]}
  *   A gap is null in y, lo or hi and is never interpolated. A hold series is
  *   markers with a band, never a line. A caveat that starts with "!" in the
- *   view is flagged and opens the page's disclosure.
+ *   view is flagged and opens the page's disclosure; one that starts with "~" is
+ *   about the whole run and is stated once under the run's setup.
  */
 import fs from 'node:fs';
 import path from 'node:path';

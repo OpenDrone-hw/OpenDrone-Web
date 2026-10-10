@@ -85,7 +85,7 @@ export function Legend({
                     strokeDasharray={st.dash.length ? st.dash.join(' ') : undefined}
                   />
                 )}
-                <path d={markerPath(st.marker, 13, 6, 4)} fill={st.color} stroke="var(--tf-surface)" strokeWidth="2" />
+                <path d={markerPath(st.marker, 13, 6, 3.5)} fill={st.color} stroke="var(--tf-surface)" strokeWidth="1" />
               </svg>
               <span>{plainLabel(g.label, g.lead.short)}</span>
             </button>

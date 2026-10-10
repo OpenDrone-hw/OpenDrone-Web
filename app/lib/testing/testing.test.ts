@@ -33,7 +33,7 @@ describe('published figures', () => {
     assert.match(setup, /207\.4 counts\/g/);
   });
 
-  it('the thrust figure has one frame per rotor speed reading and holds are markers only', () => {
+  it('the thrust figure has one frame per rotor speed reading and holds are markers joined by a thin line', () => {
     const f = fig('openmotor-thrust-vs-rpm');
     const frames = f.series.filter((s) => s.kind === 'frames');
     for (const s of frames) {
@@ -42,7 +42,7 @@ describe('published figures', () => {
     assert.ok(f.fit && f.fit.k > 1.6 && f.fit.k < 1.8, 'the 1.7 g per krpm squared claim is drawn');
     const g = buildGeometry(f, {w: 1200, h: 480});
     for (const s of g.series.filter((q) => q.kind === 'hold')) {
-      assert.equal(s.d, undefined, 'no connecting line');
+      assert.ok(s.d, 'the markers are joined, the fit is drawn apart');
       assert.ok(s.dots.length > 0);
       assert.ok(s.bars.length > 0);
     }
@@ -223,12 +223,14 @@ describe('headline numbers and round 3 rules', () => {
   it('a reading that starts near zero gets no empty axis below zero', () => {
     assert.ok(figureDomains(fig('openesc-shunt-vs-clamp')).y[0] >= 0);
   });
-  it('marks sit on published points and hold figures join their markers unless a fit is drawn', async () => {
+  it('marks sit on published points and hold figures join their markers, with the fit a separate line', async () => {
     const f = fig('openmotor-thrust-vs-rpm');
     assert.equal(fig('openmotor-hold-thrust').marks?.[0]?.kind, 'line');
     const g = buildGeometry(fig('openesc-shunt-vs-clamp'), {w: 700, h: 380});
     assert.ok(g.series.every((s) => s.d), 'holds are joined');
-    assert.ok(buildGeometry(f, {w: 1000, h: 480}).series.filter((s) => s.kind === 'hold').every((s) => !s.d));
+    const fitted = buildGeometry(f, {w: 1000, h: 480});
+    assert.ok(fitted.series.filter((s) => s.kind === 'hold').every((s) => s.d), 'a fitted figure joins its markers too');
+    assert.ok(fitted.fit, 'the fit is its own line');
   });
 });
 

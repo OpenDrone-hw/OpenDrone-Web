@@ -34,7 +34,7 @@ export type AxisDef = {
   max?: number;
 };
 
-export type Caveat = string | {text: string; flag?: boolean};
+export type Caveat = string | {text: string; flag?: boolean; /** About the whole run, stated once under its setup. */ run?: boolean};
 
 export type Fig = {
   id: string;
@@ -137,4 +137,8 @@ export function caveatText(c: Caveat): string {
 
 export function caveatFlagged(c: Caveat): boolean {
   return typeof c !== 'string' && c.flag === true;
+}
+
+export function caveatRunWide(c: Caveat): boolean {
+  return typeof c !== 'string' && c.run === true;
 }

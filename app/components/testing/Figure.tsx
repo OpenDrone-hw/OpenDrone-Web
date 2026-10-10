@@ -2,7 +2,8 @@ import {useCallback, useEffect, useRef, useState, type ComponentType} from 'reac
 import {figureCsv, tableRows} from '~/lib/testing/export';
 import {fmtValue, unitLabel} from '~/lib/testing/scale';
 import type {Domain} from '~/lib/testing/scale';
-import {caveatFlagged, caveatText, type Fig, type FigSummary, type RunInfo} from '~/lib/testing/types';
+import {caveatFlagged, caveatRunWide, caveatText, type Fig, type FigSummary, type RunInfo} from '~/lib/testing/types';
+import {sourceLine} from '~/lib/testing/layout';
 import {UnitLine} from './UnitLine';
 import {StaticFigure} from './StaticFigure';
 import {useWorkspaceTheme} from './WorkspaceShell';
@@ -10,13 +11,12 @@ import {useWorkspaceTheme} from './WorkspaceShell';
 type PanelProps = React.ComponentProps<typeof import('./ChartPanel').default>;
 
 /**
- * Plot height from the width it is drawn at: at most 0.56 of the column, as in
- * the exported reports, and squarer on a phone so axis text stays the same size
+ * Plot height from the width it is drawn at: at most 0.42 of the column, and squarer on a phone so axis text stays the same size
  * next to the data at every width.
  */
 export function plotHeight(width: number): number {
-  if (width < 520) return Math.round(Math.min(380, Math.max(260, width * 0.9)));
-  return Math.round(Math.min(460, Math.max(300, width * 0.52)));
+  if (width < 520) return Math.round(Math.min(340, Math.max(240, width * 0.8)));
+  return Math.round(Math.min(380, Math.max(260, width * 0.42)));
 }
 
 /** `?f=<id>&x0=&x1=` for this figure, or null. */
@@ -170,9 +170,14 @@ export function Figure({
   const fit = fig.fit
     ? `Dashed line: quadratic fit, ${fmtValue(fig.fit.k)} ${fig.fit.unit} from ${fig.fit.fromThrottle} percent throttle up, ${fig.fit.n} holds, largest miss ${fig.fit.maxMiss} ${unitLabel(fig.axes.y.unit)}.`
     : null;
-  // Notes before the measurement, as in the exported report; a flagged note comes first.
-  const notes = [...fig.caveats].sort((a, b) => Number(caveatFlagged(b)) - Number(caveatFlagged(a))).map(caveatText);
-  const items = [...notes, summary.finding];
+  // The measurement first, then the notes of this figure, a flagged one before the rest. A note about
+  // the whole run is stated once under the run's setup, not under each figure.
+  const notes = fig.caveats
+    .filter((c) => !caveatRunWide(c))
+    .sort((a, b) => Number(caveatFlagged(b)) - Number(caveatFlagged(a)))
+    .map(caveatText);
+  const items = [summary.finding, ...notes];
+  const logs = fig.cite ? fig.cite.replace(/#L\d+-L\d+/g, '').split('; ') : [];
   const rows = tableRows(fig);
 
   return (
@@ -185,8 +190,6 @@ export function Figure({
             height={height}
             initialRange={startRange}
             onRange={(r) => writeUrlRange(id, r)}
-            onDownload={() => void download()}
-            onCsv={csv}
             hint={hint}
           />
         ) : error ? (
@@ -203,34 +206,43 @@ export function Figure({
           </>
         )}
       </div>
-      <p className="tr-prov">
-        Setup: {summary.chip}. Source: <code>{summary.runId.replace(/-\d{4}-\d{2}-\d{2}$/, '')}</code> {run?.date ?? ''}
-        {fig.cite ? (
-          <>
-            , <code>{fig.cite.replace(/#L\d+-L\d+/g, '').split('; ').join(', ')}</code>
-          </>
-        ) : null}
-        .
-      </p>
       <figcaption id={`${id}-cap`}>
         <b>Figure {no}.</b> {summary.title}.{fit ? ` ${fit}` : ''}
       </figcaption>
-      <p className="tr-view">
-        View <code>{id}</code> <b>Findings</b>
+      <p className="tr-prov">
+        <span>Source: {sourceLine(summary.runId, run?.date, fig.cite)}</span>
+        {full ? (
+          <span className="tr-get">
+            <button type="button" className="tr-link" onClick={() => void download()}>
+              SVG
+            </button>
+            <button type="button" className="tr-link" onClick={csv}>
+              CSV
+            </button>
+          </span>
+        ) : null}
+        <span className="tr-id">{id}</span>
       </p>
-      <ul className="tr-findings">
+      <ol className="tr-findings">
         {items.map((t, i) => (
           <li key={i} id={`fig-${no}-${i + 1}`}>
             <a className="tr-n" href={`#fig-${no}-${i + 1}`}>
               {no}.{i + 1}
-            </a>{' '}
+            </a>
             {t}
           </li>
         ))}
-      </ul>
+      </ol>
       <details className="tr-values">
         <summary>{rows ? `Reduction and values of Figure ${no}` : `Reduction of Figure ${no}`}</summary>
         {fig.reduction ? <p>{fig.reduction}</p> : null}
+        {logs.length ? (
+          <p className="tr-logs">
+            Logs: {logs.map((l, i) => (
+              <span key={i}>{l}</span>
+            ))}
+          </p>
+        ) : null}
         {rows ? (
           <table>
             <thead>

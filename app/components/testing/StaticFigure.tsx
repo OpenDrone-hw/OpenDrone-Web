@@ -117,7 +117,7 @@ export function StaticFigure({
               d={markerPath(s.style.marker, x, y, s.kind === 'hold' ? MARKER_R : 2.5)}
               fill={s.kind === 'hold' ? colorOf(s) : surface}
               stroke={s.kind === 'hold' ? surface : colorOf(s)}
-              strokeWidth={1.5}
+              strokeWidth={1}
             />
           ))}
         </g>

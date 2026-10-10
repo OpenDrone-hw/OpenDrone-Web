@@ -18964,6 +18964,12 @@ summary,
 html.light .testing-card {
   color-scheme: light;
 }
+/* The chapter grid leaves an empty row between the heading and the card: close it. */
+@media (min-width: 880px) {
+  .chapter-wide:has(> .testing-card) {
+    margin-top: calc(-1 * var(--sp-7));
+  }
+}
 .testing-card figure {
   margin: 0;
 }
@@ -18976,6 +18982,9 @@ html.light .testing-card {
 .testing-card figcaption b {
   font-weight: 500;
   color: var(--color-text);
+}
+.testing-card-finding {
+  font-size: 14px;
 }
 .testing-card-svg {
   display: block;

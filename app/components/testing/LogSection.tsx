@@ -9,6 +9,12 @@ export function LogSection({index, numbers}: {index: TestingIndex; numbers: Numb
       <h2>A Engineering log</h2>
       <p>Each step: what was tested, what was seen, what changed.</p>
       <table className="tr-log">
+        <colgroup>
+          <col style={{width: '17%'}} />
+          <col style={{width: '28%'}} />
+          <col style={{width: '37%'}} />
+          <col style={{width: '18%'}} />
+        </colgroup>
         <thead>
           <tr>
             <th scope="col">Date</th>
@@ -24,18 +30,18 @@ export function LogSection({index, numbers}: {index: TestingIndex; numbers: Numb
               <tr key={e.id} id={`log-${e.id}`}>
                 <td>
                   <time dateTime={e.date}>{e.date}</time>
-                  <br />
-                  {names[e.product] ?? e.product}
-                  {fig && e.figureId ? (
-                    <>
-                      <br />
-                      <a href={`#${anchorFor(index, e.figureId)}`}>{fig}</a>
-                    </>
-                  ) : null}
+                  <span className="tr-logsub">
+                    {names[e.product] ?? e.product}
+                    {fig && e.figureId ? (
+                      <>
+                        , <a href={`#${anchorFor(index, e.figureId)}`}>{fig.replace('Figure', 'Fig.')}</a>
+                      </>
+                    ) : null}
+                  </span>
                 </td>
                 <td>{e.tested}</td>
                 <td>{e.saw}</td>
-                <td>{e.changed ?? 'No change.'}</td>
+                <td>{e.changed ?? '-'}</td>
               </tr>
             );
           })}

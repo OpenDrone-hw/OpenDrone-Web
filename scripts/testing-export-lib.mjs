@@ -89,6 +89,16 @@ export function standViolations(view, cfg) {
   return {stand: true, errors};
 }
 
+/**
+ * A caveat is plain text, or starts with "!" (flagged: opens the disclosure, stays first) or
+ * "~" (about the whole run: the page states it once under the run's setup, not under each figure).
+ */
+function parseCaveat(c) {
+  const m = /^([!~]*)\s*(.*)$/s.exec(c);
+  const marks = m[1];
+  return {text: m[2].trim(), ...(marks.includes('!') ? {flag: true} : {}), ...(marks.includes('~') ? {run: true} : {})};
+}
+
 /** Every text field a visitor reads, for the stand text rule. */
 function visibleText(P, labels) {
   const extra = [P.card_caveat, P.setup_short, P.tile?.label, P.tile?.note, P.tile?.detail, P.photo?.alt, P.photo?.caption];
@@ -693,7 +703,7 @@ export function buildFigure(view, resp, benches, cfg) {
     runId: P.run,
     domain: P.domain,
     chip: P.setup_chip,
-    caveats: P.caveats.map((c) => (c.startsWith('!') ? {text: c.slice(1).trim(), flag: true} : {text: c})),
+    caveats: P.caveats.map(parseCaveat),
     ...(P.card_caveat !== undefined ? {cardCaveat: P.card_caveat} : {}),
     reduction: reduction.join(' '),
     cite,

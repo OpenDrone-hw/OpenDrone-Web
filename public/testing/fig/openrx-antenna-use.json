@@ -9,13 +9,14 @@
   "chip": "Gemini, Mono and Lite on one carry, 5.3 km ride",
   "caveats": [
     {
-      "text": "One unit, one ride."
-    },
-    {
       "text": "Samples are not evenly spread over distance: bins hold 9 to 871 samples, and bins with fewer than 8 are dropped."
     },
     {
       "text": "Antenna placement and orientation are not recorded."
+    },
+    {
+      "text": "One unit of each, one ride.",
+      "run": true
     }
   ],
   "reduction": "Share of logged samples with the flag set, in 500 m bins of at least 8 samples.",

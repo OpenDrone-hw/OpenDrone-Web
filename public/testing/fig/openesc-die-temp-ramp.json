@@ -9,20 +9,23 @@
   "chip": "OpenESC-20x20, channel 4, no thermal guard",
   "caveats": [
     {
-      "text": "Single channel, one unit, run to destruction with no thermal guard."
-    },
-    {
       "text": "The die sensor is the controller's own, not a measurement of the output transistors."
-    },
-    {
-      "text": "Why the speed and current fell at about 100.1 s is not established by this capture."
-    },
-    {
-      "text": "The clamp reads about -0.85 A with no current flowing; the offset is not removed."
     },
     {
       "text": "The die reading stays at 156 C once telemetry is lost; the plot ends where that starts.",
       "flag": true
+    },
+    {
+      "text": "Single channel, one unit, run to destruction with no thermal guard.",
+      "run": true
+    },
+    {
+      "text": "Why the speed and current fell at about 100.1 s is not established by this capture.",
+      "run": true
+    },
+    {
+      "text": "The clamp reads about -0.85 A with no current flowing; the offset is not removed.",
+      "run": true
     }
   ],
   "reduction": "Logged frames; frames in throttle or speed transients are excluded. Shown from 8 s to the loss of bus voltage telemetry.",

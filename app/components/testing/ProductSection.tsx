@@ -1,5 +1,6 @@
 import type {Fig, TestingIndex} from '~/lib/testing/types';
 import type {Numbered} from '~/lib/testing/layout';
+import {caveatRunWide, caveatText} from '~/lib/testing/types';
 import {Figure} from './Figure';
 import {runState} from './TitleBlock';
 
@@ -14,18 +15,31 @@ export function ProductSection({
   index,
   previews,
   numbers,
+  photoNo,
 }: {
   product: TestingIndex['products'][number];
   section: number;
   index: TestingIndex;
   previews: Record<string, Fig>;
   numbers: Numbered[];
+  /** Number of the section's run photo in the document. */
+  photoNo?: number;
 }) {
   const mine = numbers.filter((n) => product.figures.includes(n.id));
   const runIds = [...new Set(mine.map((n) => index.figures[n.id]!.runId))];
   const cov = product.coverage;
-  const state = runIds.map((r) => runState(index.runs[r]?.setup ?? [])).find(Boolean) ?? null;
-  const photo = runIds.map((r) => index.runs[r]?.photo).find(Boolean);
+  // The draft status is printed once on the title block; a section names it only when the runs differ.
+  const states = new Set(Object.values(index.runs).map((r) => runState(r.setup)).filter(Boolean));
+  const state = states.size > 1 ? (runIds.map((r) => runState(index.runs[r]?.setup ?? [])).find(Boolean) ?? null) : null;
+  // Notes about a whole run, stated once under its setup.
+  const limits = (rid: string): string[] => {
+    const out: string[] = [];
+    for (const n of mine) {
+      if (index.figures[n.id]!.runId !== rid) continue;
+      for (const c of previews[n.id]?.caveats ?? []) if (caveatRunWide(c) && !out.includes(caveatText(c))) out.push(caveatText(c));
+    }
+    return out;
+  };  const photo = runIds.map((r) => index.runs[r]?.photo).find(Boolean);
   // The newest step of the log that changed something and has no figure of its own to say so under.
   const loose = index.log.find((e) => e.product === product.handle && e.changed && !e.figureId);
   return (
@@ -36,12 +50,7 @@ export function ProductSection({
       <p className="tr-head">
         {runIds.map((rid) => (
           <span key={rid}>
-            <b>Setup</b> {index.runs[rid]?.chip}
-          </span>
-        ))}
-        {runIds.map((rid) => (
-          <span key={`${rid}-run`}>
-            <b>Run</b> <code>{rid.replace(/-\d{4}-\d{2}-\d{2}$/, '')}</code> {index.runs[rid]?.date}
+            <b>Run</b> {rid.replace(/-\d{4}-\d{2}-\d{2}$/, '')}, {index.runs[rid]?.date}
           </span>
         ))}
         {state ? (
@@ -63,7 +72,9 @@ export function ProductSection({
       {photo ? (
         <figure className="tr-photo">
           <img src={photo.src} width={photo.size[0]} height={photo.size[1]} alt={photo.alt} loading="lazy" decoding="async" />
-          <figcaption>{photo.caption}</figcaption>
+          <figcaption>
+            <b>Photo {photoNo ?? 1}.</b> {photo.caption}
+          </figcaption>
         </figure>
       ) : null}
       <h3>Setup</h3>
@@ -75,7 +86,7 @@ export function ProductSection({
           <div key={rid}>
             {runIds.length > 1 ? (
               <p className="tr-runline">
-                Run <code>{rid.replace(/-\d{4}-\d{2}-\d{2}$/, '')}</code> {run.date}
+                Run {rid.replace(/-\d{4}-\d{2}-\d{2}$/, '')}, {run.date}
               </p>
             ) : null}
             <ul className="tr-setup" aria-label={`Setup of run ${rid}`}>
@@ -83,6 +94,11 @@ export function ProductSection({
                 <li key={l}>{l}</li>
               ))}
             </ul>
+            {limits(rid).length ? (
+              <p className="tr-limits">
+                <b>Limits.</b> {limits(rid).join(' ')}
+              </p>
+            ) : null}
           </div>
         );
       })}

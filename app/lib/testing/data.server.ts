@@ -1,5 +1,6 @@
 import {previewFigure} from './decimate.ts';
 import {featuredIds} from './select.ts';
+import {numberFigures} from './layout.ts';
 import type {Fig, TestingIndex} from './types.ts';
 
 /**
@@ -44,10 +45,13 @@ export function getProductCards(handle: string) {
   const index = getIndex();
   const ids = featuredIds(index, handle);
   const previews = getPreviews(160, ids);
+  const all = numberFigures(index, (id) => Boolean(getFigure(id)));
   return ids
     .filter((id) => previews[id])
     .map((id) => ({
       id,
+      /** The figure's number in the test report, which the card links to. */
+      no: all.find((n) => n.id === (index.figures[id]!.duplicateOf ?? id))?.no ?? null,
       summary: index.figures[id]!,
       date: index.runs[index.figures[id]!.runId]?.date ?? '',
       state:

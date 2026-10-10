@@ -9,17 +9,19 @@
   "chip": "OpenFC-Lite flight logs, 2026-08-09, hottest flights",
   "caveats": [
     {
-      "text": "This is a flight log from one day, not a flight controller bench measurement. No FC bench capture exists."
-    },
-    {
-      "text": "The flights are the hottest of the retained logs, not a sample of typical flights; the retained logs are a selection of 103."
-    },
-    {
       "text": "The die sensor is the ESC's own; the ESC model and cooling are not recorded in the log."
     },
     {
       "text": "Flight length, load and ambient temperature differ between the airframes, so the curves are not a like-for-like comparison.",
       "flag": true
+    },
+    {
+      "text": "This is a flight log from one day, not a flight controller bench measurement. No FC bench capture exists.",
+      "run": true
+    },
+    {
+      "text": "The flights are the hottest of the retained logs, not a sample of typical flights; the retained logs are a selection of 103.",
+      "run": true
     }
   ],
   "reduction": "Logged values, unreduced.",

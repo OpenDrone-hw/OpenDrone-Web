@@ -60,7 +60,7 @@
         "src": "/testing/photo/drv-04-2026-10-10.webp",
         "size": [1600, 1200],
         "alt": "The thrust stand: a 3D printed base with a 10 kg load cell carrying the motor and propeller, a display and the controller board in front. The laptop screen behind is blurred.",
-        "caption": "Thrust stand with the OpenMotor-2306 on the 10 kg load cell. The display reads UNCAL in this photo. Laptop screen blurred."
+        "caption": "Thrust stand with the OpenMotor-2306 on the 10 kg load cell. The display reads UNCAL in this photo."
       }
     },
     "rx-13-2026-07-11": {
@@ -193,7 +193,7 @@
       "domain": "THR",
       "runId": "drv-04-2026-10-10",
       "chip": "One OpenMotor-2306, one 6S pack, cell calibrated to 1726 g",
-      "caveats": 5,
+      "caveats": 7,
       "flagged": 1
     },
     "openrx-antenna-use": {
@@ -254,34 +254,34 @@
       "id": "motor-thrust-clean-run",
       "date": "2026-10-10",
       "product": "openmotor",
-      "tested": "Thrust map at 16:48 UTC on one 6S pack: ten throttle holds from 10 to 100 percent, with the abort on bus loss in place.",
-      "saw": "Thrust reached 1652 g at 31283 rpm at 100 percent throttle. The pack read 23.9 V at rest and the ESC temperature stayed live, 38 to 53 C. The load cell zero moved by 2 g before and 0.5 g after the run. A capture at 16:35 UTC had a zero drift of up to 27 g and an ESC temperature frozen by a pack swap, so its thrust offsets and temperatures are not used.",
-      "changed": "The bench software was fixed so the ESC temperature stays live after a pack swap.",
+      "tested": "Thrust map at 16:48 UTC on one 6S pack: ten throttle holds, 10 to 100 percent.",
+      "saw": "1652 g at 31283 rpm at 100 percent throttle; pack 23.9 V at rest; ESC temperature live, 38 to 53 C; zero drift 2 g before, 0.5 g after. The 16:35 UTC capture is not used: zero drift up to 27 g and a frozen ESC temperature.",
+      "changed": "ESC temperature now stays live after a pack swap.",
       "figureId": "openmotor-thrust-vs-rpm"
     },
     {
       "id": "motor-thrust-map-bus-loss",
       "date": "2026-10-10",
       "product": "openmotor",
-      "tested": "Thrust map on the new thrust stand: ten throttle holds from 10 to 100 percent.",
-      "saw": "In the 13:25 UTC run thrust reached 1496 g at 100 percent throttle on the OpenMotor-2306. In the earlier 13:16 UTC run the operator unplugged the pack during the 80 percent step because of the noise, and the throttle profile kept stepping up to full with no pack connected.",
-      "changed": "The bench controller now aborts the run when the bus voltage disappears under command. The 13:25 UTC run was recorded with that change. The thrust stand test plans no longer include a current cut, because current sense on the stand is not calibrated.",
+      "tested": "Thrust map on the new thrust stand: ten throttle holds, 10 to 100 percent.",
+      "saw": "13:25 UTC run: 1496 g at 100 percent. 13:16 UTC run: the operator unplugged the pack at 80 percent because of the noise, and the throttle profile kept stepping to full with no pack.",
+      "changed": "The bench controller aborts when the bus voltage disappears under command. Stand test plans no longer include a current cut.",
       "figureId": "openmotor-hold-thrust"
     },
     {
       "id": "esc-thermal-seek",
       "date": "2026-09-19",
       "product": "openesc",
-      "tested": "Continuous current rating by stepping to a fixed current and waiting for the die temperature to settle.",
-      "saw": "Calculated from the fitted thermal time constant of 5 to 10 minutes, not captured: a fixed-current step on a pack cannot reach thermal steady state, because 20 s at the target current gives only a few percent of the steady temperature rise.",
-      "changed": "The bench now holds a target die temperature and reads the current needed to hold it."
+      "tested": "Continuous current rating by a fixed-current step and the die temperature settling.",
+      "saw": "Not captured. From the fitted thermal time constant of 5 to 10 minutes, 20 s at the target current gives only a few percent of the steady rise, so a pack step cannot reach steady state.",
+      "changed": "The bench holds a target die temperature and reads the current needed."
     },
     {
       "id": "esc-scope-channel-constant",
       "date": "2026-09-04",
       "product": "openesc",
       "tested": "Review of the scope captures from the destructive ramp session.",
-      "saw": "Scope channel 1 read one constant value in all nine sessions of that afternoon and no check flagged it.",
+      "saw": "Scope channel 1 read one constant value in all nine sessions of that afternoon; no check flagged it.",
       "changed": null
     },
     {
@@ -289,8 +289,8 @@
       "date": "2026-08-22",
       "product": "openesc",
       "tested": "Throttle sweep against a clamp reference.",
-      "saw": "The current-sense amplifier reading, as read by the bench controller, did not track the clamp: 11.6 A against 32.4 A at 80 percent throttle, and 64.7 A against 55.7 A at 100 percent.",
-      "changed": "An input network was added to the current-sense amplifier in rev3.2. It has not been tested on hardware: no capture after the change exists.",
+      "saw": "The sense reading did not track the clamp: 11.6 A against 32.4 A at 80 percent, 64.7 A against 55.7 A at 100 percent.",
+      "changed": "Input network added to the sense amplifier in rev3.2; no capture after the change.",
       "figureId": "openesc-shunt-vs-clamp",
       "commit": "6d2174b"
     },
@@ -299,7 +299,7 @@
       "date": "2026-08-21",
       "product": "openesc",
       "tested": "One channel ramped from 0 to full throttle with no thermal guard.",
-      "saw": "Clamp current peaked at 39.8 A with the die sensor at 156 C. The die reading reached 161 C and bus voltage telemetry then stopped.",
+      "saw": "Clamp current peaked at 39.8 A with the die at 156 C; the die reached 161 C and bus voltage telemetry stopped.",
       "changed": null,
       "figureId": "openesc-die-temp-ramp"
     },
@@ -308,7 +308,7 @@
       "date": "2026-08-09",
       "product": "openfc-lite",
       "tested": "First flights of the full stack on five drones.",
-      "saw": "103 blackbox logs from four of the drones, about half of them arm and disarm blips. The fifth drone's SD card failed after the session. On the 8 inch, seven logs were recorded with the FC on a separate battery, so their voltage is not pack voltage.",
+      "saw": "103 blackbox logs from four drones, about half arm and disarm blips; the fifth drone's SD card failed. Seven logs on the 8 inch ran the FC on a separate battery, so their voltage is not pack voltage.",
       "changed": null,
       "figureId": "openfc-lite-flight-die-temp"
     },
@@ -317,7 +317,7 @@
       "date": "2026-07-11",
       "product": "openrx",
       "tested": "Ride out to 5.3 km with a Gemini and a Mono on the same carry.",
-      "saw": "Beyond 2.9 km the Gemini's reported RSSI was below the Mono's in 24 of the 25 100 m bins and equal in one, by a median of 4 dB and up to 7 dB. Its link quality was higher in all 25 bins, by a median of 15 points. The log numbers its receivers instead of naming them, so the column-to-unit mapping was taken from the operators' notes and one duplicate column was excluded.",
+      "saw": "Beyond 2.9 km the Gemini's RSSI was below the Mono's in 24 of 25 bins, by a median of 4 dB, and its link quality was higher in all 25, by a median of 15 points. Receiver columns come from the operators' notes; one duplicate column was excluded.",
       "changed": null,
       "figureId": "openrx-rssi-vs-distance"
     }

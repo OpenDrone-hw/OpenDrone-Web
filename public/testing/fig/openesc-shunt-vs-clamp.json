@@ -9,12 +9,6 @@
   "chip": "OpenESC-20x20, 1 motor, clamp reference",
   "caveats": [
     {
-      "text": "One unit, one run."
-    },
-    {
-      "text": "The ESC trace is a bench controller ADC value at a set gain, not a reading from the ESC firmware."
-    },
-    {
       "text": "The clamp zero offset (-0.43 A) is not removed, so the 15 percent point is not reliable."
     },
     {
@@ -22,7 +16,16 @@
       "flag": true
     },
     {
-      "text": "No capture exists after the rev3.2 input network change, so whether it removed the error is not known."
+      "text": "One unit, one run.",
+      "run": true
+    },
+    {
+      "text": "The ESC trace is a bench controller ADC value at a set gain, not a reading from the ESC firmware.",
+      "run": true
+    },
+    {
+      "text": "No capture exists after the rev3.2 input network change, so whether it removed the error is not known.",
+      "run": true
     }
   ],
   "reduction": "Median over the settled window of each throttle hold; the band is the 25th to 75th percentile.",

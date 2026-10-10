@@ -71,7 +71,7 @@ export type Note = {
   leader?: [number, number, number, number];
 };
 
-export const TICK_PX = 13;
+export const TICK_PX = 12;
 /** Left gutter, shared by every figure so plots line up. The axis title sits above the plot, not rotated beside it. */
 export const GUTTER_L = 54;
 /** Left gutter on a phone. */
@@ -80,10 +80,10 @@ export const GUTTER_L_NARROW = 42;
 export const MARK_ROW = 15;
 /** Average width of one character of a 12 px label, for the SVG, which cannot measure text. */
 export const CHAR_PX = 7.2;
-/** Hold markers are joined by a thin line unless a fitted law already draws the trend. */
-export const connectsHolds = (fig: Fig) => !fig.fit;
-/** Hold marker radius in css px: 12 px across. */
-export const MARKER_R = 6;
+/** Hold markers are always joined by a thin line; a fitted law is a separate dashed line over them. */
+export const connectsHolds = (_fig: Fig) => true;
+/** Hold marker radius in css px: 7 px across. */
+export const MARKER_R = 3.5;
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
 
