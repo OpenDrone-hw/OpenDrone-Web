@@ -25,13 +25,13 @@
       "featured": true,
       "order": 1,
       "status": "publish",
-      "blurb": "The ESC's own current reading, compared with a clamp meter on the battery lead at six throttle holds.",
+      "blurb": "The current-sense amplifier output as the bench controller reads it, against a clamp meter on the battery lead, at six throttle holds. No capture exists after the change that followed.",
       "x": {
         "label": "Throttle",
-        "unit": "permille",
+        "unit": "percent",
         "scale": "linear",
         "min": 0,
-        "max": 1000
+        "max": 100
       },
       "y": {
         "label": "Current",
@@ -45,7 +45,7 @@
       "series": [
         {
           "id": "shunt",
-          "name": "ESC current-sense reading",
+          "name": "Current-sense amplifier output (bench controller ADC)",
           "role": "measured",
           "style": "solid",
           "run": "esc-04-20x20-20260821T150430Z",
@@ -60,12 +60,14 @@
           "field": "i_clamp"
         }
       ],
-      "setup": "One OpenESC-20x20 on the bench with one motor driven from the bench controller. A DC clamp meter on the battery lead is the reference. Six throttle holds of 8 to 20 s each, from 150 to 1000 permille.",
-      "finding": "Before the rev3.2 input network, the ESC read 2.6 times the clamp at 150 permille (1.03 A against 0.39 A), 0.36 times at 800 permille and 1.16 times at 1000 permille (64.7 A against 55.7 A). The error changes size and direction with throttle.",
+      "setup": "One OpenESC-20x20 on the bench with one motor driven from the bench controller. The ESC trace is the bench controller's ADC reading of the current-sense amplifier output, converted at a set gain of 50 A/V. A DC clamp meter on the battery lead is the reference. Six throttle holds of 8 to 20 s each, from 15 to 100 percent.",
+      "finding": "The sense reading does not track the clamp. At 80 percent throttle it read 11.6 A against the clamp's 32.4 A, and at 100 percent 64.7 A against 55.7 A: the error changes size and direction with throttle. At 15 percent it read 1.03 A against 0.39 A, but the clamp reads -0.43 A with no current flowing and that offset is not removed, so the low-throttle ratio is not reliable.",
       "caveats": [
         "One unit, one run.",
-        "The clamp is reference grade below 40 A; the 1000 permille point is above that.",
-        "No capture exists after the rev3.2 input network, so this figure shows the state before the change only."
+        "The ESC trace is a bench controller ADC value at a set gain, not a reading from the ESC firmware.",
+        "The clamp's zero offset (-0.43 A, median of the idle frames) is not removed.",
+        "The clamp is reference grade below 40 A; the 100 percent point is above that.",
+        "No capture exists after the rev3.2 input network, so this figure shows the state before the change only. Whether the change removed the error is not known."
       ],
       "source": {
         "run": "esc-04-20x20-20260821T150430Z",
@@ -111,7 +113,8 @@
           "y": 55.66,
           "tol": 0.1
         }
-      ]
+      ],
+      "xScale": 0.1
     },
     {
       "id": "openesc-die-temp-ramp",
@@ -176,12 +179,13 @@
         }
       ],
       "setup": "One OpenESC-20x20, channel 4 driven alone. Throttle ramped from 0 to full over 120 s with the thermal limit disabled, fan cooling and a fresh pack. The plot ends where the bus voltage telemetry reads zero.",
-      "finding": "The die reading rose from 23 C to 156 C while the clamp current climbed to 39.8 A. The die peaked at 161 C 1.4 s later, after the motor had stopped drawing load and the current had fallen to 10.6 A. Bus voltage telemetry reads zero from 104 s.",
+      "finding": "The die reading rose from 23 C to 156 C while the clamp current climbed to 39.8 A. From about 100.1 s the electrical speed fell by about 43 percent (45000 to 25700 erpm in 0.6 s) and the clamp current fell to about 10 A; the motor kept turning. The die reading peaked at 161 C 1.4 s after the 156 C point. Bus voltage telemetry reads zero from 104 s.",
       "caveats": [
         "Single channel, one unit, run to destruction with no thermal guard.",
         "The die sensor is the controller's own temperature sensor, not a measurement of the output transistors.",
-        "Why the load collapsed at 101 s is not established by this capture.",
-        "The clamp reads about -0.85 A with no current flowing; the offset is not removed."
+        "Why the speed and current fell at about 100.1 s is not established by this capture.",
+        "The clamp reads about -0.85 A with no current flowing; the offset is not removed.",
+        "The die reading stays at 156 C once telemetry is lost; the plot ends where that starts."
       ],
       "source": {
         "run": "esc-18-20x20-20260821T181141Z",
@@ -296,9 +300,9 @@
       "featured": true,
       "order": 1,
       "status": "publish",
-      "blurb": "Thrust stand sweep from 10 to 100 percent throttle in ten holds.",
+      "blurb": "Thrust stand sweep from 10 to 100 percent throttle in ten holds, with the motor not recorded.",
       "x": {
-        "label": "Rotor speed",
+        "label": "Rotor speed (7 pole pairs assumed)",
         "unit": "rpm",
         "scale": "linear",
         "min": 0
@@ -321,7 +325,7 @@
       "series": [
         {
           "id": "main",
-          "name": "Main run, 10 to 100 percent",
+          "name": "13:25 UTC run, 10 to 100 percent",
           "role": "measured",
           "style": "solid",
           "run": "drv-04-thrust-2026-10-10-20261010T132503Z",
@@ -330,7 +334,7 @@
         },
         {
           "id": "second",
-          "name": "Second run, 10 to 70 percent",
+          "name": "13:16 UTC run, 10 to 70 percent",
           "role": "measured",
           "style": "dashed",
           "run": "drv-04-openmotor-2306-2026-10-10-20261010T131644Z",
@@ -338,14 +342,14 @@
           "xField": "rpm"
         }
       ],
-      "setup": "Thrust stand with a load cell calibrated on the controller. Ten throttle holds of about 4 s from 10 to 100 percent. Motor, propeller, ESC and pack are not recorded for the main run; the second run lists its motor as OpenMotor-2306. Rotor speed is the ESC's electrical speed divided by 7 pole pairs, the pole count stored in the capture.",
-      "finding": "From 40 percent throttle up, thrust is about 1.7 g per krpm squared (1.67 to 1.74 across the main run). The main run reaches 1496 g at 100 percent throttle and 29350 rpm. At the same speed the second run reads 2 to 3 percent less thrust, with a pack voltage up to 1.9 V higher.",
+      "setup": "Thrust stand. The load-cell scale is the controller's stored value, not checked against a known weight. Ten throttle holds of about 4 s from 10 to 100 percent. Motor, propeller, ESC and pack are not recorded for the 13:25 UTC run; the 13:16 UTC run lists its motor as OpenMotor-2306. Rotor speed is the ESC's electrical speed divided by 7 pole pairs, the default pole count stored in the capture. The motor's real pole count is not recorded, so the rpm axis depends on that assumption.",
+      "finding": "From 40 percent throttle up, thrust is about 1.7 g per krpm squared (1.67 to 1.74 in the 13:25 UTC run), taking the stored 7 pole pairs as correct. That run, with no motor recorded, reaches 1496 g at 100 percent throttle and 29350 rpm. At the same speed the 13:16 UTC run reads 2 to 3 percent less thrust, with a pack voltage up to 1.9 V higher.",
       "caveats": [
-        "One capture per run; the main run was not repeated.",
-        "Motor, propeller, ESC and pack are not recorded for the main run.",
+        "One capture per run; the 13:25 UTC run was not repeated.",
+        "Motor, propeller, ESC and pack are not recorded for the 13:25 UTC run.",
         "The clamp meter was not recorded.",
-        "The load-cell scale comes from the controller's stored calibration; no independent weight check is recorded in the capture.",
-        "The second run ends at 70 percent: the pack was pulled mid-run, so its later holds are dropped."
+        "The load-cell scale comes from the controller's stored value; no independent weight check is recorded in the capture.",
+        "The 13:16 UTC run ends at 70 percent: the pack was pulled during the 80 percent step, so its later holds are dropped. The 13:25 UTC run was recorded after the bench controller was changed to abort in that case."
       ],
       "source": {
         "run": "drv-04-thrust-2026-10-10-20261010T132503Z, drv-04-openmotor-2306-2026-10-10-20261010T131644Z",
@@ -413,7 +417,7 @@
       "series": [
         {
           "id": "main",
-          "name": "Main run",
+          "name": "13:25 UTC run",
           "role": "measured",
           "style": "solid",
           "run": "drv-04-thrust-2026-10-10-20261010T132503Z",
@@ -422,7 +426,7 @@
         },
         {
           "id": "second",
-          "name": "Second run",
+          "name": "13:16 UTC run",
           "role": "measured",
           "style": "dashed",
           "run": "drv-04-openmotor-2306-2026-10-10-20261010T131644Z",
@@ -430,11 +434,11 @@
           "xField": "thr_pct"
         }
       ],
-      "setup": "Same two thrust stand runs as the thrust figure. Rotor speed is the ESC's electrical speed divided by 7 pole pairs.",
-      "finding": "Rotor speed rises from about 5000 rpm at 10 percent to 29350 rpm at 100 percent in the main run.",
+      "setup": "Same two thrust stand runs as the thrust figure. Rotor speed is the ESC's electrical speed divided by 7 pole pairs, the default pole count stored in the capture; the motor's real pole count is not recorded.",
+      "finding": "Rotor speed rises from about 5000 rpm at 10 percent to 29350 rpm at 100 percent in the 13:25 UTC run, taking 7 pole pairs as correct.",
       "caveats": [
         "One capture per run.",
-        "Motor, propeller, ESC and pack are not recorded for the main run."
+        "Motor, propeller, ESC and pack are not recorded for the 13:25 UTC run."
       ],
       "source": {
         "run": "drv-04-thrust-2026-10-10-20261010T132503Z, drv-04-openmotor-2306-2026-10-10-20261010T131644Z",
@@ -493,7 +497,7 @@
       "series": [
         {
           "id": "main",
-          "name": "Main run",
+          "name": "13:25 UTC run",
           "role": "measured",
           "style": "solid",
           "run": "drv-04-thrust-2026-10-10-20261010T132503Z",
@@ -502,7 +506,7 @@
         },
         {
           "id": "second",
-          "name": "Second run",
+          "name": "13:16 UTC run",
           "role": "measured",
           "style": "dashed",
           "run": "drv-04-openmotor-2306-2026-10-10-20261010T131644Z",
@@ -510,12 +514,13 @@
           "xField": "thr_pct"
         }
       ],
-      "setup": "Same two thrust stand runs as the thrust figure, with the load cell calibrated on the controller.",
-      "finding": "Thrust is 30 g at 10 percent and 1496 g at 100 percent in the main run.",
+      "setup": "Same two thrust stand runs as the thrust figure. The load-cell scale is the controller's stored value, not checked against a known weight.",
+      "finding": "Thrust is 30 g at 10 percent and 1496 g at 100 percent in the 13:25 UTC run.",
       "caveats": [
         "One capture per run.",
-        "At 10 percent the main run reads 30 g and the second 35 g, a difference of about 17 percent at a low load.",
-        "The clamp meter was not recorded."
+        "At 10 percent the 13:25 UTC run reads 30 g and the 13:16 UTC run 35 g, a difference of about 17 percent at a low load.",
+        "The clamp meter was not recorded.",
+        "No independent weight check of the load cell is recorded."
       ],
       "source": {
         "run": "drv-04-thrust-2026-10-10-20261010T132503Z, drv-04-openmotor-2306-2026-10-10-20261010T131644Z",
@@ -573,7 +578,7 @@
       "series": [
         {
           "id": "main",
-          "name": "Main run",
+          "name": "13:25 UTC run",
           "role": "measured",
           "style": "solid",
           "run": "drv-04-thrust-2026-10-10-20261010T132503Z",
@@ -582,7 +587,7 @@
         },
         {
           "id": "second",
-          "name": "Second run",
+          "name": "13:16 UTC run",
           "role": "measured",
           "style": "dashed",
           "run": "drv-04-openmotor-2306-2026-10-10-20261010T131644Z",
@@ -591,9 +596,9 @@
         }
       ],
       "setup": "Same two thrust stand runs as the thrust figure. Pack voltage is read by the ESC.",
-      "finding": "The pack sags from 24.4 V at 10 percent to 19.3 V at 100 percent in the main run. The second run starts about 0.3 V higher and is 1.9 V higher at 70 percent.",
+      "finding": "The pack sags from 24.4 V at 10 percent to 19.3 V at 100 percent in the 13:25 UTC run. The 13:16 UTC run starts about 0.3 V higher and is 1.9 V higher at 70 percent.",
       "caveats": [
-        "The packs are not recorded; the second run reads higher throughout.",
+        "The packs are not recorded; the 13:16 UTC run reads higher throughout.",
         "Voltage is the ESC's own reading, not checked against a meter."
       ],
       "source": {
@@ -658,7 +663,7 @@
       "series": [
         {
           "id": "main",
-          "name": "Main run",
+          "name": "13:25 UTC run",
           "role": "measured",
           "style": "solid",
           "run": "drv-04-thrust-2026-10-10-20261010T132503Z",
@@ -667,7 +672,7 @@
         },
         {
           "id": "second",
-          "name": "Second run",
+          "name": "13:16 UTC run",
           "role": "measured",
           "style": "dashed",
           "run": "drv-04-openmotor-2306-2026-10-10-20261010T131644Z",
@@ -676,9 +681,9 @@
         }
       ],
       "setup": "Same two thrust stand runs as the thrust figure. Temperature is the hottest of the ESC's reported die readings.",
-      "finding": "The hottest die reading rises from 44 C at 10 percent to 72 C at 100 percent in the main run; the second run stays between 42 and 48 C up to 70 percent.",
+      "finding": "The hottest die reading rises from 44 C at 10 percent to 72 C at 100 percent in the 13:25 UTC run; the 13:16 UTC run stays between 42 and 48 C up to 70 percent.",
       "caveats": [
-        "The main run was hotter at the same throttle; motor, propeller, cooling and packs are not recorded.",
+        "The 13:25 UTC run was hotter at the same throttle; motor, propeller, cooling and packs are not recorded.",
         "The die sensor is the controller's own, not a measurement of the output transistors."
       ],
       "source": {
@@ -712,7 +717,7 @@
       "featured": true,
       "order": 1,
       "status": "publish",
-      "blurb": "One 75 minute ride out to 5.3 km with a Gemini and a Mono on the same carry.",
+      "blurb": "One 75 minute ride out to 5.3 km with a Gemini and a Mono on the same carry. Reported RSSI here; link quality is in the next figure.",
       "x": {
         "label": "Distance from the track start",
         "unit": "m",
@@ -752,10 +757,10 @@
         }
       ],
       "setup": "One OpenRX-Gemini and one OpenRX-Mono on the same carry, logged together during a ride out along a road to 5.3 km. Distance is measured from the start of the GPS track, not from the transmitter.",
-      "finding": "From 2.9 km to 5.3 km the Gemini's reported RSSI is below the Mono's in all 25 of the 100 m bins that both logged: a median of 4 dB lower, up to 7 dB, and 2 dB or more lower in 23 of the 25. Below 1.3 km the two are within about 5 dB of each other in either direction.",
+      "finding": "From 2.9 km to 5.3 km the Gemini's reported RSSI is below the Mono's in 24 of the 25 100 m bins that both logged and equal in one: a median of 4 dB lower, up to 7 dB, and 2 dB or more lower in 23 of the 25. In the same bins its link quality is higher than the Mono's in all 25, by a median of 15 points, so the Gemini reported a weaker signal and held the link better. Below 1.3 km the two RSSI values are within about 5 dB of each other in either direction.",
       "caveats": [
         "One unit of each, one ride.",
-        "Antenna placement on the carry may explain the gap.",
+        "Antenna placement on the carry may explain the RSSI gap.",
         "RSSI is the value each receiver reports after its own antenna selection.",
         "The receiver columns in the log are numbered, not named; which column is which unit comes from the operators' notes. One column duplicates the Mono and is excluded.",
         "Transmitter settings and receiver firmware are not recorded.",
@@ -779,13 +784,89 @@
       }
     },
     {
+      "id": "openrx-lq-vs-distance",
+      "product": "openrx",
+      "tier": null,
+      "title": "Link quality against distance, Gemini and Mono",
+      "kind": "band",
+      "featured": false,
+      "order": 2,
+      "status": "publish",
+      "blurb": "The same ride as the RSSI figure: link quality of the Gemini and the Mono in 100 m distance bins.",
+      "x": {
+        "label": "Distance from the track start",
+        "unit": "m",
+        "scale": "linear",
+        "min": 400
+      },
+      "y": {
+        "label": "Link quality",
+        "unit": "percent",
+        "scale": "linear",
+        "min": 0,
+        "max": 100
+      },
+      "xField": "dist_start_m",
+      "reduce": {
+        "mode": "app-bin",
+        "bin": 100
+      },
+      "series": [
+        {
+          "id": "gemini",
+          "name": "OpenRX-Gemini",
+          "role": "measured",
+          "style": "solid",
+          "ref": "field:rx-13-field-20260711",
+          "run": "rx-13-field-20260711",
+          "field": "rx1_lq",
+          "band": true
+        },
+        {
+          "id": "mono",
+          "name": "OpenRX-Mono",
+          "role": "reference",
+          "style": "dashed",
+          "ref": "field:rx-13-field-20260711",
+          "run": "rx-13-field-20260711",
+          "field": "rx0_lq",
+          "band": true
+        }
+      ],
+      "setup": "One OpenRX-Gemini and one OpenRX-Mono on the same carry, logged together during a ride out along a road to 5.3 km. Distance is measured from the start of the GPS track, not from the transmitter.",
+      "finding": "From 2.9 km to 5.3 km the Gemini's link quality is higher than the Mono's in all 25 of the 100 m bins that both logged, by a median of 15 points and up to 48. This is the metric on which the Gemini leads while its reported RSSI is lower.",
+      "caveats": [
+        "One unit of each, one ride.",
+        "The receiver columns in the log are numbered, not named; which column is which unit comes from the operators' notes. One column duplicates the Mono and is excluded.",
+        "Transmitter settings and receiver firmware are not recorded.",
+        "No transmitter position or terrain is recorded, so range is not line-of-sight range.",
+        "Link quality is each receiver's own figure; the two may not be computed identically."
+      ],
+      "source": {
+        "run": "rx-13-field-20260711",
+        "kind": "field-ride",
+        "recorded": "2026-07-11",
+        "simulated": false,
+        "reduction": "Median of the logged link quality in 100 m distance bins; the band is the 25th to 75th percentile."
+      },
+      "checks": [],
+      "diffCheck": {
+        "a": "gemini",
+        "b": "mono",
+        "from": 2900,
+        "to": 5400,
+        "min": 1,
+        "max": 48.5
+      }
+    },
+    {
       "id": "openrx-lq-vs-rssi",
       "product": "openrx",
       "tier": null,
       "title": "Link quality and RSSI at the first link drop",
       "kind": "line",
       "featured": false,
-      "order": 2,
+      "order": 3,
       "status": "publish",
       "blurb": "RSSI and link quality of the Lite as the ride passed out of range for the first time.",
       "x": {
@@ -902,7 +983,7 @@
       "title": "Gemini antenna 2 use against distance",
       "kind": "line",
       "featured": false,
-      "order": 3,
+      "order": 4,
       "status": "publish",
       "blurb": "How often the Gemini selected its second antenna along the ride.",
       "x": {
@@ -983,15 +1064,15 @@
       ]
     },
     {
-      "id": "openfc-lite-flight-throttle",
+      "id": "openfc-lite-flight-die-temp",
       "product": "openfc-lite",
       "tier": null,
-      "title": "Flight log, four airframes",
+      "title": "ESC die temperature in flight, three airframes",
       "kind": "line",
       "featured": true,
       "order": 1,
       "status": "publish",
-      "blurb": "Throttle stick command in the longest retained flight of each of four airframes, all recorded by the OpenFC-Lite stack on one day.",
+      "blurb": "ESC die temperature in the hottest retained flight of each of three airframes, logged by an OpenFC-Lite on 2026-08-09.",
       "x": {
         "label": "Time from start of log",
         "unit": "s",
@@ -999,90 +1080,91 @@
         "min": 0
       },
       "y": {
-        "label": "Throttle command",
-        "unit": "us",
+        "label": "ESC die temperature",
+        "unit": "degC",
         "scale": "linear"
       },
-      "xField": "t",
       "reduce": {
         "mode": "app-raw",
         "buckets": 150
       },
       "series": [
         {
-          "id": "in3",
-          "name": "3 inch",
-          "role": "measured",
-          "style": "solid",
-          "ref": "flight:Logs/field-2026-08-09/3in/LOG00029.BFL",
-          "run": "field-2026-08-09/3in/LOG00029",
-          "field": "thr"
-        },
-        {
           "id": "in5f",
-          "name": "5 inch freestyle",
+          "name": "5 inch freestyle, 130 s",
           "role": "measured",
           "style": "solid",
-          "ref": "flight:Logs/field-2026-08-09/5in-freestyle/LOG00011.BFL",
-          "run": "field-2026-08-09/5in-freestyle/LOG00011",
-          "field": "thr"
+          "ref": "flight:Logs/field-2026-08-09/5in-freestyle/LOG00013.BFL",
+          "run": "field-2026-08-09/5in-freestyle/LOG00013",
+          "field": "etempMax"
         },
         {
           "id": "in5r",
-          "name": "5 inch race",
+          "name": "5 inch race, 79 s",
           "role": "measured",
           "style": "solid",
-          "ref": "flight:Logs/field-2026-08-09/5in-race/LOG00013.BFL",
-          "run": "field-2026-08-09/5in-race/LOG00013",
-          "field": "thr"
+          "ref": "flight:Logs/field-2026-08-09/5in-race/LOG00010.BFL",
+          "run": "field-2026-08-09/5in-race/LOG00010",
+          "field": "etempMax"
         },
         {
-          "id": "in8",
-          "name": "8 inch",
+          "id": "in8s6",
+          "name": "8 inch, 6S, 177 s",
           "role": "measured",
           "style": "solid",
-          "ref": "flight:Logs/field-2026-08-09/8in/LOG00017.BFL",
-          "run": "field-2026-08-09/8in/LOG00017",
-          "field": "thr"
+          "ref": "flight:Logs/field-2026-08-09/8in/LOG00010.BFL",
+          "run": "field-2026-08-09/8in/LOG00010",
+          "field": "etempMax"
+        },
+        {
+          "id": "in8s8",
+          "name": "8 inch, 8S, 88 s",
+          "role": "measured",
+          "style": "solid",
+          "ref": "flight:Logs/field-2026-08-09/8in/LOG00018.BFL",
+          "run": "field-2026-08-09/8in/LOG00018",
+          "field": "etempMax"
         }
       ],
-      "setup": "Blackbox logs from four airframes flown on 2026-08-09, each with the full OpenDrone stack. The longest retained flight of each airframe is shown: 291 s, 377 s, 143 s and 513 s.",
-      "finding": "Peak throttle command was 1413 us (3 inch), 1408 us (5 inch freestyle), 2000 us (5 inch race) and 1945 us (8 inch).",
+      "setup": "Blackbox logs from three airframes flown on 2026-08-09 with an OpenFC-Lite (RP2350B) and the ESC die temperature reported over telemetry. For each airframe, the retained flight with the highest die reading is shown; the 8 inch is shown on both 6S and 8S. A 3 inch airframe flew on a different board variant and is not shown.",
+      "finding": "The highest die reading was 52.6 C on the 5 inch freestyle, 64.0 C on the 5 inch race, 87.4 C on the 8 inch on 6S and 116 C on the 8 inch on 8S.",
       "caveats": [
-        "This is a flight log from one pilot on one day, not a flight controller measurement. No FC bench capture exists.",
-        "The longest flight was kept for log retention, not as the most demanding flight of each airframe.",
-        "The values are the pilot's throttle command, not motor output."
+        "This is a flight log from one day, not a flight controller bench measurement. No FC bench capture exists.",
+        "The flights are the hottest of the retained logs, not a sample of typical flights, and the retained logs are a selection of 103.",
+        "The die sensor is the ESC's own, not a measurement of the output transistors; the ESC model and cooling are not recorded in the log.",
+        "Flight length, load and ambient temperature differ between the airframes, so the curves are not a like-for-like comparison."
       ],
       "source": {
         "run": "field-2026-08-09",
         "kind": "flight-log",
         "recorded": "2026-08-09",
         "simulated": false,
-        "reduction": "Logged throttle command, kept as the minimum and maximum of 150 time buckets per flight."
+        "reduction": "Logged ESC die temperature, kept as the minimum and maximum of 150 time buckets per flight."
       },
       "checks": [],
       "maxChecks": [
         {
-          "series": "in3",
-          "y": 1413,
-          "tol": 1
-        },
-        {
           "series": "in5f",
-          "y": 1408,
-          "tol": 1
+          "y": 52.6,
+          "tol": 0.6
         },
         {
           "series": "in5r",
-          "y": 2000,
-          "tol": 1
+          "y": 64.0,
+          "tol": 0.6
         },
         {
-          "series": "in8",
-          "y": 1945,
-          "tol": 1
+          "series": "in8s6",
+          "y": 87.4,
+          "tol": 0.6
+        },
+        {
+          "series": "in8s8",
+          "y": 116.0,
+          "tol": 0.6
         }
-      ]
+      ],
+      "xField": "t"
     }
   ],
   "timeline": [
@@ -1091,8 +1173,8 @@
       "date": "2026-10-10",
       "product": "openmotor",
       "tested": "Thrust map on the new thrust stand: ten throttle holds from 10 to 100 percent.",
-      "saw": "1496 g at 100 percent throttle. In a second run a pack was pulled mid-run and the throttle profile kept stepping up to full.",
-      "changed": "The bench controller now aborts the run when the pack is pulled. The thrust stand test plans no longer include a current cut, because current sense on the stand is not calibrated.",
+      "saw": "In the 13:25 UTC run thrust reached 1496 g at 100 percent throttle; motor, propeller, ESC and pack were not recorded. In the earlier 13:16 UTC run a pack was pulled during the 80 percent step and the throttle profile kept stepping up to full.",
+      "changed": "The bench controller now aborts the run when the pack is pulled, and the 13:25 UTC run was recorded with that change. The thrust stand test plans no longer include a current cut, because current sense on the stand is not calibrated.",
       "figureId": "openmotor-thrust-vs-rpm",
       "status": "publish"
     },
@@ -1101,7 +1183,7 @@
       "date": "2026-09-19",
       "product": "openesc",
       "tested": "Continuous current rating by stepping to a fixed current and waiting for the die temperature to settle.",
-      "saw": "A fixed-current step on a pack cannot reach thermal steady state: 20 s at the target current reaches only a few percent of the steady temperature rise.",
+      "saw": "Calculated from the fitted thermal time constant of 5 to 10 minutes, not captured: a fixed-current step on a pack cannot reach thermal steady state, because 20 s at the target current gives only a few percent of the steady temperature rise.",
       "changed": "The bench now holds a target die temperature and reads the current needed to hold it.",
       "status": "publish"
     },
@@ -1119,8 +1201,8 @@
       "date": "2026-08-22",
       "product": "openesc",
       "tested": "Throttle sweep against a clamp reference.",
-      "saw": "The ESC's own current reading was far from the clamp, by a different amount at each throttle.",
-      "changed": "An input network was added to the current-sense amplifier in rev3.2, checked in simulation. The same change landed on the 30x30 board.",
+      "saw": "The current-sense amplifier reading, as read by the bench controller, did not track the clamp: 11.6 A against 32.4 A at 80 percent throttle, and 64.7 A against 55.7 A at 100 percent.",
+      "changed": "An input network was added to the current-sense amplifier in rev3.2. It has not been tested on hardware: no capture after the change exists.",
       "figureId": "openesc-shunt-vs-clamp",
       "commit": "6d2174b",
       "status": "publish"
@@ -1151,7 +1233,7 @@
       "tested": "First flights of the full stack on five drones.",
       "saw": "103 blackbox logs from four of the drones, about half of them arm and disarm blips. The fifth drone's SD card failed after the session. On the 8 inch, seven logs were recorded with the FC on a separate battery, so their voltage is not pack voltage.",
       "changed": null,
-      "figureId": "openfc-lite-flight-throttle",
+      "figureId": "openfc-lite-flight-die-temp",
       "status": "publish"
     },
     {
@@ -1159,7 +1241,7 @@
       "date": "2026-07-11",
       "product": "openrx",
       "tested": "Ride out to 5.3 km with a Gemini and a Mono on the same carry.",
-      "saw": "Beyond 2.9 km the Gemini's reported RSSI was below the Mono's in every 100 m bin, by a median of 4 dB and up to 7 dB. The log numbers its receivers instead of naming them, so the column-to-unit mapping was taken from the operators' notes and one duplicate column was excluded.",
+      "saw": "Beyond 2.9 km the Gemini's reported RSSI was below the Mono's in 24 of the 25 100 m bins and equal in one, by a median of 4 dB and up to 7 dB. Its link quality was higher in all 25 bins, by a median of 15 points. The log numbers its receivers instead of naming them, so the column-to-unit mapping was taken from the operators' notes and one duplicate column was excluded.",
       "changed": null,
       "figureId": "openrx-rssi-vs-distance",
       "status": "publish"

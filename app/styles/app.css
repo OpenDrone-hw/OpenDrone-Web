@@ -18956,6 +18956,9 @@ summary,
   width: 100%;
   font-family: var(--font-mono);
 }
+.testing-plot {
+  position: relative;
+}
 .testing-chart-svg {
   display: block;
   width: 100%;
@@ -18980,9 +18983,6 @@ summary,
 .testing-axis text {
   fill: var(--color-text-muted);
   font-size: 11px;
-}
-.testing-axis text[data-thin] {
-  display: none;
 }
 .testing-axis .testing-axis-title {
   font-size: 11px;
@@ -19036,6 +19036,10 @@ summary,
   line-height: 1.45;
   pointer-events: none;
 }
+.testing-readout[data-valign="bottom"] {
+  top: auto;
+  bottom: 22%;
+}
 .testing-readout[data-side="right"] {
   transform: translateX(12px);
 }
@@ -19068,7 +19072,10 @@ summary,
   white-space: nowrap;
 }
 .testing-readout-at {
+  display: block;
   color: var(--color-text-muted);
+  font-size: 11px;
+  text-align: right;
 }
 .testing-legend {
   list-style: none;

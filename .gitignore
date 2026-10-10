@@ -66,3 +66,6 @@ __pycache__/
 
 # Generated brand bundle — rebuild with scripts/gen-logo-package.py
 brand.zip
+
+# Held bench evidence (needs-review), never public
+.testing-held/

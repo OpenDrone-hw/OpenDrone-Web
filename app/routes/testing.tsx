@@ -11,8 +11,9 @@ import {TestingLog} from '~/components/testing/TestingLog';
 /**
  * Measured data from the bench and the field. The numbers and their prose live
  * in `content/testing/*.json` (written by `npm run sync:testing`); the page's
- * own words live in `content/copy/testing.json`. Items marked needs-review in
- * the data never reach this page: the loader drops them.
+ * own words live in `content/copy/testing.json`. Items marked needs-review are
+ * not in `content/testing/` at all: the exporter keeps them in a git-ignored
+ * file, and the loader still drops any that appear.
  */
 export const meta: Route.MetaFunction = () =>
   buildSeoMeta({

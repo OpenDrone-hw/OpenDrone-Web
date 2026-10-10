@@ -10,6 +10,10 @@
  *   content/testing/timeline.json  the engineering log
  *   content/testing/meta.json      when, from what, which schema
  *
+ * Only items with status "publish" are written to content/testing/. Items
+ * marked "needs-review" go to the git-ignored .testing-held/held.json, so
+ * held evidence is never committed or bundled into the public client.
+ *
  *   node scripts/sync-testing.mjs --write   regenerate the three files
  *   node scripts/sync-testing.mjs --check   exit 1 on drift or a banned string
  *   add --offline to skip the app and use the capture files
@@ -46,6 +50,8 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const WEB_ROOT = path.resolve(HERE, '..');
 const CONFIG = path.join(HERE, 'testing-export.config.json');
 const OUT_DIR = path.join(WEB_ROOT, 'content', 'testing');
+/** Items marked needs-review are written here (git-ignored), never to OUT_DIR. */
+const HELD_FILE = path.join(WEB_ROOT, '.testing-held', 'held.json');
 
 const API = (process.env.TESTING_API || 'http://127.0.0.1:8787').replace(/\/$/, '');
 const REPO = process.env.TESTING_REPO || '/Users/stan/Incutec/testing';
@@ -388,12 +394,20 @@ function benchSeries(fig, s) {
 // ---------------------------------------------------------------- the build
 
 const prev = (() => {
+  const m = new Map();
   try {
     const j = JSON.parse(fs.readFileSync(path.join(OUT_DIR, 'figures.json'), 'utf8'));
-    return new Map(j.figures.map((f) => [f.id, f]));
+    for (const f of j.figures) m.set(f.id, f);
   } catch {
-    return new Map();
+    /* none */
   }
+  try {
+    const j = JSON.parse(fs.readFileSync(HELD_FILE, 'utf8'));
+    for (const f of j.figures || []) m.set(f.id, f);
+  } catch {
+    /* none */
+  }
+  return m;
 })();
 
 const usedSources = new Set(); // 'app' | 'files' | 'carried'
@@ -433,7 +447,7 @@ async function buildFigure(fig, appUp) {
     for (const s of fig.series) {
       const g = got.series.get(s.id);
       if (!g) throw new Error(`${fig.id}: no series ${s.id} in the app answer`);
-      if (appFields && appFields.get(s.field) === undefined) throw new Error(`${fig.id}: the app has no field ${s.field}`);
+      if (appFields && !String(s.ref || '').startsWith('flight:') && appFields.get(s.field) === undefined) throw new Error(`${fig.id}: the app has no field ${s.field}`);
       result.set(s.id, {points: g.points, lo: g.lo, hi: g.hi, unit: g.unit});
     }
     used = 'app';
@@ -538,6 +552,16 @@ async function buildFigure(fig, appUp) {
 
   // Pin every number the finding quotes.
   verifyChecks(fig, series);
+
+  // Optional display unit change on x (e.g. permille to percent), applied
+  // after the checks so they stay in the unit the app reports.
+  if (fig.xScale) {
+    const sx = (pt) => [sig4(pt[0] * fig.xScale), pt[1]];
+    for (const s of series) {
+      s.points = s.points.map(sx);
+      if (s.band) s.band = {lo: s.band.lo.map(sx), hi: s.band.hi.map(sx)};
+    }
+  }
 
   const out = {
     id: fig.id,
@@ -734,8 +758,15 @@ async function main() {
     schema: 1,
     source: usedSources.has('carried') ? 'mixed' : appUp ? 'app' : 'file-fallback',
   };
-  const outFigures = {schema: 1, figures};
-  const outTimeline = {schema: 1, items: timeline};
+  // Only publish items reach the committed files. Held items stay in a
+  // git-ignored file so they are not bundled into the public client JS.
+  const outFigures = {schema: 1, figures: figures.filter((f) => f.status === 'publish')};
+  const outTimeline = {schema: 1, items: timeline.filter((t) => t.status === 'publish')};
+  const held = {
+    schema: 1,
+    figures: figures.filter((f) => f.status !== 'publish'),
+    items: timeline.filter((t) => t.status !== 'publish'),
+  };
 
   const hits = [];
   scan(outFigures, 'figures', hits);
@@ -759,6 +790,8 @@ async function main() {
   if (mode === 'write') {
     fs.mkdirSync(OUT_DIR, {recursive: true});
     for (const [name, text] of Object.entries(next)) fs.writeFileSync(path.join(OUT_DIR, name), text);
+    fs.mkdirSync(path.dirname(HELD_FILE), {recursive: true});
+    fs.writeFileSync(HELD_FILE, pretty(held));
     console.log(`wrote ${Object.keys(next).length} files to content/testing (source: ${meta.source})`);
     return;
   }
