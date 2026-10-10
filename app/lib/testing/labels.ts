@@ -1,13 +1,12 @@
 import type {Fig} from './types.ts';
 
-/** The label without the wording every series of a figure shares or the run length. */
-export function plainLabel(label: string): string {
-  return label
-    .replace(/, (frames|hold median.*)$/, '')
-    .replace(/, ends at \d+ percent/, '')
-    .replace(/, \d+ s$/, '')
-    .replace(/^(\d{2}:\d{2}) UTC run$/, 'run $1')
-    .replace(/^(Pack [A-Z]), (\d{2}:\d{2}) run$/, '$1, $2');
+/**
+ * The name drawn on the plot: the view's `short` name for the series when it
+ * has one, else the label without the suffixes the exporter adds for the
+ * reduction.
+ */
+export function plainLabel(label: string, short?: string): string {
+  return short ?? label.replace(/, (frames|hold median.*)$/, '').replace(/, \d+ s$/, '');
 }
 
 /**

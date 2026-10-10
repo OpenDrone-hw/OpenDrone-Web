@@ -1,52 +1,37 @@
 import {unitLabel} from './scale.ts';
-import type {AxisDef, Fig} from './types.ts';
+import type {AxisDef, Fig, TestingIndex} from './types.ts';
 
 /**
- * Editorial choices of the workspace that are not in the figure files: which
- * figure a panel duplicates, and the one place an assumption is written.
+ * Layout decisions that read the figure files. No figure's wording is written
+ * here: it all comes from the publish block of its saved view.
  */
 
-/** A hold panel that repeats a figure drawn in full elsewhere is not stacked. */
-export const DUPLICATE_OF: Record<string, string> = {
-  'openmotor-hold-rpm': 'openmotor-thrust-vs-rpm',
-};
+/** A panel whose figure is drawn in full by another figure is not stacked. */
+export const isDuplicate = (index: TestingIndex, id: string): boolean => Boolean(index.figures[id]?.duplicateOf);
 
 /** Where a figure's own anchor is, when its panel is not drawn: links go to the figure that shows it. */
-export const anchorFor = (id: string): string => DUPLICATE_OF[id] ?? id;
-
-/** The pole-pair assumption is stated once, in the axis title, not in every card. */
-const AXIS_NOTE: Record<string, Partial<Record<'x' | 'y' | 'y2', string>>> = {
-  'openmotor-thrust-vs-rpm': {x: '7 pole pairs assumed'},
-  'openmotor-hold-rpm': {y: '7 pole pairs assumed'},
-};
+export const anchorFor = (index: TestingIndex, id: string): string => index.figures[id]?.duplicateOf ?? id;
 
 export function axisTitle(fig: Fig, axis: 'x' | 'y' | 'y2'): string {
   const a: AxisDef | undefined = fig.axes[axis];
   if (!a) return '';
-  const note = AXIS_NOTE[fig.id]?.[axis];
-  return `${a.label} (${unitLabel(a.unit)}${note ? `, ${note}` : ''})`;
+  return `${a.label} (${unitLabel(a.unit)}${a.note ? `, ${a.note}` : ''})`;
 }
 
-/** A flagged caveat too long for one line under a card has a short form here; the full text stays in Details. */
-export const SHORT_FLAG: Record<string, string> = {
-  'openmotor-thrust-vs-rpm': 'Pack A unplugged by the operator at 80 percent, because of the noise.',
-  'openmotor-hold-thrust': 'At 10 percent throttle the two packs read 30 g and 35 g.',
-};
-
-/** Caveats the axis title already states; they are not repeated under the card. */
-const STATED_IN_AXIS = /assumes 7 pole pairs/;
-
-/** The one caveat shown under a card: the first flagged one the axis does not already state. */
+/**
+ * The one caveat shown under a card. The view's `card_caveat` decides: its
+ * text, or nothing when it is empty; without it, the first flagged caveat in
+ * full. The full caveats stay in Details.
+ */
 export function visibleCaveat(figs: Fig[]): {text: string; full: string} | null {
   for (const f of figs) {
-    for (const c of f.caveats) {
-      const text = typeof c === 'string' ? c : c.text;
-      const flagged = typeof c !== 'string' && c.flag === true;
-      if (!flagged || STATED_IN_AXIS.test(text)) continue;
-      const short = SHORT_FLAG[f.id];
-      const isShortable = short && f.caveats.length;
-      return {text: isShortable ? short : text, full: text};
+    const flagged = f.caveats.map((c) => (typeof c === 'string' ? null : c.flag ? c.text : null)).find((t) => t);
+    if (f.cardCaveat !== undefined) {
+      if (f.cardCaveat && flagged) return {text: f.cardCaveat, full: flagged};
+      if (f.cardCaveat) return {text: f.cardCaveat, full: f.cardCaveat};
+      continue;
     }
+    if (flagged) return {text: flagged, full: flagged};
   }
   return null;
 }

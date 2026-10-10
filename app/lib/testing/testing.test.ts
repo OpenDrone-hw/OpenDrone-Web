@@ -221,3 +221,24 @@ describe('headline numbers and round 3 rules', () => {
     assert.ok(buildGeometry(f, {w: 1000, h: 480}).series.filter((s) => s.kind === 'hold').every((s) => !s.d));
   });
 });
+
+describe('page wording comes from the views', () => {
+  it('no figure or run wording is written in the storefront code', () => {
+    const files = ['layout.ts', 'labels.ts', 'data.server.ts', 'select.ts'];
+    for (const f of files) {
+      const text = fs.readFileSync(new URL(f, import.meta.url), 'utf8');
+      assert.doesNotMatch(text, /pole pairs|Pack [AB]\b|OpenMotor|UTC run|13:\d\d|calibrated|unplugged/, f);
+    }
+  });
+
+  it('the card caveat, axis note, tiles and photo are published as data', () => {
+    assert.match(fig('openmotor-thrust-vs-rpm').cardCaveat ?? '', /unplugged/);
+    assert.equal(fig('openmotor-thrust-vs-rpm').axes.x.note, '7 pole pairs assumed');
+    assert.equal(index.figures['openmotor-hold-rpm']!.duplicateOf, 'openmotor-thrust-vs-rpm');
+    const tiles = Object.values(index.figures).filter((f) => f.tile);
+    assert.equal(tiles.length, 4);
+    const photo = index.runs[index.figures['openmotor-thrust-vs-rpm']!.runId]!.photo!;
+    assert.ok(photo.size[0] <= 1600);
+    assert.ok(fs.existsSync(new URL(`.${photo.src.replace(/^\/testing/, '')}`, DIR)), 'photo file');
+  });
+});

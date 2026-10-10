@@ -386,6 +386,23 @@ describe('buildIndex', () => {
     const e = bi([fake('a', {meta: {featured: true}}), fake('b', {meta: {featured: true}})], [], CFG, 'x').errors;
     assert.match(e.join(), /2 featured figures/);
   });
+  it('carries the run level wording once and rejects two different ones', () => {
+    const photo = {file: 'a.jpg', alt: 'x', caption: 'y'};
+    const ok = bi([fake('a', {run: {setupShort: 'One unit', photo}}), fake('b')], [], CFG, 'x');
+    assert.equal(ok.errors.length, 0);
+    assert.equal(ok.index.runs.r1.setupShort, 'One unit');
+    assert.deepEqual(ok.index.runs.r1.photo, photo);
+    const bad = bi([fake('a', {run: {setupShort: 'One unit'}}), fake('b', {run: {setupShort: 'Two units'}})], [], CFG, 'x');
+    assert.match(bad.errors.join(), /two different setupShort/);
+  });
+  it('carries duplicate_of and tile and rejects a duplicate of an unpublished figure', () => {
+    const tile = {order: 1, note: 'n'};
+    const {index, errors} = bi([fake('a', {meta: {tile}}), fake('b', {meta: {duplicateOf: 'a'}})], [], CFG, 'x');
+    assert.equal(errors.length, 0);
+    assert.deepEqual(index.figures.a.tile, tile);
+    assert.equal(index.figures.b.duplicateOf, 'a');
+    assert.match(bi([fake('b', {meta: {duplicateOf: 'zz'}})], [], CFG, 'x').errors.join(), /not a published figure/);
+  });
   it('counts caveats and flagged caveats', () => {
     const {index} = bi([fake('a')], [], CFG, 'x');
     assert.equal(index.figures.a.caveats, 2);

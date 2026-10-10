@@ -91,7 +91,12 @@ export function standViolations(view, cfg) {
 
 /** Every text field a visitor reads, for the stand text rule. */
 function visibleText(P, labels) {
-  return [P.title, P.finding, P.setup_chip, ...(P.setup || []), ...(P.caveats || []), ...(P.marks || []).map((m) => m.text || ''), ...labels].join('\n');
+  const extra = [P.card_caveat, P.setup_short, P.tile?.label, P.tile?.note, P.photo?.alt, P.photo?.caption];
+  const notes = Object.values(P.axes || {}).map((a) => a.note);
+  const shorts = Object.values(P.series || {}).map((s) => s.short);
+  return [P.title, P.finding, P.setup_chip, ...(P.setup || []), ...(P.caveats || []), ...(P.marks || []).map((m) => m.text || ''), ...extra, ...notes, ...shorts, ...labels]
+    .filter((t) => typeof t === 'string')
+    .join('\n');
 }
 
 /** Validate a publish block beyond what the bench server checks. */
@@ -119,6 +124,16 @@ export function validatePublish(view, cfg) {
     if (!String(m.text || '').trim() || words(m.text) > 9) bad('a mark needs a text of at most 9 words');
     if (m.kind === 'line' && !Number.isFinite(m.x) && !m.last) bad('a line mark needs x or last');
     if (m.kind === 'point' && !m.last) bad('a point mark needs last, the series it sits on');
+  }
+  for (const k of ['card_caveat', 'setup_short', 'duplicate_of']) if (P[k] !== undefined && typeof P[k] !== 'string') bad(`${k} must be text`);
+  if (P.duplicate_of !== undefined && !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(P.duplicate_of)) bad('duplicate_of must name a figure id');
+  if (P.tile !== undefined) {
+    if (!String(P.tile?.note || '').trim()) bad('a tile needs a note');
+    if (!Number.isFinite(P.tile?.order)) bad('a tile needs an order');
+  }
+  if (P.photo !== undefined) {
+    for (const k of ['file', 'alt', 'caption']) if (!String(P.photo?.[k] || '').trim()) bad(`photo needs ${k}`);
+    if (/^\/|\.\.|(^|\/)Private\//i.test(P.photo?.file || '')) bad('photo.file must be inside the public tree');
   }
   if (P.status === 'publish') {
     if (!String(P.by || '').trim() || !/^\d{4}-\d{2}-\d{2}/.test(String(P.at || ''))) bad('by and at are required to publish');
@@ -516,10 +531,11 @@ export function buildFigure(view, resp, benches, cfg) {
   const out = [];
   const xs = display.xScale ?? 1;
   const scaleX = (pts) => pts.map((p) => ({...p, x: p.x * xs}));
-  const entry = (id, label, quantity, pack, kind, axis, pts, band) => {
+  const entry = (id, label, quantity, pack, kind, axis, pts, band, short) => {
     const e = {
       id,
       label,
+      ...(short ? {short} : {}),
       quantity,
       ...(pack ? {pack} : {}),
       kind,
@@ -547,7 +563,7 @@ export function buildFigure(view, resp, benches, cfg) {
     const base = meta.label || s.name || s.id;
     const suffix = kindOfApi === 'frames' ? ', frames' : kindOfApi === 'hold' ? ', hold median' : '';
     out.push(
-      entry(s.id, base + suffix, meta.quantity || quantityOf(s.field), meta.pack, kindOfApi, s.axis, scaleX(pts), !!s.band),
+      entry(s.id, base + suffix, meta.quantity || quantityOf(s.field), meta.pack, kindOfApi, s.axis, scaleX(pts), !!s.band, meta.short),
     );
   }
 
@@ -575,7 +591,7 @@ export function buildFigure(view, resp, benches, cfg) {
       const pts = got.sort((a, b) => a.x - b.x).map((h) => ({x: h.x, y: h.y, lo: holds.band ? h.lo : null, hi: holds.band ? h.hi : null}));
       if (!pts.length) bad(`series ${s.id}: no holds found in ${run}`);
       out.push(
-        entry(`${s.id}.hold`, `${meta.label || s.name || s.id}, hold median, last ${holds.seconds} s`, meta.quantity || quantityOf(s.field), meta.pack, 'hold', s.axis, scaleX(pts), true),
+        entry(`${s.id}.hold`, `${meta.label || s.name || s.id}, hold median, last ${holds.seconds} s`, meta.quantity || quantityOf(s.field), meta.pack, 'hold', s.axis, scaleX(pts), true, meta.short),
       );
       for (const h of got) {
         if (P.fit && h.thr / 10 >= P.fit.fromThrottle) fitPts.push([h.x * xs, h.y]);
@@ -678,6 +694,7 @@ export function buildFigure(view, resp, benches, cfg) {
     domain: P.domain,
     chip: P.setup_chip,
     caveats: P.caveats.map((c) => (c.startsWith('!') ? {text: c.slice(1).trim(), flag: true} : {text: c})),
+    ...(P.card_caveat !== undefined ? {cardCaveat: P.card_caveat} : {}),
     reduction: reduction.join(' '),
     cite,
     axes,
@@ -695,8 +712,16 @@ export function buildFigure(view, resp, benches, cfg) {
   return {
     fig: errors.length ? null : fig,
     errors,
-    run: {id: P.run, date: recorded[0] || null, setup: P.setup, chip: P.setup_chip},
-    meta: {status: P.status, order: P.order, featured: !!P.featured, tier: P.tier ?? null, product: P.product},
+    run: {id: P.run, date: recorded[0] || null, setup: P.setup, chip: P.setup_chip, setupShort: P.setup_short, photo: P.photo},
+    meta: {
+      status: P.status,
+      order: P.order,
+      featured: !!P.featured,
+      tier: P.tier ?? null,
+      product: P.product,
+      duplicateOf: P.duplicate_of,
+      tile: P.tile,
+    },
     fullFig: fig,
   };
 }
@@ -732,8 +757,13 @@ export function buildIndex(built, logItems, cfg, builtAt) {
   for (const b of built) {
     const r = b.run;
     const prev = runs[r.id];
-    if (!prev) runs[r.id] = {date: r.date, setup: r.setup, chip: r.chip};
+    const extra = {...(r.setupShort ? {setupShort: r.setupShort} : {}), ...(r.photo ? {photo: r.photo} : {})};
+    if (!prev) runs[r.id] = {date: r.date, setup: r.setup, chip: r.chip, ...extra};
     else {
+      for (const k of Object.keys(extra)) {
+        if (prev[k] === undefined) prev[k] = extra[k];
+        else if (JSON.stringify(prev[k]) !== JSON.stringify(extra[k])) errors.push(`${b.fig.id}: run ${r.id} has two different ${k}`);
+      }
       if (JSON.stringify(prev.setup) !== JSON.stringify(r.setup) || prev.chip !== r.chip) {
         errors.push(`${b.fig.id}: run ${r.id} is shared and its setup or chip differs from another figure of the run`);
       }
@@ -776,7 +806,12 @@ export function buildIndex(built, logItems, cfg, builtAt) {
       chip: b.fig.chip,
       caveats: b.fig.caveats.length,
       flagged: b.fig.caveats.filter((c) => c.flag).length,
+      ...(b.meta.duplicateOf ? {duplicateOf: b.meta.duplicateOf} : {}),
+      ...(b.meta.tile ? {tile: {order: b.meta.tile.order, ...(b.meta.tile.label ? {label: b.meta.tile.label} : {}), note: b.meta.tile.note}} : {}),
     };
+    if (b.meta.duplicateOf && !built.some((o) => o.fig.id === b.meta.duplicateOf)) {
+      errors.push(`${b.fig.id}: duplicate_of ${b.meta.duplicateOf} is not a published figure`);
+    }
   }
   const log = [...logItems]
     .sort((a, b) => b.date.localeCompare(a.date) || a.id.localeCompare(b.id))

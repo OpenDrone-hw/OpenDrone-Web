@@ -8,6 +8,9 @@
  *
  *   public/testing/index.json     products, runs, log, one summary per figure
  *   public/testing/fig/<id>.json  one figure: series, axes, caveats, citation
+ *   public/testing/photo/<run>.webp  the run's photo, when a view's publish
+ *                                 block names one (1600 px wide at most,
+ *                                 metadata stripped, listed boxes blurred)
  *
  * A new published view appears on the page with no code or config edit, and
  * removing its publish block removes it on the next run. Views whose status
@@ -57,6 +60,7 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
+import sharp from 'sharp';
 import {buildFigure, buildIndex, compileConfig, loadBench, pretty, runOfRef, scan, validateLog} from './testing-export-lib.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -202,6 +206,35 @@ function sourceRevision() {
   }
 }
 
+const PHOTO_MAX_WIDTH = 1600;
+
+/**
+ * A run's photo from the capture tree: orientation applied, the listed boxes
+ * blurred in source pixels, resized to at most 1600 px wide, written as webp
+ * without metadata. The source must lie inside the data tree and outside its
+ * private folder.
+ */
+async function buildPhoto(runId, spec) {
+  const file = path.resolve(DATA, spec.file);
+  const rel = path.relative(path.resolve(DATA), file);
+  if (rel.startsWith('..') || path.isAbsolute(rel) || /(^|\/)Private(\/|$)/i.test(rel)) throw new Error(`photo of ${runId} is outside the public tree`);
+  if (!fs.existsSync(file)) throw new Error(`photo of ${runId}: ${spec.file} does not exist`);
+  let base = await sharp(file).rotate().toBuffer();
+  const {width: w0, height: h0} = await sharp(base).metadata();
+  const overlays = [];
+  for (const [x, y, bw, bh] of spec.blur || []) {
+    const left = Math.min(Math.round(x), w0 - 1);
+    const top = Math.min(Math.round(y), h0 - 1);
+    const width = Math.min(Math.round(bw), w0 - left);
+    const height = Math.min(Math.round(bh), h0 - top);
+    overlays.push({input: await sharp(base).extract({left, top, width, height}).blur(14).toBuffer(), left, top});
+  }
+  if (overlays.length) base = await sharp(base).composite(overlays).toBuffer();
+  const buf = await sharp(base).resize({width: PHOTO_MAX_WIDTH, withoutEnlargement: true}).webp({quality: 82}).toBuffer();
+  const {width, height} = await sharp(buf).metadata();
+  return {name: `photo/${runId}.webp`, buf, meta: {src: `/testing/photo/${runId}.webp`, size: [width, height], alt: spec.alt, caption: spec.caption}};
+}
+
 /** Files under OUT_DIR by relative path, for the stale and drift checks. */
 function filesOnDisk() {
   const out = new Map();
@@ -210,7 +243,7 @@ function filesOnDisk() {
     for (const name of fs.readdirSync(dir)) {
       const full = path.join(dir, name);
       if (fs.statSync(full).isDirectory()) walk(full, rel + name + '/');
-      else out.set(rel + name, fs.readFileSync(full, 'utf8'));
+      else out.set(rel + name, fs.readFileSync(full));
     }
   };
   walk(OUT_DIR, '');
@@ -241,6 +274,19 @@ async function main() {
   const {index, errors: indexErrors} = buildIndex(published, logFile.items.filter((t) => t.status === 'publish'), cfg, new Date().toISOString().slice(0, 10));
   errors.push(...indexErrors);
 
+  const bin = new Map();
+  for (const [rid, run] of Object.entries(index.runs)) {
+    if (!run.photo) continue;
+    try {
+      const photo = await buildPhoto(rid, run.photo);
+      bin.set(photo.name, photo.buf);
+      run.photo = photo.meta;
+    } catch (e) {
+      errors.push(e.message);
+      delete run.photo;
+    }
+  }
+
   const next = new Map();
   next.set('index.json', pretty(index));
   for (const p of published) next.set(`fig/${p.fig.id}.json`, pretty(p.fig));
@@ -257,6 +303,8 @@ async function main() {
     if (name.startsWith('fig/') && raw > budget) errors.push(`${name}: ${kb(raw)} KB is over the ${cfg.figureBudgetKb} KB budget`);
   }
 
+  for (const [name, buf] of bin) console.log(`  ${name}: ${kb(buf.length)} KB`);
+
   if (mode === 'write') {
     fs.mkdirSync(path.dirname(HELD_FILE), {recursive: true});
     fs.writeFileSync(HELD_FILE, pretty({schema: 2, built: index.built, ...held}));
@@ -270,26 +318,36 @@ async function main() {
   if (mode === 'write') {
     fs.mkdirSync(path.join(OUT_DIR, 'fig'), {recursive: true});
     for (const [name, text] of next) fs.writeFileSync(path.join(OUT_DIR, name), text);
+    for (const [name, buf] of bin) {
+      fs.mkdirSync(path.dirname(path.join(OUT_DIR, name)), {recursive: true});
+      fs.writeFileSync(path.join(OUT_DIR, name), buf);
+    }
     for (const name of disk.keys()) {
-      if (!next.has(name)) {
+      if (!next.has(name) && !bin.has(name)) {
         fs.rmSync(path.join(OUT_DIR, name));
         console.log(`  removed ${name}: no longer published`);
       }
     }
-    console.log(`wrote ${next.size} files to ${path.relative(WEB_ROOT, OUT_DIR) || OUT_DIR} (testing revision ${sourceRevision()})`);
+    console.log(`wrote ${next.size + bin.size} files to ${path.relative(WEB_ROOT, OUT_DIR) || OUT_DIR} (testing revision ${sourceRevision()})`);
     return;
   }
   let drift = false;
   for (const [name, text] of next) {
-    const have = disk.get(name);
+    const have = disk.get(name)?.toString('utf8');
     const same = have !== undefined && (name === 'index.json' ? withoutBuilt(have) === withoutBuilt(text) : have === text);
     if (!same) {
       drift = true;
       console.error(`DRIFT: ${name} differs from the export`);
     }
   }
+  for (const [name, buf] of bin) {
+    if (!disk.get(name)?.equals(buf)) {
+      drift = true;
+      console.error(`DRIFT: ${name} differs from the export`);
+    }
+  }
   for (const name of disk.keys()) {
-    if (!next.has(name)) {
+    if (!next.has(name) && !bin.has(name)) {
       drift = true;
       console.error(`DRIFT: ${name} is on disk and no view publishes it`);
     }
@@ -301,7 +359,9 @@ async function main() {
 /** --check without the app: the banned-string scan and the budget on what is on disk. */
 function scanDisk() {
   const hits = [];
-  for (const [name, text] of filesOnDisk()) {
+  for (const [name, buf] of filesOnDisk()) {
+    if (!name.endsWith('.json')) continue;
+    const text = buf.toString('utf8');
     scan(JSON.parse(text), name, hits, cfg);
     if (Buffer.byteLength(text) > cfg.figureBudgetKb * 1024) hits.push(`${name}: over ${cfg.figureBudgetKb} KB`);
   }

@@ -1,14 +1,6 @@
 import type {Tile} from '~/lib/testing/data.server';
-import {anchorFor, DUPLICATE_OF} from '~/lib/testing/layout';
+import {anchorFor, isDuplicate} from '~/lib/testing/layout';
 import type {TestingIndex} from '~/lib/testing/types';
-
-/** "Same OpenMotor-2306, two 6S packs, cell calibrated to 1726 g" becomes "OpenMotor-2306 on two 6S packs". */
-function latestSetup(chip: string): string {
-  return chip
-    .replace(/,? cell calibrated.*$/, '')
-    .replace(/^Same /, '')
-    .replace(/^(\S+), (one|two|three|\d+)/, '$1 on $2');
-}
 
 /**
  * What this page is, the latest headline numbers, and a way to every figure.
@@ -26,14 +18,14 @@ export function Landing({index, tiles}: {index: TestingIndex; tiles: Tile[]}) {
     <section className="tw-landing" aria-labelledby="tw-title">
       <h1 id="tw-title">Test results</h1>
       <p className="tw-lede">
-        Bench measurements{state ? `, ${state}` : ''}. Latest: {latest?.date}, {latest ? latestSetup(latest.chip) : ''}.
+        Bench measurements{state ? `, ${state}` : ''}. Latest: {latest?.date}, {latest ? (latest.setupShort ?? latest.chip) : ''}.
       </p>
       {tiles.length ? <p className="tw-tilecap">{tiles[0]!.sub}. Hold medians, not peaks.</p> : null}
       {tiles.length ? (
         <ul className="tw-tiles" aria-label={`Latest run ${latestId ?? ''}`}>
           {tiles.map((t) => (
             <li key={t.id}>
-              <a href={`#${anchorFor(t.id)}`}>
+              <a href={`#${anchorFor(index, t.id)}`}>
                 <span className="tw-tile-label">{t.label}</span>
                 <span className="tw-tile-value">
                   {t.value}
@@ -52,7 +44,7 @@ export function Landing({index, tiles}: {index: TestingIndex; tiles: Tile[]}) {
             <p key={p.handle}>
               <b>{p.name}</b>
               {p.figures
-                .filter((id) => index.figures[id] && !DUPLICATE_OF[id])
+                .filter((id) => index.figures[id] && !isDuplicate(index, id))
                 .map((id) => (
                   <a key={id} href={`#${id}`}>
                     {index.figures[id]?.title}

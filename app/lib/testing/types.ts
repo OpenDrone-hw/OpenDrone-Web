@@ -9,6 +9,8 @@ export type SeriesKind = 'trace' | 'frames' | 'hold';
 export type FigSeries = {
   id: string;
   label: string;
+  /** The name drawn on the plot and in the legend, from the view's publish block. */
+  short?: string;
   /** One hue per quantity: current, voltage, temperature, rpm, command, aux, thrust. */
   quantity: string;
   /** Pack, motor or unit. Series of one quantity differ by shade and dash. */
@@ -25,6 +27,8 @@ export type FigSeries = {
 
 export type AxisDef = {
   label: string;
+  /** A condition appended to the axis title, from the view. */
+  note?: string;
   unit: string;
   min?: number;
   max?: number;
@@ -42,6 +46,8 @@ export type Fig = {
   domain: string;
   chip: string;
   caveats: Caveat[];
+  /** The one line under the card, from the view: empty is none, absent is the first flagged caveat. */
+  cardCaveat?: string;
   reduction?: string;
   cite?: string;
   axes: {x: AxisDef; y: AxisDef; y2?: AxisDef};
@@ -74,7 +80,14 @@ export type FigFit = {
   n: number;
 };
 
-export type RunInfo = {date: string; setup: string[]; chip: string};
+export type RunInfo = {
+  date: string;
+  setup: string[];
+  chip: string;
+  /** The run in a few words, for the page lede. */
+  setupShort?: string;
+  photo?: {src: string; size: [number, number]; alt: string; caption: string};
+};
 
 export type FigSummary = {
   title: string;
@@ -88,6 +101,10 @@ export type FigSummary = {
   chip: string;
   caveats: number;
   flagged: number;
+  /** Id of the figure that draws this one in full; this one gets no panel of its own. */
+  duplicateOf?: string;
+  /** A headline number on the landing band: the last hold of the longest run. */
+  tile?: {order: number; label?: string; note: string};
 };
 
 export type LogEntry = {

@@ -413,7 +413,7 @@ export function layoutNotes(
       const i = lastOf(s);
       if (i < 0) continue;
       items.push({
-        text: [plainLabel(s.label)],
+        text: [plainLabel(s.label, s.short)],
         x: f.px(s.x[i]!),
         y: f.py(s.y[i]!, axis),
         sid: s.id,

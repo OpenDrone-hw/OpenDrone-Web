@@ -22,6 +22,7 @@
       "text": "No independent weight check of the load cell is recorded."
     }
   ],
+  "cardCaveat": "At 10 percent throttle the two packs read 30 g and 35 g.",
   "reduction": "Logged frames; frames in throttle or speed transients are excluded. Hold markers: median of the last 2 s of each throttle hold; the band is the 25th to 75th percentile. Holds with no pack voltage reading are dropped.",
   "cite": "Logs/drv-04-thrust-2026-10-10-20261010T132503Z#L1291-L9813; Logs/drv-04-openmotor-2306-2026-10-10-20261010T131644Z#L1513-L7322",
   "axes": {
@@ -41,6 +42,7 @@
     {
       "id": "s1.thrust_g.hold",
       "label": "Pack B, 13:25 run, hold median, last 2 s",
+      "short": "Pack B, 13:25",
       "quantity": "thrust",
       "pack": "13:25",
       "kind": "hold",
@@ -52,6 +54,7 @@
     {
       "id": "s2.thrust_g.hold",
       "label": "Pack A, 13:16 run, ends at 70 percent, hold median, last 2 s",
+      "short": "Pack A, 13:16",
       "quantity": "thrust",
       "pack": "13:16",
       "kind": "hold",

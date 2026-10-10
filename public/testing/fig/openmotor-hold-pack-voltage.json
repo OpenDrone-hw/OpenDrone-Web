@@ -33,6 +33,7 @@
     {
       "id": "s1.v_bus.hold",
       "label": "Pack B, 13:25 run, hold median, last 2 s",
+      "short": "Pack B, 13:25",
       "quantity": "voltage",
       "pack": "13:25",
       "kind": "hold",
@@ -44,6 +45,7 @@
     {
       "id": "s2.v_bus.hold",
       "label": "Pack A, 13:16 run, ends at 70 percent, hold median, last 2 s",
+      "short": "Pack A, 13:16",
       "quantity": "voltage",
       "pack": "13:16",
       "kind": "hold",

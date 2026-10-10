@@ -345,7 +345,7 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
           if (i < 0) continue;
           rows.push({
             id: s.id,
-            label: s.pack ?? plainLabel(s.label),
+            label: s.pack ?? plainLabel(s.label, s.short),
             color: styles[s.id]!.color,
             unit: (s.axis === 'y2' ? fig.axes.y2 : fig.axes.y)?.unit ?? '',
             x: s.x[i]!,

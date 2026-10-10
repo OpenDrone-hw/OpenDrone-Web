@@ -26,13 +26,15 @@
       "flag": true
     }
   ],
+  "cardCaveat": "Pack A unplugged by the operator at 80 percent, because of the noise.",
   "reduction": "Logged frames; frames in throttle or speed transients are excluded. Frames that share one rotor speed reading are reduced to their median, because rotor speed telemetry updates slower than the load cell. Hold markers: median of the last 2 s of each throttle hold; the band is the 25th to 75th percentile. Holds with no pack voltage reading are dropped.",
   "cite": "Logs/drv-04-thrust-2026-10-10-20261010T132503Z#L2-L11008; Logs/drv-04-openmotor-2306-2026-10-10-20261010T131644Z#L2-L11229",
   "axes": {
     "x": {
       "label": "Rotor speed",
       "unit": "rpm",
-      "min": 0
+      "min": 0,
+      "note": "7 pole pairs assumed"
     },
     "y": {
       "label": "Thrust",
@@ -44,6 +46,7 @@
     {
       "id": "s1.thrust_g",
       "label": "Pack B, 13:25 run, frames",
+      "short": "Pack B, 13:25",
       "quantity": "thrust",
       "pack": "13:25",
       "kind": "frames",
@@ -53,6 +56,7 @@
     {
       "id": "s2.thrust_g",
       "label": "Pack A, 13:16 run, ends at 70 percent, frames",
+      "short": "Pack A, 13:16",
       "quantity": "thrust",
       "pack": "13:16",
       "kind": "frames",
@@ -62,6 +66,7 @@
     {
       "id": "s1.thrust_g.hold",
       "label": "Pack B, 13:25 run, hold median, last 2 s",
+      "short": "Pack B, 13:25",
       "quantity": "thrust",
       "pack": "13:25",
       "kind": "hold",
@@ -73,6 +78,7 @@
     {
       "id": "s2.thrust_g.hold",
       "label": "Pack A, 13:16 run, ends at 70 percent, hold median, last 2 s",
+      "short": "Pack A, 13:16",
       "quantity": "thrust",
       "pack": "13:16",
       "kind": "hold",

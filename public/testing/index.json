@@ -54,7 +54,14 @@
     "drv-04-2026-10-10": {
       "date": "2026-10-10",
       "setup": ["1 OpenMotor-2306 on a 10 kg load cell, ESC reversed so the propeller pulls (operator-stated, not recorded in the capture)", "Two runs, pack A at 13:16 and pack B at 13:25 UTC, the same motor on two different 6S packs", "Load cell calibrated against a 1726 g reference mass (207.4 counts/g, about 0.7 percent)", "Ten throttle holds of about 4 s, 10 to 100 percent", "Rotor speed is ESC eRPM divided by the 7 pole pairs stored in the capture", "A third capture at 13:24 UTC, 36 s long, was stopped before any throttle step and is not plotted.", "Run state: draft, not validated; no scope or clamp record."],
-      "chip": "Same OpenMotor-2306, two 6S packs, cell calibrated to 1726 g"
+      "chip": "Same OpenMotor-2306, two 6S packs, cell calibrated to 1726 g",
+      "setupShort": "OpenMotor-2306 on two 6S packs",
+      "photo": {
+        "src": "/testing/photo/drv-04-2026-10-10.webp",
+        "size": [1600, 1200],
+        "alt": "The thrust stand: a 3D printed base with a 10 kg load cell carrying the motor and propeller, a display and the controller board in front.",
+        "caption": "The thrust stand with the OpenMotor-2306 on the 10 kg load cell. Its display reads UNCAL: the cell was not calibrated when this photo was taken."
+      }
     },
     "rx-13-2026-07-11": {
       "date": "2026-07-11",
@@ -113,7 +120,11 @@
       "runId": "drv-04-2026-10-10",
       "chip": "Same OpenMotor-2306, two 6S packs, cell calibrated to 1726 g",
       "caveats": 2,
-      "flagged": 0
+      "flagged": 0,
+      "tile": {
+        "order": 30,
+        "note": "Hottest of 4 die sensors, only channel 1 driven"
+      }
     },
     "openmotor-hold-pack-voltage": {
       "title": "Pack voltage per throttle hold",
@@ -126,7 +137,12 @@
       "runId": "drv-04-2026-10-10",
       "chip": "Same OpenMotor-2306, two 6S packs, cell calibrated to 1726 g",
       "caveats": 2,
-      "flagged": 0
+      "flagged": 0,
+      "tile": {
+        "order": 40,
+        "label": "Pack voltage under load",
+        "note": "Flight controller battery divider, not checked against a meter"
+      }
     },
     "openmotor-hold-rpm": {
       "title": "Rotor speed per throttle hold",
@@ -139,7 +155,12 @@
       "runId": "drv-04-2026-10-10",
       "chip": "Same OpenMotor-2306, two 6S packs, cell calibrated to 1726 g",
       "caveats": 3,
-      "flagged": 1
+      "flagged": 1,
+      "duplicateOf": "openmotor-thrust-vs-rpm",
+      "tile": {
+        "order": 20,
+        "note": "ESC eRPM over 7 pole pairs, assumed"
+      }
     },
     "openmotor-hold-thrust": {
       "title": "Thrust per throttle hold",
@@ -152,7 +173,11 @@
       "runId": "drv-04-2026-10-10",
       "chip": "Same OpenMotor-2306, two 6S packs, cell calibrated to 1726 g",
       "caveats": 4,
-      "flagged": 1
+      "flagged": 1,
+      "tile": {
+        "order": 10,
+        "note": "Load cell, calibrated at one point, 1726 g, about 0.7 percent"
+      }
     },
     "openmotor-thrust-vs-rpm": {
       "title": "Thrust against rotor speed",
