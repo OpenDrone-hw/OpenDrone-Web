@@ -2,11 +2,13 @@ import {useEffect, useRef} from 'react';
 import uPlot from 'uplot';
 import 'uplot/dist/uPlot.min.css';
 import {assignStyles, CANVAS, INK, MUTED, SURFACE, type Theme} from '~/lib/testing/palette';
-import {markerPath} from '~/lib/testing/geometry';
+import {GUTTER_L, markerPath, TICK_PX} from '~/lib/testing/geometry';
 import {
   alignSeries,
+  evenTicks,
   figureDomains,
   fmtTick,
+  fmtValue,
   fullXDomain,
   nearestSorted,
   niceTicks,
@@ -50,6 +52,8 @@ type Props = {
   onReadout: (r: ReadoutState) => void;
   onRange: (r: RangeState) => void;
   onReady: (api: ChartApi | null) => void;
+  /** Spoken text for a cursor moved with the keyboard. */
+  onAnnounce?: (text: string) => void;
 };
 
 const hexA = (hex: string, a: number) => {
@@ -57,13 +61,13 @@ const hexA = (hex: string, a: number) => {
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 };
 
-export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRange, onReady}: Props) {
+export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRange, onReady, onAnnounce}: Props) {
   const host = useRef<HTMLDivElement>(null);
   const plot = useRef<uPlot | null>(null);
   const hiddenRef = useRef(hidden);
   hiddenRef.current = hidden;
-  const cb = useRef({onReadout, onRange});
-  cb.current = {onReadout, onRange};
+  const cb = useRef({onReadout, onRange, onAnnounce});
+  cb.current = {onReadout, onRange, onAnnounce};
   const initial = useRef(initialRange);
   const applyYRef = useRef<((u: uPlot) => void) | null>(null);
 
@@ -75,8 +79,9 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
     const styles = assignStyles(fig.series, theme);
     const aligned = alignSeries(fig.series);
     const full = fullXDomain(fig);
-    const grid = theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
+    const grid = theme === 'dark' ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
     const hasY2 = Boolean(fig.axes.y2);
+    let dualN: number | undefined;
     const windowOf = (u: uPlot): Domain | undefined => {
       const a = u.scales.x.min;
       const b = u.scales.x.max;
@@ -88,25 +93,28 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
     // which runs before the new x is in place.
     const applyY = (u: uPlot) => {
       const d = figureDomains(fig, {hidden: hiddenRef.current, xWindow: windowOf(u)});
+      dualN = d.n;
       u.batch(() => {
         u.setScale('y', {min: d.y[0], max: d.y[1]});
         if (d.y2) u.setScale('y2', {min: d.y2[0], max: d.y2[1]});
       });
     };
     applyYRef.current = applyY;
-    const count = (u: uPlot, axisPx: number) => Math.max(3, Math.floor(axisPx / 90));
+    const count = (u: uPlot, axisPx: number) => Math.max(3, Math.min(8, Math.floor(axisPx / 100)));
     const xSplits = (u: uPlot, _a: number, min: number, max: number) =>
       niceTicks(min, max, count(u, u.bbox.width / devicePixelRatio));
     const ySplits = (u: uPlot, _a: number, min: number, max: number) =>
-      niceTicks(min, max, Math.max(3, Math.floor(u.bbox.height / devicePixelRatio / 48)));
+      dualN
+        ? evenTicks(min, max, dualN)
+        : niceTicks(min, max, Math.min(5, Math.max(3, Math.floor(u.bbox.height / devicePixelRatio / 56))));
     const fmtAxis = (_u: uPlot, splits: number[]) => {
       const step = tickStep(splits);
       return splits.map((v) => fmtTick(v, step));
     };
     const axisBase = {
       stroke: MUTED[theme],
-      font: `12px ${font}`,
-      labelFont: `14px ${font}`,
+      font: `${TICK_PX}px ${font}`,
+      labelFont: `12px ${font}`,
       ticks: {stroke: grid, width: 1, size: 4},
       grid: {stroke: grid, width: 1},
       values: fmtAxis,
@@ -128,6 +136,15 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
         if (s.kind === 'hold') {
           return {...base, paths: () => null, points: {show: false}};
         }
+        if (s.kind === 'frames') {
+          // Dots, never a line: rotor speed and thrust are sampled at different
+          // rates, so a line through them would draw a sawtooth.
+          return {
+            ...base,
+            paths: () => null,
+            points: {show: true, size: 3, width: 0, stroke: hexA(st.color, st.opacity), fill: hexA(st.color, st.opacity)},
+          };
+        }
         return {
           ...base,
           stroke: hexA(st.color, st.opacity),
@@ -135,7 +152,7 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
           dash: st.dash.length ? st.dash : undefined,
           points: {
             show: s.x.length <= 24,
-            size: 7,
+            size: 6,
             width: 1.5,
             stroke: st.color,
             fill: SURFACE[theme],
@@ -152,14 +169,35 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
       const slack = 10 * pr;
       ctx.rect(u.bbox.left - 2 * pr, u.bbox.top - 6 * pr, u.bbox.width + slack, u.bbox.height + 6 * pr);
       ctx.clip();
-      fig.series.forEach((s, k) => {
+      // The fitted law, under the markers.
+      if (fig.fit) {
+        const {k, x0, x1} = fig.fit;
+        ctx.strokeStyle = hexA(INK[theme], 0.55);
+        ctx.lineWidth = 1 * pr;
+        ctx.setLineDash([5 * pr, 4 * pr]);
+        ctx.beginPath();
+        for (let i = 0; i <= 40; i++) {
+          const xv = x0 + ((x1 - x0) * i) / 40;
+          const px = u.valToPos(xv, 'x', true);
+          const py = u.valToPos(k * (xv / 1000) ** 2, 'y', true);
+          if (i) ctx.lineTo(px, py);
+          else ctx.moveTo(px, py);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      const labels: Array<{x: number; y: number; text: string; color: string}> = [];
+      fig.series.forEach((s) => {
         if (s.kind !== 'hold' || hiddenRef.current.has(s.id)) return;
         const st = styles[s.id]!;
         const scale = s.axis === 'y2' ? 'y2' : 'y';
+        const unit = (s.axis === 'y2' ? fig.axes.y2 : fig.axes.y)?.unit ?? '';
+        let last = -1;
         for (let i = 0; i < s.x.length; i++) {
           const xv = s.x[i];
           const yv = s.y[i];
           if (xv === null || xv === undefined || yv === null || yv === undefined) continue;
+          last = i;
           const cx = u.valToPos(xv, 'x', true);
           const cy = u.valToPos(yv, scale, true);
           const lo = s.lo?.[i];
@@ -167,11 +205,11 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
           if (lo !== null && lo !== undefined && hi !== null && hi !== undefined) {
             let y0 = u.valToPos(hi, scale, true);
             let y1 = u.valToPos(lo, scale, true);
-            const pad = Math.max(0, 4 * pr - Math.abs(y1 - y0) / 2);
+            const pad = Math.max(0, 2.5 * pr - Math.abs(y1 - y0) / 2);
             y0 -= pad;
             y1 += pad;
-            ctx.strokeStyle = hexA(st.color, 0.35);
-            ctx.lineWidth = 6 * pr;
+            ctx.strokeStyle = hexA(st.color, 0.3);
+            ctx.lineWidth = 5 * pr;
             ctx.lineCap = 'round';
             ctx.beginPath();
             ctx.moveTo(cx, y0);
@@ -180,12 +218,32 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
           }
           ctx.fillStyle = st.color;
           ctx.strokeStyle = SURFACE[theme];
-          ctx.lineWidth = 1.5 * pr;
-          ctx.stroke(new Path2D(markerPath(st.marker, cx, cy, 4.5 * pr)));
-          ctx.fill(new Path2D(markerPath(st.marker, cx, cy, 4.5 * pr)));
+          ctx.lineWidth = 1 * pr;
+          ctx.stroke(new Path2D(markerPath(st.marker, cx, cy, 3 * pr)));
+          ctx.fill(new Path2D(markerPath(st.marker, cx, cy, 3 * pr)));
         }
-        void k;
+        // Name the run and its last value at the end of its markers.
+        if (last >= 0 && s.pack) {
+          labels.push({
+            x: u.valToPos(s.x[last]!, 'x', true),
+            y: u.valToPos(s.y[last]!, scale, true),
+            text: `${s.pack}  ${fmtValue(s.y[last]!)} ${unit}`.trim(),
+            color: st.color,
+          });
+        }
       });
+      ctx.font = `${TICK_PX * pr}px ${font}`;
+      ctx.textBaseline = 'middle';
+      const right = u.bbox.left + u.bbox.width;
+      for (const l of labels) {
+        const w = ctx.measureText(l.text).width;
+        const room = right - l.x - 9 * pr;
+        // Right of the last marker when it fits, else above and left of it.
+        const flip = w > room;
+        ctx.textAlign = flip ? 'right' : 'left';
+        ctx.fillStyle = l.color;
+        ctx.fillText(l.text, flip ? l.x + 6 * pr : l.x + 9 * pr, flip ? l.y - 16 * pr : l.y);
+      }
       ctx.restore();
       drawCallout(u);
     };
@@ -276,7 +334,7 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
     const opts: uPlot.Options = {
       width: Math.max(200, el.clientWidth),
       height,
-      padding: [10, hasY2 ? 6 : 14, 0, 0],
+      padding: [12, hasY2 ? 4 : 16, 0, 0],
       legend: {show: false},
       cursor: {
         drag: {x: true, y: false, setScale: true, dist: 6},
@@ -295,17 +353,17 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
         ...(hasY2 ? {y2: {auto: false, range: (_u: uPlot, min: number, max: number) => [min, max] as [number, number]}} : {}),
       },
       axes: [
-        {...axisBase, scale: 'x', size: 36, label: lab(fig.axes.x), labelSize: 22, splits: xSplits, gap: 4},
-        {...axisBase, scale: 'y', size: 62, label: lab(fig.axes.y), labelSize: 22, splits: ySplits, gap: 4},
+        {...axisBase, scale: 'x', size: 30, label: lab(fig.axes.x), labelSize: 20, splits: xSplits, gap: 3},
+        {...axisBase, scale: 'y', size: GUTTER_L, label: lab(fig.axes.y), labelSize: 18, splits: ySplits, gap: 3},
         ...(hasY2
           ? [
               {
                 ...axisBase,
                 scale: 'y2',
                 side: 1,
-                size: 62,
+                size: GUTTER_L,
                 label: lab(fig.axes.y2!),
-                labelSize: 22,
+                labelSize: 18,
                 splits: ySplits,
                 grid: {show: false},
                 gap: 4,
@@ -385,8 +443,69 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
     over.addEventListener('touchend', onTouchEnd, {passive: true});
     over.addEventListener('touchcancel', onTouchEnd, {passive: true});
 
+    // Keyboard: arrows step the cursor through the points of the first shown
+    // hold series (or the shared x values), +/- zoom, Home/End jump, Escape resets.
+    let at = -1;
+    const stops = () => {
+      const h = fig.series.find((q) => q.kind === 'hold' && !hiddenRef.current.has(q.id));
+      const src = h ? (h.x.filter((v) => v !== null) as number[]) : aligned.x;
+      if (src.length <= 60) return src;
+      const step = Math.ceil(src.length / 60);
+      return src.filter((_, i) => i % step === 0);
+    };
+    const speak = (x: number) => {
+      const parts: string[] = [`${fmtValue(x)} ${fig.axes.x.unit}`];
+      for (const s of fig.series) {
+        if (hiddenRef.current.has(s.id) || s.kind === 'frames') continue;
+        const i = nearestSorted(s, x);
+        if (i < 0) continue;
+        const ax = s.axis === 'y2' ? fig.axes.y2 : fig.axes.y;
+        parts.push(`${s.pack ?? s.label} ${fmtValue(s.y[i]!)} ${ax?.unit ?? ''}`.trim());
+      }
+      cb.current.onAnnounce?.(parts.join(', '));
+    };
+    const moveTo = (x: number) => {
+      const a = u.scales.x.min ?? full[0];
+      const b = u.scales.x.max ?? full[1];
+      if (x < a || x > b) {
+        const w = b - a;
+        u.setScale('x', {min: Math.max(full[0], x - w / 2), max: Math.min(full[1], x + w / 2)});
+      }
+      u.setCursor({left: u.valToPos(x, 'x'), top: u.bbox.height / devicePixelRatio / 2});
+      speak(x);
+    };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') resetRange(u);
+      const xs = stops();
+      if (e.key === 'Escape') {
+        resetRange(u);
+        return;
+      }
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft' || e.key === 'Home' || e.key === 'End') {
+        if (!xs.length) return;
+        const dir = e.key === 'ArrowRight' ? 1 : -1;
+        if (e.key === 'Home') at = 0;
+        else if (e.key === 'End') at = xs.length - 1;
+        else {
+          if (at < 0) {
+            const cur = u.cursor.left;
+            const x = cur !== undefined && cur >= 0 ? u.posToVal(cur, 'x') : u.scales.x.min ?? full[0];
+            at = xs.findIndex((v) => v >= x);
+            if (at < 0) at = xs.length - 1;
+            else if (dir < 0) at = Math.max(0, at - 1);
+          } else at = Math.min(xs.length - 1, Math.max(0, at + dir));
+        }
+        moveTo(xs[at]!);
+        e.preventDefault();
+      } else if (e.key === '+' || e.key === '=' || e.key === '-' || e.key === '_') {
+        const a = u.scales.x.min ?? full[0];
+        const b = u.scales.x.max ?? full[1];
+        const mid = at >= 0 && xs[at] !== undefined ? xs[at]! : (a + b) / 2;
+        const k = e.key === '+' || e.key === '=' ? 0.6 : 1 / 0.6;
+        const lo = Math.max(full[0], mid - (mid - a) * k);
+        const hi = Math.min(full[1], mid + (b - mid) * k);
+        if (hi - lo > (full[1] - full[0]) * 0.005) u.setScale('x', {min: lo, max: hi});
+        e.preventDefault();
+      }
     };
     el.addEventListener('keydown', onKey);
 
@@ -429,7 +548,7 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
       // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex, jsx-a11y/no-noninteractive-element-interactions
       tabIndex={0}
       role="application"
-      aria-label={`${fig.title}. Drag to zoom, Escape resets.`}
+      aria-label={`${fig.title}. Left and right arrows read values, plus and minus zoom, Escape resets.`}
       data-canvas-bg={CANVAS[theme]}
     />
   );

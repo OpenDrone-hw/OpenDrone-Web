@@ -1,8 +1,8 @@
 import {createContext, useCallback, useContext, useEffect, useState, type ReactNode} from 'react';
 import type {Theme} from '~/lib/testing/palette';
-import {summarize} from '~/lib/testing/select';
-import type {TestingIndex} from '~/lib/testing/types';
+import {useNonce} from '~/lib/csp';
 import {SITE_ORIGIN} from '~/lib/seo';
+import type {TestingIndex} from '~/lib/testing/types';
 import '../../brand/testing/fonts.css';
 import '../../brand/testing/tokens.css';
 import '../../brand/testing/topbar.css';
@@ -10,29 +10,42 @@ import '../../styles/testing.css';
 
 /**
  * The Incutec testing workspace: its own page, outside the storefront layout.
- * Light by default; the choice is kept in this browser only. Brand files are
- * vendored from the design repository and scoped to `.testing-workspace`.
+ * Light unless the visitor chose otherwise here or on the storefront (`od-theme`).
+ * The choice is kept in this browser only. A tiny script in front of the page
+ * applies a stored dark choice before first paint, so there is no light flash.
+ * Brand files are vendored from the design repository and scoped to
+ * `.testing-workspace`.
  */
 
 const THEME_KEY = 'incutec-testing-theme';
+const STORE_KEY = 'od-theme';
 
 const ThemeContext = createContext<Theme>('light');
 export const useWorkspaceTheme = () => useContext(ThemeContext);
 
-function readTheme(): Theme {
+function stored(): Theme | null {
   try {
-    return localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light';
+    for (const k of [THEME_KEY, STORE_KEY]) {
+      const v = localStorage.getItem(k);
+      if (v === 'dark' || v === 'light') return v;
+    }
   } catch {
-    return 'light';
+    /* storage can be blocked */
   }
+  return null;
 }
 
+const PRE_PAINT = `(function(){try{var t=localStorage.getItem(${JSON.stringify(THEME_KEY)});if(t!=='dark'&&t!=='light')t=localStorage.getItem(${JSON.stringify(STORE_KEY)});if(t==='dark'||t==='light')document.currentScript.parentElement.setAttribute('data-theme',t)}catch(e){}})()`;
+
 export function WorkspaceShell({index, children}: {index: TestingIndex; children: ReactNode}) {
+  const nonce = useNonce();
   const [theme, setTheme] = useState<Theme>('light');
   const [active, setActive] = useState<string>('');
-  const sum = summarize(index);
 
-  useEffect(() => setTheme(readTheme()), []);
+  useEffect(() => {
+    const t = stored();
+    if (t) setTheme(t);
+  }, []);
 
   const toggle = useCallback(() => {
     setTheme((t) => {
@@ -48,8 +61,8 @@ export function WorkspaceShell({index, children}: {index: TestingIndex; children
 
   // Mark the product whose section is under the bar.
   useEffect(() => {
-    const els = index.products
-      .map((p) => document.getElementById(p.handle))
+    const els = [...index.products.map((p) => p.handle), 'log']
+      .map((id) => document.getElementById(id))
       .filter((e): e is HTMLElement => Boolean(e));
     if (!els.length || !('IntersectionObserver' in window)) return;
     const io = new IntersectionObserver(
@@ -62,22 +75,31 @@ export function WorkspaceShell({index, children}: {index: TestingIndex; children
     return () => io.disconnect();
   }, [index.products]);
 
+  // Keep the active chip in view in the scrolling nav on a phone.
+  useEffect(() => {
+    document.querySelector('.tw-bar [aria-current="location"]')?.scrollIntoView?.({inline: 'center', block: 'nearest'});
+  }, [active]);
+
   return (
     <ThemeContext.Provider value={theme}>
-      <div className="testing-workspace" data-theme={theme}>
-        <header className="incutec-topbar tw-bar" data-variant="stroke">
+      <div className="testing-workspace" data-theme={theme} suppressHydrationWarning>
+        <script nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{__html: PRE_PAINT}} />
+        <header className="incutec-topbar tw-bar">
+          <span className="incutec-topbar__line" />
           <a className="incutec-topbar__brand" href="/testing" aria-label="Incutec testing">
             <img className="incutec-topbar__wordmark incutec-topbar__wordmark--light" src="/brand/wordmark-light.svg" alt="Incutec" />
             <img className="incutec-topbar__wordmark incutec-topbar__wordmark--dark" src="/brand/wordmark-dark.svg" alt="" />
           </a>
-          <span className="incutec-topbar__line" />
+          <span className="tw-bar-title">Testing</span>
           <nav className="incutec-topbar__nav" aria-label="Products">
-            <span className="tw-bar-title">Testing</span>
             {index.products.map((p) => (
               <a key={p.handle} href={`#${p.handle}`} aria-current={active === p.handle ? 'location' : undefined}>
                 {p.name}
               </a>
             ))}
+            <a href="#log" aria-current={active === 'log' ? 'location' : undefined}>
+              Log
+            </a>
           </nav>
           <div className="incutec-topbar__end">
             <button type="button" className="tw-btn" onClick={toggle} aria-pressed={theme === 'dark'}>
@@ -88,15 +110,7 @@ export function WorkspaceShell({index, children}: {index: TestingIndex; children
             </a>
           </div>
         </header>
-        <main className="tw-main">
-          <p className="tw-summary" aria-label="Summary">
-            <span>{sum.products} products</span>
-            <span>{sum.figures} figures</span>
-            <span>{sum.runs} runs</span>
-            <span>last run {sum.lastRun}</span>
-          </p>
-          {children}
-        </main>
+        <main className="tw-main">{children}</main>
         <footer className="tw-foot">
           <span>Single units. Read the caveats.</span>
           <a href="/testing/index.json">index.json</a>

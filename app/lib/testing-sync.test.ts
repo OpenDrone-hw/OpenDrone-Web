@@ -600,11 +600,12 @@ describe('public/testing', () => {
     assert.match(setup, /same motor on two different 6S packs/);
     assert.match(setup, /reversed so the propeller pulls/);
   });
-  it('draws the thrust figure from over 2000 points and its holds as markers with a band', () => {
+  it('draws the thrust figure from one frame per rpm reading and its holds as markers with a band', () => {
     const f = figs.get('openmotor-thrust-vs-rpm');
     const frames = f.series.filter((s: any) => s.kind === 'frames');
     const holds = f.series.filter((s: any) => s.kind === 'hold');
-    assert.ok(frames.some((s: any) => s.x.length > 2000));
+    for (const s of frames) assert.equal(new Set(s.x).size, s.x.length);
+    assert.ok(f.fit && f.fit.n >= 3);
     assert.equal(holds.length, 2);
     for (const h of holds) assert.ok(h.lo && h.hi && h.lo.length === h.x.length);
   });

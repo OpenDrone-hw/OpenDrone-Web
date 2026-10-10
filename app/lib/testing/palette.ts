@@ -80,7 +80,7 @@ export function seriesColorCss(quantity: string, variant: number): string {
   return `light-dark(${seriesColor(quantity, variant, 'light')}, ${seriesColor(quantity, variant, 'dark')})`;
 }
 
-/** Domain tag colour (the 3 px bar over a product section and the chip dot). */
+/** Quantity colour of a figure's domain, for the small dot beside a figure's run line. */
 export const DOMAIN_QUANTITY: Record<string, Quantity> = {
   THR: 'thrust',
   PWR: 'current',
@@ -157,8 +157,8 @@ export function assignStyles(
       variant: variant % 3,
       dash: DASHES[variant % 3]!,
       marker: MARKERS[variant % 3]!,
-      width: frames ? 1.25 : 2,
-      opacity: frames ? 0.7 : 1,
+      width: frames ? 1 : 1.5,
+      opacity: frames ? 0.22 : 1,
     };
   });
   return out;

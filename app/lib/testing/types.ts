@@ -48,6 +48,20 @@ export type Fig = {
   series: FigSeries[];
   /** x of the point the finding is drawn against, when the view sets one. */
   callout_x?: number;
+  /** One record per throttle hold of a thrust stand figure. */
+  holds?: Array<{run: string; throttle: number; t0: number; t1: number; n: number}>;
+  /** Quadratic law through the holds at or above a throttle: y = k (x / 1000)^2. */
+  fit?: FigFit;
+};
+
+export type FigFit = {
+  k: number;
+  unit: string;
+  fromThrottle: number;
+  x0: number;
+  x1: number;
+  maxMiss: number;
+  n: number;
 };
 
 export type RunInfo = {date: string; setup: string[]; chip: string};
@@ -77,7 +91,13 @@ export type LogEntry = {
 };
 
 export type TestingIndex = {
-  products: Array<{handle: string; name: string; figures: string[]}>;
+  products: Array<{
+    handle: string;
+    name: string;
+    /** What the figures cover and what is not measured yet. */
+    coverage?: {done: string[]; gaps?: string[]};
+    figures: string[];
+  }>;
   runs: Record<string, RunInfo>;
   figures: Record<string, FigSummary>;
   log: LogEntry[];

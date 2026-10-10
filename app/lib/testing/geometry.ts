@@ -1,5 +1,5 @@
 import {assignStyles, type SeriesStyle, type Theme} from './palette.ts';
-import {figureDomains, fmtTick, fmtValue, niceTicks, tickStep, type Domain} from './scale.ts';
+import {evenTicks, figureDomains, fmtTick, niceTicks, tickStep, type Domain} from './scale.ts';
 import type {Fig, FigSeries} from './types.ts';
 
 /**
@@ -12,7 +12,7 @@ export type GeomOptions = {
   w: number;
   h: number;
   theme?: Theme;
-  /** Card: only the end values on each axis, no grid. */
+  /** Product-page card: 3 to 4 ticks per axis, shorter margins, no second axis title room. */
   compact?: boolean;
   hidden?: ReadonlySet<string>;
   xWindow?: Domain;
@@ -41,9 +41,15 @@ export type Geometry = {
   yTicks: Tick[];
   y2Ticks: Tick[];
   series: GeomSeries[];
+  /** The fitted law as path data, when the figure has one. */
+  fit?: string;
+  /** Value label at the last point of the first series that has points. */
+  end?: {x: number; y: number; text: string};
 };
 
-export const TICK_PX = 12;
+export const TICK_PX = 11;
+/** Left gutter, shared by every figure so plots of one row line up. */
+export const GUTTER_L = 52;
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
 
@@ -53,28 +59,29 @@ export function buildGeometry(fig: Fig, opt: GeomOptions): Geometry {
   const dom = figureDomains(fig, {hidden: opt.hidden, xWindow: opt.xWindow});
   const hasY2 = Boolean(dom.y2);
   const m = compact
-    ? {l: 44, r: 10, t: 8, b: 24}
-    : {l: 58, r: hasY2 ? 58 : 14, t: 10, b: 38};
+    ? {l: GUTTER_L, r: hasY2 ? GUTTER_L : 16, t: 12, b: 40}
+    : {l: GUTTER_L, r: hasY2 ? GUTTER_L : 14, t: 10, b: 38};
   const plot = {x0: m.l, y0: m.t, x1: w - m.r, y1: h - m.b};
   const sx = (v: number) => plot.x0 + ((v - dom.x[0]) / (dom.x[1] - dom.x[0] || 1)) * (plot.x1 - plot.x0);
   const sy = (v: number, d: Domain) => plot.y1 - ((v - d[0]) / (d[1] - d[0] || 1)) * (plot.y1 - plot.y0);
   const styles = assignStyles(fig.series, theme);
 
-  const mkTicks = (d: Domain, count: number, scale: (v: number) => number): Tick[] => {
-    if (compact) {
-      return [d[0], d[1]].map((v) => ({p: scale(v), label: Math.abs(v) >= 10000 ? `${Math.round(v / 100) / 10}k` : fmtValue(v)}));
-    }
-    const t = niceTicks(d[0], d[1], count);
+  const mkTicks = (d: Domain, count: number, scale: (v: number) => number, even?: number): Tick[] => {
+    const t = even ? evenTicks(d[0], d[1], even) : niceTicks(d[0], d[1], count);
     const step = tickStep(t);
     return t.map((v) => ({p: scale(v), label: fmtTick(v, step)}));
   };
-  const xTicks = mkTicks(dom.x, Math.max(3, Math.floor((plot.x1 - plot.x0) / 90)), sx);
-  const yTicks = mkTicks(dom.y, Math.max(3, Math.floor((plot.y1 - plot.y0) / 44)), (v) => sy(v, dom.y));
-  const y2Ticks = dom.y2 ? mkTicks(dom.y2, 5, (v) => sy(v, dom.y2!)) : [];
+  const yCount = Math.min(compact ? 4 : 5, Math.max(3, Math.floor((plot.y1 - plot.y0) / 56)));
+  const xTicks = mkTicks(dom.x, compact ? 4 : Math.max(3, Math.min(8, Math.floor((plot.x1 - plot.x0) / 100))), sx);
+  const yTicks = mkTicks(dom.y, yCount, (v) => sy(v, dom.y), dom.n);
+  const y2Ticks = dom.y2 ? mkTicks(dom.y2, yCount, (v) => sy(v, dom.y2!), dom.n) : [];
 
   const series: GeomSeries[] = [];
+  let end: Geometry['end'];
   for (const s of fig.series) {
     if (opt.hidden?.has(s.id)) continue;
+    // Logged frames are drawn by the interactive chart only.
+    if (s.kind === 'frames') continue;
     const d = s.axis === 'y2' && dom.y2 ? dom.y2 : dom.y;
     const dots: Array<[number, number]> = [];
     const bars: Array<[number, number, number]> = [];
@@ -104,6 +111,15 @@ export function buildGeometry(fig: Fig, opt: GeomOptions): Geometry {
         bars.push([px, r1(sy(lo, d)), r1(sy(hi, d))]);
       }
     }
+    if (!end && s.x.length) {
+      const i = s.y.length - 1 - [...s.y].reverse().findIndex((v) => v !== null && v !== undefined);
+      const xv = s.x[i];
+      const yv = s.y[i];
+      if (xv !== null && xv !== undefined && yv !== null && yv !== undefined && i >= 0) {
+        const ax = s.axis === 'y2' ? fig.axes.y2 : fig.axes.y;
+        end = {x: r1(sx(xv)), y: r1(sy(yv, d)), text: `${fmtEnd(yv)} ${ax?.unit ?? ''}`.trim()};
+      }
+    }
     series.push({
       id: s.id,
       label: s.label,
@@ -114,7 +130,23 @@ export function buildGeometry(fig: Fig, opt: GeomOptions): Geometry {
       bars,
     });
   }
-  return {w, h, plot, xTicks, yTicks, y2Ticks, series};
+  let fit: string | undefined;
+  if (fig.fit && !opt.xWindow) {
+    const {k, x0, x1} = fig.fit;
+    let d = '';
+    for (let i = 0; i <= 32; i++) {
+      const xv = x0 + ((x1 - x0) * i) / 32;
+      d += `${i ? 'L' : 'M'}${r1(sx(xv))} ${r1(sy(k * (xv / 1000) ** 2, dom.y))}`;
+    }
+    fit = d;
+  }
+  return {w, h, plot, xTicks, yTicks, y2Ticks, series, fit, end};
+}
+
+/** Four significant digits, no exponent, for the label at the end of a line. */
+function fmtEnd(v: number): string {
+  const a = Math.abs(v);
+  return a >= 1000 ? String(Math.round(v)) : a >= 100 ? String(Math.round(v * 10) / 10) : String(Math.round(v * 100) / 100);
 }
 
 /** Path data for a marker of the given shape, centred on (x, y), radius r. */

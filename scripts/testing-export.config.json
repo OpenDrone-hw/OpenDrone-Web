@@ -17,19 +17,53 @@
   "products": {
     "openmotor": {
       "name": "OpenMotor",
-      "order": 1
+      "order": 1,
+      "coverage": {
+        "done": [
+          "Thrust",
+          "Rotor speed",
+          "Pack voltage",
+          "ESC die temperature"
+        ],
+        "gaps": [
+          "Current",
+          "Power",
+          "Efficiency"
+        ]
+      }
     },
     "openesc": {
       "name": "OpenESC",
-      "order": 2
+      "order": 2,
+      "coverage": {
+        "done": [
+          "Die temperature ramp",
+          "Current sense against a clamp"
+        ],
+        "gaps": [
+          "Current sense after the rev3.2 input network",
+          "Continuous current rating"
+        ]
+      }
     },
     "openfc-lite": {
       "name": "OpenFC-Lite",
-      "order": 3
+      "order": 3,
+      "coverage": {
+        "done": [
+          "ESC die temperature in flight"
+        ]
+      }
     },
     "openrx": {
       "name": "OpenRX",
-      "order": 4
+      "order": 4,
+      "coverage": {
+        "done": [
+          "Link quality and signal strength against distance",
+          "Antenna use"
+        ]
+      }
     },
     "openframe": {
       "name": "OpenFrame",

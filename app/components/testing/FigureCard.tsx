@@ -1,5 +1,6 @@
 import {useCallback, useEffect, useRef, useState, type ComponentType} from 'react';
-import {domainColorCss} from '~/lib/testing/palette';
+import {figureCsv} from '~/lib/testing/export';
+import {fmtValue} from '~/lib/testing/scale';
 import type {Domain} from '~/lib/testing/scale';
 import type {Fig, FigSummary, RunInfo} from '~/lib/testing/types';
 import {Disclosure} from './Disclosure';
@@ -8,11 +9,14 @@ import {useWorkspaceTheme} from './WorkspaceShell';
 
 type PanelProps = React.ComponentProps<typeof import('./ChartPanel').default>;
 
-function plotHeight(size: 'wide' | 'half'): number {
-  if (typeof window === 'undefined') return size === 'wide' ? 460 : 380;
-  const w = window.innerWidth;
-  if (w < 640) return 300;
-  return size === 'wide' ? (w < 1100 ? 400 : 480) : 380;
+/**
+ * Plot height from the width it is drawn at: wide on a desktop card, squarer on
+ * a phone, so axis text stays the same size next to the data at every width.
+ */
+function plotHeight(width: number, size: 'wide' | 'half'): number {
+  if (width < 520) return Math.round(Math.min(340, Math.max(260, width * 0.85)));
+  if (size === 'wide') return Math.round(Math.min(520, Math.max(340, width * 0.4)));
+  return Math.round(Math.min(420, Math.max(300, width * 0.58)));
 }
 
 /** `?f=<id>&x0=&x1=` for this figure, or null. */
@@ -54,6 +58,7 @@ export function FigureCard({
   run,
   preview,
   size,
+  showRun,
 }: {
   id: string;
   summary: FigSummary;
@@ -61,13 +66,16 @@ export function FigureCard({
   /** Thinned figure for the server-rendered SVG. */
   preview: Fig;
   size: 'wide' | 'half';
+  /** The product has more than one run, so the card names its own. */
+  showRun: boolean;
 }) {
   const theme = useWorkspaceTheme();
   const root = useRef<HTMLElement>(null);
   const [full, setFull] = useState<Fig | null>(null);
   const [Panel, setPanel] = useState<ComponentType<PanelProps> | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [height, setHeight] = useState(size === 'wide' ? 460 : 380);
+  const plotEl = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState(size === 'wide' ? 440 : 380);
   const [wide, setWide] = useState(false);
   const started = useRef(false);
 
@@ -92,10 +100,14 @@ export function FigureCard({
   }, [id]);
 
   useEffect(() => {
-    setHeight(plotHeight(size));
-    const onResize = () => setHeight(plotHeight(size));
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    const el = plotEl.current;
+    if (!el) return;
+    const update = () => setHeight(plotHeight(el.clientWidth, size));
+    update();
+    if (!('ResizeObserver' in window)) return;
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
   }, [size]);
 
   useEffect(() => {
@@ -143,11 +155,22 @@ export function FigureCard({
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   }, [full, id, theme]);
 
+  const csv = useCallback(() => {
+    if (!full) return;
+    const blob = new Blob([figureCsv(full, run)], {type: 'text/csv;charset=utf-8'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${id}.csv`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }, [full, id, run]);
+
   useEffect(() => {
     if (!wide) return;
     const r = document.documentElement;
     r.style.overflow = 'hidden';
     const lock = async () => {
+      if (!window.matchMedia('(pointer: coarse)').matches) return;
       try {
         await document.documentElement.requestFullscreen?.();
         await (screen.orientation as unknown as {lock?: (o: string) => Promise<void>}).lock?.('landscape');
@@ -165,30 +188,33 @@ export function FigureCard({
     };
   }, [wide]);
 
-  const setup = run?.setup ?? [];
-  const date = run?.date ?? '';
   const fig = full ?? preview;
   const startRange = typeof window === 'undefined' ? null : readUrlRange(id);
+  const hasHold = fig.series.some((s) => s.kind === 'hold');
+  const hasFrames = fig.series.some((s) => s.kind === 'frames');
+  const y2 = fig.axes.y2;
+  const caption = [
+    hasHold ? 'Markers: hold medians; bars: 25th to 75th percentile.' : null,
+    hasFrames ? 'Dots: logged frames.' : null,
+    fig.fit
+      ? `Dashed: ${fmtValue(fig.fit.k)} ${fig.fit.unit} from ${fig.fit.fromThrottle} percent throttle up, ${fig.fit.n} holds, largest miss ${fig.fit.maxMiss} ${fig.axes.y.unit}.`
+      : null,
+    y2 ? `Left: ${fig.axes.y.label.toLowerCase()}. Right: ${y2.label.toLowerCase()}.` : null,
+  ].filter(Boolean);
 
   return (
     <article className="tw-card" id={id} ref={root} data-size={size} data-ready={full && Panel ? '1' : '0'}>
       <header className="tw-card-head">
         <h3>{summary.title}</h3>
-        <ul className="tw-chips" aria-label="Run">
-          <li className="tw-chip tw-chip-mono">{summary.runId}</li>
-          <li className="tw-chip tw-chip-mono">{date}</li>
-          <li className="tw-chip tw-chip-mono tw-chip-domain" style={{['--dot' as string]: domainColorCss(summary.domain)}}>
-            {summary.domain}
-          </li>
-          <li className="tw-chip tw-chip-mono">
-            {summary.caveats} caveats{summary.flagged ? ' !' : ''}
-          </li>
-        </ul>
-        <p className="tw-setup-chip">{summary.chip}</p>
+        {showRun ? (
+          <p className="tw-meta">
+            {summary.runId.replace(/-\d{4}-\d{2}-\d{2}$/, '')} <span aria-hidden="true">/</span> {run?.date ?? ''}
+          </p>
+        ) : null}
         <p className="tw-finding">{summary.finding}</p>
       </header>
 
-      <div className="tw-plot" style={{minHeight: height + 120}}>
+      <div className="tw-plot" ref={plotEl} style={{minHeight: height + 64}}>
         {full && Panel ? (
           <>
             <Panel
@@ -197,26 +223,17 @@ export function FigureCard({
               height={height}
               initialRange={startRange}
               onRange={(r) => writeUrlRange(id, r)}
-              extra={
-                <div className="tw-tools">
-                  <button type="button" className="tw-btn" onClick={() => void download()}>
-                    Download SVG
-                  </button>
-                  <button type="button" className="tw-btn tw-wide-btn" onClick={() => setWide(true)}>
-                    Open wide view
-                  </button>
-                </div>
-              }
+              onExpand={() => setWide(true)}
+              onDownload={() => void download()}
+              onCsv={csv}
             />
             {wide ? (
               <div className="tw-wide" role="dialog" aria-label={`${summary.title}, wide view`}>
-                <div className="tw-wide-bar">
-                  <strong>{summary.title}</strong>
-                  <button type="button" className="tw-btn" onClick={() => setWide(false)}>
-                    Close
-                  </button>
-                </div>
-                <Panel fig={full} theme={theme} height={Math.max(220, window.innerHeight - 190)} />
+                <button type="button" className="tw-close" onClick={() => setWide(false)} aria-label="Close wide view">
+                  <span aria-hidden="true">x</span>
+                </button>
+                <h3 className="tw-wide-title">{summary.title}</h3>
+                <Panel fig={full} theme={theme} height={Math.max(240, window.innerHeight - 150)} />
               </div>
             ) : null}
           </>
@@ -231,8 +248,9 @@ export function FigureCard({
           <StaticFigure fig={fig} width={size === 'wide' ? 1200 : 720} height={size === 'wide' ? 480 : 380} className="tw-static" />
         )}
       </div>
+      {caption.length ? <p className="tw-caption">{caption.join(' ')}</p> : null}
 
-      <Disclosure caveats={fig.caveats} setup={setup} reduction={fig.reduction} cite={fig.cite} />
+      <Disclosure fig={fig} />
     </article>
   );
 }

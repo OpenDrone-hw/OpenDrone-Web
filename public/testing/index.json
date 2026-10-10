@@ -3,21 +3,35 @@
     {
       "handle": "openmotor",
       "name": "OpenMotor",
+      "coverage": {
+        "done": ["Thrust", "Rotor speed", "Pack voltage", "ESC die temperature"],
+        "gaps": ["Current", "Power", "Efficiency"]
+      },
       "figures": ["openmotor-thrust-vs-rpm", "openmotor-hold-rpm", "openmotor-hold-thrust", "openmotor-hold-pack-voltage", "openmotor-hold-esc-temp"]
     },
     {
       "handle": "openesc",
       "name": "OpenESC",
+      "coverage": {
+        "done": ["Die temperature ramp", "Current sense against a clamp"],
+        "gaps": ["Current sense after the rev3.2 input network", "Continuous current rating"]
+      },
       "figures": ["openesc-shunt-vs-clamp", "openesc-die-temp-ramp"]
     },
     {
       "handle": "openfc-lite",
       "name": "OpenFC-Lite",
+      "coverage": {
+        "done": ["ESC die temperature in flight"]
+      },
       "figures": ["openfc-lite-flight-die-temp"]
     },
     {
       "handle": "openrx",
       "name": "OpenRX",
+      "coverage": {
+        "done": ["Link quality and signal strength against distance", "Antenna use"]
+      },
       "figures": ["openrx-rssi-vs-distance", "openrx-lq-vs-distance", "openrx-lq-vs-rssi", "openrx-antenna-use"]
     }
   ],
@@ -39,7 +53,7 @@
     },
     "drv-04-2026-10-10": {
       "date": "2026-10-10",
-      "setup": ["1 OpenMotor-2306 on a 10 kg load cell, ESC reversed so the propeller pulls", "Two runs at 13:16 and 13:25 UTC, the same motor on two different 6S packs", "Load cell calibrated against a 1726 g reference mass (207.4 counts/g, about 0.7 percent)", "Ten throttle holds of about 4 s, 10 to 100 percent", "Rotor speed is ESC eRPM divided by the 7 pole pairs stored in the capture"],
+      "setup": ["1 OpenMotor-2306 on a 10 kg load cell, ESC reversed so the propeller pulls (operator-stated, not recorded in the capture)", "Two runs at 13:16 and 13:25 UTC, the same motor on two different 6S packs", "Load cell calibrated against a 1726 g reference mass (207.4 counts/g, about 0.7 percent)", "Ten throttle holds of about 4 s, 10 to 100 percent", "Rotor speed is ESC eRPM divided by the 7 pole pairs stored in the capture", "Run state: draft, not validated; no scope or clamp record."],
       "chip": "Same OpenMotor-2306, two 6S packs, cell calibrated to 1726 g, ESC reversed"
     },
     "rx-13-2026-07-11": {
@@ -90,7 +104,7 @@
     },
     "openmotor-hold-esc-temp": {
       "title": "ESC temperature per throttle hold",
-      "finding": "The hottest ESC die reading rises from 44 C at 10 percent throttle to 72 C at 100 percent, in the 13:25 UTC run.",
+      "finding": "Channel 1 die temperature rises from 44 C at 10 percent throttle to 72 C at 100 percent in the 13:25 UTC run.",
       "product": "openmotor",
       "tier": null,
       "featured": false,
@@ -212,7 +226,7 @@
       "date": "2026-10-10",
       "product": "openmotor",
       "tested": "Thrust map on the new thrust stand: ten throttle holds from 10 to 100 percent.",
-      "saw": "In the 13:25 UTC run thrust reached 1496 g at 100 percent throttle on the OpenMotor-2306. In the earlier 13:16 UTC run a pack was pulled during the 80 percent step and the throttle profile kept stepping up to full.",
+      "saw": "In the 13:25 UTC run thrust reached 1496 g at 100 percent throttle on the OpenMotor-2306. In the earlier 13:16 UTC run pack voltage read 0 V from the 80 percent step, cause not recorded, and the throttle profile kept stepping up to full.",
       "changed": "The bench controller now aborts the run when the pack is pulled, and the 13:25 UTC run was recorded with that change. The thrust stand test plans no longer include a current cut, because current sense on the stand is not calibrated.",
       "figureId": "openmotor-thrust-vs-rpm"
     },

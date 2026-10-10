@@ -32,10 +32,13 @@ describe('published figures', () => {
     assert.match(setup, /207\.4 counts\/g/);
   });
 
-  it('the thrust figure carries over 2000 points and holds are markers only', () => {
+  it('the thrust figure has one frame per rotor speed reading and holds are markers only', () => {
     const f = fig('openmotor-thrust-vs-rpm');
     const frames = f.series.filter((s) => s.kind === 'frames');
-    assert.ok(Math.max(...frames.map((s) => s.x.length)) > 2000);
+    for (const s of frames) {
+      assert.equal(new Set(s.x).size, s.x.length, 'no two frames share an rpm value');
+    }
+    assert.ok(f.fit && f.fit.k > 1.6 && f.fit.k < 1.8, 'the 1.7 g per krpm squared claim is drawn');
     const g = buildGeometry(f, {w: 1200, h: 480});
     for (const s of g.series.filter((q) => q.kind === 'hold')) {
       assert.equal(s.d, undefined, 'no connecting line');
@@ -104,5 +107,14 @@ describe('selection', () => {
     assert.equal(pickFeatured(index, 'openesc', '30x30'), null);
     assert.equal(pickFeatured(index, 'openesc', '20x20')?.id, 'openesc-shunt-vs-clamp');
     assert.equal(summarize(index).figures, Object.keys(index.figures).length);
+  });
+
+  it('both y axes of a dual-axis figure share their gridlines', () => {
+    const f = fig('openesc-die-temp-ramp');
+    const d = figureDomains(f);
+    assert.ok(d.n && d.y2);
+    assert.ok(d.y2![0] >= 0, 'no empty negative current range');
+    const g = buildGeometry(f, {w: 1000, h: 400});
+    assert.deepEqual(g.yTicks.map((t) => t.p), g.y2Ticks.map((t) => t.p));
   });
 });

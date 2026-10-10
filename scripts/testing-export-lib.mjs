@@ -166,6 +166,28 @@ export function decimate(points, maxPoints) {
   return [...live.filter((p) => keep.has(p)), ...nulls].sort((a, b) => a.x - b.x);
 }
 
+/**
+ * Frames that share one x. Rotor speed telemetry updates far slower than the
+ * load cell samples, so the same rpm value is paired with many thrust samples
+ * and a line through them is a sawtooth that no motor produced. Points must be
+ * sorted by x; each run of equal x becomes one point at the median y.
+ */
+export function collapseSameX(points) {
+  const out = [];
+  let i = 0;
+  while (i < points.length) {
+    let j = i;
+    while (j + 1 < points.length && points[j + 1].x === points[i].x) j++;
+    if (j === i) out.push(points[i]);
+    else {
+      const ys = points.slice(i, j + 1).map((p) => p.y).filter((v) => v !== null);
+      out.push({...points[i], y: ys.length ? median(ys) : null});
+    }
+    i = j + 1;
+  }
+  return out;
+}
+
 /** Share of samples with the flag set, per x bin of width `bin`. */
 export function shareByBin(points, bin, minCount) {
   const groups = new Map();
@@ -442,6 +464,9 @@ export function citeOf(citations) {
  * Returns {fig, errors, run, notes}: errors are gate failures, notes are facts
  * for the log.
  */
+const axesYUnit = (P) => (P.axes?.y?.unit === 'g' ? 'g' : P.axes?.y?.unit || '');
+const axesXUnit = (P) => (P.axes?.x?.unit === 'rpm' ? 'krpm' : P.axes?.x?.unit || '');
+
 export function buildFigure(view, resp, benches, cfg) {
   const P = view.publish;
   const errors = validatePublish(view, cfg).map((m) => `${view.id}: ${m}`);
@@ -510,6 +535,7 @@ export function buildFigure(view, resp, benches, cfg) {
     let pts = raw.get(s.id);
     if (display.share) pts = shareByBin(pts, display.share.bin, display.share.minCount);
     pts = clip(pts, lo, hi).sort((a, b) => a.x - b.x);
+    if (kindOfApi === 'frames') pts = collapseSameX(pts);
     if (kindOfApi !== 'hold' && !s.band) pts = decimate(pts, cfg.maxPoints);
     if (!needFrames && kindOfApi !== 'hold') continue;
     const base = meta.label || s.name || s.id;
@@ -522,6 +548,7 @@ export function buildFigure(view, resp, benches, cfg) {
   // Stand holds from the capture files.
   const holdRecords = [];
   const holdCites = [];
+  const fitPts = [];
   if (holds) {
     for (const s of drawn) {
       if (hide.has(s.id)) continue;
@@ -545,12 +572,32 @@ export function buildFigure(view, resp, benches, cfg) {
         entry(`${s.id}.hold`, `${meta.label || s.name || s.id}, hold median, last ${holds.seconds} s`, meta.quantity || quantityOf(s.field), meta.pack, 'hold', s.axis, scaleX(pts), true),
       );
       for (const h of got) {
+        if (P.fit && h.thr / 10 >= P.fit.fromThrottle) fitPts.push([h.x * xs, h.y]);
         if (!holdRecords.some((r) => r.run === (meta.pack || run) && r.t0 === sig5(h.t0))) {
           holdRecords.push({run: meta.pack || run, throttle: sig5(h.thr / 10), t0: sig5(h.t0), t1: sig5(h.t1), n: h.n});
         }
       }
       if (got.length) holdCites.push(`${bench.folder}#L${Math.min(...got.map((h) => h.l0))}-L${Math.max(...got.map((h) => h.l1))}`);
     }
+  }
+
+  // Quadratic law y = k (x / 1000)^2 through the origin, least squares over the
+  // holds at or above a throttle, both runs pooled. Published with its range and
+  // its largest miss, so the page can draw it and the claim can be checked.
+  let fit = null;
+  if (P.fit && fitPts.length >= 3) {
+    const u = fitPts.map(([x, y]) => [x / 1000, y]);
+    const k = u.reduce((a, [x, y]) => a + x * x * y, 0) / u.reduce((a, [x]) => a + x ** 4, 0);
+    const miss = Math.max(...u.map(([x, y]) => Math.abs(y - k * x * x)));
+    fit = {
+      k: Number(k.toPrecision(3)),
+      unit: `${axesYUnit(P)} per ${axesXUnit(P)} squared`,
+      fromThrottle: P.fit.fromThrottle,
+      x0: sig5(Math.min(...fitPts.map((p) => p[0]))),
+      x1: sig5(Math.max(...fitPts.map((p) => p[0]))),
+      maxMiss: Number(miss.toPrecision(2)),
+      n: fitPts.length,
+    };
   }
 
   // Checks run on the numbers as published.
@@ -586,6 +633,7 @@ export function buildFigure(view, resp, benches, cfg) {
   else if (display.share) reduction.push(`Share of logged samples with the flag set, in ${display.share.bin} ${axes.x.unit} bins of at least ${display.share.minCount} samples.`);
   else if (display.window) reduction.push(`Logged values from ${display.window[0]} s to ${display.window[1]} s.`);
   else reduction.push(view.reduce === 'frames' ? 'Logged frames; frames in throttle or speed transients are excluded.' : 'Logged values, unreduced.');
+  if (kindOfApi === 'frames' && holds) reduction.push('Frames that share one rotor speed reading are reduced to their median, because rotor speed telemetry updates slower than the load cell.');
   if (holds) reduction.push(`Hold markers: median of the last ${holds.seconds} s of each throttle hold; the band is the 25th to 75th percentile. Holds with no pack voltage reading are dropped.`);
   if (display.from !== undefined || display.cutWhen) reduction.push(`Shown from ${display.from ?? 0} s${cutX !== null ? ' to the loss of bus voltage telemetry' : ''}.`);
   if (out.some((s) => s.kind !== 'hold' && s.x.length > cfg.maxPoints * 0.98)) reduction.push(`Over ${cfg.maxPoints} points are thinned to the minimum and maximum of each x bucket.`);
@@ -609,6 +657,7 @@ export function buildFigure(view, resp, benches, cfg) {
     axes,
     series: out,
     holds: holdRecords,
+    ...(fit ? {fit} : {}),
   };
 
   const hits = [];
@@ -678,6 +727,7 @@ export function buildIndex(built, logItems, cfg, builtAt) {
     .map(([handle, p]) => ({
       handle,
       name: p.name,
+      ...(p.coverage ? {coverage: p.coverage} : {}),
       figures: built
         .filter((b) => b.meta.product === handle)
         .sort((a, b) => a.meta.order - b.meta.order || a.fig.id.localeCompare(b.fig.id))

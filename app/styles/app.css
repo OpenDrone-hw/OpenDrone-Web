@@ -18976,9 +18976,8 @@ html.light .testing-card {
   color: var(--color-text-muted);
 }
 .testing-card-meta b {
-  font-weight: 600;
-  letter-spacing: var(--ls-label);
-  color: var(--color-gold-text);
+  font-weight: 500;
+  color: var(--color-text);
 }
 .testing-card h3 {
   margin: 0;
@@ -19010,10 +19009,8 @@ html.light .testing-card {
 .testing-card-link {
   display: inline-block;
   margin-top: 12px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  color: var(--color-gold-text);
+  font-size: 14px;
+  color: var(--color-text);
   text-decoration: underline;
   text-underline-offset: 3px;
 }

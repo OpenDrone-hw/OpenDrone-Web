@@ -1,10 +1,11 @@
 import type {Route} from './+types/testing';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
-import {getIndex, getPreviews} from '~/lib/testing/data.server';
+import {getIndex, getPreviews, getTiles} from '~/lib/testing/data.server';
 import {WorkspaceShell} from '~/components/testing/WorkspaceShell';
 import {ProductSection} from '~/components/testing/ProductSection';
 import {LogRow} from '~/components/testing/LogRow';
+import {Landing} from '~/components/testing/Landing';
 
 /**
  * The Incutec testing workspace. It is a page of its own: `root.tsx` renders it
@@ -20,25 +21,34 @@ export const meta: Route.MetaFunction = () =>
   });
 
 export async function loader(_args: Route.LoaderArgs) {
-  return {index: getIndex(), previews: getPreviews(240)};
+  return {index: getIndex(), previews: getPreviews(240), tiles: getTiles()};
 }
 
 export default function TestingRoute({loaderData}: Route.ComponentProps) {
-  const {index, previews} = loaderData;
+  const {index, previews, tiles} = loaderData;
   const names = Object.fromEntries(index.products.map((p) => [p.handle, p.name]));
   return (
     <WorkspaceShell index={index}>
+      <Landing index={index} tiles={tiles} />
       {index.products.map((p) => (
         <ProductSection key={p.handle} product={p} index={index} previews={previews} />
       ))}
       {index.log.length ? (
         <section className="tw-product tw-log" id="log">
           <h2>Engineering log</h2>
-          <div className="tw-log-list">
+          <p className="tw-coverage">
+            <span>Each step: what was tested, what was seen, what changed.</span>
+          </p>
+          <ol className="tw-steps">
             {index.log.map((e) => (
-              <LogRow key={e.id} entry={e} productName={names[e.product] ?? e.product} />
+              <LogRow
+                key={e.id}
+                entry={e}
+                productName={names[e.product] ?? e.product}
+                figureTitle={e.figureId ? index.figures[e.figureId]?.title : undefined}
+              />
             ))}
-          </div>
+          </ol>
         </section>
       ) : null}
     </WorkspaceShell>

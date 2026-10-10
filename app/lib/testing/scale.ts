@@ -1,4 +1,4 @@
-import type {Fig, FigSeries} from './types.ts';
+import type {AxisDef, Fig, FigSeries} from './types.ts';
 
 export type Domain = [number, number];
 
@@ -67,7 +67,51 @@ function niceRange(d: Domain, target: number, pad: number): Domain {
   return [Math.floor(lo / step + 1e-9) * step, Math.ceil(hi / step - 1e-9) * step];
 }
 
-export type Domains = {x: Domain; y: Domain; y2?: Domain};
+export type Domains = {
+  x: Domain;
+  y: Domain;
+  y2?: Domain;
+  /** Dual-axis figures: both y axes have this many intervals, so the gridlines serve both. */
+  n?: number;
+};
+
+/** `n + 1` evenly spaced ticks from lo to hi. */
+export function evenTicks(lo: number, hi: number, n: number): number[] {
+  return Array.from({length: n + 1}, (_, i) => Number((lo + ((hi - lo) * i) / n).toPrecision(12)));
+}
+
+const STEP_MANTISSAS = [1, 2, 2.5, 4, 5];
+
+/** The smallest nice step and its lower edge that fit extent `e` into n intervals. */
+function fitIntervals(e: Domain, n: number, fixedMin?: number): {lo: number; hi: number; waste: number} | null {
+  const span = e[1] - e[0] || 1;
+  const k0 = Math.floor(Math.log10(span / n)) - 1;
+  // A reading may sit up to 3 percent of the span under the lower edge, so an
+  // offset of a clamp at zero current does not cost a whole tick of empty axis.
+  const tol = fixedMin === undefined ? span * 0.03 : 0;
+  for (let k = k0; k <= k0 + 3; k++) {
+    for (const m of STEP_MANTISSAS) {
+      const step = m * 10 ** k;
+      const lo = fixedMin ?? Math.floor((e[0] + tol) / step + 1e-9) * step;
+      const hi = lo + n * step;
+      if (hi >= e[1] + span * 0.02) return {lo, hi, waste: (hi - lo) / span};
+    }
+  }
+  return null;
+}
+
+/** One interval count for both axes, chosen so the two together waste the least. */
+function alignDual(e1: Domain, e2: Domain, min1?: number, min2?: number): {y: Domain; y2: Domain; n: number} | null {
+  let best: {y: Domain; y2: Domain; n: number; cost: number} | null = null;
+  for (const n of [5, 4, 6]) {
+    const a = fitIntervals(e1, n, min1);
+    const b = fitIntervals(e2, n, min2);
+    if (!a || !b) continue;
+    const cost = a.waste + b.waste;
+    if (!best || cost < best.cost - 1e-9) best = {y: [a.lo, a.hi], y2: [b.lo, b.hi], n, cost};
+  }
+  return best;
+}
 
 function seriesY(s: FigSeries, win?: Domain): Array<number | null | undefined> {
   const out: Array<number | null | undefined> = [];
@@ -100,6 +144,18 @@ export function figureDomains(
   const xPad = (base[1] - base[0] || 1) * 0.03;
   const xFull: Domain = [ax.min ?? base[0] - xPad, ax.max ?? base[1] + xPad];
   const win = opts.xWindow;
+  const extentOf = (axis: 'y' | 'y2'): Domain | null => {
+    const group = use.filter((s) => (s.axis === 'y2') === (axis === 'y2'));
+    if (!group.length) return null;
+    return extent(group.flatMap((s) => seriesY(s, win))) ?? extent(group.flatMap((s) => seriesY(s)));
+  };
+  const e1 = extentOf('y');
+  const e2 = fig.axes.y2 ? extentOf('y2') : null;
+  const free = (d: AxisDef | undefined) => d?.max === undefined;
+  if (e1 && e2 && free(fig.axes.y) && free(fig.axes.y2)) {
+    const a = alignDual(e1, e2, fig.axes.y.min, fig.axes.y2?.min);
+    if (a) return {x: win ?? xFull, y: a.y, y2: a.y2, n: a.n};
+  }
   const yFor = (axis: 'y' | 'y2'): Domain | undefined => {
     const group = use.filter((s) => (s.axis === 'y2') === (axis === 'y2'));
     if (!group.length) return undefined;

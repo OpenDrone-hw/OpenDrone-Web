@@ -1,7 +1,7 @@
 {
   "id": "openmotor-hold-esc-temp",
   "title": "ESC temperature per throttle hold",
-  "finding": "The hottest ESC die reading rises from 44 C at 10 percent throttle to 72 C at 100 percent, in the 13:25 UTC run.",
+  "finding": "Channel 1 die temperature rises from 44 C at 10 percent throttle to 72 C at 100 percent in the 13:25 UTC run.",
   "product": "openmotor",
   "tier": null,
   "runId": "drv-04-2026-10-10",
@@ -12,7 +12,7 @@
       "text": "The 13:25 UTC run was hotter at the same throttle, on a different 6S pack; propeller and cooling are not recorded."
     },
     {
-      "text": "The die sensor is the controller's own, not a measurement of the output transistors."
+      "text": "The die reading is the maximum of four sensors, and only channel 1 is driven; at idle the four read up to 11 C apart, so it is a sensor reading, not a hot spot."
     }
   ],
   "reduction": "Logged frames; frames in throttle or speed transients are excluded. Hold markers: median of the last 2 s of each throttle hold; the band is the 25th to 75th percentile. Holds with no pack voltage reading are dropped.",
