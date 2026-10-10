@@ -31,6 +31,7 @@ const LABELS: Record<ChapterType, string> = {
   openSource: 'Open for learning',
   teardown: 'Teardown',
   specs: 'Datasheet',
+  testing: 'Testing',
   inTheBox: 'In the box',
   downloads: 'Downloads',
   firmware: 'Firmware',
@@ -53,6 +54,7 @@ const CAVEATS: Partial<Record<ChapterType, string>> = {
   reviews: 'Appears only once the catalog carries published ratings for a product.',
   teardown: 'Needs board art or a frame viewer for this product.',
   firmware: 'Hidden on bundles and on products not yet for sale.',
+  testing: 'Only on products with published bench data in content/testing.',
   build: 'Only on parts listed in content/builds.json, and not while the product is coming soon.',
 };
 

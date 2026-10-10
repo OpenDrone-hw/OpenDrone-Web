@@ -3,6 +3,8 @@ import {ChatFpvWidget} from '~/components/ChatFpvWidget';
 import {ChatFpvInlineLink} from '~/components/ChatFpvEntry';
 import {chatFpvWidgetSrc, chatFpvWidgetSrcWithProduct} from '~/lib/support/chatfpv';
 import {handoffEnabled} from '~/lib/accounts/handoff';
+import {getFeatured} from '~/lib/testing-content';
+import {TestingChapterBody, TestingChapterWide} from '~/components/testing/TestingChapter';
 import {Fragment, Suspense, useEffect, useMemo, useRef, useState} from 'react';
 import {createPortal} from 'react-dom';
 import {useAside} from '~/components/Aside';
@@ -2072,6 +2074,9 @@ function ProductPage() {
    * the handle has an editorial entry at all, the product's lifecycle status,
    * and the catalog's rating.
    */
+  // Measured bench data for this product. A tiered figure shows only on its
+  // own tier; an untiered one always shows.
+  const testingFigure = getFeatured(product.handle, activeTier);
   const present = (type: ChapterType, entry: ChapterEntry): boolean => {
     switch (type) {
       // Only when the product's JSON carries the beginner copy: accessories
@@ -2091,6 +2096,8 @@ function ProductPage() {
         return Boolean(content.teardown) && frameViewerSrcs.length === 0;
       case 'specs':
         return content.specs.length > 0;
+      case 'testing':
+        return testingFigure !== null;
       case 'inTheBox':
         return content.inTheBox.length > 0 || Boolean(content.bundle);
       case 'downloads':
@@ -2676,6 +2683,23 @@ function ProductPage() {
           ) : null}
         </Chapter>
     ),
+    /** What we measured on the bench, with one chart. The rest is on /testing. */
+    testing: (n, title) =>
+      testingFigure ? (
+        <Chapter
+          id="testing"
+          number={n}
+          label="Testing"
+          title={title}
+          titleId="testing.chapter_title"
+          noMedia
+          wide={
+            <TestingChapterWide figure={testingFigure} handle={product.handle} />
+          }
+        >
+          <TestingChapterBody figure={testingFigure} />
+        </Chapter>
+      ) : null,
     /** What it measures. */
     specs: (n, title) => {
       const multi = sheet.columns.length > 1;

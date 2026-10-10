@@ -18949,3 +18949,313 @@ summary,
 .home-community-owners:hover {
   color: var(--color-text);
 }
+
+/* === Testing: measured data charts and the engineering log === */
+.testing-chart {
+  position: relative;
+  width: 100%;
+  font-family: var(--font-mono);
+}
+.testing-chart-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  touch-action: pan-y;
+}
+.testing-chart-svg:focus-visible {
+  outline: 2px solid var(--color-text-muted);
+  outline-offset: 4px;
+}
+.testing-grid line {
+  stroke: color-mix(in srgb, var(--color-text-muted) 22%, transparent);
+  stroke-width: 1;
+}
+.testing-grid .testing-grid-x {
+  stroke: color-mix(in srgb, var(--color-text-muted) 10%, transparent);
+}
+.testing-axis line {
+  stroke: color-mix(in srgb, var(--color-text-muted) 60%, transparent);
+}
+.testing-axis text {
+  fill: var(--color-text-muted);
+  font-size: 11px;
+}
+.testing-axis text[data-thin] {
+  display: none;
+}
+.testing-axis .testing-axis-title {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+.testing-line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  animation: testing-fade 0.5s ease-out both;
+}
+.testing-band {
+  fill: color-mix(in srgb, currentColor 16%, transparent);
+  stroke: none;
+  animation: testing-fade 0.5s ease-out both;
+}
+.testing-rule {
+  stroke: var(--color-text-muted);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+.testing-hit {
+  cursor: crosshair;
+}
+@keyframes testing-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .testing-line,
+  .testing-band {
+    animation: none;
+  }
+}
+.testing-readout {
+  position: absolute;
+  top: 8px;
+  z-index: 2;
+  min-width: 11rem;
+  max-width: min(20rem, 80%);
+  padding: 8px 10px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text);
+  font-size: 12px;
+  line-height: 1.45;
+  pointer-events: none;
+}
+.testing-readout[data-side="right"] {
+  transform: translateX(12px);
+}
+.testing-readout[data-side="left"] {
+  transform: translateX(calc(-100% - 12px));
+}
+.testing-readout[data-pinned] {
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 92%;
+}
+.testing-readout-x {
+  color: var(--color-text-muted);
+  margin-bottom: 4px;
+}
+.testing-readout-row {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  gap: 8px;
+  align-items: baseline;
+}
+.testing-swatch {
+  width: 10px;
+  height: 3px;
+  display: inline-block;
+  transform: translateY(-3px);
+}
+.testing-readout-val {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.testing-readout-at {
+  color: var(--color-text-muted);
+}
+.testing-legend {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+.testing-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.testing-figure {
+  margin: 1.6rem 0 2.4rem;
+}
+.testing-figure-title {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-text);
+  margin-bottom: 10px;
+}
+.testing-finding {
+  margin: 14px 0 0;
+  max-width: 68ch;
+  color: var(--color-text);
+}
+.testing-meta {
+  margin: 14px 0 0;
+  display: grid;
+  gap: 8px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+.testing-meta > div {
+  display: grid;
+  grid-template-columns: 7rem 1fr;
+  gap: 12px;
+}
+.testing-meta dt {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+}
+.testing-meta dd {
+  margin: 0;
+  max-width: 68ch;
+}
+.testing-meta ul {
+  margin: 0;
+  padding-left: 1.1em;
+}
+.testing-meta code,
+.testing-chapter-run code,
+.testing-log-commit {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+.testing-chapter-run {
+  margin: 4px 0 0;
+  color: var(--color-text-muted);
+}
+.testing-group {
+  margin: 1.6rem 0 2.4rem;
+}
+.testing-group-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.6rem 2rem;
+}
+.testing-figure--small {
+  margin: 0;
+}
+.testing-figure--small .testing-finding {
+  font-size: 0.875rem;
+}
+.testing-tested,
+.testing-note {
+  color: var(--color-text-muted);
+}
+.testing-log-title {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-text);
+  margin: 2.4rem 0 1rem;
+}
+.testing-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-left: 1px solid var(--color-border-strong);
+}
+.testing-log-item {
+  position: relative;
+  padding: 0 0 1.6rem 1.25rem;
+}
+.testing-log-item::before {
+  content: "";
+  position: absolute;
+  left: -4px;
+  top: 0.45em;
+  width: 7px;
+  height: 7px;
+  background: var(--color-gold);
+}
+.testing-log-item time {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+.testing-log-item dl {
+  margin: 4px 0 0;
+  display: grid;
+  gap: 4px;
+}
+.testing-log-item dl > div {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  gap: 12px;
+}
+.testing-log-item dt {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  padding-top: 0.2em;
+}
+.testing-log-item dd {
+  margin: 0;
+  max-width: 68ch;
+}
+.testing-log-fig,
+.testing-log-commit {
+  display: inline-block;
+  margin: 6px 14px 0 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.testing-log-fig {
+  color: var(--color-gold-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.testing-chapter-wide {
+  max-width: 56rem;
+}
+.testing-chapter-caveats {
+  margin: 10px 0 0;
+  padding-left: 1.1em;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+.testing-chapter-link {
+  display: inline-block;
+  margin-top: 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--color-gold-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.testing-chapter-link:hover {
+  color: var(--color-gold-text-hover);
+}
+@media (max-width: 760px) {
+  .testing-group-grid {
+    grid-template-columns: 1fr;
+  }
+  .testing-meta > div,
+  .testing-log-item dl > div {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}

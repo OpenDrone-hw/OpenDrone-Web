@@ -61,6 +61,7 @@ const COMPANY_LINKS: Array<{to: string; copy: string}> = [
   {to: '/firmware-partners', copy: 'nav_firmware_partners'},
   {to: '/roadmap', copy: 'nav_roadmap'},
   {to: '/timeline', copy: 'nav_timeline'},
+  {to: '/testing', copy: 'nav_testing'},
   {to: '/production', copy: 'nav_production'},
   {to: '/visit', copy: 'nav_visit'},
 ];

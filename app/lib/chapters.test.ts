@@ -45,6 +45,7 @@ describe('DEFAULT_CHAPTERS', () => {
         'openSource',
         'teardown',
         'specs',
+        'testing',
         'inTheBox',
         'downloads',
         'firmware',
@@ -61,7 +62,7 @@ describe('resolveChapters numbering', () => {
     const out = resolveChapters(null, all);
     assert.deepEqual(
       out.map((c) => c.number),
-      ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10'],
+      ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11'],
     );
   });
 
@@ -72,7 +73,7 @@ describe('resolveChapters numbering', () => {
     const out = resolveChapters(null, skipTeardown);
     assert.deepEqual(
       out.map((c) => c.number),
-      ['01', '02', '03', '04', '05', '06', '07', '08', '09'],
+      ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10'],
     );
     assert.ok(!out.some((c) => c.type === 'teardown'));
   });
@@ -137,5 +138,18 @@ describe('chaptersFor', () => {
       assert.equal(typeof c.id, 'string');
       assert.ok((CHAPTER_TYPES as readonly string[]).includes(c.type));
     }
+  });
+});
+
+describe('testing chapter', () => {
+  it('sits right after specs and is dropped when the product has no data', () => {
+    const types = DEFAULT_CHAPTERS.map((c) => c.type);
+    assert.equal(types.indexOf('testing'), types.indexOf('specs') + 1);
+    const out = resolveChapters(null, (t) => t !== 'testing');
+    assert.ok(!out.some((c) => c.type === 'testing'));
+    assert.deepEqual(
+      out.map((c) => c.number),
+      out.map((_, i) => String(i + 1).padStart(2, '0')),
+    );
   });
 });
