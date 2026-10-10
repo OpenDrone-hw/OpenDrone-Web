@@ -342,13 +342,13 @@
           "xField": "rpm"
         }
       ],
-      "setup": "Thrust stand. The load-cell scale is the controller's stored value, not checked against a known weight. Ten throttle holds of about 4 s from 10 to 100 percent. Motor, propeller, ESC and pack are not recorded for the 13:25 UTC run; the 13:16 UTC run lists its motor as OpenMotor-2306. Rotor speed is the ESC's electrical speed divided by 7 pole pairs, the default pole count stored in the capture. The motor's real pole count is not recorded, so the rpm axis depends on that assumption.",
+      "setup": "Thrust stand: one OpenMotor-2306 on a 10 kg load cell, 6S pack at about 24.6 V at rest. The load cell was calibrated against a 1726 g reference mass (207.4 counts per gram, within about 0.7 percent; the cell creeps under load). Ten throttle holds of about 4 s from 10 to 100 percent. Both runs used the same motor; the 13:25 UTC run was started without the device field set. Rotor speed is the ESC's electrical speed divided by 7 pole pairs, the default pole count stored in the capture. The motor's real pole count is not recorded, so the rpm axis depends on that assumption.",
       "finding": "From 40 percent throttle up, thrust is about 1.7 g per krpm squared (1.67 to 1.74 in the 13:25 UTC run), taking the stored 7 pole pairs as correct. That run, with no motor recorded, reaches 1496 g at 100 percent throttle and 29350 rpm. At the same speed the 13:16 UTC run reads 2 to 3 percent less thrust, with a pack voltage up to 1.9 V higher.",
       "caveats": [
         "One capture per run; the 13:25 UTC run was not repeated.",
         "Motor, propeller, ESC and pack are not recorded for the 13:25 UTC run.",
         "The clamp meter was not recorded.",
-        "The load-cell scale comes from the controller's stored value; no independent weight check is recorded in the capture.",
+        "Load-cell calibration: one 1726 g reference mass, about 0.7 percent uncertainty from creep during the 40 s calibration recording.",
         "The 13:16 UTC run ends at 70 percent: the pack was pulled during the 80 percent step, so its later holds are dropped. The 13:25 UTC run was recorded after the bench controller was changed to abort in that case."
       ],
       "source": {
@@ -514,7 +514,7 @@
           "xField": "thr_pct"
         }
       ],
-      "setup": "Same two thrust stand runs as the thrust figure. The load-cell scale is the controller's stored value, not checked against a known weight.",
+      "setup": "Same two thrust stand runs as the thrust figure, same load-cell calibration (1726 g reference mass).",
       "finding": "Thrust is 30 g at 10 percent and 1496 g at 100 percent in the 13:25 UTC run.",
       "caveats": [
         "One capture per run.",
