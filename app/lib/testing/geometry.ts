@@ -71,9 +71,9 @@ export type Note = {
   leader?: [number, number, number, number];
 };
 
-export const TICK_PX = 12;
+export const TICK_PX = 13;
 /** Left gutter, shared by every figure so plots line up. The axis title sits above the plot, not rotated beside it. */
-export const GUTTER_L = 50;
+export const GUTTER_L = 54;
 /** Left gutter on a phone. */
 export const GUTTER_L_NARROW = 42;
 /** Height of one row of the strip above the plot that carries mark-line labels. */

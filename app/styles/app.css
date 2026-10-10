@@ -18950,47 +18950,32 @@ summary,
   color: var(--color-text);
 }
 
-/* === Product-page testing card: a static SVG of the featured bench figure === */
+/* === Product-page testing entry: a small figure of the test report, no box === */
 .testing-card {
   --tf-ink: var(--color-text);
   --tf-muted: var(--color-text-muted);
   --tf-grid: color-mix(in srgb, var(--color-text) 14%, transparent);
-  --tf-surface: var(--color-bg-elevated);
+  --tf-surface: transparent;
   color-scheme: dark;
   max-width: 44rem;
-  padding: 18px 20px 16px;
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  background: var(--color-bg-elevated);
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
 }
 html.light .testing-card {
   color-scheme: light;
 }
-.testing-card-meta {
-  margin: 0 0 8px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 14px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: color-mix(in srgb, var(--color-text) 78%, var(--color-bg-elevated));
-}
-.testing-card-meta b {
-  font-weight: 500;
-  color: var(--color-text);
-}
-.testing-card h3 {
+.testing-card figure {
   margin: 0;
-  font-size: 1.125rem;
+}
+.testing-card figcaption {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+.testing-card figcaption b {
   font-weight: 500;
-}
-.testing-card-finding {
-  margin: 6px 0 12px;
-  max-width: 60ch;
   color: var(--color-text);
-}
-.testing-card-plot {
-  margin: 0 -4px;
 }
 .testing-card-svg {
   display: block;
@@ -19000,14 +18985,14 @@ html.light .testing-card {
 .testing-card-svg-narrow {
   display: none;
 }
-.testing-card-chip {
-  margin: 10px 0 0;
-  font-size: 13px;
-  color: color-mix(in srgb, var(--color-text) 78%, var(--color-bg-elevated));
+.testing-card-finding {
+  margin: 12px 0 0;
+  max-width: 60ch;
+  color: var(--color-text);
 }
 .testing-card-link {
   display: inline-block;
-  margin-top: 12px;
+  margin-top: 8px;
   font-size: 14px;
   color: var(--color-text);
   text-decoration: underline;

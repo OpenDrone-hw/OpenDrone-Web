@@ -1,17 +1,19 @@
 import type {Route} from './+types/testing';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
-import {getIndex, getPreviews, getTiles} from '~/lib/testing/data.server';
+import {getIndex, getPreviews} from '~/lib/testing/data.server';
+import {numberFigures} from '~/lib/testing/layout';
 import {WorkspaceShell} from '~/components/testing/WorkspaceShell';
 import {ProductSection} from '~/components/testing/ProductSection';
 import {LogSection} from '~/components/testing/LogSection';
-import {Landing} from '~/components/testing/Landing';
+import {TitleBlock} from '~/components/testing/TitleBlock';
 
 /**
- * The Incutec testing workspace. It is a page of its own: `root.tsx` renders it
- * without the storefront header, footer or chapter strip. Data comes from
- * `public/testing/` (written by `npm run sync:testing` from the bench app's
- * published views); each figure's full series is fetched when it scrolls near.
+ * The Incutec testing page, laid out as a report. It is a page of its own:
+ * `root.tsx` renders it without the storefront header, footer or chapter strip.
+ * Data comes from `public/testing/` (written by `npm run sync:testing` from the
+ * bench app's published views); each figure's full series is fetched when it
+ * scrolls near.
  */
 export const meta: Route.MetaFunction = () =>
   buildSeoMeta({
@@ -21,18 +23,19 @@ export const meta: Route.MetaFunction = () =>
   });
 
 export async function loader(_args: Route.LoaderArgs) {
-  return {index: getIndex(), previews: getPreviews(240), tiles: getTiles()};
+  return {index: getIndex(), previews: getPreviews(240)};
 }
 
 export default function TestingRoute({loaderData}: Route.ComponentProps) {
-  const {index, previews, tiles} = loaderData;
+  const {index, previews} = loaderData;
+  const numbers = numberFigures(index, (id) => Boolean(previews[id]));
   return (
-    <WorkspaceShell index={index}>
-      <Landing index={index} tiles={tiles} />
+    <WorkspaceShell>
+      <TitleBlock index={index} />
       {index.products.map((p, i) => (
-        <ProductSection key={p.handle} product={p} index={index} previews={previews} first={i === 0} />
+        <ProductSection key={p.handle} product={p} section={i + 1} index={index} previews={previews} numbers={numbers} />
       ))}
-      {index.log.length ? <LogSection index={index} /> : null}
+      {index.log.length ? <LogSection index={index} numbers={numbers} /> : null}
     </WorkspaceShell>
   );
 }

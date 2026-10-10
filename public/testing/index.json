@@ -53,9 +53,9 @@
     },
     "drv-04-2026-10-10": {
       "date": "2026-10-10",
-      "setup": ["1 OpenMotor-2306 on a 10 kg load cell, ESC reversed so the propeller pulls (operator-stated, not recorded in the capture)", "Two runs, pack A at 13:16 and pack B at 13:25 UTC, the same motor on two different 6S packs", "Load cell calibrated against a 1726 g reference mass (207.4 counts/g, about 0.7 percent)", "Ten throttle holds of about 4 s, 10 to 100 percent", "Rotor speed is ESC eRPM divided by the 7 pole pairs stored in the capture", "A third capture at 13:24 UTC, 36 s long, was stopped before any throttle step and is not plotted.", "Run state: draft, not validated; no scope or clamp record."],
-      "chip": "Same OpenMotor-2306, two 6S packs, cell calibrated to 1726 g",
-      "setupShort": "OpenMotor-2306 on two 6S packs",
+      "setup": ["1 OpenMotor-2306 on a 10 kg load cell, ESC reversed so the propeller pulls (operator-stated, not recorded in the capture)", "Main run at 16:48 UTC: ten throttle holds of about 4 s, 10 to 100 percent, on one 6S pack reading 23.9 V at rest", "Two earlier runs, pack A at 13:16 UTC (unplugged by the operator at 80 percent because of the noise) and pack B at 13:25 UTC, are drawn in the thrust and pack voltage figures only, to compare packs", "Load cell calibrated against a 1726 g reference mass (207.4 counts/g, about 0.7 percent); zero drift 2 g before and 0.5 g after the run", "Rotor speed is ESC eRPM divided by the 7 pole pairs stored in the capture", "Pack voltage is the flight controller battery divider; the other electrical readings of the capture are uncalibrated and not shown", "A capture at 16:35 UTC is not plotted: its zero drifted by up to 27 g and its ESC temperature was frozen by a pack swap", "Run state: draft, not validated; no scope or clamp record."],
+      "chip": "One OpenMotor-2306, one 6S pack, cell calibrated to 1726 g",
+      "setupShort": "OpenMotor-2306 on one 6S pack",
       "photo": {
         "src": "/testing/photo/drv-04-2026-10-10.webp",
         "size": [1600, 1200],
@@ -111,15 +111,15 @@
     },
     "openmotor-hold-esc-temp": {
       "title": "ESC temperature per throttle hold",
-      "finding": "Hottest of four die sensors, only channel 1 driven: 44 C at 10 percent throttle, 72 C at 100 percent.",
+      "finding": "Hottest of four die sensors, only channel 1 driven: 43 C at 10 percent throttle, 53 C at 100 percent.",
       "product": "openmotor",
       "tier": null,
       "featured": false,
       "order": 50,
       "domain": "THM",
       "runId": "drv-04-2026-10-10",
-      "chip": "Same OpenMotor-2306, two 6S packs, cell calibrated to 1726 g",
-      "caveats": 2,
+      "chip": "One OpenMotor-2306, one 6S pack, cell calibrated to 1726 g",
+      "caveats": 3,
       "flagged": 0,
       "tile": {
         "order": 30,
@@ -129,14 +129,14 @@
     },
     "openmotor-hold-pack-voltage": {
       "title": "Pack voltage per throttle hold",
-      "finding": "In the 13:25 UTC run the pack sags from 24.4 V at 10 percent throttle to 19.3 V at 100 percent.",
+      "finding": "The 16:48 UTC pack reads 23.9 V at 10 percent throttle and 21.6 V at 100 percent; the 13:25 UTC pack sagged to 19.3 V.",
       "product": "openmotor",
       "tier": null,
       "featured": false,
       "order": 40,
       "domain": "PWR",
       "runId": "drv-04-2026-10-10",
-      "chip": "Same OpenMotor-2306, two 6S packs, cell calibrated to 1726 g",
+      "chip": "One OpenMotor-2306, one 6S pack, cell calibrated to 1726 g",
       "caveats": 2,
       "flagged": 0,
       "tile": {
@@ -148,14 +148,14 @@
     },
     "openmotor-hold-rpm": {
       "title": "Rotor speed per throttle hold",
-      "finding": "Rotor speed rises from about 5000 rpm at 10 percent throttle to 29354 rpm at 100 percent, in the 13:25 UTC run.",
+      "finding": "Rotor speed rises from 4881 rpm at 10 percent throttle to 31283 rpm at 100 percent, in the 16:48 UTC run.",
       "product": "openmotor",
       "tier": null,
       "featured": false,
       "order": 20,
       "domain": "THR",
       "runId": "drv-04-2026-10-10",
-      "chip": "Same OpenMotor-2306, two 6S packs, cell calibrated to 1726 g",
+      "chip": "One OpenMotor-2306, one 6S pack, cell calibrated to 1726 g",
       "caveats": 3,
       "flagged": 1,
       "duplicateOf": "openmotor-thrust-vs-rpm",
@@ -167,14 +167,14 @@
     },
     "openmotor-hold-thrust": {
       "title": "Thrust per throttle hold",
-      "finding": "Thrust is 30 g at 10 percent throttle and 1496 g at 100 percent, in the 13:25 UTC run.",
+      "finding": "Thrust is 34 g at 10 percent throttle and 1652 g at 100 percent, in the 16:48 UTC run.",
       "product": "openmotor",
       "tier": null,
       "featured": false,
       "order": 30,
       "domain": "THR",
       "runId": "drv-04-2026-10-10",
-      "chip": "Same OpenMotor-2306, two 6S packs, cell calibrated to 1726 g",
+      "chip": "One OpenMotor-2306, one 6S pack, cell calibrated to 1726 g",
       "caveats": 4,
       "flagged": 1,
       "tile": {
@@ -185,16 +185,16 @@
     },
     "openmotor-thrust-vs-rpm": {
       "title": "Thrust against rotor speed",
-      "finding": "From 40 percent throttle up, a quadratic fit gives 1.71 g per krpm squared.",
+      "finding": "From 40 percent throttle up, a quadratic fit gives 1.68 g per krpm squared.",
       "product": "openmotor",
       "tier": null,
       "featured": true,
       "order": 10,
       "domain": "THR",
       "runId": "drv-04-2026-10-10",
-      "chip": "Same OpenMotor-2306, two 6S packs, cell calibrated to 1726 g",
-      "caveats": 6,
-      "flagged": 2
+      "chip": "One OpenMotor-2306, one 6S pack, cell calibrated to 1726 g",
+      "caveats": 5,
+      "flagged": 1
     },
     "openrx-antenna-use": {
       "title": "Antenna 2 use against distance",
@@ -251,13 +251,22 @@
   },
   "log": [
     {
+      "id": "motor-thrust-clean-run",
+      "date": "2026-10-10",
+      "product": "openmotor",
+      "tested": "Thrust map at 16:48 UTC on one 6S pack: ten throttle holds from 10 to 100 percent, with the abort on bus loss in place.",
+      "saw": "Thrust reached 1652 g at 31283 rpm at 100 percent throttle. The pack read 23.9 V at rest and the ESC temperature stayed live, 38 to 53 C. The load cell zero moved by 2 g before and 0.5 g after the run. A capture at 16:35 UTC had a zero drift of up to 27 g and an ESC temperature frozen by a pack swap, so its thrust offsets and temperatures are not used.",
+      "changed": "The bench software was fixed so the ESC temperature stays live after a pack swap.",
+      "figureId": "openmotor-thrust-vs-rpm"
+    },
+    {
       "id": "motor-thrust-map-bus-loss",
       "date": "2026-10-10",
       "product": "openmotor",
       "tested": "Thrust map on the new thrust stand: ten throttle holds from 10 to 100 percent.",
       "saw": "In the 13:25 UTC run thrust reached 1496 g at 100 percent throttle on the OpenMotor-2306. In the earlier 13:16 UTC run the operator unplugged the pack during the 80 percent step because of the noise, and the throttle profile kept stepping up to full with no pack connected.",
       "changed": "The bench controller now aborts the run when the bus voltage disappears under command. The 13:25 UTC run was recorded with that change. The thrust stand test plans no longer include a current cut, because current sense on the stand is not calibrated.",
-      "figureId": "openmotor-thrust-vs-rpm"
+      "figureId": "openmotor-hold-thrust"
     },
     {
       "id": "esc-thermal-seek",

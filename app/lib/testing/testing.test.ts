@@ -4,7 +4,8 @@ import fs from 'node:fs';
 import {decimateSeries} from './decimate.ts';
 import {buildGeometry, placeLabels} from './geometry.ts';
 import {alignSeries, figureDomains, fmtTickSet, niceTicks, unitLabel} from './scale.ts';
-import {blocksOf, normalizeTier, pickFeatured, summarize} from './select.ts';
+import {normalizeTier, pickFeatured, summarize} from './select.ts';
+import {numberFigures} from './layout.ts';
 import type {Fig, TestingIndex} from './types.ts';
 
 // Run with:
@@ -23,10 +24,10 @@ describe('published figures', () => {
     }
   });
 
-  it('the thrust chip states the reference mass and one motor on two packs, and not the unrecorded ESC direction', () => {
+  it('the thrust chip states the reference mass and one motor on one pack, and not the unrecorded ESC direction', () => {
     const c = index.figures['openmotor-thrust-vs-rpm']!.chip;
     assert.match(c, /1726 g/);
-    assert.match(c, /two 6S packs/);
+    assert.match(c, /one 6S pack/);
     assert.doesNotMatch(c, /reversed/);
     const setup = index.runs[index.figures['openmotor-thrust-vs-rpm']!.runId]!.setup.join(' ');
     assert.match(setup, /207\.4 counts\/g/);
@@ -159,27 +160,34 @@ describe('end labels', () => {
 
 describe('the OpenMotor section', () => {
   const previews = Object.fromEntries(Object.keys(index.figures).map((id) => [id, fig(id)]));
-  it('stacks the hold figures of one run on one axis and keeps the thrust against rpm card whole', () => {
-    const blocks = blocksOf(index.products.find((p) => p.handle === 'openmotor')!.figures, index, previews);
-    assert.equal(blocks[0]!.kind, 'card');
-    const stack = blocks.find((b) => b.kind === 'stack');
-    assert.ok(stack && stack.kind === 'stack' && stack.ids.length === 4);
+  const motor = () => index.products.find((p) => p.handle === 'openmotor')!;
+  it('numbers its figures in document order, the thrust against rpm figure first', () => {
+    const nums = numberFigures(index, (id) => Boolean(previews[id])).filter((n) => motor().figures.includes(n.id));
+    assert.equal(nums[0]!.id, 'openmotor-thrust-vs-rpm');
+    assert.deepEqual(nums.map((n) => n.no), nums.map((_, i) => nums[0]!.no + i));
+    assert.ok(!nums.some((n) => n.id === 'openmotor-hold-rpm' && index.figures[n.id]!.duplicateOf));
   });
-  it('names both packs on every figure of the run and says where pack A stops', () => {
+  it('draws the clean 16:48 run on every figure and the earlier packs only where they compare packs', () => {
     for (const id of Object.keys(index.figures).filter((i) => i.startsWith('openmotor-'))) {
       const labels = fig(id).series.map((s) => s.label);
-      assert.ok(labels.some((l) => /^Pack B, 13:25 run/.test(l)), `${id} pack B`);
-      assert.ok(labels.some((l) => /^Pack A, 13:16 run, ends at 70 percent/.test(l)), `${id} pack A`);
+      assert.ok(labels.some((l) => /^Clean run, 16:48/.test(l)), `${id} clean run`);
+      const both = /thrust per throttle|Thrust per throttle|pack voltage/i.test(fig(id).title);
+      assert.equal(labels.some((l) => /^Pack [AB]/.test(l)), both, `${id} earlier packs`);
     }
   });
-  it('states the 70 percent stop beside the thrust figure, flagged, and says the cause is unrecorded', () => {
-    const c = fig('openmotor-thrust-vs-rpm').caveats.find((x) => /ends at 70 percent/.test(typeof x === 'string' ? x : x.text));
-    assert.ok(c && typeof c !== 'string' && c.flag, 'flagged');
-    assert.match(typeof c === 'string' ? c : c.text, /unplugged the pack/);
+  it('never plots the 16:35 run and says why', () => {
+    for (const id of Object.keys(index.figures).filter((i) => i.startsWith('openmotor-'))) {
+      assert.ok(!fig(id).series.some((s) => /16:35/.test(s.label)), id);
+    }
+    assert.match(index.runs[index.figures['openmotor-thrust-vs-rpm']!.runId]!.setup.join(' '), /16:35 UTC is not plotted/);
   });
-  it('uses 29354 rpm and a quadratic fit in the findings', () => {
-    assert.match(index.figures['openmotor-hold-rpm']!.finding, /29354 rpm/);
-    assert.match(index.figures['openmotor-thrust-vs-rpm']!.finding, /quadratic fit gives 1\.71 g per krpm squared/);
+  it('states that full-throttle thrust depends on the pack, flagged', () => {
+    const c = fig('openmotor-hold-thrust').caveats.find((x) => /sagged to 19\.3 V/.test(typeof x === 'string' ? x : x.text));
+    assert.ok(c && typeof c !== 'string' && c.flag, 'flagged');
+  });
+  it('uses 31283 rpm and a quadratic fit in the findings', () => {
+    assert.match(index.figures['openmotor-hold-rpm']!.finding, /31283 rpm/);
+    assert.match(index.figures['openmotor-thrust-vs-rpm']!.finding, /quadratic fit gives 1\.68 g per krpm squared/);
   });
 });
 
@@ -196,11 +204,13 @@ describe('headline numbers and round 3 rules', () => {
     return s.y[s.x.indexOf(x)]!;
   };
   it('pins thrust, rotor speed, voltage, temperature, the fit and the 70 percent voltage gap', () => {
+    assert.ok(Math.abs(at('openmotor-hold-thrust', /Clean run/, 100) - 1652.2) < 0.5);
     assert.ok(Math.abs(at('openmotor-hold-thrust', /Pack B/, 100) - 1496.2) < 0.5);
-    assert.ok(Math.abs(at('openmotor-hold-rpm', /Pack B/, 100) - 29354) < 1);
+    assert.ok(Math.abs(at('openmotor-hold-rpm', /Clean run/, 100) - 31283) < 1);
     assert.ok(Math.abs(at('openmotor-hold-pack-voltage', /Pack B/, 100) - 19.264) < 0.01);
-    assert.equal(at('openmotor-hold-esc-temp', /Pack B/, 100), 72);
-    assert.equal(fig('openmotor-thrust-vs-rpm').fit!.k, 1.71);
+    assert.ok(Math.abs(at('openmotor-hold-pack-voltage', /Clean run/, 10) - 23.912) < 0.01);
+    assert.equal(at('openmotor-hold-esc-temp', /Clean run/, 100), 53);
+    assert.equal(fig('openmotor-thrust-vs-rpm').fit!.k, 1.68);
     const gap = at('openmotor-hold-pack-voltage', /Pack A/, 70) - at('openmotor-hold-pack-voltage', /Pack B/, 70);
     assert.ok(gap > 1.8 && gap < 1.95, `gap ${gap}`);
   });
@@ -215,7 +225,7 @@ describe('headline numbers and round 3 rules', () => {
   });
   it('marks sit on published points and hold figures join their markers unless a fit is drawn', async () => {
     const f = fig('openmotor-thrust-vs-rpm');
-    assert.equal(f.marks?.[0]?.kind, 'point');
+    assert.equal(fig('openmotor-hold-thrust').marks?.[0]?.kind, 'line');
     const g = buildGeometry(fig('openesc-shunt-vs-clamp'), {w: 700, h: 380});
     assert.ok(g.series.every((s) => s.d), 'holds are joined');
     assert.ok(buildGeometry(f, {w: 1000, h: 480}).series.filter((s) => s.kind === 'hold').every((s) => !s.d));
@@ -232,7 +242,7 @@ describe('page wording comes from the views', () => {
   });
 
   it('the card caveat, axis note, tiles and photo are published as data', () => {
-    assert.match(fig('openmotor-thrust-vs-rpm').cardCaveat ?? '', /unplugged/);
+    assert.match(fig('openmotor-hold-thrust').cardCaveat ?? '', /sagged to 19\.3 V/);
     assert.equal(fig('openmotor-thrust-vs-rpm').axes.x.note, '7 pole pairs assumed');
     assert.equal(index.figures['openmotor-hold-rpm']!.duplicateOf, 'openmotor-thrust-vs-rpm');
     const tiles = Object.values(index.figures).filter((f) => f.tile);

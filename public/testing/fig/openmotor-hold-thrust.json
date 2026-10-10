@@ -1,18 +1,18 @@
 {
   "id": "openmotor-hold-thrust",
   "title": "Thrust per throttle hold",
-  "finding": "Thrust is 30 g at 10 percent throttle and 1496 g at 100 percent, in the 13:25 UTC run.",
+  "finding": "Thrust is 34 g at 10 percent throttle and 1652 g at 100 percent, in the 16:48 UTC run.",
   "product": "openmotor",
   "tier": null,
   "runId": "drv-04-2026-10-10",
   "domain": "THR",
-  "chip": "Same OpenMotor-2306, two 6S packs, cell calibrated to 1726 g",
+  "chip": "One OpenMotor-2306, one 6S pack, cell calibrated to 1726 g",
   "caveats": [
     {
       "text": "One capture per run."
     },
     {
-      "text": "At 10 percent the 13:25 UTC run reads 30 g and the 13:16 UTC run 35 g, about 17 percent apart at a low load.",
+      "text": "The 13:25 UTC run read 1496 g at 100 percent on a pack that sagged to 19.3 V, so thrust at full throttle depends on the pack.",
       "flag": true
     },
     {
@@ -22,9 +22,9 @@
       "text": "No independent weight check of the load cell is recorded."
     }
   ],
-  "cardCaveat": "At 10 percent throttle the two packs read 30 g and 35 g.",
+  "cardCaveat": "At full throttle the 13:25 UTC pack sagged to 19.3 V and the motor gave 1496 g.",
   "reduction": "Logged frames; frames in throttle or speed transients are excluded. Hold markers: median of the last 2 s of each throttle hold; the band is the 25th to 75th percentile. Holds with no pack voltage reading are dropped.",
-  "cite": "Logs/drv-04-thrust-2026-10-10-20261010T132503Z#L1291-L9813; Logs/drv-04-openmotor-2306-2026-10-10-20261010T131644Z#L1513-L7322",
+  "cite": "Logs/drv-04-openmotor-2306-2026-10-10-20261010T164844Z#L1312-L9833; Logs/drv-04-thrust-2026-10-10-20261010T132503Z#L1291-L9813; Logs/drv-04-openmotor-2306-2026-10-10-20261010T131644Z#L1513-L7322",
   "axes": {
     "x": {
       "label": "Throttle",
@@ -41,6 +41,18 @@
   "series": [
     {
       "id": "s1.thrust_g.hold",
+      "label": "Clean run, 16:48 UTC, hold median, last 2 s",
+      "short": "Clean run, 16:48",
+      "quantity": "thrust",
+      "pack": "16:48",
+      "kind": "hold",
+      "x": [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+      "y": [34, 125.7, 292.3, 466.7, 660.3, 863.5, 1067.6, 1268.1, 1457.9, 1652.2],
+      "lo": [34, 125.5, 291.8, 466.4, 659.9, 861.6, 1064.8, 1265.8, 1453.5, 1649.5],
+      "hi": [34.1, 126, 292.7, 467.2, 660.7, 865.6, 1068.7, 1274, 1461, 1659.4]
+    },
+    {
+      "id": "s2.thrust_g.hold",
       "label": "Pack B, 13:25 run, hold median, last 2 s",
       "short": "Pack B, 13:25",
       "quantity": "thrust",
@@ -52,7 +64,7 @@
       "hi": [30.2, 126.3, 292.5, 461.8, 629.7, 795.9, 960.82, 1138, 1305.5, 1496.5]
     },
     {
-      "id": "s2.thrust_g.hold",
+      "id": "s3.thrust_g.hold",
       "label": "Pack A, 13:16 run, ends at 70 percent, hold median, last 2 s",
       "short": "Pack A, 13:16",
       "quantity": "thrust",
@@ -65,6 +77,76 @@
     }
   ],
   "holds": [
+    {
+      "run": "16:48",
+      "throttle": 10,
+      "t0": 6.535,
+      "t1": 8.53,
+      "n": 400
+    },
+    {
+      "run": "16:48",
+      "throttle": 20,
+      "t0": 11.045,
+      "t1": 13.04,
+      "n": 400
+    },
+    {
+      "run": "16:48",
+      "throttle": 30,
+      "t0": 15.555,
+      "t1": 17.55,
+      "n": 400
+    },
+    {
+      "run": "16:48",
+      "throttle": 40,
+      "t0": 20.035,
+      "t1": 22.03,
+      "n": 400
+    },
+    {
+      "run": "16:48",
+      "throttle": 50,
+      "t0": 24.545,
+      "t1": 26.54,
+      "n": 400
+    },
+    {
+      "run": "16:48",
+      "throttle": 60,
+      "t0": 29.055,
+      "t1": 31.05,
+      "n": 400
+    },
+    {
+      "run": "16:48",
+      "throttle": 70,
+      "t0": 33.535,
+      "t1": 35.53,
+      "n": 400
+    },
+    {
+      "run": "16:48",
+      "throttle": 80,
+      "t0": 38.045,
+      "t1": 40.04,
+      "n": 400
+    },
+    {
+      "run": "16:48",
+      "throttle": 90,
+      "t0": 42.55,
+      "t1": 44.546,
+      "n": 400
+    },
+    {
+      "run": "16:48",
+      "throttle": 100,
+      "t0": 47.051,
+      "t1": 49.046,
+      "n": 400
+    },
     {
       "run": "13:25",
       "throttle": 10,

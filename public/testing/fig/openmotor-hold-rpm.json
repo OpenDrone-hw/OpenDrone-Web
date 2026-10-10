@@ -1,15 +1,15 @@
 {
   "id": "openmotor-hold-rpm",
   "title": "Rotor speed per throttle hold",
-  "finding": "Rotor speed rises from about 5000 rpm at 10 percent throttle to 29354 rpm at 100 percent, in the 13:25 UTC run.",
+  "finding": "Rotor speed rises from 4881 rpm at 10 percent throttle to 31283 rpm at 100 percent, in the 16:48 UTC run.",
   "product": "openmotor",
   "tier": null,
   "runId": "drv-04-2026-10-10",
   "domain": "THR",
-  "chip": "Same OpenMotor-2306, two 6S packs, cell calibrated to 1726 g",
+  "chip": "One OpenMotor-2306, one 6S pack, cell calibrated to 1726 g",
   "caveats": [
     {
-      "text": "One capture per run."
+      "text": "One capture."
     },
     {
       "text": "Propeller and ESC model are not recorded."
@@ -19,9 +19,8 @@
       "flag": true
     }
   ],
-  "cardCaveat": "",
   "reduction": "Logged frames; frames in throttle or speed transients are excluded. Hold markers: median of the last 2 s of each throttle hold; the band is the 25th to 75th percentile. Holds with no pack voltage reading are dropped.",
-  "cite": "Logs/drv-04-thrust-2026-10-10-20261010T132503Z#L1291-L9813; Logs/drv-04-openmotor-2306-2026-10-10-20261010T131644Z#L1513-L7322",
+  "cite": "Logs/drv-04-openmotor-2306-2026-10-10-20261010T164844Z#L1312-L9833",
   "axes": {
     "x": {
       "label": "Throttle",
@@ -39,155 +38,87 @@
   "series": [
     {
       "id": "s1.rpm.hold",
-      "label": "Pack B, 13:25 run, hold median, last 2 s",
-      "short": "Pack B, 13:25",
+      "label": "Clean run, 16:48 UTC, hold median, last 2 s",
+      "short": "Clean run, 16:48",
       "quantity": "rpm",
-      "pack": "13:25",
+      "pack": "16:48",
       "kind": "hold",
       "x": [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
-      "y": [4960.3, 9236.4, 13520, 16611, 19305, 21590, 23678, 25586, 27472, 29354],
-      "lo": [4960.3, 9216.6, 13477, 16547, 19218, 21536, 23548, 25510, 27385, 29354],
-      "hi": [4971.7, 9256.3, 13605, 16676, 19392, 21700, 23743, 25663, 27561, 29455]
-    },
-    {
-      "id": "s2.rpm.hold",
-      "label": "Pack A, 13:16 run, ends at 70 percent, hold median, last 2 s",
-      "short": "Pack A, 13:16",
-      "quantity": "rpm",
-      "pack": "13:16",
-      "kind": "hold",
-      "x": [10, 20, 30, 40, 50, 60, 70],
-      "y": [4995, 9377.9, 13825, 17281, 20311, 22918, 25284],
-      "lo": [4983.3, 9357.4, 13780, 17212, 20263, 22796, 25210],
-      "hi": [4995, 9377.9, 13870, 17351, 20408, 22980, 25359]
+      "y": [4881.1, 9157.4, 13649, 17007, 19980, 22736, 25210, 27472, 29455, 31283],
+      "lo": [4870, 9137.9, 13562, 16940, 19933, 22676, 25136, 27385, 29354, 31169],
+      "hi": [4881.1, 9196.7, 13692, 17074, 20074, 22857, 25284, 27561, 29557, 31283]
     }
   ],
   "holds": [
     {
-      "run": "13:25",
+      "run": "16:48",
       "throttle": 10,
-      "t0": 6.431,
-      "t1": 8.426,
+      "t0": 6.535,
+      "t1": 8.53,
       "n": 400
     },
     {
-      "run": "13:25",
+      "run": "16:48",
       "throttle": 20,
-      "t0": 10.941,
-      "t1": 12.936,
+      "t0": 11.045,
+      "t1": 13.04,
       "n": 400
     },
     {
-      "run": "13:25",
+      "run": "16:48",
       "throttle": 30,
-      "t0": 15.451,
-      "t1": 17.446,
+      "t0": 15.555,
+      "t1": 17.55,
       "n": 400
     },
     {
-      "run": "13:25",
+      "run": "16:48",
       "throttle": 40,
-      "t0": 19.931,
-      "t1": 21.926,
+      "t0": 20.035,
+      "t1": 22.03,
       "n": 400
     },
     {
-      "run": "13:25",
+      "run": "16:48",
       "throttle": 50,
-      "t0": 24.441,
-      "t1": 26.436,
+      "t0": 24.545,
+      "t1": 26.54,
       "n": 400
     },
     {
-      "run": "13:25",
+      "run": "16:48",
       "throttle": 60,
-      "t0": 28.951,
-      "t1": 30.946,
+      "t0": 29.055,
+      "t1": 31.05,
       "n": 400
     },
     {
-      "run": "13:25",
+      "run": "16:48",
       "throttle": 70,
-      "t0": 33.431,
-      "t1": 35.426,
+      "t0": 33.535,
+      "t1": 35.53,
       "n": 400
     },
     {
-      "run": "13:25",
+      "run": "16:48",
       "throttle": 80,
-      "t0": 37.941,
-      "t1": 39.936,
+      "t0": 38.045,
+      "t1": 40.04,
       "n": 400
     },
     {
-      "run": "13:25",
+      "run": "16:48",
       "throttle": 90,
-      "t0": 42.452,
-      "t1": 44.447,
+      "t0": 42.55,
+      "t1": 44.546,
       "n": 400
     },
     {
-      "run": "13:25",
+      "run": "16:48",
       "throttle": 100,
-      "t0": 46.952,
-      "t1": 48.947,
+      "t0": 47.051,
+      "t1": 49.046,
       "n": 400
-    },
-    {
-      "run": "13:16",
-      "throttle": 10,
-      "t0": 7.545,
-      "t1": 9.541,
-      "n": 399
-    },
-    {
-      "run": "13:16",
-      "throttle": 20,
-      "t0": 12.046,
-      "t1": 14.041,
-      "n": 400
-    },
-    {
-      "run": "13:16",
-      "throttle": 30,
-      "t0": 16.541,
-      "t1": 18.536,
-      "n": 399
-    },
-    {
-      "run": "13:16",
-      "throttle": 40,
-      "t0": 21.046,
-      "t1": 23.041,
-      "n": 400
-    },
-    {
-      "run": "13:16",
-      "throttle": 50,
-      "t0": 25.548,
-      "t1": 27.543,
-      "n": 399
-    },
-    {
-      "run": "13:16",
-      "throttle": 60,
-      "t0": 30.028,
-      "t1": 32.023,
-      "n": 400
-    },
-    {
-      "run": "13:16",
-      "throttle": 70,
-      "t0": 34.533,
-      "t1": 36.528,
-      "n": 399
-    }
-  ],
-  "marks": [
-    {
-      "kind": "line",
-      "x": 80,
-      "text": "Pack A unplugged"
     }
   ]
 }

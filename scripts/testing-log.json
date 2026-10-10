@@ -2,13 +2,23 @@
   "$comment": "Hand-written engineering log for /testing, in public language: what was tested, what was seen, what changed. No names, tools, suppliers, prices or datasheet figures. sync-testing.mjs validates it and copies published entries into public/testing/index.json. figureId must name a published figure.",
   "items": [
     {
+      "id": "motor-thrust-clean-run",
+      "date": "2026-10-10",
+      "product": "openmotor",
+      "tested": "Thrust map at 16:48 UTC on one 6S pack: ten throttle holds from 10 to 100 percent, with the abort on bus loss in place.",
+      "saw": "Thrust reached 1652 g at 31283 rpm at 100 percent throttle. The pack read 23.9 V at rest and the ESC temperature stayed live, 38 to 53 C. The load cell zero moved by 2 g before and 0.5 g after the run. A capture at 16:35 UTC had a zero drift of up to 27 g and an ESC temperature frozen by a pack swap, so its thrust offsets and temperatures are not used.",
+      "changed": "The bench software was fixed so the ESC temperature stays live after a pack swap.",
+      "figureId": "openmotor-thrust-vs-rpm",
+      "status": "publish"
+    },
+    {
       "id": "motor-thrust-map-bus-loss",
       "date": "2026-10-10",
       "product": "openmotor",
       "tested": "Thrust map on the new thrust stand: ten throttle holds from 10 to 100 percent.",
       "saw": "In the 13:25 UTC run thrust reached 1496 g at 100 percent throttle on the OpenMotor-2306. In the earlier 13:16 UTC run the operator unplugged the pack during the 80 percent step because of the noise, and the throttle profile kept stepping up to full with no pack connected.",
       "changed": "The bench controller now aborts the run when the bus voltage disappears under command. The 13:25 UTC run was recorded with that change. The thrust stand test plans no longer include a current cut, because current sense on the stand is not calibrated.",
-      "figureId": "openmotor-thrust-vs-rpm",
+      "figureId": "openmotor-hold-thrust",
       "status": "publish"
     },
     {

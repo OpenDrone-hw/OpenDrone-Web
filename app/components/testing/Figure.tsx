@@ -1,10 +1,8 @@
 import {useCallback, useEffect, useRef, useState, type ComponentType} from 'react';
-import {figureCsv} from '~/lib/testing/export';
+import {figureCsv, tableRows} from '~/lib/testing/export';
 import {fmtValue, unitLabel} from '~/lib/testing/scale';
 import type {Domain} from '~/lib/testing/scale';
-import type {Fig, FigSummary, LogEntry, RunInfo} from '~/lib/testing/types';
-import {Disclosure} from './Disclosure';
-import {sentences} from './LogRow';
+import {caveatFlagged, caveatText, type Fig, type FigSummary, type RunInfo} from '~/lib/testing/types';
 import {UnitLine} from './UnitLine';
 import {StaticFigure} from './StaticFigure';
 import {useWorkspaceTheme} from './WorkspaceShell';
@@ -12,13 +10,13 @@ import {useWorkspaceTheme} from './WorkspaceShell';
 type PanelProps = React.ComponentProps<typeof import('./ChartPanel').default>;
 
 /**
- * Plot height from the width it is drawn at: wide on a desktop card, squarer on
- * a phone, so axis text stays the same size next to the data at every width.
+ * Plot height from the width it is drawn at: at most 0.56 of the column, as in
+ * the exported reports, and squarer on a phone so axis text stays the same size
+ * next to the data at every width.
  */
-export function plotHeight(width: number, size: 'wide' | 'half'): number {
-  if (width < 520) return Math.round(Math.min(400, Math.max(280, width * 1.0)));
-  if (size === 'wide') return Math.round(Math.min(560, Math.max(380, width * 0.5)));
-  return Math.round(Math.min(440, Math.max(320, width * 0.62)));
+export function plotHeight(width: number): number {
+  if (width < 520) return Math.round(Math.min(380, Math.max(260, width * 0.9)));
+  return Math.round(Math.min(460, Math.max(300, width * 0.52)));
 }
 
 /** `?f=<id>&x0=&x1=` for this figure, or null. */
@@ -54,26 +52,21 @@ function writeUrlRange(id: string, r: {x0: number; x1: number; zoomed: boolean})
   }
 }
 
-export function FigureCard({
+export function Figure({
   id,
+  no,
   summary,
   run,
   preview,
-  size,
-  showRun,
-  log,
   hint = false,
 }: {
   id: string;
+  /** Figure number in the document; the findings under it are numbered from it. */
+  no: number;
   summary: FigSummary;
   run: RunInfo | undefined;
   /** Thinned figure for the server-rendered SVG. */
   preview: Fig;
-  size: 'wide' | 'half';
-  /** The product has more than one run, so the card names its own. */
-  showRun: boolean;
-  /** The log entry that explains this figure, linked from the head. */
-  log?: LogEntry;
   /** The first plot of the page says how to read values, inside the plot, until it is touched. */
   hint?: boolean;
 }) {
@@ -83,8 +76,7 @@ export function FigureCard({
   const [Panel, setPanel] = useState<ComponentType<PanelProps> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const plotEl = useRef<HTMLDivElement>(null);
-  const [height, setHeight] = useState(size === 'wide' ? 440 : 380);
-  const [wide, setWide] = useState(false);
+  const [height, setHeight] = useState(420);
   const started = useRef(false);
 
   const load = useCallback(() => {
@@ -110,13 +102,13 @@ export function FigureCard({
   useEffect(() => {
     const el = plotEl.current;
     if (!el) return;
-    const update = () => setHeight(plotHeight(el.clientWidth, size));
+    const update = () => setHeight(plotHeight(el.clientWidth));
     update();
     if (!('ResizeObserver' in window)) return;
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [size]);
+  }, []);
 
   useEffect(() => {
     const el = root.current;
@@ -173,100 +165,99 @@ export function FigureCard({
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   }, [full, id, run]);
 
-  useEffect(() => {
-    if (!wide) return;
-    const r = document.documentElement;
-    r.style.overflow = 'hidden';
-    const lock = async () => {
-      if (!window.matchMedia('(pointer: coarse)').matches) return;
-      try {
-        await document.documentElement.requestFullscreen?.();
-        await (screen.orientation as unknown as {lock?: (o: string) => Promise<void>}).lock?.('landscape');
-      } catch {
-        /* the overlay still fills the viewport */
-      }
-    };
-    void lock();
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setWide(false);
-    window.addEventListener('keydown', onKey);
-    return () => {
-      r.style.overflow = '';
-      window.removeEventListener('keydown', onKey);
-      if (document.fullscreenElement) void document.exitFullscreen?.().catch(() => {});
-    };
-  }, [wide]);
-
   const fig = full ?? preview;
   const startRange = typeof window === 'undefined' ? null : readUrlRange(id);
-  const caption = fig.fit
-    ? `Quadratic fit: ${fmtValue(fig.fit.k)} ${fig.fit.unit} from ${fig.fit.fromThrottle} percent throttle up, ${fig.fit.n} holds, largest miss ${fig.fit.maxMiss} ${unitLabel(fig.axes.y.unit)}.`
+  const fit = fig.fit
+    ? `Dashed line: quadratic fit, ${fmtValue(fig.fit.k)} ${fig.fit.unit} from ${fig.fit.fromThrottle} percent throttle up, ${fig.fit.n} holds, largest miss ${fig.fit.maxMiss} ${unitLabel(fig.axes.y.unit)}.`
     : null;
+  // Notes before the measurement, as in the exported report; a flagged note comes first.
+  const notes = [...fig.caveats].sort((a, b) => Number(caveatFlagged(b)) - Number(caveatFlagged(a))).map(caveatText);
+  const items = [...notes, summary.finding];
+  const rows = tableRows(fig);
 
   return (
-    <article className="tw-card" id={id} ref={root} data-size={size} data-ready={full && Panel ? '1' : '0'}>
-      <header className="tw-card-head">
-        <h3>{summary.title}</h3>
-        {showRun ? (
-          <p className="tw-meta">
-            {summary.runId.replace(/-\d{4}-\d{2}-\d{2}$/, '')} <span aria-hidden="true">/</span> {run?.date ?? ''}
-          </p>
-        ) : null}
-        <p className="tw-finding">{summary.finding}</p>
-        {log ? (
-          <p className="tw-logref">
-            {log.changed ? <span>Changed: {sentences(log.changed, 1)} </span> : null}
-            <a href={`#log-${log.id}`}>Log, {log.date}</a>
-          </p>
-        ) : null}
-      </header>
-
-      <div className="tw-plot" ref={plotEl} style={{minHeight: height + 64}}>
+    <figure className="tr-fig" id={id} ref={root} data-ready={full && Panel ? '1' : '0'} aria-labelledby={`${id}-cap`}>
+      <div className="tr-plot" ref={plotEl} style={{minHeight: height + 70}}>
         {full && Panel ? (
-          <>
-            <Panel
-              fig={full}
-              theme={theme}
-              height={height}
-              initialRange={startRange}
-              onRange={(r) => writeUrlRange(id, r)}
-              onExpand={() => setWide(true)}
-              onDownload={() => void download()}
-              onCsv={csv}
-              hint={hint}
-            />
-            {wide ? (
-              <div className="tw-wide" role="dialog" aria-label={`${summary.title}, wide view`}>
-                <button type="button" className="tw-close" onClick={() => setWide(false)} aria-label="Close wide view">
-                  <span aria-hidden="true">x</span>
-                </button>
-                <h3 className="tw-wide-title">{summary.title}</h3>
-                <Panel fig={full} theme={theme} height={Math.max(240, window.innerHeight - 150)} />
-              </div>
-            ) : null}
-          </>
+          <Panel
+            fig={full}
+            theme={theme}
+            height={height}
+            initialRange={startRange}
+            onRange={(r) => writeUrlRange(id, r)}
+            onDownload={() => void download()}
+            onCsv={csv}
+            hint={hint}
+          />
         ) : error ? (
-          <p className="tw-error" role="alert">
-            Figure {id} did not load ({error}).{' '}
-            <button type="button" className="tw-linkbtn" onClick={load}>
+          <p className="tr-error" role="alert">
+            Figure {no} did not load ({error}).{' '}
+            <button type="button" className="tr-link" onClick={load}>
               Retry
             </button>
           </p>
         ) : (
           <>
             <UnitLine fig={fig} theme={theme} />
-            <StaticFigure
-              fig={fig}
-              width={size === 'wide' ? 1200 : 720}
-              height={size === 'wide' ? 480 : 380}
-              className="tw-static"
-              titles={false}
-            />
+            <StaticFigure fig={fig} width={820} height={height} className="tr-static" titles={false} />
           </>
         )}
       </div>
-      {caption ? <p className="tw-caption">{caption}</p> : null}
-
-      <Disclosure figs={[fig]} />
-    </article>
+      <p className="tr-prov">
+        Setup: {summary.chip}. Source: <code>{summary.runId.replace(/-\d{4}-\d{2}-\d{2}$/, '')}</code> {run?.date ?? ''}
+        {fig.cite ? (
+          <>
+            , <code>{fig.cite.replace(/#L\d+-L\d+/g, '').split('; ').join(', ')}</code>
+          </>
+        ) : null}
+        .
+      </p>
+      <figcaption id={`${id}-cap`}>
+        <b>Figure {no}.</b> {summary.title}.{fit ? ` ${fit}` : ''}
+      </figcaption>
+      <p className="tr-view">
+        View <code>{id}</code> <b>Findings</b>
+      </p>
+      <ul className="tr-findings">
+        {items.map((t, i) => (
+          <li key={i} id={`fig-${no}-${i + 1}`}>
+            <a className="tr-n" href={`#fig-${no}-${i + 1}`}>
+              {no}.{i + 1}
+            </a>{' '}
+            {t}
+          </li>
+        ))}
+      </ul>
+      <details className="tr-values">
+        <summary>{rows ? `Reduction and values of Figure ${no}` : `Reduction of Figure ${no}`}</summary>
+        {fig.reduction ? <p>{fig.reduction}</p> : null}
+        {rows ? (
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Series</th>
+                <th scope="col">
+                  {fig.axes.x.label} ({unitLabel(fig.axes.x.unit)})
+                </th>
+                <th scope="col">
+                  {fig.axes.y.label} ({unitLabel(fig.axes.y.unit)})
+                </th>
+                <th scope="col">25th to 75th</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => (
+                <tr key={i}>
+                  <td>{r.series.replace(/, hold median.*$/, '')}</td>
+                  <td>{r.x}</td>
+                  <td>{r.y}</td>
+                  <td>{r.band}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : null}
+      </details>
+    </figure>
   );
 }

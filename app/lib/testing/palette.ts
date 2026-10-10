@@ -2,9 +2,9 @@
  * Series colours for the testing workspace, one source for the canvas chart,
  * the static SVG and the download.
  *
- * One hue per quantity. Packs, motors and units of the same quantity differ by
- * shade, dash and marker shape, so the figure still reads in greyscale. Teal
- * is the Incutec identity and is never a series or a status colour. Every
+ * Restrained, like the exported reports: the report teal, grey and one
+ * teal-green. Packs, motors and units of one figure differ by shade, dash and
+ * marker shape, so the figure reads in greyscale. Every
  * colour here is at least 4.5:1 against the surface it is drawn on, in both
  * themes; `palette.test.ts` checks that.
  */
@@ -32,44 +32,44 @@ export type Quantity = (typeof QUANTITIES)[number];
 /** Three shades per quantity, strongest first. */
 const SHADES: Record<Quantity, Record<Theme, [string, string, string]>> = {
   current: {
-    light: ['#1B6E34', '#2A7F45', '#437A56'],
+    light: ['#0F4C5C', '#5B6166', '#1E7F74'],
     dark: ['#5FD08A', '#46B876', '#8FDDAC'],
   },
   voltage: {
-    light: ['#B3261E', '#C8443C', '#9B4A45'],
+    light: ['#0F4C5C', '#5B6166', '#1E7F74'],
     dark: ['#FF8A80', '#F26B60', '#FFB0A8'],
   },
   temperature: {
-    light: ['#8A5100', '#A06312', '#7D5A24'],
+    light: ['#0F4C5C', '#5B6166', '#1E7F74'],
     dark: ['#F5B84F', '#E0A238', '#FFD08A'],
   },
   rpm: {
-    light: ['#1A56B0', '#3A70BF', '#4E6FA0'],
+    light: ['#0F4C5C', '#5B6166', '#1E7F74'],
     dark: ['#7DB2FF', '#5E9BF2', '#A8CCFF'],
   },
   command: {
-    light: ['#6234B8', '#7A50C6', '#7A64A3'],
+    light: ['#0F4C5C', '#5B6166', '#1E7F74'],
     dark: ['#BCA4FF', '#A688F2', '#D3C4FF'],
   },
   aux: {
-    light: ['#4A5056', '#5F666C', '#6B7177'],
+    light: ['#0F4C5C', '#5B6166', '#1E7F74'],
     dark: ['#B7BDBD', '#9AA0A0', '#CFD3D3'],
   },
   thrust: {
-    light: ['#A8196F', '#BF3A8A', '#94467A'],
+    light: ['#0F4C5C', '#5B6166', '#1E7F74'],
     dark: ['#FF86C4', '#F264AF', '#FFB0D8'],
   },
 };
 
 /**
  * Runs, packs and units of one quantity in one figure: when a quantity has more
- * than one of them the figure colours them by identity, blue, orange, violet,
- * green, magenta, the same way on every card. Quantity hue then cannot carry the
- * difference, and the legend, markers and end labels name each one. Each is at
+ * than one of them the figure colours them by identity, the same way on every
+ * figure; dash and marker shape carry the difference too, and the legend,
+ * markers and end labels name each one. Each is at
  * least 4.5:1 on both surfaces.
  */
 export const IDENTITY: Record<Theme, string[]> = {
-  light: ['#1A56B0', '#B45309', '#6234B8', '#12703F', '#A8196F'],
+  light: ['#0F4C5C', '#5B6166', '#1E7F74', '#14171A', '#8A5A00'],
   dark: ['#7DB2FF', '#FFA24D', '#BCA4FF', '#5FD08A', '#FF86C4'],
 };
 const N_ID = 5;

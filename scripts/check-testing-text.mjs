@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Checks of the /testing workspace in a real browser.
+ * Checks of the /testing report in a real browser.
  *
  *   text      at most BUDGET visible words (document.body.innerText after the
  *             page has been scrolled through, so charts are mounted; closed
@@ -20,7 +20,8 @@
 import {chromium} from 'playwright';
 
 const url = process.argv[2] ?? 'http://localhost:5199/testing';
-const BUDGET = 1250;
+// A report: every note of every figure and the whole log are on the page.
+const BUDGET = 3000;
 
 async function launch() {
   try {
@@ -59,7 +60,7 @@ for (const width of [1440, 390]) {
       scroll: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       dead: [...new Set(dead)],
       charts: document.querySelectorAll('.tw-chart[tabindex="0"]').length,
-      figures: document.querySelectorAll('.tw-card[id], .tw-panelblock').length,
+      figures: document.querySelectorAll('.tr-fig[id]').length,
       // The first plot is drawn whole once mounted: ink in its left third as well as its right.
       painted: (() => {
         const c = document.querySelector('.tw-chart canvas');

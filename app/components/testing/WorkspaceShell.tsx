@@ -1,94 +1,23 @@
-import {createContext, useCallback, useContext, useEffect, useState, type ReactNode} from 'react';
+import {useEffect, type ReactNode} from 'react';
 import type {Theme} from '~/lib/testing/palette';
-import {useNonce} from '~/lib/csp';
 import {SITE_ORIGIN} from '~/lib/seo';
-import type {TestingIndex} from '~/lib/testing/types';
 import '../../brand/testing/fonts.css';
 import '../../brand/testing/tokens.css';
-import '../../brand/testing/topbar.css';
 import '../../styles/testing.css';
 
 /**
- * The Incutec testing workspace: its own page, outside the storefront layout.
- * Light unless the visitor chose otherwise here or on the storefront (`od-theme`).
- * The choice is kept in this browser only. A tiny script in front of the page
- * applies a stored dark choice before first paint, so there is no light flash.
- * Brand files are vendored from the design repository and scoped to
- * `.testing-workspace`.
+ * The testing page is a typeset document, like the reports the Incutec testing
+ * app exports: one column, light only, the Incutec wordmark on a rule at the
+ * top, no navigation bar. Brand files are vendored from the design repository
+ * and scoped to `.testing-workspace`.
  */
 
-const THEME_KEY = 'incutec-testing-theme';
-const STORE_KEY = 'od-theme';
+/** The page is light only, as the exported reports are. */
+export const useWorkspaceTheme = (): Theme => 'light';
 
-const ThemeContext = createContext<Theme>('light');
-export const useWorkspaceTheme = () => useContext(ThemeContext);
-
-function stored(): Theme | null {
-  try {
-    for (const k of [THEME_KEY, STORE_KEY]) {
-      const v = localStorage.getItem(k);
-      if (v === 'dark' || v === 'light') return v;
-    }
-  } catch {
-    /* storage can be blocked */
-  }
-  return null;
-}
-
-const PRE_PAINT = `(function(){try{var t=localStorage.getItem(${JSON.stringify(THEME_KEY)});if(t!=='dark'&&t!=='light')t=localStorage.getItem(${JSON.stringify(STORE_KEY)});if(t==='dark'||t==='light')document.currentScript.parentElement.setAttribute('data-theme',t)}catch(e){}})()`;
-
-export function WorkspaceShell({index, children}: {index: TestingIndex; children: ReactNode}) {
-  const nonce = useNonce();
-  const [theme, setTheme] = useState<Theme>('light');
-  const [active, setActive] = useState<string>('');
-
-  useEffect(() => {
-    const t = stored();
-    if (t) setTheme(t);
-  }, []);
-
-  const toggle = useCallback(() => {
-    setTheme((t) => {
-      const next: Theme = t === 'dark' ? 'light' : 'dark';
-      try {
-        localStorage.setItem(THEME_KEY, next);
-      } catch {
-        /* private window: the choice lasts for this page view */
-      }
-      return next;
-    });
-  }, []);
-
-  // Mark the section under the bar: the last one whose top has passed it.
-  // Nothing is marked above the first section.
-  useEffect(() => {
-    const ids = [...index.products.map((p) => p.handle), 'log'];
-    let raf = 0;
-    const update = () => {
-      raf = 0;
-      const line = (document.querySelector('.tw-bar')?.getBoundingClientRect().bottom ?? 56) + 24;
-      let cur = '';
-      for (const id of ids) {
-        const el = document.getElementById(id);
-        if (el && el.getBoundingClientRect().top <= line) cur = id;
-      }
-      setActive(cur);
-    };
-    const on = () => {
-      if (!raf) raf = requestAnimationFrame(update);
-    };
-    update();
-    window.addEventListener('scroll', on, {passive: true});
-    window.addEventListener('resize', on);
-    return () => {
-      window.removeEventListener('scroll', on);
-      window.removeEventListener('resize', on);
-      if (raf) cancelAnimationFrame(raf);
-    };
-  }, [index.products]);
-
-  // A link to a section lands on it even though figures above it change height as they load:
-  // the jump is repeated while the page settles, and stops at the first touch of the reader.
+export function WorkspaceShell({children}: {children: ReactNode}) {
+  // A link to a section or figure lands on it even though figures above it change height as they
+  // load: the jump is repeated while the page settles, and stops at the first touch of the reader.
   useEffect(() => {
     const id = decodeURIComponent(window.location.hash.slice(1));
     if (!id) return;
@@ -108,51 +37,22 @@ export function WorkspaceShell({index, children}: {index: TestingIndex; children
     };
   }, []);
 
-  // Keep the active chip in view in the scrolling nav on a phone.
-  useEffect(() => {
-    const nav = document.querySelector<HTMLElement>('.tw-bar .incutec-topbar__nav');
-    const cur = nav?.querySelector<HTMLElement>('[aria-current="location"]');
-    if (!nav) return;
-    // The active chip is centred; above the first section the row starts at its first chip.
-    nav.scrollTo({left: cur ? cur.offsetLeft - nav.clientWidth / 2 + cur.clientWidth / 2 : 0});
-  }, [active]);
-
   return (
-    <ThemeContext.Provider value={theme}>
-      <div className="testing-workspace" data-theme={theme} suppressHydrationWarning>
-        <script nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{__html: PRE_PAINT}} />
-        <header className="incutec-topbar tw-bar">
-          <span className="incutec-topbar__line" />
-          <a className="incutec-topbar__brand" href="/testing" aria-label="Incutec testing">
-            <img className="incutec-topbar__wordmark incutec-topbar__wordmark--light" src="/brand/wordmark-light.svg" alt="Incutec" />
-            <img className="incutec-topbar__wordmark incutec-topbar__wordmark--dark" src="/brand/wordmark-dark.svg" alt="" />
+    <div className="testing-workspace" data-theme="light">
+      <div className="tr-page">
+        <header className="tr-strip">
+          <a href="/testing" aria-label="Incutec testing">
+            <img src="/brand/wordmark-light.svg" alt="Incutec" />
           </a>
-          <span className="tw-bar-title">Testing</span>
-          <nav className="incutec-topbar__nav" aria-label="Products">
-            {index.products.map((p) => (
-              <a key={p.handle} href={`#${p.handle}`} aria-current={active === p.handle ? 'location' : undefined}>
-                {p.name}
-              </a>
-            ))}
-            <a href="#log" aria-current={active === 'log' ? 'location' : undefined}>
-              Log
-            </a>
-          </nav>
-          <div className="incutec-topbar__end">
-            <button type="button" className="tw-btn tw-theme" onClick={toggle} aria-pressed={theme === 'dark'}>
-              {theme === 'dark' ? 'Light' : 'Dark'}
-            </button>
-            <a className="tw-return" href={SITE_ORIGIN}>
-              Back to {SITE_ORIGIN.replace('https://', '')}
-            </a>
-          </div>
+          <span aria-hidden="true" />
         </header>
-        <main className="tw-main">{children}</main>
-        <footer className="tw-foot">
-          <span>Single units. Read the caveats.</span>
-          <a href="/testing/index.json">index.json</a>
+        <main className="tr-doc">{children}</main>
+        <footer className="tr-end">
+          <p>
+            Data: <a href="/testing/index.json">index.json</a>. Back to <a href={SITE_ORIGIN}>{SITE_ORIGIN.replace('https://', '')}</a>.
+          </p>
         </footer>
       </div>
-    </ThemeContext.Provider>
+    </div>
   );
 }

@@ -608,15 +608,16 @@ describe('public/testing', () => {
     const f = figs.get('openmotor-thrust-vs-rpm');
     assert.ok(f, 'thrust figure published');
     assert.match(f.chip, /1726 g/);
-    assert.match(f.chip, /Same OpenMotor-2306/);
-    assert.match(f.chip, /two 6S packs/);
+    assert.match(f.chip, /One OpenMotor-2306/);
+    assert.match(f.chip, /one 6S pack/);
     assert.doesNotMatch(f.chip, /reversed/, 'the capture does not record it, so the chip does not state it');
     const setup = index.runs[f.runId].setup.join(' ');
     assert.match(setup, /1726 g reference mass/);
     assert.match(setup, /207\.4 counts\/g/);
-    assert.match(setup, /same motor on two different 6S packs/);
+    assert.match(setup, /one 6S pack reading 23\.9 V at rest/);
+    assert.match(setup, /drawn in the thrust and pack voltage figures only/);
     assert.match(setup, /reversed so the propeller pulls \(operator-stated, not recorded in the capture\)/);
-    assert.match(setup, /third capture at 13:24 UTC/);
+    assert.match(setup, /capture at 16:35 UTC is not plotted/);
   });
   it('draws the thrust figure from one frame per rpm reading and its holds as markers with a band', () => {
     const f = figs.get('openmotor-thrust-vs-rpm');
@@ -624,7 +625,7 @@ describe('public/testing', () => {
     const holds = f.series.filter((s: any) => s.kind === 'hold');
     for (const s of frames) assert.equal(new Set(s.x).size, s.x.length);
     assert.ok(f.fit && f.fit.n >= 3);
-    assert.equal(holds.length, 2);
+    assert.equal(holds.length, 1);
     for (const h of holds) assert.ok(h.lo && h.hi && h.lo.length === h.x.length);
   });
   it('has the series shape the page reads', () => {

@@ -84,7 +84,7 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
     const styles = assignStyles(fig.series, theme);
     const aligned = alignSeries(fig.series);
     const full = figureDomains(fig, {hidden: hiddenRef.current}).x;
-    const grid = theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+    const grid = theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
     const hasY2 = Boolean(fig.axes.y2);
     let dualN: number | undefined;
     const windowOf = (u: uPlot): Domain | undefined => {

@@ -19,19 +19,24 @@ export function axisTitle(fig: Fig, axis: 'x' | 'y' | 'y2'): string {
 }
 
 /**
- * The one caveat shown under a card. The view's `card_caveat` decides: its
- * text, or nothing when it is empty; without it, the first flagged caveat in
- * full. The full caveats stay in Details.
+ * The figures of the page in document order: products as listed, figures as
+ * listed, a figure drawn in full by another one left out. Each gets its number
+ * and the number of its section, so a finding reads 2.1 for the first note or
+ * measurement under Figure 2. A figure without a preview is not drawn and has none.
  */
-export function visibleCaveat(figs: Fig[]): {text: string; full: string} | null {
-  for (const f of figs) {
-    const flagged = f.caveats.map((c) => (typeof c === 'string' ? null : c.flag ? c.text : null)).find((t) => t);
-    if (f.cardCaveat !== undefined) {
-      if (f.cardCaveat && flagged) return {text: f.cardCaveat, full: flagged};
-      if (f.cardCaveat) return {text: f.cardCaveat, full: f.cardCaveat};
-      continue;
+export type Numbered = {id: string; no: number; section: number};
+export function numberFigures(index: TestingIndex, has: (id: string) => boolean): Numbered[] {
+  const out: Numbered[] = [];
+  index.products.forEach((p, i) => {
+    for (const id of p.figures) {
+      if (index.figures[id] && has(id) && !isDuplicate(index, id)) out.push({id, no: out.length + 1, section: i + 1});
     }
-    if (flagged) return {text: flagged, full: flagged};
-  }
-  return null;
+  });
+  return out;
+}
+
+/** Where a link to a figure lands, as text: `Figure 3`, following a duplicate to the figure that draws it. */
+export function figureLabel(numbers: Numbered[], index: TestingIndex, id: string): string | null {
+  const n = numbers.find((q) => q.id === anchorFor(index, id));
+  return n ? `Figure ${n.no}` : null;
 }
