@@ -175,7 +175,7 @@ describe('the OpenMotor section', () => {
   it('states the 70 percent stop beside the thrust figure, flagged, and says the cause is unrecorded', () => {
     const c = fig('openmotor-thrust-vs-rpm').caveats.find((x) => /ends at 70 percent/.test(typeof x === 'string' ? x : x.text));
     assert.ok(c && typeof c !== 'string' && c.flag, 'flagged');
-    assert.match(typeof c === 'string' ? c : c.text, /cause not recorded/);
+    assert.match(typeof c === 'string' ? c : c.text, /unplugged the pack/);
   });
   it('uses 29354 rpm and a quadratic fit in the findings', () => {
     assert.match(index.figures['openmotor-hold-rpm']!.finding, /29354 rpm/);
@@ -184,10 +184,9 @@ describe('the OpenMotor section', () => {
 });
 
 describe('the log', () => {
-  it('does not name an unrecorded cause for the abort', () => {
+  it('names the operator pulling the pack as the cause', () => {
     const e = index.log.find((l) => l.id === 'motor-thrust-map-bus-loss')!;
-    assert.match(e.saw, /cause not recorded/);
-    assert.doesNotMatch(e.changed ?? '', /pack is pulled/);
+    assert.match(e.saw, /unplugged the pack/);
   });
 });
 

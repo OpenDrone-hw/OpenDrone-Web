@@ -80,7 +80,7 @@ function noteOf(id: string, value: number, setup: string[]): string {
     case 'openmotor-hold-esc-temp':
       return 'Hottest of 4 die sensors, only channel 1 driven';
     case 'openmotor-hold-pack-voltage':
-      return 'ESC reading, not checked against a meter';
+      return 'Flight controller battery divider, not checked against a meter';
     default:
       return '';
   }

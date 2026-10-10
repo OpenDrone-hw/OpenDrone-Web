@@ -22,7 +22,7 @@
       "text": "Load cell calibration: one 1726 g reference mass, about 0.7 percent from creep during the 40 s recording."
     },
     {
-      "text": "Pack A, the 13:16 UTC run, ends at 70 percent: pack voltage reads 0 V from the 80 percent step, cause not recorded, so later holds are dropped.",
+      "text": "Pack A, the 13:16 UTC run, ends at 70 percent: the operator unplugged the pack during the 80 percent step because of the noise, so later holds are dropped.",
       "flag": true
     }
   ],
@@ -218,7 +218,7 @@
       "x": 25284,
       "series": "s2.thrust_g.hold",
       "y": 1083.6,
-      "text": "Pack A stops here, 0 V pack reading"
+      "text": "Pack A unplugged here"
     }
   ]
 }

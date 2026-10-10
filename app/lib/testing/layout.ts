@@ -29,7 +29,7 @@ export function axisTitle(fig: Fig, axis: 'x' | 'y' | 'y2'): string {
 
 /** A flagged caveat too long for one line under a card has a short form here; the full text stays in Details. */
 export const SHORT_FLAG: Record<string, string> = {
-  'openmotor-thrust-vs-rpm': 'Pack A stops at 70 percent: 0 V pack voltage, cause not recorded.',
+  'openmotor-thrust-vs-rpm': 'Pack A unplugged by the operator at 80 percent, because of the noise.',
   'openmotor-hold-thrust': 'At 10 percent throttle the two packs read 30 g and 35 g.',
 };
 

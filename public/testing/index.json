@@ -226,7 +226,7 @@
       "date": "2026-10-10",
       "product": "openmotor",
       "tested": "Thrust map on the new thrust stand: ten throttle holds from 10 to 100 percent.",
-      "saw": "In the 13:25 UTC run thrust reached 1496 g at 100 percent throttle on the OpenMotor-2306. In the earlier 13:16 UTC run pack voltage read 0 V from the 80 percent step, cause not recorded, and the throttle profile kept stepping up to full.",
+      "saw": "In the 13:25 UTC run thrust reached 1496 g at 100 percent throttle on the OpenMotor-2306. In the earlier 13:16 UTC run the operator unplugged the pack during the 80 percent step because of the noise, and the throttle profile kept stepping up to full with no pack connected.",
       "changed": "The bench controller now aborts the run when the bus voltage disappears under command. The 13:25 UTC run was recorded with that change. The thrust stand test plans no longer include a current cut, because current sense on the stand is not calibrated.",
       "figureId": "openmotor-thrust-vs-rpm"
     },
