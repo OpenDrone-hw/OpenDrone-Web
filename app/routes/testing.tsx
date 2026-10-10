@@ -1,19 +1,15 @@
+import {useEffect, useState} from 'react';
 import type {Route} from './+types/testing';
 import {buildSeoMeta, SITE_ORIGIN} from '~/lib/seo';
 import {copyText} from '~/lib/copy';
-import {getIndex, getPreviews} from '~/lib/testing/data.server';
-import {numberFigures, photoNumbers} from '~/lib/testing/layout';
-import {WorkspaceShell} from '~/components/testing/WorkspaceShell';
-import {ProductSection} from '~/components/testing/ProductSection';
-import {LogSection} from '~/components/testing/LogSection';
-import {TitleBlock} from '~/components/testing/TitleBlock';
 
 /**
- * The Incutec testing page, laid out as a report. It is a page of its own:
- * `root.tsx` renders it without the storefront header, footer or chapter strip.
- * Data comes from `public/testing/` (written by `npm run sync:testing` from the
- * bench app's published views); each figure's full series is fetched when it
- * scrolls near.
+ * The Incutec testing explorer: the bench app's Analyse screen built for a
+ * static host, with the published views as saved graphs. It runs the app's
+ * own Python in the browser (Pyodide) over the recordings in
+ * `public/testing/explorer/chunks/`, so any field of any included recording
+ * can be drawn. `root.tsx` renders this route without the storefront chrome.
+ * A hash such as `#/analyse/<view id>` opens that saved graph.
  */
 export const meta: Route.MetaFunction = () =>
   buildSeoMeta({
@@ -22,21 +18,22 @@ export const meta: Route.MetaFunction = () =>
     canonical: `${SITE_ORIGIN}/testing`,
   });
 
-export async function loader(_args: Route.LoaderArgs) {
-  return {index: getIndex(), previews: getPreviews(240)};
-}
+const EXPLORER = '/testing/explorer/index.html';
 
-export default function TestingRoute({loaderData}: Route.ComponentProps) {
-  const {index, previews} = loaderData;
-  const numbers = numberFigures(index, (id) => Boolean(previews[id]));
-  const photos = photoNumbers(index);
+export default function TestingRoute() {
+  const [src, setSrc] = useState<string | null>(null);
+  useEffect(() => {
+    setSrc(EXPLORER + (window.location.hash || ''));
+  }, []);
   return (
-    <WorkspaceShell>
-      <TitleBlock index={index} />
-      {index.products.map((p) => (
-        <ProductSection key={p.handle} product={p} index={index} previews={previews} numbers={numbers} photoNo={photos[p.handle]} />
-      ))}
-      {index.log.length ? <LogSection index={index} numbers={numbers} /> : null}
-    </WorkspaceShell>
+    <main style={{position: 'fixed', inset: 0, background: '#FBFBFA'}}>
+      {src ? (
+        <iframe
+          title="Incutec testing explorer"
+          src={src}
+          style={{border: 0, width: '100%', height: '100%', display: 'block'}}
+        />
+      ) : null}
+    </main>
   );
 }
