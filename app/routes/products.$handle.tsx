@@ -723,7 +723,16 @@ function useChapterReveal(key: string) {
       {rootMargin: '0px 0px -15% 0px', threshold: 0.05},
     );
     chapters.forEach((el) => io.observe(el));
-    return () => io.disconnect();
+    // A chapter that mounts later (a variant switch adds one) is observed too;
+    // otherwise it stays at opacity 0.
+    const mo = new MutationObserver(() => {
+      document.querySelectorAll('.chapter:not(.is-visible)').forEach((el) => io.observe(el));
+    });
+    mo.observe(document.body, {childList: true, subtree: true});
+    return () => {
+      io.disconnect();
+      mo.disconnect();
+    };
   }, [key]);
 }
 
@@ -2103,7 +2112,7 @@ function ProductPage() {
       case 'specs':
         return content.specs.length > 0;
       case 'testing':
-        return testingFigure !== null;
+        return testingCards.length > 0;
       case 'inTheBox':
         return content.inTheBox.length > 0 || Boolean(content.bundle);
       case 'downloads':
@@ -2690,20 +2699,27 @@ function ProductPage() {
         </Chapter>
     ),
     /** What we measured on the bench: one card. The rest is in the testing workspace. */
-    testing: (n, title) =>
-      testingFigure ? (
-        <Chapter
-          id="testing"
-          number={n}
-          label="Testing"
-          title={title}
-          titleId="testing.chapter_title"
-          noMedia
-          wide={<ProductCard card={testingFigure} />}
-        >
-          {null}
-        </Chapter>
-      ) : null,
+    testing: (n, title) => (
+      <Chapter
+        id="testing"
+        number={n}
+        label="Testing"
+        title={title}
+        titleId="testing.chapter_title"
+        noMedia
+        wide={
+          testingFigure ? (
+            <ProductCard card={testingFigure} />
+          ) : (
+            <p className="testing-card-none">
+              No bench data for this variant yet. <a href="/testing">All measurements</a>
+            </p>
+          )
+        }
+      >
+        {null}
+      </Chapter>
+    ),
     /** What it measures. */
     specs: (n, title) => {
       const multi = sheet.columns.length > 1;

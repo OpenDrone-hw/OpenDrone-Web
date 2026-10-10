@@ -9,7 +9,7 @@ import type {Fig} from '~/lib/testing/types';
  * A figure as a plain SVG, drawn from the same domains, ticks and styles as the
  * canvas chart. It is what the server renders for every figure, what the
  * product-page card shows, and what "SVG" saves. It needs no script. Logged
- * frames are drawn by the interactive chart only.
+ * frames are drawn only on the card (`compact`), as a faint cloud of dots.
  *
  * With no `theme` the colours follow the CSS `color-scheme` of the container
  * (`light-dark()`); with a `theme` they are fixed, for the download.
@@ -41,7 +41,7 @@ export function StaticFigure({
   /** Turn the y axis title and hang it in the left gutter beside the tick labels. */
   side?: boolean;
 }) {
-  const g = buildGeometry(fig, {w: width, h: height, theme, compact, titles, side, narrow: width < 520, hidden: defaultHidden(fig)});
+  const g = buildGeometry(fig, {w: width, h: height, theme, compact, titles, side, narrow: width < 520, hidden: compact ? new Set<string>() : defaultHidden(fig)});
   const clip = useId().replace(/:/g, '');
   const ink = theme ? INK[theme] : 'var(--tf-ink, currentColor)';
   const muted = theme ? MUTED[theme] : 'var(--tf-muted, currentColor)';
@@ -113,7 +113,14 @@ export function StaticFigure({
           {s.bars.filter(([, lo, hi]) => Math.abs(hi - lo) > 3).map(([x, lo, hi], i) => (
             <path key={`b${i}`} d={`M${x} ${lo}V${hi}M${x - 3} ${lo}H${x + 3}M${x - 3} ${hi}H${x + 3}`} strokeWidth={1} strokeOpacity={0.9} />
           ))}
-          {s.dots.map(([x, y], i) => (
+          {s.kind === 'frames' ? (
+            <g clipPath={`url(#${clip}-plot)`} fill={colorOf(s)} fillOpacity={0.4} stroke="none">
+              {s.dots.map(([x, y], i) => (
+                <circle key={`f${i}`} cx={x} cy={y} r={1.4} />
+              ))}
+            </g>
+          ) : null}
+          {s.kind !== 'frames' && s.dots.map(([x, y], i) => (
             <path
               key={`d${i}`}
               d={markerPath(s.style.marker, x, y, DOT_R)}

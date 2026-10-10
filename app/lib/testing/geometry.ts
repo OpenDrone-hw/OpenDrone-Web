@@ -122,8 +122,9 @@ export function buildGeometry(fig: Fig, opt: GeomOptions): Geometry {
   let end: Geometry['end'];
   for (const s of fig.series) {
     if (opt.hidden?.has(s.id)) continue;
-    // Logged frames are drawn by the interactive chart only.
-    if (s.kind === 'frames') continue;
+    // Logged frames are drawn by the interactive chart, and by the card as a
+    // faint cloud of dots behind its medians.
+    if (s.kind === 'frames' && !compact) continue;
     const d = s.axis === 'y2' && dom.y2 ? dom.y2 : dom.y;
     const dots: Array<[number, number]> = [];
     const bars: Array<[number, number, number]> = [];
@@ -143,6 +144,10 @@ export function buildGeometry(fig: Fig, opt: GeomOptions): Geometry {
       }
       const px = r1(sx(xv));
       const py = r1(sy(yv, d));
+      if (s.kind === 'frames') {
+        dots.push([px, py]);
+        continue;
+      }
       if (s.kind !== 'hold' || connectsHolds(fig)) {
         path += `${pen ? 'L' : 'M'}${px} ${py}`;
         pen = true;
@@ -157,7 +162,7 @@ export function buildGeometry(fig: Fig, opt: GeomOptions): Geometry {
     }
     // Ten points or more: a line with one marker at its end, not a marker on every point.
     if (count >= MARKS_BELOW) dots.splice(0, dots.length - 1);
-    if (!end && s.x.length) {
+    if (!end && s.kind !== 'frames' && s.x.length) {
       const i = s.y.length - 1 - [...s.y].reverse().findIndex((v) => v !== null && v !== undefined);
       const xv = s.x[i];
       const yv = s.y[i];

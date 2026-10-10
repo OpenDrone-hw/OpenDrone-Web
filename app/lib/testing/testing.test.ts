@@ -107,7 +107,7 @@ describe('selection', () => {
   it('picks the featured figure by tier and summarizes', () => {
     assert.equal(pickFeatured(index, 'openmotor')?.id, 'openmotor-thrust-vs-rpm');
     assert.equal(pickFeatured(index, 'openesc', '30x30'), null);
-    assert.equal(pickFeatured(index, 'openesc', '20x20')?.id, 'openesc-shunt-vs-clamp');
+    assert.equal(pickFeatured(index, 'openesc', '20x20')?.id, 'openesc-die-temp-ramp');
     assert.equal(summarize(index).figures, Object.keys(index.figures).length);
   });
 
