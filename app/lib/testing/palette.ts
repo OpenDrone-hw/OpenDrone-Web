@@ -63,20 +63,25 @@ const SHADES: Record<Quantity, Record<Theme, [string, string, string]>> = {
 
 /**
  * Runs, packs and units of one quantity in one figure: when a quantity has more
- * than one of them the figure colours them by identity, blue then orange then
- * violet, the same way on every card. Quantity hue then cannot carry the
+ * than one of them the figure colours them by identity, blue, orange, violet,
+ * green, magenta, the same way on every card. Quantity hue then cannot carry the
  * difference, and the legend, markers and end labels name each one. Each is at
  * least 4.5:1 on both surfaces.
  */
-export const IDENTITY: Record<Theme, [string, string, string]> = {
-  light: ['#1A56B0', '#B45309', '#6234B8'],
-  dark: ['#7DB2FF', '#FFA24D', '#BCA4FF'],
+export const IDENTITY: Record<Theme, string[]> = {
+  light: ['#1A56B0', '#B45309', '#6234B8', '#12703F', '#A8196F'],
+  dark: ['#7DB2FF', '#FFA24D', '#BCA4FF', '#5FD08A', '#FF86C4'],
 };
+const N_ID = 5;
 
 /** Dash pattern per variant, in CSS px. */
-export const DASHES: Array<number[]> = [[], [7, 4], [2, 3]];
-export type MarkerShape = 'circle' | 'square' | 'diamond';
-export const MARKERS: MarkerShape[] = ['circle', 'square', 'diamond'];
+export const DASHES: Array<number[]> = [[], [7, 4], [2, 3], [9, 3, 2, 3], [4, 3]];
+export type MarkerShape = 'circle' | 'square' | 'diamond' | 'triangle';
+export const MARKERS: MarkerShape[] = ['circle', 'square', 'diamond', 'triangle', 'circle'];
+
+/** The one chart spec: line weight and hold-marker size in css px, shared by canvas, SVG and download. */
+export const LINE_PX = 1.5;
+export const HOLD_LINE_PX = 1.25;
 
 export function isQuantity(q: string): q is Quantity {
   return (QUANTITIES as readonly string[]).includes(q);
@@ -155,7 +160,7 @@ export type SeriesStyle = {
  * pack share colour and dash.
  */
 export function assignStyles(
-  series: Array<{id: string; quantity: string; pack?: string; kind: string}>,
+  series: Array<{id: string; quantity: string; pack?: string; kind: string; axis?: string}>,
   theme: Theme,
 ): Record<string, SeriesStyle> {
   const seen: Record<string, string[]> = {};
@@ -167,24 +172,34 @@ export function assignStyles(
     if (variant < 0) variant = packs.push(key) - 1;
     variants.push(variant);
   });
+  // A two-axis figure names its two quantities by identity colour, blue and
+  // orange, so the axis titles and the lines match on every card.
+  const dual = series.some((s) => s.axis === 'y2');
+  const order: string[] = [];
   const out: Record<string, SeriesStyle> = {};
   series.forEach((s, i) => {
-    const variant = variants[i]!;
-    const identity = (seen[s.quantity]?.length ?? 0) > 1;
     const frames = s.kind === 'frames';
-    const color = identity ? IDENTITY[theme][variant % 3]! : seriesColor(s.quantity, variant, theme);
+    let variant = variants[i]!;
+    let identity = (seen[s.quantity]?.length ?? 0) > 1;
+    if (dual) {
+      const key = `${s.quantity}/${s.pack ?? ''}/${s.axis ?? ''}`;
+      if (!order.includes(key)) order.push(key);
+      variant = order.indexOf(key);
+      identity = true;
+    }
+    const v = variant % N_ID;
+    const color = identity ? IDENTITY[theme][v]! : seriesColor(s.quantity, variant, theme);
     out[s.id] = {
       color,
       colorCss: identity
-        ? `light-dark(${IDENTITY.light[variant % 3]}, ${IDENTITY.dark[variant % 3]})`
+        ? `light-dark(${IDENTITY.light[v]}, ${IDENTITY.dark[v]})`
         : seriesColorCss(s.quantity, variant),
-      variant: variant % 3,
-      dash: DASHES[variant % 3]!,
-      marker: MARKERS[variant % 3]!,
-      width: frames ? 1 : 2,
-      // Raw frames stay quiet but must be seen: at least 3:1 on both surfaces
-      // for the dot itself comes from the identity colour at this strength.
-      opacity: frames ? (theme === 'dark' ? 0.62 : 0.5) : 1,
+      variant: v,
+      dash: dual ? [] : DASHES[v]!,
+      marker: MARKERS[v]!,
+      width: frames ? 1 : s.kind === 'hold' ? HOLD_LINE_PX : LINE_PX,
+      // Raw frames are quiet but seen: the dot stays at 3:1 or more on both surfaces.
+      opacity: frames ? (theme === 'dark' ? 0.7 : 0.6) : 1,
     };
   });
   return out;

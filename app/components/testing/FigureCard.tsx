@@ -4,6 +4,8 @@ import {fmtValue, unitLabel} from '~/lib/testing/scale';
 import type {Domain} from '~/lib/testing/scale';
 import type {Fig, FigSummary, LogEntry, RunInfo} from '~/lib/testing/types';
 import {Disclosure} from './Disclosure';
+import {sentences} from './LogRow';
+import {UnitLine} from './UnitLine';
 import {StaticFigure} from './StaticFigure';
 import {useWorkspaceTheme} from './WorkspaceShell';
 
@@ -60,6 +62,7 @@ export function FigureCard({
   size,
   showRun,
   log,
+  hint = false,
 }: {
   id: string;
   summary: FigSummary;
@@ -71,6 +74,8 @@ export function FigureCard({
   showRun: boolean;
   /** The log entry that explains this figure, linked from the head. */
   log?: LogEntry;
+  /** The first plot of the page says how to read values, inside the plot, until it is touched. */
+  hint?: boolean;
 }) {
   const theme = useWorkspaceTheme();
   const root = useRef<HTMLElement>(null);
@@ -194,7 +199,7 @@ export function FigureCard({
   const fig = full ?? preview;
   const startRange = typeof window === 'undefined' ? null : readUrlRange(id);
   const caption = fig.fit
-    ? `Dashed: quadratic fit, ${fmtValue(fig.fit.k)} ${fig.fit.unit} from ${fig.fit.fromThrottle} percent throttle up, ${fig.fit.n} holds, largest miss ${fig.fit.maxMiss} ${unitLabel(fig.axes.y.unit)}.`
+    ? `Quadratic fit: ${fmtValue(fig.fit.k)} ${fig.fit.unit} from ${fig.fit.fromThrottle} percent throttle up, ${fig.fit.n} holds, largest miss ${fig.fit.maxMiss} ${unitLabel(fig.axes.y.unit)}.`
     : null;
 
   return (
@@ -208,13 +213,14 @@ export function FigureCard({
         ) : null}
         <p className="tw-finding">{summary.finding}</p>
         {log ? (
-          <a className="tw-logref" href={`#log-${log.id}`}>
-            Tested, saw, changed: {log.date}
-          </a>
+          <p className="tw-logref">
+            {log.changed ? <span>Changed: {sentences(log.changed, 1)} </span> : null}
+            <a href={`#log-${log.id}`}>Log, {log.date}</a>
+          </p>
         ) : null}
       </header>
 
-      <div className="tw-plot" ref={plotEl} style={{minHeight: height + 96}}>
+      <div className="tw-plot" ref={plotEl} style={{minHeight: height + 64}}>
         {full && Panel ? (
           <>
             <Panel
@@ -226,6 +232,7 @@ export function FigureCard({
               onExpand={() => setWide(true)}
               onDownload={() => void download()}
               onCsv={csv}
+              hint={hint}
             />
             {wide ? (
               <div className="tw-wide" role="dialog" aria-label={`${summary.title}, wide view`}>
@@ -245,7 +252,16 @@ export function FigureCard({
             </button>
           </p>
         ) : (
-          <StaticFigure fig={fig} width={size === 'wide' ? 1200 : 720} height={size === 'wide' ? 480 : 380} className="tw-static" />
+          <>
+            <UnitLine fig={fig} theme={theme} />
+            <StaticFigure
+              fig={fig}
+              width={size === 'wide' ? 1200 : 720}
+              height={size === 'wide' ? 480 : 380}
+              className="tw-static"
+              titles={false}
+            />
+          </>
         )}
       </div>
       {caption ? <p className="tw-caption">{caption}</p> : null}

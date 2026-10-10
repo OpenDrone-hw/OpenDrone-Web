@@ -183,6 +183,9 @@ export function figureDomains(
     const e = extent(group.flatMap((s) => seriesY(s, win))) ?? extent(group.flatMap((s) => seriesY(s)));
     if (!e) return [0, 1];
     const n = niceRange(e, 5, 0.06);
+    // A reading that starts near zero and never goes below it gets no empty
+    // axis under it.
+    if (e[0] >= 0 && e[0] < 0.1 * e[1] && n[0] < 0) n[0] = 0;
     return [def?.min ?? n[0], def?.max ?? n[1]];
   };
   const y = yFor('y') ?? [0, 1];
@@ -192,7 +195,7 @@ export function figureDomains(
   // from -109 to -17 dBm runs -110 to -10 in steps of 20, not -120 to 0.
   if (!y2 && e1 && free(fig.axes.y)) {
     const span = e1[1] - e1[0] || 1;
-    const fixedMin = fig.axes.y.min;
+    const fixedMin = fig.axes.y.min ?? (e1[0] >= 0 && e1[0] < 0.1 * e1[1] ? 0 : undefined);
     let best: {lo: number; hi: number; waste: number; n: number} | null = null;
     for (const n of [5, 4, 6]) {
       const f = fitIntervals(e1, n, fixedMin, true);

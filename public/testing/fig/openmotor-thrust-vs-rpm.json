@@ -211,5 +211,14 @@
     "x1": 29354,
     "maxMiss": 23,
     "n": 11
-  }
+  },
+  "marks": [
+    {
+      "kind": "point",
+      "x": 25284,
+      "series": "s2.thrust_g.hold",
+      "y": 1083.6,
+      "text": "Pack A stops here, 0 V pack reading"
+    }
+  ]
 }

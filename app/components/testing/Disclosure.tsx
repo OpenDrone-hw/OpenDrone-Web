@@ -1,46 +1,47 @@
 import {tableRows} from '~/lib/testing/export';
 import {unitLabel} from '~/lib/testing/scale';
-import {caveatFlagged, caveatText, type Caveat, type Fig} from '~/lib/testing/types';
+import {visibleCaveat} from '~/lib/testing/layout';
+import {caveatFlagged, caveatText, type Fig} from '~/lib/testing/types';
 
 /**
- * Flagged caveats are visible. The other caveats are one fold, the plotted
- * values, how they were reduced and the source another, each named for what it
- * holds.
+ * One flagged caveat is visible under the card, short. Everything else is one
+ * disclosure, Details: the other caveats, the plotted values, how they were
+ * reduced and the source.
  */
 export function Disclosure({figs}: {figs: Fig[]}) {
   const uniq = <T,>(list: T[], key: (t: T) => string) => [...new Map(list.map((t) => [key(t), t])).values()];
   const caveats = uniq(figs.flatMap((f) => f.caveats), caveatText);
-  const flagged = caveats.filter(caveatFlagged);
-  const rest = caveats.filter((c) => !caveatFlagged(c));
+  const shown = visibleCaveat(figs);
+  const rest = caveats.filter((c) => caveatText(c) !== shown?.text);
   const reductions = uniq(figs.filter((f) => f.reduction).map((f) => f.reduction!), (t) => t);
   const cites = uniq(figs.filter((f) => f.cite).map((f) => f.cite!), (t) => t);
   return (
     <div className="tw-notes">
-      {flagged.length ? (
-        <ul className="tw-cav">
-          {flagged.map((c) => (
-            <li key={caveatText(c)} data-flag="1">
-              {caveatText(c)}
-            </li>
-          ))}
-        </ul>
+      {shown ? (
+        <p className="tw-flag">
+          <b aria-hidden="true">!</b>
+          <span className="tw-sr">Caveat: </span>
+          {shown.text}
+        </p>
       ) : null}
-      <div className="tw-folds">
-        {rest.length ? (
-          <details className="tw-details">
-            <summary>
-              {flagged.length ? 'More caveats' : 'Caveats'} ({rest.length})
-            </summary>
-            <ul className="tw-cav">
-              {rest.map((c) => (
-                <li key={caveatText(c)}>{caveatText(c)}</li>
-              ))}
-            </ul>
-          </details>
-        ) : null}
-        <details className="tw-details">
-          <summary>Values and source</summary>
-          <div className="tw-details-body">
+      <details className="tw-details">
+        <summary>
+          Details
+          <span>{rest.length ? `${rest.length} more caveats, values, source` : 'values, source'}</span>
+        </summary>
+        <div className="tw-details-body">
+          {rest.length ? (
+            <>
+              <h4>Caveats</h4>
+              <ul className="tw-cav">
+                {rest.map((c) => (
+                  <li key={caveatText(c)} data-flag={caveatFlagged(c) ? '1' : undefined}>
+                    {caveatText(c)}
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
             {figs.map((fig) => {
               const rows = tableRows(fig);
               return rows ? (
@@ -91,9 +92,8 @@ export function Disclosure({figs}: {figs: Fig[]}) {
                 ))}
               </>
             ) : null}
-          </div>
-        </details>
-      </div>
+        </div>
+      </details>
     </div>
   );
 }

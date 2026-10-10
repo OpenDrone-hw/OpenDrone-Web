@@ -1,9 +1,13 @@
 import {useCallback, useEffect, useMemo, useRef, useState, type ComponentType} from 'react';
 import {figureCsv} from '~/lib/testing/export';
-import {unitLabel} from '~/lib/testing/scale';
+import {fmtValue, unitLabel} from '~/lib/testing/scale';
+import {markerPath} from '~/lib/testing/geometry';
+import {plainLabel} from '~/lib/testing/labels';
+import {assignStyles} from '~/lib/testing/palette';
 import type {Fig, FigSummary, RunInfo} from '~/lib/testing/types';
 import {Disclosure} from './Disclosure';
 import {Legend} from './Legend';
+import type {ReadoutState} from './Chart';
 import {StaticFigure} from './StaticFigure';
 import {useWorkspaceTheme} from './WorkspaceShell';
 
@@ -36,6 +40,7 @@ export function StackCard({
   const [Panel, setPanel] = useState<ComponentType<PanelProps> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [hidden, setHidden] = useState<Set<string>>(() => new Set());
+  const [reads, setReads] = useState<Record<string, ReadoutState>>({});
   const started = useRef(false);
 
   const load = useCallback(() => {
@@ -122,12 +127,12 @@ export function StackCard({
           </span>
         </div>
       </div>
+      <CursorRow figs={figs} reads={reads} theme={theme} />
       {figs.map((fig, i) => {
-        const sum = summaries[fig.id]!;
         const last = i === figs.length - 1;
-        const h = last ? 230 : 176;
+        const h = last ? 150 : 120;
         return (
-          <section key={fig.id} id={fig.id} className="tw-panelblock" aria-label={`${fig.title}. ${sum.finding}`}>
+          <section key={fig.id} id={fig.id} className="tw-panelblock" aria-label={`${fig.title}. ${summaries[fig.id]!.finding}`}>
             <h4>
               {fig.axes.y.label}, {unitLabel(fig.axes.y.unit)}
             </h4>
@@ -141,6 +146,7 @@ export function StackCard({
                   syncKey={syncKey}
                   showXLabels={last}
                   hiddenExt={hiddenFor(fig)}
+                  onReadout={(r) => setReads((prev) => (prev[fig.id] === r ? prev : {...prev, [fig.id]: r}))}
                 />
               ) : error ? (
                 <p className="tw-error" role="alert">
@@ -150,7 +156,7 @@ export function StackCard({
                   </button>
                 </p>
               ) : (
-                <StaticFigure fig={fig} width={720} height={h + 20} compact className="tw-static" />
+                <StaticFigure fig={fig} width={720} height={h + (last ? 30 : 0)} compact className="tw-static" titles={false} />
               )}
             </div>
           </section>
@@ -158,5 +164,50 @@ export function StackCard({
       })}
       <Disclosure figs={figs} />
     </article>
+  );
+}
+
+/**
+ * One row for the shared cursor: the throttle under it and, per panel, the
+ * value of each run, in the run's marker. Empty, it says how to use it, so the
+ * row never changes height.
+ */
+function CursorRow({figs, reads, theme}: {figs: Fig[]; reads: Record<string, ReadoutState>; theme: 'light' | 'dark'}) {
+  const first = Object.values(reads).find(Boolean);
+  const x = first?.rows.find((r) => r.kind === 'hold')?.x ?? first?.x;
+  return (
+    <p className="tw-cursor" aria-hidden="true" data-idle={first ? undefined : '1'}>
+      {first && x !== undefined ? (
+        <>
+          <b>
+            {figs[0]!.axes.x.label} {fmtValue(x)} {unitLabel(figs[0]!.axes.x.unit)}
+          </b>
+          {figs.map((fig) => {
+            const rows = (reads[fig.id]?.rows ?? []).filter((r) => r.kind === 'hold');
+            if (!rows.length) return null;
+            const st = assignStyles(fig.series, theme);
+            return (
+              <span key={fig.id} className="tw-cursor-item">
+                {fig.axes.y.label}{' '}
+                {rows.map((r) => (
+                  <span key={r.id} title={plainLabel(r.label)}>
+                    <svg width="10" height="10" viewBox="-6 -6 12 12" aria-hidden="true">
+                      <path d={markerPath(st[r.id]?.marker ?? 'circle', 0, 0, 4)} fill={r.color} />
+                    </svg>{' '}
+                    <b>{fmtValue(r.y)}</b>{' '}
+                  </span>
+                ))}
+                {unitLabel(fig.axes.y.unit)}
+              </span>
+            );
+          })}
+        </>
+      ) : (
+        <span>
+          <span className="tw-hint-fine">Hover</span>
+          <span className="tw-hint-coarse">Touch</span> a panel for the values of both runs at one throttle.
+        </span>
+      )}
+    </p>
   );
 }

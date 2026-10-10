@@ -2,17 +2,17 @@ import {useEffect, useRef} from 'react';
 import uPlot from 'uplot';
 import 'uplot/dist/uPlot.min.css';
 import {assignStyles, CANVAS, INK, MUTED, SURFACE, type Theme} from '~/lib/testing/palette';
-import {GUTTER_L, GUTTER_L_NARROW, MARKER_R, markerPath, placeLabels, TICK_PX} from '~/lib/testing/geometry';
+import {connectsHolds, GUTTER_L, GUTTER_L_NARROW, layoutNotes, MARK_ROW, MARKER_R, markerPath, TICK_PX} from '~/lib/testing/geometry';
+import {directPad, plainLabel} from '~/lib/testing/labels';
+import {axisTitle} from '~/lib/testing/layout';
 import {
   alignSeries,
   evenTicks,
   figureDomains,
   fmtTickSet,
   fmtValue,
-  fullXDomain,
   nearestSorted,
   niceTicks,
-  unitLabel,
   type Domain,
 } from '~/lib/testing/scale';
 import type {Fig} from '~/lib/testing/types';
@@ -83,8 +83,8 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
     const font = getComputedStyle(el).fontFamily || 'sans-serif';
     const styles = assignStyles(fig.series, theme);
     const aligned = alignSeries(fig.series);
-    const full = fullXDomain(fig);
-    const grid = theme === 'dark' ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
+    const full = figureDomains(fig, {hidden: hiddenRef.current}).x;
+    const grid = theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
     const hasY2 = Boolean(fig.axes.y2);
     let dualN: number | undefined;
     const windowOf = (u: uPlot): Domain | undefined => {
@@ -109,7 +109,7 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
     const xSplits = (u: uPlot, _a: number, min: number, max: number) =>
       niceTicks(min, max, count(u, u.bbox.width / devicePixelRatio));
     const ySplits = (u: uPlot, _a: number, min: number, max: number) =>
-      dualN
+      dualN && hasY2
         ? evenTicks(min, max, dualN)
         : niceTicks(min, max, Math.min(5, Math.max(3, Math.floor(u.bbox.height / devicePixelRatio / 56))));
     const fmtAxis = (_u: uPlot, splits: number[]) => fmtTickSet(splits);
@@ -123,7 +123,8 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
     };
     const narrow = el.clientWidth < 520;
     const gutter = narrow ? GUTTER_L_NARROW : GUTTER_L;
-    const lab = (a: {label: string; unit: string}) => `${a.label} (${unitLabel(a.unit)})`;
+    const nLines = Math.min(2, (fig.marks ?? []).filter((q) => q.kind === 'line').length);
+    const rightPad = directPad(fig, narrow);
 
     const series: uPlot.Series[] = [
       {},
@@ -144,7 +145,7 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
           return {
             ...base,
             paths: () => null,
-            points: {show: true, size: 4, width: 0, stroke: hexA(st.color, st.opacity), fill: hexA(st.color, st.opacity)},
+            points: {show: true, size: 5, width: 0, stroke: hexA(st.color, st.opacity), fill: hexA(st.color, st.opacity)},
           };
         }
         return {
@@ -154,7 +155,7 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
           dash: st.dash.length ? st.dash : undefined,
           points: {
             show: s.x.length <= 24,
-            size: 6,
+            size: 8,
             width: 1.5,
             stroke: st.color,
             fill: SURFACE[theme],
@@ -166,6 +167,29 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
     const drawHolds = (u: uPlot) => {
       const ctx = u.ctx;
       const pr = devicePixelRatio;
+      const hiddenNow = hiddenRef.current;
+      const plotBox = {
+        x0: u.bbox.left / pr,
+        y0: u.bbox.top / pr,
+        x1: (u.bbox.left + u.bbox.width) / pr,
+        y1: (u.bbox.top + u.bbox.height) / pr,
+      };
+      const win = windowOf(u);
+      ctx.save();
+      ctx.font = `500 ${12 * pr}px ${font}`;
+      const laid = layoutNotes(fig, {
+        px: (v) => u.valToPos(v, 'x', true) / pr,
+        py: (v, axis) => u.valToPos(v, axis, true) / pr,
+        plot: plotBox,
+        measure: (t) => ctx.measureText(t).width / pr,
+        styles,
+        hidden: hiddenNow,
+        narrow,
+        xWindow: win,
+        rightPad,
+      });
+      ctx.restore();
+
       ctx.save();
       ctx.beginPath();
       // Markers on the plot edge (100 percent throttle) are drawn whole.
@@ -194,23 +218,48 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
         ctx.setLineDash([]);
         ctx.restore();
       }
-      const labels: Array<{x: number; y: number; text: string; color: string; w: number}> = [];
-      const centres: Array<[number, number]> = [];
-      ctx.font = `${TICK_PX * pr}px ${font}`;
+      // Hold markers are joined by a thin line unless the fitted law draws the trend.
+      if (connectsHolds(fig)) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(u.bbox.left, u.bbox.top, u.bbox.width, u.bbox.height);
+        ctx.clip();
+        fig.series.forEach((s) => {
+          if (s.kind !== 'hold' || hiddenNow.has(s.id)) return;
+          const st = styles[s.id]!;
+          const scale = s.axis === 'y2' ? 'y2' : 'y';
+          ctx.strokeStyle = hexA(st.color, 0.55);
+          ctx.lineWidth = st.width * pr;
+          ctx.beginPath();
+          let pen = false;
+          for (let i = 0; i < s.x.length; i++) {
+            const xv = s.x[i];
+            const yv = s.y[i];
+            if (xv === null || xv === undefined || yv === null || yv === undefined) {
+              pen = false;
+              continue;
+            }
+            const px = u.valToPos(xv, 'x', true);
+            const py = u.valToPos(yv, scale, true);
+            if (pen) ctx.lineTo(px, py);
+            else ctx.moveTo(px, py);
+            pen = true;
+          }
+          ctx.stroke();
+        });
+        ctx.restore();
+      }
+      // Hold markers with their interquartile whisker, a surface ring around each.
       fig.series.forEach((s) => {
-        if (s.kind !== 'hold' || hiddenRef.current.has(s.id)) return;
+        if (s.kind !== 'hold' || hiddenNow.has(s.id)) return;
         const st = styles[s.id]!;
         const scale = s.axis === 'y2' ? 'y2' : 'y';
-        const unit = unitLabel((s.axis === 'y2' ? fig.axes.y2 : fig.axes.y)?.unit ?? '');
-        let last = -1;
         for (let i = 0; i < s.x.length; i++) {
           const xv = s.x[i];
           const yv = s.y[i];
           if (xv === null || xv === undefined || yv === null || yv === undefined) continue;
-          last = i;
           const cx = u.valToPos(xv, 'x', true);
           const cy = u.valToPos(yv, scale, true);
-          centres.push([cx / pr, cy / pr]);
           const lo = s.lo?.[i];
           const hi = s.hi?.[i];
           if (lo !== null && lo !== undefined && hi !== null && hi !== undefined) {
@@ -232,89 +281,51 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
           const path = new Path2D(markerPath(st.marker, cx, cy, MARKER_R * pr));
           ctx.fillStyle = st.color;
           ctx.strokeStyle = SURFACE[theme];
-          ctx.lineWidth = 1.5 * pr;
+          ctx.lineWidth = 2 * pr;
+          ctx.lineJoin = 'round';
           ctx.stroke(path);
           ctx.fill(path);
         }
-        // Name the run and its last value at the end of its markers.
-        if (last >= 0 && s.pack) {
-          const text = `${s.pack} ${fmtValue(s.y[last]!)} ${unit}`.trim();
-          labels.push({
-            x: u.valToPos(s.x[last]!, 'x', true) / pr,
-            y: u.valToPos(s.y[last]!, scale, true) / pr,
-            text,
-            color: st.color,
-            w: ctx.measureText(text).width / pr,
-          });
-        }
       });
-      const rects = placeLabels(
-        labels.map((l) => ({x: l.x, y: l.y, w: l.w, h: TICK_PX + 2})),
-        centres,
-        {x0: u.bbox.left / pr, y0: u.bbox.top / pr, x1: (u.bbox.left + u.bbox.width) / pr, y1: (u.bbox.top + u.bbox.height) / pr},
-        MARKER_R,
-      );
-      ctx.textBaseline = 'middle';
-      ctx.textAlign = 'left';
-      labels.forEach((l, i) => {
-        const r = rects[i]!;
-        ctx.fillStyle = l.color;
-        ctx.fillText(l.text, r.left * pr, (r.top + r.h / 2) * pr);
+      // Rings on marked points.
+      laid.rings.forEach(([x, y, id]) => {
+        ctx.strokeStyle = styles[id]?.color ?? INK[theme];
+        ctx.lineWidth = 1.5 * pr;
+        ctx.beginPath();
+        ctx.arc(x * pr, y * pr, (MARKER_R + 4) * pr, 0, Math.PI * 2);
+        ctx.stroke();
       });
       ctx.restore();
-      drawCallout(u);
-    };
 
-    const drawCallout = (u: uPlot) => {
-      const cx = fig.callout_x;
-      if (cx === undefined) return;
-      const s = fig.series.find((q) => !hiddenRef.current.has(q.id));
-      if (!s) return;
-      const i = nearestSorted(s, cx);
-      if (i < 0) return;
-      const ctx = u.ctx;
-      const pr = devicePixelRatio;
-      const px = u.valToPos(s.x[i]!, 'x', true);
-      const py = u.valToPos(s.y[i]!, s.axis === 'y2' ? 'y2' : 'y', true);
-      const st = styles[s.id]!;
-      const maxW = Math.min(260 * pr, u.bbox.width * 0.6);
-      ctx.save();
+      // Vertical mark lines with their label in the strip above the plot.
       ctx.font = `${12 * pr}px ${font}`;
-      const words = fig.finding.split(' ');
-      const lines: string[] = [];
-      let cur = '';
-      for (const w of words) {
-        const t = cur ? `${cur} ${w}` : w;
-        if (ctx.measureText(t).width > maxW - 16 * pr && cur) {
-          lines.push(cur);
-          cur = w;
-        } else cur = t;
-      }
-      if (cur) lines.push(cur);
-      const lh = 16 * pr;
-      const bw = maxW;
-      const bh = lines.length * lh + 12 * pr;
-      let bx = px + 24 * pr;
-      if (bx + bw > u.bbox.left + u.bbox.width) bx = px - 24 * pr - bw;
-      bx = Math.max(u.bbox.left + 4 * pr, bx);
-      let by = py - bh - 24 * pr;
-      if (by < u.bbox.top + 4 * pr) by = py + 24 * pr;
-      ctx.strokeStyle = MUTED[theme];
-      ctx.lineWidth = 1 * pr;
-      ctx.beginPath();
-      ctx.moveTo(px, py);
-      ctx.lineTo(bx < px ? bx + bw : bx, by + bh / 2);
-      ctx.stroke();
-      ctx.fillStyle = SURFACE[theme];
-      ctx.strokeStyle = hexA(INK[theme], 0.25);
-      ctx.fillRect(bx, by, bw, bh);
-      ctx.strokeRect(bx, by, bw, bh);
-      ctx.fillStyle = st.color;
-      ctx.fillRect(bx, by, 4 * pr, bh);
-      ctx.fillStyle = INK[theme];
-      ctx.textBaseline = 'top';
-      lines.forEach((t, n) => ctx.fillText(t, bx + 12 * pr, by + 6 * pr + n * lh));
-      ctx.restore();
+      ctx.textBaseline = 'alphabetic';
+      laid.lines.forEach((l) => {
+        const text = l.text;
+        const w = ctx.measureText(text).width / pr;
+        const fits = l.x - 5 - w >= plotBox.x0;
+        const y = 13 + l.row * MARK_ROW;
+        ctx.save();
+        ctx.strokeStyle = MUTED[theme];
+        ctx.lineWidth = pr;
+        ctx.setLineDash([3 * pr, 3 * pr]);
+        ctx.beginPath();
+        ctx.moveTo(l.x * pr, (y + 4) * pr);
+        ctx.lineTo(l.x * pr, plotBox.y1 * pr);
+        ctx.stroke();
+        ctx.restore();
+        ctx.fillStyle = INK[theme];
+        ctx.textAlign = fits ? 'right' : 'left';
+        ctx.fillText(text, (fits ? l.x - 5 : l.x + 5) * pr, y * pr);
+      });
+      ctx.textAlign = 'left';
+      // Written notes: end value, fit, marks, direct labels.
+      ctx.font = `500 ${12 * pr}px ${font}`;
+      ctx.textBaseline = 'alphabetic';
+      laid.notes.forEach((n) => {
+        ctx.fillStyle = n.sid ? (styles[n.sid]?.color ?? MUTED[theme]) : MUTED[theme];
+        n.lines.forEach((t, k) => ctx.fillText(t, n.left * pr, (n.top + 11 + k * (TICK_PX + 3)) * pr));
+      });
     };
 
     let raf = 0;
@@ -334,7 +345,7 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
           if (i < 0) continue;
           rows.push({
             id: s.id,
-            label: `${s.pack ?? s.label}${s.kind === 'hold' ? ' hold' : ''}`,
+            label: s.pack ?? plainLabel(s.label),
             color: styles[s.id]!.color,
             unit: (s.axis === 'y2' ? fig.axes.y2 : fig.axes.y)?.unit ?? '',
             x: s.x[i]!,
@@ -351,7 +362,7 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
     const opts: uPlot.Options = {
       width: Math.max(200, el.clientWidth),
       height,
-      padding: [12, hasY2 ? 4 : 16, 0, 0],
+      padding: [12 + nLines * MARK_ROW, (hasY2 ? 4 : 16) + rightPad, 0, 0],
       legend: {show: false},
       cursor: {
         ...(syncKey ? {sync: {key: syncKey, scales: ['x', null] as [string, null], setSeries: false}} : {}),
@@ -372,14 +383,12 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
       },
       axes: [
         showXLabels
-          ? ({...axisBase, scale: 'x', size: 30, label: lab(fig.axes.x), labelSize: 20, splits: xSplits, gap: 3} as uPlot.Axis)
+          ? ({...axisBase, scale: 'x', size: 30, label: axisTitle(fig, 'x'), labelSize: 20, splits: xSplits, gap: 3} as uPlot.Axis)
           : ({...axisBase, scale: 'x', size: 6, splits: xSplits, values: (_u: uPlot, sp: number[]) => sp.map(() => ''), gap: 0} as uPlot.Axis),
         {
           ...axisBase,
           scale: 'y',
           size: gutter,
-          // On a phone the unit sits on a line above the plot, not rotated beside it.
-          ...(narrow ? {} : {label: lab(fig.axes.y), labelSize: 18}),
           splits: ySplits,
           gap: 3,
         },
@@ -390,7 +399,6 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
                 scale: 'y2',
                 side: 1,
                 size: gutter,
-                ...(narrow ? {} : {label: lab(fig.axes.y2!), labelSize: 18}),
                 splits: ySplits,
                 grid: {show: false},
                 gap: 4,

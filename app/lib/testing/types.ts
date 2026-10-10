@@ -52,6 +52,16 @@ export type Fig = {
   holds?: Array<{run: string; throttle: number; t0: number; t1: number; n: number}>;
   /** Quadratic law through the holds at or above a throttle: y = k (x / 1000)^2. */
   fit?: FigFit;
+  marks?: FigMark[];
+};
+
+/** A note written on the plot: a vertical line at an x, or a ring on a point of a series. */
+export type FigMark = {
+  kind: 'line' | 'point';
+  x: number;
+  y?: number;
+  series?: string;
+  text: string;
 };
 
 export type FigFit = {

@@ -1,6 +1,7 @@
 import {useId} from 'react';
-import {buildGeometry, MARKER_R, markerPath, TICK_PX} from '~/lib/testing/geometry';
-import {unitLabel} from '~/lib/testing/scale';
+import {buildGeometry, CHAR_PX, MARK_ROW, MARKER_R, markerPath, TICK_PX} from '~/lib/testing/geometry';
+import {defaultHidden, isDual} from '~/lib/testing/labels';
+import {axisTitle} from '~/lib/testing/layout';
 import {CANVAS, INK, MUTED, SURFACE, type Theme} from '~/lib/testing/palette';
 import type {Fig} from '~/lib/testing/types';
 
@@ -24,6 +25,7 @@ export function StaticFigure({
   theme,
   className,
   title,
+  titles = true,
 }: {
   fig: Fig;
   width: number;
@@ -33,18 +35,23 @@ export function StaticFigure({
   theme?: Theme;
   className?: string;
   title?: string;
+  /** Write the y axis titles above the plot. The workspace cards write them in HTML instead. */
+  titles?: boolean;
 }) {
-  const g = buildGeometry(fig, {w: width, h: height, theme, compact});
+  const g = buildGeometry(fig, {w: width, h: height, theme, compact, titles, narrow: width < 520, hidden: defaultHidden(fig)});
   const clip = useId().replace(/:/g, '');
   const ink = theme ? INK[theme] : 'var(--tf-ink, currentColor)';
   const muted = theme ? MUTED[theme] : 'var(--tf-muted, currentColor)';
   const grid = theme ? (theme === 'dark' ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)') : 'var(--tf-grid, rgba(128,128,128,0.18))';
   const surface = theme ? SURFACE[theme] : 'var(--tf-surface, #fff)';
   const colorOf = (s: (typeof g.series)[number]) => (theme ? s.style.color : s.style.colorCss);
+  const colorOfId = (id?: string) => {
+    const hit = g.series.find((q) => q.id === id);
+    return hit ? colorOf(hit) : muted;
+  };
   const y2 = fig.axes.y2;
-  const lab = (a: {label: string; unit: string}) => `${compact ? short(a.label) : a.label} (${unitLabel(a.unit)})`;
-  const endRight = g.end ? g.end.x + 8 + g.end.text.length * 6.2 > g.plot.x1 : false;
-  return (
+  const lab = (axis: 'x' | 'y' | 'y2') => (compact ? axisTitle({...fig, axes: {...fig.axes, [axis]: {...fig.axes[axis]!, label: short(fig.axes[axis]!.label)}}}, axis) : axisTitle(fig, axis));
+    return (
     <svg
       className={className}
       viewBox={`0 0 ${width} ${height}`}
@@ -81,8 +88,8 @@ export function StaticFigure({
         ))}
       </g>
       <g fill={muted} fontSize={12}>
-        <text x={(g.plot.x0 + g.plot.x1) / 2} y={height - 4} textAnchor="middle">
-          {lab(fig.axes.x)}
+        <text x={(g.plot.x0 + g.plot.x1) / 2} y={height - 6} textAnchor="middle">
+          {lab('x')}
         </text>
       </g>
       <clipPath id={`${clip}-plot`}>
@@ -95,7 +102,7 @@ export function StaticFigure({
             <path
               d={s.d}
               strokeWidth={s.style.width}
-              strokeOpacity={s.style.opacity}
+              strokeOpacity={s.kind === 'hold' ? 0.55 : s.style.opacity}
               strokeDasharray={s.style.dash.length ? s.style.dash.join(' ') : undefined}
               strokeLinejoin="round"
               strokeLinecap="round"
@@ -110,32 +117,49 @@ export function StaticFigure({
               d={markerPath(s.style.marker, x, y, s.kind === 'hold' ? MARKER_R : 2.5)}
               fill={s.kind === 'hold' ? colorOf(s) : surface}
               stroke={s.kind === 'hold' ? surface : colorOf(s)}
-              strokeWidth={s.kind === 'hold' ? 1.5 : 1.5}
+              strokeWidth={s.kind === 'hold' ? 2 : 1.5}
             />
           ))}
         </g>
       ))}
-      {compact && g.end ? (
-        <text
-          x={endRight ? g.end.x - 8 : g.end.x + 8}
-          y={endRight ? g.end.y - 9 : g.end.y + 4}
-          textAnchor={endRight ? 'end' : 'start'}
-          fontSize={12}
-          fontWeight={500}
-          fill={ink}
-        >
-          {g.end.text}
+      {g.lines.map((l) => {
+        const text = l.text;
+        const w = text.length * CHAR_PX + 10;
+        const fits = l.x - 5 - w >= g.plot.x0;
+        const y = 13 + l.row * MARK_ROW + (titles ? 14 : 0);
+        return (
+          <g key={`ml${l.row}`}>
+            <line x1={l.x} x2={l.x} y1={y + 4} y2={g.plot.y1} stroke={muted} strokeWidth={1} strokeDasharray="3 3" />
+            <text x={fits ? l.x - 5 : l.x + 5} y={y} textAnchor={fits ? 'end' : 'start'} fontSize={12} fill={ink}>
+              {text}
+            </text>
+          </g>
+        );
+      })}
+      {g.rings.map(([x, y, c], i) => (
+        <circle key={`r${i}`} cx={x} cy={y} r={MARKER_R + 4} fill="none" stroke={colorOfId(c)} strokeWidth={1.5} />
+      ))}
+      {g.notes.map((n, i) => (
+        <text key={`n${i}`} fontSize={12} fontWeight={500} fill={n.sid ? colorOfId(n.sid) : muted} textAnchor="start">
+          {n.lines.map((t, k) => (
+            <tspan key={k} x={n.left} y={n.top + 11 + k * (TICK_PX + 3)}>
+              {t}
+            </tspan>
+          ))}
         </text>
+      ))}
+      {titles ? (
+        <g fontSize={12} fontWeight={500}>
+          <text x={4} y={14} textAnchor="start" fill={isDual(fig) ? colorOfId(g.axisSeries.y) : muted}>
+            {lab('y')}
+          </text>
+          {y2 ? (
+            <text x={width - 4} y={14} textAnchor="end" fill={colorOfId(g.axisSeries.y2)}>
+              {lab('y2')}
+            </text>
+          ) : null}
+        </g>
       ) : null}
-      {y2 ? (
-        <text fill={muted} fontSize={12} transform={`translate(${width - 4} ${(g.plot.y0 + g.plot.y1) / 2}) rotate(90)`} textAnchor="middle">
-          {lab(y2)}
-        </text>
-      ) : null}
-      <text fill={muted} fontSize={12} transform={`translate(12 ${(g.plot.y0 + g.plot.y1) / 2}) rotate(-90)`} textAnchor="middle">
-        {lab(fig.axes.y)}
-      </text>
-      {theme ? <rect x={0} y={0} width={width} height={height} fill="none" stroke={CANVAS[theme]} /> : null}
     </svg>
   );
 }

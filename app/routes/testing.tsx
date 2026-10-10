@@ -4,7 +4,7 @@ import {copyText} from '~/lib/copy';
 import {getIndex, getPreviews, getTiles} from '~/lib/testing/data.server';
 import {WorkspaceShell} from '~/components/testing/WorkspaceShell';
 import {ProductSection} from '~/components/testing/ProductSection';
-import {LogRow} from '~/components/testing/LogRow';
+import {LogSection} from '~/components/testing/LogSection';
 import {Landing} from '~/components/testing/Landing';
 
 /**
@@ -26,29 +26,13 @@ export async function loader(_args: Route.LoaderArgs) {
 
 export default function TestingRoute({loaderData}: Route.ComponentProps) {
   const {index, previews, tiles} = loaderData;
-  const names = Object.fromEntries(index.products.map((p) => [p.handle, p.name]));
   return (
     <WorkspaceShell index={index}>
       <Landing index={index} tiles={tiles} />
-      {index.products.map((p) => (
-        <ProductSection key={p.handle} product={p} index={index} previews={previews} />
+      {index.products.map((p, i) => (
+        <ProductSection key={p.handle} product={p} index={index} previews={previews} first={i === 0} />
       ))}
-      {index.log.length ? (
-        <section className="tw-product tw-log" id="log">
-          <h2>Engineering log</h2>
-          <p className="tw-sub">Each step: what was tested, what was seen, what changed.</p>
-          <ol className="tw-steps">
-            {index.log.map((e) => (
-              <LogRow
-                key={e.id}
-                entry={e}
-                productName={names[e.product] ?? e.product}
-                figureTitle={e.figureId ? index.figures[e.figureId]?.title : undefined}
-              />
-            ))}
-          </ol>
-        </section>
-      ) : null}
+      {index.log.length ? <LogSection index={index} /> : null}
     </WorkspaceShell>
   );
 }

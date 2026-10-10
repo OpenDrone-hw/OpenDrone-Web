@@ -66,20 +66,36 @@ export type Tile = {id: string; label: string; value: string; unit: string; sub:
 /** Figures whose last point of the longest run is a headline number, in order. */
 const TILE_FIGURES = ['openmotor-hold-thrust', 'openmotor-hold-rpm', 'openmotor-hold-esc-temp', 'openmotor-hold-pack-voltage'];
 
-/** What each number is, so no tile is a floating number. */
-const TILE_NOTES: Record<string, string> = {
-  'openmotor-hold-thrust': 'Load cell, median of the last 2 s of the hold',
-  'openmotor-hold-rpm': 'ESC eRPM over 7 pole pairs (assumed)',
-  'openmotor-hold-esc-temp': 'ESC die sensors, the maximum of four',
-  'openmotor-hold-pack-voltage': "The ESC's own reading",
-};
-
 const round = (v: number) => (Math.abs(v) >= 100 ? String(Math.round(v)) : String(Math.round(v * 10) / 10));
+
+/** What each number is, so no tile is a floating number. Wording that states a limit lives here, beside the number. */
+function noteOf(id: string, value: number, setup: string[]): string {
+  const pairs = setup.join(' ').match(/(\d+) pole pairs/)?.[1];
+  const cal = setup.join(' ').match(/(\d+ g) reference mass.*?about ([\d.]+) percent/);
+  switch (id) {
+    case 'openmotor-hold-thrust':
+      return `Load cell${cal ? `, calibrated at one point, ${cal[1]}, about ${cal[2]} percent` : ''}`;
+    case 'openmotor-hold-rpm':
+      return pairs ? `ESC eRPM ${Math.round(value * Number(pairs))} over ${pairs} pole pairs, assumed` : 'ESC eRPM over an assumed pole count';
+    case 'openmotor-hold-esc-temp':
+      return 'Hottest of 4 die sensors, only channel 1 driven';
+    case 'openmotor-hold-pack-voltage':
+      return 'ESC reading, not checked against a meter';
+    default:
+      return '';
+  }
+}
+
+/** The tile title: the quantity, with the condition that limits it when the quantity alone would mislead. */
+const TILE_LABEL: Record<string, string> = {
+  'openmotor-hold-pack-voltage': 'Pack voltage under load',
+};
 
 /**
  * Headline numbers for the top of the page, read from the figure files: the
  * last hold of the run that went furthest, with the throttle it was taken at.
- * Each is a hold median, not a peak.
+ * Each is a hold median, not a peak. A rotor speed of five digits is written
+ * in thousands, to the precision its assumed pole count supports.
  */
 export function getTiles(): Tile[] {
   const index = getIndex();
@@ -95,13 +111,14 @@ export function getTiles(): Tile[] {
     const last = series.y[series.y.length - 1];
     if (last === null || last === undefined) continue;
     const x = series.x[series.x.length - 1];
+    const kilo = fig.axes.y.unit === 'rpm' && last >= 10000;
     out.push({
       id,
-      label: fig.axes.y.label.replace(/\s*\(.*?\)/g, ''),
-      value: round(last),
-      unit: unitLabel(fig.axes.y.unit),
-      sub: `${series.label.replace(/, hold median.*$/, '')}, ${x} ${fig.axes.x.unit} throttle hold`,
-      note: TILE_NOTES[id] ?? '',
+      label: TILE_LABEL[id] ?? fig.axes.y.label.replace(/\s*\(.*?\)/g, ''),
+      value: kilo ? round(last / 1000) : round(last),
+      unit: kilo ? 'krpm' : unitLabel(fig.axes.y.unit),
+      sub: `${series.label.replace(/, hold median.*$/, '').replace(/, ends at.*$/, '')}, ${x} ${fig.axes.x.unit} throttle hold`,
+      note: noteOf(id, last, index.runs[sum.runId]?.setup ?? []),
     });
   }
   return out;

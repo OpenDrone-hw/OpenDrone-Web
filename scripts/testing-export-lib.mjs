@@ -91,7 +91,7 @@ export function standViolations(view, cfg) {
 
 /** Every text field a visitor reads, for the stand text rule. */
 function visibleText(P, labels) {
-  return [P.title, P.finding, P.setup_chip, ...(P.setup || []), ...(P.caveats || []), ...labels].join('\n');
+  return [P.title, P.finding, P.setup_chip, ...(P.setup || []), ...(P.caveats || []), ...(P.marks || []).map((m) => m.text || ''), ...labels].join('\n');
 }
 
 /** Validate a publish block beyond what the bench server checks. */
@@ -114,6 +114,12 @@ export function validatePublish(view, cfg) {
   if (!String(P.setup_chip || '').trim()) bad('setup_chip is empty');
   if (!Array.isArray(P.caveats) || !P.caveats.length) bad('caveats are empty');
   if (!Number.isFinite(P.order)) bad('order must be a number');
+  for (const m of P.marks || []) {
+    if (m.kind !== 'line' && m.kind !== 'point') bad('a mark is a line or a point');
+    if (!String(m.text || '').trim() || words(m.text) > 9) bad('a mark needs a text of at most 9 words');
+    if (m.kind === 'line' && !Number.isFinite(m.x) && !m.last) bad('a line mark needs x or last');
+    if (m.kind === 'point' && !m.last) bad('a point mark needs last, the series it sits on');
+  }
   if (P.status === 'publish') {
     if (!String(P.by || '').trim() || !/^\d{4}-\d{2}-\d{2}/.test(String(P.at || ''))) bad('by and at are required to publish');
     if (AGENT_NAME.test(P.by || '')) bad('by names an agent; only a person publishes');
@@ -642,6 +648,26 @@ export function buildFigure(view, resp, benches, cfg) {
   if (!recorded.length) bad('no recording date in the app answer');
 
   const cite = needFrames ? citeOf(resp.citations) : [...new Set(holdCites)].join('; ');
+  // Marks written on the plot: a vertical line at an x, or a ring on the last
+  // point of a series. `last` names the view series; its published id may carry
+  // a `.hold` suffix.
+  const marks = [];
+  for (const m of P.marks || []) {
+    const target = m.last ? (out.find((s) => s.id === `${m.last}.hold`) || out.find((s) => s.id === m.last)) : null;
+    if (m.last && !target) {
+      bad(`mark ${JSON.stringify(m.text)}: no series ${m.last}`);
+      continue;
+    }
+    let x = m.x;
+    let y;
+    if (target) {
+      let i = target.x.length - 1;
+      while (i >= 0 && (target.x[i] === null || target.y[i] === null)) i--;
+      x = target.x[i];
+      y = target.y[i];
+    }
+    marks.push({kind: m.kind, x, ...(m.kind === 'point' ? {series: target.id, y} : {}), text: m.text});
+  }
   const fig = {
     id: view.id,
     title: P.title,
@@ -658,6 +684,7 @@ export function buildFigure(view, resp, benches, cfg) {
     series: out,
     holds: holdRecords,
     ...(fit ? {fit} : {}),
+    ...(marks.length ? {marks} : {}),
   };
 
   const hits = [];

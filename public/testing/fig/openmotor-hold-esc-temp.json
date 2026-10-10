@@ -1,7 +1,7 @@
 {
   "id": "openmotor-hold-esc-temp",
   "title": "ESC temperature per throttle hold",
-  "finding": "Channel 1 die temperature rises from 44 C at 10 percent throttle to 72 C at 100 percent in the 13:25 UTC run.",
+  "finding": "Hottest of four die sensors, only channel 1 driven: 44 C at 10 percent throttle, 72 C at 100 percent.",
   "product": "openmotor",
   "tier": null,
   "runId": "drv-04-2026-10-10",

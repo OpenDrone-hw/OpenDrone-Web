@@ -190,3 +190,35 @@ describe('the log', () => {
     assert.doesNotMatch(e.changed ?? '', /pack is pulled/);
   });
 });
+
+describe('headline numbers and round 3 rules', () => {
+  const at = (id: string, sid: RegExp, x: number) => {
+    const s = fig(id).series.find((q) => q.kind === 'hold' && sid.test(q.label))!;
+    return s.y[s.x.indexOf(x)]!;
+  };
+  it('pins thrust, rotor speed, voltage, temperature, the fit and the 70 percent voltage gap', () => {
+    assert.ok(Math.abs(at('openmotor-hold-thrust', /Pack B/, 100) - 1496.2) < 0.5);
+    assert.ok(Math.abs(at('openmotor-hold-rpm', /Pack B/, 100) - 29354) < 1);
+    assert.ok(Math.abs(at('openmotor-hold-pack-voltage', /Pack B/, 100) - 19.264) < 0.01);
+    assert.equal(at('openmotor-hold-esc-temp', /Pack B/, 100), 72);
+    assert.equal(fig('openmotor-thrust-vs-rpm').fit!.k, 1.71);
+    const gap = at('openmotor-hold-pack-voltage', /Pack A/, 70) - at('openmotor-hold-pack-voltage', /Pack B/, 70);
+    assert.ok(gap > 1.8 && gap < 1.95, `gap ${gap}`);
+  });
+  it('a figure with four runs of one quantity gives each its own colour', async () => {
+    const {assignStyles} = await import('./palette.ts');
+    const f = fig('openfc-lite-flight-die-temp');
+    const st = assignStyles(f.series, 'light');
+    assert.equal(new Set(f.series.map((s) => st[s.id]!.color)).size, 4);
+  });
+  it('a reading that starts near zero gets no empty axis below zero', () => {
+    assert.ok(figureDomains(fig('openesc-shunt-vs-clamp')).y[0] >= 0);
+  });
+  it('marks sit on published points and hold figures join their markers unless a fit is drawn', async () => {
+    const f = fig('openmotor-thrust-vs-rpm');
+    assert.equal(f.marks?.[0]?.kind, 'point');
+    const g = buildGeometry(fig('openesc-shunt-vs-clamp'), {w: 700, h: 380});
+    assert.ok(g.series.every((s) => s.d), 'holds are joined');
+    assert.ok(buildGeometry(f, {w: 1000, h: 480}).series.filter((s) => s.kind === 'hold').every((s) => !s.d));
+  });
+});

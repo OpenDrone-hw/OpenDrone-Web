@@ -1,16 +1,19 @@
-import {useCallback, useRef, useState} from 'react';
+import {useCallback, useMemo, useRef, useState} from 'react';
 import type {Domain} from '~/lib/testing/scale';
 import {fmtValue, unitLabel} from '~/lib/testing/scale';
 import type {Theme} from '~/lib/testing/palette';
 import type {Fig} from '~/lib/testing/types';
 import {Chart, type ChartApi, type RangeState, type ReadoutState} from './Chart';
+import {defaultHidden} from '~/lib/testing/labels';
 import {Legend} from './Legend';
 import {Readout} from './Readout';
+import {UnitLine} from './UnitLine';
 
 /**
- * Canvas chart with its cursor readout inside the plot, an inline legend, and
- * one row of actions. Loaded after hydration, with uPlot, by FigureCard.
- * Also used by the wide view.
+ * Canvas chart with its cursor readout inside the plot and one toolbar row:
+ * the legend on the left, the actions on the right. Loaded after hydration,
+ * with uPlot, by FigureCard. Also used by the wide view and, bare, by the
+ * stacked card.
  */
 export default function ChartPanel({
   fig,
@@ -25,6 +28,8 @@ export default function ChartPanel({
   syncKey,
   showXLabels = true,
   hiddenExt,
+  onReadout,
+  hint = false,
 }: {
   fig: Fig;
   theme: Theme;
@@ -34,16 +39,21 @@ export default function ChartPanel({
   onExpand?: () => void;
   onDownload?: () => void;
   onCsv?: () => void;
-  /** A panel of a stack: no legend and no buttons, the stack draws them. */
+  /** A panel of a stack: no title line, legend or buttons, the stack draws them. */
   bare?: boolean;
   syncKey?: string;
   showXLabels?: boolean;
   /** Series hidden from outside (the stack's legend). */
   hiddenExt?: ReadonlySet<string>;
+  /** The stack shows one shared readout; this panel then draws none of its own. */
+  onReadout?: (r: ReadoutState) => void;
+  /** Show how to read values inside the plot until the first touch of it. */
+  hint?: boolean;
 }) {
-  const [hiddenOwn, setHidden] = useState<Set<string>>(() => new Set());
+  const [hiddenOwn, setHidden] = useState<Set<string>>(() => defaultHidden(fig));
   const hidden = hiddenExt ?? hiddenOwn;
   const [readout, setReadout] = useState<ReadoutState>(null);
+  const [touched, setTouched] = useState(false);
   const [range, setRange] = useState<RangeState | null>(null);
   const [said, setSaid] = useState('');
   const api = useRef<ChartApi | null>(null);
@@ -55,27 +65,40 @@ export default function ChartPanel({
     },
     [onRange],
   );
+  const handleReadout = useCallback(
+    (r: ReadoutState) => {
+      if (r) setTouched(true);
+      if (onReadout) onReadout(r);
+      else setReadout(r);
+    },
+    [onReadout],
+  );
   const onReady = useCallback((a: ChartApi | null) => {
     api.current = a;
   }, []);
+  const legend = useMemo(
+    () => (bare ? null : <Legend fig={fig} theme={theme} hidden={hidden} onChange={setHidden} />),
+    [bare, fig, theme, hidden],
+  );
 
   return (
     <div className="tw-panel">
-      {bare ? null : (
-        <p className="tw-unitline" aria-hidden="true">
-          {fig.axes.y.label}, {unitLabel(fig.axes.y.unit)}
-          {fig.axes.y2 ? `. Right: ${fig.axes.y2.label}, ${unitLabel(fig.axes.y2.unit)}` : ''}
-        </p>
-      )}
+      {bare ? null : <UnitLine fig={fig} theme={theme} />}
       <div className="tw-plotwrap" data-y2={fig.axes.y2 ? '1' : undefined}>
-        <Readout fig={fig} readout={readout} />
+        {onReadout ? null : <Readout fig={fig} readout={readout} />}
+        {hint && !touched ? (
+          <p className="tw-hint" aria-hidden="true">
+            <span className="tw-hint-fine">Hover for values, drag to zoom, arrow keys step through points.</span>
+            <span className="tw-hint-coarse">Touch for values, pinch to zoom.</span>
+          </p>
+        ) : null}
         <Chart
           fig={fig}
           theme={theme}
           hidden={hidden}
           height={height}
           initialRange={initialRange}
-          onReadout={setReadout}
+          onReadout={handleReadout}
           onRange={handleRange}
           onReady={onReady}
           onAnnounce={setSaid}
@@ -88,7 +111,7 @@ export default function ChartPanel({
       </p>
       {bare ? null : (
         <div className="tw-keyrow">
-          <Legend fig={fig} theme={theme} hidden={hidden} onChange={setHidden} />
+          {legend}
           <div className="tw-actions">
             {range?.zoomed ? (
               <>
@@ -100,24 +123,20 @@ export default function ChartPanel({
                 </button>
               </>
             ) : null}
-            {onExpand || onDownload || onCsv ? (
-              <span className="tw-btns" role="group" aria-label="Figure actions">
-                {onExpand ? (
-                  <button type="button" className="tw-act" onClick={onExpand}>
-                    Wide view
-                  </button>
-                ) : null}
-                {onDownload ? (
-                  <button type="button" className="tw-act" onClick={onDownload}>
-                    SVG
-                  </button>
-                ) : null}
-                {onCsv ? (
-                  <button type="button" className="tw-act" onClick={onCsv}>
-                    CSV
-                  </button>
-                ) : null}
-              </span>
+            {onExpand ? (
+              <button type="button" className="tw-act" onClick={onExpand}>
+                Wide view
+              </button>
+            ) : null}
+            {onDownload ? (
+              <button type="button" className="tw-act tw-act-svg" onClick={onDownload}>
+                SVG
+              </button>
+            ) : null}
+            {onCsv ? (
+              <button type="button" className="tw-act" onClick={onCsv}>
+                CSV
+              </button>
             ) : null}
           </div>
         </div>

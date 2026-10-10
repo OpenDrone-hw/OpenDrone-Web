@@ -10,7 +10,8 @@
  *   links     every in-page link has a target
  *   charts    every figure mounts one focusable chart
  *   console   no error (the dev-only critical.css nonce warning of React
- *             Router is ignored; it also appears on every other route)
+ *             Router is ignored; it also appears on every other route and
+ *             is absent from a production build)
  *
  *   node scripts/check-testing-text.mjs [url]   (default http://localhost:5199/testing)
  *
@@ -19,7 +20,7 @@
 import {chromium} from 'playwright';
 
 const url = process.argv[2] ?? 'http://localhost:5199/testing';
-const BUDGET = 1300;
+const BUDGET = 1250;
 
 async function launch() {
   try {
@@ -59,6 +60,16 @@ for (const width of [1440, 390]) {
       dead: [...new Set(dead)],
       charts: document.querySelectorAll('.tw-chart[tabindex="0"]').length,
       figures: document.querySelectorAll('.tw-card[id], .tw-panelblock').length,
+      // The first plot is drawn whole once mounted: ink in its left third as well as its right.
+      painted: (() => {
+        const c = document.querySelector('.tw-chart canvas');
+        if (!c) return false;
+        const ctx = c.getContext('2d');
+        const h = c.height;
+        const third = Math.floor(c.width / 3);
+        const has = (x0) => ctx.getImageData(x0, 0, third, h).data.some((v, i) => i % 4 === 3 && v > 0);
+        return has(0) && has(c.width - third);
+      })(),
       em: /—/.test(text),
       quote: document.querySelectorAll('blockquote').length,
     };
@@ -67,6 +78,7 @@ for (const width of [1440, 390]) {
   if (r.scroll > 0) problems.push(`${width}px: page scrolls sideways by ${r.scroll}px`);
   if (r.dead.length) problems.push(`${width}px: links without a target: ${r.dead.join(', ')}`);
   if (r.charts !== r.figures) problems.push(`${width}px: ${r.charts} focusable charts for ${r.figures} figures`);
+  if (!r.painted) problems.push(`${width}px: the first plot is not drawn across its width`);
   if (r.em) problems.push('em dash in the page');
   if (r.quote) problems.push('blockquote in the page');
   for (const e of errors) problems.push(`${width}px console error: ${e}`);

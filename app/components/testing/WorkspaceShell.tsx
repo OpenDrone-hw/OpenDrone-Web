@@ -87,11 +87,34 @@ export function WorkspaceShell({index, children}: {index: TestingIndex; children
     };
   }, [index.products]);
 
+  // A link to a section lands on it even though figures above it change height as they load:
+  // the jump is repeated while the page settles, and stops at the first touch of the reader.
+  useEffect(() => {
+    const id = decodeURIComponent(window.location.hash.slice(1));
+    if (!id) return;
+    let live = true;
+    const stop = () => {
+      live = false;
+    };
+    const again = () => {
+      if (live) document.getElementById(id)?.scrollIntoView({block: 'start'});
+    };
+    const events = ['wheel', 'touchstart', 'keydown', 'mousedown'] as const;
+    events.forEach((e) => window.addEventListener(e, stop, {once: true, passive: true}));
+    const timers = [150, 500, 1000, 2000].map((t) => window.setTimeout(again, t));
+    return () => {
+      timers.forEach(clearTimeout);
+      events.forEach((e) => window.removeEventListener(e, stop));
+    };
+  }, []);
+
   // Keep the active chip in view in the scrolling nav on a phone.
   useEffect(() => {
-    const cur = document.querySelector<HTMLElement>('.tw-bar [aria-current="location"]');
-    const nav = cur?.parentElement;
-    if (cur && nav) nav.scrollTo({left: cur.offsetLeft - nav.clientWidth / 2 + cur.clientWidth / 2});
+    const nav = document.querySelector<HTMLElement>('.tw-bar .incutec-topbar__nav');
+    const cur = nav?.querySelector<HTMLElement>('[aria-current="location"]');
+    if (!nav) return;
+    // The active chip is centred; above the first section the row starts at its first chip.
+    nav.scrollTo({left: cur ? cur.offsetLeft - nav.clientWidth / 2 + cur.clientWidth / 2 : 0});
   }, [active]);
 
   return (
@@ -116,7 +139,7 @@ export function WorkspaceShell({index, children}: {index: TestingIndex; children
             </a>
           </nav>
           <div className="incutec-topbar__end">
-            <button type="button" className="tw-btn" onClick={toggle} aria-pressed={theme === 'dark'}>
+            <button type="button" className="tw-btn tw-theme" onClick={toggle} aria-pressed={theme === 'dark'}>
               {theme === 'dark' ? 'Light' : 'Dark'}
             </button>
             <a className="tw-return" href={SITE_ORIGIN}>
