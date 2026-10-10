@@ -114,7 +114,7 @@ function fitIntervals(e: Domain, n: number, fixedMin?: number, half = false): {l
       const unit = half ? step / 2 : step;
       const lo = fixedMin ?? Math.floor((e[0] + tol) / unit + 1e-9) * unit;
       const hi = lo + n * step;
-      if (hi >= e[1] + span * 0.02) return {lo, hi, waste: (hi - lo) / span};
+      if (hi >= e[1] + span * 0.06) return {lo, hi, waste: (hi - lo) / span};
     }
   }
   return null;

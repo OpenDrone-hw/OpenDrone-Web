@@ -175,5 +175,12 @@
       "t1": 36.528,
       "n": 399
     }
+  ],
+  "marks": [
+    {
+      "kind": "line",
+      "x": 80,
+      "text": "Pack A unplugged"
+    }
   ]
 }

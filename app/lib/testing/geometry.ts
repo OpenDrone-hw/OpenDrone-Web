@@ -60,21 +60,30 @@ export type Geometry = {
   axisSeries: {y?: string; y2?: string};
 };
 
-export type Note = {lines: string[]; left: number; top: number; w: number; h: number; sid?: string};
+export type Note = {
+  lines: string[];
+  left: number;
+  top: number;
+  w: number;
+  h: number;
+  sid?: string;
+  /** A leader from the ring of a marked point to its label: x1, y1, x2, y2. */
+  leader?: [number, number, number, number];
+};
 
-export const TICK_PX = 11;
+export const TICK_PX = 12;
 /** Left gutter, shared by every figure so plots line up. The axis title sits above the plot, not rotated beside it. */
-export const GUTTER_L = 44;
+export const GUTTER_L = 50;
 /** Left gutter on a phone. */
-export const GUTTER_L_NARROW = 38;
+export const GUTTER_L_NARROW = 42;
 /** Height of one row of the strip above the plot that carries mark-line labels. */
 export const MARK_ROW = 15;
 /** Average width of one character of a 12 px label, for the SVG, which cannot measure text. */
 export const CHAR_PX = 7.2;
 /** Hold markers are joined by a thin line unless a fitted law already draws the trend. */
 export const connectsHolds = (fig: Fig) => !fig.fit;
-/** Hold marker radius in css px: 8 px across. */
-export const MARKER_R = 4;
+/** Hold marker radius in css px: 12 px across. */
+export const MARKER_R = 6;
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
 
@@ -200,7 +209,7 @@ export function markerPath(shape: SeriesStyle['marker'], x: number, y: number, r
   return `M${x - r} ${y}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0z`;
 }
 
-export type LabelBox = {x: number; y: number; w: number; h: number; dir?: 'ul' | 'lr' | 'r' | 'u'};
+export type LabelBox = {x: number; y: number; w: number; h: number; dir?: 'ul' | 'lr' | 'r' | 'u' | 'far'};
 export type Rect = {left: number; top: number; w: number; h: number};
 
 const hit = (a: Rect, b: Rect, pad = 0) =>
@@ -244,6 +253,8 @@ export function placeLabels(
     const first: Rect | null =
       l.dir === 'r'
         ? {left: x + g, top: y - h / 2, w, h}
+        : l.dir === 'far'
+        ? {left: x + g + 12, top: y + g + 14, w, h}
         : l.dir === 'ul'
         ? {left: x - g - w + 2, top: y - h - g + 2, w, h}
         : l.dir === 'lr'
@@ -289,7 +300,8 @@ export type Frame = {
   rightPad?: number;
 };
 
-const FIT_SHORT = (unit: string) => unit.replace(/ per /, '/').replace(/ squared$/, '²');
+/** The fit as a short legend entry: `1.71 g/krpm²`. */
+export const fitShort = (k: number, unit: string) => `${k} ${unit.replace(/ per /, '/').replace(/ squared$/, '²')}`;
 
 function wrap(text: string, maxW: number, measure: (t: string) => number): string[] {
   const out: string[] = [];
@@ -348,7 +360,7 @@ export function layoutNotes(
     }
   }
 
-  type Item = {text: string[]; x: number; y: number; sid?: string; dir: LabelBox['dir']};
+  type Item = {text: string[]; x: number; y: number; sid?: string; dir: LabelBox['dir']; ring?: boolean};
   const items: Item[] = [];
   const inWin = (x: number) => !f.xWindow || (x >= f.xWindow[0] && x <= f.xWindow[1]);
 
@@ -362,19 +374,7 @@ export function layoutNotes(
     const x = f.px(m.x);
     const y = f.py(m.y, axis);
     rings.push([x, y, s.id]);
-    items.push({text: wrap(m.text, f.narrow ? 118 : 160, f.measure), x, y, sid: s.id, dir: 'lr'});
-  }
-
-  // The fitted law. On a phone the legend and the caption carry it.
-  if (fig.fit && !f.narrow) {
-    const {k, x0, x1, unit} = fig.fit;
-    const xv = x0 + (x1 - x0) * 0.66;
-    items.push({
-      text: [`Fit ${k} ${FIT_SHORT(unit)}`],
-      x: f.px(xv),
-      y: f.py(k * (xv / 1000) ** 2, 'y'),
-      dir: 'ul',
-    });
+    items.push({text: wrap(m.text, f.narrow ? 118 : 160, f.measure), x, y, sid: s.id, dir: 'far', ring: true});
   }
 
   // The last value of the hold series that reaches furthest. Not on a phone.
@@ -430,14 +430,19 @@ export function layoutNotes(
     dir: it.dir,
   }));
   const rects = placeLabels(boxes, centres, {...plot, x1: plot.x1 + (f.rightPad ?? 0) - 2}, MARKER_R, thin);
-  const notes: Note[] = items.map((it, n) => ({
-    lines: it.text,
-    left: rects[n]!.left,
-    top: rects[n]!.top,
-    w: rects[n]!.w,
-    h: rects[n]!.h,
-    sid: it.sid,
-  }));
+  const notes: Note[] = items.map((it, n) => {
+    const r = rects[n]!;
+    const note: Note = {lines: it.text, left: r.left, top: r.top, w: r.w, h: r.h, sid: it.sid};
+    if (it.ring) {
+      // Leader from the edge of the ring to the nearest point of the label.
+      const tx = Math.min(r.left + r.w, Math.max(r.left, it.x));
+      const ty = Math.min(r.top + r.h, Math.max(r.top, it.y));
+      const d = Math.hypot(tx - it.x, ty - it.y);
+      const R = MARKER_R + 4;
+      if (d > R + 4) note.leader = [it.x + ((tx - it.x) * R) / d, it.y + ((ty - it.y) * R) / d, tx, ty];
+    }
+    return note;
+  });
 
   // Vertical mark lines: one row of the strip above the plot each.
   const lines: Geometry['lines'] = [];

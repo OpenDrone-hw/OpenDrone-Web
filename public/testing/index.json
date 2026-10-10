@@ -59,8 +59,8 @@
       "photo": {
         "src": "/testing/photo/drv-04-2026-10-10.webp",
         "size": [1600, 1200],
-        "alt": "The thrust stand: a 3D printed base with a 10 kg load cell carrying the motor and propeller, a display and the controller board in front.",
-        "caption": "The thrust stand with the OpenMotor-2306 on the 10 kg load cell. Its display reads UNCAL: the cell was not calibrated when this photo was taken."
+        "alt": "The thrust stand: a 3D printed base with a 10 kg load cell carrying the motor and propeller, a display and the controller board in front. The laptop screen behind is blurred.",
+        "caption": "Thrust stand with the OpenMotor-2306 on the 10 kg load cell. The display reads UNCAL in this photo. Laptop screen blurred."
       }
     },
     "rx-13-2026-07-11": {
@@ -123,7 +123,8 @@
       "flagged": 0,
       "tile": {
         "order": 30,
-        "note": "Hottest of 4 die sensors, only channel 1 driven"
+        "note": "Hottest of 4 sensors",
+        "detail": "Hottest of 4 die sensors, only channel 1 driven"
       }
     },
     "openmotor-hold-pack-voltage": {
@@ -140,8 +141,9 @@
       "flagged": 0,
       "tile": {
         "order": 40,
-        "label": "Pack voltage under load",
-        "note": "Flight controller battery divider, not checked against a meter"
+        "label": "Pack voltage",
+        "note": "FC divider, not metered",
+        "detail": "Flight controller battery divider, not checked against a meter"
       }
     },
     "openmotor-hold-rpm": {
@@ -159,7 +161,8 @@
       "duplicateOf": "openmotor-thrust-vs-rpm",
       "tile": {
         "order": 20,
-        "note": "ESC eRPM over 7 pole pairs, assumed"
+        "note": "eRPM, 7 pole pairs assumed",
+        "detail": "ESC eRPM over 7 pole pairs, assumed"
       }
     },
     "openmotor-hold-thrust": {
@@ -176,7 +179,8 @@
       "flagged": 1,
       "tile": {
         "order": 10,
-        "note": "Load cell, calibrated at one point, 1726 g, about 0.7 percent"
+        "note": "One-point cal, 0.7%",
+        "detail": "Load cell, calibrated at one point, 1726 g, about 0.7 percent"
       }
     },
     "openmotor-thrust-vs-rpm": {
@@ -189,7 +193,7 @@
       "domain": "THR",
       "runId": "drv-04-2026-10-10",
       "chip": "Same OpenMotor-2306, two 6S packs, cell calibrated to 1726 g",
-      "caveats": 5,
+      "caveats": 6,
       "flagged": 2
     },
     "openrx-antenna-use": {

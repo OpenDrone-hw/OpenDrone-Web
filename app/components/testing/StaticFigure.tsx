@@ -42,7 +42,7 @@ export function StaticFigure({
   const clip = useId().replace(/:/g, '');
   const ink = theme ? INK[theme] : 'var(--tf-ink, currentColor)';
   const muted = theme ? MUTED[theme] : 'var(--tf-muted, currentColor)';
-  const grid = theme ? (theme === 'dark' ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)') : 'var(--tf-grid, rgba(128,128,128,0.18))';
+  const grid = theme ? (theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.045)') : 'var(--tf-grid, rgba(128,128,128,0.18))';
   const surface = theme ? SURFACE[theme] : 'var(--tf-surface, #fff)';
   const colorOf = (s: (typeof g.series)[number]) => (theme ? s.style.color : s.style.colorCss);
   const colorOfId = (id?: string) => {
@@ -51,7 +51,7 @@ export function StaticFigure({
   };
   const y2 = fig.axes.y2;
   const lab = (axis: 'x' | 'y' | 'y2') => (compact ? axisTitle({...fig, axes: {...fig.axes, [axis]: {...fig.axes[axis]!, label: short(fig.axes[axis]!.label)}}}, axis) : axisTitle(fig, axis));
-    return (
+  return (
     <svg
       className={className}
       viewBox={`0 0 ${width} ${height}`}
@@ -70,7 +70,7 @@ export function StaticFigure({
         ))}
         <line x1={g.plot.x0} x2={g.plot.x1} y1={g.plot.y1} y2={g.plot.y1} stroke={muted} strokeOpacity={0.5} />
       </g>
-      <g fill={muted} fontSize={TICK_PX}>
+      <g fill={muted} fontSize={TICK_PX} style={{fontVariantNumeric: 'tabular-nums'}}>
         {g.xTicks.map((t, i) => (
           <text key={`x${i}`} x={t.p} y={g.plot.y1 + 15} textAnchor="middle">
             {t.label}
@@ -95,7 +95,7 @@ export function StaticFigure({
       <clipPath id={`${clip}-plot`}>
         <rect x={g.plot.x0} y={g.plot.y0} width={g.plot.x1 - g.plot.x0} height={g.plot.y1 - g.plot.y0} />
       </clipPath>
-      {g.fit ? <path d={g.fit} clipPath={`url(#${clip}-plot)`} fill="none" stroke={ink} strokeOpacity={0.6} strokeWidth={1.25} strokeDasharray="5 4" /> : null}
+      {g.fit ? <path d={g.fit} clipPath={`url(#${clip}-plot)`} fill="none" stroke={ink} strokeOpacity={0.75} strokeWidth={1.5} /> : null}
       {g.series.map((s) => (
         <g key={s.id} fill="none" stroke={colorOf(s)}>
           {s.d ? (
@@ -117,7 +117,7 @@ export function StaticFigure({
               d={markerPath(s.style.marker, x, y, s.kind === 'hold' ? MARKER_R : 2.5)}
               fill={s.kind === 'hold' ? colorOf(s) : surface}
               stroke={s.kind === 'hold' ? surface : colorOf(s)}
-              strokeWidth={s.kind === 'hold' ? 2 : 1.5}
+              strokeWidth={1.5}
             />
           ))}
         </g>
@@ -139,6 +139,11 @@ export function StaticFigure({
       {g.rings.map(([x, y, c], i) => (
         <circle key={`r${i}`} cx={x} cy={y} r={MARKER_R + 4} fill="none" stroke={colorOfId(c)} strokeWidth={1.5} />
       ))}
+      {g.notes.map((n, i) =>
+        n.leader ? (
+          <line key={`l${i}`} x1={n.leader[0]} y1={n.leader[1]} x2={n.leader[2]} y2={n.leader[3]} stroke={colorOfId(n.sid)} strokeWidth={1} />
+        ) : null,
+      )}
       {g.notes.map((n, i) => (
         <text key={`n${i}`} fontSize={12} fontWeight={500} fill={n.sid ? colorOfId(n.sid) : muted} textAnchor="start">
           {n.lines.map((t, k) => (

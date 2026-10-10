@@ -104,7 +104,7 @@ export type FigSummary = {
   /** Id of the figure that draws this one in full; this one gets no panel of its own. */
   duplicateOf?: string;
   /** A headline number on the landing band: the last hold of the longest run. */
-  tile?: {order: number; label?: string; note: string};
+  tile?: {order: number; label?: string; note: string; detail?: string};
 };
 
 export type LogEntry = {

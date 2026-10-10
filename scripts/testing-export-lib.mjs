@@ -91,7 +91,7 @@ export function standViolations(view, cfg) {
 
 /** Every text field a visitor reads, for the stand text rule. */
 function visibleText(P, labels) {
-  const extra = [P.card_caveat, P.setup_short, P.tile?.label, P.tile?.note, P.photo?.alt, P.photo?.caption];
+  const extra = [P.card_caveat, P.setup_short, P.tile?.label, P.tile?.note, P.tile?.detail, P.photo?.alt, P.photo?.caption];
   const notes = Object.values(P.axes || {}).map((a) => a.note);
   const shorts = Object.values(P.series || {}).map((s) => s.short);
   return [P.title, P.finding, P.setup_chip, ...(P.setup || []), ...(P.caveats || []), ...(P.marks || []).map((m) => m.text || ''), ...extra, ...notes, ...shorts, ...labels]
@@ -807,7 +807,7 @@ export function buildIndex(built, logItems, cfg, builtAt) {
       caveats: b.fig.caveats.length,
       flagged: b.fig.caveats.filter((c) => c.flag).length,
       ...(b.meta.duplicateOf ? {duplicateOf: b.meta.duplicateOf} : {}),
-      ...(b.meta.tile ? {tile: {order: b.meta.tile.order, ...(b.meta.tile.label ? {label: b.meta.tile.label} : {}), note: b.meta.tile.note}} : {}),
+      ...(b.meta.tile ? {tile: {order: b.meta.tile.order, ...(b.meta.tile.label ? {label: b.meta.tile.label} : {}), note: b.meta.tile.note, ...(b.meta.tile.detail ? {detail: b.meta.tile.detail} : {})}} : {}),
     };
     if (b.meta.duplicateOf && !built.some((o) => o.fig.id === b.meta.duplicateOf)) {
       errors.push(`${b.fig.id}: duplicate_of ${b.meta.duplicateOf} is not a published figure`);
