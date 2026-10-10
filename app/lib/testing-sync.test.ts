@@ -593,12 +593,13 @@ describe('public/testing', () => {
     assert.match(f.chip, /1726 g/);
     assert.match(f.chip, /Same OpenMotor-2306/);
     assert.match(f.chip, /two 6S packs/);
-    assert.match(f.chip, /ESC reversed/);
+    assert.doesNotMatch(f.chip, /reversed/, 'the capture does not record it, so the chip does not state it');
     const setup = index.runs[f.runId].setup.join(' ');
     assert.match(setup, /1726 g reference mass/);
     assert.match(setup, /207\.4 counts\/g/);
     assert.match(setup, /same motor on two different 6S packs/);
-    assert.match(setup, /reversed so the propeller pulls/);
+    assert.match(setup, /reversed so the propeller pulls \(operator-stated, not recorded in the capture\)/);
+    assert.match(setup, /third capture at 13:24 UTC/);
   });
   it('draws the thrust figure from one frame per rpm reading and its holds as markers with a band', () => {
     const f = figs.get('openmotor-thrust-vs-rpm');

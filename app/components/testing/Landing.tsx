@@ -19,6 +19,7 @@ export function Landing({index, tiles}: {index: TestingIndex; tiles: Tile[]}) {
         {latest ? `: ${latest.chip[0]!.toLowerCase()}${latest.chip.slice(1)}` : ''}
         {state ? `. ${state[0]!.toUpperCase()}${state.slice(1)}.` : '.'}
       </p>
+      {tiles.length ? <p className="tw-tilecap">{tiles[0]!.sub}. Hold medians, not peaks.</p> : null}
       {tiles.length ? (
         <ul className="tw-tiles" aria-label={`Latest run ${latestId ?? ''}`}>
           {tiles.map((t) => (
@@ -29,7 +30,7 @@ export function Landing({index, tiles}: {index: TestingIndex; tiles: Tile[]}) {
                   {t.value}
                   <small>{t.unit}</small>
                 </span>
-                <span className="tw-tile-sub">{t.sub}</span>
+                <span className="tw-tile-note">{t.note}</span>
               </a>
             </li>
           ))}
@@ -53,6 +54,10 @@ export function Landing({index, tiles}: {index: TestingIndex; tiles: Tile[]}) {
           <dd>{sum.lastRun}</dd>
         </div>
       </dl>
+      <p className="tw-hintline">
+        <span className="tw-hint-fine">Hover for values, drag to zoom, arrow keys step through points.</span>
+        <span className="tw-hint-coarse">Touch for values, pinch to zoom.</span>
+      </p>
       <details className="tw-jump">
         <summary>All figures</summary>
         <div>

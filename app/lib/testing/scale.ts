@@ -27,11 +27,30 @@ export function tickStep(ticks: number[]): number {
   return ticks.length > 1 ? ticks[1]! - ticks[0]! : 1;
 }
 
-/** Tick label: no trailing zeros, `k` for round thousands from 10 000 up. */
+/** Tick label of a single value: no trailing zeros. Use `fmtTickSet` for an axis. */
 export function fmtTick(v: number, step = 1): string {
-  if (Math.abs(v) >= 10000 && step >= 1000) return `${Number((v / 1000).toPrecision(6))}k`;
   const dec = step >= 1 ? 0 : Math.min(4, Math.ceil(-Math.log10(step) - 1e-9));
   return v.toFixed(dec);
+}
+
+/**
+ * Labels for the ticks of one axis, in one form: when the axis reaches 5000 or
+ * more and its step is at least 500, every tick is written in thousands with a
+ * `k` (0, 5k, 10k, 2.5k), otherwise all are plain numbers. No axis mixes 5000
+ * and 10k.
+ */
+export function fmtTickSet(ticks: number[]): string[] {
+  const step = tickStep(ticks);
+  const max = Math.max(...ticks.map(Math.abs));
+  if (max >= 5000 && step >= 500) {
+    return ticks.map((v) => (v === 0 ? '0' : `${Number((v / 1000).toPrecision(6))}k`));
+  }
+  return ticks.map((v) => fmtTick(v, step));
+}
+
+/** The unit as written on a figure: `degC` is `°C`. */
+export function unitLabel(unit: string): string {
+  return unit === 'degC' ? '°C' : unit;
 }
 
 /** Readout value: 4 significant digits, no exponent. */
@@ -83,7 +102,7 @@ export function evenTicks(lo: number, hi: number, n: number): number[] {
 const STEP_MANTISSAS = [1, 2, 2.5, 4, 5];
 
 /** The smallest nice step and its lower edge that fit extent `e` into n intervals. */
-function fitIntervals(e: Domain, n: number, fixedMin?: number): {lo: number; hi: number; waste: number} | null {
+function fitIntervals(e: Domain, n: number, fixedMin?: number, half = false): {lo: number; hi: number; waste: number} | null {
   const span = e[1] - e[0] || 1;
   const k0 = Math.floor(Math.log10(span / n)) - 1;
   // A reading may sit up to 3 percent of the span under the lower edge, so an
@@ -92,7 +111,8 @@ function fitIntervals(e: Domain, n: number, fixedMin?: number): {lo: number; hi:
   for (let k = k0; k <= k0 + 3; k++) {
     for (const m of STEP_MANTISSAS) {
       const step = m * 10 ** k;
-      const lo = fixedMin ?? Math.floor((e[0] + tol) / step + 1e-9) * step;
+      const unit = half ? step / 2 : step;
+      const lo = fixedMin ?? Math.floor((e[0] + tol) / unit + 1e-9) * unit;
       const hi = lo + n * step;
       if (hi >= e[1] + span * 0.02) return {lo, hi, waste: (hi - lo) / span};
     }
@@ -165,11 +185,23 @@ export function figureDomains(
     const n = niceRange(e, 5, 0.06);
     return [def?.min ?? n[0], def?.max ?? n[1]];
   };
-  return {
-    x: win ?? xFull,
-    y: yFor('y') ?? [0, 1],
-    y2: fig.axes.y2 ? yFor('y2') : undefined,
-  };
+  const y = yFor('y') ?? [0, 1];
+  const y2 = fig.axes.y2 ? yFor('y2') : undefined;
+  // One free axis: when the rounded range leaves more than 10 percent more
+  // empty room than a tighter one with even steps, use the tighter one. RSSI
+  // from -109 to -17 dBm runs -110 to -10 in steps of 20, not -120 to 0.
+  if (!y2 && e1 && free(fig.axes.y)) {
+    const span = e1[1] - e1[0] || 1;
+    const fixedMin = fig.axes.y.min;
+    let best: {lo: number; hi: number; waste: number; n: number} | null = null;
+    for (const n of [5, 4, 6]) {
+      const f = fitIntervals(e1, n, fixedMin, true);
+      if (f && (!best || f.waste < best.waste - 1e-9)) best = {...f, n};
+    }
+    const oldWaste = (y[1] - y[0]) / span;
+    if (best && best.waste < oldWaste - 0.1) return {x: win ?? xFull, y: [best.lo, best.hi], n: best.n};
+  }
+  return {x: win ?? xFull, y, y2};
 }
 
 /** Full x range, for the Reset button and the URL state. */

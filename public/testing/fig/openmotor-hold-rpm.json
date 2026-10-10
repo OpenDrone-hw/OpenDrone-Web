@@ -1,12 +1,12 @@
 {
   "id": "openmotor-hold-rpm",
   "title": "Rotor speed per throttle hold",
-  "finding": "Rotor speed rises from about 5000 rpm at 10 percent throttle to 29350 rpm at 100 percent, in the 13:25 UTC run.",
+  "finding": "Rotor speed rises from about 5000 rpm at 10 percent throttle to 29354 rpm at 100 percent, in the 13:25 UTC run.",
   "product": "openmotor",
   "tier": null,
   "runId": "drv-04-2026-10-10",
   "domain": "THR",
-  "chip": "Same OpenMotor-2306, two 6S packs, cell calibrated to 1726 g, ESC reversed",
+  "chip": "Same OpenMotor-2306, two 6S packs, cell calibrated to 1726 g",
   "caveats": [
     {
       "text": "One capture per run."
@@ -29,7 +29,7 @@
       "max": 100
     },
     "y": {
-      "label": "Rotor speed (7 pole pairs assumed)",
+      "label": "Rotor speed",
       "unit": "rpm",
       "min": 0
     }
@@ -37,7 +37,7 @@
   "series": [
     {
       "id": "s1.rpm.hold",
-      "label": "13:25 UTC run, hold median, last 2 s",
+      "label": "Pack B, 13:25 run, hold median, last 2 s",
       "quantity": "rpm",
       "pack": "13:25",
       "kind": "hold",
@@ -48,7 +48,7 @@
     },
     {
       "id": "s2.rpm.hold",
-      "label": "13:16 UTC run, hold median, last 2 s",
+      "label": "Pack A, 13:16 run, ends at 70 percent, hold median, last 2 s",
       "quantity": "rpm",
       "pack": "13:16",
       "kind": "hold",

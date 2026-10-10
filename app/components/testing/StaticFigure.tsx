@@ -1,4 +1,6 @@
-import {buildGeometry, markerPath, TICK_PX} from '~/lib/testing/geometry';
+import {useId} from 'react';
+import {buildGeometry, MARKER_R, markerPath, TICK_PX} from '~/lib/testing/geometry';
+import {unitLabel} from '~/lib/testing/scale';
 import {CANVAS, INK, MUTED, SURFACE, type Theme} from '~/lib/testing/palette';
 import type {Fig} from '~/lib/testing/types';
 
@@ -33,13 +35,14 @@ export function StaticFigure({
   title?: string;
 }) {
   const g = buildGeometry(fig, {w: width, h: height, theme, compact});
+  const clip = useId().replace(/:/g, '');
   const ink = theme ? INK[theme] : 'var(--tf-ink, currentColor)';
   const muted = theme ? MUTED[theme] : 'var(--tf-muted, currentColor)';
   const grid = theme ? (theme === 'dark' ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)') : 'var(--tf-grid, rgba(128,128,128,0.18))';
   const surface = theme ? SURFACE[theme] : 'var(--tf-surface, #fff)';
   const colorOf = (s: (typeof g.series)[number]) => (theme ? s.style.color : s.style.colorCss);
   const y2 = fig.axes.y2;
-  const lab = (a: {label: string; unit: string}) => `${compact ? short(a.label) : a.label} (${a.unit})`;
+  const lab = (a: {label: string; unit: string}) => `${compact ? short(a.label) : a.label} (${unitLabel(a.unit)})`;
   const endRight = g.end ? g.end.x + 8 + g.end.text.length * 6.2 > g.plot.x1 : false;
   return (
     <svg
@@ -82,7 +85,10 @@ export function StaticFigure({
           {lab(fig.axes.x)}
         </text>
       </g>
-      {g.fit ? <path d={g.fit} fill="none" stroke={ink} strokeOpacity={0.55} strokeWidth={1} strokeDasharray="5 4" /> : null}
+      <clipPath id={`${clip}-plot`}>
+        <rect x={g.plot.x0} y={g.plot.y0} width={g.plot.x1 - g.plot.x0} height={g.plot.y1 - g.plot.y0} />
+      </clipPath>
+      {g.fit ? <path d={g.fit} clipPath={`url(#${clip}-plot)`} fill="none" stroke={ink} strokeOpacity={0.6} strokeWidth={1.25} strokeDasharray="5 4" /> : null}
       {g.series.map((s) => (
         <g key={s.id} fill="none" stroke={colorOf(s)}>
           {s.d ? (
@@ -96,15 +102,15 @@ export function StaticFigure({
             />
           ) : null}
           {s.bars.map(([x, lo, hi], i) => (
-            <line key={`b${i}`} x1={x} x2={x} y1={lo + Math.max(0, 2.5 - Math.abs(lo - hi) / 2)} y2={hi - Math.max(0, 2.5 - Math.abs(lo - hi) / 2)} strokeWidth={5} strokeOpacity={0.3} strokeLinecap="round" />
+            <path key={`b${i}`} d={`M${x} ${lo}V${hi}M${x - 4} ${lo}H${x + 4}M${x - 4} ${hi}H${x + 4}`} strokeWidth={1.5} strokeOpacity={0.9} />
           ))}
           {s.dots.map(([x, y], i) => (
             <path
               key={`d${i}`}
-              d={markerPath(s.style.marker, x, y, s.kind === 'hold' ? 3 : 2.5)}
+              d={markerPath(s.style.marker, x, y, s.kind === 'hold' ? MARKER_R : 2.5)}
               fill={s.kind === 'hold' ? colorOf(s) : surface}
               stroke={s.kind === 'hold' ? surface : colorOf(s)}
-              strokeWidth={s.kind === 'hold' ? 1 : 1.5}
+              strokeWidth={s.kind === 'hold' ? 1.5 : 1.5}
             />
           ))}
         </g>

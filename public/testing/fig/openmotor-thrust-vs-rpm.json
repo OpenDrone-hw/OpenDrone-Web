@@ -1,12 +1,12 @@
 {
   "id": "openmotor-thrust-vs-rpm",
   "title": "Thrust against rotor speed",
-  "finding": "From 40 percent throttle up, thrust follows 1.7 g per krpm squared. The 13:25 UTC run reaches 1496 g at 29350 rpm.",
+  "finding": "From 40 percent throttle up, a quadratic fit gives 1.71 g per krpm squared.",
   "product": "openmotor",
   "tier": null,
   "runId": "drv-04-2026-10-10",
   "domain": "THR",
-  "chip": "Same OpenMotor-2306, two 6S packs, cell calibrated to 1726 g, ESC reversed",
+  "chip": "Same OpenMotor-2306, two 6S packs, cell calibrated to 1726 g",
   "caveats": [
     {
       "text": "Rotor speed assumes 7 pole pairs, the default stored in the capture; the motor's real pole count is not recorded.",
@@ -22,14 +22,15 @@
       "text": "Load cell calibration: one 1726 g reference mass, about 0.7 percent from creep during the 40 s recording."
     },
     {
-      "text": "The 13:16 UTC run ends at 70 percent: pack voltage reads 0 V from the 80 percent step, cause not recorded, so later holds are dropped."
+      "text": "Pack A, the 13:16 UTC run, ends at 70 percent: pack voltage reads 0 V from the 80 percent step, cause not recorded, so later holds are dropped.",
+      "flag": true
     }
   ],
   "reduction": "Logged frames; frames in throttle or speed transients are excluded. Frames that share one rotor speed reading are reduced to their median, because rotor speed telemetry updates slower than the load cell. Hold markers: median of the last 2 s of each throttle hold; the band is the 25th to 75th percentile. Holds with no pack voltage reading are dropped.",
   "cite": "Logs/drv-04-thrust-2026-10-10-20261010T132503Z#L2-L11008; Logs/drv-04-openmotor-2306-2026-10-10-20261010T131644Z#L2-L11229",
   "axes": {
     "x": {
-      "label": "Rotor speed (7 pole pairs assumed)",
+      "label": "Rotor speed",
       "unit": "rpm",
       "min": 0
     },
@@ -42,7 +43,7 @@
   "series": [
     {
       "id": "s1.thrust_g",
-      "label": "13:25 UTC run, frames",
+      "label": "Pack B, 13:25 run, frames",
       "quantity": "thrust",
       "pack": "13:25",
       "kind": "frames",
@@ -51,7 +52,7 @@
     },
     {
       "id": "s2.thrust_g",
-      "label": "13:16 UTC run, frames",
+      "label": "Pack A, 13:16 run, ends at 70 percent, frames",
       "quantity": "thrust",
       "pack": "13:16",
       "kind": "frames",
@@ -60,7 +61,7 @@
     },
     {
       "id": "s1.thrust_g.hold",
-      "label": "13:25 UTC run, hold median, last 2 s",
+      "label": "Pack B, 13:25 run, hold median, last 2 s",
       "quantity": "thrust",
       "pack": "13:25",
       "kind": "hold",
@@ -71,7 +72,7 @@
     },
     {
       "id": "s2.thrust_g.hold",
-      "label": "13:16 UTC run, hold median, last 2 s",
+      "label": "Pack A, 13:16 run, ends at 70 percent, hold median, last 2 s",
       "quantity": "thrust",
       "pack": "13:16",
       "kind": "hold",

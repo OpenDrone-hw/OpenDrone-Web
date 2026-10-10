@@ -2,9 +2,9 @@ import {describe, it} from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {decimateSeries} from './decimate.ts';
-import {buildGeometry} from './geometry.ts';
-import {alignSeries, figureDomains, niceTicks} from './scale.ts';
-import {normalizeTier, pickFeatured, summarize} from './select.ts';
+import {buildGeometry, placeLabels} from './geometry.ts';
+import {alignSeries, figureDomains, fmtTickSet, niceTicks, unitLabel} from './scale.ts';
+import {blocksOf, normalizeTier, pickFeatured, summarize} from './select.ts';
 import type {Fig, TestingIndex} from './types.ts';
 
 // Run with:
@@ -23,11 +23,11 @@ describe('published figures', () => {
     }
   });
 
-  it('the thrust chip states the reference mass, one motor on two packs and the reversed ESC', () => {
+  it('the thrust chip states the reference mass and one motor on two packs, and not the unrecorded ESC direction', () => {
     const c = index.figures['openmotor-thrust-vs-rpm']!.chip;
     assert.match(c, /1726 g/);
     assert.match(c, /two 6S packs/);
-    assert.match(c, /ESC reversed/);
+    assert.doesNotMatch(c, /reversed/);
     const setup = index.runs[index.figures['openmotor-thrust-vs-rpm']!.runId]!.setup.join(' ');
     assert.match(setup, /207\.4 counts\/g/);
   });
@@ -116,5 +116,77 @@ describe('selection', () => {
     assert.ok(d.y2![0] >= 0, 'no empty negative current range');
     const g = buildGeometry(f, {w: 1000, h: 400});
     assert.deepEqual(g.yTicks.map((t) => t.p), g.y2Ticks.map((t) => t.p));
+  });
+});
+
+describe('axis labels', () => {
+  it('writes one axis in one form: k from 5000 up, plain below', () => {
+    assert.deepEqual(fmtTickSet([0, 5000, 10000, 15000]), ['0', '5k', '10k', '15k']);
+    assert.deepEqual(fmtTickSet([2500, 3000, 3500]).length, 3);
+    assert.deepEqual(fmtTickSet([2500, 3000, 3500]), ['2500', '3000', '3500']);
+    assert.deepEqual(fmtTickSet([0, 500, 1000, 1500]), ['0', '500', '1000', '1500']);
+    assert.deepEqual(fmtTickSet([0, 2500, 5000, 7500]), ['0', '2.5k', '5k', '7.5k']);
+    assert.deepEqual(fmtTickSet([18, 20, 22, 24]), ['18', '20', '22', '24']);
+  });
+  it('writes degC as a degree sign', () => {
+    assert.equal(unitLabel('degC'), '°C');
+    assert.equal(unitLabel('rpm'), 'rpm');
+  });
+});
+
+describe('end labels', () => {
+  const bounds = {x0: 0, y0: 0, x1: 300, y1: 200};
+  const overlap = (a: {left: number; top: number; w: number; h: number}, x: number, y: number, r: number) =>
+    a.left < x + r && a.left + a.w > x - r && a.top < y + r && a.top + a.h > y - r;
+  it('never sits on a marker, on another label or outside the plot', () => {
+    const labels = [
+      {x: 290, y: 20, w: 70, h: 13},
+      {x: 288, y: 34, w: 70, h: 13},
+      {x: 150, y: 100, w: 70, h: 13},
+    ];
+    const markers: Array<[number, number]> = [[290, 20], [288, 34], [150, 100], [200, 105], [140, 90]];
+    const placed = placeLabels(labels, markers, bounds);
+    placed.forEach((r, i) => {
+      assert.ok(r.left >= 0 && r.left + r.w <= 300 && r.top >= 0 && r.top + r.h <= 200, `label ${i} inside`);
+      for (const [x, y] of markers) assert.ok(!overlap(r, x, y, 4), `label ${i} clear of marker ${x},${y}`);
+      for (let j = 0; j < i; j++) {
+        const o = placed[j]!;
+        assert.ok(r.left >= o.left + o.w || o.left >= r.left + r.w || r.top >= o.top + o.h || o.top >= r.top + r.h, `labels ${i} and ${j} apart`);
+      }
+    });
+  });
+});
+
+describe('the OpenMotor section', () => {
+  const previews = Object.fromEntries(Object.keys(index.figures).map((id) => [id, fig(id)]));
+  it('stacks the hold figures of one run on one axis and keeps the thrust against rpm card whole', () => {
+    const blocks = blocksOf(index.products.find((p) => p.handle === 'openmotor')!.figures, index, previews);
+    assert.equal(blocks[0]!.kind, 'card');
+    const stack = blocks.find((b) => b.kind === 'stack');
+    assert.ok(stack && stack.kind === 'stack' && stack.ids.length === 4);
+  });
+  it('names both packs on every figure of the run and says where pack A stops', () => {
+    for (const id of Object.keys(index.figures).filter((i) => i.startsWith('openmotor-'))) {
+      const labels = fig(id).series.map((s) => s.label);
+      assert.ok(labels.some((l) => /^Pack B, 13:25 run/.test(l)), `${id} pack B`);
+      assert.ok(labels.some((l) => /^Pack A, 13:16 run, ends at 70 percent/.test(l)), `${id} pack A`);
+    }
+  });
+  it('states the 70 percent stop beside the thrust figure, flagged, and says the cause is unrecorded', () => {
+    const c = fig('openmotor-thrust-vs-rpm').caveats.find((x) => /ends at 70 percent/.test(typeof x === 'string' ? x : x.text));
+    assert.ok(c && typeof c !== 'string' && c.flag, 'flagged');
+    assert.match(typeof c === 'string' ? c : c.text, /cause not recorded/);
+  });
+  it('uses 29354 rpm and a quadratic fit in the findings', () => {
+    assert.match(index.figures['openmotor-hold-rpm']!.finding, /29354 rpm/);
+    assert.match(index.figures['openmotor-thrust-vs-rpm']!.finding, /quadratic fit gives 1\.71 g per krpm squared/);
+  });
+});
+
+describe('the log', () => {
+  it('does not name an unrecorded cause for the abort', () => {
+    const e = index.log.find((l) => l.id === 'motor-thrust-map-bus-loss')!;
+    assert.match(e.saw, /cause not recorded/);
+    assert.doesNotMatch(e.changed ?? '', /pack is pulled/);
   });
 });

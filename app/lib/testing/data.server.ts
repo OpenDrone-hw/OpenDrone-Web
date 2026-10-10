@@ -1,4 +1,5 @@
 import {previewFigure} from './decimate.ts';
+import {unitLabel} from './scale.ts';
 import {featuredIds} from './select.ts';
 import type {Fig, TestingIndex} from './types.ts';
 
@@ -60,16 +61,25 @@ export function getProductCards(handle: string) {
 }
 export type ProductCard = ReturnType<typeof getProductCards>[number];
 
-export type Tile = {id: string; label: string; value: string; unit: string; sub: string};
+export type Tile = {id: string; label: string; value: string; unit: string; sub: string; note: string};
 
 /** Figures whose last point of the longest run is a headline number, in order. */
 const TILE_FIGURES = ['openmotor-hold-thrust', 'openmotor-hold-rpm', 'openmotor-hold-esc-temp', 'openmotor-hold-pack-voltage'];
+
+/** What each number is, so no tile is a floating number. */
+const TILE_NOTES: Record<string, string> = {
+  'openmotor-hold-thrust': 'Load cell, median of the last 2 s of the hold',
+  'openmotor-hold-rpm': 'ESC eRPM over 7 pole pairs (assumed)',
+  'openmotor-hold-esc-temp': 'ESC die sensors, the maximum of four',
+  'openmotor-hold-pack-voltage': "The ESC's own reading",
+};
 
 const round = (v: number) => (Math.abs(v) >= 100 ? String(Math.round(v)) : String(Math.round(v * 10) / 10));
 
 /**
  * Headline numbers for the top of the page, read from the figure files: the
  * last hold of the run that went furthest, with the throttle it was taken at.
+ * Each is a hold median, not a peak.
  */
 export function getTiles(): Tile[] {
   const index = getIndex();
@@ -89,8 +99,9 @@ export function getTiles(): Tile[] {
       id,
       label: fig.axes.y.label.replace(/\s*\(.*?\)/g, ''),
       value: round(last),
-      unit: fig.axes.y.unit === 'degC' ? '°C' : fig.axes.y.unit,
-      sub: `${x} ${fig.axes.x.unit} throttle, run ${series.pack ?? sum.runId}`,
+      unit: unitLabel(fig.axes.y.unit),
+      sub: `${series.label.replace(/, hold median.*$/, '')}, ${x} ${fig.axes.x.unit} throttle hold`,
+      note: TILE_NOTES[id] ?? '',
     });
   }
   return out;

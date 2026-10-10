@@ -28,16 +28,21 @@ export function Legend({
 }) {
   const styles = assignStyles(fig.series, theme);
   const groups = new Map<string, {key: string; label: string; ids: string[]; lead: (typeof fig.series)[number]}>();
+  const keyOf = (s: (typeof fig.series)[number]) => `${s.quantity}/${s.pack ?? s.id}`;
+  // Raw frames have their own switch, unless a pack has nothing else.
+  const framed = new Set(fig.series.filter((s) => s.kind !== 'frames').map(keyOf));
+  const frameIds = fig.series.filter((s) => s.kind === 'frames' && framed.has(keyOf(s))).map((s) => s.id);
   for (const s of fig.series) {
-    const key = `${s.quantity}/${s.pack ?? s.id}`;
+    if (frameIds.includes(s.id)) continue;
+    const key = keyOf(s);
     const g = groups.get(key);
     if (g) {
       g.ids.push(s.id);
       if (s.kind === 'hold') g.lead = s;
-    } else groups.set(key, {key, label: s.pack ? s.label : s.label, ids: [s.id], lead: s});
+    } else groups.set(key, {key, label: s.label, ids: [s.id], lead: s});
   }
   const list = [...groups.values()];
-  if (list.length < 2 && !fig.series.some((s) => s.axis === 'y2')) return null;
+  if (list.length < 2 && !fig.series.some((s) => s.axis === 'y2') && !frameIds.length) return null;
   const allIds = fig.series.map((s) => s.id);
   const isOff = (ids: string[]) => ids.every((i) => hidden.has(i));
   const toggle = (ids: string[]) => {
@@ -67,19 +72,19 @@ export function Legend({
               onDoubleClick={() => isolate(g.ids)}
               title="Click to hide or show. Double-click to show only this one."
             >
-              <svg width="22" height="10" viewBox="0 0 22 10" aria-hidden="true">
+              <svg width="26" height="12" viewBox="0 0 26 12" aria-hidden="true">
                 {g.lead.kind === 'hold' ? null : (
                   <line
                     x1="1"
-                    x2="21"
-                    y1="5"
-                    y2="5"
+                    x2="25"
+                    y1="6"
+                    y2="6"
                     stroke={st.color}
-                    strokeWidth={st.width + 0.5}
+                    strokeWidth={st.width}
                     strokeDasharray={st.dash.length ? st.dash.join(' ') : undefined}
                   />
                 )}
-                <path d={markerPath(st.marker, 11, 5, 3)} fill={st.color} />
+                <path d={markerPath(st.marker, 13, 6, 4)} fill={st.color} stroke="var(--tf-surface)" strokeWidth="1.5" />
               </svg>
               <span>{plainLabel(g.label)}</span>
               {g.lead.axis === 'y2' && ax ? <em>right axis</em> : null}
@@ -87,6 +92,25 @@ export function Legend({
           </li>
         );
       })}
+      {frameIds.length ? (
+        <li>
+          <button
+            type="button"
+            className="tw-key tw-key-frames"
+            aria-pressed={!isOff(frameIds)}
+            onClick={() => {
+              const next = new Set(hidden);
+              for (const i of frameIds) {
+                if (isOff(frameIds)) next.delete(i);
+                else next.add(i);
+              }
+              onChange(next);
+            }}
+          >
+            <span>Raw frames</span>
+          </button>
+        </li>
+      ) : null}
     </ul>
   );
 }

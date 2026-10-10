@@ -1,5 +1,5 @@
 import {assignStyles, type SeriesStyle, type Theme} from './palette.ts';
-import {evenTicks, figureDomains, fmtTick, niceTicks, tickStep, type Domain} from './scale.ts';
+import {evenTicks, figureDomains, fmtTickSet, niceTicks, unitLabel, type Domain} from './scale.ts';
 import type {Fig, FigSeries} from './types.ts';
 
 /**
@@ -50,6 +50,10 @@ export type Geometry = {
 export const TICK_PX = 11;
 /** Left gutter, shared by every figure so plots of one row line up. */
 export const GUTTER_L = 52;
+/** Left gutter on a phone: no rotated axis title, so less room is needed. */
+export const GUTTER_L_NARROW = 40;
+/** Hold marker radius in css px: 8 px across. */
+export const MARKER_R = 4;
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
 
@@ -68,8 +72,8 @@ export function buildGeometry(fig: Fig, opt: GeomOptions): Geometry {
 
   const mkTicks = (d: Domain, count: number, scale: (v: number) => number, even?: number): Tick[] => {
     const t = even ? evenTicks(d[0], d[1], even) : niceTicks(d[0], d[1], count);
-    const step = tickStep(t);
-    return t.map((v) => ({p: scale(v), label: fmtTick(v, step)}));
+    const labels = fmtTickSet(t);
+    return t.map((v, i) => ({p: scale(v), label: labels[i]!}));
   };
   const yCount = Math.min(compact ? 4 : 5, Math.max(3, Math.floor((plot.y1 - plot.y0) / 56)));
   const xTicks = mkTicks(dom.x, compact ? 4 : Math.max(3, Math.min(8, Math.floor((plot.x1 - plot.x0) / 100))), sx);
@@ -117,7 +121,7 @@ export function buildGeometry(fig: Fig, opt: GeomOptions): Geometry {
       const yv = s.y[i];
       if (xv !== null && xv !== undefined && yv !== null && yv !== undefined && i >= 0) {
         const ax = s.axis === 'y2' ? fig.axes.y2 : fig.axes.y;
-        end = {x: r1(sx(xv)), y: r1(sy(yv, d)), text: `${fmtEnd(yv)} ${ax?.unit ?? ''}`.trim()};
+        end = {x: r1(sx(xv)), y: r1(sy(yv, d)), text: `${fmtEnd(yv)} ${unitLabel(ax?.unit ?? '')}`.trim()};
       }
     }
     series.push({
@@ -154,4 +158,60 @@ export function markerPath(shape: SeriesStyle['marker'], x: number, y: number, r
   if (shape === 'square') return `M${x - r} ${y - r}h${2 * r}v${2 * r}h${-2 * r}z`;
   if (shape === 'diamond') return `M${x} ${y - r * 1.3}L${x + r * 1.3} ${y}L${x} ${y + r * 1.3}L${x - r * 1.3} ${y}z`;
   return `M${x - r} ${y}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0z`;
+}
+
+export type LabelBox = {x: number; y: number; w: number; h: number};
+export type Rect = {left: number; top: number; w: number; h: number};
+
+const hit = (a: Rect, b: Rect, pad = 0) =>
+  a.left < b.left + b.w + pad && a.left + a.w + pad > b.left && a.top < b.top + b.h + pad && a.top + a.h + pad > b.top;
+
+/**
+ * Where to write each end-of-series label so that none sits on a marker, on
+ * another label or outside the plot. Each label tries the right of its point
+ * first, then the usual offsets around it, and takes the first that is clear;
+ * if none is clear it takes the one that covers the fewest things. `markers`
+ * are every marker centre of the figure. Units are the caller's (css px).
+ */
+export function placeLabels(
+  labels: LabelBox[],
+  markers: Array<[number, number]>,
+  bounds: {x0: number; y0: number; x1: number; y1: number},
+  markerR = 4,
+): Rect[] {
+  const placed: Rect[] = [];
+  const dots: Rect[] = markers.map(([x, y]) => ({left: x - markerR - 1, top: y - markerR - 1, w: 2 * markerR + 2, h: 2 * markerR + 2}));
+  for (const l of labels) {
+    const {x, y, w, h} = l;
+    const g = markerR + 5;
+    const cands: Rect[] = [
+      {left: x + g, top: y - h / 2, w, h},
+      {left: x - g - w, top: y - h - 3, w, h},
+      {left: x - w / 2, top: y - h - g, w, h},
+      {left: x - g - w, top: y - h / 2, w, h},
+      {left: x - g - w, top: y + 3, w, h},
+      {left: x - w / 2, top: y + g, w, h},
+      {left: x + g, top: y - h - 3, w, h},
+      {left: x + g, top: y + 3, w, h},
+    ];
+    const cost = (r: Rect) => {
+      let c = 0;
+      if (r.left < bounds.x0 || r.left + r.w > bounds.x1 || r.top < bounds.y0 || r.top + r.h > bounds.y1) c += 100;
+      for (const d of dots) if (hit(r, d)) c += 10;
+      for (const p of placed) if (hit(r, p, 2)) c += 10;
+      return c;
+    };
+    let best = cands[0]!;
+    let bestCost = Infinity;
+    for (const c of cands) {
+      const k = cost(c);
+      if (k < bestCost) {
+        best = c;
+        bestCost = k;
+        if (k === 0) break;
+      }
+    }
+    placed.push(best);
+  }
+  return placed;
 }

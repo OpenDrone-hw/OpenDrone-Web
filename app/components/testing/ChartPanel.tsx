@@ -1,6 +1,6 @@
 import {useCallback, useRef, useState} from 'react';
 import type {Domain} from '~/lib/testing/scale';
-import {fmtValue} from '~/lib/testing/scale';
+import {fmtValue, unitLabel} from '~/lib/testing/scale';
 import type {Theme} from '~/lib/testing/palette';
 import type {Fig} from '~/lib/testing/types';
 import {Chart, type ChartApi, type RangeState, type ReadoutState} from './Chart';
@@ -9,7 +9,7 @@ import {Readout} from './Readout';
 
 /**
  * Canvas chart with its cursor readout inside the plot, an inline legend, and
- * one row of text actions. Loaded after hydration, with uPlot, by FigureCard.
+ * one row of actions. Loaded after hydration, with uPlot, by FigureCard.
  * Also used by the wide view.
  */
 export default function ChartPanel({
@@ -21,6 +21,10 @@ export default function ChartPanel({
   onExpand,
   onDownload,
   onCsv,
+  bare = false,
+  syncKey,
+  showXLabels = true,
+  hiddenExt,
 }: {
   fig: Fig;
   theme: Theme;
@@ -30,8 +34,15 @@ export default function ChartPanel({
   onExpand?: () => void;
   onDownload?: () => void;
   onCsv?: () => void;
+  /** A panel of a stack: no legend and no buttons, the stack draws them. */
+  bare?: boolean;
+  syncKey?: string;
+  showXLabels?: boolean;
+  /** Series hidden from outside (the stack's legend). */
+  hiddenExt?: ReadonlySet<string>;
 }) {
-  const [hidden, setHidden] = useState<Set<string>>(() => new Set());
+  const [hiddenOwn, setHidden] = useState<Set<string>>(() => new Set());
+  const hidden = hiddenExt ?? hiddenOwn;
   const [readout, setReadout] = useState<ReadoutState>(null);
   const [range, setRange] = useState<RangeState | null>(null);
   const [said, setSaid] = useState('');
@@ -50,7 +61,13 @@ export default function ChartPanel({
 
   return (
     <div className="tw-panel">
-      <div className="tw-plotwrap">
+      {bare ? null : (
+        <p className="tw-unitline" aria-hidden="true">
+          {fig.axes.y.label}, {unitLabel(fig.axes.y.unit)}
+          {fig.axes.y2 ? `. Right: ${fig.axes.y2.label}, ${unitLabel(fig.axes.y2.unit)}` : ''}
+        </p>
+      )}
+      <div className="tw-plotwrap" data-y2={fig.axes.y2 ? '1' : undefined}>
         <Readout fig={fig} readout={readout} />
         <Chart
           fig={fig}
@@ -62,45 +79,49 @@ export default function ChartPanel({
           onRange={handleRange}
           onReady={onReady}
           onAnnounce={setSaid}
+          syncKey={syncKey}
+          showXLabels={showXLabels}
         />
       </div>
       <p className="tw-sr" role="status" aria-live="polite">
         {said}
       </p>
-      <div className="tw-keyrow">
-        <Legend fig={fig} theme={theme} hidden={hidden} onChange={setHidden} />
-        <div className="tw-actions">
-          {range?.zoomed ? (
-            <>
-              <span className="tw-range">
-                {fmtValue(range.x0)} to {fmtValue(range.x1)} {fig.axes.x.unit}
+      {bare ? null : (
+        <div className="tw-keyrow">
+          <Legend fig={fig} theme={theme} hidden={hidden} onChange={setHidden} />
+          <div className="tw-actions">
+            {range?.zoomed ? (
+              <>
+                <span className="tw-range">
+                  {fmtValue(range.x0)} to {fmtValue(range.x1)} {unitLabel(fig.axes.x.unit)}
+                </span>
+                <button type="button" className="tw-act" onClick={() => api.current?.reset()}>
+                  Reset zoom
+                </button>
+              </>
+            ) : null}
+            {onExpand || onDownload || onCsv ? (
+              <span className="tw-btns" role="group" aria-label="Figure actions">
+                {onExpand ? (
+                  <button type="button" className="tw-act" onClick={onExpand}>
+                    Wide view
+                  </button>
+                ) : null}
+                {onDownload ? (
+                  <button type="button" className="tw-act" onClick={onDownload}>
+                    SVG
+                  </button>
+                ) : null}
+                {onCsv ? (
+                  <button type="button" className="tw-act" onClick={onCsv}>
+                    CSV
+                  </button>
+                ) : null}
               </span>
-              <button type="button" className="tw-act" onClick={() => api.current?.reset()}>
-                Reset zoom
-              </button>
-            </>
-          ) : null}
-          {onExpand ? (
-            <button type="button" className="tw-act" onClick={onExpand}>
-              Expand
-            </button>
-          ) : null}
-          {onDownload ? (
-            <button type="button" className="tw-act" onClick={onDownload}>
-              SVG
-            </button>
-          ) : null}
-          {onCsv ? (
-            <button type="button" className="tw-act" onClick={onCsv}>
-              CSV
-            </button>
-          ) : null}
+            ) : null}
+          </div>
         </div>
-      </div>
-      <p className="tw-hint">
-        <span className="tw-hint-fine">Hover for values, drag to zoom, arrow keys step through points.</span>
-        <span className="tw-hint-coarse">Touch for values, pinch to zoom.</span>
-      </p>
+      )}
     </div>
   );
 }

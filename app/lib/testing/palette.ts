@@ -61,6 +61,18 @@ const SHADES: Record<Quantity, Record<Theme, [string, string, string]>> = {
   },
 };
 
+/**
+ * Runs, packs and units of one quantity in one figure: when a quantity has more
+ * than one of them the figure colours them by identity, blue then orange then
+ * violet, the same way on every card. Quantity hue then cannot carry the
+ * difference, and the legend, markers and end labels name each one. Each is at
+ * least 4.5:1 on both surfaces.
+ */
+export const IDENTITY: Record<Theme, [string, string, string]> = {
+  light: ['#1A56B0', '#B45309', '#6234B8'],
+  dark: ['#7DB2FF', '#FFA24D', '#BCA4FF'],
+};
+
 /** Dash pattern per variant, in CSS px. */
 export const DASHES: Array<number[]> = [[], [7, 4], [2, 3]];
 export type MarkerShape = 'circle' | 'square' | 'diamond';
@@ -120,6 +132,9 @@ export function allSeriesColors(): Array<{quantity: Quantity; variant: number; t
       }
     }
   }
+  for (const theme of ['light', 'dark'] as Theme[]) {
+    IDENTITY[theme].forEach((color, variant) => out.push({quantity: 'aux', variant, theme, color}));
+  }
   return out;
 }
 
@@ -144,21 +159,32 @@ export function assignStyles(
   theme: Theme,
 ): Record<string, SeriesStyle> {
   const seen: Record<string, string[]> = {};
-  const out: Record<string, SeriesStyle> = {};
+  const variants: number[] = [];
   series.forEach((s, i) => {
     const packs = (seen[s.quantity] ??= []);
     const key = s.pack ?? `#${i}`;
     let variant = packs.indexOf(key);
     if (variant < 0) variant = packs.push(key) - 1;
+    variants.push(variant);
+  });
+  const out: Record<string, SeriesStyle> = {};
+  series.forEach((s, i) => {
+    const variant = variants[i]!;
+    const identity = (seen[s.quantity]?.length ?? 0) > 1;
     const frames = s.kind === 'frames';
+    const color = identity ? IDENTITY[theme][variant % 3]! : seriesColor(s.quantity, variant, theme);
     out[s.id] = {
-      color: seriesColor(s.quantity, variant, theme),
-      colorCss: seriesColorCss(s.quantity, variant),
+      color,
+      colorCss: identity
+        ? `light-dark(${IDENTITY.light[variant % 3]}, ${IDENTITY.dark[variant % 3]})`
+        : seriesColorCss(s.quantity, variant),
       variant: variant % 3,
       dash: DASHES[variant % 3]!,
       marker: MARKERS[variant % 3]!,
-      width: frames ? 1 : 1.5,
-      opacity: frames ? 0.22 : 1,
+      width: frames ? 1 : 2,
+      // Raw frames stay quiet but must be seen: at least 3:1 on both surfaces
+      // for the dot itself comes from the identity colour at this strength.
+      opacity: frames ? (theme === 'dark' ? 0.62 : 0.5) : 1,
     };
   });
   return out;

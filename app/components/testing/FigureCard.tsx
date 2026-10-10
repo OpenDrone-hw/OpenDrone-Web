@@ -1,8 +1,8 @@
 import {useCallback, useEffect, useRef, useState, type ComponentType} from 'react';
 import {figureCsv} from '~/lib/testing/export';
-import {fmtValue} from '~/lib/testing/scale';
+import {fmtValue, unitLabel} from '~/lib/testing/scale';
 import type {Domain} from '~/lib/testing/scale';
-import type {Fig, FigSummary, RunInfo} from '~/lib/testing/types';
+import type {Fig, FigSummary, LogEntry, RunInfo} from '~/lib/testing/types';
 import {Disclosure} from './Disclosure';
 import {StaticFigure} from './StaticFigure';
 import {useWorkspaceTheme} from './WorkspaceShell';
@@ -13,10 +13,10 @@ type PanelProps = React.ComponentProps<typeof import('./ChartPanel').default>;
  * Plot height from the width it is drawn at: wide on a desktop card, squarer on
  * a phone, so axis text stays the same size next to the data at every width.
  */
-function plotHeight(width: number, size: 'wide' | 'half'): number {
-  if (width < 520) return Math.round(Math.min(340, Math.max(260, width * 0.85)));
-  if (size === 'wide') return Math.round(Math.min(520, Math.max(340, width * 0.4)));
-  return Math.round(Math.min(420, Math.max(300, width * 0.58)));
+export function plotHeight(width: number, size: 'wide' | 'half'): number {
+  if (width < 520) return Math.round(Math.min(400, Math.max(280, width * 1.0)));
+  if (size === 'wide') return Math.round(Math.min(560, Math.max(380, width * 0.5)));
+  return Math.round(Math.min(440, Math.max(320, width * 0.62)));
 }
 
 /** `?f=<id>&x0=&x1=` for this figure, or null. */
@@ -59,6 +59,7 @@ export function FigureCard({
   preview,
   size,
   showRun,
+  log,
 }: {
   id: string;
   summary: FigSummary;
@@ -68,6 +69,8 @@ export function FigureCard({
   size: 'wide' | 'half';
   /** The product has more than one run, so the card names its own. */
   showRun: boolean;
+  /** The log entry that explains this figure, linked from the head. */
+  log?: LogEntry;
 }) {
   const theme = useWorkspaceTheme();
   const root = useRef<HTMLElement>(null);
@@ -190,17 +193,9 @@ export function FigureCard({
 
   const fig = full ?? preview;
   const startRange = typeof window === 'undefined' ? null : readUrlRange(id);
-  const hasHold = fig.series.some((s) => s.kind === 'hold');
-  const hasFrames = fig.series.some((s) => s.kind === 'frames');
-  const y2 = fig.axes.y2;
-  const caption = [
-    hasHold ? 'Markers: hold medians; bars: 25th to 75th percentile.' : null,
-    hasFrames ? 'Dots: logged frames.' : null,
-    fig.fit
-      ? `Dashed: ${fmtValue(fig.fit.k)} ${fig.fit.unit} from ${fig.fit.fromThrottle} percent throttle up, ${fig.fit.n} holds, largest miss ${fig.fit.maxMiss} ${fig.axes.y.unit}.`
-      : null,
-    y2 ? `Left: ${fig.axes.y.label.toLowerCase()}. Right: ${y2.label.toLowerCase()}.` : null,
-  ].filter(Boolean);
+  const caption = fig.fit
+    ? `Dashed: quadratic fit, ${fmtValue(fig.fit.k)} ${fig.fit.unit} from ${fig.fit.fromThrottle} percent throttle up, ${fig.fit.n} holds, largest miss ${fig.fit.maxMiss} ${unitLabel(fig.axes.y.unit)}.`
+    : null;
 
   return (
     <article className="tw-card" id={id} ref={root} data-size={size} data-ready={full && Panel ? '1' : '0'}>
@@ -212,9 +207,14 @@ export function FigureCard({
           </p>
         ) : null}
         <p className="tw-finding">{summary.finding}</p>
+        {log ? (
+          <a className="tw-logref" href={`#log-${log.id}`}>
+            Tested, saw, changed: {log.date}
+          </a>
+        ) : null}
       </header>
 
-      <div className="tw-plot" ref={plotEl} style={{minHeight: height + 64}}>
+      <div className="tw-plot" ref={plotEl} style={{minHeight: height + 96}}>
         {full && Panel ? (
           <>
             <Panel
@@ -248,9 +248,9 @@ export function FigureCard({
           <StaticFigure fig={fig} width={size === 'wide' ? 1200 : 720} height={size === 'wide' ? 480 : 380} className="tw-static" />
         )}
       </div>
-      {caption.length ? <p className="tw-caption">{caption.join(' ')}</p> : null}
+      {caption ? <p className="tw-caption">{caption}</p> : null}
 
-      <Disclosure fig={fig} />
+      <Disclosure figs={[fig]} />
     </article>
   );
 }

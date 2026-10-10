@@ -36,9 +36,7 @@ export default function TestingRoute({loaderData}: Route.ComponentProps) {
       {index.log.length ? (
         <section className="tw-product tw-log" id="log">
           <h2>Engineering log</h2>
-          <p className="tw-coverage">
-            <span>Each step: what was tested, what was seen, what changed.</span>
-          </p>
+          <p className="tw-sub">Each step: what was tested, what was seen, what changed.</p>
           <ol className="tw-steps">
             {index.log.map((e) => (
               <LogRow

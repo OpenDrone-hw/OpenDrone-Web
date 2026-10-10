@@ -59,25 +59,39 @@ export function WorkspaceShell({index, children}: {index: TestingIndex; children
     });
   }, []);
 
-  // Mark the product whose section is under the bar.
+  // Mark the section under the bar: the last one whose top has passed it.
+  // Nothing is marked above the first section.
   useEffect(() => {
-    const els = [...index.products.map((p) => p.handle), 'log']
-      .map((id) => document.getElementById(id))
-      .filter((e): e is HTMLElement => Boolean(e));
-    if (!els.length || !('IntersectionObserver' in window)) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) if (e.isIntersecting) setActive(e.target.id);
-      },
-      {rootMargin: '-72px 0px -70% 0px'},
-    );
-    els.forEach((e) => io.observe(e));
-    return () => io.disconnect();
+    const ids = [...index.products.map((p) => p.handle), 'log'];
+    let raf = 0;
+    const update = () => {
+      raf = 0;
+      const line = (document.querySelector('.tw-bar')?.getBoundingClientRect().bottom ?? 56) + 24;
+      let cur = '';
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (el && el.getBoundingClientRect().top <= line) cur = id;
+      }
+      setActive(cur);
+    };
+    const on = () => {
+      if (!raf) raf = requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener('scroll', on, {passive: true});
+    window.addEventListener('resize', on);
+    return () => {
+      window.removeEventListener('scroll', on);
+      window.removeEventListener('resize', on);
+      if (raf) cancelAnimationFrame(raf);
+    };
   }, [index.products]);
 
   // Keep the active chip in view in the scrolling nav on a phone.
   useEffect(() => {
-    document.querySelector('.tw-bar [aria-current="location"]')?.scrollIntoView?.({inline: 'center', block: 'nearest'});
+    const cur = document.querySelector<HTMLElement>('.tw-bar [aria-current="location"]');
+    const nav = cur?.parentElement;
+    if (cur && nav) nav.scrollTo({left: cur.offsetLeft - nav.clientWidth / 2 + cur.clientWidth / 2});
   }, [active]);
 
   return (
@@ -106,7 +120,7 @@ export function WorkspaceShell({index, children}: {index: TestingIndex; children
               {theme === 'dark' ? 'Light' : 'Dark'}
             </button>
             <a className="tw-return" href={SITE_ORIGIN}>
-              {SITE_ORIGIN.replace('https://', '')}
+              Back to {SITE_ORIGIN.replace('https://', '')}
             </a>
           </div>
         </header>

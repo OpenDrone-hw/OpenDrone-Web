@@ -2,17 +2,17 @@ import {useEffect, useRef} from 'react';
 import uPlot from 'uplot';
 import 'uplot/dist/uPlot.min.css';
 import {assignStyles, CANVAS, INK, MUTED, SURFACE, type Theme} from '~/lib/testing/palette';
-import {GUTTER_L, markerPath, TICK_PX} from '~/lib/testing/geometry';
+import {GUTTER_L, GUTTER_L_NARROW, MARKER_R, markerPath, placeLabels, TICK_PX} from '~/lib/testing/geometry';
 import {
   alignSeries,
   evenTicks,
   figureDomains,
-  fmtTick,
+  fmtTickSet,
   fmtValue,
   fullXDomain,
   nearestSorted,
   niceTicks,
-  tickStep,
+  unitLabel,
   type Domain,
 } from '~/lib/testing/scale';
 import type {Fig} from '~/lib/testing/types';
@@ -35,7 +35,8 @@ export type ReadoutRow = {
   y: number;
   kind: string;
 };
-export type ReadoutState = {x: number; rows: ReadoutRow[]} | null;
+/** `frac` is where the cursor is along the plot, 0 to 1, so the readout can sit on the far side. */
+export type ReadoutState = {x: number; rows: ReadoutRow[]; frac: number} | null;
 export type RangeState = {x0: number; x1: number; zoomed: boolean};
 
 export type ChartApi = {
@@ -54,6 +55,10 @@ type Props = {
   onReady: (api: ChartApi | null) => void;
   /** Spoken text for a cursor moved with the keyboard. */
   onAnnounce?: (text: string) => void;
+  /** Charts with the same key share cursor and zoom window (small multiples). */
+  syncKey?: string;
+  /** False on the upper panels of a stack: ticks stay, labels and title go. */
+  showXLabels?: boolean;
 };
 
 const hexA = (hex: string, a: number) => {
@@ -61,7 +66,7 @@ const hexA = (hex: string, a: number) => {
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 };
 
-export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRange, onReady, onAnnounce}: Props) {
+export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRange, onReady, onAnnounce, syncKey, showXLabels = true}: Props) {
   const host = useRef<HTMLDivElement>(null);
   const plot = useRef<uPlot | null>(null);
   const hiddenRef = useRef(hidden);
@@ -107,10 +112,7 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
       dualN
         ? evenTicks(min, max, dualN)
         : niceTicks(min, max, Math.min(5, Math.max(3, Math.floor(u.bbox.height / devicePixelRatio / 56))));
-    const fmtAxis = (_u: uPlot, splits: number[]) => {
-      const step = tickStep(splits);
-      return splits.map((v) => fmtTick(v, step));
-    };
+    const fmtAxis = (_u: uPlot, splits: number[]) => fmtTickSet(splits);
     const axisBase = {
       stroke: MUTED[theme],
       font: `${TICK_PX}px ${font}`,
@@ -120,8 +122,8 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
       values: fmtAxis,
     };
     const narrow = el.clientWidth < 520;
-    const lab = (a: {label: string; unit: string}) =>
-      `${narrow ? a.label.replace(/\s*\(.*?\)/g, '') : a.label} (${a.unit})`;
+    const gutter = narrow ? GUTTER_L_NARROW : GUTTER_L;
+    const lab = (a: {label: string; unit: string}) => `${a.label} (${unitLabel(a.unit)})`;
 
     const series: uPlot.Series[] = [
       {},
@@ -142,7 +144,7 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
           return {
             ...base,
             paths: () => null,
-            points: {show: true, size: 3, width: 0, stroke: hexA(st.color, st.opacity), fill: hexA(st.color, st.opacity)},
+            points: {show: true, size: 4, width: 0, stroke: hexA(st.color, st.opacity), fill: hexA(st.color, st.opacity)},
           };
         }
         return {
@@ -166,14 +168,19 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
       const pr = devicePixelRatio;
       ctx.save();
       ctx.beginPath();
-      const slack = 10 * pr;
-      ctx.rect(u.bbox.left - 2 * pr, u.bbox.top - 6 * pr, u.bbox.width + slack, u.bbox.height + 6 * pr);
+      // Markers on the plot edge (100 percent throttle) are drawn whole.
+      const m = (MARKER_R + 3) * pr;
+      ctx.rect(u.bbox.left - m, u.bbox.top - m, u.bbox.width + 2 * m, u.bbox.height + 2 * m);
       ctx.clip();
-      // The fitted law, under the markers.
+      // The fitted law, under the markers, clipped to the plot rectangle.
       if (fig.fit) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(u.bbox.left, u.bbox.top, u.bbox.width, u.bbox.height);
+        ctx.clip();
         const {k, x0, x1} = fig.fit;
-        ctx.strokeStyle = hexA(INK[theme], 0.55);
-        ctx.lineWidth = 1 * pr;
+        ctx.strokeStyle = hexA(INK[theme], 0.6);
+        ctx.lineWidth = 1.25 * pr;
         ctx.setLineDash([5 * pr, 4 * pr]);
         ctx.beginPath();
         for (let i = 0; i <= 40; i++) {
@@ -185,13 +192,16 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
         }
         ctx.stroke();
         ctx.setLineDash([]);
+        ctx.restore();
       }
-      const labels: Array<{x: number; y: number; text: string; color: string}> = [];
+      const labels: Array<{x: number; y: number; text: string; color: string; w: number}> = [];
+      const centres: Array<[number, number]> = [];
+      ctx.font = `${TICK_PX * pr}px ${font}`;
       fig.series.forEach((s) => {
         if (s.kind !== 'hold' || hiddenRef.current.has(s.id)) return;
         const st = styles[s.id]!;
         const scale = s.axis === 'y2' ? 'y2' : 'y';
-        const unit = (s.axis === 'y2' ? fig.axes.y2 : fig.axes.y)?.unit ?? '';
+        const unit = unitLabel((s.axis === 'y2' ? fig.axes.y2 : fig.axes.y)?.unit ?? '');
         let last = -1;
         for (let i = 0; i < s.x.length; i++) {
           const xv = s.x[i];
@@ -200,50 +210,57 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
           last = i;
           const cx = u.valToPos(xv, 'x', true);
           const cy = u.valToPos(yv, scale, true);
+          centres.push([cx / pr, cy / pr]);
           const lo = s.lo?.[i];
           const hi = s.hi?.[i];
           if (lo !== null && lo !== undefined && hi !== null && hi !== undefined) {
-            let y0 = u.valToPos(hi, scale, true);
-            let y1 = u.valToPos(lo, scale, true);
-            const pad = Math.max(0, 2.5 * pr - Math.abs(y1 - y0) / 2);
-            y0 -= pad;
-            y1 += pad;
-            ctx.strokeStyle = hexA(st.color, 0.3);
-            ctx.lineWidth = 5 * pr;
-            ctx.lineCap = 'round';
+            const y0 = u.valToPos(hi, scale, true);
+            const y1 = u.valToPos(lo, scale, true);
+            // Whisker with end caps: the 25th to 75th percentile of the hold.
+            ctx.strokeStyle = hexA(st.color, 0.9);
+            ctx.lineWidth = 1.5 * pr;
+            ctx.lineCap = 'butt';
             ctx.beginPath();
             ctx.moveTo(cx, y0);
             ctx.lineTo(cx, y1);
+            ctx.moveTo(cx - 4 * pr, y0);
+            ctx.lineTo(cx + 4 * pr, y0);
+            ctx.moveTo(cx - 4 * pr, y1);
+            ctx.lineTo(cx + 4 * pr, y1);
             ctx.stroke();
           }
+          const path = new Path2D(markerPath(st.marker, cx, cy, MARKER_R * pr));
           ctx.fillStyle = st.color;
           ctx.strokeStyle = SURFACE[theme];
-          ctx.lineWidth = 1 * pr;
-          ctx.stroke(new Path2D(markerPath(st.marker, cx, cy, 3 * pr)));
-          ctx.fill(new Path2D(markerPath(st.marker, cx, cy, 3 * pr)));
+          ctx.lineWidth = 1.5 * pr;
+          ctx.stroke(path);
+          ctx.fill(path);
         }
         // Name the run and its last value at the end of its markers.
         if (last >= 0 && s.pack) {
+          const text = `${s.pack} ${fmtValue(s.y[last]!)} ${unit}`.trim();
           labels.push({
-            x: u.valToPos(s.x[last]!, 'x', true),
-            y: u.valToPos(s.y[last]!, scale, true),
-            text: `${s.pack}  ${fmtValue(s.y[last]!)} ${unit}`.trim(),
+            x: u.valToPos(s.x[last]!, 'x', true) / pr,
+            y: u.valToPos(s.y[last]!, scale, true) / pr,
+            text,
             color: st.color,
+            w: ctx.measureText(text).width / pr,
           });
         }
       });
-      ctx.font = `${TICK_PX * pr}px ${font}`;
+      const rects = placeLabels(
+        labels.map((l) => ({x: l.x, y: l.y, w: l.w, h: TICK_PX + 2})),
+        centres,
+        {x0: u.bbox.left / pr, y0: u.bbox.top / pr, x1: (u.bbox.left + u.bbox.width) / pr, y1: (u.bbox.top + u.bbox.height) / pr},
+        MARKER_R,
+      );
       ctx.textBaseline = 'middle';
-      const right = u.bbox.left + u.bbox.width;
-      for (const l of labels) {
-        const w = ctx.measureText(l.text).width;
-        const room = right - l.x - 9 * pr;
-        // Right of the last marker when it fits, else above and left of it.
-        const flip = w > room;
-        ctx.textAlign = flip ? 'right' : 'left';
+      ctx.textAlign = 'left';
+      labels.forEach((l, i) => {
+        const r = rects[i]!;
         ctx.fillStyle = l.color;
-        ctx.fillText(l.text, flip ? l.x + 6 * pr : l.x + 9 * pr, flip ? l.y - 16 * pr : l.y);
-      }
+        ctx.fillText(l.text, r.left * pr, (r.top + r.h / 2) * pr);
+      });
       ctx.restore();
       drawCallout(u);
     };
@@ -325,7 +342,7 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
             kind: s.kind,
           });
         }
-        cb.current.onReadout({x, rows});
+        cb.current.onReadout({x, rows, frac: left / Math.max(1, u.bbox.width / devicePixelRatio)});
       });
     };
 
@@ -337,6 +354,7 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
       padding: [12, hasY2 ? 4 : 16, 0, 0],
       legend: {show: false},
       cursor: {
+        ...(syncKey ? {sync: {key: syncKey, scales: ['x', null] as [string, null], setSeries: false}} : {}),
         drag: {x: true, y: false, setScale: true, dist: 6},
         points: {size: 8, width: 1.5},
         y: false,
@@ -353,17 +371,26 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
         ...(hasY2 ? {y2: {auto: false, range: (_u: uPlot, min: number, max: number) => [min, max] as [number, number]}} : {}),
       },
       axes: [
-        {...axisBase, scale: 'x', size: 30, label: lab(fig.axes.x), labelSize: 20, splits: xSplits, gap: 3},
-        {...axisBase, scale: 'y', size: GUTTER_L, label: lab(fig.axes.y), labelSize: 18, splits: ySplits, gap: 3},
+        showXLabels
+          ? ({...axisBase, scale: 'x', size: 30, label: lab(fig.axes.x), labelSize: 20, splits: xSplits, gap: 3} as uPlot.Axis)
+          : ({...axisBase, scale: 'x', size: 6, splits: xSplits, values: (_u: uPlot, sp: number[]) => sp.map(() => ''), gap: 0} as uPlot.Axis),
+        {
+          ...axisBase,
+          scale: 'y',
+          size: gutter,
+          // On a phone the unit sits on a line above the plot, not rotated beside it.
+          ...(narrow ? {} : {label: lab(fig.axes.y), labelSize: 18}),
+          splits: ySplits,
+          gap: 3,
+        },
         ...(hasY2
           ? [
               {
                 ...axisBase,
                 scale: 'y2',
                 side: 1,
-                size: GUTTER_L,
-                label: lab(fig.axes.y2!),
-                labelSize: 18,
+                size: gutter,
+                ...(narrow ? {} : {label: lab(fig.axes.y2!), labelSize: 18}),
                 splits: ySplits,
                 grid: {show: false},
                 gap: 4,
@@ -525,7 +552,7 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
       plot.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fig, theme, height]);
+  }, [fig, theme, height, syncKey, showXLabels]);
 
   // Show and hide series without rebuilding.
   useEffect(() => {
