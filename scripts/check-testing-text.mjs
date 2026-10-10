@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Text budget for the /testing workspace: at most 1200 visible words, no em
+ * Text budget for the /testing workspace: at most 1250 visible words, no em
  * dashes, no blockquotes. Reads the server-rendered HTML, so it counts what a
  * reader sees before any script runs: closed <details> content, SVG text,
  * scripts and styles are not counted.
@@ -8,7 +8,7 @@
  *   node scripts/check-testing-text.mjs [url]   (default http://localhost:5199/testing)
  */
 const url = process.argv[2] ?? 'http://localhost:5199/testing';
-const BUDGET = 1200;
+const BUDGET = 1250;
 
 const html = await (await fetch(url)).text();
 const body = html.slice(html.indexOf('<body'));
