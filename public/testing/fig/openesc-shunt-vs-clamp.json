@@ -1,7 +1,7 @@
 {
   "id": "openesc-shunt-vs-clamp",
   "title": "Current sense against clamp",
-  "finding": "80 percent throttle: 11.6 A sense against 32.4 A clamp. 100 percent: 64.7 A against 55.7 A.",
+  "finding": "At 80 percent the sense reads 11.6 A against 32.4 A on the clamp; at 100 percent it reads 64.7 A against 55.7 A.",
   "product": "openesc",
   "tier": "20x20",
   "runId": "esc-04-2026-08-21",

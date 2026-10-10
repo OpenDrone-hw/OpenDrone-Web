@@ -17,6 +17,8 @@ export type GeomOptions = {
   compact?: boolean;
   /** The y axis titles are drawn in the SVG, above the plot. False when the page writes them in HTML. */
   titles?: boolean;
+  /** The y axis title is turned and hung in the left gutter, beside the tick labels, as in the exports. */
+  side?: boolean;
   /** Narrow plot: no end labels, the legend names the runs. */
   narrow?: boolean;
   hidden?: ReadonlySet<string>;
@@ -52,7 +54,7 @@ export type Geometry = {
   end?: {x: number; y: number; text: string};
   /** Text written on the plot: end value, fit, marks. Positions are clear of markers and of each other. */
   notes: Note[];
-  /** Vertical mark lines, with the row of the label strip above the plot. */
+  /** Vertical mark lines: a thin dashed line from the axis to the top of the plot with its number in a small circle. */
   lines: Array<{x: number; row: number; text: string}>;
   /** Rings on marked points: x, y and the id of the series. */
   rings: Array<[number, number, string]>;
@@ -76,6 +78,12 @@ export const TICK_PX = 12;
 export const GUTTER_L = 54;
 /** Left gutter on a phone. */
 export const GUTTER_L_NARROW = 42;
+/** Left gutter that holds tick labels and the turned axis title; on a wide page it hangs in the page margin. */
+export const GUTTER_SIDE = 64;
+/** Marker radius of a point on a line, 5 px across. */
+export const DOT_R = 2.5;
+/** A series with this many points or more is drawn as a line with one marker at its end. */
+export const MARKS_BELOW = 10;
 /** Height of one row of the strip above the plot that carries mark-line labels. */
 export const MARK_ROW = 15;
 /** Average width of one character of a 12 px label, for the SVG, which cannot measure text. */
@@ -92,8 +100,8 @@ export function buildGeometry(fig: Fig, opt: GeomOptions): Geometry {
   const theme: Theme = opt.theme ?? 'light';
   const dom = figureDomains(fig, {hidden: opt.hidden, xWindow: opt.xWindow});
   const hasY2 = Boolean(dom.y2);
-  const top = opt.titles === false ? 12 : 26;
-  const gl = opt.narrow ? GUTTER_L_NARROW : GUTTER_L;
+  const top = opt.titles === false || opt.side ? 12 : 26;
+  const gl = opt.side ? GUTTER_SIDE : opt.narrow ? GUTTER_L_NARROW : GUTTER_L;
   const m = {l: gl, r: (hasY2 ? gl : 16) + directPad(fig, Boolean(opt.narrow)), t: top, b: 38};
   const plot = {x0: m.l, y0: m.t, x1: w - m.r, y1: h - m.b};
   const sx = (v: number) => plot.x0 + ((v - dom.x[0]) / (dom.x[1] - dom.x[0] || 1)) * (plot.x1 - plot.x0);
@@ -121,6 +129,7 @@ export function buildGeometry(fig: Fig, opt: GeomOptions): Geometry {
     const bars: Array<[number, number, number]> = [];
     let path = '';
     let pen = false;
+    let count = 0;
     for (let i = 0; i < s.x.length; i++) {
       const xv = s.x[i];
       const yv = s.y[i];
@@ -139,12 +148,15 @@ export function buildGeometry(fig: Fig, opt: GeomOptions): Geometry {
         pen = true;
       }
       if (s.kind === 'hold' || s.x.length <= 24) dots.push([px, py]);
+      if (s.kind === 'hold' || s.x.length <= 24) count += 1;
       const lo = s.lo?.[i];
       const hi = s.hi?.[i];
       if (s.kind === 'hold' && lo !== null && lo !== undefined && hi !== null && hi !== undefined) {
         bars.push([px, r1(sy(lo, d)), r1(sy(hi, d))]);
       }
     }
+    // Ten points or more: a line with one marker at its end, not a marker on every point.
+    if (count >= MARKS_BELOW) dots.splice(0, dots.length - 1);
     if (!end && s.x.length) {
       const i = s.y.length - 1 - [...s.y].reverse().findIndex((v) => v !== null && v !== undefined);
       const xv = s.x[i];
@@ -437,4 +449,47 @@ export function layoutNotes(
   const ml = (fig.marks ?? []).filter((m) => m.kind === 'line' && inWin(m.x)).sort((a, b) => a.x - b.x);
   ml.forEach((m, i) => lines.push({x: f.px(m.x), row: 0, text: String(i + 1)}));
   return {notes, lines, rings, centres};
+}
+
+/**
+ * The corner of the plot with the least data under it, where the legend can stand without covering a line.
+ * Null when every corner has something in it: the legend then stays in a row under the plot.
+ */
+export function legendCorner(fig: Fig, hidden?: ReadonlySet<string>): 'tl' | 'tr' | 'bl' | 'br' | null {
+  const dom = figureDomains(fig, {hidden});
+  const hits: Record<'tl' | 'tr' | 'bl' | 'br', number> = {tl: 0, tr: 0, bl: 0, br: 0};
+  const note = (x: number, y: number, d: Domain) => {
+    const fx = (x - dom.x[0]) / (dom.x[1] - dom.x[0] || 1);
+    const fy = (y - d[0]) / (d[1] - d[0] || 1);
+    const side = fx < 0.3 ? 'l' : fx > 0.7 ? 'r' : null;
+    if (!side) return;
+    if (fy > 0.68) hits[side === 'l' ? 'tl' : 'tr'] += 1;
+    if (fy < 0.3) hits[side === 'l' ? 'bl' : 'br'] += 1;
+  };
+  for (const s of fig.series) {
+    if (hidden?.has(s.id) || s.kind === 'frames') continue;
+    const d = s.axis === 'y2' && dom.y2 ? dom.y2 : dom.y;
+    let prev: [number, number] | null = null;
+    for (let i = 0; i < s.x.length; i++) {
+      const x = s.x[i];
+      const y = s.y[i];
+      if (x === null || x === undefined || y === null || y === undefined) {
+        prev = null;
+        continue;
+      }
+      if (prev) for (let k = 1; k <= 8; k++) note(prev[0] + ((x - prev[0]) * k) / 8, prev[1] + ((y - prev[1]) * k) / 8, d);
+      else note(x, y, d);
+      prev = [x, y];
+    }
+  }
+  if (fig.fit) {
+    const {k, x0, x1} = fig.fit;
+    for (let i = 0; i <= 40; i++) {
+      const xv = x0 + ((x1 - x0) * i) / 40;
+      note(xv, k * (xv / 1000) ** 2, dom.y);
+    }
+  }
+  const order: Array<'tl' | 'tr' | 'br' | 'bl'> = ['tl', 'tr', 'br', 'bl'];
+  const best = order.reduce((a, b) => (hits[b] < hits[a] ? b : a));
+  return hits[best] === 0 ? best : null;
 }

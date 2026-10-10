@@ -1,7 +1,7 @@
 {
   "id": "openmotor-thrust-vs-rpm",
   "title": "Thrust against rotor speed",
-  "finding": "1652 g at 31283 rpm, 100 percent throttle.",
+  "finding": "Peak thrust is 1652 g at 31283 rpm.",
   "product": "openmotor",
   "tier": "2306",
   "runId": "drv-04-2026-10-10",
@@ -9,11 +9,11 @@
   "chip": "One OpenMotor-2306, one 6S pack, cell calibrated to 1726 g",
   "caveats": [
     {
-      "text": "One capture, not repeated; propeller, ESC model and cooling are not recorded.",
+      "text": "One capture, not repeated. Propeller, ESC model, packs and cooling are not recorded, and neither the load cell nor the pack voltage was checked against an independent reference.",
       "run": true
     },
     {
-      "text": "No clamp meter record and no independent weight check of the load cell.",
+      "text": "The 16:35 UTC capture is not used: its zero drift reached 27 g and the ESC temperature was frozen by a pack swap.",
       "run": true
     }
   ],

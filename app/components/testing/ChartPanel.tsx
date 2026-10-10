@@ -8,6 +8,7 @@ import {defaultHidden} from '~/lib/testing/labels';
 import {Legend} from './Legend';
 import {Readout} from './Readout';
 import {UnitLine} from './UnitLine';
+import {keyStyle} from '~/lib/testing/layout';
 
 /**
  * Canvas chart with its cursor readout inside the plot and one row under it:
@@ -20,12 +21,15 @@ export default function ChartPanel({
   height,
   initialRange,
   onRange,
+  corner,
 }: {
   fig: Fig;
   theme: Theme;
   height: number;
   initialRange?: Domain | null;
   onRange?: (r: RangeState) => void;
+  /** Where the legend stands on the plot; null puts it in a row under it. */
+  corner?: 'tl' | 'tr' | 'bl' | 'br' | null;
 }) {
   const [hidden, setHidden] = useState<Set<string>>(() => defaultHidden(fig));
   const [readout, setReadout] = useState<ReadoutState>(null);
@@ -74,21 +78,19 @@ export default function ChartPanel({
       <p className="tw-sr" role="status" aria-live="polite">
         {said}
       </p>
-      <div className="tr-keyrow">
+      <div className="tr-keyrow" data-corner={corner ?? undefined} style={keyStyle(fig)}>
         {legend}
-        <p className="tr-actions">
-          {range?.zoomed ? (
-            <>
-              <span>
-                {fmtValue(range.x0)} to {fmtValue(range.x1)} {unitLabel(fig.axes.x.unit)}
-              </span>
-              <button type="button" className="tr-link" onClick={() => api.current?.reset()}>
-                Reset zoom
-              </button>
-            </>
-          ) : null}
-        </p>
       </div>
+      {range?.zoomed ? (
+        <p className="tr-actions">
+          <span>
+            {fmtValue(range.x0)} to {fmtValue(range.x1)} {unitLabel(fig.axes.x.unit)}
+          </span>
+          <button type="button" className="tr-link" onClick={() => api.current?.reset()}>
+            Reset zoom
+          </button>
+        </p>
+      ) : null}
     </div>
   );
 }

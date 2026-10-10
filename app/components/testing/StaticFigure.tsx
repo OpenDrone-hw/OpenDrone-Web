@@ -1,5 +1,5 @@
 import {useId} from 'react';
-import {buildGeometry, MARKER_R, markerPath, TICK_PX} from '~/lib/testing/geometry';
+import {buildGeometry, DOT_R, MARKER_R, markerPath, TICK_PX} from '~/lib/testing/geometry';
 import {defaultHidden} from '~/lib/testing/labels';
 import {axisTitle} from '~/lib/testing/layout';
 import {CANVAS, INK, MUTED, SURFACE, type Theme} from '~/lib/testing/palette';
@@ -26,6 +26,7 @@ export function StaticFigure({
   className,
   title,
   titles = true,
+  side = false,
 }: {
   fig: Fig;
   width: number;
@@ -37,8 +38,10 @@ export function StaticFigure({
   title?: string;
   /** Write the y axis titles above the plot. The workspace cards write them in HTML instead. */
   titles?: boolean;
+  /** Turn the y axis title and hang it in the left gutter beside the tick labels. */
+  side?: boolean;
 }) {
-  const g = buildGeometry(fig, {w: width, h: height, theme, compact, titles, narrow: width < 520, hidden: defaultHidden(fig)});
+  const g = buildGeometry(fig, {w: width, h: height, theme, compact, titles, side, narrow: width < 520, hidden: defaultHidden(fig)});
   const clip = useId().replace(/:/g, '');
   const ink = theme ? INK[theme] : 'var(--tf-ink, currentColor)';
   const muted = theme ? MUTED[theme] : 'var(--tf-muted, currentColor)';
@@ -100,20 +103,20 @@ export function StaticFigure({
           {s.d ? (
             <path
               d={s.d}
-              strokeWidth={s.style.width}
-              strokeOpacity={s.kind === 'hold' ? 0.55 : s.style.opacity}
+              strokeWidth={s.kind === 'hold' ? 1.25 : s.style.width}
+              strokeOpacity={s.kind === 'hold' ? 1 : s.style.opacity}
               strokeDasharray={s.style.dash.length ? s.style.dash.join(' ') : undefined}
               strokeLinejoin="round"
               strokeLinecap="round"
             />
           ) : null}
-          {s.bars.map(([x, lo, hi], i) => (
-            <path key={`b${i}`} d={`M${x} ${lo}V${hi}M${x - 4} ${lo}H${x + 4}M${x - 4} ${hi}H${x + 4}`} strokeWidth={1.5} strokeOpacity={0.9} />
+          {s.bars.filter(([, lo, hi]) => Math.abs(hi - lo) > 3).map(([x, lo, hi], i) => (
+            <path key={`b${i}`} d={`M${x} ${lo}V${hi}M${x - 3} ${lo}H${x + 3}M${x - 3} ${hi}H${x + 3}`} strokeWidth={1} strokeOpacity={0.9} />
           ))}
           {s.dots.map(([x, y], i) => (
             <path
               key={`d${i}`}
-              d={markerPath(s.style.marker, x, y, s.kind === 'hold' ? MARKER_R : 2.5)}
+              d={markerPath(s.style.marker, x, y, DOT_R)}
               fill={s.kind === 'hold' && !s.style.hollow ? colorOf(s) : surface}
               stroke={colorOf(s)}
               strokeWidth={s.kind === 'hold' && !s.style.hollow ? 0 : 1.25}
@@ -124,8 +127,9 @@ export function StaticFigure({
       {g.fit ? <path d={g.fit} clipPath={`url(#${clip}-plot)`} fill="none" stroke={ink} strokeWidth={1.75} strokeDasharray="7 4" /> : null}
       {g.lines.map((l, li) => (
         <g key={`ml${li}`}>
-          <line x1={l.x} x2={l.x} y1={g.plot.y1} y2={g.plot.y1 - 8} stroke={ink} strokeWidth={1.25} />
-          <text x={l.x} y={g.plot.y1 - 12} textAnchor="middle" fontSize={12} fontWeight={500} fill={ink}>
+          <line x1={l.x} x2={l.x} y1={g.plot.y1} y2={g.plot.y0} stroke={ink} strokeOpacity={0.5} strokeWidth={1} strokeDasharray="3 3" />
+          <circle cx={l.x} cy={g.plot.y0 + 9} r={7.5} fill={surface} stroke={ink} strokeWidth={1} />
+          <text x={l.x} y={g.plot.y0 + 13} textAnchor="middle" fontSize={11} fontWeight={500} fill={ink}>
             {l.text}
           </text>
         </g>
@@ -147,7 +151,19 @@ export function StaticFigure({
           ))}
         </text>
       ))}
-      {titles ? (
+      {side ? (
+        <g fontSize={12} fill={muted} className="tr-ytitle">
+          <text transform={`translate(13 ${(g.plot.y0 + g.plot.y1) / 2}) rotate(-90)`} textAnchor="middle">
+            {lab('y')}
+          </text>
+          {y2 ? (
+            <text transform={`translate(${width - 4} ${(g.plot.y0 + g.plot.y1) / 2}) rotate(90)`} textAnchor="middle">
+              {lab('y2')}
+            </text>
+          ) : null}
+        </g>
+      ) : null}
+      {titles && !side ? (
         <g fontSize={12} fontWeight={500}>
           <text x={4} y={14} textAnchor="start" fill={muted}>
             {lab('y')}

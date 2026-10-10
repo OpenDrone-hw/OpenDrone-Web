@@ -180,7 +180,8 @@ describe('the OpenMotor section', () => {
     for (const id of Object.keys(index.figures).filter((i) => i.startsWith('openmotor-'))) {
       assert.ok(!fig(id).series.some((s) => /16:35/.test(s.label)), id);
     }
-    assert.match((index.runs[index.figures['openmotor-thrust-vs-rpm']!.runId]!.table ?? []).flat().join(' '), /16:35 UTC capture/);
+    const caveats = fig('openmotor-thrust-vs-rpm').caveats.map((c) => (typeof c === 'string' ? c : c.text)).join(' ');
+    assert.match(caveats, /16:35 UTC capture is not used/);
   });
   it('states that full-throttle thrust depends on the pack, flagged', () => {
     const c = fig('openmotor-hold-thrust').caveats.find((x) => /sagged to 19\.3 V/.test(typeof x === 'string' ? x : x.text));

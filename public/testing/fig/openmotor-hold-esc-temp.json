@@ -1,7 +1,7 @@
 {
   "id": "openmotor-hold-esc-temp",
   "title": "ESC temperature per throttle hold",
-  "finding": "43 C at 10 percent throttle, 53 C at 100 percent, hottest of four die sensors.",
+  "finding": "The hottest of four die sensors reads 43 C at 10 percent and 53 C at 100 percent.",
   "product": "openmotor",
   "tier": "2306",
   "runId": "drv-04-2026-10-10",

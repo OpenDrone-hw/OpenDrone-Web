@@ -2,10 +2,10 @@ import {useCallback, useEffect, useRef, useState, type ComponentType} from 'reac
 import {figureCsv} from '~/lib/testing/export';
 import {unitLabel} from '~/lib/testing/scale';
 import type {Domain} from '~/lib/testing/scale';
-import {markLines} from '~/lib/testing/geometry';
+import {legendCorner, markLines} from '~/lib/testing/geometry';
 import {defaultHidden} from '~/lib/testing/labels';
 import {caveatFlagged, caveatRunWide, caveatText, type Fig, type FigSummary, type RunInfo} from '~/lib/testing/types';
-import {sourceLine} from '~/lib/testing/layout';
+import {keyStyle, sourceLine} from '~/lib/testing/layout';
 import {Legend} from './Legend';
 import {UnitLine} from './UnitLine';
 import {StaticFigure} from './StaticFigure';
@@ -79,6 +79,7 @@ export function Figure({
   const [error, setError] = useState<string | null>(null);
   const plotEl = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState(420);
+  const [width, setWidth] = useState(920);
   const started = useRef(false);
 
   const load = useCallback(() => {
@@ -104,7 +105,10 @@ export function Figure({
   useEffect(() => {
     const el = plotEl.current;
     if (!el) return;
-    const update = () => setHeight(plotHeight(el.clientWidth));
+    const update = () => {
+      setHeight(plotHeight(el.clientWidth));
+      if (el.clientWidth > 0) setWidth(el.clientWidth);
+    };
     update();
     if (!('ResizeObserver' in window)) return;
     const ro = new ResizeObserver(update);
@@ -183,11 +187,12 @@ export function Figure({
     ...notes,
   ];
   const marks = markLines(fig);
+  const corner = legendCorner(preview, defaultHidden(preview));
   const caption = `${summary.title}.${fig.fit ? ' Dashed line: quadratic fit.' : ''}${marks.map((m) => ` Mark ${m.no}: ${m.text}.`).join('')}`;
 
   return (
     <figure className="tr-fig" id={id} ref={root} data-ready={full && Panel ? '1' : '0'} aria-labelledby={`${id}-cap`}>
-      <div className="tr-plot" ref={plotEl} style={{minHeight: height + 46}}>
+      <div className="tr-plot" ref={plotEl} style={{minHeight: height + 4}}>
         {full && Panel ? (
           <Panel
             fig={full}
@@ -195,6 +200,7 @@ export function Figure({
             height={height}
             initialRange={startRange}
             onRange={(r) => writeUrlRange(id, r)}
+            corner={corner}
           />
         ) : error ? (
           <p className="tr-error" role="alert">
@@ -206,36 +212,30 @@ export function Figure({
         ) : (
           <>
             <UnitLine fig={fig} theme={theme} />
-            <StaticFigure fig={fig} width={820} height={height} className="tr-static" titles={false} />
-            <div className="tr-keyrow">
+            <StaticFigure fig={fig} width={width} height={height} className="tr-static" titles={false} side={width >= 520} />
+            <div className="tr-keyrow" data-corner={corner ?? undefined} style={keyStyle(fig)}>
               <Legend fig={fig} theme={theme} hidden={defaultHidden(fig)} onChange={noop} />
             </div>
           </>
         )}
       </div>
       <figcaption id={`${id}-cap`}>
-        <b>Figure {no}.</b> {caption}
+        <b>Figure {no}.</b> {caption}{' '}
+        <span className="tr-src" data-view={id}>
+          Source {sourceLine(summary.runId, run?.date, fig.cite)}.{' '}
+          <button type="button" className="tr-link" disabled={!full} onClick={() => void download()} title={`${id}.svg`}>
+            SVG
+          </button>{' '}
+          <button type="button" className="tr-link" disabled={!full} onClick={csv} title={`${id}.csv`}>
+            CSV
+          </button>
+        </span>
       </figcaption>
-      <p className="tr-prov" data-view={id}>
-        Source: {sourceLine(summary.runId, run?.date, fig.cite)}.{' '}
-        <button type="button" className="tr-link" disabled={!full} onClick={() => void download()} title={`${id}.svg`}>
-          SVG
-        </button>
-        ,{' '}
-        <button type="button" className="tr-link" disabled={!full} onClick={csv} title={`${id}.csv`}>
-          CSV
-        </button>
-      </p>
-      <ol className="tr-findings">
-        {items.map((t, i) => (
-          <li key={i} id={`fig-${no}-${i + 1}`}>
-            <a className="tr-n" href={`#fig-${no}-${i + 1}`}>
-              {no}.{i + 1}
-            </a>
-            {t}
-          </li>
-        ))}
-      </ol>
+      {items.map((t, i) => (
+        <p key={i} className="tr-find">
+          {t}
+        </p>
+      ))}
     </figure>
   );
 }

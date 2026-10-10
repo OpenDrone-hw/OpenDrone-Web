@@ -1,3 +1,4 @@
+import {GUTTER_SIDE} from './geometry.ts';
 import {unitLabel} from './scale.ts';
 import type {AxisDef, Fig, TestingIndex} from './types.ts';
 
@@ -83,4 +84,9 @@ export function runReduction(figs: Array<{no: number; reduction?: string}>): str
   return [...seen.entries()]
     .map(([s, nos]) => (figs.length > 1 && nos.length === 1 ? `${s.replace(/\.$/, '')} (Figure ${nos[0]}).` : s))
     .join(' ');
+}
+
+/** CSS variables that stand the legend in its corner of the plot: left and right clear of the axes. */
+export function keyStyle(fig: Fig): Record<string, string> {
+  return {'--kl': `${GUTTER_SIDE + 10}px`, '--kr': `${(fig.axes.y2 ? GUTTER_SIDE : 16) + 10}px`};
 }

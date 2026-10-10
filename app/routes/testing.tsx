@@ -32,9 +32,9 @@ export default function TestingRoute({loaderData}: Route.ComponentProps) {
   const photos = photoNumbers(index);
   return (
     <WorkspaceShell>
-      <TitleBlock index={index} numbers={numbers} />
-      {index.products.map((p, i) => (
-        <ProductSection key={p.handle} product={p} section={i + 1} index={index} previews={previews} numbers={numbers} photoNo={photos[p.handle]} />
+      <TitleBlock index={index} />
+      {index.products.map((p) => (
+        <ProductSection key={p.handle} product={p} index={index} previews={previews} numbers={numbers} photoNo={photos[p.handle]} />
       ))}
       {index.log.length ? <LogSection index={index} numbers={numbers} /> : null}
     </WorkspaceShell>

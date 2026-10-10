@@ -11,14 +11,12 @@ import {runState} from './TitleBlock';
  */
 export function ProductSection({
   product,
-  section,
   index,
   previews,
   numbers,
   photoNo,
 }: {
   product: TestingIndex['products'][number];
-  section: number;
   index: TestingIndex;
   previews: Record<string, Fig>;
   numbers: Numbered[];
@@ -45,9 +43,7 @@ export function ProductSection({
   const loose = index.log.find((e) => e.product === product.handle && e.changed && !e.figureId);
   return (
     <section className="tr-section" id={product.handle}>
-      <h2>
-        {section} {product.name}
-      </h2>
+      <h2>{product.name}</h2>
       <p className="tr-head">
         {runIds.map((rid) => (
           <span key={rid}>
@@ -83,7 +79,7 @@ export function ProductSection({
             ) : null}
             <div className="tr-runblock" data-photo={showPhoto ? '1' : undefined}>
               <div className="tr-runtext">
-                <h3 className="tr-label">Setup</h3>
+                <h3>Setup</h3>
                 {run.table?.length ? (
                   <table className="tr-kv" aria-label={`Setup of run ${rid}`}>
                     <tbody>
@@ -96,11 +92,7 @@ export function ProductSection({
                     </tbody>
                   </table>
                 ) : (
-                  <ul className="tr-lim" aria-label={`Setup of run ${rid}`}>
-                    {lines.map((l) => (
-                      <li key={l}>{l}</li>
-                    ))}
-                  </ul>
+                  <p aria-label={`Setup of run ${rid}`}>{lines.join('. ').replace(/\.\.$/, '.')}</p>
                 )}
               </div>
               {showPhoto ? (
@@ -114,19 +106,16 @@ export function ProductSection({
             </div>
             {lim.length || gaps.length ? (
               <>
-                <h3 className="tr-label">Limits</h3>
-                <ul className="tr-lim">
-                  {lim.map((l) => (
-                    <li key={l}>{l}</li>
-                  ))}
-                  {gaps.length ? <li>Not measured: {gaps.join(', ')}.</li> : null}
-                </ul>
+                <h3>Limits</h3>
+                <p>
+                  {[...lim, ...(gaps.length ? [`Not measured: ${gaps.join(', ')}.`] : [])].join(' ')}
+                </p>
               </>
             ) : null}
             {reduction ? (
               <>
-                <h3 className="tr-label">Reduction</h3>
-                <p className="tr-red">{reduction}</p>
+                <h3>Reduction</h3>
+                <p>{reduction}</p>
               </>
             ) : null}
           </div>

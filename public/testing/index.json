@@ -74,13 +74,10 @@
       "chip": "One OpenMotor-2306, one 6S pack, cell calibrated to 1726 g",
       "table": [
         ["Unit", "OpenMotor-2306, ESC reversed so the propeller pulls (operator-stated, not in the capture)"],
-        ["Load cell", "10 kg"],
-        ["Calibration", "1726 g reference mass, 207.4 counts/g, about 0.7 percent"],
-        ["Zero drift", "2 g before, 0.5 g after the 16:48 UTC run"],
-        ["Pack", "One 6S, 23.9 V at rest; voltage from the flight controller battery divider"],
-        ["Runs", "16:48 UTC, ten holds of about 4 s from 10 to 100 percent, in every figure; 13:25 and 13:16 UTC, other packs, in the thrust and pack voltage figures only"],
-        ["Rotor speed", "ESC eRPM over 7 pole pairs, the capture default; the real pole count is not recorded"],
-        ["Excluded", "16:35 UTC capture: zero drift up to 27 g, ESC temperature frozen by a pack swap"]
+        ["Load cell", "10 kg, calibrated on a 1726 g reference mass (207.4 counts/g, about 0.7 percent); zero drift 2 g before and 0.5 g after the 16:48 UTC run"],
+        ["Pack", "One 6S, 23.9 V at rest"],
+        ["Runs", "16:48 UTC: ten holds of about 4 s, 10 to 100 percent. 13:25 and 13:16 UTC: other packs, in the thrust and pack voltage figures only; the 13:16 UTC run was unplugged by the operator at 80 percent because of the noise"],
+        ["Rotor speed", "ESC eRPM over 7 pole pairs; the real pole count is not recorded"]
       ],
       "setupShort": "OpenMotor-2306 on one 6S pack",
       "photo": {
@@ -104,7 +101,7 @@
   "figures": {
     "openesc-die-temp-ramp": {
       "title": "Die temperature in a ramp",
-      "finding": "23 C to 156 C as clamp current rose to 39.8 A; peak 161 C.",
+      "finding": "Die temperature climbs from 23 C to 156 C as clamp current rises to 39.8 A; telemetry peaks at 161 C.",
       "product": "openesc",
       "tier": "20x20",
       "featured": false,
@@ -117,7 +114,7 @@
     },
     "openesc-shunt-vs-clamp": {
       "title": "Current sense against clamp",
-      "finding": "80 percent throttle: 11.6 A sense against 32.4 A clamp. 100 percent: 64.7 A against 55.7 A.",
+      "finding": "At 80 percent the sense reads 11.6 A against 32.4 A on the clamp; at 100 percent it reads 64.7 A against 55.7 A.",
       "product": "openesc",
       "tier": "20x20",
       "featured": true,
@@ -130,7 +127,7 @@
     },
     "openfc-lite-flight-die-temp": {
       "title": "ESC die temperature in flight",
-      "finding": "116 C for the 8 inch on 8S; 52.6 to 87.4 C for the other three.",
+      "finding": "The 8 inch on 8S reaches 116 C; the other three flights stay between 52.6 and 87.4 C.",
       "product": "openfc-lite",
       "tier": null,
       "featured": true,
@@ -143,7 +140,7 @@
     },
     "openmotor-hold-esc-temp": {
       "title": "ESC temperature per throttle hold",
-      "finding": "43 C at 10 percent throttle, 53 C at 100 percent, hottest of four die sensors.",
+      "finding": "The hottest of four die sensors reads 43 C at 10 percent and 53 C at 100 percent.",
       "product": "openmotor",
       "tier": "2306",
       "featured": false,
@@ -161,7 +158,7 @@
     },
     "openmotor-hold-pack-voltage": {
       "title": "Pack voltage per throttle hold",
-      "finding": "23.9 V at 10 percent throttle, 21.6 V at 100 percent (16:48 UTC); 19.3 V at 100 percent (13:25 UTC).",
+      "finding": "The 16:48 UTC pack sags from 23.9 V to 21.6 V across the holds; the 13:25 UTC pack reaches 19.3 V at 100 percent.",
       "product": "openmotor",
       "tier": "2306",
       "featured": false,
@@ -180,7 +177,7 @@
     },
     "openmotor-hold-rpm": {
       "title": "Rotor speed per throttle hold",
-      "finding": "4881 rpm at 10 percent throttle, 31283 rpm at 100 percent (16:48 UTC).",
+      "finding": "Rotor speed rises from 4881 rpm at 10 percent to 31283 rpm at 100 percent (16:48 UTC).",
       "product": "openmotor",
       "tier": "2306",
       "featured": false,
@@ -199,7 +196,7 @@
     },
     "openmotor-hold-thrust": {
       "title": "Thrust per throttle hold",
-      "finding": "34 g at 10 percent throttle, 1652 g at 100 percent (16:48 UTC).",
+      "finding": "Thrust on the 16:48 UTC pack rises from 34 g at 10 percent to 1652 g at 100 percent.",
       "product": "openmotor",
       "tier": "2306",
       "featured": false,
@@ -207,7 +204,7 @@
       "domain": "THR",
       "runId": "drv-04-2026-10-10",
       "chip": "One OpenMotor-2306, one 6S pack, cell calibrated to 1726 g",
-      "caveats": 2,
+      "caveats": 1,
       "flagged": 1,
       "tile": {
         "order": 10,
@@ -217,7 +214,7 @@
     },
     "openmotor-thrust-vs-rpm": {
       "title": "Thrust against rotor speed",
-      "finding": "1652 g at 31283 rpm, 100 percent throttle.",
+      "finding": "Peak thrust is 1652 g at 31283 rpm.",
       "product": "openmotor",
       "tier": "2306",
       "featured": true,
@@ -230,7 +227,7 @@
     },
     "openrx-antenna-use": {
       "title": "Antenna 2 use against distance",
-      "finding": "Antenna 2 share rises from 0 in the first 1 km to 35 percent beyond 5 km.",
+      "finding": "Antenna 2 share rises from 0 in the first kilometre to 35 percent beyond 5 km.",
       "product": "openrx",
       "tier": null,
       "featured": false,
@@ -243,7 +240,7 @@
     },
     "openrx-lq-vs-distance": {
       "title": "Link quality against distance",
-      "finding": "Gemini above Mono in all 25 bins from 2.9 to 5.3 km, median 15 points.",
+      "finding": "From 2.9 to 5.3 km Gemini holds higher link quality than Mono in all 25 bins, by a median of 15 points.",
       "product": "openrx",
       "tier": null,
       "featured": false,
@@ -256,7 +253,7 @@
     },
     "openrx-lq-vs-rssi": {
       "title": "RSSI and link quality, first drop",
-      "finding": "RSSI fell from -74 dBm at 284 s to -98 dBm at 294.5 s; link quality held at 87 percent or more until 292.6 s.",
+      "finding": "RSSI falls from -74 dBm at 284 s to -98 dBm at 294.5 s; link quality stays at 87 percent or more until 292.6 s.",
       "product": "openrx",
       "tier": null,
       "featured": false,
@@ -269,7 +266,7 @@
     },
     "openrx-rssi-vs-distance": {
       "title": "RSSI against distance",
-      "finding": "Gemini below Mono in 24 of 25 bins from 2.9 to 5.3 km, median 4 dB.",
+      "finding": "From 2.9 to 5.3 km Gemini reads below Mono in 24 of 25 bins, by a median of 4 dB.",
       "product": "openrx",
       "tier": null,
       "featured": true,

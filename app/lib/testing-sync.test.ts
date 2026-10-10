@@ -617,7 +617,7 @@ describe('public/testing', () => {
     assert.match(setup, /One 6S, 23\.9 V at rest/);
     assert.match(setup, /in the thrust and pack voltage figures only/);
     assert.match(setup, /reversed so the propeller pulls \(operator-stated, not in the capture\)/);
-    assert.match(setup, /16:35 UTC capture/);
+    assert.match(f.caveats.map((c: any) => (typeof c === 'string' ? c : c.text)).join(' '), /16:35 UTC capture is not used/);
   });
   it('draws the thrust figure from one frame per rpm reading and its holds as markers with a band', () => {
     const f = figs.get('openmotor-thrust-vs-rpm');

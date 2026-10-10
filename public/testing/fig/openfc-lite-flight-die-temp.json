@@ -1,7 +1,7 @@
 {
   "id": "openfc-lite-flight-die-temp",
   "title": "ESC die temperature in flight",
-  "finding": "116 C for the 8 inch on 8S; 52.6 to 87.4 C for the other three.",
+  "finding": "The 8 inch on 8S reaches 116 C; the other three flights stay between 52.6 and 87.4 C.",
   "product": "openfc-lite",
   "tier": null,
   "runId": "field-2026-08-09",

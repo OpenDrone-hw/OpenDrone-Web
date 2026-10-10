@@ -1,7 +1,7 @@
 {
   "id": "openesc-die-temp-ramp",
   "title": "Die temperature in a ramp",
-  "finding": "23 C to 156 C as clamp current rose to 39.8 A; peak 161 C.",
+  "finding": "Die temperature climbs from 23 C to 156 C as clamp current rises to 39.8 A; telemetry peaks at 161 C.",
   "product": "openesc",
   "tier": "20x20",
   "runId": "esc-18-2026-08-21",

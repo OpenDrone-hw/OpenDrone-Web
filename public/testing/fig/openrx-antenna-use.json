@@ -1,7 +1,7 @@
 {
   "id": "openrx-antenna-use",
   "title": "Antenna 2 use against distance",
-  "finding": "Antenna 2 share rises from 0 in the first 1 km to 35 percent beyond 5 km.",
+  "finding": "Antenna 2 share rises from 0 in the first kilometre to 35 percent beyond 5 km.",
   "product": "openrx",
   "tier": null,
   "runId": "rx-13-2026-07-11",

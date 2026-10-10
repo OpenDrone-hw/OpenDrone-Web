@@ -1,7 +1,7 @@
 {
   "id": "openmotor-hold-thrust",
   "title": "Thrust per throttle hold",
-  "finding": "34 g at 10 percent throttle, 1652 g at 100 percent (16:48 UTC).",
+  "finding": "Thrust on the 16:48 UTC pack rises from 34 g at 10 percent to 1652 g at 100 percent.",
   "product": "openmotor",
   "tier": "2306",
   "runId": "drv-04-2026-10-10",
@@ -11,10 +11,6 @@
     {
       "text": "The 13:25 UTC pack sagged to 19.3 V and read 1496 g at 100 percent, so full-throttle thrust depends on the pack.",
       "flag": true
-    },
-    {
-      "text": "Pack A (13:16 UTC) was unplugged by the operator at 80 percent because of the noise.",
-      "run": true
     }
   ],
   "cardCaveat": "At full throttle the 13:25 UTC pack sagged to 19.3 V and the motor gave 1496 g.",

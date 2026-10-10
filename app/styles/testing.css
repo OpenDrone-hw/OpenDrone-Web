@@ -42,7 +42,7 @@
 }
 .testing-workspace a {
   color: var(--teal);
-  font-weight: 500;
+  font-weight: 400;
   text-decoration: underline;
   text-decoration-color: rgba(15, 76, 92, 0.3);
   text-underline-offset: 2px;
@@ -129,18 +129,10 @@
   scroll-margin-top: 16px;
 }
 .testing-workspace h3 {
-  margin: 14px 0 3px;
-  font-size: 10.5pt;
-  font-weight: 500;
-}
-/* Run-in labels (Setup, Limits, Reduction, Figure N., finding numbers) are black, not teal: colour is for the title, section headings, the wordmark and links. */
-.testing-workspace h3.tr-label {
-  margin: 14px 0 4px;
-  color: var(--ink);
-  font-size: 8.5pt;
+  margin: 18px 0 4px;
+  font-size: 16px;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  line-height: 1.35;
 }
 .testing-workspace p {
   margin: 0 0 9px;
@@ -167,56 +159,28 @@
   display: inline-block;
   margin-right: 14px;
 }
+.testing-workspace .tr-meta span span {
+  display: inline;
+  margin: 0;
+}
 .testing-workspace .tr-meta b,
 .testing-workspace .tr-head b {
   font-weight: 500;
   color: var(--ink);
 }
-/* Contents: numbered entries, a dotted leader, the figures each section holds. */
-.testing-workspace .tr-contents {
-  list-style: none;
-  margin: 0 0 6px;
-  padding: 0;
-  font-size: 10pt;
-}
-.testing-workspace .tr-contents li {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  margin: 0 0 2px;
-}
-.testing-workspace .tr-contents i {
-  flex: 1;
-  min-width: 12px;
-  border-bottom: 1px dotted var(--cell);
-  transform: translateY(-3px);
-}
-.testing-workspace .tr-contents .tr-cn {
-  display: inline-block;
-  min-width: 1.2em;
-  color: var(--ink);
-  font-weight: 600;
-}
-.testing-workspace .tr-contents .tr-cr {
-  color: var(--grey);
-  font-size: 9pt;
-}
+/* Run line, limits and reduction paragraphs. */
 .testing-workspace .tr-runline {
   margin: 6px 0 2px;
   font-size: 9pt;
   color: var(--grey);
 }
-.testing-workspace .tr-lim {
-  margin: 0 0 9px;
-  list-style: disc;
-  font-size: 9.5pt;
-}
-.testing-workspace .tr-red {
-  margin: 0 0 9px;
+.testing-workspace .tr-runblock p,
+.testing-workspace .tr-runblock + h3 + p,
+.testing-workspace .tr-section > div > p {
   font-size: 9.5pt;
 }
 
-/* Setup as a name and value table, as the exports set it, with the run's photo beside it. */
+/* Setup as a name and value table: hairline rules, no fill, no box; the fill is for table headers. */
 .testing-workspace .tr-runblock {
   display: block;
 }
@@ -227,23 +191,19 @@
   align-items: start;
 }
 .testing-workspace .tr-kv {
-  margin: 0 0 9px;
-  border: 1px solid var(--cell);
+  margin: 4px 0 9px;
+  border-top: 0.4pt solid var(--cell);
   font-size: 9.5pt;
 }
 .testing-workspace .tr-kv th,
 .testing-workspace .tr-kv td {
-  padding: 4px 10px;
+  padding: 4px 12px 4px 0;
   border-bottom: 0.4pt solid var(--hair);
 }
-.testing-workspace .tr-kv tr:last-child th,
-.testing-workspace .tr-kv tr:last-child td {
-  border-bottom: 0;
-}
 .testing-workspace .tr-kv th {
-  width: 22%;
+  width: 24%;
   font-weight: 500;
-  background: var(--fill-head);
+  color: var(--ink);
 }
 .testing-workspace .tr-photo {
   margin: 14px 0 12px;
@@ -266,17 +226,17 @@
   color: var(--ink);
 }
 
-/* Figure --------------------------------------------------------------- */
+/* Figure: the plot, its caption with the source folded in, then what it shows as plain paragraphs. */
 .testing-workspace .tr-fig {
-  margin: 52px 0 0;
-  padding-top: 14px;
-  border-top: 0.4pt solid var(--cell);
+  margin: 44px 0 0;
   scroll-margin-top: 16px;
   break-inside: avoid;
   page-break-inside: avoid;
 }
 .testing-workspace .tr-plot {
+  position: relative;
   min-width: 0;
+  container: trplot / inline-size;
 }
 .testing-workspace .tr-static {
   display: block;
@@ -286,9 +246,15 @@
 .testing-workspace .tr-panel {
   min-width: 0;
 }
-/* Caption, one short source line, then the findings, numbered and hung. */
+/* Wide page: the tick labels and the turned axis title hang in the page margin, so the plot box starts at the column edge. */
+@media (min-width: 960px) {
+  .testing-workspace .tr-plot {
+    margin-left: -64px;
+    width: calc(100% + 64px);
+  }
+}
 .testing-workspace .tr-fig figcaption {
-  margin: 16px 0 2px;
+  margin: 8px 0 6px;
   font-size: 9.5pt;
   color: var(--ink);
 }
@@ -296,60 +262,39 @@
   font-weight: 600;
   color: var(--ink);
 }
-.testing-workspace .tr-prov {
-  margin: 0 0 8px;
+.testing-workspace .tr-src {
   font-size: 8.5pt;
-  line-height: 1.5;
   color: var(--grey);
 }
-.testing-workspace .tr-findings {
-  list-style: none;
-  margin: 0 0 6px;
-  padding: 0;
+.testing-workspace .tr-find {
+  margin: 0 0 4px;
   font-size: 9.5pt;
-}
-.testing-workspace .tr-findings li {
-  position: relative;
-  margin: 0 0 3px;
-  padding-left: 34px;
   scroll-margin-top: 16px;
-}
-.testing-workspace .tr-findings li:target {
-  background: var(--fill-code);
-}
-.testing-workspace .tr-n {
-  position: absolute;
-  left: 0;
-  color: var(--ink);
-  font-weight: 600;
-  text-decoration: none;
-  font-variant-numeric: tabular-nums;
-}
-.testing-workspace .tr-contents a {
-  text-decoration: none;
 }
 .testing-workspace .tr-link {
   padding: 0;
   font: inherit;
-  font-weight: 500;
-  color: var(--teal);
-  text-decoration: underline;
-  text-decoration-color: rgba(15, 76, 92, 0.3);
-  text-underline-offset: 2px;
+  font-weight: 400;
+  color: var(--grey);
+  text-decoration: none;
   background: none;
   border: 0;
   cursor: pointer;
 }
+.testing-workspace .tr-link:hover:not(:disabled) {
+  color: var(--teal);
+  text-decoration: underline;
+}
 .testing-workspace .tr-link:disabled {
   color: var(--grey);
-  text-decoration: none;
+  opacity: 0.6;
   cursor: default;
 }
 .testing-workspace .tr-error {
   margin: 12px 0;
   color: #a15c00;
 }
-/* Log table: grey header fill, a 1 px outer border, hairlines between rows, as the exports set tables. */
+/* Log table: grey header fill, hairlines between rows, as the exports set tables. */
 .testing-workspace table {
   width: 100%;
   margin: 8px 0 12px;
@@ -360,7 +305,7 @@
 }
 .testing-workspace th,
 .testing-workspace td {
-  padding: 4px 10px;
+  padding: 4px 8px;
   text-align: left;
   vertical-align: top;
 }
@@ -382,6 +327,15 @@
 .testing-workspace .tr-log .tr-num {
   text-align: right;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.testing-workspace .tr-log .tr-num a {
+  color: var(--ink);
+  text-decoration: none;
+}
+.testing-workspace .tr-log .tr-num a:hover {
+  color: var(--teal);
+  text-decoration: underline;
 }
 .testing-workspace .tr-log .tr-date {
   font-variant-numeric: tabular-nums;
@@ -463,15 +417,13 @@
   font-weight: 400;
   color: var(--ink);
 }
-/* Legend: a short dash and the series name, plain text. */
+/* Legend: a short dash and the series name, plain text. On a wide plot it stands in the emptiest corner. */
 .testing-workspace .tr-keyrow {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
   align-items: baseline;
   gap: 2px 16px;
-  margin-top: 8px;
-  min-height: 22px;
+  margin-top: 6px;
 }
 .testing-workspace .tw-legend {
   list-style: none;
@@ -483,6 +435,38 @@
 }
 .testing-workspace .tw-legend li {
   margin: 0;
+}
+@container trplot (min-width: 520px) {
+  .testing-workspace .tw-unitline {
+    display: none;
+  }
+  .testing-workspace .tr-keyrow[data-corner] {
+    position: absolute;
+    z-index: 1;
+    margin: 0;
+    padding: 2px 6px;
+    background: rgba(255, 255, 255, 0.88);
+  }
+  .testing-workspace .tr-keyrow[data-corner] .tw-legend {
+    flex-direction: column;
+    gap: 1px;
+  }
+  .testing-workspace .tr-keyrow[data-corner='tl'] {
+    top: 12px;
+    left: var(--kl);
+  }
+  .testing-workspace .tr-keyrow[data-corner='tr'] {
+    top: 12px;
+    right: var(--kr);
+  }
+  .testing-workspace .tr-keyrow[data-corner='bl'] {
+    bottom: 60px;
+    left: var(--kl);
+  }
+  .testing-workspace .tr-keyrow[data-corner='br'] {
+    bottom: 60px;
+    right: var(--kr);
+  }
 }
 .testing-workspace .tw-key {
   display: inline-flex;
@@ -515,7 +499,7 @@
   text-decoration: none;
 }
 .testing-workspace .tr-actions {
-  margin: 0 0 0 auto;
+  margin: 4px 0 0;
   display: flex;
   flex-wrap: wrap;
   gap: 0 12px;
@@ -547,6 +531,9 @@
   .testing-workspace .tr-kv th {
     width: 30%;
   }
+  .testing-workspace .tr-keyrow {
+    margin-top: 6px;
+  }
   .testing-workspace .tr-log,
   .testing-workspace .tr-log tbody,
   .testing-workspace .tr-log td {
@@ -567,15 +554,20 @@
     border: 0;
     padding: 0 0 2px;
   }
-  .testing-workspace .tr-log td:nth-child(3) {
+  .testing-workspace .tr-log td:nth-child(3),
+  .testing-workspace .tr-log td:nth-child(4) {
     grid-column: 1 / -1;
-    grid-row: 2;
   }
-  .testing-workspace .tr-log td:nth-child(4):empty {
+  .testing-workspace .tr-log td.tr-none {
     display: none;
   }
-  .testing-workspace .tr-log td:nth-child(4):not(:empty)::before {
-    content: 'Figure ';
+  .testing-workspace .tr-log td:nth-child(4)::before {
+    content: 'Action: ';
+    font-weight: 500;
+  }
+  .testing-workspace .tr-log td:nth-child(5) {
+    grid-column: 3;
+    grid-row: 1;
   }
 }
 

@@ -1,5 +1,5 @@
 import {assignStyles, type Theme} from '~/lib/testing/palette';
-import {connectsHolds, markerPath} from '~/lib/testing/geometry';
+import {connectsHolds, DOT_R, markerPath} from '~/lib/testing/geometry';
 import {defaultHidden, frameIdsOf, plainLabel} from '~/lib/testing/labels';
 import type {Fig} from '~/lib/testing/types';
 
@@ -86,7 +86,7 @@ export function Legend({
                     strokeDasharray={st.dash.length ? st.dash.join(' ') : undefined}
                   />
                 )}
-                <path d={markerPath(st.marker, 13, 6, 3.5)} fill={st.hollow ? 'var(--tf-surface)' : st.color} stroke={st.color} strokeWidth="1.25" />
+                <path d={markerPath(st.marker, 13, 6, DOT_R)} fill={st.hollow ? 'var(--tf-surface)' : st.color} stroke={st.color} strokeWidth="1.25" />
               </svg>
               <span>{plainLabel(g.label, g.lead.short)}</span>
             </button>

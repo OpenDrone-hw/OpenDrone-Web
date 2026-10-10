@@ -2,7 +2,7 @@ import {useEffect, useRef} from 'react';
 import uPlot from 'uplot';
 import 'uplot/dist/uPlot.min.css';
 import {assignStyles, CANVAS, INK, MUTED, SURFACE, type Theme} from '~/lib/testing/palette';
-import {connectsHolds, GUTTER_L, GUTTER_L_NARROW, layoutNotes, MARKER_R, markerPath, TICK_PX} from '~/lib/testing/geometry';
+import {connectsHolds, DOT_R, GUTTER_L_NARROW, GUTTER_SIDE, layoutNotes, MARKS_BELOW, markerPath, MARKER_R, TICK_PX} from '~/lib/testing/geometry';
 import {directPad, plainLabel} from '~/lib/testing/labels';
 import {axisTitle} from '~/lib/testing/layout';
 import {
@@ -59,6 +59,11 @@ type Props = {
   syncKey?: string;
   /** False on the upper panels of a stack: ticks stay, labels and title go. */
   showXLabels?: boolean;
+};
+
+const lastIndex = (ys: Array<number | null | undefined>) => {
+  for (let i = ys.length - 1; i >= 0; i--) if (ys[i] !== null && ys[i] !== undefined) return i;
+  return -1;
 };
 
 const hexA = (hex: string, a: number) => {
@@ -122,7 +127,7 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
       values: fmtAxis,
     };
     const narrow = el.clientWidth < 520;
-    const gutter = narrow ? GUTTER_L_NARROW : GUTTER_L;
+    const gutter = narrow ? GUTTER_L_NARROW : GUTTER_SIDE;
     const rightPad = directPad(fig, narrow);
 
     const series: uPlot.Series[] = [
@@ -154,10 +159,15 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
           dash: st.dash.length ? st.dash : undefined,
           points: {
             show: s.x.length <= 24,
-            size: 8,
-            width: 1.5,
+            size: DOT_R * 2 + 1,
+            width: 1.25,
             stroke: st.color,
             fill: SURFACE[theme],
+            // Ten points or more: one marker, at the end of the line.
+            filter: (_u: uPlot, _si: number, _show: boolean, _gaps?: null | number[][]) => {
+              const last = lastIndex(s.y);
+              return s.y.filter((v) => v !== null && v !== undefined).length >= MARKS_BELOW && last >= 0 ? [last] : null;
+            },
           },
         };
       }),
@@ -205,8 +215,9 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
           if (s.kind !== 'hold' || hiddenNow.has(s.id)) return;
           const st = styles[s.id]!;
           const scale = s.axis === 'y2' ? 'y2' : 'y';
-          ctx.strokeStyle = hexA(st.color, 0.55);
-          ctx.lineWidth = st.width * pr;
+          ctx.strokeStyle = st.color;
+          ctx.lineWidth = 1.25 * pr;
+          ctx.lineJoin = 'round';
           ctx.beginPath();
           let pen = false;
           for (let i = 0; i < s.x.length; i++) {
@@ -231,6 +242,8 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
         if (s.kind !== 'hold' || hiddenNow.has(s.id)) return;
         const st = styles[s.id]!;
         const scale = s.axis === 'y2' ? 'y2' : 'y';
+        const sparse = s.y.filter((v) => v !== null && v !== undefined).length < MARKS_BELOW;
+        const lastAt = lastIndex(s.y);
         for (let i = 0; i < s.x.length; i++) {
           const xv = s.x[i];
           const yv = s.y[i];
@@ -239,23 +252,26 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
           const cy = u.valToPos(yv, scale, true);
           const lo = s.lo?.[i];
           const hi = s.hi?.[i];
-          if (lo !== null && lo !== undefined && hi !== null && hi !== undefined) {
-            const y0 = u.valToPos(hi, scale, true);
-            const y1 = u.valToPos(lo, scale, true);
+          const wy0 = hi === null || hi === undefined ? 0 : u.valToPos(hi, scale, true);
+          const wy1 = lo === null || lo === undefined ? 0 : u.valToPos(lo, scale, true);
+          if (lo !== null && lo !== undefined && hi !== null && hi !== undefined && Math.abs(wy1 - wy0) > 3 * pr) {
+            const y0 = wy0;
+            const y1 = wy1;
             // Whisker with end caps: the 25th to 75th percentile of the hold.
             ctx.strokeStyle = hexA(st.color, 0.9);
-            ctx.lineWidth = 1.5 * pr;
+            ctx.lineWidth = 1 * pr;
             ctx.lineCap = 'butt';
             ctx.beginPath();
             ctx.moveTo(cx, y0);
             ctx.lineTo(cx, y1);
-            ctx.moveTo(cx - 4 * pr, y0);
-            ctx.lineTo(cx + 4 * pr, y0);
-            ctx.moveTo(cx - 4 * pr, y1);
-            ctx.lineTo(cx + 4 * pr, y1);
+            ctx.moveTo(cx - 3 * pr, y0);
+            ctx.lineTo(cx + 3 * pr, y0);
+            ctx.moveTo(cx - 3 * pr, y1);
+            ctx.lineTo(cx + 3 * pr, y1);
             ctx.stroke();
           }
-          const path = new Path2D(markerPath(st.marker, cx, cy, MARKER_R * pr));
+          if (!sparse && i !== lastAt) continue;
+          const path = new Path2D(markerPath(st.marker, cx, cy, DOT_R * pr));
           ctx.fillStyle = st.hollow ? SURFACE[theme] : st.color;
           ctx.strokeStyle = st.color;
           ctx.lineWidth = 1.25 * pr;
@@ -296,21 +312,29 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
       });
       ctx.restore();
 
-      // Numbered marks: a short tick up from the x axis and its number; the wording is in the caption.
-      ctx.font = `500 ${12 * pr}px ${font}`;
+      // Numbered marks: a thin dashed line up from the x axis with its number in a small circle; the wording is in the caption.
+      ctx.font = `500 ${11 * pr}px ${font}`;
       ctx.textBaseline = 'alphabetic';
       ctx.textAlign = 'center';
       laid.lines.forEach((l) => {
         ctx.save();
-        ctx.strokeStyle = INK[theme];
-        ctx.lineWidth = 1.25 * pr;
+        ctx.strokeStyle = hexA(INK[theme], 0.5);
+        ctx.lineWidth = 1 * pr;
+        ctx.setLineDash([3 * pr, 3 * pr]);
         ctx.beginPath();
         ctx.moveTo(l.x * pr, plotBox.y1 * pr);
-        ctx.lineTo(l.x * pr, (plotBox.y1 - 8) * pr);
+        ctx.lineTo(l.x * pr, plotBox.y0 * pr);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = SURFACE[theme];
+        ctx.strokeStyle = INK[theme];
+        ctx.beginPath();
+        ctx.arc(l.x * pr, (plotBox.y0 + 9) * pr, 7.5 * pr, 0, Math.PI * 2);
+        ctx.fill();
         ctx.stroke();
         ctx.restore();
         ctx.fillStyle = INK[theme];
-        ctx.fillText(l.text, l.x * pr, (plotBox.y1 - 12) * pr);
+        ctx.fillText(l.text, l.x * pr, (plotBox.y0 + 13) * pr);
       });
       ctx.textAlign = 'left';
       // Written notes: end value, fit, marks, direct labels.
@@ -382,20 +406,22 @@ export function Chart({fig, theme, hidden, height, initialRange, onReadout, onRa
         {
           ...axisBase,
           scale: 'y',
-          size: gutter,
+          size: narrow ? gutter : gutter - 16,
           splits: ySplits,
           gap: 3,
-        },
+          ...(narrow ? {} : {label: axisTitle(fig, 'y'), labelSize: 16}),
+        } as uPlot.Axis,
         ...(hasY2
           ? [
               {
                 ...axisBase,
                 scale: 'y2',
                 side: 1,
-                size: gutter,
+                size: narrow ? gutter : gutter - 16,
                 splits: ySplits,
                 grid: {show: false},
                 gap: 4,
+                ...(narrow ? {} : {label: axisTitle(fig, 'y2'), labelSize: 16}),
               } as uPlot.Axis,
             ]
           : []),

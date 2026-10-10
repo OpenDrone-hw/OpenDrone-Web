@@ -1,7 +1,7 @@
 {
   "id": "openrx-lq-vs-rssi",
   "title": "RSSI and link quality, first drop",
-  "finding": "RSSI fell from -74 dBm at 284 s to -98 dBm at 294.5 s; link quality held at 87 percent or more until 292.6 s.",
+  "finding": "RSSI falls from -74 dBm at 284 s to -98 dBm at 294.5 s; link quality stays at 87 percent or more until 292.6 s.",
   "product": "openrx",
   "tier": null,
   "runId": "rx-13-2026-07-11",

@@ -1,7 +1,7 @@
 {
   "id": "openmotor-hold-rpm",
   "title": "Rotor speed per throttle hold",
-  "finding": "4881 rpm at 10 percent throttle, 31283 rpm at 100 percent (16:48 UTC).",
+  "finding": "Rotor speed rises from 4881 rpm at 10 percent to 31283 rpm at 100 percent (16:48 UTC).",
   "product": "openmotor",
   "tier": "2306",
   "runId": "drv-04-2026-10-10",

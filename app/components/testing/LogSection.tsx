@@ -6,21 +6,23 @@ export function LogSection({index, numbers}: {index: TestingIndex; numbers: Numb
   const names = Object.fromEntries(index.products.map((p) => [p.handle, p.name]));
   return (
     <section className="tr-section" id="log">
-      <h2>A Engineering log</h2>
+      <h2>Appendix A. Engineering log</h2>
       <table className="tr-log">
         <colgroup>
-          <col style={{width: '14%'}} />
-          <col style={{width: '15%'}} />
-          <col />
           <col style={{width: '12%'}} />
+          <col style={{width: '12%'}} />
+          <col />
+          <col style={{width: '27%'}} />
+          <col style={{width: '8%'}} />
         </colgroup>
         <thead>
           <tr>
             <th scope="col">Date</th>
             <th scope="col">Unit</th>
-            <th scope="col">Result</th>
+            <th scope="col">Observation</th>
+            <th scope="col">Action</th>
             <th scope="col" className="tr-num">
-              Figure
+              Fig.
             </th>
           </tr>
         </thead>
@@ -35,10 +37,10 @@ export function LogSection({index, numbers}: {index: TestingIndex; numbers: Numb
                 <td>{names[e.product] ?? e.product}</td>
                 <td>
                   {e.tested} {e.saw}
-                  {e.changed ? ` Change: ${e.changed}` : ''}
                 </td>
+                <td className={e.changed ? 'tr-act' : 'tr-act tr-none'}>{e.changed ?? '-'}</td>
                 <td className="tr-num">
-                  {fig && e.figureId ? <a href={`#${anchorFor(index, e.figureId)}`}>{fig.replace('Figure ', '')}</a> : ''}
+                  {fig && e.figureId ? <a href={`#${anchorFor(index, e.figureId)}`}>{fig.replace('Figure ', 'Fig. ')}</a> : '-'}
                 </td>
               </tr>
             );
