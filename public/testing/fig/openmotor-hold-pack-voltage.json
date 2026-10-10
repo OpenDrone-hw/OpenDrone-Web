@@ -1,0 +1,177 @@
+{
+  "id": "openmotor-hold-pack-voltage",
+  "title": "Pack voltage per throttle hold",
+  "finding": "In the 13:25 UTC run the pack sags from 24.4 V at 10 percent throttle to 19.3 V at 100 percent.",
+  "product": "openmotor",
+  "tier": null,
+  "runId": "drv-04-2026-10-10",
+  "domain": "PWR",
+  "chip": "Same OpenMotor-2306, two 6S packs, cell calibrated to 1726 g, ESC reversed",
+  "caveats": [
+    {
+      "text": "The packs are not recorded; the 13:16 UTC run reads higher throughout, by 1.9 V at 70 percent."
+    },
+    {
+      "text": "Voltage is the ESC's own reading, not checked against a meter."
+    }
+  ],
+  "reduction": "Logged frames; frames in throttle or speed transients are excluded. Hold markers: median of the last 2 s of each throttle hold; the band is the 25th to 75th percentile. Holds with no pack voltage reading are dropped.",
+  "cite": "Logs/drv-04-thrust-2026-10-10-20261010T132503Z#L1291-L9813; Logs/drv-04-openmotor-2306-2026-10-10-20261010T131644Z#L1513-L7322",
+  "axes": {
+    "x": {
+      "label": "Throttle",
+      "unit": "percent",
+      "min": 0,
+      "max": 100
+    },
+    "y": {
+      "label": "Pack voltage",
+      "unit": "V"
+    }
+  },
+  "series": [
+    {
+      "id": "s1.v_bus.hold",
+      "label": "13:25 UTC run, hold median, last 2 s",
+      "quantity": "voltage",
+      "pack": "13:25",
+      "kind": "hold",
+      "x": [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+      "y": [24.383, 24.168, 23.701, 23.128, 22.458, 21.783, 21.094, 20.408, 19.836, 19.264],
+      "lo": [24.381, 24.16, 23.689, 23.109, 22.439, 21.768, 21.08, 20.405, 19.829, 19.245],
+      "hi": [24.385, 24.177, 23.716, 23.146, 22.477, 21.799, 21.109, 20.411, 19.845, 19.291]
+    },
+    {
+      "id": "s2.v_bus.hold",
+      "label": "13:16 UTC run, hold median, last 2 s",
+      "quantity": "voltage",
+      "pack": "13:16",
+      "kind": "hold",
+      "x": [10, 20, 30, 40, 50, 60, 70],
+      "y": [24.64, 24.568, 24.405, 24.174, 23.833, 23.425, 22.954],
+      "lo": [24.639, 24.566, 24.398, 24.163, 23.817, 23.406, 22.936],
+      "hi": [24.641, 24.57, 24.411, 24.185, 23.848, 23.443, 22.976]
+    }
+  ],
+  "holds": [
+    {
+      "run": "13:25",
+      "throttle": 10,
+      "t0": 6.431,
+      "t1": 8.426,
+      "n": 400
+    },
+    {
+      "run": "13:25",
+      "throttle": 20,
+      "t0": 10.941,
+      "t1": 12.936,
+      "n": 400
+    },
+    {
+      "run": "13:25",
+      "throttle": 30,
+      "t0": 15.451,
+      "t1": 17.446,
+      "n": 400
+    },
+    {
+      "run": "13:25",
+      "throttle": 40,
+      "t0": 19.931,
+      "t1": 21.926,
+      "n": 400
+    },
+    {
+      "run": "13:25",
+      "throttle": 50,
+      "t0": 24.441,
+      "t1": 26.436,
+      "n": 400
+    },
+    {
+      "run": "13:25",
+      "throttle": 60,
+      "t0": 28.951,
+      "t1": 30.946,
+      "n": 400
+    },
+    {
+      "run": "13:25",
+      "throttle": 70,
+      "t0": 33.431,
+      "t1": 35.426,
+      "n": 400
+    },
+    {
+      "run": "13:25",
+      "throttle": 80,
+      "t0": 37.941,
+      "t1": 39.936,
+      "n": 400
+    },
+    {
+      "run": "13:25",
+      "throttle": 90,
+      "t0": 42.452,
+      "t1": 44.447,
+      "n": 400
+    },
+    {
+      "run": "13:25",
+      "throttle": 100,
+      "t0": 46.952,
+      "t1": 48.947,
+      "n": 400
+    },
+    {
+      "run": "13:16",
+      "throttle": 10,
+      "t0": 7.545,
+      "t1": 9.541,
+      "n": 399
+    },
+    {
+      "run": "13:16",
+      "throttle": 20,
+      "t0": 12.046,
+      "t1": 14.041,
+      "n": 400
+    },
+    {
+      "run": "13:16",
+      "throttle": 30,
+      "t0": 16.541,
+      "t1": 18.536,
+      "n": 399
+    },
+    {
+      "run": "13:16",
+      "throttle": 40,
+      "t0": 21.046,
+      "t1": 23.041,
+      "n": 400
+    },
+    {
+      "run": "13:16",
+      "throttle": 50,
+      "t0": 25.548,
+      "t1": 27.543,
+      "n": 399
+    },
+    {
+      "run": "13:16",
+      "throttle": 60,
+      "t0": 30.028,
+      "t1": 32.023,
+      "n": 400
+    },
+    {
+      "run": "13:16",
+      "throttle": 70,
+      "t0": 34.533,
+      "t1": 36.528,
+      "n": 399
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "id": "openesc-shunt-vs-clamp",
+  "title": "Current sense against clamp",
+  "finding": "At 80 percent throttle the sense reading was 11.6 A against 32.4 A on the clamp; at 100 percent, 64.7 A against 55.7 A.",
+  "product": "openesc",
+  "tier": "20x20",
+  "runId": "esc-04-2026-08-21",
+  "domain": "PWR",
+  "chip": "OpenESC-20x20, 1 motor, clamp reference",
+  "caveats": [
+    {
+      "text": "One unit, one run."
+    },
+    {
+      "text": "The ESC trace is a bench controller ADC value at a set gain, not a reading from the ESC firmware."
+    },
+    {
+      "text": "The clamp zero offset (-0.43 A) is not removed, so the 15 percent point is not reliable."
+    },
+    {
+      "text": "The clamp is reference grade below 40 A; the 100 percent point is above that.",
+      "flag": true
+    },
+    {
+      "text": "No capture exists after the rev3.2 input network change, so whether it removed the error is not known."
+    }
+  ],
+  "reduction": "Median over the settled window of each throttle hold; the band is the 25th to 75th percentile.",
+  "cite": "Logs/_archive/esc-04-20x20-20260821T150430Z#L3133-L21719",
+  "axes": {
+    "x": {
+      "label": "Throttle",
+      "unit": "percent",
+      "min": 0,
+      "max": 100
+    },
+    "y": {
+      "label": "Current",
+      "unit": "A"
+    }
+  },
+  "series": [
+    {
+      "id": "s1.i_shunt",
+      "label": "Current-sense output (bench ADC), hold median",
+      "quantity": "current",
+      "pack": "sense",
+      "kind": "hold",
+      "x": [15, 30, 45, 60, 80, 100],
+      "y": [1.034, 7.182, 11.227, 27.094, 11.556, 64.675],
+      "lo": [1.017, 7.109, 11.12, 26.602, 10.93, 63.807],
+      "hi": [1.053, 7.254, 11.325, 27.456, 12.295, 65.746]
+    },
+    {
+      "id": "s1.i_clamp",
+      "label": "Clamp meter, battery lead, hold median",
+      "quantity": "current",
+      "pack": "clamp",
+      "kind": "hold",
+      "x": [15, 30, 45, 60, 80, 100],
+      "y": [0.392, 3.19, 8.993, 18.302, 32.387, 55.66],
+      "lo": [0.379, 3.171, 8.955, 18.199, 32.276, 55.272],
+      "hi": [0.406, 3.203, 9.053, 18.539, 32.447, 56.584]
+    }
+  ],
+  "holds": []
+}

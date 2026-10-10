@@ -1,0 +1,48 @@
+{
+  "id": "openrx-antenna-use",
+  "title": "Antenna 2 use against distance",
+  "finding": "Antenna 2 share rises from 0 in the first 1 km to 35 percent beyond 5 km.",
+  "product": "openrx",
+  "tier": null,
+  "runId": "rx-13-2026-07-11",
+  "domain": "RF",
+  "chip": "Gemini, Mono and Lite on one carry, 5.3 km ride",
+  "caveats": [
+    {
+      "text": "One unit, one ride."
+    },
+    {
+      "text": "Samples are not evenly spread over distance: bins hold 9 to 871 samples, and bins with fewer than 8 are dropped."
+    },
+    {
+      "text": "Antenna placement and orientation are not recorded."
+    }
+  ],
+  "reduction": "Share of logged samples with the flag set, in 500 m bins of at least 8 samples.",
+  "cite": "Logs/rx-13-field-20260711#L6-L2474",
+  "axes": {
+    "x": {
+      "label": "Distance from the track start",
+      "unit": "m",
+      "min": 0
+    },
+    "y": {
+      "label": "Antenna 2 selected",
+      "unit": "%",
+      "min": 0,
+      "max": 100
+    }
+  },
+  "series": [
+    {
+      "id": "s1.rx1_ant",
+      "label": "Share of samples on antenna 2",
+      "quantity": "aux",
+      "pack": "Gemini",
+      "kind": "trace",
+      "x": [250, 750, 1250, 1750, 2250, 2750, 3250, 3750, 4250, 4750, 5250],
+      "y": [0, 0, 2.7027, 13.559, 11.494, 13.776, 16.073, 9.8765, 10.959, 22.222, 35.47]
+    }
+  ],
+  "holds": []
+}
