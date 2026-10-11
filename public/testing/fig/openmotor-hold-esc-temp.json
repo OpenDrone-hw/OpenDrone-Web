@@ -1,0 +1,118 @@
+{
+  "id": "openmotor-hold-esc-temp",
+  "title": "ESC temperature per throttle hold",
+  "finding": "The hottest of four die sensors reads 43 C at 10 percent and 53 C at 100 percent.",
+  "product": "openmotor",
+  "tier": "2306",
+  "runId": "drv-04-2026-10-10",
+  "domain": "THM",
+  "chip": "One OpenMotor-2306, one 6S pack, cell calibrated to 1726 g",
+  "caveats": [
+    {
+      "text": "Only channel 1 is driven and at idle the four sensors read up to 11 C apart, so this is a sensor reading, not a hot spot."
+    },
+    {
+      "text": "Read live through the run, 38 to 53 C."
+    }
+  ],
+  "reduction": "Logged frames, without throttle or speed transients. Hold markers are the median of the last 2 s of each throttle hold, the band the 25th to 75th percentile; holds with no pack voltage reading are dropped.",
+  "cite": "Logs/drv-04-openmotor-2306-2026-10-10-20261010T164844Z#L1312-L9833",
+  "axes": {
+    "x": {
+      "label": "Throttle",
+      "unit": "percent",
+      "min": 0,
+      "max": 100
+    },
+    "y": {
+      "label": "ESC die temperature",
+      "unit": "degC"
+    }
+  },
+  "series": [
+    {
+      "id": "s1.tesc_max.hold",
+      "label": "Clean run, 16:48 UTC, hold median, last 2 s",
+      "short": "Clean run, 16:48",
+      "quantity": "temperature",
+      "pack": "16:48",
+      "kind": "hold",
+      "x": [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+      "y": [43, 41, 39, 38, 38, 40, 43, 47, 52, 53],
+      "lo": [43, 41, 39, 38, 38, 40, 43, 47, 52, 53],
+      "hi": [44, 41, 39, 38, 39, 40, 43, 48, 53, 54]
+    }
+  ],
+  "holds": [
+    {
+      "run": "16:48",
+      "throttle": 10,
+      "t0": 6.535,
+      "t1": 8.53,
+      "n": 400
+    },
+    {
+      "run": "16:48",
+      "throttle": 20,
+      "t0": 11.045,
+      "t1": 13.04,
+      "n": 400
+    },
+    {
+      "run": "16:48",
+      "throttle": 30,
+      "t0": 15.555,
+      "t1": 17.55,
+      "n": 400
+    },
+    {
+      "run": "16:48",
+      "throttle": 40,
+      "t0": 20.035,
+      "t1": 22.03,
+      "n": 400
+    },
+    {
+      "run": "16:48",
+      "throttle": 50,
+      "t0": 24.545,
+      "t1": 26.54,
+      "n": 400
+    },
+    {
+      "run": "16:48",
+      "throttle": 60,
+      "t0": 29.055,
+      "t1": 31.05,
+      "n": 400
+    },
+    {
+      "run": "16:48",
+      "throttle": 70,
+      "t0": 33.535,
+      "t1": 35.53,
+      "n": 400
+    },
+    {
+      "run": "16:48",
+      "throttle": 80,
+      "t0": 38.045,
+      "t1": 40.04,
+      "n": 400
+    },
+    {
+      "run": "16:48",
+      "throttle": 90,
+      "t0": 42.55,
+      "t1": 44.546,
+      "n": 400
+    },
+    {
+      "run": "16:48",
+      "throttle": 100,
+      "t0": 47.051,
+      "t1": 49.046,
+      "n": 400
+    }
+  ]
+}

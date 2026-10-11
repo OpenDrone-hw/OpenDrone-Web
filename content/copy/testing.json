@@ -1,0 +1,7 @@
+{
+  "$route": "/testing",
+  "$title": "Testing",
+  "meta_title": "Testing · Incutec bench data",
+  "meta_description": "Measured bench and field data for OpenDrone boards in the Incutec testing workspace, with the setup and caveats of each run.",
+  "chapter_title": "Testing"
+}

@@ -18949,3 +18949,106 @@ summary,
 .home-community-owners:hover {
   color: var(--color-text);
 }
+
+/* === Product-page testing entry: a small figure of the test report, no box === */
+.testing-card {
+  --tf-ink: var(--color-text);
+  --tf-muted: var(--color-text-muted);
+  --tf-grid: color-mix(in srgb, var(--color-text) 14%, transparent);
+  --tf-surface: transparent;
+  color-scheme: dark;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
+}
+html.light .testing-card {
+  color-scheme: light;
+}
+/* The chapter grid leaves an empty row between the heading and the card: close it. */
+@media (min-width: 880px) {
+  .chapter-wide:has(> .testing-card) {
+    margin-top: calc(-1 * var(--sp-7));
+  }
+}
+.testing-card figure {
+  margin: 0;
+}
+.testing-card figcaption {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+.testing-card figcaption b {
+  font-weight: 500;
+  color: var(--color-text);
+}
+.testing-card-finding {
+  font-size: 14px;
+}
+.testing-card-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.testing-card-svg-narrow {
+  display: none;
+}
+.testing-card-finding {
+  margin: 12px 0 0;
+  max-width: 60ch;
+  color: var(--color-text);
+}
+.testing-card-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+.testing-card-key li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.testing-card-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 10px;
+  color: var(--color-text);
+}
+.testing-card-none {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+.testing-card-none a {
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.testing-card-link {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.testing-card-link:hover {
+  color: var(--color-gold-text-hover);
+}
+@media (max-width: 560px) {
+  .testing-card-svg-wide {
+    display: none;
+  }
+  .testing-card-svg-narrow {
+    display: block;
+  }
+}

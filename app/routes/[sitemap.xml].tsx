@@ -26,6 +26,7 @@ const STATIC_PATHS = [
   '/owners',
   '/roadmap',
   '/timeline',
+  '/testing',
   '/firmware-partners',
   '/newsletter',
   '/wholesale',

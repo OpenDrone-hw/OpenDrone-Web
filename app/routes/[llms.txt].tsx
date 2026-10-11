@@ -189,6 +189,7 @@ infer status from prose anywhere else.
 - [Product roadmap, community vote and financial goals](${origin}/roadmap)
 - [How to contribute](https://github.com/OpenDrone-hw/.github/blob/main/CONTRIBUTING.md)
 - [Release timeline, everything that has shipped](${origin}/timeline)
+- [Testing, measured bench and field data with setup and caveats](${origin}/testing)
 - [Where the boards are made](${origin}/production)
 - [All products](${origin}/products)
 - [Newsletter / release notes](${origin}/newsletter)

@@ -3,6 +3,9 @@ import {ChatFpvWidget} from '~/components/ChatFpvWidget';
 import {ChatFpvInlineLink} from '~/components/ChatFpvEntry';
 import {chatFpvWidgetSrc, chatFpvWidgetSrcWithProduct} from '~/lib/support/chatfpv';
 import {handoffEnabled} from '~/lib/accounts/handoff';
+import {getProductCards} from '~/lib/testing/data.server';
+import {normalizeTier} from '~/lib/testing/select';
+import {ProductCard} from '~/components/testing/ProductCard';
 import {Fragment, Suspense, useEffect, useMemo, useRef, useState} from 'react';
 import {createPortal} from 'react-dom';
 import {useAside} from '~/components/Aside';
@@ -226,6 +229,8 @@ export async function loader(args: Route.LoaderArgs) {
     chatfpvWidget: chatFpvWidgetSrc(args.context.env, 'product', args.params.handle),
     // "1": a `#cfh` ticket from ChatFPV opens the widget on its conversation.
     chatfpvHandoff: handoffEnabled(args.context.env),
+    // Featured bench figures for this product, drawn as static SVG cards.
+    testingCards: getProductCards(args.params.handle ?? ''),
   };
 }
 
@@ -718,7 +723,16 @@ function useChapterReveal(key: string) {
       {rootMargin: '0px 0px -15% 0px', threshold: 0.05},
     );
     chapters.forEach((el) => io.observe(el));
-    return () => io.disconnect();
+    // A chapter that mounts later (a variant switch adds one) is observed too;
+    // otherwise it stays at opacity 0.
+    const mo = new MutationObserver(() => {
+      document.querySelectorAll('.chapter:not(.is-visible)').forEach((el) => io.observe(el));
+    });
+    mo.observe(document.body, {childList: true, subtree: true});
+    return () => {
+      io.disconnect();
+      mo.disconnect();
+    };
   }, [key]);
 }
 
@@ -762,6 +776,7 @@ function ProductPage() {
     commerceHandoff,
     chatfpvWidget,
     chatfpvHandoff,
+    testingCards,
   } = useLoaderData<typeof loader>();
   useChapterReveal(product.handle);
 
@@ -2072,6 +2087,11 @@ function ProductPage() {
    * the handle has an editorial entry at all, the product's lifecycle status,
    * and the catalog's rating.
    */
+  // Measured bench data for this product. A tiered figure shows only on its
+  // own tier (the OpenMotor-2306 data is never shown on the 1604); an untiered one always shows.
+  const activeTierKey = normalizeTier(activeTier);
+  const testingFigure =
+    testingCards.find((c) => !c.summary.tier || normalizeTier(c.summary.tier) === activeTierKey) ?? null;
   const present = (type: ChapterType, entry: ChapterEntry): boolean => {
     switch (type) {
       // Only when the product's JSON carries the beginner copy: accessories
@@ -2091,6 +2111,8 @@ function ProductPage() {
         return Boolean(content.teardown) && frameViewerSrcs.length === 0;
       case 'specs':
         return content.specs.length > 0;
+      case 'testing':
+        return testingCards.length > 0;
       case 'inTheBox':
         return content.inTheBox.length > 0 || Boolean(content.bundle);
       case 'downloads':
@@ -2675,6 +2697,28 @@ function ProductPage() {
             </a>
           ) : null}
         </Chapter>
+    ),
+    /** What we measured on the bench: one card. The rest is in the testing workspace. */
+    testing: (n, title) => (
+      <Chapter
+        id="testing"
+        number={n}
+        label="Testing"
+        title={title}
+        titleId="testing.chapter_title"
+        noMedia
+        wide={
+          testingFigure ? (
+            <ProductCard card={testingFigure} />
+          ) : (
+            <p className="testing-card-none">
+              No bench data for this variant yet. <a href="/testing">All measurements</a>
+            </p>
+          )
+        }
+      >
+        {null}
+      </Chapter>
     ),
     /** What it measures. */
     specs: (n, title) => {

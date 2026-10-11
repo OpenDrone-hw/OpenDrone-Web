@@ -37,6 +37,7 @@ export const CHAPTER_TYPES = [
   'openSource',
   'teardown',
   'specs',
+  'testing',
   'inTheBox',
   'downloads',
   'firmware',
@@ -92,6 +93,8 @@ export const DEFAULT_CHAPTERS: ChapterEntry[] = [
   {id: 'open-source', type: 'openSource'},
   {id: 'teardown', type: 'teardown'},
   {id: 'specs', type: 'specs'},
+  // Measured bench data, only on products that have some.
+  {id: 'testing', type: 'testing'},
   {id: 'in-the-box', type: 'inTheBox'},
   {id: 'downloads', type: 'downloads'},
   {id: 'firmware', type: 'firmware'},
