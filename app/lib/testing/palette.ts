@@ -69,16 +69,16 @@ const SHADES: Record<Quantity, Record<Theme, [string, string, string]>> = {
  * least 4.5:1 on both surfaces.
  */
 export const IDENTITY: Record<Theme, string[]> = {
-  light: ['#0F4C5C', '#5B6166', '#1E7F74', '#14171A', '#8A5A00'],
-  dark: ['#4DD0C4', '#B7BDBD', '#8FD8CF', '#F5F5F5', '#D9A441'],
+  light: ['#0F4C5C', '#5B6166', '#1E7F74', '#14171A', '#8A5A00', '#B42318'],
+  dark: ['#4DD0C4', '#B7BDBD', '#8FD8CF', '#F5F5F5', '#D9A441', '#F0605D'],
 };
-const N_ID = 5;
+const N_ID = 6;
 
 /** Dash pattern per variant, in CSS px. */
-export const DASHES: Array<number[]> = [[], [7, 4], [2, 3], [9, 3, 2, 3], [4, 3]];
+export const DASHES: Array<number[]> = [[], [7, 4], [2, 3], [9, 3, 2, 3], [4, 3], [1, 3]];
 export type MarkerShape = 'circle' | 'square' | 'diamond' | 'triangle';
 /** One marker shape for every series: runs are told apart by colour, dash and a hollow or filled marker, not by shape. */
-export const MARKERS: MarkerShape[] = ['circle', 'circle', 'circle', 'circle', 'circle'];
+export const MARKERS: MarkerShape[] = ['circle', 'circle', 'circle', 'circle', 'circle', 'circle'];
 /** The emphasised series of a figure with several runs, and the grey of the rest. */
 export const EMPHASIS: Record<Theme, {primary: string; rest: string}> = {
   light: {primary: '#0F4C5C', rest: '#5B6166'},

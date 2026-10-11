@@ -112,7 +112,7 @@
   "figures": {
     "openesc-30-four-motors": {
       "title": "Four motors in a ramp",
-      "finding": "All four motors hold 7545 to 7572 rpm at full throttle on 13 inch props; the clamp reads 89.3 A at 64 percent.",
+      "finding": "Four motors hold 7545 to 7572 rpm at full throttle on 13 inch props; the ESC's own current reading peaks at 318 A.",
       "product": "openesc",
       "tier": "30x30",
       "featured": true,
@@ -375,5 +375,5 @@
       "figureId": "openrx-rssi-vs-distance"
     }
   ],
-  "built": "2026-10-10"
+  "built": "2026-10-11"
 }
